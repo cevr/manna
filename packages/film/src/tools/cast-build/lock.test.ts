@@ -1,8 +1,9 @@
 // The lock stage over a fake trained graph, with the reader's test layer:
 // the lock's fields come from its inputs' outputs and the train's note; a
 // changed eval output changes the lock; a trained drawing with no held eval
-// fails it; a rerun with nothing changed writes nothing, and a lock edited by
-// hand is written again.
+// fails it; every clip's entry is the lock's, a clip that fails its bars or
+// has no eval is written and counted unpassed; a rerun with nothing changed
+// writes nothing, and a lock edited by hand is written again.
 
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, type FileSystem, Layer, Option, Path, Schema } from 'effect';
@@ -10,7 +11,7 @@ import { sha256Hex } from '../digest.ts';
 import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore } from '../content-store.ts';
 import { type Stage, StageFailed, buildGraph, fileInput, stageInput } from './graph.ts';
-import { lockStage } from './lock.ts';
+import { ClipsFailed, checkClips, failedClipsOf, lockStage } from './lock.ts';
 import { CastReader } from './reader.ts';
 import { evalStage, trainStage } from './stages.ts';
 
@@ -58,24 +59,36 @@ const graph: ReadonlyArray<Stage<CastReader | FileSystem.FileSystem>> = [
   },
   trainStage(CANDIDATES, SOURCES, LOCK),
   ...CANDIDATES.map((c) => evalStage(c.renders, [])),
-  {
-    id: 'eval:clip:clip-b@m',
-    inputs: [stageInput('train'), fileInput('/in/chain.json')],
+  ...['clip-b', 'wave'].map((clip): Stage<never> => ({
+    id: `eval:clip:${clip}@m`,
+    inputs: [stageInput('train'), fileInput(`/in/${clip}.json`)],
     version: '1',
-    run: (ctx) => ctx.file('/in/chain.json'),
-  },
+    run: (ctx) => ctx.file(`/in/${clip}.json`),
+  })),
 ];
-const lock = lockStage({
-  file: LOCK,
-  candidates: CANDIDATES,
-  sources: SOURCES,
-  clip: Option.some({ member: 'm', clip: 'clip-b' }),
-});
+const CLIPS = [
+  { member: 'm', clip: 'clip-b' },
+  { member: 'm', clip: 'wave' },
+];
+const lock = lockStage({ file: LOCK, candidates: CANDIDATES, sources: SOURCES, clips: CLIPS });
 
-const chain = (iou: number) =>
-  text(
-    `{"runs":[{"from":0,"to":124,"drawing":"m/front"}],"keys":[0],"iou":{"41-123":${iou}},"named":{"41-123":{"m/front":83}},"ms":5}`,
-  );
+/** An eval:clip stage's output: the clip's lock entry, its end band at `iou`, failing for each of `fails`. */
+const entryOf = (clip: string, iou: number, fails: ReadonlyArray<string> = []) => ({
+  member: 'm',
+  clip,
+  sha256: `sha-${clip}`,
+  frames: 124,
+  bands: [{ from: 41, to: 123, expect: ['m/front'] }],
+  iou: { '0-123': 0.91, '41-123': iou },
+  named: { '0-123': { 'm/front': 124 }, '41-123': { 'm/front': 83 } },
+  holds: { start: 12, end: 83 },
+  scale: { heightRatio: { min: 0.991, max: 1.0015 }, feetPx: { min: 0, max: 1 } },
+  runs: [{ from: 0, to: 124, drawing: 'm/front' }],
+  pass: fails.length === 0,
+  fails,
+});
+const chain = (iou: number, clip = 'clip-b', fails: ReadonlyArray<string> = []) =>
+  text(jsonOf(entryOf(clip, iou, fails)));
 
 /** A disk that records every path written to it. */
 class Disk extends Map<string, Uint8Array> {
@@ -90,7 +103,8 @@ const files = () =>
   new Disk([
     ['/in/renders:front@m.tar', text('front shard')],
     ['/in/renders:side@m.tar', text('side shard')],
-    ['/in/chain.json', chain(0.9132)],
+    ['/in/clip-b.json', chain(0.9132)],
+    ['/in/wave.json', chain(0.95, 'wave')],
     ['/reader/model.py', text('model')],
   ]);
 
@@ -184,12 +198,11 @@ describe('cast build: the reader lock', () => {
           jointPx: { median: 17, p90: 62.7 },
         },
       });
-      expect(l['clip']).toEqual({
-        member: 'm',
-        clip: 'clip-b',
-        iou: { '41-123': 0.9132 },
-        named: { '41-123': { 'm/front': 83 } },
-        runs: [{ from: 0, to: 124, drawing: 'm/front' }],
+      expect(l['clip']).toBeUndefined();
+      expect(l['clips']).toEqual({
+        passed: 2,
+        of: 2,
+        byClip: { 'm/clip-b': entryOf('clip-b', 0.9132), 'm/wave': entryOf('wave', 0.95) },
       });
       expect(l['spend']).toEqual({ buildCountedUsd: 0.92 });
     }),
@@ -274,13 +287,69 @@ describe('cast build: the reader lock', () => {
       const disk = files();
       yield* build(disk);
       const before = read(disk, LOCK);
-      disk.set('/in/chain.json', chain(0.95));
+      disk.set('/in/clip-b.json', chain(0.95));
       const report = yield* build(disk);
       expect(stateOf(report)['eval:clip:clip-b@m']).toBe('ran');
       expect(stateOf(report)['lock']).toBe('ran');
       expect(read(disk, LOCK)).not.toBe(before);
-      expect(lockOf(disk)['clip']).toMatchObject({ iou: { '41-123': 0.95 } });
+      expect(lockOf(disk)['clips']).toMatchObject({
+        byClip: { 'm/clip-b': { iou: { '41-123': 0.95 } } },
+      });
     }),
+  );
+
+  it.effect('a clip that fails its bars is written all the same, and not counted passed', () =>
+    Effect.gen(function* () {
+      const disk = files();
+      disk.set('/in/wave.json', chain(0.8, 'wave', ['iou 41-123: 0.8 under 0.88']));
+      const report = yield* build(disk);
+      expect(stateOf(report)['lock']).toBe('ran');
+      expect(lockOf(disk)['clips']).toMatchObject({
+        passed: 1,
+        of: 2,
+        byClip: { 'm/wave': { pass: false, fails: ['iou 41-123: 0.8 under 0.88'] } },
+      });
+      expect(yield* failedClipsOf(read(disk, LOCK), CLIPS)).toEqual([
+        'm/wave: iou 41-123: 0.8 under 0.88',
+      ]);
+    }),
+  );
+
+  it.effect('a clip whose eval failed is written as failed with no entry, and counted', () =>
+    Effect.gen(function* () {
+      const disk = files();
+      const stages = graph.map((stage): Stage<CastReader | FileSystem.FileSystem> => {
+        if (stage.id !== 'eval:clip:wave@m') return stage;
+        return {
+          ...stage,
+          run: () => Effect.fail(StageFailed.make({ reason: 'the reader died' })),
+        };
+      });
+      const report = yield* build(disk, STDOUT, jsonOf(EVAL), stages);
+      expect(stateOf(report)['eval:clip:wave@m']).toBe('failed');
+      expect(stateOf(report)['lock']).toBe('ran');
+      const clips = lockOf(disk)['clips'] as { passed: number; of: number; byClip: object };
+      expect([clips.passed, clips.of, Object.keys(clips.byClip)]).toEqual([1, 2, ['m/clip-b']]);
+      expect(yield* failedClipsOf(read(disk, LOCK), CLIPS)).toEqual(['m/wave: no eval']);
+    }),
+  );
+
+  it.effect(
+    'after the build, a lock with a failed or missing clip fails with ClipsFailed naming each; one that passes every clip passes',
+    () =>
+      Effect.gen(function* () {
+        const disk = files();
+        disk.set('/in/wave.json', chain(0.8, 'wave', ['iou 41-123: 0.8 under 0.88']));
+        yield* build(disk);
+        const check = (clips: ReadonlyArray<{ member: string; clip: string }>) =>
+          checkClips(LOCK, clips).pipe(Effect.provide(memoryFileSystem(disk)));
+        const failed = yield* Effect.flip(check([...CLIPS, { member: 'm', clip: 'gone' }]));
+        expect(failed).toBeInstanceOf(ClipsFailed);
+        expect(failed).toMatchObject({
+          clips: ['m/wave: iou 41-123: 0.8 under 0.88', 'm/gone: no eval'],
+        });
+        yield* check([{ member: 'm', clip: 'clip-b' }]);
+      }),
   );
 
   it.effect(

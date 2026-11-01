@@ -6,12 +6,13 @@
 // a drawing drawn or kept waits on the owner (`waiting-owner`), as does every
 // stage below either. `--plan` runs nothing and prints what would run;
 // `--touch` plans as if that file changed. The cache is `FILM_CAST_CACHE`,
-// else `~/.cache/bible-film/cast`. It exits non-zero only when a stage fails.
+// else `~/.cache/bible-film/cast`. It exits non-zero when a stage fails, or
+// when the reader lock it wrote or kept fails a clip (`ClipsFailed`).
 
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
-import { Array as Arr, Console, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
+import { Console, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
 import type { SheetKind } from '../../core/cast-sheet.ts';
 import type { CritiqueRule } from '../../core/critique.ts';
 import { PuppetImagesBun } from '../../puppet/images-bun.ts';
@@ -44,7 +45,7 @@ import {
   needName,
   ownerNeeds,
 } from './owner-ask.ts';
-import { lockStage } from './lock.ts';
+import { checkClips, lockStage } from './lock.ts';
 import { CastReader } from './reader.ts';
 import {
   type MemberStages,
@@ -193,6 +194,9 @@ export const build = <E, R>(
       const cache = yield* castCache;
       const needs = ownerNeeds(members);
       const lockFile = yield* readerLockOf(film);
+      const clips = members.flatMap((m) =>
+        (m.coverage.clips ?? []).map((c) => ({ member: m.member, clip: c.id })),
+      );
       const stages: ReadonlyArray<
         Stage<StageServices | CastReader | AskStore | DrawingSet | DrawServices>
       > = [
@@ -202,17 +206,7 @@ export const build = <E, R>(
         ...candidates.map((c) => evalStage(c.renders, sources.eval)),
         ...clipMakes,
         ...members.flatMap((m) => clipStages(m, cache, sources.chain)),
-        lockStage({
-          file: lockFile,
-          candidates,
-          sources: reader.sources,
-          // the lock reports the build's first clip (today the one: lead-feast's raise/clip-b)
-          clip: Arr.head(
-            members.flatMap((m) =>
-              (m.coverage.clips ?? []).map((c) => ({ member: m.member, clip: c.id })),
-            ),
-          ),
-        }),
+        lockStage({ file: lockFile, candidates, sources: reader.sources, clips }),
         askStage(
           film,
           members.map((m) => m.member),
@@ -238,6 +232,10 @@ export const build = <E, R>(
       }
       const failed = report.stages.filter((s) => s.state === 'failed').map((s) => s.id);
       if (failed.length > 0) return yield* BuildFailed.make({ stages: failed });
+      // the lock is written whatever its clips; a build it holds a failed clip in fails all the same
+      const lock = report.stages.find((s) => s.id === 'lock');
+      const lockHeld = lock?.state === 'ran' || lock?.state === 'cached';
+      if (!input.plan && lockHeld && clips.length > 0) yield* checkClips(lockFile, clips);
     }),
   ).pipe(
     Command.provide(

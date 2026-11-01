@@ -5,8 +5,10 @@
 // config, the checkpoint's SHA-256, the train's fit summary and spend as the
 // train noted them in `build.json` (absent for a train that noted none; a
 // train that adopted the committed checkpoint notes the lock's own, kept),
-// each trained drawing's held numbers, each untrained drawing's, and the
-// clip's chain numbers. The stage's output is the file's bytes; a cached one
+// each trained drawing's held numbers, each untrained drawing's, and every
+// clip's entry with its verdict (`clips.ts` `ClipLock`) and how many passed;
+// a failing clip is written all the same, and the build then fails with
+// `ClipsFailed` (`checkClips`). The stage's output is the file's bytes; a cached one
 // holds only while the file on disk has them, so a rerun with nothing
 // changed writes nothing, and a file edited or lost is written again.
 
@@ -20,6 +22,7 @@ import {
   optionalInput,
   stageInput,
 } from './graph.ts';
+import { ClipLock } from './clips.ts';
 import {
   AdoptedNote,
   BuildSpend,
@@ -54,15 +57,15 @@ const EvalJson = Schema.fromJsonString(
   }),
 );
 
-/** The part of a clip's chain (`chain.ts`) the lock reads: its IoU and named drawings per band, and its runs. */
-const ChainNumbers = Schema.Struct({
-  iou: Schema.Record(Schema.String, Schema.Finite),
-  named: Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Finite)),
-  runs: Schema.Array(
-    Schema.Struct({ from: Schema.Finite, to: Schema.Finite, drawing: Schema.String }),
-  ),
+/** An eval:clip stage's output: the clip's lock entry (`clips.ts` `clipEntryOf`). */
+const ClipLockJson = Schema.fromJsonString(ClipLock);
+
+/** Every clip the build judges: how many passed, how many there are, and each judged one's entry by `<member>/<clip>`. */
+const Clips = Schema.Struct({
+  passed: Schema.Int,
+  of: Schema.Int,
+  byClip: Schema.Record(Schema.String, ClipLock),
 });
-const ChainJson = Schema.fromJsonString(ChainNumbers);
 
 const Lock = Schema.Struct({
   reader: Schema.String,
@@ -98,9 +101,7 @@ const Lock = Schema.Struct({
     Schema.String,
     Schema.Struct({ n: Schema.Finite, angleDeg: Spread, jointPx: Spread }),
   ),
-  clip: Schema.optionalKey(
-    Schema.Struct({ member: Schema.String, clip: Schema.String, ...ChainNumbers.fields }),
-  ),
+  clips: Clips,
   spend: Schema.optionalKey(BuildSpend),
 });
 const LockJson = Schema.fromJsonString(Lock, { space: 2 });
@@ -108,10 +109,53 @@ const LockJson = Schema.fromJsonString(Lock, { space: 2 });
 const encoder = new TextEncoder();
 
 /** A clip the lock reports: its member and its id (`raise/clip-b`); its stage is `eval:clip:<clip>@<member>`. */
-interface LockClip {
+export interface LockClip {
   readonly member: string;
   readonly clip: string;
 }
+
+const clipStageOf = (c: LockClip) => `eval:clip:${c.clip}@${c.member}`;
+const clipKeyOf = (c: LockClip) => `${c.member}/${c.clip}`;
+
+/** The part of a lock `failedClipsOf` reads. */
+const ClipsJson = Schema.fromJsonString(Schema.Struct({ clips: Clips }));
+
+/**
+ * Each of `clips` the lock (its text) does not pass, as `<member>/<clip>:`
+ * and its failed bars, or `no eval` when the lock has no entry for it.
+ */
+export const failedClipsOf = (text: string, clips: ReadonlyArray<LockClip>) =>
+  Effect.map(Schema.decodeEffect(ClipsJson)(text), ({ clips: { byClip } }) =>
+    clips.flatMap((c) => {
+      const key = clipKeyOf(c);
+      return Option.match(Option.fromUndefinedOr(byClip[key]), {
+        onNone: () => [`${key}: no eval`],
+        onSome: (entry) =>
+          Option.toArray(Option.liftPredicate(entry, (e) => !e.pass)).map(
+            (e) => `${key}: ${e.fails.join('; ')}`,
+          ),
+      });
+    }),
+  );
+
+/** A build whose lock does not pass every clip: each one as `failedClipsOf` names it. */
+export class ClipsFailed extends Schema.TaggedError<ClipsFailed>()('ClipsFailed', {
+  clips: Schema.Array(Schema.String),
+}) {
+  override get message() {
+    return `clips failed: ${this.clips.join('; ')}`;
+  }
+}
+
+/** After a build: the lock at `file` passes each of `clips`, else `ClipsFailed` names every one it does not. */
+export const checkClips = Effect.fn('film.cast.checkClips')(function* (
+  file: string,
+  clips: ReadonlyArray<LockClip>,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const failing = yield* failedClipsOf(yield* fs.readFileString(file), clips);
+  if (failing.length > 0) return yield* ClipsFailed.make({ clips: failing });
+});
 
 const failed = (what: string) => (e: { readonly message: string }) =>
   StageFailed.make({ reason: `lock ${what}: ${e.message}` });
@@ -143,20 +187,22 @@ const trainOf = (train: BuiltRecord) =>
   });
 
 /**
- * The lock stage: after the train, every candidate's eval and `clip`'s
- * chain, it writes `file` from their outputs. A trained drawing's eval is
+ * The lock stage: after the train, every candidate's eval and each clip's
+ * eval, it writes `file` from their outputs. A trained drawing's eval is
  * required (the lock never names a trained drawing without its held
- * numbers); an untrained one's joins when it has an output. `sources` are
- * the reader's files, which the reader's key reads.
+ * numbers); an untrained one's joins when it has an output. Every clip
+ * counts in `clips.of`; a clip whose eval has an output carries its entry,
+ * pass or fail, and one with none (its stage failed) is left unpassed, so
+ * the lock is written whatever the clips. `sources` are the reader's files,
+ * which the reader's key reads.
  */
 export const lockStage = (o: {
   readonly file: string;
   readonly candidates: ReadonlyArray<Candidate>;
   readonly sources: ReadonlyArray<string>;
-  readonly clip: Option.Option<LockClip>;
+  readonly clips: ReadonlyArray<LockClip>;
 }): Stage<FileSystem.FileSystem> => {
   const evalOf = (c: Candidate) => c.renders.replace(/^renders:/, 'eval:');
-  const clipId = Option.map(o.clip, (c) => `eval:clip:${c.clip}@${c.member}`);
   return {
     id: 'lock',
     inputs: [
@@ -164,7 +210,7 @@ export const lockStage = (o: {
       stageInput('train'),
       ...o.sources.map(fileInput),
       ...o.candidates.map((c) => optionalInput(evalOf(c))),
-      ...Option.match(clipId, { onNone: () => [], onSome: (id) => [stageInput(id)] }),
+      ...o.clips.map((c) => optionalInput(clipStageOf(c))),
     ],
     version: '1',
     run: (ctx) =>
@@ -221,28 +267,22 @@ export const lockStage = (o: {
             { n: u.n, angleDeg: spreadOf(u.angle_deg), jointPx: spreadOf(u.joint_px) },
           ]);
         }
-        const clip = yield* Option.match(
-          Option.zipWith(o.clip, clipId, (c, id) => [c, id] as const),
-          {
-            onNone: () => Effect.succeed({}),
-            onSome: ([c, id]) =>
-              ctx.output(id).pipe(
-                Effect.flatMap((bytes) =>
-                  Schema.decodeEffect(ChainJson)(new TextDecoder().decode(bytes)),
-                ),
-                Effect.map((chain) => ({
-                  clip: {
-                    member: c.member,
-                    clip: c.clip,
-                    iou: chain.iou,
-                    named: chain.named,
-                    runs: chain.runs,
-                  },
-                })),
-                Effect.mapError(failed(id)),
+        const judged = yield* Effect.forEach(
+          o.clips.filter((c) => ctx.known(clipStageOf(c))),
+          (c) =>
+            ctx.output(clipStageOf(c)).pipe(
+              Effect.flatMap((bytes) =>
+                Schema.decodeEffect(ClipLockJson)(new TextDecoder().decode(bytes)),
               ),
-          },
+              Effect.map((entry) => [clipKeyOf(c), entry] as const),
+              Effect.mapError(failed(clipStageOf(c))),
+            ),
         );
+        const clips = {
+          passed: judged.filter(([, entry]) => entry.pass).length,
+          of: o.clips.length,
+          byClip: Object.fromEntries(judged),
+        };
         const hits = held.filter(([, h]) => h.accuracy === 1).length;
         const adopted = adoptedOf(train);
         const spend = Option.match(adopted, {
@@ -266,7 +306,7 @@ export const lockStage = (o: {
             byDrawing: Object.fromEntries(held),
           },
           untrained: Object.fromEntries(untrained),
-          ...clip,
+          clips,
           ...Option.match(spend, { onNone: () => ({}), onSome: (s) => ({ spend: s }) }),
         }).pipe(Effect.mapError(failed('encode')));
         const bytes = encoder.encode(`${text}\n`);
