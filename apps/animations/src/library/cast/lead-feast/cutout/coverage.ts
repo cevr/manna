@@ -3,7 +3,8 @@
 // front, and his raise's keys. K2 and K3 split onto the upper arm and the
 // forearm (0.8 % and 1.4 % of their pixels within both segments' sleeve
 // half-width), so each is a puppet to cut; K4-K6 fold the forearm over the
-// upper arm and stay drawn keys, shown whole on twos. Pure data.
+// upper arm and stay drawn keys, shown whole on twos. His reader is scored
+// on clip B (`clips`). Pure data.
 
 import type { CoverageManifest } from '@manna/film/tools';
 
@@ -76,6 +77,17 @@ export const COVERAGE: CoverageManifest = {
       file: 'cutout/raise/keys/k6.png',
       for: RAISE,
       why: 'folds the forearm: elbow 1.9 deg, 63.3 % of its pixels within both segments (bar 5 %)',
+    },
+  ],
+  // clip B (fal, first frame only): he stands at the front to f40 and holds the bottle raised from f41
+  clips: [
+    {
+      id: 'raise/clip-b',
+      file: 'cutout/raise/clip/clip-b.mp4',
+      bands: [
+        [0, 40],
+        [41, 123],
+      ],
     },
   ],
 };

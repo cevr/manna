@@ -34,6 +34,8 @@ pre-commit:
       glob: '{apps/animations,packages/film}/**.{mp4,m4v,mov,webm,mkv,m4a,MP4,MOV}'
       exclude:
         - 'packages/film/src/tools/fixtures/*.mp4'
+        # A cast member's reference clip (its manifest's `clips`): the reader is scored on it.
+        - 'apps/animations/src/library/cast/*/cutout/*/clip/*.mp4'
       run: |
         echo "Renders may not be committed (they carry the generated score):"
         printf '  %s\n' {staged_files}
