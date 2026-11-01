@@ -1,0 +1,31 @@
+{
+  "endpoint": "minimax/h3-max/image-to-video",
+  "input": {
+    "prompt": "Flat 2D cut-paper cartoon animation on a static paper background. The boy stands still and slowly raises his right hand (on the left side of the picture), lifting a small baby bottle from his side up to shoulder height beside his face, then holds the pose. Only the arm moves; body, feet and head stay in place. Locked camera, no zoom, no pan, same flat colours and thick dark outline throughout.",
+    "prompt_expansion_mode": "disabled",
+    "duration": 5,
+    "resolution": "768P",
+    "seed": 7
+  },
+  "frames": {
+    "first": {
+      "path": "apps/animations/src/library/cast/lead-feast/cutout/raise/clip/clip-b.first.png",
+      "sha256": "9077787c62f031714ce0a1b1cd633ef021136f4edf757e1d7ed733bff7afc3f7"
+    }
+  },
+  "requestId": "01a182f9-9e48-7e53-8cc4-aff59501a583",
+  "made": "2026-10-28",
+  "usd": 0.1625,
+  "output": {
+    "width": 704,
+    "height": 1440,
+    "fps": 24,
+    "frames": 124,
+    "sha256": "d7bf5f2ebe36974000a4069e68e6ee637b56d12152933b7d3fd12e007ea20376"
+  },
+  "map": {
+    "x0": -182,
+    "y0": 68,
+    "scale": 2
+  }
+}
