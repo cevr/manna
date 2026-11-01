@@ -22,7 +22,15 @@ import type { Pages } from '../pages.ts';
 import { coverageFacts } from './coverage-facts.ts';
 import { cutoutMembers, manifestOf, toStderr } from './coverage-cli.ts';
 import { BuildReport, Spend, type StageReport, buildGraph } from './graph.ts';
-import { type MemberStages, askStage, memberStages, ownerNeeds } from './stages.ts';
+import {
+  type MemberStages,
+  askStage,
+  memberStages,
+  ownerNeeds,
+  rendersOf,
+  trainStage,
+  trainsetStage,
+} from './stages.ts';
 
 class BuildAsked extends Schema.TaggedError<BuildAsked>()('BuildAsked', {}) {
   override get message() {
@@ -124,8 +132,11 @@ export const build = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArra
         const facts = yield* coverageFacts(memberDir, coverage, {});
         members.push({ film, member, memberDir, libraryPuppets, coverage, facts });
       }
+      const built = (yield* Effect.forEach(members, memberStages)).flat();
       const stages = [
-        ...(yield* Effect.forEach(members, memberStages)).flat(),
+        ...built,
+        trainsetStage(rendersOf(built)),
+        trainStage,
         askStage(ownerNeeds(members)),
       ];
       const report = yield* toStderr(
@@ -155,6 +166,6 @@ export const build = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArra
       ),
     ),
     Command.withDescription(
-      "Build each cast member's stages (drawing, parts, cut, fit) over the cast cache, rerunning only what changed; spends okra or Modal only when --spend names it",
+      "Build each cast member's stages (drawing, parts, cut, fit, renders), the training set and its train over the cast cache, rerunning only what changed; spends okra or Modal only when --spend names it",
     ),
   );

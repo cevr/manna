@@ -14,13 +14,21 @@
 //                 --fit-only` of that view, its fit rows; it reads the cut
 //                 it is posed with (its `fitted` entry's, else its own) and
 //                 its drawing.
+//   renders:<id>  a puppet entry cut from its own sheet: its synthetic
+//                 training renders, one shard (`renders.ts`); it reads its
+//                 cut. An entry fitted with another view's cut has none.
 //
 // A stage id reads `<stage>:<entry>@<member>` (`cut:turnaround-front@lead-feast`).
-// `askStage` is the build's last stage: every entry missing `drawn` or
-// `kept` across the members built, waiting on the owner.
+// After every member's stages: `trainsetStage`, the sorted hashes of every
+// shard built; `trainStage`, the one reader trained on that set (spending
+// Modal); `askStage`, every entry missing `drawn` or `kept` across the
+// members built, waiting on the owner.
 
 import * as Command from 'effect/cli/Command';
-import { Effect, FileSystem, Option, Path, Schema, type Scope } from 'effect';
+import { Effect, FileSystem, Option, Path, Predicate, Schema, type Scope } from 'effect';
+import type { PuppetSpec } from '../../canvas/puppet.ts';
+import type { PuppetImages } from '../../puppet/images.ts';
+import { puppetFrom } from '../../puppet/load.ts';
 import { renderCast } from '../cast-render.ts';
 import { sha256Hex } from '../digest.ts';
 import { type FilmName, importFilmModule } from '../film-repo.ts';
@@ -35,9 +43,22 @@ import {
   fileInput,
   stageInput,
 } from './graph.ts';
+import { SAMPLES, shardOf, trainsetOf } from './renders.ts';
 
 /** Bumped when a stage's code makes other bytes from the same inputs. */
-const VERSION = { drawing: '1', parts: '1', cut: '2', fit: '1', ask: '1' } as const;
+const VERSION = {
+  drawing: '1',
+  parts: '1',
+  cut: '2',
+  fit: '1',
+  renders: '1',
+  trainset: '1',
+  train: '1',
+  ask: '1',
+} as const;
+
+/** The reader's train: steps, batch, learning rate, seed, GPU and precision; a fixed step count, no wall-clock stop. */
+const TRAIN = { steps: 4800, batch: 32, lr: 1e-3, seed: 0, gpu: 'L4', precision: 'bf16' } as const;
 
 const encoder = new TextEncoder();
 
@@ -69,6 +90,9 @@ const listing = (dir: string) =>
   }).pipe(Effect.mapError((e) => StageFailed.make({ reason: `listing ${dir}: ${String(e)}` })));
 
 const SpecJson = Schema.fromJsonString(Schema.Unknown);
+const ConfigJson = Schema.fromJsonString(Schema.Unknown);
+/** A renders stage's settings: how many samples of each split. */
+const RENDERS_CONFIG = Schema.encodeSync(ConfigJson)(SAMPLES);
 const PuppetsModule = Schema.Struct({ PUPPETS: Schema.Record(Schema.String, Schema.Unknown) });
 
 /** The member's cutout sources a puppet spec is built from: every `cutout/*.ts` of his, and the library's `cutout/puppets.ts`. */
@@ -91,10 +115,32 @@ const specSources = (memberDir: string, libraryPuppets: string) =>
 const runParts = (film: FilmName, member: string, view: string, flags: ReadonlyArray<string>) =>
   Command.runWith(parts, { version: 'build' })([film, member, '--view', view, ...flags]);
 
-/** What the stages run on: the files, `concept parts` and the fit render. */
+/** `entry`'s puppet spec, as the member's `cutout/puppets.ts` declares it (`PUPPETS[<sheet>]`). */
+const puppetSpecIn = (memberDir: string, entry: Coverage['entries'][number]) =>
+  Effect.gen(function* () {
+    const path = yield* Path.Path;
+    const loaded = yield* Effect.tryPromise(() =>
+      importFilmModule(path.join(memberDir, 'cutout', 'puppets.ts')),
+    );
+    const module = yield* Schema.decodeUnknownEffect(PuppetsModule)(loaded);
+    return yield* Effect.fromOption(Option.fromNullishOr(module.PUPPETS[sheetOf(entry)])).pipe(
+      Effect.mapError(() => `cutout/puppets.ts has no puppet ${sheetOf(entry)}`),
+    );
+  });
+
+/** A puppets module's value read as a puppet spec: its key, size, parts and skeleton are there. */
+const isPuppetSpec = (u: unknown): u is PuppetSpec =>
+  Predicate.hasProperty(u, 'key') &&
+  Predicate.hasProperty(u, 'size') &&
+  Predicate.hasProperty(u, 'skeleton') &&
+  Predicate.hasProperty(u, 'parts') &&
+  Array.isArray(u.parts);
+
+/** What the stages run on: the files, `concept parts`, the fit render and the puppets' part PNGs. */
 export type StageServices =
   | FileSystem.FileSystem
   | Path.Path
+  | PuppetImages
   | Effect.Services<ReturnType<typeof runParts>>
   | Exclude<Effect.Services<ReturnType<typeof renderCast>>, Scope.Scope>;
 
@@ -116,6 +162,8 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
   const at = (id: string) => `${id}@${m.member}`;
   const factsOf = (id: string) => Option.fromNullishOr(m.facts[id]);
   const stages: Array<Stage<StageServices>> = [];
+  /** The entries whose part sheet has a record: cut once, so a puppet to pose. */
+  const recorded = new Set<string>();
   for (const entry of m.coverage.entries) {
     const file = path.join(m.memberDir, entry.file);
     const facts = factsOf(entry.id);
@@ -141,6 +189,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
     // every file of the sheet folder: its record and part PNGs (which `--check` holds to its
     // answers), and its okra ledger and answers
     const sheetFiles = yield* filesUnder(sheet);
+    if (sheetFiles.includes('record.json')) recorded.add(entry.id);
     stages.push({
       id: `parts:${at(entry.id)}`,
       view: entry.id,
@@ -175,13 +224,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
       version: VERSION.cut,
       run: (ctx) =>
         Effect.gen(function* () {
-          const loaded = yield* Effect.tryPromise(() =>
-            importFilmModule(path.join(m.memberDir, 'cutout', 'puppets.ts')),
-          );
-          const module = yield* Schema.decodeUnknownEffect(PuppetsModule)(loaded);
-          const spec = yield* Effect.fromOption(
-            Option.fromNullishOr(module.PUPPETS[sheetOf(entry)]),
-          ).pipe(Effect.mapError(() => `cutout/puppets.ts has no puppet ${sheetOf(entry)}`));
+          const spec = yield* puppetSpecIn(m.memberDir, entry);
           // its PNG paths named from the member's folder, so the spec reads the same in any checkout
           const text = yield* Schema.encodeEffect(SpecJson)(spec);
           return text.replaceAll(`${m.memberDir}/`, '');
@@ -228,8 +271,75 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
         ),
     });
   }
+  for (const entry of m.coverage.entries) {
+    // only a drawing cut from its own sheet: one not yet cut has no puppet to pose, so the
+    // training set does not wait on it
+    if (entry.cut !== 'puppet' || Option.isSome(Option.fromUndefinedOr(entry.fitted))) continue;
+    if (!recorded.has(entry.id)) continue;
+    stages.push({
+      id: `renders:${at(entry.id)}`,
+      view: entry.id,
+      inputs: [stageInput(`cut:${at(entry.id)}`)],
+      version: VERSION.renders,
+      config: RENDERS_CONFIG,
+      run: () =>
+        Effect.gen(function* () {
+          const spec = yield* puppetSpecIn(m.memberDir, entry);
+          if (!isPuppetSpec(spec)) return yield* Effect.fail('its puppet spec has no parts');
+          const paper = yield* Effect.fromOption(Option.fromUndefinedOr(spec.paper)).pipe(
+            Effect.mapError(() => `puppet ${spec.key} names no paper`),
+          );
+          const puppet = yield* puppetFrom(spec);
+          return shardOf({ puppet, paper }, m.member, entry.id);
+        }).pipe(
+          Effect.mapError((e) =>
+            StageFailed.make({ reason: `renders ${at(entry.id)}: ${String(e)}` }),
+          ),
+        ),
+    });
+  }
   return stages;
 });
+
+/** The renders stages among `stages`, by the drawing they render, `<member>/<entry>`. */
+export const rendersOf = (stages: ReadonlyArray<Stage<unknown>>): Record<string, string> =>
+  Object.fromEntries(
+    stages.flatMap((s) => {
+      const match = Option.fromNullishOr(/^renders:(.+)@(.+)$/.exec(s.id));
+      return Option.match(match, {
+        onNone: () => [],
+        onSome: ([, entry, member]) => [[`${member}/${entry}`, s.id] as const],
+      });
+    }),
+  );
+
+/** The training set: every shard's hash, by its drawing, sorted. */
+export const trainsetStage = (renders: Readonly<Record<string, string>>): Stage<never> => ({
+  id: 'trainset',
+  inputs: Object.values(renders).map(stageInput),
+  version: VERSION.trainset,
+  run: (ctx) =>
+    Effect.forEach(Object.entries(renders), ([drawing, id]) =>
+      Effect.map(ctx.output(id), (shard) => [drawing, sha256Hex(shard)] as const),
+    ).pipe(Effect.map((shards) => trainsetOf(Object.fromEntries(shards)))),
+});
+
+/**
+ * The one reader trained on the training set, on Modal; it spends, so it
+ * waits unless `--spend modal`. The reader's code is not in the repo yet:
+ * allowed to spend, it fails, naming that, and trains nothing.
+ */
+export const trainStage: Stage<never> = {
+  id: 'train',
+  inputs: [stageInput('trainset')],
+  version: VERSION.train,
+  config: Schema.encodeSync(ConfigJson)(TRAIN),
+  run: (ctx) =>
+    ctx.spend(
+      'modal',
+      Effect.fail(StageFailed.make({ reason: 'train: the reader is not in the repo yet' })),
+    ),
+};
 
 const FitJson = Schema.fromJsonString(
   Schema.Array(
