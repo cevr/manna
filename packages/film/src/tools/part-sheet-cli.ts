@@ -423,7 +423,7 @@ const callLine = (label: string, c: CallLaid) =>
     onNone: () =>
       `parts ${label} answer ${c.n}: ${[c.state, ...Option.toArray(Option.fromUndefinedOr(c.reason))].join(' ')}`,
     onSome: (m) =>
-      `parts ${label} answer ${c.n}: seam=${Option.getOrElse(Option.map(m.seam.deltaE, String), () => 'unread')}/${m.seam.pairs} drift=${m.drift.deltaE} chroma=${m.drift.chroma.map((r) => `${r.part}<${r.under}:${r.painted.chroma}/${r.kept.chroma}:${r.verdict}`).join(',')} grain=${m.grain.map((g) => `${g.part}:${g.painted.robust}/${g.kept.robust}:${g.verdict}`).join(',')} speck=${m.speck.map((r) => `${r.part}<${r.under}:${r.painted.share}/${r.kept.share}:${r.verdict}`).join(',')} painted=${m.paintedPx}px visible=${m.visibleAtRest} missed=${(c.missed ?? []).join(',') || 'none'}`,
+      `parts ${label} answer ${c.n}: seam=${Option.getOrElse(Option.map(m.seam.deltaE, String), () => 'unread')}/${m.seam.pairs} drift=${m.drift.deltaE} chroma=${m.drift.chroma.map((r) => `${r.part}<${r.under}:${r.painted.chroma}/${r.kept.chroma}:${r.verdict}`).join(',')} grain=${m.grain.map((g) => `${g.part}:${g.painted.robust}/${g.kept.robust}:${g.verdict}`).join(',')} speck=${m.speck.map((r) => `${r.part}<${r.under}:${r.painted.share}/${r.kept.share}:${r.verdict}`).join(',')} step=${m.step.map((s) => `${s.part}|${s.meets}<${s.under}:${s.laid}/${s.answer}/${s.pairs}:${s.verdict}`).join(',')} painted=${m.paintedPx}px visible=${m.visibleAtRest} missed=${(c.missed ?? []).join(',') || 'none'}`,
   });
 
 /**

@@ -278,10 +278,11 @@ const RegionVerdict = Schema.Literals(['within', 'outside', 'unverified']);
 /** A speck read: the share of the pixels that are specks, and the pixels read. */
 const SpeckRead = Schema.Struct({ share: Schema.Finite, px: Schema.Int });
 
-/** A line where the paint of `part` meets the paint of `meets` (four ways, both lighter than the ink in the answer): the mean L* step across it, `part` less `meets`, of the laid paint and of the answer at the same pixels, and how many pairs it was read on. */
+/** A line where the paint of `part` meets the paint of `meets` under the moving part `under` (four ways, both lighter than the ink in the answer): the mean L* step across it, `part` less `meets`, of the laid paint and of the answer at the same pixels, and how many pairs it was read on. */
 export const PartStep = Schema.Struct({
   part: Schema.String,
   meets: Schema.String,
+  under: Schema.String,
   laid: Schema.Finite,
   answer: Schema.Finite,
   pairs: Schema.Int,
@@ -604,10 +605,11 @@ const regionsOf = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster
 };
 
 /**
- * Each line where two parts' paint meets (four ways, both lighter than the
- * ink in the answer `laid`): the mean L* step across it of the laid paint
- * (`composite`) and of the answer at the same pixels. The lay tones each
- * part's paint on its own, so a step the answer does not paint is the lay's.
+ * Each line where two parts' paint meets under one moving part (four ways,
+ * both lighter than the ink in the answer `laid`): the mean L* step across
+ * it of the laid paint (`composite`) and of the answer at the same pixels.
+ * The lay tones each part's paint on its own, so a step the answer does not
+ * paint is the lay's.
  */
 const stepsAcross = (sheet: Sheet, at: Uint8Array, composite: Raster, laid: Raster) => {
   const { width: w, height: h } = composite;
@@ -615,7 +617,7 @@ const stepsAcross = (sheet: Sheet, at: Uint8Array, composite: Raster, laid: Rast
   const lightness = (r: Raster, i: number) => labOf(rgbAt(r, i))[0];
   const lines = new Map<
     string,
-    { a: number; b: number; laid: number; answer: number; pairs: number }
+    { a: number; b: number; under: number; laid: number; answer: number; pairs: number }
   >();
   for (let i = 0; i < w * h; i++) {
     const ahead = [
@@ -627,19 +629,21 @@ const stepsAcross = (sheet: Sheet, at: Uint8Array, composite: Raster, laid: Rast
       if (!inside || ki === 0 || kj === 0 || ki === kj) continue;
       if (!lightAt(laid, i) || !lightAt(laid, j)) continue;
       const [p, q] = (ki < kj && [i, j]) || [j, i];
-      const [a, b] = [Math.min(ki, kj), Math.max(ki, kj)];
-      const line = lines.get(`${a}/${b}`) ?? { a, b, laid: 0, answer: 0, pairs: 0 };
-      lines.set(`${a}/${b}`, line);
+      const [a, b, under] = [Math.min(ki, kj), Math.max(ki, kj), sheet.owner[p] ?? 0];
+      const key = `${a}/${b}/${under}`;
+      const line = lines.get(key) ?? { a, b, under, laid: 0, answer: 0, pairs: 0 };
+      lines.set(key, line);
       line.laid += lightness(composite, p) - lightness(composite, q);
       line.answer += lightness(laid, p) - lightness(laid, q);
       line.pairs += 1;
     }
   }
   return [...lines.values()]
-    .sort((x, y) => x.a - y.a || x.b - y.b)
+    .sort((x, y) => x.a - y.a || x.b - y.b || x.under - y.under)
     .map((l) => ({
       part: name(l.a),
       meets: name(l.b),
+      under: name(l.under),
       laid: round2(l.laid / l.pairs),
       answer: round2(l.answer / l.pairs),
       pairs: l.pairs,

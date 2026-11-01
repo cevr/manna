@@ -214,7 +214,13 @@ describe('the part sheet lay', () => {
       Bool.match(x >= 30, { onTrue: () => OLIVE, onFalse: () => TUNIC });
     const stepped = layOn(ARM, { cloth, still: torsoOverRobe })(() => TUNIC);
     expect(stepped.step).toEqual([
-      expect.objectContaining({ part: 'torso', meets: 'robe', answer: 0, verdict: 'outside' }),
+      expect.objectContaining({
+        part: 'torso',
+        meets: 'robe',
+        under: 'arm',
+        answer: 0,
+        verdict: 'outside',
+      }),
     ]);
     expect(missedBars(stepped)).toContain('step');
   });
@@ -224,7 +230,7 @@ describe('the part sheet lay', () => {
       Bool.match(y < 26, { onTrue: () => OLIVE, onFalse: () => TUNIC });
     const kept = layOn(ARM, { cloth, still: torsoOverRobe })(cloth);
     expect(kept.step).toEqual([
-      expect.objectContaining({ part: 'torso', meets: 'robe', verdict: 'within' }),
+      expect.objectContaining({ part: 'torso', meets: 'robe', under: 'arm', verdict: 'within' }),
     ]);
     expect(missedBars(kept)).not.toContain('step');
   });
