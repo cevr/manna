@@ -10,6 +10,7 @@ import { type AskRecord, askStatus, askedIn } from '../../core/ask.ts';
 import { reviewFileUrl } from '../../core/api.ts';
 import { ReviewFileUnknown } from '../../core/refusals.ts';
 import { AskStore } from '../ask-store.ts';
+import { StoreLocked } from '../errors.ts';
 import type { FilmName } from '../film-repo.ts';
 import { echoPages, noRenders, noStudio } from '../film-services/testing.ts';
 import { text } from '../host/testing.ts';
@@ -121,6 +122,26 @@ const labOver = (files: Map<string, Uint8Array>, published: Array<ReadonlyArray<
     labInMemory(files, echoPages, { asking: Layer.mergeAll(review, noStudio) }),
     set,
   );
+};
+
+/** An ask store whose lab is down: every call fails as locked, and is named in `called`. */
+const labDown = (called: Array<string>) => {
+  const down = (what: string) =>
+    Effect.suspend(() => {
+      called.push(what);
+      return Effect.fail(StoreLocked.make({ file: '/nonexistent/loop-probe-x/asks' }));
+    });
+  return AskStore.of({
+    dir: '/nonexistent/loop-probe-x/asks',
+    file: (id) => `/nonexistent/loop-probe-x/asks/${id}.json`,
+    make: () => down('make'),
+    read: () => down('read'),
+    page: () => down('page'),
+    list: down('list'),
+    answerPage: () => down('answerPage'),
+    shownFile: () => down('shownFile'),
+    close: () => down('close'),
+  });
 };
 
 /** The build's asks about the film that still ask; the lab shows their asker as `concept build`. */
@@ -302,6 +323,20 @@ describe('the build asks the owner once', () => {
       yield* buildGraph(stages, okra);
       expect(drew).toHaveLength(1);
     }).pipe(Effect.provide(labOver(filesOf(), [])));
+  });
+
+  it.effect('a plan reads no lab: a down lab plans the ask from the cache', () => {
+    const files = filesOf();
+    const stages = [askStage(film, ['lead-feast'], ownerNeeds([member]))];
+    const called: Array<string> = [];
+    return Effect.gen(function* () {
+      yield* buildGraph(stages, options());
+      const plan = yield* buildGraph(stages, options({ plan: true })).pipe(
+        Effect.provideService(AskStore, labDown(called)),
+      );
+      expect(statesOf(plan)).toEqual({ ask: 'cached' });
+      expect(called).toEqual([]);
+    }).pipe(Effect.provide(labOver(files, [])));
   });
 
   it.effect('no kept need: no ask is made', () => {

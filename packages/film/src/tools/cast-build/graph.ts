@@ -13,7 +13,8 @@
 // `waiting-spend`; a stage that needs the owner fails as `waiting-owner`.
 // Neither is cached, so the next build asks again; the manifest keeps only
 // what it waited on, by key. Every stage below a waiting or failed stage
-// takes its state without running. `plan` runs no stage: one whose key is not
+// takes its state without running. `plan` runs no stage and reads nothing but
+// the cache and the input files (no lab, no network): one whose key is not
 // in the manifest is `stale`, and so is every stage below it, its output
 // unknown, unless it last waited at that key, when it waits again (a plan
 // granted its spend calls it stale); `touch` plans as if those files changed.
@@ -147,7 +148,9 @@ export interface Stage<R> {
   readonly promote?: (ctx: StageContext) => Effect.Effect<void, StageFailed, R>;
   /**
    * Whether a cached output still answers its key: one that no longer does
-   * (the ask it names was closed) is run again as if never built.
+   * (the ask it names was closed) is run again as if never built. A plan does
+   * not ask it: it may read the live lab, and a plan reads only the cache, so
+   * it plans from the output last recorded.
    */
   readonly holds?: (output: Uint8Array) => Effect.Effect<boolean, StageFailed, R>;
 }
@@ -734,7 +737,8 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
       );
     let decision: Decision = yield* decideOver(Option.none());
     let spent = Option.none<string>();
-    const holds = Option.fromUndefinedOr(stage.holds);
+    // a plan reads only the cache, so it takes the output last recorded as holding
+    const holds = Option.filter(Option.fromUndefinedOr(stage.holds), () => !options.plan);
     if (decision._tag === 'cached' && Option.isSome(holds)) {
       // a cached output that no longer holds is built again
       const output = decision.output;
