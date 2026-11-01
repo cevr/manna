@@ -55,6 +55,8 @@ def mp4_frames(path: str):
         yield f"f{i:03d}", canvas_of_video(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB))
         i += 1
     cap.release()
+    if i == 0:
+        raise FileNotFoundError(f"no frames in {path}: it opens and decodes no frame")
 
 
 def png_frames(d: str, limit: int | None = None):
