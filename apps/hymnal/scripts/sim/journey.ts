@@ -106,6 +106,12 @@ const Step = Schema.Union([
   }),
   Schema.Struct({
     ...common,
+    action: Schema.Literal('pinch'),
+    at: From,
+    scale: Schema.Finite.check(Schema.isGreaterThan(0), Schema.isLessThanOrEqualTo(4)),
+  }),
+  Schema.Struct({
+    ...common,
     action: Schema.Literal('hold'),
     target: Target,
     ms: Schema.optionalKey(Positive),
@@ -238,6 +244,11 @@ const act = (d: DriveMembers, place: Place, step: Step) => {
         d.gesture(place, { from, dx: step.dx, dy: step.dy, ms: step.ms ?? PAN_MS }),
         none,
       );
+    }
+    case 'pinch': {
+      // The decoder refused every `at` that is neither a point nor a target.
+      const at = Option.getOrElse(panStart(step.at), () => step.at);
+      return Effect.as(d.pinch(place, at, step.scale), none);
     }
     case 'hold':
       return Effect.as(

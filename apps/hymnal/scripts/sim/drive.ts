@@ -975,6 +975,26 @@ export const gesture = Effect.fn('Sim.gesture')(function* (place: Place, pan: Pa
   );
 });
 
+/**
+ * Pinch as two fingers do (iOS), centred on a point or a target's centre:
+ * `scale` below 1 closes the fingers (a pinch in), above 1 spreads them.
+ * agent-device's `gesture pinch` takes no duration.
+ */
+export const pinch = Effect.fn('Sim.pinch')(function* (
+  place: Place,
+  at: Point | string,
+  scale: number,
+) {
+  const session = yield* readSession(place);
+  if (session.platform !== 'ios')
+    return yield* NotOnPlatform.make({ command: 'gesture', platform: session.platform });
+  const udid = yield* booted(session);
+  let centre = at;
+  if (Predicate.isString(centre)) centre = yield* centreOf(session, centre);
+  yield* inApp(udid, ['gesture', 'pinch', String(scale), String(centre.x), String(centre.y)]);
+  return outcome(session.platform, {}, { x: centre.x, y: centre.y, scale });
+});
+
 /** Press and hold the target for `ms` (iOS), then wait `settle` seconds for what it opens. */
 export const hold = Effect.fn('Sim.hold')(function* (
   place: Place,
@@ -1174,6 +1194,7 @@ export interface DriveMembers {
   readonly down: Hosted<typeof down>;
   readonly sees: Hosted<typeof sees>;
   readonly gesture: Hosted<typeof gesture>;
+  readonly pinch: Hosted<typeof pinch>;
   readonly hold: Hosted<typeof hold>;
   readonly relaunch: Hosted<typeof relaunch>;
   readonly clean: Hosted<typeof clean>;
@@ -1207,6 +1228,7 @@ export const DriveLive = Layer.effect(
       down: hosted(down),
       sees: hosted(sees),
       gesture: hosted(gesture),
+      pinch: hosted(pinch),
       hold: hosted(hold),
       relaunch: hosted(relaunch),
       clean: hosted(clean),

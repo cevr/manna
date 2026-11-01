@@ -76,6 +76,7 @@ const standIn = (calls: Array<Call>, out: string, missing: ReadonlyArray<string>
     down: step('down'),
     clean: step('clean'),
     gesture: step('gesture'),
+    pinch: step('pinch'),
     hold: step('hold'),
     relaunch: step('relaunch'),
     sees: (_place, target, seconds) =>
@@ -228,6 +229,32 @@ describe('sim journey', () => {
         },
       });
       expect(run.kept).toEqual(run.lines);
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.scoped('a pinch step pinches on its target or point at its scale', () =>
+    Effect.gen(function* () {
+      const pinching = {
+        feature: 'chords',
+        platform: 'ios',
+        steps: [
+          { name: 'in', action: 'pinch', at: 'id=list', scale: 0.6, receipt: 'none' },
+          { name: 'out', action: 'pinch', at: '200,400', scale: 1.6, receipt: 'none' },
+        ],
+      };
+      const run = yield* runJourney(toJson(pinching), ['journey', 'chords'], []);
+      expect(Exit.isSuccess(run.exit)).toBe(true);
+      const pinches = run.calls.filter((call) => call.op === 'pinch');
+      expect(pinches.map((call) => call.args)).toEqual([
+        ['id=list', 0.6],
+        [{ x: 200, y: 400 }, 1.6],
+      ]);
+      const bad = yield* runJourney(
+        toJson({ ...pinching, steps: [{ name: 'in', action: 'pinch', at: 'id=list', scale: 5 }] }),
+        ['journey', 'chords'],
+        [],
+      );
+      expect(Exit.isFailure(bad.exit)).toBe(true);
     }).pipe(Effect.provide(BunServices.layer)),
   );
 

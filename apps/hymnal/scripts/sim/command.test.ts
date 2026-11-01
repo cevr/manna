@@ -3,8 +3,8 @@
  * step runs, `boot` on iOS hands the dev server a Hermes compiler (the one
  * `HERMESC_PATH` names, else the one react-native depends on), and `open`
  * retries once, terminating the app, when its target is missing on iOS.
- * The journey's verbs read their arguments here: `gesture pan` and
- * `gesture edge-pan`, `hold` with its press and settle, `relaunch`, and
+ * The journey's verbs read their arguments here: `gesture pan`,
+ * `gesture edge-pan` and `gesture pinch`, `hold` with its press and settle, `relaunch`, and
  * `down --clean`, which cleans whether or not a drive was booted.
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -82,6 +82,7 @@ const standIn = (
     },
     clean: step('clean'),
     gesture: step('gesture'),
+    pinch: step('pinch'),
     hold: step('hold'),
     relaunch: step('relaunch'),
     sees: (...args) => Effect.sync(() => void calls.push({ op: 'sees', args })),
@@ -308,6 +309,36 @@ describe('sim commands over the Drive service', () => {
     }).pipe(Effect.provide(BunServices.layer)),
   );
 
+  it.scoped('gesture pinch pinches on a point or a target at the scale it is given', () =>
+    Effect.gen(function* () {
+      const place = yield* coldPlace;
+      const cases: ReadonlyArray<readonly [ReadonlyArray<string>, Array<unknown>]> = [
+        [
+          ['id=list', '0.6'],
+          ['id=list', 0.6],
+        ],
+        [
+          ['label=Topics, all at once', '1.6'],
+          ['label=Topics, all at once', 1.6],
+        ],
+        [
+          ['200,400', '0.97'],
+          [{ x: 200, y: 400 }, 0.97],
+        ],
+        [
+          ['id=list', '4'],
+          ['id=list', 4],
+        ],
+      ];
+      for (const [args, pinch] of cases) {
+        const { exit, calls, printed } = yield* sim(place, ['gesture', 'pinch', ...args]);
+        expect(Exit.isSuccess(exit)).toBe(true);
+        expect(driven(calls)).toEqual([{ op: 'pinch', args: pinch }]);
+        expect(printed[0]?.ok === true && printed[0].command).toBe('gesture');
+      }
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
   it.scoped('gesture edge-pan pans right from the left edge, its defaults overridable', () =>
     Effect.gen(function* () {
       const place = yield* coldPlace;
@@ -365,6 +396,11 @@ describe('sim commands over the Drive service', () => {
         ['gesture', 'pan', '-5,20', '10', '0'],
         ['gesture', 'edge-pan', '--ms', '0'],
         ['gesture', 'swipe', '10,20', '1', '0'],
+        ['gesture', 'pinch', 'id=list'],
+        ['gesture', 'pinch', 'id=list', '0'],
+        ['gesture', 'pinch', 'id=list', '4.5'],
+        ['gesture', 'pinch', 'id=list', 'in'],
+        ['gesture', 'pinch', '-5,20', '0.6'],
         ['hold'],
         ['hold', 'id=x', '--ms', '0'],
         ['hold', 'id=x', '--settle', '-1'],

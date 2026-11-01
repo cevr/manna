@@ -94,6 +94,9 @@ export const report = <R>(
 /** The x, in points, an edge pan starts at: inside the screen's left edge. */
 const EDGE_X = 3;
 
+/** The widest spread a pinch asks: past it the fingers leave a phone's screen. */
+const PINCH_MOST = 4;
+
 /** A whole-number flag above 0, `fallback` when not given. */
 const positive = (name: string, fallback: number, description: string) =>
   Flag.Int(name).pipe(
@@ -464,9 +467,32 @@ export const simCommand = (place: Place) => {
       ),
   ).pipe(Command.withDescription("Pan right from the screen's left edge: the back swipe (iOS)"));
 
+  const pinchCommand = Command.make(
+    'pinch',
+    {
+      at: Argument.String('at').pipe(
+        Argument.filterMap(panStart, (at) => `${at} is no x,y point and no target`),
+        Argument.withDescription('x,y in points (10,20), or a target whose centre the pinch is on'),
+      ),
+      scale: Argument.Finite('scale').pipe(
+        Argument.filter(
+          (scale) => scale > 0 && scale <= PINCH_MOST,
+          (scale) => `scale ${scale} is not above 0 and at most ${PINCH_MOST}`,
+        ),
+        Argument.withDescription('below 1 the fingers close (a pinch in), above 1 they spread'),
+      ),
+      state,
+    },
+    (flags) =>
+      report(
+        'gesture',
+        drive((d) => d.pinch(at(flags.state), flags.at, flags.scale)),
+      ),
+  ).pipe(Command.withDescription('Pinch two fingers in or out on a point or a target (iOS)'));
+
   const gestureCommand = Command.make('gesture').pipe(
-    Command.withDescription('Pan as a finger does (iOS)'),
-    Command.withSubcommands([panCommand, edgePanCommand]),
+    Command.withDescription('Pan or pinch as fingers do (iOS)'),
+    Command.withSubcommands([panCommand, edgePanCommand, pinchCommand]),
   );
 
   const holdCommand = Command.make(
