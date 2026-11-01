@@ -12,7 +12,7 @@
 // a missed bar, not a pass, and every moving part must hide some paint
 // (`film concept parts`, `part-sheet-cli.ts`, keeps the best answer).
 
-import { Array as Arr, Boolean as Bool, Option, Result, Schema } from 'effect';
+import { Array as Arr, Boolean as Bool, Option, Order, Result, Schema } from 'effect';
 import { componentsOf, deltaE, labOf, rgbAt } from '../core/cast-sheet-pixels.ts';
 import { grainOf } from '../core/grain.ts';
 import { type cutParts, paintHidden, recompose } from '../core/part-sheet.ts';
@@ -736,38 +736,90 @@ const measureHidden = (
  * recomposed.
  */
 export const missedBars = (m: HiddenMeasures): ReadonlyArray<string> =>
+  missesOf(m).map((miss) => miss.bar);
+
+/** How far a read lies past its bar, in the bar's own allowance: 0 at the bar or inside it. */
+const pastBy = (excess: number, allowance: number) => Math.max(0, excess) / allowance;
+
+/** The reads of `reads` outside their bar. */
+const outside = <A extends { readonly verdict: string }>(reads: ReadonlyArray<A>) =>
+  reads.filter((r) => r.verdict === 'outside');
+
+/**
+ * Each bar a measure misses (as `missedBars` names them) and its weight:
+ * 1, plus how far its furthest read lies past the bar in the bar's own
+ * allowance (seam 10 ΔE, drift 5 ΔE, chroma 3, grain 0.5, speck 0.04, step
+ * 5 L*). The allowance is how far the bar lets a read stray from the kept
+ * view, so bars of other units weigh alike: a read one allowance past its
+ * bar weighs as one more missed bar. A miss with no size (a read too thin,
+ * paint visible at rest, the view not recomposed) weighs 1.
+ */
+export const missesOf = (
+  m: HiddenMeasures,
+): ReadonlyArray<{ readonly bar: string; readonly weight: number }> =>
   Arr.filter(
     [
-      ['paint', m.paintUnder.length > 0 && m.paintUnder.every((p) => p.px > 0)],
-      ['seam', Option.exists(m.seam.deltaE, (d) => d <= BARS.seamDeltaE)],
+      ['paint', m.paintUnder.length > 0 && m.paintUnder.every((p) => p.px > 0), []],
+      [
+        'seam',
+        Option.exists(m.seam.deltaE, (d) => d <= BARS.seamDeltaE),
+        Option.toArray(m.seam.deltaE).map((d) => pastBy(d - BARS.seamDeltaE, BARS.seamDeltaE)),
+      ],
       [
         'drift',
         m.drift.px > 0 &&
           m.drift.deltaE <= BARS.driftDeltaE &&
           m.drift.chroma.every((c) => c.verdict === 'within'),
+        [
+          pastBy(m.drift.deltaE - BARS.driftDeltaE, BARS.driftDeltaE) * Number(m.drift.px > 0),
+          ...outside(m.drift.chroma).map((c) =>
+            pastBy(c.kept.chroma - c.painted.chroma - BARS.chromaDrop, BARS.chromaDrop),
+          ),
+        ],
       ],
       [
         'grain',
         m.grain.some((g) => g.verdict === 'within') &&
           m.grain.every((g) => g.verdict !== 'outside'),
+        outside(m.grain).map((g) =>
+          pastBy(Math.abs(g.painted.robust - g.kept.robust) - BARS.grainWithin, BARS.grainWithin),
+        ),
       ],
-      ['speck', m.speck.every((s) => s.verdict === 'within')],
-      ['step', m.step.every((s) => s.verdict === 'within')],
-      ['visible', m.visibleAtRest === BARS.visibleAtRest],
-      ['recompose', m.recomposeByteEqual],
+      [
+        'speck',
+        m.speck.every((s) => s.verdict === 'within'),
+        outside(m.speck).map((s) =>
+          pastBy(s.painted.share - s.kept.share - BARS.speckOver, BARS.speckOver),
+        ),
+      ],
+      [
+        'step',
+        m.step.every((s) => s.verdict === 'within'),
+        outside(m.step).map((s) =>
+          pastBy(Math.abs(s.laid - s.answer) - BARS.stepWithin, BARS.stepWithin),
+        ),
+      ],
+      ['visible', m.visibleAtRest === BARS.visibleAtRest, []],
+      ['recompose', m.recomposeByteEqual, []],
     ] as const,
     ([, met]) => !met,
-  ).map(([name]) => name);
+  ).map(([bar, , past]) => ({ bar, weight: 1 + Math.max(0, ...past) }));
 
-/** How an answer ranks, lower first: one that leaves a moving part unpainted after every one that paints them all, then by bars missed, then by seam. */
-export const rankOf = (m: HiddenMeasures): readonly [number, number, number] => {
-  const missed = missedBars(m);
+/** How an answer ranks, lower first: one that leaves a moving part unpainted after every one that paints them all, then by its misses' weight, then by seam. */
+const rankOf = (m: HiddenMeasures): readonly [number, number, number] => {
+  const misses = missesOf(m);
   return [
-    Number(missed.includes('paint')),
-    missed.length,
+    Number(misses.some((miss) => miss.bar === 'paint')),
+    misses.reduce((sum, miss) => sum + miss.weight, 0),
     Option.getOrElse(m.seam.deltaE, () => Number.POSITIVE_INFINITY),
   ];
 };
+
+/** Two answers' measures in their rank's order, the better first. */
+export const rankOrder: Order.Order<HiddenMeasures> = Order.mapInput(
+  Order.Tuple([Order.Number, Order.Number, Order.Number]),
+  rankOf,
+);
 
 /** The parts laid side by side over `ground`, a view's width each; with `tint`, each painted pixel half magenta. */
 export const sheetStrip = (sheet: Sheet, ground: Rgb, tint: boolean): Raster => {

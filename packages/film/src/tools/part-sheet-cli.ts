@@ -59,7 +59,8 @@ import {
   layAnswer,
   magentaOf,
   missedBars,
-  rankOf,
+  missesOf,
+  rankOrder,
   sheetStrip,
 } from './part-sheet-lay.ts';
 import { decodePng, encodePng } from './png.ts';
@@ -423,14 +424,18 @@ const callLine = (label: string, c: CallLaid) =>
     onNone: () =>
       `parts ${label} answer ${c.n}: ${[c.state, ...Option.toArray(Option.fromUndefinedOr(c.reason))].join(' ')}`,
     onSome: (m) =>
-      `parts ${label} answer ${c.n}: seam=${Option.getOrElse(Option.map(m.seam.deltaE, String), () => 'unread')}/${m.seam.pairs} drift=${m.drift.deltaE} chroma=${m.drift.chroma.map((r) => `${r.part}<${r.under}:${r.painted.chroma}/${r.kept.chroma}:${r.verdict}`).join(',')} grain=${m.grain.map((g) => `${g.part}:${g.painted.robust}/${g.kept.robust}:${g.verdict}`).join(',')} speck=${m.speck.map((r) => `${r.part}<${r.under}:${r.painted.share}/${r.kept.share}:${r.verdict}`).join(',')} step=${m.step.map((s) => `${s.part}|${s.meets}<${s.under}:${s.laid}/${s.answer}/${s.pairs}:${s.verdict}`).join(',')} painted=${m.paintedPx}px visible=${m.visibleAtRest} missed=${(c.missed ?? []).join(',') || 'none'}`,
+      `parts ${label} answer ${c.n}: seam=${Option.getOrElse(Option.map(m.seam.deltaE, String), () => 'unread')}/${m.seam.pairs} drift=${m.drift.deltaE} chroma=${m.drift.chroma.map((r) => `${r.part}<${r.under}:${r.painted.chroma}/${r.kept.chroma}:${r.verdict}`).join(',')} grain=${m.grain.map((g) => `${g.part}:${g.painted.robust}/${g.kept.robust}:${g.verdict}`).join(',')} speck=${m.speck.map((r) => `${r.part}<${r.under}:${r.painted.share}/${r.kept.share}:${r.verdict}`).join(',')} step=${m.step.map((s) => `${s.part}|${s.meets}<${s.under}:${s.laid}/${s.answer}/${s.pairs}:${s.verdict}`).join(',')} painted=${m.paintedPx}px visible=${m.visibleAtRest} missed=${
+        missesOf(m)
+          .map((x) => `${x.bar}:${x.weight.toFixed(2)}`)
+          .join(',') || 'none'
+      }`,
   });
 
 /**
  * A view's part sheet made, laid again or checked. With `call`, one more
  * okra call is written to the ledger and then asked, refused once the view
  * has used its budget. Every call on the present input is laid; the best
- * (`rankOf`) is kept.
+ * (`rankOrder`) is kept.
  */
 export const runParts = Effect.fn('film.concept.parts.run')(function* (job: PartsJob) {
   const fs = yield* FileSystem.FileSystem;
@@ -515,10 +520,7 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
   const tried = laid.flatMap(({ call, at }) =>
     Result.match(at, { onFailure: () => [], onSuccess: (l) => [{ call, ...l }] }),
   );
-  const byRank = Order.mapInput(
-    Order.Tuple([Order.Number, Order.Number, Order.Number]),
-    (t: (typeof tried)[number]) => rankOf(t.measures),
-  );
+  const byRank = Order.mapInput(rankOrder, (t: (typeof tried)[number]) => t.measures);
   // the best answer by rank, the first drawn on a tie
   const found = Arr.reduce(tried, Option.none<(typeof tried)[number]>(), (best, t) =>
     Option.match(best, {

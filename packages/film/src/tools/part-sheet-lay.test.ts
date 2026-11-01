@@ -1,8 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { Boolean as Bool, Result } from 'effect';
+import { Boolean as Bool, Option, Result } from 'effect';
 import { type PartCut, cutParts } from '../core/part-sheet.ts';
 import type { Raster } from '../core/raster.ts';
-import { domainOf, hiddenOf, layAnswer, missedBars, rankOf } from './part-sheet-lay.ts';
+import {
+  type HiddenMeasures,
+  domainOf,
+  hiddenOf,
+  layAnswer,
+  missedBars,
+  rankOrder,
+} from './part-sheet-lay.ts';
 
 type Rgb = readonly [number, number, number];
 type Box = { readonly x0: number; readonly y0: number; readonly x1: number; readonly y1: number };
@@ -175,7 +182,7 @@ describe('the part sheet lay', () => {
       expect.objectContaining({ painted: { share: 0, px: 99 }, verdict: 'unverified' }),
     ]);
     expect(missedBars(under)).toContain('speck');
-    expect(rankOf(under)[1]).toBe(rankOf(atFloor)[1] + 1);
+    expect(rankOrder(under, atFloor)).toBe(1);
   });
 
   test('a region whose cells hold one pixel fewer than the chroma floor misses the drift bar and ranks below one at the floor', () => {
@@ -189,7 +196,7 @@ describe('the part sheet lay', () => {
       expect.objectContaining({ cells: 0, verdict: 'unverified' }),
     ]);
     expect(missedBars(under)).toContain('drift');
-    expect(rankOf(under)[1]).toBe(rankOf(atFloor)[1] + 1);
+    expect(rankOrder(under, atFloor)).toBe(1);
   });
 
   // a torso over a robe that meets it at y 26 behind the arm; the torso keeps an olive vest right of the arm, past the line
@@ -233,5 +240,73 @@ describe('the part sheet lay', () => {
       expect.objectContaining({ part: 'torso', meets: 'robe', under: 'arm', verdict: 'within' }),
     ]);
     expect(missedBars(kept)).not.toContain('step');
+  });
+
+  /** A measure that meets every bar, with the reads `over` names. */
+  const measured = (over: Partial<HiddenMeasures>): HiddenMeasures => ({
+    seam: { deltaE: Option.some(4), pairs: 80 },
+    drift: { deltaE: 3, px: 900, chroma: [] },
+    grain: [
+      {
+        part: 'robe',
+        painted: { robust: 1.5, plain: 2, n: 200 },
+        kept: { robust: 1.6, plain: 2, n: 200 },
+        verdict: 'within',
+      },
+    ],
+    speck: [],
+    step: [],
+    paintUnder: [{ part: 'armRight', px: 900 }],
+    paintedPx: 900,
+    visibleAtRest: 0,
+    recomposeByteEqual: true,
+    ...over,
+  });
+  const robeChroma = (painted: number, kept: number) => ({
+    part: 'robe',
+    under: 'armRight',
+    painted: { chroma: painted, px: 300 },
+    kept: { chroma: kept, px: 300 },
+    cells: 2,
+    verdict: 'outside' as const,
+  });
+  const robeStep = (laid: number, answer: number) => ({
+    part: 'robe',
+    meets: 'torso',
+    under: 'armRight',
+    laid,
+    answer,
+    pairs: 27,
+    verdict: 'outside' as const,
+  });
+
+  test('paint far greyer than its cloth ranks below paint that misses two bars by a little', () => {
+    // sower threeQuarterRight, measured: white robe paint (chroma 0.01 against 22.11) against a greyer torso and a step of -7.15 against -0.2
+    const far = measured({ drift: { deltaE: 3, px: 900, chroma: [robeChroma(0.01, 22.11)] } });
+    const near = measured({
+      drift: { deltaE: 3, px: 900, chroma: [robeChroma(7.43, 13.81)] },
+      step: [robeStep(-7.15, -0.2)],
+    });
+    expect(missedBars(far)).toEqual(['drift']);
+    expect(missedBars(near)).toEqual(['drift', 'step']);
+    expect(rankOrder(near, far)).toBe(-1);
+  });
+
+  test('of two answers whose misses are the same size, the one that misses one bar more ranks below', () => {
+    // the step 2.5 past its bar of 5 and the grain 0.25 past its bar of 0.5: each half its bar again
+    const step = measured({ step: [robeStep(7.5, 0)] });
+    const both = measured({
+      step: [robeStep(7.5, 0)],
+      grain: [
+        {
+          part: 'robe',
+          painted: { robust: 0.56, plain: 1, n: 200 },
+          kept: { robust: 1.31, plain: 2, n: 200 },
+          verdict: 'outside',
+        },
+      ],
+    });
+    expect(missedBars(both)).toEqual(['grain', 'step']);
+    expect(rankOrder(both, step)).toBe(1);
   });
 });
