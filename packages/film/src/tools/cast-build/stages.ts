@@ -70,8 +70,22 @@ const VERSION = {
   ask: '1',
 } as const;
 
-/** The reader's train: steps, batch, learning rate, seed, GPU and precision; a fixed step count, no wall-clock stop. */
-const TRAIN = { steps: 4800, batch: 32, lr: 1e-3, seed: 0, gpu: 'L4', precision: 'bf16' } as const;
+/**
+ * The reader's train: steps, batch, learning rate, seed, GPU, precision, its
+ * backbone and the input it reads (width and height in px); a fixed step
+ * count, no wall-clock stop. The backbone and input are `reader/model.py`'s
+ * (`BACKBONE`, `IN_W, IN_H`), held equal by `reader.test.ts`.
+ */
+export const TRAIN = {
+  steps: 4800,
+  batch: 32,
+  lr: 1e-3,
+  seed: 0,
+  gpu: 'L4',
+  precision: 'bf16',
+  backbone: 'facebook/dinov2-small',
+  inputSide: { width: 448, height: 560 },
+} as const;
 /** A train's cost in USD as the build counts it: S7b's measured $0.9229; Modal's billing holds the real figure. */
 const TRAIN_USD = 0.92;
 

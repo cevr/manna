@@ -3,14 +3,15 @@
 // each drawing's eval, when it is allowed; a rerun asks the reader nothing;
 // a change to one of the reader's source files is a new train.
 
+import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, Layer, Path } from 'effect';
+import { Effect, FileSystem, Layer, Path } from 'effect';
 import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore } from '../content-store.ts';
 import type { EntryFacts } from './coverage.ts';
 import { type BuildOptions, type Stage, buildGraph, fileInput, stageInput } from './graph.ts';
 import { CastReader } from './reader.ts';
-import { type Candidate, evalStage, trainStage, trainsetStage } from './stages.ts';
+import { type Candidate, TRAIN, evalStage, trainStage, trainsetStage } from './stages.ts';
 
 const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
   cache: '/cache',
@@ -195,5 +196,19 @@ describe('cast build: train and eval', () => {
         expect.stringMatching(/ shards=1$/),
       ]);
     }),
+  );
+
+  it.effect('the train config names the backbone and input model.py reads, in its key', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const model = yield* fs.readFileString(
+        new URL('../../../reader/model.py', import.meta.url).pathname,
+      );
+      expect(model).toContain(`BACKBONE = "${TRAIN.backbone}"`);
+      expect(model).toContain(`IN_W, IN_H = ${TRAIN.inputSide.width}, ${TRAIN.inputSide.height}`);
+      // the config is the train key's (`graph.ts` keys every stage by its config)
+      expect(trainStage(CANDIDATES, SOURCES).config).toContain(TRAIN.backbone);
+      expect(trainStage(CANDIDATES, SOURCES).config).toContain('"inputSide":{"width":448');
+    }).pipe(Effect.provide(BunFileSystem.layer)),
   );
 });

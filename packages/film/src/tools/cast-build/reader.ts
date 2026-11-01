@@ -33,6 +33,9 @@ export interface TrainConfig {
   readonly seed: number;
   readonly gpu: string;
   readonly precision: string;
+  /** The backbone's name (`facebook/dinov2-small`), and the input it reads in px. */
+  readonly backbone: string;
+  readonly inputSide: { readonly width: number; readonly height: number };
 }
 
 export interface TrainJob {
