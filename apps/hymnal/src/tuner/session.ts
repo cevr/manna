@@ -182,6 +182,8 @@ const activeStep = (session: Session, active: boolean): Step => {
       return stopInto(next, Phase.Away(), 'away');
     return stay(next);
   }
+  // Back in the foreground under a covering route: the read waits for the screen's return.
+  if (session.covered) return stay(next);
   // Back in the foreground: the permission may have changed in Settings meanwhile, even under a read in flight.
   const back = !session.active && Phase.$is('Checking')(phase);
   if (back || Phase.$is('Away')(phase) || Phase.$is('Denied')(phase)) return recheck(next);
@@ -197,8 +199,9 @@ const coveredStep = (session: Session, covered: boolean): Step => {
       return stopInto(next, Phase.Away(), 'covered');
     return stay(next);
   }
-  // Shown again: the permission is read again, as on the app's return.
-  if (session.covered && session.active && Phase.$is('Away')(phase)) return recheck(next);
+  // Shown again: the permission is read again, as on the app's return (it may have changed in Settings).
+  const waiting = Phase.$is('Away')(phase) || Phase.$is('Denied')(phase);
+  if (session.covered && session.active && waiting) return recheck(next);
   return stay(next);
 };
 

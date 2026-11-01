@@ -350,13 +350,10 @@ describe('the tuner sheet’s rule', () => {
     const covered = step(listening.session, Event.Covered({ covered: true }));
     expect(covered.session.phase._tag).toBe('Away');
     expect(tags(covered.work)).toEqual(['Stop:covered']);
-    // Background and back while covered: a read, never a start.
+    // Background and back while covered: nothing, the read waits for the screen's return.
     const away = step(covered.session, Event.Active({ active: false }));
-    const back = step(away.session, Event.Active({ active: true }));
-    const read = step(back.session, Event.Read({ permission: 'granted', check: 2 }));
-    expect([...tags(away.work), ...tags(back.work), ...tags(read.work)]).toEqual([
-      'ReadPermission',
-    ]);
+    const read = step(away.session, Event.Active({ active: true }));
+    expect([...tags(away.work), ...tags(read.work)]).toEqual([]);
     expect(read.session.phase._tag).toBe('Away');
     // Uncovered while in the background: nothing starts.
     const hidden = step(read.session, Event.Active({ active: false }));
@@ -364,7 +361,7 @@ describe('the tuner sheet’s rule', () => {
     // Uncovered while active: it reads again, then starts.
     const shown = step(read.session, Event.Covered({ covered: false }));
     expect(tags(shown.work)).toEqual(['ReadPermission']);
-    expect(tags(step(shown.session, Event.Read({ permission: 'granted', check: 3 })).work)).toEqual(
+    expect(tags(step(shown.session, Event.Read({ permission: 'granted', check: 2 })).work)).toEqual(
       ['Start'],
     );
     // A start that resolves after the cover is given back; covered while pausing stops into Away.
