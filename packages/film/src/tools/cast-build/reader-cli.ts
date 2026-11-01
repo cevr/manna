@@ -9,6 +9,10 @@
 //                            drawing and every class's probability
 //   eval --reader <r> --shard <tar>
 //                            a drawing's held renders read and scored (eval.py)
+//   chain --reader <r> --clip <mp4>
+//                            a member's clip read and chained (`chain.ts`):
+//                            runs, fitted keys, each band's IoU and the
+//                            drawings named; the read and the fits are cached
 //
 // `--reader` is a name `import` gave, a checkpoint's sha256, or `current`:
 // the reader `--lock` (the committed `reader.lock.json`) names. Reads and
@@ -18,9 +22,23 @@ import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
 import { Console, Effect, FileSystem, Option, Path, Schema } from 'effect';
+import { PuppetImagesBun } from '../../puppet/images-bun.ts';
 import { sha256Hex } from '../digest.ts';
 import { castCache } from './build-cli.ts';
+import { manifestOf } from './coverage-cli.ts';
 import { CastReader } from './reader.ts';
+import { chainClip } from './stages.ts';
+
+class ClipUnowned extends Schema.TaggedError<ClipUnowned>()('ClipUnowned', {
+  clip: Schema.String,
+}) {
+  override get message() {
+    return `${this.clip} lies in no cast member's folder (none above it has cutout/coverage.ts)`;
+  }
+}
+
+/** `reader chain --json`: the chain's report, with the reader, clip and member it ran on. */
+const OutJson = Schema.fromJsonString(Schema.Unknown);
 
 class ReaderUnknown extends Schema.TaggedError<ReaderUnknown>()('ReaderUnknown', {
   reader: Schema.String,
@@ -205,8 +223,67 @@ const evaluate = Command.make(
   Command.withDescription("Score a reader on a drawing's held renders; prints eval.py's JSON"),
 );
 
+/** The member a clip belongs to: the nearest folder above it with a `cutout/coverage.ts`. */
+const clipMember = Effect.fn('cast.reader.clipMember')(function* (clip: string) {
+  const path = yield* Path.Path;
+  const file = path.resolve(clip);
+  for (let dir = path.dirname(file); dir !== path.dirname(dir); dir = path.dirname(dir)) {
+    const manifest = yield* manifestOf(dir);
+    if (Option.isSome(manifest)) {
+      const { coverage } = manifest.value;
+      const named = (coverage.clips ?? []).find((c) => path.resolve(dir, c.file) === file);
+      return { memberDir: dir, coverage, bands: named?.bands ?? [] };
+    }
+  }
+  return yield* ClipUnowned.make({ clip });
+});
+
+const chain = Command.make(
+  'chain',
+  {
+    reader: readerFlag,
+    lock: lockFlag,
+    clip: Flag.String('clip').pipe(
+      Flag.withDescription("a clip inside a cast member's folder, as its manifest's clips name it"),
+    ),
+    json: jsonFlag,
+  },
+  Effect.fn('film.concept.reader.chain')(function* (input) {
+    const ckpt = yield* checkpointOf(input.reader, input.lock);
+    const { memberDir, coverage, bands } = yield* clipMember(input.clip);
+    const made = yield* chainClip({
+      ckpt,
+      clip: input.clip,
+      memberDir,
+      coverage,
+      bands,
+      cache: yield* castCache,
+    });
+    const out = { reader: input.reader, clip: input.clip, member: coverage.member, ...made };
+    if (input.json) return yield* Console.log(yield* Schema.encodeEffect(OutJson)(out));
+    for (const r of made.runs) yield* Console.log(`run f${r.from}-${r.to} ${r.drawing}`);
+    yield* Console.log(`keys ${made.keys.join(' ')}`);
+    for (const [band, iou] of Object.entries(made.iou)) {
+      const named = Object.entries(made.named[band] ?? {})
+        .map(([d, n]) => `${d} ${n}`)
+        .join(', ');
+      yield* Console.log(`f${band}: IoU ${iou.toFixed(4)}; ${named}`);
+    }
+    yield* Console.log(
+      `fits ${made.fits.run} run, ${made.fits.cached} cached, ${made.fits.ms} ms; chain ${made.ms} ms`,
+    );
+  }),
+).pipe(
+  Command.withDescription(
+    "Read a member's clip with a reader and chain it: runs, keys fitted (cached), each band's IoU and the drawings named",
+  ),
+  Command.provide(PuppetImagesBun),
+);
+
 export const reader = Command.make('reader').pipe(
-  Command.withDescription('The cast reader: import a checkpoint, read frames with it, score it'),
-  Command.withSubcommands([importReader, read, evaluate]),
+  Command.withDescription(
+    'The cast reader: import a checkpoint, read frames with it, score it, chain a clip with it',
+  ),
+  Command.withSubcommands([importReader, read, evaluate, chain]),
   Command.provide(CastReader.layer),
 );

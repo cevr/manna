@@ -21,12 +21,12 @@ import { FilmFolder, filmNamed } from '../film-repo.ts';
 import type { Pages } from '../pages.ts';
 import { coverageFacts } from './coverage-facts.ts';
 import { cutoutMembers, manifestOf, toStderr } from './coverage-cli.ts';
-import { BuildReport, Spend, type Stage, type StageReport, buildGraph } from './graph.ts';
+import { BuildReport, Spend, type StageReport, buildGraph } from './graph.ts';
 import { CastReader } from './reader.ts';
 import {
   type MemberStages,
-  type StageServices,
   askStage,
+  clipStages,
   evalStage,
   memberStages,
   ownerNeeds,
@@ -138,16 +138,18 @@ export const build = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArra
       const built = (yield* Effect.forEach(members, memberStages)).flat();
       const renders = rendersOf(built);
       const reader = yield* CastReader;
-      const stages: ReadonlyArray<Stage<StageServices | CastReader>> = [
+      const cache = yield* castCache;
+      const stages = [
         ...built,
         trainsetStage(renders),
         trainStage(renders, reader.sources),
         ...Object.values(renders).map(evalStage),
+        ...members.flatMap((m) => clipStages(m, built, cache)),
         askStage(ownerNeeds(members)),
       ];
       const report = yield* toStderr(
         buildGraph(stages, {
-          cache: yield* castCache,
+          cache,
           plan: input.plan,
           touch: input.touch,
           spend,

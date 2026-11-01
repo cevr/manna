@@ -44,10 +44,23 @@ export const Entry = Schema.Struct({
 });
 export interface Entry extends Schema.Schema.Type<typeof Entry> {}
 
-/** A member's manifest: every drawing the pipeline needs of him. */
+/**
+ * A clip the reader is scored on (`eval:clip:<id>`, `concept reader
+ * chain`): its file, from the member's folder, and the bands of frames
+ * (first and last, inclusive) its report means over beside the whole clip.
+ */
+export const Clip = Schema.Struct({
+  id: Schema.String,
+  file: Schema.String,
+  bands: Schema.Array(Schema.Tuple([Schema.Finite, Schema.Finite])),
+});
+export interface Clip extends Schema.Schema.Type<typeof Clip> {}
+
+/** A member's manifest: every drawing the pipeline needs of him, and the clips his reader is scored on. */
 export const Coverage = Schema.Struct({
   member: Schema.String,
   entries: Schema.Array(Entry),
+  clips: Schema.optionalKey(Schema.Array(Clip)),
 });
 export interface Coverage extends Schema.Schema.Type<typeof Coverage> {}
 

@@ -17,7 +17,7 @@
 // `CastReader.sources` names the files a train ships and is keyed by: every
 // file of the reader's folder but its tests.
 
-import { Config, Context, Duration, Effect, FileSystem, Layer, Path, Schema } from 'effect';
+import { Config, Context, Duration, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { sha256Hex } from '../digest.ts';
 import { collectWithin } from '../process.ts';
@@ -71,8 +71,12 @@ export type ReaderError = ReaderMissing | ReaderFailed;
 interface CastReaderService {
   /** The files a train ships and its key hashes, sorted: every file of the reader's folder but its tests. */
   readonly sources: ReadonlyArray<string>;
-  /** `frames` read by the checkpoint at `ckpt`: read.py's JSON (every class's probability per frame). */
-  readonly read: (ckpt: string, frames: Frames) => Effect.Effect<string, ReaderError>;
+  /** `frames` read by the checkpoint at `ckpt`: read.py's JSON (every class's probability per frame); each frame as mapped onto the canvas written to `mapped` as `<id>.png`, when named. */
+  readonly read: (
+    ckpt: string,
+    frames: Frames,
+    mapped?: string,
+  ) => Effect.Effect<string, ReaderError>;
   /** The held samples of `shard` (a drawing's renders tar) read by `ckpt` and scored: eval.py's JSON. */
   readonly evaluate: (ckpt: string, shard: string) => Effect.Effect<string, ReaderError>;
   /** One reader trained on Modal: the checkpoint's bytes and the train's result JSON. It spends. */
@@ -177,7 +181,11 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
       const failedAs = (what: string) => (e: { readonly message: string }) =>
         ReaderFailed.make({ what, reason: e.message });
 
-      const read = Effect.fn('CastReader.read')(function* (ckpt: string, frames: Frames) {
+      const read = Effect.fn('CastReader.read')(function* (
+        ckpt: string,
+        frames: Frames,
+        mapped?: string,
+      ) {
         return yield* Effect.scoped(
           Effect.gen(function* () {
             const scratch = yield* fs.makeTempDirectoryScoped();
@@ -194,6 +202,10 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
                 '--device',
                 'cpu',
                 '--all-probs',
+                ...Option.match(Option.fromUndefinedOr(mapped), {
+                  onNone: () => [],
+                  onSome: (m) => ['--save-mapped', path.resolve(m)],
+                }),
               ],
               READ_LIMIT,
             );
