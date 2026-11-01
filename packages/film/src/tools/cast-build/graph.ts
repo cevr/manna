@@ -21,10 +21,14 @@
 // A stage is decided under the manifest's lock (`ContentStore.transact`),
 // runs outside it, and is recorded under it again, so a plan or another build
 // reads the manifest while a 29 min train runs. The decision to run marks the
-// key as running (by build, pid, host and time); a second build that finds the mark of a
-// live process waits and decides again, so two builds never run one stage. A
-// run that dies lets its mark go; a mark whose process is gone on this host,
-// or from another host older than `RUNNING_LEASE_MS`, is cleared and taken over.
+// key as running (by build, pid, host, start and heartbeat); the build renews
+// the heartbeat every `HEARTBEAT` while the stage runs. A second build that
+// finds a live mark waits and decides again, so two builds never run one
+// stage. A run that dies lets its mark go; a mark whose process is gone on
+// this host, or from another host whose heartbeat is older than
+// `RUNNING_LEASE_MS`, is cleared and taken over. A build records what it ran
+// only while its mark still holds the key (fencing): one whose mark was taken
+// discards its output and reports it.
 // An optional input (`optionalInput`) holds its stage only while it is stale in
 // a plan: a stage reading what this build made of a set (the training set) runs
 // over the inputs that did not wait or fail.
@@ -38,6 +42,7 @@ import {
   Option,
   Path,
   Random,
+  Schedule,
   Schema,
 } from 'effect';
 import { ContentStore, type Manifest, Processes } from '../content-store.ts';
@@ -175,12 +180,13 @@ const Waited = Schema.Struct({
   reason: Schema.String,
 });
 
-/** A key a build runs now, outside the lock: which build, its process and host, and when it took the key (epoch ms). */
+/** A key a build runs now, outside the lock: which build, its process and host, when it took the key and its last heartbeat (epoch ms). */
 const Running = Schema.Struct({
   build: Schema.String,
   pid: Schema.Finite,
   host: Schema.String,
   at: Schema.optionalKey(Schema.Finite),
+  beat: Schema.optionalKey(Schema.Finite),
 });
 type Running = typeof Running.Type;
 
@@ -228,13 +234,33 @@ const checkOrder = <R>(stages: ReadonlyArray<Stage<R>>) => {
 /** How long a build waits before it decides again on a key another build runs. */
 const BUSY_SPACING = '100 millis';
 
+/** How often a build renews the marks of the stages it runs. */
+export const HEARTBEAT_MS = 60 * 1000;
+const HEARTBEAT = Schedule.spaced(HEARTBEAT_MS);
+
 /**
- * How long another host's mark holds its key: longer than the longest stage
- * (the train, about 29 min, which Modal stops at 45), with a margin. Its pid
- * cannot be asked on this host, so past this the mark is taken as left by a
- * build that died.
+ * How long another host's mark holds its key past its last heartbeat: five
+ * heartbeats. Its pid cannot be asked on this host, so past this the mark is
+ * taken as left by a build that died. A live owner renews its mark however
+ * long its stage runs, so the lease does not depend on any stage's timeout.
  */
-export const RUNNING_LEASE_MS = 60 * 60 * 1000;
+export const RUNNING_LEASE_MS = 5 * HEARTBEAT_MS;
+
+/** The manifest with `key`'s mark renewed at `now`, when `build` holds it. */
+const renewed = (
+  current: BuildManifest,
+  key: string,
+  build: string,
+  now: number,
+): BuildManifest => {
+  const mark = current.running?.[key];
+  if (mark?.build !== build) return current;
+  return { ...current, running: { ...current.running, [key]: { ...mark, beat: now } } };
+};
+
+/** Whether `build`'s mark holds `key`. */
+const holds = (current: BuildManifest, key: string, build: string) =>
+  current.running?.[key]?.build === build;
 
 /** The manifest without `key`'s running mark, when `build` holds it. */
 const unmarked = (current: BuildManifest, key: string, build: string): BuildManifest => {
@@ -336,15 +362,39 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
   }));
   /**
    * Whether the build that marked a key runs it still: on this host, its
-   * process runs; on another, whose pid means nothing here, its mark is
-   * younger than the lease (a mark with no time is older than the lease).
+   * process runs; on another, whose pid means nothing here, its last
+   * heartbeat (its start, before the first) is younger than the lease (a mark
+   * with neither is older than the lease).
    */
   const runs = (mark: Running) => {
     if (mark.host === processes.host) return processes.alive(mark.pid);
+    const last = Option.orElse(Option.fromUndefinedOr(mark.beat), () =>
+      Option.fromUndefinedOr(mark.at),
+    );
     return Effect.map(Clock.currentTimeMillis, (now) =>
-      Option.exists(Option.fromUndefinedOr(mark.at), (at) => now - at < RUNNING_LEASE_MS),
+      Option.exists(last, (at) => now - at < RUNNING_LEASE_MS),
     );
   };
+  /** Renew this build's mark on `key` every heartbeat, for as long as it runs. */
+  const heartbeat = (key: string) =>
+    Clock.currentTimeMillis.pipe(
+      Effect.flatMap((now) =>
+        store.update(manifest, (current) => renewed(current, key, build, now)),
+      ),
+      Effect.ignore,
+      Effect.repeat(HEARTBEAT),
+    );
+  /** The outcome of a run whose mark was taken while it ran: its output is not recorded. */
+  const fenced = (stage: { readonly id: string }) =>
+    Effect.as(
+      Effect.logWarning(
+        `cast.build.fenced stage=${stage.id} reason="another build took its key while it ran; its output is discarded"`,
+      ),
+      {
+        _tag: 'failed',
+        reason: Option.some('another build took its key while it ran; its output is discarded'),
+      } satisfies Outcome,
+    );
   /** The manifest's marks that still run: a stale one is cleared. */
   const liveMarks = (current: BuildManifest) =>
     Effect.map(
@@ -354,7 +404,25 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
   /** Run a stage outside the lock, then record what it made, or what it waited on, under it. */
   const runOutside = <R>(stage: Stage<R>, key: string, start: number) =>
     Effect.gen(function* () {
-      const ran = yield* stage.run(ctx).pipe(
+      /** Record `outcome` and `change` under the lock while this build's mark holds the key; else discard it. */
+      const record = (outcome: Outcome, change: (done: BuildManifest) => BuildManifest) =>
+        store
+          .transact(manifest, (current) => {
+            if (!holds(current, key, build))
+              return Effect.succeed([Option.none<Outcome>(), current] as const);
+            return Effect.succeed([
+              Option.some(outcome),
+              change(unmarked(current, key, build)),
+            ] as const);
+          })
+          .pipe(
+            Effect.flatMap(
+              Option.match({ onNone: () => fenced(stage), onSome: (o) => Effect.succeed(o) }),
+            ),
+          );
+      const ran = yield* Effect.scoped(
+        Effect.andThen(Effect.forkScoped(heartbeat(key)), stage.run(ctx)),
+      ).pipe(
         Effect.map((bytes) => ({ _tag: 'made' as const, bytes })),
         Effect.catchTags({
           WaitingSpend: (e) =>
@@ -380,22 +448,17 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
         const output = sha256Hex(ran.bytes);
         yield* store.writeFile(objectFile(output), ran.bytes);
         const ms = (yield* Clock.currentTimeMillis) - start;
-        return yield* store.transact(manifest, (current) => {
-          const done = unmarked(current, key, build);
-          return Effect.succeed([
-            { _tag: 'ran', output } satisfies Outcome,
-            { ...done, stages: { ...done.stages, [key]: { id: stage.id, output, ms } } },
-          ] as const);
-        });
+        return yield* record({ _tag: 'ran', output }, (done) => ({
+          ...done,
+          stages: { ...done.stages, [key]: { id: stage.id, output, ms } },
+        }));
       }
-      return yield* store.transact(manifest, (current) => {
-        const done = unmarked(current, key, build);
-        if (ran._tag !== 'waited') return Effect.succeed([ran, done] as const);
-        return Effect.succeed([
-          { _tag: ran.waited.state, reason: Option.some(ran.waited.reason) } satisfies Outcome,
-          { ...done, waited: { ...done.waited, [key]: ran.waited } },
-        ] as const);
-      });
+      if (ran._tag !== 'waited') return yield* record(ran, (done) => done);
+      const waited = ran.waited;
+      return yield* record({ _tag: waited.state, reason: Option.some(waited.reason) }, (done) => ({
+        ...done,
+        waited: { ...done.waited, [key]: waited },
+      }));
     }).pipe(
       Effect.onExit((exit) => {
         if (Exit.isSuccess(exit)) return Effect.void;

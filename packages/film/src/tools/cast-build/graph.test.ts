@@ -11,6 +11,7 @@ import { ContentStore, Processes } from '../content-store.ts';
 import {
   type BuildOptions,
   type Stage,
+  HEARTBEAT_MS,
   RUNNING_LEASE_MS,
   type StageFailed,
   WaitingOwner,
@@ -31,6 +32,23 @@ const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
 /** `build.json`'s running marks, as a test reads them. */
 const RunningMarks = Schema.fromJsonString(
   Schema.Struct({ running: Schema.Record(Schema.String, Schema.Unknown) }),
+);
+
+/** `build.json`'s stages and each running mark's build, as a test reads and writes them. */
+const Marks = Schema.fromJsonString(
+  Schema.Struct({
+    stages: Schema.Record(Schema.String, Schema.Unknown),
+    running: Schema.Record(
+      Schema.String,
+      Schema.Struct({
+        build: Schema.String,
+        pid: Schema.optionalKey(Schema.Finite),
+        host: Schema.optionalKey(Schema.String),
+        at: Schema.optionalKey(Schema.Finite),
+        beat: Schema.optionalKey(Schema.Finite),
+      }),
+    ),
+  }),
 );
 
 const servicesOver = (files: Map<string, Uint8Array>) =>
@@ -329,31 +347,78 @@ describe('the cast build graph', () => {
     ),
   );
 
-  it.effect("another host's mark holds its key for the lease, and is taken over past it", () => {
+  it.effect("another host's live build keeps its key past an hour: its heartbeat renews it", () => {
     const files = seeded();
-    const onHost = (host: string) =>
-      Effect.provideService(Processes, { host, alive: () => Effect.succeed(true) });
     return Effect.gen(function* () {
       const slow = yield* slowTrain;
       const first = yield* Effect.forkChild(buildGraph(slow.stages, options()).pipe(onHost('a')));
       yield* Deferred.await(slow.started);
-      // within the lease, a build on host b waits on a's mark
-      yield* TestClock.adjust(RUNNING_LEASE_MS - 60_000);
+      yield* TestClock.adjust('61 minutes');
       const waiting = yield* Effect.forkChild(buildGraph(slow.stages, options()).pipe(onHost('b')));
-      yield* TestClock.adjust('1 second');
+      yield* TestClock.adjust('20 minutes');
       expect(slow.runs()).toBe(1);
-      // past the lease, a's mark is taken as left by a build that died
-      yield* TestClock.adjust('2 minutes');
+      yield* Deferred.succeed(slow.release, true);
+      expect(statesOf(yield* Fiber.join(first))).toEqual({ train: 'ran' });
+      yield* TestClock.adjust('1 second');
+      expect(statesOf(yield* Fiber.join(waiting))).toEqual({ train: 'cached' });
+      expect(slow.runs()).toBe(1);
+    }).pipe(Effect.provide(servicesOver(files)));
+  });
+
+  it.effect("another host's mark whose heartbeat stopped frees its key after the lease", () => {
+    const files = seeded();
+    return Effect.gen(function* () {
+      const slow = yield* slowTrain;
+      const first = yield* Effect.forkChild(buildGraph(slow.stages, options()).pipe(onHost('a')));
+      yield* Deferred.await(slow.started);
+      // host a goes dark: its build stops (and its heartbeat with it), its mark left behind
+      const left = files.get('/cache/build.json') ?? text('');
+      yield* Fiber.interrupt(first);
+      files.set('/cache/build.json', left);
+      const second = yield* Effect.forkChild(buildGraph(slow.stages, options()).pipe(onHost('b')));
+      yield* TestClock.adjust(RUNNING_LEASE_MS - HEARTBEAT_MS);
+      expect(slow.runs()).toBe(1);
+      yield* TestClock.adjust(2 * HEARTBEAT_MS);
       yield* Deferred.await(slow.restarted);
       expect(slow.runs()).toBe(2);
       yield* Deferred.succeed(slow.release, true);
-      yield* Fiber.join(first);
-      yield* Fiber.join(waiting);
+      expect(statesOf(yield* Fiber.join(second))).toEqual({ train: 'ran' });
       const manifest = new TextDecoder().decode(files.get('/cache/build.json'));
       expect((yield* Schema.decodeEffect(RunningMarks)(manifest)).running).toEqual({});
     }).pipe(Effect.provide(servicesOver(files)));
   });
+
+  it.effect('a build whose mark was taken while it ran discards its output (fencing)', () => {
+    const files = seeded();
+    return Effect.gen(function* () {
+      const slow = yield* slowTrain;
+      const first = yield* Effect.forkChild(buildGraph(slow.stages, options()).pipe(onHost('a')));
+      yield* Deferred.await(slow.started);
+      // another build takes the key meanwhile (as host b would past a lost lease)
+      const manifest = new TextDecoder().decode(files.get('/cache/build.json'));
+      const [key] = Object.keys((yield* Schema.decodeEffect(RunningMarks)(manifest)).running);
+      const taken = yield* Schema.encodeEffect(Marks)({
+        stages: {},
+        running: { [key ?? '']: { build: 'other', pid: 1, host: 'b', at: 0, beat: 0 } },
+      });
+      files.set('/cache/build.json', text(taken));
+      yield* Deferred.succeed(slow.release, true);
+      const report = yield* Fiber.join(first);
+      expect(statesOf(report)).toEqual({ train: 'failed' });
+      expect(report.stages[0]?.reason).toEqual(
+        Option.some('another build took its key while it ran; its output is discarded'),
+      );
+      const after = yield* Schema.decodeEffect(Marks)(
+        new TextDecoder().decode(files.get('/cache/build.json')),
+      );
+      expect(after.stages).toEqual({});
+      expect(Object.values(after.running).map((mark) => mark.build)).toEqual(['other']);
+    }).pipe(Effect.provide(servicesOver(files)));
+  });
 });
+
+const onHost = (host: string) =>
+  Effect.provideService(Processes, { host, alive: () => Effect.succeed(true) });
 
 /**
  * A train that marks `started` at its first run and `restarted` at its second,
