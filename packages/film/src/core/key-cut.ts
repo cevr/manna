@@ -11,7 +11,7 @@
 // house width (`INK_WIDTH`) before the crop. Pure.
 
 import { Option } from 'effect';
-import { type Rgb, labOf, rgbAt } from './cast-sheet-pixels.ts';
+import { type Rgb, labsOf, rgbAt } from './cast-sheet-pixels.ts';
 import { rgbOfLab } from './part-sheet.ts';
 import type { Raster } from './raster.ts';
 
@@ -202,9 +202,11 @@ const flood = (
   for (const i of stack) reached[i] = 1;
   while (stack.length > 0) {
     const i = stack.pop() ?? 0;
-    const [x, y] = [i % width, Math.floor(i / width)];
-    for (const [dx, dy] of STEPS) {
-      const [nx, ny] = [x + dx, y + dy];
+    const x = i % width;
+    const y = Math.floor(i / width);
+    for (let s = 0; s < STEPS.length; s++) {
+      const nx = x + (STEPS[s]?.[0] ?? 0);
+      const ny = y + (STEPS[s]?.[1] ?? 0);
       const k = ny * width + nx;
       if (nx < 0 || ny < 0 || nx >= width || ny >= height || reached[k] || !pass(k)) continue;
       reached[k] = 1;
@@ -241,9 +243,10 @@ const classesOf = (r: Raster, ground: Rgb, limb: Limb) => {
   const { root, elbow, wrist } = limb;
   const fl = Math.hypot(wrist[0] - elbow[0], wrist[1] - elbow[1]);
   const fd = [(wrist[0] - elbow[0]) / fl, (wrist[1] - elbow[1]) / fl] as const;
+  const labAt = labsOf(r);
   for (let i = 0; i < n; i++) {
     const p: KeyPt = [(i % r.width) + 0.5, Math.floor(i / r.width) + 0.5];
-    const [l, a, b] = labOf(rgbAt(r, i));
+    const [l, a, b] = labAt(i);
     ink[i] = Number(l < 40);
     skin[i] = Number(l >= 40 && a > 14 && b > 18);
     fig[i] = Number(l < 40 || away(rgbAt(r, i), ground) > 45);
@@ -260,13 +263,16 @@ const grown = (width: number, height: number, of: Uint8Array, radius: number) =>
   const out = new Uint8Array(width * height);
   for (let i = 0; i < width * height; i++) {
     if (!of[i]) continue;
-    const [x, y] = [i % width, Math.floor(i / width)];
-    for (let dy = -radius; dy <= radius; dy++)
+    const x = i % width;
+    const y = Math.floor(i / width);
+    for (let dy = -radius; dy <= radius; dy++) {
+      const ny = y + dy;
+      if (ny < 0 || ny >= height) continue;
       for (let dx = -radius; dx <= radius; dx++) {
-        const [nx, ny] = [x + dx, y + dy];
-        if (dx * dx + dy * dy <= radius * radius && nx >= 0 && ny >= 0 && nx < width && ny < height)
-          out[ny * width + nx] = 1;
+        const nx = x + dx;
+        if (dx * dx + dy * dy <= radius * radius && nx >= 0 && nx < width) out[ny * width + nx] = 1;
       }
+    }
   }
   return out;
 };
@@ -319,10 +325,13 @@ const depthField = (
     for (let y = Math.max(0, by - reach); y <= Math.min(h - 1, by + reach); y++)
       for (let x = Math.max(0, bx - reach); x <= Math.min(w - 1, bx + reach); x++) {
         const i = y * w + x;
-        const [cx, cy] = [x + 0.5, y + 0.5];
-        const [qx, qy] = [Math.max(bx, Math.min(bx + 1, cx)), Math.max(by, Math.min(by + 1, cy))];
+        if (!mask[i]) continue;
+        const cx = x + 0.5;
+        const cy = y + 0.5;
+        const qx = Math.max(bx, Math.min(bx + 1, cx));
+        const qy = Math.max(by, Math.min(by + 1, cy));
         const d = Math.hypot(cx - qx, cy - qy);
-        if (!mask[i] || d >= (field.depth[i] ?? 0)) continue;
+        if (d >= (field.depth[i] ?? 0)) continue;
         field.depth[i] = d;
         field.nx[i] = (cx - qx) / d;
         field.ny[i] = (cy - qy) / d;
@@ -367,7 +376,9 @@ const outlined = (r: Raster, mask: Uint8Array, open: (i: number) => boolean, ink
   const n = w * h;
   const { depth, nx, ny } = depthField(w, h, mask, open, Math.ceil(LINE + OUTLINE_SLACK + 2));
   const depthAt = (i: number) => depth[i] ?? Infinity;
-  const labs = Array.from({ length: n }, (_, i) => labOf(rgbAt(r, i)));
+  const labAt = labsOf(r);
+  const labs: Rgb[] = [];
+  for (let i = 0; i < n; i++) labs.push(labAt(i));
   const isInk = (i: number) => (labs[i]?.[0] ?? 100) < 40;
   const rgba = Uint8Array.from(r.rgba);
   const full = rgbOfLab(ink);
