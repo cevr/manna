@@ -2937,19 +2937,21 @@ The reader's Python files take three roles (`tools/cast-build/reader.ts`
 every file they import: `train` is what `modal_app.py` runs (`modal_app.py`,
 `model.py`, `train.py`); `read` is what `read.py` runs, with the local
 environment (`pyproject.toml`, `uv.lock`); `eval` is `read` with
-`eval.py`. The scan reads code only: strings and comments are taken out
-first, so neither makes an edge or hides the import after it, and an import
-counts wherever a statement starts (a line's start, indented or not, after
-`;`, in a one-line suite such as `if x: import y`). It fails closed, naming
-the file and the line: an `import` left in code that no import statement it
-reads holds, an import it cannot read, a string that does not end, a quote
-in an f-string's format spec (`f"{x:'>3}"`; a nested field's string, as in
-`f"{x:{'>'}3}"`, is read), an import of one of the reader folder's own
-folders (a package it does not follow), and a file that imports through
-`importlib`, `__import__` or `runpy`, as each would hide an edge. Its rules
-are tested on an in-memory disk in `reader.test.ts`; the committed folder's
-roles, and the scan against CPython's `ast` over 2000 generated programs,
-are read in `reader.slow.test.ts`. The reader key is the
+`eval.py`. The scan (`scanOf`) is CPython's `ast`: one `python3 -I -B -c`
+spawn reads every `.py` file of the folder, handed over on stdin as JSON,
+and names each file's imports wherever they stand (indented, in a
+function, in a one-line suite such as `if x: import y`), so no string,
+comment or f-string makes an edge or hides one. It fails closed, naming
+the file and the line: a file CPython cannot parse (code valid in another
+Python version only fails too), a relative import, a name or an import of
+`importlib`, `__import__` or `runpy` (each would hide an edge), and an
+import of one of the reader folder's own folders (a package it does not
+follow). No python3 on PATH, or an answer that leaves a file out, fails
+the scan too, never with an import left out. The closure and the roles
+are tested on an in-memory disk in `reader.test.ts`, with a fake spawner
+that answers as the scan does; the real scan, over every import form and
+every fault, and the committed folder's roles are read in
+`reader.slow.test.ts`. The reader key is the
 training set, the config and the `train` files, each named by its basename
 and hash; the lock names those files as `trainer`. Each `eval` stage reads
 the `eval` files, and each `eval:clip` stage and the clip read cache

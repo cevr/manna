@@ -4722,7 +4722,7 @@ The form of an entry, each field on its own line:
 - **Source:** reader-key/round-1-review.md M1; reader-key/round-2-review.md B1
 - **Wrong:** The cast reader's import scan joined raw lines before it told strings and comments apart. A docstring holding `from example import (` swallowed the `import helper` after it, and a comment ending in a backslash joined the next line's import into itself, so `helper.py` left the read closure and an edit to it kept the clip read cache. Its tokenizer then read a quote in an f-string's format spec (`f"{x:'>3}"`) as a string's start: two such quotes on one line paired up, and the import between them was lost with no failure.
 - **Cause:** The scan matched import lines in the raw text; it had no tokenizer, so a string or a comment could open a continuation that consumed real code. The tokenizer's tests covered the forms its author thought of, not the rule over every string form.
-- **Guard:** code: `packages/film/src/tools/cast-build/reader.test.ts` `after a docstring that reads as an open import`, `packages/film/src/tools/cast-build/reader.test.ts` `after a comment that ends in a backslash`, `packages/film/src/tools/cast-build/reader.test.ts` `a string that does not end, or a quote in a format spec`, `packages/film/src/tools/cast-build/reader.test.ts` `import helper; b = f"{y:`
+- **Guard:** code: `packages/film/src/tools/cast-build/reader.slow.test.ts` `the scan reads every import form wherever it stands`, `packages/film/src/tools/cast-build/reader.slow.test.ts` `the scan fails closed, naming the file and the line`
 
 ### reader-scan-reads-one-line-suites-and-fails-closed
 
@@ -4732,7 +4732,17 @@ The form of an entry, each field on its own line:
 - **Source:** reader-key/round-1-review.md M2
 - **Wrong:** The scan read an import only at a statement's start or after `;`, so `if True: import helper` and `def load(): from helper import VALUE` in train.py were no edge: an edit to the helper left the reader key as it was, and the train adopted the committed checkpoint for code it was not trained under.
 - **Cause:** The scan listed the places an import may stand instead of failing on an `import` keyword it could not place.
-- **Guard:** code: `packages/film/src/tools/cast-build/reader.test.ts` `in a one-line if`, `packages/film/src/tools/cast-build/reader.test.ts` `in a one-line def`, `packages/film/src/tools/cast-build/reader.test.ts` `the scan fails closed: an import keyword it cannot place, an import it cannot read, a string that does not end`
+- **Guard:** code: `packages/film/src/tools/cast-build/reader.slow.test.ts` `the scan reads every import form wherever it stands`, `packages/film/src/tools/cast-build/reader.slow.test.ts` `the scan fails closed, naming the file and the line`
+
+### reader-scan-is-cpythons-ast
+
+- **Date:** 2026-11-01
+- **Kind:** review
+- **Said:** "In a formatted string, a backslash before `{` makes the scan lose its place, and it drops a real import with no failure."
+- **Source:** reader-key/round-3-review.md B1
+- **Wrong:** The hand tokenizer took `\{` in an f-string (`rf'\{{'`) as one escape, where Python reads the `{` as a field's start or half of a literal `{{`. Its quotes then paired up differently from Python's, and `PAD = rf'\{{'; import helper; END = '}'` in train.py left `helper.py` out of the train closure with no failure: the third silent miss in three reviews, each through a different part of the string grammar.
+- **Cause:** The scan was a second, hand-written copy of Python's tokenizer, and each fix closed one door of a grammar it did not hold whole. The scan now asks CPython's own `ast`, in one `python3` spawn, and fails closed on what it cannot follow.
+- **Guard:** code: `packages/film/src/tools/cast-build/reader.slow.test.ts` `the scan reads every import form wherever it stands`, `packages/film/src/tools/cast-build/reader.slow.test.ts` `the scan fails closed, naming the file and the line`
 
 ### cast-reader-unit-tests-stay-in-memory
 
