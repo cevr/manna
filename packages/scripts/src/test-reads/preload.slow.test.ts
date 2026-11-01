@@ -77,7 +77,13 @@ describe('the read recorder test:reads preloads', () => {
         const exit = yield* spawner.exitCode(
           ChildProcess.make('bun', [path.join(dir, 'child.js')], {
             cwd: dir,
-            env: { ...readsEnv(path.join(import.meta.dir, 'preload.ts'), log), HOME: home },
+            // Bun caches under XDG_CACHE_HOME when it is set, so it points inside
+            // the scratch HOME: a host's own setting cannot carry a write out of it.
+            env: {
+              ...readsEnv(path.join(import.meta.dir, 'preload.ts'), log),
+              HOME: home,
+              XDG_CACHE_HOME: path.join(home, '.cache'),
+            },
             extendEnv: true,
             forceKillAfter: '5 seconds',
           }),
