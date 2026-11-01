@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="94" height="176" viewBox="0 0 94 176">
+  <defs>
+    <clipPath id="body">
+      <path d="M 32.5 20 A 14.5 14.5 0 0 1 61.5 20 C 61.5 27, 58.5 31, 58.5 36 C 58.5 43, 66 47, 70 52 L 78 52 Q 88.5 52, 88.5 62 L 88.5 160 Q 88.5 170.5, 78 170.5 L 16 170.5 Q 5.5 170.5, 5.5 160 L 5.5 62 Q 5.5 52, 16 52 L 24 52 C 28 47, 35.5 43, 35.5 36 C 35.5 31, 32.5 27, 32.5 20 Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#body)">
+    <rect x="0" y="0" width="94" height="52" fill="#fcb65d"/>
+    <ellipse cx="43" cy="20" rx="6" ry="7" fill="#fccc7c"/>
+    <rect x="0" y="46" width="94" height="6" fill="#e68d39"/>
+    <rect x="0" y="52" width="94" height="27" fill="#fdf0d6"/>
+    <rect x="0" y="79" width="94" height="7" fill="#d1b1a9"/>
+    <rect x="0" y="86" width="94" height="90" fill="#fef0d5"/>
+    <polygon points="64,86 94,86 94,176 50,176" fill="#f3d8c1"/>
+  </g>
+  <path d="M 32.5 20 A 14.5 14.5 0 0 1 61.5 20 C 61.5 27, 58.5 31, 58.5 36 C 58.5 43, 66 47, 70 52 L 78 52 Q 88.5 52, 88.5 62 L 88.5 160 Q 88.5 170.5, 78 170.5 L 16 170.5 Q 5.5 170.5, 5.5 160 L 5.5 62 Q 5.5 52, 16 52 L 24 52 C 28 47, 35.5 43, 35.5 36 C 35.5 31, 32.5 27, 32.5 20 Z" fill="none" stroke="#231106" stroke-width="11" stroke-linejoin="round"/>
+</svg>

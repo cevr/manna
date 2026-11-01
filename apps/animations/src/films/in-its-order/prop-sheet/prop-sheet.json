@@ -1,0 +1,84 @@
+{
+  "film": "in-its-order",
+  "sheet": "props",
+  "props": [
+    "the scroll rolled on its two rollers, banded, with its gold seal (letter)",
+    "the scroll open on its two wooden rollers, the gold seal, no words (letter, quote)",
+    "the baby's bottle as lead-feast single-1 draws it",
+    "the book open, and closed with no title (newborn)",
+    "the ribbon of white from the book's pages into the cup (word)",
+    "the dropper of dark ink with a drop at its tip (mixed)",
+    "the clay cups: empty with its dark inside, and with milk"
+  ],
+  "scale": "The bottle is the scale: lead-feast's kept single-1 draws it 94 px wide and about 176 px tall, outline 9-12 px, on a 1024x1536 sheet whose head is 360 px; every prop is drawn to that bottle.",
+  "route": "okra image, ChatGPT subscription route (each run logged \"via codex\"), 1536x1024, run from this folder: okra image \"<prompt>\" --ref <ref> ... --size 1536x1024 -o tries/props-<n>.png",
+  "board": "The board files (../board/) are git-ignored and live only in the main checkout: the tries were drawn in a worktree, so okra got the main checkout's absolute path for each.",
+  "guide": {
+    "note": "guide/ holds the scale guides tries 3 and 4 read. Each guide is try 2 cut apart: its props rescaled to single-1's bottle and laid on a 1536x1024 ground #fefaed at the placements below, with the bottle drawn from bottle.svg. bottle-single-1-3x.png is single-1 cropped at [185,285,160,220], three times its size.",
+    "bottle.svg": "the bottle at single-1's size: 94 x 176 px, 11 px ink",
+    "placements": "Each source box [x,y,w,h] of tries/props-2.png, its scale, then its top-left on the guide: rolled [98,249,434,206] x1.0 at 74,250; open [560,84,532,435] x0.846 at 585,87; dropper [1015,575,103,347] x0.45 at 1316,296; book open [20,654,456,257] x0.947 at 74,693; book closed [472,642,276,279] x0.947 at 585,672; cups [1170,703,344,194] x0.66 at 1176,806; bottle.svg at 1130,274.",
+    "guide-3.png": "the placements, and try 2's ribbon [766,556,197,417] x0.75 at 925,622",
+    "guide-4.png": "the placements, the ribbon's place left empty: try 4's prompt asks for the board's arc of poured milk, with no ink"
+  },
+  "tries": [
+    {
+      "n": 1,
+      "file": "tries/props-1.png",
+      "prompt": "A prop sheet for a cut-paper animated film, drawn in the exact house look of the reference images: flat cut-paper shapes with clean simple silhouettes. Each object has ONE warm dark-brown outline around its silhouette, as thick as the outline of the baby's bottle the man holds in reference 1. Very few inner lines. Flat colour fills. Shade with colour only: each shade is the base colour turned toward a cooler or redder hue (cream shades to rose-lavender, terracotta to deep red-brown, wood to dark red-brown, white to pale lavender-blue). Never grey and never black shading. A thin lighter edge on the lit side. Light from the upper left. No gradients, no texture noise, no cast shadows on the ground. No text, no labels, no letters or numbers anywhere. No people, no hands, no table. Plain flat light background. Landscape sheet.\n\nScale: draw every prop at the scale of the man in reference 1, as if he could pick it up. The baby's bottle is the same size as in his hand in reference 1: about 95 px wide and about 240 px tall on this 1536 x 1024 sheet, with a dark outline about 11 px thick. Every other prop uses the same scale and the same outline thickness.\n\nLay out eight props in two rows, with clear empty space around each one. No prop touches or overlaps another.\n\nTop row, left to right:\n1. The scroll, rolled shut: cream paper wound around its two brown wooden rollers, side by side, with darker turned knob ends (as the scroll in reference 3), held shut by one round gold wax seal.\n2. The same scroll open: the cream paper unrolled flat between its two wooden rollers, as in reference 3, with the round gold seal on the paper. The paper is completely blank: no writing, no marks.\n3. The baby's bottle, exactly as the man holds it in reference 1, but standing upright alone with no hand: a cream rounded body (#fdf0d6, shaded #d5b09c on its left side), a thin darker collar line under the neck, a rounded orange-amber teat on top (#fcb65d, shaded #e68d39), and a flat rounded base.\n\nBottom row, left to right:\n4. A book lying open, its two cream pages curving up from the spine, a warm brown leather cover showing at the edges.\n5. The same book closed, in a slight three-quarter view, with a plain brown leather cover and no title.\n6. A long white ribbon flowing in a loose S-curve, as if it pours down: soft white (#fdf8ef) with pale lavender-blue (#d8d4ea) on the inner side of each turn.\n7. An ink dropper: a slim pale-blue glass tube with a round dark red-brown rubber bulb on top, dark indigo ink (#2b2440) inside the tube, and one dark ink drop at its tip.\n8. Two small terracotta clay cups like the clay cup in reference 4 (#bb5425, lit #e67837, shade #7d3517): one empty, its dark inside showing; one filled with white milk (#fde9c8, shade #e6d0c4) to just under the rim.\n\nColours: wood for the rollers #8a5233, shade #5f4535. Gold seal #e2a73c, shade #b8692a. The props' outline is a warm dark brown, a little lighter than the figure's outline in reference 1.",
+      "refs": [
+        "../../../library/cast/lead-feast/cast-sheet/kept/single-1.png",
+        "../../../../docs/ref/house-look.png",
+        "../board/cold.letter.4.png",
+        "../cast/feast-mother/cast-sheet/kept/poses.png"
+      ],
+      "underlay": false,
+      "flags": [],
+      "at": "2026-11-01T23:32:38.000Z"
+    },
+    {
+      "n": 2,
+      "file": "tries/props-2.png",
+      "prompt": "A prop sheet for a cut-paper animated film, drawn in the exact house look of the reference images: flat cut-paper shapes with clean simple silhouettes. Each object has ONE warm dark-brown outline around its silhouette, as thick as the outline of the baby's bottle the man holds in reference 1. Very few inner lines. Flat colour fills. Shade with colour only: each shade is the base colour turned toward a cooler or redder hue (cream shades to rose-lavender, terracotta to deep red-brown, wood to dark red-brown, white to pale lavender-blue). Never grey and never black shading. A thin lighter edge on the lit side. Light from the upper left. No gradients, no texture noise, no cast shadows on the ground. No text, no labels, no letters or numbers anywhere. No people, no hands, no table. Plain flat light background. Landscape sheet.\n\nScale: draw every prop at the scale of the man in reference 1, as if he could pick it up. The baby's bottle is the same size as in his hand in reference 1: about 95 px wide and about 240 px tall on this 1536 x 1024 sheet, with a dark outline about 11 px thick. Every other prop uses the same scale and the same outline thickness.\n\nLay out eight props in two rows, with clear empty space around each one. No prop touches or overlaps another.\n\nTop row, left to right:\n1. The scroll, rolled shut: cream paper wound around its two brown wooden rollers, side by side, with darker turned knob ends (as the scroll in reference 3), held shut by one round gold wax seal.\n2. The same scroll open: the cream paper unrolled flat between its two wooden rollers, as in reference 3, with the round gold seal on the paper. The paper is completely blank: no writing, no marks.\n3. The baby's bottle, exactly as the man holds it in reference 1, but standing upright alone with no hand: a cream rounded body (#fdf0d6, shaded #d5b09c on its left side), a thin darker collar line under the neck, a rounded orange-amber teat on top (#fcb65d, shaded #e68d39), and a flat rounded base.\n\nBottom row, left to right:\n4. A book lying open, its two cream pages curving up from the spine, a warm brown leather cover showing at the edges.\n5. The same book closed, in a slight three-quarter view, with a plain brown leather cover and no title.\n6. A long white ribbon flowing in a loose S-curve, as if it pours down: soft white (#fdf8ef) with pale lavender-blue (#d8d4ea) on the inner side of each turn.\n7. An ink dropper: a slim pale-blue glass tube with a round dark red-brown rubber bulb on top, dark indigo ink (#2b2440) inside the tube, and one dark ink drop at its tip.\n8. Two small terracotta clay cups like the clay cup in reference 4 (#bb5425, lit #e67837, shade #7d3517): one empty, its dark inside showing; one filled with white milk (#fde9c8, shade #e6d0c4) to just under the rim.\n\nColours: wood for the rollers #8a5233, shade #5f4535. Gold seal #e2a73c, shade #b8692a. The props' outline is a warm dark brown, a little lighter than the figure's outline in reference 1.",
+      "refs": [
+        "../../../library/cast/lead-feast/cast-sheet/kept/single-1.png",
+        "../../../../docs/ref/house-look.png",
+        "../board/cold.letter.4.png",
+        "../board/cold.baby.3.png"
+      ],
+      "underlay": false,
+      "flags": [],
+      "at": "2026-11-01T23:32:40.000Z"
+    },
+    {
+      "n": 3,
+      "file": "tries/props-3.png",
+      "prompt": "Redraw reference 1 as a finished prop sheet for a cut-paper animated film. Reference 1 is a layout guide drawn at the exact final scale. Keep every prop at exactly the size and the place it has in reference 1, and keep the wide empty paper around them. Do not enlarge anything. Do not add, drop or move any prop.\n\nThe scale is set by the baby's bottle (top row, third from the left). It is 94 px wide and 176 px tall, and its ink outline is 11 px thick, exactly as the bottle the man holds in reference 3. Redraw it upright at exactly that size, in the shape of the close-up in reference 2: a rounded orange teat (#fcb65d, lit tip #fccc7c, shaded foot #e68d39) with a narrow neck and a flared foot, a cream collar ring (#fdf0d6) a little wider than the body, a thin lavender-rose line (#d1b1a9) under the collar, and a straight cream body (#fef0d5) with rounded bottom corners, shaded on its right side (#f3d8c1). No hand.\n\nInk: every prop has ONE thick warm dark-brown ink outline (#231106) round its silhouette, as thick as the bottle's: about 11 px. The guide's other props have lines that are too thin: redraw every one of them with the bottle's thick outline. Inner lines are fewer and thinner than the outline.\n\nThe house look (reference 4): flat cut-paper shapes; a thin light inner edge just inside each outline; each prop creased once by a single straight diagonal line at the light's angle (light from the upper left), its far side a deeper hue of its own colour turned toward violet, never grey and never black; a soft paper grain on every piece; muted warm colours. No gradients. No cast shadows. Plain warm cream background (#fdf3e0), the same as the ground in reference 3. No text, no labels, no letters or numbers anywhere. No people, no hands.\n\nThe props, as reference 1 shows them:\nTop row: the scroll rolled shut on its two wooden rollers (wood #8a5233, shade #5f4535, darker turned knob ends), a cream paper band round it with one round gold wax seal (#e2a73c, shade #b8692a); the same scroll open between its two wooden rollers, its cream paper (#fde9c8, shade #e6d0c4) completely blank with only the gold seal on it, the scroll as reference 5 draws it; the baby's bottle; an ink dropper: a slim pale-blue glass tube, a round dark red-brown rubber bulb on top, dark indigo ink (#2b2440) inside, and one dark ink drop falling from its tip.\nBottom row: a book lying open, its cream pages curving up from the spine, a warm brown leather cover; the same book closed, a plain brown leather cover with no title; a long ribbon of soft white (#fdf8ef), its turns shaded pale lavender-blue (#d8d4ea); two small terracotta clay cups (#bb5425, lit #e67837, shade #7d3517), tapered and a little wider at the rim: one empty with its dark inside showing, one filled with milk (#fde9c8, shade #e6d0c4) to just under the rim.",
+      "refs": [
+        "guide/guide-3.png",
+        "guide/bottle-single-1-3x.png",
+        "../../../library/cast/lead-feast/cast-sheet/kept/single-1.png",
+        "../../../../docs/ref/house-look.png",
+        "../board/cold.letter.4.png"
+      ],
+      "underlay": false,
+      "flags": [],
+      "at": "2026-11-01T23:41:08.000Z"
+    },
+    {
+      "n": 4,
+      "file": "tries/props-4.png",
+      "prompt": "Redraw reference 1 as a finished prop sheet for a cut-paper animated film. Reference 1 is a layout guide drawn at the exact final scale. Keep every prop at exactly the size and the place it has in reference 1, and keep the wide empty paper around them. Do not enlarge anything. Add only the one prop named below for the empty space in the bottom row.\n\nThe scale is set by the baby's bottle (top row, third from the left). It is 94 px wide and 176 px tall, and its ink outline is 11 px thick, exactly as the bottle the man holds in reference 3. Redraw it upright at exactly that size, in the shape of the close-up in reference 2: a rounded orange teat (#fcb65d, lit tip #fccc7c, shaded foot #e68d39) with a narrow neck and a flared foot, a cream collar ring (#fdf0d6) a little wider than the body, a thin lavender-rose line (#d1b1a9) under the collar, and a straight cream body (#fef0d5) with rounded bottom corners, shaded on its right side (#f3d8c1). No hand.\n\nInk: every prop has ONE thick warm dark-brown ink outline (#231106) round its silhouette, as thick as the bottle's: about 11 px. The guide's other props have lines that are too thin: redraw every one of them with the bottle's thick outline. Inner lines are fewer and thinner than the outline.\n\nThe house look (reference 4): flat cut-paper shapes; a thin light inner edge just inside each outline; each prop creased once by a single straight diagonal line at the light's angle (light from the upper left), its far side a deeper hue of its own colour turned toward violet, never grey and never black; a soft paper grain on every piece; muted warm colours. No gradients. No cast shadows. Plain warm cream background (#fdf3e0), the same as the ground in reference 3. No text, no labels, no letters or numbers anywhere. No people, no hands.\n\nThe props, as reference 1 shows them:\nTop row: the scroll rolled shut on its two wooden rollers (wood #8a5233, shade #5f4535, darker turned knob ends), a cream paper band round it with one round gold wax seal (#e2a73c, shade #b8692a); the same scroll open between its two wooden rollers, its cream paper (#fde9c8, shade #e6d0c4) completely blank with only the gold seal on it, the scroll as reference 5 draws it; the baby's bottle; an ink dropper: a slim pale-blue glass tube, a round dark red-brown rubber bulb on top, dark indigo ink (#2b2440) inside, and one dark ink drop falling from its tip.\nBottom row: a book lying open, its cream pages curving up from the spine, a warm brown leather cover, the book as reference 6 draws it; the same book closed, a plain brown leather cover with no title; then, in the empty space between the closed book and the cups (about 150 px wide and 300 px tall), the ribbon of poured milk as reference 6 draws it: one smooth soft-white arc (#fdf8ef) that leaves the top and falls in a curve, wide where it starts and narrower where it pours, with no ink outline, a faint warm glow, and pale lavender (#e6dff0) on the inner side of its curve; two small terracotta clay cups (#bb5425, lit #e67837, shade #7d3517), tapered and a little wider at the rim: one empty with its dark inside showing, one filled with milk (#fde9c8, shade #e6d0c4) to just under the rim.",
+      "refs": [
+        "guide/guide-4.png",
+        "guide/bottle-single-1-3x.png",
+        "../../../library/cast/lead-feast/cast-sheet/kept/single-1.png",
+        "../../../../docs/ref/house-look.png",
+        "../board/cold.letter.4.png",
+        "../board/milk.newborn.4.png"
+      ],
+      "underlay": false,
+      "flags": [],
+      "at": "2026-11-01T23:41:02.000Z"
+    }
+  ]
+}
