@@ -37,7 +37,7 @@ import {
 } from './graph.ts';
 
 /** Bumped when a stage's code makes other bytes from the same inputs. */
-const VERSION = { drawing: '1', parts: '1', cut: '1', fit: '1', ask: '1' } as const;
+const VERSION = { drawing: '1', parts: '1', cut: '2', fit: '1', ask: '1' } as const;
 
 const encoder = new TextEncoder();
 
@@ -173,7 +173,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
       view: entry.id,
       inputs: [stageInput(`parts:${at(entry.id)}`), ...sources.map((s): Input => fileInput(s))],
       version: VERSION.cut,
-      run: () =>
+      run: (ctx) =>
         Effect.gen(function* () {
           const loaded = yield* Effect.tryPromise(() =>
             importFilmModule(path.join(m.memberDir, 'cutout', 'puppets.ts')),
@@ -184,9 +184,16 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
           ).pipe(Effect.mapError(() => `cutout/puppets.ts has no puppet ${sheetOf(entry)}`));
           // its PNG paths named from the member's folder, so the spec reads the same in any checkout
           const text = yield* Schema.encodeEffect(SpecJson)(spec);
-          return encoder.encode(text.replaceAll(`${m.memberDir}/`, ''));
+          return text.replaceAll(`${m.memberDir}/`, '');
         }).pipe(
           Effect.mapError((e) => StageFailed.make({ reason: `cut ${at(entry.id)}: ${String(e)}` })),
+          // the puppet is its spec and its part PNGs' bytes: a repainted part changes the cut,
+          // so its fits rerun
+          Effect.flatMap((spec) =>
+            Effect.map(ctx.output(`parts:${at(entry.id)}`), (parts) =>
+              encoder.encode(`${spec}\n${new TextDecoder().decode(parts)}`),
+            ),
+          ),
         ),
     });
   }
