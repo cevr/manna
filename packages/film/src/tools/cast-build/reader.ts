@@ -305,7 +305,7 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
           Effect.sync(() => (asked.push(`evaluate ${shard}`), answers.evaluate ?? '{}')),
         train: (job) =>
           Effect.sync(() => {
-            asked.push(`train ${job.key}`);
+            asked.push(`train ${job.key} shards=${job.shards.length}`);
             return { checkpoint: answers.checkpoint ?? new Uint8Array([1]), result: '{}' };
           }),
         test: Effect.succeed(''),

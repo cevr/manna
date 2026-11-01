@@ -7,9 +7,10 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Path } from 'effect';
 import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore } from '../content-store.ts';
-import { type BuildOptions, type Stage, buildGraph, fileInput } from './graph.ts';
+import type { EntryFacts } from './coverage.ts';
+import { type BuildOptions, type Stage, buildGraph, fileInput, stageInput } from './graph.ts';
 import { CastReader } from './reader.ts';
-import { evalStage, trainStage, trainsetStage } from './stages.ts';
+import { type Candidate, evalStage, trainStage, trainsetStage } from './stages.ts';
 
 const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
   cache: '/cache',
@@ -20,19 +21,57 @@ const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
 });
 
 const SOURCES = ['/reader/model.py', '/reader/uv.lock'];
-const RENDERS = { 'm/front': 'renders:front@m', 'm/side': 'renders:side@m' };
+const complete: EntryFacts = { drawn: true, kept: true, cut: true, bars: true, fit: true };
+const candidate = (view: string, facts: Partial<EntryFacts> = {}): Candidate => ({
+  drawing: `m/${view}`,
+  renders: `renders:${view}@m`,
+  fit: `fit:${view}@m`,
+  facts: { ...complete, ...facts },
+});
+const CANDIDATES = [candidate('front'), candidate('side')];
 
-/** Two shards (each a file's bytes), the training set, its train and each drawing's eval. */
-const graph = (): ReadonlyArray<Stage<CastReader>> => [
-  ...Object.values(RENDERS).map((id) => ({
-    id,
-    inputs: [fileInput(`/in/${id}.tar`)],
-    version: '1',
-    run: (ctx: Parameters<Stage<never>['run']>[0]) => ctx.file(`/in/${id}.tar`),
-  })),
-  trainsetStage(RENDERS),
-  trainStage(RENDERS, SOURCES),
-  ...Object.values(RENDERS).map(evalStage),
+type Ctx = Parameters<Stage<never>['run']>[0];
+const fitRows = (pass: boolean) =>
+  text(`[{"view":"v","rows":[{"name":"silhouette","pass":${pass}}]}]`);
+
+/**
+ * Each candidate's shard (a file's bytes) and fit rows (passing unless
+ * `failing` names it), the training set, its train and each drawing's eval.
+ * The side's shard reads `cut:side@m` when `sideCut` is on, a stage that
+ * spends okra: the side is cut in the build.
+ */
+const graph = (
+  candidates: ReadonlyArray<Candidate> = CANDIDATES,
+  o: { readonly failing?: string; readonly sideCut?: boolean } = {},
+): ReadonlyArray<Stage<CastReader>> => [
+  ...[
+    {
+      id: 'cut:side@m',
+      inputs: [fileInput('/in/side.png')],
+      version: '1',
+      run: (ctx: Ctx) => ctx.spend('okra', ctx.file('/in/side.png')),
+    },
+  ].filter(() => o.sideCut === true),
+  ...candidates.flatMap((c) => [
+    {
+      id: c.renders,
+      inputs: [
+        fileInput(`/in/${c.renders}.tar`),
+        ...[stageInput('cut:side@m')].filter(() => o.sideCut === true && c.drawing === 'm/side'),
+      ],
+      version: '1',
+      run: (ctx: Ctx) => ctx.file(`/in/${c.renders}.tar`),
+    },
+    {
+      id: c.fit,
+      inputs: [],
+      version: '1',
+      run: () => Effect.succeed(fitRows(o.failing !== c.drawing)),
+    },
+  ]),
+  trainsetStage(candidates),
+  trainStage(candidates, SOURCES),
+  ...candidates.map((c) => evalStage(c.renders)),
 ];
 
 const files = () =>
@@ -47,8 +86,9 @@ const build = (
   disk: Map<string, Uint8Array>,
   asked: Array<string>,
   over: Partial<BuildOptions> = {},
+  stages: ReadonlyArray<Stage<CastReader>> = graph(),
 ) =>
-  buildGraph(graph(), options(over)).pipe(
+  buildGraph(stages, options(over)).pipe(
     Effect.provide(
       Layer.mergeAll(
         ContentStore.layer.pipe(
@@ -103,6 +143,57 @@ describe('cast build: train and eval', () => {
       expect(state['trainset']).toBe('cached');
       expect(state['train']).toBe('stale');
       expect(state['eval:front@m']).toBe('stale');
+    }),
+  );
+
+  it.effect('an entry with an open bar or a failing fit row is not trained on', () =>
+    Effect.gen(function* () {
+      const spend = { spend: new Set(['modal'] as const) };
+      const bars: Array<string> = [];
+      yield* build(
+        files(),
+        bars,
+        spend,
+        graph([candidate('front'), candidate('side', { bars: false })]),
+      );
+      expect(bars.filter((a) => a.startsWith('train'))).toEqual([
+        expect.stringMatching(/ shards=1$/),
+      ]);
+      const fit: Array<string> = [];
+      yield* build(files(), fit, spend, graph(CANDIDATES, { failing: 'm/side' }));
+      expect(fit.filter((a) => a.startsWith('train'))).toEqual([
+        expect.stringMatching(/ shards=1$/),
+      ]);
+    }),
+  );
+
+  it.effect('a drawing cut in this build joins its one train', () =>
+    Effect.gen(function* () {
+      const disk = files();
+      disk.set('/in/side.png', text('side drawing'));
+      const asked: Array<string> = [];
+      const report = yield* build(
+        disk,
+        asked,
+        { spend: new Set(['okra', 'modal'] as const) },
+        graph(CANDIDATES, { sideCut: true }),
+      );
+      expect(stateOf(report)['cut:side@m']).toBe('ran');
+      expect(asked.filter((a) => a.startsWith('train'))).toEqual([
+        expect.stringMatching(/ shards=2$/),
+      ]);
+      // without the okra spend the side waits, and the set trains on the front alone
+      const waits: Array<string> = [];
+      const held = yield* build(
+        files(),
+        waits,
+        { spend: new Set(['modal'] as const) },
+        graph(CANDIDATES, { sideCut: true }),
+      );
+      expect(stateOf(held)['renders:side@m']).toBe('waiting-spend');
+      expect(waits.filter((a) => a.startsWith('train'))).toEqual([
+        expect.stringMatching(/ shards=1$/),
+      ]);
     }),
   );
 });

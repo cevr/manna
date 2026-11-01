@@ -24,7 +24,7 @@
 //
 // A stage id reads `<stage>:<entry>@<member>` (`cut:turnaround-front@lead-feast`).
 // After every member's stages: `trainsetStage`, the sorted hashes of every
-// shard built; `trainStage`, the one reader trained on that set (spending
+// complete drawing's shard after this build's stages; `trainStage`, the one reader trained on that set (spending
 // Modal), keyed by the set, its shards and the reader's source files;
 // `evalStage` per shard, that drawing's held samples read and scored by the
 // reader (`reader.ts`, on this machine); `askStage`, every entry missing
@@ -41,7 +41,7 @@ import { sha256Hex } from '../digest.ts';
 import { type FilmName, importFilmModule } from '../film-repo.ts';
 import { parts } from '../part-sheet-cli.ts';
 import { type Band, CHAIN, ChainFailed, ClipReadJson, chainOf } from './chain.ts';
-import type { Coverage, EntryFacts } from './coverage.ts';
+import { type Coverage, type EntryFacts, coverageOf } from './coverage.ts';
 import { sheetOf } from './coverage-facts.ts';
 import {
   type Input,
@@ -49,6 +49,7 @@ import {
   StageFailed,
   WaitingOwner,
   fileInput,
+  optionalInput,
   stageInput,
 } from './graph.ts';
 import { CastReader, type ReaderError } from './reader.ts';
@@ -196,8 +197,6 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
   const at = (id: string) => `${id}@${m.member}`;
   const factsOf = (id: string) => Option.fromNullishOr(m.facts[id]);
   const stages: Array<Stage<StageServices>> = [];
-  /** The entries whose part sheet has a record: cut once, so a puppet to pose. */
-  const recorded = new Set<string>();
   for (const entry of m.coverage.entries) {
     const file = path.join(m.memberDir, entry.file);
     const facts = factsOf(entry.id);
@@ -223,7 +222,6 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
     // every file of the sheet folder: its record and part PNGs (which `--check` holds to its
     // answers), and its okra ledger and answers
     const sheetFiles = yield* filesUnder(sheet);
-    if (sheetFiles.includes('record.json')) recorded.add(entry.id);
     stages.push({
       id: `parts:${at(entry.id)}`,
       view: entry.id,
@@ -321,10 +319,9 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
     });
   }
   for (const entry of m.coverage.entries) {
-    // only a drawing cut from its own sheet: one not yet cut has no puppet to pose, so the
-    // training set does not wait on it
+    // a drawing cut from its own sheet, once its cut is made (in this build or before); the
+    // training set takes it only when its entry is complete (`trainsetStage`)
     if (entry.cut !== 'puppet' || Option.isSome(Option.fromUndefinedOr(entry.fitted))) continue;
-    if (!recorded.has(entry.id)) continue;
     stages.push({
       id: `renders:${at(entry.id)}`,
       view: entry.id,
@@ -350,28 +347,75 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
   return stages;
 });
 
-/** The renders stages among `stages`, by the drawing they render, `<member>/<entry>`. */
-export const rendersOf = (stages: ReadonlyArray<Stage<unknown>>): Record<string, string> =>
-  Object.fromEntries(
-    stages.flatMap((s) => {
-      const match = Option.fromNullishOr(/^renders:(.+)@(.+)$/.exec(s.id));
-      return Option.match(match, {
-        onNone: () => [],
-        onSome: ([, entry, member]) => [[`${member}/${entry}`, s.id] as const],
-      });
-    }),
+/**
+ * A drawing that may join the training set: a puppet entry cut from its own
+ * sheet, its renders and fit stages, and what is known of it before the
+ * build (drawn, kept, bars).
+ */
+export interface Candidate {
+  /** `<member>/<entry>`. */
+  readonly drawing: string;
+  readonly renders: string;
+  readonly fit: string;
+  readonly facts: EntryFacts;
+}
+
+const unknownFacts: EntryFacts = { drawn: false, kept: false, cut: false, bars: false, fit: false };
+
+/** A member's candidates for the training set, one per puppet entry cut from its own sheet. */
+export const candidatesOf = (m: MemberStages): ReadonlyArray<Candidate> =>
+  m.coverage.entries
+    .filter((e) => e.cut === 'puppet' && Option.isNone(Option.fromUndefinedOr(e.fitted)))
+    .map((e) => ({
+      drawing: `${m.member}/${e.id}`,
+      renders: `renders:${e.id}@${m.member}`,
+      fit: `fit:${e.id}@${m.member}`,
+      facts: Option.getOrElse(Option.fromNullishOr(m.facts[e.id]), () => unknownFacts),
+    }));
+
+/** Whether a fit stage's output passes: every row of every view it fit. */
+const fitPasses = (bytes: Uint8Array) =>
+  Schema.decodeEffect(FitJson)(new TextDecoder().decode(bytes)).pipe(
+    Effect.map((views) => views.length > 0 && views.every((v) => v.rows.every((r) => r.pass))),
+    Effect.orElseSucceed(() => false),
   );
 
-/** The training set: every shard's hash, by its drawing, sorted. */
-export const trainsetStage = (renders: Readonly<Record<string, string>>): Stage<never> => ({
+/**
+ * The training set: the shard hash of every candidate complete after this
+ * build's stages, by its drawing, sorted. Complete is coverage's rule
+ * (`coverageOf`): drawn, kept and bars as known before the build, cut as its
+ * renders made (its cut was made), fit as its fit rows pass. Its renders and
+ * fit are optional inputs, so a drawing that waits (its sheet not yet cut)
+ * leaves the set without holding it, and one cut in this build joins it.
+ */
+export const trainsetStage = (candidates: ReadonlyArray<Candidate>): Stage<never> => ({
   id: 'trainset',
-  inputs: Object.values(renders).map(stageInput),
+  inputs: candidates.flatMap((c) => [optionalInput(c.renders), optionalInput(c.fit)]),
   version: VERSION.trainset,
   run: (ctx) =>
-    Effect.forEach(Object.entries(renders), ([drawing, id]) =>
-      Effect.map(ctx.output(id), (shard) => [drawing, sha256Hex(shard)] as const),
-    ).pipe(Effect.map((shards) => trainsetOf(Object.fromEntries(shards)))),
+    Effect.gen(function* () {
+      const shards: Array<readonly [string, string]> = [];
+      for (const c of candidates) {
+        if (!ctx.known(c.renders) || !ctx.known(c.fit)) continue;
+        const fit = yield* fitPasses(yield* ctx.output(c.fit));
+        const entry = c.drawing.slice(c.drawing.indexOf('/') + 1);
+        const report = coverageOf(
+          { member: '', entries: [{ id: entry, cut: 'puppet' }] },
+          { [entry]: { ...c.facts, cut: true, fit } },
+        );
+        if (report.complete) shards.push([c.drawing, sha256Hex(yield* ctx.output(c.renders))]);
+      }
+      return trainsetOf(Object.fromEntries(shards));
+    }),
 });
+
+/** The drawings in a training set's output, `<member>/<entry>=<hash>` lines. */
+const drawingsIn = (trainset: Uint8Array) =>
+  new TextDecoder()
+    .decode(trainset)
+    .split('\n')
+    .filter((line) => line.length > 0)
+    .map((line) => line.slice(0, line.lastIndexOf('=')));
 
 /** A reader error as the stage's failure. */
 const readerFailed = (id: string) => (e: ReaderError) =>
@@ -385,13 +429,13 @@ const readerFailed = (id: string) => (e: ReaderError) =>
  * Modal it is `/readers/<the hash of those inputs and the config>.pt`.
  */
 export const trainStage = (
-  renders: Readonly<Record<string, string>>,
+  candidates: ReadonlyArray<Candidate>,
   sources: ReadonlyArray<string>,
 ): Stage<CastReader> => ({
   id: 'train',
   inputs: [
+    // the set names each shard by its hash, so its shards are in its key
     stageInput('trainset'),
-    ...Object.values(renders).map(stageInput),
     ...sources.map(fileInput),
   ],
   version: VERSION.train,
@@ -401,11 +445,16 @@ export const trainStage = (
       'modal',
       Effect.gen(function* () {
         const reader = yield* CastReader;
-        const trainset = sha256Hex(yield* ctx.output('trainset'));
+        const set = yield* ctx.output('trainset');
+        const trainset = sha256Hex(set);
+        const inSet = new Set(drawingsIn(set));
         const lines = [`trainset=${trainset}`, `config=${TRAIN_CONFIG}`];
         for (const file of sources)
           lines.push(`${file.split('/').at(-1)}=${sha256Hex(yield* ctx.file(file))}`);
-        const shards = yield* Effect.forEach(Object.values(renders), ctx.outputPath);
+        const shards = yield* Effect.forEach(
+          candidates.filter((c) => inSet.has(c.drawing)).map((c) => c.renders),
+          ctx.outputPath,
+        );
         const made = yield* reader
           .train({
             trainset,
@@ -501,12 +550,12 @@ export const chainClip = Effect.fn('cast.chain.clip')(function* (o: {
 /**
  * Each of the member's clips chained by the trained reader
  * (`eval:clip:<clip>@<member>`), on this machine. It reads the reader, the
- * clip and every cut of the member (the puppets it may pose), with the
+ * clip, the training set (whose shards stand for the cuts of the drawings
+ * it poses) and the chain's source files, with the
  * chain's settings and the clip's bands as its config.
  */
 export const clipStages = (
   m: MemberStages,
-  built: ReadonlyArray<Stage<unknown>>,
   cache: string,
 ): ReadonlyArray<Stage<StageServices | CastReader | ChildProcessSpawner.ChildProcessSpawner>> =>
   (m.coverage.clips ?? []).map((clip) => {
@@ -519,9 +568,8 @@ export const clipStages = (
         stageInput('train'),
         fileInput(file),
         ...sourceInputs('chain'),
-        ...built
-          .filter((s) => s.id.startsWith('cut:') && s.id.endsWith(`@${m.member}`))
-          .map((s) => stageInput(s.id)),
+        // the set's shards stand for the cuts of the drawings the reader was trained on
+        stageInput('trainset'),
       ],
       version: VERSION.chain,
       config: Schema.encodeSync(ConfigJson)({ chain: CHAIN, bands: clip.bands }),

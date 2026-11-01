@@ -26,11 +26,11 @@ import { CastReader } from './reader.ts';
 import {
   type MemberStages,
   askStage,
+  candidatesOf,
   clipStages,
   evalStage,
   memberStages,
   ownerNeeds,
-  rendersOf,
   trainStage,
   trainsetStage,
 } from './stages.ts';
@@ -136,15 +136,15 @@ export const build = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArra
         members.push({ film, member, memberDir, libraryPuppets, coverage, facts });
       }
       const built = (yield* Effect.forEach(members, memberStages)).flat();
-      const renders = rendersOf(built);
+      const candidates = members.flatMap(candidatesOf);
       const reader = yield* CastReader;
       const cache = yield* castCache;
       const stages = [
         ...built,
-        trainsetStage(renders),
-        trainStage(renders, reader.sources),
-        ...Object.values(renders).map(evalStage),
-        ...members.flatMap((m) => clipStages(m, built, cache)),
+        trainsetStage(candidates),
+        trainStage(candidates, reader.sources),
+        ...candidates.map((c) => evalStage(c.renders)),
+        ...members.flatMap((m) => clipStages(m, cache)),
         askStage(ownerNeeds(members)),
       ];
       const report = yield* toStderr(

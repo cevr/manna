@@ -8,7 +8,7 @@ import { Effect, FileSystem, Path } from 'effect';
 import type { Coverage, EntryFacts } from './coverage.ts';
 import type { Input, Stage } from './graph.ts';
 import { sourceFiles } from './sources.ts';
-import { memberStages } from './stages.ts';
+import { clipStages, memberStages } from './stages.ts';
 
 const COVERAGE: Coverage = {
   member: 'fake',
@@ -104,6 +104,48 @@ describe('memberStages', () => {
       );
       expect(filesOf(stages, 'parts:turnaround-front@fake')).toEqual(
         expect.arrayContaining([...sourceFiles('parts')]),
+      );
+    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect('an entry with no sheet yet has its renders listed, held on its cut', () =>
+    Effect.gen(function* () {
+      const dir = yield* memberIn(['front']);
+      const stages = yield* stagesOf(dir, allComplete);
+      const renders = stages.filter((s) => s.id.startsWith('renders:')).map((s) => s.id);
+      expect(renders).toEqual([
+        'renders:turnaround-front@fake',
+        'renders:turnaround-threeQuarterLeft@fake',
+      ]);
+      expect(
+        stages.find((s) => s.id === 'renders:turnaround-threeQuarterLeft@fake')?.inputs,
+      ).toContainEqual({ _tag: 'Stage', id: 'cut:turnaround-threeQuarterLeft@fake' });
+    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect('a clip eval reads the train, the training set and the chain, not every cut', () =>
+    Effect.gen(function* () {
+      const dir = yield* memberIn(['front']);
+      const clips = clipStages(
+        {
+          film: 'in-its-order' as never,
+          member: 'fake',
+          memberDir: dir,
+          libraryPuppets: `${dir}/library-puppets.ts`,
+          coverage: {
+            ...COVERAGE,
+            clips: [{ id: 'b', file: 'cutout/raise/clip/b.mp4', bands: [] }],
+          },
+          facts: allComplete,
+        },
+        '/cache',
+      );
+      const inputs = clips.flatMap((c) => c.inputs);
+      expect(inputs).toContainEqual({ _tag: 'Stage', id: 'train' });
+      expect(inputs).toContainEqual({ _tag: 'Stage', id: 'trainset' });
+      expect(inputs.filter((i) => i._tag !== 'File' && i.id.startsWith('cut:'))).toEqual([]);
+      expect(filesOf(clips, 'eval:clip:b@fake')).toEqual(
+        expect.arrayContaining([...sourceFiles('chain')]),
       );
     }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
