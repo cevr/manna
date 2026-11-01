@@ -35,9 +35,9 @@
     {
       "name": "list-top",
       "action": "scroll",
-      "target": "label=Number, title or first line",
+      "target": "role=tab label=Sections",
       "direction": "up",
-      "expect": [{ "shows": "label=Number, title or first line" }]
+      "expect": [{ "shows": "role=tab label=Sections" }]
     },
     {
       "name": "down-1",
@@ -58,30 +58,33 @@
       "direction": "down"
     },
     {
-      "name": "list-search-hide",
+      "name": "list-tabs-hide",
       "action": "scroll",
       "target": "screen",
       "direction": "down",
-      "expect": [{ "hides": "label=Number, title or first line" }]
+      "expect": [{ "hides": "role=tab label=Sections" }]
     },
     {
-      "name": "list-search-reveal",
+      "name": "list-tabs-reveal",
       "action": "scroll",
       "target": "screen",
       "direction": "up",
-      "expect": [{ "shows": "label=Number, title or first line" }]
+      "expect": [
+        { "shows": "role=tab label=Sections" },
+        { "hides": "label=Number, title or first line" }
+      ]
     },
     {
-      "name": "list-search-tap",
+      "name": "list-tabs-tap",
       "action": "tap",
-      "target": "role=button label=Number, title or first line",
-      "expect": [{ "shows": "label=Cancel" }]
+      "target": "role=tab label=Lists",
+      "expect": [{ "shows": "role=tab label=Lists" }]
     },
     {
-      "name": "search-cancel",
+      "name": "list-tabs-back",
       "action": "tap",
-      "target": "label=Cancel",
-      "expect": [{ "shows": "label=Number, title or first line" }, { "hides": "label=Cancel" }]
+      "target": "role=tab label=Sections",
+      "expect": [{ "shows": "role=tab label=Sections" }]
     }
   ]
 }

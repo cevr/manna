@@ -6,39 +6,39 @@
       "name": "home",
       "action": "open",
       "link": "/",
-      "expect": [{ "shows": "label=Number, title or first line" }]
+      "expect": [{ "shows": "id=find-search" }, { "hides": "id=find-box" }]
     },
     {
       "name": "search",
       "action": "tap",
-      "target": "role=button label=Number, title or first line",
-      "expect": [{ "shows": "label=Cancel" }]
+      "target": "id=find-search",
+      "expect": [{ "shows": "id=find-box" }, { "shows": "id=find-cancel" }]
     },
     {
       "name": "search-number",
       "action": "fill",
-      "target": "label=Number, title or first line",
+      "target": "id=find-box",
       "value": "no 100",
       "expect": [{ "shows": "label=100, Great Is Thy Faithfulness" }]
     },
     {
       "name": "search-number-forms",
       "action": "fill",
-      "target": "label=Number, title or first line",
+      "target": "id=find-box",
       "value": "#100",
       "expect": [{ "shows": "label=100, Great Is Thy Faithfulness" }]
     },
     {
       "name": "search-number-hymn",
       "action": "fill",
-      "target": "label=Number, title or first line",
+      "target": "id=find-box",
       "value": "Hymn #100",
       "expect": [{ "shows": "label=100, Great Is Thy Faithfulness" }]
     },
     {
       "name": "search-about",
       "action": "fill",
-      "target": "label=Number, title or first line",
+      "target": "id=find-box",
       "value": "hymns about the second coming",
       "timeout": 15,
       "expect": [{ "shows": "label=Hymns about this" }]
@@ -46,14 +46,14 @@
     {
       "name": "search-scripture",
       "action": "fill",
-      "target": "label=Number, title or first line",
+      "target": "id=find-box",
       "value": "Psalm 23",
       "expect": [{ "shows": "label=Cancel" }]
     },
     {
       "name": "search-number-again",
       "action": "fill",
-      "target": "label=Number, title or first line",
+      "target": "id=find-box",
       "value": "no 100",
       "expect": [
         { "shows": "label=100, Great Is Thy Faithfulness" },
@@ -74,15 +74,15 @@
     {
       "name": "search-empty",
       "action": "fill",
-      "target": "label=Number, title or first line",
+      "target": "id=find-box",
       "value": "zzzz",
       "expect": [{ "shows": "label=No hymn matches “zzzz”." }]
     },
     {
       "name": "search-cancel",
       "action": "tap",
-      "target": "label=Cancel",
-      "expect": [{ "shows": "label=Number, title or first line" }, { "hides": "label=Cancel" }]
+      "target": "id=find-cancel",
+      "expect": [{ "shows": "id=find-search" }, { "hides": "id=find-cancel" }]
     }
   ]
 }

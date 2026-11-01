@@ -1,12 +1,13 @@
 # Search
 
-The home screen's field (`Number, title or first line`) finds a hymn by
+The home screen's search box (`Number, title or first line`) finds a hymn by
 its number in any form a reader writes one, or by any line of any stanza
 or refrain half remembered: with a typo or two in its longer words, a word
 or two left out, two words swapped, or a modern word for an old one
 (`you` for `thee`, `your` for `thy`, `has` for `hath`, and the other way).
-On a phone a tap on the field enters search mode: the focused search box
-and `Cancel` over the results. The results are hymn rows as in the list;
+On a phone a tap on `Search` in the find bar at the list's foot enters
+search mode: the bar grows into the focused search box, with `Cancel`
+at its right, under the results. The results are hymn rows as in the list;
 a result found by a line other than its title shows that line under the
 title, quiet. On a phone, after a pause of about 150 ms in the typing,
 the five strongest matches are followed by a section `Hymns about this`
@@ -18,7 +19,7 @@ query of known words with no text match: it shows `Hymns about this`
 alone, with no empty message. Cancel clears the query
 and brings the list back where it was.
 
-The field also finds hymns by the hymnal's back-matter indexes: a Bible
+The search box also finds hymns by the hymnal's back-matter indexes: a Bible
 reference (`John 3:16`, `Ps 23`, `Psalm 23:1`: any book name or
 abbreviation of the canon) lists first the hymns the Scriptural index
 gives that verse, then the rest of that chapter's by verse distance, then
@@ -43,14 +44,14 @@ home list's `Topics` tab instead (`browse.md`).
 - `search-matched-line`: on a phone, a result found by a line other than its title shows that line under the title in the muted colour, one line long, in a taller row; VoiceOver reads it after the title. A result found by its title or its number shows the title alone. The home list's rows stay one line.
 - `search-about`: on a phone, a query of words (`hymns about the second coming`) shows, after a pause of about 150 ms, the heading `Hymns about this` under at most five matches, its hymns by meaning (none of the five above it), then `More matches` over the rest of the matches, each hymn once in the results; a number (`no 100`) shows no such heading. No model runs on the phone (`about.md`, `search-about-size`).
 - `search-topic`: a topic's name finds the hymns whose title holds its words, then every hymn the Topical index lists under it, each once. `About this hymn`'s `Topics` row opens the `Topics` tab, not search (`browse.md`, `browse-topics`).
-- `search-scripture`: a reference finds first the hymns the Scriptural index gives that verse (a range from its first verse, a chapter from verse 1), then the rest of the chapter's by verse distance; a book alone gives no reference hits. `About this hymn`'s `Scripture` row (`about-scripture`) opens search mode with where its passage begins as the query, its hymn among the first results.
+- `search-scripture`: a reference finds first the hymns the Scriptural index gives that verse (a range from its first verse, a chapter from verse 1), then the rest of the chapter's by verse distance; a book alone gives no reference hits. `About this hymn`'s `Scripture` row (`about-scripture`) opens search mode with where its passage begins as the query, its hymn among the first results: the find bar open at the list's foot with that query, the keyboard down.
 - `search-open`: a result opens the hymn, with a back button `Hymns`.
 - `search-empty`: a query with no match shows the empty message. On a phone a query of known words with no text match shows `Hymns about this` alone instead; a made-up word such as `zzzz` knows no hymn by meaning and shows the empty message.
 - `search-hermes`: each keystroke's search runs under 4 ms at the 95th percentile and under 8 ms at most in Hermes (`hermes-engine-cli` 0.12.0, the research harness over the app's own `src/hymns/search.ts`), and its index is built as search mode opens, never at the app's start.
 
 ## How to get to it (user POV)
 
-- The home screen's field `Number, title or first line`: at the list's top, or shown again over the list's top after an upward scroll deep in the list (`hymn-list.md`, `list-search-reveal`).
+- On a phone, `Search` in the home screen's find bar at the list's foot (`browse.md`, `browse-findbar-rest`, `browse-findbar-open`); no search field stands at the list's top.
 - On the web, the field above the home list.
 
 ## Driving it with sim
@@ -77,7 +78,7 @@ By hand:
 
 ## Gotchas
 
-- Search lives on the home screen; there is no Search tab or `/search` route. Reach it from the list's field, at the top or shown again over the top.
-- On iOS the field at the list's top is a button named `Number, title or first line`; in search mode the search box has the same name. Use `role=button` to enter, `label=` to fill.
+- Search lives on the home screen; there is no Search tab or `/search` route. Reach it from the find bar's `Search` at the list's foot.
+- On iOS the find bar's controls carry ids: `id=find-search` enters search mode, `id=find-box` is the search box (named `Number, title or first line`) to fill, `id=find-cancel` leaves it.
 - Results follow the typing after a deferral: wait for a result (`--expect`, or `sim tap` of the row with its timeout), never a fixed sleep.
 - A result's name is `<n>, <title>` and, when it was found by a line, `, <line>` after it: match a result by its leading `<n>, ` only.

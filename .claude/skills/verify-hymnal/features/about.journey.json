@@ -82,8 +82,8 @@
     {
       "name": "search-cancel",
       "action": "tap",
-      "target": "label=Cancel",
-      "expect": [{ "shows": "label=Number, title or first line" }]
+      "target": "id=find-cancel",
+      "expect": [{ "shows": "id=find-search" }]
     }
   ]
 }

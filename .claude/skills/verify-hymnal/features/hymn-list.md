@@ -13,10 +13,10 @@ when the reader opens a hymn and comes back, or switches tabs and returns.
 - `list-place`: back from a hymn, or back to the tab, the list is where it was.
 - `list-favourites`: on a phone, a hymn starred on its page (the head's `Favourite` button) shows a star at the row's end, after its title and the size of its number, in each of its rows, under `Recent`, under its topic and on the Recent screen; a long title's ellipsis comes before the star, and a row with no star keeps the title's full width; and VoiceOver reads the row as `<n>, <title>, favourite`. The list has no `Favourites` row. Kept across launches (`lists.favourites`).
 - `list-recent`: on a phone, the hymns opened last show first under a `Recent` header, most recent first, at most 5 there; Recent keeps the latest 50, across launches (`lists.recent`). A row pressed under `Recent` opens its hymn, and a swipe there pages in number order, as from any home row.
-- `list-search-reveal`: on a phone, deep in the list (past the search field's resting place under the title), an upward scroll of 8 pt or more, a drag or its glide, slides the search field `Number, title or first line` in over the list's top, under the status bar, as Safari's toolbar comes back. The list's rows and offset do not move for it.
-- `list-search-hide`: once shown, a downward scroll of 8 pt or more slides it away again; while hidden it is out of VoiceOver's reach and takes no touch. While shown a tap on it enters search mode, as the field at the top does, and Cancel brings the list back where it was, the field still shown.
-- `list-search-top`: at the list's top the field sits where it always has, under the title (pull down to bring it out); the shown field goes under the title as the list nears its top, out of touch and VoiceOver's reach while the title covers it, and is never a second field there.
-- `list-search-pin`: the pinned topic row sits flush under the shown field, moves down and up with it as it slides, and never jumps or hides under it.
+- `list-tabs-reveal`: on a phone, deep in the list (past the tab row's resting place under the title), an upward scroll of 8 pt or more, a drag or its glide, slides the tab row (`Sections`, `Lists`, `Topics`, `Metres`, `Scripture`) in over the list's top, under the status bar, as Safari's toolbar comes back (`browse.md`, `browse-tabs-reveal`). The list's rows and offset do not move for it. No search field stands there.
+- `list-tabs-hide`: once shown, a downward scroll of 8 pt or more slides it away again; while hidden it is out of VoiceOver's reach and takes no touch. While shown a tap on a tab there chooses it, as the list's own row does, and the pinned row stays.
+- `list-tabs-top`: at the list's top the tab row is the list's own, under the title; scrolled up to its resting place, the pinned row meets the list's own row and is never a second row there.
+- `list-tabs-pin`: the pinned topic row sits flush under the shown tab row, moves down and up with it as it slides, and never jumps or hides under it.
 - `list-recent-all`: the `Recent` header is a button, named `Recent, see all` and showing `See all ›`; it pushes the Recent screen (`/recent`, title `Recent`), every hymn Recent keeps, most recent first, a favourite starred. A row there opens its hymn, a swipe pages through that whole list, and a pan from the left edge goes back to it; its back button `Hymns` goes home. With nothing opened it says `The hymns you open show here.`
 
 ## How to get to it (user POV)
@@ -31,15 +31,15 @@ when the reader opens a hymn and comes back, or switches tabs and returns.
 
 - **Preconditions:** none beyond the baseline.
 - **States:** default. Focus-visible, open, loading, empty and error are n/a (the hymns are compiled in).
-- **Regression:** `apps/hymnal/test/browser/list.slow.test.ts`, `apps/hymnal/src/reader/back.test.tsx`; the lists: `apps/hymnal/src/reader/pager.slow.test.ts` (the reader's lists, the Recent header and screen), `apps/hymnal/src/reader/lists.test.ts`, `apps/hymnal/src/reader/rows.test.ts`, `apps/hymnal/src/settings.test.ts`, the field over the list's top: `apps/hymnal/src/home/reveal.test.ts` (when it turns) and `apps/hymnal/src/reader/pin.test.ts` (the pin under it), `apps/hymnal/src/feel/feel.slow.test.tsx` (the `section` cue as a topic takes the pin, and `Favourite`'s chimes).
+- **Regression:** `apps/hymnal/test/browser/list.slow.test.ts`, `apps/hymnal/src/reader/back.test.tsx`; the lists: `apps/hymnal/src/reader/pager.slow.test.ts` (the reader's lists, the Recent header and screen), `apps/hymnal/src/reader/lists.test.ts`, `apps/hymnal/src/reader/rows.test.ts`, `apps/hymnal/src/settings.test.ts`, the tab row over the list's top: `apps/hymnal/src/home/reveal.test.ts` (when it turns), `apps/hymnal/src/home/PinnedTabs.test.tsx` (in reach exactly while shown, over generated scroll paths) and `apps/hymnal/src/reader/pin.test.ts` (the pin under it), `apps/hymnal/src/feel/feel.slow.test.tsx` (the `section` cue as a topic takes the pin, and `Favourite`'s chimes).
 
-**The journey:** `sim journey hymn-list`. The first screen (`hymn-list`), a scroll to row 31, open it and come back to the same place (`back-keeps-place`), then the field over the list: to the top, four screens down until it is gone (`list-search-hide`), one up until it shows (`list-search-reveal`), a tap into search mode and `Cancel`. It opens hymn 31, which joins `Recent` (data, not a stored choice).
+**The journey:** `sim journey hymn-list`. The first screen (`hymn-list`), a scroll to row 31, open it and come back to the same place (`back-keeps-place`), then the tab row over the list: to the top, four screens down until it is gone (`list-tabs-hide`), one up until it shows (`list-tabs-reveal`), a tap on its `Lists` and back on `Sections`. It opens hymn 31, which joins `Recent` (data, not a stored choice), and leaves `Sections` the tab in use.
 
 Read in the receipts:
 
 - `scroll` and `back-keeps-place`: the same rows on screen; not `1, Praise to the Lord` at the top.
-- `list-search-reveal`: one node named `Number, title or first line`, its `y` just under the status bar (about 70 on an iPhone 17 Pro), the first row's `y` below its bottom.
-- `search-cancel`: the same first row as before the tap, the field still shown.
+- `list-tabs-reveal`: one node named `Sections` with role tab, its `y` just under the status bar (about 70 on an iPhone 17 Pro), the first row's `y` below its bottom; no node named `Number, title or first line`.
+- `list-tabs-tap`: the `Lists` tab selected, its tab row still pinned; `list-tabs-back`: `Sections` selected again.
 
 By hand (these change the app's data; the lists stay until the app is reinstalled or erased):
 
@@ -48,7 +48,7 @@ By hand (these change the app's data; the lists stay until the app is reinstalle
 3. **A list's pager.** Press the `5, …` row under `Recent` by its ref (`agent-device press @eN --session verify-hymnal`: the label also names the row under its topic), then `sim scroll screen right`. → hymn 6, the next in number order, not 4.
 4. **Place with a new Recent row.** Deep in the list, read a row's `y`, open a hymn not yet in Recent, `sim back`. → the row's `y` unchanged; from the top, the new hymn first under `Recent`.
 5. **See all.** `sim tap "role=button label=Recent, see all"`. → the header `Recent`; every hymn opened, most recent first, hymn 3 starred. Press its `4, …` row, `sim scroll screen right` → hymn 2; twice more → 1, then 3. `sim gesture edge-pan` → the Recent screen, led by the hymn last shown. `sim back` → home.
-6. **The pin (`list-search-pin`).** On a Release build, `bun scripts/sticky.ts` (SKILL.md, Helpers): the pinned topic row off by no more than 1 pt in any frame, flush under the shown field. Without a recording, `pin.test.ts` holds the rule and `HymnList.native.slow.test.ts` holds the pin to the field's cover.
+6. **The pin (`list-tabs-pin`).** On a Release build, `bun scripts/sticky.ts` (SKILL.md, Helpers): the pinned topic row off by no more than 1 pt in any frame, flush under the shown tab row. Without a recording, `pin.test.ts` holds the rule and `HymnList.native.slow.test.ts` holds the pin to the tab row's cover.
 
 ## Gotchas
 
