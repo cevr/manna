@@ -2900,8 +2900,9 @@ sheet's call and a drawing's tries, `modal` for the train. Without it the
 stage waits (`waiting-spend`), as every stage below it does, and a rerun
 asks again. `--plan` runs nothing and reads no lab: it prints each stage's
 state (`cached`, `stale`, `waiting-*`) and key; `--touch` plans as if a
-file changed, and `--plan --spend modal` names the training set a train
-would read.
+file changed, and `--plan --spend modal` prints the key a train would run
+at. The training set it would read is the `trainset` stage's output: one
+`<member>/<drawing>=<shard hash>` line for each complete drawing.
 
 The cache is `FILM_CAST_CACHE`, else `~/.cache/bible-film/cast`: each
 stage's output kept as `objects/<sha256>`, and the manifest `build.json`
