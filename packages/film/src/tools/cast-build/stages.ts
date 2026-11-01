@@ -49,6 +49,7 @@ import {
 } from './graph.ts';
 import { CastReader, type ReaderError } from './reader.ts';
 import { SAMPLES, shardOf, trainsetOf } from './renders.ts';
+import { sourceInputs } from './sources.ts';
 
 /** Bumped when a stage's code makes other bytes from the same inputs. */
 const VERSION = {
@@ -208,6 +209,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
         stageInput(`drawing:${at(entry.id)}`),
         fileInput(path.join(m.memberDir, 'cutout', 'cut.ts')),
         ...sheetFiles.map((f) => fileInput(path.join(sheet, f))),
+        ...sourceInputs('parts'),
       ],
       version: VERSION.parts,
       run: (ctx) =>
@@ -231,7 +233,11 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
     stages.push({
       id: `cut:${at(entry.id)}`,
       view: entry.id,
-      inputs: [stageInput(`parts:${at(entry.id)}`), ...sources.map((s): Input => fileInput(s))],
+      inputs: [
+        stageInput(`parts:${at(entry.id)}`),
+        ...sources.map((s): Input => fileInput(s)),
+        ...sourceInputs('cut'),
+      ],
       version: VERSION.cut,
       run: (ctx) =>
         Effect.gen(function* () {
@@ -257,7 +263,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
     stages.push({
       id: `fit:${at(entry.id)}`,
       view: entry.id,
-      inputs: [stageInput(cut), stageInput(`drawing:${at(entry.id)}`)],
+      inputs: [stageInput(cut), stageInput(`drawing:${at(entry.id)}`), ...sourceInputs('fit')],
       version: VERSION.fit,
       run: () =>
         Effect.scoped(
@@ -290,7 +296,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
     stages.push({
       id: `renders:${at(entry.id)}`,
       view: entry.id,
-      inputs: [stageInput(`cut:${at(entry.id)}`)],
+      inputs: [stageInput(`cut:${at(entry.id)}`), ...sourceInputs('renders')],
       version: VERSION.renders,
       config: RENDERS_CONFIG,
       run: () =>
@@ -389,7 +395,7 @@ export const evalStage = (rendersId: string): Stage<CastReader> => {
   return {
     id,
     view: id.slice('eval:'.length).split('@')[0],
-    inputs: [stageInput('train'), stageInput(rendersId)],
+    inputs: [stageInput('train'), stageInput(rendersId), ...sourceInputs('eval')],
     version: VERSION.eval,
     run: (ctx) =>
       Effect.gen(function* () {
@@ -480,6 +486,7 @@ export const clipStages = (
       inputs: [
         stageInput('train'),
         fileInput(file),
+        ...sourceInputs('chain'),
         ...built
           .filter((s) => s.id.startsWith('cut:') && s.id.endsWith(`@${m.member}`))
           .map((s) => stageInput(s.id)),
