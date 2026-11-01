@@ -275,6 +275,11 @@ describe('part sheet', () => {
             [20, 20],
             [14, 25],
           ],
+          // the 12 x 12 square at (14, 14), row by row
+          pixels: Array.from(
+            { length: 144 },
+            (_, k) => (14 + Math.floor(k / 12)) * view.width + 14 + (k % 12),
+          ),
         },
       ]);
       expect(enclosedPaperOf(view).pieces.map((p) => p.gaps)).toEqual([[]]);

@@ -76,10 +76,16 @@ interface PaperPiece {
   readonly area: number;
 }
 
-/** A view's enclosed paper: the pieces its cut holds as cloth, and the pieces it leaves open as the gaps the view names, each with its why. */
+/**
+ * A view's enclosed paper: the pieces its cut holds as cloth, the pieces it
+ * leaves open as the gaps the view names, each with its why, and the named
+ * gaps that are stale, each with the boxes of the pieces its point opens
+ * (none, or none with its box: the sheet or the paper read moved under it).
+ */
 export interface CutPaper {
   readonly held: ReadonlyArray<PaperPiece>;
   readonly open: ReadonlyArray<PaperPiece & { readonly why: string }>;
+  readonly stale: ReadonlyArray<CutGap & { readonly opened: ReadonlyArray<Box> }>;
 }
 
 /** A member's cut data, by his views' names in his sheets' views. */
@@ -240,46 +246,98 @@ export const cutTable = <V extends string>(member: CutMember<V>) => {
     member.views,
     (view) => view.gaps ?? [],
   );
-  // the pieces of the reads its figure is made of, each in the kept view's pixels with the gap points in it
+  // the pieces of the reads its figure is made of, each in the kept view's pixels with the gap
+  // points in it, and the part of it the figure's read holds: a pad read's piece holds only its
+  // pixels in the pad (the kept box is the kept read's), a bust's only its pixels above the closing row
   const piecesOf = (name: V, view: View) => {
     const { kept, pad } = member.frames[name];
     const by: Pt = [pad[0], pad[1]];
     const gaps = GAPS[name].map((g) => g.at);
     const onView = gaps.map((g) => shifted(g, by));
-    const back = (p: { box: Box; area: number; gaps: ReadonlyArray<Pt> }) => ({
-      box: [p.box[0] - by[0], p.box[1] - by[1], p.box[2] - by[0], p.box[3] - by[1]] as const,
-      area: p.area,
-      gaps: p.gaps.map((g) => shifted(g, [-by[0], -by[1]])),
-    });
     const [w, h] = [kept[2] - kept[0], kept[3] - kept[1]];
-    const inPad = (p: { box: Box }) =>
-      p.box[0] < by[0] || p.box[1] < by[1] || p.box[2] > by[0] + w || p.box[3] > by[1] + h;
+    const inKept = (x: number, y: number) =>
+      x >= by[0] && y >= by[1] && x < by[0] + w && y < by[1] + h;
+    const listed =
+      (width: number, holds: (x: number, y: number) => boolean, shift: Pt) =>
+      (p: { box: Box; area: number; gaps: ReadonlyArray<Pt>; pixels: ReadonlyArray<number> }) => {
+        const own = p.pixels
+          .map((i): Pt => [i % width, Math.floor(i / width)])
+          .filter(([x, y]) => holds(x, y));
+        const back = (b: Box): Box => [
+          b[0] - shift[0],
+          b[1] - shift[1],
+          b[2] - shift[0],
+          b[3] - shift[1],
+        ];
+        return {
+          box: back(p.box),
+          area: p.area,
+          gaps: p.gaps.map((g) => shifted(g, [-shift[0], -shift[1]])),
+          held: Arr.head(own).pipe(
+            Option.map((first) => ({
+              box: back(
+                own.reduce<Box>(
+                  (b, [x, y]) => [
+                    Math.min(b[0], x),
+                    Math.min(b[1], y),
+                    Math.max(b[2], x + 1),
+                    Math.max(b[3], y + 1),
+                  ],
+                  [first[0], first[1], first[0] + 1, first[1] + 1],
+                ),
+              ),
+              area: own.length,
+            })),
+          ),
+        };
+      };
     return Match.value(member.views[name].figure).pipe(
       Match.when('framed', () => [
-        ...enclosedPaperOf(keptOf(member.frames[name], view), gaps).pieces,
-        ...enclosedPaperOf(view, onView).pieces.filter(inPad).map(back),
+        ...enclosedPaperOf(keptOf(member.frames[name], view), gaps).pieces.map(
+          listed(w, () => true, [0, 0]),
+        ),
+        ...enclosedPaperOf(view, onView)
+          .pieces.map(listed(view.width, (x, y) => !inKept(x, y), by))
+          .filter((p) => Option.isSome(p.held)),
       ]),
       Match.when('bust', () =>
-        enclosedPaperOf(closedOf(view, member.ink), onView).pieces.map(back),
+        enclosedPaperOf(closedOf(view, member.ink), onView).pieces.map(
+          listed(view.width, (_, y) => y < view.height, by),
+        ),
       ),
       Match.exhaustive,
     );
   };
-  /** A view's enclosed paper as its figure reads it: each piece held, or open as the gap it names. */
+  /**
+   * A view's enclosed paper as its figure reads it: each piece held (only the
+   * part its figure holds), or open as the gap it names; and each named gap
+   * that is stale, its point opening no piece or no piece with its box.
+   */
   const paperOf = (name: V, view: View): CutPaper => {
-    const pieces = piecesOf(name, view).map((p) => ({
+    const read = piecesOf(name, view);
+    const pieces = read.map((p) => ({
       piece: { box: p.box, area: p.area },
+      held: p.held,
       gap: Arr.findFirst(GAPS[name], (g) =>
         p.gaps.some((at) => at[0] === g.at[0] && at[1] === g.at[1]),
       ),
     }));
+    const same = (a: Box, b: Box) => a.every((v, i) => v === b[i]);
     return {
       held: pieces.flatMap((p) =>
-        Option.match(p.gap, { onNone: () => [p.piece], onSome: () => [] }),
+        Option.match(p.gap, { onNone: () => Option.toArray(p.held), onSome: () => [] }),
       ),
       open: pieces.flatMap((p) =>
         Option.match(p.gap, { onNone: () => [], onSome: (g) => [{ ...p.piece, why: g.why }] }),
       ),
+      stale: GAPS[name]
+        .map((g) => ({
+          ...g,
+          opened: read
+            .filter((p) => p.gaps.some((at) => at[0] === g.at[0] && at[1] === g.at[1]))
+            .map((p) => p.box),
+        }))
+        .filter((g) => !g.opened.some((b) => same(b, g.box))),
     };
   };
   return { CUTS, cutOptionsFor, HIDDEN: member.hidden, FRAMES: member.frames, GAPS, paperOf };

@@ -282,16 +282,19 @@ describe('paperOf', () => {
     frames: {
       standing: frame,
       foot: frame,
+      bare: frame,
       bust: { sheet: 'heads', kept: [0, 0, 24, 24], pad: [0, 0, 0, 0] },
     },
     views: {
       standing: { cut, figure: 'framed', gaps: [between] },
       foot: { cut, figure: 'framed', gaps: [below] },
+      bare: { cut, figure: 'framed' },
       bust: { cut, figure: 'bust', gaps: [{ at: [11, 20], box: [5, 7, 19, 24], why: 'neck' }] },
     },
     hidden: {
       standing: { moving: ['arm'], prompt: 'standing' },
       foot: { moving: ['arm'], prompt: 'foot' },
+      bare: { moving: ['arm'], prompt: 'bare' },
       bust: { moving: ['arm'], prompt: 'bust' },
     },
     ink: INK,
@@ -303,19 +306,34 @@ describe('paperOf', () => {
     expect(table.paperOf('standing', view)).toEqual({
       held: [{ box: [3, 2, 13, 11], area: 90 }],
       open: [{ box: [3, 14, 13, 23], area: 90, why: 'ground between' }],
+      stale: [],
     });
   });
 
-  test('lists a piece only the pad’s reading encloses, moved into the kept view’s pixels', () => {
+  test('lists a piece only the pad’s reading encloses in the kept view’s pixels, held only where the pad holds it', () => {
+    // the pocket's rows 22 to 29 lie in the kept box, open ground on the kept view alone; its row 30 is the pad's
     const view = raster(pw, ph, ringed(5, 26, 16, 36, false));
     expect(table.paperOf('foot', view)).toEqual({
       held: [],
       open: [{ box: [3, 22, 13, 31], area: 90, why: 'ground below' }],
+      stale: [],
     });
-    expect(table.paperOf('standing', view)).toEqual({
-      held: [{ box: [3, 22, 13, 31], area: 90 }],
+    expect(table.paperOf('bare', view)).toEqual({
+      held: [{ box: [3, 30, 13, 31], area: 10 }],
       open: [],
+      stale: [],
     });
+  });
+
+  test('names each gap that opens no piece, or a piece whose box is not its own, as stale', () => {
+    // the pocket between grown two rows taller than the gap names: the sheet redrawn under it
+    const grown = raster(pw, ph, ringed(5, 18, 16, 30, false));
+    expect(table.paperOf('standing', grown).stale).toEqual([
+      { ...between, opened: [[3, 14, 13, 25]] },
+    ]);
+    // no pocket between: the paper read changed under it
+    const none = raster(pw, ph, ringed(5, 6, 16, 16, false));
+    expect(table.paperOf('standing', none).stale).toEqual([{ ...between, opened: [] }]);
   });
 
   test('reads a bust with its foot closed', () => {
@@ -323,6 +341,7 @@ describe('paperOf', () => {
     expect(table.paperOf('bust', view)).toEqual({
       held: [],
       open: [{ box: [5, 7, 19, 24], area: 238, why: 'neck' }],
+      stale: [],
     });
   });
 });

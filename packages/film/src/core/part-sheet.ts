@@ -102,6 +102,8 @@ interface PaperPiece {
   readonly box: Box;
   readonly area: number;
   readonly gaps: ReadonlyArray<PartPt>;
+  /** Its pixels, each by its index in the view. */
+  readonly pixels: ReadonlyArray<number>;
 }
 
 /** A view's paper read: its figure (1 on its pixels) and its enclosed paper pieces. */
@@ -147,6 +149,8 @@ export const enclosedPaperOf = (view: Raster, gaps: ReadonlyArray<PartPt> = []):
       Option.getOrElse(() => -1),
     );
   const open = new Set(gaps.map(pieceAt).filter((id) => paper.has(id)));
+  const pixels = new Map([...paper].map((id) => [id, new Array<number>()] as const));
+  for (let i = 0; i < holes.length; i++) pixels.get(all.labels[i] ?? -1)?.push(i);
   return {
     figure: Uint8Array.from(figure, (f, i) => Number(f === 1 && !open.has(all.labels[i] ?? -1))),
     pieces: [...paper]
@@ -155,7 +159,12 @@ export const enclosedPaperOf = (view: Raster, gaps: ReadonlyArray<PartPt> = []):
         Option.match(Option.fromUndefinedOr(all.components[id]), {
           onNone: () => [],
           onSome: (c) => [
-            { box: c.box, area: c.area, gaps: gaps.filter((g) => pieceAt(g) === id) },
+            {
+              box: c.box,
+              area: c.area,
+              gaps: gaps.filter((g) => pieceAt(g) === id),
+              pixels: pixels.get(id) ?? [],
+            },
           ],
         }),
       ),
