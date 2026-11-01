@@ -1,0 +1,606 @@
+{
+  "reader": "7f20f3a760af60370eee3775e06dfbefe1649c16c1e3e83e7e4d621bb1063085",
+  "stageKey": "162b77b08b72d9c2827b00f44a29df6d7089a7daaa0c97ba59b00db9cccfa1aa",
+  "trainset": "757547d8e9f29a291a19822b8115ca13089f6aa4dad9a3e04cdf0ce8e89010c9",
+  "drawings": {
+    "feast-mother/poses-poses-1": "d61a553af925fb7d7740554fa20a77eba7081043d256a333fdc067f0c477413a",
+    "feast-mother/poses-poses-2": "798584e7d50bc667d12d13a70c63f1d00be4f1043cb12836a692301b1e11b526",
+    "feast-mother/poses-poses-3": "4fba06a7ee96a6876b9ac9140568ad307249a9c0d08b64f682ce8c495d25edc3",
+    "feast-mother/turnaround-back": "791f5c4810ab00df03b42eb0a1ffbfe4aa9ff031ba33b8812a60c96a5672b563",
+    "feast-mother/turnaround-front": "1af93e976736e5fc76781b29a44abf0f8834eb8e7d1a2838d8d6451578ece2cd",
+    "feast-mother/turnaround-profileLeft": "997144b62900805000f136845331e34ca90d5734eb0dbbf836f6e81f0802d715",
+    "feast-mother/turnaround-profileRight": "0303c56f21acd5d4f773ef0e6108b14de678909010f209dbcafdb819be1a9d6c",
+    "feast-mother/turnaround-threeQuarterLeft": "5d3139855db204e01a0737368078d0d2c20bc2008f97644b9e102554bbd6ee59",
+    "feast-mother/turnaround-threeQuarterRight": "1ccee744260a0ace4e0cc030a53445d2fc2b616d64ddc8f23a1911b299d17896",
+    "idea-villagers/poses-poses-4": "ed0a2ba1d320ad60667b29db153a0e792efe56f7f718f2f476f074e01bdaa584",
+    "idea-villagers/poses-poses-6": "0138b3734c9346b3596233138f2852d9d55fdeef7eb61a571bb53ebfe097a07e",
+    "jeremiah/heads-heads-1": "33bb164035424b9e94263c465c7851e76860d32df9fb7c9f5a94865445ec89e2",
+    "jeremiah/heads-heads-2": "9969b69a546b200c8d4de33d40fd48f70c86ac88c18f528be69f1c6a1094032e",
+    "jeremiah/heads-heads-3": "f8dc65f520c82f9f16ff7b537295c5c434ee03b14ace2c01d473db3b88297557",
+    "jeremiah/heads-heads-4": "780feb9d7607289721a1ce396f8ce64afb0861cf6e8bf4a8db3243efd7a78bf1",
+    "jeremiah/heads-heads-5": "962795ebf366b57107023c81977cf73a98e5adb61bc63bc10203d788c000268d",
+    "jeremiah/heads-heads-6": "9c5e68652d7729d7314f754e931ab379d6d8dc52a24ad9a347c5d906497c7e7a",
+    "lead-feast/heads-heads-4": "9b2bcd546885754b46a8fdf452e6a80c538e9ac701334bbbbd3fb96be308d549",
+    "lead-feast/single-single-1": "8cd7a0d5716d2dbe4f6eaefe3c6e2610889c2e31636695f28f6fb01edb6a168d",
+    "lead-feast/turnaround-front": "d25bd915ff36a4b945be909307969785d70d50f751e5660f375012c06c389d6a",
+    "lead-feast/turnaround-threeQuarterLeft": "4d14608065042278559d478d92440d6fb18d3167b20ccb122606118137c1161b",
+    "paul/heads-heads-1": "70edd06434ed811f98d001236f0126ce78b597dba3fb0cca2932c25f15d1ca19",
+    "paul/heads-heads-2": "bd778cdbd5c75f9a78609ee747b7d72d4043425bf6a4e33f6ac4c1d8621d4e7a",
+    "paul/heads-heads-3": "26ce35d5a24567c8adbf59f84c42e2d1f3308d24f00575ac9bb28e5d4a417d68",
+    "paul/heads-heads-4": "983744057b3f5c3e50b77889ed4a93dc7800e2cacb4d60f48b9e663ca82a1a5c",
+    "paul/heads-heads-5": "083309d45c37c3d7caa3f8b68cc8fdf95cec8e014dd332bb4839a5dfda898c40",
+    "paul/heads-heads-6": "16e937694a22737017a82b40ac407788e7ebae0962ad68a72ff3ee3b3760ae3f",
+    "sower/poses-poses-1": "f5eaa3b285597e796c6337d3e6b893c5c71c5ea9578147bcde04507ed054d1f8",
+    "sower/poses-poses-2": "0611b550b7f875ffc9986f10ee2c58ea7eff51ed0640e84a4d949b787934cde1",
+    "sower/poses-poses-3": "aaf006758c3905e9f08843557dc86e93b06507bcfc0618931e0b06987bf274cd",
+    "sower/poses-poses-4": "aa471812e92499ef626821deb5905a335e782194eeb652ab6f4cfaeff9ece548",
+    "sower/turnaround-back": "c6af897822820dad08dd4b792b91782a960b254760aa1d10a35ac46a69e4cad6",
+    "sower/turnaround-front": "f7d00969539f7e03d28988bf3e6f682817266b4742573306e5048672ca05792e",
+    "sower/turnaround-profileLeft": "2d76f594f9875808f87dbbccd883d835a829548239ec05a2d6234ef02f6911fe",
+    "sower/turnaround-profileRight": "bc286943c28c14cbe963235876599a0ac0cbab99e7991681fbd1a0c228cd886b",
+    "sower/turnaround-threeQuarterLeft": "934c44c73cf67ef5e4543789d0fae54b6d3f064a8e69e0623f009f9b89272466",
+    "sower/turnaround-threeQuarterRight": "64ea74fbfa8a4368a0e8c177aa63924ed669c21a0e77c5445534f266661f68c7",
+    "villager-child/poses-poses-5": "314e0532eb8080c730869b635d0488f1d96476975db77be289ce5b846fe6c7c0",
+    "villager-toddler/poses-poses-1": "86384b84b6645c22c6ada4c0ad6b317f8a03013db07f07e9014527fa37b756f3",
+    "villager-toddler/poses-poses-2": "0b14dfa8b8e6740af4bb629098ec8b2b9d520b78cfb530d9c9c9a020f0e68323"
+  },
+  "config": {
+    "steps": 4800,
+    "batch": 32,
+    "lr": 0.001,
+    "seed": 0,
+    "gpu": "L4",
+    "precision": "bf16",
+    "backbone": "facebook/dinov2-small",
+    "inputSide": {
+      "width": 448,
+      "height": 560
+    }
+  },
+  "checkpointSha256": "74ec6577c51b8f8964d2265650702662ed745d5c86fba540b226d3c92ead8a84",
+  "train": {
+    "trainedOn": "2026-11-01",
+    "modalApp": "ap-CrXrNlBRXGxPBIG0oJ8vMW",
+    "trainSec": 2513,
+    "finalLoss": 0.00862,
+    "stageSec": 4361
+  },
+  "held": {
+    "drawings": 40,
+    "accuracy": 1,
+    "byDrawing": {
+      "feast-mother/poses-poses-1": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.66,
+          "p90": 3.74
+        },
+        "jointPx": {
+          "median": 1.04,
+          "p90": 1.7
+        }
+      },
+      "feast-mother/poses-poses-2": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.65,
+          "p90": 3.15
+        },
+        "jointPx": {
+          "median": 1.06,
+          "p90": 1.62
+        }
+      },
+      "feast-mother/poses-poses-3": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.71,
+          "p90": 3.18
+        },
+        "jointPx": {
+          "median": 1.04,
+          "p90": 1.71
+        }
+      },
+      "feast-mother/turnaround-back": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.7,
+          "p90": 2.98
+        },
+        "jointPx": {
+          "median": 1,
+          "p90": 1.59
+        }
+      },
+      "feast-mother/turnaround-front": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.77,
+          "p90": 2.77
+        },
+        "jointPx": {
+          "median": 1.02,
+          "p90": 1.56
+        }
+      },
+      "feast-mother/turnaround-profileLeft": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.57,
+          "p90": 2.16
+        },
+        "jointPx": {
+          "median": 1.02,
+          "p90": 1.54
+        }
+      },
+      "feast-mother/turnaround-profileRight": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.55,
+          "p90": 2.24
+        },
+        "jointPx": {
+          "median": 1.09,
+          "p90": 1.69
+        }
+      },
+      "feast-mother/turnaround-threeQuarterLeft": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.76,
+          "p90": 3.25
+        },
+        "jointPx": {
+          "median": 1.04,
+          "p90": 1.64
+        }
+      },
+      "feast-mother/turnaround-threeQuarterRight": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.99,
+          "p90": 3.43
+        },
+        "jointPx": {
+          "median": 1,
+          "p90": 1.61
+        }
+      },
+      "idea-villagers/poses-poses-4": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 1.05,
+          "p90": 6.35
+        },
+        "jointPx": {
+          "median": 1.09,
+          "p90": 1.65
+        }
+      },
+      "idea-villagers/poses-poses-6": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.71,
+          "p90": 2.7
+        },
+        "jointPx": {
+          "median": 1.05,
+          "p90": 1.6
+        }
+      },
+      "jeremiah/heads-heads-1": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.12,
+          "p90": 0.23
+        },
+        "jointPx": {
+          "median": 0.92,
+          "p90": 1.51
+        }
+      },
+      "jeremiah/heads-heads-2": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.14,
+          "p90": 0.27
+        },
+        "jointPx": {
+          "median": 1,
+          "p90": 1.55
+        }
+      },
+      "jeremiah/heads-heads-3": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.12,
+          "p90": 0.27
+        },
+        "jointPx": {
+          "median": 1.09,
+          "p90": 1.68
+        }
+      },
+      "jeremiah/heads-heads-4": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.09,
+          "p90": 0.28
+        },
+        "jointPx": {
+          "median": 0.97,
+          "p90": 1.52
+        }
+      },
+      "jeremiah/heads-heads-5": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.08,
+          "p90": 0.26
+        },
+        "jointPx": {
+          "median": 0.98,
+          "p90": 1.54
+        }
+      },
+      "jeremiah/heads-heads-6": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.1,
+          "p90": 0.23
+        },
+        "jointPx": {
+          "median": 0.94,
+          "p90": 1.56
+        }
+      },
+      "lead-feast/heads-heads-4": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.1,
+          "p90": 0.25
+        },
+        "jointPx": {
+          "median": 1.05,
+          "p90": 1.84
+        }
+      },
+      "lead-feast/single-single-1": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.74,
+          "p90": 3.92
+        },
+        "jointPx": {
+          "median": 1.03,
+          "p90": 1.62
+        }
+      },
+      "lead-feast/turnaround-front": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.59,
+          "p90": 2.96
+        },
+        "jointPx": {
+          "median": 0.97,
+          "p90": 1.5
+        }
+      },
+      "lead-feast/turnaround-threeQuarterLeft": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.75,
+          "p90": 3.36
+        },
+        "jointPx": {
+          "median": 1.05,
+          "p90": 1.68
+        }
+      },
+      "paul/heads-heads-1": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.1,
+          "p90": 0.27
+        },
+        "jointPx": {
+          "median": 1.05,
+          "p90": 1.6
+        }
+      },
+      "paul/heads-heads-2": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.07,
+          "p90": 0.2
+        },
+        "jointPx": {
+          "median": 1.06,
+          "p90": 1.51
+        }
+      },
+      "paul/heads-heads-3": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.12,
+          "p90": 0.2
+        },
+        "jointPx": {
+          "median": 1.06,
+          "p90": 1.62
+        }
+      },
+      "paul/heads-heads-4": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.11,
+          "p90": 0.25
+        },
+        "jointPx": {
+          "median": 0.98,
+          "p90": 1.56
+        }
+      },
+      "paul/heads-heads-5": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.09,
+          "p90": 0.2
+        },
+        "jointPx": {
+          "median": 1.01,
+          "p90": 1.49
+        }
+      },
+      "paul/heads-heads-6": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.09,
+          "p90": 0.2
+        },
+        "jointPx": {
+          "median": 1.03,
+          "p90": 1.49
+        }
+      },
+      "sower/poses-poses-1": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.66,
+          "p90": 2.73
+        },
+        "jointPx": {
+          "median": 1.03,
+          "p90": 1.7
+        }
+      },
+      "sower/poses-poses-2": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.72,
+          "p90": 2.76
+        },
+        "jointPx": {
+          "median": 1.04,
+          "p90": 1.63
+        }
+      },
+      "sower/poses-poses-3": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.59,
+          "p90": 2.91
+        },
+        "jointPx": {
+          "median": 1.08,
+          "p90": 1.7
+        }
+      },
+      "sower/poses-poses-4": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.71,
+          "p90": 3.79
+        },
+        "jointPx": {
+          "median": 1.04,
+          "p90": 1.66
+        }
+      },
+      "sower/turnaround-back": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.66,
+          "p90": 2.94
+        },
+        "jointPx": {
+          "median": 0.98,
+          "p90": 1.55
+        }
+      },
+      "sower/turnaround-front": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.74,
+          "p90": 2.87
+        },
+        "jointPx": {
+          "median": 1.04,
+          "p90": 1.59
+        }
+      },
+      "sower/turnaround-profileLeft": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.54,
+          "p90": 2.14
+        },
+        "jointPx": {
+          "median": 1.04,
+          "p90": 1.78
+        }
+      },
+      "sower/turnaround-profileRight": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.59,
+          "p90": 2.43
+        },
+        "jointPx": {
+          "median": 0.95,
+          "p90": 1.59
+        }
+      },
+      "sower/turnaround-threeQuarterLeft": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.6,
+          "p90": 2.57
+        },
+        "jointPx": {
+          "median": 1.03,
+          "p90": 1.59
+        }
+      },
+      "sower/turnaround-threeQuarterRight": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.66,
+          "p90": 2.43
+        },
+        "jointPx": {
+          "median": 1.07,
+          "p90": 1.64
+        }
+      },
+      "villager-child/poses-poses-5": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.55,
+          "p90": 2.22
+        },
+        "jointPx": {
+          "median": 1.07,
+          "p90": 1.68
+        }
+      },
+      "villager-toddler/poses-poses-1": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.54,
+          "p90": 2.11
+        },
+        "jointPx": {
+          "median": 1.13,
+          "p90": 1.79
+        }
+      },
+      "villager-toddler/poses-poses-2": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.72,
+          "p90": 3.09
+        },
+        "jointPx": {
+          "median": 1.08,
+          "p90": 1.8
+        }
+      }
+    }
+  },
+  "untrained": {
+    "idea-villagers/poses-poses-3": {
+      "n": 40,
+      "angleDeg": {
+        "median": 12.34,
+        "p90": 63.06
+      },
+      "jointPx": {
+        "median": 17.01,
+        "p90": 62.71
+      }
+    }
+  },
+  "clip": {
+    "member": "lead-feast",
+    "clip": "raise/clip-b",
+    "iou": {
+      "0-123": 0.9120966698510602,
+      "0-40": 0.9098354292209895,
+      "41-123": 0.9132136682345893
+    },
+    "named": {
+      "0-123": {
+        "lead-feast/turnaround-front": 39,
+        "lead-feast/single-single-1": 85
+      },
+      "0-40": {
+        "lead-feast/turnaround-front": 39,
+        "lead-feast/single-single-1": 2
+      },
+      "41-123": {
+        "lead-feast/single-single-1": 83
+      }
+    },
+    "runs": [
+      {
+        "from": 0,
+        "to": 39,
+        "drawing": "lead-feast/turnaround-front"
+      },
+      {
+        "from": 39,
+        "to": 124,
+        "drawing": "lead-feast/single-single-1"
+      }
+    ]
+  },
+  "spend": {
+    "modalMeteredUsd": 0.79,
+    "modalBilledUsd": 0,
+    "buildCountedUsd": 0.92
+  }
+}
