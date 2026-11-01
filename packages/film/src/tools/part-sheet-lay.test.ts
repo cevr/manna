@@ -556,7 +556,7 @@ describe('the part sheet lay', () => {
   });
 
   test('the lays the tests above read are made to the bit as recorded', () => {
-    // a digest of each whole lay (fit, measures, the sheet's every byte), so a faster lay is held to the same output
+    // a digest of each whole lay (fit, measures, the sheet's every byte), so no change to the lay goes unseen
     expect(
       [smoothArm, fleckedArm, grainyBeside, steppedTunic, acrossTheEdge].map(digestOf),
     ).toEqual([
