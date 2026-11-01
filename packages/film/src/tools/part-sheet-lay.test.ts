@@ -35,10 +35,10 @@ const DARK_OLIVE: Rgb = [105, 95, 60];
 const DARK_FLECK: Rgb = [93, 83, 49];
 /** An ink of L* 20, drawn as an outline through the dark olive. */
 const DARK_INK: Rgb = [56, 47, 37];
-/** A brown cloth of L* 16.6: at the darkest tone a kept cloth of the cast is shaded. */
-const DEEP: Rgb = [48, 40, 28];
-/** The deep brown 6 L* lighter: a fleck of fine grain in it. */
-const DEEP_FLECK: Rgb = [62, 53, 38];
+/** A brown cloth of L* 15.25: the darkest kept cloth of the cast measures L* 15.2, under 1 above the outline's 15. */
+const DEEP: Rgb = [45, 37, 26];
+/** The deep brown 6.1 L* lighter: a fleck of fine grain in it. */
+const DEEP_FLECK: Rgb = [59, 50, 36];
 /** An ink of L* 5: an outline's core. */
 const OUTLINE_INK: Rgb = [20, 16, 14];
 /** An outline's ramp into its cloth, L* 46. */
