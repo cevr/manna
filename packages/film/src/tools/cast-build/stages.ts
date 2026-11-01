@@ -24,7 +24,7 @@
 //
 // A stage id reads `<stage>:<entry>@<member>` (`cut:turnaround-front@lead-feast`).
 // After every member's stages: `trainsetStage`, the sorted hashes of every
-// complete drawing's shard after this build's stages; `trainStage`, the one reader trained on that set (spending
+// trainable drawing's shard after this build's stages; `trainStage`, the one reader trained on that set (spending
 // Modal), keyed by the set, its shards and the reader's source files;
 // `evalStage` per shard, that drawing's held samples read and scored by the
 // reader (`reader.ts`, on this machine). The owner's ask and draws are
@@ -65,7 +65,7 @@ const VERSION = {
   cut: '2',
   fit: '1',
   renders: '1',
-  status: '1',
+  status: '2',
   trainset: '2',
   train: '2',
   eval: '1',
@@ -394,7 +394,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
   }
   for (const entry of m.coverage.entries) {
     // a drawing cut from its own sheet, once its cut is made (in this build or before); the
-    // training set takes it only when its entry is complete (`trainsetStage`)
+    // training set takes it only when its entry is trainable (`trainsetStage`)
     if (entry.cut !== 'puppet' || Option.isSome(Option.fromUndefinedOr(entry.fitted))) continue;
     stages.push({
       id: `renders:${at(entry.id)}`,
@@ -436,15 +436,21 @@ const idsOf = (entry: string, member: string) => {
 };
 
 const StatusJson = Schema.fromJsonString(
-  Schema.Struct({ complete: Schema.Boolean, missing: Schema.Array(Schema.String) }),
+  Schema.Struct({
+    complete: Schema.Boolean,
+    trainable: Schema.Boolean,
+    missing: Schema.Array(Schema.String),
+  }),
 );
 
 /**
- * An entry's coverage verdict, `coverageOf` over facts read off this
+ * An entry's coverage verdicts, `coverageOf` over facts read off this
  * build's outputs: drawn and kept, its drawing stage made (it fails
  * otherwise); bars, its parts output's record; cut, its cut made; fit, its
- * fit rows pass. Its inputs are those stages, so a record whose bars change
- * changes the verdict and every key that reads it.
+ * fit rows pass. It says `complete` (the library's readiness) and
+ * `trainable` (the training set takes it). Its inputs are those stages, so
+ * a record whose bars change changes the verdicts and every key that reads
+ * them.
  */
 const statusStage = (entry: string, member: string): Stage<never> => {
   const ids = idsOf(entry, member);
@@ -472,16 +478,20 @@ const statusStage = (entry: string, member: string): Stage<never> => {
           { [entry]: { drawn: true, kept: true, cut: true, bars, fit } },
         );
         const missing = report.entries.flatMap((e) => e.missing);
-        const text = yield* Schema.encodeEffect(StatusJson)({ complete: report.complete, missing });
+        const text = yield* Schema.encodeEffect(StatusJson)({
+          complete: report.complete,
+          trainable: report.entries.every((e) => e.trainable),
+          missing,
+        });
         return encoder.encode(text);
       }).pipe(Effect.mapError((e) => StageFailed.make({ reason: `${ids.status}: ${String(e)}` }))),
   };
 };
 
-/** Whether a status stage's output says its entry is complete. */
-const completeIn = (bytes: Uint8Array) =>
+/** Whether a status stage's output says its entry is trainable. */
+const trainableIn = (bytes: Uint8Array) =>
   Schema.decodeEffect(StatusJson)(new TextDecoder().decode(bytes)).pipe(
-    Effect.map((s) => s.complete),
+    Effect.map((s) => s.trainable),
     Effect.orElseSucceed(() => false),
   );
 
@@ -517,10 +527,12 @@ export const fitPasses = (bytes: Uint8Array) =>
 
 /**
  * The training set: the shard hash of every candidate whose status stage
- * says complete, by its drawing, sorted. Its renders and status are
- * optional inputs, so the set is keyed by every eligibility fact through
- * those outputs; a drawing that waits (its sheet not yet cut) leaves the set
- * without holding it, and one made complete in this build joins it.
+ * says trainable (`coverage.ts`: drawn, kept, cut, fit passed; its bars do
+ * not count), by its drawing, sorted. Its renders and status are optional
+ * inputs, so the set is keyed by every eligibility fact through those
+ * outputs; a drawing that waits (its sheet not yet cut) leaves the set
+ * without holding it, and one made trainable in this build joins it. A
+ * fitted entry is no candidate, so it yields no shard.
  */
 export const trainsetStage = (candidates: ReadonlyArray<Candidate>): Stage<never> => ({
   id: 'trainset',
@@ -531,7 +543,7 @@ export const trainsetStage = (candidates: ReadonlyArray<Candidate>): Stage<never
       const shards: Array<readonly [string, string]> = [];
       for (const c of candidates) {
         if (!ctx.known(c.renders) || !ctx.known(c.status)) continue;
-        if (yield* completeIn(yield* ctx.output(c.status)))
+        if (yield* trainableIn(yield* ctx.output(c.status)))
           shards.push([c.drawing, sha256Hex(yield* ctx.output(c.renders))]);
       }
       return trainsetOf(Object.fromEntries(shards));

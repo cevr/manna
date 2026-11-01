@@ -4,8 +4,11 @@
 // twos, never posed), and the rule that says what each still lacks.
 //
 // An entry is complete when it is drawn and kept, and a puppet also cut, its
-// part sheet's bars passed and its fit rows passed. The facts come from
-// `coverage-facts.ts`; this module is pure.
+// part sheet's bars passed and its fit rows passed: the library's readiness.
+// A puppet entry cut from its own sheet is trainable when it is drawn, kept,
+// cut and its fit rows pass: the reader needs a puppet that poses as its
+// sheet does, and the bars judge the laid paint for a film frame, not that.
+// The facts come from `coverage-facts.ts`; this module is pure.
 
 import { Option, Schema } from 'effect';
 
@@ -74,6 +77,8 @@ interface EntryReport {
   readonly cut: CutKind;
   readonly missing: ReadonlyArray<Requirement>;
   readonly unmeasured: ReadonlyArray<Requirement>;
+  /** Whether the reader's training set takes this entry's shard (`trainableOf`). */
+  readonly trainable: boolean;
 }
 
 interface CoverageReport {
@@ -90,11 +95,33 @@ const HELD_TO = {
   puppet: REQUIREMENTS,
 } satisfies { readonly [C in CutKind]: ReadonlyArray<Requirement> };
 
-/** Each entry's unmet requirements, in order; an entry with no facts misses them all. */
+/** What a puppet entry needs to be trained on: all but its bars. */
+const TRAIN_NEEDS: ReadonlyArray<Requirement> = ['drawn', 'kept', 'cut', 'fit'];
+
+/**
+ * Whether the training set takes an entry: a puppet cut from its own sheet
+ * that misses none of `TRAIN_NEEDS`. A key is never posed, so never trained
+ * on. A fitted entry (`fitted`) yields no shard: its parts are its source
+ * view's and its pose lies in that view's range, so the reader names the
+ * source view for it.
+ */
+const trainableOf = (
+  entry: { readonly cut: CutKind; readonly fitted?: string },
+  missing: ReadonlyArray<Requirement>,
+): boolean =>
+  entry.cut === 'puppet' &&
+  Option.isNone(Option.fromUndefinedOr(entry.fitted)) &&
+  !TRAIN_NEEDS.some((r) => missing.includes(r));
+
+/** Each entry's unmet requirements, in order, and whether it is trained on; an entry with no facts misses them all. */
 export const coverageOf = (
   coverage: {
     readonly member: string;
-    readonly entries: ReadonlyArray<{ readonly id: string; readonly cut: CutKind }>;
+    readonly entries: ReadonlyArray<{
+      readonly id: string;
+      readonly cut: CutKind;
+      readonly fitted?: string;
+    }>;
   },
   facts: Readonly<Record<string, EntryFacts>>,
 ): CoverageReport => {
@@ -106,7 +133,13 @@ export const coverageOf = (
         Option.exists(Option.fromNullishOr(f.unmeasured), (u) => u.includes(r)),
       ),
     );
-    return { id: entry.id, cut: entry.cut, missing, unmeasured };
+    return {
+      id: entry.id,
+      cut: entry.cut,
+      missing,
+      unmeasured,
+      trainable: trainableOf(entry, missing),
+    };
   });
   return {
     member: coverage.member,

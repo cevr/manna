@@ -1,6 +1,8 @@
 // A member's coverage (`coverageOf`): an entry is complete when it is drawn
 // and kept, and a puppet also cut, its bars passed and its fit rows passed;
-// the report names exactly the unmet requirements, in that order.
+// the report names exactly the unmet requirements, in that order. A puppet
+// entry cut from its own sheet is trainable when it misses neither drawn,
+// kept, cut nor fit; its bars do not count.
 
 import { describe, expect, test as it } from 'bun:test';
 import { Schema } from 'effect';
@@ -17,7 +19,15 @@ describe('a member coverage', () => {
     expect(report).toEqual({
       member: 'lead',
       complete: false,
-      entries: [{ id: 'raise/k2', cut: 'puppet', missing: ['cut', 'bars', 'fit'], unmeasured: [] }],
+      entries: [
+        {
+          id: 'raise/k2',
+          cut: 'puppet',
+          missing: ['cut', 'bars', 'fit'],
+          unmeasured: [],
+          trainable: false,
+        },
+      ],
     });
   });
 
@@ -63,7 +73,47 @@ describe('a member coverage', () => {
       cut: 'puppet',
       missing: ['cut', 'fit'],
       unmeasured: ['cut', 'fit'],
+      trainable: false,
     });
+  });
+
+  it('trains on a puppet entry that misses only its bars, not on one that misses its fit', () => {
+    const report = coverageOf(
+      {
+        member: 'lead',
+        entries: [
+          { id: 'turnaround-front', cut: 'puppet' },
+          { id: 'heads-heads-1', cut: 'puppet' },
+          { id: 'heads-heads-2', cut: 'puppet' },
+        ],
+      },
+      {
+        'turnaround-front': { ...ALL, bars: false },
+        'heads-heads-1': { ...ALL, fit: false },
+        'heads-heads-2': ALL,
+      },
+    );
+    expect(report.complete).toBe(false);
+    expect(report.entries.map((e) => [e.id, e.trainable])).toEqual([
+      ['turnaround-front', true],
+      ['heads-heads-1', false],
+      ['heads-heads-2', true],
+    ]);
+  });
+
+  it('never trains on a key or a fitted entry, each complete', () => {
+    const report = coverageOf(
+      {
+        member: 'lead',
+        entries: [
+          { id: 'raise/k4', cut: 'key' },
+          { id: 'poses-poses-1', cut: 'puppet', fitted: 'turnaround-front' },
+        ],
+      },
+      { 'raise/k4': ALL, 'poses-poses-1': ALL },
+    );
+    expect(report.complete).toBe(true);
+    expect(report.entries.map((e) => e.trainable)).toEqual([false, false]);
   });
 
   it('decodes a manifest whose key names its neighbours and why it is no puppet', () => {

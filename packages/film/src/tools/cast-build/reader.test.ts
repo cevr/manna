@@ -103,17 +103,17 @@ const RECORD = { passing: '{"missed":[]}', open: '{"missed":["arm"],"named":[]}'
 const record = (bars: keyof typeof RECORD) => text(RECORD[bars]);
 /** The record file a view's parts stage reads; `none` stands for a sheet with no record yet. */
 const recordFile = (view: string) => `/in/${view}.record.json`;
+/** The fit rows a view's fit stage reads off disk, so a test flips them on one cache. */
+const fitFile = (view: string) => `/in/${view}.fit.json`;
 
 /**
  * Each view's drawing, parts (its record file read off disk, `none` for no
- * record), cut, fit (passing unless `failing` names it), renders (a shard
+ * record), cut, fit (its rows read off disk), renders (a shard
  * file's bytes) and status stages, the training set, its train and each
  * drawing's eval. When `sideCut` is on, the side's parts stage spends okra
  * and writes a passing record: the side is cut in the build.
  */
-const graph = (
-  o: { readonly failing?: string; readonly sideCut?: boolean } = {},
-): ReadonlyArray<Stage<CastReader>> => [
+const graph = (o: { readonly sideCut?: boolean } = {}): ReadonlyArray<Stage<CastReader>> => [
   ...VIEWS.flatMap((v): ReadonlyArray<Stage<never>> => {
     const at = (kind: string) => `${kind}:${v}@m`;
     const cutInBuild = o.sideCut === true && v === 'side';
@@ -151,9 +151,9 @@ const graph = (
       },
       {
         id: at('fit'),
-        inputs: [stageInput(at('cut'))],
+        inputs: [stageInput(at('cut')), fileInput(fitFile(v))],
         version: '1',
-        run: () => Effect.succeed(fitRows(o.failing !== `m/${v}`)),
+        run: (ctx: Ctx) => ctx.file(fitFile(v)),
       },
       {
         id: at('renders'),
@@ -175,6 +175,8 @@ const files = () =>
     ['/in/renders:side@m.tar', text('side shard')],
     [recordFile('front'), record('passing')],
     [recordFile('side'), record('passing')],
+    [fitFile('front'), fitRows(true)],
+    [fitFile('side'), fitRows(true)],
     ['/reader/model.py', text('model')],
     ['/reader/uv.lock', text('lock')],
   ]);
@@ -351,7 +353,7 @@ describe('cast build: train and eval', () => {
     }),
   );
 
-  it.effect('an entry with an open bar or a failing fit row is not trained on', () =>
+  it.effect('an entry missing only its bars, or with no record, joins the set it trains on', () =>
     Effect.gen(function* () {
       const spend = { spend: new Set(['modal'] as const) };
       const bars: Array<string> = [];
@@ -359,44 +361,77 @@ describe('cast build: train and eval', () => {
       open.set(recordFile('side'), record('open'));
       yield* build(open, bars, spend);
       expect(bars.filter((a) => a.startsWith('train'))).toEqual([
-        expect.stringMatching(/ shards=1$/),
+        expect.stringMatching(/ shards=2$/),
       ]);
       const missing: Array<string> = [];
       const none = files();
       none.set(recordFile('side'), text('none'));
       yield* build(none, missing, spend);
       expect(missing.filter((a) => a.startsWith('train'))).toEqual([
-        expect.stringMatching(/ shards=1$/),
-      ]);
-      const fit: Array<string> = [];
-      yield* build(files(), fit, spend, graph({ failing: 'm/side' }));
-      expect(fit.filter((a) => a.startsWith('train'))).toEqual([
-        expect.stringMatching(/ shards=1$/),
+        expect.stringMatching(/ shards=2$/),
       ]);
     }),
   );
 
-  it.effect("a record's bars that change change the set, the shard and fit bytes the same", () =>
+  it.effect('an entry with a failing fit row is not trained on, its bars passed or not', () =>
     Effect.gen(function* () {
+      const spend = { spend: new Set(['modal'] as const) };
+      for (const bars of ['passing', 'open'] as const) {
+        const asked: Array<string> = [];
+        const disk = files();
+        disk.set(recordFile('side'), record(bars));
+        disk.set(fitFile('side'), fitRows(false));
+        yield* build(disk, asked, spend);
+        expect(asked.filter((a) => a.startsWith('train'))).toEqual([
+          expect.stringMatching(/ shards=1$/),
+        ]);
+      }
+    }),
+  );
+
+  it.effect('a fit that flips flips the entry in the set on one cache, its pixels the same', () =>
+    Effect.gen(function* () {
+      // the side's bars stay open throughout: only its trainable verdict flips
       const disk = files();
       disk.set(recordFile('side'), record('open'));
+      disk.set(fitFile('side'), fitRows(false));
       const trained = (asked: ReadonlyArray<string>) => asked.filter((a) => a.startsWith('train'));
       const spend = { spend: new Set(['modal'] as const) };
       const first: Array<string> = [];
       yield* build(disk, first, spend);
       expect(trained(first)).toEqual([expect.stringMatching(/ shards=1$/)]);
-      // bars false -> true: the side joins, one more train
-      disk.set(recordFile('side'), record('passing'));
+      // fit false -> true: the side's status says trainable, and it joins, its renders cached
+      disk.set(fitFile('side'), fitRows(true));
       const joined: Array<string> = [];
-      yield* build(disk, joined, spend);
+      const join = yield* build(disk, joined, spend);
+      expect(stateOf(join)['renders:side@m']).toBe('cached');
+      expect(stateOf(join)['status:side@m']).toBe('ran');
       expect(trained(joined)).toEqual([expect.stringMatching(/ shards=2$/)]);
       // and back: the side leaves the set again, which is the first build's set, and its train
-      disk.set(recordFile('side'), record('open'));
+      disk.set(fitFile('side'), fitRows(false));
       const left: Array<string> = [];
       const back = yield* build(disk, left, spend);
       expect(stateOf(back)['trainset']).toBe('cached');
       expect(stateOf(back)['train']).toBe('cached');
       expect(trained(left)).toEqual([]);
+    }),
+  );
+
+  it.effect("a record's bars that change change the entry's status, not the set or its train", () =>
+    Effect.gen(function* () {
+      const disk = files();
+      const spend = { spend: new Set(['modal'] as const) };
+      const first: Array<string> = [];
+      yield* build(disk, first, spend);
+      expect(first.filter((a) => a.startsWith('train'))).toEqual([
+        expect.stringMatching(/ shards=2$/),
+      ]);
+      disk.set(recordFile('side'), record('open'));
+      const again: Array<string> = [];
+      const opened = yield* build(disk, again, spend);
+      expect(stateOf(opened)['status:side@m']).toBe('ran');
+      expect(stateOf(opened)['train']).toBe('cached');
+      expect(again).toEqual([]);
     }),
   );
 

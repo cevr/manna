@@ -45,6 +45,7 @@ const MemberReport = Schema.Struct({
       cut: CutKind,
       missing: Schema.Array(Requirement),
       unmeasured: Schema.Array(Requirement),
+      trainable: Schema.Boolean,
     }),
   ),
 });
@@ -130,7 +131,7 @@ const reportOf = Effect.fn('film.cast.coverageReport')(function* (
   } satisfies MemberReport;
 });
 
-/** An entry's line: its id, its cut, what it lacks and what of that is unmeasured. */
+/** An entry's line: its id, its cut, what it lacks, what of that is unmeasured, and whether it is trained on. */
 const entryLine = (e: MemberReport['entries'][number]): string =>
   [
     `  ${e.id} ${e.cut}`,
@@ -142,9 +143,10 @@ const entryLine = (e: MemberReport['entries'][number]): string =>
       onEmpty: () => [],
       onNonEmpty: (u) => [`unmeasured=${u.join(',')}`],
     }),
+    ...Arr.filter(['trainable'], () => e.trainable),
   ].join(' ');
 
-/** A report's lines: the member, then each entry and what it lacks. */
+/** A report's lines: the member and how many entries are trained on, then each entry and what it lacks. */
 const linesOf = (r: MemberReport): ReadonlyArray<string> =>
   Option.match(r.manifest, {
     onNone: () => [`coverage ${r.member} no manifest (cutout/coverage.ts)`],
@@ -152,7 +154,7 @@ const linesOf = (r: MemberReport): ReadonlyArray<string> =>
       `coverage ${r.member} ${Match.value(r.complete).pipe(
         Match.when(true, () => 'complete'),
         Match.orElse(() => 'incomplete'),
-      )} entries=${r.entries.length}`,
+      )} entries=${r.entries.length} trainable=${r.entries.filter((e) => e.trainable).length}`,
       ...r.entries.map(entryLine),
     ],
   });
@@ -217,6 +219,6 @@ export const coverage = <E, R>(
       ),
     ),
     Command.withDescription(
-      "What each cast member's coverage manifest (cutout/coverage.ts) still lacks: each drawing the pipeline needs, a puppet view (drawn, kept, cut, its bars and fit rows passed) or a drawn key (drawn, kept); exits non-zero when one is incomplete",
+      "What each cast member's coverage manifest (cutout/coverage.ts) still lacks: each drawing the pipeline needs, a puppet view (drawn, kept, cut, its bars and fit rows passed) or a drawn key (drawn, kept), and which puppet views the reader trains on (drawn, kept, cut, fit rows passed); exits non-zero when one is incomplete",
     ),
   );
