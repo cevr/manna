@@ -108,6 +108,7 @@ import { ImageRoute } from './image-route.ts';
 import { trace } from './trace-cli.ts';
 import { render } from './cast-render-cli.ts';
 import { build } from './cast-build/build-cli.ts';
+import { reader } from './cast-build/reader-cli.ts';
 import { coverage } from './cast-build/coverage-cli.ts';
 import { ease } from './ease-cli.ts';
 import { fit } from './pose-fit-cli.ts';
@@ -579,6 +580,7 @@ export const concept = <E, R>(
       render(pages, rules),
       coverage(pages, rules),
       build(pages, rules),
+      reader,
       ease(pages),
       fit,
       partSheet,
