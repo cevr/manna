@@ -12,7 +12,7 @@ import {
   iouOf,
   keysOf,
   oneEuro,
-} from './chain.ts';
+} from './chain-steps.ts';
 
 const frame = (probs: Record<string, number>) => ({ id: 'f', joints: {}, probs, worlds: {} });
 

@@ -40,7 +40,8 @@ import { renderCast } from '../cast-render.ts';
 import { sha256Hex } from '../digest.ts';
 import { FilmFolder, type FilmName, importFilmModule } from '../film-repo.ts';
 import { parts } from '../part-sheet-cli.ts';
-import { type Band, CHAIN, ChainFailed, ClipReadJson, chainOf } from './chain.ts';
+import { ChainFailed, chainOf } from './chain.ts';
+import { type Band, CHAIN, ClipReadJson } from './chain-steps.ts';
 import { type Coverage, type EntryFacts, coverageOf } from './coverage.ts';
 import { barsOfRecord, sheetOf } from './coverage-facts.ts';
 import {
