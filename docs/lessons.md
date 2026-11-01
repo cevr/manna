@@ -4663,3 +4663,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** The cut removed every enclosed piece near the paper's colour, so pale cloth was cut as paper: the feast-mother swaddle and veil, the sower's robe and headcloth highlights, the idea-villagers' robes and Jeremiah's bust highlights. Over the night ground each piece showed as a dark band or speck in the cloth.
 - **Cause:** The cut read an enclosed piece by its colour alone, and no pixel measure separates cloth from a true gap: ring ink, edge ink, cool share and size all overlap between the 89 cloth pieces and the 13 gaps of the cast. The cut now holds every enclosed paper piece, and a view names each gap the kept sheet shows open (`gaps` in its `cut.ts`, with the sheet's box and why). The dry run lists each held piece and each named gap, and the eye at 1:1 decides each new one.
 - **Guard:** skill: no pixel measure separates pale cloth from a gap the sheet shows open, so the eye decides each held piece against the kept sheet. Carried by `.claude/skills/film/SKILL.md`: "Check each held piece at 1:1 against the kept sheet: where the sheet shows the ground through it, name it in the view's `gaps` in his `cut.ts` (`at`, `box` and `why`), else the cut fills that ground."
+
+### fine-grain-outline-cutoff-under-dark-cloth
+
+- **Date:** 2026-11-01
+- **Kind:** review
+- **Said:** "a future member's coloured cloth at L* 14 would lose its fine-grain samples"
+- **Source:** cut-held/round-4-review.md m1
+- **Wrong:** The fine grain read leaves out every pixel darker than `OUTLINE_L`, L* 15, as an outline's ink, 0.2 L* under the darkest kept cloth the cast measures (15.2). A member whose cloth is shaded darker than the cutoff would lose that cloth from the read, and its grain would go unread.
+- **Cause:** The cutoff is a style assumption, that no cloth is shaded as dark as ink, measured on the cast as it stands.
+- **Guard:** skill: whether a new member's cloth is darker than the cutoff is known only when his kept sheet is measured. Carried by `.claude/skills/film/SKILL.md`: "Cloth darker than the cutoff drops out of the read, its cells unread: revisit the ink rule, never lower the cutoff to fit him."
