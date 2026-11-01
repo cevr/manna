@@ -9,11 +9,18 @@ import { Effect, FileSystem, Layer, Path } from 'effect';
 import { ContentStore } from '../content-store.ts';
 import { memoryLocks, text } from '../host/testing.ts';
 import { type Stage, buildGraph } from './graph.ts';
-import { STAGE_ENTRIES, type SourcedStage, sourceFiles, stageSources } from './sources.ts';
+import {
+  STAGE_ENTRIES,
+  type SourcedStage,
+  filmCastSources,
+  sourceFiles,
+  stageSources,
+} from './sources.ts';
 
 const local = Layer.mergeAll(BunFileSystem.layer, Path.layer);
 const ends = (files: ReadonlyArray<string>) => files.map((f) => f.split('/src/').at(-1));
 const UNMATTE = new URL('../../core/unmatte.ts', import.meta.url).pathname;
+const PAGE = new URL('../../player/cast.ts', import.meta.url).pathname;
 
 describe('stage sources', () => {
   it.effect('every stage kind runs files of this repo, none of node_modules, each on disk', () =>
@@ -49,7 +56,13 @@ describe('stage sources', () => {
         ]),
       );
       expect(ends(yield* sourceFiles('fit'))).toEqual(
-        expect.arrayContaining(['tools/cast-render.ts', 'core/fit-rows.ts', 'core/unmatte.ts']),
+        expect.arrayContaining([
+          'tools/cast-render.ts',
+          'core/fit-rows.ts',
+          'core/unmatte.ts',
+          // the page the fit render draws in, which no import of the render reaches
+          'player/cast.ts',
+        ]),
       );
     }).pipe(Effect.provide(local)),
   );
@@ -74,6 +87,36 @@ describe('stage sources', () => {
       expect(again.stages.map((s) => s.state)).toEqual(['cached']);
       const touched = yield* buildGraph(stages, { ...options, plan: true, touch: [UNMATTE] });
       expect(touched.stages.map((s) => s.state)).toEqual(['stale']);
+    }).pipe(
+      Effect.scoped,
+      Effect.provide(ContentStore.layer.pipe(Layer.provideMerge([local, memoryLocks]))),
+    ),
+  );
+
+  it.effect('a change to the page or the film’s cast module stales a warm fit stage', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const cache = yield* fs.makeTempDirectoryScoped({ prefix: 'cast-sources-' });
+      const sources = yield* stageSources;
+      const film = new URL('../../../../../apps/animations/src/films/in-its-order', import.meta.url)
+        .pathname;
+      const stages: ReadonlyArray<Stage<never>> = [
+        {
+          id: 'fit:front@m',
+          inputs: [...sources.fit, ...(yield* filmCastSources(film))],
+          version: '1',
+          run: () => Effect.succeed(text('rows')),
+        },
+      ];
+      const options = { cache, plan: false, touch: [], spend: new Set<never>() };
+      expect((yield* buildGraph(stages, options)).stages.map((s) => s.state)).toEqual(['ran']);
+      const stateAfter = (touch: ReadonlyArray<string>) =>
+        Effect.map(buildGraph(stages, { ...options, plan: true, touch }), (r) =>
+          r.stages.map((s) => s.state),
+        );
+      expect(yield* stateAfter([])).toEqual(['cached']);
+      expect(yield* stateAfter([PAGE])).toEqual(['stale']);
+      expect(yield* stateAfter([`${film}/rigs/cast.ts`])).toEqual(['stale']);
     }).pipe(
       Effect.scoped,
       Effect.provide(ContentStore.layer.pipe(Layer.provideMerge([local, memoryLocks]))),

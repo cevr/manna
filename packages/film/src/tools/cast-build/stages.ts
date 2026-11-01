@@ -38,7 +38,7 @@ import type { PuppetImages } from '../../puppet/images.ts';
 import { puppetFrom } from '../../puppet/load.ts';
 import { renderCast } from '../cast-render.ts';
 import { sha256Hex } from '../digest.ts';
-import { type FilmName, importFilmModule } from '../film-repo.ts';
+import { FilmFolder, type FilmName, importFilmModule } from '../film-repo.ts';
 import { parts } from '../part-sheet-cli.ts';
 import { type Band, CHAIN, ChainFailed, ClipReadJson, chainOf } from './chain.ts';
 import { type Coverage, type EntryFacts, coverageOf } from './coverage.ts';
@@ -54,7 +54,7 @@ import {
 } from './graph.ts';
 import { CastReader, type ReaderError } from './reader.ts';
 import { SAMPLES, shardOf, trainsetOf } from './renders.ts';
-import { stageSources } from './sources.ts';
+import { filmCastSources, stageSources } from './sources.ts';
 
 /** Bumped when a stage's code makes other bytes from the same inputs. */
 const VERSION = {
@@ -319,6 +319,8 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
     });
   }
   const fitted = yield* fittedFiles(m.memberDir);
+  // the fit render loads the film's cast module by its path (`STAGE_LOADS`)
+  const filmCast = yield* filmCastSources((yield* FilmFolder).paths(m.film).dir);
   for (const entry of m.coverage.entries) {
     if (entry.cut !== 'puppet') continue;
     const cut = `cut:${at(entry.fitted ?? entry.id)}`;
@@ -329,6 +331,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (m: M
         stageInput(cut),
         stageInput(`drawing:${at(entry.id)}`),
         ...src.fit,
+        ...filmCast,
         // a fitted pose is its pose JSON and held drawings too, which its cut does not hash
         ...Option.match(Option.fromUndefinedOr(entry.fitted), {
           onNone: () => [],

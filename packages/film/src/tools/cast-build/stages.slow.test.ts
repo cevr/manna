@@ -62,6 +62,12 @@ const memberIn = (recorded: ReadonlyArray<string>) =>
     yield* write('cutout/raise/held/poses-1.png', 'png');
     yield* write('cutout/puppets.ts', 'export const PUPPETS = {};');
     for (const view of recorded) yield* write(`cutout/sheets/${view}/record.json`, '{}');
+    // the film's cast module, which the fit render loads by its path, and a file it imports
+    yield* write(
+      'films/in-its-order/rigs/cast.ts',
+      "import { TABLE } from './table.ts';\nexport const CAST = TABLE;",
+    );
+    yield* write('films/in-its-order/rigs/table.ts', 'export const TABLE = {};');
     return dir;
   });
 
@@ -73,7 +79,10 @@ const stagesOf = (dir: string, facts: Record<string, EntryFacts> = {}) =>
     libraryPuppets: `${dir}/library-puppets.ts`,
     coverage: COVERAGE,
     facts,
-  });
+  }).pipe(Effect.provide(FilmFolder.layer(`${dir}/films`)));
+
+/** Each file from the packages folder: `film/src/...`. */
+const ends = (files: ReadonlyArray<string>) => files.map((f) => f.split('/packages/').at(-1));
 
 const filesOf = (stages: ReadonlyArray<Stage<unknown>>, id: string) =>
   stages
@@ -112,6 +121,9 @@ const leadFeastIn = Effect.gen(function* () {
   const sheet = path.join(member, 'cutout', 'sheets', 'front');
   yield* fs.makeDirectory(path.join(films, 'in-its-order', 'scenes'), { recursive: true });
   yield* fs.writeFileString(path.join(films, 'in-its-order', 'scenes', 'index.ts'), 'export {};\n');
+  // the film's cast module, which the fit stage's key reads; a stand-in, as no fit runs here
+  yield* fs.makeDirectory(path.join(films, 'in-its-order', 'rigs'));
+  yield* fs.writeFileString(path.join(films, 'in-its-order', 'rigs', 'cast.ts'), 'export {};\n');
   yield* fs.makeDirectory(path.join(member, 'cutout', 'sheets'), { recursive: true });
   for (const name of ['cast-sheet', 'rig'])
     yield* fs.symlink(path.join(LEAD_FEAST, name), path.join(member, name));
@@ -239,8 +251,19 @@ describe('memberStages', () => {
       expect(filesOf(stages, 'renders:turnaround-front@fake')).toEqual(
         expect.arrayContaining(yield* sourceFiles('renders')),
       );
+      // the fit runs the render, the page it draws in and the film's cast module, loaded by its path
+      expect(ends(filesOf(stages, 'fit:poses-poses-1@fake'))).toEqual(
+        expect.arrayContaining([
+          'film/src/tools/cast-render.ts',
+          'film/src/player/cast.ts',
+          'film/src/core/unmatte.ts',
+        ]),
+      );
       expect(filesOf(stages, 'fit:poses-poses-1@fake')).toEqual(
-        expect.arrayContaining(yield* sourceFiles('fit')),
+        expect.arrayContaining([
+          `${dir}/films/in-its-order/rigs/cast.ts`,
+          `${dir}/films/in-its-order/rigs/table.ts`,
+        ]),
       );
       expect(filesOf(stages, 'parts:turnaround-front@fake')).toEqual(
         expect.arrayContaining(yield* sourceFiles('parts')),

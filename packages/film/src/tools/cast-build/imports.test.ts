@@ -5,7 +5,13 @@
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Path } from 'effect';
 import { memoryFileSystem, text } from '../host/testing.ts';
-import { importClosure, specifiersOf } from './imports.ts';
+import {
+  UndeclaredImport,
+  declaredClosure,
+  importClosure,
+  specifiersOf,
+  variableImportsOf,
+} from './imports.ts';
 
 const tree = () =>
   new Map<string, Uint8Array>([
@@ -30,6 +36,10 @@ const tree = () =>
     ['/src/unused.ts', text('export const u = 1;')],
   ]);
 
+/** The tree, with `b.ts` loading a module by a variable path. */
+const loader = () =>
+  new Map([...tree(), ['/src/b.ts', text('export const load = (f: string) => import(f);')]]);
+
 describe('import closure', () => {
   it.effect(
     'reads static, re-export, side-effect and literal dynamic specifiers, not type-only ones',
@@ -45,7 +55,7 @@ describe('import closure', () => {
 
   it.effect('follows local files transitively, and no package or type-only import', () =>
     Effect.gen(function* () {
-      const files = yield* importClosure(['/src/a.ts']);
+      const { files } = yield* importClosure(['/src/a.ts']);
       expect(files).toEqual([
         '/src/a.ts',
         '/src/b.ts',
@@ -55,5 +65,26 @@ describe('import closure', () => {
         '/src/side.ts',
       ]);
     }).pipe(Effect.provide(Layer.mergeAll(memoryFileSystem(tree()), Path.layer))),
+  );
+
+  it.effect('records each dynamic import whose specifier is not a string literal', () =>
+    Effect.sync(() => {
+      expect(
+        variableImportsOf(
+          "const m = import(file);\nconst t = import(`./x.ts`);\nconst l = import('./l');\nthis.import(y);",
+        ),
+      ).toEqual(['file', '`./x.ts`']);
+    }),
+  );
+
+  it.effect('a closure records its variable imports; one in an undeclared file fails', () =>
+    Effect.gen(function* () {
+      const closure = yield* importClosure(['/src/a.ts']);
+      expect(closure.variable).toEqual([{ file: '/src/b.ts', argument: 'f' }]);
+      const declared = yield* declaredClosure(['/src/a.ts'], ['/src/b.ts']);
+      expect(declared).toEqual(closure.files);
+      const undeclared = yield* Effect.flip(declaredClosure(['/src/a.ts'], []));
+      expect(undeclared).toEqual(UndeclaredImport.make({ file: '/src/b.ts', argument: 'f' }));
+    }).pipe(Effect.provide(Layer.mergeAll(memoryFileSystem(loader()), Path.layer))),
   );
 });
