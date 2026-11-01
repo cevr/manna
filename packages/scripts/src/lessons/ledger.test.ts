@@ -1,6 +1,8 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Option, Path } from 'effect';
+import { Effect, FileSystem, Option, Path, Stream } from 'effect';
+import * as ChildProcess from 'effect/process/ChildProcess';
+import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { ledgerProblems, reviewRoutes } from './ledger.ts';
 
 /** An entry of a ledger, its Guard and its Kind as given, its other fields well formed. */
@@ -180,9 +182,148 @@ describe('the lessons ledger', () => {
         'bad-date: date 19 Oct',
         'bad-kind: kind agent is none of owner, review, retraction',
         'unquoted: said is neither the words in quotes nor a choice',
-        'review-uncited: a review entry cites no finding (<unit>/<review file> F<n>)',
+        'review-uncited: a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)',
         'no-cause: no Cause',
       ]);
+    }),
+  );
+
+  it.effect('reads a finding cited by the id its review gives it, as F2, M1, m3, o2 or T3', () =>
+    Effect.gen(function* () {
+      expect(
+        yield* problemsOf(
+          entry('by-f', 'none: a reason', 'review', 'p6-x/review-1.md F2'),
+          entry('by-major', 'none: a reason', 'review', 'run/unit/p5-round-1-findings.md M1, m1'),
+          entry('by-optional', 'none: a reason', 'review', 'unit/round-1-findings.md o2, T3'),
+          entry('by-file-alone', 'none: a reason', 'review', 'unit/round-1-findings.md'),
+          entry('by-word', 'none: a reason', 'review', 'unit/spec.md Goal'),
+        ),
+      ).toEqual([
+        'by-file-alone: a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)',
+        'by-word: a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)',
+      ]);
+    }),
+  );
+
+  it.effect(
+    'reads a finding only in a review-shaped file: findings, review, checks, verify, report, follow-up or blocked',
+    () =>
+      Effect.gen(function* () {
+        expect(
+          yield* problemsOf(
+            entry('in-findings', 'none: a reason', 'review', 'unit/rw-round-2-findings.md F1'),
+            entry('in-review', 'none: a reason', 'review', 'unit/review-art-3.md F2'),
+            entry('in-checks', 'none: a reason', 'review', 'run/unit/p1-round-1-checks.md F7'),
+            entry('in-self-check', 'none: a reason', 'review', 'unit/p5-self-check.md F3'),
+            entry('in-verify', 'none: a reason', 'review', 'unit/round-2-verify.md F1'),
+            entry('in-report', 'none: a reason', 'review', 'unit/report.md F3'),
+            entry('in-follow-up', 'none: a reason', 'review', 'unit/follow-up-1.md F2'),
+            entry('in-blocked', 'none: a reason', 'review', 'unit/blocked.md F2 (option B)'),
+            entry('in-spec', 'none: a reason', 'review', 'hymnapp/playbulk/spec.md p5'),
+            entry('in-log', 'none: a reason', 'review', 'unit/log.md v2'),
+            entry('in-preview', 'none: a reason', 'review', 'unit/preview.md F1'),
+            entry('in-a-review-folder', 'none: a reason', 'review', 'review-1/spec.md p5'),
+          ),
+        ).toEqual(
+          ['in-spec', 'in-log', 'in-preview', 'in-a-review-folder'].map(
+            (id) =>
+              `${id}: a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)`,
+          ),
+        );
+      }),
+  );
+
+  it.effect(
+    'reads a finding in a counsel, codex, critique, audit or followups output, and none in its input',
+    () =>
+      Effect.gen(function* () {
+        expect(
+          yield* problemsOf(
+            entry('in-counsel', 'none: a reason', 'review', 'unit/round-3-counsel.md F1'),
+            entry('in-counsel-codex', 'none: a reason', 'review', 'unit/counsel-codex.md F2'),
+            entry('in-codex', 'none: a reason', 'review', 'review-1/codex.md C1'),
+            entry('in-critique', 'none: a reason', 'review', 'unit/critique-r2.md F1'),
+            entry(
+              'in-dotted-critique',
+              'none: a reason',
+              'review',
+              'unit/turnaround-threeQuarterLeft.critique.md F2',
+            ),
+            entry('in-audit', 'none: a reason', 'review', 'unit/semantic-audit.md A1'),
+            entry('in-followups', 'none: a reason', 'review', 'unit/followups.md F1'),
+            entry(
+              'in-review-followups',
+              'none: a reason',
+              'review',
+              'unit/review-followups-r1.md F2',
+            ),
+            entry('in-counsel-packet', 'none: a reason', 'review', 'unit/counsel-packet.md F1'),
+            entry(
+              'in-critique-prompt',
+              'none: a reason',
+              'review',
+              'unit/critique-r2-a-prompt.md F1',
+            ),
+            entry('in-followups-brief', 'none: a reason', 'review', 'unit/brief-followups.md F1'),
+            entry('in-dotted-spec', 'none: a reason', 'review', 'unit/film.spec.md p5'),
+          ),
+        ).toEqual(
+          ['in-counsel-packet', 'in-critique-prompt', 'in-followups-brief', 'in-dotted-spec'].map(
+            (id) =>
+              `${id}: a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)`,
+          ),
+        );
+      }),
+  );
+
+  it.effect("refuses a reviewer's input as a cited finding: its prompt, brief or packet", () =>
+    Effect.gen(function* () {
+      expect(
+        yield* problemsOf(
+          entry('a-brief', 'none: a reason', 'review', 'unit/round-1-review-brief.md F1'),
+          entry('a-prompt', 'none: a reason', 'review', 'unit/review-1-prompt.md F2'),
+          entry('a-packet', 'none: a reason', 'review', 'unit/review-r1-packet.md F1'),
+          entry(
+            'a-brief-beside-its-review',
+            'none: a reason',
+            'review',
+            'unit/r1-review-brief.md F1, unit/review-r1.md F1',
+          ),
+        ),
+      ).toEqual(
+        ['a-brief', 'a-prompt', 'a-packet'].map(
+          (id) => `${id}: a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)`,
+        ),
+      );
+    }),
+  );
+
+  it.effect('holds each name a guard lists after its file, up to the next file', () =>
+    Effect.gen(function* () {
+      expect(
+        yield* problemsOf(
+          entry('names-held', 'code: `src/thing.ts` `held`, `refuses a thing`'),
+          entry('second-lost', 'code: `src/thing.ts` `held`, `refuses another`; `src/gone.ts` `x`'),
+          entry(
+            'next-file',
+            'code: `src/thing.ts` `held`, `lint/fixtures/own.ts` `RED film/own-rule`, `call()`',
+          ),
+          entry('proof-lost', 'lint:no-console, proof `src/thing.ts` `refuses a thing`, `unheld`'),
+        ),
+      ).toEqual([
+        'second-lost: src/thing.ts does not hold "refuses another"',
+        'second-lost: no file src/gone.ts',
+        'proof-lost: src/thing.ts does not hold "unheld"',
+      ]);
+    }),
+  );
+
+  it.effect('refuses a field given twice, since its reader keeps only the last', () =>
+    Effect.gen(function* () {
+      const fine = entry('twice', 'code: `src/thing.ts` `held`');
+      expect(
+        yield* problemsOf(fine.replace('- **Guard:**', '- **Guard:** none: lost\n- **Guard:**')),
+      ).toEqual(['twice: Guard is given twice']);
     }),
   );
 
@@ -236,5 +377,50 @@ describe('the lessons ledger', () => {
           ]);
         }),
       ),
+  );
+});
+
+/** `bun check.ts <root>` over a scratch repo whose ledger holds `entries`: its stdout's lines and its exit code. */
+const checkRun = (...entries: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const path = yield* Path.Path;
+    const root = yield* repoWith(`# Lessons\n\n${entries.join('\n')}`);
+    const child = yield* (yield* ChildProcessSpawner).spawn(
+      ChildProcess.make('bun', [path.join(import.meta.dir, 'check.ts'), root], {
+        forceKillAfter: '5 seconds',
+      }),
+    );
+    const [out, code] = yield* Effect.all(
+      [Stream.mkString(Stream.decodeText(child.stdout)), child.exitCode],
+      { concurrency: 2 },
+    );
+    return { lines: out.trim().split('\n'), code: Number(code) };
+  }).pipe(Effect.scoped, Effect.provide(BunServices.layer));
+
+describe('the ledger check, as the gate and the pre-commit run it', () => {
+  it.effect('prints each problem by its entry, then the counts, and exits 1', () =>
+    Effect.gen(function* () {
+      const { lines, code } = yield* checkRun(
+        entry('held', 'code: `src/thing.ts` `held`'),
+        entry('code-no-file', 'code: `src/gone.ts` `held`'),
+        entry('review-uncited', 'none: a reason', 'review', 'hymnapp/playbulk/spec.md p5'),
+      );
+      expect(lines.slice(0, -1)).toEqual([
+        'lessons code-no-file: no file src/gone.ts',
+        'lessons review-uncited: a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)',
+      ]);
+      expect(lines.at(-1)).toMatch(/^lessons: 3 entries, 2 problem\(s\), \d+ ms$/);
+      expect(code).toBe(1);
+    }),
+  );
+
+  it.effect('prints the counts alone and exits 0 when every entry holds', () =>
+    Effect.gen(function* () {
+      const { lines, code } = yield* checkRun(entry('held', 'code: `src/thing.ts` `held`'));
+      expect(lines).toEqual([
+        expect.stringMatching(/^lessons: 1 entries, 0 problem\(s\), \d+ ms$/),
+      ]);
+      expect(code).toBe(0);
+    }),
   );
 });

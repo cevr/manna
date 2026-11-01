@@ -3545,8 +3545,8 @@ a commit hash, each outside a quoted literal and a URL. History told in words
 (what the code used to do, which pass changed it) is a review finding
 (`CLAUDE.md`, **Comments**), since no pattern can read it.
 **A mistake found once** becomes a check when the check is cheap, so the
-gate (`bun run gate`: oxlint's deterministic rules and the unit tests) finds
-it the next time: a mistake a syntax tree shows is a deterministic rule; one
+gate (`bun run gate`: oxlint's deterministic rules, the lessons ledger's
+check and the unit tests) finds it the next time: a mistake a syntax tree shows is a deterministic rule; one
 a small fast test shows is a unit test; one only a reader can see is a
 judged rule with its labelled corpus, run by `bun run test:slow`; one of
 taste or process that no item shows is a line in a skill. A mistake with no
@@ -3730,8 +3730,8 @@ suite. Each run writes its files' times to a timings file in the package's
 installed modules (the script's `--timings` and `--update-timings`), and the
 next run starts the slowest files first, so a long file does not begin last
 and run alone. A fresh checkout, CI's among them, has no times yet and runs
-the files in their usual order. The suite stays inside the repo's ten-second
-budget (`bun run test:budget`). E2E files live separately under `e2e/`, so
+the files in their usual order. Its budget is 1.1 s (`bun run
+test:budget`); on a busy host it runs over it (issue #49). E2E files live separately under `e2e/`, so
 those paths do not discover or execute them. Their source remains linted and typechecked.
 
 Run `bun run test:e2e` from the repository root or this package to exercise

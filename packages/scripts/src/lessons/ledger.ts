@@ -28,25 +28,26 @@ import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 const FIELDS = ['Date', 'Kind', 'Said', 'Source', 'Wrong', 'Cause', 'Guard'] as const;
 const KINDS = ['owner', 'review', 'retraction'];
 
-/** One entry: its id and each field's words, as written. */
+/** One entry: its id, each field's words as written, and each field it gives more than once. */
 interface Entry {
   readonly id: string;
   readonly fields: ReadonlyMap<string, string>;
+  readonly twice: ReadonlyArray<string>;
 }
 
-/** The entries of the ledger's text, in order. */
+/** The entries of the ledger's text, in order; a field given twice keeps its last words. */
 const entriesOf = (ledger: string): ReadonlyArray<Entry> =>
   ledger
     .split('\n### ')
     .slice(1)
     .map((chunk) => {
       const [id = '', ...lines] = chunk.split('\n');
-      const fields = new Map(
-        lines.flatMap((line): ReadonlyArray<readonly [string, string]> =>
-          Array.from(line.matchAll(/^- \*\*(\w+):\*\* (.+)$/g), (m) => [m[1] ?? '', m[2] ?? '']),
-        ),
+      const given = lines.flatMap((line): ReadonlyArray<readonly [string, string]> =>
+        Array.from(line.matchAll(/^- \*\*(\w+):\*\* (.+)$/g), (m) => [m[1] ?? '', m[2] ?? '']),
       );
-      return { id: id.trim(), fields };
+      const names = given.map(([name]) => name);
+      const twice = [...new Set(names.filter((name, at) => names.indexOf(name) !== at))];
+      return { id: id.trim(), fields: new Map(given), twice };
     });
 
 /** What a guard asks of the repo. */
@@ -56,13 +57,21 @@ type Claim =
   | { readonly _tag: 'Gates'; readonly rule: string; readonly corpus: string }
   | { readonly _tag: 'Unread'; readonly why: string };
 
-/** A guard's `` `file` `name` `` pairs. */
+/** A guard's file, `dir/file.ext`, as the words in its backticks. */
+const FILE = '[^`\\s]+\\/[^`\\s]+\\.[a-z]+';
+
+/**
+ * A guard's `` `file` `name` `` pairs, a file's further names listed after
+ * it as `` , `name` `` each, up to the next file.
+ */
 const pairsOf = (text: string): ReadonlyArray<Claim> =>
-  Array.from(text.matchAll(/`([^`\s]+\/[^`\s]+\.[a-z]+)` `([^`]+)`/g), (m): Claim => ({
-    _tag: 'Holds',
-    file: m[1] ?? '',
-    holds: m[2] ?? '',
-  }));
+  Array.from(
+    text.matchAll(new RegExp(`\`(${FILE})\` \`([^\`]+)\`((?:, (?!\`${FILE}\`)\`[^\`]+\`)*)`, 'g')),
+  ).flatMap((m) =>
+    [m[2] ?? '', ...Array.from((m[3] ?? '').matchAll(/`([^`]+)`/g), (n) => n[1] ?? '')].map(
+      (holds): Claim => ({ _tag: 'Holds', file: m[1] ?? '', holds }),
+    ),
+  );
 
 const unread = (why: string): ReadonlyArray<Claim> => [{ _tag: 'Unread', why }];
 
@@ -146,12 +155,37 @@ const LEDGER = 'docs/lessons.md';
 const unless = (holds: boolean, problem: string): ReadonlyArray<string> =>
   [problem].filter(() => !holds);
 
+/** Each `<unit>/<file>.md <id>` of a Source, captured by the file's name. */
+const CITE = /\S\/([\w.-]+)\.md [A-Za-z]\d+\b/g;
+/** A review's word as one of a file name's parts, joined by `-` or `.`. */
+const REVIEW_PART =
+  /(?:^|[-.])(?:findings|review|checks?|verify|report|follow-up|followups|blocked|counsel|codex|critique|audit)(?=[-.]|$)/;
+/** A reviewer's input as one of a file name's parts, joined by `-` or `.`. */
+const INPUT_PART = /(?:^|[-.])(?:prompt|brief|packet)(?=[-.]|$)/;
+
+/**
+ * Whether a Source cites a finding in its review file: `<unit>/<file> <id>`,
+ * the file's name holding a review's word as one of its parts
+ * (`round-1-findings.md`, `review-r1.md`, `p1-round-1-checks.md`,
+ * `p5-self-check.md`, `round-2-verify.md`, `report.md`, `follow-up-1.md`,
+ * `followups.md`, `blocked.md`, `round-3-counsel.md`, `codex.md`,
+ * `critique-r2.md`, `<view>.critique.md`, `semantic-audit.md`) and no
+ * reviewer's input (`round-1-review-brief.md`, `review-1-prompt.md`,
+ * `counsel-packet.md`), so a spec's phase (`unit/spec.md p5`) or a brief's
+ * numbered ask cites no finding.
+ */
+const citesFinding = (source: string) =>
+  Array.from(source.matchAll(CITE), ([, name = '']) => name).some(
+    (name) => REVIEW_PART.test(name) && !INPUT_PART.test(name),
+  );
+
 /** What is wrong with an entry's fields: one missing, a date, a kind or words of the wrong shape, a review that cites no finding. */
 const fieldProblems = (entry: Entry): ReadonlyArray<string> => {
   const field = (name: string) => entry.fields.get(name) ?? '';
   const kind = field('Kind');
   return [
     ...FIELDS.filter((name) => !entry.fields.has(name)).map((name) => `no ${name}`),
+    ...entry.twice.map((name) => `${name} is given twice`),
     ...unless(/^\d{4}-\d{2}-\d{2}$/.test(field('Date')), `date ${field('Date')}`),
     ...unless(KINDS.includes(kind), `kind ${kind} is none of ${KINDS.join(', ')}`),
     ...unless(
@@ -159,8 +193,8 @@ const fieldProblems = (entry: Entry): ReadonlyArray<string> => {
       'said is neither the words in quotes nor a choice',
     ),
     ...unless(
-      kind !== 'review' || /\S+\/\S+ F\d+/.test(field('Source')),
-      'a review entry cites no finding (<unit>/<review file> F<n>)',
+      kind !== 'review' || citesFinding(field('Source')),
+      'a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)',
     ),
   ];
 };

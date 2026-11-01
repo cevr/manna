@@ -35,6 +35,11 @@ describe('a drawn key cut into the sheet frame', () => {
     expect([fit.s, fit.dx, fit.dy]).toEqual([1, 9, 6]);
     expect(fit.error).toBe(0);
     expect(fit.ground).toEqual(PAPER);
+    // a view with no figure, or one a single row tall, has no scale to start from: no fit, never a perfect one
+    expect(fitKey(drawn, paper(56, 48), () => true).error).toBeNaN();
+    const row = paper(56, 48);
+    fill(row, [4, 20, 40, 21], INK);
+    expect(fitKey(drawn, row, () => true).error).toBeNaN();
     // a frame padded 3 left and 2 above: its pixel (x, y) is the view's (x - 3, y - 2), flat paint read back whole
     const framed = keyInFrame(drawn, fit, [60, 52], [3, 2]);
     const px = (x: number, y: number) => [

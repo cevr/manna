@@ -1,12 +1,12 @@
 // The gate and the slow suite as the root manifest, turbo's config, `gate.sh`
-// and `test-slow.sh` lay them. The gate is the lint's deterministic rules
-// beside every workspace's unit tests, each cached on its inputs, under no
-// lock. Everything else (typecheck, builds, slow tests, browser checks, the
+// and `test-slow.sh` lay them. The gate is the lint's deterministic rules and
+// the lessons ledger's check beside every workspace's unit tests, each cached
+// on its inputs, under no lock; the pre-commit checks the ledger too. Everything else (typecheck, builds, slow tests, browser checks, the
 // full lint) is the slow suite, run one task at a time under the host's test
 // lock, by hand and before each deploy.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { JSONC } from 'bun';
+import { JSONC, YAML } from 'bun';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { andChained, commandsOf } from './test-budget/shell.ts';
@@ -46,9 +46,8 @@ const laid = Effect.gen(function* () {
     );
   const gate = yield* linesOf('gate.sh');
   const slow = yield* linesOf('test-slow.sh');
-  const hooks = (yield* fs.readFileString(path.join(root, 'lefthook.yml')))
-    .split('\n')
-    .map((line) => line.trim());
+  const lefthook = yield* fs.readFileString(path.join(root, 'lefthook.yml'));
+  const hooks = lefthook.split('\n').map((line) => line.trim());
   const packages = yield* Effect.forEach(['apps', 'packages'], (group) =>
     Effect.flatMap(fs.readDirectory(path.join(root, group)), (names) =>
       Effect.forEach(names, (name) =>
@@ -61,8 +60,39 @@ const laid = Effect.gen(function* () {
       ),
     ),
   );
-  return { scripts, turbo, gate, slow, hooks, packages: packages.flat() };
+  return { scripts, turbo, gate, slow, lefthook, hooks, packages: packages.flat() };
 }).pipe(Effect.provide(BunServices.layer));
+
+const Lefthook = Schema.Struct({ 'pre-commit': Schema.Record(Schema.String, Schema.Unknown) });
+const Jobs = Schema.Array(Schema.Record(Schema.String, Schema.Unknown));
+
+/**
+ * The keys of lefthook's schema (`node_modules/lefthook/schema.json`) that
+ * narrow the commits or files a job runs on, or let it be skipped: a job's
+ * `tags` are what an `exclude_tags` or `LEFTHOOK_EXCLUDE` names to skip it.
+ */
+const JOB_NARROWS = ['glob', 'files', 'file_types', 'exclude', 'only', 'skip', 'tags'];
+/** The keys on the hook that narrow every job of it, or skip the jobs its `exclude_tags` names. */
+const HOOK_NARROWS = ['files', 'exclude', 'only', 'skip', 'exclude_tags'];
+
+/**
+ * The pre-commit's `lessons` jobs in `lefthook.yml`'s text: what each runs,
+ * and each key, on the job in any position or on its hook, that narrows it.
+ */
+const lessonsJob = (text: string) =>
+  Effect.gen(function* () {
+    const { 'pre-commit': hook } = yield* Schema.decodeUnknownEffect(Lefthook)(YAML.parse(text));
+    const lessons = (yield* Schema.decodeUnknownEffect(Jobs)(hook['jobs'])).filter(
+      (job) => job['name'] === 'lessons',
+    );
+    return {
+      runs: lessons.map((job) => job['run']),
+      narrowedBy: [
+        ...HOOK_NARROWS.filter((key) => key in hook).map((key) => `pre-commit.${key}`),
+        ...lessons.flatMap((job) => JOB_NARROWS.filter((key) => key in job)),
+      ],
+    };
+  });
 
 /** The `turbo run` lines of a shell script, each as its words. */
 const turboRuns = (lines: ReadonlyArray<string>) =>
@@ -93,16 +123,24 @@ const slowBeforeAlchemy = (name: string, script: string) => {
 const locks = (line: string) => /\b(flock|lockf)\b/.test(line) && !line.startsWith('#');
 
 describe('the gate', () => {
-  it.effect('is gate.sh: the lint in the background beside the unit tests, under no lock', () =>
-    Effect.gen(function* () {
-      const { scripts, gate } = yield* laid;
-      expect(commandsOf(scripts['gate'] ?? '')).toEqual([['sh', 'packages/scripts/src/gate.sh']]);
-      expect(gate).toContain('bun packages/scripts/src/lint-gate.ts &');
-      const runs = turboRuns(gate);
-      expect(runs).toHaveLength(1);
-      expect(runs[0]?.filter((word) => !word.startsWith('-'))).toEqual(['turbo', 'run', 'test']);
-      expect(gate.filter(locks)).toEqual([]);
-    }),
+  it.effect(
+    'is gate.sh: the lint and the lessons ledger in the background beside the unit tests, under no lock',
+    () =>
+      Effect.gen(function* () {
+        const { scripts, gate } = yield* laid;
+        expect(commandsOf(scripts['gate'] ?? '')).toEqual([['sh', 'packages/scripts/src/gate.sh']]);
+        expect(gate).toEqual(
+          expect.arrayContaining([
+            'bun packages/scripts/src/lint-gate.ts &',
+            'bun packages/scripts/src/lessons/check.ts &',
+            '[ "$lint" -eq 0 ] && [ "$ledger" -eq 0 ] && [ "$tests" -eq 0 ]',
+          ]),
+        );
+        const runs = turboRuns(gate);
+        expect(runs).toHaveLength(1);
+        expect(runs[0]?.filter((word) => !word.startsWith('-'))).toEqual(['turbo', 'run', 'test']);
+        expect(gate.filter(locks)).toEqual([]);
+      }),
   );
 
   it.effect("caches each workspace's tests on its inputs, and a test waits on no build", () =>
@@ -220,6 +258,33 @@ describe('the pre-commit', () => {
           ),
         );
         expect(plain).toEqual([]);
+      }),
+  );
+
+  it.effect(
+    'checks the lessons ledger on every commit, whatever files it stages, so a renamed test is red at its commit',
+    () =>
+      Effect.gen(function* () {
+        const { lefthook } = yield* laid;
+        expect(yield* lessonsJob(lefthook)).toEqual({
+          runs: ['bun packages/scripts/src/lessons/check.ts'],
+          narrowedBy: [],
+        });
+        const run = '      run: bun packages/scripts/src/lessons/check.ts\n';
+        expect(lefthook).toContain(run);
+        for (const [narrowed, by] of [
+          [lefthook.replace(run, `$&      glob: '*.md'\n`), 'glob'],
+          [lefthook.replace(run, `      glob: '*.md'\n$&`), 'glob'],
+          [lefthook.replace(run, `$&      files: git diff --name-only HEAD\n`), 'files'],
+          [lefthook.replace('  jobs:\n', `  skip: merge\n$&`), 'pre-commit.skip'],
+          [
+            lefthook.replace('  jobs:\n', `  exclude_tags: [lessons]\n$&`),
+            'pre-commit.exclude_tags',
+          ],
+          [lefthook.replace(run, `$&      tags: [ledger]\n`), 'tags'],
+        ] as const) {
+          expect((yield* lessonsJob(narrowed)).narrowedBy).toEqual([by]);
+        }
       }),
   );
 });

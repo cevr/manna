@@ -316,6 +316,9 @@ const onDay = (days: number): Clock.Clock => {
   };
 };
 
+/** A test's renders on day 0: each fake frame yields where the live clock waits a millisecond. */
+const atDayZero = Effect.provideService(Clock.Clock, onDay(0));
+
 /** Once `ready` holds, yielding between looks. */
 const until = (ready: () => boolean): Effect.Effect<void> =>
   Effect.suspend(() =>
@@ -346,27 +349,29 @@ const panel = (beat: string): Panel => ({
 const board: BoardFile = { ...emptyBoard('test'), panels: [panel('a'), panel('b'), panel('c')] };
 
 describe.concurrent("a film render's segments", () => {
-  it.live('are drawn once: with every key kept, the next render draws nothing and joins them', () =>
-    Effect.gen(function* () {
-      const { render } = project();
-      const first = yield* render(video(keyed()));
-      expect(first.drawn).toEqual(frames(0, 40));
-      const again = yield* render(video(keyed()));
-      expect(again.drawn).toEqual([]);
-      expect(again.reuse).toEqual([
-        'render.reuse segments=3 unpinned=0 drawn=0 frames_drawn=0 fresh=false',
-      ]);
-      // Only the page that chose the encoder: no page opened to draw.
-      expect(again.pages).toBe(1);
-      expect(again.master).toEqual(first.master);
-      expect(again.share).toEqual(first.share);
-      // Each beat's chunks start where they play, in order, the share copy's beside them.
-      expect(again.master.at(0)?.at).toBe(0);
-      expect(again.master.map((s) => s.at)).toEqual(again.share.map((s) => s.at));
-    }),
+  it.effect(
+    'are drawn once: with every key kept, the next render draws nothing and joins them',
+    () =>
+      Effect.gen(function* () {
+        const { render } = project();
+        const first = yield* render(video(keyed()));
+        expect(first.drawn).toEqual(frames(0, 40));
+        const again = yield* render(video(keyed()));
+        expect(again.drawn).toEqual([]);
+        expect(again.reuse).toEqual([
+          'render.reuse segments=3 unpinned=0 drawn=0 frames_drawn=0 fresh=false',
+        ]);
+        // Only the page that chose the encoder: no page opened to draw.
+        expect(again.pages).toBe(1);
+        expect(again.master).toEqual(first.master);
+        expect(again.share).toEqual(first.share);
+        // Each beat's chunks start where they play, in order, the share copy's beside them.
+        expect(again.master.at(0)?.at).toBe(0);
+        expect(again.master.map((s) => s.at)).toEqual(again.share.map((s) => s.at));
+      }).pipe(atDayZero),
   );
 
-  it.live("draw only a changed beat's segment, and join it among the kept ones", () =>
+  it.effect("draw only a changed beat's segment, and join it among the kept ones", () =>
     Effect.gen(function* () {
       const { render } = project();
       const first = yield* render(video(keyed()));
@@ -381,19 +386,19 @@ describe.concurrent("a film render's segments", () => {
       expect(beat(0, 5)(changed.master)).toEqual(beat(0, 5)(first.master));
       expect(beat(10, 20)(changed.master)).toEqual(beat(10, 20)(first.master));
       expect(beat(5, 10)(changed.master)).not.toEqual(beat(5, 10)(first.master));
-    }),
+    }).pipe(atDayZero),
   );
 
-  it.live('draw every segment again with --fresh', () =>
+  it.effect('draw every segment again with --fresh', () =>
     Effect.gen(function* () {
       const { render } = project();
       yield* render(video(keyed()));
       const fresh = yield* render(video(keyed(keys, true)));
       expect(fresh.drawn).toEqual(frames(0, 40));
-    }),
+    }).pipe(atDayZero),
   );
 
-  it.live(
+  it.effect(
     'a share-only render writes the share copy alone, and reuses the share copies a render with the master kept',
     () =>
       Effect.gen(function* () {
@@ -405,10 +410,10 @@ describe.concurrent("a film render's segments", () => {
         expect(shareOnly.share).toEqual(both.share);
         expect(shareOnly.output.clip).toEqual(Option.none());
         expect(shareOnly.output.share).toEqual(Option.some('/out/test/film/main.share.mp4'));
-      }),
+      }).pipe(atDayZero),
   );
 
-  it.live(
+  it.effect(
     'a share-only render keeps no master: the next render with one draws every segment again',
     () =>
       Effect.gen(function* () {
@@ -425,17 +430,17 @@ describe.concurrent("a film render's segments", () => {
         const master = yield* render(video(keyed(), Picture.Scenes(), 'master'));
         expect(master.drawn).toEqual([]);
         expect(master.master).toEqual(both.master);
-      }),
+      }).pipe(atDayZero),
   );
 
-  it.live('keep nothing when the render reuses none', () =>
+  it.effect('keep nothing when the render reuses none', () =>
     Effect.gen(function* () {
       const { render } = project();
       yield* render(video(Reuse.Off()));
       const again = yield* render(video(Reuse.Off()));
       expect(again.drawn).toEqual(frames(0, 40));
       expect(again.reuse).toEqual([]);
-    }),
+    }).pipe(atDayZero),
   );
 
   it.effect(
@@ -613,7 +618,7 @@ describe.concurrent("a film render's segments", () => {
     }),
   );
 
-  it.live('of the Board: a changed image draws only the segments that show it', () =>
+  it.effect('of the Board: a changed image draws only the segments that show it', () =>
     Effect.gen(function* () {
       const { render, boarded } = project();
       yield* boarded(board, { 'a.png': 'a', 'b.png': 'b', 'c.png': 'c' });
@@ -623,7 +628,7 @@ describe.concurrent("a film render's segments", () => {
       // c's image is seen from 9.75 s, its dissolve in over b's last quarter second.
       yield* boarded(board, { 'c.png': 'c, one pixel changed' });
       expect((yield* render(job)).drawn).toEqual(frames(10, 40));
-    }),
+    }).pipe(atDayZero),
   );
 
   /** The film with a a second longer, two frames at 2 fps: b at frames 12–21, c at 22–41. */
@@ -647,7 +652,7 @@ describe.concurrent("a film render's segments", () => {
   });
   const panelsOnly = () => false;
 
-  it.live(
+  it.effect(
     "of the Board's panels: an earlier beat a second longer, a later beat's kept chunks join at its new place",
     () =>
       Effect.gen(function* () {
@@ -672,10 +677,10 @@ describe.concurrent("a film render's segments", () => {
         expect(c(11, moved.master)).toEqual(c(10, first.master));
         expect(c(11, moved.share)).toEqual(c(10, first.share));
         expect(c(10, first.master).length).toBeGreaterThan(0);
-      }),
+      }).pipe(atDayZero),
   );
 
-  it.live(
+  it.effect(
     'of frames that read the film’s seconds: an earlier beat a second longer draws every later one again',
     () =>
       Effect.gen(function* () {
@@ -690,10 +695,10 @@ describe.concurrent("a film render's segments", () => {
           lengthened(),
         );
         expect(moved.drawn).toEqual(frames(0, 42));
-      }),
+      }).pipe(atDayZero),
   );
 
-  it.live('draw again what a --fresh render cut off after a chunk drew over', () =>
+  it.effect('draw again what a --fresh render cut off after a chunk drew over', () =>
     Effect.gen(function* () {
       const { render, holding, held } = project(new Map(), longer);
       yield* render(video(keyed(new Map([...longerKeys, ['b', 'key-b0']]))));
@@ -714,7 +719,7 @@ describe.concurrent("a film render's segments", () => {
       expect(next.drawn).toEqual(frames(0, 60));
       const joined = held(next.master);
       expect(joined.held).toEqual(joined.placed);
-    }),
+    }).pipe(atDayZero),
   );
 
   it.effect(

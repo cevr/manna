@@ -286,15 +286,16 @@ interface Grid {
 const sheetIndex = (g: Grid, k: number) =>
   (g.y0 + Math.floor(k / g.w)) * g.r.width + g.x0 + (k % g.w);
 
-/** The four neighbours of `k` inside the grid. */
-const neighbours4 = (g: Grid, k: number): number[] => {
-  const [x, y] = [k % g.w, Math.floor(k / g.w)];
-  const out: number[] = [];
-  if (x > 0) out.push(k - 1);
-  if (x < g.w - 1) out.push(k + 1);
-  if (y > 0) out.push(k - g.w);
-  if (y < g.h - 1) out.push(k + g.w);
-  return out;
+/** The four neighbours of `k` inside the grid, written to the start of `out`: how many there are. */
+const neighbours4 = (g: Grid, k: number, out: Int32Array): number => {
+  const x = k % g.w;
+  const y = (k - x) / g.w;
+  let n = 0;
+  if (x > 0) out[n++] = k - 1;
+  if (x < g.w - 1) out[n++] = k + 1;
+  if (y > 0) out[n++] = k - g.w;
+  if (y < g.h - 1) out[n++] = k + g.w;
+  return n;
 };
 
 /** Every pixel `from` reaches through pixels `through` accepts, four ways. */
@@ -306,13 +307,17 @@ const flood = (
   const seen = new Uint8Array(g.w * g.h);
   const stack = from.filter((k) => through(k));
   for (const k of stack) seen[k] = 1;
+  const near = new Int32Array(4);
   while (stack.length > 0) {
     const k = stack.pop() ?? 0;
-    for (const n of neighbours4(g, k))
+    const count = neighbours4(g, k, near);
+    for (let i = 0; i < count; i++) {
+      const n = near[i] ?? 0;
       if (seen[n] === 0 && through(n)) {
         seen[n] = 1;
         stack.push(n);
       }
+    }
   }
   return seen;
 };
@@ -339,16 +344,33 @@ const around = (g: Grid, k: number, reach: number, visit: (n: number) => void) =
   for (let ny = y0; ny <= y1; ny++) for (let nx = x0; nx <= x1; nx++) visit(ny * g.w + nx);
 };
 
-/** `mask` grown `by` pixels into the pixels `into` accepts, eight ways a step. */
+/**
+ * `mask` grown `by` pixels into the pixels `into` accepts, eight ways a step.
+ * Each step grows from the pixels the step before it took (the first from
+ * every pixel of `mask`): a pixel taken earlier has had each of its
+ * neighbours judged already, and `into` judges a pixel the same at any step.
+ */
 const grown = (g: Grid, mask: Uint8Array, by: number, into: (k: number) => boolean): Uint8Array => {
-  let out = mask;
-  for (let step = 0; step < by; step++) {
-    const next = out.slice();
-    const reach = (n: number) => {
-      if (next[n] === 0 && into(n)) next[n] = 1;
-    };
-    for (let k = 0; k < out.length; k++) if (out[k] === 1) around(g, k, 1, reach);
-    out = next;
+  const out = mask.slice();
+  let front: number[] = [];
+  for (let k = 0; k < out.length; k++) if (out[k] === 1) front.push(k);
+  for (let step = 0; step < by && front.length > 0; step++) {
+    const taken: number[] = [];
+    for (const k of front) {
+      const x = k % g.w;
+      const y = (k - x) / g.w;
+      const x1 = Math.min(g.w - 1, x + 1);
+      const y1 = Math.min(g.h - 1, y + 1);
+      for (let ny = Math.max(0, y - 1); ny <= y1; ny++)
+        for (let nx = Math.max(0, x - 1); nx <= x1; nx++) {
+          const n = ny * g.w + nx;
+          if (out[n] === 0 && into(n)) {
+            out[n] = 1;
+            taken.push(n);
+          }
+        }
+    }
+    front = taken;
   }
   return out;
 };
@@ -431,6 +453,7 @@ const regionsOf = (g: Grid, kinds: Int8Array, classIds: ReadonlyArray<string>): 
   const label = new Int32Array(g.w * g.h);
   const regions: TraceRegion[] = [];
   let next = 1;
+  const near = new Int32Array(4);
   for (let k = 0; k < label.length; k++) {
     if (label[k] !== 0 || kinds[k] === 0) continue;
     const id = next++;
@@ -441,11 +464,14 @@ const regionsOf = (g: Grid, kinds: Int8Array, classIds: ReadonlyArray<string>): 
     while (stack.length > 0) {
       const p = stack.pop() ?? 0;
       members.push(p);
-      for (const n of neighbours4(g, p))
+      const count = neighbours4(g, p, near);
+      for (let i = 0; i < count; i++) {
+        const n = near[i] ?? 0;
         if (label[n] === 0 && kinds[n] === kind) {
           label[n] = id;
           stack.push(n);
         }
+      }
     }
     const xs = members.map((p) => p % g.w);
     const ys = members.map((p) => Math.floor(p / g.w));
