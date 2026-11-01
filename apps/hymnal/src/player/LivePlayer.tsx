@@ -8,7 +8,10 @@
  * puts it, just above the bar while the bar shows, and the find drums it
  * opens (`FindDrums.tsx`), with their `Open` and `Play` (`pressFind`). It
  * tells the lists the room the `#` takes (`FindRoom`). The drums close on a
- * move to another screen or where the `#` leaves (`findMoved`).
+ * move to another screen or where the `#` leaves (`findMoved`), and on a tap
+ * outside them: while they are open a layer lies over the screens and the
+ * bar, under the drums and the `#`, and takes that tap, so it reaches
+ * nothing behind.
  */
 
 import { useAtom, useAtomMount, useAtomSet, useAtomValue } from '@effect/atom-react';
@@ -121,7 +124,11 @@ function Finding({ children }: { readonly children: ReactNode }) {
   );
 }
 
-/** The `#`, its bottom `bottom` points over the window's, and the drums over it while open. */
+/**
+ * The `#`, its bottom `bottom` points over the window's, and the drums over
+ * it while open, over a layer across the whole window that closes them on a
+ * tap (`FindPress.Outside`).
+ */
 function FindNumber({ bar, bottom }: { readonly bar: Bar; readonly bottom: number }) {
   const [state, setFind] = useAtom(find);
   const send = useAtomSet(player.send);
@@ -155,41 +162,64 @@ function FindNumber({ bar, bottom }: { readonly bar: Bar; readonly bottom: numbe
   });
   const open = Find.$is('Open')(state);
   return (
-    <View testID="find" pointerEvents="box-none" style={[styles.find, { bottom }]}>
+    <>
       {Find.$match(state, {
         Closed: () => <></>,
-        Open: ({ number }) => (
-          <GestureHandlerRootView style={styles.drums}>
-            <GestureDetector gesture={swipe}>
-              <View>
-                <DialPanel testID="find-drums">
-                  <FindDrums
-                    number={number}
-                    onDial={(dialled) => press(FindPress.Dial({ number: dialled }))}
-                  />
-                  <View style={styles.acts}>
-                    <Act testID="find-open" label="Open" onPress={() => press(FindPress.Open())} />
-                    <Act testID="find-play" label="Play" onPress={() => press(FindPress.Play())} />
-                  </View>
-                </DialPanel>
-              </View>
-            </GestureDetector>
-          </GestureHandlerRootView>
+        // Over the screens and the bar, under the panel and the `#`: a tap outside closes the drums and goes no further.
+        Open: () => (
+          <Pressable
+            testID="find-outside"
+            accessible={false}
+            aria-hidden
+            style={StyleSheet.absoluteFill}
+            onPress={() => press(FindPress.Outside())}
+          />
         ),
       })}
-      <Pressable
-        testID="find-number"
-        accessibilityRole="button"
-        accessibilityLabel={FIND_LABEL}
-        accessibilityState={{ expanded: open }}
-        onPress={() => press(FindPress.Hash())}
-        style={({ pressed }) => [styles.hash, pressed && styles.pressed]}
-      >
-        <Text style={styles.hashText} maxFontSizeMultiplier={MOST_SCALE}>
-          #
-        </Text>
-      </Pressable>
-    </View>
+      <View testID="find" pointerEvents="box-none" style={[styles.find, { bottom }]}>
+        {Find.$match(state, {
+          Closed: () => <></>,
+          Open: ({ number }) => (
+            <GestureHandlerRootView style={styles.drums}>
+              <GestureDetector gesture={swipe}>
+                <View>
+                  <DialPanel testID="find-drums">
+                    <FindDrums
+                      number={number}
+                      onDial={(dialled) => press(FindPress.Dial({ number: dialled }))}
+                    />
+                    <View style={styles.acts}>
+                      <Act
+                        testID="find-open"
+                        label="Open"
+                        onPress={() => press(FindPress.Open())}
+                      />
+                      <Act
+                        testID="find-play"
+                        label="Play"
+                        onPress={() => press(FindPress.Play())}
+                      />
+                    </View>
+                  </DialPanel>
+                </View>
+              </GestureDetector>
+            </GestureHandlerRootView>
+          ),
+        })}
+        <Pressable
+          testID="find-number"
+          accessibilityRole="button"
+          accessibilityLabel={FIND_LABEL}
+          accessibilityState={{ expanded: open }}
+          onPress={() => press(FindPress.Hash())}
+          style={({ pressed }) => [styles.hash, pressed && styles.pressed]}
+        >
+          <Text style={styles.hashText} maxFontSizeMultiplier={MOST_SCALE}>
+            #
+          </Text>
+        </Pressable>
+      </View>
+    </>
   );
 }
 

@@ -77,9 +77,8 @@ export const AUDIO_SOURCES = [
   'packages/hymnal/scripts/render/stems.ts',
   'packages/hymnal/scripts/render/style.ts',
   'packages/hymnal/scripts/render/wav.ts',
-  'packages/hymnal/src/chord.ts',
+  'packages/hymnal/src/melody.ts',
   'packages/hymnal/src/midi.ts',
-  'packages/hymnal/src/score.ts',
   'packages/hymnal/src/voices.ts',
 ] as const;
 

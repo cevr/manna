@@ -63,6 +63,12 @@ export const useSafeAreaInsets = () => safeArea;
 /** The route's params, as a test sets them: the hymn route reads `number`. */
 export const params: Record<string, string> = {};
 
+/** The shown route's path, as a test sets it: the player layer reads it (`LivePlayer`). */
+export const pathname = { current: '/' };
+
+/** One's `usePathname`: the path a test set. */
+export const usePathname = () => pathname.current;
+
 /** One's `useParams`: the params a test set. */
 export const useParams = <T,>() => params as T;
 

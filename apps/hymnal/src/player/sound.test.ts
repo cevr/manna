@@ -177,7 +177,7 @@ describe('the score clock', () => {
     () =>
       Effect.scoped(
         Effect.gen(function* () {
-          const timeline = timelineOf(6);
+          const timeline = timelineOf(663);
           const last = timeline.lines.at(-1);
           expect(last?.played).toBe(false);
           // The recording ends where its last played line does.
@@ -186,7 +186,7 @@ describe('the score clock', () => {
           const { device } = recording(length);
           const { api } = yield* clockOver(device, true);
 
-          const started = yield* api.play(audioUrl(6), 0);
+          const started = yield* api.play(audioUrl(663), 0);
           expect(started.durationMs).toBe(timeline.end);
           // The player reads the status once a poll.
           for (let t = 0; t < length + 5000; t += POLL) {

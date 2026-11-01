@@ -31,7 +31,10 @@ export const app = {
   // A recording plays on with the screen locked, under the lock
   // screen's and Control Center's controls (iOS `UIBackgroundModes`
   // audio; Android's media-playback service).
-  audio: { background: true },
+  audio: {
+    background: true,
+    microphone: 'Hymnal listens to your guitar to tune it. Nothing is recorded or kept.',
+  },
   android: {
     applicationId: 'im.cvr.hymnal',
     adaptiveIcon: {

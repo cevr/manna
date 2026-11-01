@@ -35,8 +35,8 @@
  * slot of the window shows a key, in order.
  *
  * The name keeps one line at every text size, whole: its column is as wide
- * as the widest name of its group (`COLUMN`) drawn at the text size showing,
- * and `TITLE` points at the least, so the notches of a group's dials line up and
+ * as the widest row's name (`ROW_TITLES`) drawn at the text size showing,
+ * and `TITLE` points at the least, so the notches of the rows line up and
  * the column follows a change of the system's text size as the text does.
  * Every text in the row grows with Dynamic Type at most `MOST_SCALE` times,
  * as a fixed-height control's text does.
@@ -45,9 +45,9 @@
  * so a vertical scroll under the dial still scrolls, and the dial lies over
  * the page, outside the pager, so a drag on it never turns the page.
  *
- * A dial with `axis` `column` is a drum (the find drums): its name stands
- * above a window `DRUM_WINDOW` tall, the detent at the notch with one above
- * and one below, its stops run down the window, and its pan needs a
+ * A dial with `axis` `column` is a drum (the find drums): it draws no name,
+ * only a window `DRUM_WINDOW` tall, the detent at the notch with one above
+ * and one below; its stops run down the window, and its pan needs a
  * vertical move to begin. A finger dragged up brings the higher detents to
  * the notch, as on a picker wheel. Only the axis differs (`AXES`, `along`):
  * the drag, glide, cues, ring and VoiceOver are the row's.
@@ -60,7 +60,6 @@ import {
   type LayoutChangeEvent,
   StyleSheet,
   Text,
-  type TextStyle,
   View,
   type ViewStyle,
 } from 'react-native';
@@ -103,13 +102,19 @@ import {
 } from './dial';
 import { useReduceMotion } from './motion';
 
-export interface DialProps<A> {
+/**
+ * Which way the dial runs: `row` (the default), sideways with its name, the
+ * small word `title`, at the left; `column`, a drum, up and down with no name.
+ */
+type Runs =
+  | { readonly axis?: 'row'; readonly title: string }
+  | { readonly axis: 'column'; readonly title?: never };
+
+export type DialProps<A> = Runs & {
   /** Which dial it is: its detents' cues name it (`~/feel/cue`). */
   readonly dial: DialName;
   /** What VoiceOver names the dial by, and a test finds it by. */
   readonly label: string;
-  /** The small word at the dial's left. */
-  readonly title: string;
   readonly stops: ReadonlyArray<A>;
   /** The stop at the notch. */
   readonly index: number;
@@ -132,13 +137,8 @@ export interface DialProps<A> {
    * new count is a reset, and the row turns home on the reset's curve.
    */
   readonly resets?: number;
-  /**
-   * Which way the dial runs: `row` (the default), sideways with its name at
-   * the left; `column`, a drum, up and down with its name above.
-   */
-  readonly axis?: Axis;
   readonly testID: string;
-}
+};
 
 /** The width of the dial's name at its left, in points, at the system's default text size. */
 const TITLE = 58;
@@ -161,9 +161,6 @@ const NOTCH = 140;
 /** How tall a drum's window is: the detent at the notch and one above and below it. */
 const DRUM_WINDOW = 3 * DETENT;
 
-/** How tall a drum's name above it is, in points. */
-const DRUM_TITLE = 24;
-
 /** A stop moved `by` points from the notch along `axis`. */
 const shifted = (axis: Axis, by: number) => {
   'worklet';
@@ -179,27 +176,16 @@ const stretched = (axis: Axis, by: number) => {
 };
 
 /**
- * The titles of the dials drawn one over another, so each one's title
- * column is as wide as the widest of its own group: the player's and
- * settings' dials share one column, the find drums (`Drums.tsx`) another.
+ * The names of the rows drawn one over another, so every row's name column
+ * is as wide as the widest of them: the player's and settings' dials, the
+ * only rows, share one column.
  */
-const PLAYER_TITLES = ['KEY', 'CAPO', 'SIZE', 'PLACE'] as const;
-const DRUM_TITLES = ['HUNDREDS', 'TENS', 'ONES'] as const;
-const COLUMN = {
-  key: PLAYER_TITLES,
-  capo: PLAYER_TITLES,
-  size: PLAYER_TITLES,
-  placement: PLAYER_TITLES,
-  hundreds: DRUM_TITLES,
-  tens: DRUM_TITLES,
-  ones: DRUM_TITLES,
-} satisfies Record<DialName, ReadonlyArray<string>>;
+const ROW_TITLES = ['KEY', 'CAPO', 'SIZE', 'PLACE'] as const;
 
 function Dial<A>(props: DialProps<A>) {
   const {
     dial,
     label,
-    title,
     stops,
     index,
     wrap,
@@ -416,27 +402,7 @@ function Dial<A>(props: DialProps<A>) {
           testID={testID}
           style={look.dial}
         >
-          <View style={look.title} aria-hidden>
-            <View style={styles.sizer}>
-              {COLUMN[dial].map((name) => (
-                <Text
-                  key={name}
-                  style={styles.title}
-                  numberOfLines={1}
-                  maxFontSizeMultiplier={MOST_SCALE}
-                >
-                  {name}
-                </Text>
-              ))}
-            </View>
-            <Text
-              style={[styles.title, look.name]}
-              numberOfLines={1}
-              maxFontSizeMultiplier={MOST_SCALE}
-            >
-              {title}
-            </Text>
-          </View>
+          {props.axis !== 'column' && <RowName title={props.title} />}
           <View
             style={look.window}
             onLayout={({ nativeEvent: { layout } }: LayoutChangeEvent) =>
@@ -470,6 +436,36 @@ function Dial<A>(props: DialProps<A>) {
         </View>
       </GestureDetector>
     </GestureHandlerRootView>
+  );
+}
+
+/**
+ * A row's name at its left, whole on one line, in a column as wide as the
+ * widest row's name (`ROW_TITLES`) at the text size showing.
+ */
+function RowName({ title }: { readonly title: string }) {
+  return (
+    <View style={styles.titleColumn} aria-hidden>
+      <View style={styles.sizer}>
+        {ROW_TITLES.map((name) => (
+          <Text
+            key={name}
+            style={styles.title}
+            numberOfLines={1}
+            maxFontSizeMultiplier={MOST_SCALE}
+          >
+            {name}
+          </Text>
+        ))}
+      </View>
+      <Text
+        style={[styles.title, styles.name]}
+        numberOfLines={1}
+        maxFontSizeMultiplier={MOST_SCALE}
+      >
+        {title}
+      </Text>
+    </View>
   );
 }
 
@@ -588,8 +584,6 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     overflow: 'hidden',
   },
-  drumTitle: { height: DRUM_TITLE, alignItems: 'center', justifyContent: 'center' },
-  drumName: { position: 'absolute', left: 0, right: 0, paddingLeft: 0, textAlign: 'center' },
   drumWindow: { height: DRUM_WINDOW, overflow: 'hidden' },
   drumRow: { position: 'absolute', top: 0, left: 0, right: 0, height: DETENT },
   drumStop: {
@@ -630,8 +624,6 @@ const AXES = {
   row: {
     pan: { activeOffsetX: [-6, 6], failOffsetY: [-14, 14] },
     dial: styles.dial,
-    title: styles.titleColumn,
-    name: styles.name,
     window: styles.window,
     row: styles.row,
     stop: styles.stop,
@@ -642,8 +634,6 @@ const AXES = {
   column: {
     pan: { activeOffsetY: [-6, 6], failOffsetX: [-14, 14] },
     dial: styles.drum,
-    title: styles.drumTitle,
-    name: styles.drumName,
     window: styles.drumWindow,
     row: styles.drumRow,
     stop: styles.drumStop,
@@ -661,8 +651,6 @@ const AXES = {
       readonly failOffsetY?: [number, number];
     };
     readonly dial: ViewStyle;
-    readonly title: ViewStyle;
-    readonly name: TextStyle;
     readonly window: ViewStyle;
     readonly row: ViewStyle;
     readonly stop: ViewStyle;

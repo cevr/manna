@@ -9,6 +9,7 @@ import {
   type TextStyle,
   View,
 } from 'react-native';
+import { useRouter } from 'one';
 
 import { About } from '~/about';
 import { plain, useCue } from '~/feel/cue';
@@ -18,6 +19,7 @@ import { settings } from '~/store';
 import { color, useAccent } from '~/color';
 import { placements } from '~/settings';
 import { Downloads } from '~/offline/Downloads';
+import { available } from '~/tuner/native';
 
 interface Choice<A extends string> {
   readonly value: A;
@@ -49,6 +51,7 @@ export default function Settings() {
       <Heading style={styles.section}>Chord placement</Heading>
       <Choices label="Chord placement" value={settings.placement} choices={placements} />
       <FeelSwitch />
+      {available && <TunerRow />}
       <Downloads />
       <About />
     </ScrollView>
@@ -126,6 +129,26 @@ function FeelSwitch() {
   );
 }
 
+/** `Tuner`: opens the guitar tuner over Settings. */
+function TunerRow() {
+  const router = useRouter();
+  return (
+    <Pressable
+      role="button"
+      aria-label="Tuner"
+      onPress={() => router.push('/tuner')}
+      style={({ pressed }) => [styles.group, styles.row, styles.section, pressed && styles.pressed]}
+    >
+      <Text style={styles.label} dynamicTypeRamp="body">
+        Tuner
+      </Text>
+      <Text style={styles.chevron} aria-hidden>
+        ›
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   page: { padding: 16, paddingTop: 24, gap: 8 },
   title: { marginBottom: 8, fontSize: 28, fontWeight: '700', color: color.ink },
@@ -153,4 +176,5 @@ const styles = StyleSheet.create({
   pressed: { backgroundColor: color.soft },
   label: { flex: 1, fontSize: 17, color: color.ink },
   check: { fontSize: 17, fontWeight: '600' },
+  chevron: { fontSize: 22, color: color.muted },
 });
