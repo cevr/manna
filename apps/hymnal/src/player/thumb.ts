@@ -10,7 +10,8 @@
  * stay open while the rows turn home, and close once the reader has seen
  * them go (`ResetShown`, which the bar tells when its wait is over). A reset
  * of a hymn already at home (a double tap on a dial there) closes them at
- * once, with no cue.
+ * once, with no cue. A tap on the dials' Tuner closes them, with no cue, as
+ * the tuner opens over the page.
  *
  * Each step gives the next state and the cues it makes (`~/feel/cue`). A
  * step gives nothing else: no player command has a place in it, so no
@@ -47,6 +48,8 @@ export type ThumbEvent = Data.TaggedEnum<{
   Reset: {};
   /** A reset's turn home has been seen: the dials close. */
   ResetShown: {};
+  /** A tap on the dials' Tuner: the dials close as the tuner opens. */
+  Tune: {};
 }>;
 export const ThumbEvent = Data.taggedEnum<ThumbEvent>();
 
@@ -96,19 +99,36 @@ export const step = (printed: Chord.Key, state: Thumb, event: ThumbEvent): Step 
       return { state: { ...state, move: still }, cues: [plain('reset')] };
     },
     ResetShown: () => ({ state: { ...state, open: false }, cues: [] }),
+    // The tuner path is silent: opening it closes the dials and cues nothing.
+    Tune: () => ({ state: { ...state, open: false }, cues: [] }),
   });
 
-export type Shown = 'reset' | 'capo' | 'key';
+/** A chip of the open dials' top row. */
+export type Chip = 'tuner' | 'reset';
 
 /**
- * What the open dials show, top to bottom: with chords on, the reset chip
- * while the move is not the hymn as printed, the capo dial and the key dial;
- * with chords off, the key dial alone.
+ * The chips of the open dials' top row, leading to trailing: the Tuner where
+ * the panel holds it (`tuner`: the hymn page's panel on a device with the
+ * ear), then Reset while chords are on and the move is not the hymn as printed.
  */
-export const shownOf = (state: Thumb): ReadonlyArray<Shown> => {
-  if (!state.chords) return ['key'];
-  if (isStill(state.move)) return ['capo', 'key'];
-  return ['reset', 'capo', 'key'];
+export const chipsOf = (state: Thumb, tuner: boolean): ReadonlyArray<Chip> => {
+  const reset = state.chords && !isStill(state.move);
+  if (tuner && reset) return ['tuner', 'reset'];
+  if (tuner) return ['tuner'];
+  if (reset) return ['reset'];
+  return [];
+};
+
+export type Shown = 'chips' | 'capo' | 'key';
+
+/**
+ * What the open dials show, top to bottom: the chips' row while it holds a
+ * chip (`chipsOf`), the capo dial with chords on, and the key dial.
+ */
+export const shownOf = (state: Thumb, tuner: boolean): ReadonlyArray<Shown> => {
+  const chips: ReadonlyArray<Shown> = (chipsOf(state, tuner).length > 0 && ['chips']) || [];
+  const capo: ReadonlyArray<Shown> = (state.chords && ['capo']) || [];
+  return [...chips, ...capo, 'key'];
 };
 
 /** What the key button shows: the dim guitar with chords off, else a small word over a key. */

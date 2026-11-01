@@ -256,7 +256,7 @@ function ChordSection({ number }: { readonly number: number }) {
           />
         </View>
         <DialPanel>
-          <Dials thumb={thumb} printed={printed} />
+          <Dials thumb={thumb} printed={printed} tuner={false} />
         </DialPanel>
       </View>
     ),

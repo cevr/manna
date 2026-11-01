@@ -3,7 +3,7 @@
  * box, in `tint`: a speaker with two waves while sound is on, with a slash
  * across it while it is off; a play triangle, two pause bars, and a ring
  * with an arrowhead, turning clockwise for retry and counter-clockwise for
- * again; a tuning fork, two prongs on a stem, for the Tuner.
+ * again; a tuning fork, two prongs on a stem, for the key panel's Tuner chip.
  */
 
 import { Match } from 'effect';
@@ -12,7 +12,7 @@ import { type ColorValue, StyleSheet, View } from 'react-native';
 
 import type { Mark } from './button';
 
-/** The bar's marks: its buttons' and Sound's (`Mark`), and the Tuner's, which opens a route rather than commanding the player. */
+/** The bar's marks: its buttons' and Sound's (`Mark`), and the tuning fork of the key panel's Tuner chip, which opens a route rather than commanding the player. */
 type Drawn = Mark | 'tuner';
 
 export function BarMark({ mark, tint }: { readonly mark: Drawn; readonly tint: ColorValue }) {

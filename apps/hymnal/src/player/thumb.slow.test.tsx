@@ -22,6 +22,7 @@ import { act, type ReactNode, useState } from 'react';
 import { AccessibilityInfo, View } from 'react-native';
 import { createRoot } from 'react-dom/client';
 
+import { type Cue, CueProvider, plain } from '~/feel/cue';
 import { hymnAt } from '~/hymns/hymns';
 import type { ChordReader } from '~/reader/HymnPage';
 import { HymnPage } from '~/reader/HymnPage';
@@ -36,7 +37,8 @@ import { actionsOf, perform, propsWith } from '../test/props';
 import { readerOn } from '../test/reader';
 import { PlayerContext } from './context';
 import { DETENT } from './dial';
-import { ChordReaderContext, RESET_WAIT, ResetClock } from './Dials';
+import { ChordReaderContext, Dials, RESET_WAIT, ResetClock, useThumb } from './Dials';
+import { KeyButton } from './KeyButton';
 import { FullPlayer } from './FullPlayer';
 import { Playback, Player, playerOn } from './player';
 import { REST, RISE, SOUNDING } from './bar';
@@ -878,6 +880,90 @@ describe('the player sheet over a hymn page', () => {
         expect(Option.isSome(capo())).toBe(true);
         expect(page.sends()).toBe(sends);
       }),
+  );
+});
+
+/**
+ * Hymn `n`'s key button and its open dials as the bar draws them, holding the
+ * Tuner when `tuner` (the bar tells the device's ear, which the web lacks),
+ * every cue told to `cues`.
+ */
+const keyPanel = (n: number, tuner: boolean, cues: Array<Cue>) => () => {
+  params['number'] = String(n);
+  return (
+    <CueProvider value={(cue) => void cues.push(cue)}>
+      <KeyPanel n={n} tuner={tuner} />
+    </CueProvider>
+  );
+};
+
+function KeyPanel({ n, tuner }: { readonly n: number; readonly tuner: boolean }) {
+  const thumb = useThumb(n);
+  return (
+    <>
+      <KeyButton thumb={thumb} />
+      {Option.match(
+        Option.filter(thumb.printed, () => thumb.state.open),
+        {
+          onNone: () => <></>,
+          onSome: (printed) => <Dials thumb={thumb} printed={printed} tuner={tuner} />,
+        },
+      )}
+    </>
+  );
+}
+
+describe('the Tuner on the key button’s dials', () => {
+  it.live('leads the dials, and a tap closes them, opens the tuner and cues nothing', () =>
+    Effect.sync(() => {
+      const cues: Array<Cue> = [];
+      using page = mount(keyPanel(100, true, cues));
+      tapKey(page);
+      const tuner = page.get('[data-testid="dials-tuner"]');
+      expect(tuner.getAttribute('role')).toBe('button');
+      expect(tuner.getAttribute('aria-label')).toBe('Tuner');
+      expect(tuner.textContent).toBe('Tuner');
+      // The chips' row is the dials' top row: the Tuner comes before the capo and the key dials.
+      const capo = page.get('[data-testid="dial-capo"]');
+      expect(tuner.compareDocumentPosition(capo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(cues).toEqual([plain('press')]);
+      page.press('Tuner');
+      expect(Option.isNone(page.find('[data-testid="dials"]'))).toBe(true);
+      expect(keyButton(page).getAttribute('aria-expanded')).toBe('false');
+      expect(routed).toEqual(['push /tuner']);
+      expect(cues).toEqual([plain('press')]);
+      // The model was left closed: the next tap opens the dials again.
+      tapKey(page);
+      expect(Option.isSome(page.find('[data-testid="dials-tuner"]'))).toBe(true);
+    }),
+  );
+
+  it.live(
+    'leads Reset with it while moved, and shows with chords off over the key dial alone',
+    () =>
+      Effect.gen(function* () {
+        using page = mount(keyPanel(100, true, []));
+        tapKey(page);
+        turn(page, 'Capo');
+        const chips = page.all('[data-testid="dials"] [role="button"]');
+        expect(chips.map((chip) => chip.getAttribute('aria-label'))).toEqual(['Tuner', 'Reset']);
+        // A hold turns chords off with the dials open, and they stay open.
+        yield* hold(page, false);
+        expect(Option.isSome(page.find('[data-testid="dials-tuner"]'))).toBe(true);
+        expect(Option.isNone(page.find('[data-testid="dial-capo"]'))).toBe(true);
+        expect(Option.isSome(page.find('[data-testid="dial-key"]'))).toBe(true);
+      }),
+  );
+
+  it.live('is not on the dials of a device with no ear, nor on the player sheet’s', () =>
+    Effect.sync(() => {
+      using page = mount(route(100, true));
+      tapKey(page);
+      expect(Option.isSome(page.find('[data-testid="dials"] [data-testid="dial-key"]'))).toBe(true);
+      // The web has no ear, so the bar tells its dials no Tuner; the sheet's dials never hold one.
+      expect(page.all('[data-testid="dials-tuner"]')).toHaveLength(0);
+      expect(page.all('[aria-label="Tuner"]')).toHaveLength(0);
+    }),
   );
 });
 

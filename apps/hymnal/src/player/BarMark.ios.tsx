@@ -2,7 +2,7 @@
  * A player bar button's mark on iOS: an SF Symbol, 22 points, in `tint`. A
  * speaker with waves while sound is on, with a slash while it is off; play,
  * pause, again (a counter-clockwise arrow) and retry (a clockwise one); a
- * tuning fork for the Tuner.
+ * tuning fork for the key panel's Tuner chip.
  */
 
 import { Match } from 'effect';
@@ -11,7 +11,7 @@ import { type ColorValue, StyleSheet } from 'react-native';
 
 import type { Mark } from './button';
 
-/** The bar's marks: its buttons' and Sound's (`Mark`), and the Tuner's, which opens a route rather than commanding the player. */
+/** The bar's marks: its buttons' and Sound's (`Mark`), and the tuning fork of the key panel's Tuner chip, which opens a route rather than commanding the player. */
 type Drawn = Mark | 'tuner';
 
 export function BarMark({ mark, tint }: { readonly mark: Drawn; readonly tint: ColorValue }) {

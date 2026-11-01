@@ -3,8 +3,9 @@
  * (transpose -5 to 6, capo 0 to 11) and the dials closed or open, 576
  * states, against every event: a tap, a hold, a tap on the page, the key
  * dial turned to each of the twelve sounding keys, the capo dial turned to
- * each fret and one past each end, reset, and the end of a reset's wait. Three printed keys: hymn
- * 100's D-flat, a sharp key, and a minor one.
+ * each fret and one past each end, reset, the end of a reset’s wait, and a tap on the
+ * dials’ Tuner; the dials with the Tuner and without. Three printed keys: hymn 100’s
+ * D-flat, a sharp key, and a minor one.
  */
 
 import * as Chord from '@manna/hymnal/chord';
@@ -15,9 +16,11 @@ import { type Move, soundingKey, still } from '~/hymns/chords';
 
 import {
   capoStops,
+  chipsOf,
   faceOf,
   isStill,
   keyStops,
+  type Shown,
   shownOf,
   step,
   type Thumb,
@@ -46,6 +49,7 @@ const events: ReadonlyArray<ThumbEvent> = [
   ...Array.from({ length: 14 }, (_, k) => ThumbEvent.TurnCapo({ capo: k - 1 })),
   ThumbEvent.Reset(),
   ThumbEvent.ResetShown(),
+  ThumbEvent.Tune(),
 ];
 
 const each = (check: (printed: Chord.Key, state: Thumb, event: ThumbEvent) => void) => {
@@ -54,9 +58,9 @@ const each = (check: (printed: Chord.Key, state: Thumb, event: ThumbEvent) => vo
 };
 
 describe('the key model', () => {
-  it('walks 576 states against 31 events', () => {
+  it('walks 576 states against 32 events', () => {
     expect(states).toHaveLength(576);
-    expect(events).toHaveLength(31);
+    expect(events).toHaveLength(32);
   });
 
   it('resets a moved hymn to the printed key and no capo, the dials and chords as they were, with one cue', () =>
@@ -73,7 +77,7 @@ describe('the key model', () => {
       expect(step(printed, state, event)).toEqual({ state: { ...state, open: false }, cues: [] });
     }));
 
-  it('closes the dials once a reset’s turn home has been seen, the move and chords as they were, with no cue', () =>
+  it('closes the dials once a resetâs turn home has been seen, the move and chords as they were, with no cue', () =>
     each((printed, state, event) => {
       if (event._tag !== 'ResetShown') return;
       const next = step(printed, state, event);
@@ -125,13 +129,28 @@ describe('the key model', () => {
       expect(next.cues).toEqual((held !== event.capo && [plain('wall')]) || []);
     }));
 
-  it('shows the capo and key dials with chords on, reset while moved, and the key alone with chords off', () =>
+  it('closes the dials on a tap on the Tuner, the move and chords as they were, with no cue', () =>
+    each((printed, state, event) => {
+      if (event._tag !== 'Tune') return;
+      expect(step(printed, state, event)).toEqual({ state: { ...state, open: false }, cues: [] });
+    }));
+
+  it('leads the chips with the Tuner where the dials hold it and trails them with reset while moved with chords on; shows the chips while they hold one, the capo with chords on, and the key last', () =>
     each((printed, state, event) => {
       const next = step(printed, state, event).state;
-      const shown = shownOf(next);
-      if (!next.chords) expect(shown).toEqual(['key']);
-      else if (isStill(next.move)) expect(shown).toEqual(['capo', 'key']);
-      else expect(shown).toEqual(['reset', 'capo', 'key']);
+      const reset = next.chords && !isStill(next.move);
+      const dials: ReadonlyArray<Shown> = (next.chords && (['capo', 'key'] as const)) || ['key'];
+      expect({
+        tuner: chipsOf(next, true),
+        none: chipsOf(next, false),
+        shownTuner: shownOf(next, true),
+        shownNone: shownOf(next, false),
+      }).toEqual({
+        tuner: (reset && ['tuner', 'reset']) || ['tuner'],
+        none: (reset && ['reset']) || [],
+        shownTuner: ['chips', ...dials],
+        shownNone: [...((reset && (['chips'] as const)) || []), ...dials],
+      });
     }));
 
   it('gives nothing but a state and cues: no step carries a command for the player', () =>
@@ -140,7 +159,7 @@ describe('the key model', () => {
     }));
 });
 
-describe('the key button and the dials’ detents', () => {
+describe('the key button and the dialsâ detents', () => {
   const db: Chord.Key = { tonic: 'Db', minor: false };
 
   it('shows the key with no capo, the capo over the shapes with one, and nothing with chords off', () => {
@@ -157,7 +176,7 @@ describe('the key button and the dials’ detents', () => {
     expect(faceOf(db, { chords: false, move: still, open: false })).toEqual({ _tag: 'Off' });
   });
 
-  it('marks the printed key among twelve, and the open shapes among the capo’s frets', () => {
+  it('marks the printed key among twelve, and the open shapes among the capoâs frets', () => {
     const keys = keyStops(db);
     expect(keys.map((stop) => stop.pitch)).toEqual(Array.from({ length: 12 }, (_, k) => k));
     expect(keys.filter((stop) => stop.printed).map((stop) => stop.name)).toEqual(['Db']);

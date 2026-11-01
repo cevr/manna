@@ -13,10 +13,11 @@
  * hymn sounds over the reader), and holds the hymn's number
  * and title only when the bar's hymn is not the page's own; the Sound
  * switch; and the player's button. While another hymn sounds over a page,
- * a compact Play for the page's hymn sits before Sound. On a hymn page, on
- * a device with the ear, the Tuner mark sits just left of Sound and opens
- * the tuner (`/tuner`) with no cue, as the tuner's path is silent. A swipe up on the
- * bar opens the sheet too. Over a hymn page, a pan from the docked bar's
+ * a compact Play for the page's hymn sits before Sound. The opener is the
+ * row's only flexible item, so it takes whatever width the marks leave. On a
+ * device with the ear, the key button's dials hold the way to the tuner
+ * (`Dials`, which the bar tells `available`). A swipe up on the bar opens the
+ * sheet too. Over a hymn page, a pan from the docked bar's
  * left edge goes back, as the stack's own edge pan does above the bar
  * (`BackEdge`).
  *
@@ -222,7 +223,9 @@ function Overlay({ drawing }: { readonly drawing: Drawing }) {
           >
             {Option.match(dials, {
               onNone: () => <></>,
-              onSome: ({ bound, printed }) => <Dials thumb={bound} printed={printed} />,
+              onSome: ({ bound, printed }) => (
+                <Dials thumb={bound} printed={printed} tuner={available} />
+              ),
             })}
           </DialPopover>
         </View>
@@ -294,7 +297,6 @@ function Frame({
                   onNone: () => <></>,
                   onSome: (other) => <PlayPage track={other} send={send} />,
                 })}
-                {tunerOn(shown, available) && <TunerMark />}
                 <Sound />
                 <Buttons track={track} state={state} send={send} />
               </View>
@@ -395,26 +397,6 @@ function Opener({
         )),
         Match.orElse(() => <View testID="bar-grabber" style={styles.grabber} />),
       )}
-    </Pressable>
-  );
-}
-
-/** Whether the bar holds the Tuner: on a hymn page shown, where the device has the ear (iOS). */
-export const tunerOn = (shown: Option.Option<Track>, ear: boolean): boolean =>
-  ear && Option.isSome(shown);
-
-/** The Tuner: a tuning fork in the accent that opens the tuner over the page; it plays no cue. */
-function TunerMark() {
-  const accent = useAccent();
-  const router = useRouter();
-  return (
-    <Pressable
-      role="button"
-      aria-label="Tuner"
-      onPress={() => router.push('/tuner')}
-      style={pressedSoft}
-    >
-      <BarMark mark="tuner" tint={accent} />
     </Pressable>
   );
 }
