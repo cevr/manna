@@ -13,6 +13,7 @@ import { hostEventsThroughAdapter } from './host-events-through-adapter.ts';
 import { keysNamedAsBound } from './keys-named-as-bound.ts';
 import { keysThroughKeymap } from './keys-through-keymap.ts';
 import { lockThroughSqlite } from './lock-through-sqlite.ts';
+import { mediaInProcess } from './media-in-process.ts';
 import { mediaThroughPlayer } from './media-through-player.ts';
 import { noCueRemap } from './no-cue-remap.ts';
 import { noEaseOnCue } from './no-ease-on-cue.ts';
@@ -31,6 +32,7 @@ import { synthOwnMath } from './synth-own-math.ts';
 import { testsKeepTheirStrength } from './tests-keep-their-strength.ts';
 import { toldAfterAnswer } from './told-after-answer.ts';
 import { touchesSerial } from './touches-serial.ts';
+import { webviewThroughChrome } from './webview-through-chrome.ts';
 
 export default Plugin.define({
   name: 'film',
@@ -44,6 +46,7 @@ export default Plugin.define({
     'keys-named-as-bound': keysNamedAsBound,
     'keys-through-keymap': keysThroughKeymap,
     'lock-through-sqlite': lockThroughSqlite,
+    'media-in-process': mediaInProcess,
     'media-through-player': mediaThroughPlayer,
     'no-cue-remap': noCueRemap,
     'no-ease-on-cue': noEaseOnCue,
@@ -62,5 +65,6 @@ export default Plugin.define({
     'tests-keep-their-strength': testsKeepTheirStrength,
     'told-after-answer': toldAfterAnswer,
     'touches-serial': touchesSerial,
+    'webview-through-chrome': webviewThroughChrome,
   },
 });

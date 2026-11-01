@@ -336,8 +336,9 @@ login (`auth status`, free), the H.264 encoder a render would use (a page
 chooses it as a render does; the line says `hardware` or `software`, the
 default pages and the encoder budget), reports each, and fails if any is
 missing. Nothing needs an ffmpeg on the machine: every media file is read and
-written in-process (below), and `tools/no-ffmpeg.test.ts` fails on a source
-that names `ffmpeg` or `ffprobe` as a command. `narrate`, `takes import` and `score` run the ElevenLabs check before their first paid call,
+written in-process (below), and the lint rule `film/media-in-process`
+(`lint/media-in-process.ts`) fails on a source that names `ffmpeg` or
+`ffprobe` in a string. `narrate`, `takes import` and `score` run the ElevenLabs check before their first paid call,
 and the `ElevenLabs` service uses `ELEVENLABS_API_KEY` when the environment
 or the Keychain holds one (effects need it) and the CLI's OAuth login
 otherwise, one OAuth call at a time (concurrent refreshes race and fail);
