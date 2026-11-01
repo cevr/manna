@@ -503,13 +503,14 @@ const offMedianOf = (r: Seen, set: Uint8Array) => {
 
 /** The median of the first `n` values of `v` as `medianOf` reads it (the upper one of an even count, 0 for none), sorted in place by insertion, with no array made. */
 const sortedMedian = (v: Float64Array, n: number) => {
+  if (n === 0) return 0;
   for (let k = 1; k < n; k++) {
     const x = v[k] ?? 0;
     let j = k - 1;
     for (; j >= 0 && (v[j] ?? 0) > x; j--) v[j + 1] = v[j] ?? 0;
     v[j + 1] = x;
   }
-  return Number(n > 0) * (v[n >> 1] ?? 0);
+  return v[n >> 1] ?? 0;
 };
 
 /**
