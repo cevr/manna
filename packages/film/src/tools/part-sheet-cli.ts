@@ -116,15 +116,15 @@ const namedOf = (hidden: HiddenEntry, measures: HiddenMeasures) =>
       .map((g) => ({ ...miss, grain: g })),
   );
 
-/** What a member's cut table exports: its cuts, each view's options, each view's hidden entry, and, if it has them, its frames and its paper reader. */
+/** What a member's cut table exports: its cuts, each view's options, each view's hidden entry, its paper reader, and, if it has them, its frames. */
 interface CutModule {
   readonly CUTS: Readonly<Record<string, PartCut>>;
   readonly cutOptionsFor: (view: string, raster: Raster) => PartCutOptions;
   readonly HIDDEN: Readonly<Record<string, HiddenEntry>>;
   /** Each view's frame on its kept sheet, where its part sheet is cut from the kept box padded: the sheet, the kept box and the pad (left, top, right, bottom). A view with none is cut from its kept view (`views/<view>.png`). */
   readonly FRAMES?: Readonly<Record<string, ViewFrame>>;
-  /** A view's enclosed paper in the kept view's pixels: the pieces its cut holds as cloth, and the pieces it leaves open as the gaps the view names. The dry run lists both, for the eye to check each held piece against the kept sheet. */
-  readonly paperOf?: (view: string, raster: Raster) => EnclosedPaper;
+  /** A view's enclosed paper in the kept view's pixels: the pieces its cut holds as cloth, the pieces it leaves open as the gaps the view names, and the named gaps gone stale. The dry run lists the first two, for the eye to check each held piece against the kept sheet; every run refuses a stale gap. */
+  readonly paperOf: (view: string, raster: Raster) => EnclosedPaper;
 }
 
 /** A piece of enclosed paper: its box in the kept view's pixels (the far edges exclusive) and its pixels. */
@@ -133,10 +133,15 @@ interface PaperPiece {
   readonly area: number;
 }
 
-/** A view's enclosed paper, held or open, as its cut table reads it. */
+/** A view's enclosed paper, held or open, as its cut table reads it, and each named gap whose point opens no piece, or no piece with the box it names. */
 interface EnclosedPaper {
   readonly held: ReadonlyArray<PaperPiece>;
   readonly open: ReadonlyArray<PaperPiece & { readonly why: string }>;
+  readonly stale: ReadonlyArray<{
+    readonly at: readonly [number, number];
+    readonly box: PaperPiece['box'];
+    readonly opened: ReadonlyArray<PaperPiece['box']>;
+  }>;
 }
 
 /** A view's frame on its kept sheet (`kept/<sheet>.png`): its kept box and the pixels its part sheet pads it by. */
@@ -151,7 +156,9 @@ const isCutModule = (u: unknown): u is CutModule =>
   Predicate.hasProperty(u, 'CUTS') &&
   Predicate.hasProperty(u, 'HIDDEN') &&
   Predicate.hasProperty(u, 'cutOptionsFor') &&
-  Predicate.isFunction(u.cutOptionsFor);
+  Predicate.isFunction(u.cutOptionsFor) &&
+  Predicate.hasProperty(u, 'paperOf') &&
+  Predicate.isFunction(u.paperOf);
 
 const Similarity = Schema.Struct({ s: Schema.Finite, dx: Schema.Finite, dy: Schema.Finite });
 
@@ -251,7 +258,7 @@ const cutTableOf = (file: string, name: string, refuse: (reason: string) => Part
       catch: (e) => refuse(`${file} does not load: ${String(e)}`),
     });
     if (!isCutModule(loaded))
-      return yield* refuse(`${file} exports no CUTS, cutOptionsFor and HIDDEN`);
+      return yield* refuse(`${file} exports no CUTS, cutOptionsFor, HIDDEN and paperOf`);
     const found = Option.all([
       Option.fromUndefinedOr(loaded.CUTS[name]),
       Option.fromUndefinedOr(loaded.HIDDEN[name]),
@@ -264,7 +271,7 @@ const cutTableOf = (file: string, name: string, refuse: (reason: string) => Part
           hidden,
           optionsFor: loaded.cutOptionsFor,
           frame: Option.fromUndefinedOr(loaded.FRAMES?.[name]),
-          paperOf: Option.fromUndefinedOr(loaded.paperOf),
+          paperOf: loaded.paperOf,
         }),
     });
   });
@@ -657,6 +664,22 @@ export const parts = Command.make(
           ),
         ).pipe(Effect.map((sheet) => cropRaster(sheet, f.box))),
     }).pipe(Effect.mapError(refuse));
+    // a named gap the sheet or the paper read moved from would hold the ground it names open
+    const paper = table.paperOf(name, view);
+    const stale = paper.stale.map(
+      (g) =>
+        `the gap at [${g.at.join(',')}] names the box [${g.box.join(',')}] but opens ${Option.match(
+          Arr.head(g.opened),
+          {
+            onNone: () => 'no piece of enclosed paper',
+            onSome: () => g.opened.map((b) => `[${b.join(',')}]`).join(' and '),
+          },
+        )}`,
+    );
+    if (stale.length > 0)
+      return yield* refuse(
+        `${input.member}.${input.view}: ${stale.join('; ')}; name its box again in the view's gaps, or drop it`,
+      );
     const started = yield* Clock.currentTimeMillis;
     const sheet = yield* Effect.fromResult(
       Result.mapError(cutParts(view, table.cut, table.optionsFor(name, view)), (e) =>
@@ -679,19 +702,13 @@ export const parts = Command.make(
       yield* fs.makeDirectory(out, { recursive: true });
       const mask = path.join(out, 'input.png');
       yield* fs.writeFile(mask, made.bytes);
-      const paper = Option.match(table.paperOf, {
-        onNone: () => [],
-        onSome: (of) => {
-          const { held, open } = of(name, view);
-          return [
-            ...held.map((p) => `parts ${label} paper held [${p.box.join(',')}] ${p.area}px`),
-            ...open.map(
-              (p) => `parts ${label} paper gap [${p.box.join(',')}] ${p.area}px: ${p.why}`,
-            ),
-          ];
-        },
-      });
-      for (const line of paper) yield* Console.log(line);
+      for (const line of [
+        ...paper.held.map((p) => `parts ${label} paper held [${p.box.join(',')}] ${p.area}px`),
+        ...paper.open.map(
+          (p) => `parts ${label} paper gap [${p.box.join(',')}] ${p.area}px: ${p.why}`,
+        ),
+      ])
+        yield* Console.log(line);
       return yield* Console.log(
         `parts ${label} dry-run parts=${sheet.parts.length} moving=${table.hidden.moving.join(',')} hidden=${made.hidden.reduce((a, b) => a + b, 0)}px cut=${cutMs}ms mask=${mask} okra=0`,
       );
