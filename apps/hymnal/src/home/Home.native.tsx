@@ -22,8 +22,10 @@
  * mounted beneath, out of reach, so it keeps its place. The bar's Cancel, or
  * Android's Back, clears the query and shows the list as it was.
  *
- * A tap on a group's heading shows `All at once` (`tiles`) with the list's
- * place read then (`showTiles`).
+ * A pinch in on the list (`usePinch`), a tap on a group's heading, or the
+ * `Hymns` heading's VoiceOver action `All at once` shows `All at once`
+ * (`tiles`) with the list's place read then (`showTiles`). A pinch out on
+ * the tiles, a tile or `Done` closes it.
  */
 
 import { useAtom, useAtomSet, useAtomSubscribe, useAtomValue } from '@effect/atom-react';
@@ -31,6 +33,7 @@ import { Link, useLinkTo, useSafeAreaInsets } from 'one';
 import { Option } from 'effect';
 import { type ReactNode, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   type SharedValue,
   useAnimatedStyle,
@@ -52,6 +55,7 @@ import { hymnHref, hymnOf } from './Browse';
 import { showTiles, type Stood, Tiles, tiles } from './finding';
 import { Gear } from './Gear';
 import { PinnedTabs, type TabReveal, useTabReveal } from './PinnedTabs';
+import { usePinch } from './pinch';
 import { TabRow, tabRowHeight } from './TabRow';
 import { groupAt, openingOffset, type TabName, tabNamed, tabsOf } from './tabs';
 
@@ -74,21 +78,13 @@ export function Home() {
   const scroll = useSharedValue(0);
   // The pinned tab row rests where the list's own row meets the list's top: one title's height down.
   const reveal = useTabReveal(scroll, title, tabRowHeight(fontScale));
-  const [shown, setTiles] = useAtom(tiles);
-  const cue = useCue();
-  const zoomOut = () => {
-    cue(plain('zoom-out'));
-    setTiles((state) => showTiles(state, { offset: scroll.value, cover: reveal.cover.value }));
-  };
-  const zoomIn = () => {
-    cue(plain('zoom-in'));
-    setTiles(Tiles.Hidden());
-  };
+  const shown = useAtomValue(tiles);
+  const { zoomOut, zoomIn } = useZoom(scroll, reveal.cover);
   const zoom = Option.liftPredicate(shown, Tiles.$is('Shown')).pipe(
     Option.map(({ stood }) => stood),
   );
   return (
-    <View style={styles.screen}>
+    <GestureHandlerRootView style={styles.screen}>
       <View style={[styles.below, { marginTop: insets.top }]}>
         <TabList
           title={title}
@@ -98,14 +94,34 @@ export function Home() {
           onZoomOut={zoomOut}
           onZoomIn={zoomIn}
         >
-          <Title height={title} scroll={scroll} />
+          <Title height={title} scroll={scroll} onAllAtOnce={zoomOut} />
         </TabList>
       </View>
       {/* The status bar's ground: rows and the title pass under it unseen. */}
       <View style={[styles.scrim, { height: insets.top }]} />
-    </View>
+    </GestureHandlerRootView>
   );
 }
+
+/**
+ * The home list's zoom, with its cue: out to `All at once` with the list's
+ * place read as it zooms (its `scroll` offset, and how far the pinned layer
+ * `cover`s its top), and back in. A group heading, the pinch and the
+ * `Hymns` heading's VoiceOver action all zoom out through it.
+ */
+export const useZoom = (scroll: SharedValue<number>, cover: SharedValue<number>) => {
+  const setTiles = useAtomSet(tiles);
+  const cue = useCue();
+  const zoomOut = () => {
+    cue(plain('zoom-out'));
+    setTiles((state) => showTiles(state, { offset: scroll.value, cover: cover.value }));
+  };
+  const zoomIn = () => {
+    cue(plain('zoom-in'));
+    setTiles(Tiles.Hidden());
+  };
+  return { zoomOut, zoomIn };
+};
 
 /**
  * The hymn list of the tab in use (`settings.home.tab`, `tabNamed`), with
@@ -117,8 +133,8 @@ export function Home() {
  * (`openAtTopic`) mounts the Topics tab's list afresh with that topic's row
  * at the top (`groupOffset`), even when Topics is already the tab in use.
  *
- * A tap on a group's row (`onZoomOut`, as the find bar's `All at once`)
- * zooms out to `All at once` over the list, its tiles opened at the group at
+ * A pinch in on the list (`list-pinch`) or a tap on a group's row
+ * (`onZoomOut`) zooms out to `All at once` over the list, its tiles opened at the group at
  * the list's top when it zoomed out (`zoom`, `groupAt`). A tile mounts the
  * tab's list afresh with that group's row at the top (`groupStarts`).
  * While it shows, the list and the layers over it (the pinned tab row, and
@@ -226,22 +242,32 @@ function TabList({
     cover: reveal.cover,
     onTouch: reveal.touch,
   };
+  const pinch = usePinch({
+    testID: 'list-pinch',
+    act: 'zoomOut',
+    enabled: Option.isNone(zoom),
+    onCommit: onZoomOut,
+  });
   return (
     <UnderTiles tiles={Option.map(zoom, allAtOnce)}>
-      <HymnList
-        key={`${tab.name}:${visit}`}
-        hymns={hymns}
-        hrefOf={hymnHref}
-        offset={hymnsOffset}
-        favourites={starred}
-        pullDown={pullDown}
-        start={start}
-        onGroup={onZoomOut}
-        {...(tab.name === 'Sections' && { byTopic: true, shelves })}
-        {...(tab.name !== 'Sections' && { grouped: tab, empty: 'No hymns here yet.' })}
-      />
-      <PinnedTabs reveal={reveal}>{tabRow}</PinnedTabs>
-      {children}
+      <GestureDetector gesture={pinch}>
+        <View style={styles.fill}>
+          <HymnList
+            key={`${tab.name}:${visit}`}
+            hymns={hymns}
+            hrefOf={hymnHref}
+            offset={hymnsOffset}
+            favourites={starred}
+            pullDown={pullDown}
+            start={start}
+            onGroup={onZoomOut}
+            {...(tab.name === 'Sections' && { byTopic: true, shelves })}
+            {...(tab.name !== 'Sections' && { grouped: tab, empty: 'No hymns here yet.' })}
+          />
+          <PinnedTabs reveal={reveal}>{tabRow}</PinnedTabs>
+          {children}
+        </View>
+      </GestureDetector>
     </UnderTiles>
   );
 }
@@ -270,13 +296,23 @@ export function UnderTiles({
   );
 }
 
-/** The title and the settings button, moved with the list's offset: up with the rows, and down with a pull past the top. */
-function Title({
+/** The VoiceOver action on the `Hymns` heading that zooms out to `All at once`, the pinch's single-pointer way in. */
+const ALL_AT_ONCE = { name: 'allAtOnce', label: 'All at once' } as const;
+
+/**
+ * The title and the settings button, moved with the list's offset: up with
+ * the rows, and down with a pull past the top. The `Hymns` heading, the
+ * first thing VoiceOver reaches, carries the action `All at once`
+ * (`onAllAtOnce`), the zoom the pinch runs.
+ */
+export function Title({
   height,
   scroll,
+  onAllAtOnce,
 }: {
   readonly height: number;
   readonly scroll: SharedValue<number>;
+  readonly onAllAtOnce: () => void;
 }) {
   const settings = useLinkTo({ href: Link.resolveHref('/settings') });
   const moved = useAnimatedStyle(() => {
@@ -286,7 +322,16 @@ function Title({
   return (
     <Animated.View pointerEvents="box-none" style={[styles.title, { height }, moved]}>
       <View pointerEvents="none" style={styles.titleText}>
-        <Text role="heading" aria-level={1} style={styles.titleWords} numberOfLines={1}>
+        <Text
+          role="heading"
+          aria-level={1}
+          accessibilityActions={[ALL_AT_ONCE]}
+          onAccessibilityAction={({ nativeEvent }) => {
+            if (nativeEvent.actionName === ALL_AT_ONCE.name) onAllAtOnce();
+          }}
+          style={styles.titleWords}
+          numberOfLines={1}
+        >
           Hymns
         </Text>
       </View>

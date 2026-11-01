@@ -9,6 +9,8 @@ import {
   type Control,
   drawn,
   inReach,
+  type PinchAct,
+  pinchAct,
   type Row,
   rowOf,
   showTiles,
@@ -114,5 +116,44 @@ describe('the find bar place on the home list', () => {
         expect(FindAt.$is('OverBar')(at) || FindAt.$is('Docked')(at)).toBe(true);
         expect(findRoom(at, inset)).toBeGreaterThanOrEqual(44);
       }
+  });
+});
+
+describe('the pinch on the home list', () => {
+  test('zooms out at 0.8, in at 1.25, and between them only a quick pinch the same way acts', () => {
+    const cases: ReadonlyArray<readonly [number, number, PinchAct]> = [
+      [1, 0, 'none'],
+      [0.8, 0, 'zoomOut'],
+      [0.81, 0, 'none'],
+      [0.3, 6, 'zoomOut'],
+      [1.25, 0, 'zoomIn'],
+      [1.24, 0, 'none'],
+      [3, -6, 'zoomIn'],
+      [0.94, -0.5, 'zoomOut'],
+      [0.94, -0.49, 'none'],
+      [0.95, -6, 'none'],
+      [0.9, 6, 'none'],
+      [1.06, 0.5, 'zoomIn'],
+      [1.06, 0.49, 'none'],
+      [1.05, 6, 'none'],
+      [1.1, -6, 'none'],
+    ];
+    expect(cases.map(([scale, velocity]) => [scale, velocity, pinchAct(scale, velocity)])).toEqual(
+      cases.map(([scale, velocity, act]) => [scale, velocity, act]),
+    );
+  });
+
+  test('never zooms out from 0.95 up nor in from 1.05 down, and at rest acts on the scale alone', () => {
+    const next = seeded(7);
+    for (let n = 0; n < 2000; n += 1) {
+      const scale = (next(4000) + 1) / 1000;
+      const velocity = next(12001) / 1000 - 6;
+      const act = pinchAct(scale, velocity);
+      if (scale >= 0.95) expect(act).not.toBe('zoomOut');
+      if (scale <= 1.05) expect(act).not.toBe('zoomIn');
+      expect(pinchAct(scale, 0)).toBe(
+        (scale <= 0.8 && 'zoomOut') || (scale >= 1.25 && 'zoomIn') || 'none',
+      );
+    }
   });
 });

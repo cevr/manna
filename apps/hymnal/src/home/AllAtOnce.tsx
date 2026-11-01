@@ -4,10 +4,11 @@
  * hymns it holds, and a strip of where they lie from hymn 1 to 695; the
  * group that holds the hymn the player has is outlined in the accent. A tap
  * on a tile zooms back in with that group's row at the list's top
- * (`onPick`); `Done` zooms back in where the list was (`onClose`). The
- * tiles open with the group at the list's top (`at`) in their first row.
- * The zoom out grows the tiles in from a little larger, and the zoom in
- * fades them out a little larger again.
+ * (`onPick`); `Done`, or a pinch out on the tiles (`usePinch`), zooms back
+ * in where the list was (`onClose`). The tiles open with the group at the
+ * list's top (`at`) in their first row. The zoom out grows the tiles in
+ * from a little larger, and the zoom in fades them out a little larger
+ * again; with Reduce Motion on, they cross-fade in and out in 150 ms.
  */
 
 import { useAtomValue } from '@effect/atom-react';
@@ -23,13 +24,16 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import Animated, { Keyframe } from 'react-native-reanimated';
+import { GestureDetector } from 'react-native-gesture-handler';
+import Animated, { FadeIn, FadeOut, Keyframe } from 'react-native-reanimated';
 
 import { color, useAccent } from '~/color';
 import { usePlayer } from '~/player/context';
+import { useReduceMotion } from '~/player/motion';
 import { Player } from '~/player/player';
 import { ListEnd } from '~/reader/ListEnd';
 
+import { usePinch } from './pinch';
 import { playingNumber } from './playing';
 import { type Tab, type Tile, tilesOf } from './tabs';
 
@@ -55,15 +59,20 @@ const tileHeight = (fontScale: number) =>
 const barLine = 22;
 const barPadding = 11;
 
-const zoomOut = new Keyframe({
-  0: { opacity: 0, transform: [{ scale: 1.06 }] },
-  100: { opacity: 1, transform: [{ scale: 1 }] },
-}).duration(180);
+/** The tiles' way in and out: the zoom out grows them in, the zoom in fades them out a little larger. */
+const zoomed = {
+  entering: new Keyframe({
+    0: { opacity: 0, transform: [{ scale: 1.06 }] },
+    100: { opacity: 1, transform: [{ scale: 1 }] },
+  }).duration(180),
+  exiting: new Keyframe({
+    0: { opacity: 1, transform: [{ scale: 1 }] },
+    100: { opacity: 0, transform: [{ scale: 1.06 }] },
+  }).duration(140),
+};
 
-const zoomIn = new Keyframe({
-  0: { opacity: 1, transform: [{ scale: 1 }] },
-  100: { opacity: 0, transform: [{ scale: 1.06 }] },
-}).duration(140);
+/** With Reduce Motion on, the tiles come and go by a cross-fade in place of the zoom. */
+const faded = { entering: FadeIn.duration(150), exiting: FadeOut.duration(150) };
 
 const idle = Atom.make<Player>(Player.Idle());
 
@@ -103,46 +112,55 @@ export function AllAtOnce({
   );
   const height = tileHeight(fontScale);
   const firstRow = Math.floor(at / columns) * (height + gap);
+  const motion = (useReduceMotion() && faded) || zoomed;
+  const pinch = usePinch({
+    testID: 'tiles-pinch',
+    act: 'zoomIn',
+    enabled: true,
+    onCommit: onClose,
+  });
   return (
-    <Animated.View
-      entering={zoomOut}
-      exiting={zoomIn}
-      accessibilityViewIsModal
-      style={styles.screen}
-    >
-      <View style={styles.bar}>
-        <Text role="heading" aria-level={2} style={styles.heading} numberOfLines={1}>
-          {tab.name}, all at once
-        </Text>
-        <Pressable
-          role="button"
-          aria-label="Done"
-          hitSlop={8}
-          onPress={onClose}
-          style={({ pressed }) => [styles.done, pressed && styles.pressed]}
-        >
-          <Text style={[styles.doneWords, { color: accent }]}>Done</Text>
-        </Pressable>
-      </View>
-      <FlatList
-        data={tiles}
-        keyExtractor={(tile) => String(tile.index)}
-        numColumns={columns}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.tiles}
-        contentOffset={{ x: 0, y: firstRow }}
-        ListEmptyComponent={<Text style={styles.empty}>No hymns here yet.</Text>}
-        ListFooterComponent={<ListEnd />}
-        renderItem={({ item }) => (
-          <TileView
-            tile={item}
-            height={height}
-            accent={accent}
-            onPress={() => onPick(item.index)}
-          />
-        )}
-      />
-    </Animated.View>
+    <GestureDetector gesture={pinch}>
+      <Animated.View
+        entering={motion.entering}
+        exiting={motion.exiting}
+        accessibilityViewIsModal
+        style={styles.screen}
+      >
+        <View style={styles.bar}>
+          <Text role="heading" aria-level={2} style={styles.heading} numberOfLines={1}>
+            {tab.name}, all at once
+          </Text>
+          <Pressable
+            role="button"
+            aria-label="Done"
+            hitSlop={8}
+            onPress={onClose}
+            style={({ pressed }) => [styles.done, pressed && styles.pressed]}
+          >
+            <Text style={[styles.doneWords, { color: accent }]}>Done</Text>
+          </Pressable>
+        </View>
+        <FlatList
+          data={tiles}
+          keyExtractor={(tile) => String(tile.index)}
+          numColumns={columns}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.tiles}
+          contentOffset={{ x: 0, y: firstRow }}
+          ListEmptyComponent={<Text style={styles.empty}>No hymns here yet.</Text>}
+          ListFooterComponent={<ListEnd />}
+          renderItem={({ item }) => (
+            <TileView
+              tile={item}
+              height={height}
+              accent={accent}
+              onPress={() => onPick(item.index)}
+            />
+          )}
+        />
+      </Animated.View>
+    </GestureDetector>
   );
 }
 

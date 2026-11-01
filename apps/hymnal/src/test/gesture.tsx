@@ -34,15 +34,19 @@ interface Touch {
   readonly translationY?: number;
   readonly velocityX?: number;
   readonly velocityY?: number;
+  /** A pinch's scale (1 where the fingers landed) and its velocity, in scale per second. */
+  readonly scale?: number;
+  readonly velocity?: number;
 }
 
 /** A pan's offset: one way past a number, or out of a range either way. */
 type Offset = number | readonly [number, number];
 
-/** A gesture's config, as a screen hands it to `usePanGesture` or `useTapGesture`. */
+/** A gesture's config, as a screen hands it to `usePanGesture`, `useTapGesture` or `usePinchGesture`. */
 export interface PanConfig {
   readonly testID?: string;
   readonly enabled?: boolean;
+  readonly runOnJS?: boolean;
   readonly numberOfTaps?: number;
   readonly minDistance?: number;
   readonly activeOffsetX?: Offset;
@@ -85,6 +89,7 @@ export const usePanGesture = (config: PanConfig) => {
 };
 export const useTapGesture = (config: PanConfig) => config;
 export const useLongPressGesture = (config: PanConfig) => config;
+export const usePinchGesture = (config: PanConfig) => config;
 
 const compose = (...composed: ReadonlyArray<PanConfig | Composed>): Composed => ({ composed });
 export const useCompetingGestures = compose;

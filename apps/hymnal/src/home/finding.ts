@@ -50,6 +50,24 @@ export const tilesAt = (state: Tiles, path: string): Tiles => {
   return Tiles.Hidden();
 };
 
+/** What a pinch asks of the home list: zoom out to `All at once`, zoom back in to the list, or nothing. */
+export type PinchAct = 'zoomOut' | 'zoomIn' | 'none';
+
+/**
+ * What a pinch at `scale` (1 where the fingers landed), moving at
+ * `velocity` (scale per second, below 0 while the fingers close), asks.
+ * Out at 0.8 or less, in at 1.25 or more; between 0.95 and 1.05 it asks
+ * nothing, and between those bands only a pinch moving at 0.5 a second or
+ * faster the same way asks. The gesture asks with velocity 0 while the
+ * fingers move, and with their velocity as they lift, so a quick short
+ * pinch commits too, and a scroll's stray second finger commits nothing.
+ */
+export const pinchAct = (scale: number, velocity: number): PinchAct => {
+  if (scale <= 0.8 || (scale < 0.95 && velocity <= -0.5)) return 'zoomOut';
+  if (scale >= 1.25 || (scale > 1.05 && velocity >= 0.5)) return 'zoomIn';
+  return 'none';
+};
+
 /** The row the find bar shows. */
 export type Row = 'folded' | 'open' | 'tiles';
 
