@@ -26,19 +26,21 @@ const Spread = Schema.Struct({ median: Schema.Finite, p90: Schema.Finite });
 /** A spread as the lock keeps it: eval.py's also carries its count and mean. */
 const spreadOf = (s: typeof Spread.Type) => ({ median: s.median, p90: s.p90 });
 
-/** The part of an eval's output (eval.py's JSON) the lock reads: the trained drawing's held samples, or the untrained one's. */
+/** The part of an eval's output (eval.py's JSON) the lock reads: the trained drawing's held samples, or the untrained one's; eval.py writes `null` for the side it has no samples on. */
 const EvalJson = Schema.fromJsonString(
   Schema.Struct({
     seen: Schema.optionalKey(
-      Schema.Struct({
-        n: Schema.Finite,
-        accuracy: Schema.Finite,
-        angle_deg: Spread,
-        joint_px: Spread,
-      }),
+      Schema.NullOr(
+        Schema.Struct({
+          n: Schema.Finite,
+          accuracy: Schema.Finite,
+          angle_deg: Spread,
+          joint_px: Spread,
+        }),
+      ),
     ),
     unseen: Schema.optionalKey(
-      Schema.Struct({ n: Schema.Finite, angle_deg: Spread, joint_px: Spread }),
+      Schema.NullOr(Schema.Struct({ n: Schema.Finite, angle_deg: Spread, joint_px: Spread })),
     ),
   }),
 );
@@ -185,7 +187,7 @@ export const lockStage = (o: {
           );
           if (Option.isNone(c))
             return yield* StageFailed.make({ reason: `lock: no held eval for ${drawing}` });
-          const seen = Option.fromUndefinedOr((yield* evalNumbers(c.value)).seen);
+          const seen = Option.fromNullishOr((yield* evalNumbers(c.value)).seen);
           if (Option.isNone(seen))
             return yield* StageFailed.make({
               reason: `lock: ${evalOf(c.value)} has no held samples`,
@@ -204,7 +206,7 @@ export const lockStage = (o: {
         const untrained: Array<readonly [string, (typeof Lock.Type.untrained)[string]]> = [];
         for (const c of o.candidates) {
           if (inSet.has(c.drawing) || !ctx.known(evalOf(c))) continue;
-          const unseen = Option.fromUndefinedOr((yield* evalNumbers(c)).unseen);
+          const unseen = Option.fromNullishOr((yield* evalNumbers(c)).unseen);
           if (Option.isNone(unseen)) continue;
           const u = unseen.value;
           untrained.push([

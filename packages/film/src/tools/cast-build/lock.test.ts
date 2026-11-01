@@ -93,7 +93,8 @@ const files = () =>
     ['/reader/model.py', text('model')],
   ]);
 
-const build = (disk: Disk, stdout = STDOUT) =>
+/** `evaluate` is eval.py's JSON text, the same for every drawing. */
+const build = (disk: Disk, stdout = STDOUT, evaluate = jsonOf(EVAL)) =>
   buildGraph<CastReader | FileSystem.FileSystem>([...graph, lock], {
     cache: '/cache',
     plan: false,
@@ -110,14 +111,14 @@ const build = (disk: Disk, stdout = STDOUT) =>
           ]),
         ),
         CastReader.layerTest(
-          { evaluate: JSON_EVAL, checkpoint: text('ckpt'), trainStdout: stdout },
+          { evaluate, checkpoint: text('ckpt'), trainStdout: stdout },
           [],
           SOURCES,
         ),
       ),
     ),
   );
-const JSON_EVAL = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown))(EVAL);
+const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
 const LockJson = Schema.fromJsonString(Schema.Record(Schema.String, Schema.Unknown));
 const lockOf = (disk: Disk) => Schema.decodeSync(LockJson)(read(disk, LOCK));
@@ -183,6 +184,16 @@ describe('cast build: the reader lock', () => {
       const report = yield* build(disk, 'View run at https://modal.com/apps/me/main/ap-X');
       expect(stateOf(report)['train']).toBe('ran');
       expect(Object.keys(lockOf(disk)['train'] as object)).toEqual(['stageSec']);
+    }),
+  );
+
+  it.effect("eval.py's null for a side with no samples reads as absent", () =>
+    Effect.gen(function* () {
+      const disk = files();
+      const report = yield* build(disk, STDOUT, `{"seen":${jsonOf(EVAL.seen)},"unseen":null}`);
+      expect(stateOf(report)['lock']).toBe('ran');
+      expect(lockOf(disk)['untrained']).toEqual({});
+      expect(lockOf(disk)['held']).toMatchObject({ drawings: 1, accuracy: 1 });
     }),
   );
 
