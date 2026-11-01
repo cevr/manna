@@ -10,10 +10,15 @@ tuner.
 ## Sub-features
 
 - `tuner-native-build`: `sim install --prebuild` of the branch builds and launches the app, and the built `Info.plist` has `NSMicrophoneUsageDescription` with the usage text.
-- `tuner-open-chord`: a hymn → a chord → the chord sheet's `Tuner` → the tuner sheet (`id=tuner-sheet`) over it; `Done` or a pan down from its grabber returns to the chord sheet at its own detent.
-- `tuner-open-settings`: Settings → `Tuner` → the tuner sheet.
+- `tuner-open-chord`: a hymn → a chord → the chord sheet's `Tuner` → the tuner full screen (`id=tuner-screen`, no grabber) over it; `Done` returns to the chord sheet at its own detent, and the log holds `[tuner] stop reason=closed` when it listened.
+- `tuner-open-settings`: Settings → `Tuner` → the tuner full screen (`id=tuner-screen`).
+- `tuner-open-hymn`: `sim open hymns/3` → the bar's `label=Tuner` → `id=tuner-screen` fills the screen: no grabber, and hymn 3 is not in the tree under it. `Done` returns to hymn 3. On the home screen with a hymn docked, the bar holds no `Tuner`.
+- `tuner-pick`: `hymnal://tuner?feed=A2:0`, then `sim tap id=tuner-string-E2` → `id=tuner-reading` is labelled `Low E string, 500 cents sharp` (±2), `id=tuner-hint` reads `Loosen`, `id=tuner-auto` is unchecked, and the log holds `[tuner] target id=E2`.
+- `tuner-auto`: from `tuner-pick`, `sim tap id=tuner-auto` → `A string, in tune`, `id=tuner-auto` is checked, and the log holds `[tuner] target id=auto`. With `feed=E2:-12` and Auto on, the reading names `Low E`.
+- `tuner-covered`: listening on `feed=E2:-12`, open `hymnal://hymns/100` (it pushes over the tuner) → `[tuner] stop reason=covered`, and no `[tuner] frame` line after it. Back to the tuner → a new `[tuner] listen source=feed`.
+- `tuner-announce`: on `feed=E2:-12`, over 10 s the log holds between 1 and 10 `[tuner] announced` lines, and none holds the reading's words. A steady feed gives about 1: it announces only when the words change, at most once a second.
 - `tuner-permission`: with the permission reset, opening the tuner runs the system request (`[tuner] permission state=undetermined`, then the alert in the tree with the usage text); Allow → `[tuner] permission state=granted`.
-- `tuner-denied`: with the permission revoked, the sheet reads `Microphone is off for Hymnal` and holds `Open Settings`; no `[tuner] listen` line.
+- `tuner-denied`: with the permission revoked, the screen reads `Microphone is off for Hymnal` and holds `Open Settings`; no `[tuner] listen` line.
 - `tuner-listen`: with the permission granted, `hymnal://tuner?feed=E2:-12` → `id=tuner-reading` is labelled `Low E string, 12 cents flat` (±2), and the log holds `[tuner] listen source=feed`.
 - `tuner-tuned`: `feed=A2:0` → `id=tuner-string-A2` is labelled `A string, tuned` within 2 s; the other five strings are not tuned.
 - `tuner-pauses-player`: with Sound off, hymn 100 playing, the tuner opened from Settings → the player reads Paused and the log holds `[tuner] paused player` once; after the tuner closes the player stays Paused.
@@ -22,7 +27,7 @@ tuner.
 
 ## How to get to it (user POV)
 
-- A hymn's chord sheet → `Tuner` (in its head, beside `Done`), or Settings → `Tuner`; both open the sheet at `/tuner`. Deep link: `hymnal://tuner`; in development `hymnal://tuner?feed=<string>:<cents>` (for example `A2:-12`) feeds frames in place of the microphone.
+- A hymn page's bottom bar → `Tuner` (left of `Sound`), a hymn's chord sheet → `Tuner` (in its head, beside `Done`), or Settings → `Tuner`; each opens the tuner full screen at `/tuner`, and `Done` (top left) closes it. `Auto` (top right) and the six string circles of the headstock pick the target. Deep link: `hymnal://tuner`; in development `hymnal://tuner?feed=<string>:<cents>` (for example `A2:-12`) feeds frames in place of the microphone.
 
 ## Driving it with sim
 
@@ -33,20 +38,24 @@ tuner.
 1. **Build (`tuner-native-build`).** `sim install --prebuild` → `{"ok":true,"command":"install",…}` and the app shows `label=Hymns`.
 2. **Usage text.** `/usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' apps/hymnal/ios/build/dd/Build/Products/Debug-iphonesimulator/Hymnal.app/Info.plist` → `Hymnal listens to your guitar to tune it. Nothing is recorded or kept.`
 3. **The log.** The `[tuner]` lines are JS console lines, which `sim log` does not see. Read them with Argent: `argent run debugger-connect --port $PORT --device_id <udid>`, then `argent run debugger-log-registry --port $PORT --device_id <udid> --json` names the log file to grep. A reconnect starts a new file. Each later step reads its lines from that file.
-4. **Opened with no feed (`tuner-open-settings`, `tuner-denied`).** Run `xcrun simctl privacy <udid> revoke microphone im.cvr.hymnal` first, so a sheet opened with no feed starts nothing. `sim open settings --expect label=Simple`, `sim scroll label=Tuner down`, `sim tap label=Tuner` → `id=tuner-sheet`, `label=Microphone is off for Hymnal`, `label=Open Settings`, and no `[tuner] listen` line.
-5. **From the chord sheet (`tuner-open-chord`).** With chords on, `sim open hymns/3 --expect "label=Stanza 1"`, `sim tap id=chord-1-1-1` → the chord sheet with `label=Tuner` beside `label=Done`. `sim tap label=Tuner` → `id=tuner-sheet`. `sim tap label=Done` → the chord sheet again (`id=chord-box-0`). Open the tuner again and pan its grabber down (`agent-device gesture pan <grabber x> <grabber y> 0 400 400`) → the chord sheet again, at its `Half screen` detent.
+4. **Opened with no feed (`tuner-open-settings`, `tuner-denied`).** Run `xcrun simctl privacy <udid> revoke microphone im.cvr.hymnal` first, so a sheet opened with no feed starts nothing. `sim open settings --expect label=Simple`, `sim scroll label=Tuner down`, `sim tap label=Tuner` → `id=tuner-screen`, `label=Microphone is off for Hymnal`, `label=Open Settings`, and no `[tuner] listen` line.
+5. **From the chord sheet (`tuner-open-chord`).** With chords on, `sim open hymns/3 --expect "label=Stanza 1"`, `sim tap id=chord-1-1-1` → the chord sheet with `label=Tuner` beside `label=Done`. `sim tap label=Tuner` → `id=tuner-screen`, full screen with no grabber. `sim tap label=Done` → the chord sheet again (`id=chord-box-0`), at its `Half screen` detent.
+   **From the hymn (`tuner-open-hymn`).** `sim open hymns/3 --expect "label=Stanza 1"`, `sim tap label=Tuner` (the bar's mark) → `id=tuner-screen`, and no `label=Stanza 1` in the tree. `sim tap label=Done` → hymn 3 again. `sim open /` with hymn 3 docked → the bar holds no `label=Tuner`.
 6. **The request (`tuner-permission`).** Run `xcrun simctl privacy <udid> reset microphone im.cvr.hymnal`, then `sim open 'tuner?feed=E2:0'` twice (see Gotchas). → `[tuner] permission state=undetermined`, and the system alert with the usage text is in the tree. Tap `Allow` → `[tuner] permission state=granted`, then `[tuner] listen source=feed`.
 7. **A reading (`tuner-listen`, `tuner-tuned`).** With the permission granted, `sim open 'tuner?feed=E2:-12' --expect id=tuner-string-E2` → `id=tuner-reading` is labelled `Low E string, 12 cents flat`. `sim open 'tuner?feed=A2:0'` → within 2 s, `id=tuner-string-A2` is labelled `A string, tuned` and no other `tuner-string-*` is tuned.
 8. **The player (`tuner-pauses-player`).** Turn the bar's `Sound` off (`value` `unchecked`) and `Sounds and haptics` off in Settings. On hymn 100, `sim tap "label=Play hymn 100"` (the one Play of the drive) → `label=Pause hymn 100`. Open Settings and `sim open 'tuner?feed=E2:0'` → exactly one `[tuner] paused player` line, before the `listen` line. `sim back`, then `sim open hymns/100` → the bar reads `label=Play hymn 100`, and its place does not move for 8 s. Turn `Sound` and `Sounds and haptics` on again.
+   **A picked string (`tuner-pick`, `tuner-auto`).** `sim open 'tuner?feed=A2:0'`, then `sim tap id=tuner-string-E2` → `id=tuner-reading` is labelled `Low E string, 500 cents sharp` (±2), `id=tuner-hint` reads `Loosen`, `id=tuner-auto` has `value` unchecked, and the log holds `[tuner] target id=E2`. `sim tap id=tuner-auto` → `A string, in tune`, `id=tuner-auto` checked, and `[tuner] target id=auto`. `sim open 'tuner?feed=E2:-12'` → the reading names `Low E`.
+   **Covered (`tuner-covered`).** Listening on `feed=E2:-12`, `sim open hymns/100` → the log holds `[tuner] stop reason=covered` and no `[tuner] frame` line after it. `sim back` to the tuner → a new `[tuner] listen source=feed`.
+   **Announced (`tuner-announce`).** On `feed=E2:-12` for 10 s, count the `[tuner] announced` lines: between 1 and 10, none with words after `announced`.
 9. **Speed (`tuner-speed`).** Leave `feed=E2:-12` open until the log holds at least 50 `[tuner] frame ms=` lines (about 40 s), at a load of at most 12. Take the median and the p95 of the numbers.
 10. **No sound (`tuner-no-sound`).** Over the whole drive, the log holds no `[feel] play` line from the tuner, and no Swift `[tuner]` line (the feed never starts `Listen`).
 
 ## Gotchas
 
 - Never let the simulator open the Mac's microphone: a drive sets the permission with `xcrun simctl privacy <udid> grant|revoke|reset microphone im.cvr.hymnal` before launch, and feeds the tuner frames instead of the microphone.
-- A sheet opened with the permission granted and no feed starts the real microphone. Open the tuner with no feed only with the permission revoked. Every listening row opens the feed link.
+- A tuner opened with the permission granted and no feed starts the real microphone. Open the tuner with no feed only with the permission revoked. Every listening row opens the feed link.
 - `xcrun simctl privacy` ends the app. The next `sim open` lands on the hymn list and fails its `--expect`: run it again.
-- A development build mounts the sheet twice (React's StrictMode): each open logs two `[tuner] permission state=` lines and one `listen` line.
+- A development build mounts the screen twice (React's StrictMode): each open logs two `[tuner] permission state=` lines and one `listen` line.
 - The system alert makes the app inactive and then active again: after `Allow` the log holds `granted`, `listen`, `stop reason=away`, a second permission read and a second `listen`.
 - `tuner-pauses-player` opens the feed link from Settings, not Settings' `Tuner` row: with the permission granted, the row would start the real microphone. The pause runs the same path.
 - The build may rewrite `apps/hymnal/native/feel/Voice.d.swift.ts`; put it back with `git checkout -- apps/hymnal/native/feel/Voice.d.swift.ts`.
