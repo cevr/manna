@@ -1,6 +1,11 @@
 {
-  "reader": "7f20f3a760af60370eee3775e06dfbefe1649c16c1e3e83e7e4d621bb1063085",
-  "stageKey": "4779d46b69ac0e4483d02d0e733aa8e80ed7818b902784804668c8dd6f381bef",
+  "reader": "7e708b171e552b1948c758a73ce999d355dd4b011da7c36afe805b4ff10dd456",
+  "stageKey": "ea6c2870a7b436a61fe572d9b0ccd6e057f71329b2c0ee99a59e8a45ca91bae7",
+  "trainer": {
+    "modal_app.py": "832803300d5db044b45a59fe30df80c4623b11e8c2041da958a0900ebf8a303f",
+    "model.py": "7fbe128fec85fbda0fc4adc2c98f6167c7cc4ed766c21af1554d6aa72d058420",
+    "train.py": "70080fd8c1c4ea87d2b1f462b3092904667c41e7454e9d01c8e8b82251d08ab1"
+  },
   "trainset": "757547d8e9f29a291a19822b8115ca13089f6aa4dad9a3e04cdf0ce8e89010c9",
   "drawings": {
     "feast-mother/poses-poses-1": "d61a553af925fb7d7740554fa20a77eba7081043d256a333fdc067f0c477413a",
