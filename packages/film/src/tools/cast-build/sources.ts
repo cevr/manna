@@ -19,7 +19,7 @@ import type { PlatformError } from 'effect/PlatformError';
 import { fileInput, type Input } from './graph.ts';
 import { type ImportUnresolved, type UndeclaredImport, declaredClosure } from './imports.ts';
 
-export const STAGE_ENTRIES = {
+const STAGE_ENTRIES = {
   /** `concept parts`, which the parts stage runs. */
   parts: ['../part-sheet-cli.ts'],
   /** The cut stage's code, `puppetSpecIn` and its encoding, lives with the stages. */
@@ -32,7 +32,7 @@ export const STAGE_ENTRIES = {
   chain: ['chain.ts', 'chain-fit.ts'],
 } as const;
 
-export type SourcedStage = keyof typeof STAGE_ENTRIES;
+type SourcedStage = keyof typeof STAGE_ENTRIES;
 
 /**
  * The files (from this folder) whose variable imports each kind's code meets,
@@ -59,10 +59,10 @@ type StageSources = { readonly [K in SourcedStage]: ReadonlyArray<Input> };
 const here = (s: string) => new URL(s, import.meta.url).pathname;
 
 /** A stage kind's entry modules, as absolute paths. */
-export const stageEntryFiles = (kind: SourcedStage) => STAGE_ENTRIES[kind].map(here);
+const stageEntryFiles = (kind: SourcedStage) => STAGE_ENTRIES[kind].map(here);
 
 /** A stage kind's source files, as absolute paths, sorted; fails on an undeclared variable import. */
-export const sourceFiles = (
+const sourceFiles = (
   kind: SourcedStage,
 ): Effect.Effect<
   ReadonlyArray<string>,

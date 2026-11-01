@@ -9,13 +9,16 @@ import { Effect, FileSystem, Layer, Path } from 'effect';
 import { ContentStore } from '../content-store.ts';
 import { memoryLocks, text } from '../host/testing.ts';
 import { type Stage, buildGraph } from './graph.ts';
-import {
-  STAGE_ENTRIES,
-  type SourcedStage,
-  filmCastSources,
-  sourceFiles,
-  stageSources,
-} from './sources.ts';
+import { filmCastSources, stageSources } from './sources.ts';
+
+/** A stage kind's source files, as `stageSources` makes them its inputs. */
+const sourceFiles = (kind: keyof Effect.Success<typeof stageSources>) =>
+  Effect.map(stageSources, (all) =>
+    all[kind].flatMap((i) => {
+      if (i._tag === 'File') return [i.path];
+      return [];
+    }),
+  );
 
 const local = Layer.mergeAll(BunFileSystem.layer, Path.layer);
 const ends = (files: ReadonlyArray<string>) => files.map((f) => f.split('/src/').at(-1));
@@ -26,7 +29,7 @@ describe('stage sources', () => {
   it.effect('every stage kind runs files of this repo, none of node_modules, each on disk', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
-      for (const kind of Object.keys(STAGE_ENTRIES) as ReadonlyArray<SourcedStage>) {
+      for (const kind of ['parts', 'cut', 'fit', 'renders', 'eval', 'chain'] as const) {
         const files = yield* sourceFiles(kind);
         expect({ kind, some: files.length > 0 }).toEqual({ kind, some: true });
         const outside = files.filter((f) => f.includes('/node_modules/'));

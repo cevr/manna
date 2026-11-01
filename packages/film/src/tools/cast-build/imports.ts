@@ -32,13 +32,13 @@ const COMMENT = /^[ \t]*(?:\/\/.*$|\/\*[\s\S]*?\*\/)/gm;
 const uncommented = (text: string) => text.replace(COMMENT, '');
 
 /** The specifiers a module's text imports or re-exports, in order, type-only ones left out. */
-export const specifiersOf = (text: string): ReadonlyArray<string> =>
+const specifiersOf = (text: string): ReadonlyArray<string> =>
   [...uncommented(text).matchAll(STATIC)].flatMap((m) =>
     [m[1], m[2], m[3]].flatMap((s) => Option.toArray(Option.fromUndefinedOr(s))),
   );
 
 /** The arguments of a module's dynamic imports whose specifier is not a string literal, in order. */
-export const variableImportsOf = (text: string): ReadonlyArray<string> =>
+const variableImportsOf = (text: string): ReadonlyArray<string> =>
   [...uncommented(text).matchAll(VARIABLE)].map((m) => (m[1] ?? '').trim());
 
 /** A dynamic import the scanner cannot follow: the file it is in, and its argument's text. */
@@ -159,7 +159,7 @@ const resolve = (file: string, specifier: string) =>
   });
 
 /** Every local file the entries run, the entries with them, and the variable imports met on the way. */
-export const importClosure = Effect.fn('cast.build.importClosure')(function* (
+const importClosure = Effect.fn('cast.build.importClosure')(function* (
   entries: ReadonlyArray<string>,
 ) {
   const fs = yield* FileSystem.FileSystem;

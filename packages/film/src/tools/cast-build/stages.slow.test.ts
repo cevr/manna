@@ -14,8 +14,17 @@ import { Pages } from '../pages.ts';
 import { memoryLocks } from '../host/testing.ts';
 import type { Coverage, EntryFacts } from './coverage.ts';
 import { type Input, type Stage, buildGraph } from './graph.ts';
-import { sourceFiles, stageSources } from './sources.ts';
+import { stageSources } from './sources.ts';
 import { clipStages, memberStages } from './stages.ts';
+
+/** A stage kind's source files, as `stageSources` makes them its inputs. */
+const sourceFiles = (kind: keyof Effect.Success<typeof stageSources>) =>
+  Effect.map(stageSources, (all) =>
+    all[kind].flatMap((i) => {
+      if (i._tag === 'File') return [i.path];
+      return [];
+    }),
+  );
 
 const COVERAGE: Coverage = {
   member: 'fake',

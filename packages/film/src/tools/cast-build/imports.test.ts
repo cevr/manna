@@ -5,14 +5,7 @@
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Path } from 'effect';
 import { memoryFileSystem, text } from '../host/testing.ts';
-import {
-  ImportUnresolved,
-  UndeclaredImport,
-  declaredClosure,
-  importClosure,
-  specifiersOf,
-  variableImportsOf,
-} from './imports.ts';
+import { ImportUnresolved, UndeclaredImport, declaredClosure } from './imports.ts';
 
 const tree = () =>
   new Map<string, Uint8Array>([
@@ -45,18 +38,34 @@ describe('import closure', () => {
   it.effect(
     'reads static, re-export, side-effect and literal dynamic specifiers, not type-only ones',
     () =>
-      Effect.sync(() => {
-        expect(
-          specifiersOf(
-            "// import './commented'\n/** import('./doc') */\nimport a from './a';\nimport type { T } from './t';\nexport type { U } from './u';\nexport * from './e';\nimport './s';\nconst l = import('./l');",
+      // Each name the scanner must not read names no file, and a relative import of no file fails the closure.
+      Effect.gen(function* () {
+        expect(yield* declaredClosure(['/k/main.ts'], [])).toEqual(
+          ['a', 'e', 'l', 'main', 's'].map((f) => `/k/${f}.ts`),
+        );
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            memoryFileSystem(
+              new Map([
+                [
+                  '/k/main.ts',
+                  text(
+                    "// import './commented'\n/** import('./doc') */\nimport a from './a';\nimport type { T } from './t';\nexport type { U } from './u';\nexport * from './e';\nimport './s';\nconst l = import('./l');",
+                  ),
+                ],
+                ...['a', 'e', 's', 'l'].map((f) => [`/k/${f}.ts`, text('export {};')] as const),
+              ]),
+            ),
+            Path.layer,
           ),
-        ).toEqual(['./a', './e', './s', './l']);
-      }),
+        ),
+      ),
   );
 
   it.effect('follows local files transitively, and no package or type-only import', () =>
     Effect.gen(function* () {
-      const { files } = yield* importClosure(['/src/a.ts']);
+      const files = yield* declaredClosure(['/src/a.ts'], []);
       expect(files).toEqual([
         '/src/a.ts',
         '/src/b.ts',
@@ -70,7 +79,7 @@ describe('import closure', () => {
 
   it.effect('a `.js` name resolves to its `.ts` file, as Bun resolves it', () =>
     Effect.gen(function* () {
-      const { files } = yield* importClosure(['/j/a.ts']);
+      const files = yield* declaredClosure(['/j/a.ts'], []);
       expect(files).toEqual(['/j/a.ts', '/j/b.ts', '/j/c.tsx']);
     }).pipe(
       Effect.provide(
@@ -90,7 +99,7 @@ describe('import closure', () => {
 
   it.effect('a relative specifier that resolves to no file fails the closure', () =>
     Effect.gen(function* () {
-      const error = yield* Effect.flip(importClosure(['/u/a.ts']));
+      const error = yield* Effect.flip(declaredClosure(['/u/a.ts'], []));
       expect(error).toEqual(ImportUnresolved.make({ file: '/u/a.ts', specifier: './gone.ts' }));
     }).pipe(
       Effect.provide(
@@ -106,14 +115,14 @@ describe('import closure', () => {
     'a workspace package is followed to the file its exports name; another package is not',
     () =>
       Effect.gen(function* () {
-        const { files } = yield* importClosure(['/w/app/a.ts']);
+        const files = yield* declaredClosure(['/w/app/a.ts'], []);
         expect(files).toEqual([
           '/w/app/a.ts',
           '/w/node_modules/@manna/x/src/index.ts',
           '/w/node_modules/@manna/x/src/tools/index.ts',
           '/w/node_modules/@manna/x/src/tools/t.ts',
         ]);
-        const error = yield* Effect.flip(importClosure(['/w/app/gone.ts']));
+        const error = yield* Effect.flip(declaredClosure(['/w/app/gone.ts'], []));
         expect(error).toEqual(
           ImportUnresolved.make({ file: '/w/app/gone.ts', specifier: '@manna/x/missing' }),
         );
@@ -145,21 +154,45 @@ describe('import closure', () => {
   );
 
   it.effect('records each dynamic import whose specifier is not a string literal', () =>
-    Effect.sync(() => {
-      expect(
-        variableImportsOf(
-          "const m = import(file);\nconst t = import(`./x.ts`);\nconst l = import('./l');\nthis.import(y);",
-        ),
-      ).toEqual(['file', '`./x.ts`']);
+    Effect.gen(function* () {
+      const undeclared = (body: string) =>
+        Effect.flip(declaredClosure(['/v/a.ts'], [])).pipe(
+          Effect.provide(
+            Layer.mergeAll(
+              memoryFileSystem(
+                new Map([
+                  ['/v/a.ts', text(body)],
+                  ['/v/l.ts', text('export {};')],
+                ]),
+              ),
+              Path.layer,
+            ),
+          ),
+        );
+      expect(yield* undeclared("const l = import('./l');\nconst m = import(file);")).toEqual(
+        UndeclaredImport.make({ file: '/v/a.ts', argument: 'file' }),
+      );
+      expect(yield* undeclared('const t = import(`./x.ts`);')).toEqual(
+        UndeclaredImport.make({ file: '/v/a.ts', argument: '`./x.ts`' }),
+      );
+      // A method named import is no import.
+      expect(yield* Effect.flip(undeclared("const l = import('./l');\nthis.import(y);"))).toEqual([
+        '/v/a.ts',
+        '/v/l.ts',
+      ]);
     }),
   );
 
-  it.effect('a closure records its variable imports; one in an undeclared file fails', () =>
+  it.effect('a closure with a variable import in an undeclared file fails', () =>
     Effect.gen(function* () {
-      const closure = yield* importClosure(['/src/a.ts']);
-      expect(closure.variable).toEqual([{ file: '/src/b.ts', argument: 'f' }]);
       const declared = yield* declaredClosure(['/src/a.ts'], ['/src/b.ts']);
-      expect(declared).toEqual(closure.files);
+      expect(declared).toEqual([
+        '/src/a.ts',
+        '/src/b.ts',
+        '/src/data.json',
+        '/src/lib/c/index.ts',
+        '/src/side.ts',
+      ]);
       const undeclared = yield* Effect.flip(declaredClosure(['/src/a.ts'], []));
       expect(undeclared).toEqual(UndeclaredImport.make({ file: '/src/b.ts', argument: 'f' }));
     }).pipe(Effect.provide(Layer.mergeAll(memoryFileSystem(loader()), Path.layer))),
