@@ -153,16 +153,16 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.096,
-                  "px": 218
+                  "share": 0,
+                  "px": 123
                 },
                 "kept": {
-                  "share": 0.007,
-                  "px": 2562
+                  "share": 0,
+                  "px": 3412
                 },
-                "cells": 10
+                "cells": 7
               },
-              "verdict": "outside"
+              "verdict": "within"
             },
             {
               "part": "torso",
@@ -178,16 +178,16 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.09,
-                  "px": 133
+                  "share": 0,
+                  "px": 572
                 },
                 "kept": {
-                  "share": 0.04,
-                  "px": 1140
+                  "share": 0,
+                  "px": 1456
                 },
-                "cells": 11
+                "cells": 6
               },
-              "verdict": "outside"
+              "verdict": "within"
             }
           ],
           "speck": [
@@ -278,7 +278,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift", "grain", "step"]
+        "missed": ["drift", "step"]
       }
     ],
     "chosen": 1,
@@ -371,16 +371,16 @@
         },
         "fine": {
           "painted": {
-            "share": 0.096,
-            "px": 218
+            "share": 0,
+            "px": 123
           },
           "kept": {
-            "share": 0.007,
-            "px": 2562
+            "share": 0,
+            "px": 3412
           },
-          "cells": 10
+          "cells": 7
         },
-        "verdict": "outside"
+        "verdict": "within"
       },
       {
         "part": "torso",
@@ -396,16 +396,16 @@
         },
         "fine": {
           "painted": {
-            "share": 0.09,
-            "px": 133
+            "share": 0,
+            "px": 572
           },
           "kept": {
-            "share": 0.04,
-            "px": 1140
+            "share": 0,
+            "px": 1456
           },
-          "cells": 11
+          "cells": 6
         },
-        "verdict": "outside"
+        "verdict": "within"
       }
     ],
     "speck": [
@@ -511,6 +511,6 @@
     "leastRegionPx": 100,
     "leastCellPx": 40
   },
-  "missed": ["drift", "grain", "step"],
+  "missed": ["drift", "step"],
   "named": []
 }

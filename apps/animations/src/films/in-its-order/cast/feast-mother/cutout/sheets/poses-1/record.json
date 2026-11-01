@@ -163,12 +163,12 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.006,
-                  "px": 312
+                  "share": 0,
+                  "px": 172
                 },
                 "kept": {
-                  "share": 0.007,
-                  "px": 851
+                  "share": 0.003,
+                  "px": 747
                 },
                 "cells": 2
               },
@@ -195,7 +195,7 @@
                   "share": 0.007,
                   "px": 2599
                 },
-                "cells": 27
+                "cells": 21
               },
               "verdict": "outside"
             },
@@ -213,16 +213,16 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.114,
-                  "px": 105
+                  "share": 0.013,
+                  "px": 524
                 },
                 "kept": {
-                  "share": 0.08,
-                  "px": 415
+                  "share": 0.002,
+                  "px": 2426
                 },
-                "cells": 24
+                "cells": 21
               },
-              "verdict": "outside"
+              "verdict": "within"
             }
           ],
           "speck": [
@@ -419,12 +419,12 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.01,
-                  "px": 312
+                  "share": 0,
+                  "px": 216
                 },
                 "kept": {
-                  "share": 0.007,
-                  "px": 851
+                  "share": 0.003,
+                  "px": 747
                 },
                 "cells": 2
               },
@@ -451,7 +451,7 @@
                   "share": 0.007,
                   "px": 2599
                 },
-                "cells": 27
+                "cells": 21
               },
               "verdict": "outside"
             },
@@ -469,14 +469,14 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.032,
-                  "px": 158
+                  "share": 0.003,
+                  "px": 310
                 },
                 "kept": {
-                  "share": 0.012,
-                  "px": 2045
+                  "share": 0.002,
+                  "px": 598
                 },
-                "cells": 24
+                "cells": 20
               },
               "verdict": "within"
             }
@@ -662,12 +662,12 @@
         },
         "fine": {
           "painted": {
-            "share": 0.01,
-            "px": 312
+            "share": 0,
+            "px": 216
           },
           "kept": {
-            "share": 0.007,
-            "px": 851
+            "share": 0.003,
+            "px": 747
           },
           "cells": 2
         },
@@ -694,7 +694,7 @@
             "share": 0.007,
             "px": 2599
           },
-          "cells": 27
+          "cells": 21
         },
         "verdict": "outside"
       },
@@ -712,14 +712,14 @@
         },
         "fine": {
           "painted": {
-            "share": 0.032,
-            "px": 158
+            "share": 0.003,
+            "px": 310
           },
           "kept": {
-            "share": 0.012,
-            "px": 2045
+            "share": 0.002,
+            "px": 598
           },
-          "cells": 24
+          "cells": 20
         },
         "verdict": "within"
       }

@@ -172,13 +172,13 @@
               "fine": {
                 "painted": {
                   "share": 0,
-                  "px": 102
+                  "px": 0
                 },
                 "kept": {
-                  "share": 0.002,
-                  "px": 1516
+                  "share": 0,
+                  "px": 0
                 },
-                "cells": 2
+                "cells": 0
               },
               "verdict": "outside"
             },
@@ -196,14 +196,14 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.084,
-                  "px": 249
+                  "share": 0.126,
+                  "px": 159
                 },
                 "kept": {
-                  "share": 0.025,
-                  "px": 2187
+                  "share": 0.012,
+                  "px": 1956
                 },
-                "cells": 14
+                "cells": 8
               },
               "verdict": "outside"
             }
@@ -354,13 +354,13 @@
         "fine": {
           "painted": {
             "share": 0,
-            "px": 102
+            "px": 0
           },
           "kept": {
-            "share": 0.002,
-            "px": 1516
+            "share": 0,
+            "px": 0
           },
-          "cells": 2
+          "cells": 0
         },
         "verdict": "outside"
       },
@@ -378,14 +378,14 @@
         },
         "fine": {
           "painted": {
-            "share": 0.084,
-            "px": 249
+            "share": 0.126,
+            "px": 159
           },
           "kept": {
-            "share": 0.025,
-            "px": 2187
+            "share": 0.012,
+            "px": 1956
           },
-          "cells": 14
+          "cells": 8
         },
         "verdict": "outside"
       }

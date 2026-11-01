@@ -172,14 +172,14 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.022,
-                  "px": 186
+                  "share": 0.016,
+                  "px": 128
                 },
                 "kept": {
-                  "share": 0.002,
-                  "px": 2167
+                  "share": 0.001,
+                  "px": 2165
                 },
-                "cells": 7
+                "cells": 5
               },
               "verdict": "within"
             },
@@ -204,7 +204,7 @@
                   "share": 0.002,
                   "px": 1007
                 },
-                "cells": 11
+                "cells": 10
               },
               "verdict": "within"
             },
@@ -222,16 +222,16 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.083,
-                  "px": 217
+                  "share": 0.007,
+                  "px": 272
                 },
                 "kept": {
-                  "share": 0.008,
-                  "px": 376
+                  "share": 0.001,
+                  "px": 1315
                 },
-                "cells": 36
+                "cells": 31
               },
-              "verdict": "outside"
+              "verdict": "within"
             }
           ],
           "speck": [
@@ -344,7 +344,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift", "grain", "step"]
+        "missed": ["drift", "step"]
       }
     ],
     "chosen": 1,
@@ -451,14 +451,14 @@
         },
         "fine": {
           "painted": {
-            "share": 0.022,
-            "px": 186
+            "share": 0.016,
+            "px": 128
           },
           "kept": {
-            "share": 0.002,
-            "px": 2167
+            "share": 0.001,
+            "px": 2165
           },
-          "cells": 7
+          "cells": 5
         },
         "verdict": "within"
       },
@@ -483,7 +483,7 @@
             "share": 0.002,
             "px": 1007
           },
-          "cells": 11
+          "cells": 10
         },
         "verdict": "within"
       },
@@ -501,16 +501,16 @@
         },
         "fine": {
           "painted": {
-            "share": 0.083,
-            "px": 217
+            "share": 0.007,
+            "px": 272
           },
           "kept": {
-            "share": 0.008,
-            "px": 376
+            "share": 0.001,
+            "px": 1315
           },
-          "cells": 36
+          "cells": 31
         },
-        "verdict": "outside"
+        "verdict": "within"
       }
     ],
     "speck": [
@@ -638,6 +638,6 @@
     "leastRegionPx": 100,
     "leastCellPx": 40
   },
-  "missed": ["drift", "grain", "step"],
+  "missed": ["drift", "step"],
   "named": []
 }

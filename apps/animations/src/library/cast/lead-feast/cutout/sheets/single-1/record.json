@@ -296,7 +296,7 @@
                   "share": 0,
                   "px": 2454
                 },
-                "cells": 34
+                "cells": 28
               },
               "verdict": "outside"
             }
@@ -564,7 +564,7 @@
             "share": 0,
             "px": 2454
           },
-          "cells": 34
+          "cells": 28
         },
         "verdict": "outside"
       }

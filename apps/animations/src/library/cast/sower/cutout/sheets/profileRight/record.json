@@ -153,10 +153,10 @@
                   "px": 176
                 },
                 "kept": {
-                  "share": 0.109,
-                  "px": 238
+                  "share": 0.08,
+                  "px": 199
                 },
-                "cells": 3
+                "cells": 2
               },
               "verdict": "outside"
             },
@@ -179,7 +179,7 @@
                 },
                 "kept": {
                   "share": 0,
-                  "px": 939
+                  "px": 938
                 },
                 "cells": 7
               },
@@ -206,7 +206,7 @@
                   "share": 0.002,
                   "px": 924
                 },
-                "cells": 11
+                "cells": 8
               },
               "verdict": "outside"
             }
@@ -365,10 +365,10 @@
             "px": 176
           },
           "kept": {
-            "share": 0.109,
-            "px": 238
+            "share": 0.08,
+            "px": 199
           },
-          "cells": 3
+          "cells": 2
         },
         "verdict": "outside"
       },
@@ -391,7 +391,7 @@
           },
           "kept": {
             "share": 0,
-            "px": 939
+            "px": 938
           },
           "cells": 7
         },
@@ -418,7 +418,7 @@
             "share": 0.002,
             "px": 924
           },
-          "cells": 11
+          "cells": 8
         },
         "verdict": "outside"
       }

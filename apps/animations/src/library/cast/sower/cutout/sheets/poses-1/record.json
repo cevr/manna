@@ -184,16 +184,16 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.092,
-                  "px": 174
+                  "share": 0.012,
+                  "px": 258
                 },
                 "kept": {
-                  "share": 0.043,
-                  "px": 1387
+                  "share": 0,
+                  "px": 2734
                 },
-                "cells": 22
+                "cells": 15
               },
-              "verdict": "outside"
+              "verdict": "within"
             }
           ],
           "speck": [
@@ -262,7 +262,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift", "grain", "speck", "step"]
+        "missed": ["drift", "speck", "step"]
       },
       {
         "n": 2,
@@ -379,14 +379,14 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.135,
-                  "px": 104
+                  "share": 0.176,
+                  "px": 136
                 },
                 "kept": {
-                  "share": 0.009,
-                  "px": 3032
+                  "share": 0,
+                  "px": 465
                 },
-                "cells": 17
+                "cells": 15
               },
               "verdict": "outside"
             }
@@ -561,16 +561,16 @@
         },
         "fine": {
           "painted": {
-            "share": 0.092,
-            "px": 174
+            "share": 0.012,
+            "px": 258
           },
           "kept": {
-            "share": 0.043,
-            "px": 1387
+            "share": 0,
+            "px": 2734
           },
-          "cells": 22
+          "cells": 15
         },
-        "verdict": "outside"
+        "verdict": "within"
       }
     ],
     "speck": [
@@ -654,6 +654,6 @@
     "leastRegionPx": 100,
     "leastCellPx": 40
   },
-  "missed": ["drift", "grain", "speck", "step"],
+  "missed": ["drift", "speck", "step"],
   "named": []
 }

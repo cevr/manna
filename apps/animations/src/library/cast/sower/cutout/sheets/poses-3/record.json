@@ -193,14 +193,14 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.126,
-                  "px": 269
+                  "share": 0.112,
+                  "px": 250
                 },
                 "kept": {
                   "share": 0.001,
                   "px": 2485
                 },
-                "cells": 38
+                "cells": 26
               },
               "verdict": "outside"
             }
@@ -411,14 +411,14 @@
         },
         "fine": {
           "painted": {
-            "share": 0.126,
-            "px": 269
+            "share": 0.112,
+            "px": 250
           },
           "kept": {
             "share": 0.001,
             "px": 2485
           },
-          "cells": 38
+          "cells": 26
         },
         "verdict": "outside"
       }

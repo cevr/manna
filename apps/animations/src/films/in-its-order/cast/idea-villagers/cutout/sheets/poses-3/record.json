@@ -186,14 +186,14 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.018,
-                  "px": 222
+                  "share": 0.007,
+                  "px": 150
                 },
                 "kept": {
-                  "share": 0.005,
-                  "px": 1484
+                  "share": 0.006,
+                  "px": 2109
                 },
-                "cells": 8
+                "cells": 4
               },
               "verdict": "within"
             }
@@ -381,14 +381,14 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.044,
-                  "px": 135
+                  "share": 0,
+                  "px": 118
                 },
                 "kept": {
-                  "share": 0.024,
-                  "px": 2199
+                  "share": 0,
+                  "px": 394
                 },
-                "cells": 12
+                "cells": 9
               },
               "verdict": "within"
             }
@@ -563,14 +563,14 @@
         },
         "fine": {
           "painted": {
-            "share": 0.018,
-            "px": 222
+            "share": 0.007,
+            "px": 150
           },
           "kept": {
-            "share": 0.005,
-            "px": 1484
+            "share": 0.006,
+            "px": 2109
           },
-          "cells": 8
+          "cells": 4
         },
         "verdict": "within"
       }

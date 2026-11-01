@@ -185,12 +185,12 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.01,
-                  "px": 104
+                  "share": 0.068,
+                  "px": 103
                 },
                 "kept": {
-                  "share": 0.002,
-                  "px": 2035
+                  "share": 0.015,
+                  "px": 1371
                 },
                 "cells": 5
               },
@@ -214,10 +214,10 @@
                   "px": 163
                 },
                 "kept": {
-                  "share": 0.015,
-                  "px": 2846
+                  "share": 0.012,
+                  "px": 2688
                 },
-                "cells": 23
+                "cells": 16
               },
               "verdict": "outside"
             }
@@ -420,8 +420,8 @@
                   "px": 104
                 },
                 "kept": {
-                  "share": 0.002,
-                  "px": 2035
+                  "share": 0.001,
+                  "px": 2031
                 },
                 "cells": 5
               },
@@ -441,14 +441,14 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.058,
-                  "px": 156
+                  "share": 0.004,
+                  "px": 277
                 },
                 "kept": {
-                  "share": 0.007,
-                  "px": 892
+                  "share": 0.001,
+                  "px": 733
                 },
-                "cells": 23
+                "cells": 18
               },
               "verdict": "outside"
             }
@@ -634,12 +634,12 @@
         },
         "fine": {
           "painted": {
-            "share": 0.01,
-            "px": 104
+            "share": 0.068,
+            "px": 103
           },
           "kept": {
-            "share": 0.002,
-            "px": 2035
+            "share": 0.015,
+            "px": 1371
           },
           "cells": 5
         },
@@ -663,10 +663,10 @@
             "px": 163
           },
           "kept": {
-            "share": 0.015,
-            "px": 2846
+            "share": 0.012,
+            "px": 2688
           },
-          "cells": 23
+          "cells": 16
         },
         "verdict": "outside"
       }

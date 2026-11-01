@@ -120,14 +120,14 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.043,
-                  "px": 391
+                  "share": 0.037,
+                  "px": 243
                 },
                 "kept": {
-                  "share": 0.025,
-                  "px": 1688
+                  "share": 0.01,
+                  "px": 1336
                 },
-                "cells": 12
+                "cells": 10
               },
               "verdict": "outside"
             }
@@ -240,14 +240,14 @@
         },
         "fine": {
           "painted": {
-            "share": 0.043,
-            "px": 391
+            "share": 0.037,
+            "px": 243
           },
           "kept": {
-            "share": 0.025,
-            "px": 1688
+            "share": 0.01,
+            "px": 1336
           },
-          "cells": 12
+          "cells": 10
         },
         "verdict": "outside"
       }

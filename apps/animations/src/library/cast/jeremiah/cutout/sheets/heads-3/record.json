@@ -220,12 +220,12 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.007,
-                  "px": 572
+                  "share": 0,
+                  "px": 288
                 },
                 "kept": {
-                  "share": 0.003,
-                  "px": 346
+                  "share": 0.001,
+                  "px": 1775
                 },
                 "cells": 4
               },
@@ -309,12 +309,12 @@
         },
         "fine": {
           "painted": {
-            "share": 0.007,
-            "px": 572
+            "share": 0,
+            "px": 288
           },
           "kept": {
-            "share": 0.003,
-            "px": 346
+            "share": 0.001,
+            "px": 1775
           },
           "cells": 4
         },

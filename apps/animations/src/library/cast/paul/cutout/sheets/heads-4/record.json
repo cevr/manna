@@ -96,12 +96,12 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.021,
-                  "px": 282
+                  "share": 0,
+                  "px": 576
                 },
                 "kept": {
-                  "share": 0.018,
-                  "px": 1962
+                  "share": 0,
+                  "px": 1282
                 },
                 "cells": 9
               },
@@ -185,12 +185,12 @@
         },
         "fine": {
           "painted": {
-            "share": 0.021,
-            "px": 282
+            "share": 0,
+            "px": 576
           },
           "kept": {
-            "share": 0.018,
-            "px": 1962
+            "share": 0,
+            "px": 1282
           },
           "cells": 9
         },

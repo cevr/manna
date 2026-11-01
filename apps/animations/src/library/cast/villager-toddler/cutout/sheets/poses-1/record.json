@@ -116,16 +116,16 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.078,
-                  "px": 102
+                  "share": 0,
+                  "px": 0
                 },
                 "kept": {
-                  "share": 0.009,
-                  "px": 3510
+                  "share": 0,
+                  "px": 0
                 },
-                "cells": 1
+                "cells": 0
               },
-              "verdict": "outside"
+              "verdict": "unverified"
             }
           ],
           "speck": [
@@ -205,16 +205,16 @@
         },
         "fine": {
           "painted": {
-            "share": 0.078,
-            "px": 102
+            "share": 0,
+            "px": 0
           },
           "kept": {
-            "share": 0.009,
-            "px": 3510
+            "share": 0,
+            "px": 0
           },
-          "cells": 1
+          "cells": 0
         },
-        "verdict": "outside"
+        "verdict": "unverified"
       }
     ],
     "speck": [

@@ -120,16 +120,16 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.048,
-                  "px": 272
+                  "share": 0.018,
+                  "px": 226
                 },
                 "kept": {
-                  "share": 0.017,
-                  "px": 1877
+                  "share": 0.006,
+                  "px": 1772
                 },
-                "cells": 13
+                "cells": 10
               },
-              "verdict": "outside"
+              "verdict": "within"
             }
           ],
           "speck": [
@@ -175,7 +175,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift", "grain", "speck"]
+        "missed": ["drift", "speck"]
       }
     ],
     "chosen": 1,
@@ -240,16 +240,16 @@
         },
         "fine": {
           "painted": {
-            "share": 0.048,
-            "px": 272
+            "share": 0.018,
+            "px": 226
           },
           "kept": {
-            "share": 0.017,
-            "px": 1877
+            "share": 0.006,
+            "px": 1772
           },
-          "cells": 13
+          "cells": 10
         },
-        "verdict": "outside"
+        "verdict": "within"
       }
     ],
     "speck": [
@@ -310,6 +310,6 @@
     "leastRegionPx": 100,
     "leastCellPx": 40
   },
-  "missed": ["drift", "grain", "speck"],
+  "missed": ["drift", "speck"],
   "named": []
 }

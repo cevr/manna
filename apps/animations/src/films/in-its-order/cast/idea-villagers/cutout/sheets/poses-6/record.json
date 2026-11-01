@@ -170,16 +170,16 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.084,
-                  "px": 285
+                  "share": 0.01,
+                  "px": 302
                 },
                 "kept": {
-                  "share": 0.023,
-                  "px": 1106
+                  "share": 0.011,
+                  "px": 1518
                 },
-                "cells": 5
+                "cells": 3
               },
-              "verdict": "outside"
+              "verdict": "within"
             },
             {
               "part": "torso",
@@ -195,14 +195,14 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.029,
-                  "px": 240
+                  "share": 0.038,
+                  "px": 312
                 },
                 "kept": {
-                  "share": 0.016,
-                  "px": 2609
+                  "share": 0.019,
+                  "px": 1568
                 },
-                "cells": 18
+                "cells": 12
               },
               "verdict": "within"
             }
@@ -295,7 +295,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift", "grain", "step"]
+        "missed": ["drift", "step"]
       }
     ],
     "chosen": 2,
@@ -388,16 +388,16 @@
         },
         "fine": {
           "painted": {
-            "share": 0.084,
-            "px": 285
+            "share": 0.01,
+            "px": 302
           },
           "kept": {
-            "share": 0.023,
-            "px": 1106
+            "share": 0.011,
+            "px": 1518
           },
-          "cells": 5
+          "cells": 3
         },
-        "verdict": "outside"
+        "verdict": "within"
       },
       {
         "part": "torso",
@@ -413,14 +413,14 @@
         },
         "fine": {
           "painted": {
-            "share": 0.029,
-            "px": 240
+            "share": 0.038,
+            "px": 312
           },
           "kept": {
-            "share": 0.016,
-            "px": 2609
+            "share": 0.019,
+            "px": 1568
           },
-          "cells": 18
+          "cells": 12
         },
         "verdict": "within"
       }
@@ -528,6 +528,6 @@
     "leastRegionPx": 100,
     "leastCellPx": 40
   },
-  "missed": ["drift", "grain", "step"],
+  "missed": ["drift", "step"],
   "named": []
 }

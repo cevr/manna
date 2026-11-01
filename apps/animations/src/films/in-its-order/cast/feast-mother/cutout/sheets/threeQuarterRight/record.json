@@ -154,7 +154,7 @@
               "fine": {
                 "painted": {
                   "share": 0,
-                  "px": 350
+                  "px": 230
                 },
                 "kept": {
                   "share": 0,
@@ -363,7 +363,7 @@
         "fine": {
           "painted": {
             "share": 0,
-            "px": 350
+            "px": 230
           },
           "kept": {
             "share": 0,

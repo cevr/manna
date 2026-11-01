@@ -245,10 +245,10 @@
                   "px": 176
                 },
                 "kept": {
-                  "share": 0.004,
-                  "px": 714
+                  "share": 0.003,
+                  "px": 712
                 },
-                "cells": 24
+                "cells": 17
               },
               "verdict": "outside"
             }
@@ -578,10 +578,10 @@
             "px": 176
           },
           "kept": {
-            "share": 0.004,
-            "px": 714
+            "share": 0.003,
+            "px": 712
           },
-          "cells": 24
+          "cells": 17
         },
         "verdict": "outside"
       }

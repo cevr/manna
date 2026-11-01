@@ -189,10 +189,10 @@
                   "px": 239
                 },
                 "kept": {
-                  "share": 0.019,
-                  "px": 2978
+                  "share": 0.005,
+                  "px": 2761
                 },
-                "cells": 6
+                "cells": 4
               },
               "verdict": "outside"
             },
@@ -210,14 +210,14 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.096,
-                  "px": 135
+                  "share": 0.051,
+                  "px": 447
                 },
                 "kept": {
-                  "share": 0.023,
-                  "px": 2893
+                  "share": 0.003,
+                  "px": 1949
                 },
-                "cells": 21
+                "cells": 13
               },
               "verdict": "outside"
             }
@@ -411,10 +411,10 @@
                   "px": 239
                 },
                 "kept": {
-                  "share": 0.019,
-                  "px": 2978
+                  "share": 0.005,
+                  "px": 2761
                 },
-                "cells": 6
+                "cells": 5
               },
               "verdict": "outside"
             },
@@ -432,14 +432,14 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.049,
-                  "px": 103
+                  "share": 0.009,
+                  "px": 432
                 },
                 "kept": {
-                  "share": 0.026,
-                  "px": 2454
+                  "share": 0.003,
+                  "px": 1824
                 },
-                "cells": 23
+                "cells": 15
               },
               "verdict": "outside"
             }
@@ -620,10 +620,10 @@
             "px": 239
           },
           "kept": {
-            "share": 0.019,
-            "px": 2978
+            "share": 0.005,
+            "px": 2761
           },
-          "cells": 6
+          "cells": 5
         },
         "verdict": "outside"
       },
@@ -641,14 +641,14 @@
         },
         "fine": {
           "painted": {
-            "share": 0.049,
-            "px": 103
+            "share": 0.009,
+            "px": 432
           },
           "kept": {
-            "share": 0.026,
-            "px": 2454
+            "share": 0.003,
+            "px": 1824
           },
-          "cells": 23
+          "cells": 15
         },
         "verdict": "outside"
       }

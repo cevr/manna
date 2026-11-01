@@ -113,8 +113,8 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.036,
-                  "px": 224
+                  "share": 0.018,
+                  "px": 219
                 },
                 "kept": {
                   "share": 0.001,
@@ -216,7 +216,7 @@
               "fine": {
                 "painted": {
                   "share": 0,
-                  "px": 260
+                  "px": 259
                 },
                 "kept": {
                   "share": 0,
@@ -304,8 +304,8 @@
         },
         "fine": {
           "painted": {
-            "share": 0.036,
-            "px": 224
+            "share": 0.018,
+            "px": 219
           },
           "kept": {
             "share": 0.001,

@@ -215,12 +215,12 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.014,
-                  "px": 138
+                  "share": 0,
+                  "px": 576
                 },
                 "kept": {
-                  "share": 0.009,
-                  "px": 795
+                  "share": 0.001,
+                  "px": 1122
                 },
                 "cells": 5
               },

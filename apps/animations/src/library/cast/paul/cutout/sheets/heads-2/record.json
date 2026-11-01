@@ -101,14 +101,14 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.03,
-                  "px": 540
+                  "share": 0.023,
+                  "px": 390
                 },
                 "kept": {
-                  "share": 0.006,
-                  "px": 1252
+                  "share": 0.003,
+                  "px": 1182
                 },
-                "cells": 10
+                "cells": 9
               },
               "verdict": "within"
             }
@@ -190,14 +190,14 @@
         },
         "fine": {
           "painted": {
-            "share": 0.03,
-            "px": 540
+            "share": 0.023,
+            "px": 390
           },
           "kept": {
-            "share": 0.006,
-            "px": 1252
+            "share": 0.003,
+            "px": 1182
           },
-          "cells": 10
+          "cells": 9
         },
         "verdict": "within"
       }

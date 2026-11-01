@@ -255,16 +255,16 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.039,
-                  "px": 407
+                  "share": 0.015,
+                  "px": 131
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 922
+                  "share": 0.004,
+                  "px": 1388
                 },
-                "cells": 9
+                "cells": 7
               },
-              "verdict": "outside"
+              "verdict": "within"
             },
             {
               "part": "torso",
@@ -280,12 +280,12 @@
               },
               "fine": {
                 "painted": {
-                  "share": 0.038,
-                  "px": 503
+                  "share": 0.021,
+                  "px": 192
                 },
                 "kept": {
-                  "share": 0.014,
-                  "px": 1191
+                  "share": 0.005,
+                  "px": 2850
                 },
                 "cells": 14
               },
@@ -380,7 +380,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["grain"]
+        "missed": []
       }
     ],
     "chosen": 2,
@@ -473,16 +473,16 @@
         },
         "fine": {
           "painted": {
-            "share": 0.039,
-            "px": 407
+            "share": 0.015,
+            "px": 131
           },
           "kept": {
-            "share": 0,
-            "px": 922
+            "share": 0.004,
+            "px": 1388
           },
-          "cells": 9
+          "cells": 7
         },
-        "verdict": "outside"
+        "verdict": "within"
       },
       {
         "part": "torso",
@@ -498,12 +498,12 @@
         },
         "fine": {
           "painted": {
-            "share": 0.038,
-            "px": 503
+            "share": 0.021,
+            "px": 192
           },
           "kept": {
-            "share": 0.014,
-            "px": 1191
+            "share": 0.005,
+            "px": 2850
           },
           "cells": 14
         },
@@ -613,6 +613,6 @@
     "leastRegionPx": 100,
     "leastCellPx": 40
   },
-  "missed": ["grain"],
+  "missed": [],
   "named": []
 }

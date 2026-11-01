@@ -114,11 +114,11 @@
               "fine": {
                 "painted": {
                   "share": 0,
-                  "px": 384
+                  "px": 183
                 },
                 "kept": {
-                  "share": 0.011,
-                  "px": 2337
+                  "share": 0,
+                  "px": 276
                 },
                 "cells": 7
               },
@@ -216,13 +216,13 @@
               "fine": {
                 "painted": {
                   "share": 0,
-                  "px": 384
+                  "px": 576
                 },
                 "kept": {
-                  "share": 0.011,
-                  "px": 2337
+                  "share": 0.003,
+                  "px": 394
                 },
-                "cells": 7
+                "cells": 4
               },
               "verdict": "within"
             }
@@ -305,13 +305,13 @@
         "fine": {
           "painted": {
             "share": 0,
-            "px": 384
+            "px": 576
           },
           "kept": {
-            "share": 0.011,
-            "px": 2337
+            "share": 0.003,
+            "px": 394
           },
-          "cells": 7
+          "cells": 4
         },
         "verdict": "within"
       }
