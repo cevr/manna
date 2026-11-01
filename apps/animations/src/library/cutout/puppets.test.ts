@@ -1,9 +1,21 @@
-import { describe, expect, test } from 'bun:test';
 import type { PartCut } from '@manna/film/tools';
-import { PUPPETS as LEAD } from '../cast/lead-feast/cutout/puppets.ts';
-import { PUPPETS as SOWER } from '../cast/sower/cutout/puppets.ts';
-import { PUPPETS as TODDLER } from '../cast/villager-toddler/cutout/puppets.ts';
-import { type PuppetMember, puppetsOf } from './puppets.ts';
+import { Glob } from 'bun';
+import { Effect } from 'effect';
+import { describe, expect, it } from 'effect-bun-test';
+import { type CutPuppet, type PuppetMember, puppetsOf } from './puppets.ts';
+
+const SRC = `${import.meta.dir}/../..`;
+
+/** Every member's puppets file, the library's cast and each film's own. */
+const MEMBERS = [
+  ...new Glob('library/cast/*/cutout/puppets.ts').scanSync(SRC),
+  ...new Glob('films/*/cast/*/cutout/puppets.ts').scanSync(SRC),
+].toSorted();
+
+/** A member's puppets file as this test reads it. */
+interface PuppetsModule {
+  readonly PUPPETS: Readonly<Record<string, CutPuppet>>;
+}
 
 const ROOT = { bones: [], skin: {}, root: [0, 0] } as const;
 const FRAME = { sheet: 'turnaround', kept: [0, 0, 10, 10], pad: [1, 1, 1, 1] } as const;
@@ -20,22 +32,34 @@ const member = (parts: PartCut['parts']): PuppetMember<'front'> => ({
 });
 
 describe('a cut view puppet', () => {
-  test('names as his shadow each part his cut gives the shadow role, and no part the cut gives none, whatever it is called', () => {
-    const { front } = puppetsOf(
-      member([
-        { name: 'body', take: [] },
-        { name: 'shadow', take: [] },
-        { name: 'pool', role: 'shadow', take: [] },
-      ]),
-    );
-    expect(front.shadow).toEqual(['pool']);
-  });
+  it.effect(
+    'names as his shadow each part his cut gives the shadow role, and no part the cut gives none, whatever it is called',
+    () =>
+      Effect.sync(() => {
+        const { front } = puppetsOf(
+          member([
+            { name: 'body', take: [] },
+            { name: 'shadow', take: [] },
+            { name: 'pool', role: 'shadow', take: [] },
+          ]),
+        );
+        expect(front.shadow).toEqual(['pool']);
+      }),
+  );
 
-  test('names every part called shadow on each view of the members that cut one as his shadow', () => {
-    for (const puppets of [LEAD, SOWER, TODDLER])
-      for (const puppet of Object.values(puppets))
-        for (const part of puppet.parts)
-          if (part.name === 'shadow')
-            expect([puppet.key, puppet.shadow]).toEqual([puppet.key, ['shadow']]);
-  });
+  it.effect(
+    'names every part called shadow on each view of every member as his shadow, so his cut gives it the shadow role',
+    () =>
+      Effect.gen(function* () {
+        expect(MEMBERS.length).toBeGreaterThanOrEqual(8);
+        const all = yield* Effect.forEach(MEMBERS, (file) =>
+          Effect.promise((): Promise<PuppetsModule> => import(`${SRC}/${file}`)),
+        );
+        for (const { PUPPETS } of all)
+          for (const puppet of Object.values(PUPPETS))
+            for (const part of puppet.parts)
+              if (part.name === 'shadow')
+                expect([puppet.key, puppet.shadow]).toEqual([puppet.key, ['shadow']]);
+      }),
+  );
 });

@@ -23,6 +23,7 @@ import p6Head from './sheets/poses-6/head.png' with { type: 'file' };
 import p6Robe from './sheets/poses-6/robe.png' with { type: 'file' };
 import p6Torso from './sheets/poses-6/torso.png' with { type: 'file' };
 import { puppetsOf } from '../../../../../library/cutout/puppets.ts';
+import { CUTS } from './cut.ts';
 import { FRAMES } from './frames.ts';
 import { SKELETONS } from './skeleton.ts';
 
@@ -73,6 +74,7 @@ const PAPERS = {
 
 const SHARED = {
   cast: 'idea-villagers',
+  cuts: CUTS,
   frames: FRAMES,
   skeletons: SKELETONS,
   papers: PAPERS,

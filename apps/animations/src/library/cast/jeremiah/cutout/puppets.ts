@@ -19,6 +19,7 @@ import heads5Torso from './sheets/heads-5/torso.png' with { type: 'file' };
 import heads6Head from './sheets/heads-6/head.png' with { type: 'file' };
 import heads6Torso from './sheets/heads-6/torso.png' with { type: 'file' };
 import { puppetsOf } from '../../../cutout/puppets.ts';
+import { CUTS } from './cut.ts';
 import { FRAMES } from './frames.ts';
 import { SKELETONS } from './skeleton.ts';
 
@@ -75,6 +76,7 @@ export const PAPERS = {
  */
 export const PUPPETS = puppetsOf({
   cast: 'jeremiah',
+  cuts: CUTS,
   frames: FRAMES,
   skeletons: SKELETONS,
   papers: PAPERS,
