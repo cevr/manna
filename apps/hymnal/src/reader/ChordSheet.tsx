@@ -21,6 +21,7 @@ import { type Href, type StackScreenOptions, useParams, useRouter } from 'one';
 
 import { color, useAccent } from '~/color';
 import { describe, fingeringOf } from '~/hymns/shapes';
+import { available } from '~/tuner/native';
 
 import { ChordBox } from './ChordBox';
 
@@ -75,6 +76,16 @@ function ChordSheet({
   return (
     <View testID="chord-sheet" style={styles.sheet}>
       <View style={styles.head}>
+        {available && (
+          <Pressable
+            role="button"
+            aria-label="Tuner"
+            onPress={() => router.push('/tuner')}
+            hitSlop={12}
+          >
+            <Text style={[styles.done, { color: accent }]}>Tuner</Text>
+          </Pressable>
+        )}
         <Pressable role="button" aria-label="Done" onPress={() => router.back()} hitSlop={12}>
           <Text style={[styles.done, { color: accent }]}>Done</Text>
         </Pressable>
@@ -143,7 +154,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     gap: 16,
   },
-  head: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
+  head: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 24 },
   done: { fontSize: 17, fontWeight: '600' },
   boxes: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 24 },
   played: { alignItems: 'center', gap: 6 },

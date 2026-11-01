@@ -13,7 +13,7 @@ tuner.
 
 ## How to get to it (user POV)
 
-- None yet: the tuner's sheet and its entries (the chord sheet's `Tuner`, Settings' `Tuner`) come with the sheet.
+- A hymn's chord sheet → `Tuner` (in its head, beside `Done`), or Settings → `Tuner`; both open the sheet at `/tuner`. Deep link: `hymnal://tuner`; in development `hymnal://tuner?feed=<string>:<cents>` (for example `A2:-12`) feeds frames in place of the microphone.
 
 ## Driving it with sim
 

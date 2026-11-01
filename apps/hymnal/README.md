@@ -404,6 +404,22 @@ Android haptics only.
   off iOS `src/tuner/native.ts` has none, so the tuner hides there. The
   system's microphone prompt reads the `audio.microphone` text in
   `vite/app.ts`.
+- `src/tuner/session.ts` is the sheet's rule as a pure machine (`step`):
+  it reads the permission on opening, asks for it at most once in an
+  opening, pauses a sounding player once before it listens, and never
+  listens while the player sounds, the app is away or the sheet is
+  closed; a start that resolves when nothing waits on it is given back.
+  `session.property.test.ts` holds the rule over generated worlds. The
+  same file names a string and its cents (`labelOf`), holds the needle
+  to ±50 cents (`needleOf`), and lights a string after 8 frames in a row
+  in tune on it (`latch`).
+- `src/tuner/Tuner.tsx` is the sheet at `/tuner`, opened by the chord
+  sheet's `Tuner` button and Settings' `Tuner` row, both shown only where
+  the tuner has an ear (iOS). It says the reading at most once a second,
+  shows `Open Settings` when the microphone is denied and `Tap to listen
+  again` when listening ended. In development
+  `hymnal://tuner?feed=<string>:<cents>` (for example `A2:-12`) feeds it
+  frames of that pitch in place of the microphone.
 
 ## App icon
 
