@@ -4,7 +4,8 @@
  * status bar to the stack's bottom; the find bar, which holds the search box
  * and Cancel, stands over them. They list the hymns the query finds, each
  * found by a line other than its title showing that line, and a row pushes
- * its hymn, so Back returns to them. An empty query lists nothing: the
+ * its hymn; they stay mounted, unseen, under it, so Back returns to them at
+ * the same scroll place, with the same hymns about the query. An empty query lists nothing: the
  * results' ground covers the screen beneath, which stays in place.
  *
  * Search builds the search's index (`hymnIndex`) once it is on screen,
@@ -32,7 +33,8 @@ import { searchBack } from './back';
 import { hymnHref } from './Browse';
 import { useCancelSearch } from './FindBar';
 
-export function Search() {
+/** The search's results, seen and in reach while `here`: their screen shows, not a hymn pushed from them. */
+export function Search({ here }: { readonly here: boolean }) {
   const query = useAtomValue(searchQuery);
   const shown = useDeferredValue(query);
   const top = Math.max(useSafeAreaInsets().top, 0);
@@ -71,16 +73,21 @@ export function Search() {
     hymnIndex();
     return readMeaningSoon();
   }, []);
-  // Mounted only while the search's own screen shows, so Android's Back here always cancels it.
+  // Android's Back cancels the search only while its own screen shows; under a pushed hymn the stack pops it.
   useEffect(() => {
+    if (!here) return;
     const back = BackHandler.addEventListener(
       'hardwareBackPress',
       searchBack({ isFocused: () => true, cancel }),
     );
     return () => back.remove();
-  }, []);
+  }, [here]);
   return (
-    <View style={[styles.search, { paddingTop: top }]}>
+    <View
+      testID="search"
+      style={[styles.search, { paddingTop: top }, !here && styles.unseen]}
+      {...(!here && unseen)}
+    >
       {shown !== '' && (
         // A new query's results open at their top.
         <HymnList
@@ -97,6 +104,11 @@ export function Search() {
   );
 }
 
+/** The results under a hymn pushed from them: untouchable and unseen by assistive technology. */
+const unseen = { pointerEvents: 'none', 'aria-hidden': true } as const;
+
 const styles = StyleSheet.create({
   search: { ...StyleSheet.absoluteFill, backgroundColor: color.ground },
+  // Transparent, not `display: none`: the views stay in the window, so the list keeps its scroll offset.
+  unseen: { opacity: 0 },
 });

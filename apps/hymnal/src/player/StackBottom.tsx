@@ -10,7 +10,8 @@
  * It draws the open search's results (`Search`) over the stack while the
  * search's own screen shows (`searchOpen`, keyed by the path), and puts the
  * stack beneath out of reach then: no touch reaches it and assistive
- * technology does not see it, while it stays mounted in its place. The
+ * technology does not see it, while it stays mounted in its place. While
+ * another screen shows, the results stay mounted, unseen and out of reach. The
  * results end on the stack's bottom: above the docked bar on the home list,
  * so playback stays in reach, and at the window's bottom on a hymn page,
  * whose own bar lies under them.
@@ -67,15 +68,21 @@ function Meets({ bottom, children }: { readonly bottom: number; readonly childre
   return <Bottom value={value}>{children}</Bottom>;
 }
 
-/** The stack, with the results over it and it out of reach while search is open on the shown path. */
+/**
+ * The stack, with the results over it and it out of reach while search is
+ * open on the shown path. The results stay mounted for as long as their
+ * search is open, hidden while a hymn pushed from them shows, so Back finds
+ * them as the reader left them.
+ */
 function Searched({ children }: { readonly children: ReactNode }) {
-  const searching = modeAt(useAtomValue(searchOpen), usePathname()) !== 'off';
+  const open = useAtomValue(searchOpen);
+  const here = modeAt(open, usePathname()) !== 'off';
   return (
     <View style={styles.fill}>
-      <View style={styles.fill} {...(searching && outOfReach)}>
+      <View style={styles.fill} {...(here && outOfReach)}>
         {children}
       </View>
-      {searching && <Search />}
+      {Option.isSome(open) && <Search here={here} />}
     </View>
   );
 }

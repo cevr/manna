@@ -52,7 +52,7 @@ import { plain, useCue } from '~/feel/cue';
 import { HASH, HASH_GAP } from '~/player/bar';
 import { MOST_SCALE } from '~/player/DialView';
 import { useReduceMotion } from '~/player/motion';
-import { modeAt, searchAt, searchOpen, searchQuery } from '~/reader/place';
+import { modeAt, searchAt, searchOpen, searchQuery, type Searching } from '~/reader/place';
 
 import { type Control, drawn, inReach, rowOf, tiles, tilesAt } from './finding';
 import { Magnifier } from './Magnifier';
@@ -148,8 +148,12 @@ export function FindBar({
   const cue = useCue();
   const accent = useAccent();
   const reduced = useReduceMotion();
-  // Only a press on `Search` in this bar's life focuses the box; a bar drawn again over open search leaves the keyboard down.
-  const [asked, setAsked] = useState(false);
+  // The search this bar's `Search` opened, until its box first opens: only then does the box take focus. A search
+  // opened some other way, a later one, and the same one shown again on the way back from a result leave the keyboard down.
+  const [asked, setAsked] = useState(Option.none<Searching>());
+  const focusBox =
+    row === 'open' &&
+    Option.exists(asked, (mine) => Option.exists(searching, (open) => open === mine));
   const [searchButton, keepSearchButton] = useHeld<ComponentRef<typeof View>>();
   const [box, keepBox] = useHeld<ComponentRef<typeof TextInput>>();
   const keyboard = useKeyboardHeight();
@@ -171,9 +175,10 @@ export function FindBar({
       progress.value = withSpring(open, { duration: 300, dampingRatio: 1 });
       fade.value = withTiming(1, { duration: 120 });
     }
-    if (row === 'open' && asked) focusOn(box);
+    if (focusBox) focusOn(box);
+    if (row === 'open') setAsked(Option.none());
     if (before === 'open' && row === 'folded') focusOn(searchButton);
-  }, [row, reduced, asked, progress, fade]);
+  }, [row, reduced, focusBox, progress, fade]);
   const lifted = useAnimatedStyle(() => {
     if (keyboard.value <= 0) return { transform: [{ translateY: 0 }] };
     return { transform: [{ translateY: -Math.max(0, keyboard.value + HASH_GAP - bottom) }] };
@@ -188,10 +193,11 @@ export function FindBar({
   const reach = (control: Control) => !inReach(control, drumsOpen) && outOfReach;
   const startSearch = () => {
     cue(plain('tab'));
-    setAsked(true);
+    const opened = searchAt(path, 'field');
+    setAsked(opened);
     // One search at a time: opened here, it leaves any other screen, and starts with an empty box.
     setQuery('');
-    setSearching(searchAt(path, 'field'));
+    setSearching(opened);
   };
   const controls = drawn(row);
   return (
@@ -230,7 +236,7 @@ export function FindBar({
                 <Magnifier />
                 <TextInput
                   ref={keepBox}
-                  autoFocus={asked}
+                  autoFocus={focusBox}
                   testID="find-box"
                   role="searchbox"
                   aria-label={searchLabel}
