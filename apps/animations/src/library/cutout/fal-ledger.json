@@ -1,0 +1,106 @@
+[
+  {
+    "at": "2026-10-28T14:45:59Z",
+    "member": "lead-feast",
+    "clip": "raise/clip-b",
+    "endpoint": "minimax/h3-max/image-to-video",
+    "requestId": "01a182f9-9e48-7e53-8cc4-aff59501a583",
+    "seconds": 5,
+    "usd": 0.1625,
+    "kept": true
+  },
+  {
+    "at": "2026-10-28T14:45:59Z",
+    "member": "lead-feast",
+    "clip": "raise/clip-a",
+    "endpoint": "minimax/h3-max/image-to-video",
+    "requestId": "01a182f9-9e48-7e53-8cc4-b0065c73b557",
+    "seconds": 5,
+    "usd": 0.1625,
+    "kept": false,
+    "external": true
+  },
+  {
+    "at": "2026-10-29T00:37:35Z",
+    "member": "lead-feast",
+    "clip": "raise/clip-c",
+    "endpoint": "minimax/h3-max/image-to-video",
+    "requestId": "01a18517-3cea-77c3-b1ef-2e86b9979e8b",
+    "seconds": 5,
+    "usd": 0.1625,
+    "kept": false,
+    "external": true
+  },
+  {
+    "at": "2026-10-29T00:37:35Z",
+    "member": "lead-feast",
+    "clip": "raise/clip-d",
+    "endpoint": "minimax/h3-max/image-to-video",
+    "requestId": "01a18517-3cee-7623-b416-9cce3c18e5ab",
+    "seconds": 5,
+    "usd": 0.1625,
+    "kept": false,
+    "external": true
+  },
+  {
+    "at": "2026-10-28T16:06:36Z",
+    "member": "lead-feast",
+    "clip": "r6-3d/turnaround",
+    "endpoint": "fal-ai/hunyuan-3d-pro-image-to-3d/v3.1/pro/image-to-3d",
+    "requestId": "01a18343-6bdf-7681-8e8d-e7e531a0fecb",
+    "seconds": 0,
+    "usd": 1.0,
+    "kept": false,
+    "external": true
+  },
+  {
+    "at": "2026-11-01T14:05:11Z",
+    "member": "sower",
+    "clip": "sow/clip-a",
+    "endpoint": "minimax/h3-max/image-to-video",
+    "requestId": "01a1976d-b4a5-7460-a4fc-b61b7d6c6664",
+    "seconds": 5,
+    "usd": 0.1625,
+    "kept": true
+  },
+  {
+    "at": "2026-11-01T14:05:11Z",
+    "member": "sower",
+    "clip": "dip/clip-a",
+    "endpoint": "minimax/h3-max/image-to-video",
+    "requestId": "01a1976d-b4a4-7811-b17e-ac388afaf5bf",
+    "seconds": 5,
+    "usd": 0.1625,
+    "kept": true
+  },
+  {
+    "at": "2026-11-01T14:05:11Z",
+    "member": "sower",
+    "clip": "wave/clip-a",
+    "endpoint": "minimax/h3-max/image-to-video",
+    "requestId": "01a1976d-b4a5-79f2-8a69-64c3a96c69b6",
+    "seconds": 5,
+    "usd": 0.1625,
+    "kept": true
+  },
+  {
+    "at": "2026-11-01T14:05:11Z",
+    "member": "feast-mother",
+    "clip": "wave/clip-a",
+    "endpoint": "minimax/h3-max/image-to-video",
+    "requestId": "01a1976d-b4a8-7951-b587-f348bf0fb596",
+    "seconds": 5,
+    "usd": 0.1625,
+    "kept": true
+  },
+  {
+    "at": "2026-11-01T14:05:11Z",
+    "member": "feast-mother",
+    "clip": "cup/clip-a",
+    "endpoint": "minimax/h3-max/image-to-video",
+    "requestId": "01a1976d-b4a6-7bb0-b3b0-e45ee0970e95",
+    "seconds": 5,
+    "usd": 0.1625,
+    "kept": true
+  }
+]
