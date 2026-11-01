@@ -3882,15 +3882,30 @@ message is asserted, including the distinct anchor-end and cue-part repairs,
 so a rule that fires but gives the wrong advice fails the fixture suite; the
 test holds that list to the plugin's rules.
 
-The package's `test` script runs the unit tests under `src/` and `lint/`.
-The root `test` and `gate`, including the CI gate, run this browser-free
-suite. Each run writes its files' times to a timings file in the package's
-installed modules (the script's `--timings` and `--update-timings`), and the
-next run starts the slowest files first, so a long file does not begin last
-and run alone. A fresh checkout, CI's among them, has no times yet and runs
-the files in their usual order. Its budget is 1.1 s (`bun run
-test:budget`); on a busy host it runs over it (issue #49). E2E files live separately under `e2e/`, so
-those paths do not discover or execute them. Their source remains linted and typechecked.
+The unit tests under `src/` and `lint/` run as three parts, each a package
+script and a task of `turbo.json` that the package's `test` task depends on
+(the package has no `test` script): `test:lab` runs `src/lab` and the lab
+tools of `src/tools` (asks, boards, choices, easel, the lab's MCP and gate),
+`test:tools` runs the rest of `src/tools` (cast-build, media, the render
+CLIs), and `test:engine` runs everything else under `src/` and `lint/`
+(core, canvas, player, puppet, rive, style, browser, command). Each part's
+import closure differs, so each of its workers loads less of the module graph.
+A new test file falls to `test:tools` or `test:engine` by its folder; a lab
+tool is named in `test:lab`, ignored by `test:tools`, and left out of
+`test:tools`'s turbo inputs, and `src/lab/fixtures/test-parts.test.ts` holds
+the three lists to one another. Each part's turbo inputs leave out the other
+parts' test files, never their sources (an engine file may import a tool),
+so an edit of one part's test reruns that part alone. The root `test` and
+`gate`, including the CI gate, run this browser-free suite. Each part writes
+its files' times to its own timings file in the package's installed modules
+(the script's `--timings` and `--update-timings`), and the next run starts
+the slowest files first, so a long file does not begin last and run alone. A
+fresh checkout, CI's among them, has no times yet and runs the files in their
+usual order. Each part's budget is 1.1 s alone (`bun run test:budget
+@manna/film`, which times each part as its own task). Their workers sum to
+the core count (2, 6 and 4), since the gate runs the three side by side. E2E
+files live separately under `e2e/`, so those paths do not discover or
+execute them. Their source remains linted and typechecked.
 
 Run `bun run test:e2e` from the repository root or this package to exercise
 the real browser workflows and canvas pixel checks. The E2E script uses
@@ -3901,7 +3916,7 @@ process whose command line names a path in it has ended
 (`src/lab/fixtures/run-folder.ts`): Bun's recursive remove fails when an
 entry goes from under it.
 A browser-free film test that sets no timeout of its own has bun's own 5 s,
-so the `test` script names no `--timeout`, and a browser test has 20 s
+so no part of the unit tests' scripts names a `--timeout`, and a browser test has 20 s
 (`E2E_TIMEOUT_MS`, `src/lab/fixtures/test-timeout.ts`);
 `test-timeout.test.ts` holds the scripts to both. The preload `bunfig.toml`
 names (`src/lab/fixtures/preload.ts`) passes the first to effect-bun-test's `setDefaultTimeout`: the
