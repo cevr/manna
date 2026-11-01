@@ -46,6 +46,7 @@ import { barsOfRecord, sheetOf } from './coverage-facts.ts';
 import {
   type Input,
   type Stage,
+  type StageContext,
   StageFailed,
   WaitingOwner,
   fileInput,
@@ -520,12 +521,26 @@ const drawingsIn = (trainset: Uint8Array) =>
 const readerFailed = (id: string) => (e: ReaderError) =>
   StageFailed.make({ reason: `${id}: ${e.message}` });
 
+/** The training set read by the train stage: its bytes, its hash, and the reader's key over it, the config and `sources`. */
+const trainKeyOf = (ctx: StageContext, sources: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const set = yield* ctx.output('trainset');
+    const trainset = sha256Hex(set);
+    const lines = [`trainset=${trainset}`, `config=${TRAIN_CONFIG}`];
+    for (const file of sources)
+      lines.push(`${file.split('/').at(-1)}=${sha256Hex(yield* ctx.file(file))}`);
+    return { set, trainset, key: sha256Hex(encoder.encode(lines.join('\n'))) };
+  });
+
 /**
  * The one reader trained on the training set, on Modal; it spends, so it
  * waits unless `--spend modal`. It reads the set, every shard in it and
  * the reader's source files (`sources`, every file a train ships), so a
  * change to any of them is a new reader. Its output is the checkpoint; on
- * Modal it is `/readers/<the hash of those inputs and the config>.pt`.
+ * Modal the train writes it at `/runs/<key>/<the build's run>.pt`, and
+ * `promote` copies it to `/readers/<key>.pt` (the key: the hash of those
+ * inputs and the config) only while the build's mark holds the stage's key,
+ * so a train fenced by another build's never overwrites the key's checkpoint.
  */
 export const trainStage = (
   candidates: ReadonlyArray<Candidate>,
@@ -544,29 +559,26 @@ export const trainStage = (
       'modal',
       Effect.gen(function* () {
         const reader = yield* CastReader;
-        const set = yield* ctx.output('trainset');
-        const trainset = sha256Hex(set);
+        const { set, trainset, key } = yield* trainKeyOf(ctx, sources);
         const inSet = new Set(drawingsIn(set));
-        const lines = [`trainset=${trainset}`, `config=${TRAIN_CONFIG}`];
-        for (const file of sources)
-          lines.push(`${file.split('/').at(-1)}=${sha256Hex(yield* ctx.file(file))}`);
         const shards = yield* Effect.forEach(
           candidates.filter((c) => inSet.has(c.drawing)).map((c) => c.renders),
           ctx.outputPath,
         );
         const made = yield* reader
-          .train({
-            trainset,
-            key: sha256Hex(encoder.encode(lines.join('\n'))),
-            shards,
-            config: TRAIN,
-          })
+          .train({ trainset, key, run: ctx.run, shards, config: TRAIN })
           .pipe(Effect.mapError(readerFailed('train')));
         yield* Effect.log(`cast.build.train result=${made.result}`);
         return made.checkpoint;
       }),
       TRAIN_USD,
     ),
+  promote: (ctx) =>
+    Effect.gen(function* () {
+      const reader = yield* CastReader;
+      const { key } = yield* trainKeyOf(ctx, sources);
+      yield* reader.promote(key, ctx.run).pipe(Effect.mapError(readerFailed('promote')));
+    }),
 });
 
 /** One drawing's held samples read by the trained reader and scored, by its renders stage's id. */

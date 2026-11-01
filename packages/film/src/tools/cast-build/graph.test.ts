@@ -4,7 +4,18 @@
 // spend, or waits on the owner, holds every stage below it.
 
 import { describe, expect, it } from 'effect-bun-test';
-import { Deferred, Effect, Fiber, Layer, Logger, Option, Path, Schema } from 'effect';
+import {
+  Clock,
+  Deferred,
+  Duration,
+  Effect,
+  Fiber,
+  Layer,
+  Logger,
+  Option,
+  Path,
+  Schema,
+} from 'effect';
 import { TestClock } from 'effect/testing';
 import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore, Processes } from '../content-store.ts';
@@ -394,6 +405,66 @@ describe('the cast build graph', () => {
     },
   );
 
+  it.effect(
+    'another host whose clock runs two hours behind keeps its key while its heartbeat changes',
+    () => {
+      const files = seeded();
+      return Effect.gen(function* () {
+        const slow = yield* slowTrain;
+        const first = yield* Effect.forkChild(
+          buildGraph(slow.stages, options()).pipe(
+            onHost('a'),
+            skewed(yield* Clock.Clock, '-2 hours'),
+          ),
+        );
+        yield* Deferred.await(slow.started);
+        const waiting = yield* Effect.forkChild(
+          buildGraph(slow.stages, options()).pipe(onHost('b')),
+        );
+        // host b judges the mark by its beat changing, not by host a's clock against its own
+        yield* TestClock.adjust('20 minutes');
+        expect(slow.runs()).toBe(1);
+        yield* Deferred.succeed(slow.release, true);
+        expect(statesOf(yield* Fiber.join(first))).toEqual({ train: 'ran' });
+        yield* TestClock.adjust('1 second');
+        expect(statesOf(yield* Fiber.join(waiting))).toEqual({ train: 'cached' });
+        expect(slow.runs()).toBe(1);
+      }).pipe(Effect.provide(servicesOver(files)));
+    },
+  );
+
+  it.effect(
+    'a mark from a host whose clock runs two hours ahead frees its key five minutes after its beat stops changing',
+    () => {
+      const files = seeded();
+      return Effect.gen(function* () {
+        const slow = yield* slowTrain;
+        const first = yield* Effect.forkChild(
+          buildGraph(slow.stages, options()).pipe(
+            onHost('a'),
+            skewed(yield* Clock.Clock, '2 hours'),
+          ),
+        );
+        yield* Deferred.await(slow.started);
+        yield* TestClock.adjust('3 minutes');
+        // host a goes dark, its mark left with a beat two hours in host b's future
+        const left = files.get('/cache/build.json') ?? text('');
+        yield* Fiber.interrupt(first);
+        files.set('/cache/build.json', left);
+        const second = yield* Effect.forkChild(
+          buildGraph(slow.stages, options()).pipe(onHost('b')),
+        );
+        yield* TestClock.adjust('4 minutes');
+        expect(slow.runs()).toBe(1);
+        yield* TestClock.adjust('2 minutes');
+        expect(yield* Deferred.isDone(slow.restarted)).toBe(true);
+        expect(slow.runs()).toBe(2);
+        yield* Deferred.succeed(slow.release, true);
+        expect(statesOf(yield* Fiber.join(second))).toEqual({ train: 'ran' });
+      }).pipe(Effect.provide(servicesOver(files)));
+    },
+  );
+
   it.effect('a build whose mark was taken while it ran discards its output (fencing)', () => {
     const files = seeded();
     return Effect.gen(function* () {
@@ -425,6 +496,22 @@ describe('the cast build graph', () => {
 
 const onHost = (host: string) =>
   Effect.provideService(Processes, { host, alive: () => Effect.succeed(true) });
+
+/** Run on a host whose wall clock reads `offset` off this one's (its sleeps and monotonic time are this one's). */
+const skewed = (clock: Clock.Clock, offset: Duration.Input) => {
+  const ms = Duration.toMillis(offset);
+  const off: Clock.Clock = {
+    currentTimeMillisUnsafe: () => clock.currentTimeMillisUnsafe() + ms,
+    currentTimeMillis: Effect.map(clock.currentTimeMillis, (t) => t + ms),
+    currentTimeNanosUnsafe: () => clock.currentTimeNanosUnsafe() + BigInt(ms) * 1_000_000n,
+    currentTimeNanos: Effect.map(clock.currentTimeNanos, (t) => t + BigInt(ms) * 1_000_000n),
+    monotonicTimeNanosUnsafe: () => clock.monotonicTimeNanosUnsafe(),
+    monotonicTimeNanos: clock.monotonicTimeNanos,
+    sleep: (duration) => clock.sleep(duration),
+  };
+  return <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    Effect.provideService(effect, Clock.Clock, off);
+};
 
 /**
  * A train that marks `started` at its first run and `restarted` at its second,

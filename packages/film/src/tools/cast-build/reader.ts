@@ -41,8 +41,10 @@ export interface TrainConfig {
 export interface TrainJob {
   /** The training set's hash: its tar on the data volume is `/sets/<trainset>.tar`. */
   readonly trainset: string;
-  /** The reader's key: its checkpoint on the volume is `/readers/<key>.pt`. */
+  /** The reader's key: its checkpoint on the volume is `/readers/<key>.pt`, once promoted. */
   readonly key: string;
+  /** This train's own name: it writes its checkpoint on the volume at `/runs/<key>/<run>.pt`, never at the key's. */
+  readonly run: string;
   /** The set's shards, one tar per drawing, in the set's order. */
   readonly shards: ReadonlyArray<string>;
   readonly config: TrainConfig;
@@ -86,6 +88,8 @@ interface CastReaderService {
   readonly train: (
     job: TrainJob,
   ) => Effect.Effect<{ readonly checkpoint: Uint8Array; readonly result: string }, ReaderError>;
+  /** Make run `run`'s checkpoint the key's: `/runs/<key>/<run>.pt` copied to `/readers/<key>.pt` on the volume. It runs no GPU. */
+  readonly promote: (key: string, run: string) => Effect.Effect<void, ReaderError>;
   /** The reader's pytest cases, run in its environment: pytest's output. */
   readonly test: Effect.Effect<string, ReaderError>;
 }
@@ -258,7 +262,7 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
         return yield* Effect.scoped(
           Effect.gen(function* () {
             const scratch = yield* fs.makeTempDirectoryScoped();
-            const out = path.join(scratch, `${job.key}.pt`);
+            const out = path.join(scratch, `${job.key}-${job.run}.pt`);
             const c = job.config;
             const stdout = yield* python_(
               'train',
@@ -267,7 +271,8 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
                 'modal',
                 'run',
                 `${path.join(dir, 'modal_app.py')}::train`,
-                ...['--trainset', job.trainset, '--key', job.key, '--shards', job.shards.join(',')],
+                ...['--trainset', job.trainset, '--key', job.key, '--run', job.run],
+                ...['--shards', job.shards.join(',')],
                 ...['--out', out, '--steps', String(c.steps), '--batch', String(c.batch)],
                 ...['--lr', String(c.lr), '--seed', String(c.seed), '--gpu', c.gpu],
                 ...['--precision', c.precision],
@@ -280,21 +285,37 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
         ).pipe(Effect.catchTag('PlatformError', failedAs('train')));
       });
 
+      const promote = Effect.fn('CastReader.promote')(function* (key: string, run: string) {
+        yield* python_(
+          'promote',
+          [
+            '-m',
+            'modal',
+            'run',
+            `${path.join(dir, 'modal_app.py')}::promote`,
+            ...['--key', key, '--run', run],
+          ],
+          READ_LIMIT,
+        );
+      });
+
       const test = python_('test', ['-m', 'pytest', '-q'], READ_LIMIT);
 
-      return CastReader.of({ sources, read, evaluate, train, test });
+      return CastReader.of({ sources, read, evaluate, train, promote, test });
     }),
   );
 
   /**
    * A reader that answers from `answers` and runs nothing; `asked` records
-   * each call as `<what> <argument>`.
+   * each call as `<what> <argument>`. A train runs `answers.training` before
+   * it answers: what happens while it runs.
    */
   static readonly layerTest = (
     answers: {
       readonly read?: string;
       readonly evaluate?: string;
       readonly checkpoint?: Uint8Array;
+      readonly training?: Effect.Effect<void>;
     },
     asked: Array<string> = [],
     sources: ReadonlyArray<string> = [],
@@ -307,10 +328,13 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
         evaluate: (_, shard) =>
           Effect.sync(() => (asked.push(`evaluate ${shard}`), answers.evaluate ?? '{}')),
         train: (job) =>
-          Effect.sync(() => {
-            asked.push(`train ${job.key} shards=${job.shards.length}`);
-            return { checkpoint: answers.checkpoint ?? new Uint8Array([1]), result: '{}' };
-          }),
+          Effect.sync(() =>
+            asked.push(`train ${job.key} run=${job.run} shards=${job.shards.length}`),
+          ).pipe(
+            Effect.andThen(answers.training ?? Effect.void),
+            Effect.as({ checkpoint: answers.checkpoint ?? new Uint8Array([1]), result: '{}' }),
+          ),
+        promote: (key, run) => Effect.sync(() => void asked.push(`promote ${key} ${run}`)),
         test: Effect.succeed(''),
       }),
     );

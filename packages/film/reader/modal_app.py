@@ -1,12 +1,15 @@
 """The reader's train on Modal: one L4 (bf16), a fixed step count, no wall-clock stop.
 
 Volumes, keyed by hash: `film-reader-data` holds each training set as `/sets/<trainset>.tar` (the set's shards merged,
-`train/` and `held/`), uploaded only when the volume lacks it; `film-reader-ckpt` holds each reader as
-`/readers/<key>.pt` and its train log beside it. The local entrypoint downloads the checkpoint to `--out` and prints
-the train's result as JSON on its last line. A run that stops before its step count fails.
+`train/` and `held/`), uploaded only when the volume lacks it; `film-reader-ckpt` holds each train's checkpoint as
+`/runs/<key>/<run>.pt` (`run`: the build's own name, so two builds' trains never write one file) and its train log
+beside it, and each reader as `/readers/<key>.pt`, copied there by `promote` once the build that ran the train still
+holds its key. The train's local entrypoint downloads its run's checkpoint to `--out` and prints the train's result as
+JSON on its last line. A run that stops before its step count fails.
 
-  modal run modal_app.py::train --trainset <hash> --key <key> --shards a.tar,b.tar --out <reader>.pt \
+  modal run modal_app.py::train --trainset <hash> --key <key> --run <run> --shards a.tar,b.tar --out <reader>.pt \
     --steps 4800 --batch 32 --lr 0.001 --seed 0 --gpu L4 --precision bf16
+  modal run modal_app.py::promote --key <key> --run <run>
 """
 from __future__ import annotations
 
@@ -33,6 +36,11 @@ ckpt_vol = modal.Volume.from_name("film-reader-ckpt", create_if_missing=True)
 VOLS = {"/data": data_vol, "/ckpt": ckpt_vol}
 
 
+def _run_path(key: str, run: str) -> str:
+    """A train's checkpoint on the ckpt volume: under its key, named by its run."""
+    return f"/runs/{key}/{run}.pt"
+
+
 def _stage(trainset: str) -> str:
     """Unpack the training set from its one tar on the volume to local disk: the volume reads many small files slowly."""
     import tarfile
@@ -45,13 +53,14 @@ def _stage(trainset: str) -> str:
 
 
 @app.function(gpu=GPU, timeout=2 * 60 * 60, cpu=8, memory=32768, volumes=VOLS)
-def fit(trainset: str, key: str, steps: int, batch: int, lr: float, seed: int, bf16: bool) -> dict:
+def fit(trainset: str, key: str, run_name: str, steps: int, batch: int, lr: float, seed: int, bf16: bool) -> dict:
     import sys
 
     sys.path.insert(0, "/root/reader")
     from train import train as run
 
-    out = f"/ckpt/readers/{key}.pt"
+    out = f"/ckpt{_run_path(key, run_name)}"
+    os.makedirs(os.path.dirname(out), exist_ok=True)
     r = run(_stage(trainset) + "/train", out, steps=steps, batch=batch, lr=lr, device="cuda", workers=6, cache=True,
             bf16=bf16, log_every=50, save_every=1000, log_file=out[:-3] + ".train.log.jsonl", on_save=ckpt_vol.commit,
             seed=seed)
@@ -80,8 +89,8 @@ def _has(vol: modal.Volume, path: str) -> bool:
 
 
 @app.local_entrypoint()
-def train(trainset: str, key: str, shards: str, out: str, steps: int, batch: int, lr: float, seed: int, gpu: str,
-          precision: str):
+def train(trainset: str, key: str, run: str, shards: str, out: str, steps: int, batch: int, lr: float, seed: int,
+          gpu: str, precision: str):
     import tempfile
 
     if gpu != GPU:
@@ -95,9 +104,15 @@ def train(trainset: str, key: str, shards: str, out: str, steps: int, batch: int
             _set_tar(shards.split(","), tar)
             with data_vol.batch_upload() as b:
                 b.put_file(tar, remote)
-    r = fit.remote(trainset, key, steps, batch, lr, seed, precision == "bf16")
+    r = fit.remote(trainset, key, run, steps, batch, lr, seed, precision == "bf16")
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     with open(out, "wb") as f:
-        for chunk in ckpt_vol.read_file(f"/readers/{key}.pt"):
+        for chunk in ckpt_vol.read_file(_run_path(key, run)):
             f.write(chunk)
     print(json.dumps(r))
+
+
+@app.local_entrypoint()
+def promote(key: str, run: str):
+    """Make run `run`'s checkpoint the key's reader: copied on the volume, no container started."""
+    ckpt_vol.copy_files([_run_path(key, run)], f"/readers/{key}.pt")

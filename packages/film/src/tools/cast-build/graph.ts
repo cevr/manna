@@ -25,10 +25,14 @@
 // the heartbeat every `HEARTBEAT` while the stage runs. A second build that
 // finds a live mark waits and decides again, so two builds never run one
 // stage. A run that dies lets its mark go; a mark whose process is gone on
-// this host, or from another host whose heartbeat is older than
-// `RUNNING_LEASE_MS`, is cleared and taken over. A build records what it ran
-// only while its mark still holds the key (fencing): one whose mark was taken
-// discards its output and reports it.
+// this host, or from another host that this build has read unchanged for
+// `RUNNING_LEASE_MS` of its own clock, is cleared and taken over. A build
+// records what it ran only while its mark still holds the key (fencing): one
+// whose mark was taken discards its output and reports it. What a stage
+// writes outside the cache under the name its key owns (the reader's
+// checkpoint on its volume) it writes first under the build's own name
+// (`StageContext.run`), and its `promote` makes it the key's under the lock,
+// while the mark holds the key, so a fenced run's write is never the key's.
 // An optional input (`optionalInput`) holds its stage only while it is stale in
 // a plan: a stage reading what this build made of a set (the training set) runs
 // over the inputs that did not wait or fail.
@@ -109,6 +113,8 @@ export interface StageContext {
   readonly outputPath: (id: string) => Effect.Effect<string, StageFailed>;
   /** Whether an upstream stage has an output in this build (an optional input that did not wait or fail). */
   readonly known: (id: string) => boolean;
+  /** This build's own name, which no other build shares: what a stage writes outside the cache is named by it until `promote`. */
+  readonly run: string;
   /** Run `effect`, which spends `kind`, when the build allows it; else the stage waits. */
   readonly spend: <A, E, R>(
     kind: Spend,
@@ -127,6 +133,12 @@ export interface Stage<R> {
   /** Settings that change its output, as text (JSON). */
   readonly config?: string;
   readonly run: (ctx: StageContext) => Effect.Effect<Uint8Array, StageError, R>;
+  /**
+   * Make what `run` wrote outside the cache under `ctx.run` the key's own. It
+   * runs under the manifest's lock, only while this build's mark holds the
+   * key, before the output is recorded; when it fails, the stage fails.
+   */
+  readonly promote?: (ctx: StageContext) => Effect.Effect<void, StageFailed, R>;
 }
 
 /** The ways a stage's run ends other than with its output. */
@@ -239,10 +251,11 @@ export const HEARTBEAT_MS = 60 * 1000;
 const HEARTBEAT = Schedule.spaced(HEARTBEAT_MS);
 
 /**
- * How long another host's mark holds its key past its last heartbeat: five
- * heartbeats. Its pid cannot be asked on this host, so past this the mark is
- * taken as left by a build that died. A live owner renews its mark however
- * long its stage runs, so the lease does not depend on any stage's timeout.
+ * How long another host's mark holds its key once this host has read it
+ * unchanged, on this host's clock: five heartbeats. Its pid cannot be asked
+ * on this host, so past this the mark is taken as left by a build that died.
+ * A live owner renews its mark however long its stage runs, so the lease does
+ * not depend on any stage's timeout.
  */
 export const RUNNING_LEASE_MS = 5 * HEARTBEAT_MS;
 
@@ -316,7 +329,10 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
     if (known?._tag === 'Known') return Option.some(known.output);
     return Option.none();
   };
+  const processes = yield* Processes;
+  const build = `${process.pid}-${yield* Random.nextIntBetween(0, 1e9)}`;
   const ctx: StageContext = {
+    run: build,
     file: (p) =>
       fs.readFile(p).pipe(Effect.mapError((e) => StageFailed.make({ reason: String(e) }))),
     output: (id) =>
@@ -357,8 +373,6 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
       `${LINE[input._tag]}:${input.id}=${Option.getOrElse(outputOf(input.id), () => 'held')}`,
     );
   };
-  const processes = yield* Processes;
-  const build = `${process.pid}-${yield* Random.nextIntBetween(0, 1e9)}`;
   /** This build's mark on a key it takes now. */
   const selfAt = Effect.map(Clock.currentTimeMillis, (at): Running => ({
     build,
@@ -367,19 +381,27 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
     at,
   }));
   /**
-   * Whether the build that marked a key runs it still: on this host, its
-   * process runs; on another, whose pid means nothing here, its last
-   * heartbeat (its start, before the first) is younger than the lease (a mark
-   * with neither is older than the lease).
+   * Each other host's mark this build has read, by key: the mark as written
+   * (its build, start and beat) and when this host first read it so.
    */
-  const runs = (mark: Running) => {
+  const seen = new Map<string, { readonly mark: string; readonly since: number }>();
+  /**
+   * Whether the build that marked a key runs it still: on this host, its
+   * process runs; on another, whose pid and clock mean nothing here, this
+   * host has read its mark change within the lease. The lease runs on this
+   * host's clock from the first read of the mark as it stands, so the other
+   * host's clock running ahead or behind neither frees a live key nor holds
+   * a dead one.
+   */
+  const runs = (key: string, mark: Running) => {
     if (mark.host === processes.host) return processes.alive(mark.pid);
-    const last = Option.orElse(Option.fromUndefinedOr(mark.beat), () =>
-      Option.fromUndefinedOr(mark.at),
-    );
-    return Effect.map(Clock.currentTimeMillis, (now) =>
-      Option.exists(last, (at) => now - at < RUNNING_LEASE_MS),
-    );
+    const written = [mark.build, mark.at ?? '', mark.beat ?? ''].join(' ');
+    return Effect.map(Clock.currentTimeMillis, (now) => {
+      const last = seen.get(key);
+      if (last?.mark === written) return now - last.since < RUNNING_LEASE_MS;
+      seen.set(key, { mark: written, since: now });
+      return true;
+    });
   };
   /** Renew this build's mark on `key` every heartbeat, for as long as it runs. */
   const heartbeat = (key: string) =>
@@ -404,22 +426,36 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
   /** The manifest's marks that still run: a stale one is cleared. */
   const liveMarks = (current: BuildManifest) =>
     Effect.map(
-      Effect.filter(Object.entries(current.running ?? {}), ([, mark]) => runs(mark)),
+      Effect.filter(Object.entries(current.running ?? {}), ([key, mark]) => runs(key, mark)),
       (live): BuildManifest => ({ ...current, running: Object.fromEntries(live) }),
     );
   /** Run a stage outside the lock, then record what it made, or what it waited on, under it. */
   const runOutside = <R>(stage: Stage<R>, key: string, start: number) =>
     Effect.gen(function* () {
-      /** Record `outcome` and `change` under the lock while this build's mark holds the key; else discard it. */
-      const record = (outcome: Outcome, change: (done: BuildManifest) => BuildManifest) =>
+      /**
+       * Record `outcome` and `change` under the lock while this build's mark
+       * holds the key, `promote` first (its failure is the stage's); else
+       * discard it.
+       */
+      const record = (
+        outcome: Outcome,
+        change: (done: BuildManifest) => BuildManifest,
+        promote: Effect.Effect<void, StageFailed, R> = Effect.void,
+      ) =>
         store
           .transact(manifest, (current) => {
             if (!holds(current, key, build))
               return Effect.succeed([Option.none<Outcome>(), current] as const);
-            return Effect.succeed([
-              Option.some(outcome),
-              change(unmarked(current, key, build)),
-            ] as const);
+            const done = unmarked(current, key, build);
+            return promote.pipe(
+              Effect.as([Option.some(outcome), change(done)] as const),
+              Effect.catchTag('StageFailed', (e) =>
+                Effect.succeed([
+                  Option.some<Outcome>({ _tag: 'failed', reason: Option.some(e.reason) }),
+                  done,
+                ] as const),
+              ),
+            );
           })
           .pipe(
             Effect.flatMap(
@@ -454,10 +490,14 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
         const output = sha256Hex(ran.bytes);
         yield* store.writeFile(objectFile(output), ran.bytes);
         const ms = (yield* Clock.currentTimeMillis) - start;
-        return yield* record({ _tag: 'ran', output }, (done) => ({
-          ...done,
-          stages: { ...done.stages, [key]: { id: stage.id, output, ms } },
-        }));
+        return yield* record(
+          { _tag: 'ran', output },
+          (done) => ({
+            ...done,
+            stages: { ...done.stages, [key]: { id: stage.id, output, ms } },
+          }),
+          stage.promote?.(ctx),
+        );
       }
       if (ran._tag !== 'waited') return yield* record(ran, (done) => done);
       const waited = ran.waited;

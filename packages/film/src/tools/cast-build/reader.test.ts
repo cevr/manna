@@ -5,7 +5,7 @@
 
 import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Layer, Option, Path } from 'effect';
+import { Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore } from '../content-store.ts';
 import { type BuildOptions, type Stage, buildGraph, fileInput, stageInput } from './graph.ts';
@@ -121,6 +121,7 @@ const build = (
   asked: Array<string>,
   over: Partial<BuildOptions> = {},
   stages: ReadonlyArray<Stage<CastReader>> = graph(),
+  training: Effect.Effect<void> = Effect.void,
 ) =>
   buildGraph(stages, options(over)).pipe(
     Effect.provide(
@@ -128,10 +129,38 @@ const build = (
         ContentStore.layer.pipe(
           Layer.provideMerge([memoryFileSystem(disk), Path.layer, memoryLocks]),
         ),
-        CastReader.layerTest({ evaluate: '{"seen":{"accuracy":1}}' }, asked, SOURCES),
+        CastReader.layerTest({ evaluate: '{"seen":{"accuracy":1}}', training }, asked, SOURCES),
       ),
     ),
   );
+
+/** `build.json`'s running marks, as a test reads and writes them. */
+const Marks = Schema.fromJsonString(
+  Schema.Struct({
+    stages: Schema.Record(Schema.String, Schema.Unknown),
+    running: Schema.Record(Schema.String, Schema.Unknown),
+  }),
+);
+
+/** Another host's build takes every key `disk`'s cache marks as running (as it would past a lost lease). */
+const takeMarks = (disk: Map<string, Uint8Array>) =>
+  Effect.gen(function* () {
+    const marks = yield* Schema.decodeEffect(Marks)(
+      new TextDecoder().decode(disk.get('/cache/build.json')),
+    );
+    const other = { build: 'other', pid: 1, host: 'b', at: 0, beat: 0 };
+    const taken = Object.fromEntries(Object.keys(marks.running).map((key) => [key, other]));
+    disk.set(
+      '/cache/build.json',
+      text(yield* Schema.encodeEffect(Marks)({ ...marks, running: taken })),
+    );
+  }).pipe(Effect.orDie);
+
+/** A train the fake reader was asked for: its key and its run. */
+const trainOf = (line: string) => {
+  const [, key = '', run = ''] = /^train (\S+) run=(\S+) /.exec(line) ?? [];
+  return { key, run };
+};
 
 const stateOf = (report: { stages: ReadonlyArray<{ id: string; state: string }> }) =>
   Object.fromEntries(report.stages.map((s) => [s.id, s.state]));
@@ -166,6 +195,31 @@ describe('cast build: train and eval', () => {
       expect(new Set(Object.values(stateOf(second)))).toEqual(new Set(['cached']));
       expect(again).toEqual([]);
     }),
+  );
+
+  it.effect(
+    "a train writes under its own run; the key's checkpoint is promoted only while its mark holds the key",
+    () =>
+      Effect.gen(function* () {
+        const spend = { spend: new Set(['modal'] as const) };
+        // another build takes the key while the train runs: its run is fenced, so not promoted
+        const lost = files();
+        const fencedAsked: Array<string> = [];
+        const fenced = yield* build(lost, fencedAsked, spend, graph(), takeMarks(lost));
+        expect(stateOf(fenced)['train']).toBe('failed');
+        expect(fencedAsked.filter((a) => a.startsWith('promote'))).toEqual([]);
+        // a run that holds its key promotes its own run's checkpoint to the key's
+        const asked: Array<string> = [];
+        expect(stateOf(yield* build(files(), asked, spend))['train']).toBe('ran');
+        const trains = asked.filter((a) => a.startsWith('train')).map(trainOf);
+        expect(trains.length).toBe(1);
+        const [{ key, run } = { key: '', run: '' }] = trains;
+        expect(asked.filter((a) => a.startsWith('promote'))).toEqual([`promote ${key} ${run}`]);
+        const [lostRun] = fencedAsked.filter((a) => a.startsWith('train')).map(trainOf);
+        expect(lostRun?.key).toBe(key);
+        expect(run.length).toBeGreaterThan(0);
+        expect(lostRun?.run).not.toBe(run);
+      }),
   );
 
   it.effect('a change to a reader source file is a new train, and so new evals', () =>
