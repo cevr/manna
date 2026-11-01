@@ -8,7 +8,9 @@
 // path, a `.js` name for a `.ts` file, a workspace package through its link in
 // `node_modules`. A file that resolves outside the root or inside a
 // `node_modules` folder is a dependency's, and `bun.lock` keys those; an import
-// that does not resolve is left to oxlint to report.
+// that does not resolve is left to oxlint to report. A file that is not a
+// script (a `.riv` or `.json` loaded `with { type }`) is in the closure and
+// imports nothing.
 
 import { Effect, FileSystem, Option, Path } from 'effect';
 import * as Bool from 'effect/Boolean';
@@ -19,6 +21,9 @@ import type { LintConfig } from './config.js';
 export const pluginsOf = (config: LintConfig): ReadonlyArray<string> => [
   ...new Set([...config.jsPlugins, ...config.overrides.flatMap((override) => override.jsPlugins)]),
 ];
+
+/** A script Bun's transpiler reads; every other file imports nothing. */
+const SCRIPT = /\.[cm]?[jt]sx?$/;
 
 /** The loader Bun's transpiler reads `file` with. */
 const loaderOf = (file: string) =>
@@ -53,7 +58,7 @@ export const importClosure = Effect.fn('importClosure')(function* (
     const fresh = [...new Set(pending)].filter((file) => !seen.has(file));
     fresh.forEach((file) => seen.add(file));
     const next = yield* Effect.forEach(
-      fresh,
+      fresh.filter((file) => SCRIPT.test(file)),
       (file) =>
         Effect.gen(function* () {
           const source = yield* fs.readFileString(file);

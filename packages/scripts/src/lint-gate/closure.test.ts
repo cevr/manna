@@ -12,7 +12,7 @@ const config = Schema.decodeSync(LintConfig)({
 
 describe("the files the gate's lint keys", () => {
   it.effect.layer(BunServices.layer)(
-    'follow each import a plugin makes, through `.js` names, and stop at node_modules',
+    'follow each import a plugin makes, through `.js` names, hold a file that is not a script, and stop at node_modules',
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
@@ -32,8 +32,23 @@ describe("the files the gate's lint keys", () => {
         yield* write('src/unused.ts', 'export const unused = 1;\n');
         yield* write('node_modules/dep/package.json', '{"name":"dep","main":"index.js"}');
         yield* write('node_modules/dep/index.js', 'export default 1;\n');
-        const files = yield* importClosure(root, ['./lint/plugin.ts', 'dep']);
-        expect(files).toEqual(['lint/plugin.ts', 'lint/rule.ts', 'src/limit.ts']);
+        // a file loaded that is not a script (a rig's `.riv`) is held, and imports nothing
+        yield* write(
+          'src/rig.ts',
+          "import art from './art.riv' with { type: 'file' };\nexport default art;\n",
+        );
+        yield* Effect.andThen(
+          fs.makeDirectory(path.join(root, 'src'), { recursive: true }),
+          fs.writeFile(path.join(root, 'src/art.riv'), new Uint8Array([0x89, 0x50, 0x4e, 0x47])),
+        );
+        const files = yield* importClosure(root, ['./lint/plugin.ts', 'dep', './src/rig.ts']);
+        expect(files).toEqual([
+          'lint/plugin.ts',
+          'lint/rule.ts',
+          'src/art.riv',
+          'src/limit.ts',
+          'src/rig.ts',
+        ]);
       }).pipe(Effect.scoped),
   );
 
