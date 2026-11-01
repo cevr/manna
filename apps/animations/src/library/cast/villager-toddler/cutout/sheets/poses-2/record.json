@@ -126,12 +126,12 @@
               "part": "torso",
               "under": "armRight",
               "painted": {
-                "share": 0.03,
-                "px": 1826
+                "share": 0.006,
+                "px": 1583
               },
               "kept": {
-                "share": 0.023,
-                "px": 4602
+                "share": 0.008,
+                "px": 4131
               },
               "verdict": "within"
             },
@@ -139,16 +139,17 @@
               "part": "torso",
               "under": "armLeft",
               "painted": {
-                "share": 0.031,
-                "px": 1729
+                "share": 0.005,
+                "px": 1501
               },
               "kept": {
-                "share": 0.019,
-                "px": 4572
+                "share": 0.007,
+                "px": 4061
               },
               "verdict": "within"
             }
           ],
+          "step": [],
           "paintUnder": [
             {
               "part": "armRight",
@@ -234,12 +235,12 @@
         "part": "torso",
         "under": "armRight",
         "painted": {
-          "share": 0.03,
-          "px": 1826
+          "share": 0.006,
+          "px": 1583
         },
         "kept": {
-          "share": 0.023,
-          "px": 4602
+          "share": 0.008,
+          "px": 4131
         },
         "verdict": "within"
       },
@@ -247,16 +248,17 @@
         "part": "torso",
         "under": "armLeft",
         "painted": {
-          "share": 0.031,
-          "px": 1729
+          "share": 0.005,
+          "px": 1501
         },
         "kept": {
-          "share": 0.019,
-          "px": 4572
+          "share": 0.007,
+          "px": 4061
         },
         "verdict": "within"
       }
     ],
+    "step": [],
     "paintUnder": [
       {
         "part": "armRight",
@@ -277,8 +279,10 @@
     "chromaDrop": 3,
     "grainWithin": 0.5,
     "speckOver": 0.04,
+    "stepWithin": 5,
     "visibleAtRest": 0,
     "leastSeamPairs": 20,
+    "leastStepPairs": 8,
     "leastGrainWindows": 90,
     "leastRegionPx": 100,
     "leastCellPx": 40
