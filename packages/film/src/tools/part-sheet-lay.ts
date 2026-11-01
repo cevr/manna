@@ -199,16 +199,17 @@ export const groundOf = (r: Raster): Rgb => {
   ]);
 };
 
-/** The four neighbours of pixel `i` inside a `w` × `h` picture. */
-const neighbours = (i: number, w: number, h: number): ReadonlyArray<number> => {
-  const [x, y] = [i % w, Math.floor(i / w)];
-  const steps: ReadonlyArray<readonly [boolean, number]> = [
-    [x > 0, i - 1],
-    [x < w - 1, i + 1],
-    [y > 0, i - w],
-    [y < h - 1, i + w],
-  ];
-  return steps.filter(([inside]) => inside).map(([, j]) => j);
+/** The four neighbours' steps, in the order they are read: left, right, up, down. */
+const NEAR_DX = [-1, 1, 0, 0] as const;
+const NEAR_DY = [0, 0, -1, 1] as const;
+
+/** Neighbour `d` of the four (`NEAR_DX`, `NEAR_DY`) of pixel `i` in a `w` × `h` picture, -1 outside it. */
+const neighbourAt = (i: number, d: number, w: number, h: number) => {
+  const x = i % w;
+  const nx = x + (NEAR_DX[d] ?? 0);
+  const ny = (i - x) / w + (NEAR_DY[d] ?? 0);
+  if (nx < 0 || ny < 0 || nx >= w || ny >= h) return -1;
+  return ny * w + nx;
 };
 
 /**
@@ -226,11 +227,13 @@ const paintedOf = (sheet: Sheet, hidden: Uint8Array, answer: Seen): Uint8Array =
   const queue = [...ground];
   for (const i of ground) reached[i] = 1;
   for (let q = 0; q < queue.length; q++)
-    for (const j of neighbours(queue[q] ?? 0, w, h))
-      if (reached[j] === 0 && hidden[j] === 1 && deltaE(answer.lab(j), lab) <= near) {
+    for (let d = 0; d < 4; d++) {
+      const j = neighbourAt(queue[q] ?? 0, d, w, h);
+      if (j >= 0 && reached[j] === 0 && hidden[j] === 1 && deltaE(answer.lab(j), lab) <= near) {
         reached[j] = 1;
         queue.push(j);
       }
+    }
   return Uint8Array.from(hidden, (m, i) => Number(m === 1 && reached[i] === 0));
 };
 
@@ -241,11 +244,13 @@ const behindOf = (sheet: Sheet, hidden: Uint8Array): Uint8Array => {
   const queue = Arr.range(0, w * h - 1).filter((i) => (behind[i] ?? 0) > 0);
   for (let q = 0; q < queue.length; q++) {
     const i = queue[q] ?? 0;
-    for (const j of neighbours(i, w, h))
-      if (behind[j] === 0 && hidden[j] === 1) {
+    for (let d = 0; d < 4; d++) {
+      const j = neighbourAt(i, d, w, h);
+      if (j >= 0 && behind[j] === 0 && hidden[j] === 1) {
         behind[j] = behind[i] ?? 0;
         queue.push(j);
       }
+    }
   }
   return Uint8Array.from(behind, (b, i) => b * Number(hidden[i] === 1));
 };
@@ -255,16 +260,19 @@ const stepsOf = (view: Seen, sheet: Sheet, laid: Seen, mine: Uint8Array, id: num
   const { width: w, height: h } = view;
   const { components, labels } = componentsOf(mine, w, h, false);
   const sums = components.map(() => [0, 0, 0, 0]);
-  labels.forEach((l, i) => {
-    const sum = Option.fromUndefinedOr(sums[l]).pipe(Option.filter(() => lightAt(laid, i)));
-    if (Option.isNone(sum)) return;
-    for (const j of neighbours(i, w, h).filter((j) => sheet.owner[j] === id && lightAt(view, j))) {
+  for (let i = 0; i < w * h; i++) {
+    // a pixel off `mine` has label -1, and each label of `mine` has its sum
+    const l = labels[i] ?? -1;
+    if (l < 0 || !lightAt(laid, i)) continue;
+    const sum = sums[l] ?? [];
+    for (let d = 0; d < 4; d++) {
+      const j = neighbourAt(i, d, w, h);
+      if (j < 0 || sheet.owner[j] !== id || !lightAt(view, j)) continue;
       for (let c = 0; c < 3; c++)
-        sum.value[c] =
-          (sum.value[c] ?? 0) + (view.rgba[j * 4 + c] ?? 0) - (laid.rgba[i * 4 + c] ?? 0);
-      sum.value[3] = (sum.value[3] ?? 0) + 1;
+        sum[c] = (sum[c] ?? 0) + (view.rgba[j * 4 + c] ?? 0) - (laid.rgba[i * 4 + c] ?? 0);
+      sum[3] = (sum[3] ?? 0) + 1;
     }
-  });
+  }
   return { labels, steps: sums.map((s) => s.slice(0, 3).map((v) => v / Math.max(1, s[3] ?? 0))) };
 };
 
@@ -285,15 +293,16 @@ const tonedTo = (
   for (const id of Arr.range(1, sheet.parts.length)) {
     const mine = Uint8Array.from(painted, (m, i) => Number(m === 1 && behind[i] === id));
     const { labels, steps } = stepsOf(view, sheet, laid, mine, id);
-    labels.forEach((l, i) => {
-      const step = Option.fromUndefinedOr(steps[l]).pipe(Option.filter(() => lightAt(laid, i)));
-      if (Option.isNone(step)) return;
+    for (let i = 0; i < labels.length; i++) {
+      const l = labels[i] ?? -1;
+      if (l < 0 || !lightAt(laid, i)) continue;
+      const step = steps[l] ?? [];
       for (let c = 0; c < 3; c++)
         rgba[i * 4 + c] = Math.max(
           0,
-          Math.min(255, Math.round((laid.rgba[i * 4 + c] ?? 0) + (step.value[c] ?? 0))),
+          Math.min(255, Math.round((laid.rgba[i * 4 + c] ?? 0) + (step[c] ?? 0))),
         );
-    });
+    }
   }
   return { width: view.width, height: view.height, rgba };
 };
@@ -891,10 +900,11 @@ const paintOf = (view: Seen, sheet: Sheet) => {
       const front = Number(o >= 1 && o <= k) * (sheet.parts[o - 1]?.pixels.rgba[i * 4 + 3] ?? 0);
       visible += Number(front !== 255);
       const paint = labOf(rgbAt(p.pixels, i));
-      for (const j of neighbours(i, w, h).filter(
-        (j) => sheet.owner[j] === k + 1 && lightAt(view, j),
-      ))
-        if (paint[0] > INK_L) seam.push(deltaE(paint, view.lab(j)));
+      for (let d = 0; d < 4; d++) {
+        const j = neighbourAt(i, d, w, h);
+        if (j >= 0 && sheet.owner[j] === k + 1 && lightAt(view, j) && paint[0] > INK_L)
+          seam.push(deltaE(paint, view.lab(j)));
+      }
     }
   });
   return { at, seam, visible };
