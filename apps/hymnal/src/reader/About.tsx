@@ -31,7 +31,7 @@ import { passageQuery, passageText, referencesOf, sameMetre, topicsOf } from '~/
 import { moreLike } from '~/hymns/meaning';
 import type { StackState } from '~/player/title';
 
-import { openAtTopic, searchOpen, searchQuery } from './place';
+import { openAtTopic, searchAt, searchOpen, searchQuery } from './place';
 
 /** The home route's file name, as the stack names its screens. */
 const homeRoute = 'index';
@@ -87,12 +87,12 @@ function AboutSheet({ hymn }: { readonly hymn: Option.Option<HymnText> }) {
   };
   const search = (query: string) => {
     setQuery(query);
-    setSearching('about');
+    setSearching(searchAt('/', 'about'));
     home();
   };
   const openTopic = (name: string) => {
     setTopic(Option.some(name));
-    setSearching('off');
+    setSearching(Option.none());
     home();
   };
   return (

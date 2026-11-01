@@ -7,8 +7,8 @@
  * Over the screens it draws the bar's `#` (`FIND_LABEL`) where `findAt`
  * puts it, just above the bar while the bar shows, and the find drums it
  * opens (`FindDrums.tsx`), with their `Open` and `Play` (`pressFind`). On
- * the home list the `#` is the last button of the find bar (`FindBar.tsx`),
- * which also holds search and `All at once`, in the same place. It
+ * every screen the `#` is the last button of the find bar (`FindBar.tsx`),
+ * which also holds `Search`, in the same place. It
  * tells the lists the room the `#` takes (`FindRoom`). The drums close on a
  * move to another screen or where the `#` leaves (`findMoved`), and on a tap
  * outside them: while they are open a layer lies over the screens and the
@@ -100,8 +100,7 @@ export function LivePlayer({ children }: { readonly children: ReactNode }) {
 function Finding({ children }: { readonly children: ReactNode }) {
   const bar = barFor(useAtomValue(player.state), useShownPage());
   const path = usePathname();
-  const home = path === '/';
-  const at = findAt(bar, { home, raised: useAtomValue(raised) > 0 });
+  const at = findAt(bar, { home: path === '/', raised: useAtomValue(raised) > 0 });
   const inset = Math.max(useSafeAreaInsets().bottom, 0);
   // The drums close on a move to another screen, or where the `#` leaves.
   const setFind = useAtomSet(find);
@@ -121,9 +120,9 @@ function Finding({ children }: { readonly children: ReactNode }) {
         Nowhere: () => <></>,
         Yielded: () => <></>,
         OverBar: ({ state }) => (
-          <FindNumber bar={bar} home={home} bottom={inset + heightOf(state) + HASH_GAP} />
+          <FindNumber bar={bar} path={path} bottom={inset + heightOf(state) + HASH_GAP} />
         ),
-        Docked: () => <FindNumber bar={bar} home={home} bottom={inset + DOCKED_LIFT} />,
+        Docked: () => <FindNumber bar={bar} path={path} bottom={inset + DOCKED_LIFT} />,
       })}
     </FindRoom>
   );
@@ -132,16 +131,16 @@ function Finding({ children }: { readonly children: ReactNode }) {
 /**
  * The `#`, its bottom `bottom` points over the window's, and the drums over
  * it while open, over a layer across the whole window that closes them on a
- * tap (`FindPress.Outside`). On the home list (`home`) the `#` is the last
- * button of the find bar (`FindBar`), which holds search and `All at once`.
+ * tap (`FindPress.Outside`). The `#` is the last button of the find bar
+ * (`FindBar`) of the screen at `path`, after `Search`.
  */
 function FindNumber({
   bar,
-  home,
+  path,
   bottom,
 }: {
   readonly bar: Bar;
-  readonly home: boolean;
+  readonly path: string;
   readonly bottom: number;
 }) {
   const [state, setFind] = useAtom(find);
@@ -229,13 +228,7 @@ function FindNumber({
           />
         ),
       })}
-      {home && <FindBar bottom={bottom} drums={drums} drumsOpen={open} hash={hash} />}
-      {!home && (
-        <View testID="find" pointerEvents="box-none" style={[styles.find, { bottom }]}>
-          {drums}
-          {hash(true)}
-        </View>
-      )}
+      <FindBar path={path} bottom={bottom} drums={drums} drumsOpen={open} hash={hash} />
     </>
   );
 }
@@ -266,7 +259,6 @@ function Act({
 }
 
 const styles = StyleSheet.create({
-  find: { position: 'absolute', left: 12, right: 12, alignItems: 'flex-end', gap: HASH_GAP },
   drums: { flex: 0, alignSelf: 'stretch' },
   acts: { flexDirection: 'row', gap: HASH_GAP },
   act: {

@@ -6,7 +6,6 @@ import { Player } from '~/player/player';
 import type { SearchMode } from '~/reader/place';
 
 import {
-  askTiles,
   type Control,
   drawn,
   inReach,
@@ -15,6 +14,7 @@ import {
   showTiles,
   type Stood,
   Tiles,
+  tilesAt,
 } from './finding';
 
 /** A seeded run of numbers, so a failing sequence comes back the same. */
@@ -29,57 +29,60 @@ const seeded = (start: number) => {
 const modes: ReadonlyArray<SearchMode> = ['off', 'field', 'about'];
 const allTiles: ReadonlyArray<Tiles> = [
   Tiles.Hidden(),
-  Tiles.Asked(),
   Tiles.Shown({ stood: { offset: 120, cover: 0 } }),
 ];
 
 describe('the find bar row', () => {
-  test('folded, it holds Search, All at once and the # in that order', () => {
-    expect(drawn(rowOf('off', Tiles.Hidden()))).toEqual(['search', 'grid', 'hash']);
+  test('folded, it holds Search then the #, and no All at once', () => {
+    expect(drawn(rowOf('off', Tiles.Hidden()))).toEqual(['search', 'hash']);
   });
 
-  test('search open, from Search or from About this hymn, draws the box, the # and Cancel, and no All at once', () => {
+  test('search open, from Search or from About this hymn, draws the box, the # and Cancel', () => {
     for (const mode of ['field', 'about'] as const)
       for (const state of allTiles)
         expect(drawn(rowOf(mode, state))).toEqual(['box', 'hash', 'cancel']);
   });
 
-  test('while the tiles are asked for or show, the # alone stands', () => {
-    expect(drawn(rowOf('off', Tiles.Asked()))).toEqual(['hash']);
-    expect(drawn(rowOf('off', allTiles[2]!))).toEqual(['hash']);
+  test('the tiles belong to the home list: a hymn page reads them hidden, and its bar stays Search then #', () => {
+    for (const state of allTiles) {
+      expect(tilesAt(state, '/')).toEqual(state);
+      expect(drawn(rowOf('off', tilesAt(state, '/hymns/8')))).toEqual(['search', 'hash']);
+    }
   });
 
-  test('every row draws exactly one #, at most one All at once and a search box exactly while search is open', () => {
+  test('while the tiles show, the # alone stands', () => {
+    expect(drawn(rowOf('off', allTiles[1]!))).toEqual(['hash']);
+  });
+
+  test('every row draws exactly one # and a search box exactly while search is open', () => {
     for (const mode of modes)
       for (const state of allTiles) {
         const row: Row = rowOf(mode, state);
         const controls = drawn(row);
         expect({
           hashes: controls.filter((c) => c === 'hash').length,
-          grids: controls.filter((c) => c === 'grid').length <= 1,
           box: controls.includes('box'),
-        }).toEqual({ hashes: 1, grids: true, box: mode !== 'off' });
+        }).toEqual({ hashes: 1, box: mode !== 'off' });
       }
   });
 
   test('while the drums are open, inReach names the # alone', () => {
-    const controls: ReadonlyArray<Control> = ['search', 'grid', 'box', 'cancel', 'hash'];
+    const controls: ReadonlyArray<Control> = ['search', 'box', 'cancel', 'hash'];
     expect(controls.filter((c) => inReach(c, true))).toEqual(['hash']);
     expect(controls.filter((c) => inReach(c, false))).toEqual([...controls]);
   });
 });
 
-describe('All at once, asked by the bar and shown by the home screen', () => {
-  test('over generated presses, each zoom reads the list place once, at its first show', () => {
+describe('All at once, shown by the home screen', () => {
+  test('over generated zooms, each zoom reads the list place once, at its first show', () => {
     const next = seeded(0x7a11e5);
     for (let run = 0; run < 40; run++) {
       let state: Tiles = Tiles.Hidden();
       // The place the current zoom took, once it shows.
       let took = Option.none<Stood>();
       for (let step = 0; step < 12; step++) {
-        const pick = next(3);
-        if (pick === 0) state = askTiles(state);
-        else if (pick === 1) {
+        const pick = next(2);
+        if (pick === 0) {
           const stood = { offset: next(5000), cover: next(60) };
           state = showTiles(state, stood);
           if (Option.isNone(took)) took = Option.some(stood);
@@ -93,11 +96,6 @@ describe('All at once, asked by the bar and shown by the home screen', () => {
         expect(stood).toEqual(took);
       }
     }
-  });
-
-  test('a second press on All at once leaves asked or shown tiles as they are', () => {
-    expect(askTiles(Tiles.Asked())).toEqual(Tiles.Asked());
-    expect(askTiles(allTiles[2]!)).toEqual(allTiles[2]!);
   });
 });
 

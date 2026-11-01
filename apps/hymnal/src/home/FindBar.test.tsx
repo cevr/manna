@@ -18,10 +18,14 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Pressable, Text } from 'react-native';
 
-import { type SearchMode, searchOpen } from '~/reader/place';
+import { searchAt, type Searching, searchOpen } from '~/reader/place';
 
 import { FindBar } from './FindBar';
 import { Tiles, tiles } from './finding';
+
+/** The screens the bar stands on: the home list, and a hymn page, where the bar is the same. */
+const HOME = '/';
+const PAGE = '/hymns/8';
 
 /** The `#` the player layer hands the bar, as `LivePlayer` draws it: one pressable, on a disk or not. */
 const hash = () => (
@@ -32,13 +36,26 @@ const hash = () => (
 
 const rows: ReadonlyArray<{
   readonly name: string;
-  readonly mode: SearchMode;
+  readonly path: string;
+  readonly open: Option.Option<Searching>;
   readonly shown: Tiles;
 }> = [
-  { name: 'folded', mode: 'off', shown: Tiles.Hidden() },
-  { name: 'open', mode: 'field', shown: Tiles.Hidden() },
-  { name: 'open for About this hymn', mode: 'about', shown: Tiles.Hidden() },
-  { name: 'tiles', mode: 'off', shown: Tiles.Shown({ stood: { offset: 0, cover: 0 } }) },
+  { name: 'folded', path: HOME, open: Option.none(), shown: Tiles.Hidden() },
+  { name: 'open', path: HOME, open: searchAt(HOME, 'field'), shown: Tiles.Hidden() },
+  {
+    name: 'open for About this hymn',
+    path: HOME,
+    open: searchAt(HOME, 'about'),
+    shown: Tiles.Hidden(),
+  },
+  {
+    name: 'tiles',
+    path: HOME,
+    open: Option.none(),
+    shown: Tiles.Shown({ stood: { offset: 0, cover: 0 } }),
+  },
+  { name: 'folded on a hymn page', path: PAGE, open: Option.none(), shown: Tiles.Hidden() },
+  { name: 'open on a hymn page', path: PAGE, open: searchAt(PAGE, 'field'), shown: Tiles.Hidden() },
 ];
 
 /**
@@ -61,8 +78,13 @@ const named = (view: Element) =>
     onSome: (id) => `${view.tagName.toLowerCase()}#${id}`,
   });
 
-/** Mounts the bar in `mode` with `shown` tiles, the drums open or shut, and returns the views of it that take a touch, the `#` left out. */
-const touchable = (mode: SearchMode, shown: Tiles, drumsOpen: boolean): ReadonlyArray<string> => {
+/** Mounts the bar on the screen at `path` with the search `open` and `shown` tiles, the drums open or shut, and returns the views of it that take a touch, the `#` left out. */
+const touchable = (
+  path: string,
+  open: Option.Option<Searching>,
+  shown: Tiles,
+  drumsOpen: boolean,
+): ReadonlyArray<string> => {
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host);
@@ -70,11 +92,11 @@ const touchable = (mode: SearchMode, shown: Tiles, drumsOpen: boolean): Readonly
     root.render(
       <RegistryProvider
         initialValues={[
-          [searchOpen, mode],
+          [searchOpen, open],
           [tiles, shown],
         ]}
       >
-        <FindBar bottom={0} drums={<></>} drumsOpen={drumsOpen} hash={hash} />
+        <FindBar path={path} bottom={0} drums={<></>} drumsOpen={drumsOpen} hash={hash} />
       </RegistryProvider>,
     ),
   );
@@ -98,15 +120,18 @@ const touchable = (mode: SearchMode, shown: Tiles, drumsOpen: boolean): Readonly
 
 describe('the find bar over the open drums', () => {
   it('in every row, every view of the bar but the # lets a touch through to the backdrop', () => {
-    const taking = rows.map(({ name, mode, shown }) => [name, touchable(mode, shown, true)]);
+    const taking = rows.map(({ name, path, open, shown }) => [
+      name,
+      touchable(path, open, shown, true),
+    ]);
     expect(taking).toEqual(rows.map(({ name }) => [name, []]));
   });
 
   it('with the drums shut, its controls take a touch', () => {
-    expect(touchable('off', Tiles.Hidden(), false)).toEqual(
-      expect.arrayContaining(['button#find-search', 'button#find-all']),
+    expect(touchable(PAGE, Option.none(), Tiles.Hidden(), false)).toEqual(
+      expect.arrayContaining(['button#find-search']),
     );
-    expect(touchable('field', Tiles.Hidden(), false)).toEqual(
+    expect(touchable(PAGE, searchAt(PAGE, 'field'), Tiles.Hidden(), false)).toEqual(
       expect.arrayContaining(['input#find-box', 'button#find-cancel']),
     );
   });

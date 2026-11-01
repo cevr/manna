@@ -21,7 +21,7 @@ import { moreLike } from '~/hymns/meaning';
 
 import { aboutHref, MORE_LIKE } from './About';
 import { HymnPage } from './HymnPage';
-import { openAtTopic, searchOpen, searchQuery } from './place';
+import { modeAt, openAtTopic, searchOpen, searchQuery } from './place';
 
 /** The hymn numbers of the rows `More like this` shows, in order. */
 const likeRows = (html: string) =>
@@ -176,7 +176,7 @@ describe('About this hymn', () => {
       routed,
       topic: registry.get(openAtTopic),
       query: registry.get(searchQuery),
-      searching: registry.get(searchOpen),
+      searching: modeAt(registry.get(searchOpen), '/'),
     }).toEqual({
       routed: ['dismissAll'],
       topic: Option.fromUndefinedOr(topicsOf(100)[0]?.name),
@@ -193,7 +193,7 @@ describe('About this hymn', () => {
     expect({
       routed,
       query: registry.get(searchQuery),
-      searching: registry.get(searchOpen),
+      searching: modeAt(registry.get(searchOpen), '/'),
     }).toEqual({
       routed: ['dismissAll'],
       query: passageQuery(first),
@@ -215,7 +215,7 @@ describe('About this hymn', () => {
     using _route = routeTo('100');
     using _stack = sheetOver([]);
     const registry = clickIn(<AboutRoute />, '[data-testid="about-scripture-0"]');
-    expect({ routed, searching: registry.get(searchOpen) }).toEqual({
+    expect({ routed, searching: modeAt(registry.get(searchOpen), '/') }).toEqual({
       routed: ['replace /'],
       searching: 'about',
     });

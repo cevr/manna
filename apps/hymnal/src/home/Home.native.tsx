@@ -1,8 +1,7 @@
 /**
  * A phone's home screen: the title "Hymns" and a settings button over the
  * hymn list. The ways to find a hymn stand in the find bar at the list's
- * foot (`FindBar.tsx`, drawn by the player layer): `Search`, `All at once`
- * and the `#`.
+ * foot (`FindBar.tsx`, drawn by the player layer): `Search` and the `#`.
  *
  * The list's content is a spacer the title's height, the row of the list's
  * tabs (`TabList`, `TabRow`), then the rows; the list opens at its top, with
@@ -16,23 +15,22 @@
  * `PinnedTabs`): a layer, so the list's content and offset never move for
  * it, with the pinned topic row under it (`PullDown.cover`).
  *
- * A press on the find bar's `Search` enters search mode: the bar grows into
- * the search box, and the results show over the list. A passage tapped in
- * `About this hymn` enters it too, with its query and the keyboard down
- * (`searchOpen`). The list stays mounted beneath, untouchable and hidden
- * from assistive technology, so it keeps its place. The bar's Cancel, or
- * Android's Back while the home screen is in focus (`searchBack`), clears
- * the query and shows the list as it was.
+ * A press on the find bar's `Search` enters search mode on this screen: the
+ * bar grows into the search box, and the results show over the list
+ * (`StackBottom`, `Search.tsx`). A passage tapped in `About this hymn` enters
+ * it too, with its query and the keyboard down (`searchOpen`). The list stays
+ * mounted beneath, out of reach, so it keeps its place. The bar's Cancel, or
+ * Android's Back, clears the query and shows the list as it was.
  *
- * The find bar's `All at once` asks for the tiles (`tiles`); the home screen
- * shows them with the list's place read then (`showTiles`).
+ * A tap on a group's heading shows `All at once` (`tiles`) with the list's
+ * place read then (`showTiles`).
  */
 
 import { useAtom, useAtomSet, useAtomSubscribe, useAtomValue } from '@effect/atom-react';
-import { Link, useLinkTo, useNavigation, useSafeAreaInsets } from 'one';
-import { Effect, Fiber, Option } from 'effect';
-import { type ReactNode, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Link, useLinkTo, useSafeAreaInsets } from 'one';
+import { Option } from 'effect';
+import { type ReactNode, useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   type SharedValue,
   useAnimatedStyle,
@@ -41,20 +39,16 @@ import Animated, {
 
 import bundled from 'virtual:hymnal-indexes';
 
-import { hymnAt, hymns } from '~/hymns/hymns';
-import { aboutQuery, aboutShown, afterPause, readMeaningSoon } from '~/hymns/meaning';
-import { find, hymnIndex } from '~/hymns/search';
+import { hymns } from '~/hymns/hymns';
 import { groupOffset, groupStarts, HymnList } from '~/reader/HymnList.native';
 import { shelvesOf } from '~/reader/lists';
-import { hymnsOffset, openAtTopic, searchOffset, searchOpen, searchQuery } from '~/reader/place';
+import { hymnsOffset, openAtTopic } from '~/reader/place';
 import { settings } from '~/store';
 import { color } from '~/color';
 import { plain, useCue } from '~/feel/cue';
 
 import { AllAtOnce } from './AllAtOnce';
-import { searchBack } from './back';
 import { hymnHref, hymnOf } from './Browse';
-import { useCancelSearch } from './FindBar';
 import { showTiles, type Stood, Tiles, tiles } from './finding';
 import { Gear } from './Gear';
 import { PinnedTabs, type TabReveal, useTabReveal } from './PinnedTabs';
@@ -63,7 +57,7 @@ import { groupAt, openingOffset, type TabName, tabNamed, tabsOf } from './tabs';
 
 /**
  * A layer out of reach, untouchable and unseen by assistive technology: the
- * list beneath search mode or `All at once` (kept in place). React Native turns `aria-hidden` into
+ * list beneath `All at once` (kept in place). React Native turns `aria-hidden` into
  * `accessibilityElementsHidden` on iOS and `no-hide-descendants` on Android,
  * and the web's renderer writes it as the attribute.
  */
@@ -76,7 +70,6 @@ const titleSpace = 8;
 export function Home() {
   const insets = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();
-  const searching = useAtomValue(searchOpen) !== 'off';
   const title = Math.ceil(titleLine * fontScale) + titleSpace;
   const scroll = useSharedValue(0);
   // The pinned tab row rests where the list's own row meets the list's top: one title's height down.
@@ -87,14 +80,6 @@ export function Home() {
     cue(plain('zoom-out'));
     setTiles((state) => showTiles(state, { offset: scroll.value, cover: reveal.cover.value }));
   };
-  // The find bar asks for the tiles; the list's place is read here, once, as they show.
-  useAtomSubscribe(
-    tiles,
-    (state) => {
-      if (Tiles.$is('Asked')(state)) zoomOut();
-    },
-    { immediate: true },
-  );
   const zoomIn = () => {
     cue(plain('zoom-in'));
     setTiles(Tiles.Hidden());
@@ -105,19 +90,16 @@ export function Home() {
   return (
     <View style={styles.screen}>
       <View style={[styles.below, { marginTop: insets.top }]}>
-        <View style={styles.fill} {...(searching && outOfReach)}>
-          <TabList
-            title={title}
-            scroll={scroll}
-            reveal={reveal}
-            zoom={zoom}
-            onZoomOut={zoomOut}
-            onZoomIn={zoomIn}
-          >
-            <Title height={title} scroll={scroll} />
-          </TabList>
-        </View>
-        {searching && <Search />}
+        <TabList
+          title={title}
+          scroll={scroll}
+          reveal={reveal}
+          zoom={zoom}
+          onZoomOut={zoomOut}
+          onZoomIn={zoomIn}
+        >
+          <Title height={title} scroll={scroll} />
+        </TabList>
       </View>
       {/* The status bar's ground: rows and the title pass under it unseen. */}
       <View style={[styles.scrim, { height: insets.top }]} />
@@ -321,82 +303,6 @@ function Title({
   );
 }
 
-/**
- * Search mode's results, over the list and above the find bar, which holds
- * the search box and Cancel: the hymns the query finds, each found by a line
- * other than its title showing that line. Search mode builds the search's
- * index (`hymnIndex`) once it is on screen, while the box's keyboard comes
- * up, and reads the meaning table in a timer task after it
- * (`readMeaningSoon`), so neither the first keystroke nor the first pause
- * waits on them and no one task holds the thread for both; the app's start
- * never does. After a pause in the typing (`afterPause`), the hymns
- * about the query stand under its strongest matches.
- */
-function Search() {
-  const query = useAtomValue(searchQuery);
-  const shown = useDeferredValue(query);
-  const results = useMemo(() => {
-    // An empty query lists nothing here: the list beneath shows instead.
-    const found = Option.match(
-      Option.liftPredicate(shown, (q) => q !== ''),
-      {
-        onNone: () => [],
-        onSome: (q) => find(hymnIndex(), q),
-      },
-    );
-    return {
-      hymns: found.map((f) => f.hymn),
-      lines: new Map(
-        found.flatMap((f) => Option.toArray(f.line).map((line) => [f.hymn.number, line] as const)),
-      ),
-    };
-  }, [shown]);
-  // The hymns about the query wait for a pause in the typing, and show only for the query shown.
-  const [asked, setAsked] = useState('');
-  useEffect(() => {
-    const pause = Effect.runFork(
-      afterPause(query).pipe(Effect.tap((paused) => Effect.sync(() => setAsked(paused)))),
-    );
-    return () => {
-      Effect.runFork(Fiber.interrupt(pause));
-    };
-  }, [query]);
-  const near = useMemo(
-    () => aboutQuery(asked).flatMap((n) => Option.toArray(hymnAt(String(n)))),
-    [asked],
-  );
-  const about = useMemo(() => aboutShown(asked, shown, near), [near, asked, shown]);
-  const cancel = useCancelSearch();
-  useEffect(() => {
-    hymnIndex();
-    return readMeaningSoon();
-  }, []);
-  const navigation = useNavigation();
-  useEffect(() => {
-    const back = BackHandler.addEventListener(
-      'hardwareBackPress',
-      searchBack({ isFocused: () => navigation.isFocused(), cancel }),
-    );
-    return () => back.remove();
-  }, []);
-  return (
-    <View style={styles.search}>
-      {shown !== '' && (
-        // A new query's results open at their top.
-        <HymnList
-          key={shown}
-          hymns={results.hymns}
-          lines={results.lines}
-          about={about}
-          hrefOf={(n) => `/hymns/${n}`}
-          offset={searchOffset}
-          empty={`No hymn matches “${shown}”.`}
-        />
-      )}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.ground },
   below: { flex: 1, overflow: 'hidden' },
@@ -423,5 +329,4 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   pressed: { opacity: 0.6 },
-  search: { ...StyleSheet.absoluteFill, backgroundColor: color.ground },
 });

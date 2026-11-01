@@ -1,13 +1,15 @@
 /**
- * The home list's find bar (`find-bar`), drawn by the player layer where the
- * bar's `#` stands (`findAt`), so it shares the `#`'s place, the room the
- * lists leave for it (`findRoom`) and the drums' backdrop.
+ * The find bar (`find-bar`), drawn by the player layer on every screen where
+ * the bar's `#` stands (`findAt`), the home list and a hymn page alike, so
+ * it shares the `#`'s place, the room the lists leave for it (`findRoom`)
+ * and the drums' backdrop.
  *
- * Folded, it is a capsule at the bottom right with three ways to find:
- * `Search`, `All at once` and the `#`. A press on `Search` opens search
- * (`searchOpen`): the capsule grows leftward across the screen into a
- * focused search box, the `#` keeps the capsule's trailing end without its
- * own disk, `All at once` leaves, and `Cancel` stands at the bar's right.
+ * Folded, it is a capsule at the bottom right with two ways to find:
+ * `Search` and the `#`. A press on `Search` opens search on the screen at
+ * the bar's `path` (`searchOpen`, keyed by the path): the capsule grows
+ * leftward across the screen into a focused search box, the `#` keeps the
+ * capsule's trailing end without its own disk, and `Cancel` stands at the
+ * bar's right. The results show over the screen (`StackBottom.tsx`).
  * `Cancel` folds it back. With Reduce Motion on the growth is a cross-fade
  * alone. While the keyboard is up the bar rides 8 points over its top.
  * While the drums are open only the `#` takes a touch (`inReach`): every
@@ -15,7 +17,7 @@
  * through to the backdrop beneath it, which closes the drums.
  */
 
-import { useAtom, useAtomSet } from '@effect/atom-react';
+import { useAtom, useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import {
   type ComponentRef,
@@ -50,10 +52,9 @@ import { plain, useCue } from '~/feel/cue';
 import { HASH, HASH_GAP } from '~/player/bar';
 import { MOST_SCALE } from '~/player/DialView';
 import { useReduceMotion } from '~/player/motion';
-import { searchOpen, searchQuery } from '~/reader/place';
+import { modeAt, searchAt, searchOpen, searchQuery } from '~/reader/place';
 
-import { GridMark } from './AllAtOnce';
-import { askTiles, type Control, drawn, inReach, rowOf, tiles } from './finding';
+import { type Control, drawn, inReach, rowOf, tiles, tilesAt } from './finding';
 import { Magnifier } from './Magnifier';
 import { searchLabel } from './Results';
 
@@ -62,8 +63,8 @@ const outOfReach = { pointerEvents: 'none', 'aria-hidden': true } as const;
 /** The capsule while the drums are open: a touch on its own background passes through to the backdrop; its `#` still takes one. */
 const passThrough = { pointerEvents: 'box-none' } as const;
 
-/** The folded capsule's width: its three buttons side by side. */
-const FOLDED = 3 * HASH;
+/** The folded capsule's width: its two buttons side by side. */
+const FOLDED = 2 * HASH;
 /** The space between the open capsule and `Cancel`. */
 const CANCEL_GAP = 12;
 
@@ -74,7 +75,7 @@ export const useCancelSearch = () => {
   return () => {
     setQuery('');
     Keyboard.dismiss();
-    setMode('off');
+    setMode(Option.none());
   };
 };
 
@@ -120,25 +121,29 @@ const useHeld = <Host extends HostInstance>() => {
 };
 
 /**
- * The bar, its bottom `bottom` points over the window's, with the drums
- * (`drums`) over it while they are open (`drumsOpen`). `hash` draws the `#`,
- * on its own disk or, inside the open bar, without one.
+ * The bar of the screen at `path`, its bottom `bottom` points over the
+ * window's, with the drums (`drums`) over it while they are open
+ * (`drumsOpen`). `hash` draws the `#`, on its own disk or, inside the open
+ * bar, without one. The tiles of `All at once` belong to the home list (`/`):
+ * on any other screen the bar reads them hidden.
  */
 export function FindBar({
+  path,
   bottom,
   drums,
   drumsOpen,
   hash,
 }: {
+  readonly path: string;
   readonly bottom: number;
   readonly drums: ReactNode;
   readonly drumsOpen: boolean;
   readonly hash: (disk: boolean) => ReactNode;
 }) {
-  const [mode, setMode] = useAtom(searchOpen);
-  const [shown, setTiles] = useAtom(tiles);
+  const [searching, setSearching] = useAtom(searchOpen);
+  const shown = useAtomValue(tiles);
   const [query, setQuery] = useAtom(searchQuery);
-  const row = rowOf(mode, shown);
+  const row = rowOf(modeAt(searching, path), tilesAt(shown, path));
   const cancel = useCancelSearch();
   const cue = useCue();
   const accent = useAccent();
@@ -184,7 +189,9 @@ export function FindBar({
   const startSearch = () => {
     cue(plain('tab'));
     setAsked(true);
-    setMode('field');
+    // One search at a time: opened here, it leaves any other screen, and starts with an empty box.
+    setQuery('');
+    setSearching(searchAt(path, 'field'));
   };
   const controls = drawn(row);
   return (
@@ -215,19 +222,6 @@ export function FindBar({
                   style={({ pressed }) => [styles.button, pressed && styles.pressed]}
                 >
                   <Magnifier />
-                </Pressable>
-              </Animated.View>
-            )}
-            {controls.includes('grid') && (
-              <Animated.View style={faded} {...reach('grid')}>
-                <Pressable
-                  testID="find-all"
-                  role="button"
-                  aria-label="All at once"
-                  onPress={() => setTiles(askTiles)}
-                  style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-                >
-                  <GridMark />
                 </Pressable>
               </Animated.View>
             )}

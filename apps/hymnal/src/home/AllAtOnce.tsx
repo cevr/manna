@@ -199,18 +199,6 @@ function TileView({
   );
 }
 
-/** The grid button's mark: four squares, in the accent. */
-export function GridMark() {
-  const accent = useAccent();
-  return (
-    <View style={styles.mark} aria-hidden>
-      {[0, 1, 2, 3].map((i) => (
-        <View key={i} style={[styles.square, { borderColor: accent }]} />
-      ))}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: { ...StyleSheet.absoluteFill, zIndex: 1, backgroundColor: color.ground },
   bar: {
@@ -246,6 +234,4 @@ const styles = StyleSheet.create({
   },
   span: { position: 'absolute', top: 0, bottom: 0 },
   empty: { padding: 16, fontSize: 15, color: color.muted },
-  mark: { width: 20, height: 20, flexDirection: 'row', flexWrap: 'wrap', gap: 2 },
-  square: { width: 9, height: 9, borderRadius: 2, borderWidth: 1.5 },
 });
