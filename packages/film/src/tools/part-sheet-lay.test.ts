@@ -44,7 +44,8 @@ const OUTLINE_INK: Rgb = [20, 16, 14];
 /** An outline's ramp into its cloth, L* 46. */
 const RAMP: Rgb = [118, 108, 96];
 
-const TORSO: Box = { x0: 6, y0: 4, x1: 42, y1: 44 };
+/** The torso in a picture `h` px tall: 4 px in from its top and foot. */
+const torsoOf = (h: number): Box => ({ x0: 6, y0: 4, x1: 42, y1: h - 4 });
 const ARM: Box = { x0: 18, y0: 8, x1: 30, y1: 40 };
 const inside = (b: Box, x: number, y: number) => x >= b.x0 && x < b.x1 && y >= b.y0 && y < b.y1;
 
@@ -55,9 +56,6 @@ const rasterOf = (colour: (x: number, y: number) => Rgb, w = W, h = W): Raster =
   return { width: w, height: h, rgba };
 };
 
-const FIGURE = Uint8Array.from({ length: W * W }, (_, i) =>
-  Number(inside(TORSO, i % W, Math.floor(i / W))),
-);
 const corners = (b: Box): ReadonlyArray<readonly [number, number]> => [
   [b.x0, b.y0],
   [b.x1, b.y0],
@@ -69,26 +67,31 @@ type Paint = (x: number, y: number) => Rgb;
 type Still = { readonly name: string; readonly polygon: ReadonlyArray<readonly [number, number]> };
 
 /**
- * A torso of `cloth` (flat olive unless given), cut into the `still` parts
- * (one torso unless given), with a cream arm in `arm` in front of it that
- * moves, and okra's answer laid on it: the view with the arm's place
- * painted, the cloth at its edge and `inner` more than `margin` px in from
- * it (2 unless given, where the seam never reads).
+ * A torso of `cloth` (flat olive unless given), in a picture `h` px tall
+ * (`W` unless given), cut into the `still` parts (one torso unless given),
+ * with a cream arm in `arm` in front of it that moves, and okra's answer
+ * laid on it: the view with the arm's place painted, the cloth at its edge
+ * and `inner` more than `margin` px in from it (2 unless given, where the
+ * seam never reads).
  */
 const layOn =
   (
     arm: Box,
     {
+      h = W,
       cloth = (): Rgb => OLIVE,
       margin = 2,
-      still = [{ name: 'torso', polygon: corners(TORSO) }],
-    }: { cloth?: Paint; margin?: number; still?: ReadonlyArray<Still> } = {},
+      still = [{ name: 'torso', polygon: corners(torsoOf(h)) }],
+    }: { h?: number; cloth?: Paint; margin?: number; still?: ReadonlyArray<Still> } = {},
   ) =>
   (inner: Paint) => {
+    const body = torsoOf(h);
     const torso = (x: number, y: number) =>
-      Bool.match(inside(TORSO, x, y), { onTrue: () => cloth(x, y), onFalse: () => PAPER });
-    const view = rasterOf((x, y) =>
-      Bool.match(inside(arm, x, y), { onTrue: () => CREAM, onFalse: () => torso(x, y) }),
+      Bool.match(inside(body, x, y), { onTrue: () => cloth(x, y), onFalse: () => PAPER });
+    const view = rasterOf(
+      (x, y) => Bool.match(inside(arm, x, y), { onTrue: () => CREAM, onFalse: () => torso(x, y) }),
+      W,
+      h,
     );
     const cut: PartCut = {
       parts: [
@@ -98,10 +101,16 @@ const layOn =
     };
     const m = margin;
     const within = { x0: arm.x0 + m, y0: arm.y0 + m, x1: arm.x1 - m, y1: arm.y1 - m };
-    const answer = rasterOf((x, y) =>
-      Bool.match(inside(within, x, y), { onTrue: () => inner(x, y), onFalse: () => torso(x, y) }),
+    const answer = rasterOf(
+      (x, y) =>
+        Bool.match(inside(within, x, y), { onTrue: () => inner(x, y), onFalse: () => torso(x, y) }),
+      W,
+      h,
     );
-    return measuresOf(view, cut, FIGURE, answer);
+    const figure = Uint8Array.from({ length: W * h }, (_, i) =>
+      Number(inside(body, i % W, Math.floor(i / W))),
+    );
+    return measuresOf(view, cut, figure, answer);
   };
 
 /** The measures of `answer` laid on `view`, cut by `cut` within `figure`, with the arm moving. */
@@ -259,6 +268,23 @@ describe('the part sheet lay', () => {
     expect(missedBars(grainy)).toContain('grain');
     expect(asCloth.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'within' })]);
     expect(missedBars(asCloth)).not.toContain('grain');
+  });
+
+  test('fine grain in one cell among smooth cells misses the grain bar, though pooled over the part it is under the bar', () => {
+    // the arm takes four 24 px cells down x 24..47; the flecks of the test above fill only the cell
+    // y 24..47, about 7 % of it, so over the part's paint they are under the 3 % the bar allows
+    const arm = { x0: 24, y0: 8, x1: 40, y1: 88 };
+    const fleck = (x: number, y: number): Rgb =>
+      Bool.match(y >= 24 && y < 48 && (x + 5 * y) % 14 === 0, {
+        onTrue: () => FLECK,
+        onFalse: () => OLIVE,
+      });
+    const patched = layOn(arm, { margin: 0, h: 96 })(fleck);
+    expect(patched.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'outside' })]);
+    expect(missedBars(patched)).toContain('grain');
+    // each of the four cells is read, and the flecked one stands for the part
+    expect(patched.grain[0]?.fine.cells).toBe(4);
+    expect(patched.grain[0]?.fine.painted.share).toBeGreaterThan(0.06);
   });
 
   test('fine grain in cloth as dark as L* 40 misses the grain bar; an ink outline through it is not grain; smooth dark paint meets it', () => {
