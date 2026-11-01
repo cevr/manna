@@ -2,14 +2,16 @@
 // its uv environment (`uv.lock`'s, under `FILM_READER_HOME`); and, with no
 // environment there, a refusal that names the line making one; and the
 // committed folder's roles, as its imports derive them; the train config
-// against model.py's defaults; and the unit tests' own file, which reads no
-// real folder. Slow: it starts Python and imports torch, and it reads the
-// repo's files.
+// against model.py's defaults; the unit tests' own file, which reads no
+// real folder; and the import scan against CPython's `ast`. Slow: it starts
+// Python and imports torch, and it reads the repo's files.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { ConfigProvider, Effect, FileSystem, Layer, Schema } from 'effect';
-import { CastReader } from './reader.ts';
+import { ConfigProvider, Effect, Exit, FileSystem, Layer, Schema } from 'effect';
+import { ChildProcess, ChildProcessSpawner } from 'effect/process';
+import { collect } from '../process.ts';
+import { CastReader, importsOf } from './reader.ts';
 import { trainStage } from './stages.ts';
 
 const live = CastReader.layer.pipe(Layer.provideMerge(BunServices.layer));
@@ -21,6 +23,80 @@ const decodeTrainConfig = Schema.decodeUnknownSync(
       backbone: Schema.String,
       inputSide: Schema.Struct({ width: Schema.Finite, height: Schema.Finite }),
     }),
+  ),
+);
+
+/**
+ * The differential check's programs and CPython's reading of them, as JSON
+ * lines (`{src, imports}`): from a fixed seed, four families of fragments
+ * (statement forms and one-line suites; quotes in format specs; nested
+ * fields, comments in fields and other field forms; spec quotes beside
+ * imports) joined at random around one import (at a statement's start,
+ * after a `;` or a `:`, indented, parenthesized, relative), each kept only
+ * when `ast` parses it, 500 per family. `imports` is every first name an
+ * import names, as the scan names them (`from . import a` names `a`).
+ */
+const ORACLE = String.raw`
+import ast, json, random, sys, warnings
+
+warnings.simplefilter("ignore")
+COMMON = [
+    "'", '"', "'''", '"""', "''''", "f'", 'f"', "f'''", 'f"""', "rb'", 'r"', "b'", "fr'",
+    "\\'", '\\"', "\\\\", "{", "}", "{{", "}}", ":", ";", "\n", "\n    ", " ", "+", ",",
+    "x = ", "f(", "(", ")", "[", "]", "#", "\\\n", "a", "1", "import", "from", "as h",
+]
+FAMILIES = [
+    COMMON + ["lambda: ", "if x: ", "else: ", "def g(): ", "class C: ", "try: ", "except E: ",
+              "pass", "{'k': 1}", "x[1:2]", "%", "{y}", "{x!r}", "{x:'>3}"],
+    COMMON + ["f\"{x:'>3}\"", "f'{x:\">3}'", "f\"{x:'''}\"", "f\"{x:'", "f'{x:\"", "{x:'}",
+              "}\"", "}'", "%H'%M", "{x:{'>'}3}", "{x:{y:'<'}}"],
+    COMMON + ["{x}", "{x!r}", "{x:>3}", "{f'{y}'}", "{ {'a': 1}['a'] }", "{x[1:2]}",
+              "{(lambda: 1)()}", "\\N{BULLET}", "{x:{w}}", "{x=}", "{x # it's\n}",
+              "{x # '''\n}", "}\"", "}'"],
+    ["f\"{x:'>3}\"", "f'{x:\">3}'", "f\"{x:'''}\"", "f\"{x:{'>'}3}\"", "f'''{x:'}'''", "'", '"',
+     "; ", "\n", "x = ", " + ", "#", "(", ")"],
+]
+IMPORTS = ["\nimport helper\n", "; import helper", ": import helper",
+           "\nfrom helper import (a,\n b)\n", "\nfrom . import helper\n", "\n    import helper\n"]
+
+
+def imports(tree):
+    names = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names += [n.name.split(".")[0] for n in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            if node.module:
+                names.append(node.module.split(".")[0])
+            else:
+                names += [n.name for n in node.names]
+    return sorted(set(names))
+
+
+rng = random.Random(1)
+seen = set()
+for family in FAMILIES:
+    found = tries = 0
+    while found < 500 and tries < 10_000_000:
+        tries += 1
+        parts = [rng.choice(family) for _ in range(rng.randint(2, 14))]
+        parts.insert(rng.randint(0, len(parts)), rng.choice(IMPORTS))
+        src = "x = " + "".join(parts) + "\n"
+        if src in seen:
+            continue
+        seen.add(src)
+        try:
+            tree = ast.parse(src)
+        except (SyntaxError, ValueError):
+            continue
+        print(json.dumps({"src": src, "imports": imports(tree)}))
+        found += 1
+`;
+
+/** One program of the oracle's, and the first names CPython's `ast` reads it to import. */
+const decodeProgram = Schema.decodeUnknownSync(
+  Schema.fromJsonString(
+    Schema.Struct({ src: Schema.String, imports: Schema.Array(Schema.String) }),
   ),
 );
 
@@ -105,5 +181,36 @@ describe('cast reader (Python)', () => {
         const unit = yield* fileHere('./reader.test.ts');
         expect(unit).not.toMatch(/@effect\/platform-bun|node:fs|import\.meta/);
       }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    "the import scan, against CPython's ast over 2000 generated programs: it names every import ast reads, or refuses the file, and never misses one in silence",
+    () =>
+      Effect.gen(function* () {
+        const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+        const ran = yield* collect(
+          spawner,
+          ChildProcess.make('python3', ['-I', '-c', ORACLE], { forceKillAfter: '5 seconds' }),
+        );
+        expect(ran.stderr).toBe('');
+        const programs = ran.stdout
+          .trim()
+          .split('\n')
+          .map((line) => decodeProgram(line));
+        expect(programs.length).toBe(2000);
+        const missed: Array<string> = [];
+        let read = 0;
+        for (const { src, imports } of programs) {
+          const scanned = Effect.runSyncExit(importsOf('gen.py', src));
+          if (Exit.isFailure(scanned)) continue;
+          if (imports.some((name) => !scanned.value.includes(name))) missed.push(src);
+          if (imports.length > 0) read++;
+        }
+        expect(missed).toEqual([]);
+        // a scan that refused every file would miss nothing: most programs that import are read
+        expect(read).toBeGreaterThan(programs.length / 5);
+      }).pipe(Effect.provide(BunServices.layer)),
+    // the oracle is one Python process, about 1.5 s, and 2000 scans
+    30_000,
   );
 });
