@@ -102,16 +102,17 @@
               "part": "torso",
               "under": "head",
               "painted": {
-                "share": 0.008,
-                "px": 10258
+                "share": 0,
+                "px": 9780
               },
               "kept": {
-                "share": 0.017,
-                "px": 4361
+                "share": 0.004,
+                "px": 3933
               },
               "verdict": "within"
             }
           ],
+          "step": [],
           "paintUnder": [
             {
               "part": "head",
@@ -179,16 +180,17 @@
         "part": "torso",
         "under": "head",
         "painted": {
-          "share": 0.008,
-          "px": 10258
+          "share": 0,
+          "px": 9780
         },
         "kept": {
-          "share": 0.017,
-          "px": 4361
+          "share": 0.004,
+          "px": 3933
         },
         "verdict": "within"
       }
     ],
+    "step": [],
     "paintUnder": [
       {
         "part": "head",
@@ -205,8 +207,10 @@
     "chromaDrop": 3,
     "grainWithin": 0.5,
     "speckOver": 0.04,
+    "stepWithin": 5,
     "visibleAtRest": 0,
     "leastSeamPairs": 20,
+    "leastStepPairs": 8,
     "leastGrainWindows": 90,
     "leastRegionPx": 100,
     "leastCellPx": 40
