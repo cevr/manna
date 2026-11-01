@@ -34,7 +34,10 @@ review states each finding as `### F<n> <severity>: <what>` with a `Guard
 class:` line (lint, judged, skill, code or none) and a `Cheapest guard:`
 line. A finding given a guard gets an entry, its Source citing the finding
 as `<unit>/<review file> F<n>`, or by the id a review in another form
-gives it (`M1`, `m3`, `o2`); a finding classed `none` needs no entry.
+gives it (`M1`, `m3`, `o2`). The review file's name holds `findings`,
+`review`, `check`, `checks`, `verify`, `report`, `follow-up` or `blocked`
+as one of its dash-joined parts, so `<unit>/spec.md p5` cites no finding.
+A finding classed `none` needs no entry.
 `bun run merge-audit --review <file>`, an optional check, prints each
 finding `routed`, `declined` or `unrouted`, and fails on an unrouted one.
 `packages/scripts/src/lessons/check.ts` holds every entry to its fields and

@@ -203,6 +203,34 @@ describe('the lessons ledger', () => {
     }),
   );
 
+  it.effect(
+    'reads a finding only in a review-shaped file: findings, review, checks, verify, report, follow-up or blocked',
+    () =>
+      Effect.gen(function* () {
+        expect(
+          yield* problemsOf(
+            entry('in-findings', 'none: a reason', 'review', 'unit/rw-round-2-findings.md F1'),
+            entry('in-review', 'none: a reason', 'review', 'unit/review-art-3.md F2'),
+            entry('in-checks', 'none: a reason', 'review', 'run/unit/p1-round-1-checks.md F7'),
+            entry('in-self-check', 'none: a reason', 'review', 'unit/p5-self-check.md F3'),
+            entry('in-verify', 'none: a reason', 'review', 'unit/round-2-verify.md F1'),
+            entry('in-report', 'none: a reason', 'review', 'unit/report.md F3'),
+            entry('in-follow-up', 'none: a reason', 'review', 'unit/follow-up-1.md F2'),
+            entry('in-blocked', 'none: a reason', 'review', 'unit/blocked.md F2 (option B)'),
+            entry('in-spec', 'none: a reason', 'review', 'hymnapp/playbulk/spec.md p5'),
+            entry('in-log', 'none: a reason', 'review', 'unit/log.md v2'),
+            entry('in-preview', 'none: a reason', 'review', 'unit/preview.md F1'),
+            entry('in-a-review-folder', 'none: a reason', 'review', 'review-1/spec.md p5'),
+          ),
+        ).toEqual(
+          ['in-spec', 'in-log', 'in-preview', 'in-a-review-folder'].map(
+            (id) =>
+              `${id}: a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)`,
+          ),
+        );
+      }),
+  );
+
   it.effect('holds each name a guard lists after its file, up to the next file', () =>
     Effect.gen(function* () {
       expect(
