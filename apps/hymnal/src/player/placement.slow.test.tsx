@@ -281,10 +281,10 @@ test('web sheet exposes placement for its named hymn without a mounted reader', 
 });
 
 test('a chordless hymn sheet exposes no placement control or override', () => {
-  using page = mount(126, true, false);
+  using page = mount(225, true, false);
   expect(page.host.querySelector('[aria-label="Chord placement"]')).toBeNull();
   expect(page.host.querySelector('[aria-label="Use global chord placement"]')).toBeNull();
-  expect(page.registry.get(page.reader.placementFor(126))).toBe('inherit');
+  expect(page.registry.get(page.reader.placementFor(225))).toBe('inherit');
 });
 
 test('placement updates real reader anchors in every player state without playback commands', () => {

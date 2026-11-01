@@ -327,9 +327,9 @@ describe('bar J on a hymn page', () => {
       tapKey(page);
       holdAnimations();
       using _held = { [Symbol.dispose]: landAnimations };
-      // Hymn 126 has no chords yet: the panel still closes along its path, drawn as it was.
-      act(() => turned.to(126));
-      expect(page.find('[aria-label="Play hymn 126"]').pipe(Option.isSome)).toBe(true);
+      // Hymn 225 has no chords yet: the panel still closes along its path, drawn as it was.
+      act(() => turned.to(225));
+      expect(page.find('[aria-label="Play hymn 225"]').pipe(Option.isSome)).toBe(true);
       expect(page.find('[data-testid="dials-panel"]').pipe(Option.isSome)).toBe(true);
       act(() => landAnimations());
       expect(page.find('[data-testid="dials-panel"]').pipe(Option.isNone)).toBe(true);
@@ -486,7 +486,7 @@ describe('bar J on a hymn page', () => {
 
   it.live('opens no dials on a hymn with no chords, and its page says it has none yet', () =>
     Effect.sync(() => {
-      using page = mount(route(126));
+      using page = mount(route(225));
       tapKey(page);
       expect(Option.isNone(dial(page, 'Key'))).toBe(true);
       // A boolean, so a failure prints no hymn words.

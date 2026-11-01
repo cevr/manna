@@ -209,7 +209,7 @@ const spellingFaults = (
   );
 };
 
-const CHORDLESS = [126, 181, 220, 225, 262, 292, 403, 453, 481, 580, 663, 664, 687, 693];
+const CHORDLESS = [181, 220, 225, 262, 403, 453, 481, 580, 663, 664, 687, 693];
 const MIXED = [69, 72, 172, 178, 208, 221, 269, 391, 434, 445, 471, 474, 488, 578, 600, 601];
 
 describe('the chords over every compiled hymn', () => {
@@ -349,7 +349,7 @@ describe('the chords over every compiled hymn', () => {
       });
     }
     expect(faults).toEqual([]);
-    expect(lit).toBe(15170);
+    expect(lit).toBe(15226);
   });
 });
 
