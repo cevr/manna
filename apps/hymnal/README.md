@@ -24,7 +24,9 @@ title. On a phone the list falls under sticky rows that name the hymnal's
 topical sections (each hymn's topic is joined from the compiled
 `topics.json` through `topicOf` when the app is bundled), and a find bar at
 the list's foot holds `Search`, which grows into a search box (number,
-title or first line) over the list, `All at once` and the `#`. A gear in the title row opens Settings (appearance, chord style) as a
+title or first line) over the list, and the `#`. A hymn page shows the same
+bar over the right end of its own bar, and its `Search` searches in place
+over the page. A gear in the title row opens Settings (appearance, chord style) as a
 sheet. A hymn opens pushed over the home screen. A hymn shows its words in the order they are sung: each stanza
 under its number, and the refrain written out each time it is sung.
 
@@ -58,8 +60,12 @@ under its number, and the refrain written out each time it is sung.
   downward one sends it away (`src/home/reveal.ts`, `src/home/PinnedTabs.tsx`),
   a layer moved on the UI thread with the pinned topic row under it
   (`src/reader/pin.ts`), so the list's rows and offset never move for it.
-  The find bar (`src/home/FindBar.tsx`) stands at the list's foot, over the
-  floating bar's top, and rides the keyboard while search is open.
+  The find bar (`src/home/FindBar.tsx`) stands wherever the `#` does: at the
+  list's foot over the floating bar's top, and on a hymn page over its bar's
+  right end. It rides the keyboard while search is open. The open search
+  belongs to the screen it opened on (`searchOpen`, keyed by the path), and
+  the stack's wrapper (`src/player/StackBottom.tsx`) draws its results
+  (`src/home/Search.tsx`) over that screen and puts the screen out of reach.
 - Search (`src/hymns/search.ts`) finds a hymn by its number in any form a
   reader writes one (`100`, `#100`, `no. 100`, `Hymn #100`, `number 100`),
   or by any line of any stanza or refrain half remembered: a typo or two in

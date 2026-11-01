@@ -1,6 +1,6 @@
 # Search
 
-The home screen's search box (`Number, title or first line`) finds a hymn by
+The search box (`Number, title or first line`) finds a hymn by
 its number in any form a reader writes one, or by any line of any stanza
 or refrain half remembered: with a typo or two in its longer words, a word
 or two left out, two words swapped, or a modern word for an old one
@@ -51,7 +51,7 @@ home list's `Topics` tab instead (`browse.md`).
 
 ## How to get to it (user POV)
 
-- On a phone, `Search` in the home screen's find bar at the list's foot (`browse.md`, `browse-findbar-rest`, `browse-findbar-open`); no search field stands at the list's top.
+- On a phone, `Search` in the find bar: at the home list's foot (`browse.md`, `browse-findbar-rest`, `browse-findbar-open`), where no search field stands at the list's top, and over the right end of a hymn page's bar, where it searches in place over the page; `Cancel` returns to the page where it was.
 - On the web, the field above the home list.
 
 ## Driving it with sim
@@ -78,7 +78,7 @@ By hand:
 
 ## Gotchas
 
-- Search lives on the home screen; there is no Search tab or `/search` route. Reach it from the find bar's `Search` at the list's foot.
+- Search opens on the screen whose find bar opened it, the home list or a hymn page, and belongs to that screen's path: a hymn opened from its results leaves it open beneath, and Back returns to the results. There is no Search tab or `/search` route. A search opened on hymn 8 that opens hymn 8 again shows on both pages (accepted).
 - On iOS the find bar's controls carry ids: `id=find-search` enters search mode, `id=find-box` is the search box (named `Number, title or first line`) to fill, `id=find-cancel` leaves it.
 - Results follow the typing after a deferral: wait for a result (`--expect`, or `sim tap` of the row with its timeout), never a fixed sleep.
 - A result's name is `<n>, <title>` and, when it was found by a line, `, <line>` after it: match a result by its leading `<n>, ` only.
