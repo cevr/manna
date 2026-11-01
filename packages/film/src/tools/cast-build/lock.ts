@@ -27,35 +27,17 @@ import {
   AdoptedNote,
   BuildSpend,
   type Candidate,
+  EvalJson,
   FitNote,
+  HeldLine,
+  Spread,
   TRAIN,
   TrainLines,
   trainKeyOf,
 } from './stages.ts';
 
-/** A spread of the median and the 90th percentile. */
-const Spread = Schema.Struct({ median: Schema.Finite, p90: Schema.Finite });
 /** A spread as the lock keeps it: eval.py's also carries its count and mean. */
 const spreadOf = (s: typeof Spread.Type) => ({ median: s.median, p90: s.p90 });
-
-/** The part of an eval's output (eval.py's JSON) the lock reads: the trained drawing's held samples, or the untrained one's; eval.py writes `null` for the side it has no samples on. */
-const EvalJson = Schema.fromJsonString(
-  Schema.Struct({
-    seen: Schema.optionalKey(
-      Schema.NullOr(
-        Schema.Struct({
-          n: Schema.Finite,
-          accuracy: Schema.Finite,
-          angle_deg: Spread,
-          joint_px: Spread,
-        }),
-      ),
-    ),
-    unseen: Schema.optionalKey(
-      Schema.NullOr(Schema.Struct({ n: Schema.Finite, angle_deg: Spread, joint_px: Spread })),
-    ),
-  }),
-);
 
 /** An eval:clip stage's output: the clip's lock entry (`clips.ts` `clipEntryOf`). */
 const ClipLockJson = Schema.fromJsonString(ClipLock);
@@ -89,15 +71,7 @@ const Lock = Schema.Struct({
   held: Schema.Struct({
     drawings: Schema.Finite,
     accuracy: Schema.Finite,
-    byDrawing: Schema.Record(
-      Schema.String,
-      Schema.Struct({
-        n: Schema.Finite,
-        accuracy: Schema.Finite,
-        angleDeg: Spread,
-        jointPx: Spread,
-      }),
-    ),
+    byDrawing: Schema.Record(Schema.String, HeldLine),
   }),
   untrained: Schema.Record(
     Schema.String,

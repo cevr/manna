@@ -35,6 +35,7 @@ import * as Command from 'effect/cli/Command';
 import {
   DateTime,
   Effect,
+  Equal,
   FileSystem,
   Option,
   Path,
@@ -651,17 +652,80 @@ export const AdoptedNote = Schema.fromJsonString(
   }),
 );
 
-/** The part of the committed reader lock a train reads to adopt its checkpoint (extra keys ignored). */
+/** A spread of the median and the 90th percentile. */
+export const Spread = Schema.Struct({ median: Schema.Finite, p90: Schema.Finite });
+
+/** The part of an eval's output (eval.py's JSON) the lock reads: the trained drawing's held samples, or the untrained one's; eval.py writes `null` for the side it has no samples on. */
+export const EvalJson = Schema.fromJsonString(
+  Schema.Struct({
+    seen: Schema.optionalKey(
+      Schema.NullOr(
+        Schema.Struct({
+          n: Schema.Finite,
+          accuracy: Schema.Finite,
+          angle_deg: Spread,
+          joint_px: Spread,
+        }),
+      ),
+    ),
+    unseen: Schema.optionalKey(
+      Schema.NullOr(Schema.Struct({ n: Schema.Finite, angle_deg: Spread, joint_px: Spread })),
+    ),
+  }),
+);
+
+/** A trained drawing's held line, as the lock keeps it (`held.byDrawing`). */
+export const HeldLine = Schema.Struct({
+  n: Schema.Finite,
+  accuracy: Schema.Finite,
+  angleDeg: Spread,
+  jointPx: Spread,
+});
+
+/**
+ * The part of the committed reader lock a train reads (extra keys ignored):
+ * to adopt its checkpoint, its key, checkpoint, train lines and spend; to
+ * name what changed, its `trainer`; to keep it across a key change
+ * (`--keep-reader`), its set, config and held lines. A lock older than a
+ * field has none of it.
+ */
 const CommittedLock = Schema.fromJsonString(
   Schema.Struct({
     reader: Schema.String,
-    /** The train files' hashes by basename the key was made from; a lock older than the field has none. */
     trainer: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+    trainset: Schema.optionalKey(Schema.String),
+    config: Schema.optionalKey(Schema.Unknown),
     checkpointSha256: Schema.String,
     train: TrainLines,
+    held: Schema.optionalKey(Schema.Struct({ byDrawing: Schema.Record(Schema.String, HeldLine) })),
     spend: Schema.optionalKey(BuildSpend),
   }),
 );
+type Committed = typeof CommittedLock.Type;
+
+/**
+ * Each field of a held line that differs between `was` (the lock's) and
+ * `now` (eval.py's numbers for the same drawing), by its lock name: exact
+ * equality, as eval.py rounds them; none when they are the same.
+ */
+const heldDiffs = (
+  was: typeof HeldLine.Type,
+  now: Option.Option<NonNullable<(typeof EvalJson.Type)['seen']>>,
+): ReadonlyArray<string> =>
+  Option.match(now, {
+    onNone: () => ['no held samples'],
+    onSome: (s) =>
+      [
+        ['n', was.n, s.n],
+        ['accuracy', was.accuracy, s.accuracy],
+        ['angleDeg.median', was.angleDeg.median, s.angle_deg.median],
+        ['angleDeg.p90', was.angleDeg.p90, s.angle_deg.p90],
+        ['jointPx.median', was.jointPx.median, s.joint_px.median],
+        ['jointPx.p90', was.jointPx.p90, s.joint_px.p90],
+      ]
+        .filter(([, a, b]) => a !== b)
+        .map(([field, a, b]) => `${field} ${a} -> ${b}`),
+  });
 
 /** The fit summary of a train whose result is `result` (train.py's JSON), run in Modal app `app`, today. */
 const fitNote = (result: string, app: Option.Option<string>) =>
@@ -695,33 +759,132 @@ const fitNote = (result: string, app: Option.Option<string>) =>
  * call; that checkpoint is already the key's on Modal, so its promote does
  * nothing. A stage key that moves while the reader's does not (a change in
  * how the build keys its inputs) so costs nothing.
+ *
+ * When the lock names another reader key, it trains (so waits on the
+ * spend) and logs the train files, set or config that changed since the
+ * lock. With `keepReader` (`--keep-reader`: the claim that the edit leaves
+ * what a train makes as it is) it instead keeps the committed checkpoint
+ * (`keep`), or fails; it never trains. The flag is in no key.
  */
 export const trainStage = (
   candidates: ReadonlyArray<Candidate>,
   trainFiles: ReadonlyArray<string>,
   lock: string,
-): Stage<CastReader> => {
+  o: { readonly keepReader: boolean } = { keepReader: false },
+): Stage<CastReader | FileSystem.FileSystem> => {
   /** This process's runs that adopted rather than trained: they have nothing to promote. */
   const adopted = new Set<string>();
   const trainOn = trainOnModal(candidates, trainFiles);
-  /** The committed checkpoint and the lock's lines, when the lock names this reader key and the cache keeps its bytes. */
-  const adoptable = (ctx: StageContext, key: string) =>
+  /** The committed lock, when there is one that decodes. */
+  const committedOf = (ctx: StageContext) =>
     Effect.gen(function* () {
       const text = yield* ctx.file(lock).pipe(Effect.option);
-      const committed = yield* Effect.option(
+      return yield* Effect.option(
         Effect.flatMap(Effect.fromOption(text), (bytes) =>
           Schema.decodeEffect(CommittedLock)(new TextDecoder().decode(bytes)),
         ),
       );
-      if (Option.isNone(committed) || committed.value.reader !== key) return Option.none();
-      const c = committed.value;
-      const bytes = yield* ctx.object(c.checkpointSha256);
-      return Option.map(bytes, (checkpoint) => ({
-        checkpoint,
-        hash: c.checkpointSha256,
-        note: Struct.pick(c, ['train', 'spend']),
-      }));
     });
+  /** The committed checkpoint `checkpoint` as this run's output: the lock's train lines and spend noted, nothing to promote. */
+  const adopt = (
+    ctx: StageContext,
+    key: string,
+    c: Committed,
+    checkpoint: Uint8Array,
+    how: string,
+  ) =>
+    Effect.gen(function* () {
+      yield* ctx.note(
+        yield* Schema.encodeEffect(AdoptedNote)({
+          adopted: Struct.pick(c, ['train', 'spend']),
+        }).pipe(Effect.orDie),
+      );
+      yield* Effect.log(
+        `cast.build.train adopted${how} reader=${key} checkpoint=${c.checkpointSha256}`,
+      );
+      adopted.add(ctx.run);
+      return checkpoint;
+    });
+  const refused = (why: string) => StageFailed.make({ reason: `train: --keep-reader: ${why}` });
+  /**
+   * The committed checkpoint kept across a key change: only when the lock's
+   * set is this set, its config this config, its checkpoint in the cache,
+   * and every drawing of its held set, read by that checkpoint under this
+   * code (the eval stages' path, on this machine's CPU), scores exactly the
+   * lock's held line (`heldDiffs`). Anything else fails, naming why (each
+   * differing drawing and field); a failed stage is not cached.
+   */
+  const keep = (
+    ctx: StageContext,
+    t: Effect.Success<ReturnType<typeof trainKeyOf>>,
+    c: Committed,
+  ) =>
+    Effect.gen(function* () {
+      if (c.trainset !== t.trainset)
+        return yield* refused(
+          `the training set changed (lock ${c.trainset ?? 'none'}, this build ${t.trainset})`,
+        );
+      if (!Equal.equals(c.config, TRAIN))
+        return yield* refused("the train config is not the lock's");
+      const held = c.held?.byDrawing ?? {};
+      const drawings = Object.keys(held).toSorted();
+      if (!Equal.equals(drawings, drawingsIn(t.set).toSorted()))
+        return yield* refused("the lock's held drawings are not the training set's");
+      const checkpoint = yield* ctx.object(c.checkpointSha256);
+      if (Option.isNone(checkpoint))
+        return yield* refused(`the checkpoint ${c.checkpointSha256} is not in the cache`);
+      const reader = yield* CastReader;
+      const fs = yield* FileSystem.FileSystem;
+      const renders = new Map(candidates.map((one) => [one.drawing, one.renders]));
+      const diffs = yield* Effect.scoped(
+        Effect.gen(function* () {
+          const ckpt = `${yield* fs.makeTempDirectoryScoped()}/checkpoint.pt`;
+          yield* fs.writeFile(ckpt, checkpoint.value);
+          const out: Array<string> = [];
+          for (const [drawing, was] of Object.entries(held).toSorted(([a], [b]) =>
+            a.localeCompare(b),
+          )) {
+            const shard = yield* ctx.outputPath(renders.get(drawing) ?? `renders:${drawing}`);
+            const scored = yield* reader
+              .evaluate(ckpt, shard)
+              .pipe(Effect.mapError(readerFailed('train --keep-reader')));
+            const now = yield* Schema.decodeEffect(EvalJson)(scored).pipe(
+              Effect.mapError((e) => refused(`${drawing}'s eval: ${e.message}`)),
+            );
+            for (const diff of heldDiffs(was, Option.fromNullishOr(now.seen)))
+              out.push(`${drawing} ${diff}`);
+          }
+          return out;
+        }),
+      ).pipe(Effect.catchTag('PlatformError', (e) => Effect.fail(refused(e.message))));
+      if (diffs.length > 0)
+        return yield* refused(
+          `the committed checkpoint reads otherwise under this code: ${diffs.join('; ')}`,
+        );
+      return yield* adopt(
+        ctx,
+        t.key,
+        c,
+        checkpoint.value,
+        ` (keep-reader: ${drawings.length} held drawings equal)`,
+      );
+    });
+  /** The line a rekeyed train logs: what changed since the lock (its train files by `trainer`, the set, the config) and the keep path. */
+  const rekeyedLine = (t: Effect.Success<ReturnType<typeof trainKeyOf>>, c: Committed) => {
+    const files = Option.match(Option.fromUndefinedOr(c.trainer), {
+      onNone: () => ['the lock names no train files'],
+      onSome: (was) =>
+        [...new Set([...Object.keys(was), ...Object.keys(t.trainer)])]
+          .toSorted()
+          .filter((name) => was[name] !== t.trainer[name]),
+    });
+    const changed = [
+      ...files,
+      ...['trainset'].filter(() => c.trainset !== t.trainset),
+      ...['config'].filter(() => !Equal.equals(c.config, TRAIN)),
+    ];
+    return `cast.build.train rekeyed reader=${t.key} lock=${c.reader} changed=${changed.join(',')}: it trains (--spend modal); when the edit leaves what a train makes as it is, --keep-reader keeps the committed checkpoint once its held eval reads the same`;
+  };
   return {
     id: 'train',
     inputs: [
@@ -733,17 +896,20 @@ export const trainStage = (
     config: TRAIN_CONFIG,
     run: (ctx) =>
       Effect.gen(function* () {
-        const { key } = yield* trainKeyOf(ctx, trainFiles);
-        const found = yield* adoptable(ctx, key);
-        if (Option.isSome(found)) {
-          const a = found.value;
-          yield* ctx.note(
-            yield* Schema.encodeEffect(AdoptedNote)({ adopted: a.note }).pipe(Effect.orDie),
-          );
-          yield* Effect.log(`cast.build.train adopted reader=${key} checkpoint=${a.hash}`);
-          adopted.add(ctx.run);
-          return a.checkpoint;
+        const t = yield* trainKeyOf(ctx, trainFiles);
+        const committed = yield* committedOf(ctx);
+        if (Option.isSome(committed) && committed.value.reader === t.key) {
+          const c = committed.value;
+          const checkpoint = yield* ctx.object(c.checkpointSha256);
+          if (Option.isSome(checkpoint)) return yield* adopt(ctx, t.key, c, checkpoint.value, '');
+          return yield* trainOn(ctx);
         }
+        if (o.keepReader)
+          return yield* Option.match(committed, {
+            onNone: () => Effect.fail(refused(`no committed lock at ${lock}`)),
+            onSome: (c) => keep(ctx, t, c),
+          });
+        if (Option.isSome(committed)) yield* Effect.log(rekeyedLine(t, committed.value));
         return yield* trainOn(ctx);
       }),
     promote: (ctx) =>

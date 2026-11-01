@@ -11,6 +11,7 @@ import {
   Effect,
   FileSystem,
   Layer,
+  Logger,
   Option,
   Path,
   Schema,
@@ -28,6 +29,7 @@ import {
   evalStage,
   memberStages,
   readsDirOf,
+  TRAIN,
   trainStage,
   trainsetStage,
 } from './stages.ts';
@@ -128,7 +130,9 @@ const fitFile = (view: string) => `/in/${view}.fit.json`;
  * drawing's eval. When `sideCut` is on, the side's parts stage spends okra
  * and writes a passing record: the side is cut in the build.
  */
-const graph = (o: { readonly sideCut?: boolean } = {}): ReadonlyArray<Stage<CastReader>> => [
+const graph = (
+  o: { readonly sideCut?: boolean; readonly keepReader?: boolean } = {},
+): ReadonlyArray<Stage<CastReader | FileSystem.FileSystem>> => [
   ...VIEWS.flatMap((v): ReadonlyArray<Stage<never>> => {
     const at = (kind: string) => `${kind}:${v}@m`;
     const cutInBuild = o.sideCut === true && v === 'side';
@@ -180,7 +184,7 @@ const graph = (o: { readonly sideCut?: boolean } = {}): ReadonlyArray<Stage<Cast
     ];
   }),
   trainsetStage(CANDIDATES),
-  trainStage(CANDIDATES, ROLES.train, LOCK),
+  trainStage(CANDIDATES, ROLES.train, LOCK, { keepReader: o.keepReader === true }),
   ...CANDIDATES.map((c) => evalStage(c.renders, [], ROLES.eval)),
 ];
 
@@ -202,8 +206,12 @@ const build = (
   disk: Map<string, Uint8Array>,
   asked: Array<string>,
   over: Partial<BuildOptions> = {},
-  stages: ReadonlyArray<Stage<CastReader>> = graph(),
-  reader: { readonly training?: Effect.Effect<void>; readonly promoteFails?: string } = {},
+  stages: ReadonlyArray<Stage<CastReader | FileSystem.FileSystem>> = graph(),
+  reader: {
+    readonly training?: Effect.Effect<void>;
+    readonly promoteFails?: string;
+    readonly evaluate?: (shard: string) => string;
+  } = {},
 ) =>
   buildGraph(stages, options(over)).pipe(
     Effect.provide(
@@ -632,6 +640,252 @@ describe('cast build: the train adopts the committed checkpoint', () => {
       expect(stateOf(report)['train']).toBe('waiting-spend');
       expect(asked).toEqual([]);
     }),
+  );
+});
+
+describe('cast build: --keep-reader keeps the committed checkpoint across a key change', () => {
+  const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
+  const spend = { spend: new Set(['modal'] as const) };
+  /** The fake reader's checkpoint, as `layerTest` makes it. */
+  const CHECKPOINT = sha256Hex(new Uint8Array([1]));
+  const SIDE = sha256Hex(text('side shard'));
+  /** The fake set's hash: each drawing by its shard's hash, a line each, sorted. */
+  const TRAINSET = sha256Hex(
+    text([`m/front=${sha256Hex(text('front shard'))}`, `m/side=${SIDE}`].join('\n')),
+  );
+  /** A held line as the lock keeps it. */
+  const LINE = {
+    n: 12,
+    accuracy: 0.9,
+    angleDeg: { median: 3.1, p90: 9.4 },
+    jointPx: { median: 2.2, p90: 6.8 },
+  };
+  /** eval.py's JSON for a held line: its spreads also carry a count and a mean; it writes `null` for the side it has no samples on. */
+  const evalJson = (l: typeof LINE) =>
+    `{"seen":${jsonOf({
+      n: l.n,
+      accuracy: l.accuracy,
+      angle_deg: { ...l.angleDeg, mean: 4, n: l.n },
+      joint_px: { ...l.jointPx, mean: 3, n: l.n },
+    })},"unseen":null}`;
+  /** `side` for the side's shard, else `front`. */
+  const bySide = <A>(shard: string, side: A, front: A) =>
+    Option.match(
+      Option.liftPredicate(shard, (s) => s.includes(SIDE)),
+      { onNone: () => front, onSome: () => side },
+    );
+  /** Each shard's eval: the lock's line, or `side` for the side's shard. */
+  const scores =
+    (side: typeof LINE = LINE) =>
+    (shard: string) =>
+      evalJson(bySide(shard, side, LINE));
+  const keep = graph({ keepReader: true });
+  const evaluated = (asked: ReadonlyArray<string>) =>
+    asked.filter((a) => a.startsWith('evaluate')).length;
+  const trainedOrPromoted = (asked: ReadonlyArray<string>) =>
+    asked.filter((a) => a.startsWith('train') || a.startsWith('promote'));
+  /** The reason the report gives stage `id`, '' for none. */
+  const reasonOf = (
+    report: { stages: ReadonlyArray<{ id: string; reason: Option.Option<string> }> },
+    id: string,
+  ) =>
+    report.stages
+      .filter((s) => s.id === id)
+      .flatMap((s) => Option.toArray(s.reason))
+      .join('');
+
+  /** What a test sets in the committed lock over the train's own fields. */
+  type LockOver = Partial<{
+    readonly trainset: string;
+    readonly config: Omit<typeof TRAIN, 'steps'> & { readonly steps: number };
+    readonly held: {
+      readonly drawings: number;
+      readonly accuracy: number;
+      readonly byDrawing: Readonly<Record<string, typeof LINE>>;
+    };
+  }>;
+
+  /**
+   * A cache trained once with `--spend modal`, and a committed lock naming
+   * that train: its key, train files, set, config, checkpoint and held lines
+   * (`over` on top). Then, unless `edit` is off, model.py edited: the reader
+   * key moved.
+   */
+  const moved = (over: LockOver = {}, edit = true) =>
+    Effect.gen(function* () {
+      const disk = files();
+      const asked: Array<string> = [];
+      yield* build(disk, asked, spend, graph(), { evaluate: scores() });
+      const [{ key } = { key: '' }] = asked.filter((a) => a.startsWith('train')).map(trainOf);
+      disk.set(
+        LOCK,
+        text(
+          jsonOf({
+            reader: key,
+            trainer: { 'model.py': sha256Hex(text('model')) },
+            trainset: TRAINSET,
+            config: TRAIN,
+            checkpointSha256: CHECKPOINT,
+            train: { stageSec: 4361 },
+            held: { drawings: 2, accuracy: 0.9, byDrawing: { 'm/front': LINE, 'm/side': LINE } },
+            ...over,
+          }),
+        ),
+      );
+      if (edit) disk.set('/reader/model.py', text('model, a comment added'));
+      return disk;
+    });
+
+  it.effect(
+    "it adopts once every held drawing reads exactly the lock's line: no train, no promote, no spend",
+    () =>
+      Effect.gen(function* () {
+        const disk = yield* moved();
+        const asked: Array<string> = [];
+        const report = yield* build(disk, asked, spend, keep, { evaluate: scores() });
+        expect(stateOf(report)['train']).toBe('ran');
+        expect(report.modalCalls).toBe(0);
+        expect(report.spendUsd).toBe(0);
+        expect(trainedOrPromoted(asked)).toEqual([]);
+        // the train read both held drawings, then each eval stage its own
+        expect(evaluated(asked)).toBe(4);
+        expect(stateOf(report)['eval:side@m']).toBe('ran');
+        // the flag is in no key: a plan after it, with or without it, reads the train cached
+        expect(stateOf(yield* build(disk, [], { plan: true }, keep))['train']).toBe('cached');
+        expect(stateOf(yield* build(disk, [], { plan: true }))['train']).toBe('cached');
+      }),
+  );
+
+  it.effect(
+    'a drawing that reads otherwise fails the train, naming it and its field; it trains nothing and is not cached',
+    () =>
+      Effect.gen(function* () {
+        const disk = yield* moved();
+        const asked: Array<string> = [];
+        const off = { ...LINE, jointPx: { median: 2.2, p90: 6.9 } };
+        const report = yield* build(disk, asked, spend, keep, { evaluate: scores(off) });
+        expect(stateOf(report)['train']).toBe('failed');
+        const reason = reasonOf(report, 'train');
+        expect(reason).toContain('m/side jointPx.p90 6.8 -> 6.9');
+        expect(reason).not.toContain('m/front');
+        expect(trainedOrPromoted(asked)).toEqual([]);
+        expect(report.modalCalls).toBe(0);
+        expect(evaluated(asked)).toBe(2);
+        // not cached: the next plan reads the train stale, and an equal read adopts
+        expect(stateOf(yield* build(disk, [], { plan: true }, keep))['train']).toBe('stale');
+        const again = yield* build(disk, [], {}, keep, { evaluate: scores() });
+        expect(stateOf(again)['train']).toBe('ran');
+      }),
+  );
+
+  it.effect(
+    'every field of every held drawing is compared: one field off in either drawing refuses',
+    () =>
+      Effect.gen(function* () {
+        const fields: ReadonlyArray<readonly [string, typeof LINE]> = [
+          ['n', { ...LINE, n: 13 }],
+          ['accuracy', { ...LINE, accuracy: 0.91 }],
+          ['angleDeg.median', { ...LINE, angleDeg: { median: 3.2, p90: 9.4 } }],
+          ['angleDeg.p90', { ...LINE, angleDeg: { median: 3.1, p90: 9.5 } }],
+          ['jointPx.median', { ...LINE, jointPx: { median: 2.3, p90: 6.8 } }],
+          ['jointPx.p90', { ...LINE, jointPx: { median: 2.2, p90: 6.9 } }],
+        ];
+        for (const [field, off] of fields) {
+          const report = yield* build(yield* moved(), [], {}, keep, { evaluate: scores(off) });
+          expect([field, stateOf(report)['train'], reasonOf(report, 'train')]).toEqual([
+            field,
+            'failed',
+            expect.stringContaining(`m/side ${field} `),
+          ]);
+        }
+        // the front, first in order, refuses too
+        const front = yield* build(yield* moved(), [], {}, keep, {
+          evaluate: (shard) => evalJson(bySide(shard, LINE, { ...LINE, n: 1 })),
+        });
+        expect(reasonOf(front, 'train')).toContain('m/front n 12 -> 1');
+        // a drawing the eval finds no held samples for refuses
+        const none = yield* build(yield* moved(), [], {}, keep, {
+          evaluate: (shard) => bySide(shard, '{"seen":null}', evalJson(LINE)),
+        });
+        expect(reasonOf(none, 'train')).toContain('m/side no held samples');
+      }),
+  );
+
+  it.effect(
+    "a set, config or held set not the lock's, a missing checkpoint or lock: it fails, naming which, and reads nothing",
+    () =>
+      Effect.gen(function* () {
+        const cases: ReadonlyArray<readonly [string, ReturnType<typeof moved>]> = [
+          ['the training set changed', moved({ trainset: '0'.repeat(64) })],
+          ["the train config is not the lock's", moved({ config: { ...TRAIN, steps: 1 } })],
+          [
+            "the lock's held drawings are not the training set's",
+            moved({ held: { drawings: 1, accuracy: 0.9, byDrawing: { 'm/front': LINE } } }),
+          ],
+          [
+            `the checkpoint ${CHECKPOINT} is not in the cache`,
+            Effect.map(moved(), (disk) => {
+              disk.delete(`/cache/objects/${CHECKPOINT}`);
+              return disk;
+            }),
+          ],
+          [
+            `no committed lock at ${LOCK}`,
+            Effect.map(moved(), (disk) => {
+              disk.delete(LOCK);
+              return disk;
+            }),
+          ],
+        ];
+        for (const [why, made] of cases) {
+          const asked: Array<string> = [];
+          const report = yield* build(yield* made, asked, spend, keep, { evaluate: scores() });
+          expect([why, stateOf(report)['train'], reasonOf(report, 'train'), asked]).toEqual([
+            why,
+            'failed',
+            expect.stringContaining(why),
+            [],
+          ]);
+        }
+      }),
+  );
+
+  it.effect(
+    'without the flag a moved key never adopts, though every held line would read the same; it logs what changed',
+    () => {
+      const lines: Array<string> = [];
+      // the rekeyed line kept, every other line dropped
+      const logged = Logger.layer([
+        Logger.make(({ message }) => {
+          const line = [message].flat().join(' ');
+          if (line.startsWith('cast.build.train rekeyed')) lines.push(line);
+        }),
+      ]);
+      return Effect.gen(function* () {
+        const disk = yield* moved();
+        lines.length = 0;
+        const asked: Array<string> = [];
+        const report = yield* build(disk, asked, {}, graph(), { evaluate: scores() });
+        expect(stateOf(report)['train']).toBe('waiting-spend');
+        expect(asked).toEqual([]);
+        expect(lines).toEqual([expect.stringMatching(/ changed=model\.py: .*--keep-reader/)]);
+      }).pipe(Effect.provide(logged));
+    },
+  );
+
+  it.effect(
+    "with the lock's key the flag changes nothing: it adopts and reads no held drawing",
+    () =>
+      Effect.gen(function* () {
+        const disk = yield* moved({}, false);
+        disk.delete('/cache/build.json');
+        const asked: Array<string> = [];
+        const report = yield* build(disk, asked, {}, keep, { evaluate: scores() });
+        expect(stateOf(report)['train']).toBe('ran');
+        expect(trainedOrPromoted(asked)).toEqual([]);
+        // only the two eval stages read
+        expect(evaluated(asked)).toBe(2);
+      }),
   );
 });
 

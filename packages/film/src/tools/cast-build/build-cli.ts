@@ -1,11 +1,13 @@
 // `film concept build <film> (<member> | --cast) [--plan] [--touch <path> …]
-// [--spend okra,modal] [--json]`: build each member's stages (`stages.ts`)
+// [--spend okra,modal] [--keep-reader] [--json]`: build each member's stages (`stages.ts`)
 // over the cast cache (`graph.ts`), and print each stage's state, its wall
 // time and its key. A stage spends only when `--spend` names what it spends;
 // one that would spend otherwise waits (`waiting-spend`), and one that needs
 // a drawing drawn or kept waits on the owner (`waiting-owner`), as does every
 // stage below either. `--plan` runs nothing and prints what would run;
-// `--touch` plans as if that file changed. The cache is `FILM_CAST_CACHE`,
+// `--touch` plans as if that file changed. `--keep-reader` lets the train keep
+// the committed checkpoint across a reader key change once that checkpoint
+// reads every held drawing as the lock does (`trainStage`). The cache is `FILM_CAST_CACHE`,
 // else `~/.cache/bible-film/cast`. It exits non-zero when a stage fails, or
 // when the reader lock it wrote or kept fails a clip (`ClipsFailed`).
 
@@ -160,6 +162,12 @@ export const build = <E, R>(
         Flag.optional,
         Flag.withDescription('what the build may spend, comma-separated: okra, modal'),
       ),
+      keepReader: Flag.Boolean('keep-reader').pipe(
+        Flag.withDefault(false),
+        Flag.withDescription(
+          "when the reader key moved but the edit leaves what a train makes as it is, keep the committed checkpoint once it reads every held drawing exactly as the lock's (no spend), else fail",
+        ),
+      ),
       json: Flag.Boolean('json').pipe(Flag.withDefault(false), Flag.withDescription('print JSON')),
     },
     Effect.fn('film.concept.build')(function* (input) {
@@ -203,7 +211,7 @@ export const build = <E, R>(
       > = [
         ...built,
         trainsetStage(candidates),
-        trainStage(candidates, reader.sources.train, lockFile),
+        trainStage(candidates, reader.sources.train, lockFile, { keepReader: input.keepReader }),
         ...candidates.map((c) => evalStage(c.renders, sources.eval, reader.sources.eval)),
         ...clipMakes,
         ...members.flatMap((m) => clipStages(m, cache, sources.chain, reader.sources.read)),
