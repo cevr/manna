@@ -45,7 +45,7 @@ import type { Style } from './style.js';
 
 /** Everything a hymn's render reads besides its MIDI file. */
 export interface Setup extends AudioSetup {
-  /** Semitones from the printed key (`keys.ts`): 0 for `warm-1`, else a key set (`keySet`). */
+  /** Semitones from the printed key (`keys.ts`): 0 for the set itself (`warm-1`, `warm-2`), else a key set (`keySet`). */
   readonly transpose: number;
   /** The 1-minute load over which a hymn waits to render (`GUARDS.load` unless the CLI names another). */
   readonly load: number;

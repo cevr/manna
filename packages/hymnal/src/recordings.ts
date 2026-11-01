@@ -1,14 +1,48 @@
 /**
- * The hymn recordings the app plays: the set they belong to, each hymn's key
- * inside a set, and the credit their instruments ask for. It imports nothing,
- * so the app's bundlers and the infra read it unchanged.
+ * The hymn recordings the app plays: the sets they belong to, the set each
+ * hymn plays from, each hymn's key inside a set, and the credit their
+ * instruments ask for. It imports nothing, so the app's bundlers and the
+ * infra read it unchanged.
  *
- * A set is rendered once (`scripts/render/`) and never replaced: any change
- * to the sound is a new set (`warm-2`), uploaded beside the old one.
+ * A set is rendered once (`scripts/render/`) and never replaced: a hymn
+ * whose sound changes is rendered into a later set that holds it alone (or
+ * with the others that changed), uploaded beside the old one, and the hymn
+ * plays from the latest set that holds it.
  */
 
-/** The set the app plays: style C, "Warm band", the first render. */
+/** The first set: style C, "Warm band", every hymn 1 to 695. */
 export const RECORDING_SET = 'warm-1';
+
+/** A set the app plays from: its name and the hymns it holds. */
+export interface RecordingSet {
+  readonly name: string;
+  /** `every` for the first set (hymns 1 to 695); a later set holds exactly these hymns. */
+  readonly hymns: 'every' | ReadonlyArray<number>;
+}
+
+/**
+ * Every set, oldest first. `warm-2` holds hymn 663, whose file plays one
+ * verse for its six stanzas: rendered again on its sung file
+ * (`src/sung.ts`), the verse once a stanza.
+ */
+export const RECORDING_SETS: ReadonlyArray<RecordingSet> = [
+  { name: RECORDING_SET, hymns: 'every' },
+  { name: 'warm-2', hymns: [663] },
+];
+
+/** Whether `set` holds `hymn`: the first set holds every hymn. */
+export const holdsHymn = (set: RecordingSet, hymn: number) =>
+  set.hymns === 'every' || set.hymns.includes(hymn);
+
+/** The set named `name`, if the app plays from it. */
+export const recordingSet = (name: string) => RECORDING_SETS.find((set) => set.name === name);
+
+/** The set hymn `hymn` plays from: the latest that holds it. */
+export const setOf = (hymn: number) =>
+  RECORDING_SETS.findLast((set) => holdsHymn(set, hymn))?.name ?? RECORDING_SET;
+
+/** The latest set: a name that changes whenever a set is added. */
+export const LATEST_SET = RECORDING_SETS.at(-1)?.name ?? RECORDING_SET;
 
 /**
  * The keys the app's Key stepper reaches besides the printed one, in the
@@ -18,13 +52,11 @@ export const RECORDING_SET = 'warm-1';
 export const KEY_TRANSPOSES = [1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6] as const;
 
 /**
- * The set of `RECORDING_SET` moved `transpose` semitones: `warm-1-up2`,
- * `warm-1-down3`; 0 is `RECORDING_SET` itself. No name holds a `+`.
+ * The set `set` moved `transpose` semitones: `warm-1-up2`, `warm-2-down3`;
+ * 0 is `set` itself. No name holds a `+`.
  */
-export const keySet = (transpose: number) =>
-  transpose === 0
-    ? RECORDING_SET
-    : `${RECORDING_SET}-${transpose > 0 ? 'up' : 'down'}${Math.abs(transpose)}`;
+export const keySet = (set: string, transpose: number) =>
+  transpose === 0 ? set : `${set}-${transpose > 0 ? 'up' : 'down'}${Math.abs(transpose)}`;
 
 /** A hymn's key inside a set: the 1985 SDA Hymnal's number, unpadded. */
 export const recordingKey = (hymn: number) => `sdah/${hymn}.mp3`;

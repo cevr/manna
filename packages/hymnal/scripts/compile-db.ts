@@ -19,9 +19,10 @@ import { IndexName, Rulings } from '../src/indexes.js';
 import {
   KEY_TRANSPOSES,
   RECORDING_CREDITS,
-  RECORDING_SET,
+  RECORDING_SETS,
   recordingKey,
   keySet,
+  setOf,
 } from '../src/recordings.js';
 import { decodeSourceText } from './source-text.js';
 
@@ -87,12 +88,11 @@ export const readDatabaseSources = Effect.fn('CorpusDatabase.readSources')(funct
     Effect.mapError(() => CorpusDatabaseError.make({ operation: 'decode:rulings' })),
   );
   const recordings = JSON.stringify({
-    set: RECORDING_SET,
+    sets: RECORDING_SETS,
     credits: RECORDING_CREDITS,
     choices: [0, ...KEY_TRANSPOSES].map((transpose) => ({
       transpose,
-      set: keySet(transpose),
-      keys: compiled.map((h) => recordingKey(h.number)),
+      keys: compiled.map((h) => `${keySet(setOf(h.number), transpose)}/${recordingKey(h.number)}`),
     })),
   });
   const fingerprints = {
