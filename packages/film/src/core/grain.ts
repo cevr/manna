@@ -27,18 +27,23 @@ const OFFSETS = Array.from({ length: (2 * REACH + 1) ** 2 }, (_, k) => [
   Math.floor(k / (2 * REACH + 1)) - REACH,
 ]);
 
-const medianOf = (v: ReadonlyArray<number>) => [...v].sort((a, b) => a - b)[v.length >> 1] ?? 0;
+// a typed array sorts numbers natively, with no comparator to call; a high pass has no NaN or -0 to order apart
+const medianOf = (v: ReadonlyArray<number>) => Float64Array.from(v).sort()[v.length >> 1] ?? 0;
 
 /** G less its window's mean at each pixel `at` marks whose whole window `at` marks, in reading order. */
 const highPass = (r: Raster, at: Uint8Array): ReadonlyArray<number> => {
   const { width: w, height: h } = r;
   const g = (i: number) => r.rgba[i * 4 + 1] ?? 0;
   const vals: number[] = [];
+  // each window's pixels as steps from its middle, in the order `OFFSETS` sums them
+  const window = OFFSETS.map(([dx = 0, dy = 0]) => dy * w + dx);
   for (let y = REACH; y < h - REACH; y++)
     for (let x = REACH; x < w - REACH; x++) {
-      const window = OFFSETS.map(([dx = 0, dy = 0]) => (y + dy) * w + x + dx);
-      if (!window.every((j) => at[j] === 1)) continue;
-      vals.push(g(y * w + x) - window.reduce((a, j) => a + g(j), 0) / window.length);
+      const i = y * w + x;
+      if (!window.every((d) => at[i + d] === 1)) continue;
+      let sum = 0;
+      for (const d of window) sum += g(i + d);
+      vals.push(g(i) - sum / window.length);
     }
   return vals;
 };
