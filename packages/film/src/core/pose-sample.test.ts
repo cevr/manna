@@ -104,14 +104,22 @@ describe('the limits of a sample', () => {
     expect(headLo).toBeLessThan(-14);
     expect(headHi).toBeLessThanOrEqual(15);
     expect(headHi).toBeGreaterThan(14);
-    // each arm range reaches at least 20 degrees either side of the rest, so
-    // 200 draws over it (at most 340 wide) come within 5 degrees of 20
-    for (const bone of ['shoulderRight', 'elbowRight']) {
-      const [lo, hi] = range(bone);
-      expect(lo).toBeLessThanOrEqual(-15);
-      expect(hi).toBeGreaterThanOrEqual(15);
-      expect(lo).toBeGreaterThanOrEqual(-170);
-      expect(hi).toBeLessThanOrEqual(170);
+    // the fixture's arm lies left of the hip, so it takes the left arm's
+    // ranges about its rest: the shoulder [64, 214] less its rest angle
+    // (unwrapped beside the range's middle) is [-116, 34]; the elbow
+    // [-150, 10] less its bend from the upper arm (none at rest), widened to
+    // hold 20 degrees either side of the rest, is [-150, 20]; 200 uniform
+    // draws come within 2 degrees of each bound, never past it
+    const arms: ReadonlyArray<readonly [string, number, number]> = [
+      ['shoulderRight', -116, 34],
+      ['elbowRight', -150, 20],
+    ];
+    for (const [bone, lo, hi] of arms) {
+      const [drawnLo, drawnHi] = range(bone);
+      expect(drawnLo).toBeGreaterThanOrEqual(lo);
+      expect(drawnLo).toBeLessThan(lo + 2);
+      expect(drawnHi).toBeLessThanOrEqual(hi);
+      expect(drawnHi).toBeGreaterThan(hi - 2);
     }
   });
 });
