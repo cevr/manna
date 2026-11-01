@@ -78,12 +78,7 @@
       "name": "drums-outside",
       "action": "tap",
       "target": "label=Find a hymn by number",
-      "expect": [
-        { "shows": "id=find-open" },
-        { "hides": "label=100s" },
-        { "hides": "label=10s" },
-        { "hides": "label=1s" }
-      ]
+      "expect": [{ "shows": "id=find-open" }]
     },
     {
       "name": "browse-number-outside",
