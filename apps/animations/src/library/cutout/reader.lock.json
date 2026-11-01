@@ -560,38 +560,357 @@
       }
     }
   },
-  "clip": {
-    "member": "lead-feast",
-    "clip": "raise/clip-b",
-    "iou": {
-      "0-123": 0.9120966698510602,
-      "0-40": 0.9098354292209895,
-      "41-123": 0.9132136682345893
-    },
-    "named": {
-      "0-123": {
-        "lead-feast/turnaround-front": 39,
-        "lead-feast/single-single-1": 85
+  "clips": {
+    "passed": 5,
+    "of": 6,
+    "byClip": {
+      "feast-mother/wave/clip-a": {
+        "member": "feast-mother",
+        "clip": "wave/clip-a",
+        "sha256": "af290d4c5ea6ab81185826ccad411f2c5bcfd772255b9f51fc3bb5b3f040a3d1",
+        "frames": 124,
+        "bands": [
+          {
+            "from": 0,
+            "to": 13,
+            "expect": ["feast-mother/turnaround-front"]
+          },
+          {
+            "from": 34,
+            "to": 123,
+            "expect": ["feast-mother/turnaround-front"]
+          }
+        ],
+        "iou": {
+          "0-123": 0.9306761081425122,
+          "0-13": 0.9552794466110791,
+          "34-123": 0.9254757921094215
+        },
+        "named": {
+          "0-123": {
+            "feast-mother/turnaround-front": 124
+          },
+          "0-13": {
+            "feast-mother/turnaround-front": 14
+          },
+          "34-123": {
+            "feast-mother/turnaround-front": 90
+          }
+        },
+        "holds": {
+          "start": 14,
+          "end": 90
+        },
+        "scale": {
+          "heightRatio": {
+            "min": 0.9935064935064936,
+            "max": 1
+          },
+          "feetPx": {
+            "min": 0,
+            "max": 0
+          }
+        },
+        "runs": [
+          {
+            "from": 0,
+            "to": 124,
+            "drawing": "feast-mother/turnaround-front"
+          }
+        ],
+        "pass": true,
+        "fails": []
       },
-      "0-40": {
-        "lead-feast/turnaround-front": 39,
-        "lead-feast/single-single-1": 2
+      "feast-mother/cup/clip-a": {
+        "member": "feast-mother",
+        "clip": "cup/clip-a",
+        "sha256": "723754bec972296f150deaab15498c6d5af7c070b755ecb8e5171a39067a713e",
+        "frames": 124,
+        "bands": [
+          {
+            "from": 0,
+            "to": 123,
+            "expect": ["feast-mother/poses-poses-1"]
+          },
+          {
+            "from": 0,
+            "to": 123,
+            "expect": ["feast-mother/poses-poses-1"]
+          }
+        ],
+        "iou": {
+          "0-123": 0.9391565383134801
+        },
+        "named": {
+          "0-123": {
+            "feast-mother/poses-poses-1": 124
+          }
+        },
+        "holds": {
+          "start": 124,
+          "end": 124
+        },
+        "scale": {
+          "heightRatio": {
+            "min": 0.9983792544570502,
+            "max": 1.0016207455429498
+          },
+          "feetPx": {
+            "min": 0,
+            "max": 0
+          }
+        },
+        "runs": [
+          {
+            "from": 0,
+            "to": 124,
+            "drawing": "feast-mother/poses-poses-1"
+          }
+        ],
+        "pass": true,
+        "fails": []
       },
-      "41-123": {
-        "lead-feast/single-single-1": 83
+      "lead-feast/raise/clip-b": {
+        "member": "lead-feast",
+        "clip": "raise/clip-b",
+        "sha256": "d7bf5f2ebe36974000a4069e68e6ee637b56d12152933b7d3fd12e007ea20376",
+        "frames": 124,
+        "bands": [
+          {
+            "from": 0,
+            "to": 40,
+            "expect": ["lead-feast/turnaround-front"]
+          },
+          {
+            "from": 41,
+            "to": 123,
+            "expect": ["lead-feast/single-single-1"]
+          }
+        ],
+        "iou": {
+          "0-123": 0.9120966698510602,
+          "0-40": 0.9098354292209895,
+          "41-123": 0.9132136682345893
+        },
+        "named": {
+          "0-123": {
+            "lead-feast/turnaround-front": 39,
+            "lead-feast/single-single-1": 85
+          },
+          "0-40": {
+            "lead-feast/turnaround-front": 39,
+            "lead-feast/single-single-1": 2
+          },
+          "41-123": {
+            "lead-feast/single-single-1": 83
+          }
+        },
+        "holds": {
+          "start": 12,
+          "end": 83
+        },
+        "scale": {
+          "heightRatio": {
+            "min": 0.9909774436090225,
+            "max": 1.0015037593984963
+          },
+          "feetPx": {
+            "min": 0,
+            "max": 1
+          }
+        },
+        "runs": [
+          {
+            "from": 0,
+            "to": 39,
+            "drawing": "lead-feast/turnaround-front"
+          },
+          {
+            "from": 39,
+            "to": 124,
+            "drawing": "lead-feast/single-single-1"
+          }
+        ],
+        "pass": true,
+        "fails": []
+      },
+      "sower/sow/clip-a": {
+        "member": "sower",
+        "clip": "sow/clip-a",
+        "sha256": "30697b28d9212107da96ff8c801cb0486c7affb3f188a944f6bed46fdbb1793b",
+        "frames": 124,
+        "bands": [
+          {
+            "from": 0,
+            "to": 2,
+            "expect": ["sower/poses-poses-3"]
+          },
+          {
+            "from": 110,
+            "to": 123,
+            "expect": ["sower/poses-poses-1"]
+          }
+        ],
+        "iou": {
+          "0-123": 0.9277297027159622,
+          "0-2": 0.9568421382638329,
+          "110-123": 0.9419474757653825
+        },
+        "named": {
+          "0-123": {
+            "sower/poses-poses-3": 50,
+            "sower/poses-poses-1": 74
+          },
+          "0-2": {
+            "sower/poses-poses-3": 3
+          },
+          "110-123": {
+            "sower/poses-poses-1": 14
+          }
+        },
+        "holds": {
+          "start": 3,
+          "end": 14
+        },
+        "scale": {
+          "heightRatio": {
+            "min": 0.9821138211382113,
+            "max": 1
+          },
+          "feetPx": {
+            "min": 0,
+            "max": 0
+          }
+        },
+        "runs": [
+          {
+            "from": 0,
+            "to": 50,
+            "drawing": "sower/poses-poses-3"
+          },
+          {
+            "from": 50,
+            "to": 124,
+            "drawing": "sower/poses-poses-1"
+          }
+        ],
+        "pass": true,
+        "fails": []
+      },
+      "sower/dip/clip-a": {
+        "member": "sower",
+        "clip": "dip/clip-a",
+        "sha256": "cb666e3de5850c24662412b001e24b99d8035dd8683f8c068f24e84dddaeb381",
+        "frames": 124,
+        "bands": [
+          {
+            "from": 0,
+            "to": 23,
+            "expect": ["sower/turnaround-threeQuarterLeft"]
+          },
+          {
+            "from": 34,
+            "to": 123,
+            "expect": ["sower/poses-poses-3"]
+          }
+        ],
+        "iou": {
+          "0-123": 0.9432795501505491,
+          "0-23": 0.9469182537869005,
+          "34-123": 0.9427686101442216
+        },
+        "named": {
+          "0-123": {
+            "sower/turnaround-threeQuarterLeft": 124
+          },
+          "0-23": {
+            "sower/turnaround-threeQuarterLeft": 24
+          },
+          "34-123": {
+            "sower/turnaround-threeQuarterLeft": 90
+          }
+        },
+        "holds": {
+          "start": 24,
+          "end": 90
+        },
+        "scale": {
+          "heightRatio": {
+            "min": 0.9983739837398374,
+            "max": 1
+          },
+          "feetPx": {
+            "min": 0,
+            "max": 0
+          }
+        },
+        "runs": [
+          {
+            "from": 0,
+            "to": 124,
+            "drawing": "sower/turnaround-threeQuarterLeft"
+          }
+        ],
+        "pass": false,
+        "fails": ["named 34-123: 0 of 90 frames name sower/poses-poses-3, under 0.9"]
+      },
+      "sower/wave/clip-a": {
+        "member": "sower",
+        "clip": "wave/clip-a",
+        "sha256": "ea6e3166ebf3b4991d1f28caf57f1e5c230924f606ba12076b07f140ca360d7e",
+        "frames": 124,
+        "bands": [
+          {
+            "from": 0,
+            "to": 19,
+            "expect": ["sower/turnaround-front", "sower/poses-poses-4"]
+          },
+          {
+            "from": 38,
+            "to": 123,
+            "expect": ["sower/turnaround-front", "sower/poses-poses-4"]
+          }
+        ],
+        "iou": {
+          "0-123": 0.9043169610972085,
+          "0-19": 0.9382803519557932,
+          "38-123": 0.8978248233666307
+        },
+        "named": {
+          "0-123": {
+            "sower/turnaround-front": 124
+          },
+          "0-19": {
+            "sower/turnaround-front": 20
+          },
+          "38-123": {
+            "sower/turnaround-front": 86
+          }
+        },
+        "holds": {
+          "start": 20,
+          "end": 86
+        },
+        "scale": {
+          "heightRatio": {
+            "min": 0.9902439024390244,
+            "max": 1
+          },
+          "feetPx": {
+            "min": 0,
+            "max": 0
+          }
+        },
+        "runs": [
+          {
+            "from": 0,
+            "to": 124,
+            "drawing": "sower/turnaround-front"
+          }
+        ],
+        "pass": true,
+        "fails": []
       }
-    },
-    "runs": [
-      {
-        "from": 0,
-        "to": 39,
-        "drawing": "lead-feast/turnaround-front"
-      },
-      {
-        "from": 39,
-        "to": 124,
-        "drawing": "lead-feast/single-single-1"
-      }
-    ]
+    }
   }
 }
