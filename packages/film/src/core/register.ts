@@ -48,13 +48,20 @@ const summedOf = (r: Raster): Summed => {
  * corner totals, exact for pixels of one colour each.
  */
 const addTotal = (p: Summed, x: number, y: number, sign: number, out: Float64Array) => {
+  // the scoring loop calls this four times a pixel: plain locals, no array per call
   const cx = Math.max(0, Math.min(p.w, x));
   const cy = Math.max(0, Math.min(p.h, y));
-  const [x0, y0] = [Math.min(p.w - 1, Math.floor(cx)), Math.min(p.h - 1, Math.floor(cy))];
-  const [fx, fy] = [cx - x0, cy - y0];
+  const x0 = Math.min(p.w - 1, Math.floor(cx));
+  const y0 = Math.min(p.h - 1, Math.floor(cy));
+  const fx = cx - x0;
+  const fy = cy - y0;
   const W = p.w + 1;
-  const [a, b] = [(y0 * W + x0) * 3, ((y0 + 1) * W + x0) * 3];
-  const [wa, wb, wc, wd] = [(1 - fx) * (1 - fy), fx * (1 - fy), (1 - fx) * fy, fx * fy];
+  const a = (y0 * W + x0) * 3;
+  const b = ((y0 + 1) * W + x0) * 3;
+  const wa = (1 - fx) * (1 - fy);
+  const wb = fx * (1 - fy);
+  const wc = (1 - fx) * fy;
+  const wd = fx * fy;
   const t = p.sums;
   for (let c = 0; c < 3; c++)
     out[c] =
@@ -74,18 +81,23 @@ const colourInto = (
   i: number,
   out: Float64Array,
 ): void => {
-  const [x, y] = [i % width, Math.floor(i / width)];
-  const [u0, v0] = [(x - fit.dx) / fit.s, (y - fit.dy) / fit.s];
-  const [u1, v1] = [(x + 1 - fit.dx) / fit.s, (y + 1 - fit.dy) / fit.s];
-  const [x0, x1] = [Math.min(p.w - 1, Math.max(0, u0)), Math.max(1, Math.min(p.w, u1))];
-  const [y0, y1] = [Math.min(p.h - 1, Math.max(0, v0)), Math.max(1, Math.min(p.h, v1))];
-  out.fill(0);
+  const x = i % width;
+  const y = Math.floor(i / width);
+  const x0 = Math.min(p.w - 1, Math.max(0, (x - fit.dx) / fit.s));
+  const x1 = Math.max(1, Math.min(p.w, (x + 1 - fit.dx) / fit.s));
+  const y0 = Math.min(p.h - 1, Math.max(0, (y - fit.dy) / fit.s));
+  const y1 = Math.max(1, Math.min(p.h, (y + 1 - fit.dy) / fit.s));
+  out[0] = 0;
+  out[1] = 0;
+  out[2] = 0;
   addTotal(p, x1, y1, 1, out);
   addTotal(p, x0, y1, -1, out);
   addTotal(p, x1, y0, -1, out);
   addTotal(p, x0, y0, 1, out);
   const area = (x1 - x0) * (y1 - y0);
-  for (let c = 0; c < 3; c++) out[c] = (out[c] ?? 0) / area;
+  out[0] = (out[0] ?? 0) / area;
+  out[1] = (out[1] ?? 0) / area;
+  out[2] = (out[2] ?? 0) / area;
 };
 
 const drawSummed = (p: Summed, width: number, height: number, fit: Similarity): Raster => {
@@ -93,10 +105,10 @@ const drawSummed = (p: Summed, width: number, height: number, fit: Similarity): 
   const rgb = new Float64Array(3);
   for (let i = 0; i < width * height; i++) {
     colourInto(p, width, fit, i, rgb);
-    rgba.set(
-      [Math.round(rgb[0] ?? 0), Math.round(rgb[1] ?? 0), Math.round(rgb[2] ?? 0), 255],
-      i * 4,
-    );
+    rgba[i * 4] = Math.round(rgb[0] ?? 0);
+    rgba[i * 4 + 1] = Math.round(rgb[1] ?? 0);
+    rgba[i * 4 + 2] = Math.round(rgb[2] ?? 0);
+    rgba[i * 4 + 3] = 255;
   }
   return { width, height, rgba };
 };
@@ -168,11 +180,15 @@ export const fitSimilarity = (
     }
   const [cx, cy] = [mx / Math.max(1, at.length), my / Math.max(1, at.length)];
   const rgb = new Float64Array(3);
+  const v = view.rgba;
   const score = (f: Similarity) => {
     let s = 0;
-    for (const i of at) {
+    for (let k = 0; k < at.length; k++) {
+      const i = at[k] ?? 0;
       colourInto(p, W, f, i, rgb);
-      for (let c = 0; c < 3; c++) s += Math.abs((rgb[c] ?? 0) - (view.rgba[i * 4 + c] ?? 0));
+      s += Math.abs((rgb[0] ?? 0) - (v[i * 4] ?? 0));
+      s += Math.abs((rgb[1] ?? 0) - (v[i * 4 + 1] ?? 0));
+      s += Math.abs((rgb[2] ?? 0) - (v[i * 4 + 2] ?? 0));
     }
     return s / Math.max(1, at.length);
   };
