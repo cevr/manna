@@ -64,7 +64,9 @@ export const COVERAGE: CoverageManifest = {
         [0, 23],
         [34, 123],
       ],
-      expect: [['turnaround-threeQuarterLeft'], ['poses-poses-3']],
+      // the clip keeps the three-quarter body and moves only the arm into the bag: poses-3's body
+      // turns further left, which this clip never reaches, so its end is threeQuarterLeft's own
+      expect: [['turnaround-threeQuarterLeft'], ['turnaround-threeQuarterLeft']],
       given: { first: 'turnaround-threeQuarterLeft' },
       prompt: `${PAPER} The sower stands still and slowly reaches his right hand (on the left side of the picture) across his body into the seed bag at his left hip, then holds the pose with the hand in the bag. Only the arm moves; body, feet and head stay in place. ${CAMERA}`,
       seed: 7,
