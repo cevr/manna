@@ -4,7 +4,7 @@
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Layer, Path, Sink, Stream } from 'effect';
+import { Effect, FileSystem, Layer, Option, Path, Sink, Stream } from 'effect';
 import { ChildProcessSpawner } from 'effect/process';
 import { PuppetImagesBun } from '../../puppet/images-bun.ts';
 import { ContentStore } from '../content-store.ts';
@@ -183,6 +183,12 @@ const partsLayer = Layer.mergeAll(
   ),
 ).pipe(Layer.provideMerge(BunServices.layer));
 
+/** The timeout of a parts case: laying a part sheet again took 5.6 s at a load of 43, past bun's 5 s. */
+const PARTS_MS = 20_000;
+
+/** A time no build writes a part at: 2000-01-01, in seconds as `utimes` reads a number. */
+const LONG_AGO = 946_684_800;
+
 /**
  * `body` over the lead in a scratch films folder: `run` builds his front's
  * drawing and parts under a spend setting and answers the parts stage's
@@ -287,41 +293,64 @@ describe('memberStages', () => {
   );
 
   describe('the parts stage, on the lead with okra answering from his kept answer', () => {
-    it.effect('the sheet holds its answers: it checks, spending nothing', () =>
-      partsOver(({ run, spawned }) =>
-        Effect.gen(function* () {
-          expect(yield* run(new Set())).toEqual({ parts: 'ran', okra: 0 });
-          expect(spawned).toEqual([]);
-        }),
-      ),
+    it.effect(
+      'the sheet holds its answers: it checks, spending nothing',
+      () =>
+        partsOver(({ at, run, spawned }) =>
+          Effect.gen(function* () {
+            // `--check` writes nothing; `--reuse` lays every part again: the parts keep the time set here only under `--check`.
+            const fs = yield* FileSystem.FileSystem;
+            const parts = (yield* fs.readDirectory(at.sheet)).filter((f) => f.endsWith('.png'));
+            expect(parts).toContain('head.png');
+            for (const part of parts) yield* fs.utimes(`${at.sheet}/${part}`, LONG_AGO, LONG_AGO);
+            expect(yield* run(new Set())).toEqual({ parts: 'ran', okra: 0 });
+            const times = yield* Effect.forEach(parts, (part) =>
+              Effect.map(fs.stat(`${at.sheet}/${part}`), (info) =>
+                Option.map(info.mtime, (t) => t.getTime()),
+              ),
+            );
+            expect(times).toEqual(parts.map(() => Option.some(LONG_AGO * 1000)));
+            expect(spawned).toEqual([]);
+          }),
+        ),
+      // oxlint-disable-next-line film/tests-keep-their-strength -- the parts stage lays a real part sheet in this process (image decode and composite): 5.6 s at a load of 43, past bun's 5 s; a slow test may wait.
+      PARTS_MS,
     );
 
-    it.effect('a part lost is laid again from the answers drawn, spending nothing', () =>
-      partsOver(({ at, run, spawned }) =>
-        Effect.gen(function* () {
-          const fs = yield* FileSystem.FileSystem;
-          yield* fs.remove(`${at.sheet}/head.png`);
-          expect(yield* run(new Set())).toEqual({ parts: 'ran', okra: 0 });
-          expect(yield* fs.exists(`${at.sheet}/head.png`)).toBe(true);
-          expect(spawned).toEqual([]);
-        }),
-      ),
+    it.effect(
+      'a part lost is laid again from the answers drawn, spending nothing',
+      () =>
+        partsOver(({ at, run, spawned }) =>
+          Effect.gen(function* () {
+            const fs = yield* FileSystem.FileSystem;
+            yield* fs.remove(`${at.sheet}/head.png`);
+            expect(yield* run(new Set())).toEqual({ parts: 'ran', okra: 0 });
+            expect(yield* fs.exists(`${at.sheet}/head.png`)).toBe(true);
+            expect(spawned).toEqual([]);
+          }),
+        ),
+      // oxlint-disable-next-line film/tests-keep-their-strength -- the parts stage lays a real part sheet in this process (image decode and composite): 5.6 s at a load of 43, past bun's 5 s; a slow test may wait.
+      PARTS_MS,
     );
 
-    it.effect('no answer drawn: it waits on --spend okra, and calls okra once given it', () =>
-      partsOver(({ at, run, spawned }) =>
-        Effect.gen(function* () {
-          const fs = yield* FileSystem.FileSystem;
-          for (const file of ['okra/answer-1.png', 'okra/answer-2.png', 'okra/calls.json'])
-            yield* fs.remove(`${at.sheet}/${file}`);
-          expect(yield* run(new Set())).toEqual({ parts: 'waiting-spend', okra: 0 });
-          expect(spawned).toEqual([]);
-          expect(yield* run(new Set(['okra'] as const))).toEqual({ parts: 'ran', okra: 1 });
-          expect(spawned.map((c) => c.slice(0, 2))).toEqual([['okra', 'image']]);
-          expect(spawned[0]).not.toContain('--model');
-          expect(yield* fs.exists(`${at.sheet}/okra/answer-1.png`)).toBe(true);
-        }),
-      ),
+    it.effect(
+      'no answer drawn: it waits on --spend okra, and calls okra once given it',
+      () =>
+        partsOver(({ at, run, spawned }) =>
+          Effect.gen(function* () {
+            const fs = yield* FileSystem.FileSystem;
+            for (const file of ['okra/answer-1.png', 'okra/answer-2.png', 'okra/calls.json'])
+              yield* fs.remove(`${at.sheet}/${file}`);
+            expect(yield* run(new Set())).toEqual({ parts: 'waiting-spend', okra: 0 });
+            expect(spawned).toEqual([]);
+            expect(yield* run(new Set(['okra'] as const))).toEqual({ parts: 'ran', okra: 1 });
+            expect(spawned.map((c) => c.slice(0, 2))).toEqual([['okra', 'image']]);
+            expect(spawned[0]).not.toContain('--model');
+            expect(yield* fs.exists(`${at.sheet}/okra/answer-1.png`)).toBe(true);
+          }),
+        ),
+      // oxlint-disable-next-line film/tests-keep-their-strength -- the parts stage lays a real part sheet in this process (image decode and composite): 5.6 s at a load of 43, past bun's 5 s; a slow test may wait.
+      PARTS_MS,
     );
   });
 
