@@ -84,7 +84,7 @@ describe('every named gap', () => {
       const read = (yield* Effect.forEach(MEMBERS, gapsOf)).flat(2);
       for (const { opened, box, ...gap } of read)
         expect({ ...gap, opened }).toEqual({ ...gap, opened: [box] });
-      // the 13 gaps the kept sheets show (cut-held's 1:1 pass over every enclosed paper piece)
+      // the 13 gaps the kept sheets show, found at 1:1 over every enclosed paper piece
       expect(read.length).toBe(13);
     }),
   );

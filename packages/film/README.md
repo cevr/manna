@@ -2635,7 +2635,16 @@ the kept crop at 1:1. The film skill (`.claude/skills/film/SKILL.md`, "A
 cut-out member") keeps the cut lessons and what a member with poses alone can
 and cannot get. His cut table (`<member>/cutout/cut.ts`: `CUTS`,
 `cutOptionsFor`, `HIDDEN`) splits a view into named parts, front to back
-(`cutParts`, `core/part-sheet.ts`).
+(`cutParts`, `core/part-sheet.ts`). The figure the cut reads holds every
+piece of paper the view's ink encloses (`cutFigureOf(view, gaps)` and
+`enclosedPaperOf`, from `@manna/film/core`): a pale swaddle, veil or
+highlight reads as paper just as the ground between the feet does, and no
+pixel measure tells them apart. So a view names its true gaps, where its kept
+sheet shows the ground through, in its cut table's `gaps` (`CutViewData`: a
+point inside each, its piece's box in the kept view's pixels, and why), and
+the cut holds every other piece. A named gap whose point opens no piece, or no
+piece with its box, is stale: every run of the tool below refuses it and
+names the view, the gap and the boxes it opens.
 `film concept parts <film> <member> --view <kind>-<view> [--dry-run]
 [--reuse] [--check]` (`tools/part-sheet-cli.ts`) paints what the view's
 moving parts hide. Each moving part's area goes flat magenta on the whole
@@ -2673,7 +2682,11 @@ counts. An answer drawn from another input (the cut has moved since) is
 stale: the record keeps it, it is never laid, and it still counts.
 `--reuse` lays the answers already drawn, `--check` lays them and fails
 where a file differs, and `--dry-run` writes the magenta input under
-`out/<film>/cast/<member>/parts/<view>/`; none of the three calls okra.
+`out/<film>/cast/<member>/parts/<view>/` and prints each piece of enclosed
+paper the cut holds (`paper held`, its box and pixels, only the part the
+view's figure holds) and each gap the view names (`paper gap`, with its why),
+for the eye to check each held piece against the kept sheet at 1:1 (the cut
+table's `paperOf`); none of the three calls okra.
 
 ### The puppet: a part sheet on a skeleton
 
