@@ -66,10 +66,14 @@ const laid = Effect.gen(function* () {
 const Lefthook = Schema.Struct({ 'pre-commit': Schema.Record(Schema.String, Schema.Unknown) });
 const Jobs = Schema.Array(Schema.Record(Schema.String, Schema.Unknown));
 
-/** The keys of lefthook's schema (`node_modules/lefthook/schema.json`) that narrow the commits or files a job runs on. */
-const JOB_NARROWS = ['glob', 'files', 'file_types', 'exclude', 'only', 'skip'];
-/** The same keys on the hook, which narrow every job of it. */
-const HOOK_NARROWS = ['files', 'exclude', 'only', 'skip'];
+/**
+ * The keys of lefthook's schema (`node_modules/lefthook/schema.json`) that
+ * narrow the commits or files a job runs on, or let it be skipped: a job's
+ * `tags` are what an `exclude_tags` or `LEFTHOOK_EXCLUDE` names to skip it.
+ */
+const JOB_NARROWS = ['glob', 'files', 'file_types', 'exclude', 'only', 'skip', 'tags'];
+/** The keys on the hook that narrow every job of it, or skip the jobs its `exclude_tags` names. */
+const HOOK_NARROWS = ['files', 'exclude', 'only', 'skip', 'exclude_tags'];
 
 /**
  * The pre-commit's `lessons` jobs in `lefthook.yml`'s text: what each runs,
@@ -273,6 +277,11 @@ describe('the pre-commit', () => {
           [lefthook.replace(run, `      glob: '*.md'\n$&`), 'glob'],
           [lefthook.replace(run, `$&      files: git diff --name-only HEAD\n`), 'files'],
           [lefthook.replace('  jobs:\n', `  skip: merge\n$&`), 'pre-commit.skip'],
+          [
+            lefthook.replace('  jobs:\n', `  exclude_tags: [lessons]\n$&`),
+            'pre-commit.exclude_tags',
+          ],
+          [lefthook.replace(run, `$&      tags: [ledger]\n`), 'tags'],
         ] as const) {
           expect((yield* lessonsJob(narrowed)).narrowedBy).toEqual([by]);
         }
