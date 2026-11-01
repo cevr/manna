@@ -142,9 +142,9 @@ const build = (
           ]),
         ),
         CastReader.layerTest(
-          { evaluate, checkpoint: text('ckpt'), trainStdout: stdout },
+          { evaluate: () => evaluate, checkpoint: text('ckpt'), trainStdout: stdout },
           [],
-          SOURCES,
+          { train: SOURCES, read: SOURCES, eval: SOURCES },
         ),
       ),
     ),

@@ -826,7 +826,10 @@ export const chainClip = Effect.fn('cast.chain.clip')(function* (o: {
       clip: yield* hashOf(o.clip),
       map: o.map,
       mapping: MAPPING,
-      sources: yield* Effect.forEach(reader.sources, hashOf),
+      sources: yield* Effect.forEach(
+        [...new Set([...reader.sources.train, ...reader.sources.eval])].toSorted(),
+        hashOf,
+      ),
     }),
   );
   const dir = path.join(o.cache, 'reads', key);

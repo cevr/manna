@@ -14,8 +14,14 @@
 //   train stage calls it, inside its `ctx.spend('modal', …)`; reads and
 //   evals run on this machine's CPU and spend nothing.
 //
-// `CastReader.sources` names the files a train ships and is keyed by: every
-// file of the reader's folder but its tests.
+// `CastReader.sources` names the reader's files by role, each a closure
+// derived from the Python's local imports (`rolesOf`): `train`, what a train
+// runs (modal_app.py's closure; the Modal image installs `modal_app.PACKAGES`,
+// not the lock), which keys the checkpoint; `read`, what a local read runs
+// (read.py's closure and the environment, pyproject.toml and uv.lock); `eval`,
+// what a local eval runs (read.py's and eval.py's closures and the
+// environment). An edit to a read or eval file so re-runs the reads and evals,
+// and leaves the checkpoint's key, and so the checkpoint, as it is.
 
 import { Config, Context, Duration, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
@@ -95,9 +101,138 @@ const trainedOf = (stdout: string): Omit<Trained, 'checkpoint'> => ({
   app: Option.map(Option.fromNullishOr(/\bap-[A-Za-z0-9]+/.exec(stdout)), (m) => m[0]),
 });
 
+/** The reader's files by role, each sorted: what a train runs, what a read runs, what an eval runs (`rolesOf`). */
+export interface ReaderSources {
+  readonly train: ReadonlyArray<string>;
+  readonly read: ReadonlyArray<string>;
+  readonly eval: ReadonlyArray<string>;
+}
+
+/** A reader folder whose roles cannot be derived from its imports: a dynamic import, or an entry script missing. */
+export class ReaderScanFailed extends Schema.TaggedError<ReaderScanFailed>()('ReaderScanFailed', {
+  file: Schema.String,
+  reason: Schema.String,
+}) {
+  override get message() {
+    return `reader scan ${this.file}: ${this.reason}`;
+  }
+}
+
+/** The local environment a read or an eval runs under: the project's pins and the lock its venv is made from. */
+const ENVIRONMENT = ['pyproject.toml', 'uv.lock'];
+/** Each role's entry scripts, whose local-import closures it runs. */
+const ENTRIES = {
+  train: ['modal_app.py'],
+  read: ['read.py'],
+  eval: ['read.py', 'eval.py'],
+} as const satisfies Record<keyof ReaderSources, ReadonlyArray<string>>;
+/** The roles that run locally, under the environment; a train runs in the Modal image. */
+const LOCAL: ReadonlySet<keyof ReaderSources> = new Set(['read', 'eval']);
+
+/** A word that names a dynamic import, which hides an edge from the scan. */
+const DYNAMIC = /\b(importlib|__import__|runpy)\b/;
+
+/**
+ * The statements of `text` an import can open: backslash continuations
+ * joined, a `from … import (` joined through its closing paren, and each
+ * line split at `;`.
+ */
+const statementsOf = (text: string) => {
+  const lines = text.replace(/\\\r?\n/g, ' ').split(/\r?\n/);
+  const statements: Array<string> = [];
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i] ?? '';
+    if (/^\s*from\b.*\bimport\s*\(/.test(line))
+      while (!line.includes(')') && i + 1 < lines.length) line = `${line} ${lines[++i] ?? ''}`;
+    statements.push(...line.split(';'));
+  }
+  return statements;
+};
+
+/**
+ * Every module `text` (a Python file) may import, by its first name: each
+ * `import a, b.c as d` names `a` and `b`; each `from x import …` names `x`; a
+ * relative `from .x import …` names `x`, and `from . import a, b` names `a`
+ * and `b`. Indented imports count (an import inside a function is an edge
+ * too). A line in a string that reads as an import counts as well: a false
+ * edge only widens a key.
+ */
+export const importsOf = (text: string): ReadonlyArray<string> =>
+  statementsOf(text).flatMap((s) =>
+    Option.fromNullishOr(/^\s*import\s+(.+)$/.exec(s)).pipe(
+      Option.map((plain) =>
+        (plain[1] ?? '').split(',').flatMap((part) => /^\s*(\w+)/.exec(part)?.slice(1) ?? []),
+      ),
+      Option.orElse(() =>
+        Option.map(Option.fromNullishOr(/^\s*from\s+\.+\s*import\s+(.+)$/.exec(s)), (bare) =>
+          [...(bare[1] ?? '').matchAll(/(\w+)(?:\s+as\s+\w+)?/g)].map((m) => m[1] ?? ''),
+        ),
+      ),
+      Option.getOrElse(() => /^\s*from\s+\.*(\w+)/.exec(s)?.slice(1) ?? []),
+    ),
+  );
+
+/**
+ * The reader's files by role, by name, from `py`: every `.py` file of its
+ * folder by name and its text. Each role is the closure of its entries over
+ * their local imports (an import naming a `<name>.py` of `py`, followed
+ * transitively), with the environment for a local role, sorted. A file that
+ * imports dynamically (`importlib`, `__import__`, `runpy`) fails the scan, as
+ * does a missing entry.
+ */
+export const rolesOf = (
+  py: ReadonlyMap<string, string>,
+): Effect.Effect<ReaderSources, ReaderScanFailed> =>
+  Effect.gen(function* () {
+    for (const [file, text] of py) {
+      const dynamic = Option.fromNullishOr(DYNAMIC.exec(text));
+      if (Option.isSome(dynamic))
+        return yield* ReaderScanFailed.make({
+          file,
+          reason: `it names ${dynamic.value[1]}, a dynamic import the scan cannot follow`,
+        });
+    }
+    const closureOf = (role: keyof ReaderSources) =>
+      Effect.gen(function* () {
+        const seen = new Set<string>();
+        const queue: Array<string> = [...ENTRIES[role]];
+        for (const entry of queue)
+          if (!py.has(entry))
+            return yield* ReaderScanFailed.make({
+              file: entry,
+              reason: `missing: the ${role} role's entry`,
+            });
+        while (queue.length > 0) {
+          const file = queue.shift() ?? '';
+          if (seen.has(file)) continue;
+          seen.add(file);
+          for (const name of importsOf(py.get(file) ?? ''))
+            if (py.has(`${name}.py`)) queue.push(`${name}.py`);
+        }
+        return [...seen, ...ENVIRONMENT.filter(() => LOCAL.has(role))].toSorted();
+      });
+    return {
+      train: yield* closureOf('train'),
+      read: yield* closureOf('read'),
+      eval: yield* closureOf('eval'),
+    };
+  });
+
+/** The roles of the reader folder `dir`, from its `.py` files (its tests' folder is not read), as absolute paths. */
+const sourcesIn = (dir: string) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const names = (yield* fs.readDirectory(dir)).filter((n) => n.endsWith('.py')).toSorted();
+    const py = new Map<string, string>();
+    for (const name of names) py.set(name, yield* fs.readFileString(`${dir}/${name}`));
+    const roles = yield* rolesOf(py);
+    const at = (files: ReadonlyArray<string>) => files.map((n) => `${dir}/${n}`);
+    return { train: at(roles.train), read: at(roles.read), eval: at(roles.eval) };
+  });
+
 interface CastReaderService {
-  /** The files a train ships and its key hashes, sorted: every file of the reader's folder but its tests. */
-  readonly sources: ReadonlyArray<string>;
+  /** The reader's files by role, as absolute paths, each sorted (`rolesOf`). */
+  readonly sources: ReaderSources;
   /** `frames` read by the checkpoint at `ckpt`: read.py's JSON (every class's probability per frame); each frame as mapped onto the canvas written to `mapped` as `<id>.png`, when named. */
   readonly read: (
     ckpt: string,
@@ -138,213 +273,208 @@ const frameArgs = (frames: Frames, resolve: (p: string) => string): ReadonlyArra
 /** The last lines a run printed, for its failure. */
 const tailOf = (text: string) => text.trim().split('\n').slice(-6).join('\n');
 
-/** The reader's source files: every file of `dir` but its tests and caches, sorted. */
-const sourcesIn = (dir: string) =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const names = yield* fs.readDirectory(dir);
-    return names
-      .filter((n) => /\.(py|toml|lock)$/.test(n))
-      .toSorted()
-      .map((n) => `${dir}/${n}`);
-  });
-
 export class CastReader extends Context.Service<CastReader, CastReaderService>()(
   '@manna/film/tools/cast-build/CastReader',
 ) {
-  /** The reader in its uv environment under `FILM_READER_HOME` (else ~/.cache/bible-film/reader). */
-  static readonly layer = Layer.effect(
-    CastReader,
-    Effect.gen(function* () {
-      const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const dir = path.resolve(READER_DIR);
-      const userHome = yield* Config.String('HOME').pipe(Config.withDefault('~'));
-      const home = yield* Config.String('FILM_READER_HOME').pipe(
-        Config.withDefault(path.join(userHome, '.cache', 'bible-film', 'reader')),
-      );
-      const sources = yield* sourcesIn(dir);
-      const lock = yield* fs.readFile(path.join(dir, 'uv.lock'));
-      const venv = path.join(home, `venv-${sha256Hex(lock).slice(0, 12)}`);
-      const python = path.join(venv, 'bin', 'python');
-      const install = `cd ${dir} && UV_PROJECT_ENVIRONMENT=${venv} uv sync --frozen --python 3.12`;
-      const env = { HOME: userHome, PATH: '/usr/bin:/bin', PYTHONDONTWRITEBYTECODE: '1' };
+  /** The reader in folder `folder`, in its uv environment under `FILM_READER_HOME` (else ~/.cache/bible-film/reader). */
+  static readonly layerIn = (folder: string) =>
+    Layer.effect(
+      CastReader,
+      Effect.gen(function* () {
+        const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+        const fs = yield* FileSystem.FileSystem;
+        const path = yield* Path.Path;
+        const dir = path.resolve(folder);
+        const userHome = yield* Config.String('HOME').pipe(Config.withDefault('~'));
+        const home = yield* Config.String('FILM_READER_HOME').pipe(
+          Config.withDefault(path.join(userHome, '.cache', 'bible-film', 'reader')),
+        );
+        const sources = yield* sourcesIn(dir);
+        const lock = yield* fs.readFile(path.join(dir, 'uv.lock'));
+        const venv = path.join(home, `venv-${sha256Hex(lock).slice(0, 12)}`);
+        const python = path.join(venv, 'bin', 'python');
+        const install = `cd ${dir} && UV_PROJECT_ENVIRONMENT=${venv} uv sync --frozen --python 3.12`;
+        const env = { HOME: userHome, PATH: '/usr/bin:/bin', PYTHONDONTWRITEBYTECODE: '1' };
 
-      const ready = Effect.gen(function* () {
-        const there = yield* fs.exists(python).pipe(Effect.orElseSucceed(() => false));
-        if (!there) return yield* ReaderMissing.make({ venv, install });
-      });
-
-      /** `python -I -B` with `args`, its stdout on success. */
-      const python_ = (what: string, args: ReadonlyArray<string>, limit: Duration.Duration) =>
-        Effect.gen(function* () {
-          yield* ready;
-          const ran = yield* collectWithin(
-            spawner,
-            `reader ${what}`,
-            ChildProcess.make(python, ['-I', '-B', ...args], {
-              cwd: dir,
-              env,
-              forceKillAfter: Duration.seconds(5),
-            }),
-            limit,
-          ).pipe(
-            Effect.catchTags({
-              PlatformError: (e) => ReaderFailed.make({ what, reason: e.message }),
-              ProcessTimedOut: (e) => ReaderFailed.make({ what, reason: e.message }),
-            }),
-          );
-          if (ran.exitCode !== 0)
-            return yield* ReaderFailed.make({
-              what,
-              reason: `it exited ${ran.exitCode}: ${tailOf(ran.stderr) || tailOf(ran.stdout)}`,
-            });
-          return ran.stdout;
+        const ready = Effect.gen(function* () {
+          const there = yield* fs.exists(python).pipe(Effect.orElseSucceed(() => false));
+          if (!there) return yield* ReaderMissing.make({ venv, install });
         });
-      const script = (name: string, args: ReadonlyArray<string>, limit: Duration.Duration) =>
-        python_(name, ['-c', DRIVER, dir, name, ...args], limit);
 
-      const failedAs = (what: string) => (e: { readonly message: string }) =>
-        ReaderFailed.make({ what, reason: e.message });
-
-      const read = Effect.fn('CastReader.read')(function* (
-        ckpt: string,
-        frames: Frames,
-        mapped?: string,
-      ) {
-        return yield* Effect.scoped(
+        /** `python -I -B` with `args`, its stdout on success. */
+        const python_ = (what: string, args: ReadonlyArray<string>, limit: Duration.Duration) =>
           Effect.gen(function* () {
-            const scratch = yield* fs.makeTempDirectoryScoped();
-            const out = path.join(scratch, 'read.json');
-            const source = frameArgs(frames, (p) => path.resolve(p));
-            yield* script(
-              'read',
-              [
-                '--ckpt',
-                path.resolve(ckpt),
-                ...source,
-                '--out',
-                out,
-                '--device',
-                'cpu',
-                '--all-probs',
-                ...Option.match(Option.fromUndefinedOr(mapped), {
-                  onNone: () => [],
-                  onSome: (m) => ['--save-mapped', path.resolve(m)],
-                }),
-              ],
-              READ_LIMIT,
-            );
-            return yield* fs.readFileString(out);
-          }),
-        ).pipe(Effect.catchTag('PlatformError', failedAs('read')));
-      });
-
-      const evaluate = Effect.fn('CastReader.evaluate')(function* (ckpt: string, shard: string) {
-        return yield* Effect.scoped(
-          Effect.gen(function* () {
-            const scratch = yield* fs.makeTempDirectoryScoped();
-            const untar = yield* collectWithin(
+            yield* ready;
+            const ran = yield* collectWithin(
               spawner,
-              'tar',
-              ChildProcess.make('/usr/bin/tar', ['-xf', shard, '-C', scratch, 'held'], {
+              `reader ${what}`,
+              ChildProcess.make(python, ['-I', '-B', ...args], {
+                cwd: dir,
+                env,
                 forceKillAfter: Duration.seconds(5),
               }),
-              READ_LIMIT,
+              limit,
+            ).pipe(
+              Effect.catchTags({
+                PlatformError: (e) => ReaderFailed.make({ what, reason: e.message }),
+                ProcessTimedOut: (e) => ReaderFailed.make({ what, reason: e.message }),
+              }),
             );
-            if (untar.exitCode !== 0)
-              return yield* ReaderFailed.make({ what: 'eval', reason: tailOf(untar.stderr) });
-            const held = path.join(scratch, 'held');
-            const readOut = path.join(scratch, 'read.json');
-            const evalOut = path.join(scratch, 'eval.json');
-            yield* script(
-              'read',
-              ['--ckpt', path.resolve(ckpt), '--pngs', held, '--out', readOut, '--device', 'cpu'],
-              READ_LIMIT,
-            );
-            yield* script(
-              'eval',
-              ['--read', readOut, '--truth', held, '--out', evalOut],
-              READ_LIMIT,
-            );
-            return yield* fs.readFileString(evalOut);
-          }),
-        ).pipe(
-          Effect.catchTags({
-            PlatformError: failedAs('eval'),
-            ProcessTimedOut: failedAs('eval'),
-          }),
-        );
-      });
+            if (ran.exitCode !== 0)
+              return yield* ReaderFailed.make({
+                what,
+                reason: `it exited ${ran.exitCode}: ${tailOf(ran.stderr) || tailOf(ran.stdout)}`,
+              });
+            return ran.stdout;
+          });
+        const script = (name: string, args: ReadonlyArray<string>, limit: Duration.Duration) =>
+          python_(name, ['-c', DRIVER, dir, name, ...args], limit);
 
-      const train = Effect.fn('CastReader.train')(function* (job: TrainJob) {
-        return yield* Effect.scoped(
-          Effect.gen(function* () {
-            const scratch = yield* fs.makeTempDirectoryScoped();
-            const out = path.join(scratch, `${job.key}-${job.run}.pt`);
-            const c = job.config;
-            const stdout = yield* python_(
-              'train',
-              [
-                '-m',
-                'modal',
-                'run',
-                `${path.join(dir, 'modal_app.py')}::train`,
-                ...['--trainset', job.trainset, '--key', job.key, '--run', job.run],
-                ...['--shards', job.shards.join(',')],
-                ...['--out', out, '--steps', String(c.steps), '--batch', String(c.batch)],
-                ...['--lr', String(c.lr), '--seed', String(c.seed), '--gpu', c.gpu],
-                ...['--precision', c.precision, '--backbone', c.backbone],
-                ...['--input-width', String(c.inputSide.width)],
-                ...['--input-height', String(c.inputSide.height)],
-              ],
-              TRAIN_LIMIT,
-            );
-            const checkpoint = yield* fs.readFile(out);
-            return { checkpoint, ...trainedOf(stdout) };
-          }),
-        ).pipe(Effect.catchTag('PlatformError', failedAs('train')));
-      });
+        const failedAs = (what: string) => (e: { readonly message: string }) =>
+          ReaderFailed.make({ what, reason: e.message });
 
-      const promote = Effect.fn('CastReader.promote')(function* (key: string, run: string) {
-        yield* python_(
-          'promote',
-          [
-            '-m',
-            'modal',
-            'run',
-            `${path.join(dir, 'modal_app.py')}::promote`,
-            ...['--key', key, '--run', run],
-          ],
-          READ_LIMIT,
-        );
-      });
+        const read = Effect.fn('CastReader.read')(function* (
+          ckpt: string,
+          frames: Frames,
+          mapped?: string,
+        ) {
+          return yield* Effect.scoped(
+            Effect.gen(function* () {
+              const scratch = yield* fs.makeTempDirectoryScoped();
+              const out = path.join(scratch, 'read.json');
+              const source = frameArgs(frames, (p) => path.resolve(p));
+              yield* script(
+                'read',
+                [
+                  '--ckpt',
+                  path.resolve(ckpt),
+                  ...source,
+                  '--out',
+                  out,
+                  '--device',
+                  'cpu',
+                  '--all-probs',
+                  ...Option.match(Option.fromUndefinedOr(mapped), {
+                    onNone: () => [],
+                    onSome: (m) => ['--save-mapped', path.resolve(m)],
+                  }),
+                ],
+                READ_LIMIT,
+              );
+              return yield* fs.readFileString(out);
+            }),
+          ).pipe(Effect.catchTag('PlatformError', failedAs('read')));
+        });
 
-      const test = python_('test', ['-m', 'pytest', '-q'], READ_LIMIT);
+        const evaluate = Effect.fn('CastReader.evaluate')(function* (ckpt: string, shard: string) {
+          return yield* Effect.scoped(
+            Effect.gen(function* () {
+              const scratch = yield* fs.makeTempDirectoryScoped();
+              const untar = yield* collectWithin(
+                spawner,
+                'tar',
+                ChildProcess.make('/usr/bin/tar', ['-xf', shard, '-C', scratch, 'held'], {
+                  forceKillAfter: Duration.seconds(5),
+                }),
+                READ_LIMIT,
+              );
+              if (untar.exitCode !== 0)
+                return yield* ReaderFailed.make({ what: 'eval', reason: tailOf(untar.stderr) });
+              const held = path.join(scratch, 'held');
+              const readOut = path.join(scratch, 'read.json');
+              const evalOut = path.join(scratch, 'eval.json');
+              yield* script(
+                'read',
+                ['--ckpt', path.resolve(ckpt), '--pngs', held, '--out', readOut, '--device', 'cpu'],
+                READ_LIMIT,
+              );
+              yield* script(
+                'eval',
+                ['--read', readOut, '--truth', held, '--out', evalOut],
+                READ_LIMIT,
+              );
+              return yield* fs.readFileString(evalOut);
+            }),
+          ).pipe(
+            Effect.catchTags({
+              PlatformError: failedAs('eval'),
+              ProcessTimedOut: failedAs('eval'),
+            }),
+          );
+        });
 
-      return CastReader.of({ sources, read, evaluate, train, promote, test });
-    }),
-  );
+        const train = Effect.fn('CastReader.train')(function* (job: TrainJob) {
+          return yield* Effect.scoped(
+            Effect.gen(function* () {
+              const scratch = yield* fs.makeTempDirectoryScoped();
+              const out = path.join(scratch, `${job.key}-${job.run}.pt`);
+              const c = job.config;
+              const stdout = yield* python_(
+                'train',
+                [
+                  '-m',
+                  'modal',
+                  'run',
+                  `${path.join(dir, 'modal_app.py')}::train`,
+                  ...['--trainset', job.trainset, '--key', job.key, '--run', job.run],
+                  ...['--shards', job.shards.join(',')],
+                  ...['--out', out, '--steps', String(c.steps), '--batch', String(c.batch)],
+                  ...['--lr', String(c.lr), '--seed', String(c.seed), '--gpu', c.gpu],
+                  ...['--precision', c.precision, '--backbone', c.backbone],
+                  ...['--input-width', String(c.inputSide.width)],
+                  ...['--input-height', String(c.inputSide.height)],
+                ],
+                TRAIN_LIMIT,
+              );
+              const checkpoint = yield* fs.readFile(out);
+              return { checkpoint, ...trainedOf(stdout) };
+            }),
+          ).pipe(Effect.catchTag('PlatformError', failedAs('train')));
+        });
+
+        const promote = Effect.fn('CastReader.promote')(function* (key: string, run: string) {
+          yield* python_(
+            'promote',
+            [
+              '-m',
+              'modal',
+              'run',
+              `${path.join(dir, 'modal_app.py')}::promote`,
+              ...['--key', key, '--run', run],
+            ],
+            READ_LIMIT,
+          );
+        });
+
+        const test = python_('test', ['-m', 'pytest', '-q'], READ_LIMIT);
+
+        return CastReader.of({ sources, read, evaluate, train, promote, test });
+      }),
+    );
+
+  /** The reader of `packages/film/reader/`, in its uv environment. */
+  static readonly layer = CastReader.layerIn(READER_DIR);
 
   /**
    * A reader that answers from `answers` and runs nothing; `asked` records
-   * each call as `<what> <argument>`. A train runs `answers.training` before
-   * it answers: what happens while it runs; it reads `answers.trainStdout`
-   * as the live train reads `modal run`'s stdout. A promote fails with
-   * `answers.promoteFails` as its reason, when it is given.
+   * each call as `<what> <argument>`. An eval answers what `answers.evaluate`
+   * makes of the shard ('{}' without it). A train runs
+   * `answers.training` before it answers: what happens while it runs; it
+   * reads `answers.trainStdout` as the live train reads `modal run`'s
+   * stdout. A promote fails with `answers.promoteFails` as its reason, when
+   * it is given.
    */
   static readonly layerTest = (
     answers: {
       readonly read?: string;
-      readonly evaluate?: string;
+      readonly evaluate?: (shard: string) => string;
       readonly checkpoint?: Uint8Array;
       readonly training?: Effect.Effect<void>;
       readonly trainStdout?: string;
       readonly promoteFails?: string;
     },
     asked: Array<string> = [],
-    sources: ReadonlyArray<string> = [],
+    sources: ReaderSources = { train: [], read: [], eval: [] },
   ) =>
     Layer.succeed(
       CastReader,
@@ -352,7 +482,10 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
         sources,
         read: (ckpt) => Effect.sync(() => (asked.push(`read ${ckpt}`), answers.read ?? '{}')),
         evaluate: (_, shard) =>
-          Effect.sync(() => (asked.push(`evaluate ${shard}`), answers.evaluate ?? '{}')),
+          Effect.sync(() => {
+            asked.push(`evaluate ${shard}`);
+            return answers.evaluate?.(shard) ?? '{}';
+          }),
         train: (job) =>
           Effect.sync(() =>
             asked.push(`train ${job.key} run=${job.run} shards=${job.shards.length}`),

@@ -192,6 +192,9 @@ export const build = <E, R>(
       const candidates = members.flatMap(candidatesOf);
       const sources = src.stage;
       const reader = yield* CastReader;
+      const readerFiles = [
+        ...new Set([...reader.sources.train, ...reader.sources.eval]),
+      ].toSorted();
       const cache = yield* castCache;
       const needs = ownerNeeds(members);
       const lockFile = yield* readerLockOf(film);
@@ -203,11 +206,11 @@ export const build = <E, R>(
       > = [
         ...built,
         trainsetStage(candidates),
-        trainStage(candidates, reader.sources, lockFile),
+        trainStage(candidates, readerFiles, lockFile),
         ...candidates.map((c) => evalStage(c.renders, sources.eval)),
         ...clipMakes,
         ...members.flatMap((m) => clipStages(m, cache, sources.chain)),
-        lockStage({ file: lockFile, candidates, sources: reader.sources, clips }),
+        lockStage({ file: lockFile, candidates, sources: readerFiles, clips }),
         askStage(
           film,
           members.map((m) => m.member),

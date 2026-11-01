@@ -22,7 +22,7 @@ import { sha256Hex } from '../digest.ts';
 import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore } from '../content-store.ts';
 import { type Stage, buildGraph, fileInput, stageInput } from './graph.ts';
-import { CastReader } from './reader.ts';
+import { CastReader, importsOf, rolesOf } from './reader.ts';
 import { candidatesOf, evalStage, memberStages, trainStage, trainsetStage } from './stages.ts';
 
 /** What a build is asked with, as `buildGraph` takes it. */
@@ -197,7 +197,11 @@ const build = (
         ContentStore.layer.pipe(
           Layer.provideMerge([memoryFileSystem(disk), Path.layer, memoryLocks]),
         ),
-        CastReader.layerTest({ evaluate: '{"seen":{"accuracy":1}}', ...reader }, asked, SOURCES),
+        CastReader.layerTest({ evaluate: () => '{"seen":{"accuracy":1}}', ...reader }, asked, {
+          train: SOURCES,
+          read: SOURCES,
+          eval: SOURCES,
+        }),
       ),
     ),
   );
@@ -556,6 +560,120 @@ describe('cast build: the train adopts the committed checkpoint', () => {
   );
 });
 
+describe("the reader's roles, derived from its imports", () => {
+  /** A reader folder shaped as the committed one: modal_app.py imports train and model inside its functions. */
+  const FOLDER: ReadonlyArray<readonly [string, string]> = [
+    ['eval.py', 'import argparse\nimport numpy as np\n\nfrom model import BONES, wrap\n'],
+    [
+      'modal_app.py',
+      [
+        'import json',
+        'import modal',
+        'def fit():',
+        '    import sys',
+        '    from train import train as run',
+        'def read():',
+        '    from model import Frame',
+      ].join('\n'),
+    ],
+    [
+      'model.py',
+      'import torch\n\nclass Reader:\n    def load(self):\n        from transformers import AutoModel\n',
+    ],
+    ['read.py', 'import cv2\nfrom model import CANVAS, decode\n'],
+    ['train.py', 'import torch.nn.functional as F\nfrom model import BACKBONE, Reader\n'],
+  ];
+  const rolesIn = (over: ReadonlyArray<readonly [string, string]> = []) =>
+    rolesOf(new Map([...FOLDER, ...over]));
+
+  it.effect('a role is its entries’ closure, a local role with the environment', () =>
+    Effect.gen(function* () {
+      expect(yield* rolesIn()).toEqual({
+        train: ['modal_app.py', 'model.py', 'train.py'],
+        read: ['model.py', 'pyproject.toml', 'read.py', 'uv.lock'],
+        eval: ['eval.py', 'model.py', 'pyproject.toml', 'read.py', 'uv.lock'],
+      });
+    }),
+  );
+
+  it.effect('the closure is transitive, and a module with no file in the folder is no edge', () =>
+    Effect.gen(function* () {
+      const roles = yield* rolesIn([
+        ['read.py', 'import numpy\nfrom model import decode\nimport a\n'],
+        ['a.py', 'import os\nimport b\n'],
+        ['b.py', 'from c import x\n'],
+        ['c.py', 'import torch\n'],
+        ['unused.py', 'import model\n'],
+      ]);
+      expect(roles.read).toEqual([
+        'a.py',
+        'b.py',
+        'c.py',
+        'model.py',
+        'pyproject.toml',
+        'read.py',
+        'uv.lock',
+      ]);
+      expect(roles.train).toEqual(['modal_app.py', 'model.py', 'train.py']);
+    }),
+  );
+
+  it.effect('reads every import form, each by its first name', () =>
+    Effect.sync(() => {
+      const forms: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = [
+        ['import a, b as c', ['a', 'b']],
+        ['import x as y', ['x']],
+        ['import pkg.sub', ['pkg']],
+        ['    from inner import thing', ['inner']],
+        ['from multi import (\n    one,\n    two,\n)', ['multi']],
+        ['from .rel import x', ['rel']],
+        ['from . import (\n    left,\n    right as r,\n)', ['left', 'right']],
+        ['import first, \\\n    second', ['first', 'second']],
+        ['x = 1; import semi', ['semi']],
+        ['# import commented', []],
+        ['print("import nothing")', []],
+      ];
+      for (const [source, names] of forms)
+        expect([source, importsOf(source)]).toEqual([source, names]);
+    }),
+  );
+
+  it.effect('an import-like line in a string widens the closure, which only widens its key', () =>
+    Effect.gen(function* () {
+      const roles = yield* rolesIn([
+        ['read.py', 'from model import decode\n"""\nimport helper\n"""\n'],
+        ['helper.py', ''],
+      ]);
+      expect(roles.read).toContain('helper.py');
+    }),
+  );
+
+  it.effect('a file that imports dynamically fails the scan, by its name and the word', () =>
+    Effect.gen(function* () {
+      for (const word of [
+        'importlib.import_module("x")',
+        '__import__("x")',
+        'runpy.run_path("x")',
+      ]) {
+        const failed = yield* Effect.flip(rolesIn([['stray.py', word]]));
+        expect(failed._tag).toBe('ReaderScanFailed');
+        expect(failed.file).toBe('stray.py');
+        expect(failed.message).toContain(word.split(/[.(]/)[0] ?? '');
+      }
+    }),
+  );
+
+  it.effect('a missing entry fails the scan, naming its role', () =>
+    Effect.gen(function* () {
+      const failed = yield* Effect.flip(
+        rolesOf(new Map(FOLDER.filter(([name]) => name !== 'eval.py'))),
+      );
+      expect(failed.file).toBe('eval.py');
+      expect(failed.reason).toContain('eval');
+    }),
+  );
+});
+
 describe('the live reader', () => {
   /** A spawner that records each command (program and arguments) and exits 0, printing nothing. */
   const recording = (commands: Array<ReadonlyArray<string>>) =>
@@ -578,23 +696,39 @@ describe('the live reader', () => {
       );
     });
 
+  /** A reader folder of the live layer's: its entry scripts, its model and its lock, written to a temporary folder. */
+  const FOLDER = {
+    'eval.py': 'from model import BONES\n',
+    'modal_app.py': 'def fit():\n    from train import train\n',
+    'model.py': 'import torch\n',
+    'read.py': 'from model import decode\n',
+    'train.py': 'from model import Reader\n',
+    'pyproject.toml': '[project]\n',
+    'uv.lock': 'version = 1\n',
+  };
+
   /**
-   * The live reader over `spawner`, in an environment made for it as the
-   * layer finds one: `venv-<uv.lock's hash>/bin/python` under a temporary
+   * The live reader over `spawner`, of a reader folder written to a
+   * temporary folder (`reader`), in an environment made for it as the layer
+   * finds one: `venv-<uv.lock's hash>/bin/python` under a temporary
    * FILM_READER_HOME.
    */
-  const liveOver = (spawner: ChildProcessSpawner.ChildProcessSpawner['Service']) =>
+  const liveOver = (
+    spawner: ChildProcessSpawner.ChildProcessSpawner['Service'],
+    reader: Array<string> = [],
+  ) =>
     Layer.unwrap(
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const home = yield* fs.makeTempDirectoryScoped();
-        const lock = yield* fs.readFile(
-          new URL('../../../reader/uv.lock', import.meta.url).pathname,
-        );
-        const bin = `${home}/venv-${sha256Hex(lock).slice(0, 12)}/bin`;
+        const folder = yield* fs.makeTempDirectoryScoped();
+        for (const [name, body] of Object.entries(FOLDER))
+          yield* fs.writeFileString(`${folder}/${name}`, body);
+        reader.push(folder);
+        const bin = `${home}/venv-${sha256Hex(text(FOLDER['uv.lock'])).slice(0, 12)}/bin`;
         yield* fs.makeDirectory(bin, { recursive: true });
         yield* fs.writeFileString(`${bin}/python`, '');
-        return CastReader.layer.pipe(
+        return CastReader.layerIn(folder).pipe(
           Layer.provide([
             Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, spawner),
             ConfigProvider.layer(ConfigProvider.fromUnknown({ FILM_READER_HOME: home })),
@@ -631,5 +765,19 @@ describe('the live reader', () => {
       expect(flag('--input-width')).toBe('896');
       expect(flag('--input-height')).toBe('1120');
     }).pipe(Effect.provide(liveOver(recording(commands))));
+  });
+
+  it.effect("its sources are its folder's roles, as absolute paths", () => {
+    const folder: Array<string> = [];
+    return Effect.gen(function* () {
+      const { sources } = yield* CastReader;
+      const [dir = ''] = folder;
+      const at = (names: ReadonlyArray<string>) => names.map((n) => `${dir}/${n}`);
+      expect(sources).toEqual({
+        train: at(['modal_app.py', 'model.py', 'train.py']),
+        read: at(['model.py', 'pyproject.toml', 'read.py', 'uv.lock']),
+        eval: at(['eval.py', 'model.py', 'pyproject.toml', 'read.py', 'uv.lock']),
+      });
+    }).pipe(Effect.provide(liveOver(recording([]), folder)));
   });
 });

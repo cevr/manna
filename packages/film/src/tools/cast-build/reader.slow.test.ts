@@ -1,7 +1,8 @@
 // The cast reader's Python, run as the build runs it: its pytest cases in
 // its uv environment (`uv.lock`'s, under `FILM_READER_HOME`); and, with no
-// environment there, a refusal that names the line making one. Slow: it
-// starts Python and imports torch.
+// environment there, a refusal that names the line making one; and the
+// committed folder's roles, as its imports derive them. Slow: it starts
+// Python and imports torch.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -45,18 +46,21 @@ describe('cast reader (Python)', () => {
     ),
   );
 
-  it.effect('names its source files: the model, its scripts and the lock, never the tests', () =>
-    Effect.gen(function* () {
-      const names = (yield* CastReader).sources.map((s) => s.split('/').at(-1));
-      expect(names).toEqual([
-        'eval.py',
-        'modal_app.py',
-        'model.py',
-        'pyproject.toml',
-        'read.py',
-        'train.py',
-        'uv.lock',
-      ]);
-    }).pipe(Effect.provide(live)),
+  it.effect(
+    "names the committed folder's files by role, from their imports: what trains, reads and evals, never the tests",
+    () =>
+      Effect.gen(function* () {
+        const { sources } = yield* CastReader;
+        const names = (files: ReadonlyArray<string>) => files.map((s) => s.split('/').at(-1));
+        expect(names(sources.train)).toEqual(['modal_app.py', 'model.py', 'train.py']);
+        expect(names(sources.read)).toEqual(['model.py', 'pyproject.toml', 'read.py', 'uv.lock']);
+        expect(names(sources.eval)).toEqual([
+          'eval.py',
+          'model.py',
+          'pyproject.toml',
+          'read.py',
+          'uv.lock',
+        ]);
+      }).pipe(Effect.provide(live)),
   );
 });
