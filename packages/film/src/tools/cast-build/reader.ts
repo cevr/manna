@@ -132,45 +132,267 @@ const LOCAL: ReadonlySet<keyof ReaderSources> = new Set(['read', 'eval']);
 /** A word that names a dynamic import, which hides an edge from the scan. */
 const DYNAMIC = /\b(importlib|__import__|runpy)\b/;
 
-/**
- * The statements of `text` an import can open: backslash continuations
- * joined, a `from … import (` joined through its closing paren, and each
- * line split at `;`.
- */
-const statementsOf = (text: string) => {
-  const lines = text.replace(/\\\r?\n/g, ' ').split(/\r?\n/);
-  const statements: Array<string> = [];
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i] ?? '';
-    if (/^\s*from\b.*\bimport\s*\(/.test(line))
-      while (!line.includes(')') && i + 1 < lines.length) line = `${line} ${lines[++i] ?? ''}`;
-    statements.push(...line.split(';'));
+/** A Python file read for its imports: its text, the place reached, the line it is on, the bracket depth, and the code kept, each character with its line. */
+interface Cursor {
+  readonly text: string;
+  i: number;
+  line: number;
+  depth: number;
+  readonly code: Array<string>;
+  readonly lines: Array<number>;
+}
+
+/** A word that may stand before a quote as its string's prefix (`r`, `b`, `f`, `rb`, `fr`…); with `f` or `t`, a formatted string. */
+const PREFIX = /^[rRbBuUfFtT]{1,2}$/;
+/** A character outside brackets that ends a statement: a newline, a `;`, or the `:` before a one-line suite (`if x: import y`). */
+const ENDS: ReadonlySet<string> = new Set(['\n', ';', ':']);
+
+const isQuote = (c: string) => c === '"' || c === "'";
+
+/** The prefix of the string whose quote is at `quote`: the word just before it, when it is one; else ''. */
+const prefixAt = (text: string, quote: number) => {
+  const word = /\w*$/.exec(text.slice(Math.max(0, quote - 2), quote))?.[0] ?? '';
+  if (PREFIX.test(word) && !/\w/.test(text.charAt(quote - word.length - 1))) return word;
+  return '';
+};
+
+/** The quotes that close the string opening at `at`: three when it opens with three. */
+const closeAt = (text: string, at: number) => {
+  const quote = text.charAt(at);
+  if (text.startsWith(quote.repeat(3), at)) return quote.repeat(3);
+  return quote;
+};
+
+/** Keeps `s` as code, each character on the cursor's line. */
+const keep = (cur: Cursor, s: string) => {
+  for (const c of s) {
+    cur.code.push(c);
+    cur.lines.push(cur.line);
   }
-  return statements;
 };
 
 /**
- * Every module `text` (a Python file) may import, by its first name: each
- * `import a, b.c as d` names `a` and `b`; each `from x import …` names `x`; a
- * relative `from .x import …` names `x`, and `from . import a, b` names `a`
- * and `b`. Indented imports count (an import inside a function is an edge
- * too). A line in a string that reads as an import counts as well: a false
- * edge only widens a key.
+ * Past a formatted string's field, its `{` read: code, whose strings nest
+ * and whose braces count. False when it, or a string in it, does not end.
  */
-export const importsOf = (text: string): ReadonlyArray<string> =>
-  statementsOf(text).flatMap((s) =>
-    Option.fromNullishOr(/^\s*import\s+(.+)$/.exec(s)).pipe(
-      Option.map((plain) =>
-        (plain[1] ?? '').split(',').flatMap((part) => /^\s*(\w+)/.exec(part)?.slice(1) ?? []),
-      ),
-      Option.orElse(() =>
-        Option.map(Option.fromNullishOr(/^\s*from\s+\.+\s*import\s+(.+)$/.exec(s)), (bare) =>
-          [...(bare[1] ?? '').matchAll(/(\w+)(?:\s+as\s+\w+)?/g)].map((m) => m[1] ?? ''),
-        ),
-      ),
-      Option.getOrElse(() => /^\s*from\s+\.*(\w+)/.exec(s)?.slice(1) ?? []),
-    ),
-  );
+const pastField = (cur: Cursor): boolean => {
+  let open = 1;
+  while (cur.i < cur.text.length && open > 0) {
+    const c = cur.text.charAt(cur.i);
+    if (isQuote(c)) {
+      if (!pastString(cur)) return false;
+      continue;
+    }
+    if (c === '{') open++;
+    if (c === '}') open--;
+    if (c === '\n') cur.line++;
+    cur.i++;
+  }
+  return open === 0;
+};
+
+/**
+ * One step in a string's body: an escape (two characters), a newline
+ * (which ends a one-quote string: false), a formatted string's `{{` or its
+ * field, or a character.
+ */
+const stringStep = (cur: Cursor, close: string, formatted: boolean): boolean => {
+  const c = cur.text.charAt(cur.i);
+  const next = cur.text.charAt(cur.i + 1);
+  if (c === '\\') {
+    if (next === '\n') cur.line++;
+    cur.i += 2;
+    return true;
+  }
+  if (c === '\n') {
+    cur.line++;
+    cur.i++;
+    return close.length === 3;
+  }
+  if (formatted && c === '{' && next === '{') {
+    cur.i += 2;
+    return true;
+  }
+  cur.i++;
+  if (formatted && c === '{') return pastField(cur);
+  return true;
+};
+
+/** Past the string whose first quote is at the cursor, its lines counted. False when it does not end. */
+function pastString(cur: Cursor): boolean {
+  const formatted = /[fFtT]/.test(prefixAt(cur.text, cur.i));
+  const close = closeAt(cur.text, cur.i);
+  cur.i += close.length;
+  while (cur.i < cur.text.length) {
+    if (cur.text.startsWith(close, cur.i)) {
+      cur.i += close.length;
+      return true;
+    }
+    if (!stringStep(cur, close, formatted)) return false;
+  }
+  return false;
+}
+
+/** What code character `c` is kept as: outside brackets a statement's end is a newline; inside them a newline is a space. */
+const keptAs = (c: string, depth: number) => {
+  if (depth === 0 && ENDS.has(c)) return '\n';
+  if (c === '\n') return ' ';
+  return c;
+};
+
+/**
+ * One step in code: a comment (skipped to its line's end), a backslash
+ * that joins the next line, a string (kept as `""`), or a character
+ * (`keptAs`). False when a string does not end.
+ */
+const codeStep = (cur: Cursor): boolean => {
+  const c = cur.text.charAt(cur.i);
+  if (c === '#') {
+    cur.i = cur.text.indexOf('\n', cur.i);
+    if (cur.i < 0) cur.i = cur.text.length;
+    return true;
+  }
+  if (c === '\\' && cur.text.charAt(cur.i + 1) === '\n') {
+    keep(cur, ' ');
+    cur.line++;
+    cur.i += 2;
+    return true;
+  }
+  if (isQuote(c)) {
+    if (!pastString(cur)) return false;
+    keep(cur, '""');
+    return true;
+  }
+  if ('([{'.includes(c)) cur.depth++;
+  if (')]}'.includes(c)) cur.depth = Math.max(0, cur.depth - 1);
+  keep(cur, keptAs(c, cur.depth));
+  if (c === '\n') cur.line++;
+  cur.i++;
+  return true;
+};
+
+/**
+ * Python file `file`'s code, as an import can stand in it, and the line
+ * each of its characters is on: every string a `""` (its prefix, escapes,
+ * triple quotes and a formatted string's fields, whose strings nest, read
+ * through), every comment gone, a backslash at a line's end outside a
+ * string joining the next line, a newline inside brackets a space, and
+ * each statement on its own line (`ENDS`). A string that does not end
+ * fails the scan: it has lost its place, and an import may hide in what it
+ * took for a string.
+ */
+const codeOf = (file: string, src: string) =>
+  Effect.gen(function* () {
+    const cur: Cursor = {
+      text: src.replace(/\r\n?/g, '\n'),
+      i: 0,
+      line: 1,
+      depth: 0,
+      code: [],
+      lines: [],
+    };
+    while (cur.i < cur.text.length) {
+      const line = cur.line;
+      if (!codeStep(cur))
+        return yield* ReaderScanFailed.make({
+          file,
+          reason: `line ${line}: a string that does not end`,
+        });
+    }
+    return { code: cur.code.join(''), lines: cur.lines };
+  });
+
+/** A module path, by its first name: `a` of `a.b.c`. */
+const DOTTED = /^\s*(\w+)(?:\s*\.\s*\w+)*\s*$/;
+/** `import a.b as c, d`: its items. */
+const PLAIN = /^\s*import\s+(.*)$/;
+/** `from .x.y import …`: its dots, its module (none in `from . import a`) and what it imports. */
+const FROM = /^\s*from\b\s*(\.*)\s*(\w+(?:\s*\.\s*\w+)*)?\s*\bimport\b(.*)$/;
+/** One name a `from … import` list imports, with its optional alias. */
+const NAME = /^\s*(\w+)(?:\s+as\s+\w+)?\s*$/;
+
+/** The first names of `import`'s items (`a.b as c, d` names `a` and `d`); none when one cannot be read. */
+const plainNames = (items: string): Option.Option<ReadonlyArray<string>> => {
+  const names = items
+    .split(',')
+    .map((item) => DOTTED.exec(item.replace(/\s+as\s+\w+\s*$/, ''))?.[1] ?? '');
+  return Option.liftPredicate(names, (n) => !n.includes(''));
+};
+
+/** The names a `from … import` list imports, `*` or names, parenthesized or not; none when it cannot be read. */
+const fromNames = (list: string): Option.Option<ReadonlyArray<string>> => {
+  if (/^\s*\*\s*$/.test(list)) return Option.some([]);
+  const inParens = Option.fromNullishOr(/^\s*\((.*)\)\s*$/.exec(list));
+  const items = Option.match(inParens, {
+    onNone: () => list.split(','),
+    // a parenthesized list may end with a comma
+    onSome: (m) => (m[1] ?? '').replace(/,\s*$/, '').split(','),
+  });
+  const names = items.map((item) => NAME.exec(item)?.[1] ?? '');
+  return Option.liftPredicate(names, (n) => !n.includes(''));
+};
+
+/**
+ * The modules one statement imports: none when it is no import statement,
+ * `[]` modules read for an unreadable one (`readable` false).
+ */
+const statementImports = (
+  statement: string,
+): Option.Option<{ readonly modules: ReadonlyArray<string>; readonly readable: boolean }> => {
+  const read = (names: Option.Option<ReadonlyArray<string>>) =>
+    Option.some({ modules: Option.getOrElse(names, () => []), readable: Option.isSome(names) });
+  const plain = Option.fromNullishOr(PLAIN.exec(statement));
+  if (Option.isSome(plain)) return read(plainNames(plain.value[1] ?? ''));
+  const from = Option.fromNullishOr(FROM.exec(statement));
+  if (Option.isNone(from)) return Option.none();
+  const [, dots = '', module = '', list = ''] = from.value;
+  const names = fromNames(list);
+  if (module !== '') return read(Option.map(names, () => [DOTTED.exec(module)?.[1] ?? '']));
+  // `from . import *` names no module the scan can follow
+  return read(Option.filter(names, (n) => dots !== '' && n.length > 0));
+};
+
+/**
+ * Every module `text` (Python file `file`) imports, by its first name:
+ * each `import a, b.c as d` names `a` and `b`; each `from x.y import …`
+ * names `x`; a relative `from .x import …` names `x`, and `from . import
+ * a, b` names `a` and `b`. An import is read wherever a statement can
+ * start (`codeOf`): a line's start, indented or not (an import inside a
+ * function is an edge too), after a `;`, in a one-line suite. Strings and
+ * comments are not code, so an import in one is no edge. The scan fails
+ * closed, naming the line: an `import` keyword in code that no import
+ * statement it reads holds, an import statement it cannot read, or a
+ * string that does not end. It never guesses an edge from a word, since
+ * the reader's files name each other in plain words (`read`, `train`,
+ * `model`).
+ */
+export const importsOf = (file: string, text: string) =>
+  Effect.gen(function* () {
+    const { code, lines } = yield* codeOf(file, text);
+    const fail = (at: number, reason: string) =>
+      ReaderScanFailed.make({ file, reason: `line ${lines[at] ?? 0}: ${reason}` });
+    const modules: Array<string> = [];
+    const held = new Set<number>();
+    let start = 0;
+    for (const statement of code.split('\n')) {
+      const keyword = start + statement.search(/\bimport\b/);
+      const found = statementImports(statement);
+      if (Option.isSome(found) && !found.value.readable)
+        return yield* fail(keyword, `an import the scan cannot read: ${statement.trim()}`);
+      if (Option.isSome(found)) {
+        modules.push(...found.value.modules);
+        held.add(keyword);
+      }
+      start += statement.length + 1;
+    }
+    for (const word of code.matchAll(/\bimport\b/g))
+      if (!held.has(word.index))
+        return yield* fail(
+          word.index,
+          '`import` in code where no import statement the scan reads starts',
+        );
+    return modules;
+  });
 
 /**
  * The reader's files by role, by name, from `py`: every `.py` file of its
@@ -206,7 +428,7 @@ export const rolesOf = (
           const file = queue.shift() ?? '';
           if (seen.has(file)) continue;
           seen.add(file);
-          for (const name of importsOf(py.get(file) ?? ''))
+          for (const name of yield* importsOf(file, py.get(file) ?? ''))
             if (py.has(`${name}.py`)) queue.push(`${name}.py`);
         }
         return [...seen, ...ENVIRONMENT.filter(() => LOCAL.has(role))].toSorted();

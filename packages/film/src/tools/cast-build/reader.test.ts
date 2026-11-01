@@ -131,7 +131,12 @@ const fitFile = (view: string) => `/in/${view}.fit.json`;
  * and writes a passing record: the side is cut in the build.
  */
 const graph = (
-  o: { readonly sideCut?: boolean; readonly keepReader?: boolean } = {},
+  o: {
+    readonly sideCut?: boolean;
+    readonly keepReader?: boolean;
+    /** The train files, `ROLES.train` unless named. */
+    readonly train?: ReadonlyArray<string>;
+  } = {},
 ): ReadonlyArray<Stage<CastReader | FileSystem.FileSystem>> => [
   ...VIEWS.flatMap((v): ReadonlyArray<Stage<never>> => {
     const at = (kind: string) => `${kind}:${v}@m`;
@@ -184,7 +189,7 @@ const graph = (
     ];
   }),
   trainsetStage(CANDIDATES),
-  trainStage(CANDIDATES, ROLES.train, LOCK, { keepReader: o.keepReader === true }),
+  trainStage(CANDIDATES, o.train ?? ROLES.train, LOCK, { keepReader: o.keepReader === true }),
   ...CANDIDATES.map((c) => evalStage(c.renders, [], ROLES.eval)),
 ];
 
@@ -947,34 +952,73 @@ describe("the reader's roles, derived from its imports", () => {
     }),
   );
 
-  it.effect('reads every import form, each by its first name', () =>
-    Effect.sync(() => {
+  it.effect('reads every import form, wherever a statement starts, each by its first name', () =>
+    Effect.gen(function* () {
       const forms: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = [
         ['import a, b as c', ['a', 'b']],
         ['import x as y', ['x']],
         ['import pkg.sub', ['pkg']],
         ['    from inner import thing', ['inner']],
         ['from multi import (\n    one,\n    two,\n)', ['multi']],
+        ['from pkg.sub import x', ['pkg']],
+        ['from star import *', ['star']],
         ['from .rel import x', ['rel']],
+        ['from.rel import x', ['rel']],
         ['from . import (\n    left,\n    right as r,\n)', ['left', 'right']],
         ['import first, \\\n    second', ['first', 'second']],
         ['x = 1; import semi', ['semi']],
+        ['if True: import suite', ['suite']],
+        ['def load(): from helper import VALUE', ['helper']],
+        ['try: import a\nexcept ImportError: import b', ['a', 'b']],
+        ['if n := len(xs): import walrus', ['walrus']],
         ['# import commented', []],
         ['print("import nothing")', []],
+        ["s = 'it\\'s'; import escaped", ['escaped']],
+        ['s = r"\\\\"; import raw', ['raw']],
+        ['s = f"{d["k"]:>{w}} {{import x}}"; import nested', ['nested']],
+        ['"""\nimport in_a_docstring\n"""\nimport after', ['after']],
+        ['x = [\n    1,  # a comment\n]\nimport later', ['later']],
       ];
       for (const [source, names] of forms)
-        expect([source, importsOf(source)]).toEqual([source, names]);
+        expect([source, yield* importsOf('f.py', source)]).toEqual([source, [...names]]);
     }),
   );
 
-  it.effect('an import-like line in a string widens the closure, which only widens its key', () =>
-    Effect.gen(function* () {
-      const roles = yield* rolesIn([
-        ['read.py', 'from model import decode\n"""\nimport helper\n"""\n'],
-        ['helper.py', ''],
-      ]);
-      expect(roles.read).toContain('helper.py');
-    }),
+  it.effect(
+    'a string or a comment that reads as an import is no edge, and never hides the import after it',
+    () =>
+      Effect.gen(function* () {
+        const roles = yield* rolesIn([
+          ['read.py', 'from model import decode\n"""\nimport helper\n"""\n# import other\n'],
+          ['helper.py', ''],
+          ['other.py', ''],
+        ]);
+        expect(roles.read).not.toContain('helper.py');
+        expect(roles.read).not.toContain('other.py');
+      }),
+  );
+
+  it.effect(
+    'the scan fails closed: an import keyword it cannot place, an import it cannot read, or a string that does not end',
+    () =>
+      Effect.gen(function* () {
+        const cases: ReadonlyArray<readonly [string, string]> = [
+          ['import model\nx = 1 import helper\n', 'line 2: `import` in code'],
+          ['import model\nfrom helper import a,\n', 'line 2: an import the scan cannot read'],
+          ['import model\nfrom . import *\n', 'line 2: an import the scan cannot read'],
+          ["import model\n'it ends nowhere\nimport helper\n", 'line 2: a string that does not end'],
+          ['s = f"{x:\'>10}"\nimport helper\n', 'line 1: a string that does not end'],
+        ];
+        for (const [source, reason] of cases) {
+          const failed = yield* Effect.flip(rolesIn([['read.py', source]]));
+          expect([source, failed._tag, failed.file, failed.reason]).toEqual([
+            source,
+            'ReaderScanFailed',
+            'read.py',
+            expect.stringContaining(reason),
+          ]);
+        }
+      }),
   );
 
   it.effect('a file that imports dynamically fails the scan, by its name and the word', () =>
@@ -1001,6 +1045,88 @@ describe("the reader's roles, derived from its imports", () => {
       expect(failed.reason).toContain('eval');
     }),
   );
+
+  /**
+   * The folder with `over`, scanned, and on a disk with the build's other
+   * files: each `.py` at `/reader/<name>`, the roles as paths there.
+   */
+  const scannedOver = (over: ReadonlyArray<readonly [string, string]>) =>
+    Effect.gen(function* () {
+      const folder = new Map([...FOLDER, ['helper.py', 'VALUE = 1\n'] as const, ...over]);
+      const roles = yield* rolesOf(folder);
+      const at = (names: ReadonlyArray<string>) => names.map((n) => `/reader/${n}`);
+      const disk = files();
+      for (const [name, body] of folder) disk.set(`/reader/${name}`, text(body));
+      disk.set('/reader/pyproject.toml', text('[project]\n'));
+      disk.set('/ckpt.pt', text('ckpt'));
+      disk.set('/clip.mp4', text('clip'));
+      return {
+        roles,
+        disk,
+        sources: { train: at(roles.train), read: at(roles.read), eval: at(roles.eval) },
+      };
+    });
+  const editHelper = (disk: Map<string, Uint8Array>) =>
+    disk.set('/reader/helper.py', text('VALUE = 2\n'));
+
+  // review r1 M1: a string or a comment once swallowed the import after it
+  for (const [name, source] of [
+    [
+      'after a docstring that reads as an open import',
+      '"""\nfrom example import (\n"""\nimport helper\n',
+    ],
+    [
+      'after a comment that ends in a backslash',
+      'from model import decode\n# a comment ending in a backslash \\\nimport helper\n',
+    ],
+  ] as const)
+    it.effect(
+      `an import ${name} is in the read closure, and its edit misses the clip read cache`,
+      () => {
+        const { roles, disk, sources } = Effect.runSync(scannedOver([['read.py', source]]));
+        const dirOf = readsDirOf({
+          ckpt: '/ckpt.pt',
+          clip: '/clip.mp4',
+          map: { x0: 0, y0: 0, scale: 1 },
+          cache: '/cache',
+        });
+        return Effect.gen(function* () {
+          expect(roles.read).toContain('helper.py');
+          const first = yield* dirOf;
+          editHelper(disk);
+          expect(yield* dirOf).not.toBe(first);
+        }).pipe(
+          Effect.provide([
+            memoryFileSystem(disk),
+            Path.layer,
+            CastReader.layerTest({}, [], sources),
+          ]),
+        );
+      },
+    );
+
+  // review r1 M2: an import in a one-line suite was once no edge, so a training helper's edit kept the old checkpoint
+  for (const [name, source] of [
+    ['in a one-line if', 'from model import Reader\nif True: import helper\n'],
+    ['in a one-line def', 'from model import Reader\ndef load(): from helper import VALUE\n'],
+  ] as const)
+    it.effect(`an import ${name} is in the train closure, and its edit is a new train key`, () =>
+      Effect.gen(function* () {
+        const { roles, disk, sources } = yield* scannedOver([['train.py', source]]);
+        expect(roles.train).toEqual(['helper.py', 'modal_app.py', 'model.py', 'train.py']);
+        const spend = { spend: new Set(['modal'] as const) };
+        const asked: Array<string> = [];
+        const stages = graph({ train: sources.train });
+        yield* build(disk, asked, spend, stages);
+        editHelper(disk);
+        const plan = yield* build(disk, [], { plan: true }, stages);
+        expect(stateOf(plan)['train']).toBe('stale');
+        yield* build(disk, asked, spend, stages);
+        const keys = asked.filter((a) => a.startsWith('train')).map((a) => trainOf(a).key);
+        expect(keys.length).toBe(2);
+        expect(keys[0]).not.toBe(keys[1]);
+      }),
+    );
 });
 
 describe('the live reader', () => {
