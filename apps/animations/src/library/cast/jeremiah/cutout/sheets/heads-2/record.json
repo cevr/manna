@@ -107,27 +107,27 @@
             {
               "part": "torso",
               "painted": {
-                "robust": 2.14,
-                "plain": 2.48,
-                "n": 3612
+                "robust": 2.31,
+                "plain": 4.28,
+                "n": 3483
               },
               "kept": {
                 "robust": 1.65,
-                "plain": 3.44,
-                "n": 6489
+                "plain": 3.35,
+                "n": 6603
               },
               "fine": {
                 "painted": {
-                  "share": 0,
-                  "px": 453
+                  "share": 0.176,
+                  "px": 125
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 148
+                  "share": 0.002,
+                  "px": 1107
                 },
-                "cells": 7
+                "cells": 10
               },
-              "verdict": "within"
+              "verdict": "outside"
             }
           ],
           "speck": [
@@ -156,7 +156,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift"]
+        "missed": ["drift", "grain"]
       }
     ],
     "chosen": 2,
@@ -196,27 +196,27 @@
       {
         "part": "torso",
         "painted": {
-          "robust": 2.14,
-          "plain": 2.48,
-          "n": 3612
+          "robust": 2.31,
+          "plain": 4.28,
+          "n": 3483
         },
         "kept": {
           "robust": 1.65,
-          "plain": 3.44,
-          "n": 6489
+          "plain": 3.35,
+          "n": 6603
         },
         "fine": {
           "painted": {
-            "share": 0,
-            "px": 453
+            "share": 0.176,
+            "px": 125
           },
           "kept": {
-            "share": 0,
-            "px": 148
+            "share": 0.002,
+            "px": 1107
           },
-          "cells": 7
+          "cells": 10
         },
-        "verdict": "within"
+        "verdict": "outside"
       }
     ],
     "speck": [
@@ -260,6 +260,6 @@
     "leastRegionPx": 100,
     "leastCellPx": 40
   },
-  "missed": ["drift"],
+  "missed": ["drift", "grain"],
   "named": []
 }

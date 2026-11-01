@@ -85,25 +85,25 @@
             {
               "part": "torso",
               "painted": {
-                "robust": 1.48,
-                "plain": 1.55,
-                "n": 14714
+                "robust": 1.65,
+                "plain": 8.67,
+                "n": 15009
               },
               "kept": {
                 "robust": 1.48,
-                "plain": 3.72,
-                "n": 3451
+                "plain": 5.84,
+                "n": 4281
               },
               "fine": {
                 "painted": {
                   "share": 0,
-                  "px": 387
+                  "px": 177
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 103
+                  "share": 0.001,
+                  "px": 3048
                 },
-                "cells": 8
+                "cells": 9
               },
               "verdict": "within"
             }
@@ -174,25 +174,25 @@
       {
         "part": "torso",
         "painted": {
-          "robust": 1.48,
-          "plain": 1.55,
-          "n": 14714
+          "robust": 1.65,
+          "plain": 8.67,
+          "n": 15009
         },
         "kept": {
           "robust": 1.48,
-          "plain": 3.72,
-          "n": 3451
+          "plain": 5.84,
+          "n": 4281
         },
         "fine": {
           "painted": {
             "share": 0,
-            "px": 387
+            "px": 177
           },
           "kept": {
-            "share": 0,
-            "px": 103
+            "share": 0.001,
+            "px": 3048
           },
-          "cells": 8
+          "cells": 9
         },
         "verdict": "within"
       }

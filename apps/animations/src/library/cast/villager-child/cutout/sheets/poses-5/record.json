@@ -110,26 +110,26 @@
               "part": "torso",
               "painted": {
                 "robust": 1.48,
-                "plain": 2.32,
-                "n": 2383
+                "plain": 18.9,
+                "n": 3118
               },
               "kept": {
                 "robust": 1.15,
-                "plain": 2.7,
-                "n": 6634
+                "plain": 6.99,
+                "n": 6739
               },
               "fine": {
                 "painted": {
-                  "share": 0.018,
-                  "px": 225
+                  "share": 0.048,
+                  "px": 272
                 },
                 "kept": {
-                  "share": 0.006,
-                  "px": 1756
+                  "share": 0.017,
+                  "px": 1877
                 },
-                "cells": 10
+                "cells": 13
               },
-              "verdict": "within"
+              "verdict": "outside"
             }
           ],
           "speck": [
@@ -175,7 +175,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift", "speck"]
+        "missed": ["drift", "grain", "speck"]
       }
     ],
     "chosen": 1,
@@ -230,26 +230,26 @@
         "part": "torso",
         "painted": {
           "robust": 1.48,
-          "plain": 2.32,
-          "n": 2383
+          "plain": 18.9,
+          "n": 3118
         },
         "kept": {
           "robust": 1.15,
-          "plain": 2.7,
-          "n": 6634
+          "plain": 6.99,
+          "n": 6739
         },
         "fine": {
           "painted": {
-            "share": 0.018,
-            "px": 225
+            "share": 0.048,
+            "px": 272
           },
           "kept": {
-            "share": 0.006,
-            "px": 1756
+            "share": 0.017,
+            "px": 1877
           },
-          "cells": 10
+          "cells": 13
         },
-        "verdict": "within"
+        "verdict": "outside"
       }
     ],
     "speck": [
@@ -310,6 +310,6 @@
     "leastRegionPx": 100,
     "leastCellPx": 40
   },
-  "missed": ["drift", "speck"],
+  "missed": ["drift", "grain", "speck"],
   "named": []
 }

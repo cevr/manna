@@ -162,24 +162,24 @@
               "part": "baby",
               "painted": {
                 "robust": 0.99,
-                "plain": 2.51,
-                "n": 1345
+                "plain": 12.07,
+                "n": 1756
               },
               "kept": {
                 "robust": 0.99,
-                "plain": 2.84,
-                "n": 4993
+                "plain": 6.75,
+                "n": 5266
               },
               "fine": {
                 "painted": {
-                  "share": 0.017,
-                  "px": 119
+                  "share": 0.022,
+                  "px": 186
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 2162
+                  "share": 0.002,
+                  "px": 2167
                 },
-                "cells": 5
+                "cells": 7
               },
               "verdict": "within"
             },
@@ -187,51 +187,51 @@
               "part": "robe",
               "painted": {
                 "robust": 0.99,
-                "plain": 1.17,
-                "n": 805
+                "plain": 4.45,
+                "n": 4576
               },
               "kept": {
                 "robust": 1.48,
-                "plain": 2.6,
-                "n": 3204
+                "plain": 7.1,
+                "n": 5342
               },
               "fine": {
                 "painted": {
-                  "share": 0,
-                  "px": 285
+                  "share": 0.031,
+                  "px": 254
                 },
                 "kept": {
-                  "share": 0.001,
-                  "px": 1540
+                  "share": 0.002,
+                  "px": 1007
                 },
-                "cells": 3
+                "cells": 11
               },
               "verdict": "within"
             },
             {
               "part": "torso",
               "painted": {
-                "robust": 0.82,
-                "plain": 1.84,
-                "n": 5397
+                "robust": 1.15,
+                "plain": 7.55,
+                "n": 14265
               },
               "kept": {
                 "robust": 0.99,
-                "plain": 2.37,
-                "n": 6638
+                "plain": 7.75,
+                "n": 8174
               },
               "fine": {
                 "painted": {
-                  "share": 0,
-                  "px": 298
+                  "share": 0.083,
+                  "px": 217
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 2163
+                  "share": 0.008,
+                  "px": 376
                 },
-                "cells": 19
+                "cells": 36
               },
-              "verdict": "within"
+              "verdict": "outside"
             }
           ],
           "speck": [
@@ -344,7 +344,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift", "step"]
+        "missed": ["drift", "grain", "step"]
       }
     ],
     "chosen": 1,
@@ -441,24 +441,24 @@
         "part": "baby",
         "painted": {
           "robust": 0.99,
-          "plain": 2.51,
-          "n": 1345
+          "plain": 12.07,
+          "n": 1756
         },
         "kept": {
           "robust": 0.99,
-          "plain": 2.84,
-          "n": 4993
+          "plain": 6.75,
+          "n": 5266
         },
         "fine": {
           "painted": {
-            "share": 0.017,
-            "px": 119
+            "share": 0.022,
+            "px": 186
           },
           "kept": {
-            "share": 0,
-            "px": 2162
+            "share": 0.002,
+            "px": 2167
           },
-          "cells": 5
+          "cells": 7
         },
         "verdict": "within"
       },
@@ -466,51 +466,51 @@
         "part": "robe",
         "painted": {
           "robust": 0.99,
-          "plain": 1.17,
-          "n": 805
+          "plain": 4.45,
+          "n": 4576
         },
         "kept": {
           "robust": 1.48,
-          "plain": 2.6,
-          "n": 3204
+          "plain": 7.1,
+          "n": 5342
         },
         "fine": {
           "painted": {
-            "share": 0,
-            "px": 285
+            "share": 0.031,
+            "px": 254
           },
           "kept": {
-            "share": 0.001,
-            "px": 1540
+            "share": 0.002,
+            "px": 1007
           },
-          "cells": 3
+          "cells": 11
         },
         "verdict": "within"
       },
       {
         "part": "torso",
         "painted": {
-          "robust": 0.82,
-          "plain": 1.84,
-          "n": 5397
+          "robust": 1.15,
+          "plain": 7.55,
+          "n": 14265
         },
         "kept": {
           "robust": 0.99,
-          "plain": 2.37,
-          "n": 6638
+          "plain": 7.75,
+          "n": 8174
         },
         "fine": {
           "painted": {
-            "share": 0,
-            "px": 298
+            "share": 0.083,
+            "px": 217
           },
           "kept": {
-            "share": 0,
-            "px": 2163
+            "share": 0.008,
+            "px": 376
           },
-          "cells": 19
+          "cells": 36
         },
-        "verdict": "within"
+        "verdict": "outside"
       }
     ],
     "speck": [
@@ -638,6 +638,6 @@
     "leastRegionPx": 100,
     "leastCellPx": 40
   },
-  "missed": ["drift", "step"],
+  "missed": ["drift", "grain", "step"],
   "named": []
 }

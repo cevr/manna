@@ -103,22 +103,22 @@
               "part": "torso",
               "painted": {
                 "robust": 3.46,
-                "plain": 3.53,
-                "n": 2704
+                "plain": 3.91,
+                "n": 2603
               },
               "kept": {
                 "robust": 1.48,
-                "plain": 3.24,
-                "n": 6926
+                "plain": 3.22,
+                "n": 6516
               },
               "fine": {
                 "painted": {
-                  "share": 0.004,
-                  "px": 486
+                  "share": 0.024,
+                  "px": 510
                 },
                 "kept": {
                   "share": 0,
-                  "px": 1388
+                  "px": 1398
                 },
                 "cells": 2
               },
@@ -205,22 +205,22 @@
               "part": "torso",
               "painted": {
                 "robust": 1.98,
-                "plain": 1.92,
-                "n": 2486
+                "plain": 2.07,
+                "n": 2294
               },
               "kept": {
                 "robust": 1.48,
-                "plain": 3.22,
-                "n": 7037
+                "plain": 3.2,
+                "n": 6627
               },
               "fine": {
                 "painted": {
                   "share": 0,
-                  "px": 539
+                  "px": 508
                 },
                 "kept": {
                   "share": 0,
-                  "px": 1425
+                  "px": 1398
                 },
                 "cells": 2
               },
@@ -294,22 +294,22 @@
         "part": "torso",
         "painted": {
           "robust": 1.98,
-          "plain": 1.92,
-          "n": 2486
+          "plain": 2.07,
+          "n": 2294
         },
         "kept": {
           "robust": 1.48,
-          "plain": 3.22,
-          "n": 7037
+          "plain": 3.2,
+          "n": 6627
         },
         "fine": {
           "painted": {
             "share": 0,
-            "px": 539
+            "px": 508
           },
           "kept": {
             "share": 0,
-            "px": 1425
+            "px": 1398
           },
           "cells": 2
         },

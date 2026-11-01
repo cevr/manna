@@ -103,13 +103,13 @@
               "part": "torso",
               "painted": {
                 "robust": 2.31,
-                "plain": 2.39,
-                "n": 2040
+                "plain": 2.64,
+                "n": 1870
               },
               "kept": {
                 "robust": 1.48,
-                "plain": 3.17,
-                "n": 6865
+                "plain": 3.16,
+                "n": 6459
               },
               "fine": {
                 "painted": {
@@ -118,7 +118,7 @@
                 },
                 "kept": {
                   "share": 0.001,
-                  "px": 1118
+                  "px": 1122
                 },
                 "cells": 5
               },
@@ -205,22 +205,22 @@
               "part": "torso",
               "painted": {
                 "robust": 2.31,
-                "plain": 2.41,
-                "n": 3523
+                "plain": 2.82,
+                "n": 3298
               },
               "kept": {
                 "robust": 1.48,
-                "plain": 3.18,
-                "n": 6847
+                "plain": 3.16,
+                "n": 6441
               },
               "fine": {
                 "painted": {
-                  "share": 0,
-                  "px": 576
+                  "share": 0.014,
+                  "px": 138
                 },
                 "kept": {
-                  "share": 0.001,
-                  "px": 1118
+                  "share": 0.009,
+                  "px": 795
                 },
                 "cells": 5
               },
@@ -294,13 +294,13 @@
         "part": "torso",
         "painted": {
           "robust": 2.31,
-          "plain": 2.39,
-          "n": 2040
+          "plain": 2.64,
+          "n": 1870
         },
         "kept": {
           "robust": 1.48,
-          "plain": 3.17,
-          "n": 6865
+          "plain": 3.16,
+          "n": 6459
         },
         "fine": {
           "painted": {
@@ -309,7 +309,7 @@
           },
           "kept": {
             "share": 0.001,
-            "px": 1118
+            "px": 1122
           },
           "cells": 5
         },

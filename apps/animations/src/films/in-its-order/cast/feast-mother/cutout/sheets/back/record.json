@@ -142,52 +142,52 @@
             {
               "part": "robe",
               "painted": {
-                "robust": 1.65,
-                "plain": 2.59,
-                "n": 29
+                "robust": 0.82,
+                "plain": 12.57,
+                "n": 904
               },
               "kept": {
                 "robust": 1.65,
-                "plain": 3.42,
-                "n": 2215
+                "plain": 5.55,
+                "n": 4448
               },
               "fine": {
                 "painted": {
-                  "share": 0,
-                  "px": 0
+                  "share": 0.054,
+                  "px": 224
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 0
+                  "share": 0.011,
+                  "px": 1857
                 },
-                "cells": 0
+                "cells": 4
               },
-              "verdict": "unverified"
+              "verdict": "outside"
             },
             {
               "part": "torso",
               "painted": {
-                "robust": 3.46,
-                "plain": 3.62,
-                "n": 8
+                "robust": 0.66,
+                "plain": 10.61,
+                "n": 582
               },
               "kept": {
-                "robust": 1.15,
-                "plain": 1.95,
-                "n": 3224
+                "robust": 1.48,
+                "plain": 11.71,
+                "n": 4919
               },
               "fine": {
                 "painted": {
-                  "share": 0,
-                  "px": 0
+                  "share": 0.035,
+                  "px": 144
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 0
+                  "share": 0.014,
+                  "px": 861
                 },
-                "cells": 0
+                "cells": 4
               },
-              "verdict": "unverified"
+              "verdict": "outside"
             }
           ],
           "speck": [
@@ -365,51 +365,51 @@
               "part": "robe",
               "painted": {
                 "robust": 0.99,
-                "plain": 1.54,
-                "n": 384
+                "plain": 11.9,
+                "n": 1488
               },
               "kept": {
                 "robust": 1.65,
-                "plain": 3.42,
-                "n": 2215
+                "plain": 5.55,
+                "n": 4448
               },
               "fine": {
                 "painted": {
-                  "share": 0,
-                  "px": 129
+                  "share": 0.042,
+                  "px": 118
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 1136
+                  "share": 0.011,
+                  "px": 2571
                 },
-                "cells": 2
+                "cells": 6
               },
               "verdict": "outside"
             },
             {
               "part": "torso",
               "painted": {
-                "robust": 1.32,
-                "plain": 1.73,
-                "n": 241
+                "robust": 0.99,
+                "plain": 12.6,
+                "n": 1192
               },
               "kept": {
-                "robust": 1.15,
-                "plain": 2.07,
-                "n": 3298
+                "robust": 1.48,
+                "plain": 11.75,
+                "n": 5042
               },
               "fine": {
                 "painted": {
-                  "share": 0,
-                  "px": 0
+                  "share": 0.018,
+                  "px": 221
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 0
+                  "share": 0.002,
+                  "px": 810
                 },
-                "cells": 0
+                "cells": 6
               },
-              "verdict": "unverified"
+              "verdict": "within"
             }
           ],
           "speck": [
@@ -583,51 +583,51 @@
         "part": "robe",
         "painted": {
           "robust": 0.99,
-          "plain": 1.54,
-          "n": 384
+          "plain": 11.9,
+          "n": 1488
         },
         "kept": {
           "robust": 1.65,
-          "plain": 3.42,
-          "n": 2215
+          "plain": 5.55,
+          "n": 4448
         },
         "fine": {
           "painted": {
-            "share": 0,
-            "px": 129
+            "share": 0.042,
+            "px": 118
           },
           "kept": {
-            "share": 0,
-            "px": 1136
+            "share": 0.011,
+            "px": 2571
           },
-          "cells": 2
+          "cells": 6
         },
         "verdict": "outside"
       },
       {
         "part": "torso",
         "painted": {
-          "robust": 1.32,
-          "plain": 1.73,
-          "n": 241
+          "robust": 0.99,
+          "plain": 12.6,
+          "n": 1192
         },
         "kept": {
-          "robust": 1.15,
-          "plain": 2.07,
-          "n": 3298
+          "robust": 1.48,
+          "plain": 11.75,
+          "n": 5042
         },
         "fine": {
           "painted": {
-            "share": 0,
-            "px": 0
+            "share": 0.018,
+            "px": 221
           },
           "kept": {
-            "share": 0,
-            "px": 0
+            "share": 0.002,
+            "px": 810
           },
-          "cells": 0
+          "cells": 6
         },
-        "verdict": "unverified"
+        "verdict": "within"
       }
     ],
     "speck": [

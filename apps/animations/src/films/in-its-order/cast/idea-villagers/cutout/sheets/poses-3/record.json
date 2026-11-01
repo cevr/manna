@@ -150,14 +150,14 @@
             {
               "part": "head",
               "painted": {
-                "robust": 0,
-                "plain": 0,
-                "n": 0
+                "robust": 0.99,
+                "plain": 0.67,
+                "n": 6
               },
               "kept": {
-                "robust": 1.98,
-                "plain": 4.94,
-                "n": 39
+                "robust": 1.15,
+                "plain": 7.33,
+                "n": 909
               },
               "fine": {
                 "painted": {
@@ -175,25 +175,25 @@
             {
               "part": "torso",
               "painted": {
-                "robust": 1.48,
-                "plain": 2.41,
-                "n": 1453
+                "robust": 1.32,
+                "plain": 20.72,
+                "n": 2194
               },
               "kept": {
-                "robust": 1.15,
-                "plain": 2.72,
-                "n": 5378
+                "robust": 1.32,
+                "plain": 8.64,
+                "n": 5624
               },
               "fine": {
                 "painted": {
-                  "share": 0.007,
-                  "px": 145
+                  "share": 0.018,
+                  "px": 222
                 },
                 "kept": {
-                  "share": 0.003,
-                  "px": 2094
+                  "share": 0.005,
+                  "px": 1484
                 },
-                "cells": 4
+                "cells": 8
               },
               "verdict": "within"
             }
@@ -345,14 +345,14 @@
             {
               "part": "head",
               "painted": {
-                "robust": 0,
-                "plain": 0,
-                "n": 0
+                "robust": 0.66,
+                "plain": 0.44,
+                "n": 9
               },
               "kept": {
-                "robust": 1.98,
-                "plain": 4.94,
-                "n": 39
+                "robust": 1.15,
+                "plain": 7.4,
+                "n": 941
               },
               "fine": {
                 "painted": {
@@ -371,24 +371,24 @@
               "part": "torso",
               "painted": {
                 "robust": 1.32,
-                "plain": 2.17,
-                "n": 2415
+                "plain": 15.38,
+                "n": 3115
               },
               "kept": {
                 "robust": 1.32,
-                "plain": 2.73,
-                "n": 5402
+                "plain": 8.88,
+                "n": 5675
               },
               "fine": {
                 "painted": {
-                  "share": 0.009,
-                  "px": 111
+                  "share": 0.044,
+                  "px": 135
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 393
+                  "share": 0.024,
+                  "px": 2199
                 },
-                "cells": 9
+                "cells": 12
               },
               "verdict": "within"
             }
@@ -527,14 +527,14 @@
       {
         "part": "head",
         "painted": {
-          "robust": 0,
-          "plain": 0,
-          "n": 0
+          "robust": 0.99,
+          "plain": 0.67,
+          "n": 6
         },
         "kept": {
-          "robust": 1.98,
-          "plain": 4.94,
-          "n": 39
+          "robust": 1.15,
+          "plain": 7.33,
+          "n": 909
         },
         "fine": {
           "painted": {
@@ -552,25 +552,25 @@
       {
         "part": "torso",
         "painted": {
-          "robust": 1.48,
-          "plain": 2.41,
-          "n": 1453
+          "robust": 1.32,
+          "plain": 20.72,
+          "n": 2194
         },
         "kept": {
-          "robust": 1.15,
-          "plain": 2.72,
-          "n": 5378
+          "robust": 1.32,
+          "plain": 8.64,
+          "n": 5624
         },
         "fine": {
           "painted": {
-            "share": 0.007,
-            "px": 145
+            "share": 0.018,
+            "px": 222
           },
           "kept": {
-            "share": 0.003,
-            "px": 2094
+            "share": 0.005,
+            "px": 1484
           },
-          "cells": 4
+          "cells": 8
         },
         "verdict": "within"
       }

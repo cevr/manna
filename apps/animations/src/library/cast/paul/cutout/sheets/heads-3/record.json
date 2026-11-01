@@ -90,14 +90,14 @@
             {
               "part": "torso",
               "painted": {
-                "robust": 1.48,
-                "plain": 2.27,
-                "n": 5853
+                "robust": 1.65,
+                "plain": 11.33,
+                "n": 6653
               },
               "kept": {
                 "robust": 1.48,
-                "plain": 2.99,
-                "n": 3468
+                "plain": 5.19,
+                "n": 3855
               },
               "fine": {
                 "painted": {
@@ -105,10 +105,10 @@
                   "px": 138
                 },
                 "kept": {
-                  "share": 0.001,
-                  "px": 3009
+                  "share": 0.004,
+                  "px": 3036
                 },
-                "cells": 5
+                "cells": 8
               },
               "verdict": "outside"
             }
@@ -179,14 +179,14 @@
       {
         "part": "torso",
         "painted": {
-          "robust": 1.48,
-          "plain": 2.27,
-          "n": 5853
+          "robust": 1.65,
+          "plain": 11.33,
+          "n": 6653
         },
         "kept": {
           "robust": 1.48,
-          "plain": 2.99,
-          "n": 3468
+          "plain": 5.19,
+          "n": 3855
         },
         "fine": {
           "painted": {
@@ -194,10 +194,10 @@
             "px": 138
           },
           "kept": {
-            "share": 0.001,
-            "px": 3009
+            "share": 0.004,
+            "px": 3036
           },
-          "cells": 5
+          "cells": 8
         },
         "verdict": "outside"
       }

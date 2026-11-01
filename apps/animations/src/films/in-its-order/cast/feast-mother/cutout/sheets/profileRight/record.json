@@ -111,12 +111,12 @@
               "painted": {
                 "robust": 0.82,
                 "plain": 0.82,
-                "n": 3042
+                "n": 2774
               },
               "kept": {
                 "robust": 1.48,
-                "plain": 1.91,
-                "n": 4112
+                "plain": 5.22,
+                "n": 5273
               },
               "fine": {
                 "painted": {
@@ -125,7 +125,7 @@
                 },
                 "kept": {
                   "share": 0,
-                  "px": 603
+                  "px": 609
                 },
                 "cells": 8
               },
@@ -136,12 +136,12 @@
               "painted": {
                 "robust": 0.82,
                 "plain": 0.8,
-                "n": 4998
+                "n": 4654
               },
               "kept": {
                 "robust": 1.32,
-                "plain": 2.51,
-                "n": 6077
+                "plain": 10.27,
+                "n": 7328
               },
               "fine": {
                 "painted": {
@@ -150,7 +150,7 @@
                 },
                 "kept": {
                   "share": 0,
-                  "px": 1821
+                  "px": 2222
                 },
                 "cells": 11
               },
@@ -262,12 +262,12 @@
         "painted": {
           "robust": 0.82,
           "plain": 0.82,
-          "n": 3042
+          "n": 2774
         },
         "kept": {
           "robust": 1.48,
-          "plain": 1.91,
-          "n": 4112
+          "plain": 5.22,
+          "n": 5273
         },
         "fine": {
           "painted": {
@@ -276,7 +276,7 @@
           },
           "kept": {
             "share": 0,
-            "px": 603
+            "px": 609
           },
           "cells": 8
         },
@@ -287,12 +287,12 @@
         "painted": {
           "robust": 0.82,
           "plain": 0.8,
-          "n": 4998
+          "n": 4654
         },
         "kept": {
           "robust": 1.32,
-          "plain": 2.51,
-          "n": 6077
+          "plain": 10.27,
+          "n": 7328
         },
         "fine": {
           "painted": {
@@ -301,7 +301,7 @@
           },
           "kept": {
             "share": 0,
-            "px": 1821
+            "px": 2222
           },
           "cells": 11
         },

@@ -228,23 +228,23 @@
             {
               "part": "sash",
               "painted": {
-                "robust": 0.66,
-                "plain": 2.05,
-                "n": 1746
+                "robust": 0.82,
+                "plain": 6.92,
+                "n": 2498
               },
               "kept": {
-                "robust": 0.82,
-                "plain": 3.03,
-                "n": 882
+                "robust": 0.99,
+                "plain": 6.24,
+                "n": 859
               },
               "fine": {
                 "painted": {
-                  "share": 0,
-                  "px": 480
+                  "share": 0.013,
+                  "px": 316
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 225
+                  "share": 0.013,
+                  "px": 1274
                 },
                 "cells": 4
               },
@@ -253,52 +253,52 @@
             {
               "part": "robe",
               "painted": {
-                "robust": 8.73,
-                "plain": 10.3,
-                "n": 16
+                "robust": 0.66,
+                "plain": 4,
+                "n": 8911
               },
               "kept": {
                 "robust": 1.15,
-                "plain": 2.7,
-                "n": 2338
+                "plain": 4.3,
+                "n": 5424
               },
               "fine": {
                 "painted": {
                   "share": 0,
-                  "px": 0
+                  "px": 352
                 },
                 "kept": {
                   "share": 0,
-                  "px": 0
+                  "px": 1426
                 },
-                "cells": 0
+                "cells": 15
               },
-              "verdict": "unverified"
+              "verdict": "within"
             },
             {
               "part": "torso",
               "painted": {
                 "robust": 0.82,
-                "plain": 2.48,
-                "n": 6865
+                "plain": 7.72,
+                "n": 15560
               },
               "kept": {
-                "robust": 0.82,
-                "plain": 2.73,
-                "n": 8629
+                "robust": 0.99,
+                "plain": 7.58,
+                "n": 11038
               },
               "fine": {
                 "painted": {
-                  "share": 0,
-                  "px": 374
+                  "share": 0.101,
+                  "px": 288
                 },
                 "kept": {
                   "share": 0,
-                  "px": 2016
+                  "px": 2454
                 },
-                "cells": 18
+                "cells": 34
               },
-              "verdict": "within"
+              "verdict": "outside"
             }
           ],
           "speck": [
@@ -389,7 +389,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift", "step"]
+        "missed": ["drift", "grain", "step"]
       }
     ],
     "chosen": 4,
@@ -496,23 +496,23 @@
       {
         "part": "sash",
         "painted": {
-          "robust": 0.66,
-          "plain": 2.05,
-          "n": 1746
+          "robust": 0.82,
+          "plain": 6.92,
+          "n": 2498
         },
         "kept": {
-          "robust": 0.82,
-          "plain": 3.03,
-          "n": 882
+          "robust": 0.99,
+          "plain": 6.24,
+          "n": 859
         },
         "fine": {
           "painted": {
-            "share": 0,
-            "px": 480
+            "share": 0.013,
+            "px": 316
           },
           "kept": {
-            "share": 0,
-            "px": 225
+            "share": 0.013,
+            "px": 1274
           },
           "cells": 4
         },
@@ -521,52 +521,52 @@
       {
         "part": "robe",
         "painted": {
-          "robust": 8.73,
-          "plain": 10.3,
-          "n": 16
+          "robust": 0.66,
+          "plain": 4,
+          "n": 8911
         },
         "kept": {
           "robust": 1.15,
-          "plain": 2.7,
-          "n": 2338
+          "plain": 4.3,
+          "n": 5424
         },
         "fine": {
           "painted": {
             "share": 0,
-            "px": 0
+            "px": 352
           },
           "kept": {
             "share": 0,
-            "px": 0
+            "px": 1426
           },
-          "cells": 0
+          "cells": 15
         },
-        "verdict": "unverified"
+        "verdict": "within"
       },
       {
         "part": "torso",
         "painted": {
           "robust": 0.82,
-          "plain": 2.48,
-          "n": 6865
+          "plain": 7.72,
+          "n": 15560
         },
         "kept": {
-          "robust": 0.82,
-          "plain": 2.73,
-          "n": 8629
+          "robust": 0.99,
+          "plain": 7.58,
+          "n": 11038
         },
         "fine": {
           "painted": {
-            "share": 0,
-            "px": 374
+            "share": 0.101,
+            "px": 288
           },
           "kept": {
             "share": 0,
-            "px": 2016
+            "px": 2454
           },
-          "cells": 18
+          "cells": 34
         },
-        "verdict": "within"
+        "verdict": "outside"
       }
     ],
     "speck": [
@@ -672,6 +672,6 @@
     "leastRegionPx": 100,
     "leastCellPx": 40
   },
-  "missed": ["drift", "step"],
+  "missed": ["drift", "grain", "step"],
   "named": []
 }

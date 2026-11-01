@@ -110,24 +110,24 @@
               "part": "robe",
               "painted": {
                 "robust": 0.99,
-                "plain": 1.24,
-                "n": 2524
+                "plain": 1.46,
+                "n": 2693
               },
               "kept": {
                 "robust": 1.48,
-                "plain": 1.57,
-                "n": 4268
+                "plain": 3.56,
+                "n": 5356
               },
               "fine": {
                 "painted": {
                   "share": 0,
-                  "px": 120
+                  "px": 351
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 508
+                  "share": 0.001,
+                  "px": 3238
                 },
-                "cells": 7
+                "cells": 9
               },
               "verdict": "within"
             },
@@ -135,13 +135,13 @@
               "part": "torso",
               "painted": {
                 "robust": 1.15,
-                "plain": 1.5,
-                "n": 4635
+                "plain": 1.44,
+                "n": 4298
               },
               "kept": {
-                "robust": 1.32,
-                "plain": 2.24,
-                "n": 6220
+                "robust": 1.48,
+                "plain": 9.55,
+                "n": 7342
               },
               "fine": {
                 "painted": {
@@ -149,8 +149,8 @@
                   "px": 132
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 902
+                  "share": 0.017,
+                  "px": 1380
                 },
                 "cells": 14
               },
@@ -261,24 +261,24 @@
         "part": "robe",
         "painted": {
           "robust": 0.99,
-          "plain": 1.24,
-          "n": 2524
+          "plain": 1.46,
+          "n": 2693
         },
         "kept": {
           "robust": 1.48,
-          "plain": 1.57,
-          "n": 4268
+          "plain": 3.56,
+          "n": 5356
         },
         "fine": {
           "painted": {
             "share": 0,
-            "px": 120
+            "px": 351
           },
           "kept": {
-            "share": 0,
-            "px": 508
+            "share": 0.001,
+            "px": 3238
           },
-          "cells": 7
+          "cells": 9
         },
         "verdict": "within"
       },
@@ -286,13 +286,13 @@
         "part": "torso",
         "painted": {
           "robust": 1.15,
-          "plain": 1.5,
-          "n": 4635
+          "plain": 1.44,
+          "n": 4298
         },
         "kept": {
-          "robust": 1.32,
-          "plain": 2.24,
-          "n": 6220
+          "robust": 1.48,
+          "plain": 9.55,
+          "n": 7342
         },
         "fine": {
           "painted": {
@@ -300,8 +300,8 @@
             "px": 132
           },
           "kept": {
-            "share": 0,
-            "px": 902
+            "share": 0.017,
+            "px": 1380
           },
           "cells": 14
         },

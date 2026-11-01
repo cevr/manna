@@ -103,13 +103,13 @@
               "part": "torso",
               "painted": {
                 "robust": 2.47,
-                "plain": 2.56,
-                "n": 3079
+                "plain": 2.8,
+                "n": 2869
               },
               "kept": {
                 "robust": 1.48,
-                "plain": 3.16,
-                "n": 6992
+                "plain": 3.33,
+                "n": 6584
               },
               "fine": {
                 "painted": {
@@ -117,8 +117,8 @@
                   "px": 540
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 1222
+                  "share": 0.003,
+                  "px": 1236
                 },
                 "cells": 2
               },
@@ -205,13 +205,13 @@
               "part": "torso",
               "painted": {
                 "robust": 2.14,
-                "plain": 2.22,
-                "n": 3148
+                "plain": 2.28,
+                "n": 2897
               },
               "kept": {
                 "robust": 1.48,
-                "plain": 3.16,
-                "n": 6992
+                "plain": 3.33,
+                "n": 6584
               },
               "fine": {
                 "painted": {
@@ -219,8 +219,8 @@
                   "px": 573
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 1222
+                  "share": 0.003,
+                  "px": 1236
                 },
                 "cells": 2
               },
@@ -294,13 +294,13 @@
         "part": "torso",
         "painted": {
           "robust": 2.14,
-          "plain": 2.22,
-          "n": 3148
+          "plain": 2.28,
+          "n": 2897
         },
         "kept": {
           "robust": 1.48,
-          "plain": 3.16,
-          "n": 6992
+          "plain": 3.33,
+          "n": 6584
         },
         "fine": {
           "painted": {
@@ -308,8 +308,8 @@
             "px": 573
           },
           "kept": {
-            "share": 0,
-            "px": 1222
+            "share": 0.003,
+            "px": 1236
           },
           "cells": 2
         },

@@ -152,77 +152,77 @@
             {
               "part": "cup",
               "painted": {
-                "robust": 1.32,
-                "plain": 2.27,
-                "n": 67
+                "robust": 0.82,
+                "plain": 4.65,
+                "n": 718
               },
               "kept": {
-                "robust": 1.32,
-                "plain": 2.32,
-                "n": 648
+                "robust": 1.65,
+                "plain": 9.71,
+                "n": 1360
               },
               "fine": {
                 "painted": {
-                  "share": 0,
-                  "px": 0
+                  "share": 0.006,
+                  "px": 312
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 0
+                  "share": 0.007,
+                  "px": 851
                 },
-                "cells": 0
+                "cells": 2
               },
-              "verdict": "unverified"
+              "verdict": "outside"
             },
             {
               "part": "baby",
               "painted": {
                 "robust": 0.82,
-                "plain": 1.79,
-                "n": 5834
+                "plain": 5.77,
+                "n": 10477
               },
               "kept": {
                 "robust": 0.99,
-                "plain": 2.79,
-                "n": 10469
+                "plain": 6.02,
+                "n": 11725
               },
               "fine": {
                 "painted": {
-                  "share": 0.005,
-                  "px": 561
+                  "share": 0.087,
+                  "px": 126
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 2053
+                  "share": 0.007,
+                  "px": 2599
                 },
-                "cells": 11
+                "cells": 27
               },
-              "verdict": "within"
+              "verdict": "outside"
             },
             {
               "part": "torso",
               "painted": {
-                "robust": 0.82,
-                "plain": 1.87,
-                "n": 7322
+                "robust": 0.99,
+                "plain": 5.79,
+                "n": 12049
               },
               "kept": {
-                "robust": 0.99,
-                "plain": 2.42,
-                "n": 5169
+                "robust": 1.15,
+                "plain": 8.63,
+                "n": 7083
               },
               "fine": {
                 "painted": {
-                  "share": 0,
-                  "px": 576
+                  "share": 0.114,
+                  "px": 105
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 227
+                  "share": 0.08,
+                  "px": 415
                 },
-                "cells": 15
+                "cells": 24
               },
-              "verdict": "within"
+              "verdict": "outside"
             }
           ],
           "speck": [
@@ -313,7 +313,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["seam", "drift", "step"]
+        "missed": ["seam", "drift", "grain", "step"]
       },
       {
         "n": 2,
@@ -408,75 +408,75 @@
             {
               "part": "cup",
               "painted": {
-                "robust": 1.15,
-                "plain": 1.07,
-                "n": 86
+                "robust": 0.82,
+                "plain": 5.93,
+                "n": 718
               },
               "kept": {
-                "robust": 1.32,
-                "plain": 2.32,
-                "n": 648
+                "robust": 1.65,
+                "plain": 9.71,
+                "n": 1360
               },
               "fine": {
                 "painted": {
-                  "share": 0,
-                  "px": 0
+                  "share": 0.01,
+                  "px": 312
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 0
+                  "share": 0.007,
+                  "px": 851
                 },
-                "cells": 0
+                "cells": 2
               },
-              "verdict": "unverified"
+              "verdict": "outside"
             },
             {
               "part": "baby",
               "painted": {
                 "robust": 0.82,
-                "plain": 2.14,
-                "n": 7565
+                "plain": 6.14,
+                "n": 10577
               },
               "kept": {
                 "robust": 0.99,
-                "plain": 2.79,
-                "n": 10469
+                "plain": 6.02,
+                "n": 11725
               },
               "fine": {
                 "painted": {
-                  "share": 0.002,
-                  "px": 485
+                  "share": 0.071,
+                  "px": 126
                 },
                 "kept": {
-                  "share": 0.002,
-                  "px": 1114
+                  "share": 0.007,
+                  "px": 2599
                 },
-                "cells": 15
+                "cells": 27
               },
-              "verdict": "within"
+              "verdict": "outside"
             },
             {
               "part": "torso",
               "painted": {
                 "robust": 0.99,
-                "plain": 1.78,
-                "n": 7568
+                "plain": 8.77,
+                "n": 12137
               },
               "kept": {
-                "robust": 0.99,
-                "plain": 2.42,
-                "n": 5169
+                "robust": 1.15,
+                "plain": 8.63,
+                "n": 7083
               },
               "fine": {
                 "painted": {
-                  "share": 0.005,
-                  "px": 184
+                  "share": 0.032,
+                  "px": 158
                 },
                 "kept": {
-                  "share": 0.003,
-                  "px": 704
+                  "share": 0.012,
+                  "px": 2045
                 },
-                "cells": 15
+                "cells": 24
               },
               "verdict": "within"
             }
@@ -569,7 +569,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["seam", "drift"]
+        "missed": ["seam", "drift", "grain"]
       }
     ],
     "chosen": 2,
@@ -651,75 +651,75 @@
       {
         "part": "cup",
         "painted": {
-          "robust": 1.15,
-          "plain": 1.07,
-          "n": 86
+          "robust": 0.82,
+          "plain": 5.93,
+          "n": 718
         },
         "kept": {
-          "robust": 1.32,
-          "plain": 2.32,
-          "n": 648
+          "robust": 1.65,
+          "plain": 9.71,
+          "n": 1360
         },
         "fine": {
           "painted": {
-            "share": 0,
-            "px": 0
+            "share": 0.01,
+            "px": 312
           },
           "kept": {
-            "share": 0,
-            "px": 0
+            "share": 0.007,
+            "px": 851
           },
-          "cells": 0
+          "cells": 2
         },
-        "verdict": "unverified"
+        "verdict": "outside"
       },
       {
         "part": "baby",
         "painted": {
           "robust": 0.82,
-          "plain": 2.14,
-          "n": 7565
+          "plain": 6.14,
+          "n": 10577
         },
         "kept": {
           "robust": 0.99,
-          "plain": 2.79,
-          "n": 10469
+          "plain": 6.02,
+          "n": 11725
         },
         "fine": {
           "painted": {
-            "share": 0.002,
-            "px": 485
+            "share": 0.071,
+            "px": 126
           },
           "kept": {
-            "share": 0.002,
-            "px": 1114
+            "share": 0.007,
+            "px": 2599
           },
-          "cells": 15
+          "cells": 27
         },
-        "verdict": "within"
+        "verdict": "outside"
       },
       {
         "part": "torso",
         "painted": {
           "robust": 0.99,
-          "plain": 1.78,
-          "n": 7568
+          "plain": 8.77,
+          "n": 12137
         },
         "kept": {
-          "robust": 0.99,
-          "plain": 2.42,
-          "n": 5169
+          "robust": 1.15,
+          "plain": 8.63,
+          "n": 7083
         },
         "fine": {
           "painted": {
-            "share": 0.005,
-            "px": 184
+            "share": 0.032,
+            "px": 158
           },
           "kept": {
-            "share": 0.003,
-            "px": 704
+            "share": 0.012,
+            "px": 2045
           },
-          "cells": 15
+          "cells": 24
         },
         "verdict": "within"
       }
@@ -827,6 +827,6 @@
     "leastRegionPx": 100,
     "leastCellPx": 40
   },
-  "missed": ["seam", "drift"],
+  "missed": ["seam", "drift", "grain"],
   "named": []
 }

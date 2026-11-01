@@ -108,26 +108,26 @@
               "part": "torso",
               "painted": {
                 "robust": 1.81,
-                "plain": 2.04,
-                "n": 2322
+                "plain": 2.57,
+                "n": 2176
               },
               "kept": {
                 "robust": 1.65,
-                "plain": 3.06,
-                "n": 7179
+                "plain": 3.05,
+                "n": 6822
               },
               "fine": {
                 "painted": {
-                  "share": 0,
-                  "px": 535
+                  "share": 0.109,
+                  "px": 128
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 342
+                  "share": 0.001,
+                  "px": 1326
                 },
-                "cells": 4
+                "cells": 6
               },
-              "verdict": "within"
+              "verdict": "outside"
             }
           ],
           "speck": [
@@ -156,7 +156,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift"]
+        "missed": ["drift", "grain"]
       },
       {
         "n": 3,
@@ -210,22 +210,22 @@
               "part": "torso",
               "painted": {
                 "robust": 1.65,
-                "plain": 1.7,
-                "n": 1996
+                "plain": 2.06,
+                "n": 1879
               },
               "kept": {
-                "robust": 1.65,
-                "plain": 3,
-                "n": 7069
+                "robust": 1.48,
+                "plain": 2.99,
+                "n": 6712
               },
               "fine": {
                 "painted": {
-                  "share": 0,
-                  "px": 559
+                  "share": 0.007,
+                  "px": 572
                 },
                 "kept": {
-                  "share": 0,
-                  "px": 342
+                  "share": 0.003,
+                  "px": 346
                 },
                 "cells": 4
               },
@@ -299,22 +299,22 @@
         "part": "torso",
         "painted": {
           "robust": 1.65,
-          "plain": 1.7,
-          "n": 1996
+          "plain": 2.06,
+          "n": 1879
         },
         "kept": {
-          "robust": 1.65,
-          "plain": 3,
-          "n": 7069
+          "robust": 1.48,
+          "plain": 2.99,
+          "n": 6712
         },
         "fine": {
           "painted": {
-            "share": 0,
-            "px": 559
+            "share": 0.007,
+            "px": 572
           },
           "kept": {
-            "share": 0,
-            "px": 342
+            "share": 0.003,
+            "px": 346
           },
           "cells": 4
         },
