@@ -1,17 +1,16 @@
 // The cast reader's Python, run as the build runs it: its pytest cases in
 // its uv environment (`uv.lock`'s, under `FILM_READER_HOME`); and, with no
-// environment there, a refusal that names the line making one; and the
+// environment there, a refusal that names the line making one; the
 // committed folder's roles, as its imports derive them; the train config
 // against model.py's defaults; the unit tests' own file, which reads no
-// real folder; and the import scan against CPython's `ast`. Slow: it starts
-// Python and imports torch, and it reads the repo's files.
+// real folder; and the import scan (`scanOf`), CPython's `ast` in one
+// `python3` spawn, over every import form and every fault it refuses.
+// Slow: it starts Python and imports torch, and it reads the repo's files.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { ConfigProvider, Effect, Exit, FileSystem, Layer, Schema } from 'effect';
-import { ChildProcess, ChildProcessSpawner } from 'effect/process';
-import { collect } from '../process.ts';
-import { CastReader, importsOf } from './reader.ts';
+import { ConfigProvider, Effect, FileSystem, Layer, Schema } from 'effect';
+import { CastReader, rolesOf, scanOf } from './reader.ts';
 import { trainStage } from './stages.ts';
 
 const live = CastReader.layer.pipe(Layer.provideMerge(BunServices.layer));
@@ -26,86 +25,92 @@ const decodeTrainConfig = Schema.decodeUnknownSync(
   ),
 );
 
-/**
- * The differential check's programs and CPython's reading of them, as JSON
- * lines (`{src, imports}`): from a fixed seed, four families of fragments
- * (statement forms and one-line suites; quotes in format specs; nested
- * fields, comments in fields and other field forms; spec quotes beside
- * imports) joined at random around one import (at a statement's start,
- * after a `;` or a `:`, indented, parenthesized, relative), each kept only
- * when `ast` parses it, 500 per family. `imports` is every first name an
- * import names, as the scan names them (`from . import a` names `a`).
- */
-const ORACLE = String.raw`
-import ast, json, random, sys, warnings
-
-warnings.simplefilter("ignore")
-COMMON = [
-    "'", '"', "'''", '"""', "''''", "f'", 'f"', "f'''", 'f"""', "rb'", 'r"', "b'", "fr'",
-    "\\'", '\\"', "\\\\", "{", "}", "{{", "}}", ":", ";", "\n", "\n    ", " ", "+", ",",
-    "x = ", "f(", "(", ")", "[", "]", "#", "\\\n", "a", "1", "import", "from", "as h",
-]
-FAMILIES = [
-    COMMON + ["lambda: ", "if x: ", "else: ", "def g(): ", "class C: ", "try: ", "except E: ",
-              "pass", "{'k': 1}", "x[1:2]", "%", "{y}", "{x!r}", "{x:'>3}"],
-    COMMON + ["f\"{x:'>3}\"", "f'{x:\">3}'", "f\"{x:'''}\"", "f\"{x:'", "f'{x:\"", "{x:'}",
-              "}\"", "}'", "%H'%M", "{x:{'>'}3}", "{x:{y:'<'}}"],
-    COMMON + ["{x}", "{x!r}", "{x:>3}", "{f'{y}'}", "{ {'a': 1}['a'] }", "{x[1:2]}",
-              "{(lambda: 1)()}", "\\N{BULLET}", "{x:{w}}", "{x=}", "{x # it's\n}",
-              "{x # '''\n}", "}\"", "}'"],
-    ["f\"{x:'>3}\"", "f'{x:\">3}'", "f\"{x:'''}\"", "f\"{x:{'>'}3}\"", "f'''{x:'}'''", "'", '"',
-     "; ", "\n", "x = ", " + ", "#", "(", ")"],
-]
-IMPORTS = ["\nimport helper\n", "; import helper", ": import helper",
-           "\nfrom helper import (a,\n b)\n", "\nfrom . import helper\n", "\n    import helper\n"]
-
-
-def imports(tree):
-    names = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            names += [n.name.split(".")[0] for n in node.names]
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                names.append(node.module.split(".")[0])
-            else:
-                names += [n.name for n in node.names]
-    return sorted(set(names))
-
-
-rng = random.Random(1)
-seen = set()
-for family in FAMILIES:
-    found = tries = 0
-    while found < 500 and tries < 10_000_000:
-        tries += 1
-        parts = [rng.choice(family) for _ in range(rng.randint(2, 14))]
-        parts.insert(rng.randint(0, len(parts)), rng.choice(IMPORTS))
-        src = "x = " + "".join(parts) + "\n"
-        if src in seen:
-            continue
-        seen.add(src)
-        try:
-            tree = ast.parse(src)
-        except (SyntaxError, ValueError):
-            continue
-        print(json.dumps({"src": src, "imports": imports(tree)}))
-        found += 1
-`;
-
-/** One program of the oracle's, and the first names CPython's `ast` reads it to import. */
-const decodeProgram = Schema.decodeUnknownSync(
-  Schema.fromJsonString(
-    Schema.Struct({ src: Schema.String, imports: Schema.Array(Schema.String) }),
-  ),
-);
-
 /** A file of this folder's, read off disk. */
 const fileHere = (name: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     return yield* fs.readFileString(new URL(name, import.meta.url).pathname);
   });
+
+/**
+ * Each source the scan reads and the first names it imports, sorted:
+ * every import form, wherever a statement starts; strings and comments
+ * that read as imports; strings and formatted strings that a hand
+ * tokenizer lost its place in (a docstring holding an open `from … (`, a
+ * comment ending in a backslash, a quote in a format spec, a backslash
+ * before a formatted string's `{`).
+ */
+const FORMS: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = [
+  ['import a, b as c', ['a', 'b']],
+  ['import x as y', ['x']],
+  ['import pkg.sub', ['pkg']],
+  ['def f():\n    from inner import thing', ['inner']],
+  ['from multi import (\n    one,\n    two,\n)', ['multi']],
+  ['from pkg.sub import x', ['pkg']],
+  ['from star import *', ['star']],
+  ['import first, \\\n    second', ['first', 'second']],
+  ['x = 1; import semi', ['semi']],
+  ['if True: import suite', ['suite']],
+  ['def load(): from helper import VALUE', ['helper']],
+  ['try: import a\nexcept ImportError: import b', ['a', 'b']],
+  ['if n := len(xs): import walrus', ['walrus']],
+  ['class A:\n    import in_class', ['in_class']],
+  ['# import commented', []],
+  ['print("import nothing")', []],
+  ['print("importlib, __import__ and runpy, named in a string")', []],
+  ["s = 'it\\'s'; import escaped", ['escaped']],
+  ['s = r"\\\\"; import raw', ['raw']],
+  ['s = f"{d["k"]:>{w}} {{import x}}"; import nested', ['nested']],
+  ['"""\nimport in_a_docstring\n"""\nimport after', ['after']],
+  ['x = [\n    1,  # a comment\n]\nimport later', ['later']],
+  ['s = f"{x:{\'>\'}3}"; import spec_field', ['spec_field']],
+  ["s = f\"{ {'k': 1}['k']:>3} {d[1:2]!r:^{w}}\"; import brackets", ['brackets']],
+  ['s = f"""{x # a comment\'s quote\n}"""; import field_comment', ['field_comment']],
+  // a docstring that reads as an open import, and a comment that ends in a backslash
+  ['"""\nfrom example import (\n"""\nimport helper\n', ['helper']],
+  [
+    'from model import decode\n# a comment ending in a backslash \\\nimport helper\n',
+    ['helper', 'model'],
+  ],
+  ['from model import decode\n"""\nimport helper\n"""\n# import other\n', ['model']],
+  ['from model import Reader\nif True: import helper\n', ['helper', 'model']],
+  ['from model import Reader\ndef load(): from helper import VALUE\n', ['helper', 'model']],
+  // a quote in a formatted string's format spec is a character of the spec
+  ['s = f"{x:\'>10}"\nimport helper\n', ['helper']],
+  ['a = f"{x:\'>3}"; import helper; b = f"{y:\'<3}"\n', ['helper']],
+  ["import model\nx = f\"{x:'''}\"\nimport helper\nf\"{x:'''}\"\n", ['helper', 'model']],
+  ['import model\ns = f"{x:{y:\'<\'}}"\nimport helper\nf"{y:{z:\'>\'}}"\n', ['helper', 'model']],
+  // a backslash before a formatted string's `{` escapes nothing: the `{` opens a field, or `{{` is a brace
+  ["a = rf'\\{{'; import helper; b = '}'", ['helper']],
+  ["a = f'\\{{'; import helper; b = '}'", ['helper']],
+  ['a = rf\'\\{"\'"}\'; import helper  # "', ['helper']],
+  ['a = rf\'\\{"""\'"""}\'\nimport helper\nb = 1  # """', ['helper']],
+];
+
+/** Each source the scan refuses, the folders it is scanned with, and the start of its reason. */
+const FAULTS: ReadonlyArray<readonly [string, ReadonlyArray<string>, string]> = [
+  ['import model\nx = 1 import helper\n', [], 'line 2: CPython cannot parse it'],
+  ['import model\nfrom helper import a,\n', [], 'line 2: CPython cannot parse it'],
+  ["import model\n'it ends nowhere\nimport helper\n", [], 'line 2: CPython cannot parse it'],
+  ['    from inner import thing', [], 'line 1: CPython cannot parse it'],
+  ['from .rel import x', [], 'line 1: a relative import'],
+  ['from.rel import x', [], 'line 1: a relative import'],
+  ['from . import (\n    left,\n    right as r,\n)', [], 'line 1: a relative import'],
+  ['import model\nfrom . import *\n', [], 'line 2: a relative import'],
+  ['importlib.import_module("x")', [], 'line 1: it names importlib, a dynamic import'],
+  ['__import__("x")', [], 'line 1: it names __import__, a dynamic import'],
+  ['runpy.run_path("x")', [], 'line 1: it names runpy, a dynamic import'],
+  ['import builtins\nbuiltins.__import__("x")', [], 'line 2: it names __import__'],
+  ['import model\nfrom importlib import import_module\n', [], 'line 2: it imports importlib'],
+  ['import runpy as r', [], 'line 1: it imports runpy'],
+  ['x = 1\nimport runpy\nfrom . import a\n', [], 'line 2: it imports runpy'],
+  ['from lib import decode\n', ['lib'], "line 1: it imports lib, a folder of the reader's"],
+  ['import model\nimport tests.helpers\n', ['tests'], 'line 2: it imports tests, a folder'],
+];
+
+/** `py` scanned by the real scan, with `folders`. */
+const scanned = (py: ReadonlyMap<string, string>, folders: ReadonlyArray<string> = []) =>
+  scanOf(py, new Set(folders)).pipe(Effect.provide(BunServices.layer));
 
 describe('cast reader (Python)', () => {
   it.live(
@@ -186,33 +191,50 @@ describe('cast reader (Python)', () => {
   );
 
   it.effect(
-    "the import scan, against CPython's ast over 2000 generated programs: it names every import ast reads, or refuses the file, and never misses one in silence",
+    'the scan reads every import form wherever it stands, and no string, comment or formatted string hides one',
     () =>
       Effect.gen(function* () {
-        const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-        const ran = yield* collect(
-          spawner,
-          ChildProcess.make('python3', ['-I', '-c', ORACLE], { forceKillAfter: '5 seconds' }),
-        );
-        expect(ran.stderr).toBe('');
-        const programs = ran.stdout
-          .trim()
-          .split('\n')
-          .map((line) => decodeProgram(line));
-        expect(programs.length).toBe(2000);
-        const missed: Array<string> = [];
-        let read = 0;
-        for (const { src, imports } of programs) {
-          const scanned = Effect.runSyncExit(importsOf('gen.py', src));
-          if (Exit.isFailure(scanned)) continue;
-          if (imports.some((name) => !scanned.value.includes(name))) missed.push(src);
-          if (imports.length > 0) read++;
+        const py = new Map(FORMS.map(([source], i) => [`form${i}.py`, source]));
+        const imports = yield* scanned(py);
+        for (const [i, [source, names]] of FORMS.entries())
+          expect([source, imports.get(`form${i}.py`)]).toEqual([source, names]);
+      }),
+  );
+
+  it.effect(
+    'the scan fails closed, naming the file and the line: a file CPython cannot parse, a relative import, a dynamic import, an import of a folder of its own',
+    () =>
+      Effect.gen(function* () {
+        for (const [source, folders, reason] of FAULTS) {
+          const py = new Map([
+            ['clean.py', 'import os\n'],
+            ['read.py', source],
+          ]);
+          const failed = yield* Effect.flip(scanned(py, folders));
+          expect([source, failed._tag, failed.file, failed.reason]).toEqual([
+            source,
+            'ReaderScanFailed',
+            'read.py',
+            expect.stringContaining(reason),
+          ]);
         }
-        expect(missed).toEqual([]);
-        // a scan that refused every file would miss nothing: most programs that import are read
-        expect(read).toBeGreaterThan(programs.length / 5);
-      }).pipe(Effect.provide(BunServices.layer)),
-    // the oracle is one Python process, about 1.5 s, and 2000 scans
-    30_000,
+      }),
+  );
+
+  it.effect(
+    'a helper train.py imports past a backslash before a formatted string’s brace is in the train closure',
+    () =>
+      Effect.gen(function* () {
+        const py = new Map([
+          ['eval.py', 'from model import BONES\n'],
+          ['helper.py', 'VALUE = 1\n'],
+          ['modal_app.py', 'def fit():\n    from train import train\n'],
+          ['model.py', 'import torch\n'],
+          ['read.py', 'from model import decode\n'],
+          ['train.py', "from model import Reader\nPAD = rf'\\{{'; import helper; END = '}'\n"],
+        ]);
+        const roles = yield* rolesOf(yield* scanned(py, ['tests']));
+        expect(roles.train).toEqual(['helper.py', 'modal_app.py', 'model.py', 'train.py']);
+      }),
   );
 });

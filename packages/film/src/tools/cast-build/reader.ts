@@ -15,7 +15,8 @@
 //   evals run on this machine's CPU and spend nothing.
 //
 // `CastReader.sources` names the reader's files by role, each a closure
-// derived from the Python's local imports (`rolesOf`): `train`, what a train
+// derived from the Python's local imports, as CPython's `ast` reads them in
+// one `python3` spawn (`scanOf`, `rolesOf`): `train`, what a train
 // runs (modal_app.py's closure; the Modal image installs `modal_app.PACKAGES`,
 // not the lock), which keys the checkpoint; `read`, what a local read runs
 // (read.py's closure and the environment, pyproject.toml and uv.lock); `eval`,
@@ -23,10 +24,21 @@
 // environment). An edit to a read or eval file so re-runs the reads and evals,
 // and leaves the checkpoint's key, and so the checkpoint, as it is.
 
-import { Config, Context, Duration, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
+import {
+  Config,
+  Context,
+  Duration,
+  Effect,
+  FileSystem,
+  Layer,
+  Option,
+  Path,
+  Schema,
+  Stream,
+} from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { sha256Hex } from '../digest.ts';
-import { collectWithin } from '../process.ts';
+import { collectWithin, isNotFound } from '../process.ts';
 
 /** The reader's Python project: `packages/film/reader/`. */
 const READER_DIR = `${import.meta.dir}/../../../reader`;
@@ -108,7 +120,7 @@ export interface ReaderSources {
   readonly eval: ReadonlyArray<string>;
 }
 
-/** A reader folder whose roles cannot be derived from its imports: a dynamic import, or an entry script missing. */
+/** A reader folder whose roles cannot be derived from its imports: a scan fault (`SCAN`), no python3, or an entry script missing. */
 export class ReaderScanFailed extends Schema.TaggedError<ReaderScanFailed>()('ReaderScanFailed', {
   file: Schema.String,
   reason: Schema.String,
@@ -129,352 +141,162 @@ const ENTRIES = {
 /** The roles that run locally, under the environment; a train runs in the Modal image. */
 const LOCAL: ReadonlySet<keyof ReaderSources> = new Set(['read', 'eval']);
 
-/** A word that names a dynamic import, which hides an edge from the scan. */
-const DYNAMIC = /\b(importlib|__import__|runpy)\b/;
+/**
+ * The scan, run as `python3 -I -B -c`: CPython's own parser reads each
+ * file of the reader folder, so no string, comment or formatted string can
+ * hide an import from it. Its stdin is `{"files": {name: text}, "folders":
+ * [name]}`. It prints `{name: [first names]}` and exits 0: every module
+ * each file imports, wherever the import stands (indented, in a function,
+ * in a one-line suite), by its first name (`import a.b as c, d` names `a`
+ * and `d`; `from x.y import z` names `x`). On a file's earliest fault it
+ * prints `{"file", "reason"}` (the reason starts `line N:`) and exits 1: a
+ * file CPython cannot parse; a relative import; a name of `importlib`,
+ * `runpy` or `__import__`, or an import of one (a dynamic import hides an
+ * edge); or an import of one of the folder's own folders (a package the
+ * scan does not follow).
+ */
+const SCAN = String.raw`
+import ast, json, sys, warnings
+
+warnings.simplefilter("ignore")
+DYNAMIC = {"importlib", "runpy", "__import__"}
+
+
+def fail(file, line, reason):
+    print(json.dumps({"file": file, "reason": "line %d: %s" % (line, reason)}))
+    sys.exit(1)
+
+
+job = json.load(sys.stdin)
+folders = set(job["folders"])
+found = {}
+for file, text in sorted(job["files"].items()):
+    try:
+        tree = ast.parse(text, filename=file)
+    except (SyntaxError, ValueError) as e:
+        fail(file, getattr(e, "lineno", None) or 0, "CPython cannot parse it: %s" % getattr(e, "msg", e))
+    names, faults = set(), []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.level > 0:
+            faults.append((node.lineno, "a relative import, which the scan does not follow"))
+            continue
+        if isinstance(node, ast.Import):
+            firsts = [alias.name.split(".")[0] for alias in node.names]
+        elif isinstance(node, ast.ImportFrom):
+            firsts = [node.module.split(".")[0]]
+        elif isinstance(node, ast.Name) and node.id in DYNAMIC:
+            faults.append((node.lineno, "it names %s, a dynamic import the scan cannot follow" % node.id))
+            continue
+        elif isinstance(node, ast.Attribute) and node.attr in DYNAMIC:
+            faults.append((node.lineno, "it names %s, a dynamic import the scan cannot follow" % node.attr))
+            continue
+        else:
+            continue
+        for name in firsts:
+            if name in DYNAMIC:
+                faults.append((node.lineno, "it imports %s, a dynamic import the scan cannot follow" % name))
+            elif name in folders:
+                faults.append((node.lineno, "it imports %s, a folder of the reader's: a package the scan does not follow" % name))
+        names.update(firsts)
+    if faults:
+        fail(file, *min(faults))
+    found[file] = sorted(names)
+print(json.dumps(found))
+`;
+
+/** The scan's limit: CPython parses a few small files in well under a second. */
+const SCAN_LIMIT = Duration.seconds(30);
+
+/** What the scan reads on its stdin: the folder's `.py` files by name and text, and its folders' names. */
+const ScanJob = Schema.fromJsonString(
+  Schema.Struct({
+    files: Schema.Record(Schema.String, Schema.String),
+    folders: Schema.Array(Schema.String),
+  }),
+);
+/** The scan's answer: each file's imports by first name, sorted. */
+const ScanImports = Schema.fromJsonString(
+  Schema.Record(Schema.String, Schema.Array(Schema.String)),
+);
+/** The scan's fault: the file and the reason, which names the line. */
+const ScanFault = Schema.fromJsonString(
+  Schema.Struct({ file: Schema.String, reason: Schema.String }),
+);
+
+/** Each `.py` file of a reader folder, by name, and the modules it imports, by first name (`SCAN`). */
+export type Imports = ReadonlyMap<string, ReadonlyArray<string>>;
+
+/** A scan that ended with no answer of `SCAN`'s: a failure that names python3 and what it printed. */
+const scanBroke = (reason: string) => ReaderScanFailed.make({ file: 'python3', reason });
 
 /**
- * A Python file read for its imports: its text, the place reached, the line
- * it is on, the bracket depth, the code kept, each character with its line,
- * and the reason the read stopped, when it names one.
+ * The imports of `py` (a reader folder's `.py` files by name and text),
+ * read by CPython in one spawn (`SCAN`), with `folders` (the folder's own
+ * folders) refused as imports. It fails with the scan's fault (its file,
+ * and the reason with the line), or, when python3 cannot run, answers no
+ * JSON of the scan's or leaves a file out, a failure naming python3: never
+ * with an import left out.
  */
-interface Cursor {
-  readonly text: string;
-  i: number;
-  line: number;
-  depth: number;
-  readonly code: Array<string>;
-  readonly lines: Array<number>;
-  fault: Option.Option<string>;
-}
-
-/** A word that may stand before a quote as its string's prefix (`r`, `b`, `f`, `rb`, `fr`…); with `f` or `t`, a formatted string. */
-const PREFIX = /^[rRbBuUfFtT]{1,2}$/;
-/** A character outside brackets that ends a statement: a newline, a `;`, or the `:` before a one-line suite (`if x: import y`). */
-const ENDS: ReadonlySet<string> = new Set(['\n', ';', ':']);
-
-const isQuote = (c: string) => c === '"' || c === "'";
-
-/** The prefix of the string whose quote is at `quote`: the word just before it, when it is one; else ''. */
-const prefixAt = (text: string, quote: number) => {
-  const word = /\w*$/.exec(text.slice(Math.max(0, quote - 2), quote))?.[0] ?? '';
-  if (PREFIX.test(word) && !/\w/.test(text.charAt(quote - word.length - 1))) return word;
-  return '';
-};
-
-/** The quotes that close the string opening at `at`: three when it opens with three. */
-const closeAt = (text: string, at: number) => {
-  const quote = text.charAt(at);
-  if (text.startsWith(quote.repeat(3), at)) return quote.repeat(3);
-  return quote;
-};
-
-/** Keeps `s` as code, each character on the cursor's line. */
-const keep = (cur: Cursor, s: string) => {
-  for (const c of s) {
-    cur.code.push(c);
-    cur.lines.push(cur.line);
-  }
-};
-
-/** Past the comment whose `#` is at the cursor, to its line's end. */
-const pastComment = (cur: Cursor) => {
-  cur.i = cur.text.indexOf('\n', cur.i);
-  if (cur.i < 0) cur.i = cur.text.length;
-};
-
-/** How bracket character `c` moves the depth: an opening one 1, a closing one -1, any other 0. */
-const bracketStep = (c: string) => {
-  if ('([{'.includes(c)) return 1;
-  if (')]}'.includes(c)) return -1;
-  return 0;
-};
-
-/**
- * Past a formatted string's field, its `{` read: an expression, whose
- * strings nest, whose comments run to the line's end and whose brackets
- * count, then, after a `:` outside its brackets, its format spec
- * (`pastSpec`). False when it, or a string in it, does not end, or its spec
- * holds a quote.
- */
-const pastField = (cur: Cursor): boolean => {
-  let depth = 0;
-  while (cur.i < cur.text.length) {
-    const c = cur.text.charAt(cur.i);
-    if (isQuote(c)) {
-      if (!pastString(cur)) return false;
-      continue;
-    }
-    if (c === '#') {
-      pastComment(cur);
-      continue;
-    }
-    if (c === '\n') cur.line++;
-    cur.i++;
-    if (depth === 0 && c === '}') return true;
-    if (depth === 0 && c === ':') return pastSpec(cur);
-    depth += bracketStep(c);
-  }
-  return false;
-};
-
-/**
- * Past a formatted string's format spec, its `:` read: plain text up to the
- * field's `}`, in which a `{` opens a nested field (`pastField`, whose
- * strings are strings). A quote in the spec itself is a character to
- * Python, which the scan does not read: it fails, naming the line, rather
- * than take the quote for a string's and lose its place. False when the
- * spec does not end, or holds a quote.
- */
-function pastSpec(cur: Cursor): boolean {
-  while (cur.i < cur.text.length) {
-    const c = cur.text.charAt(cur.i);
-    if (isQuote(c)) {
-      cur.fault = Option.some(
-        `line ${cur.line}: a quote in a formatted string's format spec, which the scan does not read`,
+export const scanOf = (py: ReadonlyMap<string, string>, folders: ReadonlySet<string>) =>
+  Effect.gen(function* () {
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+    const job = yield* Schema.encodeEffect(ScanJob)({
+      files: Object.fromEntries(py),
+      folders: [...folders].toSorted(),
+    }).pipe(Effect.mapError((e) => scanBroke(`its input did not encode: ${e.message}`)));
+    const ran = yield* collectWithin(
+      spawner,
+      'reader scan',
+      ChildProcess.make('python3', ['-I', '-B', '-c', SCAN], {
+        stdin: Stream.make(new TextEncoder().encode(job)),
+        forceKillAfter: Duration.seconds(5),
+      }),
+      SCAN_LIMIT,
+    ).pipe(
+      Effect.catchTags({
+        PlatformError: (e) => {
+          if (isNotFound(e))
+            return scanBroke(
+              "no python3 on PATH: the scan reads the reader's imports with CPython",
+            );
+          return scanBroke(e.message);
+        },
+        ProcessTimedOut: (e) => scanBroke(e.message),
+      }),
+    );
+    const said = tailOf(ran.stderr) || tailOf(ran.stdout);
+    if (ran.exitCode === 0) {
+      const answer = yield* Schema.decodeEffect(ScanImports)(ran.stdout).pipe(
+        Effect.mapError(() => scanBroke(`the scan answered no imports: ${said}`)),
       );
-      return false;
-    }
-    if (c === '\n') cur.line++;
-    cur.i++;
-    if (c === '}') return true;
-    if (c === '{' && !pastField(cur)) return false;
-  }
-  return false;
-}
-
-/**
- * One step in a string's body: an escape (two characters), a newline
- * (which ends a one-quote string: false), a formatted string's `{{` or its
- * field, or a character.
- */
-const stringStep = (cur: Cursor, close: string, formatted: boolean): boolean => {
-  const c = cur.text.charAt(cur.i);
-  const next = cur.text.charAt(cur.i + 1);
-  if (c === '\\') {
-    if (next === '\n') cur.line++;
-    cur.i += 2;
-    return true;
-  }
-  if (c === '\n') {
-    cur.line++;
-    cur.i++;
-    return close.length === 3;
-  }
-  if (formatted && c === '{' && next === '{') {
-    cur.i += 2;
-    return true;
-  }
-  cur.i++;
-  if (formatted && c === '{') return pastField(cur);
-  return true;
-};
-
-/** Past the string whose first quote is at the cursor, its lines counted. False when it does not end. */
-function pastString(cur: Cursor): boolean {
-  const formatted = /[fFtT]/.test(prefixAt(cur.text, cur.i));
-  const close = closeAt(cur.text, cur.i);
-  cur.i += close.length;
-  while (cur.i < cur.text.length) {
-    if (cur.text.startsWith(close, cur.i)) {
-      cur.i += close.length;
-      return true;
-    }
-    if (!stringStep(cur, close, formatted)) return false;
-  }
-  return false;
-}
-
-/** What code character `c` is kept as: outside brackets a statement's end is a newline; inside them a newline is a space. */
-const keptAs = (c: string, depth: number) => {
-  if (depth === 0 && ENDS.has(c)) return '\n';
-  if (c === '\n') return ' ';
-  return c;
-};
-
-/**
- * One step in code: a comment (skipped to its line's end), a backslash
- * that joins the next line, a string (kept as `""`), or a character
- * (`keptAs`). False when a string does not end.
- */
-const codeStep = (cur: Cursor): boolean => {
-  const c = cur.text.charAt(cur.i);
-  if (c === '#') {
-    pastComment(cur);
-    return true;
-  }
-  if (c === '\\' && cur.text.charAt(cur.i + 1) === '\n') {
-    keep(cur, ' ');
-    cur.line++;
-    cur.i += 2;
-    return true;
-  }
-  if (isQuote(c)) {
-    if (!pastString(cur)) return false;
-    keep(cur, '""');
-    return true;
-  }
-  if ('([{'.includes(c)) cur.depth++;
-  if (')]}'.includes(c)) cur.depth = Math.max(0, cur.depth - 1);
-  keep(cur, keptAs(c, cur.depth));
-  if (c === '\n') cur.line++;
-  cur.i++;
-  return true;
-};
-
-/**
- * Python file `file`'s code, as an import can stand in it, and the line
- * each of its characters is on: every string a `""` (its prefix, escapes,
- * triple quotes and a formatted string's fields, whose strings nest, read
- * through), every comment gone, a backslash at a line's end outside a
- * string joining the next line, a newline inside brackets a space, and
- * each statement on its own line (`ENDS`). A string that does not end
- * fails the scan: it has lost its place, and an import may hide in what it
- * took for a string. A quote in a format spec (`f"{x:'>3}"`) fails it too,
- * before it can lose its place (`pastSpec`).
- */
-const codeOf = (file: string, src: string) =>
-  Effect.gen(function* () {
-    const cur: Cursor = {
-      text: src.replace(/\r\n?/g, '\n'),
-      i: 0,
-      line: 1,
-      depth: 0,
-      code: [],
-      lines: [],
-      fault: Option.none(),
-    };
-    while (cur.i < cur.text.length) {
-      const line = cur.line;
-      if (!codeStep(cur))
-        return yield* ReaderScanFailed.make({
-          file,
-          reason: Option.getOrElse(cur.fault, () => `line ${line}: a string that does not end`),
-        });
-    }
-    return { code: cur.code.join(''), lines: cur.lines };
-  });
-
-/** A module path, by its first name: `a` of `a.b.c`. */
-const DOTTED = /^\s*(\w+)(?:\s*\.\s*\w+)*\s*$/;
-/** `import a.b as c, d`: its items. */
-const PLAIN = /^\s*import\s+(.*)$/;
-/** `from .x.y import …`: its dots, its module (none in `from . import a`) and what it imports. */
-const FROM = /^\s*from\b\s*(\.*)\s*(\w+(?:\s*\.\s*\w+)*)?\s*\bimport\b(.*)$/;
-/** One name a `from … import` list imports, with its optional alias. */
-const NAME = /^\s*(\w+)(?:\s+as\s+\w+)?\s*$/;
-
-/** The first names of `import`'s items (`a.b as c, d` names `a` and `d`); none when one cannot be read. */
-const plainNames = (items: string): Option.Option<ReadonlyArray<string>> => {
-  const names = items
-    .split(',')
-    .map((item) => DOTTED.exec(item.replace(/\s+as\s+\w+\s*$/, ''))?.[1] ?? '');
-  return Option.liftPredicate(names, (n) => !n.includes(''));
-};
-
-/** The names a `from … import` list imports, `*` or names, parenthesized or not; none when it cannot be read. */
-const fromNames = (list: string): Option.Option<ReadonlyArray<string>> => {
-  if (/^\s*\*\s*$/.test(list)) return Option.some([]);
-  const inParens = Option.fromNullishOr(/^\s*\((.*)\)\s*$/.exec(list));
-  const items = Option.match(inParens, {
-    onNone: () => list.split(','),
-    // a parenthesized list may end with a comma
-    onSome: (m) => (m[1] ?? '').replace(/,\s*$/, '').split(','),
-  });
-  const names = items.map((item) => NAME.exec(item)?.[1] ?? '');
-  return Option.liftPredicate(names, (n) => !n.includes(''));
-};
-
-/**
- * The modules one statement imports: none when it is no import statement,
- * `[]` modules read for an unreadable one (`readable` false).
- */
-const statementImports = (
-  statement: string,
-): Option.Option<{ readonly modules: ReadonlyArray<string>; readonly readable: boolean }> => {
-  const read = (names: Option.Option<ReadonlyArray<string>>) =>
-    Option.some({ modules: Option.getOrElse(names, () => []), readable: Option.isSome(names) });
-  const plain = Option.fromNullishOr(PLAIN.exec(statement));
-  if (Option.isSome(plain)) return read(plainNames(plain.value[1] ?? ''));
-  const from = Option.fromNullishOr(FROM.exec(statement));
-  if (Option.isNone(from)) return Option.none();
-  const [, dots = '', module = '', list = ''] = from.value;
-  const names = fromNames(list);
-  if (module !== '') return read(Option.map(names, () => [DOTTED.exec(module)?.[1] ?? '']));
-  // `from . import *` names no module the scan can follow
-  return read(Option.filter(names, (n) => dots !== '' && n.length > 0));
-};
-
-/**
- * Every module `text` (Python file `file`) imports, by its first name:
- * each `import a, b.c as d` names `a` and `b`; each `from x.y import …`
- * names `x`; a relative `from .x import …` names `x`, and `from . import
- * a, b` names `a` and `b`. An import is read wherever a statement can
- * start (`codeOf`): a line's start, indented or not (an import inside a
- * function is an edge too), after a `;`, in a one-line suite. Strings and
- * comments are not code, so an import in one is no edge. The scan fails
- * closed, naming the line: an `import` keyword in code that no import
- * statement it reads holds, an import statement it cannot read, or a
- * string that does not end. It never guesses an edge from a word, since
- * the reader's files name each other in plain words (`read`, `train`,
- * `model`).
- */
-export const importsOf = (file: string, text: string) =>
-  Effect.gen(function* () {
-    const { code, lines } = yield* codeOf(file, text);
-    const fail = (at: number, reason: string) =>
-      ReaderScanFailed.make({ file, reason: `line ${lines[at] ?? 0}: ${reason}` });
-    const modules: Array<string> = [];
-    const held = new Set<number>();
-    let start = 0;
-    for (const statement of code.split('\n')) {
-      const keyword = start + statement.search(/\bimport\b/);
-      const found = statementImports(statement);
-      if (Option.isSome(found) && !found.value.readable)
-        return yield* fail(keyword, `an import the scan cannot read: ${statement.trim()}`);
-      if (Option.isSome(found)) {
-        modules.push(...found.value.modules);
-        held.add(keyword);
-      }
-      start += statement.length + 1;
-    }
-    for (const word of code.matchAll(/\bimport\b/g))
-      if (!held.has(word.index))
-        return yield* fail(
-          word.index,
-          '`import` in code where no import statement the scan reads starts',
+      const imports: Imports = new Map(Object.entries(answer));
+      const answered = [...imports.keys()].toSorted().join(', ');
+      if (answered !== [...py.keys()].toSorted().join(', '))
+        return yield* scanBroke(
+          `the scan answered for ${answered}, not for each file it was given`,
         );
-    return modules;
+      return imports;
+    }
+    const fault = yield* Schema.decodeEffect(ScanFault)(ran.stdout).pipe(
+      Effect.mapError(() => scanBroke(`it exited ${ran.exitCode}: ${said}`)),
+    );
+    return yield* ReaderScanFailed.make(fault);
   });
 
 /**
- * The reader's files by role, by name, from `py`: every `.py` file of its
- * folder by name and its text. Each role is the closure of its entries over
- * their local imports (an import naming a `<name>.py` of `py`, followed
- * transitively), with the environment for a local role, sorted. A file that
- * imports dynamically (`importlib`, `__import__`, `runpy`) fails the scan, as
- * does a missing entry, and a file in a role that imports a name of
- * `folders` (the folder's own folders): a package of the reader's, whose
- * files the scan does not follow.
+ * The reader's files by role, by name, from `imports` (`scanOf`). Each role
+ * is the closure of its entries over their local imports (an import naming
+ * a `<name>.py` of the folder, followed transitively), with the environment
+ * for a local role, sorted. A missing entry fails the scan.
  */
-export const rolesOf = (
-  py: ReadonlyMap<string, string>,
-  folders: ReadonlySet<string> = new Set(),
-): Effect.Effect<ReaderSources, ReaderScanFailed> =>
+export const rolesOf = (imports: Imports): Effect.Effect<ReaderSources, ReaderScanFailed> =>
   Effect.gen(function* () {
-    for (const [file, text] of py) {
-      const dynamic = Option.fromNullishOr(DYNAMIC.exec(text));
-      if (Option.isSome(dynamic))
-        return yield* ReaderScanFailed.make({
-          file,
-          reason: `it names ${dynamic.value[1]}, a dynamic import the scan cannot follow`,
-        });
-    }
     const closureOf = (role: keyof ReaderSources) =>
       Effect.gen(function* () {
         const seen = new Set<string>();
         const queue: Array<string> = [...ENTRIES[role]];
         for (const entry of queue)
-          if (!py.has(entry))
+          if (!imports.has(entry))
             return yield* ReaderScanFailed.make({
               file: entry,
               reason: `missing: the ${role} role's entry`,
@@ -483,14 +305,8 @@ export const rolesOf = (
           const file = queue.shift() ?? '';
           if (seen.has(file)) continue;
           seen.add(file);
-          for (const name of yield* importsOf(file, py.get(file) ?? '')) {
-            if (folders.has(name))
-              return yield* ReaderScanFailed.make({
-                file,
-                reason: `it imports ${name}, a folder of the reader's: a package the scan does not follow`,
-              });
-            if (py.has(`${name}.py`)) queue.push(`${name}.py`);
-          }
+          for (const name of imports.get(file) ?? [])
+            if (imports.has(`${name}.py`)) queue.push(`${name}.py`);
         }
         return [...seen, ...ENVIRONMENT.filter(() => LOCAL.has(role))].toSorted();
       });
@@ -511,7 +327,7 @@ const sourcesIn = (dir: string) =>
       if (name.endsWith('.py')) py.set(name, yield* fs.readFileString(`${dir}/${name}`));
       else if ((yield* fs.stat(`${dir}/${name}`)).type === 'Directory') folders.add(name);
     }
-    const roles = yield* rolesOf(py, folders);
+    const roles = yield* rolesOf(yield* scanOf(py, folders));
     const at = (files: ReadonlyArray<string>) => files.map((n) => `${dir}/${n}`);
     return { train: at(roles.train), read: at(roles.read), eval: at(roles.eval) };
   });

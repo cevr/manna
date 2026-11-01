@@ -18,12 +18,13 @@ import {
   Sink,
   Stream,
 } from 'effect';
-import { ChildProcessSpawner } from 'effect/process';
+import * as PlatformError from 'effect/PlatformError';
+import { type ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { sha256Hex } from '../digest.ts';
 import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore } from '../content-store.ts';
 import { type Stage, buildGraph, fileInput, stageInput } from './graph.ts';
-import { CastReader, importsOf, rolesOf } from './reader.ts';
+import { CastReader, rolesOf, scanOf } from './reader.ts';
 import {
   candidatesOf,
   evalStage,
@@ -870,30 +871,83 @@ describe('cast build: --keep-reader keeps the committed checkpoint across a key 
   );
 });
 
+/** What a fake spawn answers: its exit code and what it prints. */
+interface Reply {
+  readonly exitCode?: number;
+  readonly stdout?: string;
+  readonly stderr?: string;
+}
+
+/** One command a fake spawner ran: its program and arguments, and what it read on stdin. */
+interface Spawned {
+  readonly argv: ReadonlyArray<string>;
+  readonly stdin: string;
+}
+
+/** The text a command's stdin carries, when it is a stream ('' else). */
+const stdinOf = (input: ChildProcess.CommandOptions['stdin']) => {
+  if (Stream.isStream(input)) return Stream.mkString(Stream.decodeText(Stream.orDie(input)));
+  return Effect.succeed('');
+};
+
+/**
+ * A spawner that records each command (program, arguments and stdin) in
+ * `spawned`, and answers it with `reply` of it: by default exit 0, printing
+ * nothing.
+ */
+const spawnerOf = (
+  spawned: Array<Spawned>,
+  reply: (run: Spawned) => Reply = () => ({}),
+): ChildProcessSpawner.ChildProcessSpawner['Service'] =>
+  ChildProcessSpawner.make((command) =>
+    Effect.gen(function* () {
+      const run = { argv: [] as Array<string>, stdin: '' };
+      if (command._tag === 'StandardCommand') {
+        run.argv = [command.command, ...command.args];
+        run.stdin = yield* stdinOf(command.options.stdin);
+      }
+      spawned.push(run);
+      const { exitCode = 0, stdout = '', stderr = '' } = reply(run);
+      const bytes = (s: string) => Stream.make(new TextEncoder().encode(s));
+      return ChildProcessSpawner.makeHandle({
+        pid: ChildProcessSpawner.ProcessId(0),
+        exitCode: Effect.succeed(ChildProcessSpawner.ExitCode(exitCode)),
+        isRunning: Effect.succeed(false),
+        kill: () => Effect.void,
+        stdin: Sink.drain,
+        stdout: bytes(stdout),
+        stderr: bytes(stderr),
+        all: Stream.empty,
+        getInputFd: () => Sink.drain,
+        getOutputFd: () => Stream.empty,
+        unref: Effect.succeed(Effect.void),
+      });
+    }),
+  );
+
+/** Whether a command is the reader's scan: `python3 -I -B -c <SCAN>`. */
+const isScan = (run: Spawned) => run.argv[0] === 'python3' && run.argv[3] === '-c';
+
+/** The scan's stdin, decoded: the files by name and text, and the folders. */
+const decodeJob = Schema.decodeUnknownSync(
+  Schema.fromJsonString(
+    Schema.Struct({
+      files: Schema.Record(Schema.String, Schema.String),
+      folders: Schema.Array(Schema.String),
+    }),
+  ),
+);
+
 describe("the reader's roles, derived from its imports", () => {
-  /** A reader folder shaped as the committed one: modal_app.py imports train and model inside its functions. */
-  const FOLDER: ReadonlyArray<readonly [string, string]> = [
-    ['eval.py', 'import argparse\nimport numpy as np\n\nfrom model import BONES, wrap\n'],
-    [
-      'modal_app.py',
-      [
-        'import json',
-        'import modal',
-        'def fit():',
-        '    import sys',
-        '    from train import train as run',
-        'def read():',
-        '    from model import Frame',
-      ].join('\n'),
-    ],
-    [
-      'model.py',
-      'import torch\n\nclass Reader:\n    def load(self):\n        from transformers import AutoModel\n',
-    ],
-    ['read.py', 'import cv2\nfrom model import CANVAS, decode\n'],
-    ['train.py', 'import torch.nn.functional as F\nfrom model import BACKBONE, Reader\n'],
+  /** A reader folder's imports shaped as the committed one's: modal_app.py imports train and model inside its functions. */
+  const FOLDER: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = [
+    ['eval.py', ['argparse', 'model', 'numpy']],
+    ['modal_app.py', ['json', 'modal', 'model', 'sys', 'train']],
+    ['model.py', ['torch', 'transformers']],
+    ['read.py', ['cv2', 'model']],
+    ['train.py', ['model', 'torch']],
   ];
-  const rolesIn = (over: ReadonlyArray<readonly [string, string]> = []) =>
+  const rolesIn = (over: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = []) =>
     rolesOf(new Map([...FOLDER, ...over]));
 
   it.effect('a role is its entries’ closure, a local role with the environment', () =>
@@ -909,11 +963,11 @@ describe("the reader's roles, derived from its imports", () => {
   it.effect('the closure is transitive, and a module with no file in the folder is no edge', () =>
     Effect.gen(function* () {
       const roles = yield* rolesIn([
-        ['read.py', 'import numpy\nfrom model import decode\nimport a\n'],
-        ['a.py', 'import os\nimport b\n'],
-        ['b.py', 'from c import x\n'],
-        ['c.py', 'import torch\n'],
-        ['unused.py', 'import model\n'],
+        ['read.py', ['a', 'model', 'numpy']],
+        ['a.py', ['b', 'os']],
+        ['b.py', ['c']],
+        ['c.py', ['torch']],
+        ['unused.py', ['model']],
       ]);
       expect(roles.read).toEqual([
         'a.py',
@@ -928,150 +982,129 @@ describe("the reader's roles, derived from its imports", () => {
     }),
   );
 
-  it.effect('reads every import form, wherever a statement starts, each by its first name', () =>
-    Effect.gen(function* () {
-      const forms: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = [
-        ['import a, b as c', ['a', 'b']],
-        ['import x as y', ['x']],
-        ['import pkg.sub', ['pkg']],
-        ['    from inner import thing', ['inner']],
-        ['from multi import (\n    one,\n    two,\n)', ['multi']],
-        ['from pkg.sub import x', ['pkg']],
-        ['from star import *', ['star']],
-        ['from .rel import x', ['rel']],
-        ['from.rel import x', ['rel']],
-        ['from . import (\n    left,\n    right as r,\n)', ['left', 'right']],
-        ['import first, \\\n    second', ['first', 'second']],
-        ['x = 1; import semi', ['semi']],
-        ['if True: import suite', ['suite']],
-        ['def load(): from helper import VALUE', ['helper']],
-        ['try: import a\nexcept ImportError: import b', ['a', 'b']],
-        ['if n := len(xs): import walrus', ['walrus']],
-        ['# import commented', []],
-        ['print("import nothing")', []],
-        ["s = 'it\\'s'; import escaped", ['escaped']],
-        ['s = r"\\\\"; import raw', ['raw']],
-        ['s = f"{d["k"]:>{w}} {{import x}}"; import nested', ['nested']],
-        ['"""\nimport in_a_docstring\n"""\nimport after', ['after']],
-        ['x = [\n    1,  # a comment\n]\nimport later', ['later']],
-        ['s = f"{x:{\'>\'}3}"; import spec_field', ['spec_field']],
-        ["s = f\"{ {'k': 1}['k']:>3} {d[1:2]!r:^{w}}\"; import brackets", ['brackets']],
-        ['s = f"""{x # a comment\'s quote\n}"""; import field_comment', ['field_comment']],
-      ];
-      for (const [source, names] of forms)
-        expect([source, yield* importsOf('f.py', source)]).toEqual([source, [...names]]);
-    }),
-  );
-
-  it.effect(
-    'a string or a comment that reads as an import is no edge, and never hides the import after it',
-    () =>
-      Effect.gen(function* () {
-        const roles = yield* rolesIn([
-          ['read.py', 'from model import decode\n"""\nimport helper\n"""\n# import other\n'],
-          ['helper.py', ''],
-          ['other.py', ''],
-        ]);
-        expect(roles.read).not.toContain('helper.py');
-        expect(roles.read).not.toContain('other.py');
-      }),
-  );
-
-  it.effect(
-    'the scan fails closed: an import keyword it cannot place, an import it cannot read, a string that does not end, or a quote in a format spec',
-    () =>
-      Effect.gen(function* () {
-        const cases: ReadonlyArray<readonly [string, string]> = [
-          ['import model\nx = 1 import helper\n', 'line 2: `import` in code'],
-          ['import model\nfrom helper import a,\n', 'line 2: an import the scan cannot read'],
-          ['import model\nfrom . import *\n', 'line 2: an import the scan cannot read'],
-          ["import model\n'it ends nowhere\nimport helper\n", 'line 2: a string that does not end'],
-          [
-            's = f"{x:\'>10}"\nimport helper\n',
-            "line 1: a quote in a formatted string's format spec",
-          ],
-          [
-            'a = f"{x:\'>3}"; import helper; b = f"{y:\'<3}"\n',
-            "line 1: a quote in a formatted string's format spec",
-          ],
-          [
-            "import model\nx = f\"{x:'''}\"\nimport helper\nf\"{x:'''}\"\n",
-            "line 2: a quote in a formatted string's format spec",
-          ],
-          [
-            'import model\ns = f"{x:{y:\'<\'}}"\nimport helper\nf"{y:{z:\'>\'}}"\n',
-            "line 2: a quote in a formatted string's format spec",
-          ],
-        ];
-        for (const [source, reason] of cases) {
-          const failed = yield* Effect.flip(rolesIn([['read.py', source]]));
-          expect([source, failed._tag, failed.file, failed.reason]).toEqual([
-            source,
-            'ReaderScanFailed',
-            'read.py',
-            expect.stringContaining(reason),
-          ]);
-        }
-      }),
-  );
-
-  it.effect('a file that imports dynamically fails the scan, by its name and the word', () =>
-    Effect.gen(function* () {
-      for (const word of [
-        'importlib.import_module("x")',
-        '__import__("x")',
-        'runpy.run_path("x")',
-      ]) {
-        const failed = yield* Effect.flip(rolesIn([['stray.py', word]]));
-        expect(failed._tag).toBe('ReaderScanFailed');
-        expect(failed.file).toBe('stray.py');
-        expect(failed.message).toContain(word.split(/[.(]/)[0] ?? '');
-      }
-    }),
-  );
-
   it.effect('a missing entry fails the scan, naming its role', () =>
     Effect.gen(function* () {
       const failed = yield* Effect.flip(
         rolesOf(new Map(FOLDER.filter(([name]) => name !== 'eval.py'))),
       );
-      expect(failed.file).toBe('eval.py');
-      expect(failed.reason).toContain('eval');
+      expect([failed._tag, failed.file, failed.reason]).toEqual([
+        'ReaderScanFailed',
+        'eval.py',
+        expect.stringContaining('eval'),
+      ]);
     }),
   );
 
-  it.effect(
-    "an import of one of the folder's own folders fails the scan, naming the file and the folder; a folder no role imports is no matter",
-    () =>
-      Effect.gen(function* () {
-        const folders = new Set(['lib', 'tests']);
-        expect((yield* rolesOf(new Map(FOLDER), folders)).train).toEqual([
-          'modal_app.py',
-          'model.py',
-          'train.py',
-        ]);
-        const failed = yield* Effect.flip(
-          rolesOf(new Map([...FOLDER, ['read.py', 'from lib import decode\n']]), folders),
+  describe('the scan: one python3 spawn, the folder on its stdin', () => {
+    const PY = new Map([
+      ['model.py', 'import torch\n'],
+      ['read.py', 'from model import decode\n'],
+    ]);
+
+    it.effect(
+      'it runs python3 -I -B -c once, hands it every file and folder as JSON, and reads its answer',
+      () => {
+        const spawned: Array<Spawned> = [];
+        return Effect.gen(function* () {
+          const imports = yield* scanOf(PY, new Set(['tests', 'lib']));
+          expect([...imports]).toEqual([
+            ['model.py', ['torch']],
+            ['read.py', ['model']],
+          ]);
+          expect(spawned.length).toBe(1);
+          expect(spawned[0]?.argv.slice(0, 4)).toEqual(['python3', '-I', '-B', '-c']);
+          expect(decodeJob(spawned[0]?.stdin ?? '')).toEqual({
+            files: Object.fromEntries(PY),
+            folders: ['lib', 'tests'],
+          });
+        }).pipe(
+          Effect.provideService(
+            ChildProcessSpawner.ChildProcessSpawner,
+            spawnerOf(spawned, () => ({
+              stdout: '{"model.py": ["torch"], "read.py": ["model"]}\n',
+            })),
+          ),
         );
-        expect([failed._tag, failed.file, failed.reason]).toEqual([
-          'ReaderScanFailed',
-          'read.py',
-          expect.stringContaining('it imports lib, a folder'),
-        ]);
-      }),
-  );
+      },
+    );
+
+    it.effect(
+      'a fault of the scan fails with its file and its reason; python3 missing, a crash, an answer with no imports or one that leaves a file out fail naming python3',
+      () =>
+        Effect.gen(function* () {
+          const cases: ReadonlyArray<
+            readonly [ChildProcessSpawner.ChildProcessSpawner['Service'], string, string]
+          > = [
+            [
+              spawnerOf([], () => ({
+                exitCode: 1,
+                stdout: '{"file": "read.py", "reason": "line 3: a relative import"}\n',
+              })),
+              'read.py',
+              'line 3: a relative import',
+            ],
+            [
+              ChildProcessSpawner.make(() =>
+                Effect.fail(
+                  PlatformError.systemError({
+                    _tag: 'NotFound',
+                    module: 'ChildProcess',
+                    method: 'spawn',
+                  }),
+                ),
+              ),
+              'python3',
+              'no python3 on PATH',
+            ],
+            [
+              spawnerOf([], () => ({ exitCode: 1, stderr: 'Traceback\nMemoryError\n' })),
+              'python3',
+              'it exited 1: Traceback\nMemoryError',
+            ],
+            [
+              spawnerOf([], () => ({ stdout: '["model.py"]\n' })),
+              'python3',
+              'the scan answered no imports',
+            ],
+            [
+              spawnerOf([], () => ({ exitCode: 1, stdout: '{"file": "read.py"}\n' })),
+              'python3',
+              'it exited 1',
+            ],
+            [
+              spawnerOf([], () => ({ stdout: '{"model.py": ["torch"]}\n' })),
+              'python3',
+              'the scan answered for model.py, not for each file it was given',
+            ],
+          ];
+          for (const [spawner, file, reason] of cases) {
+            const failed = yield* Effect.flip(
+              scanOf(PY, new Set()).pipe(
+                Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+              ),
+            );
+            expect([failed._tag, failed.file, failed.reason]).toEqual([
+              'ReaderScanFailed',
+              file,
+              expect.stringContaining(reason),
+            ]);
+          }
+        }),
+    );
+  });
 
   /**
-   * The folder with `over`, scanned, and on a disk with the build's other
-   * files: each `.py` at `/reader/<name>`, the roles as paths there.
+   * The folder's imports with `over`, its roles, and a disk with the
+   * build's other files: each `.py` at `/reader/<name>`, the roles as paths
+   * there.
    */
-  const scannedOver = (over: ReadonlyArray<readonly [string, string]>) =>
+  const scannedOver = (over: ReadonlyArray<readonly [string, ReadonlyArray<string>]>) =>
     Effect.gen(function* () {
-      const folder = new Map([...FOLDER, ['helper.py', 'VALUE = 1\n'] as const, ...over]);
+      const folder = new Map([...FOLDER, ['helper.py', []] as const, ...over]);
       const roles = yield* rolesOf(folder);
       const at = (names: ReadonlyArray<string>) => names.map((n) => `/reader/${n}`);
       const disk = files();
-      for (const [name, body] of folder) disk.set(`/reader/${name}`, text(body));
+      for (const name of folder.keys()) disk.set(`/reader/${name}`, text(`# ${name}\n`));
       disk.set('/reader/pyproject.toml', text('[project]\n'));
       disk.set('/ckpt.pt', text('ckpt'));
       disk.set('/clip.mp4', text('clip'));
@@ -1084,50 +1117,34 @@ describe("the reader's roles, derived from its imports", () => {
   const editHelper = (disk: Map<string, Uint8Array>) =>
     disk.set('/reader/helper.py', text('VALUE = 2\n'));
 
-  // a string or a comment that could open a continuation ends where Python ends it, so the import after it is an edge
-  for (const [name, source] of [
-    [
-      'after a docstring that reads as an open import',
-      '"""\nfrom example import (\n"""\nimport helper\n',
-    ],
-    [
-      'after a comment that ends in a backslash',
-      'from model import decode\n# a comment ending in a backslash \\\nimport helper\n',
-    ],
-  ] as const)
-    it.effect(
-      `an import ${name} is in the read closure, and its edit misses the clip read cache`,
-      () => {
-        const { roles, disk, sources } = Effect.runSync(scannedOver([['read.py', source]]));
-        const dirOf = readsDirOf({
-          ckpt: '/ckpt.pt',
-          clip: '/clip.mp4',
-          map: { x0: 0, y0: 0, scale: 1 },
-          cache: '/cache',
-        });
-        return Effect.gen(function* () {
-          expect(roles.read).toContain('helper.py');
-          const first = yield* dirOf;
-          editHelper(disk);
-          expect(yield* dirOf).not.toBe(first);
-        }).pipe(
-          Effect.provide([
-            memoryFileSystem(disk),
-            Path.layer,
-            CastReader.layerTest({}, [], sources),
-          ]),
-        );
-      },
-    );
+  it.effect(
+    'a helper read.py imports is in the read closure, and its edit misses the clip read cache',
+    () => {
+      const { roles, disk, sources } = Effect.runSync(
+        scannedOver([['read.py', ['helper', 'model']]]),
+      );
+      const dirOf = readsDirOf({
+        ckpt: '/ckpt.pt',
+        clip: '/clip.mp4',
+        map: { x0: 0, y0: 0, scale: 1 },
+        cache: '/cache',
+      });
+      return Effect.gen(function* () {
+        expect(roles.read).toContain('helper.py');
+        const first = yield* dirOf;
+        editHelper(disk);
+        expect(yield* dirOf).not.toBe(first);
+      }).pipe(
+        Effect.provide([memoryFileSystem(disk), Path.layer, CastReader.layerTest({}, [], sources)]),
+      );
+    },
+  );
 
-  // an import in a one-line suite is an edge, so a training helper's edit is a new train key
-  for (const [name, source] of [
-    ['in a one-line if', 'from model import Reader\nif True: import helper\n'],
-    ['in a one-line def', 'from model import Reader\ndef load(): from helper import VALUE\n'],
-  ] as const)
-    it.effect(`an import ${name} is in the train closure, and its edit is a new train key`, () =>
+  it.effect(
+    'a helper train.py imports is in the train closure, and its edit is a new train key',
+    () =>
       Effect.gen(function* () {
-        const { roles, disk, sources } = yield* scannedOver([['train.py', source]]);
+        const { roles, disk, sources } = yield* scannedOver([['train.py', ['helper', 'model']]]);
         expect(roles.train).toEqual(['helper.py', 'modal_app.py', 'model.py', 'train.py']);
         const spend = { spend: new Set(['modal'] as const) };
         const asked: Array<string> = [];
@@ -1141,32 +1158,11 @@ describe("the reader's roles, derived from its imports", () => {
         expect(keys.length).toBe(2);
         expect(keys[0]).not.toBe(keys[1]);
       }),
-    );
+  );
 });
 
 describe('the live reader', () => {
-  /** A spawner that records each command (program and arguments) and exits 0, printing nothing. */
-  const recording = (commands: Array<ReadonlyArray<string>>) =>
-    ChildProcessSpawner.make((command) => {
-      if (command._tag === 'StandardCommand') commands.push([command.command, ...command.args]);
-      return Effect.succeed(
-        ChildProcessSpawner.makeHandle({
-          pid: ChildProcessSpawner.ProcessId(0),
-          exitCode: Effect.succeed(ChildProcessSpawner.ExitCode(0)),
-          isRunning: Effect.succeed(false),
-          kill: () => Effect.void,
-          stdin: Sink.drain,
-          stdout: Stream.empty,
-          stderr: Stream.empty,
-          all: Stream.empty,
-          getInputFd: () => Sink.drain,
-          getOutputFd: () => Stream.empty,
-          unref: Effect.succeed(Effect.void),
-        }),
-      );
-    });
-
-  /** A reader folder of the live layer's: its entry scripts, its model, a helper in a one-line suite, its tests' folder, and its lock. */
+  /** A reader folder of the live layer's: its entry scripts, its model, a helper, its tests' folder, and its lock. */
   const FOLDER = {
     'eval.py': 'from model import BONES\n',
     'helper.py': '',
@@ -1178,9 +1174,21 @@ describe('the live reader', () => {
     'pyproject.toml': '[project]\n',
     'uv.lock': 'version = 1\n',
   };
+  /** The folder's imports, as the scan answers them. */
+  const SCANNED = [
+    '{"eval.py": ["model"], "helper.py": [], "modal_app.py": ["train"], "model.py": ["torch"],',
+    ' "read.py": ["model"], "train.py": ["helper", "model"]}',
+  ].join('');
   /** Where the folder and the reader's home lie, on the in-memory disk. */
   const DIR = '/reader';
   const HOME = '/reader-home';
+
+  /** A spawner that records each command and answers the scan with `SCANNED`, any other command with exit 0 and nothing. */
+  const recording = (spawned: Array<Spawned>) =>
+    spawnerOf(spawned, (run) => {
+      if (isScan(run)) return { stdout: SCANNED };
+      return {};
+    });
 
   /**
    * The live reader over `spawner`, of the folder on an in-memory disk, in
@@ -1209,7 +1217,7 @@ describe('the live reader', () => {
   };
 
   it.effect("a train hands Modal the config's backbone and input side", () => {
-    const commands: Array<ReadonlyArray<string>> = [];
+    const spawned: Array<Spawned> = [];
     return Effect.gen(function* () {
       // the recording spawner writes no checkpoint, so the train itself fails after its call
       yield* Effect.exit(
@@ -1230,39 +1238,59 @@ describe('the live reader', () => {
           },
         }),
       );
-      const train = commands.find((c) => c.some((a) => a.endsWith('modal_app.py::train')));
-      const flag = (name: string) => train?.[train.indexOf(name) + 1];
+      const train = spawned.find((c) => c.argv.some((a) => a.endsWith('modal_app.py::train')));
+      const flag = (name: string) => train?.argv[train.argv.indexOf(name) + 1];
       expect(flag('--backbone')).toBe('facebook/dinov2-base');
       expect(flag('--input-width')).toBe('896');
       expect(flag('--input-height')).toBe('1120');
-    }).pipe(Effect.provide(liveOver(recording(commands))));
+    }).pipe(Effect.provide(liveOver(recording(spawned))));
   });
 
-  it.effect("its sources are its folder's roles, as absolute paths", () =>
-    Effect.gen(function* () {
-      const { sources } = yield* CastReader;
-      const at = (names: ReadonlyArray<string>) => names.map((n) => `${DIR}/${n}`);
-      expect(sources).toEqual({
-        train: at(['helper.py', 'modal_app.py', 'model.py', 'train.py']),
-        read: at(['model.py', 'pyproject.toml', 'read.py', 'uv.lock']),
-        eval: at(['eval.py', 'model.py', 'pyproject.toml', 'read.py', 'uv.lock']),
-      });
-    }).pipe(Effect.provide(liveOver(recording([])))),
+  it.effect(
+    "its sources are its folder's roles, as absolute paths, from one scan of the folder's .py files and folders",
+    () => {
+      const spawned: Array<Spawned> = [];
+      return Effect.gen(function* () {
+        const { sources } = yield* CastReader;
+        const at = (names: ReadonlyArray<string>) => names.map((n) => `${DIR}/${n}`);
+        expect(sources).toEqual({
+          train: at(['helper.py', 'modal_app.py', 'model.py', 'train.py']),
+          read: at(['model.py', 'pyproject.toml', 'read.py', 'uv.lock']),
+          eval: at(['eval.py', 'model.py', 'pyproject.toml', 'read.py', 'uv.lock']),
+        });
+        const scans = spawned.filter(isScan);
+        expect(scans.length).toBe(1);
+        const job = decodeJob(scans[0]?.stdin ?? '');
+        expect(Object.keys(job.files)).toEqual([
+          'eval.py',
+          'helper.py',
+          'modal_app.py',
+          'model.py',
+          'read.py',
+          'train.py',
+        ]);
+        expect(job.files['train.py']).toBe(FOLDER['train.py']);
+        expect(job.folders).toEqual(['tests']);
+      }).pipe(Effect.provide(liveOver(recording(spawned))));
+    },
   );
 
-  it.effect('a role that imports a package folder of its own fails as the layer is made', () =>
+  it.effect('a scan fault fails the layer as it is made, naming the file and the reason', () =>
     Effect.gen(function* () {
       const failed = yield* Effect.flip(
         Layer.build(
-          liveOver(recording([]), {
-            'read.py': 'from lib import decode\n',
-            'lib/__init__.py': 'decode = None\n',
-          }),
+          liveOver(
+            spawnerOf([], () => ({
+              exitCode: 1,
+              stdout: `{"file": "read.py", "reason": "line 1: it imports lib, a folder of the reader's"}`,
+            })),
+            { 'read.py': 'from lib import decode\n', 'lib/__init__.py': 'decode = None\n' },
+          ),
         ),
       );
       expect([failed._tag, failed.message]).toEqual([
         'ReaderScanFailed',
-        expect.stringContaining('read.py: it imports lib, a folder'),
+        expect.stringContaining('read.py: line 1: it imports lib, a folder'),
       ]);
     }).pipe(Effect.scoped),
   );
