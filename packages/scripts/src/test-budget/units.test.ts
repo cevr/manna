@@ -52,6 +52,25 @@ describe("a workspace's unit-test tasks", () => {
     });
   });
 
+  test('are not a task the test run reaches for another reason, though it has a command', () => {
+    const dry: DryRun = {
+      tasks: [
+        // A `transit` and a `build` given scripts, a part no `test` depends on, and another workspace's part.
+        task('@manna/core#transit', 'bun scripts/transit.ts'),
+        task('@manna/core#build', 'tsc -b', []),
+        task('@manna/core#test', 'bun test', ['@manna/core#build']),
+        task('@manna/film#test', '<NONEXISTENT>', ['@manna/film#test:lab', '@manna/ui#test:dom']),
+        task('@manna/film#test:lab', 'bun test ./src/lab'),
+        task('@manna/film#test:stray', 'bun test ./src/stray'),
+        task('@manna/ui#test:dom', 'bun test src/dom'),
+      ],
+    };
+    expect(unitTests(dry).map((unit) => unit.taskId)).toEqual([
+      '@manna/core#test',
+      '@manna/film#test:lab',
+    ]);
+  });
+
   test('are none when no task has a command', () => {
     expect(unitTests({ tasks: [task('@manna/core#transit', '<NONEXISTENT>')] })).toEqual([]);
   });

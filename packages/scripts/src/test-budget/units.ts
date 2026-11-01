@@ -1,5 +1,6 @@
-// A workspace's unit-test tasks: the tasks with a command that `turbo run
-// test` (the gate's) runs in it, by turbo's own dry run. Most workspaces have
+// A workspace's unit-test tasks: its `test`, or the parts its `test` depends
+// on, that `turbo run test` (the gate's) runs with a command, by turbo's own
+// dry run. Most workspaces have
 // one, `<ws>#test`. One whose tests are cut into parts (`@manna/film`) gives
 // its `test` no command and has it depend on its parts (`test:lab`,
 // `test:tools`, `test:engine`, each a script and a task of its
@@ -45,10 +46,28 @@ export interface UnitTest {
   readonly command: string;
 }
 
-/** The unit-test tasks of `dry` (a dry run of `turbo run test`): each task with a command, by workspace, then task. */
-export const unitTests = (dry: Pick<DryRun, 'tasks'>): ReadonlyArray<UnitTest> =>
-  dry.tasks
-    .filter((task) => task.command !== NO_COMMAND)
+/** A part's task name: `test:<part>`. */
+const PART = /^test:[^:]+$/u;
+
+/**
+ * The unit-test tasks of `dry` (a dry run of `turbo run test`), by workspace,
+ * then task: each `<ws>#test` with a command, and each `<ws>#test:<part>`
+ * with a command that a commandless `<ws>#test` depends on. A task the test
+ * run reaches for another reason (a `transit` or a `build` given a script) is
+ * none.
+ */
+export const unitTests = (dry: Pick<DryRun, 'tasks'>): ReadonlyArray<UnitTest> => {
+  const parts = new Set(
+    dry.tasks
+      .filter((task) => task.task === 'test' && task.command === NO_COMMAND)
+      .flatMap((test) => test.dependencies.filter((id) => id.startsWith(`${test.package}#`))),
+  );
+  return dry.tasks
+    .filter(
+      (task) =>
+        task.command !== NO_COMMAND &&
+        (task.task === 'test' || (PART.test(task.task) && parts.has(task.taskId))),
+    )
     .map((task) => ({
       workspace: task.package,
       directory: task.directory,
@@ -57,6 +76,7 @@ export const unitTests = (dry: Pick<DryRun, 'tasks'>): ReadonlyArray<UnitTest> =
       command: task.command,
     }))
     .toSorted((a, b) => a.workspace.localeCompare(b.workspace) || a.task.localeCompare(b.task));
+};
 
 /** turbo's dry run of `turbo run test` at `root`, by the turbo binary `turbo` (a path, or a name on `PATH`). */
 export const testDryRun = (root: string, turbo: string) =>

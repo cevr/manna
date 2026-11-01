@@ -107,7 +107,7 @@ const standIn = (each: Case) => {
     'two-lines': [printed, printed],
     outside: [`echo "Summary:    $PWD/${OUTSIDE_DIR}/${OWN_FILE}"`],
   };
-  const task = (taskId: string, command: string) => {
+  const task = (taskId: string, command: string, dependencies: ReadonlyArray<string> = []) => {
     const [pkg = '', name = ''] = taskId.split('#');
     return {
       taskId,
@@ -116,7 +116,7 @@ const standIn = (each: Case) => {
       directory: pkg,
       command,
       inputs: {},
-      dependencies: [],
+      dependencies,
     };
   };
   const parts = each.parts ?? [];
@@ -128,6 +128,7 @@ const standIn = (each: Case) => {
           onEmpty: () => each.command ?? 'bun test',
           onNonEmpty: () => '<NONEXISTENT>',
         }),
+        parts.map((part) => `x#${part.task}`),
       ),
       ...parts.map((part) => task(`x#${part.task}`, 'bun test')),
       task('y#test', 'bun test'),
