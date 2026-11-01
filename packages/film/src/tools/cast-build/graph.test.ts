@@ -11,8 +11,6 @@ import { ContentStore, Processes } from '../content-store.ts';
 import {
   type BuildOptions,
   type Stage,
-  HEARTBEAT_MS,
-  RUNNING_LEASE_MS,
   type StageFailed,
   WaitingOwner,
   buildGraph,
@@ -365,28 +363,36 @@ describe('the cast build graph', () => {
     }).pipe(Effect.provide(servicesOver(files)));
   });
 
-  it.effect("another host's mark whose heartbeat stopped frees its key after the lease", () => {
-    const files = seeded();
-    return Effect.gen(function* () {
-      const slow = yield* slowTrain;
-      const first = yield* Effect.forkChild(buildGraph(slow.stages, options()).pipe(onHost('a')));
-      yield* Deferred.await(slow.started);
-      // host a goes dark: its build stops (and its heartbeat with it), its mark left behind
-      const left = files.get('/cache/build.json') ?? text('');
-      yield* Fiber.interrupt(first);
-      files.set('/cache/build.json', left);
-      const second = yield* Effect.forkChild(buildGraph(slow.stages, options()).pipe(onHost('b')));
-      yield* TestClock.adjust(RUNNING_LEASE_MS - HEARTBEAT_MS);
-      expect(slow.runs()).toBe(1);
-      yield* TestClock.adjust(2 * HEARTBEAT_MS);
-      yield* Deferred.await(slow.restarted);
-      expect(slow.runs()).toBe(2);
-      yield* Deferred.succeed(slow.release, true);
-      expect(statesOf(yield* Fiber.join(second))).toEqual({ train: 'ran' });
-      const manifest = new TextDecoder().decode(files.get('/cache/build.json'));
-      expect((yield* Schema.decodeEffect(RunningMarks)(manifest)).running).toEqual({});
-    }).pipe(Effect.provide(servicesOver(files)));
-  });
+  it.effect(
+    "another host's mark whose heartbeat stopped frees its key five minutes after its last beat",
+    () => {
+      const files = seeded();
+      return Effect.gen(function* () {
+        const slow = yield* slowTrain;
+        const first = yield* Effect.forkChild(buildGraph(slow.stages, options()).pipe(onHost('a')));
+        yield* Deferred.await(slow.started);
+        // host a's build beats for an hour, then host a goes dark: its build stops (and its
+        // heartbeat with it), its mark left behind with its last beat at 61 minutes
+        yield* TestClock.adjust('61 minutes');
+        const left = files.get('/cache/build.json') ?? text('');
+        yield* Fiber.interrupt(first);
+        files.set('/cache/build.json', left);
+        const second = yield* Effect.forkChild(
+          buildGraph(slow.stages, options()).pipe(onHost('b')),
+        );
+        // the lease runs from the last beat, not from the mark's start
+        yield* TestClock.adjust('4 minutes');
+        expect(slow.runs()).toBe(1);
+        yield* TestClock.adjust('2 minutes');
+        yield* Deferred.await(slow.restarted);
+        expect(slow.runs()).toBe(2);
+        yield* Deferred.succeed(slow.release, true);
+        expect(statesOf(yield* Fiber.join(second))).toEqual({ train: 'ran' });
+        const manifest = new TextDecoder().decode(files.get('/cache/build.json'));
+        expect((yield* Schema.decodeEffect(RunningMarks)(manifest)).running).toEqual({});
+      }).pipe(Effect.provide(servicesOver(files)));
+    },
+  );
 
   it.effect('a build whose mark was taken while it ran discards its output (fencing)', () => {
     const files = seeded();
