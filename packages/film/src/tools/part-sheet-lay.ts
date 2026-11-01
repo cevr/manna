@@ -610,9 +610,10 @@ const measureHidden = (
 /**
  * The bars a measure misses, by name: paint (a moving part hides none),
  * seam (above its bar, or too few pairs to read), drift (above its bar, no
- * pixel to read it on, or a read region's chroma outside its bar), grain (a
- * read part outside its bar, or no part read), speck (a read region's speck
- * share outside its bar), paint visible at rest, the view not recomposed.
+ * pixel to read it on, or a region's chroma outside its bar or with no cell
+ * to read it on), grain (a read part outside its bar, or no part read),
+ * speck (a region's speck share outside its bar, or too few pixels to read
+ * it on), paint visible at rest, the view not recomposed.
  */
 export const missedBars = (m: HiddenMeasures): ReadonlyArray<string> =>
   Arr.filter(
@@ -623,14 +624,14 @@ export const missedBars = (m: HiddenMeasures): ReadonlyArray<string> =>
         'drift',
         m.drift.px > 0 &&
           m.drift.deltaE <= BARS.driftDeltaE &&
-          m.drift.chroma.every((c) => c.verdict !== 'outside'),
+          m.drift.chroma.every((c) => c.verdict === 'within'),
       ],
       [
         'grain',
         m.grain.some((g) => g.verdict === 'within') &&
           m.grain.every((g) => g.verdict !== 'outside'),
       ],
-      ['speck', m.speck.every((s) => s.verdict !== 'outside')],
+      ['speck', m.speck.every((s) => s.verdict === 'within')],
       ['visible', m.visibleAtRest === BARS.visibleAtRest],
       ['recompose', m.recomposeByteEqual],
     ] as const,
