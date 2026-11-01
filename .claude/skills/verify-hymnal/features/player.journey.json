@@ -53,6 +53,12 @@
       "expect": [{ "shows": "label=Pause hymn 100" }, { "hides": "label=Sheet Grabber" }]
     },
     {
+      "name": "player-seek-tap",
+      "action": "tap",
+      "target": "id=seek",
+      "expect": [{ "shows": "label=Pause hymn 100" }, { "hides": "label=Sheet Grabber" }]
+    },
+    {
       "name": "player-sheet-reader",
       "action": "gesture",
       "from": "label=Open player",
