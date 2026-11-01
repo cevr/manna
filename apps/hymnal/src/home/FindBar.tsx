@@ -202,6 +202,7 @@ export function FindBar({
               <Animated.View style={faded} {...reach('search')}>
                 <Pressable
                   ref={keepSearchButton}
+                  testID="find-search"
                   role="button"
                   aria-label="Search"
                   accessibilityHint="Opens search"
@@ -216,6 +217,7 @@ export function FindBar({
             {controls.includes('grid') && (
               <Animated.View style={faded} {...reach('grid')}>
                 <Pressable
+                  testID="find-all"
                   role="button"
                   aria-label="All at once"
                   onPress={() => setTiles(askTiles)}
@@ -231,6 +233,7 @@ export function FindBar({
                 <TextInput
                   ref={keepBox}
                   autoFocus={asked}
+                  testID="find-box"
                   role="searchbox"
                   aria-label={searchLabel}
                   placeholder={searchLabel}
@@ -255,6 +258,7 @@ export function FindBar({
             {...reach('cancel')}
           >
             <Pressable
+              testID="find-cancel"
               role="button"
               aria-label="Cancel"
               onPress={cancel}
