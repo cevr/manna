@@ -2677,7 +2677,11 @@ ring more than 4 L* from the median of their 5×5 neighbours, at most 0.03
 above the same share of the part's kept cloth within 24 px of the cell, on
 100 pixels a side or more, the cell furthest above its cloth standing for
 the part, so a patch of grain too fine for the specks shows in its cell
-where the pooled read hides it; the part is outside when either read is,
+where the pooled read hides it; both reads take the part's cloth at any
+lightness, off its edge ring, less the ink the specks' line rule below
+finds in it and the ring about that ink, so grain in dark cloth is read
+and an outline through it or round it is not grain; the part is outside
+when either read is,
 within when both are read, else `unverified`) and each painted region's specks (the share of its
 pixels off its 1 px edge ring, ink included, more than 12 L* from the
 median of their 5×5 neighbours of their own kind, at most 0.04 above the

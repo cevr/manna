@@ -29,6 +29,12 @@ const SKIN: Rgb = [214, 160, 128];
 const TUNIC: Rgb = [225, 215, 190];
 /** The olive 5.3 L* lighter: a fleck of fine grain, under the speck's 12 L* and over the grain's 4. */
 const FLECK: Rgb = [164, 154, 114];
+/** An olive cloth as dark as L* 40, under the ink's 45: shade a figure's cloth keeps. */
+const DARK_OLIVE: Rgb = [105, 95, 60];
+/** The dark olive 5 L* darker: a fleck of fine grain in it. */
+const DARK_FLECK: Rgb = [93, 83, 49];
+/** An ink of L* 20, drawn as an outline through the dark olive. */
+const DARK_INK: Rgb = [56, 47, 37];
 
 const TORSO: Box = { x0: 6, y0: 4, x1: 42, y1: 44 };
 const ARM: Box = { x0: 18, y0: 8, x1: 30, y1: 40 };
@@ -181,6 +187,29 @@ describe('the part sheet lay', () => {
     expect(missedBars(grainy)).toContain('grain');
     expect(asCloth.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'within' })]);
     expect(missedBars(asCloth)).not.toContain('grain');
+  });
+
+  test('fine grain in cloth as dark as L* 40 misses the grain bar; an ink outline through it is not grain; smooth dark paint meets it', () => {
+    // one pixel in 14, 5 L* darker than the cloth, in the cells of the test above; the arm is 16 px
+    // wide, so with the line and the ring about it left out each cell still reads 100 pixels
+    const arm = { x0: 24, y0: 8, x1: 40, y1: 40 };
+    const dark = (): Rgb => DARK_OLIVE;
+    const fleck = (x: number, y: number): Rgb =>
+      Bool.match((x + 5 * y) % 14 === 0, { onTrue: () => DARK_FLECK, onFalse: dark });
+    // a steep line of L* 20, one step across for every four down, from the top of the arm to its foot
+    const inked = (x: number, y: number): Rgb =>
+      Bool.match(x === arm.x0 + 2 + Math.floor((y - arm.y0) / 4), {
+        onTrue: () => DARK_INK,
+        onFalse: dark,
+      });
+    const onDark = layOn(arm, { margin: 0, cloth: dark });
+    const [grainy, lined, smooth] = [onDark(fleck), onDark(inked), onDark(dark)];
+    expect(grainy.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'outside' })]);
+    expect(missedBars(grainy)).toContain('grain');
+    expect(lined.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'within' })]);
+    expect(missedBars(lined)).not.toContain('grain');
+    expect(smooth.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'within' })]);
+    expect(missedBars(smooth)).not.toContain('grain');
   });
 
   test('paint greyer than the cloth beside it misses the drift bar, though its seam matches', () => {

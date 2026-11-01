@@ -35,7 +35,7 @@ const PAPER_NEAR = 6;
 /** How far a kept pixel lies from paint to count in the kept grain, pixels, looked for on a 3 px lattice. */
 const GRAIN_STEPS = Arr.range(-8, 8).map((k) => k * 3);
 
-/** Lighter than this L* is paint, not ink, for the seam, the grain and the specks' outlines. */
+/** Lighter than this L* is paint, not ink, for the seam, the step, the chroma and the specks' outlines (the grain finds its ink by the line rule, `clothOf`). */
 const INK_L = 45;
 
 /** The fewest seam pairs a seam is read on. */
@@ -47,7 +47,7 @@ const LEAST_GRAIN_WINDOWS = 90;
 /** The fewest pixels a painted region's specks, or a cell's fine grain, are read on, painted and kept each. */
 const LEAST_REGION_PX = 100;
 
-/** A light pixel is fine grain when its L* lies further than this from the median L* of its 5 × 5 neighbours of its own kind. */
+/** A cloth pixel is fine grain when its L* lies further than this from the median L* of its 5 × 5 neighbours of its own kind. */
 const GRAIN_L = 4;
 
 /**
@@ -442,6 +442,19 @@ const offMedianOf = (r: Raster, set: Uint8Array) => {
  * speckle; a lighter line, a dash of another part's colour, is speckle.
  */
 const speckShare = (r: Raster, set: Uint8Array) => {
+  const { at, components, outline } = specksOf(r, set);
+  const specks = components.filter((_, k) => outline[k] !== true).reduce((n, c) => n + c.area, 0);
+  return { share: specks / Math.max(1, at.length), px: at.length };
+};
+
+/**
+ * The specks of `set` read on `r` (each pixel off its edge ring more than
+ * `SPECK_L` from the median L* of its 5 × 5 neighbours in `set`), joined
+ * eight ways, and which of them are an outline: the line rule, a line of
+ * `SPECK_LINE_PX` or more, `SPECK_LINE_LONG` times as long as it is wide,
+ * as dark as ink on the mean.
+ */
+const specksOf = (r: Raster, set: Uint8Array) => {
   const { width: w, height: h } = r;
   const { at, off, l } = offMedianOf(r, set);
   const speck = Uint8Array.from(off, (d) => Number(d > SPECK_L));
@@ -459,10 +472,19 @@ const speckShare = (r: Raster, set: Uint8Array) => {
     area >= SPECK_LINE_PX &&
     elongationOf(area, m) >= SPECK_LINE_LONG &&
     (m[5] ?? 0) / area <= INK_L;
-  const specks = components
-    .filter((c, k) => !isOutline(c.area, moments[k] ?? []))
-    .reduce((n, c) => n + c.area, 0);
-  return { share: specks / Math.max(1, at.length), px: at.length };
+  const outline = components.map((c, k) => isOutline(c.area, moments[k] ?? []));
+  return { at, components, labels, outline };
+};
+
+/**
+ * The cloth of `set` on `r`: its pixels less the ink the line rule finds in
+ * it (`specksOf`'s outlines). The grain is read on it at any lightness, so
+ * grain in cloth as dark as the ink's L* is read, and an outline drawn
+ * through the cloth is not grain.
+ */
+const clothOf = (r: Raster, set: Uint8Array) => {
+  const { labels, outline } = specksOf(r, set);
+  return Uint8Array.from(set, (s, i) => Number(s === 1 && outline[labels[i] ?? -1] !== true));
 };
 
 /** Summed-area tables of a*, b* and count over the pixels `set` marks on `r`, and the sums over a box of them. */
@@ -508,8 +530,9 @@ const summedOf = (w: number, h: number, value: (i: number) => number) => {
 
 /**
  * A part's fine grain, read cell by cell (`GRAIN_CELL` px squares): in each
- * cell, the share of the paint's pixels off its edge ring more than
- * `GRAIN_L` from the median L* of their 5 × 5 neighbours, against the same
+ * cell, the share of the paint's cloth off its edge ring (the ring about
+ * an outline left out of it too) more than `GRAIN_L` from the median L*
+ * of their 5 × 5 neighbours, at any lightness, against the same
  * share of the part's kept cloth within `SPECK_REACH` of the cell, each read
  * on `LEAST_REGION_PX` pixels or more. Grain fine enough to pass the speck
  * read, in one patch, shows in its cell where the part's pooled grain hides
@@ -605,30 +628,36 @@ const verdictOf = (read: boolean, within: boolean) =>
     onFalse: () => 'unverified' as const,
   });
 
-/** The grain of part `id`'s paint against its kept paint near it, each lighter than the ink: pooled over the part, and fine, cell by cell. */
+/**
+ * The grain of part `id`'s paint against its kept cloth near it, each less
+ * the ink the line rule finds in it (`clothOf`) and off its edge ring, at
+ * any lightness: pooled over the part, and fine, cell by cell. The ring is
+ * where a part's outline runs, so no read takes it (as the specks' read).
+ */
 const partGrain = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster, id: number) => {
   const { width: w, height: h } = view;
-  const paint = Uint8Array.from(at, (k, i) => Number(k === id && lightAt(composite, i)));
-  const near = Uint8Array.from(sheet.owner, (o, i) => {
+  const paint = clothOf(
+    composite,
+    Uint8Array.from(at, (k) => Number(k === id)),
+  );
+  const cloth = clothOf(
+    view,
+    Uint8Array.from(sheet.owner, (o) => Number(o === id)),
+  );
+  // the pooled read's windows lie off each cloth's edge ring, where its outline runs, as the fine read's pixels do
+  const inner = (set: Uint8Array) =>
+    Uint8Array.from(set, (s, i) => Number(s === 1 && !onRing(set, i, w, h)));
+  const near = Uint8Array.from(inner(cloth), (c, i) => {
     const [x, y] = [i % w, Math.floor(i / w)];
     const reaches = (a: number, b: number) =>
       x + a >= 0 && y + b >= 0 && x + a < w && y + b < h && at[(y + b) * w + x + a] === id;
-    return Number(
-      o === id &&
-        lightAt(view, i) &&
-        GRAIN_STEPS.some((a) => GRAIN_STEPS.some((b) => reaches(a, b))),
-    );
+    return Number(c === 1 && GRAIN_STEPS.some((a) => GRAIN_STEPS.some((b) => reaches(a, b))));
   });
-  const painted = grainOf(composite, paint);
+  const painted = grainOf(composite, inner(paint));
   const kept = grainOf(view, near);
   const pooledRead = painted.n >= LEAST_GRAIN_WINDOWS && kept.n >= LEAST_GRAIN_WINDOWS;
   const pooledOut = pooledRead && Math.abs(painted.robust - kept.robust) > BARS.grainWithin;
-  const fine = fineGrain(
-    composite,
-    view,
-    paint,
-    Uint8Array.from(sheet.owner, (o, i) => Number(o === id && lightAt(view, i))),
-  );
+  const fine = fineGrain(composite, view, paint, cloth);
   const unread = { share: 0, px: 0 };
   const [finePainted, fineKept] = Option.match(fine.furthest, {
     onNone: () => [unread, unread] as const,

@@ -16,7 +16,12 @@ import { encodePng } from './png.ts';
 
 type Rgba = readonly [number, number, number, number];
 
-const [W, H] = [32, 48];
+// 64 × 96, so each part's grain reads: a part's grain is read on the 3 × 3
+// windows wholly inside its cloth off the cloth's edge ring, 90 of them or
+// more painted and kept each (LEAST_GRAIN_WINDOWS), and the kept cloth
+// beside the arm is a strip; at 32 × 48 those strips hold too few windows
+// and every part reads `unverified`.
+const [W, H] = [64, 96];
 const PAPER: Rgba = [244, 232, 212, 255];
 const INK: Rgba = [30, 24, 20, 255];
 const TEAL: Rgba = [90, 150, 150, 255];
@@ -24,9 +29,9 @@ const TEAL: Rgba = [90, 150, 150, 255];
 /** A pixel's grain: a fixed spread of G about its paint, the same for every run. */
 const grain = (x: number, y: number) => (((x * 7 + y * 13 + x * y * 3) % 7) - 3) * 1.5;
 
-/** His body's paint at (x, y), with its grain: the torso above row 24, the robe below; `flat` paints the parts it names without grain. */
+/** His body's paint at (x, y), with its grain: the torso above row 48, the robe below; `flat` paints the parts it names without grain. */
 const bodyAt = (x: number, y: number, flat: ReadonlyArray<string>): Rgba => {
-  const torso = y < 24;
+  const torso = y < 48;
   const g = grain(x, y) * Number(!flat.includes(['robe', 'torso'][Number(torso)] ?? ''));
   const fills: ReadonlyArray<Rgba> = [
     [120, 160 + g, 200, 255],
@@ -38,13 +43,13 @@ const bodyAt = (x: number, y: number, flat: ReadonlyArray<string>): Rgba => {
 const inBox = (x: number, y: number, x0: number, y0: number, x1: number, y1: number) =>
   x >= x0 && x <= x1 && y >= y0 && y <= y1;
 
-/** The figure: his body (x 4-27, y 4-45, inked round), and with `arm`, an inked arm in front (x 10-21, y 8-40). */
+/** The figure: his body (x 8-55, y 8-91, inked round), and with `arm`, an inked arm in front (x 20-43, y 16-81). */
 const figureAt = (x: number, y: number, arm: boolean, flat: ReadonlyArray<string>): Rgba => {
   const layers: ReadonlyArray<readonly [boolean, Rgba]> = [
-    [arm && inBox(x, y, 11, 9, 20, 39), TEAL],
-    [arm && inBox(x, y, 10, 8, 21, 40), INK],
-    [inBox(x, y, 5, 5, 26, 44), bodyAt(x, y, flat)],
-    [inBox(x, y, 4, 4, 27, 45), INK],
+    [arm && inBox(x, y, 21, 17, 42, 80), TEAL],
+    [arm && inBox(x, y, 20, 16, 43, 81), INK],
+    [inBox(x, y, 9, 9, 54, 90), bodyAt(x, y, flat)],
+    [inBox(x, y, 8, 8, 55, 91), INK],
   ];
   return layers.find(([on]) => on)?.[1] ?? PAPER;
 };
@@ -57,7 +62,7 @@ const rasterOf = (w: number, h: number, at: (x: number, y: number) => Rgba): Ras
 
 const VIEW = rasterOf(W, H, (x, y) => figureAt(x, y, true, []));
 const FIGURE = Uint8Array.from({ length: W * H }, (_, i) =>
-  Number(inBox(i % W, Math.floor(i / W), 4, 4, 27, 45)),
+  Number(inBox(i % W, Math.floor(i / W), 8, 8, 55, 91)),
 );
 const box = (x0: number, y0: number, x1: number, y1: number) => ({
   polygon: [
@@ -69,17 +74,17 @@ const box = (x0: number, y0: number, x1: number, y1: number) => ({
 });
 const CUT = {
   parts: [
-    { name: 'arm', take: [box(10, 8, 22, 41)] },
-    { name: 'torso', take: [box(0, 0, W, 24)] },
-    { name: 'robe', take: [box(0, 24, W, H)] },
+    { name: 'arm', take: [box(20, 16, 44, 82)] },
+    { name: 'torso', take: [box(0, 0, W, 48)] },
+    { name: 'robe', take: [box(0, 48, W, H)] },
   ],
 };
 
-/** A figure whose arm reaches past his body's side onto the paper (x 18-30): its hidden area meets the ground. */
+/** A figure whose arm reaches past his body's side onto the paper (x 36-61): its hidden area meets the ground. */
 const reachAt = (x: number, y: number): Rgba => {
   const layers: ReadonlyArray<readonly [boolean, Rgba]> = [
-    [inBox(x, y, 19, 9, 29, 39), TEAL],
-    [inBox(x, y, 18, 8, 30, 40), INK],
+    [inBox(x, y, 37, 17, 60, 80), TEAL],
+    [inBox(x, y, 36, 16, 61, 81), INK],
   ];
   return layers.find(([on]) => on)?.[1] ?? figureAt(x, y, false, []);
 };
@@ -87,13 +92,13 @@ const REACH = {
   view: rasterOf(W, H, reachAt),
   figure: Uint8Array.from({ length: W * H }, (_, i) => {
     const [x, y] = [i % W, Math.floor(i / W)];
-    return Number(inBox(x, y, 4, 4, 27, 45) || inBox(x, y, 18, 8, 30, 40));
+    return Number(inBox(x, y, 8, 8, 55, 91) || inBox(x, y, 36, 16, 61, 81));
   }),
   cut: {
     parts: [
-      { name: 'arm', take: [box(18, 8, 31, 41)] },
-      { name: 'torso', take: [box(0, 0, W, 24)] },
-      { name: 'robe', take: [box(0, 24, W, H)] },
+      { name: 'arm', take: [box(36, 16, 62, 82)] },
+      { name: 'torso', take: [box(0, 0, W, 48)] },
+      { name: 'robe', take: [box(0, 48, W, H)] },
     ],
   },
 };
@@ -120,7 +125,7 @@ const UNDER = (flat: ReadonlyArray<string>) =>
   answerOf(
     rasterOf(W, H, (x, y) =>
       Option.getOrElse(
-        Option.liftPredicate(figureAt(x, y, false, flat), () => inBox(x, y, 10, 8, 21, 40)),
+        Option.liftPredicate(figureAt(x, y, false, flat), () => inBox(x, y, 20, 16, 43, 81)),
         () => figureAt(x, y, true, []),
       ),
     ),
@@ -279,7 +284,7 @@ describe('film concept parts', () => {
         for (let k = 0; k < 2; k++) Result.getOrThrow(yield* run(files, [UNDER([])]));
         // one robe pixel the magenta leaves showing, repainted: another input, another hash
         const moved = { ...VIEW, rgba: Uint8Array.from(VIEW.rgba) };
-        moved.rgba.set([121, 158, 201, 255], (30 * W + 7) * 4);
+        moved.rgba.set([121, 158, 201, 255], (60 * W + 14) * 4);
         const elsewhere = Result.getOrThrow(yield* run(new Map(), [UNDER([])], { view: moved }));
         expect(elsewhere.okra.input).not.toBe(first.okra.input);
         const refused = yield* run(files, [UNDER([])], { view: moved });
