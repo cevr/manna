@@ -7,7 +7,7 @@
  * reaches it. The drag ticks at each five seconds of track the knob passes
  * (`seek-tick`). A tap jumps the knob to the place under it and lands there
  * (`seek-release`), with no grab and no tick. VoiceOver adjusts it ten
- * seconds a swipe.
+ * seconds a swipe, and its double tap does nothing.
  *
  * The touch is a gesture handler's pan that takes a sideways drag only, and
  * the seeker lies inside the bar's swipe up: a drag that goes sideways
@@ -42,6 +42,9 @@ const SIDEWAYS = 8;
 const UPWARDS = 10;
 
 const KNOB = 14;
+
+/** VoiceOver's double tap on the seeker: it is adjusted, never activated. */
+const ignore = () => {};
 
 /** How much the knob grows under the finger. */
 const GROWN = 1.4;
@@ -137,6 +140,8 @@ export function Seeker(props: ScrubberProps) {
             aria-disabled={scrub.still}
             accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
             onAccessibilityAction={act}
+            // VoiceOver's double tap is handled here and does nothing: a view that handles none gets it as a touch at its centre, which the tap would seek to.
+            onAccessibilityTap={ignore}
             onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
             testID="seek"
             style={styles.bar}

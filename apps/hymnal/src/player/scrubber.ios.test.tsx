@@ -5,17 +5,22 @@
  * competes with the pan for a still touch. The touch is played through the
  * gestures' own callbacks, as iOS's recognizers report it
  * (`src/test/gesture.tsx`); the drive on the simulator proves the sheet
- * holds still.
+ * holds still. VoiceOver's double tap on this bar and on the docked bar's
+ * `Seek` is handled by the bar's own view, so it sends no touch to the tap.
  */
 
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
-import { act } from 'react';
+import { act, type ComponentType } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { CueProvider } from '~/feel/cue';
+
 import { gestureOf, gestures, touchDown, touchUp } from '../test/gesture';
-import { propsWith } from '../test/props';
+import { perform, propsWith } from '../test/props';
+import type { ScrubberProps } from './scrub';
 import { Scrubber } from './Scrubber.ios';
+import { Seeker } from './Seeker';
 
 /** A view's `onLayout` event, as the bar reads it. */
 interface LayoutEvent {
@@ -96,4 +101,56 @@ describe('iOS’s position bar', () => {
     expect(pan().enabled).toBe(false);
     expect(gestureOf('position-tap').enabled).toBe(false);
   });
+});
+
+/** Either seek bar over a recording 2:00 long at 0:30, laid out 220 points wide; each seek and cue it gives is kept. */
+const mountBar = (Bar: ComponentType<ScrubberProps>, selector: string) => {
+  gestures.splice(0);
+  const sought: Array<number> = [];
+  const cues: Array<string> = [];
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  act(() =>
+    root.render(
+      <CueProvider value={(cue) => cues.push(cue._tag)}>
+        <Bar at={30} length={Option.some(120)} onSeek={(seconds) => sought.push(seconds)} />
+      </CueProvider>,
+    ),
+  );
+  const bar = host.querySelector(selector) as Element;
+  act(() =>
+    (propsWith(bar, 'onLayout')['onLayout'] as (event: LayoutEvent) => void)({
+      nativeEvent: { layout: { x: 0, y: 0, width: 220, height: 32 } },
+    }),
+  );
+  return {
+    sought,
+    cues,
+    bar,
+    [Symbol.dispose]: () => {
+      act(() => root.unmount());
+      host.remove();
+    },
+  };
+};
+
+// VoiceOver's double tap on a view that handles no activation is a touch at the view's centre, which the bar's tap would take as a seek to the middle.
+describe('VoiceOver on a seek bar', () => {
+  for (const [name, Bar, selector] of [
+    ['the docked bar’s Seek', Seeker, '[data-testid="seek"]'],
+    ['the full player’s Position', Scrubber, '[aria-label="Position"]'],
+  ] as const) {
+    it(`handles a double tap on ${name} itself, with no seek and no cue, and still adjusts ten seconds a swipe`, () => {
+      using bar = mountBar(Bar, selector);
+      const own = propsWith(bar.bar, 'accessibilityRole');
+      expect(own['accessibilityRole']).toBe('adjustable');
+      expect(own['onAccessibilityTap']).toBeInstanceOf(Function);
+      act(() => (own['onAccessibilityTap'] as () => void)());
+      expect(bar.sought).toEqual([]);
+      expect(bar.cues).toEqual([]);
+      perform(bar.bar, 'increment');
+      expect(bar.sought).toEqual([40]);
+    });
+  }
 });

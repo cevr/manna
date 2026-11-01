@@ -6,7 +6,8 @@
  * a stray line. This bar knows the touch that drags it, as the web's does:
  * the place under the finger is the drag, and the drag is sent once the
  * finger lifts. A tap is a drag that begins and lifts at one point: the
- * place under it is sent at once. VoiceOver adjusts it ten seconds a swipe.
+ * place under it is sent at once. VoiceOver adjusts it ten seconds a swipe,
+ * and its double tap does nothing.
  * While the length is not known the bar is still, in the muted role.
  *
  * The touch is a gesture handler's pan (`usePanGesture`), a UIKit gesture of
@@ -39,6 +40,9 @@ import { nudged, placeAt, type ScrubberProps, useScrub } from './scrub';
 const TOUCH = 1;
 
 const THUMB = 20;
+
+/** VoiceOver's double tap on the bar: it is adjusted, never activated. */
+const ignore = () => {};
 
 export function Scrubber(props: ScrubberProps) {
   const accent = useAccent();
@@ -100,6 +104,8 @@ export function Scrubber(props: ScrubberProps) {
           accessibilityState={{ disabled: scrub.still }}
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
           onAccessibilityAction={act}
+          // VoiceOver's double tap is handled here and does nothing: a view that handles none gets it as a touch at its centre, which the tap would seek to.
+          onAccessibilityTap={ignore}
           onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
           style={styles.bar}
         >
