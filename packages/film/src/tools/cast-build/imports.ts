@@ -8,39 +8,70 @@
 // Only script files are read for further imports; a JSON or other file a
 // module imports is in the closure as itself.
 //
-// A dynamic import whose specifier is not a string literal (a variable, a
-// template literal) names no file the scanner can follow. The closure records
-// each one with the file it is in, so a stage that runs such a file declares
-// what it loads (`declaredClosure`), and a new one cannot hide.
+// Each module is parsed (oxc-parser, as the scene files are), so comments and
+// strings that show an import are no import. A dynamic import is static only
+// when its argument is one plain string literal; every other argument (a
+// variable, a concatenation, a cast, a template literal) names no file the
+// scanner can follow. The closure records each one with the file it is in,
+// so a stage that runs such a file declares what it loads
+// (`declaredClosure`), and a new one cannot hide.
 
-import { Effect, FileSystem, Option, Path, Schema } from 'effect';
+import { Effect, FileSystem, Option, Path, Predicate, Schema } from 'effect';
+import { Visitor, parseSync } from 'oxc-parser';
 import { pageSpecifiers } from './page-html.ts';
 
-const STATIC =
-  /\b(?:import|export)(?!\s+type\s)\s[^'";]*?\bfrom\s*['"]([^'"]+)['"]|\bimport\s*['"]([^'"]+)['"]|\bimport\(\s*['"]([^'"]+)['"]\s*\)/g;
+/** A module that does not parse, so its imports cannot be read. */
+export class ImportsUnparsed extends Schema.TaggedError<ImportsUnparsed>()('ImportsUnparsed', {
+  file: Schema.String,
+  reason: Schema.String,
+}) {
+  override get message() {
+    return `${this.file} does not parse: ${this.reason}`;
+  }
+}
 
-/** A dynamic import whose argument is not a single- or double-quoted string. */
-const VARIABLE = /(?<![\w$.])import\(\s*(?!['"])([^)]*)\)/g;
-
-// A comment that opens its line: a line comment, or a block comment to its end.
-const COMMENT = /^[ \t]*(?:\/\/.*$|\/\*[\s\S]*?\*\/)/gm;
+/** The language oxc-parser reads a script file as, by its extension. */
+const langOf = (file: string) => {
+  if (file.endsWith('.tsx')) return 'tsx';
+  if (file.endsWith('.jsx')) return 'jsx';
+  if (/\.[cm]?ts$/.test(file)) return 'ts';
+  return 'js';
+};
 
 /**
- * `text` with each comment that opens its line taken out, so a comment that
- * shows an import is not read as one. A comment after code on its line stays:
- * an import it shows fails the closure loudly, never silently.
+ * What a module's text imports: the specifiers its value imports, re-exports
+ * and literal dynamic imports name, in order (type-only ones left out), and
+ * the argument text of each dynamic import that is not one string literal.
  */
-const uncommented = (text: string) => text.replace(COMMENT, '');
-
-/** The specifiers a module's text imports or re-exports, in order, type-only ones left out. */
-const specifiersOf = (text: string): ReadonlyArray<string> =>
-  [...uncommented(text).matchAll(STATIC)].flatMap((m) =>
-    [m[1], m[2], m[3]].flatMap((s) => Option.toArray(Option.fromUndefinedOr(s))),
-  );
-
-/** The arguments of a module's dynamic imports whose specifier is not a string literal, in order. */
-const variableImportsOf = (text: string): ReadonlyArray<string> =>
-  [...uncommented(text).matchAll(VARIABLE)].map((m) => (m[1] ?? '').trim());
+const importsOf = (file: string, text: string) => {
+  const parsed = parseSync(file, text, { lang: langOf(file), sourceType: 'module' });
+  const specifiers: Array<string> = [];
+  const variable: Array<string> = [];
+  new Visitor({
+    ImportDeclaration: (node) => {
+      if (node.importKind !== 'type') specifiers.push(node.source.value);
+    },
+    ExportNamedDeclaration: (node) => {
+      if (node.exportKind === 'type') return;
+      specifiers.push(
+        ...Option.toArray(Option.map(Option.fromNullOr(node.source), (s) => s.value)),
+      );
+    },
+    ExportAllDeclaration: (node) => {
+      if (node.exportKind !== 'type') specifiers.push(node.source.value);
+    },
+    ImportExpression: (node) => {
+      const { source } = node;
+      if (source.type === 'Literal' && Predicate.isString(source.value))
+        specifiers.push(source.value);
+      else variable.push(text.slice(source.start, source.end));
+    },
+  }).visit(parsed.program);
+  return Option.match(Option.fromUndefinedOr(parsed.errors[0]), {
+    onNone: () => Effect.succeed({ specifiers, variable }),
+    onSome: (error) => Effect.fail(ImportsUnparsed.make({ file, reason: error.message })),
+  });
+};
 
 /** A dynamic import the scanner cannot follow: the file it is in, and its argument's text. */
 interface VariableImport {
@@ -173,10 +204,10 @@ const importClosure = Effect.fn('cast.build.importClosure')(function* (
       if (seen.has(file)) continue;
       seen.add(file);
       if (!SCRIPT.test(file)) continue;
-      const text = yield* fs.readFileString(file);
-      for (const specifier of specifiersOf(text))
+      const found = yield* importsOf(file, yield* fs.readFileString(file));
+      for (const specifier of found.specifiers)
         next.push(...Option.toArray(yield* resolve(file, specifier)));
-      for (const argument of variableImportsOf(text)) variable.push({ file, argument });
+      for (const argument of found.variable) variable.push({ file, argument });
     }
     frontier = next;
   }

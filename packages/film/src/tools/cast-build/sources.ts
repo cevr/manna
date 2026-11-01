@@ -20,6 +20,7 @@ import type { PlatformError } from 'effect/PlatformError';
 import { fileInput, type Input } from './graph.ts';
 import {
   type ImportUnresolved,
+  type ImportsUnparsed,
   type UndeclaredImport,
   declaredClosure,
   pageClosure,
@@ -72,7 +73,7 @@ const sourceFiles = (
   kind: SourcedStage,
 ): Effect.Effect<
   ReadonlyArray<string>,
-  PlatformError | UndeclaredImport | ImportUnresolved,
+  PlatformError | UndeclaredImport | ImportUnresolved | ImportsUnparsed,
   FileSystem.FileSystem | Path.Path
 > => declaredClosure(stageEntryFiles(kind), STAGE_LOADS[kind].map(here));
 
@@ -90,7 +91,7 @@ const inputsOf = (kind: SourcedStage) =>
 /** Every stage kind's source files as its inputs. */
 export const stageSources: Effect.Effect<
   StageSources,
-  PlatformError | UndeclaredImport | ImportUnresolved,
+  PlatformError | UndeclaredImport | ImportUnresolved | ImportsUnparsed,
   FileSystem.FileSystem | Path.Path
 > = Effect.all({
   parts: inputsOf('parts'),

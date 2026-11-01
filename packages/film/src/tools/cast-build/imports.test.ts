@@ -175,6 +175,13 @@ describe('import closure', () => {
       expect(yield* undeclared('const t = import(`./x.ts`);')).toEqual(
         UndeclaredImport.make({ file: '/v/a.ts', argument: '`./x.ts`' }),
       );
+      // only one plain string literal is static: a concatenation or a cast names no file
+      expect(yield* undeclared("const p = import('./parts/' + name + '.ts');")).toEqual(
+        UndeclaredImport.make({ file: '/v/a.ts', argument: "'./parts/' + name + '.ts'" }),
+      );
+      expect(yield* undeclared("const b = import('./b.ts' as string);")).toEqual(
+        UndeclaredImport.make({ file: '/v/a.ts', argument: "'./b.ts' as string" }),
+      );
       // A method named import is no import.
       expect(yield* Effect.flip(undeclared("const l = import('./l');\nthis.import(y);"))).toEqual([
         '/v/a.ts',
