@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'bun:test';
 
-import { hidden, reachable, type Reveal, revealAt, shownHeight, travel } from './reveal';
+import { hidden, jumped, type Reveal, revealAt, shownHeight, travel } from './reveal';
 
-/** The list resting with its field 52 pt down, as the home list does at the reader's usual text size. */
-const rest = 52;
+/** The list's own tab row meets the list's top 49 pt down, under the title, at the reader's usual text size. */
+const rest = 49;
 
-/** The field's state after the list passes through each offset in turn, from its opening. */
+/** The row's state after the list passes through each offset in turn, from its opening. */
 const through = (offsets: ReadonlyArray<number>, start: Reveal = hidden(rest)) =>
   offsets.reduce((state, scroll) => revealAt(state, scroll, rest), start);
 
@@ -18,7 +18,7 @@ const frames = (from: number, to: number, step: number) => {
   return out;
 };
 
-describe('the search field over the home list', () => {
+describe('the tab row pinned over the home list', () => {
   it('stays hidden while the reader scrolls down into the list', () => {
     expect(through(frames(rest, 3000, 13)).shown).toBe(false);
   });
@@ -54,48 +54,39 @@ describe('the search field over the home list', () => {
     const shown = through([3000, 2900]);
     expect(through([rest], shown)).toEqual({ shown: false, from: rest });
     expect(through([-40], shown)).toEqual({ shown: false, from: -40 });
-    // Back down from the top, the run starts afresh: no field without an upward scroll.
+    // Back down from the top, the run starts afresh: no row without an upward scroll.
     expect(through(frames(-40, 600, 11), shown).shown).toBe(false);
   });
 });
 
-describe('how much of the field shows', () => {
-  const height = 52;
-
-  it('is the slide’s share of the field', () => {
-    expect([0, 0.5, 1].map((p) => shownHeight(p, height, 3000, rest))).toEqual([0, 26, 52]);
+describe('a jump the app makes', () => {
+  it('turns nothing, and counts the next run from where it landed', () => {
+    const shown = through([3000, 2900]);
+    expect(jumped(shown, 5000, rest)).toEqual({ shown: true, from: 5000 });
+    expect(jumped(hidden(rest), 400, rest)).toEqual({ shown: false, from: 400 });
+    // The reader's scroll on from the landing turns it as from any offset.
+    expect(through([5000 + travel], jumped(shown, 5000, rest)).shown).toBe(false);
   });
 
-  it('never exceeds how far the list is past its resting place, reaching 0 there', () => {
-    expect(
-      [rest + 60, rest + 20, rest, rest - 30].map((s) => shownHeight(1, height, s, rest)),
-    ).toEqual([52, 20, 0, 0]);
+  it('hides the row when it lands at or above the resting place', () => {
+    expect(jumped(through([3000, 2900]), rest, rest).shown).toBe(false);
   });
 });
 
-describe('when the shown field takes a touch', () => {
-  /** The home list's title (49 pt) and the field's margin (8 pt) at the reader's usual text size. */
-  const title = 49;
-  const margin = 8;
-  const at = (cover: number, scroll: number) => reachable(cover, scroll, rest, title, margin);
+describe('how much of the list’s top the pinned row covers', () => {
+  const height = 48;
 
-  it('never while the field is off screen', () => {
-    expect(at(0, 3000)).toBe(false);
+  it('deep in the list, the slide’s share of the row', () => {
+    expect([0, 0.5, 1].map((p) => shownHeight(p, height, 3000, rest))).toEqual([0, 24, 48]);
   });
 
-  it('deep in the list, once any of its box shows', () => {
-    expect([52, 9, 8].map((cover) => at(cover, 3000))).toEqual([true, true, false]);
+  it('near the resting place, never less than the list’s own row, which it meets as one', () => {
+    // 20 pt past rest the list's own row ends 28 pt down: a row sliding in or away stands there.
+    expect([0.1, 0.5, 1].map((p) => shownHeight(p, height, rest + 20, rest))).toEqual([28, 28, 48]);
   });
 
-  it('not near the top, where the title covers the whole field', () => {
-    // 20 pt past rest: the field shows 20 pt, its box ends at 12, the title's bottom is at 29.
-    expect(at(20, rest + 20)).toBe(false);
-    expect(at(28, rest + 28)).toBe(false);
-  });
-
-  it('as the box comes out from under the title', () => {
-    // 29 pt past rest the box ends at 21, the title at 20.
-    expect(at(29, rest + 29)).toBe(true);
-    expect(at(52, rest + 52)).toBe(true);
+  it('is 0 while hidden and at or above the resting place', () => {
+    expect(shownHeight(0, height, rest + 20, rest)).toBe(0);
+    expect([rest, rest - 30, -40].map((s) => shownHeight(1, height, s, rest))).toEqual([0, 0, 0]);
   });
 });

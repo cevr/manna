@@ -6,19 +6,22 @@
  *
  * Over the screens it draws the bar's `#` (`FIND_LABEL`) where `findAt`
  * puts it, just above the bar while the bar shows, and the find drums it
- * opens (`FindDrums.tsx`), with their `Open` and `Play` (`pressFind`). It
+ * opens (`FindDrums.tsx`), with their `Open` and `Play` (`pressFind`). On
+ * the home list the `#` is the last button of the find bar (`FindBar.tsx`),
+ * which also holds search and `All at once`, in the same place. It
  * tells the lists the room the `#` takes (`FindRoom`). The drums close on a
  * move to another screen or where the `#` leaves (`findMoved`), and on a tap
  * outside them: while they are open a layer lies over the screens and the
  * bar, under the drums and the `#`, and takes that tap, so it reaches
- * nothing behind.
+ * nothing behind. The find bar lies over it too and lets a tap on any of
+ * its views but the `#` through to it.
  */
 
 import { useAtom, useAtomMount, useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Effect, Option, SubscriptionRef } from 'effect';
 import { usePathname, useRouter, useSafeAreaInsets } from 'one';
 import { type ReactNode, useEffect, useRef } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   GestureDetector,
   GestureHandlerRootView,
@@ -30,6 +33,7 @@ import { plain, useCue } from '~/feel/cue';
 import { book } from '~/follow/book';
 import { counted } from '~/follow/seeks';
 import { hymnHref } from '~/home/Browse';
+import { FindBar } from '~/home/FindBar';
 import { hymnAt } from '~/hymns/hymns';
 import { settings } from '~/store';
 
@@ -96,7 +100,8 @@ export function LivePlayer({ children }: { readonly children: ReactNode }) {
 function Finding({ children }: { readonly children: ReactNode }) {
   const bar = barFor(useAtomValue(player.state), useShownPage());
   const path = usePathname();
-  const at = findAt(bar, { home: path === '/', raised: useAtomValue(raised) > 0 });
+  const home = path === '/';
+  const at = findAt(bar, { home, raised: useAtomValue(raised) > 0 });
   const inset = Math.max(useSafeAreaInsets().bottom, 0);
   // The drums close on a move to another screen, or where the `#` leaves.
   const setFind = useAtomSet(find);
@@ -116,9 +121,9 @@ function Finding({ children }: { readonly children: ReactNode }) {
         Nowhere: () => <></>,
         Yielded: () => <></>,
         OverBar: ({ state }) => (
-          <FindNumber bar={bar} bottom={inset + heightOf(state) + HASH_GAP} />
+          <FindNumber bar={bar} home={home} bottom={inset + heightOf(state) + HASH_GAP} />
         ),
-        Docked: () => <FindNumber bar={bar} bottom={inset + DOCKED_LIFT} />,
+        Docked: () => <FindNumber bar={bar} home={home} bottom={inset + DOCKED_LIFT} />,
       })}
     </FindRoom>
   );
@@ -127,9 +132,18 @@ function Finding({ children }: { readonly children: ReactNode }) {
 /**
  * The `#`, its bottom `bottom` points over the window's, and the drums over
  * it while open, over a layer across the whole window that closes them on a
- * tap (`FindPress.Outside`).
+ * tap (`FindPress.Outside`). On the home list (`home`) the `#` is the last
+ * button of the find bar (`FindBar`), which holds search and `All at once`.
  */
-function FindNumber({ bar, bottom }: { readonly bar: Bar; readonly bottom: number }) {
+function FindNumber({
+  bar,
+  home,
+  bottom,
+}: {
+  readonly bar: Bar;
+  readonly home: boolean;
+  readonly bottom: number;
+}) {
   const [state, setFind] = useAtom(find);
   const send = useAtomSet(player.send);
   const router = useRouter();
@@ -161,6 +175,45 @@ function FindNumber({ bar, bottom }: { readonly bar: Bar; readonly bottom: numbe
     },
   });
   const open = Find.$is('Open')(state);
+  const drums = Find.$match(state, {
+    Closed: () => <></>,
+    Open: ({ number }) => (
+      <GestureHandlerRootView style={styles.drums}>
+        <GestureDetector gesture={swipe}>
+          <View>
+            <DialPanel testID="find-drums">
+              <FindDrums
+                number={number}
+                onDial={(dialled) => press(FindPress.Dial({ number: dialled }))}
+              />
+              <View style={styles.acts}>
+                <Act testID="find-open" label="Open" onPress={() => press(FindPress.Open())} />
+                <Act testID="find-play" label="Play" onPress={() => press(FindPress.Play())} />
+              </View>
+            </DialPanel>
+          </View>
+        </GestureDetector>
+      </GestureHandlerRootView>
+    ),
+  });
+  // The drums open over the keyboard's place: an open search's keyboard goes down first.
+  const hash = (disk: boolean) => (
+    <Pressable
+      testID="find-number"
+      accessibilityRole="button"
+      accessibilityLabel={FIND_LABEL}
+      aria-expanded={open}
+      onPress={() => {
+        Keyboard.dismiss();
+        press(FindPress.Hash());
+      }}
+      style={({ pressed }) => [styles.hash, disk && styles.disk, pressed && styles.pressed]}
+    >
+      <Text style={[styles.hashText, !disk && styles.hashInBar]} maxFontSizeMultiplier={MOST_SCALE}>
+        #
+      </Text>
+    </Pressable>
+  );
   return (
     <>
       {Find.$match(state, {
@@ -176,49 +229,13 @@ function FindNumber({ bar, bottom }: { readonly bar: Bar; readonly bottom: numbe
           />
         ),
       })}
-      <View testID="find" pointerEvents="box-none" style={[styles.find, { bottom }]}>
-        {Find.$match(state, {
-          Closed: () => <></>,
-          Open: ({ number }) => (
-            <GestureHandlerRootView style={styles.drums}>
-              <GestureDetector gesture={swipe}>
-                <View>
-                  <DialPanel testID="find-drums">
-                    <FindDrums
-                      number={number}
-                      onDial={(dialled) => press(FindPress.Dial({ number: dialled }))}
-                    />
-                    <View style={styles.acts}>
-                      <Act
-                        testID="find-open"
-                        label="Open"
-                        onPress={() => press(FindPress.Open())}
-                      />
-                      <Act
-                        testID="find-play"
-                        label="Play"
-                        onPress={() => press(FindPress.Play())}
-                      />
-                    </View>
-                  </DialPanel>
-                </View>
-              </GestureDetector>
-            </GestureHandlerRootView>
-          ),
-        })}
-        <Pressable
-          testID="find-number"
-          accessibilityRole="button"
-          accessibilityLabel={FIND_LABEL}
-          accessibilityState={{ expanded: open }}
-          onPress={() => press(FindPress.Hash())}
-          style={({ pressed }) => [styles.hash, pressed && styles.pressed]}
-        >
-          <Text style={styles.hashText} maxFontSizeMultiplier={MOST_SCALE}>
-            #
-          </Text>
-        </Pressable>
-      </View>
+      {home && <FindBar bottom={bottom} drums={drums} drumsOpen={open} hash={hash} />}
+      {!home && (
+        <View testID="find" pointerEvents="box-none" style={[styles.find, { bottom }]}>
+          {drums}
+          {hash(true)}
+        </View>
+      )}
     </>
   );
 }
@@ -267,8 +284,9 @@ const styles = StyleSheet.create({
     borderRadius: HASH / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: color.pill,
   },
+  disk: { backgroundColor: color.pill },
   pressed: { opacity: 0.6 },
   hashText: { fontSize: 20, fontWeight: '700', color: color.onPill },
+  hashInBar: { color: color.ink },
 });

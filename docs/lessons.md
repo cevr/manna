@@ -4693,3 +4693,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** The verse reader's tests named 10 hymns. A change that moved a later verse start of hymn 262, of 140, or of any other hymn outside those 10 left every committed test green.
 - **Cause:** The generator was a fixed table of 10 hymns, narrower than the rule it held: every hymn's verse split, all 695.
 - **Guard:** code: `packages/hymnal/src/verse-starts.slow.test.ts` `every hymn verse starts equal the committed table`
+
+### hymnal-layer-over-a-backdrop-passes-touch-on-every-view
+
+- **Date:** 2026-11-01
+- **Kind:** review
+- **Said:** "The capsule (`Animated.View`, `styles.capsule`, with a background colour, so it is a real native view) has no `pointerEvents`, so it is `auto`."
+- **Source:** hymnapp/findbar/round-1-findings.md M1
+- **Wrong:** While the number drums were open, the find bar set `pointerEvents: 'none'` on its buttons only. The capsule that holds them stayed `auto` and took a tap on `Search`, `All at once` or the open box, so the drums stayed open where the backdrop had closed them before.
+- **Cause:** A layer drawn over a backdrop is `box-none` on every view with a background, not only on its buttons: iOS hit-tests a view that is `auto` as a target even with no responder. The test checked the reach rule (`inReach`) as data and pressed the backdrop by id, so no test hit-tested the bar.
+- **Guard:** code: `apps/hymnal/src/home/FindBar.test.tsx` `in every row, every view of the bar but the # lets a touch through to the backdrop`
