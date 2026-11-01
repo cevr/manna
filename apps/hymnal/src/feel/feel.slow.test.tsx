@@ -40,6 +40,7 @@ import { drag, gestureOf } from '../test/gesture';
 import { params, routed } from '../test/one';
 import { propsWith } from '../test/props';
 import { readerOn } from '../test/reader';
+import { runScript } from '../test/script';
 import { bodyOf, type Haptic, type SoundName } from './body';
 import { type Cue, CueProvider, plain, useCue } from './cue';
 import { FeelProvider } from './FeelProvider';
@@ -430,12 +431,12 @@ describe('the phone’s hymn list under the Feel', () => {
     'gives one section, with its place, as a topic takes the pin, and none as it mounts',
     () =>
       Effect.sync(() => {
-        // The phone's stand-ins are registered in a process of the script's own.
-        const run = Bun.spawnSync(['bun', Bun.resolveSync('./list-feel.tsx', import.meta.dir)], {
-          stderr: 'pipe',
-        });
+        // The phone's stand-ins are registered in a process of the script's own. Its limit, 4 s, is
+        // under the case's own 5 s, so a script that hangs is ended, and named, before the
+        // case's timeout cuts the run.
+        const run = runScript(Bun.resolveSync('./list-feel.tsx', import.meta.dir), [], 4_000);
         // The report is its last line: the store's fallback is logged before it.
-        const report = run.stdout.toString().trim().split('\n').at(-1) ?? '';
+        const report = run.stdout.trim().split('\n').at(-1) ?? '';
         expect(JSON.parse(report)).toEqual({
           mounted: [],
           scrolled: [{ _tag: 'section', place: 1 }],

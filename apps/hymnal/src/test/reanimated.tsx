@@ -6,7 +6,9 @@
  * thread. A shared value is a box; an animation set on it (`withSpring`,
  * `withTiming`) lands on its target at once and calls its callback, as an
  * animation that has settled would; an animated style and a reaction run
- * again whenever any shared value is set. A worklet scheduled on React
+ * again whenever any shared value changes. A plain set of the value a
+ * shared value already holds changes nothing and tells no one, as in
+ * Reanimated; an animation set always runs. A worklet scheduled on React
  * Native's thread runs at once. A test reads each frame as it is once its
  * animations have settled.
  *
@@ -181,6 +183,10 @@ const shared = <T,>(initial: T): SharedValue<T> => {
         land();
         return;
       }
+      // Reanimated's valueSetter skips a plain value equal by `===` to the one it holds, after it
+      // has stopped the running animation (as above), so nothing that reads it runs again. `===`,
+      // not `Object.is`, as there: a NaN set always tells, and -0 over 0 does not.
+      if (next === now) return;
       now = next;
       tell();
     },

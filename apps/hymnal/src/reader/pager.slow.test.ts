@@ -9,6 +9,8 @@
 
 import { describe, expect, it } from 'bun:test';
 
+import { runScript } from '../test/script';
+
 interface Seen {
   readonly pages: ReadonlyArray<number>;
   readonly headers: number;
@@ -103,11 +105,9 @@ interface Run {
   };
 }
 
-const run = Bun.spawnSync(['bun', Bun.resolveSync('../test/phone-pager.tsx', import.meta.dir)], {
-  stderr: 'pipe',
-});
+const run = runScript(Bun.resolveSync('../test/phone-pager.tsx', import.meta.dir));
 /** The script's last line is its report; the lines before it are the app's own logs. */
-const seen: Run = JSON.parse(run.stdout.toString().trim().split('\n').at(-1) ?? 'null');
+const seen: Run = JSON.parse(run.stdout.trim().split('\n').at(-1) ?? 'null');
 
 /** A screen 390 points wide: page `i` starts at `i` screens. */
 const width = 390;

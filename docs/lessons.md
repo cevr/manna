@@ -4703,3 +4703,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** While the number drums were open, the find bar set `pointerEvents: 'none'` on its buttons only. The capsule that holds them stayed `auto` and took a tap on `Search`, `All at once` or the open box, so the drums stayed open where the backdrop had closed them before.
 - **Cause:** A layer drawn over a backdrop is `box-none` on every view with a background, not only on its buttons: iOS hit-tests a view that is `auto` as a target even with no responder. The test checked the reach rule (`inReach`) as data and pressed the backdrop by id, so no test hit-tested the bar.
 - **Guard:** code: `apps/hymnal/src/home/FindBar.test.tsx` `in every row, every view of the bar but the # lets a touch through to the backdrop`
+
+### hymnal-slow-tests-spawn-scripts-under-a-limit
+
+- **Date:** 2026-11-01
+- **Kind:** owner
+- **Said:** "a script child that hangs can no longer stall the suite silently."
+- **Source:** hymnapp/slowhang/spec.md Goal; measured failure in hymnapp/slowhang/acceptance-base.log.
+- **Wrong:** `test:slow` held for 2 h 30 min: `HymnList.native.slow.test.ts` ran `phone-list.tsx cover` with a bare `Bun.spawnSync` in a `describe` body, the child spun at 100% CPU, and the run waited on it with nothing to end it. The feel case's `list-feel.tsx` child went on spinning past its case's timeout.
+- **Cause:** A synchronous spawn blocks the event loop, so no case's timeout ends its child; the spawn had no limit of its own.
+- **Guard:** code: `apps/hymnal/src/test/script.test.ts` `every file test:slow runs spawns bun only through runScript, never with a bare Bun.spawnSync`

@@ -5,14 +5,20 @@
  * stepped slider's ticks under its track, which at a second a step read as
  * a stray line. This bar knows the touch that drags it, as the web's does:
  * the place under the finger is the drag, and the drag is sent once the
- * finger lifts. VoiceOver adjusts it ten seconds a swipe. While the length
- * is not known the bar is still, in the muted role.
+ * finger lifts. A tap is a drag that begins and lifts at one point: the
+ * place under it is sent at once. VoiceOver adjusts it ten seconds a swipe,
+ * and its double tap does nothing.
+ * While the length is not known the bar is still, in the muted role.
  *
  * The touch is a gesture handler's pan (`usePanGesture`), a UIKit gesture of
  * its own that begins at the touch: while it holds the finger, the sheet's
  * pan and its scroll view's cannot begin, so a drag on the bar in any
  * direction never moves the sheet. React Native's touch responder cannot
- * hold a touch from a native gesture: the sheet took the drag from it.
+ * hold a touch from a native gesture: the sheet took the drag from it. The
+ * pan presses at the touch and activates on any move; a touch that never
+ * moves fails it, and a tap gesture competing with it takes that touch. The
+ * two end in no set order, and both press the bar's one pointer, so the tap
+ * sends one seek either way.
  */
 
 import { Match } from 'effect';
@@ -21,7 +27,9 @@ import { type AccessibilityActionEvent, StyleSheet, View } from 'react-native';
 import {
   GestureDetector,
   GestureHandlerRootView,
+  useCompetingGestures,
   usePanGesture,
+  useTapGesture,
 } from 'react-native-gesture-handler';
 
 import { color, useAccent } from '~/color';
@@ -32,6 +40,9 @@ import { nudged, placeAt, type ScrubberProps, useScrub } from './scrub';
 const TOUCH = 1;
 
 const THUMB = 20;
+
+/** VoiceOver's double tap on the bar: it is adjusted, never activated. */
+const ignore = () => {};
 
 export function Scrubber(props: ScrubberProps) {
   const accent = useAccent();
@@ -47,7 +58,19 @@ export function Scrubber(props: ScrubberProps) {
   // The pan's callbacks read the bar as it is now, not as it was when the pan was made.
   const live = useRef({ scrub, under });
   live.current = { scrub, under };
+  // A still touch: the pan fails and the tap lands where the finger lifts, in either order.
+  const tap = useTapGesture({
+    testID: 'position-tap',
+    runOnJS: true,
+    enabled: !scrub.still,
+    onActivate: ({ x }) => {
+      live.current.scrub.press(TOUCH);
+      live.current.scrub.move(live.current.under(x));
+      live.current.scrub.lift(TOUCH);
+    },
+  });
   const pan = usePanGesture({
+    testID: 'position-pan',
     runOnJS: true,
     disableReanimated: true,
     enabled: !scrub.still,
@@ -65,13 +88,14 @@ export function Scrubber(props: ScrubberProps) {
         Match.orElse(() => live.current.scrub.lift(TOUCH)),
       ),
   });
+  const touch = useCompetingGestures(pan, tap);
   const act = ({ nativeEvent }: AccessibilityActionEvent) => {
     if (nativeEvent.actionName === 'increment') scrub.step(nudged(scrub.value, scrub.max, 1));
     if (nativeEvent.actionName === 'decrement') scrub.step(nudged(scrub.value, scrub.max, -1));
   };
   return (
     <GestureHandlerRootView style={styles.root}>
-      <GestureDetector gesture={pan}>
+      <GestureDetector gesture={touch}>
         <View
           accessible
           accessibilityRole="adjustable"
@@ -80,6 +104,8 @@ export function Scrubber(props: ScrubberProps) {
           accessibilityState={{ disabled: scrub.still }}
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
           onAccessibilityAction={act}
+          // VoiceOver's double tap is handled here and does nothing: a view that handles none gets it as a touch at its centre, which the tap would seek to.
+          onAccessibilityTap={ignore}
           onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
           style={styles.bar}
         >

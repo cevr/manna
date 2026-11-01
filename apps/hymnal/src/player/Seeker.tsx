@@ -5,12 +5,15 @@
  * player's own (`useScrub`): the place under the finger is the drag, sent
  * once the finger lifts, and the bar holds the place sent until the player
  * reaches it. The drag ticks at each five seconds of track the knob passes
- * (`seek-tick`). VoiceOver adjusts it ten seconds a swipe.
+ * (`seek-tick`). A tap jumps the knob to the place under it and lands there
+ * (`seek-release`), with no grab and no tick. VoiceOver adjusts it ten
+ * seconds a swipe, and its double tap does nothing.
  *
  * The touch is a gesture handler's pan that takes a sideways drag only, and
  * the seeker lies inside the bar's swipe up: a drag that goes sideways
  * first seeks and never opens the player sheet, and a swipe that goes up
- * first opens the sheet and moves no place.
+ * first opens the sheet and moves no place. A tap gesture competes with the
+ * pan for a touch that moves less than the drag takes; it opens no sheet.
  */
 
 import { Match, Option } from 'effect';
@@ -19,7 +22,9 @@ import { type AccessibilityActionEvent, StyleSheet, Text, View } from 'react-nat
 import {
   GestureDetector,
   GestureHandlerRootView,
+  useCompetingGestures,
   usePanGesture,
+  useTapGesture,
 } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
@@ -37,6 +42,9 @@ const SIDEWAYS = 8;
 const UPWARDS = 10;
 
 const KNOB = 14;
+
+/** VoiceOver's double tap on the seeker: it is adjusted, never activated. */
+const ignore = () => {};
 
 /** How much the knob grows under the finger. */
 const GROWN = 1.4;
@@ -95,6 +103,20 @@ export function Seeker(props: ScrubberProps) {
       );
     },
   });
+  // A still touch, or one that moves less than the drag takes: the knob jumps there and lands, with no grab.
+  const tap = useTapGesture({
+    testID: 'seek-tap',
+    runOnJS: true,
+    enabled: !scrub.still,
+    maxDistance: SIDEWAYS,
+    onActivate: ({ x }) => {
+      cue(plain('seek-release'));
+      live.current.scrub.press(TOUCH);
+      live.current.scrub.move(live.current.under(x));
+      live.current.scrub.lift(TOUCH);
+    },
+  });
+  const touch = useCompetingGestures(pan, tap);
   const act = ({ nativeEvent }: AccessibilityActionEvent) => {
     if (nativeEvent.actionName === 'increment') scrub.step(nudged(scrub.value, scrub.max, 1));
     if (nativeEvent.actionName === 'decrement') scrub.step(nudged(scrub.value, scrub.max, -1));
@@ -109,7 +131,7 @@ export function Seeker(props: ScrubberProps) {
         {clock(scrub.value)}
       </Text>
       <GestureHandlerRootView style={styles.root}>
-        <GestureDetector gesture={pan}>
+        <GestureDetector gesture={touch}>
           <View
             accessible
             accessibilityRole="adjustable"
@@ -118,6 +140,8 @@ export function Seeker(props: ScrubberProps) {
             aria-disabled={scrub.still}
             accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
             onAccessibilityAction={act}
+            // VoiceOver's double tap is handled here and does nothing: a view that handles none gets it as a touch at its centre, which the tap would seek to.
+            onAccessibilityTap={ignore}
             onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
             testID="seek"
             style={styles.bar}
