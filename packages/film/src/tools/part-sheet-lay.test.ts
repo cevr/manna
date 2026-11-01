@@ -133,9 +133,9 @@ const measuresOf = (view: Raster, cut: PartCut, figure: Uint8Array, answer: Rast
 const STRIP = { w: 72, h: 192 } as const;
 /** The torso's left edge in the strip: one pixel out every four rows, from x 6. */
 const stripEdge = (y: number) => 6 + Math.floor(y / 4);
-/** The corners down the strip's edge, `d` px right of it. */
-const stairOf = (d: number): ReadonlyArray<readonly [number, number]> =>
-  Array.from({ length: STRIP.h / 4 }, (_, s) => [
+/** The corners down the strip's edge, `d` px right of it, for a strip `h` px tall. */
+const stairOf = (d: number, h: number = STRIP.h): ReadonlyArray<readonly [number, number]> =>
+  Array.from({ length: h / 4 }, (_, s) => [
     [6 + s + d, 4 * s] as const,
     [6 + s + d, 4 * s + 4] as const,
   ]).flat();
@@ -186,6 +186,65 @@ const layStrip = (edge: ReadonlyArray<Rgb>) => {
     Number(!ground(i % w, Math.floor(i / w))),
   );
   return measuresOf(view, cut, figure, answer);
+};
+
+/** A part's own outline along its edge, read in from the edge: 4 px of ink, a ramp and 2 px of cloth. */
+const OUTLINE: ReadonlyArray<Rgb> = [...Array<Rgb>(4).fill(OUTLINE_INK), RAMP, OLIVE, OLIVE];
+/**
+ * How far in from the strip's edge the arm lies over the outlined torso, and
+ * where the torso ends, px: its 7 px of olive past the arm are enough of its
+ * kept cloth that the pooled grain reads it smooth beside the outline (6 px
+ * are not), and few enough that the outline, read as cloth, is near 5 % of
+ * each cell's kept cloth.
+ */
+const BESIDE = {
+  arm: [OUTLINE.length, OUTLINE.length + 16],
+  end: OUTLINE.length + 16 + 7,
+} as const;
+
+/**
+ * A torso, half the strip's height, whose left edge slants (`stripEdge`):
+ * its `OUTLINE` kept along that edge, a cream arm that moves over the 16 px
+ * in from it, and a band of olive past the arm; and okra's answer laid on
+ * it: `inner` in the arm's place, the view elsewhere.
+ */
+const layBeside = (inner: Paint) => {
+  const [w, h] = [STRIP.w, STRIP.h / 2];
+  const [a0, a1] = BESIDE.arm;
+  const ground = (x: number, y: number) => x < stripEdge(y) || x >= stripEdge(y) + BESIDE.end;
+  const armAt = (x: number, y: number) => x >= stripEdge(y) + a0 && x < stripEdge(y) + a1;
+  const pictureOf = (arm: Paint) =>
+    rasterOf(
+      (x, y) =>
+        Bool.match(ground(x, y), {
+          onTrue: () => PAPER,
+          onFalse: () =>
+            Bool.match(armAt(x, y), {
+              onTrue: () => arm(x, y),
+              onFalse: () => OUTLINE[x - stripEdge(y)] ?? OLIVE,
+            }),
+        }),
+      w,
+      h,
+    );
+  const cut: PartCut = {
+    parts: [
+      { name: 'arm', take: [{ polygon: [...stairOf(a0, h), ...stairOf(a1, h).toReversed()] }] },
+      {
+        name: 'torso',
+        take: [{ polygon: [...stairOf(0, h), ...stairOf(BESIDE.end, h).toReversed()] }],
+      },
+    ],
+  };
+  const figure = Uint8Array.from({ length: w * h }, (_, i) =>
+    Number(!ground(i % w, Math.floor(i / w))),
+  );
+  return measuresOf(
+    pictureOf(() => CREAM),
+    cut,
+    figure,
+    pictureOf(inner),
+  );
 };
 
 const laid = layOn(ARM);
@@ -327,9 +386,21 @@ describe('the part sheet lay', () => {
   test("a part's own outline along its edge, 4 px of ink, a ramp and 2 px of cloth, is not grain beside smooth kept cloth", () => {
     // the edge slants a pixel every four rows, so the line rule takes none of the ink; read as cloth,
     // the outline is grain in each of the six cells it crosses (lead-feast front's torso, art review 4)
-    const outlined = layStrip([...Array(4).fill(OUTLINE_INK), RAMP, OLIVE, OLIVE]);
+    const outlined = layStrip(OUTLINE);
     expect(outlined.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'within' })]);
     expect(missedBars(outlined)).not.toContain('grain');
+  });
+
+  test("fine grain painted beside a part's own outline in its kept cloth misses the grain bar", () => {
+    // the flecks of the tests above, about 7 % of a cell; the kept outline is no grain of the cloth, so
+    // it lifts no cell's allowance over them (read as cloth, it is near 5 % of each cell's kept cloth)
+    const fleck = (x: number, y: number): Rgb =>
+      Bool.match((x + 5 * y) % 14 === 0, { onTrue: () => FLECK, onFalse: () => OLIVE });
+    const [grainy, smooth] = [layBeside(fleck), layBeside(olive)];
+    expect(grainy.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'outside' })]);
+    expect(missedBars(grainy)).toContain('grain');
+    expect(smooth.grain).toEqual([expect.objectContaining({ part: 'torso', verdict: 'within' })]);
+    expect(missedBars(smooth)).not.toContain('grain');
   });
 
   test('paint greyer than the cloth beside it misses the drift bar, though its seam matches', () => {
