@@ -13,10 +13,11 @@ import type { ExportHandle } from '../core/export-handle.ts';
 import type { FigureMark } from '../core/match.ts';
 import { sceneTimesOf } from '../core/easel.ts';
 import { frameAtOrAfter, secondsAt } from '../core/time.ts';
-import { Effect, Option } from 'effect';
+import { Boolean as Bool, Effect, Option } from 'effect';
 import { FetchHttpClient } from 'effect/http';
 import { parseHref } from '@manna/url-state';
 import { boardFilm } from '../canvas/board.ts';
+import { scenesReview } from '../canvas/review.ts';
 import { Picture, pictureOn } from '../core/board-render.ts';
 import { addressOn, hostOf, monotonicMs } from '../browser/host.ts';
 import type { Host } from '../browser/host.ts';
@@ -66,12 +67,19 @@ export const mountRender = (films: Films): void => {
 };
 
 /**
- * `staged` drawing `picture`: its scenes as staged, or its Board
- * (`boardFilm`), the board and its kept tries read and decoded first.
+ * `staged` drawing `picture`: its scenes as staged (their review copy with
+ * the burn-in over each frame, `scenesReview`), or its Board (`boardFilm`),
+ * the board and its kept tries read and decoded first.
  */
 const onPicture = (staged: Staged, picture: Picture): Promise<Staged> =>
   Picture.$match(picture, {
-    Scenes: () => Promise.resolve(staged),
+    Scenes: ({ review }) =>
+      Promise.resolve(
+        Bool.match(review, {
+          onTrue: () => ({ ...staged, film: scenesReview(staged.film) }),
+          onFalse: () => staged,
+        }),
+      ),
     Board: ({ review }) =>
       Effect.runPromise(
         loadBoard(staged.name).pipe(
