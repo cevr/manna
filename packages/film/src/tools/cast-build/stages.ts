@@ -21,8 +21,10 @@
 // A stage id reads `<stage>:<entry>@<member>` (`cut:turnaround-front@lead-feast`).
 // After every member's stages: `trainsetStage`, the sorted hashes of every
 // shard built; `trainStage`, the one reader trained on that set (spending
-// Modal); `askStage`, every entry missing `drawn` or `kept` across the
-// members built, waiting on the owner.
+// Modal), keyed by the set, its shards and the reader's source files;
+// `evalStage` per shard, that drawing's held samples read and scored by the
+// reader (`reader.ts`, on this machine); `askStage`, every entry missing
+// `drawn` or `kept` across the members built, waiting on the owner.
 
 import * as Command from 'effect/cli/Command';
 import { Effect, FileSystem, Option, Path, Predicate, Schema, type Scope } from 'effect';
@@ -43,6 +45,7 @@ import {
   fileInput,
   stageInput,
 } from './graph.ts';
+import { CastReader, type ReaderError } from './reader.ts';
 import { SAMPLES, shardOf, trainsetOf } from './renders.ts';
 
 /** Bumped when a stage's code makes other bytes from the same inputs. */
@@ -53,12 +56,15 @@ const VERSION = {
   fit: '1',
   renders: '1',
   trainset: '1',
-  train: '1',
+  train: '2',
+  eval: '1',
   ask: '1',
 } as const;
 
 /** The reader's train: steps, batch, learning rate, seed, GPU and precision; a fixed step count, no wall-clock stop. */
 const TRAIN = { steps: 4800, batch: 32, lr: 1e-3, seed: 0, gpu: 'L4', precision: 'bf16' } as const;
+/** A train's cost in USD as the build counts it: S7b's measured $0.9229; Modal's billing holds the real figure. */
+const TRAIN_USD = 0.92;
 
 const encoder = new TextEncoder();
 
@@ -93,6 +99,8 @@ const SpecJson = Schema.fromJsonString(Schema.Unknown);
 const ConfigJson = Schema.fromJsonString(Schema.Unknown);
 /** A renders stage's settings: how many samples of each split. */
 const RENDERS_CONFIG = Schema.encodeSync(ConfigJson)(SAMPLES);
+/** The train settings as text, as its key and its run read them. */
+const TRAIN_CONFIG = Schema.encodeSync(ConfigJson)(TRAIN);
 const PuppetsModule = Schema.Struct({ PUPPETS: Schema.Record(Schema.String, Schema.Unknown) });
 
 /** The member's cutout sources a puppet spec is built from: every `cutout/*.ts` of his, and the library's `cutout/puppets.ts`. */
@@ -324,21 +332,71 @@ export const trainsetStage = (renders: Readonly<Record<string, string>>): Stage<
     ).pipe(Effect.map((shards) => trainsetOf(Object.fromEntries(shards)))),
 });
 
+/** A reader error as the stage's failure. */
+const readerFailed = (id: string) => (e: ReaderError) =>
+  StageFailed.make({ reason: `${id}: ${e.message}` });
+
 /**
  * The one reader trained on the training set, on Modal; it spends, so it
- * waits unless `--spend modal`. The reader's code is not in the repo yet:
- * allowed to spend, it fails, naming that, and trains nothing.
+ * waits unless `--spend modal`. It reads the set, every shard in it and
+ * the reader's source files (`sources`, every file a train ships), so a
+ * change to any of them is a new reader. Its output is the checkpoint; on
+ * Modal it is `/readers/<the hash of those inputs and the config>.pt`.
  */
-export const trainStage: Stage<never> = {
+export const trainStage = (
+  renders: Readonly<Record<string, string>>,
+  sources: ReadonlyArray<string>,
+): Stage<CastReader> => ({
   id: 'train',
-  inputs: [stageInput('trainset')],
+  inputs: [
+    stageInput('trainset'),
+    ...Object.values(renders).map(stageInput),
+    ...sources.map(fileInput),
+  ],
   version: VERSION.train,
-  config: Schema.encodeSync(ConfigJson)(TRAIN),
+  config: TRAIN_CONFIG,
   run: (ctx) =>
     ctx.spend(
       'modal',
-      Effect.fail(StageFailed.make({ reason: 'train: the reader is not in the repo yet' })),
+      Effect.gen(function* () {
+        const reader = yield* CastReader;
+        const trainset = sha256Hex(yield* ctx.output('trainset'));
+        const lines = [`trainset=${trainset}`, `config=${TRAIN_CONFIG}`];
+        for (const file of sources)
+          lines.push(`${file.split('/').at(-1)}=${sha256Hex(yield* ctx.file(file))}`);
+        const shards = yield* Effect.forEach(Object.values(renders), ctx.outputPath);
+        const made = yield* reader
+          .train({
+            trainset,
+            key: sha256Hex(encoder.encode(lines.join('\n'))),
+            shards,
+            config: TRAIN,
+          })
+          .pipe(Effect.mapError(readerFailed('train')));
+        yield* Effect.log(`cast.build.train result=${made.result}`);
+        return made.checkpoint;
+      }),
+      TRAIN_USD,
     ),
+});
+
+/** One drawing's held samples read by the trained reader and scored, by its renders stage's id. */
+export const evalStage = (rendersId: string): Stage<CastReader> => {
+  const id = rendersId.replace(/^renders:/, 'eval:');
+  return {
+    id,
+    view: id.slice('eval:'.length).split('@')[0],
+    inputs: [stageInput('train'), stageInput(rendersId)],
+    version: VERSION.eval,
+    run: (ctx) =>
+      Effect.gen(function* () {
+        const reader = yield* CastReader;
+        const scored = yield* reader
+          .evaluate(yield* ctx.outputPath('train'), yield* ctx.outputPath(rendersId))
+          .pipe(Effect.mapError(readerFailed(id)));
+        return encoder.encode(scored);
+      }),
+  };
 };
 
 const FitJson = Schema.fromJsonString(

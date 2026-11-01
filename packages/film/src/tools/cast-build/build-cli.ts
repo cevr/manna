@@ -21,10 +21,13 @@ import { FilmFolder, filmNamed } from '../film-repo.ts';
 import type { Pages } from '../pages.ts';
 import { coverageFacts } from './coverage-facts.ts';
 import { cutoutMembers, manifestOf, toStderr } from './coverage-cli.ts';
-import { BuildReport, Spend, type StageReport, buildGraph } from './graph.ts';
+import { BuildReport, Spend, type Stage, type StageReport, buildGraph } from './graph.ts';
+import { CastReader } from './reader.ts';
 import {
   type MemberStages,
+  type StageServices,
   askStage,
+  evalStage,
   memberStages,
   ownerNeeds,
   rendersOf,
@@ -50,7 +53,7 @@ const ReportJson = Schema.fromJsonString(BuildReport);
 const SpendList = Schema.Array(Spend);
 
 /** The cast cache: `FILM_CAST_CACHE`, else `~/.cache/bible-film/cast`. */
-const castCache = Effect.gen(function* () {
+export const castCache = Effect.gen(function* () {
   const path = yield* Path.Path;
   const home = yield* Config.String('HOME').pipe(Config.withDefault('.'));
   return yield* Config.String('FILM_CAST_CACHE').pipe(
@@ -133,10 +136,13 @@ export const build = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArra
         members.push({ film, member, memberDir, libraryPuppets, coverage, facts });
       }
       const built = (yield* Effect.forEach(members, memberStages)).flat();
-      const stages = [
+      const renders = rendersOf(built);
+      const reader = yield* CastReader;
+      const stages: ReadonlyArray<Stage<StageServices | CastReader>> = [
         ...built,
-        trainsetStage(rendersOf(built)),
-        trainStage,
+        trainsetStage(renders),
+        trainStage(renders, reader.sources),
+        ...Object.values(renders).map(evalStage),
         askStage(ownerNeeds(members)),
       ];
       const report = yield* toStderr(
@@ -163,9 +169,10 @@ export const build = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArra
         pages,
         Critic.layer(rules).pipe(Layer.provide(Counsel.layer)),
         PuppetImagesBun,
+        CastReader.layer,
       ),
     ),
     Command.withDescription(
-      "Build each cast member's stages (drawing, parts, cut, fit, renders), the training set and its train over the cast cache, rerunning only what changed; spends okra or Modal only when --spend names it",
+      "Build each cast member's stages (drawing, parts, cut, fit, renders), the training set, its train and each drawing's eval over the cast cache, rerunning only what changed; spends okra or Modal only when --spend names it",
     ),
   );

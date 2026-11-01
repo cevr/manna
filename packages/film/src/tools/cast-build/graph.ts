@@ -71,6 +71,8 @@ export interface StageContext {
   readonly file: (path: string) => Effect.Effect<Uint8Array, StageFailed>;
   /** An upstream stage's output bytes. */
   readonly output: (id: string) => Effect.Effect<Uint8Array, StageFailed>;
+  /** The cache file holding an upstream stage's output, for a tool that reads a path (a 95 MB checkpoint). */
+  readonly outputPath: (id: string) => Effect.Effect<string, StageFailed>;
   /** Run `effect`, which spends `kind`, when the build allows it; else the stage waits. */
   readonly spend: <A, E, R>(
     kind: Spend,
@@ -220,6 +222,11 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
           fs
             .readFile(objectFile(hash))
             .pipe(Effect.mapError((e) => StageFailed.make({ reason: String(e) }))),
+      }),
+    outputPath: (id) =>
+      Option.match(outputOf(id), {
+        onNone: () => Effect.die(`${id} has no output in this build`),
+        onSome: (hash) => Effect.succeed(objectFile(hash)),
       }),
     spend: (kind, effect, usd = 0) => {
       if (!options.spend.has(kind)) return Effect.fail(WaitingSpend.make({ spend: kind }));
