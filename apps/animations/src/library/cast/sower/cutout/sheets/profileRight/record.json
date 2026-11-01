@@ -88,7 +88,51 @@
           },
           "drift": {
             "deltaE": 2.88,
-            "px": 56743
+            "px": 56743,
+            "chroma": [
+              {
+                "part": "head",
+                "under": "armRight",
+                "painted": {
+                  "chroma": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "chroma": 0,
+                  "px": 0
+                },
+                "cells": 0,
+                "verdict": "unverified"
+              },
+              {
+                "part": "robe",
+                "under": "armRight",
+                "painted": {
+                  "chroma": 22.85,
+                  "px": 133
+                },
+                "kept": {
+                  "chroma": 24.3,
+                  "px": 133
+                },
+                "cells": 1,
+                "verdict": "within"
+              },
+              {
+                "part": "torso",
+                "under": "armRight",
+                "painted": {
+                  "chroma": 16.35,
+                  "px": 79
+                },
+                "kept": {
+                  "chroma": 19.63,
+                  "px": 79
+                },
+                "cells": 5,
+                "verdict": "outside"
+              }
+            ]
           },
           "grain": [
             {
@@ -134,6 +178,47 @@
               "verdict": "within"
             }
           ],
+          "speck": [
+            {
+              "part": "head",
+              "under": "armRight",
+              "painted": {
+                "share": 0.083,
+                "px": 761
+              },
+              "kept": {
+                "share": 0.039,
+                "px": 1684
+              },
+              "verdict": "outside"
+            },
+            {
+              "part": "robe",
+              "under": "armRight",
+              "painted": {
+                "share": 0,
+                "px": 3689
+              },
+              "kept": {
+                "share": 0.023,
+                "px": 5699
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "torso",
+              "under": "armRight",
+              "painted": {
+                "share": 0.174,
+                "px": 9141
+              },
+              "kept": {
+                "share": 0.037,
+                "px": 5657
+              },
+              "verdict": "outside"
+            }
+          ],
           "paintUnder": [
             {
               "part": "armRight",
@@ -144,7 +229,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["seam"]
+        "missed": ["seam", "drift", "speck"]
       }
     ],
     "chosen": 1,
@@ -162,7 +247,51 @@
     },
     "drift": {
       "deltaE": 2.88,
-      "px": 56743
+      "px": 56743,
+      "chroma": [
+        {
+          "part": "head",
+          "under": "armRight",
+          "painted": {
+            "chroma": 0,
+            "px": 0
+          },
+          "kept": {
+            "chroma": 0,
+            "px": 0
+          },
+          "cells": 0,
+          "verdict": "unverified"
+        },
+        {
+          "part": "robe",
+          "under": "armRight",
+          "painted": {
+            "chroma": 22.85,
+            "px": 133
+          },
+          "kept": {
+            "chroma": 24.3,
+            "px": 133
+          },
+          "cells": 1,
+          "verdict": "within"
+        },
+        {
+          "part": "torso",
+          "under": "armRight",
+          "painted": {
+            "chroma": 16.35,
+            "px": 79
+          },
+          "kept": {
+            "chroma": 19.63,
+            "px": 79
+          },
+          "cells": 5,
+          "verdict": "outside"
+        }
+      ]
     },
     "grain": [
       {
@@ -208,6 +337,47 @@
         "verdict": "within"
       }
     ],
+    "speck": [
+      {
+        "part": "head",
+        "under": "armRight",
+        "painted": {
+          "share": 0.083,
+          "px": 761
+        },
+        "kept": {
+          "share": 0.039,
+          "px": 1684
+        },
+        "verdict": "outside"
+      },
+      {
+        "part": "robe",
+        "under": "armRight",
+        "painted": {
+          "share": 0,
+          "px": 3689
+        },
+        "kept": {
+          "share": 0.023,
+          "px": 5699
+        },
+        "verdict": "within"
+      },
+      {
+        "part": "torso",
+        "under": "armRight",
+        "painted": {
+          "share": 0.174,
+          "px": 9141
+        },
+        "kept": {
+          "share": 0.037,
+          "px": 5657
+        },
+        "verdict": "outside"
+      }
+    ],
     "paintUnder": [
       {
         "part": "armRight",
@@ -221,11 +391,15 @@
   "bars": {
     "seamDeltaE": 10,
     "driftDeltaE": 5,
+    "chromaDrop": 3,
     "grainWithin": 0.5,
+    "speckOver": 0.04,
     "visibleAtRest": 0,
     "leastSeamPairs": 20,
-    "leastGrainWindows": 90
+    "leastGrainWindows": 90,
+    "leastRegionPx": 100,
+    "leastCellPx": 40
   },
-  "missed": ["seam"],
+  "missed": ["seam", "drift", "speck"],
   "named": []
 }
