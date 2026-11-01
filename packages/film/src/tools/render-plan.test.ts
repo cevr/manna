@@ -20,6 +20,7 @@ import {
   flagConflicts,
   jobOf,
   frameSpan,
+  pictureOf,
   Reuse,
   segmentChunks,
   stillName,
@@ -29,7 +30,7 @@ import {
 import { CHECK_RULES } from './film-check.ts';
 import { IMPORT_RULES } from './library.ts';
 import { testExportInfo } from './browser/testing.ts';
-import { Picture } from '../core/board-render.ts';
+import { Picture, pictureVariant } from '../core/board-render.ts';
 
 /** A film of three scenes, 4, 5 and 6 s, and one short over its first. */
 const cutShort = {
@@ -210,7 +211,7 @@ describe('jobOf', () => {
     expect(Result.getOrThrow(jobOf(flags))).toMatchObject({ cut: Cut.Whole() });
   });
 
-  test('--board draws the Board, --review with its burn-in; the burn-in needs the Board, a short its own page', () => {
+  test('--board draws the Board, --review with its burn-in; a short draws its own page', () => {
     expect(Result.getOrThrow(jobOf(flags))).toMatchObject({
       picture: Picture.Scenes({ review: false }),
     });
@@ -220,10 +221,37 @@ describe('jobOf', () => {
     expect(
       Result.getOrThrow(jobOf({ ...flags, board: true, review: true, stills: Option.some([3]) })),
     ).toMatchObject({ _tag: 'Stills', picture: Picture.Board({ review: true }) });
-    expect(conflict({ review: true })).toBe('review needs board');
     expect(conflict({ board: true, scope: scoped({ _tag: 'Short', id: 'cut' }) })).toBe(
       'board excludes short',
     );
+    expect(conflict({ review: true, scope: scoped({ _tag: 'Short', id: 'cut' }) })).toBe(
+      'review excludes short',
+    );
+  });
+
+  test('--review alone burns in over the scenes, as its own variant `review`, with no share copy unless asked', () => {
+    const review = { ...flags, review: true };
+    expect(Result.getOrThrow(jobOf(review))).toMatchObject({
+      _tag: 'Video',
+      picture: Picture.Scenes({ review: true }),
+      copies: 'master',
+    });
+    expect(Result.getOrThrow(jobOf({ ...review, share: Option.some(true) }))).toMatchObject({
+      copies: 'master+share',
+    });
+    expect(Result.getOrThrow(jobOf({ ...review, scope: bc }))).toMatchObject({
+      picture: Picture.Scenes({ review: true }),
+    });
+    expect(Result.getOrThrow(jobOf({ ...review, stills: Option.some([3]) }))).toMatchObject({
+      _tag: 'Stills',
+      picture: Picture.Scenes({ review: true }),
+    });
+    const variant = (over: { board: boolean; review: boolean }) =>
+      Option.getOrElse(pictureVariant(pictureOf(over)), () => 'none');
+    expect(variant({ board: false, review: true })).toBe('review');
+    expect(variant({ board: false, review: false })).toBe('none');
+    expect(variant({ board: true, review: true })).toBe('board-review');
+    expect(variant({ board: true, review: false })).toBe('board');
   });
 
   test('a short draws on its own page', () => {

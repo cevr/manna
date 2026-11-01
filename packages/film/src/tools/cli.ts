@@ -104,7 +104,7 @@ import type { LabAt } from './api-server.ts';
 import { type LabPageSpec, PageBundler } from './lab-page.ts';
 import { PALETTE_FILE, paletteSwaps, wedgeServer } from './wedge.ts';
 import { levelsOf, wedgeVariant } from '../core/easel.ts';
-import { Picture, boardVariant } from '../core/board-render.ts';
+import { Picture, pictureVariant } from '../core/board-render.ts';
 import { filmServices, labPages, startLab } from './film-services.ts';
 import { fillBeside, ScriptVoices, stagingFill } from './script-voice.ts';
 import { SeriesDrafts, draftKey } from './series-drafts.ts';
@@ -132,6 +132,7 @@ import {
   flagConflicts,
   givenFlags,
   jobOf,
+  pictureOf,
 } from './render-plan.ts';
 import { cache } from './cache-cli.ts';
 import { media } from './media-cli.ts';
@@ -862,7 +863,7 @@ const render = <E, R>(
       review: Flag.Boolean('review').pipe(
         Flag.withDefault(false),
         Flag.withDescription(
-          'with --board: burn in, small in the bottom-left corner, the film time, the beat and the panel with its try (named board-review); no share copy unless --share',
+          'burn in, small in the bottom-left corner, the film time, the beat and the last mark said in it (named review), or with --board the panel with its try (named board-review); no share copy unless --share; not with --short',
         ),
       ),
       fresh: Flag.Boolean('fresh').pipe(
@@ -884,13 +885,9 @@ const render = <E, R>(
         });
         // `--level`: the palette as the picks would write it, built and served for this render alone.
         const levels = yield* Effect.fromResult(levelsOf(input.level));
-        // `--board` names its render `board` (`board-review` with `--review`) unless `--variant` does.
-        const asked = Option.orElse(input.variant, () =>
-          Option.map(
-            Option.liftPredicate(input.board, (b) => b),
-            () => boardVariant(input.review),
-          ),
-        );
+        // `--board` names its render `board` (`board-review` with `--review`), and `--review` alone names
+        // the scenes' review copy `review`, unless `--variant` names it.
+        const asked = Option.orElse(input.variant, () => pictureVariant(pictureOf(input)));
         const variant = yield* Effect.fromResult(wedgeVariant(asked, levels));
         const path = yield* Path.Path;
         const swaps = yield* paletteSwaps(

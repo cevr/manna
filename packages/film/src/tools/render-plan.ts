@@ -269,7 +269,7 @@ const RENDER_RULES: ReadonlyArray<FlagRule> = [
   ['contact', 'excludes', 'workers', 'one page composes the whole sheet'],
   ['stills', 'excludes', 'encoder', VIDEO],
   ['contact', 'excludes', 'encoder', VIDEO],
-  ['review', 'needs', 'board', "the burn-in is the Board render's (--board)"],
+  ['review', 'excludes', 'short', 'a short draws its own page, with no burn-in'],
   ['board', 'excludes', 'short', 'a short draws its own page, not the Board'],
   ['stills', 'excludes', 'fresh', VIDEO],
   ['contact', 'excludes', 'fresh', VIDEO],
@@ -318,11 +318,18 @@ interface RenderFlags {
   readonly server: Option.Option<string>;
   /** `--board`: draw the film's Board, not its scenes. */
   readonly board: boolean;
-  /** `--review`: the Board with its burn-in (`burnIn`). */
+  /** `--review`: the burn-in over each frame, the Board's (`burnIn`) or the scenes' (`scenesBurnIn`). */
   readonly review: boolean;
   /** The segments a video reuses (`Reuse`); `--fresh` is its `Keyed.fresh`. */
   readonly reuse: Reuse;
 }
+
+/** What `--board` and `--review` ask the frames to picture: the Board or the scenes, each with the burn-in on `--review`. */
+export const pictureOf = (flags: { readonly board: boolean; readonly review: boolean }): Picture =>
+  Bool.match(flags.board, {
+    onTrue: () => Picture.Board({ review: flags.review }),
+    onFalse: () => Picture.Scenes({ review: flags.review }),
+  });
 
 /** Whether `reuse` draws every segment again (`--fresh`). */
 const freshOf = (reuse: Reuse): boolean =>
@@ -384,10 +391,7 @@ export const jobOf = (flags: RenderFlags): Result.Result<RenderJob, FlagsConflic
     variant: flags.variant,
     captions: flags.captions,
     server: flags.server,
-    picture: Bool.match(flags.board, {
-      onTrue: () => Picture.Board({ review: flags.review }),
-      onFalse: () => Picture.Scenes({ review: false }),
-    }),
+    picture: pictureOf(flags),
     cut: Option.match(flags.scope.short, {
       onNone: () => Cut.Whole(),
       onSome: (short) => Cut.Short({ short }),
