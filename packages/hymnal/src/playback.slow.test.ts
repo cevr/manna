@@ -667,7 +667,6 @@ it.effect(
         const hymn = yield* Schema.decodeUnknownEffect(Hymn)(candidate);
         const timing = timingOf(hymn, clock, [
           {
-            played: true,
             span: { start: 384, end: clock.lastTick },
             stanza: 2,
             tail: 0,

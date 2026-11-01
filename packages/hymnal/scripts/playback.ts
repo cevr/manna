@@ -46,6 +46,7 @@ const inputsHash = (source: string, fixes: string) => {
     'placement',
     'playback',
     'score',
+    'sung',
     'syllables',
     'timing',
   ]) {

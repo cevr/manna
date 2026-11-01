@@ -49,7 +49,6 @@ const clock: Clock = { ticksPerBeat: 96, tempos: [], lastTick: 320 };
 
 /** Verse v's span, [100 + 100v, 200 + 100v): a stanza line at its start, a refrain line at +50. */
 const verse = (v: number, extra: Partial<Laying> = {}): Laying => ({
-  played: true,
   span: { start: 100 + 100 * v, end: 200 + 100 * v },
   stanza: 1,
   tail: 1,
@@ -139,26 +138,6 @@ describe('timingOf', () => {
         [200, 250, true, false],
         [250, 320, true, false],
       ]);
-    }),
-  );
-
-  it.effect('lays a stanza the file does not play after its end, on its last verse moved', () =>
-    Effect.sync(() => {
-      const hymn = hymnOf([...two, sungPart(2)], { order: 'after-each', part: sungPart(2) });
-      const again = verse(1, {
-        played: false,
-        starts: [
-          [205, 225],
-          [255, 275],
-        ],
-      });
-      const timing = timingOf(hymn, clock, [verse(0), verse(1), again]);
-      expect(timing.lines.slice(3)).toEqual([
-        { start: 250, until: 325, syllables: [250, 270], played: true, even: false },
-        { start: 325, until: 375, syllables: [325, 345], played: false, even: false },
-        { start: 375, until: 420, syllables: [375, 395], played: false, even: false },
-      ]);
-      expect(timing.end).toBe(320);
     }),
   );
 
@@ -288,8 +267,6 @@ const faults = (hymn: Hymn): string[] => {
   const lines = sung(hymn);
   if (timing.lines.length !== lines.length)
     return [`${timing.lines.length} timed lines for ${lines.length} sung`];
-  const firstOnly =
-    hymn.refrain?.order === 'first-and-after-each' || hymn.refrain?.order === 'first-and-last';
   let stanza = 0;
   timing.lines.forEach((time, i) => {
     const line = lines[i];
@@ -309,16 +286,15 @@ const faults = (hymn: Hymn): string[] => {
       if (time.syllables.length !== count)
         out.push(`${at}: ${time.syllables.length} syllables for ${count}`);
     } else if (!time.even || time.syllables.length > 0) out.push(`${at}: a Plain line not even`);
-    const unplayed =
-      stanza > hymn.verses.midi || (line.verse === 'refrain' && stanza === 0 && firstOnly);
+    // The sung file plays every line but a refrain sung before any stanza.
+    const unplayed = line.verse === 'refrain' && stanza === 0;
     if (unplayed && time.played) out.push(`${at}: played, though the file does not play it`);
+    if (!unplayed && !time.played) out.push(`${at}: not played, though the sung file plays it`);
     if (time.played && time.until > timing.end) out.push(`${at}: played past the file's end`);
   });
   const last = timing.lines.at(-1);
-  if (last !== undefined && last.played && last.until !== timing.end)
+  if (last !== undefined && last.until !== timing.end)
     out.push(`the last line ends at ${last.until}, not the file's end ${timing.end}`);
-  if (last !== undefined && !last.played && last.until < timing.end)
-    out.push(`the last line, unplayed, ends before the file's end`);
   return out;
 };
 
