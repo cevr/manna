@@ -14,6 +14,7 @@ import {
   WaitingOwner,
   buildGraph,
   fileInput,
+  optionalInput,
   stageInput,
 } from './graph.ts';
 
@@ -90,7 +91,42 @@ const seeded = () =>
 const statesOf = (report: { readonly stages: ReadonlyArray<{ id: string; state: string }> }) =>
   Object.fromEntries(report.stages.map((s) => [s.id, s.state]));
 
+/** The fake graph and a set of the cuts known in this build, read through optional inputs. */
+const withSet = (runs: Map<string, number>, made: Array<string>): ReadonlyArray<Stage<never>> => [
+  ...fakeGraph(runs),
+  {
+    id: 'set',
+    inputs: [optionalInput('cut:front'), optionalInput('cut:k2')],
+    version: '1',
+    run: (ctx) =>
+      Effect.sync(() => {
+        const set = ['cut:front', 'cut:k2'].filter((id) => ctx.known(id)).join(',');
+        made.push(set);
+        return text(set);
+      }),
+  },
+];
+
 describe('the cast build graph', () => {
+  it.effect('a waiting optional input does not hold its stage, and joins it once built', () => {
+    const files = seeded();
+    const runs = new Map<string, number>();
+    const made: Array<string> = [];
+    return Effect.gen(function* () {
+      const first = yield* buildGraph(withSet(runs, made), options());
+      expect(statesOf(first)).toMatchObject({ 'cut:k2': 'waiting-spend', set: 'ran' });
+      expect(made.at(-1)).toBe('cut:front');
+      const plan = yield* buildGraph(
+        withSet(runs, made),
+        options({ plan: true, touch: ['/in/k2.png'] }),
+      );
+      expect(statesOf(plan)).toMatchObject({ 'cut:k2': 'stale', set: 'stale' });
+      const second = yield* buildGraph(withSet(runs, made), options({ spend: new Set(['okra']) }));
+      expect(statesOf(second)).toMatchObject({ 'cut:k2': 'ran', set: 'ran' });
+      expect(made.at(-1)).toBe('cut:front,cut:k2');
+    }).pipe(Effect.provide(servicesOver(files)));
+  });
+
   it.effect('a second build with nothing changed runs no stage', () => {
     const files = seeded();
     const runs = new Map<string, number>();

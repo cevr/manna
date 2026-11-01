@@ -18,6 +18,9 @@
 // unknown, unless it last waited at that key, when it waits again (a plan
 // granted its spend calls it stale); `touch` plans as if those files changed. Each stage is decided and run under the manifest's lock
 // (`ContentStore.transact`), so two builds never decide on one stage at once.
+// An optional input (`optionalInput`) holds its stage only while it is stale in
+// a plan: a stage reading what this build made of a set (the training set) runs
+// over the inputs that did not wait or fail.
 
 import { Array as Arr, Clock, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { ContentStore, type Manifest } from '../content-store.ts';
@@ -37,13 +40,22 @@ export const StageState = Schema.Literals([
 ]);
 export type StageState = typeof StageState.Type;
 
-/** A stage's input: a file's bytes, or an upstream stage's output. */
+/**
+ * A stage's input: a file's bytes, an upstream stage's output, or an optional
+ * upstream stage's: one that waits or failed does not hold the stage, which
+ * runs without it (its key reads it as held); one stale in a plan does.
+ */
 export type Input =
   | { readonly _tag: 'File'; readonly path: string }
-  | { readonly _tag: 'Stage'; readonly id: string };
+  | { readonly _tag: 'Stage'; readonly id: string }
+  | { readonly _tag: 'Optional'; readonly id: string };
+
+/** How an upstream input's line in a key is named, by its kind. */
+const LINE = { Stage: 'stage', Optional: 'optional' } as const;
 
 export const fileInput = (path: string): Input => ({ _tag: 'File', path });
 export const stageInput = (id: string): Input => ({ _tag: 'Stage', id });
+export const optionalInput = (id: string): Input => ({ _tag: 'Optional', id });
 
 /** The stage would spend, and the build's `--spend` does not name it. */
 export class WaitingSpend extends Schema.TaggedError<WaitingSpend>()('WaitingSpend', {
@@ -73,6 +85,8 @@ export interface StageContext {
   readonly output: (id: string) => Effect.Effect<Uint8Array, StageFailed>;
   /** The cache file holding an upstream stage's output, for a tool that reads a path (a 95 MB checkpoint). */
   readonly outputPath: (id: string) => Effect.Effect<string, StageFailed>;
+  /** Whether an upstream stage has an output in this build (an optional input that did not wait or fail). */
+  readonly known: (id: string) => boolean;
   /** Run `effect`, which spends `kind`, when the build allows it; else the stage waits. */
   readonly spend: <A, E, R>(
     kind: Spend,
@@ -167,7 +181,7 @@ const checkOrder = <R>(stages: ReadonlyArray<Stage<R>>) => {
   for (const stage of stages) {
     if (seen.has(stage.id)) return Option.some(`${stage.id} is named twice`);
     for (const input of stage.inputs)
-      if (input._tag === 'Stage' && !seen.has(input.id))
+      if (input._tag !== 'File' && !seen.has(input.id))
         return Option.some(`${stage.id} reads ${input.id}, which is not before it`);
     seen.add(stage.id);
   }
@@ -228,6 +242,7 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
         onNone: () => Effect.die(`${id} has no output in this build`),
         onSome: (hash) => Effect.succeed(objectFile(hash)),
       }),
+    known: (id) => Option.isSome(outputOf(id)),
     spend: (kind, effect, usd = 0) => {
       if (!options.spend.has(kind)) return Effect.fail(WaitingSpend.make({ spend: kind }));
       return Effect.sync(() => {
@@ -249,7 +264,7 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
     if (input._tag === 'File')
       return fileHash(input.path).pipe(Effect.map((h) => `file:${input.path}=${h}`));
     return Effect.succeed(
-      `stage:${input.id}=${Option.getOrElse(outputOf(input.id), () => 'unknown')}`,
+      `${LINE[input._tag]}:${input.id}=${Option.getOrElse(outputOf(input.id), () => 'held')}`,
     );
   };
   yield* fs.makeDirectory(objects, { recursive: true });
@@ -271,9 +286,11 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
       );
     const held = heldBy(
       stage.inputs.flatMap((input) => {
-        if (input._tag !== 'Stage') return [];
+        if (input._tag === 'File') return [];
         const up = decided.get(input.id);
-        if (up?._tag === 'Held') return [up.state];
+        // an optional input holds the stage only while its output may yet come (a plan's stale)
+        if (up?._tag === 'Held' && (input._tag === 'Stage' || up.state === 'stale'))
+          return [up.state];
         return [];
       }),
     );
