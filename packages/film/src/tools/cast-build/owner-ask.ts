@@ -10,7 +10,7 @@
 // with `concept keep … --ask <id>`.
 
 import { Array as Arr, Context, Effect, Option } from 'effect';
-import { AskName, askStatus, oneQuestion } from '../../core/ask.ts';
+import { AskName, type AskRecord, askStatus, askedIn, oneQuestion } from '../../core/ask.ts';
 import { AskStore } from '../ask-store.ts';
 import type { FilmName } from '../film-repo.ts';
 import { type Stage, StageFailed, fileInput } from './graph.ts';
@@ -64,11 +64,24 @@ export const ownerNeeds = (
     }),
   );
 
+/** A keep choice's question: `<member>/<id>: keep this drawing?`. */
+const KEEP_QUESTION = ': keep this drawing?';
+const keepLabel = (need: OwnerNeed) => `${needName(need)}${KEEP_QUESTION}`;
+
+/** The members an ask of the build asks about, read from its keep choices' questions (`keepLabel`). */
+const membersAsked = (record: AskRecord) =>
+  new Set(
+    Object.values(record.ask.steps)
+      .flatMap(askedIn)
+      .filter((b) => b.kind === 'choose' && b.label.endsWith(KEEP_QUESTION))
+      .map((b) => b.label.split('/')[0] ?? ''),
+  );
+
 /** One choice per drawing: keep it (recommended), shown at `src` with its path beside it, or draw it again. */
 const keepChoice = (need: OwnerNeed, n: number, src: string) => ({
   kind: 'choose' as const,
   id: AskName.make(`keep-${n + 1}`),
-  label: `${needName(need)}: keep this drawing?`,
+  label: keepLabel(need),
   options: [
     {
       value: 'keep',
@@ -91,12 +104,14 @@ const asked = <A, E extends { readonly message: string }>(self: Effect.Effect<A,
  * The build's one ask, about `film`: every need `kept` lacks, its drawings
  * published first (`DrawingSet`) so each keep choice shows its own, made once
  * through the ask store on the asker's open page; then each earlier build ask
- * about the film that still asks is closed as superseded, so only this one
- * is answered. Its output is the ask's id. Keyed by each drawing's bytes and
+ * about the film that still asks, and asks only about `members` (the members
+ * this build covers), is closed as superseded: a build of one member never
+ * closes another's ask. Its output is the ask's id. Keyed by each drawing's bytes and
  * the needs' names, so the same needs publish and ask once.
  */
 export const askStage = (
   film: FilmName,
+  members: ReadonlyArray<string>,
   needs: ReadonlyArray<OwnerNeed>,
 ): Stage<AskStore | DrawingSet> => {
   const keeps = needs.filter((n) => n.lacks === 'kept');
@@ -131,7 +146,8 @@ export const askStage = (
             r.id !== made.id &&
             r.by === BUILD_ASKER &&
             r.film === film &&
-            askStatus(r.state) === 'asking',
+            askStatus(r.state) === 'asking' &&
+            [...membersAsked(r)].every((who) => members.includes(who)),
         );
         yield* Effect.forEach(earlier, (r) => asked(asks.close(r.id, `superseded by ${made.id}`)), {
           discard: true,

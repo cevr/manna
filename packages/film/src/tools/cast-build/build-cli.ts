@@ -195,7 +195,11 @@ export const build = <E, R>(
         trainStage(candidates, reader.sources),
         ...candidates.map((c) => evalStage(c.renders, sources.eval)),
         ...members.flatMap((m) => clipStages(m, cache, sources.chain)),
-        askStage(film, needs),
+        askStage(
+          film,
+          members.map((m) => m.member),
+          needs,
+        ),
         drawStage(needs, drawTries(house)),
       ];
       const report = yield* toStderr(

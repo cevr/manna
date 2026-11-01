@@ -58,6 +58,21 @@ const member = {
   },
 } as unknown as Member;
 
+/** wife: her front drawn and not kept. */
+const wife = {
+  film,
+  member: 'wife',
+  memberDir: '/m/wife',
+  coverage: {
+    member: 'wife',
+    entries: [{ id: 'turnaround-front', cut: 'puppet', file: 'views/front.png' }],
+  },
+  facts: {
+    'turnaround-front': { drawn: true, kept: false, cut: false, bars: false, fit: false },
+  },
+} as unknown as Member;
+const WIFE_FRONT = '/m/wife/views/front.png';
+
 const SIDE = '/m/lead-feast/views/side.png';
 const BACK = '/m/lead-feast/views/back.png';
 
@@ -67,6 +82,7 @@ const filesOf = () =>
     [`/films/${film}/scenes/index.ts`, text('export {};\n')],
     [SIDE, text('side v1')],
     [BACK, text('back v1')],
+    [WIFE_FRONT, text('wife front v1')],
   ]);
 
 /** Where the set below puts a need's drawing, as the review names it. */
@@ -160,7 +176,7 @@ describe('the build asks the owner once', () => {
     const drew: Array<ReadonlyArray<OwnerNeed>> = [];
     const needs = ownerNeeds([member]);
     const stages = [
-      askStage(film, needs),
+      askStage(film, ['lead-feast'], needs),
       drawStage(needs, (draws) => Effect.sync(() => void drew.push(draws))),
     ];
     return Effect.gen(function* () {
@@ -191,7 +207,7 @@ describe('the build asks the owner once', () => {
 
   it.effect('a changed drawing asks again and closes the earlier ask: one stays open', () => {
     const files = filesOf();
-    const stages = [askStage(film, ownerNeeds([member]))];
+    const stages = [askStage(film, ['lead-feast'], ownerNeeds([member]))];
     return Effect.gen(function* () {
       yield* buildGraph(stages, options());
       const earlier = yield* only(yield* openAsks);
@@ -214,6 +230,41 @@ describe('the build asks the owner once', () => {
     }).pipe(Effect.provide(labOver(files, [])));
   });
 
+  it.effect(
+    'a build closes only its own members’ asks: lead, wife, lead leaves each one open',
+    () => {
+      const files = filesOf();
+      const lead = [askStage(film, ['lead-feast'], ownerNeeds([member]))];
+      const her = [askStage(film, ['wife'], ownerNeeds([wife]))];
+      /** The open asks with a keep choice about `who`. */
+      const openAbout = (who: string) =>
+        Effect.map(openAsks, (open) =>
+          open.filter((r) => keepChoices(r).some((c) => c.label.startsWith(`${who}/`))),
+        );
+      return Effect.gen(function* () {
+        yield* buildGraph(lead, options());
+        yield* buildGraph(her, options());
+        const again = yield* buildGraph(lead, options());
+        expect(statesOf(again)).toEqual({ ask: 'cached' });
+        expect(yield* openAbout('lead-feast')).toHaveLength(1);
+        expect(yield* openAbout('wife')).toHaveLength(1);
+        expect(yield* openAsks).toHaveLength(2);
+        // A build of both asks about both, and closes each one's earlier ask.
+        yield* buildGraph(
+          [askStage(film, ['lead-feast', 'wife'], ownerNeeds([member, wife]))],
+          options(),
+        );
+        const open = yield* openAsks;
+        expect(open).toHaveLength(1);
+        expect(keepChoices(yield* only(open)).map((c) => c.label.split(':')[0])).toEqual([
+          'lead-feast/turnaround-side',
+          'lead-feast/turnaround-back',
+          'wife/turnaround-front',
+        ]);
+      }).pipe(Effect.provide(labOver(files, [])));
+    },
+  );
+
   it.effect('the drawn needs are drawn once under --spend okra', () => {
     const drew: Array<ReadonlyArray<OwnerNeed>> = [];
     const needs = ownerNeeds([member]);
@@ -231,7 +282,7 @@ describe('the build asks the owner once', () => {
   it.effect('no kept need: no ask is made', () => {
     const published: Array<ReadonlyArray<string>> = [];
     return Effect.gen(function* () {
-      const report = yield* buildGraph([askStage(film, [])], options());
+      const report = yield* buildGraph([askStage(film, ['lead-feast'], [])], options());
       expect(statesOf(report)).toEqual({ ask: 'ran' });
       expect(yield* openAsks).toHaveLength(0);
       expect(published).toHaveLength(0);
