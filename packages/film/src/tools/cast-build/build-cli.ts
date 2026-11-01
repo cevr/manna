@@ -11,25 +11,38 @@
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
-import { Console, Effect, Layer, Option, Schema } from 'effect';
+import { Console, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
+import type { SheetKind } from '../../core/cast-sheet.ts';
 import type { CritiqueRule } from '../../core/critique.ts';
 import { PuppetImagesBun } from '../../puppet/images-bun.ts';
+import { castFolder } from '../cast-library.ts';
+import { CAST_LANES, castLine, makeCastSheet } from '../cast-sheet-make.ts';
 import { Counsel } from '../counsel.ts';
 import { Critic } from '../critique.ts';
-import { filmNamed } from '../film-repo.ts';
+import { FilmFolder, filmNamed } from '../film-repo.ts';
+import { ImageRoute } from '../image-route.ts';
 import type { Pages } from '../pages.ts';
+import type { AskStore } from '../ask-store.ts';
 import { castCache, memberOf } from './built.ts';
 import { cutoutMembers, toStderr } from './coverage-cli.ts';
-import { BuildReport, Spend, type StageReport, buildGraph } from './graph.ts';
+import { viewOfId } from './coverage-facts.ts';
+import {
+  BuildReport,
+  Spend,
+  type Stage,
+  StageFailed,
+  type StageReport,
+  buildGraph,
+} from './graph.ts';
+import { type OwnerNeed, askStage, drawStage, needName, ownerNeeds } from './owner-ask.ts';
 import { CastReader } from './reader.ts';
 import {
   type MemberStages,
-  askStage,
+  type StageServices,
   candidatesOf,
   clipStages,
   evalStage,
   memberStages,
-  ownerNeeds,
   trainStage,
   trainsetStage,
 } from './stages.ts';
@@ -48,6 +61,48 @@ class BuildFailed extends Schema.TaggedError<BuildFailed>()('BuildFailed', {
   }
 }
 
+/** The app's house look: the block every concept prompt opens with, and its image. */
+interface HouseLook {
+  readonly text: string;
+  readonly image: string;
+}
+
+/**
+ * The needs not drawn, drawn as sheet tries on the image route (each
+ * member's sheet kind once, its default tries); a key's drawing is its own
+ * tool's (the held keys), so it is named and left.
+ */
+const drawTries = (house: HouseLook) => (needs: ReadonlyArray<OwnerNeed>) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const sheets = new Map<string, OwnerNeed & { readonly kind: SheetKind }>();
+    for (const need of needs)
+      yield* Option.match(viewOfId(need.id), {
+        onNone: () => Console.error(`draw ${needName(need)}: drawn by its own tool, not a sheet`),
+        onSome: ({ kind }) =>
+          Effect.sync(() => sheets.set(`${need.member}/${kind}`, { ...need, kind })),
+      });
+    const text = yield* fs.readFileString(house.text);
+    for (const sheet of sheets.values()) {
+      const folder = yield* castFolder(sheet.film, sheet.member);
+      const out = path.join((yield* FilmFolder).paths(sheet.film).out, 'cast', sheet.member);
+      yield* makeCastSheet(
+        { folder, out },
+        {
+          kind: sheet.kind,
+          tries: 3,
+          lanes: CAST_LANES,
+          dryRun: false,
+          house: text,
+          houseImage: path.resolve(house.image),
+        },
+        (line) => Console.error(castLine(line)),
+      );
+    }
+  }).pipe(Effect.mapError((e) => StageFailed.make({ reason: `draw: ${e.message}` })));
+type DrawServices = Effect.Services<ReturnType<ReturnType<typeof drawTries>>>;
+
 const ReportJson = Schema.fromJsonString(BuildReport);
 const SpendList = Schema.Array(Spend);
 
@@ -60,7 +115,11 @@ const stageLine = (s: StageReport) =>
     ...Option.toArray(Option.map(s.reason, (r) => `(${r})`)),
   ].join(' ');
 
-export const build = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArray<CritiqueRule>) =>
+export const build = <E, R>(
+  house: HouseLook,
+  pages: Layer.Layer<Pages, E, R>,
+  rules: ReadonlyArray<CritiqueRule>,
+) =>
   Command.make(
     'build',
     {
@@ -117,13 +176,15 @@ export const build = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArra
       const candidates = members.flatMap(candidatesOf);
       const reader = yield* CastReader;
       const cache = yield* castCache;
-      const stages = [
+      const needs = ownerNeeds(members);
+      const stages: ReadonlyArray<Stage<StageServices | CastReader | AskStore | DrawServices>> = [
         ...built,
         trainsetStage(candidates),
         trainStage(candidates, reader.sources),
         ...candidates.map((c) => evalStage(c.renders)),
         ...members.flatMap((m) => clipStages(m, cache)),
-        askStage(ownerNeeds(members)),
+        askStage(film, needs),
+        drawStage(needs, drawTries(house)),
       ];
       const report = yield* toStderr(
         buildGraph(stages, {
@@ -150,6 +211,7 @@ export const build = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArra
         Critic.layer(rules).pipe(Layer.provide(Counsel.layer)),
         PuppetImagesBun,
         CastReader.layer,
+        ImageRoute.layer,
       ),
     ),
     Command.withDescription(

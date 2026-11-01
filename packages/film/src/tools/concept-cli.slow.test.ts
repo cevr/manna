@@ -24,6 +24,7 @@ import { CastSheetJson } from '../core/cast-record.ts';
 import { drawFigure, drawSheet, PLAIN } from '../core/fixtures/figure.ts';
 import { scaleRaster } from '../core/raster.ts';
 import { Segment } from '../core/segment.ts';
+import { AskStore } from './ask-store.ts';
 import { concept } from './concept-cli.ts';
 import { ContentStore } from './content-store.ts';
 import { FilmFolder } from './film-repo.ts';
@@ -43,7 +44,12 @@ const houseBlock = Effect.gen(function* () {
 
 /** A memory store holding the app's house block, a look, references, a layout and a heads sheet; nothing under the shell's folder; no films. */
 const over = () =>
-  Layer.mergeAll(ContentStore.layer, FilmFolder.layer('/films')).pipe(Layer.provideMerge(files()));
+  Layer.mergeAll(
+    ContentStore.layer,
+    FilmFolder.layer('/films'),
+    // `concept build` asks through the asks; no command run here makes one
+    Layer.mock(AskStore)({ dir: '/nonexistent/asks', file: (id) => `/nonexistent/asks/${id}` }),
+  ).pipe(Layer.provideMerge(files()));
 
 const files = () =>
   Layer.mergeAll(

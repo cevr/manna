@@ -579,7 +579,7 @@ export const concept = <E, R>(
       keep,
       render(pages, rules),
       coverage(pages, rules),
-      build(pages, rules),
+      build(house, pages, rules),
       reader,
       ease(pages),
       fit,

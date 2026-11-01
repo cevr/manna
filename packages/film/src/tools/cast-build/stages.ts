@@ -27,8 +27,8 @@
 // complete drawing's shard after this build's stages; `trainStage`, the one reader trained on that set (spending
 // Modal), keyed by the set, its shards and the reader's source files;
 // `evalStage` per shard, that drawing's held samples read and scored by the
-// reader (`reader.ts`, on this machine); `askStage`, every entry missing
-// `drawn` or `kept` across the members built, waiting on the owner.
+// reader (`reader.ts`, on this machine). The owner's ask and draws are
+// `owner-ask.ts`'s.
 
 import * as Command from 'effect/cli/Command';
 import { Effect, FileSystem, Option, Path, Predicate, Schema, type Scope } from 'effect';
@@ -67,7 +67,6 @@ const VERSION = {
   train: '2',
   eval: '1',
   chain: '1',
-  ask: '1',
 } as const;
 
 /**
@@ -613,30 +612,3 @@ const FitJson = Schema.fromJsonString(
     }),
   ),
 );
-
-/** The entries across the members built that the owner must draw or keep, by `<member>/<id>`. */
-export const ownerNeeds = (members: ReadonlyArray<MemberStages>): ReadonlyArray<string> =>
-  members.flatMap((m) =>
-    m.coverage.entries.flatMap((e) => {
-      const facts = Option.fromNullishOr(m.facts[e.id]);
-      const lacks = (['drawn', 'kept'] as const).filter(
-        (need) => !Option.exists(facts, (f) => f[need]),
-      );
-      if (lacks.length === 0) return [];
-      return [`${m.member}/${e.id} (${lacks.join(', ')})`];
-    }),
-  );
-
-/** The build's ask: every entry the owner must draw or keep, in one wait; it draws nothing. */
-export const askStage = (needs: ReadonlyArray<string>): Stage<never> => ({
-  id: 'ask',
-  inputs: [],
-  version: VERSION.ask,
-  config: needs.join('\n'),
-  run: () => {
-    if (needs.length === 0) return Effect.succeed(encoder.encode('none'));
-    return Effect.fail(
-      WaitingOwner.make({ reason: `the owner draws or keeps: ${needs.join('; ')}` }),
-    );
-  },
-});
