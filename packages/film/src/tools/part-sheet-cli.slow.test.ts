@@ -194,16 +194,16 @@ describe('film concept parts', () => {
   );
 
   it.effect(
-    'misses an all-paper answer on its drift and grain, read where the sheet fixes them, and keeps the answer that paints over it',
+    'misses an all-paper answer on its drift, grain and step, read where the sheet fixes them, and keeps the answer that paints over it',
     () =>
       Effect.gen(function* () {
         const files = new Map<string, Uint8Array>();
         const alone = Result.getOrThrow(yield* run(files, [PAPER_ANSWER]));
-        expect(alone.missed).toEqual(['drift', 'grain']);
+        expect(alone.missed).toEqual(['drift', 'grain', 'step']);
         const both = Result.getOrThrow(yield* run(files, [UNDER([])]));
         expect(both.okra.chosen).toBe(2);
         expect(alone.measures.drift.px).toBe(both.measures.drift.px);
-        expect(both.okra.calls.map((c) => c.missed)).toEqual([['drift', 'grain'], []]);
+        expect(both.okra.calls.map((c) => c.missed)).toEqual([['drift', 'grain', 'step'], []]);
       }),
   );
 
