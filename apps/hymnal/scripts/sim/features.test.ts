@@ -53,6 +53,21 @@ const hidesBeforeLanding = (journey: Journey) =>
 
 const toJson = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
+/** A `role=tab` term in a step's JSON: in a selector string, between spaces or quotes. */
+const ROLE_TAB = /["\s]role=tab["\s]/;
+
+/**
+ * The `role=tab` selectors in an iOS journey, by step. React Native gives the
+ * `tab` role no iOS trait, so the runner lists a tab as `other` and a
+ * `role=tab` selector answers `TargetMissing` there (browse.md's Gotchas).
+ */
+const tabRolesOnIos = (journey: Journey) => {
+  if (journey.platform !== 'ios') return [];
+  return journey.steps
+    .filter((step) => ROLE_TAB.test(toJson(step)))
+    .map((step) => `${journey.feature}/${step.name}`);
+};
+
 const FEATURES = import.meta.dir + '/../../../../.claude/skills/verify-hymnal/features';
 
 describe('verify-hymnal journey files', () => {
@@ -79,6 +94,29 @@ describe('verify-hymnal journey files', () => {
       const journeys = yield* decodeAll(FEATURES);
       expect(journeys.flatMap(hidesBeforeLanding)).toEqual([]);
     }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.effect('no shipped iOS journey selects by role=tab', () =>
+    Effect.gen(function* () {
+      const journeys = yield* decodeAll(FEATURES);
+      expect(journeys.flatMap(tabRolesOnIos)).toEqual([]);
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.effect('a role=tab selector in an iOS journey is named; role=other is not', () =>
+    Effect.gen(function* () {
+      const text = toJson({
+        feature: 'hymn-list',
+        platform: 'ios',
+        steps: [
+          { name: 'target', action: 'tap', target: 'role=tab label=Lists' },
+          { name: 'expect', action: 'back', expect: [{ shows: 'role=tab label=Sections' }] },
+          { name: 'other', action: 'tap', target: 'role=other label=Lists' },
+        ],
+      });
+      const journey = yield* decodeJourney('hymn-list.journey.json', text);
+      expect(tabRolesOnIos(journey)).toEqual(['hymn-list/target', 'hymn-list/expect']);
+    }),
   );
 
   it.effect('a hold with a short settle before a hides is named; the default settle is not', () =>

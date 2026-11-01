@@ -35,9 +35,9 @@
     {
       "name": "list-top",
       "action": "scroll",
-      "target": "role=tab label=Sections",
+      "target": "role=other label=Sections",
       "direction": "up",
-      "expect": [{ "shows": "role=tab label=Sections" }]
+      "expect": [{ "shows": "role=other label=Sections" }]
     },
     {
       "name": "down-1",
@@ -62,7 +62,7 @@
       "action": "scroll",
       "target": "screen",
       "direction": "down",
-      "expect": [{ "hides": "role=tab label=Sections" }]
+      "expect": [{ "hides": "role=other label=Sections" }]
     },
     {
       "name": "list-tabs-reveal",
@@ -70,21 +70,21 @@
       "target": "screen",
       "direction": "up",
       "expect": [
-        { "shows": "role=tab label=Sections" },
+        { "shows": "role=other label=Sections" },
         { "hides": "label=Number, title or first line" }
       ]
     },
     {
       "name": "list-tabs-tap",
       "action": "tap",
-      "target": "role=tab label=Lists",
-      "expect": [{ "shows": "role=tab label=Lists" }]
+      "target": "role=other label=Lists",
+      "expect": [{ "shows": "role=other label=Lists" }]
     },
     {
       "name": "list-tabs-back",
       "action": "tap",
-      "target": "role=tab label=Sections",
-      "expect": [{ "shows": "role=tab label=Sections" }]
+      "target": "role=other label=Sections",
+      "expect": [{ "shows": "role=other label=Sections" }]
     }
   ]
 }
