@@ -83,7 +83,23 @@
           },
           "drift": {
             "deltaE": 5.3,
-            "px": 17007
+            "px": 17007,
+            "chroma": [
+              {
+                "part": "torso",
+                "under": "armLeft",
+                "painted": {
+                  "chroma": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "chroma": 0,
+                  "px": 0
+                },
+                "cells": 0,
+                "verdict": "unverified"
+              }
+            ]
           },
           "grain": [
             {
@@ -101,6 +117,21 @@
               "verdict": "unverified"
             }
           ],
+          "speck": [
+            {
+              "part": "torso",
+              "under": "armLeft",
+              "painted": {
+                "share": 0.159,
+                "px": 245
+              },
+              "kept": {
+                "share": 0.011,
+                "px": 2527
+              },
+              "verdict": "outside"
+            }
+          ],
           "paintUnder": [
             {
               "part": "armLeft",
@@ -111,7 +142,7 @@
           "visibleAtRest": 0,
           "recomposeByteEqual": true
         },
-        "missed": ["drift", "grain"]
+        "missed": ["drift", "grain", "speck"]
       }
     ],
     "chosen": 1,
@@ -129,7 +160,23 @@
     },
     "drift": {
       "deltaE": 5.3,
-      "px": 17007
+      "px": 17007,
+      "chroma": [
+        {
+          "part": "torso",
+          "under": "armLeft",
+          "painted": {
+            "chroma": 0,
+            "px": 0
+          },
+          "kept": {
+            "chroma": 0,
+            "px": 0
+          },
+          "cells": 0,
+          "verdict": "unverified"
+        }
+      ]
     },
     "grain": [
       {
@@ -147,6 +194,21 @@
         "verdict": "unverified"
       }
     ],
+    "speck": [
+      {
+        "part": "torso",
+        "under": "armLeft",
+        "painted": {
+          "share": 0.159,
+          "px": 245
+        },
+        "kept": {
+          "share": 0.011,
+          "px": 2527
+        },
+        "verdict": "outside"
+      }
+    ],
     "paintUnder": [
       {
         "part": "armLeft",
@@ -160,11 +222,15 @@
   "bars": {
     "seamDeltaE": 10,
     "driftDeltaE": 5,
+    "chromaDrop": 3,
     "grainWithin": 0.5,
+    "speckOver": 0.04,
     "visibleAtRest": 0,
     "leastSeamPairs": 20,
-    "leastGrainWindows": 90
+    "leastGrainWindows": 90,
+    "leastRegionPx": 100,
+    "leastCellPx": 40
   },
-  "missed": ["drift", "grain"],
+  "missed": ["drift", "grain", "speck"],
   "named": []
 }
