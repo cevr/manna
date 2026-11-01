@@ -171,7 +171,7 @@ const build = (
   asked: Array<string>,
   over: Partial<BuildOptions> = {},
   stages: ReadonlyArray<Stage<CastReader>> = graph(),
-  training: Effect.Effect<void> = Effect.void,
+  reader: { readonly training?: Effect.Effect<void>; readonly promoteFails?: string } = {},
 ) =>
   buildGraph(stages, options(over)).pipe(
     Effect.provide(
@@ -179,7 +179,7 @@ const build = (
         ContentStore.layer.pipe(
           Layer.provideMerge([memoryFileSystem(disk), Path.layer, memoryLocks]),
         ),
-        CastReader.layerTest({ evaluate: '{"seen":{"accuracy":1}}', training }, asked, SOURCES),
+        CastReader.layerTest({ evaluate: '{"seen":{"accuracy":1}}', ...reader }, asked, SOURCES),
       ),
     ),
   );
@@ -189,6 +189,20 @@ const Marks = Schema.fromJsonString(
   Schema.Struct({
     stages: Schema.Record(Schema.String, Schema.Unknown),
     running: Schema.Record(Schema.String, Schema.Unknown),
+  }),
+);
+
+/** `build.json`'s recorded stages, as far as a run left unpromoted. */
+const Built = Schema.fromJsonString(
+  Schema.Struct({
+    stages: Schema.Record(
+      Schema.String,
+      Schema.Struct({
+        unpromoted: Schema.optionalKey(
+          Schema.Struct({ run: Schema.String, reason: Schema.String }),
+        ),
+      }),
+    ),
   }),
 );
 
@@ -255,7 +269,9 @@ describe('cast build: train and eval', () => {
         // another build takes the key while the train runs: its run is fenced, so not promoted
         const lost = files();
         const fencedAsked: Array<string> = [];
-        const fenced = yield* build(lost, fencedAsked, spend, graph(), takeMarks(lost));
+        const fenced = yield* build(lost, fencedAsked, spend, graph(), {
+          training: takeMarks(lost),
+        });
         expect(stateOf(fenced)['train']).toBe('failed');
         expect(fencedAsked.filter((a) => a.startsWith('promote'))).toEqual([]);
         // a run that holds its key promotes its own run's checkpoint to the key's
@@ -269,6 +285,44 @@ describe('cast build: train and eval', () => {
         expect(lostRun?.key).toBe(key);
         expect(run.length).toBeGreaterThan(0);
         expect(lostRun?.run).not.toBe(run);
+      }),
+  );
+
+  it.effect(
+    'a failed promote keeps the paid train; the next build promotes that run and trains nothing',
+    () =>
+      Effect.gen(function* () {
+        const spend = { spend: new Set(['modal'] as const) };
+        const disk = files();
+        const asked: Array<string> = [];
+        const first = yield* build(disk, asked, spend, graph(), { promoteFails: 'volume busy' });
+        expect(stateOf(first)['train']).toBe('ran');
+        const [{ key, run } = { key: '', run: '' }] = asked
+          .filter((a) => a.startsWith('train'))
+          .map(trainOf);
+        expect(asked.filter((a) => a.startsWith('promote'))).toEqual([`promote ${key} ${run}`]);
+        const unpromoted = (yield* Schema.decodeEffect(Built)(
+          new TextDecoder().decode(disk.get('/cache/build.json')),
+        )).stages;
+        expect(
+          Object.values(unpromoted).flatMap((s) =>
+            Option.toArray(Option.fromUndefinedOr(s.unpromoted)),
+          ),
+        ).toEqual([{ run, reason: 'promote: reader promote: volume busy' }]);
+        // a plan reads the train cached and asks the reader nothing
+        const planned: Array<string> = [];
+        const plan = yield* build(disk, planned, { plan: true });
+        expect(stateOf(plan)['train']).toBe('cached');
+        expect(planned).toEqual([]);
+        // the next build promotes the first run, and trains nothing
+        const again: Array<string> = [];
+        const second = yield* build(disk, again, spend);
+        expect(stateOf(second)['train']).toBe('cached');
+        expect(again).toEqual([`promote ${key} ${run}`]);
+        // once promoted, a build asks nothing
+        const third: Array<string> = [];
+        yield* build(disk, third, spend);
+        expect(third).toEqual([]);
       }),
   );
 

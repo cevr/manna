@@ -308,7 +308,8 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
   /**
    * A reader that answers from `answers` and runs nothing; `asked` records
    * each call as `<what> <argument>`. A train runs `answers.training` before
-   * it answers: what happens while it runs.
+   * it answers: what happens while it runs. A promote fails with
+   * `answers.promoteFails` as its reason, when it is given.
    */
   static readonly layerTest = (
     answers: {
@@ -316,6 +317,7 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
       readonly evaluate?: string;
       readonly checkpoint?: Uint8Array;
       readonly training?: Effect.Effect<void>;
+      readonly promoteFails?: string;
     },
     asked: Array<string> = [],
     sources: ReadonlyArray<string> = [],
@@ -334,7 +336,15 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
             Effect.andThen(answers.training ?? Effect.void),
             Effect.as({ checkpoint: answers.checkpoint ?? new Uint8Array([1]), result: '{}' }),
           ),
-        promote: (key, run) => Effect.sync(() => void asked.push(`promote ${key} ${run}`)),
+        promote: (key, run) =>
+          Effect.sync(() => void asked.push(`promote ${key} ${run}`)).pipe(
+            Effect.andThen(
+              Option.match(Option.fromUndefinedOr(answers.promoteFails), {
+                onNone: () => Effect.void,
+                onSome: (reason) => Effect.fail(ReaderFailed.make({ what: 'promote', reason })),
+              }),
+            ),
+          ),
         test: Effect.succeed(''),
       }),
     );

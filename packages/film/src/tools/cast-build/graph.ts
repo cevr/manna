@@ -33,6 +33,9 @@
 // checkpoint on its volume) it writes first under the build's own name
 // (`StageContext.run`), and its `promote` makes it the key's under the lock,
 // while the mark holds the key, so a fenced run's write is never the key's.
+// A promote that fails leaves the output recorded with its run unpromoted; the
+// next build takes the key's mark and promotes that run again, and runs the
+// stage again only if it no longer has the output.
 // An optional input (`optionalInput`) holds its stage only while it is stale in
 // a plan: a stage reading what this build made of a set (the training set) runs
 // over the inputs that did not wait or fail.
@@ -137,7 +140,9 @@ export interface Stage<R> {
   /**
    * Make what `run` wrote outside the cache under `ctx.run` the key's own. It
    * runs under the manifest's lock, only while this build's mark holds the
-   * key, before the output is recorded; when it fails, the stage fails.
+   * key, before the output is recorded. When it fails, the output is still
+   * recorded, with `ctx.run` unpromoted, and the next build promotes that run
+   * again before the stage would run again: a paid run is never thrown away.
    */
   readonly promote?: (ctx: StageContext) => Effect.Effect<void, StageFailed, R>;
   /**
@@ -179,11 +184,24 @@ export const BuildReport = Schema.Struct({
 });
 export interface BuildReport extends Schema.Schema.Type<typeof BuildReport> {}
 
-/** A stage's result as `build.json` keeps it, by key: its output's hash and the wall time of the run that made it. */
+/**
+ * A run whose output is recorded but whose `promote` failed: the build that
+ * wrote it (its write outside the cache is still named by it, the reader's
+ * `/runs/<key>/<run>.pt`) and why the promote failed. The next build promotes
+ * it again before anything would run the stage again.
+ */
+const Unpromoted = Schema.Struct({ run: Schema.String, reason: Schema.String });
+
+/**
+ * A stage's result as `build.json` keeps it, by key: its output's hash, the
+ * wall time of the run that made it and, while its promote has not held, the
+ * run it left unpromoted.
+ */
 const Built = Schema.Struct({
   id: Schema.String,
   output: Schema.String,
   ms: Schema.Finite,
+  unpromoted: Schema.optionalKey(Unpromoted),
 });
 
 /**
@@ -297,8 +315,15 @@ type Outcome =
       readonly reason: Option.Option<string>;
     };
 
-/** What a build decides under the lock: an outcome, a key another build runs now, or the run to make. */
-type Decision = Outcome | { readonly _tag: 'busy' } | { readonly _tag: 'run' };
+/**
+ * What a build decides under the lock: an outcome, a key another build runs
+ * now, the run to make, or a recorded run's promote to make again.
+ */
+type Decision =
+  | Outcome
+  | { readonly _tag: 'busy' }
+  | { readonly _tag: 'run' }
+  | { readonly _tag: 'promote'; readonly output: string; readonly run: string };
 
 /** A busy decision's poll: again every `BUSY_SPACING` until it is not busy. */
 const BUSY = {
@@ -435,39 +460,102 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
       Effect.filter(Object.entries(current.running ?? {}), ([key, mark]) => runs(key, mark)),
       (live): BuildManifest => ({ ...current, running: Object.fromEntries(live) }),
     );
+  /**
+   * Record `outcome` and `change` under the lock while this build's mark holds
+   * `key`, else discard them. A `promote` runs first: when it fails, the output
+   * is still recorded, with the run it leaves unpromoted (`built`), so a paid
+   * run is never thrown away and the next build promotes it again.
+   */
+  const recordUnder = <R>(
+    stage: Stage<R>,
+    key: string,
+    outcome: Outcome,
+    change: (done: BuildManifest) => BuildManifest,
+    promote: Option.Option<{
+      readonly run: string;
+      readonly effect: Effect.Effect<void, StageFailed, R>;
+      readonly built: (
+        unpromoted: typeof Unpromoted.Type,
+      ) => (done: BuildManifest) => BuildManifest;
+    }> = Option.none(),
+  ) =>
+    store
+      .transact(manifest, (current) => {
+        if (!holds(current, key, build))
+          return Effect.succeed([Option.none<Outcome>(), current] as const);
+        const done = unmarked(current, key, build);
+        const recorded = [Option.some(outcome), change(done)] as const;
+        return Option.match(promote, {
+          onNone: () => Effect.succeed(recorded),
+          onSome: (p) =>
+            p.effect.pipe(
+              Effect.as(recorded),
+              Effect.catchTag('StageFailed', (e) =>
+                Effect.as(
+                  Effect.logWarning(
+                    `cast.build.promote-failed stage=${stage.id} key=${key} run=${p.run} reason="${e.reason}"`,
+                  ),
+                  [Option.some(outcome), p.built({ run: p.run, reason: e.reason })(done)] as const,
+                ),
+              ),
+            ),
+        });
+      })
+      .pipe(
+        Effect.flatMap(
+          Option.match({ onNone: () => fenced(stage), onSome: (o) => Effect.succeed(o) }),
+        ),
+      );
+  /** Promote again a recorded output whose promote failed, under the lock while this build's mark holds its key. */
+  const promoteOutside = <R>(
+    stage: Stage<R>,
+    key: string,
+    pending: { readonly output: string; readonly run: string },
+  ) =>
+    Effect.suspend(() => {
+      const effect = Option.match(Option.fromUndefinedOr(stage.promote), {
+        onNone: () => Effect.void,
+        onSome: (promote) => promote({ ...ctx, run: pending.run }),
+      });
+      const builtWith =
+        (unpromoted: Option.Option<typeof Unpromoted.Type>) => (done: BuildManifest) =>
+          Option.match(Option.fromUndefinedOr(done.stages[key]), {
+            onNone: () => done,
+            onSome: ({ unpromoted: _was, ...built }) => ({
+              ...done,
+              stages: {
+                ...done.stages,
+                [key]: Option.match(unpromoted, {
+                  onNone: () => built,
+                  onSome: (u) => ({ ...built, unpromoted: u }),
+                }),
+              },
+            }),
+          });
+      return recordUnder(
+        stage,
+        key,
+        { _tag: 'cached', output: pending.output },
+        builtWith(Option.none()),
+        Option.some({
+          run: pending.run,
+          effect,
+          built: (u: typeof Unpromoted.Type) => builtWith(Option.some(u)),
+        }),
+      );
+    }).pipe(
+      Effect.onExit((exit) => {
+        if (Exit.isSuccess(exit)) return Effect.void;
+        return store
+          .update(manifest, (current) => unmarked(current, key, build))
+          .pipe(Effect.ignore);
+      }),
+    );
   /** Run a stage outside the lock, then record what it made, or what it waited on, under it. */
   const runOutside = <R>(stage: Stage<R>, key: string, start: number) =>
     Effect.gen(function* () {
-      /**
-       * Record `outcome` and `change` under the lock while this build's mark
-       * holds the key, `promote` first (its failure is the stage's); else
-       * discard it.
-       */
-      const record = (
-        outcome: Outcome,
-        change: (done: BuildManifest) => BuildManifest,
-        promote: Effect.Effect<void, StageFailed, R> = Effect.void,
-      ) =>
-        store
-          .transact(manifest, (current) => {
-            if (!holds(current, key, build))
-              return Effect.succeed([Option.none<Outcome>(), current] as const);
-            const done = unmarked(current, key, build);
-            return promote.pipe(
-              Effect.as([Option.some(outcome), change(done)] as const),
-              Effect.catchTag('StageFailed', (e) =>
-                Effect.succeed([
-                  Option.some<Outcome>({ _tag: 'failed', reason: Option.some(e.reason) }),
-                  done,
-                ] as const),
-              ),
-            );
-          })
-          .pipe(
-            Effect.flatMap(
-              Option.match({ onNone: () => fenced(stage), onSome: (o) => Effect.succeed(o) }),
-            ),
-          );
+      const record = (outcome: Outcome, change: (done: BuildManifest) => BuildManifest) =>
+        recordUnder(stage, key, outcome, change);
       const ran = yield* Effect.scoped(
         Effect.andThen(Effect.forkScoped(heartbeat(key)), stage.run(ctx)),
       ).pipe(
@@ -496,13 +584,27 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
         const output = sha256Hex(ran.bytes);
         yield* store.writeFile(objectFile(output), ran.bytes);
         const ms = (yield* Clock.currentTimeMillis) - start;
-        return yield* record(
-          { _tag: 'ran', output },
-          (done) => ({
+        const built =
+          (unpromoted: Option.Option<typeof Unpromoted.Type>) => (done: BuildManifest) => ({
             ...done,
-            stages: { ...done.stages, [key]: { id: stage.id, output, ms } },
-          }),
-          stage.promote?.(ctx),
+            stages: {
+              ...done.stages,
+              [key]: Option.match(unpromoted, {
+                onNone: () => ({ id: stage.id, output, ms }),
+                onSome: (u) => ({ id: stage.id, output, ms, unpromoted: u }),
+              }),
+            },
+          });
+        return yield* recordUnder(
+          stage,
+          key,
+          { _tag: 'ran', output },
+          built(Option.none()),
+          Option.map(Option.fromUndefinedOr(stage.promote), (promote) => ({
+            run: ctx.run,
+            effect: promote(ctx),
+            built: (u: typeof Unpromoted.Type) => built(Option.some(u)),
+          })),
         );
       }
       if (ran._tag !== 'waited') return yield* record(ran, (done) => done);
@@ -523,6 +625,7 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
   /** A decision's outcome: the run made, when it is this build's to make. */
   const settle = <R>(stage: Stage<R>, key: string, start: number, decision: Decision) => {
     if (decision._tag === 'run') return runOutside(stage, key, start);
+    if (decision._tag === 'promote') return promoteOutside(stage, key, decision);
     if (decision._tag === 'busy')
       return Effect.die(`${stage.id} is settled while another build runs it`);
     return Effect.succeed<Outcome>(decision);
@@ -568,7 +671,7 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
         ...lines,
       ].join('\n'),
     );
-    // decide under the lock: cached, a plan's answer, another build's run to wait on, or this build's to run;
+    // decide under the lock: cached, a plan's answer, another build's run to wait on, this build's to run, or a promote to make again;
     // the output `spent` (one that no longer holds) counts as never built
     const decideOver = (spent: Option.Option<string>) =>
       store.transact(manifest, (current) =>
@@ -581,11 +684,29 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
             const kept = yield* fs
               .exists(objectFile(built.value.output))
               .pipe(Effect.orElseSucceed(() => false));
-            if (kept)
+            // a run left unpromoted is promoted again under this build's mark (a plan reads it cached)
+            const pending = Option.filter(
+              Option.fromUndefinedOr(built.value.unpromoted),
+              () => !options.plan && Option.isSome(Option.fromUndefinedOr(stage.promote)),
+            );
+            if (kept && Option.isNone(pending))
               return [
                 { _tag: 'cached', output: built.value.output } satisfies Decision,
                 current,
               ] as const;
+            if (kept && Option.isSome(pending)) {
+              const live = yield* liveMarks(current);
+              if (Option.isSome(Option.fromUndefinedOr(live.running?.[key])))
+                return [{ _tag: 'busy' } satisfies Decision, live] as const;
+              return [
+                {
+                  _tag: 'promote',
+                  output: built.value.output,
+                  run: pending.value.run,
+                } satisfies Decision,
+                { ...live, running: { ...live.running, [key]: yield* selfAt } },
+              ] as const;
+            }
           }
           const waited = Option.fromUndefinedOr(current.waited?.[key]);
           if (options.plan) {
