@@ -24,8 +24,7 @@ import * as Flag from 'effect/cli/Flag';
 import { Console, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { PuppetImagesBun } from '../../puppet/images-bun.ts';
 import { sha256Hex } from '../digest.ts';
-import { castCache } from './build-cli.ts';
-import { manifestOf } from './coverage-cli.ts';
+import { castCache, manifestOf } from './built.ts';
 import { CastReader } from './reader.ts';
 import { chainClip } from './stages.ts';
 

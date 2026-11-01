@@ -5,8 +5,8 @@
 // is on disk and its kept answer was drawn from the current input; bars, that
 // answer misses no bar, or each bar it misses is named; fit, its fit rows
 // pass. Whether a record is current and whether the fit rows pass are stage
-// results (`concept parts --check`, `concept render --fit-only`): a caller
-// that has not run them leaves them `unmeasured`.
+// results, the build cache's at the current inputs (`built.ts`
+// `measuredOf`): one the caller does not pass is `unmeasured`.
 
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { SheetKind } from '../../core/cast-sheet.ts';

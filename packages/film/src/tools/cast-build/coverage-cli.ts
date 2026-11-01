@@ -2,11 +2,12 @@
 // what each cast member's coverage manifest (`<member>/cutout/coverage.ts`)
 // still lacks. A member is one with a `cutout/` folder in the film's cast or
 // the library's (the film's own first, as `castFolder` reads him). It exits
-// non-zero when any member reported is incomplete or has no manifest.
-// `--measure` first runs the free stages whose results the facts read: each
-// cut puppet's `concept parts --check` and the member's fit rows
-// (`concept render --figure cutout --fit-only`); without it they are
-// reported `unmeasured`.
+// non-zero when any member reported is incomplete or has no manifest. Cut
+// and fit are the build cache's results at the current inputs (`built.ts`,
+// the keys `concept build` writes); one the cache lacks is `unmeasured`.
+// `--measure` first runs the free stages those results come from (drawing,
+// `concept parts --check`, cut, the fit render) with no spend, and the cache
+// keeps what they make.
 
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
@@ -24,15 +25,14 @@ import {
 } from 'effect';
 import type { CritiqueRule } from '../../core/critique.ts';
 import { PuppetImagesBun } from '../../puppet/images-bun.ts';
-import { castFolder } from '../cast-library.ts';
-import { renderCast } from '../cast-render.ts';
 import { Counsel } from '../counsel.ts';
 import { Critic } from '../critique.ts';
-import { FilmFolder, type FilmName, filmNamed, importFilmModule } from '../film-repo.ts';
+import { FilmFolder, type FilmName, filmNamed } from '../film-repo.ts';
 import type { Pages } from '../pages.ts';
-import { parts } from '../part-sheet-cli.ts';
-import { Coverage, CutKind, Requirement, coverageOf } from './coverage.ts';
-import { type Measured, coverageFacts, sheetOf, viewOfId } from './coverage-facts.ts';
+import { castCache, measuredOf, memberOf } from './built.ts';
+import { CutKind, Requirement, coverageOf } from './coverage.ts';
+import { coverageFacts } from './coverage-facts.ts';
+import { memberStages } from './stages.ts';
 
 /** A member reported: his manifest's file (`null` in JSON when he has none), and what it lacks. */
 const MemberReport = Schema.Struct({
@@ -85,19 +85,6 @@ export const cutoutMembers = Effect.fn('film.cast.cutoutMembers')(function* (fil
   return [...found];
 });
 
-/** The member's manifest, decoded, or none when his folder has no `cutout/coverage.ts`. */
-export const manifestOf = Effect.fn('film.cast.manifest')(function* (memberDir: string) {
-  const fs = yield* FileSystem.FileSystem;
-  const path = yield* Path.Path;
-  const file = path.join(memberDir, 'cutout', 'coverage.ts');
-  if (!(yield* fs.exists(file).pipe(Effect.orElseSucceed(() => false)))) return Option.none();
-  const loaded = yield* Effect.tryPromise(() => importFilmModule(file));
-  const coverage = yield* Schema.decodeUnknownEffect(CoverageModule)(loaded);
-  return Option.some({ file, coverage: coverage.COVERAGE });
-});
-
-const CoverageModule = Schema.Struct({ COVERAGE: Coverage });
-
 /** Stage output written to stderr, so `--json` keeps stdout to its report. */
 export const toStderr = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.gen(function* () {
@@ -112,103 +99,31 @@ export const toStderr = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     );
   });
 
-/** The free stages' results: each cut puppet's parts check, and the member's fit rows over his puppet views. */
-const measure = Effect.fn('film.cast.measure')(function* (
-  film: FilmName,
-  member: string,
-  memberDir: string,
-  coverage: Coverage,
-) {
-  const fs = yield* FileSystem.FileSystem;
-  const path = yield* Path.Path;
-  const puppets = coverage.entries.filter((e) => e.cut === 'puppet');
-  const checked = new Map<string, boolean>();
-  for (const entry of puppets) {
-    const sheet = sheetOf(entry);
-    const id = entry.fitted ?? entry.id;
-    if (checked.has(id)) continue;
-    const record = path.join(memberDir, 'cutout', 'sheets', sheet, 'record.json');
-    if (!(yield* fs.exists(record).pipe(Effect.orElseSucceed(() => false)))) continue;
-    const ok = yield* Command.runWith(parts, { version: 'coverage' })([
-      film,
-      member,
-      '--view',
-      id,
-      '--check',
-    ]).pipe(
-      toStderr,
-      Effect.as(true),
-      Effect.orElseSucceed(() => false),
-    );
-    checked.set(id, ok);
-  }
-  const views = puppets.map((e) => e.id).filter((id) => Option.isSome(viewOfId(id)));
-  const fits = yield* Effect.scoped(
-    renderCast(film, member, {
-      kinds: [],
-      views,
-      critique: false,
-      fitOnly: true,
-      figure: 'cutout',
-    }),
-  ).pipe(
-    toStderr,
-    Effect.map(
-      (made) =>
-        new Map(
-          made.render.views.map((v) => [
-            `${v.kind}-${v.view}`,
-            (v.fit ?? []).length > 0 && (v.fit ?? []).every((r) => r.pass),
-          ]),
-        ),
-    ),
-    Effect.orElseSucceed(() => new Map<string, boolean>()),
-  );
-  const measured: Record<string, Measured> = {};
-  for (const entry of puppets) {
-    measured[entry.id] = {
-      cut: Option.fromNullishOr(checked.get(entry.fitted ?? entry.id)),
-      fit: Option.fromNullishOr(fits.get(entry.id)),
-    };
-  }
-  return measured;
-});
-
-/** One member's report: his manifest's facts, measured first when asked. */
+/**
+ * One member's report: his manifest's facts, with cut and fit read from the
+ * build cache at the current inputs (`measuredOf`), its free stages run first
+ * when `run` is on.
+ */
 const reportOf = Effect.fn('film.cast.coverageReport')(function* (
   film: FilmName,
   member: string,
-  measured: boolean,
+  run: boolean,
 ) {
   const path = yield* Path.Path;
-  const memberDir = path.dirname(yield* castFolder(film, member));
-  const manifest = yield* manifestOf(memberDir);
-  return yield* Option.match(manifest, {
-    onNone: () =>
-      Effect.succeed<MemberReport>({
-        member,
-        manifest: Option.none(),
-        complete: false,
-        entries: [],
-      }),
-    onSome: ({ file, coverage }) =>
-      Effect.gen(function* () {
-        const results = yield* Effect.when(
-          measure(film, member, memberDir, coverage),
-          Effect.succeed(measured),
-        );
-        const facts = yield* coverageFacts(
-          memberDir,
-          coverage,
-          Option.getOrElse(results, () => ({})),
-        );
-        return {
-          ...coverageOf(coverage, facts),
-          member,
-          manifest: Option.some(path.relative(memberDir, file)),
-        };
-      }),
-  });
+  const found = yield* memberOf(film, member);
+  if (Option.isNone(found))
+    return { member, manifest: Option.none(), complete: false, entries: [] } satisfies MemberReport;
+  const { file, stages: m } = found.value;
+  const cache = yield* castCache;
+  const results = yield* toStderr(
+    measuredOf(yield* memberStages(m), m.coverage, member, { cache, run }),
+  );
+  const facts = yield* coverageFacts(m.memberDir, m.coverage, results);
+  return {
+    ...coverageOf(m.coverage, facts),
+    member,
+    manifest: Option.some(path.relative(m.memberDir, file)),
+  } satisfies MemberReport;
 });
 
 /** An entry's line: its id, its cut, what it lacks and what of that is unmeasured. */

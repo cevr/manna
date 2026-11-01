@@ -11,16 +11,15 @@
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
-import { Config, Console, Effect, Layer, Option, Path, Schema } from 'effect';
+import { Console, Effect, Layer, Option, Schema } from 'effect';
 import type { CritiqueRule } from '../../core/critique.ts';
 import { PuppetImagesBun } from '../../puppet/images-bun.ts';
-import { castFolder } from '../cast-library.ts';
 import { Counsel } from '../counsel.ts';
 import { Critic } from '../critique.ts';
-import { FilmFolder, filmNamed } from '../film-repo.ts';
+import { filmNamed } from '../film-repo.ts';
 import type { Pages } from '../pages.ts';
-import { coverageFacts } from './coverage-facts.ts';
-import { cutoutMembers, manifestOf, toStderr } from './coverage-cli.ts';
+import { castCache, memberOf } from './built.ts';
+import { cutoutMembers, toStderr } from './coverage-cli.ts';
 import { BuildReport, Spend, type StageReport, buildGraph } from './graph.ts';
 import { CastReader } from './reader.ts';
 import {
@@ -51,15 +50,6 @@ class BuildFailed extends Schema.TaggedError<BuildFailed>()('BuildFailed', {
 
 const ReportJson = Schema.fromJsonString(BuildReport);
 const SpendList = Schema.Array(Spend);
-
-/** The cast cache: `FILM_CAST_CACHE`, else `~/.cache/bible-film/cast`. */
-export const castCache = Effect.gen(function* () {
-  const path = yield* Path.Path;
-  const home = yield* Config.String('HOME').pipe(Config.withDefault('.'));
-  return yield* Config.String('FILM_CAST_CACHE').pipe(
-    Config.withDefault(path.join(home, '.cache', 'bible-film', 'cast')),
-  );
-});
 
 /** A stage's line: its state, id, wall time and, when it waits or failed, why. */
 const stageLine = (s: StageReport) =>
@@ -102,7 +92,6 @@ export const build = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArra
     Effect.fn('film.concept.build')(function* (input) {
       const film = yield* filmNamed(input.film);
       if (Option.isSome(input.member) === input.cast) return yield* BuildAsked.make({});
-      const path = yield* Path.Path;
       const spend = new Set(
         yield* Schema.decodeUnknownEffect(SpendList)(
           Option.match(input.spend, {
@@ -115,25 +104,14 @@ export const build = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArra
         onSome: (m) => Effect.succeed([m]),
         onNone: () => cutoutMembers(film),
       });
-      const libraryPuppets = path.join(
-        (yield* FilmFolder).paths(film).dir,
-        '..',
-        '..',
-        'library',
-        'cutout',
-        'puppets.ts',
-      );
       const members: Array<MemberStages> = [];
       for (const member of names) {
-        const memberDir = path.dirname(yield* castFolder(film, member));
-        const manifest = yield* manifestOf(memberDir);
-        if (Option.isNone(manifest)) {
+        const found = yield* memberOf(film, member);
+        if (Option.isNone(found)) {
           yield* Console.error(`build ${member}: no cutout/coverage.ts, no stages`);
           continue;
         }
-        const { coverage } = manifest.value;
-        const facts = yield* coverageFacts(memberDir, coverage, {});
-        members.push({ film, member, memberDir, libraryPuppets, coverage, facts });
+        members.push(found.value.stages);
       }
       const built = (yield* Effect.forEach(members, memberStages)).flat();
       const candidates = members.flatMap(candidatesOf);

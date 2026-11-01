@@ -388,7 +388,7 @@ export const candidatesOf = (m: MemberStages): ReadonlyArray<Candidate> =>
     }));
 
 /** Whether a fit stage's output passes: every row of every view it fit. */
-const fitPasses = (bytes: Uint8Array) =>
+export const fitPasses = (bytes: Uint8Array) =>
   Schema.decodeEffect(FitJson)(new TextDecoder().decode(bytes)).pipe(
     Effect.map((views) => views.length > 0 && views.every((v) => v.rows.every((r) => r.pass))),
     Effect.orElseSucceed(() => false),

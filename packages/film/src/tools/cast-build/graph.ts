@@ -195,6 +195,16 @@ const manifestIn = (path: Path.Path, cache: string): Manifest<BuildManifest> => 
   empty: { stages: {} },
 });
 
+/** The output the cache keeps for a stage's `key` (a report's), or none when it keeps none. */
+export const builtOutput = Effect.fn('cast.build.output')(function* (cache: string, key: string) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const current = yield* (yield* ContentStore).read(manifestIn(path, cache));
+  const built = Option.fromUndefinedOr(current.stages[key]);
+  if (Option.isNone(built)) return Option.none<Uint8Array>();
+  return yield* fs.readFile(path.join(cache, 'objects', built.value.output)).pipe(Effect.option);
+});
+
 /** A stage's place in this build: its output's hash once known, else the state that holds the stages below it. */
 type Decided =
   | { readonly _tag: 'Known'; readonly output: string }
