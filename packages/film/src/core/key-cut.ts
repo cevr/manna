@@ -94,16 +94,32 @@ export const fitKey = (
   const ground = groundOfKey(drawn);
   const [, vy0, vx1, vy1] = boxOf(view, groundOfKey(view));
   const [, dy0, dx1, dy1] = boxOf(drawn, ground);
-  const pts: KeyPt[] = [];
+  // The scored pixels, each its place and its view colour, read once: the
+  // search scores them 2,000 times.
+  const xs: number[] = [];
+  const ys: number[] = [];
+  const seen: number[] = [];
   for (let y = 0; y < view.height; y += 2)
-    for (let x = 0; x < view.width; x += 2) if (still(x, y)) pts.push([x, y]);
+    for (let x = 0; x < view.width; x += 2)
+      if (still(x, y)) {
+        xs.push(x);
+        ys.push(y);
+        seen.push(...rgbAt(view, y * view.width + x));
+      }
+  const { width: w, height: h, rgba } = drawn;
   const error = (s: number, dx: number, dy: number) => {
     let e = 0;
-    for (const [x, y] of pts) {
-      const at = rgbOrGround(drawn, Math.round(s * x + dx), Math.round(s * y + dy), ground);
-      e += away(rgbAt(view, y * view.width + x), at);
+    for (let k = 0; k < xs.length; k++) {
+      const x = Math.round(s * (xs[k] ?? 0) + dx);
+      const y = Math.round(s * (ys[k] ?? 0) + dy);
+      const i = (y * w + x) * 4;
+      for (let c = 0; c < 3; c++) {
+        let at = ground[c] ?? 0;
+        if (x >= 0 && y >= 0 && x < w && y < h) at = rgba[i + c] ?? 0;
+        e += Math.abs((seen[k * 3 + c] ?? 0) - at);
+      }
     }
-    return e / pts.length / 3;
+    return e / xs.length / 3;
   };
   const s0 = (dy1 - dy0) / (vy1 - vy0);
   const start = { s: s0, dx: dx1 - s0 * vx1, dy: dy0 - s0 * vy0 };
