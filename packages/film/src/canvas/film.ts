@@ -73,6 +73,12 @@ import {
   type PuppetSpec,
   drawPuppet,
 } from './puppet.ts';
+import {
+  type LoadedPainting,
+  type PaintingSpec,
+  type Paintings,
+  drawPainting,
+} from './painting.ts';
 import { seedOf } from '../core/random.ts';
 import { CLOCK_EPSILON, type Key, clamp, ease, heardAtOrAfter, justBefore } from '../core/time.ts';
 
@@ -99,15 +105,20 @@ type Puppets = Readonly<Record<string, PuppetSpec | undefined>>;
 /** No puppets: every `f.puppet` name is a compile error. */
 type NoPuppets = Record<never, PuppetSpec>;
 
+/** No paintings: every `f.painting` name is a compile error. */
+type NoPaintings = Record<never, PaintingSpec>;
+
 /**
  * One instant of one scene. `C` names the scene's cues, `K` its knobs, `R`
- * its rigs and `P` its puppets, when its drawing declares them.
+ * its rigs, `P` its puppets and `Pa` its paintings, when its drawing declares
+ * them.
  */
 export interface Frame<
   C extends string = string,
   K extends Knobs = Knobs,
   R extends Rigs = Rigs,
   P extends Puppets = Puppets,
+  Pa extends Paintings = Paintings,
 > {
   readonly ctx: CanvasRenderingContext2D;
   readonly w: number;
@@ -169,6 +180,14 @@ export interface Frame<
    * puppet the film has not loaded.
    */
   puppet<N extends keyof P & string>(name: N, pose: PuppetPose, look?: PuppetLook): void;
+  /**
+   * Paint a plate the drawing declares (`paintings: { sky: … }`) as one plane
+   * under the canvas's transform: its top-left at the spec's `at`, each plate
+   * pixel `scale` scene px (`canvas/painting.ts`). The parallax is the scene's:
+   * call it inside a `multiplane` plane or a plane function of its own.
+   * Throws, naming it, for a painting the film has not loaded.
+   */
+  painting<N extends keyof Pa & string>(name: N): void;
   /** The spoken words, scene-local. */
   readonly words: ReadonlyArray<Word>;
   /**
@@ -235,6 +254,8 @@ export interface SceneSpec extends Timed {
   readonly rigs?: Rigs;
   /** The puppets its draw poses by name (`f.puppet`): the film loads each before its first frame. */
   readonly puppets?: Puppets;
+  /** The painted plates its draw paints by name (`f.painting`): the film loads each before its first frame. */
+  readonly paintings?: Paintings;
   /**
    * How this scene breathes (`Drift`), in place of the film's `DRIFT`: `0`
    * holds it still (an end card), a `Drift` sets its own size. `DRIFT` when
@@ -312,18 +333,31 @@ export const drawing = <
   const K extends Knobs = NoKnobs,
   const R extends Rigs = NoRigs,
   const P extends Puppets = NoPuppets,
+  const Pa extends Paintings = NoPaintings,
 >(
   d: Omit<
     SceneSpec,
-    'id' | 'say' | 'timeline' | 'knobs' | 'rigs' | 'puppets' | 'draw' | 'light' | 'cards'
+    | 'id'
+    | 'say'
+    | 'timeline'
+    | 'knobs'
+    | 'rigs'
+    | 'puppets'
+    | 'paintings'
+    | 'draw'
+    | 'light'
+    | 'cards'
   > & {
     readonly timeline: T & Closed<T>;
     readonly knobs?: K;
     readonly rigs?: R;
     readonly puppets?: P;
-    readonly draw: (f: Frame<keyof T & string, K, R, P>) => Box | void;
-    readonly light?: Light | ((f: Frame<keyof T & string, K, R, P>) => Light);
-    readonly cards?: ReadonlyArray<CardSpec<keyof T & string, Frame<keyof T & string, K, R, P>>>;
+    readonly paintings?: Pa;
+    readonly draw: (f: Frame<keyof T & string, K, R, P, Pa>) => Box | void;
+    readonly light?: Light | ((f: Frame<keyof T & string, K, R, P, Pa>) => Light);
+    readonly cards?: ReadonlyArray<
+      CardSpec<keyof T & string, Frame<keyof T & string, K, R, P, Pa>>
+    >;
   },
 ) => d;
 
@@ -625,6 +659,8 @@ export interface Film {
   readonly rigs: FilmRigs;
   /** The puppets its scenes' drawings declare, and the loaded ones it draws with. */
   readonly puppets: FilmPuppets;
+  /** The paintings its scenes' drawings declare, and the loaded ones it draws with. */
+  readonly paintings: FilmPaintings;
 }
 
 /**
@@ -636,6 +672,17 @@ interface FilmPuppets {
   readonly declared: ReadonlyArray<PuppetSpec>;
   /** Draw with `loaded` from now on; what it returns stands them down again (the load's scope closing). */
   readonly stand: (loaded: ReadonlyMap<PuppetSpec, LoadedPuppet>) => () => void;
+}
+
+/**
+ * A film's paintings, as its puppets: every one its drawings declare
+ * (`drawing({ paintings })`), each once; and where the loader
+ * (`loadPaintings`, src/painting) stands the loaded ones for its draws.
+ */
+interface FilmPaintings {
+  readonly declared: ReadonlyArray<PaintingSpec>;
+  /** Draw with `loaded` from now on; what it returns stands them down again (the load's scope closing). */
+  readonly stand: (loaded: ReadonlyMap<PaintingSpec, LoadedPainting>) => () => void;
 }
 
 /**
@@ -1063,6 +1110,25 @@ export const createFilm = (spec: FilmSpec): Film => {
     },
   };
 
+  /** The paintings, as the puppets: every one the scenes declare, and the latest load still standing. */
+  const declaredPaintings = [
+    ...new Set(placed.flatMap((q) => Object.values(q.spec.paintings ?? {}))),
+  ];
+  const noPaintings: ReadonlyMap<PaintingSpec, LoadedPainting> = new Map();
+  let paintingStands: ReadonlyArray<ReadonlyMap<PaintingSpec, LoadedPainting>> = [];
+  let paintingsStanding = noPaintings;
+  const paintings: FilmPaintings = {
+    declared: declaredPaintings,
+    stand: (loaded) => {
+      paintingStands = [...paintingStands, loaded];
+      paintingsStanding = loaded;
+      return () => {
+        paintingStands = paintingStands.filter((up) => up !== loaded);
+        paintingsStanding = paintingStands.at(-1) ?? noPaintings;
+      };
+    },
+  };
+
   /**
    * Each scene's captions, built once from its words when the film has a
    * caption style: a captioned frame only finds its line.
@@ -1159,6 +1225,16 @@ export const createFilm = (spec: FilmSpec): Film => {
           );
         const why = drawPuppet(ctx, spec, loaded, pose, look);
         if (why !== undefined) throw new Error(`scene ${p.spec.id}: ${why}`);
+      },
+      painting: (name) => {
+        const spec = p.spec.paintings?.[name];
+        if (spec === undefined) throw new Error(`scene ${p.spec.id} has no painting "${name}"`);
+        const loaded = paintingsStanding.get(spec);
+        if (loaded === undefined)
+          throw new Error(
+            `scene ${p.spec.id}: painting ${spec.key} is not loaded (loadPaintings): a film's paintings load with it, before its first frame`,
+          );
+        drawPainting(ctx, spec, loaded, probeOf(ctx));
       },
       hand: (key) => sceneHand(p.spec.id, key, boil),
       handsOf: (of) => {
@@ -1594,6 +1670,7 @@ export const createFilm = (spec: FilmSpec): Film => {
     render,
     rigs,
     puppets,
+    paintings,
   };
 };
 

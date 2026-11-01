@@ -18,6 +18,7 @@ import type {
   TextBox,
 } from '../core/export-handle.ts';
 import type { ConceptRef, FigureMark } from '../core/match.ts';
+import type { Edge, Quad } from './painting.ts';
 
 /** What one probed frame collects: text and ink, in the order drawn, and faces and hands when asked. */
 export interface ProbeSink {
@@ -31,6 +32,21 @@ export interface ProbeSink {
   readonly footage?: FootageMark[];
   /** Given, every figure a rig declares lands here (`probeFigure`: the match's `figures` call). */
   readonly figures?: FigureMark[];
+  /** Given, every painted plate a scene paints lands here (`f.painting`: the draw leg's `PaintingEdge`). */
+  readonly paintings?: PaintingMark[];
+}
+
+/**
+ * A painted plate as a frame paints it: its key, the four corners (tl, tr,
+ * br, bl) of its rectangle in the scene layer's pixels, mapped by the
+ * transform the draw uses (a pan's offset left out: the layer moves whole,
+ * so an edge shows only inside the scene's own frame), and its open edges.
+ */
+export interface PaintingMark {
+  readonly scene: string;
+  readonly key: string;
+  readonly quad: Quad;
+  readonly open: ReadonlyArray<Edge>;
 }
 
 /** Where text and ink drawn into a context land on screen, and whose they are. */
