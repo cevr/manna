@@ -18,7 +18,8 @@ import { LATEST_SET } from '@manna/hymnal/recordings';
 /**
  * A later immutable recording set must not resolve files from an earlier
  * set: the storage is named for the latest set, so a set added (`warm-2`
- * moved hymn 663) starts a new storage, and the old one is removed whole.
+ * moved hymn 663) starts a new, empty storage for every hymn, and the old
+ * one stays on disk until Delete removes it (`removeOld`).
  */
 export const storageName = `hymnal-recordings-${LATEST_SET}-v1`;
 export const recordingStorage = (name: string) => /^hymnal-recordings-[a-z0-9-]+-v\d+$/.test(name);

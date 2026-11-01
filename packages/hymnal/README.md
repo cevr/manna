@@ -151,9 +151,16 @@ Each part says how far its placement can be trusted:
   (`held`).
 
 `why` says what lowered a part, and also records `inexact` (the verse split
-came from the phrase search, not exact repeats) and `reused` (the text has
-more stanzas than the file plays: the extra ones are laid on its last
-verse). The thresholds are constants in `src/compile.ts`; only the held
+came from the phrase search, not exact repeats). The literal `reused` stays
+in the schema so older data decodes, but no part is given it now: a file
+whose read plays fewer verses than the text has stanzas is sung on its
+sung file (`src/sung.ts`, `Sung.of(midi, stanzas)`), which plays the last
+verse again once for each stanza past them, from that verse's start to the
+file's last tick, with the tempo, meter and key in effect at the verse's
+start stated again at each pass. Every stanza is laid on its own pass and
+every line is played; `verses.midi` keeps the file's own count, so a looped
+hymn is the one whose `midi` is below its `text` (today 663, one verse for
+six stanzas). The compile and the render both read the sung file. The thresholds are constants in `src/compile.ts`; only the held
 list in `scripts/sources.ts` and the fixes in `data/fixes` name hymns. The level is judged from the fit's
 numbers alone, so it cannot see a line laid a note off: the key's section of
 the report shows `syllable` parts with lines that do not match the score.
@@ -283,8 +290,12 @@ The app continues to read compiled JSON through the portable `./hymn` export.
 `bun run render --hymns 1,46` (or `--all`) plays the hymnal's MIDI files as
 MP3 recordings in style C, "Warm band", the style the owner picked by ear from
 the listening pilot. The code is `scripts/render/`; its numbers are data in
-`scripts/render/style.ts`. The app plays the set `RECORDING_SET` from
-`src/recordings.ts` (`warm-1`), uploaded by the app's `audio:upload`
+`scripts/render/style.ts`. A set is rendered once and never replaced:
+`RECORDING_SETS` in `src/recordings.ts` lists them oldest first, `warm-1`
+(`RECORDING_SET`, every hymn) and `warm-2` (hymn 663 alone, rendered on its
+sung file), and `setOf(hymn)` names the latest set that holds a hymn, the
+one the app plays. A hymn whose sound changes is rendered into a new set
+that lists it. Each set is uploaded by the app's `audio:upload`
 (`apps/hymnal/README.md`).
 
 - `voices` (`src/voices.ts`) reads a hymn's four parts through the score's own
@@ -321,9 +332,13 @@ the listening pilot. The code is `scripts/render/`; its numbers are data in
   Measure the six again before changing the silence check or the sound.
 
 The cache is `$HYMN_RENDER_CACHE` (default `~/.cache/manna-hymn-render`), and
-the set goes to `sets/warm-1/` there unless `--out` names a folder: `<n>.mp3`,
-`<n>.json` (its checks, memory, times and resume key) and `manifest.json`. A
-hymn's resume key covers only what shapes its sound: its MIDI file, the style,
+the set goes to `sets/<set>/` there unless `--out` names a folder: `<n>.mp3`,
+`<n>.json` (its checks, memory, times and resume key) and `manifest.json`.
+`--set <name>` (default `warm-1`) names a set of `RECORDING_SETS`; the run
+refuses a set the app does not play and a `--hymns` hymn the set does not
+hold, and `--all` is the set's hymns. A
+hymn's resume key covers only what shapes its sound: its MIDI file (for a
+looped hymn, the file's bytes, its loop and `src/sung.ts`), the style,
 the lock, the sampler, NodeAV, the credits and the files the sound's code
 reaches (`AUDIO_SOURCES` in `scripts/render/run.ts`). A rerun renders a hymn
 whose key changed, and checks every other again from its record
@@ -337,7 +352,8 @@ bytes are this Mac's: another host's sampler and FFmpeg give others, so a set
 is rendered on one host and recorded with its tools' hashes.
 
 `--transpose <t>` (-5 to 6) renders the same style in another key, as the
-set `warm-1-up<t>` or `warm-1-down<-t>` (`keySet` in `src/recordings.ts`;
+set `<set>-up<t>` or `<set>-down<-t>` (`warm-1-up2`, `warm-2-down3`:
+`keySet(set, t)` in `src/recordings.ts`;
 the stepper's order is `KEY_TRANSPOSES`). Every note moves t semitones; the
 ticks, the tempo map and the velocities stay, so the words' timings hold.
 A stem that would then play a note its instrument has no sample for moves
