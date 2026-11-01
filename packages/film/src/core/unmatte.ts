@@ -246,8 +246,9 @@ const sides = (i: number, width: number, height: number) => {
  * the ground and the frame's border past his walls: a px the parts not in
  * `shadow` hold at view alpha `FENCE` or more, so his shadow on the ground,
  * which his cut names, walls nothing in. The flood steps diagonally, so a
- * gap his outline leaves only at a corner is outside, and no px it does not reach lies beside the outside or
- * on the frame: none taken back shows as a fleck on his outline. A px is
+ * gap his outline leaves only at a corner is outside, and no px it does not
+ * reach lies beside the outside or on the frame: none taken back shows as a
+ * fleck on his outline. A px is
  * enclosed when the outside does not reach it, and its clear region
  * (4-connected) is taken back but for two things that stay cleared: a region
  * holding `POCKET` px of paper, or any px of the sheet's open paper or of a
