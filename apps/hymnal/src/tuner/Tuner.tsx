@@ -541,6 +541,7 @@ function Tuner({
   return (
     <View
       testID="tuner-screen"
+      onAccessibilityEscape={() => router.back()}
       style={[styles.screen, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }]}
     >
       <View style={styles.head}>
