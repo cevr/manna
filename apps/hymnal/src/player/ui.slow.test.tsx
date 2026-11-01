@@ -39,7 +39,7 @@ import { FullPlayer } from './FullPlayer';
 import { useShowsPage } from './page';
 import { Command, Playback, Player, playerOn, type Track, type RecordingSelection } from './player';
 import { RecordingNotice } from './RecordingNotice';
-import { PlayerBar } from './PlayerBar';
+import { PlayerBar, tunerOn } from './PlayerBar';
 import { StackBottom } from './StackBottom';
 import { useCommitAtRest, useScrub } from './scrub';
 
@@ -864,6 +864,20 @@ describe('a list’s end over the bottom bar', () => {
   );
 });
 
+describe('the bar’s Tuner', () => {
+  const three = Option.getOrThrow(hymnAt('3'));
+
+  it.effect('shows on a hymn page with the ear, and never off a page or without the ear', () =>
+    Effect.sync(() => {
+      expect(tunerOn(Option.some(three), true)).toBe(true);
+      // The home screen's docked bar shows no page.
+      expect(tunerOn(Option.none(), true)).toBe(false);
+      // The web and Android have no ear.
+      expect(tunerOn(Option.some(three), false)).toBe(false);
+    }),
+  );
+});
+
 describe('the hymn page with the bottom bar', () => {
   const three = Option.getOrThrow(hymnAt('3'));
   const inPage = (page: ReturnType<typeof mount>, selector: string) =>
@@ -882,6 +896,7 @@ describe('the hymn page with the bottom bar', () => {
       const bar = Option.getOrThrow(page.find('[aria-label="Player"]'));
       expect(bar.querySelector('[aria-label="Play hymn 3"]')).not.toBeNull();
       // Bar J: the key button, the opener, Sound and Play; the page names its own hymn, so the bar does not.
+      // The web has no ear, so no Tuner (on iOS it sits before Sound: `tunerOn`).
       expect(
         [...bar.querySelectorAll('[role="button"]')].map((button) =>
           button.getAttribute('aria-label'),
