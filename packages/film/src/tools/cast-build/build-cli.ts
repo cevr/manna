@@ -23,6 +23,7 @@ import { FilmFolder, filmNamed } from '../film-repo.ts';
 import { ImageRoute } from '../image-route.ts';
 import type { Pages } from '../pages.ts';
 import type { AskStore } from '../ask-store.ts';
+import { clipMakeStages } from './clip-make.ts';
 import { castCache, castRoot, memberOf, readerLockOf } from './built.ts';
 import { cutoutMembers, toStderr } from './coverage-cli.ts';
 import { viewOfId } from './coverage-facts.ts';
@@ -185,6 +186,7 @@ export const build = <E, R>(
       }
       const src = yield* buildSources(film, renderPage);
       const built = (yield* Effect.forEach(members, (m) => memberStages(m, src))).flat();
+      const clipMakes = (yield* Effect.forEach(members, (m) => clipMakeStages(m, castRoot))).flat();
       const candidates = members.flatMap(candidatesOf);
       const sources = src.stage;
       const reader = yield* CastReader;
@@ -198,6 +200,7 @@ export const build = <E, R>(
         trainsetStage(candidates),
         trainStage(candidates, reader.sources, lockFile),
         ...candidates.map((c) => evalStage(c.renders, sources.eval)),
+        ...clipMakes,
         ...members.flatMap((m) => clipStages(m, cache, sources.chain)),
         lockStage({
           file: lockFile,

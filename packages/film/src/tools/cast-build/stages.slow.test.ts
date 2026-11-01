@@ -385,7 +385,17 @@ describe('memberStages', () => {
           libraryPuppets: `${dir}/library-puppets.ts`,
           coverage: {
             ...COVERAGE,
-            clips: [{ id: 'b', file: 'cutout/raise/clip/b.mp4', bands: [] }],
+            clips: [
+              {
+                id: 'b',
+                file: 'cutout/raise/clip/b.mp4',
+                bands: [],
+                expect: [],
+                given: { first: 'turnaround-front' },
+                prompt: 'p',
+                seed: 7,
+              },
+            ],
           },
           facts: allComplete,
         },

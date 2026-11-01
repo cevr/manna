@@ -88,6 +88,11 @@ export const COVERAGE: CoverageManifest = {
         [0, 40],
         [41, 123],
       ],
+      expect: [['turnaround-front'], ['single-single-1']],
+      given: { first: 'turnaround-front' },
+      prompt:
+        'Flat 2D cut-paper cartoon animation on a static paper background. The boy stands still and slowly raises his right hand (on the left side of the picture), lifting a small baby bottle from his side up to shoulder height beside his face, then holds the pose. Only the arm moves; body, feet and head stay in place. Locked camera, no zoom, no pan, same flat colours and thick dark outline throughout.',
+      seed: 7,
     },
   ],
 };

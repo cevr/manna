@@ -49,15 +49,23 @@ export interface Entry extends Schema.Schema.Type<typeof Entry> {}
 
 /**
  * A clip the reader is scored on (`eval:clip:<id>`, `concept reader
- * chain`): its file, from the member's folder, and the bands of frames
- * (first and last, inclusive) its report means over beside the whole clip.
+ * chain`): its file, from the member's folder; the bands of frames (first
+ * and last, inclusive) its report means over beside the whole clip, and for
+ * each band the entries it may name; and how it is made (`clip:<id>`,
+ * `clips.ts`): the entries its first and last frames are drawn from, the
+ * prompt and the seed of its fal call. Its frames, provenance and mp4 lie
+ * beside each other: `<file stem>.first.png`, `.last.png`, `.json`.
  */
 const Clip = Schema.Struct({
   id: Schema.String,
   file: Schema.String,
   bands: Schema.Array(Schema.Tuple([Schema.Finite, Schema.Finite])),
+  expect: Schema.Array(Schema.Array(Schema.String)),
+  given: Schema.Struct({ first: Schema.String, last: Schema.optionalKey(Schema.String) }),
+  prompt: Schema.String,
+  seed: Schema.Int,
 });
-interface Clip extends Schema.Schema.Type<typeof Clip> {}
+export interface Clip extends Schema.Schema.Type<typeof Clip> {}
 
 /** A member's manifest: every drawing the pipeline needs of him, and the clips his reader is scored on. */
 export const Coverage = Schema.Struct({
