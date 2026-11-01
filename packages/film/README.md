@@ -2876,9 +2876,14 @@ A cut-out member's coverage manifest (his `cutout/coverage.ts`, data only)
 names each drawing he needs: a `puppet` entry is cut into parts, a `key`
 entry is a drawn key. `film concept coverage <film> (<member> | --cast)
 [--measure] [--json]` (`tools/cast-build/coverage-cli.ts`) prints what each
-entry still lacks (drawn, kept, cut, fit) and exits non-zero while any
-member is incomplete; `--measure` first runs the free stages its answers
-come from.
+entry still lacks (drawn, kept, cut, bars, fit) and exits non-zero while
+any member is incomplete; `--measure` first runs the free stages its
+answers come from. An entry missing nothing is `complete`: the library's
+readiness. A puppet entry cut from its own sheet that is drawn, kept, cut
+and passes its fit rows is `trainable`, its bars aside (`coverage.ts`): the
+reader needs a puppet that poses as its sheet does, and the bars judge the
+laid paint for a film frame. A fitted entry is never trainable: it yields
+no shard, as its parts and pose lie in its source view's.
 
 `film concept build <film> (<member> | --cast) [--plan] [--touch <path> …]
 [--spend okra,modal] [--json]` (`tools/cast-build/build-cli.ts`) builds
@@ -2890,7 +2895,9 @@ each member's stages from his manifest (`tools/cast-build/stages.ts`):
   parts are posed by), `fit` (the fit rows of `film concept render --figure
   cutout --fit-only`) and `renders` (its synthetic training renders, one
   shard);
-- per film: `trainset` (every complete drawing's shard), `train` (one
+- per entry, after those: `status` (its `complete` and `trainable`
+  verdicts, read off its stages' outputs);
+- per film: `trainset` (every trainable drawing's shard), `train` (one
   reader, trained on Modal), `eval` (each drawing's held renders read and
   scored on this machine) and the owner's `ask` and `draw`
   (`tools/cast-build/owner-ask.ts`).
@@ -2902,7 +2909,7 @@ asks again. `--plan` runs nothing and reads no lab: it prints each stage's
 state (`cached`, `stale`, `waiting-*`) and key; `--touch` plans as if a
 file changed, and `--plan --spend modal` prints the key a train would run
 at. The training set it would read is the `trainset` stage's output: one
-`<member>/<drawing>=<shard hash>` line for each complete drawing.
+`<member>/<drawing>=<shard hash>` line for each trainable drawing.
 
 The cache is `FILM_CAST_CACHE`, else `~/.cache/bible-film/cast`: each
 stage's output kept as `objects/<sha256>`, and the manifest `build.json`
