@@ -132,15 +132,19 @@ describe('time', () => {
     const wrong: Array<string> = [];
     for (const fps of [...broadcast, ...odd]) {
       const last = Math.ceil(fps) - 1;
-      let before = '';
+      // The last timecode's `HH:MM:SS` and its frame: a time is read in that order.
+      let beforeSecond = '';
+      let beforeFrame = 0;
       // Each frame's start, and two times inside it.
       for (let i = 0; i < 1000 * 3; i++) {
-        const [hh = '', mm = '', ss = '', fr = ''] = timecode(i / 3 / fps, fps).split(':');
-        const ff = Number(fr);
-        const now = `${hh}:${mm}:${ss}:${fr.padStart(4, '0')}`;
-        if (!(ff >= 0 && ff <= last) || now < before)
-          wrong.push(`${fps} fps, frame ${i / 3}: ${now}`);
-        before = now;
+        const now = timecode(i / 3 / fps, fps);
+        const cut = now.lastIndexOf(':');
+        const second = now.slice(0, cut);
+        const ff = Number(now.slice(cut + 1));
+        const back = second < beforeSecond || (second === beforeSecond && ff < beforeFrame);
+        if (!(ff >= 0 && ff <= last) || back) wrong.push(`${fps} fps, frame ${i / 3}: ${now}`);
+        beforeSecond = second;
+        beforeFrame = ff;
       }
     }
     expect(wrong.slice(0, 5)).toEqual([]);
