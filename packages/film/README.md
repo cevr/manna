@@ -2937,8 +2937,16 @@ The reader's Python files take three roles (`tools/cast-build/reader.ts`
 every file they import: `train` is what `modal_app.py` runs (`modal_app.py`,
 `model.py`, `train.py`); `read` is what `read.py` runs, with the local
 environment (`pyproject.toml`, `uv.lock`); `eval` is `read` with
-`eval.py`. A reader file that imports through `importlib`, `__import__` or
-`runpy` fails the scan, as its edge would be hidden. The reader key is the
+`eval.py`. The scan reads code only: strings and comments are taken out
+first, so neither makes an edge or hides the import after it, and an import
+counts wherever a statement starts (a line's start, indented or not, after
+`;`, in a one-line suite such as `if x: import y`). It fails closed, naming
+the file and the line: an `import` left in code that no import statement it
+reads holds, an import it cannot read, a string that does not end, and a
+file that imports through `importlib`, `__import__` or `runpy`, as each
+would hide an edge. Its rules are tested on an in-memory disk in
+`reader.test.ts`; the committed folder's roles are read in
+`reader.slow.test.ts`. The reader key is the
 training set, the config and the `train` files, each named by its basename
 and hash; the lock names those files as `trainer`. Each `eval` stage reads
 the `eval` files, and each `eval:clip` stage and the clip read cache
