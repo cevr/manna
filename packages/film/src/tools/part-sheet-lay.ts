@@ -114,8 +114,45 @@ export const BARS = {
   leastCellPx: LEAST_CELL_PX,
 } as const;
 
+/** A raster with each pixel's CIELAB (`labOf`) at hand: L*, a* and b*, and all three. */
+interface Seen extends Raster {
+  readonly lightness: (i: number) => number;
+  readonly a: (i: number) => number;
+  readonly b: (i: number) => number;
+  readonly lab: (i: number) => Rgb;
+}
+
+/** `r` with each pixel's CIELAB worked out on its first read and kept: one lay reads each pixel's colour many times. */
+const seenOf = (r: Raster): Seen => {
+  const n = r.width * r.height;
+  const lab = new Float64Array(n * 3);
+  const done = new Uint8Array(n);
+  const at = (i: number) => {
+    if (done[i] === 0) {
+      const [l, a, b] = labOf(rgbAt(r, i));
+      lab[3 * i] = l;
+      lab[3 * i + 1] = a;
+      lab[3 * i + 2] = b;
+      done[i] = 1;
+    }
+    return 3 * i;
+  };
+  return {
+    width: r.width,
+    height: r.height,
+    rgba: r.rgba,
+    lightness: (i) => lab[at(i)] ?? 0,
+    a: (i) => lab[at(i) + 1] ?? 0,
+    b: (i) => lab[at(i) + 2] ?? 0,
+    lab: (i) => {
+      const k = at(i);
+      return [lab[k] ?? 0, lab[k + 1] ?? 0, lab[k + 2] ?? 0];
+    },
+  };
+};
+
 /** Whether pixel `i` of `r` is paint, lighter than the ink. */
-const lightAt = (r: Raster, i: number) => labOf(rgbAt(r, i))[0] > INK_L;
+const lightAt = (r: Seen, i: number) => r.lightness(i) > INK_L;
 
 /** The mean of `v`'s values, 0 for none. */
 const meanOf = (v: ReadonlyArray<number>) => v.reduce((a, b) => a + b, 0) / Math.max(1, v.length);
@@ -179,18 +216,18 @@ const neighbours = (i: number, w: number, h: number): ReadonlyArray<number> => {
  * ground reaches through answer pixels of the answer's own ground colour
  * (its median where the view shows ground, near by the spread there).
  */
-const paintedOf = (sheet: Sheet, hidden: Uint8Array, answer: Raster): Uint8Array => {
+const paintedOf = (sheet: Sheet, hidden: Uint8Array, answer: Seen): Uint8Array => {
   const { width: w, height: h } = sheet;
   const ground = Arr.range(0, w * h - 1).filter((i) => sheet.owner[i] === 0);
   const lab = labOf(medianOver(answer, ground));
-  const spread = ground.map((i) => deltaE(labOf(rgbAt(answer, i)), lab)).sort((a, b) => a - b);
+  const spread = ground.map((i) => deltaE(answer.lab(i), lab)).sort((a, b) => a - b);
   const near = Math.max(PAPER_NEAR, 1.5 * (spread[Math.floor(0.9 * (spread.length - 1))] ?? 0));
   const reached = new Uint8Array(w * h);
   const queue = [...ground];
   for (const i of ground) reached[i] = 1;
   for (let q = 0; q < queue.length; q++)
     for (const j of neighbours(queue[q] ?? 0, w, h))
-      if (reached[j] === 0 && hidden[j] === 1 && deltaE(labOf(rgbAt(answer, j)), lab) <= near) {
+      if (reached[j] === 0 && hidden[j] === 1 && deltaE(answer.lab(j), lab) <= near) {
         reached[j] = 1;
         queue.push(j);
       }
@@ -214,7 +251,7 @@ const behindOf = (sheet: Sheet, hidden: Uint8Array): Uint8Array => {
 };
 
 /** The mean RGB step from each piece of `mine` (four-way) to the pixels part `id` keeps beside it, both paint; a piece beside none has no step. */
-const stepsOf = (view: Raster, sheet: Sheet, laid: Raster, mine: Uint8Array, id: number) => {
+const stepsOf = (view: Seen, sheet: Sheet, laid: Seen, mine: Uint8Array, id: number) => {
   const { width: w, height: h } = view;
   const { components, labels } = componentsOf(mine, w, h, false);
   const sums = components.map(() => [0, 0, 0, 0]);
@@ -238,11 +275,11 @@ const stepsOf = (view: Raster, sheet: Sheet, laid: Raster, mine: Uint8Array, id:
  * shows where the paint meets the part. The ink keeps the answer's colour.
  */
 const tonedTo = (
-  view: Raster,
+  view: Seen,
   sheet: Sheet,
   painted: Uint8Array,
   behind: Uint8Array,
-  laid: Raster,
+  laid: Seen,
 ): Raster => {
   const rgba = Uint8Array.from(laid.rgba);
   for (const id of Arr.range(1, sheet.parts.length)) {
@@ -263,11 +300,11 @@ const tonedTo = (
 
 /** `sheet` with the answer's paint laid under each part a moving part hides, at the pixels `painted` marks, each under its part behind, in that part's tone (`tonedTo`). */
 const layHidden = (
-  view: Raster,
+  view: Seen,
   sheet: Sheet,
   behind: Uint8Array,
   painted: Uint8Array,
-  laid: Raster,
+  laid: Seen,
 ) => {
   const answer = tonedTo(view, sheet, painted, behind, laid);
   const start: Result.Result<Sheet, { readonly message: string }> = Result.succeed(sheet);
@@ -426,12 +463,12 @@ const elongationOf = (count: number, [sx, sy, sxx, syy, sxy]: ReadonlyArray<numb
  * where the set meets another part, so it serves as neighbours but is not
  * read.
  */
-const offMedianOf = (r: Raster, set: Uint8Array) => {
+const offMedianOf = (r: Seen, set: Uint8Array) => {
   const { width: w, height: h } = r;
   const at: number[] = [];
   for (let i = 0; i < w * h; i++) if (set[i] === 1 && !onRing(set, i, w, h)) at.push(i);
   const l = new Float32Array(w * h);
-  for (let i = 0; i < w * h; i++) if (set[i] === 1) l[i] = labOf(rgbAt(r, i))[0];
+  for (let i = 0; i < w * h; i++) if (set[i] === 1) l[i] = r.lightness(i);
   const off = new Float32Array(w * h);
   // one buffer holds each pixel's 5 × 5 neighbours in turn, sorted in place
   const around = new Float64Array(25);
@@ -465,7 +502,7 @@ const sortedMedian = (v: Float64Array, n: number) => {
  * as dark as ink on the mean, are an outline drawn in the paint, not
  * speckle; a lighter line, a dash of another part's colour, is speckle.
  */
-const speckShare = (r: Raster, set: Uint8Array) => {
+const speckShare = (r: Seen, set: Uint8Array) => {
   const { at, components, outline } = specksOf(r, set);
   const specks = components.filter((_, k) => outline[k] !== true).reduce((n, c) => n + c.area, 0);
   return { share: specks / Math.max(1, at.length), px: at.length };
@@ -478,7 +515,7 @@ const speckShare = (r: Raster, set: Uint8Array) => {
  * `SPECK_LINE_PX` or more, `SPECK_LINE_LONG` times as long as it is wide,
  * as dark as ink on the mean.
  */
-const specksOf = (r: Raster, set: Uint8Array) => {
+const specksOf = (r: Seen, set: Uint8Array) => {
   const { width: w, height: h } = r;
   const { at, off, l } = offMedianOf(r, set);
   const speck = Uint8Array.from(off, (d) => Number(d > SPECK_L));
@@ -506,17 +543,17 @@ const specksOf = (r: Raster, set: Uint8Array) => {
  * cloth is shaded, so grain in cloth as dark as `INK_L` is read, and an
  * outline drawn through the cloth is not grain.
  */
-const clothOf = (r: Raster, set: Uint8Array) => {
+const clothOf = (r: Seen, set: Uint8Array) => {
   const { labels, outline } = specksOf(r, set);
   return Uint8Array.from(set, (s, i) => Number(s === 1 && outline[labels[i] ?? -1] !== true));
 };
 
 /** `set` less its pixels darker than `OUTLINE_L` on `r`: an outline's ink, which no cloth is as dark as. */
-const lessOutline = (r: Raster, set: Uint8Array) =>
-  Uint8Array.from(set, (s, i) => Number(s === 1 && labOf(rgbAt(r, i))[0] >= OUTLINE_L));
+const lessOutline = (r: Seen, set: Uint8Array) =>
+  Uint8Array.from(set, (s, i) => Number(s === 1 && r.lightness(i) >= OUTLINE_L));
 
 /** Summed-area tables of a*, b* and count over the pixels `set` marks on `r`, and the sums over a box of them. */
-const summedAb = (r: Raster, set: Uint8Array) => {
+const summedAb = (r: Seen, set: Uint8Array) => {
   const { width: w, height: h } = r;
   const s = w + 1;
   const [a, b, n] = [
@@ -528,10 +565,9 @@ const summedAb = (r: Raster, set: Uint8Array) => {
     for (let x = 0; x < w; x++) {
       const i = y * w + x;
       const on = Number(set[i] === 1);
-      const lab = labOf(rgbAt(r, i));
       const j = (y + 1) * s + x + 1;
-      a[j] = on * lab[1] + (a[j - 1] ?? 0) + (a[j - s] ?? 0) - (a[j - s - 1] ?? 0);
-      b[j] = on * lab[2] + (b[j - 1] ?? 0) + (b[j - s] ?? 0) - (b[j - s - 1] ?? 0);
+      a[j] = on * r.a(i) + (a[j - 1] ?? 0) + (a[j - s] ?? 0) - (a[j - s - 1] ?? 0);
+      b[j] = on * r.b(i) + (b[j - 1] ?? 0) + (b[j - s] ?? 0) - (b[j - s - 1] ?? 0);
       n[j] = on + (n[j - 1] ?? 0) + (n[j - s] ?? 0) - (n[j - s - 1] ?? 0);
     }
   const sum = (t: Float64Array, x0: number, y0: number, x1: number, y1: number) =>
@@ -567,7 +603,7 @@ const summedOf = (w: number, h: number, value: (i: number) => number) => {
  * it. The cell furthest above its cloth stands for the part, with how many
  * cells were read; none read leaves it unread.
  */
-const fineGrain = (composite: Raster, view: Raster, paint: Uint8Array, kept: Uint8Array) => {
+const fineGrain = (composite: Seen, view: Seen, paint: Uint8Array, kept: Uint8Array) => {
   const { width: w, height: h } = view;
   const painted = offMedianOf(composite, paint);
   const near = offMedianOf(view, kept);
@@ -614,7 +650,7 @@ const fineGrain = (composite: Raster, view: Raster, paint: Uint8Array, kept: Uin
  * its cloth stands for the region, with how many cells were read; none read
  * leaves it unread.
  */
-const chromaCells = (composite: Raster, view: Raster, paint: Uint8Array, kept: Uint8Array) => {
+const chromaCells = (composite: Seen, view: Seen, paint: Uint8Array, kept: Uint8Array) => {
   const { width: w, height: h } = view;
   const beside = summedAb(view, kept);
   const cells = new Map<number, { pa: number; pb: number; ka: number; kb: number; px: number }>();
@@ -631,9 +667,8 @@ const chromaCells = (composite: Raster, view: Raster, paint: Uint8Array, kept: U
     const key = Math.floor(y / CHROMA_CELL) * w + Math.floor(x / CHROMA_CELL);
     const cell = cells.get(key) ?? { pa: 0, pb: 0, ka: 0, kb: 0, px: 0 };
     cells.set(key, cell);
-    const lab = labOf(rgbAt(composite, i));
-    cell.pa += lab[1];
-    cell.pb += lab[2];
+    cell.pa += composite.a(i);
+    cell.pb += composite.b(i);
     cell.ka += cloth.a / cloth.n;
     cell.kb += cloth.b / cloth.n;
     cell.px += 1;
@@ -685,7 +720,7 @@ const latticeReach = (at: Uint8Array, id: number, w: number, h: number) => {
  * ring about it. The ring is where a part's outline runs, so no read takes
  * it (as the specks' read).
  */
-const partGrain = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster, id: number) => {
+const partGrain = (view: Seen, sheet: Sheet, at: Uint8Array, composite: Seen, id: number) => {
   const { width: w, height: h } = view;
   const paint = clothOf(
     composite,
@@ -736,7 +771,7 @@ const partGrain = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster
  * included: a fleck of another part's colour in the paint. The chroma is
  * read on paint and cloth lighter than the ink.
  */
-const regionsOf = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster) => {
+const regionsOf = (view: Seen, sheet: Sheet, at: Uint8Array, composite: Seen) => {
   const { width: w, height: h } = view;
   const name = (id: number) => sheet.parts[id - 1]?.name ?? '';
   const keys = [
@@ -800,10 +835,9 @@ const regionsOf = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster
  * The lay tones each part's paint on its own, so a step the answer does not
  * paint is the lay's.
  */
-const stepsAcross = (sheet: Sheet, at: Uint8Array, composite: Raster, laid: Raster) => {
+const stepsAcross = (sheet: Sheet, at: Uint8Array, composite: Seen, laid: Seen) => {
   const { width: w, height: h } = composite;
   const name = (id: number) => sheet.parts[id - 1]?.name ?? '';
-  const lightness = (r: Raster, i: number) => labOf(rgbAt(r, i))[0];
   const lines = new Map<
     string,
     { a: number; b: number; under: number; laid: number; answer: number; pairs: number }
@@ -822,8 +856,8 @@ const stepsAcross = (sheet: Sheet, at: Uint8Array, composite: Raster, laid: Rast
       const key = `${a}/${b}/${under}`;
       const line = lines.get(key) ?? { a, b, under, laid: 0, answer: 0, pairs: 0 };
       lines.set(key, line);
-      line.laid += lightness(composite, p) - lightness(composite, q);
-      line.answer += lightness(laid, p) - lightness(laid, q);
+      line.laid += composite.lightness(p) - composite.lightness(q);
+      line.answer += laid.lightness(p) - laid.lightness(q);
       line.pairs += 1;
     }
   }
@@ -844,7 +878,7 @@ const stepsAcross = (sheet: Sheet, at: Uint8Array, composite: Raster, laid: Rast
 };
 
 /** Each painted pixel's part (k + 1, 0 for none), the seam pairs, and the painted pixels no opaque part in front hides. */
-const paintOf = (view: Raster, sheet: Sheet) => {
+const paintOf = (view: Seen, sheet: Sheet) => {
   const { width: w, height: h } = view;
   const at = new Uint8Array(w * h);
   const seam: number[] = [];
@@ -860,7 +894,7 @@ const paintOf = (view: Raster, sheet: Sheet) => {
       for (const j of neighbours(i, w, h).filter(
         (j) => sheet.owner[j] === k + 1 && lightAt(view, j),
       ))
-        if (paint[0] > INK_L) seam.push(deltaE(paint, labOf(rgbAt(view, j))));
+        if (paint[0] > INK_L) seam.push(deltaE(paint, view.lab(j)));
     }
   });
   return { at, seam, visible };
@@ -876,11 +910,11 @@ export const domainOf = (sheet: Sheet, hidden: Uint8Array) => {
 
 /** The hidden paint of `sheet` (laid from `laid`, the answer over the view) measured against `view` on the domain the sheet fixes. */
 const measureHidden = (
-  view: Raster,
+  view: Seen,
   sheet: Sheet,
   domain: ReturnType<typeof domainOf>,
   moving: ReadonlyArray<string>,
-  laid: Raster,
+  laid: Seen,
 ): HiddenMeasures => {
   const n = view.width * view.height;
   const { at, seam, visible } = paintOf(view, sheet);
@@ -889,10 +923,10 @@ const measureHidden = (
     if (k > 0)
       rgba.set(sheet.parts[k - 1]?.pixels.rgba.subarray(i * 4, i * 4 + 4) ?? MAGENTA, i * 4);
   });
-  const composite = { width: view.width, height: view.height, rgba };
+  const composite = seenOf({ width: view.width, height: view.height, rgba });
   const drift = Arr.range(0, n - 1)
     .filter((i) => domain.kept[i] === 1)
-    .map((i) => deltaE(labOf(rgbAt(laid, i)), labOf(rgbAt(view, i))));
+    .map((i) => deltaE(laid.lab(i), view.lab(i)));
   const ids = sheet.parts.map((_, k) => k + 1);
   const regions = regionsOf(view, sheet, at, composite);
   return {
@@ -1081,13 +1115,14 @@ export const layAnswer = (target: LayTarget, answer: Raster) => {
   // the answer drawn at another size than the portrait it was asked at
   const k = (portrait.width / answer.width + portrait.height / answer.height) / 2;
   const fit = fitSimilarity(view, answer, where, { s: pad.s * k, dx: pad.dx, dy: pad.dy });
-  const laid = drawSimilar(answer, view.width, view.height, fit);
+  const laid = seenOf(drawSimilar(answer, view.width, view.height, fit));
   // the paint takes one answer pixel each, so okra's grain is not averaged away; the drift reads the footprint mean
-  const point = drawPoint(answer, view.width, view.height, fit);
+  const point = seenOf(drawPoint(answer, view.width, view.height, fit));
   const painted = paintedOf(sheet, hidden, point);
-  return Result.map(layHidden(view, sheet, domain.behind, painted, point), (made) => ({
+  const seen = seenOf(view);
+  return Result.map(layHidden(seen, sheet, domain.behind, painted, point), (made) => ({
     fit,
     made,
-    measures: measureHidden(view, made, domain, target.moving, laid),
+    measures: measureHidden(seen, made, domain, target.moving, laid),
   }));
 };
