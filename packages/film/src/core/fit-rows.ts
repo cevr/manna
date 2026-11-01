@@ -46,7 +46,15 @@
 // Pure: RGBA in, rows out, the same rows for the same crops.
 
 import { Option } from 'effect';
-import { type Rgb, componentsOf, deltaE, labOf, lumaOf, rgbAt } from './cast-sheet-pixels.ts';
+import {
+  type Rgb,
+  componentsOf,
+  deltaE,
+  labOf,
+  labsOf,
+  lumaOf,
+  rgbAt,
+} from './cast-sheet-pixels.ts';
 import { type LabelRegion, type LabelTable, labelRegions, touchingIn } from './label.ts';
 import type { Raster } from './raster.ts';
 
@@ -309,7 +317,10 @@ const thinStrips = (mask: Uint8Array, w: number, h: number): Uint8Array => {
 const groundOf = (r: Raster) => {
   const { width: w, height: h } = r;
   const n = w * h;
-  const labs = Array.from({ length: n }, (_, i) => labOf(rgbAt(r, i)));
+  // a crop holds few colours against its pixels: each colour's Lab is worked out once
+  const labAt = labsOf(r);
+  const labs: Rgb[] = [];
+  for (let i = 0; i < n; i++) labs.push(labAt(i));
   const { lab, near } = groundColour(r, labs);
   const like = maskWhere(n, (i) => deltaE(labs[i] ?? lab, lab) <= near);
   const ground = fromBorder(like, w, h);
