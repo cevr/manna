@@ -18,6 +18,7 @@ import {
   burnIn,
   pictureOn,
   pictureParams,
+  scenesBurnIn,
 } from './board-render.ts';
 import { filmClock, timedBeat } from './film-timeline.ts';
 import { layout } from './layout.ts';
@@ -251,10 +252,47 @@ describe('the burn-in', () => {
   });
 });
 
+describe("a scenes render's burn-in", () => {
+  const placed = Result.getOrThrow(
+    layout(
+      [
+        { id: 'cold', say: 'A baby drinks {cup}milk, {grown}and grows.', lead: 1.2 },
+        { id: 'title' },
+      ],
+      { voice: '', scenes: {} },
+      30,
+    ),
+  );
+  const cold = placed[0]!;
+  /** Film second of `cold`'s mark `name`. */
+  const said = (name: string) => cold.start + cold.speechStart + cold.voice.marks.get(name)!;
+
+  test("names the time, the beat, and the last mark said: `start` before the beat's first", () => {
+    expect(scenesBurnIn(0.5, cold, false)).toBe('0:00.5 · cold · start');
+    expect(scenesBurnIn(said('cup') - 0.1, cold, false)).toMatch(/ · cold · start$/);
+    expect(scenesBurnIn(said('cup'), cold, false)).toMatch(/ · cold · cup$/);
+    expect(scenesBurnIn((said('cup') + said('grown')) / 2, cold, false)).toMatch(/ · cold · cup$/);
+    expect(scenesBurnIn(said('grown') + 0.1, cold, false)).toMatch(/ · cold · grown$/);
+  });
+
+  test('names a full-screen card, and a beat with no marks by its start', () => {
+    expect(scenesBurnIn(said('grown') + 0.1, cold, true)).toMatch(/ · cold · card$/);
+    const title = placed[1]!;
+    expect(scenesBurnIn(title.start + 0.2, title, false)).toMatch(/ · title · start$/);
+  });
+
+  test("says the film time as the Board's burn-in does", () => {
+    expect(scenesBurnIn(62.37, cold, false).split(' · ')[0]).toBe(
+      burnIn(62.37, frameAt(2).shown, false).split(' · ')[0],
+    );
+  });
+});
+
 describe('the export page query', () => {
   test('reads back the picture it was built for', () => {
     for (const picture of [
-      Picture.Scenes(),
+      Picture.Scenes({ review: false }),
+      Picture.Scenes({ review: true }),
       Picture.Board({ review: false }),
       Picture.Board({ review: true }),
     ])

@@ -56,12 +56,12 @@ interface PagesService {
   ) => Effect.Effect<ExportPages, PageOpenError, Scope.Scope>;
 }
 
-/** The player's export page for `film` on the app's server at `server`, drawing `picture` (its scenes unless given). */
+/** The player's export page for `film` on the app's server at `server`, drawing `picture` (its scenes, no burn-in, unless given). */
 export const exportUrl = (
   server: string,
   film: string,
   captions: boolean,
-  picture: Picture = Picture.Scenes(),
+  picture: Picture = Picture.Scenes({ review: false }),
 ): string =>
   `${server}?${[
     `film=${encodeURIComponent(film)}`,

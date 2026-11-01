@@ -211,7 +211,9 @@ describe('jobOf', () => {
   });
 
   test('--board draws the Board, --review with its burn-in; the burn-in needs the Board, a short its own page', () => {
-    expect(Result.getOrThrow(jobOf(flags))).toMatchObject({ picture: Picture.Scenes() });
+    expect(Result.getOrThrow(jobOf(flags))).toMatchObject({
+      picture: Picture.Scenes({ review: false }),
+    });
     expect(Result.getOrThrow(jobOf({ ...flags, board: true }))).toMatchObject({
       picture: Picture.Board({ review: false }),
     });

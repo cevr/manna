@@ -386,7 +386,7 @@ export const jobOf = (flags: RenderFlags): Result.Result<RenderJob, FlagsConflic
     server: flags.server,
     picture: Bool.match(flags.board, {
       onTrue: () => Picture.Board({ review: flags.review }),
-      onFalse: () => Picture.Scenes(),
+      onFalse: () => Picture.Scenes({ review: false }),
     }),
     cut: Option.match(flags.scope.short, {
       onNone: () => Cut.Whole(),

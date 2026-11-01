@@ -1,32 +1,33 @@
 // What a Board render shows at a film second (`film render --board`): the
 // animatic's shot there (`shotsOf`, the one rule for when a panel shows),
 // dissolved into the next across its cut, each picture panel moving slowly
-// over its hold, and the line a review copy burns in. A picture panel's
+// over its hold, and the line a review copy burns in (a Board's `burnIn`, a
+// scenes render's `scenesBurnIn`). A picture panel's
 // motion is a pure function of its id, so the same panel moves the same way
 // on every render; a card (a text panel, a beat with no panel) holds still.
 // Its times are whole ticks of the Board's clock (`BoardClock`), so a frame
 // moved by whole frames with its shots works out the same numbers.
 // Pure:the page paints what this decides (`canvas/board.ts`, `boardFilm`).
 
-import { Array as Arr, Boolean as Bool, Data, Option, Predicate } from 'effect';
+import { Array as Arr, Boolean as Bool, Data, Option, Order, Predicate } from 'effect';
 import { type BoardFile, shownTry } from './board.ts';
 import { RenderVariantName } from './catalogue.ts';
-import type { Placed } from './layout.ts';
+import { type Placed, beatTime } from './layout.ts';
 import { Shot, shotsOf } from './animatic.ts';
 import { clockBeat, timedBeat } from './film-timeline.ts';
-import { TICKS_PER_FRAME, frameAtOrBefore, ticksAt } from './time.ts';
+import { CLOCK_EPSILON, TICKS_PER_FRAME, frameAtOrBefore, ticksAt } from './time.ts';
 
-/** What a render's frames picture: the film's scenes, or its Board (`review`: with the burn-in). */
+/** What a render's frames picture: the film's scenes or its Board, each with the burn-in when `review`. */
 export type Picture = Data.TaggedEnum<{
-  Scenes: {};
+  Scenes: { readonly review: boolean };
   Board: { readonly review: boolean };
 }>;
 export const Picture = Data.taggedEnum<Picture>();
 
-/** The export page's query words for `picture`: none for the scenes, `board` (and `review`) for the Board. */
+/** The export page's query words for `picture`: `board` for the Board, and `review` for a review copy of either. */
 export const pictureParams = (picture: Picture): ReadonlyArray<string> =>
   Picture.$match(picture, {
-    Scenes: () => [],
+    Scenes: ({ review }) => Arr.filter(['review'], () => review),
     Board: ({ review }) => ['board', ...Arr.filter(['review'], () => review)],
   });
 
@@ -34,7 +35,7 @@ export const pictureParams = (picture: Picture): ReadonlyArray<string> =>
 export const pictureOn = (params: URLSearchParams): Picture =>
   Bool.match(params.has('board'), {
     onTrue: () => Picture.Board({ review: params.has('review') }),
-    onFalse: () => Picture.Scenes(),
+    onFalse: () => Picture.Scenes({ review: params.has('review') }),
   });
 
 /** A Board render's catalogue variant when `--variant` names none: `board`, its review copy `board-review`. */
@@ -42,6 +43,21 @@ export const boardVariant = (review: boolean): RenderVariantName =>
   RenderVariantName.make(
     Bool.match(review, { onTrue: () => 'board-review', onFalse: () => 'board' }),
   );
+
+/**
+ * A render's catalogue variant when `--variant` names none, by its picture:
+ * a Board's (`boardVariant`), a scenes review copy `review`, and none for the
+ * scenes' own frames (`main`, or a wedge's name: `wedgeVariant`).
+ */
+export const pictureVariant = (picture: Picture): Option.Option<RenderVariantName> =>
+  Picture.$match(picture, {
+    Scenes: ({ review }) =>
+      Option.map(
+        Option.liftPredicate(review, (r) => r),
+        () => RenderVariantName.make('review'),
+      ),
+    Board: ({ review }) => Option.some(boardVariant(review)),
+  });
 
 /** Where a render page reads film `id`'s Board on its server (`tools/narration-route.ts`, `boardFile`). */
 export const boardUrls = (id: string) => ({
@@ -334,4 +350,30 @@ export const burnIn = (T: number, shot: Shot, card: boolean): string =>
     tenths(T),
     shot.beat,
     Bool.match(card, { onTrue: () => 'card', onFalse: () => shotName(shot) }),
+  ].join(' · ');
+
+/** The mark of beat `p` said last by `t` seconds into it (scene-local, as `Frame.mark` places one), or `start` before its first. */
+const markPassed = (p: Placed, t: number): string =>
+  Option.match(
+    Arr.last(
+      Arr.sortWith(
+        Arr.filter([...p.voice.marks], ([, at]) => p.speechStart + at <= t + CLOCK_EPSILON),
+        ([, at]) => at,
+        Order.Number,
+      ),
+    ),
+    { onNone: () => 'start', onSome: ([name]) => name },
+  );
+
+/**
+ * A scenes render's review copy's burn-in at `T`, in beat `p` (the one
+ * playing there): the film time, the beat, and the last mark said in it
+ * (`0:31.4 · title · start`), so a frame of a screen capture names where it
+ * is. `card` names a full-screen card the film's scenes set there.
+ */
+export const scenesBurnIn = (T: number, p: Placed, card: boolean): string =>
+  [
+    tenths(T),
+    p.spec.id,
+    Bool.match(card, { onTrue: () => 'card', onFalse: () => markPassed(p, beatTime(p, T)) }),
   ].join(' · ');

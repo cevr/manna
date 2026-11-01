@@ -963,7 +963,7 @@ const lookbook = <E, R>(lookLayer: Layer.Layer<Renderer | Looker, E, R>) =>
           variant: input.variant,
           captions: input.captions,
           server: Option.none(),
-          picture: Picture.Scenes(),
+          picture: Picture.Scenes({ review: false }),
         }),
         stamp,
       );
