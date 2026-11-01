@@ -6,24 +6,29 @@
 import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Path } from 'effect';
+import { FetchHttpClient, HttpClient } from 'effect/http';
 import { ContentStore } from '../content-store.ts';
 import { memoryLocks, text } from '../host/testing.ts';
-import { type Stage, buildGraph } from './graph.ts';
-import { filmCastSources, stageSources } from './sources.ts';
+import { type Input, type Stage, buildGraph } from './graph.ts';
+import { FILMS, RENDER_PAGE, serve } from '../../../../../apps/animations/server.ts';
+import { filmCastSources, pageSources, stageSources } from './sources.ts';
+
+/** The files among inputs, by path. */
+const pathsOf = (inputs: ReadonlyArray<Input>) =>
+  inputs.flatMap((i) => {
+    if (i._tag === 'File') return [i.path];
+    return [];
+  });
 
 /** A stage kind's source files, as `stageSources` makes them its inputs. */
 const sourceFiles = (kind: keyof Effect.Success<typeof stageSources>) =>
-  Effect.map(stageSources, (all) =>
-    all[kind].flatMap((i) => {
-      if (i._tag === 'File') return [i.path];
-      return [];
-    }),
-  );
+  Effect.map(stageSources, (all) => pathsOf(all[kind]));
 
 const local = Layer.mergeAll(BunFileSystem.layer, Path.layer);
 const ends = (files: ReadonlyArray<string>) => files.map((f) => f.split('/src/').at(-1));
 const UNMATTE = new URL('../../core/unmatte.ts', import.meta.url).pathname;
-const PAGE = new URL('../../player/cast.ts', import.meta.url).pathname;
+/** A file of the render page's, by its path from the framework's `src`. */
+const player = (file: string) => new URL(`../../player/${file}`, import.meta.url).pathname;
 
 describe('stage sources', () => {
   it.effect('every stage kind runs files of this repo, none of node_modules, each on disk', () =>
@@ -59,13 +64,7 @@ describe('stage sources', () => {
         ]),
       );
       expect(ends(yield* sourceFiles('fit'))).toEqual(
-        expect.arrayContaining([
-          'tools/cast-render.ts',
-          'core/fit-rows.ts',
-          'core/unmatte.ts',
-          // the page the fit render draws in, which no import of the render reaches
-          'player/cast.ts',
-        ]),
+        expect.arrayContaining(['tools/cast-render.ts', 'core/fit-rows.ts', 'core/unmatte.ts']),
       );
     }).pipe(Effect.provide(local)),
   );
@@ -96,6 +95,41 @@ describe('stage sources', () => {
     ),
   );
 
+  it.effect('the fit’s page is the one the app’s preview server answers at `/`', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const server = yield* Effect.acquireRelease(
+        Effect.sync(() =>
+          serve(0, FILMS, { dir: '/nonexistent/footage', out: '/nonexistent/footage' }),
+        ),
+        (running) => Effect.promise(() => running.stop(true)),
+      );
+      const served = yield* HttpClient.get(server.url).pipe(
+        Effect.flatMap((response) => response.text),
+        Effect.orDie,
+      );
+      // the server answers the page bundled: its scripts and stylesheets linked as
+      // chunks, the rest of its HTML as written
+      const bare = (html: string) =>
+        html
+          .replace(/<script\b[^>]*>\s*<\/script>|<link\b[^>]*>/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      expect(bare(served)).toBe(bare(yield* fs.readFileString(RENDER_PAGE)));
+      expect(served).toMatch(/<script\b[^>]*\bsrc="\/chunk-/);
+      // the page's closure reaches the export half of the page, which no import of the render does
+      expect(ends(yield* Effect.map(pageSources(RENDER_PAGE), pathsOf))).toEqual(
+        expect.arrayContaining([
+          'main.ts',
+          'player/cast.ts',
+          'player/render.ts',
+          'player/still.ts',
+          'player/dom.ts',
+        ]),
+      );
+    }).pipe(Effect.scoped, Effect.provide([local, FetchHttpClient.layer])),
+  );
+
   it.effect('a change to the page or the film’s cast module stales a warm fit stage', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
@@ -106,7 +140,11 @@ describe('stage sources', () => {
       const stages: ReadonlyArray<Stage<never>> = [
         {
           id: 'fit:front@m',
-          inputs: [...sources.fit, ...(yield* filmCastSources(film))],
+          inputs: [
+            ...sources.fit,
+            ...(yield* pageSources(RENDER_PAGE)),
+            ...(yield* filmCastSources(film)),
+          ],
           version: '1',
           run: () => Effect.succeed(text('rows')),
         },
@@ -118,7 +156,9 @@ describe('stage sources', () => {
           r.stages.map((s) => s.state),
         );
       expect(yield* stateAfter([])).toEqual(['cached']);
-      expect(yield* stateAfter([PAGE])).toEqual(['stale']);
+      for (const file of ['cast.ts', 'render.ts', 'still.ts', 'dom.ts'])
+        expect(yield* stateAfter([player(file)])).toEqual(['stale']);
+      expect(yield* stateAfter([RENDER_PAGE])).toEqual(['stale']);
       expect(yield* stateAfter([`${film}/rigs/cast.ts`])).toEqual(['stale']);
     }).pipe(
       Effect.scoped,

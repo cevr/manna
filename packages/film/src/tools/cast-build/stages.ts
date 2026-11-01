@@ -56,7 +56,7 @@ import {
 } from './graph.ts';
 import { CastReader, type ReaderError } from './reader.ts';
 import { SAMPLES, shardOf, trainsetOf } from './renders.ts';
-import { filmCastSources, stageSources } from './sources.ts';
+import { filmCastSources, pageSources, stageSources } from './sources.ts';
 
 /** Bumped when a stage's code makes other bytes from the same inputs. */
 const VERSION = {
@@ -231,18 +231,27 @@ export interface MemberStages {
   readonly facts: Readonly<Record<string, EntryFacts>>;
 }
 
-/** The code every member's stages are keyed by: each stage kind's sources, and the film's cast module's (`buildSources`). */
+/** The code every member's stages are keyed by: each stage kind's sources, the film's cast module's and the render page's (`buildSources`). */
 interface BuildSources {
   readonly stage: Effect.Success<typeof stageSources>;
   readonly filmCast: ReadonlyArray<Input>;
+  /** The render page the fit draws in: its HTML and its scripts' closure. */
+  readonly page: ReadonlyArray<Input>;
 }
 
-/** The film's build sources, read once per build: each stage kind's import closure and its `rigs/cast.ts`'s. */
-export const buildSources = Effect.fn('cast.build.sources')(function* (film: FilmName) {
+/**
+ * The film's build sources, read once per build: each stage kind's import
+ * closure, its `rigs/cast.ts`'s, and the closure of `page`, the render page
+ * the fit draws in (the CLI's, the app's `RENDER_PAGE`).
+ */
+export const buildSources = Effect.fn('cast.build.sources')(function* (
+  film: FilmName,
+  page: string,
+) {
   const stage = yield* stageSources;
   // the fit render loads the film's cast module by its path (`STAGE_LOADS`)
   const filmCast = yield* filmCastSources((yield* FilmFolder).paths(film).dir);
-  return { stage, filmCast } satisfies BuildSources;
+  return { stage, filmCast, page: yield* pageSources(page) } satisfies BuildSources;
 });
 
 /** One member's stages, in the order they build, keyed by the build's sources. */
@@ -338,7 +347,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
     });
   }
   const fitted = yield* fittedFiles(m.memberDir);
-  const { filmCast } = built;
+  const { filmCast, page } = built;
   for (const entry of m.coverage.entries) {
     if (entry.cut !== 'puppet') continue;
     const cut = `cut:${at(entry.fitted ?? entry.id)}`;
@@ -349,6 +358,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
         stageInput(cut),
         stageInput(`drawing:${at(entry.id)}`),
         ...src.fit,
+        ...page,
         ...filmCast,
         // a fitted pose is its pose JSON and held drawings too, which its cut does not hash
         ...Option.match(Option.fromUndefinedOr(entry.fitted), {

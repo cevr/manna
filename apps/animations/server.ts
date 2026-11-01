@@ -20,6 +20,14 @@ import index from './index.html';
 export const FILMS = join(import.meta.dir, 'src/films');
 
 /**
+ * The render page, absolute: the HTML file of the bundle `serve` answers at
+ * `/`, read off that bundle, so the page the renderer draws on, the page the
+ * lab builds as `render` and the page whose scripts key the cast build's fit
+ * stage (`film concept build`) are one file.
+ */
+export const RENDER_PAGE: string = index.index;
+
+/**
  * The lab's pages, each this app's HTML entry: its asks, and its render
  * page, whose handle the easel draws a look through (`film lab look`, at a
  * film's export page). The places each is served at are the framework's
@@ -27,7 +35,7 @@ export const FILMS = join(import.meta.dir, 'src/films');
  */
 export const LAB_PAGES = {
   ask: join(import.meta.dir, 'ask.html'),
-  render: join(import.meta.dir, 'index.html'),
+  render: RENDER_PAGE,
 };
 
 /**

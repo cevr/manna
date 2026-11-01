@@ -14,6 +14,7 @@ import { Pages } from '../pages.ts';
 import { memoryLocks } from '../host/testing.ts';
 import type { Coverage, EntryFacts } from './coverage.ts';
 import { type Input, type Stage, buildGraph } from './graph.ts';
+import { RENDER_PAGE } from '../../../../../apps/animations/server.ts';
 import { stageSources } from './sources.ts';
 import { buildSources, clipStages, memberStages } from './stages.ts';
 
@@ -81,7 +82,7 @@ const memberIn = (recorded: ReadonlyArray<string>) =>
   });
 
 const stagesOf = (dir: string, facts: Record<string, EntryFacts> = {}) =>
-  Effect.flatMap(buildSources('in-its-order' as never), (src) =>
+  Effect.flatMap(buildSources('in-its-order' as never, RENDER_PAGE), (src) =>
     memberStages(
       {
         film: 'in-its-order' as never,
@@ -236,7 +237,7 @@ const partsOver = <E>(
             coverage: { member: 'lead-feast', entries: [FRONT] },
             facts: { [FRONT.id]: complete },
           },
-          yield* buildSources('in-its-order' as never),
+          yield* buildSources('in-its-order' as never, RENDER_PAGE),
         )).filter((s) => [`drawing:${FRONT.id}@lead-feast`, PARTS].includes(s.id));
         const report = yield* buildGraph(stages, {
           cache: at.cache,

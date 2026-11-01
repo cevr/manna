@@ -14,6 +14,7 @@
 // what it loads (`declaredClosure`), and a new one cannot hide.
 
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
+import { pageSpecifiers } from './page-html.ts';
 
 const STATIC =
   /\b(?:import|export)(?!\s+type\s)\s[^'";]*?\bfrom\s*['"]([^'"]+)['"]|\bimport\s*['"]([^'"]+)['"]|\bimport\(\s*['"]([^'"]+)['"]\s*\)/g;
@@ -198,4 +199,19 @@ export const declaredClosure = Effect.fn('cast.build.declaredClosure')(function*
   for (const site of closure.variable)
     if (!declared.includes(site.file)) return yield* UndeclaredImport.make(site);
   return closure.files;
+});
+
+/**
+ * A browser page's closure: its HTML file, and the closure of every script
+ * and stylesheet it loads, each resolved from the page as an import is. A
+ * page declares no variable import.
+ */
+export const pageClosure = Effect.fn('cast.build.pageClosure')(function* (page: string) {
+  const fs = yield* FileSystem.FileSystem;
+  const specifiers = yield* pageSpecifiers(page, yield* fs.readFileString(page));
+  const entries: Array<string> = [];
+  for (const specifier of specifiers)
+    entries.push(...Option.toArray(yield* resolve(page, specifier)));
+  const files = yield* declaredClosure(entries, []);
+  return [...new Set([page, ...files])].toSorted();
 });

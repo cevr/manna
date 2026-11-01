@@ -108,6 +108,7 @@ const reportOf = Effect.fn('film.cast.coverageReport')(function* (
   film: FilmName,
   member: string,
   run: boolean,
+  renderPage: string,
 ) {
   const path = yield* Path.Path;
   const found = yield* memberOf(film, member);
@@ -116,7 +117,7 @@ const reportOf = Effect.fn('film.cast.coverageReport')(function* (
   const { file, stages: m } = found.value;
   const cache = yield* castCache;
   const results = yield* toStderr(
-    measuredOf(yield* memberStages(m, yield* buildSources(film)), m.coverage, member, {
+    measuredOf(yield* memberStages(m, yield* buildSources(film, renderPage)), m.coverage, member, {
       cache,
       run,
     }),
@@ -159,6 +160,7 @@ const linesOf = (r: MemberReport): ReadonlyArray<string> =>
 export const coverage = <E, R>(
   pages: Layer.Layer<Pages, E, R>,
   rules: ReadonlyArray<CritiqueRule>,
+  renderPage: string,
 ) =>
   Command.make(
     'coverage',
@@ -190,7 +192,7 @@ export const coverage = <E, R>(
         onNone: () => cutoutMembers(film),
       });
       const reports = yield* Effect.forEach(yield* members, (m) =>
-        reportOf(film, m, input.measure),
+        reportOf(film, m, input.measure, renderPage),
       );
       if (!input.json) for (const line of reports.flatMap(linesOf)) yield* Console.log(line);
       else

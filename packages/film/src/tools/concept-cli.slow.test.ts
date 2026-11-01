@@ -86,14 +86,16 @@ const NO_PAGES = Layer.succeed(
   Pages.of({ open: () => Effect.die('no export pages in this test') }),
 );
 
+/** No render page: no command run here keys a fit by it. */
+const NO_RENDER_PAGE = '/nonexistent/render-page.html';
+
 /** `film concept …args`: its exit and what it printed. */
 const run = (args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const lines = yield* Queue.unbounded<string>();
-    const exit = yield* Command.runWith(concept(HOUSE, [], NO_PAGES), { version: '0' })(args).pipe(
-      Effect.provideService(Console.Console, printingTo(lines)),
-      Effect.exit,
-    );
+    const exit = yield* Command.runWith(concept(HOUSE, [], NO_PAGES, NO_RENDER_PAGE), {
+      version: '0',
+    })(args).pipe(Effect.provideService(Console.Console, printingTo(lines)), Effect.exit);
     return { exit, printed: (yield* Queue.clear(lines)).join('\n') };
   });
 

@@ -1188,6 +1188,7 @@ export const runFilmCli = <E>({
         house,
         critiquing.rules,
         Pages.layer.pipe(Layer.provide([Browser.layer, previewServer])),
+        labApp.pages.pages.render,
       ),
       ask,
       production,

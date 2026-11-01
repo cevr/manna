@@ -7,9 +7,10 @@
 // status, trainset and ask stages make their bytes from their inputs alone.
 // Entry paths are from this folder.
 //
-// A stage that runs a browser page names the page's own entry: the fit
-// render draws in the app's page, whose cut-out drawing is `player/cast.ts`,
-// which no import of the render reaches. A variable import (a module loaded
+// A stage that runs a browser page is keyed by that page's own closure as
+// well (`pageSources`): the fit render draws in the app's render page, the
+// one file its CLI is given (the app's `RENDER_PAGE`), whose scripts no import
+// of the render reaches. A variable import (a module loaded
 // by its path at run time) is declared beside its kind in `STAGE_LOADS`, with
 // what it loads; a kind whose closure meets an undeclared one fails, so the
 // next one cannot hide.
@@ -17,15 +18,20 @@
 import { Effect, type FileSystem, type Path } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
 import { fileInput, type Input } from './graph.ts';
-import { type ImportUnresolved, type UndeclaredImport, declaredClosure } from './imports.ts';
+import {
+  type ImportUnresolved,
+  type UndeclaredImport,
+  declaredClosure,
+  pageClosure,
+} from './imports.ts';
 
 const STAGE_ENTRIES = {
   /** `concept parts`, which the parts stage runs. */
   parts: ['../part-sheet-cli.ts'],
   /** The cut stage's code, `puppetSpecIn` and its encoding, lives with the stages. */
   cut: ['stages.ts'],
-  /** `renderCast`'s fit render, and the page it draws in (`player/cast.ts`, the cut-out canvas). */
-  fit: ['../cast-render.ts', '../../player/cast.ts'],
+  /** `renderCast`'s fit render; the page it draws in is the build's (`pageSources`). */
+  fit: ['../cast-render.ts'],
   /** The shard's sampler and the puppet it loads (`puppetFrom`). */
   renders: ['renders.ts', '../../puppet/load.ts'],
   eval: ['reader.ts'],
@@ -73,6 +79,10 @@ const sourceFiles = (
 /** The film's `rigs/cast.ts` and every file it runs, which the fit render loads by its path. */
 export const filmCastSources = (filmDir: string) =>
   Effect.map(declaredClosure([`${filmDir}/rigs/cast.ts`], []), (files) => files.map(fileInput));
+
+/** A browser page's HTML and every file its scripts and stylesheets run (`pageClosure`). */
+export const pageSources = (page: string) =>
+  Effect.map(pageClosure(page), (files) => files.map(fileInput));
 
 const inputsOf = (kind: SourcedStage) =>
   Effect.map(sourceFiles(kind), (files) => files.map(fileInput));

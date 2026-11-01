@@ -128,6 +128,7 @@ export const build = <E, R>(
   house: HouseLook,
   pages: Layer.Layer<Pages, E, R>,
   rules: ReadonlyArray<CritiqueRule>,
+  renderPage: string,
 ) =>
   Command.make(
     'build',
@@ -181,7 +182,7 @@ export const build = <E, R>(
         }
         members.push(found.value.stages);
       }
-      const src = yield* buildSources(film);
+      const src = yield* buildSources(film, renderPage);
       const built = (yield* Effect.forEach(members, (m) => memberStages(m, src))).flat();
       const candidates = members.flatMap(candidatesOf);
       const sources = src.stage;

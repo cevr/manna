@@ -561,11 +561,16 @@ const keep = Command.make(
   ),
 );
 
-/** `film concept` over the app's house look, its critique over the app's figure rules. */
+/**
+ * `film concept` over the app's house look, its critique over the app's
+ * figure rules; its cast build keys each fit by `renderPage`, the app's render
+ * page the fit draws in.
+ */
 export const concept = <E, R>(
   house: HouseLook,
   rules: ReadonlyArray<CritiqueRule>,
   pages: Layer.Layer<Pages, E, R>,
+  renderPage: string,
 ) =>
   Command.make('concept').pipe(
     Command.withDescription(
@@ -578,8 +583,8 @@ export const concept = <E, R>(
       critique(rules),
       keep,
       render(pages, rules),
-      coverage(pages, rules),
-      build(house, pages, rules),
+      coverage(pages, rules, renderPage),
+      build(house, pages, rules, renderPage),
       reader,
       ease(pages),
       fit,

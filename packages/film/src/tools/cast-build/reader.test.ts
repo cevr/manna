@@ -68,6 +68,7 @@ const STATUS = Effect.runSync(
   memberStages(MEMBER, {
     stage: { parts: [], cut: [], fit: [], renders: [], eval: [], chain: [] },
     filmCast: [],
+    page: [],
   }).pipe(
     Effect.map((stages) => stages.filter((s) => s.id.startsWith('status:'))),
     Effect.provide([memoryFileSystem(new Map()), Path.layer]),
