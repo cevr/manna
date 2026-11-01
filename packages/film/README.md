@@ -2679,7 +2679,12 @@ share of its part's kept cloth within 24 px: a fleck of a moving part's
 colour left in the paint; the ring, where the outline runs, is a neighbour
 but is not read, and specks joined eight ways into a line of 4 px or more,
 3 times as long as wide, are an outline, not speckle; read on fewer than
-100 pixels a side, it is `unverified`). A measure
+100 pixels a side, it is `unverified`) and each line where two parts'
+paint meets (its mean L* step across the line, four ways and both lighter
+than the ink in the answer, within 5 of the answer's step at the same
+pixels: the lay tones each part's paint on its own, so a step the answer
+does not paint is the lay's; read on fewer than 8 pairs, it is
+`unverified`). A measure
 with too few samples misses its bar, at least one part's grain must be
 read, and every moving part must hide some paint. An answer that leaves a
 moving part unpainted ranks after every one that paints them all, then by

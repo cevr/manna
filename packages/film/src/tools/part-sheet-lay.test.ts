@@ -18,6 +18,8 @@ const GREY: Rgb = [138, 138, 138];
 const INK: Rgb = [70, 58, 46];
 /** A skin beside the olive: a second material of the torso. */
 const SKIN: Rgb = [214, 160, 128];
+/** A light tunic: the cloth the robe and most of the torso keep. */
+const TUNIC: Rgb = [225, 215, 190];
 
 const TORSO: Box = { x0: 6, y0: 4, x1: 42, y1: 44 };
 const ARM: Box = { x0: 18, y0: 8, x1: 30, y1: 40 };
@@ -41,15 +43,24 @@ const corners = (b: Box): ReadonlyArray<readonly [number, number]> => [
 ];
 
 type Paint = (x: number, y: number) => Rgb;
+type Still = { readonly name: string; readonly polygon: ReadonlyArray<readonly [number, number]> };
 
 /**
- * A torso of `cloth` (flat olive unless given) with a cream arm in `arm` in
- * front of it that moves, and okra's answer laid on it: the view with the
- * arm's place painted, the cloth at its edge and `inner` more than `margin`
- * px in from it (2 unless given, where the seam never reads).
+ * A torso of `cloth` (flat olive unless given), cut into the `still` parts
+ * (one torso unless given), with a cream arm in `arm` in front of it that
+ * moves, and okra's answer laid on it: the view with the arm's place
+ * painted, the cloth at its edge and `inner` more than `margin` px in from
+ * it (2 unless given, where the seam never reads).
  */
 const layOn =
-  (arm: Box, { cloth = (): Rgb => OLIVE, margin = 2 }: { cloth?: Paint; margin?: number } = {}) =>
+  (
+    arm: Box,
+    {
+      cloth = (): Rgb => OLIVE,
+      margin = 2,
+      still = [{ name: 'torso', polygon: corners(TORSO) }],
+    }: { cloth?: Paint; margin?: number; still?: ReadonlyArray<Still> } = {},
+  ) =>
   (inner: Paint) => {
     const torso = (x: number, y: number) =>
       Bool.match(inside(TORSO, x, y), { onTrue: () => cloth(x, y), onFalse: () => PAPER });
@@ -59,7 +70,7 @@ const layOn =
     const cut: PartCut = {
       parts: [
         { name: 'arm', take: [{ polygon: corners(arm) }] },
-        { name: 'torso', take: [{ polygon: corners(TORSO) }] },
+        ...still.map(({ name, polygon }) => ({ name, take: [{ polygon }] })),
       ],
     };
     const m = margin;
@@ -179,5 +190,42 @@ describe('the part sheet lay', () => {
     ]);
     expect(missedBars(under)).toContain('drift');
     expect(rankOf(under)[1]).toBe(rankOf(atFloor)[1] + 1);
+  });
+
+  // a torso over a robe that meets it at y 26 behind the arm; the torso keeps an olive vest right of the arm, past the line
+  const torsoOverRobe: ReadonlyArray<Still> = [
+    {
+      name: 'torso',
+      polygon: [
+        [6, 4],
+        [42, 4],
+        [42, 44],
+        [30, 44],
+        [30, 26],
+        [6, 26],
+      ],
+    },
+    { name: 'robe', polygon: corners({ x0: 6, y0: 26, x1: 30, y1: 44 }) },
+  ];
+
+  test('paint toned into a step across a part line the answer paints flat misses the step bar', () => {
+    // the torso's paint takes the vest beside it into its tone, the robe's does not
+    const cloth = (x: number): Rgb =>
+      Bool.match(x >= 30, { onTrue: () => OLIVE, onFalse: () => TUNIC });
+    const stepped = layOn(ARM, { cloth, still: torsoOverRobe })(() => TUNIC);
+    expect(stepped.step).toEqual([
+      expect.objectContaining({ part: 'torso', meets: 'robe', answer: 0, verdict: 'outside' }),
+    ]);
+    expect(missedBars(stepped)).toContain('step');
+  });
+
+  test('paint that steps across a part line as the answer does meets the step bar', () => {
+    const cloth = (_: number, y: number): Rgb =>
+      Bool.match(y < 26, { onTrue: () => OLIVE, onFalse: () => TUNIC });
+    const kept = layOn(ARM, { cloth, still: torsoOverRobe })(cloth);
+    expect(kept.step).toEqual([
+      expect.objectContaining({ part: 'torso', meets: 'robe', verdict: 'within' }),
+    ]);
+    expect(missedBars(kept)).not.toContain('step');
   });
 });

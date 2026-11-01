@@ -59,6 +59,9 @@ const CHROMA_REACH = 6;
 /** The fewest kept pixels within `CHROMA_REACH` that give a painted pixel its cloth. */
 const LEAST_BESIDE_PX = 8;
 
+/** The fewest pixel pairs a line where two parts' paint meets is read on: a line 8 px long. */
+const LEAST_STEP_PAIRS = 8;
+
 /** The side of the square cells a region's chroma is read in, and the fewest painted pixels with a cloth beside them a cell is read on. */
 const CHROMA_CELL = 24;
 const LEAST_CELL_PX = 40;
@@ -68,7 +71,8 @@ const LEAST_CELL_PX = 40;
  * painted region the paint's chroma at most 3 below the kept cloth's beside
  * it; each read part's paint grain within ±0.5 of its kept grain (robust
  * std); each read region's speck share, off its edge ring and outlines left
- * out, at most 0.04 above the kept cloth's;
+ * out, at most 0.04 above the kept cloth's; where two parts' paint meets, the
+ * laid paint's mean L* step across the line within 5 of the answer's there;
  * no paint at rest.
  */
 export const BARS = {
@@ -77,8 +81,10 @@ export const BARS = {
   chromaDrop: 3,
   grainWithin: 0.5,
   speckOver: 0.04,
+  stepWithin: 5,
   visibleAtRest: 0,
   leastSeamPairs: LEAST_SEAM_PAIRS,
+  leastStepPairs: LEAST_STEP_PAIRS,
   leastGrainWindows: LEAST_GRAIN_WINDOWS,
   leastRegionPx: LEAST_REGION_PX,
   leastCellPx: LEAST_CELL_PX,
@@ -272,6 +278,16 @@ const RegionVerdict = Schema.Literals(['within', 'outside', 'unverified']);
 /** A speck read: the share of the pixels that are specks, and the pixels read. */
 const SpeckRead = Schema.Struct({ share: Schema.Finite, px: Schema.Int });
 
+/** A line where the paint of `part` meets the paint of `meets` (four ways, both lighter than the ink in the answer): the mean L* step across it, `part` less `meets`, of the laid paint and of the answer at the same pixels, and how many pairs it was read on. */
+export const PartStep = Schema.Struct({
+  part: Schema.String,
+  meets: Schema.String,
+  laid: Schema.Finite,
+  answer: Schema.Finite,
+  pairs: Schema.Int,
+  verdict: RegionVerdict,
+});
+
 /** One painted region's specks (the paint of `part` under the moving part `under`) against its part's kept cloth within 24 px of it. */
 export const RegionSpeck = Schema.Struct({
   part: Schema.String,
@@ -308,6 +324,8 @@ export const HiddenMeasures = Schema.Struct({
   grain: Schema.Array(PartGrain),
   /** Each painted region: its speck share against its part's kept cloth's. */
   speck: Schema.Array(RegionSpeck),
+  /** Each line where two parts' paint meets: the laid paint's step across it against the answer's. */
+  step: Schema.Array(PartStep),
   /** The painted pixels each moving part hides. */
   paintUnder: Schema.Array(Schema.Struct({ part: Schema.String, px: Schema.Int })),
   paintedPx: Schema.Int,
@@ -585,6 +603,53 @@ const regionsOf = (view: Raster, sheet: Sheet, at: Uint8Array, composite: Raster
   return { speck: regions.map((r) => r.speck), chroma: regions.map((r) => r.chroma) };
 };
 
+/**
+ * Each line where two parts' paint meets (four ways, both lighter than the
+ * ink in the answer `laid`): the mean L* step across it of the laid paint
+ * (`composite`) and of the answer at the same pixels. The lay tones each
+ * part's paint on its own, so a step the answer does not paint is the lay's.
+ */
+const stepsAcross = (sheet: Sheet, at: Uint8Array, composite: Raster, laid: Raster) => {
+  const { width: w, height: h } = composite;
+  const name = (id: number) => sheet.parts[id - 1]?.name ?? '';
+  const lightness = (r: Raster, i: number) => labOf(rgbAt(r, i))[0];
+  const lines = new Map<
+    string,
+    { a: number; b: number; laid: number; answer: number; pairs: number }
+  >();
+  for (let i = 0; i < w * h; i++) {
+    const ahead = [
+      [i % w < w - 1, i + 1],
+      [Math.floor(i / w) < h - 1, i + w],
+    ] as const;
+    for (const [inside, j] of ahead) {
+      const [ki, kj] = [at[i] ?? 0, at[j] ?? 0];
+      if (!inside || ki === 0 || kj === 0 || ki === kj) continue;
+      if (!lightAt(laid, i) || !lightAt(laid, j)) continue;
+      const [p, q] = (ki < kj && [i, j]) || [j, i];
+      const [a, b] = [Math.min(ki, kj), Math.max(ki, kj)];
+      const line = lines.get(`${a}/${b}`) ?? { a, b, laid: 0, answer: 0, pairs: 0 };
+      lines.set(`${a}/${b}`, line);
+      line.laid += lightness(composite, p) - lightness(composite, q);
+      line.answer += lightness(laid, p) - lightness(laid, q);
+      line.pairs += 1;
+    }
+  }
+  return [...lines.values()]
+    .sort((x, y) => x.a - y.a || x.b - y.b)
+    .map((l) => ({
+      part: name(l.a),
+      meets: name(l.b),
+      laid: round2(l.laid / l.pairs),
+      answer: round2(l.answer / l.pairs),
+      pairs: l.pairs,
+      verdict: verdictOf(
+        l.pairs >= LEAST_STEP_PAIRS,
+        Math.abs(l.laid - l.answer) / l.pairs <= BARS.stepWithin,
+      ),
+    }));
+};
+
 /** Each painted pixel's part (k + 1, 0 for none), the seam pairs, and the painted pixels no opaque part in front hides. */
 const paintOf = (view: Raster, sheet: Sheet) => {
   const { width: w, height: h } = view;
@@ -645,6 +710,7 @@ const measureHidden = (
     drift: { deltaE: round2(meanOf(drift)), px: drift.length, chroma: regions.chroma },
     grain: domain.ids.map((id) => partGrain(view, sheet, at, composite, id)),
     speck: regions.speck,
+    step: stepsAcross(sheet, at, composite, laid),
     paintUnder: moving.map((part) => {
       const id = ids.find((k) => sheet.parts[k - 1]?.name === part) ?? 0;
       return { part, px: at.filter((k, i) => k > 0 && sheet.owner[i] === id).length };
@@ -661,7 +727,9 @@ const measureHidden = (
  * pixel to read it on, or a region's chroma outside its bar or with no cell
  * to read it on), grain (a read part outside its bar, or no part read),
  * speck (a region's speck share outside its bar, or too few pixels to read
- * it on), paint visible at rest, the view not recomposed.
+ * it on), step (a line where two parts' paint meets stepping outside its
+ * bar, or too few pairs to read it on), paint visible at rest, the view not
+ * recomposed.
  */
 export const missedBars = (m: HiddenMeasures): ReadonlyArray<string> =>
   Arr.filter(
@@ -680,6 +748,7 @@ export const missedBars = (m: HiddenMeasures): ReadonlyArray<string> =>
           m.grain.every((g) => g.verdict !== 'outside'),
       ],
       ['speck', m.speck.every((s) => s.verdict === 'within')],
+      ['step', m.step.every((s) => s.verdict === 'within')],
       ['visible', m.visibleAtRest === BARS.visibleAtRest],
       ['recompose', m.recomposeByteEqual],
     ] as const,
