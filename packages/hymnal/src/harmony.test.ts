@@ -261,6 +261,76 @@ describe('Score.findVerses', () => {
         expect(startsOf(Score.findVerses(melody, 3, 4 * 384))).toEqual([11, 24, 37]);
       }),
   );
+
+  /** A 4/4 tune on a one-beat pickup, its first line, its middle line, its last line. */
+  const PICKUP: Fixture.Voice = [[67, 1]];
+  const OPENS: Fixture.Voice = [
+    [72, 1],
+    [71, 1],
+    [69, 1],
+    [67, 1],
+    [65, 2],
+    [64, 2],
+  ];
+  const MIDDLE: Fixture.Voice = [
+    [65, 1],
+    [67, 1],
+    [69, 1],
+    [71, 1],
+    [72, 4],
+  ];
+  const CLOSES: Fixture.Voice = [
+    [74, 1],
+    [72, 1],
+    [71, 1],
+    [69, 1],
+    [67, 1],
+    [65, 1],
+    [62, 2],
+    [60, 7],
+  ];
+  const TUNE_ON_PICKUP = [...PICKUP, ...OPENS, ...MIDDLE, ...CLOSES];
+
+  it.effect(
+    'keeps a verse on its pickup when the verse before splits its final note, not on the split',
+    () =>
+      Effect.sync(() => {
+        // The intro is the first and last lines, ending on the tune's held final note. Verse 1
+        // splits its final note, so verse 2's pickup follows the tune's last keys but one, yet
+        // opens as verse 1 does; verse 2 joins two notes of its middle line. An equal split in
+        // ticks from the intro's final note would put verse 2 on the split's second half.
+        // Verses start at beats 23 and 55.
+        const joined: Fixture.Voice = TUNE_ON_PICKUP.flatMap((note, i): Fixture.Voice =>
+          i === 9 ? [[note[0], 2]] : i === 10 ? [] : [note],
+        );
+        const melody = file(
+          [...OPENS, ...CLOSES],
+          splitAt(TUNE_ON_PICKUP, TUNE_ON_PICKUP.length - 1),
+          joined,
+        );
+        expect(startsOf(Score.findVerses(melody, 2, 4 * 384))).toEqual([23, 55]);
+      }),
+  );
+
+  it.effect(
+    'splits the verses equally in bars when they differ by more than a note near each start',
+    () =>
+      Effect.sync(() => {
+        // 126's and 292's shape: verse 2 sings its middle line in eighths, so the closest equal
+        // split by notes puts verse 1 on its own last line and verse 2 inside its eighths. Each
+        // verse is the same 32 beats after an intro of the first and last lines (23 beats).
+        const eighths: Fixture.Voice = MIDDLE.flatMap(([key, beats]) =>
+          Array.from({ length: beats * 2 }, (): readonly [number, number] => [key, 0.5]),
+        );
+        const melody = file(
+          [...OPENS, ...CLOSES],
+          TUNE_ON_PICKUP,
+          [...PICKUP, ...OPENS, ...eighths, ...CLOSES],
+          TUNE_ON_PICKUP,
+        );
+        expect(startsOf(Score.findVerses(melody, 3, 4 * 384))).toEqual([23, 55, 87]);
+      }),
+  );
 });
 
 describe('Harmony.onNotes', () => {
