@@ -10,6 +10,7 @@
 
 import { describe, expect, it } from 'bun:test';
 
+import { runScript } from '../test/script';
 import { pinnedAt, topicStarts } from './pin';
 import { rowsOf } from './rows';
 
@@ -44,9 +45,7 @@ interface End {
   readonly space: ReadonlyArray<number>;
 }
 
-const run = Bun.spawnSync(['bun', Bun.resolveSync('../test/phone-list.tsx', import.meta.dir)], {
-  stderr: 'pipe',
-});
+const run = runScript(Bun.resolveSync('../test/phone-list.tsx', import.meta.dir));
 const seen: Partial<Record<Change, Seen>> & {
   readonly end?: ReadonlyArray<End>;
   readonly found?: ReadonlyArray<ReadonlyArray<Found>>;
@@ -54,7 +53,7 @@ const seen: Partial<Record<Change, Seen>> & {
     readonly rows: ReadonlyArray<number | string>;
     readonly sections: ReadonlyArray<string>;
   };
-} = JSON.parse(run.stdout.toString() || '{}');
+} = JSON.parse(run.stdout || '{}');
 
 /** The rows of `kind` on screen both live and fresh, by label, as each draws them. */
 const shared = (rows: Seen, kind: keyof Rows) => {
@@ -71,7 +70,7 @@ const empty: Rows = { hymns: {}, topics: {} };
 
 describe('the phones’ hymn list, changed while mounted', () => {
   it('mounts and changes with nothing on its error stream', () => {
-    expect(run.stderr.toString()).toBe('');
+    expect(run.stderr).toBe('');
     expect(Object.keys(seen)).toEqual(['about', 'scheme', 'fontScale', 'hrefOf', 'end', 'found']);
   });
 
@@ -93,17 +92,14 @@ describe('the phones’ hymn list, changed while mounted', () => {
 });
 
 describe('the home list’s pinned row under the field shown over its top', () => {
-  const covered = Bun.spawnSync(
-    ['bun', Bun.resolveSync('../test/phone-list.tsx', import.meta.dir), 'cover'],
-    { stderr: 'pipe' },
-  );
+  const covered = runScript(Bun.resolveSync('../test/phone-list.tsx', import.meta.dir), ['cover']);
   const steps: ReadonlyArray<{
     readonly scroll: number;
     readonly cover: number;
     readonly line: number;
     readonly y: number;
     readonly topic: number;
-  }> = JSON.parse(covered.stdout.toString() || '{}').cover ?? [];
+  }> = JSON.parse(covered.stdout || '{}').cover ?? [];
   // The script's forty hymns in two topics, under a header 100 pt tall.
   const fixture = Array.from({ length: 40 }, (_, i) => ({
     number: i + 1,
@@ -116,7 +112,7 @@ describe('the home list’s pinned row under the field shown over its top', () =
   );
 
   it('mounts and covers with nothing on its error stream', () => {
-    expect(covered.stderr.toString()).toBe('');
+    expect(covered.stderr).toBe('');
     expect(steps.map((step) => [step.scroll, step.cover])).toEqual([
       [990, 0],
       [990, 26],
