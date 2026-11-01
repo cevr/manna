@@ -73,6 +73,28 @@ class ReaderFailed extends Schema.TaggedError<ReaderFailed>()('ReaderFailed', {
 
 export type ReaderError = ReaderMissing | ReaderFailed;
 
+/** A train's yield: the checkpoint's bytes, the fit's result (train.py's JSON: steps, sec_per_step, last_loss…) and its Modal app id. */
+interface Trained {
+  readonly checkpoint: Uint8Array;
+  /** The last line of the train's stdout that is a JSON object ('' when none is). */
+  readonly result: string;
+  readonly app: Option.Option<string>;
+}
+
+/**
+ * A train's stdout read: `modal run` prints the app's URL (`…/apps/…/ap-<id>`)
+ * and its own lines around the fit's JSON, so the result is the last line
+ * that reads as a JSON object, not the last line.
+ */
+const trainedOf = (stdout: string): Omit<Trained, 'checkpoint'> => ({
+  result:
+    stdout
+      .split('\n')
+      .map((l) => l.trim())
+      .findLast((l) => l.startsWith('{') && l.endsWith('}')) ?? '',
+  app: Option.map(Option.fromNullishOr(/\bap-[A-Za-z0-9]+/.exec(stdout)), (m) => m[0]),
+});
+
 interface CastReaderService {
   /** The files a train ships and its key hashes, sorted: every file of the reader's folder but its tests. */
   readonly sources: ReadonlyArray<string>;
@@ -84,10 +106,8 @@ interface CastReaderService {
   ) => Effect.Effect<string, ReaderError>;
   /** The held samples of `shard` (a drawing's renders tar) read by `ckpt` and scored: eval.py's JSON. */
   readonly evaluate: (ckpt: string, shard: string) => Effect.Effect<string, ReaderError>;
-  /** One reader trained on Modal: the checkpoint's bytes and the train's result JSON. It spends. */
-  readonly train: (
-    job: TrainJob,
-  ) => Effect.Effect<{ readonly checkpoint: Uint8Array; readonly result: string }, ReaderError>;
+  /** One reader trained on Modal: the checkpoint's bytes, the fit's result JSON and the Modal app it ran in. It spends. */
+  readonly train: (job: TrainJob) => Effect.Effect<Trained, ReaderError>;
   /** Make run `run`'s checkpoint the key's: `/runs/<key>/<run>.pt` copied to `/readers/<key>.pt` on the volume. It runs no GPU. */
   readonly promote: (key: string, run: string) => Effect.Effect<void, ReaderError>;
   /** The reader's pytest cases, run in its environment: pytest's output. */
@@ -282,7 +302,7 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
               TRAIN_LIMIT,
             );
             const checkpoint = yield* fs.readFile(out);
-            return { checkpoint, result: stdout.trim().split('\n').at(-1) ?? '' };
+            return { checkpoint, ...trainedOf(stdout) };
           }),
         ).pipe(Effect.catchTag('PlatformError', failedAs('train')));
       });
@@ -310,7 +330,8 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
   /**
    * A reader that answers from `answers` and runs nothing; `asked` records
    * each call as `<what> <argument>`. A train runs `answers.training` before
-   * it answers: what happens while it runs. A promote fails with
+   * it answers: what happens while it runs; it reads `answers.trainStdout`
+   * as the live train reads `modal run`'s stdout. A promote fails with
    * `answers.promoteFails` as its reason, when it is given.
    */
   static readonly layerTest = (
@@ -319,6 +340,7 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
       readonly evaluate?: string;
       readonly checkpoint?: Uint8Array;
       readonly training?: Effect.Effect<void>;
+      readonly trainStdout?: string;
       readonly promoteFails?: string;
     },
     asked: Array<string> = [],
@@ -336,7 +358,10 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
             asked.push(`train ${job.key} run=${job.run} shards=${job.shards.length}`),
           ).pipe(
             Effect.andThen(answers.training ?? Effect.void),
-            Effect.as({ checkpoint: answers.checkpoint ?? new Uint8Array([1]), result: '{}' }),
+            Effect.as({
+              checkpoint: answers.checkpoint ?? new Uint8Array([1]),
+              ...trainedOf(answers.trainStdout ?? ''),
+            }),
           ),
         promote: (key, run) =>
           Effect.sync(() => void asked.push(`promote ${key} ${run}`)).pipe(

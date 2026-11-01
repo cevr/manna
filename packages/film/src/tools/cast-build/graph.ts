@@ -3,7 +3,9 @@
 // version, its config and the hash of each input, where an input is a file's
 // bytes or an upstream stage's output. A stage's output is bytes, kept in
 // the cache as `objects/<sha256>`, and `build.json` (a `ContentStore`
-// manifest) maps each key to its output's hash and the stage's wall time.
+// manifest) maps each key to its output's hash and the stage's wall time,
+// with what the run noted (`ctx.note`) and the USD it counted, read
+// downstream through `ctx.built`.
 // A stage whose key is in the manifest is `cached` and does not run; one
 // that reruns and makes the same bytes leaves every stage below it cached
 // (early cutoff), since their keys read its output's hash, not its inputs.
@@ -126,6 +128,19 @@ export interface StageContext {
     effect: Effect.Effect<A, E, R>,
     usd?: number,
   ) => Effect.Effect<A, E | WaitingSpend, R>;
+  /** Keep `text` beside this run's output in `build.json`: what the run reported (a train's fit), read by `built`. It is in no key. */
+  readonly note: (text: string) => Effect.Effect<void>;
+  /** An upstream stage's record in `build.json`: its key, output, wall time, note and counted spend, as the run that made it left them. */
+  readonly built: (id: string) => Effect.Effect<BuiltRecord, StageFailed>;
+}
+
+/** A stage's record as `build.json` keeps it, by key. */
+export interface BuiltRecord {
+  readonly key: string;
+  readonly output: string;
+  readonly ms: number;
+  readonly note: Option.Option<string>;
+  readonly usd: Option.Option<number>;
 }
 
 export interface Stage<R> {
@@ -197,13 +212,16 @@ const Unpromoted = Schema.Struct({ run: Schema.String, reason: Schema.String });
 
 /**
  * A stage's result as `build.json` keeps it, by key: its output's hash, the
- * wall time of the run that made it and, while its promote has not held, the
- * run it left unpromoted.
+ * wall time of the run that made it, the note it left (`ctx.note`), the USD
+ * it counted (`ctx.spend`, when above 0) and, while its promote has not held,
+ * the run it left unpromoted.
  */
 const Built = Schema.Struct({
   id: Schema.String,
   output: Schema.String,
   ms: Schema.Finite,
+  note: Schema.optionalKey(Schema.String),
+  usd: Schema.optionalKey(Schema.Finite),
   unpromoted: Schema.optionalKey(Unpromoted),
 });
 
@@ -254,7 +272,7 @@ export const builtOutput = Effect.fn('cast.build.output')(function* (cache: stri
 
 /** A stage's place in this build: its output's hash once known, else the state that holds the stages below it. */
 type Decided =
-  | { readonly _tag: 'Known'; readonly output: string }
+  | { readonly _tag: 'Known'; readonly output: string; readonly key: string }
   | { readonly _tag: 'Held'; readonly state: StageState };
 
 /** The order check: every stage input names a stage before it, and no id repeats. */
@@ -365,8 +383,35 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
   };
   const processes = yield* Processes;
   const build = `${process.pid}-${yield* Random.nextIntBetween(0, 1e9)}`;
+  /** What the running stage has noted and counted: stages run one at a time, so one tally serves, reset by each run. */
+  const tally = { note: Option.none<string>(), usd: 0 };
   const ctx: StageContext = {
     run: build,
+    note: (text) =>
+      Effect.sync(() => {
+        tally.note = Option.some(text);
+      }),
+    built: (id) =>
+      Effect.gen(function* () {
+        const known = decided.get(id);
+        if (known?._tag !== 'Known') return yield* Effect.die(`${id} has no output in this build`);
+        const current = yield* store
+          .read(manifest)
+          .pipe(Effect.mapError((e) => StageFailed.make({ reason: String(e) })));
+        const record = Option.fromUndefinedOr(current.stages[known.key]);
+        if (Option.isNone(record))
+          return yield* StageFailed.make({
+            reason: `${id}: build.json keeps no record of its key`,
+          });
+        const r = record.value;
+        return {
+          key: known.key,
+          output: r.output,
+          ms: r.ms,
+          note: Option.fromUndefinedOr(r.note),
+          usd: Option.fromUndefinedOr(r.usd),
+        };
+      }),
     file: (p) =>
       fs.readFile(p).pipe(Effect.mapError((e) => StageFailed.make({ reason: String(e) }))),
     output: (id) =>
@@ -388,6 +433,7 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
       return Effect.sync(() => {
         counts[kind]++;
         counts.usd += usd;
+        tally.usd += usd;
       }).pipe(Effect.andThen(effect));
     },
   };
@@ -559,6 +605,8 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
     Effect.gen(function* () {
       const record = (outcome: Outcome, change: (done: BuildManifest) => BuildManifest) =>
         recordUnder(stage, key, outcome, change);
+      tally.note = Option.none();
+      tally.usd = 0;
       const ran = yield* Effect.scoped(
         Effect.andThen(Effect.forkScoped(heartbeat(key)), stage.run(ctx)),
       ).pipe(
@@ -587,14 +635,27 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
         const output = sha256Hex(ran.bytes);
         yield* store.writeFile(objectFile(output), ran.bytes);
         const ms = (yield* Clock.currentTimeMillis) - start;
+        const made: typeof Built.Type = {
+          id: stage.id,
+          output,
+          ms,
+          ...Option.match(tally.note, { onNone: () => ({}), onSome: (note) => ({ note }) }),
+          ...Option.match(
+            Option.liftPredicate(tally.usd, (usd) => usd > 0),
+            {
+              onNone: () => ({}),
+              onSome: (usd) => ({ usd }),
+            },
+          ),
+        };
         const built =
           (unpromoted: Option.Option<typeof Unpromoted.Type>) => (done: BuildManifest) => ({
             ...done,
             stages: {
               ...done.stages,
               [key]: Option.match(unpromoted, {
-                onNone: () => ({ id: stage.id, output, ms }),
-                onSome: (u) => ({ id: stage.id, output, ms, unpromoted: u }),
+                onNone: () => made,
+                onSome: (u) => ({ ...made, unpromoted: u }),
               }),
             },
           });
@@ -765,7 +826,7 @@ export const buildGraph = Effect.fn('cast.build.graph')(function* <R>(
     switch (outcome._tag) {
       case 'cached':
       case 'ran':
-        decided.set(stage.id, { _tag: 'Known', output: outcome.output });
+        decided.set(stage.id, { _tag: 'Known', output: outcome.output, key });
         yield* report(outcome._tag, Option.some(key), Option.none());
         break;
       case 'stale':

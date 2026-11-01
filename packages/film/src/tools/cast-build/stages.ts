@@ -27,11 +27,12 @@
 // trainable drawing's shard after this build's stages; `trainStage`, the one reader trained on that set (spending
 // Modal), keyed by the set, its shards and the reader's source files;
 // `evalStage` per shard, that drawing's held samples read and scored by the
-// reader (`reader.ts`, on this machine). The owner's ask and draws are
+// reader (`reader.ts`, on this machine); then `lock.ts`'s lock stage writes
+// the reader lock from those outputs. The owner's ask and draws are
 // `owner-ask.ts`'s.
 
 import * as Command from 'effect/cli/Command';
-import { Effect, FileSystem, Option, Path, Predicate, Schema, type Scope } from 'effect';
+import { DateTime, Effect, FileSystem, Option, Path, Predicate, Schema, type Scope } from 'effect';
 import type { ChildProcessSpawner } from 'effect/process';
 import type { PuppetSpec } from '../../canvas/puppet.ts';
 import type { PuppetImages } from '../../puppet/images.ts';
@@ -80,7 +81,7 @@ const VERSION = {
  * `reader/model.py`'s defaults (`BACKBONE`, `IN_W, IN_H`), held equal by
  * `reader.test.ts`.
  */
-const TRAIN = {
+export const TRAIN = {
   steps: 4800,
   batch: 32,
   lr: 1e-3,
@@ -499,7 +500,7 @@ const trainableIn = (bytes: Uint8Array) =>
  * A drawing that may join the training set: a puppet entry cut from its own
  * sheet, with its renders and status stages.
  */
-interface Candidate {
+export interface Candidate {
   /** `<member>/<entry>`. */
   readonly drawing: string;
   readonly renders: string;
@@ -563,7 +564,7 @@ const readerFailed = (id: string) => (e: ReaderError) =>
   StageFailed.make({ reason: `${id}: ${e.message}` });
 
 /** The training set read by the train stage: its bytes, its hash, and the reader's key over it, the config and `sources`. */
-const trainKeyOf = (ctx: StageContext, sources: ReadonlyArray<string>) =>
+export const trainKeyOf = (ctx: StageContext, sources: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const set = yield* ctx.output('trainset');
     const trainset = sha256Hex(set);
@@ -573,11 +574,41 @@ const trainKeyOf = (ctx: StageContext, sources: ReadonlyArray<string>) =>
     return { set, trainset, key: sha256Hex(encoder.encode(lines.join('\n'))) };
   });
 
+/** The part of train.py's result the train notes: its steps, seconds per step and last loss. */
+const FitResult = Schema.fromJsonString(
+  Schema.Struct({ steps: Schema.Finite, sec_per_step: Schema.Finite, last_loss: Schema.Finite }),
+);
+
+/** A train's fit summary, as the train stage notes it in `build.json` and the lock reads it. */
+export const FitNote = Schema.fromJsonString(
+  Schema.Struct({
+    trainedOn: Schema.String,
+    modalApp: Schema.optionalKey(Schema.String),
+    steps: Schema.Finite,
+    secPerStep: Schema.Finite,
+    finalLoss: Schema.Finite,
+  }),
+);
+
+/** The fit summary of a train whose result is `result` (train.py's JSON), run in Modal app `app`, today. */
+const fitNote = (result: string, app: Option.Option<string>) =>
+  Effect.gen(function* () {
+    const fit = yield* Schema.decodeEffect(FitResult)(result);
+    return yield* Schema.encodeEffect(FitNote)({
+      trainedOn: DateTime.formatIsoDateUtc(yield* DateTime.now),
+      ...Option.match(app, { onNone: () => ({}), onSome: (modalApp) => ({ modalApp }) }),
+      steps: fit.steps,
+      secPerStep: fit.sec_per_step,
+      finalLoss: fit.last_loss,
+    });
+  });
+
 /**
  * The one reader trained on the training set, on Modal; it spends, so it
  * waits unless `--spend modal`. It reads the set, every shard in it and
  * the reader's source files (`sources`, every file a train ships), so a
- * change to any of them is a new reader. Its output is the checkpoint; on
+ * change to any of them is a new reader. Its output is the checkpoint, with
+ * the fit's summary (`FitNote`) noted beside it in `build.json`; on
  * Modal the train writes it at `/runs/<key>/<the build's run>.pt`, and
  * `promote` copies it to `/readers/<key>.pt` (the key: the hash of those
  * inputs and the config) only while the build's mark holds the stage's key,
@@ -610,6 +641,13 @@ export const trainStage = (
           .train({ trainset, key, run: ctx.run, shards, config: TRAIN })
           .pipe(Effect.mapError(readerFailed('train')));
         yield* Effect.log(`cast.build.train result=${made.result}`);
+        yield* fitNote(made.result, made.app).pipe(
+          Effect.flatMap(ctx.note),
+          // a paid train is kept without its summary rather than thrown away
+          Effect.catch((e) =>
+            Effect.logWarning(`cast.build.train fit-unread reason="${String(e)}"`),
+          ),
+        );
         return made.checkpoint;
       }),
       TRAIN_USD,

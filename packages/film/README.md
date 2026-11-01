@@ -2898,9 +2898,12 @@ each member's stages from his manifest (`tools/cast-build/stages.ts`):
 - per entry, after those: `status` (its `complete` and `trainable`
   verdicts, read off its stages' outputs);
 - per film: `trainset` (every trainable drawing's shard), `train` (one
-  reader, trained on Modal), `eval` (each drawing's held renders read and
-  scored on this machine) and the owner's `ask` and `draw`
-  (`tools/cast-build/owner-ask.ts`).
+  reader, trained on Modal; it notes the fit's steps, seconds per step and
+  final loss beside its checkpoint), `eval` (each drawing's held renders
+  read and scored on this machine), `eval:clip` (each clip chained by the
+  reader), `lock` (the library's `cutout/reader.lock.json`, written from
+  those stages' outputs and the train's note, `tools/cast-build/lock.ts`)
+  and the owner's `ask` and `draw` (`tools/cast-build/owner-ask.ts`).
 
 A stage spends only when `--spend` names what it spends: `okra` for a part
 sheet's call and a drawing's tries, `modal` for the train. Without it the
@@ -2915,8 +2918,10 @@ The cache is `FILM_CAST_CACHE`, else `~/.cache/bible-film/cast`: each
 stage's output kept as `objects/<sha256>`, and the manifest `build.json`
 (a `ContentStore`) maps each stage's key (its id, version, config and the
 hash of each input file or upstream output) to its output's hash and wall
-time. A stage whose key is kept does not run, and a rerun that makes the
-same bytes leaves every stage below it cached. Each stage is decided and
+time, with the note its run left and the USD it counted. A stage whose key
+is kept does not run, and a rerun that makes the same bytes leaves every
+stage below it cached; a cached lock holds only while the file has its
+bytes, so a rerun with nothing changed writes nothing. Each stage is decided and
 recorded under the manifest's lock and runs outside it, marked as running
 with a heartbeat, so a plan reads the manifest during a train and two
 builds never run one stage (`tools/cast-build/graph.ts`).

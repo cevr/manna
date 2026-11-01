@@ -11,7 +11,7 @@
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
-import { Console, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
+import { Array as Arr, Console, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
 import type { SheetKind } from '../../core/cast-sheet.ts';
 import type { CritiqueRule } from '../../core/critique.ts';
 import { PuppetImagesBun } from '../../puppet/images-bun.ts';
@@ -23,7 +23,7 @@ import { FilmFolder, filmNamed } from '../film-repo.ts';
 import { ImageRoute } from '../image-route.ts';
 import type { Pages } from '../pages.ts';
 import type { AskStore } from '../ask-store.ts';
-import { castCache, memberOf } from './built.ts';
+import { castCache, memberOf, readerLockOf } from './built.ts';
 import { cutoutMembers, toStderr } from './coverage-cli.ts';
 import { viewOfId } from './coverage-facts.ts';
 import {
@@ -43,6 +43,7 @@ import {
   needName,
   ownerNeeds,
 } from './owner-ask.ts';
+import { lockStage } from './lock.ts';
 import { CastReader } from './reader.ts';
 import {
   type MemberStages,
@@ -197,6 +198,17 @@ export const build = <E, R>(
         trainStage(candidates, reader.sources),
         ...candidates.map((c) => evalStage(c.renders, sources.eval)),
         ...members.flatMap((m) => clipStages(m, cache, sources.chain)),
+        lockStage({
+          file: yield* readerLockOf(film),
+          candidates,
+          sources: reader.sources,
+          // the lock reports the build's first clip (today the one: lead-feast's raise/clip-b)
+          clip: Arr.head(
+            members.flatMap((m) =>
+              (m.coverage.clips ?? []).map((c) => ({ member: m.member, clip: c.id })),
+            ),
+          ),
+        }),
         askStage(
           film,
           members.map((m) => m.member),

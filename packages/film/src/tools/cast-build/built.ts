@@ -44,6 +44,12 @@ const libraryPuppetsOf = Effect.fn('film.cast.libraryPuppets')(function* (film: 
   return path.join(dir, '..', '..', 'library', 'cutout', 'puppets.ts');
 });
 
+/** The library's `cutout/reader.lock.json`: the reader the cast build trained (`lock.ts`). */
+export const readerLockOf = Effect.fn('film.cast.readerLock')(function* (film: FilmName) {
+  const path = yield* Path.Path;
+  return path.join(path.dirname(yield* libraryPuppetsOf(film)), 'reader.lock.json');
+});
+
 /**
  * A member's build inputs: his folder, his manifest's file and coverage, and
  * the facts read off his folder (drawn, kept, bars), or none when he has no
