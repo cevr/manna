@@ -45,9 +45,6 @@ export const setHolds = (name: string, hymn: number) =>
 export const setOf = (hymn: number) =>
   RECORDING_SETS.findLast((set) => holdsHymn(set, hymn))?.name ?? RECORDING_SET;
 
-/** The latest set: a name that changes whenever a set is added. */
-export const LATEST_SET = RECORDING_SETS.at(-1)?.name ?? RECORDING_SET;
-
 /**
  * The keys the app's Key stepper reaches besides the printed one, in the
  * order they are rendered: the smallest steps first, so the most used keys

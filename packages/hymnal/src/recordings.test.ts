@@ -5,7 +5,6 @@ import {
   creditText,
   KEY_TRANSPOSES,
   keySet,
-  LATEST_SET,
   RECORDING_SET,
   RECORDING_SETS,
   recordingKey,
@@ -60,7 +59,6 @@ describe('recordings', () => {
       expect(RECORDING_SETS.map((set) => set.name)).toEqual(['warm-1', 'warm-2']);
       expect(setOf(663)).toBe('warm-2');
       expect([1, 662, 664, 695].map(setOf)).toEqual(['warm-1', 'warm-1', 'warm-1', 'warm-1']);
-      expect(LATEST_SET).toBe('warm-2');
       const later = RECORDING_SETS.slice(1).flatMap((set) =>
         set.hymns === 'every' ? [] : set.hymns,
       );

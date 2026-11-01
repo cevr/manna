@@ -10,8 +10,10 @@ import {
   mediaHeader,
   Media,
   OfflineError,
+  readStorages,
   recordingStorage,
-  storageName,
+  storageFor,
+  stray,
 } from './cache';
 import { protectDirectory } from './backup';
 
@@ -21,62 +23,76 @@ const decode = Schema.decodeUnknownOption(Schema.fromJsonString(Entry));
 const encode = Schema.encodeSync(Schema.fromJsonString(Entry));
 export const mediaLayer = Layer.sync(Media, () => {
   const fs = One.FileSystem;
-  let protectedDirectory = false;
+  let protectedAll = false;
+  const made = new Set<string>();
   let base = Option.none<string>();
   // Resolve the native directory within an operation's typed Promise boundary.
   // A missing filesystem must not prevent the online player from starting.
-  const root = () =>
+  const support = () =>
     Option.match(base, {
       onSome: (uri) => uri,
       onNone: () => {
-        const uri = `${fs.getDirectories().applicationSupport.replace(/\/$/, '')}/${storageName}/`;
+        const uri = `${fs.getDirectories().applicationSupport.replace(/\/$/, '')}/`;
         base = Option.some(uri);
         return uri;
       },
     });
-  const path = (id: Identity, ext: string) => `${root()}${identityKey(id)}.${ext}`;
-  const ready = async () => {
-    await fs.makeDirectory(root(), true);
-    if (!protectedDirectory) {
-      protectDirectory(root());
-      for (const file of await fs.readDirectory(fs.getDirectories().applicationSupport))
+  const root = (storage: string) => `${support()}${storage}/`;
+  const path = (id: Identity, ext: string) =>
+    `${root(storageFor(id.number))}${identityKey(id)}.${ext}`;
+  const ready = async (storage: string) => {
+    if (made.has(storage)) return;
+    await fs.makeDirectory(root(storage), true);
+    protectDirectory(root(storage));
+    if (!protectedAll) {
+      for (const file of await fs.readDirectory(support()))
         if (file.isDirectory && recordingStorage(file.name)) protectDirectory(file.uri);
-      protectedDirectory = true;
+      protectedAll = true;
+    }
+    made.add(storage);
+  };
+  // A stray (a hymn that plays from another set's storage) is never listed.
+  const listIn = async (storage: string, found: Map<string, Entry>) => {
+    await ready(storage);
+    for (const file of await fs.readDirectory(root(storage))) {
+      if (stray(storage, file.name)) continue;
+      const match = /^(\d+)_(0|-?[1-6])\.(json|mp3)$/.exec(file.name);
+      if (!match) continue;
+      const id = { number: Number(match[1]), offset: Number(match[2]) };
+      if (!Schema.is(Identity)(id)) continue;
+      const key = identityKey(id);
+      if (!found.has(key)) found.set(key, { ...id, bytes: 0, total: 1, etag: '', complete: false });
+      if (match[3] === 'json') {
+        const row = decode(await new fs.File(file.uri).text());
+        if (row._tag === 'Some' && identityKey(row.value) === key) found.set(key, row.value);
+      }
     }
   };
   return Media.of({
     protect: call(async () => {
-      await ready();
+      for (const storage of readStorages) await ready(storage);
       if (fs.Paths.availableDiskSpace < 2 * CHUNK) throw OfflineError.make({ code: 'storage' });
     }),
     removeOld: call(async () => {
-      const parent = fs.getDirectories().applicationSupport;
-      for (const file of await fs.readDirectory(parent))
-        if (file.isDirectory && file.name !== storageName && recordingStorage(file.name))
-          await fs.delete(file.uri);
+      for (const dir of await fs.readDirectory(support())) {
+        if (!dir.isDirectory || !recordingStorage(dir.name)) continue;
+        if (!readStorages.includes(dir.name)) {
+          await fs.delete(dir.uri);
+          continue;
+        }
+        for (const file of await fs.readDirectory(dir.uri))
+          if (stray(dir.name, file.name)) await fs.delete(file.uri);
+      }
     }),
     list: call(async () => {
-      await ready();
       const found = new Map<string, Entry>();
-      for (const file of await fs.readDirectory(root())) {
-        const match = /^(\d+)_(0|-?[1-6])\.(json|mp3)$/.exec(file.name);
-        if (!match) continue;
-        const id = { number: Number(match[1]), offset: Number(match[2]) };
-        if (!Schema.is(Identity)(id)) continue;
-        const key = identityKey(id);
-        if (!found.has(key))
-          found.set(key, { ...id, bytes: 0, total: 1, etag: '', complete: false });
-        if (match[3] === 'json') {
-          const row = decode(await new fs.File(file.uri).text());
-          if (row._tag === 'Some' && identityKey(row.value) === key) found.set(key, row.value);
-        }
-      }
+      for (const storage of readStorages) await listIn(storage, found);
       return [...found.values()];
     }),
     size: (id) => call(async () => (await fs.getInfo(path(id, 'mp3'))).size ?? 0),
     append: (id, at, bytes) =>
       call(async () => {
-        await ready();
+        await ready(storageFor(id.number));
         const file = new fs.File(path(id, 'mp3'));
         const info = await fs.getInfo(file.uri);
         if ((info.size ?? 0) !== at || fs.Paths.availableDiskSpace < bytes.length)

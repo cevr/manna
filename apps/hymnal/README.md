@@ -460,12 +460,13 @@ no longer matches the script, so an edit to `wheat.svg` needs `bun run icon`.
 The app saves a visible hymn's printed-key recording after a 750 ms dwell.
 Play in another Key queues that set too; capo never changes its identity.
 `src/offline/` owns two scoped workers and media files: application support
-excluded from iCloud backup on iOS, origin-private files on web, in one
-storage named for the latest recording set (`storageName`,
-`hymnal-recordings-<LATEST_SET>-v1`), so no file saved from an earlier set
-is played after a later set moves its hymn. Adding a set starts an empty
-storage: a phone fetches its saved recordings again, and the earlier
-storage stays on disk until Delete removes it. Web requests persistent storage for Download all; the UI
+excluded from iCloud backup on iOS, origin-private files on web, one
+storage per recording set (`storageOf`, `hymnal-recordings-<set>-v1`). A
+hymn's files live in the storage of the set it plays from (`storageFor`,
+by `setOf`), so a later set moves only its own hymns: every other hymn's
+saved recording is still found, and a moved hymn's file left in its old
+set's storage is a stray, never listed or played. Delete frees every saved
+file, the strays, and each storage no hymn reads (`removeOld`). Web requests persistent storage for Download all; the UI
 states that a browser may remove downloads. Startup indexing runs in the
 background; playback can use remote while an entry is not yet indexed.
 Save intentions wait for discovery so they join retained files, and Cancel
