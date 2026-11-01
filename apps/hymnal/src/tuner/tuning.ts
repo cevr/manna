@@ -2,9 +2,9 @@
  * Standard guitar tuning and the reading of a heard pitch against it.
  *
  * The strings sit in equal temperament from A4 = 440 Hz. A reading names
- * the nearest equal-tempered note and how far the pitch lies from it, and
- * the nearest string (in cents, so the target the tuner shows is always the
- * string the player is closest to) and how far it lies from that string.
+ * the nearest equal-tempered note and how far the pitch lies from it, and a
+ * target string and how far the pitch lies from it: in Auto the nearest
+ * string (in cents), or the string the reader picked, however far off.
  */
 
 export type StringId = 'E2' | 'A2' | 'D3' | 'G3' | 'B3' | 'E4';
@@ -49,20 +49,17 @@ const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] 
 
 const centsBetween = (hz: number, ref: number) => 1200 * Math.log2(hz / ref);
 
-/** The reading of a pitch `hz` (positive, finite) against the note grid and the six strings. */
-export const reading = (hz: number): Reading => {
+const LOW_E: GuitarString = { id: 'E2', hz: hzFrom(-29) };
+
+const stringOf = (id: StringId): GuitarString =>
+  STRINGS.find((string) => string.id === id) ?? LOW_E;
+
+/** The reading of `hz` against the note grid and against `target`, however far off it. */
+const readAgainst = (hz: number, target: GuitarString): Reading => {
   const semitones = 12 * Math.log2(hz / A4);
   const nearest = Math.round(semitones);
   const midi = 69 + nearest;
-  let target = STRINGS[0] ?? { id: 'E2', hz: hzFrom(-29) };
-  let stringCents = centsBetween(hz, target.hz);
-  for (const string of STRINGS) {
-    const away = centsBetween(hz, string.hz);
-    if (Math.abs(away) < Math.abs(stringCents)) {
-      target = string;
-      stringCents = away;
-    }
-  }
+  const stringCents = centsBetween(hz, target.hz);
   return {
     note: NAMES[((midi % 12) + 12) % 12] ?? 'C',
     octave: Math.floor(midi / 12) - 1,
@@ -72,3 +69,19 @@ export const reading = (hz: number): Reading => {
     inTune: Math.abs(stringCents) <= IN_TUNE_CENTS,
   };
 };
+
+/** The Auto reading of a pitch `hz` (positive, finite): against the note grid and the nearest of the six strings. */
+export const reading = (hz: number): Reading => {
+  let target = STRINGS[0] ?? LOW_E;
+  for (const string of STRINGS)
+    if (Math.abs(centsBetween(hz, string.hz)) < Math.abs(centsBetween(hz, target.hz)))
+      target = string;
+  return readAgainst(hz, target);
+};
+
+/**
+ * The reading of `hz` on a picked string: the note as `reading` names it, and the cents from
+ * `string` itself, neither held nor folded to the nearest octave (an A on low E is 500 sharp).
+ */
+export const readingOn = (hz: number, string: StringId): Reading =>
+  readAgainst(hz, stringOf(string));

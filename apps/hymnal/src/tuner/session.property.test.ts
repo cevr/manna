@@ -20,6 +20,7 @@ import {
   Event,
   feedFrame,
   feedOf,
+  hintOf,
   holdsMicrophone,
   labelOf,
   latch,
@@ -35,7 +36,7 @@ import {
   Work,
 } from './session';
 import { detect } from './pitch';
-import { reading } from './tuning';
+import { reading, readingOn, STRINGS } from './tuning';
 
 /** A seeded generator of numbers in [0, 1) (mulberry32). */
 const seeded = (seed: number) => {
@@ -58,6 +59,8 @@ const EVENTS = 40;
 interface World {
   permission: Permission;
   active: boolean;
+  /** Another route covers the sheet. */
+  covered: boolean;
   sounding: boolean;
   microphone: boolean;
   /** Answers the phone owes the sheet, delivered in a drawn order. */
@@ -90,6 +93,7 @@ const pause = (world: World, before: Session, draw: () => number): Option.Option
 
 const start = (world: World, attempt: number, draw: () => number): Option.Option<string> => {
   if (!world.active) return Option.some('started while away');
+  if (world.covered) return Option.some('started while covered');
   if (world.sounding) return Option.some('started while the player sounds');
   // The ear refuses without the microphone (it changed in Settings since the read), and now and then for no reason.
   // A start takes the microphone as it resolves, whatever stop came while it was in flight.
@@ -139,6 +143,7 @@ const carry = (
 const violation = (world: World, after: Session): Option.Option<string> => {
   if (world.microphone && world.sounding) return Option.some('listening and playing at once');
   if (world.microphone && !world.active) return Option.some('listening while away');
+  if (world.microphone && world.covered) return Option.some('listening while covered');
   if (world.microphone && Phase.$is('Closed')(after.phase))
     return Option.some('listening after the close');
   if (Phase.$is('Listening')(after.phase) && !world.microphone)
@@ -185,15 +190,22 @@ const happening = (world: World, draw: () => number): Event => {
     world.permission = PERMISSIONS[Math.floor(draw() * PERMISSIONS.length)] ?? 'granted';
     return Event.Tapped();
   }
-  if (roll < 0.97) return Event.Tapped();
+  if (roll < 0.88) return Event.Tapped();
+  if (roll < 0.98) {
+    // A hymn link or another route pushes over the sheet, or goes back off it.
+    world.covered = !world.covered;
+    return Event.Covered({ covered: world.covered });
+  }
   return Event.Closed();
 };
 
-const run = (seed: number) => {
+/** Runs the world `seed`, adding to `coveredIn` each phase a `Covered` event met. */
+const run = (seed: number, coveredIn: Set<string>) => {
   const draw = seeded(seed);
   const world: World = {
     permission: PERMISSIONS[Math.floor(draw() * 3)] ?? 'granted',
     active: draw() < 0.9,
+    covered: false,
     sounding: draw() < 0.4,
     microphone: false,
     pending: [],
@@ -204,6 +216,7 @@ const run = (seed: number) => {
   const first = opened(world.active, world.sounding);
   let session = first.session;
   const apply = (event: Event, next: { session: Session; work: ReadonlyArray<Work> }) => {
+    if (Event.$is('Covered')(event)) coveredIn.add(session.phase._tag);
     trail.push(`${event._tag} -> ${next.session.phase._tag} [${next.work.map((w) => w._tag)}]`);
     const broken = carry(world, session, next.session, next.work, draw);
     session = next.session;
@@ -233,6 +246,10 @@ const settle = (
   for (let round = 0; round < 6; round += 1) {
     const due = world.pending.splice(0);
     if (world.sounding) due.push(Event.Sounding({ sounding: false }));
+    if (round === 0 && world.covered) {
+      world.covered = false;
+      due.push(Event.Covered({ covered: false }));
+    }
     if (round < 2) due.push(Event.Active({ active: false }), Event.Active({ active: true }));
     due.push(Event.Tapped());
     for (const owed of due) {
@@ -250,10 +267,25 @@ const settle = (
 
 describe('the tuner sheet’s rule', () => {
   it(`never listens and plays at once, nor away or closed, over ${WORLDS} generated worlds`, () => {
-    const broken = Array.from({ length: WORLDS }, (_, k) => run(SEED + k)).filter(
+    const coveredIn = new Set<string>();
+    const broken = Array.from({ length: WORLDS }, (_, k) => run(SEED + k, coveredIn)).filter(
       (world) => world.broken !== 'none',
     );
     expect(broken.slice(0, 1)).toEqual([]);
+    // The worlds cover the sheet in every phase it can stand in.
+    expect([...coveredIn].toSorted()).toEqual(
+      [
+        'Checking',
+        'Asking',
+        'Denied',
+        'Pausing',
+        'Starting',
+        'Listening',
+        'Away',
+        'Ended',
+        'Closed',
+      ].toSorted(),
+    );
   });
 
   it('pauses a sounding player once, then listens when it falls quiet', () => {
@@ -304,6 +336,50 @@ describe('the tuner sheet’s rule', () => {
     ]);
   });
 
+  it('stops when covered, stays quiet through the app’s return, and listens once shown again', () => {
+    const tags = (work: ReadonlyArray<Work>) =>
+      work.map((w) => {
+        if (Work.$is('Stop')(w)) return `Stop:${w.reason}`;
+        return w._tag;
+      });
+    const starting = step(
+      opened(true, false).session,
+      Event.Read({ permission: 'granted', check: 1 }),
+    );
+    const listening = step(starting.session, Event.Started({ attempt: 1 }));
+    const covered = step(listening.session, Event.Covered({ covered: true }));
+    expect(covered.session.phase._tag).toBe('Away');
+    expect(tags(covered.work)).toEqual(['Stop:covered']);
+    // Background and back while covered: a read, never a start.
+    const away = step(covered.session, Event.Active({ active: false }));
+    const back = step(away.session, Event.Active({ active: true }));
+    const read = step(back.session, Event.Read({ permission: 'granted', check: 2 }));
+    expect([...tags(away.work), ...tags(back.work), ...tags(read.work)]).toEqual([
+      'ReadPermission',
+    ]);
+    expect(read.session.phase._tag).toBe('Away');
+    // Uncovered while in the background: nothing starts.
+    const hidden = step(read.session, Event.Active({ active: false }));
+    expect(step(hidden.session, Event.Covered({ covered: false })).work).toEqual([]);
+    // Uncovered while active: it reads again, then starts.
+    const shown = step(read.session, Event.Covered({ covered: false }));
+    expect(tags(shown.work)).toEqual(['ReadPermission']);
+    expect(tags(step(shown.session, Event.Read({ permission: 'granted', check: 3 })).work)).toEqual(
+      ['Start'],
+    );
+    // A start that resolves after the cover is given back; covered while pausing stops into Away.
+    const late = step(starting.session, Event.Covered({ covered: true }));
+    expect(tags(late.work)).toEqual(['Stop:covered']);
+    expect(tags(step(late.session, Event.Started({ attempt: 1 })).work)).toEqual(['Stop:late']);
+    const pausing = step(
+      opened(true, true).session,
+      Event.Read({ permission: 'granted', check: 1 }),
+    );
+    const coveredPausing = step(pausing.session, Event.Covered({ covered: true }));
+    expect(coveredPausing.session.phase._tag).toBe('Away');
+    expect(step(coveredPausing.session, Event.Sounding({ sounding: false })).work).toEqual([]);
+  });
+
   it('holds the microphone only while starting or listening', () => {
     expect(holdsMicrophone(Phase.Listening())).toBe(true);
     expect(holdsMicrophone(Phase.Pausing())).toBe(false);
@@ -321,6 +397,52 @@ describe('the tuner sheet’s display', () => {
     );
     expect(labelOf(Option.none())).toBe('Listening');
     expect(stringLabel('B3', true)).toBe('B string, tuned');
+  });
+
+  it('reads a picked string however far off, and Auto as the nearest string', () => {
+    const turn = (cents: number) => {
+      if (Math.abs(cents) <= 5) return 'In tune';
+      if (cents < 0) return 'Tighten';
+      return 'Loosen';
+    };
+    const draw = seeded(SEED);
+    const ids = STRINGS.map((string) => string.id);
+    for (let k = 0; k < 500; k += 1) {
+      // Log-uniform from an octave under low E to an octave over high E.
+      const hz = 41.2 * 2 ** (draw() * 5);
+      const auto = reading(hz);
+      for (const id of ids) {
+        const picked = readingOn(hz, id);
+        const want = 1200 * Math.log2(hz / (STRINGS.find((s) => s.id === id)?.hz ?? 1));
+        expect(picked.string).toBe(id);
+        expect(picked.stringCents).toBeCloseTo(want, 6);
+        expect(picked.inTune).toBe(Math.abs(want) <= 5);
+        expect([picked.note, picked.octave, picked.cents]).toEqual([
+          auto.note,
+          auto.octave,
+          auto.cents,
+        ]);
+        const hint = hintOf(Option.some(id), Option.some(picked));
+        expect(hint).toBe(turn(want));
+      }
+      expect(Math.abs(auto.stringCents)).toBe(
+        Math.min(...ids.map((id) => Math.abs(readingOn(hz, id).stringCents))),
+      );
+    }
+    const far = Option.some(readingOn(110, 'E2'));
+    expect(labelOf(far)).toBe('Low E string, 500 cents sharp');
+    expect(needleOf(far)).toBe(50);
+    expect(labelOf(Option.some(readingOn(82.407 / 2 ** (1190 / 1200), 'E2')))).toBe(
+      'Low E string, 1190 cents flat',
+    );
+  });
+
+  it('hints what to pluck, then which way to turn the peg', () => {
+    expect(hintOf(Option.none(), Option.none())).toBe('Pluck any string');
+    expect(hintOf(Option.some('E4'), Option.none())).toBe('Pluck the High E string');
+    expect(hintOf(Option.none(), Option.some(reading(110)))).toBe('In tune');
+    expect(hintOf(Option.none(), Option.some(reading(108)))).toBe('Tighten');
+    expect(hintOf(Option.some('A2'), Option.some(readingOn(112, 'A2')))).toBe('Loosen');
   });
 
   it('holds the needle to ±50 cents, at centre while nothing is heard', () => {
