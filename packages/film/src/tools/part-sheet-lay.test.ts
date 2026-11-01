@@ -135,6 +135,17 @@ describe('the part sheet lay', () => {
     expect(missedBars(clumped)).toContain('speck');
   });
 
+  test('paint hatched with dashes of the kept sleeve, 4 × 1 on every fourth row, misses the speck bar', () => {
+    // two dashes a row, x 19..22 and 25..28, clear of the edge ring the speck read leaves out
+    const dash = (x: number, y: number) =>
+      (y - ARM.y0) % 4 === 2 && [1, 2, 3, 4, 7, 8, 9, 10].includes(x - ARM.x0);
+    const hatched = layOn(ARM, { margin: 0 })((x, y) =>
+      Bool.match(dash(x, y), { onTrue: () => CREAM, onFalse: () => OLIVE }),
+    );
+    expect(hatched.speck).toEqual([expect.objectContaining({ verdict: 'outside' })]);
+    expect(missedBars(hatched)).toContain('speck');
+  });
+
   test('a thin outline in the paint, dotted along its edge or drawn across it, is not speckle', () => {
     const edge = (x: number, y: number) =>
       (x === ARM.x0 || x === ARM.x1 - 1 || y === ARM.y0 || y === ARM.y1 - 1) && (x + y) % 2 === 0;

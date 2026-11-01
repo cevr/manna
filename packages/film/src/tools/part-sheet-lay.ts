@@ -33,7 +33,7 @@ const PAPER_NEAR = 6;
 /** How far a kept pixel lies from paint to count in the kept grain, pixels, looked for on a 3 px lattice. */
 const GRAIN_STEPS = Arr.range(-8, 8).map((k) => k * 3);
 
-/** Lighter than this L* is paint, not ink, for the seam and the grain. */
+/** Lighter than this L* is paint, not ink, for the seam, the grain and the specks' outlines. */
 const INK_L = 45;
 
 /** The fewest seam pairs a seam is read on. */
@@ -58,7 +58,7 @@ const GRAIN_CELL = 24;
 /** A pixel is a speck when its L* lies further than this from the median L* of its 5 × 5 neighbours of its own kind. */
 const SPECK_L = 12;
 
-/** Specks that join into a line this many pixels long or more, this many times as long as wide, are an outline, not speckle. */
+/** Specks as dark as ink that join into a line this many pixels long or more, this many times as long as wide, are an outline, not speckle. */
 const SPECK_LINE_PX = 4;
 const SPECK_LINE_LONG = 3;
 
@@ -428,7 +428,7 @@ const offMedianOf = (r: Raster, set: Uint8Array) => {
         if (set[b * w + a] === 1) around.push(l[b * w + a] ?? 0);
     off[i] = Math.abs((l[i] ?? 0) - medianOf(around));
   }
-  return { at, off };
+  return { at, off, l };
 };
 
 /**
@@ -436,25 +436,29 @@ const offMedianOf = (r: Raster, set: Uint8Array) => {
  * `SPECK_L` from the median L* of their 5 × 5 neighbours in `set`, read on
  * `r`, and how many were read. Specks that join (eight ways) into a line of
  * `SPECK_LINE_PX` or more, `SPECK_LINE_LONG` times as long as it is wide,
- * are an outline drawn in the paint, not speckle.
+ * as dark as ink on the mean, are an outline drawn in the paint, not
+ * speckle; a lighter line, a dash of another part's colour, is speckle.
  */
 const speckShare = (r: Raster, set: Uint8Array) => {
   const { width: w, height: h } = r;
-  const { at, off } = offMedianOf(r, set);
+  const { at, off, l } = offMedianOf(r, set);
   const speck = Uint8Array.from(off, (d) => Number(d > SPECK_L));
   const { components, labels } = componentsOf(speck, w, h, true);
-  const moments = components.map(() => [0, 0, 0, 0, 0]);
+  // the sums of x, y, x², y², xy and L* over each component's pixels
+  const moments = components.map(() => [0, 0, 0, 0, 0, 0]);
   for (const i of at.filter((i) => speck[i] === 1)) {
     const [x, y] = [i % w, Math.floor(i / w)];
-    const step = [x, y, x * x, y * y, x * y];
+    const step = [x, y, x * x, y * y, x * y, l[i] ?? 0];
     Option.map(Option.fromUndefinedOr(moments[labels[i] ?? -1]), (m) => {
-      for (let c = 0; c < 5; c++) m[c] = (m[c] ?? 0) + (step[c] ?? 0);
+      for (let c = 0; c < 6; c++) m[c] = (m[c] ?? 0) + (step[c] ?? 0);
     });
   }
+  const isOutline = (area: number, m: ReadonlyArray<number>) =>
+    area >= SPECK_LINE_PX &&
+    elongationOf(area, m) >= SPECK_LINE_LONG &&
+    (m[5] ?? 0) / area <= INK_L;
   const specks = components
-    .filter(
-      (c, k) => c.area < SPECK_LINE_PX || elongationOf(c.area, moments[k] ?? []) < SPECK_LINE_LONG,
-    )
+    .filter((c, k) => !isOutline(c.area, moments[k] ?? []))
     .reduce((n, c) => n + c.area, 0);
   return { share: specks / Math.max(1, at.length), px: at.length };
 };

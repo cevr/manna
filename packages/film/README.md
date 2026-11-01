@@ -2684,7 +2684,8 @@ median of their 5×5 neighbours of their own kind, at most 0.04 above the
 share of its part's kept cloth within 24 px: a fleck of a moving part's
 colour left in the paint; the ring, where the outline runs, is a neighbour
 but is not read, and specks joined eight ways into a line of 4 px or more,
-3 times as long as wide, are an outline, not speckle; read on fewer than
+3 times as long as wide, with a mean L* of 45 or less (ink), are an outline,
+not speckle, while a lighter dash is speckle; read on fewer than
 100 pixels a side, it is `unverified`) and each line where two parts'
 paint meets under one moving part (its mean L* step across the line, read
 apart under each moving part, four ways and both lighter
