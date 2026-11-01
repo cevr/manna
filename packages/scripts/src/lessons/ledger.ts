@@ -155,15 +155,26 @@ const LEDGER = 'docs/lessons.md';
 const unless = (holds: boolean, problem: string): ReadonlyArray<string> =>
   [problem].filter(() => !holds);
 
+/** Each `<unit>/<file>.md <id>` of a Source, captured by the file's name. */
+const CITE = /\S\/([\w-]+)\.md [A-Za-z]\d+\b/g;
+/** A review's word as one of a file name's dash-joined parts. */
+const REVIEW_PART = /(?:^|-)(?:findings|review|checks?|verify|report|follow-up|blocked)(?=-|$)/;
+/** A reviewer's input as one of a file name's dash-joined parts. */
+const INPUT_PART = /(?:^|-)(?:prompt|brief|packet)(?=-|$)/;
+
 /**
- * A finding cited in its review file: `<unit>/<file> <id>`, the file's name
- * holding a review's word as one of its dash-joined parts (`round-1-findings.md`,
- * `review-r1.md`, `p1-round-1-checks.md`, `p5-self-check.md`, `round-2-verify.md`,
- * `report.md`, `follow-up-1.md`, `blocked.md`), so a spec's phase
- * (`unit/spec.md p5`) cites no finding.
+ * Whether a Source cites a finding in its review file: `<unit>/<file> <id>`,
+ * the file's name holding a review's word as one of its dash-joined parts
+ * (`round-1-findings.md`, `review-r1.md`, `p1-round-1-checks.md`,
+ * `p5-self-check.md`, `round-2-verify.md`, `report.md`, `follow-up-1.md`,
+ * `blocked.md`) and no reviewer's input (`round-1-review-brief.md`,
+ * `review-1-prompt.md`, `review-r1-packet.md`), so a spec's phase
+ * (`unit/spec.md p5`) or a brief's numbered ask cites no finding.
  */
-const FINDING_CITED =
-  /\S\/(?:\w+-)*(?:findings|review|checks?|verify|report|follow-up|blocked)(?:-\w+)*\.md [A-Za-z]\d+\b/;
+const citesFinding = (source: string) =>
+  Array.from(source.matchAll(CITE), ([, name = '']) => name).some(
+    (name) => REVIEW_PART.test(name) && !INPUT_PART.test(name),
+  );
 
 /** What is wrong with an entry's fields: one missing, a date, a kind or words of the wrong shape, a review that cites no finding. */
 const fieldProblems = (entry: Entry): ReadonlyArray<string> => {
@@ -179,7 +190,7 @@ const fieldProblems = (entry: Entry): ReadonlyArray<string> => {
       'said is neither the words in quotes nor a choice',
     ),
     ...unless(
-      kind !== 'review' || FINDING_CITED.test(field('Source')),
+      kind !== 'review' || citesFinding(field('Source')),
       'a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)',
     ),
   ];

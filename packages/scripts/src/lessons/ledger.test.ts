@@ -233,6 +233,28 @@ describe('the lessons ledger', () => {
       }),
   );
 
+  it.effect("refuses a reviewer's input as a cited finding: its prompt, brief or packet", () =>
+    Effect.gen(function* () {
+      expect(
+        yield* problemsOf(
+          entry('a-brief', 'none: a reason', 'review', 'unit/round-1-review-brief.md F1'),
+          entry('a-prompt', 'none: a reason', 'review', 'unit/review-1-prompt.md F2'),
+          entry('a-packet', 'none: a reason', 'review', 'unit/review-r1-packet.md F1'),
+          entry(
+            'a-brief-beside-its-review',
+            'none: a reason',
+            'review',
+            'unit/r1-review-brief.md F1, unit/review-r1.md F1',
+          ),
+        ),
+      ).toEqual(
+        ['a-brief', 'a-prompt', 'a-packet'].map(
+          (id) => `${id}: a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)`,
+        ),
+      );
+    }),
+  );
+
   it.effect('holds each name a guard lists after its file, up to the next file', () =>
     Effect.gen(function* () {
       expect(
