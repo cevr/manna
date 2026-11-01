@@ -4,9 +4,16 @@
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Path } from 'effect';
+import { Effect, FileSystem, Layer, Path } from 'effect';
+import { ChildProcessSpawner } from 'effect/process';
+import { PuppetImagesBun } from '../../puppet/images-bun.ts';
+import { ContentStore } from '../content-store.ts';
+import { Critic } from '../critique.ts';
+import { FilmFolder } from '../film-repo.ts';
+import { Pages } from '../pages.ts';
+import { memoryLocks } from '../host/testing.ts';
 import type { Coverage, EntryFacts } from './coverage.ts';
-import type { Input, Stage } from './graph.ts';
+import { type Input, type Stage, buildGraph } from './graph.ts';
 import { sourceFiles } from './sources.ts';
 import { clipStages, memberStages } from './stages.ts';
 
@@ -121,6 +128,61 @@ describe('memberStages', () => {
         stages.find((s) => s.id === 'renders:turnaround-threeQuarterLeft@fake')?.inputs,
       ).toContainEqual({ _tag: 'Stage', id: 'cut:turnaround-threeQuarterLeft@fake' });
     }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    'the parts stage calls no okra without --spend okra, and only its spend gate does',
+    () => {
+      const spawned: Array<string> = [];
+      // every process the parts command could start, `okra image` first among them, is recorded and refused
+      const spawner = ChildProcessSpawner.make((command) => {
+        if (command._tag === 'StandardCommand') spawned.push(command.command);
+        return Effect.die(`no process in this test: ${String(command)}`);
+      });
+      return Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const dir = yield* memberIn([]);
+        yield* fs.makeDirectory(`${dir}/cast-sheet/views`, { recursive: true });
+        yield* fs.writeFileString(`${dir}/cast-sheet/views/front.png`, 'png');
+        const front = (yield* stagesOf(dir, allComplete)).filter((s) =>
+          ['drawing:turnaround-front@fake', 'parts:turnaround-front@fake'].includes(s.id),
+        );
+        const options = { cache: `${dir}/cache`, plan: false, touch: [] };
+        const held = yield* buildGraph(front, { ...options, spend: new Set() });
+        expect(held.stages.map((s) => [s.id, s.state])).toEqual([
+          ['drawing:turnaround-front@fake', 'ran'],
+          ['parts:turnaround-front@fake', 'waiting-spend'],
+        ]);
+        expect(held.okraCalls).toBe(0);
+        expect(spawned).toEqual([]);
+        // granted, the stage's one way to okra is its spend gate (its member is no film's here, so the call fails)
+        const granted = yield* buildGraph(front, { ...options, spend: new Set(['okra'] as const) });
+        expect(granted.okraCalls).toBe(1);
+        expect(granted.stages.find((s) => s.id === 'parts:turnaround-front@fake')?.state).toBe(
+          'failed',
+        );
+      }).pipe(
+        Effect.scoped,
+        Effect.provide(
+          Layer.mergeAll(
+            ContentStore.layer.pipe(Layer.provide(memoryLocks)),
+            FilmFolder.layer('/nonexistent/loop-probe-x/films'),
+            PuppetImagesBun,
+            Layer.succeed(Pages, Pages.of({ open: () => Effect.die('no page in this test') })),
+            Layer.succeed(
+              Critic,
+              Critic.of({
+                critique: () => Effect.die('no critique in this test'),
+                start: () => Effect.die('no critique in this test'),
+                job: () => Effect.die('no critique in this test'),
+                critiqueSheet: () => Effect.die('no critique in this test'),
+              }),
+            ),
+          ).pipe(Layer.provideMerge(BunServices.layer)),
+        ),
+        Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+      );
+    },
   );
 
   it.effect('a clip eval reads the train, the training set and the chain, not every cut', () =>
