@@ -404,28 +404,28 @@ describe('the tuner sheet’s display', () => {
     };
     const draw = seeded(SEED);
     const ids = STRINGS.map((string) => string.id);
+    const bad: Array<string> = [];
     for (let k = 0; k < 500; k += 1) {
       // Log-uniform from an octave under low E to an octave over high E.
       const hz = 41.2 * 2 ** (draw() * 5);
       const auto = reading(hz);
-      for (const id of ids) {
-        const picked = readingOn(hz, id);
-        const want = 1200 * Math.log2(hz / (STRINGS.find((s) => s.id === id)?.hz ?? 1));
-        expect(picked.string).toBe(id);
-        expect(picked.stringCents).toBeCloseTo(want, 6);
-        expect(picked.inTune).toBe(Math.abs(want) <= 5);
-        expect([picked.note, picked.octave, picked.cents]).toEqual([
-          auto.note,
-          auto.octave,
-          auto.cents,
-        ]);
-        const hint = hintOf(Option.some(id), Option.some(picked));
-        expect(hint).toBe(turn(want));
+      for (const string of STRINGS) {
+        const picked = readingOn(hz, string.id);
+        const want = 1200 * Math.log2(hz / string.hz);
+        const same =
+          picked.string === string.id &&
+          Math.abs(picked.stringCents - want) < 1e-6 &&
+          picked.inTune === Math.abs(want) <= 5 &&
+          picked.note === auto.note &&
+          picked.octave === auto.octave &&
+          picked.cents === auto.cents &&
+          hintOf(Option.some(string.id), Option.some(picked)) === turn(want);
+        if (!same) bad.push(`${hz}/${string.id}`);
       }
-      expect(Math.abs(auto.stringCents)).toBe(
-        Math.min(...ids.map((id) => Math.abs(readingOn(hz, id).stringCents))),
-      );
+      const nearest = Math.min(...ids.map((id) => Math.abs(readingOn(hz, id).stringCents)));
+      if (Math.abs(auto.stringCents) !== nearest) bad.push(`${hz}/auto`);
     }
+    expect(bad.slice(0, 3)).toEqual([]);
     const far = Option.some(readingOn(110, 'E2'));
     expect(labelOf(far)).toBe('Low E string, 500 cents sharp');
     expect(needleOf(far)).toBe(50);
