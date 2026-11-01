@@ -1665,6 +1665,28 @@
             "box": [191, 109, 742, 1382]
           }
         ]
+      },
+      {
+        "try": 9,
+        "why": "owner keep, 2026-11-01, through the orchestrator (no lab ask): the seated raise (in-its-order item 1), filed by hand as the try's bytes, its view cut at the ink box",
+        "views": [
+          {
+            "view": 9,
+            "name": "single-9",
+            "box": [191, 200, 766, 1300]
+          }
+        ]
+      },
+      {
+        "try": 5,
+        "why": "owner keep, 2026-11-01, through the orchestrator (no lab ask): the wince (in-its-order item 2), the right head only, played in heads-4's place at 0.803; skin matched to the kept (owner): kept/single-5.png moves skin #fdc080 to #fdb677 and skin shade #f29c64 to #ec8b5a by their OKLab offsets (pixels of hue 40-75, chroma above .09, L above .6), tries/single-5.png stays as drawn",
+        "views": [
+          {
+            "view": 5,
+            "name": "single-5",
+            "box": [772, 293, 1076, 710]
+          }
+        ]
       }
     ]
   },
