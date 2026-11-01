@@ -23,7 +23,14 @@ import { memoryFileSystem, memoryLocks, text } from '../host/testing.ts';
 import { ContentStore } from '../content-store.ts';
 import { type Stage, buildGraph, fileInput, stageInput } from './graph.ts';
 import { CastReader, importsOf, rolesOf } from './reader.ts';
-import { candidatesOf, evalStage, memberStages, trainStage, trainsetStage } from './stages.ts';
+import {
+  candidatesOf,
+  evalStage,
+  memberStages,
+  readsDirOf,
+  trainStage,
+  trainsetStage,
+} from './stages.ts';
 
 /** What a build is asked with, as `buildGraph` takes it. */
 type BuildOptions = Parameters<typeof buildGraph>[1];
@@ -174,7 +181,7 @@ const graph = (o: { readonly sideCut?: boolean } = {}): ReadonlyArray<Stage<Cast
   }),
   trainsetStage(CANDIDATES),
   trainStage(CANDIDATES, ROLES.train, LOCK),
-  ...CANDIDATES.map((c) => evalStage(c.renders, [])),
+  ...CANDIDATES.map((c) => evalStage(c.renders, [], ROLES.eval)),
 ];
 
 const files = () =>
@@ -367,15 +374,65 @@ describe('cast build: train and eval', () => {
     }),
   );
 
-  it.effect('a change to a file only a read or an eval runs leaves the train cached', () =>
-    Effect.gen(function* () {
-      const disk = files();
-      yield* build(disk, [], { spend: new Set(['modal'] as const) });
-      for (const file of ['/reader/read.py', '/reader/eval.py', '/reader/uv.lock']) {
-        const plan = yield* build(disk, [], { plan: true, touch: [file] });
-        expect([file, stateOf(plan)['train']]).toEqual([file, 'cached']);
-      }
-    }),
+  it.effect(
+    'a change to a file only a read or an eval runs leaves the train cached and re-runs every eval',
+    () =>
+      Effect.gen(function* () {
+        const disk = files();
+        yield* build(disk, [], { spend: new Set(['modal'] as const) });
+        for (const file of ['/reader/read.py', '/reader/eval.py', '/reader/uv.lock']) {
+          const state = stateOf(yield* build(disk, [], { plan: true, touch: [file] }));
+          expect([file, state['train'], state['eval:front@m'], state['eval:side@m']]).toEqual([
+            file,
+            'cached',
+            'stale',
+            'stale',
+          ]);
+        }
+      }),
+  );
+
+  it.effect(
+    "a clip's read is kept by the read files' hashes: a read edit misses it, a train-only edit does not",
+    () => {
+      const disk = new Map([
+        ['/ckpt.pt', text('ckpt')],
+        ['/clip.mp4', text('clip')],
+        ['/reader/model.py', text('model')],
+        ['/reader/read.py', text('read')],
+        ['/reader/uv.lock', text('lock')],
+        ['/reader/train.py', text('train')],
+      ]);
+      const dirOf = readsDirOf({
+        ckpt: '/ckpt.pt',
+        clip: '/clip.mp4',
+        map: { x0: 0, y0: 0, scale: 1 },
+        cache: '/cache',
+      });
+      return Effect.gen(function* () {
+        const first = yield* dirOf;
+        expect(first).toMatch(/^\/cache\/reads\/[0-9a-f]{64}$/);
+        disk.set('/reader/train.py', text('train, edited'));
+        expect(yield* dirOf).toBe(first);
+        for (const file of ROLES.read) {
+          const was = disk.get(file) ?? text('');
+          disk.set(file, text(`${file}, edited`));
+          expect([file, (yield* dirOf) === first]).toEqual([file, false]);
+          disk.set(file, was);
+        }
+        expect(yield* dirOf).toBe(first);
+      }).pipe(
+        Effect.provide([
+          memoryFileSystem(disk),
+          Path.layer,
+          CastReader.layerTest({}, [], {
+            train: ['/reader/model.py', '/reader/train.py'],
+            read: ROLES.read,
+            eval: [],
+          }),
+        ]),
+      );
+    },
   );
 
   it.effect('an entry missing only its bars, or with no record, joins the set it trains on', () =>

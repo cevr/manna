@@ -204,9 +204,9 @@ export const build = <E, R>(
         ...built,
         trainsetStage(candidates),
         trainStage(candidates, reader.sources.train, lockFile),
-        ...candidates.map((c) => evalStage(c.renders, sources.eval)),
+        ...candidates.map((c) => evalStage(c.renders, sources.eval, reader.sources.eval)),
         ...clipMakes,
-        ...members.flatMap((m) => clipStages(m, cache, sources.chain)),
+        ...members.flatMap((m) => clipStages(m, cache, sources.chain, reader.sources.read)),
         lockStage({ file: lockFile, candidates, trainFiles: reader.sources.train, clips }),
         askStage(
           film,

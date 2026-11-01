@@ -786,16 +786,27 @@ const trainOnModal =
       TRAIN_USD,
     );
 
-/** One drawing's held samples read by the trained reader and scored, by its renders stage's id. */
+/**
+ * One drawing's held samples read by the trained reader and scored, by its
+ * renders stage's id. It reads the eval's TS sources (`evalSources`) and the
+ * reader's eval files (`evalFiles`, `CastReader.sources.eval`: what a local
+ * read and score run), so a read or eval edit re-runs it with the train cached.
+ */
 export const evalStage = (
   rendersId: string,
   evalSources: ReadonlyArray<Input>,
+  evalFiles: ReadonlyArray<string>,
 ): Stage<CastReader> => {
   const id = rendersId.replace(/^renders:/, 'eval:');
   return {
     id,
     view: id.slice('eval:'.length).split('@')[0],
-    inputs: [stageInput('train'), stageInput(rendersId), ...evalSources],
+    inputs: [
+      stageInput('train'),
+      stageInput(rendersId),
+      ...evalSources,
+      ...evalFiles.map(fileInput),
+    ],
     version: VERSION.eval,
     run: (ctx) =>
       Effect.gen(function* () {
@@ -821,13 +832,39 @@ const puppetsOf = (memberDir: string, coverage: Coverage) => (drawing: string) =
   }).pipe(Effect.mapError((e) => ChainFailed.make({ reason: `puppet ${drawing}: ${String(e)}` })));
 
 /**
+ * The folder a clip's read is kept in: `<cache>/reads/<key>`, keyed by the
+ * checkpoint's and the clip's hashes, the map, the mapping's version and the
+ * hashes of the reader's read files (`CastReader.sources.read`, in its sorted
+ * order), so a read edit misses it and a train-only edit does not.
+ */
+export const readsDirOf = Effect.fn('cast.chain.readsDir')(function* (o: {
+  readonly ckpt: string;
+  readonly clip: string;
+  readonly map: ClipMap;
+  readonly cache: string;
+}) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const reader = yield* CastReader;
+  const hashOf = (file: string) => Effect.map(fs.readFile(file), sha256Hex);
+  const key = sha256Hex(
+    yield* Schema.encodeEffect(ConfigJson)({
+      ckpt: yield* hashOf(o.ckpt),
+      clip: yield* hashOf(o.clip),
+      map: o.map,
+      mapping: MAPPING,
+      sources: yield* Effect.forEach(reader.sources.read, hashOf),
+    }),
+  );
+  return path.join(o.cache, 'reads', key);
+});
+
+/**
  * `clip` (an mp4) laid on the canvas at `map` (`clip-eval.ts`), read by the
  * checkpoint at `ckpt` and chained (`chain.ts`) with the member's puppets;
  * with the figure numbers of its canvases. The canvases, their figure
- * numbers and the read are kept in `<cache>/reads/<key>/` (`canvas/`,
- * `figure.json`, `read.json`), keyed by the checkpoint's and the clip's
- * hashes, the map, the mapping's version and the reader's source files'
- * hashes.
+ * numbers and the read are kept in `readsDirOf`'s folder (`canvas/`,
+ * `figure.json`, `read.json`).
  */
 export const chainClip = Effect.fn('cast.chain.clip')(function* (o: {
   readonly ckpt: string;
@@ -841,20 +878,7 @@ export const chainClip = Effect.fn('cast.chain.clip')(function* (o: {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const reader = yield* CastReader;
-  const hashOf = (file: string) => Effect.map(fs.readFile(file), sha256Hex);
-  const key = sha256Hex(
-    yield* Schema.encodeEffect(ConfigJson)({
-      ckpt: yield* hashOf(o.ckpt),
-      clip: yield* hashOf(o.clip),
-      map: o.map,
-      mapping: MAPPING,
-      sources: yield* Effect.forEach(
-        [...new Set([...reader.sources.train, ...reader.sources.eval])].toSorted(),
-        hashOf,
-      ),
-    }),
-  );
-  const dir = path.join(o.cache, 'reads', key);
+  const dir = yield* readsDirOf(o);
   const readFile = path.join(dir, 'read.json');
   const figureFile = path.join(dir, 'figure.json');
   if (!(yield* fs.exists(readFile))) {
@@ -890,14 +914,16 @@ export const chainClip = Effect.fn('cast.chain.clip')(function* (o: {
  * reader-lock entry (`clips.ts` `clipEntryOf`), pass or fail. It reads the
  * reader, the clip its clip-make stage adopted (`clip:<clip>@<member>`), the
  * provenance beside it (whose map lays it on the canvas), the training set
- * (whose shards stand for the cuts of the drawings it poses) and the
- * chain's source files, with the chain's settings and the clip's bands and
- * expected drawings as its config.
+ * (whose shards stand for the cuts of the drawings it poses), the chain's
+ * source files and the reader's read files (`readFiles`,
+ * `CastReader.sources.read`), with the chain's settings and the clip's bands
+ * and expected drawings as its config.
  */
 export const clipStages = (
   m: MemberStages,
   cache: string,
   chainSources: ReadonlyArray<Input>,
+  readFiles: ReadonlyArray<string>,
 ): ReadonlyArray<
   Stage<StageServices | CastReader | Media | ChildProcessSpawner.ChildProcessSpawner>
 > =>
@@ -913,6 +939,7 @@ export const clipStages = (
         stageInput(made),
         fileInput(provenance),
         ...chainSources,
+        ...readFiles.map(fileInput),
         // the set's shards stand for the cuts of the drawings the reader was trained on
         stageInput('trainset'),
       ],

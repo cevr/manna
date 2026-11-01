@@ -59,7 +59,7 @@ const graph: ReadonlyArray<Stage<CastReader | FileSystem.FileSystem>> = [
       Effect.map(ctx.output('renders:front@m'), (shard) => text(`m/front=${sha256Hex(shard)}\n`)),
   },
   trainStage(CANDIDATES, TRAIN_FILES, LOCK),
-  ...CANDIDATES.map((c) => evalStage(c.renders, [])),
+  ...CANDIDATES.map((c) => evalStage(c.renders, [], [])),
   ...['clip-b', 'wave'].map((clip): Stage<never> => ({
     id: `eval:clip:${clip}@m`,
     inputs: [stageInput('train'), fileInput(`/in/${clip}.json`)],

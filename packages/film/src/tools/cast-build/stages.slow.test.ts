@@ -403,9 +403,12 @@ describe('memberStages', () => {
           },
           '/cache',
           (yield* stageSources).chain,
+          ['/reader/read.py'],
         );
         const inputs = clips.flatMap((c) => c.inputs);
         expect(inputs).toContainEqual({ _tag: 'Stage', id: 'train' });
+        // the reader's read files, beside the train: a read edit re-runs it with the train cached
+        expect(inputs).toContainEqual({ _tag: 'File', path: '/reader/read.py' });
         expect(inputs).toContainEqual({ _tag: 'Stage', id: 'trainset' });
         // the mp4 is the clip-make stage's output; its map is the provenance beside it
         expect(inputs).toContainEqual({ _tag: 'Stage', id: 'clip:b@fake' });
