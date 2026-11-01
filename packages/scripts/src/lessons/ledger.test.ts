@@ -233,6 +233,49 @@ describe('the lessons ledger', () => {
       }),
   );
 
+  it.effect(
+    'reads a finding in a counsel, codex, critique, audit or followups output, and none in its input',
+    () =>
+      Effect.gen(function* () {
+        expect(
+          yield* problemsOf(
+            entry('in-counsel', 'none: a reason', 'review', 'unit/round-3-counsel.md F1'),
+            entry('in-counsel-codex', 'none: a reason', 'review', 'unit/counsel-codex.md F2'),
+            entry('in-codex', 'none: a reason', 'review', 'review-1/codex.md C1'),
+            entry('in-critique', 'none: a reason', 'review', 'unit/critique-r2.md F1'),
+            entry(
+              'in-dotted-critique',
+              'none: a reason',
+              'review',
+              'unit/turnaround-threeQuarterLeft.critique.md F2',
+            ),
+            entry('in-audit', 'none: a reason', 'review', 'unit/semantic-audit.md A1'),
+            entry('in-followups', 'none: a reason', 'review', 'unit/followups.md F1'),
+            entry(
+              'in-review-followups',
+              'none: a reason',
+              'review',
+              'unit/review-followups-r1.md F2',
+            ),
+            entry('in-counsel-packet', 'none: a reason', 'review', 'unit/counsel-packet.md F1'),
+            entry(
+              'in-critique-prompt',
+              'none: a reason',
+              'review',
+              'unit/critique-r2-a-prompt.md F1',
+            ),
+            entry('in-followups-brief', 'none: a reason', 'review', 'unit/brief-followups.md F1'),
+            entry('in-dotted-spec', 'none: a reason', 'review', 'unit/film.spec.md p5'),
+          ),
+        ).toEqual(
+          ['in-counsel-packet', 'in-critique-prompt', 'in-followups-brief', 'in-dotted-spec'].map(
+            (id) =>
+              `${id}: a review entry cites no finding (<unit>/<review file> <id>, as F2 or m1)`,
+          ),
+        );
+      }),
+  );
+
   it.effect("refuses a reviewer's input as a cited finding: its prompt, brief or packet", () =>
     Effect.gen(function* () {
       expect(

@@ -156,20 +156,23 @@ const unless = (holds: boolean, problem: string): ReadonlyArray<string> =>
   [problem].filter(() => !holds);
 
 /** Each `<unit>/<file>.md <id>` of a Source, captured by the file's name. */
-const CITE = /\S\/([\w-]+)\.md [A-Za-z]\d+\b/g;
-/** A review's word as one of a file name's dash-joined parts. */
-const REVIEW_PART = /(?:^|-)(?:findings|review|checks?|verify|report|follow-up|blocked)(?=-|$)/;
-/** A reviewer's input as one of a file name's dash-joined parts. */
-const INPUT_PART = /(?:^|-)(?:prompt|brief|packet)(?=-|$)/;
+const CITE = /\S\/([\w.-]+)\.md [A-Za-z]\d+\b/g;
+/** A review's word as one of a file name's parts, joined by `-` or `.`. */
+const REVIEW_PART =
+  /(?:^|[-.])(?:findings|review|checks?|verify|report|follow-up|followups|blocked|counsel|codex|critique|audit)(?=[-.]|$)/;
+/** A reviewer's input as one of a file name's parts, joined by `-` or `.`. */
+const INPUT_PART = /(?:^|[-.])(?:prompt|brief|packet)(?=[-.]|$)/;
 
 /**
  * Whether a Source cites a finding in its review file: `<unit>/<file> <id>`,
- * the file's name holding a review's word as one of its dash-joined parts
+ * the file's name holding a review's word as one of its parts
  * (`round-1-findings.md`, `review-r1.md`, `p1-round-1-checks.md`,
  * `p5-self-check.md`, `round-2-verify.md`, `report.md`, `follow-up-1.md`,
- * `blocked.md`) and no reviewer's input (`round-1-review-brief.md`,
- * `review-1-prompt.md`, `review-r1-packet.md`), so a spec's phase
- * (`unit/spec.md p5`) or a brief's numbered ask cites no finding.
+ * `followups.md`, `blocked.md`, `round-3-counsel.md`, `codex.md`,
+ * `critique-r2.md`, `<view>.critique.md`, `semantic-audit.md`) and no
+ * reviewer's input (`round-1-review-brief.md`, `review-1-prompt.md`,
+ * `counsel-packet.md`), so a spec's phase (`unit/spec.md p5`) or a brief's
+ * numbered ask cites no finding.
  */
 const citesFinding = (source: string) =>
   Array.from(source.matchAll(CITE), ([, name = '']) => name).some(
