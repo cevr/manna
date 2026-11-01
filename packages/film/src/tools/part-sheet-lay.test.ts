@@ -249,6 +249,8 @@ const layBeside = (inner: Paint) => {
 
 const laid = layOn(ARM);
 const olive = () => OLIVE;
+/** The arm laid in smooth olive, the kept cloth: two tests read it and neither changes it. */
+const smoothArm = laid(olive);
 
 describe('the part sheet lay', () => {
   test('paint flecked with the kept sleeve misses the speck bar; smooth paint meets it', () => {
@@ -259,7 +261,7 @@ describe('the part sheet lay', () => {
         onFalse: () => OLIVE,
       }),
     );
-    const smooth = laid(olive);
+    const smooth = smoothArm;
     expect(flecked.speck).toEqual([
       expect.objectContaining({ part: 'torso', under: 'arm', verdict: 'outside' }),
     ]);
@@ -405,7 +407,7 @@ describe('the part sheet lay', () => {
 
   test('paint greyer than the cloth beside it misses the drift bar, though its seam matches', () => {
     const grey = laid(() => GREY);
-    const kept = laid(olive);
+    const kept = smoothArm;
     expect(grey.seam.deltaE._tag === 'Some' && grey.seam.deltaE.value).toBe(0);
     expect(grey.drift.chroma).toEqual([
       expect.objectContaining({ part: 'torso', under: 'arm', verdict: 'outside' }),
