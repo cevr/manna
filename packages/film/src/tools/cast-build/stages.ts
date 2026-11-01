@@ -585,15 +585,33 @@ const drawingsIn = (trainset: Uint8Array) =>
 const readerFailed = (id: string) => (e: ReaderError) =>
   StageFailed.make({ reason: `${id}: ${e.message}` });
 
-/** The training set read by the train stage: its bytes, its hash, and the reader's key over it, the config and `sources`. */
-export const trainKeyOf = (ctx: StageContext, sources: ReadonlyArray<string>) =>
+/**
+ * The training set read by the train stage: its bytes, its hash, the train
+ * files' hashes by basename (`trainer`), and the reader's key over the set,
+ * the config and those files (`trainFiles`, the reader's `train` role). The
+ * key names each file by its basename, sorted, so it holds across checkouts.
+ */
+export const trainKeyOf = (ctx: StageContext, trainFiles: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const set = yield* ctx.output('trainset');
     const trainset = sha256Hex(set);
-    const lines = [`trainset=${trainset}`, `config=${TRAIN_CONFIG}`];
-    for (const file of sources)
-      lines.push(`${file.split('/').at(-1)}=${sha256Hex(yield* ctx.file(file))}`);
-    return { set, trainset, key: sha256Hex(encoder.encode(lines.join('\n'))) };
+    const hashes = new Map<string, string>();
+    for (const file of trainFiles)
+      hashes.set(file.split('/').at(-1) ?? file, sha256Hex(yield* ctx.file(file)));
+    const trainer = [...hashes.keys()]
+      .toSorted()
+      .map((name) => [name, hashes.get(name) ?? ''] as const);
+    const lines = [
+      `trainset=${trainset}`,
+      `config=${TRAIN_CONFIG}`,
+      ...trainer.map(([name, sha]) => `${name}=${sha}`),
+    ];
+    return {
+      set,
+      trainset,
+      trainer: Object.fromEntries(trainer),
+      key: sha256Hex(encoder.encode(lines.join('\n'))),
+    };
   });
 
 /** The part of train.py's result the train notes: its steps, seconds per step and last loss. */
@@ -637,6 +655,8 @@ export const AdoptedNote = Schema.fromJsonString(
 const CommittedLock = Schema.fromJsonString(
   Schema.Struct({
     reader: Schema.String,
+    /** The train files' hashes by basename the key was made from; a lock older than the field has none. */
+    trainer: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
     checkpointSha256: Schema.String,
     train: TrainLines,
     spend: Schema.optionalKey(BuildSpend),
@@ -659,8 +679,9 @@ const fitNote = (result: string, app: Option.Option<string>) =>
 /**
  * The one reader trained on the training set, on Modal; it spends, so it
  * waits unless `--spend modal`. It reads the set, every shard in it and
- * the reader's source files (`sources`, every file a train ships), so a
- * change to any of them is a new reader. Its output is the checkpoint, with
+ * the reader's train files (`trainFiles`, the closure of what a train runs,
+ * `CastReader.sources.train`), so a change to any of them is a new reader;
+ * a read-only or eval-only file is not among them. Its output is the checkpoint, with
  * the fit's summary (`FitNote`) noted beside it in `build.json`; on
  * Modal the train writes it at `/runs/<key>/<the build's run>.pt`, and
  * `promote` copies it to `/readers/<key>.pt` (the key: the hash of those
@@ -677,12 +698,12 @@ const fitNote = (result: string, app: Option.Option<string>) =>
  */
 export const trainStage = (
   candidates: ReadonlyArray<Candidate>,
-  sources: ReadonlyArray<string>,
+  trainFiles: ReadonlyArray<string>,
   lock: string,
 ): Stage<CastReader> => {
   /** This process's runs that adopted rather than trained: they have nothing to promote. */
   const adopted = new Set<string>();
-  const trainOn = trainOnModal(candidates, sources);
+  const trainOn = trainOnModal(candidates, trainFiles);
   /** The committed checkpoint and the lock's lines, when the lock names this reader key and the cache keeps its bytes. */
   const adoptable = (ctx: StageContext, key: string) =>
     Effect.gen(function* () {
@@ -706,13 +727,13 @@ export const trainStage = (
     inputs: [
       // the set names each shard by its hash, so its shards are in its key
       stageInput('trainset'),
-      ...sources.map(fileInput),
+      ...trainFiles.map(fileInput),
     ],
     version: VERSION.train,
     config: TRAIN_CONFIG,
     run: (ctx) =>
       Effect.gen(function* () {
-        const { key } = yield* trainKeyOf(ctx, sources);
+        const { key } = yield* trainKeyOf(ctx, trainFiles);
         const found = yield* adoptable(ctx, key);
         if (Option.isSome(found)) {
           const a = found.value;
@@ -729,7 +750,7 @@ export const trainStage = (
       Effect.gen(function* () {
         if (adopted.has(ctx.run)) return;
         const reader = yield* CastReader;
-        const { key } = yield* trainKeyOf(ctx, sources);
+        const { key } = yield* trainKeyOf(ctx, trainFiles);
         yield* reader.promote(key, ctx.run).pipe(Effect.mapError(readerFailed('promote')));
       }),
   };
@@ -737,12 +758,13 @@ export const trainStage = (
 
 /** The paid train of `candidates` on Modal, when the build allows it. */
 const trainOnModal =
-  (candidates: ReadonlyArray<Candidate>, sources: ReadonlyArray<string>) => (ctx: StageContext) =>
+  (candidates: ReadonlyArray<Candidate>, trainFiles: ReadonlyArray<string>) =>
+  (ctx: StageContext) =>
     ctx.spend(
       'modal',
       Effect.gen(function* () {
         const reader = yield* CastReader;
-        const { set, trainset, key } = yield* trainKeyOf(ctx, sources);
+        const { set, trainset, key } = yield* trainKeyOf(ctx, trainFiles);
         const inSet = new Set(drawingsIn(set));
         const shards = yield* Effect.forEach(
           candidates.filter((c) => inSet.has(c.drawing)).map((c) => c.renders),

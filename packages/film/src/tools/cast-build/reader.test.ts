@@ -37,7 +37,12 @@ const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
   ...over,
 });
 
-const SOURCES = ['/reader/model.py', '/reader/uv.lock'];
+/** The reader's files by role, as `CastReader.sources` names them: model.py trains and reads; read.py, eval.py and the lock only read. */
+const ROLES = {
+  train: ['/reader/model.py'],
+  read: ['/reader/model.py', '/reader/read.py', '/reader/uv.lock'],
+  eval: ['/reader/eval.py', '/reader/model.py', '/reader/read.py', '/reader/uv.lock'],
+};
 /** The committed reader lock the train adopts from. */
 const LOCK = '/library/reader.lock.json';
 const VIEWS = ['front', 'side'];
@@ -168,7 +173,7 @@ const graph = (o: { readonly sideCut?: boolean } = {}): ReadonlyArray<Stage<Cast
     ];
   }),
   trainsetStage(CANDIDATES),
-  trainStage(CANDIDATES, SOURCES, LOCK),
+  trainStage(CANDIDATES, ROLES.train, LOCK),
   ...CANDIDATES.map((c) => evalStage(c.renders, [])),
 ];
 
@@ -181,6 +186,8 @@ const files = () =>
     [fitFile('front'), fitRows(true)],
     [fitFile('side'), fitRows(true)],
     ['/reader/model.py', text('model')],
+    ['/reader/read.py', text('read')],
+    ['/reader/eval.py', text('eval')],
     ['/reader/uv.lock', text('lock')],
   ]);
 
@@ -197,11 +204,11 @@ const build = (
         ContentStore.layer.pipe(
           Layer.provideMerge([memoryFileSystem(disk), Path.layer, memoryLocks]),
         ),
-        CastReader.layerTest({ evaluate: () => '{"seen":{"accuracy":1}}', ...reader }, asked, {
-          train: SOURCES,
-          read: SOURCES,
-          eval: SOURCES,
-        }),
+        CastReader.layerTest(
+          { evaluate: () => '{"seen":{"accuracy":1}}', ...reader },
+          asked,
+          ROLES,
+        ),
       ),
     ),
   );
@@ -348,7 +355,7 @@ describe('cast build: train and eval', () => {
       }),
   );
 
-  it.effect('a change to a reader source file is a new train, and so new evals', () =>
+  it.effect('a change to a train file is a new train, and so new evals', () =>
     Effect.gen(function* () {
       const disk = files();
       yield* build(disk, [], { spend: new Set(['modal'] as const) });
@@ -357,6 +364,17 @@ describe('cast build: train and eval', () => {
       expect(state['trainset']).toBe('cached');
       expect(state['train']).toBe('stale');
       expect(state['eval:front@m']).toBe('stale');
+    }),
+  );
+
+  it.effect('a change to a file only a read or an eval runs leaves the train cached', () =>
+    Effect.gen(function* () {
+      const disk = files();
+      yield* build(disk, [], { spend: new Set(['modal'] as const) });
+      for (const file of ['/reader/read.py', '/reader/eval.py', '/reader/uv.lock']) {
+        const plan = yield* build(disk, [], { plan: true, touch: [file] });
+        expect([file, stateOf(plan)['train']]).toEqual([file, 'cached']);
+      }
     }),
   );
 
@@ -481,7 +499,7 @@ describe('cast build: train and eval', () => {
         new URL('../../../reader/model.py', import.meta.url).pathname,
       );
       // the config is the train key's (`graph.ts` keys every stage by its config)
-      const train = decodeTrainConfig(trainStage(CANDIDATES, SOURCES, LOCK).config ?? '');
+      const train = decodeTrainConfig(trainStage(CANDIDATES, ROLES.train, LOCK).config ?? '');
       expect(train.backbone).toBe('facebook/dinov2-small');
       expect(model).toContain(`BACKBONE = "${train.backbone}"`);
       expect(model).toContain(`IN_W, IN_H = ${train.inputSide.width}, ${train.inputSide.height}`);

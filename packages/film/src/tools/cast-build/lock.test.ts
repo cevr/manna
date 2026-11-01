@@ -13,10 +13,11 @@ import { ContentStore } from '../content-store.ts';
 import { type Stage, StageFailed, buildGraph, fileInput, stageInput } from './graph.ts';
 import { ClipsFailed, checkClips, failedClipsOf, lockStage } from './lock.ts';
 import { CastReader } from './reader.ts';
-import { evalStage, trainStage } from './stages.ts';
+import { TRAIN, evalStage, trainStage } from './stages.ts';
 
 const LOCK = '/library/reader.lock.json';
-const SOURCES = ['/reader/model.py'];
+/** The reader's train files, out of basename order: the key sorts them by basename. */
+const TRAIN_FILES = ['/reader/train.py', '/reader/model.py'];
 /** `front` is trained on; `side` is a candidate the set leaves out. */
 const CANDIDATES = ['front', 'side'].map((v) => ({
   drawing: `m/${v}`,
@@ -57,7 +58,7 @@ const graph: ReadonlyArray<Stage<CastReader | FileSystem.FileSystem>> = [
     run: (ctx) =>
       Effect.map(ctx.output('renders:front@m'), (shard) => text(`m/front=${sha256Hex(shard)}\n`)),
   },
-  trainStage(CANDIDATES, SOURCES, LOCK),
+  trainStage(CANDIDATES, TRAIN_FILES, LOCK),
   ...CANDIDATES.map((c) => evalStage(c.renders, [])),
   ...['clip-b', 'wave'].map((clip): Stage<never> => ({
     id: `eval:clip:${clip}@m`,
@@ -70,7 +71,12 @@ const CLIPS = [
   { member: 'm', clip: 'clip-b' },
   { member: 'm', clip: 'wave' },
 ];
-const lock = lockStage({ file: LOCK, candidates: CANDIDATES, sources: SOURCES, clips: CLIPS });
+const lock = lockStage({
+  file: LOCK,
+  candidates: CANDIDATES,
+  trainFiles: TRAIN_FILES,
+  clips: CLIPS,
+});
 
 /** An eval:clip stage's output: the clip's lock entry, its end band at `iou`, failing for each of `fails`. */
 const entryOf = (clip: string, iou: number, fails: ReadonlyArray<string> = []) => ({
@@ -106,6 +112,7 @@ const files = () =>
     ['/in/clip-b.json', chain(0.9132)],
     ['/in/wave.json', chain(0.95, 'wave')],
     ['/reader/model.py', text('model')],
+    ['/reader/train.py', text('train')],
   ]);
 
 /** `graph` with the trained drawing's eval failing. */
@@ -144,7 +151,7 @@ const build = (
         CastReader.layerTest(
           { evaluate: () => evaluate, checkpoint: text('ckpt'), trainStdout: stdout },
           [],
-          { train: SOURCES, read: SOURCES, eval: SOURCES },
+          { train: TRAIN_FILES, read: [], eval: [] },
         ),
       ),
     ),
@@ -166,7 +173,24 @@ describe('cast build: the reader lock', () => {
       const l = lockOf(disk);
       const train = report.stages.find((s) => s.id === 'train');
       expect(l['stageKey']).toBe(Option.getOrUndefined(train?.key ?? Option.none()));
-      expect(String(l['reader'])).toMatch(/^[0-9a-f]{64}$/);
+      // the reader key: the set, the config and each train file by basename, sorted
+      const trainer = {
+        'model.py': sha256Hex(text('model')),
+        'train.py': sha256Hex(text('train')),
+      };
+      expect(l['trainer']).toEqual(trainer);
+      expect(l['reader']).toBe(
+        sha256Hex(
+          text(
+            [
+              `trainset=${sha256Hex(text(set))}`,
+              `config=${jsonOf(TRAIN)}`,
+              `model.py=${trainer['model.py']}`,
+              `train.py=${trainer['train.py']}`,
+            ].join('\n'),
+          ),
+        ),
+      );
       expect(l['trainset']).toBe(sha256Hex(text(set)));
       expect(l['drawings']).toEqual({ 'm/front': sha256Hex(text('front shard')) });
       expect(l['checkpointSha256']).toBe(sha256Hex(text('ckpt')));
