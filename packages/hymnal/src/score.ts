@@ -55,15 +55,18 @@ const closingKey = (harmony: readonly Note[]): Chord.Key => {
  * own rhythm, a note split or joined for its words, breaks the repeat: when
  * fewer verses repeat exactly than the text has, the missing ones are found
  * beside them (`fewer`). With no exact repeat, the expected count's closest
- * equal split only places each verse near its start: the verse starts on the
- * note nearby that opens as the first verse does, after the longest pause
- * (the end of a phrase).
+ * equal split only places each verse near its start. Verse 1 starts on note
+ * 0 or at least two bars (`bar`, in ticks) in: where a note nearby follows
+ * the tune's last keys, the intro ends there, else after the longest pause.
+ * Each later verse starts on the note nearby that most follows the tune's
+ * last keys and opens as verse 1 does, ties to the longest pause (the end of
+ * a phrase), then to the nearest.
  */
-export const findVerses = (melody: readonly Note[], expected: number): Verses => {
+export const findVerses = (melody: readonly Note[], expected: number, bar: number): Verses => {
   const keys = melody.map((note) => note.key);
   const end = melody.at(-1)?.end ?? 0;
-  // The time from the note before to this one: a long note or a rest ends a phrase. The files
-  // play an intro first, so the first note is no verse's start.
+  // The time from the note before to this one: a long note or a rest ends a phrase. The first
+  // note follows no pause.
   const pause = (i: number) => {
     const [before, note] = [melody[i - 1], melody[i]];
     if (note === undefined) return Number.NEGATIVE_INFINITY;
@@ -96,6 +99,8 @@ export const findVerses = (melody: readonly Note[], expected: number): Verses =>
     spans(Array.from({ length: count }, (_, k) => intro + k * length));
   const REACH = 4;
   const OPENING = 8;
+  /** The run of the tune's last keys that marks an intro's end. */
+  const ENDING = 4;
   /** The notes within `REACH` of `center`, after note `after` and before note `before`. */
   const nearby = (center: number, after: number, before = keys.length) =>
     Array.from({ length: 2 * REACH + 1 }, (_, d) => center - REACH + d).filter(
@@ -158,7 +163,33 @@ export const findVerses = (melody: readonly Note[], expected: number): Verses =>
   }
   if (wanted === undefined) return { spans: [{ start: 0, end }], exact: false };
 
-  const first = best(nearby(wanted.intro, -1), pause, wanted.intro);
+  /** The candidate whose ranks, compared in order, are highest; ties to the nearest `center`. */
+  const top = (
+    candidates: readonly number[],
+    ranks: (i: number) => readonly number[],
+    center: number,
+  ) => {
+    const ranked = (i: number) => [...ranks(i), -Math.abs(i - center)];
+    return candidates.reduce((a, b) => {
+      const [ra, rb] = [ranked(a), ranked(b)];
+      const d = rb.findIndex((r, k) => r !== ra[k]);
+      return d >= 0 && (rb[d] ?? 0) > (ra[d] ?? 0) ? b : a;
+    }, candidates[0] ?? center);
+  };
+  // How many keys right before note `i` are the melody's last keys, in a row: a verse starts
+  // where the one before it ended as the tune ends.
+  const ends = (i: number) => {
+    let k = 0;
+    while (k < OPENING && i - 1 - k >= 0 && keys[i - 1 - k] === keys[keys.length - 1 - k]) k++;
+    return k;
+  };
+  // An intro is none or at least two bars: verse 1 starts on note 0 or two bars in.
+  const firsts = [...new Set([0, ...nearby(wanted.intro, -1)])].filter(
+    (i) => i === 0 || (melody[i]?.start ?? 0) >= 2 * bar,
+  );
+  // Where a note nearby ends as the tune ends, the intro ends there; else after the longest pause.
+  const ended = Math.max(...firsts.map(ends)) >= ENDING;
+  const first = top(firsts, (i) => (ended ? [ends(i), pause(i)] : [pause(i)]), wanted.intro);
   // How many of the first verse's opening keys this note begins with, in a row.
   const opens = (i: number) => {
     let k = 0;
@@ -167,10 +198,9 @@ export const findVerses = (melody: readonly Note[], expected: number): Verses =>
   };
   const starts = [first];
   for (let k = 1; k < expected; k++) {
-    const center = (starts.at(-1) ?? first) + wanted.length;
     const after = starts.at(-1) ?? first;
-    const ranked = (i: number) => opens(i) * end + Math.min(pause(i), end - 1);
-    starts.push(best(nearby(center, after), ranked, center));
+    const center = after + wanted.length;
+    starts.push(top(nearby(center, after), (i) => [ends(i) + opens(i), pause(i)], center));
   }
   return { spans: spans(starts), exact: false };
 };
@@ -182,9 +212,10 @@ export const fromMidi = (midi: Midi, expectedVerses: number): Score => {
   const melody = melodyOf(midi, tracks);
   const meter = midi.timeSignatures[0] ?? { numerator: 4, denominator: 4 };
   const signature = midi.keySignatures[0];
+  const beatsPerBar = (meter.numerator * 4) / meter.denominator;
   return {
     ticksPerBeat: midi.ticksPerBeat,
-    beatsPerBar: (meter.numerator * 4) / meter.denominator,
+    beatsPerBar,
     meter: { numerator: meter.numerator, denominator: meter.denominator },
     meters: [{ ...meter, tick: 0 }, ...midi.timeSignatures.slice(1)],
     key:
@@ -193,6 +224,6 @@ export const fromMidi = (midi: Midi, expectedVerses: number): Score => {
         : Chord.keyFromSignature(signature.fifths, signature.minor),
     harmony,
     melody,
-    verses: findVerses(melody, expectedVerses),
+    verses: findVerses(melody, expectedVerses, beatsPerBar * midi.ticksPerBeat),
   };
 };

@@ -65,6 +65,9 @@ describe('Score.fromMidi', () => {
 });
 
 describe('Score.findVerses', () => {
+  /** A bar of 2/4 at 384 ticks per beat: the tunes here are in 2/4 unless a case says else. */
+  const BAR = 2 * 384;
+
   it.effect(
     'finds verses played each in its own rhythm, each after the pause that ends the last',
     () =>
@@ -91,7 +94,7 @@ describe('Score.findVerses', () => {
           beat += beats;
           return note;
         });
-        const found = Score.findVerses(melody, 2);
+        const found = Score.findVerses(melody, 2, BAR);
         expect(found.exact).toBe(false);
         expect(found.spans.map((span) => span.start / 384)).toEqual([5, 16]);
       }),
@@ -139,7 +142,7 @@ describe('Score.findVerses', () => {
         // 493's shape: verse 1 splits a note, verses 2 and 3 repeat exactly. The intro takes 6
         // beats, each verse 14 beats.
         const melody = file(INTRO, splitAt(TUNE, 2), TUNE, TUNE);
-        const found = Score.findVerses(melody, 3);
+        const found = Score.findVerses(melody, 3, BAR);
         expect(startsOf(found)).toEqual([6, 20, 34]);
         expect(found.exact).toBe(false);
       }),
@@ -154,7 +157,7 @@ describe('Score.findVerses', () => {
         const tune: Fixture.Voice = [[60, 1], ...TUNE];
         const intro = tune.slice(8);
         const melody = file(intro, tune, splitAt(tune, 1), tune, tune);
-        expect(startsOf(Score.findVerses(melody, 4))).toEqual([6, 21, 36, 51]);
+        expect(startsOf(Score.findVerses(melody, 4, BAR))).toEqual([6, 21, 36, 51]);
       }),
   );
 
@@ -163,7 +166,7 @@ describe('Score.findVerses', () => {
       // 212's and 305's shape: verses 2 and 4 split a note, so the file repeats exactly as two
       // pairs of verses.
       const melody = file(INTRO, TUNE, splitAt(TUNE, 4), TUNE, splitAt(TUNE, 4));
-      const found = Score.findVerses(melody, 4);
+      const found = Score.findVerses(melody, 4, BAR);
       expect(startsOf(found)).toEqual([6, 20, 34, 48]);
       expect(found.exact).toBe(false);
     }),
@@ -177,14 +180,14 @@ describe('Score.findVerses', () => {
         // longest pause falls before that last note, one note early.
         const tune: Fixture.Voice = [...TUNE.slice(0, 8), [64, 4], [62, 2]];
         const melody = file(tune.slice(7), tune, splitAt(tune, 4), tune, splitAt(tune, 4));
-        expect(startsOf(Score.findVerses(melody, 4))).toEqual([7, 22, 37, 52]);
+        expect(startsOf(Score.findVerses(melody, 4, BAR))).toEqual([7, 22, 37, 52]);
       }),
   );
 
   it.effect('keeps the verses a file plays when it plays fewer than the text has', () =>
     Effect.sync(() => {
       // Two exact verses after a short intro, for a text of three stanzas: the file plays two.
-      expect(Score.findVerses(file(INTRO, TUNE, TUNE), 3)).toEqual({
+      expect(Score.findVerses(file(INTRO, TUNE, TUNE), 3, BAR)).toEqual({
         spans: [
           { start: 6 * 384, end: 20 * 384 },
           { start: 20 * 384, end: 34 * 384 },
@@ -202,7 +205,60 @@ describe('Score.findVerses', () => {
         // held note before each verse.
         const rested: Fixture.Voice = TUNE.map((note, i) => (i === 3 ? [note[0], 6] : note));
         const melody = file(rested.slice(7), splitAt(rested, 6), rested, rested);
-        expect(startsOf(Score.findVerses(melody, 3))).toEqual([6, 24, 42]);
+        expect(startsOf(Score.findVerses(melody, 3, BAR))).toEqual([6, 24, 42]);
+      }),
+  );
+
+  it.effect(
+    'starts verse 1 where the intro ends as the tune ends, not after a longer note inside it',
+    () =>
+      Effect.sync(() => {
+        // 54's and 288's shape: the intro is the tune's last line, with a 3-beat note before
+        // its last three notes; verse 2 splits a note. The intro ends at beat 7, each verse is
+        // 16 beats.
+        const held: Fixture.Voice = TUNE.map((note, i) => (i === 6 ? [note[0], 3] : note));
+        const intro: Fixture.Voice = [...held.slice(5, 9), [62, 1]];
+        const found = Score.findVerses(file(intro, held, splitAt(held, 2)), 2, BAR);
+        expect(startsOf(found)).toEqual([7, 23]);
+        expect(found.exact).toBe(false);
+      }),
+  );
+
+  it.effect('starts verse 1 on the first note when no intro of two bars fits', () =>
+    Effect.sync(() => {
+      // 58's shape: a 4/4 file with no intro, its first two bars in quarter notes; verse 2 splits
+      // its next-to-last note. The closest split puts a one-note intro before verse 1.
+      const tune: Fixture.Voice = [60, 62, 64, 65, 67, 65, 64, 62, 64, 65, 67, 64]
+        .map((key): readonly [number, number] => [key, 1])
+        .concat([[62, 4]]);
+      const found = Score.findVerses(file(tune, splitAt(tune, 11)), 2, 4 * 384);
+      expect(startsOf(found)).toEqual([0, 16]);
+    }),
+  );
+
+  it.effect(
+    'starts a verse on the first of a split pickup, where the verse before ends as the tune ends',
+    () =>
+      Effect.sync(() => {
+        // 475's and 525's shape: a 4/4 tune on a one-beat pickup, its intro three bars less the
+        // pickup. Verse 2 splits the pickup in two for an extra syllable, so its second half
+        // opens as verse 1 does, and the first half follows verse 1's ending. Verse 3 splits its
+        // second note. Verses start at beats 11, 24, 37.
+        const tune: Fixture.Voice = [
+          [60, 1],
+          [64, 1],
+          [65, 1],
+          [67, 2],
+          [65, 1],
+          [64, 1],
+          [62, 1],
+          [64, 1],
+          [62, 1],
+          [59, 3],
+        ];
+        const intro: Fixture.Voice = [...tune.slice(1, 9), [59, 2]];
+        const melody = file(intro, tune, splitAt(tune, 0), splitAt(tune, 1));
+        expect(startsOf(Score.findVerses(melody, 3, 4 * 384))).toEqual([11, 24, 37]);
       }),
   );
 });
