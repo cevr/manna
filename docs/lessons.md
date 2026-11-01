@@ -4683,3 +4683,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** Three mutants of the fine grain read left every lay test green: one cell the size of the whole part (`GRAIN_CELL` 4096), an outline cutoff of L* 16 that drops cloth at 15.2 to 15.9, and the kept cloth read with its outline ink in it.
 - **Cause:** The fixtures spread their grain over every cell, their darkest cloth lay at L* 16.6, and no case kept an outline in the cloth beside grainy paint.
 - **Guard:** code: `packages/film/src/tools/part-sheet-lay.test.ts` `fine grain in one cell among smooth cells misses the grain bar, though pooled over the part it is under the bar`, `packages/film/src/tools/part-sheet-lay.test.ts` `fine grain in cloth as dark as the darkest kept cloth misses the grain bar; smooth paint of it meets it`, `packages/film/src/tools/part-sheet-lay.test.ts` `fine grain painted beside a part's own outline in its kept cloth misses the grain bar`
+
+### hymnal-verse-starts-pinned-for-every-hymn
+
+- **Date:** 2026-11-01
+- **Kind:** review
+- **Said:** "The committed read guard reaches 10 of the 695 reads. A later reader change can misread any other hymn while the gate stays green."
+- **Source:** hymnapp/versecheck/round-2-findings.md m1
+- **Wrong:** The verse reader's tests named 10 hymns. A change that moved a later verse start of hymn 262, of 140, or of any other hymn outside those 10 left every committed test green.
+- **Cause:** The generator was a fixed table of 10 hymns, narrower than the rule it held: every hymn's verse split, all 695.
+- **Guard:** code: `packages/hymnal/src/verse-starts.slow.test.ts` `every hymn verse starts equal the committed table`

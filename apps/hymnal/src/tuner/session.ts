@@ -4,8 +4,10 @@
  * sheet (`Tuner.tsx`) feeds this machine the world's events and carries out
  * the work each step names; it decides nothing itself.
  *
- * The rule: the sheet listens only while it is open, the app is active, the
- * microphone is granted and the player is quiet. Opening it reads the
+ * The rule: the sheet listens only while it is open, the app is active, no
+ * other route covers it, the microphone is granted and the player is quiet.
+ * Covered and active are two conditions, each from its own source (the
+ * navigation and the app's state), so neither can lift the other. Opening it reads the
  * permission, and asks once when it is undetermined. A player that sounds as
  * listening would start is paused once, and listening starts when it is
  * quiet; a player that starts to sound while the sheet listens ends the
@@ -21,7 +23,13 @@ import { type Reading, STRINGS, type StringId } from './tuning';
 export type Permission = 'undetermined' | 'granted' | 'denied';
 
 /** Why the sheet stopped listening: an end the ear sent, or one the sheet made. */
-export type StopReason = Exclude<ListenEnd, 'stopped'> | 'player' | 'away' | 'closed' | 'late';
+export type StopReason =
+  | Exclude<ListenEnd, 'stopped'>
+  | 'player'
+  | 'away'
+  | 'covered'
+  | 'closed'
+  | 'late';
 
 /** Where the sheet stands. */
 export type Phase = Data.TaggedEnum<{
@@ -36,7 +44,7 @@ export type Phase = Data.TaggedEnum<{
   /** The ear is asked to start. */
   Starting: {};
   Listening: {};
-  /** Granted, and the app is not active: it listens again on active. */
+  /** Granted, and the app is not active or another route covers the sheet: it listens again on its return. */
   Away: {};
   /** Listening ended on its own (an interruption, a route, a failure, the player): `Tap to listen again`. */
   Ended: { readonly reason: StopReason };
@@ -52,6 +60,8 @@ export type Event = Data.TaggedEnum<{
   Answered: { readonly permission: Permission };
   /** The app became active, or stopped being it (background, inactive). */
   Active: { readonly active: boolean };
+  /** Another route covers the sheet (its screen blurred), or it is shown again (focused). */
+  Covered: { readonly covered: boolean };
   /** The player sounds (loading, playing, buffering), or it does not. */
   Sounding: { readonly sounding: boolean };
   /** The ear's start `attempt` resolved. */
@@ -79,6 +89,8 @@ export const Work = Data.taggedEnum<Work>();
 export interface Session {
   readonly phase: Phase;
   readonly active: boolean;
+  /** Another route covers the sheet. */
+  readonly covered: boolean;
   readonly sounding: boolean;
   /** Whether the system has asked for the microphone in this opening: it asks once. */
   readonly asked: boolean;
@@ -93,21 +105,37 @@ export interface Step {
   readonly work: ReadonlyArray<Work>;
 }
 
+/**
+ * Whether the screen's words may go to VoiceOver: only while it is open, in
+ * the foreground and not covered by another route, so a stop into `Away` under
+ * a pushed hymn says nothing over that hymn.
+ */
+export const voiced = (session: Session): boolean =>
+  session.active && !session.covered && !Phase.$is('Closed')(session.phase);
+
 /** Whether the ear holds, or is taking, the microphone in `phase`. */
 export const holdsMicrophone = (phase: Phase): boolean =>
   Phase.$is('Starting')(phase) || Phase.$is('Listening')(phase);
 
 /** The sheet as it opens: it reads the permission first. */
 export const opened = (active: boolean, sounding: boolean): Step => ({
-  session: { phase: Phase.Checking(), active, sounding, asked: false, attempt: 0, check: 1 },
+  session: {
+    phase: Phase.Checking(),
+    active,
+    covered: false,
+    sounding,
+    asked: false,
+    attempt: 0,
+    check: 1,
+  },
   work: [Work.ReadPermission({ check: 1 })],
 });
 
 const stay = (session: Session): Step => ({ session, work: [] });
 
-/** Granted: listen now, after pausing a sounding player once, or on the app's return. */
+/** Granted: listen now, after pausing a sounding player once, or on the app's or the screen's return. */
 const listen = (session: Session): Step => {
-  if (!session.active) return stay({ ...session, phase: Phase.Away() });
+  if (!session.active || session.covered) return stay({ ...session, phase: Phase.Away() });
   if (session.sounding)
     return { session: { ...session, phase: Phase.Pausing() }, work: [Work.PausePlayer()] };
   const attempt = session.attempt + 1;
@@ -162,9 +190,26 @@ const activeStep = (session: Session, active: boolean): Step => {
       return stopInto(next, Phase.Away(), 'away');
     return stay(next);
   }
+  // Back in the foreground under a covering route: the read waits for the screen's return.
+  if (session.covered) return stay(next);
   // Back in the foreground: the permission may have changed in Settings meanwhile, even under a read in flight.
   const back = !session.active && Phase.$is('Checking')(phase);
   if (back || Phase.$is('Away')(phase) || Phase.$is('Denied')(phase)) return recheck(next);
+  return stay(next);
+};
+
+/** Another route covered the sheet, or it is shown again. */
+const coveredStep = (session: Session, covered: boolean): Step => {
+  const { phase } = session;
+  const next = { ...session, covered };
+  if (covered) {
+    if (Phase.$is('Pausing')(phase) || holdsMicrophone(phase))
+      return stopInto(next, Phase.Away(), 'covered');
+    return stay(next);
+  }
+  // Shown again: the permission is read again, as on the app's return (it may have changed in Settings).
+  const waiting = Phase.$is('Away')(phase) || Phase.$is('Denied')(phase);
+  if (session.covered && session.active && waiting) return recheck(next);
   return stay(next);
 };
 
@@ -204,6 +249,7 @@ export const step = (session: Session, event: Event): Step => {
       return permitted(session, permission);
     },
     Active: ({ active }) => activeStep(session, active),
+    Covered: ({ covered }) => coveredStep(session, covered),
     Sounding: ({ sounding }) => soundingStep(session, sounding),
     Started: ({ attempt }) => startedStep(session, attempt),
     Refused: ({ attempt }) => {
@@ -257,6 +303,70 @@ export const labelOf = (heard: Option.Option<Reading>): string =>
       if (inTune) return `${name}, in tune`;
       return `${name}, ${centsOff(stringCents)}`;
     },
+  });
+
+/**
+ * The hint under the gauge, from the target (none is Auto) and the frame's reading:
+ * what to pluck while nothing is heard, else which way to turn the peg.
+ */
+export const hintOf = (target: Option.Option<StringId>, heard: Option.Option<Reading>): string =>
+  Option.match(heard, {
+    onNone: () =>
+      Option.match(target, {
+        onNone: () => 'Pluck any string',
+        onSome: (string) => `Pluck the ${STRING_NAMES[string]} string`,
+      }),
+    onSome: ({ stringCents, inTune }) => {
+      if (inTune) return 'In tune';
+      if (stringCents < 0) return 'Tighten';
+      return 'Loosen';
+    },
+  });
+
+/** Ended: the screen offers `Tap to listen again`, and the reading shows and says why nothing is heard. */
+export const NOT_LISTENING = 'Not listening';
+
+/**
+ * The one rule for the reading under the gauge in `phase`, which `nameOf` and
+ * `wordsOf` both follow. Denied and Closed have no reading. Ended has the
+ * stop. Only Listening has a heard reading; every other phase is at rest.
+ */
+const byPhase = <R, A>(
+  phase: Phase['_tag'],
+  heard: Option.Option<R>,
+  give: { readonly rest: () => A; readonly heard: (heard: R) => A; readonly ended: A },
+): Option.Option<A> =>
+  Match.value(phase).pipe(
+    Match.whenOr('Denied', 'Closed', () => Option.none<A>()),
+    Match.when('Ended', () => Option.some(give.ended)),
+    Match.when('Listening', () =>
+      Option.some(Option.match(heard, { onNone: give.rest, onSome: give.heard })),
+    ),
+    Match.orElse(() => Option.some(give.rest())),
+  );
+
+/** The reading's big name in `phase`: the string heard; at rest the picked string, or `Listening` in Auto. */
+export const nameOf = (
+  phase: Phase['_tag'],
+  target: Option.Option<StringId>,
+  heard: Option.Option<Pick<Reading, 'string'>>,
+): Option.Option<string> =>
+  byPhase(phase, heard, {
+    rest: () =>
+      Option.match(target, { onNone: () => 'Listening', onSome: (id) => STRING_NAMES[id] }),
+    heard: ({ string }) => STRING_NAMES[string],
+    ended: NOT_LISTENING,
+  });
+
+/** The reading's words for VoiceOver in `phase`: `labelOf` the reading heard, `Listening` at rest. */
+export const wordsOf = (
+  phase: Phase['_tag'],
+  heard: Option.Option<Reading>,
+): Option.Option<string> =>
+  byPhase(phase, heard, {
+    rest: () => labelOf(Option.none()),
+    heard: (one) => labelOf(Option.some(one)),
+    ended: NOT_LISTENING,
   });
 
 /** `12 cents flat`, `1 cent sharp`. */

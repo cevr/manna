@@ -58,7 +58,10 @@ export default function HymnalLayout() {
               />
               <Stack.Screen name="chord" options={chordSheetOptions} />
               <Stack.Screen name="about" options={aboutSheetOptions} />
-              <Stack.Screen name="tuner" options={{ ...chordSheetOptions, title: 'Tuner' }} />
+              <Stack.Screen
+                name="tuner"
+                options={{ presentation: 'fullScreenModal', headerShown: false, title: 'Tuner' }}
+              />
               {webOnly(<WebStackHeader root="/" title="Hymns" />)}
             </Stack>
           </StackBottom>

@@ -14,28 +14,33 @@
  */
 
 import { describe, expect, it } from 'bun:test';
-import { Option } from 'effect';
+import { Match, Option } from 'effect';
 
 import {
   Event,
   feedFrame,
   feedOf,
+  hintOf,
   holdsMicrophone,
   labelOf,
   latch,
+  nameOf,
   needleOf,
   opened,
   type Permission,
   Phase,
   type Session,
+  STRING_NAMES,
   stringLabel,
   step,
   TUNED_FRAMES,
   unlatched,
+  voiced,
   Work,
+  wordsOf,
 } from './session';
 import { detect } from './pitch';
-import { reading } from './tuning';
+import { reading, readingOn, STRINGS, type StringId } from './tuning';
 
 /** A seeded generator of numbers in [0, 1) (mulberry32). */
 const seeded = (seed: number) => {
@@ -58,6 +63,8 @@ const EVENTS = 40;
 interface World {
   permission: Permission;
   active: boolean;
+  /** Another route covers the sheet. */
+  covered: boolean;
   sounding: boolean;
   microphone: boolean;
   /** Answers the phone owes the sheet, delivered in a drawn order. */
@@ -90,6 +97,7 @@ const pause = (world: World, before: Session, draw: () => number): Option.Option
 
 const start = (world: World, attempt: number, draw: () => number): Option.Option<string> => {
   if (!world.active) return Option.some('started while away');
+  if (world.covered) return Option.some('started while covered');
   if (world.sounding) return Option.some('started while the player sounds');
   // The ear refuses without the microphone (it changed in Settings since the read), and now and then for no reason.
   // A start takes the microphone as it resolves, whatever stop came while it was in flight.
@@ -139,6 +147,7 @@ const carry = (
 const violation = (world: World, after: Session): Option.Option<string> => {
   if (world.microphone && world.sounding) return Option.some('listening and playing at once');
   if (world.microphone && !world.active) return Option.some('listening while away');
+  if (world.microphone && world.covered) return Option.some('listening while covered');
   if (world.microphone && Phase.$is('Closed')(after.phase))
     return Option.some('listening after the close');
   if (Phase.$is('Listening')(after.phase) && !world.microphone)
@@ -185,15 +194,22 @@ const happening = (world: World, draw: () => number): Event => {
     world.permission = PERMISSIONS[Math.floor(draw() * PERMISSIONS.length)] ?? 'granted';
     return Event.Tapped();
   }
-  if (roll < 0.97) return Event.Tapped();
+  if (roll < 0.88) return Event.Tapped();
+  if (roll < 0.98) {
+    // A hymn link or another route pushes over the sheet, or goes back off it.
+    world.covered = !world.covered;
+    return Event.Covered({ covered: world.covered });
+  }
   return Event.Closed();
 };
 
-const run = (seed: number) => {
+/** Runs the world `seed`, adding to `coveredIn` each phase a `Covered` event met. */
+const run = (seed: number, coveredIn: Set<string>) => {
   const draw = seeded(seed);
   const world: World = {
     permission: PERMISSIONS[Math.floor(draw() * 3)] ?? 'granted',
     active: draw() < 0.9,
+    covered: false,
     sounding: draw() < 0.4,
     microphone: false,
     pending: [],
@@ -204,6 +220,7 @@ const run = (seed: number) => {
   const first = opened(world.active, world.sounding);
   let session = first.session;
   const apply = (event: Event, next: { session: Session; work: ReadonlyArray<Work> }) => {
+    if (Event.$is('Covered')(event)) coveredIn.add(session.phase._tag);
     trail.push(`${event._tag} -> ${next.session.phase._tag} [${next.work.map((w) => w._tag)}]`);
     const broken = carry(world, session, next.session, next.work, draw);
     session = next.session;
@@ -233,6 +250,10 @@ const settle = (
   for (let round = 0; round < 6; round += 1) {
     const due = world.pending.splice(0);
     if (world.sounding) due.push(Event.Sounding({ sounding: false }));
+    if (round === 0 && world.covered) {
+      world.covered = false;
+      due.push(Event.Covered({ covered: false }));
+    }
     if (round < 2) due.push(Event.Active({ active: false }), Event.Active({ active: true }));
     due.push(Event.Tapped());
     for (const owed of due) {
@@ -250,10 +271,25 @@ const settle = (
 
 describe('the tuner sheet’s rule', () => {
   it(`never listens and plays at once, nor away or closed, over ${WORLDS} generated worlds`, () => {
-    const broken = Array.from({ length: WORLDS }, (_, k) => run(SEED + k)).filter(
+    const coveredIn = new Set<string>();
+    const broken = Array.from({ length: WORLDS }, (_, k) => run(SEED + k, coveredIn)).filter(
       (world) => world.broken !== 'none',
     );
     expect(broken.slice(0, 1)).toEqual([]);
+    // The worlds cover the sheet in every phase it can stand in.
+    expect([...coveredIn].toSorted()).toEqual(
+      [
+        'Checking',
+        'Asking',
+        'Denied',
+        'Pausing',
+        'Starting',
+        'Listening',
+        'Away',
+        'Ended',
+        'Closed',
+      ].toSorted(),
+    );
   });
 
   it('pauses a sounding player once, then listens when it falls quiet', () => {
@@ -304,6 +340,61 @@ describe('the tuner sheet’s rule', () => {
     ]);
   });
 
+  it('stops when covered, stays quiet through the app’s return, and listens once shown again', () => {
+    const tags = (work: ReadonlyArray<Work>) =>
+      work.map((w) => {
+        if (Work.$is('Stop')(w)) return `Stop:${w.reason}`;
+        return w._tag;
+      });
+    const starting = step(
+      opened(true, false).session,
+      Event.Read({ permission: 'granted', check: 1 }),
+    );
+    const listening = step(starting.session, Event.Started({ attempt: 1 }));
+    const covered = step(listening.session, Event.Covered({ covered: true }));
+    expect(covered.session.phase._tag).toBe('Away');
+    expect(tags(covered.work)).toEqual(['Stop:covered']);
+    // Background and back while covered: nothing, the read waits for the screen's return.
+    const away = step(covered.session, Event.Active({ active: false }));
+    const read = step(away.session, Event.Active({ active: true }));
+    expect([...tags(away.work), ...tags(read.work)]).toEqual([]);
+    expect(read.session.phase._tag).toBe('Away');
+    // Uncovered while in the background: nothing starts.
+    const hidden = step(read.session, Event.Active({ active: false }));
+    expect(step(hidden.session, Event.Covered({ covered: false })).work).toEqual([]);
+    // Uncovered while active: it reads again, then starts.
+    const shown = step(read.session, Event.Covered({ covered: false }));
+    expect(tags(shown.work)).toEqual(['ReadPermission']);
+    expect(tags(step(shown.session, Event.Read({ permission: 'granted', check: 2 })).work)).toEqual(
+      ['Start'],
+    );
+    // A start that resolves after the cover is given back; covered while pausing stops into Away.
+    const late = step(starting.session, Event.Covered({ covered: true }));
+    expect(tags(late.work)).toEqual(['Stop:covered']);
+    expect(tags(step(late.session, Event.Started({ attempt: 1 })).work)).toEqual(['Stop:late']);
+    const pausing = step(
+      opened(true, true).session,
+      Event.Read({ permission: 'granted', check: 1 }),
+    );
+    const coveredPausing = step(pausing.session, Event.Covered({ covered: true }));
+    expect(coveredPausing.session.phase._tag).toBe('Away');
+    expect(step(coveredPausing.session, Event.Sounding({ sounding: false })).work).toEqual([]);
+  });
+
+  it('voices its words only while open, in the foreground and uncovered', () => {
+    const starting = step(
+      opened(true, false).session,
+      Event.Read({ permission: 'granted', check: 1 }),
+    );
+    const listening = step(starting.session, Event.Started({ attempt: 1 })).session;
+    expect(voiced(listening)).toBe(true);
+    const covered = step(listening, Event.Covered({ covered: true })).session;
+    expect(voiced(covered)).toBe(false);
+    expect(voiced(step(listening, Event.Active({ active: false })).session)).toBe(false);
+    expect(voiced(step(listening, Event.Closed()).session)).toBe(false);
+    expect(voiced(step(covered, Event.Covered({ covered: false })).session)).toBe(true);
+  });
+
   it('holds the microphone only while starting or listening', () => {
     expect(holdsMicrophone(Phase.Listening())).toBe(true);
     expect(holdsMicrophone(Phase.Pausing())).toBe(false);
@@ -321,6 +412,108 @@ describe('the tuner sheet’s display', () => {
     );
     expect(labelOf(Option.none())).toBe('Listening');
     expect(stringLabel('B3', true)).toBe('B string, tuned');
+  });
+
+  it('reads a picked string however far off, and Auto as the nearest string', () => {
+    const turn = (cents: number) => {
+      if (Math.abs(cents) <= 5) return 'In tune';
+      if (cents < 0) return 'Tighten';
+      return 'Loosen';
+    };
+    const draw = seeded(SEED);
+    const ids = STRINGS.map((string) => string.id);
+    const bad: Array<string> = [];
+    for (let k = 0; k < 500; k += 1) {
+      // Log-uniform from an octave under low E to an octave over high E.
+      const hz = 41.2 * 2 ** (draw() * 5);
+      const auto = reading(hz);
+      for (const string of STRINGS) {
+        const picked = readingOn(hz, string.id);
+        const want = 1200 * Math.log2(hz / string.hz);
+        const same =
+          picked.string === string.id &&
+          Math.abs(picked.stringCents - want) < 1e-6 &&
+          picked.inTune === Math.abs(want) <= 5 &&
+          picked.note === auto.note &&
+          picked.octave === auto.octave &&
+          picked.cents === auto.cents &&
+          hintOf(Option.some(string.id), Option.some(picked)) === turn(want);
+        if (!same) bad.push(`${hz}/${string.id}`);
+      }
+      const nearest = Math.min(...ids.map((id) => Math.abs(readingOn(hz, id).stringCents)));
+      if (Math.abs(auto.stringCents) !== nearest) bad.push(`${hz}/auto`);
+    }
+    expect(bad.slice(0, 3)).toEqual([]);
+    const far = Option.some(readingOn(110, 'E2'));
+    expect(labelOf(far)).toBe('Low E string, 500 cents sharp');
+    expect(needleOf(far)).toBe(50);
+    expect(labelOf(Option.some(readingOn(82.407 / 2 ** (1190 / 1200), 'E2')))).toBe(
+      'Low E string, 1190 cents flat',
+    );
+  });
+
+  it('hints what to pluck, then which way to turn the peg', () => {
+    expect(hintOf(Option.none(), Option.none())).toBe('Pluck any string');
+    expect(hintOf(Option.some('E4'), Option.none())).toBe('Pluck the High E string');
+    expect(hintOf(Option.none(), Option.some(reading(110)))).toBe('In tune');
+    expect(hintOf(Option.none(), Option.some(reading(108)))).toBe('Tighten');
+    expect(hintOf(Option.some('A2'), Option.some(readingOn(112, 'A2')))).toBe('Loosen');
+  });
+
+  it('shows and says the reading the phase allows: none while denied or closed, `Not listening` once ended', () => {
+    // A record, so a new phase fails the typecheck until it is named here.
+    const each: Record<Phase['_tag'], 'none' | 'ended' | 'rest' | 'heard'> = {
+      Checking: 'rest',
+      Asking: 'rest',
+      Denied: 'none',
+      Pausing: 'rest',
+      Starting: 'rest',
+      Listening: 'heard',
+      Away: 'rest',
+      Ended: 'ended',
+      Closed: 'none',
+    };
+    const targets = [Option.none<StringId>(), ...STRINGS.map((string) => Option.some(string.id))];
+    const heards = [Option.none(), Option.some(reading(110)), Option.some(readingOn(110, 'E2'))];
+    const misses: Array<string> = [];
+    for (const [phase, kind] of Object.entries(each) as Array<[Phase['_tag'], string]>)
+      for (const target of targets)
+        for (const heard of heards) {
+          const rested = {
+            name: Option.match(target, {
+              onNone: () => 'Listening',
+              onSome: (id) => STRING_NAMES[id],
+            }),
+            words: 'Listening',
+          };
+          const want = Match.value(kind).pipe(
+            Match.when('none', () => Option.none()),
+            Match.when('ended', () =>
+              Option.some({ name: 'Not listening', words: 'Not listening' }),
+            ),
+            Match.when('rest', () => Option.some(rested)),
+            Match.orElse(() =>
+              Option.some(
+                Option.match(heard, {
+                  onNone: () => rested,
+                  onSome: (one) => ({ name: STRING_NAMES[one.string], words: labelOf(heard) }),
+                }),
+              ),
+            ),
+          );
+          // What shows and what is said, side by side: one without the other is a miss too.
+          const absent = () => '(none)';
+          const got = `${Option.getOrElse(nameOf(phase, target, heard), absent)} / ${Option.getOrElse(wordsOf(phase, heard), absent)}`;
+          const wanted = Option.match(want, {
+            onNone: () => `${absent()} / ${absent()}`,
+            onSome: ({ name, words }) => `${name} / ${words}`,
+          });
+          if (got !== wanted)
+            misses.push(
+              `${phase} target=${Option.getOrElse(target, () => 'auto')} heard=${Option.isSome(heard)}: ${got}`,
+            );
+        }
+    expect(misses).toEqual([]);
   });
 
   it('holds the needle to ±50 cents, at centre while nothing is heard', () => {
