@@ -635,10 +635,12 @@
       // its pose (`core/pose-fit.ts`), its random poses for a reader
       // (`core/pose-sample.ts`) and its draw's vertex buffers
       // (`canvas/puppet.ts`, `canvas/puppet-gl.ts`), and the clip chain's
-      // frame and angle loops (`tools/cast-build/chain.ts`, `chain-steps.ts`).
+      // frame and angle loops (`tools/cast-build/chain.ts`, `chain-steps.ts`)
+      // and a clip's map onto the canvas (`tools/cast-build/clip-map.ts`).
       "files": [
         "**/packages/film/src/tools/cast-build/chain.ts",
         "**/packages/film/src/tools/cast-build/chain-steps.ts",
+        "**/packages/film/src/tools/cast-build/clip-map.ts",
         "**/packages/film/src/core/puppet.ts",
         "**/packages/film/src/core/unmatte.ts",
         "**/packages/film/src/core/key-join.ts",
