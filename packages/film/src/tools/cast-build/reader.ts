@@ -114,14 +114,14 @@ const trainedOf = (stdout: string): Omit<Trained, 'checkpoint'> => ({
 });
 
 /** The reader's files by role, each sorted: what a train runs, what a read runs, what an eval runs (`rolesOf`). */
-export interface ReaderSources {
+interface ReaderSources {
   readonly train: ReadonlyArray<string>;
   readonly read: ReadonlyArray<string>;
   readonly eval: ReadonlyArray<string>;
 }
 
 /** A reader folder whose roles cannot be derived from its imports: a scan fault (`SCAN`), no python3, or an entry script missing. */
-export class ReaderScanFailed extends Schema.TaggedError<ReaderScanFailed>()('ReaderScanFailed', {
+class ReaderScanFailed extends Schema.TaggedError<ReaderScanFailed>()('ReaderScanFailed', {
   file: Schema.String,
   reason: Schema.String,
 }) {
@@ -236,7 +236,7 @@ const ScanFault = Schema.fromJsonString(
 );
 
 /** Each `.py` file of a reader folder, by name, and the modules it imports, by first name (`SCAN`). */
-export type Imports = ReadonlyMap<string, ReadonlyArray<string>>;
+type Imports = ReadonlyMap<string, ReadonlyArray<string>>;
 
 /** A scan that ended with no answer of `SCAN`'s: a failure that names python3 and what it printed. */
 const scanBroke = (reason: string) => ReaderScanFailed.make({ file: 'python3', reason });
