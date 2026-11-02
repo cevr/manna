@@ -13,8 +13,9 @@
 // On `letter` they stare again (`SWAPS`), a rolled scroll drops onto the
 // table in front of the lead and unrolls over its edge (`SCROLL`). On `ouch`
 // he winces (`WINCE`), his wince's head riding his head's bones. From `grown`
-// on he and the mother move in their idles (`numbersOf`, `motherNumbers`),
-// and he acts on the cues. The mother blinks all through and bows to her
+// on he, the man and the mother move in their idles (`numbersOf`,
+// `manNumbersOf`, `motherNumbers`), and he acts on the cues; the man nods
+// toward him as the guests turn and as they stare again (`NODS`). The mother blinks all through and bows to her
 // baby (`motherLook`, `motherNumbers`), and he blinks from `grown` to `ouch`
 // (`eyesOf`).
 // `what` cuts to the last close plate (`WHAT`), the cup of milk and the
@@ -99,6 +100,9 @@ const SWAPS = [
   ['smile', 'smile'],
   ['read', 'turn'],
 ] as const satisfies ReadonlyArray<readonly [string, GuestKey]>;
+
+/** The cues the man nods toward the lead on: as the guests turn to him and stare, and as they stare again at the letter. */
+const NODS = ['turn', 'read'] as const;
 
 /**
  * The courtyard's framings, on the frame px the title ends on: from `grown`
@@ -282,6 +286,8 @@ export const cold = drawing({
       (at, [cue, to]) => (f.t >= f.cue(cue).start ? to : at),
       'neutral',
     );
+    // The man's nods toward the lead: each of `NODS`'s starts.
+    const nods = NODS.map((cue) => f.cue(cue).start);
 
     // The letter on the table's plane: the rolled scroll falling and hopping,
     // then fading off the open scroll laid under it, which unrolls top down
@@ -353,7 +359,7 @@ export const cold = drawing({
     plane(camera, PLANES.sky, () => f.painting('sky'));
     plane(camera, PLANES.distance, () => f.painting('distance'));
     plane(camera, PLANES.near, () => f.painting('near'));
-    plane(camera, PLANES.guests, () => panel(() => seatTable(f, key, lead)));
+    plane(camera, PLANES.guests, () => panel(() => seatTable(f, key, nods, lead)));
     plane(camera, PLANES.table, () => {
       f.painting('table');
       if (f.t >= f.cue('drop').start) scroll();

@@ -2,7 +2,7 @@
 // courtyard under the teal sky as the painter's plates (`plates/plates.ts`),
 // a small dawn light on the green hill and the gold path drawing on up to it.
 // The cold open's people sit behind the long table (`seatTable`): a man
-// guest, the lead at rest in his idle (`atRest`), a woman guest, each guest in its neutral key, and
+// guest in his idle, the lead at rest in his idle (`atRest`), a woman guest, each guest in its neutral key, and
 // the mother with her baby behind the woman, fewer than the panel's ten, so
 // the cut to the cold open keeps one table. The camera pulls back from a near
 // framing to the panel's own, each plane by its distance (`PLANES`), while
@@ -143,7 +143,7 @@ export const title = drawing({
     });
     plane(PLANES.near, () => f.painting('near'));
     plane(PLANES.guests, () =>
-      panel(() => seatTable(f, 'neutral', () => seatedLead(f, restingOf(f.t), atRest(f.t)))),
+      panel(() => seatTable(f, 'neutral', [], () => seatedLead(f, restingOf(f.t), atRest(f.t)))),
     );
     plane(PLANES.table, () => f.painting('table'));
     // The name, on a torn strip of the film's dark paper, settling over the sky.
