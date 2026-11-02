@@ -12,7 +12,14 @@
  */
 
 import { Match } from 'effect';
-import { type MouseEvent, type ReactNode, useEffect, useId } from 'react';
+import {
+  type DependencyList,
+  type EffectCallback,
+  type MouseEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+} from 'react';
 import { View } from 'react-native';
 
 import type { StackState } from '~/player/title';
@@ -110,6 +117,15 @@ export const useNavigation = () => ({
   getState: () => stack.state,
   isFocused: () => true,
 });
+
+/**
+ * One's `useFocusEffect` for a screen that is always focused (`isFocused`):
+ * the effect runs once the screen is mounted, again when `deps` change, and
+ * its cleanup runs when the screen leaves.
+ */
+export function useFocusEffect(effect: EffectCallback, deps: DependencyList = []) {
+  useEffect(effect, deps);
+}
 
 /** A header from a screen's options: named by its title, holding its right items. */
 export const Stack = {
