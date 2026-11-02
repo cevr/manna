@@ -36,3 +36,21 @@
   the panel's guests sit and only their robes show under it.
 - Rendered act `feast` with `--review` and read its title frames at 30.5, 31.7 and 33.3 s: the
   plates, the path half drawn and then whole, and the name match the stills.
+
+## 2026-11-01, `cold` fix pass after the review render
+
+- The courtyard framings push in toward `cold.letter.4`: close on the mother at the table (`grown`,
+  k 2.6), down the table to the lead, closer on his bottle (k 3), back to the three guests waist up
+  (`smile`, k 1.9), chest up on him as the letter falls (`read`, k 2.8), onto the seal (`quote`,
+  k 3.4) and up to his wince (`ouch`, k 3.2). At 1:1 his head is 77 to 92% of the panel's size from
+  `read` to `ouch`, and no plate's edge shows.
+- The open scroll lies back on the table at a third of his torso's height and three quarters of his
+  shoulders' width; the panel's scroll is about as wide as his shoulders. Kept.
+- The baby close has the feast's table in front of the mother (the courtyard's table plate as a near
+  plane, 2.75 times its size, its edge where `cold.baby.3` has it), so she sits at the table.
+- Without his line pass the lead's sheet line is about two thirds of the guests' at 1:1, and he still
+  reads beside them: his line stays off.
+- Named gaps for the cut: the paper's white rim round the mother's veil and the baby's head, and the
+  dotted rim and the neck step of the lead's wince head (`PuppetLook` has no alpha choke; the wince
+  drawing loads without the un-matte); the front table in the baby close is soft at 2.75 to 3.2 times
+  its plate.
