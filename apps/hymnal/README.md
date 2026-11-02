@@ -411,7 +411,9 @@ Android haptics only.
   65 Hz (mains hum) counts as none. A voice glides through each syllable,
   so it never holds that long. `focus.test.ts` and
   `focus.property.slow.test.ts` hold the rule over generated talk, room
-  noise and plucks.
+  noise and plucks; `focus.screen.slow.test.tsx` holds the screen, which
+  reads every frame through `hear` and starts it afresh on each listen and
+  each rest.
 - `src/tuner/tuning.ts` reads a pitch (`reading`): the nearest note and
   octave from A4 = 440 Hz, the nearest standard string (E2 A2 D3 G3 B3
   E4), its signed cents, and in tune within 5 cents. The tuner plays no
