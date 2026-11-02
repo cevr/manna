@@ -2,7 +2,7 @@
 // courtyard under the teal sky as the painter's plates (`plates/plates.ts`),
 // a small dawn light on the green hill and the gold path drawing on up to it.
 // The cold open's people sit behind the long table (`seatTable`): a man
-// guest, the lead at rest (`AT_REST`), a woman guest, each guest in its neutral key, and
+// guest, the lead at rest in his idle (`atRest`), a woman guest, each guest in its neutral key, and
 // the mother with her baby behind the woman, fewer than the panel's ten, so
 // the cut to the cold open keeps one table. The camera pulls back from a near
 // framing to the panel's own, each plane by its distance (`PLANES`), while
@@ -14,10 +14,22 @@ import { lerp } from '@manna/film/core';
 import { fonts, palette as P } from '../palette.ts';
 import { DISTANCE, NEAR, PANEL, PATH, PATH_BRUSH, PLANES, SKY, TABLE } from '../plates/plates.ts';
 import { TITLE } from '../script.ts';
-import { TABLE_PAINTINGS, TABLE_PUPPETS, raising, seatTable, seatedLead } from './table.ts';
+import { restingEyes, restingOf } from './lead.ts';
+import {
+  TABLE_PAINTINGS,
+  TABLE_PUPPETS,
+  eyesLook,
+  headMiddle,
+  raising,
+  seatTable,
+  seatedLead,
+} from './table.ts';
 
-/** The lead at rest: every bone at 0, the bottle on his lap (his raise's first key in place of his arm), the boil off. */
-const AT_REST = raising({ boil: 0, amp: 0 }, 'raise-rest');
+/** His look as his eyes read: open, or his single-9 head drawn eyes shut, about his head bone's middle. */
+const leadEyes = eyesLook(headMiddle(TABLE_PUPPETS.lead.skeleton));
+
+/** The lead at rest at scene time `t`: his idle (`restingOf`) and his blinks, the bottle on his lap (his raise's rest key in place of his arm). */
+const atRest = (t: number) => raising(leadEyes(restingEyes(t)), 'raise-rest');
 
 /** The film's name: its strip's centre and size over the sky (panel px), and its type. */
 const NAME = {
@@ -131,7 +143,7 @@ export const title = drawing({
     });
     plane(PLANES.near, () => f.painting('near'));
     plane(PLANES.guests, () =>
-      panel(() => seatTable(f, 'neutral', () => seatedLead(f, {}, AT_REST))),
+      panel(() => seatTable(f, 'neutral', () => seatedLead(f, restingOf(f.t), atRest(f.t)))),
     );
     plane(PLANES.table, () => f.painting('table'));
     // The name, on a torn strip of the film's dark paper, settling over the sky.

@@ -53,6 +53,25 @@ export const leanOf = (c: Cues) => {
 export const eyesOf = (c: Cues) => blink(1, [c.turn, c.smile, c.read]);
 
 /**
+ * His bone numbers at rest, the bottle on his lap under his raise's rest key
+ * (the title): his idle's sway, drift and breath in his lean (his breath
+ * deep, as the mother's, to read at the title's pulled-back framing), and half its
+ * tilt in his neck and head (about 1 degree, inside `HEAD_LIMIT`). His bottle
+ * arm stays at 0 under the key.
+ */
+export const restingOf = (t: number) => {
+  const { sway, breath, drift, tilt } = LEAD_IDLE(t);
+  return {
+    lean: sway + 1.2 * breath + 0.6 * drift,
+    neck: 0.35 * 0.5 * tilt,
+    head: 0.65 * 0.5 * tilt,
+  };
+};
+
+/** His eyes at rest, 0 open to 1 shut: his own blinks, seed 1, with no cue. */
+export const restingEyes = blink(1);
+
+/**
  * His bone numbers, degrees clockwise on screen: his lean (`leanOf`) all
  * through, and his joints from his raise's landing on k6, each at 0 before
  * it, under his raise's keys. k6 is his single-9 view, every bone at 0, and
