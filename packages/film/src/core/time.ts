@@ -225,7 +225,7 @@ export const ease = {
     const c3 = c1 + 1;
     return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2;
   },
-  /** Settles with one soft overshoot — a paper cut-out landing. */
+  /** Settles with one soft overshoot — a figure or prop landing. */
   outSoft: (t) => 1 - (1 - t) ** 3 * Math.cos(t * Math.PI * 1.1),
 } satisfies Record<string, Ease>;
 

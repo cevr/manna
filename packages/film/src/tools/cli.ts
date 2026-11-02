@@ -1154,7 +1154,7 @@ export const runFilmCli = <E>({
     Layer.provide([Browser.layer, previewServer]),
   );
   const root = Command.make('film').pipe(
-    Command.withDescription('Narrate, score, mix, inspect and render a cut-paper film'),
+    Command.withDescription('Narrate, score, mix, inspect and render a storybook film'),
     Command.withSubcommands([
       narrate,
       takes,

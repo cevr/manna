@@ -1,6 +1,6 @@
 # @manna/film
 
-The engine behind the cut-paper explainer films in `apps/animations`: a film
+The engine behind the storybook explainer films in `apps/animations`: a film
 is an ordered list of narrated scenes, laid end to end on a clock set by the
 recorded words, and every frame is a pure function of that film and a time.
 

@@ -53,7 +53,7 @@ const beat: BoardBeat = {
 const style = {
   id: BoardName.make('9005'),
   name: 'K1',
-  block: 'A paper-cut frame.',
+  block: 'A storybook frame.',
   ref: Segment.make('style.9005.png'),
   sha256: 'x',
 };

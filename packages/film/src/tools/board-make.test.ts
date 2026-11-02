@@ -64,7 +64,7 @@ const acts: ReadonlyArray<Act> = [
 const style = {
   id: BoardName.make('9005'),
   name: 'K1',
-  block: 'A paper-cut frame.',
+  block: 'A storybook frame.',
   ref: Segment.make('style.9005.png'),
   sha256: 'x',
   world: 'A parchment world.',
@@ -628,7 +628,7 @@ describe('the scene prompt', () => {
     cast: [],
   });
   test('opens on the style block and reads each mark as the words said there', () => {
-    expect(prompt.startsWith('A paper-cut frame.')).toBe(true);
+    expect(prompt.startsWith('A storybook frame.')).toBe(true);
     expect(prompt).toContain('the gavel falls on «righteous.»');
     expect(prompt).toContain("THE MOMENT: this frame holds from the narrator's words «righteous.»");
     expect(prompt).toContain("THE FILM'S WORLD: A parchment world.");

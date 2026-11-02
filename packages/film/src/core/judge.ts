@@ -276,7 +276,7 @@ export const packetOf = (input: PacketInput): string => {
   return [
     `# Judge ${labels.length} versions of one scene`,
     '',
-    `You are a second opinion on one choice in a narrated cut-paper explainer film. The ${labels.length} versions below are the same scene, \`${input.scene}\`, drawn the same way but for one choice: ${input.choice}. You see them only by label (${labels.join(', ')}), in an order drawn at random. This review is read-only: edit nothing.`,
+    `You are a second opinion on one choice in a narrated storybook explainer film. The ${labels.length} versions below are the same scene, \`${input.scene}\`, drawn the same way but for one choice: ${input.choice}. You see them only by label (${labels.join(', ')}), in an order drawn at random. This review is read-only: edit nothing.`,
     '',
     '## The beat',
     '',
