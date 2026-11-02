@@ -71,7 +71,8 @@ export const TempoDial = memo(function TempoDial({ number }: { readonly number: 
         onSome: (hymnTempo) => (
           <View style={styles.beatRow}>
             <BpmReadOut first={hymnTempo} tempo={tempo} />
-            <TapChip hymnBpm={bpmOf(hymnTempo)} onTempo={setTempo} />
+            {/* Keyed by the hymn, so another hymn's sheet starts a run of its own. */}
+            <TapChip key={number} hymnBpm={bpmOf(hymnTempo)} onTempo={setTempo} />
           </View>
         ),
       })}
