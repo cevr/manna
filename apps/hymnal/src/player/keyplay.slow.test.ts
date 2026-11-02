@@ -158,6 +158,8 @@ const native = (clock: Clock.Clock, recorded = 240_000) => {
     calls.push({ operation, at, uri, time: clock.currentTimeMillisUnsafe() });
   const device: Device = {
     audio: {
+      // Every play here is at 1: the rate answers at once with the place.
+      setPlaybackRate: () => Promise.resolve(read()),
       play: (uri) => {
         const owner = ++id;
         tell('play', 0, uri);

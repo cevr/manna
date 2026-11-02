@@ -46,6 +46,8 @@ const fake = () => {
   const one = (action: Action) => () => void asked.push(`One's ${action} handler`);
   const device: Device = {
     audio: {
+      // The rate each play tells first is `playback.live.rate.test.ts`'s; here it answers at once.
+      setPlaybackRate: () => Effect.runPromise(Effect.succeed(status)),
       play: (uri) => {
         asked.push(`play ${uri}`);
         handlers.clear();

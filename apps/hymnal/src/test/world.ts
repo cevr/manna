@@ -662,6 +662,9 @@ export const makeWorld = (
   };
 
   const audio: Device['audio'] = {
+    // The world's plays are all at 1: the rate answers at once, with no lag, so each play
+    // reaches the device when it did before One took a rate.
+    setPlaybackRate: () => Promise.resolve(said()),
     play: () => {
       load();
       return later(said);

@@ -287,6 +287,7 @@
   },
   "patchedDependencies": {
     "@alchemy.run/domain@2.0.0-beta.84": "patches/@alchemy.run%2Fdomain@2.0.0-beta.84.patch",
+    "one@2.11.1": "patches/one@2.11.1.patch",
   },
   "overrides": {
     "@effect/platform-node-shared": "4.0.5",

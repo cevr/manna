@@ -1043,16 +1043,18 @@ describe('the tempo dial in the full player', () => {
     }),
   );
 
-  it.live('says the recording sets the pace under it with Sound on, and not with Sound off', () =>
+  it.live('says no note of the pace under the Tempo dial, with Sound on or off', () =>
     Effect.sync(() => {
-      const note = 'With Sound on, the recording sets the pace.';
       using page = mount();
       using _kept = keeping(page, true);
-      expect(page.text()).toContain(note);
+      // With Sound on the dial moves the recording too, so nothing says the recording sets the pace.
+      expect(dialOf(page).getAttribute('aria-valuetext')).toBe('100%');
+      expect(page.text()).not.toContain('sets the pace');
+      expect(page.text()).not.toContain('With Sound on');
       page.set(settings.sound, false);
-      expect(page.text()).not.toContain(note);
+      expect(page.text()).not.toContain('sets the pace');
       page.set(settings.sound, true);
-      expect(page.text()).toContain(note);
+      expect(page.text()).not.toContain('sets the pace');
     }),
   );
 

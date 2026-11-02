@@ -85,6 +85,7 @@
     "vite-plugin-solid": "3.0.0-next.27"
   },
   "patchedDependencies": {
-    "@alchemy.run/domain@2.0.0-beta.84": "patches/@alchemy.run%2Fdomain@2.0.0-beta.84.patch"
+    "@alchemy.run/domain@2.0.0-beta.84": "patches/@alchemy.run%2Fdomain@2.0.0-beta.84.patch",
+    "one@2.11.1": "patches/one@2.11.1.patch"
   }
 }

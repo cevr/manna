@@ -2,12 +2,12 @@
  * A hymn's tempo in the player sheet: a stopping dial over the stops, 50 %
  * to 150 % in steps of 5 % (`tempo.ts`), each drawn as its number, the
  * percent read out. Each turn is kept under the hymn's `tempo.<n>` key, and
- * with Sound off the score clock and the follow keep it at once
- * (`playerOn`'s `tempoFor`). With Sound on the recording sets the pace, and
- * a line under the dial says so.
+ * the player keeps it at once (`playerOn`'s `tempoFor`): with Sound on the
+ * recording plays at it with its pitch kept, with Sound off the score clock
+ * runs at it, and the follow keeps step either way.
  */
 
-import { useAtom, useAtomValue } from '@effect/atom-react';
+import { useAtom } from '@effect/atom-react';
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -36,7 +36,6 @@ export const TempoDial = memo(function TempoDial({ number }: { readonly number: 
           onTurn={(to) => setTempo(stopAt(to))}
         />
       </DialPanel>
-      <SoundSetsPace />
     </View>
   );
 });
@@ -55,20 +54,8 @@ function TempoMark({ stop, current }: { readonly stop: number; readonly current:
   );
 }
 
-/** With Sound on the recording plays at its own pace, not the dial's, so a line says so. */
-function SoundSetsPace() {
-  const sound = useAtomValue(settings.sound);
-  if (!sound) return <></>;
-  return (
-    <Text style={styles.note} dynamicTypeRamp="footnote">
-      With Sound on, the recording sets the pace.
-    </Text>
-  );
-}
-
 const styles = StyleSheet.create({
   section: { gap: 8 },
   mark: { fontSize: 15, lineHeight: 17, fontWeight: '700', color: color.muted },
   current: { color: color.chord },
-  note: { fontSize: 13, color: color.muted },
 });

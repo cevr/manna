@@ -1,0 +1,586 @@
+diff --git a/android/src/main/java/com/margelo/nitro/one/HybridOneAudio.kt b/android/src/main/java/com/margelo/nitro/one/HybridOneAudio.kt
+index 16bd182f35685f7a320dac60b910ebe53f2b8501..e4822d942dddad0055b2d52bbedee1650fbc3da7 100644
+--- a/android/src/main/java/com/margelo/nitro/one/HybridOneAudio.kt
++++ b/android/src/main/java/com/margelo/nitro/one/HybridOneAudio.kt
+@@ -46,6 +46,8 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
+     private var playbackPaused = false
+     private var playbackEnded = false
+     private var playbackError: String? = null
++    // the shared player's rate, pitch kept; it outlives a stop, so the next play keeps it.
++    private var playbackRate = 1.0
+     private var seekGeneration = 0
+ 
+     private var recorder: MediaRecorder? = null
+@@ -202,6 +204,7 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
+                 fresh.setOnPreparedListener { mp ->
+                     playerPrepared = true
+                     mp.start()
++                    applyPlaybackRate(mp)
+                     startServiceIfBackground()
+                     syncNowPlaying()
+                 }
+@@ -267,7 +270,10 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
+                     playbackEnded = false
+                 }
+                 playbackPaused = false
+-                if (playerPrepared) current.start()
++                if (playerPrepared) {
++                    current.start()
++                    applyPlaybackRate(current)
++                }
+                 startServiceIfBackground()
+                 syncNowPlaying()
+                 promise.resolve(playbackStatus())
+@@ -311,6 +317,36 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
+         return promise
+     }
+ 
++    override fun setPlaybackRate(rate: Double): Promise<AudioPlaybackStatus> {
++        val promise = Promise<AudioPlaybackStatus>()
++        main.post {
++            if (!rate.isFinite() || rate <= 0 || rate > 2) {
++                promise.reject(OneNativeError(E_RATE, "Audio.setPlaybackRate: the playback rate must be above 0 and at most 2"))
++                return@post
++            }
++            playbackRate = rate
++            val current = player
++            // playbackParams starts a paused MediaPlayer, so a paused one takes the rate on its next start.
++            if (current != null && playerPrepared && !playbackPaused && !playbackEnded) {
++                applyPlaybackRate(current)
++            }
++            syncNowPlaying()
++            promise.resolve(playbackStatus())
++        }
++        return promise
++    }
++
++    private fun applyPlaybackRate(current: MediaPlayer) {
++        if (Build.VERSION.SDK_INT < 23) return
++        try {
++            val params = current.playbackParams
++            params.speed = playbackRate.toFloat()
++            params.pitch = 1.0f
++            current.playbackParams = params
++        } catch (e: Exception) {
++        }
++    }
++
+     override fun stop(): Promise<Unit> {
+         val promise = Promise<Unit>()
+         main.post {
+@@ -980,7 +1016,10 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
+                             playbackEnded = false
+                         }
+                         playbackPaused = false
+-                        if (playerPrepared) current.start()
++                        if (playerPrepared) {
++                            current.start()
++                            applyPlaybackRate(current)
++                        }
+                         startServiceIfBackground()
+                     } catch (e: Exception) {
+                         return@post
+@@ -1111,7 +1150,7 @@ class HybridOneAudio : HybridOneAudioSpec(), PermissionListener {
+                 .setState(
+                     if (playing) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED,
+                     position,
+-                    if (playing) 1.0f else 0.0f
++                    if (playing) playbackRate.toFloat() else 0.0f
+                 )
+                 .build()
+         )
+diff --git a/dist/cjs/platform/audio/index.cjs b/dist/cjs/platform/audio/index.cjs
+index dd4ce0838bd0bb4adb71fc42b4cabeae3e3fa768..9bc4454d9eedccfd270e364f9d44165e4559b9a0 100644
+--- a/dist/cjs/platform/audio/index.cjs
++++ b/dist/cjs/platform/audio/index.cjs
+@@ -25,6 +25,7 @@ var import_unavailable = require("./unavailable.cjs");
+ var import_validateCallback = require("../validateCallback.cjs");
+ var import_player = require("./player.cjs");
+ let player;
++let playbackRate = 1;
+ let playbackError;
+ let permission = "undetermined";
+ let openingRecording = false;
+@@ -194,6 +195,8 @@ const Audio = Object.freeze({
+ 		].includes(url.protocol)) throw new Error("Audio.play: invalid browser audio URI");
+ 		clearPlayer();
+ 		const audio = new window.Audio(url.href);
++		audio.preservesPitch = true;
++		audio.playbackRate = playbackRate;
+ 		player = audio;
+ 		for (const event of [
+ 			"play",
+@@ -258,6 +261,13 @@ const Audio = Object.freeze({
+ 		});
+ 		return playbackStatus();
+ 	},
++	setPlaybackRate: async (rate) => {
++		if (typeof window === "undefined") return import_unavailable.Audio.setPlaybackRate(rate);
++		if (!Number.isFinite(rate) || rate <= 0 || rate > 2) throw new Error("Audio.setPlaybackRate: rate must be finite, above 0 and at most 2");
++		playbackRate = rate;
++		if (player) player.playbackRate = rate;
++		return playbackStatus();
++	},
+ 	stop: async () => {
+ 		clearPlayer();
+ 	},
+diff --git a/dist/cjs/platform/audio/index.native.cjs b/dist/cjs/platform/audio/index.native.cjs
+index d413bd44c7707e92815f5590dfaf94375105d912..c63af294f3123e1f3128d6479a79b6b8e4c39899 100644
+--- a/dist/cjs/platform/audio/index.native.cjs
++++ b/dist/cjs/platform/audio/index.native.cjs
+@@ -49,6 +49,9 @@ var Audio = Object.freeze({
+ 	seek: function seek(positionMs) {
+ 		return (0, import_hybrid.audioNative)().seek(positionMs).catch(import_nativeError.rethrowNativeError);
+ 	},
++	setPlaybackRate: function setPlaybackRate(rate) {
++		return (0, import_hybrid.audioNative)().setPlaybackRate(rate).catch(import_nativeError.rethrowNativeError);
++	},
+ 	stop: function stop() {
+ 		return (0, import_hybrid.audioNative)().stop().catch(import_nativeError.rethrowNativeError);
+ 	},
+diff --git a/dist/cjs/platform/audio/index.native.js b/dist/cjs/platform/audio/index.native.js
+index 849183eae3e02c029f981bc31f5ba84540240cd6..16c7ee50cf8d35f664f2b0487515f0c3e1d7af71 100644
+--- a/dist/cjs/platform/audio/index.native.js
++++ b/dist/cjs/platform/audio/index.native.js
+@@ -49,6 +49,9 @@ var Audio = Object.freeze({
+ 	seek: function seek(positionMs) {
+ 		return (0, import_hybrid.audioNative)().seek(positionMs).catch(import_nativeError.rethrowNativeError);
+ 	},
++	setPlaybackRate: function setPlaybackRate(rate) {
++		return (0, import_hybrid.audioNative)().setPlaybackRate(rate).catch(import_nativeError.rethrowNativeError);
++	},
+ 	stop: function stop() {
+ 		return (0, import_hybrid.audioNative)().stop().catch(import_nativeError.rethrowNativeError);
+ 	},
+diff --git a/dist/cjs/platform/audio/unavailable.cjs b/dist/cjs/platform/audio/unavailable.cjs
+index 2fb7f630244033b695a8349145816d5a93ae7070..e63edd3fc09e250a29cd46620248de3f4d034e62 100644
+--- a/dist/cjs/platform/audio/unavailable.cjs
++++ b/dist/cjs/platform/audio/unavailable.cjs
+@@ -43,6 +43,7 @@ const Audio = Object.freeze({
+ 		state: "idle",
+ 		positionMs: 0
+ 	}),
++	setPlaybackRate: (_rate) => Promise.reject((0, import_nativeError.missingNativeBuild)("Audio.setPlaybackRate")),
+ 	stop: () => Promise.resolve(),
+ 	startRecording: () => Promise.reject((0, import_nativeError.missingNativeBuild)("Audio.startRecording")),
+ 	getRecordingStatus: () => Promise.resolve({
+diff --git a/dist/cjs/platform/audio/unavailable.native.cjs b/dist/cjs/platform/audio/unavailable.native.cjs
+index 88ec38d0e7aac03647a2ea741dadef928e30b3be..5626de7be1cc34d8a466c4e71bb3496cd0186280 100644
+--- a/dist/cjs/platform/audio/unavailable.native.cjs
++++ b/dist/cjs/platform/audio/unavailable.native.cjs
+@@ -59,6 +59,9 @@ var Audio = Object.freeze({
+ 			positionMs: 0
+ 		});
+ 	},
++	setPlaybackRate: function setPlaybackRate(_rate) {
++		return Promise.reject((0, import_nativeError.missingNativeBuild)("Audio.setPlaybackRate"));
++	},
+ 	stop: function stop() {
+ 		return Promise.resolve();
+ 	},
+diff --git a/dist/cjs/platform/audio/unavailable.native.js b/dist/cjs/platform/audio/unavailable.native.js
+index 08ded78071140b01c9db2ec252c3cd728f6a244d..28d6548815b334a952903cf6a3ecf6dd3348cb2e 100644
+--- a/dist/cjs/platform/audio/unavailable.native.js
++++ b/dist/cjs/platform/audio/unavailable.native.js
+@@ -59,6 +59,9 @@ var Audio = Object.freeze({
+ 			positionMs: 0
+ 		});
+ 	},
++	setPlaybackRate: function setPlaybackRate(_rate) {
++		return Promise.reject((0, import_nativeError.missingNativeBuild)("Audio.setPlaybackRate"));
++	},
+ 	stop: function stop() {
+ 		return Promise.resolve();
+ 	},
+diff --git a/dist/esm/platform/audio/index.mjs b/dist/esm/platform/audio/index.mjs
+index 793b07914e58e9a76cdf0665c8f25c4483b5fcc1..5188fea9d2a05f8d0f45315720222149d65e4f4d 100644
+--- a/dist/esm/platform/audio/index.mjs
++++ b/dist/esm/platform/audio/index.mjs
+@@ -3,6 +3,7 @@ import { validateCallback } from "../validateCallback.mjs";
+ import { AudioPlayer, createPlayer } from "./player.mjs";
+ 
+ let player;
++let playbackRate = 1;
+ let playbackError;
+ let permission = "undetermined";
+ let openingRecording = false;
+@@ -172,6 +173,8 @@ const Audio = Object.freeze({
+ 		].includes(url.protocol)) throw new Error("Audio.play: invalid browser audio URI");
+ 		clearPlayer();
+ 		const audio = new window.Audio(url.href);
++		audio.preservesPitch = true;
++		audio.playbackRate = playbackRate;
+ 		player = audio;
+ 		for (const event of [
+ 			"play",
+@@ -236,6 +239,13 @@ const Audio = Object.freeze({
+ 		});
+ 		return playbackStatus();
+ 	},
++	setPlaybackRate: async (rate) => {
++		if (typeof window === "undefined") return Audio$1.setPlaybackRate(rate);
++		if (!Number.isFinite(rate) || rate <= 0 || rate > 2) throw new Error("Audio.setPlaybackRate: rate must be finite, above 0 and at most 2");
++		playbackRate = rate;
++		if (player) player.playbackRate = rate;
++		return playbackStatus();
++	},
+ 	stop: async () => {
+ 		clearPlayer();
+ 	},
+diff --git a/dist/esm/platform/audio/index.native.js b/dist/esm/platform/audio/index.native.js
+index 11662d9bae2a355604ce9cc19e44308e95267f58..a24ba3213e1f6ef73e941daf05a93e0fd02deeb3 100644
+--- a/dist/esm/platform/audio/index.native.js
++++ b/dist/esm/platform/audio/index.native.js
+@@ -25,6 +25,9 @@ var Audio = Object.freeze({
+ 	seek: function seek(positionMs) {
+ 		return audioNative().seek(positionMs).catch(rethrowNativeError);
+ 	},
++	setPlaybackRate: function setPlaybackRate(rate) {
++		return audioNative().setPlaybackRate(rate).catch(rethrowNativeError);
++	},
+ 	stop: function stop() {
+ 		return audioNative().stop().catch(rethrowNativeError);
+ 	},
+diff --git a/dist/esm/platform/audio/unavailable.mjs b/dist/esm/platform/audio/unavailable.mjs
+index 0c961b2340103f18814770647d6e36cdb0919d4f..3b01adf219b8c4c02ba8270909fb0c622c068c37 100644
+--- a/dist/esm/platform/audio/unavailable.mjs
++++ b/dist/esm/platform/audio/unavailable.mjs
+@@ -21,6 +21,7 @@ const Audio = Object.freeze({
+ 		state: "idle",
+ 		positionMs: 0
+ 	}),
++	setPlaybackRate: (_rate) => Promise.reject(missingNativeBuild("Audio.setPlaybackRate")),
+ 	stop: () => Promise.resolve(),
+ 	startRecording: () => Promise.reject(missingNativeBuild("Audio.startRecording")),
+ 	getRecordingStatus: () => Promise.resolve({
+diff --git a/dist/esm/platform/audio/unavailable.native.js b/dist/esm/platform/audio/unavailable.native.js
+index 2125c16f1d1bff40d2da9568b4fdb8ce44e10473..72abd4f6e1529bb837389276f2ddddfaa1fd61da 100644
+--- a/dist/esm/platform/audio/unavailable.native.js
++++ b/dist/esm/platform/audio/unavailable.native.js
+@@ -35,6 +35,9 @@ var Audio = Object.freeze({
+ 			positionMs: 0
+ 		});
+ 	},
++	setPlaybackRate: function setPlaybackRate(_rate) {
++		return Promise.reject(missingNativeBuild("Audio.setPlaybackRate"));
++	},
+ 	stop: function stop() {
+ 		return Promise.resolve();
+ 	},
+diff --git a/ios/Nitro/HybridOneAudio.swift b/ios/Nitro/HybridOneAudio.swift
+index 045ce7503aa2664127f39a05104830f05861e80b..cf209d032a5d0c081f82b4dcf7bb9e660e8b9b68 100644
+--- a/ios/Nitro/HybridOneAudio.swift
++++ b/ios/Nitro/HybridOneAudio.swift
+@@ -41,6 +41,8 @@ final class HybridOneAudio: HybridOneAudioSpec {
+   private var playerURI: String?
+   private var playbackPaused = false
+   private var playbackEnded = false
++  /// The shared session's rate, pitch kept. It outlives a stop, so the next play keeps it.
++  private var playbackRate = 1.0
+   private var endObserver: NSObjectProtocol?
+   private var playerStatusObservation: NSKeyValueObservation?
+   private var itemStatusObservation: NSKeyValueObservation?
+@@ -133,7 +135,10 @@ final class HybridOneAudio: HybridOneAudioSpec {
+       try session.setActive(true)
+       self.clearPlayer()
+       let item = AVPlayerItem(url: url)
++      item.audioTimePitchAlgorithm = .spectral
+       let player = AVPlayer(playerItem: item)
++      // play(), resume and the remote play all start at defaultRate.
++      player.defaultRate = Float(self.playbackRate)
+       self.player = player
+       self.playerStatusObservation = player.observe(\.timeControlStatus, options: [.new]) {
+         [weak self] _, _ in
+@@ -184,6 +189,21 @@ final class HybridOneAudio: HybridOneAudioSpec {
+     }
+   }
+ 
++  func setPlaybackRate(rate: Double) throws -> Promise<AudioPlaybackStatus> {
++    query("setPlaybackRate") {
++      guard rate.isFinite && rate > 0 && rate <= 2 else { throw Problem.rate }
++      self.playbackRate = rate
++      if let player = self.player {
++        player.defaultRate = Float(rate)
++        // A paused player stays paused; its next play starts at defaultRate.
++        if player.timeControlStatus != .paused { player.rate = Float(rate) }
++      }
++      // KVO on timeControlStatus does not fire for a turn while playing.
++      self.syncNowPlaying()
++      return self.playbackStatus()
++    }
++  }
++
+   func seek(positionMs: Double) throws -> Promise<AudioPlaybackStatus> {
+     let promise = Promise<AudioPlaybackStatus>()
+     DispatchQueue.main.async {
+@@ -736,7 +756,7 @@ final class HybridOneAudio: HybridOneAudioSpec {
+       MPNowPlayingInfoPropertyElapsedPlaybackTime: position.isFinite ? max(0, position) : 0,
+       MPNowPlayingInfoPropertyPlaybackRate:
+         !playbackEnded && player.timeControlStatus == .playing ? player.rate : 0.0,
+-      MPNowPlayingInfoPropertyDefaultPlaybackRate: 1.0,
++      MPNowPlayingInfoPropertyDefaultPlaybackRate: playbackRate,
+     ]
+     if let artist = info.artist { metadata[MPMediaItemPropertyArtist] = artist }
+     if let albumTitle = info.albumTitle { metadata[MPMediaItemPropertyAlbumTitle] = albumTitle }
+diff --git a/nitrogen/generated/android/c++/JHybridOneAudioSpec.cpp b/nitrogen/generated/android/c++/JHybridOneAudioSpec.cpp
+index f4995e83d819c86e3deae3641504862ad5356d9d..c21ece4a272f0587c311d3f16cb3ee0c42d4c947 100644
+--- a/nitrogen/generated/android/c++/JHybridOneAudioSpec.cpp
++++ b/nitrogen/generated/android/c++/JHybridOneAudioSpec.cpp
+@@ -217,6 +217,22 @@ namespace margelo::nitro::one {
+       return __promise;
+     }();
+   }
++  std::shared_ptr<Promise<AudioPlaybackStatus>> JHybridOneAudioSpec::setPlaybackRate(double rate) {
++    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>(double /* rate */)>("setPlaybackRate");
++    auto __result = method(_javaPart, rate);
++    return [&]() {
++      auto __promise = Promise<AudioPlaybackStatus>::create();
++      __result->cthis()->addOnResolvedListener([=](const jni::alias_ref<jni::JObject>& __boxedResult) {
++        auto __result = jni::static_ref_cast<JAudioPlaybackStatus>(__boxedResult);
++        __promise->resolve(__result->toCpp());
++      });
++      __result->cthis()->addOnRejectedListener([=](const jni::alias_ref<jni::JThrowable>& __throwable) {
++        jni::JniException __jniError(__throwable);
++        __promise->reject(std::make_exception_ptr(__jniError));
++      });
++      return __promise;
++    }();
++  }
+   std::shared_ptr<Promise<void>> JHybridOneAudioSpec::stop() {
+     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<JPromise::javaobject>()>("stop");
+     auto __result = method(_javaPart);
+diff --git a/nitrogen/generated/android/c++/JHybridOneAudioSpec.hpp b/nitrogen/generated/android/c++/JHybridOneAudioSpec.hpp
+index e173e81c9b9754ed765caeb5e37cf6e35b77e895..18733e5502bd27c63f2b7b7a3e00477508865e78 100644
+--- a/nitrogen/generated/android/c++/JHybridOneAudioSpec.hpp
++++ b/nitrogen/generated/android/c++/JHybridOneAudioSpec.hpp
+@@ -61,6 +61,7 @@ namespace margelo::nitro::one {
+     std::shared_ptr<Promise<AudioPlaybackStatus>> pause() override;
+     std::shared_ptr<Promise<AudioPlaybackStatus>> resume() override;
+     std::shared_ptr<Promise<AudioPlaybackStatus>> seek(double positionMs) override;
++    std::shared_ptr<Promise<AudioPlaybackStatus>> setPlaybackRate(double rate) override;
+     std::shared_ptr<Promise<void>> stop() override;
+     std::shared_ptr<Promise<AudioRecordingStatus>> startRecording() override;
+     std::shared_ptr<Promise<AudioRecordingStatus>> getRecordingStatus() override;
+diff --git a/nitrogen/generated/android/kotlin/com/margelo/nitro/one/HybridOneAudioSpec.kt b/nitrogen/generated/android/kotlin/com/margelo/nitro/one/HybridOneAudioSpec.kt
+index f07e04736e946004e560ba0e25945ea5121847eb..825bad386ae5b3c9f1d2342bd3b8b92ba28d6f53 100644
+--- a/nitrogen/generated/android/kotlin/com/margelo/nitro/one/HybridOneAudioSpec.kt
++++ b/nitrogen/generated/android/kotlin/com/margelo/nitro/one/HybridOneAudioSpec.kt
+@@ -58,6 +58,10 @@ abstract class HybridOneAudioSpec: HybridObject() {
+   @Keep
+   abstract fun seek(positionMs: Double): Promise<AudioPlaybackStatus>
+   
++  @DoNotStrip
++  @Keep
++  abstract fun setPlaybackRate(rate: Double): Promise<AudioPlaybackStatus>
++
+   @DoNotStrip
+   @Keep
+   abstract fun stop(): Promise<Unit>
+diff --git a/nitrogen/generated/ios/c++/HybridOneAudioSpecSwift.hpp b/nitrogen/generated/ios/c++/HybridOneAudioSpecSwift.hpp
+index d8b5dd14044ffebb471bc1c9b372747c6dbd77cf..5a46ec28b54c92e4e3c2cf6baef69d0c589f6000 100644
+--- a/nitrogen/generated/ios/c++/HybridOneAudioSpecSwift.hpp
++++ b/nitrogen/generated/ios/c++/HybridOneAudioSpecSwift.hpp
+@@ -164,6 +164,14 @@ namespace margelo::nitro::one {
+       auto __value = std::move(__result.value());
+       return __value;
+     }
++    inline std::shared_ptr<Promise<AudioPlaybackStatus>> setPlaybackRate(double rate) override {
++      auto __result = _swiftPart.setPlaybackRate(std::forward<decltype(rate)>(rate));
++      if (__result.hasError()) [[unlikely]] {
++        std::rethrow_exception(__result.error());
++      }
++      auto __value = std::move(__result.value());
++      return __value;
++    }
+     inline std::shared_ptr<Promise<void>> stop() override {
+       auto __result = _swiftPart.stop();
+       if (__result.hasError()) [[unlikely]] {
+diff --git a/nitrogen/generated/ios/swift/HybridOneAudioSpec.swift b/nitrogen/generated/ios/swift/HybridOneAudioSpec.swift
+index f4a925d2a67756a9618c36a88d524fba7b01047c..b474f3556422ef481ec4f32d7916b8b1944bffb4 100644
+--- a/nitrogen/generated/ios/swift/HybridOneAudioSpec.swift
++++ b/nitrogen/generated/ios/swift/HybridOneAudioSpec.swift
+@@ -20,6 +20,7 @@ public protocol HybridOneAudioSpec_protocol: HybridObject {
+   func pause() throws -> Promise<AudioPlaybackStatus>
+   func resume() throws -> Promise<AudioPlaybackStatus>
+   func seek(positionMs: Double) throws -> Promise<AudioPlaybackStatus>
++  func setPlaybackRate(rate: Double) throws -> Promise<AudioPlaybackStatus>
+   func stop() throws -> Promise<Void>
+   func startRecording() throws -> Promise<AudioRecordingStatus>
+   func getRecordingStatus() throws -> Promise<AudioRecordingStatus>
+diff --git a/nitrogen/generated/ios/swift/HybridOneAudioSpec_cxx.swift b/nitrogen/generated/ios/swift/HybridOneAudioSpec_cxx.swift
+index 432772ca515cac59bc84892861305fa350db3693..3e0cf45f141e46f3f4fb61f66c8924101089ccd3 100644
+--- a/nitrogen/generated/ios/swift/HybridOneAudioSpec_cxx.swift
++++ b/nitrogen/generated/ios/swift/HybridOneAudioSpec_cxx.swift
+@@ -257,6 +257,25 @@ open class HybridOneAudioSpec_cxx {
+     }
+   }
+   
++  @inline(__always)
++  public final func setPlaybackRate(rate: Double) -> bridge.Result_std__shared_ptr_Promise_AudioPlaybackStatus___ {
++    do {
++      let __result = try self.__implementation.setPlaybackRate(rate: rate)
++      let __resultCpp = { () -> bridge.std__shared_ptr_Promise_AudioPlaybackStatus__ in
++        let __promise = bridge.create_std__shared_ptr_Promise_AudioPlaybackStatus__()
++        let __promiseHolder = bridge.wrap_std__shared_ptr_Promise_AudioPlaybackStatus__(__promise)
++        __result
++          .then({ __result in __promiseHolder.resolve(__result) })
++          .catch({ __error in __promiseHolder.reject(__error.toCpp()) })
++        return __promise
++      }()
++      return bridge.create_Result_std__shared_ptr_Promise_AudioPlaybackStatus___(__resultCpp)
++    } catch (let __error) {
++      let __exceptionPtr = __error.toCpp()
++      return bridge.create_Result_std__shared_ptr_Promise_AudioPlaybackStatus___(__exceptionPtr)
++    }
++  }
++
+   @inline(__always)
+   public final func stop() -> bridge.Result_std__shared_ptr_Promise_void___ {
+     do {
+diff --git a/nitrogen/generated/shared/c++/HybridOneAudioSpec.cpp b/nitrogen/generated/shared/c++/HybridOneAudioSpec.cpp
+index 8572b8ada433914cad59e014194e0d248679ceb4..fd6c8938378c76ed2d76dcd5c6e90d0c74fca40c 100644
+--- a/nitrogen/generated/shared/c++/HybridOneAudioSpec.cpp
++++ b/nitrogen/generated/shared/c++/HybridOneAudioSpec.cpp
+@@ -21,6 +21,7 @@ namespace margelo::nitro::one {
+       prototype.registerHybridMethod("pause", &HybridOneAudioSpec::pause);
+       prototype.registerHybridMethod("resume", &HybridOneAudioSpec::resume);
+       prototype.registerHybridMethod("seek", &HybridOneAudioSpec::seek);
++      prototype.registerHybridMethod("setPlaybackRate", &HybridOneAudioSpec::setPlaybackRate);
+       prototype.registerHybridMethod("stop", &HybridOneAudioSpec::stop);
+       prototype.registerHybridMethod("startRecording", &HybridOneAudioSpec::startRecording);
+       prototype.registerHybridMethod("getRecordingStatus", &HybridOneAudioSpec::getRecordingStatus);
+diff --git a/nitrogen/generated/shared/c++/HybridOneAudioSpec.hpp b/nitrogen/generated/shared/c++/HybridOneAudioSpec.hpp
+index d8beb5a12f76a40d1f435fac2fe40be3723380a7..9c1a22b4932aa8d9d17fd305a3cfb35bc8aff058 100644
+--- a/nitrogen/generated/shared/c++/HybridOneAudioSpec.hpp
++++ b/nitrogen/generated/shared/c++/HybridOneAudioSpec.hpp
+@@ -85,6 +85,7 @@ namespace margelo::nitro::one {
+       virtual std::shared_ptr<Promise<AudioPlaybackStatus>> pause() = 0;
+       virtual std::shared_ptr<Promise<AudioPlaybackStatus>> resume() = 0;
+       virtual std::shared_ptr<Promise<AudioPlaybackStatus>> seek(double positionMs) = 0;
++      virtual std::shared_ptr<Promise<AudioPlaybackStatus>> setPlaybackRate(double rate) = 0;
+       virtual std::shared_ptr<Promise<void>> stop() = 0;
+       virtual std::shared_ptr<Promise<AudioRecordingStatus>> startRecording() = 0;
+       virtual std::shared_ptr<Promise<AudioRecordingStatus>> getRecordingStatus() = 0;
+diff --git a/src/platform/audio/index.native.ts b/src/platform/audio/index.native.ts
+index bf550a2740168a0dcf81b4d9cdbbb4fbe561005c..ac991dde5171ec4fbdd75bf1a9a7d93ace664e11 100644
+--- a/src/platform/audio/index.native.ts
++++ b/src/platform/audio/index.native.ts
+@@ -41,6 +41,8 @@ export const Audio = Object.freeze({
+   resume: (): Promise<AudioPlaybackStatus> => native().resume().catch(rethrowNativeError),
+   seek: (positionMs: number): Promise<AudioPlaybackStatus> =>
+     native().seek(positionMs).catch(rethrowNativeError),
++  setPlaybackRate: (rate: number): Promise<AudioPlaybackStatus> =>
++    native().setPlaybackRate(rate).catch(rethrowNativeError),
+   stop: (): Promise<void> => native().stop().catch(rethrowNativeError),
+   startRecording: (): Promise<AudioRecordingStatus> =>
+     native().startRecording().catch(rethrowNativeError),
+diff --git a/src/platform/audio/index.ts b/src/platform/audio/index.ts
+index bfa2353e4a19fc30575d87147796b2aa80d2f71d..b36ee1d9bfc3e3c9faf9225dcec4a97355d4869f 100644
+--- a/src/platform/audio/index.ts
++++ b/src/platform/audio/index.ts
+@@ -13,6 +13,8 @@ export type { PitchCorrectionQuality } from '../specs/OneAudio.nitro'
+ export type * from './types'
+ export type * from './unavailable'
+ let player: HTMLAudioElement | undefined
++// the shared player's rate, pitch kept; it outlives a stop, so the next play keeps it.
++let playbackRate = 1
+ let playbackError: string | undefined
+ let permission: AudioRecordingPermission = 'undetermined'
+ let openingRecording = false
+@@ -208,6 +210,8 @@ export const Audio = Object.freeze({
+       throw new Error('Audio.play: invalid browser audio URI')
+     clearPlayer()
+     const audio = new window.Audio(url.href)
++    audio.preservesPitch = true
++    audio.playbackRate = playbackRate
+     player = audio
+     for (const event of ['play', 'pause', 'ended'])
+       audio.addEventListener(event, syncNowPlaying)
+@@ -277,6 +281,14 @@ export const Audio = Object.freeze({
+     })
+     return playbackStatus()
+   },
++  setPlaybackRate: async (rate: number): Promise<AudioPlaybackStatus> => {
++    if (typeof window === 'undefined') return unavailable.setPlaybackRate(rate)
++    if (!Number.isFinite(rate) || rate <= 0 || rate > 2)
++      throw new Error('Audio.setPlaybackRate: rate must be finite, above 0 and at most 2')
++    playbackRate = rate
++    if (player) player.playbackRate = rate
++    return playbackStatus()
++  },
+   stop: async (): Promise<void> => {
+     clearPlayer()
+   },
+diff --git a/src/platform/audio/unavailable.ts b/src/platform/audio/unavailable.ts
+index 77a656d2a723bb6d79ed222edb4cc71a040452d5..64eb92eeb7bd3bd4c1f6971944f6ba2ec17e6ab2 100644
+--- a/src/platform/audio/unavailable.ts
++++ b/src/platform/audio/unavailable.ts
+@@ -39,6 +39,8 @@ export const Audio = Object.freeze({
+     Promise.resolve({ state: 'idle', positionMs: 0 }),
+   seek: (_positionMs: number): Promise<AudioPlaybackStatus> =>
+     Promise.resolve({ state: 'idle', positionMs: 0 }),
++  setPlaybackRate: (_rate: number): Promise<AudioPlaybackStatus> =>
++    Promise.reject(missingNativeBuild('Audio.setPlaybackRate')),
+   stop: (): Promise<void> => Promise.resolve(),
+   startRecording: (): Promise<AudioRecordingStatus> =>
+     Promise.reject(missingNativeBuild('Audio.startRecording')),
+diff --git a/src/platform/specs/OneAudio.nitro.ts b/src/platform/specs/OneAudio.nitro.ts
+index 8fd0c6ad8d9fadee244f108c5b6e696a9368a242..065a9464ce1ae797f7d9317521f79966c2000fe0 100644
+--- a/src/platform/specs/OneAudio.nitro.ts
++++ b/src/platform/specs/OneAudio.nitro.ts
+@@ -71,6 +71,7 @@ export interface OneAudio extends HybridObject<{ ios: 'swift'; android: 'kotlin'
+   pause(): Promise<AudioPlaybackStatus>
+   resume(): Promise<AudioPlaybackStatus>
+   seek(positionMs: number): Promise<AudioPlaybackStatus>
++  setPlaybackRate(rate: number): Promise<AudioPlaybackStatus>
+   stop(): Promise<void>
+   startRecording(): Promise<AudioRecordingStatus>
+   getRecordingStatus(): Promise<AudioRecordingStatus>
+diff --git a/types/platform/audio/index.d.ts b/types/platform/audio/index.d.ts
+index c60d69b34a4ce3b789658de09d8c8bb9a3eb7616..5f7e85e748cd47664623015508eba8815cdff65a 100644
+--- a/types/platform/audio/index.d.ts
++++ b/types/platform/audio/index.d.ts
+@@ -13,6 +13,7 @@ export declare const Audio: Readonly<{
+     pause: () => Promise<AudioPlaybackStatus>;
+     resume: () => Promise<AudioPlaybackStatus>;
+     seek: (positionMs: number) => Promise<AudioPlaybackStatus>;
++    setPlaybackRate: (rate: number) => Promise<AudioPlaybackStatus>;
+     stop: () => Promise<void>;
+     startRecording: () => Promise<AudioRecordingStatus>;
+     getRecordingStatus: () => Promise<AudioRecordingStatus>;
+diff --git a/types/platform/audio/index.native.d.ts b/types/platform/audio/index.native.d.ts
+index f6784d01ded3a45e07b012876ab8edf450ff5b9c..7d59444caad9ea8db57d8e40a026da1a1a262c20 100644
+--- a/types/platform/audio/index.native.d.ts
++++ b/types/platform/audio/index.native.d.ts
+@@ -10,6 +10,7 @@ export declare const Audio: Readonly<{
+     pause: () => Promise<AudioPlaybackStatus>;
+     resume: () => Promise<AudioPlaybackStatus>;
+     seek: (positionMs: number) => Promise<AudioPlaybackStatus>;
++    setPlaybackRate: (rate: number) => Promise<AudioPlaybackStatus>;
+     stop: () => Promise<void>;
+     startRecording: () => Promise<AudioRecordingStatus>;
+     getRecordingStatus: () => Promise<AudioRecordingStatus>;
+diff --git a/types/platform/audio/unavailable.d.ts b/types/platform/audio/unavailable.d.ts
+index b81f7eaf1c5736acd4750c9064e648e222fbb536..7eaf9b8201efe9e16f1bd9216bbb34641cdc38b4 100644
+--- a/types/platform/audio/unavailable.d.ts
++++ b/types/platform/audio/unavailable.d.ts
+@@ -8,6 +8,7 @@ export declare const Audio: Readonly<{
+     pause: () => Promise<AudioPlaybackStatus>;
+     resume: () => Promise<AudioPlaybackStatus>;
+     seek: (_positionMs: number) => Promise<AudioPlaybackStatus>;
++    setPlaybackRate: (_rate: number) => Promise<AudioPlaybackStatus>;
+     stop: () => Promise<void>;
+     startRecording: () => Promise<AudioRecordingStatus>;
+     getRecordingStatus: () => Promise<AudioRecordingStatus>;
+diff --git a/types/platform/specs/OneAudio.nitro.d.ts b/types/platform/specs/OneAudio.nitro.d.ts
+index 1e982c6e8362befd66273dd8bbc86675976c65d1..b2cbde8af2cc9f65a122cb32635f78142aaba7bf 100644
+--- a/types/platform/specs/OneAudio.nitro.d.ts
++++ b/types/platform/specs/OneAudio.nitro.d.ts
+@@ -62,6 +62,7 @@ export interface OneAudio extends HybridObject<{
+     pause(): Promise<AudioPlaybackStatus>;
+     resume(): Promise<AudioPlaybackStatus>;
+     seek(positionMs: number): Promise<AudioPlaybackStatus>;
++    setPlaybackRate(rate: number): Promise<AudioPlaybackStatus>;
+     stop(): Promise<void>;
+     startRecording(): Promise<AudioRecordingStatus>;
+     getRecordingStatus(): Promise<AudioRecordingStatus>;
