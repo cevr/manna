@@ -22,8 +22,9 @@
 
 import { Array as Arr, Order, Schema } from 'effect';
 
-import type { TimedLine, Timeline } from '~/follow/timeline';
-import type { Section } from '~/hymns/text';
+// Relative, not `~/`: the follow checker (`scripts/follow.ts`) reads this module under the scripts' tsconfig.
+import type { TimedLine, Timeline } from '../follow/timeline';
+import type { Section } from '../hymns/text';
 
 const ascending = (numbers: ReadonlyArray<number>) =>
   Arr.zip(numbers, numbers.slice(1)).every(([before, after]) => before < after) ||
@@ -121,9 +122,14 @@ const laidAt = (line: TimedLine, start: number, kept: boolean): TimedLine => {
   };
 };
 
-/** `timeline` with only the lines `kept` marks sung; `kept` holds one flag per line. */
+/**
+ * `timeline` with only the lines `kept` marks sung, one flag per line. Flags
+ * that are not one for each line keep every line: words and timing that
+ * disagree sing the hymn whole, in the player and the follow alike.
+ */
 export const cutOf = (timeline: Timeline, kept: ReadonlyArray<boolean>): Cut => {
-  if (timeline.lines.every((_, index) => kept[index] === true)) return whole(timeline);
+  if (kept.length !== timeline.lines.length) return whole(timeline);
+  if (kept.every((flag) => flag)) return whole(timeline);
   const { starts, end } = startsOf(timeline, kept);
   const lines = timeline.lines.map((line, index) =>
     laidAt(line, Arr.getUnsafe(starts, index), kept[index] === true),

@@ -114,6 +114,14 @@ describe('a cut', () => {
     expect(cut.timeline).toBe(timeline);
     expect(cut.skips).toEqual([]);
   });
+
+  it('is the timeline itself when the flags are not one for each line', () => {
+    for (const kept of [[true, false], [false, true, false, true], []]) {
+      const cut = cutOf(timeline, kept);
+      expect(cut.timeline).toBe(timeline);
+      expect(cut.skips).toEqual([]);
+    }
+  });
 });
 
 describe('a chip’s tap', () => {

@@ -27,8 +27,10 @@ import { createRoot } from 'react-dom/client';
 import { hymnAt } from '~/hymns/hymns';
 import { PlayerContext } from '~/player/context';
 import { Player, playerOn } from '~/player/player';
+import { ALL, type Choice, cutOf, keptOf } from '~/player/stanzas';
 import * as Syllables from '~/reader/SyllableWords';
 import { HymnPage } from '~/reader/HymnPage';
+import { settings } from '~/store';
 import { fakeDevice } from '~/test/device';
 import { readerOn } from '~/test/reader';
 
@@ -85,13 +87,17 @@ const wholeLineOf = () =>
     ),
   );
 
-/** Hymn `number`'s page over a player whose state the test sets; it unmounts when the `using` ends. */
-const mount = (number: number, chords: boolean = false) => {
+/**
+ * Hymn `number`'s page over a player whose state the test sets, with `stanzas` chosen (every
+ * one by default); it unmounts, and the choice goes back to every stanza, when the `using` ends.
+ */
+const mount = (number: number, chords: boolean = false, stanzas: Choice = ALL) => {
   const hymn = Option.getOrThrow(hymnAt(String(number)));
   const track = { number, title: hymn.title };
   const state = Atom.make<Player>(Player.Idle());
   const player = { ...playerOn(fakeDevice().layer, Duration.millis(1)), state };
   const registry = AtomRegistry.make();
+  registry.set(settings.stanzas(number), stanzas);
   const device = new Map<string, string>();
   if (chords) device.set('chords', 'true');
   const host = document.createElement('div');
@@ -167,6 +173,7 @@ const mount = (number: number, chords: boolean = false) => {
     [Symbol.dispose]: () => {
       act(() => root.unmount());
       host.remove();
+      registry.set(settings.stanzas(number), ALL);
     },
   };
 };
@@ -275,6 +282,23 @@ describe('the follow on a hymn page', () => {
     page.press();
     expect(page.scrolled.at(-1)).toBe(2);
     expect(Option.isNone(page.pill())).toBe(true);
+  });
+
+  it('follows only the chosen stanzas, in the sung time the player reads, and marks no skipped line', () => {
+    // Hymn 78 with stanzas 1 and 3: lines 0-7 and 16-23 sung, 8-15 and 24-31 skipped.
+    const timeline = timelineOf(78);
+    const sections = Option.getOrThrow(hymnAt('78')).sections;
+    const cut = cutOf(timeline, keptOf(sections, [1, 3])).timeline;
+    using page = mount(78, false, [1, 3]);
+    expect(page.lines().length).toBe(timeline.lines.length);
+    // Line 16 starts in sung time where line 8 starts in the recording's.
+    expect(lineOf(cut, 16).start).toBe(lineOf(timeline, 8).start);
+    for (const k of [0, 7, 16, 23]) {
+      page.at(lineOf(cut, k).start + 1, 'Playing');
+      expect(page.selected()).toEqual([k]);
+    }
+    page.at(cut.end - 1, 'Playing');
+    expect(page.selected()).toEqual([23]);
   });
 
   it('resumes on a seek and scrolls to the line sung there', () => {

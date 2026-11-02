@@ -129,10 +129,7 @@ interface Score {
   readonly cut: Cut;
 }
 
-/**
- * Hymn `hymn`'s `timeline` cut to `stanzas` by `keptFor`. Flags that are not one for each line
- * keep every line: words and timing that disagree play the hymn whole.
- */
+/** Hymn `hymn`'s `timeline` cut to `stanzas` by `keptFor` (`cutOf` keeps every line when the flags disagree). */
 const scoreOf = (
   hymn: number,
   timeline: Timeline,
@@ -140,9 +137,7 @@ const scoreOf = (
   keptFor: KeptFor,
 ): Score => {
   if (stanzas.length === 0) return { hymn, timeline, cut: whole(timeline) };
-  const kept = keptFor(hymn, stanzas);
-  if (kept.length !== timeline.lines.length) return { hymn, timeline, cut: whole(timeline) };
-  return { hymn, timeline, cut: cutOf(timeline, kept) };
+  return { hymn, timeline, cut: cutOf(timeline, keptFor(hymn, stanzas)) };
 };
 
 /** A device's status, its places in the recording's time, read in `cut`'s sung time. */
