@@ -1,11 +1,17 @@
 /**
- * `bun scripts/follow.ts --udid <udid> --hymn <n> --out <dir> [--every 500] [--session verify-hymnal] [--no-video] [--stanzas 1,3]`:
+ * `bun scripts/follow.ts --udid <udid> --hymn <n> --out <dir> [--every 500] [--session verify-hymnal] [--no-video] [--stanzas 1,3] [--no-count-in]`:
  * one Play tap on a hymn page, and the sung line followed to the end.
  *
  * `--stanzas` names the stanzas the app's player sheet has chosen for the
  * hymn: the run is judged against the timeline cut to them
  * (`src/player/stanzas.ts`), as the app plays it, and a sample that selects
  * a skipped line fails it (`skipped`).
+ *
+ * The app's `Intro` switch is on by default, so Play from the start counts
+ * one bar of the hymn's meter in before the score clock leaves the first
+ * sung line (`src/player/countin.ts`, at 100 %): the judge allows for it
+ * (`countInMsOf`). `--no-count-in` judges a run with `Intro` off, whose
+ * clock runs from the tap; a run that counted in is then adrift.
  *
  * Run from `apps/hymnal`, on a booted simulator whose app shows hymn `<n>`'s
  * page with sound off (`sim open hymns/<n>`, then `sim tap label=Sound`
@@ -38,6 +44,7 @@ import { Command, Flag } from 'effect/cli';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 import { type Timeline, timelineOf } from '../src/follow/timeline.ts';
+import { countInOf } from '../src/player/countin.ts';
 import { Choice, cutOf, keptOf } from '../src/player/stanzas.ts';
 import { readTiming } from '../vite/timing.ts';
 import { readWords } from '../vite/words.ts';
@@ -175,6 +182,17 @@ export const choiceOf = (list: string) => {
 };
 
 /**
+ * How long, in ms, the app's score clock holds at the first sung line after
+ * the Play tap: one bar of `timeline`'s first tempo in its meter's beat, at
+ * 100 %, when Play `counts` in; else 0.
+ */
+export const countInMsOf = (timeline: Timeline, counts: boolean): number => {
+  if (!counts) return 0;
+  const { beats, beatMs } = countInOf(timeline.tempo);
+  return beats * beatMs;
+};
+
+/**
  * Hymn `hymn`'s `timeline` as the app's Play sings it with the stanzas
  * `list` names: cut by `keptOf` and `cutOf` over the hymn's words
  * (`readWords`), the time the follow and the player read. No list gives the
@@ -255,6 +273,12 @@ const follow = Command.make(
         "the stanzas the app's player sheet has chosen for the hymn, comma-separated; every one by default",
       ),
     ),
+    noCountIn: Flag.Boolean('no-count-in').pipe(
+      Flag.withDefault(false),
+      Flag.withDescription(
+        "judge a run with the app's Intro off: the score clock runs from the tap, with no count-in",
+      ),
+    ),
   },
   (flags) =>
     Effect.gen(function* () {
@@ -266,13 +290,16 @@ const follow = Command.make(
         Effect.fromOption,
         Effect.mapError(() => FollowFailed.make({ reason: `hymn ${flags.hymn} has no timeline` })),
       );
-      const timeline = yield* sungOf(flags.hymn, full, flags.stanzas);
+      const timeline = {
+        ...(yield* sungOf(flags.hymn, full, flags.stanzas)),
+        countIn: countInMsOf(full, !flags.noCountIn),
+      };
       const before = yield* nodesNow(flags.session);
       if (!before.some((node) => node.label === `Play hymn ${flags.hymn}`))
         return yield* FollowFailed.make({ reason: `the page shows no Play hymn ${flags.hymn}` });
       if (!soundOff(before))
         return yield* FollowFailed.make({ reason: 'sound is not off: Play is not pressed' });
-      const limit = timeline.end - timeline.first + Duration.toMillis(OVER);
+      const limit = timeline.countIn + timeline.end - timeline.first + Duration.toMillis(OVER);
       const drive = play(flags.session, flags.hymn, flags.every, limit);
       const samples = yield* Option.match(videoOf(flags.out, flags.hymn, flags.noVideo), {
         onNone: () => drive,

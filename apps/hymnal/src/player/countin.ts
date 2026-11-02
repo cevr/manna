@@ -6,7 +6,7 @@
  * the host's clock.
  */
 
-import type { FirstTempo } from '~/follow/timeline';
+import type { FirstTempo } from '../follow/timeline';
 
 import { beatOf } from './tempo';
 

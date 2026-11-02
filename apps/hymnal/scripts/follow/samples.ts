@@ -22,8 +22,10 @@
  * - `doubled`: the samples with more than one line selected;
  * - `mismatched`: the samples whose count of lines is not the timeline's;
  * - `adrift`: the samples whose selected line is not sung at the sample's
- *   time on the score clock, which starts at the first sung line at the tap
- *   (`first + at`), give or take `TIMING`: a clock that runs fast or slow;
+ *   time on the score clock (`placeOf`), which holds at the first sung line
+ *   through the count-in after the tap and then runs from it
+ *   (`first + at - countIn`), give or take `TIMING`: a clock that runs fast
+ *   or slow;
  * - `early`: whether the player was seen to end before the timeline's end
  *   on that clock, less `TIMING`.
  *
@@ -93,9 +95,14 @@ export const LONG = 1000;
  */
 export const TIMING = 1500;
 
-/** The part of a hymn's timeline the judge reads, in ms: each line's span, the first sung line, the end. */
+/**
+ * The part of a hymn's timeline the judge reads, in ms: each line's span,
+ * the first sung line, the end, and the count-in: how long the score clock
+ * holds at the first sung line after the tap (0 when Play does not count in).
+ */
 export interface Timed {
   readonly first: number;
+  readonly countIn: number;
   readonly end: number;
   readonly lines: ReadonlyArray<{ readonly start: number; readonly until: number }>;
 }
@@ -195,6 +202,9 @@ export interface Verdict {
   readonly holds: boolean;
 }
 
+/** The score clock's place, ms, `at` ms after the tap: held at the first sung line through the count-in. */
+const placeOf = (timed: Timed, at: number) => timed.first + Math.max(0, at - timed.countIn);
+
 /** Whether line `span` is sung, give or take `TIMING`, at `place` ms on the score clock. */
 const onTime = (span: Timed['lines'][number], place: number) =>
   span.start - TIMING <= place && place < span.until + TIMING;
@@ -229,7 +239,9 @@ export const judge = (
     const line = first.value;
     seen.add(line);
     if (Arr.get(lengths, line).pipe(Option.exists((length) => length <= 0))) skipped++;
-    if (!Option.exists(Arr.get(timed.lines, line), (span) => onTime(span, timed.first + sample.at)))
+    if (
+      !Option.exists(Arr.get(timed.lines, line), (span) => onTime(span, placeOf(timed, sample.at)))
+    )
       adrift++;
     if (line < before) backwards++;
     before = line;
@@ -253,7 +265,7 @@ export const judge = (
   );
   const ended = samples.some((sample) => sample.ended);
   const early = samples.some(
-    (sample) => sample.ended && timed.first + sample.at < timed.end - TIMING,
+    (sample) => sample.ended && placeOf(timed, sample.at) < timed.end - TIMING,
   );
   const counts = {
     hymn,
