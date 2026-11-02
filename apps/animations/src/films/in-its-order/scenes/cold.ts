@@ -74,8 +74,9 @@ const GUESTS = {
 /**
  * The courtyard's framings, on the frame px the title ends on: from `grown`
  * the camera starts on the mother at the table (`START`), trucks down the
- * table to the lead, pushes in on his bottle and pulls back to the three
- * guests (`smile`), each a cue and where it leaves the camera.
+ * table to the lead, pushes in on his bottle, pulls back to the three
+ * guests (`smile`) and pushes in on the letter's gold seal under his face
+ * (`quote`), each a cue and where it leaves the camera.
  *
  * The plates cover frame x 0..1920 and y -100..1180, and the table, the
  * nearest plane, binds: every framing keeps 960/k <= x <= 1920 - 960/k and
@@ -89,6 +90,7 @@ const MOVES = [
   ['truck', { x: 960, y: 796, k: 1.42 }],
   ['bottle', { x: 952, y: 812, k: 1.5 }],
   ['smile', { x: 955, y: 744, k: 1.25 }],
+  ['quote', { x: 996, y: 818, k: 1.5 }],
 ] as const satisfies ReadonlyArray<readonly [string, Camera]>;
 
 /**
@@ -129,6 +131,7 @@ export const cold = drawing({
     hop: { after: 'drop', dur: 0.24, ease: 'linear' },
     unfurl: { after: 'hop', dur: 0.15, ease: 'linear' },
     unroll: { after: 'unfurl', dur: 1, ease: 'inOutCubic' },
+    quote: { mark: 'quote', dur: 2.6, ease: 'inOutSine' },
     what: { mark: 'what', until: { at: 'end' }, ease: 'inOutSine' },
   },
   puppets: {
