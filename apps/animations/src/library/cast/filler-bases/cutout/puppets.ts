@@ -1,6 +1,7 @@
 // The filler bases' puppets, one a cut view (`canvas/puppet.ts`): each view's
 // part sheet (`sheets/<view>/`, its head and torso written by their cutter,
-// `sheets-cut.ts`, its house parts by `parts-cut.ts`), its parts front to
+// `sheets-cut.ts`, its house parts and a headwear view's covered head by
+// `parts-cut.ts`), its parts front to
 // back, the house parts before the head, each PNG imported by its module
 // so a scene that draws a base is keyed by its bytes (`tools/stamp.ts`), on
 // the view's skeleton (`skeleton.ts`), with the origin at the kept box's
@@ -11,6 +12,7 @@
 import p1Band from './sheets/poses-1/band.png' with { type: 'file' };
 import p1Beard from './sheets/poses-1/beard.png' with { type: 'file' };
 import p1Head from './sheets/poses-1/head.png' with { type: 'file' };
+import p1HeadCovered from './sheets/poses-1/head-covered.png' with { type: 'file' };
 import p1Headwear from './sheets/poses-1/headwear.png' with { type: 'file' };
 import p1Mantle from './sheets/poses-1/mantle.png' with { type: 'file' };
 import p1Torso from './sheets/poses-1/torso.png' with { type: 'file' };
@@ -19,6 +21,7 @@ import p2Mantle from './sheets/poses-2/mantle.png' with { type: 'file' };
 import p2Torso from './sheets/poses-2/torso.png' with { type: 'file' };
 import p3Beard from './sheets/poses-3/beard.png' with { type: 'file' };
 import p3Head from './sheets/poses-3/head.png' with { type: 'file' };
+import p3HeadCovered from './sheets/poses-3/head-covered.png' with { type: 'file' };
 import p3Headwear from './sheets/poses-3/headwear.png' with { type: 'file' };
 import p3Mantle from './sheets/poses-3/mantle.png' with { type: 'file' };
 import p3Torso from './sheets/poses-3/torso.png' with { type: 'file' };
@@ -109,8 +112,31 @@ const ramped = (puppet: CutPuppet, ramps: Readonly<Record<string, Ramp>>): CutPu
   ),
 });
 
+/** The drawing a crowd lays in place of a view's head when the figure wears its headwear (`crowd.ts`). */
+export const HEAD_COVERED = 'head-covered';
+
+/**
+ * Each headwear view's covered head (`parts-cut.ts`): its head with the hair
+ * the headwear hides read from the dressed view, on the head's own canvas,
+ * un-matted as the head is.
+ */
+const COVERED: Partial<Record<keyof typeof BUSTS, string>> = {
+  'poses-1': p1HeadCovered,
+  'poses-3': p3HeadCovered,
+};
+
+/** A view's bust with its covered head among its drawings, when it has one. */
+const covered = (puppet: CutPuppet, png: Option.Option<string>): CutPuppet =>
+  Option.match(png, {
+    onNone: () => puppet,
+    onSome: (p) => ({ ...puppet, drawings: [{ name: HEAD_COVERED, png: p, part: 'head' }] }),
+  });
+
 /**
  * Each cut view's puppet, by the view's name in their sheet's views: its
- * bust, its dyed parts (`mantle`, `band`) declaring their drawn ramps.
+ * bust, its dyed parts (`mantle`, `band`) declaring their drawn ramps, and
+ * a headwear view's covered head as a drawing.
  */
-export const PUPPETS = Records.map(BUSTS, (puppet, view) => ramped(puppet, RAMPS[view]));
+export const PUPPETS = Records.map(BUSTS, (puppet, view) =>
+  covered(ramped(puppet, RAMPS[view]), Option.fromUndefinedOr(COVERED[view])),
+);

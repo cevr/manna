@@ -21,7 +21,7 @@ import { rng } from '@manna/film/core';
 import { keyLight, shading } from '@manna/film/style';
 import { Array as Arr, Option, Record as Rec } from 'effect';
 import { FRAMES, type FramedView } from './frames.ts';
-import { PUPPETS } from './puppets.ts';
+import { HEAD_COVERED, PUPPETS } from './puppets.ts';
 import { SKELETONS } from './skeleton.ts';
 
 /** The story kit's mantle cloths (`docs/casting.md` §3.1): walnut, indigo, olive and camel, each at the band's floor. */
@@ -325,6 +325,32 @@ export const dressOf = (figure: Figure, spec: Pick<PuppetSpec, 'parts'>): Puppet
 /** A bust's look: no drawing laid and the boil off, as the table's guests hold between their keys; at a crowd's size a boil would read as noise. */
 const STILL: PuppetLook = { boil: 0, amp: 0 };
 
+/** A drawing on its bust's own part sheet canvas, laid where its part lies with every bone at 0. */
+const ON_SHEET = { s: 1, dx: 0, dy: 0 } as const;
+
+/**
+ * `figure`'s look on `spec`'s puppet: `STILL`, and when the figure wears its
+ * headwear and the puppet has a covered head (`HEAD_COVERED`, `puppets.ts`),
+ * that head laid in place of its head, riding the head bone at its pivot, so
+ * none of the base's hair shows round the headcloth.
+ */
+export const lookOf = (figure: Figure, spec: Pick<PuppetSpec, 'drawings'>): PuppetLook =>
+  Option.match(
+    Option.fromUndefinedOr(spec.drawings).pipe(
+      Option.flatMap((drawings) => Arr.findFirst(drawings, (d) => d.name === HEAD_COVERED)),
+      Option.filter(() => figure.headwear !== 'bare'),
+    ),
+    {
+      onNone: () => STILL,
+      onSome: (d) => ({
+        ...STILL,
+        swaps: [
+          { part: 'head', drawing: d.name, place: ON_SHEET, pivot: rowsOf(figure.body).pivot },
+        ],
+      }),
+    },
+  );
+
 /** What the crowd needs of a scene's frame: its time, its canvas and the crowd's puppets. */
 export interface CrowdFrame {
   readonly t: number;
@@ -337,6 +363,7 @@ export const drawBust = (f: CrowdFrame, figure: Figure, at: Placement): void => 
   const { pose, transform } = bustAt(figure, at, f.t);
   f.ctx.save();
   f.ctx.transform(...transform);
-  f.puppet(puppetOf(figure.body), pose, STILL, dressOf(figure, PUPPETS[figure.body]));
+  const spec = PUPPETS[figure.body];
+  f.puppet(puppetOf(figure.body), pose, lookOf(figure, spec), dressOf(figure, spec));
   f.ctx.restore();
 };

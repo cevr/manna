@@ -21,12 +21,16 @@
 //   and its rim), so the line between a veil and the face comes whole with the
 //   veil, while a brow or an eye, which skin parts from it, stays the base's.
 // - **Ramp.** A part a dress dyes (`mantle`, `band`) declares the ramp it is
-//   drawn in: its shade, base and light, the colours at its interior's 10th,
-//   50th and 90th lightness percentiles (`rampOf`). They are written to
+//   drawn in: its shade, base and light, its interior's darkest 5 %, middle
+//   and lightest 5 % by lightness (`rampOf`). They are written to
 //   `sheets/ramps.ts`, which `puppets.ts` reads.
+// - **Covered head.** A view with a headwear writes its base head as the
+//   headwear covers it (`head-covered.png`, `coveredOf`): the face kept, the
+//   hair read from the dressed view, so a crowd figure in headwear shows none.
 //
-// Each view's log prints its eyes, its similarity, each part's regions, its
-// ramp, and the base's hair that no part covers above the eyes (`showing`).
+// Each view's log prints its eyes, its similarity, each part's regions (and
+// the strokes it drops), its ramp and lightness spread, and the hair of the
+// head drawn with the parts that no part covers above the eyes (`showing`).
 // Run it from the repo root with
 // `bun apps/animations/src/library/cast/filler-bases/cutout/parts-cut.ts`.
 
@@ -97,6 +101,10 @@ const SKIN: ReadonlyArray<readonly [Paint, Rgb]> = [
  * Each kept dressed view's palette: every paint it is drawn in, as the
  * cluster means of its figure's px (k-means in Lab, rows above the hands),
  * each a house part's or another's. A px is the paint's it lies nearest.
+ * A headcloth's lining, the shadowed cloth between its drapes and the face
+ * (the grown man's two browns, the older man's two tans), is the headcloth's,
+ * so no ground shows between them; the older man's robe shares those tans,
+ * and the headcloth's seat (`sits`) leaves it out.
  */
 const PALETTES: Readonly<Record<FramedView, ReadonlyArray<readonly [Paint, Rgb]>>> = {
   'poses-1': [
@@ -116,8 +124,8 @@ const PALETTES: Readonly<Record<FramedView, ReadonlyArray<readonly [Paint, Rgb]>
     ['other', [242, 222, 196]],
     ['other', [231, 209, 190]],
     ['other', [252, 244, 223]],
-    ['other', [157, 127, 102]],
-    ['other', [199, 169, 140]],
+    ['headwear', [157, 127, 102]],
+    ['headwear', [199, 169, 140]],
   ],
   'poses-2': [
     ...LINES,
@@ -143,8 +151,8 @@ const PALETTES: Readonly<Record<FramedView, ReadonlyArray<readonly [Paint, Rgb]>
     ['headwear', [241, 216, 175]],
     ['headwear', [225, 197, 163]],
     ['headwear', [239, 215, 183]],
-    ['other', [216, 187, 159]],
-    ['other', [193, 164, 137]],
+    ['headwear', [216, 187, 159]],
+    ['headwear', [193, 164, 137]],
     ['mantle', [91, 97, 116]],
     ['mantle', [85, 88, 108]],
     ['mantle', [79, 80, 103]],
@@ -186,6 +194,15 @@ const MIN_REGION = 40;
 
 /** A mantle's region is at least this many px: an ear's shadow or a rim near its colour is far smaller. */
 const MANTLE_PX = 400;
+
+/** A region whose box is narrower or shorter than this, px, is a stroke near a part's colour (a mantle's front edge beside a beard, a sash under a veil), not the part. */
+const STROKE = 12;
+
+/** How far a part's mask grows past its regions and line into the line's anti-aliased edge, px, so the part's edge is the ink's own blend and no fringe of its paint shows. */
+const AA = 2;
+
+/** A px darker than this luminance beside a part is its line's anti-aliased edge, which the mask grows into (the skin, the robes and the headcloths are lighter). */
+const AA_LUM = 170;
 
 /** How near its paint a px lies to be a part's, CIE76 ΔE. */
 const NEAR = 20;
@@ -433,7 +450,8 @@ const opened = (mask: Uint8Array, w: number, h: number): Uint8Array => {
 
 /**
  * The regions of `name` on `view`: the components of its paints' px, opened
- * by one px, of `MIN_REGION` px or more.
+ * by one px, of `MIN_REGION` px or more. A stroke (`STROKE`) among them is
+ * not the part (`isStroke`); the cut drops it and logs it.
  */
 const regionsOf = (
   view: Raster,
@@ -448,6 +466,9 @@ const regionsOf = (
     .filter((px) => px.length >= MIN_REGION)
     .map((px) => ({ px, ...boxOfPx(w, px), median: medianRgb(px.map((i) => rgbAt(view, i))) }));
 };
+
+/** Whether `region` is a stroke near a part's colour: its box narrower or shorter than `STROKE`. */
+const isStroke = ({ box: [x0, y0, x1, y1] }: Region) => Math.min(x1 - x0, y1 - y0) + 1 < STROKE;
 
 /** Whether `region` sits where a part of `seat` sits, given the dressed view's eyes. */
 const sits = (seat: Seat, region: Region, [l, r]: readonly [Pt, Pt]) => {
@@ -467,7 +488,9 @@ const sits = (seat: Seat, region: Region, [l, r]: readonly [Pt, Pt]) => {
  * A part's mask on `view`: its regions, then the line, its rims and the
  * outside's anti-aliased rim reached from them through those alone within
  * `REACH` px (chamfer 2-3), never into another house part's regions
- * (`others`), then its small holes filled.
+ * (`others`), then its small holes filled, then grown `AA` px into the
+ * line's anti-aliased edge (`AA_LUM`) and the outside's rim, so its edge
+ * ends in the ink's blend rather than a jagged fringe of its own paint.
  */
 const maskOf = (
   view: Raster,
@@ -520,6 +543,24 @@ const maskOf = (
   });
   for (const hole of componentsOf(w, h, (i) => mask[i] !== 1))
     if (hole.length < HOLE) for (const i of hole) mask[i] = 1;
+  const edge = (i: number) => {
+    if (others[i] === 1) return false;
+    if (outside[i] === 1) return deltaE(rgbAt(view, i), paper) > PAPERISH;
+    return lumOf(view, i) < AA_LUM;
+  };
+  for (let pass = 0; pass < AA; pass++) {
+    const grown = Array.from({ length: w * h }, (_, i) => i).filter((i) => {
+      if (mask[i] === 1 || !edge(i)) return false;
+      const [x, y] = [i % w, Math.floor(i / w)];
+      return (
+        (x > 0 && mask[i - 1] === 1) ||
+        (x < w - 1 && mask[i + 1] === 1) ||
+        (y > 0 && mask[i - w] === 1) ||
+        (y < h - 1 && mask[i + w] === 1)
+      );
+    });
+    for (const i of grown) mask[i] = 1;
+  }
   return mask;
 };
 
@@ -534,25 +575,39 @@ export interface DrawnRamp {
   readonly light: `#${string}`;
 }
 
-/**
- * The ramp `own` is drawn in, measured from its interior (its px whose four
- * neighbours two px out are its own too, so no rim): the colours about its
- * 10th, 50th and 90th lightness percentiles.
- */
-const rampOf = (view: Raster, own: ReadonlyArray<Region>): DrawnRamp => {
+/** The colours of `own`'s interior (its px whose four neighbours two px out are its own too, so no rim), sorted by lightness L*. */
+const interiorOf = (view: Raster, own: ReadonlyArray<Region>) => {
   const { width: w } = view;
   const mine = new Set(own.flatMap((r) => r.px));
-  const interior = [...mine].filter((i) => [-2, 2, -2 * w, 2 * w].every((d) => mine.has(i + d)));
-  const sorted = interior
+  return [...mine]
+    .filter((i) => [-2, 2, -2 * w, 2 * w].every((d) => mine.has(i + d)))
     .map((i) => rgbAt(view, i))
     .map((c) => ({ c, l: labOf(c)[0] }))
-    .sort((p, q) => p.l - q.l)
-    .map(({ c }) => c);
+    .sort((p, q) => p.l - q.l);
+};
+
+/**
+ * The ramp `own` is drawn in, measured from its interior: its shade the
+ * median of its darkest 5 % by L*, its base the median about its 50th
+ * percentile, its light the median of its lightest 5 %. A dye maps the drawn
+ * shade to light onto the cloth's, which spans about 30 L*, so the drawn span
+ * is taken wide: a narrow one (the 10th to 90th percentiles span 4-9 L* on
+ * these flat-painted cloths) stretches the paper's grain into blotches, and
+ * sends the lightest tenth of the cloth past the cloth's light toward white.
+ */
+const rampOf = (view: Raster, own: ReadonlyArray<Region>): DrawnRamp => {
+  const sorted = interiorOf(view, own).map(({ c }) => c);
   return {
-    shade: hexOf(atPercentiles(sorted, 0.05, 0.15)),
+    shade: hexOf(atPercentiles(sorted, 0, 0.05)),
     base: hexOf(atPercentiles(sorted, 0.45, 0.55)),
-    light: hexOf(atPercentiles(sorted, 0.85, 0.95)),
+    light: hexOf(atPercentiles(sorted, 0.95, 1)),
   };
+};
+
+/** `own`'s interior lightness at its 5th, 50th and 95th percentiles, L*, as the log reports its spread. */
+const spreadOf = (view: Raster, own: ReadonlyArray<Region>) => {
+  const ls = interiorOf(view, own).map(({ l }) => l);
+  return [0.05, 0.5, 0.95].map((p) => ls[Math.floor(ls.length * p)] ?? 0);
 };
 
 /**
@@ -636,6 +691,63 @@ const showingOf = (head: Raster, parts: ReadonlyArray<Raster>, eyeY: number) => 
     .map((px) => ({ n: px.length, box: boxOfPx(w, px).box }));
 };
 
+/** A hole in a base head's skin of fewer px than this is a feature it encloses (an eye, a brow, the mouth, a cheek's blush); the hair, open to the ground, is no hole. */
+const FEATURE = 3000;
+
+/** A head px whose colour lies this near, CIE76 ΔE, to the dressed view's px over it is the same drawing there (the face's outline as both draw it), and keeps the base's. */
+const AGREE = 15;
+
+/**
+ * The base head as a headwear covers it (`head-covered.png`), in the part
+ * sheet's frame: its face and ears (its skin, the features the skin encloses,
+ * and one px past them) kept, and every other px of it, its hair and the
+ * hair's line, read from the dressed view over it (`figure`, the dressed
+ * view's figure warped into the frame): kept where the two agree (`AGREE`),
+ * transparent where the dressed view is ground (the cowlick above a
+ * headcloth), else the dressed view's colour (the forehead under a band, the
+ * headcloth and its lining over the hair), so no base hair shows round the
+ * headwear at rest, nor where a turned head moves under a drape that rides
+ * the lean too.
+ */
+const coveredOf = (head: Raster, figure: Raster): Raster => {
+  const { width: w, height: h } = head;
+  const skins = SKIN.map(([, c]) => labOf(c));
+  const opaque = (r: Raster, i: number) => (r.rgba[i * 4 + 3] ?? 0) >= 128;
+  const skin = Uint8Array.from({ length: w * h }, (_, i) => {
+    if (!opaque(head, i)) return 0;
+    const [l, a, b] = labOf(rgbAt(head, i));
+    return Number(skins.some((s) => Math.hypot(s[0] - l, s[1] - a, s[2] - b) < NEAR));
+  });
+  for (const hole of componentsOf(w, h, (i) => skin[i] !== 1)) {
+    const open = hole.some((i) => {
+      const [x, y] = [i % w, Math.floor(i / w)];
+      return !opaque(head, i) || x === 0 || y === 0 || x === w - 1 || y === h - 1;
+    });
+    if (!open && hole.length < FEATURE) for (const i of hole) skin[i] = 1;
+  }
+  const face = Uint8Array.from(skin, (v, i) => {
+    const [x, y] = [i % w, Math.floor(i / w)];
+    const near = [-1, 0, 1].flatMap((dy) =>
+      [-1, 0, 1].map((dx) => {
+        const [nx, ny] = [x + dx, y + dy];
+        return nx >= 0 && ny >= 0 && nx < w && ny < h && skin[ny * w + nx] === 1;
+      }),
+    );
+    return Number(v === 1 || near.some(Boolean));
+  });
+  const rgba = Uint8Array.from(head.rgba);
+  for (let i = 0; i < w * h; i++) {
+    if ((head.rgba[i * 4 + 3] ?? 0) === 0 || face[i] === 1) continue;
+    if (!opaque(figure, i)) {
+      rgba[i * 4 + 3] = 0;
+      continue;
+    }
+    if (deltaE(rgbAt(head, i), rgbAt(figure, i)) < AGREE) continue;
+    rgba.set(rgbAt(figure, i), i * 4);
+  }
+  return { width: w, height: h, rgba };
+};
+
 const pt = ([x, y]: Pt) => `(${x.toFixed(1)},${y.toFixed(1)})`;
 
 const cutView = (sheet: Raster, view: FramedView) =>
@@ -659,17 +771,42 @@ const cutView = (sheet: Raster, view: FramedView) =>
     );
     const palette = PALETTES[view];
     const paints = paintsOf(dressed, outside, palette);
-    const owned = Records.fromEntries(
-      HOUSE[view].map((part) => [
-        part.name,
-        regionsOf(dressed, paints, palette, part.name).filter((r) =>
-          sits(part.seat, r, dressedEyes),
-        ),
-      ]),
-    );
+    const seated = HOUSE[view].map((part) => {
+      const all = regionsOf(dressed, paints, palette, part.name).filter((r) =>
+        sits(part.seat, r, dressedEyes),
+      );
+      return {
+        name: part.name,
+        regions: all.filter((r) => !isStroke(r)),
+        strokes: all.filter(isStroke),
+      };
+    });
+    for (const { name, strokes } of seated)
+      if (strokes.length > 0)
+        yield* Console.log(
+          `  ${name}: strokes dropped${strokes.map((r) => ` [${r.px.length} px ${r.box.join(',')}]`).join('')}`,
+        );
+    const owned = Records.fromEntries(seated.map((s) => [s.name, s.regions]));
     const head = yield* Effect.fromResult(
       decodePng(yield* fs.readFile(`${here}/sheets/${view}/head.png`)),
     );
+    const covered = Option.liftPredicate(
+      coveredOf(
+        head,
+        warped(
+          dressed,
+          Uint8Array.from(outside, (v) => 1 - v),
+          to,
+          base.width,
+          base.height,
+        ),
+      ),
+      () => HOUSE[view].some((p) => p.name === 'headwear'),
+    );
+    yield* Option.match(covered, {
+      onNone: () => Effect.void,
+      onSome: (r) => fs.writeFile(`${here}/sheets/${view}/head-covered.png`, encodePng(r)),
+    });
     const written = yield* Effect.forEach(HOUSE[view], (part) =>
       Effect.gen(function* () {
         const own = owned[part.name] ?? [];
@@ -690,7 +827,13 @@ const cutView = (sheet: Raster, view: FramedView) =>
         yield* Console.log(
           `  ${part.name}.png: ${own.length} regions${own.map((r) => ` [${r.px.length} px ${r.box.join(',')} ${hexOf(r.median)}]`).join('')}${Option.match(
             ramp,
-            { onNone: () => '', onSome: (r) => `; ramp ${r.shade} ${r.base} ${r.light}` },
+            {
+              onNone: () => '',
+              onSome: (r) =>
+                `; ramp ${r.shade} ${r.base} ${r.light}; L* p5 p50 p95 ${spreadOf(dressed, own)
+                  .map((l) => l.toFixed(1))
+                  .join(' ')}`,
+            },
           )}`,
         );
         return { name: part.name, raster, ramp };
@@ -698,12 +841,12 @@ const cutView = (sheet: Raster, view: FramedView) =>
     );
     const eyeY = (baseEyes[0][1] + baseEyes[1][1]) / 2;
     const showing = showingOf(
-      head,
+      Option.getOrElse(covered, () => head),
       written.map((p) => p.raster),
       eyeY,
     );
     yield* Console.log(
-      `  base head showing above the eyes: ${showing.length}${showing.map((s) => ` [${s.n} px ${s.box.join(',')}]`).join('')}`,
+      `  ${Option.match(covered, { onNone: () => 'base head', onSome: () => 'covered head' })} showing above the eyes: ${showing.length}${showing.map((s) => ` [${s.n} px ${s.box.join(',')}]`).join('')}`,
     );
     return Records.fromEntries(
       written.flatMap((p) =>

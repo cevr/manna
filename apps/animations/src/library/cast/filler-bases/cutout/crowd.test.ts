@@ -20,10 +20,11 @@ import {
   crowdOf,
   dressOf,
   idleAt,
+  lookOf,
   rowsOf,
 } from './crowd.ts';
 import { FRAMES } from './frames.ts';
-import { PUPPETS } from './puppets.ts';
+import { HEAD_COVERED, PUPPETS } from './puppets.ts';
 
 type Pt = readonly [number, number];
 
@@ -203,6 +204,29 @@ describe('the crowd kit', () => {
       );
     });
     expect(wrong).toEqual([]);
+  });
+
+  test('a figure in headwear lays its bust’s covered head, a bare head or a bust without one keeps its drawn head', () => {
+    const wrong = FIGURES.filter((f) => {
+      const swaps = lookOf(f, PUPPETS[f.body]).swaps ?? [];
+      const has = (PUPPETS[f.body].drawings ?? []).some((d) => d.name === HEAD_COVERED);
+      const want = has && f.headwear !== 'bare';
+      return (
+        swaps.length !== Number(want) ||
+        swaps.some((s) => s.part !== 'head' || s.drawing !== HEAD_COVERED)
+      );
+    });
+    expect(wrong).toEqual([]);
+    expect(
+      FIGURES.some(
+        (f) => f.headwear !== 'bare' && (lookOf(f, PUPPETS[f.body]).swaps ?? []).length === 1,
+      ),
+    ).toBe(true);
+    expect(
+      Object.keys(PUPPETS).filter(
+        (v) => (PUPPETS[v as keyof typeof PUPPETS].drawings ?? []).length > 0,
+      ),
+    ).toEqual(['poses-1', 'poses-3']);
   });
 
   test('every head tip moves at least 2 screen px in every 2 s window at the smallest scale', () => {
