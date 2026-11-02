@@ -2,17 +2,19 @@
  * The score clock: a silent `PlaybackApi` under the player (`player.ts`),
  * over the device's own.
  *
- * With sound on, the device plays the recording. A hymn whose timeline runs
- * past the recording's end (stanzas the recording does not play) goes on
- * silently from there to the timeline's end, and the status gives the
- * timeline's length. With sound off, nothing sounds: the clock runs at the
- * held hymn's tempo (`rate` of the play's options, then each `setRate`;
- * 1000 ms a second until told) from the first sung line, with no count-in,
- * and gives the status the device would. A switch mid-play hands the place
- * over: off pauses the device and runs the clock from the device's place;
- * on plays the recording from the clock's place. The recording, and the
- * silent tail past it, run at 1000 ms a second: the tempo reaches the device
- * in no play's options. `pace` tells the rate the place moves at.
+ * The place moves at the held hymn's tempo (`rate` of the play's options,
+ * then each `setRate`; 1000 ms a second until told), with sound on or off.
+ * With sound on, the device plays the recording at the tempo: each device
+ * play carries the tempo as it stands, a turn reaches the device's
+ * `setRate`, and the device's statuses, which name no rate, get the tempo's.
+ * A hymn whose timeline runs past the recording's end (stanzas the
+ * recording does not play) goes on silently at the tempo from there to the
+ * timeline's end, and the status gives the timeline's length. With sound
+ * off, nothing sounds: the clock runs from the first sung line, with no
+ * count-in, and gives the status the device would. A switch mid-play hands
+ * the place over: off pauses the device and runs the clock from the
+ * device's place; on plays the recording from the clock's place. `pace`
+ * tells the rate the place moves at.
  *
  * Every change of rate, place or playing takes the place at the old run's
  * rate first, then starts the new run from it (`run`).
@@ -167,7 +169,7 @@ export const scoreClock = (
       selection: Option.none(),
       rate: 1,
     };
-    /** The rate the place moves at: the tempo with sound off, the recording's 1 with it on. */
+    /** The rate the place moves at: the held tempo, sound on or off; 1 while nothing is held. */
     const pace = yield* SubscriptionRef.make(1);
     const paceNow = Effect.sync(() => held.rate);
     const tellPace = Effect.flatMap(paceNow, (rate) => SubscriptionRef.set(pace, rate));
