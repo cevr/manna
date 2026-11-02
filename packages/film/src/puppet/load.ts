@@ -7,11 +7,13 @@
 // (its textures and buffers, `canvas/puppet-gl.ts`) is the load scope's and
 // freed when it closes; the puppets stand on the film until then. A part
 // PNG of another size than its puppet declares, a skeleton that does not
-// fit the parts, or a drawn key that does not fit the part it names, fails
+// fit the parts, a drawn key that does not fit the part it names, or a
+// part's declared ramp no dye can map from (`drawnLabs`), fails
 // the load, naming why, and nothing is drawn.
 
 import { Effect, Exit, Option, Result, Scope } from 'effect';
 import type { Film } from '../canvas/film.ts';
+import { drawnLabs } from '../canvas/dye.ts';
 import type { LoadedPuppet, PuppetSpec } from '../canvas/puppet.ts';
 import { freePuppetGl, puppetGl } from '../canvas/puppet-gl.ts';
 import { type Puppet, type PuppetSheet, puppetOf, unmattedKey } from '../core/puppet.ts';
@@ -23,6 +25,12 @@ const sheetFrom = Effect.fn('Puppet.sheet')(function* (spec: PuppetSpec) {
   const images = yield* PuppetImages;
   const unloadable = (reason: string) => PuppetUnloadable.make({ puppet: spec.key, reason });
   const [w, h] = spec.size;
+  // a part's declared ramp checked here, so a ramp no dye can map from fails the load, not the first frame that dyes the part
+  for (const part of spec.parts) {
+    const drawn = Option.fromUndefinedOr(part.ramp).pipe(Option.map(drawnLabs));
+    if (Option.isSome(drawn) && Result.isFailure(drawn.value))
+      return yield* unloadable(`${part.name}: ${drawn.value.failure}`);
+  }
   const parts = yield* Effect.forEach(spec.parts, (part) =>
     images.read(part.png).pipe(
       Effect.mapError((e) => unloadable(`${part.name}: ${e.reason}`)),

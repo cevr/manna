@@ -94,17 +94,25 @@ const labsOf = (r: Ramp): readonly [Lab, Lab, Lab] => [
 ];
 
 /**
- * The dye that wears a part drawn in ramp `drawn` in a cloth of ramp `cloth`
- * (the look's `shaded()` of the cloth's colour), or why not: either ramp
- * does not rise in lightness from above the ink cut (shade, base, light),
- * so no map keeps the line and the folds' order both.
+ * The Lab of ramp `drawn` (shade, base, light) as a part declares it is drawn
+ * in, or why no dye can map from it: it does not rise in lightness from above
+ * the ink cut to white. A puppet's load checks each part's declared ramp with
+ * it (`puppet/load.ts`), before any draw dyes the part.
  */
-export const dyeKnots = (drawn: Ramp, cloth: Ramp): Result.Result<Dye, string> => {
-  const [ds, db, dl] = labsOf(drawn);
-  if (!rises([INK_CUT, ds[0], db[0], dl[0], 100]))
+export const drawnLabs = (drawn: Ramp): Result.Result<readonly [Lab, Lab, Lab], string> => {
+  const labs = labsOf(drawn);
+  if (!rises([INK_CUT, ...labs.map((c) => c[0]), 100]))
     return Result.fail(
       `the drawn ramp ${drawn.shade} ${drawn.base} ${drawn.light} does not rise in lightness from above the ink cut (L* ${INK_CUT})`,
     );
+  return Result.succeed(labs);
+};
+
+/** The dye from the drawn ramp's Lab (`drawnLabs`) onto `cloth`'s ramp, or why not: `cloth` does not rise in lightness from above the ink cut. */
+const clothKnots = (
+  [ds, db, dl]: readonly [Lab, Lab, Lab],
+  cloth: Ramp,
+): Result.Result<Dye, string> => {
   const [s, b, l] = labsOf(cloth);
   if (!rises([INK_CUT, s[0], b[0], l[0]]))
     return Result.fail(
@@ -117,6 +125,15 @@ export const dyeKnots = (drawn: Ramp, cloth: Ramp): Result.Result<Dye, string> =
     to: [[INK_CUT, s[1] * k, s[2] * k], s, b, l, [100, 0, 0]],
   });
 };
+
+/**
+ * The dye that wears a part drawn in ramp `drawn` in a cloth of ramp `cloth`
+ * (the look's `shaded()` of the cloth's colour), or why not: either ramp
+ * does not rise in lightness from above the ink cut (shade, base, light),
+ * so no map keeps the line and the folds' order both.
+ */
+export const dyeKnots = (drawn: Ramp, cloth: Ramp): Result.Result<Dye, string> =>
+  Result.flatMap(drawnLabs(drawn), (labs) => clothKnots(labs, cloth));
 
 /** The Lab `t` (0..1) of the way from `p` to `q`. */
 const mixLab = (p: Lab, q: Lab, t: number): Lab => [
