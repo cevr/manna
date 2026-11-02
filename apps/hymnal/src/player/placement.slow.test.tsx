@@ -45,6 +45,7 @@ test('server placement rendering uses its default without opening the device sto
         remove: () => Effect.void,
         clear: Effect.void,
         size: Effect.succeed(0),
+        keys: Effect.succeed([]),
       });
     }),
   );

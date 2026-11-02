@@ -30,11 +30,20 @@ const BANNED = [
   ['create', 'Player'],
 ].map((parts) => parts.join(''));
 
+/**
+ * One's native source writes `.one-native-source.*` (gitignored) beside the
+ * Swift from `Voice.swift` and its declaration, which the scan reads; it
+ * reads only tracked files, so a task's hash covers every file it reads.
+ */
+const generated = (name: string) => name.startsWith('.one-native-source.');
+
 const filesUnder = (dir: string): ReadonlyArray<string> =>
-  readdirSync(dir, { withFileTypes: true }).flatMap(
-    (entry) =>
-      (entry.isDirectory() && filesUnder(join(dir, entry.name))) || [join(dir, entry.name)],
-  );
+  readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => !generated(entry.name))
+    .flatMap(
+      (entry) =>
+        (entry.isDirectory() && filesUnder(join(dir, entry.name))) || [join(dir, entry.name)],
+    );
 
 describe('the voice’s audio path', () => {
   it('names no audio session, player or One audio in any Feel or Swift file', () => {

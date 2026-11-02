@@ -81,10 +81,11 @@ const putObject = API.make(() => ({
 const failure = (reason: string) => StoreFailed.make({ store: 'r2', reason });
 
 /**
- * An answer whose body is lost after its headers fails as `StoreFailed`.
- * Distilled reads each body with `Effect.orDie`, so a broken read arrives as
- * a defect that carries the `HttpClientError`. That key then fails alone and
- * the run goes on. Every other defect stays a defect.
+ * An answer whose body is lost after its headers fails as `StoreFailed`, and
+ * that key then fails alone while the run goes on. A read that distilled runs
+ * under `Effect.orDie` arrives as a defect carrying the `HttpClientError`;
+ * every other defect stays a defect. A read that distilled fails typed
+ * arrives as an `HttpClientError` failure, named by `failureOf`.
  */
 const bodyLost =
   (what: string) =>
@@ -94,12 +95,26 @@ const bodyLost =
       return Effect.fail(failure(`${what}: the answer lost its body: ${defect.message}`));
     });
 
+/** A 2xx answer whose body could not be read: an `HttpClientError` whose reason is a `DecodeError`. */
+const lostBody = (error: { readonly message: string }): boolean => {
+  if (!HttpClientError.isHttpClientError(error)) return false;
+  const reason = error.reason;
+  if (reason._tag !== 'DecodeError') return false;
+  return reason.response.status >= 200 && reason.response.status < 300;
+};
+
 /** A failure as Cloudflare said it: its class, its code when it gave one, its message. */
 const reasonOf = (error: { readonly message: string }) => {
   const tag = Option.liftPredicate(Reflect.get(error, '_tag'), Predicate.isString);
   const code = Option.liftPredicate(Reflect.get(error, 'code'), Predicate.isNumber);
   const head = [Option.getOrElse(tag, () => 'Error'), ...Option.toArray(code)].join(' ');
   return `${head}: ${error.message}`;
+};
+
+/** The key's failure: a lost body by that name, any other failure as Cloudflare said it. */
+const failureOf = (what: string, error: { readonly message: string }) => {
+  if (lostBody(error)) return failure(`${what}: the answer lost its body: ${error.message}`);
+  return failure(`${what}: ${reasonOf(error)}`);
 };
 
 export const TargetR2 = Layer.effect(
@@ -114,7 +129,7 @@ export const TargetR2 = Layer.effect(
         .items({ accountId, bucketName: BUCKET, prefix, perPage: 1000 })
         .pipe(
           Stream.runCollect,
-          Effect.mapError((error) => failure(`list ${prefix}: ${reasonOf(error)}`)),
+          Effect.mapError((error) => failureOf(`list ${prefix}`, error)),
           bodyLost(`list ${prefix}`),
           Effect.timeoutOrElse({
             duration: LIST_TIMEOUT,
@@ -147,7 +162,7 @@ export const TargetR2 = Layer.effect(
         contentType: metadata.contentType,
         cacheControl: metadata.cacheControl,
       }).pipe(
-        Effect.mapError((error) => failure(`put ${key}: ${reasonOf(error)}`)),
+        Effect.mapError((error) => failureOf(`put ${key}`, error)),
         bodyLost(`put ${key}`),
         Effect.timeoutOrElse({
           duration: PUT_TIMEOUT,

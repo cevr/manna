@@ -1,3 +1,4 @@
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 // A talk through the tools, with no media: a footage library whose lock
 // lists a take heard (its transcript written here, a synthetic take's words
 // and loudness) and a `talk.ts` cut on it, in a films folder. The tools read
@@ -177,7 +178,7 @@ const worldOf = (made: (folders: Folders) => void) =>
         series: Option.none(),
       });
     }),
-  ).pipe(Layer.provideMerge(BunServices.layer));
+  ).pipe(Layer.provideMerge(Layer.merge(BunServices.layer, BunCrypto.layerMac)));
 
 /** The console a run prints to: each line it logs, offered to `lines`. */
 const printingTo = (lines: Queue.Queue<string>): Console.Console => ({

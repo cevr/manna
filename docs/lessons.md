@@ -58,6 +58,16 @@ The form of an entry, each field on its own line:
 
 ## Process and tooling
 
+### http-refusals-keep-their-declared-status
+
+- **Date:** 2026-11-02
+- **Kind:** owner
+- **Said:** "expected 403/404/413 get 500, etc."
+- **Source:** deps-effect41 Round 2 owner message, group 1
+- **Wrong:** The lab and review handlers answered declared client refusals as 500, including foreign hosts, missing films and oversized bodies.
+- **Cause:** The status lookup read only ordinary schema annotations, while Effect's HTTP status annotation also uses key context. The lookup reads both locations used by the table's numeric annotations.
+- **Guard:** code: `packages/film/src/core/api.test.ts` `%o answers with %d`
+
 ### offline-storage-failure-counts
 
 - **Date:** 2026-10-27

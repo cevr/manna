@@ -1,5 +1,10 @@
 import { WebsterEntry, WebsterLookup, WebsterService } from '@manna/core/webster';
-import { CorpusSupply, Target, SqliteRefreshRefused } from '@manna/core/corpus-supply';
+import {
+  CorpusSupply,
+  CorpusSupplyInput,
+  Target,
+  SqliteRefreshRefused,
+} from '@manna/core/corpus-supply';
 import {
   layerNativeWebsterArtifacts,
   type NativeFileArtifactSource,
@@ -62,7 +67,7 @@ const ensureWebster = (input: {
   readonly refresh?: boolean;
 }) =>
   CorpusSupply.use((supply) =>
-    supply.ensure({ target: Target.webster(), refresh: input.refresh }),
+    supply.ensure(CorpusSupplyInput.make({ target: Target.webster(), refresh: input.refresh })),
   ).pipe(
     Effect.provide(CorpusSupply.layer.pipe(Layer.provide(layerNativeWebsterArtifacts(input)))),
   );

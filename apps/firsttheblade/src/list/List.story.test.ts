@@ -48,7 +48,7 @@ const world = Effect.gen(function* () {
   );
   const story = Story.make(List, {
     layer: ListHandlers.pipe(Layer.provide(ports)),
-    externalSystems: [Postman],
+    stub: [Postman],
   });
   /** The same model, with a Postman whose letters never go. */
   const storyUnmailed = Story.make(List, {
@@ -77,8 +77,8 @@ const confirmed = [...signedUp(T0), Confirmed.make({ at: T0 })];
 
 /** The confirm letter the Postman was asked for, sent. */
 const mailed = (subscriber: typeof sam, issued: number) => [
-  Story.expectCall(Postman.confirmLetter, { subscriber: subscriber.id, issued, origin: ORIGIN }),
-  Story.resolve(Postman.confirmLetter, {}),
+  Story.call(Postman.confirmLetter, { subscriber: subscriber.id, issued, origin: ORIGIN }),
+  Story.succeed(Postman.confirmLetter, {}),
 ];
 
 describe('signing up', () => {
@@ -123,9 +123,22 @@ describe('signing up', () => {
         yield* storyUnmailed(
           Story.when(sam, SignUp.make({ origin: ORIGIN })),
           Story.then(sam, ...signedUp(T0), ConfirmLinkReleased.make({ issued: T0 })),
+          Story.call(Postman.confirmLetter, { subscriber: sam.id, issued: T0, origin: ORIGIN }),
+          Story.failed(Postman.confirmLetter, LetterNotSent.make({ reason: 'mailer down' })),
           Story.clock(at(after(T0, '1 minute'))),
           Story.when(sam, SignUp.make({ origin: ORIGIN })),
           Story.replied({ issued: Option.some(after(T0, '1 minute')) }),
+          Story.then(
+            sam,
+            ...signedUp(after(T0, '1 minute')),
+            ConfirmLinkReleased.make({ issued: after(T0, '1 minute') }),
+          ),
+          Story.call(Postman.confirmLetter, {
+            subscriber: sam.id,
+            issued: after(T0, '1 minute'),
+            origin: ORIGIN,
+          }),
+          Story.failed(Postman.confirmLetter, LetterNotSent.make({ reason: 'mailer down' })),
         );
       }),
   );
@@ -140,7 +153,9 @@ describe('confirming', () => {
         Story.given(sam, ...signedUp(T0), ...signedUp(newer)),
         Story.clock(at(after(newer, '1 minute'))),
         Story.when(sam, Confirm.make({ issued: T0 })),
-        Story.rejected(StaleLink.make({})),
+        // The constructor includes YieldableError, which Story checks for rejections.
+        // @effect-diagnostics-next-line newSchemaClass:off
+        Story.rejected(new StaleLink({})),
         Story.when(sam, Confirm.make({ issued: newer })),
         Story.then(sam, Confirmed.make({ at: after(newer, '1 minute') })),
         Story.when(sam, Confirm.make({ issued: newer })),
@@ -156,7 +171,9 @@ describe('confirming', () => {
         Story.given(sam, ...signedUp(T0)),
         Story.clock(at(after(T0, CONFIRM_FOR) + 1)),
         Story.when(sam, Confirm.make({ issued: T0 })),
-        Story.rejected(StaleLink.make({})),
+        // The constructor includes YieldableError, which Story checks for rejections.
+        // @effect-diagnostics-next-line newSchemaClass:off
+        Story.rejected(new StaleLink({})),
       );
     }),
   );
@@ -174,7 +191,9 @@ describe('leaving', () => {
         Story.then(sam, ...signedUp(back)),
         ...mailed(sam, back),
         Story.when(sam, Confirm.make({ issued: T0 })),
-        Story.rejected(StaleLink.make({})),
+        // The constructor includes YieldableError, which Story checks for rejections.
+        // @effect-diagnostics-next-line newSchemaClass:off
+        Story.rejected(new StaleLink({})),
         Story.when(sam, Confirm.make({ issued: back })),
         Story.then(sam, Confirmed.make({ at: back })),
       );
@@ -325,6 +344,12 @@ describe("a film's letter", () => {
         Story.when(sam, ReleaseFilmLetter.make({ film: FILM })),
         Story.when(ari, ClaimFilmLetter.make({ film: FILM })),
         Story.then(
+          ari,
+          ...signedUp(T0),
+          Confirmed.make({ at: T0 }),
+          FilmLetterClaimed.make({ film: FILM }),
+        ),
+        Story.then(
           sam,
           ...signedUp(T0),
           Confirmed.make({ at: T0 }),
@@ -351,6 +376,7 @@ describe("a film's letter", () => {
         ...mailed(sam, T0),
         Story.when(sam, Confirm.make({ issued: T0 })),
         Story.when(sam, Leave.make({})),
+        Story.then(sam, ...signedUp(T0), Confirmed.make({ at: T0 }), Left.make({ at: T0 })),
         Story.when(sam, ClaimFilmLetter.make({ film: FILM })),
         Story.replied({ claimed: false }),
       );
@@ -379,6 +405,7 @@ describe('a subscriber imported from the D1 list', () => {
         Story.replied({ claimed: false }),
         Story.when(sam, ClaimFilmLetter.make({ film: 'path/02' })),
         Story.replied({ claimed: true }),
+        Story.then(sam, FilmLetterClaimed.make({ film: 'path/02' })),
       );
       expect(yield* roster.counts(FILM)).toEqual({
         confirmed: 1,

@@ -1,12 +1,5 @@
-// The train and eval stages over a fake training set, with the reader's live
-// layer replaced: no Modal call without `--spend modal`; one train, then
-// each drawing's eval, when it is allowed; a rerun asks the reader nothing;
-// a change to one of the reader's source files is a new train. Every file
-// is on an in-memory disk; the committed folder is read in
-// reader.slow.test.ts.
-
-import { describe, expect, it } from 'effect-bun-test';
 import {
+  Redacted,
   ConfigProvider,
   Effect,
   type FileSystem,
@@ -18,6 +11,14 @@ import {
   Sink,
   Stream,
 } from 'effect';
+// The train and eval stages over a fake training set, with the reader's live
+// layer replaced: no Modal call without `--spend modal`; one train, then
+// each drawing's eval, when it is allowed; a rerun asks the reader nothing;
+// a change to one of the reader's source files is a new train. Every file
+// is on an in-memory disk; the committed folder is read in
+// reader.slow.test.ts.
+
+import { describe, expect, it } from 'effect-bun-test';
 import * as PlatformError from 'effect/PlatformError';
 import { type ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { sha256Hex } from '../digest.ts';
@@ -37,6 +38,11 @@ import {
 
 /** What a build is asked with, as `buildGraph` takes it. */
 type BuildOptions = Parameters<typeof buildGraph>[1];
+
+const wordValue = (word: string | Redacted.Redacted<string>): string => {
+  if (Redacted.isRedacted(word)) return Redacted.value(word);
+  return word;
+};
 
 const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
   root: '/',
@@ -903,7 +909,7 @@ const spawnerOf = (
     Effect.gen(function* () {
       const run = { argv: [] as Array<string>, stdin: '' };
       if (command._tag === 'StandardCommand') {
-        run.argv = [command.command, ...command.args];
+        run.argv = [command.command, ...command.args.map(wordValue)];
         run.stdin = yield* stdinOf(command.options.stdin);
       }
       spawned.push(run);

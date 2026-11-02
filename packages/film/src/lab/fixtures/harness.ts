@@ -109,7 +109,7 @@ const madeOf = (found: Answer): Effect.Effect<Answer> => {
  * route goes through here (`film/told-after-answer`).
  */
 export const told = (tell: Effect.Effect<unknown>, then: Answer): Answer =>
-  madeBy(Effect.flatMap(madeOf(then), (made) => Effect.as(tell, made)));
+  madeBy(Effect.tap(madeOf(then), () => tell));
 /**
  * Ten seconds of tone (`tone.ts`): the real media every fixture player plays
  * (its videos, its mixes), its time moving on the media's own clock.

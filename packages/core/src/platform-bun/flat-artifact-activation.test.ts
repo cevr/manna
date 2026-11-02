@@ -32,7 +32,7 @@ import { Effect, FileSystem, Layer, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
 import { VectorsArtifact } from '../search/vector-artifact.js';
-import { corpusGeneration } from '../corpus-supply/model.js';
+import { CorpusSupplyInput, corpusGeneration } from '../corpus-supply/model.js';
 import { CorpusSupply } from '../corpus-supply/service.js';
 import { layerNativeFileArtifacts, type NativeFileArtifactSource } from './file-artifact.js';
 
@@ -94,14 +94,14 @@ const VECTORS_TARGET = { _tag: 'file', corpus: 'vectors' } satisfies {
 };
 
 const ensureVectors = (host: Layer.Layer<CorpusSupply>) =>
-  Effect.flatMap(CorpusSupply, (supply) => supply.ensure({ target: VECTORS_TARGET })).pipe(
-    Effect.provide(host),
-  );
+  Effect.flatMap(CorpusSupply, (supply) =>
+    supply.ensure(CorpusSupplyInput.make({ target: VECTORS_TARGET })),
+  ).pipe(Effect.provide(host));
 
 const ensureThenActiveFile = (host: Layer.Layer<CorpusSupply>) =>
   Effect.gen(function* () {
     const supply = yield* CorpusSupply;
-    yield* supply.ensure({ target: VECTORS_TARGET });
+    yield* supply.ensure(CorpusSupplyInput.make({ target: VECTORS_TARGET }));
     return yield* supply.activeFile('vectors');
   }).pipe(Effect.provide(host));
 
@@ -120,7 +120,7 @@ const readInstalled = (host: Layer.Layer<CorpusSupply>) =>
 const ensureThenReadPointer = (host: Layer.Layer<CorpusSupply>) =>
   Effect.gen(function* () {
     const supply = yield* CorpusSupply;
-    const receipt = yield* supply.ensure({ target: VECTORS_TARGET });
+    const receipt = yield* supply.ensure(CorpusSupplyInput.make({ target: VECTORS_TARGET }));
     return {
       receipt,
       provenance: yield* supply.installed('vectors'),
@@ -131,7 +131,7 @@ const ensureThenReadPointer = (host: Layer.Layer<CorpusSupply>) =>
 const ensureThenReadInstalled = (host: Layer.Layer<CorpusSupply>) =>
   Effect.gen(function* () {
     const supply = yield* CorpusSupply;
-    yield* supply.ensure({ target: VECTORS_TARGET });
+    yield* supply.ensure(CorpusSupplyInput.make({ target: VECTORS_TARGET }));
     return yield* supply.installed('vectors');
   }).pipe(Effect.provide(host));
 

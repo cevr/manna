@@ -6,6 +6,12 @@
  * within 250 ms and stays shown. The generated sweeps over the whole signal
  * domains are in `focus.property.slow.test.ts`.
  *
+ * The rule's edges are held on steady tones (`toneFrame`, which `detect`
+ * reads within a hundredth of a cent, each case checking its readings): the
+ * lock's 10 cents over 4 frames, the follow's 20 cents a frame, the 2 misses
+ * held and the 3rd let go, and the floor at 65 Hz while seeking and while
+ * held. `Focus` is opaque: no caller reads it.
+ *
  * Every signal is generated here, in memory, from a seed (xorshift32): a
  * talker (`talk`: glottal pulses through three vowel formants, gliding
  * syllables, fricatives and bursts, pauses), a plucked string (`pluck`:
@@ -19,6 +25,7 @@ import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
 import { type Focus, hear, unfocused } from './focus';
+import { detect } from './pitch';
 
 const FRAME = 2048;
 /** A pluck's RMS over its first 0.5 s. */
@@ -631,4 +638,140 @@ describe('hear', () => {
       });
     },
   );
+});
+
+/** The rate of the edge cases' tones. */
+const TONE_RATE = 44_100;
+
+/** One frame of a steady tone at `hz`, its fundamental with its 2nd and 3rd partials, at `TONE_RATE`; silence for NaN. */
+const toneFrame = (hz: number) =>
+  Float32Array.from({ length: FRAME }, (_, i) => {
+    if (Number.isNaN(hz)) return 0;
+    const t = (2 * Math.PI * hz * i) / TONE_RATE;
+    return 0.1 * (Math.sin(t) + 0.5 * Math.sin(2 * t) + 0.3 * Math.sin(3 * t));
+  });
+
+/** `hz` moved by `by` cents. */
+const centsFrom = (hz: number, by: number) => hz * 2 ** (by / 1200);
+
+/** A frame's reading's bar: `detect` reads a steady tone within it, so each edge case tests the rule, not the detector. */
+const READ_CENTS = 0.05;
+
+/** No frame: `shows` marks a frame that shows nothing with it. */
+const NONE = -1;
+
+/**
+ * Hears `tones` (Hz a frame, NaN for silence) from the start state. The
+ * frames whose `detect` reading strays past `READ_CENTS` from their tone
+ * (or reads a pitch in silence), and what each frame shows set beside
+ * `shows`: per frame, the index of the frame whose reading it shows, or
+ * `NONE`.
+ */
+const atEdge = (tones: ReadonlyArray<number>, shows: ReadonlyArray<number>) => {
+  const frames = tones.map(toneFrame);
+  const read = frames.map((frame) => Option.getOrElse(detect(frame, TONE_RATE), () => Number.NaN));
+  const strays = tones.flatMap((hz, k) => {
+    const reading = read[k] ?? Number.NaN;
+    if (Number.isNaN(hz) && Number.isNaN(reading)) return [];
+    if (!Number.isNaN(reading) && Math.abs(cents(reading, hz)) <= READ_CENTS) return [];
+    return [{ frame: k, hz, reading }];
+  });
+  return {
+    actual: { strays, shown: listen(frames, TONE_RATE).shown },
+    expected: {
+      strays: [],
+      shown: shows.map((k) => {
+        if (k === NONE) return Number.NaN;
+        return read[k] ?? Number.NaN;
+      }),
+    },
+  };
+};
+
+/** The A string, the edge cases' pitch. */
+const A2 = STRINGS[1].hz;
+
+describe("hear at the rule's edges", () => {
+  it('locks a run of 4 frames 9.9 cents apart, highest over lowest, on its 4th frame at that frame’s reading', () => {
+    const { actual, expected } = atEdge(
+      [A2, centsFrom(A2, 3.3), centsFrom(A2, 6.6), centsFrom(A2, 9.9)],
+      [NONE, NONE, NONE, 3],
+    );
+    expect(actual).toEqual(expected);
+  });
+
+  it('locks no run of 4 frames 10.5 cents apart, highest over lowest, though its first and last lie 2 cents apart', () => {
+    const { actual, expected } = atEdge(
+      [A2, centsFrom(A2, 10.5), centsFrom(A2, 5.25), centsFrom(A2, 2)],
+      [NONE, NONE, NONE, NONE],
+    );
+    expect(actual).toEqual(expected);
+  });
+
+  it('starts the run afresh after a frame with no reading', () => {
+    const { actual, expected } = atEdge(
+      [A2, A2, A2, Number.NaN, A2, A2, A2, A2],
+      [NONE, NONE, NONE, NONE, NONE, NONE, NONE, 7],
+    );
+    expect(actual).toEqual(expected);
+  });
+
+  it('follows a reading 19.5 cents from the pitch last shown, and holds that pitch for one 20.5 cents off', () => {
+    const { actual, expected } = atEdge(
+      [A2, A2, A2, A2, centsFrom(A2, 19.5), centsFrom(A2, 39), centsFrom(A2, 59.5)],
+      [NONE, NONE, NONE, 3, 4, 5, 5],
+    );
+    expect(actual).toEqual(expected);
+  });
+
+  it('holds the pitch across 2 frames with no reading, and lets it go on the 3rd', () => {
+    const { actual, expected } = atEdge(
+      [A2, A2, A2, A2, Number.NaN, Number.NaN, Number.NaN],
+      [NONE, NONE, NONE, 3, 3, 3, NONE],
+    );
+    expect(actual).toEqual(expected);
+  });
+
+  it('lets go on the 3rd frame a semitone off, and that frame starts the run that locks the new pitch 3 frames later', () => {
+    const far = centsFrom(A2, 100);
+    const { actual, expected } = atEdge(
+      [A2, A2, A2, A2, far, far, far, far, far, far],
+      [NONE, NONE, NONE, 3, 3, 3, NONE, NONE, NONE, 9],
+    );
+    expect(actual).toEqual(expected);
+  });
+
+  it('never shows a steady 64.5 Hz tone, under the floor', () => {
+    const { actual, expected } = atEdge(
+      Array.from({ length: 6 }, () => 64.5),
+      Array(6).fill(NONE),
+    );
+    expect(actual).toEqual(expected);
+  });
+
+  it('locks a steady 65.5 Hz tone, over the floor', () => {
+    const { actual, expected } = atEdge(
+      Array.from({ length: 4 }, () => 65.5),
+      [NONE, NONE, NONE, 3],
+    );
+    expect(actual).toEqual(expected);
+  });
+
+  it('follows a held 68 Hz tone falling 15 cents a frame to the floor, holds its last pitch over it for 2 frames under 65 Hz, and lets go on the 3rd', () => {
+    const falling = Array.from({ length: 8 }, (_, k) => centsFrom(68, -15 * (k + 1)));
+    const { actual, expected } = atEdge(
+      [68, 68, 68, 68, ...falling],
+      [NONE, NONE, NONE, 3, 4, 5, 6, 7, 8, 8, 8, NONE],
+    );
+    expect({ underFloor: falling.filter((hz) => hz < 65).length, ...actual }).toEqual({
+      underFloor: 3,
+      ...expected,
+    });
+  });
+
+  it('keeps its state opaque: a caller holds a `Focus` and hands it back, and reads nothing from it', () => {
+    // @ts-expect-error -- `Focus` is opaque: no caller reads even its tag, which every state has.
+    const tag: unknown = unfocused._tag;
+    expect(tag).toBeUndefined();
+  });
 });

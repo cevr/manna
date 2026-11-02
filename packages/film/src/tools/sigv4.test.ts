@@ -1,3 +1,6 @@
+import * as Layer from 'effect/Layer';
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
+import { Mac } from 'effect/crypto';
 // SigV4 against the signatures AWS publishes for its S3 examples
 // ("Signature Calculations for the Authorization Header: Transferring Payload
 // in a Single Chunk"), and HMAC-SHA256 against RFC 4231.
@@ -5,7 +8,7 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
-import { Crypto, DateTime, Effect, Redacted } from 'effect';
+import { DateTime, Effect, Redacted } from 'effect';
 import { Hex } from 'effect/encoding';
 import { EMPTY_SHA256, encodeKey, hmacSha256, signS3, type S3Request } from './sigv4.ts';
 
@@ -19,7 +22,7 @@ const text = new TextEncoder();
 
 const signatureOf = (request: S3Request) =>
   Effect.gen(function* () {
-    const crypto = yield* Crypto.Crypto;
+    const crypto = yield* Mac.Mac;
     const headers = yield* signS3(crypto, credentials, 'us-east-1', request, at);
     return headers.authorization.split('Signature=')[1];
   });
@@ -36,7 +39,7 @@ describe('SigV4', () => {
         payloadHash: EMPTY_SHA256,
       });
       expect(signature).toBe('f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41');
-    }).pipe(Effect.provide(BunServices.layer)),
+    }).pipe(Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerMac))),
   );
 
   it.effect("signs AWS's PUT Object example (an encoded key, a signed payload)", () =>
@@ -53,7 +56,7 @@ describe('SigV4', () => {
         payloadHash: '44ce7dd67c959e0d3524ffac1771dfbba87d2b6b4b4e99e42034a8b803f8b072',
       });
       expect(signature).toBe('98ad721746da40c64f1a55b78f14c238d841ea1380cd77a1b5971af0ece108bd');
-    }).pipe(Effect.provide(BunServices.layer)),
+    }).pipe(Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerMac))),
   );
 
   it.effect("signs AWS's list example (a sorted query)", () =>
@@ -70,12 +73,12 @@ describe('SigV4', () => {
         payloadHash: EMPTY_SHA256,
       });
       expect(signature).toBe('34b48302e7b5fa45bde8084f4b7868a86f0a534bc59db6670ed5711ef69dc6f7');
-    }).pipe(Effect.provide(BunServices.layer)),
+    }).pipe(Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerMac))),
   );
 
   it.effect('computes HMAC-SHA256 as RFC 4231 does, a long key hashed first', () =>
     Effect.gen(function* () {
-      const crypto = yield* Crypto.Crypto;
+      const crypto = yield* Mac.Mac;
       const short = yield* hmacSha256(
         crypto,
         text.encode('Jefe'),
@@ -92,7 +95,7 @@ describe('SigV4', () => {
       expect(Hex.encode(long)).toBe(
         '60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54',
       );
-    }).pipe(Effect.provide(BunServices.layer)),
+    }).pipe(Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerMac))),
   );
 
   test('encodes a key segment by segment, keeping its slashes', () => {

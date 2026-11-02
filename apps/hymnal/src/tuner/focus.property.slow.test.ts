@@ -8,7 +8,9 @@
  * every pair shows the new string and nothing between; P8 a held string
  * rides out one or two dark frames on its last reading and lets go on the
  * third, and the frame that lets go leaves the focus as the start state
- * would after that frame. The fixed-seed cases are in `focus.test.ts`.
+ * would after that frame. P9 a pluck under room noise (white, pink, brown,
+ * fan) at 15 dB shows soon, then on every frame of its ring near the plucked
+ * pitch. The fixed-seed cases are in `focus.test.ts`.
  *
  * Every case draws from its own seed, which each failure prints with its
  * parameters. Each property fits bun's 5 s test limit alone.
@@ -866,6 +868,50 @@ const dropout = (i: number) => {
   ];
 };
 
+/** P9's room kinds: the broad noises; P2 holds the mains hums. */
+const NOISES: ReadonlyArray<RoomKind> = ['white', 'pink', 'brown', 'fan'];
+
+/** Plucks in P9 for each room kind: 10 about each centre. */
+const NOISY_PLUCKS = 70;
+
+/**
+ * P9's ring: to 750 ms after the onset. Past it the room still sounds while
+ * the pluck fades: on P9's seeds the first dark frame falls at 793 ms (a B3
+ * beside the fan's 240 Hz tone) and the first frame past 25 cents at 938 ms
+ * (a D2 at 71 Hz under pink noise).
+ */
+const RING_MS = 750;
+
+/**
+ * P9: a pluck under room noise of `kind` 15 dB under it, 1.05 s from its
+ * onset: when it first shows, and each frame of its ring that is dark after
+ * that or more than 25 cents off the pluck.
+ */
+const underRoom = (kind: RoomKind, k: number, i: number) => {
+  const seed = seedOf(9, 1000 * k + i);
+  const next = draw(seed);
+  const { centre, by, rate, p } = drawPluck(next, i);
+  const at = onsetOf(next);
+  const n = at + Math.ceil(1.05 * rate);
+  const signal = mix(
+    pluck(next, rate, n, at, p),
+    room(next, rate, n, kind, under(PLUCK_LEVEL, 15)),
+  );
+  const { shown } = listen(framesOf(signal), rate);
+  const first = firstMs(shown, at, rate);
+  const what = { seed, kind, centre, by, rate, at, pluck: p };
+  return {
+    what,
+    first,
+    ring: [
+      ...darkFrames(shown, at, rate, first, RING_MS).map((dark) => ({ ...what, dark })),
+      ...offsOf(shown, p, at, rate)
+        .filter(({ ms, centsOff }) => ms <= RING_MS && Math.abs(centsOff) > 25)
+        .map((off) => ({ ...what, off })),
+    ],
+  };
+};
+
 describe('hear over the generated domains', () => {
   it('P1: talk alone, 120 talkers of 8 s each, shows no frame', () => {
     const cases = Array.from({ length: TALKERS }, (_, i) => {
@@ -992,4 +1038,21 @@ describe('hear over the generated domains', () => {
       first: [],
     });
   });
+
+  it.each(NOISES.map((kind, k) => [kind, k] as const))(
+    'P9: a pluck under %s room noise at 15 dB shows within 260 ms (95%%) and 400 ms (all), then on every frame of its ring, within 25 cents',
+    (kind, k) => {
+      const cases = Array.from({ length: NOISY_PLUCKS }, (_, i) => underRoom(kind, k, i));
+      const late = cases.filter(({ first }) => first > 260);
+      const verdict = {
+        late: late.map(({ what, first }) => ({ seed: what.seed, ms: first })),
+        lateWithin5Percent: late.length <= 0.05 * cases.length,
+        past400: cases
+          .filter(({ first }) => first > 400)
+          .map(({ what, first }) => ({ ...what, first })),
+        ring: cases.flatMap(({ ring }) => ring).slice(0, 5),
+      };
+      expect(verdict).toEqual({ ...verdict, lateWithin5Percent: true, past400: [], ring: [] });
+    },
+  );
 });

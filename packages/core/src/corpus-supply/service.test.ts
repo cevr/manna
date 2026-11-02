@@ -14,6 +14,7 @@ import {
 import { CorpusSourceUnavailableError } from './errors.js';
 import { CorpusSupply } from './service.js';
 import {
+  CorpusSupplyInput,
   Target,
   type WritingsContribution,
   unknownProvenance,
@@ -73,7 +74,7 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const supply = yield* CorpusSupply;
-      const receipt = yield* supply.ensure({ target: Target.webster() });
+      const receipt = yield* supply.ensure(CorpusSupplyInput.make({ target: Target.webster() }));
       expect(receipt.activated).toMatchObject([{ corpus: 'webster', installed: 62391 }]);
       const bootstrap = yield* Effect.flip(supply.ensure());
       expect(bootstrap).toMatchObject({ _tag: 'CorpusRecipeUnavailableError', corpus: 'bible' });
@@ -159,7 +160,10 @@ describe('CorpusSupply', () => {
   it.effect('treats omitted and explicit empty inputs as the same Bootstrap request', () =>
     Effect.gen(function* () {
       const supply = yield* CorpusSupply;
-      const [omitted, empty] = [yield* supply.ensure(), yield* supply.ensure({})];
+      const [omitted, empty] = [
+        yield* supply.ensure(),
+        yield* supply.ensure(CorpusSupplyInput.make({})),
+      ];
 
       expect(empty).toEqual(omitted);
       expect(omitted.activated).toHaveLength(1);
@@ -179,8 +183,8 @@ describe('CorpusSupply', () => {
       const supply = yield* CorpusSupply;
       const target = Target.writings([id]);
       const [current, refreshed] = [
-        yield* supply.ensure({ target }),
-        yield* supply.ensure({ target, refresh: true }),
+        yield* supply.ensure(CorpusSupplyInput.make({ target })),
+        yield* supply.ensure(CorpusSupplyInput.make({ target, refresh: true })),
       ];
 
       expect(current.skipped).toEqual([id]);
@@ -201,7 +205,9 @@ describe('CorpusSupply', () => {
   it.effect('reports an unavailable recipe instead of partially bootstrapping Bible assets', () =>
     Effect.gen(function* () {
       const supply = yield* CorpusSupply;
-      const failure = yield* Effect.flip(supply.ensure({ target: Target.bible() }));
+      const failure = yield* Effect.flip(
+        supply.ensure(CorpusSupplyInput.make({ target: Target.bible() })),
+      );
 
       expect(failure._tag).toBe('CorpusRecipeUnavailableError');
     }).pipe(Effect.provide(makeLayer({ needsSync: true, includeBible: false }))),
@@ -211,8 +217,8 @@ describe('CorpusSupply', () => {
     Effect.gen(function* () {
       const supply = yield* CorpusSupply;
       const [bootstrapped, addressed] = [
-        yield* supply.ensure({ target: Target.bootstrap() }),
-        yield* supply.ensure({ target: Target.file('bible') }),
+        yield* supply.ensure(CorpusSupplyInput.make({ target: Target.bootstrap() })),
+        yield* supply.ensure(CorpusSupplyInput.make({ target: Target.file('bible') })),
       ];
 
       expect(addressed).toEqual(bootstrapped);
@@ -223,7 +229,9 @@ describe('CorpusSupply', () => {
   it.effect('names the addressed File Corpus when no host wires its Recipe', () =>
     Effect.gen(function* () {
       const supply = yield* CorpusSupply;
-      const failure = yield* Effect.flip(supply.ensure({ target: Target.file('bible') }));
+      const failure = yield* Effect.flip(
+        supply.ensure(CorpusSupplyInput.make({ target: Target.file('bible') })),
+      );
 
       expect(failure).toMatchObject({ _tag: 'CorpusRecipeUnavailableError', corpus: 'bible' });
     }).pipe(Effect.provide(makeLayer({ needsSync: true, includeBible: false }))),
@@ -258,7 +266,9 @@ describe('CorpusSupply', () => {
       // serving it. Reporting an error here made hosts warn about a corpus that
       // was working perfectly.
       const supply = yield* CorpusSupply;
-      const receipt = yield* supply.ensure({ target: Target.file('bible') });
+      const receipt = yield* supply.ensure(
+        CorpusSupplyInput.make({ target: Target.file('bible') }),
+      );
 
       expect(receipt.activated).toEqual([]);
       expect(receipt.skipped).toEqual(['canonical']);
@@ -270,7 +280,9 @@ describe('CorpusSupply', () => {
       // Bible is fail-closed at startup. With no active artifact there is
       // nothing to fall back to, so the acquisition failure must still surface.
       const supply = yield* CorpusSupply;
-      const failure = yield* Effect.flip(supply.ensure({ target: Target.file('bible') }));
+      const failure = yield* Effect.flip(
+        supply.ensure(CorpusSupplyInput.make({ target: Target.file('bible') })),
+      );
 
       expect(failure._tag).toBe('CorpusSourceUnavailableError');
     }).pipe(Effect.provide(offline(Option.none()))),

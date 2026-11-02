@@ -146,7 +146,7 @@ export const layerCloudflare = Layer.unwrap(
       Layer.succeed(Mailer, mailer),
     );
     return Layer.mergeAll(
-      layerModel.pipe(Layer.provide(DomainCloudflare.DurableObjects)),
+      layerModel.pipe(Layer.provide(DomainCloudflare.layerDurableObjects())),
       Layer.succeed(FilmQueue, films),
       Layer.succeed(Throttle, throttle),
       Layer.succeed(Background, background),

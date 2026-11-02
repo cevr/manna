@@ -11,12 +11,13 @@
  * It listens through the ear (`native.ios.ts`) or, in a development build, a
  * fed tone (`?feed=E2:-12`), and reads each frame on the JavaScript thread
  * through the focus (`hear`, `focus.ts`): a pitch shows only once it has held
- * for a few frames, so talk in the room moves nothing on the screen, and the
- * focus starts afresh each time listening starts and each time the screen
- * rests. When it listens, asks, pauses and stops is the session's
- * rule (`session.ts`): this file only hands the world's events to it (the
- * app's state, the navigation's focus, the player's sounding) and carries
- * out the work it names. The reading's words go to VoiceOver when they
+ * for a few frames, so the gliding pitch of talk in the room does not reach
+ * the screen; a level vowel or a sung note held about 170 ms can. The focus
+ * starts afresh each time listening starts and each time the screen rests.
+ * When it listens, asks, pauses and stops is the session's rule
+ * (`session.ts`): this file only hands the world's events to it (the app's
+ * state, the navigation's focus, the player's sounding) and carries out the
+ * work it names. The reading's words go to VoiceOver when they
  * change, at most once a `LABEL_EVERY`. The tuner plays nothing: no cue, no
  * tone, no haptic.
  *

@@ -1,3 +1,4 @@
+import { SecureRandom } from 'effect/crypto';
 /**
  * The list off Cloudflare: its model hosted in memory (`./model.ts`), its
  * tables in SQLite in memory with the migrations applied
@@ -18,8 +19,8 @@
  * Both need the platform's file system (`BunServices.layer`).
  */
 import * as InMemory from '@alchemy.run/domain/InMemory';
-import { BunCrypto } from '@effect/platform-bun';
-import { Clock, Config, Context, Crypto, Duration, Effect, Layer, Redacted } from 'effect';
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
+import { Clock, Config, Context, Duration, Effect, Layer, Redacted } from 'effect';
 import { Hex } from 'effect/encoding';
 import { TestClock } from 'effect/testing';
 
@@ -38,7 +39,7 @@ export const TEST_ADMIN_TOKEN = 'test-admin-token';
 
 /** A key of 32 random bytes, which no one but this run holds. */
 const freshKey = Effect.gen(function* () {
-  const crypto = yield* Crypto.Crypto;
+  const crypto = yield* SecureRandom.SecureRandom;
   return Redacted.make(Hex.encode(yield* crypto.randomBytes(32)));
 }).pipe(Effect.orDie);
 

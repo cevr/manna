@@ -6,7 +6,7 @@ import { FetchHttpClient, HttpClient, HttpClientResponse } from 'effect/http';
 import { expect, it } from 'effect-bun-test';
 
 import { init } from '../../src/commands/init.js';
-import { CorpusSupply, Target } from '@manna/core/corpus-supply';
+import { CorpusSupply, CorpusSupplyInput, Target } from '@manna/core/corpus-supply';
 import { INDEX_TABLES } from '@manna/core/hymnal';
 import { layerNativeTopicsArtifacts } from '@manna/core/corpus-supply/bun';
 import { withSqliteRefresh } from '../../src/lib/sqlite-refresh.js';
@@ -28,7 +28,9 @@ const stageWithOutgoingWal = (
   source: string,
   onProvenance: () => Effect.Effect<void, unknown>,
 ) =>
-  CorpusSupply.use((supply) => supply.ensure({ target: Target.topics(), refresh: true })).pipe(
+  CorpusSupply.use((supply) =>
+    supply.ensure(CorpusSupplyInput.make({ target: Target.topics(), refresh: true })),
+  ).pipe(
     Effect.provide(
       CorpusSupply.layer.pipe(
         Layer.provide(

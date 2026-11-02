@@ -12,6 +12,7 @@
 import {
   BIBLE_ARTIFACT_RELEASE,
   CorpusSupply,
+  CorpusSupplyInput,
   type CorpusSupplyReceipt,
   Target,
   type SqliteRefreshRefused,
@@ -169,7 +170,9 @@ const ensureArtifact = (
       yield* withSqliteRefresh(
         destination,
         refresh,
-        CorpusSupply.use((corpus) => corpus.ensure({ target: Target.file(name), refresh })),
+        CorpusSupply.use((corpus) =>
+          corpus.ensure(CorpusSupplyInput.make({ target: Target.file(name), refresh })),
+        ),
       ),
     );
   }).pipe(Effect.provide(artifactSupply(bibleDir, path)));

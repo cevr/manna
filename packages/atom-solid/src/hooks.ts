@@ -60,7 +60,7 @@ import type * as Exit from 'effect/Exit';
 import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import * as Atom from 'effect/reactivity/Atom';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
-import type * as Schema from 'effect/Schema';
+import * as Schema from 'effect/Schema';
 import type { Accessor } from 'solid-js';
 import { isServer } from '@solidjs/web';
 import { createMemo, createRenderEffect, createSignal, isHydrating, untrack } from 'solid-js';
@@ -262,7 +262,8 @@ function createServedAccessor<A>(
   source: Atom.Atom<A> & Atom.Serializable<Schema.ConstraintCodec<A, unknown>>,
 ): Accessor<A> {
   const codec = source[Atom.SerializableTypeId];
-  const decoded = lastDecoded<A>(codec.decode);
+  const readJson = Schema.decodeUnknownSync(Schema.Json);
+  const decoded = lastDecoded<A>((encoded) => codec.decode(readJson(encoded)));
   if (isServer) {
     const carrier = createMemo(
       () => settledOn(registry, atom()).then((value): unknown => codec.encode(value)),

@@ -68,7 +68,8 @@ const fixture = (sign: Tokens['Service']['sign'], send: Mailer['Service']['send'
     const postman = layerPostman.pipe(Layer.provide(ports));
     const logger = Logger.layer([
       Logger.make(({ message }) => {
-        lines.push([message].flat().map(String).join(' '));
+        const line = [message].flat().map(String).join(' ');
+        if (line.startsWith('[mail] ')) lines.push(line);
       }),
     ]);
     const story = Story.make(List, {
@@ -118,6 +119,8 @@ describe('the Postman signing boundary', () => {
             yield* story(
               Story.clock('2026-01-01T00:00:00.000Z'),
               Story.when(subscriber, SignUp.make({ origin })),
+              Story.call(Postman.confirmLetter, args),
+              Story.failed(Postman.confirmLetter, LetterNotSent.make({ reason: 'defect' })),
               Story.then(
                 subscriber,
                 SignedUp.make({ at: issued }),
@@ -156,6 +159,11 @@ describe('the Postman signing boundary', () => {
             Story.clock('2026-01-01T00:00:00.000Z'),
             Story.when(subscriber, SignUp.make({ origin })),
             Story.then(subscriber, ...events, ConfirmLinkReleased.make({ issued })),
+            Story.call(Postman.confirmLetter, args),
+            Story.failed(
+              Postman.confirmLetter,
+              LetterNotSent.make({ reason: 'E_TEST_UNAVAILABLE' }),
+            ),
             // oxlint-disable-next-line effect/noInlineProvide -- Capture this control story's runtime logs at its test boundary.
           ).pipe(Effect.provide(logger));
           expect(lines).toEqual([
@@ -166,6 +174,8 @@ describe('the Postman signing boundary', () => {
             Story.clock('2026-01-01T00:00:00.000Z'),
             Story.when(subscriber, SignUp.make({ origin })),
             Story.then(subscriber, ...events),
+            Story.call(Postman.confirmLetter, args),
+            Story.returned(Postman.confirmLetter, {}),
             // oxlint-disable-next-line effect/noInlineProvide -- Capture this control story's runtime logs at its test boundary.
           ).pipe(Effect.provide(logger));
           expect(lines).toEqual([`[mail] subscribe.mailed subscriber=${subscriber.id}`]);
