@@ -2,8 +2,9 @@
  * The player at a hymn's tempo (unit `tempo`, acceptance A2): with Sound
  * off, the score clock runs from the first sung line at the held hymn's
  * tempo, for every tempo the Tempo dial offers; a tempo turned mid-play
- * moves the place on from where it stands; Sound on plays the recording at
- * its own pace; a Sound switch off mid-play runs on from the device's place
+ * moves the place on from where it stands; Sound on, the place is the
+ * device's (the recording at the tempo is `sound.rate.test.ts`'s); a Sound
+ * switch off mid-play runs on from the device's place
  * at the tempo. Nothing sounds: the device is the test's fake, on the
  * TestClock.
  *

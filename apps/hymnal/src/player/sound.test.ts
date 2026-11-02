@@ -55,14 +55,18 @@ const unplayedTail: Timeline = {
 /** One poll of the player (`statusEvery`), ms. */
 const POLL = 250;
 
-/** A device holding a recording `length` ms long that moves with the clock, and what it was asked. */
+/**
+ * A device holding a recording `length` ms long that moves with the clock at the rate it was
+ * told (a play's `rate`, else 1, then each `setRate`), and what it was asked.
+ */
 const recording = (length: number) => {
   const asked = { play: new Array<readonly [string, number]>(), pause: 0, stop: 0 };
   let state: Status['state'] = 'idle';
   let at = 0;
   let since = 0;
+  let rate = 1;
   const read = Effect.map(Clock.currentTimeMillis, (now): Status => {
-    if (state === 'playing') at = Math.min(length, at + now - since);
+    if (state === 'playing') at = Math.min(length, at + (now - since) * rate);
     since = now;
     if (state === 'playing' && at >= length) state = 'ended';
     return { state, positionMs: at, durationMs: length };
@@ -73,12 +77,19 @@ const recording = (length: number) => {
       return read;
     });
   const device: PlaybackApi = {
-    play: (uri, fromMs) =>
+    play: (uri, fromMs, options) =>
       then(() => {
         asked.play.push([uri, fromMs]);
+        rate = options?.rate ?? 1;
         at = fromMs;
         state = 'playing';
       }),
+    setRate: (to) =>
+      Effect.asVoid(
+        then(() => {
+          rate = to;
+        }),
+      ),
     pause: then(() => {
       asked.pause += 1;
       state = 'paused';
@@ -382,21 +393,20 @@ describe('the score clock at a tempo', () => {
         const { api, sound } = yield* clockOver(device, true);
         yield* api.play(audioUrl(100), 0, at(0.5));
         yield* TestClock.adjust(30_000);
-        // The recording plays at its own pace, and its play is told no tempo.
-        expect(yield* place(api)).toBe(30_000);
-        expect(options.map(Option.isSome)).toEqual([true]);
-        expect(options.map(Option.exists((it) => 'rate' in it))).toEqual([false]);
+        // The recording's play is told the tempo, and the recording plays at it.
+        expect(yield* place(api)).toBe(15_000);
+        expect(options.map(Option.map((it) => it.rate))).toEqual([Option.some(0.5)]);
         yield* SubscriptionRef.set(sound, false);
         yield* settle;
         expect(asked.pause).toBe(1);
-        expect(yield* place(api)).toBe(30_000);
+        expect(yield* place(api)).toBe(15_000);
         yield* TestClock.adjust(10_000);
-        expect(yield* place(api)).toBe(35_000);
+        expect(yield* place(api)).toBe(20_000);
       }),
     ),
   );
 
-  it.effect('Sound off → on hands the clock’s place to the device, which plays at 1×', () =>
+  it.effect('Sound off → on hands the clock’s place to the device, which plays at the tempo', () =>
     Effect.scoped(
       Effect.gen(function* () {
         const { device: held, asked } = recording(600_000);
@@ -409,16 +419,16 @@ describe('the score clock at a tempo', () => {
         yield* SubscriptionRef.set(sound, true);
         yield* settle;
         expect(asked.play).toEqual([[audioUrl(100), first + 5000]]);
-        expect(options.filter(Option.exists((it) => 'rate' in it))).toEqual([]);
+        expect(options.map(Option.map((it) => it.rate))).toEqual([Option.some(0.5)]);
         yield* TestClock.adjust(1000);
         const on = yield* api.status;
-        expect(on.positionMs).toBe(first + 6000);
-        expect(on.rate).toBeUndefined();
+        expect(on.positionMs).toBe(first + 5500);
+        expect(on.rate).toBe(0.5);
       }),
     ),
   );
 
-  it.effect('tells its pace: the tempo with Sound off, 1 with the recording, 1 once stopped', () =>
+  it.effect('tells its pace: the tempo with Sound on or off, 1 once stopped', () =>
     Effect.scoped(
       Effect.gen(function* () {
         const { device } = recording(600_000);
@@ -439,7 +449,8 @@ describe('the score clock at a tempo', () => {
         yield* settle;
         yield* api.stop;
         yield* settle;
-        expect(seen).toEqual([1, 0.8, 1, 0.8, 1.2, 1]);
+        // A Sound switch changes no pace: the recording plays at the tempo too.
+        expect(seen).toEqual([1, 0.8, 1.2, 1]);
       }),
     ),
   );
