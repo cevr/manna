@@ -127,7 +127,7 @@ Saturation is (max−min)/max, not comparable with the first study's numbers. A1
 
 ### The looks
 
-**A14T Justice (2017): 2D sketch figures in a cardboard diorama, the closest match to a cut-paper engine.**
+**A14T Justice (2017): 2D sketch figures in a cardboard diorama, the closest match to a layered 2D engine.**
 
 - **Colour script:** ink animals on cardboard tiles → teal day for "image of God" → rose-brown with darker corners for "how the world really works" → peach to yellow for Abraham, the words and Israel → sunset, then a black silhouette at the cross → dawn relight at the tomb → teal/mint to yellow for the landing, which returns to the opening sky.
 - **Figures:** flat light-grey (#b1a89c–#b7b7b2) bean bodies with a sketchy dark outline of varying weight; tapering legs and handless arms; round heads with a cross guideline for facing and no features. Emotion by posture only: hands on hips, hand to chin, curled on the steps, head bowed, running with arms flung up.

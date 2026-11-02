@@ -1,6 +1,6 @@
 # Prior art for faces and figures
 
-A library of art studies for the paper-cut look, one section per source, in four groups: games; picture books and mid-century illustration; animation and cut-out film; and BibleProject, our house reference. The last section ties the sources to the kits.
+A library of art studies for the house look's faces and figures (the storybook cartoon, [CRAFT.md](../CRAFT.md) 12), one section per source, in four groups: games; picture books and mid-century illustration; animation and cut-out film; and BibleProject, our house reference. The last section ties the sources to the kits.
 
 Each source has five parts:
 
@@ -123,7 +123,7 @@ Translations from French and Russian, in parentheses, are ours.
   - A calm two-oval, one-dash rest face.
   - Brows only for troubled, angry and astonished: inner ends up for trouble, down for anger.
   - A pose with every face.
-  - Mock each cast member up in cut paper to pick their view.
+  - Mock each cast member up as a sheet of views to pick their view.
 - **Never take:**
   - The white border (white is the robe's).
   - One stock face for many people.

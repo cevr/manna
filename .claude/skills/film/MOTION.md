@@ -1,13 +1,13 @@
 # Motion: a figure that feels alive
 
-How a film's figures, props and scenery move between their poses so they read as alive and not as puppets. It is adapted from [rossark-motion-skill](https://github.com/rossark0/rossark-motion-skill) (MIT, 2026-10-22), cut to what a narrated cut-paper film on Rive needs. The app-only parts (React Native, SwiftUI, reduced motion, interface timing) are left out.
+How a film's figures, props and scenery move between their poses so they read as alive and not as puppets. It is adapted from [rossark-motion-skill](https://github.com/rossark0/rossark-motion-skill) (MIT, 2026-10-22), cut to what a narrated storybook film on Rive needs. The app-only parts (React Native, SwiftUI, reduced motion, interface timing) are left out.
 
 **What wins.** [CRAFT.md](CRAFT.md), [reference/director-vision.md](reference/director-vision.md), a film's kept boards and concepts, and the owner's words outrank this file. Director-vision already sets the camera's breath, the 4 s rule, the hand's arc, how a flat face turns and that the body acts first; this file does not restate them. A figure's proportions come from its cast sheet, never from a number here. The locked look never changes for motion ([SKILL.md](SKILL.md#speed), **Speed**).
 
 ## Principles
 
 1. **Never teleport.** Every change is interpolated: a pupil slides, a door swings, a hand travels its arc. A pose never snaps to the next.
-2. **Calm by default.** Eased moves with strong curves. One soft overshoot (`outSoft`) only for a paper cut-out landing; no bounce elsewhere.
+2. **Calm by default.** Eased moves with strong curves. One soft overshoot (`outSoft`) only for a figure or prop landing; no bounce elsewhere.
 3. **Small amplitudes.** Life is subtle. When unsure, halve it.
 4. **Arcs about pivots.** Each moving part turns about its joint (a stem's base, a hinge, the neck, the shoulder). A straight slide reads as a machine.
 5. **Overlap and follow-through.** Parts do not move together. The tip moves later and further than the root; hair, a sleeve's end, a robe's hem and a hanging sign lag and settle.

@@ -1,7 +1,7 @@
-// The paper-cut figure's parts, as Rive markup: one generator a film's rigs
+// The storybook figure's parts, as Rive markup: one generator a film's rigs
 // are built from (`righteousness-by-faith/rigs/`), so its people share their
 // paper, their hands and their face rather than each drawing its own. The
-// language they follow is the film skill's director vision → "Paper-cut
+// language they follow is the film skill's director vision → "Storybook
 // figures (Rive)":
 //
 // - paper: a flat piece with an ink edge (`INK`, laid as its figure's

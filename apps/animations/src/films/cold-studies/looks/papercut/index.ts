@@ -1,6 +1,6 @@
 // `papercut` and `papercutgl`: the control's courtroom (`cutpaper`) with both
 // its people drawn as Rive rigs in the paper-cut figure language (the film
-// skill's director vision, "Paper-cut figures (Rive)"): circle hands, a face
+// skill's director vision, "Storybook figures (Rive)"): circle hands, a face
 // of brow, eye and mouth line, each piece of paper creased once by the light
 // and shaded with colour. The accused and the judge act on the court's cues
 // (`looks/rive/`). `papercut` draws them with Rive's Canvas 2D renderer on

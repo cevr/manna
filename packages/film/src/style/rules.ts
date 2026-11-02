@@ -42,7 +42,7 @@ export const RULES = {
   InteriorInk: {
     says: 'no ink inside a figure: one line round the silhouette, none inside it',
     source:
-      'director-vision.md, Paper-cut figures rule 1: "no inner lines but the face\'s, since form is the crease"',
+      'director-vision.md, Storybook figures rule 1: "no inner lines but the face\'s, since form is the crease"',
     way: 'owner',
   },
   InnerRim: {

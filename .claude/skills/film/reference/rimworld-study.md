@@ -1,4 +1,4 @@
-# RimWorld in-game art: a study for the paper-cut look
+# RimWorld in-game art: a study for the house figures
 
 Owner, 2026-10-13: "for paper cut art direction, maybe we can look at rimworld's ingame art style". Owner rulings received while this was written: **"outlines can be black, shading !== outlining"**, and **"dont worry about camera, just art direction"**. So this study covers figure construction, line, shape, colour, shading, texture, motion and charm. It does not cover the camera or top-down framing.
 
@@ -74,7 +74,7 @@ The faces, the style's name and the face mods are studied further in [face-study
 - **Hierarchy by line.** Black outlines mark what matters and green or no outline sinks the world, so the eye finds people first at any size.
 - **Physical effects are cheap and readable.** Shadows, impulses, a tilt and a flash do the acting that limbs would cost hundreds of frames to do.
 
-## 2. Transferable rules for the paper-cut figures
+## 2. Transferable rules for the house figures
 
 1. **Outline by story weight.** The figures carry the heaviest line in the frame. Props that act in the beat (the ledger, the gavel, the stamp) carry a lighter one. Scenery carries none, or its own paper's shade, like RimWorld's green plant outline.
    - _Map:_ the stroke width per piece in `packages/film/src/style/rig/parts.ts`, ranked figure > acting prop > scenery.
