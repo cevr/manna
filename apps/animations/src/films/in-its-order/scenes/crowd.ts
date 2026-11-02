@@ -45,8 +45,10 @@ export interface CrowdRow {
  * behind the guests and the long table's props. Each haze pulls the row
  * toward a pale warm light (a contrast under 1 and a brightness over 1 move
  * every channel toward about 0.8, the courtyard's far stone) and takes some
- * of its colour: the back row more, so it reads paler and cooler, as
- * `cold.letter.4`'s farthest heads do; the ink goes a soft brown with it.
+ * of its colour: the back row much more, so it reads paler and cooler, as
+ * `cold.letter.4`'s farthest heads do; the ink goes a soft brown with it. The
+ * front row's haze is light, so its dyed veils, mantles and bands keep their
+ * kit cloths (walnut, indigo, olive, camel) and do not wash to linen.
  */
 export const CROWD_ROWS = {
   back: {
@@ -62,7 +64,7 @@ export const CROWD_ROWS = {
     top: 738,
     scale: 0.235,
     blur: 1.7,
-    haze: 'contrast(0.84) brightness(1.07) saturate(0.86)',
+    haze: 'contrast(0.94) brightness(1.04) saturate(0.96)',
     table: 0.74,
   },
 } as const satisfies Record<string, CrowdRow>;
