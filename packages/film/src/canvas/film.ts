@@ -773,7 +773,7 @@ const shortOf = (declared: ShortStyle = {}, shade: string): ShortLook => {
 export const SHEETS_KEPT = 4;
 
 /** How much a probe's sink held before a scene drew into it (scratch, one draw at a time). */
-const SINK_MARK = { texts: 0, inks: 0, faces: 0, hands: 0 };
+const SINK_MARK = { texts: 0, inks: 0, faces: 0, hands: 0, paintings: 0 };
 
 /** Mark how much `sink` holds now, so a draw made again can let the first go. */
 const markSink = (sink: ProbeSink | undefined) => {
@@ -781,6 +781,7 @@ const markSink = (sink: ProbeSink | undefined) => {
   SINK_MARK.inks = sink?.inks.length ?? 0;
   SINK_MARK.faces = sink?.faces?.length ?? 0;
   SINK_MARK.hands = sink?.hands?.length ?? 0;
+  SINK_MARK.paintings = sink?.paintings?.length ?? 0;
 };
 
 /** Let go of everything `sink` took since `markSink`. */
@@ -790,6 +791,7 @@ const rewindSink = (sink: ProbeSink | undefined) => {
   sink.inks.length = SINK_MARK.inks;
   if (sink.faces !== undefined) sink.faces.length = SINK_MARK.faces;
   if (sink.hands !== undefined) sink.hands.length = SINK_MARK.hands;
+  if (sink.paintings !== undefined) sink.paintings.length = SINK_MARK.paintings;
 };
 
 /** A scene's card as the film sets it: as its drawing declares it, and the words it sets. */

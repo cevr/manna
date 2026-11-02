@@ -136,4 +136,33 @@ describe('a painted plate', () => {
     // Declared once across the scenes that share it.
     expect(film.paintings.declared).toEqual([SPEC]);
   });
+
+  it('leaves one probe mark per draw when the sheet draws a scene again', () => {
+    // A scene with no shot breathes, so the sheet's first framing guess is
+    // wrong at a moving time and it draws the scene again; the first draw's
+    // mark goes with its probe.
+    const plate = drawing({
+      timeline: {},
+      paintings: { sky: SPEC },
+      draw: (f) => f.painting('sky'),
+    });
+    const film = createFilm({
+      fps: 30,
+      title: 'plates',
+      paper: { base: '#ffffff', tone: '#000000', seed: 1 },
+      shade: '#000000',
+      scenes: [{ id: 'a', min: 4, ...plate }],
+    });
+    const down = film.paintings.stand(new Map([[SPEC, { image: Option.none() }]]));
+    const marks: PaintingMark[] = [];
+    withDom(() => {
+      const ctx = recorder(1920, 1080).ctx;
+      film.render(ctx, 2, {
+        captions: true,
+        probe: { texts: [], inks: [], faces: [], hands: [], paintings: marks },
+      });
+    });
+    down();
+    expect(marks).toHaveLength(1);
+  });
 });
