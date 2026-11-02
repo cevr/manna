@@ -6,7 +6,9 @@
 // stands, and on `peter` the camera pushes in on him and his cup. On
 // `newborn` a shut book drifts in above his cup and opens, tilts toward the
 // cup, and on the word "milk" a white ribbon runs out of its pages down into
-// the cup (`POUR`), which fills; on `sincere` the ribbon's tail falls in.
+// the cup (`POUR`), which fills. On `sincere` the ribbon's tail falls in and
+// the camera closes on his face and the cup as an ink dropper comes down over
+// it (`INK`); on `mixed`, at "nothing", he leans back from it and it goes.
 //
 // A shot's camera is a centre and a zoom on the page's frame px; each move
 // runs from where the last one left it (`MOVES`). The page covers frame x
@@ -17,7 +19,7 @@
 import { drawing } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
 import { PUPPETS as VILLAGER } from '../cast/idea-villagers/cutout/puppets.ts';
-import { BOOK_OPEN, BOOK_SHUT, PAGE, RIBBON, RIBBON_ROWS } from '../plates/milk.ts';
+import { BOOK_OPEN, BOOK_SHUT, DROPPER, PAGE, RIBBON, RIBBON_ROWS } from '../plates/milk.ts';
 
 /** A point, px. */
 type Pt = readonly [number, number];
@@ -31,17 +33,24 @@ const CENTRE = [960, 540] as const;
 /** The whole page, as the scene opens. */
 const WIDE: Camera = { x: 960, y: 540, k: 1 };
 
-/** Shot A's framings, each a cue and where it leaves the camera: `push` closes in on the villager and his cup. */
-const MOVES = [['push', { x: 1060, y: 380, k: 1.35 }]] as const satisfies ReadonlyArray<
-  readonly [string, Camera]
->;
+/**
+ * Shot A's framings, each a cue and where it leaves the camera: `push`
+ * closes in on the villager and his cup, `close` on his face and the cup
+ * as the dropper comes.
+ */
+const MOVES = [
+  ['push', { x: 1060, y: 380, k: 1.35 }],
+  ['close', { x: 1150, y: 360, k: 1.9 }],
+] as const satisfies ReadonlyArray<readonly [string, Camera]>;
 
 /**
  * The grown villager, frame px: his root (the hip) and his scale, so he
  * stands about 950 px from crown to feet as the panel's villager does. As he
  * stands he sways whole about his feet, `sway` degrees each way every
- * `swayPeriod` s: his rig's lean and head bones open seams at his hip and at
- * his headcloth's flaps, so he is turned whole and no bone moves.
+ * `swayPeriod` s, and on `mixed` he leans `recoil` degrees back from the
+ * dropper and comes upright again: his rig's lean and head bones open seams
+ * at his hip and at his headcloth's flaps, so he is turned whole and no
+ * bone moves.
  */
 const MAN = {
   root: [1200, 630],
@@ -49,6 +58,7 @@ const MAN = {
   feet: [1200, 1020],
   sway: 0.4,
   swayPeriod: 4,
+  recoil: 2.5,
 } as const;
 
 /**
@@ -97,6 +107,25 @@ const POUR = {
   thin: 0.65,
 } as const;
 
+/**
+ * The ink dropper over his cup, frame px: its tip `at` from the cup's mouth
+ * as he stands at rest, over the mouth's near side and under his beard, the
+ * dropper leaning `lean` degrees back to the left so it stays off his face,
+ * drawn `s` its size. Its drop of ink (its plate's rows from `cut` px under
+ * the tip) hangs straight down under the tip. It comes in along its own
+ * length from `from` px away, out of the frame, bobs `bob` px every
+ * `bobPeriod` s as it hovers, and goes back out the same way.
+ */
+const INK = {
+  at: [-22, -32],
+  lean: -45,
+  s: 0.85,
+  cut: 4,
+  from: 420,
+  bob: 3,
+  bobPeriod: 1.6,
+} as const;
+
 const between = (a: Camera, b: Camera, t: number): Camera => ({
   x: lerp(a.x, b.x, t),
   y: lerp(a.y, b.y, t),
@@ -132,6 +161,10 @@ export const milk = drawing({
     pour: { mark: 'newborn', word: 'milk', dur: 1.6, ease: 'inOutSine' },
     fill: { after: 'pour', dur: 3, ease: 'inOutSine' },
     stop: { mark: 'sincere', dur: 0.6, ease: 'inQuad' },
+    close: { mark: 'sincere', dur: 1.2, ease: 'inOutCubic' },
+    ink: { mark: 'sincere', offset: 0.6, dur: 1, ease: 'outCubic' },
+    recoil: { mark: 'mixed', word: 'nothing', dur: 0.9, ease: 'inOutSine' },
+    away: { mark: 'mixed', word: 'nothing', offset: 0.3, dur: 0.7, ease: 'inQuad' },
   },
   puppets: {
     villager: VILLAGER['single-15'],
@@ -141,6 +174,7 @@ export const milk = drawing({
     open: BOOK_OPEN,
     shut: BOOK_SHUT,
     ribbon: RIBBON,
+    dropper: DROPPER,
   },
   draw: (f) => {
     const { ctx, w } = f;
@@ -157,7 +191,10 @@ export const milk = drawing({
     const sway = (degrees: number, period: number, phase: number) =>
       degrees * Math.sin((2 * Math.PI * f.t) / period + phase);
     // How far he is turned about his feet.
-    const turn = (sway(MAN.sway, MAN.swayPeriod, 0) * Math.PI) / 180;
+    const turn =
+      ((sway(MAN.sway, MAN.swayPeriod, 0) + MAN.recoil * Math.sin(Math.PI * f.at('recoil'))) *
+        Math.PI) /
+      180;
     // His cup's mouth on the page as he sways (the sway turns its ellipse too little to see).
     const [mx, my] = onPage(CUP.mouth);
     const [fx, fy] = MAN.feet;
@@ -250,6 +287,30 @@ export const milk = drawing({
       ctx.fill();
       ctx.restore();
     };
+    // The dropper coming in over his cup along its length, hovering, and
+    // going back out: the dropper turned, its drop hanging straight under it.
+    const dropper = () => {
+      const fall = INK.from * (1 - f.at('ink') + f.at('away'));
+      const lean = (INK.lean * Math.PI) / 180;
+      ctx.save();
+      ctx.translate(
+        mx + INK.at[0] + fall * Math.sin(lean),
+        my + INK.at[1] - fall * Math.cos(lean) + sway(INK.bob, INK.bobPeriod, 0),
+      );
+      ctx.scale(INK.s, INK.s);
+      ctx.save();
+      ctx.rotate(lean);
+      ctx.beginPath();
+      ctx.rect(-DROPPER.size[0], -DROPPER.size[1], 2 * DROPPER.size[0], DROPPER.size[1] + INK.cut);
+      ctx.clip();
+      f.painting('dropper');
+      ctx.restore();
+      ctx.beginPath();
+      ctx.rect(-DROPPER.size[0], INK.cut, 2 * DROPPER.size[0], DROPPER.size[1]);
+      ctx.clip();
+      f.painting('dropper');
+      ctx.restore();
+    };
 
     const camera = MOVES.reduce<Camera>((cam, [cue, to]) => between(cam, to, f.at(cue)), WIDE);
     view(camera, () => {
@@ -264,6 +325,7 @@ export const milk = drawing({
       const end = RIBBON.size[1];
       ribbon(end * f.at('stop'), end * f.at('pour'));
       if (f.t >= f.cue('book').start) book();
+      if (f.at('ink') > 0 && f.at('away') < 1) dropper();
     });
   },
 });
