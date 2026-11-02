@@ -108,6 +108,16 @@ const GUESTS = {
 const KEYS = { man: MAN, woman: WOMAN } as const;
 
 /**
+ * Each guest's colour shift toward the lead's palette, a canvas filter on its
+ * key alone. The man's skin is painted paler and yellower than the lead's
+ * (CIE76 10.4 off it in the smile's wide, measured), so his key is saturated,
+ * which warms his skin to the lead's (3.8 off) and leaves his black outline
+ * black. The woman's skin lies 3.9 off the lead's (measured), so she draws as
+ * painted.
+ */
+const TINT = { man: 'saturate(1.3)', woman: 'none' } as const;
+
+/**
  * The guests' key from each cue's start on, the cues in time order, neutral
  * before the first: turned to the lead and staring at the word "bottle",
  * smiling at him on `smile`, and staring again, mouths open, at the letter
@@ -323,7 +333,8 @@ export const cold = drawing({
       if (wince) f.puppet('lead', pose, WINCE);
     };
     // A guest on its stool: the contact shadow under it, then its key
-    // (`SWAPS`), whole, on its frames' px (`posed`, origin [0, 0]).
+    // (`SWAPS`) through its tint (`TINT`), whole, on its frames' px
+    // (`posed`, origin [0, 0]).
     const guest = (name: keyof typeof KEYS) => {
       const { ground: shadow } = KEYS[name];
       const key = SWAPS.reduce<keyof typeof MAN.paintings>(
@@ -332,7 +343,10 @@ export const cold = drawing({
       );
       posed(seat(name), shadow.at, [0, 0], () => {
         ground(ctx, shadow.at[0], shadow.at[1], shadow.w);
+        ctx.save();
+        ctx.filter = TINT[name];
         f.painting(`${name}-${key}`);
+        ctx.restore();
       });
     };
     // The mother behind the woman: her eyes on her seat's point, her veil its width.
