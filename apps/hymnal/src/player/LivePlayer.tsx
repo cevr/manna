@@ -6,7 +6,9 @@
  *
  * Over the screens it draws the bar's `#` (`FIND_LABEL`) where `findAt`
  * puts it, just above the bar while the bar shows, and the find drums it
- * opens (`FindDrums.tsx`), with their `Open` and `Play` (`pressFind`). On
+ * opens (`FindDrums.tsx`), with their `Open` and `Play` (`pressFind`).
+ * `Open` pushes the hymn dialled, or on a hymn page puts it in the page's
+ * place, and on the page's own hymn moves nothing (`openingAt`). On
  * every screen the `#` is the last button of the find bar (`FindBar.tsx`),
  * which also holds `Search`, in the same place. It
  * tells the lists the room the `#` takes (`FindRoom`). The drums close on a
@@ -18,7 +20,7 @@
  */
 
 import { useAtom, useAtomMount, useAtomSet, useAtomValue } from '@effect/atom-react';
-import { Effect, Option, SubscriptionRef } from 'effect';
+import { Effect, Match, Option, SubscriptionRef } from 'effect';
 import { usePathname, useRouter, useSafeAreaInsets } from 'one';
 import { type ReactNode, useEffect, useRef } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -34,6 +36,7 @@ import { book } from '~/follow/book';
 import { counted } from '~/follow/seeks';
 import { hymnHref } from '~/home/Browse';
 import { FindBar } from '~/home/FindBar';
+import { openingAt } from '~/home/opening';
 import { hymnAt } from '~/hymns/hymns';
 import { settings } from '~/store';
 
@@ -154,7 +157,14 @@ function FindNumber({
     setFind(next);
     FindAct.$match(act, {
       Stay: () => {},
-      Open: ({ number }) => router.push(hymnHref(number)),
+      // On a hymn page the hymn dialled takes the page's place, and the page's own hymn stays.
+      Open: ({ number }) =>
+        Match.value(openingAt(path, number)).pipe(
+          Match.when('push', () => router.push(hymnHref(number))),
+          Match.when('replace', () => router.replace(hymnHref(number))),
+          Match.when('stay', () => {}),
+          Match.exhaustive,
+        ),
       // Playbulk's Start alone starts a hymn, in place of the one held.
       Play: ({ number }) =>
         Option.match(hymnAt(String(number)), {

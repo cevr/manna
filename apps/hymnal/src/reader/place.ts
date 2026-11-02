@@ -34,7 +34,9 @@ export interface Searching {
  * The open search, if one is open. It belongs to the screen it opened on
  * (`Searching.path`): only that screen's find bar is open and only that
  * screen lies under the results (`StackBottom.tsx`). A hymn pushed from the
- * results leaves it open beneath, so Back returns to the results. There is
+ * results (a search on the home list) leaves it open beneath, so Back returns
+ * to the results; on a hymn page a result takes the page's place, or is the
+ * page's own hymn, and the search closes (`openingAt`, `Search.tsx`). There is
  * one search at a time: `Search` pressed on another screen moves it there.
  */
 export const searchOpen = Atom.make(Option.none<Searching>()).pipe(Atom.keepAlive);
