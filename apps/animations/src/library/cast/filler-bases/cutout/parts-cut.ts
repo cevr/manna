@@ -699,14 +699,14 @@ const AGREE = 15;
 
 /**
  * The base head as a headwear covers it (`head-covered.png`), in the part
- * sheet's frame: its face and ears (its skin, the features the skin encloses,
- * and one px past them) kept, and every other px of it, its hair and the
- * hair's line, read from the dressed view over it (`figure`, the dressed
+ * sheet's frame: its face and ears (its skin and the features the skin
+ * encloses) kept, and every other px of it, its hair and the hair's line,
+ * the face's own outline among them, read from the dressed view over it (`figure`, the dressed
  * view's figure warped into the frame): kept where the two agree (`AGREE`),
  * transparent where the dressed view is ground (the cowlick above a
  * headcloth), else the dressed view's colour (the forehead under a band, the
  * headcloth and its lining over the hair), so no base hair shows round the
- * headwear at rest, nor where a turned head moves under a drape that rides
+ * headwear at rest, nor the hair's anti-aliased edge along the old fringe, nor where a turned head moves under a drape that rides
  * the lean too.
  */
 const coveredOf = (head: Raster, figure: Raster): Raster => {
@@ -725,16 +725,7 @@ const coveredOf = (head: Raster, figure: Raster): Raster => {
     });
     if (!open && hole.length < FEATURE) for (const i of hole) skin[i] = 1;
   }
-  const face = Uint8Array.from(skin, (v, i) => {
-    const [x, y] = [i % w, Math.floor(i / w)];
-    const near = [-1, 0, 1].flatMap((dy) =>
-      [-1, 0, 1].map((dx) => {
-        const [nx, ny] = [x + dx, y + dy];
-        return nx >= 0 && ny >= 0 && nx < w && ny < h && skin[ny * w + nx] === 1;
-      }),
-    );
-    return Number(v === 1 || near.some(Boolean));
-  });
+  const face = skin;
   const rgba = Uint8Array.from(head.rgba);
   for (let i = 0; i < w * h; i++) {
     if ((head.rgba[i * 4 + 3] ?? 0) === 0 || face[i] === 1) continue;
