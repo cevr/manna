@@ -162,7 +162,7 @@ describe('the crowd kit', () => {
     expect([...worn]).not.toContain(ROBE_WHITE);
   });
 
-  test('a dress hides and dyes the house parts a puppet has, and asks nothing of the undressed busts', () => {
+  test('a dress hides and dyes the house parts a puppet has, and on each bust only its own', () => {
     const dressed = {
       parts: ['headwear', 'band', 'beard', 'mantle', 'head', 'torso'].map((name) => ({
         name,
@@ -177,8 +177,32 @@ describe('the crowd kit', () => {
     });
     const tied = FIGURES.find((f) => f.headwear === 'tied' && Option.isSome(f.mantle))!;
     expect(Object.keys(dressOf(tied, dressed).dye ?? {})).toEqual(['mantle', 'band']);
-    for (const f of FIGURES.slice(0, 40))
-      expect(dressOf(f, PUPPETS[f.body])).toEqual({ hide: [], dye: {} });
+    // each bust's own house parts: the women's veil is their mantle, and only the grown man's headcloth is tied with a band
+    const own = Object.fromEntries(
+      Object.entries(PUPPETS).map(([view, p]) => [
+        view,
+        p.parts.map((part) => part.name).filter((name) => name !== 'head' && name !== 'torso'),
+      ]),
+    );
+    expect(own).toEqual({
+      'poses-1': ['beard', 'band', 'headwear', 'mantle'],
+      'poses-2': ['mantle'],
+      'poses-3': ['beard', 'headwear', 'mantle'],
+      'poses-4': ['mantle'],
+    });
+    const wrong = FIGURES.filter((f) => {
+      const { hide = [], dye = {} } = dressOf(f, PUPPETS[f.body]);
+      const worn = (name: string) => !hide.includes(name) && own[f.body]!.includes(name);
+      return (
+        hide.some((name) => !own[f.body]!.includes(name)) ||
+        worn('mantle') !== Option.isSome(f.mantle) ||
+        (own[f.body]!.includes('headwear') && worn('headwear') === (f.headwear === 'bare')) ||
+        (own[f.body]!.includes('beard') && worn('beard') !== f.beard) ||
+        (own[f.body]!.includes('band') && worn('band') !== (f.headwear === 'tied')) ||
+        Object.keys(dye).sort().join() !== ['band', 'mantle'].filter(worn).join()
+      );
+    });
+    expect(wrong).toEqual([]);
   });
 
   test('every head tip moves at least 2 screen px in every 2 s window at the smallest scale', () => {

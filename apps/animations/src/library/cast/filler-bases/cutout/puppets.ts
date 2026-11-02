@@ -1,23 +1,36 @@
 // The filler bases' puppets, one a cut view (`canvas/puppet.ts`): each view's
-// part sheet (`sheets/<view>/`, written by their cutter, `sheets-cut.ts`), its
-// parts front to back as the cut lists them, each PNG imported by its module
+// part sheet (`sheets/<view>/`, its head and torso written by their cutter,
+// `sheets-cut.ts`, its house parts by `parts-cut.ts`), its parts front to
+// back, the house parts before the head, each PNG imported by its module
 // so a scene that draws a base is keyed by its bytes (`tools/stamp.ts`), on
 // the view's skeleton (`skeleton.ts`), with the origin at the kept box's
 // top-left corner in the padded part sheet (`frames.ts`): the pixels are the
 // sheet's, drawn at its one scale, which a crowd's draw scale shrinks. Each
 // declares the kept view it is held to (`concept`). Pure data.
 
+import p1Band from './sheets/poses-1/band.png' with { type: 'file' };
+import p1Beard from './sheets/poses-1/beard.png' with { type: 'file' };
 import p1Head from './sheets/poses-1/head.png' with { type: 'file' };
+import p1Headwear from './sheets/poses-1/headwear.png' with { type: 'file' };
+import p1Mantle from './sheets/poses-1/mantle.png' with { type: 'file' };
 import p1Torso from './sheets/poses-1/torso.png' with { type: 'file' };
 import p2Head from './sheets/poses-2/head.png' with { type: 'file' };
+import p2Mantle from './sheets/poses-2/mantle.png' with { type: 'file' };
 import p2Torso from './sheets/poses-2/torso.png' with { type: 'file' };
+import p3Beard from './sheets/poses-3/beard.png' with { type: 'file' };
 import p3Head from './sheets/poses-3/head.png' with { type: 'file' };
+import p3Headwear from './sheets/poses-3/headwear.png' with { type: 'file' };
+import p3Mantle from './sheets/poses-3/mantle.png' with { type: 'file' };
 import p3Torso from './sheets/poses-3/torso.png' with { type: 'file' };
 import p4Head from './sheets/poses-4/head.png' with { type: 'file' };
+import p4Mantle from './sheets/poses-4/mantle.png' with { type: 'file' };
 import p4Torso from './sheets/poses-4/torso.png' with { type: 'file' };
-import { puppetsOf } from '../../../cutout/puppets.ts';
+import type { Ramp } from '@manna/film/canvas';
+import { Option, Record as Records } from 'effect';
+import { type CutPuppet, puppetsOf } from '../../../cutout/puppets.ts';
 import { CUTS } from './cut.ts';
 import { FRAMES } from './frames.ts';
+import { RAMPS } from './sheets/ramps.ts';
 import { SKELETONS } from './skeleton.ts';
 
 /**
@@ -42,12 +55,12 @@ export const PAPERS = {
 } as const satisfies Readonly<Record<keyof typeof SKELETONS, readonly [number, number, number]>>;
 
 /**
- * Each cut view's puppet, by the view's name in their sheet's views: its
- * parts front to back, its part sheet the kept box padded (`frames.ts`), the
- * origin at the kept box's top-left corner, held to the kept box
- * (`library/cutout/puppets.ts`).
+ * Each cut view's bust, by the view's name in their sheet's views: its parts
+ * front to back, its house parts (`parts-cut.ts`) before its head and torso,
+ * its part sheet the kept box padded (`frames.ts`), the origin at the kept
+ * box's top-left corner, held to the kept box (`library/cutout/puppets.ts`).
  */
-export const PUPPETS = puppetsOf({
+const BUSTS = puppetsOf({
   cast: 'filler-bases',
   cuts: CUTS,
   frames: FRAMES,
@@ -58,20 +71,46 @@ export const PUPPETS = puppetsOf({
   line: LINE,
   parts: {
     'poses-1': [
+      ['beard', p1Beard],
+      ['band', p1Band],
+      ['headwear', p1Headwear],
+      ['mantle', p1Mantle],
       ['head', p1Head],
       ['torso', p1Torso],
     ],
     'poses-2': [
+      ['mantle', p2Mantle],
       ['head', p2Head],
       ['torso', p2Torso],
     ],
     'poses-3': [
+      ['beard', p3Beard],
+      ['headwear', p3Headwear],
+      ['mantle', p3Mantle],
       ['head', p3Head],
       ['torso', p3Torso],
     ],
     'poses-4': [
+      ['mantle', p4Mantle],
       ['head', p4Head],
       ['torso', p4Torso],
     ],
   },
 });
+
+/** A view's bust with each part a dress dyes declaring the ramp it is drawn in (`sheets/ramps.ts`). */
+const ramped = (puppet: CutPuppet, ramps: Readonly<Record<string, Ramp>>): CutPuppet => ({
+  ...puppet,
+  parts: puppet.parts.map((part) =>
+    Option.match(Option.fromUndefinedOr(ramps[part.name]), {
+      onNone: () => part,
+      onSome: (ramp) => ({ ...part, ramp }),
+    }),
+  ),
+});
+
+/**
+ * Each cut view's puppet, by the view's name in their sheet's views: its
+ * bust, its dyed parts (`mantle`, `band`) declaring their drawn ramps.
+ */
+export const PUPPETS = Records.map(BUSTS, (puppet, view) => ramped(puppet, RAMPS[view]));

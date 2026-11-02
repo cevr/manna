@@ -3,10 +3,10 @@
 // four bodies, facing either way, in its headwear, beard and mantle, each
 // cloth one of the kit's, in its own idle; and the one draw a scene calls to
 // lay a figure's bust at a placement behind a table. The house parts the kit
-// dresses (`headwear`, `band`, `beard`, `mantle`) are cut from the dressed
-// sheet once it is kept; until then a puppet lacks them, and the draw asks of
-// each puppet only the parts it has, so the kit's choices are data the draw
-// applies as the parts arrive. Pure.
+// dresses (`headwear`, `band`, `beard`, `mantle`) are cut from the kept
+// dressed sheet (`parts-cut.ts`), each bust holding only its own (the women's
+// veil is their mantle), and the draw asks of each puppet only the parts it
+// has. Pure.
 
 import {
   type Hex,
