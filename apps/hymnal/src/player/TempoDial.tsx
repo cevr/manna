@@ -13,11 +13,18 @@
  * each sets the stop nearest the tapped bpm (`tap`). The run is kept here,
  * not in settings; a pause over 3 s starts it over. A hymn whose timing
  * does not decode draws neither, and the dial is as it is.
+ *
+ * While the hymn's tempo is not 100 %, `Reset tempo` (`↺ 100%`) stands
+ * before `Tap`, with Sound on or off and whether the timing decodes or not.
+ * A press sets this hymn's tempo to 100 % and turns the dial home on the
+ * reset's curve, as the key panel's Reset does (`Dials.tsx`); it tells the
+ * `reset` cue and no detent. `Tap` stays at the row's trailing end, so it
+ * does not move as the reset comes and goes.
  */
 
 import { useAtom } from '@effect/atom-react';
 import { Clock, Option } from 'effect';
-import { createContext, memo, use, useMemo, useRef } from 'react';
+import { createContext, memo, use, useMemo, useRef, useState } from 'react';
 import { type ColorValue, StyleSheet, Text, View } from 'react-native';
 
 import { color } from '~/color';
@@ -34,6 +41,7 @@ import {
   beatOf,
   bpmAt,
   bpmOf,
+  DEFAULT_TEMPO,
   saidOf,
   stopAt,
   stopIndexOf,
@@ -51,6 +59,15 @@ export const TapClock = createContext<Clock.Clock>(Clock.Clock.defaultValue());
 export const TempoDial = memo(function TempoDial({ number }: { readonly number: number }) {
   const [tempo, setTempo] = useAtom(settings.tempo(number));
   const first = useMemo(() => Option.map(book.of(number), (timeline) => timeline.tempo), [number]);
+  const cue = useCue();
+  // How many resets were pressed here: the dial turns home on the reset's curve when the count moves.
+  const [resets, setResets] = useState(0);
+  const away = tempo !== DEFAULT_TEMPO;
+  const reset = () => {
+    cue(plain('reset'));
+    setTempo(DEFAULT_TEMPO);
+    setResets((count) => count + 1);
+  };
   return (
     <View style={styles.section}>
       <DialPanel>
@@ -65,17 +82,24 @@ export const TempoDial = memo(function TempoDial({ number }: { readonly number: 
           said={saidOf(tempo)}
           drawStop={(stop, current) => <TempoMark stop={stop} current={current} />}
           onTurn={(to) => setTempo(stopAt(to))}
+          resets={resets}
         />
       </DialPanel>
-      {Option.match(first, {
-        onNone: () => <></>,
-        onSome: (hymnTempo) => (
-          <View style={styles.beatRow}>
-            <BpmReadOut first={hymnTempo} tempo={tempo} />
-            <TapChip hymnBpm={bpmOf(hymnTempo)} onTempo={setTempo} />
+      {(Option.isSome(first) || away) && (
+        <View style={styles.beatRow}>
+          {Option.match(first, {
+            onNone: () => <></>,
+            onSome: (hymnTempo) => <BpmReadOut first={hymnTempo} tempo={tempo} />,
+          })}
+          <View style={styles.chips}>
+            {away && <ResetChip onPress={reset} />}
+            {Option.match(first, {
+              onNone: () => <></>,
+              onSome: (hymnTempo) => <TapChip hymnBpm={bpmOf(hymnTempo)} onTempo={setTempo} />,
+            })}
           </View>
-        ),
-      })}
+        </View>
+      )}
     </View>
   );
 });
@@ -184,6 +208,15 @@ function TapChip({
   );
 }
 
+/** `Reset tempo`, while the hymn's tempo is not 100 %: "↺ 100%". */
+function ResetChip({ onPress }: { readonly onPress: () => void }) {
+  return (
+    <Chip testID="tempo-reset" label="Reset tempo" hint="Back to 100%" onPress={onPress}>
+      {`↺ ${saidOf(DEFAULT_TEMPO)}`}
+    </Chip>
+  );
+}
+
 /** The note mark's strokes: thin, as the read-out's semibold figures. */
 const STROKE = 1.5;
 
@@ -197,6 +230,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
+  // Trailing in the row even with no read-out before it.
+  chips: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 'auto' },
   readOut: { flexDirection: 'row', alignItems: 'center' },
   bpm: {
     fontSize: 15,
