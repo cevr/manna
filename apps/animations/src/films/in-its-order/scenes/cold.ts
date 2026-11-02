@@ -206,17 +206,17 @@ const WINCE: PuppetLook = {
  * unrolls toward us flat on the table, its top roller held where the rolled
  * scroll's lay and its lower roller riding down the open scroll's rows
  * `roll[0]` to `roll[1]`, where `SCROLL_ROLLER` lies on it. `s` is plane px
- * a scroll px, about as wide beside him as the panel's scroll (four fifths
- * of his shoulders); the open scroll lies back on the table, so its rows are
- * drawn `lie` as tall as they are wide, and it stands a third of his torso
- * high, as the panel's does.
+ * a scroll px, large enough that the open scroll and its gold seal read whole
+ * in front of him, over the plate's garland and fruit, as the panel's do; the
+ * open scroll lies back on the table, so its rows are drawn `lie` as tall as
+ * they are wide.
  */
 const SCROLL = {
   x: 960,
   from: 280,
   land: 978,
   hop: 5,
-  s: 0.17,
+  s: 0.28,
   lie: 0.5,
   roll: [114, 280],
 } as const;
