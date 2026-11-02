@@ -3,9 +3,10 @@
 // kept single-9 view, the bottle raised), each a painted frame
 // (`PaintingSpec`) clear on all four sides, shown in order for the record's
 // `hold` film frames each (on twos), the last kept after. A frame lies on his
-// single-9 view's px, the cut-out's sheet px (his origin at the kept box's
-// top-left, the record's `place`), so a scene draws a frame under the
-// transform it poses the single-9 cut-out with and the two lie on each other.
+// single-9 view's px (the kept box's; the record's `place` lays each frame
+// there), whose top-left is his single-9 cut-out's origin, so a scene draws a
+// frame where its posed single-9 cut-out lays those px and the two lie on
+// each other.
 // The frames leave out the drawn floor shadow: a scene draws the engine's
 // contact shadow (`ground`) at `ground`. Read once from the record.
 

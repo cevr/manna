@@ -238,19 +238,23 @@ export const cold = drawing({
       };
     };
     const guest = (name: 'villager' | 'mother') => f.puppet(name, seat(name));
-    // The lead on his seat, on his single-9 view's px as his cut-out is
-    // posed: the contact shadow under him, then his raise's frame (rest, on
-    // twos from `raise` to k6, k6 kept), or from `ouch` his single-9 cut-out,
-    // which is k6, with the wince's head in place of its own. The raise's
+    // The lead on his seat: the contact shadow under him, then his raise's
+    // frame (rest, on twos from `raise` to k6, k6 kept), or from `ouch` his
+    // single-9 cut-out, which is k6, with the wince's head in place of its
+    // own. The frames and the shadow lie on his view's px, whose top-left is
+    // his cut-out's origin, and are drawn where his cut-out lays those px:
+    // `drawPuppet` scales his sheet about its root (sheet px) to the pose,
+    // then moves it by minus his origin in scene px, unscaled. The raise's
     // film frame is its linear cue's share of its frames, rounded: `bottle`
     // lies on the frame grid, where a floor would drop a frame to float noise.
     const lead = () => {
       const pose = seat('lead');
       const wince = f.t >= f.cue('ouch').start;
+      const [ox, oy] = SEATED.origin;
       ctx.save();
-      ctx.translate(pose.root[0], pose.root[1]);
+      ctx.translate(pose.root[0] - ox, pose.root[1] - oy);
       ctx.scale(pose.scale, pose.scale);
-      ctx.translate(-GUESTS.lead.root[0], -GUESTS.lead.root[1]);
+      ctx.translate(ox - GUESTS.lead.root[0], oy - GUESTS.lead.root[1]);
       ground(ctx, RAISE_SEATED.ground.at[0], RAISE_SEATED.ground.at[1], RAISE_SEATED.ground.w);
       if (!wince) f.painting(RAISE_SEATED.frame(Math.round(f.at('raise') * RAISE_SEATED.frames)));
       ctx.restore();
