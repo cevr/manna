@@ -48,6 +48,24 @@ const KEYS = {
 /** A px is ink where its luminance is below this: his outlines, hair and features, none of his cloth or skin. */
 const INK = 80;
 
+/** A px may be a drawn line where its luminance is below this. */
+const LINE = 40;
+
+/** The fewest px a drawn line spans across a row. */
+const LINE_WIDTH = 4;
+
+/** A px is skin where its luminance is this or more: her lit skin (lum 200-221), above her lightest cloth (146). */
+const SKIN_LUM = 170;
+
+/** A darker px is skin where its red is this or more and stands `SKIN_WARM` above its green: her shaded neck and ear. */
+const SKIN_RED = 150;
+
+/** See `SKIN_RED`: her shaded skin's red stands 50-118 above its green, her cloth's and hair's 6-34. */
+const SKIN_WARM = 40;
+
+/** How far past a drawn line's face side its skin may begin: the anti-aliased edge of a line that runs nearly along the row. */
+const SKIN_REACH = 10;
+
 /**
  * The drape band's top view row: his ear's top, below the headband. From here
  * down to the shoulders each key's drape outlines run beside the neutral's at
@@ -89,7 +107,7 @@ const lumAt = (r: Raster, x: number, y: number) => {
   return 0.299 * (r.rgba[i] ?? 0) + 0.587 * (r.rgba[i + 1] ?? 0) + 0.114 * (r.rgba[i + 2] ?? 0);
 };
 
-/** Each side's drape edges on one row: the outline's ink run, and the next ink run in, his ear, cheek, jaw or neck. */
+/** Each side's edges on one row: the drape outline's ink run, and an inner run, `edgesOf`'s or `faceLinesOf`'s. */
 interface Edges {
   readonly outlineL: readonly [number, number];
   readonly faceL: readonly [number, number];
@@ -97,14 +115,14 @@ interface Edges {
   readonly outlineR: readonly [number, number];
 }
 
-/** Row `y`'s ink runs in `r`, each `[first, last]`, left to right. */
-const inkRuns = (r: Raster, y: number) => {
+/** Row `y`'s runs of px darker than lum `below` in `r`, each `[first, last]`, left to right. */
+const runsOf = (r: Raster, y: number, below: number) => {
   const runs: Array<readonly [number, number]> = [];
   let start = -1;
   for (let x = 0; x <= r.width; x++) {
-    const ink = x < r.width && lumAt(r, x, y) < INK;
-    if (ink && start < 0) start = x;
-    if (!ink && start >= 0) {
+    const dark = x < r.width && lumAt(r, x, y) < below;
+    if (dark && start < 0) start = x;
+    if (!dark && start >= 0) {
       runs.push([start, x - 1]);
       start = -1;
     }
@@ -112,7 +130,14 @@ const inkRuns = (r: Raster, y: number) => {
   return runs;
 };
 
-/** Row `y`'s `Edges` in `r`. Fails where the row has fewer than three ink runs, no outline and face edge a side. */
+/** Row `y`'s ink runs in `r`, each `[first, last]`, left to right. */
+const inkRuns = (r: Raster, y: number) => runsOf(r, y, INK);
+
+/**
+ * Row `y`'s `Edges` in `r`, the warp's: each side's outline and the next ink
+ * run in, her hair, ear, cheek, jaw or neck. Fails where the row has fewer
+ * than three ink runs, no outline and inner run a side.
+ */
 const edgesOf = (r: Raster, y: number): Result.Result<Edges, string> => {
   const runs = inkRuns(r, y);
   return Result.fromOption(
@@ -125,7 +150,45 @@ const edgesOf = (r: Raster, y: number): Result.Result<Edges, string> => {
       }),
       () => runs.length >= 3,
     ),
-    () => `row ${y} has ${runs.length} ink runs, not an outline and a face edge a side`,
+    () => `row ${y} has ${runs.length} ink runs, not an outline and an inner run a side`,
+  );
+};
+
+/** Whether `r`'s px at `(x, y)` is her skin: light (`SKIN_LUM`), or warm and red enough (`SKIN_RED`, `SKIN_WARM`). */
+const isSkin = (r: Raster, x: number, y: number) => {
+  const i = (y * r.width + x) * 4;
+  const [red, green] = [r.rgba[i] ?? 0, r.rgba[i + 1] ?? 0];
+  return lumAt(r, x, y) >= SKIN_LUM || (red >= SKIN_RED && red - green >= SKIN_WARM);
+};
+
+/**
+ * Row `y`'s `Edges` in `r`, the fade's: each side's outline and the first
+ * drawn line in from it, a run darker than `LINE` and `LINE_WIDTH` px or
+ * wider, whose face side holds her skin within `SKIN_REACH` px: the line of
+ * her ear, cheek, jaw or neck. The hair's flecks are too narrow to count,
+ * and her hair, its outline and the veil's folds have no skin beside them.
+ * Fails where a side has no such line.
+ */
+const faceLinesOf = (r: Raster, y: number): Result.Result<Edges, string> => {
+  const runs = inkRuns(r, y);
+  const lines = Arr.filter(runsOf(r, y, LINE), ([a, b]) => b - a + 1 >= LINE_WIDTH);
+  const skinBetween = (from: number, to: number) =>
+    Arr.some(Arr.range(Math.max(0, from), Math.min(r.width - 1, to)), (x) => isSkin(r, x, y));
+  return Result.fromOption(
+    Option.flatMap(
+      Option.all({ outlineL: Arr.head(runs), outlineR: Arr.last(runs) }),
+      ({ outlineL, outlineR }) => {
+        const inner = Arr.filter(lines, ([a, b]) => a > outlineL[1] && b < outlineR[0]);
+        return Option.map(
+          Option.all({
+            faceL: Arr.findFirst(inner, ([, b]) => skinBetween(b + 1, b + SKIN_REACH)),
+            faceR: Arr.findLast(inner, ([a]) => skinBetween(a - SKIN_REACH, a - 1)),
+          }),
+          ({ faceL, faceR }) => ({ outlineL, faceL, faceR, outlineR }),
+        );
+      },
+    ),
+    () => `row ${y} has no drawn line beside her skin within its outlines a side`,
   );
 };
 
@@ -237,7 +300,7 @@ const warped = (
  */
 const clothOf = (r: Raster, y: number) =>
   Result.map(
-    edgesOf(r, y),
+    faceLinesOf(r, y),
     ({ outlineL, faceL, faceR, outlineR }) =>
       [
         [outlineL[1] + 2, faceL[0] - 2],
