@@ -1,28 +1,41 @@
 /**
  * wordlight acceptance (unit): the follow lights the syllable sung now on
- * every line the score gives note times, a line-level part's lines
+ * every line whose note times may light it, a line-level part's lines
  * included, on a fake clock, with Sound on (the recording's place) and Sound
- * off (the score clock). Only a line the score gives no note times (a Plain
- * part, a line held to even shares, a line the recording does not play) is
- * marked whole.
+ * off (the score clock). Any other line (a Plain part, a line held to even
+ * shares, a line the recording does not play, a line whose times do not fit
+ * it, a line-level line another singing lays elsewhere) is marked whole.
  *
  * The oracle reads the compiled timing (`hymn.timing`) through the tempo
- * map, as `vite/timing.ts` does, never the bundled encoding: a line has note
- * times when it is played, not even, and has syllable times. At a time `t`
+ * map, as `vite/timing.ts` does, never the bundled encoding. A line's note
+ * times may light it when it is played, not even, in a Sung part, and its
+ * times fit it (one per syllable of its part's line, none before the one
+ * before, inside `[start, until)` in ms); at `line` level they must also
+ * agree with every other such line of its place in the music (stanza or
+ * refrain, line index) whose verse of the sung file plays the same keys at
+ * the same steps: a refrain line has each syllable on the same note of its
+ * verse, a stanza line opens within one note; a line or such a singing whose
+ * times start no notes of one verse agrees with nothing. The verses' notes
+ * come from `versesOf`, the encoder's read of the sung file, as the hymns
+ * come from `readPlaybackHymns`: the data is shared, the rule is restated
+ * here. At a time `t`
  * the sung line is the last whose start is at or before `t`, while `t` is
  * before its `until`; its mark is the last syllable whose time is at or
- * before `t` (`-1` before the first), or `WHOLE` with no note times.
+ * before `t` (`-1` before the first), or `WHOLE` when its times may not
+ * light it.
  *
  * Run from `apps/hymnal` with `--preload ./src/test/setup.ts`, the file
  * placed at `src/follow/wordlight.acceptance.test.ts`.
  */
 
+import { sung } from '@manna/hymnal/hymn';
 import * as Timing from '@manna/hymnal/timing';
 import { Array as Arr, Clock, Effect, Match, Option, Stream, SubscriptionRef } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { TestClock } from 'effect/testing';
 
 import { readPlaybackHymns } from '../../vite/chords';
+import { type Verses, versesOf } from '../../vite/timing';
 import type { PlaybackApi, Status } from '../player/player';
 import { scoreClock } from '../player/sound';
 import { audioUrl } from '../remote';
@@ -43,18 +56,96 @@ interface Laid {
   readonly times: Option.Option<ReadonlyArray<number>>;
 }
 
+/** A line's syllables in the sung file: its verse's tune (each note's step from the first, and key) and each syllable's note there. */
+interface OnNotes {
+  readonly tune: string;
+  readonly notes: ReadonlyArray<number>;
+}
+
+/** Where `times` (the timing's units) start notes of one verse, none when any starts none of the first one's verse. */
+const onNotes = (verses: Verses, times: ReadonlyArray<number>): Option.Option<OnNotes> =>
+  Option.flatMap(
+    Arr.findFirst(verses, (verse) => Arr.some(verse, (note) => note.at === times[0])),
+    (verse) =>
+      Option.map(
+        Option.all(times.map((time) => Arr.findFirstIndex(verse, (note) => note.at === time))),
+        (notes) => ({
+          tune: verse.map((note) => `${note.at - (verse[0]?.at ?? 0)}:${note.key}`).join(' '),
+          notes,
+        }),
+      ),
+  );
+
 /** Hymn `number`'s sung lines from its compiled timing, in ms. */
 const laidOf = (number: number): ReadonlyArray<Laid> => {
   const hymn = Option.getOrThrow(Arr.findFirst(hymns, (one) => one.number === number));
   const timing = Option.getOrThrow(Option.fromUndefinedOr(hymn.timing));
   const seconds = Timing.secondsAt(timing);
   const ms = (time: number) => Math.round(seconds(time) * 1000);
-  return timing.lines.map((line) => ({
+  const parts = sung(hymn);
+  // Each line with times that fit it, its place in the music and its part's level.
+  const fit = timing.lines.map((line, i) =>
+    Option.flatMap(Arr.get(parts, i), (at) =>
+      Match.value(at.part).pipe(
+        Match.tag('Sung', (part) => {
+          const times = line.syllables.map(ms);
+          const ok =
+            line.played &&
+            !line.even &&
+            times.length > 0 &&
+            times.length === (part.lines[at.line]?.length ?? 0) &&
+            times.every(
+              (time, k) => time >= (times[k - 1] ?? ms(line.start)) && time < ms(line.until),
+            );
+          return Option.liftPredicate(
+            {
+              place: `${at.verse === 'refrain'}/${at.line}`,
+              refrain: at.verse === 'refrain',
+              sure: part.level === 'syllable',
+              ticks: line.syllables,
+            },
+            () => ok,
+          );
+        }),
+        Match.orElse(() => Option.none()),
+      ),
+    ),
+  );
+  const loose = fit.some((one) => Option.exists(one, (line) => !line.sure));
+  const verses = Match.value(loose).pipe(
+    Match.when(true, () => versesOf(hymn)),
+    Match.orElse(() => []),
+  );
+  const placed = fit.map((one) =>
+    Option.map(one, (line) => ({ ...line, on: onNotes(verses, line.ticks) })),
+  );
+  const agrees = (i: number) =>
+    Option.exists(Arr.get(placed, i).pipe(Option.flatten), (line) =>
+      Option.exists(line.on, (own) =>
+        placed.every((other, k) =>
+          Option.match(other, {
+            onNone: () => true,
+            onSome: (them) =>
+              k === i ||
+              them.place !== line.place ||
+              Option.exists(
+                them.on,
+                (on) =>
+                  on.tune !== own.tune ||
+                  Match.value(line.refrain).pipe(
+                    Match.when(true, () => on.notes.join() === own.notes.join()),
+                    Match.orElse(() => Math.abs((on.notes[0] ?? 0) - (own.notes[0] ?? 0)) <= 1),
+                  ),
+              ),
+          }),
+        ),
+      ),
+    );
+  return timing.lines.map((line, i) => ({
     start: ms(line.start),
     until: ms(line.until),
-    times: Option.liftPredicate(
-      line.syllables.map(ms),
-      (times) => line.played && !line.even && times.length > 0,
+    times: Option.liftPredicate(line.syllables.map(ms), () =>
+      Option.exists(Arr.get(fit, i).pipe(Option.flatten), (one) => one.sure || agrees(i)),
     ),
   }));
 };
@@ -237,7 +328,7 @@ const fractions = (seed: number) => {
 
 describe('wordlight: the rule over every hymn', () => {
   it.effect(
-    'every line with note times lights its sung syllable at each syllable start, between starts and at generated times; only a line without note times is marked whole',
+    'every line whose note times may light it lights its sung syllable at each syllable start, between starts and at generated times; any other line is marked whole',
     () =>
       Effect.sync(() => {
         const faults: Array<string> = [];
@@ -291,8 +382,8 @@ describe('wordlight: the rule over every hymn', () => {
           }
         }
         expect(faults.slice(0, 20)).toEqual([]);
-        // 14 150 lines lit at syllable level before this unit, 1 045 line-level lines after it.
-        expect(lit).toBeGreaterThanOrEqual(15_195);
+        // 14 150 lines lit at syllable level before this unit, 935 line-level lines after it.
+        expect(lit).toBeGreaterThanOrEqual(15_085);
         expect(whole).toBeGreaterThan(0);
       }),
   );
