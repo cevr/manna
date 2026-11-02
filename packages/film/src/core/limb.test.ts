@@ -1,21 +1,52 @@
 import { describe, expect, test } from 'bun:test';
-import { Result } from 'effect';
-import { type PuppetLimb, type PuppetPartLimb, limbBlend, limbOf, limbShares } from './limb.ts';
+import { Result, Schema } from 'effect';
+import {
+  LimbRefused,
+  type PuppetLimb,
+  type PuppetPartLimb,
+  limbBlend,
+  limbOf,
+  limbShares,
+} from './limb.ts';
 import { type Skeleton, boneTransforms, puppetOf, rasterOf } from './puppet.ts';
 
 type Pt = readonly [number, number];
+type Rgb = readonly [number, number, number];
 type PuppetSheet = Parameters<typeof puppetOf>[0];
+type Raster = PuppetSheet['parts'][number]['pixels'];
+
+const sub = (a: Pt, b: Pt): Pt => [a[0] - b[0], a[1] - b[1]];
+const dot = (a: Pt, b: Pt) => a[0] * b[0] + a[1] * b[1];
+const along = (p: Pt, d: Pt, l: number): Pt => [p[0] + l * d[0], p[1] + l * d[1]];
+const unit = (a: Pt): Pt => [a[0] / Math.hypot(...a), a[1] / Math.hypot(...a)];
+/** The side a positive elbow turn opens of a segment running along `d`, as the fixtures draw it. */
+const opens = (d: Pt): Pt => [d[1], -d[0]];
+/** `p`'s `(u, v)` on the line from `a` along `d`, u counted on from `from`. */
+const frame = (p: Pt, a: Pt, d: Pt, from: number): Pt => [
+  from + dot(sub(p, a), d),
+  dot(sub(p, a), opens(d)),
+];
+const toSegment = (p: Pt, a: Pt, d: Pt, l: number) => {
+  const q = sub(p, a);
+  const t = Math.max(0, Math.min(l, dot(q, d)));
+  return Math.hypot(q[0] - t * d[0], q[1] - t * d[1]);
+};
+
+/** Which sides a fixture inks: `[inner, outer]`. */
+type Inked = readonly [boolean, boolean];
+const BOTH: Inked = [true, true];
+const NONE: Inked = [false, false];
 
 // A synthetic arm, 200 × 300 px: a straight chain tilted off the axes, its
 // sleeve two flat shade planes of different half-widths each side, inked 4 px
-// along both edges, a stub above the shoulder and a hand (a disc) past the cuff.
+// along the edges `Inked` names, a stub above the shoulder and a hand (a disc)
+// past the cuff.
 const [W, H] = [200, 300];
 const S: Pt = [60, 40];
 const E: Pt = [90, 150];
 const C: Pt = [117, 249];
-const D: Pt = [30 / Math.hypot(30, 110), 110 / Math.hypot(30, 110)];
-/** The side a positive elbow turn opens, as the fixture draws it. */
-const OUTER: Pt = [D[1], -D[0]];
+const D = unit([30, 110]);
+const OUTER = opens(D);
 const UPPER = Math.hypot(30, 110);
 const CUFF = UPPER + Math.hypot(27, 99);
 const outerWidth = (u: number) => 26 - 0.03 * u;
@@ -25,46 +56,54 @@ const LIGHT = [236, 214, 178] as const;
 const DARK = [196, 170, 136] as const;
 const SKIN = [240, 170, 120] as const;
 const STUB = 14;
-const HAND: Pt = [C[0] + 14 * D[0], C[1] + 14 * D[1]];
-
-const unrolled = (x: number, y: number): Pt => {
-  const q: Pt = [x + 0.5 - S[0], y + 0.5 - S[1]];
-  return [q[0] * D[0] + q[1] * D[1], q[0] * OUTER[0] + q[1] * OUTER[1]];
-};
-
-type Rgb = readonly [number, number, number];
+const HAND = along(C, D, 14);
 
 /** The sleeve's colour at (u, v), or none off the sleeve. */
-const sleeveAt = (u: number, v: number, inked: boolean): ReadonlyArray<Rgb> => {
+const sleeveAt = (u: number, v: number, inked: Inked): ReadonlyArray<Rgb> => {
   const w = Math.max(0, u);
   const sides: ReadonlyArray<readonly [number, Rgb]> = [
     [innerWidth(w), DARK],
     [outerWidth(w), LIGHT],
   ];
-  const [half, plane] = sides[Number(v >= 0)]!;
+  const side = Number(v >= 0);
+  const [half, plane] = sides[side]!;
   if (u < -STUB || u > CUFF || Math.abs(v) > half) return [];
-  if (inked && Math.abs(v) > half - 4) return [INK];
+  if (inked[side] && Math.abs(v) > half - 4) return [INK];
   return [plane];
 };
 
-const texelAt = (x: number, y: number, inked: boolean): ReadonlyArray<Rgb> => {
-  const [u, v] = unrolled(x, y);
-  if (Math.hypot(x + 0.5 - HAND[0], y + 0.5 - HAND[1]) <= 14 && u > CUFF) return [SKIN];
+const texelAt = (x: number, y: number, inked: Inked): ReadonlyArray<Rgb> => {
+  const [u, v] = frame([x + 0.5, y + 0.5], S, D, 0);
+  if (Math.hypot(...sub([x + 0.5, y + 0.5], HAND)) <= 14 && u > CUFF) return [SKIN];
   return sleeveAt(u, v, inked);
 };
 
-const armPixels = (inked: boolean) => {
-  const rgba = new Uint8Array(W * H * 4);
-  for (let y = 0; y < H; y++)
-    for (let x = 0; x < W; x++)
-      for (const c of texelAt(x, y, inked)) rgba.set([...c, 255], (y * W + x) * 4);
-  return { width: W, height: H, rgba };
+const paint = (
+  width: number,
+  height: number,
+  at: (x: number, y: number) => ReadonlyArray<Rgb>,
+): Raster => {
+  const rgba = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++)
+      for (const c of at(x, y)) rgba.set([...c, 255], (y * width + x) * 4);
+  return { width, height, rgba };
+};
+
+const armPixels = (inked: Inked) => paint(W, H, (x, y) => texelAt(x, y, inked));
+
+/** `r` with each texel of a colour `pairs` names in its colour there. */
+const recoloured = (r: Raster, pairs: ReadonlyArray<readonly [Rgb, Rgb]>): Raster => {
+  const rgba = r.rgba.slice();
+  for (let i = 0; i < rgba.length; i += 4)
+    for (const [from, to] of pairs) if (from.every((c, j) => rgba[i + j] === c)) rgba.set(to, i);
+  return { ...r, rgba };
 };
 
 const BONES: Skeleton['bones'] = [
   { name: 'shoulderRight', pivot: S, tip: E },
   { name: 'elbowRight', parent: 'shoulderRight', pivot: E, tip: C },
-  { name: 'wristRight', parent: 'elbowRight', pivot: C, tip: [C[0] + 20 * D[0], C[1] + 20 * D[1]] },
+  { name: 'wristRight', parent: 'elbowRight', pivot: C, tip: along(C, D, 20) },
 ];
 const CHAIN = ['shoulderRight', 'elbowRight', 'wristRight'] as const;
 const DECLARED: PuppetLimb = { part: 'arm', bones: CHAIN };
@@ -73,17 +112,88 @@ const SKELETON: Skeleton = {
   skin: { arm: [...CHAIN] },
   limbs: [DECLARED],
 };
-const ARM = armPixels(true);
+const ARM = armPixels(BOTH);
 const SHEET: PuppetSheet = { width: W, height: H, parts: [{ name: 'arm', pixels: ARM }] };
 const JOINTS = { shoulder: S, elbow: E, wrist: C };
+/** Cloth as dark as ink (L* about 13) under a darker ink: no edge shows where its ink ends. */
+const DARK_SLEEVE = recoloured(ARM, [
+  [LIGHT, [40, 30, 30]],
+  [DARK, [40, 30, 30]],
+  [INK, [10, 5, 2]],
+]);
 
 const LIMB: PuppetPartLimb = Result.getOrThrow(limbOf('arm', ARM, JOINTS, DECLARED));
+
+const kindOf = (r: ReturnType<typeof limbOf>) =>
+  Result.match(r, { onSuccess: () => 'measured', onFailure: (e) => e.kind });
+
+// A bent arm, 220 × 200 px, folded like the lead's right arm: the forearm
+// turned 135° toward the inner side, a 45° angle inside the elbow. Each texel
+// belongs to the segment it lies nearer (the elbow's own texels to the upper
+// arm), within that segment's half-widths: inner 18 px on both, so the inner
+// edges meet at a crease on the fold's bisector; outer tapering to 3 px at the
+// elbow, where a 3 px disc of ink rounds the corner. The ink is 4 px deep, so
+// the elbow's pivot lies in the outline's ink.
+const [BW, BH] = [220, 200];
+const BD1 = unit([20, 110]);
+const BD2: Pt = [Math.SQRT1_2 * (-BD1[1] - BD1[0]), Math.SQRT1_2 * (BD1[0] - BD1[1])];
+const [B_UPPER, B_FORE] = [120, 90];
+const BS: Pt = [150, 30];
+const BE = along(BS, BD1, B_UPPER);
+const BC = along(BE, BD2, B_FORE);
+const B_HAND = along(BC, BD2, 14);
+const B_INNER = 18;
+const bentOuter = (u: number) =>
+  Math.max(26 - (23 * u) / B_UPPER, 3 + (17 * (u - B_UPPER)) / B_FORE);
+
+const bentSleeve = (p: Pt): ReadonlyArray<Rgb> => {
+  const cells = [
+    [...frame(p, BS, BD1, 0), -STUB, B_UPPER],
+    [...frame(p, BE, BD2, B_UPPER), B_UPPER, B_UPPER + B_FORE],
+  ] as const;
+  const fore = toSegment(p, BE, BD2, B_FORE) < toSegment(p, BS, BD1, B_UPPER);
+  const [u, v, lo, hi] = cells[Number(fore)]!;
+  const side = Number(v >= 0);
+  const half = [B_INNER, bentOuter(u)][side]!;
+  if (u < lo || u > hi || Math.abs(v) > half) return [];
+  return [[[DARK, LIGHT][side]!, INK][Number(Math.abs(v) > half - 4)]!];
+};
+
+const bentTexel = (x: number, y: number): ReadonlyArray<Rgb> => {
+  const p: Pt = [x + 0.5, y + 0.5];
+  if (Math.hypot(...sub(p, B_HAND)) <= 14 && frame(p, BE, BD2, 0)[0] > B_FORE) return [SKIN];
+  if (Math.hypot(...sub(p, BE)) <= 3) return [INK];
+  return bentSleeve(p);
+};
+
+const BENT = paint(BW, BH, bentTexel);
+const BENT_LIMB = Result.getOrThrow(
+  limbOf('arm', BENT, { shoulder: BS, elbow: BE, wrist: BC }, DECLARED),
+);
+const FOLD_SLOPE = Math.tan(Math.PI / 8);
+
+/** Where the bent limb's widths stray more than 1 px from the drawing, or a side ends on what the drawing does not. */
+const bentFaults = (limb: PuppetPartLimb) => {
+  const faults: Array<string> = [];
+  for (let k = 0; k < limb.outer.widths.length; k++) {
+    const u = (k + 0.5) * limb.step;
+    const a = Math.abs(u - B_UPPER);
+    const [outer, inner] = [limb.outer.widths[k]!, limb.inner.widths[k]!];
+    if (Math.abs(outer - bentOuter(u)) > 1) faults.push(`outer ${outer} at ${u}`);
+    if (a < 40 && Math.abs(inner - a * FOLD_SLOPE) > 1) faults.push(`fold ${inner} at ${u}`);
+    if (a < 40 && (limb.inner.ends[k] !== 'fold' || limb.inner.inks[k] !== 0))
+      faults.push(`fold end ${limb.inner.ends[k]} ink ${limb.inner.inks[k]} at ${u}`);
+    if (a > 47 && (Math.abs(inner - B_INNER) > 1 || limb.inner.ends[k] !== 'ink'))
+      faults.push(`inner ${inner} ${limb.inner.ends[k]} at ${u}`);
+  }
+  return faults;
+};
 
 describe('limbOf', () => {
   test('a positive elbow turn swings the forearm away from the side the fixture calls outer', () => {
     const m = boneTransforms(BONES, { elbowRight: 30 });
     const moved: Pt = [m[6]! * C[0] + m[8]! * C[1] + m[10]!, m[7]! * C[0] + m[9]! * C[1] + m[11]!];
-    expect((moved[0] - C[0]) * OUTER[0] + (moved[1] - C[1]) * OUTER[1]).toBeLessThan(-10);
+    expect(dot(sub(moved, C), OUTER)).toBeLessThan(-10);
   });
 
   test("recovers each side's drawn half-width within 1 px along the sleeve", () => {
@@ -102,8 +212,18 @@ describe('limbOf', () => {
   test('reads the ink: its colour, its width, and its depth at each knot of both sides', () => {
     expect(LIMB.ink).toEqual([...INK]);
     expect(Math.abs(LIMB.inkWidth - 4)).toBeLessThanOrEqual(1);
-    for (const side of [LIMB.outer, LIMB.inner])
+    for (const side of [LIMB.outer, LIMB.inner]) {
       for (const d of side.inks) expect(Math.abs(d - 4)).toBeLessThanOrEqual(1);
+      expect(new Set(side.ends)).toEqual(new Set(['ink']));
+    }
+  });
+
+  test('marks a side cut against the body bare: its edge read, no ink taken from it', () => {
+    const cut = Result.getOrThrow(limbOf('arm', armPixels([true, false]), JOINTS, DECLARED));
+    expect(new Set(cut.outer.ends)).toEqual(new Set(['bare']));
+    expect(cut.outer.inks.every((d) => d === 0)).toBe(true);
+    expect(new Set(cut.inner.ends)).toEqual(new Set(['ink']));
+    expect(Math.abs(cut.inkWidth - 4)).toBeLessThanOrEqual(1);
   });
 
   test('puts every texel in the stub, the sleeve or the hand, the shares summing to one', () => {
@@ -122,18 +242,62 @@ describe('limbOf', () => {
   });
 
   test('refuses an arm it cannot measure, naming the kind', () => {
-    const kind = (r: ReturnType<typeof limbOf>) =>
-      Result.match(r, { onSuccess: () => 'measured', onFailure: (e) => e.kind });
-    expect(kind(limbOf('arm', ARM, { ...JOINTS, wrist: [E[0] + 1, E[1] + 2] }, DECLARED))).toBe(
+    expect(kindOf(limbOf('arm', ARM, { ...JOINTS, wrist: [E[0] + 1, E[1] + 2] }, DECLARED))).toBe(
       'short-chain',
     );
     const away = (p: Pt): Pt => [p[0] + 100, p[1]];
     expect(
-      kind(limbOf('arm', ARM, { shoulder: away(S), elbow: away(E), wrist: away(C) }, DECLARED)),
+      kindOf(limbOf('arm', ARM, { shoulder: away(S), elbow: away(E), wrist: away(C) }, DECLARED)),
     ).toBe('off-part');
     const full = { width: W, height: H, rgba: new Uint8Array(W * H * 4).fill(255) };
-    expect(kind(limbOf('arm', full, JOINTS, DECLARED))).toBe('open-edge');
-    expect(kind(limbOf('arm', armPixels(false), JOINTS, DECLARED))).toBe('no-ink');
+    expect(kindOf(limbOf('arm', full, JOINTS, DECLARED))).toBe('open-edge');
+    expect(kindOf(limbOf('arm', armPixels(NONE), JOINTS, DECLARED))).toBe('no-ink');
+  });
+
+  test('refuses a sleeve as dark as its ink, rather than measuring the whole half-width as ink', () => {
+    const r = limbOf('arm', DARK_SLEEVE, JOINTS, DECLARED);
+    expect(kindOf(r)).toBe('ink-unbounded');
+    expect(Result.isFailure(r) && r.failure.detail).toMatch(/0 end on cloth/);
+  });
+
+  test('refuses a cuff that is not a finite point under its own kind, never throwing', () => {
+    for (const cuff of [
+      [Number.POSITIVE_INFINITY, 1],
+      [Number.NaN, 1],
+    ] as const) {
+      const r = limbOf('arm', ARM, JOINTS, { ...DECLARED, cuff });
+      expect(kindOf(r)).toBe('non-finite');
+      expect(Result.isFailure(r) && r.failure.detail).toBe(
+        `its cuff (${cuff[0]}, 1) is not a finite point`,
+      );
+    }
+  });
+});
+
+describe('limbOf on a bent chain', () => {
+  test("each side follows the drawing: the outer edge on both segments, the inner side stopping on the fold's bisector", () => {
+    expect(BENT_LIMB.chain.upper).toBeCloseTo(B_UPPER, 9);
+    expect(BENT_LIMB.chain.fore).toBeCloseTo(B_FORE, 9);
+    expect(bentFaults(BENT_LIMB)).toEqual([]);
+  });
+
+  test('the elbow pivot in the outline ink: those knots unbounded, their ink unread, the ink width the drawn 4 px', () => {
+    const { outer, step } = BENT_LIMB;
+    const near = (k: number) => Math.abs((k + 0.5) * step - B_UPPER) < 8;
+    const unbounded = outer.ends.flatMap((e, k) => [k].filter(() => e === 'unbounded'));
+    expect(unbounded.length).toBeGreaterThan(0);
+    expect(unbounded.filter((k) => !near(k))).toEqual([]);
+    expect(unbounded.map((k) => outer.inks[k])).toEqual(unbounded.map(() => 0));
+    expect(outer.ends.filter((e, k) => !near(k) && e !== 'ink')).toEqual([]);
+    expect(BENT_LIMB.ink).toEqual([...INK]);
+    expect(Math.abs(BENT_LIMB.inkWidth - 4)).toBeLessThanOrEqual(1);
+  });
+
+  test("a texel past the fold's bisector unrolls by the forearm: the hand, the forearm's sleeve, the stub", () => {
+    const at = (p: Pt) => limbShares(BENT_LIMB, Math.floor(p[0]), Math.floor(p[1]));
+    expect(at(B_HAND)).toEqual([0, 0, 1]);
+    expect(at(along(BE, BD2, B_FORE / 2))).toEqual([0, 1, 0]);
+    expect(at(along(BS, BD1, -8))).toEqual([1, 0, 0]);
   });
 });
 
@@ -213,6 +377,37 @@ describe('limbBlend', () => {
   });
 });
 
+// The straight arm with a body part beside its outer edge near the shoulder,
+// reaching 12 px past the shoulder's line, which a flap takes into the arm.
+const FLAP_REACH = 12;
+const BODY_COLOUR = [120, 90, 200] as const;
+const FLAP_SKELETON: Skeleton = {
+  bones: [{ name: 'lean', pivot: [S[0], S[1] - 30], tip: S }, ...BONES],
+  skin: { arm: [...CHAIN, 'lean'], body: ['lean'] },
+  flaps: [
+    {
+      part: 'arm',
+      from: 'body',
+      bone: 'shoulderRight',
+      body: 'lean',
+      cap: 2,
+      reach: 10,
+      region: [
+        [-STUB - 2, -40],
+        [FLAP_REACH + 2, -40],
+        [FLAP_REACH + 2, 50],
+        [-STUB - 2, 50],
+      ].map(([u, v]) => along(along(S, D, u!), OUTER, v!)),
+    },
+  ],
+  limbs: [DECLARED],
+};
+const FLAP_BODY = paint(W, H, (x, y) => {
+  const [u, v] = frame([x + 0.5, y + 0.5], S, D, 0);
+  const beside = u >= -STUB && u <= FLAP_REACH && v > outerWidth(Math.max(0, u)) && v < 36;
+  return [[], [BODY_COLOUR]][Number(beside)]!;
+});
+
 describe('puppetOf with a stroke limb', () => {
   const refusedFor = (skeleton: Skeleton) =>
     Result.match(puppetOf(SHEET, skeleton), {
@@ -220,13 +415,15 @@ describe('puppetOf with a stroke limb', () => {
       onFailure: (e) => e.reason,
     });
 
-  test('attaches the measured limb to its part, and rasterOf draws the part as without it', () => {
+  test('attaches the measured limb to its part, and rasterOf draws the part as without it at the painted turns', () => {
     const withLimb = Result.getOrThrow(puppetOf(SHEET, SKELETON));
     const without = Result.getOrThrow(puppetOf(SHEET, { ...SKELETON, limbs: [] }));
     expect(withLimb.parts[0]!.limb).toEqual(LIMB);
     expect(without.parts[0]!.limb).toBeUndefined();
-    const pose = { numbers: { elbowRight: 45, wristRight: -38 }, root: S, scale: 1 };
-    expect(rasterOf(withLimb, pose).rgba).toEqual(rasterOf(without, pose).rgba);
+    for (const elbowRight of [0, 10, 15]) {
+      const pose = { numbers: { elbowRight, wristRight: -38 }, root: S, scale: 1 };
+      expect(rasterOf(withLimb, pose).rgba).toEqual(rasterOf(without, pose).rgba);
+    }
   });
 
   test('refuses each declaration that does not fit, naming it', () => {
@@ -253,7 +450,7 @@ describe('puppetOf with a stroke limb', () => {
   });
 
   test("refuses a declared limb its part's pixels cannot measure, with limbOf's reason", () => {
-    const bare = { ...SHEET, parts: [{ name: 'arm', pixels: armPixels(false) }] };
+    const bare = { ...SHEET, parts: [{ name: 'arm', pixels: armPixels(NONE) }] };
     const reason = Result.match(puppetOf(bare, SKELETON), {
       onSuccess: () => 'built',
       onFailure: (e) => e.reason,
@@ -261,5 +458,63 @@ describe('puppetOf with a stroke limb', () => {
     expect(reason).toBe(
       "arm cannot be measured as a stroke limb (no-ink): no knot's edge shows a texel under L* 20",
     );
+  });
+
+  test('refuses every limb it cannot measure, each typed, not the first as a string', () => {
+    const left = ['shoulderLeft', 'elbowLeft', 'wristLeft'] as const;
+    const skeleton: Skeleton = {
+      bones: [
+        ...BONES,
+        { name: 'shoulderLeft', pivot: S, tip: E },
+        { name: 'elbowLeft', parent: 'shoulderLeft', pivot: E, tip: C },
+        { name: 'wristLeft', parent: 'elbowLeft', pivot: C, tip: along(C, D, 20) },
+      ],
+      skin: { arm: [...CHAIN], arm2: [...left] },
+      limbs: [DECLARED, { part: 'arm2', bones: left }],
+    };
+    const sheet: PuppetSheet = {
+      width: W,
+      height: H,
+      parts: [
+        { name: 'arm', pixels: armPixels(NONE) },
+        { name: 'arm2', pixels: DARK_SLEEVE },
+      ],
+    };
+    const limbs = Result.match(puppetOf(sheet, skeleton), {
+      onSuccess: () => [],
+      onFailure: (e) => e.limbs ?? [],
+    });
+    expect(limbs.every(Schema.is(LimbRefused))).toBe(true);
+    expect(limbs.map((l) => [l.part, l.kind])).toEqual([
+      ['arm', 'no-ink'],
+      ['arm2', 'ink-unbounded'],
+    ]);
+  });
+
+  test('a cuff that is not finite refuses the puppet with the typed limb, never throwing', () => {
+    const skeleton = {
+      ...SKELETON,
+      limbs: [{ ...DECLARED, cuff: [Number.POSITIVE_INFINITY, 1] as Pt }],
+    };
+    const kinds = Result.match(puppetOf(SHEET, skeleton), {
+      onSuccess: () => [],
+      onFailure: (e) => (e.limbs ?? []).map((l) => l.kind),
+    });
+    expect(kinds).toEqual(['non-finite']);
+  });
+
+  test("a flap's body texels past the shoulder stay out of the sleeve: not in its widths, wholly in the stub", () => {
+    const sheet: PuppetSheet = {
+      ...SHEET,
+      parts: [...SHEET.parts, { name: 'body', pixels: FLAP_BODY }],
+    };
+    const limb = Result.getOrThrow(puppetOf(sheet, FLAP_SKELETON)).parts[0]!.limb!;
+    const near = Array.from(limb.outer.widths.subarray(0, Math.floor(FLAP_REACH / limb.step)));
+    expect(near.length).toBeGreaterThan(3);
+    expect(near.filter((w, k) => Math.abs(w - outerWidth((k + 0.5) * limb.step)) > 1)).toEqual([]);
+    const body = along(along(S, D, FLAP_REACH / 2), OUTER, 31);
+    expect(limbShares(limb, Math.floor(body[0]), Math.floor(body[1]))).toEqual([1, 0, 0]);
+    const sleeve = along(along(S, D, FLAP_REACH / 2), OUTER, 10);
+    expect(limbShares(limb, Math.floor(sleeve[0]), Math.floor(sleeve[1]))).toEqual([0, 1, 0]);
   });
 });

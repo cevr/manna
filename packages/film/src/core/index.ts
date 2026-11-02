@@ -33,13 +33,6 @@ export {
 export { defineStore } from './store.ts';
 export { stagingVoice } from './staging-voice.ts';
 export { type Skeleton, rasterOf, restPose } from './puppet.ts';
-export {
-  type LimbRule,
-  type LimbShown,
-  type PuppetLimb,
-  type PuppetPartLimb,
-  limbBlend,
-} from './limb.ts';
 export { boxStart, fitPose } from './pose-fit.ts';
 export { labOf } from './cast-sheet-pixels.ts';
 export { figureOf } from './fit-rows.ts';

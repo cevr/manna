@@ -18,10 +18,13 @@
 //   along ±v from the chain to where the part's alpha falls under one half,
 //   each side apart, or, inside a fold the drawn view bends, to where the
 //   other segment's texels begin.
-// - **Ink.** From each alpha edge inward, the texels darker than `INK_L`:
-//   their depth at each knot (0 where a side shows none, as along a cut
-//   against the body), their colour (the median of each channel over all of
-//   them) and the ink's width (the median depth where a side shows ink).
+// - **Ink.** From each alpha edge inward, the run of texels darker than
+//   `INK_L`, counted only when it ends on lighter cloth before the chain: a
+//   run that reaches the chain (a pivot drawn in a corner's ink, or cloth as
+//   dark as ink) has no measured depth. Each knot keeps what its side ends on
+//   (`LimbEnd`) and its ink's depth; the limb keeps the ink's colour (the
+//   median of each channel over the bounded runs' texels) and width (the
+//   median bounded depth).
 // - **Regions.** Each texel lies in the stub (u < 0, the part's join to the
 //   body, which stays painted), the sleeve (0 to the cuff's u, which the
 //   stroke draws) or the hand (past the cuff, drawn from its own pixels on
@@ -41,12 +44,12 @@ type Pt = readonly [number, number];
 type Ramp = readonly [number, number];
 
 /** The default fade: the painted part to 15°, the stroke alone from 25°; the probe's cut-out arm tore open past about 25° (`tmp/orchestrate/p5/probes/strokes/report.md`). */
-export const LIMB_FADE: Ramp = [15, 25];
+const LIMB_FADE: Ramp = [15, 25];
 
 /** The default fold: the forearm's ink fold line comes in from 60° and is whole at 90° (the probe's `final-fold-ink-2x.png`). */
-export const LIMB_FOLD: Ramp = [60, 90];
+const LIMB_FOLD: Ramp = [60, 90];
 
-/** The CIE L* under which a texel at a sleeve's edge is its ink: the lead's ink (rgb 33 15 3) reads L* 0 to 15 on both arms of single-9, and his blue sleeve's darkest shade reaches L* 20, a threshold of 30 reads as ink at two knots of its cut edge. */
+/** The CIE L* under which a texel at a sleeve's edge is its ink. The lead's ink (rgb 33 15 3) reads L* 0 to 15 on both arms of single-9, and his blue sleeve's darkest shade reaches L* 20; at 30, that shade reads as ink at two knots of its cut edge. */
 const INK_L = 20;
 
 /** The length of sleeve between two width knots, at most, px. */
@@ -80,14 +83,14 @@ export interface PuppetLimb {
 }
 
 /** What `limbBlend` reads: the chain's names and the two ramps. */
-export interface LimbRule {
+interface LimbRule {
   readonly bones: readonly [string, string, string];
   readonly fade: Ramp;
   readonly fold: Ramp;
 }
 
 /** A limb's rest chain, sheet px: its three points and the lengths of its two segments. */
-export interface LimbChain {
+interface LimbChain {
   readonly shoulder: Pt;
   readonly elbow: Pt;
   readonly cuff: Pt;
@@ -99,20 +102,33 @@ export interface LimbChain {
 type LimbSideName = 'outer' | 'inner';
 
 /**
- * One side of a sleeve, at each knot, px: its half-width (to its alpha edge,
- * or where the side meets the other segment's texels, the inside of a fold
- * the drawn view bends, which has no edge), and the depth of its ink there (0
- * where the side shows none: a cut edge against the body, or a fold's inside).
+ * What a side's width ends on at a knot:
+ * - `fold`: where the side meets the other segment's texels, the inside of a
+ *   fold the drawn view bends. No edge is there, so no ink is read; the stroke
+ *   rebuilds this side once the fold opens.
+ * - `ink`: an alpha edge, inked, the dark run ending on lighter cloth.
+ * - `bare`: an alpha edge with no ink, as a cut against the body.
+ * - `unbounded`: an alpha edge whose dark run reaches the chain (the elbow's
+ *   pivot drawn in the ink of a corner, or cloth as dark as ink): its ink is
+ *   not measured there.
  */
-export interface LimbSide {
+type LimbEnd = 'fold' | 'ink' | 'bare' | 'unbounded';
+
+/**
+ * One side of a sleeve, at each knot: its half-width (px, to what `ends`
+ * names), what it ends on, and the depth of its ink (px; 0 unless it ends on
+ * `ink`).
+ */
+interface LimbSide {
   readonly widths: Float64Array;
   readonly inks: Float64Array;
+  readonly ends: ReadonlyArray<LimbEnd>;
 }
 
 /** A limb's regions over the box `[x, y, width, height]` that holds the part's paint: two bytes a texel, row by row, the stub's share and the hand's, of 255; the sleeve's is the rest. */
-export interface LimbRegions {
+interface LimbRegions {
   readonly box: readonly [number, number, number, number];
-  readonly shares: Uint8Array;
+  readonly shares: DataView;
 }
 
 /** A stroke limb as `puppetOf` measured it from its part's pixels: its rule, its rest chain, its knots `step` px apart along the sleeve, knot k at u = (k + ½) step (none on the shoulder's or the cuff's line, where a side's reach would read the paint's end), its two sides (`outer` the side a positive elbow turn opens), its ink's colour (the median of each channel) and width (the median depth where a side shows ink), and its regions. */
@@ -127,15 +143,27 @@ export interface PuppetPartLimb extends LimbRule {
 }
 
 /** The rest joints a limb is measured on, sheet px: the shoulder's, elbow's and wrist's pivots. */
-export interface LimbJoints {
+interface LimbJoints {
   readonly shoulder: Pt;
   readonly elbow: Pt;
   readonly wrist: Pt;
 }
 
-/** Why a part cannot be measured as a limb: a bone of its chain too short, its chain off its paint, its paint running off the sheet, or no ink at any of its edges. */
-export const LimbRefusalKind = Schema.Literals(['short-chain', 'off-part', 'open-edge', 'no-ink']);
-export type LimbRefusalKind = typeof LimbRefusalKind.Type;
+/**
+ * Why a part cannot be measured as a limb: a point of its chain that is not
+ * finite, a bone of its chain too short, its chain off its paint, its paint
+ * running off the sheet, no ink at any of its edges, or more of its edges'
+ * dark runs reaching the chain than ending on cloth (cloth as dark as ink).
+ */
+const LimbRefusalKind = Schema.Literals([
+  'non-finite',
+  'short-chain',
+  'off-part',
+  'open-edge',
+  'no-ink',
+  'ink-unbounded',
+]);
+type LimbRefusalKind = typeof LimbRefusalKind.Type;
 
 /** A part refused as a limb: which, the kind of refusal, and what was read. */
 export class LimbRefused extends Schema.TaggedError<LimbRefused>()('LimbRefused', {
@@ -157,7 +185,7 @@ const ramp = ([a, b]: Ramp, x: number) => {
 };
 
 /** How much of a limb a pose shows: its stroke over its painted part, and its fold line, each in [0, 1]. */
-export interface LimbShown {
+interface LimbShown {
   readonly sleeve: number;
   readonly fold: number;
 }
@@ -183,7 +211,7 @@ export const limbShares = (
 ): readonly [number, number, number] => {
   const [bx, by, bw, bh] = limb.regions.box;
   const i = Math.max(0, Math.min(bh - 1, y - by)) * bw + Math.max(0, Math.min(bw - 1, x - bx));
-  const view = bytes(limb.regions.shares);
+  const view = limb.regions.shares;
   const [stub, hand] = [view.getUint8(2 * i), view.getUint8(2 * i + 1)];
   return [stub / 255, (255 - stub - hand) / 255, hand / 255];
 };
@@ -233,25 +261,28 @@ const pointAt = (chain: LimbChain, u: number): readonly [Pt, Pt] => {
   return on(chain.shoulder, chain.elbow, 0);
 };
 
-/** A part's straight RGBA read texel by texel, in its bounds. */
-const texels = (pixels: Raster) => {
+/** A part's straight RGBA read texel by texel, in its bounds, with which of its texels are a flap's body pixels (`body`, a byte a texel, nonzero for the body's). */
+const texels = (pixels: Raster, body: Uint8Array) => {
   const view = bytes(pixels.rgba);
+  const flap = bytes(body);
   const { width: W, height: H } = pixels;
   const holds = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H;
   const byte = (x: number, y: number, c: number) => view.getUint8((y * W + x) * 4 + c);
-  /** The alpha (0..1) at `(sx, sy)`, bilinear over texel centres (texel x's centre at x + ½), 0 off the part. */
+  const isBody = (x: number, y: number) => flap.getUint8(y * W + x) > 0;
+  /** The alpha (0..1) of the part's own paint at `(sx, sy)`, bilinear over texel centres (texel x's centre at x + ½), 0 off the part and on a flap's body pixels. */
   const alpha = (sx: number, sy: number) => {
     const [fx, fy] = [sx - 0.5, sy - 0.5];
     const [x0, y0] = [Math.floor(fx), Math.floor(fy)];
     const [ax, ay] = [fx - x0, fy - y0];
-    const at = (x: number, y: number) => Number(holds(x, y)) && byte(x, y, 3) / 255;
+    const at = (x: number, y: number) =>
+      Number(holds(x, y) && !isBody(x, y)) && byte(x, y, 3) / 255;
     return (
       (1 - ay) * ((1 - ax) * at(x0, y0) + ax * at(x0 + 1, y0)) +
       ay * ((1 - ax) * at(x0, y0 + 1) + ax * at(x0 + 1, y0 + 1))
     );
   };
   const rgb = (x: number, y: number): Rgb => [byte(x, y, 0), byte(x, y, 1), byte(x, y, 2)];
-  return { holds, byte, alpha, rgb };
+  return { holds, byte, alpha, rgb, isBody };
 };
 
 type Texels = ReturnType<typeof texels>;
@@ -291,19 +322,26 @@ const reachFrom = (
   }
 };
 
-/** The ink texels inward from the edge `w` px from `p` along `n`: their colours, and their depth (px) before the first texel that is not ink. */
-const inkFrom = (t: Texels, p: Pt, n: Pt, w: number) => {
+/** A dark run read inward from an edge: its texels' colours, its depth (px), and whether it ended on an opaque texel at or over `INK_L` (bounded) rather than at the chain. */
+interface Run {
+  readonly found: ReadonlyArray<Rgb>;
+  readonly depth: number;
+  readonly bounded: boolean;
+}
+
+/** The dark run inward from the edge `w` px from `p` along `n`, to the first opaque texel that is not ink, or to `p` itself when there is none. */
+const inkFrom = (t: Texels, p: Pt, n: Pt, w: number): Run => {
   const found: Array<Rgb> = [];
   let depth = 0;
   for (let s = INK_STEP / 2; s < w; s += INK_STEP) {
     const [x, y] = [Math.floor(p[0] + (w - s) * n[0]), Math.floor(p[1] + (w - s) * n[1])];
     if (t.byte(x, y, 3) < 128) continue;
     const c = t.rgb(x, y);
-    if (labOf(c)[0] >= INK_L) break;
+    if (labOf(c)[0] >= INK_L) return { found, depth, bounded: true };
     found.push(c);
     depth = s + INK_STEP / 2;
   }
-  return { found, depth };
+  return { found, depth, bounded: false };
 };
 
 const median = (xs: ReadonlyArray<number>) => {
@@ -326,23 +364,105 @@ const paintBox = (pixels: Raster, t: Texels) => {
   return [x0, y0, Math.max(0, x1 - x0 + 1), Math.max(0, y1 - y0 + 1)] as const;
 };
 
+/** Each side's measure along the sleeve, and the colours of its bounded ink runs. */
+interface Sides {
+  readonly sides: Record<LimbSideName, LimbSide>;
+  readonly found: ReadonlyArray<Rgb>;
+}
+
+/** Each side's width at every knot of `chain`, what it ends on, and its ink; refused when a knot is off the paint or the paint runs off the sheet. */
+const measureSides = (
+  t: Texels,
+  chain: LimbChain,
+  knots: number,
+  step: number,
+): Result.Result<Sides, readonly [LimbRefusalKind, string]> => {
+  const sign: Record<LimbSideName, number> = { outer: 1, inner: -1 };
+  const made = (): LimbSide & { ends: Array<LimbEnd> } => ({
+    widths: new Float64Array(knots),
+    inks: new Float64Array(knots),
+    ends: [],
+  });
+  const sides = { outer: made(), inner: made() };
+  const found: Array<Rgb> = [];
+  for (let k = 0; k < knots; k++) {
+    const [p, o] = pointAt(chain, (k + 0.5) * step);
+    for (const side of ['outer', 'inner'] as const) {
+      const n: Pt = [o[0] * sign[side], o[1] * sign[side]];
+      const reach = reachFrom(t, chain, p, n);
+      if (Result.isFailure(reach)) return Result.fail(reach.failure);
+      const { width, edge } = reach.success;
+      sides[side].widths[k] = width;
+      if (!edge) {
+        sides[side].ends.push('fold');
+        continue;
+      }
+      const run = inkFrom(t, p, n, width);
+      const end = endOf(run);
+      sides[side].ends.push(end);
+      if (end !== 'ink') continue;
+      found.push(...run.found);
+      sides[side].inks[k] = run.depth;
+    }
+  }
+  return Result.succeed({ sides, found });
+};
+
+/** What a side's alpha edge is, as its dark run reads it. */
+const endOf = (run: Run): LimbEnd => {
+  if (run.found.length === 0) return 'bare';
+  if (run.bounded) return 'ink';
+  return 'unbounded';
+};
+
+const finite = (p: Pt) => Number.isFinite(p[0]) && Number.isFinite(p[1]);
+
+/** The regions over the box of `pixels`' paint: each texel's stub and hand shares by its u on `chain`, a flap's body pixels wholly stub (painted, on the flap's weights, never redrawn by the stroke). */
+const regionsOf = (pixels: Raster, t: Texels, chain: LimbChain): LimbRegions => {
+  const length = chain.upper + chain.fore;
+  const box = paintBox(pixels, t);
+  const [bx, by, bw, bh] = box;
+  const shares = new Uint8Array(bw * bh * 2);
+  for (let y = 0; y < bh; y++)
+    for (let x = 0; x < bw; x++) {
+      const [u] = unroll(chain, [bx + x + 0.5, by + y + 0.5]);
+      const body = t.isBody(bx + x, by + y);
+      const stub = Math.round(255 * Math.max(Number(body), clamp01(0.5 - u / FEATHER)));
+      const hand = Number(!body) * Math.round(255 * clamp01(0.5 + (u - length) / FEATHER));
+      shares.set([stub, hand], 2 * (y * bw + x));
+    }
+  return { box, shares: bytes(shares) };
+};
+
 /**
  * Part `part`'s limb, measured from its own pixels (its texture, as
  * `puppetOf` holds it) on its rest joints: the chain, each side's half-widths
- * at every knot and its ink, and the regions. Refused, with a reason that
- * names its kind, when a bone of the chain is too short, the chain leaves the
- * paint, the paint runs off the sheet, or no edge shows any ink:
- * such an arm is never drawn from defaults.
+ * at every knot, what each ends on, and its ink, and the regions. The texels
+ * `body` marks (a byte a texel, nonzero where a flap took the body's pixels
+ * into the part) are not the sleeve's: a width ends where they begin, and
+ * they lie wholly in the stub. Refused, with a reason that names its kind,
+ * when a point of the chain is not finite, a bone of the chain is too short,
+ * the chain leaves the paint, the paint runs off the sheet, no edge shows any
+ * ink, or more edges' dark runs reach the chain than end on cloth: such an
+ * arm is never drawn from defaults.
  */
 export const limbOf = (
   part: string,
   pixels: Raster,
   joints: LimbJoints,
   declared: PuppetLimb,
+  body: Option.Option<Uint8Array> = Option.none(),
 ): Result.Result<PuppetPartLimb, LimbRefused> => {
   const refuse = (kind: LimbRefusalKind, detail: string) =>
     Result.fail(LimbRefused.make({ part, kind, detail }));
   const cuff = Option.getOrElse(Option.fromUndefinedOr(declared.cuff), () => joints.wrist);
+  const points = { shoulder: joints.shoulder, elbow: joints.elbow, cuff };
+  const bad = Object.entries(points).filter(([, p]) => !finite(p));
+  if (bad.length > 0)
+    return refuse(
+      'non-finite',
+      bad.map(([name, p]) => `its ${name} (${p[0]}, ${p[1]}) is not a finite point`).join('; '),
+    );
   const chain: LimbChain = {
     shoulder: joints.shoulder,
     elbow: joints.elbow,
@@ -355,42 +475,30 @@ export const limbOf = (
       'short-chain',
       `its upper arm is ${chain.upper.toFixed(1)} px and its forearm ${chain.fore.toFixed(1)} px, under ${SHORTEST}`,
     );
-  const t = texels(pixels);
+  const t = texels(
+    pixels,
+    Option.getOrElse(body, () => new Uint8Array(pixels.width * pixels.height)),
+  );
   const length = chain.upper + chain.fore;
   const knots = Math.ceil(length / KNOT);
   const step = length / knots;
-  const sign: Record<LimbSideName, number> = { outer: 1, inner: -1 };
-  const sides: Record<LimbSideName, LimbSide> = {
-    outer: { widths: new Float64Array(knots), inks: new Float64Array(knots) },
-    inner: { widths: new Float64Array(knots), inks: new Float64Array(knots) },
-  };
-  const found: Array<Rgb> = [];
-  for (let k = 0; k < knots; k++) {
-    const [p, o] = pointAt(chain, (k + 0.5) * step);
-    for (const side of ['outer', 'inner'] as const) {
-      const n: Pt = [o[0] * sign[side], o[1] * sign[side]];
-      const reach = reachFrom(t, chain, p, n);
-      if (Result.isFailure(reach)) return refuse(...reach.failure);
-      sides[side].widths[k] = reach.success.width;
-      if (!reach.success.edge) continue;
-      const ink = inkFrom(t, p, n, reach.success.width);
-      found.push(...ink.found);
-      sides[side].inks[k] = ink.depth;
-    }
-  }
-  if (found.length === 0) return refuse('no-ink', `no knot's edge shows a texel under L* ${INK_L}`);
+  const measured = measureSides(t, chain, knots, step);
+  if (Result.isFailure(measured)) return refuse(...measured.failure);
+  const { sides, found } = measured.success;
+  const ends = [...sides.outer.ends, ...sides.inner.ends];
+  const [inked, unbounded] = [
+    ends.filter((e) => e === 'ink'),
+    ends.filter((e) => e === 'unbounded'),
+  ];
+  if (inked.length === 0 && unbounded.length === 0)
+    return refuse('no-ink', `no knot's edge shows a texel under L* ${INK_L}`);
+  if (inked.length < unbounded.length)
+    return refuse(
+      'ink-unbounded',
+      `${unbounded.length} knots' dark runs reach the chain and ${inked.length} end on cloth over L* ${INK_L}`,
+    );
   const depths = [...sides.outer.inks, ...sides.inner.inks].filter((d) => d > 0);
   const channel = (c: 0 | 1 | 2) => median(found.map((x) => x[c]));
-  const box = paintBox(pixels, t);
-  const [bx, by, bw, bh] = box;
-  const shares = new Uint8Array(bw * bh * 2);
-  for (let y = 0; y < bh; y++)
-    for (let x = 0; x < bw; x++) {
-      const [u] = unroll(chain, [bx + x + 0.5, by + y + 0.5]);
-      const stub = Math.round(255 * clamp01(0.5 - u / FEATHER));
-      const hand = Math.round(255 * clamp01(0.5 + (u - length) / FEATHER));
-      shares.set([stub, hand], 2 * (y * bw + x));
-    }
   return Result.succeed({
     bones: declared.bones,
     fade: Option.getOrElse(Option.fromUndefinedOr(declared.fade), () => LIMB_FADE),
@@ -401,6 +509,6 @@ export const limbOf = (
     inner: sides.inner,
     ink: [channel(0), channel(1), channel(2)],
     inkWidth: median(depths),
-    regions: { box, shares },
+    regions: regionsOf(pixels, t, chain),
   });
 };
