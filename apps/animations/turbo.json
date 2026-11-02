@@ -3,11 +3,41 @@
   "extends": ["//"],
   "tasks": {
     "test": {
+      "dependsOn": ["$TURBO_EXTENDS$", "test:app", "test:films", "test:library"]
+    },
+    "test:app": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/package.json",
-        "$TURBO_ROOT$/.claude/skills/film/**"
+        "$TURBO_ROOT$/.claude/skills/film/**",
+        "!src/**/*.test.*"
+      ]
+    },
+    "test:films": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/.claude/skills/film/**",
+        "!*.test.*",
+        "!src/library/**/*.test.*"
+      ]
+    },
+    "test:library": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/.claude/skills/film/**",
+        "!*.test.*",
+        "!src/films/**/*.test.*"
       ]
     }
   }

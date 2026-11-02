@@ -1,9 +1,10 @@
 // A workspace's unit-test tasks: its `test`, or the parts its `test` depends
 // on, that `turbo run test` (the gate's) runs with a command, by turbo's own
 // dry run. Most workspaces have
-// one, `<ws>#test`. One whose tests are cut into parts (`@manna/film`) gives
-// its `test` no command and has it depend on its parts (`test:lab`,
-// `test:tools`, `test:engine`, each a script and a task of its
+// one, `<ws>#test`. One whose tests are cut into parts (`@manna/film`,
+// `@manna/animations`) gives its `test` no command and has it depend on its
+// parts (film's `test:lab`, `test:tools`, `test:engine`; animations'
+// `test:app`, `test:films`, `test:library`; each a script and a task of its
 // `turbo.json`); its unit-test tasks are those parts. Each task's name is the
 // package script it runs.
 //
