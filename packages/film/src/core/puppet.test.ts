@@ -7,6 +7,7 @@ import {
   puppetOf,
   rasterOf,
   restPose,
+  unmattedKey,
 } from './puppet.ts';
 
 type PuppetSheet = Parameters<typeof puppetOf>[0];
@@ -545,6 +546,47 @@ describe('a puppet', () => {
     expect(back.revealed[1]).toBeUndefined();
     // a front part's own pixels are never given back
     expect(p.parts[0]!.revealed.filter(Boolean)).toEqual([]);
+  });
+
+  test("un-mattes a key drawn on the sheet's canvas in place of a part as that part's own rim is un-matted", () => {
+    const paper = [250, 240, 220] as const;
+    const { arm, body } = rimSheet();
+    const sheet: PuppetSheet = {
+      width: W,
+      height: H,
+      paper,
+      parts: [
+        { name: 'arm', pixels: { width: W, height: H, rgba: arm } },
+        { name: 'body', pixels: { width: W, height: H, rgba: body } },
+      ],
+    };
+    const skeleton = { ...TWO_BONES, skin: { arm: ['shoulderRight', 'elbowRight'], body: [] } };
+    const at = (r: Uint8Array, x: number, y: number) => [
+      ...r.subarray((y * W + x) * 4, (y * W + x) * 4 + 4),
+    ];
+    // the key: the body with its middle painted another colour, as a shut-eye head differs from its open one
+    const green = [90, 120, 60, 255] as const;
+    const rgba = body.slice();
+    for (let y = 15; y < 20; y++) for (let x = 28; x < 34; x++) rgba.set(green, (y * W + x) * 4);
+    const key = { width: W, height: H, rgba };
+    const unmatted = Result.getOrThrow(unmattedKey(sheet, skeleton, 'body', key));
+    // the paper the key's cut kept outside its line is its rim: un-matted to nothing, as the body's own
+    expect(at(rgba, 11, 8)).toEqual([250, 240, 220, 255]);
+    expect(at(unmatted, 11, 8)).toEqual([0, 0, 0, 0]);
+    expect(at(made(sheet, skeleton).parts[1]!.pixels.rgba, 11, 8)).toEqual([0, 0, 0, 0]);
+    // inside its line the key's own paint stays, not the body's
+    expect(at(unmatted, 30, 18)).toEqual([...green]);
+    expect(at(made(sheet, skeleton).parts[1]!.pixels.rgba, 30, 18)).not.toEqual([...green]);
+    // as given with no paper
+    const { paper: _paper, ...bare } = sheet;
+    expect(Result.getOrThrow(unmattedKey(bare, skeleton, 'body', key))).toBe(rgba);
+    // refused, naming why, for no such part or another size
+    const refused = (r: Result.Result<Uint8Array, { readonly reason: string }>) =>
+      Result.match(r, { onFailure: (e) => e.reason, onSuccess: () => 'made' });
+    expect(refused(unmattedKey(sheet, skeleton, 'tail', key))).toBe('the sheet has no part tail');
+    expect(refused(unmattedKey(sheet, skeleton, 'body', { ...key, width: W - 1 }))).toBe(
+      `the key is ${W - 1}x${H}, the sheet ${W}x${H}`,
+    );
   });
 
   test('un-mattes the light gap between his feet open when the sheet names the part that closes it below his shadow, and keeps it when it does not', () => {

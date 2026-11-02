@@ -6,19 +6,20 @@
 // stood on the film for its draws. What a puppet holds on a WebGL context
 // (its textures and buffers, `canvas/puppet-gl.ts`) is the load scope's and
 // freed when it closes; the puppets stand on the film until then. A part
-// PNG of another size than its puppet declares, or a skeleton that does not
-// fit the parts, fails the load, naming why, and nothing is drawn.
+// PNG of another size than its puppet declares, a skeleton that does not
+// fit the parts, or a drawn key that does not fit the part it names, fails
+// the load, naming why, and nothing is drawn.
 
-import { Effect, Exit, Result, Scope } from 'effect';
+import { Effect, Exit, Option, Result, Scope } from 'effect';
 import type { Film } from '../canvas/film.ts';
 import type { LoadedPuppet, PuppetSpec } from '../canvas/puppet.ts';
 import { freePuppetGl, puppetGl } from '../canvas/puppet-gl.ts';
-import { type Puppet, puppetOf } from '../core/puppet.ts';
+import { type Puppet, type PuppetSheet, puppetOf, unmattedKey } from '../core/puppet.ts';
 import type { Raster } from '../core/raster.ts';
 import { PuppetImages, PuppetUnloadable } from './images.ts';
 
-/** `spec`'s puppet: each part PNG read and decoded, checked against its declared size, skinned on its skeleton. */
-export const puppetFrom = Effect.fn('Puppet.from')(function* (spec: PuppetSpec) {
+/** `spec`'s sheet: each part PNG read and decoded, checked against its declared size, with its paper and un-matte settings. */
+const sheetFrom = Effect.fn('Puppet.sheet')(function* (spec: PuppetSpec) {
   const images = yield* PuppetImages;
   const unloadable = (reason: string) => PuppetUnloadable.make({ puppet: spec.key, reason });
   const [w, h] = spec.size;
@@ -33,33 +34,65 @@ export const puppetFrom = Effect.fn('Puppet.from')(function* (spec: PuppetSpec) 
       Effect.map((pixels) => ({ name: part.name, pixels })),
     ),
   );
-  const made = puppetOf(
-    {
-      width: w,
-      height: h,
-      parts,
-      paper: spec.paper,
-      keep: spec.keep,
-      thin: spec.thin,
-      open: spec.open,
-      grain: spec.grain,
-      shadow: spec.shadow,
-    },
-    spec.skeleton,
-  );
-  if (Result.isFailure(made)) return yield* unloadable(made.failure.reason);
+  return {
+    width: w,
+    height: h,
+    parts,
+    paper: spec.paper,
+    keep: spec.keep,
+    thin: spec.thin,
+    open: spec.open,
+    grain: spec.grain,
+    shadow: spec.shadow,
+  } satisfies PuppetSheet;
+});
+
+/** `sheet` skinned on `spec`'s skeleton. */
+const puppetOfSheet = Effect.fn('Puppet.ofSheet')(function* (spec: PuppetSpec, sheet: PuppetSheet) {
+  const made = puppetOf(sheet, spec.skeleton);
+  if (Result.isFailure(made))
+    return yield* PuppetUnloadable.make({ puppet: spec.key, reason: made.failure.reason });
   return made.success satisfies Puppet;
 });
 
-/** `spec`'s drawings (its drawn keys and held hands), each PNG read and decoded, by name. */
-export const drawingsFrom = Effect.fn('Puppet.drawings')(function* (spec: PuppetSpec) {
+/** `spec`'s puppet: each part PNG read and decoded, checked against its declared size, skinned on its skeleton. */
+export const puppetFrom = Effect.fn('Puppet.from')(function* (spec: PuppetSpec) {
+  return yield* puppetOfSheet(spec, yield* sheetFrom(spec));
+});
+
+/**
+ * `spec`'s drawings (its drawn keys and held hands), each PNG read and
+ * decoded, by name: a key drawn on the sheet's canvas in place of a part
+ * (`part`) un-matted from the sheet's paper as that part is (`unmattedKey`),
+ * so its rim matches the part it stands in for. A key that names a part the
+ * sheet lacks, or is another size than the sheet, fails the load.
+ */
+const drawingsFrom = Effect.fn('Puppet.drawings')(function* (spec: PuppetSpec, sheet: PuppetSheet) {
   const images = yield* PuppetImages;
   const read = yield* Effect.forEach(spec.drawings ?? [], (d) =>
     images.read(d.png).pipe(
       Effect.mapError((e) =>
         PuppetUnloadable.make({ puppet: spec.key, reason: `${d.name}: ${e.reason}` }),
       ),
-      Effect.map((pixels) => [d.name, pixels] as const),
+      Effect.flatMap((pixels) =>
+        Option.match(Option.fromUndefinedOr(d.part), {
+          onNone: () => Effect.succeed(pixels),
+          onSome: (part) =>
+            unmattedKey(sheet, spec.skeleton, part, pixels).pipe(
+              Result.match({
+                onFailure: (refused) =>
+                  Effect.fail(
+                    PuppetUnloadable.make({
+                      puppet: spec.key,
+                      reason: `${d.name}: ${refused.reason}`,
+                    }),
+                  ),
+                onSuccess: (rgba) => Effect.succeed({ ...pixels, rgba }),
+              }),
+            ),
+        }),
+      ),
+      Effect.map((pixels): readonly [string, Raster] => [d.name, pixels]),
     ),
   );
   return new Map(read) satisfies ReadonlyMap<string, Raster>;
@@ -68,8 +101,9 @@ export const drawingsFrom = Effect.fn('Puppet.drawings')(function* (spec: Puppet
 /** One declared puppet, loaded with its drawings, its GL state freed with the scope. */
 const loadPuppet = Effect.fn('Puppet.load')(function* (spec: PuppetSpec) {
   const images = yield* PuppetImages;
-  const puppet = yield* puppetFrom(spec);
-  const drawings = yield* drawingsFrom(spec);
+  const sheet = yield* sheetFrom(spec);
+  const puppet = yield* puppetOfSheet(spec, sheet);
+  const drawings = yield* drawingsFrom(spec, sheet);
   const gl = yield* Effect.acquireRelease(
     Effect.sync(() => puppetGl(puppet)),
     (state) => Effect.sync(() => freePuppetGl(state)),

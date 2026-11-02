@@ -59,8 +59,17 @@ export interface PuppetSpec {
   readonly open?: ReadonlyArray<BoxEdge>;
   /** His paper's grain, luma: a rim pixel darker than the paper by more than it is kept whole (`core/unmatte.ts`, `grain`). */
   readonly grain?: number;
-  /** The drawings a look lays with it (drawn keys and held hands), each a PNG, loaded with its parts. */
-  readonly drawings?: ReadonlyArray<{ readonly name: string; readonly png: string }>;
+  /**
+   * The drawings a look lays with it (drawn keys and held hands), each a PNG,
+   * loaded with its parts; a key drawn on the sheet's own canvas in place of
+   * a part names it (`part`), and its edge is un-matted from the paper as
+   * that part's is.
+   */
+  readonly drawings?: ReadonlyArray<{
+    readonly name: string;
+    readonly png: string;
+    readonly part?: string;
+  }>;
   /** The sheet's line: its width, sheet px, and its ink, which a look's L3 pass draws near what moved. */
   readonly line?: { readonly width: number; readonly ink: readonly [number, number, number] };
 }

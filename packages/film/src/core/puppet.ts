@@ -145,7 +145,7 @@ export interface Puppet {
 }
 
 /** What a puppet is made from: a part sheet's size and parts, front to back, and the paper they were cut from, if their edges are to be un-matted from it (`core/unmatte.ts`). */
-interface PuppetSheet {
+export interface PuppetSheet {
   readonly width: number;
   readonly height: number;
   readonly parts: ReadonlyArray<{ readonly name: string; readonly pixels: Raster }>;
@@ -389,6 +389,57 @@ const flapRefusal = (
   return undefined;
 };
 
+/** Each part's pixels, with its flap's body pixels where it has one (at most one flap a part, `refusal`). */
+const flappedParts = (sheet: PuppetSheet, skeleton: Skeleton): ReadonlyArray<Uint8Array> => {
+  const flapOf = new Map((skeleton.flaps ?? []).map((f) => [f.part, f]));
+  return sheet.parts.map((part) => {
+    const flap = flapOf.get(part.name);
+    const from = sheet.parts.find((p) => p.name === flap?.from);
+    return flap === undefined || from === undefined
+      ? part.pixels.rgba
+      : withFlap(part.pixels, from.pixels, flap.region);
+  });
+};
+
+/** How a sheet's parts are un-matted from its paper (`UnmatteOptions`), its named parts by index. */
+const unmatteOptions = (sheet: PuppetSheet) => ({
+  keep: sheet.keep,
+  thin: sheet.parts.flatMap((p, k) => (sheet.thin?.includes(p.name) === true ? [k] : [])),
+  shadow: sheet.parts.flatMap((p, k) => (sheet.shadow?.includes(p.name) === true ? [k] : [])),
+  open: sheet.open,
+  grain: sheet.grain,
+});
+
+/**
+ * A key drawn on the sheet's own canvas in place of part `part` (a head
+ * with its eyes shut), its edge un-matted from the sheet's paper as that
+ * part's is, with the key in the part's place among the others; its pixels
+ * as given when the sheet has no paper. Refused, naming why, when the sheet
+ * has no part of that name or the key is another size than the sheet: such
+ * a key would keep its paper rim and pop on the frames it shows.
+ */
+export const unmattedKey = (
+  sheet: PuppetSheet,
+  skeleton: Skeleton,
+  part: string,
+  key: Raster,
+): Result.Result<Uint8Array, PuppetRefused> => {
+  const k = sheet.parts.findIndex((p) => p.name === part);
+  if (k < 0) return Result.fail(PuppetRefused.make({ reason: `the sheet has no part ${part}` }));
+  if (key.width !== sheet.width || key.height !== sheet.height)
+    return Result.fail(
+      PuppetRefused.make({
+        reason: `the key is ${key.width}x${key.height}, the sheet ${sheet.width}x${sheet.height}`,
+      }),
+    );
+  const { paper } = sheet;
+  if (paper === undefined) return Result.succeed(key.rgba);
+  const parts = flappedParts(sheet, skeleton).map((p, n) => (n === k ? key.rgba : p));
+  return Result.succeed(
+    unmatte(parts, sheet.width, sheet.height, paper, unmatteOptions(sheet))[k]!,
+  );
+};
+
 /**
  * The puppet of `sheet` on `skeleton`: each part's mesh, weighted on its
  * skin, its texture its pixels (with its flap's body pixels, where it has
@@ -405,21 +456,9 @@ export const puppetOf = (
   const { width: W, height: H } = sheet;
   // at most one flap a part (`refusal`)
   const flapOf = new Map((skeleton.flaps ?? []).map((f) => [f.part, f]));
-  const withFlaps = sheet.parts.map((part) => {
-    const flap = flapOf.get(part.name);
-    const from = sheet.parts.find((p) => p.name === flap?.from);
-    return flap === undefined || from === undefined
-      ? part.pixels.rgba
-      : withFlap(part.pixels, from.pixels, flap.region);
-  });
+  const withFlaps = flappedParts(sheet, skeleton);
   const { paper } = sheet;
-  const options = {
-    keep: sheet.keep,
-    thin: sheet.parts.flatMap((p, k) => (sheet.thin?.includes(p.name) === true ? [k] : [])),
-    shadow: sheet.parts.flatMap((p, k) => (sheet.shadow?.includes(p.name) === true ? [k] : [])),
-    open: sheet.open,
-    grain: sheet.grain,
-  };
+  const options = unmatteOptions(sheet);
   const unmatted = paper === undefined ? withFlaps : unmatte(withFlaps, W, H, paper, options);
   const skins = sheet.parts.map((p) => [...(skeleton.skin[p.name] ?? [])].sort().join(' '));
   const textures = sealed(unmatted, skins, W, H);

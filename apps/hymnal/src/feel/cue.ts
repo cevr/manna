@@ -8,7 +8,10 @@
  * The context's default does nothing, so no haptic plays and no sound is
  * made until a provider (`FeelProvider`) gives the cues a body (`body.ts`).
  * A cue is told only from a touch's handler: never as a control mounts,
- * and never for a value set from outside it.
+ * and never for a value set from outside it. The one exception is `beat`:
+ * the count-in (`src/follow/CountIn.tsx`) tells one for each beat the
+ * player gives while the reader's `Click` is on, a touch's (Play's) result
+ * told in time.
  */
 
 import { createContext, use } from 'react';
@@ -56,7 +59,9 @@ export type Cue =
   /** A dial's row passed detent `at`, among the dial's own (on the key dial, a pitch class: 0 is C). */
   | { readonly _tag: 'detent'; readonly dial: DialName; readonly at: number }
   /** The topic at `place` among the hymn list's topics took the list's pin. */
-  | { readonly _tag: 'section'; readonly place: number };
+  | { readonly _tag: 'section'; readonly place: number }
+  /** A beat of the count-in came; `accent` on its first beat (`src/player/countin.ts`). */
+  | { readonly _tag: 'beat'; readonly accent: boolean };
 
 /** The cue named `name`, for the cues that carry nothing else. */
 export const plain = (name: PlainCue): Cue => ({ _tag: name });

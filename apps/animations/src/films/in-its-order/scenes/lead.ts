@@ -3,7 +3,7 @@
 // on the cues and the bottle arm's settle, each joint inside the limits his
 // cut-out draws clean at.
 
-import { act, idle, lag } from '@manna/film/core';
+import { act, blink, idle, lag } from '@manna/film/core';
 
 /** The most his bottle arm's bones turn from his single-9 view, degrees: at 25 the cuff breaks. */
 export const ARM_LIMIT = 15;
@@ -44,6 +44,13 @@ export const leanOf = (c: Cues) => {
     return acting(t) + sway + 0.4 * breath + 0.6 * drift;
   };
 };
+
+/**
+ * His eyes, 0 open to 1 shut: his blinks, seed 1 (the mother's is seed 2),
+ * and one more as his head turns on `turn`, `smile` and `read`, each that
+ * lies half a second or more from his own.
+ */
+export const eyesOf = (c: Cues) => blink(1, [c.turn, c.smile, c.read]);
 
 /**
  * His bone numbers from his raise's landing on k6, degrees clockwise on

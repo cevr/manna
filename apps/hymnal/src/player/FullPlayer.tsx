@@ -12,7 +12,8 @@
  * while the length is not known. A recording that cannot play says why and
  * offers Retry. Under the player: the held hymn's `Tempo` dial (`TempoDial`),
  * which the recording follows too while Sound is on, and its stanza choice
- * (`StanzaChips`, none for a hymn of one stanza); then,
+ * (`StanzaChips`, none for a hymn of one stanza), and the `Start` group
+ * (`StartSwitches`: `Intro` and `Click`); then,
  * over the hymn's own page, a `Chords` switch (the bar's hold, with no long
  * press) and its key and capo dials
  * with reset (`Dials`); then the reader's settings, the text size dial, the
@@ -55,6 +56,7 @@ import { RecordingNotice } from './RecordingNotice';
 import { PlayPage } from './PlayPage';
 import { PlacementDial } from './PlacementDial';
 import { StanzaChips } from './StanzaChips';
+import { StartSwitches } from './StartSwitches';
 import { TempoDial } from './TempoDial';
 
 export function FullPlayer() {
@@ -174,6 +176,7 @@ function Held({
       </View>
       <TempoDial key={`tempo-${track.number}`} number={track.number} />
       <StanzaChips number={track.number} />
+      <StartSwitches />
       <PageChords track={track} />
       <PlacementDial key={track.number} number={track.number} />
       <Reading />

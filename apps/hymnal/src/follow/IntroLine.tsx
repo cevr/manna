@@ -12,6 +12,10 @@
  * height, iOS leaves it out of the accessibility tree. It is an accessible
  * element of its own and reads as a progress bar named `Introduction`:
  * whole percent played, and whole seconds to the first line.
+ *
+ * The count-in's pulse (`CountIn.tsx`) is drawn the same way, after the
+ * intro, in the box of the line the follow holds at the first sung line:
+ * line 0's with every stanza, the first kept line's under a stanza choice.
  */
 
 import { Option } from 'effect';
@@ -20,13 +24,16 @@ import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 
 import { color, useAccent } from '~/color';
 
-import { useIntro } from './follow';
+import { CountIn } from './CountIn';
+import { useCountLine, useIntro } from './follow';
 import { type Intro as Shown, readingOf } from './intro';
 
 /**
- * Line `index` of the page, with the intro over it when it is line 0: the
- * two share a box of their own, so the section's gap between its rows is
- * the same whether the intro shows or not.
+ * Line `index` of the page, with the intro over it when it is line 0 and the
+ * count-in over it when it is the line the follow holds at the first sung
+ * line (`useCountLine`; line 0 with every stanza): each shares a box of its
+ * own with the line, so the section's gap between its rows is the same
+ * whether they show or not.
  */
 export function WithIntro({
   index,
@@ -35,14 +42,22 @@ export function WithIntro({
   readonly index: number;
   readonly children: ReactNode;
 }) {
-  if (index !== 0) return children;
+  const counts = useCountLine() === index;
+  if (index !== 0 && !counts) return children;
   return (
     <View>
       {children}
-      <Intro />
+      {when(index === 0, <Intro />)}
+      {when(counts, <CountIn />)}
     </View>
   );
 }
+
+/** `node` when `shown`, else nothing. */
+const when = (shown: boolean, node: ReactNode): ReactNode => {
+  if (shown) return node;
+  return <></>;
+};
 
 function Intro() {
   const { intro, running } = useIntro();

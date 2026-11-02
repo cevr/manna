@@ -231,25 +231,59 @@ const JITTER = 0.25;
 /** The salt for a blink's place. */
 const BLINK_SALT = 6151;
 
+/**
+ * A blink on a cue falls only where it starts half a second or more from
+ * every blink of the seed's own and from the cued blink before it, so the
+ * eyes stay open 0.2 s or more between
+ * two blinks and read as a double blink at the closest, never as one long one.
+ */
+const APART = 0.5;
+
 const smooth = (x: number): number => x * x * (3 - 2 * x);
+
+/** How far one blink's lids are shut `a` s after it starts: 0 open to 1 shut. */
+const lids = (a: number): number => {
+  if (a <= 0 || a >= SHUT + OPEN) return 0;
+  if (a < SHUT) return smooth(a / SHUT);
+  return smooth(1 - (a - SHUT) / OPEN);
+};
 
 /**
  * How far a figure's eyes are shut at `t`, 0 open to 1 shut, for `seed` (an
  * integer, as `idle` takes): a blink every 3 to 4 s at times drawn from the
- * seed, the lids shutting in 110 ms and opening in 190 ms. A head drawn
- * with its eyes shut shows while it reads past one half.
+ * seed, the lids shutting in 110 ms and opening in 190 ms, and one more
+ * blink at each time of `on` (a head turn, say) that lies half a second or
+ * more from every blink of its own. A head drawn with its eyes shut shows
+ * while it reads past one half.
  */
-export const blink = (seed: number): Track => {
+export const blink = (seed: number, on: ReadonlyArray<number> = []): Track => {
   const offset = EVERY * frac(0.5 + seed * SPREAD);
   const startOf = (k: number) =>
     offset + k * EVERY + JITTER * (2 * hash2(Math.imul(seed, BLINK_SALT) + 1, k) - 1);
+  // the seed's own blinks that can reach `t` start in its slot or a neighbour's
+  const ownNear = (t: number) => {
+    const k = Math.floor((t - offset) / EVERY);
+    return [startOf(k - 1), startOf(k), startOf(k + 1)];
+  };
+  // in time order, each cue kept only half a second or more from the seed's blinks and from the cue kept before it
+  const cued = [...on]
+    .sort((a, b) => a - b)
+    .filter((c) => ownNear(c).every((s) => Math.abs(c - s) >= APART))
+    .reduce<ReadonlyArray<number>>(
+      (kept, c) =>
+        Option.match(Arr.last(kept), {
+          onNone: () => [c],
+          onSome: (last) => {
+            if (c - last < APART) return kept;
+            return [...kept, c];
+          },
+        }),
+      [],
+    );
   return (t) => {
-    const near = Math.floor((t - offset) / EVERY);
-    for (let k = near - 1; k <= near + 1; k++) {
-      const a = t - startOf(k);
-      if (a > 0 && a < SHUT) return smooth(a / SHUT);
-      if (a >= SHUT && a < SHUT + OPEN) return smooth(1 - (a - SHUT) / OPEN);
-    }
-    return 0;
+    let shut = 0;
+    for (const s of ownNear(t)) shut = Math.max(shut, lids(t - s));
+    for (const c of cued) shut = Math.max(shut, lids(t - c));
+    return shut;
   };
 };

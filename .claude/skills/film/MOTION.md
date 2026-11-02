@@ -41,7 +41,7 @@ A figure on screen is never fully still, even in a held pose. It carries a small
 
 Each channel is the key pose, plus the idle waves, plus the follow-through, plus an accent switched on for one cue (a wave of the hand, a nod).
 
-`idle(seed)` (`@manna/film/core`) gives one figure's breath, sway, head tilt and weight drift at a time, on periods and phases drawn from the seed, so two figures never move in step; give each figure on screen its own seed. `blink(seed)` (engine-internal until a rig draws closed eyes) times its blinks (every 3–4 s, shut in 110 ms, open in 190 ms).
+`idle(seed)` (`@manna/film/core`) gives one figure's breath, sway, head tilt and weight drift at a time, on periods and phases drawn from the seed, so two figures never move in step; give each figure on screen its own seed. `blink(seed, on)` (`@manna/film/core`) times its blinks (every 3–4 s, shut in 110 ms, open in 190 ms), and one more at each time of `on` (its head turns) that lies half a second or more from its own. A rig shows a blink with its head drawn eyes shut, a look's drawn key in place of the head while the track reads past one half: the lead in `apps/animations/src/films/in-its-order/scenes/cold.ts`, the mother in `scenes/table.ts`.
 
 ## Poses flow; they do not stop
 
@@ -120,5 +120,4 @@ When the owner gives a video and says "like this", read it frame by frame, never
 
 ## Gaps in the engine
 
-- `blink` times the blinks, but no rig has a closed-eye head or a lid track to show them yet.
 - No tool measures a subject's edges in a video frame by frame (step 3 above).

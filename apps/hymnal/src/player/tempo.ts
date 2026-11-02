@@ -10,7 +10,7 @@
 
 import { Option, Schema } from 'effect';
 
-import type { Timeline } from '~/follow/timeline';
+import type { Timeline } from '../follow/timeline';
 
 export const SLOWEST = 50;
 export const FASTEST = 150;
