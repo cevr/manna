@@ -4352,7 +4352,17 @@ The form of an entry, each field on its own line:
 - **Source:** hymnapp/playbulk/p4-round-1-findings.md M2 and m5
 - **Wrong:** Repeated alignment and serialization used the corpus test's margin; one stale-input scenario raised its timeout to 120 seconds.
 - **Cause:** Shared setup and repeated checks ran inside large test cases.
-- **Guard:** skill: normal-load runtime margins and scenario sizes require measurement. Carried by `.claude/skills/verify-hymnal/features/follow.md`: "Never add a timeout argument to a test or raise a runner timeout. Split long scenarios into cases under the default limit. An extended corpus slow test keeps at least 30% headroom under the 5 s default, measured in five paired runs at load 5 or more."
+- **Guard:** skill: normal-load runtime margins and scenario sizes require measurement. Carried by `.claude/skills/verify-hymnal/features/follow.md`: "A test's timeout stays at the 5 s default, except a case that spawns a child process, which takes a spawn budget of at least 20 s (`effect/requireSpawnBudget`). A runner timeout is never raised. A fixture the cases share builds as the file loads, outside every case's limit (`film/no-lazy-test-fixture`). Split long scenarios into cases under the default limit. An extended corpus slow test keeps at least 30% headroom under the 5 s default, measured in five paired runs at load 5 or more."
+
+### lazy-fixture-rule-reads-runtimes
+
+- **Date:** 2026-11-02
+- **Kind:** review
+- **Said:** "fixed-lock-newline times out under load: its first case pays the lazily built runtime"
+- **Source:** hymnapp/playbulk/p4-round-1-findings.md m5, whose repair hymnapp/checkbulk/spec.md S2 measured
+- **Wrong:** `apps/hymnal/src/follow/staleness.slow.test.ts` shared its scratch clone through `ManagedRuntime.make(scratchLayer)` made where the file loads, so its first case built the clone and the baseline child inside its own 5 s limit and timed out at load 36.
+- **Cause:** `film/no-lazy-test-fixture` read effect's memo makers only, not a runtime made at load, which builds its layer on its first run in the same way.
+- **Guard:** lint:film/no-lazy-test-fixture, proof `packages/film/lint/fixtures/lazy-runtime.ts` `export const runtime = ManagedRuntime.make(scratch); // RED film/no-lazy-test-fixture`
 
 ### playback-build-inputs
 

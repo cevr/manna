@@ -18,7 +18,19 @@
 // reported. `Effect` is
 // effect's, imported from `effect` (or an alias), or
 // `effect/Effect`, imported whole or by name. A memo made inside a case, a helper or a
-// layer's build is that call's own, and is not reported. The config turns
+// layer's build is that call's own, and is not reported.
+//
+// A runtime made where the file loads and held by a name
+// (`const runtime = ManagedRuntime.make(layer)`, outside every function but
+// a `describe` body) is the same fixture: it builds its layer on its first
+// run, so the case that runs on it first pays the layer's build in its limit
+// (the hymnal's staleness cases: a scratch clone and a baseline child, past
+// 5 s on a busy machine). Build what the cases need as the file loads
+// (`Layer.buildWithScope` into a scope the suite's close closes), or make the
+// runtime in each case. `ManagedRuntime` is effect's, imported by name from
+// `effect`, or `make` off `effect/ManagedRuntime`, imported whole or by name.
+// A runtime made at load and not held by a name (its `contextEffect` handed
+// to a layer the file builds as it loads) is not reported. The config turns
 // it on over every test file.
 
 import { Effect, Option } from 'effect';
@@ -34,8 +46,26 @@ import { ancestors, type Bindings, bindings, memberName, type Module } from './n
 const MESSAGE =
   "a fixture the file's cases share, made on first use: the case that asks first builds it inside its time limit, and which case pays moves with their order. Build it as the file loads (const x = await Effect.runPromise(…)), or make it in each case.";
 
+const RUNTIME_MESSAGE =
+  "a runtime the file's cases share, made as the file loads: it builds its layer on its first run, inside the time limit of the case that runs on it first. Build what the cases need as the file loads (Layer.buildWithScope into a scope the suite closes), or make the runtime in each case.";
+
 const isEffect: Module = (from) => from === 'effect';
 const isEffectModule: Module = (from) => from === 'effect/Effect';
+const isRuntimeModule: Module = (from) => from === 'effect/ManagedRuntime';
+
+/** Whether a call makes a runtime: `ManagedRuntime.make(…)` off `effect`, or `make` off `effect/ManagedRuntime`. */
+const makesRuntime = (b: Bindings, call: ESTree.CallExpression) =>
+  b.callsImport(call, isRuntimeModule, 'make') ||
+  (call.callee.type === 'MemberExpression' &&
+    Option.contains(memberName(call.callee), 'make') &&
+    b.importsAs(call.callee.object, isEffect, 'ManagedRuntime'));
+
+/** Whether a call's value is held by a name: `const runtime = ManagedRuntime.make(layer)`. */
+const heldByName = (call: ESTree.CallExpression) =>
+  Option.exists(
+    Option.fromNullishOr(call.parent),
+    (parent) => parent.type === 'VariableDeclarator' && parent.init === call,
+  );
 
 /** effect's memo makers: each runs what it wraps on its first use alone. */
 const MEMOS = ['cached', 'cachedWithTTL', 'cachedInvalidateWithTTL'];
@@ -157,8 +187,16 @@ export const noLazyTestFixture = Rule.define({
       Effect.asVoid(
         Effect.when(
           Effect.forEach(
-            [...[node].filter((call) => makesMemo(b, call)), ...memosPiped(b, node)],
-            (made) => context.report(Diagnostic.make({ node: made, message: MESSAGE })),
+            [
+              ...[node]
+                .filter((call) => makesMemo(b, call))
+                .map((made) => ({ made, message: MESSAGE })),
+              ...memosPiped(b, node).map((made) => ({ made, message: MESSAGE })),
+              ...[node]
+                .filter((call) => makesRuntime(b, call) && heldByName(call))
+                .map((made) => ({ made, message: RUNTIME_MESSAGE })),
+            ],
+            ({ made, message }) => context.report(Diagnostic.make({ node: made, message })),
             { discard: true },
           ),
           Effect.sync(() => runsAtLoad(b, node)),
