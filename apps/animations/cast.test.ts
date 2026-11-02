@@ -9,7 +9,7 @@
 
 import { BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
-import { Boolean as Bool, Effect, FileSystem, Schema, Stream } from 'effect';
+import { Boolean as Bool, Effect, FileSystem, Layer, Path, Schema, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 /** A kept sheet's views, by name. */
@@ -76,11 +76,13 @@ const sheetFolders = Effect.gen(function* () {
 /**
  * The files `folder`'s record names, whether on disk or not: each kept sheet
  * (`kept/<kind>.png`) and each view it keeps (`views/<name>.png`), or its refs
- * when it keeps none. A lock sends some of them, whichever it sends.
+ * when it keeps none. A lock sends some of them, whichever it sends. Each is
+ * normalised as git prints it: a ref may climb out of its folder (`../`).
  */
 const named = (folder: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
     const record = Schema.decodeUnknownSync(SentBy)(
       yield* fs.readFileString(`${folder}/cast-sheet.json`),
     );
@@ -89,7 +91,7 @@ const named = (folder: string) =>
       onTrue: () => record.refs.map((ref) => ref.file),
       onFalse: () => kept.flatMap(([kind, sheet]) => keptFiles(kind, sheet)),
     });
-    return files.map((file) => `${folder}/${file}`);
+    return files.map((file) => path.normalize(`${folder}/${file}`));
   });
 
 describe("the cast's library references", () => {
@@ -101,5 +103,27 @@ describe("the cast's library references", () => {
       const tracked = new Set(yield* git(['--', ...files]));
       expect(files.filter((file) => !tracked.has(file))).toEqual([]);
     }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.effect('that a record names by a ref out of its folder (`../`) is read as git prints it', () =>
+    Effect.gen(function* () {
+      const files = yield* named('src/library/cast/villager-child/cast-sheet');
+      expect(files).toEqual(['src/library/cast/filler-bases/cast-sheet/views/poses-1.png']);
+      expect(yield* git(['--', ...files])).toEqual(files);
+    }).pipe(
+      Effect.provide(
+        Layer.merge(
+          BunServices.layer,
+          FileSystem.layerNoop({
+            readFileString: () =>
+              Effect.succeed(
+                Schema.encodeSync(SentBy)({
+                  refs: [{ file: '../../filler-bases/cast-sheet/views/poses-1.png' }],
+                }),
+              ),
+          }),
+        ),
+      ),
+    ),
   );
 });
