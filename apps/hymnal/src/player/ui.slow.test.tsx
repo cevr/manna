@@ -1098,6 +1098,92 @@ describe('the tempo dial in the full player', () => {
   );
 });
 
+describe('the stanza chips in the full player', () => {
+  /** Hymn 78: four stanzas, the refrain after each. */
+  const four = Option.getOrThrow(hymnAt('78'));
+  /** Hymn 78's choice set to all for a test and put back as it ends. */
+  const keeping = (page: ReturnType<typeof mount>) => {
+    page.set(settings.stanzas(78), []);
+    return { [Symbol.dispose]: () => page.set(settings.stanzas(78), []) };
+  };
+  const before = (first: Element, second: Element) =>
+    Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
+  /** Each chip in the group, by its testID, and whether it reads checked (`none`: no checked state). */
+  const chipsOf = (page: ReturnType<typeof mount>) =>
+    page
+      .all('[data-testid="stanzas"] [role="button"]')
+      .map((chip) => [
+        chip.getAttribute('data-testid'),
+        Option.getOrElse(Option.fromNullishOr(chip.getAttribute('aria-checked')), () => 'none'),
+      ]);
+
+  it.live('stand after the bpm read-out and Tap, before Chord settings, all checked', () =>
+    Effect.sync(() => {
+      using page = mount(sheetOver(four));
+      using _kept = keeping(page);
+      const group = Option.getOrThrow(page.find('[data-testid="stanzas"]'));
+      const tap = Option.getOrThrow(page.find('[data-testid="tempo-tap"]'));
+      const chords = Option.getOrThrow(page.find('[aria-label="Chord settings"]'));
+      expect({
+        role: group.getAttribute('role'),
+        label: group.getAttribute('aria-label'),
+        afterTap: before(tap, group),
+        beforeChords: before(group, chords),
+        labels: page
+          .all('[data-testid="stanzas"] [role="button"]')
+          .map((chip) => chip.getAttribute('aria-label')),
+      }).toEqual({
+        role: 'group',
+        label: 'Stanzas',
+        afterTap: true,
+        beforeChords: true,
+        labels: ['Stanza 1', 'Stanza 2', 'Stanza 3', 'Stanza 4'],
+      });
+      expect(chipsOf(page)).toEqual([
+        ['stanza-1', 'true'],
+        ['stanza-2', 'true'],
+        ['stanza-3', 'true'],
+        ['stanza-4', 'true'],
+      ]);
+    }),
+  );
+
+  it.live('uncheck Stanza 2 at a tap, show All, and keep the choice for hymn 78', () =>
+    Effect.sync(() => {
+      using page = mount(sheetOver(four));
+      using _kept = keeping(page);
+      page.press('Stanza 2');
+      expect(chipsOf(page)).toEqual([
+        ['stanza-1', 'true'],
+        ['stanza-2', 'false'],
+        ['stanza-3', 'true'],
+        ['stanza-4', 'true'],
+        ['stanzas-all', 'none'],
+      ]);
+      expect(page.get(settings.stanzas(78))).toEqual([1, 3, 4]);
+      expect(page.get(settings.stanzas(65))).toEqual([]);
+
+      page.press('All');
+      expect(chipsOf(page).map(([id]) => id)).toEqual([
+        'stanza-1',
+        'stanza-2',
+        'stanza-3',
+        'stanza-4',
+      ]);
+      expect(page.get(settings.stanzas(78))).toEqual([]);
+    }),
+  );
+
+  it.live('draw no group for hymn 481, a hymn of one stanza', () =>
+    Effect.sync(() => {
+      using page = mount(sheetOver(Option.getOrThrow(hymnAt('481'))));
+      expect(page.find('[data-testid="tempo-tap"]')._tag).toBe('Some');
+      expect(page.all('[data-testid="stanzas"]')).toHaveLength(0);
+      expect(page.all('[data-testid^="stanza-"]')).toHaveLength(0);
+    }),
+  );
+});
+
 /**
  * The web's stack as One draws it (`WebStackHeader`): the focused screen
  * alone. It starts on the hymn route at `/hymns/<from>`; a link the app

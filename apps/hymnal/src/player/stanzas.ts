@@ -16,7 +16,7 @@
  *   its syllables where they were in it; a skipped line has no length and no
  *   syllables and sits at the next kept line's start, so `placeAt` never
  *   lands on it.
- * - `toggle`: a tap on a stanza's chip.
+ * - `toggle`: a tap on a stanza's chip; `countOf`, how many chips a hymn has.
  */
 
 import { Array as Arr, Order, Schema } from 'effect';
@@ -43,12 +43,16 @@ const ownerOf = (section: Section): number => {
   return section.stanza;
 };
 
+/** How many stanzas `sections` hold: the chips a hymn's choice is made from. */
+export const countOf = (sections: ReadonlyArray<Section>): number =>
+  sections.filter((section) => section.kind === 'stanza').length;
+
 /** Whether each sung line of `sections`, in order, is sung under `choice`. */
 export const keptOf = (
   sections: ReadonlyArray<Section>,
   choice: Choice,
 ): ReadonlyArray<boolean> => {
-  const count = sections.filter((section) => section.kind === 'stanza').length;
+  const count = countOf(sections);
   const chosen = new Set(choice.filter((n) => n >= 1 && n <= count));
   return sections.flatMap((section) => {
     const owner = ownerOf(section);
