@@ -5,6 +5,7 @@
 // `grown` cuts to the feast's courtyard plates on the mother at the long
 // table and trucks down it to the lead, who stands between the villager and
 // the mother where the title stands them, his bottle raised (`bottle`).
+// `smile` pulls back to the three guests at the table, who hold still.
 // `what` cuts to the last close plate (`WHAT`), the cup of milk and the
 // bread, and the camera lifts to them.
 //
@@ -70,8 +71,8 @@ const GUESTS = {
 /**
  * The courtyard's framings, on the frame px the title ends on: from `grown`
  * the camera starts on the mother at the table (`START`), trucks down the
- * table to the lead and pushes in on his bottle, each a cue and where it
- * leaves the camera.
+ * table to the lead, pushes in on his bottle and pulls back to the three
+ * guests (`smile`), each a cue and where it leaves the camera.
  *
  * The plates cover frame x 0..1920 and y -100..1180, and the table, the
  * nearest plane, binds: every framing keeps 960/k <= x <= 1920 - 960/k and
@@ -84,6 +85,7 @@ const START: Camera = { x: 1200, y: 816, k: 1.5 };
 const MOVES = [
   ['truck', { x: 960, y: 796, k: 1.42 }],
   ['bottle', { x: 952, y: 812, k: 1.5 }],
+  ['smile', { x: 955, y: 744, k: 1.25 }],
 ] as const satisfies ReadonlyArray<readonly [string, Camera]>;
 
 /** The last close (`cold.what.3`), on `WHAT`'s frame px: the camera lifts to the cup and the bread and pushes in a little. */
@@ -100,6 +102,7 @@ export const cold = drawing({
     baby: { mark: 'baby', until: 'grown', ease: 'inOutSine' },
     truck: { mark: 'grown', until: 'bottle', ease: 'inOutCubic' },
     bottle: { mark: 'bottle', dur: 0.7, ease: 'outCubic' },
+    smile: { mark: 'smile', dur: 1.6, ease: 'inOutCubic' },
     what: { mark: 'what', until: { at: 'end' }, ease: 'inOutSine' },
   },
   puppets: {
