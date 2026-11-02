@@ -13,8 +13,13 @@
 // pours again, filling the cup to its brim. On `good` the pour ends and the
 // book fades away as the camera settles on him and his full cup.
 //
+// On `need` the scene cuts to the kept drinking row on the same page (`ROW`):
+// a baby with his bottle, a toddler, a child and the grown villager, each
+// with his cup, come in in turn from the left as the camera trucks along
+// them.
+//
 // A shot's camera is a centre and a zoom on the page's frame px; each move
-// runs from where the last one left it (`MOVES`). The page covers frame x
+// runs from where the last one left it (`MOVES`, `ROW_MOVES`). The page covers frame x
 // 0..1920 and y -100..1180, so every framing keeps 960/k <= x <= 1920 - 960/k
 // and 540/k - 100 <= y <= 1180 - 540/k, and a straight move in (x, y, k)
 // between two framings that keep them keeps them all the way.
@@ -22,7 +27,15 @@
 import { drawing } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
 import { PUPPETS as VILLAGER } from '../cast/idea-villagers/cutout/puppets.ts';
-import { BOOK_OPEN, BOOK_SHUT, DROPPER, PAGE, RIBBON, RIBBON_ROWS } from '../plates/milk.ts';
+import {
+  BOOK_OPEN,
+  BOOK_SHUT,
+  DRINKERS,
+  DROPPER,
+  PAGE,
+  RIBBON,
+  RIBBON_ROWS,
+} from '../plates/milk.ts';
 
 /** A point, px. */
 type Pt = readonly [number, number];
@@ -48,6 +61,14 @@ const MOVES = [
   ['again', { x: 1040, y: 330, k: 1.6 }],
   ['settle', { x: 1100, y: 420, k: 1.4 }],
 ] as const satisfies ReadonlyArray<readonly [string, Camera]>;
+
+/** Shot B opens on the drinking row's left end. */
+const ROW_START: Camera = { x: 800, y: 600, k: 1.2 };
+
+/** Shot B's framings: `truck` runs along the row to its right end as the four come in. */
+const ROW_MOVES = [['truck', { x: 1120, y: 600, k: 1.2 }]] as const satisfies ReadonlyArray<
+  readonly [string, Camera]
+>;
 
 /**
  * The grown villager, frame px: his root (the hip) and his scale, so he
@@ -135,6 +156,33 @@ const INK = {
   bobPeriod: 1.6,
 } as const;
 
+const [BABY, TODDLER, CHILD, GROWN] = DRINKERS;
+
+/** The drinking row, left to right, each by its painting's name. */
+const DRINKING = [
+  ['baby', BABY],
+  ['toddler', TODDLER],
+  ['child', CHILD],
+  ['grown', GROWN],
+] as const;
+
+/**
+ * The drinking row on the page, frame px: each of the five drawn `s` its
+ * size, its feet where the kept row has them (`sheet`) scaled to the frame
+ * and moved by `shift`, so the 1536-px row spans the frame and its feet stand
+ * at about y 1020. Each comes in rising `rise` px as it fades in, and rocks
+ * `bob` degrees each way about its feet every `bobPeriod` s, each `phase`
+ * radians after the one on its left.
+ */
+const ROW = {
+  s: 1.25,
+  shift: [-4, -52],
+  rise: 16,
+  bob: 1.2,
+  bobPeriod: 3,
+  phase: 0.9,
+} as const;
+
 const between = (a: Camera, b: Camera, t: number): Camera => ({
   x: lerp(a.x, b.x, t),
   y: lerp(a.y, b.y, t),
@@ -186,6 +234,8 @@ export const milk = drawing({
     stop2: { mark: 'good', dur: 0.6, ease: 'inQuad' },
     settle: { mark: 'good', dur: 1.4, ease: 'inOutCubic' },
     gone: { mark: 'good', offset: 0.3, dur: 0.7 },
+    truck: { mark: 'need', until: 'began', ease: 'inOutSine' },
+    row: { mark: 'need', offset: 0.15, dur: 2.25, stagger: 0.8, ease: 'outCubic' },
   },
   puppets: {
     villager: VILLAGER['single-15'],
@@ -196,6 +246,10 @@ export const milk = drawing({
     shut: BOOK_SHUT,
     ribbon: RIBBON,
     dropper: DROPPER,
+    baby: BABY,
+    toddler: TODDLER,
+    child: CHILD,
+    grown: GROWN,
   },
   draw: (f) => {
     const { ctx, w } = f;
@@ -332,6 +386,36 @@ export const milk = drawing({
       ctx.restore();
     };
 
+    // The drinking row, left to right, the four coming in in turn (`row`).
+    const row = () => {
+      for (const [i, [name, d]] of DRINKING.entries()) {
+        const shown = f.stagger('row', i, DRINKING.length);
+        if (shown <= 0) continue;
+        ctx.save();
+        ctx.translate(
+          ROW.s * (d.sheet[0] + d.size[0] / 2) + ROW.shift[0],
+          ROW.s * (d.sheet[1] + d.size[1]) + ROW.shift[1] + ROW.rise * (1 - shown),
+        );
+        ctx.rotate((sway(ROW.bob, ROW.bobPeriod, ROW.phase * i) * Math.PI) / 180);
+        ctx.scale(ROW.s, ROW.s);
+        ctx.globalAlpha = shown;
+        f.painting(name);
+        ctx.restore();
+      }
+    };
+
+    // Shot B: on `need` the scene cuts to the drinking row on the same page.
+    if (f.t >= f.cue('truck').start) {
+      const along = ROW_MOVES.reduce<Camera>(
+        (cam, [cue, to]) => between(cam, to, f.at(cue)),
+        ROW_START,
+      );
+      view(along, () => {
+        f.painting('page');
+        row();
+      });
+      return;
+    }
     const camera = MOVES.reduce<Camera>((cam, [cue, to]) => between(cam, to, f.at(cue)), WIDE);
     view(camera, () => {
       f.painting('page');
