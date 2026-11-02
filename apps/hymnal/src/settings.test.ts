@@ -87,6 +87,34 @@ describe('the sound switch', () => {
   });
 });
 
+describe('the Start switches', () => {
+  it('start with Intro on and Click off', () => {
+    const { settings, registry } = launch(new Map());
+    expect({ intro: registry.get(settings.intro), click: registry.get(settings.click) }).toEqual({
+      intro: true,
+      click: false,
+    });
+  });
+
+  it('are kept under their keys, for every hymn, when the app is opened again', () => {
+    const device = new Map<string, string>();
+    const first = launch(device);
+    first.registry.set(first.settings.intro, false);
+    first.registry.set(first.settings.click, true);
+    first.registry.dispose();
+    expect({ intro: device.get('intro'), click: device.get('click') }).toEqual({
+      intro: 'false',
+      click: 'true',
+    });
+
+    const again = launch(device);
+    expect({
+      intro: again.registry.get(again.settings.intro),
+      click: again.registry.get(again.settings.click),
+    }).toEqual({ intro: false, click: true });
+  });
+});
+
 describe('Sounds and haptics', () => {
   it('is on the first time', () => {
     const { settings, registry } = launch(new Map());

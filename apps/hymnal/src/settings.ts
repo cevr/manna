@@ -111,6 +111,20 @@ export const settingsOn = (store: Layer.Layer<KeyValueStore.KeyValueStore>) => {
      */
     stanzas: Atom.family((number: number) => setting(`stanzas.${number}`, Choice, ALL)),
     /**
+     * What comes before the first sung line when Play starts a hymn from its
+     * start, set in the player sheet's `Start` group, the same for every
+     * hymn. On, Sound on plays the recording's introduction and Sound off
+     * counts one bar in (`src/player/countin.ts`); off, both start at the
+     * first sung line. On until the reader turns it off.
+     */
+    intro: setting('intro', Schema.Boolean, true),
+    /**
+     * Whether each beat of the count-in is told as a `beat` cue
+     * (`src/feel/cue.ts`), heard while `feel` is on. The same for every
+     * hymn; off until the reader turns it on.
+     */
+    click: setting('click', Schema.Boolean, false),
+    /**
      * How a hymn page is set (`src/reader/reading.ts`), chosen in the player
      * sheet's reading section: the same for every hymn. The defaults set
      * the page as it has always been, with the screen left to sleep as the

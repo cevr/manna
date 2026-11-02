@@ -80,8 +80,8 @@ reads the verses aloud; the teacher says the point, asks, confirms, and
 moves on.
 
 The voice and line grammar are the universal teaching format —
-`references/teachings.md` — and the interpretive method is `SKILL.md`'s
-("Hermeneutic & Sources"): **Miller's 14 Rules** and the **EGW +
+`references/teachings.md` — and the interpretive method is `references/hermeneutic.md`:
+**Miller's 14 Rules** and the **EGW +
 SDA-pioneer corpus — historic pioneer Adventism, not modern Adventism**.
 Where the quarterly's reading and the pioneer reading diverge, teach the
 pioneer position from Scripture, charitably, with the verses on the table.

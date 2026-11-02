@@ -187,6 +187,17 @@ export const followerOf = (timeline: Timeline, host: Host) => {
       shown = line;
       host.scrollTo(line, true);
     },
+    /**
+     * A count-in began, the place held: scroll to the line held now, where the count-in is
+     * drawn, even when it was shown before and the reader scrolled away since.
+     */
+    show: () => {
+      if (Option.isNone(clock) || held.get()) return;
+      const line = placeAt(timeline, placeOf(clock.value, host.now())).line;
+      if (line < 0) return;
+      shown = line;
+      host.scrollTo(line, true);
+    },
     /** The page's lines moved (chords, text size, a turn): scroll the shown line back into place. */
     relayout: () => {
       if (Option.isSome(clock) && clock.value.playing && !held.get() && shown >= 0)

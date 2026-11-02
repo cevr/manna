@@ -1,9 +1,10 @@
 /**
  * Each cue's body: the haptic it is felt by and the sound it is heard by.
  * The haptics carry Apple's names (One's `Haptics`); the sounds are the
- * voice's (`voice.ts`). Only a dial's detent is heard: the key dial sounds
- * each key at its own pitch class, and the capo and text-size dials thock.
- * Every other cue is felt only.
+ * voice's (`voice.ts`). Only a dial's detent and a count-in's beat are
+ * heard: the key dial sounds each key at its own pitch class, the capo and
+ * text-size dials thock, and a beat thocks with an impact, `medium` on the
+ * count-in's first beat and `light` after. Every other cue is felt only.
  */
 
 import { Option, Predicate } from 'effect';
@@ -20,7 +21,7 @@ export type SoundName = `key-${number}` | 'thock';
 
 export interface Body {
   readonly haptic: Haptic;
-  /** The sound it is heard by: none for every cue but a dial's detent. */
+  /** The sound it is heard by: none for every cue but a dial's detent and a beat. */
   readonly sound: Option.Option<SoundName>;
 }
 
@@ -36,8 +37,8 @@ const felt = (haptic: Haptic): Body => ({ haptic, sound: Option.none() });
 
 const mod = (n: number, by: number) => ((n % by) + by) % by;
 
-/** The haptic each cue but a dial's detent is felt by. */
-const FELT: Record<Exclude<Cue['_tag'], 'detent'>, Haptic> = {
+/** The haptic each cue but a dial's detent and a beat is felt by. */
+const FELT: Record<Exclude<Cue['_tag'], 'detent' | 'beat'>, Haptic> = {
   section: light,
   wall: impact('rigid'),
   reset: impact('medium'),
@@ -61,8 +62,15 @@ const FELT: Record<Exclude<Cue['_tag'], 'detent'>, Haptic> = {
   'rail-tick': selection,
 };
 
+/** A count-in's beat is felt harder on its first beat, the accent. */
+const beatHaptic = (accent: boolean): Haptic => {
+  if (accent) return impact('medium');
+  return light;
+};
+
 /** The body cue `cue` is given. */
 export const bodyOf = (cue: Cue): Body => {
+  if (cue._tag === 'beat') return { haptic: beatHaptic(cue.accent), sound: Option.some('thock') };
   if (cue._tag !== 'detent') return felt(FELT[cue._tag]);
   if (cue.dial === 'key')
     return { haptic: selection, sound: Option.some<SoundName>(`key-${mod(cue.at, 12)}`) };

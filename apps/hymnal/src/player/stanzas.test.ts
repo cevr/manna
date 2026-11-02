@@ -12,7 +12,7 @@ import { Schema } from 'effect';
 import type { TimedLine, Timeline } from '~/follow/timeline';
 import type { Section } from '~/hymns/text';
 
-import { Choice, cutOf, keptOf, toggle } from './stanzas';
+import { Choice, chosenOf, cutOf, keptOf, toggle } from './stanzas';
 
 const decodes = Schema.is(Choice);
 
@@ -138,5 +138,39 @@ describe('a chip’s tap', () => {
 
   it('takes no tap on a number outside the hymn’s stanzas', () => {
     expect([toggle([], 5, 4), toggle([1], 0, 4)]).toEqual([[], [1]]);
+  });
+
+  it('acts on a stored number above the hymn’s stanzas as on the choice without it', () => {
+    expect(toggle([2, 5], 2, 4)).toEqual(toggle([2], 2, 4));
+    expect(toggle([2, 5], 3, 4)).toEqual([2, 3]);
+    expect(toggle([5], 2, 4)).toEqual([1, 3, 4]);
+    expect(toggle([1, 2, 3, 4, 5], 1, 4)).toEqual([2, 3, 4]);
+  });
+});
+
+/** Every ascending choice of the numbers 0..9, the empty one too: 1024 in all. */
+const choices: ReadonlyArray<ReadonlyArray<number>> = Array.from({ length: 1 << 10 }, (_, bits) =>
+  Array.from({ length: 10 }, (_, n) => n).filter((n) => (bits & (1 << n)) !== 0),
+);
+
+/** A hymn of `count` stanzas of one line each, so the kept lines are the kept stanzas. */
+const stanzasOf = (count: number): ReadonlyArray<Section> =>
+  Array.from({ length: count }, (_, k) => ({ kind: 'stanza' as const, n: k + 1, lines: ['x'] }));
+
+describe('the chosen stanzas', () => {
+  it('lie in the hymn’s stanzas, are never none, and are the stanzas the kept lines keep', () => {
+    for (let count = 1; count <= 7; count++) {
+      const sections = stanzasOf(count);
+      const chosen = choices.map((choice) => chosenOf(choice, count));
+      const kept = choices.map((choice) =>
+        keptOf(sections, choice)
+          .map((flag, k) => ({ flag, stanza: k + 1 }))
+          .filter((it) => it.flag)
+          .map((it) => it.stanza),
+      );
+      expect(chosen.filter((it) => it.length === 0)).toEqual([]);
+      expect(chosen.filter((it) => it.some((n) => n < 1 || n > count))).toEqual([]);
+      expect(chosen).toEqual(kept);
+    }
   });
 });

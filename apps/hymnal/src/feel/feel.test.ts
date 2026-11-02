@@ -75,6 +75,8 @@ const table: ReadonlyArray<readonly [Cue, Haptic, Option.Option<SoundName>]> = [
     (_, at) => [{ _tag: 'detent', dial: 'tempo', at }, selection, heardAs('thock')] as const,
   ),
   ...PLACES.map((place) => [{ _tag: 'section', place }, impact('light'), unheard] as const),
+  [{ _tag: 'beat', accent: true }, impact('medium'), heardAs('thock')],
+  [{ _tag: 'beat', accent: false }, impact('light'), heardAs('thock')],
 ];
 
 /** A Feel over recording ports; the clock moves a whole second each read, so no tick or sound is held back. */
@@ -102,13 +104,13 @@ const soundCalls = (sound: Option.Option<SoundName>): ReadonlyArray<Call> =>
   Option.toArray(sound).map((name): Call => ['sound', name]);
 
 describe('the table of bodies', () => {
-  it('holds every cue the app tells: each key, fret, size, tempo and topic place', () => {
+  it('holds every cue the app tells: each key, fret, size, tempo and topic place, and both beats', () => {
     expect(table).toHaveLength(
-      plainRows.length + 12 + 12 + SIZES.length + STOPS.length + PLACES.length,
+      plainRows.length + 12 + 12 + SIZES.length + STOPS.length + PLACES.length + 2,
     );
   });
 
-  it('gives each cue its row’s haptic once, and only a dial’s detent its sound, while the switch is on', () => {
+  it('gives each cue its row’s haptic once, and only a dial’s detent and a beat its sound, while the switch is on', () => {
     for (const [cue, haptic, sound] of table) {
       const feel = recorded(() => true);
       feel.tell(cue);
