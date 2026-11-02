@@ -306,7 +306,7 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
     'single-15': {
       cut: SINGLE_15,
       figure: 'framed',
-      gaps: [{ at: [221, 1068], box: [178, 1047, 267, 1092], why: 'the ground between the feet' }],
+      gaps: [{ at: [221, 1068], box: [180, 1049, 267, 1091], why: 'the ground between the feet' }],
     },
   },
   hidden: HIDDEN_ENTRIES,
