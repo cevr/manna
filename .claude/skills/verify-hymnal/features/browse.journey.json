@@ -66,7 +66,7 @@
         { "shows": "label=Tens" },
         { "shows": "label=Ones" },
         { "shows": "id=find-open" },
-        { "shows": "id=find-play" }
+        { "hides": "id=find-play" }
       ]
     },
     {

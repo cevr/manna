@@ -7,7 +7,7 @@
  * Over the screens it draws the bar's `#` (`FIND_LABEL`) where `findPlace`
  * puts it on the page the route draws, just above the bar while that page
  * draws one, and the find drums it
- * opens (`FindDrums.tsx`), with their `Open` and `Play` (`pressFind`).
+ * opens (`FindDrums.tsx`), with their `Open` (`pressFind`).
  * `Open` pushes the hymn dialled, or on a hymn page puts it in the page's
  * place, and on the page's own hymn moves nothing (`openingAt`); either
  * closes a search open on that page, as a search's result does. On
@@ -36,7 +36,6 @@ import {
 } from 'react-native-gesture-handler';
 
 import { color } from '~/color';
-import { plain, useCue } from '~/feel/cue';
 import { book } from '~/follow/book';
 import { counted } from '~/follow/seeks';
 import { hymnHref } from '~/home/Browse';
@@ -75,7 +74,7 @@ import { MOST_SCALE } from './DialView';
 import { FindDrums } from './FindDrums';
 import { useShownPage } from './page';
 import { playbackLive } from './playback.live';
-import { Command, playerOn, statusEvery } from './player';
+import { playerOn, statusEvery } from './player';
 import { cachedPlayback } from './offline';
 import { keptOf } from './stanzas';
 import { offlineLive } from '~/offline/live';
@@ -176,9 +175,7 @@ function FindNumber({
   readonly bottom: number;
 }) {
   const [state, setFind] = useAtom(find);
-  const send = useAtomSet(player.send);
   const router = useRouter();
-  const cue = useCue();
   const searching = useAtomValue(searchOpen);
   const cancelSearch = useCancelSearch();
   // A search open on this page closes: its results would wait on the hymn left, or stand over the one shown.
@@ -201,15 +198,6 @@ function FindNumber({
           Match.when('stay', closeSearchHere),
           Match.exhaustive,
         ),
-      // Playbulk's Start alone starts a hymn, in place of the one held.
-      Play: ({ number }) =>
-        Option.match(hymnAt(String(number)), {
-          onNone: () => {},
-          onSome: (hymn) => {
-            cue(plain('play'));
-            send(Command.Start({ track: { number: hymn.number, title: hymn.title } }));
-          },
-        }),
     });
   };
   const swipe = usePanGesture({
@@ -235,7 +223,6 @@ function FindNumber({
               />
               <View style={styles.acts}>
                 <Act testID="find-open" label="Open" onPress={() => press(FindPress.Open())} />
-                <Act testID="find-play" label="Play" onPress={() => press(FindPress.Play())} />
               </View>
             </DialPanel>
           </View>
