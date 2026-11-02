@@ -403,6 +403,15 @@ Android haptics only.
   1200 Hz at 44.1, 48 and 96 kHz), or none in silence and noise. A key at half the period gives
   way to the key at its double lag when that stands higher, so a pluck
   with strong even partials reads at its fundamental, not an octave up.
+- `src/tuner/focus.ts` decides which frames show a pitch (`hear`, pure,
+  from the start state `unfocused`), so talk in the room does not move the
+  tuner: a pitch shows once 4 frames in a row read it within 10 cents
+  (about 170 ms after a pluck), then follows the string within 20 cents a
+  frame and rides out 2 missed frames; the 3rd lets it go. A reading under
+  65 Hz (mains hum) counts as none. A voice glides through each syllable,
+  so it never holds that long. `focus.test.ts` and
+  `focus.property.slow.test.ts` hold the rule over generated talk, room
+  noise and plucks.
 - `src/tuner/tuning.ts` reads a pitch (`reading`): the nearest note and
   octave from A4 = 440 Hz, the nearest standard string (E2 A2 D3 G3 B3
   E4), its signed cents, and in tune within 5 cents. The tuner plays no
