@@ -9,6 +9,8 @@
 // the cup (`POUR`), which fills. On `sincere` the ribbon's tail falls in and
 // the camera closes on his face and the cup as an ink dropper comes down over
 // it (`INK`); on `mixed`, at "nothing", he leans back from it and it goes.
+// On `word` the camera draws back to the book and the cup and the ribbon
+// pours again, filling the cup to its brim.
 //
 // A shot's camera is a centre and a zoom on the page's frame px; each move
 // runs from where the last one left it (`MOVES`). The page covers frame x
@@ -41,6 +43,7 @@ const WIDE: Camera = { x: 960, y: 540, k: 1 };
 const MOVES = [
   ['push', { x: 1060, y: 380, k: 1.35 }],
   ['close', { x: 1150, y: 360, k: 1.9 }],
+  ['again', { x: 1040, y: 330, k: 1.6 }],
 ] as const satisfies ReadonlyArray<readonly [string, Camera]>;
 
 /**
@@ -66,7 +69,8 @@ const MAN = {
  * axes (the rim's inside, dark while the cup is empty), and his root there.
  * Milk is the ribbon's own cream (`colour`); it rises `depth` sheet px, from
  * under the mouth's front rim to just under its centre, so a sliver of it
- * shows at the front first.
+ * shows at the front first: the first pour fills the cup `first` of the way,
+ * the second the rest.
  */
 const CUP = {
   mouth: [171, 382],
@@ -74,6 +78,7 @@ const CUP = {
   ry: 8,
   root: [224, 675],
   depth: 18,
+  first: 0.65,
   colour: '#fef8e7',
 } as const;
 
@@ -165,6 +170,10 @@ export const milk = drawing({
     ink: { mark: 'sincere', offset: 0.6, dur: 1, ease: 'outCubic' },
     recoil: { mark: 'mixed', word: 'nothing', dur: 0.9, ease: 'inOutSine' },
     away: { mark: 'mixed', word: 'nothing', offset: 0.3, dur: 0.7, ease: 'inQuad' },
+    again: { mark: 'word', dur: 1.4, ease: 'inOutCubic' },
+    pour2: { mark: 'word', dur: 1.6, ease: 'inOutSine' },
+    fill2: { after: 'pour2', dur: 2.5, ease: 'inOutSine' },
+    stop2: { mark: 'good', dur: 0.6, ease: 'inQuad' },
   },
   puppets: {
     villager: VILLAGER['single-15'],
@@ -321,9 +330,10 @@ export const milk = drawing({
       ctx.translate(-fx, -fy);
       f.puppet('villager', { numbers: {}, root: MAN.root, scale: MAN.scale });
       ctx.restore();
-      milkIn(f.at('fill'));
+      milkIn(CUP.first * f.at('fill') + (1 - CUP.first) * f.at('fill2'));
       const end = RIBBON.size[1];
-      ribbon(end * f.at('stop'), end * f.at('pour'));
+      if (f.t < f.cue('pour2').start) ribbon(end * f.at('stop'), end * f.at('pour'));
+      else ribbon(end * f.at('stop2'), end * f.at('pour2'));
       if (f.t >= f.cue('book').start) book();
       if (f.at('ink') > 0 && f.at('away') < 1) dropper();
     });
