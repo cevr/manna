@@ -413,22 +413,31 @@ const unmatteOptions = (sheet: PuppetSheet) => ({
 /**
  * A key drawn on the sheet's own canvas in place of part `part` (a head
  * with its eyes shut), its edge un-matted from the sheet's paper as that
- * part's is, with the key in the part's place among the others: its pixels
- * as given when the sheet has no paper, or no part of that name, or the key
- * is another size than the sheet.
+ * part's is, with the key in the part's place among the others; its pixels
+ * as given when the sheet has no paper. Refused, naming why, when the sheet
+ * has no part of that name or the key is another size than the sheet: such
+ * a key would keep its paper rim and pop on the frames it shows.
  */
 export const unmattedKey = (
   sheet: PuppetSheet,
   skeleton: Skeleton,
   part: string,
   key: Raster,
-): Uint8Array => {
+): Result.Result<Uint8Array, PuppetRefused> => {
   const k = sheet.parts.findIndex((p) => p.name === part);
+  if (k < 0) return Result.fail(PuppetRefused.make({ reason: `the sheet has no part ${part}` }));
+  if (key.width !== sheet.width || key.height !== sheet.height)
+    return Result.fail(
+      PuppetRefused.make({
+        reason: `the key is ${key.width}x${key.height}, the sheet ${sheet.width}x${sheet.height}`,
+      }),
+    );
   const { paper } = sheet;
-  if (paper === undefined || k < 0 || key.width !== sheet.width || key.height !== sheet.height)
-    return key.rgba;
+  if (paper === undefined) return Result.succeed(key.rgba);
   const parts = flappedParts(sheet, skeleton).map((p, n) => (n === k ? key.rgba : p));
-  return unmatte(parts, sheet.width, sheet.height, paper, unmatteOptions(sheet))[k]!;
+  return Result.succeed(
+    unmatte(parts, sheet.width, sheet.height, paper, unmatteOptions(sheet))[k]!,
+  );
 };
 
 /**

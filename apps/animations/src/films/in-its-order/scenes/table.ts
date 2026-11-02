@@ -132,9 +132,11 @@ const motherEyes = eyesLook(headMiddle(MOTHER_POSES.skeleton));
 export const motherLook = (t: number) => motherEyes(MOTHER_EYES(t));
 
 /**
- * The mother's bow to her baby, degrees on her neck and head together: from
- * `from` s and every `every` s, she bows her head `deg` toward the baby at
- * her arm over `down` s, holds it `hold` s and lifts it again over `up` s.
+ * The mother's bow to her baby: from `from` s and every `every` s, her head
+ * turns `deg` in all toward the baby at her arm over `down` s, holds it
+ * `hold` s and lifts it again over `up` s. `motherNumbers` splits the turn
+ * along her lean (most of it, so she bows from her hip), her neck and her
+ * head.
  * `every` lies apart from her breath's period (3.7 s), so the bow drifts
  * across her breaths.
  */
@@ -161,7 +163,8 @@ const headBow = lag(bow, 0.1);
  * carries her sway, her breath (deep enough to read as her rocking the baby)
  * and the slow drift of her weight, and the baby and the cup ride it with her
  * arms. Her head takes a little of the idle's tilt, her neck less, as her
- * veil rides her lean, and both bow to the baby (`BOW`), her neck first. Her
+ * veil rides her lean. Her bow (`BOW`) is 0.6 on her lean, 0.15 on her neck
+ * and 0.25 on her head, her head 0.1 s behind. Her
  * arms keep their drawn angles round the baby.
  */
 export const motherNumbers = (t: number) => {

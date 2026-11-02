@@ -6,8 +6,9 @@
 // stood on the film for its draws. What a puppet holds on a WebGL context
 // (its textures and buffers, `canvas/puppet-gl.ts`) is the load scope's and
 // freed when it closes; the puppets stand on the film until then. A part
-// PNG of another size than its puppet declares, or a skeleton that does not
-// fit the parts, fails the load, naming why, and nothing is drawn.
+// PNG of another size than its puppet declares, a skeleton that does not
+// fit the parts, or a drawn key that does not fit the part it names, fails
+// the load, naming why, and nothing is drawn.
 
 import { Effect, Exit, Option, Result, Scope } from 'effect';
 import type { Film } from '../canvas/film.ts';
@@ -63,7 +64,8 @@ export const puppetFrom = Effect.fn('Puppet.from')(function* (spec: PuppetSpec) 
  * `spec`'s drawings (its drawn keys and held hands), each PNG read and
  * decoded, by name: a key drawn on the sheet's canvas in place of a part
  * (`part`) un-matted from the sheet's paper as that part is (`unmattedKey`),
- * so its rim matches the part it stands in for.
+ * so its rim matches the part it stands in for. A key that names a part the
+ * sheet lacks, or is another size than the sheet, fails the load.
  */
 const drawingsFrom = Effect.fn('Puppet.drawings')(function* (spec: PuppetSpec, sheet: PuppetSheet) {
   const images = yield* PuppetImages;
@@ -72,13 +74,25 @@ const drawingsFrom = Effect.fn('Puppet.drawings')(function* (spec: PuppetSpec, s
       Effect.mapError((e) =>
         PuppetUnloadable.make({ puppet: spec.key, reason: `${d.name}: ${e.reason}` }),
       ),
-      Effect.map((pixels): readonly [string, Raster] => [
-        d.name,
+      Effect.flatMap((pixels) =>
         Option.match(Option.fromUndefinedOr(d.part), {
-          onNone: () => pixels,
-          onSome: (part) => ({ ...pixels, rgba: unmattedKey(sheet, spec.skeleton, part, pixels) }),
+          onNone: () => Effect.succeed(pixels),
+          onSome: (part) =>
+            unmattedKey(sheet, spec.skeleton, part, pixels).pipe(
+              Result.match({
+                onFailure: (refused) =>
+                  Effect.fail(
+                    PuppetUnloadable.make({
+                      puppet: spec.key,
+                      reason: `${d.name}: ${refused.reason}`,
+                    }),
+                  ),
+                onSuccess: (rgba) => Effect.succeed({ ...pixels, rgba }),
+              }),
+            ),
         }),
-      ]),
+      ),
+      Effect.map((pixels): readonly [string, Raster] => [d.name, pixels]),
     ),
   );
   return new Map(read) satisfies ReadonlyMap<string, Raster>;

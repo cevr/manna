@@ -311,4 +311,18 @@ describe('blink', () => {
     expect(cued.shut - cued.start).toBeGreaterThan(0.105);
     expect(cued.open - cued.shut).toBeGreaterThan(0.185);
   });
+
+  test('keeps the earlier of two cues under half a second apart, so they never shut as one long blink', () => {
+    const own = blinks(3, 0, 30, 0.001).out.map((b) => b.start);
+    const free = (own[2]! + own[3]!) / 2;
+    // given out of order: the second cue 0.2 s after the first
+    const { out } = blinksOf(blink(3, [free + 0.2, free]), 0, 30, 0.001);
+    const starts = out.map((b) => b.start);
+    const want = [...own, free].sort((a, b) => a - b);
+    expect(starts.length).toBe(want.length);
+    starts.forEach((s, k) => expect(Math.abs(s - want[k]!)).toBeLessThan(0.002));
+    // one blink's length (110 ms shut, 190 ms open), not two run together
+    const cued = out.find((b) => Math.abs(b.start - free) < 0.002)!;
+    expect(cued.open - cued.start).toBeLessThan(0.31);
+  });
 });

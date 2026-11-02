@@ -233,7 +233,8 @@ const BLINK_SALT = 6151;
 
 /**
  * A blink on a cue falls only where it starts half a second or more from
- * every blink of the seed's own, so the eyes stay open 0.2 s or more between
+ * every blink of the seed's own and from the cued blink before it, so the
+ * eyes stay open 0.2 s or more between
  * two blinks and read as a double blink at the closest, never as one long one.
  */
 const APART = 0.5;
@@ -264,7 +265,21 @@ export const blink = (seed: number, on: ReadonlyArray<number> = []): Track => {
     const k = Math.floor((t - offset) / EVERY);
     return [startOf(k - 1), startOf(k), startOf(k + 1)];
   };
-  const cued = on.filter((c) => ownNear(c).every((s) => Math.abs(c - s) >= APART));
+  // in time order, each cue kept only half a second or more from the seed's blinks and from the cue kept before it
+  const cued = [...on]
+    .sort((a, b) => a - b)
+    .filter((c) => ownNear(c).every((s) => Math.abs(c - s) >= APART))
+    .reduce<ReadonlyArray<number>>(
+      (kept, c) =>
+        Option.match(Arr.last(kept), {
+          onNone: () => [c],
+          onSome: (last) => {
+            if (c - last < APART) return kept;
+            return [...kept, c];
+          },
+        }),
+      [],
+    );
   return (t) => {
     let shut = 0;
     for (const s of ownNear(t)) shut = Math.max(shut, lids(t - s));
