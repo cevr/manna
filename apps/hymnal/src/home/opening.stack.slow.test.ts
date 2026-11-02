@@ -1,4 +1,4 @@
-/* oxlint-disable effect/noGlobals, effect/noAsyncFunction, effect/noDynamicImports, effect/noNullish, effect/noUnknownParameters, effect/noUnsafeDictionaryType, effect/noReduceAccumulatorCopy -- One's and React Navigation's router modules load from their installed files by path, take their own loose arguments and keep their state in plain objects with optional fields; the stack folds a handful of steps. */
+/* oxlint-disable effect/noGlobals, effect/noAsyncFunction, effect/noNullish, effect/noUnknownParameters, effect/noUnsafeDictionaryType -- One's and React Navigation's router modules load from their installed files by path, take their own loose arguments and keep their state in plain objects with optional fields. */
 
 /**
  * What One does with the step a hymn page sends, on the phone. The `#`
