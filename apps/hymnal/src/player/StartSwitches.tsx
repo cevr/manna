@@ -24,7 +24,7 @@ export const StartSwitches = memo(function StartSwitches() {
   const [intro, setIntro] = useAtom(settings.intro);
   const [click, setClick] = useAtom(settings.click);
   return (
-    <View role="group" aria-label="Start" style={styles.section}>
+    <View testID="start" role="group" aria-label="Start" style={styles.section}>
       <View style={styles.row}>
         <View style={styles.text} aria-hidden>
           <Text style={styles.label} dynamicTypeRamp="body">
@@ -46,8 +46,12 @@ export const StartSwitches = memo(function StartSwitches() {
             A click on each beat of the count-in.
           </Text>
         </View>
+        {/* iOS's Switch keeps `disabled` out of VoiceOver's reading, so the
+            state says it; the web's root reads `aria-disabled`. */}
         <Switch
           accessibilityLabel="Click"
+          accessibilityState={{ disabled: !intro }}
+          aria-disabled={!intro}
           value={click}
           disabled={!intro}
           onValueChange={setClick}

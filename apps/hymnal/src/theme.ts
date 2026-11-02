@@ -1,5 +1,5 @@
 /**
- * The app's colours: eighteen roles in light and dark, all drawn from the
+ * The app's colours: twenty-two roles in light and dark, all drawn from the
  * brand (`@manna/brand`, the one source the First the Blade site reads too)
  * as the owner's pick of 2026-10-25, "sky": the brand's painted sky as the
  * second colour, the night as the ink. A screen reads a role (`color.ts` on
@@ -15,12 +15,15 @@
  * the accent and the chords, the night raised (`nightPanel`) for panels and
  * pressed rows, and the docked bar a shade under the night (`bar`).
  *
- * Text on a fill (`onAccent`, `onPressed`, `onPill`, `onChosen`) is the night
- * where it meets AA on the fill, else white, else black (`onColor`). The find
- * bar's capsule is the pill too: its chosen control stands on a disk of the
- * accent where the accent reads at 3:1 on the pill, else of the pill's ink
- * (`chosen`; by night the gold does not, so the night), and its placeholder
- * is the pill's ink moved toward the pill as far as AA allows (`onPillMuted`).
+ * Text on a fill (`onAccent`, `onPressed`, `onPill`, `onChosen`,
+ * `onGlassChosen`) is the night where it meets AA on the fill, else white,
+ * else black (`onColor`). A checked chip stands on the accent where the
+ * accent reads at 3:1 on the pill, else on the pill's ink (`chosen`; by night
+ * the gold does not, so the night). The find bar's capsule is glass: `soft`
+ * at 85 % (`glass`), laid over whatever scrolls under the bar, with the ink
+ * for its words (`onGlass`) and its chosen control on a disk of the accent
+ * (`glassChosen`). Its placeholder is the ink moved toward `soft` as far as
+ * AA holds over every opaque role with the glass laid on it (`onGlassMuted`).
  * A pressed accent is a fill of its own (`pressed`), the accent a fifth
  * toward the ground.
  * The open dials stand on an opaque panel (`panel`), so no page word shows
@@ -33,7 +36,8 @@
 
 import { PALETTE } from '@manna/brand';
 
-export interface Roles {
+/** The roles drawn opaque: every role a screen can show under the find bar's glass. */
+interface OpaqueRoles {
   /** The screen's background. */
   readonly ground: string;
   /** Body text, the hymn's words and titles. */
@@ -64,13 +68,27 @@ export interface Roles {
   readonly pill: string;
   /** Text and marks drawn on the pill. */
   readonly onPill: string;
-  /** Quiet text on the pill: the find bar's placeholder. */
-  readonly onPillMuted: string;
-  /** The chosen mark on the pill: the disk behind the find bar's chosen control. */
+  /** The chosen mark on the pill: a checked chip's fill. */
   readonly chosen: string;
   /** Text and marks drawn on the chosen mark. */
   readonly onChosen: string;
 }
+
+/** The find bar's glass, laid over whatever the page shows under the bar. */
+interface GlassRoles {
+  /** The find bar's capsule and the lone `#` disk: `soft` at 85 % (`#rrggbbd9`). */
+  readonly glass: string;
+  /** Typed words and unchosen marks on the glass. */
+  readonly onGlass: string;
+  /** Quiet text on the glass: the find bar's placeholder. */
+  readonly onGlassMuted: string;
+  /** The disk behind the find bar's chosen control, on the glass. */
+  readonly glassChosen: string;
+  /** Text and marks drawn on the chosen disk. */
+  readonly onGlassChosen: string;
+}
+
+export interface Roles extends OpaqueRoles, GlassRoles {}
 
 type Rgb = readonly [number, number, number];
 
@@ -131,21 +149,46 @@ const chosenOn = (accent: string, pill: string, onPill: string) => {
   return onPill;
 };
 
-/**
- * Quiet text on `fill`: `ink` moved toward the fill, in steps of a hundredth,
- * as far as it still meets WCAG AA (4.5:1) there. `ink` itself must meet it.
- */
-const quietOn = (ink: string, fill: string) => {
-  const steps = Array.from({ length: 101 }, (_, step) => mix(ink, fill, step / 100));
-  return steps.findLast((tone) => contrast(tone, fill) >= 4.5) ?? ink;
-};
-
-/** The roles the find bar's capsule draws with on the pill, the key button's lit fill. */
+/** The roles a lit pill-shaped button draws with: the key button with chords on, a checked chip. */
 const onPillRoles = (accent: string, pill: string) => {
   const onPill = onColor(pill);
   const chosen = chosenOn(accent, pill, onPill);
-  return { pill, onPill, onPillMuted: quietOn(onPill, pill), chosen, onChosen: onColor(chosen) };
+  return { pill, onPill, chosen, onChosen: onColor(chosen) };
 };
+
+/** The glass's alpha: 0xd9 of 0xff, 85 %. */
+const GLASS_ALPHA = 'd9';
+
+/** A `#rrggbbaa` colour laid over an opaque `under`, as the screen draws it. */
+const over = (glass: string, under: string) =>
+  mix(under, glass.slice(0, 7), channel(glass, 7) / 255);
+
+/**
+ * The find bar's glass over a scheme's opaque roles: `soft` at 85 %, its words
+ * the ink, its chosen disk the accent. The placeholder is the ink moved toward
+ * `soft`, in steps of a hundredth, as far as it still meets WCAG AA (4.5:1)
+ * over every opaque role with the glass laid on it, since any of them may
+ * scroll under the bar.
+ */
+const glassRoles = (opaque: OpaqueRoles) => {
+  const glass = `${opaque.soft}${GLASS_ALPHA}`;
+  const seen = Object.values(opaque).map((under) => over(glass, under));
+  const holds = (tone: string) => seen.every((fill) => contrast(tone, fill) >= 4.5);
+  const steps = Array.from({ length: 101 }, (_, step) => mix(opaque.ink, opaque.soft, step / 100));
+  return {
+    glass,
+    onGlass: opaque.ink,
+    onGlassMuted: steps.findLast(holds) ?? opaque.ink,
+    glassChosen: opaque.accent,
+    onGlassChosen: onColor(opaque.accent),
+  };
+};
+
+/** A scheme's roles: its opaque roles and the glass laid over them. */
+const withGlass = <const T extends OpaqueRoles>(opaque: T) => ({
+  ...opaque,
+  ...glassRoles(opaque),
+});
 
 const white = '#ffffff';
 
@@ -157,7 +200,7 @@ const lightPressed = mix(PALETTE.night, lightGround, 0.2);
 const darkPressed = mix(PALETTE.duskGold, PALETTE.night, 0.2);
 
 export const theme = {
-  light: {
+  light: withGlass({
     ground: lightGround,
     ink: PALETTE.night,
     // The night 27% toward white: the brand's quiet text a shade bluer, for the sky.
@@ -173,8 +216,8 @@ export const theme = {
     edge: mix(PALETTE.sky, PALETTE.night, 0.45),
     bar: lightGround,
     ...onPillRoles(PALETTE.night, PALETTE.sky),
-  },
-  dark: {
+  }),
+  dark: withGlass({
     ground: PALETTE.night,
     ink: skyTint(0.75),
     muted: PALETTE.sky,
@@ -190,5 +233,5 @@ export const theme = {
     // The night 15% toward black: the docked bar sits a shade under the page.
     bar: mix(PALETTE.night, '#000000', 0.147),
     ...onPillRoles(PALETTE.duskGold, PALETTE.sky),
-  },
+  }),
 } as const satisfies { readonly light: Roles; readonly dark: Roles };

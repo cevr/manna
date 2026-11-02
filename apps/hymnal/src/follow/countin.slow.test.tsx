@@ -505,4 +505,28 @@ describe('the sheet’s Start group', () => {
       settings: { intro: true, click: false },
     });
   });
+
+  it('is found by its id, and Click reads disabled to assistive tech only while Intro is off', () => {
+    using sheet = mountSheet(78);
+    const disabledClick = () =>
+      [...sheet.group().querySelectorAll('[aria-disabled="true"]')].some((el) =>
+        el.contains(sheet.click()),
+      );
+    expect({
+      id: sheet.group().getAttribute('data-testid'),
+      disabledClick: disabledClick(),
+    }).toEqual({ id: 'start', disabledClick: false });
+
+    sheet.tap(sheet.intro());
+    expect({ intro: sheet.intro().checked, disabledClick: disabledClick() }).toEqual({
+      intro: false,
+      disabledClick: true,
+    });
+
+    sheet.tap(sheet.intro());
+    expect({ intro: sheet.intro().checked, disabledClick: disabledClick() }).toEqual({
+      intro: true,
+      disabledClick: false,
+    });
+  });
 });

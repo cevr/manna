@@ -9,7 +9,7 @@
  * another's place (numreplace) keeps the bar's place and its node, so
  * nothing glides and nothing mounts again. With Reduce Motion the bar jumps
  * to its place under a 150 ms fade. The `#` the player layer draws takes
- * the chosen ink while it is the chosen control and the pill's ink while
+ * the chosen ink while it is the chosen control and the glass's ink while
  * Search is.
  *
  * Mounted as the layout nests them, as `numreplace.slow.test.tsx` mounts
@@ -67,7 +67,7 @@ const DOCKED = INSET + DOCKED_LIFT;
 const OVER_BAR = INSET + REST + HASH_GAP;
 
 /** The roles the bar's ink reads, each a colour of its own, so a computed colour names its role (`color.ts`). */
-const ROLES = ['accent', 'ink', 'onPill', 'chosen', 'onChosen'] as const;
+const ROLES = ['accent', 'ink', 'onGlass', 'glassChosen', 'onGlassChosen'] as const;
 const role = (name: (typeof ROLES)[number]) => `rgb(${ROLES.indexOf(name) + 1}, 3, 4)`;
 const roleSheet = document.createElement('style');
 roleSheet.textContent = `:root { ${ROLES.map((name) => `--${name}: ${role(name)};`).join(' ')} }`;
@@ -247,7 +247,7 @@ describe('the # the player layer draws in the find bar', () => {
     return Option.match(glyph, { onNone: () => 'none', onSome: (view) => style(view).color });
   };
 
-  it('is in the chosen ink folded, and the pill’s ink with search open', () => {
+  it('is in the chosen ink folded, and the glass’s ink with search open', () => {
     using phone = mount(home, hymn(6));
     const folded = ink(phone.host);
     act(() =>
@@ -257,8 +257,8 @@ describe('the # the player layer draws in the find bar', () => {
       ),
     );
     expect({ folded, open: ink(phone.host) }).toEqual({
-      folded: role('onChosen'),
-      open: role('onPill'),
+      folded: role('onGlassChosen'),
+      open: role('onGlass'),
     });
   });
 });

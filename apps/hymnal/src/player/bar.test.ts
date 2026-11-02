@@ -199,23 +199,15 @@ describe('a press on the find drums', () => {
     ]);
   });
 
-  it('opens or plays the dialled hymn on `Open` or `Play`, and closes them', () => {
+  it('opens the dialled hymn on `Open`, and closes them', () => {
     expect(pressFind(open, shown, FindPress.Open())).toEqual([
       Find.Closed(),
       FindAct.Open({ number: 312 }),
     ]);
-    expect(pressFind(open, Bar.Hidden(), FindPress.Play())).toEqual([
-      Find.Closed(),
-      FindAct.Play({ number: 312 }),
-    ]);
   });
 
-  it('asks nothing of `Open` or `Play` while closed', () => {
+  it('asks nothing of `Open` while closed', () => {
     expect(pressFind(Find.Closed(), shown, FindPress.Open())).toEqual([
-      Find.Closed(),
-      FindAct.Stay(),
-    ]);
-    expect(pressFind(Find.Closed(), shown, FindPress.Play())).toEqual([
       Find.Closed(),
       FindAct.Stay(),
     ]);
