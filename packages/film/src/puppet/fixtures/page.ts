@@ -2,7 +2,8 @@
 // puppet a module declares (`module`'s export `name`, at `key` when given)
 // loaded as a film's are (`loadPuppet` over the page's image decoder) and
 // drawn by the draw path (`drawPuppet`, `canvas/puppet-gl.ts`) at a pose, in
-// its sheet's frame on a clear canvas the sheet's size, in the render path's
+// its sheet's frame on a clear canvas the sheet's size (or a crowd of it,
+// one figure at a time or batched, over paper), in the render path's
 // own Chrome (`openView(launchArgs)`). The page is built with Bun's bundler
 // into a folder under the package's `node_modules/.cache` (so `effect`
 // resolves from the package) and served on loopback for the scope.
@@ -21,10 +22,21 @@ export interface PuppetAt {
   readonly key?: string;
 }
 
-/** The page's calls: a pose drawn (with a look when given) and read back, a pose drawn wearing a dress and read back, and the ms of each of `poses` drawn into a 1920 × 1080 frame. */
+/** One figure of a crowd the page draws: its sheet's top left at `at`, sized `s` and mirrored when `flip`, at `pose`, with its look and dress when given. */
+export interface CrowdSeat {
+  readonly at: readonly [number, number];
+  readonly s: number;
+  readonly flip: boolean;
+  readonly pose: PuppetPose;
+  readonly look?: PuppetLook;
+  readonly dress?: PuppetDress;
+}
+
+/** The page's calls: a pose drawn (with a look when given) and read back, a pose drawn wearing a dress and read back, a crowd drawn in order over paper on a frame `CROWD` px, one puppet at a time or as one batch (`batchPuppets`), and read back, and the ms of each of `poses` drawn into a 1920 × 1080 frame. */
 export interface PuppetPage {
   readonly draw: (pose: PuppetPose, look?: PuppetLook) => Effect.Effect<Raster>;
   readonly dressed: (pose: PuppetPose, dress: PuppetDress) => Effect.Effect<Raster>;
+  readonly crowd: (seats: ReadonlyArray<CrowdSeat>, batch: boolean) => Effect.Effect<Raster>;
   readonly time: (
     poses: ReadonlyArray<PuppetPose>,
     look?: PuppetLook,
@@ -33,6 +45,9 @@ export interface PuppetPage {
 }
 
 const FILM = new URL('../..', import.meta.url).pathname;
+
+/** The crowd's frame, px. */
+export const CROWD = [240, 140] as const;
 
 /** `v` as a JavaScript literal in the page's source. */
 const literal = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
@@ -48,6 +63,7 @@ import * as M from ${literal(at.module)};
 import { loadPuppet } from ${literal(`${FILM}puppet/load.ts`)};
 import { PuppetImagesBrowser } from ${literal(`${FILM}puppet/images-browser.ts`)};
 import { drawPuppet } from ${literal(`${FILM}canvas/puppet.ts`)};
+import { batchPuppets } from ${literal(`${FILM}canvas/puppet-gl.ts`)};
 
 const table = M[${literal(at.name)}];
 const spec = ${Option.match(Option.fromUndefinedOr(at.key), { onNone: () => 'table', onSome: (k) => `table[${literal(k)}]` })};
@@ -71,6 +87,9 @@ try {
   frame.width = 1920;
   frame.height = 1080;
   const fctx = frame.getContext('2d', { willReadFrequently: true });
+  const crowd = document.createElement('canvas');
+  [crowd.width, crowd.height] = ${literal(CROWD)};
+  const cctx = crowd.getContext('2d', { willReadFrequently: true });
   const draw = (c, pose, look, dress) => {
     const why = drawPuppet(c, spec, loaded, pose, look ?? undefined, dress ?? undefined);
     if (why !== undefined) throw new Error(why);
@@ -88,6 +107,23 @@ try {
       ctx.translate(spec.origin[0], spec.origin[1]);
       draw(ctx, pose, look, dress);
       return base64Of(new Uint8Array(ctx.getImageData(0, 0, W, H).data.buffer));
+    },
+    crowd: (seats, batch) => {
+      cctx.setTransform(1, 0, 0, 1, 0, 0);
+      cctx.fillStyle = '#f2eada';
+      cctx.fillRect(0, 0, crowd.width, crowd.height);
+      const all = () => {
+        for (const seat of seats) {
+          cctx.save();
+          cctx.translate(seat.at[0], seat.at[1]);
+          cctx.scale(seat.flip ? -seat.s : seat.s, seat.s);
+          draw(cctx, seat.pose, seat.look, seat.dress);
+          cctx.restore();
+        }
+      };
+      if (batch) batchPuppets(cctx, all);
+      else all();
+      return base64Of(new Uint8Array(cctx.getImageData(0, 0, crowd.width, crowd.height).data.buffer));
     },
     time: (poses, look) =>
       poses.map((pose) => {
@@ -168,12 +204,12 @@ export const puppetPage = Effect.fn('test.puppetPage')(function* (at: PuppetAt) 
     view.evaluate<[number, number]>('window.probe.size'),
   );
   const renderer = yield* Effect.promise(() => view.evaluate<string>('window.probe.renderer'));
-  /** The raster a call of `window.probe.draw` in the page reads back. */
-  const drawn = (call: string) =>
+  /** The raster `[w, h]` a call of `window.probe` in the page reads back: the sheet's size unless given. */
+  const drawn = (call: string, [w, h]: readonly [number, number] = [width, height]) =>
     Effect.promise(() => view.evaluate<string>(call)).pipe(
       Effect.map((b64): Raster => ({
-        width,
-        height,
+        width: w,
+        height: h,
         rgba: Uint8Array.from(Buffer.from(b64, 'base64')),
       })),
     );
@@ -182,6 +218,7 @@ export const puppetPage = Effect.fn('test.puppetPage')(function* (at: PuppetAt) 
     draw: (pose, look) => drawn(`window.probe.draw(${literal(pose)}, ${lookOf(look)})`),
     dressed: (pose, dress) =>
       drawn(`window.probe.draw(${literal(pose)}, undefined, ${literal(dress)})`),
+    crowd: (seats, batch) => drawn(`window.probe.crowd(${literal(seats)}, ${batch})`, CROWD),
     time: (poses, look) =>
       Effect.promise(() =>
         view.evaluate<number[]>(`window.probe.time(${literal(poses)}, ${lookOf(look)})`),

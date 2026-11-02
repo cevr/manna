@@ -7,7 +7,10 @@
 // same frames in order; a dress's dye (the shader's, `DYE_GLSL`) against the
 // sleeve's pixels dyed on the CPU (`dyedRaster`) and drawn undressed, over a
 // sleeve whose pixels reach each of the dye's five branches, at rest within
-// ΔE 1 at any pixel and posed within the bounds above; and a part
+// ΔE 1 at any pixel and posed within the bounds above; a crowd of six
+// overlapping figures (plain, dyed, hidden, mirrored, sized, on the look's
+// passes) drawn as one batch (`batchPuppets`) equal to it drawn one puppet at
+// a time within 1/255 a channel; and a part
 // PNG's bytes in the key of a beat whose scene imports the puppet
 // (`tools/stamp.ts`). Each case opens Chrome or writes a film, so they run in
 // the slow suite.
@@ -22,7 +25,7 @@ import { type PuppetPose, rasterOf } from '../core/puppet.ts';
 import type { Raster } from '../core/raster.ts';
 import { encodePng } from '../tools/png.ts';
 import { handBeatKey } from './fixtures/key.ts';
-import { puppetPage } from './fixtures/page.ts';
+import { type CrowdSeat, puppetPage } from './fixtures/page.ts';
 import { puppetFrom } from './load.ts';
 import { PuppetImagesBun } from './images-bun.ts';
 
@@ -462,6 +465,46 @@ describe('a puppet in the page', () => {
         expect(farFigure).toBeGreaterThan(1000);
       }),
     ).pipe(Effect.provide(Layer.provideMerge(PuppetImagesBun, BunServices.layer))),
+  );
+
+  it.live(
+    'a crowd drawn as one batch is the crowd drawn one puppet at a time, within 1/255 a channel',
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const fs = yield* FileSystem.FileSystem;
+          const path = yield* Path.Path;
+          const dir = yield* fs.makeTempDirectoryScoped();
+          yield* layDyed(dir);
+          const page = yield* puppetPage({ module: path.join(dir, 'spec.ts'), name: 'SPEC' });
+          const rest: PuppetPose = { numbers: {}, root: [45, 60], scale: 1 };
+          const dyed = { dye: { arm: CLOTH } };
+          // six overlapping figures: plain, dyed, a hidden sleeve, mirrored, sized, and on the look's passes (a still look, a boiling one)
+          const seats: ReadonlyArray<CrowdSeat> = [
+            { at: [10, 20], s: 1, flip: false, pose: poseOf(1) },
+            { at: [150, 10], s: 1.2, flip: true, pose: poseOf(2), dress: dyed },
+            { at: [60, 40], s: 0.8, flip: false, pose: poseOf(3), look: { boil: 0, amp: 0 } },
+            { at: [110, 55], s: 1.1, flip: false, pose: poseOf(4), look: { boil: 2 }, dress: dyed },
+            { at: [215, 50], s: 0.9, flip: true, pose: rest, dress: { hide: ['arm'] } },
+            { at: [35, 62], s: 1.3, flip: false, pose: poseOf(6), look: { boil: 5, amp: 0 } },
+          ];
+          const [one, batch] = [yield* page.crowd(seats, false), yield* page.crowd(seats, true)];
+          let [worst, figure] = [0, 0];
+          for (let i = 0; i < one.rgba.length; i++) {
+            worst = Math.max(worst, Math.abs(one.rgba[i]! - batch.rgba[i]!));
+            if (i % 4 === 0) figure += Number(one.rgba[i] !== 242 || one.rgba[i + 1] !== 234);
+          }
+          expect(worst).toBeLessThanOrEqual(1);
+          // the crowd covers the frame, and its figures overlap: drawn back to front it is another picture
+          // measured 9891 figure px, 2532 moved by the order and worst 1 (2026-11-02)
+          expect(figure).toBeGreaterThan(8000);
+          const reversed = yield* page.crowd(seats.toReversed(), false);
+          let moved = 0;
+          for (let i = 0; i < one.rgba.length; i += 4)
+            moved += Number(Math.abs(one.rgba[i]! - reversed.rgba[i]!) > 8);
+          expect(moved).toBeGreaterThan(1000);
+        }),
+      ).pipe(Effect.provide(Layer.provideMerge(PuppetImagesBun, BunServices.layer))),
   );
 
   it.live("changes the key of a beat that draws it when a part PNG's bytes change", () =>
