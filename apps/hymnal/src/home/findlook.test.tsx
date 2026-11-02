@@ -5,8 +5,8 @@
  * The find bar and the key panel's chips, as the owner asked (2026-11-01,
  * plan `packages/hymnal/plans/hymnapp-run.md`, unit findlook): the Tuner
  * chip and Reset are one height, the Tuner's mark small and upright; the
- * find bar's capsule takes the key button's lit colour (`pill`), its marks
- * the pill's ink, and one chosen mark, a disk in the `chosen` colour behind
+ * find bar's capsule is glass (`glass`), its marks the
+ * glass's ink, and one chosen mark, a disk in the `glassChosen` colour behind
  * the chosen control, slides to the side tapped: the `#` while the bar is
  * folded or the drums are open, Search while search is open. With Reduce
  * Motion the mark jumps. Between a hymn page and the home list the whole
@@ -61,7 +61,11 @@ const ROLES = [
   'onPill',
   'chosen',
   'onChosen',
-  'onPillMuted',
+  'glass',
+  'onGlass',
+  'onGlassMuted',
+  'glassChosen',
+  'onGlassChosen',
 ] as const;
 type Role = (typeof ROLES)[number];
 const role = (name: Role) => `rgb(${ROLES.indexOf(name) + 1}, 1, 2)`;
@@ -228,21 +232,21 @@ describe('the find bar’s colours', () => {
   it.each([
     ['folded', Option.none<Searching>()],
     ['open', searchAt(PAGE, 'field')],
-  ] as const)('%s, the capsule is the key button’s lit pill', (_, open) => {
+  ] as const)('%s, the capsule is glass', (_, open) => {
     using found = findBar(open, false);
-    expect(style(capsule(found)).backgroundColor).toBe(role('pill'));
+    expect(style(capsule(found)).backgroundColor).toBe(role('glass'));
   });
 
-  it('open, the typed words are the pill’s ink and the placeholder its quiet ink', () => {
+  it('open, the typed words are the glass’s ink and the placeholder its quiet ink', () => {
     using found = findBar(searchAt(PAGE, 'field'), false);
     const box = found.get('[data-testid="find-box"]');
     expect({
       words: style(box).color,
       placeholder: box.style.getPropertyValue('--placeholderTextColor'),
-    }).toEqual({ words: role('onPill'), placeholder: 'var(--onPillMuted)' });
+    }).toEqual({ words: role('onGlass'), placeholder: 'var(--onGlassMuted)' });
   });
 
-  it('the magnifier is the pill’s ink folded, and the chosen ink open, where the chosen mark lies behind it', () => {
+  it('the magnifier is the glass’s ink folded, and the chosen ink open, where the chosen mark lies behind it', () => {
     /** The fills the magnifier's parts draw with: its views hidden from VoiceOver in the capsule, the chosen mark and the `#` left out. */
     const inkOf = (found: Bar) => {
       const marks = [
@@ -263,8 +267,8 @@ describe('the find bar’s colours', () => {
     const shut = inkOf(folded);
     using open = findBar(searchAt(PAGE, 'field'), false);
     expect({ folded: shut, open: inkOf(open) }).toEqual({
-      folded: [role('onPill')],
-      open: [role('onChosen')],
+      folded: [role('onGlass')],
+      open: [role('onGlassChosen')],
     });
   });
 
@@ -283,7 +287,7 @@ describe('the find bar’s colours', () => {
           hidden: mark.getAttribute('aria-hidden'),
           touch: style(mark).pointerEvents,
         })),
-      ).toEqual([{ fill: role('chosen'), hidden: 'true', touch: 'none' }]);
+      ).toEqual([{ fill: role('glassChosen'), hidden: 'true', touch: 'none' }]);
     },
   );
 });
@@ -397,21 +401,21 @@ describe('the theme’s find bar roles', () => {
   };
 
   it.each(['light', 'dark'] as const)(
-    '%s: the chosen mark reads on the pill (3:1), its ink on it (4.5:1), and the placeholder on the pill (4.5:1)',
+    '%s: the capsule is soft glass, the chosen disk the accent with its ink on it (4.5:1), and the placeholder quieter than the words',
     (scheme) => {
       const roles = themes.theme[scheme];
-      const picked = (contrast(roles.accent, roles.pill) >= 3 && roles.accent) || roles.onPill;
+      // Each role laid over the page under the glass is held in `findglass.test.tsx`.
       expect({
-        chosen: roles.chosen,
-        chosenOnPill: contrast(roles.chosen, roles.pill) >= 3,
-        onChosen: contrast(roles.onChosen, roles.chosen) >= 4.5,
-        placeholder: contrast(roles.onPillMuted, roles.pill) >= 4.5,
-        quieter: roles.onPillMuted !== roles.onPill,
+        glass: roles.glass,
+        words: roles.onGlass,
+        chosen: roles.glassChosen,
+        onChosen: contrast(roles.onGlassChosen, roles.glassChosen) >= 4.5,
+        quieter: roles.onGlassMuted !== roles.onGlass,
       }).toEqual({
-        chosen: picked,
-        chosenOnPill: true,
+        glass: `${roles.soft}d9`,
+        words: roles.ink,
+        chosen: roles.accent,
         onChosen: true,
-        placeholder: true,
         quieter: true,
       });
     },

@@ -24,9 +24,13 @@ const roles = [
   'bar',
   'pill',
   'onPill',
-  'onPillMuted',
   'chosen',
   'onChosen',
+  'glass',
+  'onGlass',
+  'onGlassMuted',
+  'glassChosen',
+  'onGlassChosen',
 ] as const satisfies ReadonlyArray<keyof Roles>;
 
 export const color = {
@@ -41,9 +45,13 @@ export const color = {
   bar: 'var(--bar)',
   pill: 'var(--pill)',
   onPill: 'var(--onPill)',
-  onPillMuted: 'var(--onPillMuted)',
   chosen: 'var(--chosen)',
   onChosen: 'var(--onChosen)',
+  glass: 'var(--glass)',
+  onGlass: 'var(--onGlass)',
+  onGlassMuted: 'var(--onGlassMuted)',
+  glassChosen: 'var(--glassChosen)',
+  onGlassChosen: 'var(--onGlassChosen)',
 } satisfies Record<Exclude<keyof Roles, Fill>, ColorValue>;
 
 /** The roles a screen reads through a hook: the accent fill and its text, pressed or not. */

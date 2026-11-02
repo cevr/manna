@@ -56,8 +56,7 @@ const pairs: ReadonlyArray<readonly [text: keyof Roles, on: keyof Roles]> = [
   ['accent', 'panel'],
   ['chord', 'panel'],
   ['onPill', 'pill'],
-  // The find bar's capsule, the pill: its typed words and unchosen marks in onPill, its placeholder in onPillMuted, the chosen control's mark in onChosen on the chosen disk.
-  ['onPillMuted', 'pill'],
+  // A checked chip: its words in onChosen on the chosen mark.
   ['onChosen', 'chosen'],
   // The docked bar: its title in ink, its marks in muted and accent.
   ['ink', 'bar'],
@@ -102,17 +101,16 @@ describe('the dials’ panel stands off the page', () => {
 });
 
 /**
- * The find bar's chosen mark is a state, not text: a disk that must read on
+ * A checked chip's chosen mark is a state, not text: a fill that must read on
  * the pill at WCAG 1.4.11's 3:1. The accent where it does (by day, the
  * night), else the pill's ink (by night, where the gold reads 1.09:1). The
- * placeholder is quieter than the typed words.
+ * find bar's glass is held in `home/findglass.test.tsx`.
  */
-describe('the find bar’s chosen mark reads on the pill', () => {
+describe('the chosen mark reads on the pill', () => {
   for (const scheme of ['light', 'dark'] as const) {
-    test(`${scheme}: chosen is at least 3:1 on the pill, and the placeholder is not the words' ink`, () => {
+    test(`${scheme}: chosen is at least 3:1 on the pill`, () => {
       const roles = theme[scheme];
       expect(contrast(roles.chosen, roles.pill)).toBeGreaterThanOrEqual(3);
-      expect(roles.onPillMuted).not.toBe(roles.onPill);
     });
   }
   test('dark: the gold fails on the pill, so the chosen mark is the night', () => {
@@ -180,9 +178,13 @@ test('the roles are the sky', () => {
       bar: '#f7f9fb',
       pill: PALETTE.sky,
       onPill: PALETTE.night,
-      onPillMuted: '#39576e',
       chosen: PALETTE.night,
       onChosen: '#ffffff',
+      glass: '#e1e8f0d9',
+      onGlass: PALETTE.night,
+      onGlassMuted: '#3b596e',
+      glassChosen: PALETTE.night,
+      onGlassChosen: '#ffffff',
     },
     dark: {
       ground: PALETTE.night,
@@ -200,9 +202,13 @@ test('the roles are the sky', () => {
       bar: '#0f2d43',
       pill: PALETTE.sky,
       onPill: PALETTE.night,
-      onPillMuted: '#39576e',
       chosen: PALETTE.night,
       onChosen: '#ffffff',
+      glass: `${PALETTE.nightPanel}d9`,
+      onGlass: '#eef2f6',
+      onGlassMuted: '#cad4dd',
+      glassChosen: PALETTE.duskGold,
+      onGlassChosen: PALETTE.night,
     },
   });
 });

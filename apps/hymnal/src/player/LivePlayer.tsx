@@ -332,8 +332,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  disk: { backgroundColor: color.pill },
+  disk: { backgroundColor: color.glass },
   pressed: { opacity: 0.6 },
-  hashText: { fontSize: 20, fontWeight: '700', color: color.onPill },
-  hashChosen: { color: color.onChosen },
+  hashText: { fontSize: 20, fontWeight: '700', color: color.onGlass },
+  hashChosen: { color: color.onGlassChosen },
 });
