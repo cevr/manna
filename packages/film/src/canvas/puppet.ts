@@ -9,7 +9,8 @@
 //
 // A frame is a function of its pose and its look: its vertices are posed
 // from the bind vertices by the pose's numbers alone, a drawn key stands in
-// for a part where the look lays one, and each is written whole into the
+// for a part where the look lays one, carried by that part's bones at its
+// pivot as the part's own pixel there is, and each is written whole into the
 // buffers the page draws them from (`canvas/puppet-gl.ts`), which clear the
 // box they draw in first. With a look, the figure's line is drawn again near
 // what moved (L3) and the figure boils on the look's tick. Where nothing is
@@ -71,23 +72,32 @@ interface PuppetPlace {
   readonly dy: number;
 }
 
-/** A drawn key laid in place of part `part`: drawing `drawing` laid by `place`, then turned `theta` degrees about `pivot`, sheet px. */
+/**
+ * A drawn key laid in place of part `part`: drawing `drawing` laid by
+ * `place` at rest, turned `theta` degrees further about `pivot`, then carried
+ * as the part's skin carries its pixel at `pivot` (`skinAt`), sheet px, so a
+ * head key turns with the head bones it stands on.
+ */
 export interface PuppetSwap {
   readonly part: string;
   readonly drawing: string;
   readonly place: PuppetPlace;
   readonly pivot: Pt;
-  readonly theta: number;
+  /** Degrees it turns about `pivot` past its part's own turn: 0 unless given. */
+  readonly theta?: number;
+  /** Whether its part's bones carry it: true unless given. False lays it where `place` and `theta` put it, a place already in the pose's frame. */
+  readonly rides?: boolean;
 }
 
 /**
  * How a frame draws a posed puppet beyond its pose: the boil's tick; the
  * drawings laid in place of parts (drawn keys, `PuppetSwap`), each in place
- * of its own part, so a head key and an arm key show at once; and a drawing
- * laid over the figure once its line is drawn (a held hand: its centre `c`,
- * drawing px, laid at `at`, sheet px, unturned, sized by `s`), within
- * `quiet` px of which the line is left as the drawings draw it. Each is then
- * moved and sized with the pose's root and scale, as the parts are.
+ * of its own part and carried by its bones, so a head key and an arm key show
+ * at once; and a drawing laid over the figure once its line is drawn (a held
+ * hand: its centre `c`, drawing px, laid at `at`, sheet px, turned by no
+ * bone, sized by `s`), within `quiet` px of which the line is left as the
+ * drawings draw it. Each is then moved and sized with the pose's root and
+ * scale, as the parts are.
  */
 export interface PuppetLook {
   readonly boil: number;
@@ -239,16 +249,55 @@ const layQuad = (
   return true;
 };
 
-/** Where a sheet point stands at `pose`: moved with its root and sized by its scale, as the parts are (a look's drawings turn no bone). */
+/** Where a sheet point stands at `pose`: moved with its root and sized by its scale, as the parts are (after any bones carry it: a drawn key's, `skinAt`). */
 const posedAt = (puppet: Puppet, pose: PuppetPose, [x, y]: Pt): Pt => [
   pose.root[0] + pose.scale * (x - puppet.root[0]),
   pose.root[1] + pose.scale * (y - puppet.root[1]),
 ];
 
-/** A look's drawings laid at `pose`'s root and scale: each drawn key by its place, turned about its pivot, into its part's quad, and its held hand centred where it is held. Why not, for a drawing not loaded. */
+/** How bones carry a rest sheet point to where they turn it, sheet px. */
+type Carry = (p: Pt) => Pt;
+
+const unmoved: Carry = (p) => p;
+
+/**
+ * How part `k`'s skin carries its pixel at sheet point `p` under the bones'
+ * transforms `m` (`boneTransforms`): the weights of its mesh's vertex nearest
+ * `p`, blended over the same slots as `poseMesh` blends that vertex's, so a
+ * point at that vertex lands where the vertex does. Unmoved where the part
+ * has no vertex, or that one lies on no bone.
+ */
+const skinAt = (puppet: Puppet, k: number, m: Float64Array, [x, y]: Pt): Carry => {
+  const { vertices, bones, amounts } = puppet.parts[k]!.mesh;
+  const n = vertices.length / 2;
+  let [nearest, far] = [-1, Infinity];
+  for (let i = 0; i < n; i++) {
+    const d = (vertices[2 * i]! - x) ** 2 + (vertices[2 * i + 1]! - y) ** 2;
+    if (d < far) [nearest, far] = [i, d];
+  }
+  if (nearest < 0) return unmoved;
+  // the weights a vertex holds: `core/puppet.ts` keeps its count to itself, and each vertex holds as many
+  const stride = bones.length / n;
+  if (bones[stride * nearest]! < 0) return unmoved;
+  const slots = Array.from({ length: stride }, (_, j) => stride * nearest + j).filter(
+    (j) => bones[j]! >= 0,
+  );
+  return ([px, py]) => {
+    let [sx, sy] = [0, 0];
+    for (const j of slots) {
+      const [w, o] = [amounts[j]!, 6 * bones[j]!];
+      sx += w * (m[o]! * px + m[o + 2]! * py + m[o + 4]!);
+      sy += w * (m[o + 1]! * px + m[o + 3]! * py + m[o + 5]!);
+    }
+    return [sx, sy];
+  };
+};
+
+/** A look's drawings laid at `pose`: each drawn key by its place, turned `theta` about its pivot and carried by its part's bones there (`skinAt`, under `m`) into its part's quad, and its held hand centred where it is held, each moved with the root and sized by the scale. Why not, for a drawing not loaded. */
 const layDrawings = (
   loaded: LoadedPuppet,
   layer: Layer,
+  m: Float64Array,
   pose: PuppetPose,
   look: PuppetLook,
   swapped: ReadonlyMap<number, PuppetSwap>,
@@ -256,12 +305,13 @@ const layDrawings = (
   const { held } = look;
   const at = (p: Pt) => posedAt(loaded.puppet, pose, p);
   for (const [k, swap] of swapped) {
-    const a = (swap.theta * Math.PI) / 180;
+    const a = ((swap.theta ?? 0) * Math.PI) / 180;
     const [c, s] = [Math.cos(a), Math.sin(a)];
     const { place, pivot } = swap;
+    const carry = swap.rides === false ? unmoved : skinAt(loaded.puppet, k, m, pivot);
     const to = (x: number, y: number): Pt => {
       const [qx, qy] = [place.s * x + place.dx - pivot[0], place.s * y + place.dy - pivot[1]];
-      return at([pivot[0] + c * qx - s * qy, pivot[1] + s * qx + c * qy]);
+      return at(carry([pivot[0] + c * qx - s * qy, pivot[1] + s * qx + c * qy]));
     };
     if (!layQuad(loaded, layer, swap.drawing, loaded.gl.swapPositions[k]!, to))
       return `no drawing ${swap.drawing} loaded`;
@@ -328,7 +378,7 @@ export const drawPuppet = (
   const { swapped, why: unlaid } = swappedOf(puppet, look?.swaps ?? []);
   if (unlaid !== undefined) return `puppet ${spec.key}: ${unlaid}`;
   const moving = layParts(loaded, layer, m, pose, swapped, look !== undefined);
-  const missing = look && layDrawings(loaded, layer, pose, look, swapped);
+  const missing = look && layDrawings(loaded, layer, m, pose, look, swapped);
   if (missing !== undefined) return `puppet ${spec.key}: ${missing}`;
   const [left, top, right, bottom] = layer.figure;
   if (probesFigures(ctx) && left <= right)

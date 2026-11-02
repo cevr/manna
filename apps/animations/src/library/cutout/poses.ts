@@ -120,6 +120,7 @@ export const fitted = <V extends string>(made: Fitted<V>) => {
       (held.c[0] - held.source.dx) / held.source.s,
       (held.c[1] - held.source.dy) / held.source.s,
     ]);
+    // the key's place is on the sheet where the fitted pose lays it, so its part's bones carry it no further
     const look: Omit<PuppetLook, 'boil' | 'amp'> = {
       swaps: [
         {
@@ -127,7 +128,7 @@ export const fitted = <V extends string>(made: Fitted<V>) => {
           drawing: made.swap.drawing,
           place: { s, dx: corner[0], dy: corner[1] },
           pivot: [0, 0],
-          theta: 0,
+          rides: false,
         },
       ],
       held: {

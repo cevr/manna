@@ -2,7 +2,9 @@
 // `check --draw`): each key's quad is written into its part's swap buffer,
 // the buffer the page draws it from (`canvas/puppet-gl.ts`), canvas px. The
 // figure stands under an unturned frame with our origin at the sheet's
-// corner and its root where the sheet's is, so canvas px are sheet px.
+// corner and its root where the sheet's is, so canvas px are sheet px. A key
+// rides its part's bones at its pivot, so it is held to the part's own
+// posed vertices, which the same draw writes into the part's buffer.
 
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
@@ -95,20 +97,18 @@ const poseOf = (numbers: Readonly<Record<string, number>>): PuppetPose => ({
   scale: 1,
 });
 
-/** A closed-eye head laid over the head, and an arm key laid over the arm. */
+/** A closed-eye head laid over the head, and an arm key laid over the arm, each pivoting on a vertex of its part's grid. */
 const BLINK = {
   part: 'head',
   drawing: 'blink',
   place: { s: 1, dx: 39, dy: 9 },
   pivot: [51, 24],
-  theta: 0,
 } as const;
 const FOLD = {
   part: 'arm',
   drawing: 'fold',
   place: { s: 1, dx: 69, dy: 45 },
   pivot: [81, 48],
-  theta: 0,
 } as const;
 
 /** The quad laid in place of part `k`: its four corners, canvas px. */
@@ -116,6 +116,25 @@ const keyQuad = (l: LoadedPuppet, k: number): ReadonlyArray<Pt> => {
   const q = l.gl.swapPositions[k];
   if (q === undefined) return [];
   return [0, 1, 2, 3].map((i): Pt => [q[2 * i]!, q[2 * i + 1]!]);
+};
+
+/** Where part `k`'s vertex at sheet px `p` (a point of its mesh's grid) was last posed, canvas px. */
+const partAt = (l: LoadedPuppet, k: number, [x, y]: Pt): Pt => {
+  const v = PUPPET.parts[k]!.mesh.vertices;
+  const i = v.findIndex(
+    (_, j) => j % 2 === 0 && Math.abs(v[j]! - x) < 1e-9 && Math.abs(v[j + 1]! - y) < 1e-9,
+  );
+  expect(i).toBeGreaterThanOrEqual(0);
+  const out = l.gl.positions[k]!;
+  return [out[i]!, out[i + 1]!];
+};
+
+/** The point of a key's quad at `[u, v]`, fractions of its drawing's width and height. */
+const inKey = (q: ReadonlyArray<Pt>, [u, v]: Pt): Pt => {
+  const [tl, tr, br, bl] = q as readonly [Pt, Pt, Pt, Pt];
+  const top: Pt = [tl[0] + u * (tr[0] - tl[0]), tl[1] + u * (tr[1] - tl[1])];
+  const bottom: Pt = [bl[0] + u * (br[0] - bl[0]), bl[1] + u * (br[1] - bl[1])];
+  return [top[0] + v * (bottom[0] - top[0]), top[1] + v * (bottom[1] - top[1])];
 };
 
 const near = (got: ReadonlyArray<Pt>, want: ReadonlyArray<Pt>) => {
@@ -146,6 +165,47 @@ describe('a look lays its drawn keys', () => {
     const look: PuppetLook = { boil: 0, swaps: [FOLD, { ...BLINK, part: 'arm' }] };
     expect(drawPuppet(ctx, SPEC, loaded(), poseOf({}), look)).toBe(
       'puppet test/two-parts: two drawings laid in place of part arm',
+    );
+  });
+});
+
+describe("a drawn key rides its part's bones at its pivot", () => {
+  test('a head key turns with its head bone', () => {
+    const l = loaded();
+    const look: PuppetLook = { boil: 0, swaps: [BLINK] };
+    expect(drawPuppet(ctx, SPEC, l, poseOf({ head: 20 }), look)).toBeUndefined();
+    near(
+      keyQuad(l, 0),
+      HEAD.map((p) => partAt(l, 0, p)),
+    );
+  });
+
+  test("a head key rides its head bone's parent too", () => {
+    const l = loaded();
+    const look: PuppetLook = { boil: 0, swaps: [BLINK] };
+    expect(drawPuppet(ctx, SPEC, l, poseOf({ root: -6, head: 3 }), look)).toBeUndefined();
+    near(
+      keyQuad(l, 0),
+      HEAD.map((p) => partAt(l, 0, p)),
+    );
+  });
+
+  test("an arm key's pivot lands where the arm's own pixel does, in the elbow's blend", () => {
+    const l = loaded();
+    const look: PuppetLook = { boil: 0, swaps: [FOLD] };
+    expect(drawPuppet(ctx, SPEC, l, poseOf({ fore: 40 }), look)).toBeUndefined();
+    near([inKey(keyQuad(l, 1), [12 / 21, 3 / 9])], [partAt(l, 1, [81, 48])]);
+  });
+
+  test('theta turns a key further about its pivot', () => {
+    const l = loaded();
+    const look: PuppetLook = { boil: 0, swaps: [{ ...BLINK, pivot: [51, 39], theta: 10 }] };
+    expect(drawPuppet(ctx, SPEC, l, poseOf({ head: 20 }), look)).toBeUndefined();
+    const further = loaded();
+    expect(drawPuppet(ctx, SPEC, further, poseOf({ head: 30 }))).toBeUndefined();
+    near(
+      keyQuad(l, 0),
+      HEAD.map((p) => partAt(further, 0, p)),
     );
   });
 });
