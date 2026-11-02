@@ -142,5 +142,33 @@
         }
       ]
     }
+  },
+  "kept": {
+    "poses": {
+      "try": 1,
+      "why": "Try 1 (Recommended)",
+      "views": [
+        {
+          "view": 1,
+          "name": "poses-1",
+          "box": [74, 149, 376, 871]
+        },
+        {
+          "view": 2,
+          "name": "poses-2",
+          "box": [446, 162, 732, 872]
+        },
+        {
+          "view": 3,
+          "name": "poses-3",
+          "box": [790, 154, 1092, 871]
+        },
+        {
+          "view": 4,
+          "name": "poses-4",
+          "box": [1161, 162, 1448, 871]
+        }
+      ]
+    }
   }
 }
