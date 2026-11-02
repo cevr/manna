@@ -41,9 +41,11 @@ A figure on screen is never fully still, even in a held pose. It carries a small
 
 Each channel is the key pose, plus the idle waves, plus the follow-through, plus an accent switched on for one cue (a wave of the hand, a nod).
 
+`idle(seed)` (`core/motion.ts`) gives one figure's breath, sway, head tilt and weight drift at a time, on periods and phases drawn from the seed, so two figures never move in step; give each figure on screen its own seed. `blink(seed)` times its blinks (every 3–4 s, shut in 110 ms, open in 190 ms).
+
 ## Poses flow; they do not stop
 
-The engine's `keys` (`core/time.ts`) eases each segment, so its speed falls to zero at every key. That is right for one move (a blink, a lid, a door). For a chain of poses it makes the figure stop dead at each one and read as a robot. For acting, pass through the middle poses with a continuous speed, and hold a pose by repeating its value while the idle layer keeps it alive. The engine has no flowing key helper yet (Gaps, below).
+The engine's `keys` (`core/time.ts`) eases each segment, so its speed falls to zero at every key. That is right for one move (a blink, a lid, a door). For a chain of poses it makes the figure stop dead at each one and read as a robot. For acting, pass through the middle poses with a continuous speed, and hold a pose by repeating its value while the idle layer keeps it alive. `curve` (`packages/film/src/core/motion.ts`) is that flowing key: a monotone cubic through `[time, value]` keys that passes through the middle keys without stopping and never swings past one. `act(from, moves)` builds a bone's performance from it: each `Move` (`at`, `dur`, `to`) starts where the last one settled, with an optional `anticipate` (a dip the other way a fifth of the way in) and `overshoot` (past the target three fifths in), as shares of the move.
 
 ## Follow-through by delay, not springs
 
@@ -51,6 +53,8 @@ A child part reads its parent a moment earlier, 60–150 ms, at 0.3–0.6 of its
 
 - **Counter-motion:** the head rights itself a beat after the body leans: `head(t) = own(t) − 0.45 × lean(t − 0.11)`.
 - **Trailing:** the forearm, the hand, hair, a sleeve's end and a hem lag their parent and catch up: `child(t) += 0.45 × (parent(t − 0.09) − parent(t))`.
+
+`lag(track, delay)` (`core/motion.ts`) reads a parent's track `delay` s late, for the trailing child.
 
 Times here are in seconds, as a scene's clock reads them.
 
@@ -116,7 +120,5 @@ When the owner gives a video and says "like this", read it frame by frame, never
 
 ## Gaps in the engine
 
-- No flowing key helper: `keys` stops at every key (Poses flow, above).
-- No follow-through helper: a delayed read of a parent channel is written by hand.
-- No blink: the rigs carry no lid track today.
+- `blink` times the blinks, but no rig has a closed-eye head or a lid track to show them yet.
 - No tool measures a subject's edges in a video frame by frame (step 3 above).
