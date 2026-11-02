@@ -1,0 +1,1273 @@
+{
+  "view": "single-9",
+  "kind": "single",
+  "size": [581, 1115],
+  "box": [188, 197, 769, 1312],
+  "command": "film concept parts in-its-order lead-feast --view single-single-9",
+  "parts": [
+    {
+      "name": "armRight",
+      "kept": 52069,
+      "painted": 0
+    },
+    {
+      "name": "armLeft",
+      "kept": 34495,
+      "painted": 0
+    },
+    {
+      "name": "head",
+      "kept": 105480,
+      "painted": 12
+    },
+    {
+      "name": "sash",
+      "kept": 35579,
+      "painted": 2516
+    },
+    {
+      "name": "robe",
+      "kept": 161379,
+      "painted": 7525
+    },
+    {
+      "name": "torso",
+      "kept": 60202,
+      "painted": 13246
+    }
+  ],
+  "moving": ["armRight", "armLeft"],
+  "hiddenPx": 86480,
+  "carried": [],
+  "okra": {
+    "route": "subscription (okra image, Codex route; no --model)",
+    "input": "okra/input-2af05d4d1106.png",
+    "prompt": "okra/prompt.txt",
+    "pad": {
+      "s": 0.7161052929521652,
+      "dx": -78.77158222473817,
+      "dy": 0
+    },
+    "budget": {
+      "calls": 3,
+      "allowance": null,
+      "used": 3
+    },
+    "calls": [
+      {
+        "n": 1,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his two arms were cut away to make a cut-out puppet. He sits on a wooden stool. His right arm (on the viewer's left) was raised with its hand holding a baby bottle beside his cheek; his left arm (on the viewer's right) was bent under the teal-blue mantle with its round hand resting on his knee. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each shoulder and armpit down to the sash, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle over his left shoulder on the viewer's right side), and his lap under his left hand, the cream tunic and the teal mantle over his thigh as they run on beside it. Each side of his body runs straight down from the outer end of his shoulder to the outer edge of his robe below, so his body under the arms is as wide as his shoulders and his robe, and the tunic and mantle fill everything inside that line with the same soft shade and fine paper grain the sheet paints beside each arm. Keep the soft shade each arm casts on his body beside it exactly as it is, and carry that same shade on under where the arm was. Paint the white sash and the tunic and mantle of his body with the same fine paper grain the sheet shows on them beside the arms: a fine, even speckle through every flat area of colour, never smooth flat colour. There are no arms now: no sleeves, no hands, no bottle, nothing magenta left. Where the magenta lay outside his body, beside his head and shoulders, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, neck, sash, lap, stool, sandals, size, position and framing.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input-2af05d4d1106.png",
+          "-o",
+          "okra/answer-1.png"
+        ],
+        "input": "okra/input-2af05d4d1106.png",
+        "out": "okra/answer-1.png",
+        "state": "laid",
+        "fit": {
+          "s": 0.716217184404189,
+          "dx": -75.67661650007108,
+          "dy": 3.089936500742624,
+          "score": 17.63993285792156
+        },
+        "measures": {
+          "seam": {
+            "deltaE": 4.71,
+            "pairs": 371
+          },
+          "drift": {
+            "deltaE": 3.83,
+            "px": 358467,
+            "chroma": [
+              {
+                "part": "head",
+                "under": "armRight",
+                "painted": {
+                  "chroma": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "chroma": 0,
+                  "px": 0
+                },
+                "cells": 0,
+                "verdict": "unverified"
+              },
+              {
+                "part": "sash",
+                "under": "armLeft",
+                "painted": {
+                  "chroma": 16.86,
+                  "px": 119
+                },
+                "kept": {
+                  "chroma": 15.94,
+                  "px": 119
+                },
+                "cells": 1,
+                "verdict": "within"
+              },
+              {
+                "part": "robe",
+                "under": "armLeft",
+                "painted": {
+                  "chroma": 6.02,
+                  "px": 49
+                },
+                "kept": {
+                  "chroma": 13.19,
+                  "px": 49
+                },
+                "cells": 5,
+                "verdict": "outside"
+              },
+              {
+                "part": "torso",
+                "under": "armRight",
+                "painted": {
+                  "chroma": 16.45,
+                  "px": 135
+                },
+                "kept": {
+                  "chroma": 19.63,
+                  "px": 135
+                },
+                "cells": 7,
+                "verdict": "outside"
+              },
+              {
+                "part": "torso",
+                "under": "armLeft",
+                "painted": {
+                  "chroma": 19.22,
+                  "px": 45
+                },
+                "kept": {
+                  "chroma": 19.44,
+                  "px": 45
+                },
+                "cells": 3,
+                "verdict": "within"
+              }
+            ]
+          },
+          "grain": [
+            {
+              "part": "head",
+              "painted": {
+                "robust": 0,
+                "plain": 0,
+                "n": 0
+              },
+              "kept": {
+                "robust": 0,
+                "plain": 0,
+                "n": 0
+              },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 0
+                },
+                "cells": 0
+              },
+              "verdict": "unverified"
+            },
+            {
+              "part": "sash",
+              "painted": {
+                "robust": 1.15,
+                "plain": 5.05,
+                "n": 3740
+              },
+              "kept": {
+                "robust": 1.15,
+                "plain": 8.69,
+                "n": 1366
+              },
+              "fine": {
+                "painted": {
+                  "share": 0.013,
+                  "px": 160
+                },
+                "kept": {
+                  "share": 0.003,
+                  "px": 1803
+                },
+                "cells": 3
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "robe",
+              "painted": {
+                "robust": 0.82,
+                "plain": 4.94,
+                "n": 7227
+              },
+              "kept": {
+                "robust": 0.99,
+                "plain": 5.41,
+                "n": 5642
+              },
+              "fine": {
+                "painted": {
+                  "share": 0.054,
+                  "px": 258
+                },
+                "kept": {
+                  "share": 0.007,
+                  "px": 2223
+                },
+                "cells": 11
+              },
+              "verdict": "outside"
+            },
+            {
+              "part": "torso",
+              "painted": {
+                "robust": 0.82,
+                "plain": 4.53,
+                "n": 19545
+              },
+              "kept": {
+                "robust": 0.82,
+                "plain": 7.75,
+                "n": 11747
+              },
+              "fine": {
+                "painted": {
+                  "share": 0.043,
+                  "px": 302
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 1146
+                },
+                "cells": 26
+              },
+              "verdict": "outside"
+            }
+          ],
+          "speck": [
+            {
+              "part": "head",
+              "under": "armRight",
+              "painted": {
+                "share": 0,
+                "px": 0
+              },
+              "kept": {
+                "share": 0.01,
+                "px": 1173
+              },
+              "verdict": "unverified"
+            },
+            {
+              "part": "sash",
+              "under": "armLeft",
+              "painted": {
+                "share": 0.002,
+                "px": 4064
+              },
+              "kept": {
+                "share": 0,
+                "px": 1526
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "robe",
+              "under": "armLeft",
+              "painted": {
+                "share": 0.006,
+                "px": 7767
+              },
+              "kept": {
+                "share": 0.001,
+                "px": 5988
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "torso",
+              "under": "armRight",
+              "painted": {
+                "share": 0.007,
+                "px": 6703
+              },
+              "kept": {
+                "share": 0.004,
+                "px": 6392
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "torso",
+              "under": "armLeft",
+              "painted": {
+                "share": 0.005,
+                "px": 14634
+              },
+              "kept": {
+                "share": 0.001,
+                "px": 6256
+              },
+              "verdict": "within"
+            }
+          ],
+          "step": [
+            {
+              "part": "sash",
+              "meets": "robe",
+              "under": "armLeft",
+              "laid": 4.18,
+              "answer": 0.04,
+              "pairs": 19,
+              "verdict": "within"
+            },
+            {
+              "part": "sash",
+              "meets": "torso",
+              "under": "armLeft",
+              "laid": 0.4,
+              "answer": -0.03,
+              "pairs": 49,
+              "verdict": "within"
+            },
+            {
+              "part": "robe",
+              "meets": "torso",
+              "under": "armLeft",
+              "laid": 13.96,
+              "answer": 11.09,
+              "pairs": 3,
+              "verdict": "unverified"
+            }
+          ],
+          "paintUnder": [
+            {
+              "part": "armRight",
+              "px": 8132
+            },
+            {
+              "part": "armLeft",
+              "px": 28008
+            }
+          ],
+          "paintedPx": 36140,
+          "visibleAtRest": 0,
+          "recomposeByteEqual": true
+        },
+        "missed": ["drift", "grain", "speck", "step"]
+      },
+      {
+        "n": 2,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his two arms were cut away to make a cut-out puppet. He sits on a wooden stool. His right arm (on the viewer's left) was raised with its hand holding a baby bottle beside his cheek; his left arm (on the viewer's right) was bent under the teal-blue mantle with its round hand resting on his knee. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each shoulder and armpit down to the sash, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle over his left shoulder on the viewer's right side), and his lap under his left hand, the cream tunic and the teal mantle over his thigh as they run on beside it. Each side of his body runs straight down from the outer end of his shoulder to the outer edge of his white sash below, so his body under the arms is as wide as his shoulders and his white sash, and the tunic and mantle fill everything inside that line with the same soft shade and fine paper grain the sheet paints beside each arm. His body is narrower than his lap: its two sides meet the two ends of the sash, and the wider lap spreads out only below the sash. Keep the soft shade each arm casts on his body beside it exactly as it is, and carry that same shade on under where the arm was. Paint the white sash and the tunic and mantle of his body with the same fine paper grain the sheet shows on them beside the arms: a fine, even speckle through every flat area of colour, never smooth flat colour. There are no arms now: no sleeves, no hands, no bottle, nothing magenta left. Where the magenta lay outside his body, beside his head and shoulders, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, neck, sash, lap, stool, sandals, size, position and framing.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input-2af05d4d1106.png",
+          "-o",
+          "okra/answer-2.png"
+        ],
+        "input": "okra/input-2af05d4d1106.png",
+        "out": "okra/answer-2.png",
+        "state": "laid",
+        "fit": {
+          "s": 0.7163290758562126,
+          "dx": -75.51909218165395,
+          "dy": 2.9611034702354573,
+          "score": 21.07383715402408
+        },
+        "measures": {
+          "seam": {
+            "deltaE": 3.86,
+            "pairs": 350
+          },
+          "drift": {
+            "deltaE": 4.47,
+            "px": 358467,
+            "chroma": [
+              {
+                "part": "head",
+                "under": "armRight",
+                "painted": {
+                  "chroma": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "chroma": 0,
+                  "px": 0
+                },
+                "cells": 0,
+                "verdict": "unverified"
+              },
+              {
+                "part": "sash",
+                "under": "armLeft",
+                "painted": {
+                  "chroma": 15.6,
+                  "px": 119
+                },
+                "kept": {
+                  "chroma": 15.94,
+                  "px": 119
+                },
+                "cells": 1,
+                "verdict": "within"
+              },
+              {
+                "part": "robe",
+                "under": "armLeft",
+                "painted": {
+                  "chroma": 6.01,
+                  "px": 49
+                },
+                "kept": {
+                  "chroma": 13.19,
+                  "px": 49
+                },
+                "cells": 4,
+                "verdict": "outside"
+              },
+              {
+                "part": "torso",
+                "under": "armRight",
+                "painted": {
+                  "chroma": 17.86,
+                  "px": 143
+                },
+                "kept": {
+                  "chroma": 19.63,
+                  "px": 143
+                },
+                "cells": 8,
+                "verdict": "within"
+              },
+              {
+                "part": "torso",
+                "under": "armLeft",
+                "painted": {
+                  "chroma": 17.25,
+                  "px": 71
+                },
+                "kept": {
+                  "chroma": 18.31,
+                  "px": 71
+                },
+                "cells": 1,
+                "verdict": "within"
+              }
+            ]
+          },
+          "grain": [
+            {
+              "part": "head",
+              "painted": {
+                "robust": 0,
+                "plain": 0,
+                "n": 0
+              },
+              "kept": {
+                "robust": 0,
+                "plain": 0,
+                "n": 0
+              },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 0
+                },
+                "cells": 0
+              },
+              "verdict": "unverified"
+            },
+            {
+              "part": "sash",
+              "painted": {
+                "robust": 0.99,
+                "plain": 10.13,
+                "n": 1732
+              },
+              "kept": {
+                "robust": 1.15,
+                "plain": 8.69,
+                "n": 1366
+              },
+              "fine": {
+                "painted": {
+                  "share": 0.013,
+                  "px": 160
+                },
+                "kept": {
+                  "share": 0.003,
+                  "px": 1803
+                },
+                "cells": 3
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "robe",
+              "painted": {
+                "robust": 1.15,
+                "plain": 4.5,
+                "n": 6265
+              },
+              "kept": {
+                "robust": 0.99,
+                "plain": 5.41,
+                "n": 5642
+              },
+              "fine": {
+                "painted": {
+                  "share": 0.157,
+                  "px": 345
+                },
+                "kept": {
+                  "share": 0.008,
+                  "px": 1977
+                },
+                "cells": 11
+              },
+              "verdict": "outside"
+            },
+            {
+              "part": "torso",
+              "painted": {
+                "robust": 0.82,
+                "plain": 8.63,
+                "n": 10683
+              },
+              "kept": {
+                "robust": 0.82,
+                "plain": 8.2,
+                "n": 11978
+              },
+              "fine": {
+                "painted": {
+                  "share": 0.045,
+                  "px": 528
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 702
+                },
+                "cells": 24
+              },
+              "verdict": "outside"
+            }
+          ],
+          "speck": [
+            {
+              "part": "head",
+              "under": "armRight",
+              "painted": {
+                "share": 0,
+                "px": 0
+              },
+              "kept": {
+                "share": 0.01,
+                "px": 1173
+              },
+              "verdict": "unverified"
+            },
+            {
+              "part": "sash",
+              "under": "armLeft",
+              "painted": {
+                "share": 0.005,
+                "px": 1973
+              },
+              "kept": {
+                "share": 0,
+                "px": 1526
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "robe",
+              "under": "armLeft",
+              "painted": {
+                "share": 0.002,
+                "px": 6675
+              },
+              "kept": {
+                "share": 0.001,
+                "px": 5988
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "torso",
+              "under": "armRight",
+              "painted": {
+                "share": 0.002,
+                "px": 6523
+              },
+              "kept": {
+                "share": 0.004,
+                "px": 6719
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "torso",
+              "under": "armLeft",
+              "painted": {
+                "share": 0.005,
+                "px": 5097
+              },
+              "kept": {
+                "share": 0.001,
+                "px": 6256
+              },
+              "verdict": "within"
+            }
+          ],
+          "step": [
+            {
+              "part": "sash",
+              "meets": "torso",
+              "under": "armLeft",
+              "laid": 2.42,
+              "answer": 0.46,
+              "pairs": 16,
+              "verdict": "within"
+            }
+          ],
+          "paintUnder": [
+            {
+              "part": "armRight",
+              "px": 6987
+            },
+            {
+              "part": "armLeft",
+              "px": 14960
+            }
+          ],
+          "paintedPx": 21947,
+          "visibleAtRest": 0,
+          "recomposeByteEqual": true
+        },
+        "missed": ["drift", "grain", "speck"]
+      },
+      {
+        "n": 3,
+        "command": [
+          "okra",
+          "image",
+          "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where his two arms were cut away to make a cut-out puppet. He sits on a wooden stool. His right arm (on the viewer's left) was raised with its hand holding a baby bottle beside his cheek; his left arm (on the viewer's right) was bent under the teal-blue mantle with its round hand resting on his knee. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each shoulder and armpit down to the sash, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle over his left shoulder on the viewer's right side), and his lap under his left hand, the cream tunic and the teal mantle over his thigh as they run on beside it. Each side of his body runs from the outer end of his shoulder down to the outer end of his white sash, so his body under the arms is no wider than his shoulders and his sash; on the viewer's left it runs on into the short piece of his side's outline still drawn just above the sash, with no step. His lap below the sash is wider than his body and keeps its own outline. The tunic and mantle fill everything inside those lines with the same soft shading the sheet paints beside each arm. Keep the soft shade each arm casts on his body beside it exactly as it is, and carry that same shade on under where the arm was. There are no arms now: no sleeves, no hands, no bottle, nothing magenta left. Where the magenta lay outside his body, beside his head and shoulders, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, neck, sash, lap, stool, sandals, size, position and framing.",
+          "--size",
+          "1024x1536",
+          "--ref",
+          "okra/input-2af05d4d1106.png",
+          "-o",
+          "okra/answer-3.png"
+        ],
+        "input": "okra/input-2af05d4d1106.png",
+        "out": "okra/answer-3.png",
+        "state": "laid",
+        "fit": {
+          "s": 0.7163290758562126,
+          "dx": -75.45659218165395,
+          "dy": 2.9923925327354937,
+          "score": 16.470972988117463
+        },
+        "measures": {
+          "seam": {
+            "deltaE": 3.78,
+            "pairs": 332
+          },
+          "drift": {
+            "deltaE": 3.54,
+            "px": 358467,
+            "chroma": [
+              {
+                "part": "head",
+                "under": "armRight",
+                "painted": {
+                  "chroma": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "chroma": 0,
+                  "px": 0
+                },
+                "cells": 0,
+                "verdict": "unverified"
+              },
+              {
+                "part": "sash",
+                "under": "armLeft",
+                "painted": {
+                  "chroma": 16.58,
+                  "px": 119
+                },
+                "kept": {
+                  "chroma": 15.94,
+                  "px": 119
+                },
+                "cells": 1,
+                "verdict": "within"
+              },
+              {
+                "part": "robe",
+                "under": "armLeft",
+                "painted": {
+                  "chroma": 5.16,
+                  "px": 49
+                },
+                "kept": {
+                  "chroma": 13.19,
+                  "px": 49
+                },
+                "cells": 4,
+                "verdict": "outside"
+              },
+              {
+                "part": "torso",
+                "under": "armRight",
+                "painted": {
+                  "chroma": 12.62,
+                  "px": 63
+                },
+                "kept": {
+                  "chroma": 14.56,
+                  "px": 63
+                },
+                "cells": 7,
+                "verdict": "within"
+              },
+              {
+                "part": "torso",
+                "under": "armLeft",
+                "painted": {
+                  "chroma": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "chroma": 0,
+                  "px": 0
+                },
+                "cells": 0,
+                "verdict": "unverified"
+              }
+            ]
+          },
+          "grain": [
+            {
+              "part": "head",
+              "painted": {
+                "robust": 0,
+                "plain": 0,
+                "n": 0
+              },
+              "kept": {
+                "robust": 0,
+                "plain": 0,
+                "n": 0
+              },
+              "fine": {
+                "painted": {
+                  "share": 0,
+                  "px": 0
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 0
+                },
+                "cells": 0
+              },
+              "verdict": "unverified"
+            },
+            {
+              "part": "sash",
+              "painted": {
+                "robust": 0.82,
+                "plain": 10.77,
+                "n": 2006
+              },
+              "kept": {
+                "robust": 1.15,
+                "plain": 8.69,
+                "n": 1366
+              },
+              "fine": {
+                "painted": {
+                  "share": 0.013,
+                  "px": 160
+                },
+                "kept": {
+                  "share": 0.003,
+                  "px": 1803
+                },
+                "cells": 3
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "robe",
+              "painted": {
+                "robust": 0.82,
+                "plain": 4.21,
+                "n": 6647
+              },
+              "kept": {
+                "robust": 0.99,
+                "plain": 5.41,
+                "n": 5642
+              },
+              "fine": {
+                "painted": {
+                  "share": 0.028,
+                  "px": 537
+                },
+                "kept": {
+                  "share": 0.008,
+                  "px": 1834
+                },
+                "cells": 11
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "torso",
+              "painted": {
+                "robust": 0.99,
+                "plain": 9.68,
+                "n": 11272
+              },
+              "kept": {
+                "robust": 0.82,
+                "plain": 8.24,
+                "n": 12040
+              },
+              "fine": {
+                "painted": {
+                  "share": 0.031,
+                  "px": 225
+                },
+                "kept": {
+                  "share": 0,
+                  "px": 2576
+                },
+                "cells": 25
+              },
+              "verdict": "outside"
+            }
+          ],
+          "speck": [
+            {
+              "part": "head",
+              "under": "armRight",
+              "painted": {
+                "share": 0,
+                "px": 0
+              },
+              "kept": {
+                "share": 0.01,
+                "px": 1173
+              },
+              "verdict": "unverified"
+            },
+            {
+              "part": "sash",
+              "under": "armLeft",
+              "painted": {
+                "share": 0.01,
+                "px": 2252
+              },
+              "kept": {
+                "share": 0,
+                "px": 1526
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "robe",
+              "under": "armLeft",
+              "painted": {
+                "share": 0.003,
+                "px": 7076
+              },
+              "kept": {
+                "share": 0.001,
+                "px": 5988
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "torso",
+              "under": "armRight",
+              "painted": {
+                "share": 0.007,
+                "px": 6127
+              },
+              "kept": {
+                "share": 0.004,
+                "px": 6719
+              },
+              "verdict": "within"
+            },
+            {
+              "part": "torso",
+              "under": "armLeft",
+              "painted": {
+                "share": 0.013,
+                "px": 6126
+              },
+              "kept": {
+                "share": 0.001,
+                "px": 6256
+              },
+              "verdict": "within"
+            }
+          ],
+          "step": [
+            {
+              "part": "sash",
+              "meets": "torso",
+              "under": "armLeft",
+              "laid": 1.63,
+              "answer": 0.76,
+              "pairs": 19,
+              "verdict": "within"
+            }
+          ],
+          "paintUnder": [
+            {
+              "part": "armRight",
+              "px": 6607
+            },
+            {
+              "part": "armLeft",
+              "px": 16692
+            }
+          ],
+          "paintedPx": 23299,
+          "visibleAtRest": 0,
+          "recomposeByteEqual": true
+        },
+        "missed": ["drift", "grain", "speck"]
+      }
+    ],
+    "chosen": 3,
+    "fit": {
+      "s": 0.7163290758562126,
+      "dx": -75.45659218165395,
+      "dy": 2.9923925327354937,
+      "score": 16.470972988117463
+    }
+  },
+  "measures": {
+    "seam": {
+      "deltaE": 3.78,
+      "pairs": 332
+    },
+    "drift": {
+      "deltaE": 3.54,
+      "px": 358467,
+      "chroma": [
+        {
+          "part": "head",
+          "under": "armRight",
+          "painted": {
+            "chroma": 0,
+            "px": 0
+          },
+          "kept": {
+            "chroma": 0,
+            "px": 0
+          },
+          "cells": 0,
+          "verdict": "unverified"
+        },
+        {
+          "part": "sash",
+          "under": "armLeft",
+          "painted": {
+            "chroma": 16.58,
+            "px": 119
+          },
+          "kept": {
+            "chroma": 15.94,
+            "px": 119
+          },
+          "cells": 1,
+          "verdict": "within"
+        },
+        {
+          "part": "robe",
+          "under": "armLeft",
+          "painted": {
+            "chroma": 5.16,
+            "px": 49
+          },
+          "kept": {
+            "chroma": 13.19,
+            "px": 49
+          },
+          "cells": 4,
+          "verdict": "outside"
+        },
+        {
+          "part": "torso",
+          "under": "armRight",
+          "painted": {
+            "chroma": 12.62,
+            "px": 63
+          },
+          "kept": {
+            "chroma": 14.56,
+            "px": 63
+          },
+          "cells": 7,
+          "verdict": "within"
+        },
+        {
+          "part": "torso",
+          "under": "armLeft",
+          "painted": {
+            "chroma": 0,
+            "px": 0
+          },
+          "kept": {
+            "chroma": 0,
+            "px": 0
+          },
+          "cells": 0,
+          "verdict": "unverified"
+        }
+      ]
+    },
+    "grain": [
+      {
+        "part": "head",
+        "painted": {
+          "robust": 0,
+          "plain": 0,
+          "n": 0
+        },
+        "kept": {
+          "robust": 0,
+          "plain": 0,
+          "n": 0
+        },
+        "fine": {
+          "painted": {
+            "share": 0,
+            "px": 0
+          },
+          "kept": {
+            "share": 0,
+            "px": 0
+          },
+          "cells": 0
+        },
+        "verdict": "unverified"
+      },
+      {
+        "part": "sash",
+        "painted": {
+          "robust": 0.82,
+          "plain": 10.77,
+          "n": 2006
+        },
+        "kept": {
+          "robust": 1.15,
+          "plain": 8.69,
+          "n": 1366
+        },
+        "fine": {
+          "painted": {
+            "share": 0.013,
+            "px": 160
+          },
+          "kept": {
+            "share": 0.003,
+            "px": 1803
+          },
+          "cells": 3
+        },
+        "verdict": "within"
+      },
+      {
+        "part": "robe",
+        "painted": {
+          "robust": 0.82,
+          "plain": 4.21,
+          "n": 6647
+        },
+        "kept": {
+          "robust": 0.99,
+          "plain": 5.41,
+          "n": 5642
+        },
+        "fine": {
+          "painted": {
+            "share": 0.028,
+            "px": 537
+          },
+          "kept": {
+            "share": 0.008,
+            "px": 1834
+          },
+          "cells": 11
+        },
+        "verdict": "within"
+      },
+      {
+        "part": "torso",
+        "painted": {
+          "robust": 0.99,
+          "plain": 9.68,
+          "n": 11272
+        },
+        "kept": {
+          "robust": 0.82,
+          "plain": 8.24,
+          "n": 12040
+        },
+        "fine": {
+          "painted": {
+            "share": 0.031,
+            "px": 225
+          },
+          "kept": {
+            "share": 0,
+            "px": 2576
+          },
+          "cells": 25
+        },
+        "verdict": "outside"
+      }
+    ],
+    "speck": [
+      {
+        "part": "head",
+        "under": "armRight",
+        "painted": {
+          "share": 0,
+          "px": 0
+        },
+        "kept": {
+          "share": 0.01,
+          "px": 1173
+        },
+        "verdict": "unverified"
+      },
+      {
+        "part": "sash",
+        "under": "armLeft",
+        "painted": {
+          "share": 0.01,
+          "px": 2252
+        },
+        "kept": {
+          "share": 0,
+          "px": 1526
+        },
+        "verdict": "within"
+      },
+      {
+        "part": "robe",
+        "under": "armLeft",
+        "painted": {
+          "share": 0.003,
+          "px": 7076
+        },
+        "kept": {
+          "share": 0.001,
+          "px": 5988
+        },
+        "verdict": "within"
+      },
+      {
+        "part": "torso",
+        "under": "armRight",
+        "painted": {
+          "share": 0.007,
+          "px": 6127
+        },
+        "kept": {
+          "share": 0.004,
+          "px": 6719
+        },
+        "verdict": "within"
+      },
+      {
+        "part": "torso",
+        "under": "armLeft",
+        "painted": {
+          "share": 0.013,
+          "px": 6126
+        },
+        "kept": {
+          "share": 0.001,
+          "px": 6256
+        },
+        "verdict": "within"
+      }
+    ],
+    "step": [
+      {
+        "part": "sash",
+        "meets": "torso",
+        "under": "armLeft",
+        "laid": 1.63,
+        "answer": 0.76,
+        "pairs": 19,
+        "verdict": "within"
+      }
+    ],
+    "paintUnder": [
+      {
+        "part": "armRight",
+        "px": 6607
+      },
+      {
+        "part": "armLeft",
+        "px": 16692
+      }
+    ],
+    "paintedPx": 23299,
+    "visibleAtRest": 0,
+    "recomposeByteEqual": true
+  },
+  "bars": {
+    "seamDeltaE": 10,
+    "driftDeltaE": 5,
+    "chromaDrop": 3,
+    "grainWithin": 0.5,
+    "grainCellOver": 0.03,
+    "speckOver": 0.04,
+    "stepWithin": 5,
+    "visibleAtRest": 0,
+    "leastSeamPairs": 20,
+    "leastStepPairs": 8,
+    "leastGrainWindows": 90,
+    "leastRegionPx": 100,
+    "leastCellPx": 40
+  },
+  "missed": ["drift", "grain", "speck"],
+  "named": []
+}

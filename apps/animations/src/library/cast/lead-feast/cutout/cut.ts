@@ -535,11 +535,184 @@ const SINGLE_1: PartCut = {
   ],
 };
 
+/** His left sleeve seated (single-9, the viewer's right, under the mantle): its inner edge, a dark teal crease down to the cuff over his knee. */
+const SINGLE_9_LEFT: Sleeve = {
+  inner: [
+    [436, 445],
+    [429, 478],
+    [425, 520],
+    [423, 560],
+    [421, 600],
+    [416, 622],
+    [411, 650],
+    [403, 672],
+    [394, 690],
+  ],
+  shoulder: JOINTS['single-9'].shoulderLeft,
+  cap: 13,
+  side: 'right',
+};
+const single9Left = sleeve(SINGLE_9_LEFT);
+
+/**
+ * His seated raise (single-9), read off gridded 2-3x crops of the view: his
+ * right arm raised as on single-1, the bottle in his hand beside his cheek,
+ * a polygon from the bottle's top down the upper arm's soft crease to the
+ * sleeve's foot; his left arm bent under the mantle, its sleeve on its dark
+ * teal crease, its round hand resting on his knee and the cuff's end beside
+ * it; his head above his chin and his neck's skin to the collar's V; the
+ * sash's band, knot and ends; his lap below the sash. His lap, stool and
+ * sandals stand with the root, so they are one part.
+ */
+const SINGLE_9: PartCut = {
+  parts: [
+    {
+      name: 'armRight',
+      take: [
+        {
+          polygon: [
+            [-1, 185],
+            [144, 185],
+            [146, 380],
+            [141, 437],
+            [150, 432],
+            [165, 423],
+            [180, 413],
+            [195, 403],
+            [211, 396],
+            [211, 420],
+            [206, 450],
+            [203, 500],
+            [200, 545],
+            [196, 559],
+            [177, 559],
+            [173, 565],
+            [171, 600],
+            [-1, 610],
+          ],
+        },
+      ],
+      pivot: JOINTS['single-9'].shoulderRight,
+    },
+    {
+      name: 'armLeft',
+      take: [
+        ...single9Left.take,
+        // his round hand on his knee, its ring and thumb whole
+        { disc: { c: [442, 718], r: 50 } },
+        // the cuff's end beside the hand, to where the arm's lower outline meets the mantle on his thigh
+        {
+          polygon: [
+            [470, 680],
+            [FAR, 680],
+            [FAR, 728],
+            [535, 732],
+            [510, 748],
+            [480, 762],
+          ],
+        },
+      ],
+      unless: single9Left.unless,
+      pivot: JOINTS['single-9'].shoulderLeft,
+    },
+    {
+      // above his chin, and his neck's skin down to the collar's V
+      name: 'head',
+      take: [
+        box(-1, -1, FAR, 362),
+        {
+          polygon: [
+            [248, 360],
+            [374, 360],
+            [374, 392],
+            [366, 404],
+            [355, 408],
+            [345, 415],
+            [335, 420],
+            [320, 426],
+            [310, 431],
+            [300, 427],
+            [290, 423],
+            [280, 418],
+            [270, 411],
+            [260, 401],
+            [252, 394],
+            [245, 386],
+          ],
+        },
+      ],
+    },
+    {
+      // the band's rows across his body, the knot and the two ends hanging over his lap
+      name: 'sash',
+      take: [
+        box(186, 637, 412, 692),
+        { disc: { c: [301, 660], r: 30 } },
+        {
+          polygon: [
+            [266, 688],
+            [341, 688],
+            [346, 740],
+            [352, 930],
+            [356, 962],
+            [298, 966],
+            [296, 900],
+            [248, 900],
+            [246, 785],
+            [262, 740],
+          ],
+        },
+      ],
+    },
+    { name: 'robe', take: [box(-1, 692, FAR, FAR)] },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
+  ],
+};
+
+/**
+ * His wince (single-5), a bust as heads-4, read off gridded 3x crops: his
+ * head above the row where his jaw's ink meets his neck's outline, with the
+ * shadow his chin casts on his neck between those outlines; his neck below
+ * it, his collar and garments.
+ */
+const SINGLE_5: PartCut = {
+  parts: [
+    {
+      name: 'head',
+      take: [
+        {
+          polygon: [
+            [-1, -1],
+            [FAR, -1],
+            [FAR, 252],
+            [197, 252],
+            [197, 287],
+            [109, 287],
+            [109, 252],
+            [-1, 252],
+          ],
+        },
+      ],
+      pivot: [152, 286],
+    },
+    { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
+  ],
+};
+
 /** His sheets' ink, for the row that closes a bust's foot. */
 const INK = [42, 30, 24, 255] as const;
 
 /** Where his body's sides run under his arms: out to his shoulders and robe, not in at the sleeves' inner edges. */
 const SIDES = sides({ pronoun: 'his', lower: 'robe', cloth: 'the tunic and mantle' });
+
+/**
+ * Where his body's sides run under his arms as he sits: in to the ends of
+ * his sash, as his lap below it spreads wider than his body, and on the
+ * viewer's left into the piece of his side's outline still drawn above the
+ * sash.
+ */
+const SEATED_SIDES =
+  "Each side of his body runs from the outer end of his shoulder down to the outer end of his white sash, so his body under the arms is no wider than his shoulders and his sash; on the viewer's left it runs on into the short piece of his side's outline still drawn just above the sash, with no step. His lap below the sash is wider than his body and keeps its own outline. The tunic and mantle fill everything inside those lines with the same soft shading the sheet paints beside each arm.";
 
 /** The paper grain his sheet shows on his sash and torso, carried into the paint under his arms. */
 const GRAIN = grain('the white sash and the tunic and mantle of his body');
@@ -588,6 +761,15 @@ const HIDDEN_ENTRIES = {
       why: 'its three calls were drawn before the held bottle was part of the right arm; holding it changes the magenta input, so no kept answer lays on the present input',
     },
   },
+  // seated: no grain sentence, as okra reads it as speckle on his lap
+  'single-9': {
+    moving: ['armRight', 'armLeft'],
+    prompt: `${CUT_AWAY} his two arms were cut away to make a cut-out puppet. He sits on a wooden stool. His right arm (on the viewer's left) was raised with its hand holding a baby bottle beside his cheek; his left arm (on the viewer's right) was bent under the teal-blue mantle with its round hand resting on his knee. Repaint ONLY the magenta areas, as what lies underneath his arms: the sides of his body, from each shoulder and armpit down to the sash, each side closed by the same thick dark brown-black outline as the rest of him, painted in exactly the same style, colours and soft shading (the cream tunic on the viewer's left side, the teal-blue mantle over his left shoulder on the viewer's right side), and his lap under his left hand, the cream tunic and the teal mantle over his thigh as they run on beside it. ${SEATED_SIDES} ${shade('his')} There are no arms now: no sleeves, no hands, no bottle, nothing magenta left. Where the magenta lay outside his body, beside his head and shoulders, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same head, face, hair, neck, sash, lap, stool, sandals, size, position and framing.`,
+  },
+  'single-5': {
+    moving: ['head'],
+    prompt: `${CUT_AWAY} his head (his hair, face and ears) was cut away to make a cut-out puppet. Repaint ONLY the magenta area, as what lies behind his head: his neck rising straight up from his collar as a plain column of skin to about where his mouth was, its two sides closed by the same thick dark brown-black outline as the rest of him, its top simply rounded and closed by the same outline (no opening, no rim, no dark band), in exactly the same skin colour, soft shading and fine paper grain as his neck below. Everywhere else in the magenta area becomes the plain cream paper. There is no head now: no hair, no face, no ears, nothing magenta left. ${KEEP_REST}`,
+  },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
 /** His cut table: each view's cut, how its figure is read, and what its label rules read (his colour classes and the view's part labels). */
@@ -619,6 +801,24 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
         },
       ],
     },
+    'single-9': {
+      cut: SINGLE_9,
+      figure: 'framed',
+      gaps: [
+        { at: [319, 1041], box: [282, 1023, 356, 1060], why: 'the ground between his feet' },
+        {
+          at: [154, 1018],
+          box: [147, 1003, 162, 1033],
+          why: "the ground in the notch between his hem, his right sandal and the stool's leg",
+        },
+        {
+          at: [483, 1015],
+          box: [471, 1002, 496, 1028],
+          why: "the ground in the notch between his hem, his left sandal and the stool's leg",
+        },
+      ],
+    },
+    'single-5': { cut: SINGLE_5, figure: 'bust' },
   },
   hidden: HIDDEN_ENTRIES,
   ink: INK,

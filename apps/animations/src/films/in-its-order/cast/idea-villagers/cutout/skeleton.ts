@@ -93,4 +93,28 @@ export const SKELETONS = {
       capLeft: 8,
     }),
   ),
+  // his right arm raised, the clay cup in his hand before his chest; his left
+  // arm hanging at his side. Each flap's band takes the corner of his headcloth
+  // over that shoulder: the right flap's edge lies 30 px past the shoulder, past
+  // where the headcloth's diagonal edge leaves the band (x 82), and the left
+  // flap's edge is the sleeve's inner edge at its top.
+  'single-15': framed(
+    keptAt('single-15'),
+    standing(BODY, {
+      facing: 'front',
+      hip: [221, 672],
+      neck: [221, 374],
+      chin: [221, 341],
+      crown: [221, 0],
+      ...JOINTS['single-15'],
+      wristRight: [110, 498],
+      handRight: [147, 469],
+      wristLeft: [390, 665],
+      handLeft: [392, 710],
+      flapRight: 100,
+      flapLeft: 330,
+      capRight: 13,
+      capLeft: 13,
+    }),
+  ),
 } as const satisfies Readonly<Record<FramedView, Skeleton>>;

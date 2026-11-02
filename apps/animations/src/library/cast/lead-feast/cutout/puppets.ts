@@ -24,6 +24,14 @@ import single1Head from './sheets/single-1/head.png' with { type: 'file' };
 import single1Robe from './sheets/single-1/robe.png' with { type: 'file' };
 import single1Sash from './sheets/single-1/sash.png' with { type: 'file' };
 import single1Torso from './sheets/single-1/torso.png' with { type: 'file' };
+import single5Head from './sheets/single-5/head.png' with { type: 'file' };
+import single5Torso from './sheets/single-5/torso.png' with { type: 'file' };
+import single9ArmLeft from './sheets/single-9/armLeft.png' with { type: 'file' };
+import single9ArmRight from './sheets/single-9/armRight.png' with { type: 'file' };
+import single9Head from './sheets/single-9/head.png' with { type: 'file' };
+import single9Robe from './sheets/single-9/robe.png' with { type: 'file' };
+import single9Sash from './sheets/single-9/sash.png' with { type: 'file' };
+import single9Torso from './sheets/single-9/torso.png' with { type: 'file' };
 import tqArmLeft from './sheets/threeQuarterLeft/armLeft.png' with { type: 'file' };
 import tqArmRight from './sheets/threeQuarterLeft/armRight.png' with { type: 'file' };
 import tqFootLeft from './sheets/threeQuarterLeft/footLeft.png' with { type: 'file' };
@@ -53,6 +61,8 @@ export const PAPERS = {
   threeQuarterLeft: [253, 242, 220],
   'heads-4': [254, 242, 218],
   'single-1': [254, 242, 219],
+  'single-9': [254, 243, 219],
+  'single-5': [254, 243, 220],
 } as const satisfies Readonly<Record<keyof typeof SKELETONS, readonly [number, number, number]>>;
 
 /** Each cut view's puppet, by the view's name in his sheets' views: its parts front to back, its part sheet the kept box padded (`frames.ts`), his origin at the kept box's top-left corner, held to the kept box (`library/cutout/puppets.ts`). */
@@ -97,6 +107,18 @@ export const PUPPETS = puppetsOf({
       ['sash', single1Sash],
       ['robe', single1Robe],
       ['torso', single1Torso],
+    ],
+    'single-9': [
+      ['armRight', single9ArmRight],
+      ['armLeft', single9ArmLeft],
+      ['head', single9Head],
+      ['sash', single9Sash],
+      ['robe', single9Robe],
+      ['torso', single9Torso],
+    ],
+    'single-5': [
+      ['head', single5Head],
+      ['torso', single5Torso],
     ],
   },
 });

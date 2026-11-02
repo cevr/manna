@@ -27,4 +27,13 @@ export const JOINTS = {
     shoulderLeft: [172, 195],
     elbowLeft: [187, 260],
   },
+  // his right arm raised, the clay cup in its hand before his chest: the upper
+  // arm runs down from under his headcloth to the elbow out at his side, the
+  // forearm rises to the hand; his left arm hangs at his side
+  'single-15': {
+    shoulderRight: [70, 430],
+    elbowRight: [40, 560],
+    shoulderLeft: [370, 430],
+    elbowLeft: [397, 580],
+  },
 } as const satisfies Readonly<Record<string, Readonly<Record<string, Pt>>>>;
