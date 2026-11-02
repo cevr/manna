@@ -4,8 +4,9 @@
 // `cold.baby.3` (`BABY_BACK`) with the feast's table in front of her
 // (`FRONT`), the camera pushing in on the baby's face.
 // `grown` cuts to the feast's courtyard plates on the mother at the long
-// table and trucks down it to the lead, who stands between the villager and
-// the mother where the title stands them, his bottle raised (`bottle`).
+// table and trucks down it to the lead, who sits between the villager and
+// the mother where the title stands them, the bottle on his lap, and on
+// `bottle` raises it (`raise`, his seated raise's frames on twos).
 // `smile` pulls back to the three guests at the table, who hold still. On
 // `letter` a rolled scroll drops onto the table in front of the lead and
 // unrolls over its edge (`SCROLL`). On `ouch` he winces (`WINCE`).
@@ -17,9 +18,10 @@
 // near one. Each courtyard move runs from where the last one left it
 // (`MOVES`).
 
-import { drawing, type PuppetLook } from '@manna/film/canvas';
+import { drawing, ground, type PuppetLook, type PuppetPose } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
 import { PUPPETS as LEAD } from '../../../library/cast/lead-feast/cutout/puppets.ts';
+import { RAISE_SEATED } from '../../../library/cast/lead-feast/cutout/raise-seated.ts';
 import winceHead from '../../../library/cast/lead-feast/cutout/sheets/single-5/head.png' with { type: 'file' };
 import { PUPPETS as MOTHER } from '../cast/feast-mother/cutout/puppets.ts';
 import { PUPPETS as VILLAGER } from '../cast/idea-villagers/cutout/puppets.ts';
@@ -109,6 +111,9 @@ const MOVES = [
   ['ouch', { x: 956, y: 820, k: 3.2 }],
 ] as const satisfies ReadonlyArray<readonly [string, Camera]>;
 
+/** The film's frames a second, its `film.ts`'s `fps` (the film imports this scene, so the scene names the rate it swaps the raise's frames on). */
+const FPS = 30;
+
 /**
  * His seated cut-out (single-9) with no line: the wince's head is laid whole
  * with its own line, so the look draws no line again near it (with a line,
@@ -170,6 +175,7 @@ export const cold = drawing({
     baby: { mark: 'baby', until: 'grown', ease: 'inOutSine' },
     truck: { mark: 'grown', until: 'bottle', ease: 'inOutCubic' },
     bottle: { mark: 'bottle', dur: 0.7, ease: 'outCubic' },
+    raise: { mark: 'bottle', dur: RAISE_SEATED.frames / FPS, ease: 'linear' },
     smile: { mark: 'smile', dur: 1.6, ease: 'inOutCubic' },
     read: { mark: 'letter', dur: 1.6, ease: 'inOutCubic' },
     drop: { mark: 'letter', dur: 0.4, ease: 'inQuad' },
@@ -195,6 +201,7 @@ export const cold = drawing({
     rolled: SCROLL_ROLLED,
     open: SCROLL_OPEN,
     roller: SCROLL_ROLLER,
+    ...RAISE_SEATED.paintings,
   },
   draw: (f) => {
     const { ctx, w } = f;
@@ -219,20 +226,35 @@ export const cold = drawing({
       draw();
       ctx.restore();
     };
-    // A guest: its head centred on its seat, its feet on the floor.
-    const guest = (name: keyof typeof GUESTS, look?: PuppetLook) => {
+    // A guest's pose: its head centred on its seat, its feet on the floor.
+    const seat = (name: keyof typeof GUESTS): PuppetPose => {
       const g = GUESTS[name];
       const scale = g.head / (g.box[2] - g.box[0]);
       const headX = (g.box[0] + g.box[2]) / 2;
-      f.puppet(
-        name,
-        {
-          numbers: {},
-          root: [g.x + scale * (g.root[0] - headX), FLOOR - scale * (g.h - g.root[1])],
-          scale,
-        },
-        look,
-      );
+      return {
+        numbers: {},
+        root: [g.x + scale * (g.root[0] - headX), FLOOR - scale * (g.h - g.root[1])],
+        scale,
+      };
+    };
+    const guest = (name: 'villager' | 'mother') => f.puppet(name, seat(name));
+    // The lead on his seat, on his single-9 view's px as his cut-out is
+    // posed: the contact shadow under him, then his raise's frame (rest, on
+    // twos from `raise` to k6, k6 kept), or from `ouch` his single-9 cut-out,
+    // which is k6, with the wince's head in place of its own. The raise's
+    // film frame is its linear cue's share of its frames, rounded: `bottle`
+    // lies on the frame grid, where a floor would drop a frame to float noise.
+    const lead = () => {
+      const pose = seat('lead');
+      const wince = f.t >= f.cue('ouch').start;
+      ctx.save();
+      ctx.translate(pose.root[0], pose.root[1]);
+      ctx.scale(pose.scale, pose.scale);
+      ctx.translate(-GUESTS.lead.root[0], -GUESTS.lead.root[1]);
+      ground(ctx, RAISE_SEATED.ground.at[0], RAISE_SEATED.ground.at[1], RAISE_SEATED.ground.w);
+      if (!wince) f.painting(RAISE_SEATED.frame(Math.round(f.at('raise') * RAISE_SEATED.frames)));
+      ctx.restore();
+      if (wince) f.puppet('lead', pose, WINCE);
     };
 
     // The letter on the table's plane: the rolled scroll falling and hopping,
@@ -304,7 +326,7 @@ export const cold = drawing({
     plane(camera, PLANES.guests, () =>
       panel(() => {
         guest('villager');
-        guest('lead', f.t >= f.cue('ouch').start ? WINCE : undefined);
+        lead();
         guest('mother');
       }),
     );
