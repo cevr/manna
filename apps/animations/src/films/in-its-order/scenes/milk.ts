@@ -10,7 +10,8 @@
 // the camera closes on his face and the cup as an ink dropper comes down over
 // it (`INK`); on `mixed`, at "nothing", he leans back from it and it goes.
 // On `word` the camera draws back to the book and the cup and the ribbon
-// pours again, filling the cup to its brim.
+// pours again, filling the cup to its brim. On `good` the pour ends and the
+// book fades away as the camera settles on him and his full cup.
 //
 // A shot's camera is a centre and a zoom on the page's frame px; each move
 // runs from where the last one left it (`MOVES`). The page covers frame x
@@ -38,12 +39,14 @@ const WIDE: Camera = { x: 960, y: 540, k: 1 };
 /**
  * Shot A's framings, each a cue and where it leaves the camera: `push`
  * closes in on the villager and his cup, `close` on his face and the cup
- * as the dropper comes.
+ * as the dropper comes, `again` draws back to the book and the cup, and
+ * `settle` holds on him and his full cup as the book goes.
  */
 const MOVES = [
   ['push', { x: 1060, y: 380, k: 1.35 }],
   ['close', { x: 1150, y: 360, k: 1.9 }],
   ['again', { x: 1040, y: 330, k: 1.6 }],
+  ['settle', { x: 1100, y: 420, k: 1.4 }],
 ] as const satisfies ReadonlyArray<readonly [string, Camera]>;
 
 /**
@@ -52,8 +55,9 @@ const MOVES = [
  * stands he sways whole about his feet, `sway` degrees each way every
  * `swayPeriod` s, and on `mixed` he leans `recoil` degrees back from the
  * dropper and comes upright again: his rig's lean and head bones open seams
- * at his hip and at his headcloth's flaps, so he is turned whole and no
- * bone moves.
+ * at his hip and at his headcloth's flaps, and a turn of his cup arm's
+ * shoulder shows a dash of the sleeve's outline at his elbow, so he is
+ * turned whole and no bone moves.
  */
 const MAN = {
   root: [1200, 630],
@@ -157,6 +161,12 @@ const onPage = (p: Pt): Pt => [
   MAN.root[1] + MAN.scale * (p[1] - CUP.root[1]),
 ];
 
+/** `p` turned `a` radians about `o`, from +x toward +y as a canvas turns. */
+const turned = (p: Pt, o: Pt, a: number): Pt => [
+  o[0] + (p[0] - o[0]) * Math.cos(a) - (p[1] - o[1]) * Math.sin(a),
+  o[1] + (p[0] - o[0]) * Math.sin(a) + (p[1] - o[1]) * Math.cos(a),
+];
+
 export const milk = drawing({
   timeline: {
     push: { mark: 'peter', dur: 1.4, ease: 'inOutCubic' },
@@ -174,6 +184,8 @@ export const milk = drawing({
     pour2: { mark: 'word', dur: 1.6, ease: 'inOutSine' },
     fill2: { after: 'pour2', dur: 2.5, ease: 'inOutSine' },
     stop2: { mark: 'good', dur: 0.6, ease: 'inQuad' },
+    settle: { mark: 'good', dur: 1.4, ease: 'inOutCubic' },
+    gone: { mark: 'good', offset: 0.3, dur: 0.7 },
   },
   puppets: {
     villager: VILLAGER['single-15'],
@@ -204,13 +216,11 @@ export const milk = drawing({
       ((sway(MAN.sway, MAN.swayPeriod, 0) + MAN.recoil * Math.sin(Math.PI * f.at('recoil'))) *
         Math.PI) /
       180;
-    // His cup's mouth on the page as he sways (the sway turns its ellipse too little to see).
+    // His cup's mouth on the page at rest, and as he sways (its ellipse
+    // tipped with him).
     const [mx, my] = onPage(CUP.mouth);
     const [fx, fy] = MAN.feet;
-    const mouth: Pt = [
-      fx + (mx - fx) * Math.cos(turn) - (my - fy) * Math.sin(turn),
-      fy + (mx - fx) * Math.sin(turn) + (my - fy) * Math.cos(turn),
-    ];
+    const mouth = turned([mx, my], MAN.feet, turn);
     const [rx, ry] = [MAN.scale * CUP.rx, MAN.scale * CUP.ry];
 
     // The book's centre on the page, drifting in and floating, and how far it is tipped toward the cup.
@@ -222,14 +232,15 @@ export const milk = drawing({
     const tip = (BOOK.tilt * f.at('tilt') * Math.PI) / 180;
     // The book, shut as it fades in, turning open edge on: the shut book
     // narrows away as the turn's cosine falls to 0, the open one widens in.
+    // On `good` it fades away.
     const book = () => {
-      const turned = Math.cos(f.at('flip') * Math.PI);
+      const across = Math.cos(f.at('flip') * Math.PI);
       ctx.save();
       ctx.translate(bx, by);
       ctx.rotate(tip);
-      ctx.scale(BOOK.s * Math.abs(turned), BOOK.s);
-      ctx.globalAlpha = enter;
-      f.painting(turned > 0 ? 'shut' : 'open');
+      ctx.scale(BOOK.s * Math.abs(across), BOOK.s);
+      ctx.globalAlpha = enter * (1 - f.at('gone'));
+      f.painting(across > 0 ? 'shut' : 'open');
       ctx.restore();
     };
     // Where the ribbon leaves the book, on the page.
@@ -253,7 +264,7 @@ export const milk = drawing({
       ctx.save();
       ctx.beginPath();
       ctx.rect(0, -200, 1920, mouth[1] + 200);
-      ctx.ellipse(mouth[0], mouth[1], rx, ry, 0, 0, 2 * Math.PI);
+      ctx.ellipse(mouth[0], mouth[1], rx, ry, turn, 0, 2 * Math.PI);
       ctx.clip();
       ctx.translate(from[0], from[1]);
       ctx.rotate(Math.atan2(uy, ux) - Math.atan2(vy, vx));
@@ -280,7 +291,7 @@ export const milk = drawing({
       if (fill <= 0) return;
       ctx.save();
       ctx.beginPath();
-      ctx.ellipse(mouth[0], mouth[1], rx, ry, 0, 0, 2 * Math.PI);
+      ctx.ellipse(mouth[0], mouth[1], rx, ry, turn, 0, 2 * Math.PI);
       ctx.clip();
       ctx.fillStyle = CUP.colour;
       ctx.beginPath();
@@ -289,7 +300,7 @@ export const milk = drawing({
         mouth[1] + MAN.scale * CUP.depth * (1 - fill),
         rx,
         ry,
-        0,
+        turn,
         0,
         2 * Math.PI,
       );
