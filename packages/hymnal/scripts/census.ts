@@ -299,13 +299,40 @@ export const linesQuoting = (lines: readonly string[], runs: ReadonlySet<string>
     return [];
   });
 
+/** The depth in `open` (the marks of the spans open, outermost first) whose span `char` closes, or -1. */
+const closedAt = (open: readonly string[], char: string) => {
+  if (char === '"') return open.lastIndexOf('"');
+  if (char !== '”') return -1;
+  const curly = open.lastIndexOf('“');
+  return curly === -1 ? open.length - 1 : curly;
+};
+
 /**
- * A problem or a note as a census line prints it: each quoted span (straight
- * or curly double quotes) given as the `wordTag` of its words (`wordsOf`),
- * so a line that quotes a page or a row prints no hymn text.
+ * A problem or a note as a census line prints it: each outermost quoted span
+ * (straight or curly double quotes) given as the `wordTag` of every word
+ * inside it (`wordsOf`), spans nested in it included, so a line that quotes a
+ * page or a row prints no hymn text. `“` opens a span and `”` closes the
+ * innermost open curly one (the innermost of any kind when no curly one is
+ * open); `"` closes the innermost open straight span, else opens one, so a
+ * straight span stands inside a curly one but never inside a straight one. A
+ * span still open at the line's end is a span to the end.
  */
-export const wordlessLine = (line: string) =>
-  line.replace(/["“]([^"”]*)["”]/gu, (_whole, inner: string) => wordTag(wordsOf(inner)));
+export const wordlessLine = (line: string) => {
+  let out = '';
+  let inner = '';
+  const open: string[] = [];
+  for (const char of line) {
+    const at = closedAt(open, char);
+    if (at !== -1) open.length = at;
+    else if (char === '“' || char === '"') open.push(char);
+    if (at === 0) {
+      out += wordTag(wordsOf(inner));
+      inner = '';
+    } else if (open.length > 0) inner += char;
+    else out += char;
+  }
+  return open.length > 0 ? out + wordTag(wordsOf(inner)) : out;
+};
 
 // ----------------------------------------------------------------------------
 // The rulings
