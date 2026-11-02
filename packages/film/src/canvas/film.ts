@@ -68,6 +68,7 @@ import {
 import { type LoadedRig, type PoseOf, type RivePropSpec, drawRig } from './rive.ts';
 import {
   type LoadedPuppet,
+  type PuppetDress,
   type PuppetLook,
   type PuppetPose,
   type PuppetSpec,
@@ -176,10 +177,17 @@ export interface Frame<
    * under the canvas's transform, its bones at `pose`'s numbers: the frame's
    * own pose, nothing kept from the frame before; with `look`, a drawn key
    * laid in place of a part, its line drawn again near what moved, a held
-   * hand laid over it and its boil at the look's tick. Throws, naming it, for a
-   * puppet the film has not loaded.
+   * hand laid over it and its boil at the look's tick; with `dress`, its named
+   * parts hidden and its named parts dyed to a cloth's ramp (`PuppetDress`).
+   * Throws, naming it, for a puppet the film has not loaded, or a dress it
+   * cannot wear.
    */
-  puppet<N extends keyof P & string>(name: N, pose: PuppetPose, look?: PuppetLook): void;
+  puppet<N extends keyof P & string>(
+    name: N,
+    pose: PuppetPose,
+    look?: PuppetLook,
+    dress?: PuppetDress,
+  ): void;
   /**
    * Paint a plate the drawing declares (`paintings: { sky: … }`) as one plane
    * under the canvas's transform: its top-left at the spec's `at`, each plate
@@ -1217,7 +1225,7 @@ export const createFilm = (spec: FilmSpec): Film => {
         const why = drawRig(ctx, spec, rig, pose);
         if (why !== undefined) throw new Error(`scene ${p.spec.id}: ${why}`);
       },
-      puppet: (name, pose, look) => {
+      puppet: (name, pose, look, dress) => {
         const spec = p.spec.puppets?.[name];
         if (spec === undefined) throw new Error(`scene ${p.spec.id} has no puppet "${name}"`);
         const loaded = puppetsStanding.get(spec);
@@ -1225,7 +1233,7 @@ export const createFilm = (spec: FilmSpec): Film => {
           throw new Error(
             `scene ${p.spec.id}: puppet "${name}" (${spec.key}) is not loaded: a film's puppets load with it, before its first frame (loadPuppets)`,
           );
-        const why = drawPuppet(ctx, spec, loaded, pose, look);
+        const why = drawPuppet(ctx, spec, loaded, pose, look, dress);
         if (why !== undefined) throw new Error(`scene ${p.spec.id}: ${why}`);
       },
       painting: (name) => {

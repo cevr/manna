@@ -1,7 +1,7 @@
 // A puppet drawn in our frame: a kept view cut into parts (a part sheet),
 // each part a mesh of its own pixels skinned on a skeleton
 // (`core/puppet.ts`), that a drawing declares (`drawing({ puppets })`) and
-// poses by bone numbers each frame (`f.puppet(name, pose, look)`), drawn
+// poses by bone numbers each frame (`f.puppet(name, pose, look, dress)`), drawn
 // under the frame's own transform. This is the draw path: plain synchronous
 // code, no Effect and no Promise. The film loads its puppets before its first
 // frame (`src/puppet/load.ts`): each part's pixels and each drawing's,
@@ -17,6 +17,7 @@
 // drawn (Bun, `check --draw`) the puppet is still posed and its figure
 // declared (`probeFigure`), as a rig's is.
 
+import { Result } from 'effect';
 import { BOIL_AMP } from '../core/boil.ts';
 import type { ConceptRef } from '../core/match.ts';
 import {
@@ -29,8 +30,16 @@ import {
 } from '../core/puppet.ts';
 import type { Raster } from '../core/raster.ts';
 import type { BoxEdge } from '../core/unmatte.ts';
+import type { Ramp } from './colour.ts';
+import { type Dye, dyeKnots } from './dye.ts';
 import { probeFigure, probesFigures } from './probe.ts';
-import { type PuppetGl, type PuppetPass, paintPuppetGl } from './puppet-gl.ts';
+import {
+  type PuppetDressGl,
+  type PuppetGl,
+  type PuppetPass,
+  UNDRESSED,
+  paintPuppetGl,
+} from './puppet-gl.ts';
 
 type Pt = readonly [number, number];
 
@@ -43,7 +52,12 @@ type Pt = readonly [number, number];
 export interface PuppetSpec {
   readonly key: string;
   readonly size: Pt;
-  readonly parts: ReadonlyArray<{ readonly name: string; readonly png: string }>;
+  /** Each part's PNG, and, for a part a dress may dye (`PuppetDress`), the ramp it is drawn in: its shade, base and light as drawn. */
+  readonly parts: ReadonlyArray<{
+    readonly name: string;
+    readonly png: string;
+    readonly ramp?: Ramp;
+  }>;
   readonly skeleton: Skeleton;
   readonly origin: Pt;
   readonly concept?: ConceptRef;
@@ -137,6 +151,50 @@ export interface PuppetLook {
   };
 }
 
+/**
+ * What a draw wears, by part name: the parts it leaves undrawn (`hide`: a
+ * bare head, no beard, no mantle), and the parts it dyes, each to a cloth's
+ * ramp (`dye`: the look's `shaded()` of the cloth), from the ramp its sheet
+ * says it is drawn in (`PuppetSpec.parts`, `ramp`), keeping its line, ink and
+ * alpha (`canvas/dye.ts`). A part a dress hides shows each part behind it as
+ * when it moves away: what its rim hid there, and no seal along their line;
+ * a part named in the sheet's `underlap` shows the paint reached under it.
+ * An empty dress draws as no dress. A name the puppet lacks, a dye of a part
+ * that declares no ramp, or a ramp the dye cannot map, refuses the draw.
+ */
+export interface PuppetDress {
+  readonly hide?: ReadonlyArray<string>;
+  readonly dye?: Readonly<Record<string, Ramp>>;
+}
+
+/** What `dress` asks of the passes for `spec`'s puppet, by part index, or why it cannot be worn. */
+export const dressOf = (
+  spec: PuppetSpec,
+  puppet: Puppet,
+  dress: PuppetDress | undefined,
+): Result.Result<PuppetDressGl, string> => {
+  const index = (name: string) => puppet.parts.findIndex((p) => p.name === name);
+  const hidden: number[] = [];
+  for (const name of dress?.hide ?? []) {
+    const k = index(name);
+    if (k < 0) return Result.fail(`the dress hides no part ${name}`);
+    hidden.push(k);
+  }
+  const dyes = new Map<number, Dye>();
+  for (const [name, cloth] of Object.entries(dress?.dye ?? {})) {
+    const k = index(name);
+    if (k < 0) return Result.fail(`the dress dyes no part ${name}`);
+    const drawn = spec.parts.find((p) => p.name === name)?.ramp;
+    if (drawn === undefined)
+      return Result.fail(`the dress dyes part ${name}, which declares no ramp it is drawn in`);
+    const made = dyeKnots(drawn, cloth);
+    if (Result.isFailure(made)) return Result.fail(`the dress dyes part ${name}: ${made.failure}`);
+    dyes.set(k, made.success);
+  }
+  if (hidden.length === 0 && dyes.size === 0) return Result.succeed(UNDRESSED);
+  return Result.succeed({ hidden, dyes });
+};
+
 /** A puppet as its load leaves it: made from its parts' pixels, its drawings decoded, whether this host paints, and its GL state. */
 export interface LoadedPuppet {
   readonly puppet: Puppet;
@@ -217,9 +275,11 @@ const swappedOf = (puppet: Puppet, swaps: ReadonlyArray<PuppetSwap>) => {
 };
 
 /**
- * Every part posed at `pose` into its buffer, and, with a look, each part
- * that moved laid where it stood at rest too: the moving parts' indices (a
- * turned bone's, or one a drawing stands in for), with a look or not.
+ * Every part the dress shows posed at `pose` into its buffer, and, with a
+ * look, each part that moved laid where it stood at rest too: the moving
+ * parts' indices (a turned bone's, or one a drawing stands in for), with a
+ * look or not. A hidden part is neither laid nor counted as moving, and
+ * grows neither box.
  */
 const layParts = (
   loaded: LoadedPuppet,
@@ -227,6 +287,7 @@ const layParts = (
   m: Float64Array,
   pose: PuppetPose,
   swapped: ReadonlyMap<number, PuppetSwap>,
+  hidden: ReadonlyArray<number>,
   look: boolean,
 ) => {
   const { puppet, gl } = loaded;
@@ -234,6 +295,7 @@ const layParts = (
   const rest = boneTransforms(puppet.bones, {});
   const restPose: PuppetPose = { numbers: {}, root: pose.root, scale: pose.scale };
   for (const [k, part] of puppet.parts.entries()) {
+    if (hidden.includes(k)) continue;
     const out = gl.positions[k]!;
     const shown = !swapped.has(k);
     poseMesh(part.mesh, m, puppet.root, pose, out);
@@ -382,10 +444,11 @@ const LOOK_MARGIN = 4;
 
 /**
  * Pose `loaded` (as `spec` declares it) at `pose` and draw it at our origin
- * under the context's transform, as `look` says when given, declaring its
- * figure: nothing once drawn, else why it cannot be (no WebGL 2 context, a
- * part or drawing the look names that the puppet lacks), which the film
- * throws (`f.puppet`).
+ * under the context's transform, as `look` says when given, wearing `dress`
+ * when given (on the plain pass, or the look's), declaring its figure:
+ * nothing once drawn, else why it cannot be (no WebGL 2 context, a part or
+ * drawing the look names that the puppet lacks, a dress it cannot wear,
+ * `dressOf`), which the film throws (`f.puppet`).
  */
 export const drawPuppet = (
   ctx: CanvasRenderingContext2D,
@@ -393,13 +456,16 @@ export const drawPuppet = (
   loaded: LoadedPuppet,
   pose: PuppetPose,
   look?: PuppetLook,
+  dress?: PuppetDress,
 ): string | undefined => {
   const { puppet } = loaded;
+  const worn = dressOf(spec, puppet, dress);
+  if (Result.isFailure(worn)) return `puppet ${spec.key}: ${worn.failure}`;
   const m = boneTransforms(puppet.bones, pose.numbers);
   const layer = layerOf(ctx.getTransform(), spec.origin);
   const { swapped, why: unlaid } = swappedOf(puppet, look?.swaps ?? []);
   if (unlaid !== undefined) return `puppet ${spec.key}: ${unlaid}`;
-  const moving = layParts(loaded, layer, m, pose, swapped, look !== undefined);
+  const moving = layParts(loaded, layer, m, pose, swapped, worn.success.hidden, look !== undefined);
   const missing = look && layDrawings(loaded, layer, m, pose, look, swapped);
   if (missing !== undefined) return `puppet ${spec.key}: ${missing}`;
   const [left, top, right, bottom] = layer.figure;
@@ -423,6 +489,6 @@ export const drawPuppet = (
   if (x1 <= x0 || y1 <= y0) return undefined;
   const pass =
     look && passOf(spec, loaded, layer, pose, look, moving, swapped, turnedPivots(puppet, m, pose));
-  const why = paintPuppetGl(ctx, loaded, [x0, y0, x1, y1], moving, pass);
+  const why = paintPuppetGl(ctx, loaded, [x0, y0, x1, y1], moving, worn.success, pass);
   return why && `puppet ${spec.key}: ${why}`;
 };
