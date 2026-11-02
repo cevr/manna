@@ -50,6 +50,7 @@ import * as Atom from 'effect/reactivity/Atom';
 import { audioUrl, soundingOffset } from '~/remote';
 import { type Move, still } from '~/hymns/chords';
 
+import type { Beat } from './countin';
 import * as Proof from './proof';
 import { ALL } from './stanzas';
 import { DEFAULT_TEMPO, rateOf } from './tempo';
@@ -135,6 +136,11 @@ export interface Status {
    * Sound on or off (`sound.ts`; with Sound on the recording plays at it); 1 when not told.
    */
   readonly rate?: number;
+  /**
+   * While a count-in holds the place at the first sung line (`sound.ts`): the host's ms left
+   * until the place runs. The place is the reader's, and the player shows Playing there.
+   */
+  readonly countInMs?: number;
 }
 
 /** A replacement follows musical time while the global recording loads. */
@@ -153,6 +159,16 @@ export interface PlayOptions {
    * (`sound.ts`) runs the place over their lines alone, and skips the rest; all when not told.
    */
   readonly stanzas?: ReadonlyArray<number>;
+  /**
+   * The `Intro` switch at the play. With Sound on, `false` plays a start from the first sung
+   * line of the chosen stanzas, past the recording's intro; from 0 when not told.
+   */
+  readonly intro?: boolean;
+  /**
+   * With Sound off, whether a start counts one bar in at the first sung line before the place
+   * runs (`countin.ts`); none when not told.
+   */
+  readonly countIn?: boolean;
 }
 
 /** Requested and effective sounding offsets; a fallback is never silently claimed as the chosen Key. */
@@ -222,6 +238,8 @@ export interface PlaybackApi {
   readonly setStanzas?: (stanzas: ReadonlyArray<number>) => Effect.Effect<void>;
   /** The rate the place moves at, ms of the hymn for each ms: now, then at each change. */
   readonly pace?: Stream.Stream<number>;
+  /** The beat a count-in stands at, none while none counts: now, then at each change. */
+  readonly beats?: Stream.Stream<Option.Option<Beat>>;
   /** Adopt a selection whose effective set already sounds, without a device load. */
   readonly selectRecording?: (selection: RecordingSelection) => Effect.Effect<void>;
   /** Let the recording go: nothing loads or plays, the lock screen shows nothing, and the status says `idle`. */
@@ -325,6 +343,12 @@ const paceOf = (status: Status) => {
   return rate;
 };
 
+/** The host's ms a status's count-in has left, while it counts in at a playing place. */
+const counting = (status: Status) =>
+  Option.fromNullishOr(status.countInMs).pipe(
+    Option.filter((ms) => status.state === 'playing' && ms > 0),
+  );
+
 /**
  * The wait between two reads, so that a place moving at `pace` moves at most `every` from one
  * to the next: the seeker and the follow see the hymn in the same steps at every tempo, and a
@@ -357,6 +381,8 @@ interface Held {
   replacing: boolean;
   /** The rate the latest read's place moves at (its status's `rate`, 1 when not told). */
   pace: number;
+  /** The host's time a count-in the latest read told ends at: the next read comes no later. */
+  countEnds: Option.Option<number>;
 }
 
 const printed = Atom.make<Move>(still);
@@ -369,7 +395,8 @@ const sameStanzas = Arr.makeEquivalence<number>((a, b) => a === b);
 /**
  * The player's atoms over the device's `playback`, reading its status every `every` while it
  * moves. `moveFor` gives a hymn's transpose and capo, `tempoFor` its tempo in percent,
- * `stanzasFor` the stanzas it sings (`[]` for all).
+ * `stanzasFor` the stanzas it sings (`[]` for all), and `intro` the `Intro` switch each play
+ * carries as `PlayOptions.intro` and `countIn` (neither when not given).
  */
 export const playerOn = (
   playback: Layer.Layer<Playback>,
@@ -377,6 +404,7 @@ export const playerOn = (
   moveFor: (number: number) => Atom.Atom<Move> = () => printed,
   tempoFor: (number: number) => Atom.Atom<number> = () => asWritten,
   stanzasFor: (number: number) => Atom.Atom<ReadonlyArray<number>> = () => everyStanza,
+  intro?: Atom.Atom<boolean>,
 ) => {
   const keyFor = Atom.family((number: number) =>
     Atom.map(moveFor(number), (move) => soundingOffset(move.transpose)),
@@ -411,6 +439,7 @@ export const playerOn = (
     offset: 0,
     replacing: false,
     pace: 1,
+    countEnds: Option.none(),
   };
 
   const send = runtime
@@ -686,6 +715,9 @@ export const playerOn = (
             );
           if (seen === 'sound') return Player.Playing({ track, at, length });
           if (held.wants === 'pause') return Player.Paused({ track, at, length });
+          // A count-in holds the place at the first sung line: the hymn has begun there.
+          if (Option.isSome(counting(read.status)))
+            return Player.Playing({ track, at: seconds(read.status.positionMs), length });
           if (quiet >= Duration.toMillis(stand))
             return buffering(quiet >= Duration.toMillis(giveUpAfter) && !offline());
           return Player.$match(was, {
@@ -740,8 +772,14 @@ export const playerOn = (
             const read = yield* readFresh;
             const status = read.status;
             held.pace = paceOf(status);
+            const count = counting(status);
+            held.countEnds = Option.map(count, (ms) => read.answered + ms);
             const next = Proof.readOf(held.proof, read, landable());
-            held.proof = next.proof;
+            // A count-in's held place is no silence: the stand runs from its end.
+            held.proof = Option.match(count, {
+              onNone: () => next.proof,
+              onSome: () => ({ ...next.proof, quietFrom: Option.none() }),
+            });
             const answer = yield* Effect.when(Deferred.await(answered), Deferred.isDone(answered));
             if (Option.contains(answer, false)) {
               yield* show(failed(track));
@@ -801,11 +839,23 @@ export const playerOn = (
          */
         const watch = (track: Track, answered: Deferred.Deferred<boolean>) =>
           Effect.gen(function* () {
-            /** Until the next read: `every` of the place's time, or less once the device answers. */
+            /**
+             * Until the next read: `every` of the place's time, or less once the device answers;
+             * no later than a count-in's end, so the run is read from where it starts.
+             */
             const rest = Deferred.isDone(answered).pipe(
               Effect.flatMap((done) =>
                 Match.value(done).pipe(
-                  Match.when(true, () => Effect.sleep(pollAt(every, held.pace))),
+                  Match.when(true, () =>
+                    Effect.flatMap(now, (at) => {
+                      const poll = Duration.toMillis(pollAt(every, held.pace));
+                      const ms = Option.match(held.countEnds, {
+                        onNone: () => poll,
+                        onSome: (ends) => Math.min(poll, Math.max(0, ends - at)),
+                      });
+                      return Effect.sleep(Duration.millis(ms));
+                    }),
+                  ),
                   Match.orElse(() =>
                     Deferred.await(answered).pipe(
                       Effect.asVoid,
@@ -894,6 +944,15 @@ export const playerOn = (
             return;
           get.registry.set(recording, Option.some(selection));
         };
+        /** The `Intro` switch as it stands at the play, as `intro` and `countIn`; none without one. */
+        const introAt = (): Pick<PlayOptions, 'intro' | 'countIn'> =>
+          Option.match(Option.fromNullishOr(intro), {
+            onNone: () => ({}),
+            onSome: (atom) => {
+              const on = get.registry.get(atom);
+              return { intro: on, countIn: on };
+            },
+          });
         const playSet = (track: Track, offset: number, fromMs: number, continuous: boolean) =>
           Effect.gen(function* () {
             const id = held.id;
@@ -909,6 +968,7 @@ export const playerOn = (
                 recording: { number: track.number, offset },
                 rate: get.registry.get(rateFor(track.number)),
                 stanzas: get.registry.get(stanzasFor(track.number)),
+                ...introAt(),
               })
               .pipe(
                 Effect.tap((status) =>
@@ -1386,7 +1446,32 @@ export const playerOn = (
     }),
   );
 
-  return { state, send, remote, keys, recording, tempos, stanzas, rate: shownRate };
+  /** The beat a count-in stands at, none while none counts, as the playback tells it (`beats`). */
+  const beat = Atom.make<Option.Option<Beat>>(Option.none()).pipe(Atom.keepAlive);
+  /** While mounted: each beat the playback tells kept in `countIn`. */
+  const beats = runtime.atom((get) =>
+    Effect.gen(function* () {
+      const device = yield* Playback;
+      yield* Stream.runForEach(device.beats ?? Stream.empty, (to) =>
+        Effect.sync(() => get.set(beat, to)),
+      );
+    }),
+  );
+  /** `beat` to the screens: the playback alone sets it. */
+  const countIn: Atom.Atom<Option.Option<Beat>> = beat;
+
+  return {
+    state,
+    send,
+    remote,
+    keys,
+    recording,
+    tempos,
+    stanzas,
+    rate: shownRate,
+    beats,
+    countIn,
+  };
 };
 
 /** A player's atoms: its state, the commands it takes and its lock-screen follower. */
