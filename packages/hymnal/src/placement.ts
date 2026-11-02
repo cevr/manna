@@ -225,12 +225,14 @@ const accentsOf = (grid: Grid, lines: readonly (readonly Syllable[])[]): number[
  * far apart as the grid's or further, so a denser grid never wins by
  * density alone. A file whose tick 0 is not a printed downbeat, or whose
  * meter is not the printed one, puts its strong beats where the tune does
- * not lean, and some other bar fits the tune better. A melody with no
- * accent confirms nothing.
+ * not lean, and some other bar fits the tune better. A melody with fewer
+ * than two accents confirms nothing: every bar, shifted, puts a strong beat
+ * on a lone accent, so each ties with the grid's and the accent tells no
+ * bar's length.
  */
 export const confirms = (grid: Grid, lines: readonly (readonly Syllable[])[]): boolean => {
   const accents = accentsOf(grid, lines);
-  if (accents.length === 0) return false;
+  if (accents.length < 2) return false;
   const slack = slackOf(grid);
   const onGrid = accents.filter((tick) => beatAt(grid, tick).strong).length;
   const least = Math.min(...grid.meters.map((meter) => strongEvery(grid, meter)));

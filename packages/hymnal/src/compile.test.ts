@@ -537,6 +537,71 @@ describe('compile: where a guitarist strikes', () => {
         expect(misreadLines).toEqual(readLines);
       }),
   );
+
+  /**
+   * Two lines of 4/4 a melody leans on, a half note a syllable on each
+   * strong beat. Line 1 closes on C, then G on beat 1 of bar 4, held through
+   * a rest on beat 2 that the next strong beat falls in. Line 2 opens on a C
+   * pickup on beat 3, a chord other than line 1's last but the same as its
+   * first.
+   */
+  const C = [64, 55, 48] as const;
+  const F = [65, 60, 41] as const;
+  const G = [62, 59, 43] as const;
+  /** [beats, chord below, melody key (0 a rest)] for each note of the verse. */
+  const verse: ReadonlyArray<readonly [number, readonly [number, number, number], number]> = [
+    [2, C, 72],
+    [2, C, 67],
+    [2, F, 69],
+    [2, C, 67],
+    [2, F, 69],
+    [2, G, 71],
+    [1, C, 72],
+    [1, G, 74],
+    [1, G, 0],
+    [1, C, 67],
+    [2, C, 72],
+    [2, F, 69],
+    [2, C, 67],
+    [2, G, 71],
+    [2, F, 69],
+    [2, G, 74],
+    [4, C, 72],
+  ];
+  const leaning: Voices = [
+    verse.map(([beats, , key]) => [key, beats] as const),
+    verse.map(([beats, chord]) => [chord[0], beats] as const),
+    verse.map(([beats, chord]) => [chord[1], beats] as const),
+    verse.map(([beats, chord]) => [chord[2], beats] as const),
+  ];
+  const leaningWords = 'Sing we all now to God of light,\nLord of all ye saints sing now here';
+  const leaningHymn = compile(
+    source(file(leaning, { verses: 2, intro: 4, meter: [4, 4], fifths: 0 }), [
+      leaningWords,
+      leaningWords,
+    ]),
+  );
+
+  it.effect(
+    "strikes a line's opening chord on its first strong beat when the line before ends on another chord",
+    () =>
+      Effect.gen(function* () {
+        const hymn = yield* leaningHymn;
+        const stanza = sung(hymn.stanzas[0]);
+        expect(chordLines(hymn, stanza, 'full')[1]).toBe('C . F C G F G C');
+        expect(chordLines(hymn, stanza, 'guitar')[1]).toBe('. C F C G F G C');
+      }),
+  );
+
+  it.effect(
+    "keeps a line's last change inside its last note, though a strong beat falls in the rest after it",
+    () =>
+      Effect.gen(function* () {
+        const hymn = yield* leaningHymn;
+        const stanza = sung(hymn.stanzas[0]);
+        expect(chordLines(hymn, stanza, 'guitar')[0]).toBe('C . F C F G C G');
+      }),
+  );
 });
 
 describe('compile: trust', () => {
