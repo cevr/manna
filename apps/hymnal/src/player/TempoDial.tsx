@@ -8,23 +8,44 @@
  *
  * Under the dial, a row reads the hymn's beat and its bpm at the dial's
  * tempo (`♩ = 90`, one label for VoiceOver: `quarter note = 90`), counted
- * from the hymn's first tempo as the timing bundle carries it. A hymn whose
- * timing does not decode draws no read-out, and the dial is as it is.
+ * from the hymn's first tempo as the timing bundle carries it, and a `Tap`
+ * chip sets the dial from taps at the beat: from the fourth tap of a run on,
+ * each sets the stop nearest the tapped bpm (`tap`). The run is kept here,
+ * not in settings; a pause over 3 s starts it over. A hymn whose timing
+ * does not decode draws neither, and the dial is as it is.
  */
 
 import { useAtom } from '@effect/atom-react';
-import { Option } from 'effect';
-import { memo, useMemo } from 'react';
-import { type ColorValue, StyleSheet, Text, View } from 'react-native';
+import { Clock, Option } from 'effect';
+import { createContext, memo, use, useMemo, useRef } from 'react';
+import { type ColorValue, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { color } from '~/color';
+import { plain, useCue } from '~/feel/cue';
 import { book } from '~/follow/book';
 import type { Timeline } from '~/follow/timeline';
 import { settings } from '~/store';
 
 import { DialPanel } from './DialPanel';
 import { DialView, MOST_SCALE } from './DialView';
-import { type Beat, beatOf, bpmAt, bpmOf, saidOf, stopAt, stopIndexOf, STOPS } from './tempo';
+import {
+  type Beat,
+  beatOf,
+  bpmAt,
+  bpmOf,
+  saidOf,
+  stopAt,
+  stopIndexOf,
+  STOPS,
+  tap,
+  type TapRun,
+} from './tempo';
+
+/**
+ * The clock `Tap` reads each tap's time from: the live clock, or a test's
+ * `TestClock`, which moves between taps without real time passing.
+ */
+export const TapClock = createContext<Clock.Clock>(Clock.Clock.defaultValue());
 
 export const TempoDial = memo(function TempoDial({ number }: { readonly number: number }) {
   const [tempo, setTempo] = useAtom(settings.tempo(number));
@@ -50,6 +71,7 @@ export const TempoDial = memo(function TempoDial({ number }: { readonly number: 
         onSome: (hymnTempo) => (
           <View style={styles.beatRow}>
             <BpmReadOut first={hymnTempo} tempo={tempo} />
+            <TapChip hymnBpm={bpmOf(hymnTempo)} onTempo={setTempo} />
           </View>
         ),
       })}
@@ -127,8 +149,51 @@ function NoteMark({ beat, tint }: { readonly beat: Beat; readonly tint: ColorVal
   );
 }
 
+/**
+ * `Tap`: each press reads its time from `TapClock` first, tells `press`, and
+ * adds the tap to the run; from the fourth tap of a run on, the dial is set
+ * to the stop the run asks of a hymn of `hymnBpm`.
+ */
+function TapChip({
+  hymnBpm,
+  onTempo,
+}: {
+  readonly hymnBpm: number;
+  readonly onTempo: (tempo: number) => void;
+}) {
+  const clock = use(TapClock);
+  const cue = useCue();
+  const run = useRef<TapRun>([]);
+  const press = () => {
+    const at = clock.currentTimeMillisUnsafe();
+    cue(plain('press'));
+    const tapped = tap(run.current, at, hymnBpm);
+    run.current = tapped.run;
+    for (const tempo of Option.toArray(tapped.tempo)) onTempo(tempo);
+  };
+  return (
+    <Pressable
+      testID="tempo-tap"
+      role="button"
+      aria-label="Tap"
+      accessibilityHint="Tap four times at the beat to set the tempo"
+      hitSlop={CHIP_SLOP}
+      onPress={press}
+      style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
+    >
+      <Text style={styles.chipText} numberOfLines={1} maxFontSizeMultiplier={MOST_SCALE}>
+        Tap
+      </Text>
+    </Pressable>
+  );
+}
+
 /** The note mark's strokes: thin, as the read-out's semibold figures. */
 const STROKE = 1.5;
+
+/** The chip is 32 points high, as the dials' chips; the slop makes its hit area 44. */
+const CHIP = 32;
+const CHIP_SLOP = { top: 6, bottom: 6 };
 
 const styles = StyleSheet.create({
   section: { gap: 8 },
@@ -176,4 +241,13 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 1.5,
   },
+  chip: {
+    height: CHIP,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    justifyContent: 'center',
+    backgroundColor: color.pill,
+  },
+  pressed: { opacity: 0.6 },
+  chipText: { fontSize: 13, fontWeight: '600', color: color.onPill },
 });
