@@ -14,7 +14,7 @@
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Layer, Path, Result } from 'effect';
+import { Effect, FileSystem, Layer, Option, Path, Result } from 'effect';
 import type { Ramp } from '../canvas/colour.ts';
 import { type Dye, dyeKnots, dyedRaster, lightnessOf } from '../canvas/dye.ts';
 import { labOf } from '../core/cast-sheet-pixels.ts';
@@ -367,6 +367,60 @@ describe('a puppet in the page', () => {
             expect(m.deltaE).toBeLessThanOrEqual(1);
             expect(m.iou).toBeGreaterThanOrEqual(0.99);
           }
+        }),
+      ).pipe(Effect.provide(Layer.provideMerge(PuppetImagesBun, BunServices.layer))),
+  );
+
+  it.live(
+    'a part a dress hides draws nowhere, not where the frame before laid it, and the rest as the CPU draws them without it',
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const fs = yield* FileSystem.FileSystem;
+          const path = yield* Path.Path;
+          const dir = yield* fs.makeTempDirectoryScoped();
+          yield* lay(dir);
+          const module = path.join(dir, 'spec.ts');
+          const { SPEC } = yield* Effect.promise(() => import(module));
+          const puppet = yield* puppetFrom(SPEC);
+          const page = yield* puppetPage({ module, name: 'SPEC' });
+          const at = (shoulderRight: number): PuppetPose => ({
+            numbers: { shoulderRight },
+            root: [45, 60],
+            scale: 1,
+          });
+          const sleeve = { ...puppet, parts: puppet.parts.filter((p) => p.name === 'arm') };
+          // the CPU's figure without the sleeve: its mesh emptied, in its place, so the body shows what the sleeve hid as when it turns away, as a hidden part does
+          const bare = {
+            ...puppet,
+            parts: puppet.parts.map((p) =>
+              Option.match(
+                Option.liftPredicate(p, (q) => q.name === 'arm'),
+                {
+                  onNone: () => p,
+                  onSome: (q) => ({ ...q, mesh: { ...q.mesh, triangles: new Uint32Array(0) } }),
+                },
+              ),
+            ),
+          };
+          // the sleeve shown, laid turned one way over the body; then hidden turned the other, where its buffer still holds the first turn
+          yield* page.draw(at(35));
+          const hidden = yield* page.dressed(at(-30), { hide: ['arm'] });
+          const [before, want] = [rasterOf(sleeve, at(35)), rasterOf(bare, at(-30))];
+          let [stale, laid] = [0, 0];
+          for (let i = 0; i < W * H; i++) {
+            const left = before.rgba[i * 4 + 3]! > 0 && want.rgba[i * 4 + 3] === 0;
+            laid += Number(left);
+            stale += Number(left && hidden.rgba[i * 4 + 3]! > 0);
+          }
+          const m = against(hidden, want);
+          // the turned sleeve stood where the bare figure draws nothing, and nothing is drawn there now
+          expect(laid).toBeGreaterThan(200);
+          expect(stale).toBe(0);
+          // over the body, where it stood too, the body as the CPU draws it bare: measured 0 at every pixel (2026-11-02)
+          expect(m.deltaE).toBeLessThanOrEqual(1);
+          expect(m.worst).toBeLessThanOrEqual(1);
+          expect(m.iou).toBeGreaterThanOrEqual(0.99);
         }),
       ).pipe(Effect.provide(Layer.provideMerge(PuppetImagesBun, BunServices.layer))),
   );
