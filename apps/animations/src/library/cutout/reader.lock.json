@@ -563,6 +563,39 @@
         "median": 17.01,
         "p90": 62.71
       }
+    },
+    "idea-villagers/single-single-15": {
+      "n": 40,
+      "angleDeg": {
+        "median": 3.53,
+        "p90": 10.33
+      },
+      "jointPx": {
+        "median": 3.49,
+        "p90": 7.79
+      }
+    },
+    "lead-feast/single-single-9": {
+      "n": 40,
+      "angleDeg": {
+        "median": 3.66,
+        "p90": 19.16
+      },
+      "jointPx": {
+        "median": 4.77,
+        "p90": 25.85
+      }
+    },
+    "lead-feast/single-single-5": {
+      "n": 40,
+      "angleDeg": {
+        "median": 0.95,
+        "p90": 1.15
+      },
+      "jointPx": {
+        "median": 9.36,
+        "p90": 12.31
+      }
     }
   },
   "clips": {
