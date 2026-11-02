@@ -5,8 +5,9 @@
 // over the upper arm, one part's triangles over one pixel) within ΔE 1 on
 // average and 2 at any pixel; 60 frames drawn in a shuffled order equal to the
 // same frames in order; a dress's dye (the shader's, `DYE_GLSL`) against the
-// sleeve's pixels dyed on the CPU (`dyedRaster`) and drawn undressed, at rest
-// within ΔE 1 at any pixel and posed within the bounds above; and a part
+// sleeve's pixels dyed on the CPU (`dyedRaster`) and drawn undressed, over a
+// sleeve whose pixels reach each of the dye's five branches, at rest within
+// ΔE 1 at any pixel and posed within the bounds above; and a part
 // PNG's bytes in the key of a beat whose scene imports the puppet
 // (`tools/stamp.ts`). Each case opens Chrome or writes a film, so they run in
 // the slow suite.
@@ -15,7 +16,7 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Path, Result } from 'effect';
 import type { Ramp } from '../canvas/colour.ts';
-import { dyeKnots, dyedRaster } from '../canvas/dye.ts';
+import { type Dye, dyeKnots, dyedRaster, lightnessOf } from '../canvas/dye.ts';
 import { labOf } from '../core/cast-sheet-pixels.ts';
 import { type PuppetPose, rasterOf } from '../core/puppet.ts';
 import type { Raster } from '../core/raster.ts';
@@ -88,16 +89,47 @@ export const SPEC = {
 export const DYED = { ...PLAIN, key: 'fixture/dyed-on-cpu', parts: [{ name: 'arm', png: armDyed }, { name: 'body', png: body }] };
 `;
 
-/** The fixture puppet written into `dir` as `lay` writes it (its module as `plain.ts`), with the sleeve's CPU-dyed PNG and the dyed module (`DYE_MODULE`) as `spec.ts`. */
+/**
+ * The dyed fixture's sleeve: the sleeve's band painted as a ramp from near
+ * black at its left end to near white at its right, a little warmer down the
+ * band, so its pixels fall in every one of the dye's segments (`segmentsOf`).
+ */
+const rampSleeve = (): Raster => {
+  const arm = new Uint8Array(W * H * 4);
+  for (let y = 26; y < 38; y++)
+    for (let x = 10; x < 86; x++) {
+      const v = (x - 10) / 75;
+      const warm = y - 26;
+      arm.set(
+        [4 + 248 * v, 3 + 240 * v + warm, 2 + 226 * v + 2 * warm, 255].map(Math.round),
+        (y * W + x) * 4,
+      );
+    }
+  return { width: W, height: H, rgba: arm };
+};
+
+/** How many of `raster`'s opaque pixels lie in each of `dye`'s segments by lightness: ink kept, cut to shade, shade to base, base to light, light to white. */
+const segmentsOf = (dye: Dye, raster: Raster) => {
+  const counts = [0, 0, 0, 0, 0];
+  for (let i = 0; i < raster.width * raster.height; i++) {
+    if (raster.rgba[i * 4 + 3] === 0) continue;
+    const l = lightnessOf(raster.rgba[i * 4]!, raster.rgba[i * 4 + 1]!, raster.rgba[i * 4 + 2]!);
+    const k = Number(l > dye.from[0]) + dye.from.slice(1).filter((f) => l >= f).length;
+    counts[k]! += 1;
+  }
+  return counts;
+};
+
+/** The fixture puppet written into `dir` as `lay` writes it (its module as `plain.ts`), its sleeve the ramp (`rampSleeve`), with the sleeve's CPU-dyed PNG and the dyed module (`DYE_MODULE`) as `spec.ts`. */
 const layDyed = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     yield* lay(dir);
     yield* fs.rename(path.join(dir, 'spec.ts'), path.join(dir, 'plain.ts'));
+    yield* fs.writeFile(path.join(dir, 'arm.png'), encodePng(rampSleeve()));
     const dye = Result.getOrThrow(dyeKnots(DRAWN, CLOTH));
-    const arm = dyedRaster(dye, { width: W, height: H, rgba: partsOf().arm });
-    yield* fs.writeFile(path.join(dir, 'arm-dyed.png'), encodePng(arm));
+    yield* fs.writeFile(path.join(dir, 'arm-dyed.png'), encodePng(dyedRaster(dye, rampSleeve())));
     yield* fs.writeFileString(path.join(dir, 'spec.ts'), DYE_MODULE);
   });
 
@@ -314,6 +346,9 @@ describe('a puppet in the page', () => {
           yield* layDyed(dir);
           const module = path.join(dir, 'spec.ts');
           const { DYED } = yield* Effect.promise(() => import(module));
+          // the sleeve's pixels reach every branch of the shader's dye, ink kept to light to white
+          const segments = segmentsOf(Result.getOrThrow(dyeKnots(DRAWN, CLOTH)), rampSleeve());
+          for (const n of segments) expect(n).toBeGreaterThan(0);
           // the sleeve's pixels dyed on the CPU (`dyedRaster`), drawn undressed: the shader's dye's reference
           const reference = yield* puppetFrom(DYED);
           const page = yield* puppetPage({ module, name: 'SPEC' });
@@ -322,7 +357,7 @@ describe('a puppet in the page', () => {
           const plain = against(yield* page.draw(rest), rasterOf(reference, rest));
           // undressed, the sleeve stands far from its dyed reference, so the bounds below hold the dye, not the paint
           expect(plain.deltaE).toBeGreaterThan(5);
-          // at rest every pixel: measured 0.66 at most (2026-11-02), the GLSL's float math against the CPU's rounded bytes
+          // at rest every pixel: measured 0 over the ramp sleeve (2026-11-02); the bound leaves the GLSL's float math room against the CPU's rounded bytes
           const still = against(yield* page.dressed(rest, dress), rasterOf(reference, rest));
           expect(still.deltaE).toBeLessThanOrEqual(0.05);
           expect(still.worst).toBeLessThanOrEqual(1);
