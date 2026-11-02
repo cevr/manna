@@ -108,7 +108,7 @@ const lookOf = (i: number): PuppetLook => {
   const held = { drawing: HELD.id, c: HELD.c, at: heldAt(key, theta), quiet: QUIET };
   const boil = Math.floor(i / 2);
   const swap = { part: 'armRight', drawing: id, place: key.place, pivot: key.pivot, theta };
-  return { boil, held, ...((id !== 'rest' || theta !== 0) && { swap }) };
+  return { boil, held, ...((id !== 'rest' || theta !== 0) && { swaps: [swap] }) };
 };
 
 /** The front puppet with the raise's drawings. */

@@ -121,13 +121,15 @@ export const fitted = <V extends string>(made: Fitted<V>) => {
       (held.c[1] - held.source.dy) / held.source.s,
     ]);
     const look: Omit<PuppetLook, 'boil' | 'amp'> = {
-      swap: {
-        part: made.swap.part,
-        drawing: made.swap.drawing,
-        place: { s, dx: corner[0], dy: corner[1] },
-        pivot: [0, 0],
-        theta: 0,
-      },
+      swaps: [
+        {
+          part: made.swap.part,
+          drawing: made.swap.drawing,
+          place: { s, dx: corner[0], dy: corner[1] },
+          pivot: [0, 0],
+          theta: 0,
+        },
+      ],
       held: {
         drawing: made.view,
         c: held.c,

@@ -151,7 +151,7 @@ const WINCE_SWAP = { part: 'head', drawing: 'wince', place: { s: 1.39, dx: 104, 
 const winceAt = (lean: number): PuppetLook => ({
   boil: 0,
   amp: 0,
-  swap: { ...WINCE_SWAP, pivot: SEATED.skeleton.root, theta: lean },
+  swaps: [{ ...WINCE_SWAP, pivot: SEATED.skeleton.root, theta: lean }],
 });
 
 /**

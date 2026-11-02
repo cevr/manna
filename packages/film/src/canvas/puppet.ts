@@ -71,26 +71,30 @@ interface PuppetPlace {
   readonly dy: number;
 }
 
+/** A drawn key laid in place of part `part`: drawing `drawing` laid by `place`, then turned `theta` degrees about `pivot`, sheet px. */
+export interface PuppetSwap {
+  readonly part: string;
+  readonly drawing: string;
+  readonly place: PuppetPlace;
+  readonly pivot: Pt;
+  readonly theta: number;
+}
+
 /**
- * How a frame draws a posed puppet beyond its pose: the boil's tick; a
- * drawing laid in place of a part (a drawn key: laid by `place`, then turned
- * `theta` degrees about `pivot`, sheet px); and a drawing laid over the
- * figure once its line is drawn (a held hand: its centre `c`, drawing px,
- * laid at `at`, sheet px, unturned, sized by `s`), within `quiet` px of which
- * the line is left as the drawings draw it. Both are then moved and sized
- * with the pose's root and scale, as the parts are.
+ * How a frame draws a posed puppet beyond its pose: the boil's tick; the
+ * drawings laid in place of parts (drawn keys, `PuppetSwap`), each in place
+ * of its own part, so a head key and an arm key show at once; and a drawing
+ * laid over the figure once its line is drawn (a held hand: its centre `c`,
+ * drawing px, laid at `at`, sheet px, unturned, sized by `s`), within
+ * `quiet` px of which the line is left as the drawings draw it. Each is then
+ * moved and sized with the pose's root and scale, as the parts are.
  */
 export interface PuppetLook {
   readonly boil: number;
   /** How far the boil moves the figure, px: the house `BOIL_AMP` unless given; 0 turns it off. */
   readonly amp?: number;
-  readonly swap?: {
-    readonly part: string;
-    readonly drawing: string;
-    readonly place: PuppetPlace;
-    readonly pivot: Pt;
-    readonly theta: number;
-  };
+  /** The drawn keys, at most one a part: none unless given. */
+  readonly swaps?: ReadonlyArray<PuppetSwap>;
   readonly held?: {
     readonly drawing: string;
     readonly c: Pt;
@@ -168,17 +172,29 @@ const layerOf = (t: DOMMatrix, origin: Pt) => {
 
 type Layer = ReturnType<typeof layerOf>;
 
+/** The parts a look's keys stand in for, by index, each with its key, and why they cannot be laid if so: a part the puppet lacks, or one named twice. */
+const swappedOf = (puppet: Puppet, swaps: ReadonlyArray<PuppetSwap>) => {
+  const swapped = new Map<number, PuppetSwap>();
+  for (const swap of swaps) {
+    const k = puppet.parts.findIndex((p) => p.name === swap.part);
+    if (k < 0) return { swapped, why: `no part ${swap.part} to lay a drawing in place of` };
+    if (swapped.has(k)) return { swapped, why: `two drawings laid in place of part ${swap.part}` };
+    swapped.set(k, swap);
+  }
+  return { swapped, why: undefined };
+};
+
 /**
  * Every part posed at `pose` into its buffer, and, with a look, each part
  * that moved laid where it stood at rest too: the moving parts' indices (a
- * turned bone's, or the one a drawing stands in for), with a look or not.
+ * turned bone's, or one a drawing stands in for), with a look or not.
  */
 const layParts = (
   loaded: LoadedPuppet,
   layer: Layer,
   m: Float64Array,
   pose: PuppetPose,
-  swapped: number,
+  swapped: ReadonlyMap<number, PuppetSwap>,
   look: boolean,
 ) => {
   const { puppet, gl } = loaded;
@@ -187,9 +203,10 @@ const layParts = (
   const restPose: PuppetPose = { numbers: {}, root: pose.root, scale: pose.scale };
   for (const [k, part] of puppet.parts.entries()) {
     const out = gl.positions[k]!;
+    const shown = !swapped.has(k);
     poseMesh(part.mesh, m, puppet.root, pose, out);
-    for (let i = 0; i < out.length; i += 2) layer.lay(out[i]!, out[i + 1]!, out, i, k !== swapped);
-    if (k !== swapped && !partTurned(puppet, k, m)) continue;
+    for (let i = 0; i < out.length; i += 2) layer.lay(out[i]!, out[i + 1]!, out, i, shown);
+    if (shown && !partTurned(puppet, k, m)) continue;
     moving.push(k);
     if (!look) continue;
     const at = gl.restPositions[k]!;
@@ -228,11 +245,17 @@ const posedAt = (puppet: Puppet, pose: PuppetPose, [x, y]: Pt): Pt => [
   pose.root[1] + pose.scale * (y - puppet.root[1]),
 ];
 
-/** A look's drawings laid at `pose`'s root and scale: its drawn key by its place, turned about its pivot, and its held hand centred where it is held. Why not, for a drawing not loaded. */
-const layDrawings = (loaded: LoadedPuppet, layer: Layer, pose: PuppetPose, look: PuppetLook) => {
-  const { swap, held } = look;
+/** A look's drawings laid at `pose`'s root and scale: each drawn key by its place, turned about its pivot, into its part's quad, and its held hand centred where it is held. Why not, for a drawing not loaded. */
+const layDrawings = (
+  loaded: LoadedPuppet,
+  layer: Layer,
+  pose: PuppetPose,
+  look: PuppetLook,
+  swapped: ReadonlyMap<number, PuppetSwap>,
+) => {
+  const { held } = look;
   const at = (p: Pt) => posedAt(loaded.puppet, pose, p);
-  if (swap !== undefined) {
+  for (const [k, swap] of swapped) {
     const a = (swap.theta * Math.PI) / 180;
     const [c, s] = [Math.cos(a), Math.sin(a)];
     const { place, pivot } = swap;
@@ -240,7 +263,7 @@ const layDrawings = (loaded: LoadedPuppet, layer: Layer, pose: PuppetPose, look:
       const [qx, qy] = [place.s * x + place.dx - pivot[0], place.s * y + place.dy - pivot[1]];
       return at([pivot[0] + c * qx - s * qy, pivot[1] + s * qx + c * qy]);
     };
-    if (!layQuad(loaded, layer, swap.drawing, loaded.gl.swapPositions, to))
+    if (!layQuad(loaded, layer, swap.drawing, loaded.gl.swapPositions[k]!, to))
       return `no drawing ${swap.drawing} loaded`;
   }
   if (held === undefined) return undefined;
@@ -260,14 +283,14 @@ const passOf = (
   pose: PuppetPose,
   look: PuppetLook,
   moving: ReadonlyArray<number>,
-  swapped: number,
+  swapped: ReadonlyMap<number, PuppetSwap>,
   joints: ReadonlyArray<Pt>,
 ): PuppetPass => {
   const { scale } = layer;
-  const { swap, held } = look;
+  const { held } = look;
   return {
     moving,
-    swap: swap && { part: swapped, drawing: swap.drawing },
+    swaps: [...swapped].map(([part, { drawing }]) => ({ part, drawing })),
     held: held && {
       drawing: held.drawing,
       at: layer.at(posedAt(loaded.puppet, pose, held.at)),
@@ -302,11 +325,10 @@ export const drawPuppet = (
   const { puppet } = loaded;
   const m = boneTransforms(puppet.bones, pose.numbers);
   const layer = layerOf(ctx.getTransform(), spec.origin);
-  const swapped = puppet.parts.findIndex((p) => p.name === look?.swap?.part);
-  if (look?.swap !== undefined && swapped < 0)
-    return `puppet ${spec.key}: no part ${look.swap.part} to lay a drawing in place of`;
+  const { swapped, why: unlaid } = swappedOf(puppet, look?.swaps ?? []);
+  if (unlaid !== undefined) return `puppet ${spec.key}: ${unlaid}`;
   const moving = layParts(loaded, layer, m, pose, swapped, look !== undefined);
-  const missing = look && layDrawings(loaded, layer, pose, look);
+  const missing = look && layDrawings(loaded, layer, pose, look, swapped);
   if (missing !== undefined) return `puppet ${spec.key}: ${missing}`;
   const [left, top, right, bottom] = layer.figure;
   if (probesFigures(ctx) && left <= right)

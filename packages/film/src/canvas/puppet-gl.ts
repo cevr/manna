@@ -225,15 +225,15 @@ export interface PuppetGl {
   readonly positions: ReadonlyArray<Float32Array>;
   /** Each part's rest place, canvas px, where a look's line pass reads what moved: written whole each draw that moves the part. */
   readonly restPositions: ReadonlyArray<Float32Array>;
-  /** The drawn key's and the held hand's quads, canvas px: written whole each draw that lays them. */
-  readonly swapPositions: Float32Array;
+  /** The drawn keys' quads, one a part (the key laid in its place), and the held hand's, canvas px: written whole each draw that lays them. */
+  readonly swapPositions: ReadonlyArray<Float32Array>;
   readonly heldPositions: Float32Array;
 }
 
-/** What a look asks of the passes, canvas px: the parts that moved, the part a drawing stands in for, the held hand, the boil's tick and lattice origin, and the line. */
+/** What a look asks of the passes, canvas px: the parts that moved, the parts drawings stand in for (each with its drawing), the held hand, the boil's tick and lattice origin, and the line. */
 export interface PuppetPass {
   readonly moving: ReadonlyArray<number>;
-  readonly swap: { readonly part: number; readonly drawing: string } | undefined;
+  readonly swaps: ReadonlyArray<{ readonly part: number; readonly drawing: string }>;
   readonly held: { readonly drawing: string; readonly at: Pt; readonly quiet: number } | undefined;
   readonly boil: number;
   /** How far the boil moves a node, px: 0 draws the figure unmoved. */
@@ -253,7 +253,7 @@ export const puppetGl = (puppet: Puppet): PuppetGl => ({
   on: new Map(),
   positions: puppet.parts.map((p) => new Float32Array(p.mesh.vertices.length)),
   restPositions: puppet.parts.map((p) => new Float32Array(p.mesh.vertices.length)),
-  swapPositions: new Float32Array(8),
+  swapPositions: puppet.parts.map(() => new Float32Array(8)),
   heldPositions: new Float32Array(8),
 });
 
@@ -569,7 +569,10 @@ const drawLayers = (
   for (const tex of textures) drawMesh(gl, p.vao, p.pos, positions, tex, p.count);
 };
 
-/** Draw part `k` of the figure: the drawn key where it stands in for the part, else the part's mesh, its seals and its revealed paint. */
+/** Whether a drawn key stands in for part `k` this pass. */
+const swappedIn = (pass: PuppetPass, k: number) => pass.swaps.some((s) => s.part === k);
+
+/** Draw part `k` of the figure: the drawn key where one stands in for the part, else the part's mesh, its seals and its revealed paint. */
 const drawPart = (
   gl: WebGL2RenderingContext,
   on: PuppetOnGl,
@@ -578,7 +581,8 @@ const drawPart = (
   k: number,
 ) => {
   const p = on.parts[k]!;
-  if (k !== pass.swap?.part) {
+  const swap = pass.swaps.find((s) => s.part === k);
+  if (swap === undefined) {
     if (p.count === 0) return;
     const moves = (n: number) => pass.moving.includes(n);
     drawLayers(gl, p, state.positions[k]!, [
@@ -588,9 +592,9 @@ const drawPart = (
     ]);
     return;
   }
-  const key = on.drawings.get(pass.swap.drawing);
+  const key = on.drawings.get(swap.drawing);
   if (key !== undefined)
-    drawMesh(gl, key.vao, key.pos, state.swapPositions, key.texture, key.count);
+    drawMesh(gl, key.vao, key.pos, state.swapPositions[k]!, key.texture, key.count);
 };
 
 /** The figure into its target, back to front, and what moved into its own: each moving part's coverage now (red) and at rest (green). */
@@ -621,7 +625,7 @@ const passFigure = (
     gl.uniform3f(on.mask, 0, 1, 0);
     drawMesh(gl, r.vao, r.pos, state.restPositions[k]!, p.texture, p.count);
     // a drawn key's coverage now in blue too, the seed of the body's ink it hides
-    gl.uniform3f(on.mask, 1, 0, Number(k === pass.swap?.part));
+    gl.uniform3f(on.mask, 1, 0, Number(swappedIn(pass, k)));
     drawPart(gl, on, state, pass, k);
   }
   gl.blendEquation(gl.FUNC_ADD);
@@ -679,7 +683,7 @@ const passInk = (
   gl.uniform1f(u('IL'), line.width * INTERIOR);
   gl.uniform1f(u('reach'), lined ? REACH * pass.scale : -1);
   gl.uniform3f(u('ink'), ...line.ink);
-  const meshMoved = pass.moving.some((k) => k !== pass.swap?.part);
+  const meshMoved = pass.moving.some((k) => !swappedIn(pass, k));
   gl.uniform1i(u('interior'), Number(meshMoved && lined));
   const held = pass.held ?? { at: [0, height] as const, quiet: 0 };
   gl.uniform3f(u('quiet'), held.at[0], height - held.at[1], held.quiet);
