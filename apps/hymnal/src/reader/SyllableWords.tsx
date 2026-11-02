@@ -29,8 +29,9 @@
  * without the visual join or trailing hyphens. While
  * the line is sung (`follow/`), it is `selected`, its syllables take the
  * muted colour and the sung syllable the accent: a change of colour only, so
- * nothing moves. A line without note times (held to even shares, or one
- * the recording does not play) is highlighted whole, in the accent on a soft
+ * nothing moves. A line the timing gives no syllable times (held to even
+ * shares, not played, or a line-level line its other singings lay
+ * elsewhere; `vite/timing.ts`) is highlighted whole, in the accent on a soft
  * tint.
  *
  * A syllable's text takes no touch, so a tap in the target of the chord over

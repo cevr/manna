@@ -80,8 +80,9 @@ const faultsOf = (hymn: Hymn, timeline: Timeline): ReadonlyArray<string> => {
     const flags = [want.played, want.even].join() === [got.played, got.even].join();
     if (!flags || !same([got.start, got.until], [ms(want.start), ms(want.until)]))
       return [`${at}: times or flags`];
-    // A line is lit when it has note times, at either chord level, that fit it: one per syllable,
-    // in order, inside the line.
+    // A line may be lit when it has note times that fit it: one per syllable, in order, inside the
+    // line. At `syllable` level it is lit; at `line` level it is lit or whole, as its other singings
+    // on the same notes agree (`follower.test.ts` holds the agreement to the sung file).
     const syllables = Match.value(line.part).pipe(
       Match.tag('Sung', (part) => part.lines[line.line] ?? []),
       Match.orElse(() => []),
@@ -96,6 +97,11 @@ const faultsOf = (hymn: Hymn, timeline: Timeline): ReadonlyArray<string> => {
       return [`${at}: lit where words may not be`];
     }
     // Syllables of one word share a word; each new word takes the next place.
+    const loose = Match.value(line.part).pipe(
+      Match.tag('Sung', (part) => part.level === 'line'),
+      Match.orElse(() => false),
+    );
+    if (loose && got.syllables.length === 0 && got.words.length === 0) return [];
     let word = -1;
     const words = syllables.map((s, k) => (word += Number(s.word !== syllables[k - 1]?.word)));
     if (!same(got.syllables, times)) return [`${at}: syllable times`];
