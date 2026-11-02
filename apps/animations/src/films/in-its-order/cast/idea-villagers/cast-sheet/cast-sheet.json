@@ -488,7 +488,20 @@
           "box": [1285, 248, 1492, 760]
         }
       ]
-    }
+    },
+    "single": [
+      {
+        "try": 15,
+        "why": "owner keep, 2026-11-01, through the orchestrator (no lab ask): the cup raised in one hand (in-its-order item 4), poses try 15 drawn beside poses-6, filed by hand as a single drawing because the poses sheet is kept already and stays; kept/single-15.png has the one short stray ink stroke inside the raised sleeve painted out (a harmonic fill of the sleeve with its paper grain, the hand's ring edge drawn again where the stroke met it), tries/poses-15.png stays as drawn; its view cut at the ink box",
+        "views": [
+          {
+            "view": 15,
+            "name": "single-15",
+            "box": [291, 274, 742, 1403]
+          }
+        ]
+      }
+    ]
   },
   "replaced": [
     {
