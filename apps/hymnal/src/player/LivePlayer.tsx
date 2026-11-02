@@ -95,6 +95,7 @@ const player = playerOn(
   settings.move,
   settings.tempo,
   settings.stanzas,
+  settings.intro,
 );
 /** The context's one value: a draw again (the Sound switch) hands every reader the same player, so no page draws again for it. */
 const provided = Option.some(player);
