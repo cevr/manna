@@ -11,6 +11,7 @@ import { CoverageManifest } from '@manna/film/tools';
 import { Schema } from 'effect';
 import * as LEAD_FEAST from '../../../library/cast/lead-feast/cutout/coverage.ts';
 import * as FEAST_GUEST_MAN from '../../../library/cast/feast-guest-man/cutout/coverage.ts';
+import * as FILLER_BASES from '../../../library/cast/filler-bases/cutout/coverage.ts';
 import * as JEREMIAH from '../../../library/cast/jeremiah/cutout/coverage.ts';
 import * as PAUL from '../../../library/cast/paul/cutout/coverage.ts';
 import * as SOWER from '../../../library/cast/sower/cutout/coverage.ts';
@@ -24,6 +25,7 @@ import { CUTOUT, SHEETS } from './cast.ts';
 const MANIFESTS = [
   LEAD_FEAST,
   FEAST_GUEST_MAN,
+  FILLER_BASES,
   JEREMIAH,
   PAUL,
   SOWER,

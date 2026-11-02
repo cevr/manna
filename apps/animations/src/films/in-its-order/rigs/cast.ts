@@ -31,6 +31,7 @@ import { PUPPETS as IDEA_VILLAGERS_PUPPETS } from '../cast/idea-villagers/cutout
 import { PUPPETS as PAUL_PUPPETS } from '../../../library/cast/paul/cutout/puppets.ts';
 import { PUPPETS as JEREMIAH_PUPPETS } from '../../../library/cast/jeremiah/cutout/puppets.ts';
 import { PUPPETS as FEAST_GUEST_MAN_PUPPETS } from '../../../library/cast/feast-guest-man/cutout/puppets.ts';
+import { PUPPETS as FILLER_BASES_PUPPETS } from '../../../library/cast/filler-bases/cutout/puppets.ts';
 import { own } from '../../../library/cutout/poses.ts';
 import { RAISE as LEAD_RAISE } from '../../../library/cast/lead-feast/cutout/raise.ts';
 import { poses1View as leadPoses1 } from '../../../library/cast/lead-feast/cutout/poses.ts';
@@ -567,6 +568,14 @@ const FEAST_MOTHER_POSES = 814 / 440;
  */
 const FEAST_GUEST_MAN_POSES = (LEAD_SINGLE * 161) / 206;
 
+/**
+ * The filler bases on their poses sheet: poses-1, the grown man standing at
+ * rest, ink crown to soles 730 rows (141 to 871, his kept box), 440 units as
+ * the IDEA villagers' grown villager. Their puppets are busts cut at the
+ * waist, drawn smaller for a crowd by each draw's scale.
+ */
+const FILLER_BASES_POSES = (871 - 141) / 440;
+
 /** The IDEA villagers on their poses sheet: poses-6, the grown villager standing at rest, ink crown to soles 512 rows (248 to 759, his kept box), 440 units. */
 const IDEA_VILLAGERS_POSES = 512 / 440;
 
@@ -606,6 +615,9 @@ export const SHEETS = {
   },
   'feast-guest-man': {
     poses: { ...SHEET, scale: FEAST_GUEST_MAN_POSES },
+  },
+  'filler-bases': {
+    poses: { ...SHEET, scale: FILLER_BASES_POSES },
   },
   'idea-villagers': {
     poses: { ...SHEET, scale: IDEA_VILLAGERS_POSES },
@@ -1196,6 +1208,14 @@ export const CUTOUT = cutoutTable({
   'feast-guest-man': {
     poses: {
       'poses-1': own(undefined, FEAST_GUEST_MAN_PUPPETS['poses-1']),
+    },
+  },
+  'filler-bases': {
+    poses: {
+      'poses-1': own(undefined, FILLER_BASES_PUPPETS['poses-1']),
+      'poses-2': own(undefined, FILLER_BASES_PUPPETS['poses-2']),
+      'poses-3': own(undefined, FILLER_BASES_PUPPETS['poses-3']),
+      'poses-4': own(undefined, FILLER_BASES_PUPPETS['poses-4']),
     },
   },
   'idea-villagers': {
