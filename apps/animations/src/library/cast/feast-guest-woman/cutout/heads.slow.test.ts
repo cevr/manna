@@ -1,10 +1,10 @@
-// The man's head keys (`heads.ts`) against his poses-1 part sheet: each names
-// a part his sheet holds and is the sheet's size, as the loader asks before it
-// un-mattes a key in place of its part, and each holds his head down to his
-// head part's lowest row and no lower, so the drape below his chin stays on
-// his torso, as the feast mother's veil does, with the drape's two outlines
-// ending where his head part's end, so they run on into his torso's. Each case
-// decodes his sheets, so they run in the slow suite.
+// The woman's head keys (`heads.ts`) against her poses-1 part sheet: each names
+// a part her sheet holds and is the sheet's size, as the loader asks before it
+// un-mattes a key in place of its part, and each holds her head down to her
+// head part's lowest row and no lower, so the veil below her chin stays on
+// her torso, as the feast mother's does, with the drape's two outlines
+// ending where her head part's end, so they run on into her torso's. Each case
+// decodes her sheets, so they run in the slow suite.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { type Raster, decodePng } from '@manna/film/tools';
@@ -28,8 +28,8 @@ const lowestRow = (r: Raster) => {
 
 /**
  * Row `y`'s ink runs in `r`, each `[first, last]`, left to right: the px it
- * holds (alpha above 0) darker than luminance 110, his outlines and none of
- * his cloth or skin.
+ * holds (alpha above 0) darker than luminance 110, her outlines and none of
+ * her cloth or skin.
  */
 const inkRuns = (r: Raster, y: number) => {
   const runs: Array<readonly [number, number]> = [];
@@ -49,18 +49,18 @@ const inkRuns = (r: Raster, y: number) => {
   return runs;
 };
 
-/** The ends of row `y`'s outermost ink runs in `r`, his drape's outlines: `[left's first, left's last, right's first, right's last]`. */
+/** The ends of row `y`'s outermost ink runs in `r`, her drape's outlines: `[left's first, left's last, right's first, right's last]`. */
 const outlinesOf = (r: Raster, y: number) => {
   const runs = inkRuns(r, y);
   return [...(runs[0] ?? [-1, -1]), ...(runs.at(-1) ?? [-1, -1])];
 };
 
-/** His poses-1 head part's PNG. */
+/** Her poses-1 head part's PNG. */
 const HEAD = Option.getOrThrow(Arr.findFirst(HEADED.parts, (p) => p.name === 'head')).png;
 
-describe("the man's head keys", () => {
+describe("the woman's head keys", () => {
   it.effect.layer(BunServices.layer)(
-    "each stands in for a part his poses-1 sheet holds, at the sheet's size",
+    "each stands in for a part her poses-1 sheet holds, at the sheet's size",
     () =>
       Effect.gen(function* () {
         const names = HEADED.parts.map((p) => p.name);
@@ -76,7 +76,7 @@ describe("the man's head keys", () => {
   );
 
   it.effect.layer(BunServices.layer)(
-    "each holds his head down to his head part's lowest row, none of the drape below his chin",
+    "each holds her head down to her head part's lowest row, none of the veil below her chin",
     () =>
       Effect.gen(function* () {
         const head = lowestRow(yield* decoded(HEAD));
@@ -87,7 +87,7 @@ describe("the man's head keys", () => {
   );
 
   it.effect.layer(BunServices.layer)(
-    "each one's drape outlines end within 1 px of his head part's on its lowest row, so they meet his torso's",
+    "each one's drape outlines end within 1 px of her head part's on its lowest row, so they meet her torso's",
     () =>
       Effect.gen(function* () {
         const head = yield* decoded(HEAD);

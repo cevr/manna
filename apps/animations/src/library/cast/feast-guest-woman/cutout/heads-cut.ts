@@ -1,23 +1,24 @@
-// Cuts the man's head keys (`heads.ts`) from his kept seated sheet: his turn
-// (poses-2) and his smile (poses-3), each laid on his poses-1 part sheet's
-// frame (`frames.ts`) where its neck lies on the neutral's, and cut by his
-// poses-1 cut (`cut.ts`). That cut's head is every row above his chin, the
-// headcloth's top and band with it, as the feast mother's poses-1 cut keeps
-// her veil's top with her head: the drape below the chin stays on his neutral
-// torso. The turn and smile paintings draw that drape narrower than the
-// neutral's and further to the picture's left, so before the cut each key's
-// drape band, from his ear's top down to his chin, is warped across, row by
-// row and each side alone (`warped`): the drape's outline moves whole, by a
-// shift that eases from none at the band's top to the one that lays it on the
-// neutral's outline at the chin row, and the cloth between it and his face
-// stretches or narrows to meet the face, which stays as painted. The keys
-// shade that cloth apart from the neutral, so over the last rows down to the
-// chin each key's cloth fades into the neutral's (`faded`). So each key's
-// drape, outline and cloth, runs on into his torso's. Each key is written to
-// `sheets/poses-1/head-<key>.png`, the view's bytes where the head owns a pixel
-// and alpha 0 elsewhere, as the parts CLI writes his head part. Run it from
-// the repo root with
-// `bun apps/animations/src/library/cast/feast-guest-man/cutout/heads-cut.ts`.
+// Cuts the woman's head keys (`heads.ts`) from her kept seated sheet: her
+// turn (poses-2) and her smile (poses-3), each laid on her poses-1 part
+// sheet's frame (`frames.ts`) where its neck lies on the neutral's, and cut
+// by her poses-1 cut (`cut.ts`). That cut's head is every row above her chin,
+// the veil's top with it, as the feast mother's poses-1 cut keeps her veil's
+// top with her head: the veil below the chin stays on her neutral torso. The
+// turn and smile paintings draw that veil narrower than the neutral's and
+// further to the picture's left, so before the cut each key's drape band,
+// from her ear's top down to her chin, is warped across, row by row and each
+// side alone (`warped`): the veil's outline moves whole, by a shift that eases
+// from none at the band's top to the one that lays it on the neutral's
+// outline at the chin row, and the cloth between it and her face stretches or
+// narrows to meet the face, which stays as painted. Over the last rows down
+// to the chin, everything between the veil's outline and her face line (her
+// hair, its shadow, the veil's cloth and folds) fades into the neutral's
+// (`faded`): a face line is a drawn line (`LINE`, `LINE_WIDTH`) with her skin
+// on its face side. So each key's veil, outline, cloth and hair, runs on into
+// her torso's. Each key is written to `sheets/poses-1/head-<key>.png`, the
+// view's bytes where the head owns a pixel and alpha 0 elsewhere, as the
+// parts CLI writes her head part. Run it from the repo root with
+// `bun apps/animations/src/library/cast/feast-guest-woman/cutout/heads-cut.ts`.
 
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -30,22 +31,22 @@ const here = import.meta.dir;
 const KEPT = `${here}/../cast-sheet/kept/poses.png`;
 
 /**
- * Each key's view on his kept sheet: poses-1's part sheet frame moved by
- * `at`, sheet px. Each shift is the one, within 10 px across and 6 down of
- * the body's best (`[491, 0]` and `[984, 0]`), whose rows below the chin
- * (view rows 267-300, columns 110-300: his neck and collar between the
- * drape's inner edges) best match the neutral's: 12.4 % and 12.7 % of those
- * px step over 30 in a channel, against 16.9 % and 16.7 % at the body's best
- * (measured), so each key's neck runs on into his neutral torso's.
+ * Each key's view on her kept sheet: poses-1's part sheet frame moved by
+ * `at`, sheet px. Each shift is the one, near the body's best (`[480, 0]`
+ * and `[961, 0]`), whose rows below the chin (view rows 260-298, columns
+ * 160-225: her neck between the veil's inner edges) best match the
+ * neutral's: 11.62 % and 12.59 % of those px step over 30 in a channel,
+ * against 22.55 % at `[482, 0]` (measured), so each key's neck runs on into
+ * her neutral torso's.
  */
 const KEYS = {
-  // poses-2: turned to the lead, his mouth open
+  // poses-2: turned to the lead, her mouth open
   turn: [473, -1],
   // poses-3: smiling at the lead, turned as the turn is
   smile: [955, -1],
 } as const;
 
-/** A px is ink where its luminance is below this: his outlines, hair and features, none of his cloth or skin. */
+/** A px is ink where its luminance is below this: her outlines, hair and features, none of her cloth or skin. */
 const INK = 80;
 
 /** A px may be a drawn line where its luminance is below this. */
@@ -67,10 +68,9 @@ const SKIN_WARM = 40;
 const SKIN_REACH = 10;
 
 /**
- * The drape band's top view row: his ear's top, below the headband. From here
- * down to the shoulders each key's drape outlines run beside the neutral's at
- * a steady offset, about 4 px on the picture's left and 14 on its right
- * (measured), so the band's shift eases in over the whole free drape.
+ * The drape band's top view row: her ear's top (frame rows 159-160). From
+ * here down to the chin each key's veil outlines run beside the neutral's at
+ * a steady offset, so the band's shift eases in over the whole free veil.
  */
 const BAND_TOP = 160;
 
@@ -243,7 +243,7 @@ const outlinesAt = (r: Raster, chin: number): Result.Result<readonly [number, nu
  * with it) and the paper beyond move whole by `shift` times an ease that runs
  * from 0 at the band's top to 1 at the chin (smoothstep, so the outline leaves
  * the painting's line and meets the torso's with no corner); the cloth between
- * it and the next ink in, his ear, cheek or jaw, stretches or narrows to meet
+ * it and the next ink in, her ear, cheek or jaw, stretches or narrows to meet
  * that ink, which stays put with the face inside it. Each px is read between
  * its two nearest source px. Fails where a row lacks an outline and a face
  * edge on each side, or where a side's cloth is too narrow to take its shift.
@@ -348,8 +348,8 @@ const neutralColumn = (
  * `neutral` view's over the `FADE` rows down to `chin`: on each row and side
  * the key's cloth is mixed with the neutral's (`neutralColumn`), the
  * neutral's share easing from none to all at the chin (smoothstep). So at the
- * chin the cloth is the neutral's, which runs on into his torso's as in his
- * neutral painting; the inks and his face stay as the key paints them.
+ * chin the cloth is the neutral's, which runs on into her torso's as in her
+ * neutral painting; the inks and her face stay as the key paints them.
  */
 const faded = (drape: Raster, neutral: Raster, chin: number): Result.Result<Raster, string> => {
   const { width: w } = drape;
@@ -380,7 +380,7 @@ const faded = (drape: Raster, neutral: Raster, chin: number): Result.Result<Rast
   return Result.succeed({ width: w, height: drape.height, rgba });
 };
 
-/** The `head` part `view` cuts to by his poses-1 cut. */
+/** The `head` part `view` cuts to by her poses-1 cut. */
 const headOf = (view: Raster) =>
   Effect.gen(function* () {
     const parts = yield* Effect.fromResult(
@@ -389,7 +389,7 @@ const headOf = (view: Raster) =>
     return yield* Option.match(
       Arr.findFirst(parts.parts, (p) => p.name === 'head'),
       {
-        onNone: () => Effect.die(new Error('his poses-1 cut has no head part')),
+        onNone: () => Effect.die(new Error('her poses-1 cut has no head part')),
         onSome: Effect.succeed,
       },
     );
@@ -407,7 +407,7 @@ const cut = Effect.gen(function* () {
   const sheet = yield* Effect.fromResult(decodePng(yield* fs.readFile(KEPT)));
   const [x0, y0, x1, y1] = boxOf('poses-1');
   const neutral = cropOf(sheet, [x0, y0, x1, y1]);
-  // the chin row: his neutral head part's lowest, the torso's drape starting below it
+  // the chin row: her neutral head part's lowest, the torso's drape starting below it
   const chin = lowestRow((yield* headOf(neutral)).pixels);
   const [nL, nR] = yield* Effect.fromResult(outlinesAt(neutral, chin));
   yield* Effect.forEach(Record.toEntries(KEYS), ([name, [dx, dy]]) =>
