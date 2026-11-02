@@ -3344,9 +3344,9 @@ cast leg (`castLeg`: the cast library, FileSystem and FilmFolder), the
 sound leg (`soundLeg`: the mix, Mixer), and the
 layout and look legs (`layoutLeg`: the browser, Checker and Looker), and the
 draw leg (`drawLeg`, `tools/draw-check.ts`: the film's `film.ts` built from
-its committed timings, its rigs and puppets loaded as a page loads them (a
-puppet's part PNGs read by `PuppetImagesBun`, one that cannot load failing
-the leg by name), and each scene drawn in this process into the stand-in
+its committed timings, its rigs, puppets and paintings loaded as a page loads
+them (a puppet's part PNGs read by `PuppetImagesBun`, a painting's PNG by
+`PaintingImagesBun`, one that cannot load failing the leg by name), and each scene drawn in this process into the stand-in
 context at its moments, as `tools/talk.slow.test.ts` runs it in `test:slow`).
 `--static` runs the static leg alone, with no mix and no browser: it is what
 the lab runs after each write; with `--folder v<n>` it checks that version
@@ -3359,7 +3359,12 @@ viewer sees, `seenFace`: its scene's own, mostly opaque, centred on the frame,
 the one rule `FaceSmall` measures by too; through `FACE_CORE` of its radius; a kit declares a face with `probeFace`
 once its person is drawn, so the person's own features, headwear and hands
 come before it; fills, the caption and a stroke that `marks` a line are not
-read, and a gradient glow is invisible to the probe). With neither, all of them run. Every finding comes back in one
+read, and a gradient glow is invisible to the probe), and `PaintingEdge` (a
+painted plate's edge that its spec does not declare `open` with part of its
+segment strictly inside the frame at a drawn moment; one exactly on the frame's
+border does not show; merged per scene and painting, the first second and every
+edge; a scene that paints is also drawn at its breath's peak, the middle of the
+scene). With neither, all of them run. Every finding comes back in one
 `Report` (`tools/findings.ts`): levelled by `levelOf` (one exhaustive
 table, `--allow-stale` included) and addressed by `addressOf` (its scene and
 the film second it starts at; a finding about the whole film has neither).
@@ -3497,7 +3502,9 @@ The probe lives in `canvas/probe.ts`. `write`, `block`, right-to-left text
 and the captions record their text through it; `stroke` records its drawn
 centre line and `cutout` its outline. A Rive rig declares its figure
 (`probeFigure`: its key, its box on screen and its concept), which a
-match crops by. A drawing declares the plate its text
+match crops by. `f.painting` records a painted plate's screen quad and its
+open edges (`PaintingMark`, in a sink that collects `paintings`), which
+`check --draw` reads for `PaintingEdge`. A drawing declares the plate its text
 sits on (a torn tag, a word card) with `probePlate(ctx, shape, () => write(…))`:
 the shape it drew the plate with, and the lines on it drawn inside. A plate
 hides what is under it as the text does, so it is measured as text too; the
@@ -4035,6 +4042,32 @@ through them, rather than a flat cutout.
 - `canvas/camera.ts`: `planeView` is the view a plane at `z` sees through the
   shot. A `multiplane`'s
   `haze` takes a sky of stops as well as one colour.
+- **Painted plates** (`canvas/painting.ts`, `PaintingSpec`): a PNG with alpha
+  in the film's folder, painted at the fidelity of the concept art. A drawing
+  declares its `paintings` as it declares its puppets
+  (`drawing({ paintings: { sky: SKY }, draw: (f) => … f.painting('sky') … })`),
+  and `f.painting(name)` paints one as a plane under the ctx's current
+  transform: translate(`at`), scale(`scale`), the image at (0, 0), smoothing
+  fixed at `'high'`. The engine adds no camera law: the scene calls
+  `f.painting` inside a `multiplane` plane (its `z` the divisor) or a plane
+  function of its own. A name the drawing does not declare is a compile
+  error, and a painting the film has not loaded throws, naming it. The spec's
+  module imports the PNG `with { type: 'file' }` beside it, never as a path
+  string: the stamp (`tools/stamp.ts`) follows the import, so every beat that
+  draws the plate is keyed by the PNG's bytes. A film loads its paintings
+  before its first frame, after its puppets (`loadPaintings`,
+  `src/painting/load.ts`, through `PaintingImages`: on the page
+  `PaintingImagesBrowser`, a decode with no colour conversion and alpha
+  premultiplied, its bitmap the load scope's; in Bun `PaintingImagesBun`, the
+  bytes and no image, so a Bun draw paints nothing). A PNG of another size than
+  `size` fails the load (`PaintingUnloadable`, naming both sizes), and where the
+  host gives the bytes, so does paint (alpha above 0) on the outermost row or
+  column of an edge `open` declares clear. Paint the plate a margin larger
+  than the frame on every edge that is not `open`, enough for the drift's
+  peak (`DRIFT`, at the middle of the scene) and the plane's parallax: any
+  other edge that shows inside the frame at a drawn moment is a `PaintingEdge`
+  (`check --draw`). Under a probe, `f.painting` records its plate's screen
+  quad (`PaintingMark`), in Bun and on the page alike.
 - `canvas/grade.ts`, through `finish` in `createFilm`: `bloom` (bright parts
   bleed light) and `grade` (an S curve, split toning of the shadows and the
   highlights, and saturation), applied before the grain.
@@ -4075,7 +4108,7 @@ the checks stay ours.
 - **Owned by whoever loaded it.** The consumer that loads a film owns its
   rigs and closes them: a film's load is a scoped Effect (`Films`,
   `player/main.ts`: `Effect<Film, FilmUnloadable, Scope>`; `narratedFilms`
-  loads the rigs and puppets into the scope it runs in, a short's page into its
+  loads the rigs, puppets and paintings into the scope it runs in, a short's page into its
   film's), run on the consumer's own fiber, so no lifetime crosses a
   Promise and stopping the consumer stops the load where it is. The
   player's page (`stageFilm`) runs it in the page's own scope, which lives
