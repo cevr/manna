@@ -37,13 +37,17 @@ under its number, and the refrain written out each time it is sung.
 - The colours are the brand's, Moonlit wheat (the wheat on the night), from
   its one source, `@manna/brand` (`packages/brand`), which the First the
   Blade site reads too, as the owner's pick "sky" (2026-10-25): the brand's
-  painted sky as the second colour. `src/theme.ts` draws fifteen roles from
-  it in light and dark: ground, ink, muted, line, accent, chord (the chords
-  and the dials' current stop), soft, onAccent (the text on an accent
-  fill), pressed and onPressed (a held accent fill and its text), panel and
-  edge (the open dials' panel and its border), bar (the docked player bar),
-  and pill and onPill (the key button's lit pill and the dials' Reset, and
-  their ink). Light is a cool white page under the night's ink, with the
+  painted sky as the second colour. `src/theme.ts` draws two families of
+  roles from it in light and dark. The opaque roles: ground, ink, muted,
+  line, accent, chord (the chords and the dials' current stop), soft,
+  onAccent (the text on an accent fill), pressed and onPressed (a held
+  accent fill and its text), panel and edge (the open dials' panel and its
+  border), bar (the docked player bar), pill and onPill (the key button's
+  lit pill and the dials' Reset, and their ink), and chosen and onChosen (a
+  checked chip's fill and its ink). The glass roles, laid over any opaque
+  role under the find bar's capsule: glass (soft at 85 %), onGlass (its
+  words), onGlassMuted (its placeholder), and glassChosen and onGlassChosen
+  (the disk behind its chosen control, and that control's ink). Light is a cool white page under the night's ink, with the
   dusk's gold deepened for the chords; dark keeps the night as the page,
   with the dusk's gold for the accent and the chords. A screen reads a
   role, never a hex value. On iOS each

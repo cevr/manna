@@ -27,6 +27,8 @@
  *   the `Chords` switch, its switches `Intro` (checked) and `Click`
  *   (unchecked); `Click` turns on and reads back; a tap on `Intro` unchecks
  *   it and disables `Click`, its value kept; both read back from settings.
+ *   `Click` reads disabled to assistive tech only while `Intro` is off: on
+ *   the web its `aria-disabled`, on iOS its `accessibilityState`.
  *
  * Hymn numbers, line indices and beats only: no hymn's words are read or printed.
  *
@@ -56,6 +58,7 @@ import { HymnPage } from '~/reader/HymnPage';
 import { settings } from '~/store';
 import { fakeDevice } from '~/test/device';
 import { params } from '~/test/one';
+import { propsWith } from '~/test/props';
 import { readerOn } from '~/test/reader';
 
 import { book } from './book';
@@ -527,6 +530,21 @@ describe('the sheet’s Start group', () => {
     expect({ intro: sheet.intro().checked, disabledClick: disabledClick() }).toEqual({
       intro: true,
       disabledClick: false,
+    });
+  });
+
+  it('gives Click the accessibility state VoiceOver reads on iOS: disabled only while Intro is off', () => {
+    using sheet = mountSheet(78);
+    // react-native-web draws no DOM for `accessibilityState`: it is read from the props Click was drawn with.
+    const state = () => propsWith(sheet.click(), 'accessibilityState')['accessibilityState'];
+    const on = state();
+    sheet.tap(sheet.intro());
+    const off = state();
+    sheet.tap(sheet.intro());
+    expect({ on, off, onAgain: state() }).toEqual({
+      on: expect.not.objectContaining({ disabled: true }),
+      off: expect.objectContaining({ disabled: true }),
+      onAgain: expect.not.objectContaining({ disabled: true }),
     });
   });
 });

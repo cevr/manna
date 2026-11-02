@@ -10,6 +10,10 @@
  *   no other hymn's; it tells one `reset` cue and no detent, and the chip goes.
  * - After four taps on `Tap` set the dial, a press sets it back.
  * - The chip is a button whose words name 100 %.
+ * - On a hymn whose timing does not decode, with no read-out and no `Tap`, the
+ *   chip still shows at 120 %, and a press sets 100 % and the chip goes.
+ * - A press turns the dial home on the reset's turn, `RESET_TURN` long, frame
+ *   by frame, whether the hymn's timing decodes or not.
  *
  * Each case sets the tempos it touches to 100 first and back after. Hymn
  * numbers only: no hymn's words are read or printed.
@@ -26,12 +30,45 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { type Cue, CueProvider, plain } from '~/feel/cue';
+import { book } from '~/follow/book';
 import { settings } from '~/store';
+import { holdAnimations, landAnimations, stepAnimations } from '~/test/reanimated';
 
+import { RESET_TURN } from './DialView';
 import { STOPS } from './tempo';
 import { TapClock, TempoDial } from './TempoDial';
 
 const RESET = '[aria-label="Reset tempo"]';
+
+/** A hymn number past the hymnal's last (695): the timing bundle carries none, so its timing does not decode. */
+const NO_TIMING = 696;
+
+/** A frame of the device's drawing, in ms, as `stepAnimations` moves a timing on. */
+const FRAME = 16;
+
+/** More frames than any turn of the dial takes: a count that reaches it stops there. */
+const MOST_FRAMES = 120;
+
+/**
+ * The frames until the turns `move` sets have landed, each moved on a frame
+ * at a time; 1 when it sets none. Animations land at once again after.
+ */
+const framesAfter = (move: () => void) => {
+  holdAnimations();
+  using _held = { [Symbol.dispose]: landAnimations };
+  move();
+  // One frame drawn; whether a turn still runs after it.
+  const step = () => {
+    let running = false;
+    act(() => {
+      running = stepAnimations(FRAME);
+    });
+    return running;
+  };
+  let frames = 1;
+  while (frames < MOST_FRAMES && step()) frames++;
+  return frames;
+};
 
 /** One press, as a finger's tap reaches a button on the web. */
 const press = (element: Element) =>
@@ -69,6 +106,11 @@ const mount = (number: number) => {
     cues,
     /** Whether `Reset tempo` shows. */
     shown: () => Option.isSome(one(RESET)),
+    /** Whether the read-out and `Tap` show. */
+    beat: () => ({
+      readOut: Option.isSome(one('[data-testid="tempo-bpm"]')),
+      tap: Option.isSome(one('[aria-label="Tap"]')),
+    }),
     /** One press on `Reset tempo`, which must show. */
     reset: () => press(get(RESET)),
     /** The chip: its role and its drawn words. */
@@ -202,5 +244,66 @@ describe('Reset tempo on the Tempo dial', () => {
         names: true,
       });
     }),
+  );
+
+  it.live(
+    'shows on a hymn whose timing does not decode, and a press sets it to 100 % and goes',
+    () =>
+      Effect.sync(() => {
+        using page = mount(NO_TIMING);
+        const home = { shown: page.shown(), beat: page.beat() };
+        page.setTempo(120);
+        const away = { said: page.said(), shown: page.shown(), beat: page.beat() };
+        page.cues.splice(0);
+        page.reset();
+        expect({
+          decodes: Option.isSome(book.of(NO_TIMING)),
+          home,
+          away,
+          pressed: {
+            tempo: page.tempo(),
+            said: page.said(),
+            cues: [...page.cues],
+            shown: page.shown(),
+            beat: page.beat(),
+          },
+        }).toEqual({
+          decodes: false,
+          home: { shown: false, beat: { readOut: false, tap: false } },
+          away: { said: '120%', shown: true, beat: { readOut: false, tap: false } },
+          pressed: {
+            tempo: 100,
+            said: '100%',
+            cues: [plain('reset')],
+            shown: false,
+            beat: { readOut: false, tap: false },
+          },
+        });
+      }),
+  );
+
+  it.live(
+    'turns the dial home on the reset’s turn, whether the timing decodes or not: hymn 100 from 150 %, hymn 696 from 50 %',
+    () =>
+      Effect.sync(() => {
+        const from = [
+          { number: 100, stop: 150 },
+          { number: NO_TIMING, stop: 50 },
+        ];
+        const turns = from.map(({ number, stop }) => {
+          using page = mount(number);
+          page.setTempo(stop);
+          const frames = framesAfter(page.reset);
+          return { number, stop, frames, said: page.said() };
+        });
+        expect(turns).toEqual(
+          from.map(({ number, stop }) => ({
+            number,
+            stop,
+            frames: Math.ceil(RESET_TURN / FRAME),
+            said: '100%',
+          })),
+        );
+      }),
   );
 });
