@@ -28,6 +28,7 @@
 
 import { drawing, fly, flyV, stream } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
+import { palette } from '../palette.ts';
 import { PUPPETS as VILLAGER } from '../cast/idea-villagers/cutout/puppets.ts';
 import {
   BOOK_OPEN,
@@ -168,7 +169,7 @@ const DROPS = {
   size: [2.5, 4.5],
   small: 0.7,
   shade: '#d8d1ea',
-  ink: '#2b2622',
+  ink: palette.outline,
   line: 1.6,
   seeds: {
     pour: [11, 21],

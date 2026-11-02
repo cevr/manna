@@ -91,7 +91,7 @@ Numbers are in artboard units and seconds. They are starting points.
 
 ## Particles
 
-Drops, sparks, dust and splashes come from `packages/film/src/canvas/particles.ts` (`@manna/film/canvas`; ported from pixelfx, MIT): `fly` and `flyV` give a particle's place and velocity as the closed form of its age under gravity and drag, and `burst`, `cycle` and `stream` call back for each live particle with its age, life and its own seeded rng. A frame stays a pure function of time, so render workers and the lab's scrub draw it at any t, and a `cycle` loops with no seam. Never keep a particle list that steps from 0: a chunk that starts mid-film would replay from the start. The milk scene's drops (`apps/animations/src/films/in-its-order/scenes/milk.ts`, `DROPS`) are the worked example.
+Drops, sparks, dust and splashes come from `packages/film/src/canvas/particles.ts` (`@manna/film/canvas`; ported from pixelfx, MIT): `fly` and `flyV` give a particle's place and velocity as the closed form of its age under gravity and drag, `burst` calls back once for each of its particles with the particle's own seeded rng and index, and `cycle` and `stream` call back for each live particle with its age, life, its own seeded rng and index. A frame stays a pure function of time, so render workers and the lab's scrub draw it at any t, and a `cycle` loops with no seam. Never keep a particle list that steps from 0: a chunk that starts mid-film would replay from the start. The milk scene's drops (`apps/animations/src/films/in-its-order/scenes/milk.ts`, `DROPS`) are the worked example.
 
 - **Vary every particle.** Size, speed, delay and life each come from its rng, or the effect reads as a machine.
 - **An impact is fast in, slow out**, with a hold of 1–2 frames on contact.

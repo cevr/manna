@@ -98,6 +98,19 @@ describe('cycle', () => {
       }
     expect(lives.size).toBe(20);
   });
+
+  test('a life longer than the period gives each particle one copy per period it still lives', () => {
+    const long = calls((fn) => cycle(4.2, 1, 5, 9, () => 2.5, fn));
+    for (let i = 0; i < 5; i++) {
+      const ages = long
+        .filter((c) => c[0] === i)
+        .map((c) => c[1])
+        .toSorted((a, b) => a - b);
+      expect(ages.length).toBeGreaterThanOrEqual(2);
+      ages.slice(1).forEach((age, k) => expect(age - (ages[k] ?? 0)).toBeCloseTo(1, 9));
+      ages.forEach((age) => expect(age).toBeLessThan(2.5));
+    }
+  });
 });
 
 describe('stream', () => {
