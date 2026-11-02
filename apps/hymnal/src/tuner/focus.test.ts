@@ -770,8 +770,8 @@ describe("hear at the rule's edges", () => {
   });
 
   it('keeps its state opaque: a caller holds a `Focus` and hands it back, and reads nothing from it', () => {
-    // @ts-expect-error -- `Focus` is opaque: no caller reads a held pitch from it.
-    const held: unknown = unfocused.held;
-    expect(held).toBeUndefined();
+    // @ts-expect-error -- `Focus` is opaque: no caller reads even its tag, which every state has.
+    const tag: unknown = unfocused._tag;
+    expect(tag).toBeUndefined();
   });
 });
