@@ -1,9 +1,15 @@
-// In Its Order's sound: act 1's code sounds (`feast`: the cold open, the
-// title card and the milk page).
+// In Its Order's sound: act 1's score and code sounds (`feast`: the cold
+// open, the title card and the milk page).
 //
-// The score is not declared: it is generated, so it costs money, and it waits
-// for the owner's yes. Every sound here is a code sound from the library
-// (`apps/animations/sounds/library.ts`).
+// The score has three options, each a whole score in its own musical
+// language for a warm, hopeful, plain teaching film: no drums, no trailer
+// swell. Act 1 is written out: it turns at the joke at the feast (`cold`),
+// the title card, where the music stands alone (`title`), and the plain word
+// (`milk`); the later acts' movements (`later`) are shaped by the script's
+// arc until their scenes are drawn. The score is generated, so composing it costs credits and waits
+// for the owner's yes; until it is composed, the title card's `hush` cue
+// keeps its silence a meant one. Every other sound here is a code sound from
+// the library (`apps/animations/sounds/library.ts`).
 //
 // Beds: the courtyard's air under the cold open and the title card; the paper
 // room under the milk page; the milk's pour from where its ribbon reaches the
@@ -32,7 +38,233 @@ const comingIn = (count: number): ReadonlyArray<number> => {
   return Array.from({ length: count }, (_, i) => (dur * stagger * i) / (count - 1));
 };
 
+/** What no option plays: the epic, the electronic and the drum kit. */
+const AVOID = [
+  'drums',
+  'percussion',
+  'drum kit',
+  'epic trailer',
+  'cinematic hits',
+  'braams',
+  'electronic beats',
+  'synth bass',
+  'vocals',
+  'choir',
+];
+
+/** The instruments one option turns to past act 1: its melody, its bed and its low end. */
+interface Voicing {
+  readonly melody: string;
+  readonly bed: string;
+  readonly low: string;
+}
+
+/**
+ * The score past act 1, in one option's instruments: the API composes the
+ * whole film in one plan, each movement 3 to 120 s, so every later act has a
+ * movement now, shaped by the script's arc and refined when its scenes are
+ * drawn. The low end swells on the problem (`teeth`, `math`) and on the
+ * climax (`priest`); the landing (`thesis`) is the one stretch the music
+ * plays alone.
+ */
+const later = ({ melody, bed, low }: Voicing) => [
+  {
+    from: 'stones',
+    name: 'the foundation',
+    styles: [`steady ${bed}`, `plain ${melody} theme`, 'grounded, building slowly'],
+  },
+  {
+    from: 'teeth',
+    name: 'the rush',
+    styles: [`restless ${bed}`, `${low} swelling`, 'a little hurried, then uneasy'],
+  },
+  {
+    from: 'math',
+    name: 'the sum',
+    styles: [`thoughtful ${melody}`, `${low} pedal tone swelling`, 'searching, sober'],
+  },
+  {
+    from: 'priest',
+    name: 'the meat',
+    styles: [`reverent ${melody}`, `rich ${bed}`, `${low} swelling`, 'rising warmth'],
+  },
+  {
+    from: 'eat',
+    name: 'the path',
+    styles: [`flowing ${bed}`, `joyful ${melody}`, 'walking pace, light'],
+  },
+  {
+    from: 'name',
+    name: 'the table',
+    styles: [`the feast theme returns on ${melody}`, `warm ${bed}`, 'homecoming'],
+  },
+  {
+    from: 'thesis',
+    name: 'the landing',
+    styles: [`full warm statement of the theme on ${melody}`, `${bed}`, 'decays to silence'],
+  },
+];
+
 export const sound: Sound = {
+  score: {
+    play: 'parlour',
+    under: -18.5,
+    alone: -6,
+    options: {
+      // Felt piano and a small string section: the warm, plain teaching
+      // sound, with pizzicato for the joke.
+      parlour: {
+        model: 'music_v2_5',
+        styles: [
+          'warm hopeful instrumental',
+          'felt piano',
+          'chamber strings',
+          'gentle',
+          'major key',
+          'unhurried',
+        ],
+        avoid: AVOID,
+        movements: [
+          {
+            from: 'cold',
+            name: 'the feast',
+            styles: [
+              'playful pizzicato strings',
+              'light felt piano',
+              'wry, a little comic',
+              'wedding-feast warmth',
+            ],
+          },
+          {
+            from: 'title',
+            name: 'the title',
+            styles: [
+              'felt piano melody',
+              'warm sustained strings swell gently',
+              'cello pedal tone underneath',
+              'open, hopeful',
+            ],
+          },
+          {
+            from: 'milk',
+            name: 'the plain word',
+            styles: [
+              'simple felt piano figure',
+              'soft sustained strings',
+              'sparse, clear, room for the voice',
+              'tender',
+            ],
+          },
+          ...later({
+            melody: 'felt piano',
+            bed: 'chamber strings',
+            low: 'bowed cellos and basses',
+          }),
+        ],
+      },
+      // Fingerpicked nylon guitar, upright bass and clarinet: a homespun,
+      // village sound, with glockenspiel for the joke.
+      folk: {
+        model: 'music_v2_5',
+        styles: [
+          'warm acoustic folk instrumental',
+          'fingerpicked nylon-string guitar',
+          'upright bass',
+          'clarinet',
+          'major key',
+          'homespun',
+        ],
+        avoid: AVOID,
+        movements: [
+          {
+            from: 'cold',
+            name: 'the feast',
+            styles: [
+              'bouncy fingerpicked guitar',
+              'glockenspiel accents',
+              'playful clarinet',
+              'light-hearted',
+            ],
+          },
+          {
+            from: 'title',
+            name: 'the title',
+            styles: [
+              'clarinet melody over guitar',
+              'upright bass held low notes',
+              'warm, open, hopeful',
+            ],
+          },
+          {
+            from: 'milk',
+            name: 'the plain word',
+            styles: [
+              'slow fingerpicked guitar',
+              'soft upright bass',
+              'sparse, room for the voice',
+              'gentle',
+            ],
+          },
+          ...later({
+            melody: 'clarinet',
+            bed: 'fingerpicked nylon-string guitar',
+            low: 'bowed upright bass',
+          }),
+        ],
+      },
+      // Flute, oboe, harp and celesta: a storybook pastoral sound, with
+      // bassoon for the joke.
+      storybook: {
+        model: 'music_v2_5',
+        styles: [
+          'warm pastoral orchestral instrumental',
+          'flute',
+          'oboe',
+          'harp',
+          'celesta',
+          'major key',
+          'storybook',
+        ],
+        avoid: AVOID,
+        movements: [
+          {
+            from: 'cold',
+            name: 'the feast',
+            styles: [
+              'comic staccato bassoon',
+              'plucked harp',
+              'celesta sparkle',
+              'playful, a little wry',
+            ],
+          },
+          {
+            from: 'title',
+            name: 'the title',
+            styles: [
+              'flute melody over harp arpeggios',
+              'soft horn and bowed bass pedal tone',
+              'warm, hopeful',
+            ],
+          },
+          {
+            from: 'milk',
+            name: 'the plain word',
+            styles: [
+              'gentle harp arpeggios',
+              'soft oboe line',
+              'sparse, clear, room for the voice',
+              'tender',
+            ],
+          },
+          ...later({
+            melody: 'flute and oboe',
+            bed: 'harp arpeggios',
+            low: 'bowed basses and soft horn',
+          }),
+        ],
+      },
+    },
+  },
   beds: [
     {
       sound: 'amb.courtyard',
