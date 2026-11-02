@@ -7,7 +7,7 @@
 // the mother where the title stands them, his bottle raised (`bottle`).
 // `smile` pulls back to the three guests at the table, who hold still. On
 // `letter` a rolled scroll drops onto the table in front of the lead and
-// unrolls over its edge (`SCROLL`).
+// unrolls over its edge (`SCROLL`). On `ouch` he winces (`WINCE`).
 // `what` cuts to the last close plate (`WHAT`), the cup of milk and the
 // bread, and the camera lifts to them.
 //
@@ -16,9 +16,10 @@
 // near one. Each courtyard move runs from where the last one left it
 // (`MOVES`).
 
-import { drawing } from '@manna/film/canvas';
+import { drawing, type PuppetLook } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
 import { PUPPETS as LEAD } from '../../../library/cast/lead-feast/cutout/puppets.ts';
+import winceHead from '../../../library/cast/lead-feast/cutout/sheets/single-5/head.png' with { type: 'file' };
 import { PUPPETS as MOTHER } from '../cast/feast-mother/cutout/puppets.ts';
 import { PUPPETS as VILLAGER } from '../cast/idea-villagers/cutout/puppets.ts';
 import { BABY_BACK, DISTANCE, NEAR, PANEL, PLANES, SKY, TABLE, WHAT } from '../plates/plates.ts';
@@ -75,8 +76,9 @@ const GUESTS = {
  * The courtyard's framings, on the frame px the title ends on: from `grown`
  * the camera starts on the mother at the table (`START`), trucks down the
  * table to the lead, pushes in on his bottle, pulls back to the three
- * guests (`smile`) and pushes in on the letter's gold seal under his face
- * (`quote`), each a cue and where it leaves the camera.
+ * guests (`smile`), pushes in on the letter's gold seal under his face
+ * (`quote`) and tilts up to his face as he winces (`ouch`), each a cue and
+ * where it leaves the camera.
  *
  * The plates cover frame x 0..1920 and y -100..1180, and the table, the
  * nearest plane, binds: every framing keeps 960/k <= x <= 1920 - 960/k and
@@ -91,7 +93,33 @@ const MOVES = [
   ['bottle', { x: 952, y: 812, k: 1.5 }],
   ['smile', { x: 955, y: 744, k: 1.25 }],
   ['quote', { x: 996, y: 818, k: 1.5 }],
+  ['ouch', { x: 960, y: 770, k: 1.5 }],
 ] as const satisfies ReadonlyArray<readonly [string, Camera]>;
+
+/**
+ * His seated cut-out (single-9) with no line: the wince's head is laid whole
+ * with its own line, so the look draws no line again near it (with a line,
+ * the look inks round the head and over the bottle hand by it).
+ */
+const { line: _line, ...SEATED } = LEAD['single-9'];
+
+/**
+ * The lead's wince (`ouch`): his kept wince's head (single-5) laid in place
+ * of his single-9 head, drawing px to his sheet px, sized so the two heads'
+ * hair is as wide (350 sheet px to 253) with its crown and centre on his,
+ * the boil off as on every other frame he holds.
+ */
+const WINCE: PuppetLook = {
+  boil: 0,
+  amp: 0,
+  swap: {
+    part: 'head',
+    drawing: 'wince',
+    place: { s: 1.39, dx: 104, dy: 0 },
+    pivot: [308, 385],
+    theta: 0,
+  },
+};
 
 /**
  * The letter (`cold.letter.4`), on the table's plane px: the rolled scroll
@@ -132,11 +160,12 @@ export const cold = drawing({
     unfurl: { after: 'hop', dur: 0.15, ease: 'linear' },
     unroll: { after: 'unfurl', dur: 1, ease: 'inOutCubic' },
     quote: { mark: 'quote', dur: 2.6, ease: 'inOutSine' },
+    ouch: { mark: 'ouch', dur: 0.6, ease: 'inOutCubic' },
     what: { mark: 'what', until: { at: 'end' }, ease: 'inOutSine' },
   },
   puppets: {
     villager: VILLAGER['poses-6'],
-    lead: LEAD['single-9'],
+    lead: { ...SEATED, drawings: [{ name: 'wince', png: winceHead }] },
     mother: MOTHER['poses-1'],
   },
   paintings: {
@@ -174,15 +203,19 @@ export const cold = drawing({
       ctx.restore();
     };
     // A guest: its head centred on its seat, its feet on the floor.
-    const guest = (name: keyof typeof GUESTS) => {
+    const guest = (name: keyof typeof GUESTS, look?: PuppetLook) => {
       const g = GUESTS[name];
       const scale = g.head / (g.box[2] - g.box[0]);
       const headX = (g.box[0] + g.box[2]) / 2;
-      f.puppet(name, {
-        numbers: {},
-        root: [g.x + scale * (g.root[0] - headX), FLOOR - scale * (g.h - g.root[1])],
-        scale,
-      });
+      f.puppet(
+        name,
+        {
+          numbers: {},
+          root: [g.x + scale * (g.root[0] - headX), FLOOR - scale * (g.h - g.root[1])],
+          scale,
+        },
+        look,
+      );
     };
 
     // The letter on the table's plane: the rolled scroll falling and hopping,
@@ -247,7 +280,7 @@ export const cold = drawing({
     plane(camera, PLANES.guests, () =>
       panel(() => {
         guest('villager');
-        guest('lead');
+        guest('lead', f.t >= f.cue('ouch').start ? WINCE : undefined);
         guest('mother');
       }),
     );
