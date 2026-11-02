@@ -65,7 +65,13 @@ import {
   sourceLabel,
 } from '../core/sfx.ts';
 import { type Credit, missingSoundCredits } from '../canvas/credits.ts';
-import { cueTime, movementSpans, scoreOptionState, scoreOptions } from '../core/sound.ts';
+import {
+  cueTime,
+  movementSpans,
+  partialRange,
+  scoreOptionState,
+  scoreOptions,
+} from '../core/sound.ts';
 import {
   CLOCK_EPSILON,
   DEFAULT_EASE,
@@ -94,6 +100,7 @@ import {
 import {
   AssetMissing,
   AssetStale,
+  ScorePartial,
   CueLate,
   CueTwin,
   DeadAir,
@@ -509,16 +516,22 @@ export const unknownVoices = (
  * order for as long as the API's chunks may last (`movementSpans`: the first
  * misnamed or out-of-order movement, else every length it refuses). Only movements that hold are checked for
  * the option's state (`scoreOptionState`, asset `score.<option>`): missing,
- * or composed for another plan.
+ * or composed for another plan. An option composed through a scene is checked
+ * through that scene alone, and is `ScorePartial` while the film runs past it.
  */
 export const musicFindings = (
   score: Score,
   placed: ReadonlyArray<Placed>,
   manifest: SoundManifest,
-): ReadonlyArray<PartError | MovementLength | AssetStale | AssetMissing> =>
+): ReadonlyArray<PartError | MovementLength | AssetStale | AssetMissing | ScorePartial> =>
   scoreOptions(score).flatMap(
-    (option): ReadonlyArray<PartError | MovementLength | AssetStale | AssetMissing> => {
-      const movements = Result.match(movementSpans(option.music, placed), {
+    (
+      option,
+    ): ReadonlyArray<PartError | MovementLength | AssetStale | AssetMissing | ScorePartial> => {
+      const through = Option.flatMap(Option.fromUndefinedOr(manifest.scores?.[option.name]), (a) =>
+        Option.fromUndefinedOr(a.through),
+      );
+      const movements = Result.match(movementSpans(option.music, placed, through), {
         onFailure: (error): ReadonlyArray<PartError | MovementLength> => [error],
         onSuccess: (spans) => Arr.getFailures(spans),
       });
@@ -526,7 +539,12 @@ export const musicFindings = (
       const asset = `score.${option.name}`;
       const state = scoreOptionState(option, placed, manifest);
       if (state._tag === 'Missing') return [AssetMissing.make({ asset })];
-      if (state._tag === 'Current') return [];
+      if (state._tag === 'Current')
+        return Option.toArray(
+          Option.map(partialRange(state, placed), (range) =>
+            ScorePartial.make({ asset, ...range }),
+          ),
+        );
       if (state.why._tag !== 'Retimed') return [state.why];
       return [AssetStale.make({ asset, stored: state.asset.hash, wanted: state.why.key })];
     },

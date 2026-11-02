@@ -525,6 +525,21 @@ export class AssetMissing extends Schema.TaggedError<AssetMissing>()('AssetMissi
   }
 }
 
+/**
+ * A score option composed through a scene (`score --through`): its music ends
+ * at `to`, before the film's `end`, and the mix plays none after it.
+ */
+export class ScorePartial extends Schema.TaggedError<ScorePartial>()('ScorePartial', {
+  asset: Schema.String,
+  through: Schema.String,
+  to: Schema.Finite,
+  end: Schema.Finite,
+}) {
+  override get message() {
+    return `sound "${this.asset}" is composed through ${this.through}: music to ${this.to.toFixed(1)}s of the film's ${this.end.toFixed(1)}s, none after it; run score without --through for the whole film`;
+  }
+}
+
 /** Where a layout sample was taken: a scene, a film time, and what the time is. */
 const sampled = {
   scene: Schema.String,
@@ -746,6 +761,7 @@ export type StaticFinding =
   | TakeStale
   | AssetStale
   | AssetMissing
+  | ScorePartial
   | AudioMissing
   | AudioStale
   | UnknownScene
@@ -822,6 +838,7 @@ export const levelOf = (finding: Finding, options: CheckOptions): Level => {
       TakeStale: stale,
       AssetStale: stale,
       AssetMissing: warning,
+      ScorePartial: warning,
       AudioMissing: stale,
       AudioStale: stale,
       UnknownScene: error,
@@ -935,6 +952,7 @@ export const addressOf = (finding: Finding): FindingAddress => {
       TakeStale: scene,
       AssetStale: none,
       AssetMissing: none,
+      ScorePartial: none,
       AudioMissing: none,
       AudioStale: none,
       // The scene it names is one the film does not have.

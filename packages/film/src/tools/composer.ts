@@ -2,7 +2,9 @@
 // a whole score in its own musical language. An option is current while the
 // hash of its request matches, like a voice take: its plan is timed from the
 // film's layout, so re-timing a scene makes every option stale, while its
-// levels never do. Each lands as `sound/<option>-<hash>.mp3`, recorded with
+// levels never do. Composed through a scene (`through`), an option is a
+// partial score: the movements up to that scene's end, recorded with the
+// scene's name, current while that range's timing holds. Each lands as `sound/<option>-<hash>.mp3`, recorded with
 // the sha256 of its bytes; generated music may not sit in the public repo, so
 // the file is git-ignored and kept in the private store (`sfx push`). Effects and beds are the app's sound library's
 // (`sfx make`), not the film's.
@@ -16,7 +18,7 @@ import {
   musicKey,
   musicPlan,
   playedOption,
-  scoreOptionState,
+  scoreEnd,
   scoreOptions,
 } from '../core/sound.ts';
 import { ContentStore, type StoreError } from './content-store.ts';
@@ -53,6 +55,12 @@ export interface ScoreOptions {
   readonly cap: Option.Option<number>;
   /** A TSV each composed option is appended to: name, hash, seconds, credits. */
   readonly tally: Option.Option<string>;
+  /**
+   * Compose only through this scene: the movements that start before its end,
+   * the last to its end and `MUSIC_TAIL` past it (`musicPlan`). The whole
+   * film otherwise.
+   */
+  readonly through: Option.Option<string>;
 }
 
 type ScoreError =
@@ -139,22 +147,29 @@ export class Composer extends Context.Service<Composer, ComposerService>()(
           yield* store.update(manifest, (m) => keepScores(m, new Set(all.map((o) => o.name))));
         const placed = yield* placeFilm(film);
         const secs = filmEnd(placed);
+        const end = yield* Effect.fromResult(scoreEnd(placed, options.through));
+        const range = Option.match(options.through, {
+          onNone: () => `the film's ${secs.toFixed(1)}s and ${MUSIC_TAIL}s past its end`,
+          onSome: (scene) =>
+            `through ${scene}: ${end.toFixed(1)}s of the film's ${secs.toFixed(1)}s and ${MUSIC_TAIL}s past it`,
+        });
         let spent = yield* spentSoFar(options.tally);
         let planned = 0;
         for (const option of chosen) {
-          const plan = yield* Effect.fromResult(musicPlan(option.music, placed));
+          const plan = yield* Effect.fromResult(musicPlan(option.music, placed, options.through));
           const hash = musicKey(option.music, plan);
           const ms = plan.chunks.reduce((sum, c) => sum + c.duration_ms, 0);
           const credits = musicCredits(plan);
-          const stale =
-            options.force || scoreOptionState(option, placed, film.manifest)._tag !== 'Current';
+          // Current only when composed for this very request: a partial score is not the whole one.
+          const stored = Option.fromUndefinedOr(film.manifest.scores?.[option.name]);
+          const stale = options.force || !Option.exists(stored, (a) => a.hash === hash);
           let state = 'current';
           if (stale) {
             state = 'to compose';
             planned += credits;
           }
           yield* Console.log(
-            `option ${option.name}  ${option.music.model}  ${plan.chunks.length} movements  ${(ms / 1000).toFixed(1)}s (the film's ${secs.toFixed(1)}s and ${MUSIC_TAIL}s past its end)  ~${credits} credits  ${state}  (${hash})`,
+            `option ${option.name}  ${option.music.model}  ${plan.chunks.length} movements  ${(ms / 1000).toFixed(1)}s (${range})  ~${credits} credits  ${state}  (${hash})`,
           );
           yield* Console.log(`  styles  ${option.music.styles.join(', ')}`);
           yield* Console.log(`  avoid   ${option.music.avoid.join(', ')}`);
@@ -183,9 +198,21 @@ export class Composer extends Context.Service<Composer, ComposerService>()(
                 Effect.flatMap(() => fs.readFile(at)),
                 Effect.map(sha256Hex),
               ),
+              // The whole record is replaced: a whole score after a partial one names no range.
               record: (m, digest) => ({
                 ...m,
-                scores: { ...m.scores, [option.name]: { hash, file, sha256: digest } },
+                scores: {
+                  ...m.scores,
+                  [option.name]: {
+                    hash,
+                    file,
+                    sha256: digest,
+                    ...Option.match(options.through, {
+                      onNone: () => ({}),
+                      onSome: (through) => ({ through }),
+                    }),
+                  },
+                },
               }),
             }),
           );

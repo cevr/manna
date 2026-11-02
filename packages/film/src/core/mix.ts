@@ -48,7 +48,7 @@ import {
 } from './sfx.ts';
 import { SCORE, aloneSpans, aloneWeights, applyScore, scoreGains, speechSpans } from './score.ts';
 import { loudness } from './synth/loudness.ts';
-import { cueTime, playedOption, scoreOptionState } from './sound.ts';
+import { cueTime, partialRange, playedOption, scoreOptionState } from './sound.ts';
 
 /** Every mix runs at this rate; the takes, score and library sounds are made at it. */
 export const MIX_RATE = 44100;
@@ -409,6 +409,11 @@ export const mixPlan = (input: MixInput): Result.Result<MixPlan<SoundSource>, Mi
       if (state._tag === 'Stale')
         warnings.push(
           `mix.stale asset=score.${option.name} why=${state.why._tag} hint="movements or timing changed; run score to compose it again"`,
+        );
+      // A score composed through a scene plays to its own end and leaves the rest without music.
+      for (const range of Option.toArray(partialRange(state, placed)))
+        warnings.push(
+          `mix.partial asset=score.${option.name} through=${range.through} to=${range.to.toFixed(1)}s of=${range.end.toFixed(1)}s hint="no music after it; run score without --through to compose the whole film"`,
         );
       if (state._tag !== 'Missing')
         played = Option.some({

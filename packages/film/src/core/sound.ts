@@ -13,6 +13,7 @@ import {
   MovementTooShort,
   ScoreUnknown,
   type SoundCueError,
+  type UnknownScene,
 } from './errors.ts';
 import { type PartError, stretchesOf } from './acts.ts';
 import { type Placed, filmEnd, pointIn, sceneOf } from './layout.ts';
@@ -86,18 +87,39 @@ interface MovementSpan {
 }
 
 /**
+ * Where a score composed through `through` ends: that scene's end, or the
+ * film's when it names none (the whole score). `UnknownScene` when the film
+ * has no such scene.
+ */
+export const scoreEnd = (
+  placed: ReadonlyArray<Placed>,
+  through: Option.Option<string>,
+): Result.Result<number, UnknownScene> =>
+  Option.match(through, {
+    onNone: () => Result.succeed(filmEnd(placed)),
+    onSome: (scene) => Result.map(sceneOf(placed, scene), (p) => p.start + p.dur),
+  });
+
+/**
  * Each movement's length, from where its stretch starts (`stretchesOf`: its
- * scene, the first at 0) to the next one's (the last to the film's end and
- * `MUSIC_TAIL` past it), with `MovementTooShort` or `MovementTooLong` in
- * place of a movement outside the API's chunk lengths. Fails as an act does:
- * the first movement naming no scene, or declared out of film order.
+ * scene, the first at 0) to the next one's (the last to the score's end,
+ * `scoreEnd`, and `MUSIC_TAIL` past it), with `MovementTooShort` or
+ * `MovementTooLong` in place of a movement outside the API's chunk lengths.
+ * A score composed through a scene keeps only the movements that start before
+ * that scene's end, so the movements after it are neither composed nor
+ * measured. Fails as an act does: the first movement naming no scene, or
+ * declared out of film order; or with `UnknownScene` when `through` names none.
  */
 export const movementSpans = (
   music: Music,
   placed: ReadonlyArray<Placed>,
+  through: Option.Option<string> = Option.none(),
 ): Result.Result<ReadonlyArray<Result.Result<MovementSpan, MovementLength>>, PartError> =>
-  Result.map(stretchesOf(music.movements, placed), (stretches) => {
-    const bounds = [...stretches.map((s) => s.from), filmEnd(placed) + MUSIC_TAIL].map((s) =>
+  Result.gen(function* () {
+    const all = yield* stretchesOf(music.movements, placed);
+    const end = yield* scoreEnd(placed, through);
+    const stretches = all.filter((s) => s.from < end);
+    const bounds = [...stretches.map((s) => s.from), end + MUSIC_TAIL].map((s) =>
       Math.round(s * 1000),
     );
     return stretches.map(({ part: movement }, i): Result.Result<MovementSpan, MovementLength> => {
@@ -115,15 +137,17 @@ export const movementSpans = (
 /**
  * The score's plan: each movement lasts from its scene to the next one's, and
  * carries the film-wide styles ahead of its own. The movement's name is a
- * structure tag, never a lyric. Fails with the first movement
- * `movementSpans` refuses.
+ * structure tag, never a lyric. Composed through a scene, it holds the
+ * movements that start before that scene's end (`movementSpans`). Fails with
+ * the first movement `movementSpans` refuses.
  */
 export const musicPlan = (
   music: Music,
   placed: ReadonlyArray<Placed>,
+  through: Option.Option<string> = Option.none(),
 ): Result.Result<Plan, PartError | MovementLength> =>
   Result.gen(function* () {
-    const spans = yield* movementSpans(music, placed);
+    const spans = yield* movementSpans(music, placed, through);
     const chunks: PlanChunk[] = [];
     for (const span of spans) {
       const { movement, ms } = yield* span;
@@ -154,12 +178,41 @@ type ScoreStale = { readonly _tag: 'Retimed'; readonly key: string } | PartError
  * `Stale` when it holds one composed for another plan, or when no plan holds
  * any longer (a movement outside the API's chunk lengths, a movement naming
  * no scene or out of film order): the file still plays, with a warning; `Missing` when nothing was
- * composed.
+ * composed. A score composed through a scene (`asset.through`) is judged by
+ * its own range's plan: a timing change after that scene leaves it current.
  */
 export type ScoreOptionState =
   | { readonly _tag: 'Current'; readonly asset: ScoreAsset; readonly key: string }
   | { readonly _tag: 'Stale'; readonly asset: ScoreAsset; readonly why: ScoreStale }
   | { readonly _tag: 'Missing' };
+
+/** A partial score's range: the scene it was composed through, where its music ends, and where the film does. */
+export interface PartialRange {
+  readonly through: string;
+  /** Film seconds its music ends at: the scene's end and `MUSIC_TAIL`. */
+  readonly to: number;
+  /** The film's end. */
+  readonly end: number;
+}
+
+/**
+ * The range of a current option composed through a scene, when the film runs
+ * on past that scene: what the mix and the check name, as the rest of the
+ * film plays without music. None for a whole score.
+ */
+export const partialRange = (
+  state: ScoreOptionState,
+  placed: ReadonlyArray<Placed>,
+): Option.Option<PartialRange> => {
+  if (state._tag !== 'Current') return Option.none();
+  const end = filmEnd(placed);
+  return Option.flatMap(Option.fromUndefinedOr(state.asset.through), (through) =>
+    Option.map(
+      Option.filter(Result.getSuccess(scoreEnd(placed, Option.some(through))), (at) => at < end),
+      (at) => ({ through, to: at + MUSIC_TAIL, end }),
+    ),
+  );
+};
 
 /** `option`'s state against `manifest`, for the film as `placed` times it. */
 export const scoreOptionState = (
@@ -170,7 +223,7 @@ export const scoreOptionState = (
   Option.match(Option.fromUndefinedOr(manifest.scores?.[option.name]), {
     onNone: (): ScoreOptionState => ({ _tag: 'Missing' }),
     onSome: (asset): ScoreOptionState =>
-      Result.match(musicPlan(option.music, placed), {
+      Result.match(musicPlan(option.music, placed, Option.fromUndefinedOr(asset.through)), {
         onFailure: (why): ScoreOptionState => ({ _tag: 'Stale', asset, why }),
         onSuccess: (plan): ScoreOptionState => {
           const key = musicKey(option.music, plan);

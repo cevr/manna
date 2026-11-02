@@ -773,11 +773,15 @@ export type Sound = typeof Sound.Type;
  * A score option as it was composed: its request hash, its file under the
  * film's `sound/` (private: generated music never sits in the public repo)
  * and the sha256 of its bytes, which the private store keeps it under.
+ * `through` names the scene a partial score was composed through (`score
+ * --through`): its plan ends there, and no music plays after it. A whole
+ * score has none.
  */
 export const ScoreAsset = Schema.Struct({
   hash: Schema.String,
   file: Schema.String,
   sha256: Schema.String,
+  through: Schema.optionalKey(Schema.String),
 });
 export type ScoreAsset = typeof ScoreAsset.Type;
 

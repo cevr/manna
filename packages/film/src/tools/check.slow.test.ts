@@ -9,7 +9,7 @@ import { stroke } from '../canvas/ink.ts';
 import { type ProbeSink, probing } from '../canvas/probe.ts';
 import { recorder } from '../canvas/fixtures/stand-in.ts';
 import { voicedAt } from '../core/voiced.ts';
-import { musicKey, musicPlan } from '../core/sound.ts';
+import { MUSIC_TAIL, musicKey, musicPlan } from '../core/sound.ts';
 import { room } from '../core/synth/graph/presets.ts';
 import {
   HOLD,
@@ -1176,6 +1176,28 @@ describe('musicFindings', () => {
       { _tag: 'AssetStale', asset: 'score.piano', stored: 'old', wanted: hash },
     ]);
     expect(tags(musicFindings(inOrder, placedSound, {}))).toEqual(['AssetMissing']);
+  });
+
+  test('an option composed through a scene is partial, naming its range; the rest is not missing', () => {
+    const through = musicKey(
+      piano,
+      Result.getOrThrow(musicPlan(piano, placedSound, Option.some('middle'))),
+    );
+    const found = musicFindings(inOrder, placedSound, {
+      scores: { piano: { ...asset(through), through: 'middle' } },
+    });
+    // To middle's end and the tail; the film runs on through close.
+    const [, middle, close] = placedSound;
+    expect(found).toMatchObject([
+      {
+        _tag: 'ScorePartial',
+        asset: 'score.piano',
+        through: 'middle',
+        to: (middle?.start ?? 0) + (middle?.dur ?? 0) + MUSIC_TAIL,
+        end: (close?.start ?? 0) + (close?.dur ?? 0),
+      },
+    ]);
+    expect(found.map((f) => levelOf(f, { allowStale: false }))).toEqual(['warning']);
   });
 
   test('each option is checked: one composed, another not', () => {

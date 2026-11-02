@@ -365,6 +365,12 @@ const score = Command.make(
         'a TSV each composed option is appended to: name, hash, seconds, credits',
       ),
     ),
+    through: Flag.String('through').pipe(
+      Flag.optional,
+      Flag.withDescription(
+        'compose only through this scene: the movements that start before its end, the last to its end and 6 s past it; no music after it',
+      ),
+    ),
     dryRun,
   },
   Effect.fn('film.score')(function* (input) {
@@ -378,6 +384,7 @@ const score = Command.make(
       only: input.option,
       cap: input.cap,
       tally: input.tally,
+      through: input.through,
     });
     if (input.dryRun) return;
     // Generated music may not sit in the public repo: into the private store at once.

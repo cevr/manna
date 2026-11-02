@@ -52,6 +52,7 @@ const run: ScoreOptions = {
   only: Option.none(),
   cap: Option.none(),
   tally: Option.none(),
+  through: Option.none(),
 };
 
 const keyOf = (music: Music) =>
@@ -113,6 +114,41 @@ describe('Composer', () => {
       expect(calls.music).toEqual([`/films/test/sound/pads-${keyOf(pads)}.mp3`]);
       const lost = yield* Effect.flip(composer.score(film, { ...run, only: Option.some('organ') }));
       expect(lost._tag).toBe('ScoreUnknown');
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect('composes through a scene alone; a later whole score replaces it', () => {
+    const { files, calls, layer, manifest } = setup();
+    return Effect.gen(function* () {
+      const composer = yield* Composer;
+      const placed = Result.getOrThrow(layout(scenes, timings, 30));
+      const bounded = musicKey(
+        piano,
+        Result.getOrThrow(musicPlan(piano, placed, Option.some('open'))),
+      );
+      const through = { ...run, only: Option.some('piano'), through: Option.some('open') };
+      yield* composer.score(film, { ...through, tally: Option.some(TALLY) });
+      expect(calls.music).toEqual([`/films/test/sound/piano-${bounded}.mp3`]);
+      // Open's 8 s and the tail past its end; nothing of close.
+      expect(new TextDecoder().decode(files.get(TALLY)).split('\n')[1]).toBe(
+        `score.piano\t${bounded}\t${(8 + MUSIC_TAIL).toFixed(3)}\t${Math.ceil(((8 + MUSIC_TAIL) / 60) * 900)}`,
+      );
+      const made = yield* manifest();
+      expect(made.scores?.['piano']).toMatchObject({ hash: bounded, through: 'open' });
+
+      // Current for its range: not composed again.
+      yield* composer.score({ ...film, manifest: made }, through);
+      expect(calls.music).toHaveLength(1);
+
+      // The whole score is another request: composed, and its record names no range.
+      yield* composer.score({ ...film, manifest: made }, { ...run, only: Option.some('piano') });
+      expect(calls.music).toEqual([
+        `/films/test/sound/piano-${bounded}.mp3`,
+        `/films/test/sound/piano-${keyOf(piano)}.mp3`,
+      ]);
+      const whole = (yield* manifest()).scores?.['piano'];
+      expect(whole?.hash).toBe(keyOf(piano));
+      expect(whole).not.toHaveProperty('through');
     }).pipe(Effect.provide(layer));
   });
 

@@ -189,6 +189,38 @@ describe('sound', () => {
     expect(MAX_CHUNK_MS).toBe(120_000);
   });
 
+  test('a score composed through a scene keeps the movements that start before its end, the last to that end and the tail', () => {
+    const [, b, c] = placed;
+    const end = (b?.start ?? 0) + (b?.dur ?? 0);
+    const bounded = Result.getOrThrow(musicPlan(music, placed, Option.some('b')));
+    // Close starts where b ends, at c: past the bound, so it is not composed.
+    expect(end).toBe(c?.start ?? -1);
+    expect(bounded.chunks.map((chunk) => [chunk.text, chunk.duration_ms])).toEqual([
+      ['[Open]', Math.round((end + MUSIC_TAIL) * 1000)],
+    ]);
+    // Through the last scene is the whole film.
+    expect(musicPlan(music, placed, Option.some('c'))).toEqual(musicPlan(music, placed));
+    expect(outcome(musicPlan(music, placed, Option.some('gone')))).toBe('UnknownScene');
+  });
+
+  test('a score composed through a scene holds when the rest of the film is too long to compose', () => {
+    const long = Result.getOrThrow(
+      layout(
+        [
+          { id: 'a', min: 8, draw },
+          { id: 'c', min: 130, draw },
+        ],
+        noTakes,
+        30,
+      ),
+    );
+    expect(outcome(musicPlan(music, long))).toBe('MovementTooLong');
+    const spans = Result.getOrThrow(movementSpans(music, long, Option.some('a')));
+    expect(
+      spans.map((span) => Result.map(span, ({ movement, ms }) => [movement.name, ms])),
+    ).toEqual([Result.succeed(['Open', 14_000])]);
+  });
+
   test('keys change with the request: the model and the plan', () => {
     const plan = Result.getOrThrow(musicPlan(music, placed));
     expect(musicKey({ ...music }, plan)).toBe(musicKey(music, plan));

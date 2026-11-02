@@ -185,6 +185,17 @@ describe('renderMix', () => {
       expect(lufs(music, 6, 13) - spoken).toBeCloseTo(-6, 0);
     });
 
+    test('a score composed through a scene plays at its levels to its end, then nothing', () => {
+      const partial = { ...score, sound: tone(8, 0.3, 500) };
+      const voice = [take(tone(4, 0.3, 1000), 0), take(tone(4, 0.3, 1000), 12)];
+      const mixed = renderMix(plan({ seconds, voice, score: Option.some(partial) }));
+      const music = Option.getOrThrow(mixed.music);
+      // The silent rest does not pull the level: the voice's 12 s take hears no music.
+      expect(lufs(music, 2, 3.8) - loudness(mixed.voice).integrated).toBeCloseTo(-18, 0);
+      const after = slice(music, 8 * RATE, (seconds - 8) * RATE);
+      expect(after.channels.every((plane) => plane.every((x) => x === 0))).toBe(true);
+    });
+
     test('a short pause stays under; a long one rises and settles back before the voice', () => {
       const voice = [take(tone(4, 0.3, 1000), 0), take(tone(4, 0.3, 1000), 5.5)];
       const mixed = renderMix(plan({ seconds, voice, score: Option.some(score) }));
@@ -337,6 +348,41 @@ describe('mixPlan', () => {
     );
     expect(planned.warnings).toEqual([
       'mix.stale asset=score.piano why=UnknownScene hint="movements or timing changed; run score to compose it again"',
+    ]);
+  });
+
+  test('an option composed through a scene plays, with a warning naming its range', () => {
+    const two = Result.getOrThrow(
+      layout(
+        [
+          { id: 'a', min: 8 },
+          { id: 'b', min: 8 },
+        ],
+        { voice: '', scenes: {} },
+        30,
+      ),
+    );
+    const piano = {
+      ...option(['felt piano']),
+      movements: [
+        { from: 'a', name: 'Open', styles: [] },
+        { from: 'b', name: 'Close', styles: [] },
+      ],
+    };
+    const hash = musicKey(piano, Result.getOrThrow(musicPlan(piano, two, Option.some('a'))));
+    const planned = Result.getOrThrow(
+      mixPlan({
+        ...input,
+        placed: two,
+        manifest: { scores: { piano: { hash, file: 'piano-2.mp3', sha256: 'c', through: 'a' } } },
+        sound: Option.some<Sound>({ score: { ...score, options: { piano } }, effects: {} }),
+      }),
+    );
+    expect(Option.map(planned.score, (s) => sourceLabel(s.sound))).toEqual(
+      Option.some('s/piano-2.mp3'),
+    );
+    expect(planned.warnings).toEqual([
+      'mix.partial asset=score.piano through=a to=14.0s of=16.0s hint="no music after it; run score without --through to compose the whole film"',
     ]);
   });
 
