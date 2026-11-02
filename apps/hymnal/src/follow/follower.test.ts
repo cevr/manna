@@ -22,6 +22,7 @@ const line = (start: number, syllables: ReadonlyArray<number>): TimedLine => ({
 
 /** Three lines a second each from 1 s: two words, then a line with no note times, then two words. */
 const three: Timeline = {
+  tempo: { microsPerQuarter: 500000, numerator: 4, denominator: 4 },
   lines: [line(1000, [1000, 1500]), line(2000, []), line(3000, [3000, 3400])],
   first: 1000,
   end: 4000,
@@ -67,6 +68,7 @@ const playing = (at: number): Report => ({ _tag: 'Here', at, state: 'playing' })
 describe('followerOf', () => {
   it('distinguishes a timed rest from an untimed whole line', () => {
     const h = harness({
+      tempo: { microsPerQuarter: 500000, numerator: 4, denominator: 4 },
       lines: [line(1000, [1300]), line(2000, [])],
       first: 1000,
       end: 3000,
@@ -99,7 +101,7 @@ describe('followerOf', () => {
 
   it('marks the sung syllable, not its word, and a line with no syllable times whole (F1b)', () => {
     // Line 0: syllables at 1000 and 1500 in one word, 2000 in the next; line 1 even, marked whole.
-    const small = Option.getOrThrow(timelineOf('1,1000,2000,0.500,500;3,2000,1000'));
+    const small = Option.getOrThrow(timelineOf('666666,3,4|1,1000,2000,0.500,500;3,2000,1000'));
     const h = harness(small);
     const at = (ms: number) => {
       h.advance(ms);

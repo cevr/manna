@@ -7,6 +7,12 @@
  * plugin (`hymnal.ts`) and by the app's tests; the compiled set is read as
  * `words.ts` reads it, and the build fails on a hymn with no timing.
  *
+ * The string opens on a head, `<microsPerQuarter>,<numerator>,<denominator>|`:
+ * the hymn's first tempo, the tempo map's change in force at `Timing.intro`
+ * (the first played sung note, past any fast lead-in the file opens with),
+ * as stored, and the meter the tune opens in (`Hymn.meter`). The player's
+ * bpm read-out and `Tap` count against it.
+ *
  * Times are whole milliseconds from the file's start, through the hymn's
  * tempo map (`Timing.secondsAt`, the same math `sync-check` holds to the
  * recordings). One line per `sung(hymn)` line, in that order, `;` between
@@ -40,6 +46,7 @@ import {
   type Sung as SungPart,
   type Syllable,
   sung,
+  type Timing as HymnTiming,
 } from '@manna/hymnal/hymn';
 import { Array as Arr, Effect, Option } from 'effect';
 
@@ -213,71 +220,84 @@ const litOf = (weighed: ReadonlyArray<Weighed>, verses: () => Verses): ReadonlyA
   );
 };
 
+/** The head of the encoding: the tempo in force at the timing's `intro`, and the hymn's meter; none when no change is. */
+const headOf = (hymn: Hymn, timing: HymnTiming): Option.Option<string> =>
+  Option.map(
+    Arr.findLast(timing.tempos, ([at]) => at <= timing.intro),
+    ([, microsPerQuarter]) =>
+      `${microsPerQuarter},${hymn.meter.numerator},${hymn.meter.denominator}|`,
+  );
+
 /**
  * The hymn's timing in the encoding above; none when it has no timing.
  * `verses` reads its sung file's melodies, called only when a `line`-level
  * line needs them.
  */
 export const encodeTiming = (hymn: Hymn, verses: () => Verses): Option.Option<string> =>
-  Option.map(Option.fromUndefinedOr(hymn.timing), (timing) => {
-    const seconds = Timing.secondsAt(timing);
-    const ms = (time: number) => Math.round(seconds(time) * 1000);
-    const lines = sung(hymn);
-    const weighed = timing.lines.map((line, i): Weighed => {
-      const at = Arr.get(lines, i);
-      const index = Option.match(at, { onNone: () => 0, onSome: (one) => one.line });
-      const part = Option.flatMap(at, (one) =>
-        Option.liftPredicate(one.part, (p): p is SungPart => p._tag === 'Sung'),
-      );
-      return {
-        refrain: Option.exists(at, (one) => one.verse === 'refrain'),
-        line: index,
-        times: line.syllables,
-        syllables: Option.filter(
-          Option.flatMap(part, (p) => Arr.get(p.lines, index)),
-          (syllables) =>
-            line.played &&
-            !line.even &&
-            sound(line.syllables.map(ms), syllables.length, ms(line.start), ms(line.until)),
-        ),
-        sure: Option.exists(part, (p) => p.level === 'syllable'),
-      };
-    });
-    const lit = litOf(weighed, verses);
-    let before = 0;
-    return Arr.zip(timing.lines, weighed)
-      .map(([line, one], i) => {
-        const start = ms(line.start);
-        const fields = [
-          Number(line.played) + 2 * Number(line.even),
-          start - before,
-          ms(line.until) - start,
-        ];
-        before = start;
-        return Option.match(
-          Option.filter(one.syllables, () => lit[i] === true),
-          {
-            onNone: () => fields.join(','),
-            onSome: (syllables) => {
-              const times = line.syllables.map(ms);
-              let step = start;
-              const words = wordsOf(syllables.map((s) => s.word)).map((word) =>
-                word
-                  .map((k) => {
-                    const t = times[k] ?? step;
-                    const gap = t - step;
-                    step = t;
-                    return gap;
-                  })
-                  .join('.'),
-              );
-              return [...fields, ...words].join(',');
-            },
-          },
-        );
-      })
-      .join(';');
+  Option.flatMap(Option.fromUndefinedOr(hymn.timing), (timing) =>
+    Option.map(headOf(hymn, timing), (head) => head + linesOf(hymn, timing, verses)),
+  );
+
+/** The hymn's sung lines in the encoding above, after the head. */
+const linesOf = (hymn: Hymn, timing: HymnTiming, verses: () => Verses): string => {
+  const seconds = Timing.secondsAt(timing);
+  const ms = (time: number) => Math.round(seconds(time) * 1000);
+  const lines = sung(hymn);
+  const weighed = timing.lines.map((line, i): Weighed => {
+    const at = Arr.get(lines, i);
+    const index = Option.match(at, { onNone: () => 0, onSome: (one) => one.line });
+    const part = Option.flatMap(at, (one) =>
+      Option.liftPredicate(one.part, (p): p is SungPart => p._tag === 'Sung'),
+    );
+    return {
+      refrain: Option.exists(at, (one) => one.verse === 'refrain'),
+      line: index,
+      times: line.syllables,
+      syllables: Option.filter(
+        Option.flatMap(part, (p) => Arr.get(p.lines, index)),
+        (syllables) =>
+          line.played &&
+          !line.even &&
+          sound(line.syllables.map(ms), syllables.length, ms(line.start), ms(line.until)),
+      ),
+      sure: Option.exists(part, (p) => p.level === 'syllable'),
+    };
   });
+  const lit = litOf(weighed, verses);
+  let before = 0;
+  return Arr.zip(timing.lines, weighed)
+    .map(([line, one], i) => {
+      const start = ms(line.start);
+      const fields = [
+        Number(line.played) + 2 * Number(line.even),
+        start - before,
+        ms(line.until) - start,
+      ];
+      before = start;
+      return Option.match(
+        Option.filter(one.syllables, () => lit[i] === true),
+        {
+          onNone: () => fields.join(','),
+          onSome: (syllables) => {
+            const times = line.syllables.map(ms);
+            let step = start;
+            const words = wordsOf(syllables.map((s) => s.word)).map((word) =>
+              word
+                .map((k) => {
+                  const t = times[k] ?? step;
+                  const gap = t - step;
+                  step = t;
+                  return gap;
+                })
+                .join('.'),
+            );
+            return [...fields, ...words].join(',');
+          },
+        },
+      );
+    })
+    .join(';');
+};
 
 let encoded = Option.none<ReadonlyArray<readonly [number, string]>>();
 

@@ -89,6 +89,7 @@ for (const number of [388, 373, 214])
 it.effect('followsync shared-note groups stay simultaneous through public Start and Seek', () =>
   Effect.gen(function* () {
     const timed: Timeline = {
+      tempo: { microsPerQuarter: 500_000, numerator: 4, denominator: 4 },
       first: 1000,
       end: 4000,
       lines: [
@@ -124,7 +125,12 @@ it.effect('followsync shared-note groups stay simultaneous through public Start 
 
 const track = { number: 100, title: 'Hymn 100' };
 const other = { number: 3, title: 'Hymn 3' };
-const timeline: Timeline = { first: 5000, end: 240_000, lines: [] };
+const timeline: Timeline = {
+  tempo: { microsPerQuarter: 500_000, numerator: 4, denominator: 4 },
+  first: 5000,
+  end: 240_000,
+  lines: [],
+};
 
 // Flush the registry, Promise adapter and stream queues without advancing time.
 const settle = Effect.forEach(Array.from({ length: 20 }), () => Effect.yieldNow);
@@ -655,6 +661,7 @@ it.effect(
       const scrolled: number[] = [];
       const follower = followerOf(
         {
+          tempo: { microsPerQuarter: 500_000, numerator: 4, denominator: 4 },
           first: 0,
           end: 30_000,
           lines: Array.from({ length: 30 }, (_, k) => ({

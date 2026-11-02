@@ -24,7 +24,12 @@ import { cachedPlayback } from './offline';
 import { playbackOn } from './playback.live';
 import { Command, Playback, playerOn } from './player';
 
-const timeline = { first: 5000, end: 240000, lines: [] };
+const timeline = {
+  tempo: { microsPerQuarter: 500000, numerator: 4, denominator: 4 },
+  first: 5000,
+  end: 240000,
+  lines: [],
+};
 
 /** One's shared audio session as `playbackOn` drives it: each call logged as issued, with the file then playing. */
 const oneLogging = (log: Array<string>) => {

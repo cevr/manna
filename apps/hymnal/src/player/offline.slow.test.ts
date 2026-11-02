@@ -72,7 +72,12 @@ const device = () => {
   };
   return { api, calls, control };
 };
-const timeline = { first: 5000, end: 240000, lines: [] };
+const timeline = {
+  tempo: { microsPerQuarter: 500000, numerator: 4, denominator: 4 },
+  first: 5000,
+  end: 240000,
+  lines: [],
+};
 const starting = Predicate.or(Predicate.isTagged('Loading'), Predicate.isTagged('Playing'));
 
 it.effect(
