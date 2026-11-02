@@ -123,13 +123,41 @@ under its number, and the refrain written out each time it is sung.
   (`src/reader/keyboard.ts`).
 - Each row is a link (an anchor on the web): a press opens the hymn inside
   the app; Enter, a Cmd-click and "Open in New Tab" work as on any link.
-- `bun run test` runs the app's tests (`src`, with `src/test/setup.ts` as the
-  preload: react-native-web for `react-native`, the real words for
-  `virtual:hymnal`, a happy-dom document for the tests that press and type),
-  the browser tests and the infra's: the browser tests beside the other two,
-  which run one after the other, and it fails when any of them fails.
-  `HYMNAL_LIST_SEED` reaches the browser tests through turbo too (`bun run
-  gate`, `bun run test:budget`).
+- The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as nine parts,
+  each a package script and a task of `turbo.json` that the commandless
+  `test` task depends on, so the gate runs each as its own task and
+  `bun run test:budget @manna/hymnal-app` times each alone (under 1 s). The
+  `src` parts run with `src/test/setup.ts` as the preload (react-native-web
+  for `react-native`, the real words for `virtual:hymnal`, a happy-dom
+  document for the tests that press and type); `test:infra` runs with none.
+  - `test:search`: the search half of `src/home` (`Search`, `pinch`, `zoom`,
+    `findlook`, `FindBar`, `findglass`, `finding`, `reveal`), named file by
+    file; `test:home` runs the rest of `src/home` and ignores those.
+  - `test:tempo`: the tempo half of `src/player` (`TempoDial.reset`,
+    `TempoDial.tap`, `tempo`, `tempo.beat`, `dial`, `find`,
+    `finddrums.open`, `drums`, `findplace.property`, `findplace.static`,
+    `glide`, `bar`, `button`, `title`), named file by file; `test:player`
+    runs the rest of `src/player` and ignores those.
+  - `test:reader`, `test:follow` and `test:hymns`: their folders of `src`.
+  - `test:rest`: `src/tuner`, `src/feel`, `src/offline`, `src/test` and the
+    test files at the root of `src`, named file by file.
+  - `test:infra`: `infra`, `scripts` and `vite`.
+
+  Run one with `bun run test:<part>` here, or all with `bun run test
+  --filter=@manna/hymnal-app` at the repository root. A new test file
+  falls to its folder's part; a new file at the root of `src` must be named
+  in `test:rest`, and one of a named half in its part and in its sibling's
+  ignores. `scripts/parts.test.ts` holds the parts to the files on disk:
+  each unit-test file runs in exactly one part, no part takes a slow file,
+  and `src` runs under the preload. Each part's turbo inputs leave out the
+  other parts' test files, never their sources, so an edit of one part's
+  test reruns that part, plus `test:rest` and `test:infra`: `test:rest`
+  holds `core-import.test.ts` and `jsx.test.ts`, which read every `src`
+  file, and `test:infra` holds `parts.test.ts`. `test:infra` hashes the
+  verify-hymnal journeys (`.claude/skills/verify-hymnal/features/`), which
+  `scripts/sim` reads. `HYMNAL_LIST_SEED` reaches the browser tests through
+  turbo's `test:slow`.
+
 - `bun run test:browser` (`test/browser/`) renders the home screen's list and
   its search results on a server, hydrates them in Playwright's Chromium, and drives
   them: hydration keeps the server's list and a scroll made before it (the
@@ -594,8 +622,9 @@ audio-copy dry-run s3=694/1574581124 github=1/2991377 missing=0 total=695/157757
 A real run ends with
 `audio-copy run … target=kept K uploaded U failed F verified V/695`.
 
-`bun run test` runs the copy job's tests against fake stores, and the adapters'
-tests over a recording HTTP client. Neither uses the network.
+`bun run test:infra` runs the copy job's tests against fake stores, and
+`bun run test:slow` the adapters' (`infra/audio/adapters.slow.test.ts`) over
+a recording HTTP client. Neither uses the network.
 
 ### The upload
 
