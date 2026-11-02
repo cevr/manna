@@ -29,14 +29,22 @@
 //   displacement field at the frame's tick (`core/boil.ts`), its lattice
 //   standing at the puppet's origin.
 //
-// What a context holds for a puppet (its program, each part's and drawing's
-// texture, its texture coordinates and its triangles) is made the first time
-// the puppet is drawn on that context, and made anew on a context the budget
-// let go; the passes' programs and targets are the context's, made at the
-// canvas's size. The positions are the frame's own: each buffer is written
-// whole every draw, every target is cleared or written whole in the box
-// before it is read, and no pass reads outside the box, so no pixel of an
-// earlier frame reaches this one. Synchronous: no Promise.
+// What a context holds for a puppet (each part's and drawing's texture, its
+// texture coordinates and its triangles) is made the first time the puppet is
+// drawn on that context, and made anew on a context the budget let go; the
+// parts' program, the passes' programs and their targets are the context's,
+// shared by every puppet, the targets made at the canvas's size. The
+// positions are the frame's own: each buffer is written whole every draw,
+// every target is cleared or written whole in the box before it is read, and
+// no pass reads outside the box, so no pixel of an earlier frame reaches this
+// one. Synchronous: no Promise.
+//
+// Each puppet is laid over the puppet canvas with premultiplied `over`, and
+// the canvas is copied onto the frame and cleared in the copied box: at once,
+// or, inside a batch (`batchPuppets`, `canvas/puppet-batch.ts`), once for the
+// batch's puppets, the union of their boxes copied with one `drawImage`. So
+// the puppet canvas is clear wherever no copy is pending, and a puppet laid
+// over it shows the same pixels as one laid over a cleared box.
 
 import { Result } from 'effect';
 import { BOIL_CELL, boilField } from '../core/boil.ts';
@@ -45,6 +53,14 @@ import { type Puppet, revealedShown, sealsShown } from '../core/puppet.ts';
 import type { Raster } from '../core/raster.ts';
 import { DYE_GLSL, type Dye, dyeUniforms } from './dye.ts';
 import { glCanvas } from './gl.ts';
+import {
+  type PendingCopy,
+  applyCopyKey,
+  batched,
+  copyKeyOf,
+  isBatched,
+  joinCopy,
+} from './puppet-batch.ts';
 
 type Pt = readonly [number, number];
 
@@ -212,8 +228,8 @@ interface RestGl {
   readonly pos: WebGLBuffer;
 }
 
-/** A puppet on one context: its program, its uniforms, its parts, their rest places, and its drawings. */
-interface PuppetOnGl {
+/** The parts' program on one context, shared by every puppet drawn there, and its uniforms. */
+interface PartsProgram {
   readonly program: WebGLProgram;
   readonly size: WebGLUniformLocation | null;
   readonly mode: WebGLUniformLocation | null;
@@ -221,6 +237,10 @@ interface PuppetOnGl {
   readonly dye: WebGLUniformLocation | null;
   readonly dyeFrom: WebGLUniformLocation | null;
   readonly dyeTo: WebGLUniformLocation | null;
+}
+
+/** A puppet on one context: the context's parts program, its parts, their rest places, and its drawings. */
+interface PuppetOnGl extends PartsProgram {
   readonly parts: ReadonlyArray<PartGl>;
   readonly rests: ReadonlyArray<RestGl>;
   readonly drawings: ReadonlyMap<string, PartGl>;
@@ -394,15 +414,37 @@ const meshOn = (
 /** A drawing's quad: its four corners' texture coordinates and its two triangles. */
 const QUAD_TRIANGLES = Uint32Array.from([0, 1, 2, 0, 2, 3]);
 
-/** `loaded`'s program, textures and static buffers made on `gl`, or why not. */
+/** Each context's parts program, linked the first time a puppet is drawn on it and kept as long as the context: a puppet's load frees none of it. */
+const PROGRAMS = new WeakMap<WebGL2RenderingContext, PartsProgram>();
+
+/** The parts program on `gl`, linked or kept, or why not. */
+const programOn = (gl: WebGL2RenderingContext): Result.Result<PartsProgram, string> => {
+  const had = PROGRAMS.get(gl);
+  if (had !== undefined) return Result.succeed(had);
+  const linked = link(gl, VERTEX, FRAGMENT, ['pos', 'src']);
+  if (Result.isFailure(linked)) return Result.fail(linked.failure);
+  const program = linked.success;
+  const made: PartsProgram = {
+    program,
+    size: gl.getUniformLocation(program, 'size'),
+    mode: gl.getUniformLocation(program, 'mode'),
+    mask: gl.getUniformLocation(program, 'mask'),
+    dye: gl.getUniformLocation(program, 'dye'),
+    dyeFrom: gl.getUniformLocation(program, 'dyeFrom'),
+    dyeTo: gl.getUniformLocation(program, 'dyeTo'),
+  };
+  PROGRAMS.set(gl, made);
+  return Result.succeed(made);
+};
+
+/** `loaded`'s textures and static buffers made on `gl`, with the context's parts program, or why not. */
 const madeOn = (
   gl: WebGL2RenderingContext,
   loaded: { readonly puppet: Puppet; readonly drawings: ReadonlyMap<string, Raster> },
   state: PuppetGl,
 ): Result.Result<PuppetOnGl, string> => {
-  const linked = link(gl, VERTEX, FRAGMENT, ['pos', 'src']);
+  const linked = programOn(gl);
   if (Result.isFailure(linked)) return Result.fail(linked.failure);
-  const program = linked.success;
   const { puppet } = loaded;
   const parts = puppet.parts.map((part, k): PartGl => {
     const texture = textureOf(gl, part.pixels);
@@ -428,18 +470,7 @@ const madeOn = (
     const mesh = meshOn(gl, 32, Float32Array.from([0, 0, w, 0, w, h, 0, h]), QUAD_TRIANGLES);
     drawings.set(name, { texture, revealed: [], seals: [], ...mesh, count: 6 });
   }
-  return Result.succeed({
-    program,
-    size: gl.getUniformLocation(program, 'size'),
-    mode: gl.getUniformLocation(program, 'mode'),
-    mask: gl.getUniformLocation(program, 'mask'),
-    dye: gl.getUniformLocation(program, 'dye'),
-    dyeFrom: gl.getUniformLocation(program, 'dyeFrom'),
-    dyeTo: gl.getUniformLocation(program, 'dyeTo'),
-    parts,
-    rests,
-    drawings,
-  });
+  return Result.succeed({ ...linked.success, parts, rests, drawings });
 };
 
 /** Free one part's or drawing's textures, vertex array and buffers on `gl`. */
@@ -450,13 +481,12 @@ const freePartGl = (gl: WebGL2RenderingContext, p: PartGl) => {
   for (const b of p.buffers) gl.deleteBuffer(b);
 };
 
-/** Free what `state` holds on every context still live. */
+/** Free what `state` holds on every context still live; the context's parts program stays, other puppets' draws use it. */
 export const freePuppetGl = (state: PuppetGl) => {
   for (const [gl, on] of state.on) {
     if (gl.isContextLost()) continue;
     for (const p of [...on.parts, ...on.drawings.values()]) freePartGl(gl, p);
     for (const r of on.rests) gl.deleteVertexArray(r.vao);
-    gl.deleteProgram(on.program);
   }
   state.on.clear();
 };
@@ -800,8 +830,9 @@ const passBoil = (
   );
   gl.useProgram(passes.boil);
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  gl.clearColor(0, 0, 0, 0);
-  gl.clear(gl.COLOR_BUFFER_BIT);
+  // laid over what the batch's puppets before it left on the canvas, clear where none did
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   bindTex(gl, passes.boil, 'fig', 0, passes.inked);
   bindTex(gl, passes.boil, 'field', 1, passes.field);
   const b = (name: string) => gl.getUniformLocation(passes.boil, name);
@@ -811,13 +842,14 @@ const passBoil = (
   gl.uniform2i(b('node0'), i0, j0);
   gl.uniform1f(b('height'), passes.height);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
+  gl.disable(gl.BLEND);
 };
 
 /**
  * The look's passes: the figure (and its drawn key) into its target and
  * what moved into another, the flood, the line, the held hand, and the boil
- * onto the canvas, every target cleared or written whole in `box` (canvas
- * px), nothing read outside it.
+ * laid over the canvas, every target cleared or written whole in `box`
+ * (canvas px), nothing read outside it.
  */
 const passLook = (
   gl: WebGL2RenderingContext,
@@ -843,8 +875,8 @@ const passLook = (
 };
 
 /**
- * With no look: the box cleared on the puppet canvas and the parts drawn onto
- * it back to front, each with the seals and revealed paint it shows while
+ * With no look: the parts laid over the puppet canvas in the box back to
+ * front, each with the seals and revealed paint it shows while
  * the parts `moving` move, but for the parts the dress hides (each counted
  * as moving away for the parts behind it, `movesOf`), each dyed part's
  * layers dyed.
@@ -864,8 +896,6 @@ const passPlain = (
   gl.viewport(0, 0, width, height);
   gl.enable(gl.SCISSOR_TEST);
   gl.scissor(x0, height - y1, x1 - x0, y1 - y0);
-  gl.clearColor(0, 0, 0, 0);
-  gl.clear(gl.COLOR_BUFFER_BIT);
   gl.disable(gl.DEPTH_TEST);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -889,14 +919,59 @@ const passPlain = (
   gl.disable(gl.BLEND);
 };
 
+/** The copy the puppet canvas holds that is not yet made, and the canvas and context it lies on. */
+let pending:
+  | {
+      readonly copy: PendingCopy;
+      readonly canvas: HTMLCanvasElement;
+      readonly gl: WebGL2RenderingContext;
+    }
+  | undefined;
+
+/**
+ * Make the pending copy: its box of the puppet canvas drawn over its frame
+ * (whole pixels, under the copy's own filter, alpha, compositing and shadow,
+ * and the context's clip), then cleared on the puppet canvas.
+ */
+const flushPuppets = () => {
+  if (pending === undefined) return;
+  const { copy, canvas, gl } = pending;
+  pending = undefined;
+  const { ctx } = copy.key;
+  const [x0, y0, x1, y1] = copy.box;
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  applyCopyKey(ctx, copy.key);
+  ctx.drawImage(canvas, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
+  ctx.restore();
+  if (gl.isContextLost()) return;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.enable(gl.SCISSOR_TEST);
+  gl.scissor(x0, canvas.height - y1, x1 - x0, y1 - y0);
+  gl.clearColor(0, 0, 0, 0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.disable(gl.SCISSOR_TEST);
+};
+
+/**
+ * Run `draw` with a batch of puppets open on `ctx` (`canvas/puppet-batch.ts`):
+ * each puppet it draws is laid over the puppet canvas in its own passes, and
+ * the batch is copied onto `ctx` once, when `draw` returns, or sooner where a
+ * puppet is drawn under another filter, alpha, compositing or shadow. `draw`
+ * draws only puppets and leaves the clip as it found it.
+ */
+export const batchPuppets = (ctx: CanvasRenderingContext2D, draw: () => void): void =>
+  batched(ctx, draw, flushPuppets);
+
 /**
  * Draw `loaded`'s puppet, its parts' vertices placed at its positions
  * (canvas px of `ctx`), within the box `[x0, y0, x1, y1)`, onto `ctx` there:
- * the box cleared on the puppet canvas, the parts drawn back to front, each
- * with the seals and revealed paint it shows while the parts `moving` move,
- * as `dress` hides and dyes them (and, with a look's `pass`, its key, line,
- * held hand and boil), then copied over the frame (whole pixels, under
- * `ctx`'s clip and alpha). Why not, where no WebGL 2 context can be made.
+ * the parts laid over the puppet canvas back to front, each with the seals
+ * and revealed paint it shows while the parts `moving` move, as `dress` hides
+ * and dyes them (and, with a look's `pass`, its key, line, held hand and
+ * boil), then copied over the frame (whole pixels, under `ctx`'s clip,
+ * filter and alpha): at once, or with its batch's other puppets
+ * (`batchPuppets`). Why not, where no WebGL 2 context can be made.
  */
 export const paintPuppetGl = (
   ctx: CanvasRenderingContext2D,
@@ -912,10 +987,14 @@ export const paintPuppetGl = (
 ): string | undefined => {
   const { width, height } = ctx.canvas;
   const state = loaded.gl;
+  const key = copyKeyOf(ctx);
+  // a copy drawn otherwise is made before the puppet canvas is asked for at this frame's size, which may clear it
+  if (joinCopy(pending?.copy, key, box).flush !== undefined) flushPuppets();
   const target = glCanvas(KEY, width, height);
   if (target === undefined) return 'no WebGL 2 context could be made to draw the puppet on';
   const { gl, canvas } = target;
-  const [x0, y0, x1, y1] = box;
+  // a context made anew since the batch's last puppet holds none of its pixels: its copy is lost with them
+  if (pending !== undefined && pending.gl !== gl) pending = undefined;
   let on = state.on.get(gl);
   if (on === undefined) {
     for (const old of state.on.keys()) if (old.isContextLost()) state.on.delete(old);
@@ -930,9 +1009,7 @@ export const paintPuppetGl = (
     if (Result.isFailure(passes)) return passes.failure;
     passLook(gl, on, state, pass, dress, passes.success, box);
   }
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.drawImage(canvas, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
-  ctx.restore();
+  pending = { copy: joinCopy(pending?.copy, key, box).pending, canvas, gl };
+  if (!isBatched(ctx)) flushPuppets();
   return undefined;
 };

@@ -74,6 +74,7 @@ import {
   type PuppetSpec,
   drawPuppet,
 } from './puppet.ts';
+import { batchPuppets } from './puppet-gl.ts';
 import {
   type LoadedPainting,
   type PaintingSpec,
@@ -188,6 +189,17 @@ export interface Frame<
     look?: PuppetLook,
     dress?: PuppetDress,
   ): void;
+  /**
+   * Draw the puppets `draw` draws (`f.puppet`) as one batch: each in its own
+   * passes, the batch copied onto the frame once when `draw` returns, under
+   * the canvas's filter, alpha and compositing, so a plane's blur runs once
+   * over its crowd, not once a figure (`canvas/puppet-batch.ts`). A puppet
+   * drawn under another filter, alpha, compositing or shadow than the one
+   * before it starts a copy of its own. `draw` draws only puppets and leaves
+   * the clip as it found it: anything else it drew would land under the
+   * batch's puppets drawn before it.
+   */
+  batch(draw: () => void): void;
   /**
    * Paint a plate the drawing declares (`paintings: { sky: … }`) as one plane
    * under the canvas's transform: its top-left at the spec's `at`, each plate
@@ -1236,6 +1248,7 @@ export const createFilm = (spec: FilmSpec): Film => {
         const why = drawPuppet(ctx, spec, loaded, pose, look, dress);
         if (why !== undefined) throw new Error(`scene ${p.spec.id}: ${why}`);
       },
+      batch: (draw) => batchPuppets(ctx, draw),
       painting: (name) => {
         const spec = p.spec.paintings?.[name];
         if (spec === undefined) throw new Error(`scene ${p.spec.id} has no painting "${name}"`);
