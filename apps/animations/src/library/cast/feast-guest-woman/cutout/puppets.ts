@@ -43,6 +43,8 @@ export const PUPPETS = puppetsOf({
   frames: FRAMES,
   skeletons: SKELETONS,
   papers: PAPERS,
+  // her head turns over her still torso at the chin: the torso's veil reaches 12 px under it
+  underlap: { head: 12 },
   line: LINE,
   parts: {
     'poses-1': [
