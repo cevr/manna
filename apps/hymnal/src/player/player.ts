@@ -1093,12 +1093,17 @@ export const playerOn = (
                 // place this read saw, an act the page follows, known from the read's ask (the
                 // device moves on from it no faster than time passes); a device still at its
                 // end plays the recording again, from the place of a seek asked since the end
-                // (an end leaves no place, so with none from 0:00).
+                // (an end leaves no place, so with none from 0:00). With `Intro` off, a device
+                // that played again from 0:00 is played anew as the in-app Resume plays: from the
+                // first sung line, so the intro sounds no longer than the press took to reach the page.
                 // A command that cuts this Resume off before it acts carries its play (`seek`).
                 held.resuming = true;
                 const read = yield* readFresh.pipe(Effect.option);
                 held.resuming = false;
-                const again = Option.filter(read, (it) => holdsRecording(it.status));
+                const again = Option.filter(
+                  read,
+                  (it) => holdsRecording(it.status) && introAt().intro !== false,
+                );
                 if (Option.isNone(again))
                   return yield* load(
                     track,
