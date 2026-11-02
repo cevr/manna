@@ -38,7 +38,8 @@ import type {
 import { color, useAccent } from '~/color';
 import { hymnAt } from '~/hymns/hymns';
 import { usePlayer } from '~/player/context';
-import { Player } from '~/player/player';
+import type { Beat } from '~/player/countin';
+import { type HymnPlayer, Player, trackOf } from '~/player/player';
 import { cutOf, keptOf } from '~/player/stanzas';
 import { settings } from '~/store';
 
@@ -92,11 +93,14 @@ const useLineMark = (index: number): number => {
  * timed line has no tint: in the light theme the ink is the accent, so the
  * sung syllable shows only against muted ones. Without syllable times, the
  * whole line takes the accent on a soft tint, visible in either theme.
+ * While the player counts in (`CountIn.tsx`), the marked line (line 0)
+ * stays marked with nothing in it lit: nothing is sung until the count ends.
  */
 export const useLineFollow = (index: number) => {
   const { keep } = use(FollowContext);
   const mark = useLineMark(index);
   const accent = useAccent();
+  const counting = useCounting();
   const marked = mark !== OFF;
   const ref = useCallback<RefCallback<HostInstance>>(
     (view) =>
@@ -106,19 +110,23 @@ export const useLineFollow = (index: number) => {
       }),
     [keep, index],
   );
-  const wordsStyle = wordsStyleOf(mark === WHOLE, accent);
+  const wordsStyle = wordsStyleOf(mark === WHOLE, counting, accent);
   const syllableStyle = (syllable: number): TextStyle => {
     if (!marked) return {};
     if (mark === WHOLE) return wordsStyle;
-    if (syllable === mark) return { color: accent };
+    if (syllable === mark && !counting) return { color: accent };
     return { color: color.muted };
   };
   return { marked, ref, syllableStyle, wordsStyle };
 };
 
-/** A line without individual times is highlighted whole, with no layout change. */
-const wordsStyleOf = (marked: boolean, accent: ColorValue): TextStyle => {
+/**
+ * A line without individual times is highlighted whole, with no layout
+ * change; during a count-in it keeps only the tint.
+ */
+const wordsStyleOf = (marked: boolean, counting: boolean, accent: ColorValue): TextStyle => {
   if (!marked) return {};
+  if (counting) return { backgroundColor: color.soft };
   return { color: accent, backgroundColor: color.soft };
 };
 
@@ -127,8 +135,13 @@ const idle = Atom.make<Player>(Player.Idle());
 
 const away: Report = { _tag: 'Away' };
 
-/** The follower's report of `state` on hymn `number`, its place moving at `rate` (the player's `rate`). */
-const reportOf = (number: number, state: Player, rate: number): Report => {
+/**
+ * The follower's report of `state` on hymn `number`, its place moving at
+ * `rate` (the player's `rate`). A count-in holds the place at the first
+ * sung line, so while `counting` a playing state is reported paused there:
+ * line 0 is marked and the follow's clock does not run on.
+ */
+const reportOf = (number: number, state: Player, rate: number, counting: boolean): Report => {
   const here = (
     track: { readonly number: number },
     at: number,
@@ -140,7 +153,10 @@ const reportOf = (number: number, state: Player, rate: number): Report => {
   return Player.$match(state, {
     Idle: () => away,
     Loading: () => away,
-    Playing: ({ track, at }) => here(track, at, 'playing'),
+    Playing: ({ track, at }) => {
+      if (counting) return here(track, at, 'paused');
+      return here(track, at, 'playing');
+    },
     Buffering: ({ track, at }) => here(track, at, 'waiting'),
     Paused: ({ track, at }) => here(track, at, 'paused'),
     Ended: () => away,
@@ -154,6 +170,56 @@ const dev = typeof __DEV__ !== 'undefined' && __DEV__;
 /** The player's state, or Idle when no player is provided. */
 const usePlayerState = () =>
   useAtomValue(Option.match(usePlayer(), { onNone: () => idle, onSome: (player) => player.state }));
+
+/** The count-in when no player is provided: it never counts. */
+const uncounted = Atom.make<Option.Option<Beat>>(Option.none());
+
+const countInOf = (player: Option.Option<HymnPlayer>) =>
+  Option.match(player, { onNone: () => uncounted, onSome: (it) => it.countIn });
+
+/** Whether the player is counting in (`player.countIn`); a draw only when that turns. */
+const useCounting = () => useAtomValue(countInOf(usePlayer()), Option.isSome);
+
+/** Whether `state` holds hymn `number`, in any state but Idle. */
+const holds = (state: Player, number: number) =>
+  Option.exists(trackOf(state), (track) => track.number === number);
+
+/**
+ * The page's count-in (`CountIn.tsx`): `beat`, the beat the player gives
+ * while it plays this page's hymn, held at its first sung line; and
+ * `onBeat`, which hands `listen` each new beat the player gives on this
+ * hymn from the subscription on (a beat after a beat of another index, or
+ * beat 0 after none), never one it gave before, and returns its end.
+ */
+export const useCountIn = () => {
+  const { intro } = use(FollowContext);
+  const player = usePlayer();
+  const registry = use(RegistryContext);
+  const state = usePlayerState();
+  const atom = countInOf(player);
+  const given = useAtomValue(atom);
+  const number = Option.match(intro, { onNone: () => Number.NaN, onSome: (it) => it.number });
+  const beat = Option.filter(given, () => Player.$is('Playing')(state) && holds(state, number));
+  const onBeat = useCallback(
+    (listen: (beat: Beat) => void) =>
+      Option.match(player, {
+        onNone: () => () => {},
+        onSome: (it) => {
+          let last = Option.none<number>();
+          return registry.subscribe(atom, (next) => {
+            const fresh = Option.filter(
+              next,
+              (b) => !Option.contains(last, b.index) && holds(registry.get(it.state), number),
+            );
+            last = Option.map(next, (b) => b.index);
+            Option.map(fresh, listen);
+          });
+        },
+      }),
+    [player, registry, atom, number],
+  );
+  return { beat, onBeat };
+};
 
 /** The page's intro as the player stands (`intro.ts`), and whether it runs on (Playing). */
 export const useIntro = () => {
@@ -240,10 +306,11 @@ export const useFollow = (number: number) => {
 
   // The rate is read as each state is reported, not reported on its own change: a report at an
   // old place would set the clock back. The score clock's next read carries the new rate's place.
+  const counting = useCounting();
   useEffect(() => {
     const rate = Option.match(player, { onNone: () => 1, onSome: (it) => registry.get(it.rate) });
-    Option.map(follower, (f) => f.report(reportOf(number, state, rate)));
-  }, [follower, number, state, player, registry]);
+    Option.map(follower, (f) => f.report(reportOf(number, state, rate, counting)));
+  }, [follower, number, state, player, registry, counting]);
   useEffect(
     () => () => Option.match(follower, { onNone: () => {}, onSome: (f) => f.stop() }),
     [follower],

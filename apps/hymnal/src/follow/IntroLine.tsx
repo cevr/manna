@@ -12,6 +12,9 @@
  * height, iOS leaves it out of the accessibility tree. It is an accessible
  * element of its own and reads as a progress bar named `Introduction`:
  * whole percent played, and whole seconds to the first line.
+ *
+ * The same box holds the count-in's pulse (`CountIn.tsx`), drawn the same
+ * way after the intro.
  */
 
 import { Option } from 'effect';
@@ -20,6 +23,7 @@ import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 
 import { color, useAccent } from '~/color';
 
+import { CountIn } from './CountIn';
 import { useIntro } from './follow';
 import { type Intro as Shown, readingOf } from './intro';
 
@@ -40,6 +44,7 @@ export function WithIntro({
     <View>
       {children}
       <Intro />
+      <CountIn />
     </View>
   );
 }
