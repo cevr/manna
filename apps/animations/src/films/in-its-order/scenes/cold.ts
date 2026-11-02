@@ -150,9 +150,11 @@ const MOTHER_SEAT = {
  * the camera starts close on the mother at the table (`START`), trucks down
  * the table to the lead, pushes in on his bottle, pulls back to the three
  * waist up (`smile`), pushes in chest up on him and the letter as it
- * falls (`read`, the panel's `cold.letter.4`), closer on the letter's gold
- * seal under his face (`quote`) and tilts up to his face as he winces
- * (`ouch`), each a cue and where it leaves the camera.
+ * falls (`read`, the panel's `cold.letter.4`), tilts down to the letter's
+ * gold seal under his face (`quote`) and up to his face as he winces
+ * (`ouch`), each a cue and where it leaves the camera. The last two keep him
+ * centred (his head lies at x 949 on the guests' plane) and wide enough that
+ * the guest either side and the mother's veil stay whole in frame.
  *
  * The plates cover frame x 0..1920 and y -100..1180, and the table, the
  * nearest plane, binds: every framing keeps 960/k <= x <= 1920 - 960/k and
@@ -167,8 +169,8 @@ const MOVES = [
   ['bottle', { x: 915, y: 836, k: 3 }],
   ['smile', { x: 950, y: 790, k: 1.9 }],
   ['read', { x: 956, y: 860, k: 2.8 }],
-  ['quote', { x: 977, y: 881, k: 3.4 }],
-  ['ouch', { x: 956, y: 820, k: 3.2 }],
+  ['quote', { x: 947, y: 881, k: 2.82 }],
+  ['ouch', { x: 947, y: 820, k: 2.82 }],
 ] as const satisfies ReadonlyArray<readonly [string, Camera]>;
 
 /** The film's frames a second, its `film.ts`'s `fps` (the film imports this scene, so the scene names the rate it swaps the raise's frames on). */
