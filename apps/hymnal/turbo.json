@@ -14,8 +14,145 @@
       ],
       "outputs": ["dist/**"]
     },
-    "test": {
+    "test:search": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/home/{back,home,open,opening,playing,PinnedTabs,settings,TabRow,tabs}.test.*",
+        "!src/player/**/*.test.*",
+        "!src/reader/**/*.test.*",
+        "!src/follow/**/*.test.*",
+        "!src/hymns/**/*.test.*",
+        "!src/{tuner,feel,offline,test}/**/*.test.*",
+        "!src/*.test.*",
+        "!{infra,scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:home": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/home/{Search,pinch,zoom,findlook,FindBar,findglass,finding,reveal}.test.*",
+        "!src/player/**/*.test.*",
+        "!src/reader/**/*.test.*",
+        "!src/follow/**/*.test.*",
+        "!src/hymns/**/*.test.*",
+        "!src/{tuner,feel,offline,test}/**/*.test.*",
+        "!src/*.test.*",
+        "!{infra,scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:tempo": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/home/**/*.test.*",
+        "!src/player/{countin.lockplay,countin,keyplay,page,playback.live.rate,playback.live,player,scrub,scrubber.ios,sound.rate,sound,stanzas.play,stanzas,thumb}.test.*",
+        "!src/reader/**/*.test.*",
+        "!src/follow/**/*.test.*",
+        "!src/hymns/**/*.test.*",
+        "!src/{tuner,feel,offline,test}/**/*.test.*",
+        "!src/*.test.*",
+        "!{infra,scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:player": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/home/**/*.test.*",
+        "!src/player/{TempoDial.reset,TempoDial.tap,tempo,tempo.beat,dial,find,finddrums.open,drums,findplace.property,findplace.static,glide,bar,button,title}.test.*",
+        "!src/reader/**/*.test.*",
+        "!src/follow/**/*.test.*",
+        "!src/hymns/**/*.test.*",
+        "!src/{tuner,feel,offline,test}/**/*.test.*",
+        "!src/*.test.*",
+        "!{infra,scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:reader": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/home/**/*.test.*",
+        "!src/player/**/*.test.*",
+        "!src/follow/**/*.test.*",
+        "!src/hymns/**/*.test.*",
+        "!src/{tuner,feel,offline,test}/**/*.test.*",
+        "!src/*.test.*",
+        "!{infra,scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:follow": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/home/**/*.test.*",
+        "!src/player/**/*.test.*",
+        "!src/reader/**/*.test.*",
+        "!src/hymns/**/*.test.*",
+        "!src/{tuner,feel,offline,test}/**/*.test.*",
+        "!src/*.test.*",
+        "!{infra,scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:hymns": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "!src/home/**/*.test.*",
+        "!src/player/**/*.test.*",
+        "!src/reader/**/*.test.*",
+        "!src/follow/**/*.test.*",
+        "!src/{tuner,feel,offline,test}/**/*.test.*",
+        "!src/*.test.*",
+        "!{infra,scripts,vite}/**/*.test.*"
+      ]
+    },
+    "test:rest": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tsconfig.json"]
+    },
+    "test:infra": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/.claude/skills/verify-hymnal/features/*.journey.json"
+      ]
+    },
+    "test:slow": {
       "passThroughEnv": ["HYMNAL_LIST_SEED"]
+    },
+    "test": {
+      "dependsOn": [
+        "$TURBO_EXTENDS$",
+        "test:search",
+        "test:home",
+        "test:tempo",
+        "test:player",
+        "test:reader",
+        "test:follow",
+        "test:hymns",
+        "test:rest",
+        "test:infra"
+      ]
     }
   }
 }
