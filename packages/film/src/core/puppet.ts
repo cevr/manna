@@ -59,6 +59,7 @@
 import { Result, Schema } from 'effect';
 import { IDENTITY } from './affine.ts';
 import type { Rgb } from './cast-sheet-pixels.ts';
+import { type PuppetLimb, type PuppetPartLimb, limbOf } from './limb.ts';
 import type { Raster } from './raster.ts';
 import { type BoxEdge, unmatte } from './unmatte.ts';
 
@@ -101,11 +102,12 @@ interface PuppetFlap {
   readonly region: ReadonlyArray<Pt>;
 }
 
-/** A skeleton: its bones (each parent before its children), each part's skin (the bones it lies on), its flaps, and the root (rest: the first bone's pivot). */
+/** A skeleton: its bones (each parent before its children), each part's skin (the bones it lies on), its flaps, its stroke limbs (`core/limb.ts`), and the root (rest: the first bone's pivot). */
 export interface Skeleton {
   readonly bones: ReadonlyArray<PuppetBone>;
   readonly skin: Readonly<Record<string, ReadonlyArray<string>>>;
   readonly flaps?: ReadonlyArray<PuppetFlap>;
+  readonly limbs?: ReadonlyArray<PuppetLimb>;
   readonly root?: Pt;
 }
 
@@ -124,7 +126,7 @@ interface PuppetMesh {
   readonly amounts: Float64Array;
 }
 
-/** A part of a puppet: its name, its pixels (its texture), what each part in front of it hides, and its mesh. */
+/** A part of a puppet: its name, its pixels (its texture), what each part in front of it hides, its mesh, and its stroke limb, if it has one. */
 interface PuppetPart {
   readonly name: string;
   readonly pixels: Raster;
@@ -133,6 +135,8 @@ interface PuppetPart {
   /** By each part in front of it of another skin: the seal laid over this part along the line it shares with that part, shown while neither moves (`sealsShown`); none where it seals nothing. */
   readonly seals: ReadonlyArray<Raster | undefined>;
   readonly mesh: PuppetMesh;
+  /** Its stroke limb as `limbOf` measured it from its texture, where the skeleton declares one. */
+  readonly limb?: PuppetPartLimb;
 }
 
 /** A puppet: the sheet's size, its parts front to back, its bones and its rest root. */
@@ -349,7 +353,7 @@ class PuppetRefused extends Schema.TaggedError<PuppetRefused>()('PuppetRefused',
   }
 }
 
-/** Why `skeleton` cannot skin `sheet`, if it cannot: a bone named twice or before its parent, a skin or flap naming a part or bone that is not there, two flaps on one part, a flap resting on a bone its arm's skin does not name, a flap on an arm of more bones than a vertex holds beside the body. */
+/** Why `skeleton` cannot skin `sheet`, if it cannot: a bone named twice or before its parent, a skin or flap naming a part or bone that is not there, two flaps on one part, a flap resting on a bone its arm's skin does not name, a flap on an arm of more bones than a vertex holds beside the body, or a stroke limb that does not fit (`limbRefusal`). */
 const refusal = (sheet: PuppetSheet, skeleton: Skeleton): string | undefined => {
   const seen = new Set<string>();
   for (const b of skeleton.bones) {
@@ -369,7 +373,41 @@ const refusal = (sheet: PuppetSheet, skeleton: Skeleton): string | undefined => 
     if (!Number.isInteger(n) || n < 0)
       return `${part}'s underlap is ${n} px, not a whole number of 0 or more`;
   }
-  return flapRefusal(skeleton, names, seen);
+  return flapRefusal(skeleton, names, seen) ?? limbRefusal(skeleton, names);
+};
+
+/**
+ * Why `skeleton`'s stroke limbs cannot skin a sheet of the parts `names`, if
+ * they cannot: a limb naming a part or bone that is not there, two limbs on
+ * one part, bones that are not a parent chain (shoulder, its child the elbow,
+ * its child the wrist), a chain bone the part's skin does not name, or a fade
+ * or fold whose ends do not increase. A flap on a limb's part is allowed: its
+ * body pixels lie above the shoulder's pivot, in the stub the limb leaves
+ * painted.
+ */
+const limbRefusal = (skeleton: Skeleton, names: ReadonlySet<string>): string | undefined => {
+  const byName = new Map(skeleton.bones.map((b) => [b.name, b]));
+  const limbed = new Set<string>();
+  for (const l of skeleton.limbs ?? []) {
+    if (!names.has(l.part)) return `a limb names no part ${l.part} of the sheet`;
+    if (limbed.has(l.part)) return `two limbs name part ${l.part}`;
+    limbed.add(l.part);
+    const missing = l.bones.find((b) => !byName.has(b));
+    if (missing !== undefined) return `${l.part}'s limb names no bone ${missing}`;
+    const [shoulder, elbow, wrist] = l.bones;
+    if (byName.get(elbow)!.parent !== shoulder || byName.get(wrist)!.parent !== elbow)
+      return `${l.part}'s limb bones ${l.bones.join(', ')} are not a parent chain`;
+    const skin = skeleton.skin[l.part] ?? [];
+    const off = l.bones.find((b) => !skin.includes(b));
+    if (off !== undefined) return `${l.part}'s limb lies on ${off}, which its skin does not name`;
+    for (const [what, r] of [
+      ['fade', l.fade],
+      ['fold', l.fold],
+    ] as const)
+      if (r !== undefined && !(Number.isFinite(r[0]) && Number.isFinite(r[1]) && r[0] < r[1]))
+        return `${l.part}'s limb's ${what} ${r[0]}–${r[1]} does not increase`;
+  }
+  return undefined;
 };
 
 /** Why `skeleton`'s flaps cannot skin a sheet of the parts `names` with the bones `seen`, if they cannot. */
@@ -450,7 +488,9 @@ export const unmattedKey = (
 /**
  * The puppet of `sheet` on `skeleton`: each part's mesh, weighted on its
  * skin, its texture its pixels (with its flap's body pixels, where it has
- * one); refused for a skeleton that does not fit the sheet.
+ * one), and each stroke limb it declares measured from its part's texture
+ * (`limbOf`); refused for a skeleton that does not fit the sheet, or a limb
+ * whose part cannot be measured (the refusal's reason is `LimbRefused`'s).
  */
 export const puppetOf = (
   sheet: PuppetSheet,
@@ -479,6 +519,21 @@ export const puppetOf = (
     without.set(j, made);
     return made;
   };
+  // each declared limb measured from its part's texture on its rest joints (at most one a part, `refusal`)
+  const limbs = new Map<string, PuppetPartLimb>();
+  for (const l of skeleton.limbs ?? []) {
+    const k = sheet.parts.findIndex((p) => p.name === l.part);
+    const [shoulder, elbow, wrist] = l.bones.map((b) => bones[at.get(b)!]!.pivot);
+    const measured = limbOf(
+      l.part,
+      { width: W, height: H, rgba: textures[k]! },
+      { shoulder: shoulder!, elbow: elbow!, wrist: wrist! },
+      l,
+    );
+    if (Result.isFailure(measured))
+      return Result.fail(PuppetRefused.make({ reason: measured.failure.message }));
+    limbs.set(l.part, measured.success);
+  }
   const parts = sheet.parts.map((part, k): PuppetPart => {
     const skin = (skeleton.skin[part.name] ?? []).map((b) => at.get(b)!);
     const flap = flapOf.get(part.name);
@@ -505,13 +560,15 @@ export const puppetOf = (
               at.get(flap.bone)!,
               at.get(flap.body)!,
             );
-    return {
+    const made: PuppetPart = {
       name: part.name,
       pixels: { width: W, height: H, rgba },
       revealed: revealed.map((r) => r && { width: W, height: H, rgba: r }),
       seals: seals.map((s) => s && { width: W, height: H, rgba: s }),
       mesh: meshOf(W, H, (x, y) => covers(y * W + x), weigh),
     };
+    const limb = limbs.get(part.name);
+    return limb === undefined ? made : { ...made, limb };
   });
   return Result.succeed({
     width: W,
