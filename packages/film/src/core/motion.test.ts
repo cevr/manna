@@ -228,9 +228,9 @@ describe('idle', () => {
 });
 
 describe('blink', () => {
-  /** Each blink wholly inside [from, to], sampled every `step` s: when the lids start, shut fully and are open again. */
-  const blinks = (seed: number, from: number, to: number, step: number) => {
-    const { ts, vs } = sampled(blink(seed), from, to, step);
+  /** Each blink of `track` wholly inside [from, to], sampled every `step` s: when the lids start, shut fully and are open again. */
+  const blinksOf = (track: Track, from: number, to: number, step: number) => {
+    const { ts, vs } = sampled(track, from, to, step);
     const out: Array<{ start: number; shut: number; open: number; depth: number }> = [];
     let i = 1;
     while (i < vs.length) {
@@ -249,6 +249,10 @@ describe('blink', () => {
     }
     return { out, vs };
   };
+
+  /** Each blink of seed `seed`'s own. */
+  const blinks = (seed: number, from: number, to: number, step: number) =>
+    blinksOf(blink(seed), from, to, step);
 
   test('shuts the eyes in about 110 ms and opens them in about 190 ms', () => {
     const { out, vs } = blinks(5, 0, 30, 0.001);
@@ -289,5 +293,21 @@ describe('blink', () => {
       ([a, b]) => a.filter((s) => b.some((o) => Math.abs(o - s) < 0.05)).length / a.length,
     );
     expect(largest(shares)).toBeLessThan(0.5);
+  });
+
+  test('blinks once more on each cue a second or more from its own blinks, and only there', () => {
+    const own = blinks(3, 0, 30, 0.001).out.map((b) => b.start);
+    // a cue midway between two of its blinks, and one 0.4 s after one of them
+    const free = (own[2]! + own[3]!) / 2;
+    const close = own[5]! + 0.4;
+    const { out } = blinksOf(blink(3, [free, close]), 0, 30, 0.001);
+    const starts = out.map((b) => b.start);
+    const want = [...own, free].sort((a, b) => a - b);
+    expect(starts.length).toBe(want.length);
+    starts.forEach((s, k) => expect(Math.abs(s - want[k]!)).toBeLessThan(0.002));
+    const cued = out.find((b) => Math.abs(b.start - free) < 0.002)!;
+    expect(cued.depth).toBeGreaterThan(0.99);
+    expect(cued.shut - cued.start).toBeGreaterThan(0.105);
+    expect(cued.open - cued.shut).toBeGreaterThan(0.185);
   });
 });
