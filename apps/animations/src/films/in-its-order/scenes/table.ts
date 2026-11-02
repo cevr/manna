@@ -84,14 +84,15 @@ const MOTHER_IDLE = idle(2);
 /**
  * The mother's bone numbers at scene time `t`, degrees, clockwise on screen:
  * her idle on the bones her poses-1 cut turns with no new art. Her lean
- * carries her sway, her breath and the slow drift of her weight, and the baby
- * and the cup ride it with her arms. Her head takes a little of the idle's
+ * carries her sway, her breath (deep enough to read as her rocking the baby)
+ * and the slow drift of her weight, and the baby and the cup ride it with her
+ * arms. Her head takes a little of the idle's
  * tilt, her neck less, as her veil rides her lean. Her arms keep their drawn
  * angles round the baby.
  */
 export const motherNumbers = (t: number) => {
   const { sway, breath, drift, tilt } = MOTHER_IDLE(t);
-  return { lean: sway + 0.35 * breath + 0.5 * drift, neck: 0.15 * tilt, head: 0.35 * tilt };
+  return { lean: sway + 1.2 * breath + 0.5 * drift, neck: 0.3 * tilt, head: 0.6 * tilt };
 };
 
 /** The paintings the table draws: the lead's raise frames and each guest's keys. */
