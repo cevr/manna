@@ -143,7 +143,7 @@ Definition search shape:
 ```
 
 Strong's is **auxiliary confirmation** of a meaning already plain from the text
-(see the Hermeneutic & Sources stance in `SKILL.md`) — never the route to a
+(see the stance in `references/hermeneutic.md`) — never the route to a
 non-obvious reading.
 
 ### `manna egw search <query> [--remote] [--limit N] [--book CODE] [--lang en] [--json]`

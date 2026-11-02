@@ -12,7 +12,7 @@
 // back to the three at the table, and the guests smile at him. On
 // `letter` they stare again (`SWAPS`), a rolled scroll drops onto the table
 // in front of the lead and unrolls over its edge (`SCROLL`). On `ouch` he
-// winces (`winceAt`). From `grown` on he and the mother move in their idles
+// winces (`WINCE`), his wince's head riding his head's bones. From `grown` on he and the mother move in their idles
 // (`numbersOf`, `motherNumbers`), and he acts on the cues.
 // `what` cuts to the last close plate (`WHAT`), the cup of milk and the
 // bread, and the camera lifts to them.
@@ -24,6 +24,7 @@
 
 import { drawing, type PuppetLook } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
+import { Array as Arr, Option } from 'effect';
 import { PUPPETS as LEAD } from '../../../library/cast/lead-feast/cutout/puppets.ts';
 import { RAISE_SEATED } from '../../../library/cast/lead-feast/cutout/raise-seated.ts';
 import winceHead from '../../../library/cast/lead-feast/cutout/sheets/single-5/head.png' with { type: 'file' };
@@ -133,26 +134,38 @@ const FPS = 30;
  */
 const { line: _line, ...SEATED } = LEAD['single-9'];
 
+/** His head bone's middle, between his chin and his crown, sheet px: a point inside his head part (a skeleton with no head bone fails here, at load). */
+const HEAD_MIDDLE = Option.getOrThrow(
+  Option.map(
+    Arr.findFirst(SEATED.skeleton.bones, (b) => b.name === 'head'),
+    ({ pivot, tip }): readonly [number, number] => [
+      (pivot[0] + tip[0]) / 2,
+      (pivot[1] + tip[1]) / 2,
+    ],
+  ),
+);
+
 /**
  * The lead's wince (`ouch`): his kept wince's head (single-5) laid in place
  * of his single-9 head, drawing px to his sheet px, sized so the two heads'
  * hair is as wide (350 sheet px to 253) with its crown and centre on his,
  * the boil off as on every other frame he holds. This is its place with every
- * bone at 0; `winceAt` turns it with his lean.
+ * bone at 0. It rides his head part's bones at his head bone's middle, so it
+ * turns with his lean as his own head does; his neck and head stay at 0
+ * under it, and his idle's breath, sway and drift run on.
  */
-const WINCE_SWAP = { part: 'head', drawing: 'wince', place: { s: 1.39, dx: 104, dy: 0 } } as const;
-
-/**
- * The wince at his lean `lean`. A look's drawing turns no bone, so the
- * wince's head turns with his body about his skeleton's root, which is where
- * his lean bone turns him, as his own head part does with his neck and head
- * at 0. His idle's breath, sway and drift run on under it.
- */
-const winceAt = (lean: number): PuppetLook => ({
+const WINCE: PuppetLook = {
   boil: 0,
   amp: 0,
-  swap: { ...WINCE_SWAP, pivot: SEATED.skeleton.root, theta: lean },
-});
+  swaps: [
+    {
+      part: 'head',
+      drawing: 'wince',
+      place: { s: 1.39, dx: 104, dy: 0 },
+      pivot: HEAD_MIDDLE,
+    },
+  ],
+};
 
 /**
  * The letter (`cold.letter.4`), on the table's plane px: the rolled scroll
@@ -246,7 +259,7 @@ export const cold = drawing({
     // k6. His joints cannot reach the bottle on his lap: his single-9 view, k6,
     // holds it at his cheek. From k6 on he is his single-9 cut-out at his bone
     // numbers (`numbersOf`), from `ouch` with the wince's head in place of its
-    // own (`winceAt`). The raise's film frame is its linear cue's share of its
+    // own (`WINCE`), his neck and head at 0. The raise's film frame is its linear cue's share of its
     // frames, rounded: `bottle` lies on the frame grid, where a floor would
     // drop a frame to float noise.
     const lead = () => {
@@ -266,11 +279,7 @@ export const cold = drawing({
       const numbers = numbersOf(cues)(f.t);
       seatedLead(f);
       if (f.t >= f.cue('ouch').start)
-        f.puppet(
-          'lead',
-          { ...LEAD_POSE, numbers: { ...numbers, neck: 0, head: 0 } },
-          winceAt(numbers.lean),
-        );
+        f.puppet('lead', { ...LEAD_POSE, numbers: { ...numbers, neck: 0, head: 0 } }, WINCE);
       else f.puppet('lead', { ...LEAD_POSE, numbers });
     };
     // The guests' key: the key of the last cue started (`SWAPS`), neutral before the first.

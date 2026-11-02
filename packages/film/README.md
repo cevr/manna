@@ -2860,10 +2860,16 @@ look view keep the page crop. Four rules make that reading true:
 
 A puppet is drawn with a look (`PuppetLook`, `canvas/puppet.ts`): the boil
 tick and its amplitude (`core/boil.ts` `boilField`, the house `BOIL_AMP`
-unless `amp` is given, 0 still), a drawn key swapped in for a part (`swap`:
-its drawing, its place and its turn about the part's pivot), and a held
+unless `amp` is given, 0 still), drawn keys swapped in for parts (`swaps`,
+`PuppetSwap`: each its part, its drawing, its place at rest and its pivot;
+at most one a part, so a head key and an arm key show at once), and a held
 drawing laid where the hand stands (`held`: the kept hand and its prop, so
-the circle hand is the sheet's own); a look's drawings follow the pose's
+the circle hand is the sheet's own). A drawn key rides its part's bones at
+its pivot: the part's mesh vertex nearest the pivot gives the blend of bones
+that carries it, as it carries the part's own pixel there, so a swapped head
+turns with its head bone. `theta` turns it further about its pivot, and
+`rides: false` lays it as its place gives it, a place already in the pose's
+frame. A held drawing rides no bone; a look's drawings follow the pose's
 root and scale. `--boil <px>` renders the cut-out at one of `CUTOUT_BOILS`
 (the house boil, or 0 for the still the fit rows compare), each on its own
 page (`<film>/cast/<member>/cutout`, `…/cutout/boil-0`), its record's

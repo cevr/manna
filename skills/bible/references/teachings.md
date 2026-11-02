@@ -31,9 +31,8 @@ its PDF-driven weekly mechanics).
 3. For large documents, fan the gathering out (one gatherer per theme);
    never write from memory.
 
-Full command surface: `references/source-material.md`. Hermeneutic: the
-"Hermeneutic & Sources" section of `SKILL.md` — Miller's 14 Rules, literal
-historicism, **historic pioneer Adventism, not modern Adventism**.
+Full command surface: `references/source-material.md`. Hermeneutic:
+`references/hermeneutic.md` — Miller's 14 Rules, literal historicism, **historic pioneer Adventism, not modern Adventism**.
 
 **Phase 2 — Write** with the grammar below.
 
