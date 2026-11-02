@@ -33,7 +33,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'one';
 
 import { color } from '~/color';
@@ -43,6 +43,7 @@ import { styled } from '~/hymns/simple';
 import type { ChordReader } from '~/reader/HymnPage';
 import { reader } from '~/reader/screen';
 
+import { Chip } from './Chip';
 import { PanelRow, ROW_GAP } from './DialPanel';
 import { DialView, MOST_SCALE } from './DialView';
 import {
@@ -266,33 +267,20 @@ export const Dials = memo(function Dials({
 function TunerChip({ onPress }: { readonly onPress: () => void }) {
   const router = useRouter();
   return (
-    <Pressable
+    <Chip
       testID="dials-tuner"
-      role="button"
-      aria-label="Tuner"
-      accessibilityHint="Opens the guitar tuner"
-      hitSlop={CHIP_SLOP}
+      label="Tuner"
+      hint="Opens the guitar tuner"
+      mark={<TunerMark tint={color.onPill} />}
       onPress={() => {
         onPress();
         router.push('/tuner');
       }}
-      style={({ pressed }) => [styles.chip, styles.tuner, pressed && styles.pressed]}
     >
-      <TunerMark tint={color.onPill} />
-      <Text style={styles.chipText} numberOfLines={1} maxFontSizeMultiplier={MOST_SCALE}>
-        Tuner
-      </Text>
-    </Pressable>
+      Tuner
+    </Chip>
   );
 }
-
-/**
- * Every chip is 32 points high, whatever it holds, so the Tuner and Reset
- * stand one size; the 13-point word at the dials' largest text (1.3) fits in
- * it. Each chip's width follows its words. The slop makes the hit area 44.
- */
-const CHIP = 32;
-const CHIP_SLOP = { top: 6, bottom: 6 };
 
 /** Reset, while the move is not the hymn as printed: "↺ Db, no capo". */
 function ResetChip({
@@ -302,21 +290,15 @@ function ResetChip({
   readonly printed: Chord.Key;
   readonly onPress: () => void;
 }) {
-  const label = `↺ ${keyName(printed)}, no capo`;
   return (
-    <Pressable
+    <Chip
       testID="dials-reset"
-      role="button"
-      aria-label="Reset"
-      accessibilityHint={`Back to ${keyName(printed)}, with no capo`}
-      hitSlop={CHIP_SLOP}
+      label="Reset"
+      hint={`Back to ${keyName(printed)}, with no capo`}
       onPress={onPress}
-      style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
     >
-      <Text style={styles.chipText} numberOfLines={1} maxFontSizeMultiplier={MOST_SCALE}>
-        {label}
-      </Text>
-    </Pressable>
+      {`↺ ${keyName(printed)}, no capo`}
+    </Chip>
   );
 }
 
@@ -360,19 +342,8 @@ function Fret({ stop, current }: { readonly stop: CapoStop; readonly current: bo
 
 const styles = StyleSheet.create({
   dials: { gap: ROW_GAP, alignItems: 'stretch' },
-  chip: {
-    alignSelf: 'center',
-    height: CHIP,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    justifyContent: 'center',
-    backgroundColor: color.pill,
-  },
   chips: { flexDirection: 'row', justifyContent: 'center' },
   ends: { justifyContent: 'space-between' },
-  tuner: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  pressed: { opacity: 0.6 },
-  chipText: { fontSize: 13, fontWeight: '600', color: color.onPill },
   key: { fontSize: 17, fontWeight: '600', color: color.muted },
   longKey: { fontSize: 14 },
   current: { color: color.chord },

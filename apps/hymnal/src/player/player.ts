@@ -30,6 +30,7 @@
 
 import type { Scope } from 'effect';
 import {
+  Array as Arr,
   Clock,
   Context,
   Data,
@@ -50,6 +51,7 @@ import { audioUrl, soundingOffset } from '~/remote';
 import { type Move, still } from '~/hymns/chords';
 
 import * as Proof from './proof';
+import { ALL } from './stanzas';
 import { DEFAULT_TEMPO, rateOf } from './tempo';
 
 /** A hymn the player plays: its number names its recording. */
@@ -102,7 +104,7 @@ export type Command = Data.TaggedEnum<{
   Start: { readonly track: Track };
   Pause: {};
   Resume: {};
-  /** Move to `seconds` into the recording. */
+  /** Move to `seconds` into the hymn as it plays: the chosen stanzas' sung time (`sound.ts`). */
   Seek: { readonly seconds: number };
   /** Show the device's playback again: the lock screen moved it to a place it did not say. */
   Follow: {};
@@ -146,6 +148,11 @@ export interface PlayOptions {
    * (`sound.ts`) with Sound off, the device's recording with Sound on; 1 when not told.
    */
   readonly rate?: number;
+  /**
+   * The stanzas the play sings (`stanzas.ts`'s `Choice`, `[]` for all): the score clock
+   * (`sound.ts`) runs the place over their lines alone, and skips the rest; all when not told.
+   */
+  readonly stanzas?: ReadonlyArray<number>;
 }
 
 /** Requested and effective sounding offsets; a fallback is never silently claimed as the chosen Key. */
@@ -208,6 +215,11 @@ export interface PlaybackApi {
   readonly status: Effect.Effect<Status, PlaybackError>;
   /** The held hymn's tempo changed: the place moves on at `rate` from where it stands. */
   readonly setRate?: (rate: number) => Effect.Effect<void>;
+  /**
+   * The held hymn's stanza choice changed (`[]` for all): the place keeps its place in the
+   * recording, or moves on to the next chosen line's start when its line is no longer sung.
+   */
+  readonly setStanzas?: (stanzas: ReadonlyArray<number>) => Effect.Effect<void>;
   /** The rate the place moves at, ms of the hymn for each ms: now, then at each change. */
   readonly pace?: Stream.Stream<number>;
   /** Adopt a selection whose effective set already sounds, without a device load. */
@@ -349,16 +361,22 @@ interface Held {
 
 const printed = Atom.make<Move>(still);
 const asWritten = Atom.make(DEFAULT_TEMPO);
+const everyStanza = Atom.make<ReadonlyArray<number>>(ALL);
+
+/** Two stanza choices of one hymn the same: the same numbers in the same order. */
+const sameStanzas = Arr.makeEquivalence<number>((a, b) => a === b);
 
 /**
  * The player's atoms over the device's `playback`, reading its status every `every` while it
- * moves. `moveFor` gives a hymn's transpose and capo, `tempoFor` its tempo in percent.
+ * moves. `moveFor` gives a hymn's transpose and capo, `tempoFor` its tempo in percent,
+ * `stanzasFor` the stanzas it sings (`[]` for all).
  */
 export const playerOn = (
   playback: Layer.Layer<Playback>,
   every: Duration.Input,
   moveFor: (number: number) => Atom.Atom<Move> = () => printed,
   tempoFor: (number: number) => Atom.Atom<number> = () => asWritten,
+  stanzasFor: (number: number) => Atom.Atom<ReadonlyArray<number>> = () => everyStanza,
 ) => {
   const keyFor = Atom.family((number: number) =>
     Atom.map(moveFor(number), (move) => soundingOffset(move.transpose)),
@@ -890,6 +908,7 @@ export const playerOn = (
                 intent: held.wants,
                 recording: { number: track.number, offset },
                 rate: get.registry.get(rateFor(track.number)),
+                stanzas: get.registry.get(stanzasFor(track.number)),
               })
               .pipe(
                 Effect.tap((status) =>
@@ -1342,7 +1361,32 @@ export const playerOn = (
   /** `rate` to the screens: the playback alone sets it. */
   const shownRate: Atom.Atom<number> = rate;
 
-  return { state, send, remote, keys, recording, tempos, rate: shownRate };
+  /** The held hymn and its stanza choice, `[]` while no hymn is held (`number` 0). */
+  const heldStanzas = Atom.make((get) => {
+    const number = get(heldNumber);
+    if (number === 0) return { number, stanzas: ALL };
+    return { number, stanzas: get(stanzasFor(number)) };
+  });
+  /**
+   * While mounted: each change of the held hymn's stanza choice told to the playback, as
+   * `tempos` tells a turn of its tempo. A change of held hymn tells nothing: the new hymn's play
+   * names its own choice (`PlayOptions.stanzas`).
+   */
+  const stanzas = runtime.atom((get) =>
+    Effect.gen(function* () {
+      const device = yield* Playback;
+      yield* get.stream(heldStanzas).pipe(
+        Stream.changesWith((a, b) => a.number === b.number && sameStanzas(a.stanzas, b.stanzas)),
+        Stream.zipWithPrevious,
+        Stream.filter(([before, now]) =>
+          Option.exists(before, (held) => held.number === now.number),
+        ),
+        Stream.runForEach(([, now]) => device.setStanzas?.(now.stanzas) ?? Effect.void),
+      );
+    }),
+  );
+
+  return { state, send, remote, keys, recording, tempos, stanzas, rate: shownRate };
 };
 
 /** A player's atoms: its state, the commands it takes and its lock-screen follower. */

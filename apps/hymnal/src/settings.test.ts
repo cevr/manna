@@ -196,6 +196,33 @@ describe('a hymn’s tempo', () => {
   });
 });
 
+describe('a hymn’s stanzas', () => {
+  it('are all of them until chosen', () => {
+    const { settings, registry } = launch(new Map());
+    expect(registry.get(settings.stanzas(78))).toEqual([]);
+  });
+
+  it('are kept for their own hymn alone, under its key, when the app is opened again', () => {
+    const device = new Map<string, string>();
+    const first = launch(device);
+    first.registry.set(first.settings.stanzas(78), [1, 3]);
+    expect(first.registry.get(first.settings.stanzas(65))).toEqual([]);
+    expect(device.get('stanzas.78')).toBe('[1,3]');
+    first.registry.dispose();
+
+    const again = launch(device);
+    expect(again.registry.get(again.settings.stanzas(78))).toEqual([1, 3]);
+    expect(again.registry.get(again.settings.stanzas(65))).toEqual([]);
+  });
+
+  it('read a stored choice that is not stanza numbers, ascending, each once, as all', () => {
+    for (const stored of ['[3,1]', '[1,1]', '[0,2]', '[1.5]', '[-1]', '"1,3"', '3', 'null']) {
+      const { settings, registry } = launch(new Map([['stanzas.78', stored]]));
+      expect(registry.get(settings.stanzas(78))).toEqual([]);
+    }
+  });
+});
+
 describe('the reading settings', () => {
   it('start at the page as it has always been set, with the screen left to sleep', () => {
     const { settings, registry } = launch(new Map());

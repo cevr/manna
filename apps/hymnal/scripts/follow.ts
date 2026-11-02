@@ -1,6 +1,11 @@
 /**
- * `bun scripts/follow.ts --udid <udid> --hymn <n> --out <dir> [--every 500] [--session verify-hymnal] [--no-video]`:
+ * `bun scripts/follow.ts --udid <udid> --hymn <n> --out <dir> [--every 500] [--session verify-hymnal] [--no-video] [--stanzas 1,3]`:
  * one Play tap on a hymn page, and the sung line followed to the end.
+ *
+ * `--stanzas` names the stanzas the app's player sheet has chosen for the
+ * hymn: the run is judged against the timeline cut to them
+ * (`src/player/stanzas.ts`), as the app plays it, and a sample that selects
+ * a skipped line fails it (`skipped`).
  *
  * Run from `apps/hymnal`, on a booted simulator whose app shows hymn `<n>`'s
  * page with sound off (`sim open hymns/<n>`, then `sim tap label=Sound`
@@ -25,14 +30,17 @@ import {
   Effect,
   FileSystem,
   Option,
+  Order,
   Path,
   Schema,
 } from 'effect';
 import { Command, Flag } from 'effect/cli';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
-import { timelineOf } from '../src/follow/timeline.ts';
+import { type Timeline, timelineOf } from '../src/follow/timeline.ts';
+import { Choice, cutOf, keptOf } from '../src/player/stanzas.ts';
 import { readTiming } from '../vite/timing.ts';
+import { readWords } from '../vite/words.ts';
 import { judge, type Sample, sampleOf, soundOff } from './follow/samples.ts';
 import { succeed } from './sim/tools.ts';
 
@@ -71,6 +79,7 @@ const Verdict = Schema.Struct({
   missed: Schema.Array(Schema.Int),
   backwards: Schema.Int,
   last: Schema.Boolean,
+  skipped: Schema.Int,
   outside: Schema.Int,
   doubled: Schema.Int,
   mismatched: Schema.Int,
@@ -155,6 +164,45 @@ const recording = <A, E, R>(udid: string, video: string, drive: Effect.Effect<A,
 export const videoOf = (out: string, hymn: number, noVideo: boolean): Option.Option<string> =>
   Option.liftPredicate(`${out.replace(/\/+$/, '')}/follow-${hymn}.mp4`, () => !noVideo);
 
+/** `--stanzas`' list as a choice: `1,3` is `[1, 3]`, and nothing is every stanza (`[]`). */
+export const choiceOf = (list: string) => {
+  const numbers = list
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+    .map(Number);
+  return Schema.decodeOption(Choice)(Arr.sort(Arr.dedupe(numbers), Order.Number));
+};
+
+/**
+ * Hymn `hymn`'s `timeline` as the app's Play sings it with the stanzas
+ * `list` names: cut by `keptOf` and `cutOf` over the hymn's words
+ * (`readWords`), the time the follow and the player read. No list gives the
+ * timeline itself.
+ */
+const sungOf = Effect.fn('Follow.sungOf')(function* (
+  hymn: number,
+  timeline: Timeline,
+  list: string,
+) {
+  const choice = yield* Effect.fromOption(choiceOf(list)).pipe(
+    Effect.mapError(() =>
+      FollowFailed.make({ reason: `--stanzas ${list} is not a list of stanza numbers` }),
+    ),
+  );
+  if (choice.length === 0) return timeline;
+  const text = yield* Arr.findFirst(readWords(), (words) => words.number === hymn).pipe(
+    Effect.fromOption,
+    Effect.mapError(() => FollowFailed.make({ reason: `hymn ${hymn} has no words` })),
+  );
+  const kept = keptOf(text.sections, choice);
+  if (kept.length !== timeline.lines.length)
+    return yield* FollowFailed.make({
+      reason: `hymn ${hymn}'s words have ${kept.length} lines, its timeline ${timeline.lines.length}`,
+    });
+  return cutOf(timeline, kept).timeline;
+});
+
 /** Press Play once, then sample until the player ends or `limit` ms pass. */
 const play = Effect.fn('Follow.play')(function* (
   session: string,
@@ -201,17 +249,24 @@ const follow = Command.make(
       Flag.withDefault(false),
       Flag.withDescription('record no video of the screen; only the tree is read'),
     ),
+    stanzas: Flag.String('stanzas').pipe(
+      Flag.withDefault(''),
+      Flag.withDescription(
+        "the stanzas the app's player sheet has chosen for the hymn, comma-separated; every one by default",
+      ),
+    ),
   },
   (flags) =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       yield* fs.makeDirectory(flags.out, { recursive: true });
-      const timeline = yield* Arr.findFirst(readTiming(), ([number]) => number === flags.hymn).pipe(
+      const full = yield* Arr.findFirst(readTiming(), ([number]) => number === flags.hymn).pipe(
         Option.flatMap(([, encoded]) => timelineOf(encoded)),
         Effect.fromOption,
         Effect.mapError(() => FollowFailed.make({ reason: `hymn ${flags.hymn} has no timeline` })),
       );
+      const timeline = yield* sungOf(flags.hymn, full, flags.stanzas);
       const before = yield* nodesNow(flags.session);
       if (!before.some((node) => node.label === `Play hymn ${flags.hymn}`))
         return yield* FollowFailed.make({ reason: `the page shows no Play hymn ${flags.hymn}` });

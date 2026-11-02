@@ -12,7 +12,11 @@
  *
  * - `backwards`: the times the selected line comes before the last one seen;
  * - `missed`: the lines longer than `LONG` ms never seen selected;
- * - `last`: whether the last sung line was seen selected;
+ * - `last`: whether the last sung line, the last with a length, was seen
+ *   selected: a timeline cut to a choice of stanzas (`--stanzas`) lays the
+ *   lines it skips with no length;
+ * - `skipped`: the samples whose selected line has no length, a line the
+ *   cut skips (or one the timeline never sings);
  * - `outside`: the samples whose selected line is not inside the scroll's
  *   frame, or whose next line's top is not;
  * - `doubled`: the samples with more than one line selected;
@@ -180,6 +184,7 @@ export interface Verdict {
   readonly missed: ReadonlyArray<number>;
   readonly backwards: number;
   readonly last: boolean;
+  readonly skipped: number;
   readonly outside: number;
   readonly doubled: number;
   readonly mismatched: number;
@@ -206,6 +211,7 @@ export const judge = (
   const seen = new Set<number>();
   let before = -1;
   let backwards = 0;
+  let skipped = 0;
   let outside = 0;
   let doubled = 0;
   let mismatched = 0;
@@ -222,6 +228,7 @@ export const judge = (
     if (Option.isNone(first)) continue;
     const line = first.value;
     seen.add(line);
+    if (Arr.get(lengths, line).pipe(Option.exists((length) => length <= 0))) skipped++;
     if (!Option.exists(Arr.get(timed.lines, line), (span) => onTime(span, timed.first + sample.at)))
       adrift++;
     if (line < before) backwards++;
@@ -240,12 +247,15 @@ export const judge = (
       Option.liftPredicate(index, () => length > LONG && !seen.has(index)),
     ),
   );
-  const last = seen.has(lengths.length - 1);
+  const last = Option.exists(
+    Arr.findLastIndex(lengths, (length) => length > 0),
+    (index) => seen.has(index),
+  );
   const ended = samples.some((sample) => sample.ended);
   const early = samples.some(
     (sample) => sample.ended && timed.first + sample.at < timed.end - TIMING,
   );
-  return {
+  const counts = {
     hymn,
     samples: samples.length,
     lines: lengths.length,
@@ -253,6 +263,7 @@ export const judge = (
     missed,
     backwards,
     last,
+    skipped,
     outside,
     doubled,
     mismatched,
@@ -260,17 +271,21 @@ export const judge = (
     early,
     ended,
     touches,
-    holds:
-      samples.length > 0 &&
-      missed.length === 0 &&
-      backwards === 0 &&
-      last &&
-      outside === 0 &&
-      doubled === 0 &&
-      mismatched === 0 &&
-      adrift === 0 &&
-      !early &&
-      ended &&
-      touches === 1,
   };
+  return { ...counts, holds: holdsOf(counts) };
 };
+
+/** Whether a run's counts hold: each is 0, false or true as it should be, after one touch. */
+const holdsOf = (counts: Omit<Verdict, 'holds'>): boolean =>
+  counts.samples > 0 &&
+  counts.missed.length === 0 &&
+  counts.backwards === 0 &&
+  counts.last &&
+  counts.skipped === 0 &&
+  counts.outside === 0 &&
+  counts.doubled === 0 &&
+  counts.mismatched === 0 &&
+  counts.adrift === 0 &&
+  !counts.early &&
+  counts.ended &&
+  counts.touches === 1;

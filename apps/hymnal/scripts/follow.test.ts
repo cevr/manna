@@ -4,14 +4,15 @@
  * selected one moved by hand, and the next page's scroll and lines beside it
  * off the screen, as the app's pager keeps them. Each sample's time is set
  * by the line it marks, on a score clock whose first sung line is at
- * `TIMED.first`. And where the check's video goes, or that it records none.
+ * `TIMED.first`. And how `--stanzas` reads its list, and where the check's
+ * video goes, or that it records none.
  * No simulator.
  */
 
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
-import { videoOf } from './follow';
+import { choiceOf, videoOf } from './follow';
 import { judge, type Node, type Sample, sampleOf, soundOff, TIMING } from './follow/samples';
 
 /** The page the pager shows: the window cut to the pager. */
@@ -189,6 +190,43 @@ describe('the follow judge', () => {
     expect(judge(100, TIMED, run([0, 1, 2, 3]), 2).holds).toBe(false);
   });
 
+  it('judges a timeline cut to a choice: the last line is the last with a length, and a skipped line selected fails', () => {
+    const at = (mark: number, ms: number, button?: string) =>
+      sampleOf(nodes(TOPS, mark, button), 100, ms);
+    const ends = (ms: number) => at(-1, ms, 'Play hymn 100 again');
+    // Line 2 skipped: no length, at line 3's start.
+    const cut = {
+      first: 1000,
+      end: 7500,
+      lines: [
+        { start: 1000, until: 3000 },
+        { start: 3000, until: 4500 },
+        { start: 4500, until: 4500 },
+        { start: 4500, until: 7500 },
+      ],
+    };
+    const sung = [at(0, 200), at(1, 2200), at(3, 3700), ends(6500)];
+    expect(judge(100, cut, sung, 1)).toMatchObject({ skipped: 0, last: true, holds: true });
+    const selected = [at(0, 200), at(1, 2200), at(2, 3500), at(3, 3700), ends(6500)];
+    expect(judge(100, cut, selected, 1)).toMatchObject({ skipped: 1, holds: false });
+    // The last two lines skipped: line 1 is the last sung.
+    const tail = {
+      first: 1000,
+      end: 4500,
+      lines: [
+        { start: 1000, until: 3000 },
+        { start: 3000, until: 4500 },
+        { start: 4500, until: 4500 },
+        { start: 4500, until: 4500 },
+      ],
+    };
+    expect(judge(100, tail, [at(0, 200), at(1, 2200), ends(3500)], 1)).toMatchObject({
+      skipped: 0,
+      last: true,
+      holds: true,
+    });
+  });
+
   it('fails a sample with no scroll in it', () => {
     const lost: Sample = { ...sampleOf(nodes(TOPS, 3), 100, 4400), scroll: false };
     expect(judge(100, TIMED, [...run([0, 1, 2]), lost], 1).outside).toBe(1);
@@ -201,6 +239,15 @@ describe('the sound check', () => {
     expect(soundOff([{ label: 'Sound', value: 'checked' }])).toBe(false);
     expect(soundOff([{ label: 'Sound off' }])).toBe(false);
     expect(soundOff([])).toBe(false);
+  });
+});
+
+describe('the stanzas flag', () => {
+  it('reads a comma-separated list as a choice, nothing as every stanza, and refuses what is not one', () => {
+    expect(choiceOf('3, 1,3')).toEqual(Option.some([1, 3]));
+    expect(choiceOf('')).toEqual(Option.some([]));
+    expect(choiceOf('1,x')).toEqual(Option.none());
+    expect(choiceOf('0')).toEqual(Option.none());
   });
 });
 
