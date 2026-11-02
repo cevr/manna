@@ -1,0 +1,279 @@
+{
+  "member": "filler-bases",
+  "scope": "library",
+  "who": "them",
+  "refs": [
+    {
+      "file": "../../../../films/in-its-order/cast/idea-villagers/cast-sheet/kept/poses.png",
+      "why": "the kept IDEA villagers: the house line, paper and light on plain people of the Bible's own time, the grown villager's height, his headcloth and undyed linen; the bases are drawn bare-headed in plain cloth so a filler takes its headcloth, veil or mantle as a house part"
+    },
+    {
+      "file": "../../../../films/in-its-order/cast/feast-mother/cast-sheet/kept/poses.png",
+      "why": "the kept feast mother: a grown woman's build, height and robe in the house look"
+    },
+    {
+      "file": "../../lead-feast/cast-sheet/kept/single-1.png",
+      "why": "the kept lead standing front, bare-headed: the proportion every base is held to (3.42 heads, a head a little taller than wide, h/w 1.06, eyes 0.226 of the head apart); his curls and his knotted sash are his own, never a filler's (CRAFT rule 12)"
+    },
+    {
+      "file": "tries/bases-1.png",
+      "why": "try 1, redrawn as try 5: its palette (the older man's oatmeal, the older woman's grey-beige) and each base's own plain hair"
+    },
+    {
+      "file": "tries/guide-bases-6.png",
+      "why": "a made guide for try 6: try 5 with each head scaled to 214 px at h/w 1.06 and the kept lead's brows, eyes and mouth pasted at his place, the older pair's cloth recoloured to try 1's; okra kept try 1's round heads and wide-set eyes in try 5, so the guide sets the lead's head shape and face marks by measure"
+    }
+  ],
+  "sheets": {
+    "poses": {
+      "anchor": 1,
+      "layout": "Draw four plain base figures for filler cast in one row, evenly spaced, each standing at rest facing the viewer, both sleeved hands low at the sides, bare-headed, in a plain ankle-length robe with sleeves to the wrist, a plain flat sash and brown sandals, each with its own plain hair and never the series lead's curls, left to right: one, a grown man with short straight dark hair, the height every other figure is measured against; two, a grown woman with dark hair parted and tied back; three, an older man with short grey hair, in oatmeal; four, an older woman with grey hair in a bun, in grey-beige.",
+      "slots": ["front", "front", "front", "front"],
+      "standing": [1, 2, 3, 4],
+      "level": [1, 2, 3, 4],
+      "tries": [
+        {
+          "n": 1,
+          "file": "tries/bases-1.png",
+          "prompt": "Draw a character sheet of four plain base figures for a background crowd, in exactly the style of the two reference sheets: flat cut-paper colour shapes, one dark-brown silhouette outline of even weight around each figure, the same big round heads and small bodies as the reference figures (each grown figure about 3.3 heads tall from the hair top to the soles), faces of three small marks (two dot eyes and a short smile line) as the references draw them, ears showing, arms in sleeves to the wrist with one round circle hand at each sleeve end (no fingers, no bare arms), brown sandals. Shade with colour only, never grey or black: the skin's shaded side turns toward a warm red-orange, the cream cloth's shaded side turns toward a cool lavender, as on the reference sheets. Plain warm off-white paper background.\n\nLeft to right, evenly spaced, all four on one ground line, each standing straight and facing the viewer square (a front view, not three-quarter), arms hanging relaxed at the sides, feet a little apart:\n1. A grown man of average build, short straight dark-brown hair, clean-shaven, a knee-length undyed linen tunic with a plain cream sash.\n2. A grown woman of average build, a little shorter than the man, dark-brown hair parted in the middle and tied back at the nape, a long undyed linen dress to the ankles with a plain cream sash.\n3. An older man, as tall as the grown man, short grey-white hair receding at the temples, clean-shaven, shoulders a little rounder, a knee-length tunic in pale oatmeal with a plain sash.\n4. An older woman, as tall as the grown woman, grey-white hair tied back in a small low bun, a long dress in pale grey-beige with a plain sash.\n\nAll four have the same head size and the same peach skin as the reference figures. Their clothes are plain and neutral (undyed linen, oatmeal, pale beige), with no pattern, no headcloth, no veil, no mantle, no jewellery and nothing in the hands, so that headcloths, mantles, beards and colours can be laid over them later. No text, no labels, no frames.",
+          "refs": [
+            "../../../../films/in-its-order/cast/idea-villagers/cast-sheet/kept/poses.png",
+            "../../../../films/in-its-order/cast/feast-mother/cast-sheet/kept/poses.png"
+          ],
+          "underlay": false,
+          "flags": [
+            {
+              "check": "head",
+              "views": [2, 1]
+            },
+            {
+              "check": "head",
+              "views": [4, 1]
+            },
+            {
+              "check": "hand",
+              "views": [2, 1]
+            },
+            {
+              "check": "hand",
+              "views": [4, 1]
+            },
+            {
+              "check": "papers",
+              "views": [3, 1]
+            }
+          ],
+          "at": "2026-11-02T00:52:48.000Z"
+        },
+        {
+          "n": 2,
+          "file": "tries/bases-2.png",
+          "prompt": "Draw a character sheet of four plain base figures for a background crowd, in exactly the style of the two reference sheets: flat cut-paper colour shapes, one dark-brown silhouette outline of even weight around each figure, and the same big round heads and small bodies. Match the grown villager standing at the far right of the first reference sheet (bearded, in a cream headcloth) for the head size, the body and the height: about 3.3 heads tall from the hair top to the soles. Faces of a few small marks as the references draw them (short brown brows, two dark oval dot eyes, a short smile line), ears showing at the sides of the head, arms in sleeves to the wrist with one round circle hand at each sleeve end (no fingers, no bare arms), brown sandals. Shade with colour only, never grey or black: the skin's shaded side turns toward a warm red-orange, the cream cloth's shaded side turns toward a cool lavender, as on the reference sheets. A soft lavender contact shadow under the feet. Plain warm off-white paper background.\n\nLeft to right, evenly spaced, all four on one ground line, each standing straight and facing the viewer square (a front view, not three-quarter), arms hanging relaxed at the sides, feet a little apart:\n1. A grown man of average build, short straight dark-brown hair, a short dark-brown beard as the grown villager wears, an undyed linen tunic to the ankles with a plain cream sash.\n2. A grown woman of average build, a little shorter than the man, dark-brown hair parted in the middle and tied back behind the head, an undyed linen dress to the ankles with a plain cream sash.\n3. An older man, as tall as the grown man, short grey-white hair receding at the temples and a short grey-white beard, a tunic to the ankles in pale oatmeal with a plain sash.\n4. An older woman, as tall as the grown woman, grey-white hair tied back in a small bun, a dress to the ankles in pale grey-beige with a plain sash.\n\nAll four have the same head size and the same peach skin as the reference figures. Their clothes are plain and neutral (undyed linen, oatmeal, pale grey-beige), with no pattern, no headcloth, no veil, no mantle, no jewellery and nothing in the hands, so that headcloths, veils, mantles and colours can be laid over them later. No text, no labels, no frames.",
+          "refs": [
+            "../../../../films/in-its-order/cast/idea-villagers/cast-sheet/kept/poses.png",
+            "../../../../films/in-its-order/cast/feast-mother/cast-sheet/kept/poses.png"
+          ],
+          "underlay": false,
+          "flags": [
+            {
+              "check": "facing",
+              "views": [3]
+            },
+            {
+              "check": "height",
+              "views": [2, 1]
+            },
+            {
+              "check": "height",
+              "views": [4, 1]
+            }
+          ],
+          "at": "2026-11-02T00:53:32.000Z"
+        },
+        {
+          "n": 3,
+          "file": "tries/bases-3.png",
+          "prompt": "Draw a character sheet of four plain base figures for a background crowd, in exactly the style of the reference images: flat cut-paper colour shapes, one dark-brown silhouette outline of even weight around each figure, shading in colour only.\n\nProportions: match the young man in the first reference exactly. The same head size and the same head shape: a rounded head a little taller than it is wide, with a gently squared jaw, not a round ball. The same body: each grown figure about 3.4 of its own heads tall from the hair top to the soles. The same round circle hands at the ends of the sleeves, the same outline weight. Grown faces as the references draw them: short brown brows, two dark oval dot eyes, a short smile line, ears showing at the sides of the head. No round child faces: these are grown men and women.\n\nLeft to right, evenly spaced, all four on one ground line, each standing straight and facing the viewer square (a front view, not three-quarter), arms hanging relaxed at the sides with the round hands a little away from the body, feet a little apart, brown sandals:\n1. A grown man of average build, short straight dark-brown hair, clean-shaven, an undyed linen tunic to the ankles with long sleeves to the wrists and a plain cream sash.\n2. A grown woman of average build, a little shorter than the man, dark-brown hair parted in the middle and tied back behind the head, an undyed linen dress to the ankles with long sleeves to the wrists and a plain cream sash.\n3. An older man, as tall as the grown man, short grey-white hair receding at the temples, clean-shaven, a pale oatmeal tunic to the ankles with long sleeves and a plain sash.\n4. An older woman, as tall as the grown woman, grey-white hair tied back in a small bun, a pale grey-beige dress to the ankles with long sleeves and a plain sash.\n\nAll four heads are exactly the same size, and all four have the same peach skin as the reference figures. Shade with colour, never grey or black: the skin's shaded side turns toward a warm red-orange, the cloth's shaded side toward a cool lavender, with a soft lavender contact shadow under the feet, as on the reference sheets. Their clothes are plain and neutral, with no pattern, no headcloth, no veil, no mantle, no beard, no jewellery and nothing in the hands, so that headcloths, veils, mantles, beards and colours can be laid over them later. Plain warm off-white paper background. No text, no labels, no frames.",
+          "refs": [
+            "../../lead-feast/cast-sheet/kept/single-1.png",
+            "../../../../films/in-its-order/cast/idea-villagers/cast-sheet/kept/poses.png",
+            "../../../../films/in-its-order/cast/feast-mother/cast-sheet/kept/poses.png"
+          ],
+          "underlay": false,
+          "flags": [
+            {
+              "check": "height",
+              "views": [2, 1]
+            },
+            {
+              "check": "height",
+              "views": [4, 1]
+            },
+            {
+              "check": "head",
+              "views": [2, 1]
+            },
+            {
+              "check": "head",
+              "views": [4, 1]
+            },
+            {
+              "check": "hairFall",
+              "views": [3, 1]
+            },
+            {
+              "check": "bareArm",
+              "views": [4]
+            }
+          ],
+          "at": "2026-11-02T00:59:20.000Z"
+        },
+        {
+          "n": 4,
+          "file": "tries/bases-4.png",
+          "prompt": "Draw a character sheet of four plain base figures for a background crowd, in exactly the style of the reference images: flat cut-paper colour shapes, one dark-brown silhouette outline of even weight around each figure, shading in colour only.\n\nProportions: match the young man in the first reference exactly. The same head size and the same head shape: a rounded head a little taller than it is wide, with a gently squared jaw, not a round ball. The grown man's body is his body: about 3.4 of his own heads tall from the hair top to the soles. The same round circle hands at the ends of the sleeves, the same outline weight. Grown faces as the references draw them: short brown brows, two dark oval dot eyes, a short smile line, ears showing at the sides of the head. No round child faces: these are grown men and women.\n\nThe four bodies differ in height and width, so that a crowd made from them never looks cloned, but all four heads are exactly the same size. Left to right, evenly spaced, all four on one ground line, each standing straight and facing the viewer square (a front view, not three-quarter), arms hanging relaxed at the sides with the round hands a little away from the body, feet a little apart, brown sandals:\n1. A grown man of average build, as tall and as broad as the young man in the first reference, short straight dark-brown hair, clean-shaven, an undyed linen tunic to the ankles with long sleeves to the wrists and a plain cream sash.\n2. A grown woman, slimmer than the man and a little shorter (about 95 % of his height), dark-brown hair parted in the middle and tied back behind the head, an undyed linen dress to the ankles with long sleeves to the wrists and a plain cream sash.\n3. An older man, a little shorter than the grown man (about 95 % of his height) and broader at the waist, his shoulders a little rounded, short grey-white hair receding at the temples, clean-shaven, a pale oatmeal tunic to the ankles with long sleeves and a plain sash.\n4. An older woman, the shortest (about 90 % of the grown man's height), a rounder, fuller figure, grey-white hair tied back in a small bun, a pale grey-beige dress to the ankles with long sleeves and a plain sash.\n\nAll four have the same peach skin as the reference figures. Shade with colour, never grey or black: the skin's shaded side turns toward a warm red-orange, the cloth's shaded side toward a cool lavender, with a soft lavender contact shadow under the feet, as on the reference sheets. Their clothes are plain and neutral, with no pattern, no headcloth, no veil, no mantle, no beard, no jewellery and nothing in the hands, so that headcloths, veils, mantles, beards and colours can be laid over them later. Plain warm off-white paper background. No text, no labels, no frames.",
+          "refs": [
+            "../../lead-feast/cast-sheet/kept/single-1.png",
+            "../../../../films/in-its-order/cast/idea-villagers/cast-sheet/kept/poses.png",
+            "../../../../films/in-its-order/cast/feast-mother/cast-sheet/kept/poses.png"
+          ],
+          "underlay": false,
+          "flags": [
+            {
+              "check": "facing",
+              "views": [1]
+            },
+            {
+              "check": "facing",
+              "views": [4]
+            },
+            {
+              "check": "height",
+              "views": [2, 1]
+            },
+            {
+              "check": "height",
+              "views": [3, 1]
+            },
+            {
+              "check": "height",
+              "views": [4, 1]
+            },
+            {
+              "check": "head",
+              "views": [2, 1]
+            },
+            {
+              "check": "head",
+              "views": [3, 1]
+            },
+            {
+              "check": "head",
+              "views": [4, 1]
+            },
+            {
+              "check": "hand",
+              "views": [3, 1]
+            },
+            {
+              "check": "hand",
+              "views": [4, 1]
+            },
+            {
+              "check": "hairFall",
+              "views": [2, 1]
+            }
+          ],
+          "at": "2026-11-02T00:59:38.000Z"
+        },
+        {
+          "n": 5,
+          "file": "tries/bases-5.png",
+          "prompt": "Redraw the first reference image, the sheet of four plain base figures for a background crowd, at the same size and layout: the same flat cut-paper style, the same colours (skin, undyed cream and oatmeal cloth, cool lavender cloth shading, warm red-orange skin shading), the same single dark-brown silhouette outline of even weight around each figure, the same warm off-white paper, the same ground line, the same order, and the same figure heights (each grown figure about 3.4 heads tall from the hair top to the soles). Change only these things:\n\n1. Head shape: every head is a soft upright oval a little taller than it is wide (height about 1.06 times the width), with a gently narrowing jaw and a soft chin, exactly the head shape of the man in the second reference image. Not a round ball. Keep each head's height as in the first image and make it narrower, so the width is about 94 % of the height.\n2. Eyes: two small dark dot eyes set closer together than in the first image, as the second reference image sets them: the gap between the two eyes is about a quarter of the head's height. A short smile line below. Ears showing.\n3. Brows: every face has two short dark-brown brow strokes, one above each eye, as the second reference image draws them. Both brows on all four faces.\n4. Length: all four garments reach the ankles, as every grown figure in the reference sheets wears them. The two men now wear ankle-length tunics, not knee-length. No bare shins; only the sandals show below the hem.\n5. Head size: the two women's heads are exactly the same size as the men's heads (same height, same width). The women are shorter only in the body and legs.\n6. Each figure keeps its own plain hair and plain clothes from the first image, different from the others: the grown man short straight dark-brown hair, the grown woman dark-brown hair parted in the middle and tied back at the nape, the older man short grey-white hair receding at the temples, the older woman grey-white hair in a small low bun. No curls, no ringlets, no waves. Clothes stay plain and neutral (undyed cream, pale oatmeal, pale grey-beige) so they can be recoloured later; each sash is a plain flat band with no knot and no hanging ends. All four clean-shaven men and plain women.\n\nUse the second reference image only for the head shape, the eye spacing and the brows: do not copy his curly hair, his white knotted sash or his clothes. Use the third and fourth reference sheets only for the style, the outline and the colours.\n\nArms in sleeves to the wrist with one round circle hand at each sleeve end, all eight hands the same size (no fingers, no bare arms), brown sandals. Shade with colour only, never grey or black. Each figure stands straight and faces the viewer square (a front view), arms hanging relaxed at the sides, feet a little apart. No words, letters or numbers anywhere.",
+          "refs": [
+            "tries/bases-1.png",
+            "../../lead-feast/cast-sheet/kept/single-1.png",
+            "../../../../films/in-its-order/cast/idea-villagers/cast-sheet/kept/poses.png",
+            "../../../../films/in-its-order/cast/feast-mother/cast-sheet/kept/poses.png"
+          ],
+          "underlay": false,
+          "retryOf": 1,
+          "flags": [
+            {
+              "check": "head",
+              "views": [2, 1]
+            },
+            {
+              "check": "head",
+              "views": [3, 1]
+            },
+            {
+              "check": "head",
+              "views": [4, 1]
+            },
+            {
+              "check": "hand",
+              "views": [2, 1]
+            },
+            {
+              "check": "hand",
+              "views": [3, 1]
+            },
+            {
+              "check": "hand",
+              "views": [4, 1]
+            }
+          ],
+          "at": "2026-11-02T01:15:46.000Z"
+        },
+        {
+          "n": 6,
+          "file": "tries/bases-6.png",
+          "prompt": "Redraw the first image as a clean, finished character sheet and keep everything in it exactly as it is: the same four figures in the same places at the same sizes, on the same ground line; every head the same size as now and the same upright oval shape, a little taller than it is wide, with a soft jaw (not a round ball); the same face marks at the same place and size on each face: two short, thick, dark-brown brows, two small dark oval eyes set close together, and a short smile line; the same ears; the same hair on each (short straight dark-brown hair; dark-brown hair parted in the middle and tied back at the nape; short grey-white hair receding at the temples; grey-white hair in a small low bun); the same ankle-length garments in the same colours (undyed cream, undyed cream, pale oatmeal, pale grey-beige), the same plain flat sashes, the same round hands at the sleeve ends and the same brown sandals.\n\nOnly clean it, in the flat cut-paper style of the second and third reference sheets: one smooth dark-brown silhouette outline of even weight round each figure, with no steps, kinks or doubled lines (at the necks, the ears, the brows and the hair); clear, even skin with no stray marks, smudges or faint lines on the faces; one even paper grain on the warm off-white paper. Shade with colour only, never grey or black: the skin's shaded side turns toward a warm red-orange, the cloth's shaded side toward a cool lavender, with a soft lavender contact shadow under the feet.\n\nNo curls, no ringlets; each sash a plain flat band with no knot and no hanging ends; no headcloth, no veil, no beard, no jewellery and nothing in the hands. No words, letters or numbers anywhere.",
+          "refs": [
+            "tries/guide-bases-6.png",
+            "../../../../films/in-its-order/cast/idea-villagers/cast-sheet/kept/poses.png",
+            "../../../../films/in-its-order/cast/feast-mother/cast-sheet/kept/poses.png"
+          ],
+          "underlay": false,
+          "retryOf": 5,
+          "flags": [
+            {
+              "check": "papers",
+              "views": [3, 1]
+            }
+          ],
+          "at": "2026-11-02T01:27:00.000Z"
+        }
+      ]
+    }
+  },
+  "kept": {
+    "poses": {
+      "try": 6,
+      "why": "owner keep, 2026-11-01, through the orchestrator (no lab ask): the base filler sheet (in-its-order item 3, step 1), filed by hand as the try's bytes, each view cut at its ink box",
+      "views": [
+        {
+          "view": 1,
+          "name": "poses-1",
+          "box": [76, 141, 378, 871]
+        },
+        {
+          "view": 2,
+          "name": "poses-2",
+          "box": [450, 159, 728, 872]
+        },
+        {
+          "view": 3,
+          "name": "poses-3",
+          "box": [791, 146, 1090, 871]
+        },
+        {
+          "view": 4,
+          "name": "poses-4",
+          "box": [1164, 159, 1447, 872]
+        }
+      ]
+    }
+  }
+}
