@@ -8,7 +8,7 @@
 // resolves from the package) and served on loopback for the scope.
 
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
-import type { PuppetLook } from '../../canvas/puppet.ts';
+import type { PuppetDress, PuppetLook } from '../../canvas/puppet.ts';
 import type { PuppetPose } from '../../core/puppet.ts';
 import type { Raster } from '../../core/raster.ts';
 import { launchArgs } from '../../tools/browser.ts';
@@ -21,9 +21,10 @@ export interface PuppetAt {
   readonly key?: string;
 }
 
-/** The page's calls: a pose drawn (with a look when given) and read back, and the ms of each of `poses` drawn into a 1920 × 1080 frame. */
+/** The page's calls: a pose drawn (with a look when given) and read back, a pose drawn wearing a dress and read back, and the ms of each of `poses` drawn into a 1920 × 1080 frame. */
 export interface PuppetPage {
   readonly draw: (pose: PuppetPose, look?: PuppetLook) => Effect.Effect<Raster>;
+  readonly dressed: (pose: PuppetPose, dress: PuppetDress) => Effect.Effect<Raster>;
   readonly time: (
     poses: ReadonlyArray<PuppetPose>,
     look?: PuppetLook,
@@ -70,8 +71,8 @@ try {
   frame.width = 1920;
   frame.height = 1080;
   const fctx = frame.getContext('2d', { willReadFrequently: true });
-  const draw = (c, pose, look) => {
-    const why = drawPuppet(c, spec, loaded, pose, look ?? undefined);
+  const draw = (c, pose, look, dress) => {
+    const why = drawPuppet(c, spec, loaded, pose, look ?? undefined, dress ?? undefined);
     if (why !== undefined) throw new Error(why);
   };
   window.probe = {
@@ -80,12 +81,12 @@ try {
       const gl = document.createElement('canvas').getContext('webgl2');
       return gl ? String(gl.getParameter(gl.RENDERER)) : 'none';
     })(),
-    draw: (pose, look) => {
+    draw: (pose, look, dress) => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, W, H);
       // the puppet's origin where it stands in its sheet, so the canvas is the sheet's frame
       ctx.translate(spec.origin[0], spec.origin[1]);
-      draw(ctx, pose, look);
+      draw(ctx, pose, look, dress);
       return base64Of(new Uint8Array(ctx.getImageData(0, 0, W, H).data.buffer));
     },
     time: (poses, look) =>
@@ -167,18 +168,20 @@ export const puppetPage = Effect.fn('test.puppetPage')(function* (at: PuppetAt) 
     view.evaluate<[number, number]>('window.probe.size'),
   );
   const renderer = yield* Effect.promise(() => view.evaluate<string>('window.probe.renderer'));
+  /** The raster a call of `window.probe.draw` in the page reads back. */
+  const drawn = (call: string) =>
+    Effect.promise(() => view.evaluate<string>(call)).pipe(
+      Effect.map((b64): Raster => ({
+        width,
+        height,
+        rgba: Uint8Array.from(Buffer.from(b64, 'base64')),
+      })),
+    );
   const page: PuppetPage = {
     renderer,
-    draw: (pose, look) =>
-      Effect.promise(() =>
-        view.evaluate<string>(`window.probe.draw(${literal(pose)}, ${lookOf(look)})`),
-      ).pipe(
-        Effect.map((b64): Raster => ({
-          width,
-          height,
-          rgba: Uint8Array.from(Buffer.from(b64, 'base64')),
-        })),
-      ),
+    draw: (pose, look) => drawn(`window.probe.draw(${literal(pose)}, ${lookOf(look)})`),
+    dressed: (pose, dress) =>
+      drawn(`window.probe.draw(${literal(pose)}, undefined, ${literal(dress)})`),
     time: (poses, look) =>
       Effect.promise(() =>
         view.evaluate<number[]>(`window.probe.time(${literal(poses)}, ${lookOf(look)})`),
