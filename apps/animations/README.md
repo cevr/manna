@@ -130,8 +130,12 @@ not named for its beat imports as the one beat named), `--accept-mismatch id,id`
 `--whole` (the file is one reading of the whole script, cut at the quietest
 point of the silence around each beat; a flubbed line read again keeps the
 reading that finished it). Score flags: `--force`, `--dry-run` (each option's
-movements and estimated credits), `--option <name>` (just that one), `--cap n` and
-`--tally file`; `score` composes only the score, keeps each option in the
+movements and estimated credits), `--option <name>` (just that one), `--cap n`,
+`--tally file` and `--through <scene>` (a partial score: only the movements
+that start before that scene's end, the last to its end and 6 s past it; it
+stays current while that range's timing holds, the mix plays no music after
+it, and a later run without `--through` composes the whole score in its
+place); `score` composes only the score, keeps each option in the
 private store (as `sfx push` does) and remixes. Mix flags: `--stems` and
 `--score <option>` (play another option; its stem is `music.<option>.wav`). A film's beds and effects name sounds in the app's
 library (`sounds/library.ts`, shared by every film) with a level in dB

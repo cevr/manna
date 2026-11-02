@@ -3375,7 +3375,9 @@ the film second it starts at; a finding about the whole film has neither).
   (`CueLate`); a sound cue naming an unknown scene, cue or mark; a score movement
   out of film order or under 3 s (`MovementTooShort`); a take that is missing or
   was recorded for other text or another voice (`TakeStale`); a generated
-  sound whose request hash has moved (`AssetStale`); once every take is
+  sound whose request hash has moved (`AssetStale`); a score option composed
+  through a scene (`score --through`) while the film runs past it
+  (`ScorePartial`, a warning naming where its music ends); once every take is
   recorded, an audio master that is missing (`AudioMissing`), not the
   film's length or mixed for another plan than the film's now (`AudioStale`:
   a score pick, a re-take or a moved effect since the last `mix`). A cast member a beat's `cast` names that the board cannot draw from (`CastUnreadable`, one per member, naming its beats: no `cast-sheet.json` in the film's cast or the library, a record that does not decode, or a reference file not on disk; the cast leg, `castLeg`, reads each member once through `castReference`). `--allow-stale` reports stale takes, sounds
