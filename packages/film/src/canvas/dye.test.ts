@@ -110,7 +110,7 @@ describe('a cloth dye', () => {
   });
 
   test('keeps lightness in order: a lighter pixel never dyes darker', () => {
-    // the 8-bit rounding and the gamut's clamp move a dyed pixel's L* by at most 0.3 (2000 pairs, 200 pixels each); 0.5 holds it
+    // the 8-bit rounding and the gamut's clamp moved a dyed pixel's L* by at most 0.3 over 2000 pairs of 200 pixels each, measured once (2026-11-02); this case runs the 48 pixels of each pair here, held to 0.5
     for (const { seed, dye } of DYES) {
       const rng = seeded(seed + 3000);
       const pixels = Array.from({ length: 48 }, (): Rgb => [byte(rng), byte(rng), byte(rng)]);
