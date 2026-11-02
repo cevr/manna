@@ -2,7 +2,7 @@
 // courtyard under the teal sky as the painter's plates (`plates/plates.ts`),
 // a small dawn light on the green hill and the gold path drawing on up to it.
 // The cold open's people sit behind the long table (`seatTable`): a man
-// guest in his idle, the lead at rest in his idle (`atRest`), a woman guest, each guest in its neutral key, and
+// guest in his idle, the lead at rest in his idle (`atRest`), a woman guest in her idle, each guest in its neutral key, and
 // the mother with her baby behind the woman, fewer than the panel's ten, so
 // the cut to the cold open keeps one table. The camera pulls back from a near
 // framing to the panel's own, each plane by its distance (`PLANES`), while
@@ -15,15 +15,7 @@ import { fonts, palette as P } from '../palette.ts';
 import { DISTANCE, NEAR, PANEL, PATH, PATH_BRUSH, PLANES, SKY, TABLE } from '../plates/plates.ts';
 import { TITLE } from '../script.ts';
 import { restingEyes, restingOf } from './lead.ts';
-import {
-  TABLE_PAINTINGS,
-  TABLE_PUPPETS,
-  eyesLook,
-  headMiddle,
-  raising,
-  seatTable,
-  seatedLead,
-} from './table.ts';
+import { TABLE_PUPPETS, eyesLook, headMiddle, raising, seatTable, seatedLead } from './table.ts';
 
 /** His look as his eyes read: open, or his single-9 head drawn eyes shut, about his head bone's middle. */
 const leadEyes = eyesLook(headMiddle(TABLE_PUPPETS.lead.skeleton));
@@ -106,7 +98,6 @@ export const title = drawing({
     path: PATH,
     near: NEAR,
     table: TABLE,
-    ...TABLE_PAINTINGS,
   },
   draw: (f) => {
     const { ctx, w } = f;

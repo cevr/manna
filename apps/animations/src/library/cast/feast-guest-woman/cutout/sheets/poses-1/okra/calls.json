@@ -1,0 +1,20 @@
+{
+  "calls": [
+    {
+      "n": 1,
+      "command": [
+        "okra",
+        "image",
+        "Edit this picture. It is a cut-paper character on cream paper; the flat magenta areas are where her two arms (the olive mantle over each arm, its cream cuff and her round hand) were cut away to make a cut-out puppet. She is a young woman in a long cream robe with a plain sash, her olive mantle drawn over her head as a veil, its drape hanging behind her shoulders, seated on a low wooden stool facing the viewer with her hands resting on her knees. Repaint ONLY the magenta areas, as what lies underneath her arms: the sides of her body below the veil's drape, her olive mantle falling from each shoulder down her side to its lower end beside her lap, each side closed by the same thick dark brown-black outline as the rest of her, painted in exactly the same style, colours and soft shading as her mantle beside each arm; where the magenta lay over her lap, her cream robe and its soft folds; where it lay over the ends of her stool's planks, the same wooden stool. Each side of her body runs straight down from the outer end of her shoulder to the outer edge of her robe below, so her body under the arms is as wide as her shoulders and her robe, and the olive mantle and its soft folds fill everything inside that line with the same soft shade and fine paper grain the sheet paints beside each arm. Keep the soft shade each arm casts on her body beside it exactly as it is, and carry that same shade on under where the arm was. There are no arms now: no sleeves, no cuffs, no hands, nothing magenta left. Where the magenta lay outside her body, it becomes the plain cream paper. Keep every other pixel exactly as it is: the same olive veil and its drape, face, mantle, cream robe, sash, stool, sandals, contact shadow, size, position and framing.",
+        "--size",
+        "1024x1536",
+        "--ref",
+        "okra/input-54f9e71f3de3.png",
+        "-o",
+        "okra/answer-1.png"
+      ],
+      "input": "okra/input-54f9e71f3de3.png",
+      "out": "okra/answer-1.png"
+    }
+  ]
+}
