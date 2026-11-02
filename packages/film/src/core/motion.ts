@@ -92,7 +92,7 @@ export const curve = (keys: ReadonlyArray<Point>): Track => {
 };
 
 /** One move of an `act`. */
-export interface Move {
+interface Move {
   /** When it starts, s. A move cued before the last one settles starts when that one settles. */
   readonly at: number;
   /** How long it takes to settle, s. */
@@ -148,7 +148,7 @@ export const lag =
     track(t - delay);
 
 /** A figure's idle at one moment. */
-export interface Idle {
+interface Idle {
   /** The breath, -1 (out) to 1 (in): one breath every 3.2-3.9 s. */
   readonly breath: number;
   /** The body's sway in degrees, at most 1 either way: two waves, of 5.6-7 s and 8.2-10.5 s, so no two swings match. */
