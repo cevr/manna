@@ -10,9 +10,11 @@
  * lines, the file readable by its owner alone. Nothing but the variables'
  * names is printed.
  */
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { makeLocalState } from 'alchemy/State';
-import { Console, Crypto, Effect, FileSystem, Option, Path, Redacted, Schema } from 'effect';
+import { Console, Effect, FileSystem, Option, Path, Redacted, Schema } from 'effect';
+import { Digest } from 'effect/crypto';
 import { Hex } from 'effect/encoding';
 import { Command, Flag } from 'effect/cli';
 
@@ -69,14 +71,14 @@ const keys = Command.make(
   Effect.fn('store.keys')(function* (input) {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const crypto = yield* Crypto.Crypto;
+    const crypto = yield* Digest.Digest;
     const state = yield* makeLocalState();
     const raw = yield* state.getOutput({ stack: STACK, stage: input.stage });
     const found = Option.fromNullishOr(raw);
     if (Option.isNone(found)) return yield* StoreNotDeployed.make({ stage: input.stage });
     const outputs = yield* Schema.decodeUnknownEffect(StoreOutputs)(found.value);
     const secret = Hex.encode(
-      yield* crypto.digest('SHA-256', new TextEncoder().encode(Redacted.value(outputs.token))),
+      yield* crypto.digest(Digest.sha256, new TextEncoder().encode(Redacted.value(outputs.token))),
     );
     const file = path.resolve(input.env);
     let existing = '';
@@ -98,6 +100,6 @@ const keys = Command.make(
 
 if (import.meta.main)
   Command.run(keys, { version: '0.1.0' }).pipe(
-    Effect.provide(BunServices.layer),
+    Effect.provide([BunCrypto.layerDigest, BunServices.layer]),
     BunRuntime.runMain,
   );

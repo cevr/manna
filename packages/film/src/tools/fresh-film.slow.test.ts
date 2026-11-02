@@ -1,3 +1,4 @@
+import { Redacted, Effect, Layer, Option, Schema, Sink, Stream } from 'effect';
 // A fresh run's answers as the review and the lab read them. `film check
 // --json` prints one Schema-encoded CheckLine per line of stdout (logs go to
 // stderr): a line that does not decode is the check and its reader
@@ -10,7 +11,6 @@
 import { test } from 'bun:test';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, Layer, Option, Schema, Sink, Stream } from 'effect';
 import { ChildProcessSpawner } from 'effect/process';
 import { UnknownScene } from '../core/errors.ts';
 import { FreshProcessFailed, TakeMismatch, VerbRefused } from '../core/refusals.ts';
@@ -25,6 +25,11 @@ import {
   checkLines,
   failedCheck,
 } from './fresh-film.ts';
+
+const wordValue = (word: string | Redacted.Redacted<string>): string => {
+  if (Redacted.isRedacted(word)) return Redacted.value(word);
+  return word;
+};
 
 const warning = {
   level: 'warning',
@@ -103,7 +108,7 @@ const cliAnswering = (
     ChildProcessSpawner.ChildProcessSpawner,
     ChildProcessSpawner.make((command) => {
       if (command._tag !== 'StandardCommand') return Effect.die('a piped command is not run here');
-      const args = command.args;
+      const args = command.args.map(wordValue);
       runs.push(args);
       const { line, exit = 0 } = answer(args);
       const stdout = Stream.make(new TextEncoder().encode(`${line}\n`));

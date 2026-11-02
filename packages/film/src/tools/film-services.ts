@@ -1,3 +1,4 @@
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 // The film's composition root: the services every `film` command and the lab
 // run with, the lab's pages, and the lab's start, built in one place. Its
 // one consumer is the CLI (`runFilmCli`, `cli.ts`). A consumer that built
@@ -131,7 +132,7 @@ interface FilmServicesSpec {
  * the takes and the studio's readings, under the app's folders.
  */
 export const filmServices = (spec: FilmServicesSpec) => {
-  const Platform = BunServices.layer;
+  const Platform = Layer.merge(BunServices.layer, BunCrypto.layerMac);
   // The app's folders under the environment's: FILMS_OUT, FILMS_LAB and FILMS_PRODUCTIONS, when set, win.
   const Folders = ConfigProvider.layerAdd(
     ConfigProvider.fromUnknown({

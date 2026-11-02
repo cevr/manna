@@ -1,13 +1,5 @@
-// The storyboard's tools: the board store keeps its record and images and
-// knows a missing or changed one; a run draws each planned panel twice with
-// the style's reference (and the beat's first panel as the second), records
-// every try as it lands and skips what is drawn; a beat boarded by hand keeps
-// its own panels; a tweak adds to a panel's history from its note; the image
-// route never sends `--model` and refuses a prompt naming anything private.
-
-import { test } from 'bun:test';
-import { describe, expect, it } from 'effect-bun-test';
 import {
+  Redacted,
   Boolean as Bool,
   ConfigProvider,
   Deferred,
@@ -22,6 +14,15 @@ import {
   Sink,
   Stream,
 } from 'effect';
+// The storyboard's tools: the board store keeps its record and images and
+// knows a missing or changed one; a run draws each planned panel twice with
+// the style's reference (and the beat's first panel as the second), records
+// every try as it lands and skips what is drawn; a beat boarded by hand keeps
+// its own panels; a tweak adds to a panel's history from its note; the image
+// route never sends `--model` and refuses a prompt naming anything private.
+
+import { test } from 'bun:test';
+import { describe, expect, it } from 'effect-bun-test';
 import { ChildProcessSpawner } from 'effect/process';
 import { type BoardFile, BoardName } from '../core/board.ts';
 import { ActName } from '../core/address-schema.ts';
@@ -41,6 +42,11 @@ import { memoryFileSystem, memoryLocks, text } from './host/testing.ts';
 type ImageRequest = Parameters<(typeof ImageRoute)['Service']['draw']>[0];
 /** A line a run prints. */
 type MakeLine = Parameters<typeof makeLine>[0];
+
+const wordValue = (word: string | Redacted.Redacted<string>): string => {
+  if (Redacted.isRedacted(word)) return Redacted.value(word);
+  return word;
+};
 
 const film = FilmName.make('f');
 const COLD = BoardName.make('cold');
@@ -696,7 +702,8 @@ describe('the image route', () => {
   const okraOver = (commands: Array<ReadonlyArray<string>>) => {
     const files = new Map<string, Uint8Array>([['/o.png', text('drawn')]]);
     const spawner = ChildProcessSpawner.make((command) => {
-      if (command._tag === 'StandardCommand') commands.push([command.command, ...command.args]);
+      if (command._tag === 'StandardCommand')
+        commands.push([command.command, ...command.args.map(wordValue)]);
       return Effect.succeed(
         ChildProcessSpawner.makeHandle({
           pid: ChildProcessSpawner.ProcessId(0),

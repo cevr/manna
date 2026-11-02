@@ -1,3 +1,4 @@
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 // A talk end to end through the tools on real media, a take made in the
 // test: a synthetic camera file (`fixtures/sync-clip.ts`) with a tone where
 // someone speaks is imported into the footage library and made (its copies,
@@ -90,7 +91,7 @@ const world = Layer.unwrap(
       series: Option.none(),
     });
   }),
-).pipe(Layer.provideMerge(BunServices.layer));
+).pipe(Layer.provideMerge(Layer.merge(BunServices.layer, BunCrypto.layerMac)));
 
 /** Every file under `dir` with its bytes' hash, by path. */
 const tree = (dir: string) =>

@@ -271,12 +271,14 @@ export type ToolFailure = typeof ToolFailure.Type;
 /** Whether `u` is a failure a route answers with (else it answers ServerFailed). */
 export const isRefusal = Schema.is(Refusal);
 
+/** Status annotations on the table's schemas can live in ordinary or key context. */
 const annotatedStatus = SchemaAST.resolveAt<number>('httpApiStatus');
 
 /** The status `refusal` answers with, as `Refusals` gives it. */
 export const statusOf = (refusal: Refusal): number => {
   for (const schema of Refusals)
-    if (Schema.is(schema)(refusal)) return annotatedStatus(schema.ast) ?? 500;
+    if (Schema.is(schema)(refusal))
+      return annotatedStatus(schema.ast) ?? schema.ast.context?.annotations?.httpApiStatus ?? 500;
   return 500;
 };
 

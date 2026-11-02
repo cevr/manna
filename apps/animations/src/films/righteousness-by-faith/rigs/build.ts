@@ -20,6 +20,7 @@
 
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { Console, Effect, FileSystem, Schema } from 'effect';
 import { citedBy, figureOverrides, figuresRml, lockedPrints } from '@manna/film/style';
 import { compile, unbuilt, unlocked, unsaid } from '@manna/film/style/build';
@@ -94,4 +95,5 @@ const build = Effect.gen(function* () {
   yield* fs.writeFileString(committed.stamp, built.stamp);
 });
 
-if (import.meta.main) build.pipe(Effect.provide(BunServices.layer), BunRuntime.runMain);
+if (import.meta.main)
+  build.pipe(Effect.provide([BunCrypto.layerDigest, BunServices.layer]), BunRuntime.runMain);

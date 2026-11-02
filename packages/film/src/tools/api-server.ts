@@ -452,8 +452,8 @@ const ACCEPT_MEMBER = /^([a-z0-9!#$%&'*+.^_`|~-]+)(?:;q=(0(?:\.[0-9]{0,3})?|1(?:
 
 /**
  * `header`'s codings by weight, as Effect's negotiation reads them
- * (`parseAcceptEncoding`): none for an empty header, or for one with any
- * member it cannot read, which is then answered as if it took no coding.
+ * (`parseAcceptEncoding`): empty list members are ignored; an empty header
+ * or an unreadable member is answered as if it took no coding.
  */
 const acceptedOf = (header: string): Option.Option<ReadonlyMap<string, number>> =>
   Option.flatMap(
@@ -461,26 +461,29 @@ const acceptedOf = (header: string): Option.Option<ReadonlyMap<string, number>> 
     (trimmed) =>
       Option.map(
         Option.all(
-          trimmed.split(',').map((part) =>
-            Option.map(
-              Option.fromNullishOr(
-                ACCEPT_MEMBER.exec(
-                  part
-                    .trim()
-                    .toLowerCase()
-                    .replace(/[ \t]*;[ \t]*/g, ';'),
+          trimmed
+            .split(',')
+            .filter((part) => part.trim() !== '')
+            .map((part) =>
+              Option.map(
+                Option.fromNullishOr(
+                  ACCEPT_MEMBER.exec(
+                    part
+                      .trim()
+                      .toLowerCase()
+                      .replace(/[ \t]*;[ \t]*/g, ';'),
+                  ),
                 ),
+                ([, coding = '', weight]) =>
+                  [
+                    coding,
+                    Option.match(Option.fromUndefinedOr(weight), {
+                      onNone: () => 1,
+                      onSome: Number,
+                    }),
+                  ] as const,
               ),
-              ([, coding = '', weight]) =>
-                [
-                  coding,
-                  Option.match(Option.fromUndefinedOr(weight), {
-                    onNone: () => 1,
-                    onSome: Number,
-                  }),
-                ] as const,
             ),
-          ),
         ),
         (members) => new Map(members),
       ),

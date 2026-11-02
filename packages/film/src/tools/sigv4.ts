@@ -1,10 +1,11 @@
+import { Mac } from 'effect/crypto';
 // AWS Signature Version 4 for the S3 API, as R2 takes it: the request's
 // canonical form hashed (`digest.ts`), signed with a key derived from the
-// secret, and sent as `Authorization`. HMAC-SHA256 is built on Effect's
-// `Crypto.digest` (RFC 2104), so signing needs no SDK. Checked against the
+// secret, and sent as `Authorization`. Effect's native HMAC-SHA256 signs
+// each request without an SDK. Checked against the
 // signatures AWS publishes for its S3 examples (`sigv4.test.ts`).
 
-import { type Crypto, DateTime, Effect, Order, Redacted } from 'effect';
+import { DateTime, Effect, Order, Redacted } from 'effect';
 import { Hex } from 'effect/encoding';
 import { sha256Hex } from './digest.ts';
 
@@ -31,7 +32,6 @@ export interface S3Request {
 /** The sha256 of no bytes: a GET's, a HEAD's, a list's payload hash. */
 export const EMPTY_SHA256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
-const BLOCK = 64;
 const text = new TextEncoder();
 
 /** RFC 3986 percent-encoding as SigV4 wants it: everything but `A-Z a-z 0-9 - _ . ~` (and `/` when `slash`). */
@@ -46,27 +46,13 @@ export const uriEncode = (value: string, slash: boolean): string =>
 /** A store key as a URL path under the bucket: each segment encoded, `/` kept. */
 export const encodeKey = (key: string): string => uriEncode(key, true);
 
-const concat = (a: Uint8Array, b: Uint8Array): Uint8Array => {
-  const out = new Uint8Array(a.length + b.length);
-  out.set(a, 0);
-  out.set(b, a.length);
-  return out;
-};
-
-/** HMAC-SHA256 (RFC 2104) over `Crypto.digest`. */
+/** HMAC-SHA256 over the platform's native MAC service. */
 export const hmacSha256 = Effect.fnUntraced(function* (
-  crypto: Crypto.Crypto,
+  crypto: Mac.Mac['Service'],
   key: Uint8Array,
   message: Uint8Array,
 ) {
-  let block = key;
-  if (block.length > BLOCK) block = yield* crypto.digest('SHA-256', block);
-  const padded = new Uint8Array(BLOCK);
-  padded.set(block);
-  const inner = padded.map((b) => b ^ 0x36);
-  const outer = padded.map((b) => b ^ 0x5c);
-  const innerHash = yield* crypto.digest('SHA-256', concat(inner, message));
-  return yield* crypto.digest('SHA-256', concat(outer, innerHash));
+  return yield* crypto.sign(yield* Mac.key(Mac.hmacSha256, key), message);
 });
 
 /** `20130524T000000Z`: the moment as SigV4 stamps it. */
@@ -103,7 +89,7 @@ const canonicalRequest = (request: S3Request, stamp: string): string => {
 
 /** The headers that sign `request` at `at` for `region`: `x-amz-date`, `x-amz-content-sha256`, `authorization`. */
 export const signS3 = Effect.fnUntraced(function* (
-  crypto: Crypto.Crypto,
+  crypto: Mac.Mac['Service'],
   credentials: S3Credentials,
   region: string,
   request: S3Request,

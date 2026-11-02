@@ -1,3 +1,4 @@
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 // The sound library over a fixture library on disk (a temporary folder, one
 // generated one-shot with a code trial, one generated bed with a code trial
 // that fades, so its seams are heard, a code chime, a code tick, three
@@ -252,7 +253,7 @@ const fixture = Layer.unwrap(
       ),
     );
   }),
-).pipe(Layer.provideMerge(BunServices.layer));
+).pipe(Layer.provideMerge(Layer.merge(BunServices.layer, BunCrypto.layerMac)));
 
 const all = {
   names: Option.none(),

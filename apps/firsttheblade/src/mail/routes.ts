@@ -1,3 +1,4 @@
+import { Digest } from 'effect/crypto';
 /**
  * The list's routes, which the Worker's policy (`../worker/respond.ts`)
  * answers before it looks for a file:
@@ -26,7 +27,7 @@
  * ids, counts and codes, never an address or a token.
  */
 import type { Key } from '@alchemy.run/domain/Aggregate';
-import { Clock, Context, Crypto, Duration, Effect, Option, Redacted, Schema } from 'effect';
+import { Clock, Context, Duration, Effect, Option, Redacted, Schema } from 'effect';
 import { Headers, type HttpServerRequest, HttpServerResponse, UrlParams } from 'effect/http';
 
 import { Confirm } from '../list/ConfirmLink.command.ts';
@@ -67,7 +68,7 @@ export type MailServices =
   | AdminToken
   | Films
   | Background
-  | Crypto.Crypto;
+  | Digest.Digest;
 
 const see = (path: string) => HttpServerResponse.redirect(path, { status: 303 });
 
@@ -260,9 +261,9 @@ const leave = Effect.fn('Mail.leave')(function* (request: HttpServerRequest.Http
  * where they differ: their digests are compared, every byte of them.
  */
 const sameSecret = Effect.fn('Mail.sameSecret')(function* (given: string, held: string) {
-  const crypto = yield* Crypto.Crypto;
+  const crypto = yield* Digest.Digest;
   const digest = (value: string) =>
-    crypto.digest('SHA-256', new TextEncoder().encode(value)).pipe(Effect.orDie);
+    crypto.digest(Digest.sha256, new TextEncoder().encode(value)).pipe(Effect.orDie);
   const a = yield* digest(given);
   const b = yield* digest(held);
   let difference = 0;

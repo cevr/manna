@@ -1,3 +1,4 @@
+import { Mac } from 'effect/crypto';
 // The app's private store, as its `sounds/library.ts` declares it (`store`):
 // a folder, or a private R2 bucket. The declaration is public; what reaches
 // the bucket is not: its account and its bucket-scoped S3 key come from the
@@ -5,7 +6,7 @@
 // logged. The store is resolved on first use, once, so a command that never
 // touches it never needs its credentials.
 
-import { Config, Context, Crypto, Effect, FileSystem, Layer, Option, Path, Redacted } from 'effect';
+import { Config, Context, Effect, FileSystem, Layer, Option, Path, Redacted } from 'effect';
 import { HttpClient } from 'effect/http';
 import type { R2StoreConfig, StoreConfig } from '../core/store.ts';
 import { type FilmModuleInvalid, StoreCredentialsMissing } from './errors.ts';
@@ -70,7 +71,7 @@ export class PrivateStore extends Context.Service<PrivateStore, PrivateStoreServ
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
-        const crypto = yield* Crypto.Crypto;
+        const crypto = yield* Mac.Mac;
         const http = yield* HttpClient.HttpClient;
         const home = yield* Config.String('HOME').pipe(Config.withDefault('~'));
         const env: R2Env = {

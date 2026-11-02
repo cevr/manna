@@ -28,6 +28,7 @@ import * as McpProtocol from 'effect/ai/McpProtocol';
 import * as McpSchema from 'effect/ai/McpSchema';
 import * as McpServer from 'effect/ai/McpServer';
 import * as Tool from 'effect/ai/Tool';
+import { HttpRouter } from 'effect/http';
 import { gist } from '../core/lab-events.ts';
 import { EASEL_INSTRUCTIONS } from './easel-mcp.ts';
 import { objectSchema } from './lab-fields.ts';
@@ -87,7 +88,7 @@ const listedSchemas = (command: LabCommand<InLabNeeds>) =>
         const inputSchema = yield* Schema.decodeUnknownEffect(McpSchema.ToolJson)(
           objectSchema(tool.parametersSchema),
         );
-        const outputSchema = yield* Schema.decodeUnknownEffect(McpSchema.ToolOutputJson)(
+        const outputSchema = yield* Schema.decodeEffect(McpSchema.ToolOutputJson)(
           objectSchema(tool.successSchema),
         );
         const schemas = { inputSchema, outputSchema };
@@ -281,20 +282,24 @@ export type LabMcpNeeds = Exclude<InLabNeeds, LabEvents | LabAddress>;
  * runs first, as for every path. A client ends its session with a DELETE
  * (the transport keeps a session until then: it has no expiry).
  */
-export const labMcp = Layer.mergeAll(commandTools, resources, inbox, eventsRoute(MCP_PATH)).pipe(
-  Layer.provide(
-    McpServer.layerHttp({
-      ...LAB_SERVER,
-      instructions: INSTRUCTIONS,
-      path: MCP_PATH,
-      protocols: [
-        McpProtocol.v2025_11_25,
-        McpProtocol.v2025_06_18,
-        McpProtocol.v2025_03_26,
-        McpProtocol.v2026_07_28,
-      ],
-      allowSessionTermination: true,
-    }),
-  ),
-  Layer.orDie,
-);
+export const labMcp = Layer.unwrap(
+  Effect.gen(function* () {
+    const services = yield* Effect.context<InLabNeeds>();
+    return Layer.merge(
+      eventsRoute(MCP_PATH),
+      McpServer.layerHttp({
+        registrations: Layer.mergeAll(commandTools, resources, inbox),
+        ...LAB_SERVER,
+        instructions: INSTRUCTIONS,
+        path: MCP_PATH,
+        protocols: [
+          McpProtocol.v2025_11_25,
+          McpProtocol.v2025_06_18,
+          McpProtocol.v2025_03_26,
+          McpProtocol.v2026_07_28,
+        ],
+        allowSessionTermination: true,
+      }).pipe(HttpRouter.provideRequest(Layer.succeedContext(services))),
+    );
+  }),
+).pipe(Layer.orDie);

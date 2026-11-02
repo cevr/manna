@@ -23,7 +23,7 @@ import {
   CorpusSupplyReceipt,
   type CorpusGeneration,
   type CorpusProvenance,
-  type CorpusSupplyInput,
+  CorpusSupplyInput,
   type WritingsTarget,
 } from './model.js';
 import { WritingsAssetRecipe, type WritingsAssetRecipeService } from './source.js';
@@ -289,7 +289,7 @@ export class CorpusSupply extends Context.Service<CorpusSupply, CorpusSupplyServ
 
       // Exhaustive over CorpusTarget: adding a corpus target is a compile
       // error here until the supply pipeline knows how to ensure it.
-      const ensure: CorpusSupplyService['ensure'] = (input = {}) => {
+      const ensure: CorpusSupplyService['ensure'] = (input = CorpusSupplyInput.make({})) => {
         const refresh = input.refresh ?? false;
         const target = input.target ?? BootstrapTarget.make({});
         return Match.value(target).pipe(

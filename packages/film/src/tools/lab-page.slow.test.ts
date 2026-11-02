@@ -138,7 +138,8 @@ describe('lab pages', () => {
         // Cold: no best brotli yet, every coding the compression's (the page's own answer is never kept compressed).
         const cold = yield* Effect.forEach(headers, (accept) => codingOf('/asks/a1', accept));
         expect(cold.slice(0, 6)).toEqual(['br', 'br', 'gzip', 'br', 'br', '']);
-        expect(cold.slice(6)).toEqual(['', '', '', '']);
+        // Empty list members are ignored; malformed weights and parameters refuse the header.
+        expect(cold.slice(6)).toEqual(['', '', '', 'br']);
         // Ready: the script's best brotli made (the page's own answer sends it compressed only
         // once made, where over HTTP the compression would send br anyway), then sent for the
         // same headers, and only those.

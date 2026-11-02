@@ -1,5 +1,6 @@
-import { BunCrypto } from '@effect/platform-bun';
-import { Crypto, Effect, Layer, Option, Stream } from 'effect';
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
+import { Effect, Layer, Option, Stream } from 'effect';
+import { Digest } from 'effect/crypto';
 import { describe, expect, it } from 'effect-bun-test';
 import { strToU8, zipSync } from 'fflate';
 
@@ -8,7 +9,7 @@ import { EGWApiClient } from '../egw/client.js';
 import type { Book, Folder, Paragraph, TocItem } from '../egw/schemas.js';
 import type { PublicationArchive } from '../writings/archive.js';
 import { PublicationClassification, publicationId } from '../writings/model.js';
-import { type CorpusProvenance, provenanceForBytes, Target } from './model.js';
+import { CorpusSupplyInput, type CorpusProvenance, provenanceForBytes, Target } from './model.js';
 import { CorpusSupply } from './service.js';
 import { layerEgwWritingsAssetSource } from './writings-egw-source.js';
 
@@ -82,9 +83,11 @@ const api: EGWApiClientService = {
 /** The supply round at its own boundary. Each test composes its own layer from
  *  that test's API double, so the provide belongs here rather than to a block
  *  nested inside the test's generator. */
-const ensureWritings = (layer: Layer.Layer<CorpusSupply, never, Crypto.Crypto>) =>
+const ensureWritings = (layer: Layer.Layer<CorpusSupply, never, Digest.Digest>) =>
   Effect.flatMap(CorpusSupply, (supply) =>
-    supply.ensure({ target: Target.writings([publicationId(127)]), refresh: true }),
+    supply.ensure(
+      CorpusSupplyInput.make({ target: Target.writings([publicationId(127)]), refresh: true }),
+    ),
   ).pipe(Effect.provide(layer.pipe(Layer.provide(BunCrypto.layer))));
 
 describe('direct EGW Writings asset source', () => {
@@ -174,7 +177,7 @@ describe('direct EGW Writings asset source', () => {
         'pp-3',
         'pp-4',
       ]);
-      const digest = yield* (yield* Crypto.Crypto).digest('SHA-256', zipped);
+      const digest = yield* (yield* Digest.Digest).digest(Digest.sha256, zipped);
       const hex = [...digest].map((byte) => byte.toString(16).padStart(2, '0')).join('');
       expect(
         Option.getOrElse(
@@ -401,7 +404,7 @@ describe('direct EGW Writings asset source', () => {
   it.effect('names a contribution by the SHA-256 of the bytes it downloaded', () =>
     Effect.gen(function* () {
       const provenance = yield* provenanceForBytes(
-        yield* Crypto.Crypto,
+        yield* Digest.Digest,
         'egw-api',
         'zip:abc',
         strToU8('abc'),

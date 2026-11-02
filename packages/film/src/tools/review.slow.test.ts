@@ -542,13 +542,10 @@ const fixture = (
           return Media.of({
             ...standIn,
             timing: (file) =>
-              Effect.flatMap(standIn.timing(file), (timing) =>
-                Effect.as(
-                  Effect.when(
-                    Effect.fail(MediaFailed.make({ op: 'read', file, reason: 'not media' })),
-                    Effect.succeed(path.basename(file) === tune.unreadable),
-                  ),
-                  timing,
+              Effect.tap(standIn.timing(file), () =>
+                Effect.when(
+                  Effect.fail(MediaFailed.make({ op: 'read', file, reason: 'not media' })),
+                  Effect.succeed(path.basename(file) === tune.unreadable),
                 ),
               ),
             phoneCopy: (video, out) =>

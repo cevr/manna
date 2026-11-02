@@ -1,4 +1,5 @@
-import { type Crypto, Effect, Exit, Option, Schema } from 'effect';
+import { Effect, Exit, Option, Schema } from 'effect';
+import { Digest } from 'effect/crypto';
 
 import type { PublicationStream } from '../writings/archive.js';
 import { PublicationId } from '../writings/model.js';
@@ -153,12 +154,12 @@ export const unknownProvenance = (source: string, revision: string): CorpusProve
  *  any of them is parsed, so an install can be skipped without reading the
  *  publication. */
 export const provenanceForBytes = Effect.fn('CorpusSupply.provenanceForBytes')(function* (
-  crypto: Crypto.Crypto,
+  crypto: Digest.Digest['Service'],
   source: string,
   revision: string,
   bytes: Uint8Array,
 ) {
-  const digest = yield* crypto.digest('SHA-256', bytes);
+  const digest = yield* crypto.digest(Digest.sha256, bytes);
   const hex = [...digest].map((byte) => byte.toString(16).padStart(2, '0')).join('');
   return CorpusProvenance.make({
     source: assetSourceId(source),

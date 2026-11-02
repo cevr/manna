@@ -33,7 +33,7 @@ import {
 } from '../egw-db/index.js';
 import { publicationId } from '../writings/model.js';
 import { CorpusSupply } from './service.js';
-import { Target } from './model.js';
+import { CorpusSupplyInput, Target } from './model.js';
 import { egwBookRevision, isContentRevision } from './egw-revision.js';
 import { isKnownUnavailable } from './unavailable.js';
 
@@ -283,10 +283,12 @@ export const installEgwBook = Effect.fn('EgwSync.installBook')(function* (
   const database = yield* EGWParagraphDatabase;
   const supply = yield* CorpusSupply;
   const result = yield* Effect.exit(
-    supply.ensure({
-      target: Target.writings([publicationId(book.id)]),
-      refresh: options.refresh,
-    }),
+    supply.ensure(
+      CorpusSupplyInput.make({
+        target: Target.writings([publicationId(book.id)]),
+        refresh: options.refresh,
+      }),
+    ),
   );
   if (Exit.isSuccess(result)) {
     const changes = yield* changesOf(book.id);

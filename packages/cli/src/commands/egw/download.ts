@@ -1,5 +1,5 @@
 import { EGWApiClient, type Schemas as EGWSchemas } from '@manna/core/egw';
-import { CorpusSupply, Target } from '@manna/core/corpus-supply';
+import { CorpusSupply, CorpusSupplyInput, Target } from '@manna/core/corpus-supply';
 import { publicationId } from '@manna/core/writings';
 import { Console, Effect, Option, Stream } from 'effect';
 import { Argument, Command, Flag } from 'effect/cli';
@@ -83,10 +83,12 @@ export const egwDownload = Command.make(
         `Downloading "${resolved.title}" (${resolved.code}, id ${resolved.book_id}) by ${resolved.author}...`,
       );
 
-      const receipt = yield* supply.ensure({
-        target: Target.writings([publicationId(resolved.book_id)]),
-        refresh: true,
-      });
+      const receipt = yield* supply.ensure(
+        CorpusSupplyInput.make({
+          target: Target.writings([publicationId(resolved.book_id)]),
+          refresh: true,
+        }),
+      );
       const activation = Option.fromNullishOr(receipt.activated[0]);
       if (Option.isNone(activation)) {
         yield* Console.log('Already installed.');
