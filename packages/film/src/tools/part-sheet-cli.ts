@@ -22,6 +22,11 @@
 // `out/<film>/cast/<member>/parts/<view>/` and lists each piece of enclosed
 // paper the cut holds and each gap the view names (the table's `paperOf`).
 // None of the three calls okra.
+//
+// A view the table names in `CLEAN` (`core/part-sheet.ts` `SheetClean`) has
+// that rule run on its laid sheet before anything is written, so a fix the
+// view's art needs is made by the cut every time, and the part PNGs, the
+// strips and the record's counts all follow the cleaned sheet.
 
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
@@ -41,7 +46,13 @@ import {
   Schema,
 } from 'effect';
 import { keptFile, SheetKind } from '../core/cast-sheet.ts';
-import { type PartCut, type PartCutOptions, cutParts } from '../core/part-sheet.ts';
+import {
+  type PartCut,
+  type PartCutOptions,
+  type SheetClean,
+  countedOf,
+  cutParts,
+} from '../core/part-sheet.ts';
 import { type Raster, cropRaster } from '../core/raster.ts';
 import { padInto } from '../core/register.ts';
 import { castFolder } from './cast-library.ts';
@@ -126,6 +137,8 @@ interface CutModule {
   readonly FRAMES?: Readonly<Record<string, ViewFrame>>;
   /** A view's enclosed paper in the kept view's pixels: the pieces its cut holds as cloth, the pieces it leaves open as the gaps the view names, and the named gaps gone stale. The dry run lists the first two, for the eye to check each held piece against the kept sheet; every run refuses a stale gap. */
   readonly paperOf: (view: string, raster: Raster) => EnclosedPaper;
+  /** Each view's rule on its laid part sheet, by view (`SheetClean`): a fix the member's art needs that the cut and the paint cannot make, kept here so laying the answer again makes the same part PNGs. A view with none is written as laid. */
+  readonly CLEAN?: Readonly<Record<string, SheetClean>>;
 }
 
 /** A piece of enclosed paper: its box in the kept view's pixels (the far edges exclusive) and its pixels. */
@@ -280,6 +293,7 @@ const cutTableOf = (file: string, name: string, refuse: (reason: string) => Part
           optionsFor: loaded.cutOptionsFor,
           frame: Option.fromUndefinedOr(loaded.FRAMES?.[name]),
           paperOf: loaded.paperOf,
+          clean: Option.fromUndefinedOr(loaded.CLEAN?.[name]),
         }),
     });
   });
@@ -309,6 +323,8 @@ interface PartsJob {
   readonly dir: string;
   readonly mode: 'call' | 'reuse' | 'check';
   readonly portrait: { readonly width: number; readonly height: number };
+  /** The view's rule on its laid sheet (`CLEAN` of the cut table), run before anything is written or checked. */
+  readonly clean: Option.Option<SheetClean>;
   /**
    * Where the kept box lies in a padded view (its left and top, and its
    * size), and the padded frame's box on the kept sheet: okra is asked, and
@@ -534,10 +550,15 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
       `no okra answer on its present input lays (${calls.length} calls, ${budget - used} left of ${budget}); run it without --reuse`,
     );
   const best = found.value;
-  // the paint laid on the kept box, laid back into the padded sheet
-  const whole = Option.match(job.frame, {
+  // the paint laid on the kept box, laid back into the padded sheet, then the view's rule, so
+  // its part PNGs, strips and counts are made again from the answer each time
+  const laidWhole = Option.match(job.frame, {
     onNone: () => best.made,
     onSome: (f) => laidInto(job.sheet, best.made, f.at),
+  });
+  const whole = Option.match(job.clean, {
+    onNone: () => laidWhole,
+    onSome: (clean) => countedOf(clean(laidWhole)),
   });
   const record: typeof PartSheetRecord.Type = {
     view: job.name,
@@ -739,6 +760,7 @@ export const parts = Command.make(
       mode: modes.find(([, on]) => on)?.[0] ?? 'check',
       portrait: PORTRAIT,
       frame: framed,
+      clean: table.clean,
     });
   }),
 ).pipe(

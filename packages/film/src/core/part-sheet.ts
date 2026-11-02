@@ -54,7 +54,7 @@ export interface PartCutOptions {
 }
 
 /** A part as pixels: the view's bytes where it owns a pixel, its paint where a part in front hides it, alpha 0 elsewhere; how many pixels it owns, and how many are painted. */
-interface PartLayer {
+export interface PartLayer {
   readonly name: string;
   readonly pixels: Raster;
   readonly kept: number;
@@ -62,12 +62,37 @@ interface PartLayer {
 }
 
 /** A view's parts, front to back, and each pixel's owner (0 the ground, k + 1 the part at k). */
-interface PartSheet {
+export interface PartSheet {
   readonly width: number;
   readonly height: number;
   readonly parts: ReadonlyArray<PartLayer>;
   readonly owner: Uint8Array;
 }
+
+/**
+ * A member's rule for one view's part sheet once its paint is laid (`CLEAN`
+ * in his cut table, `tools/part-sheet-cli.ts`): the sheet as the rule leaves
+ * its parts' pixels and each pixel's owner. A pixel the rule clears is the
+ * ground's (owner 0); one it moves to another part is that part's. The parts'
+ * counts are read again from what it returns (`countedOf`), so a rule sets
+ * pixels and owners alone. Pure, and the same sheet in gives the same bytes
+ * out: the part sheet is made again from its answer and this rule.
+ */
+export type SheetClean = (sheet: PartSheet) => PartSheet;
+
+/** `sheet` with each part's counts read from its pixels and the owners: kept, the pixels it owns; painted, the pixels it holds (alpha above 0) that another part or the ground owns. */
+export const countedOf = (sheet: PartSheet): PartSheet => ({
+  ...sheet,
+  parts: sheet.parts.map((p, k) => {
+    let kept = 0;
+    let painted = 0;
+    for (let i = 0; i < sheet.owner.length; i++) {
+      if (sheet.owner[i] === k + 1) kept++;
+      else if ((p.pixels.rgba[i * 4 + 3] ?? 0) > 0) painted++;
+    }
+    return { ...p, kept, painted };
+  }),
+});
 
 /** A cut the view cannot be cut by: a figure pixel no part takes, a label that picks no region, a figure of another size, two parts of one name, more parts than the owner map holds. */
 class PartCutRefused extends Schema.TaggedError<PartCutRefused>()('PartCutRefused', {

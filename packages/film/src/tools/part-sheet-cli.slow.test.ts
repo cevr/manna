@@ -7,12 +7,12 @@
 
 import { Effect, Layer, Option, Path, Result, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
-import { cutParts } from '../core/part-sheet.ts';
+import { type SheetClean, cutParts } from '../core/part-sheet.ts';
 import type { Raster } from '../core/raster.ts';
 import { memoryFileSystem, text } from './host/testing.ts';
 import { ImageRoute } from './image-route.ts';
 import { type HiddenEntry, runParts } from './part-sheet-cli.ts';
-import { encodePng } from './png.ts';
+import { decodePng, encodePng } from './png.ts';
 
 type Rgba = readonly [number, number, number, number];
 
@@ -143,9 +143,10 @@ const run = (
   options: {
     readonly view?: Raster;
     readonly hidden?: HiddenEntry;
-    readonly mode?: 'call' | 'reuse';
+    readonly mode?: 'call' | 'reuse' | 'check';
     readonly figure?: Uint8Array;
     readonly cut?: typeof CUT;
+    readonly clean?: SheetClean;
   } = {},
 ) => {
   const view = options.view ?? VIEW;
@@ -165,6 +166,7 @@ const run = (
     mode: options.mode ?? 'call',
     frame: Option.none(),
     portrait: PORTRAIT,
+    clean: Option.fromUndefinedOr(options.clean),
   }).pipe(
     Effect.map((record) => Result.succeed(record)),
     Effect.catchTag('PartsUnmade', (e) => Effect.succeed(Result.fail(e.reason))),
@@ -339,4 +341,44 @@ describe('film concept parts', () => {
       expect(record.okra.budget.used).toBe(2);
     }),
   );
+
+  it.effect(
+    "writes the parts as its view's rule leaves the laid sheet, and a check or a reuse makes them again",
+    () =>
+      Effect.gen(function* () {
+        const at = 40 * W + 30;
+        // the rule clears one pixel the arm owns: the ground's now
+        const clean: SheetClean = (sheet) => ({
+          ...sheet,
+          owner: Uint8Array.from(sheet.owner, (o, i) => o * Number(i !== at)),
+          parts: sheet.parts.map((p) => ({
+            ...p,
+            pixels: {
+              ...p.pixels,
+              rgba: p.pixels.rgba.map((v, j) => v * Number(p.name !== 'arm' || j >> 2 !== at)),
+            },
+          })),
+        });
+        const files = new Map<string, Uint8Array>();
+        const plain = Result.getOrThrow(yield* run(new Map(), [UNDER([])]));
+        const record = Result.getOrThrow(yield* run(files, [UNDER([])], { clean }));
+        const arm = (r: typeof record) => r.parts.find((p) => p.name === 'arm')?.kept ?? 0;
+        expect(arm(record)).toBe(arm(plain) - 1);
+        const written = new Map(files);
+        const armPng = Result.getOrThrow(decodePng(written.get(`${DIR}/arm.png`) ?? NOT_A_PNG));
+        expect(armPng.rgba[at * 4 + 3]).toBe(0);
+        expect(Result.isSuccess(yield* run(files, [], { clean, mode: 'check' }))).toBe(true);
+        expect(Result.isFailure(yield* run(files, [], { mode: 'check' }))).toBe(true);
+        Result.getOrThrow(yield* run(files, [], { clean, mode: 'reuse' }));
+        const empty = new Uint8Array(0);
+        const changed = [...written].filter(
+          ([f, bytes]) => !equalBytes(files.get(f) ?? empty, bytes),
+        );
+        expect(changed.map(([f]) => f)).toEqual([]);
+      }),
+  );
 });
+
+/** Whether two files hold the same bytes. */
+const equalBytes = (a: Uint8Array, b: Uint8Array) =>
+  a.length === b.length && a.every((v, i) => v === b[i]);
