@@ -47,13 +47,13 @@ under its number, and the refrain written out each time it is sung.
   checked chip's fill and its ink). The glass roles, laid over any opaque
   role under the find bar's capsule: glass (soft at 85 %), onGlass (its
   words), onGlassMuted (its placeholder), and glassChosen and onGlassChosen
-  (the disk behind its chosen control, and that control's ink). Light is a cool white page under the night's ink, with the
-  dusk's gold deepened for the chords; dark keeps the night as the page,
-  with the dusk's gold for the accent and the chords. A screen reads a
-  role, never a hex value. On iOS each
-  role is a `DynamicColorIOS` (`src/color.native.ts`), on the web a CSS
-  `light-dark()` property (`src/color.ts`). Android keeps the system's
-  colours. `src/theme.test.ts` holds every text role to WCAG AA on what it
+  (the disk behind its chosen control, and that control's ink). Light is a
+  cool white page under the night's ink, with the dusk's gold deepened for
+  the chords; dark keeps the night as the page, with the dusk's gold for
+  the accent and the chords. A screen reads a role, never a hex value. On
+  iOS each role is a `DynamicColorIOS` (`src/color.native.ts`), on the web
+  a CSS `light-dark()` property (`src/color.ts`). Android keeps the
+  system's colours. `src/theme.test.ts` holds every text role to WCAG AA on what it
   sits on, and the panel's edge to 3.5:1 on the ground. Selah keeps its own
   palette.
 - The phone's list is a Legend List (`src/reader/HymnList.native.tsx`):
@@ -404,16 +404,20 @@ Android haptics only.
   way to the key at its double lag when that stands higher, so a pluck
   with strong even partials reads at its fundamental, not an octave up.
 - `src/tuner/focus.ts` decides which frames show a pitch (`hear`, pure,
-  from the start state `unfocused`), so talk in the room does not move the
-  tuner: a pitch shows once 4 frames in a row read it within 10 cents
-  (about 170 ms after a pluck), then follows the string within 20 cents a
-  frame and rides out 2 missed frames; the 3rd lets it go. A reading under
-  65 Hz (mains hum) counts as none. A voice glides through each syllable,
-  so it never holds that long. `focus.test.ts` and
-  `focus.property.slow.test.ts` hold the rule over generated talk, room
-  noise and plucks; `focus.screen.slow.test.tsx` holds the screen, which
-  reads every frame through `hear` and starts it afresh on each listen and
-  each rest.
+  from the start state `unfocused`; its `Focus` is opaque), so the gliding
+  pitch of talk in the room does not move the tuner: a pitch shows once 4
+  frames in a row read it within 10 cents (about 170 ms after a pluck),
+  then follows the string within 20 cents a frame and rides out 2 missed
+  frames; the 3rd lets it go. A reading under 65 Hz (mains hum) counts as
+  none. A voice glides through most syllables, so it seldom holds that
+  long; a drawn-out level vowel (a filled pause, "uhh") or a sung note
+  can. `focus.test.ts` holds the rule's edges on steady tones and the rule
+  on generated talk, room noise and plucks; `focus.property.slow.test.ts`
+  sweeps their domains, plucks under room noise among them.
+  `focus.screen.slow.test.tsx` holds the screen, which reads every frame
+  through `hear`; the screen starts the focus afresh on each listen and
+  each rest, and a shown pitch sets the string last heard
+  (`focus.reset.test.tsx`).
 - `src/tuner/tuning.ts` reads a pitch (`reading`): the nearest note and
   octave from A4 = 440 Hz, the nearest standard string (E2 A2 D3 G3 B3
   E4), its signed cents, and in tune within 5 cents. The tuner plays no
