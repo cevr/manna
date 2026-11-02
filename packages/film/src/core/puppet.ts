@@ -160,6 +160,8 @@ export interface PuppetSheet {
   readonly open?: ReadonlyArray<BoxEdge>;
   /** His paper's grain, luma: a rim pixel darker than the paper by more than it is kept whole (`UnmatteOptions.grain`). */
   readonly grain?: number;
+  /** By a front part's name, how many px each part behind it of another skin reaches under its cut edge (`underlapped`); a part not named gives none. */
+  readonly underlap?: Readonly<Record<string, number>>;
 }
 
 const smooth = (e0: number, e1: number, x: number) => {
@@ -461,7 +463,7 @@ export const puppetOf = (
   const options = unmatteOptions(sheet);
   const unmatted = paper === undefined ? withFlaps : unmatte(withFlaps, W, H, paper, options);
   const skins = sheet.parts.map((p) => [...(skeleton.skin[p.name] ?? [])].sort().join(' '));
-  const textures = sealed(unmatted, skins, W, H);
+  const textures = underlapped(sealed(unmatted, skins, W, H), unmatted, sheet, skins);
   // the parts un-matted with part j gone: what each part behind j shows once j moves away
   const without = new Map<number, ReadonlyArray<Uint8Array>>();
   const unmattedWithout = (j: number) => {
@@ -592,6 +594,88 @@ const sealed = (
       if (seal[i] !== 0) out.set(seal.subarray(i - 3, i + 1), i - 3);
     return out;
   });
+
+/**
+ * Each part's texture reaching under the cut edge of each part in front of
+ * it that the sheet names in `underlap`, of another skin: for a front part
+ * `f` named with n px, each pixel where the part behind has no paint of its
+ * own, `f`'s un-matted pixel is opaque, and a path of at most n 4-way steps
+ * through such pixels leads from the part's own paint takes `f`'s pixel.
+ * Two skins' parts cut along one line move apart, so a turned head would
+ * open the line and show the ground; with this the part behind shows `f`'s
+ * paint there, which at rest `f` hides. Where it fills a pixel the un-matte
+ * cleared, that is what shows once `f` moves (`revealedOf` gives back
+ * nothing there), and it seals the line (`sealsOf` lays none). A part that
+ * moves far (an arm) is not named: the part behind would keep a ghost of it.
+ * A pixel two named parts reach takes the front one's.
+ */
+const underlapped = (
+  textures: ReadonlyArray<Uint8Array>,
+  unmatted: ReadonlyArray<Uint8Array>,
+  sheet: PuppetSheet,
+  skins: ReadonlyArray<string>,
+): ReadonlyArray<Uint8Array> => {
+  const { width: W, height: H } = sheet;
+  const out = [...textures];
+  sheet.parts.forEach((front, f) => {
+    const n = sheet.underlap?.[front.name] ?? 0;
+    if (n < 1) return;
+    for (let b = f + 1; b < textures.length; b++)
+      if (skins[b] !== skins[f]) out[b] = laidUnder(out[b]!, textures[b]!, unmatted[f]!, n, W, H);
+  });
+  return out;
+};
+
+/**
+ * `texture` with `paint`'s pixels laid in where it has none and `underReach`
+ * reaches from `own` (the texture before any underlap): a copy where it lays
+ * any, so no sheet's pixels change.
+ */
+const laidUnder = (
+  texture: Uint8Array,
+  own: Uint8Array,
+  paint: Uint8Array,
+  n: number,
+  W: number,
+  H: number,
+) => {
+  const reached = underReach(paint, own, n, W, H);
+  if (!reached.includes(1)) return texture;
+  const out = texture === own ? Uint8Array.from(own) : texture;
+  for (let q = 0; q < W * H; q++)
+    if (reached[q] === 1 && out[q * 4 + 3] === 0) out.set(paint.subarray(q * 4, q * 4 + 4), q * 4);
+  return out;
+};
+
+/**
+ * The pixels (a mask, 1 a pixel) a path of at most `n` 4-way steps leads to
+ * from `own`'s paint through pixels where `paint` is opaque and `own` has none.
+ */
+const underReach = (paint: Uint8Array, own: Uint8Array, n: number, W: number, H: number) => {
+  const reached = new Uint8Array(W * H);
+  const open = (u: number, v: number) =>
+    u >= 0 &&
+    v >= 0 &&
+    u < W &&
+    v < H &&
+    reached[v * W + u] === 0 &&
+    paint[(v * W + u) * 4 + 3] === 255 &&
+    own[(v * W + u) * 4 + 3] === 0;
+  let ring: Array<number> = [];
+  for (let p = 0; p < W * H; p++) if (own[p * 4 + 3]! > 0) ring.push(p);
+  for (let step = 0; step < n; step++) {
+    const next: Array<number> = [];
+    for (const p of ring)
+      for (const [dx, dy] of BESIDE) {
+        const [u, v] = [(p % W) + dx, Math.floor(p / W) + dy];
+        if (!open(u, v)) continue;
+        reached[v * W + u] = 1;
+        next.push(v * W + u);
+      }
+    ring = next;
+  }
+  return reached;
+};
 
 /**
  * The seals laid over part `k` by each part in front of it of another skin,

@@ -44,6 +44,7 @@ const sheetFrom = Effect.fn('Puppet.sheet')(function* (spec: PuppetSpec) {
     open: spec.open,
     grain: spec.grain,
     shadow: spec.shadow,
+    underlap: spec.underlap,
   } satisfies PuppetSheet;
 });
 

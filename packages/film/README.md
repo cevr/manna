@@ -2788,7 +2788,12 @@ un-matte clears from behind a front part's rim is kept on the part behind
 (`PuppetPart.revealed`) and laid by one rule (`revealedShown`, beside
 `sealsShown`) in every draw: `rasterOf`, the plain GL pass and the look
 pass show it whenever the part behind or the part in front moves, so no
-hole opens either way, and a still figure draws its textures alone. A drawing declares its puppets beside
+hole opens either way, and a still figure draws its textures alone.
+`PuppetSpec.underlap` names, by front part, how many px each part behind it
+of another skin reaches under its cut edge, filled with that part's paint
+(`underlapped`), so a head cut from his torso along one line shows cloth,
+not the ground, at the cut as it turns; an arm is never named, or the torso
+would keep a ghost of it. A drawing declares its puppets beside
 its rigs (`drawing({ puppets })`), and both of a film's loads load them
 before its first frame, the page's (`narratedFilms`) and `check --draw`'s
 (`drawLeg`) (`loadPuppets`, `src/puppet/load.ts`: each part PNG read and

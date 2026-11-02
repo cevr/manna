@@ -60,6 +60,15 @@ export interface PuppetSpec {
   /** His paper's grain, luma: a rim pixel darker than the paper by more than it is kept whole (`core/unmatte.ts`, `grain`). */
   readonly grain?: number;
   /**
+   * By a front part's name, how many px each part behind it of another skin
+   * reaches under its cut edge, filled with that part's paint (`core/puppet.ts`,
+   * `underlapped`): a head cut from his torso along one line shows cloth, not
+   * the ground, at the cut as it turns. Name only a part that turns a little
+   * over the part behind (a head, a veil); an arm named would leave a ghost of
+   * itself on the torso as it moves.
+   */
+  readonly underlap?: Readonly<Record<string, number>>;
+  /**
    * The drawings a look lays with it (drawn keys and held hands), each a PNG,
    * loaded with its parts; a key drawn on the sheet's own canvas in place of
    * a part names it (`part`), and its edge is un-matted from the paper as

@@ -278,6 +278,47 @@ const expectSheetAtRest = (p: Puppet) => {
   }
 };
 
+/** `x0..x1` × `y0..y1` painted, each pixel its own colour, the rest clear. */
+const box = (x0: number, x1: number, y0: number, y1: number, blue: number) => {
+  const rgba = new Uint8Array(W * H * 4);
+  for (let y = y0; y < y1; y++)
+    for (let x = x0; x < x1; x++) rgba.set([x * 4, y * 9, blue, 255], (y * W + x) * 4);
+  return { width: W, height: H, rgba };
+};
+
+/** Front to back: a hand beside the head, a head cut from the torso along y = 12, a veil above the head on its bone, the torso on another. */
+const HEADED = {
+  hand: box(56, 60, 4, 12, 40),
+  head: box(8, 56, 4, 12, 100),
+  veil: box(8, 56, 1, 4, 160),
+  torso: box(8, 56, 12, 20, 220),
+};
+
+const HEAD_SHEET: PuppetSheet = {
+  width: W,
+  height: H,
+  parts: (['hand', 'head', 'veil', 'torso'] as const).map((name) => ({
+    name,
+    pixels: HEADED[name],
+  })),
+};
+
+const underlapping = (underlap: Record<string, number>): PuppetSheet => ({
+  ...HEAD_SHEET,
+  underlap,
+});
+
+const HEAD_BONES: Skeleton = {
+  bones: [
+    { name: 'lean', pivot: [32, 20], tip: [32, 12] },
+    { name: 'neck', parent: 'lean', pivot: [32, 12], tip: [32, 2] },
+    { name: 'shoulderRight', parent: 'lean', pivot: [58, 12], tip: [58, 4] },
+  ],
+  skin: { hand: ['shoulderRight'], head: ['neck'], veil: ['neck'], torso: ['lean'] },
+};
+
+const textureOf = (p: Puppet, name: string) => p.parts.find((q) => q.name === name)!.pixels.rgba;
+
 describe('a puppet', () => {
   test('weighs each vertex on at most two bones its skin names, totalling 1', () => {
     const p = made(SLEEVE, TWO_BONES);
@@ -656,6 +697,51 @@ describe('a puppet', () => {
     // and still, the seal is what closes the line
     const still = { numbers: {}, root: [0, 0] as const, scale: 0.9 };
     expect(rasterOf(p, still).rgba).not.toEqual(rasterOf(stripped, still).rgba);
+  });
+
+  test("gives the part behind a part the sheet names for an underlap, of another skin, that part's paint n px under its cut edge and no further, which a turned head shows at its cut", () => {
+    const p = made(underlapping({ head: 3 }), HEAD_BONES);
+    // the torso's own rows 12..19 and the head's rows 9..11 above them, nothing else
+    const expected = Uint8Array.from(HEADED.torso.rgba);
+    expected.set(HEADED.head.rgba.subarray(9 * W * 4, 12 * W * 4), 9 * W * 4);
+    expect(textureOf(p, 'torso')).toEqual(expected);
+
+    // at rest the head hides it: the sheet drawn byte for byte
+    const sheet = new Uint8Array(W * H * 4);
+    for (const part of Object.values(HEADED))
+      for (let i = 0; i < W * H * 4; i += 4)
+        if (part.rgba[i + 3] !== 0) sheet.set(part.rgba.subarray(i, i + 4), i);
+    expect(rasterOf(p, restPose(p)).rgba).toEqual(sheet);
+
+    // the head turned 4°: its lifted side shows the torso's paint at the cut, where without it the ground shows
+    const leastAlpha = (q: Puppet) => {
+      const r = rasterOf(q, { ...restPose(q), numbers: { neck: 4 } }).rgba;
+      let least = 255;
+      for (let y = 9; y <= 12; y++)
+        for (let x = 10; x <= 53; x++) least = Math.min(least, r[(y * W + x) * 4 + 3]!);
+      return least;
+    };
+    expect(leastAlpha(p)).toBe(255);
+    expect(leastAlpha(made(HEAD_SHEET, HEAD_BONES))).toBe(0);
+  });
+
+  test('keeps each texture byte for byte for a sheet that names no underlap', () => {
+    for (const p of [made(HEAD_SHEET, HEAD_BONES), made(underlapping({ head: 0 }), HEAD_BONES)])
+      // no paper: each texture is its part's pixels (the veil, sealed under the head of its own skin, aside)
+      for (const name of ['hand', 'head', 'torso'] as const)
+        expect(textureOf(p, name)).toEqual(HEADED[name].rgba);
+    expect(textureOf(made(underlapping({ head: 3 }), HEAD_BONES), 'torso')).not.toEqual(
+      HEADED.torso.rgba,
+    );
+  });
+
+  test('gives no underlap to a part in front of the named part, or to one of its skin', () => {
+    const plain = made(HEAD_SHEET, HEAD_BONES);
+    const under = made(underlapping({ head: 3 }), HEAD_BONES);
+    // the hand in front of the head and the veil behind it on its own bone each touch its edge
+    for (const name of ['hand', 'veil'])
+      expect(textureOf(under, name)).toEqual(textureOf(plain, name));
+    expect(textureOf(under, 'torso')).not.toEqual(textureOf(plain, 'torso'));
   });
 
   test('a vertex nearest the upper bone does not follow the elbow', () => {
