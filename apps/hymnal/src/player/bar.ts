@@ -15,12 +15,14 @@
  * the bar's hymn's number (`Find`); a second press, a swipe down or a tap
  * outside them closes them, and their `Open` and `Play` act on the dialled
  * hymn (`pressFind`).
- * With the bar hidden, the home list alone shows the `#`, where the bar
- * docks (`findAt`).
+ * With no bar drawn, the home list alone shows the `#`, where the bar docks.
+ * The `#` follows the page the route draws (`findPlace`).
  */
 
 import { Data, Option, Predicate } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';
+
+import { isHymnPage } from '~/home/opening';
 
 import { FIRST, held } from './drums';
 import { Player, type Track, trackOf } from './player';
@@ -60,6 +62,9 @@ export const sounding: (state: Player) => boolean = Predicate.or(
   Predicate.isTagged('Loading'),
   Predicate.or(Predicate.isTagged('Playing'), Predicate.isTagged('Buffering')),
 );
+
+/** The bar's one height rule: its height over the home indicator while it shows `state`, tall while the player sounds. */
+export const heightOf = (state: Player): number => (sounding(state) && SOUNDING) || REST;
 
 /** The bar for the player's `state`, over the hymn page shown, if any. */
 export const barFor = (state: Player, page: Option.Option<Track>): Bar =>
@@ -241,40 +246,88 @@ export type FindAt = Data.TaggedEnum<{
 export const FindAt = Data.taggedEnum<FindAt>();
 
 /**
- * Where the `#` stands for `bar`, on the home list (`home`) or another
- * screen, while a control over the bar is open (`raised`) or none is. Only a
- * shown bar has controls to raise.
+ * Where the `#` stands for the player's state in a bar drawn (`drawn`), or
+ * for no bar: over the bar unless a control over it is open (`raised`); with
+ * no bar, docked on the home list (`home`) and nowhere elsewhere. Only a
+ * drawn bar has controls to raise.
  */
-export const findAt = (
-  bar: Bar,
+const placed = (
+  drawn: Option.Option<Player>,
   { home, raised }: { readonly home: boolean; readonly raised: boolean },
 ): FindAt =>
-  Bar.$match(bar, {
-    Hidden: () => {
+  Option.match(drawn, {
+    onNone: () => {
       if (home) return FindAt.Docked();
       return FindAt.Nowhere();
     },
-    Shown: ({ state }) => {
+    onSome: (state) => {
       if (raised) return FindAt.Yielded();
       return FindAt.OverBar({ state });
     },
   });
 
+/** Where the `#` stands for `bar`, on the home list (`home`) or another screen, raised or not. */
+export const findAt = (
+  bar: Bar,
+  where: { readonly home: boolean; readonly raised: boolean },
+): FindAt =>
+  placed(
+    Bar.$match(bar, {
+      Hidden: () => Option.none(),
+      Shown: ({ state }) => Option.some(state),
+    }),
+    where,
+  );
+
+/** The sheets' paths: a sheet lies over the screen under it, whose bar it leaves drawn. */
+const SHEETS: ReadonlySet<string> = new Set(['/settings', '/player', '/chord', '/about', '/tuner']);
+
+/** `path` read as a route: its path alone, past a query, a hash and a trailing slash. */
+const routeOf = (path: string): string => path.replace(/[?#][\s\S]*$/, '').replace(/(.)\/+$/, '$1');
+
+/** A hymn page's number segment (`/hymns/<n>`), when `route` (`routeOf`) is a hymn page. */
+const hymnSegmentOf = (route: string): Option.Option<string> =>
+  Option.liftPredicate(route, isHymnPage).pipe(
+    Option.flatMap((page) => Option.fromNullishOr(page.split('/').at(-1))),
+  );
+
+/** What the find bar's place reads: the route, the hymns the book holds, the hymn page that says it shows, the player and whether a control over the bar is open. */
+export interface FindInput {
+  readonly path: string;
+  /** Whether the book holds the hymn a route's number segment names (`hymnAt`). */
+  readonly holds: (segment: string) => boolean;
+  readonly shown: Option.Option<Track>;
+  readonly state: Player;
+  readonly raised: boolean;
+}
+
 /**
- * Where the `#` stands on a hymn page (`hymnPage`) that has not yet said it
- * shows: a page says so in its effects (`useShowsPage`), a render after the
- * path moves to it, and until then the bar reads hidden there. The page's own
- * bar stands there at rest as soon as it says so, as the player holds no
- * hymn while the bar is hidden; so the `#` stands over the resting bar at
- * once, and never leaves on the way.
+ * Where the `#` stands on the page the route draws, not on the last hymn
+ * page that said it shows. A sheet leaves the screen under it as it was, so
+ * there the bar is drawn as `barFor` draws it: while a page shows under the
+ * sheet or the player holds a hymn. A held hymn's page always draws its bar,
+ * from the render the path moves to it, before the page says it shows
+ * (`useShowsPage`), so the `#` never leaves on its way up. Every other path,
+ * the home list, Recent, an unknown path and a number the book does not hold
+ * (the route's `NoHymn`), draws the bar only while the player holds a hymn.
  */
-export const pageAwaited = (at: FindAt, hymnPage: boolean): FindAt => {
-  if (hymnPage && FindAt.$is('Nowhere')(at)) return FindAt.OverBar({ state: Player.Idle() });
-  return at;
+export const findPlace = ({ path, holds, shown, state, raised }: FindInput): FindAt => {
+  const route = routeOf(path);
+  const drawn = pageDraws(route, { holds, shown }) || Option.isSome(trackOf(state));
+  return placed(
+    Option.liftPredicate(state, () => drawn),
+    { home: route === '/', raised },
+  );
 };
 
-/** The bar's height over the home indicator while it shows `state`. */
-const heightOver = (state: Player): number => (sounding(state) && SOUNDING) || REST;
+/** Whether the screen at `route` draws a bar with the player holding no hymn: a sheet while a page shows under it, a held hymn's page always. */
+const pageDraws = (
+  route: string,
+  { holds, shown }: Pick<FindInput, 'holds' | 'shown'>,
+): boolean => {
+  if (SHEETS.has(route)) return Option.isSome(shown);
+  return Option.exists(hymnSegmentOf(route), holds);
+};
 
 /** How the find bar moves between two places: on the glide's spring, on the bar's own spring (`BAR_SPRING`), or not at all. */
 export type Glide = 'glide' | 'bar' | 'none';
@@ -288,7 +341,7 @@ export type Glide = 'glide' | 'bar' | 'none';
  */
 export const glideOf = (before: FindAt, after: FindAt): Glide => {
   if (FindAt.$is('OverBar')(before) && FindAt.$is('OverBar')(after)) {
-    if (heightOver(before.state) !== heightOver(after.state)) return 'bar';
+    if (heightOf(before.state) !== heightOf(after.state)) return 'bar';
     return 'none';
   }
   const between = (one: FindAt, other: FindAt) =>

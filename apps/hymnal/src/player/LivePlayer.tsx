@@ -4,8 +4,9 @@
  * seeks counted for the page's follow (`seeks.ts`).
  * It follows the lock screen and Control Center while the app shows it.
  *
- * Over the screens it draws the bar's `#` (`FIND_LABEL`) where `findAt`
- * puts it, just above the bar while the bar shows, and the find drums it
+ * Over the screens it draws the bar's `#` (`FIND_LABEL`) where `findPlace`
+ * puts it on the page the route draws, just above the bar while that page
+ * draws one, and the find drums it
  * opens (`FindDrums.tsx`), with their `Open` and `Play` (`pressFind`).
  * `Open` pushes the hymn dialled, or on a hymn page puts it in the page's
  * place, and on the page's own hymn moves nothing (`openingAt`); either
@@ -14,7 +15,7 @@
  * which also holds `Search`, in the same place: one find bar for the home
  * list and a hymn page alike, so it lives on and glides between their places
  * (`glideOf`), and stands over a hymn page's bar from the render the path
- * moves to it (`pageAwaited`). It
+ * moves to it (`findPlace`). It
  * tells the lists the room the `#` takes (`FindRoom`). The drums close on a
  * move to another screen or where the `#` leaves (`findMoved`), and on a tap
  * outside them: while they are open a layer lies over the screens and the
@@ -41,7 +42,7 @@ import { counted } from '~/follow/seeks';
 import { hymnHref } from '~/home/Browse';
 import { FindBar, useCancelSearch } from '~/home/FindBar';
 import type { HashLook } from '~/home/finding';
-import { isHymnPage, openingAt } from '~/home/opening';
+import { openingAt } from '~/home/opening';
 import { hymnAt } from '~/hymns/hymns';
 import { searchOpen } from '~/reader/place';
 import { settings } from '~/store';
@@ -54,16 +55,16 @@ import {
   Find,
   FindAct,
   FindAt,
-  findAt,
   findMoved,
   type FindPlace,
+  findPlace,
   FIND_LABEL,
   FindPress,
   findRoom,
   HASH,
   HASH_GAP,
   hashStands,
-  pageAwaited,
+  heightOf,
   pressFind,
   raised,
   swipedDown,
@@ -73,7 +74,6 @@ import { DialPanel } from './DialPanel';
 import { MOST_SCALE } from './DialView';
 import { FindDrums } from './FindDrums';
 import { useShownPage } from './page';
-import { heightOf } from './PlayerBar';
 import { playbackLive } from './playback.live';
 import { Command, playerOn, statusEvery } from './player';
 import { cachedPlayback } from './offline';
@@ -108,14 +108,17 @@ export function LivePlayer({ children }: { readonly children: ReactNode }) {
   );
 }
 
-/** The screens, told the room the `#` takes, with the `#` over them where `findAt` puts it. */
+/** Whether the book holds the hymn a route's number segment names: the hymn route draws its page and bar. */
+const holds = (segment: string): boolean => Option.isSome(hymnAt(segment));
+
+/** The screens, told the room the `#` takes, with the `#` over them where `findPlace` puts it. */
 function Finding({ children }: { readonly children: ReactNode }) {
-  const bar = barFor(useAtomValue(player.state), useShownPage());
+  const state = useAtomValue(player.state);
+  const shown = useShownPage();
+  // The bar the `#` acts on: the drums open on its hymn.
+  const bar = barFor(state, shown);
   const path = usePathname();
-  const at = pageAwaited(
-    findAt(bar, { home: path === '/', raised: useAtomValue(raised) > 0 }),
-    isHymnPage(path),
-  );
+  const at = findPlace({ path, holds, shown, state, raised: useAtomValue(raised) > 0 });
   const inset = Math.max(useSafeAreaInsets().bottom, 0);
   // The drums close on a move to another screen, or where the `#` leaves.
   const setFind = useAtomSet(find);

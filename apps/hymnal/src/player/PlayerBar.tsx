@@ -53,10 +53,20 @@ import { plain, useCue } from '~/feel/cue';
 import { settings } from '~/store';
 import { available } from '~/tuner/native';
 
-import { Bar, BAR_SPRING, dockedBar, pageBar, placeOf, REST, SOUNDING, toldPlace } from './bar';
+import {
+  Bar,
+  BAR_SPRING,
+  dockedBar,
+  heightOf,
+  pageBar,
+  placeOf,
+  REST,
+  sounding,
+  toldPlace,
+} from './bar';
 import { usePlayer, useRaised } from './context';
 import { useShownPage } from './page';
-import { Command, type HymnPlayer, Player, type Track } from './player';
+import { Command, type HymnPlayer, type Player, type Track } from './player';
 import { BarMark } from './BarMark';
 import { buttonsOf } from './button';
 import { DialPopover } from './DialPanel';
@@ -101,21 +111,6 @@ function OnPage({ player, track }: { readonly player: HymnPlayer; readonly track
     />
   );
 }
-
-/** Whether the bar stands tall, with its seeker: while its hymn loads, plays or buffers. */
-const tall: (state: Player) => boolean = Player.$match({
-  Idle: () => false,
-  Loading: () => true,
-  Playing: () => true,
-  Buffering: () => true,
-  Paused: () => false,
-  Ended: () => false,
-  Stopped: () => false,
-  Failed: () => false,
-});
-
-/** The bar's height over the home indicator for the player's `state`. */
-export const heightOf = (state: Player): number => (tall(state) && SOUNDING) || REST;
 
 interface Drawing {
   readonly track: Track;
@@ -235,7 +230,7 @@ function Overlay({ drawing }: { readonly drawing: Drawing }) {
   );
 }
 
-/** The bar in its frame: its row of buttons, the seeker under them while it stands tall. */
+/** The bar in its frame: its row of buttons, the seeker under them while the player sounds and the bar stands tall (`heightOf`). */
 function Frame({
   drawing,
   thumb,
@@ -299,7 +294,7 @@ function Frame({
                 <Sound />
                 <Buttons track={track} state={state} send={send} />
               </View>
-              {tall(state) && (
+              {sounding(state) && (
                 <Seeker
                   key={track.number}
                   at={at}
