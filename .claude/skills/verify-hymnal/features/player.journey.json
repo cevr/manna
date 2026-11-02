@@ -39,6 +39,17 @@
       "expect": [{ "hides": "id=stanzas-all" }, { "shows": "id=stanza-2" }]
     },
     {
+      "name": "player-start",
+      "action": "scroll",
+      "target": "role=switch label=Click",
+      "direction": "down",
+      "expect": [
+        { "shows": "role=group label=Start" },
+        { "shows": "role=switch label=Intro" },
+        { "shows": "role=switch label=Click" }
+      ]
+    },
+    {
       "name": "stanzas-close",
       "action": "gesture",
       "from": "role=button label=Sheet Grabber",
