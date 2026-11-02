@@ -30,6 +30,7 @@ import { PUPPETS as FEAST_MOTHER_PUPPETS } from '../cast/feast-mother/cutout/pup
 import { PUPPETS as IDEA_VILLAGERS_PUPPETS } from '../cast/idea-villagers/cutout/puppets.ts';
 import { PUPPETS as PAUL_PUPPETS } from '../../../library/cast/paul/cutout/puppets.ts';
 import { PUPPETS as JEREMIAH_PUPPETS } from '../../../library/cast/jeremiah/cutout/puppets.ts';
+import { PUPPETS as FEAST_GUEST_MAN_PUPPETS } from '../../../library/cast/feast-guest-man/cutout/puppets.ts';
 import { own } from '../../../library/cutout/poses.ts';
 import { RAISE as LEAD_RAISE } from '../../../library/cast/lead-feast/cutout/raise.ts';
 import { poses1View as leadPoses1 } from '../../../library/cast/lead-feast/cutout/poses.ts';
@@ -157,6 +158,22 @@ const FEAST_MOTHER_CLASSES = {
     '#f0d5bb',
   ],
   skin: ['#fec086', '#fdb981', '#fdb77d', '#fdb67c', '#fdc084', '#febb82', '#feb880', '#ef9f70'],
+} as const;
+
+/**
+ * The feast's guest man's colour classes, read off his kept poses sheet's
+ * poses-1 (view px, measured): his walnut mantle (130,350 290,350 125,420
+ * 285,420 and its lower ends 45,600 365,600), his skin (face 205,200
+ * 150,190 260,190, neck 206,285, hands 85,525 325,525, feet 100,705
+ * 300,705), his headcloth's indigo band (150,70 205,60 260,72) and his
+ * stool's wood (15,585 392,585 22,650 388,650). His white robe, sleeves and
+ * headcloth are the paper's own colour (254,247,229), so they are no class.
+ */
+const FEAST_GUEST_MAN_CLASSES = {
+  walnut: ['#bf855e', '#b57955', '#b47853', '#b37650', '#ac7d5d', '#a26148'],
+  skin: ['#fec190', '#febe8e', '#febc8d', '#fec092', '#fdbf8e', '#fdbd8e', '#fec594', '#fdc18f'],
+  indigo: ['#42537f', '#404f76', '#3a4770'],
+  wood: ['#9f552a', '#924a26', '#a35429', '#9a5029'],
 } as const;
 
 /**
@@ -472,6 +489,12 @@ export const FIT_CLASSES = {
     cream: { sheet: FEAST_MOTHER_CLASSES.cream, paper: FEAST_MOTHER_CLASSES.cream },
     skin: { sheet: FEAST_MOTHER_CLASSES.skin, paper: FEAST_MOTHER_CLASSES.skin },
   },
+  'feast-guest-man': {
+    walnut: { sheet: FEAST_GUEST_MAN_CLASSES.walnut, paper: FEAST_GUEST_MAN_CLASSES.walnut },
+    skin: { sheet: FEAST_GUEST_MAN_CLASSES.skin, paper: FEAST_GUEST_MAN_CLASSES.skin },
+    indigo: { sheet: FEAST_GUEST_MAN_CLASSES.indigo, paper: FEAST_GUEST_MAN_CLASSES.indigo },
+    wood: { sheet: FEAST_GUEST_MAN_CLASSES.wood, paper: FEAST_GUEST_MAN_CLASSES.wood },
+  },
   'idea-villagers': {
     linen: { sheet: IDEA_VILLAGERS_CLASSES.linen, paper: IDEA_VILLAGERS_CLASSES.linen },
     violet: { sheet: IDEA_VILLAGERS_CLASSES.violet, paper: IDEA_VILLAGERS_CLASSES.violet },
@@ -535,6 +558,15 @@ const FEAST_MOTHER_TURNAROUND = 600 / 440;
 /** The feast mother on her poses: poses-3, her front standing with the baby, ink crown to soles 814 rows (97 to 910), 440 units. */
 const FEAST_MOTHER_POSES = 814 / 440;
 
+/**
+ * The feast's guest man on his poses, which seat him only: the table seats
+ * his face (its skin 161 px wide on his neutral view, `scenes/table.ts`) as
+ * wide as the lead's (206 px on the lead's single sheet), so his sheet px per
+ * unit are the lead's single's times 161 / 206; seated, crown to soles (736
+ * rows), he is about 325 units.
+ */
+const FEAST_GUEST_MAN_POSES = (LEAD_SINGLE * 161) / 206;
+
 /** The IDEA villagers on their poses sheet: poses-6, the grown villager standing at rest, ink crown to soles 512 rows (248 to 759, his kept box), 440 units. */
 const IDEA_VILLAGERS_POSES = 512 / 440;
 
@@ -571,6 +603,9 @@ export const SHEETS = {
   'feast-mother': {
     turnaround: { ...SHEET, scale: FEAST_MOTHER_TURNAROUND },
     poses: { ...SHEET, scale: FEAST_MOTHER_POSES },
+  },
+  'feast-guest-man': {
+    poses: { ...SHEET, scale: FEAST_GUEST_MAN_POSES },
   },
   'idea-villagers': {
     poses: { ...SHEET, scale: IDEA_VILLAGERS_POSES },
@@ -1156,6 +1191,11 @@ export const CUTOUT = cutoutTable({
       'poses-1': own(undefined, FEAST_MOTHER_PUPPETS['poses-1']),
       'poses-2': own(undefined, FEAST_MOTHER_PUPPETS['poses-2']),
       'poses-3': own(undefined, FEAST_MOTHER_PUPPETS['poses-3']),
+    },
+  },
+  'feast-guest-man': {
+    poses: {
+      'poses-1': own(undefined, FEAST_GUEST_MAN_PUPPETS['poses-1']),
     },
   },
   'idea-villagers': {
