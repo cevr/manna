@@ -27,11 +27,17 @@ export const JOINTS = {
     elbowLeft: [485, 620],
   },
   // seated: his right arm raised as on single-1, its elbow out at the sleeve's
-  // lower corner; his left arm bent under the mantle, the hand resting on his knee
+  // lower corner; his left arm bent under the mantle, the hand resting on his
+  // knee. His left hand's disc is drawn over his sleeve's end: on the forearm's
+  // axis the blue ends where the disc's ink begins, 17 px short of the wrist
+  // pivot (inside the disc), so that sleeve's stroke limb ends there (cuffLeft).
+  // His right sleeve's lip ends 1.5 px past its wrist pivot, inside the 2 px
+  // feather, so it needs none.
   'single-9': {
     shoulderRight: [180, 455],
     elbowRight: [55, 545],
     shoulderLeft: [468, 458],
     elbowLeft: [505, 630],
+    cuffLeft: [472, 674],
   },
 } as const satisfies Readonly<Record<string, Readonly<Record<string, Pt>>>>;
