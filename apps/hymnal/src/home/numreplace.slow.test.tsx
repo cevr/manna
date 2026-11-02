@@ -191,6 +191,49 @@ describe('the `#` drums’ Open', () => {
       drums: 'Closed',
     });
   });
+
+  it.each([
+    ['another hymn', 100, ['replace /hymns/100']],
+    ['the hymn it shows', 8, []],
+  ] as const)(
+    'with a search open on the hymn page, on %s: the search closes, and the page opened again shows no search',
+    (_, n, want) => {
+      using phone = mount(home, hymn(8));
+      press('Search', button(phone.host, 'Search'));
+      type(phone.host, '100');
+      dialAndOpen(phone, n);
+      const after = {
+        steps: steps(),
+        open: Option.isSome(phone.registry.get(searchOpen)),
+        query: phone.registry.get(searchQuery),
+      };
+      // The page left (or kept), shown again, holds its folded find bar: no search waits there.
+      phone.show(home, hymn(8));
+      const again = {
+        results: Option.isSome(byId(phone.host, 'search')),
+        search: Option.isSome(button(phone.host, 'Search')),
+        box: Option.isSome(box(phone.host)),
+      };
+      expect({ after, again }).toEqual({
+        after: { steps: [...want], open: false, query: '' },
+        again: { results: false, search: true, box: false },
+      });
+    },
+  );
+
+  it('on a hymn page pushed from the home list’s search: the search under it stays open', () => {
+    using phone = mount(home);
+    searchAndOpen(phone, '8', 8);
+    phone.show(home, hymn(8));
+    routed.splice(0);
+    opened.splice(0);
+    dialAndOpen(phone, 100);
+    expect({
+      steps: steps(),
+      searchAt: modeAt(phone.registry.get(searchOpen), '/'),
+      query: phone.registry.get(searchQuery),
+    }).toEqual({ steps: ['replace /hymns/100'], searchAt: 'field', query: '8' });
+  });
 });
 
 describe('a search’s result', () => {

@@ -8,7 +8,8 @@
  * puts it, just above the bar while the bar shows, and the find drums it
  * opens (`FindDrums.tsx`), with their `Open` and `Play` (`pressFind`).
  * `Open` pushes the hymn dialled, or on a hymn page puts it in the page's
- * place, and on the page's own hymn moves nothing (`openingAt`). On
+ * place, and on the page's own hymn moves nothing (`openingAt`); either
+ * closes a search open on that page, as a search's result does. On
  * every screen the `#` is the last button of the find bar (`FindBar.tsx`),
  * which also holds `Search`, in the same place. It
  * tells the lists the room the `#` takes (`FindRoom`). The drums close on a
@@ -35,9 +36,10 @@ import { plain, useCue } from '~/feel/cue';
 import { book } from '~/follow/book';
 import { counted } from '~/follow/seeks';
 import { hymnHref } from '~/home/Browse';
-import { FindBar } from '~/home/FindBar';
+import { FindBar, useCancelSearch } from '~/home/FindBar';
 import { openingAt } from '~/home/opening';
 import { hymnAt } from '~/hymns/hymns';
+import { searchOpen } from '~/reader/place';
 import { settings } from '~/store';
 
 import {
@@ -152,6 +154,12 @@ function FindNumber({
   const send = useAtomSet(player.send);
   const router = useRouter();
   const cue = useCue();
+  const searching = useAtomValue(searchOpen);
+  const cancelSearch = useCancelSearch();
+  // A search open on this page closes: its results would wait on the hymn left, or stand over the one shown.
+  const closeSearchHere = () => {
+    if (Option.exists(searching, (open) => open.path === path)) cancelSearch();
+  };
   const press = (pressed: FindPress) => {
     const [next, act] = pressFind(state, bar, pressed);
     setFind(next);
@@ -161,8 +169,11 @@ function FindNumber({
       Open: ({ number }) =>
         Match.value(openingAt(path, number)).pipe(
           Match.when('push', () => router.push(hymnHref(number))),
-          Match.when('replace', () => router.replace(hymnHref(number))),
-          Match.when('stay', () => {}),
+          Match.when('replace', () => {
+            closeSearchHere();
+            router.replace(hymnHref(number));
+          }),
+          Match.when('stay', closeSearchHere),
           Match.exhaustive,
         ),
       // Playbulk's Start alone starts a hymn, in place of the one held.
