@@ -89,6 +89,14 @@ Numbers are in artboard units and seconds. They are starting points.
 | Sky                        | Clouds drift over 20–60 s, further layers slower. Rays turn one turn in 30–60 s                                               |
 | Light, stars, a glow       | A glow grows 2–5 % over 2–4 s; stars dip at seeded times                                                                      |
 
+## Particles
+
+Drops, sparks, dust and splashes come from `packages/film/src/canvas/particles.ts` (`@manna/film/canvas`; ported from pixelfx, MIT): `fly` and `flyV` give a particle's place and velocity as the closed form of its age under gravity and drag, and `burst`, `cycle` and `stream` call back for each live particle with its age, life and its own seeded rng. A frame stays a pure function of time, so render workers and the lab's scrub draw it at any t, and a `cycle` loops with no seam. Never keep a particle list that steps from 0: a chunk that starts mid-film would replay from the start. The milk scene's drops (`apps/animations/src/films/in-its-order/scenes/milk.ts`, `DROPS`) are the worked example.
+
+- **Vary every particle.** Size, speed, delay and life each come from its rng, or the effect reads as a machine.
+- **An impact is fast in, slow out**, with a hold of 1–2 frames on contact.
+- **A one-shot ends empty.** Its particles shrink, fade or fall away before it ends; none is left hanging when the emitter stops.
+
 ## Drawing traps that show in motion
 
 - **A seam where two edges meet.** Two anti-aliased edges on one line leave a hairline: a cut-out (an even-odd hole) that ends on its shape's outline, or a clip edge over another edge. Draw the shape as one outline, and look at the frame at 1:1.
