@@ -151,6 +151,7 @@ it.effect('a later set keeps the saved recordings of the hymns it does not move'
   return Effect.gen(function* () {
     const cache = yield* Offline;
     yield* settled(cache);
+    expect((yield* cache.snapshot).failed).toBe(0);
     expect((yield* cache.snapshot).saved).toBe(1);
     expect(yield* cache.local({ number: 1, offset: 0 })).toEqual(Option.some(`${WARM_1}1_0.mp3`));
     expect(Option.isNone(yield* cache.local({ number: 663, offset: 0 }))).toBe(true);
