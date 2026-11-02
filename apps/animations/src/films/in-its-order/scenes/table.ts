@@ -10,8 +10,13 @@ import { act, blink, idle, lag } from '@manna/film/core';
 import { Array as Arr, Option } from 'effect';
 import { SEATED as MAN } from '../../../library/cast/feast-guest-man/cutout/seated.ts';
 import { SEATED as WOMAN } from '../../../library/cast/feast-guest-woman/cutout/seated.ts';
-import { PUPPETS as LEAD } from '../../../library/cast/lead-feast/cutout/puppets.ts';
-import { RAISE_SEATED } from '../../../library/cast/lead-feast/cutout/raise-seated.ts';
+import { DRAWINGS, PUPPETS as LEAD } from '../../../library/cast/lead-feast/cutout/puppets.ts';
+import {
+  RAISE_SEATED,
+  type RaiseKey,
+} from '../../../library/cast/lead-feast/cutout/raise-seated.ts';
+import leadShut from '../../../library/cast/lead-feast/cutout/sheets/single-9/head-closed.png' with { type: 'file' };
+import leadWince from '../../../library/cast/lead-feast/cutout/sheets/single-5/head.png' with { type: 'file' };
 import type { Pt } from '../../../library/cutout/rules.ts';
 import { PUPPETS as MOTHER } from '../cast/feast-mother/cutout/puppets.ts';
 import motherShut from '../cast/feast-mother/cutout/sheets/poses-1/head-closed.png' with { type: 'file' };
@@ -84,19 +89,48 @@ export const MOTHER_SEAT = {
  */
 const { line: _line, ...MOTHER_POSES } = MOTHER['poses-1'];
 
-/** The puppet the table poses: the mother, with her head drawn eyes shut (`shut`, on her head's own sheet canvas). */
+/**
+ * The lead's seated cut-out (single-9) with no line. Each drawing his scenes
+ * lay in place of one of his parts (a raise key, his head drawn eyes shut, his
+ * wince's head) is laid whole with its own line, so a look draws no line again
+ * near it (with a line, the look inks round the part laid and over the bottle
+ * hand by it).
+ */
+const { line: _leadLine, ...LEAD_SEATED } = LEAD['single-9'];
+
+/**
+ * The puppets the table poses: the mother, with her head drawn eyes shut
+ * (`shut`, on her head's own sheet canvas), and the lead (`LEAD_SEATED`) with
+ * the drawings his scenes lay in place of his parts: his head drawn eyes shut
+ * (`shut`, on his head's own sheet canvas), his wince's head (`wince`,
+ * single-5's, laid by a place) and his raise's keys (`DRAWINGS['single-9']`,
+ * on his sheet's own canvas, `raising`). Both scenes pose these same two, so
+ * the film loads each once.
+ */
 export const TABLE_PUPPETS = {
   mother: { ...MOTHER_POSES, drawings: [{ name: 'shut', png: motherShut, part: 'head' }] },
+  lead: {
+    ...LEAD_SEATED,
+    drawings: [
+      { name: 'shut', png: leadShut, part: 'head' },
+      { name: 'wince', png: leadWince },
+      ...DRAWINGS['single-9'],
+    ],
+  },
 } as const;
 
+/** A cut-out's bone `name` (a skeleton with no such bone fails here, at load). */
+const boneOf = (skeleton: PuppetSpec['skeleton'], name: string) =>
+  Option.getOrThrow(Arr.findFirst(skeleton.bones, (b) => b.name === name));
+
 /** A cut-out's head bone's middle, between its chin and its crown, sheet px: a point inside its head part (a skeleton with no head bone fails here, at load). */
-export const headMiddle = (skeleton: PuppetSpec['skeleton']): Pt =>
-  Option.getOrThrow(
-    Option.map(
-      Arr.findFirst(skeleton.bones, (b) => b.name === 'head'),
-      ({ pivot, tip }): Pt => [(pivot[0] + tip[0]) / 2, (pivot[1] + tip[1]) / 2],
-    ),
-  );
+export const headMiddle = (skeleton: PuppetSpec['skeleton']): Pt => {
+  const { pivot, tip } = boneOf(skeleton, 'head');
+  return [(pivot[0] + tip[0]) / 2, (pivot[1] + tip[1]) / 2];
+};
+
+/** A drawing on its cut-out's own sheet canvas, laid where its part lies with every bone at 0. */
+const ON_SHEET = { s: 1, dx: 0, dy: 0 } as const;
 
 /** A blinking cut-out's look with its eyes open: no drawing laid, the boil off, as on every other frame it holds. */
 const OPEN: PuppetLook = { boil: 0, amp: 0 };
@@ -104,21 +138,37 @@ const OPEN: PuppetLook = { boil: 0, amp: 0 };
 /**
  * A cut-out's look as its eyes read `eyes` (0 open to 1 shut, `blink`):
  * `OPEN`, or past one half its head drawn eyes shut (its drawing `shut`, on
- * its head's own sheet canvas, so laid where its head lies with every bone
- * at 0) in place of its head, riding its head part's bones at `pivot`. A
- * cut-out that blinks takes a look on every frame, open or shut, so a blink
- * changes nothing but its head.
+ * its head's own sheet canvas) in place of its head, riding its head part's
+ * bones at `pivot`. A cut-out that blinks takes a look on every frame, open
+ * or shut, so a blink changes nothing but its head.
  */
 export const eyesLook = (pivot: Pt) => {
   const shut: PuppetLook = {
     ...OPEN,
-    swaps: [{ part: 'head', drawing: 'shut', place: { s: 1, dx: 0, dy: 0 }, pivot }],
+    swaps: [{ part: 'head', drawing: 'shut', place: ON_SHEET, pivot }],
   };
   return (eyes: number): PuppetLook => {
     if (eyes > 0.5) return shut;
     return OPEN;
   };
 };
+
+/** The lead's shoulderRight bone's pivot, sheet px: where his raise's keys ride his arm part's bones. */
+const SHOULDER = boneOf(LEAD_SEATED.skeleton, 'shoulderRight').pivot;
+
+/**
+ * The lead's look `look` with his raise's key `key` in place of his armRight
+ * beside what it lays: drawn on his sheet's own canvas, riding his arm part's
+ * bones at his shoulder (`SHOULDER`). A scene holds his arm's bones at 0
+ * under it, so the key stays where it was drawn and turns with his lean.
+ */
+export const raising = (look: PuppetLook, key: RaiseKey): PuppetLook => ({
+  ...look,
+  swaps: [
+    ...(look.swaps ?? []),
+    { part: 'armRight', drawing: key, place: ON_SHEET, pivot: SHOULDER },
+  ],
+});
 
 /** The mother's idle, seed 2 (the lead's is seed 1). */
 const MOTHER_IDLE = idle(2);
@@ -176,9 +226,8 @@ export const motherNumbers = (t: number) => {
   };
 };
 
-/** The paintings the table draws: the lead's raise frames and each guest's keys. */
+/** The paintings the table draws: each guest's keys. */
 export const TABLE_PAINTINGS = {
-  ...RAISE_SEATED.paintings,
   'man-neutral': MAN.paintings.neutral,
   'man-turn': MAN.paintings.turn,
   'man-smile': MAN.paintings.smile,
@@ -187,11 +236,11 @@ export const TABLE_PAINTINGS = {
   'woman-smile': WOMAN.paintings.smile,
 } as const;
 
-/** What the table needs of a scene's frame: its time, its canvas, the mother's puppet and the table's paintings. */
+/** What the table needs of a scene's frame: its time, its canvas, the table's puppets and its paintings. */
 export interface TableFrame {
   readonly t: number;
   readonly ctx: CanvasRenderingContext2D;
-  puppet(name: 'mother', pose: PuppetPose, look?: PuppetLook): void;
+  puppet(name: keyof typeof TABLE_PUPPETS, pose: PuppetPose, look?: PuppetLook): void;
   painting(name: keyof typeof TABLE_PAINTINGS): void;
 }
 
@@ -207,8 +256,8 @@ const seat = (name: keyof typeof GUESTS): PuppetPose => {
   };
 };
 
-/** The lead's pose on his seat: his single-9 cut-out's, on which his raise's frames lie. */
-export const LEAD_POSE = seat('lead');
+/** The lead's pose on his seat: his single-9 cut-out's. */
+const LEAD_POSE = seat('lead');
 
 /**
  * Draws `draw`'s px where a cut-out posed at `pose` lays its view's px: the
@@ -233,27 +282,16 @@ const posed = (
 };
 
 /**
- * The lead on his seat: the contact shadow under him, then his raise's frame
- * `frame` when one is given, turned `lean` degrees (clockwise on screen) about
- * his root, which is where his cut-out's lean bone turns him (his single-9
- * skeleton's `lean` pivot), so a frame sways as his cut-out does. The frames
- * and the shadow lie on his view's px and are drawn where his cut-out lays
- * those px (`posed`); with no frame, a scene poses his cut-out at `LEAD_POSE`
- * itself.
+ * The lead on his seat: the contact shadow under him, on his view's px, drawn
+ * where his cut-out lays those px (`posed`), then his cut-out at `LEAD_POSE`
+ * at bone numbers `numbers` in look `look`.
  */
-export const seatedLead = (f: TableFrame, frame?: keyof typeof RAISE_SEATED.paintings, lean = 0) =>
-  posed(f.ctx, LEAD_POSE, GUESTS.lead.root, LEAD['single-9'].origin, () => {
-    ground(f.ctx, RAISE_SEATED.ground.at[0], RAISE_SEATED.ground.at[1], RAISE_SEATED.ground.w);
-    if (frame === undefined) return;
-    const x = GUESTS.lead.root[0] - LEAD['single-9'].origin[0];
-    const y = GUESTS.lead.root[1] - LEAD['single-9'].origin[1];
-    f.ctx.save();
-    f.ctx.translate(x, y);
-    f.ctx.rotate((lean * Math.PI) / 180);
-    f.ctx.translate(-x, -y);
-    f.painting(frame);
-    f.ctx.restore();
-  });
+export const seatedLead = (f: TableFrame, numbers: PuppetPose['numbers'], look: PuppetLook) => {
+  posed(f.ctx, LEAD_POSE, GUESTS.lead.root, LEAD_SEATED.origin, () =>
+    ground(f.ctx, RAISE_SEATED.ground.at[0], RAISE_SEATED.ground.at[1], RAISE_SEATED.ground.w),
+  );
+  f.puppet('lead', { ...LEAD_POSE, numbers }, look);
+};
 
 /** A guest on its stool: the contact shadow under it, then its key `key` through its tint (`TINT`), whole, on its frames' px (`posed`, origin [0, 0]). */
 const guest = (f: TableFrame, name: keyof typeof KEYS, key: GuestKey) => {

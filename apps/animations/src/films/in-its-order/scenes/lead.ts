@@ -1,7 +1,7 @@
 // The lead's acting at the feast table, as bone numbers on his single-9
-// cut-out (`cold.ts` draws him): his idle from the raise's landing, his head
-// on the cues and the bottle arm's settle, each joint inside the limits his
-// cut-out draws clean at.
+// cut-out (`cold.ts` draws him): his lean all through, his idle in his joints
+// from the raise's landing, his head on the cues and the bottle arm's settle,
+// each joint inside the limits his cut-out draws clean at.
 
 import { act, blink, idle, lag } from '@manna/film/core';
 
@@ -28,9 +28,9 @@ export interface Cues {
 }
 
 /**
- * His lean, degrees clockwise on screen: his whole figure turned about his
- * hip, on his raise's painted frames (`seatedLead`) as on his cut-out. His
- * idle's sway, breath and drift run all through. On the raise his weight dips
+ * His lean, degrees clockwise on screen: his whole cut-out turned about his
+ * hip, his raise's keys with it (`raising`). His idle's sway, breath and drift
+ * run all through. On the raise his weight dips
  * away from the bottle arm first (anticipation), goes over to it, and settles
  * back once the bottle is up.
  */
@@ -53,16 +53,18 @@ export const leanOf = (c: Cues) => {
 export const eyesOf = (c: Cues) => blink(1, [c.turn, c.smile, c.read]);
 
 /**
- * His bone numbers from his raise's landing on k6, degrees clockwise on
- * screen. k6 is his single-9 view, every bone at 0, and each bone keeps within
- * `ARM_LIMIT` of it: at 25 degrees his bottle arm's cuff breaks. The arm lands still moving, so it carries on up past k6 and
+ * His bone numbers, degrees clockwise on screen: his lean (`leanOf`) all
+ * through, and his joints from his raise's landing on k6, each at 0 before
+ * it, under his raise's keys. k6 is his single-9 view, every bone at 0, and
+ * each bone keeps within `ARM_LIMIT` of it: at 25 degrees his bottle arm's
+ * cuff breaks. The arm lands still moving, so it carries on up past k6 and
  * settles back with a small bounce, the wrist 80 ms behind and turned against
  * it so the bottle stays upright. His head nods after the lift, glances to
  * the man as the guests turn and stare, tilts to the woman as they smile and
  * comes back to the letter as it falls, his head 60 ms behind his neck; his
  * head's whole turn stays within `HEAD_LIMIT`, past which his collar notches. His
  * idle's breath, drift and tilt come into his joints over 0.8 s from the
- * landing, so the cut from the painted frame to the cut-out shows no step.
+ * landing, so the landing from his last key on his drawn arm shows no step.
  */
 export const numbersOf = (c: Cues) => {
   const lean = leanOf(c);
