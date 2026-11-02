@@ -3,9 +3,10 @@
  * hint under it, the string's name and the note heard, and a headstock with
  * three pegs a side and the six strings' names in circles beside them. A tap
  * on a circle picks that string, and the reading then measures from it
- * however far off the pitch is (`readingOn`); the Auto switch goes back to
- * the nearest string (`reading`). Each open starts in Auto. A string that
- * held in tune keeps its tick.
+ * however far off the pitch is (`readingOn`); a second tap on the picked
+ * string lets it go, back to Auto, which reads against the nearest string
+ * (`reading`). The Auto switch turns either way. Each open starts in Auto. A
+ * string that held in tune keeps its tick.
  *
  * It listens through the ear (`native.ios.ts`) or, in a development build, a
  * fed tone (`?feed=E2:-12`), and reads each frame on the JavaScript thread
@@ -373,7 +374,18 @@ function Tuner({
     log(`[tuner] target id=${Option.getOrElse(next, () => 'auto')}`);
   }, []);
 
-  const pick = useCallback((id: StringId) => aimAt(Option.some(id)), [aimAt]);
+  /**
+   * A tap on a string's circle: the picked string goes back to Auto, any
+   * other is picked. It reads `aim`, not the last render's `target`, so two
+   * taps before a render still end in Auto.
+   */
+  const pick = useCallback(
+    (id: StringId) => {
+      if (Option.contains(aim.current, id)) return aimAt(Option.none());
+      aimAt(Option.some(id));
+    },
+    [aimAt],
+  );
 
   /** Auto on clears the target; off picks the string last heard, or the lowest. */
   const toggleAuto = useCallback(() => {
@@ -760,7 +772,21 @@ function Headstock({
   );
 }
 
-/** One string's circle: its letter, filled while lit, a tick once tuned; it springs lightly when picked. */
+/** What a second tap on the picked string does, as VoiceOver reads it after the circle's name. */
+const BACK_TO_AUTO = 'Goes back to Auto';
+
+/** The circle's VoiceOver hint: the picked string's says a second tap goes back to Auto; the others have none. */
+const pickedHint = (picked: boolean): Option.Option<string> => {
+  if (picked) return Option.some(BACK_TO_AUTO);
+  return Option.none();
+};
+
+/**
+ * One string's circle: its letter, filled while lit, a tick once tuned; it
+ * springs lightly when picked. Picked, VoiceOver reads it as selected, with
+ * a hint that a second tap goes back to Auto. Lit is not picked: in Auto the
+ * string heard is lit, and none is selected.
+ */
 function StringCircle({
   id,
   lit,
@@ -791,6 +817,7 @@ function StringCircle({
       role="button"
       aria-label={stringLabel(id, tuned)}
       aria-selected={picked}
+      accessibilityHint={Option.getOrUndefined(pickedHint(picked))}
       onPress={() => onPick(id)}
       hitSlop={4}
     >
