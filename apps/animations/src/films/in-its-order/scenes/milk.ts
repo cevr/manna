@@ -6,7 +6,8 @@
 // stands, and on `peter` the camera pushes in on him and his cup. On
 // `newborn` a shut book drifts in above his cup and opens, tilts toward the
 // cup, and on the word "milk" a white ribbon runs out of its pages down into
-// the cup (`POUR`), which fills. On `sincere` the ribbon's tail falls in and
+// the cup (`POUR`), which fills, a few drops falling off its lip into the
+// cup and hopping where it goes in (`DROPS`). On `sincere` the ribbon's tail falls in and
 // the camera closes on his face and the cup as an ink dropper comes down over
 // it (`INK`); on `mixed`, at "nothing", he leans back from it and it goes.
 // On `word` the camera draws back to the book and the cup and the ribbon
@@ -25,8 +26,9 @@
 // and 540/k - 100 <= y <= 1180 - 540/k, and a straight move in (x, y, k)
 // between two framings that keep them keeps them all the way.
 
-import { drawing } from '@manna/film/canvas';
+import { drawing, fly, flyV, stream } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
+import { palette } from '../palette.ts';
 import { PUPPETS as VILLAGER } from '../cast/idea-villagers/cutout/puppets.ts';
 import {
   BOOK_OPEN,
@@ -140,6 +142,39 @@ const POUR = {
   from: [100, 40],
   into: 8,
   thin: 0.65,
+} as const;
+
+/**
+ * The milk's drops, frame px and seconds, a few beside each pour so it reads
+ * wet without drawing the eye. While the ribbon runs, `lip` drops a second
+ * fall off its lip under the book, each landing in the cup's mouth (within
+ * `aside` of its half width from the centre) `fall` s later under gravity
+ * `g`; the first lands as the ribbon's foot goes in. While the ribbon runs
+ * into the cup, `splash` drops a second hop up from where it goes in, `spread`
+ * px/s aside, under gravity `hop`, up and back into the mouth in `bounce` s.
+ * A drop is `size` px in radius, a splash drop `small` of that; each is the
+ * cup's cream lit (`CUP.colour`), lilac in shade (`shade`, the ribbon's own
+ * shade's hue) and ringed `line` px in the outline's ink, stretched along its
+ * motion. Each pour's drops have their own seeds (`seeds`: lip, splash).
+ */
+const DROPS = {
+  lip: 2.5,
+  fall: [0.42, 0.55],
+  aside: 0.4,
+  g: 2200,
+  splash: 7,
+  spread: 70,
+  hop: 1600,
+  bounce: [0.16, 0.28],
+  size: [2.5, 4.5],
+  small: 0.7,
+  shade: '#d8d1ea',
+  ink: palette.outline,
+  line: 1.6,
+  seeds: {
+    pour: [11, 21],
+    pour2: [12, 22],
+  },
 } as const;
 
 /**
@@ -370,6 +405,69 @@ export const milk = drawing({
       ctx.fill();
       ctx.restore();
     };
+    // One drop of milk at `at` moving at `v` px/s, `r` px in radius:
+    // stretched along its motion, ringed in ink, lilac in shade and lit
+    // cream toward the light at its upper left.
+    const drop = (at: Pt, v: Pt, r: number) => {
+      const stretch = 1 + Math.min(0.8, Math.hypot(v[0], v[1]) / 1200);
+      const a = Math.atan2(v[1], v[0]);
+      const blob = (dx: number, dy: number, rx0: number, ry0: number, colour: string) => {
+        ctx.fillStyle = colour;
+        ctx.beginPath();
+        ctx.ellipse(at[0] + dx, at[1] + dy, rx0, ry0, a, 0, 2 * Math.PI);
+        ctx.fill();
+      };
+      blob(0, 0, r * stretch + DROPS.line, r + DROPS.line, DROPS.ink);
+      blob(0, 0, r * stretch, r, DROPS.shade);
+      blob(-0.25 * r, -0.25 * r, 0.7 * r * stretch, 0.7 * r, CUP.colour);
+    };
+    // The drops of a pour (`pour`, ended by `stop`): off the ribbon's lip
+    // and into the mouth, and hopping up where it goes in, shown above the
+    // mouth and inside it, as the ribbon is.
+    const drops = (pour: 'pour' | 'pour2', stop: 'stop' | 'stop2') => {
+      const [poured, stopped] = [f.cue(pour), f.cue(stop)];
+      if (f.t < poured.end - DROPS.fall[1] || f.t > stopped.end + DROPS.bounce[1]) return;
+      const [lipSeed, splashSeed] = DROPS.seeds[pour];
+      const size = (r: () => number) => lerp(DROPS.size[0], DROPS.size[1], r());
+      const from = spout();
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, -200, 1920, mouth[1] + 200);
+      ctx.ellipse(mouth[0], mouth[1], rx, ry, turn, 0, 2 * Math.PI);
+      ctx.clip();
+      stream(
+        f.t,
+        poured.end - DROPS.fall[0],
+        stopped.start,
+        DROPS.lip,
+        lipSeed,
+        (g) => lerp(DROPS.fall[0], DROPS.fall[1], g()),
+        (age, life, r) => {
+          const to: Pt = [mouth[0] + DROPS.aside * rx * (2 * r() - 1), mouth[1]];
+          const vx = (to[0] - from[0]) / life;
+          const vy = (to[1] - from[1]) / life - (DROPS.g * life) / 2;
+          drop(fly(from[0], from[1], vx, vy, age, DROPS.g), flyV(vx, vy, age, DROPS.g), size(r));
+        },
+      );
+      stream(
+        f.t,
+        poured.end,
+        stopped.end,
+        DROPS.splash,
+        splashSeed,
+        (g) => lerp(DROPS.bounce[0], DROPS.bounce[1], g()),
+        (age, life, r) => {
+          const [vx, vy] = [DROPS.spread * (2 * r() - 1), (-DROPS.hop * life) / 2];
+          const x = mouth[0] + 0.3 * rx * (2 * r() - 1);
+          drop(
+            fly(x, mouth[1], vx, vy, age, DROPS.hop),
+            flyV(vx, vy, age, DROPS.hop),
+            DROPS.small * size(r),
+          );
+        },
+      );
+      ctx.restore();
+    };
     // The dropper coming in over his cup along its length, hovering, and
     // going back out: the dropper turned, its drop hanging straight under it.
     const dropper = () => {
@@ -439,6 +537,8 @@ export const milk = drawing({
       const end = RIBBON.size[1];
       if (f.t < f.cue('pour2').start) ribbon(end * f.at('stop'), end * f.at('pour'));
       else ribbon(end * f.at('stop2'), end * f.at('pour2'));
+      drops('pour', 'stop');
+      drops('pour2', 'stop2');
       if (f.t >= f.cue('book').start) book();
       if (f.at('ink') > 0 && f.at('away') < 1) dropper();
     });

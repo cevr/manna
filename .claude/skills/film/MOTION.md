@@ -1,13 +1,13 @@
 # Motion: a figure that feels alive
 
-How a film's figures, props and scenery move between their poses so they read as alive and not as puppets. It is adapted from [rossark-motion-skill](https://github.com/rossark0/rossark-motion-skill) (MIT, 2026-10-22), cut to what a narrated cut-paper film on Rive needs. The app-only parts (React Native, SwiftUI, reduced motion, interface timing) are left out.
+How a film's figures, props and scenery move between their poses so they read as alive and not as puppets. It is adapted from [rossark-motion-skill](https://github.com/rossark0/rossark-motion-skill) (MIT, 2026-10-22), cut to what a narrated storybook film on Rive needs. The app-only parts (React Native, SwiftUI, reduced motion, interface timing) are left out.
 
 **What wins.** [CRAFT.md](CRAFT.md), [reference/director-vision.md](reference/director-vision.md), a film's kept boards and concepts, and the owner's words outrank this file. Director-vision already sets the camera's breath, the 4 s rule, the hand's arc, how a flat face turns and that the body acts first; this file does not restate them. A figure's proportions come from its cast sheet, never from a number here. The locked look never changes for motion ([SKILL.md](SKILL.md#speed), **Speed**).
 
 ## Principles
 
 1. **Never teleport.** Every change is interpolated: a pupil slides, a door swings, a hand travels its arc. A pose never snaps to the next.
-2. **Calm by default.** Eased moves with strong curves. One soft overshoot (`outSoft`) only for a paper cut-out landing; no bounce elsewhere.
+2. **Calm by default.** Eased moves with strong curves. One soft overshoot (`outSoft`) only for a figure or prop landing; no bounce elsewhere.
 3. **Small amplitudes.** Life is subtle. When unsure, halve it.
 4. **Arcs about pivots.** Each moving part turns about its joint (a stem's base, a hinge, the neck, the shoulder). A straight slide reads as a machine.
 5. **Overlap and follow-through.** Parts do not move together. The tip moves later and further than the root; hair, a sleeve's end, a robe's hem and a hanging sign lag and settle.
@@ -88,6 +88,14 @@ Numbers are in artboard units and seconds. They are starting points.
 | Rain, snow, falling leaves | Each with a seeded phase, ±20 % speed and a sideways drift; linear                                                            |
 | Sky                        | Clouds drift over 20–60 s, further layers slower. Rays turn one turn in 30–60 s                                               |
 | Light, stars, a glow       | A glow grows 2–5 % over 2–4 s; stars dip at seeded times                                                                      |
+
+## Particles
+
+Drops, sparks, dust and splashes come from `packages/film/src/canvas/particles.ts` (`@manna/film/canvas`; ported from pixelfx, MIT): `fly` and `flyV` give a particle's place and velocity as the closed form of its age under gravity and drag, `burst` calls back once for each of its particles with the particle's own seeded rng and index, and `cycle` and `stream` call back for each live particle with its age, life, its own seeded rng and index. A frame stays a pure function of time, so render workers and the lab's scrub draw it at any t, and a `cycle` loops with no seam. Never keep a particle list that steps from 0: a chunk that starts mid-film would replay from the start. The milk scene's drops (`apps/animations/src/films/in-its-order/scenes/milk.ts`, `DROPS`) are the worked example.
+
+- **Vary every particle.** Size, speed, delay and life each come from its rng, or the effect reads as a machine.
+- **An impact is fast in, slow out**, with a hold of 1–2 frames on contact.
+- **A one-shot ends empty.** Its particles shrink, fade or fall away before it ends; none is left hanging when the emitter stops.
 
 ## Drawing traps that show in motion
 

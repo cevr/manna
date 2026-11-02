@@ -127,7 +127,7 @@ const drawnIn = (drawn: CritiqueDrawn, place: string): string =>
   (drawn === 'sheet' &&
     `Each figure below is one view of a cast sheet (${place}), painted from a concept: the film's rigs are traced from the sheet, so what differs here differs in every scene. Hold each view to its concept in the face, the proportion, the palette, the sleeves and the artifacts, and to its layout's words in the angle and the pose.`) ||
   (drawn === 'render' &&
-    `Each figure below is a Rive rig drawn in one view of a cast member's kept sheet (${place}): the concept is that kept view, cut from the sheet the owner kept, and the render is the rig in the pose the view shows, laid in the view's box at the sheet's one scale, with any held thing, seat or table drawn as a plain cut-paper piece. Every scene draws this rig, so what differs here differs in every scene. Hold each render to its kept view in the angle, the face, the pose, the proportion, the palette, the sleeves and the artifacts.`) ||
+    `Each figure below is a Rive rig drawn in one view of a cast member's kept sheet (${place}): the concept is that kept view, cut from the sheet the owner kept, and the render is the rig in the pose the view shows, laid in the view's box at the sheet's one scale, with any held thing, seat or table drawn as a plain flat piece. Every scene draws this rig, so what differs here differs in every scene. Hold each render to its kept view in the angle, the face, the pose, the proportion, the palette, the sleeves and the artifacts.`) ||
   `Each figure below was drawn in a film's scene (${place}) from a painted concept.`;
 
 /** How a head's angle is judged: a scene's figure and a render hold their concept's angle; a sheet's view holds the angle its layout asks for. */

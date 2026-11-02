@@ -1,6 +1,6 @@
 # The Path of the Just
 
-A playlist of narrated cut-paper explainer films (apps/animations, the house style of `righteousness-by-faith`) that walks every Christian from the first principles of the faith to its deepest truths, in the order the Bible itself serves them. Drafted 2026-10-10/11 for Cristian; 08 revised 2026-10-12. Nothing here is narrated, rendered or checked; scripts for 01–05, 07, 08, 10, 12 and 25 are in `scripts/`, the search record in `sources.md`.
+A playlist of narrated storybook explainer films (apps/animations, the house style of `righteousness-by-faith`) that walks every Christian from the first principles of the faith to its deepest truths, in the order the Bible itself serves them. Drafted 2026-10-10/11 for Cristian; 08 revised 2026-10-12. Nothing here is narrated, rendered or checked; scripts for 01–05, 07, 08, 10, 12 and 25 are in `scripts/`, the search record in `sources.md`.
 
 ## The name
 
@@ -45,7 +45,7 @@ House rules for every episode (owner's, binding): quote only Scripture, KJV, ver
 - One small dose of the problem, answered within seconds.
 - The deepest turn at 55–65 %, the landing back in the cold open's layout, a thesis line of Scripture, about 30 s of music alone, credits. The thesis and the credits stay in the cold open's place (CRAFT rule 4, bookend the setting).
 - A recurring series motif: **the six stones** of Heb 6:1–2 (Tier One's map, each episode lights its stone), **the veil with gold light behind it** (Tier Two), **the hill path to the city** (Tier Three), all inside the widening light of the cross.
-- **The dictionary** (owner, 2026-10-19): the small cut-paper book with a gold ribbon from 03. Each later episode that reads a word opens it to one entry before it reads, two pictures side by side, no lettering (sleep beside death in 17, beasts beside kingdoms in 29, rain beside teaching in 39, fire beside an end in 43, the pattern beside the real place in 22).
+- **The dictionary** (owner, 2026-10-19): the small book with a gold ribbon from 03. Each later episode that reads a word opens it to one entry before it reads, two pictures side by side, no lettering (sleep beside death in 17, beasts beside kingdoms in 29, rain beside teaching in 39, fire beside an end in 43, the pattern beside the real place in 22).
 
 ## Episodes
 

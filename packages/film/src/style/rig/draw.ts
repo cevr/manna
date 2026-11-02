@@ -177,7 +177,7 @@ const roundHeadOf = (rig: Figure, head: RoundHead, face: KitA) =>
     ]),
   ]);
 
-/** A paper cut inside a traced head's outline: its key, its outline, its paint and its crawl (a part of its `silhouette`). */
+/** A cut piece inside a traced head's outline: its key, its outline, its paint and its crawl (a part of its `silhouette`). */
 interface Cut {
   readonly key: string;
   readonly pts: ReadonlyArray<Pt>;

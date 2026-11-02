@@ -160,7 +160,7 @@
 // Christ in the STORY scenes, and as the Advocate at the landing.
 //
 // Registers (CRAFT rule 3): IDEA is the parchment page with the accused and
-// one gold prop; STORY is the Bible's own scene in the paper-cut look. Each switch
+// one gold prop; STORY is the Bible's own scene in the house look. Each switch
 // comes at a turn, on a question. The narration's words appear on screen only
 // as full-screen cards the engine sets (CRAFT rule 1): no picture carries
 // lettering, and each card a beat may carry is named in its picture, for the

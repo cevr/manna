@@ -12,7 +12,7 @@ The order: the cold open on a hillside where Jesus teaches (`cold`: a teacher of
 
 Motifs:
 
-- The dictionary (a series motif; owner, 2026-10-19). A small cut-paper book with a gold ribbon, closed beside the title; it opens in `waters` and gains one entry a beat: waves beside a crowd (`waters`), a girl's hand in a larger hand beside a girl standing (`talitha`), rain beside an open scroll (`rain`), a beast beside a crown (`figure`). An entry is two pictures side by side, never a printed word (CRAFT rule 1). In the landing it lies open on the grass at Jesus' feet at its new entry: a beaten man by a road beside a stranger bending to him. Each later film opens it to one entry (Notes).
+- The dictionary (a series motif; owner, 2026-10-19). A small book with a gold ribbon, closed beside the title; it opens in `waters` and gains one entry a beat: waves beside a crowd (`waters`), a girl's hand in a larger hand beside a girl standing (`talitha`), rain beside an open scroll (`rain`), a beast beside a crown (`figure`). An entry is two pictures side by side, never a printed word (CRAFT rule 1). In the landing it lies open on the grass at Jesus' feet at its new entry: a beaten man by a road beside a stranger bending to him. Each later film opens it to one entry (Notes).
 - The page and the mirror. In `two` the second way is a hand mirror laid over the open page, showing the reader's own face; in `endless` three readers hold three mirrors; in `child` the mirror shows only the reader (`yourself`); in `spirit` the wind blows it off the page.
 - The gold rod from 02. In `one` it stretches like soft paper and measures nothing, then sets firm; it lies in the dictionary as its bookmark in the landing.
 
@@ -49,7 +49,7 @@ Read against `docs/casting.md` (Part A numbers and sections) and `docs/ensemble.
 | Amos the herdsman (Amos 7:14) | Bible figure, minor | shared | no | `across` | as flat IDEA paper: a herdsman under a sycomore fig (three-quarter); story cloth |
 | Two fishermen casting a net (Matt 4:18; Peter and Andrew, #10 the twelve) | Bible figures, minor | shared | the twelve listed (#10), not drawn | `across` | as flat IDEA paper: two men casting a net from a boat (profile) |
 | Moses (#2, casting.md 1.3) | Bible figure, minor | shared | a sheet in casting.md, not drawn | `rain` | as flat IDEA paper: an old man singing with an open hand (profile); camel mantle |
-| The good Samaritan (casting.md 1.5, P5, for H54, H63), the beaten man, the priest, the Levite (Luke 10:30–35) | parable figures | shared | the Samaritan listed, not drawn; the other three new | `name` | flat cut-paper, standing in the STORY frame: the man lying (profile), two in temple dress passing (back, three-quarter), the Samaritan kneeling to bind with a small jar (three-quarter), walking beside his beast (profile) |
+| The good Samaritan (casting.md 1.5, P5, for H54, H63), the beaten man, the priest, the Levite (Luke 10:30–35) | parable figures | shared | the Samaritan listed, not drawn; the other three new | `name` | flat storybook figures, standing in the STORY frame: the man lying (profile), two in temple dress passing (back, three-quarter), the Samaritan kneeling to bind with a small jar (three-quarter), walking beside his beast (profile) |
 | The plain readers (two in `two`, three in `endless`, one in `spirit`), and the reader of our own day in a city coat (`across`) | plain figures (character-design 2.3; casting.md 2.2, "IDEA everyday figures") | series | the plain lead's sheet exists | `two`, `across`, `endless`, `spirit` | seated at a table with a hand mirror (front, three-quarter), bending over a page (profile), peeling a page's corner (three-quarter), eyes opening wide (front, close); contemporary dress, sleeves to the wrist |
 | The mother and the small boy (the boy is the arc's plain boy; his father is the plain lead in 05, 07 and 10) | a plain figure and a second plain figure (character-design 2.3; the boy differs by height) | series | the plain lead's sheet exists; the mother is new to it | `child` | the mother kneeling to the boy's height (three-quarter), holding his hand near the stove (profile), wrapping a blanket round him (front), reading to him and walking with him (back, three-quarter); the boy about 0.62; contemporary dress |
 | Max (ensemble) | recurring cast, background only | shared | yes: ensemble.md | `endless` (standing behind the readers), `child` (across the landing with his takeaway cup) | his sheet as it stands |
@@ -68,7 +68,7 @@ Props:
 
 | Prop | Scope | Beats |
 | --- | --- | --- |
-| The dictionary: a small cut-paper book with a gold ribbon, entries as picture pairs | series | `title`, `across`, `waters`, `talitha`, `rain`, `great`, `figure`, `name`, `thesis` |
+| The dictionary: a small book with a gold ribbon, entries as picture pairs | series | `title`, `across`, `waters`, `talitha`, `rain`, `great`, `figure`, `name`, `thesis` |
 | The hand mirror | film | `two`, `endless`, `child`, `spirit` |
 | The gold measuring rod (from 02) | series | `one`, `name` |
 | The teacher's scroll | film | `cold`, `name`, `thesis` |
@@ -95,7 +95,7 @@ New to the library: the teacher of the law, Jairus with his wife and daughter, A
 
 ### `title` · ~6 s
 
-**picture:** The title over the teal sky above the hillside: As It Reads. A small closed cut-paper book with a gold ribbon (the dictionary) beside the words.
+**picture:** The title over the teal sky above the hillside: As It Reads. A small closed book with a gold ribbon (the dictionary) beside the words.
 
 ### `one` · IDEA · ~19 s
 
@@ -197,7 +197,7 @@ New to the library: the teacher of the law, Jairus with his wife and daughter, A
 
 **say:** {back}So who counts as a {*}neighbour? {/} {story}Jesus tells of a beaten man by the {*}road. {/} {passed}Two men of the temple pass him {*}by. {/} {stranger}A Samaritan stops, a man the teacher would {*}shun, {/} {bound}and binds his {*}wounds. {/} {which}Which one was the neighbour? {/} {mercy}The teacher will not say {*}Samaritan. {/} “He that shewed mercy on him.” {//} {larger}The story defined the word: {/} our neighbour is anyone who needs our {*}help. {//3} {reads}Read it as it {*}reads.
 **cite:** Luke 10:29–37; John 4:9; Ellen G. White, The Desire of Ages, 498, 503
-**picture:** Landing: the hillside from `cold` in its layout and framing, now under the teal-to-yellow landing light. Jesus seated, the teacher of the law standing, the crowd on the slope. On `story` flat cut-paper figures of the parable stand up in the grass beside Jesus as he tells it (the IDEA figure inside the STORY frame): a man lying by a paper road (`story`), two figures in temple dress passing on the far side (`passed`), a stranger with a beast kneeling to him with a small jar (`bound`). On `mercy` close on the teacher's face as he answers, his mouth set, his eyes on the kneeling stranger; he still stands, the scroll in his hand. On `larger` the parable figures widen into a ring of all kinds of people round the beaten man, and the dictionary lies open on the grass at Jesus' feet, the gold rod as its bookmark, at a new entry: the beaten man beside the stranger bending to him. The change from `cold` is the light and the open dictionary, not the teacher. The held pause comes before the last words.
+**picture:** Landing: the hillside from `cold` in its layout and framing, now under the teal-to-yellow landing light. Jesus seated, the teacher of the law standing, the crowd on the slope. On `story` flat storybook figures of the parable stand up in the grass beside Jesus as he tells it (the IDEA figure inside the STORY frame): a man lying by a paper road (`story`), two figures in temple dress passing on the far side (`passed`), a stranger with a beast kneeling to him with a small jar (`bound`). On `mercy` close on the teacher's face as he answers, his mouth set, his eyes on the kneeling stranger; he still stands, the scroll in his hand. On `larger` the parable figures widen into a ring of all kinds of people round the beaten man, and the dictionary lies open on the grass at Jesus' feet, the gold rod as its bookmark, at a new entry: the beaten man beside the stranger bending to him. The change from `cold` is the light and the open dictionary, not the teacher. The held pause comes before the last words.
 **paraphrase sources (not spoken):**
 
 - DA 503.4 (Ellen G. White) — "The lawyer would not, even now, take the name Samaritan upon his lips, and he made answer, “He that showed mercy on him.”" → `mercy`

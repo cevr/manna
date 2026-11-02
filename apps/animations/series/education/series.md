@@ -1,6 +1,6 @@
 # Taught of the Lord: plan
 
-These are talk shorts. The owner speaks on camera, cut with B-roll; they are not cut-paper films. They follow the two formats in the talk-shorts style notes:
+These are talk shorts. The owner speaks on camera, cut with B-roll; they are not storybook films. They follow the two formats in the talk-shorts style notes:
 
 - **Question** (One Question): 45–65 s, about 140–160 words at 155 wpm with its marked breaths and holds.
 - **Episode**: 2:15–2:50, about 330–410 words at 155 wpm with its marks.

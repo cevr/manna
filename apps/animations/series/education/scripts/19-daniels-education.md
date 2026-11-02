@@ -22,8 +22,8 @@ The Scripture lines were printed by `manna verse "daniel 1"` and `manna verse "1
 | Daniel's mother (casting.md #36) | Bible figure, generated Illustration B-roll (casting.md §4 item 11), no rig | shared | listed in casting.md (P4), not drawn | 7 | seated, teaching a boy from a scroll across her knee and his, by lamplight (three-quarter); the olive mantle; drawn apart from Mary and the boy in E17: a different mantle and a different room (casting.md); labeled "Illustration" |
 | Nebuchadnezzar (casting.md #32) | Bible figure, generated Illustration B-roll (casting.md §4 item 11), no rig | shared | listed in casting.md (P4), not drawn | 15, 19 (the throne) | on the throne, leaning forward (three-quarter); royal purple, a brass crown that does not glow; a person, not a menace (casting.md) |
 | Babylon's court and captives (casting.md #33) | Bible-era crowd, generated Illustration B-roll (casting.md §4 item 11), no rig | shared | listed in casting.md (P4), not drawn | 3, 14 | the temple vessels carried off and a line of young captives (three-quarter, walking), 3; a row of tired faces beside the four (front), 14; never a caricature of Babylonians (casting.md) |
-| The child reading at the kitchen table | plain figure at a child's height (character-design 2.3), a cut-paper insert (ensemble.md open choice 6) | shared (the plain child of every series) | the plain lead's sheet exists; the child's height is not drawn yet | 21 | seated at a table with an open book, reading (three-quarter); sleeves |
-| The official at the council's head (character-design §5's official) | minor (casting.md 2.3, the council chamber), a cut-paper insert | shared | the §5 minor set (designed in character-design §5) | 21 | standing or seated at the head of a council table (three-quarter); the long dark coat, warm brows; sleeves |
+| The child reading at the kitchen table | plain figure at a child's height (character-design 2.3), an illustrated insert (ensemble.md open choice 6) | shared (the plain child of every series) | the plain lead's sheet exists; the child's height is not drawn yet | 21 | seated at a table with an open book, reading (three-quarter); sleeves |
+| The official at the council's head (character-design §5's official) | minor (casting.md 2.3, the council chamber), an illustrated insert | shared | the §5 minor set (designed in character-design §5) | 21 | standing or seated at the head of a council table (three-quarter); the long dark coat, warm brows; sleeves |
 | The council | crowd from the crowd kit (character-design §5; casting.md 2.3: 1 official + 5) | shared | the crowd kit | 21 | seated along a council table, turning toward the head (three-quarter, back); no two alike; sleeves |
 | The recurring cast | background only (ensemble.md), never a lead, never named in speech | shared | yes: ensemble.md | 21 (optional, behind the child at the kitchen table) | their sheets as they stand |
 
@@ -39,8 +39,8 @@ Settings:
 | Babylon's school and the king's table: cuneiform tablets, a banquet table (Illustration) | shared (H33's palace table) | 8 | not set by the script |
 | Babylon's throne room (Illustration; casting.md Prototype 3) | shared (H33's throne room) | 15, 19 | not set by the script |
 | Babylon's walls under a Persian banner (Illustration) | shared | 20 | not set by the script |
-| A kitchen table (cut-paper; theology 03's plain kitchen if it holds a table) | shared | 21 | not set by the script |
-| A modern courtroom or council chamber (cut-paper) | shared | 21 | not set by the script |
+| A kitchen table (an illustrated insert; theology 03's plain kitchen if it holds a table) | shared | 21 | not set by the script |
+| A modern courtroom or council chamber (an illustrated insert) | shared | 21 | not set by the script |
 
 Props:
 

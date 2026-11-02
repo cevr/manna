@@ -215,7 +215,7 @@ const HELD = new Map<string, ReadonlyArray<string>>(
       opening(
         titled('Dwell in the Land'),
         'Dwell in the Land',
-        'Country living · Cut-paper films',
+        'Country living · Storybook films',
         'About the series',
         '“Trust in the LORD, and do good; so shalt thou dwell in the land, and verily thou shalt be fed.”',
       ),
@@ -256,7 +256,7 @@ const HELD = new Map<string, ReadonlyArray<string>>(
       opening(
         titled('The Path of the Just'),
         'The Path of the Just',
-        'Theology · Cut-paper films',
+        'Theology · Storybook films',
         'About the series',
         '“But the path of the just is as the shining light, that shineth more and more unto the perfect day.”',
       ),

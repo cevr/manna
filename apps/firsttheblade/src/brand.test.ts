@@ -51,7 +51,7 @@ const HUE = 15;
 
 const EMBLEMS = ['path', 'land', 'taught', 'remedies'] as const;
 
-describe('the brand: Moonwheat, small capitals, fine lines, no cut paper', () => {
+describe('the brand: Moonwheat, small capitals, fine lines, no torn paper', () => {
   test('the palette is Moonwheat: the wheat is #ffefae and the night #12354e', () =>
     Effect.sync(() => {
       const roles: Record<string, string> = PALETTE;

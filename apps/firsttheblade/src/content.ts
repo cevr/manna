@@ -35,7 +35,7 @@ export type SeriesId = 'path' | 'land' | 'taught' | 'remedies';
 
 /** What a series' episodes are called, one and many, by its form. */
 export const UNITS = {
-  'Cut-paper films': { one: 'film', many: 'films' },
+  'Storybook films': { one: 'film', many: 'films' },
   Talks: { one: 'talk', many: 'talks' },
 } as const;
 
@@ -74,7 +74,7 @@ export const SERIES: ReadonlyArray<Series> = [
     formerSlugs: [],
     name: 'The Path of the Just',
     subject: 'Theology',
-    form: 'Cut-paper films',
+    form: 'Storybook films',
     verse: {
       text: 'But the path of the just is as the shining light, that shineth more and more unto the perfect day.',
       ref: 'Proverbs 4:18',
@@ -106,7 +106,7 @@ export const SERIES: ReadonlyArray<Series> = [
     formerSlugs: [],
     name: 'Dwell in the Land',
     subject: 'Country living',
-    form: 'Cut-paper films',
+    form: 'Storybook films',
     verse: {
       text: 'Trust in the LORD, and do good; so shalt thou dwell in the land, and verily thou shalt be fed.',
       ref: 'Psalm 37:3',

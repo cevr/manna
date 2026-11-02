@@ -1,7 +1,8 @@
 # Animations
 
-Narrated explainer films drawn in JavaScript: cut paper, torn edges, pastel
-grain, handwriting, and ink that boils at 12 fps. Every frame is a pure
+Narrated explainer films drawn in JavaScript in a painted storybook look:
+bold-outlined figures over painted scenery, on warm paper grain (the film
+skill's CRAFT.md 12). Every frame is a pure
 function of time drawn into a Canvas 2D context, so the same code drives the
 scrubbable preview and a frame-exact MP4 export.
 

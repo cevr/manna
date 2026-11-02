@@ -10,7 +10,7 @@ This doc is internal, so it cites Ellen White and the pioneers by name. On scree
 
 ## The look these rules assume (K1)
 
-The owner picked **K1** for the paper-cut look (2026-10-13, [p5-run.md](../../../../apps/animations/plans/p5-run.md), Owner questions), and kept it after the style trials (2026-10-14: "ok i think my favourite is still k1"). It is no longer provisional.
+The owner picked **K1** for the paper-cut look (2026-10-13, [p5-run.md](../../../../apps/animations/plans/p5-run.md), Owner questions), and kept it after the style trials (2026-10-14: "ok i think my favourite is still k1"). The look has since become the painted storybook cartoon the concept art draws ([CRAFT.md](../CRAFT.md) 12). K1's bold outline, its light inner edge and its hue per garment carried over into it.
 
 | Axis    | K1                                                                                                                                                                         |
 | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -416,14 +416,14 @@ The frame shows the Son freely; the Father is shown only as a veiled, hazy human
   - No face, no features and no ink outline: "Thou canst not see my face" (Ex 33:20, 23).
   - The form reads through soft gold-white light: feathered edges, the robe white at the centre (Dan 7:9), the light brightest where the face would be.
   - It is the brightest glow in the film.
-  - He is never a cut-paper figure like the rest, and never an old man with a beard drawn in detail.
+  - He is never an outlined storybook figure like the rest, and never an old man with a beard drawn in detail.
 - **Round the throne,** what the text puts there: the fire (Dan 7:9), the rainbow "in sight like unto an emerald" (Rev 4:3), the lamps of fire (Rev 4:5), the host (Dan 7:10).
 - **With the Son:** the Son is drawn plainly beside Him, the one "express image of his person" (Heb 1:3). The two read as two distinct persons.
 - **No emblem.** No triangle, no three-in-one sign, no eye ([god-christ.md](../frame/god-christ.md)).
 - **In a scene, a man, indistinct** (owner, 2026-10-13: "He should be pictured as a man, just an indistinct figure"). Wherever the text puts God present in a scene, the same veiled form stands or walks in it:
   - the judge's seat in a judgment scene: "the Ancient of days did sit … the judgment was set" (Dan 7:9–10). The Son comes "near before him" (Dan 7:13) and is drawn plainly, so the two read apart;
   - the presence in Eden "walking in the garden in the cool of the day" (Gen 3:8): a man's shape walking in light between the trees, with no face.
-  - Never a cut-paper judge with a face or a beard. The gold of a verdict comes from His light, not from a gavel.
+  - Never an outlined judge with a face or a beard. The gold of a verdict comes from His light, not from a gavel.
 
 ### 3.4 The Holy Spirit
 

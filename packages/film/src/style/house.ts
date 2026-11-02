@@ -76,7 +76,7 @@ export const LIGHT = { toward: 0.42, crease: 0.63 } as const;
  *   figure's height; trim keeps its centred line;
  * - `edge` (A2): no ink, a light core on every cut edge;
  * - `both` (A3): the thick outline with the light core inside it, so the
- *   edge stays cut paper, not a sticker (the study's conflict B).
+ *   edge reads as a drawn edge, not a sticker (the study's conflict B).
  */
 type Outline = 'line' | 'thick' | 'edge' | 'both';
 

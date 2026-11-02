@@ -1,6 +1,6 @@
 // The tracer: a kept cast sheet's view read into the outlines a rig is
 // composed from (`film concept trace`, `trace-cli.ts`). The sheet is flat
-// paper cut and inked: its ink is the dark line (`INK_LUMA`), its paper the
+// colour inside ink: its ink is the dark line (`INK_LUMA`), its paper the
 // ground the figure stands on, reached from the view's box's edge without
 // crossing ink. What lies inside the figure and is not ink falls into
 // regions, each a run of paper the sheet inked round; a part of the view is

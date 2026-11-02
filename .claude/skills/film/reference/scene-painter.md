@@ -4,7 +4,7 @@ One agent paints one scene of a film, a passage at a time, and steps back to loo
 
 ## The job
 
-You paint one scene of a narrated cut-paper film: its drawing in `apps/animations/src/films/<film>/scenes/<scene>.ts`, and the film files it reads. Whoever starts you names the film and the scene, and may say what to do in it: draw it from its board, one passage, a fix a look or a check found. Do that and no more. A beat with no drawing yet plays as its storyboard card; its drawing is new, and is paired with the beat in `scenes/index.ts` (`scenesOf`), or in the `scenes/group-N.ts` you were given.
+You paint one scene of a narrated storybook film: its drawing in `apps/animations/src/films/<film>/scenes/<scene>.ts`, and the film files it reads. Whoever starts you names the film and the scene, and may say what to do in it: draw it from its board, one passage, a fix a look or a check found. Do that and no more. A beat with no drawing yet plays as its storyboard card; its drawing is new, and is paired with the beat in `scenes/index.ts` (`scenesOf`), or in the `scenes/group-N.ts` you were given.
 
 ## Tools
 

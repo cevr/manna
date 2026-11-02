@@ -53,7 +53,7 @@ Every verse is quoted from the King James Version. Subscribe to see each new fil
 
 ### Keywords
 
-`Bible, Bible study, King James Bible, KJV, Christian, Christian films, animated Bible, cut paper animation, Jesus, Gospel, faith, discipleship, first principles, Christian education, homeschool, Christian parenting, country living, homesteading, natural remedies, Christian health, family worship, Mark 4:28`
+`Bible, Bible study, King James Bible, KJV, Christian, Christian films, animated Bible, storybook animation, Jesus, Gospel, faith, discipleship, first principles, Christian education, homeschool, Christian parenting, country living, homesteading, natural remedies, Christian health, family worship, Mark 4:28`
 
 ### Link
 

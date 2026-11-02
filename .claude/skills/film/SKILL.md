@@ -1,8 +1,8 @@
 ---
 name: film
 description: >
-  Make or change a narrated explainer film in apps/animations (cut-paper
-  films, BibleProject-style, with Rive rigs): source-checked script, ElevenLabs narration,
+  Make or change a narrated explainer film in apps/animations (storybook
+  cartoon films, BibleProject-style, with Rive rigs): source-checked script, ElevenLabs narration,
   drawn scenes, score and effects, review renders, MP4 export, or a talk short
   cut from the owner's own footage (`film footage`, a talk's paper edit). Use
   when asked for an animation, explainer video, or film; when editing a film's
@@ -19,7 +19,7 @@ A film lives in `apps/animations/src/films/<film>/`. The engine is the `@manna/f
 
 - **[frame/README.md](frame/README.md)** is the doctrine: the 1889 Fundamental Principles verbatim, and a source-checked topic file for each doctrine, with what a film must show and must not say or show. A film's doctrine comes from these texts, never from memory.
 - **[CRAFT.md](CRAFT.md)** is how a film carries its argument: text on screen, quoting, the STORY and IDEA registers, human scale, the shape in time, pauses, sound and the look. It was measured from BibleProject films, and it sets the tone too: informative, curious, hopeful.
-- **DIRECTION: [reference/director-vision.md](reference/director-vision.md)** is how a film looks, moves and sounds (a paper theatre lit from behind), with the reasons and numbers behind CRAFT's look, camera and sound rules. Read it before a film's colour script, its first scene, or any change to the paper look.
+- **DIRECTION: [reference/director-vision.md](reference/director-vision.md)** is how a film looks, moves and sounds (a painted storybook cartoon, [CRAFT.md](CRAFT.md) 12), with the reasons and numbers behind CRAFT's look, camera and sound rules. Read it before a film's colour script, its first scene, or any change to the look.
 - **VOICE: [reference/owner-voice.md](reference/owner-voice.md)** is how the owner preaches, measured on nine of his sermons: his openings, how he builds a case and lands it, his tone, cadence and words, and the film form of each church habit. He records every film's voice: read it before writing or revising a script's spoken lines.
 
 Every ElevenLabs call and every render needs `dangerouslyDisableSandbox: true` (the CLI's login sits in the Keychain on macOS; the renderer opens Chrome through Bun.WebView, using `BUN_CHROME_PATH` or the Chrome Bun finds, with a cached Chromium fallback).
@@ -37,7 +37,7 @@ Generate against the corpus, never against training data. A film's doctrine, its
 Every film and talk shares a recurring cast besides its main figures (owner, 2026-10-13): a household of five, the grandmother in the hills and two neighbours in the city. The cast stands only in the background, and a film's main characters are plain (owner, 2026-10-15: "let's make the recurring cast only background characters, and the main characters non descriptive so they can be better related"). Who the cast are, how they look, their garment slots and where they may appear are in [apps/animations/docs/ensemble.md](../../../apps/animations/docs/ensemble.md).
 
 - **The lead is a plain figure,** a Bible scene's lead its Bible figure: no name, no mark that tells who it is, an average build, one plain garment in a quiet hue, one design a film. Its sheet is [reference/character-design.md](reference/character-design.md) 2.3. A cast member is never a film's lead, its accused or the one whose need is its question.
-- **The cast stands behind:** one or two in the background of the cold open, the IDEA beats, the landing and a talk's cut-paper inserts, never featured, unless the owner casts one as the figure of a film's own "Picture a…" illustration (owner, 2026-10-16: "the grandmother should be one the background cast members, the old lady": Rosa is RBF's garden grandmother). Never inside a scene of Bible history, and never as a Bible person or a figure of Christ's parables.
+- **The cast stands behind:** one or two in the background of the cold open, the IDEA beats, the landing and a talk's illustrated inserts, never featured, unless the owner casts one as the figure of a film's own "Picture a…" illustration (owner, 2026-10-16: "the grandmother should be one the background cast members, the old lady": Rosa is RBF's garden grandmother). Never inside a scene of Bible history, and never as a Bible person or a figure of Christ's parables.
 - **The cast before the crowd kit.** Where a background needs a person a viewer might know, a cast member stands there; a crowd of strangers takes the crowd kit.
 - **Designing any figure** (what its colours say, how a main, supporting, antagonist, minor or allegorical figure is drawn, Bible figures, character sheets): read [reference/character-design.md](reference/character-design.md).
 - **Keep continuity:** fixed ages, the same homes, no names in speech, and each appearance framed as a parable ("Picture a father…"), never as history. The `script.ts` header describes the film's plain lead, names any cast member in its background and the ledger state it assumes.
