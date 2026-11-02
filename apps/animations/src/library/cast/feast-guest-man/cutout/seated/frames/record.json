@@ -1,0 +1,123 @@
+{
+  "sheet": "../../../cast-sheet/tries/poses-2.png",
+  "note": "the man's three seated keys from the kept try 2 sheet (owner keep, 2026-11-01), left to right neutral, turn and smile, as whole-figure frames: each cut from its paper by a flood from the sheet border through the paper and the drawn floor shadow (the ink outline stops it), then by a halo step from that ground inward through light px near the paper (L* 85 or more within dE 12 of it, at most 8 px deep: the near-white band the concept paints round parts of the outline), each light piece still left at the step's last front (a paper pocket that opens on the band) taken whole when it is 1000 px or less; its outline edge matted to the ink; one box for the three, keys 2 and 3 laid at the whole-px place where their still seat (the stool, the hem and the feet below the plank top) lies on key 1's: frame px = sheet px - box.sheet - place; the drawn floor shadow is left out: the scene draws its contact shadow with ground at the anchor (frame px: key 1's drawn shadow's darkness-weighted centre) and ground px wide (the span of its 1-99 % darkness-weighted x quantiles); a swap holds a key at least two film frames (on twos); each hand shrunk at the cut (hands)",
+  "box": {
+    "sheet": [67, 103],
+    "size": [417, 746]
+  },
+  "anchor": [207.5, 726.5],
+  "ground": 431,
+  "hold": 2,
+  "paper": "#fef7e5",
+  "tolerance": 2.35,
+  "frames": [
+    {
+      "id": "neutral",
+      "png": "neutral.png",
+      "key": 1,
+      "place": [0, 0]
+    },
+    {
+      "id": "turn",
+      "png": "turn.png",
+      "key": 2,
+      "place": [492, 0]
+    },
+    {
+      "id": "smile",
+      "png": "smile.png",
+      "key": 3,
+      "place": [984, 0]
+    }
+  ],
+  "hands": {
+    "shrink": 0.82,
+    "note": "the critic's note at the owner keep (2026-11-01): the hands read about 20 % big; each circle hand's skin (the peach disc, about 67x61 px as the critic measured it) shrunk to `shrink` about the skin's centre (centre, sheet px), its ring kept as wide as drawn (ring px, the house outline weight) round the smaller disc, so its outer size to `outerScale`; the annulus it leaves takes, along each ray from the centre, the colour 2.5 px past the old ring, so the sleeve, the robe and the outlines it covered run on in to the new ring; skin and outer are each hand's [width, height] before and after, px",
+    "each": [
+      {
+        "key": "neutral",
+        "centre": [161.8, 642],
+        "ring": 10,
+        "skin": [
+          [69.5, 61.5],
+          [57, 50.4]
+        ],
+        "outer": [
+          [89.4, 81.4],
+          [76.9, 70.4]
+        ],
+        "outerScale": 0.862
+      },
+      {
+        "key": "neutral",
+        "centre": [391, 644.1],
+        "ring": 10.25,
+        "skin": [
+          [69.5, 61.5],
+          [57, 50.4]
+        ],
+        "outer": [
+          [89.9, 81.9],
+          [77.4, 70.8]
+        ],
+        "outerScale": 0.863
+      },
+      {
+        "key": "turn",
+        "centre": [652.3, 643.1],
+        "ring": 10,
+        "skin": [
+          [70.5, 61.5],
+          [57.8, 50.4]
+        ],
+        "outer": [
+          [90.5, 81.4],
+          [77.8, 70.3]
+        ],
+        "outerScale": 0.862
+      },
+      {
+        "key": "turn",
+        "centre": [881.8, 644.1],
+        "ring": 10,
+        "skin": [
+          [69.5, 61.5],
+          [57, 50.4]
+        ],
+        "outer": [
+          [89.4, 81.4],
+          [76.9, 70.3]
+        ],
+        "outerScale": 0.862
+      },
+      {
+        "key": "smile",
+        "centre": [1145.7, 643],
+        "ring": 10.25,
+        "skin": [
+          [69.5, 61.5],
+          [57, 50.4]
+        ],
+        "outer": [
+          [90, 82],
+          [77.5, 70.9]
+        ],
+        "outerScale": 0.863
+      },
+      {
+        "key": "smile",
+        "centre": [1375, 644.2],
+        "ring": 10,
+        "skin": [
+          [69.5, 61.5],
+          [57, 50.4]
+        ],
+        "outer": [
+          [89.4, 81.4],
+          [76.9, 70.3]
+        ],
+        "outerScale": 0.862
+      }
+    ]
+  }
+}
