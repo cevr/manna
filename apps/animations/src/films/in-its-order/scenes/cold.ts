@@ -1,7 +1,8 @@
 // The cold open, drawn to its kept panels (`cold.baby.3`, `cold.letter.4`,
 // `cold.what.3`), one shot to each of the script's marks. `baby`: close on
 // the mother with her baby at the cup, on the close plate painted to
-// `cold.baby.3` (`BABY_BACK`), the camera pushing in on the baby's face.
+// `cold.baby.3` (`BABY_BACK`) with the feast's table in front of her
+// (`FRONT`), the camera pushing in on the baby's face.
 // `grown` cuts to the feast's courtyard plates on the mother at the long
 // table and trucks down it to the lead, who stands between the villager and
 // the mother where the title stands them, his bottle raised (`bottle`).
@@ -55,6 +56,16 @@ const BABY = {
   root: [193, 448],
   back: 3,
 } as const;
+
+/**
+ * The feast's table in front of her in the baby close, as `cold.baby.3` has
+ * it: the courtyard's table plate (`TABLE`) drawn `s` times its size on a
+ * plane `z` in front of her, its point `on` (the back edge of its top, under
+ * the empty bowl between the two bowls of figs, on the courtyard's frame px)
+ * at `at`, so at the push's end its top runs across the frame at y 970, the
+ * panel's table edge under the baby's swaddle, and she sits at the table.
+ */
+const FRONT = { on: [1450, 965], at: [960, 908], s: 2.75, z: 0.8 } as const;
 
 /** Where the guests' feet stand behind the table, panel px: the title's guests stand there. */
 const FLOOR = 925;
@@ -273,6 +284,12 @@ export const cold = drawing({
           scale,
         }),
       );
+      plane(camera, FRONT.z, () => {
+        ctx.translate(FRONT.at[0], FRONT.at[1]);
+        ctx.scale(FRONT.s, FRONT.s);
+        ctx.translate(-FRONT.on[0], -FRONT.on[1]);
+        f.painting('table');
+      });
       return;
     }
     if (f.t >= f.cue('what').start) {
