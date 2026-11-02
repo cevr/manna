@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 
 import * as Timing from '@manna/hymnal/timing';
 import { type Hymn, sung } from '@manna/hymnal/hymn';
-import { Array as Arr, Option } from 'effect';
+import { Array as Arr, Match, Option } from 'effect';
 import bundled from 'virtual:hymnal-timing';
 
 import { readPlaybackHymns } from '../../vite/chords';
@@ -80,17 +80,31 @@ const faultsOf = (hymn: Hymn, timeline: Timeline): ReadonlyArray<string> => {
     const flags = [want.played, want.even].join() === [got.played, got.even].join();
     if (!flags || !same([got.start, got.until], [ms(want.start), ms(want.until)]))
       return [`${at}: times or flags`];
-    const lit =
-      want.played && !want.even && line.part._tag === 'Sung' && line.part.level === 'syllable';
-    if (!lit || line.part._tag !== 'Sung') {
+    // A line may be lit when it has note times that fit it: one per syllable, in order, inside the
+    // line. At `syllable` level it is lit; at `line` level it is lit or whole, as its other singings
+    // on the same notes agree (`follower.test.ts` holds the agreement to the sung file).
+    const syllables = Match.value(line.part).pipe(
+      Match.tag('Sung', (part) => part.lines[line.line] ?? []),
+      Match.orElse(() => []),
+    );
+    const times = want.syllables.map(ms);
+    const fit =
+      times.length > 0 &&
+      times.length === syllables.length &&
+      times.every((t, k) => t >= (times[k - 1] ?? got.start) && t < got.until);
+    if (!want.played || want.even || line.part._tag !== 'Sung' || !fit) {
       if (got.syllables.length === 0) return [];
       return [`${at}: lit where words may not be`];
     }
-    const syllables = line.part.lines[line.line] ?? [];
     // Syllables of one word share a word; each new word takes the next place.
+    const loose = Match.value(line.part).pipe(
+      Match.tag('Sung', (part) => part.level === 'line'),
+      Match.orElse(() => false),
+    );
+    if (loose && got.syllables.length === 0 && got.words.length === 0) return [];
     let word = -1;
     const words = syllables.map((s, k) => (word += Number(s.word !== syllables[k - 1]?.word)));
-    if (!same(got.syllables, want.syllables.map(ms))) return [`${at}: syllable times`];
+    if (!same(got.syllables, times)) return [`${at}: syllable times`];
     if (!same(got.words, words)) return [`${at}: words`];
     return [];
   });

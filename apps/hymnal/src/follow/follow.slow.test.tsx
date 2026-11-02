@@ -67,8 +67,8 @@ const wordLineOf = (timeline: Timeline) => {
   return { k, line, second, at: Option.getOrThrow(Arr.get(line.syllables, second)) };
 };
 
-/** The first hymn with a played line that has no syllable times (line-level or Plain), and that line. */
-const lineLevel = () =>
+/** The first hymn with a played line that has no syllable times (a Plain part's or one held to even shares), and that line. */
+const wholeLineOf = () =>
   Option.getOrThrow(
     Arr.findFirst(Arr.range(1, 695), (number) =>
       Option.match(book.of(number), {
@@ -237,7 +237,7 @@ describe('the follow on a hymn page', () => {
   });
 
   it('highlights a line with no syllable times whole', () => {
-    const { number, k, start } = lineLevel();
+    const { number, k, start } = wholeLineOf();
     using page = mount(number);
     page.at(start + 1);
     expect(page.selected()).toEqual([k]);

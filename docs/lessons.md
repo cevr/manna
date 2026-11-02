@@ -4773,3 +4773,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** `chrome.test.ts` in test:tools read every source under `src` and `e2e` for a Chrome spawned past `openView`, so a spawn added to an engine or lab file reran another part, and test:tools passed from its cache.
 - **Cause:** The same whole-package sweep inside one cached part. The check is now a rule of the film plugin, which oxlint runs over every file on every gate.
 - **Guard:** lint:film/webview-through-chrome, proof `packages/film/lint/fixtures/webview-through-chrome.ts` `RED film/webview-through-chrome`
+
+### hymnal-follow-lights-every-line-with-note-times
+
+- **Date:** 2026-11-01
+- **Kind:** owner
+- **Said:** "Also, I'm seeing here, the words aren't highlighted when I'm playing."
+- **Source:** `packages/hymnal/plans/hymnapp-run.md` row `wordlight` (owner phone note, scrawl 2026-11-01)
+- **Wrong:** On hymn 11 at 0:27, with Sound on, no syllable of the sung line lit. The app's timing encoder (`apps/hymnal/vite/timing.ts`) wrote a line's syllable times only for a part of chord level `syllable`, so 16 of hymn 11's 24 sung lines, and 1 045 played lines of `line`-level parts in 100 hymns, were marked whole, and in the chords view the whole mark (accent on a soft tint) barely shows on the dark ground.
+- **Cause:** The encoder read the chord level as a yes or no for the follow. A `line`-level line's times are its notes' times, but the words the compiler laid on those notes are less sure: in 110 such lines (hymn 189's refrain after stanzas 2 and 3 among them) another singing on the same notes puts the words elsewhere. The encoder now carries the times of every played, not-even Sung line whose times fit it (one per syllable, in order, inside the line), and at `line` level only when its other singings on the same notes of the sung file agree (a refrain line each syllable on the same note, a stanza line opening within one note); any other line is marked whole.
+- **Guard:** code: `apps/hymnal/src/follow/wordlight.acceptance.test.ts` `every line whose note times may light it lights its sung syllable at each syllable start, between starts and at generated times; any other line is marked whole`; `apps/hymnal/src/follow/follower.test.ts` `lights no line-level line whose words another lit singing on the same notes lays elsewhere`

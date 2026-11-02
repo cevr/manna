@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'bun:test';
-import { Option } from 'effect';
+import { type Hymn, PER_BEAT, sung } from '@manna/hymnal/hymn';
+import * as Timing from '@manna/hymnal/timing';
+import { Array as Arr, Match, Option } from 'effect';
 import bundled from 'virtual:hymnal-timing';
+
+import { readPlaybackHymns } from '../../vite/chords';
+import { encodeTiming, versesOf } from '../../vite/timing';
 
 import { followerOf, type Host, LEAD, type Report } from './follower';
 import { OFF, WHOLE } from './marks';
@@ -15,7 +20,7 @@ const line = (start: number, syllables: ReadonlyArray<number>): TimedLine => ({
   words: syllables.map((_, k) => k),
 });
 
-/** Three lines a second each from 1 s: two words, then a line-level line, then two words. */
+/** Three lines a second each from 1 s: two words, then a line with no note times, then two words. */
 const three: Timeline = {
   lines: [line(1000, [1000, 1500]), line(2000, []), line(3000, [3000, 3400])],
   first: 1000,
@@ -259,4 +264,179 @@ describe('followerOf at a tempo, Sound off (unit tempo, A3)', () => {
       }
     },
   );
+});
+
+describe('the bundled timing of a hand-made hymn 11, through the follower', () => {
+  // Hymn 11's stanzas are line level; its line 1 (stanza 1, line index 1) has note times.
+  const hymn = Option.getOrThrow(Arr.findFirst(readPlaybackHymns(), (one) => one.number === 11));
+  const timing = Option.getOrThrow(Option.fromUndefinedOr(hymn.timing));
+  const line1 = Option.getOrThrow(Arr.get(timing.lines, 1));
+  /** Hymn 11 with line 1's syllable times replaced. */
+  const withLine1 = (syllables: ReadonlyArray<number>): Hymn => ({
+    ...hymn,
+    timing: {
+      ...timing,
+      lines: Option.getOrThrow(Arr.modify(timing.lines, 1, (line) => ({ ...line, syllables }))),
+    },
+  });
+  const timelineFor = (one: Hymn): Timeline =>
+    Option.getOrThrow(timelineOf(Option.getOrThrow(encodeTiming(one, () => versesOf(one)))));
+  const base = timelineFor(hymn);
+  /** Line 1's mark with the player paused at `at` ms. */
+  const markAt = (timeline: Timeline, at: number) => {
+    const h = harness(timeline);
+    h.report({ _tag: 'Here', at, state: 'paused' });
+    return h.follower.marks.markOf(1);
+  };
+
+  it('lights a line-level part’s line by its note times', () => {
+    expect(sung(hymn)[1]?.part).toMatchObject({ _tag: 'Sung', level: 'line' });
+    const line = Option.getOrThrow(Arr.get(base.lines, 1));
+    expect(line.syllables.length).toBe(line1.syllables.length);
+    expect(markAt(base, line.syllables[1] ?? 0)).toBe(1);
+  });
+
+  it('marks a line whole when its times are out of order, outside the line or short a syllable', () => {
+    const [first = 0, ...rest] = line1.syllables;
+    const broken = {
+      'out of order': line1.syllables.toReversed(),
+      'before the line': [line1.start - PER_BEAT, ...rest],
+      'at its until': [...line1.syllables.slice(0, -1), line1.until],
+      'short a syllable': rest,
+      'a syllable over': [first, ...line1.syllables],
+    };
+    const lines = Option.getOrThrow(
+      Arr.modify(base.lines, 1, (line) => ({ ...line, syllables: [], words: [] })),
+    );
+    const start = base.lines[1]?.start ?? 0;
+    for (const [name, syllables] of Object.entries(broken)) {
+      const timeline = timelineFor(withLine1(syllables));
+      // Only that line changes, to whole: its span and flags and every other line stay as bundled.
+      expect({ name, lines: timeline.lines }).toEqual({ name, lines });
+      expect({ name, mark: markAt(timeline, start) }).toEqual({ name, mark: WHOLE });
+    }
+  });
+
+  it('carries two syllables on one note as one start, and lights the later of them', () => {
+    const [a = 0, , ...rest] = line1.syllables;
+    const timeline = timelineFor(withLine1([a, a, ...rest]));
+    const line = Option.getOrThrow(Arr.get(timeline.lines, 1));
+    const [s0 = 0, s1 = 0, s2 = 0] = line.syllables;
+    expect(line.syllables.length).toBe(line1.syllables.length);
+    expect(s1).toBe(s0);
+    expect(s2).toBeGreaterThan(s1);
+    expect(placeAt(timeline, s0)).toMatchObject({ line: 1, syllable: 1, nextAt: s2 });
+    expect(markAt(timeline, s0)).toBe(1);
+  });
+
+  // Hymn 11's three verses play the same notes. Line 18 (stanza 3, line index 2, `syllable`
+  // level) sings line index 2 on the notes lines 2 and 10 (stanzas 1 and 2, `line` level) sing
+  // it on: notes 12 to 19 of its verse.
+  const verse3 = Option.getOrThrow(Arr.get(versesOf(hymn), 2));
+  const line18 = Option.getOrThrow(Arr.get(timing.lines, 18));
+  /** Hymn 11 with line 18 sung from `syllables`, its start at the first of them. */
+  const withLine18 = (syllables: ReadonlyArray<number>): Hymn => ({
+    ...hymn,
+    timing: {
+      ...timing,
+      lines: Option.getOrThrow(
+        Arr.modify(timing.lines, 18, (line) => ({ ...line, start: syllables[0] ?? 0, syllables })),
+      ),
+    },
+  });
+  /** Line 18 laid `by` notes earlier on its verse than compiled. */
+  const earlier = (by: number): ReadonlyArray<number> =>
+    Arr.makeBy(line18.syllables.length, (k) => verse3[12 + k - by]?.at ?? 0);
+  const litOf = (timeline: Timeline) =>
+    [2, 10, 18].map((i) => (timeline.lines[i]?.syllables.length ?? 0) > 0);
+
+  it('marks a line-level line whole when a singing of it on the same notes opens two notes away', () => {
+    expect(earlier(0)).toEqual([...line18.syllables]);
+    expect(litOf(base)).toEqual([true, true, true]);
+    expect(litOf(timelineFor(withLine18(earlier(1))))).toEqual([true, true, true]);
+    // Line 18 is `syllable` level, so it keeps its times; the two `line`-level singings go whole.
+    expect(litOf(timelineFor(withLine18(earlier(2))))).toEqual([false, false, true]);
+  });
+
+  it('marks a line-level line whole when a singing of it on the same notes starts no notes', () => {
+    const off = line18.syllables.map((t) => t + 1);
+    expect(litOf(timelineFor(withLine18(off)))).toEqual([false, false, true]);
+  });
+});
+
+describe('the bundled timing of line-level parts, against the sung file', () => {
+  const book = timingBook(bundled);
+  const hymns = readPlaybackHymns();
+  /** Hymn `number`'s bundled timeline. */
+  const timelineOfHymn = (number: number) => Option.getOrThrow(book.of(number));
+
+  it('lights the owner’s hymn 11 on every line, its 16 line-level lines included', () => {
+    const hymn = Option.getOrThrow(Arr.findFirst(hymns, (one) => one.number === 11));
+    const lines = timelineOfHymn(11).lines;
+    expect(lines.length).toBe(24);
+    expect(lines.filter((line) => line.syllables.length > 0).length).toBe(24);
+    expect(
+      sung(hymn).filter((at) => at.part._tag === 'Sung' && at.part.level === 'line').length,
+    ).toBe(16);
+  });
+
+  it('marks hymn 189’s refrain lines 0 to 2 whole after stanzas 2 and 3, sung there two notes off', () => {
+    const lines = timelineOfHymn(189).lines;
+    const lit = [12, 13, 14, 20, 21, 22].map((i) => lines[i]?.syllables.length ?? -1);
+    expect(lit).toEqual([0, 0, 0, 0, 0, 0]);
+  });
+
+  it('lights no line-level line whose words another lit singing on the same notes lays elsewhere', () => {
+    const faults: Array<string> = [];
+    let lit = 0;
+    for (const hymn of hymns) {
+      const lines = sung(hymn);
+      if (!lines.some((at) => at.part._tag === 'Sung' && at.part.level === 'line')) continue;
+      const timing = Option.getOrThrow(Option.fromUndefinedOr(hymn.timing));
+      const seconds = Timing.secondsAt(timing);
+      const verses = versesOf(hymn).map((verse) =>
+        verse.map((note) => ({ ms: Math.round(seconds(note.at) * 1000), key: note.key })),
+      );
+      // Each lit line: its place in the music, its level, its verse's tune and its syllables' notes.
+      const shown = timelineOfHymn(hymn.number).lines.flatMap((line, i) =>
+        Arr.get(lines, i).pipe(
+          Option.filter(() => line.syllables.length > 0),
+          Option.map((at) => {
+            const verse = Option.getOrElse(
+              Arr.findFirst(verses, (one) => one.some((note) => note.ms === line.syllables[0])),
+              () => [],
+            );
+            return {
+              i,
+              place: `${at.verse === 'refrain'}/${at.line}`,
+              refrain: at.verse === 'refrain',
+              level: Match.value(at.part).pipe(
+                Match.tag('Sung', (part) => part.level),
+                Match.orElse(() => 'text'),
+              ),
+              tune: verse.map((note) => `${note.ms - (verse[0]?.ms ?? 0)}:${note.key}`).join(' '),
+              notes: line.syllables.map((t) => verse.findIndex((note) => note.ms === t)),
+            };
+          }),
+          Option.toArray,
+        ),
+      );
+      for (const line of shown.filter((one) => one.level === 'line')) {
+        lit += 1;
+        const away = shown.filter(
+          (other) =>
+            other !== line &&
+            other.place === line.place &&
+            other.tune === line.tune &&
+            ((line.refrain && other.notes.join() !== line.notes.join()) ||
+              Math.abs((other.notes[0] ?? 0) - (line.notes[0] ?? 0)) > 1),
+        );
+        if (line.notes.some((k) => k < 0) || away.length > 0)
+          faults.push(`${hymn.number} line ${line.i}: ${away.map((other) => other.i).join(',')}`);
+      }
+    }
+    expect(faults).toEqual([]);
+    // 935 line-level lines light (measured): the property is not met by lighting none.
+    expect(lit).toBeGreaterThanOrEqual(900);
+  });
 });
