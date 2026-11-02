@@ -139,6 +139,23 @@ describe('followerOf', () => {
     expect(h.scrolled).toEqual([]);
   });
 
+  it('shows the line held at a count-in’s start, even one shown before, and not again as it runs on', () => {
+    const h = harness();
+    h.follower.show();
+    expect(h.scrolled).toEqual([]);
+    h.report(playing(2000));
+    expect(h.scrolled).toEqual([1]);
+    h.report({ _tag: 'Here', at: 2000, state: 'paused' });
+    h.follower.show();
+    expect(h.scrolled).toEqual([1, 1]);
+    // The host's clock reads 0 here: it runs on to 1 ms before line 2's lead.
+    h.report(playing(2000));
+    h.advance(3000 - LEAD - 1 - 2000);
+    expect(h.scrolled).toEqual([1, 1]);
+    h.advance(3000 - LEAD - 2000);
+    expect(h.scrolled).toEqual([1, 1, 2]);
+  });
+
   it('runs on between reports and is not moved back by a report a little behind', () => {
     const h = harness();
     h.report(playing(1000));

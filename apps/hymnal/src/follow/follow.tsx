@@ -49,13 +49,22 @@ import { handOf } from './hand';
 import { introOf } from './intro';
 import { type Marks, marksOf, OFF, WHOLE } from './marks';
 import { seekCount } from './seeks';
+import { placeAt } from './timeline';
 
 interface Follow {
   readonly marks: Marks;
   /** Keeps line `index`'s view for measuring; the returned function lets it go. */
   readonly keep: (index: number, view: HostInstance) => () => void;
-  /** The page's hymn and its first sung line's start, ms, when it has a timeline: its intro (`IntroLine.tsx`). */
-  readonly intro: Option.Option<{ readonly number: number; readonly first: number }>;
+  /**
+   * The page's hymn and its first sung line's start, ms, when it has a timeline: its intro
+   * (`IntroLine.tsx`). `line` is the line the follow holds there, the first line the stanza
+   * choice keeps (line 0 when not given): the count-in is drawn over it (`CountIn.tsx`).
+   */
+  readonly intro: Option.Option<{
+    readonly number: number;
+    readonly first: number;
+    readonly line?: number;
+  }>;
 }
 
 /** A page no player follows: no line is ever marked. */
@@ -93,8 +102,9 @@ const useLineMark = (index: number): number => {
  * timed line has no tint: in the light theme the ink is the accent, so the
  * sung syllable shows only against muted ones. Without syllable times, the
  * whole line takes the accent on a soft tint, visible in either theme.
- * While the player counts in (`CountIn.tsx`), the marked line (line 0)
- * stays marked with nothing in it lit: nothing is sung until the count ends.
+ * While the player counts in (`CountIn.tsx`), the marked line (the first
+ * line the stanza choice keeps) stays marked with nothing in it lit:
+ * nothing is sung until the count ends.
  */
 export const useLineFollow = (index: number) => {
   const { keep } = use(FollowContext);
@@ -139,7 +149,7 @@ const away: Report = { _tag: 'Away' };
  * The follower's report of `state` on hymn `number`, its place moving at
  * `rate` (the player's `rate`). A count-in holds the place at the first
  * sung line, so while `counting` a playing state is reported paused there:
- * line 0 is marked and the follow's clock does not run on.
+ * that line is marked and the follow's clock does not run on.
  */
 const reportOf = (number: number, state: Player, rate: number, counting: boolean): Report => {
   const here = (
@@ -219,6 +229,12 @@ export const useCountIn = () => {
     [player, registry, atom, number],
   );
   return { beat, onBeat };
+};
+
+/** The line the count-in is drawn over: the line the follow holds at the first sung line's start. */
+export const useCountLine = (): number => {
+  const { intro } = use(FollowContext);
+  return Option.match(intro, { onNone: () => 0, onSome: (it) => it.line ?? 0 });
 };
 
 /** The page's intro as the player stands (`intro.ts`), and whether it runs on (Playing). */
@@ -306,10 +322,18 @@ export const useFollow = (number: number) => {
 
   // The rate is read as each state is reported, not reported on its own change: a report at an
   // old place would set the clock back. The score clock's next read carries the new rate's place.
+  // A count-in that starts on this hymn shows the line it holds, wherever the page was.
   const counting = useCounting();
+  const counted = useRef(false);
   useEffect(() => {
     const rate = Option.match(player, { onNone: () => 1, onSome: (it) => registry.get(it.rate) });
-    Option.map(follower, (f) => f.report(reportOf(number, state, rate, counting)));
+    const told = reportOf(number, state, rate, counting);
+    const starts = counting && told._tag === 'Here' && !counted.current;
+    counted.current = counting && told._tag === 'Here';
+    Option.map(follower, (f) => {
+      f.report(told);
+      if (starts) f.show();
+    });
   }, [follower, number, state, player, registry, counting]);
   useEffect(
     () => () => Option.match(follower, { onNone: () => {}, onSome: (f) => f.stop() }),
@@ -339,7 +363,14 @@ export const useFollow = (number: number) => {
         onNone: () => still,
         onSome: ({ marks }) => ({
           marks,
-          intro: Option.map(book.of(number), ({ first }) => ({ number, first })),
+          intro: Option.map(book.of(number), ({ first }) => ({
+            number,
+            first,
+            line: Option.match(sung, {
+              onNone: () => 0,
+              onSome: (timeline) => Math.max(0, placeAt(timeline, first).line),
+            }),
+          })),
           keep: (index, view) => {
             views.current.set(index, view);
             return () => {
@@ -348,7 +379,7 @@ export const useFollow = (number: number) => {
           },
         }),
       }),
-    [follower, number],
+    [follower, number, sung],
   );
 
   const subscribeHeld = useCallback(

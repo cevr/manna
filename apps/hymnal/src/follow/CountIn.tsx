@@ -1,9 +1,11 @@
 /**
- * The count-in's pulse over line 0 (`IntroLine.tsx` draws it in line 0's
- * box): while the player holds the page's hymn at its first sung line and
- * counts one bar in (`player.countIn`, `src/player/countin.ts`), a row of
- * one mark per beat, drawn absolutely just above line 0 so the line keeps
- * its place. Each mark takes the accent as its beat comes and keeps it; the
+ * The count-in's pulse over the line the follow holds at the first sung line
+ * (`IntroLine.tsx` draws it in that line's box: line 0 with every stanza,
+ * the first kept line under a stanza choice): while the player holds the
+ * page's hymn there and counts one bar in (`player.countIn`,
+ * `src/player/countin.ts`), a row of one mark per beat, drawn absolutely
+ * just above the line so it keeps its place; the follow scrolls the line
+ * into view as the count starts. Each mark takes the accent as its beat comes and keeps it; the
  * newly lit one pulses by scale, which Reduce Motion drops (colour is not
  * motion, scale is). It is a progress bar, `Count-in`, read as `Beat <k> of
  * <n>`, with no live region: a screen reader is not read every beat.
