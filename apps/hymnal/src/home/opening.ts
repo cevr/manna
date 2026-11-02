@@ -14,15 +14,15 @@ import { Option } from 'effect';
 export type Opening = 'push' | 'replace' | 'stay';
 
 /**
- * The hymn route's segment in `path`, a path as `usePathname` gives it: its
- * last two segments are `hymns/<n>`, read past a query, a hash, a trailing
- * slash and any base before them.
+ * A hymn page's path, as `usePathname` gives it: its last two segments are
+ * `hymns/<n>`, read past a query, a hash, empty segments, a trailing slash
+ * and any base before them. The one match is the segment `<n>`.
  */
-const hymnSegment = (path: string): Option.Option<string> => {
-  const segments = (path.split(/[?#]/)[0] ?? '').split('/').filter((segment) => segment !== '');
-  const [route, segment] = segments.slice(-2);
-  return Option.filter(Option.fromNullishOr(segment), () => route === 'hymns');
-};
+const HYMN_PAGE = /^(?:[^?#]*\/)?hymns\/+([^/?#]+)\/*(?:[?#][\s\S]*)?$/;
+
+/** The hymn route's segment in `path`, when `path` is a hymn page. */
+const hymnSegment = (path: string): Option.Option<string> =>
+  Option.fromNullishOr(HYMN_PAGE.exec(path)?.[1]);
 
 /** How hymn `number`, chosen on the screen at `path`, opens. */
 export const openingAt = (path: string, number: number): Opening =>
