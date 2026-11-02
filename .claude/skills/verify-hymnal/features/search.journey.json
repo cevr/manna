@@ -86,9 +86,10 @@
     },
     {
       "name": "search-in-hymn",
-      "action": "open",
-      "link": "hymns/8",
+      "action": "tap",
+      "target": "role=link label=1, Praise to the Lord",
       "expect": [
+        { "shows": "label=Play hymn 1" },
         { "shows": "id=find-bar" },
         { "shows": "id=find-search" },
         { "shows": "id=find-number" },
@@ -113,6 +114,30 @@
       "expect": [{ "shows": "label=100, Great Is Thy Faithfulness" }]
     },
     {
+      "name": "search-in-hymn-cancel",
+      "action": "tap",
+      "target": "id=find-cancel",
+      "expect": [
+        { "shows": "label=Play hymn 1" },
+        { "shows": "id=find-search" },
+        { "shows": "id=key-button" },
+        { "hides": "id=find-cancel" }
+      ]
+    },
+    {
+      "name": "search-in-hymn-box-again",
+      "action": "tap",
+      "target": "id=find-search",
+      "expect": [{ "shows": "id=find-box" }, { "shows": "id=find-cancel" }]
+    },
+    {
+      "name": "search-in-hymn-fill-again",
+      "action": "fill",
+      "target": "id=find-box",
+      "value": "100",
+      "expect": [{ "shows": "label=100, Great Is Thy Faithfulness" }]
+    },
+    {
       "name": "search-in-hymn-open",
       "action": "tap",
       "target": "label=100, Great Is Thy Faithfulness",
@@ -123,18 +148,47 @@
       ]
     },
     {
-      "name": "search-in-hymn-back",
-      "action": "back",
+      "name": "search-in-hymn-same-box",
+      "action": "tap",
+      "target": "id=find-search",
       "expect": [{ "shows": "id=find-box" }, { "shows": "id=find-cancel" }]
     },
     {
-      "name": "search-in-hymn-cancel",
+      "name": "search-in-hymn-same-fill",
+      "action": "fill",
+      "target": "id=find-box",
+      "value": "100",
+      "expect": [{ "shows": "label=100, Great Is Thy Faithfulness" }]
+    },
+    {
+      "name": "search-in-hymn-same",
       "action": "tap",
-      "target": "id=find-cancel",
+      "target": "label=100, Great Is Thy Faithfulness",
       "expect": [
+        { "shows": "label=Play hymn 100" },
         { "shows": "id=find-search" },
-        { "shows": "id=key-button" },
+        { "hides": "id=find-box" },
         { "hides": "id=find-cancel" }
+      ]
+    },
+    {
+      "name": "search-in-hymn-back",
+      "action": "back",
+      "expect": [
+        { "shows": "role=link label=1, Praise to the Lord" },
+        { "hides": "id=key-button" },
+        { "hides": "id=find-box" },
+        { "hides": "id=find-cancel" }
+      ]
+    },
+    {
+      "name": "search-in-hymn-folded",
+      "action": "tap",
+      "target": "role=link label=1, Praise to the Lord",
+      "expect": [
+        { "shows": "label=Play hymn 1" },
+        { "shows": "id=find-search" },
+        { "hides": "id=find-box" }
       ]
     },
     {
@@ -144,10 +198,23 @@
       "expect": [{ "shows": "id=find-drums" }, { "shows": "id=find-open" }]
     },
     {
-      "name": "search-in-hymn-dialled",
+      "name": "search-in-hymn-number-same",
       "action": "tap",
       "target": "id=find-open",
-      "expect": [{ "shows": "id=find-search" }, { "hides": "id=find-drums" }]
+      "expect": [
+        { "shows": "label=Play hymn 1" },
+        { "shows": "id=key-button" },
+        { "hides": "id=find-drums" }
+      ]
+    },
+    {
+      "name": "search-in-hymn-number-back",
+      "action": "back",
+      "expect": [
+        { "shows": "role=link label=1, Praise to the Lord" },
+        { "hides": "id=key-button" },
+        { "hides": "id=find-drums" }
+      ]
     }
   ]
 }
