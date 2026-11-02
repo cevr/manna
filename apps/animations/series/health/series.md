@@ -3,7 +3,7 @@
 Status: research and planning (2026-10-10). Nothing recorded. The name is chosen (section 1); the owner chooses
 the first subjects and the cadence (talk-shorts decisions, OWNER row 8).
 
-Kind: **talk** (the owner on camera, cut with B-roll), not a cut-paper film. Two formats,
+Kind: **talk** (the owner on camera, cut with B-roll), not a storybook film. Two formats,
 both from the start (talk-shorts `decisions.md`, S-fmt and OWNER 7):
 
 - **One Question** (Q): 45–65 s, about 140–160 words at 155 wpm with its marked breaths and holds, speaker on screen 40–55%.

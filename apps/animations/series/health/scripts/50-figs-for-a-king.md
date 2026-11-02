@@ -18,7 +18,7 @@ In this video the standing line is also spoken (beat 8), because the subject is 
 
 ## Cast
 
-This is a talk. The speaker is filmed. Its Bible scene is a generated Illustration still in the sermon decks' painting style, with no rig (casting.md §4 item 11). The figs are stock footage, so it has no cut-paper insert (ensemble.md, open choice 6).
+This is a talk. The speaker is filmed. Its Bible scene is a generated Illustration still in the sermon decks' painting style, with no rig (casting.md §4 item 11). The figs are stock footage, so it has no illustrated insert (ensemble.md, open choice 6).
 
 | Figure | Kind | Scope | In the library? | Beats | The sheet must show |
 | --- | --- | --- | --- | --- | --- |

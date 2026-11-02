@@ -17,8 +17,8 @@ Every Scripture line below was printed by `manna verse` on 2026-10-10, printed a
 | Figure | Kind | Scope | In the library? | Beats | The sheet must show |
 | --- | --- | --- | --- | --- | --- |
 | The speaker (the owner, on camera) | on camera, not drawn | series | n/a | 1, 3 (his hand), 6, 8, 10–12 | none (filmed) |
-| The hands in the garden soil | plain figure (character-design 2.3), a cut-paper insert (ensemble.md open choice 6) | series | the plain lead's sheet exists | 9 | close on two hands at the sleeves' ends pressing into garden soil (three-quarter, from above); sleeves |
-| The child reading, and the child praying | plain figure at a child's height (character-design 2.3: about 0.7 of the lead, the head a larger share), a cut-paper insert | shared (the plain child of every series) | the plain lead's sheet exists; the child's height is not drawn yet | 9 | seated with an open book, reading (three-quarter); kneeling with hands together, eyes closed (profile); sleeves |
+| The hands in the garden soil | plain figure (character-design 2.3), an illustrated insert (ensemble.md open choice 6) | series | the plain lead's sheet exists | 9 | close on two hands at the sleeves' ends pressing into garden soil (three-quarter, from above); sleeves |
+| The child reading, and the child praying | plain figure at a child's height (character-design 2.3: about 0.7 of the lead, the head a larger share), an illustrated insert | shared (the plain child of every series) | the plain lead's sheet exists; the child's height is not drawn yet | 9 | seated with an open book, reading (three-quarter); kneeling with hands together, eyes closed (profile); sleeves |
 | The recurring cast | background only (ensemble.md), never a lead, never named in speech | shared | yes: ensemble.md | 9 (optional, behind the child) | their sheets as they stand |
 
 Settings:

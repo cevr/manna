@@ -74,7 +74,7 @@ Props:
 | The first dry leaf | film | `death` |
 | A slate and a cloth (01's `math` slate; 10's `forgiven`) | series | `bondage` |
 | Paper chains at the wrists | series (10 breaks them) | `bondage`, `four` |
-| A cut-paper leopard | film | `bondage` |
+| A storybook leopard | film | `bondage` |
 | A gold coin of light | film | `four` |
 
 New to the library: Seth (newborn, then grown) and Enos; Adam and Eve old in the coats of skins; the tent east of Eden; the guarded gate with the glory between the cherubim; the cracked frame.
@@ -137,7 +137,7 @@ New to the library: Seth (newborn, then grown) and Enos; Adam and Eve old in the
 
 **say:** {fourth}And the fourth loss is the {*}deepest. {/} {suppose}If every debt we owed were paid {*}today, {/} {over}would it be {*}over? {/} {clean}The record wiped clean. {/} {evening}By evening, {/} we would sin {*}again. {/} {because}Because the problem is not only what we have {*}done. {/} {become}It is what we have {*}become. {/} {paul}Paul puts it this way, {quote}“For the good that I would I do not: but the evil which I would not, that I do.” {//} {want}We want to stop. {/} {cannot}And we {*}cannot. {/} {leopard}Can a leopard change its {*}spots? {/} {captive}We were taken captive. {/} {free}And we cannot set ourselves {*}free.
 **cite:** Romans 7:18–19; Jeremiah 13:23
-**picture:** IDEA: the parchment going dark from its edges. On `suppose` the plain lead (the father of `fire`) stands at a slate covered with scrawl; on `over` he looks at the camera; on `clean` a cloth wipes it clean and the morning light comes on the page. On `evening` the light goes amber and low, and the scrawl writes itself back, line by line, in the figure's own hand. On `become` the camera turns from the slate to the figure's own chest: the same scrawl is written there. On `quote` the figure reaches for the slate's cloth and its hand pulls back, as if held. On `cannot` paper chains show at both wrists, at the sleeve's end. On `leopard` a cut-paper leopard on the page licks at its spots, and they stay. On `free` the figure pulls once against the chains and stops, head down.
+**picture:** IDEA: the parchment going dark from its edges. On `suppose` the plain lead (the father of `fire`) stands at a slate covered with scrawl; on `over` he looks at the camera; on `clean` a cloth wipes it clean and the morning light comes on the page. On `evening` the light goes amber and low, and the scrawl writes itself back, line by line, in the figure's own hand. On `become` the camera turns from the slate to the figure's own chest: the same scrawl is written there. On `quote` the figure reaches for the slate's cloth and its hand pulls back, as if held. On `cannot` paper chains show at both wrists, at the sleeve's end. On `leopard` a storybook leopard on the page licks at its spots, and they stay. On `free` the figure pulls once against the chains and stops, head down.
 **paraphrase sources (not spoken):**
 
 - SC 17.1 (Ellen G. White) — "His nature became so weakened through transgression that it was impossible for him, in his own strength, to resist the power of evil. He was made captive by Satan" → `captive`

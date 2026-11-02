@@ -1,6 +1,6 @@
 # Dwell in the Land: a series on country living
 
-A playlist of narrated cut-paper films (apps/animations, the house style of _The Path of the Just_) on country living: what it is, why God gives it, and where and how a family moves toward it. Drafted 2026-10-13. Nothing here is narrated, rendered or checked. The opening script is in `scripts/`; every citation, with its check against the local corpus, is in `sources.md`.
+A playlist of narrated storybook films (apps/animations, the house style of _The Path of the Just_) on country living: what it is, why God gives it, and where and how a family moves toward it. Drafted 2026-10-13. Nothing here is narrated, rendered or checked. The opening script is in `scripts/`; every citation, with its check against the local corpus, is in `sources.md`.
 
 **Owner direction (2026-10-13):** "leaving the cities, I think is a very important topic that interleaves with education for many reasons. I think we can kind of even have a, maybe a whole series on country living in general, what, why, where, how, and that kind of have both doctrinal and educational content alongside with it. Adam's schoolroom, if we can use it, let's use it. Let's find the author. I think it's fun. But like I said, you know, we're not, we're not trying to overtly quote Adventist pioneers and whatnot. We want to reach a target, like a wide target audience and avoid prejudice."
 

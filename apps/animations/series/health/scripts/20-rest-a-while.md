@@ -17,7 +17,7 @@ _Principles from Scripture, not medical advice. Don't stop or change any treatme
 
 ## Cast
 
-This is a talk. The speaker is filmed. Its Bible scenes are generated Illustration stills in the sermon decks' painting style, with no rigs (casting.md §4 item 11). Its everyday pictures (the bedroom, the fields) are B-roll of places, with no figure, so it has no cut-paper insert (ensemble.md, open choice 6).
+This is a talk. The speaker is filmed. Its Bible scenes are generated Illustration stills in the sermon decks' painting style, with no rigs (casting.md §4 item 11). Its everyday pictures (the bedroom, the fields) are B-roll of places, with no figure, so it has no illustrated insert (ensemble.md, open choice 6).
 
 | Figure | Kind | Scope | In the library? | Beats | The sheet must show |
 | --- | --- | --- | --- | --- | --- |

@@ -18,7 +18,7 @@ Every Scripture line was printed by `manna verse` on 2026-10-10, checked again o
 | --- | --- | --- | --- | --- | --- |
 | The speaker (the owner, on camera) | on camera, not drawn | series | n/a | 1, 3, 7, 10, 13, 14 | none (filmed) |
 | The ten (the twelve, casting.md #10, without the two who asked) | Bible figures, generated Illustration B-roll (casting.md §4 item 11), no rig | shared | listed in casting.md (P3), not drawn | 5 | ten angry faces (front, three-quarter); grown men of mixed ages, no two alike (casting.md); labeled "Illustration" |
-| The plain child (the side-eye, the late desk, the peeked sheet, the sulking second place) | plain figure at a child's height (character-design 2.3; casting.md 2.3, the classroom's plain children), a cut-paper insert (ensemble.md open choice 6) | shared (the plain child of every series) | the plain lead's sheet exists; the child's height is not drawn yet | 9 | a sideways glance (three-quarter, close); bent over a desk under a lamp at night (profile); eyes on another's answer sheet (three-quarter, from behind the shoulder); sulking, arms folded (front); sleeves |
+| The plain child (the side-eye, the late desk, the peeked sheet, the sulking second place) | plain figure at a child's height (character-design 2.3; casting.md 2.3, the classroom's plain children), an illustrated insert (ensemble.md open choice 6) | shared (the plain child of every series) | the plain lead's sheet exists; the child's height is not drawn yet | 9 | a sideways glance (three-quarter, close); bent over a desk under a lamp at night (profile); eyes on another's answer sheet (three-quarter, from behind the shoulder); sulking, arms folded (front); sleeves |
 | The older child and the younger at the next desk | two plain figures at two child heights (character-design 2.3), or two from the crowd kit's child body (casting.md 2.3, mutual help) | shared | the plain lead's sheet exists | 12 | the older child's hand guiding the younger one's pencil, both seated at a desk (three-quarter, close on the hands); sleeves |
 | The classmates | crowd from the crowd kit's child body (character-design §5; casting.md 2.3, the classroom) | shared | the crowd kit | 9 (behind the plain child, optional) | seated at desks (three-quarter, back); no two alike; sleeves |
 | The recurring cast | not used: the cast's schooling is never shown (ensemble.md open choice 8) | shared | yes: ensemble.md | none | none |
@@ -31,7 +31,7 @@ Settings:
 | A school hall with an honour-roll board (generated or filmed B-roll, a place) | series | 2 | not set by the script |
 | Two empty seats beside a throne (Illustration) | shared | 4 | not set by the script |
 | A child's desk at night | series | 9 | a desk lamp at 2 a.m. |
-| The classroom (casting.md 2.3, a day school; cut-paper) | series | 9, 12 | not set by the script |
+| The classroom (casting.md 2.3, a day school; an illustrated insert) | series | 9, 12 | not set by the script |
 
 Props:
 

@@ -19,7 +19,7 @@ _Principles from Scripture, not medical advice. Don't stop or change any treatme
 
 ## Cast
 
-This is a talk. The speaker is filmed. Its Bible scenes are generated Illustration stills in the sermon decks' painting style, with no rigs (casting.md §4 item 11). Its one everyday moment, the hands in beat 13, is a cut-paper insert (ensemble.md, open choice 6).
+This is a talk. The speaker is filmed. Its Bible scenes are generated Illustration stills in the sermon decks' painting style, with no rigs (casting.md §4 item 11). Its one everyday moment, the hands in beat 13, is an illustrated insert (ensemble.md, open choice 6).
 
 | Figure | Kind | Scope | In the library? | Beats | The sheet must show |
 | --- | --- | --- | --- | --- | --- |
@@ -29,7 +29,7 @@ This is a talk. The speaker is filmed. Its Bible scenes are generated Illustrati
 | Jesus Christ (`christ`, casting.md #1) | Bible figure, generated Illustration B-roll (casting.md §4 item 11), no rig | shared | yes: `src/library/cast/christ` (the rig is not used here) | `7`, `8` | no sheet (Illustration). `7`: healing on a Galilee hillside among the crowd (wide, three-quarter). `8`: close on his fingertips with the clay. An ordinary man in his earthly dress, the white robe and gold sash; never a portrait, no halo or glow, never the tallest in the crowd |
 | The hillside crowd (casting.md #3, gospel crowds) | Bible crowd, generated Illustration B-roll (casting.md §4 item 11), no rig | shared | listed in casting.md (P1 as a kit), not drawn | `7` | no sheet (Illustration): the crowd round him on the hillside (wide); pity, not menace |
 | The man born blind (casting.md #35) | Bible figure, generated Illustration B-roll (casting.md §4 item 11), no rig | shared | listed in casting.md (P4), not drawn | `8` | no sheet (Illustration): his eyes closed under the clay (front, close), then open (front, close), at Siloam's stone pool |
-| The hands at the eight remedies | the plain lead's hands (character-design 2.3), a cut-paper insert (ensemble.md, open choice 6) | shared (the one plain lead) | the plain lead's sheet exists (drawn before the sleeves rule) | `13` | close on the circle hands, each at its sleeve's end: pushing an empty plate away (top-down), then folded (front, close); sleeves to the wrist |
+| The hands at the eight remedies | the plain lead's hands (character-design 2.3), an illustrated insert (ensemble.md, open choice 6) | shared (the one plain lead) | the plain lead's sheet exists (drawn before the sleeves rule) | `13` | close on the circle hands, each at its sleeve's end: pushing an empty plate away (top-down), then folded (front, close); sleeves to the wrist |
 
 Named, not shown: the man at Bethesda (casting.md 1.6; beat 10 shows the pool only).
 
@@ -40,7 +40,7 @@ Settings:
 | The speaker's set (filmed, not drawn) | series | `1`, `2`, `5`, `9`, `12`, `14`, `15`, `17` | as filmed |
 | Marah: the desert pool, cracked mud (Illustration) | shared (Israel in the wilderness) | `1`, `3`, `17` | as painted; in `17` the water clears and shines |
 | Elim: the twelve wells and the seventy palms (Illustration) | shared (Israel in the wilderness) | `6` | as painted |
-| A Galilee hillside (Illustration) | shared (T04 draws its hillside crowd in cut paper) | `7` | as painted |
+| A Galilee hillside (Illustration) | shared (T04 draws its hillside crowd in the storybook look) | `7` | as painted |
 | The pool of Siloam, a stone pool (Illustration) | film | `8` | as painted |
 | The pool of Bethesda with its porches (Illustration) | film | `10` | as painted |
 | The card page: the Scripture cards, the series card, the callouts, the checklist, the word card | series | `2`, `4`, `6`, `8`, `10`, `12`, `13`, `16` | the series' card style |

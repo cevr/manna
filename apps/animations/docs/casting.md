@@ -43,8 +43,8 @@ This file applies them figure by figure. Where the two disagree, the guide wins,
 **Appearance terms.**
 
 - **Shown:** on screen in a script.
-  - "Film" means a cut-paper film scene.
-  - "Talk" means B-roll in an education or health talk. The talk scripts call their Bible pictures generated "Illustration" B-roll. Ensemble open choice 6 makes only a talk's everyday moments (a plain figure in front, the cast behind) into cut-paper inserts. Whether talk Bible scenes need rigs at all is an owner question (section 4, item 11), so talk appearances are counted apart from film appearances.
+  - "Film" means a storybook film scene.
+  - "Talk" means B-roll in an education or health talk. The talk scripts call their Bible pictures generated "Illustration" B-roll. Ensemble open choice 6 makes only a talk's everyday moments (a plain figure in front, the cast behind) into illustrated inserts from the film engine. Whether talk Bible scenes need rigs at all is an owner question (section 4, item 11), so talk appearances are counted apart from film appearances.
 - **Named:** spoken in narration, or written on a card, but not drawn.
 - **Planned:** in a series plan with no script yet. Plans change, so a planned figure is drawn last.
 
@@ -117,7 +117,7 @@ These are the figures the scripts show, with their planned uses for weight. The 
 | 1   | Jesus Christ (adult; with the baby and the boy as stages)            | T01, T02, T04, T08, RBF                | H01, H20; the boy in E17 |                           | T09, T13, T18, T20, T41; C07, C10; edu ep 8; H26, H59 | P1         |
 | 2   | Moses                                                                | T02, T04, T08                          | H01 (his hand)           | RBF                       | T22; edu eps 6, 27                                    | P1         |
 | 3   | Gospel crowds (lepers, hillside, children, temple, cross, Capernaum) | T04, T08, RBF                          | H01, H20                 |                           | T14                                                   | P1 (crowd) |
-| 4   | The Father (a veiled glow, not a cut-paper rig)                      | T04, T08, C01                          |                          |                           | T32                                                   | P1 (asset) |
+| 4   | The Father (a veiled glow, not an outlined rig)                      | T04, T08, C01                          |                          |                           | T32                                                   | P1 (asset) |
 | 5   | Adam                                                                 | T04, C01                               | H06 (the clay figure)    | RBF                       | T06; C01, C08; edu ep 4; H32                          | P2         |
 | 6   | Eve                                                                  | T04, C01                               |                          | RBF                       | T06; H59                                              | P2         |
 | 7   | Angels (seraphim, the host, the Rev 14 angel, those that stand by)   | T08, RBF                               |                          |                           | T30, T36, T38, T40                                    | P2         |
@@ -276,7 +276,7 @@ At 0.97 He is never the tallest in a crowd.
 **Drawing**
 
 - **Form:** a definite seated human silhouette, wrapped in a haze of gold-white light, with feathered edges. There is no face, no features and no ink outline. It is the brightest glow in the film.
-- **Not a rig:** it is a light asset built on a silhouette. It is never a cut-paper figure.
+- **Not a rig:** it is a light asset built on a silhouette. It is never an outlined storybook figure.
 - **Height:** seated on the throne. The text gives no measure.
 - **Props:** none.
 - **Never:** an emblem (a triangle or an eye), or a detailed bearded old man.
@@ -703,7 +703,7 @@ The Never field predates the owner's §3.3 decision. Since 2026-10-13 the Father
 - **One identity feature:** the youth, stillness with his chin level, and the plain plate of pulse that sets him apart in a court of rich dishes. The old Daniel's feature is the open window.
 - **Role:** main in E19 and H33.
 
-**Priority:** P4. His talks are B-roll, but the plans use him more than anyone. If the owner wants cut-paper talks, he rises to the top of P3.
+**Priority:** P4. His talks are B-roll, but the plans use him more than anyone. If the owner wants his talks drawn in the films' storybook look, he rises to the top of P3.
 
 #### The Bereans
 
@@ -1244,7 +1244,7 @@ The Zech 3 court:
 - "Every people" without caricature (§2.5 rule 5).
 - A king who is a person, not a menace.
 - It is scripted twice, and the plans return to it four more times.
-- It also answers open choice 6 in practice. If it reads well in cut paper, the talks can carry Bible scenes in the films' own look.
+- It also answers open choice 6 in practice. If it reads well in the storybook look, the talks can carry Bible scenes in the films' own look.
 
 **Next after these:** Abraham's tent household (Gen 18).
 
@@ -1293,7 +1293,7 @@ Each item gives where the conflict is and what the guide says. A recommendation 
      - §5's official covers a parable judge.
      - §3.3 (owner, 2026-10-13) draws the Father only as a veiled, hazy human form with no features and no outline.
      - T18's plan makes Jesus the Judge.
-   - The risk: a cut-paper judge whose verdict is God's pictures God as a man with a face.
+   - The risk: an outlined judge whose verdict is God's pictures God as a man with a face.
    - Answered (owner, 2026-10-13): "He should be pictured as a man, just an indistinct figure." The judge whose verdict is God's is the Father's veiled form on the judge's seat (§3.3, Dan 7:9–10): a man's shape in gold-white light, no face, no outline, no gavel. The Advocate stands before Him, drawn plainly. §5's official stays for a parable's human judge only.
 9. **RBF's grey figures.**
    - Where: the accused, the meeting-hall crowd and the stained figure at the gate are grey, and the accuser is "shadow-grey".
@@ -1304,7 +1304,7 @@ Each item gives where the conflict is and what the guide says. A recommendation 
     - The guide: the built crest is rust, which is right; scarlet is sin's (§1.2). Keep it off scarlet.
 11. **Bible scenes in talk B-roll.**
     - Where: E17, E19, E44, H01, H06, H20, H33 and H50 call for generated "Illustration" B-roll of Bible scenes.
-    - The ensemble: open choice 6 makes only everyday moments cut-paper (a plain figure in front, the cast behind).
+    - The ensemble: open choice 6 makes only everyday moments illustrated inserts from the film engine (a plain figure in front, the cast behind).
     - Answered (owner, 2026-10-13): "generated illustrations are good - using same artworkstyle as we do for presentations". The talks' Bible scenes are generated illustrations in the sermon decks' oil-painting style ([`skills/bible/scripts/deck/series.ts`](../../../skills/bible/scripts/deck/series.ts)), with a slow parallax camera move where one helps. They need no rigs; the counts in P4 stay apart. The frame rules still hold in them: the Father veiled (§3.3), Christ an ordinary man (§3.2).
 12. **Bookends.**
     - Where: RBF's rooftop coda (v2) and some theology codas leave the opening's place. RBF's v3 script opens and closes in one courtroom, with no rooftop coda.
