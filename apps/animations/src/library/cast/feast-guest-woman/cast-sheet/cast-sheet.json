@@ -1,0 +1,98 @@
+{
+  "member": "feast-guest-woman",
+  "scope": "library",
+  "who": "her",
+  "headgear": true,
+  "refs": [
+    {
+      "file": "../../filler-bases/cast-sheet/views/poses-2.png",
+      "why": "the kept grown woman of the base filler cast, the guest herself: her head (an upright oval a little taller than it is wide), her three-mark face, her peach skin, her dark-brown hair parted in the middle, her cream robe with sleeves to the wrist, her plain flat sash, her round hands at the sleeve ends and her brown sandals, at the base's proportions; the guest wears one house part over her, an olive mantle drawn over her head as a veil and open down the front"
+    },
+    {
+      "file": "../../lead-feast/cast-sheet/views/single-9.png",
+      "why": "the kept lead seated on the house's low wooden stool, facing the viewer: only the sitting is taken from it (the seat's height, the lap seen from the front with the knees toward the viewer, the robe falling to the ankles, the feet flat, the stool's plank ends and legs either side of the robe); never his curls, his teal mantle, his knotted sash, his face or what he holds"
+    },
+    {
+      "file": "../../../../films/in-its-order/cast/feast-mother/cast-sheet/kept/poses.png",
+      "why": "the kept feast mother, for try 1: the house veil on a kept woman, a cloth drawn over the head, framing the face and falling over the shoulders"
+    },
+    {
+      "file": "tries/guide-poses-2.png",
+      "why": "a made guide for try 2: try 1 set seated at single-9's seat (2.82 of her own heads from the veil's top to the soles, where try 1 sat 3.47), its own stool erased and single-9's stool pasted at the new seat; okra traced it"
+    }
+  ],
+  "sheets": {
+    "poses": {
+      "anchor": 1,
+      "layout": "Draw one seated guest at a feast three times in one row, evenly spaced, the same grown woman at the same size on the same low wooden stool facing the viewer square, both round hands resting on the knees, in an olive mantle drawn over her head as a veil, framing her face, a little of her dark-brown hair parted in the middle showing at the brow, the mantle open down the front over the base's cream robe and plain sash, and brown sandals on bare feet; only the head changes, left to right: one, neutral, her head and eyes to the viewer, a calm face with a short smile line; two, her head turned a quarter toward the viewer's left, her eyes on someone seated beside her, surprised: brows raised, eyes open, a small round open mouth; three, her head turned the same way, her eyes on the same person, a kind closed smile.",
+      "slots": ["front", "free", "free"],
+      "level": [1, 2, 3],
+      "tries": [
+        {
+          "n": 1,
+          "file": "tries/poses-1.png",
+          "prompt": "Draw a character sheet of one seated guest at a feast, drawn three times in one row, in exactly the style of the first and third reference images: flat cut-paper colour shapes, one smooth dark-brown silhouette outline of even weight round each figure, shading with colour only (the skin's shaded side turns toward a warm red-orange, each cloth's shaded side toward a deeper hue of its own colour turned toward violet, never grey or black), a small soft lavender contact shadow under each stool, and a plain warm off-white paper background with a soft paper grain.\n\nImage 1 is the guest herself, the kept grown woman of the base filler cast. Draw her exactly as it does, at its proportions: the same head, an upright oval a little taller than it is wide; the same face marks at the same place and size (two short, thick, dark-brown brows, two small dark oval eyes set close together, a short mouth line); the same peach skin; the same cream robe with long sleeves to the wrist; the same plain flat sash with no knot and no hanging ends; the same round circle hands at the sleeve ends; the same brown sandals. Image 2 shows how a figure sits on the house's low wooden stool facing the viewer. Take only the sitting from it: the seat's height, the short lap seen from the front with the knees toward the viewer, the robe falling over the knees to the ankles, the feet flat on the ground, the stool's legs showing either side below the robe. Never take that figure's curls, his teal mantle, his knotted sash, his face or what he holds. Image 3 shows the house's veil on a kept woman (the figure at the far right): a cloth drawn over the head, framing the face, falling over the shoulders.\n\nThe guest wears one house part over the base: an olive-green mantle (#768059) drawn over her head as a veil, framing her face, a little of her dark-brown hair, parted in the middle, showing at the brow; the mantle falls over both shoulders and hangs open down the front to the lap, the cream robe and the plain sash showing between its edges.\n\nLeft to right, evenly spaced, all three the same woman at the same size, each seated on the same low wooden stool facing the viewer square. The body, the arms, the legs and the stool are the same in all three, both round hands resting on the knees; only the head changes:\n1. Neutral: her head and her eyes face the viewer, a calm face with the short smile line of image 1.\n2. Turn: her head turned a quarter toward the viewer's left (a three-quarter head on the front body), her eyes looking toward the viewer's left as if at someone seated beside her; she stares in surprise: brows raised, eyes open, a small round open mouth.\n3. Smile: her head turned toward the viewer's left exactly as in 2, her eyes on the same person; she smiles kindly: brows soft and relaxed, a gentle closed smile.\n\nSeated, each figure is about seven eighths of the woman's standing height in image 1, from the top of the head to the soles: a little under three heads tall. Every head is the same size as image 1's head at that scale. The key light comes from the upper left on all three, whichever way the head turns. Each turned head is its own drawing, never a mirror. No skin shows below the neck except the hands. No curls, no jewellery, nothing in the hands. No words, letters, numbers, labels or frames anywhere.",
+          "refs": [
+            "../../filler-bases/cast-sheet/views/poses-2.png",
+            "../../lead-feast/cast-sheet/views/single-9.png",
+            "../../../../films/in-its-order/cast/feast-mother/cast-sheet/kept/poses.png"
+          ],
+          "underlay": false,
+          "flags": [
+            {
+              "check": "hand",
+              "views": [2, 1]
+            }
+          ],
+          "at": "2026-11-02T01:52:24.000Z"
+        },
+        {
+          "n": 2,
+          "file": "tries/poses-2.png",
+          "prompt": "Redraw image 1 as a clean, finished character sheet. Image 1 is a guide: one seated guest at a feast, the same woman three times in one row (neutral, turn, smile). Trace it. Keep every figure exactly where image 1 puts it and at its size: the head, the olive-green mantle drawn over her head as a veil, the parted dark-brown hair at her brow, the face, the cream robe, the plain sash, the round hands resting on the knees, the seat height, the low wooden stool and the feet. Keep the seat height, the stool and the face proportions exactly as image 1: each figure is 2.82 heads tall seated, from the top of the veil to the soles, and the stool's seat sits 0.62 heads above the bottom of its legs. Keep the face marks at the places and sizes image 1 gives them: the two eyes, the two short brows and the short mouth.\n\nImage 1 was pasted together, so fix only these guide marks:\n1. The stool's plank ends and legs have rough pasted seams. Redraw the stool clean, as one piece of solid wood with one even outline, the way image 3 draws its stool: a plank end showing at each side of the robe at the hands' height, two legs below the robe, at the size and height image 1 gives them. Take only the stool from image 3, never its figure: not his curls, his teal mantle, his knotted sash, his face or what he holds.\n2. The robe's hem has a rough seam. Draw it as one smooth edge.\n3. The lap is too short and squashed. Draw a natural lap seen from the front: the knees toward the viewer under the hands, the robe falling smoothly over the knees to the ankles, with the seat and the soles at the heights image 1 gives them.\n4. The feet are bare peach skin in brown sandals, flat on the ground, as image 1 draws them.\n\nStyle exactly as image 2, the kept grown woman of the base filler cast: flat cut-paper colour shapes, one smooth dark-brown silhouette outline of even weight round each figure, shading with colour only (the skin's shaded side turns toward a warm red-orange, each cloth's shaded side toward a deeper hue of its own colour turned toward violet, never grey or black), and a small soft lavender contact shadow under each stool. The background is flat plain cream paper, the same all over.\n\nThe heads, as image 1: 1. neutral, head and eyes facing the viewer, a calm face with a short smile line; 2. head turned a quarter toward the viewer's left, her eyes on someone seated beside her, surprised: brows raised, eyes open, a small round open mouth; 3. head turned the same way, eyes on the same person, a kind closed smile. The body, the arms, the legs and the stool are the same in all three. The key light comes from the upper left on all three. No skin shows below the neck except the hands and the feet. No curls, no jewellery, nothing in the hands. No words, letters, numbers, labels or frames anywhere.",
+          "refs": [
+            "tries/guide-poses-2.png",
+            "../../filler-bases/cast-sheet/views/poses-2.png",
+            "../../lead-feast/cast-sheet/views/single-9.png"
+          ],
+          "underlay": false,
+          "retryOf": 1,
+          "flags": [
+            {
+              "check": "hand",
+              "views": [2, 1]
+            },
+            {
+              "check": "hand",
+              "views": [3, 1]
+            }
+          ],
+          "at": "2026-11-02T02:51:32.000Z"
+        }
+      ]
+    }
+  },
+  "kept": {
+    "poses": {
+      "try": 2,
+      "why": "owner keep, 2026-11-01, through the orchestrator (no lab ask): the woman's seated sheet (in-its-order item 3, the feast guests), filed by hand as the try's bytes, each view cut at its ink box. The critic at the keep: her turn toward the viewer's left is right, as she sits at picture-right and turns toward the lead",
+      "views": [
+        {
+          "view": 1,
+          "name": "poses-1",
+          "box": [95, 89, 479, 785]
+        },
+        {
+          "view": 2,
+          "name": "poses-2",
+          "box": [579, 89, 959, 785]
+        },
+        {
+          "view": 3,
+          "name": "poses-3",
+          "box": [1060, 89, 1441, 785]
+        }
+      ]
+    }
+  }
+}
