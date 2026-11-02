@@ -17,7 +17,8 @@
 // `manNumbersOf`, `womanNumbersOf`, `motherNumbers`), and he acts on the cues; the guests nod
 // toward him as they turn and as they stare again (`NODS`). The mother blinks all through and bows to her
 // baby (`motherLook`, `motherNumbers`), and he blinks from `grown` to `ouch`
-// (`eyesOf`).
+// (`eyesOf`). Behind the guests the feast's crowd sits in two rows, each at a
+// table on a plane of its own, each bust in its own idle (`drawCrowdRow`).
 // `what` cuts to the last close plate (`WHAT`), the cup of milk and the
 // bread, and the camera lifts to them.
 //
@@ -30,8 +31,20 @@ import { drawing, type PuppetLook } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
 import { Option } from 'effect';
 import { RAISE_SEATED } from '../../../library/cast/lead-feast/cutout/raise-seated.ts';
-import { BABY_BACK, DISTANCE, NEAR, PANEL, PLANES, SKY, TABLE, WHAT } from '../plates/plates.ts';
+import {
+  BABY_BACK,
+  DISTANCE,
+  FAR_TABLE,
+  NEAR,
+  PANEL,
+  PLANES,
+  SKY,
+  TABLE,
+  WHAT,
+} from '../plates/plates.ts';
 import { SCROLL_OPEN, SCROLL_ROLLED, SCROLL_ROLLER } from '../plates/props.ts';
+import { CROWD_ROWS, drawCrowdRow } from './crowd.ts';
+import { CROWD_PUPPETS } from '../../../library/cast/filler-bases/cutout/crowd.ts';
 import { type Cues, eyesOf, numbersOf } from './lead.ts';
 import {
   type GuestKey,
@@ -190,6 +203,13 @@ const SCROLL = {
 /** The last close (`cold.what.3`), on `WHAT`'s frame px: the camera lifts to the cup and the bread and pushes in a little. */
 const LIFT = { from: { x: 960, y: 640, k: 1 }, to: { x: 960, y: 552, k: 1.03 } } as const;
 
+/** A camera's share on a plane `z` back: the plane's zoom and the plane point at the frame's centre, frame px. */
+const onPlane = (camera: Camera, z: number): Camera => ({
+  k: 1 + (camera.k - 1) / z,
+  x: CENTRE[0] + (camera.x - CENTRE[0]) / z,
+  y: CENTRE[1] + (camera.y - CENTRE[1]) / z,
+});
+
 const between = (a: Camera, b: Camera, t: number): Camera => ({
   x: lerp(a.x, b.x, t),
   y: lerp(a.y, b.y, t),
@@ -213,12 +233,13 @@ export const cold = drawing({
     ouch: { mark: 'ouch', dur: 0.6, ease: 'inOutCubic' },
     what: { mark: 'what', until: { at: 'end' }, ease: 'inOutSine' },
   },
-  puppets: TABLE_PUPPETS,
+  puppets: { ...TABLE_PUPPETS, ...CROWD_PUPPETS },
   paintings: {
     sky: SKY,
     distance: DISTANCE,
     near: NEAR,
     table: TABLE,
+    far: FAR_TABLE,
     back: BABY_BACK,
     what: WHAT,
     rolled: SCROLL_ROLLED,
@@ -229,9 +250,7 @@ export const cold = drawing({
     const { ctx, w } = f;
     // One plane of a shot, frame px: its share of the camera's zoom and of its move off the centre.
     const plane = (camera: Camera, z: number, draw: () => void) => {
-      const k = 1 + (camera.k - 1) / z;
-      const x = CENTRE[0] + (camera.x - CENTRE[0]) / z;
-      const y = CENTRE[1] + (camera.y - CENTRE[1]) / z;
+      const { k, x, y } = onPlane(camera, z);
       ctx.save();
       ctx.scale(w / 1920, w / 1920);
       ctx.translate(CENTRE[0], CENTRE[1]);
@@ -357,6 +376,20 @@ export const cold = drawing({
     plane(camera, PLANES.sky, () => f.painting('sky'));
     plane(camera, PLANES.distance, () => f.painting('distance'));
     plane(camera, PLANES.near, () => f.painting('near'));
+    // The feast's crowd, back row then front row, each at its table on its
+    // own plane through its row's blur and haze: a bust is drawn only when
+    // its span meets the frame (`shown`, screen px at 1920).
+    for (const name of ['back', 'front'] as const) {
+      const row = CROWD_ROWS[name];
+      const on = onPlane(camera, row.z);
+      const shown = (left: number, right: number) =>
+        CENTRE[0] + on.k * (right * PANEL.scale - on.x) >= 0 &&
+        CENTRE[0] + on.k * (left * PANEL.scale - on.x) <= 1920;
+      plane(camera, row.z, () => {
+        ctx.filter = `blur(${(row.blur * w) / 1920}px) ${row.haze}`;
+        panel(() => drawCrowdRow(f, name, shown, () => f.painting('far')));
+      });
+    }
     plane(camera, PLANES.guests, () => panel(() => seatTable(f, key, nods, lead)));
     plane(camera, PLANES.table, () => {
       f.painting('table');

@@ -15,6 +15,7 @@
 import type { PaintingSpec } from '@manna/film/canvas';
 import babyBackPng from './cold-baby-back.png' with { type: 'file' };
 import whatPng from './cold-what.png' with { type: 'file' };
+import farTablePng from './far-table.png' with { type: 'file' };
 import distancePng from './distance.png' with { type: 'file' };
 import nearPng from './near.png' with { type: 'file' };
 import pathPng from './path.png' with { type: 'file' };
@@ -66,6 +67,21 @@ export const TABLE = {
   png: tablePng,
   size: [1920, 1280],
   at: [0, -100],
+} as const satisfies PaintingSpec;
+
+/**
+ * The crowd's tables, drawn small on each crowd row's plane (`CROWD_ROWS` in
+ * `scenes/crowd.ts`): `table.png` cut to its plate rows 940..1184 (the props,
+ * the top, the face and the legs down to the paving), the stone step at its
+ * left (x < 210, rows from 1148) cleared, and its last 10 rows faded to clear,
+ * so the legs end soft above the floor and no paving comes with it.
+ */
+export const FAR_TABLE = {
+  key: 'in-its-order/far-table',
+  png: farTablePng,
+  size: [1920, 244],
+  at: [0, 840],
+  open: ['top', 'bottom'],
 } as const satisfies PaintingSpec;
 
 /**
