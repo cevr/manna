@@ -44,7 +44,7 @@
       "target": "role=switch label=Click",
       "direction": "down",
       "expect": [
-        { "shows": "role=group label=Start" },
+        { "shows": "id=start" },
         { "shows": "role=switch label=Intro" },
         { "shows": "role=switch label=Click" }
       ]
