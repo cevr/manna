@@ -1,5 +1,6 @@
 // Every drawing the cast pipeline needs of the IDEA villagers (`film concept
-// coverage`): their three kept poses, each cut. Pure data.
+// coverage`): their three kept poses and the grown villager raising the clay
+// cup (single-15), each cut. Pure data.
 
 import type { CoverageManifest } from '@manna/film/tools';
 
@@ -11,5 +12,12 @@ export const COVERAGE: CoverageManifest = {
     { id: 'poses-poses-3', cut: 'puppet', file: 'cast-sheet/views/poses-3.png', for: FOR },
     { id: 'poses-poses-4', cut: 'puppet', file: 'cast-sheet/views/poses-4.png', for: FOR },
     { id: 'poses-poses-6', cut: 'puppet', file: 'cast-sheet/views/poses-6.png', for: FOR },
+    // he holds the cup in `milk`, as the book's ribbon of white pours into it
+    {
+      id: 'single-single-15',
+      cut: 'puppet',
+      file: 'cast-sheet/views/single-15.png',
+      for: [{ script: 'in-its-order', beats: ['milk'] }],
+    },
   ],
 };

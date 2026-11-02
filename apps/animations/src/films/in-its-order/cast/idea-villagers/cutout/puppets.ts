@@ -24,11 +24,8 @@ import p6Robe from './sheets/poses-6/robe.png' with { type: 'file' };
 import p6Torso from './sheets/poses-6/torso.png' with { type: 'file' };
 import { puppetsOf } from '../../../../../library/cutout/puppets.ts';
 import { CUTS } from './cut.ts';
-import { FRAMES } from './frames.ts';
+import { FRAMES, type FramedView } from './frames.ts';
 import { SKELETONS } from './skeleton.ts';
-
-/** Their cut views on their poses sheet: the hopping man, the baby, the standing man. */
-type PoseView = 'poses-3' | 'poses-4' | 'poses-6';
 
 /**
  * The hopping man's line: the median run of ink across his outer outline is
@@ -46,11 +43,19 @@ const HOPPING_LINE = { width: 10.5, ink: [6, 2, 0] } as const;
 const LINE = { width: 8.5, ink: [6, 1, 0] } as const;
 
 /**
+ * The cup-raising man's line (single-15, drawn about 2.2 times the poses
+ * sheet's scale): the median run of ink across his outer outline (L* < 40) is
+ * 18 px (quartiles 17 and 21), laid half a pixel wider; his ink is his view's
+ * darkest 1 % (1,0,0). Read the same way, the standing man's is 8 px (8 and 9).
+ */
+const SINGLE_LINE = { width: 18.5, ink: [1, 0, 0] } as const;
+
+/**
  * Their paper's grain, luma (`core/unmatte.ts`, `grain`): the 95th percentile
  * of how far each kept view's ground (flooded from the border, within 30 of
- * its paper) runs darker than its paper is 2.516 (poses-3), 2.484 (poses-4)
- * and 2.744 (poses-6); the largest, 2.75, is the one calibration all three
- * share. A rim pixel of theirs darker than the paper by more than this is no
+ * its paper) runs darker than its paper is 2.516 (poses-3), 2.484 (poses-4),
+ * 2.744 (poses-6) and 2.456 (single-15); the largest, 2.75, is the one
+ * calibration all four share. A rim pixel of theirs darker than the paper by more than this is no
  * paper, so the un-matte keeps it whole: at rest it keeps 5606 (poses-3),
  * 1480 (poses-4) and 4303 (poses-6) rim px whole and fills no px of a real
  * paper pocket (the kept crop's holes, which the figure closes round).
@@ -70,7 +75,8 @@ const PAPERS = {
   'poses-3': [253, 237, 212],
   'poses-4': [253, 236, 213],
   'poses-6': [253, 237, 213],
-} as const satisfies Readonly<Record<PoseView, readonly [number, number, number]>>;
+  'single-15': [253, 239, 216],
+} as const satisfies Readonly<Record<FramedView, readonly [number, number, number]>>;
 
 const SHARED = {
   cast: 'idea-villagers',
@@ -122,5 +128,14 @@ const POSES = puppetsOf<'poses-4' | 'poses-6'>({
   },
 });
 
+/** The cup-raising man's puppet (single-15), drawn larger than the poses sheet's figures. */
+const SINGLE = puppetsOf<'single-15'>({
+  ...SHARED,
+  line: SINGLE_LINE,
+  parts: {
+    'single-15': [],
+  },
+});
+
 /** Each cut view's puppet, by the view's name in their sheet's views: its parts front to back, its part sheet the kept box padded (`frames.ts`), the origin at the kept box's top-left corner, held to the kept box. */
-export const PUPPETS = { ...HOPPING, ...POSES };
+export const PUPPETS = { ...HOPPING, ...POSES, ...SINGLE };
