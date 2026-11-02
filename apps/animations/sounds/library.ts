@@ -21,7 +21,7 @@
 // owner kept is the entry's code (`keptFit`, imported from its file), which
 // keeps the recording's licence, so a CC BY one owes the same line.
 //
-// The library: 19 generated one-shots, 3 generated beds, 16 code one-shots
+// The library: 19 generated one-shots, 3 generated beds, 15 code one-shots
 // (one kept from a fit), 9 code beds (three kept from fits), 3 recorded
 // one-shots and 1 recorded bed. The lock keeps a
 // recorded sound's generated takes, if it had any, as candidates, never
@@ -684,47 +684,6 @@ export const library = defineLibrary({
             node: burst({ color: 'pink', low: 400, high: 2000, attack: 0.004, decay: 0.12 }),
             at: 1.1,
             db: -8,
-          },
-        ],
-      },
-    },
-    variants: 3,
-    use: 'one-shot',
-  },
-  // Milk sloshing in a bottle as it is raised, 0.6 s: a soft swell of noise
-  // in a low band that wanders as the milk moves, and three bubbles.
-  'bottle.slosh': {
-    kind: 'code',
-    sound: {
-      play: {
-        _tag: 'Layer',
-        of: [
-          {
-            node: {
-              _tag: 'Envelope',
-              points: [
-                [0, 0],
-                [0.12, 1],
-                [0.6, 0],
-              ],
-              curve: 'linear',
-              of: {
-                _tag: 'Filter',
-                type: 'bandpass',
-                hz: { _tag: 'Wobble', around: 520, depth: 5, rate: 9 },
-                q: 1.4,
-                of: { _tag: 'Noise', color: 'pink', secs: 0.6 },
-              },
-            },
-          },
-          {
-            node: {
-              _tag: 'Repeat',
-              timing: { _tag: 'Count', every: { _tag: 'Vary', min: 0.06, max: 0.11 }, count: 3 },
-              of: bubble,
-            },
-            at: 0.08,
-            db: -6,
           },
         ],
       },
