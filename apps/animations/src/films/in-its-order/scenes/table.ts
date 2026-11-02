@@ -6,6 +6,7 @@
 // from the title to the cold open keeps one table.
 
 import { ground, type PuppetPose } from '@manna/film/canvas';
+import { idle } from '@manna/film/core';
 import { SEATED as MAN } from '../../../library/cast/feast-guest-man/cutout/seated.ts';
 import { SEATED as WOMAN } from '../../../library/cast/feast-guest-woman/cutout/seated.ts';
 import { PUPPETS as LEAD } from '../../../library/cast/lead-feast/cutout/puppets.ts';
@@ -77,6 +78,22 @@ export const MOTHER_SEAT = {
 /** The puppet the table poses: the mother. */
 export const TABLE_PUPPETS = { mother: MOTHER['poses-1'] } as const;
 
+/** The mother's idle, seed 2 (the lead's is seed 1). */
+const MOTHER_IDLE = idle(2);
+
+/**
+ * The mother's bone numbers at scene time `t`, degrees, clockwise on screen:
+ * her idle on the bones her poses-1 cut turns with no new art. Her lean
+ * carries her sway, her breath and the slow drift of her weight, and the baby
+ * and the cup ride it with her arms. Her head takes a little of the idle's
+ * tilt, her neck less, as her veil rides her lean. Her arms keep their drawn
+ * angles round the baby.
+ */
+export const motherNumbers = (t: number) => {
+  const { sway, breath, drift, tilt } = MOTHER_IDLE(t);
+  return { lean: sway + 0.35 * breath + 0.5 * drift, neck: 0.15 * tilt, head: 0.35 * tilt };
+};
+
 /** The paintings the table draws: the lead's raise frames and each guest's keys. */
 export const TABLE_PAINTINGS = {
   ...RAISE_SEATED.paintings,
@@ -88,8 +105,9 @@ export const TABLE_PAINTINGS = {
   'woman-smile': WOMAN.paintings.smile,
 } as const;
 
-/** What the table needs of a scene's frame: its canvas, the mother's puppet and the table's paintings. */
+/** What the table needs of a scene's frame: its time, its canvas, the mother's puppet and the table's paintings. */
 export interface TableFrame {
+  readonly t: number;
   readonly ctx: CanvasRenderingContext2D;
   puppet(name: 'mother', pose: PuppetPose): void;
   painting(name: keyof typeof TABLE_PAINTINGS): void;
@@ -134,14 +152,25 @@ const posed = (
 
 /**
  * The lead on his seat: the contact shadow under him, then his raise's frame
- * `frame` when one is given. The frames and the shadow lie on his view's px
- * and are drawn where his cut-out lays those px (`posed`); with no frame, a
- * scene poses his cut-out at `LEAD_POSE` itself.
+ * `frame` when one is given, turned `lean` degrees (clockwise on screen) about
+ * his root, which is where his cut-out's lean bone turns him (his single-9
+ * skeleton's `lean` pivot), so a frame sways as his cut-out does. The frames
+ * and the shadow lie on his view's px and are drawn where his cut-out lays
+ * those px (`posed`); with no frame, a scene poses his cut-out at `LEAD_POSE`
+ * itself.
  */
-export const seatedLead = (f: TableFrame, frame?: keyof typeof RAISE_SEATED.paintings) =>
+export const seatedLead = (f: TableFrame, frame?: keyof typeof RAISE_SEATED.paintings, lean = 0) =>
   posed(f.ctx, LEAD_POSE, GUESTS.lead.root, LEAD['single-9'].origin, () => {
     ground(f.ctx, RAISE_SEATED.ground.at[0], RAISE_SEATED.ground.at[1], RAISE_SEATED.ground.w);
-    if (frame !== undefined) f.painting(frame);
+    if (frame === undefined) return;
+    const x = GUESTS.lead.root[0] - LEAD['single-9'].origin[0];
+    const y = GUESTS.lead.root[1] - LEAD['single-9'].origin[1];
+    f.ctx.save();
+    f.ctx.translate(x, y);
+    f.ctx.rotate((lean * Math.PI) / 180);
+    f.ctx.translate(-x, -y);
+    f.painting(frame);
+    f.ctx.restore();
   });
 
 /** A guest on its stool: the contact shadow under it, then its key `key` through its tint (`TINT`), whole, on its frames' px (`posed`, origin [0, 0]). */
@@ -156,11 +185,11 @@ const guest = (f: TableFrame, name: keyof typeof KEYS, key: GuestKey) => {
   });
 };
 
-/** The mother behind the woman: her eyes on her seat's point, her veil its width. */
+/** The mother behind the woman: her eyes on her seat's point, her veil its width, in her idle (`motherNumbers`). */
 const mother = (f: TableFrame) => {
   const scale = MOTHER_SEAT.head / (MOTHER_SEAT.box[2] - MOTHER_SEAT.box[0]);
   f.puppet('mother', {
-    numbers: {},
+    numbers: motherNumbers(f.t),
     root: [
       MOTHER_SEAT.at[0] + scale * (MOTHER_SEAT.root[0] - MOTHER_SEAT.eyes[0]),
       MOTHER_SEAT.at[1] + scale * (MOTHER_SEAT.root[1] - MOTHER_SEAT.eyes[1]),
