@@ -5,14 +5,16 @@
 // here, on the courtyard's guests plane in the kept panel's px, so the cut
 // from the title to the cold open keeps one table.
 
-import { ground, type PuppetPose } from '@manna/film/canvas';
-import { idle } from '@manna/film/core';
+import { ground, type PuppetLook, type PuppetPose, type PuppetSpec } from '@manna/film/canvas';
+import { act, blink, idle, lag } from '@manna/film/core';
+import { Array as Arr, Option } from 'effect';
 import { SEATED as MAN } from '../../../library/cast/feast-guest-man/cutout/seated.ts';
 import { SEATED as WOMAN } from '../../../library/cast/feast-guest-woman/cutout/seated.ts';
 import { PUPPETS as LEAD } from '../../../library/cast/lead-feast/cutout/puppets.ts';
 import { RAISE_SEATED } from '../../../library/cast/lead-feast/cutout/raise-seated.ts';
 import type { Pt } from '../../../library/cutout/rules.ts';
 import { PUPPETS as MOTHER } from '../cast/feast-mother/cutout/puppets.ts';
+import motherShut from '../cast/feast-mother/cutout/sheets/poses-1/head-closed.png' with { type: 'file' };
 
 /** Where the seated figures' feet rest behind the table, panel px. */
 const FLOOR = 925;
@@ -75,24 +77,100 @@ export const MOTHER_SEAT = {
   root: [193, 448],
 } as const;
 
-/** The puppet the table poses: the mother. */
-export const TABLE_PUPPETS = { mother: MOTHER['poses-1'] } as const;
+/**
+ * Her poses-1 cut-out with no line: a look (her blinks, `motherLook`) inks a
+ * cut-out's line again near what moved, and with no look none is inked, so
+ * under her blinks' look she draws as she does with none.
+ */
+const { line: _line, ...MOTHER_POSES } = MOTHER['poses-1'];
+
+/** The puppet the table poses: the mother, with her head drawn eyes shut (`shut`, on her head's own sheet canvas). */
+export const TABLE_PUPPETS = {
+  mother: { ...MOTHER_POSES, drawings: [{ name: 'shut', png: motherShut, part: 'head' }] },
+} as const;
+
+/** A cut-out's head bone's middle, between its chin and its crown, sheet px: a point inside its head part (a skeleton with no head bone fails here, at load). */
+export const headMiddle = (skeleton: PuppetSpec['skeleton']): Pt =>
+  Option.getOrThrow(
+    Option.map(
+      Arr.findFirst(skeleton.bones, (b) => b.name === 'head'),
+      ({ pivot, tip }): Pt => [(pivot[0] + tip[0]) / 2, (pivot[1] + tip[1]) / 2],
+    ),
+  );
+
+/** A blinking cut-out's look with its eyes open: no drawing laid, the boil off, as on every other frame it holds. */
+const OPEN: PuppetLook = { boil: 0, amp: 0 };
+
+/**
+ * A cut-out's look as its eyes read `eyes` (0 open to 1 shut, `blink`):
+ * `OPEN`, or past one half its head drawn eyes shut (its drawing `shut`, on
+ * its head's own sheet canvas, so laid where its head lies with every bone
+ * at 0) in place of its head, riding its head part's bones at `pivot`. A
+ * cut-out that blinks takes a look on every frame, open or shut, so a blink
+ * changes nothing but its head.
+ */
+export const eyesLook = (pivot: Pt) => {
+  const shut: PuppetLook = {
+    ...OPEN,
+    swaps: [{ part: 'head', drawing: 'shut', place: { s: 1, dx: 0, dy: 0 }, pivot }],
+  };
+  return (eyes: number): PuppetLook => {
+    if (eyes > 0.5) return shut;
+    return OPEN;
+  };
+};
 
 /** The mother's idle, seed 2 (the lead's is seed 1). */
 const MOTHER_IDLE = idle(2);
+
+/** Her eyes: her blinks, seed 2, all through the baby close and the table. */
+const MOTHER_EYES = blink(2);
+
+const motherEyes = eyesLook(headMiddle(MOTHER_POSES.skeleton));
+
+/** The mother's look at scene time `t`: her blinks (`eyesLook`) about her head bone's middle. */
+export const motherLook = (t: number) => motherEyes(MOTHER_EYES(t));
+
+/**
+ * The mother's bow to her baby, degrees on her neck and head together: from
+ * `from` s and every `every` s, she bows her head `deg` toward the baby at
+ * her arm over `down` s, holds it `hold` s and lifts it again over `up` s.
+ * `every` lies apart from her breath's period (3.7 s), so the bow drifts
+ * across her breaths.
+ */
+const BOW = { deg: -2.5, from: 0.9, every: 8.4, down: 1.1, hold: 2.6, up: 1.3 } as const;
+
+/** One bow, 0 up to 1 bowed, over its cycle's own seconds. */
+const BOWING = act(0, [
+  { at: 0, dur: BOW.down, to: 1 },
+  { at: BOW.down + BOW.hold, dur: BOW.up, to: 0 },
+]);
+
+/** The mother's bow at scene time `t`, degrees: her cycle's bow, repeated every `BOW.every` s from `BOW.from`. */
+const bow = (t: number) => {
+  const into = t - BOW.from;
+  return BOW.deg * BOWING(into - BOW.every * Math.floor(into / BOW.every));
+};
+
+/** Her head follows her neck into the bow 0.1 s behind. */
+const headBow = lag(bow, 0.1);
 
 /**
  * The mother's bone numbers at scene time `t`, degrees, clockwise on screen:
  * her idle on the bones her poses-1 cut turns with no new art. Her lean
  * carries her sway, her breath (deep enough to read as her rocking the baby)
  * and the slow drift of her weight, and the baby and the cup ride it with her
- * arms. Her head takes a little of the idle's
- * tilt, her neck less, as her veil rides her lean. Her arms keep their drawn
- * angles round the baby.
+ * arms. Her head takes a little of the idle's tilt, her neck less, as her
+ * veil rides her lean, and both bow to the baby (`BOW`), her neck first. Her
+ * arms keep their drawn angles round the baby.
  */
 export const motherNumbers = (t: number) => {
   const { sway, breath, drift, tilt } = MOTHER_IDLE(t);
-  return { lean: sway + 1.2 * breath + 0.5 * drift, neck: 0.3 * tilt, head: 0.6 * tilt };
+  return {
+    lean: sway + 1.2 * breath + 0.5 * drift + 0.6 * bow(t),
+    neck: 0.3 * tilt + 0.15 * bow(t),
+    head: 0.6 * tilt + 0.25 * headBow(t),
+  };
 };
 
 /** The paintings the table draws: the lead's raise frames and each guest's keys. */
@@ -110,7 +188,7 @@ export const TABLE_PAINTINGS = {
 export interface TableFrame {
   readonly t: number;
   readonly ctx: CanvasRenderingContext2D;
-  puppet(name: 'mother', pose: PuppetPose): void;
+  puppet(name: 'mother', pose: PuppetPose, look?: PuppetLook): void;
   painting(name: keyof typeof TABLE_PAINTINGS): void;
 }
 
@@ -186,17 +264,21 @@ const guest = (f: TableFrame, name: keyof typeof KEYS, key: GuestKey) => {
   });
 };
 
-/** The mother behind the woman: her eyes on her seat's point, her veil its width, in her idle (`motherNumbers`). */
+/** The mother behind the woman: her eyes on her seat's point, her veil its width, in her idle (`motherNumbers`) and her blinks (`motherLook`). */
 const mother = (f: TableFrame) => {
   const scale = MOTHER_SEAT.head / (MOTHER_SEAT.box[2] - MOTHER_SEAT.box[0]);
-  f.puppet('mother', {
-    numbers: motherNumbers(f.t),
-    root: [
-      MOTHER_SEAT.at[0] + scale * (MOTHER_SEAT.root[0] - MOTHER_SEAT.eyes[0]),
-      MOTHER_SEAT.at[1] + scale * (MOTHER_SEAT.root[1] - MOTHER_SEAT.eyes[1]),
-    ],
-    scale,
-  });
+  f.puppet(
+    'mother',
+    {
+      numbers: motherNumbers(f.t),
+      root: [
+        MOTHER_SEAT.at[0] + scale * (MOTHER_SEAT.root[0] - MOTHER_SEAT.eyes[0]),
+        MOTHER_SEAT.at[1] + scale * (MOTHER_SEAT.root[1] - MOTHER_SEAT.eyes[1]),
+      ],
+      scale,
+    },
+    motherLook(f.t),
+  );
 };
 
 /**
