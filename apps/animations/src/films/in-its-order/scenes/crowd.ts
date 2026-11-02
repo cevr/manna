@@ -38,7 +38,7 @@ export interface CrowdRow {
 }
 
 /**
- * The two rows. The back row sits 56 panel px higher at about three quarters
+ * The two rows. The back row sits 68 panel px higher at about three quarters
  * of the front's size, so its heads show over and between the front row's;
  * its table is long enough to run past the widest framing (`smile`) on its
  * plane. The front row's table lies low enough that its face and legs end
@@ -51,7 +51,7 @@ export interface CrowdRow {
 export const CROWD_ROWS = {
   back: {
     z: 1.65,
-    top: 682,
+    top: 670,
     scale: 0.18,
     blur: 2.6,
     haze: 'contrast(0.74) brightness(1.1) saturate(0.76)',
