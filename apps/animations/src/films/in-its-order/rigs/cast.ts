@@ -538,6 +538,9 @@ const FEAST_MOTHER_POSES = 814 / 440;
 /** The IDEA villagers on their poses sheet: poses-6, the grown villager standing at rest, ink crown to soles 512 rows (248 to 759, his kept box), 440 units. */
 const IDEA_VILLAGERS_POSES = 512 / 440;
 
+/** The IDEA villagers on their single-15: the cup-raising man's front, ink crown to soles 1129 rows (274 to 1403, his kept box), 440 units. */
+const IDEA_VILLAGERS_SINGLE = (1403 - 274) / 440;
+
 /**
  * The bust scale of a heads sheet, read off the lead's: his busts have no
  * feet, so it is 1.13 of his turnaround's, the mean of his eyes' spacing (52
@@ -571,6 +574,7 @@ export const SHEETS = {
   },
   'idea-villagers': {
     poses: { ...SHEET, scale: IDEA_VILLAGERS_POSES },
+    single: { ...SINGLE, scale: IDEA_VILLAGERS_SINGLE },
   },
   jeremiah: {
     heads: { ...SHEET, scale: HEADS_BUST },
@@ -895,9 +899,11 @@ const LEAD_FIT = {
     // a4: the nod that cut his ears and raised his chin's line.
     'heads-6': { bars: BUST_BARS, probes: [CHIN_PROBE, EAR_PROBE] },
   },
-  // His single drawing, bottle raised: the member's bars as they stand, and no labels yet, so its rows are the silhouette's and the classes'.
+  // His single drawings (single-1 bottle raised, single-9 and single-5): the member's bars as they stand, and no labels yet, so their rows are the silhouette's and the classes'.
   single: {
     'single-1': {},
+    'single-9': {},
+    'single-5': {},
   },
 } satisfies Readonly<Record<string, Readonly<Record<string, ViewFit>>>>;
 
@@ -1133,6 +1139,8 @@ export const CUTOUT = cutoutTable({
     },
     single: {
       'single-1': own(LEAD_FIT.single['single-1'], LEAD_PUPPETS['single-1']),
+      'single-9': own(LEAD_FIT.single['single-9'], LEAD_PUPPETS['single-9']),
+      'single-5': own(LEAD_FIT.single['single-5'], LEAD_PUPPETS['single-5']),
     },
   },
   'feast-mother': {
@@ -1155,6 +1163,9 @@ export const CUTOUT = cutoutTable({
       'poses-3': own(undefined, IDEA_VILLAGERS_PUPPETS['poses-3']),
       'poses-4': own(undefined, IDEA_VILLAGERS_PUPPETS['poses-4']),
       'poses-6': own(undefined, IDEA_VILLAGERS_PUPPETS['poses-6']),
+    },
+    single: {
+      'single-15': own(undefined, IDEA_VILLAGERS_PUPPETS['single-15']),
     },
   },
   jeremiah: {
