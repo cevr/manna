@@ -37,13 +37,17 @@ under its number, and the refrain written out each time it is sung.
 - The colours are the brand's, Moonlit wheat (the wheat on the night), from
   its one source, `@manna/brand` (`packages/brand`), which the First the
   Blade site reads too, as the owner's pick "sky" (2026-10-25): the brand's
-  painted sky as the second colour. `src/theme.ts` draws fifteen roles from
-  it in light and dark: ground, ink, muted, line, accent, chord (the chords
-  and the dials' current stop), soft, onAccent (the text on an accent
-  fill), pressed and onPressed (a held accent fill and its text), panel and
-  edge (the open dials' panel and its border), bar (the docked player bar),
-  and pill and onPill (the key button's lit pill and the dials' Reset, and
-  their ink). Light is a cool white page under the night's ink, with the
+  painted sky as the second colour. `src/theme.ts` draws two families of
+  roles from it in light and dark. The opaque roles: ground, ink, muted,
+  line, accent, chord (the chords and the dials' current stop), soft,
+  onAccent (the text on an accent fill), pressed and onPressed (a held
+  accent fill and its text), panel and edge (the open dials' panel and its
+  border), bar (the docked player bar), pill and onPill (the key button's
+  lit pill and the dials' Reset, and their ink), and chosen and onChosen (a
+  checked chip's fill and its ink). The glass roles, laid over any opaque
+  role under the find bar's capsule: glass (soft at 85 %), onGlass (its
+  words), onGlassMuted (its placeholder), and glassChosen and onGlassChosen
+  (the disk behind its chosen control, and that control's ink). Light is a cool white page under the night's ink, with the
   dusk's gold deepened for the chords; dark keeps the night as the page,
   with the dusk's gold for the accent and the chords. A screen reads a
   role, never a hex value. On iOS each
@@ -399,6 +403,17 @@ Android haptics only.
   1200 Hz at 44.1, 48 and 96 kHz), or none in silence and noise. A key at half the period gives
   way to the key at its double lag when that stands higher, so a pluck
   with strong even partials reads at its fundamental, not an octave up.
+- `src/tuner/focus.ts` decides which frames show a pitch (`hear`, pure,
+  from the start state `unfocused`), so talk in the room does not move the
+  tuner: a pitch shows once 4 frames in a row read it within 10 cents
+  (about 170 ms after a pluck), then follows the string within 20 cents a
+  frame and rides out 2 missed frames; the 3rd lets it go. A reading under
+  65 Hz (mains hum) counts as none. A voice glides through each syllable,
+  so it never holds that long. `focus.test.ts` and
+  `focus.property.slow.test.ts` hold the rule over generated talk, room
+  noise and plucks; `focus.screen.slow.test.tsx` holds the screen, which
+  reads every frame through `hear` and starts it afresh on each listen and
+  each rest.
 - `src/tuner/tuning.ts` reads a pitch (`reading`): the nearest note and
   octave from A4 = 440 Hz, the nearest standard string (E2 A2 D3 G3 B3
   E4), its signed cents, and in tune within 5 cents. The tuner plays no

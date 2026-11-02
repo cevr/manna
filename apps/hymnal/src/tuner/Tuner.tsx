@@ -10,7 +10,10 @@
  *
  * It listens through the ear (`native.ios.ts`) or, in a development build, a
  * fed tone (`?feed=E2:-12`), and reads each frame on the JavaScript thread
- * through `detect`. When it listens, asks, pauses and stops is the session's
+ * through the focus (`hear`, `focus.ts`): a pitch shows only once it has held
+ * for a few frames, so talk in the room moves nothing on the screen, and the
+ * focus starts afresh each time listening starts and each time the screen
+ * rests. When it listens, asks, pauses and stops is the session's
  * rule (`session.ts`): this file only hands the world's events to it (the
  * app's state, the navigation's focus, the player's sounding) and carries
  * out the work it names. The reading's words go to VoiceOver when they
@@ -50,8 +53,8 @@ import { color, useAccent } from '~/color';
 import { usePlayer } from '~/player/context';
 import { Command, type HymnPlayer, Player } from '~/player/player';
 
+import { type Focus, hear, unfocused } from './focus';
 import { type Listen, type ListenEnd, listen } from './native';
-import { detect } from './pitch';
 import {
   Event,
   FEED_RATE,
@@ -94,7 +97,7 @@ const fork = (effect: Effect.Effect<unknown>) => {
 class NoEar extends Data.TaggedError('NoEar')<{}> {}
 
 /** What the screen listens to: the ear, or a fed tone. */
-interface Source {
+export interface Source {
   readonly name: 'mic' | 'feed';
   /** Starts, and answers the sample rate. */
   readonly start: Effect.Effect<number, Cause.UnknownError | NoEar>;
@@ -104,7 +107,7 @@ interface Source {
 }
 
 /** The phone around the screen: the permission, Settings and whether the app is active. */
-interface Device {
+export interface Device {
   readonly readPermission: Effect.Effect<Permission, Cause.UnknownError>;
   readonly askPermission: Effect.Effect<Permission, Cause.UnknownError>;
   readonly openSettings: () => void;
@@ -270,7 +273,7 @@ const isListening = (session: Option.Option<Session>) =>
   Option.exists(session, (now) => now.phase._tag === 'Listening');
 
 /** The screen over its device, its source and the player's sounding. */
-function Tuner({
+export function Tuner({
   device,
   source,
   sounding,
@@ -296,6 +299,8 @@ function Tuner({
   const session = useRef<Option.Option<Session>>(Option.none());
   const rate = useRef(0);
   const latched = useRef<Latch>(unlatched);
+  // Where the focus stands after the last frame read; `unfocused` again on each start and each rest.
+  const focused = useRef<Focus>(unfocused);
   const busy = useRef(false);
   const frames = useRef(0);
   const aim = useRef<Option.Option<StringId>>(Option.none());
@@ -348,9 +353,10 @@ function Tuner({
     [hush, say],
   );
 
-  /** Back to rest in `phase`: nothing heard, the needle at centre. */
+  /** Back to rest in `phase`: nothing heard, nothing held, the needle at centre. */
   const rest = useCallback(
     (phase: Phase['_tag']) => {
+      focused.current = unfocused;
       needle.value = withTiming(0, { duration: 120 });
       inTune.value = 0;
       setShown((before) =>
@@ -440,6 +446,8 @@ function Tuner({
               onFailure: () => tell(Event.Refused({ attempt })),
               onSuccess: (hz) => {
                 rate.current = hz;
+                // A new listen holds nothing from the last, even at another rate.
+                focused.current = unfocused;
                 log(`[tuner] listen source=${from.name} rate=${hz}`);
                 tell(Event.Started({ attempt }));
               },
@@ -453,11 +461,17 @@ function Tuner({
     });
   };
 
-  /** One frame through `detect`, read against the target or the nearest string: the needle, the latch, the words. */
+  /**
+   * One frame through the focus (`hear`), its shown pitch read against the
+   * target or the nearest string: the needle, the latch, the words, the
+   * string last heard and Auto's lit circle all take the focused reading.
+   */
   const read = useCallback(
     (frame: Float32Array) => {
       const target = aim.current;
-      const heard = Option.map(detect(frame, rate.current), (hz) =>
+      const { focus, hz: shownHz } = hear(focused.current, frame, rate.current);
+      focused.current = focus;
+      const heard = Option.map(shownHz, (hz) =>
         Option.match(target, { onNone: () => reading(hz), onSome: (id) => readingOn(hz, id) }),
       );
       if (Option.isSome(heard)) last.current = Option.some(heard.value.string);
