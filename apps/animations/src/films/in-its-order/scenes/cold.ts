@@ -13,9 +13,9 @@
 // On `letter` they stare again (`SWAPS`), a rolled scroll drops onto the
 // table in front of the lead and unrolls over its edge (`SCROLL`). On `ouch`
 // he winces (`WINCE`), his wince's head riding his head's bones. From `grown`
-// on he, the man and the mother move in their idles (`numbersOf`,
-// `manNumbersOf`, `motherNumbers`), and he acts on the cues; the man nods
-// toward him as the guests turn and as they stare again (`NODS`). The mother blinks all through and bows to her
+// on he, the guests and the mother move in their idles (`numbersOf`,
+// `manNumbersOf`, `womanNumbersOf`, `motherNumbers`), and he acts on the cues; the guests nod
+// toward him as they turn and as they stare again (`NODS`). The mother blinks all through and bows to her
 // baby (`motherLook`, `motherNumbers`), and he blinks from `grown` to `ouch`
 // (`eyesOf`).
 // `what` cuts to the last close plate (`WHAT`), the cup of milk and the
@@ -36,7 +36,6 @@ import { type Cues, eyesOf, numbersOf } from './lead.ts';
 import {
   type GuestKey,
   MOTHER_SEAT,
-  TABLE_PAINTINGS,
   TABLE_PUPPETS,
   eyesLook,
   headMiddle,
@@ -101,7 +100,7 @@ const SWAPS = [
   ['read', 'turn'],
 ] as const satisfies ReadonlyArray<readonly [string, GuestKey]>;
 
-/** The cues the man nods toward the lead on: as the guests turn to him and stare, and as they stare again at the letter. */
+/** The cues the guests nod toward the lead on: as they turn to him and stare, and as they stare again at the letter. */
 const NODS = ['turn', 'read'] as const;
 
 /**
@@ -225,7 +224,6 @@ export const cold = drawing({
     rolled: SCROLL_ROLLED,
     open: SCROLL_OPEN,
     roller: SCROLL_ROLLER,
-    ...TABLE_PAINTINGS,
   },
   draw: (f) => {
     const { ctx, w } = f;
@@ -286,7 +284,7 @@ export const cold = drawing({
       (at, [cue, to]) => (f.t >= f.cue(cue).start ? to : at),
       'neutral',
     );
-    // The man's nods toward the lead: each of `NODS`'s starts.
+    // The guests' nods toward the lead: each of `NODS`'s starts.
     const nods = NODS.map((cue) => f.cue(cue).start);
 
     // The letter on the table's plane: the rolled scroll falling and hopping,
