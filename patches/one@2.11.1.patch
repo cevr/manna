@@ -192,6 +192,59 @@ index 08ded78071140b01c9db2ec252c3cd728f6a244d..28d6548815b334a952903cf6a3ecf6dd
  	stop: function stop() {
  		return Promise.resolve();
  	},
+diff --git a/dist/cjs/router/utils/getNativeStackReplaceAction.cjs b/dist/cjs/router/utils/getNativeStackReplaceAction.cjs
+index 137f9f69ef71ac8fb859e63fed0c3a39a203130b..2b79798e4515e0c763b19dfc2a0ab3a2779f5064 100644
+--- a/dist/cjs/router/utils/getNativeStackReplaceAction.cjs
++++ b/dist/cjs/router/utils/getNativeStackReplaceAction.cjs
+@@ -31,8 +31,8 @@ function getNativeStackReplaceAction(actionState, navigationState) {
+ 		if (currentRoute.name !== targetRoute.name && ((0, import_matchers.matchGroupName)(currentRoute.name) || (0, import_matchers.matchGroupName)(targetRoute.name))) {
+ 			return null;
+ 		}
+-		const dynamicMatch = (0, import_matchers.matchDynamicName)(targetRoute.name);
+-		const changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatch && currentRoute.params?.[dynamicMatch.name] !== targetRoute.params?.[dynamicMatch.name];
++		const dynamicMatches = targetRoute.name.split("/").flatMap((segment) => (0, import_matchers.matchDynamicName)(segment) ?? []);
++		const changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatches.some((dynamicMatch) => currentRoute.params?.[dynamicMatch.name] !== targetRoute.params?.[dynamicMatch.name]);
+ 		if (!currentRoute.state || !targetRoute.state || changesDynamicScreen) {
+ 			if ((currentRoute.name !== targetRoute.name || changesDynamicScreen) && navigationState.type === "stack" && navigationState.routeNames.includes(targetRoute.name)) {
+ 				const { payload } = (0, import_getNavigateAction.getNavigateAction)(actionState, navigationState, "REPLACE");
+diff --git a/dist/cjs/router/utils/getNativeStackReplaceAction.native.cjs b/dist/cjs/router/utils/getNativeStackReplaceAction.native.cjs
+index b0b5d6282f549795b815138c962f7e4118056d92..b6cfb21c9a54adb06cefabae5534bc34c29fb406 100644
+--- a/dist/cjs/router/utils/getNativeStackReplaceAction.native.cjs
++++ b/dist/cjs/router/utils/getNativeStackReplaceAction.native.cjs
+@@ -35,8 +35,12 @@ function getNativeStackReplaceAction(actionState, navigationState) {
+ 		if (currentRoute.name !== targetRoute.name && ((0, import_matchers.matchGroupName)(currentRoute.name) || (0, import_matchers.matchGroupName)(targetRoute.name))) {
+ 			return null;
+ 		}
+-		var dynamicMatch = (0, import_matchers.matchDynamicName)(targetRoute.name);
+-		var changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatch && ((_currentRoute_params = currentRoute.params) === null || _currentRoute_params === void 0 ? void 0 : _currentRoute_params[dynamicMatch.name]) !== ((_targetRoute_params = targetRoute.params) === null || _targetRoute_params === void 0 ? void 0 : _targetRoute_params[dynamicMatch.name]);
++		var dynamicMatches = targetRoute.name.split("/").map(function(segment) {
++			return (0, import_matchers.matchDynamicName)(segment);
++		}).filter(Boolean);
++		var changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatches.some(function(dynamicMatch) {
++			return ((_currentRoute_params = currentRoute.params) === null || _currentRoute_params === void 0 ? void 0 : _currentRoute_params[dynamicMatch.name]) !== ((_targetRoute_params = targetRoute.params) === null || _targetRoute_params === void 0 ? void 0 : _targetRoute_params[dynamicMatch.name]);
++		});
+ 		if (!currentRoute.state || !targetRoute.state || changesDynamicScreen) {
+ 			if ((currentRoute.name !== targetRoute.name || changesDynamicScreen) && navigationState.type === "stack" && navigationState.routeNames.includes(targetRoute.name)) {
+ 				var { payload } = (0, import_getNavigateAction.getNavigateAction)(actionState, navigationState, "REPLACE");
+diff --git a/dist/cjs/router/utils/getNativeStackReplaceAction.native.js b/dist/cjs/router/utils/getNativeStackReplaceAction.native.js
+index 55479ff564e4283dc950952636c22a7542b15eb3..31b3a5197969ba03e210830c62fdd82674911d2d 100644
+--- a/dist/cjs/router/utils/getNativeStackReplaceAction.native.js
++++ b/dist/cjs/router/utils/getNativeStackReplaceAction.native.js
+@@ -35,8 +35,12 @@ function getNativeStackReplaceAction(actionState, navigationState) {
+ 		if (currentRoute.name !== targetRoute.name && ((0, import_matchers.matchGroupName)(currentRoute.name) || (0, import_matchers.matchGroupName)(targetRoute.name))) {
+ 			return null;
+ 		}
+-		var dynamicMatch = (0, import_matchers.matchDynamicName)(targetRoute.name);
+-		var changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatch && ((_currentRoute_params = currentRoute.params) === null || _currentRoute_params === void 0 ? void 0 : _currentRoute_params[dynamicMatch.name]) !== ((_targetRoute_params = targetRoute.params) === null || _targetRoute_params === void 0 ? void 0 : _targetRoute_params[dynamicMatch.name]);
++		var dynamicMatches = targetRoute.name.split("/").map(function(segment) {
++			return (0, import_matchers.matchDynamicName)(segment);
++		}).filter(Boolean);
++		var changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatches.some(function(dynamicMatch) {
++			return ((_currentRoute_params = currentRoute.params) === null || _currentRoute_params === void 0 ? void 0 : _currentRoute_params[dynamicMatch.name]) !== ((_targetRoute_params = targetRoute.params) === null || _targetRoute_params === void 0 ? void 0 : _targetRoute_params[dynamicMatch.name]);
++		});
+ 		if (!currentRoute.state || !targetRoute.state || changesDynamicScreen) {
+ 			if ((currentRoute.name !== targetRoute.name || changesDynamicScreen) && navigationState.type === "stack" && navigationState.routeNames.includes(targetRoute.name)) {
+ 				var { payload } = (0, import_getNavigateAction.getNavigateAction)(actionState, navigationState, "REPLACE");
 diff --git a/dist/esm/platform/audio/index.mjs b/dist/esm/platform/audio/index.mjs
 index 793b07914e58e9a76cdf0665c8f25c4483b5fcc1..5188fea9d2a05f8d0f45315720222149d65e4f4d 100644
 --- a/dist/esm/platform/audio/index.mjs
@@ -267,6 +320,40 @@ index 2125c16f1d1bff40d2da9568b4fdb8ce44e10473..72abd4f6e1529bb837389276f2ddddfa
  	stop: function stop() {
  		return Promise.resolve();
  	},
+diff --git a/dist/esm/router/utils/getNativeStackReplaceAction.mjs b/dist/esm/router/utils/getNativeStackReplaceAction.mjs
+index fb2a3e07d5e6cae94f0f99d332f62582c1c7a409..a8eb2153a2b72d7154161d85092458c657b46441 100644
+--- a/dist/esm/router/utils/getNativeStackReplaceAction.mjs
++++ b/dist/esm/router/utils/getNativeStackReplaceAction.mjs
+@@ -9,8 +9,8 @@ function getNativeStackReplaceAction(actionState, navigationState) {
+ 		if (currentRoute.name !== targetRoute.name && (matchGroupName(currentRoute.name) || matchGroupName(targetRoute.name))) {
+ 			return null;
+ 		}
+-		const dynamicMatch = matchDynamicName(targetRoute.name);
+-		const changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatch && currentRoute.params?.[dynamicMatch.name] !== targetRoute.params?.[dynamicMatch.name];
++		const dynamicMatches = targetRoute.name.split("/").flatMap((segment) => matchDynamicName(segment) ?? []);
++		const changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatches.some((dynamicMatch) => currentRoute.params?.[dynamicMatch.name] !== targetRoute.params?.[dynamicMatch.name]);
+ 		if (!currentRoute.state || !targetRoute.state || changesDynamicScreen) {
+ 			if ((currentRoute.name !== targetRoute.name || changesDynamicScreen) && navigationState.type === "stack" && navigationState.routeNames.includes(targetRoute.name)) {
+ 				const { payload } = getNavigateAction(actionState, navigationState, "REPLACE");
+diff --git a/dist/esm/router/utils/getNativeStackReplaceAction.native.js b/dist/esm/router/utils/getNativeStackReplaceAction.native.js
+index cb935f63f415073cda0b3da0f36b30e9c2ac8974..451513a0c03e195c625022f831de49f9382f6dbc 100644
+--- a/dist/esm/router/utils/getNativeStackReplaceAction.native.js
++++ b/dist/esm/router/utils/getNativeStackReplaceAction.native.js
+@@ -11,8 +11,12 @@ function getNativeStackReplaceAction(actionState, navigationState) {
+ 		if (currentRoute.name !== targetRoute.name && (matchGroupName(currentRoute.name) || matchGroupName(targetRoute.name))) {
+ 			return null;
+ 		}
+-		var dynamicMatch = matchDynamicName(targetRoute.name);
+-		var changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatch && ((_currentRoute_params = currentRoute.params) === null || _currentRoute_params === void 0 ? void 0 : _currentRoute_params[dynamicMatch.name]) !== ((_targetRoute_params = targetRoute.params) === null || _targetRoute_params === void 0 ? void 0 : _targetRoute_params[dynamicMatch.name]);
++		var dynamicMatches = targetRoute.name.split("/").map(function(segment) {
++			return matchDynamicName(segment);
++		}).filter(Boolean);
++		var changesDynamicScreen = currentRoute.name === targetRoute.name && dynamicMatches.some(function(dynamicMatch) {
++			return ((_currentRoute_params = currentRoute.params) === null || _currentRoute_params === void 0 ? void 0 : _currentRoute_params[dynamicMatch.name]) !== ((_targetRoute_params = targetRoute.params) === null || _targetRoute_params === void 0 ? void 0 : _targetRoute_params[dynamicMatch.name]);
++		});
+ 		if (!currentRoute.state || !targetRoute.state || changesDynamicScreen) {
+ 			if ((currentRoute.name !== targetRoute.name || changesDynamicScreen) && navigationState.type === "stack" && navigationState.routeNames.includes(targetRoute.name)) {
+ 				var { payload } = getNavigateAction(actionState, navigationState, "REPLACE");
 diff --git a/ios/Nitro/HybridOneAudio.swift b/ios/Nitro/HybridOneAudio.swift
 index 045ce7503aa2664127f39a05104830f05861e80b..cf209d032a5d0c081f82b4dcf7bb9e660e8b9b68 100644
 --- a/ios/Nitro/HybridOneAudio.swift
@@ -536,6 +623,30 @@ index 8fd0c6ad8d9fadee244f108c5b6e696a9368a242..065a9464ce1ae797f7d9317521f79966
    stop(): Promise<void>
    startRecording(): Promise<AudioRecordingStatus>
    getRecordingStatus(): Promise<AudioRecordingStatus>
+diff --git a/src/router/utils/getNativeStackReplaceAction.ts b/src/router/utils/getNativeStackReplaceAction.ts
+index 1901301c872a4dd9b688071cdf44b713f7f169f4..a82b98dcc67f1d5655231ea7724a61fefbe82a18 100644
+--- a/src/router/utils/getNativeStackReplaceAction.ts
++++ b/src/router/utils/getNativeStackReplaceAction.ts
+@@ -20,11 +20,16 @@ export function getNativeStackReplaceAction(
+       return null
+     }
+ 
+-    const dynamicMatch = matchDynamicName(targetRoute.name)
++    // a route named by its file path (`hymns/[number]`) holds its params in any of its segments.
++    const dynamicMatches = targetRoute.name
++      .split('/')
++      .flatMap((segment) => matchDynamicName(segment) ?? [])
+     const changesDynamicScreen =
+       currentRoute.name === targetRoute.name &&
+-      dynamicMatch &&
+-      currentRoute.params?.[dynamicMatch.name] !== targetRoute.params?.[dynamicMatch.name]
++      dynamicMatches.some(
++        (dynamicMatch) =>
++          currentRoute.params?.[dynamicMatch.name] !== targetRoute.params?.[dynamicMatch.name]
++      )
+ 
+     // a new dynamic screen instance can own a nested navigator of its own.
+     if (!currentRoute.state || !targetRoute.state || changesDynamicScreen) {
 diff --git a/types/platform/audio/index.d.ts b/types/platform/audio/index.d.ts
 index c60d69b34a4ce3b789658de09d8c8bb9a3eb7616..5f7e85e748cd47664623015508eba8815cdff65a 100644
 --- a/types/platform/audio/index.d.ts

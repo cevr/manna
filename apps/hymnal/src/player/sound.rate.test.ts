@@ -52,6 +52,7 @@ const printed = Atom.make(still);
  * unplayed: 8 s of recording, then 12 s of silent stanzas to the timeline's end.
  */
 const unplayedTail: Timeline = {
+  tempo: { microsPerQuarter: 500_000, numerator: 4, denominator: 4 },
   lines: [
     [0, 4000],
     [4000, 8000],

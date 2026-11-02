@@ -32,8 +32,19 @@ export const opening = new Set<(href: string) => void>();
 
 type Press = (event?: MouseEvent) => void;
 
-/** One's `useLinkTo` on the web (`one/src/link/useLinkTo.tsx`): a plain left click opens the href in the app. */
-export function useLinkTo({ href }: { readonly href: string }) {
+/**
+ * One's `useLinkTo` on the web (`one/src/link/useLinkTo.tsx`): a plain left
+ * click opens the href in the app, or with `replace` (One's `REPLACE`)
+ * puts it in the shown screen's place, recorded as `replace <href>` in
+ * `routed` and not in `opened`.
+ */
+export function useLinkTo({
+  href,
+  replace = false,
+}: {
+  readonly href: string;
+  readonly replace?: boolean;
+}) {
   const onPress: Press = (event) => {
     if (event?.defaultPrevented) return;
     if (
@@ -42,6 +53,10 @@ export function useLinkTo({ href }: { readonly href: string }) {
     )
       return;
     event?.preventDefault();
+    if (replace) {
+      routed.push(`replace ${href}`);
+      return;
+    }
     opened.push(href);
     for (const open of opening) open(href);
   };

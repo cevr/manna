@@ -3,7 +3,7 @@
  * box, in `tint`: a speaker with two waves while sound is on, with a slash
  * across it while it is off; a play triangle, two pause bars, and a ring
  * with an arrowhead, turning clockwise for retry and counter-clockwise for
- * again; a tuning fork, two prongs on a stem, for the key panel's Tuner chip.
+ * again.
  */
 
 import { Match } from 'effect';
@@ -12,10 +12,7 @@ import { type ColorValue, StyleSheet, View } from 'react-native';
 
 import type { Mark } from './button';
 
-/** The bar's marks: its buttons' and Sound's (`Mark`), and the tuning fork of the key panel's Tuner chip, which opens a route rather than commanding the player. */
-type Drawn = Mark | 'tuner';
-
-export function BarMark({ mark, tint }: { readonly mark: Drawn; readonly tint: ColorValue }) {
+export function BarMark({ mark, tint }: { readonly mark: Mark; readonly tint: ColorValue }) {
   return (
     <View aria-hidden testID={`mark-${mark}`} style={styles.mark}>
       {drawingOf(mark, tint)}
@@ -35,7 +32,7 @@ const turn = (tint: ColorValue, flip: boolean): ReactNode => (
   </View>
 );
 
-const drawingOf = (mark: Drawn, tint: ColorValue): ReactNode =>
+const drawingOf = (mark: Mark, tint: ColorValue): ReactNode =>
   Match.value(mark).pipe(
     Match.when('sound-on', () => [
       speaker(tint),
@@ -53,10 +50,6 @@ const drawingOf = (mark: Drawn, tint: ColorValue): ReactNode =>
     ]),
     Match.when('retry', () => turn(tint, false)),
     Match.when('again', () => turn(tint, true)),
-    Match.when('tuner', () => [
-      <View key="prongs" style={[styles.prongs, { borderColor: tint }]} />,
-      <View key="stem" style={[styles.stem, { backgroundColor: tint }]} />,
-    ]),
     Match.exhaustive,
   );
 
@@ -115,19 +108,6 @@ const styles = StyleSheet.create({
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
   },
-  prongs: {
-    position: 'absolute',
-    left: 5,
-    top: 1,
-    width: 12,
-    height: 12,
-    borderLeftWidth: 2.5,
-    borderRightWidth: 2.5,
-    borderBottomWidth: 2.5,
-    borderBottomLeftRadius: 6,
-    borderBottomRightRadius: 6,
-  },
-  stem: { position: 'absolute', left: 9.75, top: 12, width: 2.5, height: 9, borderRadius: 1 },
   bar: { position: 'absolute', top: 3, width: 5, height: 16, borderRadius: 1 },
   barLeft: { left: 4 },
   barRight: { left: 13 },

@@ -3,10 +3,14 @@
  * screen the search opened on, the home list or a hymn page, from under the
  * status bar to the stack's bottom; the find bar, which holds the search box
  * and Cancel, stands over them. They list the hymns the query finds, each
- * found by a line other than its title showing that line, and a row pushes
- * its hymn; they stay mounted, unseen, under it, so Back returns to them at
- * the same scroll place, with the same hymns about the query. An empty query lists nothing: the
- * results' ground covers the screen beneath, which stays in place.
+ * found by a line other than its title showing that line. On the home list
+ * a row pushes its hymn; they stay mounted, unseen, under it, so Back
+ * returns to them at the same scroll place, with the same hymns about the
+ * query. On a hymn page a row puts its hymn in the page's place, and the
+ * page's own hymn moves nothing (`openingAt`); either closes the search, as
+ * Cancel does, so no results wait on a hymn left or stand over the one shown.
+ * An empty query lists nothing: the results' ground covers the screen
+ * beneath, which stays in place.
  *
  * Search builds the search's index (`hymnIndex`) once it is on screen,
  * while the box's keyboard comes up, and reads the meaning table in a timer
@@ -19,19 +23,20 @@
 import { useAtomValue } from '@effect/atom-react';
 import { Effect, Fiber, Option } from 'effect';
 import { useSafeAreaInsets } from 'one';
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 
 import { color } from '~/color';
 import { hymnAt } from '~/hymns/hymns';
 import { aboutQuery, aboutShown, afterPause, readMeaningSoon } from '~/hymns/meaning';
 import { find, hymnIndex } from '~/hymns/search';
-import { HymnList } from '~/reader/HymnList.native';
-import { searchOffset, searchQuery } from '~/reader/place';
+import { HymnList, type RowOpening } from '~/reader/HymnList.native';
+import { searchOffset, searchOpen, searchQuery } from '~/reader/place';
 
 import { searchBack } from './back';
 import { hymnHref } from './Browse';
 import { useCancelSearch } from './FindBar';
+import { openingAt } from './opening';
 
 /** The search's results, seen and in reach while `here`: their screen shows, not a hymn pushed from them. */
 export function Search({ here }: { readonly here: boolean }) {
@@ -69,6 +74,25 @@ export function Search({ here }: { readonly here: boolean }) {
   );
   const about = useMemo(() => aboutShown(asked, shown, near), [near, asked, shown]);
   const cancel = useCancelSearch();
+  // Cancel as it stands at the press, so the rows' opening is made again only for a new path.
+  const cancelNow = useRef(cancel);
+  useEffect(() => {
+    cancelNow.current = cancel;
+  });
+  const path = Option.match(useAtomValue(searchOpen), {
+    onNone: () => '',
+    onSome: (searching) => searching.path,
+  });
+  const opening = useMemo(
+    (): RowOpening => ({
+      of: (n) => openingAt(path, n),
+      // A replace or a stay leaves no search open: its results would wait on the hymn left.
+      opened: (how) => {
+        if (how !== 'push') cancelNow.current();
+      },
+    }),
+    [path],
+  );
   useEffect(() => {
     hymnIndex();
     return readMeaningSoon();
@@ -96,6 +120,7 @@ export function Search({ here }: { readonly here: boolean }) {
           lines={results.lines}
           about={about}
           hrefOf={hymnHref}
+          opening={opening}
           offset={searchOffset}
           empty={`No hymn matches “${shown}”.`}
         />

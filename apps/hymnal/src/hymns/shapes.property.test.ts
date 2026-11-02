@@ -11,9 +11,10 @@
  * tone sounds but the fifth; the lowest string sounding is the bass, or the
  * root when the fingering says it plays the chord over its root; each dot is
  * one finger, 1 to 4; a barre lies at the lowest fret, every string it
- * crosses held at it or above; fingers rise with the frets, but the barre's;
- * no more than four fingers, four frets, and at least four strings sounding;
- * the words a screen reader reads name no capo.
+ * crosses held at it or above, its finger on no dot off it; fingers rise
+ * with the frets, but the barre's; no more than four fingers, four frets,
+ * and at least four strings sounding; the words a screen reader reads name
+ * no capo.
  */
 
 import { describe, expect, it } from 'bun:test';
@@ -107,9 +108,17 @@ const toneFaults = (f: Fingering, s: Sounding): ReadonlyArray<string> => {
   ];
 };
 
-/** The barre: at the lowest fret, each string it crosses held at it or above, those at its fret by its finger. */
+/**
+ * The barre: at the lowest fret, each string it crosses held at it or above,
+ * those at its fret by its finger, and its finger on no other dot.
+ */
 const barreFaults = (f: Fingering, b: Barre, low: number): ReadonlyArray<string> => [
   ...((b.fret !== low && [`barre at ${b.fret}, not the lowest fret ${low}`]) || []),
+  ...dotsOf(f)
+    .filter(
+      (d) => d.finger === b.finger && (d.fret !== b.fret || d.string < b.from || d.string > b.to),
+    )
+    .map((d) => `the barre's finger ${d.finger} also holds string ${d.string} at fret ${d.fret}`),
   ...f.strings.slice(b.from, b.to + 1).flatMap((play, k) => {
     if (play._tag !== 'Fretted' || play.fret < b.fret)
       return [`barre crosses string ${b.from + k}, not held at it`];

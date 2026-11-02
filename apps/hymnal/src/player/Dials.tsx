@@ -43,7 +43,6 @@ import { styled } from '~/hymns/simple';
 import type { ChordReader } from '~/reader/HymnPage';
 import { reader } from '~/reader/screen';
 
-import { BarMark } from './BarMark';
 import { PanelRow, ROW_GAP } from './DialPanel';
 import { DialView, MOST_SCALE } from './DialView';
 import {
@@ -60,6 +59,7 @@ import {
   type Thumb,
   ThumbEvent,
 } from './thumb';
+import { TunerMark } from './TunerMark';
 
 /** What the dials read and set: the app's own stores, or a test's. */
 export const ChordReaderContext = createContext<ChordReader>(reader);
@@ -258,8 +258,8 @@ export const Dials = memo(function Dials({
 });
 
 /**
- * The Tuner, on the hymn page's dials on a device with the ear: a tuning fork
- * and its word. A tap closes the dials (`onPress`, the model's `Tune`) and
+ * The Tuner, on the hymn page's dials on a device with the ear: a small
+ * upright tuning fork (`TunerMark`) and its word. A tap closes the dials (`onPress`, the model's `Tune`) and
  * opens the tuner over the page at once, so the dials' close plays under it.
  * It plays no cue: the tuner's path is silent.
  */
@@ -278,7 +278,7 @@ function TunerChip({ onPress }: { readonly onPress: () => void }) {
       }}
       style={({ pressed }) => [styles.chip, styles.tuner, pressed && styles.pressed]}
     >
-      <BarMark mark="tuner" tint={color.onPill} />
+      <TunerMark tint={color.onPill} />
       <Text style={styles.chipText} numberOfLines={1} maxFontSizeMultiplier={MOST_SCALE}>
         Tuner
       </Text>
@@ -286,7 +286,12 @@ function TunerChip({ onPress }: { readonly onPress: () => void }) {
   );
 }
 
-/** The chips are 32 points high; the slop makes their hit area 44. */
+/**
+ * Every chip is 32 points high, whatever it holds, so the Tuner and Reset
+ * stand one size; the 13-point word at the dials' largest text (1.3) fits in
+ * it. Each chip's width follows its words. The slop makes the hit area 44.
+ */
+const CHIP = 32;
 const CHIP_SLOP = { top: 6, bottom: 6 };
 
 /** Reset, while the move is not the hymn as printed: "↺ Db, no capo". */
@@ -300,6 +305,7 @@ function ResetChip({
   const label = `↺ ${keyName(printed)}, no capo`;
   return (
     <Pressable
+      testID="dials-reset"
       role="button"
       aria-label="Reset"
       accessibilityHint={`Back to ${keyName(printed)}, with no capo`}
@@ -356,7 +362,7 @@ const styles = StyleSheet.create({
   dials: { gap: ROW_GAP, alignItems: 'stretch' },
   chip: {
     alignSelf: 'center',
-    minHeight: 32,
+    height: CHIP,
     paddingHorizontal: 12,
     borderRadius: 16,
     justifyContent: 'center',

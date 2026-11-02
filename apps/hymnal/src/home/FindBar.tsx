@@ -5,13 +5,24 @@
  * and the drums' backdrop.
  *
  * Folded, it is a capsule at the bottom right with two ways to find:
- * `Search` and the `#`. A press on `Search` opens search on the screen at
- * the bar's `path` (`searchOpen`, keyed by the path): the capsule grows
- * leftward across the screen into a focused search box, the `#` keeps the
- * capsule's trailing end without its own disk, and `Cancel` stands at the
- * bar's right. The results show over the screen (`StackBottom.tsx`).
- * `Cancel` folds it back. With Reduce Motion on the growth is a cross-fade
- * alone. While the keyboard is up the bar rides 8 points over its top.
+ * `Search` and the `#`. The capsule is the key button's lit pill (`pill`),
+ * its marks and typed words the pill's ink (`onPill`), and one chosen mark,
+ * a disk in `chosen`, lies behind the chosen control (`chosenOf`), whose
+ * mark takes `onChosen`: the `#` while folded, Search while search is open.
+ * A press on `Search` opens search on the screen at the bar's `path`
+ * (`searchOpen`, keyed by the path): the capsule grows leftward across the
+ * screen into a focused search box, the chosen mark slides with it to the
+ * box's magnifier at the leading end, the `#` keeps the capsule's trailing
+ * end, and `Cancel` stands at the bar's right. The results show over the
+ * screen (`StackBottom.tsx`). `Cancel` folds it back, and the mark slides
+ * home to the `#`. With Reduce Motion on the growth is a cross-fade alone
+ * and the mark jumps. While the keyboard is up the bar rides 8 points over
+ * its top.
+ * The whole bar glides between its two places (`glideOf`), over the bar on a
+ * hymn page and docked on the home list, as a hymn opens or closes; over the
+ * bar it rides the bar's own spring as the bar rises or falls; a hymn page put
+ * in another's place moves it not at all. With Reduce Motion it is set in its
+ * new place under a 150 ms fade.
  * While the drums are open only the `#` takes a touch (`inReach`): every
  * other view of the bar, the capsule's own background too, lets a touch
  * through to the backdrop beneath it, which closes the drums.
@@ -49,12 +60,22 @@ import Animated, {
 
 import { color, useAccent } from '~/color';
 import { plain, useCue } from '~/feel/cue';
-import { HASH, HASH_GAP } from '~/player/bar';
+import { BAR_SPRING, FindAt, glideOf, HASH, HASH_GAP } from '~/player/bar';
 import { MOST_SCALE } from '~/player/DialView';
 import { useReduceMotion } from '~/player/motion';
 import { modeAt, searchAt, searchOpen, searchQuery, type Searching } from '~/reader/place';
 
-import { type Control, drawn, inReach, rowOf, tiles, tilesAt } from './finding';
+import {
+  chosenOf,
+  type Control,
+  drawn,
+  type HashLook,
+  hashLookOf,
+  inReach,
+  rowOf,
+  tiles,
+  tilesAt,
+} from './finding';
 import { Magnifier } from './Magnifier';
 import { searchLabel } from './Results';
 
@@ -67,6 +88,10 @@ const passThrough = { pointerEvents: 'box-none' } as const;
 const FOLDED = 2 * HASH;
 /** The space between the open capsule and `Cancel`. */
 const CANCEL_GAP = 12;
+/** The capsule's growth and the chosen mark's slide: one spring, so the mark keeps pace with the end it rides to. */
+const GROWTH = { duration: 300, dampingRatio: 1 } as const;
+/** The whole bar's glide between its two places: a little longer than the growth, as it crosses more of the screen, and as calm. */
+const GLIDE = { duration: 350, dampingRatio: 1 } as const;
 
 /** Cancel's work, for the bar's `Cancel` and Android's Back: the query cleared, the keyboard lowered, search off. */
 export const useCancelSearch = () => {
@@ -122,23 +147,28 @@ const useHeld = <Host extends HostInstance>() => {
 
 /**
  * The bar of the screen at `path`, its bottom `bottom` points over the
- * window's, with the drums (`drums`) over it while they are open
- * (`drumsOpen`). `hash` draws the `#`, on its own disk or, inside the open
- * bar, without one. The tiles of `All at once` belong to the home list (`/`):
- * on any other screen the bar reads them hidden.
+ * window's at its place `at` (`findAt`), with the drums (`drums`) over it
+ * while they are open (`drumsOpen`). A new `bottom` is reached as `glideOf`
+ * says from the place the bar stood at; a bar told no place is set there at
+ * once. `hash` draws the `#` in the look the bar gives it (`HashLook`): alone
+ * on its own disk in the tiles' row, else in the capsule, over the chosen
+ * mark or beside it. The tiles of `All at once` belong to the home list
+ * (`/`): on any other screen the bar reads them hidden.
  */
 export function FindBar({
   path,
+  at = FindAt.Nowhere(),
   bottom,
   drums,
   drumsOpen,
   hash,
 }: {
   readonly path: string;
+  readonly at?: FindAt;
   readonly bottom: number;
   readonly drums: ReactNode;
   readonly drumsOpen: boolean;
-  readonly hash: (disk: boolean) => ReactNode;
+  readonly hash: (look: HashLook) => ReactNode;
 }) {
   const [searching, setSearching] = useAtom(searchOpen);
   const shown = useAtomValue(tiles);
@@ -161,6 +191,17 @@ export function FindBar({
   const fade = useSharedValue(1);
   const [width, setWidth] = useState(0);
   const [cancelWidth, setCancelWidth] = useState(0);
+  const chosen = chosenOf(row, drumsOpen);
+  // Which end the chosen mark stands at: 0 behind the `#` at the trailing end, 1 behind Search at the leading end.
+  const side = useSharedValue(Number(chosen === 'search'));
+  const wasChosen = useRef(chosen);
+  useEffect(() => {
+    if (wasChosen.current === chosen) return;
+    wasChosen.current = chosen;
+    const to = Number(chosen === 'search');
+    if (reduced) side.value = to;
+    else side.value = withSpring(to, GROWTH);
+  }, [chosen, reduced, side]);
   const was = useRef(row);
   useEffect(() => {
     const before = was.current;
@@ -172,16 +213,34 @@ export function FindBar({
       progress.value = open;
       fade.value = withTiming(1, { duration: 150 });
     } else {
-      progress.value = withSpring(open, { duration: 300, dampingRatio: 1 });
+      progress.value = withSpring(open, GROWTH);
       fade.value = withTiming(1, { duration: 120 });
     }
     if (focusBox) focusOn(box);
     if (row === 'open') setAsked(Option.none());
     if (before === 'open' && row === 'folded') focusOn(searchButton);
   }, [row, reduced, focusBox, progress, fade]);
-  const lifted = useAnimatedStyle(() => {
-    if (keyboard.value <= 0) return { transform: [{ translateY: 0 }] };
-    return { transform: [{ translateY: -Math.max(0, keyboard.value + HASH_GAP - bottom) }] };
+  // Where the bar stands, its bottom over the window's: `bottom`, reached as `glideOf` says from where it stood.
+  const stand = useSharedValue(bottom);
+  // The whole bar's opacity: 1, but for the fade that stands in for a glide under Reduce Motion.
+  const seen = useSharedValue(1);
+  const stood = useRef({ at, bottom });
+  useEffect(() => {
+    const before = stood.current;
+    stood.current = { at, bottom };
+    if (before.bottom === bottom) return;
+    const glide = glideOf(before.at, at);
+    if (glide === 'none' || reduced) stand.value = bottom;
+    else if (glide === 'glide') stand.value = withSpring(bottom, GLIDE);
+    else stand.value = withSpring(bottom, BAR_SPRING);
+    if (glide !== 'glide' || !reduced) return;
+    seen.value = 0;
+    seen.value = withTiming(1, { duration: 150 });
+  }, [bottom, reduced, stand, seen]);
+  // The keyboard lift composes over the place: while the keyboard is up the bar rides 8 points over its top.
+  const placed = useAnimatedStyle(() => {
+    const lift = (keyboard.value > 0 && Math.max(0, keyboard.value + HASH_GAP - stand.value)) || 0;
+    return { bottom: stand.value, opacity: seen.value, transform: [{ translateY: -lift }] };
   });
   const open = Math.max(FOLDED, width - cancelWidth - CANCEL_GAP);
   // Unmeasured, the open capsule fills the row by flex (`styles.grow`).
@@ -189,7 +248,16 @@ export function FindBar({
     if (width === 0) return {};
     return { width: FOLDED + (open - FOLDED) * progress.value };
   });
+  // The chosen mark rides from the trailing end across the capsule as it is now, less its own width: a new
+  // row width moves its place at once, and only a change of side slides it.
+  const slid = useAnimatedStyle(() => {
+    if (width === 0) return { transform: [{ translateX: 0 }] };
+    const across = FOLDED + (open - FOLDED) * progress.value - HASH;
+    return { transform: [{ translateX: -across * side.value }] };
+  });
   const faded = useAnimatedStyle(() => ({ opacity: fade.value }));
+  // Search's magnifier: on the chosen mark while Search is chosen, else on the pill. The `#` takes its ink from its look.
+  const searchInk = (chosen === 'search' && color.onChosen) || color.onPill;
   const reach = (control: Control) => !inReach(control, drumsOpen) && outOfReach;
   const startSearch = () => {
     cue(plain('tab'));
@@ -201,7 +269,7 @@ export function FindBar({
   };
   const controls = drawn(row);
   return (
-    <Animated.View testID="find" pointerEvents="box-none" style={[styles.find, { bottom }, lifted]}>
+    <Animated.View testID="find" pointerEvents="box-none" style={[styles.find, placed]}>
       {drums}
       <View
         testID="find-bar"
@@ -209,12 +277,19 @@ export function FindBar({
         style={styles.row}
         onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       >
-        {row === 'tiles' && hash(true)}
+        {row === 'tiles' && hash('alone')}
         {row !== 'tiles' && (
           <Animated.View
             {...(drumsOpen && passThrough)}
             style={[styles.capsule, row === 'open' && width === 0 && styles.grow, grown]}
           >
+            {/* Drawn first, so it lies behind the controls; it takes no touch and VoiceOver passes it by. */}
+            <Animated.View
+              testID="find-chosen"
+              aria-hidden
+              pointerEvents="none"
+              style={[styles.chosen, slid]}
+            />
             {controls.includes('search') && (
               <Animated.View style={faded} {...reach('search')}>
                 <Pressable
@@ -227,13 +302,15 @@ export function FindBar({
                   onPress={startSearch}
                   style={({ pressed }) => [styles.button, pressed && styles.pressed]}
                 >
-                  <Magnifier />
+                  <Magnifier tint={searchInk} />
                 </Pressable>
               </Animated.View>
             )}
             {controls.includes('box') && (
               <Animated.View style={[styles.box, faded]} {...reach('box')}>
-                <Magnifier />
+                <View style={styles.slot}>
+                  <Magnifier tint={searchInk} />
+                </View>
                 <TextInput
                   ref={keepBox}
                   autoFocus={focusBox}
@@ -241,7 +318,7 @@ export function FindBar({
                   role="searchbox"
                   aria-label={searchLabel}
                   placeholder={searchLabel}
-                  placeholderTextColor={color.muted}
+                  placeholderTextColor={color.onPillMuted}
                   value={query}
                   onChangeText={setQuery}
                   autoCapitalize="none"
@@ -253,7 +330,7 @@ export function FindBar({
                 />
               </Animated.View>
             )}
-            {hash(row !== 'open')}
+            {hash(hashLookOf(row, chosen))}
           </Animated.View>
         )}
         {controls.includes('cancel') && (
@@ -293,16 +370,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     borderRadius: HASH / 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.edge,
-    backgroundColor: color.bar,
+    backgroundColor: color.pill,
     overflow: 'hidden',
   },
   grow: { flex: 1 },
+  chosen: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: HASH,
+    height: HASH,
+    borderRadius: HASH / 2,
+    backgroundColor: color.chosen,
+  },
   button: { width: HASH, height: HASH, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.6 },
-  box: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 12 },
-  input: { flex: 1, height: HASH, fontSize: 17, color: color.ink },
+  box: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  slot: { width: HASH, height: HASH, alignItems: 'center', justifyContent: 'center' },
+  input: { flex: 1, height: HASH, fontSize: 17, color: color.onPill },
   cancel: { minHeight: HASH, justifyContent: 'center' },
   cancelWords: { fontSize: 17 },
 });

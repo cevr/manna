@@ -1043,6 +1043,31 @@ describe('the tempo dial in the full player', () => {
     }),
   );
 
+  it.live('stands the bpm read-out and Tap under the dial, before Chord settings', () =>
+    Effect.sync(() => {
+      using page = mount();
+      using _kept = keeping(page, false);
+      const before = (first: Element, second: Element) =>
+        Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
+      const bpm = Option.getOrThrow(page.find('[data-testid="tempo-bpm"]'));
+      const tapChip = Option.getOrThrow(page.find('[aria-label="Tap"]'));
+      const chords = Option.getOrThrow(page.find('[aria-label="Chord settings"]'));
+      expect({
+        said: bpm.getAttribute('aria-label'),
+        bpmUnderDial: before(dialOf(page), bpm),
+        tapUnderDial: before(dialOf(page), tapChip),
+        bpmBeforeChords: before(bpm, chords),
+        tapBeforeChords: before(tapChip, chords),
+      }).toEqual({
+        said: 'quarter note = 90',
+        bpmUnderDial: true,
+        tapUnderDial: true,
+        bpmBeforeChords: true,
+        tapBeforeChords: true,
+      });
+    }),
+  );
+
   it.live('says no note of the pace under the Tempo dial, with Sound on or off', () =>
     Effect.sync(() => {
       using page = mount();

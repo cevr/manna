@@ -71,8 +71,9 @@ function Meets({ bottom, children }: { readonly bottom: number; readonly childre
 /**
  * The stack, with the results over it and it out of reach while search is
  * open on the shown path. The results stay mounted for as long as their
- * search is open, hidden while a hymn pushed from them shows, so Back finds
- * them as the reader left them.
+ * search is open, hidden while a hymn pushed from them shows (off a hymn
+ * page: on one a result replaces the page and closes the search), so Back
+ * finds them as the reader left them.
  */
 function Searched({ children }: { readonly children: ReactNode }) {
   const open = useAtomValue(searchOpen);

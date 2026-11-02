@@ -10,8 +10,9 @@ import { type Place, type Timeline, placeAt, timelineOf, timingBook } from './ti
 
 const decoded = (encoded: string): Timeline => Option.getOrThrow(timelineOf(encoded));
 
-// Two lines: a lit line of two words (syllables at 1000, 1500 | 2000) and a line marked whole.
-const small = decoded('1,1000,2000,0.500,500;3,2000,1000');
+// A quarter of 666666 µs in 3/4, then two lines: a lit line of two words (syllables at 1000, 1500 |
+// 2000) and a line marked whole.
+const small = decoded('666666,3,4|1,1000,2000,0.500,500;3,2000,1000');
 
 /** The place by a plain scan of every line and syllable: what `placeAt` must agree with. */
 const scanned = (timeline: Timeline, ms: number): Pick<Place, 'line' | 'syllable' | 'word'> => {
@@ -25,6 +26,7 @@ const scanned = (timeline: Timeline, ms: number): Pick<Place, 'line' | 'syllable
 describe('a hymn timeline', () => {
   it('decodes lines, words and flags from the bundled string', () => {
     expect(small).toEqual({
+      tempo: { microsPerQuarter: 666666, numerator: 3, denominator: 4 },
       first: 1000,
       end: 4000,
       lines: [
@@ -42,7 +44,24 @@ describe('a hymn timeline', () => {
   });
 
   it('refuses a string that does not decode', () => {
+    // Each refused as it stands (no head) and after a valid head (its lines are malformed).
     for (const bad of ['', '1,0', '4,0,10', '1,-1,10', '1,0,10,0.x', '1,0,10;;'])
+      for (const encoded of [bad, `500000,4,4|${bad}`])
+        expect(Option.isNone(timelineOf(encoded))).toBe(true);
+  });
+
+  it('refuses a string with no valid head', () => {
+    for (const bad of [
+      '1,0,10',
+      '|1,0,10',
+      '500000,4|1,0,10',
+      '500000,4,4,1|1,0,10',
+      '0,4,4|1,0,10',
+      '500000,0,4|1,0,10',
+      '500000,4,0|1,0,10',
+      '500000,4,x|1,0,10',
+      '-500000,4,4|1,0,10',
+    ])
       expect(Option.isNone(timelineOf(bad))).toBe(true);
   });
 
@@ -59,7 +78,7 @@ describe('a hymn timeline', () => {
   });
 
   it('decodes each hymn once, and none for a hymn it does not carry', () => {
-    const book = timingBook([[1, '1,0,10']]);
+    const book = timingBook([[1, '500000,4,4|1,0,10']]);
     expect(book.of(1)).toBe(book.of(1));
     expect(Option.isNone(book.of(2))).toBe(true);
   });

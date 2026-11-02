@@ -4,9 +4,9 @@
  * mounted in a browser's document over a registry of its own
  * (`src/test/setup.ts`), on the real home screen or a stand-in hymn page:
  *
- * - a hymn pushed from the results and popped again brings back the same
- *   results, mounted once, so their scroll place and their hymns about the
- *   query are as the reader left them;
+ * - a hymn pushed from the home list's results and popped again brings back
+ *   the same results, mounted once, so their scroll place and their hymns
+ *   about the query are as the reader left them;
  * - the box takes focus, and the keyboard rises, only on the press of
  *   `Search` that opened its search: never on the way back from a result,
  *   and never on a later search the press did not open.
@@ -95,10 +95,9 @@ const type = (host: HTMLElement, words: string) =>
     }),
   );
 
-describe.each([
-  ['the home list', home],
-  ['a hymn page', hymn(8)],
-])('back from a result to search on %s', (_, base) => {
+// On a hymn page a result takes the page's place and closes the search (`numreplace.slow.test.tsx`).
+describe('back from a result to search on the home list', () => {
+  const base = home;
   it('returns to the same results, mounted once and in reach, with the keyboard down', () => {
     using phone = mount(base);
     press(button(phone.host, 'Search'));

@@ -70,7 +70,7 @@ By hand:
 
 ## Gotchas
 
-- Never add a timeout argument to a test or raise a runner timeout. Split long scenarios into cases under the default limit. An extended corpus slow test keeps at least 30% headroom under the 5 s default, measured in five paired runs at load 5 or more.
+- A test's timeout stays at the 5 s default, except a case that spawns a child process, which takes a spawn budget of at least 20 s (`effect/requireSpawnBudget`). A runner timeout is never raised. A fixture the cases share builds as the file loads, outside every case's limit (`film/no-lazy-test-fixture`). Split long scenarios into cases under the default limit. An extended corpus slow test keeps at least 30% headroom under the 5 s default, measured in five paired runs at load 5 or more.
 
 - The simulator plays through the Mac's speakers: on iOS, read the `Sound` button's value as `unchecked` before every Play. The choice is kept across relaunches. The checker refuses to press Play unless it reads `unchecked` itself.
 - The pager keeps the pages beside the open hymn in the tree, each with a `hymn-scroll` and `line` nodes of its own, off the screen. The checker takes the scroll whose frame, cut to its ancestors' frames, the screen shows, and only the lines inside it; read a raw snapshot the same way.

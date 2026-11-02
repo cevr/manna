@@ -3,7 +3,7 @@
  *
  * The player reports its place (`at`) every 250 ms. Between reports the
  * clock runs on from the last one while the player plays, at the rate the
- * place moves (the hymn's tempo with Sound off, 1 with the recording), and
+ * place moves (the hymn's tempo, Sound on or off: the recording plays at it), and
  * holds while it does not, so the marks move with the singing and not in
  * 250 ms steps. A report close to where the clock has run (within `SLACK`)
  * moves it on, never back, so the marks do not flicker back over a word; a

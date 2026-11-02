@@ -26,7 +26,9 @@
       "expect": [
         { "shows": "label=Sheet Grabber" },
         { "shows": "label=Position" },
-        { "shows": "id=dial-tempo" }
+        { "shows": "id=dial-tempo" },
+        { "shows": "id=tempo-bpm" },
+        { "shows": "label=Tap" }
       ]
     },
     {

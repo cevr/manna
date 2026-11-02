@@ -28,16 +28,22 @@ const seeded = (seed: number) => {
   };
 };
 
+/** Every meter the hymnal's files carry. */
 const METERS = [
   [4, 4],
   [3, 4],
+  [2, 4],
   [2, 2],
   [6, 8],
   [9, 8],
   [12, 8],
+  [4, 8],
+  [3, 8],
   [3, 2],
   [4, 2],
+  [1, 2],
   [6, 4],
+  [9, 4],
 ] as const;
 
 const QUALITIES: readonly Chord.Quality[] = ['', 'm', '7', 'sus4', 'dim'];
@@ -145,26 +151,29 @@ const breaches = (line: Placement.Line, grid: Placement.Grid): string[] => {
  * A melody that leans on a one-meter grid's strong beats: from each strong
  * beat to the next, one held note or a run of eighths, and each line ends on
  * a held note, so every syllable held two beats or more and every line's
- * last starts on a strong beat. With the grid's beat in ticks.
+ * last starts on a strong beat. The first line is one held note, so the
+ * melody leans on two strong beats at least. With the first beat off the
+ * strong beats in ticks (half a beat in a bar of one beat, each beat strong).
  */
 const leaning = (grid: Placement.Grid, random: () => number) => {
   const strong: number[] = [];
-  for (let t = 0; strong.length < 2 + Math.floor(random() * 10); t++)
+  for (let t = 0; strong.length < 3 + Math.floor(random() * 9); t++)
     if (Placement.beatAt(grid, t).strong) strong.push(t);
   let beat = 1;
   while (!Placement.beatAt(grid, beat).on) beat++;
+  const off = Placement.beatAt(grid, beat).strong ? beat / 2 : beat;
   const lines: Placement.Syllable[][] = [[]];
   strong.slice(0, -1).forEach((from, i) => {
     const to = strong[i + 1] ?? from;
     const line = lines.at(-1) ?? [];
-    const ends = i === strong.length - 2 || random() < 0.3;
+    const ends = i === 0 || i === strong.length - 2 || random() < 0.3;
     if (ends || random() < 0.5) line.push({ start: from, length: to - from, key: undefined });
     else
       for (let t = from; t < to; t += TPB / 2)
         line.push({ start: t, length: TPB / 2, key: undefined });
     if (ends && i < strong.length - 2) lines.push([]);
   });
-  return { lines, beat };
+  return { lines, off };
 };
 
 describe('R1 over drawn lines', () => {
@@ -183,7 +192,7 @@ describe('R1 over drawn lines', () => {
   );
 
   it.effect(
-    "confirms a grid a melody leans on, and not the same grid a beat off the melody's bars",
+    "confirms a grid a melody leans on, and not the same grid off the melody's strong beats",
     () =>
       Effect.sync(() => {
         const random = seeded(474259);
@@ -191,8 +200,8 @@ describe('R1 over drawn lines', () => {
         for (let n = 0; n < 400 && found.length < 10; n++) {
           const { grid } = draw(random);
           const one: Placement.Grid = { ...grid, meters: grid.meters.slice(0, 1) };
-          const { lines, beat } = leaning(one, random);
-          const shifted = lines.map((line) => line.map((s) => ({ ...s, start: s.start + beat })));
+          const { lines, off } = leaning(one, random);
+          const shifted = lines.map((line) => line.map((s) => ({ ...s, start: s.start + off })));
           const meter = `${one.meters[0]?.numerator}/${one.meters[0]?.denominator}`;
           if (!Placement.confirms(one, lines)) found.push(`melody ${n} in ${meter}: not confirmed`);
           if (Placement.confirms(one, shifted))
@@ -217,6 +226,38 @@ describe('R1 over drawn lines', () => {
       }
       expect(found).toEqual([]);
     }),
+  );
+
+  it.effect(
+    'counts a bar of n/d as n d-th notes, bars counted on from where each meter starts',
+    () =>
+      Effect.sync(() => {
+        const found: string[] = [];
+        /** A bar's ticks: n notes of a d-th of a whole note, a whole note four quarters. */
+        const barOf = ([n, d]: (typeof METERS)[number]) => (TPB * 4 * n) / d;
+        for (const first of METERS)
+          for (const second of METERS) {
+            const [a, b] = [barOf(first), barOf(second)];
+            const grid: Placement.Grid = {
+              ticksPerBeat: TPB,
+              meters: [
+                { tick: 0, numerator: first[0], denominator: first[1] },
+                { tick: 2 * a, numerator: second[0], denominator: second[1] },
+              ],
+              tonic: 0,
+            };
+            for (let t = 0; t < 2 * a + 3 * b; t++) {
+              const want = t < 2 * a ? Math.floor(t / a) : 2 + Math.floor((t - 2 * a) / b);
+              const got = Placement.beatAt(grid, t).bar;
+              if (got === want) continue;
+              found.push(
+                `${first.join('/')} then ${second.join('/')} at ${t}: bar ${got}, not ${want}`,
+              );
+              break;
+            }
+          }
+        expect(found.slice(0, 10)).toEqual([]);
+      }),
   );
 });
 

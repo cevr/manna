@@ -18,6 +18,8 @@
  * in each (`groupRowsOf`); the list opens at `start` when given (the tab's
  * kept place), no further than its end allows (`clampedStart`), else at
  * `pullDown`'s rest. With `onGroup`, a tap on a group's row, in the list or pinned, calls it (the tab's `All at once`).
+ * A row pushes its hymn; with `opening`, it opens it as the list's owner
+ * asks (`RowOpening`: a search's results on a hymn page replace the page).
  * A search's results given the hymns `about` its query show them under the
  * strongest matches, in a section `Hymns about this`, then the rest of the
  * matches under `More matches` (`resultRowsOf`); a section's row is a
@@ -72,6 +74,7 @@ import {
 } from 'react-native';
 
 import { useCue } from '~/feel/cue';
+import type { Opening } from '~/home/opening';
 import { Find, find } from '~/player/bar';
 import { foundOffset } from '~/player/drums';
 import { useFindRoom } from '~/player/context';
@@ -131,6 +134,18 @@ interface Look {
   readonly gutter: number;
   readonly hrefOf: HymnListProps['hrefOf'];
   readonly onGroup: Option.Option<() => void>;
+  /** How the rows open their hymns, when the list's owner asks; else each pushes its hymn. */
+  readonly opening: Option.Option<RowOpening>;
+}
+
+/**
+ * How a list's rows open their hymns, as its owner asks (a search on a hymn
+ * page, `Search.tsx`): `of` a row's number gives its opening (`openingAt`),
+ * and `opened` is told it after the press.
+ */
+export interface RowOpening {
+  readonly of: (number: number) => Opening;
+  readonly opened: (how: Opening) => void;
 }
 
 const drawRow = ({
@@ -177,6 +192,7 @@ const drawRow = ({
       })}
       gutter={extraData.gutter}
       accent={extraData.accent}
+      opening={extraData.opening}
     />
   );
 };
@@ -240,6 +256,7 @@ export function HymnList({
   grouped,
   start,
   onGroup,
+  opening: rowOpening,
 }: HymnListProps & {
   /** A search's hymns about its query, nearest first: a section under its strongest matches (`resultRowsOf`). */
   readonly about?: ReadonlyArray<HymnText>;
@@ -249,6 +266,8 @@ export function HymnList({
   readonly start?: number;
   /** A tap on a group's row, in the list or pinned: a home tab's `All at once`. */
   readonly onGroup?: () => void;
+  /** How the rows open their hymns: a search's results on a hymn page replace it (`RowOpening`). Rows push when not given. */
+  readonly opening?: RowOpening;
 }) {
   const { fontScale, height: viewport } = useWindowDimensions();
   const accent = useAccent();
@@ -338,8 +357,9 @@ export function HymnList({
       gutter,
       hrefOf,
       onGroup: Option.fromNullishOr(onGroup),
+      opening: Option.fromNullishOr(rowOpening),
     }),
-    [accent, hymnHeight, foundHeight, topicHeight, gutter, hrefOf, onGroup],
+    [accent, hymnHeight, foundHeight, topicHeight, gutter, hrefOf, onGroup, rowOpening],
   );
   const dialled = useAtomValue(find);
   // The offset of the dialled hymn's row while the drums are open on a home list, else -1.
@@ -649,7 +669,9 @@ function ShelfHeader({
 /**
  * One hymn's row: a link the router opens in the app. Its press first hands
  * the pager the hymns of the list it sits in (`source`, `rows.ts`), so a
- * swipe on the hymn moves through them. A favourite's row ends with a
+ * swipe on the hymn moves through them. It pushes its hymn, unless the
+ * list's owner asks (`opening`): then it may put the hymn in the shown
+ * page's place, or stay and move nothing, and tells the owner which. A favourite's row ends with a
  * star at the number's size, after its title, so a long title's ellipsis
  * comes before the star; its name ends `, favourite`. A search's result
  * found by another line shows that `line` under its title, quiet, one line
@@ -664,6 +686,7 @@ function HymnRow({
   height,
   gutter,
   accent,
+  opening,
 }: {
   readonly hymn: HymnText;
   readonly href: Href;
@@ -674,12 +697,23 @@ function HymnRow({
   /** The room at the right edge the row, its star and its separator end before. */
   readonly gutter: number;
   readonly accent: ColorValue;
+  readonly opening: Option.Option<RowOpening>;
 }) {
-  const link = useLinkTo({ href: Link.resolveHref(href) });
+  const how = Option.match(opening, {
+    onNone: (): Opening => 'push',
+    onSome: (asked) => asked.of(hymn.number),
+  });
+  // A replacing link is One's `REPLACE`: a new hymn under the same route, never the shown one.
+  const link = useLinkTo({ href: Link.resolveHref(href), replace: how === 'replace' });
   const pageFrom = useAtomSet(pagesFrom);
   const onPress: typeof link.onPress = (event) => {
-    pageFrom(Option.some(source));
-    link.onPress(event);
+    // A stay moves nothing and hands the pager nothing; on the web the link's href is not followed.
+    if (how === 'stay') event?.preventDefault();
+    else {
+      pageFrom(Option.some(source));
+      link.onPress(event);
+    }
+    Option.map(opening, (asked) => asked.opened(how));
   };
   return (
     <Pressable
