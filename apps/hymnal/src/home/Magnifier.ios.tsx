@@ -1,16 +1,13 @@
-/** The find bar's search mark on iOS: the SF Symbol `magnifyingglass`, in the accent. */
+/** The find bar's search mark on iOS: the SF Symbol `magnifyingglass`, in `tint`. */
 
 import { One } from 'one';
-import { StyleSheet } from 'react-native';
+import { type ColorValue, StyleSheet } from 'react-native';
 
-import { useAccent } from '~/color';
-
-export function Magnifier() {
-  const accent = useAccent();
+export function Magnifier({ tint }: { readonly tint: ColorValue }) {
   return (
     <One.iOS.Image
       systemName="magnifyingglass"
-      swiftStyle={{ foregroundStyle: accent, imageScale: 'medium' }}
+      swiftStyle={{ foregroundStyle: tint, imageScale: 'medium' }}
       style={styles.mark}
     />
   );

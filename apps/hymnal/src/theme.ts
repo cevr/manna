@@ -1,5 +1,5 @@
 /**
- * The app's colours: fifteen roles in light and dark, all drawn from the
+ * The app's colours: eighteen roles in light and dark, all drawn from the
  * brand (`@manna/brand`, the one source the First the Blade site reads too)
  * as the owner's pick of 2026-10-25, "sky": the brand's painted sky as the
  * second colour, the night as the ink. A screen reads a role (`color.ts` on
@@ -15,9 +15,14 @@
  * the accent and the chords, the night raised (`nightPanel`) for panels and
  * pressed rows, and the docked bar a shade under the night (`bar`).
  *
- * Text on a fill (`onAccent`, `onPressed`, `onPill`) is the night where it
- * meets AA on the fill, else white, else black (`onColor`). A pressed accent
- * is a fill of its own (`pressed`), the accent a fifth toward the ground.
+ * Text on a fill (`onAccent`, `onPressed`, `onPill`, `onChosen`) is the night
+ * where it meets AA on the fill, else white, else black (`onColor`). The find
+ * bar's capsule is the pill too: its chosen control stands on a disk of the
+ * accent where the accent reads at 3:1 on the pill, else of the pill's ink
+ * (`chosen`; by night the gold does not, so the night), and its placeholder
+ * is the pill's ink moved toward the pill as far as AA allows (`onPillMuted`).
+ * A pressed accent is a fill of its own (`pressed`), the accent a fifth
+ * toward the ground.
  * The open dials stand on an opaque panel (`panel`), so no page word shows
  * through it; its edge (`edge`) is the sky moved toward the night by day and
  * the night toward the sky by night, until it reads at 3.5:1 on the ground:
@@ -59,6 +64,12 @@ export interface Roles {
   readonly pill: string;
   /** Text and marks drawn on the pill. */
   readonly onPill: string;
+  /** Quiet text on the pill: the find bar's placeholder. */
+  readonly onPillMuted: string;
+  /** The chosen mark on the pill: the disk behind the find bar's chosen control. */
+  readonly chosen: string;
+  /** Text and marks drawn on the chosen mark. */
+  readonly onChosen: string;
 }
 
 type Rgb = readonly [number, number, number];
@@ -111,6 +122,31 @@ const contrast = (a: string, b: string) => {
 export const onColor = (fill: string) =>
   [PALETTE.night, '#ffffff'].find((text) => contrast(text, fill) >= 4.5) ?? '#000000';
 
+/**
+ * The chosen mark on a pill of `pill`: the `accent` where it reads as a state
+ * there (WCAG 1.4.11's 3:1), else the pill's own ink, `onPill`.
+ */
+const chosenOn = (accent: string, pill: string, onPill: string) => {
+  if (contrast(accent, pill) >= 3) return accent;
+  return onPill;
+};
+
+/**
+ * Quiet text on `fill`: `ink` moved toward the fill, in steps of a hundredth,
+ * as far as it still meets WCAG AA (4.5:1) there. `ink` itself must meet it.
+ */
+const quietOn = (ink: string, fill: string) => {
+  const steps = Array.from({ length: 101 }, (_, step) => mix(ink, fill, step / 100));
+  return steps.findLast((tone) => contrast(tone, fill) >= 4.5) ?? ink;
+};
+
+/** The roles the find bar's capsule draws with on the pill, the key button's lit fill. */
+const onPillRoles = (accent: string, pill: string) => {
+  const onPill = onColor(pill);
+  const chosen = chosenOn(accent, pill, onPill);
+  return { pill, onPill, onPillMuted: quietOn(onPill, pill), chosen, onChosen: onColor(chosen) };
+};
+
 const white = '#ffffff';
 
 /** The sky tinted `t` of the way toward white. */
@@ -136,8 +172,7 @@ export const theme = {
     panel: skyTint(0.709),
     edge: mix(PALETTE.sky, PALETTE.night, 0.45),
     bar: lightGround,
-    pill: PALETTE.sky,
-    onPill: onColor(PALETTE.sky),
+    ...onPillRoles(PALETTE.night, PALETTE.sky),
   },
   dark: {
     ground: PALETTE.night,
@@ -154,7 +189,6 @@ export const theme = {
     edge: mix(PALETTE.night, PALETTE.sky, 0.6),
     // The night 15% toward black: the docked bar sits a shade under the page.
     bar: mix(PALETTE.night, '#000000', 0.147),
-    pill: PALETTE.sky,
-    onPill: onColor(PALETTE.sky),
+    ...onPillRoles(PALETTE.duskGold, PALETTE.sky),
   },
 } as const satisfies { readonly light: Roles; readonly dark: Roles };

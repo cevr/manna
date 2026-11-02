@@ -7,5 +7,7 @@ test('the phone colours load on Android, where DynamicColorIOS throws', () => {
     stderr: 'pipe',
   });
   expect(run.stderr.toString()).toBe('');
-  expect(run.stdout.toString()).toBe('ground ink muted line soft panel edge chord bar pill onPill');
+  expect(run.stdout.toString()).toBe(
+    'ground ink muted line soft panel edge chord bar pill onPill onPillMuted chosen onChosen',
+  );
 });

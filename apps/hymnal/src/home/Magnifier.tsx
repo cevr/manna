@@ -1,15 +1,12 @@
-/** The find bar's search mark beyond iOS: a ring and its handle, in the accent. */
+/** The find bar's search mark beyond iOS: a ring and its handle, in `tint`. */
 
-import { StyleSheet, View } from 'react-native';
+import { type ColorValue, StyleSheet, View } from 'react-native';
 
-import { useAccent } from '~/color';
-
-export function Magnifier() {
-  const accent = useAccent();
+export function Magnifier({ tint }: { readonly tint: ColorValue }) {
   return (
     <View style={styles.mark} aria-hidden>
-      <View style={[styles.ring, { borderColor: accent }]} />
-      <View style={[styles.handle, { backgroundColor: accent }]} />
+      <View style={[styles.ring, { borderColor: tint }]} />
+      <View style={[styles.handle, { backgroundColor: tint }]} />
     </View>
   );
 }

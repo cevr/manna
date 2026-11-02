@@ -37,6 +37,7 @@ import { book } from '~/follow/book';
 import { counted } from '~/follow/seeks';
 import { hymnHref } from '~/home/Browse';
 import { FindBar, useCancelSearch } from '~/home/FindBar';
+import type { HashLook } from '~/home/finding';
 import { openingAt } from '~/home/opening';
 import { hymnAt } from '~/hymns/hymns';
 import { searchOpen } from '~/reader/place';
@@ -219,7 +220,7 @@ function FindNumber({
     ),
   });
   // The drums open over the keyboard's place: an open search's keyboard goes down first.
-  const hash = (disk: boolean) => (
+  const hash = (look: HashLook) => (
     <Pressable
       testID="find-number"
       accessibilityRole="button"
@@ -229,9 +230,16 @@ function FindNumber({
         Keyboard.dismiss();
         press(FindPress.Hash());
       }}
-      style={({ pressed }) => [styles.hash, disk && styles.disk, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.hash,
+        look === 'alone' && styles.disk,
+        pressed && styles.pressed,
+      ]}
     >
-      <Text style={[styles.hashText, !disk && styles.hashInBar]} maxFontSizeMultiplier={MOST_SCALE}>
+      <Text
+        style={[styles.hashText, look === 'chosen' && styles.hashChosen]}
+        maxFontSizeMultiplier={MOST_SCALE}
+      >
         #
       </Text>
     </Pressable>
@@ -303,5 +311,5 @@ const styles = StyleSheet.create({
   disk: { backgroundColor: color.pill },
   pressed: { opacity: 0.6 },
   hashText: { fontSize: 20, fontWeight: '700', color: color.onPill },
-  hashInBar: { color: color.ink },
+  hashChosen: { color: color.onChosen },
 });
