@@ -364,6 +364,11 @@ const refusal = (sheet: PuppetSheet, skeleton: Skeleton): string | undefined => 
     const missing = skin.find((b) => !seen.has(b));
     if (missing !== undefined) return `${part}'s skin names no bone ${missing}`;
   }
+  for (const [part, n] of Object.entries(sheet.underlap ?? {})) {
+    if (!names.has(part)) return `the underlap names no part ${part} of the sheet`;
+    if (!Number.isInteger(n) || n < 0)
+      return `${part}'s underlap is ${n} px, not a whole number of 0 or more`;
+  }
   return flapRefusal(skeleton, names, seen);
 };
 

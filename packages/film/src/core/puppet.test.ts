@@ -744,6 +744,20 @@ describe('a puppet', () => {
     expect(textureOf(under, 'torso')).not.toEqual(textureOf(plain, 'torso'));
   });
 
+  test('refuses an underlap that names no part of the sheet, or whose length is not a whole number of 0 or more', () => {
+    const reason = (underlap: Record<string, number>) =>
+      Result.match(puppetOf(underlapping(underlap), HEAD_BONES), {
+        onFailure: (e) => e.reason,
+        onSuccess: () => 'made',
+      });
+    expect(reason({ haed: 3 })).toBe('the underlap names no part haed of the sheet');
+    for (const n of [Infinity, -1, 2.5, Number.NaN])
+      expect(reason({ head: n })).toBe(
+        `head's underlap is ${n} px, not a whole number of 0 or more`,
+      );
+    expect(reason({ head: 3 })).toBe('made');
+  });
+
   test('a vertex nearest the upper bone does not follow the elbow', () => {
     // an arm bent back on itself: the upper arm along y = 6, the forearm from the elbow back under it
     const [N, U0, EL, F1] = [48, [6, 6], [36, 6], [6, 36]] as const;

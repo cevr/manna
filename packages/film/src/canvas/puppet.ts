@@ -65,7 +65,11 @@ export interface PuppetSpec {
    * `underlapped`): a head cut from his torso along one line shows cloth, not
    * the ground, at the cut as it turns. Name only a part that turns a little
    * over the part behind (a head, a veil); an arm named would leave a ghost of
-   * itself on the torso as it moves.
+   * itself on the torso as it moves. The part behind holds the named part's
+   * own bottom rows, so a key drawn in its place (`swaps`) must meet them at
+   * the cut, as the part does, or a sliver of the part shows under it. A
+   * name the sheet lacks, or a length that is not a whole number of 0 or
+   * more, refuses the puppet.
    */
   readonly underlap?: Readonly<Record<string, number>>;
   /**
