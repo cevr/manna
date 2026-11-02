@@ -15,7 +15,8 @@
  *   lines run on one after another from the first, each as long as it was,
  *   its syllables where they were in it; a skipped line has no length and no
  *   syllables and sits at the next kept line's start, so `placeAt` never
- *   lands on it.
+ *   lands on it. Its `skips` are the recording's spans a sounding player
+ *   seeks across (`sound.ts`).
  * - `toggle`: a tap on a stanza's chip; `countOf`, how many chips a hymn has.
  */
 
@@ -61,6 +62,12 @@ export const keptOf = (
   });
 };
 
+/** A span of the recording a cut does not sing, from `from` up to `to`, in recording ms. */
+export interface Skip {
+  readonly from: number;
+  readonly to: number;
+}
+
 /** A timeline cut to a choice, and its maps between sung (cut) time and recording time, in ms. */
 export interface Cut {
   readonly timeline: Timeline;
@@ -68,6 +75,11 @@ export interface Cut {
   readonly recordingAt: (sung: number) => number;
   /** The sung time of a recording time: inside a skipped line, the next kept line's start. */
   readonly sungAt: (recording: number) => number;
+  /**
+   * The recording's spans the cut skips, in order: each run of skipped lines, from its first
+   * line's start to the next kept line's start, or to the timeline's end, where the tail starts.
+   */
+  readonly skips: ReadonlyArray<Skip>;
 }
 
 const same = (ms: number) => ms;
@@ -77,6 +89,7 @@ export const whole = (timeline: Timeline): Cut => ({
   timeline,
   recordingAt: same,
   sungAt: same,
+  skips: [],
 });
 
 /** Each line's start on the cut: kept lines one after another from `first`, a skipped line at the next kept start. */
@@ -135,7 +148,12 @@ export const cutOf = (timeline: Timeline, kept: ReadonlyArray<boolean>): Cut => 
     if (kept[index] !== true) return start;
     return start + (recording - Arr.getUnsafe(timeline.lines, index).start);
   };
-  return { timeline: { ...timeline, lines, end }, recordingAt, sungAt };
+  // A skipped line lies at the next kept start, whose recording time ends the run it begins.
+  const skips = timeline.lines.flatMap((line, index) => {
+    if (kept[index] === true || (index > 0 && kept[index - 1] !== true)) return [];
+    return [{ from: line.start, to: recordingAt(Arr.getUnsafe(lines, index).start) }];
+  });
+  return { timeline: { ...timeline, lines, end }, recordingAt, sungAt, skips };
 };
 
 /** A choice as stored: every stanza of `count` chosen is `[]`. */

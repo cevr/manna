@@ -77,16 +77,24 @@ import { useShownPage } from './page';
 import { playbackLive } from './playback.live';
 import { Command, playerOn, statusEvery } from './player';
 import { cachedPlayback } from './offline';
+import { keptOf } from './stanzas';
 import { offlineLive } from '~/offline/live';
 import { SaveShown } from '~/offline/Open';
 
 /** Whether the recording sounds, as the score clock reads it: the Sound setting, set at mount. */
 const sound = Effect.runSync(SubscriptionRef.make(true));
+/** The lines of a hymn's timeline a choice of its stanzas keeps, from its words' sections. */
+const keptFor = (hymn: number, stanzas: ReadonlyArray<number>): ReadonlyArray<boolean> =>
+  Option.match(hymnAt(String(hymn)), {
+    onNone: () => [],
+    onSome: (text) => keptOf(text.sections, stanzas),
+  });
 const player = playerOn(
-  counted(cachedPlayback(playbackLive, book.of, sound, offlineLive)),
+  counted(cachedPlayback(playbackLive, book.of, sound, offlineLive, keptFor)),
   statusEvery,
   settings.move,
   settings.tempo,
+  settings.stanzas,
 );
 /** The context's one value: a draw again (the Sound switch) hands every reader the same player, so no page draws again for it. */
 const provided = Option.some(player);
@@ -97,6 +105,7 @@ export function LivePlayer({ children }: { readonly children: ReactNode }) {
   useAtomMount(player.remote);
   useAtomMount(player.keys);
   useAtomMount(player.tempos);
+  useAtomMount(player.stanzas);
   const on = useAtomValue(settings.sound);
   // The setting is the app's; the score clock is outside React, so it is told each change.
   useEffect(() => Effect.runSync(SubscriptionRef.set(sound, on)), [on]);

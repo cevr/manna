@@ -100,8 +100,19 @@ describe('a cut', () => {
     expect([cut.sungAt(5000), cut.recordingAt(4000)]).toEqual([4000, 7000]);
   });
 
+  it('names each run of skipped lines as a span of the recording, to the next kept start or the end', () => {
+    expect(cutOf(timeline, [true, false, true]).skips).toEqual([{ from: 2000, to: 4000 }]);
+    expect(cutOf(timeline, [false, true, false]).skips).toEqual([
+      { from: 1000, to: 2000 },
+      { from: 4000, to: 7000 },
+    ]);
+    expect(cutOf(timeline, [true, false, false]).skips).toEqual([{ from: 2000, to: 7000 }]);
+  });
+
   it('is the timeline itself when every line is kept', () => {
-    expect(cutOf(timeline, [true, true, true]).timeline).toBe(timeline);
+    const cut = cutOf(timeline, [true, true, true]);
+    expect(cut.timeline).toBe(timeline);
+    expect(cut.skips).toEqual([]);
   });
 });
 
