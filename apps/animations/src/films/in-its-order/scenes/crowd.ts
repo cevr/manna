@@ -149,7 +149,8 @@ export const seatsOf = (row: RowName): ReadonlyArray<Seat> =>
 
 /**
  * Draw one crowd row in the panel's px of its plane: each bust whose span
- * (`x` +- its half) `shown` keeps, in its idle and its lean, then the row's
+ * (`x` +- its half) `shown` keeps, in its idle and its lean, as one batch
+ * (`f.batch`), then the row's
  * table over their lower halves (`table` draws the table plate at its own
  * frame px). A bust's size is the canvas's scale, its pose at scale 1: the
  * puppet's line and its reach are sheet px times the canvas's scale alone
@@ -157,22 +158,25 @@ export const seatsOf = (row: RowName): ReadonlyArray<Seat> =>
  * 0.2 the line would be drawn five times too wide, over the hair and robe.
  */
 export const drawCrowdRow = (
-  f: CrowdFrame,
+  f: CrowdFrame & { batch(draw: () => void): void },
   row: RowName,
   shown: (left: number, right: number) => boolean,
   table: () => void,
 ): void => {
   const { ctx } = f;
-  for (const seat of seatsOf(row)) {
-    const half = FEAST_CROWD.half * seat.scale;
-    if (!shown(seat.x - half, seat.x + half)) continue;
-    ctx.save();
-    ctx.translate(seat.x, seat.top);
-    ctx.rotate(seat.lean);
-    ctx.scale(seat.scale, seat.scale);
-    drawBust(f, seat.figure, { x: 0, top: 0, scale: 1 });
-    ctx.restore();
-  }
+  // one batch: the row's busts copied onto the frame at once, through the row's blur and haze once
+  f.batch(() => {
+    for (const seat of seatsOf(row)) {
+      const half = FEAST_CROWD.half * seat.scale;
+      if (!shown(seat.x - half, seat.x + half)) continue;
+      ctx.save();
+      ctx.translate(seat.x, seat.top);
+      ctx.rotate(seat.lean);
+      ctx.scale(seat.scale, seat.scale);
+      drawBust(f, seat.figure, { x: 0, top: 0, scale: 1 });
+      ctx.restore();
+    }
+  });
   const s = CROWD_ROWS[row].table / PANEL.scale;
   ctx.save();
   ctx.translate(FEAST_CROWD.table.x, CROWD_ROWS[row].top);
