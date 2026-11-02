@@ -5,8 +5,15 @@
 // (`tools/stamp.ts`), on the view's skeleton (`skeleton.ts`), with his origin
 // at the kept box's top-left corner in the padded part sheet (`frames.ts`):
 // his pixels are the sheet's, drawn at its
-// one scale. Each declares the kept view it is held to (`concept`). Pure.
+// one scale. Each declares the kept view it is held to (`concept`); a view's
+// drawn keys, each in place of one of its parts, are its `DRAWINGS`. Pure.
 
+import type { PuppetSpec } from '@manna/film/canvas';
+import raiseSeatedK2 from './raise-seated/keys/k2.png' with { type: 'file' };
+import raiseSeatedK3 from './raise-seated/keys/k3.png' with { type: 'file' };
+import raiseSeatedK4 from './raise-seated/keys/k4.png' with { type: 'file' };
+import raiseSeatedK5 from './raise-seated/keys/k5.png' with { type: 'file' };
+import raiseSeatedRest from './raise-seated/keys/rest.png' with { type: 'file' };
 import frontArmLeft from './sheets/front/armLeft.png' with { type: 'file' };
 import frontArmRight from './sheets/front/armRight.png' with { type: 'file' };
 import frontFootLeft from './sheets/front/footLeft.png' with { type: 'file' };
@@ -122,3 +129,22 @@ export const PUPPETS = puppetsOf({
     ],
   },
 });
+
+/**
+ * Each cut view's drawn keys, by the view's name. single-9's are his seated
+ * raise's arm (`raise-seated/keys/`), each cut by hand from its frame
+ * (`raise-seated/frames/`, frame px less 2 on both axes) onto single-9's
+ * part sheet's canvas at its size, in place of his armRight: `raise-rest`
+ * the bottle on his lap to `raise-k5` the bottle near his mouth; the kept
+ * single-9 view is the raise's last key. Each names its part, so it loads
+ * un-matted from his paper as armRight does (`unmattedKey`).
+ */
+export const DRAWINGS = {
+  'single-9': [
+    { name: 'raise-rest', png: raiseSeatedRest, part: 'armRight' },
+    { name: 'raise-k2', png: raiseSeatedK2, part: 'armRight' },
+    { name: 'raise-k3', png: raiseSeatedK3, part: 'armRight' },
+    { name: 'raise-k4', png: raiseSeatedK4, part: 'armRight' },
+    { name: 'raise-k5', png: raiseSeatedK5, part: 'armRight' },
+  ],
+} as const satisfies Partial<Readonly<Record<keyof typeof SKELETONS, PuppetSpec['drawings']>>>;
