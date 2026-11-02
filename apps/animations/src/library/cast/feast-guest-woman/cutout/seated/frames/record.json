@@ -1,0 +1,36 @@
+{
+  "sheet": "../../../cast-sheet/tries/poses-2.png",
+  "note": "the woman's three seated keys from the kept try 2 sheet (owner keep, 2026-11-01), left to right neutral, turn and smile, as whole-figure frames: each cut from its paper by a flood from the sheet border through the paper and the drawn floor shadow (the ink outline stops it), and from the paper pockets the outline closes between each stool leg and foot (pockets: their px), then by a halo step from that ground inward through light px near the paper (L* 85 or more within dE 12 of it, at most 8 px deep: the near-white band the concept paints round parts of the outline), each light piece still left at the step's last front (a paper pocket that opens on the band) taken whole when it is 1000 px or less; its outline edge matted to the ink; one box for the three, keys 2 and 3 laid at the whole-px place where their still seat (the stool, the hem and the feet below the plank top) lies on key 1's: frame px = sheet px - box.sheet - place; the drawn floor shadow is left out: the scene draws its contact shadow with ground at the anchor (frame px: key 1's drawn shadow's darkness-weighted centre) and ground px wide (the span of its 1-99 % darkness-weighted x quantiles); a swap holds a key at least two film frames (on twos)",
+  "box": {
+    "sheet": [91, 84],
+    "size": [394, 706]
+  },
+  "anchor": [198.5, 688],
+  "ground": 445,
+  "hold": 2,
+  "paper": "#fef8e6",
+  "tolerance": 1.87,
+  "frames": [
+    {
+      "id": "neutral",
+      "png": "neutral.png",
+      "key": 1,
+      "place": [0, 0],
+      "pockets": [299, 316]
+    },
+    {
+      "id": "turn",
+      "png": "turn.png",
+      "key": 2,
+      "place": [480, 0],
+      "pockets": [277, 307]
+    },
+    {
+      "id": "smile",
+      "png": "smile.png",
+      "key": 3,
+      "place": [961, 0],
+      "pockets": [294, 308]
+    }
+  ]
+}

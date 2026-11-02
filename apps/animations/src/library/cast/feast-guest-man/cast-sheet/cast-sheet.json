@@ -1,0 +1,102 @@
+{
+  "member": "feast-guest-man",
+  "scope": "library",
+  "who": "him",
+  "headgear": true,
+  "refs": [
+    {
+      "file": "../../filler-bases/cast-sheet/views/poses-1.png",
+      "why": "the kept grown man of the base filler cast, the guest himself: his head (an upright oval a little taller than it is wide), his three-mark face, his peach skin, his cream robe with sleeves to the wrist, his plain flat sash, his round hands at the sleeve ends and his brown sandals, at the base's proportions; the guest wears two house parts over him, a linen headcloth tied round the brow with an indigo band and a walnut mantle open down the front"
+    },
+    {
+      "file": "../../lead-feast/cast-sheet/views/single-9.png",
+      "why": "the kept lead seated on the house's low wooden stool, facing the viewer: only the sitting is taken from it (the seat's height, the lap seen from the front with the knees toward the viewer, the robe falling to the ankles, the feet flat, the stool's plank ends and legs either side of the robe); never his curls, his teal mantle, his knotted sash, his face or what he holds"
+    },
+    {
+      "file": "../../../../films/in-its-order/cast/idea-villagers/cast-sheet/kept/poses.png",
+      "why": "the kept IDEA villagers, for try 1: the house headcloth on the grown villager at the far right, a cloth over the head falling behind the ears to the shoulders, tied round the brow with a band"
+    },
+    {
+      "file": "tries/guide-poses-2.png",
+      "why": "a made guide for try 2: try 1 set seated at single-9's seat (2.86 of his own heads from the headcloth's top to the soles, where try 1 sat 3.24), its own stool erased and single-9's stool pasted at the new seat, the cream feet recoloured to the base's bare peach skin, and the face marks moved toward the base's spacing (the eyes 1/1.16 as far apart, the mouth 1/1.23 as far below the eye line); okra traced it"
+    },
+    {
+      "file": "tries/poses-2.png",
+      "why": "try 2, drawn again as try 3 to set the eyes closer; try 3 is not kept: its eyes went 11.8 % closer than the guide's, where try 2's sit 6.3 % wider"
+    }
+  ],
+  "sheets": {
+    "poses": {
+      "anchor": 1,
+      "layout": "Draw one seated guest at a feast three times in one row, evenly spaced, the same grown man at the same size on the same low wooden stool facing the viewer square, both round hands resting on the knees, in a linen headcloth tied round the brow with an indigo band, a walnut mantle open down the front over the base's cream robe and plain sash, and brown sandals on bare feet; only the head changes, left to right: one, neutral, his head and eyes to the viewer, a calm face with a short smile line; two, his head turned a quarter toward the viewer's right, his eyes on someone seated beside him, surprised: brows raised, eyes open, a small round open mouth; three, his head turned the same way, his eyes on the same person, a kind closed smile.",
+      "slots": ["front", "free", "free"],
+      "level": [1, 2, 3],
+      "tries": [
+        {
+          "n": 1,
+          "file": "tries/poses-1.png",
+          "prompt": "Draw a character sheet of one seated guest at a feast, drawn three times in one row, in exactly the style of the first and third reference images: flat cut-paper colour shapes, one smooth dark-brown silhouette outline of even weight round each figure, shading with colour only (the skin's shaded side turns toward a warm red-orange, each cloth's shaded side toward a deeper hue of its own colour turned toward violet, never grey or black), a small soft lavender contact shadow under each stool, and a plain warm off-white paper background with a soft paper grain.\n\nImage 1 is the guest himself, the kept grown man of the base filler cast. Draw him exactly as it does, at its proportions: the same head, an upright oval a little taller than it is wide with both ears showing; the same face marks at the same place and size (two short, thick, dark-brown brows, two small dark oval eyes set close together, a short mouth line); the same peach skin; the same cream robe with long sleeves to the wrist; the same plain flat sash with no knot and no hanging ends; the same round circle hands at the sleeve ends; the same brown sandals. Image 2 shows how a figure sits on the house's low wooden stool facing the viewer. Take only the sitting from it: the seat's height, the short lap seen from the front with the knees toward the viewer, the robe falling over the knees to the ankles, the feet flat on the ground, the stool's legs showing either side below the robe. Never take that figure's curls, his teal mantle, his knotted sash, his face or what he holds. Image 3 shows the house's headcloth on a kept figure (the grown villager at the far right): a cloth over the head, falling behind the ears to the shoulders, tied round the brow with a band.\n\nThe guest wears two house parts over the base: a linen headcloth (#d1c6b4) over his head, falling behind the ears to the shoulders, tied round the brow with a plain indigo band (#4b566b), a little of his short dark-brown hair showing below the band at the temples; and a walnut-brown mantle (#ab8163) over both shoulders, hanging open down the front to the lap, the cream robe and the plain sash showing between its edges. He is clean-shaven.\n\nLeft to right, evenly spaced, all three the same man at the same size, each seated on the same low wooden stool facing the viewer square. The body, the arms, the legs and the stool are the same in all three, both round hands resting on the knees; only the head changes:\n1. Neutral: his head and his eyes face the viewer, a calm face with the short smile line of image 1.\n2. Turn: his head turned a quarter toward the viewer's right (a three-quarter head on the front body), his eyes looking toward the viewer's right as if at someone seated beside him; he stares in surprise: brows raised, eyes open, a small round open mouth.\n3. Smile: his head turned toward the viewer's right exactly as in 2, his eyes on the same person; he smiles kindly: brows soft and relaxed, a gentle closed smile.\n\nSeated, each figure is about seven eighths of the man's standing height in image 1, from the top of the head to the soles: about three heads tall. Every head is the same size as image 1's head at that scale. The key light comes from the upper left on all three, whichever way the head turns. Each turned head is its own drawing, never a mirror. No skin shows below the neck except the hands. No beard, no curls, nothing in the hands. No words, letters, numbers, labels or frames anywhere.",
+          "refs": [
+            "../../filler-bases/cast-sheet/views/poses-1.png",
+            "../../lead-feast/cast-sheet/views/single-9.png",
+            "../../../../films/in-its-order/cast/idea-villagers/cast-sheet/kept/poses.png"
+          ],
+          "underlay": false,
+          "flags": [],
+          "at": "2026-11-02T01:52:24.000Z"
+        },
+        {
+          "n": 2,
+          "file": "tries/poses-2.png",
+          "prompt": "Redraw image 1 as a clean, finished character sheet. Image 1 is a guide: one seated guest at a feast, the same man three times in one row (neutral, turn, smile). Trace it. Keep every figure exactly where image 1 puts it and at its size: the head, the linen headcloth and its indigo band, the face, the walnut-brown mantle, the cream robe, the plain sash, the round hands resting on the knees, the seat height, the low wooden stool and the feet. Keep the seat height, the stool and the face proportions exactly as image 1: each figure is 2.86 heads tall seated, from the top of the headcloth to the soles, and the stool's seat sits 0.62 heads above the bottom of its legs. Keep the face marks at the places and sizes image 1 gives them: the two eyes, the two short brows and the short mouth.\n\nImage 1 was pasted together, so fix only these guide marks:\n1. The stool's plank ends and legs have rough pasted seams. Redraw the stool clean, as one piece of solid wood with one even outline, the way image 3 draws its stool: a plank end showing at each side of the robe at the hands' height, two legs below the robe, at the size and height image 1 gives them. Take only the stool from image 3, never its figure: not his curls, his teal mantle, his knotted sash, his face or what he holds.\n2. The robe's hem has a rough seam. Draw it as one smooth edge.\n3. The lap is squashed. Draw a natural lap seen from the front: the knees toward the viewer under the hands, the robe falling smoothly over the knees to the ankles, with the seat and the soles at the heights image 1 gives them.\n4. The feet are bare peach skin in brown sandals, flat on the ground, as image 1 draws them. No socks, no shoes.\n5. In the first figure, a thin pale streak sits above one brow, where the brow meets the hair. It is a guide mark: draw both brows and the hair's edge clean there.\n\nStyle exactly as image 2, the kept grown man of the base filler cast: flat cut-paper colour shapes, one smooth dark-brown silhouette outline of even weight round each figure, shading with colour only (the skin's shaded side turns toward a warm red-orange, each cloth's shaded side toward a deeper hue of its own colour turned toward violet, never grey or black), and a small soft lavender contact shadow under each stool. The background is flat plain cream paper, the same all over.\n\nThe heads, as image 1: 1. neutral, head and eyes facing the viewer, a calm face with a short smile line; 2. head turned a quarter toward the viewer's right, his eyes on someone seated beside him, surprised: brows raised, eyes open, a small round open mouth; 3. head turned the same way, eyes on the same person, a kind closed smile. The body, the arms, the legs and the stool are the same in all three. The key light comes from the upper left on all three. No skin shows below the neck except the hands and the feet. Clean-shaven, nothing in the hands. No words, letters, numbers, labels or frames anywhere.",
+          "refs": [
+            "tries/guide-poses-2.png",
+            "../../filler-bases/cast-sheet/views/poses-1.png",
+            "../../lead-feast/cast-sheet/views/single-9.png"
+          ],
+          "underlay": false,
+          "retryOf": 1,
+          "flags": [],
+          "at": "2026-11-02T02:51:32.000Z"
+        },
+        {
+          "n": 3,
+          "file": "tries/poses-3.png",
+          "prompt": "Draw image 1 again, exactly as it is, with one change. Image 1 is a finished character sheet: one seated guest at a feast, the same man three times in one row (neutral, turn, smile). Keep everything in it exactly where it is and at its size: each figure's place on the page, the linen headcloth and its indigo band, the hair, the ears, the walnut-brown mantle, the cream robe and its sash lines, the round hands on the knees, the lap, the hem, the low wooden stool with its plank ends and legs, the bare peach feet in brown sandals, the lavender contact shadows, the style, the colours, the flat cream background. Each figure stays 2.86 heads tall seated, from the top of the headcloth to the soles.\n\nThe one change: his eyes are set too far apart. On the first head the two eye centres are 57 px apart; the guide in image 2 has them 54 px apart, and the base man in image 3 has them as close for his head's size. On all three heads, set the two eyes a little closer together, about 6 % closer, each eye the same size and shape as now, at the same height, and keep each brow over its eye. On the first head keep the short smile line centred under the eyes. On the turned heads keep the eyes looking toward the viewer's right, the surprised round mouth on the second and the kind closed smile on the third.\n\nNever change the figure's size, its place, the stool, the lap or the feet. No words, letters, numbers, labels or frames anywhere.",
+          "refs": [
+            "tries/poses-2.png",
+            "tries/guide-poses-2.png",
+            "../../filler-bases/cast-sheet/views/poses-1.png"
+          ],
+          "underlay": false,
+          "retryOf": 2,
+          "flags": [],
+          "at": "2026-11-02T02:57:56.000Z"
+        }
+      ]
+    }
+  },
+  "kept": {
+    "poses": {
+      "try": 2,
+      "why": "owner keep, 2026-11-01, through the orchestrator (no lab ask): the man's seated sheet (in-its-order item 3, the feast guests), filed by hand as the try's bytes, each view cut at its ink box; try 3 not kept. The critic at the keep: the hands read about 20 % big, so the seated frames shrink them at the cut (../cutout/seated/frames/record.json)",
+      "views": [
+        {
+          "view": 1,
+          "name": "poses-1",
+          "box": [72, 108, 479, 844]
+        },
+        {
+          "view": 2,
+          "name": "poses-2",
+          "box": [564, 108, 971, 844]
+        },
+        {
+          "view": 3,
+          "name": "poses-3",
+          "box": [1056, 107, 1463, 844]
+        }
+      ]
+    }
+  }
+}
