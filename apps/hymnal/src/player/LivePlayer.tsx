@@ -275,7 +275,7 @@ function FindNumber({
   );
 }
 
-/** One of the drums' two acts on the dialled hymn. */
+/** The drums' act on the dialled hymn (`Open`). */
 function Act({
   testID,
   label,

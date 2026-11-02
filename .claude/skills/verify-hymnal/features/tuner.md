@@ -30,6 +30,8 @@ tuner.
 - `tuner-no-sound`: through every row above, no `[feel] play` line comes from the tuner, and Play is pressed only in `tuner-pauses-player` and `tuner-bar-room`, with Sound off.
 - `tuner-speed`: over at least 50 `[tuner] frame ms=` lines of the feed, the median is at most 8 ms and the p95 at most 16 ms.
 
+The screen reads each frame through the focus (`src/tuner/focus.ts`): a fed tone shows from its 4th frame (about 0.2 s), not its first. The feed is steady, so `tuner-listen`, `tuner-tuned` and `tuner-auto` still read as written.
+
 ## How to get to it (user POV)
 
 - A hymn page's `Key` (the bar's key button) → the panel's `Tuner` (the top row's leading chip), a hymn's chord sheet → `Tuner` (in its head, beside `Done`), or Settings → `Tuner`; each opens the tuner full screen at `/tuner`, and `Done` (top left) closes it. `Auto` (top right) and the six string circles of the headstock pick the target. Deep link: `hymnal://tuner`; in development `hymnal://tuner?feed=<string>:<cents>` (for example `A2:-12`) feeds frames in place of the microphone.
