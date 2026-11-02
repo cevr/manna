@@ -52,10 +52,14 @@ export const rateOf = (tempo: number): number => {
   return tempo / 100;
 };
 
-/** The note a meter is counted in, by its length in quarter notes, and its name. */
+/** The note a meter is counted in: its length in quarter notes, and its name. */
 export interface Beat {
   readonly quarters: number;
   readonly name: string;
+  /** The plain note it is drawn as, by the denominator that writes it (4 a quarter, 8 an eighth). */
+  readonly note: number;
+  /** Whether it is that note dotted, worth half as much again. */
+  readonly dotted: boolean;
 }
 
 /** The plain notes' names, by the denominator that writes them. */
@@ -84,8 +88,18 @@ export const beatOf = (meter: {
 }): Beat => {
   const { numerator, denominator } = meter;
   if (numerator > 3 && numerator % 3 === 0 && denominator >= 2)
-    return { quarters: (3 * 4) / denominator, name: `dotted ${noteName(denominator / 2)}` };
-  return { quarters: 4 / denominator, name: noteName(denominator) };
+    return {
+      quarters: (3 * 4) / denominator,
+      name: `dotted ${noteName(denominator / 2)}`,
+      note: denominator / 2,
+      dotted: true,
+    };
+  return {
+    quarters: 4 / denominator,
+    name: noteName(denominator),
+    note: denominator,
+    dotted: false,
+  };
 };
 
 /** A hymn's own bpm: its first tempo counted in its meter's beat, unrounded. */
