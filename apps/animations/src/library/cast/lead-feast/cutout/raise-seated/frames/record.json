@@ -1,0 +1,229 @@
+{
+  "view": "single-9",
+  "note": "the seated raise as whole-figure frames, one a key in order rest to k6, each shown for two film frames (on twos); rest and k2-k5 are the round-1 okra tries (rest from rest-2a), k6 the kept single-9 page; each cut from its paper by a flood from the image border through the paper and the drawn floor shadow (the ink outline stops it), and from the two paper pockets the outline closes under the hem, its outline edge matted to the ink; one box for all six, laid by the fit to the kept view (seat and head still): drawn px = view px + place; the drawn floor shadow is left out: the scene draws its contact shadow with ground at the anchor (frame px: the drawn shadow's darkness-weighted centre on k6) and ground px wide (the span of its 1-99 % darkness-weighted x quantiles)",
+  "box": {
+    "view": [-5, -5],
+    "size": [585, 1110]
+  },
+  "anchor": [337, 1093.5],
+  "ground": 543,
+  "hold": 2,
+  "frames": [
+    {
+      "id": "rest",
+      "png": "rest.png",
+      "source": {
+        "okra": "../okra/rest-2.png",
+        "call": 2
+      },
+      "fit": {
+        "s": 0.9996,
+        "dx": 190.69,
+        "dy": 200.5
+      },
+      "place": [191, 200],
+      "paper": "#fef2d9",
+      "tolerance": 4.31
+    },
+    {
+      "id": "k2",
+      "png": "k2.png",
+      "source": {
+        "okra": "../okra/k2-1.png",
+        "call": 3
+      },
+      "fit": {
+        "s": 0.9996,
+        "dx": 190.69,
+        "dy": 200.5
+      },
+      "place": [191, 200],
+      "paper": "#fef2d9",
+      "tolerance": 4.55
+    },
+    {
+      "id": "k3",
+      "png": "k3.png",
+      "source": {
+        "okra": "../okra/k3-1.png",
+        "call": 4
+      },
+      "fit": {
+        "s": 0.9996,
+        "dx": 190.69,
+        "dy": 200.5
+      },
+      "place": [191, 200],
+      "paper": "#fef2d9",
+      "tolerance": 4.33
+    },
+    {
+      "id": "k4",
+      "png": "k4.png",
+      "source": {
+        "okra": "../okra/k4-1.png",
+        "call": 5
+      },
+      "fit": {
+        "s": 0.9996,
+        "dx": 190.69,
+        "dy": 200.5
+      },
+      "place": [191, 200],
+      "paper": "#fef2d9",
+      "tolerance": 4.06
+    },
+    {
+      "id": "k5",
+      "png": "k5.png",
+      "source": {
+        "okra": "../okra/k5-1.png",
+        "call": 6
+      },
+      "fit": {
+        "s": 0.9996,
+        "dx": 190.69,
+        "dy": 200.5
+      },
+      "place": [191, 200],
+      "paper": "#fef1d8",
+      "tolerance": 4.35
+    },
+    {
+      "id": "k6",
+      "png": "k6.png",
+      "source": {
+        "kept": "single-9"
+      },
+      "fit": {
+        "s": 1,
+        "dx": 191,
+        "dy": 200
+      },
+      "place": [191, 200],
+      "paper": "#fef2d9",
+      "tolerance": 3.84
+    }
+  ],
+  "source": {
+    "note": "rest and k2-k5 are okra image edits of the kept single-9 page with the kept circle hands as a second reference; calls 2-6 each lead with their guide (okra/guide-*.png); each command holds its prompt inline (the text of okra/prompt-*.txt) and ran from cwd (relative to this folder); call 1 (rest-1, no guide) drew the hand 17 % small (r 52.9 against the kept 63.6) and is not used, so rest is call 2 (rest-2a); no call failed",
+    "cwd": "..",
+    "okra": {
+      "calls": [
+        {
+          "n": 1,
+          "command": [
+            "okra",
+            "image",
+            "Edit the FIRST image, a finished cut-paper drawing of a seated young man in front view on a wooden stool, raising a baby bottle in his right hand (on the viewer's left). Return the FULL image, exactly 1024x1536, with the same framing, the same scale and the same place on the page. Keep EVERYTHING else exactly as drawn: his head, curly brown hair, face, neck, cream tunic, cream sash and its knot, the teal mantle over his left shoulder (on the viewer's right), his left arm under the mantle and its round circle hand resting on his knee, his lap, the wooden stool, the seat height, the sandals, the shadow, the flat paper colours with coloured shading, and the one dark silhouette outline at the same weight. Change ONLY his right arm (on the viewer's left), the one that holds the bottle: lower it to rest. The upper arm hangs straight down close beside his body from the same shoulder, the elbow bent near his waist, the forearm forward onto his right thigh, and his round peach circle hand rests on his lap, holding the same baby bottle standing upright on his right thigh, teat up, the hand behind the bottle at its middle. The resting right arm matches how his left arm rests, but in the cream sleeve: the same cream sleeve as wide as on the raised arm, one closed cuff line at the wrist, the hand a plain round disc with no fingers and no thumb, the size of his other hand (the SECOND image shows the kept circle hands). The bottle keeps its exact shape, size and colours as drawn in the first image. Where the raised arm and the bottle were, beside his face and shoulder, show only the plain paper background, and draw his right shoulder and the side of his body as his left side is drawn. Do not mirror the figure. Do not move, resize or restyle anything else.",
+            "--ref",
+            "../../cast-sheet/kept/single-9.png",
+            "--ref",
+            "../raise/okra/kept-hands-reference.png",
+            "--size",
+            "1024x1536",
+            "-o",
+            "okra/rest-1.png"
+          ],
+          "out": "okra/rest-1.png"
+        },
+        {
+          "n": 2,
+          "command": [
+            "okra",
+            "image",
+            "Finish the FIRST image, a guide: a finished cut-paper drawing of a seated young man in front view on a wooden stool, whose right arm (on the viewer's left) is roughed in as flat magenta guide paint. Return the FULL image, exactly 1024x1536, with the same framing, the same scale and the same place on the page. Keep EVERYTHING else exactly as drawn: his head, curly brown hair, face, neck, cream tunic, cream sash and its knot, the teal mantle over his left shoulder (on the viewer's right), his left arm under the mantle and its round circle hand resting on his knee, his lap, the wooden stool, the seat height, the sandals, the shadow, the flat paper colours with coloured shading, and the one dark silhouette outline at the same weight.\n\nThis key is his RESTING right arm: the upper arm hangs down at his side from the same shoulder, the elbow low by his hip, the forearm comes across his lap from the left, and his hand holds the baby bottle standing upright on his lap. Keep the shoulder, the elbow, the hand and the bottle at the guide's places. Do not change angles or proportions.\n\nReplace ALL magenta with ONE coherent artist-drawn cream sleeve, the same cream sleeve cloth as his raised right arm in the SECOND image, as wide as the magenta, or with clean paper background. Redraw the whole sleeve from the shoulder to the cuff as one drawing, never a patch. Where the magenta met his torso, draw his right shoulder and the side of his body cleanly.\n\nCRITICAL: KEEP the hand and the baby bottle already shown in the guide in EXACTLY their positions, shapes, colours and sizes. Do NOT redraw, move, shrink or enlarge them. The hand is a PLAIN ROUND PEACH CIRCLE with its dark ring, NO THUMB, NO FINGERS, NO FINGER LINES, NO BARE WRIST, the house hand design shown in the THIRD image. The hand and the bottle are IN FRONT of the sleeve: where they overlap the sleeve, the hand and bottle show whole and the sleeve passes behind them. The sleeve's cuff closes round the hand's left edge, next to the elbow, with one uninterrupted warm-black curved cuff line from sleeve edge to sleeve edge; the cuff's lip lies over the hand's edge as the cuff lies over the hand's bottom on the raised arm in the SECOND image. No open notch, gap, zigzag, detached line, pale patch, ghost hand, second hand, second bottle, stray skin or magenta.\n\nUse the kept figure's visual language: warm-black organic outline about 12px wide, soft warm cream cut-paper paint with fine grain, simple rounded cloth folds. No text, labels, diagrams, guide marks or extra figures. Return only the finished full figure on its paper.",
+            "--ref",
+            "okra/guide-rest-2.png",
+            "--ref",
+            "../../cast-sheet/kept/single-9.png",
+            "--ref",
+            "../raise/okra/kept-hands-reference.png",
+            "--size",
+            "1024x1536",
+            "-o",
+            "okra/rest-2.png"
+          ],
+          "out": "okra/rest-2.png"
+        },
+        {
+          "n": 3,
+          "command": [
+            "okra",
+            "image",
+            "Finish the FIRST image, a guide: a finished cut-paper drawing of a seated young man in front view on a wooden stool, whose right arm (on the viewer's left) is roughed in as flat magenta guide paint. Return the FULL image, exactly 1024x1536, with the same framing, the same scale and the same place on the page. Keep EVERYTHING else exactly as drawn: his head, curly brown hair, face, neck, cream tunic, cream sash and its knot, the teal mantle over his left shoulder (on the viewer's right), his left arm under the mantle and its round circle hand resting on his knee, his lap, the wooden stool, the seat height, the sandals, the shadow, the flat paper colours with coloured shading, and the one dark silhouette outline at the same weight.\n\nThis key is the EARLY LIFT of his right arm: the upper arm still hangs down at his side from the same shoulder, the elbow low by his hip, the forearm rises forward and up from the elbow, and his hand has lifted the baby bottle a little off his lap, upright in front of his belly. Keep the shoulder, the elbow, the hand and the bottle at the guide's places. Do not change angles or proportions.\n\nReplace ALL magenta with ONE coherent artist-drawn cream sleeve, the same cream sleeve cloth as his raised right arm in the SECOND image, as wide as the magenta, or with clean paper background. Redraw the whole sleeve from the shoulder to the cuff as one drawing, never a patch. Where the magenta met his torso, draw his right shoulder and the side of his body cleanly.\n\nCRITICAL: KEEP the hand and the baby bottle already shown in the guide in EXACTLY their positions, shapes, colours and sizes. Do NOT redraw, move, shrink or enlarge them. The hand is a PLAIN ROUND PEACH CIRCLE with its dark ring, NO THUMB, NO FINGERS, NO FINGER LINES, NO BARE WRIST, the house hand design shown in the THIRD image. The hand and the bottle are IN FRONT of the sleeve: where they overlap the sleeve, the hand and bottle show whole and the sleeve passes behind them. The sleeve's cuff closes round the hand's lower-left edge, next to the elbow, with one uninterrupted warm-black curved cuff line from sleeve edge to sleeve edge; the cuff's lip lies over the hand's edge as the cuff lies over the hand's bottom on the raised arm in the SECOND image. No open notch, gap, zigzag, detached line, pale patch, ghost hand, second hand, second bottle, stray skin or magenta.\n\nUse the kept figure's visual language: warm-black organic outline about 12px wide, soft warm cream cut-paper paint with fine grain, simple rounded cloth folds. No text, labels, diagrams, guide marks or extra figures. Return only the finished full figure on its paper.",
+            "--ref",
+            "okra/guide-k2.png",
+            "--ref",
+            "../../cast-sheet/kept/single-9.png",
+            "--ref",
+            "../raise/okra/kept-hands-reference.png",
+            "--size",
+            "1024x1536",
+            "-o",
+            "okra/k2-1.png"
+          ],
+          "out": "okra/k2-1.png"
+        },
+        {
+          "n": 4,
+          "command": [
+            "okra",
+            "image",
+            "Finish the FIRST image, a guide: a finished cut-paper drawing of a seated young man in front view on a wooden stool, whose right arm (on the viewer's left) is roughed in as flat magenta guide paint. Return the FULL image, exactly 1024x1536, with the same framing, the same scale and the same place on the page. Keep EVERYTHING else exactly as drawn: his head, curly brown hair, face, neck, cream tunic, cream sash and its knot, the teal mantle over his left shoulder (on the viewer's right), his left arm under the mantle and its round circle hand resting on his knee, his lap, the wooden stool, the seat height, the sandals, the shadow, the flat paper colours with coloured shading, and the one dark silhouette outline at the same weight.\n\nThis key is the MIDDLE of the lift of his right arm: the upper arm swings out and down from the same shoulder, the elbow out at his side by his waist, the forearm folds up and in from the elbow toward the hand, and his hand holds the baby bottle upright in front of his right shoulder and chest. Keep the shoulder, the elbow, the hand and the bottle at the guide's places. Do not change angles or proportions.\n\nReplace ALL magenta with ONE coherent artist-drawn cream sleeve, the same cream sleeve cloth as his raised right arm in the SECOND image, as wide as the magenta, or with clean paper background. Redraw the whole sleeve from the shoulder to the cuff as one drawing, never a patch. Where the magenta met his torso, draw his right shoulder and the side of his body cleanly.\n\nCRITICAL: KEEP the hand and the baby bottle already shown in the guide in EXACTLY their positions, shapes, colours and sizes. Do NOT redraw, move, shrink or enlarge them. The hand is a PLAIN ROUND PEACH CIRCLE with its dark ring, NO THUMB, NO FINGERS, NO FINGER LINES, NO BARE WRIST, the house hand design shown in the THIRD image. The hand and the bottle are IN FRONT of the sleeve: where they overlap the sleeve, the hand and bottle show whole and the sleeve passes behind them. The sleeve's cuff closes round the hand's lower-left edge, next to the elbow, with one uninterrupted warm-black curved cuff line from sleeve edge to sleeve edge; the cuff's lip lies over the hand's edge as the cuff lies over the hand's bottom on the raised arm in the SECOND image. No open notch, gap, zigzag, detached line, pale patch, ghost hand, second hand, second bottle, stray skin or magenta.\n\nUse the kept figure's visual language: warm-black organic outline about 12px wide, soft warm cream cut-paper paint with fine grain, simple rounded cloth folds. No text, labels, diagrams, guide marks or extra figures. Return only the finished full figure on its paper.",
+            "--ref",
+            "okra/guide-k3.png",
+            "--ref",
+            "../../cast-sheet/kept/single-9.png",
+            "--ref",
+            "../raise/okra/kept-hands-reference.png",
+            "--size",
+            "1024x1536",
+            "-o",
+            "okra/k3-1.png"
+          ],
+          "out": "okra/k3-1.png"
+        },
+        {
+          "n": 5,
+          "command": [
+            "okra",
+            "image",
+            "Finish the FIRST image, a guide: a finished cut-paper drawing of a seated young man in front view on a wooden stool, whose right arm (on the viewer's left) is roughed in as flat magenta guide paint. Return the FULL image, exactly 1024x1536, with the same framing, the same scale and the same place on the page. Keep EVERYTHING else exactly as drawn: his head, curly brown hair, face, neck, cream tunic, cream sash and its knot, the teal mantle over his left shoulder (on the viewer's right), his left arm under the mantle and its round circle hand resting on his knee, his lap, the wooden stool, the seat height, the sandals, the shadow, the flat paper colours with coloured shading, and the one dark silhouette outline at the same weight.\n\nThis key is the LATE LIFT of his right arm: the upper arm reaches out and down from the same shoulder, the elbow out at his side below the shoulder, the forearm points up from the elbow, and his hand holds the baby bottle upright at shoulder height beside his jaw, outside his body. Keep the shoulder, the elbow, the hand and the bottle at the guide's places. Do not change angles or proportions.\n\nReplace ALL magenta with ONE coherent artist-drawn cream sleeve, the same cream sleeve cloth as his raised right arm in the SECOND image, as wide as the magenta, or with clean paper background. Redraw the whole sleeve from the shoulder to the cuff as one drawing, never a patch. Where the magenta met his torso, draw his right shoulder and the side of his body cleanly.\n\nCRITICAL: KEEP the hand and the baby bottle already shown in the guide in EXACTLY their positions, shapes, colours and sizes. Do NOT redraw, move, shrink or enlarge them. The hand is a PLAIN ROUND PEACH CIRCLE with its dark ring, NO THUMB, NO FINGERS, NO FINGER LINES, NO BARE WRIST, the house hand design shown in the THIRD image. The hand and the bottle are IN FRONT of the sleeve: where they overlap the sleeve, the hand and bottle show whole and the sleeve passes behind them. The sleeve's cuff closes round the hand's lower-left edge, next to the elbow, with one uninterrupted warm-black curved cuff line from sleeve edge to sleeve edge; the cuff's lip lies over the hand's edge as the cuff lies over the hand's bottom on the raised arm in the SECOND image. No open notch, gap, zigzag, detached line, pale patch, ghost hand, second hand, second bottle, stray skin or magenta.\n\nUse the kept figure's visual language: warm-black organic outline about 12px wide, soft warm cream cut-paper paint with fine grain, simple rounded cloth folds. No text, labels, diagrams, guide marks or extra figures. Return only the finished full figure on its paper.",
+            "--ref",
+            "okra/guide-k4.png",
+            "--ref",
+            "../../cast-sheet/kept/single-9.png",
+            "--ref",
+            "../raise/okra/kept-hands-reference.png",
+            "--size",
+            "1024x1536",
+            "-o",
+            "okra/k4-1.png"
+          ],
+          "out": "okra/k4-1.png"
+        },
+        {
+          "n": 6,
+          "command": [
+            "okra",
+            "image",
+            "Finish the FIRST image, a guide: a finished cut-paper drawing of a seated young man in front view on a wooden stool, whose right arm (on the viewer's left) is roughed in as flat magenta guide paint. Return the FULL image, exactly 1024x1536, with the same framing, the same scale and the same place on the page. Keep EVERYTHING else exactly as drawn: his head, curly brown hair, face, neck, cream tunic, cream sash and its knot, the teal mantle over his left shoulder (on the viewer's right), his left arm under the mantle and its round circle hand resting on his knee, his lap, the wooden stool, the seat height, the sandals, the shadow, the flat paper colours with coloured shading, and the one dark silhouette outline at the same weight.\n\nThis key is the bottle NEARLY FULLY RAISED: the upper arm reaches out from the same shoulder, the elbow out at his side level with his chest, the forearm almost upright, and his hand holds the baby bottle upright beside his ear, outside his head, as on the raised arm in the SECOND image but a little lower. Keep the shoulder, the elbow, the hand and the bottle at the guide's places. Do not change angles or proportions.\n\nReplace ALL magenta with ONE coherent artist-drawn cream sleeve, the same cream sleeve cloth as his raised right arm in the SECOND image, as wide as the magenta, or with clean paper background. Redraw the whole sleeve from the shoulder to the cuff as one drawing, never a patch. Where the magenta met his torso, draw his right shoulder and the side of his body cleanly.\n\nCRITICAL: KEEP the hand and the baby bottle already shown in the guide in EXACTLY their positions, shapes, colours and sizes. Do NOT redraw, move, shrink or enlarge them. The hand is a PLAIN ROUND PEACH CIRCLE with its dark ring, NO THUMB, NO FINGERS, NO FINGER LINES, NO BARE WRIST, the house hand design shown in the THIRD image. The hand and the bottle are IN FRONT of the sleeve: where they overlap the sleeve, the hand and bottle show whole and the sleeve passes behind them. The sleeve's cuff closes round the hand's bottom, next to the elbow, with one uninterrupted warm-black curved cuff line from sleeve edge to sleeve edge; the cuff's lip lies over the hand's bottom edge as on the raised arm in the SECOND image. No open notch, gap, zigzag, detached line, pale patch, ghost hand, second hand, second bottle, stray skin or magenta.\n\nUse the kept figure's visual language: warm-black organic outline about 12px wide, soft warm cream cut-paper paint with fine grain, simple rounded cloth folds. No text, labels, diagrams, guide marks or extra figures. Return only the finished full figure on its paper.",
+            "--ref",
+            "okra/guide-k5.png",
+            "--ref",
+            "../../cast-sheet/kept/single-9.png",
+            "--ref",
+            "../raise/okra/kept-hands-reference.png",
+            "--size",
+            "1024x1536",
+            "-o",
+            "okra/k5-1.png"
+          ],
+          "out": "okra/k5-1.png"
+        }
+      ],
+      "failed": []
+    }
+  }
+}
