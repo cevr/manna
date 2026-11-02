@@ -22,6 +22,11 @@ import p6ArmRight from './sheets/poses-6/armRight.png' with { type: 'file' };
 import p6Head from './sheets/poses-6/head.png' with { type: 'file' };
 import p6Robe from './sheets/poses-6/robe.png' with { type: 'file' };
 import p6Torso from './sheets/poses-6/torso.png' with { type: 'file' };
+import s15ArmLeft from './sheets/single-15/armLeft.png' with { type: 'file' };
+import s15ArmRight from './sheets/single-15/armRight.png' with { type: 'file' };
+import s15Head from './sheets/single-15/head.png' with { type: 'file' };
+import s15Robe from './sheets/single-15/robe.png' with { type: 'file' };
+import s15Torso from './sheets/single-15/torso.png' with { type: 'file' };
 import { puppetsOf } from '../../../../../library/cutout/puppets.ts';
 import { CUTS } from './cut.ts';
 import { FRAMES, type FramedView } from './frames.ts';
@@ -133,7 +138,13 @@ const SINGLE = puppetsOf<'single-15'>({
   ...SHARED,
   line: SINGLE_LINE,
   parts: {
-    'single-15': [],
+    'single-15': [
+      ['armRight', s15ArmRight],
+      ['armLeft', s15ArmLeft],
+      ['head', s15Head],
+      ['robe', s15Robe],
+      ['torso', s15Torso],
+    ],
   },
 });
 
