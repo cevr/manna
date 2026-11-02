@@ -74,11 +74,12 @@ const GUESTS = {
 
 /**
  * The courtyard's framings, on the frame px the title ends on: from `grown`
- * the camera starts on the mother at the table (`START`), trucks down the
- * table to the lead, pushes in on his bottle, pulls back to the three
- * guests (`smile`), pushes in on the letter's gold seal under his face
- * (`quote`) and tilts up to his face as he winces (`ouch`), each a cue and
- * where it leaves the camera.
+ * the camera starts close on the mother at the table (`START`), trucks down
+ * the table to the lead, pushes in on his bottle, pulls back to the three
+ * guests waist up (`smile`), pushes in chest up on him and the letter as it
+ * falls (`read`, the panel's `cold.letter.4`), closer on the letter's gold
+ * seal under his face (`quote`) and tilts up to his face as he winces
+ * (`ouch`), each a cue and where it leaves the camera.
  *
  * The plates cover frame x 0..1920 and y -100..1180, and the table, the
  * nearest plane, binds: every framing keeps 960/k <= x <= 1920 - 960/k and
@@ -87,13 +88,14 @@ const GUESTS = {
  * move whose two ends keep the bounds keeps them all the way. The close
  * plates are painted on the same grid, so the same bounds hold on them.
  */
-const START: Camera = { x: 1200, y: 816, k: 1.5 };
+const START: Camera = { x: 1188, y: 846, k: 2.6 };
 const MOVES = [
-  ['truck', { x: 960, y: 796, k: 1.42 }],
-  ['bottle', { x: 952, y: 812, k: 1.5 }],
-  ['smile', { x: 955, y: 744, k: 1.25 }],
-  ['quote', { x: 996, y: 818, k: 1.5 }],
-  ['ouch', { x: 960, y: 770, k: 1.5 }],
+  ['truck', { x: 956, y: 846, k: 2.6 }],
+  ['bottle', { x: 915, y: 836, k: 3 }],
+  ['smile', { x: 950, y: 790, k: 1.9 }],
+  ['read', { x: 956, y: 860, k: 2.8 }],
+  ['quote', { x: 977, y: 881, k: 3.4 }],
+  ['ouch', { x: 956, y: 820, k: 3.2 }],
 ] as const satisfies ReadonlyArray<readonly [string, Camera]>;
 
 /**
@@ -125,18 +127,21 @@ const WINCE: PuppetLook = {
  * The letter (`cold.letter.4`), on the table's plane px: the rolled scroll
  * falls from above the frame (its foot at `from`) onto the table in front of
  * the lead (its foot's centre at `x`, `land`), hops `hop` px once, and
- * unrolls down over the table's front edge, its top roller held where the
- * rolled scroll's lay and its lower roller riding down the open scroll's
- * rows `roll[0]` to `roll[1]`, where `SCROLL_ROLLER` lies on it. At
- * `roll[0]` the lower roller's foot is the rolled scroll's foot. `s` is plane
- * px a scroll px.
+ * unrolls toward us flat on the table, its top roller held where the rolled
+ * scroll's lay and its lower roller riding down the open scroll's rows
+ * `roll[0]` to `roll[1]`, where `SCROLL_ROLLER` lies on it. `s` is plane px
+ * a scroll px, about as wide beside him as the panel's scroll (four fifths
+ * of his shoulders); the open scroll lies back on the table, so its rows are
+ * drawn `lie` as tall as they are wide, and it stands a third of his torso
+ * high, as the panel's does.
  */
 const SCROLL = {
   x: 960,
   from: 280,
   land: 978,
-  hop: 10,
-  s: 0.36,
+  hop: 5,
+  s: 0.17,
+  lie: 0.5,
   roll: [114, 280],
 } as const;
 
@@ -155,6 +160,7 @@ export const cold = drawing({
     truck: { mark: 'grown', until: 'bottle', ease: 'inOutCubic' },
     bottle: { mark: 'bottle', dur: 0.7, ease: 'outCubic' },
     smile: { mark: 'smile', dur: 1.6, ease: 'inOutCubic' },
+    read: { mark: 'letter', dur: 1.6, ease: 'inOutCubic' },
     drop: { mark: 'letter', dur: 0.4, ease: 'inQuad' },
     hop: { after: 'drop', dur: 0.24, ease: 'linear' },
     unfurl: { after: 'hop', dur: 0.15, ease: 'linear' },
@@ -219,8 +225,8 @@ export const cold = drawing({
     };
 
     // The letter on the table's plane: the rolled scroll falling and hopping,
-    // then fading off the open scroll laid under it, which unrolls top down:
-    // its rows above the lower roller, the roller on them.
+    // then fading off the open scroll laid under it, which unrolls top down
+    // toward us: its rows above the lower roller, the roller on them.
     const scroll = () => {
       const hop = f.at('hop');
       const foot = lerp(SCROLL.from, SCROLL.land, f.at('drop')) - SCROLL.hop * 4 * hop * (1 - hop);
@@ -232,6 +238,7 @@ export const cold = drawing({
         const unroll = f.at('unroll');
         ctx.save();
         ctx.translate(0, -SCROLL_ROLLED.size[1]);
+        ctx.scale(1, SCROLL.lie);
         if (unroll < 1) {
           const row = lerp(SCROLL.roll[0], SCROLL.roll[1], unroll);
           ctx.save();
