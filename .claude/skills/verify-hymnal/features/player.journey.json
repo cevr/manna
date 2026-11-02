@@ -27,7 +27,7 @@
         { "shows": "label=Sheet Grabber" },
         { "shows": "label=Position" },
         { "shows": "id=dial-tempo" },
-        { "shows": "id=tempo-bpm" },
+        { "shows": "label=quarter note = 90" },
         { "shows": "label=Tap" }
       ]
     },
