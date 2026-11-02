@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { Result, Schema } from 'effect';
+import { Option, Result, Schema } from 'effect';
 import {
   LimbRefused,
   type PuppetLimb,
@@ -378,10 +378,10 @@ describe('limbBlend', () => {
 });
 
 // The straight arm with a body part beside its outer edge near the shoulder,
-// reaching 12 px past the shoulder's line, which a flap takes into the arm.
-const FLAP_REACH = 12;
+// reaching `band` px past the shoulder's line, which a flap takes into the arm.
+const BAND = 12;
 const BODY_COLOUR = [120, 90, 200] as const;
-const FLAP_SKELETON: Skeleton = {
+const flapSkeleton = (band: number): Skeleton => ({
   bones: [{ name: 'lean', pivot: [S[0], S[1] - 30], tip: S }, ...BONES],
   skin: { arm: [...CHAIN, 'lean'], body: ['lean'] },
   flaps: [
@@ -394,19 +394,33 @@ const FLAP_SKELETON: Skeleton = {
       reach: 10,
       region: [
         [-STUB - 2, -40],
-        [FLAP_REACH + 2, -40],
-        [FLAP_REACH + 2, 50],
+        [band + 2, -40],
+        [band + 2, 50],
         [-STUB - 2, 50],
       ].map(([u, v]) => along(along(S, D, u!), OUTER, v!)),
     },
   ],
   limbs: [DECLARED],
-};
-const FLAP_BODY = paint(W, H, (x, y) => {
-  const [u, v] = frame([x + 0.5, y + 0.5], S, D, 0);
-  const beside = u >= -STUB && u <= FLAP_REACH && v > outerWidth(Math.max(0, u)) && v < 36;
-  return [[], [BODY_COLOUR]][Number(beside)]!;
 });
+const flapSheet = (band: number): PuppetSheet => ({
+  ...SHEET,
+  parts: [
+    ...SHEET.parts,
+    {
+      name: 'body',
+      pixels: paint(W, H, (x, y) => {
+        const [u, v] = frame([x + 0.5, y + 0.5], S, D, 0);
+        const beside = u >= -STUB && u <= band && v > outerWidth(Math.max(0, u)) && v < 36;
+        return [[], [BODY_COLOUR]][Number(beside)]!;
+      }),
+    },
+  ],
+});
+const flapRefusals = (band: number) =>
+  Result.match(puppetOf(flapSheet(band), flapSkeleton(band)), {
+    onSuccess: () => [],
+    onFailure: (e) => (e.limbs ?? []).map((l) => [l.kind, l.detail] as const),
+  });
 
 describe('puppetOf with a stroke limb', () => {
   const refusedFor = (skeleton: Skeleton) =>
@@ -504,17 +518,35 @@ describe('puppetOf with a stroke limb', () => {
   });
 
   test("a flap's body texels past the shoulder stay out of the sleeve: not in its widths, wholly in the stub", () => {
-    const sheet: PuppetSheet = {
-      ...SHEET,
-      parts: [...SHEET.parts, { name: 'body', pixels: FLAP_BODY }],
-    };
-    const limb = Result.getOrThrow(puppetOf(sheet, FLAP_SKELETON)).parts[0]!.limb!;
-    const near = Array.from(limb.outer.widths.subarray(0, Math.floor(FLAP_REACH / limb.step)));
+    const limb = Result.getOrThrow(puppetOf(flapSheet(BAND), flapSkeleton(BAND))).parts[0]!.limb!;
+    const near = Array.from(limb.outer.widths.subarray(0, Math.floor(BAND / limb.step)));
     expect(near.length).toBeGreaterThan(3);
     expect(near.filter((w, k) => Math.abs(w - outerWidth((k + 0.5) * limb.step)) > 1)).toEqual([]);
-    const body = along(along(S, D, FLAP_REACH / 2), OUTER, 31);
+    const body = along(along(S, D, BAND / 2), OUTER, 31);
     expect(limbShares(limb, Math.floor(body[0]), Math.floor(body[1]))).toEqual([1, 0, 0]);
-    const sleeve = along(along(S, D, FLAP_REACH / 2), OUTER, 10);
+    const sleeve = along(along(S, D, BAND / 2), OUTER, 10);
     expect(limbShares(limb, Math.floor(sleeve[0]), Math.floor(sleeve[1]))).toEqual([0, 1, 0]);
+  });
+
+  test("a flap's band to half the upper arm builds, as the lead's 20.4 px band does; past half, it refuses the limb with its reach", () => {
+    expect(flapRefusals(20.4)).toEqual([]);
+    expect(flapRefusals(UPPER / 2 - 3)).toEqual([]);
+    const past = flapRefusals(UPPER / 2 + 6);
+    expect(past.map(([kind]) => kind)).toEqual(['flap-reach']);
+    expect(past[0]![1]).toMatch(
+      new RegExp(`reach u 6[23]\\.\\d px, 0 on the forearm, past ${(UPPER / 2).toFixed(1)} px`),
+    );
+  });
+
+  test("a flap's body texel on the forearm refuses the limb, counting them", () => {
+    const body = new Uint8Array(W * H);
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        const [u, v] = frame([x + 0.5, y + 0.5], S, D, 0);
+        body[y * W + x] = Number(u > UPPER + 10 && u < UPPER + 20 && v > 30 && v < 34);
+      }
+    const r = limbOf('arm', ARM, JOINTS, DECLARED, Option.some(body));
+    expect(kindOf(r)).toBe('flap-reach');
+    expect(Result.isFailure(r) && r.failure.detail).toMatch(/, [1-9]\d* on the forearm, /);
   });
 });

@@ -388,9 +388,10 @@ const refusal = (sheet: PuppetSheet, skeleton: Skeleton): string | undefined => 
  * they cannot: a limb naming a part or bone that is not there, two limbs on
  * one part, bones that are not a parent chain (shoulder, its child the elbow,
  * its child the wrist), a chain bone the part's skin does not name, or a fade
- * or fold whose ends do not increase. A flap on a limb's part is allowed
- * while the body texels it adds lie in the stub the limb leaves painted
- * (`limbsOf` measures that from the pixels).
+ * or fold whose ends do not increase. A flap on a limb's part is allowed:
+ * `limbsOf` masks the body texels it adds out of the sleeve and into the
+ * stub, and `limbOf` refuses the limb (`flap-reach`) when one lies on the
+ * forearm or past `FLAP_REACH` of the upper arm.
  */
 const limbRefusal = (skeleton: Skeleton, names: ReadonlySet<string>): string | undefined => {
   const byName = new Map(skeleton.bones.map((b) => [b.name, b]));
@@ -457,9 +458,10 @@ const flappedParts = (sheet: PuppetSheet, skeleton: Skeleton): ReadonlyArray<Uin
  * Each declared limb measured from its part's texture on its rest joints, by
  * part (at most one a part, `refusal`); else every limb refused. The body
  * pixels a flap took into the part are marked for `limbOf`, which keeps them
- * out of the sleeve's widths and wholly in the stub: the lead's shoulder
- * bands reach 12 px below the shoulder, so their body pixels lie past the
- * shoulder's line, and the stroke must never redraw them with the arm.
+ * out of the sleeve's widths and wholly in the stub: the lead's right
+ * shoulder band reaches 20.4 px down his upper arm, past the shoulder's line,
+ * and the stroke must never redraw it with the arm. A body texel past
+ * `FLAP_REACH` of the upper arm, or on the forearm, refuses the limb.
  */
 const limbsOf = (
   sheet: PuppetSheet,

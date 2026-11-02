@@ -61,6 +61,9 @@ const FEATHER = 2;
 /** The shortest a bone of the chain may be, px: two feathers, so the regions' borders never meet. */
 const SHORTEST = 2 * FEATHER;
 
+/** How far along the upper arm a flap's body texel may lie, of the upper arm's length: past it, or on the forearm, the body's pixels would ride the stroke's sleeve. The lead's right shoulder band reaches 20.4 px of a 154 px upper arm (0.13), his left 4.0 px of 176. */
+const FLAP_REACH = 0.5;
+
 /** How finely a width is marched along ±v, px. */
 const MARCH = 0.25;
 
@@ -152,12 +155,15 @@ interface LimbJoints {
 /**
  * Why a part cannot be measured as a limb: a point of its chain that is not
  * finite, a bone of its chain too short, its chain off its paint, its paint
- * running off the sheet, no ink at any of its edges, or more of its edges'
- * dark runs reaching the chain than ending on cloth (cloth as dark as ink).
+ * running off the sheet, a flap's body texel on its forearm or past
+ * `FLAP_REACH` of its upper arm, no ink at any of its edges, or more of its
+ * edges' dark runs reaching the chain than ending on cloth (cloth as dark as
+ * ink).
  */
 const LimbRefusalKind = Schema.Literals([
   'non-finite',
   'short-chain',
+  'flap-reach',
   'off-part',
   'open-edge',
   'no-ink',
@@ -434,6 +440,19 @@ const regionsOf = (pixels: Raster, t: Texels, chain: LimbChain): LimbRegions => 
   return { box, shares: bytes(shares) };
 };
 
+/** How far a flap's body texels reach along `chain`: the greatest u of their centres (−∞ with none), and how many lie nearer the forearm. */
+const flapReach = (pixels: Raster, t: Texels, chain: LimbChain) => {
+  let [u, fore] = [-Infinity, 0];
+  for (let y = 0; y < pixels.height; y++)
+    for (let x = 0; x < pixels.width; x++) {
+      if (!t.isBody(x, y)) continue;
+      const p: Pt = [x + 0.5, y + 0.5];
+      fore += Number(!onUpper(chain, p));
+      u = Math.max(u, unroll(chain, p)[0]);
+    }
+  return { u, fore };
+};
+
 /**
  * Part `part`'s limb, measured from its own pixels (its texture, as
  * `puppetOf` holds it) on its rest joints: the chain, each side's half-widths
@@ -442,7 +461,8 @@ const regionsOf = (pixels: Raster, t: Texels, chain: LimbChain): LimbRegions => 
  * into the part) are not the sleeve's: a width ends where they begin, and
  * they lie wholly in the stub. Refused, with a reason that names its kind,
  * when a point of the chain is not finite, a bone of the chain is too short,
- * the chain leaves the paint, the paint runs off the sheet, no edge shows any
+ * a body texel lies on the forearm or past `FLAP_REACH` of the upper arm (the
+ * stub would carry it into the sleeve), the chain leaves the paint, the paint runs off the sheet, no edge shows any
  * ink, or more edges' dark runs reach the chain than end on cloth: such an
  * arm is never drawn from defaults.
  */
@@ -479,6 +499,12 @@ export const limbOf = (
     pixels,
     Option.getOrElse(body, () => new Uint8Array(pixels.width * pixels.height)),
   );
+  const reach = flapReach(pixels, t, chain);
+  if (reach.fore > 0 || reach.u > FLAP_REACH * chain.upper)
+    return refuse(
+      'flap-reach',
+      `its flap's body texels reach u ${reach.u.toFixed(1)} px, ${reach.fore} on the forearm, past ${(FLAP_REACH * chain.upper).toFixed(1)} px (${FLAP_REACH} of its ${chain.upper.toFixed(1)} px upper arm)`,
+    );
   const length = chain.upper + chain.fore;
   const knots = Math.ceil(length / KNOT);
   const step = length / knots;
