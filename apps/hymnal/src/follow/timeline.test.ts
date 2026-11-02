@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 
 import * as Timing from '@manna/hymnal/timing';
 import { type Hymn, sung } from '@manna/hymnal/hymn';
-import { Array as Arr, Option } from 'effect';
+import { Array as Arr, Match, Option } from 'effect';
 import bundled from 'virtual:hymnal-timing';
 
 import { readPlaybackHymns } from '../../vite/chords';
@@ -80,17 +80,25 @@ const faultsOf = (hymn: Hymn, timeline: Timeline): ReadonlyArray<string> => {
     const flags = [want.played, want.even].join() === [got.played, got.even].join();
     if (!flags || !same([got.start, got.until], [ms(want.start), ms(want.until)]))
       return [`${at}: times or flags`];
-    const lit =
-      want.played && !want.even && line.part._tag === 'Sung' && line.part.level === 'syllable';
-    if (!lit || line.part._tag !== 'Sung') {
+    // A line is lit when it has note times, at either chord level, that fit it: one per syllable,
+    // in order, inside the line.
+    const syllables = Match.value(line.part).pipe(
+      Match.tag('Sung', (part) => part.lines[line.line] ?? []),
+      Match.orElse(() => []),
+    );
+    const times = want.syllables.map(ms);
+    const fit =
+      times.length > 0 &&
+      times.length === syllables.length &&
+      times.every((t, k) => t >= (times[k - 1] ?? got.start) && t < got.until);
+    if (!want.played || want.even || line.part._tag !== 'Sung' || !fit) {
       if (got.syllables.length === 0) return [];
       return [`${at}: lit where words may not be`];
     }
-    const syllables = line.part.lines[line.line] ?? [];
     // Syllables of one word share a word; each new word takes the next place.
     let word = -1;
     const words = syllables.map((s, k) => (word += Number(s.word !== syllables[k - 1]?.word)));
-    if (!same(got.syllables, want.syllables.map(ms))) return [`${at}: syllable times`];
+    if (!same(got.syllables, times)) return [`${at}: syllable times`];
     if (!same(got.words, words)) return [`${at}: words`];
     return [];
   });

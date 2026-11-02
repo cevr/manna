@@ -3,7 +3,7 @@
 While a hymn plays, its page follows the singing. The line sung now is
 marked: its syllables turn muted and the syllable sung now takes the accent
 colour, with chords on or off, with no box and no underline. A line with no
-syllable times (a Plain or line-level part, or a line the score holds even) is marked
+note times (a Plain part's line, a line held to even shares, or an unplayed line) is marked
 whole: its words take the accent on a soft tint, with no invented syllable timing.
 This stays visible in light mode, where accent equals ordinary ink. The page scrolls each line in about 600 ms
 before it is sung, a third of the way down, so a reader never scrolls by
@@ -19,7 +19,7 @@ brings the sung line back and follows again. The marked line is
 - `follow-play`: one tap on `Play hymn <n>` follows the hymn to its last line, with no other touch.
 - `follow-play-recording`: with sound on (web, muted browser), the marks follow the recording.
 - `follow-line`: exactly one line is marked at a time, in order, never back, each line longer than 1 s seen, and the marked line and the next line's top inside the page's scroll.
-- `follow-syllable`: with syllable times, the sung syllable in the accent colour, the rest of the marked line muted, chords on or off. Without syllable times, the whole line is highlighted in the accent on a soft tint.
+- `follow-syllable`: on every line with note times, of a syllable-level or a line-level part, the sung syllable in the accent colour, the rest of the marked line muted, chords on or off (hymn 11 at 0:27: line 1 lights one syllable, then the next). Without note times (a Plain part's line, a line held to even shares, or an unplayed line), the whole line is highlighted in the accent on a soft tint.
 - `follow-sound`: with `Sound off`, Play sounds nothing and the marks run on the score's clock. One Play tap is enough: the player shows Playing from the first sung line, which is marked, with no seek. While a recording is still loading, `Sound off`, Pause and Stop answer at once, and a load that never answers is given up after 15 s.
 - `follow-tempo`: with `Sound off`, the marks keep the hymn's `Tempo` (player.md, `player-tempo`): the place moves tempo ÷ 100 ms of the hymn each ms from the first sung line, so at 50% `Seek`'s time gone moves 10 s in 20 s, and the marked line moves on or stays, never back. A turn while it plays moves on from the place as it stands. With sound on the recording sets the pace.
 - `follow-hand`: a drag of the page while it plays shows `Resume follow` and stops the scroll; a tap on it brings the marked line back into view.
@@ -32,7 +32,7 @@ brings the sung line back and follows again. The marked line is
 
 - `follow-soprano`: on 388, then control 373, the follow and chords use the same selected melody. A separate tune track is kept when it has one pitch per onset; polyphonic accompaniment cannot displace the keyboard soprano. Legato overlaps alone do not disqualify a tune.
 - `follow-melisma`: internal melody notes keep one syllable selected until its next distinct syllable onset. Seek on either side of that boundary. Repeat with chords off/on and Simple/Advanced. The MIDI tempo map supplies the times, rounded to 1/96-beat units before conversion to milliseconds.
-- `follow-shared-note`: a zero-note syllable shares its predecessor's onset. At a line opening it shares that line's first owned note, or the previous anchor if the entire line shares. Simultaneous starts select the last syllable in the group; no extra note or time is consumed. Plain and untrusted lines retain whole-line marks.
+- `follow-shared-note`: a zero-note syllable shares its predecessor's onset. At a line opening it shares that line's first owned note, or the previous anchor if the entire line shares. Simultaneous starts select the last syllable in the group; no extra note or time is consumed. A line keeps whole-line marks only without note times: a Plain part's line, a line held to even shares, or an unplayed line.
 - `follow-key-continuity`: change Key while silently playing 388 and 373; elapsed place and follow keep advancing. Drag and Resume follow, and seek into the intro and back into a sung line.
 
 For these rows, use Sound off before every Play on web and iOS. Run Doctor before the drive and after surprises. Retain only line/syllable indexes, numeric timing, rectangles and control states. Do not capture media or persist hymn words. Only snapshots near 1 s with Doctor timing approval can support a 1,500 ms live timing claim. Sound-off proof does not establish recording output.

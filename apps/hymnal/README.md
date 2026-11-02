@@ -162,8 +162,9 @@ alignment levels draw each chord over its syllable. Only changes show;
 a line with no opening change starts with no chord above it. A plain part
 shows its words alone, and a hymn with no chords says so. With chords off, a sung
 line still shows its syllables, a hyphen inside each word, so a played
-hymn's follow lights the syllable sung; a line without syllable times is
-highlighted whole. While chords are on,
+hymn's follow lights the syllable sung, on a line of either alignment level;
+a line without note times (a plain part's, one held to even shares, or one
+the recording does not play) is highlighted whole. While chords are on,
 `Transpose down`/`Transpose up` move the sounding key (`Key <key>`) through
 the twelve keys, and `Capo down`/`Capo up` set a capo fret, 0 to 11, the
 chords then shown as the shapes that fret plays (`Capo <n>, <key> shapes`).
@@ -691,7 +692,10 @@ The chord and follow bundles join the same versioned numeric sidecars from
 `packages/hymnal/data/playback` onto the read-only corpus words. The selected
 melody supplies both syllable times and chord anchors. A melisma keeps its
 syllable until the next syllable onset. Shared-note syllables have the same
-onset; Plain and untrusted parts keep whole-line follow marks. Input hashes
+onset. A played line with note times lights by syllable at either level
+when its times fit it (one per syllable, in order, inside the line); a
+Plain part's line, a line held to even shares and an unplayed line keep
+whole-line follow marks. Input hashes
 prevent metadata from being joined to different corpus words.
 One manifest fingerprints compiler inputs and lists changed projections.
 The manifest's global fingerprint is generation provenance only. The build

@@ -29,8 +29,9 @@
  * without the visual join or trailing hyphens. While
  * the line is sung (`follow/`), it is `selected`, its syllables take the
  * muted colour and the sung syllable the accent: a change of colour only, so
- * nothing moves. A line without syllable times is highlighted whole, in
- * the accent on a soft tint.
+ * nothing moves. A line without note times (held to even shares, or one
+ * the recording does not play) is highlighted whole, in the accent on a soft
+ * tint.
  *
  * A syllable's text takes no touch, so a tap in the target of the chord over
  * it (`chordSlop`, 44 points tall) opens that chord wherever the syllable

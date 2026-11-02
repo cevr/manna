@@ -8,7 +8,8 @@
  * with its chords over it, in the body's own font, so a chord sits over the
  * syllable it changes on with no padded spaces. Both alignment levels keep
  * these compiled anchors, so a wrapped word takes its chords with it.
- * Line-level timing still marks the line whole.
+ * Lines of both levels light by syllable where the score gives note times;
+ * a line held to even shares or not played is marked whole.
  *
  * The chords are spelled in the key the move reaches, read from a context by
  * each chord's text alone: a turn of a dial redraws the chord texts, never

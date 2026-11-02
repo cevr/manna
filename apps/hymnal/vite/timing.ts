@@ -17,8 +17,12 @@
  * - `length`: to its `until`, the next line's start (the last, the end);
  * - each `word`: its syllables' starts, `.` between them, each after the
  *   syllable before (the first, after the line's start).
- * Only a line whose words may be lit carries words: played, not even, and
- * in a part aligned syllable by syllable. Any other line is marked whole.
+ *   Two syllables on one note share a start, a step of 0.
+ * Only a line whose words may be lit carries words: played, not even, in a
+ * Sung part, and with note times that pass `sound`. The part's chord level
+ * does not decide it: it grades how sure the chord anchors are, while a
+ * line's syllable times are the notes' times at either level. Any other line
+ * is marked whole.
  */
 
 import * as Timing from '@manna/hymnal/timing';
@@ -38,6 +42,24 @@ const wordsOf = (words: ReadonlyArray<number>): ReadonlyArray<ReadonlyArray<numb
   return out;
 };
 
+/**
+ * Whether a line's syllable times, in ms, may light its words: one per
+ * syllable of its part's line, none before the one before, the first at or
+ * after the line's `start` and the last before its `until`. A line that fails
+ * is marked whole, so a time the compiler got wrong never lights a syllable.
+ */
+export const sound = (
+  times: ReadonlyArray<number>,
+  syllables: number,
+  start: number,
+  until: number,
+): boolean =>
+  times.length > 0 &&
+  times.length === syllables &&
+  (times[0] ?? -1) >= start &&
+  (times.at(-1) ?? until) < until &&
+  times.every((t, k) => k === 0 || t >= (times[k - 1] ?? t));
+
 /** The hymn's timing in the encoding above; none when it has no timing. */
 export const encodeTiming = (hymn: Hymn): Option.Option<string> =>
   Option.map(Option.fromUndefinedOr(hymn.timing), (timing) => {
@@ -55,20 +77,15 @@ export const encodeTiming = (hymn: Hymn): Option.Option<string> =>
         ];
         before = start;
         const part = lines[i]?.part;
-        if (
-          !line.played ||
-          line.even ||
-          part?._tag !== 'Sung' ||
-          part.level !== 'syllable' ||
-          line.syllables.length === 0
-        )
-          return fields.join(',');
+        if (!line.played || line.even || part?._tag !== 'Sung') return fields.join(',');
         const syllables = part.lines[lines[i]?.line ?? 0] ?? [];
+        const times = line.syllables.map(ms);
+        if (!sound(times, syllables.length, start, ms(line.until))) return fields.join(',');
         let at = start;
         const words = wordsOf(syllables.map((s) => s.word)).map((word) =>
           word
             .map((k) => {
-              const t = ms(line.syllables[k] ?? 0);
+              const t = times[k] ?? at;
               const step = t - at;
               at = t;
               return step;

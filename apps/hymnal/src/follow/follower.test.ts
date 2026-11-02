@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'bun:test';
-import { Option } from 'effect';
+import { type Hymn, PER_BEAT, sung } from '@manna/hymnal/hymn';
+import { Array as Arr, Option } from 'effect';
 import bundled from 'virtual:hymnal-timing';
+
+import { readPlaybackHymns } from '../../vite/chords';
+import { encodeTiming } from '../../vite/timing';
 
 import { followerOf, type Host, LEAD, type Report } from './follower';
 import { OFF, WHOLE } from './marks';
@@ -15,7 +19,7 @@ const line = (start: number, syllables: ReadonlyArray<number>): TimedLine => ({
   words: syllables.map((_, k) => k),
 });
 
-/** Three lines a second each from 1 s: two words, then a line-level line, then two words. */
+/** Three lines a second each from 1 s: two words, then a line with no note times, then two words. */
 const three: Timeline = {
   lines: [line(1000, [1000, 1500]), line(2000, []), line(3000, [3000, 3400])],
   first: 1000,
@@ -259,4 +263,68 @@ describe('followerOf at a tempo, Sound off (unit tempo, A3)', () => {
       }
     },
   );
+});
+
+describe('the bundled timing of a hand-made hymn 11, through the follower', () => {
+  // Hymn 11's stanzas are line level; its line 1 (stanza 1, line index 1) has note times.
+  const hymn = Option.getOrThrow(Arr.findFirst(readPlaybackHymns(), (one) => one.number === 11));
+  const timing = Option.getOrThrow(Option.fromUndefinedOr(hymn.timing));
+  const line1 = Option.getOrThrow(Arr.get(timing.lines, 1));
+  /** Hymn 11 with line 1's syllable times replaced. */
+  const withLine1 = (syllables: ReadonlyArray<number>): Hymn => ({
+    ...hymn,
+    timing: {
+      ...timing,
+      lines: Option.getOrThrow(Arr.modify(timing.lines, 1, (line) => ({ ...line, syllables }))),
+    },
+  });
+  const timelineFor = (one: Hymn): Timeline =>
+    Option.getOrThrow(timelineOf(Option.getOrThrow(encodeTiming(one))));
+  const base = timelineFor(hymn);
+  /** Line 1's mark with the player paused at `at` ms. */
+  const markAt = (timeline: Timeline, at: number) => {
+    const h = harness(timeline);
+    h.report({ _tag: 'Here', at, state: 'paused' });
+    return h.follower.marks.markOf(1);
+  };
+
+  it('lights a line-level part’s line by its note times', () => {
+    expect(sung(hymn)[1]?.part).toMatchObject({ _tag: 'Sung', level: 'line' });
+    const line = Option.getOrThrow(Arr.get(base.lines, 1));
+    expect(line.syllables.length).toBe(line1.syllables.length);
+    expect(markAt(base, line.syllables[1] ?? 0)).toBe(1);
+  });
+
+  it('marks a line whole when its times are out of order, outside the line or short a syllable', () => {
+    const [first = 0, ...rest] = line1.syllables;
+    const broken = {
+      'out of order': line1.syllables.toReversed(),
+      'before the line': [line1.start - PER_BEAT, ...rest],
+      'at its until': [...line1.syllables.slice(0, -1), line1.until],
+      'short a syllable': rest,
+      'a syllable over': [first, ...line1.syllables],
+    };
+    const lines = Option.getOrThrow(
+      Arr.modify(base.lines, 1, (line) => ({ ...line, syllables: [], words: [] })),
+    );
+    const start = base.lines[1]?.start ?? 0;
+    for (const [name, syllables] of Object.entries(broken)) {
+      const timeline = timelineFor(withLine1(syllables));
+      // Only that line changes, to whole: its span and flags and every other line stay as bundled.
+      expect({ name, lines: timeline.lines }).toEqual({ name, lines });
+      expect({ name, mark: markAt(timeline, start) }).toEqual({ name, mark: WHOLE });
+    }
+  });
+
+  it('carries two syllables on one note as one start, and lights the later of them', () => {
+    const [a = 0, , ...rest] = line1.syllables;
+    const timeline = timelineFor(withLine1([a, a, ...rest]));
+    const line = Option.getOrThrow(Arr.get(timeline.lines, 1));
+    const [s0 = 0, s1 = 0, s2 = 0] = line.syllables;
+    expect(line.syllables.length).toBe(line1.syllables.length);
+    expect(s1).toBe(s0);
+    expect(s2).toBeGreaterThan(s1);
+    expect(placeAt(timeline, s0)).toMatchObject({ line: 1, syllable: 1, nextAt: s2 });
+    expect(markAt(timeline, s0)).toBe(1);
+  });
 });
