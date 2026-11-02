@@ -3,14 +3,16 @@
 // the mother with her baby at the cup, on the close plate painted to
 // `cold.baby.3` (`BABY_BACK`) with the feast's table in front of her
 // (`FRONT`), the camera pushing in on the baby's face.
-// `grown` cuts to the feast's courtyard plates on a guest at the long table
-// and trucks down it to the lead, who sits between two guests (`GUESTS`, a
-// man picture-left and a woman picture-right), the bottle on his lap, and on
+// `grown` cuts to the feast's courtyard plates on the mother at the long
+// table, her baby at the cup, behind the guests (`MOTHER_SEAT`), and trucks
+// down it to the lead, who sits between two guests (`GUESTS`, a man
+// picture-left and a woman picture-right), the bottle on his lap, and on
 // `bottle` raises it (`raise`, his seated raise's frames on twos); at the
 // word "bottle" the guests turn to him and stare (`turn`). `smile` pulls
 // back to the three at the table, and the guests smile at him. On
-// `letter` a rolled scroll drops onto the table in front of the lead and
-// unrolls over its edge (`SCROLL`). On `ouch` he winces (`WINCE`).
+// `letter` they stare again (`SWAPS`), a rolled scroll drops onto the table
+// in front of the lead and unrolls over its edge (`SCROLL`). On `ouch` he
+// winces (`WINCE`).
 // `what` cuts to the last close plate (`WHAT`), the cup of milk and the
 // bread, and the camera lifts to them.
 //
@@ -106,8 +108,36 @@ const GUESTS = {
 const KEYS = { man: MAN, woman: WOMAN } as const;
 
 /**
+ * The guests' key from each cue's start on, the cues in time order, neutral
+ * before the first: turned to the lead and staring at the word "bottle",
+ * smiling at him on `smile`, and staring again, mouths open, at the letter
+ * on `read`, as `cold.letter.4` has them. Each swap is a cut, and each key
+ * holds seconds, far past the record's two frames.
+ */
+const SWAPS = [
+  ['turn', 'turn'],
+  ['smile', 'smile'],
+  ['read', 'turn'],
+] as const;
+
+/**
+ * The mother with her baby at the cup (her poses-1 cut-out, as in the close),
+ * picture-right behind the woman, where `cold.letter.4` has her at a table
+ * further back: her eyes (`eyes`, on her part sheet, read off the close) at
+ * `at`, panel px, about level with his, sized so her head box (`box`, the
+ * veil, sheet px) is `head` panel px across, four fifths of the woman's hood,
+ * as the panel draws her. `START` opens on her.
+ */
+const MOTHER_SEAT = {
+  at: [1012, 730],
+  eyes: [180, 153],
+  head: 70,
+  box: [78, 0, 365, 240],
+} as const;
+
+/**
  * The courtyard's framings, on the frame px the title ends on: from `grown`
- * the camera starts close on the woman at the table (`START`), trucks down
+ * the camera starts close on the mother at the table (`START`), trucks down
  * the table to the lead, pushes in on his bottle, pulls back to the three
  * waist up (`smile`), pushes in chest up on him and the letter as it
  * falls (`read`, the panel's `cold.letter.4`), closer on the letter's gold
@@ -292,17 +322,29 @@ export const cold = drawing({
       });
       if (wince) f.puppet('lead', pose, WINCE);
     };
-    // A guest on its stool: the contact shadow under it, then its key, whole,
-    // on its frames' px (`posed`, origin [0, 0]): neutral, from the word
-    // "bottle" turned to the lead, from `smile` smiling at him. A key swaps
-    // with no tween and holds seconds, far past the record's two frames.
+    // A guest on its stool: the contact shadow under it, then its key
+    // (`SWAPS`), whole, on its frames' px (`posed`, origin [0, 0]).
     const guest = (name: keyof typeof KEYS) => {
       const { ground: shadow } = KEYS[name];
-      const key =
-        f.t >= f.cue('smile').start ? 'smile' : f.t >= f.cue('turn').start ? 'turn' : 'neutral';
+      const key = SWAPS.reduce<keyof typeof MAN.paintings>(
+        (at, [cue, to]) => (f.t >= f.cue(cue).start ? to : at),
+        'neutral',
+      );
       posed(seat(name), shadow.at, [0, 0], () => {
         ground(ctx, shadow.at[0], shadow.at[1], shadow.w);
         f.painting(`${name}-${key}`);
+      });
+    };
+    // The mother behind the woman: her eyes on her seat's point, her veil its width.
+    const mother = () => {
+      const scale = MOTHER_SEAT.head / (MOTHER_SEAT.box[2] - MOTHER_SEAT.box[0]);
+      f.puppet('mother', {
+        numbers: {},
+        root: [
+          MOTHER_SEAT.at[0] + scale * (BABY.root[0] - MOTHER_SEAT.eyes[0]),
+          MOTHER_SEAT.at[1] + scale * (BABY.root[1] - MOTHER_SEAT.eyes[1]),
+        ],
+        scale,
       });
     };
 
@@ -374,6 +416,7 @@ export const cold = drawing({
     plane(camera, PLANES.near, () => f.painting('near'));
     plane(camera, PLANES.guests, () =>
       panel(() => {
+        mother();
         guest('man');
         lead();
         guest('woman');
