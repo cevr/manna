@@ -1,6 +1,6 @@
 // A page that draws one puppet, for its slow test and the parity receipt: the
 // puppet a module declares (`module`'s export `name`, at `key` when given)
-// loaded as a film's are (`puppetFrom` over the page's image decoder) and
+// loaded as a film's are (`loadPuppet` over the page's image decoder) and
 // drawn by the draw path (`drawPuppet`, `canvas/puppet-gl.ts`) at a pose, in
 // its sheet's frame on a clear canvas the sheet's size, in the render path's
 // own Chrome (`openView(launchArgs)`). The page is built with Bun's bundler
@@ -41,13 +41,12 @@ const lookOf = (look?: PuppetLook) =>
   Option.match(Option.fromUndefinedOr(look), { onNone: () => 'undefined', onSome: literal });
 
 const entry = (at: PuppetAt) => `
-import { Effect, Layer } from 'effect';
+import { Effect, Layer, Scope } from 'effect';
 import { FetchHttpClient } from 'effect/http';
 import * as M from ${literal(at.module)};
-import { drawingsFrom, puppetFrom } from ${literal(`${FILM}puppet/load.ts`)};
+import { loadPuppet } from ${literal(`${FILM}puppet/load.ts`)};
 import { PuppetImagesBrowser } from ${literal(`${FILM}puppet/images-browser.ts`)};
 import { drawPuppet } from ${literal(`${FILM}canvas/puppet.ts`)};
-import { puppetGl } from ${literal(`${FILM}canvas/puppet-gl.ts`)};
 
 const table = M[${literal(at.name)}];
 const spec = ${Option.match(Option.fromUndefinedOr(at.key), { onNone: () => 'table', onSome: (k) => `table[${literal(k)}]` })};
@@ -58,9 +57,10 @@ const base64Of = (bytes) => {
 };
 try {
   const images = PuppetImagesBrowser.pipe(Layer.provide(FetchHttpClient.layer));
-  const puppet = await Effect.runPromise(puppetFrom(spec).pipe(Effect.provide(images)));
-  const drawings = await Effect.runPromise(drawingsFrom(spec).pipe(Effect.provide(images)));
-  const loaded = { puppet, drawings, paints: true, gl: puppetGl(puppet) };
+  // the puppet's GL state held in a scope the page never closes: it draws until the page goes
+  const loaded = await Effect.runPromise(
+    loadPuppet(spec).pipe(Scope.provide(Scope.makeUnsafe()), Effect.provide(images)),
+  );
   const [W, H] = spec.size;
   const sheet = document.createElement('canvas');
   sheet.width = W;

@@ -99,8 +99,8 @@ const drawingsFrom = Effect.fn('Puppet.drawings')(function* (spec: PuppetSpec, s
   return new Map(read) satisfies ReadonlyMap<string, Raster>;
 });
 
-/** One declared puppet, loaded with its drawings, its GL state freed with the scope. */
-const loadPuppet = Effect.fn('Puppet.load')(function* (spec: PuppetSpec) {
+/** One declared puppet, loaded with its drawings, its GL state freed with the scope: what `loadPuppets` stands on a film for each, and what a page that draws one puppet loads (`fixtures/page.ts`). */
+export const loadPuppet = Effect.fn('Puppet.load')(function* (spec: PuppetSpec) {
   const images = yield* PuppetImages;
   const sheet = yield* sheetFrom(spec);
   const puppet = yield* puppetOfSheet(spec, sheet);
