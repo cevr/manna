@@ -8,10 +8,13 @@
 // painted out, and `path.png` is that painted path cut from it, clear around
 // the path, so a scene reveals the path along its length (`PATH_BRUSH`) and
 // the frame at the reveal's end is the painter's plate to within 62 px on the
-// hill's edge (at most 64 of 255 in one channel). `title` draws them;
-// `cold` may share them. Pure data.
+// hill's edge (at most 64 of 255 in one channel). `title` draws them, and
+// `cold` draws them and its two close plates (`BABY_BACK`, `WHAT`), painted
+// to their own panels on the same grid. Pure data.
 
 import type { PaintingSpec } from '@manna/film/canvas';
+import babyBackPng from './cold-baby-back.png' with { type: 'file' };
+import whatPng from './cold-what.png' with { type: 'file' };
 import distancePng from './distance.png' with { type: 'file' };
 import nearPng from './near.png' with { type: 'file' };
 import pathPng from './path.png' with { type: 'file' };
@@ -61,6 +64,31 @@ export const NEAR = {
 export const TABLE = {
   key: 'in-its-order/table',
   png: tablePng,
+  size: [1920, 1280],
+  at: [0, -100],
+} as const satisfies PaintingSpec;
+
+/**
+ * `cold`'s close on the mother, painted to `board/cold.baby.3.png` with every
+ * guest, table and bench painted out: the lanterns, the cream wall with its
+ * olive bushes, the town and the awning's post over the paving, which runs to
+ * the plate's bottom edge. The mother is a plane of her own in front of it.
+ */
+export const BABY_BACK = {
+  key: 'in-its-order/cold-baby-back',
+  png: babyBackPng,
+  size: [1920, 1280],
+  at: [0, -100],
+} as const satisfies PaintingSpec;
+
+/**
+ * `cold`'s last close, painted to `board/cold.what.3.png`: a clay cup of milk
+ * and a round loaf on a clay platter on the cream table top, the only props
+ * lit, and beyond the table a soft plum-indigo dark. The whole picture.
+ */
+export const WHAT = {
+  key: 'in-its-order/cold-what',
+  png: whatPng,
   size: [1920, 1280],
   at: [0, -100],
 } as const satisfies PaintingSpec;

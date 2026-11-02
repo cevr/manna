@@ -1,13 +1,16 @@
 // The cold open, drawn to its kept panels (`cold.baby.3`, `cold.letter.4`,
-// `cold.what.3`) on the feast's courtyard plates (`plates/plates.ts`), one
-// beat to each of the script's marks. `baby`: the mother holds her baby at
-// the cup behind the long table, framed close. `grown`: the camera trucks
-// down the table to the lead, seated between the villager and the mother
-// where the title stands them, his bottle raised (`bottle`).
+// `cold.what.3`), one shot to each of the script's marks. `baby`: close on
+// the mother with her baby at the cup, on the close plate painted to
+// `cold.baby.3` (`BABY_BACK`), the camera pushing in on the baby's face.
+// `grown` cuts to the feast's courtyard plates on the mother at the long
+// table and trucks down it to the lead, who stands between the villager and
+// the mother where the title stands them, his bottle raised (`bottle`).
+// `what` cuts to the last close plate (`WHAT`), the cup of milk and the
+// bread, and the camera lifts to them.
 //
-// The camera is one framing of the frame px the title ends on: a centre and
-// a zoom, each plane moved by its share (`PLANES`), so a far plane drifts and
-// grows less than the table. Each move runs from where the last one left it
+// A shot's camera is a centre and a zoom on its plates' frame px, each plane
+// moved by its share (`PLANES`), so a far plane drifts and grows less than a
+// near one. Each courtyard move runs from where the last one left it
 // (`MOVES`).
 
 import { drawing } from '@manna/film/canvas';
@@ -15,13 +18,38 @@ import { lerp } from '@manna/film/core';
 import { PUPPETS as LEAD } from '../../../library/cast/lead-feast/cutout/puppets.ts';
 import { PUPPETS as MOTHER } from '../cast/feast-mother/cutout/puppets.ts';
 import { PUPPETS as VILLAGER } from '../cast/idea-villagers/cutout/puppets.ts';
-import { DISTANCE, NEAR, PANEL, PLANES, SKY, TABLE } from '../plates/plates.ts';
+import { BABY_BACK, DISTANCE, NEAR, PANEL, PLANES, SKY, TABLE, WHAT } from '../plates/plates.ts';
 
-/** A camera on the title's end framing, frame px: the point at the frame's centre and the zoom. */
+/** A camera on a shot's plates, frame px: the point at the frame's centre and the zoom. */
 type Camera = { readonly x: number; readonly y: number; readonly k: number };
 
 /** The frame's centre, frame px. */
 const CENTRE = [960, 540] as const;
+
+/** The camera at zoom `k` that holds plane-1 point `p` at frame point `at`. */
+const holding = (p: readonly [number, number], at: readonly [number, number], k: number) => ({
+  x: p[0] - (at[0] - CENTRE[0]) / k,
+  y: p[1] - (at[1] - CENTRE[1]) / k,
+  k,
+});
+
+/**
+ * The close on the mother at the cup (`cold.baby.3`), on `BABY_BACK`'s frame
+ * px. The camera pushes in to `k` holding the baby's eyes where the panel
+ * has them (`eyes`, the panel's (632, 478) on the frame), and she is sized
+ * so that at the push's end she is the panel's size (`scale`, frame px a
+ * sheet px: the baby's eyes are 65 panel px apart, 40 on her sheet). `on`
+ * is the baby's eyes on her poses-1 part sheet and `root` her root there,
+ * sheet px. The plate stands `back` behind her, as a camera's divisor.
+ */
+const BABY = {
+  eyes: [790, 497],
+  scale: 2,
+  k: 1.12,
+  on: [121, 238.5],
+  root: [193, 448],
+  back: 3,
+} as const;
 
 /** Where the guests' feet stand behind the table, panel px: the title's guests stand there. */
 const FLOOR = 925;
@@ -40,24 +68,26 @@ const GUESTS = {
 } as const;
 
 /**
- * The cold open's framings, each a cue and where it leaves the camera:
- * close on the mother at the cup, trucked down the table to the lead, pushed
- * in on his bottle. TODO(close plate): `baby` frames the courtyard plates at
- * 1.5x; it moves to the painter's `cold-baby-back` plate once that plate is
- * committed.
+ * The courtyard's framings, on the frame px the title ends on: from `grown`
+ * the camera starts on the mother at the table (`START`), trucks down the
+ * table to the lead and pushes in on his bottle, each a cue and where it
+ * leaves the camera.
  *
  * The plates cover frame x 0..1920 and y -100..1180, and the table, the
  * nearest plane, binds: every framing keeps 960/k <= x <= 1920 - 960/k and
  * 540/k - 100 <= y <= 1180 - 540/k, so no plate's edge shows. A move is a
  * straight line in (x, y, k) and each bound curves away from that line, so a
- * move whose two ends keep the bounds keeps them all the way.
+ * move whose two ends keep the bounds keeps them all the way. The close
+ * plates are painted on the same grid, so the same bounds hold on them.
  */
-const START: Camera = { x: 1200, y: 800, k: 1.44 };
+const START: Camera = { x: 1200, y: 816, k: 1.5 };
 const MOVES = [
-  ['baby', { x: 1200, y: 820, k: 1.5 }],
   ['truck', { x: 960, y: 796, k: 1.42 }],
   ['bottle', { x: 952, y: 812, k: 1.5 }],
 ] as const satisfies ReadonlyArray<readonly [string, Camera]>;
+
+/** The last close (`cold.what.3`), on `WHAT`'s frame px: the camera lifts to the cup and the bread and pushes in a little. */
+const LIFT = { from: { x: 960, y: 640, k: 1 }, to: { x: 960, y: 552, k: 1.03 } } as const;
 
 const between = (a: Camera, b: Camera, t: number): Camera => ({
   x: lerp(a.x, b.x, t),
@@ -70,18 +100,25 @@ export const cold = drawing({
     baby: { mark: 'baby', until: 'grown', ease: 'inOutSine' },
     truck: { mark: 'grown', until: 'bottle', ease: 'inOutCubic' },
     bottle: { mark: 'bottle', dur: 0.7, ease: 'outCubic' },
+    what: { mark: 'what', until: { at: 'end' }, ease: 'inOutSine' },
   },
   puppets: {
     villager: VILLAGER['poses-6'],
     lead: LEAD['single-9'],
     mother: MOTHER['poses-1'],
   },
-  paintings: { sky: SKY, distance: DISTANCE, near: NEAR, table: TABLE },
+  paintings: {
+    sky: SKY,
+    distance: DISTANCE,
+    near: NEAR,
+    table: TABLE,
+    back: BABY_BACK,
+    what: WHAT,
+  },
   draw: (f) => {
     const { ctx, w } = f;
-    const camera = MOVES.reduce<Camera>((cam, [cue, to]) => between(cam, to, f.at(cue)), START);
-    // One plane, frame px: its share of the camera's zoom and of its move off the centre.
-    const plane = (z: number, draw: () => void) => {
+    // One plane of a shot, frame px: its share of the camera's zoom and of its move off the centre.
+    const plane = (camera: Camera, z: number, draw: () => void) => {
       const k = 1 + (camera.k - 1) / z;
       const x = CENTRE[0] + (camera.x - CENTRE[0]) / z;
       const y = CENTRE[1] + (camera.y - CENTRE[1]) / z;
@@ -93,7 +130,7 @@ export const cold = drawing({
       draw();
       ctx.restore();
     };
-    // Inside a plane, the kept panel's px.
+    // Inside a courtyard plane, the kept panel's px.
     const panel = (draw: () => void) => {
       ctx.save();
       ctx.scale(PANEL.scale, PANEL.scale);
@@ -112,16 +149,39 @@ export const cold = drawing({
         scale,
       });
     };
-    plane(PLANES.sky, () => f.painting('sky'));
-    plane(PLANES.distance, () => f.painting('distance'));
-    plane(PLANES.near, () => f.painting('near'));
-    plane(PLANES.guests, () =>
+
+    if (f.t < f.cue('truck').start) {
+      const camera = holding(BABY.eyes, BABY.eyes, lerp(1, BABY.k, f.at('baby')));
+      const scale = BABY.scale / BABY.k;
+      plane(camera, BABY.back, () => f.painting('back'));
+      plane(camera, 1, () =>
+        f.puppet('mother', {
+          numbers: {},
+          root: [
+            BABY.eyes[0] + scale * (BABY.root[0] - BABY.on[0]),
+            BABY.eyes[1] + scale * (BABY.root[1] - BABY.on[1]),
+          ],
+          scale,
+        }),
+      );
+      return;
+    }
+    if (f.t >= f.cue('what').start) {
+      const camera = between(LIFT.from, LIFT.to, f.at('what'));
+      plane(camera, 1, () => f.painting('what'));
+      return;
+    }
+    const camera = MOVES.reduce<Camera>((cam, [cue, to]) => between(cam, to, f.at(cue)), START);
+    plane(camera, PLANES.sky, () => f.painting('sky'));
+    plane(camera, PLANES.distance, () => f.painting('distance'));
+    plane(camera, PLANES.near, () => f.painting('near'));
+    plane(camera, PLANES.guests, () =>
       panel(() => {
         guest('villager');
         guest('lead');
         guest('mother');
       }),
     );
-    plane(PLANES.table, () => f.painting('table'));
+    plane(camera, PLANES.table, () => f.painting('table'));
   },
 });
