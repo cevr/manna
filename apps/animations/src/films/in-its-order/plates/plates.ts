@@ -70,7 +70,7 @@ export const TABLE = {
 } as const satisfies PaintingSpec;
 
 /**
- * The crowd's far table, drawn small on the crowd's plane (`FAR_TABLE` in
+ * The crowd's tables, drawn small on each crowd row's plane (`CROWD_ROWS` in
  * `scenes/crowd.ts`): `table.png` cut to its plate rows 940..1184 (the props,
  * the top, the face and the legs down to the paving), the stone step at its
  * left (x < 210, rows from 1148) cleared, and its last 10 rows faded to clear,

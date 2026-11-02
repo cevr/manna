@@ -17,8 +17,8 @@
 // `manNumbersOf`, `womanNumbersOf`, `motherNumbers`), and he acts on the cues; the guests nod
 // toward him as they turn and as they stare again (`NODS`). The mother blinks all through and bows to her
 // baby (`motherLook`, `motherNumbers`), and he blinks from `grown` to `ouch`
-// (`eyesOf`). Behind the guests, on a plane of its own, the feast's crowd sits
-// at a far table, each bust in its own idle (`drawFeastCrowd`).
+// (`eyesOf`). Behind the guests the feast's crowd sits in two rows, each at a
+// table on a plane of its own, each bust in its own idle (`drawCrowdRow`).
 // `what` cuts to the last close plate (`WHAT`), the cup of milk and the
 // bread, and the camera lifts to them.
 //
@@ -43,7 +43,7 @@ import {
   WHAT,
 } from '../plates/plates.ts';
 import { SCROLL_OPEN, SCROLL_ROLLED, SCROLL_ROLLER } from '../plates/props.ts';
-import { FEAST_CROWD, drawFeastCrowd } from './crowd.ts';
+import { CROWD_ROWS, drawCrowdRow } from './crowd.ts';
 import { CROWD_PUPPETS } from '../../../library/cast/filler-bases/cutout/crowd.ts';
 import { type Cues, eyesOf, numbersOf } from './lead.ts';
 import {
@@ -376,16 +376,20 @@ export const cold = drawing({
     plane(camera, PLANES.sky, () => f.painting('sky'));
     plane(camera, PLANES.distance, () => f.painting('distance'));
     plane(camera, PLANES.near, () => f.painting('near'));
-    // The feast's crowd at its far table, soft on its own plane: a bust
-    // is drawn only when its span meets the frame (`shown`, screen px at 1920).
-    const crowd = onPlane(camera, FEAST_CROWD.z);
-    const shown = (left: number, right: number) =>
-      CENTRE[0] + crowd.k * (right * PANEL.scale - crowd.x) >= 0 &&
-      CENTRE[0] + crowd.k * (left * PANEL.scale - crowd.x) <= 1920;
-    plane(camera, FEAST_CROWD.z, () => {
-      ctx.filter = `blur(${(FEAST_CROWD.blur * w) / 1920}px)`;
-      panel(() => drawFeastCrowd(f, shown, () => f.painting('far')));
-    });
+    // The feast's crowd, back row then front row, each at its table on its
+    // own plane through its row's blur and haze: a bust is drawn only when
+    // its span meets the frame (`shown`, screen px at 1920).
+    for (const name of ['back', 'front'] as const) {
+      const row = CROWD_ROWS[name];
+      const on = onPlane(camera, row.z);
+      const shown = (left: number, right: number) =>
+        CENTRE[0] + on.k * (right * PANEL.scale - on.x) >= 0 &&
+        CENTRE[0] + on.k * (left * PANEL.scale - on.x) <= 1920;
+      plane(camera, row.z, () => {
+        ctx.filter = `blur(${(row.blur * w) / 1920}px) ${row.haze}`;
+        panel(() => drawCrowdRow(f, name, shown, () => f.painting('far')));
+      });
+    }
     plane(camera, PLANES.guests, () => panel(() => seatTable(f, key, nods, lead)));
     plane(camera, PLANES.table, () => {
       f.painting('table');
