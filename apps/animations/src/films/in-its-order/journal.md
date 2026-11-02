@@ -28,7 +28,8 @@
   with terraces, and the table carries bowls, grapes and flowers.
 - The gold path: `distance.png` has the path painted out, and the title reveals the painter's path
   (`path.png`) from the foot along its length, clipped to the brush's circles, so the frame at the
-  reveal's end is the painter's plate. At 1:1 the hill before the reveal shows no trace of the
+  reveal's end is the painter's plate, but for 62 px on the hill's edge against the sky (at most 64
+  of 255 in one channel; unseen at full size). At 1:1 the hill before the reveal shows no trace of the
   path, and the reveal's tip is the brush's round end.
 - Named staging differences, kept: three guests in place of the panel's ten; the title strip over
   the sky; the guests stand, so their sandals show under the painted table between its legs, where

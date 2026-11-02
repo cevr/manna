@@ -7,7 +7,8 @@
 // drift. `distance.png` is the painter's distance plate with the gold path
 // painted out, and `path.png` is that painted path cut from it, clear around
 // the path, so a scene reveals the path along its length (`PATH_BRUSH`) and
-// the frame at the reveal's end is the painter's plate. `title` draws them;
+// the frame at the reveal's end is the painter's plate to within 62 px on the
+// hill's edge (at most 64 of 255 in one channel). `title` draws them;
 // `cold` may share them. Pure data.
 
 import type { PaintingSpec } from '@manna/film/canvas';
