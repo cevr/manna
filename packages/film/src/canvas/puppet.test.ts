@@ -5,13 +5,26 @@
 // corner and its root where the sheet's is, so canvas px are sheet px. A key
 // rides its part's bones at its pivot, so it is held to the part's own
 // posed vertices, which the same draw writes into the part's buffer.
+//
+// A draw's dress as the same path takes it: what it asks of the page's passes
+// (`dressOf`, which `drawPuppet` hands the plain pass or the look's), each
+// part it hides left out of the buffers, and why a dress cannot be worn.
 
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
 import { type PuppetPose, type Skeleton, puppetOf } from '../core/puppet.ts';
 import type { Raster } from '../core/raster.ts';
-import { type LoadedPuppet, type PuppetLook, type PuppetSpec, drawPuppet } from './puppet.ts';
-import { puppetGl } from './puppet-gl.ts';
+import type { Ramp } from './colour.ts';
+import { dyeKnots, dyeUniforms } from './dye.ts';
+import {
+  type LoadedPuppet,
+  type PuppetDress,
+  type PuppetLook,
+  type PuppetSpec,
+  dressOf,
+  drawPuppet,
+} from './puppet.ts';
+import { UNDRESSED, puppetGl } from './puppet-gl.ts';
 
 type Pt = readonly [number, number];
 
@@ -213,6 +226,95 @@ describe("a drawn key rides its part's bones at its pivot", () => {
     near(
       keyQuad(l, 0),
       HEAD.map((p) => partAt(further, 0, p)),
+    );
+  });
+});
+
+/** The ramp the head is drawn in (L* rising from above the ink cut), and a cloth's ramp to dye it to. */
+const DRAWN: Ramp = { shade: '#8a7f70', base: '#b8ab98', light: '#ddd2c0' };
+const INDIGO: Ramp = { shade: '#394357', base: '#4b566b', light: '#6a7590' };
+
+/** The two parts' sheet as a dress reads it: the head declares the ramp it is drawn in, the arm none. */
+const DRESSED: PuppetSpec = {
+  ...SPEC,
+  parts: [
+    { name: 'head', png: 'head.png', ramp: DRAWN },
+    { name: 'arm', png: 'arm.png' },
+  ],
+};
+
+/** Every buffer a draw writes, copied: each part's posed vertices, its rest place and its key's quad. */
+const buffersOf = (l: LoadedPuppet) => ({
+  positions: l.gl.positions.map((b) => Array.from(b)),
+  rest: l.gl.restPositions.map((b) => Array.from(b)),
+  swaps: l.gl.swapPositions.map((b) => Array.from(b)),
+});
+
+const drawn = (
+  dress: PuppetDress | undefined,
+  pose: PuppetPose,
+  look?: PuppetLook,
+): LoadedPuppet => {
+  const l = loaded();
+  expect(drawPuppet(ctx, DRESSED, l, pose, look, dress)).toBeUndefined();
+  return l;
+};
+
+describe("a draw's dress", () => {
+  test.each([
+    [{ hide: ['tail'] }, 'the dress hides no part tail'],
+    [{ dye: { tail: INDIGO } }, 'the dress dyes no part tail'],
+    [{ dye: { arm: INDIGO } }, 'the dress dyes part arm, which declares no ramp it is drawn in'],
+  ] satisfies ReadonlyArray<readonly [PuppetDress, string]>)('refuses %j: %s', (dress, why) => {
+    expect(dressOf(DRESSED, PUPPET, dress)).toEqual(Result.fail(why));
+    expect(drawPuppet(ctx, DRESSED, loaded(), poseOf({}), undefined, dress)).toBe(
+      `puppet test/two-parts: ${why}`,
+    );
+  });
+
+  test('refuses a dye its ramps cannot map, naming the part', () => {
+    const backwards: Ramp = { shade: '#e0d0c0', base: '#a09080', light: '#605040' };
+    const why = Result.match(dressOf(DRESSED, PUPPET, { dye: { head: backwards } }), {
+      onFailure: (f) => f,
+      onSuccess: () => 'worn',
+    });
+    expect(why).toStartWith("the dress dyes part head: the cloth's ramp");
+  });
+
+  test.each([undefined, {}, { hide: [], dye: {} }] satisfies ReadonlyArray<
+    PuppetDress | undefined
+  >)('%j asks nothing of the passes and lays what no dress lays', (dress) => {
+    expect(Result.getOrThrow(dressOf(DRESSED, PUPPET, dress))).toBe(UNDRESSED);
+    const pose = poseOf({ head: 12, fore: 40 });
+    const look: PuppetLook = { boil: 0, swaps: [BLINK] };
+    expect(buffersOf(drawn(dress, pose))).toEqual(buffersOf(drawn(undefined, pose)));
+    expect(buffersOf(drawn(dress, pose, look))).toEqual(buffersOf(drawn(undefined, pose, look)));
+  });
+
+  test('a hidden part is neither posed nor laid at rest, and the parts it hides nothing of are laid as undressed', () => {
+    const pose = poseOf({ head: 12, fore: 40 });
+    const look: PuppetLook = { boil: 0, swaps: [] };
+    const bare = buffersOf(drawn(undefined, pose, look));
+    expect(bare.positions[1]!.some((v) => v !== 0)).toBe(true);
+    expect(bare.rest[1]!.some((v) => v !== 0)).toBe(true);
+    const hidden = drawn({ hide: ['arm'] }, pose, look);
+    expect(Result.getOrThrow(dressOf(DRESSED, PUPPET, { hide: ['arm'] })).hidden).toEqual([1]);
+    const got = buffersOf(hidden);
+    expect(got.positions[1]!.every((v) => v === 0)).toBe(true);
+    expect(got.rest[1]!.every((v) => v === 0)).toBe(true);
+    expect(got.positions[0]).toEqual(bare.positions[0]!);
+  });
+
+  test("a dyed part is handed to the passes with its drawn ramp's knots onto the cloth's, and only it", () => {
+    const worn = Result.getOrThrow(dressOf(DRESSED, PUPPET, { dye: { head: INDIGO } }));
+    const knots = Result.getOrThrow(dyeKnots(DRAWN, INDIGO));
+    expect([...worn.dyes.keys()]).toEqual([0]);
+    expect(worn.hidden).toEqual([]);
+    expect(dyeUniforms(worn.dyes.get(0)!)).toEqual(dyeUniforms(knots));
+    // the dye leaves where the part is laid as it is
+    const pose = poseOf({ head: 12 });
+    expect(buffersOf(drawn({ dye: { head: INDIGO } }, pose))).toEqual(
+      buffersOf(drawn(undefined, pose)),
     );
   });
 });
