@@ -6,10 +6,11 @@
 // swell. Act 1 is written out: it turns at the joke at the feast (`cold`),
 // the title card, where the music stands alone (`title`), and the plain word
 // (`milk`); the later acts' movements (`later`) are shaped by the script's
-// arc until their scenes are drawn. The score is generated, so composing it costs credits and waits
-// for the owner's yes; until it is composed, the title card's `hush` cue
-// keeps its silence a meant one. Every other sound here is a code sound from
-// the library (`apps/animations/sounds/library.ts`).
+// arc until their scenes are drawn. The score is generated, so composing it
+// costs credits and waits for the owner's yes: `parlour` is composed through
+// `milk` (`score --through milk`), and the later acts play no music until a
+// whole-film compose. Every other sound here is a code sound from the library
+// (`apps/animations/sounds/library.ts`).
 //
 // Beds: the courtyard's air under the cold open and the title card; the paper
 // room under the milk page; the milk's pour from where its ribbon reaches the

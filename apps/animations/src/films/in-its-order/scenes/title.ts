@@ -75,8 +75,6 @@ const clipPath = (ctx: CanvasRenderingContext2D, progress: number) => {
 
 export const title = drawing({
   timeline: {
-    // The title has no words and no score; only the courtyard bed plays under it. The score replaces this cue.
-    hush: { at: 'start', until: { at: 'end' }, silence: true },
     // The camera keeps pulling back over the whole title.
     pull: { at: 'start', until: { at: 'end' }, ease: 'outCubic' },
     settle: { at: 'start', offset: 0.25, dur: 0.8, ease: 'outCubic' },
