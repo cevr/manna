@@ -39,9 +39,13 @@ export type Parts = ReadonlyArray<readonly [name: string, png: string]>;
  * hue on another paper; `open`, the sheet's box edges his figure leaves
  * through, past which paper the box cuts off is not un-matted; `grain`,
  * his paper's grain in luma, past which a rim pixel darker than the paper is
- * his cloth, kept whole.
+ * his cloth, kept whole; `underlap`, by a front part's name, how far each
+ * part behind it of another skin reaches under its cut edge with its paint
+ * (`core/puppet.ts`), so a turned head shows cloth at its cut, not a gap.
  */
-const SHEET = ['keep', 'thin', 'open', 'grain'] as const satisfies ReadonlyArray<keyof PuppetSpec>;
+const SHEET = ['keep', 'thin', 'open', 'grain', 'underlap'] as const satisfies ReadonlyArray<
+  keyof PuppetSpec
+>;
 
 /** What a member's puppets are made from, by his views' names. */
 export interface PuppetMember<V extends string> extends Pick<PuppetSpec, (typeof SHEET)[number]> {

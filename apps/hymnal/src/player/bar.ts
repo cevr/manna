@@ -13,8 +13,8 @@
  *
  * The bar holds a `#` (`FIND_LABEL`) that opens the find drums over it on
  * the bar's hymn's number (`Find`); a second press, a swipe down or a tap
- * outside them closes them, and their `Open` and `Play` act on the dialled
- * hymn (`pressFind`).
+ * outside them closes them, and their `Open` opens the dialled hymn's page
+ * (`pressFind`).
  * With no bar drawn, the home list alone shows the `#`, where the bar docks.
  * The `#` follows the page the route draws (`findPlace`).
  */
@@ -176,48 +176,43 @@ export const find = Atom.make<Find>(Find.Closed()).pipe(Atom.keepAlive);
 
 /**
  * What the reader does to the find drums: the `#`, a drum's detent, `Open`,
- * `Play`, a swipe down, or a tap anywhere outside the drums' panel and the `#`.
+ * a swipe down, or a tap anywhere outside the drums' panel and the `#`.
  */
 export type FindPress = Data.TaggedEnum<{
   Hash: {};
   Dial: { readonly number: number };
   Open: {};
-  Play: {};
   Swipe: {};
   Outside: {};
 }>;
 export const FindPress = Data.taggedEnum<FindPress>();
 
-/** What a press asks of the app besides the drums: nothing, the dialled hymn's page, or its start (playbulk's `Start`). */
+/** What a press asks of the app besides the drums: nothing, or the dialled hymn's page. */
 export type FindAct = Data.TaggedEnum<{
   Stay: {};
   Open: { readonly number: number };
-  Play: { readonly number: number };
 }>;
 export const FindAct = Data.taggedEnum<FindAct>();
 
 /**
  * The drums after `press`, and what it asks of the app. `#` opens or closes
  * them; a detent dials and asks nothing, so no detent ever starts a hymn;
- * `Open` and `Play` act on the dialled number and close the drums; a swipe
+ * `Open` asks for the dialled number's page and closes the drums; a swipe
  * down, or a tap outside them, closes them and asks nothing, so the tap
- * never reaches what lies behind. With the drums closed, `Open` and `Play`
- * ask nothing.
+ * never reaches what lies behind. With the drums closed, `Open` asks
+ * nothing.
  */
 export const pressFind = (find: Find, bar: Bar, press: FindPress): readonly [Find, FindAct] =>
   FindPress.$match(press, {
     Hash: () => [toggleFind(find, bar), FindAct.Stay()] as const,
     Dial: ({ number }) => [dialFind(find, number), FindAct.Stay()] as const,
-    Open: () => acting(find, (number) => FindAct.Open({ number })),
-    Play: () => acting(find, (number) => FindAct.Play({ number })),
+    Open: () =>
+      Find.$match(find, {
+        Closed: () => [find, FindAct.Stay()] as const,
+        Open: ({ number }) => [Find.Closed(), FindAct.Open({ number })] as const,
+      }),
     Swipe: () => [Find.Closed(), FindAct.Stay()] as const,
     Outside: () => [Find.Closed(), FindAct.Stay()] as const,
-  });
-
-const acting = (find: Find, act: (number: number) => FindAct): readonly [Find, FindAct] =>
-  Find.$match(find, {
-    Closed: () => [find, FindAct.Stay()] as const,
-    Open: ({ number }) => [Find.Closed(), act(number)] as const,
   });
 
 /** A drag let go on the drums is a swipe down past 24 pt, or flung down faster than 400 pt/s: the bar's swipe, turned over. */

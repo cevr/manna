@@ -5,10 +5,12 @@
  * and the drums' backdrop.
  *
  * Folded, it is a capsule at the bottom right with two ways to find:
- * `Search` and the `#`. The capsule is the key button's lit pill (`pill`),
- * its marks and typed words the pill's ink (`onPill`), and one chosen mark,
- * a disk in `chosen`, lies behind the chosen control (`chosenOf`), whose
- * mark takes `onChosen`: the `#` while folded, Search while search is open.
+ * `Search` and the `#`. The capsule is glass (`glass`: `soft` at 85 %, with
+ * no hairline round it, over whatever scrolls under the bar), its marks and
+ * typed words the ink (`onGlass`), its placeholder `onGlassMuted`, and one
+ * chosen mark, a disk in `glassChosen`, lies behind the chosen control
+ * (`chosenOf`), whose mark takes `onGlassChosen`: the `#` while folded,
+ * Search while search is open.
  * A press on `Search` opens search on the screen at the bar's `path`
  * (`searchOpen`, keyed by the path): the capsule grows leftward across the
  * screen into a focused search box, the chosen mark slides with it to the
@@ -256,8 +258,8 @@ export function FindBar({
     return { transform: [{ translateX: -across * side.value }] };
   });
   const faded = useAnimatedStyle(() => ({ opacity: fade.value }));
-  // Search's magnifier: on the chosen mark while Search is chosen, else on the pill. The `#` takes its ink from its look.
-  const searchInk = (chosen === 'search' && color.onChosen) || color.onPill;
+  // Search's magnifier: on the chosen mark while Search is chosen, else on the glass. The `#` takes its ink from its look.
+  const searchInk = (chosen === 'search' && color.onGlassChosen) || color.onGlass;
   const reach = (control: Control) => !inReach(control, drumsOpen) && outOfReach;
   const startSearch = () => {
     cue(plain('tab'));
@@ -318,7 +320,7 @@ export function FindBar({
                   role="searchbox"
                   aria-label={searchLabel}
                   placeholder={searchLabel}
-                  placeholderTextColor={color.onPillMuted}
+                  placeholderTextColor={color.onGlassMuted}
                   value={query}
                   onChangeText={setQuery}
                   autoCapitalize="none"
@@ -370,7 +372,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     borderRadius: HASH / 2,
-    backgroundColor: color.pill,
+    backgroundColor: color.glass,
     overflow: 'hidden',
   },
   grow: { flex: 1 },
@@ -381,13 +383,13 @@ const styles = StyleSheet.create({
     width: HASH,
     height: HASH,
     borderRadius: HASH / 2,
-    backgroundColor: color.chosen,
+    backgroundColor: color.glassChosen,
   },
   button: { width: HASH, height: HASH, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.6 },
   box: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   slot: { width: HASH, height: HASH, alignItems: 'center', justifyContent: 'center' },
-  input: { flex: 1, height: HASH, fontSize: 17, color: color.onPill },
+  input: { flex: 1, height: HASH, fontSize: 17, color: color.onGlass },
   cancel: { minHeight: HASH, justifyContent: 'center' },
   cancelWords: { fontSize: 17 },
 });

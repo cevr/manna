@@ -210,6 +210,8 @@ const POSES = puppetsOf<PoseView>({
   papers: POSES_PAPERS,
   line: POSES_LINE,
   keep: CLOTH,
+  // her head turns and bows over her still veil and torso at the chin: the torso reaches 12 px under it
+  underlap: { head: 12 },
   grain: GRAIN,
   parts: {
     'poses-1': [

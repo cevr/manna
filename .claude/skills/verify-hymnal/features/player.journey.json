@@ -44,7 +44,7 @@
       "target": "role=switch label=Click",
       "direction": "down",
       "expect": [
-        { "shows": "role=group label=Start" },
+        { "shows": "id=start" },
         { "shows": "role=switch label=Intro" },
         { "shows": "role=switch label=Click" }
       ]
@@ -79,7 +79,8 @@
         { "shows": "label=Position" },
         { "shows": "id=dial-tempo" },
         { "shows": "label=quarter note = 90" },
-        { "shows": "label=Tap" }
+        { "shows": "label=Tap" },
+        { "hides": "id=tempo-reset" }
       ]
     },
     {
