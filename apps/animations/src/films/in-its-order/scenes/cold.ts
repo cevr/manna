@@ -3,11 +3,12 @@
 // the mother with her baby at the cup, on the close plate painted to
 // `cold.baby.3` (`BABY_BACK`) with the feast's table in front of her
 // (`FRONT`), the camera pushing in on the baby's face.
-// `grown` cuts to the feast's courtyard plates on the mother at the long
-// table and trucks down it to the lead, who sits between the villager and
-// the mother where the title stands them, the bottle on his lap, and on
-// `bottle` raises it (`raise`, his seated raise's frames on twos).
-// `smile` pulls back to the three guests at the table, who hold still. On
+// `grown` cuts to the feast's courtyard plates on a guest at the long table
+// and trucks down it to the lead, who sits between two guests (`GUESTS`, a
+// man picture-left and a woman picture-right), the bottle on his lap, and on
+// `bottle` raises it (`raise`, his seated raise's frames on twos); at the
+// word "bottle" the guests turn to him and stare (`turn`). `smile` pulls
+// back to the three at the table, and the guests smile at him. On
 // `letter` a rolled scroll drops onto the table in front of the lead and
 // unrolls over its edge (`SCROLL`). On `ouch` he winces (`WINCE`).
 // `what` cuts to the last close plate (`WHAT`), the cup of milk and the
@@ -20,11 +21,13 @@
 
 import { drawing, ground, type PuppetLook, type PuppetPose } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
+import { SEATED as MAN } from '../../../library/cast/feast-guest-man/cutout/seated.ts';
+import { SEATED as WOMAN } from '../../../library/cast/feast-guest-woman/cutout/seated.ts';
 import { PUPPETS as LEAD } from '../../../library/cast/lead-feast/cutout/puppets.ts';
 import { RAISE_SEATED } from '../../../library/cast/lead-feast/cutout/raise-seated.ts';
 import winceHead from '../../../library/cast/lead-feast/cutout/sheets/single-5/head.png' with { type: 'file' };
+import type { Pt } from '../../../library/cutout/rules.ts';
 import { PUPPETS as MOTHER } from '../cast/feast-mother/cutout/puppets.ts';
-import { PUPPETS as VILLAGER } from '../cast/idea-villagers/cutout/puppets.ts';
 import { BABY_BACK, DISTANCE, NEAR, PANEL, PLANES, SKY, TABLE, WHAT } from '../plates/plates.ts';
 import { SCROLL_OPEN, SCROLL_ROLLED, SCROLL_ROLLER } from '../plates/props.ts';
 
@@ -69,27 +72,44 @@ const BABY = {
  */
 const FRONT = { on: [1450, 965], at: [960, 908], s: 2.75, z: 0.8 } as const;
 
-/** Where the guests' feet stand behind the table, panel px: the title's guests stand there. */
+/** Where the seated figures' feet rest behind the table, panel px: the title's guests stand there. */
 const FLOOR = 925;
 
 /**
- * The guests behind the table, panel px: where each sits (the head's
- * centre), and its kept view's head box, root and box height (sheet px, its
- * `puppets.ts`). Each view is sized so its head is as wide as the head of
- * the front view the title stands, `head` panel px (the front's head box
- * width times the title's scale), and its feet stand on `FLOOR`.
+ * The lead behind the table, panel px: where he sits (his head's centre),
+ * and his single-9 view's head box, root and box height (sheet px, his
+ * `puppets.ts`), sized so his head is as wide as the head of the front view
+ * the title stands, `head` panel px (the front's head box width times the
+ * title's scale), his box's foot on `FLOOR`.
+ */
+const LEAD_SEAT = { x: 768, head: 80, box: [138, 0, 497, 433], root: [304, 663], h: 1115 } as const;
+
+/** His face's width, panel px: the skin of his face is 206 px across on his raise's frames (measured), at his scale. */
+const FACE = (206 * LEAD_SEAT.head) / (LEAD_SEAT.box[2] - LEAD_SEAT.box[0]);
+
+/**
+ * The three behind the table, panel px, each placed as `seat` places it:
+ * the lead (`LEAD_SEAT`) and a guest either side, each a whole figure on its
+ * stool (`MAN`, `WOMAN`, frame px): its box the skin of its neutral face
+ * (measured), sized as wide as his (`FACE`), its root its contact shadow's
+ * centre, its box's foot on `FLOOR`. They sit where `cold.letter.4` seats
+ * its two, about 224 and 157 panel px either side of his head, so their eyes
+ * sit about 35 and 45 panel px below his, as the panel's do.
  */
 const GUESTS = {
-  villager: { x: 560, head: 103.1, box: [13, 0, 195, 152], root: [106, 303], h: 512 },
-  lead: { x: 768, head: 80, box: [138, 0, 497, 433], root: [304, 663], h: 1115 },
-  mother: { x: 960, head: 97.6, box: [78, 0, 365, 240], root: [193, 448], h: 824 },
+  man: { x: 544, head: FACE, box: [136, 97, 297, 270], root: MAN.ground.at, h: MAN.size[1] },
+  lead: LEAD_SEAT,
+  woman: { x: 925, head: FACE, box: [115, 76, 277, 264], root: WOMAN.ground.at, h: WOMAN.size[1] },
 } as const;
+
+/** Each guest's seated keys: neutral, turned to the lead, smiling at him. */
+const KEYS = { man: MAN, woman: WOMAN } as const;
 
 /**
  * The courtyard's framings, on the frame px the title ends on: from `grown`
- * the camera starts close on the mother at the table (`START`), trucks down
+ * the camera starts close on the woman at the table (`START`), trucks down
  * the table to the lead, pushes in on his bottle, pulls back to the three
- * guests waist up (`smile`), pushes in chest up on him and the letter as it
+ * waist up (`smile`), pushes in chest up on him and the letter as it
  * falls (`read`, the panel's `cold.letter.4`), closer on the letter's gold
  * seal under his face (`quote`) and tilts up to his face as he winces
  * (`ouch`), each a cue and where it leaves the camera.
@@ -176,6 +196,7 @@ export const cold = drawing({
     truck: { mark: 'grown', until: 'bottle', ease: 'inOutCubic' },
     bottle: { mark: 'bottle', dur: 0.7, ease: 'outCubic' },
     raise: { mark: 'bottle', dur: RAISE_SEATED.frames / FPS, ease: 'linear' },
+    turn: { mark: 'bottle', word: 'bottle', dur: 0 },
     smile: { mark: 'smile', dur: 1.6, ease: 'inOutCubic' },
     read: { mark: 'letter', dur: 1.6, ease: 'inOutCubic' },
     drop: { mark: 'letter', dur: 0.4, ease: 'inQuad' },
@@ -187,7 +208,6 @@ export const cold = drawing({
     what: { mark: 'what', until: { at: 'end' }, ease: 'inOutSine' },
   },
   puppets: {
-    villager: VILLAGER['poses-6'],
     lead: { ...SEATED, drawings: [{ name: 'wince', png: winceHead }] },
     mother: MOTHER['poses-1'],
   },
@@ -202,6 +222,12 @@ export const cold = drawing({
     open: SCROLL_OPEN,
     roller: SCROLL_ROLLER,
     ...RAISE_SEATED.paintings,
+    'man-neutral': MAN.paintings.neutral,
+    'man-turn': MAN.paintings.turn,
+    'man-smile': MAN.paintings.smile,
+    'woman-neutral': WOMAN.paintings.neutral,
+    'woman-turn': WOMAN.paintings.turn,
+    'woman-smile': WOMAN.paintings.smile,
   },
   draw: (f) => {
     const { ctx, w } = f;
@@ -226,7 +252,7 @@ export const cold = drawing({
       draw();
       ctx.restore();
     };
-    // A guest's pose: its head centred on its seat, its feet on the floor.
+    // A figure's pose at the table: its head box centred on its seat, its box's foot on the floor.
     const seat = (name: keyof typeof GUESTS): PuppetPose => {
       const g = GUESTS[name];
       const scale = g.head / (g.box[2] - g.box[0]);
@@ -237,28 +263,47 @@ export const cold = drawing({
         scale,
       };
     };
-    const guest = (name: 'villager' | 'mother') => f.puppet(name, seat(name));
+    // Draws `draw`'s px where a cut-out posed at `pose` lays its view's px:
+    // the view's top-left is the cut-out's `origin` on its sheet and `root`
+    // its root there, sheet px. `drawPuppet` scales the sheet about its root
+    // to the pose, then moves it by minus the origin in scene px, unscaled. A
+    // whole frame with no cut-out is its own view, origin [0, 0].
+    const posed = (pose: PuppetPose, root: Pt, origin: Pt, draw: () => void) => {
+      ctx.save();
+      ctx.translate(pose.root[0] - origin[0], pose.root[1] - origin[1]);
+      ctx.scale(pose.scale, pose.scale);
+      ctx.translate(origin[0] - root[0], origin[1] - root[1]);
+      draw();
+      ctx.restore();
+    };
     // The lead on his seat: the contact shadow under him, then his raise's
     // frame (rest, on twos from `raise` to k6, k6 kept), or from `ouch` his
     // single-9 cut-out, which is k6, with the wince's head in place of its
-    // own. The frames and the shadow lie on his view's px, whose top-left is
-    // his cut-out's origin, and are drawn where his cut-out lays those px:
-    // `drawPuppet` scales his sheet about its root (sheet px) to the pose,
-    // then moves it by minus his origin in scene px, unscaled. The raise's
-    // film frame is its linear cue's share of its frames, rounded: `bottle`
-    // lies on the frame grid, where a floor would drop a frame to float noise.
+    // own. The frames and the shadow lie on his view's px and are drawn where
+    // his cut-out lays those px (`posed`). The raise's film frame is its
+    // linear cue's share of its frames, rounded: `bottle` lies on the frame
+    // grid, where a floor would drop a frame to float noise.
     const lead = () => {
       const pose = seat('lead');
       const wince = f.t >= f.cue('ouch').start;
-      const [ox, oy] = SEATED.origin;
-      ctx.save();
-      ctx.translate(pose.root[0] - ox, pose.root[1] - oy);
-      ctx.scale(pose.scale, pose.scale);
-      ctx.translate(ox - GUESTS.lead.root[0], oy - GUESTS.lead.root[1]);
-      ground(ctx, RAISE_SEATED.ground.at[0], RAISE_SEATED.ground.at[1], RAISE_SEATED.ground.w);
-      if (!wince) f.painting(RAISE_SEATED.frame(Math.round(f.at('raise') * RAISE_SEATED.frames)));
-      ctx.restore();
+      posed(pose, GUESTS.lead.root, SEATED.origin, () => {
+        ground(ctx, RAISE_SEATED.ground.at[0], RAISE_SEATED.ground.at[1], RAISE_SEATED.ground.w);
+        if (!wince) f.painting(RAISE_SEATED.frame(Math.round(f.at('raise') * RAISE_SEATED.frames)));
+      });
       if (wince) f.puppet('lead', pose, WINCE);
+    };
+    // A guest on its stool: the contact shadow under it, then its key, whole,
+    // on its frames' px (`posed`, origin [0, 0]): neutral, from the word
+    // "bottle" turned to the lead, from `smile` smiling at him. A key swaps
+    // with no tween and holds seconds, far past the record's two frames.
+    const guest = (name: keyof typeof KEYS) => {
+      const { ground: shadow } = KEYS[name];
+      const key =
+        f.t >= f.cue('smile').start ? 'smile' : f.t >= f.cue('turn').start ? 'turn' : 'neutral';
+      posed(seat(name), shadow.at, [0, 0], () => {
+        ground(ctx, shadow.at[0], shadow.at[1], shadow.w);
+        f.painting(`${name}-${key}`);
+      });
     };
 
     // The letter on the table's plane: the rolled scroll falling and hopping,
@@ -329,9 +374,9 @@ export const cold = drawing({
     plane(camera, PLANES.near, () => f.painting('near'));
     plane(camera, PLANES.guests, () =>
       panel(() => {
-        guest('villager');
+        guest('man');
         lead();
-        guest('mother');
+        guest('woman');
       }),
     );
     plane(camera, PLANES.table, () => {
