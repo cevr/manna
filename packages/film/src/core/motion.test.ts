@@ -61,7 +61,7 @@ describe('curve', () => {
   });
 
   test('holds between two equal keys and never swings past a key between keys', () => {
-    // A Catmull-Rom curve through these keys (the slice 0 probe's elbow) sinks
+    // A Catmull-Rom curve through these keys (a held elbow, then a lift) sinks
     // about 1.2 degrees under the held 48 before the lift starts.
     const keys = [
       [0, 48],
@@ -129,6 +129,8 @@ describe('act', () => {
       { at: 1.5, dur: 1, to: 0 },
     ]);
     expect([2, 3].map(lean)).toEqual([10, 0]);
+    // The second move runs 2 to 3 s, not 1.5 to 2.5 s: halfway it is between its keys.
+    expect(lean(2.5)).toBeCloseTo(5, 6);
   });
 });
 

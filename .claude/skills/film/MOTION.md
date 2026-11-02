@@ -41,11 +41,11 @@ A figure on screen is never fully still, even in a held pose. It carries a small
 
 Each channel is the key pose, plus the idle waves, plus the follow-through, plus an accent switched on for one cue (a wave of the hand, a nod).
 
-`idle(seed)` (`core/motion.ts`) gives one figure's breath, sway, head tilt and weight drift at a time, on periods and phases drawn from the seed, so two figures never move in step; give each figure on screen its own seed. `blink(seed)` times its blinks (every 3–4 s, shut in 110 ms, open in 190 ms).
+`idle(seed)` (`@manna/film/core`) gives one figure's breath, sway, head tilt and weight drift at a time, on periods and phases drawn from the seed, so two figures never move in step; give each figure on screen its own seed. `blink(seed)` (engine-internal until a rig draws closed eyes) times its blinks (every 3–4 s, shut in 110 ms, open in 190 ms).
 
 ## Poses flow; they do not stop
 
-The engine's `keys` (`core/time.ts`) eases each segment, so its speed falls to zero at every key. That is right for one move (a blink, a lid, a door). For a chain of poses it makes the figure stop dead at each one and read as a robot. For acting, pass through the middle poses with a continuous speed, and hold a pose by repeating its value while the idle layer keeps it alive. `curve` (`packages/film/src/core/motion.ts`) is that flowing key: a monotone cubic through `[time, value]` keys that passes through the middle keys without stopping and never swings past one. `act(from, moves)` builds a bone's performance from it: each `Move` (`at`, `dur`, `to`) starts where the last one settled, with an optional `anticipate` (a dip the other way a fifth of the way in) and `overshoot` (past the target three fifths in), as shares of the move.
+The engine's `keys` (`core/time.ts`) eases each segment, so its speed falls to zero at every key. That is right for one move (a blink, a lid, a door). For a chain of poses it makes the figure stop dead at each one and read as a robot. For acting, pass through the middle poses with a continuous speed, and hold a pose by repeating its value while the idle layer keeps it alive. `curve` (`packages/film/src/core/motion.ts`, engine-internal) is that flowing key: a monotone cubic through `[time, value]` keys that passes through the middle keys without stopping and never swings past one. `act(from, moves)` (`@manna/film/core`) builds a bone's performance from it: each move (`at`, `dur`, `to`) starts where the last one settled, with an optional `anticipate` (a dip the other way a fifth of the way in) and `overshoot` (past the target three fifths in), as shares of the move.
 
 ## Follow-through by delay, not springs
 

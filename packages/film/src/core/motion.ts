@@ -228,7 +228,7 @@ const OPEN = 0.19;
 const EVERY = 3.5;
 const JITTER = 0.25;
 
-/** Salts for a blink's place, kept apart from each other. */
+/** The salt for a blink's place. */
 const BLINK_SALT = 6151;
 
 const smooth = (x: number): number => x * x * (3 - 2 * x);
