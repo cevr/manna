@@ -7,6 +7,7 @@ import {
   puppetOf,
   rasterOf,
   restPose,
+  unmattedKey,
 } from './puppet.ts';
 
 type PuppetSheet = Parameters<typeof puppetOf>[0];
@@ -545,6 +546,38 @@ describe('a puppet', () => {
     expect(back.revealed[1]).toBeUndefined();
     // a front part's own pixels are never given back
     expect(p.parts[0]!.revealed.filter(Boolean)).toEqual([]);
+  });
+
+  test("un-mattes a key drawn on the sheet's canvas in place of a part as that part's own rim is un-matted", () => {
+    const paper = [250, 240, 220] as const;
+    const { arm, body } = rimSheet();
+    const sheet: PuppetSheet = {
+      width: W,
+      height: H,
+      paper,
+      parts: [
+        { name: 'arm', pixels: { width: W, height: H, rgba: arm } },
+        { name: 'body', pixels: { width: W, height: H, rgba: body } },
+      ],
+    };
+    const skeleton = { ...TWO_BONES, skin: { arm: ['shoulderRight', 'elbowRight'], body: [] } };
+    const at = (r: Uint8Array, x: number, y: number) => [
+      ...r.subarray((y * W + x) * 4, (y * W + x) * 4 + 4),
+    ];
+    const key = { width: W, height: H, rgba: body };
+    // the paper the key's cut kept outside its line is its rim: un-matted to nothing, as the body's own
+    expect(at(body, 11, 8)).toEqual([250, 240, 220, 255]);
+    expect(at(unmattedKey(sheet, skeleton, 'body', key), 11, 8)).toEqual([0, 0, 0, 0]);
+    expect(at(made(sheet, skeleton).parts[1]!.pixels.rgba, 11, 8)).toEqual([0, 0, 0, 0]);
+    // inside its line it is un-matted as the body is
+    expect(at(unmattedKey(sheet, skeleton, 'body', key), 30, 18)).toEqual(
+      at(made(sheet, skeleton).parts[1]!.pixels.rgba, 30, 18),
+    );
+    // as given with no paper, no such part, or another size
+    const { paper: _paper, ...bare } = sheet;
+    expect(unmattedKey(bare, skeleton, 'body', key)).toBe(body);
+    expect(unmattedKey(sheet, skeleton, 'tail', key)).toBe(body);
+    expect(unmattedKey(sheet, skeleton, 'body', { ...key, width: W - 1 })).toBe(body);
   });
 
   test('un-mattes the light gap between his feet open when the sheet names the part that closes it below his shadow, and keeps it when it does not', () => {
