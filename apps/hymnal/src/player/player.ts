@@ -129,8 +129,8 @@ export interface Status {
   readonly replacementMs?: number;
   readonly recording?: RecordingSelection;
   /**
-   * Ms of the place for each ms of the host's clock while it plays: the score clock's tempo
-   * with Sound off (`sound.ts`); 1 when not told, as the device's recording plays.
+   * Ms of the place for each ms of the host's clock while it plays: the held hymn's tempo,
+   * Sound on or off (`sound.ts`; with Sound on the recording plays at it); 1 when not told.
    */
   readonly rate?: number;
 }
@@ -142,8 +142,8 @@ export interface PlayOptions {
   readonly intent?: Intent;
   readonly recording?: { readonly number: number; readonly offset: number };
   /**
-   * The hymn's tempo, ms of the hymn for each ms, that the score clock (`sound.ts`) runs at
-   * with Sound off; 1 when not told. The score clock keeps it from the device.
+   * The hymn's tempo, ms of the hymn for each ms, that the play runs at: the score clock
+   * (`sound.ts`) with Sound off, the device's recording with Sound on; 1 when not told.
    */
   readonly rate?: number;
 }
@@ -1304,26 +1304,33 @@ export const playerOn = (
 
   /**
    * The rate the held hymn's place moves at, ms of the hymn for each ms, as the playback tells
-   * it (`pace`): the tempo with Sound off, 1 with the recording. The follow's clock runs at it
-   * between the player's reads, so it and the score clock keep one rate.
+   * it (`pace`): the tempo, Sound on or off (with Sound on the recording plays at it). The
+   * follow's clock runs at it between the player's reads, so it and the score clock keep one
+   * rate.
    */
   const rate = Atom.make(1).pipe(Atom.keepAlive);
-  /** The held hymn's tempo as a rate, 1 while no hymn is held. */
-  const heldRate = Atom.make((get) => {
+  /** The held hymn and its tempo as a rate, 1 while no hymn is held (`number` 0). */
+  const heldTempo = Atom.make((get) => {
     const number = get(heldNumber);
-    if (number === 0) return 1;
-    return get(rateFor(number));
+    if (number === 0) return { number, rate: 1 };
+    return { number, rate: get(rateFor(number)) };
   });
   /**
-   * While mounted: each change of the held hymn's tempo told to the playback (a play tells its
-   * own), and the playback's pace kept in `rate`.
+   * While mounted: each turn of the held hymn's tempo told to the playback, and the playback's
+   * pace kept in `rate`. A change of held hymn tells nothing: the new hymn's play tells its own
+   * rate, and a rate told before it would reach the recording still playing while the new one
+   * loads.
    */
   const tempos = runtime.atom((get) =>
     Effect.gen(function* () {
       const device = yield* Playback;
-      const told = get.stream(heldRate).pipe(
-        Stream.changes,
-        Stream.runForEach((to) => device.setRate?.(to) ?? Effect.void),
+      const told = get.stream(heldTempo).pipe(
+        Stream.changesWith((a, b) => a.number === b.number && a.rate === b.rate),
+        Stream.zipWithPrevious,
+        Stream.filter(([before, now]) =>
+          Option.exists(before, (held) => held.number === now.number),
+        ),
+        Stream.runForEach(([, now]) => device.setRate?.(now.rate) ?? Effect.void),
       );
       const paced = Stream.runForEach(device.pace ?? Stream.make(1), (to) =>
         Effect.sync(() => get.set(rate, to)),
