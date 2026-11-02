@@ -579,6 +579,21 @@ export const scoreClock = (
       });
 
     /**
+     * Under the lock: a device paused in a skipped span is sought to the span's end now, where
+     * the status already shows it, so a resume sounds none of the span even while the device
+     * tells `loading` before it plays.
+     */
+    const skipPaused = (status: Status): Effect.Effect<void, PlaybackError> =>
+      Effect.gen(function* () {
+        if (status.state !== 'paused') return;
+        const at = status.positionMs;
+        const into = Arr.findFirst(skips(), (skip) => skip.from <= at && at < skip.to);
+        if (Option.isNone(into)) return;
+        revision += 1;
+        yield* device.seek(into.value.to);
+      });
+
+    /**
      * One look of the skipper: the device read outside the lock, as `readStatus` does, and taken
      * only when no change came between. It gives the change to wait on, and how long to sleep
      * before looking again, if there is a span ahead.
@@ -620,8 +635,8 @@ export const scoreClock = (
 
     /**
      * A new choice of stanzas for the held hymn: the place keeps its place in the recording,
-     * or moves on to the next sung line's start; a sounding device in a span now skipped is
-     * sought across it at once.
+     * or moves on to the next sung line's start; a device that plays or stands paused in a span
+     * now skipped is sought across it at once.
      */
     const choose = (stanzas: ReadonlyArray<number>) =>
       Effect.gen(function* () {
@@ -639,7 +654,9 @@ export const scoreClock = (
           return;
         }
         if (!watching()) return;
-        yield* skipFrom(yield* device.status);
+        const status = yield* device.status;
+        yield* skipPaused(status);
+        yield* skipFrom(status);
       });
 
     const api: PlaybackApi = {

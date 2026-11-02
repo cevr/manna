@@ -177,15 +177,20 @@ export const toggle = (choice: Choice, stanza: number, count: number): Choice =>
   if (stanza < 1 || stanza > count) return choice;
   const chosen = chosenOf(choice, count);
   if (!chosen.includes(stanza)) return stored(Arr.sort([...chosen, stanza], Order.Number), count);
-  if (chosen.length === 1) return choice;
+  if (chosen.length === 1) return stored(chosen, count);
   return stored(
     chosen.filter((n) => n !== stanza),
     count,
   );
 };
 
-/** The stanzas `choice` sings of a hymn of `count`: each of them for `[]`. */
+/**
+ * The stanzas `choice` sings of a hymn of `count`: its numbers in 1..`count`,
+ * or each stanza when none is left (`[]`, or a choice stored for more
+ * stanzas than the hymn has), as `keptOf` keeps them.
+ */
 export const chosenOf = (choice: Choice, count: number): ReadonlyArray<number> => {
-  if (choice.length === 0) return Arr.range(1, count);
-  return choice;
+  const chosen = choice.filter((n) => n >= 1 && n <= count);
+  if (chosen.length === 0) return Arr.range(1, count);
+  return chosen;
 };

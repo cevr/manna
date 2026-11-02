@@ -180,7 +180,7 @@ export const choiceOf = (list: string) => {
  * (`readWords`), the time the follow and the player read. No list gives the
  * timeline itself.
  */
-const sungOf = Effect.fn('Follow.sungOf')(function* (
+export const sungOf = Effect.fn('Follow.sungOf')(function* (
   hymn: number,
   timeline: Timeline,
   list: string,

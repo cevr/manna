@@ -4,15 +4,19 @@
  * selected one moved by hand, and the next page's scroll and lines beside it
  * off the screen, as the app's pager keeps them. Each sample's time is set
  * by the line it marks, on a score clock whose first sung line is at
- * `TIMED.first`. And how `--stanzas` reads its list, and where the check's
+ * `TIMED.first`. And how `--stanzas` reads its list and cuts hymn 78's
+ * bundled timeline to it (numbers only, no words), and where the check's
  * video goes, or that it records none.
  * No simulator.
  */
 
 import { describe, expect, it } from 'bun:test';
-import { Option } from 'effect';
+import { Array as Arr, Effect, Option } from 'effect';
 
-import { choiceOf, videoOf } from './follow';
+import { type Timeline, timelineOf } from '../src/follow/timeline.ts';
+import { readPlaybackHymns } from '../vite/chords.ts';
+import { encodeTiming, versesOf } from '../vite/timing.ts';
+import { choiceOf, sungOf, videoOf } from './follow';
 import { judge, type Node, type Sample, sampleOf, soundOff, TIMING } from './follow/samples';
 
 /** The page the pager shows: the window cut to the pager. */
@@ -248,6 +252,37 @@ describe('the stanzas flag', () => {
     expect(choiceOf('')).toEqual(Option.some([]));
     expect(choiceOf('1,x')).toEqual(Option.none());
     expect(choiceOf('0')).toEqual(Option.none());
+  });
+
+  /** Hymn 78's timeline as the timing bundle encodes it (that hymn alone): four stanzas of eight lines. */
+  const full = Arr.findFirst(readPlaybackHymns(), (hymn) => hymn.number === 78).pipe(
+    Option.flatMap((hymn) => encodeTiming(hymn, () => versesOf(hymn))),
+    Option.flatMap(timelineOf),
+    Option.getOrThrow,
+  );
+  const lengths = (timeline: Timeline) => timeline.lines.map((line) => line.until - line.start);
+
+  it('judges a run against the timeline cut to the stanzas the list names', () => {
+    const cut = Effect.runSync(sungOf(78, full, '1,3'));
+    expect(cut.end).toBe(59031);
+    expect(cut.lines).toHaveLength(full.lines.length);
+    const empty = lengths(cut)
+      .map((length, index) => ({ length, index }))
+      .filter((it) => it.length === 0)
+      .map((it) => it.index);
+    expect(empty).toEqual([...Arr.range(8, 15), ...Arr.range(24, 31)]);
+  });
+
+  it('judges a run with no list against the whole timeline', () => {
+    const whole = Effect.runSync(sungOf(78, full, ''));
+    expect(whole).toBe(full);
+    expect(whole.end).toBe(110636);
+  });
+
+  it('refuses a timeline whose lines are not the words’ lines', () => {
+    const short = { ...full, lines: full.lines.slice(1) };
+    const failed = Effect.runSync(Effect.flip(sungOf(78, short, '1,3')));
+    expect(failed.reason).toContain('lines');
   });
 });
 
