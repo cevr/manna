@@ -159,6 +159,9 @@ export interface PuppetLook {
  * alpha (`canvas/dye.ts`). A part a dress hides shows each part behind it as
  * when it moves away: what its rim hid there, and no seal along their line;
  * a part named in the sheet's `underlap` shows the paint reached under it.
+ * A drawn key that stands in for a dyed part (a look's swap) takes that
+ * part's dye, so a key of a part a dress may dye is drawn in the part's
+ * ramp: paint outside it (skin, say) is carried onto the cloth's ramp too.
  * An empty dress draws as no dress. A name the puppet lacks, a dye of a part
  * that declares no ramp, or a ramp the dye cannot map, refuses the draw.
  */

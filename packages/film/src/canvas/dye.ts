@@ -50,25 +50,44 @@ const labF = (t: number) => (t > EPSILON ? Math.cbrt(t) : (KAPPA * t + 16) / 116
 const labFi = (t: number) => (t * t * t > EPSILON ? t * t * t : (116 * t - 16) / KAPPA);
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
+type Row = readonly [number, number, number];
+
+/** Linear sRGB to XYZ (D65), row by row: X, Y, Z. */
+const TO_XYZ: readonly [Row, Row, Row] = [
+  [0.4124564, 0.3575761, 0.1804375],
+  [0.2126729, 0.7151522, 0.072175],
+  [0.0193339, 0.119192, 0.9503041],
+];
+
+/** XYZ (D65) to linear sRGB, row by row: r, g, b. */
+const TO_RGB: readonly [Row, Row, Row] = [
+  [3.2404542, -1.5371385, -0.4985314],
+  [-0.969266, 1.8760108, 0.041556],
+  [0.0556434, -0.2040259, 1.0572252],
+];
+
+const dot = (row: Row, v: Row) => row[0] * v[0] + row[1] * v[1] + row[2] * v[2];
+
+/** `row` as a GLSL `vec3` literal, for `DYE_GLSL`. */
+const vec3Of = (row: Row) => `vec3(${row.join(', ')})`;
+
 /** sRGB `r`, `g`, `b` (0..1 each) in Lab. */
 const labOf = (r: number, g: number, b: number): Lab => {
-  const [lr, lg, lb] = [toLinear(r), toLinear(g), toLinear(b)];
-  const fx = labF((0.4124564 * lr + 0.3575761 * lg + 0.1804375 * lb) / WHITE[0]);
-  const fy = labF(0.2126729 * lr + 0.7151522 * lg + 0.072175 * lb);
-  const fz = labF((0.0193339 * lr + 0.119192 * lg + 0.9503041 * lb) / WHITE[2]);
+  const l: Row = [toLinear(r), toLinear(g), toLinear(b)];
+  const fx = labF(dot(TO_XYZ[0], l) / WHITE[0]);
+  const fy = labF(dot(TO_XYZ[1], l));
+  const fz = labF(dot(TO_XYZ[2], l) / WHITE[2]);
   return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
 };
 
 /** Lab `c` in sRGB, 0..1 a channel, clamped to the gamut channel by channel. */
 const srgbOfLab = ([L, a, b]: Lab): readonly [number, number, number] => {
   const fy = (L + 16) / 116;
-  const X = WHITE[0] * labFi(fy + a / 500);
-  const Y = labFi(fy);
-  const Z = WHITE[2] * labFi(fy - b / 200);
+  const xyz: Row = [WHITE[0] * labFi(fy + a / 500), labFi(fy), WHITE[2] * labFi(fy - b / 200)];
   return [
-    clamp01(toGamma(3.2404542 * X - 1.5371385 * Y - 0.4985314 * Z)),
-    clamp01(toGamma(-0.969266 * X + 1.8760108 * Y + 0.041556 * Z)),
-    clamp01(toGamma(0.0556434 * X - 0.2040259 * Y + 1.0572252 * Z)),
+    clamp01(toGamma(dot(TO_RGB[0], xyz))),
+    clamp01(toGamma(dot(TO_RGB[1], xyz))),
+    clamp01(toGamma(dot(TO_RGB[2], xyz))),
   ];
 };
 
@@ -94,17 +113,25 @@ const labsOf = (r: Ramp): readonly [Lab, Lab, Lab] => [
 ];
 
 /**
- * The dye that wears a part drawn in ramp `drawn` in a cloth of ramp `cloth`
- * (the look's `shaded()` of the cloth's colour), or why not: either ramp
- * does not rise in lightness from above the ink cut (shade, base, light),
- * so no map keeps the line and the folds' order both.
+ * The Lab of ramp `drawn` (shade, base, light) as a part declares it is drawn
+ * in, or why no dye can map from it: it does not rise in lightness from above
+ * the ink cut to white. A puppet's load checks each part's declared ramp with
+ * it (`puppet/load.ts`), before any draw dyes the part.
  */
-export const dyeKnots = (drawn: Ramp, cloth: Ramp): Result.Result<Dye, string> => {
-  const [ds, db, dl] = labsOf(drawn);
-  if (!rises([INK_CUT, ds[0], db[0], dl[0], 100]))
+export const drawnLabs = (drawn: Ramp): Result.Result<readonly [Lab, Lab, Lab], string> => {
+  const labs = labsOf(drawn);
+  if (!rises([INK_CUT, ...labs.map((c) => c[0]), 100]))
     return Result.fail(
       `the drawn ramp ${drawn.shade} ${drawn.base} ${drawn.light} does not rise in lightness from above the ink cut (L* ${INK_CUT})`,
     );
+  return Result.succeed(labs);
+};
+
+/** The dye from the drawn ramp's Lab (`drawnLabs`) onto `cloth`'s ramp, or why not: `cloth` does not rise in lightness from above the ink cut. */
+const clothKnots = (
+  [ds, db, dl]: readonly [Lab, Lab, Lab],
+  cloth: Ramp,
+): Result.Result<Dye, string> => {
   const [s, b, l] = labsOf(cloth);
   if (!rises([INK_CUT, s[0], b[0], l[0]]))
     return Result.fail(
@@ -117,6 +144,15 @@ export const dyeKnots = (drawn: Ramp, cloth: Ramp): Result.Result<Dye, string> =
     to: [[INK_CUT, s[1] * k, s[2] * k], s, b, l, [100, 0, 0]],
   });
 };
+
+/**
+ * The dye that wears a part drawn in ramp `drawn` in a cloth of ramp `cloth`
+ * (the look's `shaded()` of the cloth's colour), or why not: either ramp
+ * does not rise in lightness from above the ink cut (shade, base, light),
+ * so no map keeps the line and the folds' order both.
+ */
+export const dyeKnots = (drawn: Ramp, cloth: Ramp): Result.Result<Dye, string> =>
+  Result.flatMap(drawnLabs(drawn), (labs) => clothKnots(labs, cloth));
 
 /** The Lab `t` (0..1) of the way from `p` to `q`. */
 const mixLab = (p: Lab, q: Lab, t: number): Lab => [
@@ -177,29 +213,30 @@ export const dyeUniforms = (dye: Dye) => ({
 /**
  * The dye in GLSL ES 3.00, `dyePixel` step for step: `vec3 dyed(vec3 c)` takes
  * and gives sRGB 0..1, keyed on the uniforms `dyeFrom` and `dyeTo`
- * (`dyeUniforms`).
+ * (`dyeUniforms`). Its constants (the white, the two matrices, `EPSILON` and
+ * `KAPPA`) are the CPU's own, written in from the same values.
  */
 export const DYE_GLSL = `
 uniform vec4 dyeFrom; uniform vec3 dyeTo[5];
-const vec3 DYE_WHITE = vec3(0.95047, 1.0, 1.08883);
+const vec3 DYE_WHITE = ${vec3Of(WHITE)};
 float dyeLinear(float c) { return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4); }
 float dyeGamma(float c) { return c <= 0.0031308 ? 12.92 * c : 1.055 * pow(c, 1.0 / 2.4) - 0.055; }
 float dyeF(float t) { return t > ${EPSILON} ? pow(t, 1.0 / 3.0) : (${KAPPA} * t + 16.0) / 116.0; }
 float dyeFi(float t) { return t * t * t > ${EPSILON} ? t * t * t : (116.0 * t - 16.0) / ${KAPPA}; }
 vec3 dyeLab(vec3 c) {
   vec3 l = vec3(dyeLinear(c.r), dyeLinear(c.g), dyeLinear(c.b));
-  float fx = dyeF(dot(vec3(0.4124564, 0.3575761, 0.1804375), l) / DYE_WHITE.x);
-  float fy = dyeF(dot(vec3(0.2126729, 0.7151522, 0.072175), l));
-  float fz = dyeF(dot(vec3(0.0193339, 0.119192, 0.9503041), l) / DYE_WHITE.z);
+  float fx = dyeF(dot(${vec3Of(TO_XYZ[0])}, l) / DYE_WHITE.x);
+  float fy = dyeF(dot(${vec3Of(TO_XYZ[1])}, l));
+  float fz = dyeF(dot(${vec3Of(TO_XYZ[2])}, l) / DYE_WHITE.z);
   return vec3(116.0 * fy - 16.0, 500.0 * (fx - fy), 200.0 * (fy - fz));
 }
 vec3 dyeRgb(vec3 lab) {
   float fy = (lab.x + 16.0) / 116.0;
   vec3 xyz = vec3(DYE_WHITE.x * dyeFi(fy + lab.y / 500.0), dyeFi(fy), DYE_WHITE.z * dyeFi(fy - lab.z / 200.0));
   return clamp(vec3(
-    dyeGamma(dot(vec3(3.2404542, -1.5371385, -0.4985314), xyz)),
-    dyeGamma(dot(vec3(-0.969266, 1.8760108, 0.041556), xyz)),
-    dyeGamma(dot(vec3(0.0556434, -0.2040259, 1.0572252), xyz))), 0.0, 1.0);
+    dyeGamma(dot(${vec3Of(TO_RGB[0])}, xyz)),
+    dyeGamma(dot(${vec3Of(TO_RGB[1])}, xyz)),
+    dyeGamma(dot(${vec3Of(TO_RGB[2])}, xyz))), 0.0, 1.0);
 }
 vec3 dyed(vec3 c) {
   float l = dyeLab(c).x;

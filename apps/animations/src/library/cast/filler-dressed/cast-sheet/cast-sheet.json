@@ -1,0 +1,174 @@
+{
+  "member": "filler-dressed",
+  "scope": "library",
+  "who": "them",
+  "headgear": true,
+  "hair": "covered",
+  "beard": "shown",
+  "refs": [
+    {
+      "file": "../../filler-bases/cast-sheet/kept/poses.png",
+      "why": "the kept base filler cast, the guide this sheet is traced from: the four bases in their kept stance, place and size (left to right the grown man, the grown woman, the older man, the older woman), their heads (an upright oval a little taller than it is wide, ears showing), their three-mark faces, their peach skin, their robes and plain flat sashes, their sleeves to the wrist, their round hands at the sleeve ends and their brown sandals; every one of these stays exactly as drawn, and only the house parts are laid over them"
+    },
+    {
+      "file": "../../feast-guest-man/cast-sheet/kept/poses.png",
+      "why": "the kept feast guest man, the grown base in house parts: only the house headcloth over the head, falling behind the ears to the shoulders and tied round the brow with an indigo band, and the walnut mantle open down the front are taken from it; never his seat, his stool, his hair at the temples or his clean-shaven chin"
+    },
+    {
+      "file": "../../feast-guest-woman/cast-sheet/kept/poses.png",
+      "why": "the kept feast guest woman, the grown woman base in a house part: only the olive mantle drawn over the head as a veil, framing the face and falling over the shoulders, open down the front over the robe, is taken from it; never her seat, her stool or her hair at the brow"
+    }
+  ],
+  "sheets": {
+    "poses": {
+      "anchor": 1,
+      "layout": "Draw the four kept base filler figures of image 2 again in one row, each exactly where image 2 puts it and at its size, standing at rest facing the viewer square, both sleeved round hands low at the sides, each now wearing the story crowd's house parts over its unchanged body; left to right as image 2 orders them: one, the grown man, in a linen headcloth (#d1c6b4) over the head, falling behind the ears to the shoulders, tied round the brow with a plain indigo band (#4b566b), a short, neatly trimmed dark walnut beard (#6b4630) round the jaw and chin below the mouth, and a walnut mantle (#ab8163) over both shoulders, hanging open down the front to the knees, the cream robe and the plain sash showing between its edges; two, the grown woman, in an olive mantle (#768059) drawn over the head as a veil, framing the face from the brow to the chin and covering the ears and all her hair, falling over both shoulders and hanging open down the front to the knees, the cream robe and the plain sash showing between its edges; three, the older man, in a linen headcloth (#d1c6b4) draped over the head with no band, falling behind the ears to the shoulders on both sides, a short, full, pale cool beard (#dcdce4, the pale cool paper of old hair, never white) round the jaw and chin below the mouth, and an indigo mantle (#4b566b) over both shoulders, hanging open down the front to the knees, the oatmeal robe and the plain sash showing between its edges; four, the older woman, in a camel mantle (#8c7762) drawn over the head as a veil, framing the face from the brow to the chin and covering the ears, all her hair and her bun, falling over both shoulders and hanging open down the front to the knees, the grey-beige robe and the plain sash showing between its edges. Every body, face, robe, sash, sleeve, round hand and sandal stays exactly as image 2 draws it: the same head shape and size, the same three face marks at the same place and size (two short dark-brown brows, two small dark oval eyes set close, a short smile line), the same peach skin, the same robe colours and lengths. No hair shows anywhere: none below a band or a headcloth's edge, none at the temples, the brow or the nape. Each house part (the headcloth, the band, the beard, the mantle) is one flat colour of its own cloth as given, its far side only a deeper hue of that same colour turned toward violet, with no pattern, no stripes, no fringe, no texture and no gradient, and a clean edge wherever it meets the face, the robe or the paper, so each part can be cut from the sheet by its colour.",
+      "slots": ["front", "front", "front", "front"],
+      "standing": [1, 2, 3, 4],
+      "level": [1, 2, 3, 4],
+      "concepts": [
+        {
+          "file": "../../filler-bases/cast-sheet/kept/poses.png",
+          "box": [76, 141, 378, 871],
+          "views": [1]
+        },
+        {
+          "file": "../../filler-bases/cast-sheet/kept/poses.png",
+          "box": [450, 159, 728, 872],
+          "views": [2]
+        },
+        {
+          "file": "../../filler-bases/cast-sheet/kept/poses.png",
+          "box": [791, 146, 1090, 871],
+          "views": [3]
+        },
+        {
+          "file": "../../filler-bases/cast-sheet/kept/poses.png",
+          "box": [1164, 159, 1447, 872],
+          "views": [4]
+        }
+      ],
+      "tries": [
+        {
+          "n": 1,
+          "file": "poses-1.png",
+          "prompt": "A character model sheet for a narrated animated film, drawn in this art style: our own K1 storybook look made minimal, the house look, as the reference image shows it. Every figure and prop is a few flat, simple shapes. Every figure and prop has a thick warm dark-brown ink outline and a thin light inner edge just inside it, and is creased once by a single straight diagonal line at the light's angle, its far side a deeper hue of its own colour turned toward violet, never grey and never black. A head is ONE simple shape inside one single thick outline, and the light inner edge runs round that one outline. Garments are flat planes: no pockets, no buttons, no stitching, no seams, no cuffs, no fabric texture. Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a hand floating free of the body, never a bare arm, no thumbs, no fingers. Faces are three marks only: two small dark ink oval eyes, short brows and a one-line mouth. One muted hue per piece. The light: a warm, soft key light from the upper left; a soft paper grain on every piece and every plane; a small soft violet contact shadow under each figure, never a darker brown; a muted, warm palette in which only the film's accents are loud. Keep it K1: no white sticker border round the figures, no felt or stitching style, no big glossy eyes, no realistic anatomy. The look is stylised, attractive, expressive and minimal.\n\nImage 1 is the house look: take its paper, its line and its light from it; its hands float free beside the body, which no figure on this sheet does. Image 2 is the kept base filler cast, the guide this sheet is traced from: the four bases in their kept stance, place and size (left to right the grown man, the grown woman, the older man, the older woman), their heads (an upright oval a little taller than it is wide, ears showing), their three-mark faces, their peach skin, their robes and plain flat sashes, their sleeves to the wrist, their round hands at the sleeve ends and their brown sandals; every one of these stays exactly as drawn, and only the house parts are laid over them. Image 3 is the kept feast guest man, the grown base in house parts: only the house headcloth over the head, falling behind the ears to the shoulders and tied round the brow with an indigo band, and the walnut mantle open down the front are taken from it; never his seat, his stool, his hair at the temples or his clean-shaven chin. Image 4 is the kept feast guest woman, the grown woman base in a house part: only the olive mantle drawn over the head as a veil, framing the face and falling over the shoulders, open down the front over the robe, is taken from it; never her seat, her stool or her hair at the brow.\n\nThe people are the base filler cast dressed in the story crowd kit: the four plain, never-named grown people of the Bible's own time kept in the library as base sizes and genders (`filler-bases`, kept poses), drawn once more in their kept stance, place and size, each wearing the kit's house parts over an unchanged body (in-its-order item 3), so a film's crowd takes its headcloths, veils, mantles and beards from this sheet and dyes them to any story cloth. The house look: a painted storybook cartoon of flat colour shapes, one bold warm-dark outline of even weight round each figure, shading with colour only. Each stands front at rest, about three and a third heads tall, both round hands low at the sides at the ends of their sleeves; each head is the base's upright oval a little taller than it is wide, with the base's three-mark face (two short, thick, dark-brown brows, two small dark oval eyes set close, a short smile line) and warm peach skin. Left to right: the grown man wears a linen headcloth (#d1c6b4) falling behind the ears to the shoulders, tied round the brow with a plain indigo band (#4b566b), a short dark walnut beard (#6b4630), and a walnut mantle (#ab8163) open down the front over his cream robe; the grown woman wears an olive mantle (#768059) drawn over her head as a veil framing her face, open down the front over her cream robe; the older man wears a linen headcloth (#d1c6b4) draped to the shoulders with no band, a pale cool beard (#dcdce4, the pale cool paper of old hair, never white), and an indigo mantle (#4b566b) open down the front over his oatmeal robe; the older woman wears a camel mantle (#8c7762) drawn over her head as a veil framing her face, open down the front over her grey-beige robe. No hair shows on any of them. Each house part is one flat colour of its own cloth, its far side a deeper hue of the same colour turned toward violet, with no pattern or texture and a clean edge at the face, the robe and the paper, so the cut keys each part by its colour and the crowd dyes it to another cloth. The plain flat sashes, the brown sandals and the robes below the mantles stay as the bases draw them.\n\nDraw the four kept base filler figures of image 2 again in one row, each exactly where image 2 puts it and at its size, standing at rest facing the viewer square, both sleeved round hands low at the sides, each now wearing the story crowd's house parts over its unchanged body; left to right as image 2 orders them: one, the grown man, in a linen headcloth (#d1c6b4) over the head, falling behind the ears to the shoulders, tied round the brow with a plain indigo band (#4b566b), a short, neatly trimmed dark walnut beard (#6b4630) round the jaw and chin below the mouth, and a walnut mantle (#ab8163) over both shoulders, hanging open down the front to the knees, the cream robe and the plain sash showing between its edges; two, the grown woman, in an olive mantle (#768059) drawn over the head as a veil, framing the face from the brow to the chin and covering the ears and all her hair, falling over both shoulders and hanging open down the front to the knees, the cream robe and the plain sash showing between its edges; three, the older man, in a linen headcloth (#d1c6b4) draped over the head with no band, falling behind the ears to the shoulders on both sides, a short, full, pale cool beard (#dcdce4, the pale cool paper of old hair, never white) round the jaw and chin below the mouth, and an indigo mantle (#4b566b) over both shoulders, hanging open down the front to the knees, the oatmeal robe and the plain sash showing between its edges; four, the older woman, in a camel mantle (#8c7762) drawn over the head as a veil, framing the face from the brow to the chin and covering the ears, all her hair and her bun, falling over both shoulders and hanging open down the front to the knees, the grey-beige robe and the plain sash showing between its edges. Every body, face, robe, sash, sleeve, round hand and sandal stays exactly as image 2 draws it: the same head shape and size, the same three face marks at the same place and size (two short dark-brown brows, two small dark oval eyes set close, a short smile line), the same peach skin, the same robe colours and lengths. No hair shows anywhere: none below a band or a headcloth's edge, none at the temples, the brow or the nape. Each house part (the headcloth, the band, the beard, the mantle) is one flat colour of its own cloth as given, its far side only a deeper hue of that same colour turned toward violet, with no pattern, no stripes, no fringe, no texture and no gradient, and a clean edge wherever it meets the face, the robe or the paper, so each part can be cut from the sheet by its colour.\n\nThis is a model sheet for the animators, not a scene: a plain warm cream paper ground with a soft paper grain and no place behind, one thin flat ground line in a slightly deeper cream under the figures that stand, and a small soft violet contact shadow under each one. Every figure on the sheet is the same person: the same head size, the same garment and the same hand size; each pose takes the height its pose gives it, and a standing figure stands about three and a third heads tall. One thick warm dark-brown outline runs round the whole silhouette of each figure, and the head's outline is the one line inside it: none on the nose, the ear or the hairline, and the hair, the ear and the garments meet as flat colour, never as their own outlined pieces. The key light comes from the upper left on every figure, whichever way it faces, so its lit side is always on the left and its far side turns a deeper hue of its own colour toward violet, never grey and never black. Each turn is its own drawing, never a mirror of another. Each arm is in its sleeve to the wrist, and each hand is a plain round paper circle of the skin's colour at its sleeve's end: no thumb, no fingers. The sleeve runs from the shoulder to the hand wherever the hand is, hanging at rest along the side or raised with it; a hand never floats free beside the body. No skin shows below the neck except the hands: never a bare arm, a forearm or a bare shoulder. A walking figure glides: both soles flat on the ground line, the feet close together, the body leaning a little into the travel, the hem swung back, never a stride. No lettering anywhere: no labels, no names, no numbers, no arrows, no text, no grid, no boxes or frames round the figures.",
+          "refs": [
+            "../../../../../docs/ref/house-look.png",
+            "../../filler-bases/cast-sheet/kept/poses.png",
+            "../../feast-guest-man/cast-sheet/kept/poses.png",
+            "../../feast-guest-woman/cast-sheet/kept/poses.png"
+          ],
+          "underlay": false,
+          "flags": [
+            {
+              "check": "head",
+              "views": [2, 1]
+            },
+            {
+              "check": "head",
+              "views": [4, 1]
+            },
+            {
+              "check": "hand",
+              "views": [4, 1]
+            },
+            {
+              "check": "papers",
+              "views": [2, 1]
+            },
+            {
+              "check": "papers",
+              "views": [3, 1]
+            }
+          ],
+          "at": "2026-11-02T19:50:52.626Z"
+        },
+        {
+          "n": 2,
+          "file": "poses-2.png",
+          "prompt": "A character model sheet for a narrated animated film, drawn in this art style: our own K1 storybook look made minimal, the house look, as the reference image shows it. Every figure and prop is a few flat, simple shapes. Every figure and prop has a thick warm dark-brown ink outline and a thin light inner edge just inside it, and is creased once by a single straight diagonal line at the light's angle, its far side a deeper hue of its own colour turned toward violet, never grey and never black. A head is ONE simple shape inside one single thick outline, and the light inner edge runs round that one outline. Garments are flat planes: no pockets, no buttons, no stitching, no seams, no cuffs, no fabric texture. Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a hand floating free of the body, never a bare arm, no thumbs, no fingers. Faces are three marks only: two small dark ink oval eyes, short brows and a one-line mouth. One muted hue per piece. The light: a warm, soft key light from the upper left; a soft paper grain on every piece and every plane; a small soft violet contact shadow under each figure, never a darker brown; a muted, warm palette in which only the film's accents are loud. Keep it K1: no white sticker border round the figures, no felt or stitching style, no big glossy eyes, no realistic anatomy. The look is stylised, attractive, expressive and minimal.\n\nImage 1 is the house look: take its paper, its line and its light from it; its hands float free beside the body, which no figure on this sheet does. Image 2 is the kept base filler cast, the guide this sheet is traced from: the four bases in their kept stance, place and size (left to right the grown man, the grown woman, the older man, the older woman), their heads (an upright oval a little taller than it is wide, ears showing), their three-mark faces, their peach skin, their robes and plain flat sashes, their sleeves to the wrist, their round hands at the sleeve ends and their brown sandals; every one of these stays exactly as drawn, and only the house parts are laid over them. Image 3 is the kept feast guest man, the grown base in house parts: only the house headcloth over the head, falling behind the ears to the shoulders and tied round the brow with an indigo band, and the walnut mantle open down the front are taken from it; never his seat, his stool, his hair at the temples or his clean-shaven chin. Image 4 is the kept feast guest woman, the grown woman base in a house part: only the olive mantle drawn over the head as a veil, framing the face and falling over the shoulders, open down the front over the robe, is taken from it; never her seat, her stool or her hair at the brow.\n\nThe people are the base filler cast dressed in the story crowd kit: the four plain, never-named grown people of the Bible's own time kept in the library as base sizes and genders (`filler-bases`, kept poses), drawn once more in their kept stance, place and size, each wearing the kit's house parts over an unchanged body (in-its-order item 3), so a film's crowd takes its headcloths, veils, mantles and beards from this sheet and dyes them to any story cloth. The house look: a painted storybook cartoon of flat colour shapes, one bold warm-dark outline of even weight round each figure, shading with colour only. Each stands front at rest, about three and a third heads tall, both round hands low at the sides at the ends of their sleeves; each head is the base's upright oval a little taller than it is wide, with the base's three-mark face (two short, thick, dark-brown brows, two small dark oval eyes set close, a short smile line) and warm peach skin. Left to right: the grown man wears a linen headcloth (#d1c6b4) falling behind the ears to the shoulders, tied round the brow with a plain indigo band (#4b566b), a short dark walnut beard (#6b4630), and a walnut mantle (#ab8163) open down the front over his cream robe; the grown woman wears an olive mantle (#768059) drawn over her head as a veil framing her face, open down the front over her cream robe; the older man wears a linen headcloth (#d1c6b4) draped to the shoulders with no band, a pale cool beard (#dcdce4, the pale cool paper of old hair, never white), and an indigo mantle (#4b566b) open down the front over his oatmeal robe; the older woman wears a camel mantle (#8c7762) drawn over her head as a veil framing her face, open down the front over her grey-beige robe. No hair shows on any of them. Each house part is one flat colour of its own cloth, its far side a deeper hue of the same colour turned toward violet, with no pattern or texture and a clean edge at the face, the robe and the paper, so the cut keys each part by its colour and the crowd dyes it to another cloth. The plain flat sashes, the brown sandals and the robes below the mantles stay as the bases draw them.\n\nDraw the four kept base filler figures of image 2 again in one row, each exactly where image 2 puts it and at its size, standing at rest facing the viewer square, both sleeved round hands low at the sides, each now wearing the story crowd's house parts over its unchanged body; left to right as image 2 orders them: one, the grown man, in a linen headcloth (#d1c6b4) over the head, falling behind the ears to the shoulders, tied round the brow with a plain indigo band (#4b566b), a short, neatly trimmed dark walnut beard (#6b4630) round the jaw and chin below the mouth, and a walnut mantle (#ab8163) over both shoulders, hanging open down the front to the knees, the cream robe and the plain sash showing between its edges; two, the grown woman, in an olive mantle (#768059) drawn over the head as a veil, framing the face from the brow to the chin and covering the ears and all her hair, falling over both shoulders and hanging open down the front to the knees, the cream robe and the plain sash showing between its edges; three, the older man, in a linen headcloth (#d1c6b4) draped over the head with no band, falling behind the ears to the shoulders on both sides, a short, full, pale cool beard (#dcdce4, the pale cool paper of old hair, never white) round the jaw and chin below the mouth, and an indigo mantle (#4b566b) over both shoulders, hanging open down the front to the knees, the oatmeal robe and the plain sash showing between its edges; four, the older woman, in a camel mantle (#8c7762) drawn over the head as a veil, framing the face from the brow to the chin and covering the ears, all her hair and her bun, falling over both shoulders and hanging open down the front to the knees, the grey-beige robe and the plain sash showing between its edges. Every body, face, robe, sash, sleeve, round hand and sandal stays exactly as image 2 draws it: the same head shape and size, the same three face marks at the same place and size (two short dark-brown brows, two small dark oval eyes set close, a short smile line), the same peach skin, the same robe colours and lengths. No hair shows anywhere: none below a band or a headcloth's edge, none at the temples, the brow or the nape. Each house part (the headcloth, the band, the beard, the mantle) is one flat colour of its own cloth as given, its far side only a deeper hue of that same colour turned toward violet, with no pattern, no stripes, no fringe, no texture and no gradient, and a clean edge wherever it meets the face, the robe or the paper, so each part can be cut from the sheet by its colour.\n\nThis is a model sheet for the animators, not a scene: a plain warm cream paper ground with a soft paper grain and no place behind, one thin flat ground line in a slightly deeper cream under the figures that stand, and a small soft violet contact shadow under each one. Every figure on the sheet is the same person: the same head size, the same garment and the same hand size; each pose takes the height its pose gives it, and a standing figure stands about three and a third heads tall. One thick warm dark-brown outline runs round the whole silhouette of each figure, and the head's outline is the one line inside it: none on the nose, the ear or the hairline, and the hair, the ear and the garments meet as flat colour, never as their own outlined pieces. The key light comes from the upper left on every figure, whichever way it faces, so its lit side is always on the left and its far side turns a deeper hue of its own colour toward violet, never grey and never black. Each turn is its own drawing, never a mirror of another. Each arm is in its sleeve to the wrist, and each hand is a plain round paper circle of the skin's colour at its sleeve's end: no thumb, no fingers. The sleeve runs from the shoulder to the hand wherever the hand is, hanging at rest along the side or raised with it; a hand never floats free beside the body. No skin shows below the neck except the hands: never a bare arm, a forearm or a bare shoulder. A walking figure glides: both soles flat on the ground line, the feet close together, the body leaning a little into the travel, the hem swung back, never a stride. No lettering anywhere: no labels, no names, no numbers, no arrows, no text, no grid, no boxes or frames round the figures.\n\nThis sheet is drawn again: Figure 2's head is as big as figure 1's: 117 pixels tall on this sheet, under a quarter of the figure's whole height (16 %). Figure 4's head is as big as figure 1's: 117 pixels tall on this sheet, under a quarter of the figure's whole height (16 %). Figure 4's round hands are as big as figure 1's: each about 65 pixels across, more than half of the head's height (0.56), as the kept concept draws them. Figure 2 wears the same papers as figure 1: cream (#fceccd), orange (#9f6947) and orange (#b98457); its shade a deeper hue toward violet, never grey. Figure 3 wears the same papers as figure 1: cream (#fceccd), orange (#9f6947) and orange (#b98457); its shade a deeper hue toward violet, never grey.",
+          "refs": [
+            "../../../../../docs/ref/house-look.png",
+            "../../filler-bases/cast-sheet/kept/poses.png",
+            "../../feast-guest-man/cast-sheet/kept/poses.png",
+            "../../feast-guest-woman/cast-sheet/kept/poses.png"
+          ],
+          "underlay": false,
+          "retryOf": 1,
+          "flags": [
+            {
+              "check": "facing",
+              "views": [3]
+            },
+            {
+              "check": "head",
+              "views": [2, 1]
+            },
+            {
+              "check": "head",
+              "views": [3, 1]
+            },
+            {
+              "check": "head",
+              "views": [4, 1]
+            },
+            {
+              "check": "hand",
+              "views": [2, 1]
+            },
+            {
+              "check": "hand",
+              "views": [3, 1]
+            },
+            {
+              "check": "hand",
+              "views": [4, 1]
+            },
+            {
+              "check": "papers",
+              "views": [2, 1]
+            },
+            {
+              "check": "papers",
+              "views": [3, 1]
+            },
+            {
+              "check": "papers",
+              "views": [4, 1]
+            }
+          ],
+          "at": "2026-11-02T19:51:48.877Z"
+        }
+      ]
+    }
+  },
+  "kept": {
+    "poses": {
+      "try": 1,
+      "why": "Try 1 (Recommended)",
+      "views": [
+        {
+          "view": 1,
+          "name": "poses-1",
+          "box": [74, 149, 376, 871]
+        },
+        {
+          "view": 2,
+          "name": "poses-2",
+          "box": [446, 162, 732, 872]
+        },
+        {
+          "view": 3,
+          "name": "poses-3",
+          "box": [790, 154, 1092, 871]
+        },
+        {
+          "view": 4,
+          "name": "poses-4",
+          "box": [1161, 162, 1448, 871]
+        }
+      ]
+    }
+  }
+}

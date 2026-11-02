@@ -276,8 +276,20 @@ const movesOf =
   (n: number): boolean =>
     moving.includes(n) || dress.hidden.includes(n);
 
-/** The program's dye set for what it draws next: on, with its knots, for `dye`; off for none. */
-const dyeOn = (gl: WebGL2RenderingContext, on: PuppetOnGl, dye: Dye | undefined) => {
+/**
+ * The program's dye set for what it draws next under `dress`: on, with its
+ * knots, for `dye`; off for none. A dress that dyes nothing sets nothing, so
+ * an undressed draw makes no GL call more: the uniform links as 0 (off), and
+ * every draw whose dress dyes a part turns it off again once its parts are
+ * drawn.
+ */
+const dyeOn = (
+  gl: WebGL2RenderingContext,
+  on: PuppetOnGl,
+  dress: PuppetDressGl,
+  dye: Dye | undefined,
+) => {
+  if (dress.dyes.size === 0) return;
   gl.uniform1i(on.dye, Number(dye !== undefined));
   if (dye === undefined) return;
   const { from, to } = dyeUniforms(dye);
@@ -624,7 +636,7 @@ const drawPart = (
   if (dress.hidden.includes(k)) return;
   const p = on.parts[k]!;
   const swap = pass.swaps.find((s) => s.part === k);
-  dyeOn(gl, on, dress.dyes.get(k));
+  dyeOn(gl, on, dress, dress.dyes.get(k));
   if (swap === undefined) {
     if (p.count === 0) return;
     const moves = movesOf(pass.moving, dress);
@@ -674,7 +686,7 @@ const passFigure = (
   }
   gl.blendEquation(gl.FUNC_ADD);
   gl.disable(gl.BLEND);
-  dyeOn(gl, on, undefined);
+  dyeOn(gl, on, dress, undefined);
 };
 
 /** The flood: seeded from the figure and what moved, then jumped; the pair of targets that holds its answer. */
@@ -864,14 +876,14 @@ const passPlain = (
   for (let k = on.parts.length - 1; k >= 0; k--) {
     const p = on.parts[k]!;
     if (p.count === 0 || dress.hidden.includes(k)) continue;
-    dyeOn(gl, on, dress.dyes.get(k));
+    dyeOn(gl, on, dress, dress.dyes.get(k));
     drawLayers(gl, p, state.positions[k]!, [
       p.texture,
       ...sealsShown(p.seals, k, moves),
       ...revealedShown(p.revealed, k, moves),
     ]);
   }
-  dyeOn(gl, on, undefined);
+  dyeOn(gl, on, dress, undefined);
   gl.bindVertexArray(null);
   gl.disable(gl.SCISSOR_TEST);
   gl.disable(gl.BLEND);
