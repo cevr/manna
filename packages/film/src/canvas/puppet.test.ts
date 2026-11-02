@@ -197,6 +197,13 @@ describe("a drawn key rides its part's bones at its pivot", () => {
     near([inKey(keyQuad(l, 1), [12 / 21, 3 / 9])], [partAt(l, 1, [81, 48])]);
   });
 
+  test('a key that does not ride stays where its place lays it, whatever its bones do', () => {
+    const l = loaded();
+    const look: PuppetLook = { boil: 0, swaps: [{ ...FOLD, rides: false }] };
+    expect(drawPuppet(ctx, SPEC, l, poseOf({ fore: 40 }), look)).toBeUndefined();
+    near(keyQuad(l, 1), ARM);
+  });
+
   test('theta turns a key further about its pivot', () => {
     const l = loaded();
     const look: PuppetLook = { boil: 0, swaps: [{ ...BLINK, pivot: [51, 39], theta: 10 }] };

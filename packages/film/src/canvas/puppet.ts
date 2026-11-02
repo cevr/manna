@@ -78,7 +78,7 @@ interface PuppetPlace {
  * as the part's skin carries its pixel at `pivot` (`skinAt`), sheet px, so a
  * head key turns with the head bones it stands on.
  */
-export interface PuppetSwap {
+interface PuppetSwap {
   readonly part: string;
   readonly drawing: string;
   readonly place: PuppetPlace;

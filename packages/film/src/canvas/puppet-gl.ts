@@ -225,7 +225,7 @@ export interface PuppetGl {
   readonly positions: ReadonlyArray<Float32Array>;
   /** Each part's rest place, canvas px, where a look's line pass reads what moved: written whole each draw that moves the part. */
   readonly restPositions: ReadonlyArray<Float32Array>;
-  /** The drawn keys' quads, one a part (the key laid in its place), and the held hand's, canvas px: written whole each draw that lays them. */
+  /** The drawn keys' quads, one a part (the key laid in its place), canvas px: written whole each draw that lays them. */
   readonly swapPositions: ReadonlyArray<Float32Array>;
   readonly heldPositions: Float32Array;
 }
