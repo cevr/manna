@@ -5,7 +5,9 @@
 // `grown` cuts to the feast's courtyard plates on the mother at the long
 // table and trucks down it to the lead, who stands between the villager and
 // the mother where the title stands them, his bottle raised (`bottle`).
-// `smile` pulls back to the three guests at the table, who hold still.
+// `smile` pulls back to the three guests at the table, who hold still. On
+// `letter` a rolled scroll drops onto the table in front of the lead and
+// unrolls over its edge (`SCROLL`).
 // `what` cuts to the last close plate (`WHAT`), the cup of milk and the
 // bread, and the camera lifts to them.
 //
@@ -20,6 +22,7 @@ import { PUPPETS as LEAD } from '../../../library/cast/lead-feast/cutout/puppets
 import { PUPPETS as MOTHER } from '../cast/feast-mother/cutout/puppets.ts';
 import { PUPPETS as VILLAGER } from '../cast/idea-villagers/cutout/puppets.ts';
 import { BABY_BACK, DISTANCE, NEAR, PANEL, PLANES, SKY, TABLE, WHAT } from '../plates/plates.ts';
+import { SCROLL_OPEN, SCROLL_ROLLED, SCROLL_ROLLER } from '../plates/props.ts';
 
 /** A camera on a shot's plates, frame px: the point at the frame's centre and the zoom. */
 type Camera = { readonly x: number; readonly y: number; readonly k: number };
@@ -88,6 +91,25 @@ const MOVES = [
   ['smile', { x: 955, y: 744, k: 1.25 }],
 ] as const satisfies ReadonlyArray<readonly [string, Camera]>;
 
+/**
+ * The letter (`cold.letter.4`), on the table's plane px: the rolled scroll
+ * falls from above the frame (its foot at `from`) onto the table in front of
+ * the lead (its foot's centre at `x`, `land`), hops `hop` px once, and
+ * unrolls down over the table's front edge, its top roller held where the
+ * rolled scroll's lay and its lower roller riding down the open scroll's
+ * rows `roll[0]` to `roll[1]`, where `SCROLL_ROLLER` lies on it. At
+ * `roll[0]` the lower roller's foot is the rolled scroll's foot. `s` is plane
+ * px a scroll px.
+ */
+const SCROLL = {
+  x: 960,
+  from: 280,
+  land: 978,
+  hop: 10,
+  s: 0.36,
+  roll: [114, 280],
+} as const;
+
 /** The last close (`cold.what.3`), on `WHAT`'s frame px: the camera lifts to the cup and the bread and pushes in a little. */
 const LIFT = { from: { x: 960, y: 640, k: 1 }, to: { x: 960, y: 552, k: 1.03 } } as const;
 
@@ -103,6 +125,10 @@ export const cold = drawing({
     truck: { mark: 'grown', until: 'bottle', ease: 'inOutCubic' },
     bottle: { mark: 'bottle', dur: 0.7, ease: 'outCubic' },
     smile: { mark: 'smile', dur: 1.6, ease: 'inOutCubic' },
+    drop: { mark: 'letter', dur: 0.4, ease: 'inQuad' },
+    hop: { after: 'drop', dur: 0.24, ease: 'linear' },
+    unfurl: { after: 'hop', dur: 0.15, ease: 'linear' },
+    unroll: { after: 'unfurl', dur: 1, ease: 'inOutCubic' },
     what: { mark: 'what', until: { at: 'end' }, ease: 'inOutSine' },
   },
   puppets: {
@@ -117,6 +143,9 @@ export const cold = drawing({
     table: TABLE,
     back: BABY_BACK,
     what: WHAT,
+    rolled: SCROLL_ROLLED,
+    open: SCROLL_OPEN,
+    roller: SCROLL_ROLLER,
   },
   draw: (f) => {
     const { ctx, w } = f;
@@ -153,6 +182,40 @@ export const cold = drawing({
       });
     };
 
+    // The letter on the table's plane: the rolled scroll falling and hopping,
+    // then fading off the open scroll laid under it, which unrolls top down:
+    // its rows above the lower roller, the roller on them.
+    const scroll = () => {
+      const hop = f.at('hop');
+      const foot = lerp(SCROLL.from, SCROLL.land, f.at('drop')) - SCROLL.hop * 4 * hop * (1 - hop);
+      const unfurl = f.at('unfurl');
+      ctx.save();
+      ctx.translate(SCROLL.x, foot);
+      ctx.scale(SCROLL.s, SCROLL.s);
+      if (unfurl > 0) {
+        const unroll = f.at('unroll');
+        ctx.save();
+        ctx.translate(0, -SCROLL_ROLLED.size[1]);
+        if (unroll < 1) {
+          const row = lerp(SCROLL.roll[0], SCROLL.roll[1], unroll);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(SCROLL_OPEN.at[0], 0, SCROLL_OPEN.size[0], row + 4);
+          ctx.clip();
+          f.painting('open');
+          ctx.restore();
+          ctx.translate(0, row - SCROLL_ROLLER.at[1]);
+          f.painting('roller');
+        } else f.painting('open');
+        ctx.restore();
+      }
+      if (unfurl < 1) {
+        ctx.globalAlpha = 1 - unfurl;
+        f.painting('rolled');
+      }
+      ctx.restore();
+    };
+
     if (f.t < f.cue('truck').start) {
       const camera = holding(BABY.eyes, BABY.eyes, lerp(1, BABY.k, f.at('baby')));
       const scale = BABY.scale / BABY.k;
@@ -185,6 +248,9 @@ export const cold = drawing({
         guest('mother');
       }),
     );
-    plane(camera, PLANES.table, () => f.painting('table'));
+    plane(camera, PLANES.table, () => {
+      f.painting('table');
+      if (f.t >= f.cue('drop').start) scroll();
+    });
   },
 });
