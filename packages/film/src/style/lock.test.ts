@@ -6,9 +6,10 @@
 // to free it.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { describe, expect, it } from 'effect-bun-test';
 import { test } from 'bun:test';
-import { Effect, FileSystem, Schema } from 'effect';
+import { Effect, FileSystem, Layer, Schema } from 'effect';
 import { ProductionFile, decisionsOf } from '../core/production.ts';
 import { repoJson } from '../core/schema.ts';
 import { unlocked } from './build.ts';
@@ -128,13 +129,15 @@ describe("a locked figure's print against its lock", () => {
 });
 
 describe("a film's locked figures held to their locks", () => {
-  it.effect.layer(BunServices.layer)('read no ledger while no figure is locked', () =>
-    Effect.gen(function* () {
-      expect(yield* unlocked('/no/ledger/here.json', [])).toEqual({ broken: [], overridden: [] });
-    }),
+  it.effect.layer(Layer.merge(BunServices.layer, BunCrypto.layerDigest))(
+    'read no ledger while no figure is locked',
+    () =>
+      Effect.gen(function* () {
+        expect(yield* unlocked('/no/ledger/here.json', [])).toEqual({ broken: [], overridden: [] });
+      }),
   );
 
-  it.effect.layer(BunServices.layer)(
+  it.effect.layer(Layer.merge(BunServices.layer, BunCrypto.layerDigest))(
     'hash each print and answer each figure apart, read against the ledger committed with the film',
     () =>
       Effect.gen(function* () {

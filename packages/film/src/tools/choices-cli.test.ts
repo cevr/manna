@@ -1,3 +1,4 @@
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 // `film options` names its film first, as the review's fresh runs ask it: a
 // film that is not one of the films answers FilmUnknown, as one line of JSON
 // on stdout (a refusal as itself) and a failed run, whichever subcommand asks.
@@ -62,7 +63,7 @@ const world = Layer.unwrap(
       series: Option.none(),
     });
   }),
-).pipe(Layer.provideMerge(BunServices.layer));
+).pipe(Layer.provideMerge(Layer.merge(BunServices.layer, BunCrypto.layerMac)));
 
 /** `film options …args` run to its end: its exit, and the lines it printed. */
 const cli = (...args: ReadonlyArray<string>) =>

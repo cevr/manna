@@ -262,7 +262,7 @@ const asked = (ask: Ask) => ({ title: 'Read it', why: 'the cut waits', by: 'agen
 const refusal = (material: AskBlock) =>
   Effect.flatMap(Effect.service(AskStore), (asks) =>
     asks.make(asked(about(material))).pipe(
-      Effect.map(() => ''),
+      Effect.as(''),
       Effect.catchTag('AskInvalid', (e) => Effect.succeed(e.message)),
     ),
   );

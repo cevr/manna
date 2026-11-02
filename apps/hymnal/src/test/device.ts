@@ -61,6 +61,8 @@ export const fakeDevice = () => {
      * paused place it does not hold).
      */
     waiting: 0,
+    /** While true, a playing device moves 3 ms per status read, so a UI story keeps hearing sound. */
+    advancing: false,
     announced: new Array<Announcement>(),
     /** Wait until the player has read the status `n` more times. */
     reads: (n: number) =>
@@ -143,6 +145,8 @@ export const fakeDevice = () => {
       status: Effect.sync(() => {
         Queue.offerUnsafe(reads, true);
         const read = said(device.now);
+        if (device.advancing && now.state === 'playing')
+          now = { ...now, positionMs: now.positionMs + sounds };
         device.waiting = Math.max(0, device.waiting - 1);
         if (!fresh || read.state !== 'playing') return read;
         fresh = false;

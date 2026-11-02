@@ -1,3 +1,4 @@
+import type { Mac } from 'effect/crypto';
 // The private store as a Cloudflare R2 bucket, over R2's S3 API: each request
 // signed with SigV4 (`sigv4.ts`) and sent through Effect's HttpClient, so no
 // SDK. The bucket is private (no r2.dev URL, no public domain): every read is
@@ -13,7 +14,6 @@
 // render of hundreds of megabytes is never held whole.
 
 import {
-  type Crypto,
   DateTime,
   Effect,
   type FileSystem,
@@ -52,7 +52,7 @@ export interface R2Access {
 interface R2Platform {
   readonly fs: FileSystem.FileSystem;
   readonly path: Path.Path;
-  readonly crypto: Crypto.Crypto;
+  readonly crypto: Mac.Mac['Service'];
   readonly http: HttpClient.HttpClient;
 }
 

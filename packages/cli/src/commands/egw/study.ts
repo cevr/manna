@@ -1,5 +1,5 @@
 import { EGWApiClient, nodesToText, type Schemas as EGWSchemas } from '@manna/core/egw';
-import { CorpusSupply, Target } from '@manna/core/corpus-supply';
+import { CorpusSupply, CorpusSupplyInput, Target } from '@manna/core/corpus-supply';
 import { publicationId, type SearchHit } from '@manna/core/writings';
 import { WritingsService } from '@manna/core/writings/service';
 import { Console, Effect, FileSystem, Option, Result, Stream } from 'effect';
@@ -214,10 +214,12 @@ const downloadBook = (exact: EGWSchemas.Book, ordinal: number) =>
       `  ${String(ordinal).padStart(2)}. ↓ ${exact.code} — ${exact.title} (${exact.author})...`,
     );
     const result = yield* Effect.result(
-      supply.ensure({
-        target: Target.writings([publicationId(exact.book_id)]),
-        refresh: true,
-      }),
+      supply.ensure(
+        CorpusSupplyInput.make({
+          target: Target.writings([publicationId(exact.book_id)]),
+          refresh: true,
+        }),
+      ),
     );
     if (Result.isFailure(result)) {
       yield* Console.log(`      ✗ failed: ${result.failure._tag}`);

@@ -1,3 +1,15 @@
+import {
+  Record,
+  Redacted,
+  ConfigProvider,
+  Effect,
+  FileSystem,
+  Layer,
+  Path,
+  Result,
+  Sink,
+  Stream,
+} from 'effect';
 // earshot as `sfx fit` runs it (`Earshot.layer`, a recording spawner in place
 // of git and the sandbox): refused with its install line when its clone or
 // virtualenv is missing, or its clone is off the pin or changed; otherwise
@@ -7,9 +19,13 @@
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { ConfigProvider, Effect, FileSystem, Layer, Path, Result, Sink, Stream } from 'effect';
 import { ChildProcessSpawner } from 'effect/process';
 import { Earshot } from './earshot.ts';
+
+const wordValue = (word: string | Redacted.Redacted<string>): string => {
+  if (Redacted.isRedacted(word)) return Redacted.value(word);
+  return word;
+};
 
 const EARSHOT_PIN = Earshot.pin;
 
@@ -47,8 +63,17 @@ const answering = (answers: Answers, spawned: Array<Spawned>) =>
   Effect.map(FileSystem.FileSystem, (fs) =>
     ChildProcessSpawner.make((command) => {
       if (command._tag !== 'StandardCommand') return Effect.succeed(handleOf(''));
-      const argv = [command.command, ...command.args];
-      spawned.push({ argv, cwd: command.options.cwd ?? '', env: command.options.env ?? {} });
+      const argv = [command.command, ...command.args.map(wordValue)];
+      spawned.push({
+        argv,
+        cwd: command.options.cwd ?? '',
+        env: Record.filterMap(command.options.env ?? {}, (value) =>
+          Result.map(
+            Result.fromNullishOr(value, () => 'absent'),
+            wordValue,
+          ),
+        ),
+      });
       if (command.command === 'git' && argv.includes('rev-parse'))
         return Effect.succeed(handleOf(`${answers.head}\n`));
       if (command.command === 'git') return Effect.succeed(handleOf(answers.status));

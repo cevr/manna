@@ -28,6 +28,7 @@ import {
   studyFixtureLayer,
 } from '@manna/core/study/testing';
 import { describe, expect, it } from 'effect-bun-test';
+import { VerseReference } from '@manna/core/bible';
 import type { Layer } from 'effect';
 import { Effect, Option, Schema, SchemaGetter } from 'effect';
 
@@ -77,12 +78,14 @@ describe('manna study verse --json', () => {
 
       const bundle = yield* askStudy(
         Effect.flatMap(StudyService, (service) =>
-          service.verse({
-            _tag: 'verse',
-            book: FIXTURE_BOOK,
-            chapter: FIXTURE_CHAPTER,
-            verse: FIXTURE_VERSE,
-          }),
+          service.verse(
+            VerseReference.make({
+              _tag: 'verse',
+              book: FIXTURE_BOOK,
+              chapter: FIXTURE_CHAPTER,
+              verse: FIXTURE_VERSE,
+            }),
+          ),
         ),
       );
 
@@ -216,12 +219,14 @@ describe('the CLI encoders are the core schemas', () => {
   it.effect('emits the bundle through the core schema, not a CLI-local projection', () =>
     Effect.gen(function* () {
       const bundle = yield* Effect.flatMap(StudyService, (service) =>
-        service.verse({
-          _tag: 'verse',
-          book: FIXTURE_BOOK,
-          chapter: FIXTURE_CHAPTER,
-          verse: FIXTURE_VERSE,
-        }),
+        service.verse(
+          VerseReference.make({
+            _tag: 'verse',
+            book: FIXTURE_BOOK,
+            chapter: FIXTURE_CHAPTER,
+            verse: FIXTURE_VERSE,
+          }),
+        ),
       );
 
       // Equality against the core encoder is the property that makes a

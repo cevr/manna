@@ -1,3 +1,5 @@
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
+import { Mac } from 'effect/crypto';
 // The private store's contract, held by both stores: the folder store on a
 // temporary folder, and the R2 store against a fake S3 bucket in memory (an
 // HttpClient that checks every request's SigV4 signature and payload hash as
@@ -11,7 +13,6 @@ import { describe, expect, it } from 'effect-bun-test';
 import {
   ConfigProvider,
   Context,
-  Crypto,
   DateTime,
   Effect,
   FileSystem,
@@ -70,7 +71,7 @@ const s3Error = (status: number, code: string): Answer => ({
 
 /** Whether the request carries the signature the bucket's key gives it, recomputed from what was sent. */
 const signedBy = (
-  crypto: Crypto.Crypto,
+  crypto: Mac.Mac['Service'],
   secret: S3Credentials,
   request: HttpClientRequest.HttpClientRequest,
   url: URL,
@@ -185,7 +186,7 @@ const drain = <E>(stream: Stream.Stream<Uint8Array, E>) =>
 
 const fakeR2 = (objects: Map<string, Held>, secret: S3Credentials) =>
   Effect.gen(function* () {
-    const crypto = yield* Crypto.Crypto;
+    const crypto = yield* Mac.Mac;
     return HttpClient.make((request, url) =>
       Effect.gen(function* () {
         // A file is sent as a stream of its length, never read whole first.
@@ -297,7 +298,7 @@ const declared = (env: Record<string, string>) =>
         Layer.merge(Layer.succeed(Declared, Declared.of({ dir, objects }))),
       );
     }),
-  ).pipe(Layer.provideMerge(BunServices.layer));
+  ).pipe(Layer.provideMerge(Layer.merge(BunServices.layer, BunCrypto.layerMac)));
 
 describe.concurrent('the private store', () => {
   it.effect('a folder store keeps the contract', () =>
@@ -307,14 +308,14 @@ describe.concurrent('the private store', () => {
       const dir = yield* tempDir;
       const store = folderStore(fs, path, `${dir}/store`);
       yield* contract(store, dir);
-    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+    }).pipe(Effect.scoped, Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerMac))),
   );
 
   it.effect('an R2 store keeps the contract, every request signed with the bucket key', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const crypto = yield* Crypto.Crypto;
+      const crypto = yield* Mac.Mac;
       const dir = yield* tempDir;
       const objects = new Map<string, Held>();
       const http = yield* fakeR2(objects, credentials);
@@ -328,14 +329,14 @@ describe.concurrent('the private store', () => {
       // The hash rides with the object, so `hashOf` never downloads it.
       const held = objects.get('scores/f/score.mp3');
       expect(held?.sha256).toBe(sha256Hex(text.encode('score')));
-    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+    }).pipe(Effect.scoped, Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerMac))),
   );
 
   it.effect('an R2 store names what R2 refused, and refuses bytes that are not their hash', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const crypto = yield* Crypto.Crypto;
+      const crypto = yield* Mac.Mac;
       const dir = yield* tempDir;
       const objects = new Map<string, Held>();
       const http = yield* fakeR2(objects, credentials);
@@ -366,7 +367,7 @@ describe.concurrent('the private store', () => {
       const corrupt = yield* Effect.flip(store.get('files/y.flac', `${dir}/y.flac`));
       expect(corrupt.reason).toContain('not the sha256');
       expect(yield* fs.exists(`${dir}/y.flac`)).toBe(false);
-    }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
+    }).pipe(Effect.scoped, Effect.provide(Layer.merge(BunServices.layer, BunCrypto.layerMac))),
   );
 
   it.effect("the declared R2 bucket is reached with the environment's key", () =>

@@ -10,8 +10,13 @@ import {
   pageAt,
   pageHref,
   reviewFileUrl,
+  statusOf,
+  RequestInvalid,
+  RequestRefused,
+  ServerFailed,
 } from './api.ts';
 import { declares } from './testing.ts';
+import { BodyTooLarge, FilmUnknown } from './refusals.ts';
 import { LONGEST_WAIT, WaitTimeout } from './wait.ts';
 
 type PlaceName = Exclude<keyof typeof Places, 'home'>;
@@ -149,5 +154,17 @@ describe('declared routes', () => {
       '/api/review/build?since=3&timeout=9',
     );
     expect(reviewFileUrl('out/a b.mp4')).toBe('/api/review/files/out/a%20b.mp4');
+  });
+});
+
+describe('refusal status', () => {
+  test.each([
+    [RequestInvalid.make({ part: 'body', reason: 'unreadable' }), 400],
+    [RequestRefused.make({ reason: 'foreign host' }), 403],
+    [FilmUnknown.make({ film: 'missing', known: [] }), 404],
+    [BodyTooLarge.make({ limit: 64 }), 413],
+    [ServerFailed.make({ tag: 'Unexpected', reason: 'failed' }), 500],
+  ])('%o answers with %d', (refusal, status) => {
+    expect(statusOf(refusal)).toBe(status);
   });
 });

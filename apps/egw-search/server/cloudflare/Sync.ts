@@ -78,6 +78,7 @@ import {
   Schema,
 } from 'effect';
 import { HttpServerResponse } from 'effect/http';
+import { Digest } from 'effect/crypto';
 import * as SqlClient from 'effect/sql/SqlClient';
 
 import {
@@ -302,7 +303,12 @@ export default class Sync extends Cloudflare.Worker<Sync>()(
         // missing binding) is a defect of the step, which stops its retries.
         const planLayer = Layer.mergeAll(library, corpusLayer).pipe(Layer.orDie);
         const installLayer = CorpusSupply.layer.pipe(
-          Layer.provide(layerEgwWritingsAssetSource.pipe(Layer.provide(library))),
+          Layer.provide(
+            layerEgwWritingsAssetSource.pipe(
+              Layer.provide(library),
+              Layer.provide(Digest.layerWebCrypto),
+            ),
+          ),
           Layer.provideMerge(corpusLayer),
           Layer.orDie,
         );

@@ -41,7 +41,7 @@
     "prepare": "(test -d .git && lefthook install || true) && effect-tsgo patch --force"
   },
   "devDependencies": {
-    "@effect/tsgo": "^0.51.1",
+    "@effect/tsgo": "0.64.1",
     "@types/bun": "1.4.2",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "agent-tail-core": "^0.4.0",
@@ -56,7 +56,7 @@
     "typescript": "^7.0.2"
   },
   "overrides": {
-    "@effect/platform-node-shared": "4.0.5",
+    "@effect/platform-node-shared": "4.1.2",
     "@react-navigation/bottom-tabs": "8.0.0-alpha.57",
     "@react-navigation/core": "8.0.0-alpha.41",
     "@react-navigation/drawer": "8.0.0-alpha.58",
@@ -64,28 +64,28 @@
     "@react-navigation/native": "8.0.0-alpha.51",
     "@react-navigation/native-stack": "8.0.0-alpha.59",
     "@react-navigation/routers": "8.0.0-alpha.21",
-    "effect": "4.0.5"
+    "effect": "4.1.2"
   },
   "packageManager": "bun@1.4.3",
   "catalog": {
-    "@effect/ai-typesafe": "4.0.5",
-    "@effect/atom-react": "4.0.5",
-    "@effect/platform-bun": "4.0.5",
-    "@effect/platform-node": "4.0.5",
-    "@effect/platform-node-shared": "4.0.5",
-    "@effect/sql-d1": "4.0.5",
-    "@effect/sql-sqlite-bun": "4.0.5",
-    "@effect/vitest": "4.0.5",
+    "@effect/ai-typesafe": "4.1.2",
+    "@effect/atom-react": "4.1.2",
+    "@effect/platform-bun": "4.1.2",
+    "@effect/platform-node": "4.1.2",
+    "@effect/platform-node-shared": "4.1.2",
+    "@effect/sql-d1": "4.1.2",
+    "@effect/sql-sqlite-bun": "4.1.2",
+    "@effect/vitest": "4.1.2",
     "@solidjs/compiler": "2.0.0-rc.15",
     "@solidjs/web": "2.0.0-rc.15",
-    "effect": "4.0.5",
+    "effect": "4.1.2",
     "effect-bun-test": "0.5.0",
     "effect-machine": "0.29.0",
     "solid-js": "2.0.0-rc.15",
     "vite-plugin-solid": "3.0.0-next.27"
   },
   "patchedDependencies": {
-    "@alchemy.run/domain@2.0.0-beta.84": "patches/@alchemy.run%2Fdomain@2.0.0-beta.84.patch",
+    "@alchemy.run/domain@2.0.0-beta.85": "patches/@alchemy.run%2Fdomain@2.0.0-beta.85.patch",
     "one@2.11.1": "patches/one@2.11.1.patch"
   }
 }

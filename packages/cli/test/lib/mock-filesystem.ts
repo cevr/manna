@@ -71,51 +71,60 @@ export const createMockFileSystemLayer = (config: MockFileSystemConfig) => {
       const recordCallSync = (call: ServiceCall): Effect.Effect<void> =>
         Ref.update(callRef, (calls) => [...calls, call]);
 
-      const baseFs = FileSystem.make({
+      const stat = (path: string) =>
+        Effect.gen(function* () {
+          const exists = state.files.has(path) || state.directories.has(path);
+          if (!exists) {
+            return yield* createFileError('stat', path, `File not found: ${path}`);
+          }
+          const isDirectory = state.directories.has(path);
+          let size = state.files.get(path)?.length ?? 0;
+          if (isDirectory) {
+            size = 0;
+          }
+          const now = yield* DateTime.nowAsDate;
+          let type: 'Directory' | 'File' = 'File';
+          if (isDirectory) {
+            type = 'Directory';
+          }
+          return {
+            type,
+            mtime: Option.some(now),
+            atime: Option.some(now),
+            birthtime: Option.some(now),
+            dev: 0n,
+            ino: Option.some(0n),
+            mode: 0o644,
+            nlink: Option.some(1n),
+            uid: Option.some(0),
+            gid: Option.some(0),
+            rdev: Option.some(0n),
+            size: ByteSize.bytes(size),
+            blksize: Option.some(ByteSize.bytes(4096)),
+            blocks: Option.some(1n),
+          };
+        });
+
+      const baseFs: FileSystem.FileSystem = FileSystem.make({
         access: () => Effect.void,
         chmod: () => Effect.void,
         chown: () => Effect.void,
         copy: () => Effect.void,
         copyFile: () => Effect.void,
-        glob: () => Effect.succeed([]),
         link: () => Effect.void,
         symlink: () => Effect.void,
         readLink: () => Effect.succeed(''),
         realPath: (path) => Effect.succeed(path),
         rename: () => Effect.void,
-        stat: (path) =>
-          Effect.gen(function* () {
-            const exists = state.files.has(path) || state.directories.has(path);
-            if (!exists) {
-              return yield* createFileError('stat', path, `File not found: ${path}`);
-            }
-            const isDirectory = state.directories.has(path);
-            let size = state.files.get(path)?.length ?? 0;
-            if (isDirectory) {
-              size = 0;
-            }
-            const now = yield* DateTime.nowAsDate;
-            let type: 'Directory' | 'File' = 'File';
-            if (isDirectory) {
-              type = 'Directory';
-            }
-            return {
-              type,
-              mtime: Option.some(now),
-              atime: Option.some(now),
-              birthtime: Option.some(now),
-              dev: 0n,
-              ino: Option.some(0n),
-              mode: 0o644,
-              nlink: Option.some(1n),
-              uid: Option.some(0),
-              gid: Option.some(0),
-              rdev: Option.some(0n),
-              size: ByteSize.bytes(size),
-              blksize: Option.some(ByteSize.bytes(4096)),
-              blocks: Option.some(1n),
-            };
-          }),
+        stat,
+        lstat: stat,
+        readDirectoryEntries: (path) =>
+          Effect.map(baseFs.readDirectory(path), (names) =>
+            names.map((name): FileSystem.DirectoryEntry => {
+              if (state.directories.has(`${path}/${name}`)) return { name, type: 'Directory' };
+              return { name, type: 'File' };
+            }),
+          ),
         truncate: () => Effect.void,
         utimes: () => Effect.void,
         watch: () => Stream.die('watch not implemented in mock'),

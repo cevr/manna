@@ -26,12 +26,18 @@ const SOURCES = new Bun.Glob('{src,app}/**/*.{ts,tsx,js,jsx,mjs}');
 
 const ROOT = `${import.meta.dir}/..`;
 const SELF = `src/${import.meta.file}`;
+/**
+ * One writes the route types (gitignored) from the routes under `app`, which
+ * this scan reads; they import `one` alone. The scan reads only tracked
+ * sources, so a task's hash covers every file it reads.
+ */
+const GENERATED = 'app/routes.d.ts';
 
 describe('the app’s imports of @manna/core', () => {
   it('reads @manna/core/bible only, in src and app, in TypeScript and JavaScript', () => {
     const files = [...SOURCES.scanSync(ROOT)];
     // This file names the modules it refuses, in its own cases.
-    const scanned = files.filter((file) => file !== SELF);
+    const scanned = files.filter((file) => file !== SELF && file !== GENERATED);
     expect(files.length).toBeGreaterThan(100);
     const found = scanned.flatMap((file) =>
       coreImports(readFileSync(`${ROOT}/${file}`, 'utf8')).map(

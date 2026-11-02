@@ -1,4 +1,5 @@
-import { Crypto, Effect, Layer, Option, Predicate, Schema, Stream } from 'effect';
+import { Effect, Layer, Option, Predicate, Schema, Stream } from 'effect';
+import { Digest } from 'effect/crypto';
 import { unzipSync } from 'fflate';
 
 import {
@@ -245,12 +246,12 @@ const archiveChapter = (
 export const layerEgwWritingsAssetSource: Layer.Layer<
   WritingsAssetRecipe,
   never,
-  EGWApiClient | Crypto.Crypto
+  EGWApiClient | Digest.Digest
 > = Layer.effect(
   WritingsAssetRecipe,
   Effect.gen(function* () {
     const api = yield* EGWApiClient;
-    const crypto = yield* Crypto.Crypto;
+    const crypto = yield* Digest.Digest;
     // The folder tree, read once per source: every book's section comes from
     // it, and it changes far more rarely than a sync runs.
     const sections = yield* Effect.cached(

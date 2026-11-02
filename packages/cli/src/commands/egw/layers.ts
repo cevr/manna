@@ -3,7 +3,7 @@ import { EGWCommentaryService } from '@manna/core/egw-commentary';
 import * as EGWDbBun from '@manna/core/egw-db/bun';
 import { CorpusSupply, layerEgwWritingsAssetSource } from '@manna/core/corpus-supply';
 import { WritingsService } from '@manna/core/writings/service';
-import { BunServices } from '@effect/platform-bun';
+import { BunCrypto, BunServices } from '@effect/platform-bun';
 import { Layer } from 'effect';
 import { FetchHttpClient } from 'effect/http';
 
@@ -14,7 +14,10 @@ const ApiClientLayer = EGWApiClient.Live.pipe(
   Layer.provide(FetchHttpClient.layer),
 );
 
-const WritingsSourceLayer = layerEgwWritingsAssetSource.pipe(Layer.provide(ApiClientLayer));
+const WritingsSourceLayer = layerEgwWritingsAssetSource.pipe(
+  Layer.provide(ApiClientLayer),
+  Layer.provide(BunCrypto.layerDigest),
+);
 
 const CorpusSupplyLayer = CorpusSupply.layer.pipe(
   Layer.provide(WritingsSourceLayer),

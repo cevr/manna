@@ -36,6 +36,7 @@ const storeOver = (map: Map<string, string>) =>
       remove: (key) => Effect.sync(() => void map.delete(key)),
       clear: Effect.sync(() => map.clear()),
       size: Effect.sync(() => map.size),
+      keys: Effect.sync(() => Array.from(map.keys())),
     }),
   );
 

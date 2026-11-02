@@ -417,6 +417,7 @@ const starPlaces = (host: HTMLElement) =>
   await act(async () =>
     shown.registry.set(shown.player.send, Command.Start({ track: Option.getOrThrow(hymnAt('3')) })),
   );
+  shown.device.advancing = true;
   shown.device.now = { state: 'playing', positionMs: 5_000, durationMs: 120_000 };
   const playing = await until(shown, (state) => state._tag === 'Playing');
   const playedBefore = [...shown.device.played];

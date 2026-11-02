@@ -16,8 +16,8 @@ import { expect } from 'bun:test';
 import * as workers from '@distilled.cloud/cloudflare/workers';
 import * as workflows from '@distilled.cloud/cloudflare/workflows';
 import * as Cloudflare from '@alchemy.run/cloudflare';
-import * as Test from 'alchemy/Test/Bun';
-import * as TestCore from 'alchemy/Test/Core';
+import * as Test from '@alchemy.run/test/Bun';
+import * as TestCore from '@alchemy.run/test/Core';
 import { Effect, Option, Schedule, Schema } from 'effect';
 import { HttpClient, HttpClientResponse } from 'effect/http';
 

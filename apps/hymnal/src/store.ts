@@ -56,6 +56,7 @@ const storeOn = (db: Database) =>
     remove: (key) => call('remove', Option.some(key), () => db.removeItem(key)),
     clear: call('clear', Option.none(), () => db.clear()),
     size: call('size', Option.none(), () => db.getAllKeys().length),
+    keys: call('keys', Option.none(), () => db.getAllKeys()),
   });
 
 const device = Layer.unwrap(

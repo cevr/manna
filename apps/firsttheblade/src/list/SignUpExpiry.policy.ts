@@ -24,10 +24,12 @@ export const SignUpExpiryLive = SignUpExpiry.toLayer(
   Effect.gen(function* () {
     const subscribers = yield* Subscriber;
     const deadline = (id: SubscriberId, signedUpAt: number) =>
-      subscribers.schedule(id, ExpireSignUp.make({ signedUpAt }), {
-        at: DateTime.makeUnsafe(signedUpAt + Duration.toMillis(PENDING_FOR)),
-        commandId: `expire/${id}/${signedUpAt}`,
-      });
+      subscribers
+        .schedule(id, ExpireSignUp.make({ signedUpAt }), {
+          at: DateTime.makeUnsafe(signedUpAt + Duration.toMillis(PENDING_FOR)),
+          commandId: `expire/${id}/${signedUpAt}`,
+        })
+        .pipe(Effect.catchTag('AlreadyExecuted', () => Effect.void));
     return Effect.fn('SignUpExpiry.schedule')(function* ({ source, event }) {
       if (event._tag === 'SignedUp') return yield* deadline(source.id, event.at);
       if (event.standing._tag !== 'Pending') return;

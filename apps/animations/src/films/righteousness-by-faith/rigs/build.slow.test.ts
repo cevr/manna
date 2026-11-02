@@ -19,8 +19,9 @@
 // laid and printed (`packages/film/src/style/figures-file.slow.test.ts`).
 
 import * as BunServices from '@effect/platform-bun/BunServices';
+import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { describe, expect, it } from 'effect-bun-test';
-import { Array as Arr, Effect, Option } from 'effect';
+import { Array as Arr, Effect, Layer, Option } from 'effect';
 import {
   Ear,
   figure,
@@ -41,16 +42,18 @@ import PROSECUTOR_LOCK from './prosecutor.lock.json' with { type: 'json' };
 const here = import.meta.dir;
 
 describe("RBF's figures", () => {
-  it.effect.layer(BunServices.layer)('are the build of their rigs', () =>
-    Effect.gen(function* () {
-      const stale = yield* unbuilt({
-        riv: `${here}/figures.riv`,
-        stamp: `${here}/figures.stamp.json`,
-        rml: figuresRml(FIGURES),
-        main: ARTBOARDS.lead,
-      });
-      expect(stale).toEqual([]);
-    }),
+  it.effect.layer(Layer.merge(BunServices.layer, BunCrypto.layerDigest))(
+    'are the build of their rigs',
+    () =>
+      Effect.gen(function* () {
+        const stale = yield* unbuilt({
+          riv: `${here}/figures.riv`,
+          stamp: `${here}/figures.stamp.json`,
+          rml: figuresRml(FIGURES),
+          main: ARTBOARDS.lead,
+        });
+        expect(stale).toEqual([]);
+      }),
   );
 
   it.effect(
@@ -85,7 +88,7 @@ describe("RBF's figures", () => {
       }),
   );
 
-  it.effect.layer(BunServices.layer)(
+  it.effect.layer(Layer.merge(BunServices.layer, BunCrypto.layerDigest))(
     'the lead, the judge and the prosecutor are drawn as the owner locked them',
     () =>
       Effect.gen(function* () {
@@ -104,7 +107,7 @@ describe("RBF's figures", () => {
       }),
   );
 
-  it.effect.layer(BunServices.layer)(
+  it.effect.layer(Layer.merge(BunServices.layer, BunCrypto.layerDigest))(
     "a part of a locked figure moved breaks his lock, and an override freeing that very print in the owner's words on another matter frees nothing",
     () =>
       Effect.gen(function* () {
@@ -147,13 +150,15 @@ describe("RBF's figures", () => {
       }),
   );
 
-  it.effect.layer(BunServices.layer)("every override on them cites the owner's word", () =>
-    Effect.gen(function* () {
-      expect(yield* unsaid(LEDGER, figureOverrides(FIGURES))).toEqual([]);
-    }),
+  it.effect.layer(Layer.merge(BunServices.layer, BunCrypto.layerDigest))(
+    "every override on them cites the owner's word",
+    () =>
+      Effect.gen(function* () {
+        expect(yield* unsaid(LEDGER, figureOverrides(FIGURES))).toEqual([]);
+      }),
   );
 
-  it.effect.layer(BunServices.layer)(
+  it.effect.layer(Layer.merge(BunServices.layer, BunCrypto.layerDigest))(
     "an override in words the owner never said is broken, and so is one in his words on RBF's ledger that are no decision of his on that figure after its lock",
     () =>
       Effect.gen(function* () {
@@ -173,7 +178,7 @@ describe("RBF's figures", () => {
       }),
   );
 
-  it.effect.layer(BunServices.layer)(
+  it.effect.layer(Layer.merge(BunServices.layer, BunCrypto.layerDigest))(
     "an override citing an ask no decision on RBF's ledger answered, or the ask the lock was kept in, is broken",
     () =>
       Effect.gen(function* () {

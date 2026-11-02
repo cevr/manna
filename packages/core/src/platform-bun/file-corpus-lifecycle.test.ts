@@ -18,7 +18,7 @@ import type {
 } from '../corpus-supply/errors.js';
 import type { CorpusName, CorpusProvenance } from '../corpus-supply/model.js';
 import { CorpusSupply } from '../corpus-supply/service.js';
-import { Target } from '../corpus-supply/model.js';
+import { CorpusSupplyInput, Target } from '../corpus-supply/model.js';
 import { layerNativeTopicsArtifacts, layerNativeWebsterArtifacts } from './bible-artifact.js';
 import { writeWebsterFixture } from '../webster/fixtures/sqlite-bun.js';
 import {
@@ -131,7 +131,9 @@ const releaseSource = (input: {
 const fixtureDigest = `sha256:${bytesToHex(sha256(new TextEncoder().encode(FIXTURE_BYTES)))}`;
 
 const attemptWebsterInstall = (destination: string, source: string) =>
-  CorpusSupply.use((supply) => supply.ensure({ target: Target.webster() })).pipe(
+  CorpusSupply.use((supply) =>
+    supply.ensure(CorpusSupplyInput.make({ target: Target.webster() })),
+  ).pipe(
     Effect.provide(
       CorpusSupply.layer.pipe(
         Layer.provide(
@@ -145,7 +147,9 @@ const attemptWebsterInstall = (destination: string, source: string) =>
   );
 
 const installTopics = (destination: string, source: string) =>
-  CorpusSupply.use((supply) => supply.ensure({ target: Target.topics() })).pipe(
+  CorpusSupply.use((supply) =>
+    supply.ensure(CorpusSupplyInput.make({ target: Target.topics() })),
+  ).pipe(
     Effect.provide(
       CorpusSupply.layer.pipe(
         Layer.provide(

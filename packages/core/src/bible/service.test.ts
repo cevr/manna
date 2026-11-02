@@ -3,7 +3,7 @@ import { Effect, Layer, Option } from 'effect';
 
 import { BibleDatabase } from '../bible-db/bible-database.js';
 import { BibleChapterNotFoundError } from './errors.js';
-import { Reference, verseNumber } from './model.js';
+import { Reference, VerseMarginAnchor, verseNumber } from './model.js';
 import { BibleService } from './service.js';
 
 const verses = [
@@ -77,7 +77,10 @@ describe('BibleService', () => {
       // Only what the *reader* draws: which anchor, and the phrase it follows.
       // The note's own text belongs to the study pane's per-verse read.
       expect(anchors.verses).toEqual([
-        { verse: verseNumber(1), anchors: [{ noteIndex: 0, phrase: 'beginning' }] },
+        {
+          verse: verseNumber(1),
+          anchors: [VerseMarginAnchor.make({ noteIndex: 0, phrase: 'beginning' })],
+        },
       ]);
     }).pipe(Effect.provide(MarginLayer)));
 

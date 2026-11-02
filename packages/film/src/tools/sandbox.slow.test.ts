@@ -1,3 +1,17 @@
+import {
+  Record,
+  Result,
+  Redacted,
+  ConfigProvider,
+  Duration,
+  Effect,
+  FileSystem,
+  Layer,
+  Logger,
+  Path,
+  Sink,
+  Stream,
+} from 'effect';
 // The counsel's sandbox as the counsel runs it (`Counsel.claudeAt`, a
 // recording spawner in place of the process): headless Claude on Opus at max
 // effort, from the packet's folder, under a Seatbelt profile that closes every
@@ -10,22 +24,16 @@
 
 import { describe, expect, it } from 'effect-bun-test';
 import * as BunServices from '@effect/platform-bun/BunServices';
-import {
-  ConfigProvider,
-  Duration,
-  Effect,
-  FileSystem,
-  Layer,
-  Logger,
-  Path,
-  Sink,
-  Stream,
-} from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { CounselFailed } from '../core/judge.ts';
 import { Counsel } from './counsel.ts';
 import { collect } from './process.ts';
 import { sandboxArgs } from './sandbox.ts';
+
+const wordValue = (word: string | Redacted.Redacted<string>): string => {
+  if (Redacted.isRedacted(word)) return Redacted.value(word);
+  return word;
+};
 
 const home = '/Users/someone';
 const claude = `${home}/.local/share/claude/versions/2.1.300`;
@@ -42,9 +50,14 @@ const answering = (answer: string, spawned: Array<Spawned>) =>
   ChildProcessSpawner.make((command) => {
     if (command._tag === 'StandardCommand')
       spawned.push({
-        argv: [command.command, ...command.args],
+        argv: [command.command, ...command.args.map(wordValue)],
         cwd: command.options.cwd ?? '',
-        env: command.options.env ?? {},
+        env: Record.filterMap(command.options.env ?? {}, (value) =>
+          Result.map(
+            Result.fromNullishOr(value, () => 'absent'),
+            wordValue,
+          ),
+        ),
       });
     return Effect.succeed(
       ChildProcessSpawner.makeHandle({

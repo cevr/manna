@@ -11,7 +11,8 @@
 // to the decision it names (`unlocked`, `lock.ts`). The CLI is `rive` on the
 // PATH, or the one `RIVE` names.
 
-import { Config, Crypto, Effect, FileSystem, Schema, Stream } from 'effect';
+import { Config, Effect, FileSystem, Schema, Stream } from 'effect';
+import { Digest } from 'effect/crypto';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { ProductionFile, decisionsOf } from '../core/production.ts';
 import { repoJson } from '../core/schema.ts';
@@ -70,8 +71,8 @@ const projectOf = (rml: string, main: string) =>
 
 /** `bytes`' sha256, as lowercase hex. */
 const sha256 = Effect.fn('sha256')(function* (bytes: Uint8Array) {
-  const crypto = yield* Crypto.Crypto;
-  const digest = yield* crypto.digest('SHA-256', bytes);
+  const crypto = yield* Digest.Digest;
+  const digest = yield* crypto.digest(Digest.sha256, bytes);
   return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
 });
 

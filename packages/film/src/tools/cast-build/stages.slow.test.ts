@@ -1,10 +1,10 @@
+import { Redacted, Effect, FileSystem, Layer, Option, Path, Sink, Stream } from 'effect';
 // A fake member's stages, in a scratch folder: what each stage reads (its
 // source files, a fitted pose's files) and which drawings get renders.
 // Slow: `stages.ts` imports the parts command and the fit render.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Layer, Option, Path, Sink, Stream } from 'effect';
 import { ChildProcessSpawner } from 'effect/process';
 import { PuppetImagesBun } from '../../puppet/images-bun.ts';
 import { ContentStore } from '../content-store.ts';
@@ -19,6 +19,11 @@ import { stageSources } from './sources.ts';
 import { buildSources, clipStages, memberStages } from './stages.ts';
 
 /** A stage kind's source files, as `stageSources` makes them its inputs. */
+const wordValue = (word: string | Redacted.Redacted<string>): string => {
+  if (Redacted.isRedacted(word)) return Redacted.value(word);
+  return word;
+};
+
 const sourceFiles = (kind: keyof Effect.Success<typeof stageSources>) =>
   Effect.map(stageSources, (all) =>
     all[kind].flatMap((i) => {
@@ -157,9 +162,10 @@ const leadFeastIn = Effect.gen(function* () {
 const okraAnswering = (fs: FileSystem.FileSystem, spawned: Array<ReadonlyArray<string>>) =>
   ChildProcessSpawner.make((command) => {
     if (command._tag !== 'StandardCommand') return Effect.die('no piped process in this test');
-    spawned.push([command.command, ...command.args]);
+    spawned.push([command.command, ...command.args.map(wordValue)]);
     if (command.command !== 'okra') return Effect.die(`no ${command.command} in this test`);
-    const out = command.args[command.args.indexOf('-o') + 1] ?? '/nonexistent/loop-probe-x';
+    const args = command.args.map(wordValue);
+    const out = args[args.indexOf('-o') + 1] ?? '/nonexistent/loop-probe-x';
     return fs.copyFile(ANSWER, out).pipe(
       Effect.orDie,
       Effect.as(
