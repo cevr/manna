@@ -2,7 +2,7 @@
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
   "agentGuidance": false,
-  "cacheMaxSize": "5GB",
+  "cacheMaxSize": "2GB",
   "globalDependencies": ["bunfig.toml"],
   "tasks": {
     "transit": {
