@@ -1,8 +1,9 @@
 // The cold open, drawn to its kept panels (`cold.baby.3`, `cold.letter.4`,
 // `cold.what.3`), one shot to each of the script's marks. `baby`: close on
 // the mother with her baby at the cup, on the close plate painted to
-// `cold.baby.3` (`BABY_BACK`) with the feast's table in front of her
-// (`FRONT`), the camera pushing in on the baby's face.
+// `cold.baby.3` (`BABY_BACK`), the feast's crowd soft at a far table between
+// them (`BABY_CROWD`), with the feast's table in front of her (`FRONT`), the
+// camera pushing in on the baby's face.
 // `grown` cuts to the feast's courtyard plates on the mother at the long
 // table, her baby at the cup, behind the guests, and trucks down it to the
 // lead, who sits between two guests (a man picture-left and a woman
@@ -43,7 +44,14 @@ import {
   WHAT,
 } from '../plates/plates.ts';
 import { SCROLL_OPEN, SCROLL_ROLLED, SCROLL_ROLLER } from '../plates/props.ts';
-import { CROWD_ROWS, drawCrowdRow } from './crowd.ts';
+import {
+  BABY_CROWD,
+  BABY_SEATS,
+  CROWD_ROWS,
+  drawCrowdRow,
+  drawCrowdTable,
+  drawSeats,
+} from './crowd.ts';
 import { CROWD_PUPPETS } from '../../../library/cast/filler-bases/cutout/crowd.ts';
 import { type Cues, eyesOf, numbersOf } from './lead.ts';
 import {
@@ -345,6 +353,18 @@ export const cold = drawing({
       const camera = holding(BABY.eyes, BABY.eyes, lerp(1, BABY.k, f.at('baby')));
       const scale = BABY.scale / BABY.k;
       plane(camera, BABY.back, () => f.painting('back'));
+      // The feast's crowd at a far table behind her, soft through its blur and haze.
+      plane(camera, BABY_CROWD.z, () => {
+        ctx.filter = `blur(${(BABY_CROWD.blur * w) / 1920}px) ${BABY_CROWD.haze}`;
+        panel(() => {
+          drawSeats(f, BABY_SEATS);
+          drawCrowdTable(
+            ctx,
+            { x: BABY_CROWD.x, top: BABY_CROWD.top, size: BABY_CROWD.table },
+            () => f.painting('far'),
+          );
+        });
+      });
       plane(camera, 1, () =>
         f.puppet(
           'mother',

@@ -103,15 +103,113 @@ export const FEAST_CROWD = {
   table: { x: 762, on: [960, 968] },
 } as const;
 
-/** One bust of the crowd: its figure, its row, its neck's x and its table top, panel px, its scale, and its lean in radians. */
+/** One bust of a crowd: its figure, its neck's x and its table top, panel px, its scale, and its lean in radians. */
 export interface Seat {
   readonly figure: Figure;
-  readonly row: RowName;
   readonly x: number;
   readonly top: number;
   readonly scale: number;
   readonly lean: number;
 }
+
+/** A bust of the feast's crowd, and its row. */
+export interface RowSeat extends Seat {
+  readonly row: RowName;
+}
+
+/**
+ * A small crowd seated at one table, panel px on its plane: `necks.length`
+ * figures of seed `seed` (`crowdOf`), their necks at `necks`, left to right,
+ * so the kit's rule on neighbours holds as the eye reads them; its table's
+ * top crosses them at `top`, each bust `scale` panel px a sheet px. Each is
+ * `1 +- size` of that, its top `+- rise` panel px, and it leans as the
+ * feast's crowd does (`FEAST_CROWD`'s `lean`), toward the nearer of its
+ * neighbours.
+ */
+export interface Gathering {
+  readonly seed: number;
+  readonly necks: ReadonlyArray<number>;
+  readonly top: number;
+  readonly scale: number;
+  readonly size: number;
+  readonly rise: number;
+}
+
+/**
+ * The title's crowd (`title.start.2`): three busts at each end of the long
+ * table on the guests' plane, either side of the man guest (544) and of the
+ * mother behind the woman (1012), so the table reads full as the panel's
+ * does. Each is the front row's size, its face about as wide as the guests'
+ * (46 panel px) and its crown about level with theirs; its table top lies
+ * just under the long table's back edge (panel 860), so the table plate in
+ * front hides its waist.
+ */
+export const TITLE_CROWD = {
+  seed: 23,
+  necks: [132, 260, 390, 1150, 1280, 1410],
+  top: 864,
+  scale: 0.4,
+  size: 0.05,
+  rise: 4,
+} as const satisfies Gathering;
+
+/** A gathering at a far table on a plane of its own (`BABY_CROWD`). */
+export interface FarGathering extends Gathering {
+  readonly z: number;
+  readonly x: number;
+  readonly table: number;
+  readonly blur: number;
+  readonly haze: string;
+}
+
+/**
+ * The baby close's crowd (`cold.baby.3`): nine busts at a far table on a
+ * plane of their own between `BABY_BACK` and the mother, as the panel seats
+ * them: four left of her, one at her right shoulder, half behind her, and
+ * four right of her, their heads 110-140 panel px across with their cloths
+ * and their crowns about 1.6 heads over the table, in sizes and heights
+ * varied enough that the row does not read as one even line.
+ * The plane stands `z` back; its table is the far table's plate drawn `table`
+ * times its frame size at panel x `x`, its top at `top`; the row is soft
+ * through `blur` (screen px at 1920) and `haze`, as the panel's crowd is, and
+ * keeps its colours.
+ */
+export const BABY_CROWD = {
+  seed: 19,
+  necks: [62, 190, 318, 440, 1040, 1140, 1260, 1376, 1490],
+  top: 606,
+  scale: 0.55,
+  size: 0.1,
+  rise: 12,
+  z: 2,
+  x: 768,
+  table: 1.5,
+  blur: 3,
+  haze: 'contrast(0.95) brightness(1.03)',
+} as const satisfies FarGathering;
+
+/** A gathering's seats, left to right: the figures from the kit's mix, the jitter and lean from a draw of its own. */
+export const seatsAt = (g: Gathering): ReadonlyArray<Seat> => {
+  const { size, rise } = g;
+  const { lean } = FEAST_CROWD;
+  const draw = rng(g.seed * 7919 + 1);
+  // How far the seat `j` lies from `at`, panel px; past either end, never nearer.
+  const apart = (at: number, j: number) =>
+    Option.match(Arr.get(g.necks, j), { onNone: () => Infinity, onSome: (o) => Math.abs(o - at) });
+  return Arr.zip(crowdOf(g.seed, g.necks.length), g.necks).map(([figure, x], i) => {
+    const top = g.top + rise * (2 * draw() - 1);
+    const scale = g.scale * (1 + size * (2 * draw() - 1));
+    const tilt = lean[0] + (lean[1] - lean[0]) * draw();
+    const toward = Math.sign(apart(x, i - 1) - apart(x, i + 1));
+    return { figure, x, top, scale, lean: (toward * tilt * Math.PI) / 180 };
+  });
+};
+
+/** The title's seats (`TITLE_CROWD`). */
+export const TITLE_SEATS = seatsAt(TITLE_CROWD);
+
+/** The baby close's seats (`BABY_CROWD`). */
+export const BABY_SEATS = seatsAt(BABY_CROWD);
 
 /** The row of the `i`th seat from the left: even seats back, odd front. */
 const rowAt = (i: number): RowName => {
@@ -120,7 +218,7 @@ const rowAt = (i: number): RowName => {
 };
 
 /** The crowd's seats, left to right, from its seed: the figures from the kit's mix, the spread and jitter from a draw of its own. */
-export const FEAST_SEATS: ReadonlyArray<Seat> = (() => {
+export const FEAST_SEATS: ReadonlyArray<RowSeat> = (() => {
   const { seed, count, from, to, gap, size, rise, lean } = FEAST_CROWD;
   const draw = rng(seed * 7919 + 1);
   const gaps = Array.from({ length: count - 1 }, () => gap[0] + (gap[1] - gap[0]) * draw());
@@ -145,27 +243,26 @@ export const FEAST_SEATS: ReadonlyArray<Seat> = (() => {
   });
 })();
 
-/** A row's seats, back to front within it: the higher top, the farther, drawn first. */
+/** A row's seats. */
 export const seatsOf = (row: RowName): ReadonlyArray<Seat> =>
-  FEAST_SEATS.filter((s) => s.row === row).toSorted((a, b) => a.top - b.top);
+  FEAST_SEATS.filter((s) => s.row === row);
 
 /**
- * Draw one crowd row in the panel's px of its plane: each bust whose span
- * (`x` +- its half) `shown` keeps, in its idle and its lean, then the row's
- * table over their lower halves (`table` draws the table plate at its own
- * frame px). A bust's size is the canvas's scale, its pose at scale 1: the
- * puppet's line and its reach are sheet px times the canvas's scale alone
- * (`passOf` in `packages/film/src/canvas/puppet.ts`), so at a pose's scale of
- * 0.2 the line would be drawn five times too wide, over the hair and robe.
+ * Draw `seats` in the panel's px of their plane, the higher top, the
+ * farther, first: each bust whose span (`x` +- its half) `shown` keeps, in
+ * its idle and its lean. A bust's size is the canvas's scale, its pose at
+ * scale 1: the puppet's line and its reach are sheet px times the canvas's
+ * scale alone (`passOf` in `packages/film/src/canvas/puppet.ts`), so at a
+ * pose's scale of 0.2 the line would be drawn five times too wide, over the
+ * hair and robe.
  */
-export const drawCrowdRow = (
+export const drawSeats = (
   f: CrowdFrame,
-  row: RowName,
-  shown: (left: number, right: number) => boolean,
-  table: () => void,
+  seats: ReadonlyArray<Seat>,
+  shown: (left: number, right: number) => boolean = () => true,
 ): void => {
   const { ctx } = f;
-  for (const seat of seatsOf(row)) {
+  for (const seat of seats.toSorted((a, b) => a.top - b.top)) {
     const half = FEAST_CROWD.half * seat.scale;
     if (!shown(seat.x - half, seat.x + half)) continue;
     ctx.save();
@@ -175,9 +272,22 @@ export const drawCrowdRow = (
     drawBust(f, seat.figure, { x: 0, top: 0, scale: 1 });
     ctx.restore();
   }
-  const s = CROWD_ROWS[row].table / PANEL.scale;
+};
+
+/**
+ * Draw a crowd's table in the panel's px of its plane: the far table's plate
+ * (`table` draws it at its own frame px) `size` times its frame size, its
+ * point `on` on the top at panel (`x`, `top`), and the shade under its top
+ * (`TABLE_SHADE`).
+ */
+export const drawCrowdTable = (
+  ctx: CanvasRenderingContext2D,
+  at: { readonly x: number; readonly top: number; readonly size: number },
+  table: () => void,
+): void => {
+  const s = at.size / PANEL.scale;
   ctx.save();
-  ctx.translate(FEAST_CROWD.table.x, CROWD_ROWS[row].top);
+  ctx.translate(at.x, at.top);
   ctx.scale(s, s);
   ctx.translate(-FEAST_CROWD.table.on[0], -FEAST_CROWD.table.on[1]);
   table();
@@ -190,4 +300,16 @@ export const drawCrowdRow = (
   ctx.fillStyle = shade;
   ctx.fillRect(0, y + from, 1920, to - from);
   ctx.restore();
+};
+
+/** Draw one row of the feast's crowd (`drawSeats`), then its table over their lower halves (`drawCrowdTable`). */
+export const drawCrowdRow = (
+  f: CrowdFrame,
+  row: RowName,
+  shown: (left: number, right: number) => boolean,
+  table: () => void,
+): void => {
+  drawSeats(f, seatsOf(row), shown);
+  const { top, table: size } = CROWD_ROWS[row];
+  drawCrowdTable(f.ctx, { x: FEAST_CROWD.table.x, top, size }, table);
 };

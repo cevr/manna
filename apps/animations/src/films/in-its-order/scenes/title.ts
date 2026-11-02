@@ -3,8 +3,9 @@
 // a small dawn light on the green hill and the gold path drawing on up to it.
 // The cold open's people sit behind the long table (`seatTable`): a man
 // guest in his idle, the lead at rest in his idle (`atRest`), a woman guest in her idle, each guest in its neutral key, and
-// the mother with her baby behind the woman, fewer than the panel's ten, so
-// the cut to the cold open keeps one table. The camera pulls back from a near
+// the mother with her baby behind the woman, so the cut to the cold open keeps
+// one table, and the feast's crowd at the table's two ends, three busts each
+// (`TITLE_CROWD`), on the guests' plane under the table. The camera pulls back from a near
 // framing to the panel's own, each plane by its distance (`PLANES`), while
 // the film's name settles on a torn strip of the film's dark paper over the
 // sky: the only text (`CARDS`).
@@ -14,6 +15,8 @@ import { lerp } from '@manna/film/core';
 import { fonts, palette as P } from '../palette.ts';
 import { DISTANCE, NEAR, PANEL, PATH, PATH_BRUSH, PLANES, SKY, TABLE } from '../plates/plates.ts';
 import { TITLE } from '../script.ts';
+import { CROWD_PUPPETS } from '../../../library/cast/filler-bases/cutout/crowd.ts';
+import { TITLE_SEATS, drawSeats } from './crowd.ts';
 import { restingEyes, restingOf } from './lead.ts';
 import { TABLE_PUPPETS, eyesLook, headMiddle, raising, seatTable, seatedLead } from './table.ts';
 
@@ -91,7 +94,7 @@ export const title = drawing({
     // How close the pull starts on the nearest plane; it ends on the panel's own framing.
     near: 1.12,
   },
-  puppets: TABLE_PUPPETS,
+  puppets: { ...TABLE_PUPPETS, ...CROWD_PUPPETS },
   paintings: {
     sky: SKY,
     distance: DISTANCE,
@@ -134,7 +137,10 @@ export const title = drawing({
     });
     plane(PLANES.near, () => f.painting('near'));
     plane(PLANES.guests, () =>
-      panel(() => seatTable(f, 'neutral', [], () => seatedLead(f, restingOf(f.t), atRest(f.t)))),
+      panel(() => {
+        drawSeats(f, TITLE_SEATS);
+        seatTable(f, 'neutral', [], () => seatedLead(f, restingOf(f.t), atRest(f.t)));
+      }),
     );
     plane(PLANES.table, () => f.painting('table'));
     // The name, on a torn strip of the film's dark paper, settling over the sky.
