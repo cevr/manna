@@ -59,7 +59,7 @@ const Home = () => (
     <section class="section" id="series" aria-labelledby="series-title">
       <div class="wrap">
         <h2 class="lead" id="series-title">
-          We are working on four series. Two are cut-paper films and two are talks.
+          We are working on four series. Two are storybook films and two are talks.
         </h2>
         <Cards series={SERIES} />
       </div>
@@ -135,8 +135,8 @@ const About = () => (
         <h2 id="made-title">How they are made</h2>
         <div class="reading">
           <p>
-            The films are told in cut paper. A small cast of characters comes back from film to
-            film. The talks are short and plain.
+            The films are drawn like a painted storybook. A small cast of characters comes back from
+            film to film. The talks are short and plain.
           </p>
           <p>
             Every verse is quoted from the <span class="nowrap">King James Version.</span> Where a

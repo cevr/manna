@@ -225,8 +225,8 @@ with a hairline between them, each mark on a band tile, “Why we make these”
 warms from the paper into the wheat, the dusk runs from the wheat through
 warm stops to the night and holds Mark 4:27, and the moonlit night rises out
 of it with the stacked lockup, the sign-up and the footer. The site has no
-cut paper: no torn strips, tilted cards or paper shadows (the films keep
-their cut-paper look). There is no dark theme: the page shows the same in
+torn paper: no torn strips, tilted cards or paper shadows (the films keep
+their storybook look). There is no dark theme: the page shows the same in
 either scheme. The colours have one source, `@manna/brand`
 (`packages/brand`), which the hymnal reads too and `src/palette.ts`
 re-exports; the stylesheet's `--color-*` tokens repeat them, and the tests hold the two

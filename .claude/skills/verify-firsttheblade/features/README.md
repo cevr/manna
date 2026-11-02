@@ -63,5 +63,5 @@ exactly these H2s in order:
   stars, the series rows' stirred marks, and the stills kept still for less
   motion.
 - [Brand](brand.md): the Moonlit wheat palette, lockup D in small capitals,
-  the fine-line marks, no cut paper, the sky that turns from day to night
+  the fine-line marks, no torn paper, the sky that turns from day to night
   down the home page, and the moonlit night.
