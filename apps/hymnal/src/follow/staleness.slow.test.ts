@@ -192,7 +192,9 @@ const scratchLayer = Layer.effect(Scratch)(
     const baseline = yield* Effect.promise(() => witness(checkout));
     expect(baseline.code).toBe(0);
     expect(baseline.hashes).toBeDefined();
-    expect(baseline.counts).toBe('21-pass,0-fail');
+    // The clean run is the reference each row matches: green, with at least one
+    // pass, whatever number of cases the witness files hold.
+    expect(baseline.counts).toMatch(/^[1-9]\d*-pass,0-fail$/);
     return { checkout, baseline };
   }),
 );
@@ -224,7 +226,7 @@ for (const row of cases)
           expect(actual.reads, row.id).toBe(true);
           expect(actual.code, row.id).toBe(0);
           expect(actual.hashes, row.id).toBe(baseline.hashes);
-          expect(actual.counts, row.id).toBe('21-pass,0-fail');
+          expect(actual.counts, row.id).toBe(baseline.counts);
         }),
       ),
     SPAWNS_MS,
