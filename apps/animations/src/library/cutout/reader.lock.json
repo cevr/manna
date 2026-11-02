@@ -607,7 +607,7 @@
     }
   },
   "clips": {
-    "passed": 5,
+    "passed": 6,
     "of": 6,
     "byClip": {
       "feast-mother/wave/clip-a": {
@@ -724,7 +724,7 @@
         "bands": [
           {
             "from": 0,
-            "to": 40,
+            "to": 30,
             "expect": ["lead-feast/turnaround-front"]
           },
           {
@@ -735,7 +735,7 @@
         ],
         "iou": {
           "0-123": 0.9081938328551735,
-          "0-40": 0.9044422596445068,
+          "0-30": 0.9157604165908579,
           "41-123": 0.9100470196218886
         },
         "named": {
@@ -743,9 +743,8 @@
             "lead-feast/turnaround-front": 31,
             "lead-feast/single-single-1": 93
           },
-          "0-40": {
-            "lead-feast/turnaround-front": 31,
-            "lead-feast/single-single-1": 10
+          "0-30": {
+            "lead-feast/turnaround-front": 31
           },
           "41-123": {
             "lead-feast/single-single-1": 83
@@ -777,8 +776,8 @@
             "drawing": "lead-feast/single-single-1"
           }
         ],
-        "pass": false,
-        "fails": ["named 0-40: 31 of 41 frames name lead-feast/turnaround-front, under 0.9"]
+        "pass": true,
+        "fails": []
       },
       "sower/sow/clip-a": {
         "member": "sower",

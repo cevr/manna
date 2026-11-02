@@ -83,13 +83,15 @@ export const COVERAGE: CoverageManifest = {
       why: 'folds the forearm: elbow 1.9 deg, 63.3 % of its pixels within both segments (bar 5 %)',
     },
   ],
-  // clip B (fal, first frame only): he stands at the front to f40 and holds the bottle raised from f41
+  // clip B (fal, first frame only): he stands at the front to f30 and holds
+  // the bottle raised from f41; f31-f40 lift it into sight, a move between
+  // the two drawings that neither band holds
   clips: [
     {
       id: 'raise/clip-b',
       file: 'cutout/raise/clip/clip-b.mp4',
       bands: [
-        [0, 40],
+        [0, 30],
         [41, 123],
       ],
       expect: [['turnaround-front'], ['single-single-1']],
