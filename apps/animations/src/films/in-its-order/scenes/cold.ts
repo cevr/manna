@@ -23,12 +23,13 @@
 // (`MOVES`).
 
 import { drawing, type PuppetLook } from '@manna/film/canvas';
-import { act, idle, lag, lerp } from '@manna/film/core';
+import { lerp } from '@manna/film/core';
 import { PUPPETS as LEAD } from '../../../library/cast/lead-feast/cutout/puppets.ts';
 import { RAISE_SEATED } from '../../../library/cast/lead-feast/cutout/raise-seated.ts';
 import winceHead from '../../../library/cast/lead-feast/cutout/sheets/single-5/head.png' with { type: 'file' };
 import { BABY_BACK, DISTANCE, NEAR, PANEL, PLANES, SKY, TABLE, WHAT } from '../plates/plates.ts';
 import { SCROLL_OPEN, SCROLL_ROLLED, SCROLL_ROLLER } from '../plates/props.ts';
+import { type Cues, leanOf, numbersOf } from './lead.ts';
 import {
   type GuestKey,
   LEAD_POSE,
@@ -140,81 +141,6 @@ const { line: _line, ...SEATED } = LEAD['single-9'];
  * bone at 0; `winceAt` turns it with his lean.
  */
 const WINCE_SWAP = { part: 'head', drawing: 'wince', place: { s: 1.39, dx: 104, dy: 0 } } as const;
-
-/** The lead's idle, seed 1 (the mother's is seed 2): his breath, sway, head tilt and weight drift. */
-const LEAD_IDLE = idle(1);
-
-/** The cues he acts on, scene s: his raise's start, its landing on k6, and the starts of `turn`, `smile` and `read`. */
-interface Cues {
-  readonly raise: number;
-  readonly landed: number;
-  readonly turn: number;
-  readonly smile: number;
-  readonly read: number;
-}
-
-/**
- * His lean, degrees clockwise on screen: his whole figure turned about his
- * hip, on his raise's painted frames (`seatedLead`) as on his cut-out. His
- * idle's sway, breath and drift run all through. On the raise his weight dips
- * away from the bottle arm first (anticipation), goes over to it, and settles
- * back once the bottle is up.
- */
-const leanOf = (c: Cues) => {
-  const acting = act(0, [
-    { at: c.raise - 0.25, dur: 0.6, to: -1.2, anticipate: 0.5 },
-    { at: c.raise + 0.45, dur: 0.8, to: 0 },
-  ]);
-  return (t: number) => {
-    const { sway, breath, drift } = LEAD_IDLE(t);
-    return acting(t) + sway + 0.4 * breath + 0.6 * drift;
-  };
-};
-
-/**
- * His bone numbers from his raise's landing on k6, degrees clockwise on
- * screen. k6 is his single-9 view, every bone at 0, and each bone keeps within
- * 15 degrees of it: at 25 his bottle arm's cuff breaks (slice 0's elbow
- * staircase). The arm lands still moving, so it carries on up past k6 and
- * settles back with a small bounce, the wrist 80 ms behind and turned against
- * it so the bottle stays upright. His head nods after the lift, glances to
- * the man as the guests turn and stare, tilts to the woman as they smile and
- * comes back to the letter as it falls, his head 60 ms behind his neck. His
- * idle's breath, drift and tilt come into his joints over 0.8 s from the
- * landing, so the cut from the painted frame to the cut-out shows no step.
- */
-const numbersOf = (c: Cues) => {
-  const lean = leanOf(c);
-  const life = act(0, [{ at: c.landed, dur: 0.8, to: 1 }]);
-  const shoulder = act(0, [
-    { at: c.landed, dur: 0.14, to: 3 },
-    { at: c.landed + 0.14, dur: 0.45, to: 0 },
-  ]);
-  const elbow = act(0, [
-    { at: c.landed, dur: 0.14, to: -5 },
-    { at: c.landed + 0.14, dur: 0.5, to: 0, overshoot: 0.2 },
-  ]);
-  const nod = act(0, [
-    { at: c.landed, dur: 0.5, to: -1.5, overshoot: 0.5 },
-    { at: c.turn + 0.15, dur: 0.5, to: -4, anticipate: 0.25, overshoot: 0.2 },
-    { at: c.smile, dur: 0.6, to: 5, anticipate: 0.2, overshoot: 0.25 },
-    { at: c.read + 0.1, dur: 0.5, to: -1, anticipate: 0.15, overshoot: 0.2 },
-  ]);
-  const shoulderRight = (t: number) => shoulder(t) + 0.6 * life(t) * LEAD_IDLE(t).breath;
-  const elbowRight = (t: number) => elbow(t) + 1.2 * life(t) * LEAD_IDLE(t).drift;
-  const wristRight = lag((t) => -0.85 * (shoulderRight(t) + elbowRight(t)), 0.08);
-  const neck = (t: number) => nod(t) + life(t) * LEAD_IDLE(t).tilt;
-  const head = lag(neck, 0.06);
-  return (t: number) => ({
-    lean: lean(t),
-    neck: 0.35 * neck(t),
-    head: 0.65 * head(t),
-    shoulderRight: shoulderRight(t),
-    elbowRight: elbowRight(t),
-    wristRight: wristRight(t),
-    shoulderLeft: -0.5 * life(t) * LEAD_IDLE(t).breath,
-  });
-};
 
 /**
  * The wince at his lean `lean`. A look's drawing turns no bone, so the
