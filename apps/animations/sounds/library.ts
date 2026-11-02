@@ -21,8 +21,8 @@
 // owner kept is the entry's code (`keptFit`, imported from its file), which
 // keeps the recording's licence, so a CC BY one owes the same line.
 //
-// The library: 19 generated one-shots, 3 generated beds, 13 code one-shots
-// (one kept from a fit), 7 code beds (three kept from fits), 3 recorded
+// The library: 19 generated one-shots, 3 generated beds, 16 code one-shots
+// (one kept from a fit), 9 code beds (three kept from fits), 3 recorded
 // one-shots and 1 recorded bed. The lock keeps a
 // recorded sound's generated takes, if it had any, as candidates, never
 // offered again, and the seconds its file was cut from. Prompts are concrete, close and dry: a
@@ -126,6 +126,35 @@ const keptBed = (fit: KeptFit, licence: KeptLicence) =>
 const keptOneShot = (fit: KeptFit, licence: KeptLicence) =>
   ({ kind: 'code', ...fit, licence, use: 'one-shot' }) as const;
 
+/** A node of a code sound, as the families return it. */
+type Node = ReturnType<typeof burst>;
+
+/**
+ * A bubble in milk: a sine's ring rising quickly in pitch as a bubble's
+ * does, gone in 50 ms. Each seed draws both ends of the rise.
+ */
+const bubble: Node = {
+  _tag: 'Envelope',
+  points: [
+    [0, 1],
+    [0.05, 0],
+  ],
+  curve: 'exponential',
+  of: {
+    _tag: 'Osc',
+    wave: 'sine',
+    phase: 0,
+    pitch: {
+      _tag: 'Ramp',
+      from: { _tag: 'Vary', min: 380, max: 560, curve: 'log' },
+      to: { _tag: 'Vary', min: 900, max: 1400, curve: 'log' },
+      secs: 0.04,
+      curve: 'exponential',
+    },
+    secs: 0.05,
+  },
+};
+
 export const library = defineLibrary({
   // Beds -------------------------------------------------------------------
   // The paper room's air: 8 s a loop.
@@ -228,6 +257,70 @@ export const library = defineLibrary({
     variants: 3,
     use: 'bed',
     level: BED_LEVEL,
+  },
+  // An open courtyard's still air: a breeze lower and gentler than the
+  // desert's, 24 s a loop.
+  'amb.courtyard': {
+    kind: 'code',
+    sound: { play: breeze({ secs: 24, hz: 380 }) },
+    variants: 1,
+    use: 'bed',
+    level: BED_LEVEL,
+  },
+  // Milk poured in a thin stream into a cup: the splash in a band that
+  // wanders as the stream gurgles, a soft body under it and small bubbles,
+  // 6 s a loop. A sound in the picture, so it holds its level under the voice.
+  'milk.pour': {
+    kind: 'code',
+    sound: {
+      play: {
+        _tag: 'Loop',
+        crossfade: 1,
+        of: {
+          _tag: 'Layer',
+          secs: 7,
+          of: [
+            {
+              node: {
+                _tag: 'Gain',
+                db: { _tag: 'Wobble', around: 0, depth: 3, rate: 7 },
+                of: {
+                  _tag: 'Filter',
+                  type: 'bandpass',
+                  hz: { _tag: 'Wobble', around: 1100, depth: 4, rate: 5 },
+                  q: 2,
+                  of: { _tag: 'Noise', color: 'pink', secs: 7 },
+                },
+              },
+            },
+            {
+              node: {
+                _tag: 'Filter',
+                type: 'lowpass',
+                hz: 700,
+                q: 0.7,
+                of: {
+                  _tag: 'Filter',
+                  type: 'highpass',
+                  hz: 120,
+                  q: 0.7,
+                  of: { _tag: 'Noise', color: 'brown', secs: 7 },
+                },
+              },
+              db: -10,
+            },
+            {
+              node: { _tag: 'Repeat', timing: { _tag: 'Poisson', rate: 9, secs: 6.9 }, of: bubble },
+              db: -9,
+            },
+          ],
+        },
+      },
+    },
+    variants: 2,
+    use: 'bed',
+    level: BED_LEVEL,
+    duck: false,
   },
 
   // One-shots --------------------------------------------------------------
@@ -505,6 +598,135 @@ export const library = defineLibrary({
             },
           ],
         },
+      },
+    },
+    variants: 3,
+    use: 'one-shot',
+  },
+  // A rolled scroll landing on a wooden table: its roller's hollow knock
+  // 20 ms in, over a soft thud and the paper's puff.
+  'scroll.drop': {
+    kind: 'code',
+    sound: {
+      play: {
+        _tag: 'Layer',
+        of: [
+          { node: knock({ material: 'wood', hz: 240, secs: 0.25 }), at: 0.02 },
+          { node: thump({ hz: 100, octaves: 1, drop: 0.02, decay: 0.3 }), at: 0.02, db: -8 },
+          {
+            node: burst({ color: 'pink', low: 600, high: 2500, attack: 0.002, decay: 0.09 }),
+            at: 0.02,
+            db: -6,
+          },
+        ],
+      },
+    },
+    variants: 3,
+    use: 'one-shot',
+  },
+  // A scroll unrolling across a table, 1.3 s: a papery swell in a band that
+  // rises as the sheet opens, loudest at 0.65 s where the roll runs fastest,
+  // a fine crackle in it, and the sheet's soft flop as it falls over the
+  // edge at 1.1 s.
+  'scroll.unroll': {
+    kind: 'code',
+    sound: {
+      play: {
+        _tag: 'Layer',
+        of: [
+          {
+            node: {
+              _tag: 'Envelope',
+              points: [
+                [0, 0],
+                [0.15, 0.5],
+                [0.65, 1],
+                [1.15, 0.15],
+                [1.3, 0],
+              ],
+              curve: 'linear',
+              of: {
+                _tag: 'Filter',
+                type: 'bandpass',
+                hz: {
+                  _tag: 'Points',
+                  points: [
+                    [0, 1400],
+                    [1.3, 2600],
+                  ],
+                  curve: 'exponential',
+                },
+                q: 0.9,
+                of: { _tag: 'Noise', color: 'pink', secs: 1.3 },
+              },
+            },
+          },
+          {
+            node: {
+              _tag: 'Envelope',
+              points: [
+                [0, 0],
+                [0.15, 0.6],
+                [0.65, 1],
+                [1.15, 0.2],
+                [1.3, 0],
+              ],
+              curve: 'linear',
+              of: {
+                _tag: 'Repeat',
+                timing: { _tag: 'Poisson', rate: 30, secs: 1.25 },
+                of: burst({ color: 'white', low: 2000, high: 8000, attack: 0.0005, decay: 0.015 }),
+              },
+            },
+            db: -10,
+          },
+          {
+            node: burst({ color: 'pink', low: 400, high: 2000, attack: 0.004, decay: 0.12 }),
+            at: 1.1,
+            db: -8,
+          },
+        ],
+      },
+    },
+    variants: 3,
+    use: 'one-shot',
+  },
+  // Milk sloshing in a bottle as it is raised, 0.6 s: a soft swell of noise
+  // in a low band that wanders as the milk moves, and three bubbles.
+  'bottle.slosh': {
+    kind: 'code',
+    sound: {
+      play: {
+        _tag: 'Layer',
+        of: [
+          {
+            node: {
+              _tag: 'Envelope',
+              points: [
+                [0, 0],
+                [0.12, 1],
+                [0.6, 0],
+              ],
+              curve: 'linear',
+              of: {
+                _tag: 'Filter',
+                type: 'bandpass',
+                hz: { _tag: 'Wobble', around: 520, depth: 5, rate: 9 },
+                q: 1.4,
+                of: { _tag: 'Noise', color: 'pink', secs: 0.6 },
+              },
+            },
+          },
+          {
+            node: {
+              _tag: 'Repeat',
+              timing: { _tag: 'Count', every: { _tag: 'Vary', min: 0.06, max: 0.11 }, count: 3 },
+              of: bubble,
+            },
+            at: 0.08,
+            db: -6,
+          },
+        ],
       },
     },
     variants: 3,
