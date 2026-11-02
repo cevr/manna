@@ -36,8 +36,10 @@ import type {
 } from 'react-native';
 
 import { color, useAccent } from '~/color';
+import { hymnAt } from '~/hymns/hymns';
 import { usePlayer } from '~/player/context';
 import { Player } from '~/player/player';
+import { cutOf, keptOf } from '~/player/stanzas';
 import { settings } from '~/store';
 
 import { book } from './book';
@@ -163,6 +165,26 @@ export const useIntro = () => {
   };
 };
 
+/**
+ * Hymn `number`'s timeline as Play sings it: cut to the hymn's chosen
+ * stanzas (`player/stanzas.ts`), in the sung time the player's place is
+ * read in. Every stanza, or words that disagree with the timing, give the
+ * timeline itself.
+ */
+const useSung = (number: number) => {
+  const choice = useAtomValue(settings.stanzas(number));
+  return useMemo(
+    () =>
+      Option.map(book.of(number), (timeline) =>
+        Option.match(hymnAt(String(number)), {
+          onNone: () => timeline,
+          onSome: (text) => cutOf(timeline, keptOf(text.sections, choice)).timeline,
+        }),
+      ),
+    [number, choice],
+  );
+};
+
 /** The page's follow: its marks for the lines and the scroll's handlers. */
 export const useFollow = (number: number) => {
   const state = usePlayerState();
@@ -182,9 +204,11 @@ export const useFollow = (number: number) => {
     return `${event} clock=score`;
   };
 
+  const sung = useSung(number);
+
   const follower = useMemo(
     () =>
-      Option.map(book.of(number), (timeline) =>
+      Option.map(sung, (timeline) =>
         followerOf(timeline, {
           now: () => performance.now(),
           wake: (ms, run) => {
@@ -211,7 +235,7 @@ export const useFollow = (number: number) => {
           },
         }),
       ),
-    [number, registry],
+    [sung, registry],
   );
 
   // The rate is read as each state is reported, not reported on its own change: a report at an

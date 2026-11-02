@@ -48,7 +48,7 @@ describe('a hymn’s syllables', () => {
   const book = chordBook([[1, '[1,"C",false,[["line",["Ab|+c d","E"]],0],["syllable",["F|+g"]]]']]);
   const chords = Option.getOrThrow(book.of(1));
   const section = (kind: 'stanza' | 'refrain', n: number, lines: ReadonlyArray<string>) => {
-    if (kind === 'refrain') return { kind, lines };
+    if (kind === 'refrain') return { kind, stanza: n, lines };
     return { kind, n, lines };
   };
   const text = (sections: HymnText['sections']): HymnText => ({

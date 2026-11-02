@@ -8,6 +8,46 @@
       "expect": [{ "shows": "label=Find a hymn by number" }]
     },
     {
+      "name": "stanzas-hymn",
+      "action": "open",
+      "link": "hymns/78",
+      "expect": [{ "shows": "label=Play hymn 78" }, { "shows": "label=Open player" }]
+    },
+    {
+      "name": "stanzas-sheet",
+      "action": "tap",
+      "target": "label=Open player",
+      "expect": [{ "shows": "label=Sheet Grabber" }, { "shows": "id=dial-tempo" }]
+    },
+    {
+      "name": "stanzas-scroll",
+      "action": "scroll",
+      "target": "id=stanza-4",
+      "direction": "down",
+      "expect": [{ "shows": "id=stanzas" }, { "hides": "id=stanzas-all" }]
+    },
+    {
+      "name": "player-stanzas",
+      "action": "tap",
+      "target": "id=stanza-2",
+      "expect": [{ "shows": "id=stanzas-all" }]
+    },
+    {
+      "name": "stanzas-all",
+      "action": "tap",
+      "target": "id=stanzas-all",
+      "expect": [{ "hides": "id=stanzas-all" }, { "shows": "id=stanza-2" }]
+    },
+    {
+      "name": "stanzas-close",
+      "action": "gesture",
+      "from": "role=button label=Sheet Grabber",
+      "dx": 0,
+      "dy": 760,
+      "ms": 400,
+      "expect": [{ "shows": "label=Play hymn 78" }, { "hides": "label=Sheet Grabber" }]
+    },
+    {
       "name": "player-bar",
       "action": "open",
       "link": "hymns/100",
@@ -27,7 +67,7 @@
         { "shows": "label=Sheet Grabber" },
         { "shows": "label=Position" },
         { "shows": "id=dial-tempo" },
-        { "shows": "id=tempo-bpm" },
+        { "shows": "label=quarter note = 90" },
         { "shows": "label=Tap" }
       ]
     },

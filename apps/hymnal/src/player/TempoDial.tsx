@@ -18,7 +18,7 @@
 import { useAtom } from '@effect/atom-react';
 import { Clock, Option } from 'effect';
 import { createContext, memo, use, useMemo, useRef } from 'react';
-import { type ColorValue, Pressable, StyleSheet, Text, View } from 'react-native';
+import { type ColorValue, StyleSheet, Text, View } from 'react-native';
 
 import { color } from '~/color';
 import { plain, useCue } from '~/feel/cue';
@@ -26,6 +26,7 @@ import { book } from '~/follow/book';
 import type { Timeline } from '~/follow/timeline';
 import { settings } from '~/store';
 
+import { Chip } from './Chip';
 import { DialPanel } from './DialPanel';
 import { DialView, MOST_SCALE } from './DialView';
 import {
@@ -71,8 +72,7 @@ export const TempoDial = memo(function TempoDial({ number }: { readonly number: 
         onSome: (hymnTempo) => (
           <View style={styles.beatRow}>
             <BpmReadOut first={hymnTempo} tempo={tempo} />
-            {/* Keyed by the hymn, so another hymn's sheet starts a run of its own. */}
-            <TapChip key={number} hymnBpm={bpmOf(hymnTempo)} onTempo={setTempo} />
+            <TapChip hymnBpm={bpmOf(hymnTempo)} onTempo={setTempo} />
           </View>
         ),
       })}
@@ -173,28 +173,19 @@ function TapChip({
     for (const tempo of Option.toArray(tapped.tempo)) onTempo(tempo);
   };
   return (
-    <Pressable
+    <Chip
       testID="tempo-tap"
-      role="button"
-      aria-label="Tap"
-      accessibilityHint="Tap four times at the beat to set the tempo"
-      hitSlop={CHIP_SLOP}
+      label="Tap"
+      hint="Tap four times at the beat to set the tempo"
       onPress={press}
-      style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
     >
-      <Text style={styles.chipText} numberOfLines={1} maxFontSizeMultiplier={MOST_SCALE}>
-        Tap
-      </Text>
-    </Pressable>
+      Tap
+    </Chip>
   );
 }
 
 /** The note mark's strokes: thin, as the read-out's semibold figures. */
 const STROKE = 1.5;
-
-/** The chip is 32 points high, as the dials' chips; the slop makes its hit area 44. */
-const CHIP = 32;
-const CHIP_SLOP = { top: 6, bottom: 6 };
 
 const styles = StyleSheet.create({
   section: { gap: 8 },
@@ -242,13 +233,4 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 1.5,
   },
-  chip: {
-    height: CHIP,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    justifyContent: 'center',
-    backgroundColor: color.pill,
-  },
-  pressed: { opacity: 0.6 },
-  chipText: { fontSize: 13, fontWeight: '600', color: color.onPill },
 });

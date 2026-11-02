@@ -130,4 +130,8 @@ export const cachedPlayback = (
   timeline: Parameters<typeof soundOn>[1],
   sound: Parameters<typeof soundOn>[2],
   cache: Layer.Layer<Offline>,
-) => savingOn(soundOn(recordingsOn(localOn(device)), timeline, sound)).pipe(Layer.provide(cache));
+  keptFor?: Parameters<typeof soundOn>[3],
+) =>
+  savingOn(soundOn(recordingsOn(localOn(device)), timeline, sound, keptFor)).pipe(
+    Layer.provide(cache),
+  );

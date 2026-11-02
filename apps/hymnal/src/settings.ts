@@ -18,6 +18,7 @@ import { Move, still } from './hymns/chords';
 import { ChordStyle } from './hymns/simple';
 import { Placement } from '@manna/hymnal/placement';
 import { TAB_NAMES } from './home/tabs';
+import { ALL, Choice } from './player/stanzas';
 import { DEFAULT_TEMPO, Tempo } from './player/tempo';
 import { Numbers } from './reader/lists';
 import { DEFAULT_SIZE, Font, Size, Spacing } from './reader/reading';
@@ -103,6 +104,12 @@ export const settingsOn = (store: Layer.Layer<KeyValueStore.KeyValueStore>) => {
      * the follow keeps it.
      */
     tempo: Atom.family((number: number) => setting(`tempo.${number}`, Tempo, DEFAULT_TEMPO)),
+    /**
+     * Each hymn's chosen stanzas (`src/player/stanzas.ts`), by its number:
+     * the verses a congregation sings of one hymn. `[]`, every stanza, until
+     * the reader chooses in the player sheet; Play then sings only those.
+     */
+    stanzas: Atom.family((number: number) => setting(`stanzas.${number}`, Choice, ALL)),
     /**
      * How a hymn page is set (`src/reader/reading.ts`), chosen in the player
      * sheet's reading section: the same for every hymn. The defaults set
