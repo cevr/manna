@@ -231,8 +231,12 @@ const JITTER = 0.25;
 /** The salt for a blink's place. */
 const BLINK_SALT = 6151;
 
-/** A blink on a cue falls only where it lies 1 s or more from every blink of the seed's own. */
-const APART = 1;
+/**
+ * A blink on a cue falls only where it starts half a second or more from
+ * every blink of the seed's own, so the eyes stay open 0.2 s or more between
+ * two blinks and read as a double blink at the closest, never as one long one.
+ */
+const APART = 0.5;
 
 const smooth = (x: number): number => x * x * (3 - 2 * x);
 
@@ -247,9 +251,9 @@ const lids = (a: number): number => {
  * How far a figure's eyes are shut at `t`, 0 open to 1 shut, for `seed` (an
  * integer, as `idle` takes): a blink every 3 to 4 s at times drawn from the
  * seed, the lids shutting in 110 ms and opening in 190 ms, and one more
- * blink at each time of `on` (a head turn, say) that lies 1 s or more from
- * every blink of its own. A head drawn with its eyes shut shows while it
- * reads past one half.
+ * blink at each time of `on` (a head turn, say) that lies half a second or
+ * more from every blink of its own. A head drawn with its eyes shut shows
+ * while it reads past one half.
  */
 export const blink = (seed: number, on: ReadonlyArray<number> = []): Track => {
   const offset = EVERY * frac(0.5 + seed * SPREAD);

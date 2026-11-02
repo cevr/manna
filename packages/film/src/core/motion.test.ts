@@ -295,14 +295,15 @@ describe('blink', () => {
     expect(largest(shares)).toBeLessThan(0.5);
   });
 
-  test('blinks once more on each cue a second or more from its own blinks, and only there', () => {
+  test('blinks once more on each cue half a second or more from its own blinks, and only there', () => {
     const own = blinks(3, 0, 30, 0.001).out.map((b) => b.start);
-    // a cue midway between two of its blinks, and one 0.4 s after one of them
+    // a cue midway between two of its blinks, one 0.6 s after one of them, and one 0.4 s after another
     const free = (own[2]! + own[3]!) / 2;
+    const after = own[4]! + 0.6;
     const close = own[5]! + 0.4;
-    const { out } = blinksOf(blink(3, [free, close]), 0, 30, 0.001);
+    const { out } = blinksOf(blink(3, [free, after, close]), 0, 30, 0.001);
     const starts = out.map((b) => b.start);
-    const want = [...own, free].sort((a, b) => a - b);
+    const want = [...own, free, after].sort((a, b) => a - b);
     expect(starts.length).toBe(want.length);
     starts.forEach((s, k) => expect(Math.abs(s - want[k]!)).toBeLessThan(0.002));
     const cued = out.find((b) => Math.abs(b.start - free) < 0.002)!;
