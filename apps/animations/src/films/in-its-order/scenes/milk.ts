@@ -16,7 +16,8 @@
 // On `need` the scene cuts to the kept drinking row on the same page (`ROW`):
 // a baby with his bottle, a toddler, a child and the grown villager, each
 // with his cup, come in in turn from the left as the camera trucks along
-// them.
+// them. On `began` the camera draws back to the whole page, and on `shame`
+// the lead comes in at the row's right end, drinking.
 //
 // A shot's camera is a centre and a zoom on the page's frame px; each move
 // runs from where the last one left it (`MOVES`, `ROW_MOVES`). The page covers frame x
@@ -65,10 +66,14 @@ const MOVES = [
 /** Shot B opens on the drinking row's left end. */
 const ROW_START: Camera = { x: 800, y: 600, k: 1.2 };
 
-/** Shot B's framings: `truck` runs along the row to its right end as the four come in. */
-const ROW_MOVES = [['truck', { x: 1120, y: 600, k: 1.2 }]] as const satisfies ReadonlyArray<
-  readonly [string, Camera]
->;
+/**
+ * Shot B's framings: `truck` runs along the row to its right end as the four
+ * come in, and `pull` draws back to the whole page as the lead comes in.
+ */
+const ROW_MOVES = [
+  ['truck', { x: 1120, y: 600, k: 1.2 }],
+  ['pull', WIDE],
+] as const satisfies ReadonlyArray<readonly [string, Camera]>;
 
 /**
  * The grown villager, frame px: his root (the hip) and his scale, so he
@@ -156,14 +161,15 @@ const INK = {
   bobPeriod: 1.6,
 } as const;
 
-const [BABY, TODDLER, CHILD, GROWN] = DRINKERS;
+const [BABY, TODDLER, CHILD, GROWN, LEAD] = DRINKERS;
 
-/** The drinking row, left to right, each by its painting's name. */
+/** The drinking row, left to right, each by its painting's name; the lead stands at its right end. */
 const DRINKING = [
   ['baby', BABY],
   ['toddler', TODDLER],
   ['child', CHILD],
   ['grown', GROWN],
+  ['lead', LEAD],
 ] as const;
 
 /**
@@ -236,6 +242,8 @@ export const milk = drawing({
     gone: { mark: 'good', offset: 0.3, dur: 0.7 },
     truck: { mark: 'need', until: 'began', ease: 'inOutSine' },
     row: { mark: 'need', offset: 0.15, dur: 2.25, stagger: 0.8, ease: 'outCubic' },
+    pull: { mark: 'began', until: 'shame', untilOffset: 0.4, ease: 'inOutCubic' },
+    lead: { mark: 'shame', dur: 0.45, ease: 'outCubic' },
   },
   puppets: {
     villager: VILLAGER['single-15'],
@@ -250,6 +258,7 @@ export const milk = drawing({
     toddler: TODDLER,
     child: CHILD,
     grown: GROWN,
+    lead: LEAD,
   },
   draw: (f) => {
     const { ctx, w } = f;
@@ -386,10 +395,11 @@ export const milk = drawing({
       ctx.restore();
     };
 
-    // The drinking row, left to right, the four coming in in turn (`row`).
+    // The drinking row, left to right: the four coming in in turn (`row`),
+    // then the lead (`lead`).
     const row = () => {
       for (const [i, [name, d]] of DRINKING.entries()) {
-        const shown = f.stagger('row', i, DRINKING.length);
+        const shown = name === 'lead' ? f.at('lead') : f.stagger('row', i, DRINKING.length - 1);
         if (shown <= 0) continue;
         ctx.save();
         ctx.translate(
