@@ -24,6 +24,9 @@ const HYMN_PAGE = /^(?:[^?#]*\/)?hymns\/+([^/?#]+)\/*(?:[?#][\s\S]*)?$/;
 const hymnSegment = (path: string): Option.Option<string> =>
   Option.fromNullishOr(HYMN_PAGE.exec(path)?.[1]);
 
+/** Whether the screen at `path` is a hymn page. */
+export const isHymnPage = (path: string): boolean => Option.isSome(hymnSegment(path));
+
 /** How hymn `number`, chosen on the screen at `path`, opens. */
 export const openingAt = (path: string, number: number): Opening =>
   Option.match(hymnSegment(path), {

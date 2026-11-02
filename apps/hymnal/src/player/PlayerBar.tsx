@@ -53,7 +53,7 @@ import { plain, useCue } from '~/feel/cue';
 import { settings } from '~/store';
 import { available } from '~/tuner/native';
 
-import { Bar, dockedBar, pageBar, placeOf, REST, SOUNDING, toldPlace } from './bar';
+import { Bar, BAR_SPRING, dockedBar, pageBar, placeOf, REST, SOUNDING, toldPlace } from './bar';
 import { usePlayer, useRaised } from './context';
 import { useShownPage } from './page';
 import { Command, type HymnPlayer, Player, type Track } from './player';
@@ -251,8 +251,7 @@ function Frame({
   // The frame comes in at rest, so the first Play springs it up from the page's own bar.
   const height = useSharedValue(REST);
   useEffect(() => {
-    // A spring that overshoots a little and settles, as the owner's prototype does.
-    height.value = withSpring(target, { damping: 13, stiffness: 190, mass: 0.9 });
+    height.value = withSpring(target, BAR_SPRING);
   }, [target]);
   const springing = useAnimatedStyle(() => ({ height: height.value }));
   const router = useRouter();

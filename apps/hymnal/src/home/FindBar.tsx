@@ -18,6 +18,11 @@
  * home to the `#`. With Reduce Motion on the growth is a cross-fade alone
  * and the mark jumps. While the keyboard is up the bar rides 8 points over
  * its top.
+ * The whole bar glides between its two places (`glideOf`), over the bar on a
+ * hymn page and docked on the home list, as a hymn opens or closes; over the
+ * bar it rides the bar's own spring as the bar rises or falls; a hymn page put
+ * in another's place moves it not at all. With Reduce Motion it is set in its
+ * new place under a 150 ms fade.
  * While the drums are open only the `#` takes a touch (`inReach`): every
  * other view of the bar, the capsule's own background too, lets a touch
  * through to the backdrop beneath it, which closes the drums.
@@ -55,7 +60,7 @@ import Animated, {
 
 import { color, useAccent } from '~/color';
 import { plain, useCue } from '~/feel/cue';
-import { HASH, HASH_GAP } from '~/player/bar';
+import { BAR_SPRING, FindAt, glideOf, HASH, HASH_GAP } from '~/player/bar';
 import { MOST_SCALE } from '~/player/DialView';
 import { useReduceMotion } from '~/player/motion';
 import { modeAt, searchAt, searchOpen, searchQuery, type Searching } from '~/reader/place';
@@ -85,6 +90,8 @@ const FOLDED = 2 * HASH;
 const CANCEL_GAP = 12;
 /** The capsule's growth and the chosen mark's slide: one spring, so the mark keeps pace with the end it rides to. */
 const GROWTH = { duration: 300, dampingRatio: 1 } as const;
+/** The whole bar's glide between its two places: a little longer than the growth, as it crosses more of the screen, and as calm. */
+const GLIDE = { duration: 350, dampingRatio: 1 } as const;
 
 /** Cancel's work, for the bar's `Cancel` and Android's Back: the query cleared, the keyboard lowered, search off. */
 export const useCancelSearch = () => {
@@ -140,20 +147,24 @@ const useHeld = <Host extends HostInstance>() => {
 
 /**
  * The bar of the screen at `path`, its bottom `bottom` points over the
- * window's, with the drums (`drums`) over it while they are open
- * (`drumsOpen`). `hash` draws the `#` in the look the bar gives it
- * (`HashLook`): alone on its own disk in the tiles' row, else in the capsule,
- * over the chosen mark or beside it. The tiles of `All at once` belong to the
- * home list (`/`): on any other screen the bar reads them hidden.
+ * window's at its place `at` (`findAt`), with the drums (`drums`) over it
+ * while they are open (`drumsOpen`). A new `bottom` is reached as `glideOf`
+ * says from the place the bar stood at; a bar told no place is set there at
+ * once. `hash` draws the `#` in the look the bar gives it (`HashLook`): alone
+ * on its own disk in the tiles' row, else in the capsule, over the chosen
+ * mark or beside it. The tiles of `All at once` belong to the home list
+ * (`/`): on any other screen the bar reads them hidden.
  */
 export function FindBar({
   path,
+  at = FindAt.Nowhere(),
   bottom,
   drums,
   drumsOpen,
   hash,
 }: {
   readonly path: string;
+  readonly at?: FindAt;
   readonly bottom: number;
   readonly drums: ReactNode;
   readonly drumsOpen: boolean;
@@ -209,9 +220,27 @@ export function FindBar({
     if (row === 'open') setAsked(Option.none());
     if (before === 'open' && row === 'folded') focusOn(searchButton);
   }, [row, reduced, focusBox, progress, fade]);
-  const lifted = useAnimatedStyle(() => {
-    if (keyboard.value <= 0) return { transform: [{ translateY: 0 }] };
-    return { transform: [{ translateY: -Math.max(0, keyboard.value + HASH_GAP - bottom) }] };
+  // Where the bar stands, its bottom over the window's: `bottom`, reached as `glideOf` says from where it stood.
+  const stand = useSharedValue(bottom);
+  // The whole bar's opacity: 1, but for the fade that stands in for a glide under Reduce Motion.
+  const seen = useSharedValue(1);
+  const stood = useRef({ at, bottom });
+  useEffect(() => {
+    const before = stood.current;
+    stood.current = { at, bottom };
+    if (before.bottom === bottom) return;
+    const glide = glideOf(before.at, at);
+    if (glide === 'none' || reduced) stand.value = bottom;
+    else if (glide === 'glide') stand.value = withSpring(bottom, GLIDE);
+    else stand.value = withSpring(bottom, BAR_SPRING);
+    if (glide !== 'glide' || !reduced) return;
+    seen.value = 0;
+    seen.value = withTiming(1, { duration: 150 });
+  }, [bottom, reduced, stand, seen]);
+  // The keyboard lift composes over the place: while the keyboard is up the bar rides 8 points over its top.
+  const placed = useAnimatedStyle(() => {
+    const lift = (keyboard.value > 0 && Math.max(0, keyboard.value + HASH_GAP - stand.value)) || 0;
+    return { bottom: stand.value, opacity: seen.value, transform: [{ translateY: -lift }] };
   });
   const open = Math.max(FOLDED, width - cancelWidth - CANCEL_GAP);
   // Unmeasured, the open capsule fills the row by flex (`styles.grow`).
@@ -240,7 +269,7 @@ export function FindBar({
   };
   const controls = drawn(row);
   return (
-    <Animated.View testID="find" pointerEvents="box-none" style={[styles.find, { bottom }, lifted]}>
+    <Animated.View testID="find" pointerEvents="box-none" style={[styles.find, placed]}>
       {drums}
       <View
         testID="find-bar"

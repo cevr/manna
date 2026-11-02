@@ -11,7 +11,10 @@
  * place, and on the page's own hymn moves nothing (`openingAt`); either
  * closes a search open on that page, as a search's result does. On
  * every screen the `#` is the last button of the find bar (`FindBar.tsx`),
- * which also holds `Search`, in the same place. It
+ * which also holds `Search`, in the same place: one find bar for the home
+ * list and a hymn page alike, so it lives on and glides between their places
+ * (`glideOf`), and stands over a hymn page's bar from the render the path
+ * moves to it (`pageAwaited`). It
  * tells the lists the room the `#` takes (`FindRoom`). The drums close on a
  * move to another screen or where the `#` leaves (`findMoved`), and on a tap
  * outside them: while they are open a layer lies over the screens and the
@@ -38,7 +41,7 @@ import { counted } from '~/follow/seeks';
 import { hymnHref } from '~/home/Browse';
 import { FindBar, useCancelSearch } from '~/home/FindBar';
 import type { HashLook } from '~/home/finding';
-import { openingAt } from '~/home/opening';
+import { isHymnPage, openingAt } from '~/home/opening';
 import { hymnAt } from '~/hymns/hymns';
 import { searchOpen } from '~/reader/place';
 import { settings } from '~/store';
@@ -60,6 +63,7 @@ import {
   HASH,
   HASH_GAP,
   hashStands,
+  pageAwaited,
   pressFind,
   raised,
   swipedDown,
@@ -108,7 +112,10 @@ export function LivePlayer({ children }: { readonly children: ReactNode }) {
 function Finding({ children }: { readonly children: ReactNode }) {
   const bar = barFor(useAtomValue(player.state), useShownPage());
   const path = usePathname();
-  const at = findAt(bar, { home: path === '/', raised: useAtomValue(raised) > 0 });
+  const at = pageAwaited(
+    findAt(bar, { home: path === '/', raised: useAtomValue(raised) > 0 }),
+    isHymnPage(path),
+  );
   const inset = Math.max(useSafeAreaInsets().bottom, 0);
   // The drums close on a move to another screen, or where the `#` leaves.
   const setFind = useAtomSet(find);
@@ -124,31 +131,34 @@ function Finding({ children }: { readonly children: ReactNode }) {
   return (
     <FindRoom value={findRoom(at, inset)}>
       {children}
+      {/* One `FindNumber` in one place for both of the bar's places, so the bar lives on and glides between them. */}
       {FindAt.$match(at, {
         Nowhere: () => <></>,
         Yielded: () => <></>,
         OverBar: ({ state }) => (
-          <FindNumber bar={bar} path={path} bottom={inset + heightOf(state) + HASH_GAP} />
+          <FindNumber bar={bar} path={path} at={at} bottom={inset + heightOf(state) + HASH_GAP} />
         ),
-        Docked: () => <FindNumber bar={bar} path={path} bottom={inset + DOCKED_LIFT} />,
+        Docked: () => <FindNumber bar={bar} path={path} at={at} bottom={inset + DOCKED_LIFT} />,
       })}
     </FindRoom>
   );
 }
 
 /**
- * The `#`, its bottom `bottom` points over the window's, and the drums over
- * it while open, over a layer across the whole window that closes them on a
- * tap (`FindPress.Outside`). The `#` is the last button of the find bar
- * (`FindBar`) of the screen at `path`, after `Search`.
+ * The `#`, its bottom `bottom` points over the window's where it stands
+ * (`at`), and the drums over it while open, over a layer across the whole
+ * window that closes them on a tap (`FindPress.Outside`). The `#` is the last
+ * button of the find bar (`FindBar`) of the screen at `path`, after `Search`.
  */
 function FindNumber({
   bar,
   path,
+  at,
   bottom,
 }: {
   readonly bar: Bar;
   readonly path: string;
+  readonly at: FindAt;
   readonly bottom: number;
 }) {
   const [state, setFind] = useAtom(find);
@@ -259,7 +269,7 @@ function FindNumber({
           />
         ),
       })}
-      <FindBar path={path} bottom={bottom} drums={drums} drumsOpen={open} hash={hash} />
+      <FindBar path={path} at={at} bottom={bottom} drums={drums} drumsOpen={open} hash={hash} />
     </>
   );
 }

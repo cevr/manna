@@ -34,6 +34,8 @@ export const SOUNDING = 88;
  * the resting bar's height alone, so the taller bar lies over the page.
  */
 export const RISE = SOUNDING - REST;
+/** The spring the bar rises and falls on between its two heights: it overshoots a little and settles, as the owner's prototype does. */
+export const BAR_SPRING = { damping: 13, stiffness: 190, mass: 0.9 } as const;
 
 /** The player as `track` sees it: its own state, or idle when it holds another hymn. */
 export const playerFor = (state: Player, track: Track): Player =>
@@ -257,6 +259,43 @@ export const findAt = (
       return FindAt.OverBar({ state });
     },
   });
+
+/**
+ * Where the `#` stands on a hymn page (`hymnPage`) that has not yet said it
+ * shows: a page says so in its effects (`useShowsPage`), a render after the
+ * path moves to it, and until then the bar reads hidden there. The page's own
+ * bar stands there at rest as soon as it says so, as the player holds no
+ * hymn while the bar is hidden; so the `#` stands over the resting bar at
+ * once, and never leaves on the way.
+ */
+export const pageAwaited = (at: FindAt, hymnPage: boolean): FindAt => {
+  if (hymnPage && FindAt.$is('Nowhere')(at)) return FindAt.OverBar({ state: Player.Idle() });
+  return at;
+};
+
+/** The bar's height over the home indicator while it shows `state`. */
+const heightOver = (state: Player): number => (sounding(state) && SOUNDING) || REST;
+
+/** How the find bar moves between two places: on the glide's spring, on the bar's own spring (`BAR_SPRING`), or not at all. */
+export type Glide = 'glide' | 'bar' | 'none';
+
+/**
+ * How the find bar moves as its place goes from `before` to `after`: it
+ * glides between over the bar (a hymn page) and docked (the home list); over
+ * the bar it rides the bar's own spring as the bar rises or falls; and every
+ * other move, a hymn page put in another's place among them, moves nothing,
+ * so the bar is set where it stands.
+ */
+export const glideOf = (before: FindAt, after: FindAt): Glide => {
+  if (FindAt.$is('OverBar')(before) && FindAt.$is('OverBar')(after)) {
+    if (heightOver(before.state) !== heightOver(after.state)) return 'bar';
+    return 'none';
+  }
+  const between = (one: FindAt, other: FindAt) =>
+    FindAt.$is('OverBar')(one) && FindAt.$is('Docked')(other);
+  if (between(before, after) || between(after, before)) return 'glide';
+  return 'none';
+};
 
 /**
  * How many controls over the bar are open (`useRaised`): the key dials'
