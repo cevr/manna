@@ -1,12 +1,12 @@
 {
-  "reader": "7e708b171e552b1948c758a73ce999d355dd4b011da7c36afe805b4ff10dd456",
-  "stageKey": "ea6c2870a7b436a61fe572d9b0ccd6e057f71329b2c0ee99a59e8a45ca91bae7",
+  "reader": "0cb7087ef37eb8f24a5711b17eb2c8410557dcd71c15a8831ec07f7b6433e3b3",
+  "stageKey": "d74cf98b72b9439b9e4ab67b4591c3e3db2ddca5bec97751dbfd20c272af8d66",
   "trainer": {
     "modal_app.py": "832803300d5db044b45a59fe30df80c4623b11e8c2041da958a0900ebf8a303f",
     "model.py": "7fbe128fec85fbda0fc4adc2c98f6167c7cc4ed766c21af1554d6aa72d058420",
     "train.py": "70080fd8c1c4ea87d2b1f462b3092904667c41e7454e9d01c8e8b82251d08ab1"
   },
-  "trainset": "757547d8e9f29a291a19822b8115ca13089f6aa4dad9a3e04cdf0ce8e89010c9",
+  "trainset": "8b68545d880dfae1820c00c33298b0e16f1e9bbd921927efd31bbecbf2741107",
   "drawings": {
     "feast-mother/poses-poses-1": "d61a553af925fb7d7740554fa20a77eba7081043d256a333fdc067f0c477413a",
     "feast-mother/poses-poses-2": "798584e7d50bc667d12d13a70c63f1d00be4f1043cb12836a692301b1e11b526",
@@ -27,6 +27,7 @@
     "jeremiah/heads-heads-6": "9c5e68652d7729d7314f754e931ab379d6d8dc52a24ad9a347c5d906497c7e7a",
     "lead-feast/heads-heads-4": "9b2bcd546885754b46a8fdf452e6a80c538e9ac701334bbbbd3fb96be308d549",
     "lead-feast/single-single-1": "8cd7a0d5716d2dbe4f6eaefe3c6e2610889c2e31636695f28f6fb01edb6a168d",
+    "lead-feast/single-single-5": "4d3e1907f0854d1e08dec98c4407d57dc8a31c19aae47f993dfbecec432076d2",
     "lead-feast/turnaround-front": "d25bd915ff36a4b945be909307969785d70d50f751e5660f375012c06c389d6a",
     "lead-feast/turnaround-threeQuarterLeft": "4d14608065042278559d478d92440d6fb18d3167b20ccb122606118137c1161b",
     "paul/heads-heads-1": "70edd06434ed811f98d001236f0126ce78b597dba3fb0cca2932c25f15d1ca19",
@@ -62,36 +63,42 @@
       "height": 560
     }
   },
-  "checkpointSha256": "74ec6577c51b8f8964d2265650702662ed745d5c86fba540b226d3c92ead8a84",
+  "checkpointSha256": "14a08974ee4a7a26340de37875dcae83af33d36cf81c1dfc796267efd7164fd8",
   "train": {
-    "stageSec": 4361
+    "trainedOn": "2026-11-02",
+    "modalApp": "ap-JnWGMbZ1NvMAQEinJR22x5",
+    "steps": 4800,
+    "secPerStep": 0.5149394284685452,
+    "trainSec": 2472,
+    "finalLoss": 0.008275103997439146,
+    "stageSec": 6767
   },
   "held": {
-    "drawings": 40,
+    "drawings": 41,
     "accuracy": 1,
     "byDrawing": {
       "feast-mother/poses-poses-1": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.66,
-          "p90": 3.74
+          "median": 0.7,
+          "p90": 3.69
         },
         "jointPx": {
-          "median": 1.04,
-          "p90": 1.7
+          "median": 1.05,
+          "p90": 1.66
         }
       },
       "feast-mother/poses-poses-2": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.65,
-          "p90": 3.15
+          "median": 0.58,
+          "p90": 2.77
         },
         "jointPx": {
           "median": 1.06,
-          "p90": 1.62
+          "p90": 1.61
         }
       },
       "feast-mother/poses-poses-3": {
@@ -99,82 +106,82 @@
         "accuracy": 1,
         "angleDeg": {
           "median": 0.71,
-          "p90": 3.18
+          "p90": 3.01
         },
         "jointPx": {
-          "median": 1.04,
-          "p90": 1.71
+          "median": 1.06,
+          "p90": 1.64
         }
       },
       "feast-mother/turnaround-back": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.7,
-          "p90": 2.98
+          "median": 0.76,
+          "p90": 2.81
         },
         "jointPx": {
-          "median": 1,
-          "p90": 1.59
+          "median": 1.01,
+          "p90": 1.62
         }
       },
       "feast-mother/turnaround-front": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.77,
-          "p90": 2.77
+          "median": 0.71,
+          "p90": 2.89
         },
         "jointPx": {
-          "median": 1.02,
-          "p90": 1.56
+          "median": 1.03,
+          "p90": 1.59
         }
       },
       "feast-mother/turnaround-profileLeft": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.57,
-          "p90": 2.16
+          "median": 0.56,
+          "p90": 1.91
         },
         "jointPx": {
-          "median": 1.02,
-          "p90": 1.54
+          "median": 1.04,
+          "p90": 1.59
         }
       },
       "feast-mother/turnaround-profileRight": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.55,
-          "p90": 2.24
+          "median": 0.52,
+          "p90": 2.15
         },
         "jointPx": {
-          "median": 1.09,
-          "p90": 1.69
+          "median": 1.08,
+          "p90": 1.71
         }
       },
       "feast-mother/turnaround-threeQuarterLeft": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.76,
-          "p90": 3.25
+          "median": 0.78,
+          "p90": 3.26
         },
         "jointPx": {
-          "median": 1.04,
-          "p90": 1.64
+          "median": 1.06,
+          "p90": 1.66
         }
       },
       "feast-mother/turnaround-threeQuarterRight": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.99,
+          "median": 0.97,
           "p90": 3.43
         },
         "jointPx": {
-          "median": 1,
+          "median": 1.02,
           "p90": 1.61
         }
       },
@@ -182,60 +189,60 @@
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 1.05,
-          "p90": 6.35
+          "median": 0.98,
+          "p90": 8.42
         },
         "jointPx": {
-          "median": 1.09,
-          "p90": 1.65
+          "median": 1.08,
+          "p90": 1.75
         }
       },
       "idea-villagers/poses-poses-6": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.71,
-          "p90": 2.7
+          "median": 0.72,
+          "p90": 2.63
         },
         "jointPx": {
           "median": 1.05,
-          "p90": 1.6
+          "p90": 1.56
         }
       },
       "jeremiah/heads-heads-1": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.12,
-          "p90": 0.23
+          "median": 0.11,
+          "p90": 0.27
         },
         "jointPx": {
           "median": 0.92,
-          "p90": 1.51
+          "p90": 1.55
         }
       },
       "jeremiah/heads-heads-2": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.14,
-          "p90": 0.27
+          "median": 0.15,
+          "p90": 0.26
         },
         "jointPx": {
           "median": 1,
-          "p90": 1.55
+          "p90": 1.5
         }
       },
       "jeremiah/heads-heads-3": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.12,
-          "p90": 0.27
+          "median": 0.11,
+          "p90": 0.28
         },
         "jointPx": {
           "median": 1.09,
-          "p90": 1.68
+          "p90": 1.58
         }
       },
       "jeremiah/heads-heads-4": {
@@ -243,35 +250,35 @@
         "accuracy": 1,
         "angleDeg": {
           "median": 0.09,
-          "p90": 0.28
+          "p90": 0.25
         },
         "jointPx": {
-          "median": 0.97,
-          "p90": 1.52
+          "median": 0.94,
+          "p90": 1.55
         }
       },
       "jeremiah/heads-heads-5": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.08,
-          "p90": 0.26
+          "median": 0.12,
+          "p90": 0.3
         },
         "jointPx": {
-          "median": 0.98,
-          "p90": 1.54
+          "median": 1,
+          "p90": 1.52
         }
       },
       "jeremiah/heads-heads-6": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.1,
-          "p90": 0.23
+          "median": 0.14,
+          "p90": 0.28
         },
         "jointPx": {
-          "median": 0.94,
-          "p90": 1.56
+          "median": 1,
+          "p90": 1.57
         }
       },
       "lead-feast/heads-heads-4": {
@@ -279,58 +286,70 @@
         "accuracy": 1,
         "angleDeg": {
           "median": 0.1,
-          "p90": 0.25
+          "p90": 0.27
         },
         "jointPx": {
-          "median": 1.05,
-          "p90": 1.84
+          "median": 1.07,
+          "p90": 1.87
         }
       },
       "lead-feast/single-single-1": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.74,
-          "p90": 3.92
+          "median": 0.79,
+          "p90": 3.94
         },
         "jointPx": {
           "median": 1.03,
-          "p90": 1.62
+          "p90": 1.67
+        }
+      },
+      "lead-feast/single-single-5": {
+        "n": 40,
+        "accuracy": 1,
+        "angleDeg": {
+          "median": 0.16,
+          "p90": 0.31
+        },
+        "jointPx": {
+          "median": 1.1,
+          "p90": 1.88
         }
       },
       "lead-feast/turnaround-front": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.59,
-          "p90": 2.96
+          "median": 0.64,
+          "p90": 3.26
         },
         "jointPx": {
-          "median": 0.97,
-          "p90": 1.5
+          "median": 1,
+          "p90": 1.48
         }
       },
       "lead-feast/turnaround-threeQuarterLeft": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.75,
-          "p90": 3.36
+          "median": 0.72,
+          "p90": 3.25
         },
         "jointPx": {
           "median": 1.05,
-          "p90": 1.68
+          "p90": 1.65
         }
       },
       "paul/heads-heads-1": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.1,
-          "p90": 0.27
+          "median": 0.11,
+          "p90": 0.31
         },
         "jointPx": {
-          "median": 1.05,
+          "median": 1.08,
           "p90": 1.6
         }
       },
@@ -338,48 +357,48 @@
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.07,
-          "p90": 0.2
+          "median": 0.08,
+          "p90": 0.25
         },
         "jointPx": {
-          "median": 1.06,
-          "p90": 1.51
+          "median": 1.05,
+          "p90": 1.49
         }
       },
       "paul/heads-heads-3": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.12,
-          "p90": 0.2
+          "median": 0.13,
+          "p90": 0.19
         },
         "jointPx": {
-          "median": 1.06,
-          "p90": 1.62
+          "median": 1.05,
+          "p90": 1.63
         }
       },
       "paul/heads-heads-4": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.11,
-          "p90": 0.25
+          "median": 0.08,
+          "p90": 0.19
         },
         "jointPx": {
-          "median": 0.98,
-          "p90": 1.56
+          "median": 1,
+          "p90": 1.51
         }
       },
       "paul/heads-heads-5": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.09,
+          "median": 0.1,
           "p90": 0.2
         },
         "jointPx": {
-          "median": 1.01,
-          "p90": 1.49
+          "median": 1,
+          "p90": 1.51
         }
       },
       "paul/heads-heads-6": {
@@ -387,107 +406,107 @@
         "accuracy": 1,
         "angleDeg": {
           "median": 0.09,
-          "p90": 0.2
+          "p90": 0.22
         },
         "jointPx": {
           "median": 1.03,
-          "p90": 1.49
+          "p90": 1.6
         }
       },
       "sower/poses-poses-1": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.66,
-          "p90": 2.73
+          "median": 0.64,
+          "p90": 2.67
         },
         "jointPx": {
-          "median": 1.03,
-          "p90": 1.7
+          "median": 1.04,
+          "p90": 1.74
         }
       },
       "sower/poses-poses-2": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.72,
-          "p90": 2.76
+          "median": 0.7,
+          "p90": 3.03
         },
         "jointPx": {
-          "median": 1.04,
-          "p90": 1.63
+          "median": 1.02,
+          "p90": 1.71
         }
       },
       "sower/poses-poses-3": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.59,
-          "p90": 2.91
+          "median": 0.62,
+          "p90": 2.57
         },
         "jointPx": {
-          "median": 1.08,
-          "p90": 1.7
+          "median": 1.04,
+          "p90": 1.64
         }
       },
       "sower/poses-poses-4": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.71,
-          "p90": 3.79
+          "median": 0.73,
+          "p90": 3.35
         },
         "jointPx": {
           "median": 1.04,
-          "p90": 1.66
+          "p90": 1.71
         }
       },
       "sower/turnaround-back": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.66,
-          "p90": 2.94
+          "median": 0.68,
+          "p90": 3.02
         },
         "jointPx": {
-          "median": 0.98,
-          "p90": 1.55
+          "median": 0.99,
+          "p90": 1.58
         }
       },
       "sower/turnaround-front": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.74,
-          "p90": 2.87
+          "median": 0.67,
+          "p90": 2.63
         },
         "jointPx": {
-          "median": 1.04,
-          "p90": 1.59
+          "median": 1.05,
+          "p90": 1.58
         }
       },
       "sower/turnaround-profileLeft": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.54,
-          "p90": 2.14
+          "median": 0.62,
+          "p90": 2.39
         },
         "jointPx": {
-          "median": 1.04,
-          "p90": 1.78
+          "median": 1.06,
+          "p90": 1.76
         }
       },
       "sower/turnaround-profileRight": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.59,
-          "p90": 2.43
+          "median": 0.56,
+          "p90": 2.53
         },
         "jointPx": {
-          "median": 0.95,
-          "p90": 1.59
+          "median": 0.97,
+          "p90": 1.68
         }
       },
       "sower/turnaround-threeQuarterLeft": {
@@ -495,19 +514,19 @@
         "accuracy": 1,
         "angleDeg": {
           "median": 0.6,
-          "p90": 2.57
+          "p90": 2.41
         },
         "jointPx": {
-          "median": 1.03,
-          "p90": 1.59
+          "median": 1.06,
+          "p90": 1.54
         }
       },
       "sower/turnaround-threeQuarterRight": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.66,
-          "p90": 2.43
+          "median": 0.65,
+          "p90": 2.56
         },
         "jointPx": {
           "median": 1.07,
@@ -518,12 +537,12 @@
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.55,
-          "p90": 2.22
+          "median": 0.52,
+          "p90": 2.21
         },
         "jointPx": {
-          "median": 1.07,
-          "p90": 1.68
+          "median": 1.04,
+          "p90": 1.78
         }
       },
       "villager-toddler/poses-poses-1": {
@@ -531,23 +550,23 @@
         "accuracy": 1,
         "angleDeg": {
           "median": 0.54,
-          "p90": 2.11
+          "p90": 2.46
         },
         "jointPx": {
-          "median": 1.13,
-          "p90": 1.79
+          "median": 1.16,
+          "p90": 1.75
         }
       },
       "villager-toddler/poses-poses-2": {
         "n": 40,
         "accuracy": 1,
         "angleDeg": {
-          "median": 0.72,
-          "p90": 3.09
+          "median": 0.89,
+          "p90": 3.1
         },
         "jointPx": {
-          "median": 1.08,
-          "p90": 1.8
+          "median": 1.05,
+          "p90": 1.73
         }
       }
     }
@@ -556,50 +575,39 @@
     "idea-villagers/poses-poses-3": {
       "n": 40,
       "angleDeg": {
-        "median": 12.34,
-        "p90": 63.06
+        "median": 12.04,
+        "p90": 62.33
       },
       "jointPx": {
-        "median": 17.01,
-        "p90": 62.71
+        "median": 16.97,
+        "p90": 65.39
       }
     },
     "idea-villagers/single-single-15": {
       "n": 40,
       "angleDeg": {
-        "median": 3.53,
-        "p90": 10.33
+        "median": 3.68,
+        "p90": 10.31
       },
       "jointPx": {
-        "median": 3.49,
-        "p90": 7.79
+        "median": 3.31,
+        "p90": 7.55
       }
     },
     "lead-feast/single-single-9": {
       "n": 40,
       "angleDeg": {
-        "median": 3.66,
-        "p90": 19.16
+        "median": 4.31,
+        "p90": 18.91
       },
       "jointPx": {
-        "median": 4.77,
-        "p90": 25.85
-      }
-    },
-    "lead-feast/single-single-5": {
-      "n": 40,
-      "angleDeg": {
-        "median": 0.95,
-        "p90": 1.15
-      },
-      "jointPx": {
-        "median": 9.36,
-        "p90": 12.31
+        "median": 4.54,
+        "p90": 25.65
       }
     }
   },
   "clips": {
-    "passed": 6,
+    "passed": 5,
     "of": 6,
     "byClip": {
       "feast-mother/wave/clip-a": {
@@ -620,9 +628,9 @@
           }
         ],
         "iou": {
-          "0-123": 0.9306761081425122,
-          "0-13": 0.9552794466110791,
-          "34-123": 0.9254757921094215
+          "0-123": 0.9303364270748277,
+          "0-13": 0.9547335829558765,
+          "34-123": 0.9252575740899226
         },
         "named": {
           "0-123": {
@@ -677,7 +685,7 @@
           }
         ],
         "iou": {
-          "0-123": 0.9391565383134801
+          "0-123": 0.9387759464038247
         },
         "named": {
           "0-123": {
@@ -726,18 +734,18 @@
           }
         ],
         "iou": {
-          "0-123": 0.9120966698510602,
-          "0-40": 0.9098354292209895,
-          "41-123": 0.9132136682345893
+          "0-123": 0.9081938328551735,
+          "0-40": 0.9044422596445068,
+          "41-123": 0.9100470196218886
         },
         "named": {
           "0-123": {
-            "lead-feast/turnaround-front": 39,
-            "lead-feast/single-single-1": 85
+            "lead-feast/turnaround-front": 31,
+            "lead-feast/single-single-1": 93
           },
           "0-40": {
-            "lead-feast/turnaround-front": 39,
-            "lead-feast/single-single-1": 2
+            "lead-feast/turnaround-front": 31,
+            "lead-feast/single-single-1": 10
           },
           "41-123": {
             "lead-feast/single-single-1": 83
@@ -760,17 +768,17 @@
         "runs": [
           {
             "from": 0,
-            "to": 39,
+            "to": 31,
             "drawing": "lead-feast/turnaround-front"
           },
           {
-            "from": 39,
+            "from": 31,
             "to": 124,
             "drawing": "lead-feast/single-single-1"
           }
         ],
-        "pass": true,
-        "fails": []
+        "pass": false,
+        "fails": ["named 0-40: 31 of 41 frames name lead-feast/turnaround-front, under 0.9"]
       },
       "sower/sow/clip-a": {
         "member": "sower",
@@ -790,13 +798,14 @@
           }
         ],
         "iou": {
-          "0-123": 0.9277297027159622,
-          "0-2": 0.9568421382638329,
-          "110-123": 0.9419474757653825
+          "0-123": 0.9309677089817859,
+          "0-2": 0.9606368050759208,
+          "110-123": 0.9419598377790243
         },
         "named": {
           "0-123": {
-            "sower/poses-poses-3": 50,
+            "sower/poses-poses-3": 48,
+            "sower/poses-poses-4": 2,
             "sower/poses-poses-1": 74
           },
           "0-2": {
@@ -823,8 +832,13 @@
         "runs": [
           {
             "from": 0,
-            "to": 50,
+            "to": 48,
             "drawing": "sower/poses-poses-3"
+          },
+          {
+            "from": 48,
+            "to": 50,
+            "drawing": "sower/poses-poses-4"
           },
           {
             "from": 50,
@@ -853,9 +867,9 @@
           }
         ],
         "iou": {
-          "0-123": 0.9432795501505491,
-          "0-23": 0.9469182537869005,
-          "34-123": 0.9427686101442216
+          "0-123": 0.9434625058370588,
+          "0-23": 0.9475747880273424,
+          "34-123": 0.9427731145229872
         },
         "named": {
           "0-123": {
@@ -910,9 +924,9 @@
           }
         ],
         "iou": {
-          "0-123": 0.9043169610972085,
-          "0-19": 0.9382803519557932,
-          "38-123": 0.8978248233666307
+          "0-123": 0.9055469819671791,
+          "0-19": 0.9388049480883229,
+          "38-123": 0.8974309905604853
         },
         "named": {
           "0-123": {
@@ -950,5 +964,8 @@
         "fails": []
       }
     }
+  },
+  "spend": {
+    "buildCountedUsd": 0.92
   }
 }
