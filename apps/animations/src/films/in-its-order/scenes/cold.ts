@@ -7,15 +7,16 @@
 // table, her baby at the cup, behind the guests, and trucks down it to the
 // lead, who sits between two guests (a man picture-left and a woman
 // picture-right; `seatTable`, the table the title ends on), the bottle on his lap, and on
-// `bottle` raises it (`raise`, his seated raise's frames on twos); at the
-// word "bottle" the guests turn to him and stare (`turn`). `smile` pulls
-// back to the three at the table, and the guests smile at him. On
-// `letter` they stare again (`SWAPS`), a rolled scroll drops onto the table
-// in front of the lead and unrolls over its edge (`SCROLL`). On `ouch` he
-// winces (`WINCE`), his wince's head riding his head's bones. From `grown` on he and the mother move in their idles
-// (`numbersOf`, `motherNumbers`), and he acts on the cues. The mother
-// blinks all through and bows to her baby (`motherLook`, `motherNumbers`),
-// and he blinks from his raise's landing to `ouch` (`eyesOf`).
+// `bottle` raises it (`raise`, his seated raise's keys in place of his arm, on
+// twos); at the word "bottle" the guests turn to him and stare (`turn`).
+// `smile` pulls back to the three at the table, and the guests smile at him.
+// On `letter` they stare again (`SWAPS`), a rolled scroll drops onto the
+// table in front of the lead and unrolls over its edge (`SCROLL`). On `ouch`
+// he winces (`WINCE`), his wince's head riding his head's bones. From `grown`
+// on he and the mother move in their idles (`numbersOf`, `motherNumbers`),
+// and he acts on the cues. The mother blinks all through and bows to her
+// baby (`motherLook`, `motherNumbers`), and he blinks from `grown` to `ouch`
+// (`eyesOf`).
 // `what` cuts to the last close plate (`WHAT`), the cup of milk and the
 // bread, and the camera lifts to them.
 //
@@ -26,16 +27,13 @@
 
 import { drawing, type PuppetLook } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
-import { PUPPETS as LEAD } from '../../../library/cast/lead-feast/cutout/puppets.ts';
+import { Option } from 'effect';
 import { RAISE_SEATED } from '../../../library/cast/lead-feast/cutout/raise-seated.ts';
-import shutHead from '../../../library/cast/lead-feast/cutout/sheets/single-9/head-closed.png' with { type: 'file' };
-import winceHead from '../../../library/cast/lead-feast/cutout/sheets/single-5/head.png' with { type: 'file' };
 import { BABY_BACK, DISTANCE, NEAR, PANEL, PLANES, SKY, TABLE, WHAT } from '../plates/plates.ts';
 import { SCROLL_OPEN, SCROLL_ROLLED, SCROLL_ROLLER } from '../plates/props.ts';
-import { type Cues, eyesOf, leanOf, numbersOf } from './lead.ts';
+import { type Cues, eyesOf, numbersOf } from './lead.ts';
 import {
   type GuestKey,
-  LEAD_POSE,
   MOTHER_SEAT,
   TABLE_PAINTINGS,
   TABLE_PUPPETS,
@@ -43,6 +41,7 @@ import {
   headMiddle,
   motherLook,
   motherNumbers,
+  raising,
   seatTable,
   seatedLead,
 } from './table.ts';
@@ -129,18 +128,14 @@ const MOVES = [
   ['ouch', { x: 947, y: 820, k: 2.82 }],
 ] as const satisfies ReadonlyArray<readonly [string, Camera]>;
 
-/** The film's frames a second, its `film.ts`'s `fps` (the film imports this scene, so the scene names the rate it swaps the raise's frames on). */
+/** The film's frames a second, its `film.ts`'s `fps` (the film imports this scene, so the scene names the rate it swaps the raise's keys on). */
 const FPS = 30;
 
-/**
- * His seated cut-out (single-9) with no line: the wince's head is laid whole
- * with its own line, so the look draws no line again near it (with a line,
- * the look inks round the head and over the bottle hand by it).
- */
-const { line: _line, ...SEATED } = LEAD['single-9'];
+/** His bottle arm's bones while a raise key shows in place of his arm: at 0, so the key stays where it was drawn (`raising`). */
+const ARM_STILL = { shoulderRight: 0, elbowRight: 0, wristRight: 0 } as const;
 
 /** His head bone's middle, sheet px: the pivot his drawn heads ride his head part's bones at. */
-const HEAD_MIDDLE = headMiddle(SEATED.skeleton);
+const HEAD_MIDDLE = headMiddle(TABLE_PUPPETS.lead.skeleton);
 
 /** His look as his eyes read (`eyesOf`): open, or his single-9 head drawn eyes shut in place of his own. */
 const leadEyes = eyesLook(HEAD_MIDDLE);
@@ -215,16 +210,7 @@ export const cold = drawing({
     ouch: { mark: 'ouch', dur: 0.6, ease: 'inOutCubic' },
     what: { mark: 'what', until: { at: 'end' }, ease: 'inOutSine' },
   },
-  puppets: {
-    lead: {
-      ...SEATED,
-      drawings: [
-        { name: 'wince', png: winceHead },
-        { name: 'shut', png: shutHead, part: 'head' },
-      ],
-    },
-    ...TABLE_PUPPETS,
-  },
+  puppets: TABLE_PUPPETS,
   paintings: {
     sky: SKY,
     distance: DISTANCE,
@@ -260,14 +246,15 @@ export const cold = drawing({
       draw();
       ctx.restore();
     };
-    // The lead on his seat (`seatedLead`): his raise's painted frame (rest,
-    // then on twos from `raise`) turned by his lean, until the raise reaches
-    // k6. His joints cannot reach the bottle on his lap: his single-9 view, k6,
-    // holds it at his cheek. From k6 on he is his single-9 cut-out at his bone
+    // The lead on his seat (`seatedLead`): his single-9 cut-out at his bone
     // numbers (`numbersOf`), blinking (`eyesOf`, his head drawn eyes shut in
-    // place of his own), and from `ouch` with the wince's head in place of
-    // his own (`WINCE`), his neck and head at 0, no blink under it. The
-    // raise's film frame is its linear cue's share of its frames, rounded:
+    // place of his own). His joints cannot reach the bottle on his lap: until
+    // his raise lands on k6, his single-9 view, which holds it at his cheek,
+    // his raise's key shows in place of his arm (`raising`: rest, then on
+    // twos from `raise`), his arm's bones at 0 (`ARM_STILL`), his lean, neck,
+    // head and blinks running on. From `ouch` he has the wince's head in
+    // place of his own (`WINCE`), his neck and head at 0, no blink under it.
+    // The raise's key is its linear cue's share of its film frames, rounded:
     // `bottle` lies on the frame grid, where a floor would drop a frame to
     // float noise.
     const lead = () => {
@@ -279,16 +266,16 @@ export const cold = drawing({
         smile: f.cue('smile').start,
         read: f.cue('read').start,
       };
-      const frame = Math.round(f.at('raise') * RAISE_SEATED.frames);
-      if (frame < RAISE_SEATED.frames) {
-        seatedLead(f, RAISE_SEATED.frame(frame), leanOf(cues)(f.t));
+      const numbers = numbersOf(cues)(f.t);
+      if (f.t >= f.cue('ouch').start) {
+        seatedLead(f, { ...numbers, neck: 0, head: 0 }, WINCE);
         return;
       }
-      const numbers = numbersOf(cues)(f.t);
-      seatedLead(f);
-      if (f.t >= f.cue('ouch').start)
-        f.puppet('lead', { ...LEAD_POSE, numbers: { ...numbers, neck: 0, head: 0 } }, WINCE);
-      else f.puppet('lead', { ...LEAD_POSE, numbers }, leadEyes(eyesOf(cues)(f.t)));
+      const eyes = leadEyes(eyesOf(cues)(f.t));
+      Option.match(RAISE_SEATED.key(Math.round(f.at('raise') * RAISE_SEATED.frames)), {
+        onNone: () => seatedLead(f, numbers, eyes),
+        onSome: (key) => seatedLead(f, { ...numbers, ...ARM_STILL }, raising(eyes, key)),
+      });
     };
     // The guests' key: the key of the last cue started (`SWAPS`), neutral before the first.
     const key = SWAPS.reduce<GuestKey>(
