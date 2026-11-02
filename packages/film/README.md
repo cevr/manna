@@ -4042,8 +4042,9 @@ through them, rather than a flat cutout.
 - `canvas/camera.ts`: `planeView` is the view a plane at `z` sees through the
   shot. A `multiplane`'s
   `haze` takes a sky of stops as well as one colour.
-- **Painted plates** (`canvas/painting.ts`, `PaintingSpec`): a PNG with alpha
-  in the film's folder, painted at the fidelity of the concept art. A drawing
+- **Painted plates** (`canvas/painting.ts`, `PaintingSpec`): an 8-bit RGBA
+  PNG, not interlaced (the Bun decoder, `tools/png.ts`, refuses a palette,
+  16-bit or interlaced PNG and reads no `tRNS`), in the film's folder, painted at the fidelity of the concept art. A drawing
   declares its `paintings` as it declares its puppets
   (`drawing({ paintings: { sky: SKY }, draw: (f) => … f.painting('sky') … })`),
   and `f.painting(name)` paints one as a plane under the ctx's current
