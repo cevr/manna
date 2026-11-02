@@ -12,8 +12,9 @@
 import type { HiddenEntry, PartCut } from '@manna/film/tools';
 import { CUT_AWAY, shade, sides } from '../../../cutout/prompts.ts';
 import { FAR, box } from '../../../cutout/rules.ts';
+import { cuffsToArms } from '../../../cutout/clean.ts';
 import { cutTable } from '../../../cutout/table.ts';
-import { FRAMES, type FramedView } from './frames.ts';
+import { FRAMES, type FramedView, keptAt } from './frames.ts';
 import { JOINTS } from './joints.ts';
 
 export { FRAMES, JOINTS };
@@ -24,13 +25,17 @@ const CHIN = 260;
 /** Her hip's row, at her lap just above her stool's planks: the robe is every row below it that her arms leave, with her stool, her sandals and the lap's fold line. */
 const HIP = 521;
 
+/** Her round hands on her knees, the discs her arms end in (seated view pixels). */
+const HAND_RIGHT = { c: [100, 529], r: 44 } as const;
+const HAND_LEFT = { c: [282, 529], r: 44 } as const;
+
 const POSES_1: PartCut = {
   parts: [
     // her right arm on the viewer's left: from the veil drape's tip along the shoulder's outline, down the mantle's crease and the cuff's inner ink to the hand on her knee, back up the cuff's outer outline
     {
       name: 'armRight',
       take: [
-        { disc: { c: [100, 529], r: 44 } },
+        { disc: HAND_RIGHT },
         {
           polygon: [
             [-1, 392],
@@ -77,7 +82,7 @@ const POSES_1: PartCut = {
     {
       name: 'armLeft',
       take: [
-        { disc: { c: [282, 529], r: 44 } },
+        { disc: HAND_LEFT },
         {
           polygon: [
             [FAR, 392],
@@ -175,3 +180,21 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   hidden: HIDDEN_ENTRIES,
   ink: INK,
 });
+
+/** A hand disc of hers in her part sheet's pixels: the seated view's disc moved by the kept box's corner in the padded frame. */
+const onSheet = (hand: typeof HAND_RIGHT | typeof HAND_LEFT) => {
+  const [dx, dy] = keptAt('poses-1');
+  return { c: [hand.c[0] + dx, hand.c[1] + dy] as const, r: hand.r };
+};
+
+/** What each view's laid part sheet runs before it is written (`film concept parts`): her arms take the cuff ink her hand discs leave on her torso and robe, and the two pieces of her torso stranded off her outer cuffs, so no specks stay behind when an arm turns. */
+export const CLEAN = {
+  'poses-1': cuffsToArms({
+    arms: [
+      { name: 'armRight', hand: onSheet(HAND_RIGHT) },
+      { name: 'armLeft', hand: onSheet(HAND_LEFT) },
+    ],
+    body: ['torso', 'robe'],
+    loose: 'torso',
+  }),
+};
