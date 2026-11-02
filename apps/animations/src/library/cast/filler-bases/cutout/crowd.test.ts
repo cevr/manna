@@ -1,0 +1,280 @@
+// The crowd kit's rules over every seed 0..999 and the placements declared
+// here (scales 0.25-0.6, the far tables' range in `C-plan.md` §1): the kit's
+// mix (neighbours, cloths, robe white), the idle's reach at the smallest
+// scale, and the table top above every bust's foot and hands. The busts'
+// geometry is read from their skeletons and kept boxes, posed here by plain
+// rotations as the engine's bones turn (clockwise on screen, each child after
+// its parent), so no part sheet is read.
+
+import { describe, expect, test } from 'bun:test';
+import { ramp } from '@manna/film/canvas';
+import { keyLight, shading } from '@manna/film/style';
+import { Option } from 'effect';
+import {
+  BODIES,
+  CLOTHS,
+  type Figure,
+  type Placement,
+  ROBE_WHITE,
+  bustAt,
+  crowdOf,
+  dressOf,
+  idleAt,
+  rowsOf,
+} from './crowd.ts';
+import { FRAMES } from './frames.ts';
+import { PUPPETS } from './puppets.ts';
+
+type Pt = readonly [number, number];
+
+const SEEDS = Array.from({ length: 1000 }, (_, i) => i);
+
+/** The most busts one plane lays (the feast's crowd plane holds 14, `C-plan.md` §1), and two more. */
+const COUNT = 16;
+
+/** Representative placements: the baby's far table, the feast's crowd plane, and the title's guests plane, at the scales they span. */
+const PLACEMENTS: ReadonlyArray<Placement> = [
+  { x: 300, top: 560, scale: 0.25 },
+  { x: 700, top: 600, scale: 0.3 },
+  { x: 960, top: 640, scale: 0.4 },
+  { x: 1200, top: 820, scale: 0.5 },
+  { x: 1600, top: 880, scale: 0.6 },
+];
+
+const SMALLEST = Math.min(...PLACEMENTS.map((p) => p.scale));
+
+const CROWDS = SEEDS.map((seed) => crowdOf(seed, COUNT));
+
+const FIGURES = CROWDS.flat();
+
+const RAD = Math.PI / 180;
+
+/** `p` turned `deg` clockwise on screen about `c`. */
+const turn = (p: Pt, c: Pt, deg: number): Pt => {
+  const [cos, sin] = [Math.cos(deg * RAD), Math.sin(deg * RAD)];
+  const [dx, dy] = [p[0] - c[0], p[1] - c[1]];
+  return [c[0] + cos * dx - sin * dy, c[1] + sin * dx + cos * dy];
+};
+
+/**
+ * Where a torso point `p` of `figure`'s bust (a sheet point on the lean)
+ * lands on screen at `at`, time `t`: turned by the lean about the root, laid
+ * by the pose about the root less the origin, then by the canvas transform.
+ */
+const torsoAt = (figure: Figure, at: Placement, t: number) => {
+  const { pose, transform } = bustAt(figure, at, t);
+  const { lean } = idleAt(figure.idle, t);
+  const { root } = rowsOf(figure.body);
+  const origin = PUPPETS[figure.body].origin;
+  const [a, b, c, d, e, f] = transform;
+  return (p: Pt): Pt => {
+    const w = turn(p, root, lean);
+    const local: Pt = [
+      pose.root[0] + pose.scale * (w[0] - root[0]) - origin[0],
+      pose.root[1] + pose.scale * (w[1] - root[1]) - origin[1],
+    ];
+    return [a * local[0] + c * local[1] + e, b * local[0] + d * local[1] + f];
+  };
+};
+
+/** A body's lowest drawn points, the kept box's two foot corners, and its hands' row at the same two sides, in its part sheet's frame. */
+const lowOf = (figure: Figure): ReadonlyArray<Pt> => {
+  const { root, hands } = rowsOf(figure.body);
+  const frame = FRAMES[figure.body];
+  const [left, right] = [frame.pad[0], frame.pad[0] + frame.kept[2] - frame.kept[0]];
+  return [
+    [left, root[1]],
+    [right, root[1]],
+    [left, hands],
+    [right, hands],
+  ];
+};
+
+/** A figure's mantle, or `none`. */
+const mantleOf = (f: Figure) => Option.getOrElse(f.mantle, () => 'none');
+
+describe('the crowd kit', () => {
+  test('no two neighbours share body, mantle and headwear', () => {
+    const shared = CROWDS.flatMap((row) =>
+      row
+        .slice(1)
+        .filter(
+          (b, i) =>
+            row[i]!.body === b.body &&
+            row[i]!.headwear === b.headwear &&
+            mantleOf(row[i]!) === mantleOf(b),
+        ),
+    );
+    expect(shared).toEqual([]);
+  });
+
+  test('every figure wears its body’s own house parts, its band only with its tied headcloth, a woman’s mantle only over her head, each cloth the kit’s', () => {
+    const cloths = new Set<string>(Object.keys(CLOTHS));
+    const wrong = FIGURES.filter((f) => {
+      const drawn = BODIES[f.body];
+      const worn = [f.mantle, f.band].flatMap((c) => Option.toArray(c));
+      return (
+        !(f.headwear === 'bare' || f.headwear === drawn.headwear) ||
+        f.hair !== drawn.hair ||
+        (drawn.beard === 0 && f.beard) ||
+        (drawn.over && Option.isSome(f.mantle) !== (f.headwear === 'over')) ||
+        Option.isSome(f.band) !== (f.headwear === 'tied') ||
+        worn.some((c) => !cloths.has(c))
+      );
+    });
+    expect(wrong).toEqual([]);
+  });
+
+  test('every choice falls somewhere: each body, each facing, each headwear, bare heads, beards, each mantle cloth and none', () => {
+    const seen = new Set(
+      FIGURES.flatMap((f) => [
+        `body ${f.body}`,
+        `facing ${f.facing}`,
+        `headwear ${f.headwear}`,
+        `beard ${f.beard}`,
+        `mantle ${mantleOf(f)}`,
+      ]),
+    );
+    expect(seen.size).toBe(4 + 2 + 4 + 2 + 5);
+  });
+
+  test('nobody wears robe white: not the hair, nor any ramp a dress dyes to', () => {
+    const dressed = {
+      parts: ['headwear', 'band', 'beard', 'mantle', 'head', 'torso'].map((name) => ({
+        name,
+        png: '/nonexistent/crowd-probe.png',
+        ramp: ramp('#d1c6b4', keyLight, shading),
+      })),
+    };
+    // one figure of each hair, mantle and band: the dress is theirs alone
+    const kinds = new Map(
+      FIGURES.map((f) => [`${f.hair} ${mantleOf(f)} ${Option.getOrElse(f.band, () => 'none')}`, f]),
+    );
+    const worn = new Set(
+      [...kinds.values()].flatMap((f) => [
+        f.hair,
+        ...Object.values(
+          Option.getOrElse(Option.fromUndefinedOr(dressOf(f, dressed).dye), () => ({})),
+        ).flatMap((r) => [r.shade, r.base, r.light]),
+      ]),
+    );
+    expect(worn.size).toBeGreaterThan(4);
+    expect([...worn]).not.toContain(ROBE_WHITE);
+  });
+
+  test('a dress hides and dyes the house parts a puppet has, and asks nothing of the undressed busts', () => {
+    const dressed = {
+      parts: ['headwear', 'band', 'beard', 'mantle', 'head', 'torso'].map((name) => ({
+        name,
+        png: '/nonexistent/crowd-probe.png',
+        ramp: ramp('#d1c6b4', keyLight, shading),
+      })),
+    };
+    const bare = FIGURES.find((f) => f.headwear === 'bare' && !f.beard && Option.isNone(f.mantle))!;
+    expect(dressOf(bare, dressed)).toEqual({
+      hide: ['headwear', 'band', 'beard', 'mantle'],
+      dye: {},
+    });
+    const tied = FIGURES.find((f) => f.headwear === 'tied' && Option.isSome(f.mantle))!;
+    expect(Object.keys(dressOf(tied, dressed).dye ?? {})).toEqual(['mantle', 'band']);
+    for (const f of FIGURES.slice(0, 40))
+      expect(dressOf(f, PUPPETS[f.body])).toEqual({ hide: [], dye: {} });
+  });
+
+  test('every head tip moves at least 2 screen px in every 2 s window at the smallest scale', () => {
+    // Sampled every 0.2 s over the film's crowd shots (0-32 s): every 2 s
+    // window holds one of the 1.8 s windows that start on a sample, and a
+    // window's sampled sway across the screen is no more than its own.
+    const [step, size, samples] = [0.2, 10, 160];
+    const xs = new Float64Array(samples);
+    // each window's least and most by blocks of its size: the run from a
+    // block's start up to a sample, and from a sample to its block's end
+    const [upLo, upHi, downLo, downHi] = [
+      new Float64Array(samples),
+      new Float64Array(samples),
+      new Float64Array(samples),
+      new Float64Array(samples),
+    ];
+    let least = Number.POSITIVE_INFINITY;
+    for (const f of FIGURES) {
+      // the tip turned by the head about the pivot, then by the lean about
+      // the root, as `turn` does, written out for the 5 million samples
+      const { root, pivot } = rowsOf(f.body);
+      const tip = PUPPETS[f.body].skeleton.bones[1]!.tip;
+      const [hx, hy] = [tip[0] - pivot[0], tip[1] - pivot[1]];
+      const [px, py] = [pivot[0] - root[0], pivot[1] - root[1]];
+      for (let k = 0; k < samples; k++) {
+        const { lean, head } = idleAt(f.idle, k * step);
+        const ch = Math.cos(head * RAD);
+        const sh = Math.sin(head * RAD);
+        const wx = px + ch * hx - sh * hy;
+        const wy = py + sh * hx + ch * hy;
+        xs[k] = SMALLEST * (root[0] + Math.cos(lean * RAD) * wx - Math.sin(lean * RAD) * wy);
+      }
+      for (let k = 0; k < samples; k++) {
+        const x = xs[k]!;
+        upLo[k] = x;
+        upHi[k] = x;
+        if (k % size === 0) continue;
+        upLo[k] = Math.min(x, upLo[k - 1]!);
+        upHi[k] = Math.max(x, upHi[k - 1]!);
+      }
+      for (let k = samples - 1; k >= 0; k--) {
+        const x = xs[k]!;
+        downLo[k] = x;
+        downHi[k] = x;
+        if (k % size === size - 1 || k === samples - 1) continue;
+        downLo[k] = Math.min(x, downLo[k + 1]!);
+        downHi[k] = Math.max(x, downHi[k + 1]!);
+      }
+      for (let s = 0; s + size <= samples; s++) {
+        const e = s + size - 1;
+        least = Math.min(least, Math.max(downHi[s]!, upHi[e]!) - Math.min(downLo[s]!, upLo[e]!));
+      }
+    }
+    expect(least).toBeGreaterThanOrEqual(2);
+  });
+
+  test('the head turns on its neck within the 4 degrees its cut is held to', () => {
+    // the head's own turn is the breath and the tilt together, so its two
+    // swings bound it; sampled on one row to hold `idleAt` to that sum
+    const most = Math.max(...FIGURES.map(({ idle }) => idle.breath.deg + idle.tilt.deg));
+    expect(most).toBeLessThanOrEqual(4);
+    let over = Number.NEGATIVE_INFINITY;
+    for (const { idle } of CROWDS[0]!)
+      for (let t = 0; t < 32; t += 0.05)
+        over = Math.max(over, Math.abs(idleAt(idle, t).head) - idle.breath.deg - idle.tilt.deg);
+    expect(over).toBeLessThanOrEqual(1e-12);
+  });
+
+  test('every table top lies above its figure’s foot and hands, at the breath’s farthest either way', () => {
+    let least = Number.POSITIVE_INFINITY;
+    for (const f of FIGURES) {
+      const { breath } = f.idle;
+      const low = lowOf(f);
+      // the breath reaches its swing either way at these times
+      const peaks = [Math.PI / 2, (3 * Math.PI) / 2].map(
+        (a) => ((a - breath.phase) * breath.period) / (2 * Math.PI),
+      );
+      for (const at of PLACEMENTS)
+        for (const t of peaks) {
+          const on = torsoAt(f, at, t);
+          for (const p of low) least = Math.min(least, on(p)[1] - at.top);
+        }
+    }
+    expect(least).toBeGreaterThan(0);
+  });
+
+  test('the table top crosses each bust at its shown row, under the neck’s centre at x', () => {
+    for (const f of CROWDS[0]!.slice(0, 4))
+      for (const at of PLACEMENTS) {
+        const { root, table } = rowsOf(f.body);
+        const [x, y] = torsoAt(f, at, 0)([root[0], table]);
+        // the breath turns that row about the foot by at most its swing
+        const reach = at.scale * (root[1] - table);
+        const swing = f.idle.breath.deg * RAD;
+        expect(Math.abs(y - at.top)).toBeLessThanOrEqual(reach * (1 - Math.cos(swing)) + 1e-9);
+        expect(Math.abs(x - at.x)).toBeLessThanOrEqual(reach * Math.sin(swing) + 1e-9);
+      }
+  });
+});
