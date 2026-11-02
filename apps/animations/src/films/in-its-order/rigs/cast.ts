@@ -31,6 +31,7 @@ import { PUPPETS as IDEA_VILLAGERS_PUPPETS } from '../cast/idea-villagers/cutout
 import { PUPPETS as PAUL_PUPPETS } from '../../../library/cast/paul/cutout/puppets.ts';
 import { PUPPETS as JEREMIAH_PUPPETS } from '../../../library/cast/jeremiah/cutout/puppets.ts';
 import { PUPPETS as FEAST_GUEST_MAN_PUPPETS } from '../../../library/cast/feast-guest-man/cutout/puppets.ts';
+import { PUPPETS as FEAST_GUEST_WOMAN_PUPPETS } from '../../../library/cast/feast-guest-woman/cutout/puppets.ts';
 import { own } from '../../../library/cutout/poses.ts';
 import { RAISE as LEAD_RAISE } from '../../../library/cast/lead-feast/cutout/raise.ts';
 import { poses1View as leadPoses1 } from '../../../library/cast/lead-feast/cutout/poses.ts';
@@ -174,6 +175,23 @@ const FEAST_GUEST_MAN_CLASSES = {
   skin: ['#fec190', '#febe8e', '#febc8d', '#fec092', '#fdbf8e', '#fdbd8e', '#fec594', '#fdc18f'],
   indigo: ['#42537f', '#404f76', '#3a4770'],
   wood: ['#9f552a', '#924a26', '#a35429', '#9a5029'],
+} as const;
+
+/**
+ * The feast's guest woman's colour classes, read off her kept poses sheet's
+ * poses-1 (view px, measured): her olive veil and mantle (the veil 120,80
+ * 60,250 325,250, its drape 345,330, the mantle 118,380 262,380 and over her
+ * arms 60,420), her skin (face 191,200 150,160, neck 191,290, feet 95,672
+ * 290,672; her hands are her cheek's colour) and her stool's wood (its lit edge 12,545, planks 20,550
+ * 365,550, legs 22,640 30,595). Her hair (105,62,31 at 150,100) and her
+ * sandals are darker than luma 90, so they read as her line; her cream robe
+ * and cuffs are near the paper's own colour (254,248,230), so they are no
+ * class.
+ */
+const FEAST_GUEST_WOMAN_CLASSES = {
+  olive: ['#a08e55', '#81764d', '#6a6444', '#676141', '#776e46', '#7f774d', '#83794e'],
+  skin: ['#febe84', '#fdbd82', '#febc80', '#febb80', '#fdbc81'],
+  wood: ['#bc6830', '#985128', '#914d28', '#9a532a', '#844626'],
 } as const;
 
 /**
@@ -495,6 +513,11 @@ export const FIT_CLASSES = {
     indigo: { sheet: FEAST_GUEST_MAN_CLASSES.indigo, paper: FEAST_GUEST_MAN_CLASSES.indigo },
     wood: { sheet: FEAST_GUEST_MAN_CLASSES.wood, paper: FEAST_GUEST_MAN_CLASSES.wood },
   },
+  'feast-guest-woman': {
+    olive: { sheet: FEAST_GUEST_WOMAN_CLASSES.olive, paper: FEAST_GUEST_WOMAN_CLASSES.olive },
+    skin: { sheet: FEAST_GUEST_WOMAN_CLASSES.skin, paper: FEAST_GUEST_WOMAN_CLASSES.skin },
+    wood: { sheet: FEAST_GUEST_WOMAN_CLASSES.wood, paper: FEAST_GUEST_WOMAN_CLASSES.wood },
+  },
   'idea-villagers': {
     linen: { sheet: IDEA_VILLAGERS_CLASSES.linen, paper: IDEA_VILLAGERS_CLASSES.linen },
     violet: { sheet: IDEA_VILLAGERS_CLASSES.violet, paper: IDEA_VILLAGERS_CLASSES.violet },
@@ -567,6 +590,15 @@ const FEAST_MOTHER_POSES = 814 / 440;
  */
 const FEAST_GUEST_MAN_POSES = (LEAD_SINGLE * 161) / 206;
 
+/**
+ * The feast's guest woman on her poses, which seat her only: the table seats
+ * her face (its skin 162 px wide on her neutral view, `scenes/table.ts`) as
+ * wide as the lead's (206 px on the lead's single sheet), so her sheet px per
+ * unit are the lead's single's times 162 / 206; seated, crown to soles (696
+ * rows), she is about 306 units.
+ */
+const FEAST_GUEST_WOMAN_POSES = (LEAD_SINGLE * 162) / 206;
+
 /** The IDEA villagers on their poses sheet: poses-6, the grown villager standing at rest, ink crown to soles 512 rows (248 to 759, his kept box), 440 units. */
 const IDEA_VILLAGERS_POSES = 512 / 440;
 
@@ -606,6 +638,9 @@ export const SHEETS = {
   },
   'feast-guest-man': {
     poses: { ...SHEET, scale: FEAST_GUEST_MAN_POSES },
+  },
+  'feast-guest-woman': {
+    poses: { ...SHEET, scale: FEAST_GUEST_WOMAN_POSES },
   },
   'idea-villagers': {
     poses: { ...SHEET, scale: IDEA_VILLAGERS_POSES },
@@ -1196,6 +1231,11 @@ export const CUTOUT = cutoutTable({
   'feast-guest-man': {
     poses: {
       'poses-1': own(undefined, FEAST_GUEST_MAN_PUPPETS['poses-1']),
+    },
+  },
+  'feast-guest-woman': {
+    poses: {
+      'poses-1': own(undefined, FEAST_GUEST_WOMAN_PUPPETS['poses-1']),
     },
   },
   'idea-villagers': {
