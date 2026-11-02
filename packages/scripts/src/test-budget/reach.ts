@@ -1,9 +1,12 @@
-// Every test file of a workspace runs: its `test` script (the one the gate
-// runs, through turbo) takes it, or a script of its own run by hand
-// (`test:e2e`, `test:browser`) names it. A test file no script reaches
-// passes the gate without ever running, and lets its workspace fit the
-// budget by running less: `test:budget` measures no workspace that leaves
-// one out, and `reach.slow.test.ts` holds every workspace of the repo to it.
+// Every test file of a workspace runs, and runs once: one of its unit-test
+// tasks (`units.ts`: the scripts the gate runs, through turbo; `test`, or
+// each part of a workspace whose tests are cut into parts) takes it, or a
+// script of its own run by hand (`test:e2e`, `test:browser`) names it. A test
+// file no script reaches passes the gate without ever running, and lets its
+// workspace fit the budget by running less; one that two unit-test tasks take
+// runs twice in the gate, and is a part list that drifted. `test:budget`
+// measures no workspace that leaves one out or runs one twice, and
+// `reach.slow.test.ts` holds every workspace of the repo to both.
 //
 // What the check reads is which files a runner takes and loads as tests:
 // the scripts, their flags, a bunfig, a playwright config, the walk. What
@@ -81,6 +84,7 @@ import {
 } from 'oxc-parser';
 import { gateFiles } from '../guard/files.ts';
 import { andChained, changesShell, commandsOf } from './shell.ts';
+import type { UnitTest } from './units.ts';
 
 /** Whether bun's runner takes a file for a test by its name. */
 const isTestFile = (file: string) => /(?:\.test|_test|\.spec|_spec)\.[cm]?[jt]sx?$/.test(file);
@@ -1065,25 +1069,38 @@ const runsOf = (
 };
 
 /**
- * The script of a workspace's `scripts` that reaches `file` (its path from the
- * workspace): `test` when the gate's runs it, else the first `test:*` run by
+ * How a workspace's scripts reach `file` (its path from the workspace): the
+ * unit-test tasks whose `bun test` takes it, in the workspace's order, and the
+ * script credited with it, the first of those, else the first `test:*` run by
  * hand that names it; none when no script does.
  */
-const reachOf = (workspace: Workspace, file: string, text: string): Option.Option<string> => {
-  if (runsOf(workspace, 'test').some((run) => run.kind === 'bunTest' && runsFile(run, file, text)))
-    return Option.some('test');
-  return Option.fromUndefinedOr(
-    Object.keys(workspace.scripts)
-      .filter((name) => name.startsWith('test:'))
-      .find((name) => runsOf(workspace, name).some((run) => runsFile(run, file, text))),
+const reachOf = (workspace: Workspace, file: string, text: string): Reach => {
+  const units = workspace.units.filter((name) =>
+    runsOf(workspace, name).some((run) => run.kind === 'bunTest' && runsFile(run, file, text)),
   );
+  const by = Option.orElse(Option.fromUndefinedOr(units[0]), () =>
+    Option.fromUndefinedOr(
+      Object.keys(workspace.scripts)
+        .filter((name) => name.startsWith('test:') && !workspace.units.includes(name))
+        .find((name) => runsOf(workspace, name).some((run) => runsFile(run, file, text))),
+    ),
+  );
+  return { by, units };
 };
+
+/** How a test file is reached: the script credited with it, and the unit-test tasks that take it. */
+interface Reach {
+  readonly by: Option.Option<string>;
+  readonly units: ReadonlyArray<string>;
+}
 
 /** A workspace: its folder from the repo root and its absolute path, its package scripts, and its playwright configs' texts by their paths from it. */
 interface Workspace {
   readonly dir: string;
   readonly absolute: string;
   readonly scripts: Readonly<Record<string, string>>;
+  /** The names of its unit-test tasks (`units.ts`), each a script of it: `test`, or its parts. */
+  readonly units: ReadonlyArray<string>;
   readonly configs: Readonly<Record<string, string>>;
   /** The text of each `.gitignore` of the workspace, by its folder's path from it (`''` its own). */
   readonly gitignores: Readonly<Record<string, string>>;
@@ -1112,20 +1129,20 @@ interface Source {
 /**
  * How each test file of `files` is reached: each file named as a test that
  * is not data (`isData`), with the script of the deepest workspace that holds
- * it that reaches it (`test`, `test:e2e`); none when no script does, no
- * workspace holds it (no workspace's script runs it), or it is a symbolic
- * link or under a folder that is one (playwright's walk takes no link, and
- * the reader follows none).
+ * it that reaches it (`by`: `test`, `test:lab`, `test:e2e`) and the unit-test
+ * tasks of that workspace that take it (`units`: two or more is a file the
+ * gate runs twice); none and none when no script does, no workspace holds it
+ * (no workspace's script runs it), or it is a symbolic link or under a folder
+ * that is one (playwright's walk takes no link, and the reader follows none).
  */
 export const reachesIn = (
   workspaces: ReadonlyArray<Workspace>,
   files: ReadonlyArray<Source>,
-): ReadonlyArray<{ readonly file: string; readonly by: Option.Option<string> }> =>
+): ReadonlyArray<Reach & { readonly file: string }> =>
   files
     .filter(({ file, text }) => isTestFile(file) && !isData(file, text))
-    .map(({ file, text, link }) => ({
-      file,
-      by: Option.flatMap(
+    .map(({ file, text, link }) => {
+      const reach = Option.map(
         Option.filter(
           Option.fromUndefinedOr(
             workspaces
@@ -1135,8 +1152,13 @@ export const reachesIn = (
           () => !link,
         ),
         (workspace) => reachOf(workspace, file.slice(workspace.dir.length + 1), text),
-      ),
-    }));
+      );
+      return {
+        file,
+        by: Option.flatMap(reach, ({ by }) => by),
+        units: Option.match(reach, { onNone: () => [], onSome: ({ units }) => units }),
+      };
+    });
 
 /**
  * The texts of the playwright configs a workspace's scripts can read, by
@@ -1216,10 +1238,14 @@ const Manifest = Schema.fromJsonString(
 
 /**
  * The repo at `root`'s workspaces (each folder the root's `workspaces` globs
- * name with a `package.json`) and its test files, each the gate reads
- * (`guard/files.ts`) named as a test, with its text.
+ * name with a `package.json`, with its unit-test tasks among `units`, by its
+ * folder) and its test files, each the gate reads (`guard/files.ts`) named as
+ * a test, with its text.
  */
-export const repoTests = Effect.fn('reach.repoTests')(function* (root: string) {
+export const repoTests = Effect.fn('reach.repoTests')(function* (
+  root: string,
+  units: ReadonlyArray<Pick<UnitTest, 'directory' | 'task'>>,
+) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const read = (file: string) => fs.readFileString(path.join(root, file));
@@ -1255,6 +1281,7 @@ export const repoTests = Effect.fn('reach.repoTests')(function* (root: string) {
           dir,
           absolute: path.join(root, dir),
           scripts,
+          units: units.filter((unit) => unit.directory === dir).map((unit) => unit.task),
           configs,
           gitignores,
           bunfig,

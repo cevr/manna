@@ -1,11 +1,15 @@
 /* oxlint-disable effect/noNodeBuiltinImport -- read-only corpus and MIDI test boundary. */
-/** Playback sidecars carry corrected timing; the corpus is a frozen text input. */
+/**
+ * Playback sidecars carry corrected timing; the corpus is a frozen text input.
+ * Each hymn is timed on its sung file (`sung.ts`), so its tempo map is read there.
+ */
 import { readFileSync } from 'node:fs';
 import { Console, Effect, Schema } from 'effect';
 import { expect, it } from 'effect-bun-test';
 import { readPlayback } from '../scripts/playback.js';
 import { Hymn } from './hymn.js';
 import * as Midi from './midi.js';
+import * as Sung from './sung.js';
 import { secondsAt } from './timing.js';
 
 it.effect('all playback tempo maps match MIDI at their stored grid endpoints', () =>
@@ -18,8 +22,9 @@ it.effect('all playback tempo maps match MIDI at their stored grid endpoints', (
     );
     const faults: number[] = [];
     for (const hymn of readPlayback(baseline)) {
-      const midi = yield* Midi.parse(
-        readFileSync(`${data}midi/${String(hymn.number).padStart(3, '0')}.mid`),
+      const { midi } = Sung.of(
+        yield* Midi.parse(readFileSync(`${data}midi/${String(hymn.number).padStart(3, '0')}.mid`)),
+        hymn.verses.text,
       );
       const timing = hymn.timing;
       if (timing === undefined) {

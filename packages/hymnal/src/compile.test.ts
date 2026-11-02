@@ -578,26 +578,32 @@ describe('compile: trust', () => {
     }),
   );
 
-  it.effect("lays a stanza the file does not play on its last verse's notes, and says so", () =>
+  it.effect('sings a stanza the file does not play on its last verse played again after it', () =>
     Effect.gen(function* () {
       const words = 'Sing we now to God,\nLord of all light now';
+      const file = yield* compile(source(tuneFile(2), [words, words]));
       const hymn = yield* compile(source(tuneFile(2), [words, words, words]));
+      // The file's own count stays, so the loop shows as fewer verses than stanzas.
       expect(hymn.verses).toEqual({ text: 3, midi: 2, exact: true });
       const parts = hymn.stanzas.map(sung);
       expect(parts.map((part) => [part.level, part.why])).toEqual([
         ['syllable', []],
         ['syllable', []],
-        ['syllable', ['reused']],
+        ['syllable', []],
       ]);
       expect(parts[2]?.lines).toEqual(parts[1]?.lines);
-      // Its times are its last verse's, moved to start at the file's end.
+      // Every line is played: stanza 3 on a pass of the last verse, from its start to the
+      // file's end, after the file's end.
       const timing = hymn.timing;
       const lines = timing?.lines ?? [];
-      expect(lines.map((line) => line.played)).toEqual([true, true, true, true, false, false]);
-      const move = (timing?.end ?? 0) - (lines[2]?.start ?? 0);
+      expect(lines.map((line) => line.played)).toEqual([true, true, true, true, true, true]);
+      const pass = (file.timing?.end ?? 0) - (lines[2]?.start ?? 0);
+      expect(timing?.end).toBe((file.timing?.end ?? 0) + pass);
+      expect(lines[4]?.start).toBe(file.timing?.end);
       expect(lines.slice(4).map((line) => line.syllables)).toEqual(
-        lines.slice(2, 4).map((line) => line.syllables.map((at) => at + move)),
+        lines.slice(2, 4).map((line) => line.syllables.map((at) => at + pass)),
       );
+      expect(lines.at(-1)?.until).toBe(timing?.end);
       expect(timing?.intro).toBe(lines[0]?.start);
     }),
   );

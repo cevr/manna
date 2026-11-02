@@ -20,7 +20,7 @@ import { readSourceText } from '../scripts/source-text.js';
 import { keyOnPitch, pitchClass } from './chord.js';
 import type { DatabaseSources } from './database.js';
 import { type Fit, type Hymn, type Part, type Reason, type Syllable, sung } from './hymn.js';
-import { keySet, recordingKey } from './recordings.js';
+import { keySet, recordingKey, setOf } from './recordings.js';
 
 const open = (file: string) =>
   Effect.acquireRelease(
@@ -569,7 +569,7 @@ const auditDescriptors = (
       const r = recordings[transpose + 5];
       check(
         r?.transpose === transpose &&
-          r.recording_set === keySet(transpose) &&
+          r.recording_set === keySet(setOf(hymn.number), transpose) &&
           r.object_key === recordingKey(hymn.number) &&
           r.availability === 'unknown' &&
           r.credits_key === 'recording_credits' &&

@@ -29,7 +29,9 @@
     "film/no-history-comment": "error",
     "film/no-lazy-test-fixture": "error",
     "film/test-git-config": "error",
-    "film/tests-keep-their-strength": "error"
+    "film/tests-keep-their-strength": "error",
+    "film/media-in-process": "error",
+    "film/webview-through-chrome": "error"
   },
   "overrides": [
     {

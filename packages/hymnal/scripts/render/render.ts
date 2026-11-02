@@ -9,9 +9,13 @@
  *   bun run render --all --load 16         # wait while the 1-minute load is over 16, not 12
  *   bun run render --lock                # make instruments.lock.json from GitHub's trees
  *   bun run render --hymns 46 --transpose 2   # the set warm-1-up2: every note 2 semitones up
+ *   bun run render --set warm-2 --all         # every hymn warm-2 holds (663), into sets/warm-2/
  *
- * `--transpose <t>` (-5 to 6) renders the set `warm-1-up<t>` or
- * `warm-1-down<-t>` (`keySet`): every note moved t semitones, a stem that
+ * `--set <name>` (default `warm-1`) is one of `RECORDING_SETS`
+ * (`src/recordings.ts`): `--all` renders every hymn it holds, and a hymn
+ * named that it does not hold is refused. `--transpose <t>` (-5 to 6)
+ * renders its key set `<set>-up<t>` or
+ * `<set>-down<-t>` (`keySet`): every note moved t semitones, a stem that
  * would leave its instrument's samples moved an octave as a whole
  * (`keys.ts`, named on the hymn's line), the ticks and tempo map unchanged.
  * `--skip-manifest` and `--manifest-only` are the stream's
@@ -34,7 +38,14 @@ import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Config, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { Command, Flag } from 'effect/cli';
-import { creditText, keySet } from '../../src/recordings.js';
+import {
+  creditText,
+  isRecordingSet,
+  keySet,
+  RECORDING_SET,
+  RECORDING_SETS,
+  setHolds,
+} from '../../src/recordings.js';
 import { chosenOf } from './hymns.js';
 import { fetchInstruments, lockInstruments, readLock } from './instruments.js';
 import { RenderFailed } from './proc.js';
@@ -79,10 +90,16 @@ const render = Command.make('render', {
     Flag.withDefault(GUARDS.load),
     Flag.withDescription('The 1-minute load over which a hymn waits to render'),
   ),
+  set: Flag.String('set').pipe(
+    Flag.withDefault(RECORDING_SET),
+    Flag.withDescription(
+      `The set rendered into, one of ${RECORDING_SETS.map((s) => s.name).join(', ')}: --all is every hymn it holds`,
+    ),
+  ),
   transpose: Flag.Int('transpose').pipe(
     Flag.withDefault(0),
     Flag.withDescription(
-      'Semitones from the printed key, -5 to 6: the set warm-1-up<t> or warm-1-down<-t>',
+      'Semitones from the printed key, -5 to 6: the key set <set>-up<t> or <set>-down<-t>',
     ),
   ),
   skipManifest: Flag.Boolean('skip-manifest').pipe(
@@ -121,8 +138,20 @@ const render = Command.make('render', {
           step: 'arguments',
           reason: `--transpose ${flags.transpose}: the keys run from -5 to 6`,
         });
-      const set = keySet(flags.transpose);
-      const chosen = flags.manifestOnly ? [] : yield* chosenOf(flags.hymns, flags.all);
+      if (!isRecordingSet(flags.set))
+        return yield* RenderFailed.make({
+          step: 'arguments',
+          reason: `--set ${flags.set}: the sets are ${RECORDING_SETS.map((s) => s.name).join(', ')}`,
+        });
+      const named = flags.manifestOnly ? [] : yield* chosenOf(flags.hymns, flags.all);
+      const outside = named.filter((hymn) => !setHolds(flags.set, hymn));
+      if (Option.isSome(flags.hymns) && outside.length > 0)
+        return yield* RenderFailed.make({
+          step: 'arguments',
+          reason: `--set ${flags.set} does not hold hymns ${outside.join(', ')}`,
+        });
+      const chosen = named.filter((hymn) => setHolds(flags.set, hymn));
+      const set = keySet(flags.set, flags.transpose);
       const out = path.resolve(Option.getOrElse(flags.out, () => path.join(cache, 'sets', set)));
       const work = path.resolve(
         Option.getOrElse(flags.work, () => path.join(cache, `work-${set}`)),

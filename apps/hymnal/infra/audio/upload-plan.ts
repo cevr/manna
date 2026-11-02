@@ -9,7 +9,7 @@
  * `immutable` cache header true: changed recordings are a new set.
  */
 import { Array as Arr, Data, Option } from 'effect';
-import { RECORDING_SET, recordingKey } from '@manna/hymnal/recordings';
+import { RECORDING_SETS, isRecordingSet, recordingKey, setHolds } from '@manna/hymnal/recordings';
 import type { ManifestHymn, RecordingManifest } from '@manna/hymnal/recording-manifest';
 
 import { SDAH_HYMNS, holds } from './plan.ts';
@@ -35,14 +35,18 @@ export type UploadItem = Data.TaggedEnum<{
 export const UploadItem = Data.taggedEnum<UploadItem>();
 
 /**
- * Why a manifest cannot be uploaded, each reason a line: it is not the set
- * the app plays, it does not hold every hymn 1 to 695 once with its own key,
- * or a hymn did not pass its checks. Empty when it can.
+ * Why a manifest cannot be uploaded, each reason a line: it is not a set the
+ * app plays (`RECORDING_SETS`), it does not hold exactly that set's hymns
+ * (every hymn 1 to 695 for the first, `warm-1`; a later set its own hymns
+ * alone, `warm-2` hymn 663) once each with its own key, or a hymn did not
+ * pass its checks. Empty when it can.
  */
 export const manifestRefusals = (manifest: RecordingManifest): ReadonlyArray<string> => {
+  const known = isRecordingSet(manifest.set);
+  const held = SDAH_HYMNS.filter((n) => setHolds(manifest.set, n));
   const numbers = manifest.hymns.map((h) => h.hymn);
-  const missing = SDAH_HYMNS.filter((n) => !numbers.includes(n));
-  const extra = numbers.filter((n, k) => !SDAH_HYMNS.includes(n) || numbers.indexOf(n) !== k);
+  const missing = held.filter((n) => !numbers.includes(n));
+  const extra = numbers.filter((n, k) => !held.includes(n) || numbers.indexOf(n) !== k);
   const miskeyed = manifest.hymns.filter((h) => h.key !== recordingKey(h.hymn)).map((h) => h.hymn);
   const failed = manifest.hymns.filter((h) => !h.passed).map((h) => h.hymn);
   const list = (hymns: ReadonlyArray<number>) =>
@@ -52,15 +56,19 @@ export const manifestRefusals = (manifest: RecordingManifest): ReadonlyArray<str
     ].join(' ');
   const checks: ReadonlyArray<readonly [boolean, () => string]> = [
     [
-      manifest.set !== RECORDING_SET,
-      () => `the set is ${manifest.set}, the app plays ${RECORDING_SET}`,
+      !known,
+      () =>
+        `the set is ${manifest.set}, the app plays ${RECORDING_SETS.map((s) => s.name).join(', ')}`,
     ],
     [
-      manifest.hymns.length !== SDAH_HYMNS.length,
-      () => `the manifest has ${manifest.hymns.length} hymns, not ${SDAH_HYMNS.length}`,
+      known && manifest.hymns.length !== held.length,
+      () => `the manifest has ${manifest.hymns.length} hymns, not ${held.length}`,
     ],
-    [missing.length > 0, () => `missing hymns ${list(missing)}`],
-    [extra.length > 0, () => `hymns outside 1 to 695 or twice: ${list(extra)}`],
+    [known && missing.length > 0, () => `missing hymns ${list(missing)}`],
+    [
+      known && extra.length > 0,
+      () => `hymns outside the set ${manifest.set} or twice: ${list(extra)}`,
+    ],
     [miskeyed.length > 0, () => `hymns whose key is not sdah/<n>.mp3: ${list(miskeyed)}`],
     [failed.length > 0, () => `hymns that did not pass their checks: ${list(failed)}`],
   ];

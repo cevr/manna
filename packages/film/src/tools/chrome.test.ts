@@ -1,45 +1,13 @@
-// Every Chrome the film tools and their browser tests spawn is silent: it is
-// spawned by `chrome.ts` alone (`openView`), which adds `--mute-audio` and
-// `--disable-audio-output` to whatever flags the caller asks for, so no launch
-// can do without them. That a running Chrome carries them is read from its
-// own command line by the browser tests (`e2e/lab/fixtures/browsers.dom.test.ts`).
-// No Chromium.
+// A Chrome's profile folder is its process's own. That every Chrome is
+// spawned by chrome.ts alone (`openView`), which silences it, is lint
+// (packages/film/lint/webview-through-chrome.ts); that a running Chrome
+// carries the flags is read from its own command line by the browser tests
+// (`e2e/lab/fixtures/browsers.dom.test.ts`).
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem } from 'effect';
 import { profileFolder } from './chrome-profile.ts';
-
-/** The package's sources and browser tests, as this guard reads them. */
-const PACKAGE = `${import.meta.dir}/../..`;
-
-/** A Chrome spawned other than through `openView`. */
-const SPAWNS = /new Bun\.WebView\(/;
-
-/**
- * The files read at once: four read the sources as fast as 32 do, in about
- * half the CPU time, which the unit tests' workers share.
- */
-const READS = 4;
-
-describe('the Chrome a tool or test spawns', () => {
-  it.effect.layer(BunServices.layer)('is spawned only by chrome.ts, which silences it', () =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const spawning = yield* Effect.forEach(['src', 'e2e'], (folder) =>
-        Effect.flatMap(fs.readDirectory(`${PACKAGE}/${folder}`, { recursive: true }), (files) =>
-          Effect.filter(
-            files.filter((file) => /\.tsx?$/.test(file)).map((file) => `${folder}/${file}`),
-            (file) =>
-              Effect.map(fs.readFileString(`${PACKAGE}/${file}`), (text) => SPAWNS.test(text)),
-            { concurrency: READS },
-          ),
-        ),
-      );
-      expect(spawning.flat()).toEqual(['src/tools/chrome.ts']);
-    }),
-  );
-});
 
 /** A process id past every system's limit: no process runs as it. */
 const STOPPED = 2 ** 30;

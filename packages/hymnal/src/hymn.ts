@@ -34,8 +34,9 @@ export type Level = typeof Level.Type;
  * hymn is held back), `notes` (the tune's notes and the words' syllables
  * disagree in number), `shared` (a syllable shares a note across words),
  * `cost` (the placement is unlikely), `melismas` (many notes per syllable),
- * `inexact` (the verses were split by ear, not by an exact repeat), `reused`
- * (the file plays fewer verses than the text has; laid on its last).
+ * `inexact` (the verses were split by ear, not by an exact repeat). `reused`
+ * is not given: every stanza is laid on a verse of its own in the sung file
+ * (`sung.ts`); the literal stays so the schema does not change.
  */
 export const Reason = Schema.Literals([
   'held',

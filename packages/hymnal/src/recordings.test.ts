@@ -1,7 +1,15 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
-import { creditText, KEY_TRANSPOSES, keySet, RECORDING_SET, recordingKey } from './recordings.js';
+import {
+  creditText,
+  KEY_TRANSPOSES,
+  keySet,
+  RECORDING_SET,
+  RECORDING_SETS,
+  recordingKey,
+  setOf,
+} from './recordings.js';
 
 describe('recordings', () => {
   it.effect('keys a hymn by its unpadded number inside the set', () =>
@@ -35,12 +43,29 @@ describe('recordings', () => {
 
   it.effect('names each other key a set of its own, up or down, with no plus sign', () =>
     Effect.sync(() => {
-      expect(keySet(2)).toBe('warm-1-up2');
-      expect(keySet(-3)).toBe('warm-1-down3');
-      expect(keySet(6)).toBe('warm-1-up6');
-      expect(keySet(0)).toBe('warm-1');
+      expect(keySet('warm-1', 2)).toBe('warm-1-up2');
+      expect(keySet('warm-1', -3)).toBe('warm-1-down3');
+      expect(keySet('warm-2', 6)).toBe('warm-2-up6');
+      expect(keySet('warm-1', 0)).toBe('warm-1');
       expect(KEY_TRANSPOSES).toEqual([1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6]);
-      expect(KEY_TRANSPOSES.map(keySet).filter((set) => set.includes('+'))).toEqual([]);
+      expect(
+        KEY_TRANSPOSES.map((t) => keySet('warm-1', t)).filter((set) => set.includes('+')),
+      ).toEqual([]);
+    }),
+  );
+
+  it.effect('plays each hymn from the latest set that holds it', () =>
+    Effect.sync(() => {
+      expect(RECORDING_SETS.map((set) => set.name)).toEqual(['warm-1', 'warm-2']);
+      expect(setOf(663)).toBe('warm-2');
+      expect([1, 662, 664, 695].map(setOf)).toEqual(['warm-1', 'warm-1', 'warm-1', 'warm-1']);
+      const later = RECORDING_SETS.slice(1).flatMap((set) =>
+        set.hymns === 'every' ? [] : set.hymns,
+      );
+      expect(later.filter((hymn, k) => later.indexOf(hymn) !== k)).toEqual([]);
+      expect(RECORDING_SETS.filter((set) => set.hymns === 'every').map((set) => set.name)).toEqual([
+        RECORDING_SET,
+      ]);
     }),
   );
 });

@@ -1,94 +1,16 @@
 // The film's media runs in-process (mediabunny, and FFmpeg's libraries
-// through NodeAV), never the ffmpeg CLI: no source in the film package names
-// `ffmpeg` or `ffprobe` as a word inside a string (the bare name, a command
-// line, a path, a template), the only way to start either as a process. The
-// films are not swept: they have no tests. And no doc tells an agent the tools use it:
-// every clause of the READMEs and the film skill that names the CLI (`ffmpeg`,
-// `ffprobe`, "the ffmpeg CLI") says it is not used.
+// through NodeAV), never the ffmpeg CLI, and no doc tells an agent the tools
+// use it: every clause of the READMEs and the film skill that names the CLI
+// (`ffmpeg`, `ffprobe`, "the ffmpeg CLI") says it is not used. That no source
+// names the CLI in a string is lint (packages/film/lint/media-in-process.ts),
+// which reads every file on every gate; this test reads only the docs, which
+// its test part's inputs hash.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Boolean as Bool, Effect, FileSystem } from 'effect';
+import { Effect, FileSystem } from 'effect';
 
 const repo = `${import.meta.dir}/../../../..`;
-
-/** The framework's source, and the installed packages under it, which are not its code. */
-const ROOT = 'packages/film';
-const SKIPPED = /(^|\/)node_modules\//;
-
-/** This file, whose doc fixtures quote the CLI's name as the stale docs did. */
-const SELF = 'packages/film/src/tools/no-ffmpeg.test.ts';
-const SOURCE = /\.tsx?$/;
-
-/**
- * A string that names a CLI as a word, in any form a command takes: `'ffmpeg'`,
- * `'ffmpeg -i in.mp4'`, `"/usr/bin/ffprobe"`, `` `ffmpeg ${args}` ``.
- */
-const COMMAND = /(['"`])[^'"`]*\b(ffmpeg|ffprobe)\b/;
-
-/** A comment line, which may name the CLI freely. */
-const COMMENT = /^\s*(\/\/|\/?\*).*$/;
-
-/**
- * The files read at once: four read the sources as fast as 32 do, in about
- * half the CPU time, which the unit tests' workers share.
- */
-const READS = 4;
-
-/**
- * Every file under `root`, its installed packages left unlisted: a recursive
- * listing follows their links into the store, over 14,000 entries.
- */
-const filesIn = (root: string) =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const top = yield* fs.readDirectory(`${repo}/${root}`);
-    const listed = yield* Effect.forEach(
-      top.filter((entry) => entry !== 'node_modules'),
-      (entry) =>
-        Effect.flatMap(fs.stat(`${repo}/${root}/${entry}`), (info) =>
-          Bool.match(info.type === 'Directory', {
-            onFalse: () => Effect.succeed([entry]),
-            onTrue: () =>
-              Effect.map(
-                fs.readDirectory(`${repo}/${root}/${entry}`, { recursive: true }),
-                (files) => files.map((file) => `${entry}/${file}`),
-              ),
-          }),
-        ),
-    );
-    return listed.flat();
-  });
-
-/** Every `file:line` under `root` naming a CLI as a string. */
-const commandsIn = (root: string) =>
-  Effect.gen(function* () {
-    const fs = yield* FileSystem.FileSystem;
-    const files = yield* filesIn(root);
-    const sources = files.filter(
-      (file) => SOURCE.test(file) && !SKIPPED.test(file) && `${root}/${file}` !== SELF,
-    );
-    const found = yield* Effect.forEach(
-      sources,
-      (file) =>
-        fs.readFileString(`${repo}/${root}/${file}`).pipe(
-          // A file that names neither CLI has no line `COMMAND` matches, so only the rest are split.
-          Effect.map((text) =>
-            Bool.match(text.includes('ffmpeg') || text.includes('ffprobe'), {
-              onFalse: () => [],
-              onTrue: () =>
-                text
-                  .split('\n')
-                  .map((line, index) => ({ code: line.replace(COMMENT, ''), at: index + 1 }))
-                  .filter(({ code }) => COMMAND.test(code))
-                  .map(({ at }) => `${root}/${file}:${at}`),
-            }),
-          ),
-        ),
-      { concurrency: READS },
-    );
-    return found.flat();
-  });
 
 /** The docs an agent reads before touching the film's media. */
 const DOCS = [
@@ -116,27 +38,6 @@ const cliUsesIn = (text: string) =>
     .filter((clause) => NAMES_CLI.test(clause) && !REFUSES.test(clause));
 
 describe('no ffmpeg CLI', () => {
-  it.effect('a command naming the CLI in any form is found, a comment is not', () =>
-    Effect.sync(() => {
-      const named = (code: string) => COMMAND.test(code.replace(COMMENT, ''));
-      expect(
-        [
-          "spawn('ffmpeg', ['-i', input])",
-          "ChildProcess.make('ffmpeg -i in.mp4 out.webm')",
-          'Bun.spawn(["/usr/bin/ffprobe", file])',
-          'const cmd = `ffmpeg -y ${args.join(" ")}`',
-        ].map(named),
-      ).toEqual([true, true, true, true]);
-      expect(
-        [
-          "// spawn('ffmpeg', …) is refused",
-          "import { Media } from './media.ts'",
-          "throwIfError(ret, 'FFmpegError')",
-        ].map(named),
-      ).toEqual([false, false, false]);
-    }),
-  );
-
   it.effect('a doc clause that names the CLI as a tool the film uses is found', () =>
     Effect.sync(() => {
       // SKILL.md step 0 and the tools row of packages/film/README.md, as a merge restored them.
@@ -161,13 +62,5 @@ describe('no ffmpeg CLI', () => {
       );
       expect(found.flat()).toEqual([]);
     }),
-  );
-
-  it.effect.layer(BunServices.layer)(
-    'no framework source names ffmpeg or ffprobe as a command',
-    () =>
-      Effect.gen(function* () {
-        expect(yield* commandsIn(ROOT)).toEqual([]);
-      }),
   );
 });

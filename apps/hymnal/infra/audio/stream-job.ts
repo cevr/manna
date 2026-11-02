@@ -1,6 +1,7 @@
 /**
- * The key sets as a stream (`./stream.ts`): for each key in the stepper's
- * order (`KEY_TRANSPOSES`), each hymn is rendered, checked, uploaded to R2,
+ * The key sets of one set (`warm-1`, or a later set such as `warm-2`) as a
+ * stream (`./stream.ts`): for each key in the stepper's order
+ * (`KEY_TRANSPOSES`), each hymn the set holds is rendered, checked, uploaded to R2,
  * read back from R2, and only then deleted from the disk. At most
  * `parallel` hymns are in hand at once, so the disk holds at most that many
  * hymns' MP3s and work folders, whatever the number of hymns.
@@ -27,7 +28,13 @@
  * (`render.ts --manifest-only`). Every line goes to the console and to
  * `<cache>/stream.log`.
  */
-import { KEY_TRANSPOSES, keySet } from '@manna/hymnal/recordings';
+import {
+  KEY_TRANSPOSES,
+  RECORDING_SETS,
+  isRecordingSet,
+  keySet,
+  setHolds,
+} from '@manna/hymnal/recordings';
 import { Console, Context, Effect, FileSystem, Option, Path, Ref, Result, Schema } from 'effect';
 
 import { holds, unquote } from './plan.ts';
@@ -66,10 +73,10 @@ export class Renderer extends Context.Service<
   Renderer,
   {
     readonly render: (
-      job: Dirs & { readonly hymn: number; readonly transpose: number },
+      job: Dirs & { readonly set: string; readonly hymn: number; readonly transpose: number },
     ) => Effect.Effect<Rendered, StreamFailed>;
     readonly manifest: (
-      job: Dirs & { readonly transpose: number },
+      job: Dirs & { readonly set: string; readonly transpose: number },
     ) => Effect.Effect<Rendered, StreamFailed>;
   }
 >()('@manna/hymnal-app/infra/audio/Renderer') {}
@@ -87,7 +94,7 @@ export const keysOf = (text: string): Result.Result<ReadonlyArray<number>, strin
   const wrong = keys.some((t) => !Number.isInteger(t) || t === 0 || t < -5 || t > 6);
   if (text.trim() === '' || wrong)
     return Result.fail(
-      `--keys ${text}: all, or transposes from -5 to 6 other than 0 (0 is warm-1)`,
+      `--keys ${text}: all, or transposes from -5 to 6 other than 0 (0 is the set itself)`,
     );
   return Result.succeed(keys);
 };
@@ -165,7 +172,13 @@ const countsText = (n: Counts, of: number) =>
 
 /** One hymn of one key: its record read, rendered when R2 lacks it, uploaded, read back, deleted. */
 const streamHymn = (
-  key: { readonly set: string; readonly transpose: number; readonly dirs: Dirs },
+  key: {
+    /** The set the key set moves (`warm-1`), as `render.ts --set` takes it. */
+    readonly base: string;
+    readonly set: string;
+    readonly transpose: number;
+    readonly dirs: Dirs;
+  },
   hymn: number,
   listed: ReadonlyMap<string, TargetObject>,
   say: (hymn: number, status: Status, detail?: string) => Effect.Effect<void>,
@@ -198,7 +211,12 @@ const streamHymn = (
       return yield* say(hymn, 'kept');
     }
 
-    const rendered = yield* renderer.render({ hymn, transpose: key.transpose, ...key.dirs });
+    const rendered = yield* renderer.render({
+      set: key.base,
+      hymn,
+      transpose: key.transpose,
+      ...key.dirs,
+    });
     const record = yield* readRecord;
     if (Option.isNone(record) || !record.value.passed) {
       yield* clean;
@@ -256,8 +274,11 @@ const streamHymn = (
 export interface StreamOptions {
   /** The render cache: `sets/<set>/`, `work-<set>/` and `stream.log` are under it. */
   readonly cache: string;
+  /** The set whose key sets are streamed (`RECORDING_SETS`): `warm-1`, or `warm-2` for hymn 663. */
+  readonly set: string;
   /** The transposes, in the order they stream. */
   readonly keys: ReadonlyArray<number>;
+  /** Hymns the set holds, each one. */
   readonly hymns: ReadonlyArray<number>;
   /** Hymns in hand at once. */
   readonly parallel: number;
@@ -276,11 +297,22 @@ export const stream = (options: StreamOptions) =>
         Console.log(text),
         fs.writeFileString(log, `${text}\n`, { flag: 'a' }).pipe(Effect.orDie),
       );
+    if (!isRecordingSet(options.set))
+      return yield* StreamFailed.make({
+        reason: `--set ${options.set}: the sets are ${RECORDING_SETS.map((s) => s.name).join(', ')}`,
+      });
+    const outside = options.hymns.filter((hymn) => !setHolds(options.set, hymn));
+    if (outside.length > 0)
+      return yield* StreamFailed.make({
+        reason: `--set ${options.set} does not hold hymns ${outside.join(', ')}`,
+      });
     let failed = 0;
     for (const transpose of options.keys) {
       if (transpose === 0)
-        return yield* StreamFailed.make({ reason: 'transpose 0 is warm-1, never streamed' });
-      const set = keySet(transpose);
+        return yield* StreamFailed.make({
+          reason: `transpose 0 is ${options.set} itself, never streamed`,
+        });
+      const set = keySet(options.set, transpose);
       const dirs = setDirs(options.cache, set);
       yield* fs.makeDirectory(dirs.out, { recursive: true }).pipe(Effect.orDie);
       yield* fs.makeDirectory(dirs.work, { recursive: true }).pipe(Effect.orDie);
@@ -299,12 +331,12 @@ export const stream = (options: StreamOptions) =>
       yield* Effect.forEach(
         options.hymns,
         (hymn) =>
-          streamHymn({ set, transpose, dirs }, hymn, listed, say).pipe(
+          streamHymn({ base: options.set, set, transpose, dirs }, hymn, listed, say).pipe(
             Effect.catchTag('StreamFailed', (error) => say(hymn, 'failed', error.message)),
           ),
         { concurrency: options.parallel, discard: true },
       );
-      const manifest = yield* renderer.manifest({ transpose, ...dirs });
+      const manifest = yield* renderer.manifest({ set: options.set, transpose, ...dirs });
       if (manifest.code !== 0)
         yield* line(
           `key ${set} manifest failed: ${lastLine(manifest.tail, `exit ${manifest.code}`)}`,

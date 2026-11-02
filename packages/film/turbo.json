@@ -3,6 +3,11 @@
   "extends": ["//"],
   "tasks": {
     "test": {
+      "dependsOn": ["$TURBO_EXTENDS$", "test:lab", "test:tools", "test:engine"]
+    },
+    "test:lab": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
@@ -19,7 +24,62 @@
         "$TURBO_ROOT$/apps/animations/plans/lab-mcp.md",
         "$TURBO_ROOT$/.claude/skills/film/**",
         "$TURBO_ROOT$/docs/lessons.md",
-        "$TURBO_ROOT$/apps/firsttheblade/kit/approval.ts"
+        "$TURBO_ROOT$/apps/firsttheblade/kit/approval.ts",
+        "!src/{browser,canvas,command,core,fixtures,player,puppet,rive,style}/**/*.test.*",
+        "!src/*.test.*",
+        "!lint/**/*.test.*",
+        "!src/tools/*/**/*.test.*"
+      ]
+    },
+    "test:tools": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/animations/productions/*.json",
+        "$TURBO_ROOT$/apps/animations/src/library/cast/*/cast-sheet/cast-sheet.json",
+        "$TURBO_ROOT$/apps/animations/src/library/cast/*/cast-sheet/look.md",
+        "$TURBO_ROOT$/apps/animations/src/films/*/cast/*/cast-sheet/cast-sheet.json",
+        "$TURBO_ROOT$/apps/animations/src/films/*/cast/*/cast-sheet/look.md",
+        "$TURBO_ROOT$/apps/animations/sounds/library.ts",
+        "$TURBO_ROOT$/apps/animations/sounds/fits/*.json",
+        "$TURBO_ROOT$/apps/animations/docs/ref/house-look.txt",
+        "$TURBO_ROOT$/apps/animations/README.md",
+        "$TURBO_ROOT$/apps/animations/plans/lab.md",
+        "$TURBO_ROOT$/apps/animations/plans/lab-mcp.md",
+        "$TURBO_ROOT$/.claude/skills/film/**",
+        "$TURBO_ROOT$/docs/lessons.md",
+        "$TURBO_ROOT$/apps/firsttheblade/kit/approval.ts",
+        "!src/lab/**/*.test.*",
+        "!src/{browser,canvas,command,core,fixtures,player,puppet,rive,style}/**/*.test.*",
+        "!src/*.test.*",
+        "!lint/**/*.test.*",
+        "!src/tools/{ask-evidence,ask-store,ask-wait,board-cli,board-http,board-make,board-stale,choice-points,choice-source,choices-cli,choices,easel-client,easel-mcp,lab-command,lab-events,lab-gate,lab-home,mcp-calls,sets-mcp,timeline-mcp}.test.ts"
+      ]
+    },
+    "test:engine": {
+      "dependsOn": ["^transit"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/apps/animations/productions/*.json",
+        "$TURBO_ROOT$/apps/animations/src/library/cast/*/cast-sheet/cast-sheet.json",
+        "$TURBO_ROOT$/apps/animations/src/library/cast/*/cast-sheet/look.md",
+        "$TURBO_ROOT$/apps/animations/src/films/*/cast/*/cast-sheet/cast-sheet.json",
+        "$TURBO_ROOT$/apps/animations/src/films/*/cast/*/cast-sheet/look.md",
+        "$TURBO_ROOT$/apps/animations/sounds/library.ts",
+        "$TURBO_ROOT$/apps/animations/sounds/fits/*.json",
+        "$TURBO_ROOT$/apps/animations/docs/ref/house-look.txt",
+        "$TURBO_ROOT$/apps/animations/README.md",
+        "$TURBO_ROOT$/apps/animations/plans/lab.md",
+        "$TURBO_ROOT$/apps/animations/plans/lab-mcp.md",
+        "$TURBO_ROOT$/.claude/skills/film/**",
+        "$TURBO_ROOT$/docs/lessons.md",
+        "$TURBO_ROOT$/apps/firsttheblade/kit/approval.ts",
+        "!src/tools/**/*.test.*",
+        "!src/lab/**/*.test.*"
       ]
     }
   }

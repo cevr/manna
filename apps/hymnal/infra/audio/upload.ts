@@ -3,8 +3,9 @@
  * recordings (`packages/hymnal/scripts/render/`) into the R2 bucket, under
  * `audio/<set>/sdah/<n>.mp3`, beside the copied recordings.
  *
- * 1. Read the set's `manifest.json` and refuse it unless it is the set the
- *    app plays and holds every hymn 1 to 695 once, each passed
+ * 1. Read the set's `manifest.json` and refuse it unless it is a set the
+ *    app plays (`RECORDING_SETS`) and holds exactly its hymns once, each
+ *    passed: every hymn 1 to 695 for `warm-1`, hymn 663 alone for `warm-2`
  *    (`./upload-plan.ts`).
  * 2. Read every MP3 of the set and refuse the set if any is missing or its
  *    sha256 or MD5 is not the manifest's: nothing is uploaded from a set that
@@ -12,14 +13,15 @@
  * 3. List the set's prefix in R2 once (a dry run lists nothing and never
  *    touches R2 or the credentials).
  * 4. Plan each hymn: keep, upload or conflict. A conflict is a key R2 holds
- *    with other bytes; it is never replaced, and the run says to bump the set.
+ *    with other bytes; it is never replaced, and the run says to render the
+ *    hymn into a later set.
  * 5. Upload, 4 at a time, as `audio/mpeg` with a year's `immutable` cache;
  *    R2's answer must carry the manifest's MD5 and size.
  * 6. List the prefix again and check every hymn.
  *
  * A failed hymn never stops the others; the run fails at the end unless
  * every hymn is verified. The last line sums it:
- * `audio-upload <run|dry-run> set=<set> kept K uploaded U conflict C failed F verified V/695`.
+ * `audio-upload <run|dry-run> set=<set> kept K uploaded U conflict C failed F verified V/N`, N the set's hymns.
  *
  * A real run writes with the owner's Alchemy Cloudflare profile, as
  * `./copy.ts` does.
@@ -32,7 +34,7 @@ import { Command } from 'effect/cli';
 
 import { audioUploadCommand } from './command.ts';
 import { HashBun } from './hash-bun.ts';
-import { SDAH_HYMNS, holds, unquote } from './plan.ts';
+import { holds, unquote } from './plan.ts';
 import { TargetR2Writes } from './r2.ts';
 import type { TargetObject } from './stores.ts';
 import { Hash, Target } from './stores.ts';
@@ -58,9 +60,10 @@ export class UploadIncomplete extends Schema.TaggedError<UploadIncomplete>()('Up
   failed: Schema.Finite,
   conflict: Schema.Finite,
   verified: Schema.Finite,
+  of: Schema.Finite,
 }) {
   override get message() {
-    return `audio upload incomplete: failed=${this.failed} conflict=${this.conflict} verified=${this.verified}/${SDAH_HYMNS.length}; run it again to resume, and for a conflict bump the set (warm-2)`;
+    return `audio upload incomplete: failed=${this.failed} conflict=${this.conflict} verified=${this.verified}/${this.of}; run it again to resume, and for a conflict render the hymn into a later set`;
   }
 }
 
@@ -160,7 +163,7 @@ const act = (dir: string) => (item: UploadItem) =>
     Upload: (upload) => put(dir, upload),
     Conflict: ({ hymn, key, held }) =>
       Console.log(
-        `conflict ${hymn.hymn} r2 holds ${key} as etag ${unquote(held.etag)} size ${held.size}, the set has md5 ${hymn.md5} size ${hymn.bytes}: bump the set to warm-2`,
+        `conflict ${hymn.hymn} r2 holds ${key} as etag ${unquote(held.etag)} size ${held.size}, the set has md5 ${hymn.md5} size ${hymn.bytes}: render the hymn into a later set`,
       ).pipe(Effect.as(Outcome.Conflict({ hymn: hymn.hymn }))),
   });
 
@@ -185,11 +188,11 @@ const verify = (manifest: RecordingManifest) =>
 
 const summary = (
   mode: 'run' | 'dry-run',
-  set: string,
+  manifest: RecordingManifest,
   n: { kept: number; uploaded: number; conflict: number; failed: number; verified: number },
 ) =>
   Console.log(
-    `audio-upload ${mode} set=${set} kept ${n.kept} uploaded ${n.uploaded} conflict ${n.conflict} failed ${n.failed} verified ${n.verified}/${SDAH_HYMNS.length}`,
+    `audio-upload ${mode} set=${manifest.set} kept ${n.kept} uploaded ${n.uploaded} conflict ${n.conflict} failed ${n.failed} verified ${n.verified}/${manifest.hymns.length}`,
   );
 
 /** Read and check the set, R2 never: what a run would upload. */
@@ -202,7 +205,7 @@ export const dryRun = (set: string) =>
     yield* Console.log(
       `would upload ${manifest.hymns.length} hymns, ${bytes} bytes, unless R2 holds them`,
     );
-    yield* summary('dry-run', manifest.set, {
+    yield* summary('dry-run', manifest, {
       kept: 0,
       uploaded: 0,
       conflict: 0,
@@ -230,12 +233,13 @@ export const run = (set: string) =>
       failed: count(outcomes, 'Failed'),
       verified,
     };
-    yield* summary('run', manifest.set, n);
-    if (verified !== SDAH_HYMNS.length || n.conflict + n.failed > 0)
+    yield* summary('run', manifest, n);
+    if (verified !== manifest.hymns.length || n.conflict + n.failed > 0)
       return yield* UploadIncomplete.make({
         failed: n.failed,
         conflict: n.conflict,
         verified,
+        of: manifest.hymns.length,
       });
   });
 

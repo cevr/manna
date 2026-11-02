@@ -21,10 +21,12 @@ describe('where the recordings are', () => {
   it.effect('selects all signed sets and identifies octave-equivalent sounding keys', () =>
     Effect.sync(() => {
       for (let hymn = 1; hymn <= 695; hymn += 1) {
+        let base = 'warm-1';
+        if (hymn === 663) base = 'warm-2';
         for (let offset = -5; offset <= 6; offset += 1) {
-          let set = 'warm-1';
-          if (offset > 0) set = `warm-1-up${offset}`;
-          if (offset < 0) set = `warm-1-down${-offset}`;
+          let set = base;
+          if (offset > 0) set = `${base}-up${offset}`;
+          if (offset < 0) set = `${base}-down${-offset}`;
           const expected = `audio/${set}/sdah/${hymn}.mp3`;
           expect(audioKey(hymn, offset)).toBe(expected);
           for (const octaves of [-12, 0, 12]) {

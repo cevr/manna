@@ -39,6 +39,36 @@ describe("the files a workspace's tests read that its test task does not hash", 
     ]);
   });
 
+  test("a part of a workspace's tests hashes its own inputs, not a sibling part's", () => {
+    const parts: Parameters<typeof hashedBy>[0] = [
+      {
+        taskId: '@manna/film#test',
+        directory: 'packages/film',
+        inputs: {},
+        dependencies: ['@manna/film#test:lab', '@manna/film#test:engine'],
+      },
+      {
+        taskId: '@manna/film#test:lab',
+        directory: 'packages/film',
+        inputs: { 'src/lab/a.test.ts': 'h', 'src/core/a.ts': 'h' },
+        dependencies: ['@manna/lib#transit'],
+      },
+      {
+        taskId: '@manna/film#test:engine',
+        directory: 'packages/film',
+        inputs: { 'src/core/a.test.ts': 'h', 'src/core/a.ts': 'h' },
+        dependencies: [],
+      },
+      ...tasks,
+    ];
+    expect([...hashedBy(parts, '@manna/film#test:lab')].toSorted()).toEqual([
+      'packages/base/src/base.ts',
+      'packages/film/src/core/a.ts',
+      'packages/film/src/lab/a.test.ts',
+      'packages/lib/src/lib.ts',
+    ]);
+  });
+
   test('names each read under the root that no input holds, once, and leaves out node_modules, .git and other roots', () => {
     const hashed = hashedBy(tasks, '@manna/app#test');
     expect(

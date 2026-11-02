@@ -4,7 +4,8 @@
  * each part judged for how far its placement can be trusted.
  *
  * Stanza n is laid, with the refrain's lines after it where the file plays
- * them, on the file's verse n (its last verse when the file plays fewer). The
+ * them, on verse n of the sung file (`sung.ts`: the hymn's file, its last
+ * verse sung again for each stanza past the verses it plays). The
  * files play each verse as its stanza and the refrain after it, a refrain
  * printed first or before each stanza included (its first singing is in the
  * intro). The refrain is stored once, with where the page sings it
@@ -36,8 +37,10 @@
  *   file whose first tick is not the printed downbeat, or whose meter is not
  *   the printed one, keeps every guitar chord where it plays it.
  *
- * Each hymn carries its timing (`timing.ts`): the file's tempo map and when
- * each sung line and syllable starts, from the notes each stanza was laid on.
+ * Each hymn carries its timing (`timing.ts`): the sung file's tempo map and
+ * when each sung line and syllable starts, from the notes each stanza was
+ * laid on. `verses.midi` stays the verses the file itself plays, so a hymn
+ * whose file is looped has fewer there than `verses.text`.
  *
  * Pure: no file, Bun or Node access.
  */
@@ -60,7 +63,8 @@ import {
 } from './hymn.js';
 import * as Midi from './midi.js';
 import * as Placement from './placement.js';
-import * as Score from './score.js';
+import type * as Score from './score.js';
+import * as Sung from './sung.js';
 import * as Timing from './timing.js';
 
 interface Source {
@@ -86,15 +90,8 @@ const TRUST = {
   line: { melismas: 1.3, cost: 0.25 },
 } as const;
 
-const REASONS: readonly Reason[] = [
-  'held',
-  'notes',
-  'shared',
-  'cost',
-  'melismas',
-  'inexact',
-  'reused',
-];
+/** The reasons the compiler gives, in the order it states them. */
+const REASONS: readonly Reason[] = ['held', 'notes', 'shared', 'cost', 'melismas', 'inexact'];
 
 const ordered = (reasons: readonly Reason[]): Reason[] =>
   REASONS.filter((reason) => reasons.includes(reason));
@@ -245,14 +242,8 @@ interface Laid {
 }
 
 /** Judges a placement: words alone, chords per line, or chords on syllables. */
-const judge = (
-  fit: Fit | undefined,
-  info: { readonly inexact: boolean; readonly reused: boolean },
-): Pick<Laid, 'level' | 'why'> => {
-  const notes: Reason[] = [
-    ...(info.inexact ? (['inexact'] as const) : []),
-    ...(info.reused ? (['reused'] as const) : []),
-  ];
+const judge = (fit: Fit | undefined, inexact: boolean): Pick<Laid, 'level' | 'why'> => {
+  const notes: Reason[] = inexact ? ['inexact'] : [];
   if (fit === undefined) return { level: 'text', why: ordered(['notes', ...notes]) };
   const r = fit.notes / Math.max(1, fit.syllables);
   const c = fit.cost / Math.max(1, fit.syllables);
@@ -266,19 +257,15 @@ const judge = (
     ...(r > TRUST.line.melismas ? (['melismas'] as const) : []),
     ...(c > TRUST.line.cost ? (['cost'] as const) : []),
     ...(fit.shared.acrossWords === TRUST.text.sharedAcross ? (['shared'] as const) : []),
-    ...(info.reused && info.inexact ? (['reused'] as const) : []),
   ];
   if (line.length > 0) return { level: 'line', why: ordered([...line, ...notes]) };
   return { level: 'syllable', why: ordered(notes) };
 };
 
-/** Lays stanza n with the refrain after it on its verse of the file. */
+/** Lays stanza n with the refrain after it on its verse of the sung file. */
 const lay = (score: Score.Score, n: number, lines: readonly string[]): Laid => {
-  const played = score.verses.spans.length;
-  const verse = Math.min(n, played - 1);
-  const span = score.verses.spans[verse] ?? { start: 0, end: 0 };
-  const info = { inexact: !score.verses.exact, reused: n > played - 1 };
-  const alignment = Align.align(score, verse, lines);
+  const span = score.verses.spans[n] ?? { start: 0, end: 0 };
+  const alignment = Align.align(score, n, lines);
   const syllables = alignment.lines.reduce((sum, line) => sum + line.length, 0);
   const fit: Fit | undefined = Number.isFinite(alignment.cost)
     ? {
@@ -289,7 +276,7 @@ const lay = (score: Score.Score, n: number, lines: readonly string[]): Laid => {
         cost: round(alignment.cost),
       }
     : undefined;
-  const { level, why } = judge(fit, info);
+  const { level, why } = judge(fit, !score.verses.exact);
   if (level === 'text')
     return { level, why, fit, lines: [], struck: [], simpler: [], folded: [], starts: undefined };
   const anchors = Align.anchorsOf(alignment, span.start);
@@ -394,19 +381,18 @@ export const compilePlacements = (
 ): Effect.Effect<Record<Placement.Placement, Hymn>, Midi.MidiParseError | VerseLayoutError> =>
   Effect.gen(function* () {
     const { stanzas, refrain } = yield* versesOf(source);
-    const midi = yield* Midi.parse(source.midi);
-    const score = Score.fromMidi(midi, stanzas.length);
+    const sung = Sung.of(yield* Midi.parse(source.midi), stanzas.length);
+    const { midi, score } = sung;
     // The stanza the refrain is laid after and stored from: the last alone when it is sung after the last only.
     const lastOnly = refrain?.order === 'first-and-last' || refrain?.order === 'after-last';
     const from = lastOnly ? stanzas.length - 1 : 0;
     const tail = (n: number) =>
       refrain === undefined || (lastOnly && n !== from) ? [] : refrain.lines;
     const spans = score.verses.spans;
-    /** The hymn with its timing: each stanza on its verse (its last when the file plays fewer). */
+    /** The hymn with its timing: each stanza on its verse of the sung file. */
     const timed = (hymn: Mutable<Hymn>, starts: (n: number) => number[][] | undefined): Hymn => {
       const layings = stanzas.map((lines, n): Timing.Laying => ({
-        played: n < spans.length,
-        span: spans[Math.min(n, spans.length - 1)] ?? { start: 0, end: midi.lastTick },
+        span: spans[n] ?? { start: 0, end: midi.lastTick },
         stanza: lines.length,
         tail: tail(n).length,
         starts: starts(n),
@@ -423,7 +409,7 @@ export const compilePlacements = (
       meter: score.meter,
       verses: {
         text: stanzas.length,
-        midi: score.verses.spans.length,
+        midi: sung.played,
         exact: score.verses.exact,
       },
     } as const;

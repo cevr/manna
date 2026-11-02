@@ -5,7 +5,8 @@
  * (`./stream-job.ts`).
  *
  *   bun run audio:stream --keys all                  # the 11 keys, +1, -1, +2, ... +6; hymns 1 to 695
- *   bun run audio:stream --keys 2 --hymns 1,46,663   # those hymns in warm-1-up2
+ *   bun run audio:stream --keys 2 --hymns 1,46,100   # those hymns in warm-1-up2
+ *   bun run audio:stream --set warm-2 --keys all     # every hymn warm-2 holds (663), in warm-2-up1 ... warm-2-down5
  *   bun run audio:stream --keys all --parallel 2 --load 8
  *
  * Each hymn renders in its own `render.ts` process
@@ -16,7 +17,10 @@
  * lines also go to its `stream.log`. A rerun resumes: what R2 holds with the
  * record's bytes is kept. Stop it with SIGTERM or Ctrl-C. The run exits
  * non-zero when a hymn failed. It writes with the owner's Alchemy Cloudflare
- * profile, as `./upload.ts` does. The printed key, `warm-1`, is never streamed.
+ * profile, as `./upload.ts` does. `--set` (default `warm-1`) names the set
+ * whose key sets are streamed, one of `RECORDING_SETS`: `--hymns` defaults to
+ * every hymn it holds, and a hymn it does not hold is refused. The printed
+ * key, the set itself, is never streamed: `./upload.ts` sends it.
  */
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -24,6 +28,8 @@ import { Config, Effect, Layer, Option, Path, Result, Schema, Stream } from 'eff
 import { Command, Flag } from 'effect/cli';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
+
+import { RECORDING_SET, RECORDING_SETS, setHolds } from '@manna/hymnal/recordings';
 
 import { HashBun } from './hash-bun.ts';
 import { SDAH_HYMNS } from './plan.ts';
@@ -81,7 +87,9 @@ const renderLive = (load: number) =>
           Effect.scoped,
           Effect.mapError((error) => StreamFailed.make({ reason: `render.ts: ${error.message}` })),
         );
-      const dirs = (out: string, work: string, transpose: number) => [
+      const dirs = (set: string, out: string, work: string, transpose: number) => [
+        '--set',
+        set,
         '--transpose',
         String(transpose),
         '--out',
@@ -90,28 +98,36 @@ const renderLive = (load: number) =>
         work,
       ];
       return Renderer.of({
-        render: ({ hymn, transpose, out, work }) =>
+        render: ({ set, hymn, transpose, out, work }) =>
           run([
             '--hymns',
             String(hymn),
-            ...dirs(out, work, transpose),
+            ...dirs(set, out, work, transpose),
             '--load',
             String(load),
             '--skip-manifest',
           ]),
-        manifest: ({ transpose, out, work }) =>
-          run([...dirs(out, work, transpose), '--manifest-only']),
+        manifest: ({ set, transpose, out, work }) =>
+          run([...dirs(set, out, work, transpose), '--manifest-only']),
       });
     }),
   );
 
 const audioStream = Command.make('audio-stream', {
+  set: Flag.String('set').pipe(
+    Flag.withDefault(RECORDING_SET),
+    Flag.withDescription(
+      `The set whose key sets are streamed, one of ${RECORDING_SETS.map((s) => s.name).join(', ')}`,
+    ),
+  ),
   keys: Flag.String('keys').pipe(
     Flag.withDescription('all (+1, -1, +2, -2, ... +6), or transposes such as 2,-3'),
   ),
   hymns: Flag.String('hymns').pipe(
     Flag.optional,
-    Flag.withDescription('Hymn numbers, unpadded and comma-separated (default 1 to 695)'),
+    Flag.withDescription(
+      'Hymn numbers, unpadded and comma-separated (default every hymn the set holds)',
+    ),
   ),
   parallel: Flag.Int('parallel').pipe(
     Flag.withDefault(4),
@@ -131,7 +147,7 @@ const audioStream = Command.make('audio-stream', {
       const keys = keysOf(flags.keys);
       if (Result.isFailure(keys)) return yield* StreamFailed.make({ reason: keys.failure });
       const hymns = Option.match(flags.hymns, {
-        onNone: () => Result.succeed(SDAH_HYMNS),
+        onNone: () => Result.succeed(SDAH_HYMNS.filter((hymn) => setHolds(flags.set, hymn))),
         onSome: hymnsOf,
       });
       if (Result.isFailure(hymns)) return yield* StreamFailed.make({ reason: hymns.failure });
@@ -139,6 +155,7 @@ const audioStream = Command.make('audio-stream', {
         return yield* StreamFailed.make({ reason: `--parallel ${flags.parallel}: at least 1` });
       const { failed } = yield* stream({
         cache,
+        set: flags.set,
         keys: keys.success,
         hymns: hymns.success,
         parallel: flags.parallel,

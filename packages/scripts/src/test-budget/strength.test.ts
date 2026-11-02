@@ -4,6 +4,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { bunTests } from './shell.ts';
 import { weakeningFlags } from './strength.ts';
+import { testDryRun, unitTests } from './units.ts';
 
 const Root = Schema.fromJsonString(Schema.Struct({ workspaces: Schema.Array(Schema.String) }));
 
@@ -23,11 +24,6 @@ const Bunfig = Schema.Struct({
     Schema.Struct({ preload: Schema.optionalKey(Schema.Array(Schema.String)) }),
   ),
 });
-const Manifest = Schema.fromJsonString(
-  Schema.Struct({
-    scripts: Schema.optionalKey(Schema.Struct({ test: Schema.optionalKey(Schema.String) })),
-  }),
-);
 const SlowManifest = Schema.fromJsonString(
   Schema.Struct({
     scripts: Schema.optionalKey(Schema.Struct({ 'test:slow': Schema.optionalKey(Schema.String) })),
@@ -83,29 +79,17 @@ describe("a workspace's test script", () => {
     'every workspace of the repo runs its tests at full strength',
     () =>
       Effect.gen(function* () {
-        const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const root = path.join(import.meta.dir, '..', '..', '..', '..');
-        const { workspaces } = yield* Schema.decodeEffect(Root)(
-          yield* fs.readFileString(path.join(root, 'package.json')),
+        // Each unit-test task the gate runs: a workspace's `test`, or each of its parts.
+        const units = unitTests(
+          yield* testDryRun(root, path.join(root, 'node_modules', '.bin', 'turbo')),
         );
-        const manifests = workspaces.flatMap((pattern) => [
-          ...new Glob(`${pattern}/package.json`).scanSync({ cwd: root }),
-        ]);
-        expect(manifests.length).toBeGreaterThan(5);
-        const weak = yield* Effect.forEach(manifests, (manifest) =>
-          Effect.map(
-            Effect.flatMap(
-              fs.readFileString(path.join(root, manifest)),
-              Schema.decodeEffect(Manifest),
-            ),
-            ({ scripts }) =>
-              weakeningFlags(Option.getOrElse(Option.fromUndefinedOr(scripts?.test), () => '')).map(
-                (why) => `${manifest}: ${why}`,
-              ),
-          ),
+        expect(new Set(units.map((unit) => unit.workspace)).size).toBeGreaterThan(5);
+        const weak = units.flatMap((unit) =>
+          weakeningFlags(unit.command).map((why) => `${unit.taskId}: ${why}`),
         );
-        expect(weak.flat()).toEqual([]);
+        expect(weak).toEqual([]);
       }),
   );
 

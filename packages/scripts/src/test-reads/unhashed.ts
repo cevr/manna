@@ -1,8 +1,10 @@
-// Which files a workspace's unit tests read that its cached `test` task does
-// not hash. turbo replays a cached pass while every file its task hashes is
-// unchanged, so a test that reads a file outside that set passes from the cache
-// after the file changes in a way that would fail it. `test-reads.ts` records
-// the reads; this compares them with turbo's own dry run.
+// Which files a unit-test task's tests read that the cached task does not hash
+// (a workspace's `test`, or one part of a workspace whose tests are cut into
+// parts: `test-budget/units.ts`). turbo replays a cached pass while every file
+// its task hashes is unchanged, so a test that reads a file outside that set
+// passes from the cache after the file changes in a way that would fail it.
+// `test-reads.ts` records the reads; this compares them with turbo's own dry
+// run.
 
 import { Option } from 'effect';
 

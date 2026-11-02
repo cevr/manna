@@ -1634,6 +1634,43 @@
       }
     },
     {
+      // The film's media runs in-process, never the ffmpeg CLI: no film
+      // source names ffmpeg or ffprobe in a string
+      // (packages/film/lint/media-in-process.ts). Lint reads every file on
+      // every gate, so no test part's cache hides a breach.
+      "files": ["**/packages/film/**/*.ts", "**/packages/film/**/*.tsx"],
+      "rules": {
+        "film/media-in-process": "error"
+      }
+    },
+    {
+      // The docs test quotes the stale docs that named the CLI.
+      "files": ["**/packages/film/src/tools/no-ffmpeg.test.ts"],
+      "rules": {
+        "film/media-in-process": "off"
+      }
+    },
+    {
+      // Every Chrome the film tools and their browser tests spawn is
+      // spawned by openView, which mutes it
+      // (packages/film/lint/webview-through-chrome.ts).
+      "files": [
+        "**/packages/film/src/**/*.ts",
+        "**/packages/film/src/**/*.tsx",
+        "**/packages/film/e2e/**/*.ts",
+        "**/packages/film/e2e/**/*.tsx"
+      ],
+      "rules": {
+        "film/webview-through-chrome": "error"
+      }
+    },
+    {
+      "files": ["**/packages/film/src/tools/chrome.ts"],
+      "rules": {
+        "film/webview-through-chrome": "off"
+      }
+    },
+    {
       // A change's, a request's and an approve run's ids are made unique,
       // never written by hand. A later block that sets
       // no-restricted-properties replaces this list, so such a block repeats

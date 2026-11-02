@@ -19,7 +19,7 @@ import {
   readIndexTables,
   writeIndexTables,
 } from './index-tables.js';
-import { KEY_TRANSPOSES, keySet, recordingKey } from './recordings.js';
+import { KEY_TRANSPOSES, keySet, recordingKey, setOf } from './recordings.js';
 
 export const SCHEMA_VERSION = 2;
 export const BUILDER_VERSION = '2';
@@ -394,7 +394,7 @@ const writeHymn = (db: Database, sources: DatabaseSources, writer: PartWriter, h
     recording(
       hymn.number,
       transpose,
-      keySet(transpose),
+      keySet(setOf(hymn.number), transpose),
       recordingKey(hymn.number),
       'unknown',
       'recording_credits',

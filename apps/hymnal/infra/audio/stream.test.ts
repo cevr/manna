@@ -41,6 +41,8 @@ interface Fakes {
   readonly puts: Ref.Ref<ReadonlyArray<{ key: string; metadata: PutMetadata }>>;
   readonly renders: Ref.Ref<ReadonlyArray<number>>;
   readonly manifests: Ref.Ref<number>;
+  /** The set each render and manifest was asked for, in order. */
+  readonly asked: Ref.Ref<ReadonlyArray<string>>;
   /** The most hymns' MP3s and work folders seen on disk at once. */
   readonly peak: Ref.Ref<number>;
 }
@@ -65,6 +67,7 @@ const fakesOf = Effect.gen(function* () {
     puts: yield* Ref.make<ReadonlyArray<{ key: string; metadata: PutMetadata }>>([]),
     renders: yield* Ref.make<ReadonlyArray<number>>([]),
     manifests: yield* Ref.make(0),
+    asked: yield* Ref.make<ReadonlyArray<string>>([]),
     peak: yield* Ref.make(0),
   } satisfies Fakes;
 });
@@ -123,9 +126,10 @@ const layerOf = (fakes: Fakes, behaviour: Behaviour = {}) => {
       const path = yield* Path.Path;
       const hash = yield* Hash;
       return Renderer.of({
-        render: ({ hymn, transpose, out, work }) =>
+        render: ({ set, hymn, transpose, out, work }) =>
           Effect.gen(function* () {
             yield* Ref.update(fakes.renders, (all) => [...all, hymn]);
+            yield* Ref.update(fakes.asked, (all) => [...all, set]);
             yield* fs.makeDirectory(path.join(work, String(hymn)), { recursive: true });
             yield* fs.writeFileString(path.join(work, String(hymn), 'piano.wav'), 'stem');
             if (behaviour.hang?.hymn === hymn) {
@@ -156,9 +160,10 @@ const layerOf = (fakes: Fakes, behaviour: Behaviour = {}) => {
             if (!record.passed) return { code: 1, tail: `${hymn} FAIL lufs` };
             return { code: 0, tail: '' };
           }).pipe(Effect.orDie),
-        manifest: ({ out }) =>
+        manifest: ({ set, out }) =>
           Effect.gen(function* () {
             yield* Ref.update(fakes.manifests, (n) => n + 1);
+            yield* Ref.update(fakes.asked, (all) => [...all, set]);
             yield* fs.writeFileString(path.join(out, 'manifest.json'), '{}');
             return { code: 0, tail: '' };
           }).pipe(Effect.orDie),
@@ -199,7 +204,10 @@ describe('the stream', () => {
         const cache = yield* cacheDir;
         const fakes = yield* fakesOf;
         const hymns = range(1, 20);
-        const result = yield* streamed({ cache, keys: [2], hymns, parallel: 4 }, fakes);
+        const result = yield* streamed(
+          { cache, set: 'warm-1', keys: [2], hymns, parallel: 4 },
+          fakes,
+        );
         expect(result.failed).toBe(0);
         const peak = yield* Ref.get(fakes.peak);
         expect(peak).toBeGreaterThan(1);
@@ -238,9 +246,13 @@ describe('the stream', () => {
         const fakes = yield* fakesOf;
         const started = yield* Deferred.make<number>();
         const hymns = range(1, 8);
-        const first = yield* streamed({ cache, keys: [-3], hymns, parallel: 1 }, fakes, {
-          hang: { hymn: 5, started },
-        }).pipe(Effect.forkChild);
+        const first = yield* streamed(
+          { cache, set: 'warm-1', keys: [-3], hymns, parallel: 1 },
+          fakes,
+          {
+            hang: { hymn: 5, started },
+          },
+        ).pipe(Effect.forkChild);
         yield* Deferred.await(started);
         yield* Fiber.interrupt(first);
         expect(yield* Ref.get(fakes.renders)).toEqual([1, 2, 3, 4, 5]);
@@ -251,7 +263,10 @@ describe('the stream', () => {
         yield* Ref.update(fakes.r2, (all) => new Map([...all, [key3, partial]]));
         const again = yield* fakesOf;
         yield* Ref.set(again.r2, yield* Ref.get(fakes.r2));
-        const result = yield* streamed({ cache, keys: [-3], hymns, parallel: 1 }, again);
+        const result = yield* streamed(
+          { cache, set: 'warm-1', keys: [-3], hymns, parallel: 1 },
+          again,
+        );
         expect(yield* Ref.get(again.renders)).toEqual([3, 5, 6, 7, 8]);
         expect((yield* Ref.get(again.puts)).map((p) => p.key)).toEqual(
           [5, 6, 7, 8].map((h) => setKey('warm-1-down3', h)),
@@ -281,9 +296,13 @@ describe('the stream', () => {
         const path = yield* Path.Path;
         const cache = yield* cacheDir;
         const fakes = yield* fakesOf;
-        const result = yield* streamed({ cache, keys: [1], hymns: [1, 2, 3], parallel: 2 }, fakes, {
-          failing: new Set([2]),
-        });
+        const result = yield* streamed(
+          { cache, set: 'warm-1', keys: [1], hymns: [1, 2, 3], parallel: 2 },
+          fakes,
+          {
+            failing: new Set([2]),
+          },
+        );
         expect(result.failed).toBe(1);
         expect((yield* Ref.get(fakes.puts)).map((p) => p.key)).toEqual(
           [1, 3].map((h) => setKey('warm-1-up1', h)),
@@ -305,9 +324,13 @@ describe('the stream', () => {
       const path = yield* Path.Path;
       const cache = yield* cacheDir;
       const fakes = yield* fakesOf;
-      const result = yield* streamed({ cache, keys: [4], hymns: [1, 2], parallel: 2 }, fakes, {
-        refused: new Set([2]),
-      });
+      const result = yield* streamed(
+        { cache, set: 'warm-1', keys: [4], hymns: [1, 2], parallel: 2 },
+        fakes,
+        {
+          refused: new Set([2]),
+        },
+      );
       expect(result.failed).toBe(1);
       const { out } = setDirs(cache, 'warm-1-up4');
       expect(yield* fs.exists(path.join(out, '1.mp3'))).toBe(false);
@@ -324,7 +347,11 @@ describe('the stream', () => {
         const cache = yield* cacheDir;
         const fakes = yield* fakesOf;
         const moves = new Map([[1, [{ stem: 'bass', octave: 12, folded: 0 }]]]);
-        yield* streamed({ cache, keys: KEY_TRANSPOSES, hymns: [1], parallel: 1 }, fakes, { moves });
+        yield* streamed(
+          { cache, set: 'warm-1', keys: KEY_TRANSPOSES, hymns: [1], parallel: 1 },
+          fakes,
+          { moves },
+        );
         const log = yield* logOf(cache);
         const sets = log.filter((l) => l.includes(' done: ')).map((l) => l.split(' ')[1]);
         expect(sets).toEqual([
@@ -343,6 +370,45 @@ describe('the stream', () => {
         expect(log).toContain(
           'key warm-1-down5 hymn 1 rendered, moved bass +12 (rendered 1 kept 0 uploaded 0 failed 0 of 1)',
         );
+      }),
+  );
+
+  it.scopedLive.layer(BunServices.layer)(
+    "streams a later set's hymns into its own key sets, beside the first set's, and refuses a hymn it does not hold",
+    () =>
+      Effect.gen(function* () {
+        const cache = yield* cacheDir;
+        const fakes = yield* fakesOf;
+        const first = { size: 3, etag: '"0123"' };
+        yield* Ref.set(fakes.r2, new Map([[setKey('warm-1-up2', 663), first]]));
+        const result = yield* streamed(
+          { cache, set: 'warm-2', keys: [2, -5], hymns: [663], parallel: 1 },
+          fakes,
+        );
+        expect(result.failed).toBe(0);
+        expect((yield* Ref.get(fakes.puts)).map((p) => p.key)).toEqual([
+          setKey('warm-2-up2', 663),
+          setKey('warm-2-down5', 663),
+        ]);
+        expect((yield* Ref.get(fakes.r2)).get(setKey('warm-1-up2', 663))).toEqual(first);
+        expect(yield* Ref.get(fakes.asked)).toEqual(['warm-2', 'warm-2', 'warm-2', 'warm-2']);
+        expect((yield* logOf(cache)).at(-1)).toBe(
+          'key warm-2-down5 done: rendered 1 kept 0 uploaded 1 failed 0 of 1',
+        );
+
+        const refused = yield* fakesOf;
+        for (const options of [
+          { set: 'warm-2', hymns: [663, 1] },
+          { set: 'warm-3', hymns: [663] },
+        ]) {
+          const outcome = yield* streamed(
+            { cache, keys: [2], parallel: 1, ...options },
+            refused,
+          ).pipe(Effect.flip);
+          expect(outcome._tag).toBe('StreamFailed');
+        }
+        expect(yield* Ref.get(refused.renders)).toEqual([]);
+        expect(yield* Ref.get(refused.puts)).toEqual([]);
       }),
   );
 });

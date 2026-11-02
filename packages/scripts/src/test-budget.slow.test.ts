@@ -4,12 +4,14 @@
 // `.turbo/runs` before, during or after it, at turbo's exit 0 and 1. A run
 // never reports a time from a summary it did not write, never removes one,
 // and measures nothing when its own summary cannot be read, at any exit: it
-// fails, and names the workspace's exit with no time.
+// fails, and names the task's exit with no time. A workspace whose tests are
+// cut into parts has each part timed by its own task's span.
 // `TEST_BUDGET_SEED=<n>` replays the generated cases of a failing seed.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, test } from 'bun:test';
 import {
+  Array as Arr,
   Clock,
   Config,
   Effect,
@@ -46,10 +48,13 @@ interface Case {
   readonly label: string;
   readonly own: Own;
   readonly exit: 0 | 1;
+  /** Under the 1 s budget, so the run's exit is turbo's at any host load. */
   readonly ownMs: number;
   readonly foreign: ReadonlyArray<Foreign>;
   /** x's `test` script as turbo's dry run names it (`bun test` when none). */
   readonly command?: string;
+  /** x's tests cut into parts: its `test` has no command, and each part's run writes its own whole summary of its time. */
+  readonly parts?: ReadonlyArray<{ readonly task: string; readonly ms: number }>;
 }
 
 const OWN_FILE = 'own.json';
@@ -102,10 +107,42 @@ const standIn = (each: Case) => {
     'two-lines': [printed, printed],
     outside: [`echo "Summary:    $PWD/${OUTSIDE_DIR}/${OWN_FILE}"`],
   };
+  const task = (taskId: string, command: string, dependencies: ReadonlyArray<string> = []) => {
+    const [pkg = '', name = ''] = taskId.split('#');
+    return {
+      taskId,
+      task: name,
+      package: pkg,
+      directory: pkg,
+      command,
+      inputs: {},
+      dependencies,
+    };
+  };
+  const parts = each.parts ?? [];
   const dry = json({
     tasks: [
-      { taskId: 'x#test', package: 'x', directory: 'x', command: each.command ?? 'bun test' },
-      { taskId: 'y#test', package: 'y', directory: 'y', command: 'bun test' },
+      task(
+        'x#test',
+        Arr.match(parts, {
+          onEmpty: () => each.command ?? 'bun test',
+          onNonEmpty: () => '<NONEXISTENT>',
+        }),
+        parts.map((part) => `x#${part.task}`),
+      ),
+      ...parts.map((part) => task(`x#${part.task}`, 'bun test')),
+      task('y#test', 'bun test'),
+    ],
+  });
+  // A measuring run is `turbo run <task> --filter=x …`: a part's run writes its own task's summary.
+  const ownWrites = Arr.match(parts, {
+    onEmpty: () => own[each.own],
+    onNonEmpty: (given) => [
+      'case "$2" in',
+      ...given.map(
+        (part) => `  ${part.task}) ${write(OWN_FILE, summary([`x#${part.task}`], part.ms))};;`,
+      ),
+      'esac',
     ],
   });
   return [
@@ -114,7 +151,7 @@ const standIn = (each: Case) => {
     'mkdir -p .turbo/runs',
     "echo 'x:test: the tests ran'",
     ...during('during-before-own'),
-    ...own[each.own],
+    ...ownWrites,
     ...during('during-after-own'),
     ...line[each.own],
     // The test writes the "after" summaries once this lands (see `run`).
@@ -217,7 +254,9 @@ const violations = (
   },
 ) => {
   const found: Array<string> = [];
-  const times = [...result.stdout.matchAll(/^\s+(\d+\.\d\d s) {2}x$/gm)].map((match) => match[1]);
+  const times = [...result.stdout.matchAll(/^\s+(\d+\.\d\d s) {2}x#test$/gm)].map(
+    (match) => match[1],
+  );
   const readable = each.own === 'whole';
   for (const foreign of each.foreign) {
     if (times.includes(seconds(foreign.ms)))
@@ -235,7 +274,7 @@ const violations = (
   }
   if (result.code !== 1) found.push(`exits ${result.code} with its own summary unreadable`);
   if (times.length > 0) found.push(`reports [${times.join()}] with no summary of its own`);
-  if (!new RegExp(`^\\s+no time {2}x: exit ${each.exit}\\b`, 'm').test(result.stdout))
+  if (!new RegExp(`^\\s+no time {2}x#test: exit ${each.exit}\\b`, 'm').test(result.stdout))
     found.push(`names no exit ${each.exit} with no time for x`);
   const unread: ReadonlyArray<Own> = ['truncated', 'no-task', 'two-lines'];
   if (unread.includes(each.own) && !result.left.has(OWN_FILE))
@@ -310,7 +349,7 @@ const generate = (seed: number, count: number): ReadonlyArray<Case> => {
       label,
       own,
       exit,
-      ownMs: 1_000 + Math.floor(next() * 80) * 100,
+      ownMs: 100 + Math.floor(next() * 80) * 10,
       foreign,
     };
   });
@@ -320,7 +359,7 @@ const fixed = (label: string, own: Own, exit: 0 | 1, foreign: ReadonlyArray<Fore
   label,
   own,
   exit,
-  ownMs: 3_400,
+  ownMs: 340,
   foreign,
 });
 
@@ -403,9 +442,37 @@ describe("test:budget's run summaries on a shared machine", () => {
           (result) => {
             expect(result.code).toBe(1);
             expect(result.stderr).toContain(
-              "test:budget: nothing is measured; a workspace's test script weakens its tests:\nx: --timeout 60000",
+              "test:budget: nothing is measured; a unit-test task's script weakens its tests:\nx#test: --timeout 60000",
             );
             expect(result.stdout).not.toContain('x:test: the tests ran');
+          },
+        ).pipe(Effect.provide(BunServices.layer)),
+      ),
+    30_000,
+  );
+
+  test(
+    "a workspace whose tests are cut into parts has each part timed alone, by its own task's span, and its test none",
+    () =>
+      Effect.runPromise(
+        Effect.map(
+          run({
+            ...fixed('parts', 'whole', 0, []),
+            parts: [
+              { task: 'test:a', ms: 400 },
+              { task: 'test:b', ms: 900 },
+            ],
+          }),
+          (result) => {
+            expect(result.code).toBe(0);
+            expect(
+              [...result.stdout.matchAll(/^\s+(\d+\.\d\d s) {2}(\S+)$/gm)].map(
+                ([, time, taskId]) => `${time} ${taskId}`,
+              ),
+            ).toEqual(['0.90 s x#test:b', '0.40 s x#test:a']);
+            expect(result.stdout).toContain('test:budget: x#test:a alone');
+            expect(result.stdout).toContain('test:budget: x#test:b alone');
+            expect(result.left.has(OWN_FILE)).toBe(false);
           },
         ).pipe(Effect.provide(BunServices.layer)),
       ),

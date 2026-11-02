@@ -5,6 +5,7 @@ import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { fileURLToPath } from 'node:url';
 import { reachesIn, repoTests } from './reach.ts';
+import { testDryRun, unitTests } from './units.ts';
 
 /** A test file's text: one that imports its runner. */
 const RUNNER = "import { test } from 'bun:test';\n";
@@ -13,8 +14,9 @@ const RUNNER = "import { test } from 'bun:test';\n";
  * How `scripts` (a workspace at `w`, `/repo/w`, its playwright configs
  * `configs`, its `.gitignore` texts by folder `gitignores`, its bunfig's
  * text `bunfig`, its wrappers of `bun test` `wrappers`) reach each of
- * `files` (paths from `w`, each its text in `texts` or a test's), as
- * `<file>: <script>`, or `none`.
+ * `files` (paths from `w`, each its text in `texts` or a test's), its
+ * unit-test tasks `units` (`test` when not given), as `<file>: <script>`, or
+ * `none`.
  */
 const reaches = (
   scripts: Record<string, string>,
@@ -24,9 +26,10 @@ const reaches = (
   bunfig = '',
   wrappers: ReadonlyArray<string> = [],
   texts: Record<string, string> = {},
+  units: ReadonlyArray<string> = ['test'],
 ) =>
   reachesIn(
-    [{ dir: 'w', absolute: '/repo/w', scripts, configs, gitignores, bunfig, wrappers }],
+    [{ dir: 'w', absolute: '/repo/w', scripts, units, configs, gitignores, bunfig, wrappers }],
     files.map((file) => ({ file: `w/${file}`, text: texts[file] ?? RUNNER, link: false })),
   ).map(({ file, by }) => `${file.slice(2)}: ${Option.getOrElse(by, () => 'none')}`);
 
@@ -44,6 +47,7 @@ describe("a workspace's test files", () => {
                 dir: 'w',
                 absolute: '/repo/w',
                 scripts: test,
+                units: ['test'],
                 configs: {},
                 gitignores: {},
                 bunfig: '',
@@ -53,6 +57,7 @@ describe("a workspace's test files", () => {
                 dir: 'w/nested',
                 absolute: '/repo/w/nested',
                 scripts: {},
+                units: [],
                 configs: {},
                 gitignores: {},
                 bunfig: '',
@@ -119,6 +124,7 @@ describe("a workspace's test files", () => {
                 dir: 'w',
                 absolute: '/repo/w',
                 scripts: { test: 'bun test src' },
+                units: ['test'],
                 configs: {},
                 gitignores: {},
                 bunfig: '',
@@ -635,6 +641,64 @@ describe("a workspace's test files", () => {
   );
 
   it.effect(
+    "are each taken by one of a workspace's unit-test parts, and a file two parts take is named with both",
+    () =>
+      Effect.sync(() => {
+        // A workspace whose tests are cut into parts: its `test` has no script, each part is one.
+        const scripts = {
+          'test:lab': 'bun test ./src/lab ./src/tools/lab-gate.test.ts',
+          'test:tools': 'bun test ./src/tools --path-ignore-patterns=src/tools/lab-gate.test.ts',
+          'test:engine':
+            'bun test src --path-ignore-patterns=src/tools --path-ignore-patterns=src/lab',
+          'test:e2e': 'bun test ./e2e',
+        };
+        const units = ['test:engine', 'test:lab', 'test:tools'];
+        const files = [
+          'src/lab/a.test.ts',
+          'src/tools/lab-gate.test.ts',
+          'src/tools/cast.test.ts',
+          'src/core/b.test.ts',
+          'e2e/c.test.ts',
+          'other/d.test.ts',
+        ];
+        const taken = (each: Record<string, string>) =>
+          reachesIn(
+            [
+              {
+                dir: 'w',
+                absolute: '/repo/w',
+                scripts: each,
+                units,
+                configs: {},
+                gitignores: {},
+                bunfig: '',
+                wrappers: [],
+              },
+            ],
+            files.map((file) => ({ file: `w/${file}`, text: RUNNER, link: false })),
+          ).map(
+            ({ file, by, units: parts }) =>
+              `${file.slice(2)}: ${Option.getOrElse(by, () => 'none')} [${parts.join(', ')}]`,
+          );
+        expect(taken(scripts)).toEqual([
+          'src/lab/a.test.ts: test:lab [test:lab]',
+          'src/tools/lab-gate.test.ts: test:lab [test:lab]',
+          'src/tools/cast.test.ts: test:tools [test:tools]',
+          'src/core/b.test.ts: test:engine [test:engine]',
+          // A hand-run script credits the file and is no unit-test task.
+          'e2e/c.test.ts: test:e2e []',
+          'other/d.test.ts: none []',
+        ]);
+        // The lab list drifted: the tools part no longer ignores a lab tool, so the gate runs it twice.
+        expect(
+          taken({ ...scripts, 'test:tools': 'bun test ./src/tools' }).filter((line) =>
+            line.includes(','),
+          ),
+        ).toEqual(['src/tools/lab-gate.test.ts: test:lab [test:lab, test:tools]']);
+      }),
+  );
+
+  it.effect(
     'are run by hand by a script of their own: a bun test, a wrapper of it the repo names, or playwright',
     () =>
       Effect.sync(() => {
@@ -674,7 +738,7 @@ describe("a workspace's test files", () => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const root = path.join(import.meta.dir, '..', '..', '..', '..');
-        const { workspaces } = yield* repoTests(root);
+        const { workspaces } = yield* repoTests(root, []);
         const wrappers = workspaces.flatMap(({ dir, wrappers }) =>
           wrappers.map((file) => `${dir}/${file}`),
         );
@@ -987,7 +1051,8 @@ describe("a workspace's test files", () => {
           yield* git('add', 'w/real', 'w/linked');
           yield* fs.remove(path.join(root, 'w/linked'), { recursive: true });
           yield* fs.symlink('real', path.join(root, 'w/linked'));
-          const { workspaces, tests } = yield* repoTests(root);
+          // `w` has no `test`: turbo's dry run names no unit-test task of it.
+          const { workspaces, tests } = yield* repoTests(root, []);
           expect(
             reachesIn(workspaces, tests).map(
               ({ file, by }) => `${file}: ${Option.getOrElse(by, () => 'none')}`,
@@ -1009,11 +1074,20 @@ describe("a workspace's test files", () => {
       Effect.gen(function* () {
         const path = yield* Path.Path;
         const root = path.join(import.meta.dir, '..', '..', '..', '..');
-        const { workspaces, tests } = yield* repoTests(root);
+        const units = unitTests(
+          yield* testDryRun(root, path.join(root, 'node_modules', '.bin', 'turbo')),
+        );
+        const { workspaces, tests } = yield* repoTests(root, units);
         expect(workspaces.length).toBeGreaterThan(5);
         const reached = reachesIn(workspaces, tests);
         expect(reached.length).toBeGreaterThan(400);
         expect(reached.filter(({ by }) => Option.isNone(by)).map(({ file }) => file)).toEqual([]);
+        // No file runs twice in the gate: no two unit-test tasks take one.
+        expect(
+          reached
+            .filter(({ units: by }) => by.length > 1)
+            .map(({ file, units: by }) => `${file} (${by.join(', ')})`),
+        ).toEqual([]);
       }),
   );
 });

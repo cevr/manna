@@ -4753,3 +4753,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** `reader.test.ts`, a unit test, wrote a reader folder to host temp folders and loaded it through `BunFileSystem.layer`, and read the committed `model.py` by its URL.
 - **Cause:** The live layer's test took the host file system for a folder the in-memory disk serves as well. A scoped `no-restricted-imports` ban was not taken: most film unit tests use a live file system by design, and oxlint gives a file the options of the last block that sets the rule, so the ban would repeat the tools block's list for one file.
 - **Guard:** code: `packages/film/src/tools/cast-build/reader.slow.test.ts` `the cast reader unit tests read no real folder: reader.test.ts takes no Bun platform layer and names no file by its URL, through Bun, or through a Node file or OS module`
+
+### film-source-sweeps-are-lint-not-a-cached-part
+
+- **Date:** 2026-11-01
+- **Kind:** review
+- **Said:** "test:tools caches a pass over test files it reads but does not hash"
+- **Source:** film-split/round-1-review.md M1
+- **Wrong:** After the film unit tests split into three turbo tasks, `no-ffmpeg.test.ts` in test:tools still read every source of the package. An ffmpeg command string added to an engine test reran test:engine alone, test:tools came from its cache, and the gate passed.
+- **Cause:** A test that sweeps the whole package reads files that its part's turbo inputs leave out, so an edit of another part does not rerun it. The source sweep is now a rule of the film plugin, which oxlint runs over every file on every gate; the docs half stays a test, and its part hashes the docs.
+- **Guard:** lint:film/media-in-process, proof `packages/film/lint/fixtures/media-in-process.ts` `RED film/media-in-process`
+
+### film-webview-sweep-is-lint-not-a-cached-part
+
+- **Date:** 2026-11-01
+- **Kind:** review
+- **Said:** "A `new Bun.WebView(` added to any engine or lab test escapes `chrome.test.ts` the same way."
+- **Source:** film-split/round-1-review.md M1
+- **Wrong:** `chrome.test.ts` in test:tools read every source under `src` and `e2e` for a Chrome spawned past `openView`, so a spawn added to an engine or lab file reran another part, and test:tools passed from its cache.
+- **Cause:** The same whole-package sweep inside one cached part. The check is now a rule of the film plugin, which oxlint runs over every file on every gate.
+- **Guard:** lint:film/webview-through-chrome, proof `packages/film/lint/fixtures/webview-through-chrome.ts` `RED film/webview-through-chrome`

@@ -25,6 +25,7 @@ import { Effect, FileSystem, Path, Schema } from 'effect';
 import * as Midi from '../../src/midi.js';
 import { recordingKey } from '../../src/recordings.js';
 import { ManifestJson, type RecordingManifest } from '../../src/recording-manifest.js';
+import * as Sung from '../../src/sung.js';
 import { voices } from '../../src/voices.js';
 import { type AudioSetup, mixAndMaster, readMidi, sampleStems, stemJobs } from './audio.js';
 import { checksOf, firstSound, LIMITS, longestQuiet, passed, samplePeak } from './checks.js';
@@ -44,7 +45,7 @@ import type { Style } from './style.js';
 
 /** Everything a hymn's render reads besides its MIDI file. */
 export interface Setup extends AudioSetup {
-  /** Semitones from the printed key (`keys.ts`): 0 for `warm-1`, else a key set (`keySet`). */
+  /** Semitones from the printed key (`keys.ts`): 0 for the set itself (`warm-1`, `warm-2`), else a key set (`keySet`). */
   readonly transpose: number;
   /** The 1-minute load over which a hymn waits to render (`GUARDS.load` unless the CLI names another). */
   readonly load: number;
@@ -222,23 +223,52 @@ export const readRecord = (out: string, hymn: number) =>
     }).pipe(Effect.orElseSucceed(() => undefined));
   });
 
+/** The stanza count of a compiled hymn's text, all `sourceOf` reads of it. */
+const StanzasJson = Schema.fromJsonString(
+  Schema.Struct({ verses: Schema.Struct({ text: Schema.Int }) }),
+);
+
 /**
- * A hymn's MIDI file: parsed, its sha256, the style in the run's key for its
- * parts with each stem an octave moved (`keys.ts`), and what it asks of the
- * recording.
+ * The source hash of a looped file: its bytes, the loop and the source of
+ * `sung.ts`, which makes the sung file from them.
+ */
+const loopedSha256 = (bytes: Uint8Array, loop: Sung.Loop, sung: Uint8Array) =>
+  new Bun.CryptoHasher('sha256')
+    .update(bytes)
+    .update(`\0sung start=${loop.start} length=${loop.length} passes=${loop.passes}\0`)
+    .update(sung)
+    .digest('hex');
+
+/**
+ * A hymn's sung file (`sung.ts`: its MIDI file, its last verse sung again
+ * for each stanza of its compiled text past the verses the file plays):
+ * parsed, its source hash, the style in the run's key for its parts with
+ * each stem an octave moved (`keys.ts`), and what it asks of the recording.
+ * A file sung as it stands keeps its bytes' sha256, so its recordings stand;
+ * a looped file's hash also covers the loop and `sung.ts` (`loopedSha256`).
  */
 export const sourceOf = (style: Style, hymn: number, transpose = 0) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    const bytes = yield* fs.readFile(
-      path.resolve(import.meta.dir, '../../data/midi', `${padded(hymn)}.mid`),
-    );
-    const midi = yield* readMidi(bytes, hymn);
+    const data = path.resolve(import.meta.dir, '../../data');
+    const bytes = yield* fs.readFile(path.join(data, 'midi', `${padded(hymn)}.mid`));
+    const { verses } = yield* Schema.decodeEffect(StanzasJson)(
+      yield* fs.readFileString(path.join(data, 'sdah-1985', `${padded(hymn)}.json`)),
+    ).pipe(Effect.mapError((e) => RenderFailed.make({ step: `hymn ${hymn}`, reason: e.message })));
+    const sung = Sung.of(yield* readMidi(bytes, hymn), verses.text);
+    const midi = sung.midi;
     const keyed = keyedStyle(style, voices(midi), transpose);
     return {
       midi,
-      sha256: sha256Hex(bytes),
+      sha256:
+        sung.loop === undefined
+          ? sha256Hex(bytes)
+          : loopedSha256(
+              bytes,
+              sung.loop,
+              yield* fs.readFile(path.resolve(import.meta.dir, '../../src/sung.ts')),
+            ),
       style: keyed.style,
       moves: keyed.moves,
       expected: expectedOf(midi, keyed.style, hymn),

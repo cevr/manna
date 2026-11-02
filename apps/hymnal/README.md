@@ -460,8 +460,13 @@ no longer matches the script, so an edit to `wheat.svg` needs `bun run icon`.
 The app saves a visible hymn's printed-key recording after a 750 ms dwell.
 Play in another Key queues that set too; capo never changes its identity.
 `src/offline/` owns two scoped workers and media files: application support
-excluded from iCloud backup on iOS, origin-private files on web, namespaced
-by recording set. Web requests persistent storage for Download all; the UI
+excluded from iCloud backup on iOS, origin-private files on web, one
+storage per recording set (`storageOf`, `hymnal-recordings-<set>-v1`). A
+hymn's files live in the storage of the set it plays from (`storageFor`,
+by `setOf`), so a later set moves only its own hymns: every other hymn's
+saved recording is still found, and a moved hymn's file left in its old
+set's storage is a stray, never listed or played. Delete frees every saved
+file, the strays, and each storage no hymn reads (`removeOld`). Web requests persistent storage for Download all; the UI
 states that a browser may remove downloads. Startup indexing runs in the
 background; playback can use remote while an entry is not yet indexed.
 Save intentions wait for discovery so they join retained files, and Cancel
@@ -488,17 +493,21 @@ always uses R2. Never use production Download all for a verification run.
 
 The 1985 SDA Hymnal's recordings are in the Cloudflare R2 bucket `cvr-hymns`,
 served publicly at `https://hymns.cvr.im`. The app builds each URL from
-`src/remote.ts` (`audioUrl(n)` is `https://hymns.cvr.im/audio/warm-1/sdah/<n>.mp3`).
+`src/remote.ts` (`audioUrl(n)` is `https://hymns.cvr.im/audio/<set>/sdah/<n>.mp3`,
+`<set>` the hymn's `setOf(n)`: `warm-2` for 663, `warm-1` for every other hymn).
 That module imports only `@manna/hymnal/recordings`, which imports nothing, so
 the app, Vite and the infra all read it.
 
 Key layout:
 
 - `audio/<set>/sdah/<n>.mp3`: hymn `n` of the 1985 hymnal in a rendered set,
-  with the number unpadded. The app plays the set `RECORDING_SET` in
-  `packages/hymnal/src/recordings.ts` (`warm-1`). A set is rendered from the
-  hymnal's MIDI files (`packages/hymnal/README.md`, "Recordings") and is never
-  replaced: changed recordings are a new set (`warm-2`) beside it.
+  with the number unpadded. The sets are `RECORDING_SETS` in
+  `packages/hymnal/src/recordings.ts`: `warm-1` holds every hymn, `warm-2`
+  holds hymn 663 alone (its one verse sung once for each of its six
+  stanzas), and a hymn plays from the latest set that holds it (`setOf`). A
+  set is rendered from the hymnal's MIDI files (`packages/hymnal/README.md`,
+  "Recordings") and is never replaced: changed recordings are a later set
+  beside it, listing the hymns it holds.
 - `audio/sdah/<n>.mp3`: the recordings copied from the old S3 bucket
   (`sourcedKey(n)`). They stay, so going back is one constant.
 - `data/`: reserved for the compiled hymn data.
@@ -574,23 +583,25 @@ writes, `~/.cache/manna-hymn-render/sets/warm-1/` by default) into R2 under
 `audio/<set>/sdah/<n>.mp3`. The code is `infra/audio/upload.ts`, and its plan
 is `infra/audio/upload-plan.ts`.
 
-- It refuses the set before any upload unless its `manifest.json` is the set
-  the app plays and holds hymns 1 to 695 once each, each with its own key and
-  each passed, and unless every MP3 has the manifest's sha256, MD5 and size.
+- It refuses the set before any upload unless its `manifest.json` is a set
+  the app plays and holds exactly that set's hymns (1 to 695 for `warm-1`,
+  663 alone for `warm-2`) once each, each with its own key and each passed,
+  and unless every MP3 has the manifest's sha256, MD5 and size.
 - It lists the set's prefix once. A key R2 holds with the manifest's size and
   MD5 is kept. A key R2 lacks is uploaded, 4 at a time, as `audio/mpeg` with
   `cache-control: public, max-age=31536000, immutable`, and R2's reply must
   carry that MD5 and size.
 - A key R2 holds with other bytes is a conflict. It is never replaced: the run
-  says to bump the set to `warm-2`. That refusal is what makes `immutable`
-  true.
+  says to render the hymn into a later set. That refusal is what makes
+  `immutable` true.
 - At the end it lists the prefix again and checks every hymn. A failed hymn
-  does not stop the others, the run exits non-zero unless all 695 are
-  verified, and a rerun uploads only what is still missing.
+  does not stop the others, the run exits non-zero unless every hymn of the
+  set is verified, and a rerun uploads only what is still missing.
 
 `--dry-run` reads and checks the local set only. It does not touch R2 or the
 Cloudflare profile. Both modes end with
-`audio-upload <run|dry-run> set=warm-1 kept K uploaded U conflict C failed F verified V/695`.
+`audio-upload <run|dry-run> set=<set> kept K uploaded U conflict C failed F verified V/N`,
+N the set's hymns (695 for `warm-1`, 1 for `warm-2`).
 A real run writes with the owner's Alchemy Cloudflare profile, as the copy job
 does, and runs before the change that points the app at the set reaches
 `main`, so the app never plays keys that do not exist.
@@ -601,11 +612,15 @@ does, and runs before the change that points the app at the set reaches
 the Key stepper reaches (+1, -1, +2, -2, ... +6) and streams each hymn to R2
 under `audio/<set>/sdah/<n>.mp3` (`warm-1-up2`, `warm-1-down3`). The code is
 `infra/audio/stream.ts` and `infra/audio/stream-job.ts`. The key sets go to R2
-only, never to the GitHub copy of `warm-1`.
+only, never to the GitHub copy of `warm-1`. `--set <name>` (default `warm-1`)
+names the set whose key sets are streamed: `--set warm-2 --keys all` streams
+663 into `warm-2-up1` … `warm-2-down5`.
 
-- Each hymn renders in its own `render.ts --transpose <t>` process, which
-  waits while the load is over `--load` (12 by default). `--parallel` (4 by
-  default) hymns run at once. `--hymns 1,46` takes some hymns only.
+- Each hymn renders in its own `render.ts --set <set> --transpose <t>`
+  process, which waits while the load is over `--load` (12 by default).
+  `--parallel` (4 by default) hymns run at once. `--hymns 1,46` takes some
+  hymns only; by default every hymn the set holds, and a hymn the set does
+  not hold is refused.
 - A hymn is rendered and checked, uploaded under the upload's rules
   (`audio/mpeg`, a year's `immutable` cache, R2's MD5 and size must match),
   read back from R2, and only then its MP3 and work folder are deleted. The
