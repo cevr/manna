@@ -21,18 +21,22 @@
 import { createHash } from 'node:crypto';
 import * as nfs from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, isAbsolute, join, normalize, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Cause, Clock, Console, Effect, Exit, FileSystem, Layer, Sink, Stream } from 'effect';
 import { HttpClient, HttpClientResponse } from 'effect/http';
+import * as PlatformError from 'effect/PlatformError';
 import { ChildProcessSpawner } from 'effect/process';
 
 import type { App } from '../app.ts';
 import { runSim } from '../command.ts';
 import { DriveLive, type Place } from '../drive.ts';
+import { Escaped } from '../errors.ts';
+import { land, LOOP, treeEscapes } from './oracle.ts';
 
-const APP: App = {
+/** The hymnal's App record, written out here. */
+export const APP: App = {
   displayName: 'the hymnal',
   simulator: 'verify-hymnal',
   deviceType: 'iPhone 18 Pro',
@@ -167,70 +171,32 @@ const makeLayout = (base: string, variant: Variant, session: Session): Layout =>
   return { base, roots, place, out, given: lexicalOf('given') };
 };
 
-const isLink = (file: string) => {
-  try {
-    return nfs.lstatSync(file).isSymbolicLink();
-  } catch {
-    return false;
-  }
-};
-
-/** Where a path lands, each link on it followed (the last one too when `follow`). */
-const walk = (file: string, follow: boolean, hops = 0): string => {
-  if (hops > 40) return '/<link-loop>';
-  const parts = normalize(file).split('/').filter(Boolean);
-  let at = '/';
-  for (const [index, part] of parts.entries()) {
-    const next = join(at, part);
-    const last = index === parts.length - 1;
-    if (isLink(next) && (!last || follow)) {
-      const target = nfs.readlinkSync(next);
-      at = walk(isAbsolute(target) ? target : join(at, target), true, hops + 1);
-    } else at = next;
-  }
-  return at;
-};
-
 const under = (file: string, dir: string) => file === dir || file.startsWith(`${dir}/`);
 
 /** Every root that lexically holds `file`. */
 const holdersOf = (layout: Layout, file: string) =>
   layout.roots.filter((root) => under(file, root.lexical) || under(file, root.canon));
 
-/** Whether `raw` lands under the canonical form of every root that holds it. */
+/** Whether `raw` lands, as the OS takes it (`oracle.ts`), under the canonical form of every root that holds it. */
 const judge = (layout: Layout, raw: string, follow: boolean) => {
-  const file = resolve(raw);
-  const real = walk(file, follow);
-  const held = holdersOf(layout, file);
+  const file = isAbsolute(raw) ? raw : `${process.cwd()}/${raw}`;
+  const real = land(file, follow);
+  const held = holdersOf(layout, resolve(file));
   if (held.length === 0) return { ok: false, real, why: 'under no root' };
+  if (real === LOOP) return { ok: false, real, why: 'a link loop' };
   const left = held.find((root) => !under(real, root.canon));
   return { ok: left === undefined, real, why: left ? `outside ${left.key}` : 'inside' };
 };
 
-/** Links beneath a tree that lead out of a root holding it. */
+/** Links reachable in a tree, through every directory a link in it leads to, that lead out of a root holding it. */
 const escapes = (layout: Layout, raw: string): Array<string> => {
-  const file = resolve(raw);
-  const held = holdersOf(layout, file);
-  const found: Array<string> = [];
-  const visit = (dir: string) => {
-    let names: Array<string> = [];
-    try {
-      names = nfs.readdirSync(dir);
-    } catch {
-      return;
-    }
-    for (const name of names) {
-      const entry = join(dir, name);
-      const info = nfs.lstatSync(entry);
-      if (info.isSymbolicLink()) {
-        const target = walk(entry, true);
-        if (held.length === 0 || held.some((root) => !under(target, root.canon)))
-          found.push(`${entry} -> ${target}`);
-      } else if (info.isDirectory()) visit(entry);
-    }
-  };
-  visit(walk(file, true));
-  return found;
+  const file = isAbsolute(raw) ? raw : `${process.cwd()}/${raw}`;
+  const held = holdersOf(layout, resolve(file));
+  if (held.length === 0) return [`${file} lies under no root`];
+  return treeEscapes(
+    file,
+    held.map((root) => root.canon),
+  );
 };
 
 /** The tree outside every root: each entry's type, and its link target or content digest. */
@@ -269,7 +235,26 @@ interface Run {
   readonly hooks: { prebuild?: () => void; build?: () => void };
   term: boolean;
   served: boolean;
+  /** Each platform call the host made and each spawn, in order: `<operation> <path>`, `spawn <tool> cwd=<cwd>`. */
+  readonly ops: Array<string>;
+  /** The lines the run printed. */
+  readonly lines: Array<string>;
+  /** Host calls (filesystem calls other than looks, and spawns) so far. */
+  calls: number;
+  /** The host call refused as the contained host refuses one, if any. */
+  readonly refuseAt?: number;
 }
+
+/** The refusal the contained host makes, at the run's `refuseAt`-th host call. */
+const refusal = (run: Run, operation: string, file: string) => {
+  run.calls += 1;
+  if (run.calls !== run.refuseAt) return undefined;
+  return PlatformError.badArgument({
+    module: 'ContainedHost',
+    method: operation,
+    cause: Escaped.make({ operation, path: file, resolved: file, outside: ['probe'] }),
+  });
+};
 
 const platformFs = Effect.runSync(
   Effect.gen(function* () {
@@ -284,6 +269,13 @@ const recordingFs = (run: Run): FileSystem.FileSystem =>
       const value: unknown = Reflect.get(target, name);
       if (typeof value !== 'function' || typeof name !== 'string') return value;
       return (...args: Array<unknown>) => {
+        if (!LOOKS.has(name)) {
+          run.ops.push(`${name} ${String(args[0])}`);
+          const refused = refusal(run, name, String(args[0]));
+          if (refused && name === 'sink') return Sink.fail(refused);
+          if (refused && (name === 'stream' || name === 'watch')) return Stream.fail(refused);
+          if (refused) return Effect.fail(refused);
+        }
         const at = TWO_PATHS.has(name) ? [0, 1] : name === 'symlink' ? [1] : [0];
         for (const index of at) {
           const file = args[index];
@@ -418,11 +410,14 @@ const judgeSpawn = (
 };
 
 const standInSpawner = (run: Run) =>
-  ChildProcessSpawner.make((command) =>
-    Effect.sync(() => {
-      const name = command._tag === 'StandardCommand' ? command.command : 'piped';
-      const args = command._tag === 'StandardCommand' ? command.args.map(String) : [];
-      const cwd = command._tag === 'StandardCommand' ? command.options.cwd : undefined;
+  ChildProcessSpawner.make((command) => {
+    const name = command._tag === 'StandardCommand' ? command.command : 'piped';
+    const args = command._tag === 'StandardCommand' ? command.args.map(String) : [];
+    const cwd = command._tag === 'StandardCommand' ? command.options.cwd : undefined;
+    run.ops.push(`spawn ${name} cwd=${cwd ?? ''}`);
+    const refused = refusal(run, 'spawn', name);
+    if (refused) return Effect.fail(refused);
+    return Effect.sync(() => {
       judgeSpawn(run, name, args, cwd);
       let answer = { exitCode: 1, stdout: '' };
       try {
@@ -444,8 +439,8 @@ const standInSpawner = (run: Run) =>
         getOutputFd: () => Stream.empty,
         unref: Effect.succeed(Effect.void),
       });
-    }),
-  );
+    });
+  });
 
 const standInHttp = (run: Run) =>
   HttpClient.make((request) =>
@@ -454,11 +449,12 @@ const standInHttp = (run: Run) =>
     ),
   );
 
-const quiet: Console.Console = {
+/** A console that keeps the run's printed lines and shows nothing. */
+const capture = (run: Run): Console.Console => ({
   ...globalThis.console,
-  log: () => undefined,
+  log: (...parts: ReadonlyArray<unknown>) => void run.lines.push(parts.join(' ')),
   error: () => undefined,
-};
+});
 
 /** `program` with the clock held at one instant, so a run and its replanted run name the same folders. */
 const fixedClock = <A, E, R>(program: Effect.Effect<A, E, R>) =>
@@ -617,6 +613,17 @@ interface Ran {
   readonly named: ReadonlyArray<string>;
   readonly base: string;
   readonly why: string;
+  readonly ops: ReadonlyArray<string>;
+  readonly lines: ReadonlyArray<string>;
+  readonly calls: number;
+  /** The error the run failed with, if it failed. */
+  readonly error: unknown;
+}
+
+/** What a run does beyond its command: a layout of its own made first, and the host call it refuses. */
+interface Extra {
+  readonly setup?: (layout: Layout) => void;
+  readonly refuseAt?: number;
 }
 
 const runCase = async (
@@ -625,6 +632,7 @@ const runCase = async (
   variant: Variant,
   plant?: Plant,
   first?: string,
+  extra: Extra = {},
 ): Promise<Ran> => {
   serial += 1;
   const base = `${scratch}/c${serial}`;
@@ -637,7 +645,12 @@ const runCase = async (
     hooks: {},
     term: false,
     served: command.session !== 'none',
+    ops: [],
+    lines: [],
+    calls: 0,
+    refuseAt: extra.refuseAt,
   };
+  extra.setup?.(layout);
   if (plant) {
     const hook = plantLink(layout, plant, first ?? base);
     if (hook && plant.kind === 'prebuild') run.hooks.prebuild = hook;
@@ -651,7 +664,7 @@ const runCase = async (
   );
   const program = runSim(layout.place, command.args(layout)).pipe(
     Effect.provide(Layer.provideMerge(DriveLive, host)),
-    Effect.provideService(Console.Console, quiet),
+    Effect.provideService(Console.Console, capture(run)),
     Effect.provide(BunServices.layer),
     Effect.timeoutOrElse({ duration: '20 seconds', orElse: () => Effect.die('timed out') }),
   );
@@ -663,7 +676,94 @@ const runCase = async (
   const ok = Exit.isSuccess(exit);
   const typed = Exit.isSuccess(exit) || (Cause.hasFails(exit.cause) && !Cause.hasDies(exit.cause));
   const why = Exit.isSuccess(exit) ? 'ok' : String(Cause.squash(exit.cause)).slice(0, 200);
-  return { ok, typed, violations: run.violations, named: [...run.named], base, why };
+  const error = Exit.isSuccess(exit) ? undefined : Cause.squash(exit.cause);
+  return {
+    ok,
+    typed,
+    violations: run.violations,
+    named: [...run.named],
+    base,
+    why,
+    ops: run.ops,
+    lines: run.lines,
+    calls: run.calls,
+    error,
+  };
+};
+
+/** The command named `name`; a name it does not know runs as an unknown subcommand, which `sim` refuses. */
+const commandNamed = (name: string): Command =>
+  commands.find((each) => each.name === name) ?? {
+    session: 'none',
+    name,
+    args: () => [name],
+  };
+
+/** One run of command `name` on the plain layout after `setup`, its scratch tree removed. */
+export const runScenario = async (
+  name: string,
+  setup: (layout: Layout) => void,
+): Promise<Omit<Ran, 'base' | 'named'>> => {
+  const scratch = nfs.mkdtempSync(join(tmpdir(), 'sim-scenario-'));
+  try {
+    return await runCase(scratch, commandNamed(name), 'plain', undefined, undefined, { setup });
+  } finally {
+    nfs.rmSync(scratch, { recursive: true, force: true });
+  }
+};
+
+/** What a printed line says of itself: whether it is a success, and its message and error. */
+interface Printed {
+  readonly ok?: unknown;
+  readonly message?: unknown;
+  readonly error?: { readonly _tag?: unknown };
+}
+
+/** A printed line, read as JSON. */
+const parsed = (line: string): Printed => {
+  try {
+    return JSON.parse(line) as Printed;
+  } catch {
+    return {};
+  }
+};
+
+/**
+ * Command `name` with each of its host calls refused in turn, as the
+ * contained host refuses one: each run that fails must fail typed and print
+ * its error once as a failure line (`ok: false` with the error); what it
+ * printed otherwise is the command's own. Each problem found, named by the
+ * call refused.
+ */
+export const refusals = async (name: string): Promise<Array<string>> => {
+  const scratch = nfs.mkdtempSync(join(tmpdir(), 'sim-refusals-'));
+  const command = commandNamed(name);
+  const problems: Array<string> = [];
+  try {
+    const plain = await runCase(scratch, command, 'plain');
+    for (let at = 1; at <= plain.calls; at += 1) {
+      const ran = await runCase(scratch, command, 'plain', undefined, undefined, { refuseAt: at });
+      nfs.rmSync(ran.base, { recursive: true, force: true });
+      const said = `${name}: host call ${at} (${ran.ops[at - 1] ?? '?'}) refused`;
+      if (!ran.typed) problems.push(`${said}: untyped ${ran.why}`);
+      if (ran.ok) continue;
+      const error = ran.error as { _tag?: unknown; message?: unknown };
+      const failures = ran.lines
+        .map(parsed)
+        .filter(
+          (line) =>
+            line.ok === false && line.error?._tag === error._tag && line.message === error.message,
+        );
+      if (failures.length !== 1)
+        problems.push(
+          `${said}: failed ${String(error._tag)}, printed it ${failures.length} times: ${ran.lines.join(' | ').slice(0, 300)}`,
+        );
+    }
+    nfs.rmSync(plain.base, { recursive: true, force: true });
+  } finally {
+    nfs.rmSync(scratch, { recursive: true, force: true });
+  }
+  return problems;
 };
 
 /** The four census triggers: the configured native path, `dd/Build`, `build.log` and the deep derived data. */

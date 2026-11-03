@@ -119,30 +119,38 @@ const make = (
     return Effect.option(base.readLink(next));
   };
 
-  /** Where `file` leads: each link on it followed (the last one too when `follow`), `..` taken after the link. */
-  const resolve = (
-    file: string,
-    follow: boolean,
-    hops = 0,
-  ): Effect.Effect<string, PlatformError.PlatformError> =>
+  /**
+   * Where the kernel takes `file`: its components walked in order, a link's
+   * raw target put in place of the link among the components still to walk
+   * (from the root when it is absolute), and each `..` taken on where the
+   * walk stands, so a `..` after a link leaves the link's target, never the
+   * link. The last link is followed only when `follow`. A missing component
+   * is walked as the folder a recursive create would make. A walk past the
+   * hop limit is a loop, refused.
+   */
+  const resolve = (file: string, follow: boolean) =>
     Effect.gen(function* () {
-      const parts = absolute(file).split('/');
+      const pending = absolute(file).split('/');
       let at = '/';
-      for (const [index, part] of parts.entries()) {
+      let hops = 0;
+      while (pending.length > 0) {
+        const part = pending.shift() ?? '';
         if (part === '' || part === '.') continue;
         if (part === '..') {
           at = path.dirname(at);
           continue;
         }
         const next = path.join(at, part);
-        const last = parts.slice(index + 1).every((rest) => rest === '' || rest === '.');
+        const last = pending.every((rest) => rest === '' || rest === '.');
         const link = yield* linkAt(next, last, follow);
         if (Option.isNone(link)) {
           at = next;
           continue;
         }
-        if (hops >= LINK_HOPS) return yield* refuse('resolve', file, next, roots);
-        at = yield* resolve(path.resolve(at, link.value), true, hops + 1);
+        hops += 1;
+        if (hops > LINK_HOPS) return yield* refuse('resolve', file, next, roots);
+        if (path.isAbsolute(link.value)) at = '/';
+        pending.unshift(...link.value.split('/'));
       }
       return at;
     });
@@ -176,33 +184,46 @@ const make = (
       return resolved;
     });
 
-  /** `checked`, and no link anywhere beneath the tree leads out of a root that holds it. */
+  /**
+   * `checked`, and no link the tool can reach through the tree leads out of
+   * a root that holds it: every folder reached, beneath the tree or through
+   * a link in it, is read once by its canonical path, so an alias whose
+   * target stays inside is followed into its descendants and a cycle ends.
+   * Entries under `skips` (folders of the tree) are not read.
+   */
   const tree = (operation: string, file: string, skips: ReadonlyArray<string> = []) =>
     Effect.gen(function* () {
       const resolved = yield* checked(operation, file, true);
       const held = yield* holders(file);
       const skipped = skips.map((skip) => path.join(resolved, skip));
+      const seen = new Set<string>();
+      const isDirectory = (dir: string) =>
+        Effect.map(Effect.option(base.stat(dir)), (info) =>
+          Option.exists(info, ({ type }) => type === 'Directory'),
+        );
       const visit = (dir: string): Effect.Effect<void, PlatformError.PlatformError> =>
         Effect.gen(function* () {
+          if (seen.has(dir)) return;
+          seen.add(dir);
           const names = yield* base.readDirectory(dir).pipe(Effect.orElseSucceed(() => []));
           for (const name of names) {
             const entry = path.join(dir, name);
             if (skipped.some((skip) => under(entry, skip))) continue;
             const link = yield* Effect.option(base.readLink(entry));
-            if (Option.isSome(link)) {
-              const target = yield* resolve(entry, true);
-              const left = held.filter(({ canonical }) => !under(target, canonical));
-              if (left.length > 0)
-                return yield* refuse(
-                  operation,
-                  entry,
-                  target,
-                  left.map(({ root }) => root),
-                );
+            if (Option.isNone(link)) {
+              if (yield* isDirectory(entry)) yield* visit(entry);
               continue;
             }
-            const info = yield* Effect.option(base.stat(entry));
-            if (Option.isSome(info) && info.value.type === 'Directory') yield* visit(entry);
+            const target = yield* resolve(entry, true);
+            const left = held.filter(({ canonical }) => !under(target, canonical));
+            if (left.length > 0)
+              return yield* refuse(
+                operation,
+                entry,
+                target,
+                left.map(({ root }) => root),
+              );
+            if (yield* isDirectory(target)) yield* visit(target);
           }
         });
       yield* visit(resolved);
@@ -248,7 +269,9 @@ const make = (
     symlink: (target, file) =>
       Effect.gen(function* () {
         const real = yield* itself('symlink', file);
-        yield* at('symlink', path.resolve(path.dirname(absolute(file)), target));
+        let lands = target;
+        if (!path.isAbsolute(target)) lands = `${path.dirname(real)}/${target}`;
+        yield* at('symlink', lands);
         return yield* base.symlink(target, real);
       }),
     makeDirectory: (file, options) =>

@@ -344,7 +344,10 @@ const runStep = (d: DriveMembers, place: Place, journey: Journey, step: Step, in
  * Run `journey` on the booted drive: a video from start to end (unless
  * `video` is false; it is stopped whatever happens), each step in order
  * until one fails, then the summary. A failed step fails the run with its
- * error.
+ * error. Each line goes to the console before it is appended to
+ * `<out>/results.jsonl`, and a write to the output folder that fails prints
+ * its own failure line and fails the run, so a refused results file is
+ * still reported once.
  */
 export const runJourney = (place: Place, journey: Journey, session: Session, video: boolean) =>
   hostFailed(
@@ -353,11 +356,25 @@ export const runJourney = (place: Place, journey: Journey, session: Session, vid
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const started = yield* Clock.currentTimeMillis;
-      yield* fs.makeDirectory(session.out, { recursive: true });
+      const kept = <A>(write: Effect.Effect<A, PlatformError>) =>
+        hostFailed(write).pipe(
+          Effect.tapError((error) =>
+            Console.log(
+              encodeFailure({
+                ok: false,
+                command: 'journey',
+                message: error.message,
+                error,
+                ms: 0,
+              }),
+            ),
+          ),
+        );
+      yield* kept(fs.makeDirectory(session.out, { recursive: true }));
       const results = path.join(session.out, 'results.jsonl');
       const emit = (line: string) =>
         Console.log(line).pipe(
-          Effect.andThen(fs.writeFileString(results, `${line}\n`, { flag: 'a' })),
+          Effect.andThen(kept(fs.writeFileString(results, `${line}\n`, { flag: 'a' }))),
         );
       const steps = Effect.gen(function* () {
         for (const [index, step] of journey.steps.entries()) {

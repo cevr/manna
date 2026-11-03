@@ -13,6 +13,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Effect } from 'effect';
 
 import { runDomain } from './fixtures/contain.ts';
+import { checkReceipt, receipts } from './fixtures/differential.ts';
 
 const APP = 'repo/apps/hymnal';
 const TRIGGERS = new Set([
@@ -23,6 +24,16 @@ const TRIGGERS = new Set([
   `${APP}/ios/build/dd/Build/Intermediates.noindex/Hymnal.build`,
   'out/build.log',
 ]);
+
+describe('the contained host against the OS', () => {
+  for (const receipt of receipts)
+    it.live(`${receipt.world.name}: decides as the OS lands`, () =>
+      Effect.gen(function* () {
+        const found = yield* Effect.promise(() => checkReceipt(receipt));
+        expect(found).toEqual([]);
+      }),
+    );
+});
 
 describe('the contained host', () => {
   it.live('refuses each census trigger, typed, and keeps install alive on real layouts', () =>

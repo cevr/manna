@@ -584,7 +584,7 @@ const simCommand = (place: Place) => {
   const serveCommand = Command.make(
     'serve',
     { port: Flag.Int('port'), out: Flag.String('out'), state },
-    (flags) => serve(at(flags.state), flags.port, flags.out),
+    (flags) => refused('serve', serve(at(flags.state), flags.port, flags.out)),
   ).pipe(Command.withDescription('Run the dev server until stopped (boot starts it)'));
 
   return Command.make('sim').pipe(
