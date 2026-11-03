@@ -396,9 +396,16 @@ keeps its clock when Key changes, then uses the chosen set on a rewind.
 - The bar is docked under the stack, above the home indicator, on every
   platform while the player holds a hymn (`app/(hymnal)/_layout.tsx`); the
   lock screen also controls the recording.
-- The seek bar is `One.iOS.Slider` on iOS (it seeks once the thumb rests for
-  300 ms, as the slider reports no release), `One.Android.Slider` on Android
-  and a range input on the web. On the web a press belongs to the pointer
+- The seek bar on iOS is the app's own (`src/player/Scrubber.ios.tsx`): a
+  track, the part played in the accent, and a thumb. It is not
+  `One.iOS.Slider`: One builds that slider with a step, always (it refuses a
+  step of 0), and iOS 26 draws a stepped slider's ticks under its track,
+  which at a second a step read as a stray line. Its touch is a gesture
+  handler's pan, which holds the finger, so a drag on the bar never moves
+  the sheet; a drag seeks once the finger lifts, a tap seeks where it lands
+  at once, and VoiceOver adjusts it ten seconds a swipe. On Android it is
+  `One.Android.Slider` (it seeks once the thumb rests for 300 ms, as the
+  slider reports no release), and on the web a range input. On the web a press belongs to the pointer
   that opened it with the main button: it opens at that pointer's
   `pointerdown` and ends at the first of its `pointerup` (the drag seeks
   when it ends on another second than it began on), `pointercancel` or
