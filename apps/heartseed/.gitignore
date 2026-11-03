@@ -3,3 +3,6 @@
 dist
 .one
 app/routes.d.ts
+# One native source writes these beside the Swift package at each bundle and prebuild.
+native/*/.one-native-source.json
+native/*/.one-native-source.swift.txt

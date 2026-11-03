@@ -6,7 +6,8 @@
     "moduleResolution": "Bundler",
     "lib": ["ESNext", "DOM"],
     "types": ["react", "vite/client"],
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "allowArbitraryExtensions": true
   },
   "include": [
     "app/**/*.ts",

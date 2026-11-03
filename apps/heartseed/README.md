@@ -7,6 +7,44 @@ word matcher (`src/matcher.ts`) grades a recall against the verse.
 Run it as a reader does with the verify skill,
 `.claude/skills/verify-heartseed`.
 
+## Voice
+
+The voice reads a verse aloud on the device and lights each word as it is
+spoken; the reader can turn it off. No screen calls it yet: the hear phase
+will call `Voice.read`.
+
+- `src/voice.ts` is the `Voice` service (Effect): `read`, `pause`,
+  `resume`, `stop`, `setEnabled`, and the `view` a screen shows (`status`,
+  the `verse`, its `words`, how many are `lit`, the `current` word range and
+  how the reading `ended`), with its `changes`. Its rules are a pure reducer,
+  `src/voice/reading.ts`: a command changes the view at its call, then makes
+  its one source call, so no command waits on another's; an event changes
+  the view only for the current utterance while a reading is under way, and
+  a range lights the words it overlaps, never fewer than are lit. A word is
+  one the matcher counts (`src/matcher/words.ts`), found by its UTF-16 span.
+- The switch is kept under `heartseed/voice/enabled` in the app's settings
+  store, `src/store.ts` (One's key-value store, or memory where it cannot
+  open). Only the text `false` turns it off; a failed read or write is
+  logged and never fails the service.
+- `src/voice/source.ios.ts` is the source on iOS: the Swift package
+  `native/voice` over AVSpeechSynthesizer, which One's prebuild makes the
+  local pod `OneSwiftPackages/voice`. Its voices and its events cross as JSON
+  text, decoded in `src/voice/wire.ts`, so the module's committed
+  declaration (`native/voice/Voice.d.swift.ts`) holds plain types only and
+  the formatter leaves it as One writes it. `src/voice/source.ts` is every
+  other platform's: no voices, and a speak that fails, so a reading ends
+  `failed`.
+- The module emits events only for the utterance it holds; one that JS
+  stopped or replaced emits nothing more, so a late event cannot reach a
+  reading that came after it, even across a JS reload, which restarts the
+  ids at 1. It leaves the audio session alone and ends the held utterance
+  on an interruption.
+- On the simulator the voice makes no sound: the module never speaks there.
+  It renders the utterance to buffers it drops, logs
+  `[voice] speak utterance=<n> skipped=simulator`, and sends the render's
+  word markers at their sample times, so the words light at the pace they
+  would be heard. `src/voice/guard.test.ts` holds the Swift file to this.
+
 ## Tests
 
 - The unit tests (`*.test.ts(x)`, not `*.slow.test.*`) run as parts, each a
@@ -18,6 +56,8 @@ Run it as a reader does with the verify skill,
   happy-dom document); `test:infra` runs with none.
   - `test:matcher`: `src/matcher.property.test.ts`, the matcher's generated
     recalls.
+  - `test:voice`: `src/voice.property.test.ts` (the voice against its model)
+    and `src/voice` (the native module's guards).
   - `test:rest`: the other test files at the root of `src`, named file by
     file.
   - `test:infra`: `scripts` and `vite`.

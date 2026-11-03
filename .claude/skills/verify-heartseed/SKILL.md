@@ -139,6 +139,8 @@ minute on a cold server. The snapshot lists the screen's nodes as
 
 - [features/today.md](features/today.md): Today, its header, reference and
   passage.
+- [features/voice.md](features/voice.md): the voice's native module, built
+  with the app (no screen calls it yet).
 
 Reach a state the way a reader does (a tap, a scroll), never by writing the
 app's storage.

@@ -4893,3 +4893,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** Heartseed ran every unit test in one task, which the matcher's property file alone took past the 1 s budget on a loaded host, and the voice's model-based test was to join it.
 - **Cause:** The app began with one `test` script; the hymnal's parts were not carried over.
 - **Guard:** code: `apps/heartseed/scripts/parts.test.ts` `take every unit-test file, each in exactly one part`; `apps/heartseed/scripts/parts.test.ts` `run every src file under the test preload, and every scripts and vite file under none`
+
+### heartseed-voice-silent-off-device
+
+- **Date:** 2026-11-03
+- **Kind:** owner
+- **Said:** "play no sound"
+- **Source:** hymnapp/hsvoice/spec.md Sound rule and Risks
+- **Wrong:** The app's first speech synthesizer could speak on the simulator, whose audio reaches the Mac's speaker, take each range twice there (the delegate and the render's markers both report them), or touch the audio session the hands-free unit owns.
+- **Cause:** AVSpeechSynthesizer speaks through the host's output on the simulator, and its delegate fires during a silent render too.
+- **Guard:** code: `apps/heartseed/src/voice/guard.test.ts` `speaks only on a device, and renders silently only on the simulator, which logs its skip`; `apps/heartseed/src/voice/guard.test.ts` `takes its ranges from the render alone: the delegate is set only on a device`; `apps/heartseed/src/voice/guard.test.ts` `names no session category or activation, player, engine, system sound or One audio`
+
+### heartseed-voice-follows-only-its-reading
+
+- **Date:** 2026-11-03
+- **Kind:** owner
+- **Said:** "An on-device voice reads each new verse in the hear phase. The user can turn it off."
+- **Source:** hymnapp/hsvoice/spec.md Done line and Risks
+- **Wrong:** A voice service could light words from a stale event of an earlier utterance, light backward, keep reading after the switch went off, speak while off, let a late failed speak end a newer reading, or hold a command on a pending speak.
+- **Cause:** Events reach JS asynchronously from the native side, and a speak's answer can come after newer commands.
+- **Guard:** code: `apps/heartseed/src/voice.property.test.ts` `agrees on 300 seeded histories of 40 steps`; `apps/heartseed/src/voice.property.test.ts` `waits on no pending speak, and a late failure ends only its own reading`
