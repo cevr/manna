@@ -10,7 +10,7 @@ import { Effect, Fiber, Option } from 'effect';
 import { it as itEffect } from 'effect-bun-test';
 import { TestClock } from 'effect/testing';
 
-import { meaning } from '../../assets/meaning/meaning.js';
+import { meaning, notice } from '../../assets/meaning/meaning.js';
 import { hymns } from './hymns';
 import { ABOUT, about, aboutQuery, aboutShown, afterPause, moreLike, PAUSE } from './meaning';
 
@@ -21,6 +21,16 @@ const distinctHymns = (found: ReadonlyArray<number>) =>
 describe('the shipped table', () => {
   it('holds a vector for every hymn of the app, in number order', () => {
     expect(meaning().hymns.split(' ').map(Number)).toEqual(hymns.map((hymn) => hymn.number));
+  });
+
+  it('carries the notice that it is modified from EmbeddingGemma, under the Gemma Terms (section 3.1)', () => {
+    for (const words of [
+      'Modified from EmbeddingGemma',
+      'Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms',
+      'not the repository',
+      'section 3.2 use restrictions',
+    ])
+      expect(notice).toContain(words);
   });
 
   it('holds its words as search folds them, so a query folded by search finds them', () => {

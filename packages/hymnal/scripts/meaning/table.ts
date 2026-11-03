@@ -25,8 +25,8 @@
  * scale changes, so the file keeps none.
  *
  * The file is a Model Derivative of EmbeddingGemma under the Gemma Terms
- * of Use, so its text opens with the notice that it is modified from the
- * model (`NOTICE_LINES`); `apps/hymnal/assets/meaning/LICENSE` says the rest.
+ * of Use, so its text opens with the exported notice that it is modified
+ * from the model (`NOTICE`); `apps/hymnal/assets/meaning/LICENSE` says the rest.
  */
 
 import { fold } from '../../src/fold.js';
@@ -161,20 +161,22 @@ export const meaningFileOf = ({
 };
 
 /**
- * The notice that opens the file: it is modified from EmbeddingGemma, and
+ * The notice the file carries: it is modified from EmbeddingGemma, and
  * under the Gemma Terms of Use with their use restrictions (section 3.1
  * asks a modified file to say so).
  */
+export const NOTICE =
+  'The meaning table, made by `packages/hymnal/scripts/meaning/build.ts` (its format: `table.ts` there). Do not edit. ' +
+  'Modified from EmbeddingGemma (google/embeddinggemma-300m), a Gemma model by Google: the model ' +
+  'was run on single words and on the hymns, and its outputs were weighted and cut to 4 and 8 bits. ' +
+  'Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms ' +
+  '(a copy: `gemma-terms.js` beside this file). This file is under those Terms, not the ' +
+  "repository's licence, and its use is subject to their section 3.2 use restrictions (`LICENSE`).";
+
+/** The file's opening lines: its exported `notice`, as the formatter writes it. */
 export const NOTICE_LINES: ReadonlyArray<string> = [
-  '/**',
-  ' * The meaning table, made by `packages/hymnal/scripts/meaning/build.ts` (its format: `table.ts` there). Do not edit.',
-  ' *',
-  ' * Modified from EmbeddingGemma (google/embeddinggemma-300m), a Gemma model by Google: the model',
-  ' * was run on single words and on the hymns, and its outputs were weighted and cut to 4 and 8 bits.',
-  ' * Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms',
-  ' * (a copy: `gemma-terms.js` beside this file). This file is under those Terms, not the',
-  " * repository's licence, and its use is subject to their section 3.2 use restrictions (`LICENSE`).",
-  ' */',
+  'export const notice =',
+  `  ${JSON.stringify(NOTICE)};`,
 ];
 
 /**
