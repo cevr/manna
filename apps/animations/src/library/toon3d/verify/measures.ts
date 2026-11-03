@@ -734,9 +734,9 @@ export const faceOffset = (p: FaceMarks, q: FaceMarks): number => {
   );
 };
 
-/** The worst relative change of a series from its first value, as a fraction; 0 for an empty series. */
-export const worstDrift = (xs: ReadonlyArray<number>): number => {
-  const first = xs[0] ?? 0;
-  if (first === 0) return 0;
-  return xs.reduce((m, x) => Math.max(m, Math.abs(x - first) / first), 0);
-};
+/** The worst relative change of a series from its first value, as a fraction; none when the series is empty or starts at 0, so there is nothing to drift from. */
+export const worstDrift = (xs: ReadonlyArray<number>): Option.Option<number> =>
+  Option.map(
+    Option.filter(Option.fromUndefinedOr(xs[0]), (first) => first !== 0),
+    (first) => xs.reduce((m, x) => Math.max(m, Math.abs(x - first) / first), 0),
+  );

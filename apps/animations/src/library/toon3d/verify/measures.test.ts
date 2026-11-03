@@ -427,8 +427,9 @@ describe('faceMarks', () => {
 });
 
 describe('worstDrift', () => {
-  test('is the largest change from the first value as a fraction', () => {
-    expect(worstDrift([10, 11, 8])).toBeCloseTo(0.2, 9);
-    expect(worstDrift([])).toBe(0);
+  test('is the largest change from the first value as a fraction, and none with no first value to drift from', () => {
+    expect(read(worstDrift([10, 11, 8]))).toBeCloseTo(0.2, 9);
+    expect(Option.isNone(worstDrift([]))).toBe(true);
+    expect(Option.isNone(worstDrift([0, 4, 8]))).toBe(true);
   });
 });
