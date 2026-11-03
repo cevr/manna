@@ -78,6 +78,19 @@ describe('figureMask and iou', () => {
     );
     expect(iou(a, b)).toBeCloseTo(1 / 3, 5);
   });
+
+  test('paper with a grain about ΔE 5 off the paper is paper, not figure', () => {
+    const GRAIN: Rgb = [242, 226, 198];
+    expect(deltaE(PAPER, GRAIN)).toBeGreaterThan(4);
+    expect(deltaE(PAPER, GRAIN)).toBeLessThan(6);
+    const r = paint(30, 30, (x, y) => {
+      if (inRect(x, y, 10, 10, 19, 19)) return BASE;
+      if (inRect(x, y, 8, 8, 21, 21)) return INK;
+      if ((x + y) % 2 === 0) return GRAIN;
+      return PAPER;
+    });
+    expect(figureMask(r).reduce((s, v) => s + v, 0)).toBe(14 * 14);
+  });
 });
 
 describe('ink', () => {
@@ -89,6 +102,25 @@ describe('ink', () => {
   test('an 8 px upright bar reads 8 px wide, and its colour is the ink', () => {
     expect(inkWidth(bar, wholeBox(bar))).toBe(8);
     expect(deltaLab(read(inkColour(bar)), lab(INK))).toBeLessThan(0.5);
+  });
+
+  test('a bar reads its own whole width, 5 px and 11 px as surely as 8', () => {
+    const barOf = (width: number) =>
+      paint(40, 40, (x) => {
+        if (x >= 10 && x < 10 + width) return INK;
+        return PAPER;
+      });
+    expect([5, 11].map((width) => inkWidth(barOf(width), wholeBox(barOf(width))))).toEqual([5, 11]);
+  });
+
+  test("the ink's colour is its core's: a 3 px line inside a lighter 2 px rim each side reads the ink, not the rim", () => {
+    const RIM: Rgb = [70, 50, 40];
+    const rimmed = paint(40, 40, (x) => {
+      if (x >= 12 && x <= 14) return INK;
+      if (x >= 10 && x <= 16) return RIM;
+      return PAPER;
+    });
+    expect(deltaLab(read(inkColour(rimmed)), lab(INK))).toBeLessThan(0.5);
   });
 
   const ring = (width: number, radius: number): Raster => {
@@ -469,6 +501,20 @@ describe('partDeltas', () => {
     expect(read(deltaOf(deltas, 5))).toBeLessThan(0.5);
   });
 
+  test('a part reads its worst paint: its base matched and its shade off reads the shade’s ΔE', () => {
+    const SHADE_OFF: Rgb = [SHADE[0] - 12, SHADE[1] - 6, SHADE[2]];
+    const twoTone = (shade: Rgb) => (_x: number, y: number) => {
+      if (y < 20) return BASE;
+      return shade;
+    };
+    const kept = paint(60, 40, figure(0, twoTone(SHADE)));
+    const scene = paint(60, 40, figure(0, twoTone(SHADE_OFF)));
+    const ids = idsOf(60, 40, (x, y) => Number(inRect(x, y, 10, 8, 39, 31)) * 5);
+    const deltas = partDeltas(kept, scene, ids, new Map([[5, [BASE, SHADE]]]));
+    expect(deltaE(SHADE, SHADE_OFF)).toBeGreaterThan(5);
+    expect(read(deltaOf(deltas, 5))).toBeCloseTo(deltaE(SHADE, SHADE_OFF), 3);
+  });
+
   test("another part's pixels near one of this part's paints, far from this part, are not its kept colour", () => {
     const near: Rgb = [SHADE[0] + 14, SHADE[1], SHADE[2]];
     const kept = paint(110, 40, (x, y) => {
@@ -509,6 +555,32 @@ describe('keptBlobs', () => {
     const ids = idsOf(60, 40, (x, y) => Number(inRect(x, y, 14, 8, 53, 31)));
     expect(keptBlobs(kept, ids, new Map([[1, [BASE, SHADE]]]), 1)).toBe(3);
   });
+
+  test("another part's paint beside it and a colour the palette lacks are not its blobs", () => {
+    const OTHER = rgbOf('#3a6ea5');
+    const OTHER_SHADE = rgbOf('#24507d');
+    const GREEN: Rgb = [40, 90, 40];
+    const kept = paint(70, 40, (x, y) => {
+      if (inRect(x, y, 40, 8, 55, 31)) return OTHER;
+      if (inRect(x, y, 10, 8, 39, 31)) {
+        if ([12, 20, 28].some((px) => inRect(x, y, px, 10, px + 4, 16))) return SHADE;
+        if (inRect(x, y, 18, 22, 24, 28)) return GREEN;
+        return BASE;
+      }
+      if (inRect(x, y, 9, 7, 56, 32)) return INK;
+      return PAPER;
+    });
+    const ids = idsOf(70, 40, (x, y) => {
+      if (inRect(x, y, 10, 8, 39, 31)) return 1;
+      if (inRect(x, y, 40, 8, 55, 31)) return 2;
+      return 0;
+    });
+    const paints = new Map([
+      [1, [BASE, SHADE]],
+      [2, [OTHER, OTHER_SHADE]],
+    ]);
+    expect(keptBlobs(kept, ids, paints, 1)).toBe(3);
+  });
 });
 
 describe('faceMarks', () => {
@@ -537,6 +609,16 @@ describe('faceMarks', () => {
     expect(a.eyes[1][1]).toBeCloseTo(43, 5);
     expect(a.mouth[0]).toBeCloseTo(50.5, 5);
     expect(faceOffset(a, read(faceMarks(face(3, 4), head)))).toBeCloseTo(5, 5);
+  });
+
+  test('a face with a sixth mark has no reading: it reads as five marks or not at all', () => {
+    const five = face(0, 0);
+    const six = paint(100, 100, (x, y) => {
+      if (inRect(x, y, 48, 52, 52, 56)) return INK;
+      const i = (y * 100 + x) * 4;
+      return [five.rgba[i] ?? 0, five.rgba[i + 1] ?? 0, five.rgba[i + 2] ?? 0];
+    });
+    expect(Option.isNone(faceMarks(six, head))).toBe(true);
   });
 
   test('a face missing its mouth has no reading', () => {
