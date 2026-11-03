@@ -56,6 +56,7 @@ export {
   type PartRule,
   type PartSheet,
   type SheetClean,
+  SheetCleanRefused,
   countedOf,
   cutParts,
   inkOf,

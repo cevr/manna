@@ -76,9 +76,21 @@ export interface PartSheet {
  * ground's (owner 0); one it moves to another part is that part's. The parts'
  * counts are read again from what it returns (`countedOf`), so a rule sets
  * pixels and owners alone. Pure, and the same sheet in gives the same bytes
- * out: the part sheet is made again from its answer and this rule.
+ * out: the part sheet is made again from its answer and this rule. A rule
+ * that names a part the sheet lacks refuses (`SheetCleanRefused`), so a
+ * misnamed part fails the view instead of moving pixels by a wrong index.
  */
-export type SheetClean = (sheet: PartSheet) => PartSheet;
+export type SheetClean = (sheet: PartSheet) => Result.Result<PartSheet, SheetCleanRefused>;
+
+/** A view's rule that cannot run on its laid sheet: a part it names that the sheet lacks. */
+export class SheetCleanRefused extends Schema.TaggedError<SheetCleanRefused>()(
+  'SheetCleanRefused',
+  { reason: Schema.String },
+) {
+  override get message() {
+    return `the view's rule cannot run: ${this.reason}`;
+  }
+}
 
 /** `sheet` with each part's counts read from its pixels and the owners: kept, the pixels it owns; painted, the pixels it holds (alpha above 0) that another part or the ground owns. */
 export const countedOf = (sheet: PartSheet): PartSheet => ({

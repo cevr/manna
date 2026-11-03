@@ -556,9 +556,13 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
     onNone: () => best.made,
     onSome: (f) => laidInto(job.sheet, best.made, f.at),
   });
-  const whole = Option.match(job.clean, {
-    onNone: () => laidWhole,
-    onSome: (clean) => countedOf(clean(laidWhole)),
+  const whole = yield* Option.match(job.clean, {
+    onNone: () => Effect.succeed(laidWhole),
+    onSome: (clean) =>
+      Effect.fromResult(clean(laidWhole)).pipe(
+        Effect.map(countedOf),
+        Effect.mapError((e) => refuse(e.message)),
+      ),
   });
   const record: typeof PartSheetRecord.Type = {
     view: job.name,

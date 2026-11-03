@@ -2,11 +2,12 @@
 // @manna/film's `SheetClean`): fixes its art needs that neither the cut nor the
 // paint makes, kept as rules so laying the answer again makes the same part
 // PNGs. A member's `cutout/cut.ts` names each view's rule with its own numbers.
-// Pure: the same sheet in gives the same bytes out.
+// Pure: the same sheet in gives the same bytes out. A rule refuses a sheet
+// that lacks a part it names (`SheetCleanRefused`).
 
 import { labOf } from '@manna/film/core';
-import type { PartSheet, Raster, SheetClean } from '@manna/film/tools';
-import { Option } from 'effect';
+import { type PartSheet, type Raster, type SheetClean, SheetCleanRefused } from '@manna/film/tools';
+import { Array as Arr, Option, Result } from 'effect';
 
 /** A colour, RGB or Lab. */
 type Rgb = readonly [number, number, number];
@@ -44,12 +45,25 @@ const aroundOf = ({ width, height }: Size, i: number): ReadonlyArray<number> => 
 /** An empty part's pixels, for a part a sheet lacks. */
 const NO_PIXELS: Raster = { width: 0, height: 0, rgba: new Uint8Array(0) };
 
-/** The index of the part named `name` in `sheet`, where the sheet has it. */
-const indexOf = (sheet: PartSheet, name: string): Option.Option<number> =>
-  Option.liftPredicate(
-    sheet.parts.findIndex((p) => p.name === name),
-    (k) => k >= 0,
+/** The index of the part named `name` in `sheet`, or the refusal that names it as one the sheet lacks. */
+const indexOf = (sheet: PartSheet, name: string): Result.Result<number, SheetCleanRefused> =>
+  Result.fromOption(
+    Option.liftPredicate(
+      sheet.parts.findIndex((p) => p.name === name),
+      (k) => k >= 0,
+    ),
+    () =>
+      SheetCleanRefused.make({
+        reason: `the sheet has no part ${name} (its parts: ${sheet.parts.map((p) => p.name).join(', ')})`,
+      }),
   );
+
+/** The index of each part `names` names in `sheet`, or the refusal for the first the sheet lacks. */
+const indicesOf = (
+  sheet: PartSheet,
+  names: ReadonlyArray<string>,
+): Result.Result<ReadonlyArray<number>, SheetCleanRefused> =>
+  Result.all(names.map((name) => indexOf(sheet, name)));
 
 /** `sheet` with each part's pixels as `pixelsOf` gives them, by index. */
 const withPixels = (
@@ -105,29 +119,26 @@ const looseOf = (
  * Clears the specks a part's paint leaves loose: every 8-connected region of
  * part `name`'s pixels (alpha above 0) of `most` pixels or fewer, but its
  * largest region, becomes alpha 0, and each such pixel the part owned becomes
- * the ground's. A part the sheet lacks is left as it is.
+ * the ground's. A sheet that lacks the part is refused.
  */
 export const clearSpecks =
   (name: string, most: number): SheetClean =>
   (sheet) =>
-    Option.match(indexOf(sheet, name), {
-      onNone: () => sheet,
-      onSome: (k) => {
-        const pixels = sheet.parts[k]?.pixels ?? NO_PIXELS;
-        const rgba = new Uint8Array(pixels.rgba);
-        const owner = new Uint8Array(sheet.owner);
-        for (const region of looseOf(regionsOf(pixels))) {
-          if (region.length > most) continue;
-          for (const i of region) {
-            rgba.fill(0, i * 4, i * 4 + 4);
-            if (owner[i] === k + 1) owner[i] = 0;
-          }
+    Result.map(indexOf(sheet, name), (k) => {
+      const pixels = sheet.parts[k]?.pixels ?? NO_PIXELS;
+      const rgba = new Uint8Array(pixels.rgba);
+      const owner = new Uint8Array(sheet.owner);
+      for (const region of looseOf(regionsOf(pixels))) {
+        if (region.length > most) continue;
+        for (const i of region) {
+          rgba.fill(0, i * 4, i * 4 + 4);
+          if (owner[i] === k + 1) owner[i] = 0;
         }
-        return {
-          ...withPixels(sheet, (j) => Option.liftPredicate(rgba, () => j === k)),
-          owner,
-        };
-      },
+      }
+      return {
+        ...withPixels(sheet, (j) => Option.liftPredicate(rgba, () => j === k)),
+        owner,
+      };
     });
 
 /** An arm whose hand is a disc of its cut, in the part sheet's pixels. */
@@ -259,36 +270,47 @@ const refilled = (
  * with its bytes to the arm (a loose piece to the arm whose hand lies
  * nearest); its owner becomes that arm. The body part keeps a cuff pixel
  * refilled with the rounded mean of its 8 neighbours there, leaving out the
- * moved and the clear ones, and a loose piece cleared.
+ * moved and the clear ones, and a loose piece cleared. A sheet that lacks an
+ * arm, a body part or the loose part is refused.
  */
 export const cuffsToArms =
   ({ arms, body, loose, cuff: cuffInk }: CuffsToArms): SheetClean =>
-  (sheet) => {
-    const at = (name: string) => sheet.parts.findIndex((p) => p.name === name);
-    const sheetArms = arms.map((arm) => ({ ...arm, k: at(arm.name) }));
-    const ink = Option.getOrElse(Option.fromUndefinedOr(cuffInk), () => CUFF);
-    const cuff = cuffInkOf(sheet, ink, sheetArms, new Set(body.map(at)));
-    const moved = new Map([...cuff, ...loosePiecesOf(sheet, sheetArms, at(loose))]);
-    const owner = new Uint8Array(sheet.owner);
-    const out = sheet.parts.map((p) => new Uint8Array(p.pixels.rgba));
-    for (const [i, k] of moved) {
-      const from = (sheet.owner[i] ?? 0) - 1;
-      const rgba = sheet.parts[from]?.pixels.rgba ?? NO_PIXELS.rgba;
-      out[k]?.set(rgba.subarray(i * 4, i * 4 + 4), i * 4);
-      owner[i] = k + 1;
-      out[from]?.set(
-        Option.match(
-          Option.liftPredicate(i, (j) => cuff.has(j)),
-          {
-            onNone: () => [0, 0, 0, 0],
-            onSome: (j) => refilled(sheet, rgba, moved, j),
-          },
+  (sheet) =>
+    Result.map(
+      Result.all([
+        indicesOf(
+          sheet,
+          arms.map((arm) => arm.name),
         ),
-        i * 4,
-      );
-    }
-    return { ...withPixels(sheet, (k) => Option.fromUndefinedOr(out[k])), owner };
-  };
+        indicesOf(sheet, body),
+        indexOf(sheet, loose),
+      ]),
+      ([armAt, bodyAt, looseAt]) => {
+        const sheetArms = Arr.zipWith(arms, armAt, (arm, k) => ({ ...arm, k }));
+        const ink = Option.getOrElse(Option.fromUndefinedOr(cuffInk), () => CUFF);
+        const cuff = cuffInkOf(sheet, ink, sheetArms, new Set(bodyAt));
+        const moved = new Map([...cuff, ...loosePiecesOf(sheet, sheetArms, looseAt)]);
+        const owner = new Uint8Array(sheet.owner);
+        const out = sheet.parts.map((p) => new Uint8Array(p.pixels.rgba));
+        for (const [i, k] of moved) {
+          const from = (sheet.owner[i] ?? 0) - 1;
+          const rgba = sheet.parts[from]?.pixels.rgba ?? NO_PIXELS.rgba;
+          out[k]?.set(rgba.subarray(i * 4, i * 4 + 4), i * 4);
+          owner[i] = k + 1;
+          out[from]?.set(
+            Option.match(
+              Option.liftPredicate(i, (j) => cuff.has(j)),
+              {
+                onNone: () => [0, 0, 0, 0],
+                onSome: (j) => refilled(sheet, rgba, moved, j),
+              },
+            ),
+            i * 4,
+          );
+        }
+        return { ...withPixels(sheet, (k) => Option.fromUndefinedOr(out[k])), owner };
+      },
+    );
 
 /** What `clearPaperRim` reads: the view's paper (RGB), how many 8-steps the clear ground's flood reaches, and the ΔE76 within which a pixel is paper-coloured. */
 export interface PaperRim {
@@ -369,10 +391,10 @@ export const clearPaperRim =
     );
     const owner = new Uint8Array(sheet.owner);
     for (let i = 0; i < mask.length; i++) if (mask[i] === 1) owner[i] = 0;
-    return {
+    return Result.succeed({
       ...withPixels(sheet, (k) =>
         Option.map(Option.fromUndefinedOr(sheet.parts[k]), (p) => clearedBy(p.pixels.rgba, mask)),
       ),
       owner,
-    };
+    });
   };

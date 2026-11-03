@@ -7,7 +7,7 @@
 
 import { Effect, Layer, Option, Path, Result, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
-import { type SheetClean, cutParts } from '../core/part-sheet.ts';
+import { type SheetClean, SheetCleanRefused, cutParts } from '../core/part-sheet.ts';
 import type { Raster } from '../core/raster.ts';
 import { memoryFileSystem, text } from './host/testing.ts';
 import { ImageRoute } from './image-route.ts';
@@ -348,17 +348,18 @@ describe('film concept parts', () => {
       Effect.gen(function* () {
         const at = 40 * W + 30;
         // the rule clears one pixel the arm owns: the ground's now
-        const clean: SheetClean = (sheet) => ({
-          ...sheet,
-          owner: Uint8Array.from(sheet.owner, (o, i) => o * Number(i !== at)),
-          parts: sheet.parts.map((p) => ({
-            ...p,
-            pixels: {
-              ...p.pixels,
-              rgba: p.pixels.rgba.map((v, j) => v * Number(p.name !== 'arm' || j >> 2 !== at)),
-            },
-          })),
-        });
+        const clean: SheetClean = (sheet) =>
+          Result.succeed({
+            ...sheet,
+            owner: Uint8Array.from(sheet.owner, (o, i) => o * Number(i !== at)),
+            parts: sheet.parts.map((p) => ({
+              ...p,
+              pixels: {
+                ...p.pixels,
+                rgba: p.pixels.rgba.map((v, j) => v * Number(p.name !== 'arm' || j >> 2 !== at)),
+              },
+            })),
+          });
         const files = new Map<string, Uint8Array>();
         const plain = Result.getOrThrow(yield* run(new Map(), [UNDER([])]));
         const record = Result.getOrThrow(yield* run(files, [UNDER([])], { clean }));
@@ -375,6 +376,21 @@ describe('film concept parts', () => {
           ([f, bytes]) => !equalBytes(files.get(f) ?? empty, bytes),
         );
         expect(changed.map(([f]) => f)).toEqual([]);
+      }),
+  );
+
+  it.effect(
+    'fails the view and writes no part or record when its rule refuses the laid sheet',
+    () =>
+      Effect.gen(function* () {
+        const clean: SheetClean = () =>
+          Result.fail(SheetCleanRefused.make({ reason: 'the sheet has no part armX' }));
+        const files = new Map<string, Uint8Array>();
+        const made = yield* run(files, [UNDER([])], { clean });
+        expect(Result.match(made, { onFailure: (reason) => reason, onSuccess: () => 'laid' })).toBe(
+          "the view's rule cannot run: the sheet has no part armX",
+        );
+        expect([...files.keys()].filter((f) => !f.startsWith(`${DIR}/okra/`))).toEqual([]);
       }),
   );
 });

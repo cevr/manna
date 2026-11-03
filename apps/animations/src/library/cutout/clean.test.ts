@@ -1,6 +1,7 @@
-import type { PartSheet } from '@manna/film/tools';
+import type { PartSheet, SheetClean } from '@manna/film/tools';
 import { describe, expect, test } from 'bun:test';
-import { clearPaperRim } from './clean.ts';
+import { Result } from 'effect';
+import { clearPaperRim, clearSpecks, cuffsToArms } from './clean.ts';
 
 const PAPER = [253, 240, 215] as const;
 const NEAR_PAPER = [251, 243, 226, 255] as const;
@@ -22,11 +23,18 @@ const sheetOf = (row: ReadonlyArray<readonly [number, number, number, number]>):
   };
 };
 
+/** The sheet `rule` leaves, or the reason it refuses. */
+const ran = (rule: SheetClean, sheet: PartSheet) =>
+  Result.match(rule(sheet), { onFailure: (e) => e.message, onSuccess: (s) => s });
+
+/** The sheet `rule` leaves; a refusal throws. */
+const cleaned = (rule: SheetClean, sheet: PartSheet) => Result.getOrThrow(rule(sheet));
+
 const RIM = clearPaperRim({ paper: PAPER, band: 24, near: 12 });
 
 describe('clearPaperRim', () => {
   test('clears the paper-coloured band the clear ground reaches and gives it to the ground, but not the cloth her ink walls in', () => {
-    const out = RIM(sheetOf([CLEAR, NEAR_PAPER, NEAR_PAPER, INK, CLOTH, INK, NEAR_PAPER]));
+    const out = cleaned(RIM, sheetOf([CLEAR, NEAR_PAPER, NEAR_PAPER, INK, CLOTH, INK, NEAR_PAPER]));
     expect(Array.from(out.parts[0]?.pixels.rgba ?? [])).toEqual(
       [CLEAR, CLEAR, CLEAR, INK, CLOTH, INK, NEAR_PAPER].flat(),
     );
@@ -35,14 +43,46 @@ describe('clearPaperRim', () => {
 
   test('reaches no farther than its band from the clear ground', () => {
     const rim = clearPaperRim({ paper: PAPER, band: 1, near: 12 });
-    const out = rim(sheetOf([CLEAR, NEAR_PAPER, NEAR_PAPER, INK]));
+    const out = cleaned(rim, sheetOf([CLEAR, NEAR_PAPER, NEAR_PAPER, INK]));
     expect(Array.from(out.owner)).toEqual([0, 0, 1, 1]);
   });
 
   test('clears nothing more when run on its own answer', () => {
-    const once = RIM(sheetOf([CLEAR, NEAR_PAPER, INK, CLOTH, INK]));
-    const twice = RIM(once);
+    const once = cleaned(RIM, sheetOf([CLEAR, NEAR_PAPER, INK, CLOTH, INK]));
+    const twice = cleaned(RIM, once);
     expect(twice.parts[0]?.pixels.rgba).toEqual(once.parts[0]?.pixels.rgba);
     expect(twice.owner).toEqual(once.owner);
+  });
+});
+
+describe('a rule naming a part the sheet lacks', () => {
+  const sheet = sheetOf([CLEAR, INK, CLOTH, INK]);
+
+  test('cuffsToArms refuses the sheet, naming the arm, and moves no pixel to the ground', () => {
+    const rule = cuffsToArms({
+      arms: [{ name: 'armX', hand: { c: [1, 0], r: 1 } }],
+      body: ['torso'],
+      loose: 'torso',
+    });
+    expect(ran(rule, sheet)).toBe(
+      "the view's rule cannot run: the sheet has no part armX (its parts: torso)",
+    );
+  });
+
+  test('cuffsToArms refuses a body or loose part the sheet lacks', () => {
+    const hand = { c: [1, 0] as const, r: 1 };
+    const arms = [{ name: 'torso', hand }];
+    expect(ran(cuffsToArms({ arms, body: ['robe'], loose: 'torso' }), sheet)).toContain(
+      'no part robe',
+    );
+    expect(ran(cuffsToArms({ arms, body: ['torso'], loose: 'robe' }), sheet)).toContain(
+      'no part robe',
+    );
+  });
+
+  test('clearSpecks refuses the sheet, naming the part', () => {
+    expect(ran(clearSpecks('armRight', 50), sheet)).toBe(
+      "the view's rule cannot run: the sheet has no part armRight (its parts: torso)",
+    );
   });
 });
