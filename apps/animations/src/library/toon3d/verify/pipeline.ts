@@ -369,17 +369,22 @@ export const measureView = (
   ),
 });
 
+/** One row of the film's figure match. */
+type MatchRow = ReturnType<typeof compareFigures>[number];
+
+/** A figure match's proportion rows counted: its ratio rows only, so a silhouette gap, a shade, the facing or a rule is not counted as a proportion. */
+export const proportionRows = (rows: ReadonlyArray<MatchRow>): RowsMeasured => {
+  const ratios = rows.filter((r) => r.unit === 'ratio');
+  const flagged = ratios.filter((r) => r.flagged);
+  return { flagged: flagged.length, compared: ratios.length, names: flagged.map((r) => r.name) };
+};
+
 /** The front's proportion rows (the film's figure measure on both pictures); none when either cannot be read. */
 export const frontRows = (kept: Raster, colour: Raster): Option.Option<RowsMeasured> => {
   const k = measureFigure(kept);
   const s = measureFigure(colour);
   if (Result.isFailure(k) || Result.isFailure(s)) return Option.none();
-  const rows = compareFigures(k.success, s.success);
-  return Option.some({
-    flagged: rows.filter((r) => r.flagged).length,
-    compared: rows.length,
-    names: rows.filter((r) => r.flagged).map((r) => r.name),
-  });
+  return Option.some(proportionRows(compareFigures(k.success, s.success)));
 };
 
 /** The front's face marks against the kept front's, inside the render's head; none when either face does not read as five marks. */

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { Option } from 'effect';
 import { PART } from '../figure.ts';
 import { BARS, MEASURES, STAGES } from './bars.ts';
-import { bendAngles, FULL_PLAN, turnYaws } from './pipeline.ts';
+import { bendAngles, FULL_PLAN, proportionRows, turnYaws } from './pipeline.ts';
 import { READERS, verdictOf, verdictText, type FrameMeasured, type Measured } from './verdict.ts';
 
 const frame = (k: number, over: Partial<FrameMeasured> = {}): FrameMeasured => ({
@@ -190,5 +190,20 @@ describe('the motion plan', () => {
     expect(turn).toHaveLength(72);
     expect(turn[0]).toBeCloseTo(0, 9);
     expect(turn[71]).toBeCloseTo(-Math.PI / 2, 9);
+  });
+});
+
+describe('the proportion rows', () => {
+  test('count only the ratio rows: a flagged silhouette gap, shade or facing row is not a proportion', () => {
+    const rows = [
+      { name: 'head height', unit: 'ratio', flagged: true },
+      { name: 'eye spacing', unit: 'ratio', flagged: false },
+      { name: 'shoulder width', unit: 'ratio', flagged: false },
+      { name: 'neck gap', unit: 'rule', flagged: true },
+      { name: 'arm gap', unit: 'rule', flagged: true },
+      { name: 'head shade step', unit: 'value', flagged: true },
+      { name: 'facing', unit: 'degrees', flagged: true },
+    ] as const;
+    expect(proportionRows(rows)).toEqual({ flagged: 1, compared: 3, names: ['head height'] });
   });
 });
