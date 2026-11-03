@@ -321,15 +321,62 @@ export interface PaperRim {
   readonly near: number;
 }
 
+/** Pixel `i` of the figure laid from `layers` front to back: its front-most layer with alpha above 0, its RGBA there; none on clear ground. */
+const frontAt = (
+  layers: ReadonlyArray<Raster>,
+  i: number,
+): Option.Option<readonly [number, number, number, number]> =>
+  Option.map(
+    Option.fromUndefinedOr(layers.find((l) => (l.rgba[i * 4 + 3] ?? 0) > 0)),
+    ({ rgba }) => [
+      rgba[i * 4] ?? 0,
+      rgba[i * 4 + 1] ?? 0,
+      rgba[i * 4 + 2] ?? 0,
+      rgba[i * 4 + 3] ?? 0,
+    ],
+  );
+
 /** Whether pixel `i` of the figure laid from `layers` front to back is paper-coloured: its front-most opaque layer's colour lies within `near` (ΔE76) of `paperLab`. A clear pixel is not. */
 const paperAt = (layers: ReadonlyArray<Raster>, i: number, paperLab: Rgb, near: number): boolean =>
-  Option.match(Option.fromUndefinedOr(layers.find((l) => (l.rgba[i * 4 + 3] ?? 0) > 0)), {
+  Option.match(frontAt(layers, i), {
     onNone: () => false,
-    onSome: ({ rgba }) => {
-      const c: Rgb = [rgba[i * 4] ?? 0, rgba[i * 4 + 1] ?? 0, rgba[i * 4 + 2] ?? 0];
-      return deltaE(labOf(c), paperLab) < near;
-    },
+    onSome: ([r, g, b]) => deltaE(labOf([r, g, b]), paperLab) < near,
   });
+
+/**
+ * The band the clear ground of the figure laid from `layers` front to back
+ * (each a raster of one size) reaches: 1 on each pixel with a layer opaque
+ * there that the clear ground (no layer opaque) reaches within `band`
+ * 8-steps through pixels `through` holds.
+ */
+const groundBandOf = (
+  layers: ReadonlyArray<Raster>,
+  band: number,
+  through: (i: number) => boolean,
+): Uint8Array => {
+  const size = layers[0] ?? NO_PIXELS;
+  const count = size.width * size.height;
+  const depth = new Int32Array(count).fill(-1);
+  const queue: Array<number> = [];
+  for (let i = 0; i < count; i++)
+    if (!layers.some((l) => (l.rgba[i * 4 + 3] ?? 0) > 0)) {
+      depth[i] = 0;
+      queue.push(i);
+    }
+  const reached = new Uint8Array(count);
+  for (let head = 0; head < queue.length; head++) {
+    const i = queue[head] ?? 0;
+    const d = depth[i] ?? 0;
+    if (d >= band) continue;
+    for (const j of aroundOf(size, i)) {
+      if (depth[j] !== -1 || !through(j)) continue;
+      depth[j] = d + 1;
+      reached[j] = 1;
+      queue.push(j);
+    }
+  }
+  return reached;
+};
 
 /**
  * The paper rim of the figure laid from `layers` front to back (each a raster
@@ -342,29 +389,64 @@ export const paperRimOf = (
   layers: ReadonlyArray<Raster>,
   { paper, band, near }: PaperRim,
 ): Uint8Array => {
-  const size = layers[0] ?? NO_PIXELS;
-  const count = size.width * size.height;
   const paperLab = labOf(paper);
-  const depth = new Int32Array(count).fill(-1);
-  const queue: Array<number> = [];
-  for (let i = 0; i < count; i++)
-    if (!layers.some((l) => (l.rgba[i * 4 + 3] ?? 0) > 0)) {
-      depth[i] = 0;
-      queue.push(i);
-    }
-  const rim = new Uint8Array(count);
-  for (let head = 0; head < queue.length; head++) {
-    const i = queue[head] ?? 0;
-    const d = depth[i] ?? 0;
-    if (d >= band) continue;
-    for (const j of aroundOf(size, i)) {
-      if (depth[j] !== -1 || !paperAt(layers, j, paperLab, near)) continue;
-      depth[j] = d + 1;
-      rim[j] = 1;
-      queue.push(j);
-    }
-  }
-  return rim;
+  return groundBandOf(layers, band, (j) => paperAt(layers, j, paperLab, near));
+};
+
+/** What `paperRimLeftOf` reads: the view's paper (RGB), its ground shadow's parts by index front to back, how many 8-steps out from the clear ground its outer band reaches, the luma (0..255) at or under which a pixel is ink, the ΔE76 within which a pixel is paper-coloured, and the alpha at or over which a pixel is drawn whole. */
+export interface RimLeft {
+  readonly paper: Rgb;
+  readonly shadow: ReadonlyArray<number>;
+  readonly band: number;
+  readonly ink: number;
+  readonly near: number;
+  readonly opaque: number;
+}
+
+/** The rim a puppet's un-matte may leave that draws as a torn white fringe: within 8 steps of the clear ground, past ink (luma 110, the un-matte's own), within ΔE76 12 of the paper, at alpha 200 or more. */
+export const RIM_LEFT = { band: 8, ink: 110, near: 12, opaque: 200 } as const satisfies Omit<
+  RimLeft,
+  'paper' | 'shadow'
+>;
+
+/** A colour's luma (0..255). */
+const lumaOf = (r: number, g: number, b: number): number => 0.299 * r + 0.587 * g + 0.114 * b;
+
+/**
+ * The paper rim the un-matte leaves on a figure: `cut` its part sheet's
+ * parts front to back as cut, `unmatted` the same parts as its puppet holds
+ * them (each a raster of `cut`'s size). 1 on each pixel outside the
+ * figure's outer ink, reached in `cut` from its clear ground within `band`
+ * 8-steps through pixels lighter than ink (luma over `ink`), that the
+ * un-matted figure draws at alpha `opaque` or more in a colour within `near`
+ * (ΔE76) of `paper`: the sheet's paper the un-matte read as the member's
+ * cloth and kept, which lays a pale fringe round him on any other paper. A
+ * pixel a `shadow` part draws in front is his ground shadow's own paint,
+ * which has no ink to lie outside, and is never rim.
+ */
+export const paperRimLeftOf = (
+  cut: ReadonlyArray<Raster>,
+  unmatted: ReadonlyArray<Raster>,
+  { paper, shadow, band, ink, near, opaque }: RimLeft,
+): Uint8Array => {
+  const paperLab = labOf(paper);
+  const outer = groundBandOf(cut, band, (j) =>
+    Option.match(frontAt(cut, j), {
+      onNone: () => false,
+      onSome: ([r, g, b]) => lumaOf(r, g, b) > ink,
+    }),
+  );
+  const figure = (i: number) =>
+    !shadow.includes(unmatted.findIndex((l) => (l.rgba[i * 4 + 3] ?? 0) > 0));
+  return outer.map((o, i) =>
+    Option.match(
+      Option.filter(frontAt(unmatted, i), () => o === 1 && figure(i)),
+      {
+        onNone: () => 0,
+        onSome: ([r, g, b, a]) => Number(a >= opaque && deltaE(labOf([r, g, b]), paperLab) < near),
+      },
+    ),
+  );
 };
 
 /** `rgba` with every pixel `rim` holds that has alpha above 0 cleared to 0 in all four bytes; a clear pixel keeps its bytes. */

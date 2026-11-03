@@ -1,7 +1,7 @@
 import type { PartSheet, SheetClean } from '@manna/film/tools';
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
-import { clearPaperRim, clearSpecks, cuffsToArms } from './clean.ts';
+import { RIM_LEFT, clearPaperRim, clearSpecks, cuffsToArms, paperRimLeftOf } from './clean.ts';
 
 const PAPER = [253, 240, 215] as const;
 const NEAR_PAPER = [251, 243, 226, 255] as const;
@@ -52,6 +52,76 @@ describe('clearPaperRim', () => {
     const twice = cleaned(RIM, once);
     expect(twice.parts[0]?.pixels.rgba).toEqual(once.parts[0]?.pixels.rgba);
     expect(twice.owner).toEqual(once.owner);
+  });
+});
+
+/** A one-row raster, `row` its pixels left to right. */
+const rowOf = (row: ReadonlyArray<readonly [number, number, number, number]>) => ({
+  width: row.length,
+  height: 1,
+  rgba: new Uint8Array(row.flat()),
+});
+
+/** `paperRimLeftOf` with the guard's own reading, on one cut part and its un-matted pixels. */
+const rimLeft = (
+  cut: ReadonlyArray<readonly [number, number, number, number]>,
+  unmatted: ReadonlyArray<readonly [number, number, number, number]>,
+  band: number = RIM_LEFT.band,
+) =>
+  Array.from(
+    paperRimLeftOf([rowOf(cut)], [rowOf(unmatted)], {
+      ...RIM_LEFT,
+      paper: PAPER,
+      shadow: [],
+      band,
+    }),
+  );
+
+const HALF_PAPER = [251, 243, 226, 120] as const;
+const PALE_ROBE = [200, 180, 150, 255] as const;
+
+describe('paperRimLeftOf', () => {
+  test("holds no pixel his ground shadow's part draws in front, however near the paper its paint lies", () => {
+    const figure = rowOf([CLEAR, NEAR_PAPER, INK, CLEAR, CLEAR]);
+    const shadow = rowOf([CLEAR, CLEAR, CLEAR, NEAR_PAPER, CLEAR]);
+    const rim = (parts: ReadonlyArray<number>) =>
+      Array.from(
+        paperRimLeftOf([figure, shadow], [figure, shadow], {
+          ...RIM_LEFT,
+          paper: PAPER,
+          shadow: parts,
+        }),
+      );
+    expect(rim([1])).toEqual([0, 1, 0, 0, 0]);
+    expect(rim([])).toEqual([0, 1, 0, 1, 0]);
+  });
+
+  test('holds the paper-coloured pixels the un-matte keeps whole outside the ink, not the cloth the ink walls in', () => {
+    expect(
+      rimLeft(
+        [CLEAR, NEAR_PAPER, NEAR_PAPER, INK, CLOTH, INK],
+        [CLEAR, NEAR_PAPER, NEAR_PAPER, INK, CLOTH, INK],
+      ),
+    ).toEqual([0, 1, 1, 0, 0, 0]);
+  });
+
+  test('holds no pixel the un-matte cleared, left under alpha 200, or coloured other than the paper', () => {
+    expect(
+      rimLeft(
+        [CLEAR, NEAR_PAPER, NEAR_PAPER, NEAR_PAPER, INK],
+        [CLEAR, CLEAR, HALF_PAPER, PALE_ROBE, INK],
+      ),
+    ).toEqual([0, 0, 0, 0, 0]);
+  });
+
+  test('reads its band from the clear ground through the cut pixels lighter than ink, whatever the un-matte made of them', () => {
+    expect(
+      rimLeft(
+        [CLEAR, PALE_ROBE, NEAR_PAPER, NEAR_PAPER],
+        [CLEAR, CLEAR, NEAR_PAPER, NEAR_PAPER],
+        2,
+      ),
+    ).toEqual([0, 0, 1, 0]);
   });
 });
 
