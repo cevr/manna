@@ -10,12 +10,18 @@ import { NO_TAKES, type Narrated, loadNarrated, narratedFilms, narrationUrls } f
 
 const TIMINGS = '{"voice":"v","scenes":{}}';
 
+/**
+ * A client on a stand-in page: bun has no `location`, so a page-relative URL
+ * is resolved against an origin here, as the browser resolves it against the
+ * page's.
+ */
 const onPage = (client: HttpClient.HttpClient) =>
   Layer.succeed(
     HttpClient.HttpClient,
     HttpClient.mapRequest(client, HttpClientRequest.prependUrl('http://lab.slow.test')),
   );
 
+/** A client that answers every URL with `status` and `body`, and notes the paths it was asked. */
 const answering = (status: number, body = '') => {
   const asked: Array<string> = [];
   const client = HttpClient.make((request, url) => {
@@ -25,6 +31,7 @@ const answering = (status: number, body = '') => {
   return { layer: onPage(client), asked };
 };
 
+/** A client whose every request fails on its way (the page offline). */
 const offline = onPage(
   HttpClient.make((request) =>
     Effect.fail(
@@ -141,6 +148,7 @@ describe('narratedFilms', () => {
     }),
   );
 
+  /** A registry of the arm's film (its one rig loaded by `rive`) and a film whose second rig cannot load. */
   const armFilms = (rive: ReturnType<typeof countedRive>['layer']) =>
     narratedFilms(
       {

@@ -1,23 +1,30 @@
 import { Array as Arr, Data, Effect, Option, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
+/** No base revision to hold the debt against (no git, no `main`, a shallow clone with no parent). */
 class BaseUnavailable extends Data.TaggedError('BaseUnavailable')<{
   readonly reason: string;
 }> {}
 
+/** The check's two files, relative to the repository root. */
 interface Files {
+  /** The check itself: a base without it is before the check's adoption. */
   readonly check: string;
+  /** The debt file. */
   readonly debt: string;
 }
 
+/** The lines of `debt` that `base` lacks: debt this change added. */
 const grownDebt = (
   debt: ReadonlyArray<string>,
   base: ReadonlyArray<string>,
 ): ReadonlyArray<string> => Arr.difference(debt, base);
 
+/** The debt file's lines of a text. */
 export const debtLines = (text: string): ReadonlyArray<string> =>
   text.split('\n').filter((line) => line !== '');
 
+/** What `git <args>` prints in `root` when it exits 0, or none when it fails or git is absent. */
 const git = (root: string, args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
@@ -35,12 +42,15 @@ const git = (root: string, args: ReadonlyArray<string>) =>
     ).pipe(Effect.orElseSucceed(() => Option.none<string>()));
   });
 
+/** Whether `git <args>` exits 0 in `root`. */
 const holds = (root: string, args: ReadonlyArray<string>) =>
   Effect.map(git(root, args), Option.isSome);
 
+/** The commit `ref` names, if it names one. */
 const commitOf = (root: string, ref: string) =>
   git(root, ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]);
 
+/** The ref to take the merge-base with: the newer of the local `main` and `origin/main`. */
 const newerMain = (root: string) =>
   Effect.gen(function* () {
     const local = yield* commitOf(root, 'main');
@@ -52,6 +62,7 @@ const newerMain = (root: string) =>
     return Option.some('origin/main');
   });
 
+/** The base the local rule gives: where the branch left main, or main's own previous commit. */
 const localBase = (root: string) =>
   Effect.gen(function* () {
     const head = yield* git(root, ['rev-parse', 'HEAD']);
@@ -73,6 +84,7 @@ const localBase = (root: string) =>
     });
   });
 
+/** The revision the debt is held against: the one `explicit` names, or the local rule's. */
 const baseRevision = (root: string, explicit: Option.Option<string>) =>
   Effect.gen(function* () {
     const named = Option.filter(explicit, (sha) => sha !== '' && !/^0+$/.test(sha));
@@ -85,6 +97,11 @@ const baseRevision = (root: string, explicit: Option.Option<string>) =>
     return commit.value;
   });
 
+/**
+ * The debt file at `revision`: its lines, or none when that revision predates
+ * the check (it has no `files.check`): the first adoption has no debt to hold
+ * the change to. A revision with the check and no debt file is unavailable.
+ */
 const debtAt = (root: string, revision: string, files: Files) =>
   Effect.gen(function* () {
     if (!(yield* holds(root, ['cat-file', '-e', `${revision}:${files.check}`])))
@@ -97,6 +114,7 @@ const debtAt = (root: string, revision: string, files: Files) =>
     return Option.some(debtLines(text.value));
   });
 
+/** The lines of `debt` this change grew over its base: none when the check is being adopted. */
 export const grownOver = (
   root: string,
   files: Files,

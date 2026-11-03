@@ -1,12 +1,15 @@
 import type { Raster } from './raster.ts';
 import { scaleRaster } from './raster.ts';
 
+/** A colour: red, green, blue. */
 export type Rgb = readonly [number, number, number];
 
+/** A box in a picture's pixels: left, top, right, bottom (the right and bottom edges outside it). */
 export type Box = readonly [number, number, number, number];
 
 export const lumaOf = (c: Rgb): number => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
 
+/** A colour in CIE Lab (D65), for distances the eye reads alike. */
 export const labOf = (c: Rgb): Rgb => {
   const lin = (v: number) => {
     const x = v / 255;
@@ -20,12 +23,15 @@ export const labOf = (c: Rgb): Rgb => {
   return [116 * f(Y) - 16, 500 * (f(X) - f(Y)), 200 * (f(Y) - f(Z))];
 };
 
+/** ΔE76: the distance of two Lab colours. */
 export const deltaE = (a: Rgb, b: Rgb): number => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 
+/** Whether squares `a` and `b` lie too near to tell their roots' order as `Math.hypot` reads it: a billionth apart is far past its error. */
 const tooNear = (a: number, b: number) =>
   // oxlint-disable-next-line film/one-clock-epsilon -- a distance's float band, no time
   Math.abs(a - b) <= 1e-9 * Math.max(a, b);
 
+/** Whether `Math.hypot(dx, dy)` is under `limit` (or at it, with `orAt`): on the squares unless they lie too near to tell. */
 export const within2 = (dx: number, dy: number, limit: number, orAt = false): boolean => {
   const [sq, l] = [dx * dx + dy * dy, limit * limit];
   if (!tooNear(sq, l)) return sq < l;
@@ -33,12 +39,14 @@ export const within2 = (dx: number, dy: number, limit: number, orAt = false): bo
   return d < limit || (orAt && d === limit);
 };
 
+/** Whether `Math.hypot(dx, dy, dz)` is under `limit`: on the squares unless they lie too near to tell. */
 export const within3 = (dx: number, dy: number, dz: number, limit: number): boolean => {
   const [sq, l] = [dx * dx + dy * dy + dz * dz, limit * limit];
   if (!tooNear(sq, l)) return sq < l;
   return Math.hypot(dx, dy, dz) < limit;
 };
 
+/** `labOf` of each pixel of `r`, each colour worked out once. */
 export const labsOf = (r: Raster) => {
   const seen = new Map<number, Rgb>();
   return (i: number): Rgb => {
@@ -51,9 +59,11 @@ export const labsOf = (r: Raster) => {
   };
 };
 
+/** A colour as a prompt writes it: `#rrggbb`. */
 export const hexOf = (rgb: ReadonlyArray<number>) =>
   `#${rgb.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 
+/** The hue names a paper takes, each up to its hue's upper bound in degrees. */
 const HUES: ReadonlyArray<readonly [number, string]> = [
   [15, 'red'],
   [30, 'orange'],
@@ -67,9 +77,11 @@ const HUES: ReadonlyArray<readonly [number, string]> = [
   [360, 'red'],
 ];
 
+/** A colour's hue in degrees, 0–360: its red, green and blue as shares, their largest, and its spread over the smallest. */
 const hueOf = (r: number, g: number, b: number, max: number, d: number): number =>
   60 * (max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4);
 
+/** A hue's name at a lightness: a light warm is cream, a dark one brown, a light red pink; very light is pale, very dark deep. */
 const hueWords = (name: string, light: number): string => {
   const warm = name === 'orange' || name === 'gold' || name === 'yellow';
   if (warm && light > 0.85) return 'cream';
@@ -78,6 +90,7 @@ const hueWords = (name: string, light: number): string => {
   return (light > 0.8 && `pale ${named}`) || (light < 0.35 && `deep ${named}`) || named;
 };
 
+/** A colour in plain words, for a prompt beside its hex: "cream", "gold", "pale lilac", "deep blue", "brown". */
 export const colourWords = (c: Rgb): string => {
   const [r, g, b] = [c[0] / 255, c[1] / 255, c[2] / 255];
   const max = Math.max(r, g, b);
@@ -99,6 +112,7 @@ export const colourWords = (c: Rgb): string => {
   );
 };
 
+/** A colour's saturation and value, each 0–1. */
 interface SaturationValue {
   readonly saturation: number;
   readonly value: number;
@@ -121,6 +135,7 @@ const median = (xs: Array<number>): number => {
   return xs[Math.floor(xs.length / 2)] ?? 0;
 };
 
+/** The median colour of the pixels `at` lists in `r`, sampled at most `most` of them evenly. */
 const medianColour = (r: Raster, at: ReadonlyArray<number>, most = 4000): Rgb => {
   const step = Math.max(1, Math.floor(at.length / most));
   const ch: [Array<number>, Array<number>, Array<number>] = [[], [], []];
@@ -133,17 +148,23 @@ const medianColour = (r: Raster, at: ReadonlyArray<number>, most = 4000): Rgb =>
   return [median(ch[0]), median(ch[1]), median(ch[2])];
 };
 
+/** A connected run of pixels: its label, its box and its size. */
 interface Component {
   readonly id: number;
   readonly box: Box;
   readonly area: number;
 }
 
+/**
+ * The connected components of `mask` (1 where in) in a `w` × `h` picture,
+ * eight ways or four, and each pixel's label (-1 where out).
+ */
 interface Labelled {
   readonly components: ReadonlyArray<Component>;
   readonly labels: Int32Array;
 }
 
+/** The four neighbours' steps, and the eight's, in the order a flood takes them. */
 const STEPS_FOUR = { dx: Int32Array.of(1, -1, 0, 0), dy: Int32Array.of(0, 0, 1, -1) };
 const STEPS_EIGHT = {
   dx: Int32Array.of(1, -1, 0, 0, 1, 1, -1, -1),
@@ -186,8 +207,10 @@ export const componentsOf = (mask: Uint8Array, w: number, h: number, eight: bool
   return { components, labels };
 };
 
+/** A sheet's ink: a pixel darker than this luma is a line or a mark. */
 const INK_LUMA = 75;
 
+/** A figure on a sheet: its body's ink ring, and its box with the marks, hands and feet beside it joined. */
 export interface SheetFigure {
   readonly body: Box;
   readonly box: Box;
@@ -195,10 +218,13 @@ export interface SheetFigure {
 
 const boxArea = (b: Box) => (b[2] - b[0]) * (b[3] - b[1]);
 
+/** An ink ring whose box is under this share of the largest one's is a part (a hand, a foot), never a figure of its own. */
 const BODY_SHARE = 0.15;
 
+/** The figures a sheet's measure reads, and how many it found. */
 interface SheetFigures {
   readonly figures: ReadonlyArray<SheetFigure>;
+  /** Every ink ring big enough to be a figure, read or not. */
   readonly found: number;
 }
 
@@ -232,6 +258,12 @@ export const figuresOf = (r: Raster, count: number): SheetFigures => {
   return { figures, found: big.length } satisfies SheetFigures;
 };
 
+/**
+ * A sheet laid on white paper: each pixel's colour weighed by its alpha over
+ * white. The route can answer with the paper left out, every pixel round
+ * the figures transparent and its colour one no eye sees; read as it is,
+ * that colour is as dark as ink and joins every figure into one.
+ */
 export const opaqueOf = (r: Raster): Raster => {
   const rgba = Uint8Array.from(r.rgba);
   for (let i = 0; i < rgba.length; i += 4) {
@@ -242,12 +274,14 @@ export const opaqueOf = (r: Raster): Raster => {
   return { width: r.width, height: r.height, rgba };
 };
 
+/** A sheet's ink by its darkness alone: 1 darker than a line's luma. */
 export const inkByLuma = (r: Raster): Uint8Array => {
   const ink = new Uint8Array(r.width * r.height);
   for (let i = 0; i < ink.length; i++) ink[i] = lumaOf(rgbAt(r, i)) < INK_LUMA ? 1 : 0;
   return ink;
 };
 
+/** What a walk from the picture's border reaches without crossing ink: 1 outside every closed shape. */
 export const outsideOf = (r: Raster, ink: Uint8Array): Uint8Array => {
   const { width: w, height: h } = r;
   const open = new Uint8Array(w * h);
@@ -261,6 +295,7 @@ export const outsideOf = (r: Raster, ink: Uint8Array): Uint8Array => {
   return outside;
 };
 
+/** A region of one fill inside a figure: its box, its size, its pixels' median colour, and its pixels. */
 export interface Region {
   readonly box: Box;
   readonly area: number;
@@ -268,6 +303,7 @@ export interface Region {
   readonly pixels: ReadonlyArray<number>;
 }
 
+/** The regions `mask` (1 where in) holds, four-connected, each with its median colour; the ones under `least` pixels left out. */
 export const regionsOf = (r: Raster, mask: Uint8Array, least: number): ReadonlyArray<Region> => {
   const { components, labels } = componentsOf(mask, r.width, r.height, false);
   const pixels: Array<Array<number>> = components.map(() => []);
@@ -282,12 +318,14 @@ export const regionsOf = (r: Raster, mask: Uint8Array, least: number): ReadonlyA
     }));
 };
 
+/** A garment's paper: its colour, its Lab and its share of the garment. */
 interface Paper {
   readonly rgb: Rgb;
   readonly lab: Rgb;
   readonly share: number;
 }
 
+/** Four colour clusters of the pixels `at` lists (k-means in Lab, seeded by lightness quartiles), the ones over 4 % of them, largest first. */
 export const papersOf = (r: Raster, at: ReadonlyArray<number>): ReadonlyArray<Paper> => {
   if (at.length < 50) return [];
   const step = Math.max(1, Math.floor(at.length / 3000));
@@ -329,6 +367,14 @@ export const papersOf = (r: Raster, at: ReadonlyArray<number>): ReadonlyArray<Pa
     .sort((a, b) => b.share - a.share);
 };
 
+/**
+ * Which side of a garment is lit: each row's outer sixth on either side,
+ * its median Lab, and the rows that vote left or right (by two levels of
+ * lightness or more). The house shade turns a cloth toward violet, never
+ * toward yellow, so a row whose darker side is yellower than its lighter
+ * one by more than `SHADE_YELLOWER` is two papers (a gold sash at one edge),
+ * not light and shade, and does not vote.
+ */
 interface LitVotes {
   readonly left: number;
   readonly right: number;
@@ -360,12 +406,19 @@ export const litSideOf = (r: Raster, rows: ReadonlyArray<ReadonlyArray<number>>)
   return { left, right };
 };
 
+/** Each pixel's luma, row by row. */
 const lumasOf = (r: Raster): Float64Array => {
   const out = new Float64Array(r.width * r.height);
   for (let i = 0; i < out.length; i++) out[i] = lumaOf(rgbAt(r, i));
   return out;
 };
 
+/**
+ * The mean luma difference of `a` against `b`, both scaled to one height and
+ * one width, `b` flipped left to right (`flipped`) and not (`straight`): near
+ * nothing flipped is a mirror; less straight than flipped, the two face the
+ * same way. Each is scaled once for both.
+ */
 export const pairDiffs = (a: Raster, b: Raster) => {
   const H = 300;
   const sa = scaleRaster(a, H / a.height);
@@ -384,6 +437,7 @@ export const pairDiffs = (a: Raster, b: Raster) => {
   return { flipped: flipped / Math.max(1, n), straight: straight / Math.max(1, n) };
 };
 
+/** The label `labels` gives the first pixel down the column band that `ok` admits, scanning rows `from` to `to` (either way), columns nearest `cx` first within `half`. */
 export const firstLabelIn = (
   labels: Int32Array,
   w: number,
@@ -402,6 +456,11 @@ export const firstLabelIn = (
   return -1;
 };
 
+/**
+ * The share of the ring round a region, `near` to `depth` steps out from it
+ * (four-connected), that `test` admits: what a region meets just past its
+ * own edge, the soft pixels on that edge left out.
+ */
 export const ringShareOf = (
   r: Raster,
   region: Region,
@@ -452,6 +511,7 @@ const FOUR: ReadonlyArray<readonly [number, number]> = [
   [0, -1],
 ];
 
+/** How long an arc of the circle of `radius` round (`x`, `y`), two pixels wide, `labels` gives `id`: where a thing joined to it crosses that circle. */
 export const arcOf = (
   labels: Int32Array,
   w: number,
@@ -477,6 +537,12 @@ export const arcOf = (
   return n / 2;
 };
 
+/**
+ * The label `labels` gives the first pixel `ok` admits down the columns of a
+ * band, columns nearest `cx` first, each column walked from `from` until it
+ * meets `ink` after something else: what lies under a mark inside one
+ * outline. Ink at a column's top (the mark itself) is passed over.
+ */
 export const firstLabelInside = (
   labels: Int32Array,
   ink: Uint8Array,
@@ -495,6 +561,7 @@ export const firstLabelInside = (
   return -1;
 };
 
+/** One column of `firstLabelInside`'s walk: the first label `ok` admits before ink met after something else, -1 when none. */
 const firstInColumn = (
   labels: Int32Array,
   ink: Uint8Array,

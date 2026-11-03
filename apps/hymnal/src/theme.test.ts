@@ -5,9 +5,11 @@ import { Match } from 'effect';
 
 import { onColor, type Roles, theme } from './theme';
 
+/** A hex colour's red, green and blue, parsed here apart from the theme's own mixing. */
 const rgb = (hex: string) =>
   [hex.slice(1, 3), hex.slice(3, 5), hex.slice(5, 7)].map((pair) => Number.parseInt(pair, 16));
 
+/** An sRGB channel (0 to 255) as linear light, 0 to 1. */
 const linear = (channel: number) =>
   Match.value(channel / 255).pipe(
     Match.when(
@@ -17,16 +19,27 @@ const linear = (channel: number) =>
     Match.orElse((c) => ((c + 0.055) / 1.055) ** 2.4),
   );
 
+/** WCAG 2's relative luminance of an sRGB hex colour. */
 const luminance = (hex: string) => {
   const [r = 0, g = 0, b = 0] = rgb(hex);
   return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
 };
 
+/** WCAG 2's contrast ratio between two colours, 1 to 21. */
 const contrast = (a: string, b: string) => {
   const [la, lb] = [luminance(a), luminance(b)];
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 };
 
+/**
+ * Every text role on every role it is drawn on, with WCAG AA's least ratio
+ * for its smallest size there: all are body sizes (13 to 17 points), so 4.5.
+ * The player draws on the ground: its title in ink, its caption and times
+ * in muted, the hymn number and iOS's play button in accent; the web's and
+ * Android's play button is an accent fill under onAccent, and while pressed
+ * a pressed fill under onPressed. The chords stand on the page, and the
+ * search field's placeholder on soft.
+ */
 const pairs: ReadonlyArray<readonly [text: keyof Roles, on: keyof Roles]> = [
   ['ink', 'ground'],
   ['muted', 'ground'],
@@ -59,6 +72,14 @@ describe('the palette meets WCAG AA', () => {
   }
 });
 
+/**
+ * The panel the open dials stand on reads against the page under it: its
+ * edge is a control's boundary, at 3.5:1 on the ground (WCAG 1.4.11's 3:1,
+ * with the margin the panel's shadow takes from the ground beside it: barfix
+ * measured 2.88:1 there for an edge at 3.13:1 on the plain ground). Its fill
+ * is a tone of its own: by day the sky a step deeper than the page, by
+ * night the night raised, each at least 1.05:1 off the ground.
+ */
 describe('the dials’ panel stands off the page', () => {
   for (const scheme of ['light', 'dark'] as const) {
     test(`${scheme}: the edge is at least 3.5:1 on the ground`, () => {
@@ -76,6 +97,12 @@ describe('the dials’ panel stands off the page', () => {
   });
 });
 
+/**
+ * A checked chip's chosen mark is a state, not text: a fill that must read on
+ * the pill at WCAG 1.4.11's 3:1. The accent where it does (by day, the
+ * night), else the pill's ink (by night, where the gold reads 1.09:1). The
+ * find bar's glass is held in `home/findglass.test.tsx`.
+ */
 describe('the chosen mark reads on the pill', () => {
   for (const scheme of ['light', 'dark'] as const) {
     test(`${scheme}: chosen is at least 3:1 on the pill`, () => {
@@ -89,6 +116,11 @@ describe('the chosen mark reads on the pill', () => {
   });
 });
 
+/**
+ * Every fill whose channels step by 17 (`#000` to `#fff`, 4096 of them), and
+ * the brand's own colours, among them its accent and the wheat, which the
+ * theme fills with.
+ */
 const fills = [
   ...Array.from({ length: 4096 }, (_, index) =>
     [index >> 8, (index >> 4) & 15, index & 15]
@@ -114,6 +146,14 @@ test('the contrast ratio is WCAG 2’s', () => {
   expect(contrast('#12354e', '#fff9e0')).toBeCloseTo(12.08, 2);
 });
 
+/**
+ * The roles as the owner's pick, "sky" (2026-10-25), draws them: each role
+ * the prototype named is its value there, or within 2 of it per channel
+ * where a mix of the brand's colours draws it (light muted, panel and soft,
+ * dark line), but the edges, moved until they read at 3.5:1 (the prototype's were
+ * 1.6:1 by day and 2.3:1 by night). A change to the brand, the mixing or a
+ * channel's order shows here.
+ */
 test('the roles are the sky', () => {
   expect(theme).toEqual({
     light: {

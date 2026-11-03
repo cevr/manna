@@ -1,10 +1,12 @@
 import { Effect, Layer, Queue, Stream } from 'effect';
 import { Viewport } from './viewport.ts';
 
+/** The window's answer to `query`, live. */
 const listFor = (query: string): MediaQueryList =>
   // oxlint-disable-next-line effect/noGlobals -- Viewport's live adapter: the window's media queries
   matchMedia(query);
 
+/** This window's answers, live. */
 export const viewportLayer: Layer.Layer<Viewport> = Layer.succeed(
   Viewport,
   Viewport.of({

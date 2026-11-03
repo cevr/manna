@@ -1,6 +1,7 @@
 import { camera } from '../../canvas/camera.ts';
 import { type Film, type FilmSpec, createFilm, drawing } from '../../canvas/film.ts';
 
+/** The probe film's name in its registry and in the lab's URLs. */
 export const PROBE = 'probe';
 
 const ball = drawing({
@@ -33,6 +34,11 @@ const rest = drawing({
   },
 });
 
+/**
+ * A shot pushed in 2× on `face`: `pole` is read before the camera and drawn
+ * inside it, as a film reads a camera's knobs at the top of its draw. The
+ * pole lands at (120, 280) on the frame, and `face` at its centre.
+ */
 const shot = drawing({
   timeline: { push: { mark: 'near', until: 'held' } },
   knobs: { face: [400, 200], faceZoom: 2, pole: [300, 250] },
@@ -49,6 +55,10 @@ const shot = drawing({
   },
 });
 
+/**
+ * The probe film, laid out afresh. Every scene held still (`drift: 0`): the
+ * knob tests measure where the scenes and the camera put things.
+ */
 export const probeFilm = (): Film => createFilm(probeSpec());
 
 const probeSpec = (): FilmSpec => ({

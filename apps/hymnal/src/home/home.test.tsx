@@ -1,3 +1,8 @@
+/**
+ * The web's home screen, rendered to HTML as the web build renders it, over
+ * the real compiled hymnal (`src/test/setup.ts`).
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { RegistryProvider } from '@effect/atom-react';
 import { renderToStaticMarkup } from 'react-dom/server';

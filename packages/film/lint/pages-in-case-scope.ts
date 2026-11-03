@@ -14,9 +14,11 @@ const MESSAGE =
 const isEffect: Module = (from) => from === 'effect';
 const isScope: Module = (from) => from === 'effect/Scope';
 
+/** Whether `node` is effect's `Scope` module. */
 const isScopeModule = (b: Bindings, node: ESTree.Node) =>
   b.readsImport(node, isEffect, 'Scope') || b.importsAs(node, isScope, '*');
 
+/** Whether a call makes a scope with no parent: `Scope.make(…)`. */
 const makesScope = (b: Bindings, call: ESTree.CallExpression): boolean => {
   const callee = call.callee;
   return (

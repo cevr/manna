@@ -23,6 +23,7 @@ import { heightOf } from './cutout.ts';
 import { FIBRE_SIZE, PLANE_FIBRE } from './fibre.ts';
 import { type Recorder, applyAffine, isPattern, recorder, withDom } from './fixtures/stand-in.ts';
 
+/** One plane of a `multiplane` shot. */
 type Plane = Parameters<typeof multiplane>[4][number];
 
 describe('knobCamera', () => {
@@ -108,10 +109,13 @@ describe('shotPath', () => {
   });
 });
 
+/** The alpha of each full-frame veil, in order: every fill but the fibre's. */
 const veilsOf = (r: Recorder) => r.fills.filter((f) => !isPattern(f.style)).map((f) => f.alpha);
 
+/** Each pattern fill (the paper's fibre): its alpha, the transform it was laid under, its rect and its tile. */
 const fibresOf = (r: Recorder) => r.fills.filter((f) => isPattern(f.style));
 
+/** Where each plane maps the world point `p`, by plane name. */
 const shoot = (
   r: Recorder,
   cam: { x: number; y: number; zoom?: number; rot?: number },
@@ -347,6 +351,7 @@ describe('multiplane', () => {
   });
 });
 
+/** A scene's breath `through` it, in a film that drifts `drift`, drawn whole (`outer`) or through its shots. */
 const breathOf = (through: number, drift: Drift | 0 = DRIFT, outer = false): SceneBreath => ({
   through,
   drift,
@@ -356,6 +361,10 @@ const breathOf = (through: number, drift: Drift | 0 = DRIFT, outer = false): Sce
 });
 
 describe('drift', () => {
+  /**
+   * The transform inside `camera(cam)` drawn `through` a scene (0..1) of a
+   * film that drifts `film`, the shot taking `share` of it when named.
+   */
   const inside = (through: number, cam: Camera, share?: number, film: Drift | 0 = DRIFT) => {
     const r = recorder();
     let m: Affine = IDENTITY;

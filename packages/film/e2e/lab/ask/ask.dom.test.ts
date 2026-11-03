@@ -48,9 +48,13 @@ import {
 import { ASK_READY, PAGE_READY, SLOW } from '../studio-states.ts';
 
 const ANSWER = new RegExp(`^/api/asks/${STUDIO_ASK}/answer$`);
+/** A still at 1920×1080: the size of a Board's. */
 const STILL_1080 = new URL('../../../src/tools/fixtures/still-1080.svg', import.meta.url).pathname;
+/** A real H.264 take at 1280×720: the size of a render's. */
 const HD_720 = new URL('../../../src/tools/fixtures/hd-720.mp4', import.meta.url).pathname;
+/** The section whose head holds the top under the header once the page is scrolled to its end. */
 const AT_THE_TOP_AT_THE_END = `(() => { scrollTo(0, document.documentElement.scrollHeight); const y = document.querySelector('.sh-header').getBoundingClientRect().bottom + 2; return document.elementFromPoint(innerWidth / 2, y)?.closest('.ak-step')?.dataset.step ?? ''; })()`;
+/** An ask whose one section is the toy's own script, by its film. */
 const SCRIPT_ASK = 'a0123456781';
 const slow = { kind: 'choose', value: 'slow', label: 'Slow' };
 const words = 'It breathes before the cut, so the turn lands.';
@@ -77,6 +81,7 @@ const done = askRecordWith(
     { step: 'why', values: { why: words }, at: '2026-10-14T00:02:00.000Z' },
   ],
 );
+/** An ask of one section, the toy's own script by its film, and whether to keep it. */
 const scriptAsk: Json = {
   id: SCRIPT_ASK,
   title: 'Hear the toy',
@@ -109,6 +114,7 @@ const scriptAsk: Json = {
   state: { _tag: 'Asking', step: 'script', answers: {} },
   answered: [],
 };
+/** The toy's script as the lab reads it: one beat saying `say`. */
 const said = (say: string) => ({
   film: STUDIO_FILM,
   beats: [{ id: '1', say, cite: ['Gen 2:7'] }],
@@ -923,11 +929,15 @@ describe("an agent's ask on a phone", () => {
   );
 });
 
+/** The ask parts of the page, in the order drawn. */
 const PARTS = `[...document.querySelectorAll('.akp .ak')].map((a) => a.dataset.ask)`;
+/** Whether ask `ask`'s part starts in view: under the header, in the window's top two-thirds. */
 const inView = (ask: string) =>
   `(() => { const top = document.querySelector('.ak[data-ask="${ask}"]').getBoundingClientRect().top; const under = document.querySelector('.sh-header').getBoundingClientRect().bottom; return top >= under - 4 && top <= innerHeight * 2 / 3; })()`;
+/** Whether ask `ask`'s Send, scrolled to, is what a tap on it reaches: no other part's Send lies over it. */
 const sendReached = (ask: string) =>
   `(() => { const send = document.querySelector('.ak[data-ask="${ask}"] .ak-send [data-act="send"]'); send.scrollIntoView({ block: 'center' }); const r = send.getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('[data-act="send"]') === send; })()`;
+/** Whether ask `ask`'s part starts just under the header: where the page scrolled to take the owner. */
 const takenTo = (ask: string) =>
   `(() => { const top = document.querySelector('.ak[data-ask="${ask}"]').getBoundingClientRect().top; const under = document.querySelector('.sh-header').getBoundingClientRect().bottom; return Math.abs(top - under) <= 4; })()`;
 
@@ -1025,10 +1035,17 @@ describe('a page of asks', () => {
   );
 });
 
+/** The guided review's cut, its video and its play. */
 const CUT = '.ak-step[data-step="cut"] [data-material="video"]';
 const CUT_VIDEO = `document.querySelector('${CUT} video')`;
+/** The header's View menu, and one of its rows by its command. */
 const VIEW_MENU = '.sh-header [data-act="view-menu"]';
 const viewRow = (id: string) => `[data-role="view-menu"] [data-command="${id}"]`;
+/**
+ * Where the next video made after now first plays from, kept as
+ * `STARTED_AT`: every video in the page is marked seen, and the first
+ * unmarked one to start playing says its time then.
+ */
 const WATCH_START = `(() => {
   for (const v of document.querySelectorAll('video')) v.dataset.seen = '';
   window.__startedAt = undefined;

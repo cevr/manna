@@ -1,3 +1,19 @@
+/**
+ * The motion's shaders (WebGL2, GLSL ES 3.00), drawn over the still they
+ * move (`./scene.ts`). Each draws its still unchanged while `u_ramp` is 0, so
+ * the canvas takes over from the picture with no step, and the motion grows
+ * in as the ramp rises to 1.
+ *
+ * - The field: the near plants sway in a wind whose gusts run from right to
+ *   left (the wind map's red, `kit/field-paint.ts`). Over the sky (its
+ *   green) the sun's rays turn slowly about the sun (`TURN`, `./sun.ts`): the
+ *   shader takes the light the still bakes in off each pixel and lays it on
+ *   again with the rays turned, so no fixed fan stays behind the moving one,
+ *   and a turn of 0 (time 0, or `u_turning` 0) leaves the still as it is.
+ *   The light flows out along the turned rays.
+ * - The night: the painted stars twinkle, and fainter stars drift across the
+ *   sky above the hills.
+ */
 import { ASPECT, GLOW, LIGHT, RAY_REACH, RAYS, SUN, TURN } from './sun.ts';
 
 const float = (n: number) => {
@@ -6,6 +22,7 @@ const float = (n: number) => {
   return `${text}.0`;
 };
 
+/** The canvas's one quad, its uv running down the canvas as a picture's does. */
 export const VERTEX = `#version 300 es
 in vec2 a_position;
 out vec2 v_uv;
@@ -31,6 +48,12 @@ const rays = RAYS.map(
     `  d = atan(sin(a - ${float(ray.angle)}), cos(a - ${float(ray.angle)})) / ${float(ray.width)};\n  sum += ${float(ray.strength)} * exp(-d * d);`,
 ).join('\n');
 
+/**
+ * How far a plant's tip sways, as a share of the painting's width, at a
+ * gust's full push: enough that the owner sees the field move at a glance on
+ * desktop and on a phone, while it still drifts slowly with the gusts. The
+ * owner saw it at 0.016 and chose "Keep it" (ask abdbb63c754).
+ */
 const SWAY = 0.016;
 
 export const FIELD_FRAGMENT = `#version 300 es
@@ -78,6 +101,7 @@ void main() {
   color = vec4(c, 1.0);
 }`;
 
+/** The moon's place in the night painting, which does not twinkle. */
 const MOON = { u: 0.846, v: 0.176, radius: 0.05 } as const;
 
 export const NIGHT_FRAGMENT = `#version 300 es

@@ -47,6 +47,7 @@ import { parts as partSheet } from './part-sheet-cli.ts';
 import type { Pages } from './pages.ts';
 import { decodePng, encodePng } from './png.ts';
 
+/** A `--concept` that is not `<crop.png>:<view>`, or whose crop shows no figure. */
 class ConceptUnread extends Schema.TaggedError<ConceptUnread>()('ConceptUnread', {
   concept: Schema.String,
   reason: Schema.String,
@@ -56,18 +57,21 @@ class ConceptUnread extends Schema.TaggedError<ConceptUnread>()('ConceptUnread',
   }
 }
 
+/** A brief given a member and the files, or neither; a member with no kind; files with both a turnaround and a layout, or neither, or a layout with no kind. */
 class LayoutUnset extends Schema.TaggedError<LayoutUnset>()('LayoutUnset', {}) {
   override get message() {
     return 'name the sheet once: --member <film>/<member> --kind <kind> reads its record; with no record, --look and --references, and --turnaround <who> for a turnaround or --layout <file> --kind poses|heads';
   }
 }
 
+/** A measure given a member and the sheet's flags, or neither a member nor a count and an anchor. */
 class SheetUnset extends Schema.TaggedError<SheetUnset>()('SheetUnset', {}) {
   override get message() {
     return 'name the sheet once: --member <film>/<member> reads its record; with no record, --count and --anchor (and --slot, --standing, --level, --headgear)';
   }
 }
 
+/** A `--member` that is not `<film>/<member>`. */
 class MemberUnnamed extends Schema.TaggedError<MemberUnnamed>()('MemberUnnamed', {
   given: Schema.String,
 }) {
@@ -76,6 +80,7 @@ class MemberUnnamed extends Schema.TaggedError<MemberUnnamed>()('MemberUnnamed',
   }
 }
 
+/** The app's house look: the block every concept prompt opens with, and its image, every try's first reference. */
 interface HouseLook {
   readonly text: string;
   readonly image: string;
@@ -83,6 +88,7 @@ interface HouseLook {
 
 const measuredJson = Schema.encodeSync(Schema.fromJsonString(SheetMeasure));
 
+/** The PNG at `file`, decoded. */
 const pngAt = (file: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -90,6 +96,7 @@ const pngAt = (file: string) =>
     return yield* Effect.fromResult(decodePng(bytes));
   });
 
+/** A `--concept <crop.png>:<view>`, its crop measured. */
 const conceptOf = (given: string) =>
   Effect.gen(function* () {
     const path = yield* Path.Path;
@@ -108,6 +115,7 @@ const conceptOf = (given: string) =>
     return { name: path.basename(file, '.png'), measure, view } satisfies SheetConcept;
   });
 
+/** `--member <film>/<member>`: the sheet read from the member's record, as `cast` reads it. */
 const memberFlag = Flag.String('member').pipe(
   Flag.optional,
   Flag.withDescription(
@@ -115,6 +123,7 @@ const memberFlag = Flag.String('member').pipe(
   ),
 );
 
+/** The member a `--member` names: its sheet folder, and the film's output folder for it. */
 const memberPlace = Effect.fn('film.concept.memberPlace')(function* (given: string) {
   const path = yield* Path.Path;
   const parts = given.split('/');
@@ -481,6 +490,11 @@ const keep = Command.make(
   ),
 );
 
+/**
+ * `film concept` over the app's house look, its critique over the app's
+ * figure rules; its cast build keys each fit by `renderPage`, the app's render
+ * page the fit draws in.
+ */
 export const concept = <E, R>(
   house: HouseLook,
   rules: ReadonlyArray<CritiqueRule>,

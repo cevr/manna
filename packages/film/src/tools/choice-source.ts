@@ -14,6 +14,7 @@ import {
   valueOf,
 } from './scene-source.ts';
 
+/** The object literal `export const <name> = {...}` declares (through `satisfies` and `as`). */
 const exportedObject = (
   file: string,
   program: Program,
@@ -31,6 +32,7 @@ const exportedObject = (
   });
 };
 
+/** The object literal at `path` under `obj`: each key's value an object literal. */
 const objectAt = (
   file: string,
   target: string,
@@ -51,20 +53,25 @@ const objectAt = (
   );
 };
 
+/** Where a pick names its variant: `play` in the object `exported` declares, down `path`. */
 interface PickSite {
   readonly exported: string;
   readonly path: ReadonlyArray<string>;
+  /** How the write names itself: `score play`, `look ground play`. */
   readonly target: string;
 }
 
+/** The score's pick: `sound.score.play` in `sound.ts`. */
 export const SCORE_PLAY: PickSite = { exported: 'sound', path: ['score'], target: 'score play' };
 
+/** A look's pick: `looks.<look>.play` in `palette.ts`. */
 export const lookPlay = (look: string): PickSite => ({
   exported: 'looks',
   path: [look],
   target: `look ${look} play`,
 });
 
+/** Where `play` names its option in the text, and the name. */
 interface PlayLiteral {
   readonly start: number;
   readonly end: number;
@@ -91,6 +98,7 @@ const playLiteral = (
     ),
   );
 
+/** The variant `site` plays, as the file declares it now. */
 export const readPick = (
   file: string,
   source: string,
@@ -98,6 +106,7 @@ export const readPick = (
 ): Result.Result<string, SourceRefused> =>
   Result.map(playLiteral(file, source, site), (literal) => literal.value);
 
+/** The file with `site`'s `play` set to `option`: only that string changes. */
 export const editPick = (
   file: string,
   source: string,
@@ -108,6 +117,7 @@ export const editPick = (
     spliced(file, source, [{ start: literal.start, end: literal.end, text: stringText(option) }]),
   );
 
+/** The names of an object literal's keys, in order; refused when one is computed or spread. */
 const keysOf = (
   file: string,
   target: string,
@@ -133,6 +143,11 @@ const keysOf = (
     }),
   );
 
+/**
+ * Each look `palette.ts` declares (`export const looks`) and its levels (the
+ * keys of its `options`), as the file is written now: what a wedge
+ * (`tools/easel.ts`) may draw. A film with no `looks` export has none.
+ */
 export const lookLevels = (
   file: string,
   source: string,

@@ -97,6 +97,7 @@ export const Node: Schema.Codec<Node> = Schema.Union([
 
 interface Frame {
   readonly children: Node[];
+  /** Called on element close. Pushes the produced node into the parent frame. */
   readonly close: (children: readonly Node[]) => Node;
 }
 
@@ -149,6 +150,13 @@ const tagClose = (name: string, attribs: Record<string, string>): Frame['close']
   });
 };
 
+/**
+ * Parse the inline HTML inside a single EGW paragraph's `content` field into
+ * the AST. Pure, sync, deterministic — safe to call from renderer or main.
+ *
+ * Streaming parser + frame stack: each opentag pushes a frame; ontext appends
+ * to the current frame's children; onclosetag pops and constructs the node.
+ */
 export const parseParagraphContent = (html: string): readonly Node[] => {
   const root: Frame = { children: [], close: () => ({ _tag: 'Text', text: '' }) };
   const stack: Frame[] = [root];
@@ -195,6 +203,11 @@ export const parseParagraphContent = (html: string): readonly Node[] => {
   return root.children;
 };
 
+/**
+ * Flatten the AST into a plain-text string. Used by pretext height estimation
+ * (which works off text + font, not DOM). Line breaks become spaces — we just
+ * want the wrappable token stream, not the visual layout.
+ */
 export const nodesToText = (nodes: readonly Node[]): string => {
   let out = '';
   for (const node of nodes) {

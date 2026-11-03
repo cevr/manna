@@ -8,6 +8,7 @@ const cores = 12;
 
 type Task = Parameters<typeof judge>[0]['tasks'][number];
 
+/** A unit-test task of `workspace` (`test` unless named) that took `ms` and exited `exitCode`. */
 const task = (workspace: string, ms: number, exitCode = 0, name = 'test'): Task => ({
   workspace,
   taskId: `${workspace}#${name}`,
@@ -15,6 +16,7 @@ const task = (workspace: string, ms: number, exitCode = 0, name = 'test'): Task 
   exitCode,
 });
 
+/** A `test` task of `workspace` with no time (its own summary did not read) that exited `exitCode`. */
 const untimed = (workspace: string, exitCode: number): Task => ({
   ...task(workspace, 0, exitCode),
   ms: Option.none(),

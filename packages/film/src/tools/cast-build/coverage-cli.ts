@@ -23,6 +23,7 @@ import { CutKind, Requirement, coverageOf } from './coverage.ts';
 import { coverageFacts } from './coverage-facts.ts';
 import { buildSources, memberStages } from './stages.ts';
 
+/** A member reported: his manifest's file (`null` in JSON when he has none), and what it lacks. */
 const MemberReport = Schema.Struct({
   member: Schema.String,
   manifest: Schema.OptionFromNullOr(Schema.String),
@@ -39,7 +40,9 @@ const MemberReport = Schema.Struct({
 });
 interface MemberReport extends Schema.Schema.Type<typeof MemberReport> {}
 
+/** One member's report as `--json` prints it. */
 const MemberJson = Schema.fromJsonString(MemberReport);
+/** The cast's reports as `--cast --json` prints them. */
 const CastJson = Schema.fromJsonString(Schema.Struct({ members: Schema.Array(MemberReport) }));
 
 class CoverageIncomplete extends Schema.TaggedError<CoverageIncomplete>()('CoverageIncomplete', {
@@ -56,6 +59,7 @@ class CoverageAsked extends Schema.TaggedError<CoverageAsked>()('CoverageAsked',
   }
 }
 
+/** Every member of `film`'s cast with a `cutout/` folder: the film's own, then the library's. */
 export const cutoutMembers = Effect.fn('film.cast.cutoutMembers')(function* (film: FilmName) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -71,6 +75,7 @@ export const cutoutMembers = Effect.fn('film.cast.cutoutMembers')(function* (fil
   return [...found];
 });
 
+/** Stage output written to stderr, so `--json` keeps stdout to its report. */
 export const toStderr = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.gen(function* () {
     const current = yield* Console.Console;
@@ -84,6 +89,11 @@ export const toStderr = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     );
   });
 
+/**
+ * One member's report: his manifest's facts, with cut and fit read from the
+ * build cache at the current inputs (`measuredOf`), its free stages run first
+ * when `run` is on.
+ */
 const reportOf = Effect.fn('film.cast.coverageReport')(function* (
   film: FilmName,
   member: string,
@@ -111,6 +121,7 @@ const reportOf = Effect.fn('film.cast.coverageReport')(function* (
   } satisfies MemberReport;
 });
 
+/** An entry's line: its id, its cut, what it lacks, what of that is unmeasured, and whether it is trained on. */
 const entryLine = (e: MemberReport['entries'][number]): string =>
   [
     `  ${e.id} ${e.cut}`,
@@ -125,6 +136,7 @@ const entryLine = (e: MemberReport['entries'][number]): string =>
     ...Arr.filter(['trainable'], () => e.trainable),
   ].join(' ');
 
+/** A report's lines: the member and how many entries are trained on, then each entry and what it lacks. */
 const linesOf = (r: MemberReport): ReadonlyArray<string> =>
   Option.match(r.manifest, {
     onNone: () => [`coverage ${r.member} no manifest (cutout/coverage.ts)`],

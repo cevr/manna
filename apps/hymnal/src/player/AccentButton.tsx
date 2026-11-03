@@ -1,3 +1,12 @@
+/**
+ * The player's button on the web and Android: an accent fill with its title
+ * in `onAccent`. React Native's `Button` there draws its title white on the
+ * colour it is given, which reads at 1.59:1 on the dark accent; this one
+ * takes the theme's text on the accent (`theme.test.ts` holds it to AA).
+ * Pressed, it draws the theme's pressed fill under that fill's own text, so
+ * the label keeps AA there too.
+ */
+
 import { Match } from 'effect';
 import { Pressable, StyleSheet, Text } from 'react-native';
 

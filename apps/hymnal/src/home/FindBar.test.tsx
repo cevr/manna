@@ -1,3 +1,16 @@
+/**
+ * The find bar (`FindBar`) mounted in a browser's document
+ * (`src/test/setup.ts`) in each of its rows, with a stand-in `#`. While the
+ * drums are open, every view of the bar but the `#` lets a touch through to
+ * the drums' backdrop beneath it, which closes the drums; with the drums
+ * shut, the bar's controls take their touches.
+ *
+ * A view lets a touch through when its computed `pointer-events` is `none`:
+ * react-native-web writes `box-none` as `none` on the view itself and `auto`
+ * on its children, and `none` as `none` on the view and its children, which
+ * is how iOS hit-tests the same props.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { RegistryProvider } from '@effect/atom-react';
 import { Option } from 'effect';
@@ -10,9 +23,11 @@ import { searchAt, type Searching, searchOpen } from '~/reader/place';
 import { FindBar } from './FindBar';
 import { Tiles, tiles } from './finding';
 
+/** The screens the bar stands on: the home list, and a hymn page, where the bar is the same. */
 const HOME = '/';
 const PAGE = '/hymns/8';
 
+/** The `#` the player layer hands the bar, as `LivePlayer` draws it: one pressable, on a disk or not. */
 const hash = () => (
   <Pressable testID="find-number" role="button" aria-label="Find a hymn by number">
     <Text>#</Text>
@@ -43,6 +58,10 @@ const rows: ReadonlyArray<{
   { name: 'open on a hymn page', path: PAGE, open: searchAt(PAGE, 'field'), shown: Tiles.Hidden() },
 ];
 
+/**
+ * `view`'s `pointer-events`, inherited as CSS inherits it: the test document
+ * computes only the value a rule sets on the view itself.
+ */
 const pointerEvents = (view: Element): string => {
   const own = getComputedStyle(view).pointerEvents;
   if (own !== '') return own;
@@ -52,12 +71,14 @@ const pointerEvents = (view: Element): string => {
   });
 };
 
+/** `view`'s tag, with its test id when it has one. */
 const named = (view: Element) =>
   Option.match(Option.fromNullishOr(view.getAttribute('data-testid')), {
     onNone: () => view.tagName.toLowerCase(),
     onSome: (id) => `${view.tagName.toLowerCase()}#${id}`,
   });
 
+/** Mounts the bar on the screen at `path` with the search `open` and `shown` tiles, the drums open or shut, and returns the views of it that take a touch, the `#` left out. */
 const touchable = (
   path: string,
   open: Option.Option<Searching>,

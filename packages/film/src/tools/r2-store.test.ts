@@ -35,6 +35,7 @@ interface Held {
   readonly modified: string;
 }
 
+/** `20260930T120000Z` back to the moment it stamps. */
 const fromAmzDate = (stamp: string) =>
   DateTime.makeUnsafe(
     `${stamp.slice(0, 4)}-${stamp.slice(4, 6)}-${stamp.slice(6, 8)}T${stamp.slice(9, 11)}:${stamp.slice(11, 13)}:${stamp.slice(13, 15)}Z`,
@@ -42,6 +43,7 @@ const fromAmzDate = (stamp: string) =>
 
 const xml = (text: string) => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;');
 
+/** What the fake bucket answers: a status, a body (empty for none), headers. */
 interface Answer {
   readonly status: number;
   readonly body: Uint8Array<ArrayBuffer> | string;
@@ -54,6 +56,7 @@ const s3Error = (status: number, code: string): Answer => ({
   headers: {},
 });
 
+/** Whether the request carries the signature the bucket's key gives it, recomputed from what was sent. */
 const signedBy = (
   crypto: Mac.Mac['Service'],
   secret: S3Credentials,
@@ -84,6 +87,7 @@ const signedBy = (
     return resigned.authorization === auth && url.host === `${ACCOUNT}.r2.cloudflarestorage.com`;
   });
 
+/** ListObjectsV2, two keys a page. */
 const listAnswer = (objects: Map<string, Held>, url: URL): Answer => {
   const prefix = url.searchParams.get('prefix') ?? '';
   const after = url.searchParams.get('continuation-token') ?? '';
@@ -105,6 +109,7 @@ const listAnswer = (objects: Map<string, Held>, url: URL): Answer => {
   };
 };
 
+/** HEAD or GET (whole, or a range) of one object. */
 const objectAnswer = (held: Held, method: string, range: string): Answer => {
   const meta = { 'x-amz-meta-sha256': held.sha256 };
   if (method === 'HEAD') return { status: 200, body: '', headers: meta };
@@ -128,6 +133,7 @@ const objectAnswer = (held: Held, method: string, range: string): Answer => {
   });
 };
 
+/** The bucket's answer to a request already signed and hashed as it should be. */
 const bucketAnswer = (
   objects: Map<string, Held>,
   request: HttpClientRequest.HttpClientRequest,
@@ -152,6 +158,7 @@ const bucketAnswer = (
   });
 };
 
+/** Every byte a read streams, joined. */
 const drain = <E>(stream: Stream.Stream<Uint8Array, E>) =>
   Effect.map(Stream.runCollect(stream), (chunks) => {
     const parts = Array.from(chunks);
@@ -192,6 +199,7 @@ const fakeR2 = (objects: Map<string, Held>, secret: S3Credentials) =>
 
 const text = new TextEncoder();
 
+/** A store's whole contract, over synthetic files in `dir`. */
 const contract = (store: MediaStoreService, dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -246,11 +254,13 @@ const contract = (store: MediaStoreService, dir: string) =>
 
 const tempDir = Effect.flatMap(FileSystem.FileSystem, (fs) => fs.makeTempDirectoryScoped());
 
+/** Where an app that declares the R2 store lives, and the fake bucket's objects. */
 class Declared extends Context.Service<
   Declared,
   { readonly dir: string; readonly objects: Map<string, Held> }
 >()('test/Declared') {}
 
+/** An app whose `library.ts` declares the R2 store, with `env` as its environment. */
 const declared = (env: Record<string, string>) =>
   Layer.unwrap(
     Effect.gen(function* () {

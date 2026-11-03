@@ -13,11 +13,13 @@ const crop = (name: string) =>
     return Result.getOrThrow(decodePng(bytes));
   }).pipe(Effect.provide(BunServices.layer));
 
+/** `view`'s rows on render `n` against its kept crop, held to `spec`. */
 const rowsOf = (view: string, n: number, spec: FitSpec = {}) =>
   Effect.gen(function* () {
     return fitRows(yield* crop(`${view}.concept`), yield* crop(`r${n}-${view}.render`), spec);
   });
 
+/** lead-feast's colour classes, his sheet's samples and the papers that paint them (In Its Order's `FIT_CLASSES`), and his front's face label (`labels.ts`). */
 const LABELLED: FitSpec = {
   classes: {
     cream: {

@@ -14,6 +14,10 @@ interface DialogDescriptionState {}
 
 interface DialogDescriptionProps extends BaseUIComponentProps<'p', DialogDescriptionState> {}
 
+/**
+ * A heading that labels the dialog.
+ * Renders an `<h2>` element.
+ */
 export function DialogTitle(componentProps: DialogTitleProps): JSX.Element {
   const { store } = useDialogRootContext();
   const elementProps = omit(componentProps, 'class', 'style', 'render', 'id');
@@ -30,6 +34,10 @@ export function DialogTitle(componentProps: DialogTitleProps): JSX.Element {
   });
 }
 
+/**
+ * A paragraph with additional information about the dialog.
+ * Renders a `<p>` element.
+ */
 export function DialogDescription(componentProps: DialogDescriptionProps): JSX.Element {
   const { store } = useDialogRootContext();
   const elementProps = omit(componentProps, 'class', 'style', 'render', 'id');

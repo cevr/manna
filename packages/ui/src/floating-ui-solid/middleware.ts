@@ -7,6 +7,7 @@ import {
   getPaddingObject,
 } from '@floating-ui/utils';
 
+/** Whether the anchor is scrolled out of view (or has no box at all). */
 export const hide: Middleware = {
   name: 'hide',
   async fn(state) {
@@ -27,10 +28,17 @@ export const hide: Middleware = {
 };
 
 interface ArrowOptions {
+  /** The arrow element to centre on the anchor. */
   element: Element;
+  /** The space kept between the arrow and the floating element's edges. */
   padding?: Padding | undefined;
 }
 
+/**
+ * Floating UI's `arrow`, measuring against the floating element rather than
+ * the arrow's offset parent (upstream's fork), so a detached stand-in arrow
+ * still reports where the anchor's centre falls along the popup.
+ */
 export const arrow = (
   options: (state: Parameters<Middleware['fn']>[0]) => ArrowOptions,
 ): Middleware => ({

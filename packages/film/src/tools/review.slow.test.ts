@@ -47,6 +47,7 @@ import {
   refOf,
 } from './review.ts';
 
+/** A seen variant's video ref: what the review plays for it. */
 const seenRef = (v: Option.Option<ChoiceVariant>): Option.Option<string> =>
   Option.flatMap(v, (variant) =>
     Match.value(variant.media).pipe(
@@ -58,6 +59,7 @@ const seenRef = (v: Option.Option<ChoiceVariant>): Option.Option<string> =>
     ),
   );
 
+/** A seen variant's video, its ref and phone copy state. */
 const phoneOf = (v: ChoiceVariant): Option.Option<string> =>
   Match.value(v.media).pipe(
     Match.tagsExhaustive({
@@ -75,6 +77,7 @@ const found = (name: string, mtime = 1, size = 10): Found => ({
   mtime,
 });
 
+/** A folder's files as found: each of `names` there, at the mtime its place gives it. */
 const lookAmong =
   (names: ReadonlyArray<string>, size = 10, folder = 'out/art') =>
   (name: string) =>
@@ -86,6 +89,7 @@ const lookAmong =
       }),
     );
 
+/** A video render of `address`'s `variant`, drawn from sources `key`, its files under `folder`. */
 const videoRender = (
   address: Address,
   folder: string,
@@ -445,9 +449,11 @@ describe('a project folder', () => {
   });
 });
 
+/** Every child process the review started, as the stand-in saw it. */
 class Spawned extends Context.Service<Spawned, Array<string>>()('test/Spawned') {}
 class Root extends Context.Service<Root, string>()('test/Root') {}
 
+/** A catalogue of film `f`: its whole film (two variants) and one scene, as `out/f` holds them. */
 const PROJECT = emptyCatalogue('f');
 const projectCatalogue = [
   videoRender({ _tag: 'Film' }, 'film', 'main'),
@@ -455,6 +461,19 @@ const projectCatalogue = [
   videoRender(sceneAddress('a'), 'scenes/a'),
 ].reduce(recordRender, PROJECT);
 
+/**
+ * The review over a fresh tree: `out/art`, a montage (a set of two, a big
+ * lone video, a variant from `out/elsewhere`); `out/f`, a project folder
+ * with its catalogue; a stand-in Media (`reviewMedia`) giving every video
+ * 12.5 s and making a still or a phone copy by copying the video whole.
+ * The montage names an image, a doc and a variant's notes beside its videos,
+ * and the project each render's captions. The review reads the files
+ * through `files` (the file system as is, by default), and copies a video
+ * over 100 bytes or over `phoneRate` bits a second (the review's own by
+ * default); the media cannot read the length of a file named `unreadable`,
+ * nor make a phone copy of one named `uncopyable`; with `held`, a phone
+ * copy is begun and never ends, so the copies stay pending.
+ */
 const fixture = (
   phoneCopies: boolean,
   fps: Option.Option<number> = Option.none(),

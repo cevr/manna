@@ -1,3 +1,5 @@
+/** Keynote slide deck CLI commands. */
+
 import { Console, Effect } from 'effect';
 import { Command } from 'effect/cli';
 

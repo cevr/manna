@@ -11,34 +11,47 @@ import { box, post, put } from './build.ts';
 import { type World, ps1 } from './shade.ts';
 import type { Textures } from './textures.ts';
 
+/** The head's radius: big, as the reference's people are. */
 const R = 0.27;
 
+/** How a person is dressed and made. */
 export interface Build {
   readonly skin: string;
   readonly hair: string;
+  /** The fringe's spikes over the brow, and how far the cap sits back (0 a full head of hair, 1 receding). */
   readonly fringe: number;
   readonly recede: number;
+  /** The body's cloth, its tint, and the legs' colour (hidden under a robe). */
   readonly cloth: keyof Textures;
   readonly clothTint?: string;
+  /** The sleeves' cloth, where it differs from the body's (a stain that stops at the shoulders). */
   readonly sleeve?: keyof Textures;
   readonly legs: string;
+  /** A robe to the floor in place of legs. */
   readonly robe?: boolean;
+  /** Height, as a scale on the whole figure. */
   readonly scale?: number;
+  /** A white band at the collar (the judge's). */
   readonly bands?: boolean;
   readonly browColor?: string;
 }
 
 export interface Person {
   readonly root: Group;
+  /** At the hips: leans the body. */
   readonly body: Group;
+  /** At the neck: nods and turns the head. */
   readonly head: Group;
   readonly brows: readonly [Mesh, Mesh];
   readonly eyes: readonly [Mesh, Mesh];
   readonly mouth: Mesh;
+  /** At the shoulders: left (the figure's own) then right. */
   readonly arms: readonly [Group, Group];
+  /** What the right hand holds hangs here. */
   readonly grip: Group;
 }
 
+/** A face piece at (x, y) on the head's front, turned to sit flat on the ball. */
 const onFace = (head: Object3D, mesh: Mesh, x: number, y: number, lift = 0.006) => {
   const z = Math.sqrt(Math.max(R * R - x * x - y * y, 0)) + lift;
   mesh.position.set(x, R + y, z);
@@ -127,16 +140,23 @@ export const person = (w: World, tex: Textures, b: Build): Person => {
   };
 };
 
+/** A face and a stance, every value set each frame. */
 export interface Pose {
+  /** The head's nod (down +) and turn (to its left +), radians. */
   readonly nod: number;
   readonly turn: number;
+  /** The body's lean forward, radians. */
   readonly lean: number;
+  /** Brows: their inner ends raised (worry +, anger −) and the whole brow raised. */
   readonly worry: number;
   readonly raise: number;
+  /** Eyes open (1) to shut (0), and looking down (+). */
   readonly open: number;
   readonly down: number;
+  /** The mouth: wide and open, in head units. */
   readonly mouthW: number;
   readonly mouthH: number;
+  /** The arms' swing forward (+, up) at the shoulder, left then right, and their spread out. */
   readonly armL: number;
   readonly armR: number;
   readonly spread: number;

@@ -4,6 +4,7 @@ import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 import { deniedStorage, memoryStorage, refusingStorage } from './fixtures/storage.ts';
 import { keptJson, keptText, storeOver } from './storage.ts';
 
+/** A page over `storage`: its own store and registry, as each page load has. */
 const page = (storage: () => Storage) => {
   const kept = keptText(storeOver(storage), 'film-lab-mic');
   const registry = AtomRegistry.make();

@@ -43,6 +43,7 @@ const repeatsInLine = (
   return repeats;
 };
 
+/** Only a different harmony is a change; this oracle does not fold events. */
 const repeatedChanges = (
   scores: ReadonlyMap<number, Playback>,
   variants: ReadonlyMap<number, typeof PlacementData.Type>,

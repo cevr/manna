@@ -44,6 +44,7 @@ const film = testFilm(scenes, recorded);
 const placed = Result.getOrThrow(layout(scenes, recorded, 30));
 const NOW = { score: Option.none<string>(), inPlace: Option.none() };
 
+/** The same film in a folder on Windows. */
 const onWindows: LoadedFilm = {
   ...film,
   paths: {
@@ -54,6 +55,7 @@ const onWindows: LoadedFilm = {
   },
 };
 
+/** The static leg over `files`, its paths `paths`: what it needs is all it is given. */
 const run = (
   files: Map<string, Uint8Array>,
   of: LoadedFilm = film,
@@ -71,6 +73,7 @@ const run = (
   );
 };
 
+/** The master's findings: missing, or stale. */
 const isMaster = Predicate.or(Predicate.isTagged('AudioMissing'), Predicate.isTagged('AudioStale'));
 const masterTags = (found: ReadonlyArray<StaticFinding | ShortFinding>) =>
   found.filter(isMaster).map((f) => f._tag);
@@ -213,6 +216,7 @@ describe('a film that does not lay out', () => {
 describe('the cast leg', () => {
   const recordJson = Schema.encodeSync(CastSheetJson);
 
+  /** A library record of `member` whose one reference file is on disk unless `missing`. */
   const castIn = (files: Map<string, Uint8Array>, member: string, missing = false) => {
     const folder = `/library/cast/${member}/cast-sheet`;
     const record: CastSheetRecord = {
@@ -233,6 +237,7 @@ describe('the cast leg', () => {
     { id: 'dawn' },
   ];
 
+  /** The leg over `files`: the film `f` under `/films`, the library beside it. */
   const castFindings = (files: Map<string, Uint8Array>) =>
     castLeg('f', beats).pipe(
       Effect.provide(

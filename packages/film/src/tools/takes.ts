@@ -45,36 +45,57 @@ import {
   takeFile,
 } from './narrator.ts';
 
+/** The files a recording may be: what the owner's recorder saves. */
 const RECORDING_EXTENSIONS = ['.wav', '.m4a', '.mp3', '.aif', '.aiff', '.flac'] as const;
 
+/** The recordings that lose nothing: a take made from any other carries its codec's loss. */
 const LOSSLESS_EXTENSIONS = ['.wav', '.aif', '.aiff', '.flac'] as const;
 
+/** One recording of a beat, kept or not. */
 export const Attempt = Schema.Struct({
   beat: Schema.String,
+  /** The take's file name (a FLAC master), in `narration/attempts/<beat>/` and, once kept, `narration/`. */
   file: Schema.String,
+  /**
+   * The recording as it came, untouched, relative to `narration/attempts/`:
+   * `<beat>/<beat>.<hash>.orig.<ext>`; for one reading of the whole script,
+   * that reading (`whole/whole.<hash>.orig.<ext>`), with `cut` the seconds of
+   * it this beat was cut from.
+   */
   original: Schema.optionalKey(Schema.String),
   cut: Schema.optionalKey(Schema.Struct({ from: Schema.Finite, to: Schema.Finite })),
+  /** The take as the timings would hold it, `source: 'recorded'`. */
   take: VoiceTiming,
+  /** What the transcriber heard. */
   heard: Schema.String,
+  /** Word error against the script when it was recorded, 0 to 1. */
   wer: Schema.Finite,
+  /** When it was recorded, in epoch milliseconds. */
   at: Schema.Finite,
 });
 export type Attempt = typeof Attempt.Type;
 
+/** `narration/attempts/<beat>/attempts.json`: a beat's attempts, oldest first. */
 const Attempts = Schema.Struct({ attempts: Schema.Array(Attempt) });
 type Attempts = typeof Attempts.Type;
 const AttemptsJson = Schema.fromJsonString(Attempts, { space: 2 });
 
 export interface ImportOptions {
+  /** Import just these beats. One file with no beat's name imports as the one beat named here. */
   readonly only: Option.Option<ReadonlySet<string>>;
+  /** The beats that may keep a take whose transcript does not match its line (`--accept-mismatch`). */
   readonly acceptMismatch: ReadonlySet<string>;
+  /** The file is one recording of the whole script, to be cut into its beats. */
   readonly whole: boolean;
 }
 
+/** What keeping one beat's take allows. */
 interface BeatOptions {
+  /** Keep it even when its transcript does not match its line ("accept anyway"). */
   readonly acceptMismatch: boolean;
 }
 
+/** One beat's part of an import's options. */
 const forBeat = (options: ImportOptions, id: string): BeatOptions => ({
   acceptMismatch: options.acceptMismatch.has(id),
 });
@@ -91,26 +112,32 @@ type TakesError =
   | StoreError
   | PlatformError;
 
+/** Whether a file name is a recording's. */
 const isRecording = (name: string): boolean =>
   RECORDING_EXTENSIONS.some((ext) => name.toLowerCase().endsWith(ext));
 
+/** A recording's beat: its file name without the extension. */
 const beatNamed = (file: string): string => {
   const name = file.slice(file.lastIndexOf('/') + 1);
   return name.slice(0, Math.max(0, name.lastIndexOf('.')));
 };
 
+/** The beats with lines, by id. */
 const spokenBeats = (beats: ReadonlyArray<ReadBeat>) =>
   new Map(beats.filter((b) => b.text.length > 0).map((b) => [b.id, b]));
 
+/** The one beat named by `--only`, when it names exactly one. */
 const onlyOne = (only: Option.Option<ReadonlySet<string>>): Option.Option<string> =>
   Option.flatMap(
     Option.filter(only, (ids) => ids.size === 1),
     (ids) => Arr.head([...ids]),
   );
 
+/** Whether `--only` lets this beat through. */
 const allowed = (only: Option.Option<ReadonlySet<string>>, id: string): boolean =>
   Option.match(only, { onNone: () => true, onSome: (ids) => ids.has(id) });
 
+/** Put a person's take into the timings; every other take stays as it was. */
 const withRecorded =
   (film: VoicedFilm, id: string, take: VoiceTiming) =>
   (timings: Timings): Timings => {
@@ -119,12 +146,14 @@ const withRecorded =
     return { voice: timings.voice, scenes };
   };
 
+/** Where an attempt's audio came from: the file named in messages, its kept original, and the stretch cut from it. */
 interface Source {
   readonly file: string;
   readonly original: string;
   readonly cut: Option.Option<{ readonly from: number; readonly to: number }>;
 }
 
+/** A take that was kept. */
 interface Imported {
   readonly id: string;
   readonly take: VoiceTiming;
@@ -133,40 +162,57 @@ interface Imported {
 }
 
 interface TakesService {
+  /** Import the recordings at `path`: a folder of `<beat>.<ext>`, one file, or with `whole`, one reading of the script. */
   readonly importPath: (
     film: VoicedFilm,
     path: string,
     options: ImportOptions,
   ) => Effect.Effect<ReadonlyArray<Imported>, TakesError>;
+  /**
+   * One recording made an attempt at `beat`'s take, not kept: the lab keeps
+   * it through `keepVoice` (`choices.ts`), so the keep is undoable.
+   */
   readonly recordAttempt: (
     film: VoicedFilm,
     beat: string,
     file: string,
   ) => Effect.Effect<Attempt, TakesError>;
+  /** A beat's attempts, newest first. */
   readonly attempts: (
     film: FilmPaths,
     beat: string,
   ) => Effect.Effect<ReadonlyArray<Attempt>, StoreError>;
+  /** Where an attempt's audio is on disk, when `file` is one of the beat's attempts. */
   readonly attemptFile: (
     film: FilmPaths,
     beat: string,
     file: string,
   ) => Effect.Effect<Option.Option<string>, StoreError>;
+  /** Keep an earlier attempt as the beat's take. */
   readonly keepAttempt: (
     film: VoicedFilm,
     beat: string,
     file: string,
     options: BeatOptions,
   ) => Effect.Effect<Imported, TakesError>;
+  /**
+   * The takes the film's timings name, kept in step with a text of them by
+   * the SourceWriter's Undo: brought back into `narration/` from
+   * `narration/attempts/<beat>/`, and put away there. They make nothing (`remake`
+   * none): a keep that mixes the track says so itself (`keepVoice`).
+   */
   readonly named: (film: FilmPaths) => Follows;
 }
 
+/** Each take the timings name, by its beat. */
 const takesOf = (timings: Timings): ReadonlyArray<readonly [string, string]> =>
   Object.entries(timings.scenes).map(([beat, t]) => [beat, t.file] as const);
 
+/** Each take a timings text names, by its beat; nothing for a text that is not timings. */
 const takesIn = (text: string): ReadonlyArray<readonly [string, string]> =>
   Option.match(Schema.decodeOption(TimingsJson)(text), { onNone: () => [], onSome: takesOf });
 
+/** The takes `from` names that `to` does not, by their beat. */
 const onlyIn = (
   from: ReadonlyArray<readonly [string, string]>,
   to: ReadonlyArray<readonly [string, string]>,
@@ -205,6 +251,10 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
           ),
         );
 
+      /**
+       * The recording at `file` copied, untouched, into `narration/attempts/<dir>/`
+       * as `<stem>.<hash>.orig.<ext>`; its path relative to `attempts/`.
+       */
       const keepOriginal = Effect.fn('Takes.keepOriginal')(function* (
         film: VoicedFilm,
         dir: string,
@@ -220,6 +270,7 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
         return `${dir}/${name}`;
       });
 
+      /** A recording, already loaded, made into an attempt at `beat`'s take. */
       const attempt = Effect.fn('Takes.attempt')(function* (
         film: VoicedFilm,
         beat: ReadBeat,
@@ -267,8 +318,14 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
         return made;
       });
 
+      /** What putting a take away needs (`putAwayTake`). */
       const io = yield* Effect.context<FileSystem.FileSystem | Path.Path | ContentStore>();
 
+      /**
+       * Every take `before` named that `after` does not, put away into its
+       * beat's attempts unless the timings name it again by then (a lab's
+       * Undo in another process: `putAwayUnnamed`).
+       */
       const putAwayReplaced = (film: FilmPaths, before: Timings, after: Timings) =>
         Effect.forEach(
           onlyIn(takesOf(before), takesOf(after)),
@@ -276,6 +333,14 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
           { discard: true },
         );
 
+      /**
+       * Which copy put away in `beat`'s attempts is take `file`: of the
+       * attempt of its name and the copies kept aside under it (`isKeptAside`),
+       * the one whose audio hashes to what its name carries (`hashOfTake`).
+       * A name from before takes were named by their audio carries no hash:
+       * its copy when every copy holds the same bytes, and `TakeAmbiguous`
+       * when they differ, rather than a guess. None when no copy is there.
+       */
       const putAwayAs = (film: FilmPaths, beat: string, file: string) =>
         Effect.gen(function* () {
           const dir = attemptsDir(film, beat);
@@ -303,6 +368,7 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
           return Option.map(Arr.head(copies), (c) => path.join(dir, c.name));
         });
 
+      /** The take `file` of `beat` in `narration/`, copied back from where it was put away when it is not. */
       const bringTake = (film: FilmPaths, beat: string, file: string) =>
         Effect.gen(function* () {
           const take = path.join(film.narration, file);
@@ -339,6 +405,7 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
         remake: Option.none(),
       });
 
+      /** Make an attempt the beat's take: beside the others, named by the timings. */
       const keep = Effect.fn('Takes.keep')(function* (
         film: VoicedFilm,
         beat: ReadBeat,
@@ -374,6 +441,7 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
         } satisfies Imported;
       });
 
+      /** One recording made an attempt at `beat`'s take, its original kept beside it. */
       const attemptOne = (film: VoicedFilm, beat: ReadBeat, file: string) =>
         Effect.gen(function* () {
           const recording = yield* media.load(file, MIX_RATE);
@@ -392,6 +460,7 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
         return yield* attemptOne(film, yield* beatFor(film, id, file), file);
       });
 
+      /** The recordings in a folder, each with its beat, in film order. */
       const folder = Effect.fn('Takes.folder')(function* (
         film: VoicedFilm,
         dir: string,
@@ -428,6 +497,7 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
         return wanted;
       });
 
+      /** One file: the beat `--only` names, or the one it is named for. */
       const single = Effect.fn('Takes.single')(function* (
         film: VoicedFilm,
         file: string,
@@ -442,6 +512,12 @@ export class Takes extends Context.Service<Takes, TakesService>()('@manna/film/t
         return [{ beat: yield* beatFor(film, id, file), file }];
       });
 
+      /**
+       * One reading of the whole script, cut beat by beat at the quietest
+       * silence either side of each. Every beat is placed and cut, so `--only`
+       * picks its beats from a reading that is already cut, never from one
+       * placed against only some of the script.
+       */
       const whole = Effect.fn('Takes.whole')(function* (
         film: VoicedFilm,
         file: string,

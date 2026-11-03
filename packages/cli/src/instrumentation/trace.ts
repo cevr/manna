@@ -1,5 +1,6 @@
 import { Clock, Config, Effect, Exit, Inspectable, Option, Predicate } from 'effect';
 
+/** Flat key/value context attached to a trace entry. */
 type TraceMetadata = Readonly<Record<string, string | number | boolean>>;
 
 interface TraceEntry {

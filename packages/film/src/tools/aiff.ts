@@ -1,16 +1,20 @@
 import { Array as Arr, Match, Option, Result } from 'effect';
 import type { Pcm } from '../core/audio.ts';
 
+/** Four bytes at `at` as text: a chunk's id, or a form's kind. */
 const fourcc = (bytes: Uint8Array, at: number) =>
   String.fromCharCode(...bytes.subarray(at, at + 4));
 
+/** Whether `bytes` open as an AIFF or AIFF-C file. */
 export const isAiff = (bytes: Uint8Array): boolean =>
   bytes.length >= 12 &&
   fourcc(bytes, 0) === 'FORM' &&
   (fourcc(bytes, 8) === 'AIFF' || fourcc(bytes, 8) === 'AIFC');
 
+/** How the samples lie: integers big- or little-endian, or big-endian floats. */
 type Encoding = 'int-be' | 'int-le' | 'float';
 
+/** An AIFF-C compression type that is plain PCM, and the depth it fixes, if any. */
 interface Layout {
   readonly encoding: Encoding;
   readonly bits: Option.Option<number>;
@@ -26,12 +30,14 @@ const LAYOUTS = new Map<string, Layout>([
   ['FL64', { encoding: 'float', bits: Option.some(64) }],
 ]);
 
+/** One chunk: its id, where its body starts, and its size. */
 interface Chunk {
   readonly id: string;
   readonly body: number;
   readonly size: number;
 }
 
+/** The form's chunks in order; each is padded to an even length. */
 const chunksOf = (bytes: Uint8Array, view: DataView): ReadonlyArray<Chunk> => {
   const chunks: Array<Chunk> = [];
   for (let at = 12; at + 8 <= bytes.length;) {
@@ -42,12 +48,14 @@ const chunksOf = (bytes: Uint8Array, view: DataView): ReadonlyArray<Chunk> => {
   return chunks;
 };
 
+/** An 80-bit IEEE 754 extended float (big-endian), as AIFF stores its rate. */
 const extended = (view: DataView, at: number): number => {
   const exponent = view.getUint16(at) & 0x7fff;
   const mantissa = view.getUint32(at + 2) * 2 ** 32 + view.getUint32(at + 6);
   return mantissa * 2 ** (exponent - 16383 - 63);
 };
 
+/** What the COMM chunk says of the sound. */
 interface Common {
   readonly channels: number;
   readonly frames: number;
@@ -56,9 +64,11 @@ interface Common {
   readonly encoding: Encoding;
 }
 
+/** Whether a COMM chunk describes a sound at all. */
 const isSound = (common: Common) =>
   common.channels > 0 && common.bits > 0 && common.bits <= 64 && common.rate > 0;
 
+/** The COMM chunk read: an AIFF-C names its compression after the rate. */
 const commonOf = (view: DataView, chunk: Chunk, type: string): Result.Result<Common, string> =>
   Result.flatMap(
     Result.fromOption(
@@ -83,6 +93,7 @@ const commonOf = (view: DataView, chunk: Chunk, type: string): Result.Result<Com
 
 type Read = (view: DataView, at: number) => number;
 
+/** One sample at `at` as a float: integers left-justified in whole bytes, so a 12-bit one fills 16. */
 const reader = (common: Common): Read =>
   Match.value({ encoding: common.encoding, width: Math.ceil(common.bits / 8) }).pipe(
     Match.when({ encoding: 'float', width: 8 }, (): Read => (v, at) => v.getFloat64(at)),
@@ -111,6 +122,7 @@ const reader = (common: Common): Read =>
     ),
   );
 
+/** The SSND chunk's samples (after its offset): as many whole frames as it holds. */
 const samplesOf = (bytes: Uint8Array, view: DataView, common: Common, sound: Chunk): Pcm => {
   const width = Math.ceil(common.bits / 8);
   const start = sound.body + 8 + view.getUint32(sound.body);
@@ -124,6 +136,7 @@ const samplesOf = (bytes: Uint8Array, view: DataView, common: Common, sound: Chu
   return { rate: common.rate, frames, channels };
 };
 
+/** `bytes`, an AIFF or an AIFF-C of plain PCM, as planar samples at its own rate. */
 export const readAiff = (bytes: Uint8Array): Result.Result<Pcm, string> => {
   if (!isAiff(bytes)) return Result.fail('not an AIFF file');
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);

@@ -6,6 +6,7 @@ import { resolveShort } from '../core/shorts.ts';
 import { sceneReport, shortReport } from './cues.ts';
 
 const draw = () => {};
+/** The two beats laid at `fps`. */
 const placedAt = (fps: number) =>
   Result.getOrThrow(
     layout(

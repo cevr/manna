@@ -24,10 +24,13 @@ import { FIGURE_STAINS } from '../../court.ts';
 import { HOLY_PLACE, IN_SANCTUARY, ministry, priestAt, sanctuary } from '../../heaven.ts';
 
 const SCALE = 1.9;
+/** Where Jesus stops beside the figure, and the hilltop where the cross stands. */
 const BESIDE = 830;
 const TOP = 1450;
+/** How far the sun sinks, from its knob to behind the hilltop. */
 const SUN_FALL = 270;
 
+/** The hill's ridge: its height at x. */
 const ridge = (x: number) => 960 - 500 * Math.exp(-(((x - TOP) / 330) ** 2));
 const HILL: Pt[] = [
   ...Array.from({ length: 36 }, (_, i): Pt => {
@@ -38,17 +41,22 @@ const HILL: Pt[] = [
   [780, 1120],
 ];
 
+/** Where the sanctuary's floor stands in heaven, and its scale. */
 const SANCTUARY: Pt = [960, -280];
 const SS = 0.8;
 const inHeaven = ([x, y]: Pt): Pt => [SANCTUARY[0] + x * SS, SANCTUARY[1] + y * SS];
 
+/** The ark framing this frame: rewritten each frame, never made per frame. */
 const AT_ARK: Camera = { x: 960, y: 540, zoom: 1 };
 
+/** The ground under the hill and the garden. */
 const GROUND = rectShape(-200, 950, 2400, 300);
+/** The cross in silhouette on the hilltop: where he is nailed, the upright and the beam. */
 const NAILED = ridge(TOP) - 50;
 const UPRIGHT = rectShape(TOP - 13, ridge(TOP) - 300, 26, 310);
 const BEAM = rectShape(TOP - 150, NAILED - 118 * 1.2 - 24, 300, 24);
 const BLACK: Person = { body: C.night, shade: C.night, skin: C.night };
+/** His hands out along the beam, there as the silhouette comes up (their reach written each frame). */
 const NAILED_FAR: GestureAt = { to: [-95, -120], reach: 0 };
 const NAILED_NEAR: GestureAt = { to: [95, -120], reach: 0 };
 const CRUCIFIED: Person = {
@@ -59,11 +67,19 @@ const CRUCIFIED: Person = {
   far: NAILED_FAR,
   near: NAILED_NEAR,
 };
+/**
+ * The cloth passing between them: the figure's near hand takes it off their
+ * chest and lets it go as it lifts; his far hand takes it and holds it on his
+ * shoulders up the hill. Their targets follow the cloth (written each frame).
+ */
 const GIVING: GestureAt = { to: [0, 0], reach: 0, grip: 'hold' };
 const TAKING: GestureAt = { to: [0, 0], reach: 0, grip: 'hold' };
+/** The cloth's half width as it lifts: a patch off the chest, drawn out across his shoulders. */
 const clothWidth = (lift: number) => lerp(70, 120, lift);
+/** Where his hand holds it: this share of the half width toward the figure, past his own body. */
 const CLOTH_END = 0.45;
 const WATCHING: Person = { ...BLACK, tilt: -0.14, look: [3, -4] };
+/** The stone rolled back from the tomb, and its core. */
 const STONE = ellipseShape(0, 0, 130, 130);
 const STONE_CORE = ellipseShape(0, 0, 60, 60);
 
@@ -118,6 +134,7 @@ export const exchange = drawing({
   },
 });
 
+/** A–B: the hill at sunset, until dawn has fully come. */
 const hill = (f: ExchangeFrame) => {
   const { ctx, w, h, t } = f;
   const { hand } = f;
@@ -223,6 +240,7 @@ const hill = (f: ExchangeFrame) => {
   );
 };
 
+/** C: the one black moment. */
 const blackMoment = (f: ExchangeFrame) => {
   const { ctx, w, h } = f;
   const { hand } = f;
@@ -278,6 +296,7 @@ const blackMoment = (f: ExchangeFrame) => {
   ctx.restore();
 };
 
+/** The garden tomb, open, the stone rolled back, and the clouds above it. */
 const tomb = (ctx: CanvasRenderingContext2D, hand: Hands) => {
   glow(ctx, 380, 900, 600, C.glow, 0.9);
   piece(ctx, blob(1220, 900, 1250, 980, 7), C.boardLight, hand('rock'), {
@@ -337,6 +356,7 @@ const CLOUDS = [
   [1550, -180, 3],
 ] as const;
 
+/** The dawn sky, going to teal day as he ascends. */
 const dawnSky = (ctx: CanvasRenderingContext2D, w: number, h: number, ascend: number) => {
   sky(ctx, w, h, [
     [0, C.dawnTop],
@@ -354,6 +374,11 @@ const dawnSky = (ctx: CanvasRenderingContext2D, w: number, h: number, ascend: nu
   ctx.restore();
 };
 
+/**
+ * D–E: dawn at the tomb, then up into heaven with him, to the holy place:
+ * the veil shut, and once he has arrived the breastplate comes on and his
+ * hands lift at the altar of incense. Held until the cut.
+ */
 const heaven = (f: ExchangeFrame, dawn: number) => {
   const { ctx, w, h } = f;
   const { hand } = f;
@@ -394,6 +419,7 @@ const heaven = (f: ExchangeFrame, dawn: number) => {
   ctx.restore();
 };
 
+/** After the cut ("right now"): close in the most holy place, Christ pleading before the ark. */
 const mostHoly = (f: ExchangeFrame) => {
   const { ctx, w, h } = f;
   const { hand } = f;

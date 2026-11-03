@@ -7,8 +7,13 @@ type ToastInternalUpdateOptions<Data extends object> = Partial<
   Omit<ToastObject<Data>, 'id' | 'updateKey'>
 >;
 
+/** How long (in ms) a toast without its own `timeout` shows. */
 const DEFAULT_TIMEOUT = 5000;
 
+/**
+ * A toast once it lives in the store. `addToast` is the only way in and it always
+ * assigns `updateKey`, so unlike the public `ToastObject` it is never missing.
+ */
 type StoredToast<Data extends object = object> = ToastObject<Data> & { updateKey: number };
 
 export type State = {
@@ -75,8 +80,11 @@ export const selectors = {
 
 interface TimerInfo {
   timeout?: Timeout | undefined;
+  /** Timestamp of the last time the timeout started running. */
   start: number;
+  /** Full timeout duration, used to restart a timer that elapsed while throttled. */
   delay: number;
+  /** Time left before the toast auto-dismisses, excluding any paused time. */
   remaining: number;
   callback: () => void;
 }
@@ -94,6 +102,7 @@ export class ToastStore {
     this.state = { ...initialState, toastMetadata: createToastMetadata(initialState.toasts) };
   }
 
+  /** Calls `listener` after every state change; returns the unsubscribe. */
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => {
@@ -128,6 +137,7 @@ export class ToastStore {
     this.set('viewport', viewport);
   };
 
+  /** Sets the limit, and with it each toast's `limited` flag. */
   setLimit(limit: number) {
     if (this.state.limit === limit) {
       return;
@@ -136,6 +146,7 @@ export class ToastStore {
     this.update({ limit, toasts: newToasts, toastMetadata: createToastMetadata(newToasts) });
   }
 
+  /** Clears every pending timer (the provider unmounted). */
   dispose = () => {
     this.timers.forEach((timer) => {
       timer.timeout?.clear();
@@ -199,6 +210,13 @@ export class ToastStore {
     return id;
   };
 
+  /**
+   * Merges `updates` into a toast. An upsert (`addToast` under an existing id)
+   * also bumps its `updateKey` and restarts its auto-dismiss timer from the
+   * full timeout, or clears the timer when the toast no longer has one; the
+   * root's settling write (its element, the end of `starting`) is not an upsert
+   * and leaves the timer alone.
+   */
   updateToastInternal = <Data extends object>(
     id: string,
     updates: ToastInternalUpdateOptions<Data>,

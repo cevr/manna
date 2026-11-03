@@ -23,6 +23,7 @@ import {
 import { WritingsAssetRecipe } from './source.js';
 import { BibleArtifact, WebsterArtifact } from './file-artifact.js';
 
+/** A whole archive as a publication streamed in one chapter. */
 const publicationStream = (archive: PublicationArchive) => ({
   publication: archive.publication,
   chapters: Stream.make(
@@ -233,6 +234,8 @@ describe('CorpusSupply', () => {
     }).pipe(Effect.provide(makeLayer({ needsSync: true, includeBible: false }))),
   );
 
+  /** A wired recipe whose every source refuses to acquire — an offline host, or
+   *  one whose only source is a release with no published artifact yet. */
   const offline = (current: Option.Option<CorpusProvenance>) => {
     const recipe = BibleArtifact.layerRecipe({
       sources: [

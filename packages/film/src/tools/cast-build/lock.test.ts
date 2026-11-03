@@ -9,7 +9,9 @@ import { CastReader } from './reader.ts';
 import { TRAIN, evalStage, trainStage } from './stages.ts';
 
 const LOCK = '/library/reader.lock.json';
+/** The reader's train files, out of basename order: the key sorts them by basename. */
 const TRAIN_FILES = ['/reader/train.py', '/reader/model.py'];
+/** `front` is trained on; `side` is a candidate the set leaves out. */
 const CANDIDATES = ['front', 'side'].map((v) => ({
   drawing: `m/${v}`,
   renders: `renders:${v}@m`,
@@ -24,6 +26,7 @@ const EVAL = {
   },
   unseen: { n: 40, angle_deg: { median: 12.3, p90: 63 }, joint_px: { median: 17, p90: 62.7 } },
 };
+/** `modal run`'s stdout: the fit's JSON, then the app's URL last. */
 const STDOUT = [
   '✓ Initialized.',
   '{"steps": 4800, "first_loss": 0.9, "last_loss": 0.00862, "sec_per_step": 0.5236, "classes": 40}',
@@ -33,6 +36,7 @@ const STDOUT = [
 const decoder = new TextDecoder();
 const read = (disk: Map<string, Uint8Array>, file: string) => decoder.decode(disk.get(file));
 
+/** Each view's renders (a shard file's bytes), the set (front only), the train, each eval, the clip's chain (read off disk) and the lock. */
 const graph: ReadonlyArray<Stage<CastReader | FileSystem.FileSystem>> = [
   ...CANDIDATES.map((c): Stage<never> => ({
     id: c.renders,
@@ -67,6 +71,7 @@ const lock = lockStage({
   clips: CLIPS,
 });
 
+/** An eval:clip stage's output: the clip's lock entry, its end band at `iou`, failing for each of `fails`. */
 const entryOf = (clip: string, iou: number, fails: ReadonlyArray<string> = []) => ({
   member: 'm',
   clip,
@@ -84,6 +89,7 @@ const entryOf = (clip: string, iou: number, fails: ReadonlyArray<string> = []) =
 const chain = (iou: number, clip = 'clip-b', fails: ReadonlyArray<string> = []) =>
   text(jsonOf(entryOf(clip, iou, fails)));
 
+/** A disk that records every path written to it. */
 class Disk extends Map<string, Uint8Array> {
   readonly written: Array<string> = [];
   override set(key: string, value: Uint8Array) {
@@ -102,6 +108,7 @@ const files = () =>
     ['/reader/train.py', text('train')],
   ]);
 
+/** `graph` with the trained drawing's eval failing. */
 const frontEvalFails = graph.map((stage): Stage<CastReader | FileSystem.FileSystem> => {
   if (stage.id !== 'eval:front@m') return stage;
   return {
@@ -110,6 +117,7 @@ const frontEvalFails = graph.map((stage): Stage<CastReader | FileSystem.FileSyst
   };
 });
 
+/** `evaluate` is eval.py's JSON text, the same for every drawing. */
 const build = (
   disk: Disk,
   stdout = STDOUT,

@@ -5,6 +5,7 @@ import { openTab, respond, servePaths } from '../../../src/lab/fixtures/browsers
 import { untokened } from '../../../src/lab/fixtures/drawn-tokens.ts';
 import { evaluates } from '../../../src/lab/fixtures/settled.ts';
 
+/** What the check answers on a page under the tokens whose body is `body`. */
 const drawn = (body: string, want: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const tokens = yield* FileSystem.FileSystem.use((fs) =>

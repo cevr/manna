@@ -1,3 +1,17 @@
+/** The resumable embed loop: crash, resume, and byte-identical completion.
+ *
+ *  The stub embedder is deterministic (each text embeds to a vector derived
+ *  from its own characters), so "the resumed run produced the same index as a
+ *  single uninterrupted pass" is checkable byte for byte — which is the whole
+ *  claim resumability makes.
+ *
+ *  One embedder layer serves every test, provided once at each test's
+ *  boundary; what varies mid-test is its *budget*, a mutable cell the tests
+ *  refill. A fresh layer per call would need `Effect.provide` inside the test
+ *  body, which is exactly the provisioning-at-the-boundary rule this repo
+ *  lints for.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { DIMENSIONS, QueryEmbedder, QueryEmbedderUnavailable } from '@manna/core/search';
 import { BunServices } from '@effect/platform-bun';
@@ -18,6 +32,7 @@ const ROWS: readonly VectorSourceRow[] = Array.from({ length: 1200 }, (_, index)
   row('GC', `GC ${String(index + 1)}.1`, `paragraph number ${String(index)}`, `${String(index)}.1`),
 );
 
+/** Deterministic per-text vector: byte i is a function of the text and i. */
 const vectorFor = (text: string): Int8Array => {
   const out = new Int8Array(DIMENSIONS);
   let seed = 0;
@@ -26,6 +41,9 @@ const vectorFor = (text: string): Int8Array => {
   return out;
 };
 
+/** Embeds remaining before the stub starts failing; None means unlimited.
+ *  A module-level cell rather than a per-layer parameter so one layer serves
+ *  every test — see the header. Tests run sequentially and each sets it. */
 const budget = { remaining: Option.none<number>() };
 
 const spend = (): Effect.Effect<void, QueryEmbedderUnavailable> =>

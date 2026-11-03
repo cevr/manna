@@ -57,6 +57,7 @@ import { Media } from './media.ts';
 import { PrivateStore, type StoreUnavailable } from './private-store.ts';
 import type { StoreFailed } from './errors.ts';
 
+/** How an original is imported: its name, whether it is a take, and a clip's terms. */
 interface FootageImport {
   readonly name: string;
   readonly kind: FootageKind;
@@ -66,12 +67,14 @@ interface FootageImport {
   readonly tags: ReadonlyArray<string>;
 }
 
+/** What an import did: the name the bytes have, and whether they were new. */
 interface FootageImported {
   readonly name: string;
   readonly entry: FootageEntry;
   readonly fresh: boolean;
 }
 
+/** Where one name's files are: its original, and what `make` derives from it. */
 interface FootageFiles {
   readonly original: string;
   readonly dir: string;
@@ -81,18 +84,21 @@ interface FootageFiles {
   readonly stamp: string;
 }
 
+/** What a `make` did for a name: each part made afresh, or found current. */
 interface FootageMade {
   readonly name: string;
   readonly made: ReadonlyArray<'mezzanine' | 'proxy' | 'voice' | 'transcript'>;
   readonly transcript: Option.Option<string>;
 }
 
+/** What a `push` or `pull` did with one original. */
 interface FootageSynced {
   readonly name: string;
   readonly key: string;
   readonly did: 'sent' | 'had' | 'pulled' | 'absent';
 }
 
+/** Why an import fails. */
 type FootageImportError =
   | FootageNameInvalid
   | FootageExtInvalid
@@ -103,6 +109,7 @@ type FootageImportError =
   | StoreError
   | PlatformError;
 
+/** Why a make fails. */
 type FootageMakeError =
   | FootageUnknown
   | FootageOriginalMissing
@@ -113,6 +120,7 @@ type FootageMakeError =
   | PlatformError
   | Schema.SchemaError;
 
+/** Why a push or pull fails. */
 type FootageSyncError =
   | StoreUnavailable
   | StoreFailed
@@ -122,24 +130,34 @@ type FootageSyncError =
   | PlatformError;
 
 interface FootageLibraryService {
+  /** The library's folder. */
   readonly dir: string;
+  /** The lock as it stands. */
   readonly lock: Effect.Effect<FootageLock, StoreError>;
+  /** One name's entry, or why there is none. */
   readonly entry: (name: string) => Effect.Effect<FootageEntry, FootageUnknown | StoreError>;
+  /** Where one name's files are. */
   readonly files: (name: string, entry: FootageEntry) => Effect.Effect<FootageFiles>;
+  /** The original at `file` kept under `options.name` (above). */
   readonly importFile: (
     file: string,
     options: FootageImport,
   ) => Effect.Effect<FootageImported, FootageImportError>;
+  /** `name`'s copies and voice made where stale, and a take heard if it has no transcript (or `hearAgain`). */
   readonly make: (
     name: string,
     options: { readonly hearAgain: boolean },
   ) => Effect.Effect<FootageMade, FootageMakeError>;
+  /** Every original on this machine sent to the private store, unless it holds them. */
   readonly push: Effect.Effect<ReadonlyArray<FootageSynced>, FootageSyncError>;
+  /** Every original the lock names brought from the private store, unless it is here. */
   readonly pull: Effect.Effect<ReadonlyArray<FootageSynced>, FootageSyncError>;
 }
 
+/** A sound's codec that keeps every sample: anything else has already lost what it drops. */
 const LOSSLESS = /^(pcm-|flac$|alac$)/;
 
+/** `entry`'s terms, as the import gave them: only those given are kept. */
 const termsOf = (options: FootageImport) => ({
   ...Option.match(options.licence, { onNone: () => ({}), onSome: (licence) => ({ licence }) }),
   ...Option.match(options.credit, { onNone: () => ({}), onSome: (credit) => ({ credit }) }),
@@ -153,6 +171,7 @@ const termsOf = (options: FootageImport) => ({
   ),
 });
 
+/** The name the lock gives bytes of `sha256`, if it gives them one. */
 const nameOf = (lock: FootageLock, sha256: string): Option.Option<string> =>
   Option.map(
     Option.fromUndefinedOr(
@@ -164,6 +183,7 @@ const nameOf = (lock: FootageLock, sha256: string): Option.Option<string> =>
 export class FootageLibrary extends Context.Service<FootageLibrary, FootageLibraryService>()(
   '@manna/film/tools/FootageLibrary',
 ) {
+  /** The library in `dir`. */
   static readonly layer = (dir: string) =>
     Layer.effect(
       FootageLibrary,
@@ -255,6 +275,7 @@ export class FootageLibrary extends Context.Service<FootageLibrary, FootageLibra
           return { name: options.name, entry: made, fresh: true };
         });
 
+        /** The stamp of what was made for a name: nothing, before anything was. */
         const stampOf = (file: string) =>
           Effect.gen(function* () {
             if (!(yield* fs.exists(file))) return {};
@@ -266,6 +287,7 @@ export class FootageLibrary extends Context.Service<FootageLibrary, FootageLibra
             store.writeFile(file, new TextEncoder().encode(text)),
           );
 
+        /** The first hearing number with no transcript file yet. */
         const nextHearing = (name: string, sha256: string) =>
           Effect.gen(function* () {
             let hearing = 1;
@@ -404,6 +426,7 @@ export class FootageLibrary extends Context.Service<FootageLibrary, FootageLibra
     );
 }
 
+/** A line of `footage list`: a name, what it is, how long, its picture and its transcript. */
 export const footageLine = (name: string, of: FootageEntry): string => {
   const { picture } = of.probe;
   const heard = Option.match(Option.fromUndefinedOr(of.transcript), {
@@ -420,6 +443,7 @@ export const footageLine = (name: string, of: FootageEntry): string => {
   ].join('  ');
 };
 
+/** A sync's lines, one an original: what was done, and its key. */
 export const printSynced = (synced: ReadonlyArray<FootageSynced>) =>
   Effect.forEach(synced, (one) => Console.log(`${one.did.padEnd(7)} ${one.key}`), {
     discard: true,

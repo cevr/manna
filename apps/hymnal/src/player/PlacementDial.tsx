@@ -13,6 +13,7 @@ import { DialView, MOST_SCALE } from './DialView';
 
 const marks = placements.map((choice) => choice.mark);
 
+/** One hymn's anchors; an explicit clear resumes the global choice. No player subscription. */
 export const PlacementDial = memo(function PlacementDial({ number }: { readonly number: number }) {
   const reader = use(ChordReaderContext);
   const global = useAtomValue(reader.placement);

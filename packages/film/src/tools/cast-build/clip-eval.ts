@@ -9,12 +9,16 @@ import { type ClipMap, type FigureMask, canvasOf, figureNumbersOf } from './clip
 import { ClipProvenance } from './clips.ts';
 import type { Clip } from './coverage.ts';
 
+/** The reader's canvas, width and height in px: `reader/model.py`'s `CANVAS`. */
 export const CANVAS: readonly [number, number] = [533, 678];
 
+/** Bumped when a clip's canvases or figure numbers come out otherwise from the same mp4 and map: a clip read's cache key holds it. */
 export const MAPPING = '1';
 
+/** The filter a decoded frame is turned to RGB by: OpenCV's decode, value for value. */
 const TO_RGB = 'scale=flags=neighbor+accurate_rnd,format=rgb24';
 
+/** A clip's figure numbers as JSON, as a clip read's cache keeps them. */
 export const ClipFigureJson = Schema.fromJsonString(
   Schema.Struct({
     heightRatio: Schema.Array(Schema.Finite),
@@ -26,14 +30,17 @@ export const ClipFigureJson = Schema.fromJsonString(
 
 const ProvenanceJson = Schema.fromJsonString(ClipProvenance);
 
+/** A clip's provenance read from its JSON text. */
 export const provenanceIn = (text: string) => Schema.decodeEffect(ProvenanceJson)(text);
 
+/** The provenance beside `mp4`: `<stem>.json`. */
 export const provenanceOf = (mp4: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     return yield* provenanceIn(yield* fs.readFileString(`${mp4.replace(/\.mp4$/, '')}.json`));
   });
 
+/** A clip's declared bands, each with the drawings it accepts (`<member>/<entry>`), none where the clip names none. */
 export const declaredBands = (member: string, clip: Pick<Clip, 'bands' | 'expect'>) =>
   clip.bands.map(([from, to], i) => ({
     from,
@@ -41,6 +48,7 @@ export const declaredBands = (member: string, clip: Pick<Clip, 'bands' | 'expect
     expect: (clip.expect[i] ?? []).map((entry) => `${member}/${entry}`),
   }));
 
+/** A frame's RGB rows, each `stride` bytes of which the first `width` × 3 are its pixels, as an opaque raster. */
 export const rasterOfRgb24 = (
   rgb: Uint8Array,
   width: number,
@@ -62,6 +70,7 @@ const loadMediabunny = () => import('mediabunny');
 const loadMediabunnyServer = () => import('@mediabunny/server');
 const loadNodeAv = () => import('node-av');
 
+/** The media stack, loaded when a clip is first decoded. */
 const mediaStack = Effect.all(
   [
     Effect.promise(loadMediabunny),
@@ -71,6 +80,7 @@ const mediaStack = Effect.all(
   { concurrency: 'unbounded' },
 );
 
+/** Each frame of `file`, in order, as OpenCV decodes it. */
 export const clipFrames = (file: string): Stream.Stream<Raster, MediaFailed, Media> =>
   Stream.unwrap(
     Effect.gen(function* () {
@@ -100,6 +110,7 @@ export const clipFrames = (file: string): Stream.Stream<Raster, MediaFailed, Med
         Effect.sync(() => av.FilterAPI.create(TO_RGB)),
         (made) => Effect.sync(() => made.close()),
       );
+      /** `sample` as RGB, every frame NodeAV allotted for it freed. */
       const rasterOf = (sample: VideoSample) =>
         Effect.scoped(
           Effect.gen(function* () {
@@ -136,6 +147,11 @@ export const clipFrames = (file: string): Stream.Stream<Raster, MediaFailed, Med
     }),
   );
 
+/**
+ * `frames` laid on a `size` canvas at `map`, each written to
+ * `<dir>/f%03d.png` in order as it comes; the figure numbers of the
+ * canvases written.
+ */
 export const writeCanvases = <E, R>(
   frames: Stream.Stream<Raster, E, R>,
   map: ClipMap,

@@ -19,27 +19,40 @@ import type { FloatingRootContext } from '../floating-ui-solid/FloatingRootConte
 import { arrow, hide } from '../floating-ui-solid/middleware.ts';
 import { ownerDocument, ownerWindow } from '../utils/dom.ts';
 
+/** The side the popup renders on: under its anchor, or over it after a flip. */
 export type Side = 'top' | 'bottom';
 export type Align = 'start' | 'center' | 'end';
 
+/** The space kept between the popup and the edges it must stay inside. */
 const COLLISION_PADDING = 5;
 
+/** The positioner's CSS variables (upstream's `MenuPositionerCssVars`). */
 const PositionerCssVars = {
+  /** The available width between the anchor and the edge of the boundary. */
   availableWidth: '--available-width',
+  /** The available height between the anchor and the edge of the boundary. */
   availableHeight: '--available-height',
+  /** The anchor's width. */
   anchorWidth: '--anchor-width',
+  /** The anchor's height. */
   anchorHeight: '--anchor-height',
+  /** The coordinates the popup is anchored to, for its animations and transitions. */
   transformOrigin: '--transform-origin',
 } as const;
 
 interface UseAnchorPositioningParameters {
   floatingRootContext: FloatingRootContext;
   mounted: boolean;
+  /** What the popup is positioned against in place of the trigger. */
   anchor: VirtualElement | undefined;
   positionMethod: 'absolute' | 'fixed';
   sideOffset: number;
   align: Align;
   alignOffset: number;
+  /**
+   * Whether a shift may move the popup over its anchor, within the viewport,
+   * rather than flipping it (a context menu kept on screen at the pointer).
+   */
   shiftCrossAxis: boolean;
 }
 

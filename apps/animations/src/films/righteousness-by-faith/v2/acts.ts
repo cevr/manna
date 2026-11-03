@@ -1,8 +1,14 @@
 import type { Look } from '@manna/film/core';
 import { GROUND, type Ground } from '../palette.ts';
 
+/**
+ * An act's target at the film's ground level (`GROUND` in palette.ts). Each
+ * level's bands are its lookbook measure, moved from `now` by what each act
+ * rose, so the gaps between the acts hold at every level.
+ */
 const range = (by: Readonly<Record<Ground, readonly [number, number]>>) => by[GROUND];
 
+/** The film's shape and colour script: its acts, in film order. */
 export const look = {
   acts: [
     {
@@ -50,4 +56,5 @@ export const look = {
   ],
 } as const satisfies typeof Look.Encoded;
 
+/** One of the film's acts, by name. */
 export type ActName = (typeof look.acts)[number]['name'];

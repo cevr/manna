@@ -1,3 +1,33 @@
+/**
+ * Acceptance (chordmode A4): the Settings route's `Chords` switch, mounted
+ * in a browser's document (`src/test/setup.ts`) over a fresh registry, as a
+ * reader opens it from the home screen's gear. A render to HTML would not
+ * do: the server render reads each setting's server value (its default), so
+ * chords would never read on.
+ *
+ * - d1 Chords off (at first): the `Chords` heading and one `Chords` switch
+ *   reading off; Appearance, Sounds and haptics, the downloads and About
+ *   with its credits show; no `Chord style`, no `Chord placement`, no
+ *   `Tuner`, even on a device with the ear.
+ * - d2 Chords on: the switch reads on; `Chord style` (`Simple` checked) and
+ *   `Chord placement` show; the `Tuner` row shows only where the device has
+ *   the ear, so it follows chords and the ear together.
+ * - d3 Order: Appearance, the `Chords` heading, the switch, then (on) the
+ *   chord style and placement, then Sounds and haptics, the downloads and
+ *   About.
+ * - d4 A tap on the switch turns chords on and the chord rows come in; a
+ *   second tap turns them off and they go.
+ * - d5 Those two taps are felt as the bar's are (`chordsCue`): `chords-on`,
+ *   then `chords-off`, told through the route's cue context.
+ *
+ * The web has no ear (`~/tuner/native`'s `available` is false), so a case
+ * that asks for one gives the route `available: true` through `mock.module`
+ * while its page is mounted, and gives the module back as the page goes,
+ * within the one synchronous case: no other file in the worker sees it.
+ *
+ * Final path: `apps/hymnal/src/home/settings.chordmode.test.tsx`.
+ */
+
 import { describe, expect, it, mock } from 'bun:test';
 import { RegistryContext } from '@effect/atom-react';
 import { Option } from 'effect';
@@ -10,11 +40,13 @@ import { type Cue, CueProvider, type Tell } from '~/feel/cue';
 import { settings } from '~/store';
 import * as native from '~/tuner/native';
 
+/** What the device holds: chords on or off, and whether it has the tuner's ear. */
 interface Device {
   readonly chords: boolean;
   readonly ear: boolean;
 }
 
+/** `~/tuner/native` telling the ear `ear` until the result is disposed, then the module as it was. */
 const earOf = (ear: boolean) => {
   const real = { ...native };
   // oxlint-disable-next-line effect/noModuleMocks -- the ear is the device's own boundary, a module constant the route reads; the stand-in lives while one page is mounted in one synchronous case, and the module is given back before any other file in the worker runs.
@@ -27,6 +59,11 @@ const earOf = (ear: boolean) => {
   };
 };
 
+/**
+ * The route mounted on `device` over a fresh registry, telling each cue it
+ * gives to `tell` (by default, nothing). Chords are set on when the device
+ * has them on; off is the default, never set.
+ */
 const mount = (device: Device, tell: Tell = () => {}) => {
   const ear = earOf(device.ear);
   const registry = AtomRegistry.make();
@@ -49,6 +86,7 @@ const mount = (device: Device, tell: Tell = () => {}) => {
   const labelOf = (element: Element) => element.getAttribute('aria-label');
   const SWITCH = 'input[role="switch"][aria-label="Chords"]';
   return {
+    /** The page's parts as a reader finds them. */
     reading: () => ({
       headings: all('[role="heading"]')
         .map((heading) => heading.textContent)
@@ -71,6 +109,10 @@ const mount = (device: Device, tell: Tell = () => {}) => {
       ),
       credits: Option.isSome(the('[data-testid="gemma-terms"]')),
     }),
+    /**
+     * The names of `marks` out of order in the page: one not there, or one
+     * whose first element stands at or before a mark listed ahead of it.
+     */
     outOfOrder: (marks: ReadonlyArray<{ readonly name: string; readonly at: string }>) => {
       const everything = all('*');
       return marks
@@ -91,7 +133,9 @@ const mount = (device: Device, tell: Tell = () => {}) => {
         )
         .map(({ name }) => name);
     },
+    /** The chords as the app holds them. */
     chords: () => registry.get(settings.chords),
+    /** A tap on the switch, as a reader's finger flips it; nothing when it is not there. */
     tap: () => Option.map(the(SWITCH), (input) => act(() => (input as HTMLInputElement).click())),
     [Symbol.dispose]: () => {
       act(() => root.unmount());
@@ -103,6 +147,7 @@ const mount = (device: Device, tell: Tell = () => {}) => {
   };
 };
 
+/** The page's parts on `device`, read once mounted. */
 const readOn = (device: Device) => {
   using page = mount(device);
   return page.reading();

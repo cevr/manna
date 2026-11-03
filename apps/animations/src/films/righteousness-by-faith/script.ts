@@ -1,10 +1,13 @@
 import { defineScript } from '@manna/film/core';
 
+/** The film's name: the film, its title card and its credits all read it here. */
 export const TITLE = 'Righteousness by Faith';
 
+/** Every brief carries it (CRAFT rule 1). */
 const CARDS =
   "The narration's words appear only as full-screen cards: nothing in the picture carries lettering.";
 
+/** The one letter a picture carries: the R in the seal's wax, an emblem (owner's choice), not narration. */
 const SEAL_R =
   'The only letter drawn is the single R pressed into the gold wax seal, an emblem for righteous; nothing else is lettered.';
 
@@ -214,4 +217,5 @@ export const script = defineScript([
   },
 ]);
 
+/** A beat's id: the name a drawing, a light and a short take it by. */
 export type BeatId = (typeof script)[number]['id'];

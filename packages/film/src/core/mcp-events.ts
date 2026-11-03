@@ -2,8 +2,10 @@ import { Array as Arr, Match, Option, Order, Result, Schema } from 'effect';
 import { Base64 } from 'effect/encoding';
 import { LabChange } from './lab-events.ts';
 
+/** The most bytes a delivery's body takes: a callback refuses more (Standard Webhooks, the profile's limit). */
 export const DELIVERY_MAX_BYTES = 256 * 1024;
 
+/** What a subscription to one of the lab's events takes: the film its events are about (every film's when left out). */
 export const EventArguments = Schema.Struct({
   film: Schema.optionalKey(
     Schema.String.annotate({ description: "Only this film's events; every film's when left out" }),
@@ -11,12 +13,14 @@ export const EventArguments = Schema.Struct({
 });
 export type EventArguments = typeof EventArguments.Type;
 
+/** A subscription's webhook: where each event is posted, and the secret it is signed with. */
 const Webhook = Schema.Struct({
   mode: Schema.Literal('webhook'),
   url: Schema.String,
   secret: Schema.String,
 });
 
+/** `events/subscribe`'s params. `ttlMs` null asks for no expiry; left out, the lab's own. */
 export const SubscribeParams = Schema.Struct({
   name: Schema.String,
   arguments: Schema.optionalKey(Schema.Record(Schema.String, Schema.Json)),
@@ -26,6 +30,7 @@ export const SubscribeParams = Schema.Struct({
 });
 export type SubscribeParams = typeof SubscribeParams.Type;
 
+/** `events/unsubscribe`'s params: the subscription named as it was made, its secret aside. */
 export const UnsubscribeParams = Schema.Struct({
   name: Schema.String,
   arguments: Schema.optionalKey(Schema.Record(Schema.String, Schema.Json)),
@@ -33,6 +38,7 @@ export const UnsubscribeParams = Schema.Struct({
 });
 export type UnsubscribeParams = typeof UnsubscribeParams.Type;
 
+/** `events/subscribe`'s answer: the subscription's id, when to subscribe again by (none: never), its cursor, and whether the history asked for is gone. */
 export const SubscribeResult = Schema.Struct({
   id: Schema.String,
   refreshBefore: Schema.OptionFromNullOr(Schema.String),
@@ -40,29 +46,36 @@ export const SubscribeResult = Schema.Struct({
   truncated: Schema.Boolean,
 });
 
+/** One subscription as the lab keeps it (`lab/events/subscriptions.json`). */
 export const EventSubscription = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
   arguments: EventArguments,
   url: Schema.String,
   secret: Schema.String,
+  /** Where its deliveries read on from: the feed's cursor after the last event it was sent. */
   cursor: Schema.String,
+  /** ISO time it expires at; none: it never does. */
   refreshBefore: Schema.optionalKey(Schema.String),
+  /** ISO time it was made, and last subscribed again. */
   made: Schema.String,
   refreshed: Schema.String,
 });
 export type EventSubscription = typeof EventSubscription.Type;
 
+/** The lab's subscriptions file. */
 export const SubscriptionsJson = Schema.fromJsonString(
   Schema.Struct({ subscriptions: Schema.Array(EventSubscription) }),
 );
 export type Subscriptions = typeof SubscriptionsJson.Type;
 
+/** What a callback is posted to show it answers for the subscriber: its challenge, echoed. */
 export const Verification = Schema.Struct({
   type: Schema.Literal('verification'),
   challenge: Schema.String,
 });
 
+/** One event as a webhook delivers it: its id (the same on each retry), name, time, payload and the cursor after it. */
 export const Delivery = Schema.Struct({
   eventId: Schema.String,
   name: Schema.String,
@@ -73,6 +86,7 @@ export const Delivery = Schema.Struct({
 
 const SECRET_PREFIX = 'whsec_';
 
+/** A subscription's secret, read: `whsec_` and base64 of 24 to 64 bytes, the key it signs with; or why not. Pure. */
 export const secretKey = (secret: string): Result.Result<Uint8Array, string> =>
   Result.flatMap(
     Result.fromOption(
@@ -99,6 +113,7 @@ const jsonText = Schema.encodeSync(Schema.fromJsonString(Schema.Json));
 
 const BY_KEY = Order.mapInput(Order.String, ([key]: readonly [string, Schema.Json]) => key);
 
+/** `value` with every object's keys in order, at every depth. Pure. */
 const ordered = (value: Schema.Json): Schema.Json =>
   Match.value(value).pipe(
     Match.when(isJsonArray, (all) => all.map(ordered)),
@@ -110,4 +125,5 @@ const ordered = (value: Schema.Json): Schema.Json =>
     Match.orElse(() => value),
   );
 
+/** `value` as canonical JSON: keys in order at every depth, so two orders of one object read alike. Pure. */
 export const canonicalJson = (value: Schema.Json): string => jsonText(ordered(value));

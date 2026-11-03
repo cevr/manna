@@ -68,34 +68,48 @@ import { FilmFolder, type FilmName, importFilmModule } from './film-repo.ts';
 import { type ExportPages, Pages } from './pages.ts';
 import { decodePng, encodePng } from './png.ts';
 
+/** A still of a cast page: the whole sheet, plain, as a PNG, captions off. */
 const SHEET_VIEW = { mode: 'plain', captions: false, format: 'image/png' } as const;
 
+/** The gap round and between the two crops of a side-by-side, pixels. */
 const SIDE_GAP = 16;
 
+/** Where each figure's page stands the sheet: a cut-out's page is the sheet grown by `CUTOUT_MARGIN`. */
 const PAGE_OFFSET: Readonly<Record<CastFigure, readonly [number, number]>> = {
   rig: [0, 0],
   cutout: CUTOUT_MARGIN,
 };
 
+/** A sheet box where `figure`'s page draws it. */
 const onPage = (box: readonly [number, number, number, number], figure: CastFigure) => {
   const [dx, dy] = PAGE_OFFSET[figure];
   return [box[0] + dx, box[1] + dy, box[2] + dx, box[3] + dy] as const;
 };
 
+/**
+ * What a render asks: the kinds to draw (every kind kept when none), the
+ * views (`<kind>-<view>`, every view of each kind drawn when none), whether
+ * to critique, and whether to read the fit rows alone (`fitOnly`: no
+ * critique, nothing written).
+ */
 interface CastRenderAsk {
   readonly kinds: ReadonlyArray<SheetKind>;
   readonly views: ReadonlyArray<string>;
   readonly critique: boolean;
   readonly fitOnly: boolean;
+  /** What draws each view: its rig (`CAST`), or its puppet (`CUTOUT`); by default his rig, or his puppet when the film has no rig of him (`defaultFigure`). */
   readonly figure?: CastFigure;
+  /** How far a cut-out's boil moves its figure, px: one of `CUTOUT_BOILS`, the house `BOIL_AMP` unless given. */
   readonly boil?: number;
 }
 
+/** The render folder of `member` in `film`'s outputs. */
 const renderRoot = Effect.fn('Cast.renderRoot')(function* (film: FilmName, member: string) {
   const path = yield* Path.Path;
   return path.join((yield* FilmFolder).paths(film).out, 'cast', member, 'render');
 });
 
+/** A measure's rows of `concept` against `render`, or why none could be read. */
 const measured = (concept: Raster, render: Raster) => {
   const c = measureFigure(concept);
   const r = measureFigure(render);
@@ -105,6 +119,7 @@ const measured = (concept: Raster, render: Raster) => {
   return Result.succeed(compareFigures(c.success, r.success));
 };
 
+/** One kept view cut from the kept sheet and from the render, its rows and its fit rows. */
 interface Cut {
   readonly v: {
     readonly view: number;
@@ -116,10 +131,12 @@ interface Cut {
   readonly render: Raster;
   readonly rows: Result.Result<ReadonlyArray<CastViewRendered['rows'][number]>, string>;
   readonly fit: ReadonlyArray<FitRow>;
+  /** The ground its fit rows read a cut-out's posed figure over, when they do (`CutoutReading`). */
   readonly ground: Option.Option<Rgb>;
   readonly deltaE: number;
 }
 
+/** The measure's lines on a cut, as the critique is shown them. */
 const flaggedOf = (cut: Cut): ReadonlyArray<string> =>
   Result.match(cut.rows, {
     onFailure: (why) => [`unmatched: ${why}`],
@@ -132,6 +149,7 @@ const flaggedOf = (cut: Cut): ReadonlyArray<string> =>
         ),
   });
 
+/** A cut as its render's record holds it: its files, its rows or why none, its critique and its findings, numbered. */
 const renderedOf = (kind: string, cut: Cut, taken: CritiqueTaken): CastViewRendered => {
   const skipped = Option.fromUndefinedOr(taken.skipped);
   const found = Option.getOrElse(
@@ -172,6 +190,7 @@ const renderedOf = (kind: string, cut: Cut, taken: CritiqueTaken): CastViewRende
   };
 };
 
+/** A critique that was not asked for: written as skipped, never as a pass. */
 const NOT_ASKED: CritiqueTaken = {
   figures: [],
   cached: false,
@@ -179,6 +198,7 @@ const NOT_ASKED: CritiqueTaken = {
   rejected: [],
 };
 
+/** The film's cast render module, loaded from its `rigs/cast.ts`. */
 const tableOf = Effect.fn('Cast.table')(function* (member: string, file: string) {
   const loaded: unknown = yield* Effect.tryPromise({
     try: () => importFilmModule(file),
@@ -192,6 +212,7 @@ const tableOf = Effect.fn('Cast.table')(function* (member: string, file: string)
   return loaded;
 });
 
+/** The mean ΔE76 of `render` against `concept` over the union of their figures (`figureOf`, the fit rows' reading). */
 const meanDeltaE = (concept: Raster, render: Raster) => {
   const [a, b] = [figureOf(concept).figure, figureOf(render).figure];
   const [la, lb] = [labsOf(concept), labsOf(render)];
@@ -204,6 +225,7 @@ const meanDeltaE = (concept: Raster, render: Raster) => {
   return sum / Math.max(1, n);
 };
 
+/** Each cut's files written into `dir`: its two crops, its side-by-side at 1:1 and its table. */
 const writeCut = Effect.fn('Cast.writeCut')(function* (
   dir: string,
   place: string,
@@ -231,13 +253,16 @@ const writeCut = Effect.fn('Cast.writeCut')(function* (
   yield* fs.writeFileString(path.join(dir, `${cut.stem}.md`), tableText);
 });
 
+/** An open page and the scenes it draws. */
 interface KindPage {
   readonly pool: ExportPages;
   readonly scenes: ReadonlyArray<SceneTimes>;
 }
 
+/** The page that draws `kind`: its own when it has one, else the member's. */
 const pageOf = (at: RenderAt, kind: SheetKind): KindPage => at.own.get(kind) ?? at;
 
+/** Where one render is drawn and written: its member's record, sheet folder and table, its page, its folder and number, the views asked, whether it critiques and whether it writes. */
 interface RenderAt {
   readonly member: string;
   readonly record: CastSheetRecord;
@@ -245,6 +270,7 @@ interface RenderAt {
   readonly table: CastModule;
   readonly pool: ExportPages;
   readonly scenes: ReadonlyArray<SceneTimes>;
+  /** The page of each kind the member's page does not draw: a cut-out kind of another sheet size, drawn alone at its own (`castPage`'s `kind`). */
   readonly own: ReadonlyMap<SheetKind, KindPage>;
   readonly root: string;
   readonly dir: string;
@@ -253,9 +279,17 @@ interface RenderAt {
   readonly critique: boolean;
   readonly write: boolean;
   readonly figure: CastFigure;
+  /** What a cut-out's fit rows read, none for a rig (`cutoutReading`). */
   readonly cutout: Option.Option<CutoutReading>;
 }
 
+/**
+ * What a view's fit rows hold it to: its member's colour classes, and its
+ * own part labels, probes and bars (`rigs/cast.ts`; a cut-out view's own,
+ * else its rig view's). A cut-out is painted with the sheet's own pixels,
+ * not the rig's papers, so its classes are read on the render by their
+ * sheet samples.
+ */
 const fitSpecOf = (
   table: CastModule,
   member: string,
@@ -299,20 +333,35 @@ const fitSpecOf = (
   };
 };
 
+/** What a cut-out view's fit rows read: its posed figure cut at its kept box, and its neighbour mask when its sheet keeps one. */
 interface CutoutPosed {
   readonly posed: Raster;
   readonly neighbour: Option.Option<Uint8Array>;
 }
 
+/**
+ * What a member's cut-out fit rows read: each view's posed figure laid over
+ * one ground, measured once on the member's posed figures and his classes'
+ * sheet samples (`measuringGround`), so a hole the puppet leaves reads as the
+ * ground and not as a paper the art may share. The page, its PNGs and the
+ * deltaE still read the page, painted on PAPER.
+ */
 interface CutoutReading {
   readonly ground: Rgb;
+  /** Each view's, by `<kind>-<view>`. */
   readonly views: ReadonlyMap<string, CutoutPosed>;
 }
 
+/** A cut-out sheet's record: the box its part sheets were cut at. */
 const PartSheetBox = Schema.fromJsonString(
   Schema.Struct({ box: Schema.Tuple([Schema.Int, Schema.Int, Schema.Int, Schema.Int]) }),
 );
 
+/**
+ * `view`'s neighbour mask, crop-sized at `box`: 1 where the still
+ * `neighbour.png` of its part sheets (`<member>/cutout/sheets/<view>/`, cut at
+ * its record's box) holds art, none when the sheet keeps no neighbour.
+ */
 const neighbourOf = Effect.fn('Cast.neighbourOf')(function* (
   memberDir: string,
   view: string,
@@ -341,6 +390,7 @@ const neighbourOf = Effect.fn('Cast.neighbourOf')(function* (
   return mask;
 });
 
+/** `v`'s posed figure cut at its kept box: the puppet's origin stands at sheet point `at`, so the box sits at `origin + box - at` in its raster. */
 const posedOf = Effect.fn('Cast.posedOf')(function* (v: CutoutView) {
   const raster = rasterOf(yield* puppetFrom(v.puppet), v.pose);
   const [ox, oy] = [
@@ -350,6 +400,7 @@ const posedOf = Effect.fn('Cast.posedOf')(function* (v: CutoutView) {
   return cropRaster(raster, [ox, oy, ox + v.box[2] - v.box[0], oy + v.box[3] - v.box[1]]);
 });
 
+/** `member`'s cut-out reading: every cut-out view of his posed and its neighbour read, and his ground measured on them all. */
 const cutoutReading = Effect.fn('Cast.cutoutReading')(function* (
   table: CastModule,
   member: string,
@@ -377,6 +428,12 @@ const cutoutReading = Effect.fn('Cast.cutoutReading')(function* (
   } satisfies CutoutReading;
 });
 
+/**
+ * What `stem`'s fit rows read and its ground: a cut-out view's posed figure
+ * over his ground, with its neighbour mask; the page's crop for a rig, and for
+ * a cut-out view that draws a look over its parts, which its posed figure
+ * leaves out.
+ */
 const fitRead = (
   at: RenderAt,
   kind: SheetKind,
@@ -410,6 +467,12 @@ const fitRead = (
   );
 };
 
+/**
+ * The cuts critiqued: each whose fit rows all pass is shown to the critic
+ * (in one run, none when it is not asked or no cut passes); each other is
+ * held, skipped with its failing rows (`fitHeld`), never sent. Each cut as
+ * its record holds it.
+ */
 const critiqued = Effect.fn('Cast.critiqued')(function* (
   at: RenderAt,
   kind: SheetKind,
@@ -453,8 +516,10 @@ const critiqued = Effect.fn('Cast.critiqued')(function* (
   );
 });
 
+/** How many times a sheet's frame is drawn for its cost. */
 const COST_DRAWS = 7;
 
+/** The median ms the page takes to draw `kind`'s frame (`drawTimes`: the draw alone, rastered, no encoder). */
 const drawCost = Effect.fn('Cast.drawCost')(function* (at: RenderAt, kind: SheetKind) {
   const { pool, scenes } = pageOf(at, kind);
   const scene = Arr.findFirst(scenes, (s) => s.id === kind);
@@ -470,6 +535,7 @@ const drawCost = Effect.fn('Cast.drawCost')(function* (at: RenderAt, kind: Sheet
   return times[Math.floor(times.length / 2)] ?? 0;
 });
 
+/** One kind of the member's sheets drawn as one still, each kept view asked cut from it and from the kept sheet, held to its fit rows, written, critiqued once its rows pass. */
 const renderKind = Effect.fn('Cast.renderKind')(function* (at: RenderAt, kind: SheetKind) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -541,6 +607,11 @@ const renderKind = Effect.fn('Cast.renderKind')(function* (at: RenderAt, kind: S
   return views;
 });
 
+/**
+ * Render `member` of `film`: each kept view of each kind `ask` names, drawn,
+ * measured, laid beside its kept view and critiqued, into the next render's
+ * folder. Answers the render's record and its folder.
+ */
 export const renderCast = Effect.fn('Cast.render')(function* (
   film: FilmName,
   member: string,
@@ -651,6 +722,7 @@ export const renderCast = Effect.fn('Cast.render')(function* (
   return { render: made, dir: Option.some(dir) };
 });
 
+/** Answer finding `finding` (`<kind>-<view>/<id>`) of `member`'s render `n`: it stands, for `why`, in its record and summary. */
 export const answerCast = Effect.fn('Cast.answer')(function* (
   film: FilmName,
   member: string,

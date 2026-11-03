@@ -1,3 +1,10 @@
+/**
+ * The source: the public S3 bucket `cvr-hymns`, read without credentials.
+ *
+ * The bucket refuses to list and answers 403 for a key it lacks, so only 200
+ * means present, and 403 or 404 mean absent. Any other status (a 5xx, a 429)
+ * is retried as transient and then fails: it never reads as absent.
+ */
 import { Effect, Layer, Option, Schedule } from 'effect';
 import { HttpClient, HttpClientRequest } from 'effect/http';
 import type { HttpClientError } from 'effect/http';
@@ -14,6 +21,7 @@ const failure = (reason: string) => StoreFailed.make({ store: 's3', reason });
 const transport = (hymn: number) => (error: HttpClientError.HttpClientError) =>
   failure(`${hymn}.mp3: ${error.message}`);
 
+/** How long a HEAD, and a download with its body, may take, retries included. */
 const HEAD_TIMEOUT = '1 minute';
 const GET_TIMEOUT = '3 minutes';
 
@@ -25,6 +33,7 @@ const within =
       orElse: () => Effect.fail(failure(`${hymn}.mp3: no answer in ${duration}`)),
     });
 
+/** What a HEAD's status and headers say of a hymn's key. */
 const headOf = (
   hymn: number,
   status: number,

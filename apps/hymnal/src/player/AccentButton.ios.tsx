@@ -1,3 +1,8 @@
+/**
+ * The player's button on iOS: a native `UIButton` whose title is drawn in
+ * the accent on the ground, no fill under it.
+ */
+
 import { Button } from 'react-native';
 
 import { useAccent } from '~/color';

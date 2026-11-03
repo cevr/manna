@@ -1,14 +1,21 @@
+/**
+ * Writes small Standard MIDI Files for the tests: each voice a list of
+ * [key, beats] pairs (key 0 a rest), laid out as the hymnal's files are.
+ */
+
 export type Voice = ReadonlyArray<readonly [key: number, beats: number]>;
 
 export interface FixtureTrack {
   readonly name?: string;
   readonly program?: number;
+  /** Voices sharing the track, as the hymnal's "SA TB" files pair them. */
   readonly voices: readonly Voice[];
 }
 
 export interface Fixture {
   readonly ticksPerBeat?: number;
   readonly meter?: readonly [numerator: number, denominator: number];
+  /** The key signature's sharps (flats below 0); `null` writes none, as 39 of the hymnal's files have none. */
   readonly fifths?: number | null;
   readonly tracks: readonly FixtureTrack[];
 }
@@ -24,6 +31,7 @@ const ascii = (s: string) => [...s].map((c) => c.charCodeAt(0));
 
 const chunk = (id: string, body: readonly number[]) => [...ascii(id), ...u32(body.length), ...body];
 
+/** Events at absolute ticks, written as delta times; note-offs sort before note-ons at a tick. */
 const trackBody = (events: Array<{ tick: number; order: number; bytes: number[] }>) => {
   events.sort((a, b) => a.tick - b.tick || a.order - b.order);
   let last = 0;
@@ -73,6 +81,10 @@ export const write = (fixture: Fixture): Uint8Array => {
   return new Uint8Array([...header, ...chunk('MTrk', conductor), ...tracks.flat()]);
 };
 
+/**
+ * "Praise to the Lord" (SDA Hymnal 1, LOBE DEN HERREN, harm. W. S. Bennett,
+ * 1863), bars 1 to 6 as the hymnal prints them: soprano, alto, tenor, bass.
+ */
 export const praiseToTheLord: readonly Voice[] = [
   [
     [65, 1],

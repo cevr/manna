@@ -32,8 +32,14 @@ const ENTRY: FootageEntry = {
   },
 };
 
+/** The copy's bytes, so a range of them is known. */
 const BYTES = 'abcdefghijklmnopqrstuvwxyz';
 
+/**
+ * A library listing `take.why` (its mezzanine made, its proxy not) and an
+ * outputs folder holding a copy no lock lists (`stray`), and a file beside
+ * the library.
+ */
 const library = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -63,6 +69,7 @@ describe('the footage route', () => {
       Effect.gen(function* () {
         const root = yield* library;
         const sha12 = SHA.slice(0, 12);
+        /** Whether the route served `url` from `at`, and with its copy's bytes. */
         const servedFrom = (at: FootageRoot) => (url: string) =>
           Effect.gen(function* () {
             const response = yield* Effect.promise(() =>

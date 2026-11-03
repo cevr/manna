@@ -13,6 +13,7 @@ import { VersionMoved } from './refusals.ts';
 
 const HOUR = 3_600_000;
 
+/** The look: v1 opened at 0, v2 at 10 h, v3 at 20 h. */
 const look = (): ProductionFile => {
   const first = { ...newProduction('look', 'The look', 0), title: 'The look' };
   const v2 = Result.getOrThrow(

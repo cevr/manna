@@ -14,6 +14,7 @@ interface MenuRadioItemIndicatorProps extends BaseUIComponentProps<
   'span',
   MenuRadioItemIndicatorState
 > {
+  /** Whether the indicator stays in the DOM while its item is unchecked. @default false */
   keepMounted?: boolean | undefined;
 }
 

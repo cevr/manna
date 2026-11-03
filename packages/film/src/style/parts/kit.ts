@@ -3,6 +3,7 @@ import { decoder } from '../decode.ts';
 import type { Pt } from '../rig/parts.ts';
 import { Length, Point, Units } from './measure.ts';
 
+/** The marks a figure's sheet draws otherwise than the kit (`FaceShape`, `rig/parts.ts`), in the kit's units about the face's centre. */
 const Shape = Schema.Struct({
   eyes: Schema.optionalKey(Point),
   eyeY: Schema.optionalKey(Units),
@@ -19,6 +20,7 @@ const Shape = Schema.Struct({
   mouthLine: Schema.optionalKey(Length),
 });
 
+/** The face it wears at rest where it differs from the kit's own (`Expression`, `face.ts`). */
 const Rest = Schema.Struct({
   browY: Schema.optionalKey(Units),
   browTilt: Schema.optionalKey(Units),
@@ -30,25 +32,40 @@ const Rest = Schema.Struct({
 });
 
 const KitAPart = Schema.TaggedStruct('KitA', {
+  /** The face's centre on the head, units from the head's own origin. */
   x: Units,
   y: Units,
+  /** The kit's size against its own (the accused's). */
   scale: Length,
+  /** Its turn on the head about its centre, radians, where the concept draws the face tipped (a head turned to us and tipped). */
   rotation: Schema.optionalKey(Units),
+  /** Each eye's lean past that turn, radians (negative: its top toward screen left), where the concept leans the eyes of a turned head. */
   eyeLean: Schema.optionalKey(Units),
   shape: Schema.optionalKey(Shape),
   rest: Schema.optionalKey(Rest),
+  /** Where the eyes look at rest, units from the figure's body's middle at its head's height: a round head's centre (a traced head is carried off it, by its `set`). */
   gaze: Point,
+  /** The marks past the kit's own it draws, each shown by its own number, and the slides it takes (`EXTRA_FACE`, `rig/parts.ts`): a figure that names none prints as before. */
   extra: Schema.optionalKey(
     Schema.Array(Schema.Literals(['wince', 'glad', 'marksY', 'mouthY', 'mouthW'])),
   ),
+  /**
+   * Where it lies among what is cut inside its head (a beardless head's):
+   * under it unless given, so hair over the brow hides a brow raised into it
+   * (a face under the hair of a view from behind); `over`, over it, so a
+   * brow turned up into the hairline (a knit wince) still shows.
+   */
   layer: Schema.optionalKey(Schema.Literal('over')),
 });
 export type KitA = typeof KitAPart.Type;
 
+/** A face, checked: a field the kit lacks is refused by KitA. */
 export const decodeKit = decoder(KitAPart, { any: 'KitA' });
 
+/** Kit A on a figure's head: where it sits, how big, its turn, its marks, its rest and its gaze. */
 export const KitA = (o: Omit<KitA, '_tag'>): KitA => decodeKit({ _tag: 'KitA', ...o }, 'KitA');
 
+/** A face's marks as its concept draws them, in the concept's pixels: each eye's centre and its size, each brow's ends and its stroke, the mouth's ends and its stroke. */
 interface TracedMarks {
   readonly eyes: readonly [Pt, Pt];
   readonly eye: readonly [number, number];
@@ -58,13 +75,22 @@ interface TracedMarks {
   readonly mouthLine: number;
 }
 
+/** A concept's pixels as a figure's units: `scale` units a pixel, about the head's centre (`head`, a pixel). */
 interface Panel {
   readonly scale: number;
   readonly head: Pt;
 }
 
+/** `v` to a hundredth, as the kit's numbers are written. */
 const hundredth = (v: number) => +v.toFixed(2);
 
+/**
+ * Kit A's place, turn and marks for marks traced in a concept's pixels
+ * (`panel` takes them to the head's units): the kit sits at the eyes'
+ * middle, turned as the line through the eyes tips, each mark in that
+ * turned frame, each number to a hundredth; `turn` is how far the features
+ * slide after the gaze. A face's rest and gaze are its own (`KitA`).
+ */
 export const tracedKit = (m: TracedMarks, panel: Panel, turn: number) => {
   const [l, r] = m.eyes;
   const c: Pt = [(l[0] + r[0]) / 2, (l[1] + r[1]) / 2];

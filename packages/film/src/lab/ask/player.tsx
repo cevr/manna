@@ -37,15 +37,25 @@ import {
 } from './sync-machine.ts';
 import { type SyncDriver, makeSync } from './sync.ts';
 
+/** What a page's player whose clock cannot play says, in its row, in place of the scrub. */
 const CANNOT_PLAY_CLOCK = 'Can’t play this video';
 
+/**
+ * A synced player's row: play, the clock and a scrub (`scrubs` names what it
+ * moves), then `children` (the docked transport's rate chip). Once its
+ * clock's media cannot play (`Failed`) the row says so in place of the
+ * scrub, and play is off: there is nothing to play or scrub until the page
+ * gives the clock new media (another quality, another picture).
+ */
 const TransportRow = (
   props: ParentProps<{
     readonly sync: Accessor<SyncState>;
     readonly send: (event: SyncEvent) => void;
     readonly scrubs: string;
     readonly title: string;
+    /** Whether it plays one video on a clock of its own (`PlayedAlone`), not the page's. */
     readonly alone?: boolean;
+    /** Whether its play is quiet, not the view's one verb (`PlayedAlone`'s `quiet`). */
     readonly quiet?: boolean;
   }>,
 ) => {
@@ -112,15 +122,25 @@ const TransportRow = (
   );
 };
 
+/** The one video a lone player plays: its clock and the one heard. */
 const ALONE = 'alone';
 
+/** What a lone video whose media cannot play says, on its picture, which tries it again. */
 const CANNOT_PLAY = 'Can’t play this video · Try again';
 
+/** One try at a lone video's source: the `n`th (0: the first; later ones are retries). */
 interface Try {
   readonly src: string;
   readonly n: number;
 }
 
+/**
+ * The `ref` of a media element that joins `driver` as `id`, for as long as
+ * the calling owner lives: a page makes a fresh element for each source (and
+ * each retry), so the driver knows the clock's media is new, and lets this
+ * one go as it leaves, whatever replaced it since. `joined`, when given, is
+ * told the element's `Playable` as it joins.
+ */
 const useClockMedia = (driver: SyncDriver, id: string, joined?: (media: Playable) => void) => {
   let release = Option.none<() => void>();
   onCleanup(() => Option.map(release, (letGo) => letGo()));
@@ -131,12 +151,35 @@ const useClockMedia = (driver: SyncDriver, id: string, joined?: (media: Playable
   };
 };
 
+/**
+ * A video on a clock of its own (a video in no set, a render in a sheet),
+ * never the browser's controls: at rest (`atRest`) its picture is the one
+ * control, a press plays or pauses it; once it has moved (playing, scrubbed,
+ * paused past its start) the review's transport row shows under it (play,
+ * the clock, a scrub), for the whole of a scrub; until then its room stands
+ * empty under the picture, so the row's coming moves nothing. A failure is its media's:
+ * each try at a source (a new source, or a retry of a failed one) is a fresh
+ * element on the same clock, so a new source stands where the last stood,
+ * playing if it played, and nothing of a failed try outlives it. Once its
+ * media cannot play (`Failed`) its picture says so and no row shows (there
+ * is nothing to play or scrub); a press on the picture then tries again,
+ * from where the failure left it, and plays as it starts (the press asked
+ * for it). It is heard, and its time is its own, not the page's. `children`
+ * are its `<track>`s.
+ */
 export const PlayedAlone = (
   props: ParentProps<{
     readonly src: string;
     readonly poster: string;
+    /** The video it plays, whose own frames its clock counts. */
     readonly video: Pick<ReviewFile, 'ref' | 'mtime'>;
+    /** Where it stands as it opens, in seconds (its start, 0, when none). */
     readonly at?: number;
+    /**
+     * Whether its row's play is quiet: on a page whose verb is elsewhere (an
+     * ask's Send), the picture is the video's press and its row's play the
+     * kit's quiet button, at the pointer's size.
+     */
     readonly quiet?: boolean;
   }>,
 ) => {
@@ -258,10 +301,19 @@ export const PlayedAlone = (
   );
 };
 
+/** No video to time, as a page-only read is (`timedHere`): the same kind of atom on either side. */
 const untimed = Atom.make(AsyncResult.initial<ReviewDuration, LabFailure>()).pipe(
   Atom.withServerValue(() => AsyncResult.initial<ReviewDuration, LabFailure>()),
 );
 
+/**
+ * Tell a clock (`send`) the frame rate of its video (`video`, none when it
+ * has none): the rate the server reads from the video's own packets
+ * (`ReviewDuration.fps`, as measured), once it answers; the guess (`UNTIMED_FPS`) while the answer is pending, or when
+ * the video names none. Read in the page only (`timedHere`): nothing the
+ * server renders counts frames past the clock's start, so its render never
+ * waits on it.
+ */
 const useClockRate = (
   video: Accessor<Option.Option<Pick<ReviewFile, 'ref' | 'mtime'>>>,
   send: (event: SyncEvent) => void,

@@ -30,6 +30,7 @@ import {
   trainsetStage,
 } from './stages.ts';
 
+/** What a build is asked with, as `buildGraph` takes it. */
 type BuildOptions = Parameters<typeof buildGraph>[1];
 
 const wordValue = (word: string | Redacted.Redacted<string>): string => {
@@ -46,13 +47,16 @@ const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
   ...over,
 });
 
+/** The reader's files by role, as `CastReader.sources` names them: model.py trains and reads; read.py, eval.py and the lock only read. */
 const ROLES = {
   train: ['/reader/model.py'],
   read: ['/reader/model.py', '/reader/read.py', '/reader/uv.lock'],
   eval: ['/reader/eval.py', '/reader/model.py', '/reader/read.py', '/reader/uv.lock'],
 };
+/** The committed reader lock the train adopts from. */
 const LOCK = '/library/reader.lock.json';
 const VIEWS = ['front', 'side'];
+/** A parts stage's output as the status stage reads it: the part files and the record, if any. */
 const partsOutput = (parts: { readonly files: ReadonlyArray<string>; readonly record?: string }) =>
   Effect.succeed(
     text(
@@ -67,6 +71,7 @@ const partsOutput = (parts: { readonly files: ReadonlyArray<string>; readonly re
     ),
   );
 
+/** Member `m`: a puppet entry per view, cut from its own sheet. */
 const MEMBER = {
   film: 'f' as never,
   member: 'm',
@@ -78,6 +83,7 @@ const MEMBER = {
   facts: {},
 };
 const CANDIDATES = candidatesOf(MEMBER);
+/** Each view's status stage as the build makes it (no code sources, so no file of the build's is read). */
 const STATUS = Effect.runSync(
   memberStages(MEMBER, {
     stage: { parts: [], cut: [], fit: [], renders: [], eval: [], chain: [] },
@@ -88,21 +94,37 @@ const STATUS = Effect.runSync(
     Effect.provide([memoryFileSystem(new Map()), Path.layer]),
   ),
 );
+/**
+ * View `v`'s status stage. It reads only its inputs' outputs, so it needs
+ * none of the build's services; `memberStages` types its list by the
+ * services any of its stages needs, hence the cast.
+ */
 const statusOf = (v: string) =>
   STATUS.filter((s) => s.id === `status:${v}@m`) as unknown as ReadonlyArray<Stage<never>>;
 
 type Ctx = Parameters<Stage<never>['run']>[0];
 const fitRows = (pass: boolean) =>
   text(`[{"view":"v","rows":[{"name":"silhouette","pass":${pass}}]}]`);
+/** A part sheet's record: `passing` misses no bar; `open` misses `arm` and names none. */
 const RECORD = { passing: '{"missed":[]}', open: '{"missed":["arm"],"named":[]}' } as const;
 const record = (bars: keyof typeof RECORD) => text(RECORD[bars]);
+/** The record file a view's parts stage reads; `none` stands for a sheet with no record yet. */
 const recordFile = (view: string) => `/in/${view}.record.json`;
+/** The fit rows a view's fit stage reads off disk, so a test flips them on one cache. */
 const fitFile = (view: string) => `/in/${view}.fit.json`;
 
+/**
+ * Each view's drawing, parts (its record file read off disk, `none` for no
+ * record), cut, fit (its rows read off disk), renders (a shard
+ * file's bytes) and status stages, the training set, its train and each
+ * drawing's eval. When `sideCut` is on, the side's parts stage spends okra
+ * and writes a passing record: the side is cut in the build.
+ */
 const graph = (
   o: {
     readonly sideCut?: boolean;
     readonly keepReader?: boolean;
+    /** The train files, `ROLES.train` unless named. */
     readonly train?: ReadonlyArray<string>;
   } = {},
 ): ReadonlyArray<Stage<CastReader | FileSystem.FileSystem>> => [
@@ -201,6 +223,7 @@ const build = (
     ),
   );
 
+/** `build.json`'s running marks, as a test reads and writes them. */
 const Marks = Schema.fromJsonString(
   Schema.Struct({
     stages: Schema.Record(Schema.String, Schema.Unknown),
@@ -208,6 +231,7 @@ const Marks = Schema.fromJsonString(
   }),
 );
 
+/** `build.json`'s recorded stages, as far as a run left unpromoted. */
 const Built = Schema.fromJsonString(
   Schema.Struct({
     stages: Schema.Record(
@@ -221,6 +245,7 @@ const Built = Schema.fromJsonString(
   }),
 );
 
+/** Another host's build takes every key `disk`'s cache marks as running (as it would past a lost lease). */
 const takeMarks = (disk: Map<string, Uint8Array>) =>
   Effect.gen(function* () {
     const marks = yield* Schema.decodeEffect(Marks)(
@@ -234,6 +259,7 @@ const takeMarks = (disk: Map<string, Uint8Array>) =>
     );
   }).pipe(Effect.orDie);
 
+/** A train the fake reader was asked for: its key and its run. */
 const trainOf = (line: string) => {
   const [, key = '', run = ''] = /^train (\S+) run=(\S+) /.exec(line) ?? [];
   return { key, run };
@@ -520,7 +546,14 @@ describe('cast build: train and eval', () => {
 
 describe('cast build: the train adopts the committed checkpoint', () => {
   const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
+  /** The fake reader's checkpoint, as `layerTest` makes it. */
   const CHECKPOINT = sha256Hex(new Uint8Array([1]));
+  /**
+   * A cache trained once with `--spend modal`, then rekeyed (its `build.json`
+   * dropped, its objects kept: every stage key new, as a change of key form
+   * makes it), and a committed lock naming `reader` (the train's reader key
+   * when `undefined`) and the checkpoint.
+   */
   const rekeyed = (reader?: string) =>
     Effect.gen(function* () {
       const disk = files();
@@ -583,17 +616,21 @@ describe('cast build: the train adopts the committed checkpoint', () => {
 describe('cast build: --keep-reader keeps the committed checkpoint across a key change', () => {
   const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
   const spend = { spend: new Set(['modal'] as const) };
+  /** The fake reader's checkpoint, as `layerTest` makes it. */
   const CHECKPOINT = sha256Hex(new Uint8Array([1]));
   const SIDE = sha256Hex(text('side shard'));
+  /** The fake set's hash: each drawing by its shard's hash, a line each, sorted. */
   const TRAINSET = sha256Hex(
     text([`m/front=${sha256Hex(text('front shard'))}`, `m/side=${SIDE}`].join('\n')),
   );
+  /** A held line as the lock keeps it. */
   const LINE = {
     n: 12,
     accuracy: 0.9,
     angleDeg: { median: 3.1, p90: 9.4 },
     jointPx: { median: 2.2, p90: 6.8 },
   };
+  /** eval.py's JSON for a held line: its spreads also carry a count and a mean; it writes `null` for the side it has no samples on. */
   const evalJson = (l: typeof LINE) =>
     `{"seen":${jsonOf({
       n: l.n,
@@ -601,11 +638,13 @@ describe('cast build: --keep-reader keeps the committed checkpoint across a key 
       angle_deg: { ...l.angleDeg, mean: 4, n: l.n },
       joint_px: { ...l.jointPx, mean: 3, n: l.n },
     })},"unseen":null}`;
+  /** `side` for the side's shard, else `front`. */
   const bySide = <A>(shard: string, side: A, front: A) =>
     Option.match(
       Option.liftPredicate(shard, (s) => s.includes(SIDE)),
       { onNone: () => front, onSome: () => side },
     );
+  /** Each shard's eval: the lock's line, or `side` for the side's shard. */
   const scores =
     (side: typeof LINE = LINE) =>
     (shard: string) =>
@@ -615,6 +654,7 @@ describe('cast build: --keep-reader keeps the committed checkpoint across a key 
     asked.filter((a) => a.startsWith('evaluate')).length;
   const trainedOrPromoted = (asked: ReadonlyArray<string>) =>
     asked.filter((a) => a.startsWith('train') || a.startsWith('promote'));
+  /** The reason the report gives stage `id`, '' for none. */
   const reasonOf = (
     report: { stages: ReadonlyArray<{ id: string; reason: Option.Option<string> }> },
     id: string,
@@ -624,6 +664,7 @@ describe('cast build: --keep-reader keeps the committed checkpoint across a key 
       .flatMap((s) => Option.toArray(s.reason))
       .join('');
 
+  /** What a test sets in the committed lock over the train's own fields. */
   type LockOver = Partial<{
     readonly trainset: string;
     readonly config: Omit<typeof TRAIN, 'steps'> & { readonly steps: number };
@@ -634,6 +675,12 @@ describe('cast build: --keep-reader keeps the committed checkpoint across a key 
     };
   }>;
 
+  /**
+   * A cache trained once with `--spend modal`, and a committed lock naming
+   * that train: its key, train files, set, config, checkpoint and held lines
+   * (`over` on top). Then, unless `edit` is off, model.py edited: the reader
+   * key moved.
+   */
   const moved = (over: LockOver = {}, edit = true) =>
     Effect.gen(function* () {
       const disk = files();
@@ -805,22 +852,30 @@ describe('cast build: --keep-reader keeps the committed checkpoint across a key 
   );
 });
 
+/** What a fake spawn answers: its exit code and what it prints. */
 interface Reply {
   readonly exitCode?: number;
   readonly stdout?: string;
   readonly stderr?: string;
 }
 
+/** One command a fake spawner ran: its program and arguments, and what it read on stdin. */
 interface Spawned {
   readonly argv: ReadonlyArray<string>;
   readonly stdin: string;
 }
 
+/** The text a command's stdin carries, when it is a stream ('' else). */
 const stdinOf = (input: ChildProcess.CommandOptions['stdin']) => {
   if (Stream.isStream(input)) return Stream.mkString(Stream.decodeText(Stream.orDie(input)));
   return Effect.succeed('');
 };
 
+/**
+ * A spawner that records each command (program, arguments and stdin) in
+ * `spawned`, and answers it with `reply` of it: by default exit 0, printing
+ * nothing.
+ */
 const spawnerOf = (
   spawned: Array<Spawned>,
   reply: (run: Spawned) => Reply = () => ({}),
@@ -851,8 +906,10 @@ const spawnerOf = (
     }),
   );
 
+/** Whether a command is the reader's scan: `python3 -I -B -c <SCAN>`. */
 const isScan = (run: Spawned) => run.argv[0] === 'python3' && run.argv[3] === '-c';
 
+/** The scan's stdin, decoded: the files by name and text, and the folders. */
 const decodeJob = Schema.decodeUnknownSync(
   Schema.fromJsonString(
     Schema.Struct({
@@ -863,6 +920,7 @@ const decodeJob = Schema.decodeUnknownSync(
 );
 
 describe("the reader's roles, derived from its imports", () => {
+  /** A reader folder's imports shaped as the committed one's: modal_app.py imports train and model inside its functions. */
   const FOLDER: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = [
     ['eval.py', ['argparse', 'model', 'numpy']],
     ['modal_app.py', ['json', 'modal', 'model', 'sys', 'train']],
@@ -1016,6 +1074,11 @@ describe("the reader's roles, derived from its imports", () => {
     );
   });
 
+  /**
+   * The folder's imports with `over`, its roles, and a disk with the
+   * build's other files: each `.py` at `/reader/<name>`, the roles as paths
+   * there.
+   */
   const scannedOver = (over: ReadonlyArray<readonly [string, ReadonlyArray<string>]>) =>
     Effect.gen(function* () {
       const folder = new Map([...FOLDER, ['helper.py', []] as const, ...over]);
@@ -1080,6 +1143,7 @@ describe("the reader's roles, derived from its imports", () => {
 });
 
 describe('the live reader', () => {
+  /** A reader folder of the live layer's: its entry scripts, its model, a helper, its tests' folder, and its lock. */
   const FOLDER = {
     'eval.py': 'from model import BONES\n',
     'helper.py': '',
@@ -1091,19 +1155,27 @@ describe('the live reader', () => {
     'pyproject.toml': '[project]\n',
     'uv.lock': 'version = 1\n',
   };
+  /** The folder's imports, as the scan answers them. */
   const SCANNED = [
     '{"eval.py": ["model"], "helper.py": [], "modal_app.py": ["train"], "model.py": ["torch"],',
     ' "read.py": ["model"], "train.py": ["helper", "model"]}',
   ].join('');
+  /** Where the folder and the reader's home lie, on the in-memory disk. */
   const DIR = '/reader';
   const HOME = '/reader-home';
 
+  /** A spawner that records each command and answers the scan with `SCANNED`, any other command with exit 0 and nothing. */
   const recording = (spawned: Array<Spawned>) =>
     spawnerOf(spawned, (run) => {
       if (isScan(run)) return { stdout: SCANNED };
       return {};
     });
 
+  /**
+   * The live reader over `spawner`, of the folder on an in-memory disk, in
+   * an environment made for it as the layer finds one: `venv-<uv.lock's
+   * hash>/bin/python` under FILM_READER_HOME; `over` replaces or adds files.
+   */
   const liveOver = (
     spawner: ChildProcessSpawner.ChildProcessSpawner['Service'],
     over: Readonly<Record<string, string>> = {},

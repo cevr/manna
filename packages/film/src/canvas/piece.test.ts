@@ -12,6 +12,7 @@ import {
 } from './piece.ts';
 import { type Probe, probing } from './probe.ts';
 
+/** A stand-in context that records the colour of every fill, in order, and every point a path passes through. */
 const recording = () => {
   const fills: string[] = [];
   const points: Pt[] = [];

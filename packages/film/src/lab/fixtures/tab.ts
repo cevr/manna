@@ -3,21 +3,29 @@ import { BrowserFailed } from '../../tools/errors.ts';
 import { CLOCK, REAL_TIMERS } from './clock.ts';
 import { E2E_TIMEOUT_MS } from './test-timeout.ts';
 
+/** How a touch report is stamped: now, or a frame after the last (a gesture under way). */
 type Pace = 'now' | 'paced';
 
+/** A frame at 60 Hz, in ms: how far apart a gesture's touch moves are stamped. */
 const FRAME_MS = 16;
 
+/** How long a wait or an action waits for the page before it fails. */
 export const WAIT_MS = 15_000;
 
+/** How many times a wait runs again in a page loaded under it before it gives up. */
 const RUNS = 20;
 
+/** A request the page made, as the test's server sees it. */
 export interface Request {
   readonly method: string;
   readonly url: URL;
+  /** The body, as text (a page's JSON); empty when it sent none. */
   readonly body: string;
+  /** The headers the browser sent, by their names as it sent them; none for a request a test makes itself. */
   readonly headers?: Readonly<Record<string, string>>;
 }
 
+/** What the test's server answers: a status, the body's type, the body, and any other headers. */
 export interface Response {
   readonly status: number;
   readonly type: string;
@@ -25,16 +33,19 @@ export interface Response {
   readonly headers?: Readonly<Record<string, string>>;
 }
 
+/** A request answered: its URL and the status it was given. */
 interface Answered {
   readonly url: string;
   readonly status: number;
 }
 
+/** A console message the page logged. */
 export interface Logged {
   readonly type: string;
   readonly text: string;
 }
 
+/** An element's box in the viewport, in CSS pixels. */
 interface Box {
   readonly x: number;
   readonly y: number;
@@ -42,15 +53,25 @@ interface Box {
   readonly height: number;
 }
 
+/** A point in the viewport, in CSS pixels. */
 interface Point {
   readonly x: number;
   readonly y: number;
 }
 
 export interface Tab {
+  /** What the page threw, and every console warning and error it logged (Solid's diagnostics are warnings). */
   readonly errors: ReadonlyArray<string>;
+  /** Every console message, in order. */
   readonly logged: ReadonlyArray<Logged>;
+  /** `script` (an expression, or statements) run in the page: its answer, awaited, as JSON. */
   readonly evaluate: <A = unknown>(script: string) => Effect.Effect<A>;
+  /**
+   * Wait until `script`, run in the page, is truthy. A timeout fails saying
+   * `failure.say` of what `failure.now`, run in the page then, answers (as
+   * JSON). The wait is `WAIT_MS` long, or `failure.within` ms: a negative
+   * control, whose page is already as it will be, reads it once (`within: 0`).
+   */
   readonly until: (
     script: string,
     failure?: {
@@ -59,23 +80,47 @@ export interface Tab {
       readonly within?: number;
     },
   ) => Effect.Effect<void>;
+  /** Wait until `selector` is in the page and shown. */
   readonly waitFor: (selector: string) => Effect.Effect<void>;
+  /** Wait until `selector` is in the page, shown or not. */
   readonly attached: (selector: string) => Effect.Effect<void>;
+  /** The box of the element at `selector`, once it is shown. */
   readonly box: (selector: string) => Effect.Effect<Box>;
+  /**
+   * How many pixels of the box of the element at `selector`, shown or not,
+   * differ from the page's background (its body's, else its root element's,
+   * else the view's white) as the page paints them now: 0 where nothing is drawn.
+   */
   readonly ink: (selector: string) => Effect.Effect<number>;
+  /** Click the middle of the element at `selector` once it is shown, enabled, still and on top. */
   readonly click: (selector: string) => Effect.Effect<void>;
+  /** Clear the field at `selector` and type `value` into it. */
   readonly fill: (selector: string, value: string) => Effect.Effect<void>;
+  /** Focus the element at `selector` as the keyboard would: from script, showing the ring (`focusVisible`). */
   readonly focus: (selector: string) => Effect.Effect<void>;
+  /** Pick the option `value` of the select at `selector`. */
   readonly select: (selector: string, value: string) => Effect.Effect<void>;
+  /** Press `key` (`Enter`, `Space`, `ArrowLeft`, `r`, `Shift+ArrowRight`) in the focused element. */
   readonly press: (key: string) => Effect.Effect<void>;
+  /** Focus `selector`, then press `key` in it. */
   readonly pressIn: (selector: string, key: string) => Effect.Effect<void>;
   readonly mouse: {
+    /** Move to `x`, `y` in `steps` moves from where the mouse is. */
     readonly move: (x: number, y: number, steps?: number) => Effect.Effect<void>;
     readonly down: Effect.Effect<void>;
     readonly up: Effect.Effect<void>;
     readonly click: (x: number, y: number) => Effect.Effect<void>;
+    /** Turn the wheel where the mouse is, by `dx`, `dy` pixels (a trackpad's swipe sideways is `dx`). */
     readonly wheel: (dx: number, dy: number) => Effect.Effect<void>;
   };
+  /**
+   * One finger, as the browser's touch input sends it (its touch events and
+   * the pointer events it makes, `pointerType: 'touch'`): put down at `x`,
+   * `y`, moved there in `steps` moves, lifted where it is; or a whole drag,
+   * put down at `from`, moved to `to` in `steps` moves and lifted there (a
+   * swipe, a scrub). `second` is another finger, put down, moved and lifted
+   * while the first stays where it is.
+   */
   readonly finger: {
     readonly down: (x: number, y: number) => Effect.Effect<void>;
     readonly move: (x: number, y: number, steps?: number) => Effect.Effect<void>;
@@ -87,27 +132,51 @@ export interface Tab {
       readonly up: Effect.Effect<void>;
     };
   };
+  /** Go to `path` (`/films/probe/lab`, a page's link) on the tab's origin; done when it has loaded. */
   readonly goto: (path: string) => Effect.Effect<void>;
   readonly reload: Effect.Effect<void>;
+  /** Back a step in the tab's history: wait on what the page then shows. */
   readonly back: Effect.Effect<void>;
+  /** Forward a step in the tab's history: wait on what the page then shows. */
   readonly forward: Effect.Effect<void>;
+  /** The page's URL now (its hash and query as the page last wrote them). */
   readonly url: Effect.Effect<string>;
   readonly resize: (width: number, height: number) => Effect.Effect<void>;
+  /** Mark the page as it stands: the Effect it gives waits for the next page to have loaded. */
   readonly nextLoad: Effect.Effect<Effect.Effect<void>>;
+  /** Start listening for an answer `which` matches: the Effect it gives waits for it. */
   readonly nextAnswer: (which: (a: Answered) => boolean) => Effect.Effect<Effect.Effect<void>>;
+  /** The page's clock (`clock.ts`), once installed. */
   readonly clock: {
     readonly runFor: (ms: number) => Effect.Effect<void>;
     readonly fastForward: (ms: number) => Effect.Effect<void>;
     readonly pauseAt: (epochMs: number) => Effect.Effect<void>;
+    /**
+     * Stop the clock where it stands, give or take `HOLD_LEAD_MS`: from here
+     * the page moves only as the test runs it on (`runFor`), so what a timer
+     * does (a loop's playback, a long press's delay) never depends on how long
+     * a loaded machine took between two steps.
+     */
     readonly hold: Effect.Effect<void>;
+    /** Run a held clock on with real time again, from where it stands. */
     readonly release: Effect.Effect<void>;
   };
 }
 
+/** Any value as JSON text, to write into a script the page runs. */
 export const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
+/**
+ * How far ahead of the page's clock `clock.hold` pauses it: the test's own
+ * time limit (`E2E_TIMEOUT_MS`). The clock runs on in real time between
+ * the read and the pause, and `pauseAt` refuses a time already past ("Cannot
+ * fast-forward to the past", which a lead of 10 ms met under load); no test
+ * lives long enough to pass this one. The jump fires each timer due in it
+ * once.
+ */
 const HOLD_LEAD_MS = E2E_TIMEOUT_MS;
 
+/** A key as the DevTools protocol dispatches it: `text` is what it types, empty for none. */
 interface Key {
   readonly key: string;
   readonly code: string;
@@ -124,6 +193,7 @@ const named = (key: string, code: string, keyCode: number, text = ''): Key => ({
 
 const SPACE = named(' ', 'Space', 32, ' ');
 
+/** The keys the tests press by name. */
 const NAMED = new Map<string, Key>([
   [' ', SPACE],
   ['Space', SPACE],
@@ -150,6 +220,7 @@ const NAMED = new Map<string, Key>([
   ['Meta', named('Meta', 'MetaLeft', 91)],
 ]);
 
+/** The DevTools modifier bit of each modifier key. */
 const MODIFIER = new Map([
   ['Alt', 1],
   ['Control', 2],
@@ -157,6 +228,7 @@ const MODIFIER = new Map([
   ['Shift', 8],
 ]);
 
+/** A letter or digit key, typing itself. */
 const charKey = (name: string): Key => {
   const upper = name.toUpperCase();
   if (/\d/.test(name)) return named(name, `Digit${name}`, upper.charCodeAt(0), name);
@@ -171,11 +243,17 @@ const keyOf = (name: string): Option.Option<Key> =>
     ),
   );
 
+/** What a page-side wait answers: the answer it waited for, that it timed out, or (its page gone) nothing. */
 type Waited<A> =
   | { readonly _tag: 'Answered'; readonly answer: A }
   | { readonly _tag: 'TimedOut' }
   | { readonly _tag: 'Gone' };
 
+/**
+ * A page-side wait: `ready`, a function expression the page calls until it
+ * answers something other than `undefined`, on the page's real timers, for at
+ * most `within` ms.
+ */
 const waitIn = (ready: string, within: number) => `new Promise((done) => {
   const timers = globalThis[Symbol.for('${REAL_TIMERS}')] ?? { setTimeout: globalThis.setTimeout.bind(globalThis), perf: performance.now.bind(performance) };
   const ready = ${ready};
@@ -190,6 +268,7 @@ const waitIn = (ready: string, within: number) => `new Promise((done) => {
   look();
 })`;
 
+/** The first element at `selector` when it is shown (a box, not hidden), as a function expression. */
 const shownAt = (selector: string) => `() => {
   const el = document.querySelector(${jsonOf(selector)});
   if (el === null) return undefined;
@@ -198,6 +277,7 @@ const shownAt = (selector: string) => `() => {
   return el;
 }`;
 
+/** `Fetch.requestPaused`'s parameters, as far as the tab reads them. */
 const Paused = Schema.Struct({
   requestId: Schema.String,
   request: Schema.Struct({
@@ -211,6 +291,7 @@ const Paused = Schema.Struct({
   }),
 });
 
+/** A request's body as text: its parts (base64) joined, or its text, or nothing. */
 const bodyOf = (request: typeof Paused.Type.request) =>
   Option.match(Option.fromUndefinedOr(request.postDataEntries), {
     onNone: () => Option.getOrElse(Option.fromUndefinedOr(request.postData), () => ''),
@@ -226,11 +307,17 @@ const bodyOf = (request: typeof Paused.Type.request) =>
         .join(''),
   });
 
+/** A request's `Range` header (`bytes=<from>-<to>`, as a media element asks), any case. */
 const rangeOf = (request: typeof Paused.Type.request): Option.Option<string> =>
   Option.fromUndefinedOr(
     Object.entries(request.headers ?? {}).find(([name]) => name.toLowerCase() === 'range')?.[1],
   );
 
+/**
+ * `r` as a server that serves byte ranges answers it, as the lab's does: a
+ * whole file says it takes ranges, and a range asked is cut from it (206).
+ * A media element seeks only in media served so.
+ */
 const ranged = (r: Response, range: Option.Option<string>): Response => {
   const body = r.body;
   if (r.status !== 200 || Predicate.isString(body)) return r;
@@ -268,21 +355,39 @@ const ranged = (r: Response, range: Option.Option<string>): Response => {
   );
 };
 
+/** A protocol call's parameters. */
 type Wire = string | number | boolean | ReadonlyArray<Wire> | { readonly [key: string]: Wire };
 
+/**
+ * A view as a tab drives it. It takes protocol calls one at a time, in
+ * order, and scripts the same, the two beside each other: a script the page
+ * is still running (a wait) never holds up an answer to a request.
+ */
 export interface View {
   readonly cdp: (method: string, params?: { readonly [key: string]: Wire }) => Promise<unknown>;
   readonly evaluate: <A>(script: string) => Promise<A>;
   readonly navigate: (url: string) => Promise<void>;
   readonly reload: () => Promise<void>;
   readonly resize: (width: number, height: number) => Promise<void>;
+  /**
+   * The view is not to be lent again: closed once the case gives it back.
+   * Chrome hears no touch on a view two fingers were down on at once.
+   */
   readonly retire: () => void;
 }
 
+/** `Page.captureScreenshot`'s answer: the image, base64. */
 const Shot = Schema.Struct({ data: Schema.String });
 
+/** `Page.addScriptToEvaluateOnNewDocument`'s answer: the script's id, to remove it by. */
 const Added = Schema.Struct({ identifier: Schema.String });
 
+/**
+ * The tab over `view`, its protocol session up and its page's requests
+ * paused (`Fetch.requestPaused`) and throws dispatched to `events`: `serve`
+ * answers every request; `init` are scripts run before the page's own on
+ * every load while the scope is open.
+ */
 export const makeTab = (
   view: View,
   page: {
@@ -290,8 +395,11 @@ export const makeTab = (
     readonly events: EventTarget;
     readonly serve: (request: Request) => Effect.Effect<Option.Option<Response>>;
     readonly init: ReadonlyArray<string>;
+    /** The page's console, as the view hands it over. */
     readonly logged: ReadonlyArray<Logged>;
+    /** What the page has done wrong so far. */
     readonly errors: ReadonlyArray<string>;
+    /** Whether this is the only tab open in the process now: a finger goes down on no other terms. */
     readonly alone: () => boolean;
   },
 ): Effect.Effect<Tab, never, Scope.Scope> =>
@@ -304,6 +412,7 @@ export const makeTab = (
     const answering = yield* FiberSet.makeRuntime();
     const answerListeners = new Set<(a: Answered) => void>();
 
+    /** Answer the paused request as the test's server does; a hold is never answered. */
     const answer = (paused: typeof Paused.Type) =>
       Effect.flatMap(
         serve({
@@ -355,6 +464,7 @@ export const makeTab = (
       );
     }
 
+    /** `expression` run in the page, its answer (awaited, as JSON); a throw is a defect naming it. */
     const run = <A>(expression: string): Effect.Effect<A> =>
       Effect.tryPromise({
         try: () => view.evaluate<A>(`(0, eval)(${jsonOf(expression)})`),
@@ -362,12 +472,18 @@ export const makeTab = (
           BrowserFailed.make({ reason: `${expression.slice(0, 200)}: ${String(cause)}` }),
       }).pipe(Effect.orDie);
 
+    /** A page-side wait, once: a run whose page went answers `Gone` while there are runs left. */
     const waitOnce = <A>(ready: string, runs: number, within: number) => {
       const once = run<Waited<A>>(waitIn(ready, within));
       if (runs <= 1) return once;
       return Effect.catchDefect(once, () => Effect.succeed<Waited<A>>({ _tag: 'Gone' }));
     };
 
+    /**
+     * Wait in the page until `ready` answers; again in the new page when a
+     * load replaced the page under it (the wait's script is lost with it), up
+     * to `RUNS` times; a timeout fails with `failure`.
+     */
     const waitFor = <A>(
       ready: string,
       failure: () => Effect.Effect<string>,
@@ -417,6 +533,7 @@ export const makeTab = (
         never(`${selector} was never shown`),
       );
 
+    /** Why the element at `selector` cannot be clicked, as the page stands. */
     const whyNot = (selector: string) =>
       run<string>(`(() => {
         const el = document.querySelector(${jsonOf(selector)});
@@ -429,6 +546,12 @@ export const makeTab = (
         return 'its middle is under ' + hit.outerHTML.slice(0, 120);
       })()`);
 
+    /**
+     * The middle of the element at `selector` once it is shown, enabled,
+     * scrolled into view, still for two looks and on top at its middle (as a
+     * click waits). Covered (by a sticky header, say), it is scrolled to
+     * another place in the view on the next look.
+     */
     const target = (selector: string) =>
       waitFor<{ readonly x: number; readonly y: number }>(
         `(() => {
@@ -508,7 +631,17 @@ export const makeTab = (
         }),
       );
 
+    /** The fingers down now, by touch id (1, the first; 2, a second), where each is. */
     const fingers = new Map<number, Point>();
+    /**
+     * The time (epoch ms) the touch device's last report carried. Chrome reads a swipe's
+     * speed, and so whether it flings, from its moves' times: a gesture's later moves and a
+     * drag's lift are `paced`, a frame after the last, so the speed is the case's and not
+     * the load on the machine sending them; any other report is stamped `now`, never before
+     * the last. So a gesture sent faster than a frame a move is stamped ahead of the wall
+     * clock, and the next `now` report follows it there. Chrome takes such stamps; the
+     * `@manna/ui` browser tests instead keep theirs never behind the wall clock.
+     */
     let stamped = 0;
     const stamp = (pace: Pace) =>
       Effect.map(Clock.currentTimeMillis, (now) => {
@@ -518,6 +651,7 @@ export const makeTab = (
         );
         return stamped;
       });
+    /** Every finger down, as the touch device reports them: Chrome makes each change since the last report its own event. */
     const report = (type: string, pace: Pace = 'now') =>
       Effect.flatMap(stamp(pace), (at) =>
         call('Input.dispatchTouchEvent', {
@@ -543,6 +677,7 @@ export const makeTab = (
         Effect.sync(() => fingers.size > 0),
       ),
     );
+    /** The finger `id`: put down, moved, lifted, the others held where they are. */
     const fingerOf = (id: number) => ({
       down: (x: number, y: number) =>
         Effect.suspend(() => {
@@ -575,6 +710,7 @@ export const makeTab = (
         }),
       up: lift(id, 'now'),
     });
+    /** Lift the finger `id`: with another still down it reports the rest, which lifts this one alone. */
     const lift = (id: number, pace: Pace) =>
       Effect.suspend(() => {
         fingers.delete(id);

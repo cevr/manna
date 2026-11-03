@@ -11,10 +11,13 @@ import {
 } from '../core/footage.ts';
 import { PHONE_ENCODE } from './media.ts';
 
+/** Microseconds: the time base frames and packets carry. */
 const MICROS = 1_000_000;
 
+/** The rate an encoder runs at when neither its conversion nor its first frame names one: the rate every film declares today. */
 const UNTIMED_FPS = 30;
 
+/** An Annex B stream's first SPS (NAL type 7): its profile, constraints and level bytes. */
 const spsBytes = (data: Uint8Array): Option.Option<Uint8Array> =>
   Option.map(
     Arr.findFirst(
@@ -28,14 +31,28 @@ const spsBytes = (data: Uint8Array): Option.Option<Uint8Array> =>
     (i) => data.subarray(i + 4, i + 7),
   );
 
+/** The codec string a decoder is configured with: `avc1.PPCCLL` from the SPS. */
 const codecString = (sps: Uint8Array) =>
   `avc1.${Array.from(sps, (b) => b.toString(16).padStart(2, '0')).join('')}`;
 
+/**
+ * A footage copy (`core/footage.ts`): x264's CRF at the quantizer it asks,
+ * preset medium, tune film, BT.709 colour named in the stream, and its key
+ * frames at most its recipe's `keyEvery` apart, by x264's own `keyint`.
+ * The key frames mediabunny asks for (`keyFrameInterval`) never reach x264:
+ * NodeAV's encoder clears each frame's picture type before it encodes
+ * (`prepareFrameForEncoding`), so a copy's key frames are x264's to place.
+ */
 const FOOTAGE_X264 = {
   preset: 'medium',
   tune: 'film',
 };
 
+/**
+ * x264's `keyint` and colour for a footage copy at `fps` (a camera's 29.97
+ * as it is): a key frame at most `keyEvery` seconds apart, so 29 frames at
+ * 29.97 for a second.
+ */
 const footageParams = (recipe: FootageRecipe, fps: number) =>
   [
     `keyint=${Math.max(1, Math.floor(recipe.keyEvery * fps))}`,
@@ -44,9 +61,11 @@ const footageParams = (recipe: FootageRecipe, fps: number) =>
     'colormatrix=bt709',
   ].join(':');
 
+/** The footage copy a content hint names (`FOOTAGE_HINTS`), if it names one. */
 const footageCopyOf = (hint: VideoEncoderConfig['contentHint']): Option.Option<FootageCopy> =>
   Arr.findFirst(FOOTAGE_COPIES, (copy) => FOOTAGE_HINTS[copy] === hint);
 
+/** x264's context and settings for the copy mediabunny's config asks for (above), at `fps` frames a second. */
 const settingsOf = (config: VideoEncoderConfig, options: VideoEncoderEncodeOptions, fps: number) =>
   Option.match(footageCopyOf(config.contentHint), {
     onSome: (copy) => ({
@@ -63,6 +82,10 @@ const settingsOf = (config: VideoEncoderConfig, options: VideoEncoderEncodeOptio
     onNone: () => filmSettingsOf(config, options, fps),
   });
 
+/**
+ * A film's copy (above), at `fps` frames a second: a quantizer quality is
+ * x264's CRF at that value (at level 4.1); a bitrate, the phone copy's.
+ */
 const filmSettingsOf = (
   config: VideoEncoderConfig,
   options: VideoEncoderEncodeOptions,
@@ -96,8 +119,10 @@ const filmSettingsOf = (
   );
 
 export class X264Encoder extends CustomVideoEncoder {
+  /** Made on the first frame, which carries the quantizer a CRF comes from. */
   private encoder = Option.none<NodeAv.Encoder>();
   private readonly frame = new NodeAv.Frame();
+  /** Whether a packet has carried the decoder's codec string yet. */
   private configured = false;
 
   static override supports(codec: VideoCodec): boolean {
@@ -150,6 +175,12 @@ export class X264Encoder extends CustomVideoEncoder {
     this.frame.free();
   }
 
+  /**
+   * The encoder, made on the first frame with the settings its copy asks
+   * (`settingsOf`), at the rate the conversion names, else the video's own:
+   * one frame in its first frame's length (a conversion that keeps the
+   * video's rate names none), else `UNTIMED_FPS`.
+   */
   private opened(
     first: VideoSample,
     options: VideoEncoderEncodeOptions,
@@ -180,6 +211,7 @@ export class X264Encoder extends CustomVideoEncoder {
     });
   }
 
+  /** Packets to mediabunny, in decode order; the first with an SPS carries the decoder's codec string. */
   private emit(packets: Iterable<NodeAv.Packet>): void {
     for (const packet of packets) {
       Option.map(Option.fromNullishOr(packet.data), (data) =>

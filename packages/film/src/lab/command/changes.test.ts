@@ -8,6 +8,7 @@ import { makeHub } from '../../command/hub.ts';
 import { pageHref } from '../../core/api.ts';
 import { keysAs } from './changes.ts';
 
+/** A lab page, a Mac's or a PC's, with Note this frame bound to `n`, as the notes register it. */
 const page = (mac = false) => {
   const host = hostOf(
     Layer.mergeAll(

@@ -15,6 +15,7 @@ type Pt = readonly [number, number];
 
 const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
+/** An ease that cannot be drawn: none from `from` to `to`, a length its seconds do not give, segments that do not cover it. */
 class EaseRefused extends Schema.TaggedError<EaseRefused>()('EaseRefused', {
   member: Schema.String,
   reason: Schema.String,
@@ -24,14 +25,17 @@ class EaseRefused extends Schema.TaggedError<EaseRefused>()('EaseRefused', {
   }
 }
 
+/** What an ease render asks: its poses, its length, its segments (each drawn in its own page; none, one of the whole) and its order. */
 interface EaseAsk {
   readonly from: string;
   readonly to: string;
   readonly seconds: number;
   readonly segments: ReadonlyArray<readonly [number, number]>;
+  /** A seed to draw the frames in a shuffled order (one page); none, in order. */
   readonly shuffle: Option.Option<number>;
 }
 
+/** One frame as `ease.json` gives it: its key, that key's turn, its held drawing and where that drawing's centre stands, frame px. */
 interface EaseFrameJson {
   readonly key: string;
   readonly theta: number;
@@ -39,6 +43,7 @@ interface EaseFrameJson {
   readonly hand: Pt;
 }
 
+/** `0..count-1` shuffled by `seed` (an LCG, Fisher-Yates). */
 const shuffled = (count: number, seed: number) => {
   const order = Arr.makeBy(count, (i) => i);
   let s = seed >>> 0;
@@ -52,6 +57,7 @@ const shuffled = (count: number, seed: number) => {
   return order;
 };
 
+/** The frame px of a sheet point of `ease`'s view on its page: the page stands the sheet `CUTOUT_MARGIN` in and the view's puppet origin at its `at`. */
 const onFrame = (m: CastModule, member: string, ease: CutoutEase) => {
   const view = m.CUTOUT?.[member]?.[ease.kind]?.[ease.view];
   return Option.map(Option.fromUndefinedOr(view), (v) => {
@@ -61,6 +67,7 @@ const onFrame = (m: CastModule, member: string, ease: CutoutEase) => {
   });
 };
 
+/** `member`'s ease `ask` drawn in `film`'s ease page, its frames and record written under a new numbered folder. */
 export const renderEase = Effect.fn('Cast.ease')(function* (
   film: FilmName,
   member: string,

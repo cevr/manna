@@ -1,3 +1,8 @@
+/**
+ * The web's home screen: the title, a link to Settings, and the search
+ * field over the whole list or what the search finds (`Results`).
+ */
+
 import { Link, useLinkTo } from 'one';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 

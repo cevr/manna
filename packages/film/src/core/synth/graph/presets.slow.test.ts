@@ -27,10 +27,17 @@ import {
 } from './presets.ts';
 import { renderCode } from './render.ts';
 
+/** The seeds a preset is heard on: a code trial's three variants. */
 const TRIAL_SEEDS = [1, 2, 3] as const;
 
+/** A hiss as the snake's: up over 0.4 s, held to 1.3 s, and 60 dB down by 2 s. */
 const HISS = { hz: 8500, q: 1.2, top: 11000, breath: -24, rise: 0.4, hold: 1.3, secs: 2 } as const;
 
+/**
+ * Each preset at settings like the library's sounds, and how it is heard: a
+ * tone short, so its tests are quick, and long enough that its draws even
+ * out (room's air sways at 0.2 Hz and the drone breathes at 0.15 Hz).
+ */
 const PRESETS = {
   room: { play: room({ secs: 2 }), use: 'bed' },
   chime: { play: chime({ root: 'D5', partials: 'glass', secs: 0.6 }), use: 'one-shot' },
@@ -70,6 +77,7 @@ const PRESETS = {
 
 type Preset = keyof typeof PRESETS;
 
+/** Each preset's first seed at its settings above, by the digest of its samples. */
 const PINNED = {
   room: '56d2d52380c38159cddaa6e26047d2fc575370936dab386a23eb7e8e3e5a0b9d',
   chime: '7b571ea9a7078df59c03d71babe1c6099e488fff1708416d5e1e1df5dd071dbe',
@@ -90,12 +98,17 @@ const PINNED = {
   'rain on a roof': 'b6e06e739d1e84568a7d09bd0296bf4035705d57055f7e352f87e99856d096d6',
 } as const satisfies Readonly<Record<Preset, string>>;
 
+/**
+ * The beds as their seams are read: four seconds, so a slow sway of level
+ * (the drone breathes at 0.15 Hz) is not all a seam can hear.
+ */
 const LOOPED = {
   room: room({ secs: 4 }),
   drone: drone({ root: 'D2', secs: 4 }),
   rain: rain({ secs: 4, hiss: 400 }),
 } as const satisfies Readonly<Record<string, Node>>;
 
+/** `play` as the library resolves a code sound heard as `use`. */
 const codeSound = (play: Node, use: SoundUse): ResolvedSound => {
   const library = defineLibrary({
     'family.trial': { kind: 'code', sound: { play }, variants: 3, use },
@@ -103,6 +116,7 @@ const codeSound = (play: Node, use: SoundUse): ResolvedSound => {
   return Result.getOrThrow(resolveCode(library)).code.get('family.trial')!;
 };
 
+/** Each preset's renders on the trial seeds, made once, when a test first reads them. */
 const rendered = new Map<Preset, Arr.NonEmptyReadonlyArray<Pcm>>();
 const rendersOf = (preset: Preset): Arr.NonEmptyReadonlyArray<Pcm> => {
   const had = rendered.get(preset);
@@ -128,6 +142,7 @@ const median = (values: ReadonlyArray<number>): number => {
   return ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2;
 };
 
+/** `pcm` from `from` to `to` seconds. */
 const span = (pcm: Pcm, from: number, to: number): Pcm => {
   const start = Math.max(0, Math.round(from * pcm.rate));
   const end = Math.min(pcm.frames, Math.round(to * pcm.rate));
@@ -138,13 +153,20 @@ const span = (pcm: Pcm, from: number, to: number): Pcm => {
   };
 };
 
+/** A MIDI note's frequency, on A4 = 440 Hz. */
 const midiHz = (midi: number): number => 440 * 2 ** ((midi - 69) / 12);
 
+/** The major pentatonic scale's steps above its root. */
 const PENTATONIC = [0, 2, 4, 7, 9] as const;
 
+/** The first `count` degrees of the pentatonic scale on `root` (a MIDI note), as MIDI notes. */
 const degrees = (root: number, count: number): ReadonlyArray<number> =>
   Array.from({ length: count }, (_, k) => root + 12 * Math.floor(k / 5) + (PENTATONIC[k % 5] ?? 0));
 
+/**
+ * The share of `pcm`'s energy at `hz` in dB (Goertzel over the first
+ * channel): −3 dB for a steady sine alone, lower as other sound shares it.
+ */
 const levelAt = (pcm: Pcm, hz: number): number => {
   const x = pcm.channels[0] ?? new Float32Array(0);
   const c = 2 * Math.cos((2 * Math.PI * hz) / pcm.rate);
@@ -161,6 +183,7 @@ const levelAt = (pcm: Pcm, hz: number): number => {
   return 10 * Math.log10(Math.max(power / (x.length * energy), 1e-30));
 };
 
+/** When a note at `hz` has entered: the first 10 ms step whose 40 ms from there stand within 6 dB of its loudest 40 ms. */
 const entersAt = (pcm: Pcm, hz: number): number => {
   const steps = Math.floor((pcm.frames / pcm.rate - 0.04) / 0.01);
   const levels = Array.from({ length: steps }, (_, k) =>
@@ -170,35 +193,48 @@ const entersAt = (pcm: Pcm, hz: number): number => {
   return levels.findIndex((level) => level >= loudest - 6) * 0.01;
 };
 
+/** The chime's scale: the first five degrees on D5, the one variant n strikes its (n − 1)th. */
 const CHIME_SCALE = degrees(74, 5);
 
+/** The notes' scale over two octaves on D5, and the notes off it. */
 const ON_SCALE = degrees(74, 10);
 const OFF_SCALE = Array.from({ length: 24 }, (_, k) => 74 + k).filter(
   (midi) => !ON_SCALE.includes(midi),
 );
 
+/** How far the loudest note on the scale stands over the loudest off it, in dB. */
 const scaleGap = (pcm: Pcm): number =>
   Math.max(...ON_SCALE.map((midi) => levelAt(pcm, midiHz(midi)))) -
   Math.max(...OFF_SCALE.map((midi) => levelAt(pcm, midiHz(midi))));
 
+/** The centre of `Profile.bands`' k-th band: the base-ten third octaves, 1000·10^((k − 15)/10) Hz. */
 const centre = (k: number): number => 1000 * 10 ** ((k - 15) / 10);
 
+/**
+ * The most rumble a family may make: 1e-4 of its power below 30 Hz, what the
+ * cleanest takes hold (amb.rain and paper.whoosh; wood.gavel's holds 1.2e-3).
+ */
 const RUMBLE = 1e-4;
 
+/** Each band's level in dB under the loudest band (0 for the loudest). */
 const underLoudest = (profile: Profile): ReadonlyArray<number> => {
   const loudest = Math.max(...profile.bands);
   return profile.bands.map((share) => 10 * Math.log10(loudest / Math.max(share, 1e-30)));
 };
 
+/** The centre of the loudest band. */
 const loudestBand = (profile: Profile): number =>
   centre(profile.bands.indexOf(Math.max(...profile.bands)));
 
+/** The share of `profile`'s power in the bands centred where `where` holds. */
 const shareWhere = (profile: Profile, where: (hz: number) => boolean): number =>
   profile.bands.reduce((sum, share, k) => sum + (where(centre(k)) ? share : 0), 0);
 
+/** How far under the loudest band the quietest-standing band centred where `where` holds lies: the least of their levels under it. */
 const leastUnder = (profile: Profile, where: (hz: number) => boolean): number =>
   Math.min(...underLoudest(profile).filter((_, k) => where(centre(k))));
 
+/** `pcm`'s mean power from `from` to `to` seconds over every channel, in dB. */
 const powerDb = (pcm: Pcm, from: number, to: number): number => {
   const start = Math.max(0, Math.floor(from * pcm.rate));
   const end = Math.min(pcm.frames, Math.floor(to * pcm.rate));
@@ -207,6 +243,7 @@ const powerDb = (pcm: Pcm, from: number, to: number): number => {
   return 10 * Math.log10(Math.max(sum / (pcm.channels.length * Math.max(1, end - start)), 1e-30));
 };
 
+/** The loudest 20 ms of `pcm` that starts between `from` and `to` seconds, read a millisecond apart: its start and its power in dB. */
 const loudest20ms = (pcm: Pcm, from: number, to: number) => {
   let best = { at: from, db: -Infinity };
   for (let at = Math.max(0, from); at < to; at += 0.001) {

@@ -1,3 +1,16 @@
+/**
+ * The player at a hymn's tempo (unit `tempo`, acceptance A2): with Sound
+ * off, the score clock runs from the first sung line at the held hymn's
+ * tempo, for every tempo the Tempo dial offers; a tempo turned mid-play
+ * moves the place on from where it stands; Sound on, the place is the
+ * device's (the recording at the tempo is `sound.rate.test.ts`'s); a Sound
+ * switch off mid-play runs on from the device's place
+ * at the tempo. Nothing sounds: the device is the test's fake, on the
+ * TestClock.
+ *
+ * Final path: `apps/hymnal/src/player/tempo.test.ts`.
+ */
+
 import { Clock, Effect, Layer, Match, Option, References, SubscriptionRef } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import * as Atom from 'effect/reactivity/Atom';
@@ -16,19 +29,28 @@ import { soundOn } from './sound';
 const book = timingBook(bundled);
 const timelineOf = (hymn: number): Timeline => Option.getOrThrow(book.of(hymn));
 
+/** One poll of the player (`statusEvery`), ms. */
 const POLL = 250;
+/** Every detent of the Tempo dial, in percent. */
 const TEMPI = Array.from({ length: 21 }, (_, i) => 50 + 5 * i);
 
 const morning = { number: 100, title: 'Hymn 100' };
+/** Every hymn as printed: no transpose, no capo. */
 const printed = Atom.make(still);
 
 const settle = Effect.forEach(Array.from({ length: 10 }), () => Effect.yieldNow, {
   discard: true,
 });
 
+/** The place the player shows, ms, while it plays. */
 const placeOf = (player: Player) =>
   Option.getOrThrow(Option.liftPredicate(player, Player.$is('Playing'))).at * 1000;
 
+/**
+ * The app's player as `LivePlayer.tsx` builds it, over the score clock over
+ * the fake device, Sound set to `on`, with hymn 100's tempo held in `tempo`
+ * (percent) and every other hymn at 100.
+ */
 const composed = (on: boolean, initial: number) =>
   Effect.gen(function* () {
     const clock = yield* TestClock.testClockWith(Effect.succeed);
@@ -62,6 +84,7 @@ const composed = (on: boolean, initial: number) =>
       state,
       setTempo: (percent: number) => registry.set(tempo, percent),
       send: (command: Command) => registry.set(player.send, command),
+      /** Move the clock on `ms`, a poll at a time. */
       run: (ms: number) =>
         Effect.gen(function* () {
           for (let t = 0; t < ms; t += POLL) {

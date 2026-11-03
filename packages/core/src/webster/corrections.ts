@@ -1,3 +1,5 @@
+/** Citation corrections read directly from the original 1828 facsimiles.
+ *  Raw CSV HTML is retained unchanged in entries.source_html. */
 export const referenceCorrections = [
   {
     key: 'charity',

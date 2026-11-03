@@ -4,6 +4,7 @@ import { TestClock } from 'effect/testing';
 import type { PhoneCopy } from '../../core/served.ts';
 import { copyAwaited } from './phone.ts';
 
+/** A copy's asks answered by `answers` in turn (the last again once they run out), a minute of the page's clock gone by: what it heard, and how often it asked. */
 const awaited = (answers: ReadonlyArray<PhoneCopy | 'lost'>) =>
   Effect.gen(function* () {
     let asked = 0;

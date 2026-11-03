@@ -34,8 +34,10 @@ const library = defineLibrary({
 });
 
 const { code, trials } = Result.getOrThrow(resolveCode(library));
+/** The library as the film loader resolves it: nothing measured. */
 const sounds: Sounds = { library, lock: {}, dir: '', code, trials };
 
+/** Seed `seed` of the code sound `name`, as the film loader resolved it. */
 const seedOf =
   (name: string) =>
   (seed: number): DerivedSource => ({ _tag: 'Code', sound: sounds.code.get(name)!, seed });

@@ -16,8 +16,10 @@ const measured = (spec: FigureSpec): FigureMeasure =>
 
 type Paper = readonly [number, number, number];
 
+/** A robe shaded toward grey, the case the rim test draws. */
 const RIM_ROBE = { ...PLAIN, robeShade: [104, 118, 135] as const };
 
+/** How much of the paper a rim pixel carries, by its distance to the ink: the nearer, the more. */
 const RIM_BLEND: ReadonlyArray<readonly [number, number]> = [
   [1.5, 0.4],
   [2.5, 0.25],
@@ -27,6 +29,7 @@ const RIM_BLEND: ReadonlyArray<readonly [number, number]> = [
 const sameRgb = (rgba: Uint8Array, i: number, c: ReadonlyArray<number>) =>
   rgba[i * 4] === c[0] && rgba[i * 4 + 1] === c[1] && rgba[i * 4 + 2] === c[2];
 
+/** The distance from (x, y) to the nearest ink pixel within 3 px, Infinity when none is. */
 const inkDistance = (r: Raster, x: number, y: number) => {
   let near = Infinity;
   for (let dy = -3; dy <= 3; dy++)
@@ -39,6 +42,7 @@ const inkDistance = (r: Raster, x: number, y: number) => {
   return near;
 };
 
+/** Each robe pixel near the ink, with the share of the paper it carries. */
 const rimBlends = (r: Raster, robeShade: ReadonlyArray<number>) => {
   const blends: Array<readonly [number, number]> = [];
   for (let y = 0; y < r.height; y++)
@@ -52,6 +56,10 @@ const rimBlends = (r: Raster, robeShade: ReadonlyArray<number>) => {
   return blends;
 };
 
+/**
+ * `spec` drawn on `paper`, its robe's rim blended toward the paper as an
+ * anti-aliased cut-out edge laid on a page is.
+ */
 const rimOnPaper = (spec: typeof RIM_ROBE, paper: Paper): Raster => {
   const r = drawFigure(spec);
   const blends = rimBlends(r, spec.robeShade);
@@ -63,6 +71,7 @@ const rimOnPaper = (spec: typeof RIM_ROBE, paper: Paper): Raster => {
   return r;
 };
 
+/** The ratio's value; NaN when it is missing, so the test's numbers fail on it. */
 const valueOf = (m: FigureMeasure, ratio: Ratio): number =>
   Option.match(Option.fromUndefinedOr(m.ratios.find((r) => r.ratio === ratio)), {
     onNone: () => Number.NaN,

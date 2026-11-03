@@ -4,6 +4,7 @@ import { DuplicateMark, TurnInvalid } from './errors.ts';
 import { layout } from './layout.ts';
 import type { Timings, Cast, Reader } from './schema.ts';
 
+/** No recorded takes: every scene is estimated. */
 const noTakes: Timings = { voice: '', scenes: {} };
 import {
   endsClause,
@@ -19,6 +20,7 @@ import {
 } from './narration.ts';
 import { unmeasured } from './voiced.ts';
 
+/** A line read that must parse. */
 const read = (text: string) => Result.getOrThrow(parse('s', text));
 
 describe('narration', () => {

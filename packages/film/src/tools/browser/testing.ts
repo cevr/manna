@@ -37,6 +37,7 @@ import { PreviewServer } from '../preview-server.ts';
 import { text } from '../host/testing.ts';
 import { noRecording } from '../media/testing.ts';
 
+/** How a fake page answers the export handle's calls: decoded answers, or the failure a page would give. */
 type FakeHandle = {
   readonly [K in ExportCall]: (
     ...args: CallArgs[K]
@@ -46,6 +47,11 @@ type FakeHandle = {
   >;
 };
 
+/**
+ * `handle` behind the same path a tab takes (`Invoke`): each answer
+ * encoded by its call's schema as the page would hand it across, a failure
+ * the page itself gives kept, any other refused with its message.
+ */
 const fakeInvoke =
   (handle: FakeHandle): Invoke =>
   (name, args) =>
@@ -60,22 +66,36 @@ const fakeInvoke =
       }),
     );
 
+/** Everything the fake render host opened and closed, so a test can check nothing leaked. */
 export interface RenderLedger {
   readonly server: { started: number; stopped: number };
   readonly browser: { launched: number; closed: number };
   readonly pages: { opened: number; closed: number };
+  /** Chunks a page began to encode: each finished, or was cut off (killed). */
   readonly encoders: { spawned: number; finished: number; killed: number };
+  /** The encoder each chunk was handed, in the order they began. */
   readonly encodedBy: Array<Encoder['_tag']>;
+  /** The encoders each page choosing one was allowed, in order. */
   readonly encoderAsked: Array<ReadonlyArray<Encoder['_tag']>>;
+  /** Every frame drawn, by any page. */
   readonly frames: Array<number>;
+  /** Look-books composed, by any page. */
   readonly lookbooks: { composed: number };
+  /** The frames of every contact sheet composed. */
   readonly contacts: Array<ReadonlyArray<number>>;
+  /** Every film joined. */
   readonly joins: Array<JoinedFilm>;
+  /** Every video whose sound was replaced, in order. */
   readonly remuxes: Array<string>;
+  /** Every file decoded, in order. */
   readonly decodes: Array<string>;
+  /** The frames of every track encoded to AAC. */
   readonly aac: Array<number>;
+  /** The URL of every page opened. */
   readonly urls: Array<string>;
+  /** Every look's still drawn: its frame and how it was shown. */
   readonly stills: Array<{ readonly frame: number; readonly view: StillView }>;
+  /** AAC encodes cut off before they ended. */
   readonly aacInterrupted: { count: number };
 }
 
@@ -106,6 +126,7 @@ export const testExportInfo: ExportInfo = {
   frames: 600,
 };
 
+/** A frame as a fake page's look pass draws it: one flat grey, and the faces it declares. */
 interface FakeLook {
   readonly grey: number;
   readonly faces: ReadonlyArray<FaceMark>;
@@ -114,25 +135,51 @@ interface FakeLook {
 
 export interface FakeRenderHost {
   readonly info?: ExportInfo;
+  /** The info the page at `url` hands out, where it is not `info` (a short's page and its film's). */
   readonly infoAt?: (url: string) => Option.Option<ExportInfo>;
+  /**
+   * How page number `page` (1 for the first page opened) draws frame `i`:
+   * fail to break it. Every frame first yields for a millisecond, so pages and
+   * encoders really run side by side.
+   */
   readonly frame?: (
     i: number,
     page: number,
   ) => Effect.Effect<void, PageError | PageCrashed | FrameFailed>;
+  /** What a probe of frame `i` reports (nothing by default); failing breaks the page. */
   readonly probe?: (i: number) => Effect.Effect<Probed, PageError | PageCrashed | FrameFailed>;
+  /** How long the audio master measures (default: the film's length). */
   readonly master?: number;
+  /** The encoders the browser has (both by default): a page chooses the first it is allowed that it has. */
   readonly encoders?: ReadonlyArray<Encoder['_tag']>;
+  /** What an AAC encode does once it is recorded (nothing by default). */
   readonly aac?: Effect.Effect<void, MediaFailed>;
+  /** What a join does once it is recorded (nothing by default). */
   readonly join?: (film: JoinedFilm) => Effect.Effect<void, MediaFailed>;
+  /**
+   * Frame `i` as the look pass sees it: the grey its `w` × `h` thumb is filled
+   * with, and the faces it declares (default mid grey, no faces).
+   */
   readonly looked?: (i: number) => FakeLook;
+  /** The luma every sample of frame `i`'s `area` reads, as `luma` reports it (default 128). */
   readonly luma?: (i: number, area: LumaArea) => number;
+  /** The scenes the page reports (`scenes`, a look's clocks; none by default). */
   readonly scenes?: ReadonlyArray<SceneTimes>;
+  /** What page `page`'s `scenes` waits on before it answers (nothing by default): a page still opening. */
   readonly opening?: (page: number) => Effect.Effect<void>;
+  /** The figures frame `i` declares (`figures`, a match's boxes; none by default). */
   readonly figures?: (i: number) => ReadonlyArray<FigureMark>;
+  /** The bytes a still of frame `i` encodes to (`still`; the frame's one byte by default): a real PNG for a match. */
   readonly still?: (i: number, view: StillView) => Uint8Array;
+  /** Whether frame `i` reads the film's own seconds (`filmTimed`; every frame by default, as a drawn film's). */
   readonly filmTimed?: (i: number) => boolean;
 }
 
+/**
+ * A preview server, and a browser whose pages draw one-byte frames and encode
+ * chunks of them, each recording in `ledger` when it opens and closes; and
+ * media that measures the master and records every film it joins.
+ */
 export const fakeRenderHost = (ledger: RenderLedger, host: FakeRenderHost = {}) => {
   const info = Option.getOrElse(Option.fromNullishOr(host.info), () => testExportInfo);
   const draw = Option.getOrElse(Option.fromNullishOr(host.frame), () => () => Effect.void);
@@ -140,6 +187,7 @@ export const fakeRenderHost = (ledger: RenderLedger, host: FakeRenderHost = {}) 
     Option.fromNullishOr(host.encoders),
     (): ReadonlyArray<Encoder['_tag']> => ['Hardware', 'Software'],
   );
+  /** The first of `candidates` this browser has, as a page chooses; `Missing` when it has none. */
   const encoder = (candidates: ReadonlyArray<Encoder>): Effect.Effect<EncoderChoice> =>
     Effect.sync(() => {
       ledger.encoderAsked.push(candidates.map((c) => c._tag));
@@ -175,6 +223,7 @@ export const fakeRenderHost = (ledger: RenderLedger, host: FakeRenderHost = {}) 
       () => Effect.sync(() => void (ledger.server.stopped += 1)),
     ),
   );
+  /** Page number `page`'s handle: frames of one byte each, every call recorded in `ledger`. */
   const handleOf = (page: number): FakeHandle => {
     const frame = (i: number) =>
       Effect.sleep('1 millis').pipe(
@@ -315,6 +364,7 @@ export const fakeRenderHost = (ledger: RenderLedger, host: FakeRenderHost = {}) 
   return Layer.mergeAll(server, browser, fakeRenderMedia(ledger, host));
 };
 
+/** The render host's media alone: it measures the master and records every film it joins. */
 export const fakeRenderMedia = (ledger: RenderLedger, host: FakeRenderHost = {}) => {
   const info = Option.getOrElse(Option.fromNullishOr(host.info), () => testExportInfo);
   return Layer.succeed(
@@ -351,6 +401,10 @@ export const fakeRenderMedia = (ledger: RenderLedger, host: FakeRenderHost = {})
   );
 };
 
+/**
+ * A probed line of text: a `w` × `h` box at (`x`, `y`), turned `rot` radians
+ * about its centre, in scene `scene`.
+ */
 export const textBox = (
   text: string,
   x: number,
@@ -362,9 +416,13 @@ export const textBox = (
     readonly rot?: number;
     readonly scene?: string;
     readonly order?: number;
+    /** The seed of the hand that wrote it: what a stroke's `marks` names. */
     readonly hand?: number;
+    /** The `order` of the plate it sits on. */
     readonly on?: number;
+    /** Canvas pixels per unit of the space it was drawn in (default 1). */
     readonly scale?: number;
+    /** The caption line. */
     readonly caption?: true;
   } = {},
 ): TextBox => {
@@ -409,6 +467,10 @@ export const textBox = (
   };
 };
 
+/**
+ * A probed mark of ink along `points`: a stroke `width` wide (a fill or a
+ * plate takes the points as its outline), drawn `order`-th in the frame.
+ */
 export const inkMark = (
   kind: InkMark['kind'],
   points: ReadonlyArray<readonly [number, number]>,
@@ -416,8 +478,11 @@ export const inkMark = (
     readonly width?: number;
     readonly alpha?: number;
     readonly order?: number;
+    /** The seeds of the hands whose text this stroke marks on purpose. */
     readonly marks?: ReadonlyArray<number>;
+    /** Canvas pixels per unit of the space it was drawn in (default 1). */
     readonly scale?: number;
+    /** The caption line's plate. */
     readonly caption?: true;
   } = {},
 ): InkMark => {

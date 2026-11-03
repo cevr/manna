@@ -1,11 +1,15 @@
 import { unitGradient } from './glow.ts';
 
+/** A warm dark, the same as a cutout's cast shadow, as r, g, b. */
 const GROUND_TINT: readonly [number, number, number] = [40, 28, 16];
 
+/** How dark the shadow is at its heart, 0..1: within the 15–30 % the direction asks. */
 export const GROUND_ALPHA = 0.28;
 
+/** How flat the ellipse lies: its height over its width. */
 export const GROUND_FLAT = 0.12;
 
+/** The shadow's gradient at unit radius: darkest at its heart, gone at its rim. */
 const shadowGradient = (ctx: CanvasRenderingContext2D, [r, g, b]: typeof GROUND_TINT) => {
   const made = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
   made.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${GROUND_ALPHA})`);
@@ -14,6 +18,11 @@ const shadowGradient = (ctx: CanvasRenderingContext2D, [r, g, b]: typeof GROUND_
   return made;
 };
 
+/**
+ * The contact shadow under something standing at (x, y), `w` wide: a flat
+ * warm ellipse, darkest under the feet and gone at its rim. Fade it with the
+ * context's `globalAlpha`.
+ */
 export const ground = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number) => {
   if (w <= 0) return;
   const rx = w / 2;

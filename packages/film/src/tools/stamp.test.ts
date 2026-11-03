@@ -15,8 +15,10 @@ import { type Keyed, Stamps, importsOf, stampOf } from './stamp.ts';
 import { sceneFixture } from './scene-sources/testing.ts';
 import { resolveAddress } from '../core/address.ts';
 
+/** The fixture film's folder: a fresh one per test. */
 class Films extends Context.Service<Films, string>()('test/Films') {}
 
+/** The fixture film's Stamps, asking `git` for the commit through `spawner`. */
 const fixtureOver = <E, R>(spawner: Layer.Layer<never, E, R>) =>
   Layer.unwrap(
     Effect.gen(function* () {
@@ -32,6 +34,10 @@ const fixtureOver = <E, R>(spawner: Layer.Layer<never, E, R>) =>
     }),
   ).pipe(Layer.provideMerge(BunServices.layer));
 
+/**
+ * `git` as it answers outside a checkout (exit 128, no commit), with no
+ * process: the keys' cases read the keys, and the commit case asks real git.
+ */
 const outsideACheckout = Layer.succeed(
   ChildProcessSpawner.ChildProcessSpawner,
   ChildProcessSpawner.make(() =>
@@ -54,6 +60,7 @@ const outsideACheckout = Layer.succeed(
 );
 
 const fixture = fixtureOver(outsideACheckout);
+/** The fixture's Stamps over the real `git`, run in the fixture's folder. */
 const gitFixture = fixtureOver(Layer.empty);
 
 const placed = Result.getOrThrow(
@@ -74,6 +81,7 @@ const film = (films: string, path: Path.Path): Keyed => ({
   timings: { voice: '', scenes: {} },
 });
 
+/** Every scene's key now. */
 const keysNow = Effect.gen(function* () {
   const films = yield* Films;
   const path = yield* Path.Path;
@@ -81,6 +89,7 @@ const keysNow = Effect.gen(function* () {
   return Object.fromEntries(keys);
 });
 
+/** Append a line to a file of the fixture's scenes folder. */
 const touch = (name: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -89,6 +98,7 @@ const touch = (name: string) =>
     yield* fs.writeFileString(file, `${yield* fs.readFileString(file)}// edited\n`);
   });
 
+/** The scenes whose key changed from `before` to `after`. */
 const changed = (before: Record<string, string>, after: Record<string, string>) =>
   Object.keys(before).filter((id) => before[id] !== after[id]);
 
@@ -171,8 +181,10 @@ describe.concurrent('scene keys', () => {
   );
 });
 
+/** How many times the stamp read each file. */
 class Reads extends Context.Service<Reads, Map<string, number>>()('test/Reads') {}
 
+/** The fixture's Stamps, over a file system that counts what it reads. */
 const counting = Layer.unwrap(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -215,6 +227,10 @@ describe.concurrent('the stamp’s reads', () => {
   );
 });
 
+/**
+ * Film `f` in memory: its frame, a registry that reads the script, and the
+ * script with `hand`'s tail `tail`. No scene has a module of its own.
+ */
 const inMemory = (tail: number) => {
   const files = new Map([
     [
@@ -239,6 +255,7 @@ const inMemory = (tail: number) => {
   return { files, layer };
 };
 
+/** The script of film `f` in memory, with `hand`'s tail `tail`. */
 const scriptOf = (tail: number) =>
   text(`export const script = [
   { id: 'hand', say: 'Hi.', tail: ${tail} },
@@ -281,6 +298,11 @@ describe.concurrent('beat keys in memory', () => {
     }).pipe(Effect.provide(layer));
   });
 
+  /**
+   * At each rate: each beat's first frame after takes of 3.6 s and 3.2 s,
+   * then 4.1 s and 2.7 s (3.6 + 3.2 is 6.800000000000001 and 4.1 + 2.7 is
+   * 6.8), and how many frames into `built` its half second falls.
+   */
   const RATES = [
     { fps: 24, was: [0, 86, 163], now: [0, 98, 163], half: 12 },
     { fps: 30, was: [0, 108, 204], now: [0, 123, 204], half: 15 },
@@ -298,6 +320,7 @@ describe.concurrent('beat keys in memory', () => {
           { id: 'built', min: 10 },
         ];
         for (const at of RATES) {
+          /** Each beat's first frame, `built`'s key, and the time it hands its painter on its frames around its half second. */
           const laidWith = (durations: readonly [number, number]) =>
             Effect.gen(function* () {
               const timings = {

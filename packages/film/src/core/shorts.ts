@@ -4,25 +4,39 @@ import { type Placed, pointIn } from './layout.ts';
 import type { ScenePoint, Short, ShortSpan } from './schema.ts';
 import { CLOCK_EPSILON, frameRead, secondsAt } from './time.ts';
 
+/** A short as it plays: 1080 × 1920, vertical. */
 export const SHORT_WIDTH = 1080;
 const SHORT_HEIGHT = 1920;
 
+/** One span of a short on the film's clock: film seconds `[from, to)`, starting at `at` in the short. */
 interface ShortCut {
   readonly scene: string;
   readonly from: number;
   readonly to: number;
   readonly at: number;
+  /** The whole frames a frame of the span lies later in the film than in the short: its first frame's in the film less its first frame's in the short. */
   readonly shift: number;
 }
 
+/** A short resolved against its film: its spans on whole frames, and its length. */
 export interface ResolvedShort {
   readonly id: string;
   readonly title: string;
   readonly spans: readonly [ShortCut, ...ShortCut[]];
+  /** Seconds, a whole number of frames. */
   readonly duration: number;
+  /** The frame rate it was resolved on: each span's ends sit within half a frame of their points. */
   readonly fps: number;
 }
 
+/**
+ * Where a short's parts sit, in 1080 × 1920 px, top to bottom: the hook line
+ * (centred on `hook.y`, at most `width` wide, set from the first frame, held
+ * `hold` s and faded over `fade` s), the film's 16:9 frame (607.5 px tall from
+ * `band.top`), and the captions (centred on `caption.y`). Every line is
+ * centred on `centre`. Data, so the page, the checks and the lab read one
+ * layout.
+ */
 export const SHORT_LAYOUT = {
   centre: 540,
   hook: { y: 445, width: 800, hold: 2.4, fade: 0.4 },
@@ -30,6 +44,13 @@ export const SHORT_LAYOUT = {
   caption: { y: 1318, width: 800 },
 } as const;
 
+/**
+ * What a platform's buttons, names and progress bar cover on a vertical
+ * short: a margin from each edge, in 1080 × 1920 px. Text past one is under
+ * the platform's own furniture, and so is text past a column of buttons on
+ * the right (`ButtonColumn`), which takes more than the margin from its top
+ * down. Data, so `film check --short` and the lab read one set of zones.
+ */
 export interface SafeZone {
   readonly top: number;
   readonly bottom: number;
@@ -38,13 +59,22 @@ export interface SafeZone {
   readonly columns: ReadonlyArray<ButtonColumn>;
 }
 
+/** A column of buttons on the right: `right` px wide, from `from` px down to the foot. */
 interface ButtonColumn {
   readonly right: number;
   readonly from: number;
 }
 
+/** `share` of `size` px, rounded up to a whole pixel: a margin given as a share of the frame. */
 const shareOf = (share: number, size: number) => Math.ceil(share * size);
 
+/**
+ * Each platform's own safe zone for a 9:16 video, in 1080 × 1920 px, as each
+ * publishes it (read 2026-10-11). Only YouTube and Meta publish numbers in
+ * their help text, and both for their ads; TikTok publishes its zone as a
+ * downloadable file. A talk is published to all three (one render), so its
+ * text keeps inside every one of them (`SAFE_ZONES.platforms`).
+ */
 export const PLATFORM_ZONES = {
   youtube: {
     title: 'YouTube Shorts',
@@ -66,6 +96,7 @@ export const PLATFORM_ZONES = {
   },
 } as const satisfies Record<string, { readonly title: string; readonly zone: SafeZone }>;
 
+/** The zone inside every one of `zones`: each edge the widest of theirs, and every one's button columns. */
 const unionOf = (zones: ReadonlyArray<SafeZone>): SafeZone => ({
   top: Math.max(...zones.map((z) => z.top)),
   bottom: Math.max(...zones.map((z) => z.bottom)),
@@ -74,6 +105,13 @@ const unionOf = (zones: ReadonlyArray<SafeZone>): SafeZone => ({
   columns: zones.flatMap((z) => z.columns),
 });
 
+/**
+ * The zones `film check --short --zone` knows: `default` the organic feed's
+ * (the like, comment and share buttons on the right, the name and caption
+ * above the bottom), `ads` a paid placement's, whose call to action covers
+ * the bottom 35%, and `platforms` the zone inside every platform's own
+ * (`PLATFORM_ZONES`): where a talk sets its words.
+ */
 export const SAFE_ZONES = {
   default: { top: 270, bottom: 520, left: 65, right: 140, columns: [] },
   ads: { top: 270, bottom: Math.round(0.35 * SHORT_HEIGHT), left: 65, right: 140, columns: [] },
@@ -86,6 +124,10 @@ export const SAFE_ZONE_NAMES = [
   'platforms',
 ] as const satisfies ReadonlyArray<SafeZoneName>;
 
+/**
+ * The rectangle inside `zone`'s margins, in 1080 × 1920 px: where text is
+ * safe above its button columns (`roomAcross` the rows a line takes).
+ */
 export const safeRect = (zone: SafeZone) => ({
   left: zone.left,
   top: zone.top,
@@ -93,6 +135,11 @@ export const safeRect = (zone: SafeZone) => ({
   bottom: SHORT_HEIGHT - zone.bottom,
 });
 
+/**
+ * How far across a line whose foot is at row `bottom` may reach in `zone`,
+ * in 1080 × 1920 px: inside its margins, and short of every button column
+ * the line runs down into (a column runs to the frame's foot).
+ */
 export const roomAcross = (zone: SafeZone, bottom: number) => {
   const under = zone.columns.filter((c) => bottom > c.from);
   return {
@@ -101,44 +148,77 @@ export const roomAcross = (zone: SafeZone, bottom: number) => {
   };
 };
 
+/**
+ * The numbers `film check --short` holds a short to: the first word by
+ * `firstWord` s and something moving by `motionBy` s (the hook), at most
+ * `loopGap` s of silence from the last word round to the first and a last
+ * frame within `loopDiff` of the first (mean luma, 0–1, of the film's band)
+ * so it loops, and a length at most `length.max` s, best `length.from` to
+ * `length.to` s.
+ */
 export const SHORT_RULES = {
   firstWord: 0.3,
   motionBy: 0.5,
   loopGap: 0.6,
   loopDiff: 0.08,
+  /** The grid the band's luma is sampled down to for `loopDiff`: coarse, so grain and boil wash out. */
   loopGrid: { cols: 64, rows: 36 },
   length: { max: 90, from: 45, to: 75 },
 } as const;
 
+/** How opaque the hook is at short second `s`: set at once, held, then faded out. */
 export const hookAlpha = (s: number): number => {
   const { hold, fade } = SHORT_LAYOUT.hook;
   return Math.min(1, Math.max(0, 1 - (s - hold) / fade));
 };
 
+/** The page a short is drawn on (`shortKey`), in the registry the player loads from. */
 export const shortKey = (film: string, id: string): string => `${film}/shorts/${id}`;
 
+/**
+ * The short's page for a film `width` px wide: 9:16 at the film's own density,
+ * so its 16:9 band is the film's frame pixel for pixel, and the `scale` that
+ * encodes it to 1080 × 1920. H.264 wants even sides.
+ */
 export const shortPage = (width: number) => ({
   width,
   height: Math.round((width * SHORT_HEIGHT) / SHORT_WIDTH / 2) * 2,
   scale: SHORT_WIDTH / width,
 });
 
+/** Where the film's frame sits on a short's page, in page px. */
 interface ShortBand {
   readonly top: number;
   readonly width: number;
   readonly height: number;
 }
 
+/** Page px per 1080 × 1920 px, for a film `width` px wide. */
 export const pageScale = (width: number) => width / SHORT_WIDTH;
 
+/**
+ * The film's frame at the layout's top (`SHORT_LAYOUT.band`), on a whole
+ * pixel row so the copy is exact: as tall as the film is drawn, whatever its
+ * aspect. The page draws it here and the check compares the loop on it.
+ */
 export const bandOf = (film: { readonly width: number; readonly height: number }): ShortBand => ({
   top: Math.round(SHORT_LAYOUT.band.top * pageScale(film.width)),
   width: film.width,
   height: film.height,
 });
 
+/**
+ * The pause a span that opens on a word keeps before the word is heard: the
+ * breath into it. The aligner starts a word with the pause before it, so a
+ * span opened on its aligned start would open on up to a second of silence.
+ */
 export const SHORT_PREROLL = 0.1;
 
+/**
+ * Where a span that opens at voice second `at` (a word's aligned start)
+ * starts: `SHORT_PREROLL` before the word there is heard, never before `at`.
+ * An estimated voice is heard from its aligned start, so it opens there.
+ */
 const openOnVoice = (p: Placed, at: number): number =>
   Option.match(
     Arr.findFirst(p.voice.words, (w) => w.end > at),
@@ -148,6 +228,10 @@ const openOnVoice = (p: Placed, at: number): number =>
     },
   );
 
+/**
+ * Where a point opens onto the voice, in voice seconds: a mark, or where the
+ * voice starts. None for any other point, which opens where it lands.
+ */
 const onVoice = (p: Placed, point: ScenePoint): Option.Option<number> => {
   const mark = Option.filter(Option.fromUndefinedOr(point.mark), () =>
     Option.isNone(Option.fromUndefinedOr(point.word)),
@@ -159,6 +243,12 @@ const onVoice = (p: Placed, point: ScenePoint): Option.Option<number> => {
   );
 };
 
+/**
+ * Where a point lands in its scene, scene-local (`pointIn`). A cue that names
+ * no edge lands on `edge`: its start when it opens a span, its end when it
+ * closes one. A mark or the speech opening a span lands on the voice
+ * (`openOnVoice`).
+ */
 const pointAt = (
   short: string,
   p: Placed,
@@ -175,6 +265,7 @@ const pointAt = (
     ),
   );
 
+/** A span on the film's frames, `[from, to)`, at the rate its scene was laid at. */
 const spanFrames = (
   short: string,
   placed: ReadonlyArray<Placed>,
@@ -208,6 +299,11 @@ const spanFrames = (
     return { scene: span.scene, from, to, fps };
   });
 
+/**
+ * `short` on the film laid out as `placed`: each span on whole frames at the
+ * rate the film was laid at, back to back. A scene, mark or cue the film
+ * lacks, or a span that holds no frame, fails naming it.
+ */
 export const resolveShort = (
   placed: ReadonlyArray<Placed>,
   short: Short,
@@ -230,6 +326,7 @@ export const resolveShort = (
     },
   );
 
+/** The index of the span playing at short time `s`. */
 export const shortSpanAt = (short: ResolvedShort, s: number): number => {
   const spans = short.spans;
   let i = spans.length - 1;
@@ -237,9 +334,11 @@ export const shortSpanAt = (short: ResolvedShort, s: number): number => {
   return i;
 };
 
+/** A stretch of the film's track: `duration` seconds from film second `start`. */
 export const FilmPiece = Schema.Struct({ start: Schema.Finite, duration: Schema.Finite });
 export type FilmPiece = typeof FilmPiece.Type;
 
+/** The film's stretches under the short's seconds `[from, to)`, in the order the short plays them. */
 export const shortPieces = (
   short: ResolvedShort,
   from: number,

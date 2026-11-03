@@ -1,3 +1,17 @@
+/**
+ * Builds the meaning table the app ships (`table.ts` says the format): the
+ * pinned EmbeddingGemma run on every word of the table alone, and on every
+ * hymn's title and words, cut to 4 and 8 bits.
+ *
+ *   bun scripts/meaning/build.ts --out <file> [--cache <dir>]
+ *
+ * The model, the word list and the runtime go into the cache (by default
+ * `<tmpdir>/manna-meaning`), never the repository: a cache inside the
+ * repository, or under `~/.bible`, is refused. Each file is checked against
+ * its pinned SHA-256 (`pins.ts`). The runtime runs on a fixed number of
+ * threads with fixed batches, so two builds write the same bytes.
+ */
+
 import { readdirSync, readFileSync, realpathSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
@@ -26,6 +40,7 @@ const argument = (name: string): string | undefined => {
 const repository = resolve(import.meta.dir, '../../../..');
 const sdah = join(import.meta.dir, '../../data/sdah-1985');
 
+/** The cache, made and checked: outside the repository and outside `~/.bible`. */
 const cacheOf = (path: string): string => {
   mkdirSync(path, { recursive: true });
   const real = realpathSync(path);
@@ -37,6 +52,7 @@ const cacheOf = (path: string): string => {
   return real;
 };
 
+/** Every compiled hymn: its number, and its title and words (each line once, in sung order). */
 const readHymns = () =>
   readdirSync(sdah)
     .filter((name) => /^\d{3}\.json$/.test(name))
@@ -49,6 +65,7 @@ const readHymns = () =>
       return { number: hymn.number, title: hymn.title, text };
     });
 
+/** The pinned runtime in `<cache>/runtime`, installed with a home of its own; the path transformers.js loads from. */
 const installRuntime = (cache: string): string => {
   const folder = join(cache, 'runtime');
   mkdirSync(join(cache, 'home'), { recursive: true });
@@ -108,6 +125,7 @@ const model = await transformers.AutoModel.from_pretrained(MODEL.repo, {
   session_options: { intraOpNumThreads: THREADS, interOpNumThreads: 1 },
 });
 
+/** The model's unit vectors for `texts`, `batch` at a time, in one array. */
 const embed = async (what: string, texts: ReadonlyArray<string>, batch: number) => {
   const rows = new Float32Array(texts.length * DIMS);
   const started = performance.now();

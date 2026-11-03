@@ -17,7 +17,13 @@ import { WikiSectionSources } from './section-composer.js';
 import { layerBunOrAbsent } from './artifact-fixture.js';
 import { WikiService } from './service.js';
 
+/** Builds a topics artifact on disk with the §2.2 schema and whatever rows a
+ *  test declares. Real SQLite rather than a stub service: the absence contract
+ *  is only worth testing against the same driver the hosts use. */
 const artifact = (input: {
+  /** A string because `meta.value` is a TEXT column: a corrupt version field is
+   *  a value the artifact can really hold, and the reader's strict parse only
+   *  has something to catch if the fixture can write one. */
   readonly schemaMajor: string;
   readonly topics?: readonly {
     readonly slug: string;
@@ -70,6 +76,9 @@ const write = (
   return file;
 };
 
+/** The catalog long tail every listing now includes. Two entries, one of which
+ *  (`sanctuary`) is also authored as a flagship page in several tests — the
+ *  overlap is what proves a topic appears once, as its better half. */
 const CATALOG = [
   TopicDetail.make({
     id: Schema.decodeSync(TopicId)('sanctuary'),
@@ -87,6 +96,11 @@ const CATALOG = [
 
 const catalog = TopicService.Test(CATALOG);
 
+/** These tests are about the artifact reader, not about §6, so they wire the
+ *  *explicit* degraded sourcing rather than four live corpora. `NotWired` is a
+ *  layer a host chooses on purpose — which is the whole point of making
+ *  `WikiSectionSources` a required dependency: there is no way to simply omit
+ *  it and get an unexplained empty lineup. */
 const live = (file: string): Layer.Layer<WikiService> =>
   WikiService.Live.pipe(
     Layer.provide(SqliteBun.layer({ filename: file, readonly: true })),
@@ -95,6 +109,8 @@ const live = (file: string): Layer.Layer<WikiService> =>
     Layer.orDie,
   );
 
+/** {@link live}, over an artifact this same layer builds — so the whole graph is
+ *  one value a test provides at its own boundary. */
 const liveArtifact = (input: {
   readonly schemaMajor: string;
   readonly topics?: readonly {
@@ -106,14 +122,22 @@ const liveArtifact = (input: {
 }): Layer.Layer<WikiService, never, FileSystem.FileSystem | Scope.Scope> =>
   Layer.unwrap(Effect.map(artifact(input), live));
 
+/** The catalog-only wiring a host gets from a path, for the tests that supply
+ *  their own file rather than {@link artifact}'s. */
 const orAbsent = (file: string): Layer.Layer<WikiService, never, FileSystem.FileSystem> =>
   layerBunOrAbsent(file).pipe(Layer.provide(catalog), Layer.provide(WikiSectionSources.NotWired));
 
+/** The typed failure `list` gives for the artifact at `file`, read at that
+ *  wiring's own boundary — the corrupt case and the absent case are two
+ *  different graphs, so each is its own named call rather than one provide. */
 const listFailureFrom = (file: string) =>
   Effect.flatMap(WikiService, (wiki) => Effect.flip(wiki.list({}))).pipe(
     Effect.provide(orAbsent(file)),
   );
 
+/** Every corruption the version gate should report for the artifact at `file`,
+ *  read at that file's own wiring — the loop below builds a fresh artifact per
+ *  case, so one shared provide cannot serve them. */
 const versionFailuresFrom = (file: string) =>
   Effect.gen(function* () {
     const wiki = yield* WikiService;
@@ -124,6 +148,7 @@ const versionFailuresFrom = (file: string) =>
     };
   }).pipe(Effect.provide(live(file)));
 
+/** The availability and listing length the artifact at `file` reports. */
 const availabilityFrom = (file: string) =>
   Effect.gen(function* () {
     const wiki = yield* WikiService;

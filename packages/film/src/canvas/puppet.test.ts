@@ -19,6 +19,7 @@ type Pt = readonly [number, number];
 const [W, H] = [100, 110];
 const ROOT: Pt = [51, 105];
 
+/** A part's pixels: opaque over `[x0, x1) × [y0, y1)`, sheet px (a mesh's 3 px grid holds each corner as a vertex). */
 const block = (x0: number, y0: number, x1: number, y1: number): Raster => {
   const rgba = new Uint8Array(W * H * 4);
   for (let y = y0; y < y1; y++)
@@ -26,6 +27,7 @@ const block = (x0: number, y0: number, x1: number, y1: number): Raster => {
   return { width: W, height: H, rgba };
 };
 
+/** A rectangle's corners in the order a drawn key's quad is laid: top left, top right, bottom right, bottom left. */
 const corners = (x0: number, y0: number, x1: number, y1: number): ReadonlyArray<Pt> => [
   [x0, y0],
   [x1, y0],
@@ -36,6 +38,7 @@ const corners = (x0: number, y0: number, x1: number, y1: number): ReadonlyArray<
 const HEAD = corners(39, 9, 60, 39);
 const ARM = corners(69, 45, 90, 54);
 
+/** A head on its head bone and an arm of two bones (upper and fore, the elbow at x 78), each on the root. */
 const SKELETON: Skeleton = {
   bones: [
     { name: 'root', pivot: ROOT, tip: [51, 60] },
@@ -95,6 +98,7 @@ const poseOf = (numbers: Readonly<Record<string, number>>): PuppetPose => ({
   scale: 1,
 });
 
+/** A closed-eye head laid over the head, and an arm key laid over the arm, each pivoting on a vertex of its part's grid. */
 const BLINK = {
   part: 'head',
   drawing: 'blink',
@@ -108,12 +112,14 @@ const FOLD = {
   pivot: [81, 48],
 } as const;
 
+/** The quad laid in place of part `k`: its four corners, canvas px. */
 const keyQuad = (l: LoadedPuppet, k: number): ReadonlyArray<Pt> => {
   const q = l.gl.swapPositions[k];
   if (q === undefined) return [];
   return [0, 1, 2, 3].map((i): Pt => [q[2 * i]!, q[2 * i + 1]!]);
 };
 
+/** Where part `k`'s vertex at sheet px `p` (a point of its mesh's grid) was last posed, canvas px. */
 const partAt = (l: LoadedPuppet, k: number, [x, y]: Pt): Pt => {
   const v = PUPPET.parts[k]!.mesh.vertices;
   const i = v.findIndex(
@@ -124,6 +130,7 @@ const partAt = (l: LoadedPuppet, k: number, [x, y]: Pt): Pt => {
   return [out[i]!, out[i + 1]!];
 };
 
+/** The point of a key's quad at `[u, v]`, fractions of its drawing's width and height. */
 const inKey = (q: ReadonlyArray<Pt>, [u, v]: Pt): Pt => {
   const [tl, tr, br, bl] = q as readonly [Pt, Pt, Pt, Pt];
   const top: Pt = [tl[0] + u * (tr[0] - tl[0]), tl[1] + u * (tr[1] - tl[1])];
@@ -211,9 +218,11 @@ describe("a drawn key rides its part's bones at its pivot", () => {
   });
 });
 
+/** The ramp the head is drawn in (L* rising from above the ink cut), and a cloth's ramp to dye it to. */
 const DRAWN: Ramp = { shade: '#8a7f70', base: '#b8ab98', light: '#ddd2c0' };
 const INDIGO: Ramp = { shade: '#394357', base: '#4b566b', light: '#6a7590' };
 
+/** The two parts' sheet as a dress reads it: the head declares the ramp it is drawn in, the arm none. */
 const DRESSED: PuppetSpec = {
   ...SPEC,
   parts: [
@@ -222,6 +231,7 @@ const DRESSED: PuppetSpec = {
   ],
 };
 
+/** Every buffer a draw writes, copied: each part's posed vertices, its rest place and its key's quad. */
 const buffersOf = (l: LoadedPuppet) => ({
   positions: l.gl.positions.map((b) => Array.from(b)),
   rest: l.gl.restPositions.map((b) => Array.from(b)),

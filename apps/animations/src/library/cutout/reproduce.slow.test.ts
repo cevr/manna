@@ -21,18 +21,23 @@ const SOURCES = `${HERE}/../..`;
 const APP = `${SOURCES}/..`;
 const FILLER = `${HERE}/../cast/filler-bases/cutout`;
 
+/** A check draws nothing: every view's answers are committed. */
 const noDraw = Layer.succeed(
   ImageRoute,
   ImageRoute.of({ draw: () => Effect.die('a check asks okra for nothing') }),
 );
 const layer = Layer.mergeAll(BunServices.layer, noDraw);
 
+/** The record-bearing views the tree holds today: a glob that finds fewer has lost its way. */
 const LEAST_VIEWS = 46;
 
+/** A part sheet's record, as far as a check reads it: the command that makes it. */
 const RecordCommand = Schema.fromJsonString(Schema.Struct({ command: Schema.String }));
 
+/** `film concept parts <film> <member> --view <asked>`, read. */
 const COMMAND = /^film concept parts (\S+) (\S+) --view (\S+)$/;
 
+/** A committed view: its member's folder (`<member>/cast-sheet` beside `<member>/cutout`), the film, member and view its record's command names, or why it cannot be read. */
 interface View {
   readonly record: string;
   readonly folder: string;
@@ -42,6 +47,7 @@ interface View {
   >;
 }
 
+/** Every committed view under the app's sources, by its record's path, sorted. */
 const VIEWS: ReadonlyArray<View> =
   // oxlint-disable-next-line effect/noAsyncFunction -- read once as the file loads, so each view is a case of its own
   await Effect.runPromise(
@@ -77,8 +83,14 @@ const VIEWS: ReadonlyArray<View> =
     }).pipe(Effect.provide(BunServices.layer)),
   );
 
+/**
+ * The views a case's 5 s cannot hold in this process (cut and lay measured
+ * at 4-7 s at rest), each checked by the command in its own process: the
+ * series lead's single-9 lays more answers than any other view.
+ */
 const IN_ITS_OWN_PROCESS = new Set(['lead-feast.single-single-9']);
 
+/** `concept parts <member> --view <asked> --check` in this process, its rule replaced when one is given. */
 const check = (
   view: View,
   called: { readonly film: string; readonly member: string; readonly asked: string },
@@ -97,6 +109,7 @@ const check = (
     });
   });
 
+/** `bun <args>` in `cwd`: its exit code and its last line out. */
 const bun = (cwd: string, args: ReadonlyArray<string>) =>
   Effect.scoped(
     Effect.gen(function* () {
@@ -109,8 +122,10 @@ const bun = (cwd: string, args: ReadonlyArray<string>) =>
     }),
   );
 
+/** The timeout of a case that checks its view in its own process (effect/requireSpawnBudget). */
 const SPAWN_MS = 60_000;
 
+/** A file's content as compared: a PNG's size and decoded RGBA, else its bytes. */
 const contentOf = (file: string) =>
   Effect.gen(function* () {
     const bytes = yield* (yield* FileSystem.FileSystem).readFile(file);
@@ -119,6 +134,7 @@ const contentOf = (file: string) =>
     return { width: raster.width, height: raster.height, rgba: [...raster.rgba] };
   });
 
+/** Each file under `dir`, by its path from it, sorted. */
 const filesIn = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -128,8 +144,10 @@ const filesIn = (dir: string) =>
     return files;
   });
 
+/** The woman's poses-1, which her cuff readings check again. */
 const WOMAN = VIEWS.find((v) => v.record.includes('/feast-guest-woman/cutout/sheets/poses-1/'));
 
+/** The readings of cuff ink the woman's poses-1 holds under. */
 const READINGS = [1.5, 2, 2.5].flatMap((rim) => [10, 11, 12].map((darker) => ({ rim, darker })));
 
 describe('the cast build makes every committed part sheet again', () => {

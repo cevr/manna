@@ -17,6 +17,7 @@ const bars = (voice: Fixture.Voice | undefined, from: number, to: number): Fixtu
   }
   return out;
 };
+/** As the hymnal's files are laid out: an intro of the first two bars, then each verse in full. */
 const played = (voice: Fixture.Voice | undefined, verses: number) => [
   ...bars(voice, 0, 2),
   ...Array.from({ length: verses }, () => voice ?? []).flat(),
@@ -64,6 +65,7 @@ describe('Score.fromMidi', () => {
 });
 
 describe('Score.findVerses', () => {
+  /** A bar of 2/4 at 384 ticks per beat: the tunes here are in 2/4 unless a case says else. */
   const BAR = 2 * 384;
 
   it.effect(
@@ -109,6 +111,7 @@ describe('Score.findVerses', () => {
     [64, 1],
     [62, 4],
   ];
+  /** The tune with note `p` split in two, for an extra syllable. */
   const splitAt = (tune: Fixture.Voice, p: number): Fixture.Voice =>
     tune.flatMap((note, i): Fixture.Voice =>
       i === p
@@ -236,6 +239,7 @@ describe('Score.findVerses', () => {
       }),
   );
 
+  /** A 4/4 tune on a one-beat pickup, its first line, its middle line, its last line. */
   const PICKUP: Fixture.Voice = [[67, 1]];
   const OPENS: Fixture.Voice = [
     [72, 1],

@@ -10,6 +10,7 @@ import { PAPERS } from './papers.ts';
 
 export { FRAMES, JOINTS };
 
+/** A view of theirs, by its name in their sheet's views. */
 type CutView = keyof typeof FRAMES;
 
 const POSES_3: PartCut = {
@@ -216,18 +217,28 @@ const SINGLE_15: PartCut = {
   ],
 };
 
+/** Their sheet's outline ink (measured on each poses view: 5,1,0 to 6,2,0; single-15's is 1,0,0). */
 const INK = [6, 1, 0, 255] as const;
 
+/** Where the grown villager's body runs under his arms: out to his shoulders and tunic, not in at the sleeves' inner edges. */
 const SIDES = sides({
   pronoun: 'his',
   lower: 'tunic',
   cloth: 'the undyed linen tunic and its soft folds',
 });
 
+/** The paper grain the sheet shows on his tunic, carried into the paint under his arms. */
 const GRAIN = grain('the linen tunic of his body');
 
+/** What every view of the grown villager keeps as it is. */
 const KEEP = `Keep every other pixel exactly as it is: the same linen headcloth and its band, face, beard, tunic, sandals, size, position and framing.`;
 
+/**
+ * Each view's moving parts (what a pose moves, whose areas are painted
+ * magenta and repainted beneath), and the words okra repaints them by: what
+ * lies under them, in the sheet's own style. The poses-3 neighbour is still,
+ * so nothing is repainted under it.
+ */
 const HIDDEN_ENTRIES = {
   'poses-3': {
     moving: ['armRight', 'armLeft'],
@@ -267,16 +278,20 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   ink: INK,
 });
 
+/** How far the clear ground's flood reaches through paper-coloured pixels, 8-steps: their band runs 1 to 4 px wide outside their ink, and its thin tail on their own figures reaches 14 at most (single-15), so one pass clears it all there; on poses-3 the flood would run on into the baby's cream cloth, which the sheet's edge leaves open in the `neighbour` part no puppet draws, and this depth stops it there. */
 const RIM_BAND_PX_PAST_THEIR_14_SHORT_OF_THE_BABYS_CLOTH = 16;
 
+/** A pixel is paper-coloured within this ΔE76 of the view's paper: their band lies 5 to 6 from it at the median, their ink's blend farther. */
 const RIM_NEAR_DE76_PAST_THEIR_RIM_6 = 12;
 
+/** Each view's paper rim, as their part sheets clear it. */
 export const PAPER_RIMS = Records.map(PAPERS, (paper): PaperRim => ({
   paper,
   band: RIM_BAND_PX_PAST_THEIR_14_SHORT_OF_THE_BABYS_CLOTH,
   near: RIM_NEAR_DE76_PAST_THEIR_RIM_6,
 }));
 
+/** What each view's laid part sheet runs before it is written (`film concept parts`): every view clears the pale paper band their paint keeps just outside their ink (250,241,225 at the median on single-15, against its paper 253,239,216), which their un-matte would read as their cream linen and draw as white specks round them. */
 export const CLEAN = Records.map(PAPER_RIMS, clearPaperRim) satisfies Partial<
   Record<keyof typeof CUTS, SheetClean>
 >;

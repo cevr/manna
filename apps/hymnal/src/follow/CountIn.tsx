@@ -1,3 +1,21 @@
+/**
+ * The count-in's pulse over the line the follow holds at the first sung line
+ * (`IntroLine.tsx` draws it in that line's box: line 0 with every stanza,
+ * the first kept line under a stanza choice): while the player holds the
+ * page's hymn there and counts one bar in (`player.countIn`,
+ * `src/player/countin.ts`), a row of one mark per beat, drawn absolutely
+ * just above the line so it keeps its place; the follow scrolls the line
+ * into view as the count starts. Each mark takes the accent as its beat comes and keeps it; the
+ * newly lit one pulses by scale, which Reduce Motion drops (colour is not
+ * motion, scale is). It is a progress bar, `Count-in`, read as `Beat <k> of
+ * <n>`, with no live region: a screen reader is not read every beat.
+ *
+ * With the reader's `Click` on, each new beat is told as a `beat` cue
+ * (`src/feel/cue.ts`), the first the accent; `Sounds and haptics` decides
+ * whether it is heard (`feelOver`). Nothing is told as the pulse mounts, for
+ * a beat given again, or for the count-in's end.
+ */
+
 import { RegistryContext } from '@effect/atom-react';
 import { Array as Arr, Option } from 'effect';
 import { use, useEffect, useRef } from 'react';
@@ -11,6 +29,7 @@ import { settings } from '~/store';
 
 import { useCountIn } from './follow';
 
+/** How far the newly lit mark grows, and how long it takes to settle back, ms. */
 const PULSE = { from: 1.6, ms: 150 } as const;
 
 export function CountIn() {
@@ -84,6 +103,7 @@ function Mark({
   return <Animated.View testID="count-in-mark" style={[...style, { transform: [{ scale }] }]} />;
 }
 
+/** A mark lit takes the accent; one still to come, the hairline's colour. */
 const paintOf = (lit: boolean, accent: ColorValue): ColorValue => {
   if (lit) return accent;
   return color.line;

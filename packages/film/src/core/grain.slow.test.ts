@@ -4,6 +4,7 @@ import type { Raster } from './raster.ts';
 
 const SIDE = 40;
 
+/** A seeded normal draw (Box-Muller over a small LCG), so the noise is the same each run. */
 const normals = (seed: number) => {
   let s = seed;
   const next = () => {
@@ -13,6 +14,7 @@ const normals = (seed: number) => {
   return () => Math.sqrt(-2 * Math.log(next())) * Math.cos(2 * Math.PI * next());
 };
 
+/** A `SIDE` square whose G at (x, y) is `g(x, y)`, R and B flat. */
 const square = (g: (x: number, y: number) => number): Raster => {
   const rgba = new Uint8Array(SIDE * SIDE * 4);
   for (let i = 0; i < SIDE * SIDE; i++)
@@ -25,6 +27,7 @@ const square = (g: (x: number, y: number) => number): Raster => {
 
 const ALL = new Uint8Array(SIDE * SIDE).fill(1);
 
+/** White noise of std σ less its 3 × 3 mean has std σ·√(8/9). */
 const SIGMA = 4;
 const EXPECTED = SIGMA * Math.sqrt(8 / 9);
 

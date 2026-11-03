@@ -5,6 +5,7 @@ import { heard, unmeasured, voicedAt, voicedSpan, voicedWords } from './voiced.t
 
 const RATE = 8000;
 
+/** `seconds` of take, a 0.3-amplitude tone where `loud` says and silence elsewhere. */
 const take = (seconds: number, loud: ReadonlyArray<readonly [number, number]>): Pcm => {
   const frames = Math.round(seconds * RATE);
   const plane = new Float32Array(frames);

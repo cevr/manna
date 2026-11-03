@@ -47,6 +47,7 @@ const readField = Effect.fn('WebsterCompiler.readField')(function* (text: string
   return { value: text.slice(start, end), end };
 });
 
+/** RFC 4180 quoting, including CRLF, doubled quotes and embedded newlines. */
 export const parseCsv = Effect.fn('WebsterCompiler.parseCsv')(function* (text: string) {
   const records: string[][] = [];
   let fields: string[] = [];

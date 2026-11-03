@@ -247,6 +247,7 @@ describe('a take point of a sound made from data', () => {
       Option.fromUndefinedOr(takePoints(loaded, placed).find((p) => p.title === name)),
     );
   const heard = { _tag: 'Heard', alone: true, inPlace: true } as const;
+  /** Why no verb reaches a variant, or `-` when one can. */
   const fixedOf = (v: VariantDraft) => Option.getOrElse(v.fixed ?? Option.none(), () => '-');
 
   test("a code sound's seeds, all picked and fixed, and the take its lock holds from before", () => {

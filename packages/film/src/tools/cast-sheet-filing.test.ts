@@ -41,6 +41,7 @@ const recordKeeping = (kept: CastKept): CastSheetRecord => ({
 });
 const record = recordKeeping(keptOf(1, [1, 2]));
 
+/** The folder as the record keeps try 1: its sheet and both views on disk, and tries 1, 2 and a bad 4 drawn (3 never landed). */
 const folderOf = (held: CastSheetRecord) =>
   new Map<string, Uint8Array>([
     [RECORD, text(Schema.encodeSync(CastSheetJson)(held))],
@@ -68,6 +69,7 @@ const read = (files: Map<string, Uint8Array>, file: string) =>
 const recordIn = (files: Map<string, Uint8Array>) =>
   Schema.decodeSync(CastSheetJson)(read(files, RECORD));
 
+/** The try's file read and cut into both slots, each view's crop its sheet's words and its number; a try that reads `bad` does not cut. */
 const keep = (n: number, replace = true, ask: Option.Option<string> = Option.some(`b${n}`)) =>
   fileCastKeep(
     { folder: FOLDER },
@@ -90,12 +92,15 @@ const keep = (n: number, replace = true, ask: Option.Option<string> = Option.som
       }),
   );
 
+/** Try 2 replacing the keep over the file system `fs`. */
 const replaceOver = <E, R>(fs: Layer.Layer<FileSystem.FileSystem, E, R>) =>
   keep(2).pipe(Effect.provide(storeOver(fs)));
 
+/** The keep's failure as its message reads, or the empty string when it kept. */
 const refusal = <A, E, R>(self: Effect.Effect<A, E, R>) =>
   Effect.map(Effect.exit(self), (exit) => (Exit.isFailure(exit) && String(exit.cause)) || '');
 
+/** The old keep's files where the record's history says it went. */
 const historyOf = (files: Map<string, Uint8Array>, k: number) => {
   const folder = `${FOLDER}/${recordIn(files).replaced?.[k]?.folder}`;
   return [

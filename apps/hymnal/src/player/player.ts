@@ -1,3 +1,33 @@
+/**
+ * The hymn player: one recording at a time, from `audioUrl` (`src/remote.ts`).
+ *
+ * The player's state is an atom; the reader acts on it by writing commands
+ * to `send`. The device's playback is a service (`Playback`): One's `Audio`
+ * on a phone and on the web (`playback.live.ts`), or one a test hands in.
+ * One's playback tells no events of its own, so while the device says it
+ * loads or plays, or has not answered an ask, the player reads its status
+ * every `every`. What the page shows comes from what the reads prove
+ * (`proof.ts`): Playing at a read that closes a sound pair; Loading, or
+ * Buffering once the load has sounded, after 2 s of proved silence; Retry
+ * beside Buffering after 15 s of it online; Failed after 15 s of it once
+ * told offline 15 s before.
+ *
+ * Every Play and Pause goes one way, whatever made it: the page's button
+ * (or a key on it), Retry, the lock screen, Control Center and the web's
+ * Media Session (`remote`) are commands. The page shows the reader's ask at
+ * once, asks the device, and reads its status beside the ask, not after it.
+ *
+ * Each command runs in place of the one before it: starting a hymn while
+ * another loads or plays stops following the old one, and the device swaps
+ * the recording (One's `Audio.play` replaces the one playing).
+ *
+ * A Pause before the first sound (Stopped), and a load given up (Failed),
+ * let the recording go. iOS keeps a pause before the first sound; Android
+ * and the web cannot (MediaPlayer starts once prepared whatever was asked,
+ * and the web rejects the waiting `play()` and says `failed`). One rule
+ * serves all three: Stopped, and a Play from the reader's place.
+ */
+
 import type { Scope } from 'effect';
 import {
   Array as Arr,
@@ -25,15 +55,25 @@ import * as Proof from './proof';
 import { ALL } from './stanzas';
 import { DEFAULT_TEMPO, rateOf } from './tempo';
 
+/** A hymn the player plays: its number names its recording. */
 export interface Track {
   readonly number: number;
   readonly title: string;
 }
 
+/**
+ * Where the player is. A position and a length are in seconds; the length
+ * is none until the recording says it.
+ */
 export type Player = Data.TaggedEnum<{
   Idle: {};
   Loading: { readonly track: Track };
   Playing: { readonly track: Track; readonly at: number; readonly length: Option.Option<number> };
+  /**
+   * Playing, but the device waits on the network mid-recording (a stall, or
+   * a seek past what it holds); `retry` once it has waited long enough that
+   * the page offers Retry beside Pause.
+   */
   Buffering: {
     readonly track: Track;
     readonly at: number;
@@ -42,7 +82,15 @@ export type Player = Data.TaggedEnum<{
   };
   Paused: { readonly track: Track; readonly at: number; readonly length: Option.Option<number> };
   Ended: { readonly track: Track; readonly length: Option.Option<number> };
+  /**
+   * The reader paused before the first sound: the device holds nothing, and
+   * Play starts it again from the reader's place `at`, if it has one.
+   */
   Stopped: { readonly track: Track; readonly at: Option.Option<number> };
+  /**
+   * The recording could not play; `offline` when the device has no
+   * connection. Retry plays it again from the reader's place `at`, if any.
+   */
   Failed: {
     readonly track: Track;
     readonly offline: boolean;
@@ -51,41 +99,79 @@ export type Player = Data.TaggedEnum<{
 }>;
 export const Player = Data.taggedEnum<Player>();
 
+/** What the reader asks of the player. */
 export type Command = Data.TaggedEnum<{
+  /** Play this hymn from its start, in place of any other. */
   Start: { readonly track: Track };
   Pause: {};
   Resume: {};
+  /** Move to `seconds` into the hymn as it plays: the chosen stanzas' sung time (`sound.ts`). */
   Seek: { readonly seconds: number };
+  /** Show the device's playback again: the lock screen moved it to a place it did not say. */
   Follow: {};
 }>;
 export const Command = Data.taggedEnum<Command>();
 
+/** Internal subscription message. The reader and remote command vocabulary stays unchanged. */
 type KeyChange = Data.TaggedEnum<{ Key: { readonly number: number; readonly offset: number } }>;
 const KeyChange = Data.taggedEnum<KeyChange>();
 
+/**
+ * What the reader last asked of the recording: to hear it (Start, Resume, the
+ * lock screen's play) or not (Pause, the lock screen's pause). A device that
+ * says `loading` mid-recording is read by it: waiting to play, or paused.
+ */
 export type Intent = 'play' | 'pause';
 
+/** The device's playback as One's `Audio` reports it. */
 export interface Status {
   readonly state: 'idle' | 'loading' | 'playing' | 'paused' | 'ended' | 'failed';
   readonly positionMs: number;
   readonly durationMs?: number;
+  /** Musical place retained while the global session prepares a replacement. */
   readonly replacementMs?: number;
   readonly recording?: RecordingSelection;
+  /**
+   * Ms of the place for each ms of the host's clock while it plays: the held hymn's tempo,
+   * Sound on or off (`sound.ts`; with Sound on the recording plays at it); 1 when not told.
+   */
   readonly rate?: number;
+  /**
+   * While a count-in holds the place at the first sung line (`sound.ts`): the host's ms left
+   * until the place runs. The place is the reader's, and the player shows Playing there.
+   */
   readonly countInMs?: number;
 }
 
+/** A replacement follows musical time while the global recording loads. */
 export interface PlayOptions {
   readonly continuous: boolean;
   readonly ready: boolean;
   readonly intent?: Intent;
   readonly recording?: { readonly number: number; readonly offset: number };
+  /**
+   * The hymn's tempo, ms of the hymn for each ms, that the play runs at: the score clock
+   * (`sound.ts`) with Sound off, the device's recording with Sound on; 1 when not told.
+   */
   readonly rate?: number;
+  /**
+   * The stanzas the play sings (`stanzas.ts`'s `Choice`, `[]` for all): the score clock
+   * (`sound.ts`) runs the place over their lines alone, and skips the rest; all when not told.
+   */
   readonly stanzas?: ReadonlyArray<number>;
+  /**
+   * The `Intro` switch at the play. With Sound on, `false` plays a start from the first sung
+   * line of the chosen stanzas, past the recording's intro; from 0 when not told.
+   */
   readonly intro?: boolean;
+  /**
+   * With Sound off, whether a start counts one bar in at the first sung line before the place
+   * runs (`countin.ts`); none when not told.
+   */
   readonly countIn?: boolean;
 }
 
+/** Requested and effective sounding offsets; a fallback is never silently claimed as the chosen Key. */
 export interface RecordingSelection {
   readonly number: number;
   readonly requested: number;
@@ -98,6 +184,11 @@ export class PlaybackError extends Schema.TaggedError<PlaybackError>()('Playback
   positionMs: Schema.optionalKey(Schema.Finite),
 }) {}
 
+/**
+ * A press of the lock screen, Control Center or the web's Media Session (the
+ * browser's and the system's media controls, a hardware key): a play, a
+ * pause, or a seek to a place, if it says one.
+ */
 export type Remote = Data.TaggedEnum<{
   Play: {};
   Pause: {};
@@ -105,6 +196,7 @@ export type Remote = Data.TaggedEnum<{
 }>;
 export const Remote = Data.taggedEnum<Remote>();
 
+/** The command a remote press is: the one the page's own controls send. */
 const commandOf: (remote: Remote) => Command = Remote.$match({
   Play: () => Command.Resume(),
   Pause: () => Command.Pause(),
@@ -115,41 +207,67 @@ const commandOf: (remote: Remote) => Command = Remote.$match({
     }),
 });
 
+/** What the lock screen and Control Center show while a hymn plays. */
 export interface Announcement {
   readonly title: string;
   readonly artist: string;
 }
 
+/** The device's one playback session. */
 export interface PlaybackApi {
+  /**
+   * Play `uri` from `fromMs` in place of whatever plays now; past 0, it asks
+   * the seek again while the device holds the recording, until it lands.
+   */
   readonly play: (
     uri: string,
     fromMs: number,
     options?: PlayOptions,
   ) => Effect.Effect<Status, PlaybackError>;
   readonly pause: Effect.Effect<Status, PlaybackError>;
+  /** Play on; from the start once the recording has ended. */
   readonly resume: Effect.Effect<Status, PlaybackError>;
   readonly seek: (positionMs: number) => Effect.Effect<Status, PlaybackError>;
   readonly status: Effect.Effect<Status, PlaybackError>;
+  /** The held hymn's tempo changed: the place moves on at `rate` from where it stands. */
   readonly setRate?: (rate: number) => Effect.Effect<void>;
+  /**
+   * The held hymn's stanza choice changed (`[]` for all): the place keeps its place in the
+   * recording, or moves on to the next chosen line's start when its line is no longer sung.
+   */
   readonly setStanzas?: (stanzas: ReadonlyArray<number>) => Effect.Effect<void>;
+  /** The rate the place moves at, ms of the hymn for each ms: now, then at each change. */
   readonly pace?: Stream.Stream<number>;
+  /** The beat a count-in stands at, none while none counts: now, then at each change. */
   readonly beats?: Stream.Stream<Option.Option<Beat>>;
+  /** Adopt a selection whose effective set already sounds, without a device load. */
   readonly selectRecording?: (selection: RecordingSelection) => Effect.Effect<void>;
+  /** Let the recording go: nothing loads or plays, the lock screen shows nothing, and the status says `idle`. */
   readonly stop: Effect.Effect<void, PlaybackError>;
+  /** Whether the device has a connection: now, then at each change, in order. */
   readonly connection: Stream.Stream<boolean>;
+  /** Show the recording on the lock screen and in Control Center. */
   readonly announce: (announcement: Announcement) => Effect.Effect<void, PlaybackError>;
+  /**
+   * Each play, pause or seek pressed on the lock screen, in Control Center or
+   * in the web's Media Session, told at the press: the player asks the device
+   * for it (a phone's session has done it already, and the ask repeats it).
+   */
   readonly remote: Stream.Stream<Remote>;
 }
 
 export class Playback extends Context.Service<Playback, PlaybackApi>()('hymnal/Playback') {}
 
+/** The connection as the device last told it, and when it told it. */
 interface Told {
   readonly online: boolean;
   readonly since: number;
 }
 
+/** The connection the player follows, from the device's `connection`. */
 class Link extends Context.Service<Link, { readonly told: () => Told }>()('hymnal/Link') {}
 
+/** Follows the device's connection for as long as the player's runtime lives. */
 const linkLayer = Layer.effect(Link)(
   Effect.gen(function* () {
     const device = yield* Playback;
@@ -163,10 +281,18 @@ const linkLayer = Layer.effect(Link)(
   }),
 );
 
+/**
+ * Where the device's answers to the player's asks run: the player's runtime,
+ * never the command that asked. A command runs in place of the one before
+ * it, but the device has each ask once it is sent, so its answer lands the
+ * act it answers whatever command comes next.
+ */
 class Answers extends Context.Service<Answers, Scope.Scope>()('hymnal/Answers') {}
 
+/** The scope of the player's runtime, closed with it. */
 const answersLayer = Layer.effect(Answers)(Effect.scope);
 
+/** The hymn the player holds, if any. */
 export const trackOf: (player: Player) => Option.Option<Track> = Player.$match({
   Idle: () => Option.none(),
   Loading: ({ track }) => Option.some(track),
@@ -178,13 +304,17 @@ export const trackOf: (player: Player) => Option.Option<Track> = Player.$match({
   Failed: ({ track }) => Option.some(track),
 });
 
+/** Whether the device holds no recording for the player: it was let go, or it failed. */
 const letGo = Predicate.or(Player.$is('Stopped'), Player.$is('Failed'));
 
+/** The stand: silence proved this long shows Loading or Buffering. */
 const stand = Duration.seconds(2);
+/** The wait: silence proved this long offers Retry online, and gives the load up offline. */
 const giveUpAfter = Duration.seconds(15);
 
 const seconds = (ms: number) => ms / 1000;
 
+/** The length a player shows, if it shows one. */
 const lengthIn: (player: Player) => Option.Option<number> = Player.$match({
   Idle: () => Option.none(),
   Loading: () => Option.none(),
@@ -202,28 +332,40 @@ const lengthOf = (status: Status) =>
     Option.map(seconds),
   );
 
+/** Whether the device holds the recording and may land a seek. */
 const holdsRecording = (status: Status) =>
   status.state === 'loading' || status.state === 'playing' || status.state === 'paused';
 
+/** The rate a status's place moves at: its `rate` when that is a positive number, else 1. */
 const paceOf = (status: Status) => {
   const rate = status.rate ?? 1;
   if (!Number.isFinite(rate) || rate <= 0) return 1;
   return rate;
 };
 
+/** The host's ms a status's count-in has left, while it counts in at a playing place. */
 const counting = (status: Status) =>
   Option.fromNullishOr(status.countInMs).pipe(
     Option.filter((ms) => status.state === 'playing' && ms > 0),
   );
 
+/**
+ * The wait between two reads, so that a place moving at `pace` moves at most `every` from one
+ * to the next: the seeker and the follow see the hymn in the same steps at every tempo, and a
+ * Play shows its start within `every` of the place it started from. Whole ms, rounded down.
+ */
 const pollAt = (every: Duration.Input, pace: number) =>
   Duration.millis(Math.max(1, Math.floor(Duration.toMillis(every) / pace)));
 
+/** The reader's place a let-go player keeps, in seconds. */
 const placeOf = (proof: Proof.Proof) => Option.map(proof.place, seconds);
 
+/** What the player holds across the commands (see `held` in `playerOn`). */
 interface Held {
   wants: Intent;
+  /** A fresh Start owns its reads independently of Key and Resume handovers. */
   starts: number;
+  /** Distinguishes acts even when two commands share one clock millisecond. */
   acts: number;
   proof: Proof.Proof;
   seeking: Option.Option<{ readonly to: number; asking: boolean }>;
@@ -237,7 +379,9 @@ interface Held {
   announced: number;
   offset: number;
   replacing: boolean;
+  /** The rate the latest read's place moves at (its status's `rate`, 1 when not told). */
   pace: number;
+  /** The host's time a count-in the latest read told ends at: the next read comes no later. */
   countEnds: Option.Option<number>;
 }
 
@@ -245,8 +389,15 @@ const printed = Atom.make<Move>(still);
 const asWritten = Atom.make(DEFAULT_TEMPO);
 const everyStanza = Atom.make<ReadonlyArray<number>>(ALL);
 
+/** Two stanza choices of one hymn the same: the same numbers in the same order. */
 const sameStanzas = Arr.makeEquivalence<number>((a, b) => a === b);
 
+/**
+ * The player's atoms over the device's `playback`, reading its status every `every` while it
+ * moves. `moveFor` gives a hymn's transpose and capo, `tempoFor` its tempo in percent,
+ * `stanzasFor` the stanzas it sings (`[]` for all), and `intro` the `Intro` switch each play
+ * carries as `PlayOptions.intro` and `countIn` (neither when not given).
+ */
 export const playerOn = (
   playback: Layer.Layer<Playback>,
   every: Duration.Input,
@@ -258,6 +409,7 @@ export const playerOn = (
   const keyFor = Atom.family((number: number) =>
     Atom.map(moveFor(number), (move) => soundingOffset(move.transpose)),
   );
+  /** A hymn's tempo as a rate, ms of the hymn for each ms; a tempo off the dial's stops is 1. */
   const rateFor = Atom.family((number: number) => Atom.map(tempoFor(number), rateOf));
   const runtime = Atom.runtime(
     Layer.provideMerge(Layer.mergeAll(linkLayer, answersLayer), playback),
@@ -266,6 +418,13 @@ export const playerOn = (
   const recording = Atom.make<Option.Option<RecordingSelection>>(Option.none()).pipe(
     Atom.keepAlive,
   );
+  /**
+   * What the player holds across the commands: the reader's intent, what the
+   * reads have proved, the place a seek still asks the device for (and
+   * whether that ask is in flight), the ask that moves the device, the read
+   * in flight, whether a Resume from Ended still reads the device before it
+   * acts, and the recording's count and the count it was announced at.
+   */
   const held: Held = {
     wants: 'play',
     starts: 0,
@@ -294,11 +453,24 @@ export const playerOn = (
         const offline = () => !link.told().online;
         const failed = (track: Track) =>
           Player.Failed({ track, offline: offline(), at: placeOf(held.proof) });
+        /**
+         * Whether a Playing page may keep Playing at `at`: no act came since its sound pair, or
+         * the sound that pair proved is less than the stand before `at`. No pair spans an act,
+         * so past it the page shows Buffering, as if the stand of silence ran from that sound.
+         */
         const heardWithin = (at: number) =>
           Option.exists(
             held.proof.heard,
             (it) => !it.acted || at - it.at < Duration.toMillis(stand),
           );
+        /**
+         * An act the page knows now, moving the device to `target` ms if it
+         * names one. No pair spans it. A page that showed Playing keeps it
+         * while the sound proved before the act is within the stand
+         * (`heardWithin`): a seek asks for no sound, so it shows no Loading
+         * (P1). It starts the wait again, so a Retry beside Buffering goes
+         * until the new wait runs out.
+         */
         const act = (target: Option.Option<number>) =>
           Effect.flatMap(now, (at) => {
             held.acts += 1;
@@ -311,6 +483,14 @@ export const playerOn = (
               Player.Buffering({ track: was.track, at: was.at, length: was.length, retry: false }),
             );
           });
+        /**
+         * One status read per Start, run in the player's scope.
+         * Commands on that hymn share an in-flight read. A new Start
+         * owns a fresh read, even in the same clock millisecond: the former
+         * recording's delayed status cannot describe its replacement or hold
+         * the player's read slot. The score clock also observes outside its
+         * command lock, so a new device Play is independent of that read.
+         */
         const readDevice = Effect.suspend(() =>
           Option.match(
             Option.filter(held.reading, (reading) => reading.start === held.starts),
@@ -350,6 +530,11 @@ export const playerOn = (
             },
           ),
         );
+        /**
+         * A read asked since the latest act, and since any answer that said `ended` unless it says
+         * `ended` too: one asked before either may show the device before it, so the device is
+         * read again.
+         */
         const readFresh = Effect.filterOrElse(
           readDevice,
           (read) =>
@@ -357,7 +542,13 @@ export const playerOn = (
             (read.status.state === 'ended' || read.asked >= held.proof.endedAt),
           () => readDevice,
         );
+        /**
+         * Whether the device is still asked the place a seek or a play from a place asks: an ask
+         * refused or answered off its place is asked again only while the device holds the
+         * recording, so after an `ended` read only an ask in flight may still land.
+         */
         const landable = () => Option.exists(held.seeking, (it) => it.asking);
+        /** One read, taken into the proof and shown nowhere; a refused read changes nothing. */
         const lastLook = Effect.suspend(() => {
           const start = held.starts;
           return readFresh.pipe(
@@ -370,6 +561,11 @@ export const playerOn = (
             Effect.option,
           );
         });
+        /**
+         * The device answered the ask for `to` ms, asked at `asked`: the act lands
+         * when the answer's place is in its window (`Proof.answered`), and the
+         * place is asked no more. An answer outside it leaves the place asked.
+         */
         const answeredAt = (asked: number, to: number) => (status: Status) =>
           Effect.flatMap(now, (at) =>
             Effect.sync(() => {
@@ -377,6 +573,7 @@ export const playerOn = (
               if (Option.isNone(held.proof.pending)) held.seeking = Option.none();
             }),
           );
+        /** The adapter's retained clock follows newer seeks while its replacement prepares. */
         const replacementLanded = (asked: number, at: number) => (status: Status) =>
           Effect.suspend(() =>
             Option.match(held.proof.pending, {
@@ -384,17 +581,24 @@ export const playerOn = (
               onSome: (pending) => answeredAt(pending.known, pending.target)(status),
             }),
           );
+        /** The ask that moves the device cut off: a newer one moves it, or the recording is let go. */
         const cut = Effect.suspend(() => {
           const fiber = held.moving;
           held.moving = Option.none();
           return Option.match(fiber, { onNone: () => Effect.void, onSome: Fiber.interrupt });
         });
+        /**
+         * An ask that moves the device (a play or a seek), run in the player's scope in place of
+         * the one before it: the adapter asks a play's seek again until it lands, so only the
+         * latest place is asked. A command that moves nothing leaves it to its answer.
+         */
         const moves = (operation: Effect.Effect<unknown>) =>
           Effect.gen(function* () {
             yield* cut;
             const fiber = yield* Effect.forkIn(operation, answers, { startImmediately: true });
             held.moving = Option.some(fiber);
           });
+        /** The place a seek asks, asked of the device until an answer lands it. */
         const askSeek = (to: number) =>
           Effect.gen(function* () {
             const seeking = { to, asking: true };
@@ -410,6 +614,7 @@ export const playerOn = (
               Effect.ensuring(Effect.sync(() => (seeking.asking = false))),
             );
           });
+        /** A seek the device refused or answered outside its window, asked again while it holds the recording. */
         const askAgain = (status: Status) =>
           Effect.suspend(() => {
             if (held.replacing) return Effect.void;
@@ -424,6 +629,7 @@ export const playerOn = (
               },
             );
           });
+        /** The hymn on the lock screen and in Control Center; a failure only logged. */
         const announce = (track: Track) =>
           device
             .announce({ title: track.title, artist: `Hymn ${track.number}` })
@@ -434,6 +640,13 @@ export const playerOn = (
                 ),
               ),
             );
+        /**
+         * The recording on the lock screen and in Control Center, once per
+         * recording: once the device holds it (it answered an ask, or it
+         * plays) and the player has not let it go. Whatever command comes
+         * next, an announce begun is not cut off. It runs beside the reads,
+         * so its answer never holds the next read back.
+         */
         const announceOnce = (track: Track, answer: Option.Option<boolean>) =>
           Effect.suspend(() => {
             const page = get.registry.get(state);
@@ -442,6 +655,7 @@ export const playerOn = (
             held.announced = held.id;
             return Effect.forkDetach(announce(track)).pipe(Effect.asVoid);
           });
+        /** The load given up: the page offers Retry, and the device lets the recording go. */
         const giveUp = (track: Track) =>
           Effect.logWarning('player.load.stalled').pipe(
             Effect.annotateLogs({ track: track.number }),
@@ -449,6 +663,12 @@ export const playerOn = (
             Effect.andThen(cut),
             Effect.andThen(Effect.ignore(device.stop)),
           );
+        /**
+         * The page after `read` of `track`, as the reader wants it: Playing at
+         * a read that closes a sound pair; Loading, or Buffering once this
+         * load has sounded, after the stand; Retry beside it after the wait
+         * online; else what it showed, at the read's place.
+         */
         const seenAt = (track: Track, read: Proof.Read, seen: Proof.Seen): Player => {
           const was = get.registry.get(state);
           const sameTrack = Option.exists(trackOf(was), (it) => it.number === track.number);
@@ -466,6 +686,14 @@ export const playerOn = (
               ),
           );
           const quiet = Proof.silentFor(held.proof, read);
+          /**
+           * Whether a page that showed Playing still does after `it`, which proved no sound. With
+           * no act since the sound pair, the stall rule alone turns it. While an act is pending,
+           * a place that moves on keeps it, else the stand from the sound before the act. After
+           * the landing the stall rule turns it, from the landing; but where the device showed
+           * no sound before the landing (`quiet`), the first pair after it that proves none turns
+           * it once the stand from the sound before the act has run.
+           */
           const keptAcross = (it: Proof.Read, by: Proof.Seen) => {
             if (!Option.exists(held.proof.heard, (heard) => heard.acted)) return true;
             if (by === 'ahead') return true;
@@ -501,6 +729,10 @@ export const playerOn = (
             Failed: () => buffering(false),
           });
         };
+        /**
+         * Whether the wait has run out offline: silence and the connection's loss each 15 s old
+         * at once, at the read's ask, the last instant its silence is proved.
+         */
         const givenUp = (read: Proof.Read) => {
           const wait = Duration.toMillis(giveUpAfter);
           const told = link.told();
@@ -511,11 +743,22 @@ export const playerOn = (
             read.asked - told.since >= wait
           );
         };
+        /**
+         * A `paused` the reader did not ask for is the device's own pause, and the page shows
+         * Paused: the device is asked to pause once, so it holds what the page shows. Android
+         * starts a recording paused before it was prepared and says `paused` over its sound
+         * (One 2.8.1, HybridOneAudio.kt:199-204); a device paused already stays so.
+         */
         const heldPaused = Effect.suspend(() => {
           if (held.wants === 'pause') return Effect.void;
           held.wants = 'pause';
           return Effect.ignore(device.pause);
         });
+        /**
+         * Read the device's status once and show it; whether to read on. The
+         * reads end when the device fails, ends, is idle or paused with no
+         * place pending, or when the load is given up.
+         */
         const readOnce = (track: Track, answered: Deferred.Deferred<boolean>) =>
           Effect.gen(function* () {
             const read = yield* readFresh;
@@ -578,8 +821,17 @@ export const playerOn = (
               ),
             ),
           );
+        /**
+         * Show the device's status while the ask is not `answered`, and after
+         * until its playback stops moving: a read every `every` of the place's
+         * time (`pollAt`), and one at once when the device answers.
+         */
         const watch = (track: Track, answered: Deferred.Deferred<boolean>) =>
           Effect.gen(function* () {
+            /**
+             * Until the next read: `every` of the place's time, or less once the device answers;
+             * no later than a count-in's end, so the run is read from where it starts.
+             */
             const rest = Deferred.isDone(answered).pipe(
               Effect.flatMap((done) =>
                 Match.value(done).pipe(
@@ -608,6 +860,11 @@ export const playerOn = (
               more = yield* readOnce(track, answered);
             }
           });
+        /**
+         * Ask the device, and show its status while it answers and after. A refusal is
+         * `refused`: `true` reads on, `false` shows Failed. An ask that `moving` moves the device
+         * runs in place of the one before it (`moves`).
+         */
         const ask = (
           track: Track,
           operation: Effect.Effect<unknown, PlaybackError>,
@@ -627,16 +884,24 @@ export const playerOn = (
             );
             yield* Effect.interruptible(watch(track, answered));
           });
+        /** Read the device's status until its playback stops moving. */
         const follow = (track: Track) =>
           Deferred.make<boolean>().pipe(
             Effect.tap((answered) => Deferred.succeed(answered, true)),
             Effect.flatMap((answered) => watch(track, answered)),
           );
+        /** A refused ask is logged, and the status shown as it is. */
         const logged = (error: PlaybackError) =>
           Effect.logWarning('player.command.failed').pipe(
             Effect.annotateLogs({ operation: error.operation, message: error.message }),
             Effect.as(true),
           );
+        /**
+         * The place a play asked at `asked` from `fromMs` started at, by its answer `status`: past
+         * 0, `fromMs`. From 0 (a start), where the playback says the recording starts: the
+         * device's 0:00, the score clock's first sung line (`sound.ts`). A start moves the load's
+         * own pending act to that place, so the answer lands it.
+         */
         const startedAt = (asked: number, fromMs: number, status: Status) =>
           Effect.sync(() => {
             if (fromMs > 0) return fromMs;
@@ -650,6 +915,7 @@ export const playerOn = (
             };
             return start;
           });
+        /** A load: Loading at once, the device asked to play from `fromMs`, its status read while it loads. */
         const keyOf = (track: Track) => soundingOffset(get.registry.get(keyFor(track.number)));
         const remember = (selection: RecordingSelection) => {
           const was = get.registry.get(recording);
@@ -665,6 +931,7 @@ export const playerOn = (
             return;
           get.registry.set(recording, Option.some(selection));
         };
+        /** The `Intro` switch as it stands at the play, as `intro` and `countIn`; none without one. */
         const introAt = (): Pick<PlayOptions, 'intro' | 'countIn'> =>
           Option.match(Option.fromNullishOr(intro), {
             onNone: () => ({}),
@@ -762,8 +1029,10 @@ export const playerOn = (
           });
         const current = get.registry.get(state);
         const holding = trackOf(current);
+        /** Run `run` on the hymn the player holds; with none, nothing. */
         const onHeld = (run: (track: Track) => Effect.Effect<void>) =>
           Option.match(holding, { onNone: () => Effect.void, onSome: run });
+        /** A Resume: from where the reader is, by what the page shows. */
         const resume = (track: Track) => {
           const fromPlace = () =>
             load(
@@ -841,12 +1110,20 @@ export const playerOn = (
               resumed(Option.none(), Player.Buffering({ track, at, length, retry: false })),
           });
         };
+        /** A Pause: before the first sound the device lets the recording go (Stopped); after it, Paused. */
         const pause = (track: Track) =>
           Effect.gen(function* () {
             held.wants = 'pause';
             held.resuming = false;
             if (letGo(current)) return;
             if (Player.$is('Loading')(current)) {
+              /**
+               * Stopped at the place the reads proved; Ended once a look says `ended` (P8): the
+               * end let the sound go, so the device is not stopped. It answers whether the
+               * device is still to be stopped. Shown through the registry: a command told after
+               * this Pause supersedes its context, whose own sets are dropped, and the let-go
+               * still shows.
+               */
               const shown = (look: Option.Option<Proof.Read>) => {
                 const end = Option.filter(look, (read) => read.status.state === 'ended');
                 const page = Option.match(end, {
@@ -891,6 +1168,7 @@ export const playerOn = (
             });
             yield* ask(track, device.pause, logged);
           });
+        /** A Seek: the device asked for the place, which becomes the reader's; a let-go player keeps it for its Play. */
         const seek = (track: Track, to: number) =>
           Effect.gen(function* () {
             const end = Option.getOrElse(lengthIn(current), () => Number.POSITIVE_INFINITY);
@@ -990,6 +1268,7 @@ export const playerOn = (
             }),
           );
         }
+        /** The hymn the command is about: the one it starts, else the one held. */
         const subject = Option.liftPredicate(command, Command.$is('Start')).pipe(
           Option.map(({ track }) => track),
           Option.orElse(() => holding),
@@ -1032,6 +1311,7 @@ export const playerOn = (
     )
     .pipe(Atom.keepAlive);
 
+  /** Sends each press of the lock screen, Control Center or the Media Session while it is mounted. */
   const remote = runtime.atom((get) =>
     Effect.gen(function* () {
       const device = yield* Playback;
@@ -1064,12 +1344,25 @@ export const playerOn = (
     ),
   );
 
+  /**
+   * The rate the held hymn's place moves at, ms of the hymn for each ms, as the playback tells
+   * it (`pace`): the tempo, Sound on or off (with Sound on the recording plays at it). The
+   * follow's clock runs at it between the player's reads, so it and the score clock keep one
+   * rate.
+   */
   const rate = Atom.make(1).pipe(Atom.keepAlive);
+  /** The held hymn and its tempo as a rate, 1 while no hymn is held (`number` 0). */
   const heldTempo = Atom.make((get) => {
     const number = get(heldNumber);
     if (number === 0) return { number, rate: 1 };
     return { number, rate: get(rateFor(number)) };
   });
+  /**
+   * While mounted: each turn of the held hymn's tempo told to the playback, and the playback's
+   * pace kept in `rate`. A change of held hymn tells nothing: the new hymn's play tells its own
+   * rate, and a rate told before it would reach the recording still playing while the new one
+   * loads.
+   */
   const tempos = runtime.atom((get) =>
     Effect.gen(function* () {
       const device = yield* Playback;
@@ -1088,13 +1381,20 @@ export const playerOn = (
     }),
   );
 
+  /** `rate` to the screens: the playback alone sets it. */
   const shownRate: Atom.Atom<number> = rate;
 
+  /** The held hymn and its stanza choice, `[]` while no hymn is held (`number` 0). */
   const heldStanzas = Atom.make((get) => {
     const number = get(heldNumber);
     if (number === 0) return { number, stanzas: ALL };
     return { number, stanzas: get(stanzasFor(number)) };
   });
+  /**
+   * While mounted: each change of the held hymn's stanza choice told to the playback, as
+   * `tempos` tells a turn of its tempo. A change of held hymn tells nothing: the new hymn's play
+   * names its own choice (`PlayOptions.stanzas`).
+   */
   const stanzas = runtime.atom((get) =>
     Effect.gen(function* () {
       const device = yield* Playback;
@@ -1109,7 +1409,9 @@ export const playerOn = (
     }),
   );
 
+  /** The beat a count-in stands at, none while none counts, as the playback tells it (`beats`). */
   const beat = Atom.make<Option.Option<Beat>>(Option.none()).pipe(Atom.keepAlive);
+  /** While mounted: each beat the playback tells kept in `countIn`. */
   const beats = runtime.atom((get) =>
     Effect.gen(function* () {
       const device = yield* Playback;
@@ -1118,6 +1420,7 @@ export const playerOn = (
       );
     }),
   );
+  /** `beat` to the screens: the playback alone sets it. */
   const countIn: Atom.Atom<Option.Option<Beat>> = beat;
 
   return {
@@ -1134,6 +1437,8 @@ export const playerOn = (
   };
 };
 
+/** A player's atoms: its state, the commands it takes and its lock-screen follower. */
 export type HymnPlayer = ReturnType<typeof playerOn>;
 
+/** How often the player reads the device's status while a recording moves. */
 export const statusEvery = Duration.millis(250);

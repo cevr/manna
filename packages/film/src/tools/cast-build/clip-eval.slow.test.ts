@@ -10,6 +10,12 @@ const CLIP = new URL(
   import.meta.url,
 ).pathname;
 
+/**
+ * The sha256 of read.py's canvases of clip B, every frame's RGBA from f000
+ * to f123 in order: measured 2026-11-01 over the five reads of clip B in the
+ * cast cache (`<cache>/reads/<key>/canvas`, read.py's `--save-mapped`), all
+ * five alike.
+ */
 const READ_PY_CANVASES = 'b3c51eeab04c19794cb345ad029cbf9a8c3449fbb2838eba88095f52c8d9a788';
 
 const MS = 60_000;

@@ -1,3 +1,21 @@
+/**
+ * The follow on a whole hymn page (A7), drawn by react-native-web under
+ * happy-dom: the sung line and word, how many lines draw again when a
+ * syllable moves, a hand scroll's pause and its pill, and a seek.
+ *
+ * The page hears the player through its state alone, so a writable atom
+ * stands in for the player's state. Reports step 200 ms at a time, inside
+ * the clock's slack, as the player's polls do; a jump past the slack is a
+ * seek. happy-dom lays nothing out, so each line measures itself at
+ * `TOP + STEP * index` (at once, where the web measures on the next turn of
+ * the loop) and the scroll's `scroll` is a spy: a scroll to `y` is a scroll
+ * to line `(y - TOP) / STEP` (the page's height reads 0, so the line sits at
+ * the top).
+ *
+ * `SyllableLine` is wrapped in a counter of its draws by line; the wrapper
+ * draws the real line.
+ */
+
 import { describe, expect, it, mock } from 'bun:test';
 import { RegistryContext } from '@effect/atom-react';
 import { Array as Arr, Duration, Effect, Match, Option, SubscriptionRef } from 'effect';
@@ -20,6 +38,7 @@ import { book } from './book';
 import { seeks } from './seeks';
 import type { Timeline } from './timeline';
 
+/** Draws of `SyllableLine` by its line index. */
 const draws = new Map<number, number>();
 const drawn = Syllables.SyllableLine;
 // oxlint-disable-next-line effect/noModuleMocks -- a line's draws are counted on the real page, so its line is wrapped; the wrapper draws the real line, and no other test file shares this file's process (test:slow runs it alone).
@@ -39,15 +58,18 @@ const timelineOf = (number: number): Timeline => Option.getOrThrow(book.of(numbe
 
 const lineOf = (timeline: Timeline, k: number) => Option.getOrThrow(Arr.get(timeline.lines, k));
 
+/** The first played line with syllable times whose sung word changes inside it. */
 const wordLineOf = (timeline: Timeline) => {
   const k = timeline.lines.findIndex(
     (line) => line.played && !line.even && new Set(line.words).size >= 2,
   );
   const line = lineOf(timeline, k);
+  /** The first syllable of the line's second word. */
   const second = line.words.findIndex((word) => word !== line.words[0]);
   return { k, line, second, at: Option.getOrThrow(Arr.get(line.syllables, second)) };
 };
 
+/** The first hymn with a played line that has no syllable times (a Plain part's or one held to even shares), and that line. */
 const wholeLineOf = () =>
   Option.getOrThrow(
     Arr.findFirst(Arr.range(1, 695), (number) =>
@@ -65,6 +87,10 @@ const wholeLineOf = () =>
     ),
   );
 
+/**
+ * Hymn `number`'s page over a player whose state the test sets, with `stanzas` chosen (every
+ * one by default); it unmounts, and the choice goes back to every stanza, when the `using` ends.
+ */
 const mount = (number: number, chords: boolean = false, stanzas: Choice = ALL) => {
   const hymn = Option.getOrThrow(hymnAt(String(number)));
   const track = { number, title: hymn.title };
@@ -100,6 +126,7 @@ const mount = (number: number, chords: boolean = false, stanzas: Choice = ALL) =
   Object.assign(scroll, {
     scroll: (to: ScrollToOptions) => scrolled.push(((to.top ?? 0) - TOP) / STEP),
   });
+  /** The player is at `ms` into the hymn: playing, or paused. */
   const at = (ms: number, kind: 'Playing' | 'Paused' = 'Paused') => {
     const told = { track, at: ms / 1000, length: Option.none<number>() };
     const player = Match.value(kind).pipe(
@@ -112,6 +139,10 @@ const mount = (number: number, chords: boolean = false, stanzas: Choice = ALL) =
     lines().flatMap((line, k) =>
       Arr.filter([k], () => line.getAttribute('aria-selected') === 'true'),
     );
+  /**
+   * In line `k`, the colour of each syllable (where the chord names above
+   * them keep their own colour), or of each word in a Plain line.
+   */
   const colours = (k: number) =>
     Option.match(Arr.get(lines(), k), {
       onNone: () => [],
@@ -123,6 +154,7 @@ const mount = (number: number, chords: boolean = false, stanzas: Choice = ALL) =
     });
   const pill = () =>
     Option.fromNullishOr(host.querySelector<HTMLElement>('[aria-label="Resume follow"]'));
+  /** A hand scroll as the web sees it: a wheel on the page (`hand.ts`). */
   const drag = () =>
     act(() => {
       scroll.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }));

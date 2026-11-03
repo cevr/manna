@@ -1,3 +1,33 @@
+/**
+ * Writes to the URL, batched into history entries.
+ *
+ * `UrlState` holds the URL as the program's writes leave it: the committed
+ * entry, or the href a write made in this tick and has not flushed yet. Every
+ * write reads that href, so two writes in one tick compose instead of the
+ * second overwriting the first, and they flush together as one history entry:
+ * a push if either asked for one, else a replace.
+ *
+ * "One tick" is one microtask turn. The flush runs on its own microtask
+ * scheduler, because Effect's default scheduler waits for a timer in a
+ * browser, and the write then lands after a test or a reader has looked.
+ *
+ * A batch whose every key is throttled (`Field.key(…, { throttle })`) waits
+ * until its window since the last flush has passed, on `Clock`; a write of an
+ * unthrottled key flushes the batch at the next tick; a window that grows
+ * while the flush waits is waited out. An entry that lands from anywhere else
+ * (Back, Forward, a push the program made around `UrlState`) drops writes that
+ * have not flushed: the reader has moved, and the entry they land on is the
+ * URL. A batch whose writes end where the entry already is writes nothing.
+ *
+ * The module functions read and write one place:
+ *
+ * - `get(place)`: the place's value, `None` off the place;
+ * - `set(place, value)`: navigate to the value's href, with the move
+ *   `Place.history` gives; no write when the href is the one already there;
+ * - `update(place, f)`: `set` with `f` of the value as the URL holds it now;
+ *   nothing off the place.
+ */
+
 import {
   Clock,
   Context,
@@ -17,8 +47,12 @@ import { Location, type Entry } from './location.js';
 import * as Place from './place.js';
 
 export interface UrlStateService {
+  /** The href as the program's writes leave it, flushed or not. */
   readonly href: Effect.Effect<string>;
+  /** `href`, then each change to it: a write as it is made, a traversal as
+   *  it lands. */
   readonly changes: Stream.Stream<string>;
+  /** Move to `href` as `move` says, in this tick's batch. */
   readonly navigate: (href: string, move: Place.Move) => Effect.Effect<void>;
 }
 
@@ -26,12 +60,16 @@ export class UrlState extends Context.Service<UrlState, UrlStateService>()(
   '@manna/url-state/UrlState',
 ) {}
 
+/** Writes waiting for the flush, folded into one move. */
 interface Batch {
   readonly href: string;
   readonly move: Place.Move;
+  /** The key of the entry the batch was written on: it flushes onto that
+   *  entry or not at all. */
   readonly entry: string;
 }
 
+/** Two moves as one: push wins; throttled only when both are, by the longer. */
 const fold = (earlier: Place.Move, later: Place.Move): Place.Move => ({
   history: Option.match(
     Option.liftPredicate(later.history, (history) => history === 'push'),
@@ -40,6 +78,7 @@ const fold = (earlier: Place.Move, later: Place.Move): Place.Move => ({
   throttle: Option.zipWith(earlier.throttle, later.throttle, Order.max(Duration.Order)),
 });
 
+/** `UrlState` over the `Location` in context. */
 export const layer: Layer.Layer<UrlState, never, Location> = Layer.effect(
   UrlState,
   Effect.gen(function* () {
@@ -50,6 +89,7 @@ export const layer: Layer.Layer<UrlState, never, Location> = Layer.effect(
     const flushing = yield* FiberHandle.make<void, never>();
     const lastFlush = yield* Ref.make(Option.none<number>());
 
+    /** How long a batch still waits for its throttle window. */
     const waitFor = (batch: Batch) =>
       Effect.gen(function* () {
         const now = yield* Clock.currentTimeMillis;
@@ -63,6 +103,8 @@ export const layer: Layer.Layer<UrlState, never, Location> = Layer.effect(
         );
       });
 
+    /** Sleep until the waiting batch's window has passed. The window is read
+     *  again on waking: a write made during the sleep can lengthen it. */
     const due: Effect.Effect<void> = Effect.suspend(() =>
       Effect.gen(function* () {
         const waiting = yield* Ref.get(pending);
@@ -74,6 +116,7 @@ export const layer: Layer.Layer<UrlState, never, Location> = Layer.effect(
       }),
     );
 
+    /** Take the waiting batch and write it, once its window has passed. */
     const commit = Effect.gen(function* () {
       yield* due;
       const batch = yield* Ref.getAndSet(pending, Option.none());
@@ -92,6 +135,10 @@ export const layer: Layer.Layer<UrlState, never, Location> = Layer.effect(
       yield* Ref.set(lastFlush, Option.some(yield* Clock.currentTimeMillis));
     });
 
+    /** Commit until nothing waits. A write made while a batch commits (an
+     *  entry subscriber answering this flush's own push) finds this flush
+     *  still running, so `navigate` schedules none for it: it is this
+     *  flush's to commit, after its own window. */
     const drain: Effect.Effect<void> = Effect.suspend(() =>
       Effect.gen(function* () {
         yield* commit;
@@ -119,6 +166,10 @@ export const layer: Layer.Layer<UrlState, never, Location> = Layer.effect(
       yield* FiberHandle.run(flushing, flush, { onlyIfMissing: throttled });
     });
 
+    /** Entries landing from `Location`. One that is not the entry a waiting
+     *  batch was written on (Back, Forward, a push from outside) drops the
+     *  batch; any entry shows when nothing is waiting. A flush's own write
+     *  lands after it took the batch, so it never drops one. */
     const land = (entry: Entry) =>
       Effect.gen(function* () {
         const elsewhere = Option.exists(
@@ -151,9 +202,11 @@ export const layer: Layer.Layer<UrlState, never, Location> = Layer.effect(
   }),
 );
 
+/** The place's value at the URL as it is now, `None` off the place. */
 export const get = <A>(place: Place.Place<A>): Effect.Effect<Option.Option<A>, never, UrlState> =>
   UrlState.use((state) => Effect.flatMap(state.href, (href) => Place.decodeEffect(place, href)));
 
+/** Navigate to the place's `value`, entering history as the move says. */
 export const set = <A>(place: Place.Place<A>, value: A): Effect.Effect<void, never, UrlState> =>
   UrlState.use((state) =>
     Effect.gen(function* () {
@@ -164,6 +217,7 @@ export const set = <A>(place: Place.Place<A>, value: A): Effect.Effect<void, nev
     }),
   );
 
+/** `set` the place to `f` of its value as the URL holds it now; nothing off the place. */
 export const update = <A>(
   place: Place.Place<A>,
   f: (value: A) => A,

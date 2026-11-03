@@ -4,8 +4,14 @@ import { describe, expect, it } from 'effect-bun-test';
 import type * as Chord from './chord.js';
 import * as Placement from './placement.js';
 
+/**
+ * The owner's feel on hymn 373, refrain line 0 (worship, 2026-10-23): the
+ * first chord on syllable 3 and the second on syllable 7. Written down
+ * before the rules, so no rule is tuned to it.
+ */
 const OWNER_373 = [3, 7] as const;
 
+/** A case over pure functions. */
 const check = (name: string, body: () => void) => it.effect(name, () => Effect.sync(body));
 
 const chord = (root: number, quality: Chord.Quality = ''): Chord.Chord => ({ root, quality });
@@ -13,6 +19,7 @@ const C = chord(0);
 const F = chord(5);
 const G = chord(7);
 
+/** Four ticks a quarter: an eighth is 2, a bar of 4/4 is 16. */
 const grid = (meters: Placement.Grid['meters'], tonic = 0): Placement.Grid => ({
   ticksPerBeat: 4,
   meters,
@@ -21,6 +28,7 @@ const grid = (meters: Placement.Grid['meters'], tonic = 0): Placement.Grid => ({
 const FOUR = grid([{ tick: 0, numerator: 4, denominator: 4 }]);
 const SIX_EIGHT = grid([{ tick: 0, numerator: 6, denominator: 8 }]);
 
+/** Syllables from [start, length, key] triples. */
 const syllables = (...notes: ReadonlyArray<readonly [number, number, number]>) =>
   notes.map(([start, length, key]) => ({ start, length, key }));
 
@@ -38,9 +46,11 @@ const line = (
   };
 };
 
+/** Where each change lands: its syllable, and its ticks into it when not 0. */
 const where = (id: Placement.RuleId, l: Placement.Line, g: Placement.Grid) =>
   Placement.apply(id, l, g).map((c) => (c.at === 0 ? c.syllable : [c.syllable, c.at]));
 
+/** Eight quarters over two bars of 4/4, the tune C D E F G A B C. */
 const quarters = syllables(
   [0, 4, 60],
   [4, 4, 62],

@@ -27,6 +27,7 @@ import { NAME } from './title.ts';
 const WORD_CARD = 'Righteousness';
 const MEANING = 'right doing';
 
+/** Where things sit inside the circle as it grows past them: distance, angle, radius, colour. */
 const SKY: ReadonlyArray<readonly [number, number, number, string]> = [
   [360, -2.5, 34, C.peachTop],
   [520, -0.5, 26, C.tealTop],
@@ -103,9 +104,11 @@ const page = (f: WordFrame) => {
   viewer(f);
 };
 
+/** The viewer's two hands at the shrug, palms up by the shoulders; their reach rewritten each frame (scratch). */
 const SHRUG_FAR: Posed<Gesture> = { to: [-66, -104], reach: 0, grip: 'palm' };
 const SHRUG_NEAR: Posed<Gesture> = { to: [66, -104], reach: 0, grip: 'palm' };
 
+/** The viewer's stand-in, on the left. */
 const viewer = (f: WordFrame) => {
   const { ctx } = f;
   const [x, y] = f.knob('figure');
@@ -133,6 +136,7 @@ const viewer = (f: WordFrame) => {
   );
 };
 
+/** The word card: righteousness, then flipped to right doing. */
 const card = (f: WordFrame) => {
   const { ctx } = f;
   const [x, y] = f.knob('card');
@@ -183,10 +187,16 @@ const card = (f: WordFrame) => {
   );
 };
 
+/** The card's word: its size, its baseline below the card's centre, and the card's tilt. */
 const CARD_SIZE = 104;
 const CARD_BASELINE = 34;
 const CARD_TILT = -0.02;
 
+/**
+ * The match cut from the title: its first word, in the ink it has on the
+ * page, starts exactly where the title left it and lands as the card's word,
+ * shrinking to the card's size; the rest of the name falls off the page.
+ */
 const matchCut = (f: WordFrame) => {
   const match = f.at('match');
   if (match >= 1) return;
@@ -215,6 +225,7 @@ const matchCut = (f: WordFrame) => {
   );
 };
 
+/** The measuring tape that drops and hangs: by whose measure? */
 const tape = (f: WordFrame) => {
   const { ctx } = f;
   const [x] = f.knob('card');
@@ -245,6 +256,7 @@ const tape = (f: WordFrame) => {
   });
 };
 
+/** The law's outline widening into a circle as big as the universe. */
 const universe = (f: WordFrame, x: number, y: number) => {
   const { ctx } = f;
   const grow = f.at('grow');

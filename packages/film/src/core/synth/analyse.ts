@@ -1,21 +1,39 @@
 import type { Pcm } from '../audio.ts';
 
+/** A sound described. Seconds, Hz, and a 0–1 flatness. */
 interface Described {
   readonly secs: number;
+  /** When it first comes within 30 dB of its loudest 10 ms. */
   readonly onset: number;
+  /**
+   * When its loudest 10 ms begins: a one-shot's hit (the stamp landing, the
+   * stack settling), which a take can hold back well after its onset.
+   */
   readonly hit: number;
+  /** When it last is within 40 dB of its loudest 10 ms. */
   readonly end: number;
+  /**
+   * How far its loudest 10 ms stands over its neighbours, in dB: over the
+   * median of the 10 ms windows within 150 ms either side, silence past its
+   * ends. A knock stands 17 dB and more; a swell or a steady hiss stands
+   * under 1 dB, and has no hit to hear.
+   */
   readonly stands: number;
   readonly centroid: number;
   readonly flatness: number;
 }
 
 const WINDOW = 0.01;
+/** How many windows either side of the loudest its neighbours are: 150 ms. */
 const AROUND = 15;
+/** The least power a window is read at, so silence has a level. */
 const FLOOR = 1e-12;
+/** Silence's level in dB: a window past a sound's ends. */
 const SILENT_DB = 10 * Math.log10(FLOOR);
+/** The FFT the centroid and flatness are read from: the first channel's. */
 const FFT_SIZE = 2048;
 
+/** Each 10 ms window's level in dB (mean over channels of the mean square). */
 const windowDb = (pcm: Pcm): ReadonlyArray<number> => {
   const n = Math.max(1, Math.round(WINDOW * pcm.rate));
   const out: Array<number> = [];
@@ -30,6 +48,7 @@ const windowDb = (pcm: Pcm): ReadonlyArray<number> => {
   return out;
 };
 
+/** `re` and `im` put in bit-reversed order, in place. */
 const bitReverse = (re: Float64Array, im: Float64Array): void => {
   const n = re.length;
   for (let i = 1, j = 0; i < n; i++) {
@@ -43,6 +62,7 @@ const bitReverse = (re: Float64Array, im: Float64Array): void => {
   }
 };
 
+/** One butterfly between `a` and `b`, turned by `(wr, wi)`. */
 const butterfly = (
   re: Float64Array,
   im: Float64Array,
@@ -59,13 +79,16 @@ const butterfly = (
   im[a] = (im[a] ?? 0) + ti;
 };
 
+/** A `size`-point FFT worked out once, not per butterfly: each stage's turns, and the Hann window over one frame. */
 interface FftPlan {
   readonly twiddles: ReadonlyArray<{ readonly cos: Float64Array; readonly sin: Float64Array }>;
   readonly hann: Float64Array;
 }
 
+/** Each size's plan, made the first time a spectrum of that size is read. */
 const plans = new Map<number, FftPlan>();
 
+/** The plan for a `size`-point FFT (a power of two). */
 const planOf = (size: number): FftPlan => {
   const had = plans.get(size);
   if (had !== undefined) return had;
@@ -87,6 +110,7 @@ const planOf = (size: number): FftPlan => {
   return plan;
 };
 
+/** An in-place radix-2 FFT over `re` and `im`, as long as `plan`'s. */
 const fft = (re: Float64Array, im: Float64Array, plan: FftPlan): void => {
   const n = re.length;
   bitReverse(re, im);
@@ -98,8 +122,17 @@ const fft = (re: Float64Array, im: Float64Array, plan: FftPlan): void => {
   });
 };
 
+/**
+ * What a sound holds past its ends: silence, as a one-shot is heard, or its
+ * own head again, as the mix loops a bed.
+ */
 type Ends = 'silent' | 'looped';
 
+/**
+ * The power spectrum of one Hann-windowed frame of `plane`: its `size`
+ * samples from `from` (`size` a power of two), in `size / 2` bins, what lies
+ * past its ends read as `ends` says. A full-scale sine's bin reads (size / 4)².
+ */
 const spectrumAt = (plane: Float32Array, from: number, size: number, ends: Ends): Float64Array => {
   const plan = planOf(size);
   const re = new Float64Array(size);
@@ -114,9 +147,20 @@ const spectrumAt = (plane: Float32Array, from: number, size: number, ends: Ends)
   return power;
 };
 
+/**
+ * The power spectrum of one Hann-windowed frame of `plane`: its `size`
+ * samples from `from` (`size` a power of two; silence before its start and
+ * past its end), in `size / 2` bins. A full-scale sine's bin reads (size / 4)².
+ */
 export const frameSpectrum = (plane: Float32Array, from: number, size: number): Float64Array =>
   spectrumAt(plane, from, size, 'silent');
 
+/**
+ * Where the frames of `plane`'s spectrum start, about a quarter of a frame
+ * apart, so that every sample lies in four of them. Silent ends: from the
+ * first frame that reaches its first sample to the last that holds its last.
+ * Looped: around the loop once, the starts spread evenly over its length.
+ */
 const frameStarts = (length: number, size: number, ends: Ends): ReadonlyArray<number> => {
   const hop = size / 4;
   if (ends === 'looped') {
@@ -129,6 +173,14 @@ const frameStarts = (length: number, size: number, ends: Ends): ReadonlyArray<nu
   );
 };
 
+/**
+ * `plane`'s power spectrum in `size / 2` bins (`size` a power of two), each
+ * sample weighed alike: averaged over Hann-windowed frames about a quarter
+ * of a frame apart (`frameStarts`), what lies past its ends read as `ends`
+ * says. Every sample lies in four frames, whose squared windows (Hann's
+ * periodic form) sum to 1.5, so a click at the very start or end of a sound
+ * counts as much as one in its middle.
+ */
 export const powerSpectrum = (plane: Float32Array, size: number, ends: Ends): Float64Array => {
   const power = new Float64Array(size / 2);
   const starts = frameStarts(plane.length, size, ends);
@@ -139,6 +191,7 @@ export const powerSpectrum = (plane: Float32Array, size: number, ends: Ends): Fl
   return power.map((p) => p / starts.length);
 };
 
+/** How far the window at `at` stands over the median of its neighbours, silence past the ends. */
 const standing = (levels: ReadonlyArray<number>, at: number): number => {
   const near = Array.from(
     { length: 2 * AROUND + 1 },
@@ -147,6 +200,7 @@ const standing = (levels: ReadonlyArray<number>, at: number): number => {
   return (levels[at] ?? SILENT_DB) - (near[AROUND] ?? SILENT_DB);
 };
 
+/** `pcm` described. */
 export const describeSound = (pcm: Pcm): Described => {
   const levels = windowDb(pcm);
   const loudest = Math.max(...levels);

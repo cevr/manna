@@ -8,6 +8,7 @@ import { useToastProviderContext } from './ToastProviderContext.ts';
 import { useToastRootContext } from './ToastRootContext.ts';
 
 interface ToastCloseState {
+  /** The type of the toast. */
   type: string | undefined;
 }
 

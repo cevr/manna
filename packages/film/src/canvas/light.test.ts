@@ -6,6 +6,7 @@ const W = 320;
 const H = 180;
 const DUR = 10;
 
+/** A light whose amount a scene rewrites each frame. */
 interface Rising extends Light {
   amount: number;
 }
@@ -37,6 +38,7 @@ const film = withDom(() =>
   }),
 );
 
+/** Every multiply `scene`'s frame takes `through` its length (0..1). */
 const multiplies = (scene: string, through: number): ReadonlyArray<Drawn> => {
   const r = recorder(W, H);
   const index = lights.findIndex(([id]) => id === scene);
@@ -44,14 +46,21 @@ const multiplies = (scene: string, through: number): ReadonlyArray<Drawn> => {
   return r.images.filter((d) => d.comp === 'multiply');
 };
 
+/** Whether a sheet is one gradient over the whole frame (a light), not white under others (a product, the vignette). */
 const isLight = (d: Drawn) =>
   d.comp === 'multiply' && d.image.drawn.fills.every((f) => f.style !== '#ffffff');
 
+/**
+ * The lights `scene` was multiplied by `through` its length (0..1): each
+ * sheet filled with one gradient over the whole frame, and the alpha it went
+ * on at, found inside the product a fixed light shares with the vignette.
+ */
 const lit = (scene: string, through: number): ReadonlyArray<Drawn> =>
   multiplies(scene, through)
     .flatMap((d) => (isLight(d) ? [d] : d.image.drawn.images))
     .filter(isLight);
 
+/** The one gradient a light's sheet was filled with, over the whole frame. */
 const gradientOf = (drawn: Drawn | undefined): StandInGradient => {
   const fills = drawn === undefined ? [] : drawn.image.drawn.fills;
   expect(fills).toHaveLength(1);

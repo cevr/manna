@@ -6,6 +6,7 @@ import turbo from '../../../turbo.json' with { type: 'json' };
 const scripts: Readonly<Record<string, string>> = film.scripts;
 const words = (script: string) => (scripts[script] ?? '').split(/\s+/);
 
+/** The names `pattern` captures among `items`, sorted. */
 const captured = (items: ReadonlyArray<string>, pattern: RegExp) =>
   items.flatMap((item) => item.match(pattern)?.slice(1, 2) ?? []).toSorted();
 
@@ -21,8 +22,10 @@ const toolsUnhashed = captured(
   .flatMap((names) => names.split(','))
   .toSorted();
 
+/** The flags of `bun test` whose value is the next word. */
 const TAKES_VALUE = new Set(['--preload']);
 
+/** The paths a part's script runs: the words after `bun test` that are no flag and no flag's value. */
 const positional = (script: string) =>
   words(script)
     .slice(2)

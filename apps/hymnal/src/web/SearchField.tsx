@@ -1,3 +1,8 @@
+/**
+ * The web's search field. On a phone the home screen draws its own
+ * (`src/home/Home.native.tsx`), so `SearchField.native.tsx` draws nothing.
+ */
+
 import { StyleSheet, TextInput } from 'react-native';
 
 import { color } from '~/color';

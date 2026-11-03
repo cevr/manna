@@ -1,11 +1,26 @@
+/**
+ * The follow check's judge, held to hand-made snapshots: a pager that shows
+ * one page 600 pt tall, the open page's scroll with four lines in it, the
+ * selected one moved by hand, and the next page's scroll and lines beside it
+ * off the screen, as the app's pager keeps them. Each sample's time is set
+ * by the line it marks, on a score clock whose first sung line is at
+ * `TIMED.first`. And how `--stanzas` reads its list, and where the check's
+ * video goes, or that it records none. And the count-in: a score clock
+ * held at the first sung line for `countIn` ms after the tap. Hymn 78's
+ * bundled timeline is read in `follow.slow.test.ts`.
+ * No simulator.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
 import { choiceOf, videoOf } from './follow';
 import { judge, type Node, type Sample, sampleOf, soundOff, TIMING } from './follow/samples';
 
+/** The page the pager shows: the window cut to the pager. */
 const SCROLL = { x: 0, y: 100, width: 400, height: 600 };
 
+/** The hymn's timeline: four lines, sung from 1 s on the score clock to 8.3 s. */
 const TIMED = {
   first: 1000,
   countIn: 0,
@@ -21,6 +36,13 @@ const TIMED = {
 const PAGE = 2;
 const NEXT = 10;
 
+/**
+ * A snapshot's nodes: the window, the pager (which clips each page to the
+ * screen's middle), the open page's scroll (its own frame as tall as its
+ * content) with a line 40 pt tall at each top and `selected` marked, the
+ * next page's scroll off the screen with lines of its own, one selected, and
+ * the button.
+ */
 const nodes = (
   tops: ReadonlyArray<number>,
   selected: number,
@@ -59,6 +81,12 @@ const nodes = (
 
 const TOPS = [200, 260, 320, 380];
 
+/**
+ * A run that marks each line in turn, then ends. Each sample is taken 200 ms
+ * after its line starts on the score clock (`speed` times as fast), and at
+ * least 400 ms after the sample before it; the player ends when the timeline
+ * does.
+ */
 const run = (marks: ReadonlyArray<number>, tops = TOPS, speed = 1): ReadonlyArray<Sample> => {
   const times: Array<number> = [];
   for (const mark of marks) {
@@ -217,8 +245,10 @@ describe('the sound check', () => {
 });
 
 describe('the count-in', () => {
+  /** `samples` taken `by` ms later after the tap. */
   const later = (samples: ReadonlyArray<Sample>, by: number) =>
     samples.map((sample) => ({ ...sample, at: sample.at + by }));
+  /** A run that counts 3 s in on line 0, then marks each line in turn. */
   const counted = [
     sampleOf(nodes(TOPS, 0), 100, 200),
     sampleOf(nodes(TOPS, 0), 100, 1600),

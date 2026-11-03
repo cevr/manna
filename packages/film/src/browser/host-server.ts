@@ -11,6 +11,7 @@ import { PageLoad } from './page-load.ts';
 import { Pointer } from './pointer.ts';
 import { Viewport } from './viewport.ts';
 
+/** Media a server render made: never measured, never ready; a play is refused, as no browser would play it. */
 const unplayable: Playable = {
   time: () => 0,
   duration: () => Number.NaN,
@@ -27,6 +28,7 @@ const unplayable: Playable = {
   on: () => {},
 };
 
+/** The clipboard a server render has: none, so a copy is refused in those words. */
 const noClipboard: Layer.Layer<Clipboard> = Layer.succeed(
   Clipboard,
   Clipboard.of({
@@ -37,6 +39,7 @@ const noClipboard: Layer.Layer<Clipboard> = Layer.succeed(
   }),
 );
 
+/** Loads a server render cannot make: each ignored, and logged. */
 const noLoads: Layer.Layer<PageLoad> = Layer.succeed(
   PageLoad,
   PageLoad.of({
@@ -45,6 +48,11 @@ const noLoads: Layer.Layer<PageLoad> = Layer.succeed(
   }),
 );
 
+/**
+ * The host of a page rendered on the server for a request to `href`, from a
+ * browser that keys as a Mac or not (`mac`): its chords labelled as that
+ * browser labels them, so the hydrated page reads as the first paint did.
+ */
 export const ServerHost = {
   layer: (href: string, mac: boolean): Layer.Layer<BrowserServices> =>
     Layer.mergeAll(

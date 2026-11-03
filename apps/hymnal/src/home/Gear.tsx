@@ -1,3 +1,5 @@
+/** The settings button's mark beyond iOS: a gear glyph, in the accent. */
+
 import { StyleSheet, Text } from 'react-native';
 
 import { useAccent } from '~/color';

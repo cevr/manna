@@ -4,6 +4,7 @@ import { LabClient } from '../api.ts';
 import { ServerHosted, pageRender } from '../page-server.tsx';
 import { ASK_PAGE, askOn } from './page.tsx';
 
+/** The ask page as the lab renders it on the server. */
 export const askRender: PageRender = pageRender({
   ...ASK_PAGE,
   app: (request) => (

@@ -12,6 +12,10 @@ interface DialogCloseState {}
 
 interface DialogCloseProps extends BaseUIComponentProps<'button', DialogCloseState> {}
 
+/**
+ * A button that closes the dialog.
+ * Renders a `<button>` element.
+ */
 export function DialogClose(componentProps: DialogCloseProps): JSX.Element {
   const { store } = useDialogRootContext();
   const elementProps = omit(componentProps, 'class', 'style', 'render');

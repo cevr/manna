@@ -52,6 +52,7 @@ const studyFull = Flag.Boolean('full').pipe(
   Flag.withDefault(false),
 );
 
+/** The nine historic SDA pioneers, for the --pioneers preset. */
 const PIONEER_AUTHORS = [
   'James Springer White',
   'Uriah Smith',
@@ -64,6 +65,7 @@ const PIONEER_AUTHORS = [
   'Charles Fitch',
 ];
 
+/** A book ranked by how many remote hits it had for the subject. */
 interface RankedBook {
   pubCode: string;
   pubName: string;
@@ -72,9 +74,11 @@ interface RankedBook {
 
 const REMOTE_PAGE_SIZE = 100;
 
+/** Does a book author match any of the requested author filters (substring, case-insensitive)? */
 const authorMatches = (author: string, filters: string[]): boolean =>
   filters.length === 0 || filters.some((f) => author.toLowerCase().includes(f.toLowerCase()));
 
+/** The flag values every phase reads, with the author filter already resolved. */
 interface StudyPlan {
   subject: string;
   lang: string;
@@ -88,6 +92,7 @@ interface StudyPlan {
   scoped: boolean;
 }
 
+/** What happened to one ranked candidate book in phase 2. */
 type CandidateOutcome =
   | 'ignored'
   | 'unresolved'
@@ -103,6 +108,7 @@ interface DownloadTally {
   skippedByAuthor: number;
 }
 
+/** How each candidate outcome moves the phase-2 counters. */
 const OUTCOME_COUNTS = {
   ignored: { selected: 0, downloaded: 0, failed: 0, skippedByAuthor: 0 },
   unresolved: { selected: 0, downloaded: 0, failed: 1, skippedByAuthor: 0 },
@@ -114,13 +120,16 @@ const OUTCOME_COUNTS = {
 
 const SNIPPET_LENGTH = 220;
 
+/** `text` when `enabled`, else nothing — for the optional clauses in summary lines. */
 const when = (enabled: boolean, text: string) => {
   if (enabled) return text;
   return '';
 };
 
+/** A local hit's paragraph text, collapsed onto one line. */
 const flatText = (hit: SearchHit) => nodesToText(hit.paragraph.nodes).replace(/\s+/g, ' ').trim();
 
+/** Cut a paragraph down to the console snippet length. */
 const clip = (text: string) => {
   if (text.length > SNIPPET_LENGTH) return `${text.slice(0, SNIPPET_LENGTH)}…`;
   return text;
@@ -180,6 +189,8 @@ const rankBooks = (hits: ReadonlyArray<EGWSchemas.SearchHit>) => {
   return rankMap;
 };
 
+/** Resolve pub_code -> Book (carries book_id + author) via title-search,
+ *  matching exactly on code. Mirrors `manna egw download <code>`. */
 const resolveCatalogBook = (plan: StudyPlan, book: RankedBook) =>
   Effect.gen(function* () {
     const client = yield* EGWApiClient;
@@ -214,6 +225,8 @@ const downloadBook = (exact: EGWSchemas.Book, ordinal: number) =>
     return 'downloaded' as const;
   });
 
+/** Take one ranked book through resolve → author filter → list or download.
+ *  `ordinal` is the number it is listed under if it is selected. */
 const studyCandidate = (
   plan: StudyPlan,
   installedCodes: ReadonlySet<string>,
@@ -243,6 +256,9 @@ const studyCandidate = (
     return yield* downloadBook(exact, ordinal);
   });
 
+/** Resolve candidates in rank order until --limit books are selected (a
+ *  selected book = passes author filter; installed ones count toward the
+ *  limit but aren't re-downloaded). */
 const selectAndDownload = (
   plan: StudyPlan,
   installedCodes: ReadonlySet<string>,

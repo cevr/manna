@@ -1,3 +1,10 @@
+/**
+ * The follow check's reading of hymn 78's bundled timeline (numbers only, no
+ * words): the count-in it gives at 100 %, and how `--stanzas` cuts it. It
+ * reads the playback bundle and encodes the hymn's timing, so it is slow.
+ * No simulator.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { Array as Arr, Effect, Option } from 'effect';
 
@@ -6,6 +13,7 @@ import { readPlaybackHymns } from '../vite/chords.ts';
 import { encodeTiming, versesOf } from '../vite/timing.ts';
 import { countInMsOf, sungOf } from './follow';
 
+/** Hymn 78's timeline as the timing bundle encodes it (that hymn alone): four stanzas of eight lines, 3/4. */
 const full = Arr.findFirst(readPlaybackHymns(), (hymn) => hymn.number === 78).pipe(
   Option.flatMap((hymn) => encodeTiming(hymn, () => versesOf(hymn))),
   Option.flatMap(timelineOf),

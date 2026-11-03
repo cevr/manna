@@ -8,6 +8,7 @@ import { riveAccused } from '../rive/accused.ts';
 import { riveJudge } from '../rive/judge.ts';
 import { accusedProp, handProp, judgeProp } from '../rive/rigs.ts';
 
+/** The court's props in K1: the bench, its rim, panels and block in walnut, the sheets in their four papers, every line in the figures' warm ink. */
 const PROPS: Props = {
   bench: hues.bench,
   rim: hues.rim,
@@ -19,6 +20,7 @@ const PROPS: Props = {
   gavelInk: ramps.ink.base,
 };
 
+/** The look on `engine`: the court's two people, and the judge's hand, as rigs, among its props. */
 const papercutOn = (engine: RiveEngine): Look => ({
   court: courtWith(riveAccused, riveJudge, PROPS),
   rigs: { accused: accusedProp(engine), judge: judgeProp(engine), hand: handProp(engine) },

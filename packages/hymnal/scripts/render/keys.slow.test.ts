@@ -1,3 +1,10 @@
+/**
+ * The sampled ranges against the instruments themselves, and every key set's
+ * notes against the ranges. Slow: it reads the instrument cache
+ * (`$HYMN_RENDER_CACHE`, default `~/.cache/manna-hymn-render`) that
+ * `render` fetches, and the whole corpus at each of the 11 keys.
+ */
+
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Config, Effect, FileSystem, Path } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -18,6 +25,7 @@ const instruments = Effect.gen(function* () {
   return path.join(cache, 'instruments');
 });
 
+/** An SFZ file's text with each `#include` replaced by its file, read from the instrument's folder. */
 const expanded = (
   dir: string,
   file: string,
@@ -35,6 +43,10 @@ const expanded = (
 
 const SCOPES = ['control', 'global', 'master', 'group', 'region'];
 
+/**
+ * The keys an SFZ's note-on regions sample: each `<region>` with its
+ * `<global>`, `<master>` and `<group>` opcodes, release triggers left out.
+ */
 const sampledKeys = (sfz: string) => {
   const scopes = new Map<string, Map<string, string>>();
   const keys = new Set<number>();
@@ -71,6 +83,7 @@ const sampledKeys = (sfz: string) => {
   return keys;
 };
 
+/** The run of sampled keys around middle C: its lowest and highest key. */
 const runAround = (keys: Set<number>, from = 60) => {
   let low = from;
   let high = from;

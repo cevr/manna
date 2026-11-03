@@ -1,5 +1,11 @@
 /* oxlint-disable effect/noNewPromise, effect/noNewError -- the fake stands in for One's native module, whose calls are promises the adapter wraps; a refused play rejects with an Error as a native call does. */
 
+/**
+ * The iOS sound adapter over a fake native module: it loads each sound once
+ * with its content hash, plays exactly the id `load` gave it, plays nothing
+ * for a sound not loaded yet or refused, and calls nothing else.
+ */
+
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect } from 'effect';
 
@@ -12,6 +18,7 @@ type Call =
   | readonly ['ready', number]
   | readonly ['play', number, string];
 
+/** A native side that answers id 100 + n for the n-th sound, and refuses `refused`. */
 const fakeNative = (refused: string, failPlay = false) => {
   const calls: Array<Call> = [];
   let next = 100;

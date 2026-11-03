@@ -1,3 +1,21 @@
+/**
+ * `bun run icon`: draws every app icon from the one wheat blade,
+ * `assets/icon/wheat.svg`, in the brand's Moonlit wheat (`@manna/brand`):
+ * the night's blade on the wheat by day, the wheat's blade on the night by
+ * night.
+ *
+ * Each row of `icons` is one PNG: its size, its layout (how large the wheat
+ * sits on the square), the wheat's colour, and its ground, or none for the
+ * Android layers and the launch screen's artwork, which the launcher or the
+ * launch screen puts on its own ground. `svgFor` writes the row
+ * as an SVG and sharp renders it (`draw`). An icon with a ground is opaque,
+ * with no alpha channel. An icon with no ground is the wheat's colour in
+ * every pixel, with the shape in the alpha channel alone. The run also writes
+ * the web's `favicon.svg` (the night's blade on the wheat, the wheat's on the
+ * night in dark mode) and `manifest.webmanifest`.
+ *
+ * A native build reads the new icons only after `bun run prebuild:native`.
+ */
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { PALETTE } from '@manna/brand';
@@ -6,13 +24,25 @@ import sharp from 'sharp';
 
 import { theme } from '../src/theme.ts';
 
+/**
+ * How the wheat sits on its square, centred on the shape's box:
+ * - `full`: the box fits the central square of side 0.78.
+ * - `favicon`: the box fits the central square of side 0.92, as large as a
+ *   16 px tab allows.
+ * - `adaptive`: the box's half-diagonal is 0.29 of the side, inside
+ *   Android's safe circle (radius 33/108 ≈ 0.3056).
+ * - `maskable`: the box's half-diagonal is 0.38 of the side, inside the
+ *   W3C maskable safe circle (radius 0.40).
+ */
 export type Layout = 'full' | 'favicon' | 'adaptive' | 'maskable';
 
 export interface Icon {
+  /** Under the app's root. */
   readonly file: string;
   readonly size: number;
   readonly layout: Layout;
   readonly wheat: string;
+  /** None: a transparent ground. */
   readonly ground: Option.Option<string>;
 }
 
@@ -103,6 +133,7 @@ export const icons: ReadonlyArray<Icon> = [
   },
 ];
 
+/** The wheat's path and the box its `viewBox` draws tight around it. */
 export interface Wheat {
   readonly d: string;
   readonly x: number;
@@ -111,6 +142,7 @@ export interface Wheat {
   readonly height: number;
 }
 
+/** `wheat.svg` had no `viewBox` of four numbers with a width and height, or no path. */
 export class WheatUnreadable extends Schema.TaggedError<WheatUnreadable>()('WheatUnreadable', {
   reason: Schema.String,
 }) {
@@ -131,6 +163,7 @@ const boxOf = (svg: string) =>
     ),
   );
 
+/** Reads the shape out of `wheat.svg`'s text. */
 export const wheatOf = (svg: string): Effect.Effect<Wheat, WheatUnreadable> =>
   Effect.gen(function* () {
     const box = yield* Effect.fromOption(boxOf(svg)).pipe(
@@ -151,6 +184,7 @@ const scales: Record<Layout, (wheat: Wheat, size: number) => number> = {
 
 const num = (n: number) => String(Math.round(n * 10_000) / 10_000);
 
+/** The wheat's path, scaled and centred on a square of `size` by `layout`. */
 const placed = (wheat: Wheat, layout: Layout, size: number, paint: string) => {
   const s = scales[layout](wheat, size);
   const tx = size / 2 - s * (wheat.x + wheat.width / 2);
@@ -158,6 +192,7 @@ const placed = (wheat: Wheat, layout: Layout, size: number, paint: string) => {
   return `<path transform="translate(${num(tx)} ${num(ty)}) scale(${num(s)})"${paint} fill-rule="evenodd" d="${wheat.d}"/>`;
 };
 
+/** One icon as an SVG: its ground (when it has one), then the wheat in its colour. */
 export const svgFor = (wheat: Wheat, icon: Icon): string => {
   const ground = Option.match(icon.ground, {
     onNone: () => '',
@@ -170,6 +205,7 @@ export const svgFor = (wheat: Wheat, icon: Icon): string => {
   );
 };
 
+/** sharp could not draw an icon. */
 export class DrawFailed extends Schema.TaggedError<DrawFailed>()('DrawFailed', {
   file: Schema.String,
   reason: Schema.String,
@@ -185,6 +221,11 @@ const sharply = <A>(icon: Icon, run: () => Promise<A>) =>
     catch: (cause) => DrawFailed.make({ file: icon.file, reason: String(cause) }),
   });
 
+/**
+ * One icon as PNG bytes. A grounded icon is flattened to three channels. A
+ * groundless one is a plate of the wheat's colour that takes the render's
+ * alpha, so no pixel's colour drifts at the antialiased edge.
+ */
 export const draw = (wheat: Wheat, icon: Icon): Effect.Effect<Buffer, DrawFailed> => {
   const svg = Buffer.from(svgFor(wheat, icon));
   const side = { width: icon.size, height: icon.size };
@@ -204,6 +245,7 @@ export const draw = (wheat: Wheat, icon: Icon): Effect.Effect<Buffer, DrawFailed
   });
 };
 
+/** The tab's icon: the night's blade on the wheat, and the wheat's on the night when the system is dark. */
 export const faviconSvg = (wheat: Wheat): string =>
   [
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">',
@@ -214,6 +256,7 @@ export const faviconSvg = (wheat: Wheat): string =>
     '',
   ].join('\n');
 
+/** The web app manifest's fields this app sets. */
 export const WebManifest = Schema.Struct({
   name: Schema.String,
   short_name: Schema.String,
@@ -229,8 +272,10 @@ export const WebManifest = Schema.Struct({
   ),
 });
 
+/** `manifest.webmanifest`'s text: two-space JSON and a final newline. */
 export const WebManifestJson = Schema.fromJsonString(WebManifest, { space: 2 });
 
+/** The name, the ground, and the icons a browser may install. */
 export const manifest = `${Schema.encodeSync(WebManifestJson)({
   name: 'Hymnal',
   short_name: 'Hymnal',

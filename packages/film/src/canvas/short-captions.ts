@@ -4,6 +4,7 @@ import { clamp } from '../core/time.ts';
 import type { ShortLook } from './film.ts';
 import { type Probe, recordText } from './probe.ts';
 
+/** A word of a set phrase, in 1080 × 1920 px. */
 interface SetWord {
   readonly text: string;
   readonly x: number;
@@ -14,6 +15,7 @@ interface SetWord {
   readonly end: number;
 }
 
+/** A line of a set phrase: its words' box, for the probe. */
 interface SetLine {
   readonly text: string;
   readonly left: number;
@@ -28,9 +30,12 @@ interface SetPhrase {
   readonly lines: ReadonlyArray<SetLine>;
 }
 
+/** How far the marker reaches past a word's ends, and how far its top sits below the font's ascent, in px. */
 const MARK_PAD = 6;
+/** How opaque the gold marker lays over the paper. */
 const MARK_ALPHA = 0.7;
 
+/** A phrase's words broken greedily into lines at most `width` wide: each line, its words' indices. */
 const greedyLines = (widths: ReadonlyArray<number>, space: number, width: number) => {
   const lines: number[][] = [];
   let used = 0;
@@ -47,6 +52,7 @@ const greedyLines = (widths: ReadonlyArray<number>, space: number, width: number
   return lines;
 };
 
+/** The widest line of `lines`, set with `space` between words. */
 const widest = (
   lines: ReadonlyArray<ReadonlyArray<number>>,
   widths: ReadonlyArray<number>,
@@ -58,6 +64,12 @@ const widest = (
     0,
   );
 
+/**
+ * A phrase's words in as few lines as the greedy break needs, but balanced:
+ * of every way to cut the words into that many lines, the one whose widest
+ * line is narrowest, so no word is left alone on a line. A phrase is a few
+ * words, so trying every cut is cheap, and it is done once per phrase.
+ */
 export const breakLines = (widths: ReadonlyArray<number>, space: number, width: number) => {
   const greedy = greedyLines(widths, space, width);
   const n = widths.length;
@@ -80,6 +92,7 @@ export const breakLines = (widths: ReadonlyArray<number>, space: number, width: 
   return best;
 };
 
+/** The index of the phrase showing at `s`, or -1: phrases run in order and never overlap. */
 const phraseAt = (phrases: ReadonlyArray<SetPhrase>, s: number) => {
   let lo = 0;
   let hi = phrases.length - 1;
@@ -94,11 +107,17 @@ const phraseAt = (phrases: ReadonlyArray<SetPhrase>, s: number) => {
   return -1;
 };
 
+/** Where a vertical film sets its captions, in 1080 × 1920 px: every line centred on `centre`. */
 interface CaptionLayout {
   readonly centre: number;
   readonly caption: { readonly y: number; readonly width: number };
 }
 
+/**
+ * The captions of a vertical film whose phrases are `phrases`, set in
+ * `style` where `layout` puts them (a short's `SHORT_LAYOUT` unless given),
+ * drawn `k` page px per px.
+ */
 export const burnedCaptions = (
   phrases: ReadonlyArray<Phrase>,
   style: ShortLook['caption'],
@@ -109,6 +128,7 @@ export const burnedCaptions = (
   let ascent = 0;
   let descent = 0;
 
+  /** Every phrase set once, on the first frame that shows one, in the caption's font. */
   const setAll = (ctx: CanvasRenderingContext2D) => {
     ctx.save();
     ctx.font = style.font;
@@ -157,6 +177,7 @@ export const burnedCaptions = (
     return all;
   };
 
+  /** Draw the phrase showing at short second `s`, if one is; record its lines when probed. */
   const draw = (ctx: CanvasRenderingContext2D, s: number, probe: Probe | undefined) => {
     set ??= setAll(ctx);
     const phrase = set[phraseAt(set, s)];

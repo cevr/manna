@@ -19,6 +19,7 @@ export type Action = Data.TaggedEnum<{
   Delete: {};
 }>;
 export const Action = Data.taggedEnum<Action>();
+/** The progress and player runtimes share this exact layer in one registry. */
 export const downloadsOn = (layer: Layer.Layer<Offline>) => {
   const runtime = Atom.runtime(layer);
   const progress = runtime

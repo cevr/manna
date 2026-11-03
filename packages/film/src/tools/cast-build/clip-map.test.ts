@@ -3,6 +3,7 @@ import { Option } from 'effect';
 import type { Raster } from '../../core/raster.ts';
 import { MAP_IOU, borderPaperOf, canvasOf, figureNumbersOf, registerClip } from './clip-map.ts';
 
+/** A `w` × `h` raster, each pixel's grey from `at`. */
 const grey = (w: number, h: number, at: (x: number, y: number) => number): Raster => {
   const rgba = new Uint8Array(w * h * 4);
   for (let y = 0; y < h; y++)
@@ -10,6 +11,7 @@ const grey = (w: number, h: number, at: (x: number, y: number) => number): Raste
   return { width: w, height: h, rgba };
 };
 
+/** A `w` × `h` paper raster with each box `[left, top, right, bottom)` inked. */
 const boxes = (
   w: number,
   h: number,

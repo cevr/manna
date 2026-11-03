@@ -6,6 +6,7 @@ import { launchArgs } from './browser.ts';
 import { gpuLauncher, throughGpuLauncher } from './chrome-gpu.ts';
 import { collect } from './process.ts';
 
+/** A stand-in Chrome: it prints its parent's pid, then each argument it was given, a line each. */
 const PRINTER = '#!/bin/sh\nprintf \'%s\\n\' "$PPID"\nfor arg do printf \'%s\\n\' "$arg"; done\n';
 
 describe('the GPU launcher', () => {

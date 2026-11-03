@@ -8,6 +8,7 @@ import {
 } from 'oxlint-plugin-effect/rule-bindings';
 import { type Bindings, bindings, isFilmTime, unwrapped } from './nodes.ts';
 
+/** `ease.inCubic(x)`, `ease` film's curves: the one argument, when it is one. */
 const easedArgument = (b: Bindings, n: ESTree.CallExpression): Option.Option<ESTree.Node> => {
   const callee = unwrapped(n.callee);
   if (

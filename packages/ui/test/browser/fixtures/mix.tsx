@@ -30,6 +30,7 @@ function OnElement() {
   return <div id="probe" {...behaviour} title={title()} ref={setup} />;
 }
 
+/** Counts presses in a signal of its own, shown as `data-count`. */
 function counter(): Mixin<HTMLButtonElement> {
   const [count, setCount] = createSignal(0);
   return {

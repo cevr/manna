@@ -21,6 +21,7 @@ const pixel = (raster: Raster, x: number, y: number) => {
 };
 const brightness = (raster: Raster, x: number, y: number) =>
   pixel(raster, x, y).reduce((sum: number, v) => sum + (v ?? 0), 0);
+/** The rows of column `x` from `top` to `bottom` (exclusive) that are not `colour`. */
 const rowsNot = (
   raster: Raster,
   x: number,

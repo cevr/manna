@@ -1,5 +1,23 @@
 /* oxlint-disable effect/noTernary -- the browser test's app, a host boundary: a small router over the History API, which gives paths as plain strings. */
 
+/**
+ * The web app as the browser test drives it: the real lists the web home
+ * screen shows (`src/home/Browse.tsx`, `src/home/Results.tsx`) under the
+ * test's own bar of links between them, and a hymn opened from a row in its
+ * list's place, under a header whose back link goes to the list, as One's
+ * web stack and `WebStackHeader` show it.
+ * A route is a path:
+ * - `/` the Hymns list, `/search` the Search list;
+ * - `/hymns/<n>` and `/search/<n>` a hymn, opened from that list.
+ * Each link (a row, a tab, the back link) pushes its path, and the
+ * browser's Back pops it, so every way back to a list mounts it anew, as on
+ * the web. The same tree renders on the server (`server.tsx`) and hydrates
+ * in the browser (`page.tsx`). Each screen's view is named by its path
+ * (`screen:<path>`), so the test can tell the screen the app shows from the
+ * address, which a navigation changes first: the router shows the new
+ * screen in a transition, as One's does.
+ */
+
 import { RegistryProvider } from '@effect/atom-react';
 import { useLinkTo } from 'one';
 import { StrictMode, startTransition, useEffect, useState } from 'react';
@@ -12,6 +30,7 @@ import { color } from '~/color';
 
 import { listOf, lists } from './routes';
 
+/** A link, as One's `Link` draws one on the web: an anchor the router opens. */
 function Go({ href, label }: { readonly href: string; readonly label: string }) {
   const link = useLinkTo({ href });
   return (

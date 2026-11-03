@@ -1,3 +1,31 @@
+/**
+ * Acceptance (chordmode A1): the bar's key button is the chords switch while
+ * chords are off, and no step leaves the dials open with chords off.
+ *
+ * The rule, over `step`'s whole domain as written: every key a signature
+ * names (15 major, 15 minor; every printed key the chord book uses is one of
+ * them), chords on and off, every move (transpose -5 to 6, capo 0 to 11),
+ * the dials open and closed, against every event (a tap, a hold, a tap on
+ * the page, the key dial turned to each of the twelve pitches, the capo dial
+ * turned to each fret and one past each end, reset, the end of a reset's
+ * wait, a tap on the Tuner):
+ *
+ * - a1 A tap with chords off turns chords on and opens nothing, the move as
+ *   it was, with one `chords-on` cue.
+ * - a2 A tap with chords on opens closed dials and closes open ones, with a
+ *   press; chords and the move as they were.
+ * - a3 A hold with chords on turns chords off and closes the dials, with a
+ *   `chords-off` cue; with chords off it turns chords on, the dials as they
+ *   were, with a `chords-on` cue. The move stays.
+ * - a4 From every state whose dials are open only with chords on, every
+ *   event's next state keeps them so.
+ * - a5 Only a key turn, a capo turn and a reset change the move: the switch
+ *   never writes a hymn's key.
+ *
+ * The domain is walked once (`walk`) and each rule keeps its count of steps
+ * checked and its first misses, so a case names the step it fails on.
+ */
+
 import * as Chord from '@manna/hymnal/chord';
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
@@ -7,6 +35,7 @@ import type { Move } from '~/hymns/chords';
 
 import { type Step, step, type Thumb, ThumbEvent } from './thumb';
 
+/** Every key a signature names, seven flats to seven sharps, major and minor. */
 const printedKeys: ReadonlyArray<Chord.Key> = [false, true].flatMap((minor) =>
   Array.from({ length: 15 }, (_, k) => Chord.keyFromSignature(k - 7, minor)),
 );
@@ -19,6 +48,7 @@ const states: ReadonlyArray<Thumb> = [false, true].flatMap((chords) =>
   moves.flatMap((move) => [false, true].map((open) => ({ chords, move, open }))),
 );
 
+/** Every event, by tag: a tag added to `ThumbEvent` and missing here fails the typecheck. */
 const eventsByTag = {
   Tap: [ThumbEvent.Tap()],
   Hold: [ThumbEvent.Hold()],
@@ -31,6 +61,7 @@ const eventsByTag = {
 } satisfies { readonly [Tag in ThumbEvent['_tag']]: ReadonlyArray<ThumbEvent> };
 const events: ReadonlyArray<ThumbEvent> = Object.values(eventsByTag).flat();
 
+/** The tags whose step may change the move. */
 const moving: ReadonlySet<string> = new Set(['TurnKey', 'TurnCapo', 'Reset']);
 
 type Rule = 'a1' | 'a2' | 'a3' | 'a4' | 'a5';
@@ -50,6 +81,7 @@ interface Tally {
 
 const sameMove = (a: Move, b: Move): boolean => a.transpose === b.transpose && a.capo === b.capo;
 
+/** The cues as words: each one's name and its count of fields (a plain cue carries its name alone). */
 const cuesSaid = (cues: ReadonlyArray<Cue>): string =>
   cues.map((cue) => `${cue._tag}/${Object.keys(cue).length}`).join(' ');
 
@@ -65,6 +97,7 @@ interface Wanted {
   readonly cues: ReadonlyArray<Cue>;
 }
 
+/** What a1 to a3 ask of a tap or a hold from `state`; nothing for any other event. */
 const wanted = (state: Thumb, event: ThumbEvent): Option.Option<Wanted> => {
   if (event._tag === 'Tap' && !state.chords)
     return Option.some({
@@ -93,6 +126,7 @@ const wanted = (state: Thumb, event: ThumbEvent): Option.Option<Wanted> => {
   return Option.none();
 };
 
+/** Walks the whole domain once, every rule over every step. */
 const walk = (): Record<Rule, Tally> => {
   const tallies: Record<Rule, Tally> = {
     a1: { checked: 0, missed: 0, first: [] },
@@ -132,12 +166,14 @@ const walk = (): Record<Rule, Tally> => {
 
 const tallies = walk();
 
+/** The rule's misses, with the count of steps it checked. */
 const verdict = (rule: Rule) => {
   const { checked, missed, first } = tallies[rule];
   return { checked, missed, first };
 };
 
 const keys = 30;
+/** States with chords off (or on): 144 moves, the dials open or closed. */
 const half = 288;
 
 describe('the key button as the chords switch (chordmode A1)', () => {

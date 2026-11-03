@@ -8,6 +8,7 @@ import { judgedModel } from './model.js';
 import { LIMITS, ask } from './run.js';
 import { env, hangs, historyComment, holding, missing, typesafeHttp } from './testing.js';
 
+/** TypeSafe answering every key today. */
 const today = () =>
   typesafeHttp(200, (keys) => ({
     model: 'jev-latest',
@@ -19,6 +20,7 @@ const today = () =>
     ),
   }));
 
+/** Asks about one comment through the lint's model over `layers`; answers the skip reason, if any. */
 const askOver = (
   layers: Layer.Layer<HttpClient.HttpClient | ChildProcessSpawner.ChildProcessSpawner>,
 ) =>

@@ -22,6 +22,7 @@ const Turbo = Schema.Struct({
   ),
 });
 
+/** The root manifest's scripts, turbo's tasks, the two shell scripts' lines and each workspace's manifest. */
 const laid = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -58,9 +59,19 @@ const laid = Effect.gen(function* () {
 const Lefthook = Schema.Struct({ 'pre-commit': Schema.Record(Schema.String, Schema.Unknown) });
 const Jobs = Schema.Array(Schema.Record(Schema.String, Schema.Unknown));
 
+/**
+ * The keys of lefthook's schema (`node_modules/lefthook/schema.json`) that
+ * narrow the commits or files a job runs on, or let it be skipped: a job's
+ * `tags` are what an `exclude_tags` or `LEFTHOOK_EXCLUDE` names to skip it.
+ */
 const JOB_NARROWS = ['glob', 'files', 'file_types', 'exclude', 'only', 'skip', 'tags'];
+/** The keys on the hook that narrow every job of it, or skip the jobs its `exclude_tags` names. */
 const HOOK_NARROWS = ['files', 'exclude', 'only', 'skip', 'exclude_tags'];
 
+/**
+ * The pre-commit's `lessons` jobs in `lefthook.yml`'s text: what each runs,
+ * and each key, on the job in any position or on its hook, that narrows it.
+ */
 const lessonsJob = (text: string) =>
   Effect.gen(function* () {
     const { 'pre-commit': hook } = yield* Schema.decodeUnknownEffect(Lefthook)(YAML.parse(text));
@@ -76,11 +87,20 @@ const lessonsJob = (text: string) =>
     };
   });
 
+/** The `turbo run` lines of a shell script, each as its words. */
 const turboRuns = (lines: ReadonlyArray<string>) =>
   lines
     .filter((line) => line.startsWith('node_modules/.bin/turbo run '))
     .map((line) => ['turbo', ...line.split(/\s+/).slice(1)]);
 
+/**
+ * Whether the deploy script `script` of workspace `name` runs its test:slow
+ * before alchemy starts: its commands are joined by `&&` alone, so each runs
+ * only when the one before it passed, and the first command with an
+ * `alchemy` word (`alchemy`, `bunx alchemy`, `node_modules/.bin/alchemy`,
+ * `alchemy@<version>`, alchemy's own `alchemy/bin/` file) comes after the
+ * slow suite.
+ */
 const slowBeforeAlchemy = (name: string, script: string) => {
   const commands = commandsOf(script);
   const slow = commands.findIndex(
@@ -92,6 +112,7 @@ const slowBeforeAlchemy = (name: string, script: string) => {
   return andChained(script) && slow > -1 && alchemy > slow;
 };
 
+/** Whether a line takes a lock (`flock`, `lockf`). */
 const locks = (line: string) => /\b(flock|lockf)\b/.test(line) && !line.startsWith('#');
 
 describe('the gate', () => {

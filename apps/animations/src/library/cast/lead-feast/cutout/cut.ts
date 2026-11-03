@@ -20,8 +20,10 @@ import { JOINTS } from './joints.ts';
 
 export { FRAMES, JOINTS };
 
+/** A view of his, by its name in his sheets' views. */
 type CutView = keyof typeof FRAMES;
 
+/** From in front: the world-proto round 2 cut's lines. */
 const FRONT_HEM: Hem = [618, 123, 4, 90];
 const FRONT_RIGHT: Sleeve = {
   inner: [
@@ -189,6 +191,7 @@ const FRONT: PartCut = {
   ],
 };
 
+/** Turned three-quarters to the viewer's left: read off 3-4x crops of the view. */
 const TURNED_HEM: Hem = [618, 112, 4, 90];
 const TURNED_RIGHT: Sleeve = {
   inner: [
@@ -366,6 +369,13 @@ const THREE_QUARTER_LEFT: PartCut = {
   ],
 };
 
+/**
+ * His bust facing the viewer (heads-4), read off 4x and 8x crops: his head
+ * (hair, face and ears) above the row where his jaw's ink meets his neck's
+ * outline, with the dark shadow his chin casts on his neck between those
+ * outlines, so the shadow turns with his chin; his neck below it, his
+ * collar and garments.
+ */
 const HEADS_4: PartCut = {
   parts: [
     {
@@ -390,6 +400,7 @@ const HEADS_4: PartCut = {
   ],
 };
 
+/** His left sleeve on his raised-bottle drawing (single-1, the viewer's right, under the mantle): its inner edge, a dark teal crease down to the cuff. */
 const SINGLE_1_LEFT: Sleeve = {
   inner: [
     [432, 455],
@@ -406,6 +417,16 @@ const SINGLE_1_LEFT: Sleeve = {
 };
 const single1Left = sleeve(SINGLE_1_LEFT);
 
+/**
+ * His raised-bottle drawing (single-1), read off 1-2x crops of the view: his
+ * right arm raised with its elbow tucked, the bottle in his hand beside his
+ * cheek, a polygon from the bottle's top down the upper arm's soft crease
+ * (no ink) to the sleeve's foot; his left arm hanging under the mantle, its
+ * sleeve on its dark teal crease and its hand to the hand's foot; his head
+ * above his chin and his neck's skin to the collar; the sash's band, knot
+ * and ends; the robe below the sash. His robe and sandals stand with the
+ * root, so they are one part.
+ */
 const SINGLE_1: PartCut = {
   parts: [
     {
@@ -479,6 +500,7 @@ const SINGLE_1: PartCut = {
   ],
 };
 
+/** His left sleeve seated (single-9, the viewer's right, under the mantle): its inner edge, a dark teal crease down to the cuff over his knee. */
 const SINGLE_9_LEFT: Sleeve = {
   inner: [
     [436, 445],
@@ -497,6 +519,16 @@ const SINGLE_9_LEFT: Sleeve = {
 };
 const single9Left = sleeve(SINGLE_9_LEFT);
 
+/**
+ * His seated raise (single-9), read off gridded 2-3x crops of the view: his
+ * right arm raised as on single-1, the bottle in his hand beside his cheek,
+ * a polygon from the bottle's top down the upper arm's soft crease to the
+ * sleeve's foot; his left arm bent under the mantle, its sleeve on its dark
+ * teal crease, its round hand resting on his knee and the cuff's end beside
+ * it; his head above his chin and his neck's skin to the collar's V; the
+ * sash's band, knot and ends; his lap below the sash. His lap, stool and
+ * sandals stand with the root, so they are one part.
+ */
 const SINGLE_9: PartCut = {
   parts: [
     {
@@ -598,6 +630,12 @@ const SINGLE_9: PartCut = {
   ],
 };
 
+/**
+ * His wince (single-5), a bust as heads-4, read off gridded 3x crops: his
+ * head above the row where his jaw's ink meets his neck's outline, with the
+ * shadow his chin casts on his neck between those outlines; his neck below
+ * it, his collar and garments.
+ */
 const SINGLE_5: PartCut = {
   parts: [
     {
@@ -622,15 +660,30 @@ const SINGLE_5: PartCut = {
   ],
 };
 
+/** His sheets' ink, for the row that closes a bust's foot. */
 const INK = [42, 30, 24, 255] as const;
 
+/** Where his body's sides run under his arms: out to his shoulders and robe, not in at the sleeves' inner edges. */
 const SIDES = sides({ pronoun: 'his', lower: 'robe', cloth: 'the tunic and mantle' });
 
+/**
+ * Where his body's sides run under his arms as he sits: in to the ends of
+ * his sash, as his lap below it spreads wider than his body, and on the
+ * viewer's left into the piece of his side's outline still drawn above the
+ * sash.
+ */
 const SEATED_SIDES =
   "Each side of his body runs from the outer end of his shoulder down to the outer end of his white sash, so his body under the arms is no wider than his shoulders and his sash; on the viewer's left it runs on into the short piece of his side's outline still drawn just above the sash, with no step. His lap below the sash is wider than his body and keeps its own outline. The tunic and mantle fill everything inside those lines with the same soft shading the sheet paints beside each arm.";
 
+/** The paper grain his sheet shows on his sash and torso, carried into the paint under his arms. */
 const GRAIN = grain('the white sash and the tunic and mantle of his body');
 
+/**
+ * Each view's moving parts (what a pose moves, whose areas are painted
+ * magenta and repainted beneath), and the words okra repaints them by: what
+ * lies under them, in the sheet's own style; and any calls granted beyond
+ * the three a view takes, with who granted them, when and why.
+ */
 const HIDDEN_ENTRIES = {
   front: {
     moving: ['armRight', 'armLeft'],
@@ -679,6 +732,7 @@ const HIDDEN_ENTRIES = {
   },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
+/** His cut table: each view's cut, how its figure is read, and what its label rules read (his colour classes and the view's part labels). */
 export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   frames: FRAMES,
   views: {
@@ -730,6 +784,7 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   ink: INK,
 });
 
+/** What each view's laid part sheet runs before it is written (`film concept parts`): single-9's right arm drops the two specks of paper and ink its paint leaves floating off his sleeve. */
 export const CLEAN = {
   'single-9': clearSpecks('armRight', 50),
 } satisfies Partial<Record<keyof typeof CUTS, SheetClean>>;

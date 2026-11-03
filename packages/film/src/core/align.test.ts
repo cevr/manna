@@ -72,6 +72,7 @@ describe('placeBeats', () => {
     { id: 'two', text: 'And the Word was with God.' },
     { id: 'three', text: 'And the Word was God.' },
   ];
+  /** `said` heard from `at`, a word every 0.3 s, each 0.2 s long. */
   const read = (said: string, at: number) =>
     said.split(' ').map((t, i) => w(t, at + i * 0.3, at + 0.2 + i * 0.3));
   const one = read('in the beginning was the word', 0.5);
@@ -121,6 +122,7 @@ describe('placeBeats', () => {
 
 describe('cutting one reading into beats', () => {
   const rate = 1000;
+  /** Room tone at `level`, with speech (0.5) over `speech` and a quieter hush (0.001) over `hush`. */
   const recording = (
     seconds: number,
     speech: ReadonlyArray<[number, number]>,

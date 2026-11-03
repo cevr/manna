@@ -33,8 +33,10 @@ import { scenesLocatedHere } from './read-cli.ts';
 import { type Keyed, Stamps } from './stamp.ts';
 import { sceneFixture } from './scene-sources/testing.ts';
 
+/** The fixture film's folder: a fresh one per test. */
 class Films extends Context.Service<Films, string>()('test/Films') {}
 
+/** The fixture film's Stamps, asking `git` for the commit through `spawner`. */
 const fixtureOver = <E, R>(spawner: Layer.Layer<never, E, R>) =>
   Layer.unwrap(
     Effect.gen(function* () {
@@ -50,6 +52,10 @@ const fixtureOver = <E, R>(spawner: Layer.Layer<never, E, R>) =>
     }),
   ).pipe(Layer.provideMerge(BunServices.layer));
 
+/**
+ * `git` as it answers outside a checkout (exit 128, no commit), with no
+ * process: the keys' cases read the keys, and the commit case asks real git.
+ */
 const outsideACheckout = Layer.succeed(
   ChildProcessSpawner.ChildProcessSpawner,
   ChildProcessSpawner.make(() =>
@@ -90,11 +96,14 @@ const film = (films: string, path: Path.Path): Keyed => ({
   timings: { voice: '', scenes: {} },
 });
 
+/** The scenes whose key changed from `before` to `after`. */
 const changed = (before: Record<string, string>, after: Record<string, string>) =>
   Object.keys(before).filter((id) => before[id] !== after[id]);
 
+/** A film script module run from `file`: the ground it derives. */
 const loadScript = (file: string): Promise<{ readonly ground: string }> => import(file);
 
+/** The fills of a Board frame 1 s into a beat `plain` whose card (payoff `Hi`) is set on `ground`. */
 const cardFills = (ground: string): ReadonlyArray<unknown> => {
   const one = Result.getOrThrow(
     layout([{ id: 'plain', say: 'Hi.', min: 2 }], { voice: '', scenes: {} }, 30),
@@ -136,6 +145,7 @@ const cardFills = (ground: string): ReadonlyArray<unknown> => {
 };
 
 describe.concurrent('beat keys wherever the beat sits', () => {
+  /** Every beat's key wherever it sits, and every scene's key, with `hand` held `seconds` at least (a silent beat lasts 3). */
   const laidWith = (seconds: number) =>
     Effect.gen(function* () {
       const films = yield* Films;
@@ -201,6 +211,7 @@ describe.concurrent('beat keys wherever the beat sits', () => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const films = yield* Films;
+        /** The film's script with `hand`'s tail `tail`, and the cards' ground picked by it. */
         const scriptOf = (tail: number) => `export const script = [
   { id: 'hand', say: 'Hi.', tail: ${tail} },
   { id: 'beta', say: 'Hi.' },
@@ -216,6 +227,7 @@ export const ground = ['#112233', '#445566'][script[0]!.tail]!;
           index,
           `import { ground } from '../script.ts';\n${yield* fs.readFileString(index)}export const look = { ground };\n`,
         );
+        /** Every beat's key wherever it sits with the script's tail `tail`, the layout held (each beat's `min` outlasts it). */
         const beatsWith = (tail: number) =>
           Effect.gen(function* () {
             yield* fs.writeFileString(path.join(films, 'f', 'script.ts'), scriptOf(tail));
@@ -227,6 +239,7 @@ export const ground = ['#112233', '#445566'][script[0]!.tail]!;
         const now = yield* beatsWith(1);
         expect(changed(was, now)).toEqual(['hand', 'beta', 'built', 'plain']);
 
+        /** The ground the script with `hand`'s tail `tail` derives, read by running it. */
         const groundOf = (tail: number) =>
           Effect.gen(function* () {
             const file = path.join(films, `script-${tail}.ts`);
@@ -238,6 +251,7 @@ export const ground = ['#112233', '#445566'][script[0]!.tail]!;
   );
 });
 
+/** A take of `spoken` lasting `duration` seconds, its words estimated. */
 const takeOf = (spoken: string, duration: number): VoiceTiming => ({
   hash: hashText(spoken),
   file: 'take.flac',
@@ -246,6 +260,12 @@ const takeOf = (spoken: string, duration: number): VoiceTiming => ({
   source: 'elevenlabs',
 });
 
+/**
+ * A film at `fps` of `hand` and `beta` saying `Hi.` with no lead or tail, on
+ * takes `durations` long, then `built` (10 s) whose scene draws a colour by
+ * its own time: one before half a second in, another from it. The tools'
+ * layout and the page's, each at `fps`.
+ */
 const compensated = (durations: readonly [number, number], fps: number) => {
   const scenes = [
     { id: 'hand', say: 'Hi.', lead: 0, tail: 0 },
@@ -277,6 +297,12 @@ const compensated = (durations: readonly [number, number], fps: number) => {
   return { placed, film };
 };
 
+/**
+ * At each rate: where beta and built start after takes of 3.6 s and 3.2 s,
+ * then 4.1 s and 2.7 s (3.6 + 3.2 is 6.800000000000001 and 4.1 + 2.7 is 6.8),
+ * where the film ends, and how many frames into built its first from half a
+ * second in is.
+ */
 const COMPENSATED = [
   { fps: 24, was: [0, 86, 163], now: [0, 98, 163], end: 403, half: 12 },
   { fps: 30, was: [0, 108, 204], now: [0, 123, 204], end: 504, half: 15 },
@@ -330,6 +356,7 @@ describe.concurrent('a beat after takes that change but end where they did', () 
           const built = at.was[2] ?? 0;
           expect([was.built.from, was.built.to, was.built.pinned]).toEqual([built, at.end, true]);
           expect(now.built.key).toEqual(was.built.key);
+          /** The fills frame `i` of `drawn` makes. */
           const fillsAt = (drawn: Film, i: number) => {
             const r = recorder(1920, 1080);
             withDom(() => drawn.render(r.ctx, secondsAt(i, at.fps)));
@@ -344,6 +371,13 @@ describe.concurrent('a beat after takes that change but end where they did', () 
     );
 });
 
+/**
+ * A film on disk declared at 24 fps (`film.ts`'s `fps`): `a` says `Hi.` on
+ * its take with no lead or tail, then `b` holds 5 s and paints one colour for
+ * its first 0.02 s and another after, then `c` holds a second. Its page is made as the player makes
+ * it (`narratedFilms`, from the module's `fps`); the tools load it with
+ * `FilmRepo`. Returns the films folder.
+ */
 const declaredAt24 = Effect.fn('test.declaredAt24')(function* (root: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -383,6 +417,7 @@ export const scenes = [
   return path.join(root, 'films');
 });
 
+/** The 24 fps film's Stamps and FilmRepo, `git` answering as outside a checkout. */
 const at24 = Layer.unwrap(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -397,6 +432,7 @@ const at24 = Layer.unwrap(
   }),
 ).pipe(Layer.provideMerge(BunServices.layer));
 
+/** A page's HTTP client that answers every request with `body`, its URLs resolved on a stand-in origin. */
 const serving = (body: string) =>
   Layer.succeed(
     HttpClient.HttpClient,
@@ -418,6 +454,7 @@ describe.concurrent('a film declared at 24 fps', () => {
         const films = yield* Films;
         const repo = yield* FilmRepo;
         const stamps = yield* Stamps;
+        /** The film with `a`'s take `seconds` long, as the tools and its page each lay it. */
         const takeOfA = (seconds: number) =>
           Effect.gen(function* () {
             const json = yield* Schema.encodeEffect(TimingsJson)({
@@ -458,6 +495,7 @@ describe.concurrent('a film declared at 24 fps', () => {
           });
         yield* fs.makeDirectory(path.join(films, 'r', 'narration'), { recursive: true });
         const laid = yield* Effect.forEach([3, 3.02, 3.03], takeOfA);
+        /** Each beat's first frame, start and the second its words start at. */
         const clock = (placed: ReadonlyArray<Placed>) =>
           placed.map((p) => [p.spec.id, p.frame, p.start, p.start + p.speechStart]);
         for (const { loaded, placed, page } of laid) {
@@ -465,6 +503,7 @@ describe.concurrent('a film declared at 24 fps', () => {
           expect(clock(page.placed)).toEqual(clock(placed));
         }
         expect(laid.map(({ placed }) => placed[1]?.frame)).toEqual([72, 72, 73]);
+        /** The fills frame `i` of `page` makes, drawn once before (a page's first draw of a scene lays its camera sheet too). */
         const fillsAt = (page: Film, i: number) => {
           withDom(() => page.render(recorder(1920, 1080).ctx, secondsAt(i, page.fps)));
           const r = recorder(1920, 1080);

@@ -7,37 +7,55 @@ import type { PoseOf, RivePropSpec } from './rive.ts';
 
 type Pt = readonly [number, number];
 
+/** A box in a sheet's pixels: left, top, right, bottom. */
 type SheetBox = readonly [number, number, number, number];
 
+/** A rig drawn with a view's own: its pose, its origin at `at` in the view's units. */
 interface CastWith {
   readonly rig: RivePropSpec;
   readonly pose: PoseOf<RivePropSpec>;
   readonly at: Pt;
 }
 
+/**
+ * Where a prop lies among a view's drawings (`castDrawOrder`): behind its
+ * figure (a stool, a table), held (over the figure, under the rigs drawn
+ * with it: a bottle in front of the sleeve, its hand over it), or in front
+ * of them all.
+ */
 type CastLayer = 'behind' | 'held' | 'front';
 
+/** A plain canvas piece a view draws (a bottle, a stool): in the view's units about its origin, in its layer (`front` unless given). */
 export interface CastProp {
   readonly name: string;
   readonly draw: (ctx: CanvasRenderingContext2D) => void;
   readonly layer?: CastLayer;
 }
 
+/** One drawing of a view, in the order the page draws them: a prop, its figure, or a rig drawn with it. */
 type CastDrawing =
   | { readonly kind: 'prop'; readonly prop: CastProp }
   | { readonly kind: 'figure' }
   | { readonly kind: 'with'; readonly with: CastWith };
 
+/** A bar a view holds a fit row to in place of the house's (`FIT_BARS`), and why. */
 interface CastFitBar extends FitBar {
   readonly why: string;
 }
 
+/**
+ * What a view's fit rows hold beyond the house's (`core/fit-rows.ts`): its
+ * member's part labels for it (`core/label.ts`: a part row each), its
+ * probes (a scanline across a feature a review measured: an ear's band, a
+ * chin's line), and a bar of its own for a row, each with its reason.
+ */
 interface CastFit {
   readonly labels?: LabelTable;
   readonly probes?: ReadonlyArray<FitProbe>;
   readonly bars?: Readonly<Partial<Record<FitBarName, CastFitBar>>>;
 }
 
+/** One kept view: its kept box, where its rig's origin stands in the sheet's pixels, the rig in its pose, what is drawn with it, and what its fit rows hold beyond the house's. */
 export interface CastView {
   readonly box: SheetBox;
   readonly at: Pt;
@@ -48,25 +66,36 @@ export interface CastView {
   readonly fit?: CastFit;
 }
 
+/** What a view's clip reads: its kept box. */
 interface Boxed {
   readonly box: SheetBox;
 }
 
+/**
+ * One kept view drawn by a puppet cut from it (`canvas/puppet.ts`): its kept
+ * box, where the puppet's origin stands in the sheet's pixels (its own
+ * pixels are the sheet's, so it is drawn at scale 1), its pose, and what its
+ * fit rows hold beyond the house's.
+ */
 export interface CutoutView {
   readonly box: SheetBox;
   readonly at: Pt;
   readonly puppet: PuppetSpec;
   readonly pose: PuppetPose;
+  /** What the view draws beyond its pose: a drawn key in place of a part, a held hand (`PuppetLook`); its boil is the page's. */
   readonly look?: Omit<PuppetLook, 'boil' | 'amp'>;
   readonly fit?: CastFit;
 }
 
+/** A film's cut-out table, beside its cast render table: member, kind, kept view name, each a view with a part sheet. */
 type CutoutTable = Readonly<
   Record<string, Readonly<Record<string, Readonly<Record<string, CutoutView>>>>>
 >;
 
+/** A film's cut-out table, checked by its type. */
 export const cutoutTable = <const T extends CutoutTable>(table: T): T => table;
 
+/** Every puppet a member's cut-out views draw, by key: what its page declares and loads. */
 export const cutoutPuppets = (
   member: Readonly<Record<string, Readonly<Record<string, CutoutView>>>>,
 ) => {
@@ -76,29 +105,38 @@ export const cutoutPuppets = (
   return puppets;
 };
 
+/** Which figure a cast render draws: each view's rig (`CAST`), or its puppet (`CUTOUT`). */
 export type CastFigure = 'rig' | 'cutout';
 
+/** A film's cast render table: member, kind (`turnaround`, `poses`, `heads`), kept view name. */
 type CastTable = Readonly<
   Record<string, Readonly<Record<string, Readonly<Record<string, CastView>>>>>
 >;
 
+/** A kept sheet as the render lays it: its size in pixels, and its one scale, sheet pixels a canon unit. */
 export interface CastSheet {
   readonly width: number;
   readonly height: number;
   readonly scale: number;
 }
 
+/** Each member's sheets, by kind: what the render's canvas and scale are. */
 type CastSheets = Readonly<Record<string, Readonly<Record<string, CastSheet>>>>;
 
+/** What a film's `rigs/cast.ts` gives the cast render: its rigs' table, its cut-outs' table, its sheets, the paper its page lays them on, and each member's colour classes for his fit rows (none, no class rows). A film gives one table or both; a member drawn only by his cut-out has no rigs. */
 export interface CastModule {
+  /** The views each member has a rig for (`--figure rig`): none when the film draws its cast by cut-outs only. */
   readonly CAST?: CastTable;
+  /** The views each member has a puppet for (`--figure cutout`): none when he has none. */
   readonly CUTOUT?: CutoutTable;
   readonly SHEETS: CastSheets;
   readonly PAPER: { readonly base: string; readonly tone: string; readonly seed: number };
   readonly FIT_CLASSES?: Readonly<Record<string, Readonly<Record<string, FitClass>>>>;
+  /** Each member's eases (`film concept ease`), by name: none when he has none. */
   readonly EASES?: Readonly<Record<string, Readonly<Record<string, CutoutEase>>>>;
 }
 
+/** Whether `u` reads as a film's cast module: its sheets, its paper, and its rigs' table or its cut-outs' table. */
 export const isCastModule = (u: unknown): u is CastModule =>
   Predicate.hasProperty(u, 'SHEETS') &&
   Predicate.hasProperty(u, 'PAPER') &&
@@ -107,11 +145,19 @@ export const isCastModule = (u: unknown): u is CastModule =>
   ((Predicate.hasProperty(u, 'CAST') && Predicate.isObject(u.CAST)) ||
     (Predicate.hasProperty(u, 'CUTOUT') && Predicate.isObject(u.CUTOUT)));
 
+/** The figure a member's page draws when none is asked: his rig when the film has one of him, else his cut-out. */
 export const defaultFigure = (m: CastModule, member: string): CastFigure =>
   m.CAST?.[member] === undefined && m.CUTOUT?.[member] !== undefined ? 'cutout' : 'rig';
 
+/**
+ * How far a cut-out's page reaches past its sheet each way, px (x, y): a
+ * drawn key swings an arm past the sheet's edge (the front's raised hand
+ * stands left of it), so the page is the sheet grown by this on every side,
+ * the sheet drawn inside it, and its paper the same for a still and an ease.
+ */
 export const CUTOUT_MARGIN: Pt = [160, 40];
 
+/** One frame of an ease: its pose and look, and what it shows (its key, that key's turn, its held drawing). */
 export interface CutoutEaseFrame {
   readonly pose: PuppetPose;
   readonly look: PuppetLook;
@@ -120,6 +166,12 @@ export interface CutoutEaseFrame {
   readonly held: string;
 }
 
+/**
+ * An ease of a cut-out view, from one pose to another: the view it moves
+ * (kind and name in `CUTOUT`, whose place it stands at), its puppet with the
+ * drawings it lays, its rate and length, and each frame a function of its
+ * index alone.
+ */
 export interface CutoutEase {
   readonly kind: string;
   readonly view: string;
@@ -131,12 +183,26 @@ export interface CutoutEase {
   readonly frame: (i: number) => CutoutEaseFrame;
 }
 
+/** The page name of `member`'s eases in `film`: a scene an ease, its frames the ease's (`film concept ease`). */
 export const easePage = (film: string, member: string) => `${film}/cast/${member}/ease`;
 
+/** The scene id of an ease from `from` to `to`. */
 export const easeScene = (from: string, to: string) => `${from}-${to}`;
 
+/**
+ * The boils a cut-out page draws its stills at, px: the house boil
+ * (`BOIL_AMP`, its page `<film>/cast/<member>/cutout`) and none (its page
+ * `…/cutout/boil-0`), the rest read without the boil's softening.
+ */
 export const CUTOUT_BOILS: ReadonlyArray<number> = [BOIL_AMP, 0];
 
+/**
+ * The page name of `member`'s cast render in `film`, drawn by `figure`, a
+ * cut-out's at boil `boil` px (one of `CUTOUT_BOILS`): what the player mounts
+ * and `film concept render` opens. A page is one canvas, so a cut-out page
+ * draws the kinds whose sheet is the size of his first kind's, and `kind`
+ * names the page that draws that kind alone, at its own sheet's size.
+ */
 export const castPage = (
   film: string,
   member: string,
@@ -148,8 +214,14 @@ export const castPage = (
     ? `${film}/cast/${member}`
     : `${film}/cast/${member}/cutout${boil === BOIL_AMP ? '' : `/boil-${boil}`}${kind === undefined ? '' : `/${kind}`}`;
 
+/** A film's cast render table, checked by its type: every view of every kind of every member. */
 export const castTable = <const T extends CastTable>(table: T): T => table;
 
+/**
+ * A view's drawings back to front: the props behind its figure, the figure,
+ * the props it holds, the rigs drawn with it (its hands, over what they
+ * hold), the props in front.
+ */
 export const castDrawOrder = (view: CastView): ReadonlyArray<CastDrawing> => {
   const props = (layer: CastLayer): CastDrawing[] =>
     (view.props ?? [])
@@ -164,6 +236,7 @@ export const castDrawOrder = (view: CastView): ReadonlyArray<CastDrawing> => {
   ];
 };
 
+/** `a` less `b`, as the boxes it leaves (none, or up to four): the bands above and below `b`, then those beside it between them. */
 const boxLess = (a: SheetBox, b: SheetBox): SheetBox[] => {
   const [ax0, ay0, ax1, ay1] = a;
   const [bx0, by0, bx1, by1] = b;
@@ -178,11 +251,19 @@ const boxLess = (a: SheetBox, b: SheetBox): SheetBox[] => {
   return bands.filter(([x0, y0, x1, y1]) => x1 > x0 && y1 > y0);
 };
 
+/** Where a view of a sheet is drawn: within `box`, less each of `cuts`. */
 interface CastClip {
   readonly box: SheetBox;
   readonly cuts: ReadonlyArray<SheetBox>;
 }
 
+/**
+ * Where `view` is drawn on its sheet beside `views` (the sheet's every
+ * view, itself too): its kept box and `margin` round it, where a line it
+ * lays just past its box (a crown's ink) shows, less every other view's box
+ * there but what lies in its own. A view's crop by its box then holds its
+ * own drawing alone, never a neighbour's ink that ran over into it.
+ */
 const castClip = (view: Boxed, views: ReadonlyArray<Boxed>, margin: number): CastClip => {
   const [x0, y0, x1, y1] = view.box;
   const box: SheetBox = [x0 - margin, y0 - margin, x1 + margin, y1 + margin];
@@ -200,8 +281,14 @@ const castClip = (view: Boxed, views: ReadonlyArray<Boxed>, margin: number): Cas
   return { box, cuts };
 };
 
+/** The part of a 2D context a view's clip is laid on. */
 type CastClipContext = Pick<CanvasRenderingContext2D, 'beginPath' | 'rect' | 'clip'>;
 
+/**
+ * Clips `ctx` to where `view` is drawn beside `views` (`castClip`): its box
+ * and `margin` round it, then each cut taken out of it (the box again with
+ * the cut inside it, its inside even-odd out). The caller saves and restores.
+ */
 export const clipCast = (
   ctx: CastClipContext,
   view: Boxed,
@@ -221,6 +308,7 @@ export const clipCast = (
   }
 };
 
+/** Every rig a member's views draw, by key: what its page declares and loads. */
 export const castRigs = (member: Readonly<Record<string, Readonly<Record<string, CastView>>>>) => {
   const rigs: Record<string, RivePropSpec> = {};
   for (const views of Object.values(member))

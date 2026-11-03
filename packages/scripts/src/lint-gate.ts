@@ -19,9 +19,13 @@ import {
   withoutJudged,
 } from './lint-gate/config.js';
 
+/** The files oxlint lints, by extension. */
 const LINTED = /\.[cm]?[jt]sx?$/;
+/** Where the derived configs and the kept files live, from the root. */
 const CACHE = 'node_modules/.cache/manna-lint';
+/** The judged plugin as the config names it. */
 const JUDGED_PLUGIN = './packages/scripts/lint/judged.ts';
+/** Files a part takes before another part pays its JS plugins' load (0.3 s). */
 const PER_PART = 64;
 
 const ConfigJson = Schema.fromJsonString(LintConfig);

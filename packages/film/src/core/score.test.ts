@@ -4,6 +4,7 @@ import { SCORE, aloneSpans, aloneWeights, speechSpans } from './score.ts';
 
 const RATE = 1000;
 
+/** A voice bus that speaks (a loud constant) over each span, silent between. */
 const voiceOver = (seconds: number, spans: ReadonlyArray<[number, number]>): Pcm => {
   const frames = seconds * RATE;
   const plane = new Float32Array(frames);

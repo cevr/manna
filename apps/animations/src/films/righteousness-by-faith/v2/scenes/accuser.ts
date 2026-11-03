@@ -10,6 +10,7 @@ import { lerp } from '@manna/film/core';
 
 import { JOSHUA, TUNIC_STAINS, ZECH_REST as REST, courtWall, zechCourt } from '../../court.ts';
 
+/** Christ's hand raised on "angel", palm out beside his head; its reach rewritten each frame (scratch). */
 const RAISED: Posed<Gesture> = { to: [-78, -205], reach: 0, grip: 'palm' };
 
 export const accuser = drawing({

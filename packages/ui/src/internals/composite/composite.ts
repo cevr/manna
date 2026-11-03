@@ -20,6 +20,7 @@ const MODIFIER_KEYS = ['Shift', 'Control', 'Alt', 'Meta'] as const;
 
 type ItemList = ReadonlyArray<HTMLElement | null>;
 
+/** Whether a modifier key is held (a held modifier leaves the key alone). */
 export function hasModifierKey(event: Pick<KeyboardEvent, 'getModifierState'>): boolean {
   return MODIFIER_KEYS.some((key) => event.getModifierState(key));
 }
@@ -31,10 +32,13 @@ export interface CompositeNavigationParameters {
 }
 
 interface CompositeNavigationResult {
+  /** The index to highlight; `-1` (or the current index) when the key moves nothing. */
   index: number;
+  /** Whether the key is one the composite acts on (its default is then prevented). */
   handled: boolean;
 }
 
+/** The index a navigation key moves the tab stop to. A key the composite does not use is not handled. */
 export function getCompositeNavigationIndex(
   params: CompositeNavigationParameters,
 ): CompositeNavigationResult {
@@ -72,6 +76,11 @@ export function getCompositeNavigationIndex(
   return { index: nextIndex, handled: isHomeOrEnd || isForwardKey || isBackwardKey };
 }
 
+/**
+ * The item that should hold the tab stop once its item is gone: the first
+ * item that can take focus, else 0 (so an all-disabled composite regains a
+ * tab stop as soon as an item is enabled).
+ */
 export function getFallbackIndex(elements: ItemList): number {
   const index = elements.findIndex(
     (element, i) => element != null && !isListIndexDisabled(elements, i),
@@ -79,6 +88,10 @@ export function getFallbackIndex(elements: ItemList): number {
   return Math.max(index, 0);
 }
 
+/**
+ * Scrolls `scrollContainer` along its row the least needed to show `element`,
+ * honouring scroll margins and padding.
+ */
 export function scrollIntoViewIfNeeded(
   scrollContainer: HTMLElement | null,
   element: HTMLElement | null,

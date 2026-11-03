@@ -52,6 +52,7 @@ const face = (scene: string, size: number, alpha = 1): FaceMark => ({
 
 const placed = Result.getOrThrow(layout(holdScenes, holdTimings, 30));
 
+/** A declared look's acts laid over `film`. */
 const actsIn = (look: Look, film: ReadonlyArray<Placed>) => stretchesOf(look.acts, film);
 const samples = lookSamples(placed, FPS, 1_000_000);
 const drawn = samples.map((s, k): Drawn => {
@@ -330,6 +331,7 @@ const handAt = (reach: number, over: Partial<HandMark> = {}): HandMark => ({
   alpha: 1,
   ...over,
 });
+/** A hand `reach` of the way along an arc round its shoulder from its rest (0°) to straight up (−90°), 150 px out. */
 const onArc = (reach: number, over: Partial<HandMark> = {}): HandMark => {
   const a = (-Math.PI / 2) * reach;
   const r = 60 + 90 * reach;
@@ -341,6 +343,7 @@ const onArc = (reach: number, over: Partial<HandMark> = {}): HandMark => {
     ...over,
   });
 };
+/** Frames `from`, `from + 1`… of `scene`, one per entry of `hands`, at 30 fps. */
 const run = (scene: string, from: number, hands: ReadonlyArray<ReadonlyArray<HandMark>>) =>
   hands.map((h, k): HandFrame => ({ scene, frame: from + k, T: (from + k) / FPS, hands: h }));
 const popping = run('held', 10, [[onArc(0)], [onArc(1)], [onArc(1)]]);

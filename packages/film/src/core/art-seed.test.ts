@@ -65,9 +65,11 @@ const DECK: ArtDeck = {
   rules: ['Keep the colour script.'],
 };
 
+/** The look `seed` draws on its own: a batch of one, when the seed itself holds. */
 const drawn = (deck: ArtDeck, seed: number) =>
   Option.filter(Arr.head(drawBatch(deck, seed, 1).draws), (d) => d.seed === seed);
 
+/** The test's own measure: the weighted share of the axes both looks name that differ. */
 const apart = (a: Picks, b: Picks): number => {
   const both = DECK.axes.filter((axis) => axis.id in a && axis.id in b);
   const total = both.reduce((sum, axis) => sum + axis.weight, 0);

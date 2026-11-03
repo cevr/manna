@@ -1,3 +1,17 @@
+/**
+ * Reads every hymn's verse starts as the compile reads them, and writes the
+ * pin `data/verse-starts.json` that `src/verse-starts.slow.test.ts` holds the
+ * reader to. Each hymn's MIDI bytes go to `Midi.parse`, then to
+ * `Score.fromMidi(midi, stanzas)`, where the stanzas are its source-text
+ * verses with `id >= 0`. A start is the melody index of the note that opens
+ * the verse's span. The table holds numbers and booleans only, no words.
+ *
+ * The table is a pin. Regenerate it only on purpose, after a review of the
+ * reads that moved; the compile never writes it.
+ *
+ *   bun run verse-starts
+ */
+
 import { readFileSync, writeFileSync } from 'node:fs';
 import { Effect, Schema } from 'effect';
 
@@ -10,6 +24,7 @@ export const VerseStarts = Schema.Struct({
 });
 export type VerseStarts = typeof VerseStarts.Type;
 
+/** The table file: `{ "hymns": [ { "number", "starts", "exact" }, … ] }`, in number order. */
 export const Table = Schema.Struct({ hymns: Schema.Array(VerseStarts) });
 
 export const HYMNS = 695;
@@ -25,6 +40,7 @@ interface SourceText {
   }>;
 }
 
+/** Each hymn's stanza count: its source-text verses that are not a refrain (`id >= 0`). */
 const stanzaCounts = (): ReadonlyMap<number, number> => {
   const source = JSON.parse(readFileSync(`${data}source-text.json`, 'utf8')) as SourceText;
   return new Map(
@@ -32,6 +48,7 @@ const stanzaCounts = (): ReadonlyMap<number, number> => {
   );
 };
 
+/** Every hymn 1-695's verse starts, in number order, read through `Score.fromMidi`. */
 export const readVerseStarts = (): ReadonlyArray<VerseStarts> => {
   const stanzas = stanzaCounts();
   return Array.from({ length: HYMNS }, (_, i) => {
@@ -47,6 +64,7 @@ export const readVerseStarts = (): ReadonlyArray<VerseStarts> => {
   });
 };
 
+/** One row a line, in the layout the formatter keeps. */
 export const formatTable = (rows: ReadonlyArray<VerseStarts>): string =>
   `{\n  "hymns": [\n${rows
     .map(

@@ -1,3 +1,20 @@
+/**
+ * The tuner sheet's rules, pure: when it listens, what it asks of the
+ * permission, the ear and the player, and what it shows of a reading. The
+ * sheet (`Tuner.tsx`) feeds this machine the world's events and carries out
+ * the work each step names; it decides nothing itself.
+ *
+ * The rule: the sheet listens only while it is open, the app is active, no
+ * other route covers it, the microphone is granted and the player is quiet.
+ * Covered and active are two conditions, each from its own source (the
+ * navigation and the app's state), so neither can lift the other. Opening it reads the
+ * permission, and asks once when it is undetermined. A player that sounds as
+ * listening would start is paused once, and listening starts when it is
+ * quiet; a player that starts to sound while the sheet listens ends the
+ * listening (`Tap to listen again`). Never listening and playing at once.
+ * Nothing resumes the player.
+ */
+
 import { Array as Arr, Data, Match, Option } from 'effect';
 
 import type { ListenEnd } from './native';
@@ -5,6 +22,7 @@ import { type Reading, STRINGS, type StringId } from './tuning';
 
 export type Permission = 'undetermined' | 'granted' | 'denied';
 
+/** Why the sheet stopped listening: an end the ear sent, or one the sheet made. */
 export type StopReason =
   | Exclude<ListenEnd, 'stopped'>
   | 'player'
@@ -13,33 +31,52 @@ export type StopReason =
   | 'closed'
   | 'late';
 
+/** Where the sheet stands. */
 export type Phase = Data.TaggedEnum<{
+  /** It reads the permission. */
   Checking: {};
+  /** The system asks the reader for the microphone. */
   Asking: {};
+  /** The microphone is off for the app: `Open Settings`. */
   Denied: {};
+  /** Granted, and the paused player is still to fall quiet. */
   Pausing: {};
+  /** The ear is asked to start. */
   Starting: {};
   Listening: {};
+  /** Granted, and the app is not active or another route covers the sheet: it listens again on its return. */
   Away: {};
+  /** Listening ended on its own (an interruption, a route, a failure, the player): `Tap to listen again`. */
   Ended: { readonly reason: StopReason };
   Closed: {};
 }>;
 export const Phase = Data.taggedEnum<Phase>();
 
+/** What the world tells the sheet. */
 export type Event = Data.TaggedEnum<{
+  /** The permission as read by the sheet's read `check`. */
   Read: { readonly permission: Permission; readonly check: number };
+  /** The reader's answer to the system's ask. */
   Answered: { readonly permission: Permission };
+  /** The app became active, or stopped being it (background, inactive). */
   Active: { readonly active: boolean };
+  /** Another route covers the sheet (its screen blurred), or it is shown again (focused). */
   Covered: { readonly covered: boolean };
+  /** The player sounds (loading, playing, buffering), or it does not. */
   Sounding: { readonly sounding: boolean };
+  /** The ear's start `attempt` resolved. */
   Started: { readonly attempt: number };
+  /** The ear's start `attempt` was refused. */
   Refused: { readonly attempt: number };
+  /** The ear ended listening on its own. */
   Ended: { readonly reason: ListenEnd };
+  /** `Tap to listen again`. */
   Tapped: {};
   Closed: {};
 }>;
 export const Event = Data.taggedEnum<Event>();
 
+/** The work a step asks of the sheet, in order. */
 export type Work = Data.TaggedEnum<{
   ReadPermission: { readonly check: number };
   AskPermission: {};
@@ -52,10 +89,14 @@ export const Work = Data.taggedEnum<Work>();
 export interface Session {
   readonly phase: Phase;
   readonly active: boolean;
+  /** Another route covers the sheet. */
   readonly covered: boolean;
   readonly sounding: boolean;
+  /** Whether the system has asked for the microphone in this opening: it asks once. */
   readonly asked: boolean;
+  /** The latest start's number; a resolution of an older one is late. */
   readonly attempt: number;
+  /** The latest permission read's number; the answer to an older one is stale. */
   readonly check: number;
 }
 
@@ -64,12 +105,19 @@ export interface Step {
   readonly work: ReadonlyArray<Work>;
 }
 
+/**
+ * Whether the screen's words may go to VoiceOver: only while it is open, in
+ * the foreground and not covered by another route, so a stop into `Away` under
+ * a pushed hymn says nothing over that hymn.
+ */
 export const voiced = (session: Session): boolean =>
   session.active && !session.covered && !Phase.$is('Closed')(session.phase);
 
+/** Whether the ear holds, or is taking, the microphone in `phase`. */
 export const holdsMicrophone = (phase: Phase): boolean =>
   Phase.$is('Starting')(phase) || Phase.$is('Listening')(phase);
 
+/** The sheet as it opens: it reads the permission first. */
 export const opened = (active: boolean, sounding: boolean): Step => ({
   session: {
     phase: Phase.Checking(),
@@ -85,6 +133,7 @@ export const opened = (active: boolean, sounding: boolean): Step => ({
 
 const stay = (session: Session): Step => ({ session, work: [] });
 
+/** Granted: listen now, after pausing a sounding player once, or on the app's or the screen's return. */
 const listen = (session: Session): Step => {
   if (!session.active || session.covered) return stay({ ...session, phase: Phase.Away() });
   if (session.sounding)
@@ -96,13 +145,16 @@ const listen = (session: Session): Step => {
   };
 };
 
+/** Ends what holds the microphone, into `phase`. */
 const stopInto = (session: Session, phase: Phase, reason: StopReason): Step => {
   if (!holdsMicrophone(session.phase)) return stay({ ...session, phase });
   return { session: { ...session, phase }, work: [Work.Stop({ reason })] };
 };
 
+/** Gives back a start that resolved when nothing waits on it. */
 const giveBack = (session: Session): Step => ({ session, work: [Work.Stop({ reason: 'late' })] });
 
+/** Asks for the microphone, once in an opening; asked before, it is as denied. */
 const ask = (session: Session): Step => {
   if (session.asked) return stay({ ...session, phase: Phase.Denied() });
   return {
@@ -111,6 +163,7 @@ const ask = (session: Session): Step => {
   };
 };
 
+/** What a permission read or answer leads to. */
 const permitted = (session: Session, permission: Permission): Step =>
   Match.value(permission).pipe(
     Match.when('granted', () => listen(session)),
@@ -119,6 +172,7 @@ const permitted = (session: Session, permission: Permission): Step =>
     Match.exhaustive,
   );
 
+/** Reads the permission again, as on opening. */
 const recheck = (session: Session): Step => {
   const check = session.check + 1;
   return {
@@ -127,6 +181,7 @@ const recheck = (session: Session): Step => {
   };
 };
 
+/** The app left the foreground, or came back to it. */
 const activeStep = (session: Session, active: boolean): Step => {
   const { phase } = session;
   const next = { ...session, active };
@@ -141,6 +196,7 @@ const activeStep = (session: Session, active: boolean): Step => {
   return stay(next);
 };
 
+/** Another route covered the sheet, or it is shown again. */
 const coveredStep = (session: Session, covered: boolean): Step => {
   const { phase } = session;
   const next = { ...session, covered };
@@ -154,6 +210,7 @@ const coveredStep = (session: Session, covered: boolean): Step => {
   return stay(next);
 };
 
+/** The player began to sound, or fell quiet. */
 const soundingStep = (session: Session, sounding: boolean): Step => {
   const next = { ...session, sounding };
   if (sounding && holdsMicrophone(session.phase))
@@ -162,6 +219,7 @@ const soundingStep = (session: Session, sounding: boolean): Step => {
   return stay(next);
 };
 
+/** The ear's start `attempt` resolved. */
 const startedStep = (session: Session, attempt: number): Step => {
   if (attempt === session.attempt && Phase.$is('Starting')(session.phase))
     return stay({ ...session, phase: Phase.Listening() });
@@ -169,6 +227,7 @@ const startedStep = (session: Session, attempt: number): Step => {
   return giveBack(session);
 };
 
+/** The sheet's next state and its work for `event`. */
 export const step = (session: Session, event: Event): Step => {
   const { phase } = session;
   if (Phase.$is('Closed')(phase)) {
@@ -204,6 +263,7 @@ export const step = (session: Session, event: Event): Step => {
   });
 };
 
+/** Each string's name as the sheet shows it. */
 export const STRING_NAMES: Readonly<Record<StringId, string>> = {
   E2: 'Low E',
   A2: 'A',
@@ -213,17 +273,21 @@ export const STRING_NAMES: Readonly<Record<StringId, string>> = {
   E4: 'High E',
 };
 
+/** The strings in the reference's layout: D A E down the left, G B E down the right. */
 export const LEFT: ReadonlyArray<StringId> = ['D3', 'A2', 'E2'];
 export const RIGHT: ReadonlyArray<StringId> = ['G3', 'B3', 'E4'];
 
+/** How far the needle swings, in cents either side. */
 export const NEEDLE_CENTS = 50;
 
+/** The needle's place in cents: the reading's distance from its string, held to ±50; centre while nothing is heard. */
 export const needleOf = (heard: Option.Option<Reading>): number =>
   Option.match(heard, {
     onNone: () => 0,
     onSome: ({ stringCents }) => Math.max(-NEEDLE_CENTS, Math.min(NEEDLE_CENTS, stringCents)),
   });
 
+/** The reading's words: `Low E string, 12 cents flat`, `A string, in tune`, or `Listening`. */
 export const labelOf = (heard: Option.Option<Reading>): string =>
   Option.match(heard, {
     onNone: () => 'Listening',
@@ -234,6 +298,10 @@ export const labelOf = (heard: Option.Option<Reading>): string =>
     },
   });
 
+/**
+ * The hint under the gauge, from the target (none is Auto) and the frame's reading:
+ * what to pluck while nothing is heard, else which way to turn the peg.
+ */
 export const hintOf = (target: Option.Option<StringId>, heard: Option.Option<Reading>): string =>
   Option.match(heard, {
     onNone: () =>
@@ -248,8 +316,14 @@ export const hintOf = (target: Option.Option<StringId>, heard: Option.Option<Rea
     },
   });
 
+/** Ended: the screen offers `Tap to listen again`, and the reading shows and says why nothing is heard. */
 export const NOT_LISTENING = 'Not listening';
 
+/**
+ * The one rule for the reading under the gauge in `phase`, which `nameOf` and
+ * `wordsOf` both follow. Denied and Closed have no reading. Ended has the
+ * stop. Only Listening has a heard reading; every other phase is at rest.
+ */
 const byPhase = <R, A>(
   phase: Phase['_tag'],
   heard: Option.Option<R>,
@@ -264,6 +338,7 @@ const byPhase = <R, A>(
     Match.orElse(() => Option.some(give.rest())),
   );
 
+/** The reading's big name in `phase`: the string heard; at rest the picked string, or `Listening` in Auto. */
 export const nameOf = (
   phase: Phase['_tag'],
   target: Option.Option<StringId>,
@@ -276,6 +351,7 @@ export const nameOf = (
     ended: NOT_LISTENING,
   });
 
+/** The reading's words for VoiceOver in `phase`: `labelOf` the reading heard, `Listening` at rest. */
 export const wordsOf = (
   phase: Phase['_tag'],
   heard: Option.Option<Reading>,
@@ -286,6 +362,7 @@ export const wordsOf = (
     ended: NOT_LISTENING,
   });
 
+/** `12 cents flat`, `1 cent sharp`. */
 const centsOff = (stringCents: number): string => {
   const cents = Math.round(Math.abs(stringCents));
   const side = Match.value(stringCents < 0).pipe(
@@ -296,15 +373,19 @@ const centsOff = (stringCents: number): string => {
   return `${cents} cents ${side}`;
 };
 
+/** A string lights `tuned` after this many frames in a row in tune on it. */
 export const TUNED_FRAMES = 8;
 
 export interface Latch {
+  /** The string the current run of in-tune frames is on, and its length. */
   readonly run: Option.Option<{ readonly string: StringId; readonly frames: number }>;
+  /** The strings lit `tuned`: they stay lit until the sheet closes. */
   readonly tuned: ReadonlySet<StringId>;
 }
 
 export const unlatched: Latch = { run: Option.none(), tuned: new Set() };
 
+/** The latch after one frame's reading (none when nothing was heard). */
 export const latch = (before: Latch, heard: Option.Option<Reading>): Latch => {
   const inTune = Option.filter(heard, (reading) => reading.inTune);
   if (Option.isNone(inTune)) return { ...before, run: Option.none() };
@@ -318,13 +399,16 @@ export const latch = (before: Latch, heard: Option.Option<Reading>): Latch => {
   return { run: Option.some({ string, frames }), tuned: new Set([...before.tuned, string]) };
 };
 
+/** A string's own words: `A string` or `A string, tuned`. */
 export const stringLabel = (string: StringId, tuned: boolean): string => {
   if (tuned) return `${STRING_NAMES[string]} string, tuned`;
   return `${STRING_NAMES[string]} string`;
 };
 
+/** The feed's sample rate. */
 export const FEED_RATE = 44_100;
 
+/** The frame length the ear sends, and the feed with it. */
 export const FRAME = 2048;
 
 export interface Feed {
@@ -334,6 +418,7 @@ export interface Feed {
 
 const FEED = /^(E2|A2|D3|G3|B3|E4):([+-]?\d+(?:\.\d+)?)$/;
 
+/** `E2:-12` as a feed: a string's id and cents off it (within ±100), or none. */
 export const feedOf = (param: string): Option.Option<Feed> =>
   Option.fromNullishOr(FEED.exec(param)).pipe(
     Option.flatMap(([, id, cents]) =>
@@ -346,6 +431,7 @@ export const feedOf = (param: string): Option.Option<Feed> =>
     ),
   );
 
+/** The partials a fed frame sounds, with their amplitudes: a plain plucked tone that does not fade. */
 const PARTIALS: ReadonlyArray<readonly [harmonic: number, amplitude: number]> = [
   [1, 0.3],
   [2, 0.15],
@@ -353,6 +439,7 @@ const PARTIALS: ReadonlyArray<readonly [harmonic: number, amplitude: number]> = 
   [4, 0.04],
 ];
 
+/** The `index`th frame of `feed` at `FEED_RATE`: continuous across frames, as the ear's are. */
 export const feedFrame = (feed: Feed, index: number, into: Float32Array): Float32Array => {
   const base = Arr.findFirst(STRINGS, (string) => string.id === feed.string).pipe(
     Option.match({ onNone: () => 0, onSome: (string) => string.hz }),

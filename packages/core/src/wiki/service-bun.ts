@@ -1,3 +1,5 @@
+/** Bun runtime composition for the driver-agnostic WikiService. */
+
 import * as SqliteBun from '@effect/sql-sqlite-bun/SqliteClient';
 import { Cause, Layer, type FileSystem } from 'effect';
 import type { SqlError } from 'effect/sql/SqlError';
@@ -10,11 +12,20 @@ import type { WikiSectionSources } from './section-composer.js';
 import { catalogOver, sectionSourcesOver } from './section-sources.js';
 import { WikiService } from './service.js';
 
+/** The layer a host actually wants: the installed artifact when there is one,
+ *  and the typed-absence service when there is not. The three-state mapping
+ *  lives in `service-artifact.ts`; only the driver is Bun's. */
 const layerBunOrAbsent = (
   filename: string,
 ): Layer.Layer<WikiService, never, FileSystem.FileSystem | TopicService | WikiSectionSources> =>
   layerArtifactOrAbsent(bunArtifactDriver, filename);
 
+/** The four §6 section sources, from the two corpora on disk
+ *  (`sectionSourcesOver` holds the composition and its degradation posture).
+ *
+ *  `bible.db` opens read-only and immutable; the writings database opens
+ *  read-write because `EGWParagraphDatabase.layerCore` initializes its schema
+ *  on construction — the same way every other Bun consumer of it opens it. */
 const layerBunSectionSources = (input: {
   readonly bible: string;
   readonly writings: string;
@@ -25,6 +36,9 @@ const layerBunSectionSources = (input: {
     writings: SqliteBun.layer({ filename: input.writings, create: false }),
   });
 
+/** The catalog half alone, from `bible.db`'s topic tables. `bible.db` is the
+ *  verified bootstrap corpus, so it opening is the expected case; when it does
+ *  not, the typed `SqlError` reaches each consumer's own recovery. */
 const layerBunCatalog = (bible: string): Layer.Layer<TopicService, SqlError> =>
   catalogOver(readOnlySqlite(bible));
 
@@ -37,6 +51,13 @@ const readOnlySqlite = (filename: string) =>
     disableWAL: true,
   });
 
+/** The whole wiki from the corpora on disk: authored cores from `topics.db`
+ *  when it is installed, the catalog long tail from `bible.db`, and the §6.1
+ *  section lineup composed live out of both plus the EGW writings library.
+ *
+ *  Hosts compose this rather than wiring the five services themselves — the
+ *  wiki page model spans three artifacts (§2, §6), and which file backs which
+ *  part of a page is this module's business, not a caller's. */
 export const layerBunWithCatalog = (input: {
   readonly topics: string;
   readonly bible: string;
@@ -50,6 +71,14 @@ export const layerBunWithCatalog = (input: {
     ),
   );
 
+/** Select-to-lookup (§7) from the corpora on disk.
+ *
+ *  The same three files `layerBunWithCatalog` opens, composed once and shared
+ *  by both services: `LookupService` needs exactly `WikiService` (for the
+ *  phrase dictionary) and `WikiSectionSources` (for the four corpus groups),
+ *  which is precisely what a topic page needs. Building the section sources
+ *  once and providing them to both is what keeps the CLI from opening
+ *  `bible.db` and the writings library twice for one command. */
 export const layerBunLookup = (input: {
   readonly topics: string;
   readonly bible: string;

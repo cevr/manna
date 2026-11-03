@@ -6,8 +6,14 @@ import { isPattern, recorder, withDom } from './fixtures/stand-in.ts';
 const W = 1920;
 const H = 1080;
 
+/** `n` wrapped into [0, period). */
 const wrap = (n: number, period: number) => ((n % period) + period) % period;
 
+/**
+ * How far, in frame px, the fibre under world point `p` (one axis) sits from
+ * where the plane carries that point's grain: the tile point laid under `p`'s
+ * frame position against `p`'s own place in the tile, scaled to the period.
+ */
 const driftAt = (view: Camera, p: number) => {
   const r = recorder(W, H);
   withDom(() => planeFibre(r.ctx, view, W, H));
@@ -22,6 +28,7 @@ const driftAt = (view: Camera, p: number) => {
   return Math.min(off, period - off);
 };
 
+/** The world x at the frame's left and right edges, seen through `view`. */
 const edges = (view: Camera): readonly [number, number] => {
   const zoom = view.zoom ?? 1;
   return [view.x - W / 2 / zoom, view.x + W / 2 / zoom];

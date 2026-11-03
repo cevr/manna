@@ -4,8 +4,10 @@ import { VERSE } from '../../look.ts';
 import type { JobFrame } from '../../scenes/job.ts';
 import { GOLD_WASH, INK, paper } from './print.ts';
 
+/** The period serif. */
 export const FACE = 'EB Garamond';
 
+/** Job 9:1–12, KJV verbatim; the printers' supplied words in [brackets], set in italic. */
 const CHAPTER: ReadonlyArray<string> = [
   'Then Job answered and said,',
   'I know [it is] so of a truth: but how should man be just with God?',
@@ -21,8 +23,10 @@ const CHAPTER: ReadonlyArray<string> = [
   'Behold, he taketh away, who can hinder him? who will say unto him, What doest thou?',
 ];
 
+/** Which verse the card lifts its phrase from (Job 9:2), by its place in `CHAPTER`. */
 const LIFTED = 1;
 
+/** The page, in its own units: its text block, columns, and the type. */
 const PAGE = {
   w: 1500,
   h: 2100,
@@ -40,6 +44,7 @@ const TEXT: TextStyle = { family: FACE, size: PAGE.size, weight: 400, color: INK
 const ITALIC: TextStyle = { ...TEXT, italic: true };
 const NUMBER: TextStyle = { family: FACE, size: 21, weight: 500, color: INK };
 
+/** A word on the page: where its baseline starts, its type, and whether the wash covers it. */
 interface Set {
   readonly text: string;
   readonly x: number;
@@ -49,6 +54,7 @@ interface Set {
   readonly phrase: boolean;
 }
 
+/** A verse's words: its number, then each word with its italic and whether it is the phrase's. */
 const tokens = (v: string, n: number) => {
   const words: Array<{ text: string; italic: boolean; phrase: boolean }> = [];
   let italic = false;
@@ -75,6 +81,10 @@ const tokens = (v: string, n: number) => {
   return words;
 };
 
+/**
+ * The verses `from`..`to` set justified in a column `x`..`x + width` from
+ * baseline `y`: each verse a paragraph, its number small and raised.
+ */
 const column = (
   ctx: CanvasRenderingContext2D,
   from: number,
@@ -126,8 +136,10 @@ const column = (
   }
 };
 
+/** The page's sheet of paper, larger than any view of it, made once. */
 const SHEET = { x: -420, y: -120, w: 1980, h: 2300 } as const;
 
+/** The gutter: the page curving away into the binding, its shade cut as lines. */
 const gutter = (ctx: CanvasRenderingContext2D) => {
   ctx.save();
   ctx.fillStyle = INK;
@@ -149,6 +161,7 @@ const gutter = (ctx: CanvasRenderingContext2D) => {
   ctx.restore();
 };
 
+/** The wash laid over one line of the phrase, `x0`..`x1`, ragged at its edges, seeded. */
 const wash = (
   ctx: CanvasRenderingContext2D,
   x0: number,
@@ -170,6 +183,7 @@ const wash = (
   ctx.fill();
 };
 
+/** `b` (in `ctx`'s current space) on the frame: the box round its corners. */
 const onFrame = (ctx: CanvasRenderingContext2D, b: Box): Box => {
   const m = ctx.getTransform();
   const xs = [b.x, b.x + b.w].flatMap((x) => [b.y, b.y + b.h].map((y) => m.a * x + m.c * y + m.e));
@@ -179,6 +193,7 @@ const onFrame = (ctx: CanvasRenderingContext2D, b: Box): Box => {
   return { x: x0, y: y0, w: Math.max(...xs) - x0, h: Math.max(...ys) - y0 };
 };
 
+/** The view on the page: the page point at the frame's centre, and how close. */
 const VIEW = { x: 545, y: 385, from: 1.62, to: 1.72 } as const;
 
 export const job = (f: JobFrame): Box => {

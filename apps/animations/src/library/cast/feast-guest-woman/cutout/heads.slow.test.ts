@@ -4,18 +4,25 @@ import { Array as Arr, Effect, FileSystem, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { HEADED } from './heads.ts';
 
+/** The PNG at `png`, decoded. */
 const decoded = (png: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     return yield* Effect.fromResult(decodePng(yield* fs.readFile(png)));
   });
 
+/** The lowest row of `r` holding a pixel (alpha above 0), or -1 for none. */
 const lowestRow = (r: Raster) => {
   for (let y = r.height - 1; y >= 0; y--)
     for (let x = 0; x < r.width; x++) if (r.rgba[(y * r.width + x) * 4 + 3]! > 0) return y;
   return -1;
 };
 
+/**
+ * Row `y`'s ink runs in `r`, each `[first, last]`, left to right: the px it
+ * holds (alpha above 0) darker than luminance 110, her outlines and none of
+ * her cloth or skin.
+ */
 const inkRuns = (r: Raster, y: number) => {
   const runs: Array<readonly [number, number]> = [];
   let start = -1;
@@ -34,11 +41,13 @@ const inkRuns = (r: Raster, y: number) => {
   return runs;
 };
 
+/** The ends of row `y`'s outermost ink runs in `r`, her drape's outlines: `[left's first, left's last, right's first, right's last]`. */
 const outlinesOf = (r: Raster, y: number) => {
   const runs = inkRuns(r, y);
   return [...(runs[0] ?? [-1, -1]), ...(runs.at(-1) ?? [-1, -1])];
 };
 
+/** Her poses-1 head part's PNG. */
 const HEAD = Option.getOrThrow(Arr.findFirst(HEADED.parts, (p) => p.name === 'head')).png;
 
 describe("the woman's head keys", () => {

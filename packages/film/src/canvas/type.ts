@@ -10,21 +10,33 @@ export interface TextStyle {
   italic?: boolean;
   color: string;
   align?: 'left' | 'center' | 'right';
+  /** Extra space between letters, in em. */
   tracking?: number;
+  /** Line height as a multiple of size. */
   leading?: number;
 }
 
 const font = (s: TextStyle) =>
   `${s.italic === true ? 'italic ' : ''}${s.weight ?? 400} ${s.size}px "${s.family}"`;
 
-type Reveal = 'write' | 'rise' | 'pop';
+type Reveal =
+  /** A pen writes each glyph left to right. */
+  | 'write'
+  /** Glyphs rise and fade in. */
+  | 'rise'
+  /** Glyphs pop in with a small overshoot, like pasted letters. */
+  | 'pop';
 
 export interface WriteOptions {
+  /** 0→1 across the whole text. */
   progress?: number;
   reveal?: Reveal;
+  /** Per-glyph boil in px; 0 holds type still. */
   boil?: number;
   alpha?: number;
+  /** Outline each glyph in the text's colour, this many px wide: hollow letters. */
   outline?: number;
+  /** 0→1, how far up each glyph its colour fills, from the foot (default 1, solid; 0 with an `outline` leaves it hollow). */
   fill?: number;
 }
 
@@ -51,29 +63,42 @@ const glyphs = (ctx: CanvasRenderingContext2D, text: string, style: TextStyle) =
 
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 
+/** How many grapheme clusters `text` holds: the glyphs `write` sets one by one. */
 const graphemeCount = (text: string) => {
   let n = 0;
   for (const _ of graphemes.segment(text)) n++;
   return n;
 };
 
+/** Hebrew, Arabic and friends: shaped and ordered by the browser, never glyph by glyph. */
 const RTL = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
 
+/**
+ * How wide `write` sets `text`: the kerned line in one measurement, plus the
+ * tracking between its glyphs. The glyph advances `write` sums telescope to it.
+ */
 export const measure = (ctx: CanvasRenderingContext2D, text: string, style: TextStyle) => {
   ctx.font = font(style);
   const track = (style.tracking ?? 0) * style.size;
   return Math.max(0, ctx.measureText(text).width + track * (graphemeCount(text) - 1));
 };
 
+/** Where a line `width` wide aligned at `x` starts. */
 const leftEdge = (align: NonNullable<TextStyle['align']>, x: number, width: number) =>
   align === 'center' ? x - width / 2 : align === 'right' ? x - width : x;
 
+/** A popped glyph's own tilt, gone once it lands; other reveals hold level. */
 const popTilt = (reveal: Reveal, i: number, seed: number, local: number) =>
   reveal === 'pop' ? (hash2(i, seed) - 0.5) * 0.12 * (1 - local) : 0;
 
+/** How opaque a glyph `local` of the way through its reveal shows. */
 const shownOpacity = (reveal: Reveal, local: number) =>
   reveal === 'rise' ? ease.outCubic(local) : reveal === 'pop' ? clamp(local * 3) : 1;
 
+/**
+ * A glyph `local` of the way through its reveal, set on `ctx` about its
+ * centre: a pen's clip across it, a rise and fade, or a pop.
+ */
 const revealGlyph = (
   ctx: CanvasRenderingContext2D,
   reveal: Reveal,
@@ -98,16 +123,27 @@ const revealGlyph = (
   }
 };
 
+/** A glyph's foot and top about its baseline, in em: where a `fill` level runs between. */
 const GLYPH_FOOT = 0.3;
 const GLYPH_TOP = -1;
 
+/** How much of the fill's last stretch the outline thins over, so it never steps on or off. */
 const OUTLINE_THIN = 0.2;
 
+/** A `fill` option as a level 0..1: solid when not given, empty when not a number. */
 const fillLevel = (fill: number | undefined) =>
   fill === undefined ? 1 : Number.isNaN(fill) ? 0 : clamp(fill);
 
+/** Whether text at this fill and outline puts any ink down at all. */
 const inks = (fill: number, outline: number) => fill > 0 || outline > 0;
 
+/**
+ * Text at (tx, ty), ty its baseline, spanning `left`..`left + width`: filled
+ * up to `fill` of its height from the foot (clipped there when part filled),
+ * and outlined in the same colour, `outline` px wide while the fill is below
+ * its last stretch and thinning to nothing as it completes, so it reads hollow
+ * above its level.
+ */
 const inkText = (
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -138,6 +174,7 @@ const inkText = (
   ctx.strokeText(text, tx, ty);
 };
 
+/** One line of text at (x, y) — y is the alphabetic baseline. */
 export const write = (
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -208,6 +245,7 @@ export const write = (
   return width;
 };
 
+/** Break text into lines no wider than `maxWidth`. */
 export const wrap = (
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -229,6 +267,10 @@ export const wrap = (
   return lines;
 };
 
+/**
+ * A wrapped block. Progress runs across all lines in reading order.
+ * Returns the block height.
+ */
 export const block = (
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -254,6 +296,10 @@ export const block = (
   return lines.length * lead;
 };
 
+/**
+ * Right-to-left text drawn as one shaped string. It is revealed by a wipe from
+ * the right edge, the way the script is written.
+ */
 const writeWhole = (
   ctx: CanvasRenderingContext2D,
   text: string,

@@ -2,7 +2,9 @@ import { Option, Schema } from 'effect';
 
 export class UnknownScene extends Schema.TaggedError<UnknownScene>()('UnknownScene', {
   scene: Schema.String,
+  /** The scenes the film has, in film order. */
   known: Schema.Array(Schema.String),
+  /** What named it, when it is not the address given (`short "reel"`). */
   by: Schema.optionalKey(Schema.String),
 }) {
   override get message() {
@@ -14,8 +16,10 @@ export class UnknownScene extends Schema.TaggedError<UnknownScene>()('UnknownSce
   }
 }
 
+/** A film's act named by an address (`--act`) that its `look` does not declare. */
 export class UnknownAct extends Schema.TaggedError<UnknownAct>()('UnknownAct', {
   act: Schema.String,
+  /** The acts the film declares, in order; empty when it declares no look. */
   known: Schema.Array(Schema.String),
 }) {
   override get message() {
@@ -24,9 +28,11 @@ export class UnknownAct extends Schema.TaggedError<UnknownAct>()('UnknownAct', {
   }
 }
 
+/** An address (`--short`) names a short the film's `shorts.ts` does not declare. */
 export class UnknownShort extends Schema.TaggedError<UnknownShort>()('UnknownShort', {
   film: Schema.String,
   id: Schema.String,
+  /** The shorts the film declares, in order; empty when it has no `shorts.ts`. */
   known: Schema.Array(Schema.String),
 }) {
   override get message() {
@@ -36,8 +42,15 @@ export class UnknownShort extends Schema.TaggedError<UnknownShort>()('UnknownSho
   }
 }
 
+/**
+ * An address (`--scene a,c`) names scenes the film does not play one after
+ * another: they are no one stretch of it, so no render or stamp can cover
+ * exactly them. Name the scenes between too, or address each alone.
+ */
 export class ScenesApart extends Schema.TaggedError<ScenesApart>()('ScenesApart', {
+  /** The scenes named, in film order. */
   named: Schema.Array(Schema.String),
+  /** The film's scenes between the first and last named that were not named. */
   between: Schema.Array(Schema.String),
 }) {
   override get message() {
@@ -45,7 +58,9 @@ export class ScenesApart extends Schema.TaggedError<ScenesApart>()('ScenesApart'
   }
 }
 
+/** An address that names more than one scope: a film, one act, some scenes or one short. */
 export class AddressConflict extends Schema.TaggedError<AddressConflict>()('AddressConflict', {
+  /** The scopes it names: `act`, `scene`, `short`. */
   given: Schema.Array(Schema.String),
 }) {
   override get message() {
@@ -53,10 +68,15 @@ export class AddressConflict extends Schema.TaggedError<AddressConflict>()('Addr
   }
 }
 
+/**
+ * A point names a cue its scene's timeline does not have. `by` says who
+ * named it: a cue of the timeline (`cue "lift"`), the sound, or a short.
+ */
 export class UnknownCue extends Schema.TaggedError<UnknownCue>()('UnknownCue', {
   scene: Schema.String,
   cue: Schema.String,
   by: Schema.String,
+  /** The scene's cues. */
   known: Schema.Array(Schema.String),
 }) {
   override get message() {
@@ -64,10 +84,12 @@ export class UnknownCue extends Schema.TaggedError<UnknownCue>()('UnknownCue', {
   }
 }
 
+/** A point names a `{mark}` its scene's narration does not have. `by` as for `UnknownCue`. */
 export class UnknownMark extends Schema.TaggedError<UnknownMark>()('UnknownMark', {
   scene: Schema.String,
   mark: Schema.String,
   by: Schema.String,
+  /** The scene's marks, in narration order. */
   known: Schema.Array(Schema.String),
 }) {
   override get message() {
@@ -76,6 +98,11 @@ export class UnknownMark extends Schema.TaggedError<UnknownMark>()('UnknownMark'
   }
 }
 
+/**
+ * A point pinned to a word (`{ mark, word }`) whose line never says that
+ * word at or after its mark: the pin has nothing to land on, so the film does
+ * not lay out (never a silent fall back to the mark).
+ */
 export class WordMissing extends Schema.TaggedError<WordMissing>()('WordMissing', {
   scene: Schema.String,
   by: Schema.String,
@@ -87,6 +114,7 @@ export class WordMissing extends Schema.TaggedError<WordMissing>()('WordMissing'
   }
 }
 
+/** A timeline whose cues anchor on each other in a ring: `cycle` runs round it, back to its first cue. */
 export class CueCycle extends Schema.TaggedError<CueCycle>()('CueCycle', {
   scene: Schema.String,
   cycle: Schema.Array(Schema.String),
@@ -96,9 +124,15 @@ export class CueCycle extends Schema.TaggedError<CueCycle>()('CueCycle', {
   }
 }
 
+/** A cue that runs `until` a mark said, a landmark that falls, or a cue's edge (plus its offset off it), before the cue starts. */
 export class UntilBeforeStart extends Schema.TaggedError<UntilBeforeStart>()('UntilBeforeStart', {
   scene: Schema.String,
   cue: Schema.String,
+  /**
+   * Where it ends, as `untilEndText` says it: `{mark}`, a landmark's name, or
+   * `the end of cue "roll"`, and its offset off that point when it has one
+   * (`{mark} − 0.40 s`).
+   */
   until: Schema.String,
 }) {
   override get message() {
@@ -106,6 +140,13 @@ export class UntilBeforeStart extends Schema.TaggedError<UntilBeforeStart>()('Un
   }
 }
 
+/**
+ * A card's flood that would fall inside a transition, where it is never
+ * drawn (a flood is drawn over its scene's own frame alone): starting inside
+ * the scene's way in (`into`), or running past its end into the next scene's
+ * way in (`out`, `next` that scene). `at` is the flood's start or end, `edge`
+ * where it would have to start after or end by.
+ */
 export class FloodInTransition extends Schema.TaggedError<FloodInTransition>()(
   'FloodInTransition',
   {
@@ -124,6 +165,11 @@ export class FloodInTransition extends Schema.TaggedError<FloodInTransition>()(
   }
 }
 
+/**
+ * Two of a scene's full-screen cards that would hold the frame at one
+ * instant: `first`'s cue (the earlier to start) runs from `from` to `to`,
+ * and `second`'s starts at `at`, before `to`.
+ */
 export class CardsOverlap extends Schema.TaggedError<CardsOverlap>()('CardsOverlap', {
   scene: Schema.String,
   first: Schema.String,
@@ -137,6 +183,7 @@ export class CardsOverlap extends Schema.TaggedError<CardsOverlap>()('CardsOverl
   }
 }
 
+/** Two scenes of a film share an id. */
 export class DuplicateScene extends Schema.TaggedError<DuplicateScene>()('DuplicateScene', {
   scene: Schema.String,
 }) {
@@ -145,6 +192,7 @@ export class DuplicateScene extends Schema.TaggedError<DuplicateScene>()('Duplic
   }
 }
 
+/** A scene's line names one `{mark}` twice. */
 export class DuplicateMark extends Schema.TaggedError<DuplicateMark>()('DuplicateMark', {
   scene: Schema.String,
   mark: Schema.String,
@@ -154,6 +202,10 @@ export class DuplicateMark extends Schema.TaggedError<DuplicateMark>()('Duplicat
   }
 }
 
+/**
+ * A scene's line hands itself on where no voice can read: two turns before
+ * one word, or a turn with no word after it.
+ */
 export class TurnInvalid extends Schema.TaggedError<TurnInvalid>()('TurnInvalid', {
   scene: Schema.String,
   voice: Schema.String,
@@ -164,8 +216,13 @@ export class TurnInvalid extends Schema.TaggedError<TurnInvalid>()('TurnInvalid'
   }
 }
 
+/**
+ * A scene's line holds a brace that is no cue, turn or delivery mark, or a
+ * delivery mark that does not fit its words (`core/delivery.ts`).
+ */
 export class DeliveryInvalid extends Schema.TaggedError<DeliveryInvalid>()('DeliveryInvalid', {
   scene: Schema.String,
+  /** The token as written (`{//9}`), or the mark as the reader sent it. */
   mark: Schema.String,
   reason: Schema.String,
 }) {
@@ -174,8 +231,10 @@ export class DeliveryInvalid extends Schema.TaggedError<DeliveryInvalid>()('Deli
   }
 }
 
+/** Why a scene's line does not parse. */
 export type LineError = DuplicateMark | TurnInvalid | DeliveryInvalid;
 
+/** A bed that ends where it starts, or before. */
 export class CueInvalid extends Schema.TaggedError<CueInvalid>()('CueInvalid', {
   scene: Schema.String,
   reason: Schema.String,
@@ -185,6 +244,7 @@ export class CueInvalid extends Schema.TaggedError<CueInvalid>()('CueInvalid', {
   }
 }
 
+/** A score movement under the music API's shortest chunk. */
 export class MovementTooShort extends Schema.TaggedError<MovementTooShort>()('MovementTooShort', {
   movement: Schema.String,
   ms: Schema.Finite,
@@ -194,6 +254,7 @@ export class MovementTooShort extends Schema.TaggedError<MovementTooShort>()('Mo
   }
 }
 
+/** A score movement longer than the music API's longest chunk: start another movement inside it. */
 export class MovementTooLong extends Schema.TaggedError<MovementTooLong>()('MovementTooLong', {
   movement: Schema.String,
   ms: Schema.Finite,
@@ -204,8 +265,10 @@ export class MovementTooLong extends Schema.TaggedError<MovementTooLong>()('Move
   }
 }
 
+/** A movement the music API cannot compose at its length. */
 export type MovementLength = MovementTooShort | MovementTooLong;
 
+/** A part of the film (an act) declared out of film order: it starts on or before the one declared ahead of it. */
 export class PartOutOfOrder extends Schema.TaggedError<PartOutOfOrder>()('PartOutOfOrder', {
   part: Schema.String,
   from: Schema.String,
@@ -216,8 +279,10 @@ export class PartOutOfOrder extends Schema.TaggedError<PartOutOfOrder>()('PartOu
   }
 }
 
+/** A score option asked for by name (`mix --score`) that the film's score does not have. */
 export class ScoreUnknown extends Schema.TaggedError<ScoreUnknown>()('ScoreUnknown', {
   option: Schema.String,
+  /** The score's options. */
   known: Schema.Array(Schema.String),
 }) {
   override get message() {
@@ -225,6 +290,7 @@ export class ScoreUnknown extends Schema.TaggedError<ScoreUnknown>()('ScoreUnkno
   }
 }
 
+/** A take's character alignment does not regroup into the words of its text. */
 export class AlignmentMismatch extends Schema.TaggedError<AlignmentMismatch>()(
   'AlignmentMismatch',
   { spoken: Schema.String, words: Schema.Int, expected: Schema.Int },
@@ -234,8 +300,13 @@ export class AlignmentMismatch extends Schema.TaggedError<AlignmentMismatch>()(
   }
 }
 
+/**
+ * One recording of the whole script, lined up with the script's words, where
+ * too few of a beat's words were heard to say where it was read.
+ */
 export class BeatUnplaced extends Schema.TaggedError<BeatUnplaced>()('BeatUnplaced', {
   beat: Schema.String,
+  /** The share of the beat's words matched, 0 to 1; `heard` is the established failure field. */
   heard: Schema.Finite,
 }) {
   override get message() {
@@ -243,13 +314,16 @@ export class BeatUnplaced extends Schema.TaggedError<BeatUnplaced>()('BeatUnplac
   }
 }
 
+/** Why a point in a scene does not resolve. */
 export type PointError = UnknownCue | UnknownMark | WordMissing;
 
 export type SoundCueError = UnknownScene | PointError;
 
+/** A line hands over to a voice the film's cast does not have. */
 export class UnknownVoice extends Schema.TaggedError<UnknownVoice>()('UnknownVoice', {
   scene: Schema.String,
   voice: Schema.String,
+  /** The cast's voices; empty when one voice reads the film. */
   known: Schema.Array(Schema.String),
 }) {
   override get message() {
@@ -259,9 +333,11 @@ export class UnknownVoice extends Schema.TaggedError<UnknownVoice>()('UnknownVoi
   }
 }
 
+/** A short's span that ends where it starts, or before. */
 export class ShortSpanEmpty extends Schema.TaggedError<ShortSpanEmpty>()('ShortSpanEmpty', {
   short: Schema.String,
   scene: Schema.String,
+  /** Film seconds, each on its frame. */
   from: Schema.Finite,
   to: Schema.Finite,
 }) {
@@ -272,8 +348,10 @@ export class ShortSpanEmpty extends Schema.TaggedError<ShortSpanEmpty>()('ShortS
 
 export type ShortError = UnknownScene | PointError | ShortSpanEmpty;
 
+/** A film names a sound the library does not declare. */
 export class UnknownSound extends Schema.TaggedError<UnknownSound>()('UnknownSound', {
   name: Schema.String,
+  /** The library's names in the same family, or every name when the family has none. */
   known: Schema.Array(Schema.String),
 }) {
   override get message() {
@@ -281,6 +359,7 @@ export class UnknownSound extends Schema.TaggedError<UnknownSound>()('UnknownSou
   }
 }
 
+/** A bed placed as a one-shot, or a one-shot laid as a bed. */
 export class SoundUseMismatch extends Schema.TaggedError<SoundUseMismatch>()('SoundUseMismatch', {
   name: Schema.String,
   declared: Schema.Literals(['one-shot', 'bed']),
@@ -291,6 +370,7 @@ export class SoundUseMismatch extends Schema.TaggedError<SoundUseMismatch>()('So
   }
 }
 
+/** A code sound samples a name the library does not declare. */
 export class SampleUnknown extends Schema.TaggedError<SampleUnknown>()('SampleUnknown', {
   sound: Schema.String,
   sample: Schema.String,
@@ -300,6 +380,7 @@ export class SampleUnknown extends Schema.TaggedError<SampleUnknown>()('SampleUn
   }
 }
 
+/** A code sound samples a sound that is not code: a take has no graph to render. */
 export class SampleNotCode extends Schema.TaggedError<SampleNotCode>()('SampleNotCode', {
   sound: Schema.String,
   sample: Schema.String,
@@ -310,7 +391,9 @@ export class SampleNotCode extends Schema.TaggedError<SampleNotCode>()('SampleNo
   }
 }
 
+/** Code sounds that sample each other round in a ring, so none can render first. */
 export class SampleCycle extends Schema.TaggedError<SampleCycle>()('SampleCycle', {
+  /** The ring, its first sound again at its end. */
   path: Schema.Array(Schema.String),
 }) {
   override get message() {
@@ -318,8 +401,10 @@ export class SampleCycle extends Schema.TaggedError<SampleCycle>()('SampleCycle'
   }
 }
 
+/** A code sound that can be longer, or write more, than a render allows (at the most its draws allow). */
 export class CodeTooLong extends Schema.TaggedError<CodeTooLong>()('CodeTooLong', {
   sound: Schema.String,
+  /** `length`: its seconds; `work`: the seconds of frames its nodes write, repetitions counted. */
   measure: Schema.Literals(['length', 'work']),
   secs: Schema.Finite,
   limit: Schema.Finite,
@@ -331,6 +416,7 @@ export class CodeTooLong extends Schema.TaggedError<CodeTooLong>()('CodeTooLong'
   }
 }
 
+/** A code sound plays a degree of a key, and names no key. */
 export class DegreeWithoutKey extends Schema.TaggedError<DegreeWithoutKey>()('DegreeWithoutKey', {
   sound: Schema.String,
 }) {
@@ -339,6 +425,7 @@ export class DegreeWithoutKey extends Schema.TaggedError<DegreeWithoutKey>()('De
   }
 }
 
+/** Two nodes of one code sound name one stream, so they would draw the same numbers. */
 export class StreamDuplicate extends Schema.TaggedError<StreamDuplicate>()('StreamDuplicate', {
   sound: Schema.String,
   stream: Schema.String,
@@ -348,8 +435,15 @@ export class StreamDuplicate extends Schema.TaggedError<StreamDuplicate>()('Stre
   }
 }
 
+/**
+ * A fit (`sounds/fits/<name>.json`, `sfx fit`) for a name the library does
+ * not declare as a recording, or as code kept from one: a fit is a
+ * recording's code trial, or the code the owner kept from it, and a
+ * generated take stays private, so nothing may be fitted from one.
+ */
 export class FitUnmatched extends Schema.TaggedError<FitUnmatched>()('FitUnmatched', {
   sound: Schema.String,
+  /** The entry's kind, or `undeclared` when the library does not declare the name. */
   kind: Schema.Literals(['generated', 'code', 'undeclared']),
 }) {
   override get message() {
@@ -361,6 +455,7 @@ export class FitUnmatched extends Schema.TaggedError<FitUnmatched>()('FitUnmatch
   }
 }
 
+/** A fit's file that is not JSON a fit holds. */
 export class FitUnreadable extends Schema.TaggedError<FitUnreadable>()('FitUnreadable', {
   file: Schema.String,
   reason: Schema.String,
@@ -370,6 +465,7 @@ export class FitUnreadable extends Schema.TaggedError<FitUnreadable>()('FitUnrea
   }
 }
 
+/** Why the library's code sounds do not resolve. */
 export type CodeError =
   | SampleUnknown
   | SampleNotCode
@@ -380,6 +476,7 @@ export type CodeError =
   | FitUnmatched
   | FitUnreadable;
 
+/** A Board render's page could not fetch or read its film's board record or an image it keeps. */
 export class BoardUnreadable extends Schema.TaggedError<BoardUnreadable>()('BoardUnreadable', {
   film: Schema.String,
   url: Schema.String,
@@ -390,6 +487,7 @@ export class BoardUnreadable extends Schema.TaggedError<BoardUnreadable>()('Boar
   }
 }
 
+/** A film's timings file is there, but the page could not fetch or read it. */
 export class NarrationUnreadable extends Schema.TaggedError<NarrationUnreadable>()(
   'NarrationUnreadable',
   { film: Schema.String, url: Schema.String, reason: Schema.String },
@@ -399,6 +497,11 @@ export class NarrationUnreadable extends Schema.TaggedError<NarrationUnreadable>
   }
 }
 
+/**
+ * A talk's page could not be built: its edit does not read, a file of the
+ * footage library it reads (`url`) could not be fetched or read, or a take it
+ * plays is not ready (`talkTakes`).
+ */
 export class TalkUnreadable extends Schema.TaggedError<TalkUnreadable>()('TalkUnreadable', {
   film: Schema.String,
   url: Schema.optionalKey(Schema.String),
@@ -413,7 +516,12 @@ export class TalkUnreadable extends Schema.TaggedError<TalkUnreadable>()('TalkUn
   }
 }
 
+/**
+ * A rig a film's drawing declares (`src/rive`) could not be loaded: Rive's
+ * runtime would not start, or its built file could not be read or parsed.
+ */
 export class RigUnloadable extends Schema.TaggedError<RigUnloadable>()('RigUnloadable', {
+  /** The rig, by its declared key. */
   rig: Schema.String,
   reason: Schema.String,
 }) {
@@ -422,10 +530,16 @@ export class RigUnloadable extends Schema.TaggedError<RigUnloadable>()('RigUnloa
   }
 }
 
+/**
+ * A rig's declaration names an artboard, a timeline, a view-model number or
+ * a node its built file lacks, and what the file has of that kind (none
+ * listed for a node: the runtime cannot list them).
+ */
 export class RigNameMissing extends Schema.TaggedError<RigNameMissing>()('RigNameMissing', {
   rig: Schema.String,
   kind: Schema.Literals(['artboard', 'timeline', 'view-model number', 'node']),
   name: Schema.String,
+  /** The names of that kind the file has, in its order. */
   has: Schema.Array(Schema.String),
 }) {
   override get message() {

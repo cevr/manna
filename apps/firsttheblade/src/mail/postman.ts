@@ -1,3 +1,11 @@
+/**
+ * The model's Postman (`../list/Postman.external.ts`): a confirm letter for a
+ * subscriber, to the address the address book keeps for it, with a link
+ * signed for the link the model issued. A letter that does not go (no
+ * address kept, a signing defect, or a mailer that will not take it) is `LetterNotSent`, and
+ * the model gives its link back. The logs name the subscriber's id and the
+ * mailer's code, never the address.
+ */
 import { Effect, Option } from 'effect';
 
 import { LetterNotSent, Postman } from '../list/Postman.external.ts';

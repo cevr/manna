@@ -12,6 +12,7 @@ const front = Effect.gen(function* () {
   return { puppet, paper } satisfies PoseSpec;
 });
 
+/** The share of a sample's pixels off its paper by more than 72 (summed over red, green and blue). */
 const figureShare = ({ img, truth }: ReturnType<typeof sample>) => {
   let figure = 0;
   for (let p = 0; p < img.width * img.height; p++) {

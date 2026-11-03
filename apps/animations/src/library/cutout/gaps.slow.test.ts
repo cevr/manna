@@ -7,6 +7,7 @@ import type { CutFrame, CutGap } from './table.ts';
 
 const SRC = `${import.meta.dir}/../..`;
 
+/** A member's cut table as this test reads it; a member who names no gap may export no `GAPS`. */
 interface CutModule {
   readonly FRAMES: Readonly<Record<string, CutFrame>>;
   readonly GAPS?: Readonly<Record<string, ReadonlyArray<CutGap>>>;
@@ -17,6 +18,7 @@ const MEMBERS = [
   ...new Glob('films/*/cast/*/cutout/cut.ts').scanSync(SRC),
 ].toSorted();
 
+/** A view's kept crop: its kept sheet's pixels in its kept box. */
 const keptOf = (file: string, view: string, frame: CutFrame) => {
   const [x0, y0, x1, y1] = frame.kept;
   const sheet = Option.match(
@@ -41,6 +43,7 @@ const keptOf = (file: string, view: string, frame: CutFrame) => {
   );
 };
 
+/** Each of a member's named gaps: where it is, and the boxes of the enclosed paper pieces its point opens on its kept crop. */
 const gapsOf = (file: string) =>
   Effect.gen(function* () {
     const cut = yield* Effect.promise((): Promise<CutModule> => import(`${SRC}/${file}`));

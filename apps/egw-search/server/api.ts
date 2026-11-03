@@ -1,3 +1,13 @@
+/**
+ * The search API definition.
+ *
+ * One group, two endpoints. It is an `HttpApi` rather than a hand-rolled
+ * `Bun.serve` router so request decoding, response encoding and error mapping
+ * are all derived from the schemas below instead of written by hand — and so
+ * the handler is an ordinary Effect with its services in context, rather than
+ * something that has to close over a captured runtime.
+ */
+
 import { type Array as Arr, Schema as S } from 'effect';
 import { HttpApi, HttpApiEndpoint, HttpApiGroup } from 'effect/http-api';
 
@@ -17,6 +27,11 @@ import {
   SignedFromStrings,
 } from '@manna/core/writings';
 
+/** Re-exported through the API module so the browser bundle has one import for
+ *  the whole wire vocabulary — the schemas it decodes with and the guards it
+ *  parses URL parameters with come from the same place the endpoints below are
+ *  declared, rather than the client reaching into `@manna/core` separately and
+ *  risking a second, divergent copy. */
 export {
   BookSubtype,
   BookType,
@@ -33,10 +48,23 @@ export {
   SignedFromStrings,
 };
 
+/** Rows a search asks for when it names no limit: the page's default, and
+ *  the server's for a request that leaves it out. */
 export const DEFAULT_LIMIT = 40;
 
+/** Paragraphs the page fetches on each side of a match, which is not the
+ *  number it shows.
+ *
+ *  One neighbour is usually the sentence that makes the hit land; more turns
+ *  the results page into a reader. So the page renders one and keeps the rest
+ *  for its expand control: fetching the full radius up front means "show
+ *  more" is instant and costs no second request. The server caps this at
+ *  three regardless. */
 export const PAGE_CONTEXT = 3;
 
+/** The searches the empty page offers. The search Worker runs them on a
+ *  schedule too (`./cloudflare/warm.ts`), so the corpus a click reaches is
+ *  warm. */
 export const EXAMPLE_QUERIES: Arr.NonEmptyReadonlyArray<string> = [
   'walk through the fire',
   'time of trouble',
@@ -45,27 +73,61 @@ export const EXAMPLE_QUERIES: Arr.NonEmptyReadonlyArray<string> = [
   'loud cry',
 ];
 
+/** The deep link egwwritings.org expects. The corpus's `para_id` is exactly
+ *  the panel id the reader addresses.
+ *
+ *  Lives here rather than in `main.ts` because both the hit and its context
+ *  paragraphs are addressed the same way, and the two builders should not
+ *  drift apart. */
 export const readerUrl = (paragraphId: string): string =>
   `https://egwwritings.org/read?panels=p${encodeURIComponent(paragraphId)}&index=0`;
 
 export const ContextParagraphSchema = S.Struct({
   refcode: S.NullOr(S.String),
   text: S.String,
+  /** The egwwritings.org deep link for this paragraph, so a neighbour can be
+   *  opened in its own setting exactly as the match can. Null for a paragraph
+   *  the corpus stores without a `para_id`. */
   url: S.NullOr(S.String),
+  /** Whether this neighbour is a chapter or section heading.
+   *
+   *  What makes progressive disclosure stop in the right place: expanding
+   *  context past a heading walks into a different chapter, where the
+   *  surrounding sentences no longer explain the hit. The client uses it to
+   *  decide whether an expand control belongs on that side at all. */
   isHeading: S.Boolean,
 });
 export type ContextParagraph = S.Schema.Type<typeof ContextParagraphSchema>;
 
+/** One search hit.
+ *
+ *  `lexicalRank` and `vectorRank` are how a reader can tell whether a row is
+ *  here because the words matched or because the meaning did — the observable
+ *  difference hybrid search makes. Either is null when only one leg found it.
+ */
 export const SearchHitSchema = S.Struct({
+  /** Null for a paragraph the corpus stores without a citation — the same set
+   *  `ContextParagraphSchema` above already allowed a null refcode for. A hit
+   *  and a neighbour are the same kind of row, so requiring one here and not
+   *  there was the asymmetry that made `controversy` a 500. */
   refcode: S.NullOr(S.String),
   bookCode: S.String,
   bookTitle: S.String,
   author: S.String,
   text: S.String,
+  /** Whether this hit is a chapter or section heading rather than prose — see
+   *  `SearchParagraphHit.isHeading`. A heading and a sentence are otherwise the
+   *  same shape on the wire, so without this the client cannot tell the chapter
+   *  title "The Loud Cry" from the phrase written mid-paragraph. */
   isHeading: S.Boolean,
+  /** Whether this hit sits in its book's back matter — an appendix, a table of
+   *  contents, a bibliography or an index. See `SearchParagraphHit.backMatter`.
+   *  The server already orders these last; this lets the client say why. */
   backMatter: S.Boolean,
   lexicalRank: S.NullOr(S.Finite),
   vectorRank: S.NullOr(S.Finite),
+  /** The egwwritings.org deep link, null for a paragraph the corpus stores
+   *  with no `para_id` — exactly the set that has no addressable route. */
   url: S.NullOr(S.String),
   before: S.Array(ContextParagraphSchema),
   after: S.Array(ContextParagraphSchema),
@@ -74,12 +136,26 @@ export type SearchHitWire = S.Schema.Type<typeof SearchHitSchema>;
 
 export const SearchResponseSchema = S.Struct({
   hits: S.Array(SearchHitSchema),
+  /** The scope this page was actually retrieved in. Echoed rather than assumed
+   *  by the client, so a result set always states which corpus produced it. */
   scope: CorpusScope,
+  /** `'hybrid'` when the vector leg ran; `'lexical — <reason>'` carrying
+   *  §9.6's typed absence when it did not. Search degrades, but never
+   *  silently. */
   vector: S.String,
+  /** Whether the query matched too much of the corpus to rank, so `hits` is
+   *  empty by decision rather than because nothing matched. The two states read
+   *  identically on the wire otherwise, and they want opposite words on screen. */
   nonSelective: S.Boolean,
 });
 export type SearchResponse = S.Schema.Type<typeof SearchResponseSchema>;
 
+/** Everything the server needs to answer one pane, already split by sign.
+ *
+ *  The batch endpoint's input. The single `GET /api/search` spells the same
+ *  fields as query parameters; this is the JSON form, so a batch carries each
+ *  pane's selection as `{ include, exclude }` rather than re-encoding it into
+ *  signed strings. */
 export const SearchRequest = S.Struct({
   q: S.String,
   scope: CorpusScope,
@@ -88,16 +164,23 @@ export const SearchRequest = S.Struct({
   subtype: Signed(BookSubtype),
   excludeApparatus: S.Boolean,
   limit: S.Finite,
+  /** Paragraphs fetched on each side of a hit. A rendering choice the caller
+   *  supplies, not search state; see `PAGE_CONTEXT`. */
   context: S.Finite,
 });
 export type SearchRequest = S.Schema.Type<typeof SearchRequest>;
 
+/** One input's answer in a batch: the response, or why that input failed.
+ *
+ *  Per slot rather than one failure for the batch, so a pane whose search
+ *  fails does not take its neighbours' results down with it. */
 export const SearchSlot = S.Union([
   S.TaggedStruct('Answered', { response: SearchResponseSchema }),
   S.TaggedStruct('Failed', { message: S.String }),
 ]);
 export type SearchSlot = S.Schema.Type<typeof SearchSlot>;
 
+/** At most one request per pane; the client never sends more (`MAX_PANES`). */
 export const MAX_BATCH = 8;
 
 export class SearchFailed extends S.TaggedError<SearchFailed>()(
@@ -113,10 +196,31 @@ export const SearchGroup = HttpApiGroup.make('search')
         q: S.String,
         limit: S.optional(S.FiniteFromString),
         context: S.optional(S.FiniteFromString),
+        /** Whose books the search may reach. Server-side rather than a filter
+         *  the client applies to a returned page: §9.2 pins the vector index to
+         *  the EGW/White-Estate partition, so on a hybrid query the fusion
+         *  ranks EGW candidates above pioneer ones and a page of 40 hits comes
+         *  back EGW-only. Filtering *that* page for pioneers yields nothing.
+         *  Narrowing the query re-runs retrieval in the chosen scope, which is
+         *  the only way the pioneer material surfaces at all. */
         scope: S.optional(CorpusScope),
+        /** The library's own classification axes, each a repeated key
+         *  (`?type=book&type=periodical`). Server-side for the same reason
+         *  `scope` is: narrowing has to happen before retrieval ranks, not
+         *  after it returns a page.
+         *
+         *  `SignedFromStrings` rather than the union itself because each value
+         *  carries its own sign: `?subtype=commentary&subtype=-devotional`
+         *  means "commentaries, but no devotionals". The transform is on the
+         *  endpoint, so the handler receives `{ include, exclude }` already
+         *  split — there is no parse step to forget. Unknown values are
+         *  dropped, so a hand-edited link degrades to a weaker filter instead
+         *  of a failed request. */
         section: S.optional(SignedFromStrings(CorpusSection)),
         type: S.optional(SignedFromStrings(BookType)),
         subtype: S.optional(SignedFromStrings(BookSubtype)),
+        /** Drop dictionaries, concordances and scripture indexes — 39% of the
+         *  corpus, and lookup apparatus rather than anything read through. */
         noref: S.optional(S.String),
       },
       success: SearchResponseSchema,
@@ -124,6 +228,13 @@ export const SearchGroup = HttpApiGroup.make('search')
     }),
   )
   .add(
+    /** Several searches in one round trip, answered slot for slot.
+     *
+     *  The page sends every pane's search that starts in the same moment —
+     *  a workspace link with three panes, or a filter toggled while another
+     *  pane is still loading — as one request. The server then reads the
+     *  surrounding paragraphs once per radius for the whole batch rather
+     *  than once per pane (`runSearchBatch` in `./search.ts`). */
     HttpApiEndpoint.post('batch', '/api/search/batch', {
       payload: S.Struct({ requests: S.Array(SearchRequest).check(S.isMaxLength(MAX_BATCH)) }),
       success: S.Struct({ results: S.Array(SearchSlot) }),
@@ -132,7 +243,14 @@ export const SearchGroup = HttpApiGroup.make('search')
   .add(
     HttpApiEndpoint.get('health', '/health', {
       success: S.Struct({
+        /** True whenever the server answers: search works from the moment
+         *  the port opens, so a platform healthcheck passes before the vector
+         *  index is in memory. */
         ok: S.Boolean,
+        /** `'ready'` when the vector leg can run; otherwise §9.6's reason it
+         *  cannot, which is `'loading'` until the index has been read. A
+         *  string for the reason `SearchResponseSchema.vector` is one: the
+         *  browser bundle imports this module and not the search core. */
         vector: S.String,
       }),
     }),

@@ -16,6 +16,7 @@ import {
 } from './figures.ts';
 import figuresRiv from './figures.riv' with { type: 'file' };
 
+/** The accused for `engine`: feet at our origin, its face for `check`; posed by its own names. */
 export const accusedProp = (
   engine: RiveEngine,
 ): RivePropSpec<AccusedTimeline, keyof typeof ACCUSED_KNOBS> => ({
@@ -31,6 +32,7 @@ export const accusedProp = (
   face: ACCUSED_FACE,
 });
 
+/** The judge for `engine`: his head's centre at our origin, his face for `check`. */
 export const judgeProp = (
   engine: RiveEngine,
 ): RivePropSpec<JudgeTimeline, keyof typeof JUDGE_KNOBS> => ({
@@ -46,6 +48,7 @@ export const judgeProp = (
   face: JUDGE_FACE,
 });
 
+/** The judge's hand for `engine`, its centre at our origin: no view model, only its paper's crawl. */
 export const handProp = (engine: RiveEngine): RivePropSpec<'boil', never> => ({
   source: { riv: figuresRiv, artboard: ARTBOARDS.hand, timelines: ['boil'], numbers: [] },
   engine,

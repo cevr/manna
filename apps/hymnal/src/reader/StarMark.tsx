@@ -1,3 +1,5 @@
+/** The Favourite button's mark beyond iOS: a star in the accent, filled while the hymn is a favourite. */
+
 import { Match } from 'effect';
 import { StyleSheet, Text } from 'react-native';
 

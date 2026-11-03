@@ -44,6 +44,7 @@ const stain = Stain({
 });
 const robe = GivenRobe(WHITE);
 
+/** A plain lead's parts, its states written as `states`, as their list is typed. */
 const leadOf = <const S extends ReadonlyArray<State>>(states: S) => ({
   concept: { image: { set: 'concepts', file: 'images/lead.png' }, box: [0, 0, 100, 200] as const },
   art: { width: 360, height: 470, feet: [180, 440] as const },
@@ -111,6 +112,7 @@ describe('a composed figure', () => {
   });
 
   test('its numbers, as typed, are never more than its parts add: a part typed wider than its kind adds none', () => {
+    /** A head and states as a slot types them: either kind of head, and any list of states. */
     const anyHead = (head: Head): Head => head;
     const anyStates = (states: ReadonlyArray<State>) => states;
     const wide = figure({
@@ -153,6 +155,7 @@ describe('a composed figure', () => {
   });
 });
 
+/** A head traced from a concept: an ellipse a hair off a circle stands in for the trace. */
 const traced = (y: number, neck: number) =>
   Head.Traced({
     view: 'threeQuarter',
@@ -171,10 +174,12 @@ const shoes = Shoes({
   far: { paper: SKIN, light: { color: '#ffffff', from: 16, to: 11, depth: 5 } },
 });
 
+/** A beard cut in a traced head, and the lip in it under the mouth line. */
 const BEARD = ellipse(0, 35, 40, 22, 12);
 const LIP = ellipse(0, 30, 9, 3, 8);
 const beard = Beard({ outline: BEARD, paper: HAIR, lip: { outline: LIP, paper: FLAT } });
 
+/** A headcloth cut in a traced head: the cloth over the crown, the band across the brow with its light, the edge down the near cheek. */
 const CLOTH = ellipse(0, -30, 56, 40, 12);
 const BAND: Pt[] = [
   [-50, -22],
@@ -196,6 +201,7 @@ const headcloth = Headcloth({
   edge: { outline: EDGE, paper: HAIR },
 });
 
+/** A far arm in its sleeve, traced raised: its pivot inside the robe, turned down 1.2 at rest, the light laid on it. */
 const SLEEVE: Pt[] = [
   [20, -300],
   [60, -320],
@@ -208,12 +214,14 @@ const SLEEVE_LIT: Pt[] = [
   [120, -430],
   [110, -435],
 ];
+/** A hand past the end of the sleeve `outline` turning on `pivot`: 2 units beyond its point farthest from the pivot, along the line from it. */
 const pastEnd = (pivot: Pt, outline: ReadonlyArray<Pt>): Pt => {
   const from = ([x, y]: Pt) => Math.hypot(x - pivot[0], y - pivot[1]);
   const end = outline.reduce((a, b) => (from(b) > from(a) ? b : a));
   const d = from(end);
   return [end[0] + ((end[0] - pivot[0]) * 2) / d, end[1] + ((end[1] - pivot[1]) * 2) / d];
 };
+/** An arm's fields, to make it again with one changed. */
 const armOf = ({ _tag: _arm, ...fields }: Arm) => fields;
 const sleeve = Arm({
   pivot: [30, -290],
@@ -224,6 +232,7 @@ const sleeve = Arm({
   tones: [{ pts: SLEEVE_LIT, color: '#efca9a' }],
 });
 
+/** A sleeve far from any garment's edge. */
 const ASTRAY: Pt[] = [
   [380, -20],
   [420, -20],
@@ -231,6 +240,7 @@ const ASTRAY: Pt[] = [
   [380, 60],
 ];
 
+/** A sleeve round the raised sleeve's pivot, its edge 30 from it. */
 const ROUND: Pt[] = [
   [0, -320],
   [60, -320],
@@ -238,6 +248,7 @@ const ROUND: Pt[] = [
   [0, -250],
 ];
 
+/** A square traced robe, and a sleeve beside its pivot: each lies 100 from (0, -300). */
 const SQUARE: Pt[] = [
   [-100, -400],
   [100, -400],
@@ -251,6 +262,7 @@ const LEVEL: Pt[] = [
   [100, -290],
 ];
 
+/** A robe traced as the cut one is cut, its pivot's place inside it. */
 const TRACED_ROBE: Pt[] = [
   [-40, -330],
   [40, -330],
@@ -259,6 +271,7 @@ const TRACED_ROBE: Pt[] = [
   [-85, -20],
 ];
 
+/** The plain lead's arms hanging at his sides at rest: each pivot inside his tunic and its sleeve, the far one lit. */
 const HANGING: Pt[] = [
   [20, -215],
   [50, -220],
@@ -294,6 +307,7 @@ const hanging = {
   }),
 };
 
+/** A seated tunic down behind its bench, and a near arm resting in its lap: its pivot inside the tunic and its sleeve. */
 const seatedTunic = Tunic({
   neck: 28,
   hem: 300,
@@ -316,6 +330,7 @@ const resting = Arm({
   paper: FLAT,
 });
 
+/** Sandals: each bare foot cut from its corners, a strap across the near one. */
 const NEAR_FOOT: Pt[] = [
   [-60, -1],
   [-60, -8],
@@ -341,6 +356,7 @@ const sandals = Sandals({
   sole: '#43291c',
 });
 
+/** A standing figure with a traced head, its hair and ear cut inside it, an open mouth, a cut robe and shoes. */
 const standingOf = () => ({
   concept: CONCEPT,
   art: { width: 300, height: 600, feet: [150, 580] as const },
@@ -366,6 +382,7 @@ const standingOf = () => ({
   hands: Hands({ paper: SKIN, share: 0.44 }),
 });
 
+/** A seated figure, its origin its body's middle at its head's height: a traced head, a cut robe down behind its bench, and bands on it. */
 const seatedOf = (y = 0) => ({
   concept: CONCEPT,
   art: { width: 460, height: 520, head: [230, 140] as const },
@@ -388,6 +405,7 @@ const seatedOf = (y = 0) => ({
   hands: Hands({ paper: SKIN, share: 0.45 }),
 });
 
+/** `spec`'s figure drawn alone, as its project's markup. */
 const drawnOf = (f: Parameters<typeof drawFigure>[1]) =>
   fragment(drawFigure(rigOf(ids(), 'Figure', 1, 0, DIRECTION), f));
 
@@ -488,20 +506,25 @@ describe('a traced figure, standing or seated', () => {
   });
 });
 
+/** The outline `key` is printed with in `rml`: its vertices' places, in order. */
 const printed = (rml: string, key: string): Pt[] =>
   Array.from(
     rml.matchAll(new RegExp(`<\\w+Vertex x="([^"]+)" y="([^"]+)"[^>]* name="${key}\\.\\d+"`, 'g')),
     (m): Pt => [Number(m[1]), Number(m[2])],
   );
 
+/** `v` as the project prints it, to a millionth (a negative zero prints as 0). */
 const millionth = (v: number) => Math.round(v * 1e6) / 1e6 + 0;
 
+/** `pts` as the project prints them. */
 const toMillionth = (pts: ReadonlyArray<Pt>): Pt[] =>
   pts.map(([x, y]): Pt => [millionth(x), millionth(y)]);
 
+/** The id the project gives the node or shape `key`, by its number. */
 const idNumber = (rml: string, key: string) =>
   Number(rml.match(new RegExp(`name="${key}" id="\\d+:(\\d+)"`))?.[1]);
 
+/** Where each of `keys` is first named in `rml`. */
 const placesOf = (rml: string, keys: ReadonlyArray<string>) =>
   keys.map((key) => rml.indexOf(`name="${key}"`));
 
@@ -915,12 +938,15 @@ describe('a bearded head, and the parts of a head turned and of bare feet', () =
 });
 
 describe('an arm in its sleeve', () => {
+  /** The id of the number `node`'s turn is bound to (`rig.bind`), in `rml`. */
   const boundIn = (rml: string, node: string) =>
     rml.match(
       new RegExp(`name="${node}"[^>]*>\\s*<DataBindContext sourcePathIds="[^"-]+-([^"]+)"`),
     )?.[1];
+  /** The id of the view model's number named `knob`, in `rml`. */
   const numberIn = (rml: string, knob: string) =>
     rml.match(new RegExp(`<ViewModelPropertyNumber name="${knob}" id="([^"]+)"/>`))?.[1];
+  /** The colours of the shape `key`'s paper, in `rml`, in order. */
   const paperIn = (rml: string, key: string) =>
     Array.from(
       rml
@@ -955,6 +981,7 @@ describe('an arm in its sleeve', () => {
   });
 
   test('an arm whose side is typed as one that may be missing adds no number to the type', () => {
+    /** Arms as the slot types them: either side may be missing. */
     const anyArms = (arms: { readonly near?: Arm; readonly far?: Arm }) => arms;
     const wide = figure({ ...standingOf(), arms: anyArms({ far: sleeve }) });
     expect(Object.keys(wide.knobs).at(-1)).toBe('farArm');
@@ -1148,6 +1175,7 @@ describe('an arm in its sleeve', () => {
   });
 
   test('a given robe lays the skin on its garment and on each sleeve again over its paper, in their order and their paint, and covers their cloth', () => {
+    /** The paint the shape `key` is filled with in `rml`, its indents dropped: a colour, or a soft tone's gradient and its stops. */
     const paintIn = (rml: string, key: string) =>
       rml
         .match(
@@ -1156,6 +1184,7 @@ describe('an arm in its sleeve', () => {
           ),
         )?.[1]
         ?.replace(/\s+/g, ' ');
+    /** The id of the shape the shape `key` is clipped to, and the id of the shape `key`, in `rml`. */
     const clipIn = (rml: string, key: string) =>
       rml.match(
         new RegExp(
@@ -1164,6 +1193,7 @@ describe('an arm in its sleeve', () => {
       )?.[1];
     const idIn = (rml: string, key: string) =>
       rml.match(new RegExp(`<Shape name="${key}" id="([^"]+)"`))?.[1];
+    /** The markup of the element whose opening tag begins with `open` in `markup`, through its closing tag: every part it holds. */
     const elementOf = (markup: string, open: string) => {
       const start = markup.indexOf(open);
       if (start < 0) return '';
@@ -1320,6 +1350,7 @@ describe('an arm in its sleeve', () => {
     const seatedRobe = (tones: RobeTones) => Robe.Cut({ ...seatedCut, tones });
     const raised = (tones: NonNullable<Parameters<typeof Arm>[0]['tones']>) =>
       Arm({ pivot: [30, -290], rest: 1.2, outline: SLEEVE, hand: sleeve.hand, paper: FLAT, tones });
+    /** The standing figure in the garment `body`, its far arm `far`, its near arm `near`. */
     const robed = (
       body: Garment,
       far: ReturnType<typeof raised>,
@@ -1329,6 +1360,7 @@ describe('an arm in its sleeve', () => {
       body,
       arms: near === undefined ? { far } : { near, far },
     });
+    /** The refusal of `part`'s tone `cloth`, cloth, laid after its skin, tone `skin`: the whole of its words. */
     const refusal = (part: string, cloth: number, skin: number) =>
       new RegExp(
         `${part.replace('.', '\\.')} refused: [^]*its tone ${cloth}, cloth, is laid after its skin \\(tone ${skin}\\): a given robe lays the skin again over its paper and covers the cloth, so skin that cloth covers would show on the robe; lay the skin after the cloth, cut to where it shows, or, if tone ${cloth} is a shade on the skin, mark it \`skin\``,
@@ -1738,6 +1770,7 @@ describe('the parts', () => {
   });
 });
 
+/** A lock as its file keeps it, on the plain lead. */
 const LOCK = {
   item: 'lead',
   version: 1,
@@ -1747,6 +1780,7 @@ const LOCK = {
   seen: { set: 'concepts', file: 'images/lead.png' },
 };
 
+/** An override of the lead's lock, freeing one print of him. */
 const OVERRIDE = {
   rule: 'FigureLock' as const,
   place: 'lead',
@@ -1802,6 +1836,7 @@ describe('a lock', () => {
   });
 });
 
+/** A far arm bent at its elbow, hanging on the cut robe: its upper sleeve from the shoulder past the elbow, its forearm from the elbow to the wrist, its hand past the forearm's end. */
 const UPPER: Pt[] = [
   [25, -320],
   [60, -320],
@@ -1824,18 +1859,22 @@ const bent = JointedArm({
   hand: [60, -90],
   paper: FLAT,
 });
+/** `bent`'s fields, to make it again with one changed. */
 const bentOf = ({ _tag: _arm, ...fields }: JointedArm) => fields;
 
+/** Where `bent`'s elbow lies with its upper sleeve turned `turn` about its shoulder. */
 const elbowAt = (turn: number): Pt => {
   const [[sx, sy], [ex, ey]] = [bent.pivot, bent.elbow];
   const [c, s] = [Math.cos(turn), Math.sin(turn)];
   return [sx + (ex - sx) * c - (ey - sy) * s, sy + (ex - sx) * s + (ey - sy) * c];
 };
+/** Which side of the line from `bent`'s shoulder to `target` the point `p` lies on. */
 const sideOf = (target: Pt, p: Pt) => {
   const [sx, sy] = bent.pivot;
   return Math.sign((target[0] - sx) * (p[1] - sy) - (target[1] - sy) * (p[0] - sx));
 };
 
+/** Trousers: two legs either side of the middle, a shoe under each. */
 const leg = (x: number): Pt[] => [
   [x - 20, -30],
   [x + 20, -30],
@@ -1855,6 +1894,7 @@ const trousers = Trousers({
   shoes: { paper: SKIN, near: { outline: shoe(-25) }, far: { outline: shoe(25) } },
 });
 
+/** The standing figure in trousers, its traced head's chin open, its far arm bent at its elbow. */
 const openOf = (arms: { readonly far?: JointedArm } = { far: bent }) => ({
   ...standingOf(),
   head: Head.Traced({
@@ -1995,6 +2035,7 @@ describe('an arm bent at its elbow, trousers, and an open chin', () => {
   });
 });
 
+/** A sleeve `half` wide each way of the line from `a` to `b`, sheet pixels. */
 const sleeveAlong = (a: Pt, b: Pt, half: number): Pt[] => {
   const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
   const [nx, ny] = [(-(b[1] - a[1]) / l) * half, ((b[0] - a[0]) / l) * half];
@@ -2006,6 +2047,7 @@ const sleeveAlong = (a: Pt, b: Pt, half: number): Pt[] => {
   ];
 };
 
+/** A figure traced from a sheet at one unit a pixel: a round head, a square garment, a hanging near sleeve, and a far sleeve as `far` gives it. */
 const tracedOf = (far: Parameters<typeof tracedFigure>[0]['arms']['far']) =>
   tracedFigure({
     concept: CONCEPT,

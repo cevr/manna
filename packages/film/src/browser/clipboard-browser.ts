@@ -1,6 +1,7 @@
 import { Effect, Layer } from 'effect';
 import { Clipboard, ClipboardRefused } from './clipboard.ts';
 
+/** This page's clipboard. */
 export const clipboardLayer: Layer.Layer<Clipboard> = Layer.succeed(
   Clipboard,
   Clipboard.of({

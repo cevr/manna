@@ -11,6 +11,7 @@ import { SYNTH_RATE, framesOf } from './units.ts';
 
 const C_MAJOR: Key = { tonic: 'C', scale: 'major' };
 
+/** A sound resolved by hand: the probes name their samples, so no library walk is needed. */
 const resolvedOf = (
   name: string,
   sound: CodeSound,
@@ -40,6 +41,7 @@ const BY_NAME = new Map(PROBES.map((p) => [p.name, p]));
 
 const probe = (name: string): Probe => BY_NAME.get(name)!;
 
+/** Buffers that are never shared, for a plan read without its peak. */
 const KIT: Kit = {
   take: (frames) => new Float32Array(frames),
   give: () => undefined,
@@ -48,6 +50,7 @@ const KIT: Kit = {
   sample: () => new Float32Array(0),
 };
 
+/** `node` planned and filled at `seed`, before the render's peak. */
 const planned = (node: Node, seed = 1): Float32Array => {
   const sound = resolvedOf('plan', { play: node });
   const plan = planNode(node, ROOT, { seed, sound, kit: KIT });
@@ -215,8 +218,10 @@ describe('the kernels, by what they make of a click', () => {
     secs: 1 / SYNTH_RATE,
     phase: 0.25,
   };
+  /** The click, then silence to `secs`. */
   const click = (secs: number): Node => ({ _tag: 'Layer', secs, of: [{ node: impulse }] });
 
+  /** A response's gain at `hz` in dB: the magnitude of its frames' Fourier sum there. */
   const gainDb = (response: Float32Array, hz: number): number => {
     let re = 0;
     let im = 0;

@@ -1,5 +1,19 @@
 /* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction -- a frame reader at Bun's boundary, as the probes are: it spawns ffmpeg, reads its raw frames in a loop and prints one line per frame on stdout. */
 
+/**
+ * The bar's height in every frame of a screen recording of `verify-hymnal`
+ * (an iPhone 17 Pro, 3x, 1206 by 2622 pixels): it finds the bar's top
+ * hairline, the topmost full-width row of one grey that is not the ground,
+ * in the band from 720 pt down, and prints `frame time top height` per frame
+ * (`-` where no hairline shows), the height from the hairline to the home
+ * indicator's inset. It reads no words: only the row of the hairline.
+ *
+ *   bun .claude/skills/verify-hymnal/scripts/bartop.ts <video.mp4> [fromSec] [toSec]
+ *
+ * `THRESH` (default 0.92) is the share of a row's pixels that must share
+ * the row's grey.
+ */
+
 const [path = '', fromArg = '0', toArg = '1000000'] = Bun.argv.slice(2);
 const from = Number(fromArg);
 const to = Number(toArg);
@@ -12,6 +26,7 @@ const FPS = 30;
 const INSET = 34.3;
 const BOTTOM = 874;
 
+/** The topmost hairline row of a frame's band, if one shows. */
 const hairline = (frame: Uint8Array): number | undefined => {
   const all = new Uint32Array(256);
   for (let k = 0; k < frame.length; k += 7) all[frame[k] ?? 0] = (all[frame[k] ?? 0] ?? 0) + 1;
@@ -28,6 +43,7 @@ const hairline = (frame: Uint8Array): number | undefined => {
   return undefined;
 };
 
+/** The most common value of a histogram. */
 const mode = (counts: Uint32Array): number => {
   let best = 0;
   for (let v = 0; v < counts.length; v++) if ((counts[v] ?? 0) > (counts[best] ?? 0)) best = v;

@@ -1,3 +1,13 @@
+/**
+ * The sung file's loop rule (`sung.ts`): a file whose read plays fewer
+ * verses than the text has stanzas plays its last verse again for each
+ * stanza past them, each pass running from the last verse's start to the
+ * file's end, with the tempo, meter and key of that start in effect again at
+ * each pass's start; any other file is sung as it stands. Held over files
+ * drawn from a fixed seed, and over every hymn's own file. Only numbers,
+ * ticks and indexes are reported.
+ */
+
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Array as Arr, Effect, Equal, FileSystem, Option, Path, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -8,6 +18,7 @@ import * as Sung from './sung.js';
 
 const test = it.scopedLive.layer(BunServices.layer);
 
+/** A fixed-seed source of numbers in [0, 1) (mulberry32), so each run draws the same files. */
 const seeded = (seed: number) => {
   let state = seed >>> 0;
   return () => {
@@ -31,11 +42,13 @@ const METERS = [
   [3, 2],
 ] as const;
 
+/** A drawn file and the stanzas its text has. */
 interface Drawn {
   readonly midi: Midi.Midi;
   readonly stanzas: number;
 }
 
+/** One sung note drawn: its key, its length and the rest after it, in half beats. */
 interface Step {
   readonly key: number;
   readonly halves: number;
@@ -45,6 +58,15 @@ interface Step {
 const byStart = (notes: ReadonlyArray<Midi.Note>) =>
   [...notes].sort((a, b) => a.start - b.start || a.key - b.key);
 
+/**
+ * A file laid out as the hymnal's are: a tune on its own keyboard track (an
+ * intro of up to four notes, then one verse of 8 to 16 notes played one to
+ * three times over), a bass under each note (the last one sometimes held to
+ * the file's end), a silent tail; tempo changes anywhere (sometimes none at
+ * tick 0, sometimes one on the last verse's first note or at the file's
+ * end), a meter at tick 0 and sometimes a second, a key signature or none.
+ * The text has from one stanza up to four more than the verses played.
+ */
 const draw = (random: () => number): Drawn => {
   const int = (n: number) => Math.floor(random() * n);
   const chance = (p: number) => random() < p;
@@ -119,6 +141,7 @@ const draw = (random: () => number): Drawn => {
   };
 };
 
+/** The last of `events` at or before `tick`, as text; `none` when none is. */
 const inEffect = <A extends { readonly tick: number }>(
   events: ReadonlyArray<A>,
   tick: number,
@@ -130,6 +153,7 @@ const inEffect = <A extends { readonly tick: number }>(
     onSome: text,
   });
 
+/** The tempo, meter and key a file plays at `tick`: a file with no tempo event yet plays at 500000. */
 const stateAt = (midi: Midi.Midi, tick: number) =>
   [
     inEffect(midi.tempos, tick, (e) => String(e.microsPerQuarter), '500000'),
@@ -147,6 +171,7 @@ const inOrder = (notes: ReadonlyArray<Midi.Note>) =>
     return Option.isNone(before) || byStart([before.value, note])[0] === before.value;
   });
 
+/** A score's fields besides its verses. */
 const scoreFields = (score: Score.Score) => [
   score.ticksPerBeat,
   score.beatsPerBar,
@@ -157,6 +182,11 @@ const scoreFields = (score: Score.Score) => [
   score.melody,
 ];
 
+/**
+ * What `Sung.of` breaks of the loop rule on a file whose read plays fewer
+ * verses than `stanzas`: its last verse runs from `a` (its start) to the
+ * file's end, `length` ticks, and is played `stanzas - played + 1` times.
+ */
 const loopProblems = (midi: Midi.Midi, stanzas: number): ReadonlyArray<string> => {
   const read = Score.fromMidi(midi, stanzas);
   const played = read.verses.spans.length;
@@ -237,6 +267,7 @@ const loopProblems = (midi: Midi.Midi, stanzas: number): ReadonlyArray<string> =
   return problems;
 };
 
+/** What `Sung.of` breaks on a file whose read plays at least `stanzas` verses: it sings the file as it stands. */
 const keptProblems = (midi: Midi.Midi, stanzas: number): ReadonlyArray<string> => {
   const sung = Sung.of(midi, stanzas);
   return [

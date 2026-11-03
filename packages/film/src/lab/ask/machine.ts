@@ -13,59 +13,90 @@ import type { LabFailure } from '../api.ts';
 import { AskApi } from './api.ts';
 import { failureText } from './format.ts';
 
+/** The owner's answers on the page, by question id, as he typed or chose them. */
 export const Draft = Schema.Record(Schema.String, Schema.String);
 export type Draft = typeof Draft.Type;
 
+/** The page as the owner has it: the ask as last read, and his draft of every answer on it. */
 export const Page = Schema.Struct({ record: AskRecord, draft: Draft });
 export type Page = typeof Page.Type;
 
 export const AskPageState = State({
+  /** Reading the ask the first time, or again from Unreadable: no draft yet. */
   Reading: { said: Schema.String },
+  /**
+   * The page, what the last send said, and the question it was refused for
+   * ('' when none is): the first left open.
+   */
   Open: { page: Page, said: Schema.String, missing: Schema.String },
+  /** The draft as it went (`sent`) is out; the page takes edits meanwhile. */
   Sending: { page: Page, sent: Draft },
+  /** The lab refused the draft (`said`): the ask is read again, the page still showing it. */
   Rereading: { page: Page, said: Schema.String },
+  /** The lab has no such ask any more (`why`): nothing can be sent, the draft is still shown. */
   Gone: { page: Page, why: Schema.String },
+  /** The ask could not be read the first time: `why`. */
   Unreadable: { why: Schema.String },
 });
 export type AskPageState = typeof AskPageState.Type;
 
 export const AskPageEvent = Event({
   Read: { record: AskRecord },
+  /** The read failed: `why`, and whether the lab has no such ask (`gone`). */
   Unread: { why: Schema.String, gone: Schema.Boolean },
+  /** Read the ask again, once it could not be read. */
   Retry: {},
+  /** The owner's answer `id` set to `value` ('' takes it back). */
   Set: { id: Schema.String, value: Schema.String },
+  /** The draft the tab kept of this ask before it reloaded, read once the page is open. */
   Restored: { draft: Draft },
   Submit: {},
   Landed: { record: AskRecord },
+  /** The lab refused the draft: `why`. */
   Refused: { why: Schema.String },
+  /** The draft did not reach the lab: `why`. */
   Unreachable: { why: Schema.String },
 });
 export type AskPageEvent = typeof AskPageEvent.Type;
 
+/** The sections `record`'s page shows with `draft`: from where its run is, as far as the draft reaches. */
 export const pageSections = (record: AskRecord, draft: Draft) =>
   sectionsOf(record.ask, record.state, draft);
 
+/** What the page sends with `draft`: each section's step and its answers, empty fields left out. */
 const sent = (record: AskRecord, draft: Draft) =>
   pageSections(record, draft).map((s) => ({ step: s.name, values: filled(s.values) }));
 
+/** What the owner drafted for the steps `record`'s page still shows: the rest the lab holds answered. */
 const stillOpen = (record: AskRecord, draft: Draft): Draft =>
   Object.assign({}, ...pageSections(record, draft).map((s) => s.values));
 
+/** `page` with the ask as the lab now has it: the draft of the steps it still asks. */
 const reread = (page: Page, record: AskRecord): Page => ({
   record,
   draft: stillOpen(record, page.draft),
 });
 
+/**
+ * `page` with the draft the tab kept (`kept`) under what the owner has set
+ * since it opened, as far as the steps it still asks.
+ */
 const restored = (page: Page, kept: Draft): Page => ({
   ...page,
   draft: stillOpen(page.record, { ...kept, ...page.draft }),
 });
 
+/** `page` with answer `id` set to `value`. */
 const drafted = (page: Page, id: string, value: string): Page => ({
   ...page,
   draft: { ...page.draft, [id]: value },
 });
 
+/**
+ * The questions whose answer the owner changed after Send (`went` is what
+ * the send carried) and the lab no longer asks once it landed, by label:
+ * changes the landed send did not carry.
+ */
 const lateLabels = (page: Page, went: Draft, landed: AskRecord): ReadonlyArray<string> => {
   const open = stillOpen(landed, page.draft);
   const asked = Object.values(page.record.ask.steps).flatMap(askedIn);
@@ -83,6 +114,7 @@ const lateLabels = (page: Page, went: Draft, landed: AskRecord): ReadonlyArray<s
     );
 };
 
+/** What a landed send says: nothing, or the changes made after Send that it did not carry. */
 const landedText = (late: ReadonlyArray<string>): string =>
   Option.match(Arr.match(late, { onEmpty: Option.none, onNonEmpty: Option.some }), {
     onNone: () => '',
@@ -90,6 +122,11 @@ const landedText = (late: ReadonlyArray<string>): string =>
       `Sent before your change to ${labels.map((l) => `“${l}”`).join(', ')}: the lab has the answer as it was at Send.`,
   });
 
+/**
+ * Why `draft` cannot go yet for `record`'s page, and the question it is
+ * for: the first question left open, by its label, before any other check
+ * the lab makes (an optional field may be empty).
+ */
 const draftRefusal = (
   record: AskRecord,
   draft: Draft,
@@ -106,18 +143,25 @@ const draftRefusal = (
       })),
   );
 
+/** A failed send, as the page's event: the lab said no, or was out of reach. */
 const unsent = (failure: LabFailure): AskPageEvent => {
   if (failure._tag === 'LabUnreachable')
     return AskPageEvent.Unreachable({ why: failureText(failure) });
   return AskPageEvent.Refused({ why: failureText(failure) });
 };
 
+/** A read of the ask, as the page's events: read, or why not and whether the lab has no such ask. */
 const readEvents = {
   onSuccess: (record: AskRecord) => AskPageEvent.Read({ record }),
   onFailure: (failure: LabFailure) =>
     AskPageEvent.Unread({ why: failureText(failure), gone: failure._tag === 'AskUnknown' }),
 };
 
+/**
+ * The page's machine for ask `id`, opening on `first` (the review's first
+ * read of it, which the shell names the ask by) and reading it afresh after
+ * a refused send.
+ */
 const askPageMachine = (id: string, first: Effect.Effect<AskRecord, LabFailure, AskApi>) =>
   Machine.make({
     state: AskPageState,
@@ -201,6 +245,7 @@ const askPageMachine = (id: string, first: Effect.Effect<AskRecord, LabFailure, 
       });
     });
 
+/** The page's actor for ask `id`, started: opening on `first`. */
 export const spawnAskPage = (id: string, first: Effect.Effect<AskRecord, LabFailure, AskApi>) =>
   Machine.spawn(askPageMachine(id, first)).pipe(Effect.tap((actor) => actor.start));
 

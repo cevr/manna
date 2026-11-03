@@ -1,3 +1,7 @@
+/** Milestone 3's core contract: the §6.1 lineup, its caps, its ordering, and
+ *  the §6.3 partial-corpus degradation — asserted against the one composer both
+ *  flagship and catalog pages traverse. */
+
 import { BunFileSystem } from '@effect/platform-bun';
 import * as SqliteBun from '@effect/sql-sqlite-bun/SqliteClient';
 import { Database } from 'bun:sqlite';
@@ -39,12 +43,16 @@ import { SECTION_CAPS, SECTION_SCOPES, WikiSectionSources } from './section-comp
 import { layerBunOrAbsent } from './artifact-fixture.js';
 import { WikiService } from './service.js';
 
+/** An `Option` as a zero-or-one array, so a `for` loop or a `flatMap` drops the
+ *  empty case without a nullish check. */
 const present = <A>(value: Option.Option<A>): readonly A[] =>
   Option.match(value, { onNone: (): readonly A[] => [], onSome: (found) => [found] });
 
 const verseNumbers = (count: number): readonly number[] =>
   Array.from({ length: count }, (_, index) => index + 1);
 
+/** One Nave's-shaped catalog topic with `count` distinct verses in John 11, in
+ *  catalog position order. Enough of them to exceed every cap under test. */
 const catalogTopic = (id: string, count: number): TopicDetail =>
   TopicDetail.make({
     id: Schema.decodeSync(TopicId)(id),
@@ -63,6 +71,8 @@ const catalogTopic = (id: string, count: number): TopicDetail =>
     ],
   });
 
+/** A catalog topic whose references are given verbatim, so a test can pin the
+ *  exact OSIS tokens the catalog really stores — ranges included. */
 const catalogTopicWith = (
   id: string,
   references: readonly { readonly raw: string; readonly osis: readonly string[] }[],
@@ -95,6 +105,8 @@ const book = (input: {
   created_at: '2026-01-01T00:00:00.000Z',
 });
 
+/** A book the catalog knows about but this library has not downloaded: zero
+ *  paragraphs is exactly the state §6.3 calls a partial corpus. */
 const uninstalledBook = (input: {
   readonly id: number;
   readonly code: string;
@@ -128,8 +140,20 @@ const BOOKS = [
   uninstalledBook({ id: 5, code: 'ABSENT', title: 'A Book You Do Not Have', author: EGW_AUTHOR }),
 ];
 
+/** The number of matching paragraphs each FTS scope holds — two past the cap of
+ *  5, so a missing cap shows up as extra items and, separately, a `total` that
+ *  merely counts the returned rows shows up as 5 where 7 is the truth. */
 const MATCHING_PARAGRAPHS_PER_SCOPE = 7;
 
+/** The fixture text carries **the whole canonical phrase**, article included.
+ *
+ *  Production FTS5 combines the terms of a query with an implicit AND, so a
+ *  paragraph reading `sanctuary egw 1` does not answer the phrase
+ *  `"The Sanctuary"` — it is missing `the`. While the in-memory double ORed its
+ *  terms, that distinction was invisible here and a flagship page whose title is
+ *  `The Sanctuary` appeared to match rows that the live corpus would never have
+ *  returned. Spelling the article into the text is what makes these fixtures
+ *  answer the query the composer actually issues. */
 const PARAGRAPHS = [
   ...verseNumbers(MATCHING_PARAGRAPHS_PER_SCOPE).map((n) =>
     paragraph({ code: 'GC', refcode: `GC ${String(n)}.1`, text: `the sanctuary egw ${String(n)}` }),
@@ -219,6 +243,8 @@ const THESIS = encodeBlocks([
   ParagraphBlock.make({ content: [TextInline.make({ text: 'The thesis.' })] }),
 ]);
 
+/** A thesis that cites a book this library does not hold — the only path that
+ *  can produce a §6.3 entry, because FTS cannot reach an uninstalled book. */
 const CITING_THESIS = encodeBlocks([
   ParagraphBlock.make({
     content: [
@@ -287,14 +313,30 @@ const live = (file: string, topics: readonly TopicDetail[]): Layer.Layer<WikiSer
     Layer.orDie,
   );
 
+/** The artifact and the `WikiService` that reads it, as one layer.
+ *
+ *  Every test below wires a fresh SQLite artifact and then a service over it,
+ *  so the wiring is a *layer* rather than a step inside the test body: the temp
+ *  file is written while the layer is built, and the whole thing is provided
+ *  once at the test's own boundary. */
 const artifactLayer = (
   topics: readonly ArtifactTopic[],
   layerFor: (file: string) => Layer.Layer<WikiService>,
 ): Layer.Layer<WikiService, never, FileSystem.FileSystem> =>
   Layer.unwrap(Effect.map(artifact(topics), layerFor));
 
+/** One captured log line, reduced to the two things an assertion cares about.
+ *  The annotations are read off the fiber the same way every real logger reads
+ *  them, so a test asserting on them is asserting on what an operator sees. */
 interface CapturedLog {
+  /** The rendered message. `Effect.logWarning` takes varargs, so the logger
+   *  receives an array; joining it here keeps the assertion about the event
+   *  name rather than about the arity of the call that produced it. */
   readonly message: string;
+  /** The three annotations the rejected-token warning carries, decoded rather
+   *  than indexed out of an untyped dictionary — an assertion reaching into a
+   *  `Record<string, unknown>` cannot notice when the warning stops carrying
+   *  one of them, which is the regression this file exists to catch. */
   readonly annotations: Option.Option<RejectionAnnotations>;
 }
 
@@ -307,10 +349,22 @@ type RejectionAnnotations = typeof RejectionAnnotations.Type;
 
 const decodeAnnotations = Schema.decodeUnknownOption(RejectionAnnotations);
 
+/** A logged message, as `Effect.logWarning`'s varargs really deliver it.
+ *
+ *  `Logger.layer` types every logger's `Message` as `unknown`, so the shape is
+ *  established here — at the boundary where the log record arrives — rather
+ *  than assumed at each use. Joining the parts keeps the assertion about the
+ *  event name rather than about the arity of the call that produced it. */
 const LoggedMessage = Schema.Array(Schema.String);
 
 const decodeLoggedMessage = Schema.decodeUnknownOption(LoggedMessage);
 
+/** Runs an effect with the default loggers replaced by a recorder, and returns
+ *  the warnings it emitted.
+ *
+ *  A diagnostic that only exists as a comment is not a diagnostic, so the
+ *  rejected-token warning is asserted rather than assumed — and replacing the
+ *  logger keeps the suite's output clean while doing it. */
 const captureWarnings = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
 ): Effect.Effect<readonly CapturedLog[], E, R> => {
@@ -353,6 +407,23 @@ const LINEUP = [
   'related-topics',
 ];
 
+/** Type-level assertion, enforced by `tsc --noEmit` rather than at run time:
+ *  `WikiSectionSources` is a **required** input of `WikiService.Live`.
+ *
+ *  This is the guard that makes a forgotten wiring impossible rather than
+ *  merely detectable. While `WikiService` read the tag with
+ *  `Effect.serviceOption`, `WikiSectionSources` was absent from this type — a
+ *  host could build the service without it, and every topic page came back with
+ *  a silently empty lineup. Relax the requirement back to optional and
+ *  `WikiSectionSources` leaves the requirements union, `Requires` stops
+ *  extending it, and the assignment below stops compiling.
+ *
+ *  Written as a type rather than as a `@ts-expect-error` on a real
+ *  `Layer.provide` chain because the Effect language-service plugin reports a
+ *  missing layer requirement as its own diagnostic (`TS38
+ *  effect(missingLayerContext)`), which `@ts-expect-error` does not suppress —
+ *  the negative test would fail for the right reason but in a way the gate
+ *  could not distinguish from a genuine break. */
 type Requires<L> = L extends Layer.Layer<infer _A, infer _E, infer R> ? R : never;
 const sectionSourcesAreRequired: WikiSectionSources extends Requires<typeof WikiService.Live>
   ? true
@@ -632,6 +703,9 @@ describe('section composer', () => {
       ),
     ));
 
+  /** The same wiring as {@link artifactLayer}, for the artifact that is not
+   *  there: a temp directory is made while the layer builds, and the path
+   *  inside it names a file nothing ever wrote. */
   const absentArtifactLayer = Layer.unwrap(
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
@@ -645,6 +719,14 @@ describe('section composer', () => {
     }),
   );
 
+  /** A commentary row the corpus stores with no refcode.
+   *
+   *  ~563 corpus paragraphs have none, and five of them cite a verse — John
+   *  1:1, John 1:14, Matthew 27:54, Romans 1:25 and Colossians 2:8 all reach a
+   *  `*****` section divider in 5BC/7BC. `WikiCommentaryEntry.refcode` is
+   *  `NonEmptyString`, and `.make` *throws* rather than failing, so the row
+   *  arrived as a defect that `commentaryEntries`' own `orElseSucceed` does not
+   *  rescue: one such row emptied the whole section. */
   const uncitableCommentary = [{ ...COMMENTARY[0]!, refcode: '' }, ...COMMENTARY.slice(1)];
 
   const uncitableLayer = Layer.unwrap(
@@ -899,6 +981,9 @@ describe('section composer', () => {
       ),
     ));
 
+  /** The real shape of an absent corpus on this stack: the SQLite client
+   *  reports a missing file as a typed `SqlError` (since effect 4.0.1; before,
+   *  `bun:sqlite`'s constructor throw arrived as a died `SQLITE_CANTOPEN`). */
   const unopenableCorpus = WikiSectionSources.NotWiredOnCorpusAbsence(
     WikiSectionSources.Live.pipe(
       Layer.provide(TopicService.Test([])),
@@ -921,6 +1006,14 @@ describe('section composer', () => {
     ),
   );
 
+  /** Resolving `WikiSectionSources` over a given wiring, with the layer built
+   *  *inside* this effect.
+   *
+   *  The boundary is here rather than on the test, because the facts under
+   *  assertion — the degradation warning and the construction defect — are both
+   *  produced while the layer builds. Hoisting the provide onto the test moves
+   *  the build outside the log recorder and outside `Effect.exit`, and neither
+   *  fact is observable any more. */
   const sourcingOver = <E>(layer: Layer.Layer<WikiSectionSources, E>) =>
     Effect.gen(function* () {
       return yield* WikiSectionSources;

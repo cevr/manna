@@ -13,27 +13,41 @@ import { loadRigs } from '../rive/load.ts';
 import type { RiveRuntime } from '../rive/runtime.ts';
 import { RiveRuntimeBrowser } from '../rive/runtime-browser.ts';
 
+/**
+ * What a film's page is built from: its takes' timings, its master's URL and
+ * the rate it declares (its module's `fps`, the one the tools lay it at), all
+ * handed to `createFilm` as they are.
+ */
 export interface Narrated {
   readonly timings: Timings;
   readonly audio: string;
   readonly fps: number;
 }
 
+/**
+ * A film's module as the registry loads it: the frames a second it declares
+ * (`fps`: the one place a film's rate is written; the tools read it from the
+ * same module), and the film, built from its narration.
+ */
 interface FilmModule {
   readonly fps: number;
   readonly film: (narrated: Narrated) => Film;
 }
 
+/** The timings of a film with no takes yet: every scene estimated, as the tools read no file. */
 export const NO_TAKES: Timings = { voice: '', scenes: {} };
 
+/** Where the page reads film `id`'s narration. */
 export const narrationUrls = (id: string) => ({
   timings: `/films/${id}/narration/timings.json`,
   audio: `/films/${id}/narration/full.wav`,
 });
 
+/** A file in film `id`'s `narration/` folder (a staging take a beat's timings name), by its name. */
 export const narrationFileUrl = (id: string, file: string): string =>
   `/films/${encodeURIComponent(id)}/narration/${encodeURIComponent(file)}`;
 
+/** Film `id`'s narration: its timings (none yet on a 404) and its master's URL. */
 export const loadNarrated = (
   id: string,
 ): Effect.Effect<Omit<Narrated, 'fps'>, NarrationUnreadable, HttpClient.HttpClient> =>
@@ -52,6 +66,12 @@ export const loadNarrated = (
     return { timings, audio: at.audio };
   });
 
+/**
+ * `film`, film `id`'s page, made at the rate its module declares (`fps`, the
+ * one the tools lay it at): a `film.ts` that makes its page at any other
+ * would place its beats on frames no tool places them on, so its load dies
+ * naming both rates.
+ */
 const declared = (id: string, m: FilmModule, film: Film): Effect.Effect<Film> =>
   Effect.as(
     Effect.when(
@@ -63,6 +83,7 @@ const declared = (id: string, m: FilmModule, film: Film): Effect.Effect<Film> =>
     film,
   );
 
+/** Why a film's load failed: its narration unreadable, or a rig, puppet or painting it declares not loadable. */
 export type FilmUnloadable =
   | NarrationUnreadable
   | RigUnloadable
@@ -70,6 +91,25 @@ export type FilmUnloadable =
   | PuppetUnloadable
   | PaintingUnloadable;
 
+/**
+ * The registry's loads: each film, keyed by its folder under `films/`, its
+ * module and its narration read and the faces it draws in (`faces`, the
+ * app's `pictureFaces`) asked for, together, and the film built from them:
+ * a page lays its film out (its bar, its scenes) while the faces load, and
+ * what draws the film waits for them (`pictureFacesWait`); the narration is
+ * read through `http` (the page's `fetch` client unless given). The film is
+ * given once its rigs are loaded (`loadRigs`) through `rive` (the page's Rive
+ * runtimes unless given), built once with the page's first film, and its
+ * puppets (`loadPuppets`), each part read through `images` (the page's
+ * decoder unless given), then its painted plates (`loadPaintings`), each
+ * read through `paintings` (the page's bitmap decoder unless given), into
+ * the scope the load runs in: each load of a film loads its own rigs,
+ * puppets and paintings, which
+ * whoever runs it frees by closing that scope (a page's staged film keeps
+ * them for the page's life, `stageFilm`). A load runs on its runner's fiber, so stopping the
+ * runner stops the load; a load stopped or failed has released what it
+ * acquired.
+ */
 export const narratedFilms = <K extends string>(
   modules: Readonly<Record<K, () => Promise<FilmModule>>>,
   faces: Effect.Effect<void>,

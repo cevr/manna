@@ -1,3 +1,20 @@
+/** Milestone 5 core acceptance (§10).
+ *
+ *  Four claims, each named by the milestone's acceptance list:
+ *
+ *  1. the bundle contains all five fields for a verse that has all five;
+ *  2. sparse `paragraph_bible_refs` yields an empty parallel-writings list,
+ *     **not** an error (§8.4);
+ *  3. the Strong's reverse concordance respects its limit;
+ *  4. margin notes are present.
+ *
+ *  The fixture is `Dan 8:13` — the verse §8.2 and the CLI acceptance workflow
+ *  both name — wired against the real `EGWCommentaryService.Live` over a test
+ *  paragraph database, so the commentary/parallel-writings split is exercised by
+ *  the same reverse lookup the live corpus uses rather than by two stubs that
+ *  could agree with each other and with nothing else.
+ */
+
 import { Effect, Layer, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
@@ -43,6 +60,9 @@ const otherBook: BookRow = {
   created_at: '2026-01-01',
 };
 
+/** The White Estate's own half of the EGW scope — the second of the two authors
+ *  `EGW_SCOPE_AUTHORS` names, so the scope filter is proved to be that constant
+ *  rather than an equality test against Ellen White alone. */
 const estateBook: BookRow = {
   book_id: 503,
   book_code: 'LDE',
@@ -52,6 +72,11 @@ const estateBook: BookRow = {
   created_at: '2026-01-01',
 };
 
+/** Outside the EGW scope, and the reason blocker 1 exists: the reverse lookup
+ *  spans the whole library, so a verse's `paragraph_bible_refs` rows are mostly
+ *  *not* White-Estate published. On the live corpus Dan 7:25 answers with 431
+ *  rows of which only 10 are. A "parallel EGW" section that carried these would
+ *  be a section of Matthew Henry under an EGW heading. */
 const henry: BookRow = {
   book_id: 504,
   book_code: 'MHC',
@@ -99,6 +124,13 @@ const bibleRef = (bookId: number, refcode: string, verse: number): BibleRefRow =
   bible_verse: verse,
 });
 
+/** One verse, five citing books: a Bible Commentary volume, both halves of the
+ *  EGW scope, and two books outside it.
+ *
+ *  This is the live corpus's shape in miniature, and the reason the
+ *  commentary/parallel split alone is not the §8.4 partition — `5BC` leaves via
+ *  the BC exclusion, `GC` and `LDE` are the parallel EGW writings, and `MHC`
+ *  and `SC` are real citations of the verse that belong to neither field. */
 const writings = EGWParagraphDatabase.Test({
   books: [commentaryBook, otherBook, estateBook, henry, strongsBook],
   paragraphs: [
@@ -117,6 +149,16 @@ const writings = EGWParagraphDatabase.Test({
   ],
 });
 
+/** Thirty EGW citations of one verse, so the default cap of 25 is a real
+ *  truncation and `parallelWritingsTotal` is a number the capped list cannot
+ *  reproduce.
+ *
+ *  A cap test over a single row proves nothing: `items.length === total === 1`
+ *  holds whether the total is counted before the cap, after it, or not at all.
+ *  Thirty separates the three. Ten non-EGW rows ride alongside so the same
+ *  fixture also proves the total is counted *after* the scope filter — a total
+ *  of 40 here would mean the pane promised fifteen citations it will never
+ *  show, ten of them by authors the section does not carry. */
 const manyWritings = EGWParagraphDatabase.Test({
   books: [
     ...Array.from({ length: 30 }, (_, index) => ({
@@ -158,12 +200,22 @@ const manyWritings = EGWParagraphDatabase.Test({
   ],
 });
 
+/** One EGW citation whose refcode is blank.
+ *
+ *  Not malformed — *uncitable*. ~563 corpus paragraphs are stored with no
+ *  refcode, and five of them cite a verse, so this row is the common shape
+ *  rather than a fault. It is kept under its old name's place in the file
+ *  because it is still the interesting fixture: it used to fail the whole
+ *  bundle, and now it must come back as a row with an absent citation. */
 const uncitableWritings = EGWParagraphDatabase.Test({
   books: [otherBook],
   paragraphs: [paragraph('GC', '', 'A paragraph the corpus stored with no refcode.')],
   bibleRefs: [bibleRef(502, '', 13)],
 });
 
+/** A writings library whose `paragraph_bible_refs` holds nothing for this verse
+ *  — §8.4's documented sparseness, which covers 603 of the corpus's 648 books
+ *  and is therefore the *common* case rather than an edge one. */
 const sparseWritings = EGWParagraphDatabase.Test({
   books: [commentaryBook],
   paragraphs: [paragraph('5BC', '5BC 1116.1', 'Unrelated.')],
@@ -216,6 +268,8 @@ const tamid: StrongsEntry = {
   kjvDefinition: Option.some('alway(-s), continual (employment, -ly), daily'),
 };
 
+/** Sixty hits for one number, so a default cap of 50 is a real truncation and
+ *  `total` is a number the capped list cannot reproduce. */
 const tamidHits: readonly ConcordanceHit[] = Array.from({ length: 60 }, (_, index) => ({
   book: 2,
   bookName: 'Exodus',
@@ -242,6 +296,15 @@ const bible = BibleDatabase.layerTest({
   concordanceHits: { H8548: tamidHits },
 });
 
+/** The same verse, whose margin note carries a `note_type` the corpus's own
+ *  vocabulary does not contain.
+ *
+ *  This is what a corpus *defect* looks like, as distinct from the absence a
+ *  blank refcode expresses: `MarginNoteKind` enumerates the five values the
+ *  builder writes, so a sixth means the artifact disagrees with the schema and
+ *  an operator needs to hear about it. It replaces the blank refcode as this
+ *  suite's malformed row, because a blank refcode turned out to be a documented
+ *  property of the corpus rather than a fault — see `StudyRefcode`. */
 const malformedBible = BibleDatabase.layerTest({
   verses: [
     {

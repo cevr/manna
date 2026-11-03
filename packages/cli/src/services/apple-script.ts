@@ -1,9 +1,23 @@
 import { Cause, Context, Effect, Layer, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
+/**
+ * Service for executing AppleScript commands.
+ */
 export interface AppleScriptService {
+  /**
+   * Execute an AppleScript command.
+   * @param script The AppleScript code to execute
+   * @returns The stdout output from the script
+   */
   readonly exec: (script: string) => Effect.Effect<string, Cause.UnknownError>;
 
+  /**
+   * Execute a JavaScript-for-Automation (JXA) script via `osascript -l JavaScript`.
+   * Captures stdout AND stderr and checks the exit code, throwing on non-zero so
+   * deck-not-found / automation-denied (-1743) surface as a typed Effect failure
+   * rather than an empty-string success. Returns stdout (expected: one JSON line).
+   */
   readonly execJxa: (script: string) => Effect.Effect<string, Cause.UnknownError>;
 }
 
@@ -11,6 +25,9 @@ export class AppleScript extends Context.Service<AppleScript, AppleScriptService
   '@manna/cli/services/apple-script/AppleScript',
 ) {}
 
+/**
+ * Live implementation using the Effect child-process service.
+ */
 export const AppleScriptLive = Layer.effect(
   AppleScript,
   Effect.gen(function* () {

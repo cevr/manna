@@ -8,6 +8,7 @@ const h = harness('hydration.tsx', { hydrate: true });
 
 const TOGGLES = ['one', 'two', 'three'];
 
+/** Each toggle's `tabindex` in `html`, or in the page's DOM when `html` is null. */
 const tabindexes = (page: Page, html: string | null): Promise<Record<string, string | null>> =>
   page.evaluate(
     ([markup, ids]) => {
@@ -24,6 +25,7 @@ const tabindexes = (page: Page, html: string | null): Promise<Record<string, str
     [html, TOGGLES] as const,
   );
 
+/** The `tabindex` lines the toggles logged. */
 const tabindexLog = async (page: Page): Promise<Array<string>> =>
   (await logOf(page)).filter((line) => line.startsWith('tabindex '));
 

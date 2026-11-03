@@ -8,19 +8,24 @@ import {
 } from 'oxlint-plugin-effect/rule-bindings';
 import { ancestors, type Bindings, bindings, isCanvas, memberName } from './nodes.ts';
 
+/** The context methods that put ink on the frame as a line: a stroke or text. */
 const INK: ReadonlySet<string> = new Set(['stroke', 'strokeRect', 'fillText', 'strokeText']);
 
+/** Any module, imported whole: a namespace is a module, never a context. */
 const anyModule = () => true;
 
+/** `node` sits inside a call of the kit's `unprobed`. */
 const insideUnprobed = (b: Bindings, node: ESTree.Node) =>
   ancestors(node).some((a) => b.callsImport(a, isCanvas, 'unprobed'));
 
+/** The ink method a member expression reads (`ctx.fillText`, `ctx['stroke']`), off anything but a namespace import. */
 const inkRead = (b: Bindings, node: ESTree.MemberExpression): Option.Option<string> =>
   Option.filter(
     memberName(node),
     (name) => INK.has(name) && !b.importsAs(node.object, anyModule, '*'),
   );
 
+/** `const { fillText } = ctx`: the ink methods an object pattern takes off its value. */
 const inkTaken = (node: ESTree.ObjectPattern): ReadonlyArray<string> =>
   node.properties.flatMap((p) => {
     if (p.type !== 'Property' || p.computed || p.key.type !== 'Identifier') return [];

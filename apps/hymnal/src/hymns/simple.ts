@@ -1,8 +1,36 @@
+/**
+ * Simple chords: a beginner's reading of a hymn's full harmony. Each line is
+ * read in sung order on its own, and each syllable shows at most one plain
+ * chord (major, minor or seventh), so a line keeps its words' natural
+ * spacing. The full harmony stays in the data (`chords.ts`); Simple is
+ * derived from it as the page draws it, and Advanced is the decoded chords
+ * themselves.
+ *
+ * The rule, per line:
+ * - each chord is made plain: `m7` and `m6` are minor; `maj7`, `6` and `aug`
+ *   are major on their root; `dim` and `dim7` are the seventh on the root a
+ *   major third below (as `Chord.simplify` reads a diminished triad);
+ *   `m7b5` is the minor on the root a minor third above; the bass is dropped;
+ * - a `sus4`, `sus2` or `7sus4` takes the plain quality of the next chord in
+ *   the line that is not a sus, when that chord has the same root; else it
+ *   is major, major or seventh;
+ * - a syllable shows the chord sounding when it starts (its own first chord,
+ *   or the last one before it in the line), and only where that differs
+ *   from the last chord shown in the line;
+ * - a shown chord that sounds for one syllable only, between two shown
+ *   chords that are the same, is a passing chord: it goes, and the second of
+ *   the two is then not shown again.
+ *
+ * Chords stay degrees above the hymn's key, so a move spells Simple chords
+ * as it spells Advanced ones (`Chord.format` in the played key).
+ */
+
 import type * as Chord from '@manna/hymnal/chord';
 import { Array as Arr, Option, Schema } from 'effect';
 
 import type { Box, HymnChords, Word } from './chords';
 
+/** How chords are shown: `simple`, a plain chord per syllable at most, or `advanced`, every chord as compiled. */
 export const ChordStyle = Schema.Literals(['simple', 'advanced']);
 export type ChordStyle = typeof ChordStyle.Type;
 
@@ -13,6 +41,7 @@ interface Plain {
   readonly quality: '' | 'm' | '7';
 }
 
+/** A shown chord and the syllable of the line it is shown over. */
 interface Change {
   readonly k: number;
   readonly chord: Plain;
@@ -20,6 +49,7 @@ interface Change {
 
 const SUS: ReadonlySet<Chord.Quality> = new Set(['sus4', 'sus2', '7sus4']);
 
+/** A chord's plain form, a sus read alone (with nothing to resolve to). */
 const plain = (chord: Chord.Chord): Plain => {
   const { root } = chord;
   switch (chord.quality) {
@@ -46,6 +76,7 @@ const plain = (chord: Chord.Chord): Plain => {
   }
 };
 
+/** A line's chords in sung order, each made plain; a sus resolves to the next non-sus chord on its root. */
 const plainLine = (chords: ReadonlyArray<Chord.Chord>): ReadonlyArray<Plain> =>
   chords.map((chord, k) =>
     Option.some(chord).pipe(
@@ -61,6 +92,7 @@ const plainLine = (chords: ReadonlyArray<Chord.Chord>): ReadonlyArray<Plain> =>
 
 const same = (a: Plain, b: Plain) => a.root === b.root && a.quality === b.quality;
 
+/** The chord sounding as each syllable starts: its own first, or the last before it in the line. */
 const soundingAt = (boxes: ReadonlyArray<Box>): ReadonlyArray<Option.Option<Plain>> => {
   const plained = plainLine(boxes.flatMap((box) => box.chords));
   let next = 0;
@@ -74,6 +106,7 @@ const soundingAt = (boxes: ReadonlyArray<Box>): ReadonlyArray<Option.Option<Plai
   });
 };
 
+/** Where the sounding chord changes, in order. */
 const changesOf = (at: ReadonlyArray<Option.Option<Plain>>): ReadonlyArray<Change> => {
   const changes: Array<Change> = [];
   for (const [k, sounding] of at.entries())
@@ -83,6 +116,7 @@ const changesOf = (at: ReadonlyArray<Option.Option<Plain>>): ReadonlyArray<Chang
   return changes;
 };
 
+/** The changes less each passing chord (one syllable long, between two that are the same) and the second of the two. */
 const withoutPassing = (changes: ReadonlyArray<Change>): ReadonlyArray<Change> => {
   const kept: Array<Change> = [];
   let skip = false;
@@ -101,6 +135,7 @@ const withoutPassing = (changes: ReadonlyArray<Change>): ReadonlyArray<Change> =
   return kept;
 };
 
+/** A line's words with each box's chords replaced by the one it shows. */
 const simpleLine = (line: ReadonlyArray<Word>): ReadonlyArray<Word> => {
   const shown = new Map(
     withoutPassing(changesOf(soundingAt(line.flat()))).map(({ k, chord }) => [k, chord]),
@@ -122,6 +157,7 @@ const simplePart = (part: PartChords): PartChords => {
   return { ...part, lines: part.lines.map(simpleLine) };
 };
 
+/** A hymn's Simple chords: the same parts, lines, words and boxes, at most one plain chord over each. */
 export const simple = (chords: HymnChords): HymnChords => ({
   ...chords,
   stanzas: chords.stanzas.map(simplePart),
@@ -133,4 +169,5 @@ const byStyle: Record<ChordStyle, (chords: HymnChords) => HymnChords> = {
   advanced: (chords) => chords,
 };
 
+/** A hymn's chords as `style` shows them: Simple, or the decoded chords themselves. */
 export const styled = (chords: HymnChords, style: ChordStyle): HymnChords => byStyle[style](chords);

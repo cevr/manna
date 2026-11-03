@@ -5,8 +5,10 @@ import type { SoundUse } from '../sfx.ts';
 import { describeSound, powerSpectrum } from './analyse.ts';
 import { loudness } from './loudness.ts';
 
+/** The FFT the bands are read from: 8192 frames, 5.4 Hz a bin at 44.1 kHz, so the lowest band holds a bin. */
 const BAND_FFT = 8192;
 
+/** The bands' nominal names (IEC 61260), low to high. */
 const NOMINAL = [
   '31.5 Hz',
   '40 Hz',
@@ -38,18 +40,25 @@ const NOMINAL = [
   '16 kHz',
 ] as const;
 
+/** Each band's name and exact centre: 1000·10^(k/10) Hz for k from −15 to 12, the base-ten third octaves. */
 const BANDS = NOMINAL.map((name, i) => ({ name, hz: 1000 * 10 ** ((i - 15) / 10) }));
 
+/** A band's edges, a twentieth of a decade either side of its centre, so the bands tile. */
 const EDGE = 10 ** (1 / 20);
 
+/** Below this, rumble. */
 const RUMBLE_HZ = 30;
 
+/** How far below a side's loudest band a band still counts; a quieter one is read at this floor. */
 const COUNTED_DB = 40;
 
+/** The floor of a silent render's bands, which have no loudest to be read against. */
 const SILENT_SHARE = 1e-12;
 
+/** Counted bands this far apart are named. */
 const APART_DB = 6;
 
+/** What one render is like: seconds, LUFS, dBFS, Hz, and shares from 0 to 1. */
 export interface Profile {
   readonly secs: number;
   readonly integrated: number;
@@ -57,14 +66,19 @@ export interface Profile {
   readonly peak: number;
   readonly onset: number;
   readonly hit: number;
+  /** From the hit to the last 10 ms within 40 dB of the loudest: how long it rings (earshot's t40). */
   readonly tail: number;
+  /** How far the loudest 10 ms stands over its neighbours, in dB: under `HEARD_HIT`, no hit is heard. */
   readonly stands: number;
   readonly centroid: number;
   readonly flatness: number;
+  /** Each band's share of the power, low to high. */
   readonly bands: ReadonlyArray<number>;
+  /** The share of the power below 30 Hz. */
   readonly rumble: number;
 }
 
+/** `pcm`'s profile as a sound of `use` is heard, its bands read over every channel's power. */
 export const profileOf = (pcm: Pcm, use: SoundUse): Profile => {
   const described = describeSound(pcm);
   const loud = loudness(pcm);
@@ -74,6 +88,7 @@ export const profileOf = (pcm: Pcm, use: SoundUse): Profile => {
       power[k] = (power[k] ?? 0) + p;
     });
   const binHz = pcm.rate / BAND_FFT;
+  /** The power from `low` up to `high` Hz; the DC bin is no sound. */
   const between = (low: number, high: number): number => {
     let sum = 0;
     for (let k = Math.max(1, Math.ceil(low / binHz)); k < power.length && k * binHz < high; k++)
@@ -98,6 +113,7 @@ export const profileOf = (pcm: Pcm, use: SoundUse): Profile => {
   };
 };
 
+/** The middle of `values`: the mean of the middle two for an even count. */
 const median = (values: Arr.NonEmptyReadonlyArray<number>): number => {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
@@ -105,6 +121,7 @@ const median = (values: Arr.NonEmptyReadonlyArray<number>): number => {
   return ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2;
 };
 
+/** A side's renders as one: each number the median of theirs, each band's share its own median. */
 export const medianProfile = (profiles: Arr.NonEmptyReadonlyArray<Profile>): Profile => {
   const of = (read: (p: Profile) => number) => median(Arr.map(profiles, read));
   return {
@@ -123,6 +140,7 @@ export const medianProfile = (profiles: Arr.NonEmptyReadonlyArray<Profile>): Pro
   };
 };
 
+/** One band as two sides hear it: each side's share in dB, and how far it moved from the first to the second. */
 interface BandRow {
   readonly band: string;
   readonly from: number;
@@ -130,13 +148,19 @@ interface BandRow {
   readonly moved: number;
 }
 
+/** How far one side's median stands from another's, each figure the second's less the first's. */
 interface Distance {
+  /** The bands within 40 dB of either side's loudest, low to high: the ones a balance is read over. */
   readonly bands: ReadonlyArray<BandRow>;
+  /** The RMS of the counted bands' moves, in dB (earshot's tone_db). */
   readonly balance: number;
+  /** The counted bands that moved more than 6 dB. */
   readonly apart: ReadonlyArray<BandRow>;
+  /** How far the hit moved, in seconds. */
   readonly hit: number;
 }
 
+/** Each band's share in dB, read at the floor 40 dB below the loudest when quieter, and whether it is above that floor. */
 const levelsOf = (bands: ReadonlyArray<number>) => {
   const floor = Math.max(SILENT_SHARE, Math.max(...bands) * 10 ** (-COUNTED_DB / 10));
   return bands.map((share) => ({
@@ -145,6 +169,7 @@ const levelsOf = (bands: ReadonlyArray<number>) => {
   }));
 };
 
+/** How far `to` stands from `from`: the bands either side hears, their balance, and the hit's move. */
 export const distance = (from: Profile, to: Profile): Distance => {
   const a = levelsOf(from.bands);
   const b = levelsOf(to.bands);
@@ -163,24 +188,46 @@ export const distance = (from: Profile, to: Profile): Distance => {
   };
 };
 
+/** What a placement lands on its cue (`SoundEffect.sync`). */
 type Sync = NonNullable<SoundEffect['sync']>;
 
+/** How far a placement may hear the hit move before the sync check names it, in seconds. */
 export const HIT_MOVE = 0.02;
 
+/**
+ * How far a sound's loudest 10 ms stands over its neighbours for its hit to
+ * be heard, in dB: twice their power. The takes' hits stand 17 to 30 dB and
+ * their swells under 1 dB (measured), so the line falls in the gap between.
+ */
 export const HEARD_HIT = 3;
 
+/** Where a placement synced by `sync` hears a render's hit, in seconds after its cue. */
 const heardHit = (sync: Sync, p: Profile): number => {
   if (sync === 'start') return p.hit;
   if (sync === 'onset') return p.hit - p.onset;
   return 0;
 };
 
+/**
+ * How far a placement hears the hit move, in seconds: the medians' move, and
+ * the move of the render furthest out; and whether what plays has a hit to
+ * hear. Without one (a swell, a hiss), the move is a loudest moment's that no
+ * one hears as a hit.
+ */
 interface HitMove {
   readonly median: number;
   readonly worst: number;
   readonly heard: boolean;
 }
 
+/**
+ * How far a placement synced by `sync` hears the hit move when `to`'s
+ * renders play in place of `from`'s: from the median of where it hears
+ * `from`'s, to the median of `to`'s, and to the one of `to`'s furthest from
+ * it (every render is judged, never the best); and whether `from` has a
+ * heard hit, its renders' hits standing `HEARD_HIT` over their neighbours by
+ * their median.
+ */
 export const hitMove = (
   sync: Sync,
   from: Arr.NonEmptyReadonlyArray<Profile>,

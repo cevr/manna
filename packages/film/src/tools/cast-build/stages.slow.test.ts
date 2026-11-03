@@ -17,6 +17,7 @@ import { RENDER_PAGE } from '../../../../../apps/animations/server.ts';
 import { stageSources } from './sources.ts';
 import { buildSources, clipStages, memberStages } from './stages.ts';
 
+/** A stage kind's source files, as `stageSources` makes them its inputs. */
 const wordValue = (word: string | Redacted.Redacted<string>): string => {
   if (Redacted.isRedacted(word)) return Redacted.value(word);
   return word;
@@ -50,12 +51,14 @@ const COVERAGE: Coverage = {
   ],
 };
 
+/** A 2×1 picture of one colour. */
 const pixels = (rgba: readonly [number, number, number, number]) => ({
   width: 2,
   height: 1,
   rgba: Uint8Array.from([...rgba, ...rgba]),
 });
 
+/** `png` with a text chunk after its header: other bytes, the same pixels. */
 const withText = (png: Uint8Array) => {
   const data = new TextEncoder().encode('Comment\0held');
   const typed = Uint8Array.from([...new TextEncoder().encode('tEXt'), ...data]);
@@ -69,6 +72,7 @@ const withText = (png: Uint8Array) => {
 
 const complete: EntryFacts = { drawn: true, kept: true, cut: true, bars: true, fit: true };
 
+/** A member folder: his poses module and the files it imports, and a recorded sheet for each view in `recorded`. */
 const memberIn = (recorded: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -113,6 +117,7 @@ const stagesOf = (dir: string, facts: Record<string, EntryFacts> = {}) =>
     ),
   ).pipe(Effect.provide(FilmFolder.layer(`${dir}/films`)));
 
+/** Each file from the packages folder: `film/src/...`. */
 const ends = (files: ReadonlyArray<string>) => files.map((f) => f.split('/packages/').at(-1));
 
 const filesOf = (stages: ReadonlyArray<Stage<unknown>>, id: string) =>
@@ -124,8 +129,10 @@ const filesOf = (stages: ReadonlyArray<Stage<unknown>>, id: string) =>
 
 const allComplete = Object.fromEntries(COVERAGE.entries.map((e) => [e.id, complete]));
 
+/** The series lead, whose front's part sheet is kept with its okra answers. */
 const LEAD_FEAST = `${import.meta.dir}/../../../../../apps/animations/src/library/cast/lead-feast`;
 
+/** The front's kept okra answer: what the fake `okra image` below draws. */
 const ANSWER = `${LEAD_FEAST}/cutout/sheets/front/okra/answer-1.png`;
 
 const FRONT: Coverage['entries'][number] = {
@@ -136,6 +143,11 @@ const FRONT: Coverage['entries'][number] = {
 };
 const PARTS = 'parts:turnaround-front@lead-feast';
 
+/**
+ * The lead as the film's own cast member, in a scratch films folder: his
+ * sheet and cutout code linked to the library's, his front's part sheet a
+ * copy the parts command may write.
+ */
 const leadFeastIn = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -157,6 +169,11 @@ const leadFeastIn = Effect.gen(function* () {
   return { films, member, sheet, cache: path.join(root, 'cache') };
 });
 
+/**
+ * `okra image` answering from the kept answer: each process asked for is
+ * recorded (program and arguments); okra's copies the answer to its `-o`
+ * path and exits 0, any other dies.
+ */
 const okraAnswering = (fs: FileSystem.FileSystem, spawned: Array<ReadonlyArray<string>>) =>
   ChildProcessSpawner.make((command) => {
     if (command._tag !== 'StandardCommand') return Effect.die('no piped process in this test');
@@ -186,6 +203,7 @@ const okraAnswering = (fs: FileSystem.FileSystem, spawned: Array<ReadonlyArray<s
 
 type Scratch = Effect.Success<typeof leadFeastIn>;
 
+/** What the parts stage builds on beside its films folder and processes: no page and no critique. */
 const partsLayer = Layer.mergeAll(
   ContentStore.layer.pipe(Layer.provide(memoryLocks)),
   PuppetImagesBun,
@@ -201,14 +219,23 @@ const partsLayer = Layer.mergeAll(
   ),
 ).pipe(Layer.provideMerge(BunServices.layer));
 
+/** The timeout of a parts case: laying a part sheet again took 5.6 s at a load of 43, past bun's 5 s. */
 const PARTS_MS = 20_000;
 
+/** A time no build writes a part at: 2000-01-01, in seconds as `utimes` reads a number. */
 const LONG_AGO = 946_684_800;
 
 const CUT = 'cut:turnaround-front@lead-feast';
 
+/** The stages a case builds past the drawing, each named in its answer by its kind. */
 const BUILT = { parts: [PARTS], cut: [PARTS, CUT] } as const;
 
+/**
+ * `body` over the lead in a scratch films folder: `run` builds his front's
+ * drawing and parts (and his cut, `upTo` 'cut') under a spend setting and
+ * answers each built stage's state by its kind and the okra calls the build
+ * counted; `spawned` holds every process asked for.
+ */
 const partsOver = <E>(
   body: (over: {
     readonly at: Scratch;
@@ -263,12 +290,18 @@ const partsOver = <E>(
     yield* body({ at, run, spawned });
   }).pipe(Effect.scoped, Effect.provide(partsLayer));
 
+/** Why a stage of a report failed; empty when it did not, or is not there. */
 const reasonOf = (stage: Option.Option<{ readonly reason: Option.Option<string> }>) =>
   Option.getOrElse(
     Option.flatMap(stage, (p) => p.reason),
     () => '',
   );
 
+/**
+ * A fake member cut by his own cutter, which copies his kept PNG to his
+ * front's head, and his front's drawing and parts stages built: each process
+ * the build starts, recorded, and only `bun` run.
+ */
 const ownCutterMember = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const real = yield* ChildProcessSpawner.ChildProcessSpawner;

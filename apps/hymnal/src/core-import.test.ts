@@ -1,22 +1,36 @@
 /* oxlint-disable effect/noGlobals, effect/noNodeBuiltinImport -- the test reads the app's own source files from disk, synchronously, outside any Effect. */
 
+/**
+ * The app reads `@manna/core` through `@manna/core/bible` only: the Bible
+ * canon and its reference parser, which import `effect` alone. Any other
+ * core module would bring Bun-only code into the phone's bundle.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 
+/** A module name `@manna/core` or below it, in an import, export, `import()` or `require()`. */
 const CORE_IMPORT =
   /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)['"](@manna\/core(?:\/[^'"]*)?)['"]/g;
 
 const ALLOWED = '@manna/core/bible';
 
+/** Each `@manna/core` module `source` imports other than `@manna/core/bible`, by its line. */
 const coreImports = (source: string) =>
   [...source.matchAll(CORE_IMPORT)]
     .filter((match) => match[1] !== ALLOWED)
     .map((match) => ({ line: source.slice(0, match.index).split('\n').length, name: match[1] }));
 
+/** The source files the app may hold, TypeScript and JavaScript both. */
 const SOURCES = new Bun.Glob('{src,app}/**/*.{ts,tsx,js,jsx,mjs}');
 
 const ROOT = `${import.meta.dir}/..`;
 const SELF = `src/${import.meta.file}`;
+/**
+ * One writes the route types (gitignored) from the routes under `app`, which
+ * this scan reads; they import `one` alone. The scan reads only tracked
+ * sources, so a task's hash covers every file it reads.
+ */
 const GENERATED = 'app/routes.d.ts';
 
 describe('the app’s imports of @manna/core', () => {

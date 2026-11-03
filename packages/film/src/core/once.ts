@@ -1,5 +1,6 @@
 import { Effect, Fiber, Option, type Scope, SynchronizedRef } from 'effect';
 
+/** `self` run once, started by its first caller in a fiber the current scope owns, and joined by each caller. */
 export const onceScoped = <A, E, R>(
   self: Effect.Effect<A, E, R>,
 ): Effect.Effect<Effect.Effect<A, E, R>, never, Scope.Scope> =>

@@ -24,9 +24,16 @@ import {
 
 type Pt = readonly [number, number];
 
+/**
+ * A puppet as a drawing declares it: its key, its part sheet's size and
+ * parts (front to back, each a PNG by the URL or path its module imported
+ * it as), its skeleton, the sheet pixel our origin stands at, and the
+ * concept it is held to (`film lab match`).
+ */
 export interface PuppetSpec {
   readonly key: string;
   readonly size: Pt;
+  /** Each part's PNG, and, for a part a dress may dye (`PuppetDress`), the ramp it is drawn in: its shade, base and light as drawn. */
   readonly parts: ReadonlyArray<{
     readonly name: string;
     readonly png: string;
@@ -35,54 +42,116 @@ export interface PuppetSpec {
   readonly skeleton: Skeleton;
   readonly origin: Pt;
   readonly concept?: ConceptRef;
+  /** The paper the parts were cut from: their edge pixels are un-matted from it as the puppet is made (`core/unmatte.ts`). */
   readonly paper?: readonly [number, number, number];
+  /** His cloth colours, which the un-matte keeps where its line does not reach them (`core/unmatte.ts`, `keep`). */
   readonly keep?: ReadonlyArray<readonly [number, number, number]>;
+  /** His thin parts by name, whose rim keeps its hue (`core/unmatte.ts`, `thin`). */
   readonly thin?: ReadonlyArray<string>;
+  /** His shadow parts by name, his shadow on the ground, which walls nothing in (`core/unmatte.ts`, `shadow`): the parts his cut names with `role: 'shadow'`. */
   readonly shadow?: ReadonlyArray<string>;
+  /** The sheet's box edges his figure leaves through (a bust's bottom): when given, paper the box cuts off on any other edge is un-matted (`core/unmatte.ts`, `open`). */
   readonly open?: ReadonlyArray<BoxEdge>;
+  /** His paper's grain, luma: a rim pixel darker than the paper by more than it is kept whole (`core/unmatte.ts`, `grain`). */
   readonly grain?: number;
+  /**
+   * By a front part's name, how many px each part behind it of another skin
+   * reaches under its cut edge, filled with that part's paint (`core/puppet.ts`,
+   * `underlapped`): a head cut from his torso along one line shows cloth, not
+   * the ground, at the cut as it turns. Name only a part that turns a little
+   * over the part behind (a head, a veil); an arm named would leave a ghost of
+   * itself on the torso as it moves. The part behind holds the named part's
+   * own bottom rows, so a key drawn in its place (`swaps`) must meet them at
+   * the cut, as the part does, or a sliver of the part shows under it. A
+   * name the sheet lacks, or a length that is not a whole number of 0 or
+   * more, refuses the puppet.
+   */
   readonly underlap?: Readonly<Record<string, number>>;
+  /**
+   * The drawings a look lays with it (drawn keys and held hands), each a PNG,
+   * loaded with its parts; a key drawn on the sheet's own canvas in place of
+   * a part names it (`part`), and its edge is un-matted from the paper as
+   * that part's is.
+   */
   readonly drawings?: ReadonlyArray<{
     readonly name: string;
     readonly png: string;
     readonly part?: string;
   }>;
+  /** The sheet's line: its width, sheet px, and its ink, which a look's L3 pass draws near what moved. */
   readonly line?: { readonly width: number; readonly ink: readonly [number, number, number] };
 }
 
+/** A drawing laid by a similarity, drawing px to sheet px: `s · p + (dx, dy)`. */
 interface PuppetPlace {
   readonly s: number;
   readonly dx: number;
   readonly dy: number;
 }
 
+/**
+ * A drawn key laid in place of part `part`: drawing `drawing` laid by
+ * `place` at rest, turned `theta` degrees further about `pivot`, then carried
+ * as the part's skin carries its pixel at `pivot` (`skinAt`), sheet px, so a
+ * head key turns with the head bones it stands on.
+ */
 interface PuppetSwap {
   readonly part: string;
   readonly drawing: string;
   readonly place: PuppetPlace;
   readonly pivot: Pt;
+  /** Degrees it turns about `pivot` past its part's own turn: 0 unless given. */
   readonly theta?: number;
+  /** Whether its part's bones carry it: true unless given. False lays it where `place` and `theta` put it, a place already in the pose's frame. */
   readonly rides?: boolean;
 }
 
+/**
+ * How a frame draws a posed puppet beyond its pose: the boil's tick; the
+ * drawings laid in place of parts (drawn keys, `PuppetSwap`), each in place
+ * of its own part and carried by its bones, so a head key and an arm key show
+ * at once; and a drawing laid over the figure once its line is drawn (a held
+ * hand: its centre `c`, drawing px, laid at `at`, sheet px, turned by no
+ * bone, sized by `s`), within `quiet` px of which the line is left as the
+ * drawings draw it. Each is then moved and sized with the pose's root and
+ * scale, as the parts are.
+ */
 export interface PuppetLook {
   readonly boil: number;
+  /** How far the boil moves the figure, px: the house `BOIL_AMP` unless given; 0 turns it off. */
   readonly amp?: number;
+  /** The drawn keys, at most one a part: none unless given. */
   readonly swaps?: ReadonlyArray<PuppetSwap>;
   readonly held?: {
     readonly drawing: string;
     readonly c: Pt;
     readonly at: Pt;
     readonly quiet: number;
+    /** Sheet px a drawing px: 1 unless given. */
     readonly s?: number;
   };
 }
 
+/**
+ * What a draw wears, by part name: the parts it leaves undrawn (`hide`: a
+ * bare head, no beard, no mantle), and the parts it dyes, each to a cloth's
+ * ramp (`dye`: the look's `shaded()` of the cloth), from the ramp its sheet
+ * says it is drawn in (`PuppetSpec.parts`, `ramp`), keeping its line, ink and
+ * alpha (`canvas/dye.ts`). A part a dress hides shows each part behind it as
+ * when it moves away: what its rim hid there, and no seal along their line;
+ * a part named in the sheet's `underlap` shows the paint reached under it.
+ * A drawn key that stands in for a dyed part (a look's swap) takes that
+ * part's dye, so a key of a part a dress may dye is drawn in the part's
+ * ramp: paint outside it (skin, say) is carried onto the cloth's ramp too.
+ * An empty dress draws as no dress. A name the puppet lacks, a dye of a part
+ * that declares no ramp, or a ramp the dye cannot map, refuses the draw.
+ */
 export interface PuppetDress {
   readonly hide?: ReadonlyArray<string>;
   readonly dye?: Readonly<Record<string, Ramp>>;
 }
 
+/** What `dress` asks of the passes for `spec`'s puppet, by part index, or why it cannot be worn. */
 export const dressOf = (
   spec: PuppetSpec,
   puppet: Puppet,
@@ -110,6 +179,7 @@ export const dressOf = (
   return Result.succeed({ hidden, dyes });
 };
 
+/** A puppet as its load leaves it: made from its parts' pixels, its drawings decoded, whether this host paints, and its GL state. */
 export interface LoadedPuppet {
   readonly puppet: Puppet;
   readonly drawings: ReadonlyMap<string, Raster>;
@@ -117,8 +187,10 @@ export interface LoadedPuppet {
   readonly gl: PuppetGl;
 }
 
+/** A puppet's pose: its bone numbers in degrees, where its root stands and its one scale (`core/puppet.ts`). */
 export type { PuppetPose };
 
+/** Where each bone turned from rest has its pivot at `pose`, sheet px: its parent's transform `m` carries it, its own turn holds it. */
 const turnedPivots = (puppet: Puppet, m: Float64Array, pose: PuppetPose): ReadonlyArray<Pt> =>
   puppet.bones.flatMap((b, k): ReadonlyArray<Pt> => {
     if ((pose.numbers[b.name] ?? 0) === 0) return [];
@@ -136,6 +208,7 @@ const turnedPivots = (puppet: Puppet, m: Float64Array, pose: PuppetPose): Readon
     ];
   });
 
+/** A box `[x0, y0, x1, y1]` that grows to hold the points laid in it. */
 type Bounds = [number, number, number, number];
 
 const emptyBounds = (): Bounds => [Infinity, Infinity, -Infinity, -Infinity];
@@ -147,6 +220,12 @@ const grow = (b: Bounds, x: number, y: number) => {
   b[3] = Math.max(b[3], y);
 };
 
+/**
+ * Where sheet points land on the canvas under the frame's transform `t`, our
+ * origin at the sheet's `origin`: `lay` writes one into a buffer and grows
+ * the drawn box (`canvas`), and the figure's (`figure`, from our origin)
+ * when it is shown.
+ */
 const layerOf = (t: DOMMatrix, origin: Pt) => {
   const [ox, oy] = origin;
   const figure = emptyBounds();
@@ -167,6 +246,7 @@ const layerOf = (t: DOMMatrix, origin: Pt) => {
 
 type Layer = ReturnType<typeof layerOf>;
 
+/** The parts a look's keys stand in for, by index, each with its key, and why they cannot be laid if so: a part the puppet lacks, or one named twice. */
 const swappedOf = (puppet: Puppet, swaps: ReadonlyArray<PuppetSwap>) => {
   const swapped = new Map<number, PuppetSwap>();
   for (const swap of swaps) {
@@ -178,6 +258,13 @@ const swappedOf = (puppet: Puppet, swaps: ReadonlyArray<PuppetSwap>) => {
   return { swapped, why: undefined };
 };
 
+/**
+ * Every part the dress shows posed at `pose` into its buffer, and, with a
+ * look, each part that moved laid where it stood at rest too: the moving
+ * parts' indices (a turned bone's, or one a drawing stands in for), with a
+ * look or not. A hidden part is neither laid nor counted as moving, and
+ * grows neither box.
+ */
 const layParts = (
   loaded: LoadedPuppet,
   layer: Layer,
@@ -207,6 +294,7 @@ const layParts = (
   return moving;
 };
 
+/** Drawing `name`'s quad laid into `out`, its corners drawing px to sheet px by `to`; false for a drawing not loaded. */
 const layQuad = (
   loaded: LoadedPuppet,
   layer: Layer,
@@ -229,15 +317,24 @@ const layQuad = (
   return true;
 };
 
+/** Where a sheet point stands at `pose`: moved with its root and sized by its scale, as the parts are (after any bones carry it: a drawn key's, `skinAt`). */
 const posedAt = (puppet: Puppet, pose: PuppetPose, [x, y]: Pt): Pt => [
   pose.root[0] + pose.scale * (x - puppet.root[0]),
   pose.root[1] + pose.scale * (y - puppet.root[1]),
 ];
 
+/** How bones carry a rest sheet point to where they turn it, sheet px. */
 type Carry = (p: Pt) => Pt;
 
 const unmoved: Carry = (p) => p;
 
+/**
+ * How part `k`'s skin carries its pixel at sheet point `p` under the bones'
+ * transforms `m` (`boneTransforms`): the weights of its mesh's vertex nearest
+ * `p`, blended over the same slots as `poseMesh` blends that vertex's, so a
+ * point at that vertex lands where the vertex does. Unmoved where the part
+ * has no vertex, or that one lies on no bone.
+ */
 const skinAt = (puppet: Puppet, k: number, m: Float64Array, [x, y]: Pt): Carry => {
   const { vertices, bones, amounts } = puppet.parts[k]!.mesh;
   const n = vertices.length / 2;
@@ -263,6 +360,7 @@ const skinAt = (puppet: Puppet, k: number, m: Float64Array, [x, y]: Pt): Carry =
   };
 };
 
+/** A look's drawings laid at `pose`: each drawn key by its place, turned `theta` about its pivot and carried by its part's bones there (`skinAt`, under `m`) into its part's quad, and its held hand centred where it is held, each moved with the root and sized by the scale. Why not, for a drawing not loaded. */
 const layDrawings = (
   loaded: LoadedPuppet,
   layer: Layer,
@@ -294,6 +392,7 @@ const layDrawings = (
     : `no drawing ${held.drawing} loaded`;
 };
 
+/** What `look` asks of the page's passes, in canvas px. */
 const passOf = (
   spec: PuppetSpec,
   loaded: LoadedPuppet,
@@ -323,8 +422,17 @@ const passOf = (
   };
 };
 
+/** How far a look's box grows past its figure, px: the boil's samples and the line's outer seeds lie there. */
 const LOOK_MARGIN = 4;
 
+/**
+ * Pose `loaded` (as `spec` declares it) at `pose` and draw it at our origin
+ * under the context's transform, as `look` says when given, wearing `dress`
+ * when given (on the plain pass, or the look's), declaring its figure:
+ * nothing once drawn, else why it cannot be (no WebGL 2 context, a part or
+ * drawing the look names that the puppet lacks, a dress it cannot wear,
+ * `dressOf`), which the film throws (`f.puppet`).
+ */
 export const drawPuppet = (
   ctx: CanvasRenderingContext2D,
   spec: PuppetSpec,

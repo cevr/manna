@@ -14,6 +14,7 @@ type PuppetSheet = Parameters<typeof puppetOf>[0];
 
 const [W, H] = [64, 24];
 
+/** A 64 × 24 sleeve (x 2..62, y 8..16), each pixel its own colour, as one part. */
 const SLEEVE: PuppetSheet = (() => {
   const rgba = new Uint8Array(W * H * 4);
   for (let y = 8; y < 16; y++)
@@ -31,6 +32,7 @@ const TWO_BONES: Skeleton = {
   skin: { arm: ['shoulderRight', 'elbowRight'] },
 };
 
+/** A body box inked round its edge with a strip of its sheet's paper outside its line, and a sleeve over it whose rim row is half paper, half ink. */
 const CLEAR = [0, 0, 0, 0] as const;
 const rimSheet = () => {
   const painted = (colourAt: (x: number, y: number) => readonly number[]) => {
@@ -60,6 +62,7 @@ const rimSheet = () => {
 const made = (sheet: PuppetSheet, skeleton: Skeleton): Puppet =>
   Result.getOrThrow(puppetOf(sheet, skeleton));
 
+/** The distance from `p` to the segment `a`–`b`, worked here apart from the module's own. */
 const segmentGap = (
   p: readonly [number, number],
   a: readonly [number, number],
@@ -82,6 +85,7 @@ type Pt = readonly [number, number];
 
 const LIMB = ['upper', 'forearm', 'hand'];
 
+/** A limb on `joints` (an upper arm from the first, then a forearm and a hand), painted within `half` px of its bones on a `w` × `h` sheet. */
 const limb = (w: number, h: number, half: number, joints: ReadonlyArray<Pt>) => {
   const segments = joints.slice(1).map((tip, i) => [joints[i]!, tip] as const);
   const rgba = new Uint8Array(w * h * 4);
@@ -100,6 +104,7 @@ const limb = (w: number, h: number, half: number, joints: ReadonlyArray<Pt>) => 
   return { pixels: { width: w, height: h, rgba }, bones };
 };
 
+/** Each mesh vertex of part `k`, by `x,y`, with its amount on each bone by name. */
 const amountsOf = (p: Puppet, k: number) => {
   const { vertices, bones, amounts } = p.parts[k]!.mesh;
   const slots = bones.length / (vertices.length / 2);
@@ -116,6 +121,12 @@ const amountsOf = (p: Puppet, k: number) => {
   return out;
 };
 
+/**
+ * An arm half 8 px wide hanging from the shoulder (70, 30), its forearm folded up so the hand
+ * lies above the shoulder, where the shoulder's flap gives the body its whole share (its reach
+ * is 20 px), over a body box: a hand that rests on the chest. `alone` is the same arm with no
+ * flap and no body.
+ */
 const FOLDED = (() => {
   const N = 140;
   const arm = limb(N, N, 8, [
@@ -164,6 +175,14 @@ const FOLDED = (() => {
   };
 })();
 
+/**
+ * How fast the weights may change across the limb, per px, on `bone` and the bones it
+ * carries: the sum over the limb's joints from its first bone down to `bone` of each joint's
+ * steepest slope. A joint's weight is a smoothstep (slope at most 1.5 over its width) of how
+ * much nearer one bone than the other a vertex lies (slope at most 2), and its width is the
+ * blend (18 px, at most half the shorter bone) times 1 + the spread its rest angle α keeps
+ * on the parent's side, (1 - cos α) / 2, at least 0.05.
+ */
 const slopeTo = (p: Puppet, bone: string) => {
   const named = (name: string) => p.bones.find((b) => b.name === name)!;
   const length = (b: Puppet['bones'][number]) =>
@@ -181,6 +200,13 @@ const slopeTo = (p: Puppet, bone: string) => {
   return slope;
 };
 
+/**
+ * The worst change of a mesh edge of part 0 over the most a 60° turn of `bone`, either way,
+ * may change it. A vertex at `v` moves by h(v) of the turn's move about the bone's pivot c,
+ * h its amount on the bone and the bones it carries; so an edge e whose nearer end lies rho
+ * from c changes by at most 2 sin(30°) |e| (1 + slope rho), `slope` bounding h's. A weight
+ * that jumps tears past it.
+ */
 const worstTear = (p: Puppet, bone: string, slope: number) => {
   const c = p.bones.find((b) => b.name === bone)!.pivot;
   const rest = posedVertices(p, restPose(p))[0]!;
@@ -209,12 +235,14 @@ const worstTear = (p: Puppet, bone: string, slope: number) => {
   return worst;
 };
 
+/** `y0..y1` of x 8..56 painted `paint`, the rest clear: a part cut along a row. */
 const cut = (y0: number, y1: number, paint: ReadonlyArray<number>) => {
   const rgba = new Uint8Array(W * H * 4);
   for (let y = y0; y < y1; y++) for (let x = 8; x < 56; x++) rgba.set(paint, (y * W + x) * 4);
   return { width: W, height: H, rgba };
 };
 
+/** A skirt (front) and a shirt (behind) cut along y = 12, hard edges both sides. */
 const CUT_SHEET: PuppetSheet = {
   width: W,
   height: H,
@@ -226,6 +254,7 @@ const CUT_SHEET: PuppetSheet = {
 
 const LEAN = [{ name: 'lean', pivot: [32, 12] as const, tip: [32, 2] as const }];
 
+/** `CUT_SHEET`'s puppet on `skin`, and the least alpha it draws, still at scale 0.9, about the line. */
 const seamless = (skin: Skeleton['skin']) => {
   const p = made(CUT_SHEET, { bones: LEAN, skin, root: [0, 0] });
   const r = rasterOf(p, { numbers: {}, root: [0, 0], scale: 0.9 });
@@ -235,6 +264,7 @@ const seamless = (skin: Skeleton['skin']) => {
   return { p, min: Math.min(...alphas) };
 };
 
+/** At rest the skirt still hides what seals the shirt: `CUT_SHEET` drawn byte for byte. */
 const expectSheetAtRest = (p: Puppet) => {
   const rest = rasterOf(p, restPose(p)).rgba;
   for (let i = 0; i < W * H; i++) {
@@ -245,6 +275,7 @@ const expectSheetAtRest = (p: Puppet) => {
   }
 };
 
+/** `x0..x1` × `y0..y1` painted, each pixel its own colour, the rest clear. */
 const box = (x0: number, x1: number, y0: number, y1: number, blue: number) => {
   const rgba = new Uint8Array(W * H * 4);
   for (let y = y0; y < y1; y++)
@@ -252,6 +283,7 @@ const box = (x0: number, x1: number, y0: number, y1: number, blue: number) => {
   return { width: W, height: H, rgba };
 };
 
+/** Front to back: a hand beside the head, a head cut from the torso along y = 12, a veil above the head on its bone, the torso on another. */
 const HEADED = {
   hand: box(56, 60, 4, 12, 40),
   head: box(8, 56, 4, 12, 100),

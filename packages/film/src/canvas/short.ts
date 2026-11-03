@@ -29,6 +29,11 @@ import {
 import type { Probe, ProbeSink } from './probe.ts';
 import { verticalHook } from './vertical.ts';
 
+/**
+ * A scene of the film on the short's clock: its first frame moved back by the
+ * whole frames its span lies later in the film (`shift`, `resolveShort`), so
+ * its own clock reads the same.
+ */
 const retimed = (film: Film, short: ResolvedShort): ReadonlyArray<Placed<SceneSpec>> =>
   short.spans.map((span, index) => {
     const p = Result.getOrThrow(sceneOf(film.placed, span.scene));
@@ -36,6 +41,7 @@ const retimed = (film: Film, short: ResolvedShort): ReadonlyArray<Placed<SceneSp
     return { ...p, index, frame, start: secondsAt(frame, p.fps) };
   });
 
+/** Records the band's probe took, moved `dy` down onto the page, into `sink`. */
 const onPage = (from: ProbeSink, sink: ProbeSink, dy: number) => {
   for (const t of from.texts)
     sink.texts.push({
@@ -58,6 +64,11 @@ const onPage = (from: ProbeSink, sink: ProbeSink, dy: number) => {
     });
 };
 
+/**
+ * The page of `short` cut from `film`: the spans back to back, each frame the
+ * film's own at the film time under it. Its spans are checked against the
+ * film here: a scene, mark or cue the film lacks fails at load, naming it.
+ */
 export const createShort = (film: Film, declared: Short): Film => {
   const decoded = Schema.decodeSync(Short)(declared);
   const short = Result.getOrThrow(resolveShort(film.placed, decoded));
@@ -66,11 +77,13 @@ export const createShort = (film: Film, declared: Short): Film => {
   const k = pageScale(film.width);
   const placed = retimed(film, short);
   const { finish, short: style } = film.look;
+  /** The paper round the band: above it, and below it to the page's foot. */
   const below = band.top + band.height;
   const strip = Math.max(band.top, page.height - below);
 
   let assets:
     | {
+        /** Paper under the page's own vignette: nothing on it moves, so it is made once. */
         sheet: HTMLCanvasElement;
         grain: Grain;
         band: Offscreen;
@@ -92,10 +105,16 @@ export const createShort = (film: Film, declared: Short): Film => {
     return assets;
   };
 
+  /** The words below the band, phrase by phrase (`--no-captions` leaves them out). */
   const captions = burnedCaptions(shortPhrases(film.placed, short), style.caption, k);
 
+  /** The hook line, above the band, while it shows; recorded as the caption's when probed. */
   const hook = verticalHook(decoded.hook, style.hook, k, SHORT_LAYOUT);
 
+  /**
+   * The band's render options, rewritten each frame so the draw allocates
+   * nothing. The film's captions are the long film's; the short sets its own.
+   */
   const bandOptions: { captions: false } & {
     -readonly [K in keyof RenderOptions]: RenderOptions[K];
   } = {
@@ -180,6 +199,12 @@ export const createShort = (film: Film, declared: Short): Film => {
   };
 };
 
+/**
+ * The player's entries for a film's shorts, one page each under
+ * `<film>/shorts/<id>`: spread them, beside the films, into the pages the app
+ * mounts. A short's page runs its film's load in the page's scope, as the
+ * film's own page does, so what the film holds goes with that scope.
+ */
 export const shortPages = <E>(
   name: string,
   load: Effect.Effect<Film, E, Scope.Scope>,

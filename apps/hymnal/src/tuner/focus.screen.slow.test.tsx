@@ -1,5 +1,28 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noGlobals, effect/noFixedWaitInTests, eslint/no-await-in-loop -- a React screen test: the screen's forked Effect work and its renders settle on the host's event loop, so each frame is handed over in `act` and awaited one after another, each turn a `Bun.sleep(0)` yield, until its read lands (the needle's animation is the event waited on). */
 
+/**
+ * The tuner screen reads every frame through its focus: a voice in the room
+ * moves nothing on it, and a plucked string still reads at once. `Tuner` is
+ * mounted in a browser's document (`src/test/setup.ts`) over a phone that
+ * has granted the microphone and is active, and a stand-in ear that hands it
+ * frames of 2048 samples at 44.1 kHz, one by one, each read before the next
+ * comes, as the ear's hop gives them.
+ *
+ * Cases: in Auto, 3 s of talk leaves the reading at rest (`Listening`), no
+ * string's circle lit or tuned, the gauge unturned, and sets no string, so
+ * turning Auto off picks the lowest (`E2`); after that talk, a clean A pluck
+ * reads `A string, …` with the A circle lit within 6 frames of its onset;
+ * with D picked, 3 s of talk leaves the reading at rest and the needle at
+ * centre; and a low E under talk at 20 dB names `Low E` within 9 frames of
+ * its onset, and no frame names another string.
+ *
+ * Every signal is generated here, in memory, from a seed (the generators of
+ * `focus.test.ts`): a talker (`talk`: glottal pulses through three vowel
+ * formants, gliding syllables, fricatives and bursts, pauses), a plucked
+ * string (`pluck`), and a pluck under talk at a named SNR (`mix` with talk
+ * at `under(PLUCK_LEVEL, db)`). No sound plays, and no microphone opens.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { Effect, Option } from 'effect';
 import { act } from 'react';
@@ -10,8 +33,10 @@ import { animations } from '../test/reanimated';
 import { type Device, type Source, Tuner } from './Tuner';
 
 const FRAME = 2048;
+/** A pluck's RMS over its first 0.5 s. */
 const PLUCK_LEVEL = 0.1;
 
+/** xorshift32 in [0, 1). */
 type Draw = () => number;
 
 const draw = (seed: number): Draw => {
@@ -28,11 +53,14 @@ const draw = (seed: number): Draw => {
 
 const between = (next: Draw, low: number, high: number) => low + (high - low) * next();
 
+/** A standard normal draw (Box-Muller). */
 const gauss = (next: Draw) =>
   Math.sqrt(-2 * Math.log(Math.max(1e-12, next()))) * Math.cos(2 * Math.PI * next());
 
+/** A uniform draw of mean 0 and variance 1, cheaper than `gauss`: breath noise, the pitch's wander and room noise. */
 const spread = (next: Draw) => (2 * next() - 1) * Math.sqrt(3);
 
+/** -1 or 1, even odds. */
 const sign = (next: Draw) => {
   if (next() < 0.5) return -1;
   return 1;
@@ -40,6 +68,7 @@ const sign = (next: Draw) => {
 
 const bySemitones = (semitones: number) => 440 * 2 ** (semitones / 12);
 
+/** Standard tuning, low to high, from A4 = 440 Hz. */
 const STRINGS = [
   { id: 'E2', hz: bySemitones(-29) },
   { id: 'A2', hz: bySemitones(-24) },
@@ -49,6 +78,7 @@ const STRINGS = [
   { id: 'E4', hz: bySemitones(-5) },
 ] as const;
 
+/** RMS-normalise `signal` in place to `level` over the samples `counted` marks with 1. */
 const normalise = (signal: Float64Array, level: number, counted: Uint8Array) => {
   let sum = 0;
   let count = 0;
@@ -62,6 +92,7 @@ const normalise = (signal: Float64Array, level: number, counted: Uint8Array) => 
   return signal;
 };
 
+/** A two-pole resonator in place, centred each sample at `centre[i]` Hz. */
 const resonate = (signal: Float64Array, rate: number, centre: Float64Array, bandwidth: number) => {
   const r = Math.exp((-Math.PI * bandwidth) / rate);
   let y1 = 0;
@@ -82,6 +113,7 @@ const resonate = (signal: Float64Array, rate: number, centre: Float64Array, band
   return signal;
 };
 
+/** Peterson and Barney's (1952) ten vowels, adult men: F1, F2, F3 in Hz. */
 const VOWELS = [
   [270, 2290, 3010],
   [390, 1990, 2550],
@@ -96,9 +128,12 @@ const VOWELS = [
 ] as const;
 
 interface Talker {
+  /** The voice's mean fundamental, Hz (85 to 255). */
   readonly f0: number;
+  /** The least and most a syllable's pitch glides across its nucleus, semitones (0.5 to 8). */
   readonly minGlide: number;
   readonly maxGlide: number;
+  /** Each glottal cycle's period and amplitude vary by these shares (standard deviations). */
   readonly jitter: number;
   readonly shimmer: number;
 }
@@ -111,6 +146,7 @@ const talker = (f0: number): Talker => ({
   shimmer: 0.04,
 });
 
+/** A talk signal being written: the glottal source, the consonants' noise, the voiced samples and the three formants' centres. */
 interface Tract {
   readonly rate: number;
   readonly n: number;
@@ -123,6 +159,7 @@ interface Tract {
   readonly f3: Float64Array;
 }
 
+/** The glottis between syllables: where in its cycle, this cycle's period and amplitude shares, the vowel last voiced. */
 interface Glottis {
   phase: number;
   period: number;
@@ -130,6 +167,7 @@ interface Glottis {
   vowel: ReadonlyArray<number>;
 }
 
+/** A fricative (30 to 110 ms of noise), a burst (8 to 20 ms and a gap), or nothing, from sample `i`; the sample after it. */
 const consonant = (next: Draw, tract: Tract, i: number) => {
   const kind = next();
   if (kind < 0.45) {
@@ -149,12 +187,18 @@ const consonant = (next: Draw, tract: Tract, i: number) => {
   return i;
 };
 
+/** A Rosenberg glottal flow derivative at `phase` in [0, 1), open quotient 0.6. */
 const pulse = (phase: number) => {
   if (phase < 0.4) return 0.5 * Math.sin((Math.PI * phase) / 0.4);
   if (phase < 0.6) return -Math.sin((Math.PI * (phase - 0.4)) / 0.2);
   return 0;
 };
 
+/**
+ * A vowel nucleus of 80 to 280 ms from sample `i`, its pitch starting `start`
+ * semitones from the voice's mean and gliding up or down across it, with a slow
+ * wander, cycle jitter and shimmer; the sample after it.
+ */
 const nucleus = (
   next: Draw,
   tract: Tract,
@@ -193,6 +237,11 @@ const nucleus = (
   return i + length;
 };
 
+/**
+ * A phrase of 3 to 11 syllables from sample `i`, falling 0.5 to 3 semitones over
+ * it, each syllable accented -2 to +4 semitones, then a pause of 150 to 600 ms;
+ * the sample after the pause.
+ */
 const phrase = (next: Draw, tract: Tract, voice: Talker, glottis: Glottis, i: number) => {
   const syllables = 3 + Math.floor(next() * 9);
   const declination = between(next, -3, -0.5);
@@ -205,11 +254,18 @@ const phrase = (next: Draw, tract: Tract, voice: Talker, glottis: Glottis, i: nu
   return at + Math.floor(between(next, 0.15, 0.6) * tract.rate);
 };
 
+/** The formants' scale: ×1.17 for a voice above 160 Hz (women's and children's vocal tracts are shorter). */
 const formantScale = (f0: number) => {
   if (f0 > 160) return 1.17;
   return 1;
 };
 
+/**
+ * `seconds` of one talker at `rate`, starting 0 to 300 ms in: phrases of
+ * syllables, each nucleus a glottal pulse through three formant resonators at a
+ * vowel (×1.17 above 160 Hz) with breath noise, and its consonant's noise rung
+ * near 3.5 to 6.5 kHz. RMS `level` over the voiced samples.
+ */
 const talk = (next: Draw, rate: number, seconds: number, voice: Talker, level: number) => {
   const n = Math.floor(rate * seconds);
   const scale = formantScale(voice.f0);
@@ -239,20 +295,28 @@ const talk = (next: Draw, rate: number, seconds: number, voice: Talker, level: n
 };
 
 interface Pluck {
+  /** The string's pitch, Hz. */
   readonly hz: number;
+  /** The fundamental's decay time constant, seconds (0.8 to 3); partial k+1 decays 1 + 0.25k times faster. */
   readonly decay: number;
+  /** Inharmonicity B (0, or up to 1e-4): partial n sits at n·hz·√((1 + B n²)/(1 + B)). */
   readonly stiffness: number;
+  /** The plucking point along the string (0.08 to 0.3). */
   readonly position: number;
+  /** Cents sharp at the attack (0 to 8), settling with τ 0.1 s. */
   readonly attack: number;
+  /** A peg turn, cents a second (0 for none), from `turnFrom` seconds after the onset. */
   readonly turn: number;
   readonly turnFrom: number;
 }
 
+/** B up to 1e-4 when stiff, else 0. */
 const stiffnessOf = (next: Draw, stiff: boolean) => {
   if (stiff) return between(next, 0, 1e-4);
   return 0;
 };
 
+/** A pluck at `hz`, harmonic or stiff, its other parameters drawn from their domains. */
 const pluckOf = (next: Draw, hz: number, stiff: boolean): Pluck => ({
   hz,
   decay: between(next, 0.8, 3),
@@ -263,8 +327,15 @@ const pluckOf = (next: Draw, hz: number, stiff: boolean): Pluck => ({
   turnFrom: 0,
 });
 
+/** Samples a partial's turn is held for; the attack and a peg turn move it well under a hundredth of a cent in that time. */
 const BLOCK = 16;
 
+/**
+ * `n` samples at `rate` of a string plucked at sample `at`, silence before it:
+ * partials up to 5 kHz (at most 14), each from the plucking point, a 4 ms pick
+ * noise. RMS `level` over its first 0.5 s. Each partial is a phasor turned and
+ * decayed each sample.
+ */
 const pluck = (next: Draw, rate: number, n: number, at: number, p: Pluck, level = PLUCK_LEVEL) => {
   const count = Math.max(1, Math.min(14, Math.floor(5000 / p.hz)));
   const partials = Array.from({ length: count }, (_, k) => {
@@ -305,23 +376,33 @@ const pluck = (next: Draw, rate: number, n: number, at: number, p: Pluck, level 
   return normalise(out, level, counted);
 };
 
+/** The level `db` under `level`: talk under a pluck at an SNR of `db`. */
 const under = (level: number, db: number) => level / 10 ** (db / 20);
 
+/** `signal` with `other` added sample by sample, `signal`'s length. */
 const mix = (signal: Float64Array, other: Float64Array) =>
   signal.map((sample, i) => sample + (other[i] ?? 0));
 
+/** The frames the ear gives: 2048 samples, one after another. */
 const framesOf = (signal: Float64Array) =>
   Array.from({ length: Math.floor(signal.length / FRAME) }, (_, k) =>
     Float32Array.from(signal.subarray(k * FRAME, (k + 1) * FRAME)),
   );
 
+/** `[item]` when `holds`, else none: a failure to report. */
 const when = <A,>(holds: boolean, item: A): ReadonlyArray<A> => {
   if (holds) return [item];
   return [];
 };
 
+/** The cases' base seed. */
 const SEED = 20_261_103;
 
+/**
+ * Case `n`, draw `i`: `SEED + 10 000 n + i` mixed through murmur3's
+ * finaliser, as `focus.property.slow.test.ts` mixes its seeds: xorshift32's
+ * first draws from nearby seeds lie close together.
+ */
 const seedOf = (n: number, i: number) => {
   let x = (SEED + 10_000 * n + i) >>> 0;
   x ^= x >>> 16;
@@ -332,8 +413,10 @@ const seedOf = (n: number, i: number) => {
   return x >>> 0;
 };
 
+/** The ear's rate in these cases. */
 const RATE = 44_100;
 
+/** 3 s of one talker, the fundamental drawn from `low` to `high` Hz, at 0.02 to 0.2 RMS. */
 const talkAlone = (seed: number, low: number, high: number) => {
   const next = draw(seed);
   const f0 = between(next, low, high);
@@ -341,6 +424,7 @@ const talkAlone = (seed: number, low: number, high: number) => {
   return { what: { seed, f0, level }, frames: framesOf(talk(next, RATE, 3, talker(f0), level)) };
 };
 
+/** A clean pluck of the A string, 30 cents either side, its onset within the first frame; 1 s of it. */
 const cleanA = (seed: number) => {
   const next = draw(seed);
   const by = between(next, -30, 30);
@@ -352,6 +436,7 @@ const cleanA = (seed: number) => {
   };
 };
 
+/** A low E under one talker at 20 dB, plucked 0.5 s into the talk, then 1.2 s more; the frame its onset falls in. */
 const lowEUnderTalk = (seed: number) => {
   const next = draw(seed);
   const p = pluckOf(next, STRINGS[0].hz, next() < 0.5);
@@ -369,6 +454,7 @@ const lowEUnderTalk = (seed: number) => {
   };
 };
 
+/** The phone around the screen: the microphone granted, the app active. */
 const granted: Device = {
   readPermission: Effect.succeed('granted'),
   askPermission: Effect.succeed('granted'),
@@ -377,6 +463,7 @@ const granted: Device = {
   onActive: () => () => {},
 };
 
+/** An ear that starts at once at `RATE` and hands the screen each frame a test gives it. */
 const ear = () => {
   const listeners = new Set<(frame: Float32Array) => void>();
   const starts: Array<number> = [];
@@ -399,13 +486,16 @@ const ear = () => {
   return { source, starts, emit };
 };
 
+/** One turn of the event loop, inside `act`: the screen's forked work runs, and its renders land. */
 const tick = () =>
   act(async () => {
     await Bun.sleep(0);
   });
 
+/** The most turns a frame's read is waited for; it takes one. */
 const TURNS = 8;
 
+/** The tuner screen mounted over a granted phone and the stand-in ear, listening; it unmounts when the test's `using` ends. */
 const mount = async () => {
   const { source, starts, emit } = ear();
   const host = document.createElement('div');
@@ -418,6 +508,7 @@ const mount = async () => {
   await tick();
   return {
     host,
+    /** Hands the screen one frame, as the ear does, and waits for its read (the needle is set on each). */
     feed: async (frame: Float32Array) => {
       const before = animations.length;
       act(() => emit(frame));
@@ -438,6 +529,7 @@ const byTestId = (host: HTMLElement, id: string) =>
 
 const circle = (host: HTMLElement, id: string) => byTestId(host, `tuner-string-${id}`);
 
+/** A left click, as a tap reaches a pressable on the web. */
 const click = (element: Element) =>
   act(
     () =>
@@ -446,12 +538,18 @@ const click = (element: Element) =>
       ),
   );
 
+/** Whether a string's circle is filled: lit, as the picked string or the string heard in Auto. */
 const filled = (host: HTMLElement, id: string) =>
   Option.fromNullishOr(circle(host, id).firstElementChild).pipe(
     Option.flatMap((inner) => Option.fromNullishOr(inner.getAttribute('style'))),
     Option.exists((style) => style.includes('background-color')),
   );
 
+/**
+ * What the screen shows of the frames: the reading's words, its name and
+ * note, the hint, the circles lit and tuned, and every turn drawn on it (the
+ * gauge's ticks and its needle, `rotate(…)`).
+ */
 const screenOf = (host: HTMLElement) => {
   const reading = byTestId(host, 'tuner-reading');
   return {
@@ -471,6 +569,7 @@ const screenOf = (host: HTMLElement) => {
 
 type Screen = ReturnType<typeof screenOf>;
 
+/** The screen at rest in Auto, listening, its turns aside: nothing heard, nothing lit. */
 const AUTO_REST: Omit<Screen, 'turns'> = {
   words: 'Listening',
   name: 'Listening',
@@ -480,6 +579,7 @@ const AUTO_REST: Omit<Screen, 'turns'> = {
   tuned: [],
 };
 
+/** The screen with `id` picked, listening, at rest, its turns aside: the string's name, its circle lit, nothing heard. */
 const pickedRest = (id: string, name: string): Omit<Screen, 'turns'> => ({
   words: 'Listening',
   name,
@@ -489,9 +589,11 @@ const pickedRest = (id: string, name: string): Omit<Screen, 'turns'> => ({
   tuned: [],
 });
 
+/** The frames whose screen differs from `rest`, each with what it showed. */
 const awayFromRest = (seen: ReadonlyArray<Screen>, rest: Screen) =>
   seen.flatMap((screen, frame) => when(!Bun.deepEquals(screen, rest), { frame, screen }));
 
+/** Feeds each frame and reads the screen after its read. */
 const play = async (
   app: { readonly host: HTMLElement; readonly feed: (frame: Float32Array) => Promise<void> },
   frames: ReadonlyArray<Float32Array>,
@@ -504,6 +606,7 @@ const play = async (
   return seen;
 };
 
+/** The first of `seen` (1 from its start) that shows `string` named `name`, lit, its words `<name> string, …`; Infinity when none does. */
 const firstNaming = (seen: ReadonlyArray<Screen>, string: string, name: string) => {
   const k = seen.findIndex(
     (screen) =>
@@ -515,6 +618,7 @@ const firstNaming = (seen: ReadonlyArray<Screen>, string: string, name: string) 
   return k + 1;
 };
 
+/** The frames of `seen` that name a string other than `name`, or light another circle than `string`. */
 const namingOther = (seen: ReadonlyArray<Screen>, string: string, name: string) =>
   seen.flatMap((screen, frame) =>
     when(

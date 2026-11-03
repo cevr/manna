@@ -6,6 +6,7 @@ import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { TEST_GIT as GIT } from './testing.js';
 
 const fixture = (dir: string) => {
+  /** A command's stdout in the fixture, whatever its exit code (the merge of main conflicts). */
   const sh = (command: string, args: ReadonlyArray<string>) =>
     Effect.flatMap(ChildProcessSpawner, (spawner) =>
       spawner.string(ChildProcess.make(command, args, { cwd: dir, forceKillAfter: '5 seconds' })),

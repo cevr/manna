@@ -47,10 +47,13 @@ type Pt = readonly [number, number];
 type Box = readonly [number, number, number, number];
 type Numbers = Readonly<Partial<Record<TracedKnob, number>>>;
 
+/** A traced composition, as `tracedFigure` gives it. */
 type Composed = ReturnType<typeof tracedFigure>;
 
+/** The film's paper, as its page lays it (`film.ts`). */
 export const PAPER = { base: palette.paper, tone: palette.paperTone, seed: 1844 } as const;
 
+/** A paper's colours: its own, its shade and its light. */
 const coloursOf = (
   ...ps: ReadonlyArray<{ readonly color: string; readonly shade?: string; readonly light?: string }>
 ) =>
@@ -60,6 +63,17 @@ const coloursOf = (
     ...(p.light === undefined ? [] : [p.light]),
   ]);
 
+/**
+ * The sower's colour classes, each sample the 3 by 3 median of his kept
+ * views' own pixels (`cast-sheet/views/<view>.png`, x,y in the view): his
+ * linen tunic (front 127,420 127,480 35,300 127,230 100,500; poses-1 120,215
+ * 220,450 330,250), his olive mantle, lit and shaded (front 70,300 75,370
+ * 160,285 170,300 185,260 200,300; poses-1 185,300 275,300), his walnut bag
+ * and strap (front 195,380 180,400; poses-1 285,410 300,390 320,400 225,240
+ * 250,300) and his skin (front 100,95 128,70 30,360 228,365 160,100; poses-1
+ * 30,210 360,360 200,130 225,110). His belt (#684430) is darker than luma 90,
+ * so it reads as his line and is no class.
+ */
 const SOWER_CLASSES = {
   linen: ['#dfc6ab', '#d8bfa4', '#ead0b1', '#e3c9a9', '#e6cbaa', '#dfbc97', '#e0bc96', '#dfbc98'],
   olive: ['#787456', '#797454', '#736f52', '#747055', '#645f58', '#615a52', '#8e7b4e', '#88784d'],
@@ -77,6 +91,22 @@ const SOWER_CLASSES = {
   ],
 } as const;
 
+/**
+ * The feast mother's colour classes, each sample the 3 by 3 median of her
+ * kept views' own pixels (`cast-sheet/views/<view>.png`, x,y in the view):
+ * her dusty-blue robe and sleeves, lit and shaded (front 60,300 40,450 80,520
+ * 150,350 160,450 120,500; back 108,450 60,450 160,450; poses-1 30,380 280,380
+ * 280,450; poses-3 100,600 230,650 120,300 260,550), her cream veil with the
+ * baby's swaddle, and the veil's warm shade (front 28,200 45,140 190,220
+ * 60,170 170,170; back 108,150 60,200 150,200; poses-1 100,350 170,440
+ * 300,240; poses-3 200,350 250,340 180,340 270,330 70,250 60,280), and her
+ * skin with the baby's (front 100,120 120,110 28,380 186,375 70,100; poses-3
+ * 250,240 150,150 225,410). The veil and the swaddle are one class: their
+ * colours lie within a few units of each other (#f8e4c7 against #f6ddbd), so
+ * two classes would split one colour. Her hair (#291309) is darker than luma
+ * 90, so it reads as her line and is no class; the clay cup of poses-1 is
+ * too small a patch for a class of its own and counts as its nearest.
+ */
 const FEAST_MOTHER_CLASSES = {
   blue: [
     '#5f94b9',
@@ -118,6 +148,15 @@ const FEAST_MOTHER_CLASSES = {
   skin: ['#fec086', '#fdb981', '#fdb77d', '#fdb67c', '#fdc084', '#febb82', '#feb880', '#ef9f70'],
 } as const;
 
+/**
+ * The feast's guest man's colour classes, read off his kept poses sheet's
+ * poses-1 (view px, measured): his walnut mantle (130,350 290,350 125,420
+ * 285,420 and its lower ends 45,600 365,600), his skin (face 205,200
+ * 150,190 260,190, neck 206,285, hands 85,525 325,525, feet 100,705
+ * 300,705), his headcloth's indigo band (150,70 205,60 260,72) and his
+ * stool's wood (15,585 392,585 22,650 388,650). His white robe, sleeves and
+ * headcloth are the paper's own colour (254,247,229), so they are no class.
+ */
 const FEAST_GUEST_MAN_CLASSES = {
   walnut: ['#bf855e', '#b57955', '#b47853', '#b37650', '#ac7d5d', '#a26148'],
   skin: ['#fec190', '#febe8e', '#febc8d', '#fec092', '#fdbf8e', '#fdbd8e', '#fec594', '#fdc18f'],
@@ -125,12 +164,40 @@ const FEAST_GUEST_MAN_CLASSES = {
   wood: ['#9f552a', '#924a26', '#a35429', '#9a5029'],
 } as const;
 
+/**
+ * The feast's guest woman's colour classes, read off her kept poses sheet's
+ * poses-1 (view px, measured): her olive veil and mantle (the veil 120,80
+ * 60,250 325,250, its drape 345,330, the mantle 118,380 262,380 and over her
+ * arms 60,420), her skin (face 191,200 150,160, neck 191,290, feet 95,672
+ * 290,672; her hands are her cheek's colour) and her stool's wood (its lit edge 12,545, planks 20,550
+ * 365,550, legs 22,640 30,595). Her hair (105,62,31 at 150,100) and her
+ * sandals are darker than luma 90, so they read as her line; her cream robe
+ * and cuffs are near the paper's own colour (254,248,230), so they are no
+ * class.
+ */
 const FEAST_GUEST_WOMAN_CLASSES = {
   olive: ['#a08e55', '#81764d', '#6a6444', '#676141', '#776e46', '#7f774d', '#83794e'],
   skin: ['#febe84', '#fdbd82', '#febc80', '#febb80', '#fdbc81'],
   wood: ['#bc6830', '#985128', '#914d28', '#9a532a', '#844626'],
 } as const;
 
+/**
+ * The villagers' colour classes, read off their kept poses sheet (the child's
+ * poses-5, the toddler's poses-1 and poses-2; x,y in the view's crop): their
+ * linen tunic and its warm shade (child 156,281 199,140 120,290 104,326
+ * 87,202; toddler poses-1 177,196 156,146 145,128 105,138 87,178, poses-2
+ * 80,194 117,154 60,221 65,146), their skin (child 59,271 97,52 95,91 70,95
+ * 124,117; toddler poses-1 227,115 104,53 35,52, poses-2 126,44 86,43 46,82),
+ * the lavender of their ground shadow (child 112,386 109,387 119,385 189,384
+ * 195,385; toddler poses-2 101,241 80,240 68,239 160,230) and their sandals'
+ * lit leather (child 133,370 131,369 143,354; toddler poses-1 216,233 215,233
+ * 214,267, poses-2 30,203 132,207 41,209). Their hair (#341c15, #312218) is
+ * darker than luma 90, so it reads as their line and is no class. The
+ * shadow's pale feathered edge is not a sample: the cool white halo round
+ * their outline (#d9d1c5 to #f2f0f1, which the un-matte clears) lies nearer
+ * it than the linen, so samples there would class that halo as shadow
+ * (measured: 58 px on the toddler's poses-1, which has no ground shadow).
+ */
 const CHILD_CLASSES = {
   linen: ['#cdaca4', '#d2b4aa', '#dbbca7', '#f0d2af', '#f4d7b1'],
   skin: ['#ea976e', '#f9a873', '#faac77', '#fdae76', '#fdb37d'],
@@ -154,6 +221,20 @@ const TODDLER_CLASSES = {
   sandal: ['#b36243', '#b56646', '#b36a49', '#965225', '#a5562b', '#a86942'],
 } as const;
 
+/**
+ * The IDEA villagers' colour classes, each sample the 3 by 3 median of their
+ * kept views' own pixels (`cast-sheet/views/<view>.png`, x,y in the view):
+ * their linen, the grown villager's headcloth and tunic with the baby's wrap,
+ * lit and in its warm shade (poses-3 181,13 191,9 189,11 213,19 145,25
+ * 225,165; poses-4 75,123 67,117 123,121; poses-6 109,9 93,9 139,19 141,19
+ * 133,21), the linen's far side turned toward violet with the baby's violet
+ * ground shadow (poses-3 215,163 209,163 215,169; poses-4 107,117 51,195
+ * 9,191; poses-6 133,151 177,205 155,299), and their skin, lit and shaded
+ * (poses-3 199,59 183,59 201,59; poses-4 87,23 109,19 85,19 101,21; poses-6
+ * 101,55 91,55 109,55). Every view holds all three. Their hair, beard and the
+ * sandals' leather lie at or under luma 90, so they read as the line and are
+ * no class; the baby's small brown tuft counts as its nearest.
+ */
 const IDEA_VILLAGERS_CLASSES = {
   linen: [
     '#f1d3ae',
@@ -196,6 +277,25 @@ const IDEA_VILLAGERS_CLASSES = {
   ],
 } as const;
 
+/**
+ * Paul's colour classes, each sample the 3 by 3 median of his kept heads
+ * views' own pixels (`library/cast/paul/cast-sheet/views/heads-<n>.png`,
+ * x,y in the view, heads-1 to heads-6 in order). Every view holds all four.
+ * Line is luma under 90 (his outline and his eyes), so it is no class.
+ * - `skin`: his face and bald crown, lit, in shade, and the crown's light
+ *   (125,13 153,17 107,11; 109,11 123,19 79,15; 109,11 137,25 95,13; 129,13
+ *   157,29 119,13; 131,13 147,21 99,13; 133,13 163,31 113,13).
+ * - `mantle`: his slate-blue cloak over the shoulders, lit and its far side
+ *   turned toward violet (61,247 179,221; 59,247 193,219; 65,255 173,227;
+ *   63,247 181,239; 59,257 181,241; 69,251 189,247).
+ * - `tunic`: the linen V at his collar, lit and in shade (81,261 133,267;
+ *   101,253 137,261; 79,267 129,269; 83,265 133,275; 83,263 139,277; 83,259
+ *   103,275).
+ * - `hair`: his grey-brown beard and the brown hair at the sides of his head
+ *   (57,157 193,135; 83,183 17,109; 41,165 31,45; 53,153 81,17; 57,149
+ *   49,137; 53,139 109,11). Both lie above luma 100, so they are not line, and
+ *   without their own class each pixel would count as the cloak's or skin's.
+ */
 const PAUL_CLASSES = {
   skin: [
     '#e8ae78',
@@ -261,6 +361,25 @@ const PAUL_CLASSES = {
   ],
 } as const;
 
+/**
+ * Jeremiah's colour classes, each sample the 3 by 3 median of his kept heads
+ * views' own pixels (`library/cast/jeremiah/cast-sheet/views/heads-<n>.png`,
+ * x,y in the view, heads-1 to heads-6 in order). Every view holds all three.
+ * Line is luma under 90 (his outline, his eyes and his dark beard), so it is
+ * no class. His paper is 252,243,226; the headcloth's lightest edge lies
+ * within 15 of it, so no sample is taken there.
+ * - `linen`: his headcloth, lit and on its shaded hanging side, and the linen
+ *   V of his tunic at the collar (133,15 185,90 125,280; 121,15 185,90
+ *   125,280; 115,17 175,60 125,280; 123,15 185,90 125,280; 133,15 185,90
+ *   125,280; 113,15 185,90 125,280).
+ * - `skin`: his face, lit and in shade (77,79 123,91; 67,113 123,107; 61,75
+ *   127,97; 117,79 160,95; 117,69 160,95; 115,79 160,95).
+ * - `olive`: the grey-olive band round his headcloth, in shade and lit, and
+ *   his robe over the shoulders, lit and in shade. Band and robe are one
+ *   paint, so they are one class (95,39 79,47 75,229 197,249; 151,57 109,65
+ *   79,222 201,236; 115,43 91,39 71,228 169,240; 129,43 75,53 77,226 201,248;
+ *   119,35 91,35 67,232 201,250; 105,47 85,43 67,232 201,252).
+ */
 const JEREMIAH_CLASSES = {
   linen: [
     '#e3cdaf',
@@ -324,6 +443,12 @@ const JEREMIAH_CLASSES = {
   ],
 } as const;
 
+/**
+ * Each member's colour classes for his fit rows (`film concept render`): a
+ * class's samples on his kept sheets, and the papers and tones that paint it
+ * on his rigs. His hair and its brown read as his line (darker than luma
+ * 90), so it is no class.
+ */
 export const FIT_CLASSES = {
   'lead-feast': {
     cream: {
@@ -416,36 +541,85 @@ export const FIT_CLASSES = {
   },
 } as const;
 
+/** Every kept sheet of many views is drawn 1536 by 1024. */
 const SHEET = { width: 1536, height: 1024 } as const;
 
+/** A kept single drawing, one figure on the page, is drawn 1024 by 1536. */
 const SINGLE = { width: 1024, height: 1536 } as const;
 
+/** The series lead on his turnaround: his front, hair to soles 440 units (`lead.ts`). */
 const LEAD_TURNAROUND = 1 / LEAD.SHEETS.turnaround.scale;
 
+/** The series lead on his single-1: his front, bottle raised, hair (row 109) to soles (row 1382, his kept box) 1273 rows, 440 units. */
 const LEAD_SINGLE = (1382 - 109) / 440;
 
+/** The sower on his turnaround: his front's ink, crown to soles, is 549 rows, 440 units. */
 const SOWER_TURNAROUND = 549 / 440;
 
+/** The sower on his poses: poses-4, his front standing, crown to soles 586 rows, 440 units. */
 const SOWER_POSES = 586 / 440;
 
+/** The villagers on their one poses sheet: its view 6, the grown villager standing at rest, ink crown to soles 516 rows (250 to 765), 440 units. */
 const VILLAGER_POSES = 516 / 440;
 
+/** The feast mother on her turnaround: her front's ink, crown to soles, is 600 rows (194 to 793), 440 units. */
 const FEAST_MOTHER_TURNAROUND = 600 / 440;
 
+/** The feast mother on her poses: poses-3, her front standing with the baby, ink crown to soles 814 rows (97 to 910), 440 units. */
 const FEAST_MOTHER_POSES = 814 / 440;
 
+/**
+ * The feast's guest man on his poses, which seat him only: the table seats
+ * his face (its skin 161 px wide on his neutral view, `scenes/table.ts`) as
+ * wide as the lead's (206 px on the lead's single sheet), so his sheet px per
+ * unit are the lead's single's times 161 / 206; seated, crown to soles (736
+ * rows), he is about 325 units.
+ */
 const FEAST_GUEST_MAN_POSES = (LEAD_SINGLE * 161) / 206;
 
+/**
+ * The feast's guest woman on her poses, which seat her only: the table seats
+ * her face (its skin 162 px wide on her neutral view, `scenes/table.ts`) as
+ * wide as the lead's (206 px on the lead's single sheet), so her sheet px per
+ * unit are the lead's single's times 162 / 206; seated, crown to soles (696
+ * rows), she is about 306 units.
+ */
 const FEAST_GUEST_WOMAN_POSES = (LEAD_SINGLE * 162) / 206;
 
+/**
+ * The filler bases on their poses sheet: poses-1, the grown man standing at
+ * rest, ink crown to soles 730 rows (141 to 871, his kept box), 440 units as
+ * the IDEA villagers' grown villager. Their puppets are busts cut at the
+ * waist, drawn smaller for a crowd by each draw's scale.
+ */
 const FILLER_BASES_POSES = (871 - 141) / 440;
 
+/** The IDEA villagers on their poses sheet: poses-6, the grown villager standing at rest, ink crown to soles 512 rows (248 to 759, his kept box), 440 units. */
 const IDEA_VILLAGERS_POSES = 512 / 440;
 
+/** The IDEA villagers on their single-15: the cup-raising man's front, ink crown to soles 1129 rows (274 to 1403, his kept box), 440 units. */
 const IDEA_VILLAGERS_SINGLE = (1403 - 274) / 440;
 
+/**
+ * The bust scale of a heads sheet, read off the lead's: his busts have no
+ * feet, so it is 1.13 of his turnaround's, the mean of his eyes' spacing (52
+ * px on heads-4 against 46.5 on the turnaround's front) and his head's width
+ * across his ears at his eyes' row (185 px against 162).
+ *
+ * Paul's heads sheet takes it too: his busts have no rig, so no view of his is
+ * a canon anchor, and his sheet shares the lead's bust framing (each bust
+ * crown to cut 297 to 313 rows). Jeremiah's heads sheet takes it as well: his
+ * busts have no rig either, so no view of his is a canon anchor. The cut-out
+ * page reads only the sheet's size.
+ */
 const HEADS_BUST = LEAD_TURNAROUND * 1.13;
 
+/**
+ * Each member's sheets: their size and one scale, sheet pixels a canon unit,
+ * each read off the sheet's anchor view. The lead's poses: poses-5, his
+ * front at rest, hair (row 225) to soles (row 829) 440 units. His heads,
+ * Paul's and Jeremiah's: the bust scale (`HEADS_BUST`).
+ */
 export const SHEETS = {
   'lead-feast': {
     turnaround: { ...SHEET, scale: LEAD_TURNAROUND },
@@ -488,6 +662,7 @@ export const SHEETS = {
   },
 } as const;
 
+/** A still pose: the breath at rest, the paper's boil at its first tick, the numbers given. */
 const still = (numbers: Numbers) => ({
   timelines: [
     ['breath', 0],
@@ -496,27 +671,40 @@ const still = (numbers: Numbers) => ({
   numbers,
 });
 
+/** `p` turned `by` radians about the origin. */
 const turned = ([x, y]: Pt, by: number): Pt => [
   x * Math.cos(by) - y * Math.sin(by),
   x * Math.sin(by) + y * Math.cos(by),
 ];
 
+/** A hand the sheet lays at a point, sheet pixels: which arm's, and where its elbow bends (`armReach`; at rest's side unless given). */
 type Reach = readonly ['near' | 'far', Pt] | readonly ['near' | 'far', Pt, 'out'];
 
+/** One kept view as the render draws it. */
 interface ViewSpec {
   readonly member: 'lead-feast';
+  /** A sheet's: the rig draws no single drawing. */
   readonly kind: Exclude<keyof (typeof SHEETS)['lead-feast'], 'single'>;
   readonly box: Box;
+  /** Where the rig's origin (his feet) stands, sheet pixels. */
   readonly at: Pt;
   readonly composed: Composed;
   readonly rig: CastView['rig'];
   readonly hand: CastView['rig'];
+  /** His lean, radians, and the rest of his numbers (his face's, his head's). */
   readonly lean: number;
   readonly numbers: Numbers;
+  /** The hands the sheet lays away from his sides: each arm reaches there. */
   readonly reach: ReadonlyArray<Reach>;
   readonly props: ReadonlyArray<CastProp>;
 }
 
+/**
+ * A view: its rig in its kept box at `at`, held to that box of its sheet
+ * (`concept`), each reaching arm's numbers those that take its hand to where
+ * the sheet lays it (its lean undone first, since the host leans the hand
+ * after), its two circle hands at its cuffs.
+ */
 const view = (v: ViewSpec): CastView => {
   const scale = SHEETS[v.member][v.kind].scale;
   const reached = Object.fromEntries(
@@ -548,6 +736,7 @@ const view = (v: ViewSpec): CastView => {
   };
 };
 
+/** A traced view's place on its own sheet: its kept box and its feet. */
 interface Placed {
   readonly BOX: Box;
   readonly FEET: Pt;
@@ -555,6 +744,7 @@ interface Placed {
 
 const LEAD_HAND = RIGS.leadFeastHandProp;
 
+/** A turnaround view of the lead: his rig at rest, standing where the sheet draws him. */
 const turnaround = (t: Placed, composed: Composed, rig: CastView['rig']): CastView =>
   view({
     member: 'lead-feast',
@@ -570,6 +760,7 @@ const turnaround = (t: Placed, composed: Composed, rig: CastView['rig']): CastVi
     props: [],
   });
 
+/** A pose of the lead on his poses sheet: his feet at `at` on its ground line. */
 const pose = (
   box: Box,
   at: Pt,
@@ -579,11 +770,17 @@ const pose = (
 ): CastView =>
   view({ member: 'lead-feast', kind: 'poses', box, at, composed, rig, hand: LEAD_HAND, ...p });
 
+/** A traced table's eyes' middle, sheet pixels. */
 const eyesOf = (marks: { readonly eyes: readonly [Pt, Pt] }): Pt => [
   (marks.eyes[0][0] + marks.eyes[1][0]) / 2,
   (marks.eyes[0][1] + marks.eyes[1][1]) / 2,
 ];
 
+/**
+ * A bust of the lead on his heads sheet: his rig with its eyes' middle where
+ * the sheet draws it (`eyes`, sheet pixels), his feet that far below at the
+ * heads sheet's scale, his face's numbers `numbers`.
+ */
 const bust = (
   box: Box,
   eyes: Pt,
@@ -609,11 +806,31 @@ const bust = (
   });
 };
 
+/**
+ * A probe across a feature review-art-3 measured (`review-art-3-receipts/
+ * probes-155.txt`), crop pixels, at the review's own line and darkness: his
+ * chin's line down x 120 (luma under 135), his near ear's outer edge along
+ * row 155 (under 90).
+ */
 const CHIN_PROBE = { name: 'chin', along: 'col', at: 120, from: 150, to: 260, dark: 135 } as const;
 const EAR_PROBE = { name: 'earLeft', along: 'row', at: 155, from: 20, to: 80, dark: 90 } as const;
 
+/**
+ * Why a bust's rows are held to the busts' bars: review-art-3's b2, kept
+ * ready on render 155. Each bust is his turnaround rig at the heads sheet's
+ * scale (7 to 8% wide, his shoulders narrow, his sash at his neck, his cream
+ * garment read teal), not a bust rig of its own: a follow-up.
+ */
 const BUST_WHY = "review-art-3 b2: the bust is his turnaround rig, not a bust rig (r155's values)";
 
+/**
+ * The busts' bars, each just past the widest the four busts review-art-3
+ * kept ready read on render 155 (heads-1, 2, 4 and 5): his head band's edge
+ * 8.17 (heads-2), its turn 22 (heads-2), his body's edge 10.18 (heads-1),
+ * the overlap 0.81 (heads-5), thin paper 82 px (heads-5's chevrons), his
+ * cream 0.01 (heads-5). A bust's own defect is its probe's: heads-3's frown,
+ * heads-6's chin and ear.
+ */
 const BUST_BARS = {
   'silhouette.edge/head': { max: 9, why: BUST_WHY },
   'outline.turns/head': { max: 23, why: BUST_WHY },
@@ -623,14 +840,24 @@ const BUST_BARS = {
   'class.iou/cream': { min: 0, why: BUST_WHY },
 } as const;
 
+/** Why the front's near ear is held to no part bar: the render lays its band to the ear's lobe alone, so the ear's skin runs on into his cheek under it and is his face's region (r155, keep-ready in review-art-3; the band's place is held by B1's `earLeft` probe on the busts). */
 const NEAR_EAR_WHY =
   "the render's near ear runs on into his cheek under its band, so it is his face's region (r155; review-art-3 B1 kept the band)";
 
+/** Why the three-quarter left's near hand is held looser: the house draws a hand as a whole circle (CRAFT, circle hands) where the sheet hides its far side behind his sleeve's shade. */
 const CIRCLE_HAND_WHY =
   'a circle hand (CRAFT) over the hand the sheet half hides in shade (r155 0.5 and 5.78; review-art-3 kept the view)';
 
+/** A view's own fit: its labels, its probes and its bars, each with why (`CastView.fit`). */
 type ViewFit = NonNullable<CastView['fit']>;
 
+/**
+ * The lead's views' own fits, by kind and view: the busts' bars and probes,
+ * each pose's bars where review-art-3 kept it ready with a difference he is
+ * shown (its value on render 155 just inside), and the probes on what
+ * review-art-3 measured wrong (poses-3's seat and chest fold, heads-3's
+ * frown, heads-6's chin and ear).
+ */
 const LEAD_FIT = {
   turnaround: {
     front: {
@@ -743,10 +970,13 @@ const LEAD_FIT = {
   },
 } satisfies Readonly<Record<string, Readonly<Record<string, ViewFit>>>>;
 
+/** `view` with its own fit (`CastView.fit`). */
 const fitted = (fit: ViewFit, view: CastView): CastView => ({ ...view, fit });
 
+/** A wince: his eyes squeezed shut as `>` `<`, his brows knit, his mouth a wavering line. */
 const WINCE: Numbers = { wince: 1, eyes: 0, mouthLine: 0, browY: -5, browTilt: -0.5 };
 
+/** Each member's kept views, by kind and view name, as the render draws them. */
 export const CAST = castTable({
   'lead-feast': {
     turnaround: {
@@ -931,6 +1161,13 @@ export const CAST = castTable({
   },
 });
 
+/**
+ * The views a member has a puppet for (`film concept render --figure
+ * cutout`): each kept view his part sheet's puppet at rest (`own`), standing
+ * where the kept view stands, and each pose view his fitted puppet
+ * (`fitted`), held to the same fit rows as his rig's view. `CAST` is the
+ * rigs' table, unchanged beside it.
+ */
 export const CUTOUT = cutoutTable({
   'lead-feast': {
     turnaround: {
@@ -1041,6 +1278,7 @@ export const CUTOUT = cutoutTable({
   },
 });
 
+/** Each member's eases (`film concept ease`): the lead's bottle raise, drawn from keys. */
 export const EASES = {
   'lead-feast': { raise: LEAD_RAISE },
 };

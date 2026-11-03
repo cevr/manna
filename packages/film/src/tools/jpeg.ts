@@ -4,8 +4,10 @@ import type { VideoSample } from 'mediabunny';
 import * as NodeAv from 'node-av';
 import { MediaFailed } from '../core/refusals.ts';
 
+/** MJPEG's quantizer scale: 2 is near lossless, 31 the coarsest. */
 const JPEG_QUALITY = 3;
 
+/** `sample` (a frame of `file`) scaled to `width`, its height kept in proportion and even, as JPEG bytes. */
 export const jpegOf = (file: string, sample: VideoSample, width: number) => {
   const failed = (cause: unknown) =>
     MediaFailed.make({ op: 'encode', file, reason: String(cause) });

@@ -16,15 +16,20 @@ import {
 } from './composite.ts';
 
 interface UseCompositeRootReturnValue {
+  /** The root element's props: its ref and keydown handling. */
   props: HTMLProps;
   highlightedIndex: () => number;
+  /** Whether the tab stop's first index has been set from the registered items. */
   settled: () => boolean;
   onHighlightedIndexChange: (index: number, shouldScrollIntoView?: boolean) => void;
+  /** The items' elements by index, kept by the `CompositeList` the root renders. */
   elementsRef: { current: Array<HTMLElement | null> };
+  /** Pass to the `CompositeList`'s `onMapChange`. */
   onMapChange: (map: CompositeIndexMap) => void;
 }
 
 interface UseCompositeRootParameters {
+  /** Where the tab stop starts, among the first items (-1: the first enabled). */
   initialIndex?: ((elements: ReadonlyArray<HTMLElement | null>) => number) | undefined;
 }
 

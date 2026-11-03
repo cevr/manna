@@ -7,8 +7,16 @@ import { EASE, type Expression, acted, smooth } from '@manna/film/style';
 import { ACCUSED_KNOBS, ACCUSED_TIMELINES, type AccusedTimeline, boilTime } from './figures.ts';
 import type { accusedProp } from './rigs.ts';
 
+/** The court's cues the rig's timelines play on. */
 type Cue = 'bow' | 'stamp' | 'lift';
 
+/**
+ * Where `timeline` stands for cue `cue` at `f.t`: 0 before the cue; across
+ * the cue its move (`ACCUSED_TIMELINES[…].move` authored seconds) stretched
+ * to the cue's own length, so a lab edit to the cue's `dur` reshapes it;
+ * after, the settle (overlap, the cloth's swing) in real seconds to the
+ * timeline's end.
+ */
 const cueTime = (f: CourtFrame, cue: Cue, timeline: AccusedTimeline): number => {
   const { start, dur } = f.cue(cue);
   const since = f.t - start;
@@ -18,13 +26,17 @@ const cueTime = (f: CourtFrame, cue: Cue, timeline: AccusedTimeline): number => 
   return Math.min(seconds, move + since - dur);
 };
 
+/** How far the lift's settle has run once its cue is over, 0..1: the timeline's own length past the move. */
 const settled = (f: CourtFrame) => {
   const { seconds, move } = ACCUSED_TIMELINES.lift;
   return Math.max(0, cueTime(f, 'lift', 'lift') - move) / (seconds - move);
 };
 
+/** The evidence falling: the inner brows up, the mouth's corners a little down. */
 const WORRY: Expression = { ...EASE, browTilt: 0.26, browY: -1, mouth: -0.8 };
+/** "You did it": brows low, lids heavy, the mouth turned down. */
 const SHAME: Expression = { ...EASE, browY: 2.5, browTilt: 0.2, eyes: 0.55, mouth: -1.8 };
+/** The judge leans in: brows up and their inner ends pulled up, eyes wide, the mouth tight and down. */
 const FEAR: Expression = {
   ...EASE,
   browY: -2.5,
@@ -33,6 +45,7 @@ const FEAR: Expression = {
   eyeW: 0.92,
   mouth: -1.4,
 };
+/** "Righteous": brows high and level (inside the head's outline), eyes round, the mouth an open "oh". */
 const ASTONISHED: Expression = {
   ...EASE,
   browY: -2.5,
@@ -42,8 +55,10 @@ const ASTONISHED: Expression = {
   mouthLine: 0,
   mouthOpen: 1,
 };
+/** It is true: the brows ease down, the inner ends still a little up, a smile. */
 const RELIEF: Expression = { ...EASE, browY: -1.5, browTilt: 0.2, eyes: 1.08, mouth: 2.6 };
 
+/** Where the accused looks, in the figure's units from their feet: at us, at the evidence, down, at the judge. */
 const GAZE = {
   rest: [ACCUSED_KNOBS.gazeX, ACCUSED_KNOBS.gazeY],
   evidence: [150, -60],
@@ -51,8 +66,10 @@ const GAZE = {
   judge: [JUDGE[0] - ACCUSED[0], JUDGE[1] - ACCUSED[1]],
 } as const;
 
+/** The view model's numbers on this frame (scratch, so a frame allocates none). */
 const NUMBERS: Record<keyof typeof ACCUSED_KNOBS, number> = { ...ACCUSED_KNOBS };
 
+/** The pose on this frame: the rig's timelines at the cues' times, and the face's numbers. */
 const poseOf = (f: CourtFrame): PoseOf<ReturnType<typeof accusedProp>> => {
   const drop = f.at('drop');
   const bow = f.at('bow');
@@ -86,6 +103,11 @@ const poseOf = (f: CourtFrame): PoseOf<ReturnType<typeof accusedProp>> => {
   };
 };
 
+/**
+ * The accused drawn by the rig the look declares (`Look.rigs.accused`), feet
+ * at the origin, over the kit's contact shadow (the host's, so both engines
+ * cast the same one).
+ */
 export const riveAccused = (f: CourtFrame) => {
   ground(f.ctx, 0, 2, 100);
   f.rive('accused', poseOf(f));

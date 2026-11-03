@@ -2,6 +2,7 @@ import { Context, Data, Effect, Layer, Option } from 'effect';
 import type { Scope } from 'effect';
 import type { Film, FootageFrames, FootageRead, RenderOptions } from '../canvas/film.ts';
 
+/** A footage frame the host could not decode for a frame: named, so the frame is never drawn black. */
 export class FootageFrameMissing extends Data.TaggedError('FootageFrameMissing')<{
   readonly source: string;
   readonly at: number;
@@ -12,19 +13,31 @@ export class FootageFrameMissing extends Data.TaggedError('FootageFrameMissing')
   }
 }
 
+/** A run of frames' footage, decoded in order (`Footage.run`). */
 interface FootageRun {
+  /** The next frame's footage: valid until the following `next`, or the run's scope closing. */
   readonly next: Effect.Effect<FootageFrames, FootageFrameMissing>;
 }
 
 interface FootageOps {
+  /**
+   * The frames `reads` name, decoded: what one frame draws. They are the
+   * caller's to draw at once, in the turn the answer lands in.
+   */
   readonly ready: (
     reads: ReadonlyArray<FootageRead>,
   ) => Effect.Effect<FootageFrames, FootageFrameMissing>;
+  /**
+   * A run of frames, each frame's reads in `frames`, decoded in that order
+   * (each source's packets at most once while its times rise): what an
+   * export chunk draws. Its decoders are let go when the scope closes.
+   */
   readonly run: (
     frames: ReadonlyArray<ReadonlyArray<FootageRead>>,
   ) => Effect.Effect<FootageRun, never, Scope.Scope>;
 }
 
+/** The frames of `reads` from `frameOf`, the first it has none for named. */
 const framesOf = (
   reads: ReadonlyArray<FootageRead>,
   frameOf: (read: FootageRead) => Option.Option<CanvasImageSource>,
@@ -36,6 +49,10 @@ const framesOf = (
   });
 
 export class Footage extends Context.Service<Footage, FootageOps>()('@manna/film/browser/Footage') {
+  /**
+   * Footage from `frameOf`, a picture per read or none: a test's frames, or
+   * the draw check's stand-ins. A read it has none for fails as missing.
+   */
   static readonly layerOver = (
     frameOf: (read: FootageRead) => Option.Option<CanvasImageSource>,
   ): Layer.Layer<Footage> =>
@@ -57,21 +74,27 @@ export class Footage extends Context.Service<Footage, FootageOps>()('@manna/film
       }),
     );
 
+  /** No footage at all: a page rendered on the server, which decodes nothing. Every read is missing. */
   static readonly none: Layer.Layer<Footage> = Footage.layerOver(() => Option.none());
 }
 
+/** What footage adds to a frame's options: its decoded frames, or nothing for a film that reads none. */
 export type FootageShown = Pick<RenderOptions, 'footage'>;
 
+/** A film that reads no footage is shown with nothing added. */
 const NONE: FootageShown = {};
 
+/** What `film`'s frames read, if it reads footage at all: a drawn film does not. */
 export const footageReads = (
   film: Pick<Film, 'footageAt'>,
 ): Option.Option<(T: number) => ReadonlyArray<FootageRead>> =>
   Option.fromUndefinedOr(film.footageAt);
 
+/** Whether `film` reads footage at all: a drawn film does not, and is drawn at once. */
 export const readsFootage = (film: Pick<Film, 'footageAt'>): boolean =>
   Option.isSome(footageReads(film));
 
+/** Frame `T` of `film`'s footage, decoded: nothing, at once, for a film that reads none. */
 export const footageAt = (
   film: Pick<Film, 'footageAt'>,
   T: number,

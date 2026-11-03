@@ -24,34 +24,56 @@ import { LAST_FRAME, fromLead, onHim, onLead, word } from './word.ts';
 
 const L = LAST_FRAME;
 
+/** His breath's period and its offset, as word breathes him (`living`). */
 const BREATH = { period: 4, offset: 2.1 } as const;
 
+/** How the gust takes the dry leaves: how far out it blows each, how far up, how far it turns it, how upright it stands it in the air. */
 const GUST = { reach: 560, lift: 70, spin: 2.6, lie: 0.9 } as const;
 
+/** The tablets beside him, lit as word leaves them (scratch: their stone rewritten each frame). */
 const TABS = tabletsAt(L.tablets[0], L.tablets[1]);
 TABS.lit.fill(1);
 
+/** Where a thing floats on the page, Board pixels, and how tall it stands. */
 interface Float {
   readonly x: number;
   readonly y: number;
   readonly size: number;
 }
 
+/**
+ * Lifted off the stain beside him, clear of his side (`seed.label`): where
+ * the seal floats, its size there against the one pressed on him, and how
+ * tall the plain seed stands when it has turned over.
+ */
 const UP = { x: 618, y: 605, scale: 1.15, size: 62 } as const;
+/** Opened, alone on the page, out from him (`seed.folded`). */
 const ALONE: Float = { x: 870, y: 520, size: 200 };
+/** Back beside his face, lit (`seed.life`). */
 const BESIDE: Float = { x: 704, y: 539, size: 228 };
 
+/** How high the seal's path arcs as it lifts off, and how far it and the seed bob as they float. */
 const ARC = 30;
 const HOVER = 3;
+/** The seed's sway as it floats, radians, and the lean it comes back to him with (`seed.life`). */
 const SWAY = 0.04;
 const TURN_BESIDE = 0.08;
 
+/**
+ * The seed's ink, Board pixels: the seal's line where it turns over (its 3
+ * at the size it floats), then, once it has risen, the cast's, as heavy as
+ * his outline beside it (`seed.life`).
+ */
 const SEED_LINE = { small: 3 * UP.scale, risen: 5 } as const;
+/** How much more its light swells on the last words. */
 const SWELL = 0.4;
 
+/** The shadow the floating seed lays on the page, down and right of it: its middle and its reach as shares of its height, and how dark. */
 const SEED_SHADOW = { x: 0.2, y: 0.55, r: 0.28, alpha: 0.7 } as const;
 
+/** The seal as word left it, pressed on him (scratch: its place rewritten each frame). */
 const SEAL: SealPose = { x: 0, y: 0, rot: 0, scale: 1, shown: 1, glint: 0 };
+/** The seed it turns into (scratch). */
 const SEED: OpenSeedPose = {
   x: 0,
   y: 0,
@@ -64,6 +86,10 @@ const SEED: OpenSeedPose = {
   shown: 1,
 };
 
+/**
+ * `draw` squeezed across to `k` (0..1) about the upright line through `x`:
+ * a flat thing turning over in the air, edge on at 0.
+ */
 const across = (ctx: CanvasRenderingContext2D, x: number, k: number, draw: () => void) => {
   if (k <= 0.02) return;
   ctx.save();
@@ -74,18 +100,27 @@ const across = (ctx: CanvasRenderingContext2D, x: number, k: number, draw: () =>
   ctx.restore();
 };
 
+/** Where he looks, from his feet: at us, and down at the seal on his chest. */
 const GAZE = {
   us: [LEAD_KNOBS.gazeX, LEAD_KNOBS.gazeY],
   chest: [-10, -150],
 } as const satisfies Record<string, Pt>;
 
+/** "But when God says righteous,": down at the seal on him, sober. */
 const ON_IT: Expression = { ...EASE, browY: 0.6, browTilt: 0.22, eyes: 0.9, mouth: -0.3 };
+/** "it isn't a label": it lifts off, his brows up after it. */
 const AFTER_IT: Expression = { ...EASE, browY: -1.8, browTilt: 0.16, eyes: 1.15, mouth: -0.2 };
+/** "on the outside.": at us, worried (`seed.label`). */
 const WORRIED: Expression = { ...EASE, browY: -0.8, browTilt: 0.5, eyes: 1, mouth: -0.45 };
+/** "Jesus said,": at the seal, curious. */
 const CURIOUS: Expression = { ...EASE, browY: -1, browTilt: 0.2, eyes: 1.05, mouth: -0.2 };
+/** "A seed looks like nothing.": not impressed, the lids heavy. */
 const UNIMPRESSED: Expression = { ...EASE, browY: 0.9, browTilt: 0.06, eyes: 0.78, mouth: -0.5 };
+/** "But it's alive.": his brows up, an "oh". */
 const STIRRED: Expression = { ...EASE, browY: -2.2, browTilt: 0.2, eyes: 1.2, mouthOpen: 0.4 };
+/** As its light wakes: intrigued (`seed.life`). */
 const INTRIGUED: Expression = { ...EASE, browY: -1.4, browTilt: 0.14, eyes: 1.1, mouth: -0.15 };
+/** "own": interested, despite himself. */
 const INTERESTED: Expression = {
   ...EASE,
   browY: -1.7,
@@ -94,13 +129,17 @@ const INTERESTED: Expression = {
   eyeW: 1.03,
   mouth: 0.1,
 };
+/** "Take in His word": drawn to it, the start of a smile. */
 const DRAWN: Expression = { ...EASE, browY: -1.2, browTilt: 0.18, eyes: 1.1, mouth: 0.4 };
 
+/** How far his head tips on "own" (radians; below 0 its top goes to the page's left, as `seed.life` tips it), and how far he leans in on "Take". */
 const TIP = -0.1;
 const LEAN_IN = 0.06;
 
+/** His numbers (scratch: every one he moves is rewritten each frame). */
 const LN: Record<keyof typeof LEAD_KNOBS, number> = { ...LEAD_KNOBS };
 
+/** The card's words from the quotation's opening mark to its closing one: Jesus' words, without "Jesus said," before them. */
 const quoted = (words: ReadonlyArray<CardWord>): ReadonlyArray<CardWord> => {
   const from = words.findIndex((w) => w.text.startsWith('“'));
   const to = words.findIndex((w) => w.text.endsWith('”'));

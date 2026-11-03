@@ -3,6 +3,7 @@ import type { CastFigure, CastModule, CastView } from '../canvas/cast.ts';
 import { type CastSheetRecord, keptOf } from '../core/cast-record.ts';
 import { SheetKind } from '../core/cast-sheet.ts';
 
+/** A cast render that cannot be made: the film's table, its record or its page do not give what it needs. */
 export class CastRenderRefused extends Schema.TaggedError<CastRenderRefused>()(
   'CastRenderRefused',
   {
@@ -15,12 +16,14 @@ export class CastRenderRefused extends Schema.TaggedError<CastRenderRefused>()(
   }
 }
 
+/** `member`'s views of `kind` in the table: none when it draws none. */
 export const tableViews = (table: CastModule, member: string, kind: SheetKind) =>
   Option.fromUndefinedOr(table.CAST?.[member]).pipe(
     Option.flatMap((kinds) => Option.fromUndefinedOr(kinds[kind])),
     Option.getOrElse((): Readonly<Record<string, CastView>> => ({})),
   );
 
+/** The names of `member`'s views of `kind` that `figure` draws: the rigs' table's, or the cut-out table's. */
 export const drawnViews = (
   table: CastModule,
   member: string,
@@ -35,14 +38,21 @@ export const drawnViews = (
       ),
   })[figure]();
 
+/** `member`'s sheet of `kind` in the table: its size and scale. */
 export const tableSheet = (table: CastModule, member: string, kind: SheetKind) =>
   Option.fromUndefinedOr(table.SHEETS[member]).pipe(
     Option.flatMap((sheets) => Option.fromUndefinedOr(sheets[kind])),
   );
 
+/** The views the owner kept of `kind`: none when he kept no such sheet, each kept single drawing's own for `single`. */
 export const keptViews = (record: CastSheetRecord, kind: SheetKind) =>
   keptOf(record, kind).flatMap((k) => k.views);
 
+/**
+ * Refused unless the table draws every kept view of each kind asked (each
+ * view asked, for a cut-out: a member has puppets only for the views cut),
+ * draws at least one view of it, and gives each sheet its scale.
+ */
 const coveredBy = (
   member: string,
   table: CastModule,
@@ -74,6 +84,7 @@ const coveredBy = (
     return Effect.void;
   });
 
+/** The kinds a render of `member` draws for `ask`, each covered by the table (`coveredBy`), or why it cannot draw them. */
 export const renderedKinds = (
   member: string,
   table: CastModule,

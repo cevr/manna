@@ -11,6 +11,7 @@ import {
   Timeline as TimelineSchema,
 } from './schema.ts';
 
+/** No recorded takes: every scene is estimated. */
 const noTakes: Timings = { voice: '', scenes: {} };
 import { CLOCK_EPSILON, DEFAULT_EASE, ease } from './time.ts';
 import {
@@ -44,6 +45,7 @@ const clock: SceneClock = {
   dur: 9.4,
 };
 
+/** Why `timeline` does not resolve on `clock`. */
 const failure = (timeline: Timeline) =>
   Option.getOrThrow(Result.getFailure(resolveTimeline(timeline, clock)));
 

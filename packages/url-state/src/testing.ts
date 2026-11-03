@@ -1,10 +1,17 @@
+/**
+ * A history stack in memory: the `Location` for tests. Back is `Location`'s own; `LocationHistory` adds what only a
+ * reader's browser does, Forward, and shows the stack for assertions.
+ */
+
 import { Context, Effect, Layer, Option, Ref, SubscriptionRef } from 'effect';
 
 import { makeEntryKeys } from './entry-key.js';
 import { Location, parseHref, relativeHref, type Entry } from './location.js';
 
 export interface LocationHistoryService {
+  /** Go forward one entry; at the last entry, nothing. */
   readonly forward: Effect.Effect<void>;
+  /** Every entry on the stack, oldest first, and the index of the one on screen. */
   readonly entries: Effect.Effect<{ readonly stack: readonly Entry[]; readonly index: number }>;
 }
 
@@ -19,6 +26,7 @@ interface Stack {
 
 const normalise = (href: string): string => relativeHref(parseHref(href));
 
+/** `Location` and `LocationHistory` over one stack, starting at `href`. */
 export const layerMemory = (href: string): Layer.Layer<Location | LocationHistory> =>
   Layer.effectContext(
     Effect.gen(function* () {

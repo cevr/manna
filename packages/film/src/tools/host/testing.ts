@@ -17,6 +17,7 @@ import { ManifestLock, type ManifestLockService } from '../manifest-lock.ts';
 import { folderStore } from '../media-store.ts';
 import { PrivateStore } from '../private-store.ts';
 
+/** A refusal of `method` on `path`, filed under the kind Effect gives Node's error (`why`, its code). */
 const refusal = (_tag: PlatformError.SystemErrorTag, method: string, path: string, why?: string) =>
   PlatformError.systemError({
     _tag,
@@ -28,13 +29,20 @@ const refusal = (_tag: PlatformError.SystemErrorTag, method: string, path: strin
 
 const notFound = (method: string, path: string) => refusal('NotFound', method, path, 'ENOENT');
 
+/** Every folder from the root down to `path`, `path` included. */
 const pathDown = (path: string): ReadonlyArray<string> => {
   const parts = path.split('/');
   return parts.slice(1).map((_, i) => parts.slice(0, i + 2).join('/'));
 };
 
+/** What a path holds in the in-memory tree. */
 type Held = 'file' | 'folder' | 'nothing';
 
+/**
+ * The in-memory tree over a map of path → bytes and the set of folders made:
+ * what a path holds (a folder is there when made, or when a file or a folder
+ * is made under it), and why a path cannot be made.
+ */
 const treeOn = (files: Map<string, Uint8Array>, folders: Set<string>) => {
   const holds = (path: string): Held => {
     if (files.has(path)) return 'file';
@@ -43,6 +51,11 @@ const treeOn = (files: Map<string, Uint8Array>, folders: Set<string>) => {
       return 'folder';
     return 'nothing';
   };
+  /**
+   * Why `path` cannot be made, as Node refuses it: its folder never made
+   * (ENOENT) or a file (ENOTDIR); none when it can, a path at the root
+   * included.
+   */
   const unplaceable = (
     method: string,
     path: string,
@@ -54,6 +67,13 @@ const treeOn = (files: Map<string, Uint8Array>, folders: Set<string>) => {
     if (held === 'file') return Option.some(refusal('BadResource', method, path, 'ENOTDIR'));
     return Option.none();
   };
+  /**
+   * Where `path` leads, as Node's `realpath` resolves it in a tree with no
+   * links: its `.`, `..` and empty segments first, as `path.resolve` takes
+   * them (so `nope/../a` is `a`, whether `nope` is there or not), then each
+   * folder down to it. Refused as Node refuses it: a step through a file
+   * (ENOTDIR), or one that is not there (ENOENT), a relative path among them.
+   */
   const realOf = (
     method: string,
     path: string,
@@ -76,11 +96,18 @@ const treeOn = (files: Map<string, Uint8Array>, folders: Set<string>) => {
   return { holds, unplaceable, realOf };
 };
 
+/** `use` given `path` as the tree keys it: with no trailing slash. */
 const keyed = <A>(
   path: string,
   use: (key: string) => Effect.Effect<A, PlatformError.PlatformError>,
 ) => Effect.suspend(() => use(path.replace(/(?<=.)\/+$/, '')));
 
+/**
+ * `use` given `path` to make (`keyed`). A path that is not absolute (a
+ * relative one, or a Windows one) is BadArgument: the in-memory file system
+ * has no folder to make it in, so it refuses it rather than guess one. Read,
+ * such a path is simply not there.
+ */
 const placed = <A>(
   method: string,
   path: string,
@@ -96,11 +123,13 @@ const placed = <A>(
   );
 };
 
+/** How a write lands: over what is there or after it, and whether only a path not there takes it. */
 interface WriteMode {
   readonly append: boolean;
   readonly exclusive: boolean;
 }
 
+/** The write flags this file system models; any other is refused, never taken for a plain write. */
 const WRITE_MODES: Partial<Record<FileSystem.OpenFlag, WriteMode>> = {
   w: { append: false, exclusive: false },
   wx: { append: false, exclusive: true },
@@ -108,6 +137,16 @@ const WRITE_MODES: Partial<Record<FileSystem.OpenFlag, WriteMode>> = {
   ax: { append: true, exclusive: true },
 };
 
+/**
+ * `path` written with `bytes` as `flag` says (`w` when none), as Node writes
+ * it: NotFound when its folder was never made (ENOENT), BadResource when that
+ * is a file (ENOTDIR) or `path` is a folder (EISDIR). `a` and `ax` add the
+ * bytes after the file's; `wx` and `ax` (create, never replace) refuse a
+ * path already there, a file or a folder, as AlreadyExists, as Node's
+ * EEXIST: a lock taken that way is refused while another holds it. A flag
+ * not modelled is BadArgument, naming it. The checks, the join and the set
+ * are one synchronous step, so writes run at once all land, as on a disk.
+ */
 const writeInto = (
   files: Map<string, Uint8Array>,
   folders: Set<string>,
@@ -150,9 +189,11 @@ const writeInto = (
     return Effect.void;
   });
 
+/** A byte count as a number. */
 const byteCount = (input: ByteSize.Input): number =>
   Number(ByteSize.toBigInt(ByteSize.fromInputUnsafe(input)));
 
+/** What `stat` answers: a path's kind, its size, and its mtime when the test keeps one. */
 const infoOf = (
   type: FileSystem.File.Type,
   size: number,
@@ -174,12 +215,22 @@ const infoOf = (
   blocks: Option.none(),
 });
 
+/**
+ * File operations over a map of path → bytes, and `folders`, the set of
+ * folders made (a folder with files in it exists whether made or not), so a
+ * test can see a folder left empty. Each refuses what Node's file system
+ * refuses, filed under the same kind: the contract in `testing.test.ts` runs
+ * every one against both. One thing it does not model: a link copies the
+ * bytes, so a write in place through one name is not seen through the other
+ * (no tool writes through a linked name).
+ */
 const memoryOps = (
   files: Map<string, Uint8Array>,
   folders = new Set<string>(),
   mtimes: ReadonlyMap<string, number> = new Map(),
 ) => {
   const tree = treeOn(files, folders);
+  /** A folder in `directory` (`/tmp`, unless given) no other call has made: `<prefix><n>`. */
   const tempFolder = (prefix = 'tmp-', directory = '/tmp') => {
     let n = 1;
     while (folders.has(`${directory}/${prefix}${n}`)) n += 1;
@@ -187,11 +238,17 @@ const memoryOps = (
     folders.add(dir);
     return dir;
   };
+  /** Every path at or under `path`: the folder's own and all it holds. */
   const atOrUnder = (path: string) => (p: string) => p === path || p.startsWith(`${path}/`);
+  /** `path` gone, with everything under it. */
   const drop = (path: string) => {
     for (const file of [...files.keys()].filter(atOrUnder(path))) files.delete(file);
     for (const folder of [...folders].filter(atOrUnder(path))) folders.delete(folder);
   };
+  /**
+   * The bytes of the file at `key`: NotFound when nothing is there, and
+   * `ofFolder` for a folder (Node's EISDIR to a read).
+   */
   const fileAt = (
     method: string,
     key: string,
@@ -202,6 +259,10 @@ const memoryOps = (
       return notFound(method, key);
     });
   const bytesAt = (method: string, path: string) => keyed(path, (key) => fileAt(method, key));
+  /**
+   * An empty file in a folder of its own, made in `directory` (`/tmp`, unless
+   * given; NotFound when no folder is there), as Node's `makeTempFile` makes it.
+   */
   const tempFile = (
     method: string,
     options?: { readonly directory?: string; readonly prefix?: string; readonly suffix?: string },
@@ -373,12 +434,22 @@ const memoryOps = (
   } satisfies Partial<FileSystem.FileSystem>;
 };
 
+/**
+ * A file system over a map of path → bytes, the set of folders made in it,
+ * and the mtimes the test keeps (none for a file it keeps none for).
+ */
 export const memoryFileSystem = (
   files: Map<string, Uint8Array>,
   folders: Set<string> = new Set(),
   mtimes: ReadonlyMap<string, number> = new Map(),
 ) => FileSystem.layerNoop(memoryOps(files, folders, mtimes));
 
+/**
+ * `files`, whose `nth` write, rename or remove (counting from 1) fails as a
+ * crash would, and every one after it: the process is gone, so nothing after
+ * it lands, not even a cleanup that catches the failure. Every op before it has landed. `nth` 0 never crashes. `ops()` counts the
+ * writes, renames and removes attempted so far.
+ */
 export const crashingFileSystem = (files: Map<string, Uint8Array>, nth: number) => {
   const ops = memoryOps(files);
   let count = 0;
@@ -391,6 +462,7 @@ export const crashingFileSystem = (files: Map<string, Uint8Array>, nth: number) 
       pathOrDescriptor: path,
       description: 'crash',
     });
+  /** A write the count leaves out (a text file, a folder, a link): after the crash it lands no more than the rest. */
   const after = (method: string, path: string) =>
     Effect.suspend(() => {
       if (gone()) return Effect.fail(crashed(method, path));
@@ -419,6 +491,7 @@ export const crashingFileSystem = (files: Map<string, Uint8Array>, nth: number) 
 
 export const text = (s: string) => new TextEncoder().encode(s);
 
+/** A private store in the folder `root`, on whatever disk the test gives: nothing reaches a bucket. */
 export const privateFolder = (root: string) =>
   Layer.effect(
     PrivateStore,
@@ -429,6 +502,11 @@ export const privateFolder = (root: string) =>
     }),
   );
 
+/**
+ * Manifest locks held in memory, as one host's kernel holds them: every
+ * store built over the same one is another process, as far as its locks
+ * know. A holder lets go when its change ends, however it ends.
+ */
 export const memoryManifestLock = (): ManifestLockService => {
   const held = new Set<string>();
   return {
@@ -441,11 +519,14 @@ export const memoryManifestLock = (): ManifestLockService => {
   };
 };
 
+/** Manifest locks in memory (`memoryManifestLock`), fresh each time the layer is built. */
 export const memoryLocks = Layer.sync(ManifestLock, memoryManifestLock);
 
+/** A store over `files`, its locks in memory, its own. */
 export const storeLayer = (files: Map<string, Uint8Array>) =>
   ContentStore.layer.pipe(Layer.provide([memoryFileSystem(files), Path.layer, memoryLocks]));
 
+/** The console a run prints to: each line it logs, offered to `lines`. */
 export const printingTo = (lines: Queue.Queue<string>): Console.Console => ({
   ...globalThis.console,
   log: (...args: ReadonlyArray<unknown>) => {

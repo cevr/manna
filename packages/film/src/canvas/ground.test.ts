@@ -4,6 +4,7 @@ import { GROUND_ALPHA, GROUND_FLAT, ground } from './ground.ts';
 
 const alphaOf = (color: string) => Number(color.split(',').at(-1)?.replace(')', ''));
 
+/** The radial gradient a fill was made with. */
 const radialOf = (style: Style | undefined) =>
   style !== undefined && isRadial(style) ? style : undefined;
 

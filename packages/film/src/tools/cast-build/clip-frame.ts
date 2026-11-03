@@ -5,13 +5,16 @@ import { SAMPLE_SIZE } from '../../core/pose-sample.ts';
 type Pt = readonly [number, number];
 type Rgb = readonly [number, number, number];
 
+/** How many times the canvas a given frame is drawn at. */
 export const FRAME_ZOOM = 2;
 
+/** A kept view to draw: its puppet and its sheet's paper. */
 interface FrameView {
   readonly puppet: Puppet;
   readonly paper: Rgb;
 }
 
+/** A drawn frame: its pixels and where the figure stands on the canvas (canvas px, before the zoom). */
 interface ClipFrame {
   readonly img: Raster;
   readonly root: Pt;
@@ -19,6 +22,7 @@ interface ClipFrame {
   readonly feet: number;
 }
 
+/** `placed` at 0.5: the scale and the root that centre the sheet, its bottom halfway down the room under it. */
 const middleOf = (p: Puppet) => {
   const [W, H] = SAMPLE_SIZE;
   const s0 = Math.min(H / p.height, (W - 13) / p.width);
@@ -32,8 +36,10 @@ const middleOf = (p: Puppet) => {
   return { scale, root };
 };
 
+/** A raster's bytes, read without a hole: every index a loop below reads lies inside it. */
 const bytesOf = (r: Raster) => new DataView(r.rgba.buffer, r.rgba.byteOffset, r.rgba.byteLength);
 
+/** The figure at rest at `root` and `scale` (canvas px), drawn at the zoom. */
 const drawn = (p: Puppet, root: Pt, scale: number) =>
   rasterOf(
     p,
@@ -41,6 +47,7 @@ const drawn = (p: Puppet, root: Pt, scale: number) =>
     [SAMPLE_SIZE[0] * FRAME_ZOOM, SAMPLE_SIZE[1] * FRAME_ZOOM],
   );
 
+/** The lowest row (canvas px, at the zoom) the figure covers past half alpha; -1 when it covers none. */
 const feetOf = (r: Raster) => {
   const bytes = bytesOf(r);
   for (let y = r.height - 1; y >= 0; y--)
@@ -49,6 +56,7 @@ const feetOf = (r: Raster) => {
   return -1;
 };
 
+/** The raster laid over `paper`, opaque. */
 const onPaper = (r: Raster, paper: Rgb): Raster => {
   const bytes = bytesOf(r);
   const out = new Uint8Array(r.width * r.height * 4);
@@ -67,11 +75,13 @@ const frameAt = (v: FrameView, root: Pt, scale: number): ClipFrame => {
   return { img: onPaper(r, v.paper), root, scale, feet: feetOf(r) };
 };
 
+/** A clip's first frame: the view at rest at the middle place. */
 export const firstFrameOf = (v: FrameView): ClipFrame => {
   const { scale, root } = middleOf(v.puppet);
   return frameAt(v, root, scale);
 };
 
+/** A clip's last frame after `first`: the view at rest at `first`'s scale and root x, moved up or down to stand on `first`'s feet line. */
 export const lastFrameOf = (first: ClipFrame, v: FrameView): ClipFrame => {
   const placed = middleOf(v.puppet);
   const at: Pt = [first.root[0], placed.root[1]];

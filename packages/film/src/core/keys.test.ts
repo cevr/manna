@@ -6,18 +6,21 @@ import { hashText, parse, takeScript, voiceKey } from './narration.ts';
 import { type Music, TimingsJson, Voice } from './schema.ts';
 import { musicKey, musicPlan } from './sound.ts';
 
+/** The fixture's three beats, as its script says them. */
 const scenes = [
   { id: 'open', say: 'A small page {begins}begins here.', min: 3.5 },
   { id: 'turn', say: 'Then the {page}page turns over.' },
   { id: 'close', say: 'And it ends.' },
 ];
 
+/** The fixture's reader. */
 const voice: typeof Voice.Encoded = {
   voiceId: 'fixture-voice',
   model: 'eleven_v3',
   settings: { stability: 0.5, similarity_boost: 0.75, style: 0, speed: 1 },
 };
 
+/** The fixture's one score option, in two movements. */
 const piano: Music = {
   model: 'music_v2_5',
   styles: ['instrumental', 'felt piano'],
@@ -28,6 +31,7 @@ const piano: Music = {
   ],
 };
 
+/** The fixture's timings.json, as committed. */
 const committed = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

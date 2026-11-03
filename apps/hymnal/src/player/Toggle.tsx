@@ -1,3 +1,12 @@
+/**
+ * The player's buttons for a hymn as text (the full player's): the buttons
+ * `buttonsOf` gives, each titled by its kind, and a spinner while it loads.
+ * While it buffers the buttons sit in a row (Retry beside Pause once a wait
+ * online runs long). The button is in the accent (`AccentButton`): a
+ * `UIButton`'s title on iOS, an accent fill under `onAccent` on the web and
+ * Android.
+ */
+
 import { Match, Option } from 'effect';
 import { Fragment } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';

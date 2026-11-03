@@ -1,3 +1,18 @@
+/** `--full`: the printer shows the whole paragraph the hit already carries.
+ *
+ *  Every hit's text is `nodesToText(nodes)` — the complete paragraph, not a
+ *  windowed extract — so the 200-character cut is presentation. A reader
+ *  checking a quotation against the corpus had to run one `lookup` per result
+ *  to see past the ellipsis; `--full` is that second call removed. `--json`
+ *  carried the full text all along, but only for a reader willing to parse it.
+ *
+ *  These run against the formatter rather than through the golden corpus on
+ *  purpose: the longest paragraph in that fixture is 76 characters, so a
+ *  fixture-driven test could never tell a cut paragraph from an uncut one and
+ *  would pass whatever the flag did. The premise a truncation test needs is a
+ *  paragraph longer than the cut, so the test supplies one.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 import {
@@ -13,6 +28,7 @@ import {
 
 import { formatLocalSearchResult, SNIPPET_LIMIT } from '../../src/commands/egw/format.js';
 
+/** A paragraph comfortably past the cut, so the two outputs cannot coincide. */
 const LONG_TEXT =
   'As man came forth from the hand of his Creator, he was of lofty stature and perfect symmetry. ' +
   'His countenance bore the ruddy tint of health and glowed with the light of life and joy. ' +

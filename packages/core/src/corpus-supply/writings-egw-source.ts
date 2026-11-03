@@ -43,6 +43,9 @@ const refcodeNumbers = (refcode: string) => {
   };
 };
 
+/** A chapter's paragraphs less those an earlier chapter already gave: the
+ *  library repeats a paragraph across chapter files, and `seen` holds the
+ *  stable ids of every paragraph kept so far. */
 const unseenParagraphs = (
   chapter: readonly EGWSchemas.Paragraph[],
   seen: Set<string>,
@@ -57,6 +60,8 @@ const unseenParagraphs = (
 
 const DownloadedParagraphs = Schema.fromJsonString(Schema.Array(EGWSchemas.ParagraphFromHtml));
 
+/** The chapter files of a downloaded archive, in reading order. Only the
+ *  zip's directory is read: no file is expanded. */
 const chapterFileNames = (
   zip: Uint8Array,
   requestedId: PublicationId,
@@ -84,6 +89,7 @@ const chapterFileNames = (
     return names.sort((left, right) => order(left) - order(right));
   });
 
+/** One chapter file of a downloaded archive, expanded and decoded alone. */
 const chapterFile = (
   zip: Uint8Array,
   name: string,
@@ -105,6 +111,9 @@ const chapterFile = (
     );
   });
 
+/** The book's classification, when its record carries a type.
+ *
+ *  The API spells an absent subtype as `''` or `' '`; both are absence here. */
 const classificationOf = (
   book: EGWSchemas.Book,
   sections: ReadonlyMap<number, CorpusSection>,
@@ -160,6 +169,8 @@ const publicationOf = (
     ),
   );
 
+/** One chapter's paragraphs as the archive keeps them, with the Scripture
+ *  they cite. */
 const archiveChapter = (
   publication: Publication,
   paragraphs: readonly EGWSchemas.Paragraph[],

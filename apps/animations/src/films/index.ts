@@ -8,6 +8,13 @@ const coldStudies = () => import('./cold-studies/film.ts');
 const inItsOrder = () => import('./in-its-order/film.ts');
 const inItsOrderCast = () => import('./in-its-order/rigs/cast.ts');
 
+/**
+ * The films, by folder: each key names a folder under `src/films`, and the
+ * framework loads that film's narration from it and the faces it draws in
+ * (`faces.ts`) with it (`narratedFilms`). A talk's folder is listed in
+ * `talkFilms` by its edit (`() => import('./<talk>/talk.ts')`): its takes
+ * are read from the footage library, as the tools read them.
+ */
 export const films = narratedFilms(
   {
     'righteousness-by-faith': righteousnessByFaith,
@@ -18,6 +25,7 @@ export const films = narratedFilms(
   faces,
 );
 
+/** Every page the player serves: the films, each film's shorts, and each film's cast renders (`film concept render`). */
 export const pages = {
   ...films,
   ...shortPages(

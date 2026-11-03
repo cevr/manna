@@ -1,4 +1,31 @@
 import { Digest } from 'effect/crypto';
+/**
+ * The list's routes, which the Worker's policy (`../worker/respond.ts`)
+ * answers before it looks for a file:
+ *
+ * - `POST /subscribe`: the sign-up form, with no script. A sign-up from a
+ *   place that has made too many this minute is refused (429). A filled
+ *   honeypot, a new address, a pending one and a confirmed one all answer
+ *   the same 303 to the check page, and the answer does not wait for the
+ *   work on the address (`./background.ts`), so neither the page nor the
+ *   time it takes tells who is on the list. That work keeps the address in
+ *   the address book and signs its subscriber up in the model
+ *   (`../list/`), whose `ConfirmLetter` policy sends the letter: only to a
+ *   new or pending address, at most once an hour.
+ * - `GET /subscribe/confirm?token=`: the one-button page, and nothing more,
+ *   since mail scanners open links; a browser's script presses its button
+ *   as it opens, and `POST` (the button) confirms, 303 to the confirmed page. A link that ran out or was replaced goes to a page that
+ *   signs up again, from either.
+ * - `GET /unsubscribe?token=`: the one-button page; `POST` leaves, from that
+ *   button or from a mail app's one click (RFC 8058), and answers the left
+ *   page, 200, never a redirect. Leaving twice is leaving.
+ * - `POST /mail/send`, with `Authorization: Bearer <MAIL_ADMIN_TOKEN>`: puts
+ *   a film's send on the queue (`./deliver.ts`), for each subscriber the
+ *   roster says still waits for it, or with `dryRun` counts it.
+ *
+ * Every answer is a redirect, a page or a short text, and the logs name
+ * ids, counts and codes, never an address or a token.
+ */
 import type { Key } from '@alchemy.run/domain/Aggregate';
 import { Clock, Context, Duration, Effect, Option, Redacted, Schema } from 'effect';
 import { Headers, type HttpServerRequest, HttpServerResponse, UrlParams } from 'effect/http';
@@ -23,10 +50,12 @@ import type { Sql, SqlError } from './sql.ts';
 import { Throttle } from './throttle.ts';
 import { type Token, Tokens } from './tokens.ts';
 
+/** The secret `bun run mail:send` sends as its bearer token. */
 export class AdminToken extends Context.Service<AdminToken, Redacted.Redacted<string>>()(
   'firsttheblade/AdminToken',
 ) {}
 
+/** Everything the routes need from their host. */
 export type MailServices =
   | Assets
   | Key<'Subscriber'>
@@ -47,6 +76,7 @@ const text = (body: string, status: number) => HttpServerResponse.text(body, { s
 
 const json = (body: SendAnswer, status: number) => HttpServerResponse.jsonUnsafe(body, { status });
 
+/** A page the prerender wrote, as this route's answer. */
 const page = Effect.fn('Mail.page')(function* (
   request: HttpServerRequest.HttpServerRequest,
   path: string,
@@ -63,15 +93,24 @@ const originOf = (request: HttpServerRequest.HttpServerRequest) =>
 const queryOf = (request: HttpServerRequest.HttpServerRequest, name: string) =>
   Option.fromNullishOr(new URL(request.originalUrl).searchParams.get(name));
 
+/** The form's fields; a body that does not read is no fields. */
 const formOf = (request: HttpServerRequest.HttpServerRequest) =>
   request.urlParamsBody.pipe(Effect.orElseSucceed(() => UrlParams.empty));
 
 const field = (form: UrlParams.UrlParams, name: string) =>
   Option.getOrElse(UrlParams.getFirst(form, name), () => '');
 
+/** The sender's address as Cloudflare names it; one place when it is missing. */
 const placeOf = (request: HttpServerRequest.HttpServerRequest) =>
   Option.getOrElse(Headers.get(request.headers, 'cf-connecting-ip'), () => 'unknown');
 
+/**
+ * What a sign-up does beside its answer, which does not wait for it: the
+ * address is kept, then its subscriber signs up in the model, whose
+ * `ConfirmLetter` policy sends the letter when a link was issued. Its time is
+ * read here, when it runs. Every failure, a defect too, is logged and
+ * changes no answer.
+ */
 const signUpAfter = Effect.fn('Mail.signUpAfter')(
   function* (address: Address, origin: string) {
     const tokens = yield* Tokens;
@@ -111,17 +150,20 @@ const subscribe = Effect.fn('Mail.subscribe')(function* (
   return see(MAIL_PAGES.check);
 });
 
+/** The link a confirm token names: its subscriber, and when it was issued. */
 interface ConfirmClaim {
   readonly subscriber: SubscriberId;
   readonly issued: number;
 }
 
+/** The claim a confirm link makes, while it is one and has not run out. */
 const claimOf = (read: Token, now: number): Option.Option<ConfirmClaim> => {
   if (read._tag !== 'Confirm') return Option.none();
   if (now - read.issued >= Duration.toMillis(CONFIRM_FOR)) return Option.none();
   return Option.some({ subscriber: read.subscriber, issued: read.issued });
 };
 
+/** The claim a confirm link makes at `now`, when its token reads as one. */
 const confirmClaimOf = Effect.fn('Mail.confirmClaimOf')(function* (
   request: HttpServerRequest.HttpServerRequest,
   now: number,
@@ -134,6 +176,11 @@ const confirmClaimOf = Effect.fn('Mail.confirmClaimOf')(function* (
   return Option.flatMap(token, (read) => claimOf(read, now));
 });
 
+/**
+ * The confirm page, for a link that has not run out. Opening it changes
+ * nothing: a mail scanner that fetches every link confirms no one, and a
+ * browser confirms by the page's own script pressing its button.
+ */
 const confirmPage = Effect.fn('Mail.confirmPage')(function* (
   request: HttpServerRequest.HttpServerRequest,
 ) {
@@ -145,6 +192,11 @@ const confirmPage = Effect.fn('Mail.confirmPage')(function* (
   return yield* page(request, MAIL_PAGES.confirm, 200);
 });
 
+/**
+ * Confirming, from the confirm page's button. The token in the address is
+ * the proof, so a post from anywhere else can do no more than the link's
+ * holder can.
+ */
 const confirm = Effect.fn('Mail.confirm')(function* (request: HttpServerRequest.HttpServerRequest) {
   const now = yield* Clock.currentTimeMillis;
   const claim = yield* confirmClaimOf(request, now);
@@ -163,6 +215,7 @@ const confirm = Effect.fn('Mail.confirm')(function* (request: HttpServerRequest.
   return see(MAIL_PAGES.expired);
 });
 
+/** The subscriber an unsubscribe link names, when its token reads as one. */
 const leaverOf = Effect.fn('Mail.leaverOf')(function* (
   request: HttpServerRequest.HttpServerRequest,
 ) {
@@ -185,6 +238,12 @@ const leavePage = Effect.fn('Mail.leavePage')(function* (
   return yield* page(request, MAIL_PAGES.leave, 200);
 });
 
+/**
+ * Leaving, from the leave page's button or a mail app's one click. Both are
+ * answered with the left page, 200: a one-click POST must not be redirected
+ * (RFC 8058), and its body is not read, so either form encoding a mail app
+ * sends it in leaves.
+ */
 const leave = Effect.fn('Mail.leave')(function* (request: HttpServerRequest.HttpServerRequest) {
   const leaver = yield* leaverOf(request);
   if (Option.isNone(leaver)) {
@@ -197,6 +256,10 @@ const leave = Effect.fn('Mail.leave')(function* (request: HttpServerRequest.Http
   return yield* page(request, MAIL_PAGES.left, 200);
 });
 
+/**
+ * Whether two secrets are equal, compared in time that does not depend on
+ * where they differ: their digests are compared, every byte of them.
+ */
 const sameSecret = Effect.fn('Mail.sameSecret')(function* (given: string, held: string) {
   const crypto = yield* Digest.Digest;
   const digest = (value: string) =>
@@ -210,6 +273,7 @@ const sameSecret = Effect.fn('Mail.sameSecret')(function* (given: string, held: 
 
 const BEARER = /^Bearer (.+)$/;
 
+/** Whether a request carries the admin token. */
 const isAdmin = Effect.fn('Mail.isAdmin')(function* (request: HttpServerRequest.HttpServerRequest) {
   const held = yield* AdminToken;
   const given = Option.getOrElse(
@@ -259,6 +323,7 @@ type Handler = (
   request: HttpServerRequest.HttpServerRequest,
 ) => Effect.Effect<HttpServerResponse.HttpServerResponse, SqlError | QueueError, MailServices>;
 
+/** Each route's handlers, by method. */
 const ROUTES = new Map<string, ReadonlyMap<string, Handler>>([
   [MAIL_ROUTES.subscribe, new Map([['POST', subscribe]])],
   [
@@ -278,6 +343,11 @@ const ROUTES = new Map<string, ReadonlyMap<string, Handler>>([
   [MAIL_ROUTES.send, new Map([['POST', send]])],
 ]);
 
+/**
+ * The answer of the route at `pathname`, or none when no route is there.
+ * A method the route does not take is 405; a store or a queue that fails is
+ * a 503 that names nothing.
+ */
 export const mailRoute = (
   request: HttpServerRequest.HttpServerRequest,
   pathname: string,

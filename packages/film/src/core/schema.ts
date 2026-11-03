@@ -4,25 +4,36 @@ import { isSegment } from './segment.ts';
 import { SketchItem } from './sketch.ts';
 import type { ease } from './time.ts';
 
+/** The line the repo's formatter (oxfmt, `.oxfmtrc.json`) fits a printed value within. */
 const PRINT_WIDTH = 100;
 
+/** A JSON value's text as JSON writes it alone: a scalar, a key. */
 const jsonText = Schema.encodeSync(Schema.fromJsonString(Schema.Json));
 
+/**
+ * A scalar's text as the formatter prints it: JSON's own, but a number's
+ * exponent without its `+` (`1e30`, where JSON writes `1e+30`).
+ */
 const scalarText = (value: Json): string =>
   (Predicate.isNumber(value) && jsonText(value).replace('e+', 'e')) || jsonText(value);
 
+/** JSON text read back as its value. */
 const jsonValue = Schema.decodeSync(Schema.fromJsonString(Schema.Json));
 
 type Json = Schema.Json;
 
+/** Whether a JSON value is an array. */
 const isArray = (value: Json): value is Schema.JsonArray => Array.isArray(value);
 
+/** Whether a JSON value is an object. */
 const isObject = (value: Json): value is Schema.JsonObject =>
   Predicate.isObject(value) && !isArray(value);
 
+/** An object's entries; none for any other value. */
 const entriesOf = (value: Json): ReadonlyArray<readonly [string, Json]> =>
   (isObject(value) && Object.entries(value)) || [];
 
+/** A JSON value's own text on one line, as the formatter prints it flat: `[1, 2]`, `{ "a": 1 }`. */
 const flatJson = (value: Json): string => {
   if (isArray(value)) return `[${value.map(flatJson).join(', ')}]`;
   if (!isObject(value)) return scalarText(value);
@@ -31,12 +42,18 @@ const flatJson = (value: Json): string => {
   return `{ ${entries.map(([k, v]) => `${jsonText(k)}: ${flatJson(v)}`).join(', ')} }`;
 };
 
+/** Two or more arrays or objects, each of two or more items: the formatter prints each on its own line. */
 const isMatrix = (items: ReadonlyArray<Json>): boolean =>
   items.length > 1 && items.every((v) => (isArray(v) && v.length > 1) || entriesOf(v).length > 1);
 
+/** Whether the formatter breaks `value` whatever room it has: an object with a key (the tools write its first key on its own line, and the formatter keeps an object broken so), a matrix, or an array holding either at any depth (a break in an item breaks every array around it). */
 const breaksAlways = (value: Json): boolean =>
   (isArray(value) && (isMatrix(value) || value.some(breaksAlways))) || entriesOf(value).length > 0;
 
+/**
+ * Numbers as the formatter fills them: as many to a line, after `indent`, as
+ * fit with the comma that follows each but the last.
+ */
 const filled = (numbers: ReadonlyArray<string>, indent: string): ReadonlyArray<string> => {
   const lines: Array<string> = [];
   numbers.forEach((n, k) => {
@@ -52,6 +69,13 @@ const filled = (numbers: ReadonlyArray<string>, indent: string): ReadonlyArray<s
   return lines;
 };
 
+/**
+ * `value` printed as oxfmt prints a JSON file: an object one key a line; an
+ * array on one line when it fits in `PRINT_WIDTH` from `column` with the
+ * `tail` that follows it (a comma), else one item a line (numbers filled
+ * as many to a line as fit), and always broken when it holds an object or
+ * is two or more arrays or objects of two or more items each.
+ */
 const printJson = (value: Json, indent: string, column: number, tail: number): string => {
   const inner = `${indent}  `;
   if (isArray(value)) {
@@ -78,6 +102,12 @@ const printJson = (value: Json, indent: string, column: number, tail: number): s
   return `{\n${lines.join(',\n')}\n${indent}}`;
 };
 
+/**
+ * `schema` as a JSON file the repo keeps, printed as the repo's formatter
+ * prints it (`printJson`) with a final newline, so a file the tools rewrite
+ * reads as one the formatter left: a record a tool writes passes the gate's
+ * format check unchanged.
+ */
 export const repoJson = <S extends Parameters<typeof Schema.fromJsonString>[0]>(schema: S) =>
   Schema.String.pipe(
     Schema.decodeTo(
@@ -89,16 +119,24 @@ export const repoJson = <S extends Parameters<typeof Schema.fromJsonString>[0]>(
     ),
   );
 
+/** The names `names` holds more than once, each once, in first-seen order. */
 const repeated = (names: ReadonlyArray<string>): ReadonlyArray<string> => [
   ...new Set(names.filter((name, i) => names.indexOf(name) !== i)),
 ];
 
+/** Seconds: finite, never negative. */
 export const Seconds = Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0));
 
+/** A key a JSON file may leave out, read as an `Option`. */
 export const maybe = <S extends Schema.Top>(schema: S) => Schema.OptionFromOptionalKey(schema);
 
+/**
+ * How far a take's last word may end past its measured length: the alignment
+ * and the decoded take measure the same audio, a frame or so apart at most.
+ */
 export const TAKE_TOLERANCE = 0.05;
 
+/** One spoken word, in seconds from the start of its take. */
 export const Word = Schema.Struct({
   text: Schema.String,
   start: Seconds,
@@ -106,16 +144,31 @@ export const Word = Schema.Struct({
 }).check(Schema.makeFilter((w) => w.start <= w.end || `"${w.text}" ends before it starts`));
 export type Word = typeof Word.Type;
 
+/**
+ * Seconds at which a voice is heard (measured from the take's audio,
+ * `voiced.ts`), not where the aligner puts a word, pause before it and all.
+ * Branded, so aligned seconds passed where the ear is met (a short's
+ * captions, its hook, its loop) are a type error.
+ */
 export const Heard = Seconds.pipe(Schema.brand('Heard'));
 export type Heard = typeof Heard.Type;
 
+/** Where a word's voice is heard, in seconds from the start of its take. */
 export const Voiced = Schema.Struct({ start: Heard, end: Heard });
 export type Voiced = typeof Voiced.Type;
 
+/** A word timed by its voice (`heard` in `voiced.ts`): its span is where it is heard. */
 export interface HeardWord extends Voiced {
   readonly text: string;
 }
 
+/**
+ * A word of a take: its span as the aligner timed it (`start`, `end`, which
+ * hold the pause before the word), and where inside that span its voice is
+ * heard (`voiced`, measured from the take's audio when it is timed:
+ * `voiced.ts`). A caption, a hook or a loop that must meet the ear reads
+ * `voiced`; a mark reads the aligned `start`.
+ */
 export const TakeWord = Schema.Struct({
   text: Schema.String,
   start: Seconds,
@@ -133,15 +186,30 @@ export const TakeWord = Schema.Struct({
 );
 export type TakeWord = typeof TakeWord.Type;
 
+/**
+ * Who read a take: the ElevenLabs staging voice (`narrate`), or a person
+ * (`takes import`, the lab's studio). Staging never replaces a recorded take.
+ */
 export const TakeSource = Schema.Literals(['elevenlabs', 'recorded']);
 export type TakeSource = typeof TakeSource.Type;
 
+/** What narrate records for one scene: its words in order, all inside the take. */
 export const VoiceTiming = Schema.Struct({
+  /** Hash of the spoken text; a mismatch means the take is stale. */
   hash: Schema.String,
   file: Schema.String,
   duration: Seconds,
   words: Schema.Array(TakeWord),
+  /**
+   * A staging take's delivery marks as it read them (`deliveryKey`), absent
+   * for a line read with none and for a person's take: a staging take whose
+   * line's marks change is stale, a person's never.
+   */
   delivered: Schema.optionalKey(Schema.String),
+  /**
+   * A take stored with no source was staged: it reads as `elevenlabs`, and a
+   * staged take is written with none, so the committed timings never churn.
+   */
   source: Schema.optionalKey(TakeSource).pipe(
     Schema.decodeTo(
       TakeSource,
@@ -172,16 +240,25 @@ export const VoiceTiming = Schema.Struct({
 );
 export type VoiceTiming = typeof VoiceTiming.Type;
 
+/** `narration/timings.json`: every current take, under the voice that read it. */
 export const Timings = Schema.Struct({
+  /** `voiceKey(voice)`: a different voice makes every take stale. */
   voice: Schema.String,
   scenes: Schema.Record(Schema.String, VoiceTiming),
 });
 export type Timings = typeof Timings.Type;
 
+/** `timings.json` on disk. */
 export const TimingsJson = repoJson(Timings);
 
+/** Voice settings as the API takes them: named numbers. */
 const VoiceSettings = Schema.Record(Schema.String, Schema.Finite);
 
+/**
+ * Settings a model reads, and nothing else: the API ignores a key it does not
+ * know, so a slider the model lacks would change the take's key and nothing
+ * in the take. Each is a number from 0 to 1.
+ */
 const settingsOnly = (model: string, keys: ReadonlyArray<string>) =>
   Schema.makeFilter((settings: Readonly<Record<string, number>>) => {
     const entries = Object.entries(settings);
@@ -193,6 +270,11 @@ const settingsOnly = (model: string, keys: ReadonlyArray<string>) =>
     return out.length === 0 || `${out.join(', ')} must be from 0 to 1`;
   });
 
+/**
+ * One voice reads every line, through text-to-speech. `eleven_v4` has two
+ * sliders, `stability` and `similarity_boost` (no style, no speed); the
+ * earlier models take any setting the API names.
+ */
 export const Reader = Schema.Union([
   Schema.Struct({
     voiceId: Schema.String,
@@ -207,9 +289,17 @@ export const Reader = Schema.Union([
 ]);
 export type Reader = typeof Reader.Type;
 
+/** One voice of a cast: the name a line hands over to with `{@name}`. */
 const CastVoice = Schema.Struct({ name: Schema.String, voiceId: Schema.String });
 type CastVoice = typeof CastVoice.Type;
 
+/**
+ * Voices in conversation, every take read through text-to-dialogue, so a
+ * question and its answer share one take. The first voice reads until a line
+ * hands over to another. The endpoint takes two settings for the whole take:
+ * `stability`, and `similarity` (how close to the source voice; the API's
+ * default is 0.75 when it is left out).
+ */
 export const Cast = Schema.Struct({
   model: Schema.Literals(['eleven_v3', 'eleven_v4']),
   settings: VoiceSettings.check(
@@ -228,19 +318,24 @@ export const Cast = Schema.Struct({
 );
 export type Cast = typeof Cast.Type;
 
+/** Who reads a film, and how (`voice.ts`). Changing any of it re-records every beat. */
 export const Voice = Schema.Union([Reader, Cast]);
 export type Voice = typeof Voice.Type;
 
+/** Whether a film is read by a cast in conversation rather than by one voice. */
 export const isCast = (voice: Voice): voice is Cast => 'voices' in voice;
 
+/** How a scene arrives from the previous one. */
 export const Transition = Schema.Union([
   Schema.Struct({ kind: Schema.Literal('cut') }),
   Schema.Struct({ kind: Schema.Literal('fade'), dur: Seconds }),
+  /** Slide across one long sheet, like a camera panning a mural. */
   Schema.Struct({
     kind: Schema.Literal('pan'),
     dur: Seconds,
     dir: Schema.optionalKey(Schema.Literals([1, -1])),
   }),
+  /** A broad brush stroke sweeps across and leaves the new scene behind it. */
   Schema.Struct({
     kind: Schema.Literal('ink'),
     dur: Seconds,
@@ -249,6 +344,7 @@ export const Transition = Schema.Union([
 ]);
 export type Transition = typeof Transition.Type;
 
+/** The name of an easing curve in `ease` (`time.ts`), so a cue's easing is data. */
 export const EaseName = Schema.Literals([
   'linear',
   'inQuad',
@@ -268,23 +364,29 @@ export const EaseName = Schema.Literals([
 ]);
 export type EaseName = typeof EaseName.Type;
 
+/** Fails the typecheck unless `EaseName` names every curve in `ease` and nothing else. */
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 type Assert<T extends true> = T;
 type _EaseNamesMatch = Assert<Same<EaseName, keyof typeof ease>>;
 
+/** A scene's landmarks: its start, where its voice starts and ends, and its end. */
 const Landmark = Schema.Literals(['start', 'speech', 'speechEnd', 'end']);
 type Landmark = typeof Landmark.Type;
 
+/** A key a point must not name beside its own anchor. */
 const none = Schema.optionalKey(Schema.Never);
 
+/** A `{mark}` in the scene's narration, or the first `word` said at or after it. */
 const onMark = {
   mark: Schema.String,
+  /** Pin to this word at or after the mark, not the mark; read as a take is checked (`normalizeWords`). */
   word: Schema.optionalKey(Schema.String),
   cue: none,
   edge: none,
   at: none,
 };
 
+/** A named cue's start, or its end with `edge: 'end'`. */
 const onCue = {
   cue: Schema.String,
   edge: Schema.optionalKey(Schema.Literals(['start', 'end'])),
@@ -293,8 +395,17 @@ const onCue = {
   at: none,
 };
 
+/** A scene landmark. */
 const onLandmark = { at: Landmark, mark: none, word: none, cue: none, edge: none };
 
+/**
+ * A point in a scene, never at a second: a `{mark}` (where the word it
+ * precedes starts) or a word pinned after it, a named cue (its start, or its
+ * end with `edge: 'end'`; a short's `to` takes the end when no edge is
+ * named), or a landmark. A point names one anchor. A short's spans, the
+ * sound's cues and a timeline's anchors (`anchorPoint`) all resolve through
+ * one function, `pointIn`.
+ */
 export const ScenePoint = Schema.Union([
   Schema.Struct(onMark),
   Schema.Struct(onCue),
@@ -302,23 +413,52 @@ export const ScenePoint = Schema.Union([
 ]);
 export type ScenePoint = typeof ScenePoint.Type;
 
+/** A share of a cue, from none of it to all of it. */
 const Share = Schema.Finite.check(Schema.isBetween({ minimum: 0, maximum: 1 }));
 
 const spanTiming = {
   offset: Schema.optionalKey(Schema.Finite),
+  /** How `f.at(name)` eases across the cue. Defaults to `DEFAULT_EASE` (`time.ts`). */
   ease: Schema.optionalKey(EaseName),
+  /**
+   * The share of the cue over which `f.stagger(name, i, n)` spreads its items'
+   * starts; each item lasts the rest. Defaults to 0: every item is the whole cue.
+   */
   stagger: Schema.optionalKey(Share),
+  /**
+   * The cue is a designed silence: `film check` lets the master fall quiet
+   * across it without a `DeadAir` finding. Only where the script means one
+   * (after the key quotation, the black moment, the beat before the last word).
+   */
   silence: Schema.optionalKey(Schema.Literal(true)),
+  /**
+   * The track the cue moves: the actor or part it is an act of (`accused`,
+   * `judge`, `room`). The lab's strip draws a track's cues on one row, in the
+   * order its first cue is written; a cue with none is its own track, named by
+   * the cue. Read by the lab only: no frame, sound or layout reads it.
+   */
   track: Schema.optionalKey(Schema.NonEmptyString),
 };
 
+/** A span that lasts its length: from its anchor, or up to it. */
 const byDur = {
+  /** Defaults to 0, an instant. */
   dur: Schema.optionalKey(Seconds),
+  /**
+   * The span ends at its anchor (plus `offset`) and starts `dur` before it:
+   * a motion that lands on its moment, so a `dur` edit keeps the landing.
+   */
   ends: Schema.optionalKey(Schema.Literal(true)),
   until: Schema.optionalKey(Schema.Never),
   untilOffset: Schema.optionalKey(Schema.Never),
 };
 
+/**
+ * Where a span runs `until`: a `{mark}` in the scene's narration (its name),
+ * a scene landmark (`{ at: 'speechEnd' }`), so a re-take moves the end with
+ * it, or another cue's edge (`{ cue: 'roll' }`, its end unless `edge` names
+ * the start), so a lab drag of that cue moves the end with it.
+ */
 export const Until = Schema.Union([
   Schema.String,
   Schema.Struct({ at: Landmark, cue: none, edge: none }),
@@ -330,22 +470,41 @@ export const Until = Schema.Union([
 ]);
 export type Until = typeof Until.Type;
 
+/** A span that ends on a mark, a landmark or a cue's edge, or a set time off it. */
 const untilPoint = {
   until: Until,
+  /**
+   * Where the span ends off its `until` point, in seconds (negative: before
+   * it), as `offset` is where it starts off its anchor. The end still follows
+   * the point: a lab drag of the end off it writes this, never a `dur`.
+   * Defaults to 0, on the point.
+   */
   untilOffset: Schema.optionalKey(Schema.Finite),
   dur: Schema.optionalKey(Schema.Never),
   ends: Schema.optionalKey(Schema.Never),
 };
 
+/** One anchor's two spans: ended by `dur`, or `until` a mark, a landmark or a cue's edge; never both. */
 const anchored = <A extends Schema.Struct.Fields>(anchor: A) =>
   [
     Schema.Struct({ ...anchor, ...spanTiming, ...byDur }),
     Schema.Struct({ ...anchor, ...spanTiming, ...untilPoint }),
   ] as const;
 
+/**
+ * Where a named cue starts (or, with `ends`, lands), plus how long it lasts:
+ * at a `{mark}` in the scene's narration, or at the first `word` said at or
+ * after it (a word pin, for a beat on a word that has no mark:
+ * `{ mark: 'gift', word: 'faith' }`; a line that never says it there is
+ * `WordMissing` at layout), at the end of another cue (`after`), at its start
+ * (`with`), or at a scene landmark (`at`: its start, where the voice starts
+ * or ends, or its end). Each anchor is a `ScenePoint` (`anchorPoint`), resolved
+ * as every other point in a scene is.
+ */
 export const Span = Schema.Union([
   ...anchored({
     mark: Schema.String,
+    /** Pin to this word at or after the mark, not the mark; read as a take is checked (`normalizeWords`). */
     word: Schema.optionalKey(Schema.String),
   }),
   ...anchored({ after: Schema.String }),
@@ -354,31 +513,54 @@ export const Span = Schema.Union([
 ]);
 export type Span = typeof Span.Type;
 
+/** A scene's timeline: cue name → span. */
 export const Timeline = Schema.Record(Schema.String, Span);
 export type Timeline = typeof Timeline.Type;
 
+/** A point in canvas pixels. */
 export const Point = Schema.Tuple([Schema.Finite, Schema.Finite]);
 export type Point = typeof Point.Type;
 
+/** A value a drawing reads by name (`f.knob`) instead of hard-coding: a number or a point. */
 export const Knob = Schema.Union([Schema.Finite, Point]);
 export type Knob = typeof Knob.Type;
 
+/** A drawing's knobs: name → value, the one place the value lives. */
 export const Knobs = Schema.Record(Schema.String, Knob);
 export type Knobs = typeof Knobs.Type;
 
+/** The part of a scene the clock reads. */
 export const Timed = Schema.Struct({
+  /** Names the scene's files, its address and its render's choice point. */
   id: PartId,
+  /** Narration, with optional `{mark}` cues. Omit for a silent beat. */
   say: Schema.optionalKey(Schema.String),
+  /** Silence before the voice starts. */
   lead: Schema.optionalKey(Seconds),
+  /** Silence after the voice ends. */
   tail: Schema.optionalKey(Seconds),
+  /** Minimum scene length. */
   min: Schema.optionalKey(Seconds),
+  /** How this scene arrives from the previous one. */
   enter: Schema.optionalKey(Transition),
+  /** Named moments, anchored to marks or to each other; resolved once in `layout()`. */
   timeline: Schema.optionalKey(Timeline),
+  /** Named numbers and points the drawing reads with `f.knob`. */
   knobs: Schema.optionalKey(Knobs),
+  /**
+   * Set by `storyboard()`: the beat has no drawing yet and plays as its card.
+   * A card holds still over its words by design, so `film check` reports no
+   * `StaticHold` in it.
+   */
   storyboard: Schema.optionalKey(Schema.Literal(true)),
 });
 export type Timed = typeof Timed.Type;
 
+/**
+ * One beat of a film's script (`script.ts`): what is said and how it is
+ * timed, its sources, and the brief its drawing follows. The drawing's own
+ * timeline and knobs live beside the drawing, not in the script.
+ */
 export const Beat = Schema.Struct({
   id: Timed.fields.id,
   say: Timed.fields.say,
@@ -386,8 +568,19 @@ export const Beat = Schema.Struct({
   tail: Timed.fields.tail,
   min: Timed.fields.min,
   enter: Timed.fields.enter,
+  /** Sources, in the order they are used; they feed the end card and sources.md. */
   cite: Schema.optionalKey(Schema.Array(Schema.String)),
+  /** What the picture does: the brief for the scene's drawing. */
   picture: Schema.String,
+  /**
+   * The cast members the picture draws, each by its cast-sheet folder's id
+   * (`['christ', 'paul']`): the board sends each one's record in the cast
+   * library (a film's own role first) as a reference that wins over any
+   * concept image that draws the member otherwise, on the person; the
+   * picture says what the member wears and does. Plain strings,
+   * so a script's literal array types; decoding still refuses a name that is
+   * not one path segment.
+   */
   cast: Schema.optionalKey(
     Schema.Array(
       Schema.String.check(
@@ -398,13 +591,24 @@ export const Beat = Schema.Struct({
 });
 export type Beat = typeof Beat.Type;
 
+/**
+ * A film's script: its beats in order, each id kept as written, so a
+ * registry keyed by beat (`scenesOf`'s drawings, a light per scene) names only
+ * beats the script has. An identity.
+ */
 export const defineScript = <const Id extends string>(
   beats: ReadonlyArray<Beat & { readonly id: Id }>,
 ): ReadonlyArray<Beat & { readonly id: Id }> => beats;
 
+/**
+ * `script.ts`'s optional `heardAs`: a word of the script (a name, mostly) and
+ * the ways speech-to-text writes it, so a take that reads it right is not a
+ * mismatch: `{ Ellet: ['Elliot', 'Elliott'] }`.
+ */
 export const HeardAs = Schema.Record(Schema.String, Schema.Array(Schema.String));
 export type HeardAs = typeof HeardAs.Type;
 
+/** One stretch of one scene a short plays: `from` a point `to` a later one. */
 export const ShortSpan = Schema.Struct({
   scene: Schema.String,
   from: ScenePoint,
@@ -412,14 +616,22 @@ export const ShortSpan = Schema.Struct({
 });
 export type ShortSpan = typeof ShortSpan.Type;
 
+/** A vertical short cut from a film (`shorts.ts`): its spans, played back to back. */
 export const Short = Schema.Struct({
+  /** Names its files (`out/<film>/shorts/<id>.mp4`) and its address. */
   id: PartId,
   title: Schema.String,
+  /**
+   * The line set above the picture from the first frame for its first
+   * seconds (`SHORT_LAYOUT`), for the viewer who watches with the sound off:
+   * the narrator's own question, or a claim against expectation.
+   */
   hook: Schema.optionalKey(Schema.NonEmptyString),
   spans: Schema.NonEmptyArray(ShortSpan),
 });
 export type Short = typeof Short.Type;
 
+/** A film's `shorts.ts`: its shorts, each id once. */
 export const Shorts = Schema.Array(Short).check(
   Schema.makeFilter((shorts) => {
     const twice = repeated(shorts.map((s) => s.id));
@@ -428,8 +640,15 @@ export const Shorts = Schema.Array(Short).check(
 );
 export type Shorts = typeof Shorts.Type;
 
+/** A sound cue's scene and its nudge off the point, in seconds. */
 const inScene = { scene: Schema.String, offset: Schema.optionalKey(Schema.Finite) };
 
+/**
+ * A moment on the film clock: a scene, a point in it (`ScenePoint`: a mark,
+ * a named cue's edge or a landmark such as `speech`), and an offset in
+ * seconds: `{ scene: 'mirror', at: 'speech' }`, `{ scene: 'roof', cue: 'lower' }`.
+ * The scene's start is a landmark like the rest: `{ scene: 'cold', at: 'start' }`.
+ */
 export const Cue = Schema.Union([
   Schema.Struct({ ...inScene, ...onMark }),
   Schema.Struct({ ...inScene, ...onCue }),
@@ -437,6 +656,11 @@ export const Cue = Schema.Union([
 ]);
 export type Cue = typeof Cue.Type;
 
+/**
+ * One movement of the score: from the start of `from` until the next movement
+ * begins (the first opens the film). Movements turn where the music does, so
+ * they need not fall on the film's acts (`look.acts`).
+ */
 export const Movement = Schema.Struct({
   from: Schema.String,
   name: Schema.String,
@@ -447,6 +671,7 @@ export type Movement = typeof Movement.Type;
 
 export const MusicModel = Schema.Literals(['music_v2', 'music_v2_5']);
 
+/** One score for the film: a musical language (its styles), in movements timed to the film. */
 export const Music = Schema.Struct({
   model: MusicModel,
   styles: Schema.Array(Schema.String),
@@ -455,6 +680,14 @@ export const Music = Schema.Struct({
 });
 export type Music = typeof Music.Type;
 
+/**
+ * The film's score: one or more options, each a whole score in its own
+ * musical language, composed for the whole film; `play` names the one the mix
+ * plays (`mix --score <option>` plays another). The levels are dB against the
+ * voice as the mix measures it: `under` wherever anyone speaks (short gaps
+ * included), `alone` where no one speaks for a while (the title card, the
+ * landing, the credits).
+ */
 export const Score = Schema.Struct({
   play: Schema.String,
   under: Schema.Finite,
@@ -469,24 +702,47 @@ export const Score = Schema.Struct({
 );
 export type Score = typeof Score.Type;
 
+/**
+ * A one-shot from the app's sound library (`sounds/library.ts`), placed on
+ * each of its cues. A film names sounds, never prompts.
+ */
 export const SoundEffect = Schema.Struct({
+  /** The library's name for it: `paper.slide`. */
   sound: Schema.String,
+  /** Its level in dB relative to the voice; else the library's, else the one-shot default. */
   level: Schema.optionalKey(Schema.Finite),
+  /**
+   * What lands on each cue, as the lock records it for each take (so a take
+   * with a slow start needs no hand offset and a kept take swapped for
+   * another stays on the cue): `'onset'`, where its sound begins (a
+   * sustained sound, steps or a creak, whose silent lead-in would be heard
+   * late); `'hit'`, its loudest moment (an impact, the rest played before
+   * it); `'start'` (the default), its first sample.
+   */
   sync: Schema.optionalKey(Schema.Literals(['start', 'onset', 'hit'])),
   at: Schema.Array(Cue),
 });
 export type SoundEffect = typeof SoundEffect.Type;
 
+/**
+ * A bed: a library sound looped from one cue to another, crossfaded into
+ * itself where it wraps, faded in and out, ducked under the voice unless the
+ * library says it sits under everything.
+ */
 const SoundBed = Schema.Struct({
   sound: Schema.String,
+  /** dB relative to the voice; else the library's, else the bed default. */
   level: Schema.optionalKey(Schema.Finite),
   from: Cue,
   to: Cue,
+  /** Seconds each end fades over; `BED_FADE` when none. */
   fade: Schema.optionalKey(Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0))),
 });
 type SoundBed = typeof SoundBed.Type;
 
+/** A film's score, beds and effects (`sound.ts`). */
 export const Sound = Schema.Struct({
+  /** Effect variant and jitter identity. Defaults to the film's name; reuse it for another visual version. */
   seed: Schema.optionalKey(Schema.String),
   score: Schema.optionalKey(Score),
   beds: Schema.optionalKey(Schema.Array(SoundBed)),
@@ -494,6 +750,14 @@ export const Sound = Schema.Struct({
 });
 export type Sound = typeof Sound.Type;
 
+/**
+ * A score option as it was composed: its request hash, its file under the
+ * film's `sound/` (private: generated music never sits in the public repo)
+ * and the sha256 of its bytes, which the private store keeps it under.
+ * `through` names the scene a partial score was composed through (`score
+ * --through`): its plan ends there, and no music plays after it. A whole
+ * score has none.
+ */
 export const ScoreAsset = Schema.Struct({
   hash: Schema.String,
   file: Schema.String,
@@ -502,13 +766,23 @@ export const ScoreAsset = Schema.Struct({
 });
 export type ScoreAsset = typeof ScoreAsset.Type;
 
+/**
+ * `sound/manifest.json`: each score option composed for the film, by option
+ * name. Its effects and beds are the library's.
+ */
 export const SoundManifest = Schema.Struct({
   scores: Schema.optionalKey(Schema.Record(Schema.String, ScoreAsset)),
 });
 export type SoundManifest = typeof SoundManifest.Type;
 
+/** `sound/manifest.json` on disk. */
 export const SoundManifestJson = repoJson(SoundManifest);
 
+/**
+ * One timed chunk of the ElevenLabs composition plan for the v2 music models.
+ * v2 always honours chunk durations, which is what lets the score turn with
+ * the film. Field order is part of the score's hash.
+ */
 export const PlanChunk = Schema.Struct({
   text: Schema.String,
   duration_ms: Schema.Int,
@@ -521,24 +795,46 @@ export type PlanChunk = typeof PlanChunk.Type;
 export const Plan = Schema.Struct({ chunks: Schema.Array(PlanChunk) });
 export type Plan = typeof Plan.Type;
 
+/** What a voice take depends on besides its text and its voices. */
 export const VoiceKey = Schema.fromJsonString(VoiceSettings);
 
+/** What the score depends on. */
 export const MusicRequestKey = Schema.fromJsonString(
   Schema.Struct({ model: MusicModel, plan: Plan }),
 );
 
+/** A range of a measure, low to high, both included. */
 const Range = Schema.Tuple([Schema.Finite, Schema.Finite]);
 
+/**
+ * One act of a film (`look.acts`, declared in film order): where it starts,
+ * its chapter title, and the light it should measure. An act holds its
+ * scenes (`membersOf`): the film's colour script, lights and chapters all
+ * read them.
+ */
 export const Act = Schema.Struct({
+  /** The scene the act starts on; it runs until the next act's. The first holds every scene before it. */
   from: PartId,
+  /** The act's name, for the report: `cold open`, `valley`. */
   name: ActName,
+  /**
+   * The narrator's question that opens the act, in the viewer's words: its
+   * YouTube chapter title (`film chapters`).
+   */
   chapter: Schema.optionalKey(Schema.String),
+  /** Mean luma, 0–255, the act's frames should measure. */
   luma: Schema.optionalKey(Range),
+  /** Mean saturation, 0–1. */
   saturation: Schema.optionalKey(Range),
+  /** The most of its frames that may be darker than luma 60, 0–1. */
   dark: Schema.optionalKey(Share),
 });
 export type Act = typeof Act.Type;
 
+/**
+ * A film's declared look (`export const look` in `film.ts`): its acts, in
+ * film order, each named once, since `act:<name>` addresses one part.
+ */
 export const Look = Schema.Struct({
   acts: Schema.Array(Act).check(
     Schema.makeFilter((acts) => {
@@ -549,6 +845,11 @@ export const Look = Schema.Struct({
 });
 export type Look = typeof Look.Type;
 
+/**
+ * A look the film chooses between at named levels (the ground's lift: `now`,
+ * `light`, `lighter`): each level's value, and `play`, the one the film is
+ * drawn at. The review compares them and a pick rewrites `play`.
+ */
 const LookOption = Schema.Struct({
   options: Schema.Record(Schema.String, Schema.Finite),
   play: Schema.String,
@@ -561,9 +862,11 @@ const LookOption = Schema.Struct({
 );
 type LookOption = typeof LookOption.Type;
 
+/** A film's look options by name (`export const looks` in `palette.ts`). */
 export const Looks = Schema.Record(Schema.String, LookOption);
 export type Looks = typeof Looks.Type;
 
+/** A pinned point (`w` and `h` 0) or a dragged box, in canvas pixels. */
 const NoteBox = Schema.Struct({
   x: Schema.Finite,
   y: Schema.Finite,
@@ -572,37 +875,52 @@ const NoteBox = Schema.Struct({
 });
 type NoteBox = typeof NoteBox.Type;
 
+/** One freehand pen stroke, in canvas pixels. */
 const InkStroke = Schema.Array(Point);
 type InkStroke = typeof InkStroke.Type;
 
 export const NoteAuthor = Schema.Literals(['user', 'agent']);
 export type NoteAuthor = typeof NoteAuthor.Type;
 
+/** `open` until the agent replies (`replied`); a user reply opens it again; `resolved` closes it. */
 export const NoteStatus = Schema.Literals(['open', 'replied', 'resolved']);
 export type NoteStatus = typeof NoteStatus.Type;
 
+/** A change's place in the film's note log: every change takes the next number. */
 const Seq = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 
 export const Reply = Schema.Struct({
   seq: Seq,
   by: NoteAuthor,
   text: Schema.String,
+  /** A still file in `stills/`, e.g. the agent's after-frame. */
   still: Schema.optionalKey(Schema.String),
+  /** ISO time. */
   at: Schema.String,
 });
 export type Reply = typeof Reply.Type;
 
+/** The named cue edge nearest the note's time, in its scene. */
 const NoteCue = Schema.Struct({
   name: Schema.String,
   edge: Schema.Literals(['start', 'end']),
 });
 type NoteCue = typeof NoteCue.Type;
 
+/**
+ * A stretch of a note's scene the note is about, in scene-local seconds (as
+ * the lab's `#t=` and the note's `local` count them): the in and out points
+ * marked when it was written, cut to its scene.
+ */
 const NoteRange = Schema.Struct({ from: Seconds, to: Seconds }).check(
   Schema.makeFilter((r) => r.to > r.from || 'a range ends after it starts'),
 );
 type NoteRange = typeof NoteRange.Type;
 
+/**
+ * A line of a scene's file a note is about: the file, the line (from 1) and
+ * the line's text as it stood, so a reader finds it after the file moves.
+ */
 const NoteSource = Schema.Struct({
   file: Schema.String,
   line: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
@@ -610,6 +928,11 @@ const NoteSource = Schema.Struct({
 });
 type NoteSource = typeof NoteSource.Type;
 
+/**
+ * Words of a beat's line a note is about: the beat, its first and last word
+ * (from 0, as the line is said and the Script's `?words=` counts them) and
+ * the words as they stood, so a reader finds them after the line changes.
+ */
 export const NoteWords = Schema.Struct({
   beat: Schema.String,
   from: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
@@ -618,31 +941,55 @@ export const NoteWords = Schema.Struct({
 }).check(Schema.makeFilter((w) => w.to >= w.from || 'the words end at or after they start'));
 export type NoteWords = typeof NoteWords.Type;
 
+/**
+ * What a note on a line's words asks of them: a note (they stand; it says
+ * something of them), a correction (say `replace` in their place) or a
+ * removal (cut them).
+ */
 const NoteKind = Schema.Literals(['note', 'correction', 'removal']);
 type NoteKind = typeof NoteKind.Type;
 
+/**
+ * What a note on a storyboard panel asks of it: a note (it says something of
+ * the panel) or a tweak (make the panel again as the note and its sketch say;
+ * `film board tweak` acts on it).
+ */
 const PanelAsk = Schema.Literals(['note', 'tweak']);
 type PanelAsk = typeof PanelAsk.Type;
 
+/**
+ * The storyboard panel a note is about (`core/board.ts`): its id
+ * (`<beat>.<at>`), the try shown when it was written, and what it asks.
+ */
 const NotePanel = Schema.Struct({
   id: Schema.String,
+  /** The try shown: absent on a card or a verse panel, which the engine sets and which has none. */
   try: Schema.optionalKey(Schema.Int.check(Schema.isGreaterThanOrEqualTo(1))),
+  /** Absent: a note. */
   ask: Schema.optionalKey(PanelAsk),
 });
 type NotePanel = typeof NotePanel.Type;
 
+/** What a note asks of a line's words: the words, what it asks of them, a correction's words instead. */
 interface Asking {
   readonly words?: NoteWords;
   readonly kind?: NoteKind;
   readonly replace?: string;
 }
 
+/** Whether a correction says words of its own: some, and not the words it corrects. */
 const saysOtherWords = (n: Asking): boolean =>
   Option.exists(
     Option.fromUndefinedOr(n.replace),
     (r) => r.trim() !== '' && r.trim() !== n.words?.text,
   );
 
+/**
+ * What a note may ask of its words, by the composer's own rule (`unsaid`,
+ * `lab/notes/draft.ts`), checked wherever a note crosses a boundary (the
+ * lab's POST, `notes.json`): what it asks is of words, so a kind comes with
+ * them; only a correction says words instead, and other words than theirs.
+ */
 const ASKS_OF_WORDS = Schema.makeFilterGroup<Asking>([
   Schema.makeFilter(
     (n) =>
@@ -667,19 +1014,50 @@ const ASKS_OF_WORDS = Schema.makeFilterGroup<Asking>([
   ),
 ]);
 
+/** What the lab sends for a new note: the frame, where it was marked, and what it says. */
 export const NoteDraft = Schema.Struct({
   scene: Schema.String,
+  /** Film seconds, as the film was laid out when the note was made. */
   T: Seconds,
+  /**
+   * Scene-local seconds: how far into `scene` the note was made. The lab reads
+   * a note here while its scene exists (`noteT`), so a note keeps its frame
+   * when an earlier beat is re-taken. Optional and additive: a note made
+   * before it reads at `T`.
+   */
   local: Schema.optionalKey(Seconds),
   frame: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  /** The edge of the cue selected as it was written nearest its time, else of any cue in its scene. */
   cue: Schema.optionalKey(NoteCue),
+  /** The `{mark}` nearest the note's time, in its scene. */
   mark: Schema.optionalKey(Schema.String),
+  /**
+   * The stretch of its scene it is about (`t 3.2–4.0 s`).
+   * Optional and additive: a note without one is about its frame.
+   */
   range: Schema.optionalKey(NoteRange),
+  /** The line of its scene's file it is about. Optional and additive. */
   source: Schema.optionalKey(NoteSource),
+  /**
+   * The words of its scene's line it is about (written with words of the
+   * line selected), its still the frame where they start. Optional and
+   * additive: a note without them is about its frame.
+   */
   words: Schema.optionalKey(NoteWords),
+  /** What it asks of its `words` (written with them): absent, a note. Optional and additive. */
   kind: Schema.optionalKey(NoteKind),
+  /** A correction's words to say in place of its `words`. Optional and additive. */
   replace: Schema.optionalKey(Schema.String),
+  /**
+   * The storyboard panel it is about (written on the Board), its still the
+   * panel with its sketch drawn on it. Optional and additive: a note without
+   * one is about its frame.
+   */
   panel: Schema.optionalKey(NotePanel),
+  /**
+   * What was drawn on the panel (`core/sketch.ts`), in the panel's own
+   * fractions. Optional and additive.
+   */
   sketch: Schema.optionalKey(Schema.Array(SketchItem)),
   box: Schema.optionalKey(NoteBox),
   ink: Schema.optionalKey(Schema.Array(InkStroke)),
@@ -689,17 +1067,23 @@ export type NoteDraft = typeof NoteDraft.Type;
 
 export const Note = Schema.Struct({
   ...NoteDraft.fields,
+  /** `n<seq>`: short enough to type in `film lab reply --note`. */
   id: Schema.String,
   film: Schema.String,
+  /** The change that made the note. */
   seq: Seq,
+  /** The last change to touch it (made, replied or resolved). */
   changed: Seq,
   status: NoteStatus,
+  /** The exact frame, as the lab drew it, in `stills/`. */
   still: Schema.String,
   thread: Schema.Array(Reply),
+  /** ISO time. */
   createdAt: Schema.String,
 }).check(ASKS_OF_WORDS);
 export type Note = typeof Note.Type;
 
+/** `lab/<film>/notes.json`. `seq` is the last change's number: the cursor a watcher waits past. */
 export const NotesFile = Schema.Struct({
   film: Schema.String,
   seq: Seq,
@@ -707,8 +1091,10 @@ export const NotesFile = Schema.Struct({
 });
 export type NotesFile = typeof NotesFile.Type;
 
+/** `notes.json` on disk. */
 export const NotesFileJson = repoJson(NotesFile);
 
+/** A change after a cursor: a new note, a reply in a thread, or a note resolved. */
 export const NoteEvent = Schema.Union([
   Schema.TaggedStruct('NoteAdded', { seq: Seq, note: Note }),
   Schema.TaggedStruct('NoteReplied', { seq: Seq, note: Note, reply: Reply }),
@@ -716,13 +1102,17 @@ export const NoteEvent = Schema.Union([
 ]);
 export type NoteEvent = typeof NoteEvent.Type;
 
+/** What a wait returns: the changes past `since`, in order, and the cursor to wait past next. */
 export const NotesWait = Schema.Struct({ cursor: Seq, events: Schema.Array(NoteEvent) });
 export type NotesWait = typeof NotesWait.Type;
 
+/** A cue's offset from its anchor, in seconds. */
 const CueOffset = Schema.Finite;
 
+/** A cue's length, in seconds, never below 0. */
 const CueDur = Seconds;
 
+/** A cue patch's fields, in the order a span writes them. */
 export const CuePatchFields = {
   offset: Schema.optionalKey(
     CueOffset.annotate({ description: "The cue's offset from its anchor, in seconds." }),
@@ -748,11 +1138,14 @@ export const CuePatchFields = {
   ),
 };
 
+/** Every key a cue patch may set, in the order a span writes them: the one list of them. */
 export const CUE_PATCH_KEYS = Struct.keys(CuePatchFields);
 
+/** The fields of a cue patch an input sets. */
 const Patched = Schema.Struct(CuePatchFields);
 type Patched = typeof Patched.Type;
 
+/** How a span ends, as a patch may say it: by its dur or on a mark, never both. */
 export const spanEnds = [
   Schema.makeFilter(
     (p: Patched) =>
@@ -765,6 +1158,7 @@ export const spanEnds = [
   ),
 ] as const;
 
+/** A cue write: the fields to set; a field the span lacks is added. */
 export const CuePatch = Schema.Struct(CuePatchFields)
   .check(
     Schema.makeFilter(
@@ -774,21 +1168,31 @@ export const CuePatch = Schema.Struct(CuePatchFields)
   .check(...spanEnds);
 export type CuePatch = typeof CuePatch.Type;
 
+/** A cue on the scene clock, in scene-local seconds, with the ease `f.at` applies across it. */
 export const ResolvedCue = Schema.Struct({
   start: Schema.Finite,
   end: Schema.Finite,
   dur: Schema.Finite,
   ease: EaseName,
+  /** The span's `stagger`, 0 when it declares none. */
   stagger: Share,
 });
 export type ResolvedCue = typeof ResolvedCue.Type;
 
+/**
+ * Where in the film a finding is: the part it is about (`Address`: the whole
+ * film, an act, a scene, a short), and the film second it starts at when it
+ * has one. A finding about the whole film (a stale master, a missing sound)
+ * is the Film's; one about a scene's declarations has only its scene; a
+ * short's has no film second, its seconds being its own.
+ */
 export const FindingAddress = Schema.Struct({
   part: Address,
   time: Schema.optionalKey(Schema.Finite),
 });
 export type FindingAddress = typeof FindingAddress.Type;
 
+/** One finding of `film check`, as `--json` prints it; `address` is absent when it has none. */
 export const CheckLine = Schema.Struct({
   level: Schema.Literals(['error', 'warning']),
   tag: Schema.String,
@@ -797,58 +1201,116 @@ export const CheckLine = Schema.Struct({
 });
 export type CheckLine = typeof CheckLine.Type;
 
+/**
+ * One change the lab made to a file, as a page is told of it: a scene's (its
+ * cue or knob) or a film's (its score's pick, its library's takes), named by
+ * the scene when there is one.
+ */
 const LabStep = Schema.Struct({
   scene: Schema.optionalKey(Schema.String),
   file: Schema.String,
   target: Schema.String,
 });
 
+/**
+ * The id the lab gives a change to a film as it makes it (`uniqueId`), the
+ * change's own: never its target's words or the time it was made.
+ */
 export const ChangeId = Schema.String.pipe(Schema.brand('ChangeId'));
 export type ChangeId = typeof ChangeId.Type;
 
+/** The id one Undo request is given (`uniqueId`), by which the lab records it once it lands. */
 export const RequestId = Schema.String.pipe(Schema.brand('RequestId'));
 export type RequestId = typeof RequestId.Type;
 
+/** A stretch of a scene file's text: `[start, end)` as offsets into `SceneCode.text` (UTF-16 units, so `text.slice(start, end)`). */
 export const CodeRange = Schema.Tuple([Schema.Int, Schema.Int]);
 export type CodeRange = typeof CodeRange.Type;
 
+/** A cue or a knob in a scene's code: where its literal is written, and every call that reads it by name. */
 const CodeSite = Schema.Struct({
   name: Schema.String,
+  /** Its property in the `timeline` or `knobs` literal: `lift: { mark: 'take', dur: 1.5 }`. */
   at: CodeRange,
   reads: Schema.Array(CodeRange),
 });
 
+/**
+ * A `{mark}` of the scene's narration its code reads by name: every call
+ * that reads it as an instant, and every one that reads the voice from it.
+ */
 const MarkSite = Schema.Struct({
   name: Schema.String,
+  /** `f.mark('take')`: when its word is said. */
   reads: Schema.Array(CodeRange),
+  /** `f.spoken('take')`, `f.spoken('take', 'held')`: the voice from it to the mark `to` names, else to the end of speech. */
   speaks: Schema.Array(Schema.Struct({ at: CodeRange, to: Schema.optionalKey(Schema.String) })),
 });
 
+/**
+ * A scene file as it stands, and where in it each cue and knob is written
+ * and read, and each mark read. The ranges come from the parse the
+ * writes use (`tools/scene-source.ts`). A read is matched by name: a call of
+ * a frame's reader (`at`, `cue`, `keys`, `stagger`, `staggerAt`, `knob`,
+ * `mark`, `spoken`) whose first argument is a string naming a cue or knob the
+ * scene declares, or any mark (the file holds no narration: the view lights
+ * the marks the staged scene says); a wrong match lights the wrong span and
+ * writes nothing. A cue's or a knob's literal the lab cannot locate is not
+ * listed, and `refused` says why.
+ */
 export const SceneCode = Schema.Struct({
   scene: Schema.String,
+  /** The scene file, relative to the film's folder. */
   file: Schema.String,
+  /** The file's text now. */
   text: Schema.String,
   cues: Schema.Array(CodeSite),
   knobs: Schema.Array(CodeSite),
   marks: Schema.Array(MarkSite),
+  /** Each field whose literal is not provable, and why: what the view's head says while nothing it lists is lit. */
   refused: Schema.Array(
     Schema.Struct({ field: Schema.Literals(['timeline', 'knobs']), reason: Schema.String }),
   ),
 });
 export type SceneCode = typeof SceneCode.Type;
 
+/**
+ * The page's build: the number of the lab's pages as built now, past the
+ * `since` a page was built at once the sources change, and the server that
+ * numbered it (an id each lab process draws at its start): a page served by
+ * another server is old code, whatever its number. A film's mix landing is
+ * numbered on the same count, so a page playing the film hears it as later.
+ */
 export const PageBuild = Schema.Struct({ build: Schema.Finite, server: Schema.String });
 export type PageBuild = typeof PageBuild.Type;
 
+/**
+ * The number the lab's pages hear the mix a write made by (a `PageBuild`),
+ * the mix that write landed and no later one: a page that asked its mix
+ * again once the write answered need not again when it hears that number.
+ * None when the write mixed nothing, or no page listens for the film's mixes.
+ */
 const mixedField = { mixed: Schema.optionalKey(PageBuild) } as const;
 
+/** What a lab write (or its undo) answers: what the file now declares, and the check after it. */
 export const LabWrite = Schema.Struct({
+  /** The scene it changed (none for a film's own file: its score's pick, the library's lock), its file, and what changed: `cue topple offset`, `knob palm`, `undo cue topple offset`. */
   ...LabStep.fields,
+  /**
+   * The change it made, by its id (`HistoryStep.change`): an undo's is the
+   * change it undid. None when the write changed nothing (the
+   * file already said so), so there is nothing to undo.
+   */
   change: Schema.optionalKey(ChangeId),
+  /** The cue's span as the file now declares it, when every field of it is a literal. */
   span: Schema.optionalKey(Span),
+  /** The cue resolved on the scene's clock, when its timeline resolves from the file alone. */
   resolved: Schema.optionalKey(ResolvedCue),
+  /** Why the written cue could not be resolved (the film did not load or lay out), when it could not. */
   unresolved: Schema.optionalKey(Schema.String),
+  /** The knob's value as the file now declares it. */
   knob: Schema.optionalKey(Knob),
+  /** `film check --static`, run fresh after the write. */
   findings: Schema.Array(CheckLine),
   ...mixedField,
 });

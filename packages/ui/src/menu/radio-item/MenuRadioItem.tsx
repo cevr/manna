@@ -12,6 +12,7 @@ interface MenuRadioItemState {
   checked: boolean;
 }
 
+/** `checked` as `data-checked`, and its absence as `data-unchecked`. */
 export const checkedMapping: StateAttributesMapping<{ checked: boolean }> = {
   checked: (value): Record<string, string> =>
     value ? { 'data-checked': '' } : { 'data-unchecked': '' },
@@ -30,8 +31,11 @@ export function useMenuRadioItemContext(): MenuRadioItemState {
 }
 
 interface MenuRadioItemProps extends BaseUIComponentProps<'div', MenuRadioItemState> {
+  /** The value the group holds while this item is checked. */
   value: unknown;
+  /** The text typeahead matches; the item's text content when not given. */
   label?: string | undefined;
+  /** Whether a press closes the menu. @default false */
   closeOnClick?: boolean | undefined;
 }
 

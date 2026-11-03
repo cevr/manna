@@ -75,6 +75,7 @@ describe('createShort', () => {
     "hands each band frame the very time the film's own frame under it reads, at %p fps",
     (fps) => {
       const turn = secondsAt(23, fps);
+      /** What each painter was handed: its scene, its time, and whether `turn` had begun. */
       const seen = new Set<string>();
       const noting = (id: string) => (f: Frame) => {
         seen.add(`${id} ${f.t} ${f.at('turn') > 0}`);
@@ -105,6 +106,7 @@ describe('createShort', () => {
           { scene: 'b', from: { at: 'start' }, to: { at: 'end' } },
         ],
       });
+      /** What frame `i` of `page`, at `fps`, hands its painters (a camera may draw a scene more than once). */
       const handed = (page: Film, i: number) => {
         seen.clear();
         withDom(() => page.render(recorder(page.width, page.height).ctx, secondsAt(i, fps)));

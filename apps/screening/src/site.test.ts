@@ -1,3 +1,10 @@
+/**
+ * The site end to end, in one process: a publish runs as the publisher runs
+ * it (`publishTo` over the desk client), its requests answered by the desk's
+ * policy (`respondDesk`) over a bucket in memory, and the site's policy
+ * (`respond`) answers a reader's requests over the same bucket. A version's
+ * files are real files in a temporary folder.
+ */
 import { BunServices } from '@effect/platform-bun';
 import { describe, expect, it, test } from 'effect-bun-test';
 import { Effect, Exit, FileSystem, Option, Path, Redacted, Schema, type Scope } from 'effect';
@@ -20,12 +27,14 @@ const SECRET = 'the-desk-secret';
 
 const sha256Of = (bytes: Uint8Array) => new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
 
+/** A web request as the desk's Worker would see it, from the client's request. */
 const toWeb = (request: HttpClientRequest.HttpClientRequest, url: URL) => {
   const init: RequestInit = { method: request.method, headers: request.headers };
   if (request.body._tag === 'Uint8Array') init.body = new Uint8Array(request.body.body);
   return new Request(url, init);
 };
 
+/** A bucket, the desk over it reached in process (its store as `storeOf` makes it), and publishing through it. */
 const world = (partBytes = 1024 * 1024, storeOf: (store: Store) => Store = (store) => store) =>
   Effect.gen(function* () {
     const bucket = memoryBucket(2 * partBytes);
@@ -115,11 +124,13 @@ const ask = (
     };
   });
 
+/** The links a page lists that match `pattern`, in its order. */
 const links = (html: string, pattern: RegExp): ReadonlyArray<string> =>
   [...html.matchAll(/href="([^"]+)"/g)]
     .map((match) => match[1] ?? '')
     .filter((href) => pattern.test(href));
 
+/** A test over the platform, its temporary folder gone when it ends. */
 const local = <A, E>(
   name: string,
   body: () => Effect.Effect<A, E, FileSystem.FileSystem | Path.Path | Scope.Scope>,

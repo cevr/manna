@@ -1,8 +1,10 @@
 import { Deferred, Effect, Option, Schema } from 'effect';
 import { FromRender, type ToRender } from './page-render-protocol.ts';
 
+/** The statuses whose answer has no body: a `Response` refuses one. */
 const BODILESS: ReadonlyArray<number> = [101, 204, 205, 304];
 
+/** A read's answer as the render's fetch resolves it. */
 const responseOf = (answer: ToRender & { readonly _tag: 'Answer' }): Response => {
   const headers = new Headers();
   for (const [name, value] of answer.headers) headers.append(name, value);
@@ -12,8 +14,10 @@ const responseOf = (answer: ToRender & { readonly _tag: 'Answer' }): Response =>
   return new Response(new Blob([new Uint8Array(answer.body)]), init);
 };
 
+/** A render's fetch refused: it asked for more than a read. */
 class NotARead extends Schema.TaggedError<NotARead>()('NotARead', { message: Schema.String }) {}
 
+/** Fails with `signal`'s reason once it aborts. */
 const abortedBy = (signal: AbortSignal) =>
   Effect.callback<never, unknown>((resume) => {
     const aborted = () => resume(Effect.fail(signal.reason));
@@ -21,10 +25,15 @@ const abortedBy = (signal: AbortSignal) =>
     return Effect.sync(() => signal.removeEventListener('abort', aborted));
   });
 
+/** The renders' reads, sent through `send`. */
 interface RenderReads {
+  /** Render `id`'s fetch: a GET read through the lab, anything else refused. */
   readonly open: (id: number) => typeof globalThis.fetch;
+  /** Render `id` is over: its end, its failure or its cancel. */
   readonly close: (id: number) => void;
+  /** The lab's answer to a read: resolves the read's fetch. */
   readonly answer: (answer: ToRender & { readonly _tag: 'Answer' }) => Effect.Effect<void>;
+  /** How many reads render `id` waits on. */
   readonly held: (id: number) => number;
 }
 
@@ -33,9 +42,16 @@ export const renderReads = (send: (message: FromRender) => void): RenderReads =>
     number,
     { readonly render: number; readonly answered: Deferred.Deferred<Response> }
   >();
+  /** Each open render's reads, aborted together when it is over. */
   const renders = new Map<number, AbortController>();
   let readsMade = 0;
 
+  /**
+   * Render `id`'s read of `request`, held (in `reads`) until answered or
+   * interrupted. Interrupted while its render goes on (`renderOver` not
+   * aborted: the fetch's own signal gave it up), the lab is told, so it stops
+   * answering; a render over is the lab's to close, whole.
+   */
   const readOf = (id: number, request: Request, renderOver: AbortSignal) =>
     Effect.gen(function* () {
       if (request.method !== 'GET')

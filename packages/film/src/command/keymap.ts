@@ -3,14 +3,17 @@ import type { KeyPress } from '../browser/keys.ts';
 import type { Command, CommandId, Invocation } from './command.ts';
 import type { Context, Focus } from './context.ts';
 
+/** A key bound to a command: the chord in its canonical text. */
 interface Binding {
   readonly key: string;
   readonly command: CommandId;
 }
 
+/** A chord's modifiers, in the order its canonical text writes them. */
 const MODIFIERS = ['mod', 'alt', 'shift'] as const;
 type Modifier = (typeof MODIFIERS)[number];
 
+/** The names a chord's text may give a modifier. */
 const MODIFIER_NAMES: ReadonlyMap<string, Modifier> = new Map([
   ['mod', 'mod'],
   ['cmd', 'mod'],
@@ -21,6 +24,7 @@ const MODIFIER_NAMES: ReadonlyMap<string, Modifier> = new Map([
   ['shift', 'shift'],
 ]);
 
+/** Other names for a key, read as its canonical one. */
 const KEY_NAMES: ReadonlyMap<string, string> = new Map([
   [' ', 'space'],
   ['esc', 'escape'],
@@ -39,20 +43,24 @@ const isLetter = (name: string): boolean => name.toUpperCase() !== name.toLowerC
 
 const isDigit = (name: string): boolean => name.length === 1 && name >= '0' && name <= '9';
 
+/** Whether Shift is part of a chord on `name`: not on a symbol, which is already shifted. */
 const shiftCounts = (name: string): boolean => name.length !== 1 || isLetter(name) || isDigit(name);
 
 const chordText = (key: string, held: ReadonlySet<Modifier>): string =>
   [...MODIFIERS.filter((m) => held.has(m) && (m !== 'shift' || shiftCounts(key))), key].join('+');
 
+/** The key a chord's parts end on: `+` itself when the text ends `++`. */
 const lastKey = (parts: ReadonlyArray<string>): string =>
   Option.getOrElse(
     Option.filter(Option.fromUndefinedOr(parts.at(-1)), (p) => p !== ''),
     () => '+',
   );
 
+/** A command's keys. */
 const declaredKeys = (command: Command): ReadonlyArray<string> =>
   Option.getOrElse(Option.fromUndefinedOr(command.keys), () => []);
 
+/** A chord's canonical text (`Shift+Cmd+Z` is `mod+shift+z`), or none when it names no key. */
 export const parseChord = (text: string): Option.Option<string> => {
   const parts = text.trim().split('+');
   const key = keyName(lastKey(parts));
@@ -66,12 +74,14 @@ export const parseChord = (text: string): Option.Option<string> => {
   );
 };
 
+/** The key a press names: by its physical key when Alt is held on a letter or digit, or Shift on a digit. */
 const pressedKey = (press: KeyPress): string =>
   Option.getOrElse(
     Option.filter(physical(press.code), (key) => press.alt || (press.shift && isDigit(key))),
     () => keyName(press.key),
   );
 
+/** The letter or digit of a physical key (`KeyO` is `o`, `Digit1` is `1`). */
 const physical = (code: string): Option.Option<string> =>
   Option.orElse(
     Option.liftPredicate(
@@ -88,8 +98,10 @@ const heldBy = (press: KeyPress): ReadonlySet<Modifier> =>
     ),
   );
 
+/** The chord a press is, in its canonical text. */
 const chordOf = (press: KeyPress): string => chordText(pressedKey(press), heldBy(press));
 
+/** The bindings: each command's keys, in the order the commands are registered. */
 export const bindingsOf = (commands: ReadonlyArray<Command>): ReadonlyArray<Binding> =>
   commands.flatMap((c) =>
     declaredKeys(c).flatMap((k) =>
@@ -97,16 +109,20 @@ export const bindingsOf = (commands: ReadonlyArray<Command>): ReadonlyArray<Bind
     ),
   );
 
+/** The keys bound to `id`, in binding order. */
 export const keysOf = (bindings: ReadonlyArray<Binding>, id: CommandId): ReadonlyArray<string> =>
   bindings.filter((b) => b.command === id).map((b) => b.key);
 
+/** What a press does: run a command with a step, stop at a scope that owns it, or pass. */
 export type Resolved = Data.TaggedEnum<{
   Run: { readonly command: Command; readonly how: Invocation };
+  /** Bound in a scope that owns its keys (the studio), with nothing to do there now. */
   Owned: {};
   Pass: {};
 }>;
 export const Resolved = Data.taggedEnum<Resolved>();
 
+/** The scopes a focus reads keys from, in order. */
 const SCOPES: Readonly<Record<Focus, ReadonlyArray<Focus>>> = {
   page: ['page'],
   field: ['field'],
@@ -115,10 +131,12 @@ const SCOPES: Readonly<Record<Focus, ReadonlyArray<Focus>>> = {
   control: ['page'],
 };
 
+/** The scopes that own their keys: a key bound there is not the next scope's. */
 const OWNS: ReadonlySet<Focus> = new Set<Focus>(['studio', 'slider']);
 
 const PAGE_ONLY: ReadonlyArray<Focus> = ['page'];
 
+/** The chords a press tries, in order, with the step each picks: itself, then its stepped forms. */
 const triesOf = (press: KeyPress): ReadonlyArray<readonly [string, Invocation['step']]> => {
   const key = pressedKey(press);
   const held = heldBy(press);
@@ -130,6 +148,7 @@ const triesOf = (press: KeyPress): ReadonlyArray<readonly [string, Invocation['s
   ];
 };
 
+/** What `press` does in `ctx`, with `commands` registered and bound by `bindings`. */
 export const resolve = (
   press: KeyPress,
   ctx: Context,
@@ -157,6 +176,7 @@ export const resolve = (
   return Resolved.Pass();
 };
 
+/** How a chord reads on the page: `⇧⌘Z` on a Mac, `Ctrl+Shift+Z` elsewhere. */
 export const chordLabel = (chord: string, mac: boolean): string => {
   const parts = chord.split('+');
   const key = lastKey(parts);
@@ -172,6 +192,7 @@ export const chordLabel = (chord: string, mac: boolean): string => {
   return [...mods, shown].join(style.between);
 };
 
+/** `title` with `key` after it in brackets (`Next frame (→)`), or alone when `key` is ''. */
 export const titleWith = (title: string, key: string): string =>
   Option.match(
     Option.liftPredicate(key, (k) => k !== ''),
@@ -194,7 +215,9 @@ const KEY_LABELS: ReadonlyMap<string, string> = new Map([
   ['tab', 'Tab'],
 ]);
 
+/** The order a Mac writes modifiers in (⌥⇧⌘); the PC's reads the same way. */
 const MAC_ORDER: ReadonlyArray<Modifier> = ['alt', 'shift', 'mod'];
+/** How each platform writes a chord: its modifiers' marks, and what goes between the parts. */
 const STYLES: Readonly<
   Record<
     'true' | 'false',

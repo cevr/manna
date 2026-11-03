@@ -15,6 +15,7 @@ import { PuppetImagesBun } from './images-bun.ts';
 
 const [W, H] = [96, 64];
 
+/** A half-scale inked sleeve with two flat shade planes and its own skin hand. */
 const strokeDyeFixture = () => {
   const width = 100,
     height = 150;
@@ -109,6 +110,7 @@ describe('stroke dye reference', () => {
   });
 });
 
+/** The fixture's two parts: a sleeve (a band from (10, 26) to (86, 38)) over a body (a box below it). */
 const partsOf = (tint = 0) => {
   const arm = new Uint8Array(W * H * 4);
   const body = new Uint8Array(W * H * 4);
@@ -141,6 +143,7 @@ export const SPEC = {
 };
 `;
 
+/** The fixture puppet's module and part PNGs written into `dir`, the sleeve tinted by `tint`. */
 const lay = (dir: string, tint = 0) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -151,9 +154,11 @@ const lay = (dir: string, tint = 0) =>
     yield* fs.writeFileString(path.join(dir, 'spec.ts'), SPEC_MODULE);
   });
 
+/** The ramp the sleeve declares it is drawn in, and the cloth a dress dyes it to. */
 const DRAWN: Ramp = { shade: '#8a7f70', base: '#b8ab98', light: '#ddd2c0' };
 const CLOTH: Ramp = { shade: '#394357', base: '#4b566b', light: '#6a7590' };
 
+/** The fixture puppet with its sleeve's ramp declared (`SPEC`), and with the sleeve's pixels dyed to `CLOTH` on the CPU (`DYED`). */
 const DYE_MODULE = `import arm from './arm.png' with { type: 'file' };
 import armDyed from './arm-dyed.png' with { type: 'file' };
 import body from './body.png' with { type: 'file' };
@@ -166,6 +171,11 @@ export const SPEC = {
 export const DYED = { ...PLAIN, key: 'fixture/dyed-on-cpu', parts: [{ name: 'arm', png: armDyed }, { name: 'body', png: body }] };
 `;
 
+/**
+ * The dyed fixture's sleeve: the sleeve's band painted as a ramp from near
+ * black at its left end to near white at its right, a little warmer down the
+ * band, so its pixels fall in every one of the dye's segments (`segmentsOf`).
+ */
 const rampSleeve = (): Raster => {
   const arm = new Uint8Array(W * H * 4);
   for (let y = 26; y < 38; y++)
@@ -180,6 +190,7 @@ const rampSleeve = (): Raster => {
   return { width: W, height: H, rgba: arm };
 };
 
+/** How many of `raster`'s opaque pixels lie in each of `dye`'s segments by lightness: ink kept, cut to shade, shade to base, base to light, light to white. */
 const segmentsOf = (dye: Dye, raster: Raster) => {
   const counts = [0, 0, 0, 0, 0];
   for (let i = 0; i < raster.width * raster.height; i++) {
@@ -191,6 +202,7 @@ const segmentsOf = (dye: Dye, raster: Raster) => {
   return counts;
 };
 
+/** The fixture puppet written into `dir` as `lay` writes it (its module as `plain.ts`), its sleeve the ramp (`rampSleeve`), with the sleeve's CPU-dyed PNG and the dyed module (`DYE_MODULE`) as `spec.ts`. */
 const layDyed = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -205,6 +217,7 @@ const layDyed = (dir: string) =>
 
 const [LW, LH] = [200, 140];
 
+/** A larger fixture for the line: a sleeve band from (24, 40) to (104, 54) over a body box, each with a 3 px ink edge, once with the sheet's line declared and once bare. */
 const LINED_MODULE = `import arm from './arm.png' with { type: 'file' };
 import body from './body.png' with { type: 'file' };
 const base = {
@@ -224,6 +237,7 @@ export const LINED = { ...base, key: 'fixture/lined', line: { width: 3, ink: [30
 export const BARE = { ...base, key: 'fixture/bare' };
 `;
 
+/** Each part's paint (sleeve, body), then the ink of its edge. */
 const INK_OR = [
   [
     [236, 226, 200, 255],
@@ -261,6 +275,7 @@ const layLined = (dir: string) =>
     yield* fs.writeFileString(path.join(dir, 'spec.ts'), LINED_MODULE);
   });
 
+/** `m` (`LW` × `LH`) grown by `k` px (Euclidean, brute force over the disc). */
 const grown = (m: Uint8Array, k: number) => {
   const out = new Uint8Array(m.length);
   for (let y = 0; y < LH; y++)
@@ -293,6 +308,7 @@ const poseOf = (seed: number): PuppetPose => {
   };
 };
 
+/** Mean ΔE76 over the union of the two figures (alpha over half), each laid over one paper, and their IoU. */
 const against = (a: Raster, b: Raster) => {
   const P = [242, 234, 218];
   const over = (r: Raster, i: number) => {

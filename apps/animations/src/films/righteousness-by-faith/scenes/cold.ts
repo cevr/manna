@@ -30,8 +30,11 @@ import { JUDGE_KNOBS } from '../rigs/judge-rig.ts';
 import { LEAD_KNOBS } from '../rigs/lead-rig.ts';
 import { PROSECUTOR_KNOBS } from '../rigs/prosecutor-rig.ts';
 
+/** The lead watching the evidence pile up: the inner brows up, the mouth's corners down. */
 const WORRY: Expression = { ...EASE, browTilt: 0.3, browY: -1, mouth: -0.9 };
+/** "He did it": brows low and worried, lids heavy, the mouth turned down. */
 const SHAME: Expression = { ...EASE, browY: 2.5, browTilt: 0.3, eyes: 0.6, mouth: -1.6 };
+/** The judge leans over: eyes up and wide, the brows' inner ends high. */
 const FEAR: Expression = {
   ...EASE,
   browY: -2.5,
@@ -40,6 +43,7 @@ const FEAR: Expression = {
   eyeW: 0.92,
   mouth: -1.3,
 };
+/** The seal comes down on him: eyes round, brows high and level, an "oh". */
 const AMAZED: Expression = {
   ...EASE,
   browY: -3,
@@ -49,9 +53,12 @@ const AMAZED: Expression = {
   mouthLine: 0,
   mouthOpen: 0.75,
 };
+/** Looking at the seal on him: puzzled, a little hopeful. */
 const PUZZLED: Expression = { ...EASE, browY: -1.2, browTilt: 0.3, eyes: 1.05, mouth: -0.3 };
+/** "He justifies the ungodly": he looks up at us, the brows lifting, the start of a smile. */
 const WONDER: Expression = { ...EASE, browY: -2, browTilt: 0.22, eyes: 1.12, mouth: 0.7 };
 
+/** The prosecutor at his work: stern (his rig's rest). */
 const STERN: Expression = {
   browY: PROSECUTOR_KNOBS.browY,
   browTilt: PROSECUTOR_KNOBS.browTilt,
@@ -61,7 +68,9 @@ const STERN: Expression = {
   mouthLine: 1,
   mouthOpen: 0,
 };
+/** Making his case at the lead: the brows knit low, the mouth hard (face-study, Kit A's anger). */
 const ACCUSE: Expression = { ...STERN, browY: 2.8, browTilt: -0.35, mouth: -1.5 };
+/** "That's not justice": brows knit hard, eyes wide; the mouth is his rig's shout (`shout`). */
 const OUTRAGE: Expression = {
   ...EASE,
   browY: 0.5,
@@ -71,6 +80,7 @@ const OUTRAGE: Expression = {
   mouthOpen: 0,
 };
 
+/** The judge at rest: stern (his rig's rest). */
 const BENCH_FACE: Expression = {
   browY: JUDGE_KNOBS.browY,
   browTilt: JUDGE_KNOBS.browTilt,
@@ -80,8 +90,10 @@ const BENCH_FACE: Expression = {
   mouthLine: 1,
   mouthOpen: 0,
 };
+/** He gives the verdict and keeps it through the uproar: grave and sure, the brows easing. */
 const VERDICT_FACE: Expression = { ...EASE, browY: 0.5, browTilt: 0, eyes: 1.05, mouth: -0.2 };
 
+/** Where the lead looks, from his feet: at us, at the stack, down at his chest, at the judge. */
 const LEAD_GAZE = {
   us: [LEAD_KNOBS.gazeX, LEAD_KNOBS.gazeY],
   stack: [STACK[0] - 293, STACK[1] - 725 - 60],
@@ -89,38 +101,53 @@ const LEAD_GAZE = {
   judge: [1300 - 293, 200 - 725],
 } as const;
 
+/**
+ * The prosecutor's near shoulder, from which his hand swings; where it takes
+ * up each sheet (his far side); and where he holds it up at the lead before
+ * he lays it on the stack.
+ */
 const PROS_SHOULDER = [700, 340] as const;
 const PROS_PICK = [816, 520] as const;
 const PROS_RAISE = [606, 438] as const;
+/** His hands thrown up on `cover`. */
 const PROS_UP = [
   [612, 352],
   [858, 372],
 ] as const;
 
+/** The judge's near shoulder, and the gavel raised, struck on its block, and hanging on `which`. */
 const JUDGE_SHOULDER = [1215, 300] as const;
 const GAVEL_UP = { grip: [1168, 292], rot: Math.PI / 2 + 0.1 } as const;
 const GAVEL_STRUCK = { grip: [BLOCK[0] + 66, BLOCK[1] - 14], rot: -0.2 } as const;
+/** Held still in the air, its head a hand's breadth above the block. */
 const GAVEL_HANGS = { grip: [1140, 296], rot: -0.12 } as const;
 
+/** Where the seal starts, above the frame, before it floats down. */
 const SEAL_FROM = { dx: -40, dy: -420, rot: -0.6 } as const;
 
+/** Job 9:2 on its page (`cold.asked`), the phrase the card floods from. */
 const VERSE = {
   ref: 'Job 9:2',
   text: 'I know it is so of a truth: but how should man be just with God?',
   phrase: 'how should man be just with God?',
 } as const;
+/** The page Job's verse is set on, frame px: the whole frame and a margin, and where its text starts. */
 const PAGE = { w: 2000, h: 1160, text: { x: 370, y: 540 } } as const;
 
+/** A sheet's swing, as shares of its stagger: picked up, lifted at the lead, held there, laid on the stack. */
 const SWING = { pick: 0.15, up: 0.35, hold: 0.5, laid: 0.62 } as const;
 
+/** How far `k` is through `from..to`, held to 0..1. */
 const share = (k: number, from: number, to: number) =>
   Math.min(1, Math.max(0, (k - from) / (to - from)));
 
+/** Of the sheets' swings `ks`: how many are laid on the stack, and the share of the one in hand (0: none). */
 const swingOf = (ks: ReadonlyArray<number>) => ({
   laid: ks.filter((k) => k >= SWING.laid).length,
   swing: ks.find((k) => k > 0 && k < 1) ?? 0,
 });
 
+/** The prosecutor's near hand `swing` through a sheet: to it, up at the lead, held, down on the stack, home. */
 const swingHand = (swing: number): Pt => {
   const rest = HANDS.prosecutor[0];
   const onStack: Pt = [STACK[0] + 8, STACK[1] - 30];
@@ -135,9 +162,11 @@ const swingHand = (swing: number): Pt => {
   return reachAbout(PROS_SHOULDER, onStack, rest, share(swing, SWING.laid, 1));
 };
 
+/** The sheets on the stack before the prosecutor lays his three. */
 const STACK_BEFORE = 6;
 const STACK_LAID = 3;
 
+/** The court's pose (scratch: rewritten each frame). */
 const POSE = restPose();
 
 export const cold = drawing({

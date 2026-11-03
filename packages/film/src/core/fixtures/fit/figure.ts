@@ -12,10 +12,13 @@ export const RENDER_GROUND: Rgb = [238, 221, 201];
 export const W = 64;
 export const H = 96;
 
+/** The figure's body: its left, right, top and bottom columns and rows, its line inside them. */
 export const BODY = { left: 18, right: 46, top: 26, bottom: 84 } as const;
 
+/** The column the body's teal gives way to its cream at, unmoved. */
 export const SEAM = 32;
 
+/** Whether pixel (`x`, `y`) is of the figure moved `dx` to the right. */
 const figure = (x: number, y: number, dx = 0) => {
   const [px, py] = [x - dx, y];
   return (
@@ -24,17 +27,26 @@ const figure = (x: number, y: number, dx = 0) => {
   );
 };
 
+/** A box `[x0, x1) × [y0, y1)`. */
 export type Box = readonly [number, number, number, number];
 
 export interface Paint {
   readonly ground: Rgb;
+  /** How far right the whole figure is moved. */
   readonly dx?: number;
+  /** The column its teal gives way to its cream at (`SEAM` unless given). */
   readonly seam?: number;
+  /** How many columns of ink lie along the seam, just left of it (none unless given). */
   readonly seamInk?: number;
+  /** A 2 × 12 px strip of cream just outside the body's right line. */
   readonly sliver?: boolean;
+  /** Boxes of cream painted over it: strips, attached or not. */
   readonly strips?: ReadonlyArray<Box>;
+  /** A 6 px square of the ground inside the body. */
   readonly hole?: boolean;
+  /** Rows a line 3 px thick crosses the body from. */
   readonly marks?: ReadonlyArray<number>;
+  /** A 6 px square of skin on the body's teal, low on its left: a hand. */
   readonly hand?: boolean;
 }
 
@@ -49,6 +61,7 @@ const NEAR: ReadonlyArray<readonly [number, number]> = [
   [-2, -2],
 ];
 
+/** A pixel of the figure moved by `dx`: the ground outside it, its line within 3 px of its edge, teal on its body left of `seam`, cream elsewhere. */
 const colourAt = (ground: Rgb, x: number, y: number, dx: number, seam: number): Rgb => {
   if (!figure(x, y, dx)) return ground;
   if (NEAR.some(([ox, oy]) => !figure(x + ox, y + oy, dx))) return INK;
@@ -56,11 +69,13 @@ const colourAt = (ground: Rgb, x: number, y: number, dx: number, seam: number): 
   return CREAM;
 };
 
+/** The box `[x0, x1) × [y0, y1)` of `rgba` filled with `c`. */
 const fill = (rgba: Uint8Array, [x0, x1, y0, y1]: Box, c: Rgb) => {
   for (let y = y0; y < y1; y++)
     for (let x = x0; x < x1; x++) rgba.set([c[0], c[1], c[2], 255], (y * W + x) * 4);
 };
 
+/** The figure painted on `ground`: its line, its cream and teal papers, and what the paint adds. */
 export const paint = ({
   ground,
   dx = 0,

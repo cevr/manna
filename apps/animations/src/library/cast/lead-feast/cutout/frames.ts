@@ -2,6 +2,12 @@ import { framesOf } from '../../../cutout/frames.ts';
 
 type Box = readonly [number, number, number, number];
 
+/**
+ * Each cut view's frame: the kept sheet it is on, its kept box, and the
+ * pixels its part sheet pads it by (left, top, right, bottom). A standing
+ * view takes 12 rows below, where the shadow fades, and 3 each other side;
+ * his bust's foot is the crop's open edge, so it takes none below.
+ */
 export const FRAMES = {
   front: { sheet: 'turnaround', kept: [18, 194, 265, 857], pad: [3, 3, 3, 12] },
   threeQuarterLeft: { sheet: 'turnaround', kept: [292, 194, 511, 857], pad: [3, 3, 3, 12] },
@@ -16,6 +22,8 @@ export const FRAMES = {
   >
 >;
 
+/** A cut view, by its name in his sheets' views. */
 export type FramedView = keyof typeof FRAMES;
 
+/** A view's part sheet frame on its kept sheet (its kept box padded, `boxOf`), and where the kept box's top-left corner lies in it (`keptAt`). */
 export const { boxOf, keptAt } = framesOf(FRAMES);

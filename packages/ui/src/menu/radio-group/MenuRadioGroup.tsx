@@ -6,7 +6,9 @@ import { useRenderElement } from '../../internals/useRenderElement.tsx';
 import { MenuGroupContext, createGroupLabelId } from '../group/MenuGroup.tsx';
 
 interface MenuRadioGroupContextValue {
+  /** The value of the checked item. */
   readonly value: () => unknown;
+  /** Offer `value`, the pressed item's, to the owner. */
   readonly setValue: (value: unknown, event: Event) => void;
 }
 
@@ -25,7 +27,9 @@ export function useMenuRadioGroupContext(): MenuRadioGroupContextValue {
 interface MenuRadioGroupState {}
 
 interface MenuRadioGroupProps<Value> extends BaseUIComponentProps<'div', MenuRadioGroupState> {
+  /** The value of the checked item; none: no item is checked. */
   value: Value | undefined;
+  /** Called with the value of the item pressed. */
   onValueChange?: ((value: Value, event: Event) => void) | undefined;
 }
 

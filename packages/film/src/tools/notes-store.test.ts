@@ -25,6 +25,7 @@ const png = text('png');
 
 const labAt = (dir: string) => ConfigProvider.layer(ConfigProvider.fromUnknown({ FILMS_LAB: dir }));
 
+/** A store over `fs`, with notes under `/lab`, its locks in memory. */
 const storeOver = <E, R>(fs: Layer.Layer<FileSystem.FileSystem, E, R>) =>
   NotesStore.layer.pipe(
     Layer.provide(ContentStore.layer),

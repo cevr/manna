@@ -1,3 +1,10 @@
+/**
+ * The hymn page's chord reader over a store the test holds: the settings
+ * over a plain map (what the device keeps), and a fresh chord book over the
+ * chords the bundler derives (`vite/chords.ts`), so a test counts its
+ * decodes.
+ */
+
 import { Effect, Layer } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import type * as Atom from 'effect/reactivity/Atom';
@@ -10,6 +17,7 @@ import { settingsOn } from '~/settings';
 
 const bundled = readChords();
 
+/** A store over `map`: what the device keeps between two launches. */
 const storeOver = (map: Map<string, string>) =>
   Layer.succeed(KeyValueStore.KeyValueStore)(
     KeyValueStore.makeStringOnly({
@@ -22,6 +30,7 @@ const storeOver = (map: Map<string, string>) =>
     }),
   );
 
+/** A reader over `device`, with its own chord book; its chord style can be set, as Settings sets it. */
 export const readerOn = (
   device: Map<string, string> = new Map(),
 ): ChordReader & { readonly style: Atom.Writable<ChordStyle> } => {

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { coverMap, positionOf } from './cover.ts';
 
+/** Where the box's uv lands in the picture under a map. */
 const land = (map: readonly [number, number, number, number], u: number, v: number) => [
   u * map[0] + map[2],
   v * map[1] + map[3],

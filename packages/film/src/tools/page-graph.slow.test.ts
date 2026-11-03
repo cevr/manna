@@ -9,20 +9,25 @@ import { LabPage, PageBundler } from './lab-page.ts';
 import { PageReads } from './api-server.ts';
 import { PageRenderer } from './page-render.ts';
 
+/** A lab page at each of its places' kinds the lab serves: an ask and a page of asks. */
 const STUDIO = [pageHref.ask('a1'), pageHref.askPage('a1')];
 
+/** What only the render page's code says: its handle, set on the window. */
 const RENDER_MARK = 'window.__film=';
 
+/** The page's reads of the API as it renders: none answered, so it renders without them. */
 const NOTHING_READ = PageReads.of({
   read: () => Effect.succeed(new Response('{}', { status: 404 })),
 });
 
+/** The scripts a page's HTML loads at once: its module entries and those it preloads. */
 const headScripts = (html: string) =>
   Array.from(
     html.matchAll(/<(?:script\b[^>]*\bsrc|link\b[^>]*rel="modulepreload"[^>]*\bhref)="([^"]+)"/g),
     (m) => m[1] ?? '',
   );
 
+/** The chunks a script imports statically (`import … from "…"`, `import "…"`), never by `import()`. */
 const staticImports = (script: string) =>
   Array.from(script.matchAll(/(?:from|import)\s*"(\/[^"]+\.js)"/g), (m) => m[1] ?? '');
 
@@ -57,6 +62,7 @@ describe("the render page's code", () => {
           );
           return yield* Effect.promise(() => response.text());
         });
+      /** Every script `href` loads at once, by path: its head's and their static imports, transitively. */
       const loaded = (href: string) =>
         Effect.gen(function* () {
           const scripts = new Map<string, string>();

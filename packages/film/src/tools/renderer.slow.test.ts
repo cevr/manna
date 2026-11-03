@@ -26,8 +26,10 @@ import { memoryFileSystem, text } from './host/testing.ts';
 
 const film = testFilm([{ id: 'a', min: 20 }], { voice: '', scenes: {} });
 
+/** The film's own plan: no score option or take in place of its own. */
 const NOW = { score: Option.none<string>(), inPlace: Option.none() };
 
+/** The film's track as `mix` leaves it: the WAV, and its stamp for the plan the film plays now. */
 const mixed = (files: Map<string, Uint8Array>, rendered: MeasuredFilm = film) =>
   Effect.gen(function* () {
     files.set(masterFile(rendered.paths), text('pcm'));
@@ -40,6 +42,7 @@ const mixed = (files: Map<string, Uint8Array>, rendered: MeasuredFilm = film) =>
 
 const G = RenderVariantName.make('g');
 
+/** The whole 20 s test film on four pages: 600 frames in 16 chunks. */
 const video = RenderJob.Video({
   address: { _tag: 'Film' },
   variant: MAIN_VARIANT,
@@ -72,6 +75,10 @@ const setup = (
       SoundRender.layer,
     ]),
   );
+  /**
+   * `job` rendered on `platform` with `cores`: a 16-core Mac unless a test
+   * says otherwise, never the cores of the machine the tests run on.
+   */
   const render = (job: RenderJob, platform = 'darwin', cores = 16) =>
     Effect.gen(function* () {
       return yield* (yield* Renderer).render(rendered, job);
@@ -80,6 +87,10 @@ const setup = (
       Effect.provideService(Cores, cores),
       Effect.provide(layer),
     );
+  /**
+   * `videos`' sounds cut again from the master now, in one run, as `project
+   * render` re-muxes them: with media and the disk alone, no browser to open.
+   */
   const remuxAll = (videos: ReadonlyArray<Remuxed>) =>
     Effect.gen(function* () {
       const remux = yield* remuxer(rendered);
@@ -92,7 +103,9 @@ const setup = (
         SoundRender.layer,
       ]),
     );
+  /** `video`'s sound cut again, alone in its run. */
   const remux = (video: Remuxed) => Effect.map(remuxAll([video]), ([sound]) => sound);
+  /** `jobs` rendered one after another in one session, as `project render` draws its scenes. */
   const session = (jobs: ReadonlyArray<RenderJob>) =>
     Effect.gen(function* () {
       const run = yield* (yield* Renderer).session;
@@ -106,6 +119,7 @@ const setup = (
   return { ledger, files, folders, render, remux, remuxAll, session };
 };
 
+/** A render whose joins keep, by file, the bytes each segment held when it was joined. */
 const joinedBytes = () => {
   const files = new Map<string, Uint8Array>();
   const joined = new Map<string, Uint8Array>();
@@ -124,6 +138,7 @@ const joinedBytes = () => {
   return { ...run, joined };
 };
 
+/** Every resource the render opened was closed, and every chunk's encode ended. */
 const expectAllClosed = (ledger: RenderLedger) => {
   expect(ledger.server).toEqual({ started: 1, stopped: 1 });
   expect(ledger.browser).toEqual({ launched: 1, closed: 1 });
@@ -709,6 +724,7 @@ describe.concurrent('Renderer', () => {
   });
 
   describe('a short', () => {
+    /** A 15 s film of three silent scenes; the short plays c, then a: 10 s. */
     const three = testFilm(
       [
         { id: 'a', min: 4 },
@@ -727,6 +743,7 @@ describe.concurrent('Renderer', () => {
         ],
       },
     });
+    /** The short's page: 9:16 at the film's density, 10 s. */
     const page: ExportInfo = { width: 1920, height: 3414, fps: 30, duration: 10, frames: 300 };
 
     it.live(
@@ -834,6 +851,7 @@ describe.concurrent('Renderer', () => {
         sounds: measuredSounds(library, lock, '/lib'),
       };
       const whole: ExportInfo = { ...testExportInfo, duration: 15, frames: 450 };
+      /** The film mixed, its recording on disk, as a render finds them. */
       const ready = (files: Map<string, Uint8Array>) =>
         Effect.gen(function* () {
           files.set('/lib/public/amb.hall/0.flac', text('flac'));

@@ -1,6 +1,23 @@
+/**
+ * Compile-time substitution targets for EGW credentials/config.
+ *
+ * The CLI's compiled build replaces the `globalThis.__EGW_X__` member
+ * expressions below with string literals at build time (the `define` map in
+ * packages/cli/scripts/build.ts, keyed by env-define-target.ts) so the binary
+ * carries credentials without needing a runtime .env file. In unbundled runs
+ * (CLI from source, sync workers, tests) the globals are never defined, so the property reads
+ * yield `undefined` and we fall through to `process.env` — Bun auto-loads the
+ * sibling `.env`, so node-side code keeps working unchanged.
+ *
+ * IMPORTANT: keep every read as a literal `globalThis.__EGW_X__` member
+ * expression. Bundlers must see that exact source text to substitute.
+ * Indirection (helpers, destructuring, renames) breaks the substitution.
+ */
+
 import { Option } from 'effect';
 
 declare global {
+  /** Populated by bundler `define`s; absent (undefined) in Node-hosted runs. */
   var __EGW_AUTH_BASE_URL__: string;
   var __EGW_API_BASE_URL__: string;
   var __EGW_CLIENT_ID__: string;

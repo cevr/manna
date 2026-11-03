@@ -1,3 +1,15 @@
+/** §10 Milestone 9's adapter check, on the leg this process can run.
+ *
+ *  The fixture in `testing.ts` is one table every host answers. The CLI's Bun
+ *  client resolves `HttpClient.HttpClient` from this runtime, so the adapter is
+ *  exercised here.
+ *
+ *  What is being checked is not "does HTTP work" — it is that the *mapping*
+ *  from a response onto §3.6's outcomes is one mapping. Every non-arrival
+ *  becomes `offline`, a readable manifest becomes a decision, and an overrun
+ *  becomes a refusal, on whichever transport delivered the bytes.
+ */
+
 import { Effect, Fiber, Layer, Option } from 'effect';
 import * as TestClock from 'effect/testing/TestClock';
 import { HttpClient, HttpClientResponse } from 'effect/http';
@@ -25,6 +37,10 @@ import {
   unreachableManifestClient,
 } from './testing.js';
 
+/** A client that answers each address from one routing table, and records the
+ *  order it was asked. The addresses are what a redirect case turns on — the
+ *  claim is "the second request went where the `Location` header said and
+ *  nowhere else", which only the sequence can express. */
 interface RoutedClient {
   readonly layer: Layer.Layer<HttpClient.HttpClient>;
   readonly asked: () => readonly string[];
@@ -50,6 +66,12 @@ const routedClient = (routes: ReadonlyMap<string, Response>): RoutedClient => {
   };
 };
 
+/** A body with **no `Content-Length`**, larger than the cap.
+ *
+ *  A `ReadableStream` rather than a string: a `Response` built from a string
+ *  states its length, and the whole claim is about the case where nothing is
+ *  stated (round-4 F4). Chunked in pieces under the cap, so nothing but the
+ *  running count can refuse it. */
 const chunkedBody = (bytes: number): ReadableStream<Uint8Array> => {
   const chunk = new Uint8Array(16_384).fill(120);
   let sent = 0;
@@ -120,6 +142,12 @@ describe('§10 M9 the manifest adapter', () => {
     }),
   );
 
+  /** **The origin gate** (round-3 F4).
+   *
+   *  The manifest address is `Config`-resolved so a test can point a host at a
+   *  fixture. Unguarded, that made every host fetch whatever that variable
+   *  named. The gate runs *before* the
+   *  request, so the observable is that the client was never called at all. */
   it.effect('refuses an address outside the allowed release origins, without fetching', () =>
     Effect.gen(function* () {
       let requests = 0;
@@ -145,6 +173,9 @@ describe('§10 M9 the manifest adapter', () => {
     }),
   );
 
+  /** A hostname that *contains* the release host but is not it — the classic
+   *  form of a prefix comparison going wrong. The check is on the parsed
+   *  origin, so this is refused like any other foreign address. */
   it.effect('refuses a hostname that only looks like the release host', () =>
     Effect.gen(function* () {
       const decision = yield* decisionOverClient({
@@ -155,12 +186,18 @@ describe('§10 M9 the manifest adapter', () => {
     }),
   );
 
+  /** The production pin itself passes the gate — otherwise the allowlist would
+   *  be a rule that refuses everything, including what ships. */
   it.effect('admits the pinned release URL', () =>
     Effect.sync(() => {
       expect(isAllowedManifestOrigin(CONTENT_MANIFEST_URL)).toBe(true);
     }),
   );
 
+  /** **The size cap** (round-3 F4). An upstream that declares a body larger
+   *  than any manifest this format can produce is refused before a byte of it
+   *  is read — a bound on what a compromised or confused release host can make
+   *  a client (or the proxy) hold in memory. */
   it.effect('refuses a manifest whose declared size exceeds the cap, without reading it', () =>
     Effect.gen(function* () {
       const oversized: Layer.Layer<HttpClient.HttpClient> = Layer.succeed(
@@ -186,6 +223,9 @@ describe('§10 M9 the manifest adapter', () => {
     }),
   );
 
+  /** A body at the cap is still read: the bound is on what is *above* it, and a
+   *  cap that refused the limit itself would be an off-by-one that only ever
+   *  showed up on a real manifest. */
   it.effect('reads a manifest whose declared size is exactly the cap', () =>
     Effect.gen(function* () {
       const atCap: Layer.Layer<HttpClient.HttpClient> = Layer.succeed(
@@ -206,6 +246,13 @@ describe('§10 M9 the manifest adapter', () => {
     }),
   );
 
+  /** **The timeout** (round-3 F4). §3.6 makes a slow upstream and an absent one
+   *  the same outcome, so a socket that never answers becomes `offline` in
+   *  bounded time rather than leaving a settings panel suspended forever.
+   *
+   *  `TestClock` rather than a real wait: what is under test is that the bound
+   *  exists and lands on `offline`, and a suite that actually waited ten seconds
+   *  would be testing the scheduler. */
   it.effect('reports offline when the manifest read exceeds the timeout', () =>
     Effect.gen(function* () {
       const hanging: Layer.Layer<HttpClient.HttpClient> = Layer.succeed(
@@ -233,6 +280,13 @@ describe('§10 M9 the manifest adapter', () => {
       expect(decision._tag).toBe('offline');
     }),
   );
+  /** **A redirect is followed, once, and only onto the allowlist** (round-4 F4).
+   *
+   *  The production GitHub URL answers with exactly one hop to the asset host,
+   *  so a reader that refused every redirect could never read the shipped
+   *  manifest — and the redirect-limit constant this build declares was
+   *  unused. The observable is the *sequence*: two requests, the second at the
+   *  address the `Location` header named. */
   it.effect('follows one redirect to an allowed origin and reads the manifest there', () =>
     Effect.gen(function* () {
       const target = 'http://127.0.0.1:64999/redirected.json';
@@ -250,6 +304,10 @@ describe('§10 M9 the manifest adapter', () => {
     }),
   );
 
+  /** The other half: a hop off the allowlist is refused at the hop, not
+   *  followed and then judged. Without the per-hop check the gate would have
+   *  checked one address while the bytes came from another — which is the whole
+   *  reason a redirect chain is dangerous to a proxy. */
   it.effect('refuses a redirect that leaves the allowed origins', () =>
     Effect.gen(function* () {
       const routed = routedClient(
@@ -273,6 +331,9 @@ describe('§10 M9 the manifest adapter', () => {
     }),
   );
 
+  /** A chain longer than this build follows stops at the bound rather than
+   *  looping. `CONTENT_MANIFEST_MAX_REDIRECTS` hops are made; the one past it
+   *  is not. */
   it.effect('stops following after the redirect bound', () =>
     Effect.gen(function* () {
       const step = (index: number) => `http://127.0.0.1:64999/hop-${String(index)}.json`;
@@ -296,6 +357,10 @@ describe('§10 M9 the manifest adapter', () => {
     }),
   );
 
+  /** **The counted cap** (round-4 F4). An upstream that declares no length —
+   *  every chunked response — could stream an unbounded body into this reader
+   *  while the declared-length check above passed vacuously. The bound is on
+   *  the bytes actually read. */
   it.effect('refuses an oversized body that declares no content length', () =>
     Effect.gen(function* () {
       const chunked: Layer.Layer<HttpClient.HttpClient> = Layer.succeed(
@@ -318,6 +383,10 @@ describe('§10 M9 the manifest adapter', () => {
     }),
   );
 
+  /** The shipped allowlist admits the release host and **nothing else**
+   *  (round-4 F4). Loopback used to be on it so the fixtures would pass, which
+   *  meant every install trusted a plaintext local address for a manifest whose
+   *  trust surface is HTTPS. The fixtures state their own origins now. */
   it.effect('the production allowlist is the release host alone', () =>
     Effect.sync(() => {
       expect(CONTENT_MANIFEST_ORIGINS).toEqual([new URL(CONTENT_MANIFEST_URL).origin]);

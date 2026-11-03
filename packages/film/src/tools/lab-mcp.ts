@@ -20,11 +20,13 @@ export const MCP_PATH = '/mcp';
 const errorResult = (text: string) =>
   McpSchema.CallToolResult.make({ isError: true, content: [{ type: 'text', text }] });
 
+/** A failure that is no refusal of the command's (a defect), logged and said plainly. */
 const INTERNAL = 'Tool execution failed due to an internal server error.';
 
 const jsonText = Schema.encodeSync(Schema.fromJsonString(Schema.Json));
 const readPayload = Schema.decodeUnknownEffect(Schema.Json);
 
+/** A call's answer as a toolkit says it: the structured answer and its JSON text, or the command's pictures beside it. */
 const resultOf = (answered: Answered) =>
   Effect.map(
     Option.getOrElse(answered.pictured, () =>
@@ -36,11 +38,17 @@ const resultOf = (answered: Answered) =>
       McpSchema.CallToolResult.make({ structuredContent: answered.json, content: [...content] }),
   );
 
+/** A command's input and output as MCP lists them. */
 interface ListedSchemas {
   readonly inputSchema: McpSchema.ToolJson;
   readonly outputSchema: McpSchema.ToolOutputJson;
 }
 
+/**
+ * Each command's schemas as MCP lists them, derived the first time a server
+ * registers it and kept: a command's definition is fixed, and every server
+ * built in a process (each lab, each MCP test) lists the same JSON Schema.
+ */
 const listed = new WeakMap<LabCommand<InLabNeeds>, ListedSchemas>();
 
 const listedSchemas = (command: LabCommand<InLabNeeds>) =>
@@ -61,6 +69,11 @@ const listedSchemas = (command: LabCommand<InLabNeeds>) =>
       }).pipe(Effect.orDie),
   });
 
+/**
+ * `command` registered on the server, over `services`: its call read, run,
+ * logged once, and answered as a toolkit answers. Input that does not read
+ * is the call's `InvalidParams`; a refusal is an error result in its words.
+ */
 const registered = (command: LabCommand<InLabNeeds>, services: Context.Context<InLabNeeds>) =>
   Effect.gen(function* () {
     const server = yield* McpServer.McpServer;
@@ -103,6 +116,7 @@ const registered = (command: LabCommand<InLabNeeds>, services: Context.Context<I
     });
   });
 
+/** Every command of the set as a tool of the lab's MCP. */
 const commandTools = Layer.effectDiscard(
   Effect.gen(function* () {
     const services = yield* Effect.context<InLabNeeds>();
@@ -112,11 +126,13 @@ const commandTools = Layer.effectDiscard(
   }),
 ).pipe(Layer.provide(McpServer.McpServer.layer));
 
+/** A read as a resource's JSON. */
 const json = <S extends Schema.Top>(schema: S) =>
   Schema.encodeEffect(Schema.fromJsonString(schema, { space: 2 }));
 
 const filmParam = McpSchema.param('film', Schema.String);
 
+/** The lab's reads as resources: what a client attaches by `@lab:lab://…`. */
 const resources = (() => {
   const reads = Effect.gen(function* () {
     const events = yield* LabEvents;
@@ -167,6 +183,7 @@ const resources = (() => {
   );
 })();
 
+/** One line a waiting note is listed by in the prompt. */
 const noteLine = (note: typeof NoteRead.Type) => {
   const panel = Option.fromUndefinedOr(note.panel);
   const asks = Option.match(
@@ -218,8 +235,19 @@ const INSTRUCTIONS = [
   EASEL_INSTRUCTIONS,
 ].join('\n\n');
 
+/**
+ * What the lab's MCP runs over beside its router, its change feed and its
+ * address: the lab's stores, its easel and its critic, its fresh runs of the
+ * film CLI and the films' timelines.
+ */
 export type LabMcpNeeds = Exclude<InLabNeeds, LabEvents | LabAddress>;
 
+/**
+ * The lab's MCP at `/mcp` on the lab's router, over its stores and its change
+ * feed. The routes it adds are the lab's own: the gate (`api-server.ts`)
+ * runs first, as for every path. A client ends its session with a DELETE
+ * (the transport keeps a session until then: it has no expiry).
+ */
 export const labMcp = Layer.unwrap(
   Effect.gen(function* () {
     const services = yield* Effect.context<InLabNeeds>();

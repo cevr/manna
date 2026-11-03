@@ -6,6 +6,7 @@ import { drawFigure, type FigureSpec, PLAIN } from '../core/fixtures/figure.ts';
 import { repoJson } from '../core/schema.ts';
 import { decodePng } from './png.ts';
 
+/** The real crops, by file name under `core/fixtures/figure/`. */
 const CROPS = [
   'cold-34-prosecutor.png',
   'court-12-christ-concept.png',
@@ -27,6 +28,7 @@ const CROPS = [
   'round-3-judge-head.png',
 ] as const;
 
+/** Figures drawn with known faults, by name. */
 const DRAWN: ReadonlyArray<readonly [string, FigureSpec]> = [
   ['plain', PLAIN],
   ['dark hair', { ...PLAIN, darkHair: true }],
@@ -47,12 +49,14 @@ const DRAWN: ReadonlyArray<readonly [string, FigureSpec]> = [
   ['headcloth', { ...PLAIN, headcloth: [70, 60, 50] }],
 ];
 
+/** What the measure answers on a crop: its measure, or why none reads. */
 const GoldenEntry = Schema.Union([
   Schema.Struct({ measure: FigureMeasure }),
   Schema.Struct({ unread: Schema.String }),
 ]);
 type GoldenEntry = typeof GoldenEntry.Type;
 
+/** `golden.json`: each case's answer, by its name. */
 const GoldenJson = repoJson(Schema.Record(Schema.String, GoldenEntry));
 
 const entryOf = (measured: ReturnType<typeof measureFigure>): GoldenEntry =>
@@ -64,8 +68,10 @@ const entryOf = (measured: ReturnType<typeof measureFigure>): GoldenEntry =>
 const fixture = (name: string) =>
   new URL(`../core/fixtures/figure/${name}`, import.meta.url).pathname;
 
+/** The cases: the real crops, or the drawn figures. */
 type GoldenSet = 'real' | 'drawn';
 
+/** Each case's crop in `set`, by its name: the real crops decoded, the drawn ones drawn. */
 const goldenCrops = (set: GoldenSet) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -79,11 +85,13 @@ const goldenCrops = (set: GoldenSet) =>
     );
   });
 
+/** The pinned answers, as `golden.json` holds them. */
 const goldenPinned = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   return yield* Schema.decodeEffect(GoldenJson)(yield* fs.readFileString(fixture('golden.json')));
 });
 
+/** A case of `set` measured now: its full measure as an entry, its pin, and both reads. */
 interface GoldenRow {
   readonly name: string;
   readonly now: GoldenEntry;
@@ -92,6 +100,7 @@ interface GoldenRow {
   readonly lean: ReturnType<typeof readFigure>;
 }
 
+/** Every case of `set` measured now, in full and lean, beside its pin; and the pins' names. */
 const goldenRows = (set: GoldenSet) =>
   Effect.gen(function* () {
     const pinned = yield* goldenPinned;
@@ -110,6 +119,7 @@ const goldenRows = (set: GoldenSet) =>
     return { rows, names };
   });
 
+/** The full measure as the lean read gives it: no rims, no shading, no artifacts, no hair and beard, and what it lacks less the rims. */
 const leanOf = ({
   headShading: _h,
   bodyShading: _b,
@@ -122,6 +132,7 @@ const leanOf = ({
   missing: rest.missing.filter((m) => m.ratio !== 'innerRim'),
 });
 
+/** The lean read with what it lacks less the rims, and the rims' entry alone. */
 const leanParts = (lean: FigureRead) => ({
   read: { ...lean, missing: lean.missing.filter((m) => m.ratio !== 'innerRim') },
   rims: lean.missing.filter((m) => m.ratio === 'innerRim'),
@@ -129,6 +140,7 @@ const leanParts = (lean: FigureRead) => ({
 
 const RIMS_LACKED = [{ ratio: 'innerRim', why: 'a lean read reads no rims' }];
 
+/** What is wrong with a row: its measure off its pin, its lean read off its measure. */
 const rowFaults = (row: GoldenRow): ReadonlyArray<string> => {
   const pinned = Option.match(row.pinned, {
     onNone: () => [`${row.name}: no pin`],
@@ -156,6 +168,7 @@ const rowFaults = (row: GoldenRow): ReadonlyArray<string> => {
   ];
 };
 
+/** Every fault of `set`'s cases: a pin with no case, a case off its pin, a lean read off its full one. */
 export const goldenFaults = (set: GoldenSet) =>
   Effect.map(goldenRows(set), ({ rows, names }) => [
     ...names

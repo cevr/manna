@@ -3,35 +3,46 @@ import { clamp, hash2, lerp } from '@manna/film/core';
 import { type Easel, along, curve, glow, oval, paint, poly, pool, rect, shade } from './brush.ts';
 import { P, R, SERIF } from './palette.ts';
 
+/** Where the back wall meets the floor. */
 export const FLOOR = 930;
 
+/** The tall windows: their left edge, width, top and bottom. */
 const WINDOWS: ReadonlyArray<Box> = [
   { x: 330, y: 80, w: 250, h: 600 },
   { x: 800, y: 80, w: 250, h: 600 },
 ];
 
+/** The lamps on the bench: where their flames burn. */
 export const LAMPS: ReadonlyArray<readonly [number, number]> = [
   [1236, 452],
   [1858, 452],
 ];
 
+/** The bench's top edge, and its front's left. */
 export const BENCH = { top: 540, left: 1150 } as const;
 
+/** The dock's top rail. */
 export const DOCK = { left: 360, right: 720, top: 782 } as const;
 
+/** The evidence table's top. */
 export const TABLE = { left: 770, right: 1070, top: 772 } as const;
 
+/** The paper on the bench front the verdict is stamped on. */
 export const WRIT = { x: 1180, y: 552, w: 236, h: 200 } as const;
 
+/** How much cool daylight reaches (x, y) from the windows. */
 const daylight = (x: number, y: number) =>
   Math.max(...WINDOWS.map((w) => pool(x, y, w.x + w.w / 2, w.y + w.h * 0.45, 520)));
 
+/** How much warm lamplight reaches (x, y). */
 const lamplight = (x: number, y: number) =>
   Math.max(...LAMPS.map(([lx, ly]) => pool(x, y, lx, ly + 30, 430)));
 
+/** The flicker of a lamp's flame: a sum of two slow rates, never the same twice in a second. */
 export const flicker = (t: number, k: number) =>
   1 + 0.06 * Math.sin(t * 9.1 + k * 2.3) + 0.04 * Math.sin(t * 15.7 + k);
 
+/** An arched window's outline. */
 const arch = (b: Box, inset = 0) => {
   const r = b.w / 2 - inset;
   const pts: Array<[number, number]> = [];
@@ -44,6 +55,7 @@ const arch = (b: Box, inset = 0) => {
   return pts;
 };
 
+/** The back wall, its pilasters and cornice, the panelling below, and the floor. */
 const walls = (e: Easel) => {
   const W: Box = { x: -200, y: -200, w: 2400, h: FLOOR + 200 };
   paint(e, rect(W), {
@@ -132,6 +144,7 @@ const walls = (e: Easel) => {
   }
 };
 
+/** The windows: their dark frames, the glass, and the lead between the panes. */
 const windows = (e: Easel) => {
   const { ctx } = e;
   for (const [k, w] of WINDOWS.entries()) {
@@ -181,6 +194,7 @@ const windows = (e: Easel) => {
   }
 };
 
+/** The daylight falling through the air, a shaft from each window, and the dust that hangs in it. */
 export const shafts = (e: Easel, t: number) => {
   const { ctx } = e;
   ctx.save();
@@ -211,11 +225,13 @@ export const shafts = (e: Easel, t: number) => {
   }
 };
 
+/** The back of the room: walls, windows, floor. */
 export const backdrop = (e: Easel) => {
   walls(e);
   windows(e);
 };
 
+/** The canopy behind the bench: dark carved wood, rising over the judge. */
 export const canopy = (e: Easel, t: number) => {
   const pts: ReadonlyArray<readonly [number, number]> = [
     [1270, BENCH.top],
@@ -244,6 +260,7 @@ export const canopy = (e: Easel, t: number) => {
     shade(e.ctx, rect({ x, y: 170, w: 14, h: BENCH.top - 190 }), P.ink, 0.35);
 };
 
+/** The bench's front: a high wall of panelled wood, lit by its lamps, and its cornice. */
 export const bench = (e: Easel, t: number) => {
   const front: Box = {
     x: BENCH.left,
@@ -289,6 +306,7 @@ export const bench = (e: Easel, t: number) => {
   shade(e.ctx, rect({ x: BENCH.left - 24, y: BENCH.top + 20, w: 2000, h: 16 }), P.ink, 0.5);
 };
 
+/** A lamp on the bench: brass foot, glass chimney, its flame and the warm air round it. */
 export const lamps = (e: Easel, t: number) => {
   const { ctx } = e;
   for (const [k, [x, y]] of LAMPS.entries()) {
@@ -342,6 +360,7 @@ export const lamps = (e: Easel, t: number) => {
   }
 };
 
+/** The dock the accused stands in: a waist-high box of dark wood, its rail worn pale. */
 export const dock = (e: Easel, t: number) => {
   const front: Box = {
     x: DOCK.left,
@@ -376,6 +395,7 @@ export const dock = (e: Easel, t: number) => {
   });
 };
 
+/** The evidence table. */
 export const table = (e: Easel) => {
   for (const x of [TABLE.left + 20, TABLE.right - 44]) {
     const leg: Box = { x, y: TABLE.top, w: 24, h: FLOOR - TABLE.top + 70 };
@@ -399,6 +419,7 @@ export const table = (e: Easel) => {
   });
 };
 
+/** One piece of evidence: a ledger or a bundle of papers, its width, thickness and where it lands. */
 interface Exhibit {
   readonly ledger: boolean;
   readonly w: number;
@@ -407,6 +428,7 @@ interface Exhibit {
   readonly rot: number;
 }
 
+/** The evidence: nine pieces, ledgers and bundles, each its own size and turn. */
 export const EXHIBITS: ReadonlyArray<Exhibit> = Array.from({ length: 9 }, (_, i) => ({
   ledger: hash2(i, 41) > 0.45,
   w: 150 + 60 * hash2(i, 42),
@@ -415,6 +437,7 @@ export const EXHIBITS: ReadonlyArray<Exhibit> = Array.from({ length: 9 }, (_, i)
   rot: (hash2(i, 45) - 0.5) * 0.09,
 }));
 
+/** The evidence on the table: each piece `fall(i)` of the way down (0 not yet thrown, 1 landed). */
 export const evidence = (e: Easel, fall: (i: number) => number) => {
   let y = TABLE.top;
   for (const [i, x] of EXHIBITS.entries()) {
@@ -473,12 +496,14 @@ export const evidence = (e: Easel, fall: (i: number) => number) => {
   }
 };
 
+/** The verdict's size as it is stamped: a press past full, and back. */
 export const STAMP_POP = [
   [0, 1.6],
   [0.5, 0.92, 'inCubic'],
   [1, 1, 'outQuad'],
 ] as const;
 
+/** The writ on the bench front, warmed as the verdict is stamped on it (`stamp` 0 not yet, 1 down). */
 export const writ = (e: Easel, t: number, stamp: number) => {
   const { ctx } = e;
   const { x, y, w, h } = WRIT;
@@ -514,6 +539,11 @@ export const writ = (e: Easel, t: number, stamp: number) => {
   if (stamp > 0) glow(ctx, x + w / 2, y + h * 0.5, 320, '#e9c46a', 0.5 * stamp);
 };
 
+/**
+ * The verdict stamped on the writ in gold leaf: `stamp` 0 not yet, 1 down;
+ * `pop` its size as it lands. Drawn over the lamps' light, so its paint stays
+ * the one gold the oil pass lays leaf on (leaf is lit by its own sheen).
+ */
 export const verdict = (
   e: Easel,
   stamp: number,

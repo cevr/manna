@@ -1,3 +1,10 @@
+/**
+ * Where a press on the full player's title goes (`titleGoes`), from every
+ * screen the sheet can lie over: the sheet only closes over its hymn's own
+ * page; else it closes and the hymn's page is pushed, or, with no screen
+ * under it, the page replaces it.
+ */
+
 import { describe, expect, it } from 'bun:test';
 
 import { TitleGo, titleGoes } from './title';

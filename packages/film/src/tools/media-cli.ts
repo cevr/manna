@@ -8,11 +8,13 @@ import { filmsOut } from './film-repo.ts';
 import { RENDERS, renderKey } from './media-store.ts';
 import { PrivateStore } from './private-store.ts';
 
+/** A key as given, under `renders/` (a bare name or path is taken as under it). */
 const underRenders = (key: string): string => {
   if (key.startsWith(RENDERS)) return key;
   return `${RENDERS}${key.replace(/^\/+/, '')}`;
 };
 
+/** `1.2 MB`: a size as a person reads it. */
 const sizeLabel = (bytes: number): string => {
   if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
   if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
@@ -115,6 +117,7 @@ const list = Command.make(
   }),
 ).pipe(Command.withDescription('The renders the private store keeps: size, when written, key'));
 
+/** `film media`, over the app's private store (`PrivateStore`). */
 export const media = Command.make('media').pipe(
   Command.withDescription(
     'Review renders in the private store: push them before trashing the local copy, pull them back, list them',

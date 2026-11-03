@@ -5,10 +5,13 @@ import { fonts, palette } from './palette.ts';
 import { scenes } from './scenes/index.ts';
 import { TITLE } from './script.ts';
 
+/** The film's acts and colour script (`acts.ts`), read by `film check`, `film lookbook` and `film chapters`. */
 export { look } from './acts.ts';
 
+/** The frames a second the film is laid and drawn at: its page (`narratedFilms`) and the tools both read it here. */
 export const fps = 30;
 
+/** The film, from its narration (its timings, its master, its `fps`) as the framework loads it (`narratedFilms`). */
 export const film = (narrated: Narrated) =>
   createFilm({
     ...narrated,

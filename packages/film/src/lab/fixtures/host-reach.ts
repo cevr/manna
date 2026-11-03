@@ -1,20 +1,25 @@
 import { SourceMap } from 'node:module';
 import { Array as Arr, Option, Predicate, Schema } from 'effect';
 
+/** What a told call's console line starts with. */
 const PREFIX = '[host-reach] ';
 
+/** A page script's frame: its url, and the line and column (both from 1) of the call in it. */
 const Frame = Schema.Struct({ url: Schema.String, line: Schema.Finite, col: Schema.Finite });
 type Frame = typeof Frame.Type;
 
+/** A call the page made: the API, and the script frames above it, the nearest first. */
 const Told = Schema.Struct({ api: Schema.String, frames: Schema.Array(Frame) });
 type Told = typeof Told.Type;
 
+/** The call a console line tells, if it is one. */
 export const toldOf = (text: string): Option.Option<Told> =>
   Option.flatMap(
     Option.liftPredicate(text, (line) => line.startsWith(PREFIX)),
     (line) => Schema.decodeOption(Schema.fromJsonString(Told))(line.slice(PREFIX.length)),
   );
 
+/** A source map, as a bundle carries it inline. */
 const Payload = Schema.Struct({
   version: Schema.Finite,
   sources: Schema.Array(Schema.String),
@@ -22,8 +27,10 @@ const Payload = Schema.Struct({
   mappings: Schema.String,
 });
 
+/** The inline source map at the end of a bundle. */
 const INLINE = /\/\/# sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+)\s*$/;
 
+/** The source map a bundle carries inline: none for a script that has none. */
 export const mapOf = (body: Uint8Array | string): Option.Option<SourceMap> => {
   const encoded = Option.flatMap(
     Option.flatMap(Option.liftPredicate(body, Predicate.isString), (text) =>
@@ -53,9 +60,15 @@ export const mapOf = (body: Uint8Array | string): Option.Option<SourceMap> => {
   );
 };
 
+/**
+ * The film's own source, as a map names it (relative to the film package),
+ * and the parts of it that may reach the host: its adapters, and the fixtures'
+ * own pages.
+ */
 const FILM_SRC = 'src/';
 const OWNERS: ReadonlyArray<string> = ['src/browser/', 'src/lab/fixtures/'];
 
+/** The file that wrote the nearest frame `maps` reads back, if any. */
 const sourceOf = (
   frames: ReadonlyArray<Frame>,
   maps: (url: string) => Option.Option<SourceMap>,
@@ -70,9 +83,11 @@ const sourceOf = (
     }),
   );
 
+/** Whether `source` is film code that may not reach the host: the film's own, outside its adapters. */
 const refused = (source: string): boolean =>
   source.startsWith(FILM_SRC) && !OWNERS.some((owner) => source.startsWith(owner));
 
+/** The failure a told call is, if it is one: `host reach: <api> from <file>`. */
 export const failureOf = (
   told: Told,
   maps: (url: string) => Option.Option<SourceMap>,
@@ -81,6 +96,7 @@ export const failureOf = (
     Option.some(`host reach: ${told.api} from ${source}`),
   );
 
+/** The script, run before the page's own, that tells each reach. */
 export const HOST_REACH = `(() => {
   const PREFIX = '${PREFIX}';
   const ON_HOST = new Set(['popstate', 'hashchange', 'keydown', 'keyup', 'pointermove', 'pointerup', 'pointercancel', 'lostpointercapture']);

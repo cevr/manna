@@ -25,6 +25,7 @@ import {
   stageInput,
 } from './graph.ts';
 
+/** What a build is asked with, as `buildGraph` takes it. */
 type BuildOptions = Parameters<typeof buildGraph>[1];
 
 const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
@@ -36,10 +37,12 @@ const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
   ...over,
 });
 
+/** `build.json`'s running marks, as a test reads them. */
 const RunningMarks = Schema.fromJsonString(
   Schema.Struct({ running: Schema.Record(Schema.String, Schema.Unknown) }),
 );
 
+/** `build.json`'s stages and each running mark's build, as a test reads and writes them. */
 const Marks = Schema.fromJsonString(
   Schema.Struct({
     stages: Schema.Record(Schema.String, Schema.Unknown),
@@ -59,6 +62,7 @@ const Marks = Schema.fromJsonString(
 const servicesOver = (files: Map<string, Uint8Array>) =>
   ContentStore.layer.pipe(Layer.provideMerge([memoryFileSystem(files), Path.layer, memoryLocks]));
 
+/** `servicesOver`, its manifest locks counting each take in `takes`. */
 const countingTakes = (files: Map<string, Uint8Array>, takes: { n: number }) =>
   ContentStore.layer.pipe(
     Layer.provideMerge([
@@ -77,6 +81,11 @@ const countingTakes = (files: Map<string, Uint8Array>, takes: { n: number }) =>
     ]),
   );
 
+/**
+ * drawing (reads /in/view.png) → parts (its bytes' length, so a same-length
+ * change makes the same output) → cut; and a key that spends okra; each run
+ * counted in `runs`. Its files lie under `checkout` (`/` by default).
+ */
 const rootedGraph = (runs: Map<string, number>, checkout: string) => {
   const counted = (id: string, bytes: Effect.Effect<Uint8Array, StageFailed>) =>
     Effect.sync(() => runs.set(id, (runs.get(id) ?? 0) + 1)).pipe(Effect.andThen(bytes));
@@ -135,6 +144,7 @@ const seeded = () =>
 const statesOf = (report: { readonly stages: ReadonlyArray<{ id: string; state: string }> }) =>
   Object.fromEntries(report.stages.map((s) => [s.id, s.state]));
 
+/** The fake graph and a set of the cuts known in this build, read through optional inputs. */
 const withSet = (runs: Map<string, number>, made: Array<string>): ReadonlyArray<Stage<never>> => [
   ...fakeGraph(runs),
   {
@@ -592,6 +602,7 @@ describe('the cast build graph', () => {
 const onHost = (host: string) =>
   Effect.provideService(Processes, { host, alive: () => Effect.succeed(true) });
 
+/** Run on a host whose wall clock reads `offset` off this one's (its sleeps and monotonic time are this one's). */
 const skewed = (clock: Clock.Clock, offset: Duration.Input) => {
   const ms = Duration.toMillis(offset);
   const off: Clock.Clock = {
@@ -607,6 +618,10 @@ const skewed = (clock: Clock.Clock, offset: Duration.Input) => {
     Effect.provideService(effect, Clock.Clock, off);
 };
 
+/**
+ * A train that marks `started` at its first run and `restarted` at its second,
+ * and makes its output once `release` is done.
+ */
 const slowTrain = Effect.gen(function* () {
   const started = yield* Deferred.make<boolean>();
   const restarted = yield* Deferred.make<boolean>();
@@ -630,6 +645,7 @@ const slowTrain = Effect.gen(function* () {
   return { stages, started, restarted, release, runs: () => count };
 });
 
+/** The logger that completes `busy` when a build logs that it waits on another build's run. */
 const busyLogged = (busy: Deferred.Deferred<boolean>) =>
   Logger.layer([
     Logger.make(({ message }) => {

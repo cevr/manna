@@ -1,3 +1,9 @@
+/**
+ * A player bar button's mark on iOS: an SF Symbol, 22 points, in `tint`. A
+ * speaker with waves while sound is on, with a slash while it is off; play,
+ * pause, again (a counter-clockwise arrow) and retry (a clockwise one).
+ */
+
 import { Match } from 'effect';
 import { One } from 'one';
 import { type ColorValue, StyleSheet } from 'react-native';

@@ -1,3 +1,9 @@
+/**
+ * Meaning search over the shipped table: what it returns, never how well
+ * (the acceptance's theme queries measure that). Queries are plain English
+ * made here; each check compares hymn numbers or counts.
+ */
+
 import { fold } from '@manna/hymnal/fold';
 import { describe, expect, it } from 'bun:test';
 import { Effect, Fiber, Option } from 'effect';
@@ -102,6 +108,7 @@ describe('search mode’s hymns about a query', () => {
 });
 
 describe('the ranking', () => {
+  /** The file decoded with Node's base64, apart from the module's own decoder. */
   const file = meaning();
   const bytes = (text: string) => new Uint8Array(Buffer.from(text, 'base64'));
   const words = file.words.split(' ');
@@ -109,6 +116,7 @@ describe('the ranking', () => {
   const vectors = new Int8Array(bytes(file.vectors).buffer);
   const order = file.hymns.split(' ').map(Number);
   const D = file.dims;
+  /** Each value of word `w`'s row, times its weight. */
   const rowOf = (w: number) => {
     const row = bytes(file.table.slice((w * D * 2) / 3, ((w + 1) * D * 2) / 3));
     return Array.from({ length: D }, (_, c) => {

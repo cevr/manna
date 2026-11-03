@@ -34,6 +34,7 @@ export interface DialogStore extends PopupStore {
   setDescriptionElementId: RegisterId;
   readonly backdropRef: { current: HTMLElement | null };
   readonly internalBackdropRef: { current: HTMLElement | null };
+  /** Asks the dialog to open or close (through `onOpenChange`, which may cancel). */
   setOpen: (open: boolean, eventDetails: BaseUIChangeEventDetails) => void;
 }
 

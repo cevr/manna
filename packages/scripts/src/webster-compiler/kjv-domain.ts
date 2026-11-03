@@ -10,6 +10,7 @@ const Census = Schema.fromJsonString(
   }),
 );
 
+/** Reproduce the raw census; resolved lemmas are reviewed data, not a stemmer's output. */
 Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const bytes = yield* fs.readFile(

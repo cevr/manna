@@ -2,12 +2,15 @@ import { rng } from '../core/random.ts';
 import type { Camera } from './camera.ts';
 import { keepAtMost, offscreen, patternOf } from './paper.ts';
 
+/** The tile's side in px. */
 export const FIBRE_SIZE = 320;
 
+/** How strongly the backdrop's fibre is soft-lit over it, 0..1. */
 export const PLANE_FIBRE = 1;
 
 let tile: HTMLCanvasElement | undefined;
 
+/** Draw `paint` at every offset a tile's edge wraps to, so what crosses one edge comes in at the other. */
 const wrapped = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -25,6 +28,12 @@ const wrapped = (
     }
 };
 
+/**
+ * The fibre tile: transparent, with soft light and dark blots (the mottle,
+ * 50–150 px across) and short light and dark strands 1–2 px wide (the
+ * fibre), for soft light over a plane: the mottle moves a mid-tone 3–6 %.
+ * Built once.
+ */
 const fibreTile = (): HTMLCanvasElement => {
   if (tile !== undefined) return tile;
   const { c, ctx } = offscreen(FIBRE_SIZE, FIBRE_SIZE);
@@ -65,8 +74,10 @@ const fibreTile = (): HTMLCanvasElement => {
   return c;
 };
 
+/** The most tile scales kept at once; a push passes through a few, one per px of period. */
 const SCALES_KEPT = 12;
 
+/** The tile drawn at `period` px a side, wrapping still without a seam, by period. */
 const scaled = new Map<number, HTMLCanvasElement>();
 
 const scaledTile = (period: number): HTMLCanvasElement => {
@@ -80,8 +91,24 @@ const scaledTile = (period: number): HTMLCanvasElement => {
   return keepAtMost(scaled, period, c, SCALES_KEPT);
 };
 
+/** `n` wrapped into [0, period). */
 const wrap = (n: number, period: number) => ((n % period) + period) % period;
 
+/**
+ * Soft-light the fibre over the whole `w` × `h` frame as the plane seen
+ * through `view` carries it, so it is anchored to the plane's world and
+ * slides, turns and scales with it. `strength` 0..1 is its alpha. Soft light
+ * is the look: it fades toward white and black, so light paper takes the
+ * grain as lightly as the eye expects (a plain fill stains it).
+ *
+ * Unturned, the tile is pre-scaled to the plane's period in device px and
+ * laid at a whole-pixel offset, so the software canvas never resamples it:
+ * 6–8 ms a 1080p frame against about 20 ms through the plane's transform.
+ * The period rounds to a whole px, so the grain sits within half a px a tile
+ * of the plane's own scale, counted from the tile corner nearest the
+ * camera's point: at most about 2 px at the frame's edge at any zoom. A
+ * turned camera lays it through the plane's transform, sampled nearest.
+ */
 export const planeFibre = (
   ctx: CanvasRenderingContext2D,
   view: Camera,

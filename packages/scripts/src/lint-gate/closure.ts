@@ -3,21 +3,30 @@ import * as Bool from 'effect/Boolean';
 
 import type { LintConfig } from './config.js';
 
+/** The JS plugins `config` loads, top level and in its overrides, each once. */
 export const pluginsOf = (config: LintConfig): ReadonlyArray<string> => [
   ...new Set([...config.jsPlugins, ...config.overrides.flatMap((override) => override.jsPlugins)]),
 ];
 
+/** A script Bun's transpiler reads; every other file imports nothing. */
 const SCRIPT = /\.[cm]?[jt]sx?$/;
 
+/** The loader Bun's transpiler reads `file` with. */
 const loaderOf = (file: string) =>
   Bool.match(/\.[cm]?[jt]sx$/.test(file), {
     onTrue: () => 'tsx' as const,
     onFalse: () => 'ts' as const,
   });
 
+/** `specifier` as Bun resolves it from `dir`; none when it does not resolve. */
 const resolved = (specifier: string, dir: string) =>
   Effect.try(() => Bun.resolveSync(specifier, dir)).pipe(Effect.option);
 
+/**
+ * The repository files under `root` that `entries` (paths or package names,
+ * resolved from `root`) run, the entries among them: relative to the root,
+ * sorted.
+ */
 export const importClosure = Effect.fn('importClosure')(function* (
   root: string,
   entries: ReadonlyArray<string>,

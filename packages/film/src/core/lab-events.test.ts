@@ -101,6 +101,7 @@ describe('boardChanges', () => {
   });
 });
 
+/** A note of film `f` on scene `cold`, open, with `more` of its own. */
 const note = (more: Partial<Note> = {}): Note => ({
   scene: 'cold',
   T: 1,
@@ -197,6 +198,7 @@ describe('gist', () => {
 });
 
 describe('askChanges', () => {
+  /** A step's name, decoded as the lab decodes it. */
   const step = Schema.decodeSync(AskName);
   const asking = Schema.decodeSync(AskRecord)({
     id: 'a0123456789',
@@ -448,6 +450,7 @@ describe('a note log over time', () => {
   const made = (file: ReturnType<typeof emptyNotes>, text: string, at: string) =>
     addNote(file, { ...draft, text }, at);
 
+  /** Each change's kind and note, as the feed tells two reads. */
   const told = (before: ReturnType<typeof emptyNotes>, after: ReturnType<typeof emptyNotes>) =>
     notesNews(before, after).map((c) => [c.kind, c.note, c.text]);
 

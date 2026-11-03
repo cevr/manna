@@ -15,8 +15,10 @@ import { type HallLight, hallLight } from './burin.ts';
 import { PICTURE, layPaper, plate } from './print.ts';
 import { ACCUSED_AT, type World, world } from './world.ts';
 
+/** The shadow map's side. */
 const SHADOW = 2048;
 
+/** One WebGL context's renderer, hall, cameras and shadow. */
 interface Rig {
   readonly renderer: WebGLRenderer;
   readonly scene: Scene;
@@ -72,6 +74,7 @@ const rig = (canvas: HTMLCanvasElement, gl: WebGL2RenderingContext): Rig => {
   };
 };
 
+/** The gavel arm's turn across its cue: raised, down hard, a bounce, at rest on the block. */
 const SWING: ReadonlyArray<Key> = [
   [0, 0.05],
   [0.373, -1.25],
@@ -80,12 +83,14 @@ const SWING: ReadonlyArray<Key> = [
   [1, 0.4],
 ];
 
+/** A camera's place, where it looks, and its lens (vertical degrees). */
 interface View {
   readonly at: readonly [number, number, number];
   readonly to: readonly [number, number, number];
   readonly fov: number;
 }
 
+/** Each shot: where it starts and where it has drifted to by its cut. */
 const SHOTS: ReadonlyArray<readonly [View, View]> = [
   [
     { at: [-4.6, 1.3, 4.0], to: [1.0, 2.3, -6.2], fov: 46 },
@@ -105,6 +110,7 @@ const SHOTS: ReadonlyArray<readonly [View, View]> = [
   ],
 ];
 
+/** Which shot the cues have reached, and how far through it the frame is. */
 const shotAt = (f: CourtFrame): readonly [number, number] => {
   const bow = f.cue('bow').start;
   const lean = f.cue('lean').start;
@@ -124,6 +130,7 @@ const aim = (eye: PerspectiveCamera, a: View, b: View, k: number) => {
   eye.updateMatrixWorld();
 };
 
+/** Everything that moves, set from the frame's time. */
 const pose = (r: Rig, f: CourtFrame) => {
   const { accused, judge, evidence } = r.world;
   const lift = f.at('lift');
@@ -150,6 +157,7 @@ const pose = (r: Rig, f: CourtFrame) => {
   r.light.uRoseTurn.value = 0;
 };
 
+/** The hall rendered at the frame's time into `gl`; the canvas it drew. */
 const render = (r: Rig, f: CourtFrame, s: number) => {
   pose(r, f);
   const [i, k] = shotAt(f);

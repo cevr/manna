@@ -1,3 +1,4 @@
+/** Real parser/handler receipts. Never attach child output or corpus values to assertions. */
 import { BunServices } from '@effect/platform-bun';
 import { Database } from 'bun:sqlite';
 import { ConfigProvider, Context, Effect, FileSystem, Layer, Result, Schema, Stream } from 'effect';
@@ -15,6 +16,10 @@ const ARTIFACT = new URL('../../../core/data/hymnal.db', import.meta.url).pathna
 const MAIN = new URL('../../src/main.ts', import.meta.url).pathname;
 const json = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
+/**
+ * The bytes of an indexed hymnal database, `hymns` and every index table each empty,
+ * with `user_version` set to `mark`, so each download body is a distinct indexed db.
+ */
 const indexedHymnal = (mark: number) => {
   const db = new Database(':memory:');
   db.exec(
@@ -93,6 +98,8 @@ const legacyFixture = (file: string, hymns: readonly (typeof ReturnedHymn.Type)[
     (db) => Effect.sync(() => db.close()),
   );
 
+/** A synthetic installed Bible satisfies init's unrelated prerequisite without corpus content.
+ * Its newer generation keeps even --force from fetching a compiled-in older floor. */
 const initPrerequisite = (file: string) =>
   Effect.acquireUseRelease(
     Effect.sync(() => new Database(file)),
@@ -113,6 +120,7 @@ const initPrerequisite = (file: string) =>
     (db) => Effect.sync(() => db.close()),
   );
 
+/** Named fetch adapter prevents any unrelated native fallback from reaching the network. */
 const blockedNativeFetch = Object.assign(
   () => Effect.runPromise(Effect.succeed(new Response('', { status: 503 }))),
   { preconnect: () => {} },

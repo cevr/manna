@@ -4,13 +4,16 @@ import type { Decided } from '../core/production.ts';
 import { decoder, ruleCheck } from './decode.ts';
 import { Words, overrideOf, whyUnbacked } from './override.ts';
 
+/** A sha256, as lowercase hex. */
 const Sha256 = Schema.String.check(
   Schema.isPattern(/^[0-9a-f]{64}$/, { message: 'a sha256, as 64 lowercase hex digits' }),
 );
 
+/** FigureLock's override: it frees the one print it names, by its sha256, citing a decision of the owner's on the figure. */
 const Freed = overrideOf('FigureLock', { frees: Sha256 });
 type Freed = typeof Freed.Type;
 
+/** An override frees the figure its lock names: its place is the lock's item. */
 const placed = ruleCheck(
   'FigureLock',
   (lock: { readonly item: string; readonly override?: Freed }) =>
@@ -19,6 +22,11 @@ const placed = ruleCheck(
       : `its override frees ${lock.override.place}, not ${lock.item}`,
 );
 
+/**
+ * A figure's lock: its file's fields (the item, its version, its print's
+ * sha256, the ask, the ledger's time in ms, the still he saw), and the
+ * override that frees one print of it when a decision of his allows.
+ */
 const LockSlot = Schema.Struct({
   item: Words,
   version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
@@ -30,18 +38,27 @@ const LockSlot = Schema.Struct({
 }).check(placed);
 export type Lock = typeof LockSlot.Type;
 
+/** A figure's lock, checked as `figure` composes it. */
 export const decodeLock = decoder(LockSlot);
 
+/** What a locked figure's print answers its lock: it holds, its override frees it, or it is broken, and why. */
 type Held =
   | { readonly _tag: 'Holds' }
   | { readonly _tag: 'Freed'; readonly override: Freed }
   | { readonly _tag: 'Broken'; readonly why: string };
 
+/** The answer that the lock is broken, and `why`. */
 const broken = (why: string): Held => ({ _tag: 'Broken', why });
 
+/** Whether the owner's decisions (`decisions`) hold the one `lock` names: filed at its time, answering its ask. */
 const keptIn = (lock: Lock, decisions: ReadonlyArray<Decided>) =>
   decisions.some((d) => d.at === lock.at && Option.contains(d.ask, lock.ask));
 
+/**
+ * What the print of the figure laid as `item` in its film, its sha256
+ * `hash`, answers `lock`, read against the owner's decisions on his
+ * production's ledger (`decisions`).
+ */
 export const heldTo = (
   item: string,
   lock: Lock,

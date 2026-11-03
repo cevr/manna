@@ -8,19 +8,44 @@ import { boxOf } from './frames.ts';
 const here = import.meta.dir;
 const KEPT = `${here}/../cast-sheet/kept/poses.png`;
 
+/**
+ * Each key's view on his kept sheet: poses-1's part sheet frame moved by
+ * `at`, sheet px. Each shift is the one, within 10 px across and 6 down of
+ * the body's best (`[491, 0]` and `[984, 0]`), whose rows below the chin
+ * (view rows 267-300, columns 110-300: his neck and collar between the
+ * drape's inner edges) best match the neutral's: 12.4 % and 12.7 % of those
+ * px step over 30 in a channel, against 16.9 % and 16.7 % at the body's best
+ * (measured), so each key's neck runs on into his neutral torso's.
+ */
 const KEYS = {
   turn: [490, -1],
   smile: [983, -1],
 } as const;
 
+/** A px is ink where its luminance is below this: his outlines, hair and features, none of his cloth or skin. */
 const INK = 110;
 
+/**
+ * The drape band's top view row: his ear's top, below the headband. From here
+ * down to the shoulders each key's drape outlines run beside the neutral's at
+ * a steady offset, about 4 px on the picture's left and 14 on its right
+ * (measured), so the band's shift eases in over the whole free drape.
+ */
 const DRAPE_TOP_ROW_AT_HIS_EAR_TOP = 135;
 
+/** The rows above the chin whose outline centres fit the line that places each drape outline at the chin. */
 const FIT = 12;
 
+/**
+ * The rows down to the chin over which each key's drape cloth fades into the
+ * neutral's: the paintings shade the cloth apart there (the keys carry a pale
+ * band and a darker fold the neutral lacks), a step of about 14 levels of
+ * RGB across the chin on the picture's left and 7 on its right against 1 in
+ * the neutral painting (measured).
+ */
 const DRAPE_FADE_ROWS = 20;
 
+/** The `[x0, y0, x1, y1]` box of `sheet`, its far edges exclusive. */
 const cropOf = (
   sheet: Raster,
   [x0, y0, x1, y1]: readonly [number, number, number, number],
@@ -35,11 +60,13 @@ const cropOf = (
   return { width: w, height: h, rgba };
 };
 
+/** The luminance of `r`'s px at `(x, y)`. */
 const lumAt = (r: Raster, x: number, y: number) => {
   const i = (y * r.width + x) * 4;
   return 0.299 * (r.rgba[i] ?? 0) + 0.587 * (r.rgba[i + 1] ?? 0) + 0.114 * (r.rgba[i + 2] ?? 0);
 };
 
+/** Each side's drape edges on one row: the outline's ink run, and the next ink run in, his ear, cheek, jaw or neck. */
 interface Edges {
   readonly outlineL: readonly [number, number];
   readonly faceL: readonly [number, number];
@@ -47,6 +74,7 @@ interface Edges {
   readonly outlineR: readonly [number, number];
 }
 
+/** Row `y`'s ink runs in `r`, each `[first, last]`, left to right. */
 const inkRuns = (r: Raster, y: number) => {
   const runs: Array<readonly [number, number]> = [];
   let start = -1;
@@ -61,6 +89,7 @@ const inkRuns = (r: Raster, y: number) => {
   return runs;
 };
 
+/** Row `y`'s `Edges` in `r`. Fails where the row has fewer than three ink runs, no outline and face edge a side. */
 const edgesOf = (r: Raster, y: number): Result.Result<Edges, string> => {
   const runs = inkRuns(r, y);
   return Result.fromOption(
@@ -77,6 +106,7 @@ const edgesOf = (r: Raster, y: number): Result.Result<Edges, string> => {
   );
 };
 
+/** The centre of the ink run `[a, b]` of row `y`, each px weighed by its darkness, its anti-aliased edges with it. */
 const centreOf = (r: Raster, y: number, [a, b]: readonly [number, number]) => {
   let [sum, weight] = [0, 0];
   for (let x = Math.max(0, a - 2); x <= Math.min(r.width - 1, b + 2); x++) {
@@ -87,9 +117,15 @@ const centreOf = (r: Raster, y: number, [a, b]: readonly [number, number]) => {
   return sum / weight;
 };
 
+/**
+ * The drape's outlines at row `chin` of `r`, `[left, right]`: on each side
+ * the line fitted through its outermost ink run's centres on the `FIT` rows
+ * down to the chin, read at the chin. Fails where a row has no ink.
+ */
 const outlinesAt = (r: Raster, chin: number): Result.Result<readonly [number, number], string> => {
   const rows = Arr.makeBy(FIT + 1, (i) => chin - FIT + i);
   const my = Arr.reduce(rows, 0, (s, y) => s + y) / rows.length;
+  /** The line through the centres `outermost` picks on each row, read at the chin. */
   const lineOf = (
     outermost: (
       runs: ReadonlyArray<readonly [number, number]>,
@@ -115,6 +151,17 @@ const outlinesAt = (r: Raster, chin: number): Result.Result<readonly [number, nu
   return Result.all([lineOf(Arr.head), lineOf(Arr.last)] as const);
 };
 
+/**
+ * `view` with its drape warped across on the rows from `BAND_TOP` down to
+ * `chin`, each side alone. Row y's outline (its outermost ink run, its edge px
+ * with it) and the paper beyond move whole by `shift` times an ease that runs
+ * from 0 at the band's top to 1 at the chin (smoothstep, so the outline leaves
+ * the painting's line and meets the torso's with no corner); the cloth between
+ * it and the next ink in, his ear, cheek or jaw, stretches or narrows to meet
+ * that ink, which stays put with the face inside it. Each px is read between
+ * its two nearest source px. Fails where a row lacks an outline and a face
+ * edge on each side, or where a side's cloth is too narrow to take its shift.
+ */
 const warped = (
   view: Raster,
   [shiftL, shiftR]: readonly [number, number],
@@ -135,6 +182,7 @@ const warped = (
     const aR = Math.max(outlineR[0] - 1, bR + 1);
     if (bL - aL - sL <= 0 || aR + sR - bR <= 0)
       return Result.fail(`row ${y}: the drape's cloth is too narrow to take its shift`);
+    /** The source column the warped row reads at `x`. */
     const sourceOf = (x: number) => {
       if (x <= aL + sL) return x - sL;
       if (x < bL) return aL + ((x - aL - sL) * (bL - aL)) / (bL - aL - sL);
@@ -157,6 +205,12 @@ const warped = (
   return Result.succeed({ width: w, height: view.height, rgba });
 };
 
+/**
+ * Each side's cloth on row `y` of `r`, `[left, right]`, each `[from, to]`:
+ * from 2 px past the drape outline's ink to 2 px short of the next ink in, so
+ * the inks' edge px stay out of it. Fails where the row lacks an outline and
+ * a face edge on each side.
+ */
 const clothOf = (r: Raster, y: number) =>
   Result.map(
     edgesOf(r, y),
@@ -167,8 +221,22 @@ const clothOf = (r: Raster, y: number) =>
       ] as const,
   );
 
+/**
+ * The px nearest each side's face edge over which `faded` reads the
+ * neutral's cloth stretched or narrowed to the key's: the face edges lie
+ * apart in the two paintings, the drape outlines together.
+ */
 const EDGE = 16;
 
+/**
+ * The column of the neutral's cloth `[c, d]` that the key's cloth `[a, b]`
+ * reads at `x`, on the picture's left (`side` 0, the face edge past `b`) or
+ * its right (1, the face edge before `a`): the same column on the outline's
+ * side, where the warp has laid the key's outline on the neutral's, so the
+ * neutral's folds keep their places and meet the torso's; and the `EDGE` px
+ * nearest the key's face edge stretched or narrowed to end at the neutral's.
+ * A cloth narrower than that is read across whole, end to end.
+ */
 const neutralColumn = (
   side: 0 | 1,
   [a, b]: readonly [number, number],
@@ -188,6 +256,14 @@ const neutralColumn = (
   return c + ((x - a) * (q - c)) / Math.max(1, q - a);
 };
 
+/**
+ * `drape` (a key's warped view) with its drape's cloth fading into the
+ * `neutral` view's over the `FADE` rows down to `chin`: on each row and side
+ * the key's cloth is mixed with the neutral's (`neutralColumn`), the
+ * neutral's share easing from none to all at the chin (smoothstep). So at the
+ * chin the cloth is the neutral's, which runs on into his torso's as in his
+ * neutral painting; the inks and his face stay as the key paints them.
+ */
 const faded = (drape: Raster, neutral: Raster, chin: number): Result.Result<Raster, string> => {
   const { width: w } = drape;
   const rgba = Uint8Array.from(drape.rgba);
@@ -217,6 +293,7 @@ const faded = (drape: Raster, neutral: Raster, chin: number): Result.Result<Rast
   return Result.succeed({ width: w, height: drape.height, rgba });
 };
 
+/** The `head` part `view` cuts to by his poses-1 cut. */
 const headOf = (view: Raster) =>
   Effect.gen(function* () {
     const parts = yield* Effect.fromResult(
@@ -231,6 +308,7 @@ const headOf = (view: Raster) =>
     );
   });
 
+/** The lowest row of `r` holding a px (alpha above 0). */
 const lowestRow = (r: Raster) => {
   for (let y = r.height - 1; y >= 0; y--)
     for (let x = 0; x < r.width; x++) if ((r.rgba[(y * r.width + x) * 4 + 3] ?? 0) > 0) return y;

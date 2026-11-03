@@ -3,24 +3,39 @@ import { type Command, type CommandId, type Invocation, labelOf } from './comman
 import type { Context } from './context.ts';
 import { EVERYWHERE, type Target, targetOf } from './target.ts';
 
+/**
+ * One row of a menu: the command, its label where the page is, and the step
+ * it runs at (`coarse` for a context menu's ×10 row: a finger's Shift).
+ */
 export interface MenuRow {
   readonly command: Command;
   readonly label: string;
   readonly step: Invocation['step'];
 }
 
+/** `command`'s row at its own step. */
 const rowOf = (command: Command, ctx: Context): MenuRow => ({
   command,
   label: labelOf(command, ctx),
   step: 'normal',
 });
 
+/**
+ * A row's identity in a rendered list: its command's id, and its step when
+ * not the normal one. A menu's rows are
+ * made again whenever what they read moves (a command's `when` and its label
+ * read the player, so each frame a film plays; a command registered again);
+ * a list keyed by it keeps each row's element, so a press on a row and its
+ * release are on one element, and the click is that row's.
+ */
 export const rowKey = (row: MenuRow): string =>
   [row.command.id, ...[row.step].filter((s) => s !== 'normal')].join(' ');
 
+/** The chord that runs `row` from its command's `key`: a coarse row's with Shift, as the keymap steps it. */
 export const rowChord = (row: MenuRow, key: string): string =>
   [...['shift'].filter(() => row.step === 'coarse'), key].join('+');
 
+/** Whether every word of `query` is in `text`, ignoring case. */
 const matches = (query: string, text: string): boolean => {
   const said = text.toLowerCase();
   return query
@@ -30,8 +45,15 @@ const matches = (query: string, text: string): boolean => {
     .every((word) => said.includes(word));
 };
 
+/** Whether a command is found only by typing (`Command.typed`). */
 const isTyped = (command: Command): boolean => command.typed === true;
 
+/**
+ * The command menu's rows: the commands of `available` (those available in
+ * `ctx`) that every word typed names (in the label, the group or the id),
+ * grouped in the order their groups first come. A command found only by
+ * typing (a Go to entry) is a row once a word is typed.
+ */
 export const menuRows = (
   available: ReadonlyArray<Command>,
   ctx: Context,
@@ -44,14 +66,25 @@ export const menuRows = (
     .filter((row) => matches(query, `${row.label} ${row.command.group} ${row.command.id}`));
 };
 
+/**
+ * The `?` sheet's rows, by group: every command registered but those found
+ * only by typing, unless a key is bound to one now (`bound`), so every key
+ * the page hears is listed.
+ */
 export const sheetRows = (
   all: ReadonlyArray<Command>,
   bound: (id: CommandId) => ReadonlyArray<unknown>,
 ): ReadonlyArray<readonly [string, ReadonlyArray<Command>]> =>
   byGroup(all.filter((command) => !isTyped(command) || bound(command.id).length > 0));
 
+/** The group of the commands the view menu (`⋯`) lists. */
 const VIEW = 'View';
 
+/**
+ * The view menu's rows (`⋯`): the commands of `available` (those available
+ * in `ctx`) of the `View` group, then `last` (the keys sheet), each where
+ * the page is.
+ */
 export const viewRows = (
   available: ReadonlyArray<Command>,
   ctx: Context,
@@ -59,6 +92,11 @@ export const viewRows = (
 ): ReadonlyArray<MenuRow> =>
   [...available.filter((c) => c.group === VIEW), ...last].map((command) => rowOf(command, ctx));
 
+/**
+ * A stepped command's rows in a context menu: its step, then its coarse
+ * step (Shift's, ×10), since a finger has no Shift. ⌘K and the keys keep the
+ * one row: there Shift is at hand.
+ */
 const steppedRows = (command: Command, ctx: Context): ReadonlyArray<MenuRow> => {
   const row = rowOf(command, ctx);
   return [
@@ -69,6 +107,13 @@ const steppedRows = (command: Command, ctx: Context): ReadonlyArray<MenuRow> => 
   ];
 };
 
+/**
+ * A context menu's rows, by group: the commands of `available` (those
+ * available in `ctx`, whose selection is the thing the menu opened on) about
+ * that thing, or about the page where it opened on nothing; the thing's own
+ * first, then those every menu offers. A stepped command has a ×10 row
+ * after its own (`steppedRows`).
+ */
 export const contextRows = (
   available: ReadonlyArray<Command>,
   ctx: Context,
@@ -84,6 +129,7 @@ export const contextRows = (
   );
 };
 
+/** `commands` by group, each group where its first command comes, in registration order within it. */
 export const byGroup = (
   commands: ReadonlyArray<Command>,
 ): ReadonlyArray<readonly [string, ReadonlyArray<Command>]> =>

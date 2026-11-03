@@ -124,6 +124,8 @@ class Scratch extends Context.Service<
   }
 >()('hymnal/staleness/Scratch') {}
 
+/** Clone only this build's inputs. Native build output and unrelated corpora
+ * are outside its fixture. Mutated installed modules are private copies too. */
 const cloneInputs = (checkout: string) => {
   const copy = (relative: string) => {
     const to = resolve(checkout, relative);
@@ -193,6 +195,7 @@ const scratchLayer = Layer.effect(Scratch)(
   }),
 );
 
+/** A spawning case's budget: a child's time is the machine's (`effect/requireSpawnBudget`, at least 20 s). */
 const SPAWNS_MS = 30_000;
 
 const scope = Scope.makeUnsafe();

@@ -8,6 +8,7 @@ import { voices } from './voices.js';
 
 const [soprano, alto, tenor, bass] = Fixture.praiseToTheLord;
 
+/** A voice's notes as the parser reads them: [start, end, key] ticks at 384 a beat. */
 const ticks = (voice: Fixture.Voice | undefined) => {
   let at = 0;
   return (voice ?? []).flatMap(([key, beats]) => {

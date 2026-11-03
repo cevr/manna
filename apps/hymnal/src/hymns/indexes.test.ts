@@ -1,3 +1,9 @@
+/**
+ * The index lookups over made-up indexes: numbers, made-up topic and tune
+ * names, and passages of made-up chapters. The bundled indexes are walked
+ * by the findbulk acceptance rows.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { parseBibleQuery } from '@manna/core/bible';
 import { Option } from 'effect';

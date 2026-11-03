@@ -1,3 +1,9 @@
+/**
+ * About this hymn, as its route renders it: `More like this` lists the
+ * hymns nearest the hymn the route names, and a row closes the sheet and
+ * opens its hymn. Each check compares hymn numbers.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { RegistryContext } from '@effect/atom-react';
 import { Array as Arr, Option } from 'effect';
@@ -17,15 +23,21 @@ import { aboutHref, MORE_LIKE } from './About';
 import { HymnPage } from './HymnPage';
 import { modeAt, openAtTopic, searchOpen, searchQuery } from './place';
 
+/** The hymn numbers of the rows `More like this` shows, in order. */
 const likeRows = (html: string) =>
   [...html.matchAll(/data-testid="about-like-(\d+)"/g)].map((match) => Number(match[1]));
 
+/** The route's params naming `hymn`, and nothing routed yet; the params are cleared when the test's `using` ends. */
 const routeTo = (hymn: string) => {
   params['hymn'] = hymn;
   routed.splice(0);
   return { [Symbol.dispose]: () => void delete params['hymn'] };
 };
 
+/**
+ * The stack under the sheet: `under`, then the sheet, shown; the stack is
+ * emptied again when the test's `using` ends.
+ */
 const sheetOver = (under: ReadonlyArray<{ readonly name: string; readonly params?: object }>) => {
   stack.state = {
     routes: [...under, { name: 'about', params: { hymn: '100' } }],
@@ -34,8 +46,14 @@ const sheetOver = (under: ReadonlyArray<{ readonly name: string; readonly params
   return { [Symbol.dispose]: () => void (stack.state = { routes: [], index: 0 }) };
 };
 
+/** Home, then hymn 100's page: the stack a tap on a hymn in the list leaves. */
 const fromHome = [{ name: 'index' }, { name: 'hymns/[number]', params: { number: '100' } }];
 
+/**
+ * `node` mounted in the document over a registry of its own, a click on the
+ * element `selector` finds, then unmounted; the registry is returned, to read
+ * what the click set.
+ */
 const clickIn = (node: ReactNode, selector: string) => {
   const registry = AtomRegistry.make();
   const host = document.createElement('div');
@@ -50,11 +68,13 @@ const clickIn = (node: ReactNode, selector: string) => {
   return registry;
 };
 
+/** Whether the sheet's markup has a heading labelled `name`. */
 const hasHeading = (html: string, name: string) =>
   new RegExp(
     `role="heading"[^>]*aria-label="${name}"|aria-label="${name}"[^>]*role="heading"`,
   ).test(html);
 
+/** The indexes of the rows with test ids `<prefix>-<n>`, in order. */
 const rows = (html: string, prefix: string) =>
   [...html.matchAll(new RegExp(`data-testid="${prefix}-(\\d+)"`, 'g'))].map((match) =>
     Number(match[1]),

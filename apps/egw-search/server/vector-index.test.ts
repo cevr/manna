@@ -23,6 +23,13 @@ import { SearchApi } from './api.js';
 import { SearchGroupLive } from './search-api.js';
 import { lateVectorIndex } from './vector-index.js';
 
+/**
+ * The server answers before its vector index is read. The load is the real
+ * `loadVectorIndex` over the golden index's bytes, and it waits on a latch
+ * the test opens, so "while the index loads" is a state the test holds, not
+ * a race it hopes to win.
+ */
+
 const embedder = Layer.succeed(
   QueryEmbedder,
   QueryEmbedder.of({
@@ -42,6 +49,8 @@ interface Searched {
   readonly hits: readonly unknown[];
 }
 
+/** The JSON API over the golden corpus. The index is read from `bytes`
+ *  once `gate` opens. */
 const serve = (gate: Latch.Latch, bytes: ArrayBuffer) =>
   Effect.gen(function* () {
     const search = lateVectorIndex(Effect.andThen(gate.await, loadVectorIndex)).pipe(
@@ -76,6 +85,8 @@ const serve = (gate: Latch.Latch, bytes: ArrayBuffer) =>
     };
   });
 
+/** Ask `/health` until the load has ended. The load's own fiber publishes
+ *  the new service, so the test waits on what a platform healthcheck sees. */
 const settled = (health: Effect.Effect<{ readonly body: Health }>) =>
   health.pipe(
     Effect.repeat({

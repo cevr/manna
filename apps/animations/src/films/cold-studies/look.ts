@@ -4,22 +4,67 @@ import type { CourtFrame } from './scenes/court.ts';
 import type { JobFrame } from './scenes/job.ts';
 
 export interface Look {
+  /**
+   * The `court` scene, the whole frame (`f.w` × `f.h`, 1920 × 1080 units):
+   * "Imagine standing in a courtroom. The evidence is overwhelming. You did
+   * it. And the judge looks at you and says, righteous." Its cues: `drop`
+   * (the evidence falling, staggered), `bow` (head down on "You did it"),
+   * `lean` (the judge leans in), `gavel`, `stamp` (the verdict) and `lift`
+   * (the head comes up at the verdict).
+   */
   readonly court: (f: CourtFrame) => void;
+  /**
+   * The Rive rigs `court` draws (`f.rive`), which the court's drawing declares
+   * and the film loads before its first frame: none for a look that draws its
+   * figures itself. Each is typed by its own timelines and numbers
+   * (`looks/rive/rigs.ts`), so a pose that names one it lacks does not
+   * compile: the accused, the judge, and the judge's hand.
+   */
   readonly rigs?: {
     readonly accused?: ReturnType<typeof accusedProp>;
     readonly judge?: ReturnType<typeof judgeProp>;
     readonly hand?: ReturnType<typeof handProp>;
   };
+  /**
+   * The `job` scene: Job 9:2 on its page (`VERSE`), the phrase highlighted
+   * `f.at('sweep')` of the way, the page in from `f.at('page')`. Returns the
+   * box the card floods out from over `flood`, in the canvas's own pixels:
+   * the engine's `verse` returns its highlight's last line so, through every
+   * transform it was drawn under. The engine reads it on the same frame (the
+   * scene's draw returns it), so it is a function of `f` like the rest: a
+   * look keeps no box between frames.
+   */
   readonly job: (f: JobFrame) => Box;
+  /**
+   * The full-screen card over its cue, over the film's paper (the look paints
+   * its own ground on it), with no caption: "How should man be just with
+   * God?", each word from `word.at` (scene seconds), "just" the payoff (the
+   * `payoff` cue starts on it). The engine's `fullCard` sets them in a
+   * `CardStyle`, or the look sets them its own way.
+   */
   readonly card: (f: JobFrame, words: ReadonlyArray<CardWord>) => void;
+  /**
+   * The flood's edge, where the look draws its own (a ragged brushed front, a
+   * wash): on the card's layer, in the canvas's pixels, it paints where the
+   * card shows, given the box the flood has grown to (`floodBox`) and the
+   * flood's eased progress (`CardSpec.flood.mask`). The box's straight edge
+   * where it names none.
+   */
   readonly floodEdge?: (ctx: CanvasRenderingContext2D, box: Box, at: number, f: JobFrame) => void;
+  /**
+   * The light over both scenes (the act light, CRAFT rule 11); none leaves the
+   * film's vignette alone. Its `vignette` is the share of the film's vignette
+   * the scenes take: 0 for a medium that has none (a print).
+   */
   readonly light?: Light;
 }
 
+/** A verse on its page, and where it is from. */
 interface CitedVerse extends Verse {
   readonly ref: string;
 }
 
+/** Job 9:2, KJV, verbatim (`manna verse "Job 9:2"`, its supplied word unbracketed), and the phrase the card lifts. */
 export const VERSE: CitedVerse = {
   ref: 'Job 9:2',
   text: 'I know it is so of a truth: but how should man be just with God?',

@@ -1,3 +1,26 @@
+/**
+ * Acceptance (tidyup A2): the Tempo dial's reset, as the owner asked
+ * (2026-11-02): "let's kind of have a reset if we change the tempo to go back
+ * to its normal". Mounted in a browser's document (`src/test/setup.ts`) over
+ * a fresh registry, every cue told to the test; nothing sounds.
+ *
+ * - `Reset tempo` shows at every stop of the dial but 100 %, with Sound on and
+ *   off, and at 100 % it is gone.
+ * - A press sets the held hymn's tempo to 100 % (the dial says `100%`), and
+ *   no other hymn's; it tells one `reset` cue and no detent, and the chip goes.
+ * - After four taps on `Tap` set the dial, a press sets it back.
+ * - The chip is a button whose words name 100 %.
+ * - On a hymn whose timing does not decode, with no read-out and no `Tap`, the
+ *   chip still shows at 120 %, and a press sets 100 % and the chip goes.
+ * - A press turns the dial home on the reset's turn, `RESET_TURN` long, frame
+ *   by frame, whether the hymn's timing decodes or not.
+ *
+ * Each case sets the tempos it touches to 100 first and back after. Hymn
+ * numbers only: no hymn's words are read or printed.
+ *
+ * Final path: `apps/hymnal/src/player/TempoDial.reset.test.tsx`.
+ */
+
 import { RegistryContext } from '@effect/atom-react';
 import { describe, expect, it } from 'effect-bun-test';
 import { Duration, Effect, Option } from 'effect';
@@ -17,12 +40,19 @@ import { TapClock, TempoDial } from './TempoDial';
 
 const RESET = '[aria-label="Reset tempo"]';
 
+/** A hymn number past the hymnal's last (695): the timing bundle carries none, so its timing does not decode. */
 const NO_TIMING = 696;
 
+/** A frame of the device's drawing, in ms, as `stepAnimations` moves a timing on. */
 const FRAME = 16;
 
+/** More frames than any turn of the dial takes: a count that reaches it stops there. */
 const MOST_FRAMES = 120;
 
+/**
+ * The frames until the turns `move` sets have landed, each moved on a frame
+ * at a time; 1 when it sets none. Animations land at once again after.
+ */
 const framesAfter = (move: () => void) => {
   holdAnimations();
   using _held = { [Symbol.dispose]: landAnimations };
@@ -39,11 +69,16 @@ const framesAfter = (move: () => void) => {
   return frames;
 };
 
+/** One press, as a finger's tap reaches a button on the web. */
 const press = (element: Element) =>
   act(() => {
     element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
   });
 
+/**
+ * Hymn `number`'s Tempo dial at 100 %, mounted under a tap clock the test
+ * moves. It sets the tempos back to 100 and unmounts when the `using` ends.
+ */
 const mount = (number: number) => {
   const registry = AtomRegistry.make();
   registry.set(settings.tempo(number), 100);
@@ -68,24 +103,34 @@ const mount = (number: number) => {
   const touched = new Set([number]);
   return {
     cues,
+    /** Whether `Reset tempo` shows. */
     shown: () => Option.isSome(one(RESET)),
+    /** Whether the read-out and `Tap` show. */
     beat: () => ({
       readOut: Option.isSome(one('[data-testid="tempo-bpm"]')),
       tap: Option.isSome(one('[aria-label="Tap"]')),
     }),
+    /** One press on `Reset tempo`, which must show. */
     reset: () => press(get(RESET)),
+    /** The chip: its role and its drawn words. */
     chip: () => {
       const element = get(RESET);
       return { role: element.getAttribute('role'), words: element.textContent ?? '' };
     },
+    /** The kept tempo of hymn `n`, this one's by default. */
     tempo: (n = number) => registry.get(settings.tempo(n)),
+    /** Hymn `n`'s tempo written as the dial or another screen writes it. */
     setTempo: (tempo: number, n = number) => {
       touched.add(n);
       act(() => registry.set(settings.tempo(n), tempo));
     },
+    /** The player's Sound switch set as the bar sets it. */
     setSound: (on: boolean) => act(() => registry.set(settings.sound, on)),
+    /** What the dial says of its tempo. */
     said: () => get('[data-testid="dial-tempo"]').getAttribute('aria-valuetext'),
+    /** The read-out's one label. */
     readOut: () => get('[data-testid="tempo-bpm"]').getAttribute('aria-label'),
+    /** `count` presses on `Tap`, `apart` ms between each, the first at once. */
     taps: (count: number, apart: number) =>
       Effect.gen(function* () {
         for (let n = 0; n < count; n++) {

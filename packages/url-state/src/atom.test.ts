@@ -30,6 +30,7 @@ const Scene = Place.make({
 });
 const scene = UrlAtom.place(Scene);
 
+/** A registry over a `Location` layer built here, so a test can drive it. */
 const registryOver = <R>(location: Layer.Layer<R>) => {
   const context = Effect.runSync(Layer.buildWithScope(location, Scope.makeUnsafe()));
   const registry = AtomRegistry.make({
@@ -46,6 +47,7 @@ const memoryRegistry = (href: string) => {
   return { registry, stack, location: Context.get(context, Location) };
 };
 
+/** Waits until the atom's value holds `predicate`, and returns it. */
 const until = <A>(
   registry: AtomRegistry.AtomRegistry,
   atom: Atom.Atom<A>,

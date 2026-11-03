@@ -13,12 +13,14 @@ import { Critic } from './critique.ts';
 import { filmNamed } from './film-repo.ts';
 import type { Pages } from './pages.ts';
 
+/** An answer asked with only some of `--render`, `--finding` and `--stands`. */
 class AnswerIncomplete extends Schema.TaggedError<AnswerIncomplete>()('AnswerIncomplete', {}) {
   override get message() {
     return 'an answer names all three: --render <n> --finding <kind>-<view>/<id> --stands "<why>"';
   }
 }
 
+/** `film concept render`, drawing on `pages` (the app's export pages), critiqued over the app's figure rules. */
 export const render = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArray<CritiqueRule>) =>
   Command.make(
     'render',

@@ -6,6 +6,7 @@ import { VIEW, sheet, type TraceView } from './fixtures/trace/view.ts';
 
 describe('traceView', () => {
   test('opens a sliver off a part, and refuses an outline that doubles back on itself', () => {
+    /** The sheet with ink, then skin, painted where each says, over the head's ring of ink. */
     const painted = (
       ink: (x: number, y: number) => boolean,
       skin: (x: number, y: number) => boolean,

@@ -4,6 +4,7 @@ import { Effect, Fiber, Option } from 'effect';
 import { hostOf } from './host.ts';
 import { Pointer } from './pointer.ts';
 
+/** An element that can hold a pointer's capture: the ids it was asked to capture. */
 class Pressable extends EventTarget {
   readonly captured: Array<number> = [];
   setPointerCapture(id: number) {
@@ -11,6 +12,7 @@ class Pressable extends EventTarget {
   }
 }
 
+/** A pointer event of `type`, for pointer `id` at `x`, of a mouse unless said. */
 const pointer = (type: string, id: number, x = 0, pointerType = 'mouse') =>
   Object.assign(new Event(type, { bubbles: true }), {
     pointerId: id,
@@ -19,6 +21,11 @@ const pointer = (type: string, id: number, x = 0, pointerType = 'mouse') =>
     pointerType,
   }) as PointerEvent;
 
+/**
+ * A page with one pressable element, its own surface: pressing it begins a
+ * drag, as a page's own `pointerdown` handler does; the moves and the end
+ * the drag told.
+ */
 const page = () => {
   const window = new EventTarget();
   const element = new Pressable();
@@ -48,7 +55,9 @@ const page = () => {
     moves,
     ends,
     press: (id: number) => element.dispatchEvent(pointer('pointerdown', id)),
+    /** A finger presses the element, at x 0. */
     touch: (id: number) => element.dispatchEvent(pointer('pointerdown', id, 0, 'touch')),
+    /** The browser sends `type` for pointer `id` at `x`: to the window, where a drag hears it. */
     send: (type: string, id: number, x = 0) => window.dispatchEvent(pointer(type, id, x)),
     done: () =>
       Option.match(drag, {
@@ -139,6 +148,11 @@ describe("Pointer.press's drag", () => {
   });
 });
 
+/**
+ * A surface whose presses go through `Pointer.press`: each press's work
+ * (`took`, the pointer it was) runs and follows its drag, or follows none
+ * when `follow` says so; the moves each drag told, by pointer.
+ */
 const surface = (follow: (id: number) => boolean = () => true) => {
   const window = new EventTarget();
   const element = new Pressable();

@@ -11,6 +11,7 @@ import {
   stroke,
 } from './ink.ts';
 
+/** A stand-in context that records every point the stroke's outline passes through. */
 const outline = (boil: Boil | undefined, tick: number): Pt[] => {
   const pts: Pt[] = [];
   const at = (x: number, y: number) => pts.push([x, y]);
@@ -36,6 +37,7 @@ const outline = (boil: Boil | undefined, tick: number): Pt[] => {
   return pts;
 };
 
+/** The farthest any point of the outline moved from tick `a` to tick `b`. */
 const moved = (boil: Boil | undefined, a: number, b: number) => {
   const from = outline(boil, a);
   const to = outline(boil, b);

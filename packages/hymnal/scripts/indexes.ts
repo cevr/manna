@@ -1,3 +1,57 @@
+/**
+ * The checks of the back-matter indexes (`data/indexes/*.json`, schemas in
+ * `src/indexes.ts`): every check that needs no reader, run over the
+ * committed files, each failure printed as
+ * `<index> p<page> <at> <check>: <what>` and counted as a problem unless a
+ * ruling in `data/indexes/rulings.json` settles it.
+ *
+ *   bun run indexes                      # every file, every check, the summary lines
+ *   bun run indexes --dir <dir>          # the files in another folder (a reconciled draft)
+ *   bun run indexes --judges <dir>       # and each ruling's judge record exists in <dir>
+ *   bun run indexes --measure            # and each order rule's broken pairs (C4's measurement)
+ *   bun run indexes --reach              # and how many look-alike digit misreadings the checks catch, per index
+ *
+ * It prints one line per file, `indexes <index> pages=<first>-<last>
+ * entries=<n> ruled=<r> problems=<p>`, then `indexes files=<k> entries=<N>
+ * problems=<P>`, and exits 1 when P is not 0.
+ *
+ * `at` names an entry by its place among the entries of its index that name
+ * the same page, in file order (`#3`, the page's third), or a topic, a
+ * section or a hymn where a check holds the whole index. The checks:
+ *
+ * - `decode` (C1): each file decodes through its schema; an excess key is refused.
+ * - `range` (C2): a hymn number is 1-695; a reading (Topical's italic entries,
+ *   the worship aids) 696-920.
+ * - `scripture` (C3): a book is 1-66, its chapter one the book has, each verse
+ *   one the chapter has (the KJV's versification), and `from` ≤ `to`.
+ * - `order` (C4): the printed order, for each rule in `ORDER_RULES`.
+ * - `stanza` (C5): a stanza letter names a stanza the compiled hymn has, or
+ *   its refrain (`r`).
+ * - `sections` (C6): the topic of each printed section's name (or the topics
+ *   its cross-reference names) lists every hymn of the section.
+ * - `tunes` (C7): the alphabetical and the metrical index name the same
+ *   (tune, hymn) pairs, a name with and without its `(qualifier)` one tune
+ *   and an alias another name of the tune at its hymn. A tune that bears its
+ *   hymn's title (`titledTune`) need not be in the alphabetical index, and
+ *   where the metres name a hymn's tune so, the alphabetical index may name
+ *   it otherwise.
+ * - `metre` (C8): a hymn's metre heading is the metre its page prints
+ *   (`data/shapes.json`), after `normalMetre`.
+ * - `coverage` (C9): every hymn is in the tunes (or under a metre by a tune
+ *   that bears its title), the metres and a topic.
+ * - `pages` (C10): each index's pages run with no gap, each page's count is
+ *   the count of entries that name it, and a page in two indexes ends one and
+ *   begins the next.
+ * - `rulings` (C11): every ruling settles a failure printed now, and names a
+ *   judge record that exists (with `--judges`).
+ * - `directions` (C12): each allusion the index by Scripture reference lists
+ *   has a twin in the index by hymn number, of the same hymn and book, an
+ *   agreeing stanza (no stanza is the whole hymn) and an overlapping passage;
+ *   a `See N` row lends its hymn the passages of hymn N. The book's index by
+ *   reference leaves out about one in twenty of the passages its index by
+ *   hymn number gives, so the other direction is not checked.
+ */
+
 import { getBibleBook, getBibleBookByName } from '@manna/core/bible';
 import { Result, Schema } from 'effect';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -30,6 +84,7 @@ export type Check =
   | 'rulings'
   | 'directions';
 
+/** A check's failure: where (index, page, `at`), which check, what fails, and the printed value. */
 export interface Problem {
   readonly index: IndexName | 'rulings';
   readonly page: number;
@@ -39,18 +94,30 @@ export interface Problem {
   readonly value: string;
 }
 
+/** What the checks hold the indexes to, beside the indexes themselves. */
 export interface Context {
+  /** The KJV's last verse of a chapter; undefined when the book has no such chapter. */
   readonly lastVerse: (book: number, chapter: number) => number | undefined;
+  /** A book's name (1-66), for the values printed. */
   readonly bookName: (book: number) => string;
+  /** A compiled hymn's title, stanza count and whether it has a refrain. */
   readonly hymn: (
     n: number,
   ) => { readonly title: string; readonly stanzas: number; readonly refrain: boolean } | undefined;
+  /**
+   * The printed sections (`data/sdah-1985/topics.json`), each a run of hymn
+   * numbers: the 62 hymn sections. The six reading sections (source
+   * categories 63–68, readings 696–920) are not in it: the Topical index
+   * files readings under subject topics, never under those six names.
+   */
   readonly sections: ReadonlyArray<{
     readonly name: string;
     readonly first: number;
     readonly last: number;
   }>;
+  /** The metre a hymn's page prints (`data/shapes.json`): null when none, undefined when not read. */
   readonly metre: (n: number) => string | null | undefined;
+  /** The hymns the book numbers (695): coverage holds 1 to it. */
   readonly hymnCount: number;
 }
 
@@ -70,6 +137,7 @@ const decodeProblem = (index: IndexName | 'rulings', error: Schema.SchemaError):
   value: '',
 });
 
+/** Decodes each file's text present (`decode`): the decoded indexes and the failures. */
 export const decodeIndexes = (texts: Partial<Record<IndexName, string>>) => {
   const decoded: Array<[IndexName, Indexes[IndexName]]> = [];
   const problems: Array<Problem> = [];
@@ -85,6 +153,7 @@ export const decodeIndexes = (texts: Partial<Record<IndexName, string>>) => {
   return { indexes: Object.fromEntries(decoded) as Indexes, problems };
 };
 
+/** Decodes the text of `rulings.json` (`decode`). */
 export const decodeRulings = (text: string) => {
   const result = Schema.decodeResult(Schema.fromJsonString(Rulings))(text, DECODE);
   return Result.isSuccess(result)
@@ -92,6 +161,7 @@ export const decodeRulings = (text: string) => {
     : { rulings: [], problems: [decodeProblem('rulings', result.failure)] };
 };
 
+/** One numbered entry of an index: the number it gives, whether a hymn or a reading, its page and place. */
 export interface Item {
   readonly index: IndexName;
   readonly page: number;
@@ -116,6 +186,7 @@ const numbered = (
   });
 };
 
+/** A numbered entry, the decoded row that holds it and the key its number sits at (what `--reach` rewrites). */
 type Row = {
   readonly page: number;
   readonly number: number;
@@ -140,6 +211,7 @@ const byHymn = (e: { readonly page: number; readonly hymn: number }): Row => ({
   key: 'hymn',
 });
 
+/** Each index's numbered entries, in file order. */
 const ROWS = {
   topical: (x: Indexes) =>
     (x.topical?.topics ?? []).flatMap((t) => [
@@ -169,9 +241,11 @@ const ROWS = {
     (x.metrical?.metres ?? []).flatMap((m) => m.tunes.flatMap((t) => t.hymns.map(hymn))),
 };
 
+/** Every numbered entry of an index, in file order, each with its place (`#k` on its page). */
 export const itemsOf = (indexes: Indexes, name: IndexName): Array<Item> =>
   numbered(name, ROWS[name](indexes));
 
+/** The pieces of a passage, written out: `Psalms 98:4, 6`, `Genesis 1:1-2:3`, `Psalms 23` for a whole chapter. */
 export const passageText = (p: Passage, bookName: (book: number) => string): string => {
   if (p._tag === 'Chapter') {
     const verses = p.verses
@@ -182,6 +256,7 @@ export const passageText = (p: Passage, bookName: (book: number) => string): str
   return `${bookName(p.book)} ${p.from.chapter}:${p.from.verse}-${p.to.chapter}:${p.to.verse}`;
 };
 
+/** A passage's sort key: canonical book place, chapter, first verse. */
 const passageKey = (p: Passage): [number, number, number] =>
   p._tag === 'Chapter'
     ? [p.book, p.chapter, p.verses[0]?.from ?? 0]
@@ -200,6 +275,7 @@ const compareKeys = (
   return 0;
 };
 
+/** What fails in a passage: an unknown book, a chapter the book lacks, a verse the chapter lacks, a range backwards. */
 export const passageFaults = (p: Passage, ctx: Context): ReadonlyArray<string> => {
   const faults: Array<string> = [];
   if (p.book < 1 || p.book > 66) return [`book ${p.book} is not 1-66`];
@@ -226,6 +302,7 @@ export const passageFaults = (p: Passage, ctx: Context): ReadonlyArray<string> =
   return faults;
 };
 
+/** The printed book names the core canon does not know (`S.S.`, `Philem`, `Is`), folded. */
 const PRINTED_BOOKS: ReadonlyMap<string, number> = new Map([
   ['is', 23],
   ['ss', 22],
@@ -233,6 +310,7 @@ const PRINTED_BOOKS: ReadonlyMap<string, number> = new Map([
   ['philem', 57],
 ]);
 
+/** A book's number from its printed name or abbreviation (`PSALMS`, `Ps`, `1 THESS.`, `S.S.`); undefined when unknown. */
 export const bookOf = (printed: string): number | undefined => {
   const name = printed.trim().replace(/\.$/, '').replace(/\s+/g, ' ');
   const known = getBibleBookByName(name);
@@ -240,6 +318,12 @@ export const bookOf = (printed: string): number | undefined => {
   return PRINTED_BOOKS.get(name.toLowerCase().replace(/[^a-z0-9]/g, ''));
 };
 
+/**
+ * The passages of a printed reference within a book: `98:4, 6` (two pieces),
+ * `1:1-2:3` (across chapters), `23` (a whole chapter), `21:4, 22:5` (a
+ * chapter change in a comma list starts a second passage). Undefined when
+ * the text is not a reference.
+ */
 type Piece =
   | {
       readonly _tag: 'cross';
@@ -254,6 +338,7 @@ type Piece =
     }
   | { readonly _tag: 'verses'; readonly from: number; readonly to: number };
 
+/** One comma piece of a reference: `1:1-2:3`, `98:4-6`, or verses alone `6`, `8-11`. */
 const pieceOf = (piece: string): Piece | undefined => {
   const cross = /^(\d+):(\d+)-(\d+):(\d+)$/.exec(piece);
   if (cross)
@@ -276,11 +361,13 @@ const pieceOf = (piece: string): Piece | undefined => {
     : undefined;
 };
 
+/** The hymn a `See N` reference sends the reader to; undefined for any other text. */
 export const seeHymnOf = (text: string): number | undefined => {
   const m = /^see\s+(\d+)\.?$/i.exec(text.trim());
   return m ? Number(m[1]) : undefined;
 };
 
+/** Obadiah, Philemon, 2 and 3 John, Jude: one chapter each. */
 const ONE_CHAPTER: ReadonlySet<number> = new Set([31, 57, 63, 64, 65]);
 
 export const parseReference = (book: number, text: string): ReadonlyArray<Passage> | undefined => {
@@ -317,12 +404,20 @@ export const parseReference = (book: number, text: string): ReadonlyArray<Passag
   return out.length > 0 ? out : undefined;
 };
 
+/** Letters only, lower case: the key of alphabetical order (a leading article kept). */
 export const fold = (s: string): string =>
   s
     .toLowerCase()
     .normalize('NFD')
     .replace(/[^a-z]/g, '');
 
+/**
+ * The key the book's alphabetical indexes sort by: word by word, so a
+ * shorter word sorts before a longer one it begins (`nothing before
+ * something`); `St.` read as `Saint`; a parenthesised qualifier left out;
+ * an apostrophe joins its word (`--measure` breaks fewer pairs so than with
+ * it ending one). Words are letters; anything else ends a word.
+ */
 export const sortKey = (s: string): string =>
   s
     .toLowerCase()
@@ -334,6 +429,11 @@ export const sortKey = (s: string): string =>
     .filter((w) => w.length > 0)
     .join(' ');
 
+/**
+ * The order rules C4 holds. A rule that more than 2% of an index's
+ * neighbouring pairs break (`--measure`) is not the book's rule: it is left
+ * out here and named, with why, in the README.
+ */
 export const ORDER_RULES = [
   'scriptural: passages by book, chapter and first verse',
   'scriptural: the hymns of one reference ascending',
@@ -367,6 +467,7 @@ const NOWHERE = { page: 0, at: '-' } as const;
 
 const pick = (p: { readonly page: number; readonly at: string }) => ({ page: p.page, at: p.at });
 
+/** The neighbouring pairs of `rows`, each judged by `broken`, placed at the second row. */
 const neighbours = <R extends { readonly page: number; readonly at: string }>(
   rule: OrderRule,
   index: IndexName,
@@ -379,6 +480,7 @@ const neighbours = <R extends { readonly page: number; readonly at: string }>(
     return a ? [{ rule, index, ...pick(b), broken: broken(a, b), value: value(a, b) }] : [];
   });
 
+/** Scripture by reference: passages in canonical order, and one reference's numbers ascending. */
 const scriptureOrder = (
   indexes: Indexes,
   ctx: Context,
@@ -427,6 +529,7 @@ const byHymnOrder = (indexes: Indexes): Array<Pair> => {
   );
 };
 
+/** Each named row placed at its first entry, so a name's pair is placed where it is printed. */
 const placedNames = <R extends { readonly name: string; readonly hymns: ReadonlyArray<unknown> }>(
   items: ReadonlyArray<Item>,
   rows: ReadonlyArray<R>,
@@ -517,6 +620,7 @@ const topicalOrder = (topical: Topical, ctx: Context): Array<Pair> => {
 
 type Placed = { readonly n: number; readonly page: number; readonly at: string };
 
+/** Each list's hymns in file order, each placed at its numbered entry (`items`, the lists' entries end to end). */
 const placedLists = (
   items: ReadonlyArray<Item>,
   lists: ReadonlyArray<ReadonlyArray<{ readonly number: number }>>,
@@ -531,6 +635,7 @@ const placedLists = (
   );
 };
 
+/** The pairs of each list judged by compiled title; a number with no compiled hymn is left out. */
 const titledLists = (
   rule: OrderRule,
   index: IndexName,
@@ -550,6 +655,7 @@ const titledLists = (
     ),
   );
 
+/** The young list, each sentences or canons group, and each author's or composer's hymns. */
 const listOrders = (indexes: Indexes, ctx: Context): Array<Pair> => [
   ...titledLists(
     'sentences: hymns by compiled title within a group',
@@ -591,6 +697,7 @@ const listOrders = (indexes: Indexes, ctx: Context): Array<Pair> => [
   ),
 ];
 
+/** Every neighbouring pair each order rule judges, broken or not. */
 export const orderPairs = (indexes: Indexes, ctx: Context): ReadonlyArray<Pair> => [
   ...scriptureOrder(indexes, ctx, 'scriptural'),
   ...scriptureOrder(indexes, ctx, 'worship-aids'),
@@ -603,6 +710,7 @@ export const orderPairs = (indexes: Indexes, ctx: Context): ReadonlyArray<Pair> 
 const topicPath = (t: Topical['topics'][number]) =>
   t.parent === undefined ? t.name : `${t.parent}: ${t.name}`;
 
+/** Each order rule's count of judged pairs and broken ones: C4's measurement. */
 export const measureOrder = (indexes: Indexes, ctx: Context) =>
   ORDER_RULES.map((rule) => {
     const of = orderPairs(indexes, ctx).filter((p) => p.rule === rule);
@@ -668,6 +776,7 @@ const orderProblems = (
       value: p.value,
     }));
 
+/** The stanza a letter names: `a` 1, `b` 2 …; `r` the refrain (0). */
 export const stanzaOf = (letter: string): number =>
   letter === 'r' ? 0 : letter.charCodeAt(0) - 96;
 
@@ -719,11 +828,23 @@ const stanzaProblems = (indexes: Indexes, ctx: Context): Array<Problem> => {
   return out;
 };
 
+/**
+ * Sections whose topic the Topical index prints under another name, by the
+ * section's folded name: each the topic paths (`PARENT: name` or `NAME`)
+ * that list its hymns. The Topical index has no topic named Love of God or
+ * Faithfulness of God; the subtopics of GOD THE FATHER of those names list
+ * every hymn of the two sections.
+ */
 export const SECTION_TOPICS: ReadonlyMap<string, ReadonlyArray<string>> = new Map([
   ['loveofgod', ['GOD THE FATHER: Love']],
   ['faithfulnessofgod', ['GOD THE FATHER: Faithfulness']],
 ]);
 
+/**
+ * The targets of a printed cross-reference: `See GOD THE FATHER: Majesty and
+ * Power; TRINITY` is two, and `JESUS CHRIST: First Advent, Second Advent` is
+ * two subtopics of one heading.
+ */
 export const seeTargets = (
   see: string,
 ): ReadonlyArray<{ readonly parent?: string; readonly name: string }> =>
@@ -791,10 +912,22 @@ const sectionProblems = (topical: Topical, ctx: Context): Array<Problem> => {
   return out;
 };
 
+/**
+ * A tune's name for matching across the two tune indexes: its sort key
+ * (a `(qualifier)` left out, `St.` as `Saint`) with a leading or trailing
+ * `The` left out, since one index prints `Ash Grove` where the other prints
+ * `The Ash Grove`.
+ */
 export const tuneKey = (name: string): string => tuneWords(name).replace(/ /g, '');
 
 const tuneWords = (name: string): string => sortKey(name).replace(/^the /, '').replace(/ the$/, '');
 
+/**
+ * Whether the tune at hymn `n` bears the hymn's title: the same words, or the
+ * one's words the first words of the other. The alphabetical index leaves
+ * most such tunes out (the metres name them), so a metre's pair named so need
+ * not be in it, nor its hymn among the alphabetical index's hymns.
+ */
 export const titledTune = (name: string, n: number, ctx: Context): boolean => {
   const title = ctx.hymn(n)?.title;
   if (title === undefined) return false;
@@ -805,6 +938,7 @@ export const titledTune = (name: string, n: number, ctx: Context): boolean => {
   );
 };
 
+/** The hymns the metres name by a tune that bears the hymn's title. */
 const titledHymns = (
   metreTunes: ReadonlyArray<{
     readonly name: string;
@@ -825,6 +959,7 @@ const tunePairs = (
   }>,
 ) => new Set(rows.flatMap((t) => t.hymns.map((h) => `${tuneKey(t.name)} ${h.number}`)));
 
+/** Each tune-and-hymn pair of `rows` with its item, in file order. */
 const tuneRows = (
   rows: ReadonlyArray<{
     readonly name: string;
@@ -845,6 +980,14 @@ const tuneRows = (
   );
 };
 
+/**
+ * C7: a main tune's pair is under its metre, by its name or an alias at the
+ * same hymn (an alias's hymn under any), and each metre's pair is in the
+ * alphabetical index, by a main name or an alias; names match by `tuneKey`.
+ * A metre's pair that bears its hymn's title (`titledTune`) needs no
+ * alphabetical row, and stands for any name the alphabetical index gives the
+ * tune at that hymn.
+ */
 const tuneProblems = (tunes: Tunes, metrical: Metrical, ctx: Context): Array<Problem> => {
   const listed = tunePairs(tunes.tunes);
   const metreTunes = metrical.metres.flatMap((m) => m.tunes);
@@ -852,6 +995,7 @@ const tuneProblems = (tunes: Tunes, metrical: Metrical, ctx: Context): Array<Pro
   const metreHymns = new Set(metreTunes.flatMap((t) => t.hymns.map((h) => h.number)));
   const aliased = tunePairs(tunes.tunes.filter((t) => t.alias === true));
   const titled = titledHymns(metreTunes, ctx);
+  /** The metre names the tune at the pair's hymn by one of its names: this one, an alias at that hymn or its title. */
   const metred = (r: { readonly key: string; readonly number: number }) =>
     metre.has(r.key) ||
     titled.has(r.number) ||
@@ -881,6 +1025,14 @@ const tuneProblems = (tunes: Tunes, metrical: Metrical, ctx: Context): Array<Pro
   return [...unmetred, ...unlisted];
 };
 
+/**
+ * A metre written for comparison: lower case, its words and numbers joined by
+ * single stops (no spaces or commas).
+ * The book writes a refrain as `with Refrain`, `Refrain`, `Ref.` or a bare `R`
+ * after the numbers (a cut-off `Re…` too), all `ref`; `Amens` and
+ * `Alleluias` with or without `with` (a cut-off `Allelui…` too) as `amen` and
+ * `alleluia`; and numbers written out twice as the half with `D` (doubled).
+ */
 export const normalMetre = (m: string): string => {
   const words = m
     .toLowerCase()
@@ -1007,6 +1159,7 @@ const pageProblems = (indexes: Indexes): Array<Problem> => {
   return out;
 };
 
+/** A passage as spans of (chapter, verse) places; a chapter with no verse pieces spans the whole chapter. */
 const spansOf = (p: Passage): ReadonlyArray<readonly [number, number]> => {
   const at = (chapter: number, verse: number) => chapter * 1000 + verse;
   return p._tag === 'Chapter'
@@ -1016,10 +1169,20 @@ const spansOf = (p: Passage): ReadonlyArray<readonly [number, number]> => {
     : [[at(p.from.chapter, p.from.verse), at(p.to.chapter, p.to.verse)]];
 };
 
+/** Two passages of one book that share a verse (a whole chapter shares each of its verses). */
 const overlaps = (a: Passage, b: Passage): boolean =>
   a.book === b.book &&
   spansOf(a).some(([from, to]) => spansOf(b).some(([f, t]) => from <= t && f <= to));
 
+/**
+ * Each entry of the index by Scripture reference has a twin in the index by
+ * hymn number: the same hymn, a stanza that agrees (the same letter, or none
+ * on either side: an entry with no stanza is the whole hymn), the same book,
+ * and a passage that overlaps (the two print one allusion differently:
+ * `98:4, 6` as one entry or two, `5:1-3` or `5:2`). A by-hymn `See N` row
+ * gives its hymn the passages of hymn N. A by-hymn entry needs no twin: the
+ * book's index by reference leaves out about one in twenty of them.
+ */
 const directionProblems = (
   scriptural: Scriptural,
   byHymn: ScripturalByHymn,
@@ -1057,6 +1220,7 @@ const directionProblems = (
   });
 };
 
+/** Every check over the decoded indexes (C2-C10, C12), in check order. */
 export const checkIndexes = (
   indexes: Indexes,
   ctx: Context,
@@ -1076,10 +1240,16 @@ export const checkIndexes = (
     : []),
 ];
 
+/** A failure's identity: a ruling settles the problem with the same key. */
 const failureKey = (
   f: Pick<Problem, 'index' | 'page' | 'at' | 'value'> & { readonly check: string },
 ): string => JSON.stringify([f.index, f.page, f.at, f.check, f.value]);
 
+/**
+ * Settles the failures the rulings name (C11): the failures left open, the
+ * ruled ones, and a problem for each ruling that settles nothing printed now
+ * or names a judge record `judgeExists` does not find.
+ */
 export const settle = (
   problems: ReadonlyArray<Problem>,
   rulings: Rulings['rulings'],
@@ -1118,9 +1288,11 @@ export const settle = (
   return { open: [...open, ...stale], ruled };
 };
 
+/** `<index> p<page> <at> <check>: <what>` */
 export const problemLine = (p: Problem): string =>
   `${p.index} p${p.page} ${p.at} ${p.check}: ${p.what}${p.value === '' ? '' : ` [${p.value}]`}`;
 
+/** The summary line of one index: its pages, entries, ruled and open failures. */
 export const summaryLine = (
   indexes: Indexes,
   name: IndexName,
@@ -1144,6 +1316,7 @@ const LOOK_ALIKES = new Map<string, ReadonlyArray<string>>([
   ['9', ['8', '3']],
 ]);
 
+/** Every number one look-alike digit away from `n` (3↔8, 3↔9, 6↔8, 9↔8, 5↔6, 0↔8, 1↔7), with no leading zero. */
 export const lookAlikes = (n: number): Array<number> => {
   const s = `${n}`;
   return [...s].flatMap((d, i) =>
@@ -1154,6 +1327,15 @@ export const lookAlikes = (n: number): Array<number> => {
   );
 };
 
+/**
+ * How many look-alike misreadings of each index's numbers the checks catch
+ * (`--reach`): a measurement, not a check. Each number is rewritten to its
+ * k-th look-alike in batches of every third entry; a variant counts as caught
+ * when a new open problem sits at its place (or, for order, at the next one),
+ * names its old hymn, or the variant is 0 (which the schema refuses). Two
+ * variants in one batch can mask or catch for each other, so the counts are
+ * approximate.
+ */
 export const reach = (indexes: Indexes, ctx: Context, rulings: Rulings['rulings']) => {
   const work = structuredClone(indexes);
   const openOf = () =>
@@ -1197,6 +1379,7 @@ export const reach = (indexes: Indexes, ctx: Context, rulings: Rulings['rulings'
 
 const DATA = join(import.meta.dir, '../data');
 
+/** The checks' context from the committed data: the KJV, the compiled hymns, their sections and metres. */
 export const loadContext = (): Context => {
   const core = dirname(Bun.resolveSync('@manna/core/package.json', import.meta.dir));
   const kjv = JSON.parse(readFileSync(join(core, 'assets/kjv.json'), 'utf8')) as {

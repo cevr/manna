@@ -12,6 +12,7 @@ import {
 } from './ContextMenuRootContext.ts';
 
 interface ContextMenuRootProps extends Omit<MenuRootProps, 'onOpenChange'> {
+  /** Called when the menu opens or closes. */
   onOpenChange?:
     | ((open: boolean, eventDetails: ContextMenuRootChangeEventDetails) => void)
     | undefined;
@@ -26,6 +27,7 @@ const ORIGIN_ANCHOR: ContextMenuAnchor = {
   },
 };
 
+/** Groups the parts of a context menu. Doesn't render its own element. */
 export function ContextMenuRoot(props: ContextMenuRootProps): JSX.Element {
   const [anchor, setAnchor] = createSignal<ContextMenuAnchor>(ORIGIN_ANCHOR, {
     ownedWrite: true,

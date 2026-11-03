@@ -14,32 +14,54 @@ import { gpuLauncher, throughGpuLauncher } from './chrome-gpu.ts';
 import { PROFILE_ROOT, profileFolder } from './chrome-profile.ts';
 import { BrowserFailed, BrowserMissing } from './errors.ts';
 
+/**
+ * The flags a Chrome is spawned with: the caller's, after the two that keep
+ * it silent. `--mute-audio` mutes its pages; `--disable-audio-output` plays
+ * what they would play to a fake device, so Chrome never opens the host's
+ * output at all (muted alone, it still held it, playing silence). A page's
+ * audio still runs: its `AudioContext` keeps time on the fake device's clock
+ * as on a real one, decodes and processes, and a microphone is heard. A host
+ * with no output device (a Linux server) ran on that fake device already.
+ */
 const chromeArgs = (argv: ReadonlyArray<string>): ReadonlyArray<string> => [
   '--mute-audio',
   '--disable-audio-output',
   ...argv,
 ];
 
+/** The GPU launcher's file in a Chrome's profile folder. */
 const LAUNCHER = 'film-gpu-launcher';
 
+/** A view's viewport, and where the page's `console.*` calls go (dropped when not given). */
 interface ViewOptions {
   readonly width: number;
   readonly height: number;
   readonly console?: (type: string, ...args: ReadonlyArray<unknown>) => void;
 }
 
+/**
+ * How this process's Chrome was spawned: its flags, the executable Bun was
+ * told (`None`: Bun's own search) and its profile folder.
+ */
 interface Spawned {
   readonly flags: string;
   readonly path: Option.Option<string>;
   readonly profile: string;
 }
 
+/** This process's Chrome, once its first view opened. */
 let spawned: Option.Option<Spawned> = Option.none();
 
+/** One view opens at a time, so views asked for at once wait for the one that spawns Chrome. */
 const opening = Semaphore.makeUnsafe(1);
 
+/** Bun's code for a Chrome it could not spawn: no executable where it looked. */
 const SPAWN_FAILED = 'ERR_DLOPEN_FAILED';
 
+/**
+ * The names Bun 1.4.3 looks for on `$PATH`, in its order (its
+ * `ChromeProcess.rs`, `find_chrome`).
+ */
 const PATH_BROWSERS = [
   'google-chrome-stable',
   'google-chrome',
@@ -50,6 +72,7 @@ const PATH_BROWSERS = [
   'chrome',
 ];
 
+/** The app bundles Bun 1.4.3 looks for on macOS, each in `/Applications`, then in `~/Applications`. */
 const MAC_BROWSERS = [
   'Google Chrome.app/Contents/MacOS/Google Chrome',
   'Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary',
@@ -58,6 +81,7 @@ const MAC_BROWSERS = [
   'Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
 ];
 
+/** The headless shell inside its Playwright revision for CPU `arch`, as Bun 1.4.3 names it on macOS (none for another CPU). */
 const macShell = (arch: string): ReadonlyArray<string> =>
   Match.value(arch).pipe(
     Match.when(
@@ -67,8 +91,10 @@ const macShell = (arch: string): ReadonlyArray<string> =>
     Match.orElse(() => []),
   );
 
+/** Playwright's browser cache under the home folder, macOS's. */
 const PLAYWRIGHT_CACHES = [['Library', 'Caches', 'ms-playwright']];
 
+/** Chromium's executable inside one of Playwright's `chromium-<revision>` folders, on macOS. */
 const PLAYWRIGHT_BINARIES = [
   'chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
   'chrome-mac/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
@@ -76,6 +102,7 @@ const PLAYWRIGHT_BINARIES = [
   'chrome-mac/Chromium.app/Contents/MacOS/Chromium',
 ];
 
+/** The newest `<prefix><revision>` folder's binary in Playwright's cache `cache`, the first of `binaries` there. */
 const newestIn = (cache: string, prefix: string, binaries: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -92,6 +119,7 @@ const newestIn = (cache: string, prefix: string, binaries: ReadonlyArray<string>
     );
   }).pipe(Effect.orElseSucceed(() => Option.none<string>()));
 
+/** The first of `effects` to find a file. */
 const firstFound = (
   effects: ReadonlyArray<
     Effect.Effect<Option.Option<string>, never, FileSystem.FileSystem | Path.Path>
@@ -104,6 +132,7 @@ const firstFound = (
       Option.match(found, { onSome: () => Effect.succeed(found), onNone: () => next }),
   );
 
+/** The newest Chromium a Playwright install left in its cache, when there is one. */
 const playwrightChromium = Effect.gen(function* () {
   const path = yield* Path.Path;
   const home = yield* Config.String('HOME');
@@ -114,12 +143,19 @@ const playwrightChromium = Effect.gen(function* () {
   );
 }).pipe(Effect.orElseSucceed(() => Option.none<string>()));
 
+/** The first of `files` that exists, when one does. */
 const existing = (files: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     return yield* Effect.findFirst(files, (file) => fs.exists(file));
   }).pipe(Effect.orElseSucceed(() => Option.none<string>()));
 
+/**
+ * The Chrome Bun 1.4.3 finds on macOS, searched as it searches
+ * (`ChromeProcess.rs`, `find_chrome`): the first of `PATH_BROWSERS` on
+ * `$PATH`, else the first of `MAC_BROWSERS` in `/Applications` or
+ * `~/Applications`, else the newest headless shell in Playwright's cache.
+ */
 const bunSearch = Effect.gen(function* () {
   const path = yield* Path.Path;
   const home = yield* Config.String('HOME');
@@ -142,6 +178,7 @@ const bunSearch = Effect.gen(function* () {
   ]);
 }).pipe(Effect.orElseSucceed(() => Option.none<string>()));
 
+/** A view with `argv` of Chrome at `path` (where Bun looks, when none), its profile in `profile`; `None` when no Chrome was there. */
 const spawnView = (
   path: Option.Option<string>,
   argv: ReadonlyArray<string>,
@@ -173,11 +210,18 @@ const spawnView = (
     }),
   );
 
+/** A view, and the executable Bun was told to spawn its Chrome from (`None`: Bun's own search). */
 interface FirstView {
   readonly view: Bun.WebView;
   readonly path: Option.Option<string>;
 }
 
+/**
+ * The process's first view, of a Chrome that runs its GPU: the Chrome named,
+ * else the one Bun would find (`bunSearch`), else Playwright's Chromium,
+ * spawned through the GPU launcher, written into the profile whole and
+ * renamed into place.
+ */
 const gpuView = (
   named: Option.Option<string>,
   argv: ReadonlyArray<string>,
@@ -208,6 +252,7 @@ const gpuView = (
     ).pipe(Effect.map((opened): FirstView => ({ view: opened, path: Option.some(launcher) })));
   });
 
+/** The first view's Chrome, spawned from the first executable found (`named`, when one is), in `profile`. */
 const chosenView = (
   named: Option.Option<string>,
   argv: ReadonlyArray<string>,
@@ -241,6 +286,7 @@ const chosenView = (
     );
   });
 
+/** The process's first view: Chrome spawned from the first executable found, in a new profile. */
 const firstView = (argv: ReadonlyArray<string>, options: ViewOptions) =>
   Effect.gen(function* () {
     const root = yield* Config.String('FILM_CHROME_PROFILES').pipe(
@@ -253,6 +299,14 @@ const firstView = (argv: ReadonlyArray<string>, options: ViewOptions) =>
     return { ...first, profile };
   });
 
+/**
+ * A view (a tab of this process's Chrome) as `options` say, closed with the scope.
+ * The first view spawns Chrome with `requested` (`chromeArgs`: muted); a
+ * later one asking for other flags fails, since the running Chrome cannot
+ * take them. Every later view names the first one's executable and profile,
+ * so when Bun spawns Chrome again (the first one died) it is the same Chrome,
+ * through the same launcher, in the same profile.
+ */
 export const openView = (
   requested: ReadonlyArray<string>,
   options: ViewOptions,
@@ -294,6 +348,7 @@ export const openView = (
   );
 };
 
+/** `Runtime.exceptionThrown`'s parameters, as far as a page's error is read. */
 const Thrown = Schema.Struct({
   exceptionDetails: Schema.Struct({
     text: Schema.String,
@@ -303,6 +358,11 @@ const Thrown = Schema.Struct({
   }),
 });
 
+/**
+ * What a page threw, from a view's `Runtime.exceptionThrown` event (with
+ * `Runtime` enabled): the error as the page's console says it (`Error: boom`
+ * and its stack), else the protocol's text.
+ */
 export const thrownBy = (event: Event): Option.Option<string> =>
   Option.map(Schema.decodeUnknownOption(Thrown)(Reflect.get(event, 'data')), (thrown) =>
     Option.getOrElse(

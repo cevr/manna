@@ -1,4 +1,11 @@
 /* oxlint-disable effect/noNewPromise -- the stand-in for One's FileSystem answers in Promises, as the host API the native adapter wraps once in Effect.tryPromise. */
+/**
+ * The phone's saved recordings across a later recording set: `warm-2` moves
+ * hymn 663 alone, so every other hymn's saved file stays found, 663's file
+ * saved from `warm-1` is never played as its new recording, and Delete frees
+ * them all. The native adapter runs over a synthetic filesystem laid out as
+ * the app saved it before `warm-2` (one `warm-1` storage); no media is fetched.
+ */
 import { Effect, Layer, Option, Schema, Stream } from 'effect';
 import { expect, it } from 'effect-bun-test';
 import { One } from 'one';
@@ -9,9 +16,11 @@ const SUPPORT = 'file:///support/';
 const WARM_0 = `${SUPPORT}hymnal-recordings-warm-0-v1/`;
 const WARM_1 = `${SUPPORT}hymnal-recordings-warm-1-v1/`;
 const WARM_2 = `${SUPPORT}hymnal-recordings-warm-2-v1/`;
+/** A saved file's bytes: an ID3 header, then the set's own byte. */
 const audio = (mark: number) => Uint8Array.of(73, 68, 51, mark, mark, mark, mark, mark);
 const encode = Schema.encodeSync(Schema.fromJsonString(Entry));
 
+/** The part of `One.FileSystem` the native adapter calls, in memory. */
 const disk = () => {
   const files = new Map<string, Uint8Array>();
   const dirs = new Set<string>([SUPPORT]);
@@ -91,6 +100,7 @@ const disk = () => {
       return Promise.resolve();
     },
   };
+  /** A complete saved recording, as the adapter writes it, in `storage`. */
   const saved = (storage: string, number: number, mark: number) => {
     dirs.add(storage);
     const bytes = audio(mark);
@@ -113,6 +123,7 @@ const disk = () => {
   return { files, saved };
 };
 
+/** R2 for hymn 663 in its new set: the bytes marked 2. */
 const fetched: number[] = [];
 const http = Layer.succeed(
   Http,

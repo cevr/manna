@@ -4,6 +4,7 @@ import { Effect, Fiber, Layer, Option, Stream } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { addressOn, hostOf } from './host.ts';
 
+/** The entry `moves` (one tick's writes) commit, as `<navigation> <href>`. */
 const entryOf = (moves: () => void) =>
   Effect.gen(function* () {
     const next = yield* Location.use((bar) =>
@@ -47,6 +48,7 @@ describe('the address bar', () => {
         UrlState.layer.pipe(Layer.provideMerge(layerMemory('/films/p/lab/one?view=wipe&size=2'))),
       );
       const address = addressOn(host);
+      /** Open a sheet with a step (`go`): the entry it pushed, and the href of the entry it left. */
       const open = (to: string) =>
         Effect.gen(function* () {
           const before = (yield* Location.use((bar) => bar.current)).href;

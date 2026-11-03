@@ -16,11 +16,13 @@ import {
 import { RenderCatalogue } from './catalogue.ts';
 import { ContentStore } from './content-store.ts';
 
+/** A withdraw: of every approval, or `given` an approve's op, of the approvals it gave alone. */
 const withdrawSay = (given: Option.Option<OpId> = Option.none()): Say => ({
   _tag: 'Withdraw',
   given,
 });
 
+/** A catalogue of its own, as another process holds one: nothing in memory is shared. */
 const ownCatalogue = Effect.map(
   Layer.build(RenderCatalogue.layer.pipe(Layer.provide(ContentStore.layer))),
   Context.get(RenderCatalogue),

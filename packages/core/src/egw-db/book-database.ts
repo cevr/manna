@@ -1,3 +1,20 @@
+/**
+ * EGW Paragraph Database Service using Effect SQL
+ *
+ * Stores EGW books, paragraphs, Bible references, and sync status in a SQLite
+ * database. The service depends only on `SqlClient.SqlClient`, so any
+ * driver-specific layer (sqlite-bun, sqlite-node) can satisfy it.
+ *
+ * Schema:
+ * - books: normalized book metadata (book_id PK, book_code, book_title, ...)
+ * - paragraphs: per-paragraph content with pre-computed navigation fields
+ *   (page_number, paragraph_number, is_chapter_heading)
+ * - paragraph_bible_refs: indexed Bible reference lookup for commentary
+ * - paragraphs_fts: FTS5 virtual table backed by paragraphs.content +
+ *   refcode_short
+ * - sync_status: incremental sync bookkeeping
+ */
+
 import {
   Array as Arr,
   Context,
@@ -45,12 +62,23 @@ import type { CorpusProvenance } from '../corpus-supply/model.js';
 const SCHEMA_VERSION = 3;
 const SCHEMA_NAME = 'egw_paragraphs';
 
+/**
+ * A refcode as typed, reduced to the form `idx_paragraphs_refcode_key`
+ * indexes: lower case, whitespace runs collapsed to one space.
+ *
+ * The corpus stores periodical refcodes with two spaces after the day's
+ * comma (`PTUK February 4,  1897, page 70.2`) and nobody types them that way.
+ * The SQL side, `REFCODE_KEY_SQL`, collapses only a double space: no stored
+ * refcode has a longer run (checked over all 3,012,004 paragraphs).
+ */
 const refcodeKey = (refcode: string): string => refcode.trim().replace(/\s+/g, ' ').toLowerCase();
 
 const REFCODE_KEY_SQL = `lower(replace(refcode_short, '  ', ' '))`;
 
 const REFCODE_KEY_END = '\u{10FFFF}';
 
+/** The separators that end a refcode's parent: `PP 351` → `PP 351.1`,
+ *  `11LtMs, Lt 1a, 1896` → `11LtMs, Lt 1a, 1896, par. 3`. */
 const REFCODE_CHILD_SEPARATORS = ['.', ', '] as const;
 
 interface RefcodeRow {
@@ -66,6 +94,7 @@ class ParagraphDataIntegrityError extends Schema.TaggedError<ParagraphDataIntegr
   },
 ) {}
 
+/** Errors emitted by the Effect SQL persistence adapter. */
 export type ParagraphDatabaseError = SqlError | ParagraphDataIntegrityError;
 
 export const BookRow = Schema.Struct({
@@ -146,6 +175,9 @@ type SyncStatusRow = Schema.Schema.Type<typeof SyncStatusRow>;
 
 const ParagraphChangeKind = Schema.Literals(['added', 'removed', 'edited']);
 
+/** One paragraph a reinstall changed: its text before and after, by its
+ *  `ref_code`. A first install records none, so every row is a change to a
+ *  book that was already there. */
 export const ParagraphChangeRow = Schema.Struct({
   book_id: Schema.Finite,
   ref_code: Schema.String,
@@ -186,17 +218,47 @@ function parseRefcodeNumbers(refcode: Option.Option<string>): RefcodeNumbers {
   return { page: Option.none(), paragraph: Option.none() };
 }
 
+/** One paragraph in the in-memory double, plus the two things a real corpus
+ *  supplies that an array cannot.
+ *
+ *  `ftsRank` is the FTS5 relevance the double has no index to compute. A test
+ *  about §9.3's strong-BM25 short-circuit has to *state* that the top hit is
+ *  strong and clearly separated — that is its premise — and without this field
+ *  it could only be stated against a real SQLite corpus whose scores happened
+ *  to land in the right regime. Optional, so every existing configuration is
+ *  unchanged and reads as the weak default. */
 export type TestParagraph = EGWSchemas.Paragraph & {
   readonly bookCode: string;
   readonly ftsRank?: number;
 };
 
+/** The terms an FTS5 MATCH string asks for, as the double reads them.
+ *
+ *  Quoted runs and bare words both reduce to lower-cased words. It is not FTS5
+ *  syntax — there is no NEAR, no prefix, no boolean — because the double is not
+ *  an FTS engine and pretending otherwise would invite tests to depend on
+ *  behavior it does not have. What it does model is the one property every
+ *  caller relies on: *a search returns rows that contain the query's words*. */
 const testQueryTerms = (query: string): readonly string[] =>
   query
     .toLowerCase()
     .split(/[^\p{L}\p{N}'-]+/u)
     .filter((term) => term.length > 0);
 
+/** One row's relevance to one query, as the double models it.
+ *
+ *  A configured `ftsRank` is a *rank for a query the paragraph actually
+ *  answers*, so it applies in proportion to how much of the query the paragraph
+ *  contains. Without that proportioning the field would be a rank the paragraph
+ *  carries against every query, which is not what a rank is: the strongest row
+ *  in a fixture would lead every search, including searches it matched on
+ *  nothing but the word "the".
+ *
+ *  The proportion is the share of the query's terms present, which is the one
+ *  BM25 property this matters for — a document containing more of what was
+ *  asked scores better than one containing less. It is not BM25: there is no
+ *  IDF, no length normalization, and a test that needs those needs a real
+ *  corpus. Negative, matching FTS5. */
 const testRank = (paragraph: TestParagraph, terms: readonly string[], text: string): number => {
   const configured = paragraph.ftsRank ?? -1;
   if (terms.length === 0) return configured;
@@ -204,11 +266,42 @@ const testRank = (paragraph: TestParagraph, terms: readonly string[], text: stri
   return configured * (present / terms.length);
 };
 
+/** Whether one paragraph matches the query, as an **AND** over its terms —
+ *  `FTS_TERM_CONJUNCTION`'s contract, applied by the double.
+ *
+ *  AND, not OR. The earlier comment here claimed OR was "FTS5's default for a
+ *  bare term list", and it is not: FTS5 has no bare term list in the query
+ *  `ftsQuery` builds. Every term is emitted quoted and space-separated, and
+ *  FTS5's implicit operator between two quoted phrases is AND. Measured against
+ *  an in-memory SQLite FTS5 table over three rows — one containing `alpha`, one
+ *  containing `beta`, one containing both — `"alpha" "beta"` returns 1 row and
+ *  `"alpha" OR "beta"` returns 3.
+ *
+ *  A double that ORs where production ANDs is worse than a double with no
+ *  filter at all: every multi-word fixture query returns a superset of the real
+ *  result set, so a test can state a premise about a top hit that the live
+ *  corpus would never have produced, and the difference only appears against
+ *  SQLite. */
 const testMatchesQuery = (terms: readonly string[], text: string): boolean => {
   if (terms.length === 0) return true;
   return terms.every((term) => text.includes(term));
 };
 
+/** The classification filters as a predicate over one book.
+ *
+ *  One function per side of the seam, deliberately: `searchFilters` builds SQL
+ *  and this builds a predicate, and they are close enough that a reader can
+ *  check them against each other line by line. The rule both implement is that
+ *  a `null` column passes every clause, `excludeApparatus` included — an
+ *  unclassified book is never excluded by a filter the reader set about a
+ *  classification it does not have. `excludeApparatus` also reads the author,
+ *  which is never null.
+ *
+ *  Exported because the vector leg needs the same answer *before* it scans.
+ *  The lexical leg gets this for free from its `WHERE`, but a vector scan has
+ *  no join to push a predicate into: it walks a flat buffer. Resolving which
+ *  books a filter admits, and scanning only their ranges, is what keeps it from
+ *  scoring 367,726 vectors whose rows the very next step would discard. */
 export const bookMatchesFilter = (book: BookRow, filter?: CorpusFilter): boolean => {
   const classified = <A extends string>(
     // oxlint-disable-next-line effect/noNullish -- see above
@@ -221,6 +314,14 @@ export const bookMatchesFilter = (book: BookRow, filter?: CorpusFilter): boolean
   if (Option.exists(subtype, (value) => EXCLUDED_SUBTYPES.has(value))) return false;
   if (Predicate.isUndefined(filter)) return true;
 
+  /** One axis, both signs — the double of the `signed` clauses in
+   *  `identityFilters`.
+   *
+   *  An empty selection narrows nothing. `include` is a *positive* choice, so
+   *  an unclassified book fails it: asking for dictionaries and being handed a
+   *  book nobody has classified is not an answer to the question. `exclude` is
+   *  the mirror: an unclassified book passes, because it is not *known* to be
+   *  the thing the reader removed. */
   const allowed = <A extends string>(
     selection: { readonly include: readonly A[]; readonly exclude: readonly A[] },
     value: Option.Option<A>,
@@ -274,8 +375,47 @@ const testSearchMatches = (
     .sort((left, right) => left.rank - right.rank);
 };
 
+/** How a multi-term search combines its terms, written down once (round-2 B4).
+ *
+ *  The producer (`search/service.ts`'s `ftsQuery`) emits each term quoted and
+ *  joins them with this separator; the in-memory double's `testMatchesQuery`
+ *  applies the matching predicate. They used to disagree — the producer joined
+ *  with a space, which FTS5 reads as **AND** between two quoted phrases, while
+ *  the double matched any term, which is OR. A double looser than production
+ *  admits fixture results the live corpus would never return, and the
+ *  divergence surfaces only against real SQLite.
+ *
+ *  The value is a single space rather than the literal `AND`, because that is
+ *  what FTS5 accepts as its implicit conjunction and what the shipped queries
+ *  have always emitted. Measured on an in-memory FTS5 table: `"alpha" "beta"`
+ *  matches only the row containing both; `"alpha" OR "beta"` matches all three.
+ *
+ *  The test that holds the double to live FTS5 builds its query with
+ *  `ftsTermQuery`, so changing the contract is one edit and cannot leave the
+ *  double behind. */
 const FTS_TERM_CONJUNCTION = ' ';
 
+/** Reader text as an FTS5 MATCH string: the one sanitizer every caller shares.
+ *
+ *  FTS5 reads its argument as a *query expression*, so a `.`, a `"`, a bare
+ *  `NEAR` or a `-` in reader text is syntax rather than text, and the engine
+ *  answers with `fts5: syntax error` rather than with results. `ftsQuery`'s
+ *  hybrid branch has always tokenized that away; `WritingsService.search` did
+ *  not, so every caller that hands it raw text — the CLI's `localSearch` and
+ *  `egw study`, the wiki's lookup panel, the web API's `search` handler — died
+ *  on a refcode like `PP 45.3`. Same engine, same untrusted input, two
+ *  behaviors; this is the one definition both sides now import.
+ *
+ *  Each term is stripped to letters, digits, apostrophes and hyphens, then
+ *  quoted, then joined with {@link FTS_TERM_CONJUNCTION} — quoting is what
+ *  demotes a surviving `NEAR` from operator to word. Terms rather than one
+ *  phrase because the callers want an AND over words; a caller that means an
+ *  exact phrase quotes it itself (the wiki's `ftsPhrase`), which is a different
+ *  operation and deliberately not this one.
+ *
+ *  Returns `None` when nothing survives — `"..."` asks for no terms at all, and
+ *  an empty MATCH is a second syntax error. The caller decides what an
+ *  unanswerable query means; this function does not invent a result for it. */
 export const ftsTermQuery = (text: string): Option.Option<string> => {
   const terms = text
     .split(/\s+/u)
@@ -285,6 +425,22 @@ export const ftsTermQuery = (text: string): Option.Option<string> => {
   return Option.some(terms.map((term) => `"${term}"`).join(FTS_TERM_CONJUNCTION));
 };
 
+/** §9.2's join key, spelled once for every producer and every consumer.
+ *
+ *  `${bookCode}:${para_id}`, book-qualified rather than bare `para_id`. The
+ *  corpus makes `para_id` globally unique today — 3,012,004 rows, 3,012,004
+ *  distinct values — but that is a property of the current import rather than a
+ *  declared constraint, and qualifying by the book makes the key unique under
+ *  the weaker guarantee the schema actually gives (unique within a book). It
+ *  costs one string concatenation and removes a whole class of silent
+ *  cross-book collision.
+ *
+ *  A paragraph with no `para_id` gets `${bookCode}:#${refCode}`, which the `#`
+ *  keeps disjoint from every real key. No row in the shipped corpus takes this
+ *  branch; it exists because the column is nullable in the schema and an
+ *  identity function that could return an empty string would fuse every such
+ *  row onto one another.
+ */
 export const paragraphIdentity = (
   bookCode: string,
   paraId: Option.Option<string>,
@@ -298,13 +454,19 @@ export const paragraphIdentity = (
     },
   );
 
+/** One `h1`–`h3` heading of a book's outline, in the order the book prints it.
+ *
+ *  What `backMatterClassifier` walks to decide whether a paragraph sits under
+ *  an appendix, an index or a table of contents. */
 export interface SectionHeading {
   readonly publicationId: number;
   readonly puborder: number;
+  /** 1–6, from the `h1`–`h6` element type. */
   readonly level: number;
   readonly title: string;
 }
 
+/** A paragraph's position, and the heading of any level closest above it. */
 export interface NearestHeading {
   readonly publicationId: number;
   readonly puborder: number;
@@ -315,25 +477,81 @@ export interface ScoredParagraphRow {
   readonly bookCode: string;
   readonly bookTitle: string;
   readonly bookAuthor: string;
+  /** The publication's numeric id — `books.book_id`, which is the same value
+   *  `WritingsReference.paragraph` takes as its `publicationId`.
+   *
+   *  Carried because a search hit has to become a *link*, and the reader route
+   *  is `/writings/<numeric-publication-id>/p/<raw-para_id>`. The UI used to
+   *  build `/writings/<bookCode>?paragraph=<qualified-key>` out of the two
+   *  fields it had, and the route decoder rejects every part of that: the first
+   *  segment must parse as a positive integer, the paragraph lives in a `/p/`
+   *  segment rather than a query parameter, and the id must be the corpus's own
+   *  `para_id` rather than the `bookCode:para_id` join key. Every paragraph and
+   *  locate link in §9's result was therefore a 404 (round-2 B2).
+   *
+   *  The fix is to carry what the route needs rather than to reconstruct it:
+   *  `bookCode` is not a publication id and no amount of formatting turns it
+   *  into one. */
   readonly publicationId: number;
+  /** The paragraph's position in its book (`paragraphs.puborder`), which is
+   *  what places it under a heading of the book's outline. */
   readonly puborder: number;
+  /** Whether this row is a chapter or section heading rather than prose.
+   *
+   *  `paragraphs.is_chapter_heading`, written at ingest from `isChapterHeading`
+   *  (any `h1`-`h6`, or an explicit `chapter`/`heading`/`title` element type).
+   *  **534,286 rows — 17.7% of the corpus.**
+   *
+   *  Carried on a search row because BM25 normalizes by document length, so a
+   *  two-word title containing a two-word query scores near-perfectly: 32 of
+   *  the top 40 production results for `latter rain` are headings, and within
+   *  one book the order is strictly shortest-first (TM 506 heading at 62 bytes,
+   *  then TM 506.2 at 353, then TM 506.1 at 1067). A reader cannot tell "The
+   *  Loud Cry" the chapter title from "The Loud Cry" the sentence, because both
+   *  arrive as a refcode and a line of text. This field is what lets a surface
+   *  say which one it is. */
   readonly isHeading: boolean;
+  /** Whether this row frames the text rather than says anything: a letter's
+   *  date or signature, a picture's caption, the scripture at the head of a
+   *  reading (`isFurniture`, from `paragraphs.element_subtype`). */
   readonly isFurniture: boolean;
+  /** The corpus's own `para_id`, unqualified — the value
+   *  `WritingsReference.paragraph` addresses a paragraph by.
+   *
+   *  Distinct from `para_id` below, which is the *join key* the vector index and
+   *  the fusion share. `None` for the rows whose `para_id` column is NULL, which
+   *  is also exactly the set of rows that have no paragraph route. */
   readonly rawParaId: Option.Option<string>;
+  /** The corpus's own paragraph identity, and §9.2's join key.
+   *
+   *  Unique across the whole `paragraphs` table — 3,012,004 rows, 3,012,004
+   *  distinct values, none null — which `(book_code, refcode_short)` is not: the
+   *  EGW/White-Estate partition alone has 961,750 non-empty rows sharing only
+   *  944,672 distinct `book:refcode` pairs, so 17,078 paragraphs would collide
+   *  onto another paragraph's vector. The vector index, the lexical leg and the
+   *  fusion all key on this column for that reason.
+   */
   readonly para_id: string;
   readonly ref_code: string;
   readonly refcode_short: Option.Option<string>;
+  /** The paragraph's decoded AST, for the caller to flatten into a snippet. */
   readonly nodes: readonly Node[];
+  /** FTS5's `rank`: negative, more-negative-is-better. */
   readonly rank: number;
 }
 
 export interface EGWParagraphDatabaseService {
+  /** Atomically replaces one publication with its chapters as they are read:
+   *  each is staged as it arrives, so the publication is never held whole.
+   *  A chapter that fails to read fails the install with its own error, and
+   *  leaves the publication as it was. */
   readonly installPublication: <E>(
     publication: PublicationStream<E>,
     provenance?: CorpusProvenance,
   ) => Effect.Effect<number, E | ParagraphDatabaseError>;
 
   readonly storeBook: (book: EGWSchemas.Book) => Effect.Effect<void, ParagraphDatabaseError>;
+  /** Set a book's top-level section (see the implementation). */
   readonly setBookSection: (
     bookCode: string,
     section: string,
@@ -366,6 +584,13 @@ export interface EGWParagraphDatabaseService {
   readonly getParagraphsByBook: (
     bookId: number,
   ) => Stream.Stream<EGWSchemas.Paragraph, ParagraphDatabaseError>;
+  /**
+   * Every paragraph, in any publication, cited by `refcode` or by a refcode
+   * under it — see `refcodeKey` for how the match is made. `PP 351.1` names a
+   * paragraph; `PP 351` a page, `PTUK February 4, 1897, page 70` an issue
+   * page, `11LtMs, Lt 1a, 1896` a letter (its heading and every paragraph).
+   * In publication order.
+   */
   readonly getParagraphsByRefcode: (
     refcode: string,
   ) => Effect.Effect<readonly RefcodeRow[], ParagraphDatabaseError>;
@@ -379,12 +604,37 @@ export interface EGWParagraphDatabaseService {
   readonly getChapterHeadings: (
     bookId: number,
   ) => Effect.Effect<readonly EGWSchemas.Paragraph[], ParagraphDatabaseError>;
+  /**
+   * The `h1`–`h3` outline of each named book, in one statement.
+   *
+   * Search reads it to demote back matter: whether a hit sits under an
+   * appendix or an index is a property of the headings above it, not of the
+   * row. Only the three outline levels, because deeper headings (the `A`, `B`,
+   * `C` letters of an index) never open a new part of a book.
+   */
   readonly getSectionHeadings: (
     publicationIds: readonly number[],
   ) => Effect.Effect<readonly SectionHeading[], ParagraphDatabaseError>;
+  /**
+   * For each paragraph position, the closest heading of any level at or
+   * before it, in one statement. A position before its book's first heading
+   * has none and is left out.
+   *
+   * The outline alone cannot say whether a deeper heading intervenes between
+   * a section heading and a paragraph, and every level of a dictionary's
+   * outline is tens of thousands of rows; one seek per position is not.
+   */
   readonly getNearestHeadings: (
     positions: readonly { readonly publicationId: number; readonly puborder: number }[],
   ) => Effect.Effect<readonly NearestHeading[], ParagraphDatabaseError>;
+  /**
+   * Full-text search over `paragraphs_fts`, in FTS5 relevance order.
+   *
+   * `scope` narrows the search to one half of the corpus by `books.book_author`
+   * (§6.4) — the indexed column, so the filter costs an index probe rather than
+   * a scan. It defaults to `'all'`, which is exactly what every caller written
+   * before the scope existed meant.
+   */
   readonly searchParagraphs: (
     query: string,
     options?: {
@@ -401,6 +651,23 @@ export interface EGWParagraphDatabaseService {
     })[],
     ParagraphDatabaseError
   >;
+  /**
+   * The same search as `searchParagraphs`, carrying each hit's FTS5 `rank`.
+   *
+   * A second method rather than a field added to `searchParagraphs`'s rows,
+   * because the two callers want different things and the difference is not
+   * cosmetic: §6's sections and §7's panel want paragraphs, and decoding a
+   * relevance score they never read onto every row would be work no caller
+   * asked for. §9.3's strong-BM25 short-circuit wants the *scores* — it decides
+   * whether to pay for a query embedding by how strong the top hit is and how
+   * far clear of the runner-up it sits — and that decision is unavailable from
+   * a list whose ordering is all that survived.
+   *
+   * `rank` is FTS5's own value: negative, more-negative-is-better. It is passed
+   * through unflipped so this method reports what SQLite said, and the one
+   * place that prefers larger-is-better flips it where its thresholds are
+   * written.
+   */
   readonly searchScoredParagraphs: (
     query: string,
     options?: {
@@ -410,6 +677,23 @@ export interface EGWParagraphDatabaseService {
       readonly filter?: CorpusFilter;
     },
   ) => Effect.Effect<readonly ScoredParagraphRow[], ParagraphDatabaseError>;
+  /**
+   * The rows behind a set of `paragraphIdentity` keys, in one statement.
+   *
+   * §9.4's fusion ranks ids from two legs, and the vector leg returns ids the
+   * lexical leg never saw — that is the recall hybrid search exists to buy. The
+   * rows for those ids have to come from somewhere, and a per-id round trip for
+   * the tail of a 30-candidate list is 30 statements where one `IN (...)` does.
+   *
+   * Returns `ScoredParagraphRow` with `rank = 0`: these rows have no BM25 score
+   * because FTS did not match them, and 0 is the value the score flip
+   * (`-rank`) maps to "no lexical evidence". The caller never reads it — the
+   * fused score comes from the RRF ranks — but the shape stays one shape.
+   *
+   * Rows are returned in whatever order SQLite yields; the caller re-orders by
+   * the fused ranking, so imposing an order here would be work the caller
+   * discards.
+   */
   readonly findParagraphsByIdentity: (
     identities: readonly string[],
     options?: {
@@ -417,6 +701,16 @@ export interface EGWParagraphDatabaseService {
       readonly filter?: CorpusFilter;
     },
   ) => Effect.Effect<readonly ScoredParagraphRow[], ParagraphDatabaseError>;
+  /**
+   * How many paragraphs `searchParagraphs` matches under the same query and the
+   * same filters, ignoring `limit`.
+   *
+   * A separate call rather than a number returned beside the rows, because the
+   * two have different costs and not every caller wants both: the row query
+   * pays `rowToParagraph` per hit, and a caller asking only "how long is the
+   * tail" should not. Both statements are built from the same `searchFilters`,
+   * so the count and the rows can never be counting different things.
+   */
   readonly countSearchParagraphs: (
     query: string,
     options?: {
@@ -425,7 +719,28 @@ export interface EGWParagraphDatabaseService {
       readonly filter?: CorpusFilter;
     },
   ) => Effect.Effect<number, ParagraphDatabaseError>;
+  /** How many paragraphs a query matches, over the FTS index alone.
+   *
+   *  Deliberately *not* `countSearchParagraphs`: that one joins `paragraphs`
+   *  and `books` so its count agrees with the scoped row query, and those joins
+   *  cost 20-30x what the bare count does — 562 ms against 25 ms for `the`,
+   *  45 ms against 1 ms for `sabbath`. A caller that wants a cheap *estimate*
+   *  of how much work a query implies cannot pay that, because the estimate
+   *  would cost more than the queries it is meant to protect.
+   *
+   *  The number is therefore an upper bound, ignoring scope and filters. That
+   *  is the right shape for a selectivity gate — a term matching half the
+   *  corpus matches half of any scope within it — and the wrong shape for
+   *  anything a reader is shown. For a count that agrees with the results on
+   *  screen, use `countSearchParagraphs`. */
   readonly estimateMatchCount: (query: string) => Effect.Effect<number, ParagraphDatabaseError>;
+  /**
+   * Exact-match lookup by `refcode_short` (e.g. "PP 351.1"). Returns the
+   * paragraph together with its book metadata so callers can navigate without
+   * a second query. NOCASE so "pp 351.1" works too. Returns up to N matches —
+   * the same refcode may appear in multiple books (rare; bumped to a small
+   * limit so the caller can disambiguate).
+   */
   readonly findByRefcodeShort: (
     refcodeShort: string,
     limit?: number,
@@ -461,6 +776,17 @@ export interface EGWParagraphDatabaseService {
   readonly getBibleRefsByBook: (
     bookId: number,
   ) => Effect.Effect<readonly BibleRefRow[], ParagraphDatabaseError>;
+  /**
+   * Every paragraph whose `paragraph_bible_refs` row points at this verse.
+   *
+   * `bookAuthor` rides along with the code and title because the reverse lookup
+   * spans the *whole* library, not the EGW half of it: Dan 7:25 alone answers
+   * with 431 rows of which only 10 are White-Estate published. A caller that
+   * has to scope the result by author (§8.4's "parallel EGW") can only do so
+   * from the same `books.book_author` column §6.4's `CorpusScope` filters on,
+   * and re-reading `books` per row to recover it would be one query per
+   * paragraph for a column the join already visits.
+   */
   readonly getParagraphsByBibleRef: (
     bibleBook: number,
     bibleChapter: number,
@@ -474,10 +800,31 @@ export interface EGWParagraphDatabaseService {
     })[],
     ParagraphDatabaseError
   >;
+  /**
+   * Distinct verse numbers in (bibleBook, bibleChapter) that have at least
+   * one cached EGW paragraph referencing them. Used by the Bible reader to
+   * mark verses with a superscript anchor in one round-trip per chapter,
+   * mirroring the margin-notes `getVersesWithNotes` pattern.
+   */
   readonly getBibleVersesWithCommentary: (
     bibleBook: number,
     bibleChapter: number,
   ) => Effect.Effect<readonly number[], ParagraphDatabaseError>;
+  /**
+   * One-shot population of `paragraph_bible_refs` from already-indexed
+   * paragraphs. Skips when the table is non-empty (so a healthy install pays
+   * a single COUNT(*) on boot, nothing more). When empty, streams every
+   * paragraph through `extract` (extractor lives in the caller — typically
+   * `extractScriptureRefs` from `@manna/core/egw`) and inserts the produced
+   * rows in per-book batches.
+   *
+   * Exists because `storeBibleRefsBatch` was added after `storeParagraphsBatch`
+   * was already populating the cache for users in the wild; without this they
+   * would never see EGW commentary on Bible verses until they re-fetched
+   * every chapter.
+   *
+   * Returns `{ scanned, inserted }` so callers can log throughput.
+   */
   readonly backfillBibleRefs: (
     extract: (
       paragraphs: readonly EGWSchemas.Paragraph[],
@@ -509,10 +856,17 @@ export interface EGWParagraphDatabaseService {
     bookId: number,
     expected?: CorpusProvenance,
   ) => Effect.Effect<boolean, ParagraphDatabaseError>;
+  /** The paragraphs the install of `revision` changed in a book, in reading
+   *  order: none for a first install, or for a revision whose text is the
+   *  same as the one it replaced. */
   readonly paragraphChanges: (
     bookId: number,
     revision: string,
   ) => Effect.Effect<readonly ParagraphChangeRow[], ParagraphDatabaseError>;
+  /** Deletes at most `limit` change rows recorded before `recordedBefore`
+   *  (an ISO time), and says how many went. A caller deletes in rounds until
+   *  a round takes fewer than `limit`, so no one statement grows with the
+   *  table. */
   readonly pruneParagraphChanges: (
     recordedBefore: string,
     limit: number,
@@ -530,12 +884,19 @@ type FullParagraphRow = ParagraphRow & {
 const NodesJson = Schema.fromJsonString(Schema.Array(Node));
 const decodeNodes = Schema.decodeUnknownSync(NodesJson);
 const encodeNodes = Schema.encodeSync(NodesJson);
+/** `getNearestHeadings`'s positions as one JSON parameter: `[book_id, puborder]` pairs. */
 const encodePositions = Schema.encodeSync(
   Schema.fromJsonString(Schema.Array(Schema.Tuple([Schema.Finite, Schema.Finite]))),
 );
+/** A list of keys as one JSON parameter, read back with `json_each`.
+ *
+ *  One bound value however long the list is. An `IN (?, ?, ...)` binds one
+ *  parameter per key, and D1 refuses a statement with more than 100 — a
+ *  600-candidate identity lookup binds each key twice. */
 const encodeKeys = Schema.encodeSync(Schema.fromJsonString(Schema.Array(Schema.String)));
 const encodeIds = Schema.encodeSync(Schema.fromJsonString(Schema.Array(Schema.Finite)));
 
+/** A staged chunk of rows as one JSON parameter, unpacked with `json_each`. */
 const encodeIncomingParagraphs = Schema.encodeSync(
   Schema.fromJsonString(Schema.Array(ParagraphRow)),
 );
@@ -552,13 +913,29 @@ const encodeIncomingBibleRefs = Schema.encodeSync(
 
 const D1_BOUND_VALUE_CAP_BYTES = 2_000_000;
 
+/** How many bytes of JSON one staged chunk carries.
+ *
+ *  D1 caps a bound value at 2 MB, and the chunk is one bound value. Half
+ *  of that leaves room for whatever the measure below misses, and a chunk
+ *  that size inserts in well under D1's 30 s per query. */
 const INCOMING_CHUNK_BYTES = D1_BOUND_VALUE_CAP_BYTES / 2;
 
+/** `items` in order, cut into runs whose summed `size` stays within `budget`
+ *  (a single item larger than the budget is a run of its own). */
 const utf8 = new TextEncoder();
 
+/** A row's size in its chunk: its JSON, escapes and all, in UTF-8 bytes,
+ *  plus the comma that separates it from the next. */
 const incomingRowBytes = (row: ParagraphRow): number =>
   utf8.encode(encodeIncomingParagraphs([row])).length - 1;
 
+/** The tables an install stages a publication in before it swaps it in.
+ *
+ *  Shaped like `paragraphs` and `paragraph_bible_refs`, with the same keys
+ *  and no full-text index: a staged row is invisible to every reader until
+ *  the swap copies it across. Created on first install rather than by
+ *  `ensureParagraphSchema`, so a host that only reads (the Worker over D1)
+ *  never pays for them and a host that writes always has them. */
 const ensureIncomingTables = (sql: SqlClient.SqlClient): Effect.Effect<void, SqlError> =>
   Effect.gen(function* () {
     yield* sql.unsafe(`
@@ -672,6 +1049,9 @@ const archivedParagraphToRow = (
   };
 };
 
+/** Checks one chapter against its publication and the chapters before it:
+ *  every paragraph is the publication's and new, and every reference names a
+ *  paragraph seen so far. `refcodes` gains the chapter's paragraphs. */
 const validateChapter = (
   publication: PublicationArchive['publication'],
   chapter: ArchiveChapter,
@@ -735,6 +1115,13 @@ const rowToParagraph = (row: ParagraphRow) =>
       }),
   });
 
+/** The paragraph database's schema, created or migrated in place.
+ *
+ *  Idempotent, and run by every host that writes: the CLI, the sync and the
+ *  Bun server open a file that may be fresh or a version behind. A host that
+ *  only reads an installed corpus (the Worker over D1) skips it: the import
+ *  created the schema, and twenty DDL statements on every cold start are cost
+ *  with nothing to show for it. */
 const ensureParagraphSchema = (sql: SqlClient.SqlClient): Effect.Effect<void, SqlError> =>
   Effect.gen(function* () {
     yield* ensureSchemaVersionsTable(sql);
@@ -900,6 +1287,13 @@ export class EGWParagraphDatabase extends Context.Service<
   EGWParagraphDatabase,
   EGWParagraphDatabaseService
 >()('@manna/core/egw-db/book-database/EGWParagraphDatabase') {
+  /**
+   * Driver-agnostic layer over a database whose schema is already in place:
+   * requires `SqlClient.SqlClient` and `SqlAtomic`, and runs no DDL until a
+   * publication is installed. For a host whose driver has no interactive
+   * transactions (the Worker over D1, which supplies `SqlAtomic` as a batch);
+   * every SQLite host takes `layerCore`.
+   */
   static layerExisting: Layer.Layer<EGWParagraphDatabase, never, SqlClient.SqlClient | SqlAtomic> =
     Layer.effect(
       EGWParagraphDatabase,
@@ -936,6 +1330,13 @@ export class EGWParagraphDatabase extends Context.Service<
         `;
           });
 
+        /** Set a book's section, which the book DTO alone cannot supply.
+         *
+         *  `type` and `subtype` come down with the book; the section does not —
+         *  it is the name of the top-level folder the book's `folder_id` sits
+         *  under, which is only knowable by walking the folder tree. So it is
+         *  written separately, by whatever has the tree in hand, rather than
+         *  guessed from the book record. */
         const setBookSection = (bookCode: string, section: string) =>
           sql`UPDATE books SET section = ${section} WHERE book_code = ${bookCode} COLLATE NOCASE`.pipe(
             Effect.asVoid,
@@ -998,6 +1399,10 @@ export class EGWParagraphDatabase extends Context.Service<
             updated_at = excluded.updated_at
         `.pipe(Effect.asVoid);
 
+        /** The publication's `books` row. A classification the archive
+         *  carries replaces the row's; an archive with none (a packaged one)
+         *  leaves the row's classification as it was, so installing it
+         *  never erases what a backfill or an earlier sync wrote. */
         const upsertPublicationBook = (
           publication: PublicationArchive['publication'],
           paragraphCount: number,
@@ -1039,6 +1444,22 @@ export class EGWParagraphDatabase extends Context.Service<
             `,
           });
 
+        /** The statement that records what replacing a book's paragraphs
+         *  with its staged ones changes: an edited text, a paragraph removed,
+         *  or one added to a book that was already there.
+         *
+         *  A paragraph is matched by its `para_id`, the library's own id, and
+         *  by `ref_code` only when it has none: an older import keyed
+         *  `ref_code` by refcode (`AA v.1`) where this one keys it by
+         *  `para_id` (`127.8`), so matching by `ref_code` would report every
+         *  paragraph of such a book removed and added again. The primary key
+         *  makes a retried install record each change once.
+         *
+         *  Each side is one book, materialized with its match key as a plain
+         *  column, so SQLite joins them through an automatic index. Joined on
+         *  the `COALESCE` itself, no index applies and the cost grows with
+         *  the square of the book: The Desire of Ages (2,705 paragraphs) took
+         *  1.6 s locally that way, and over D1's limit on the library. */
         const recordParagraphChanges = (bookId: number, revision: string, now: string) => sql`
           WITH
             before AS MATERIALIZED (
@@ -1157,6 +1578,8 @@ export class EGWParagraphDatabase extends Context.Service<
             FROM json_each(${encodeIncomingBibleRefs(references)})
           `;
 
+        /** A live paragraph differs from its staged row `i` in a column a
+         *  reader sees. `IS NOT` so that a null equals a null. */
         const paragraphDiffers = sql.literal(
           [
             'para_id',
@@ -1175,6 +1598,8 @@ export class EGWParagraphDatabase extends Context.Service<
             .join(' OR '),
         );
 
+        /** The staged reference equal to a live one, by every column of
+         *  the key; `IS` so that two verseless references match. */
         const sameStagedReference = sql.literal(`
           SELECT 1 FROM paragraph_bible_refs_incoming i
           WHERE i.para_book_id = paragraph_bible_refs.para_book_id
@@ -1184,6 +1609,7 @@ export class EGWParagraphDatabase extends Context.Service<
             AND i.bible_verse IS paragraph_bible_refs.bible_verse
         `);
 
+        /** The live reference equal to a staged one `i`. */
         const sameLiveReference = sql.literal(`
           SELECT 1 FROM paragraph_bible_refs p
           WHERE p.para_book_id = i.para_book_id
@@ -1463,6 +1889,8 @@ export class EGWParagraphDatabase extends Context.Service<
           ORDER BY puborder
         `.pipe(Effect.flatMap((rows) => Effect.forEach(rows, rowToParagraph)));
 
+        /** Served by `idx_paragraphs_chapter`, the partial index over headings:
+         *  60 books' outlines read in ~8 ms against the 4.5 GB corpus. */
         const getSectionHeadings = (publicationIds: readonly number[]) => {
           if (publicationIds.length === 0) return Effect.succeed<readonly SectionHeading[]>([]);
           return sql<{
@@ -1487,6 +1915,9 @@ export class EGWParagraphDatabase extends Context.Service<
           );
         };
 
+        /** One backward seek per position on `idx_paragraphs_puborder`: 120
+         *  positions read in ~5 ms against the 4.5 GB corpus. The positions go
+         *  in as one JSON parameter rather than a `VALUES` list per call. */
         const getNearestHeadings = (
           positions: readonly { readonly publicationId: number; readonly puborder: number }[],
         ) => {
@@ -1531,6 +1962,15 @@ export class EGWParagraphDatabase extends Context.Service<
           );
         };
 
+        /** Every predicate over `books` that a search applies, without the
+         *  `MATCH` clause.
+         *
+         *  Split out from `searchFilters` because two statements need it: the FTS
+         *  search, which adds the MATCH, and the by-identity lookup the vector
+         *  leg's candidates come back through, which has no query to match on but
+         *  must honour exactly the same scope and classification rules. They were
+         *  one function and the identity path simply had no filters, which made it
+         *  a hole every filter leaked through. */
         const identityFilters = (options?: {
           readonly bookCode?: string;
           readonly scope?: CorpusScope;
@@ -1591,6 +2031,7 @@ export class EGWParagraphDatabase extends Context.Service<
           return filters;
         };
 
+        /** The FTS search's predicates: the MATCH, plus everything above. */
         const searchFilters = (
           query: string,
           options?: {
@@ -1603,6 +2044,14 @@ export class EGWParagraphDatabase extends Context.Service<
           ...identityFilters(options),
         ];
 
+        /** The whole match count, which the row query's `LIMIT` cannot report.
+         *
+         *  `searchParagraphs` pushes the caller's cap into SQL, so its result
+         *  length saturates at the cap and a caller computing "how many matched"
+         *  from it can never see past the cap. §6.1's `total` means the pre-cap
+         *  count, so it needs its own statement — one that runs the same MATCH
+         *  and the same joins but selects a count and drops the `ORDER BY`, which
+         *  FTS5 does not need in order to count. */
         const countSearchParagraphs = (
           query: string,
           options?: {
@@ -1619,6 +2068,9 @@ export class EGWParagraphDatabase extends Context.Service<
               WHERE ${sql.and(searchFilters(query, options))}
             `.pipe(Effect.map((rows) => rows[0]?.total ?? 0));
 
+        /** The bare FTS count — see `estimateMatchCount` on the interface for why
+         *  this exists beside `countSearchParagraphs` rather than reusing it. No
+         *  `searchFilters`, because the joins those imply are the whole cost. */
         const estimateMatchCount = (query: string) =>
           sql<{ readonly total: number }>`
               SELECT count(*) AS total
@@ -1661,6 +2113,15 @@ export class EGWParagraphDatabase extends Context.Service<
           );
         };
 
+        /** The same statement as `searchParagraphs`, selecting `fts.rank` and the
+         *  four columns §9 renders instead of the whole row.
+         *
+         *  It shares `searchFilters` with the other two statements for the reason
+         *  they share it with each other: three MATCH-and-scope predicates
+         *  written three times is three chances for the scope filter to mean
+         *  something slightly different, and a search whose scoring query and
+         *  whose counting query disagree about scope is a search whose
+         *  short-circuit fires on a hit the reader cannot be shown. */
         const searchScoredParagraphs = (
           query: string,
           options?: {
@@ -1685,6 +2146,9 @@ export class EGWParagraphDatabase extends Context.Service<
             readonly rank: number;
             readonly book_id: number;
             readonly puborder: number;
+            /** SQLite has no boolean; `is_chapter_heading` is the 0/1 integer the
+             *  ingest wrote from `isChapterHeading`. Translated at this boundary
+             *  like every other storage-shaped column here. */
             readonly is_chapter_heading: number;
             // oxlint-disable-next-line effect/noNullish -- the storage boundary, see above
             readonly element_subtype: string | null;
@@ -1723,6 +2187,17 @@ export class EGWParagraphDatabase extends Context.Service<
           );
         };
 
+        /** The rows behind a set of identity keys, in one `IN (...)`.
+         *
+         *  Matched on `b.book_code || ':' || p.para_id`, which is exactly what
+         *  `paragraphIdentity` builds — the key is composed in SQL rather than
+         *  decomposed in TypeScript so the two spellings cannot drift, and so a
+         *  key this build did not produce simply matches nothing.
+         *
+         *  Rows whose `para_id` is NULL are unreachable by this lookup, which is
+         *  correct: `paragraphIdentity` gives them a `#`-prefixed key that no
+         *  concatenation of a NULL can equal, and SQLite's `||` yields NULL for
+         *  them anyway. */
         const findParagraphsByIdentity = (
           identities: readonly string[],
           options?: {
@@ -2075,17 +2550,26 @@ export class EGWParagraphDatabase extends Context.Service<
       }),
     );
 
+  /**
+   * Driver-agnostic layer: requires `SqlClient.SqlClient`. Initializes the
+   * schema (idempotent) and exposes all CRUD/query operations. Compose with
+   * a SQLite driver layer (sqlite-bun, sqlite-node) via `Layer.provide`.
+   */
   static layerCore: Layer.Layer<EGWParagraphDatabase, SqlError, SqlClient.SqlClient> =
     EGWParagraphDatabase.layerExisting.pipe(
       Layer.provide(Layer.merge(layerParagraphSchema, SqlAtomic.layerTransaction)),
     );
 
+  /**
+   * Test implementation with in-memory data.
+   */
   static Test = (
     config: {
       books?: readonly BookRow[];
       paragraphs?: readonly TestParagraph[];
       bibleRefs?: readonly BibleRefRow[];
       syncStatuses?: readonly SyncStatusRow[];
+      /** Sees each install's publication, collected whole. */
       installPublication?: (archive: PublicationArchive, provenance?: CorpusProvenance) => number;
       needsSync?: (bookId: number, expected?: CorpusProvenance) => boolean;
       paragraphChanges?: readonly ParagraphChangeRow[];
@@ -2316,7 +2800,20 @@ export class EGWParagraphDatabase extends Context.Service<
         },
         countSearchParagraphs: (query, options) =>
           Effect.succeed(testSearchMatches(config, query, options).length),
+        /** The double's estimate is the unscoped match count, which is exactly
+         *  what the real one computes — the double has no joins to skip. No
+         *  options argument rather than an explicit empty one, so "unscoped"
+         *  is spelled by omission here as it is in the real implementation. */
         estimateMatchCount: (query) => Effect.succeed(testSearchMatches(config, query).length),
+        /** The locate leg's lookup, as the double models it.
+         *
+         *  It used to answer `[]` unconditionally, which made §9.3's locate route
+         *  untestable against a fixture: the golden set declares two refcode
+         *  queries as `route: 'locate'` and neither could ever produce a jump
+         *  target, so no test could see the target's link — the shape round-2 B2
+         *  found broken. The rules mirror the live statement: match the book by
+         *  code prefix, then the tail exactly, as a child paragraph, or (for a
+         *  bare code) any row in that book. */
         findByRefcodeShort: (refcodeShort, limit = 5) => {
           const trimmed = refcodeShort.trim();
           const spaceAt = trimmed.indexOf(' ');

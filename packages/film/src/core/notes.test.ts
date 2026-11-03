@@ -17,6 +17,7 @@ const at = '2026-09-25T00:00:00.000Z';
 
 describe('where a note shows', () => {
   const FPS = 30;
+  /** Scene a lasts `aSeconds`, then scene `next` (`nextSeconds`, 6 s unless given). */
   const film = (aSeconds: number, next = 'b', nextSeconds = 6) =>
     Result.getOrThrow(
       layout(

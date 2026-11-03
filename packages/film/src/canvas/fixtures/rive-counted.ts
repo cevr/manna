@@ -3,9 +3,11 @@ import { Effect, Layer, Predicate } from 'effect';
 import { RiveRuntime } from '../../rive/runtime.ts';
 import { RiveRuntimeBun } from '../../rive/runtime-bun.ts';
 
+/** What the counted layer has seen made and freed. */
 interface RiveCounts {
   files: number;
   unrefs: number;
+  /** Calls on a file after it was unref'd: each a use after free. */
   afterFree: number;
   artboards: number;
   deletes: number;
@@ -15,11 +17,13 @@ interface RiveCounts {
   timelineDeletes: number;
 }
 
+/** The timing a test arranges: what each parse waits for, and how many advances throw. */
 interface Faults {
   parsed: () => Promise<void>;
   throws: number;
 }
 
+/** `made`'s `delete` counted into `deleted`. */
 const countedDelete = <A extends { delete: () => void }>(made: A, deleted: () => void): A => {
   const free = made.delete.bind(made);
   made.delete = () => {
@@ -29,6 +33,7 @@ const countedDelete = <A extends { delete: () => void }>(made: A, deleted: () =>
   return made;
 };
 
+/** `artboard`, its `delete` counted and its `advance` refused while faults remain; none (no artboard by that name) passed on. */
 const countedArtboard = (artboard: Artboard, counts: RiveCounts, faults: Faults): Artboard => {
   if (!Reflect.has(Object(artboard), 'delete')) return artboard;
   counts.artboards += 1;
@@ -45,6 +50,7 @@ const countedArtboard = (artboard: Artboard, counts: RiveCounts, faults: Faults)
   });
 };
 
+/** `model`, each instance it makes and each one deleted counted. */
 const countedModel = (model: ViewModel | null, counts: RiveCounts): ViewModel | null => {
   if (model === null) return model;
   const instance = model.defaultInstance.bind(model);
@@ -57,6 +63,7 @@ const countedModel = (model: ViewModel | null, counts: RiveCounts): ViewModel | 
   return model;
 };
 
+/** A view of `file`: its `unref`, the artboards and view models it makes, and each call after its unref counted. */
 const countedFile = (file: File, counts: RiveCounts, faults: Faults): File => {
   counts.files += 1;
   let freed = false;
@@ -97,6 +104,7 @@ const countedFile = (file: File, counts: RiveCounts, faults: Faults): File => {
   });
 };
 
+/** `runtime`, every file it loads and every timeline instance it makes counted (a view of it: the runtime itself is untouched). */
 const countedRuntime = (runtime: RiveCanvas, counts: RiveCounts, faults: Faults): RiveCanvas => {
   const timeline = new Proxy(runtime.LinearAnimationInstance, {
     construct: (target, args) => {
@@ -121,6 +129,7 @@ const countedRuntime = (runtime: RiveCanvas, counts: RiveCounts, faults: Faults)
   });
 };
 
+/** A Bun Rive layer that counts, its counts, and the faults a test sets. */
 export const countedRive = () => {
   const counts: RiveCounts = {
     files: 0,

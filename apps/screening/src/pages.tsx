@@ -1,3 +1,21 @@
+/**
+ * The site's three pages, drawn from the films' manifests (`./manifest.ts`)
+ * to whole HTML files at publish time: nothing hydrates, and no script runs
+ * but the browser's own video player.
+ *
+ * - the index (`/`): every film with a published version, the most recently
+ *   published first, each a card with its title, its newest version's poster
+ *   and that version's date;
+ * - a film's folder (`/<film>/`): its versions, newest first, each a card
+ *   with its name, date and poster;
+ * - one version (`/<film>/<version>/`): its video, played in place on a
+ *   phone, and for the Board the kept panels below it in the film's order,
+ *   each with its beat.
+ *
+ * Dark and calm, read on a phone first: 16 px gutters, every box as wide as
+ * the screen at most, so nothing scrolls sideways. Every page asks not to be
+ * indexed; the Worker says so in its headers too (`./respond.ts`).
+ */
 import { For, NoHydration, Show, renderToString } from '@solidjs/web';
 import type { JSX } from '@solidjs/web';
 
@@ -10,10 +28,12 @@ import {
   versionsOf,
 } from './manifest.ts';
 
+/** The site's name, as the index and every page's title say it. */
 export const SITE_NAME = 'Films';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+/** `2026-10-25` as a card says it: `25 Oct 2026`. */
 export const dayLabel = (day: string): string => {
   const [year, month, date] = day.split('-');
   return `${Number(date)} ${MONTHS[Number(month) - 1] ?? month} ${year}`;
@@ -67,6 +87,7 @@ const Document = (props: DocumentProps) => (
   </html>
 );
 
+/** A card linking to a page: its poster, its name, and below it `detail`. */
 const Card = (props: {
   readonly href: string;
   readonly name: string;
@@ -160,13 +181,17 @@ const VersionPage = (props: { readonly film: FilmManifest; readonly version: Ver
   </Document>
 );
 
+/** `view` drawn to a whole HTML document. */
 const draw = (view: () => JSX.Element): string =>
   `<!doctype html>\n${renderToString(() => <NoHydration>{view()}</NoHydration>)}\n`;
 
+/** The index over every film's manifest. */
 export const indexPage = (films: ReadonlyArray<FilmManifest>): string =>
   draw(() => <IndexPage films={films} />);
 
+/** `film`'s folder. */
 export const folderPage = (film: FilmManifest): string => draw(() => <FolderPage film={film} />);
 
+/** `film`'s `version`. */
 export const versionPage = (film: FilmManifest, version: Version): string =>
   draw(() => <VersionPage film={film} version={version} />);

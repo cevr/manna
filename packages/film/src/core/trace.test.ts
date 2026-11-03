@@ -4,6 +4,7 @@ import { Result } from 'effect';
 import { tracedModule, traceView } from './trace.ts';
 import { LEAST_GAP, VIEW, boxOf, sheet, type TraceView } from './fixtures/trace/view.ts';
 
+/** The test sheet traced through the house view, once for the file: two tests read it and neither changes it. */
 const housed = Result.getOrThrow(traceView(sheet(), VIEW));
 
 describe('traceView', () => {
@@ -148,15 +149,16 @@ describe('traceView', () => {
       expect(Math.min(...anchors.map(([ax, ay]) => Math.hypot(ax - x, ay - y)))).toBeLessThan(3);
   });
 
-  test('writes a table of points with no comment and no colour in it', () => {
+  test('writes a table of points, each part under its doc comment, with no other comment and no colour in it', () => {
     const source = tracedModule(VIEW, housed);
-    expect(source).not.toMatch(/\/\/|\/\*/);
-    expect(source).toContain('export const HEAD: Pt[] = [');
-    expect(source).toContain('export const BODY: Pt[] = [');
+    expect(source).not.toMatch(/\/\/|\/\*(?!\*)/);
+    expect(source).toContain('/** The head. */\nexport const HEAD: Pt[] = [');
+    expect(source).toContain('/** The body. */\nexport const BODY: Pt[] = [');
     expect(source).not.toMatch(/#[0-9a-f]{6}/i);
   });
 });
 
+/** A sheet `size` square on white, each layer painted over the ones before it. */
 const painted = (
   size: number,
   layers: ReadonlyArray<
@@ -170,6 +172,7 @@ const painted = (
   return { width: size, height: size, rgba };
 };
 
+/** The left and right of `pts`. */
 const across = (pts: ReadonlyArray<readonly [number, number]>) => [
   Math.min(...pts.map(([x]) => x)),
   Math.max(...pts.map(([x]) => x)),

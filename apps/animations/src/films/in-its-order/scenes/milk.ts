@@ -12,14 +12,24 @@ import {
   RIBBON_ROWS,
 } from '../plates/milk.ts';
 
+/** A point, px. */
 type Pt = readonly [number, number];
 
+/** A camera on the page, frame px: the point at the frame's centre and the zoom. */
 type Camera = { readonly x: number; readonly y: number; readonly k: number };
 
+/** The frame's centre, frame px. */
 const CENTRE = [960, 540] as const;
 
+/** The whole page, as the scene opens. */
 const WIDE: Camera = { x: 960, y: 540, k: 1 };
 
+/**
+ * Shot A's framings, each a cue and where it leaves the camera: `push`
+ * closes in on the villager and his cup, `close` on his face and the cup
+ * as the dropper comes, `again` draws back to the book and the cup, and
+ * `settle` holds on him and his full cup as the book goes.
+ */
 const MOVES = [
   ['push', { x: 1060, y: 380, k: 1.35 }],
   ['close', { x: 1150, y: 360, k: 1.9 }],
@@ -27,13 +37,28 @@ const MOVES = [
   ['settle', { x: 1100, y: 420, k: 1.4 }],
 ] as const satisfies ReadonlyArray<readonly [string, Camera]>;
 
+/** Shot B opens on the drinking row's left end. */
 const ROW_START: Camera = { x: 800, y: 600, k: 1.2 };
 
+/**
+ * Shot B's framings: `truck` runs along the row to its right end as the four
+ * come in, and `pull` draws back to the whole page as the lead comes in.
+ */
 const ROW_MOVES = [
   ['truck', { x: 1120, y: 600, k: 1.2 }],
   ['pull', WIDE],
 ] as const satisfies ReadonlyArray<readonly [string, Camera]>;
 
+/**
+ * The grown villager, frame px: his root (the hip) and his scale, so he
+ * stands about 950 px from crown to feet as the panel's villager does. As he
+ * stands he sways whole about his feet, `sway` degrees each way every
+ * `swayPeriod` s, and on `mixed` he leans `recoil` degrees back from the
+ * dropper and comes upright again: his rig's lean and head bones open seams
+ * at his hip and at his headcloth's flaps, and a turn of his cup arm's
+ * shoulder shows a dash of the sleeve's outline at his elbow, so he is
+ * turned whole and no bone moves.
+ */
 const MAN = {
   root: [1200, 630],
   scale: 0.83,
@@ -43,6 +68,14 @@ const MAN = {
   recoil: 2.5,
 } as const;
 
+/**
+ * His cup's mouth on his single-15 sheet, sheet px: its centre and half
+ * axes (the rim's inside, dark while the cup is empty), and his root there.
+ * Milk is the ribbon's own cream (`colour`); it rises `depth` sheet px, from
+ * under the mouth's front rim to just under its centre, so a sliver of it
+ * shows at the front first: the first pour fills the cup `first` of the way,
+ * the second the rest.
+ */
 const CUP = {
   mouth: [171, 382],
   rx: 44,
@@ -53,6 +86,12 @@ const CUP = {
   colour: '#fef8e7',
 } as const;
 
+/**
+ * The book, frame px: its centre over his cup and to its left, clear of
+ * his headcloth, and its scale. It drifts in by `drift` while it fades in,
+ * shut, turns open, and tips `tilt` degrees toward the cup; it floats `bob`
+ * px up and down every `bobPeriod` s.
+ */
 const BOOK = {
   at: [867, 142],
   s: 0.7,
@@ -62,6 +101,13 @@ const BOOK = {
   bobPeriod: 3,
 } as const;
 
+/**
+ * The pour: the ribbon's top end's middle and its foot, its own px, laid
+ * from `from` (the open book's px from its centre, under its right page,
+ * so the book hides the ribbon's top end) to `into` sheet px under the
+ * cup's mouth centre, so its foot goes in. It is mirrored, so its lower
+ * twist bows away from his face, and `thin` narrows it across.
+ */
 const POUR = {
   top: [56, 4],
   foot: [93, 305],
@@ -70,6 +116,19 @@ const POUR = {
   thin: 0.65,
 } as const;
 
+/**
+ * The milk's drops, frame px and seconds, a few beside each pour so it reads
+ * wet without drawing the eye. While the ribbon runs, `lip` drops a second
+ * fall off its lip under the book, each landing in the cup's mouth (within
+ * `aside` of its half width from the centre) `fall` s later under gravity
+ * `g`; the first lands as the ribbon's foot goes in. While the ribbon runs
+ * into the cup, `splash` drops a second hop up from where it goes in, `spread`
+ * px/s aside, under gravity `hop`, up and back into the mouth in `bounce` s.
+ * A drop is `size` px in radius, a splash drop `small` of that; each is the
+ * cup's cream lit (`CUP.colour`), lilac in shade (`shade`, the ribbon's own
+ * shade's hue) and ringed `line` px in the outline's ink, stretched along its
+ * motion. Each pour's drops have their own seeds (`seeds`: lip, splash).
+ */
 const DROPS = {
   lip: 2.5,
   fall: [0.42, 0.55],
@@ -90,6 +149,15 @@ const DROPS = {
   },
 } as const;
 
+/**
+ * The ink dropper over his cup, frame px: its tip `at` from the cup's mouth
+ * as he stands at rest, over the mouth's near side and under his beard, the
+ * dropper leaning `lean` degrees back to the left so it stays off his face,
+ * drawn `s` its size. Its drop of ink (its plate's rows from `cut` px under
+ * the tip) hangs straight down under the tip. It comes in along its own
+ * length from `from` px away, out of the frame, bobs `bob` px every
+ * `bobPeriod` s as it hovers, and goes back out the same way.
+ */
 const INK = {
   at: [-22, -32],
   lean: -45,
@@ -102,6 +170,7 @@ const INK = {
 
 const [BABY, TODDLER, CHILD, GROWN, LEAD] = DRINKERS;
 
+/** The drinking row, left to right, each by its painting's name; the lead stands at its right end. */
 const DRINKING = [
   ['baby', BABY],
   ['toddler', TODDLER],
@@ -110,6 +179,14 @@ const DRINKING = [
   ['lead', LEAD],
 ] as const;
 
+/**
+ * The drinking row on the page, frame px: each of the five drawn `s` its
+ * size, its feet where the kept row has them (`sheet`) scaled to the frame
+ * and moved by `shift`, so the 1536-px row spans the frame and its feet stand
+ * at about y 1020. Each comes in rising `rise` px as it fades in, and rocks
+ * `bob` degrees each way about its feet every `bobPeriod` s, each `phase`
+ * radians after the one on its left.
+ */
 const ROW = {
   s: 1.25,
   shift: [-4, -52],
@@ -125,6 +202,7 @@ const between = (a: Camera, b: Camera, t: number): Camera => ({
   k: lerp(a.k, b.k, t),
 });
 
+/** Where the ribbon's opaque pixels start and end on its row `y`, its own px: between the two listed rows round it (`RIBBON_ROWS`), else the nearest. */
 const ribbonRow = (y: number): Pt => {
   let last: (typeof RIBBON_ROWS)[number] | undefined;
   for (const row of RIBBON_ROWS) {
@@ -138,11 +216,13 @@ const ribbonRow = (y: number): Pt => {
   return last === undefined ? [0, RIBBON.size[0]] : [last[1], last[2]];
 };
 
+/** A sheet point of his on the page at rest, frame px. */
 const onPage = (p: Pt): Pt => [
   MAN.root[0] + MAN.scale * (p[0] - CUP.root[0]),
   MAN.root[1] + MAN.scale * (p[1] - CUP.root[1]),
 ];
 
+/** `p` turned `a` radians about `o`, from +x toward +y as a canvas turns. */
 const turned = (p: Pt, o: Pt, a: number): Pt => [
   o[0] + (p[0] - o[0]) * Math.cos(a) - (p[1] - o[1]) * Math.sin(a),
   o[1] + (p[0] - o[0]) * Math.sin(a) + (p[1] - o[1]) * Math.cos(a),

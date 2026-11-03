@@ -3,16 +3,20 @@ import { describe, expect, it } from 'effect-bun-test';
 
 import { agreementOf, sampleOf } from './quality.js';
 
+/** Where an item of a sample came from. */
 type Stratum = Parameters<typeof agreementOf>[1][number]['stratum'];
 import { historyComment } from './testing.js';
 
+/** The label of history at `p`. */
 const labelAt = (p: number) => {
   if (p >= 0.5) return 'history';
   return 'today';
 };
 
+/** A kept answer of history at `p`. */
 const at = (p: number) => ({ label: labelAt(p), probabilities: { history: p, today: 1 - p } });
 
+/** Ten kept items of historyComment, `k0`…`k9`: the last three report (p 0.95), the rest do not (p 0.1). */
 const KEPT = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.95, 0.95, 0.95].map((p, n) => ({
   rule: historyComment,
   key: `k${n}`,

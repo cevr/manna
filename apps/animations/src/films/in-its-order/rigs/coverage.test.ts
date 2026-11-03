@@ -31,6 +31,7 @@ const MANIFESTS = [
 
 const manifestOf = (member: string) => MANIFESTS.find((m) => m.member === member);
 
+/** Each script a manifest may cite, by film name: its beats' ids. */
 const BEATS = new Map([['in-its-order', IN_ITS_ORDER.map((beat): string => beat.id)]]);
 
 describe('cast coverage manifests', () => {

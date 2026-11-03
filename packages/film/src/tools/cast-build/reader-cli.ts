@@ -17,6 +17,7 @@ class ClipUnowned extends Schema.TaggedError<ClipUnowned>()('ClipUnowned', {
   }
 }
 
+/** `reader chain --json`: the chain's report, with the reader, clip and member it ran on. */
 const OutJson = Schema.fromJsonString(Schema.Unknown);
 
 class ReaderUnknown extends Schema.TaggedError<ReaderUnknown>()('ReaderUnknown', {
@@ -34,14 +35,17 @@ class FramesAsked extends Schema.TaggedError<FramesAsked>()('FramesAsked', {}) {
   }
 }
 
+/** The cache's names for imported readers: name → the checkpoint's sha256. */
 const Registry = Schema.Record(Schema.String, Schema.String);
 const RegistryJson = Schema.fromJsonString(Registry);
+/** The part of the committed lock a read needs: its checkpoint's hash. */
 const LockJson = Schema.fromJsonString(Schema.Struct({ checkpointSha256: Schema.String }));
 const Imported = Schema.fromJsonString(
   Schema.Struct({ name: Schema.String, sha256: Schema.String, bytes: Schema.Finite }),
 );
 const SHA256 = /^[0-9a-f]{64}$/;
 
+/** `readers.json` in the cast cache; empty when it is not there. */
 const registryIn = (cache: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -51,15 +55,18 @@ const registryIn = (cache: string) =>
     return yield* Schema.decodeEffect(RegistryJson)(yield* fs.readFileString(file));
   });
 
+/** The `--reader` flag: a name `import` gave, a checkpoint's sha256, or `current`. */
 const readerFlag = Flag.String('reader').pipe(
   Flag.withDescription(
     "a name `reader import` gave, a checkpoint's sha256, or current (the lock's)",
   ),
 );
+/** The `--lock` flag: the committed lock `--reader current` reads. */
 const lockFlag = Flag.String('lock').pipe(
   Flag.withDefault('src/library/cutout/reader.lock.json'),
   Flag.withDescription('the reader lock `current` names (from apps/animations)'),
 );
+/** The `--clip` flag: an mp4, mapped onto the reader's canvas. */
 const clipFlag = Flag.String('clip').pipe(
   Flag.optional,
   Flag.withDescription('an mp4 to read, mapped onto the canvas'),
@@ -69,6 +76,7 @@ const jsonFlag = Flag.Boolean('json').pipe(
   Flag.withDescription('print JSON'),
 );
 
+/** A reader named on the command line, as its checkpoint's sha256. */
 const shaOf = Effect.fn('cast.reader.shaOf')(function* (
   reader: string,
   lock: string,
@@ -86,6 +94,7 @@ const shaOf = Effect.fn('cast.reader.shaOf')(function* (
   return named.value;
 });
 
+/** A reader named on the command line, as its checkpoint's file in the cast cache. */
 const checkpointOf = Effect.fn('cast.reader.checkpointOf')(function* (
   reader: string,
   lock: string,
@@ -134,6 +143,7 @@ const importReader = Command.make(
   }),
 ).pipe(Command.withDescription('Copy a reader checkpoint into the cast cache under a name'));
 
+/** The read's frames, each naming its nearest drawing. */
 const ReadSummary = Schema.fromJsonString(
   Schema.Struct({
     n: Schema.Finite,
@@ -193,6 +203,7 @@ const evaluate = Command.make(
   Command.withDescription("Score a reader on a drawing's held renders; prints eval.py's JSON"),
 );
 
+/** The member a clip belongs to: the nearest folder above it with a `cutout/coverage.ts`. */
 const clipMember = Effect.fn('cast.reader.clipMember')(function* (clip: string) {
   const path = yield* Path.Path;
   const file = path.resolve(clip);

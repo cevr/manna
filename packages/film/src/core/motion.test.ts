@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { type Track, act, blink, curve, idle, lag } from './motion.ts';
 
+/** `f` sampled every `step` s over [from, to]. */
 const sampled = (f: Track, from: number, to: number, step: number) => {
   const ts: number[] = [];
   const vs: number[] = [];
@@ -24,9 +25,11 @@ const largest = (xs: ReadonlyArray<number>): number =>
 const smallest = (xs: ReadonlyArray<number>): number =>
   xs.reduce((m, x) => Math.min(m, x), Infinity);
 
+/** The heights of `vs`'s local peaks. */
 const peaks = (vs: ReadonlyArray<number>): number[] =>
   vs.filter((v, i) => i > 0 && i < vs.length - 1 && v > vs[i - 1]! && v >= vs[i + 1]!);
 
+/** Pearson correlation of two series of one length. */
 const correlation = (a: ReadonlyArray<number>, b: ReadonlyArray<number>): number => {
   const mean = (xs: ReadonlyArray<number>) => xs.reduce((s, x) => s + x, 0) / xs.length;
   const ma = mean(a);
@@ -150,6 +153,7 @@ describe('idle', () => {
     expect(idle(3)(17.25)).toEqual(first);
   });
 
+  /** Seed `seed`'s idle over [0, to], sampled every `step` s, one series a channel. */
   const channelsOf = (seed: number, to: number, step: number) => {
     const a = idle(seed);
     const { ts, vs } = sampled((t) => t, 0, to, step);
@@ -163,6 +167,7 @@ describe('idle', () => {
     };
   };
 
+  /** The times a sampled series crosses zero going up. */
   const risesOf = (ts: ReadonlyArray<number>, vs: ReadonlyArray<number>): number[] =>
     ts.filter((_, i) => i > 0 && vs[i - 1]! < 0 && vs[i]! >= 0);
 
@@ -220,6 +225,7 @@ describe('idle', () => {
 });
 
 describe('blink', () => {
+  /** Each blink of `track` wholly inside [from, to], sampled every `step` s: when the lids start, shut fully and are open again. */
   const blinksOf = (track: Track, from: number, to: number, step: number) => {
     const { ts, vs } = sampled(track, from, to, step);
     const out: Array<{ start: number; shut: number; open: number; depth: number }> = [];
@@ -241,6 +247,7 @@ describe('blink', () => {
     return { out, vs };
   };
 
+  /** Each blink of seed `seed`'s own. */
   const blinks = (seed: number, from: number, to: number, step: number) =>
     blinksOf(blink(seed), from, to, step);
 

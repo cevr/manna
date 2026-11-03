@@ -1,3 +1,9 @@
+/**
+ * The meaning table's file rules, each on small vectors made here: the
+ * words it keeps, their weights, the 4- and 8-bit rows and how they are
+ * laid out, and the module's text. No model runs.
+ */
+
 import { describe, expect, it } from 'bun:test';
 
 import { DIMS } from './pins';

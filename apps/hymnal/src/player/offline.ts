@@ -1,3 +1,4 @@
+/** Resolve completed recordings below selection; queue saves above the silent clock. */
 import { Clock, Effect, Layer, Option } from 'effect';
 import { Offline } from '~/offline/cache';
 import { clockAt, placeOf, type Clock as Run } from '~/follow/clock';
@@ -119,6 +120,7 @@ export const savingOn = <R>(device: Layer.Layer<Playback, never, R>) =>
     }),
   ).pipe(Layer.provide(device));
 
+/** One offline provision surrounds selection, silent clock and acquisition. */
 export const cachedPlayback = (
   device: Layer.Layer<Playback>,
   timeline: Parameters<typeof soundOn>[1],

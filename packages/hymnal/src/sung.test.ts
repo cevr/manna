@@ -6,6 +6,7 @@ import * as Sung from './sung.js';
 
 const TPB = 96;
 
+/** One verse of eight notes, a beat each, with a bass under each; the bass's last note held to the file's end. */
 const oneVerse = (tempos: Midi['tempos']): Midi => {
   const keys = [60, 62, 64, 65, 67, 65, 64, 60];
   const tune: Note[] = keys.map((key, i) => ({

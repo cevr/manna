@@ -12,6 +12,7 @@ const FILM_MEASURE = join(ROOT, 'packages/film/src/measure.ts');
 const IMPORT = /^import\s+(type\s+)?([\s\S]*?)\s+from\s+'([^']+)';/gm;
 const EXPORT_FROM = /^export\s+(type\s+)?\{([^}]*)\}\s+from\s+'([^']+)';/gm;
 
+/** The names a clause brings in at run time: none for `type` ones, `*` for a namespace. */
 const valueNames = (clause: string) => {
   if (clause.startsWith('* as')) return ['*'];
   const braces = /\{([^}]*)\}/.exec(clause)?.[1] ?? '';
@@ -27,11 +28,13 @@ const valueNames = (clause: string) => {
   return bare === '' ? named : [...named, 'default'];
 };
 
+/** A relative specifier as the file it names, `.js` read as the `.ts` beside it. */
 const fileOf = (from: string, spec: string) => {
   const file = resolve(dirname(from), spec);
   return existsSync(file) ? file : file.replace(/\.js$/, '.ts');
 };
 
+/** The film's measure entry, by each name it re-exports at run time, as the file it comes from. */
 const measureExports = () => {
   const text = readFileSync(FILM_MEASURE, 'utf8');
   const map = new Map<string, string>();
@@ -43,6 +46,7 @@ const measureExports = () => {
   return map;
 };
 
+/** Every repository file `entry` reaches by its run-time imports, itself included. */
 const reached = (entry: string) => {
   const film = measureExports();
   const seen = new Set<string>();

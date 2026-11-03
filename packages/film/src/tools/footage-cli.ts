@@ -140,6 +140,7 @@ const list = Command.make(
   ),
 );
 
+/** `film footage`, over the app's footage library (`FootageLibrary`). */
 export const footage = Command.make('footage').pipe(
   Command.withDescription(
     "The app's camera footage: import an original, make its copies and a take's transcript, sync the originals with the private store, list them",

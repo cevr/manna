@@ -1,3 +1,7 @@
+/**
+ * The upload's plan from a manifest and R2's listing alone: which hymns are
+ * kept, uploaded or in conflict, and which manifests are refused.
+ */
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Option } from 'effect';
 import type { RecordingManifest } from '@manna/hymnal/recording-manifest';

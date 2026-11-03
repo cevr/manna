@@ -1,6 +1,7 @@
 import { Array as Arr, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { type ModuleRecord, type Resolve, type Workspace, recordOf } from './graph.js';
 
+/** A package's name and the files its `exports`, `main` and `bin` name. */
 const PackageJson = Schema.fromJsonString(
   Schema.Struct({
     name: Schema.optionalKey(Schema.String),
@@ -11,16 +12,22 @@ const PackageJson = Schema.fromJsonString(
   }),
 );
 
+/** A package: its directory, its name, and its entry files by the specifier that names them. */
 interface Package {
   readonly dir: string;
   readonly name: Option.Option<string>;
+  /** `.`, `./canvas`, `main` or `bin:bible` → the file, relative to the root. */
   readonly entries: ReadonlyMap<string, string>;
+  /** The TypeScript files its `bin` and `scripts` run, relative to the root. */
   readonly runs: ReadonlyArray<string>;
+  /** Where `~/` points inside the package, from its tsconfig `paths` (`~/*` → `./app/*`): `packages/cli/`. */
   readonly home: Option.Option<string>;
 }
 
+/** A type-level check (`x.types.ts`): it uses the types it pins, and its own names are read by the compiler. */
 const isTypeCheck = (file: string) => file.endsWith('.types.ts');
 
+/** A test, a fixture or its support: code that runs to prove, not to ship. */
 const isTestCode = (file: string) =>
   /\.(test|spec)\.tsx?$/.test(file) ||
   /(^|\/)testing\.tsx?$/.test(file) ||
@@ -28,9 +35,11 @@ const isTestCode = (file: string) =>
   /\/(fixtures|e2e|__tests__)\//.test(file) ||
   /^packages\/[^/]+\/lint\//.test(file);
 
+/** Whether `file` is a module the check reads: TypeScript, and not a dependency or build output. */
 const isSource = (file: string) =>
   /\.tsx?$/.test(file) && !/(^|\/)(node_modules|out|dist|\.deploy|\.alchemy|\.turbo)\//.test(file);
 
+/** The extensions a specifier may leave off, or write as `.js` for a `.ts` file. */
 const candidates = (base: string): ReadonlyArray<string> => [
   base,
   base.replace(/\.js$/, '.ts'),
@@ -41,12 +50,16 @@ const candidates = (base: string): ReadonlyArray<string> => [
   `${base}/index.tsx`,
 ];
 
+/** A package specifier: its name (`@manna/film`, `effect`) and the entry after it (`/canvas`). */
 const SPECIFIER = /^(@[^/]+\/[^/]+|[^/@][^/]*)(\/.*)?$/;
 
+/** A tsconfig's `"~/*": ["./app/*"]`: the directory `~/` stands for, captured as `app/`. */
 const TILDE = /"~\/\*"\s*:\s*\[\s*"\.\/([^"*]*)\*"/;
 
+/** A script command that runs a TypeScript file: `bun src/x.ts`, `bun run --cwd . src/x.ts`. */
 const RUNS_FILE = /(?:^|[\s;&|(])(?:bun|node|tsx)\s+(?:(?:run|--\S+)\s+)*(\S+\.tsx?)(?=\s|$)/g;
 
+/** Package files that run without an importer or a script naming them, by what runs them. */
 const RUN_BY_NAME: ReadonlyMap<string, string> = new Map([
   [
     'packages/cli/src/main.ts',
@@ -64,6 +77,7 @@ const RUN_BY_NAME: ReadonlyMap<string, string> = new Map([
   ['packages/scripts/src/precommit-typecheck.ts', 'the pre-commit typecheck lefthook.yml runs'],
 ]);
 
+/** The `package.json` of directory `dir`, read: none for a directory that is no package. */
 const readPackage = (root: string, dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -103,6 +117,7 @@ const readPackage = (root: string, dir: string) =>
     });
   });
 
+/** Every module under `dir`, as `dir/relative/path`, with the parser's reading of it. */
 const readModules = (root: string, dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -119,6 +134,7 @@ const readModules = (root: string, dir: string) =>
     );
   });
 
+/** The directories of a group (`packages`, `apps`): `packages/film`, … */
 const groupDirs = (root: string, group: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -127,6 +143,11 @@ const groupDirs = (root: string, group: string) =>
     return names.map((name) => `${group}/${name}`);
   });
 
+/**
+ * How `from`, written in `user`, points at a module of the workspace: a
+ * relative path, or a package's specifier through the entries its
+ * `package.json` names; none for a dependency.
+ */
 const resolver =
   (
     path: Path.Path,
@@ -160,6 +181,7 @@ const resolver =
     );
   };
 
+/** The workspace under `root`: its files read, its packages' entries and specifiers known. */
 export const readWorkspace = (root: string) =>
   Effect.gen(function* () {
     const path = yield* Path.Path;

@@ -1,3 +1,22 @@
+/**
+ * Every chord the page can show, fingered, checked against the guitar by
+ * rule and not against the table that fingers it: each hymn's chords, Simple
+ * and Advanced, in every key a transpose from -5 to 6 and a capo from 0 to 11
+ * reach (the page shows a chord in the played key alone, so each key is
+ * walked once). Then the whole vocabulary, a superset: each of the fourteen
+ * qualities on each of the twelve roots, alone and over each of the eleven
+ * other basses.
+ *
+ * The rules: the strings sound the chord's tones (and its bass) alone; every
+ * tone sounds but the fifth; the lowest string sounding is the bass, or the
+ * root when the fingering says it plays the chord over its root; each dot is
+ * one finger, 1 to 4; a barre lies at the lowest fret, every string it
+ * crosses held at it or above, its finger on no dot off it; fingers rise
+ * with the frets, but the barre's; no more than four fingers, four frets,
+ * and at least four strings sounding; the words a screen reader reads name
+ * no capo.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import * as Chord from '@manna/hymnal/chord';
 import { Option } from 'effect';
@@ -10,6 +29,7 @@ import { simple } from './simple';
 const OPEN_STRINGS = [4, 9, 2, 7, 11, 4];
 const mod12 = (n: number) => ((n % 12) + 12) % 12;
 
+/** Each quality's tones above its root, written out here apart from the module. */
 const TONES: Record<Chord.Quality, ReadonlyArray<number>> = {
   '': [0, 4, 7],
   m: [0, 3, 7],
@@ -29,6 +49,7 @@ const TONES: Record<Chord.Quality, ReadonlyArray<number>> = {
 
 const QUALITIES: ReadonlyArray<Chord.Quality> = Chord.Quality.literals;
 
+/** A chord at pitch level: its root, quality and bass as pitch classes. */
 interface Sounding {
   readonly root: number;
   readonly quality: Chord.Quality;
@@ -52,6 +73,7 @@ const soundingOf = (c: Chord.Chord, key: Chord.Key): Sounding => {
 
 const idOf = (s: Sounding) => `${s.root}${s.quality}/${Option.getOrElse(s.bass, () => -1)}`;
 
+/** The pitch class each sounding string sounds, the low E first. */
 const heardOf = (f: Fingering): ReadonlyArray<number> =>
   f.strings.flatMap((play, k) => {
     const open = OPEN_STRINGS[k] ?? 0;
@@ -66,6 +88,7 @@ const dotsOf = (f: Fingering): ReadonlyArray<Dot> =>
       (play._tag === 'Fretted' && [{ string: k, fret: play.fret, finger: play.finger }]) || [],
   );
 
+/** The tones sounded: the chord's alone (and its bass), each but the fifth, over the bass, on four strings or more. */
 const toneFaults = (f: Fingering, s: Sounding): ReadonlyArray<string> => {
   const heard = heardOf(f);
   const tones = TONES[s.quality].map((t) => mod12(s.root + t));
@@ -85,6 +108,10 @@ const toneFaults = (f: Fingering, s: Sounding): ReadonlyArray<string> => {
   ];
 };
 
+/**
+ * The barre: at the lowest fret, each string it crosses held at it or above,
+ * those at its fret by its finger, and its finger on no other dot.
+ */
 const barreFaults = (f: Fingering, b: Barre, low: number): ReadonlyArray<string> => [
   ...((b.fret !== low && [`barre at ${b.fret}, not the lowest fret ${low}`]) || []),
   ...dotsOf(f)
@@ -101,9 +128,11 @@ const barreFaults = (f: Fingering, b: Barre, low: number): ReadonlyArray<string>
   }),
 ];
 
+/** The words a screen reader reads name no capo: a shape is the same at any fret. */
 const labelFaults = (label: string): ReadonlyArray<string> =>
   (/capo/i.test(label) && ['its label names a capo']) || [];
 
+/** The hand: fingers 1 to 4, one string each but the barre's, rising with the frets, within four frets; the box's first fret. */
 const handFaults = (f: Fingering): ReadonlyArray<string> => {
   const dots = dotsOf(f);
   if (dots.length === 0) return [];
@@ -130,16 +159,19 @@ const handFaults = (f: Fingering): ReadonlyArray<string> => {
   ];
 };
 
+/** The chords one hymn's page shows, keyed by what they sound, in each key a move reaches. */
 const chordsOf = (h: HymnChords): ReadonlyArray<Chord.Chord> =>
   [...h.stanzas, ...Option.toArray(h.refrain)].flatMap((part) => {
     if (part._tag !== 'Sung') return [];
     return part.lines.flat(2).flatMap((box) => box.chords);
   });
 
+/** Each chord once, by its degrees. */
 const distinct = (chords: ReadonlyArray<Chord.Chord>): ReadonlyArray<Chord.Chord> => [
   ...new Map(chords.map((c) => [`${c.root}${c.quality}/${c.bass}`, c])).values(),
 ];
 
+/** The keys a move reaches from `key`: a transpose from -5 to 6, less a capo from 0 to 11. */
 const keysOf = (key: Chord.Key): ReadonlyArray<Chord.Key> => {
   const moves = Array.from({ length: 12 }, (_, t) => t - 5).flatMap((transpose) =>
     Array.from({ length: 12 }, (_, capo) => playedKey(key, { transpose, capo })),
@@ -147,6 +179,7 @@ const keysOf = (key: Chord.Key): ReadonlyArray<Chord.Key> => {
   return [...new Map(moves.map((played) => [keyName(played), played])).values()];
 };
 
+/** Every chord a hymn's page shows, Simple and Advanced, in every key a move reaches, once for each sound. */
 const shown = (): ReadonlyArray<readonly [Chord.Chord, Chord.Key]> => {
   const book = chordBook(readChords());
   const out = new Map<string, readonly [Chord.Chord, Chord.Key]>();
@@ -165,6 +198,7 @@ interface Checked {
   readonly unfingered: ReadonlyArray<string>;
 }
 
+/** Each chord's broken rules, those played over their root instead, and those with no fingering. */
 const check = (chords: ReadonlyArray<readonly [Chord.Chord, Chord.Key]>): Checked => {
   const results = chords.map(([c, key]) => {
     const name = Chord.format(c, key);
@@ -196,6 +230,7 @@ const check = (chords: ReadonlyArray<readonly [Chord.Chord, Chord.Key]>): Checke
   };
 };
 
+/** What the walk saw, printed beside the run. */
 const report = (lines: ReadonlyArray<string>) => {
   // oxlint-disable-next-line effect/noGlobals -- the walk prints the count it fingered and each chord played over its root, as the run's record.
   console.log(lines.join('\n'));

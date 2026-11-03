@@ -18,8 +18,10 @@ import { type GestureAt, C, person, piece } from '../../kit.ts';
 import { CITY_FRONT, cityBack, cityFront } from '../../city.ts';
 import { herald, ministry } from '../../heaven.ts';
 
+/** Where the sanctuary floats, on the far plane. */
 const SANCTUARY: Pt = [960, -110];
 
+/** The fields, back to front: centre, size, seed, and when the rain reaches each. */
 const FIELDS = [
   { x: 500, y: 800, w: 1500, h: 260, seed: 61, reach: 0.15 },
   { x: 1500, y: 830, w: 1400, h: 280, seed: 62, reach: 0.35 },
@@ -28,11 +30,13 @@ const FIELDS = [
   { x: 1600, y: 1080, w: 1500, h: 240, seed: 65, reach: 0.9 },
 ] as const;
 
+/** The banner's words, written across the angel's flight once it has slowed to glide. */
 const WRITTEN: ReadonlyArray<Key> = [
   [0.2, 0],
   [0.32, 1, 'linear'],
 ];
 
+/** The angel's way across the sky over `fly`: in fast, a slow glide while the words can be read, out fast. */
 const FLY_X: ReadonlyArray<Key> = [
   [0, -200],
   [0.25, 1150, 'outCubic'],
@@ -40,6 +44,7 @@ const FLY_X: ReadonlyArray<Key> = [
   [1, 3400, 'inCubic'],
 ];
 
+/** The scarlet specks over the land. */
 const SPECKS = (() => {
   const r = rng(1844);
   return Array.from({ length: 11 }, (_, i) => ({
@@ -50,13 +55,16 @@ const SPECKS = (() => {
   }));
 })();
 
+/** Rain streaks: a fixed field that scrolls down and a little left. */
 const DROPS = (() => {
   const r = rng(7);
   return Array.from({ length: 160 }, () => ({ x: r() * 2200, y: r() * 1200, v: 0.8 + r() * 0.4 }));
 })();
 
+/** A watcher's hand, waving up at the angel as they turn (written per watcher). */
 const WAVING: GestureAt = { to: [60, -190], reach: 0, grip: 'open' };
 
+/** The rooftops that hold a watcher: every other block of the front row. */
 const WATCHERS = CITY_FRONT.filter((_, i) => i % 2 === 1);
 
 export const rain = drawing({

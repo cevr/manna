@@ -1,3 +1,14 @@
+/**
+ * The player's stall rules, judged by the world (`src/test/world.ts`): the
+ * player and its adapter run over One's `Audio` and `Network` as each
+ * platform has them, and the world judges the page at each 50 ms step by
+ * the rules O1 to O10 (the spec of the stall rules, "The oracle").
+ *
+ * The seeded cases draw the whole domain, D1 to D13, and fail when any item
+ * of it went unreached. The fixed cases are each counterexample found
+ * before, named by its census id, as a world written out.
+ */
+
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Clock, Console, Effect, Option } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -28,6 +39,7 @@ const seeds = Number(process.env['WORLD_SEEDS'] ?? 24);
 const firstSeed = Number(process.env['WORLD_FROM'] ?? 1);
 const seconds = 90;
 
+/** Every rule a seed broke: the first time each, and how many steps after. */
 const report = (seed: number, w: World) => {
   const first = new Map<string, { t: number; detail: string; n: number }>();
   for (const it of w.breaches) {
@@ -40,6 +52,7 @@ const report = (seed: number, w: World) => {
   );
 };
 
+/** One platform's seeds, each 90 s of the world drawn from its seed. */
 const seeded = (platform: Platform, from = 1, count = seeds) =>
   Effect.gen(function* () {
     const clock = yield* TestClock.testClockWith(Effect.succeed);
@@ -85,6 +98,7 @@ describe('the player by the world: seeded', () => {
     );
 });
 
+/** A fixed world on `platform`: `body` drives it; it ends with no rule broken unless `breaks`. */
 const fixed = (
   name: string,
   platform: Platform,
@@ -109,6 +123,7 @@ const fixed = (
   );
 
 const sound = (w: World) => w.phase === 'sound';
+/** A first load as the fixed worlds draw it, then loads of `ms` each. */
 const loadsThen = (ms: number) => {
   let loads = 0;
   return () => {
@@ -117,13 +132,16 @@ const loadsThen = (ms: number) => {
     return ms;
   };
 };
+/** Whether the device has sounded since the world began. */
 const sounded = (w: World) => w.lastSound > Number.NEGATIVE_INFINITY;
 const tag = (w: World) => w.page();
+/** Start a hymn and play until the page shows Playing. */
 const playing = (w: World) =>
   Effect.gen(function* () {
     w.send(Command.Start({ track: morning }));
     expect(yield* w.until(() => tag(w) === 'Playing', 10_000)).toBe(true);
   });
+/** Seek to `to` seconds and play there until the page shows Playing. */
 const playingAt = (w: World, to: number) =>
   Effect.gen(function* () {
     yield* playing(w);
@@ -147,6 +165,7 @@ const retry = (w: World) => {
   return shown._tag === 'Buffering' && shown.retry;
 };
 
+/** A seek asked of the world's device directly; what One answered, as it stands. */
 const asked = (w: World, positionMs: number) => {
   const answer = {
     settled: 'no' as 'no' | 'resolved' | 'rejected',
@@ -160,6 +179,7 @@ const asked = (w: World, positionMs: number) => {
   );
   return answer;
 };
+/** The world's device with a recording loaded and ready, the player never asked. */
 const readied = (w: World) =>
   Effect.gen(function* () {
     void w.audio.play('https://hymns.test/1.mp3');
@@ -312,6 +332,7 @@ describe("the world draws One's seek completion order (rw r2 M8)", () => {
 });
 
 describe("the world draws Android's pause before prepare (rw r3 decision (a))", () => {
+  /** What One says of the device now, as the adapter would read it. */
   const status = (w: World) =>
     Effect.gen(function* () {
       let seen = Option.none<Status>();
@@ -674,6 +695,7 @@ describe('the player by the world: each earlier counterexample', () => {
         }),
     );
 
+  /** Each sweep seed traced and cleared: run alone, it breaks no rule. */
   const traced: Record<Platform, ReadonlyArray<number>> = {
     ios: [119, 120, 278, 289, 144, 143, 2776],
     android: [235, 255, 90, 42],
@@ -983,6 +1005,7 @@ describe('the player by the world: each earlier counterexample', () => {
 });
 
 describe('the player by the world: the part 5 sweep (rw r3 part 6)', () => {
+  /** One seed of `platform`, 90 s as the seeded case draws it: the rules it broke. */
   const seed = (name: string, platform: Platform, at: number) =>
     it.effect(`${name} (${platform} ${at}) breaks no rule`, () =>
       Effect.gen(function* () {
@@ -1043,6 +1066,7 @@ describe('the player by the world: the part 5 sweep (rw r3 part 6)', () => {
 
   seed('offline, a seek refused while loading lands again at the place stood', 'ios', 889);
 
+  /** Lags drawn in order, then 50 ms: the answers they time come in the order the test wants. */
   const lags = (first: ReadonlyArray<number>) => {
     const queue = [...first];
     return {
@@ -1090,6 +1114,7 @@ describe('the player by the world: the part 5 sweep (rw r3 part 6)', () => {
 });
 
 describe('the player by the world: the part 6 sweep (rw r3 part 7)', () => {
+  /** One seed of `platform`, 90 s as the seeded case draws it: the rules it broke. */
   const seed = (name: string, platform: Platform, at: number) =>
     it.effect(`${name} (${platform} ${at}) breaks no rule`, () =>
       Effect.gen(function* () {
@@ -1134,6 +1159,7 @@ describe('the player by the world: the part 6 sweep (rw r3 part 7)', () => {
 });
 
 describe('the player by the world: the part 7 sweep (rw r3 part 8)', () => {
+  /** One seed of `platform`, 90 s as the seeded case draws it: the rules it broke. */
   const seed = (name: string, platform: Platform, at: number) =>
     it.effect(`${name} (${platform} ${at}) breaks no rule`, () =>
       Effect.gen(function* () {
@@ -1157,6 +1183,7 @@ describe('the player by the world: the part 7 sweep (rw r3 part 8)', () => {
 });
 
 describe('the player by the world: the part 8 sweep (rw r3 part 9)', () => {
+  /** One seed of `platform`, 90 s as the seeded case draws it: the rules it broke. */
   const seed = (name: string, platform: Platform, at: number) =>
     it.effect(`${name} (${platform} ${at}) breaks no rule`, () =>
       Effect.gen(function* () {
@@ -1197,6 +1224,7 @@ describe('a seek while Playing keeps the page Playing (rw r3 verify D1)', () => 
 });
 
 describe('a pair finished after the let-go sets the place (rw r3 web 360)', () => {
+  /** The lags as drawn: 50 ms, then those `after` gives once the pause is pressed. */
   const lags = (after: number[]) => () => after.shift() ?? 50;
   const after = new Array<number>();
   fixed(
@@ -1602,16 +1630,19 @@ describe('the oracle judges by the world alone (rw r2 M1 to M7)', () => {
 describe('a wrong page the oracle changes could excuse stays red (rw r3 attacks)', () => {
   const rules = (w: World) => w.breaches.map((it) => it.rule);
   const resumed = 'O6 a Resume played from another place';
+  /** A play from `from` ms, asked as a wrong page would. */
   const wrongPlay = (w: World, from: number) =>
     Effect.gen(function* () {
       yield* Effect.forkChild(Effect.ignore(w.playback.play('wrong', from)));
       yield* w.run(1000);
     });
+  /** A Resume, its play asked first from `from` ms as a wrong page would. */
   const wrongResume = (w: World, from: number) =>
     Effect.gen(function* () {
       w.send(Command.Resume());
       yield* wrongPlay(w, from);
     });
+  /** Pause, a Resume from Paused (which asks no play), `between`, then a wrong page's play. */
   const pausedThenWrong = (w: World, from: number, between: Effect.Effect<void> = Effect.void) =>
     Effect.gen(function* () {
       w.send(Command.Pause());

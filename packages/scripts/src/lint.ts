@@ -8,6 +8,7 @@ import { availableParallelism } from 'node:os';
 import { gateFiles, lintIgnored } from './guard/files.js';
 import { partsOf, runParts, shareOf, sizesOf } from './guard/parts.js';
 
+/** The files oxlint lints, by extension. */
 const LINTED = /\.[cm]?[jt]sx?$/;
 
 Effect.gen(function* () {

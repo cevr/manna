@@ -7,6 +7,7 @@ export type PropsInput = HTMLProps | PropsGetter | null | undefined | false;
 
 type Handler = (...args: Array<unknown>) => unknown;
 
+/** Whether `key` names an event handler prop (`onClick`, `onKeyDown`, …). */
 function isEventHandlerKey(key: string): boolean {
   const code2 = key.charCodeAt(2);
   return key.charCodeAt(0) === 111 && key.charCodeAt(1) === 110 && code2 >= 65 && code2 <= 90;
@@ -16,6 +17,10 @@ function isPropsGetter(input: PropsInput): input is PropsGetter {
   return typeof input === 'function';
 }
 
+/**
+ * The sources a merge reads: a props getter is called once, with a live view
+ * of the sources before it, and what it returns replaces them.
+ */
 function resolveSources(inputs: ReadonlyArray<PropsInput>): Array<HTMLProps> {
   let sources: Array<HTMLProps> = [];
   for (const input of inputs) {
@@ -32,6 +37,7 @@ function resolveSources(inputs: ReadonlyArray<PropsInput>): Array<HTMLProps> {
   return sources;
 }
 
+/** Marks `event` so a handler may stop the ones merged before it. */
 function makeEventPreventable<E extends Event>(event: E): BaseUIEvent<E> {
   const preventable = event as BaseUIEvent<E> & { baseUIHandlerPrevented?: boolean };
   preventable.preventBaseUIHandler = () => {
@@ -58,6 +64,7 @@ function isHandlerValue(value: unknown): boolean {
   return typeof value === 'function' || (Array.isArray(value) && typeof value[0] === 'function');
 }
 
+/** Runs `handlers` (leftmost first in the array) rightmost first, honouring prevention. */
 function runHandlers(handlers: ReadonlyArray<unknown>, args: Array<unknown>): unknown {
   const event = args[0];
   if (isEvent(event)) {
@@ -78,6 +85,7 @@ function runHandlers(handlers: ReadonlyArray<unknown>, args: Array<unknown>): un
 
 const STYLE_DECLARATION = /([\w-]+)\s*:\s*([^;]*)/g;
 
+/** A `style` string as Solid's object form. */
 function styleToObject(style: string): Record<string, string> {
   const out: Record<string, string> = {};
   for (const match of style.matchAll(STYLE_DECLARATION)) {
@@ -89,6 +97,7 @@ function styleToObject(style: string): Record<string, string> {
   return out;
 }
 
+/** Merges two style values, `b`'s properties winning. */
 export function mergeStyles(a: unknown, b: unknown): unknown {
   if (a == null || a === false) {
     return b;
@@ -101,6 +110,10 @@ export function mergeStyles(a: unknown, b: unknown): unknown {
   return { ...left, ...right };
 }
 
+/**
+ * Merges two class values: `theirs` first, as Base UI's `mergeClassNames`
+ * puts the class merged later first.
+ */
 export function mergeClassNames(ours: unknown, theirs: unknown): unknown {
   if (theirs == null || theirs === false || theirs === '') {
     return ours;
@@ -115,6 +128,7 @@ function hasKey(source: HTMLProps, key: string): boolean {
   return key in source;
 }
 
+/** A merged, reactive view over the sources `read` returns. */
 function createView(read: () => ReadonlyArray<HTMLProps>): HTMLProps {
   const handlers = new Map<string, Handler>();
   const ownerOf = (key: string): number => {
@@ -221,6 +235,7 @@ function createView(read: () => ReadonlyArray<HTMLProps>): HTMLProps {
   return view;
 }
 
+/** Calls a Solid ref (a callback, or an array of them) with `el`. */
 function applyRef(ref: unknown, el: unknown): void {
   if (typeof ref === 'function') {
     (ref as (el: unknown) => void)(el);
@@ -233,15 +248,22 @@ function applyRef(ref: unknown, el: unknown): void {
   }
 }
 
+/**
+ * Merges sets of props. The rightmost wins, except for event handlers (all
+ * run, rightmost first, each able to stop the ones to its left), `class`
+ * (all kept), `style` (merged) and `ref` (all called).
+ */
 export function mergeProps(...inputs: ReadonlyArray<PropsInput>): HTMLProps {
   return mergePropsN(inputs);
 }
 
+/** `mergeProps` over an array of sources. */
 export function mergePropsN(inputs: ReadonlyArray<PropsInput>): HTMLProps {
   const sources = resolveSources(inputs);
   return createView(() => sources);
 }
 
+/** `mergeProps` over the sources `read` returns, merged again when they change. */
 export function mergePropsLive(read: () => ReadonlyArray<PropsInput>): HTMLProps {
   const sources = createMemo(() => resolveSources(read()));
   return createView(sources);

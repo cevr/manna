@@ -1,19 +1,49 @@
+/**
+ * Where a guitarist strikes each chord change of a sung line, as pure
+ * functions over one line's sung syllables (each its start, length and
+ * melody key in the file's ticks), its chord changes as they come in the
+ * file, and the file's meters. The compiler places every guitar chord by
+ * `strong` when the melody confirms the grid (On the beat), then folds
+ * brief changes for Simpler, or keeps the original anchors for File.
+ * The other rules are the chordfeel study's candidates.
+ *
+ * Every rule keeps a line's chords in order and moves a change only later
+ * in its line: never onto or past the next change's place today, never to
+ * or past the line's end. A change at the line's very start moves only when
+ * a different chord sounds before the line (`before`); its first syllable
+ * then shows that chord held over. When a rule finds no place, the change
+ * stays where it is.
+ *
+ * The beat grid comes from the meters' ticks, bars counted from each
+ * meter's start. A compound meter (6/8, 9/8, 12/8, 6/4) beats in dotted
+ * notes. The strong beats are each bar's first beat and, in a bar of four
+ * beats (4/4, 12/8, 4/2), its third.
+ *
+ * Pure: no file, Bun or Node access.
+ */
+
 import * as Chord from './chord.js';
 import { type Hymn, PER_BEAT, sung } from './hymn.js';
 import type { TimeSignature } from './midi.js';
 import { Schema } from 'effect';
 
+/** Placement changes anchors; chord spelling is a separate reader choice. */
 export const Placement = Schema.Literals(['beat', 'simpler', 'file']);
 export type Placement = typeof Placement.Type;
 
 export interface Syllable {
+  /** When it is sung, in ticks. */
   readonly start: number;
+  /** How long it is sung, in ticks: its first note's start to its last note's end. */
   readonly length: number;
+  /** The melody's MIDI key at its start, when the tune has a note there. */
   readonly key: number | undefined;
 }
 
 export interface Change {
+  /** The syllable it is shown on, by its place in the line. */
   readonly syllable: number;
+  /** Ticks after that syllable's start: 0 is on the syllable itself. */
   readonly at: number;
   readonly chord: Chord.Chord;
 }
@@ -21,18 +51,24 @@ export interface Change {
 export interface Line {
   readonly syllables: readonly Syllable[];
   readonly changes: readonly Change[];
+  /** The tick the next sung line starts at: the line's last chord sounds until then. */
   readonly until: number;
+  /** The chord sounding before the line starts, when one does. */
   readonly before: Chord.Chord | undefined;
 }
 
 export interface Grid {
   readonly ticksPerBeat: number;
+  /** Every meter from the tick it starts, the first at tick 0. */
   readonly meters: readonly TimeSignature[];
+  /** The key's tonic as a pitch class: chord degrees are above it. */
   readonly tonic: number;
 }
 
 export interface Beat {
+  /** The bar, from 0 at the file's start. */
   readonly bar: number;
+  /** The beat within the bar, from 0; for a tick off the beat, the beat it falls in. */
   readonly beat: number;
   readonly on: boolean;
   readonly strong: boolean;
@@ -84,8 +120,10 @@ const isStrongBeat = (meter: TimeSignature, beat: number) => {
   const beats = beatsInBar(meter);
   return beat === 0 || (beats === 4 && beat === 2);
 };
+/** The files strike notes up to a few ticks off the grid. */
 const slackOf = (grid: Grid) => grid.ticksPerBeat / 16;
 
+/** The meter sounding at a tick, and the bars before it began. */
 const meterAt = (grid: Grid, tick: number) => {
   let bars = 0;
   let meter = grid.meters[0] ?? { tick: 0, numerator: 4, denominator: 4 };
@@ -101,6 +139,7 @@ const meterAt = (grid: Grid, tick: number) => {
   return { meter, bars };
 };
 
+/** Where a tick falls on the meters' grid. */
 export const beatAt = (grid: Grid, tick: number): Beat => {
   const { meter, bars } = meterAt(grid, tick);
   const beat = beatTicks(grid, meter);
@@ -113,6 +152,7 @@ export const beatAt = (grid: Grid, tick: number): Beat => {
   return { ...at, on, strong: on && isStrongBeat(meter, at.beat) };
 };
 
+/** The beat ticks after `from` and before `to`: every beat, or the strong ones alone. */
 const beatsBetween = (grid: Grid, from: number, to: number, strong: boolean): number[] => {
   const out: number[] = [];
   const slack = slackOf(grid);
@@ -129,11 +169,14 @@ const beatsBetween = (grid: Grid, from: number, to: number, strong: boolean): nu
   return out;
 };
 
+/** The first strong beat's tick after `from` and before `to`, when one comes. */
 export const nextStrong = (grid: Grid, from: number, to: number): number | undefined =>
   beatsBetween(grid, from, to, true)[0];
 
+/** A beat's length at a tick: a quarter in 4/4, a dotted quarter in 6/8, a half in 3/2. */
 const beatLengthAt = (grid: Grid, tick: number) => beatTicks(grid, meterAt(grid, tick).meter);
 
+/** The meters the hymnal's files carry: their strong beats are the grids a melody is held against. */
 const METERS: readonly TimeSignature[] = (
   [
     [1, 2],
@@ -153,9 +196,15 @@ const METERS: readonly TimeSignature[] = (
   ] satisfies ReadonlyArray<readonly [number, number]>
 ).map(([numerator, denominator]) => ({ tick: 0, numerator, denominator }));
 
+/** The ticks from one strong beat to the next in a meter: a bar, or half a bar of four beats. */
 const strongEvery = (grid: Grid, meter: TimeSignature) =>
   beatTicks(grid, meter) * (beatsInBar(meter) === 4 ? 2 : beatsInBar(meter));
 
+/**
+ * The ticks a line's melody leans on: each syllable held two beats or more
+ * (one dotted beat in a compound meter), and the line's last, where its
+ * phrase comes to rest.
+ */
 const accentsOf = (grid: Grid, lines: readonly (readonly Syllable[])[]): number[] =>
   lines.flatMap((line) =>
     line.flatMap((s, k) => {
@@ -165,6 +214,18 @@ const accentsOf = (grid: Grid, lines: readonly (readonly Syllable[])[]): number[
     }),
   );
 
+/**
+ * Whether a melody confirms the grid's bars: its accents (`accentsOf`) fall
+ * on the grid's strong beats at least as often as on the strong beats of any
+ * other bar, shifted by any eighth: every meter's whose strong beats are as
+ * far apart as the grid's or further, so a denser grid never wins by
+ * density alone. A file whose tick 0 is not a printed downbeat, or whose
+ * meter is not the printed one, puts its strong beats where the tune does
+ * not lean, and some other bar fits the tune better. A melody with fewer
+ * than two accents confirms nothing: every bar, shifted, puts a strong beat
+ * on a lone accent, so each ties with the grid's and the accent tells no
+ * bar's length.
+ */
 export const confirms = (grid: Grid, lines: readonly (readonly Syllable[])[]): boolean => {
   const accents = accentsOf(grid, lines);
   if (accents.length < 2) return false;
@@ -187,6 +248,11 @@ export const confirms = (grid: Grid, lines: readonly (readonly Syllable[])[]): b
   });
 };
 
+/**
+ * The lines a compiled hymn's bar grid is judged on, each its sung
+ * syllables in the timing's units: stanza 1's played lines, and the
+ * refrain's when it is sung right after stanza 1.
+ */
 export const judgedLines = (hymn: Hymn): Syllable[][] => {
   const timing = hymn.timing;
   if (timing === undefined) return [];
@@ -212,6 +278,7 @@ export const judgedLines = (hymn: Hymn): Syllable[][] => {
 
 const mod12 = (n: number) => ((n % 12) + 12) % 12;
 
+/** Each quality's intervals above its root. */
 const TONES: Record<Chord.Quality, readonly number[]> = {
   '': [0, 4, 7],
   m: [0, 3, 7],
@@ -229,6 +296,7 @@ const TONES: Record<Chord.Quality, readonly number[]> = {
   '7sus4': [0, 5, 7, 10],
 };
 
+/** Whether a MIDI key is a tone of a chord, its degrees above the tonic. */
 export const isChordTone = (grid: Grid, chord: Chord.Chord, key: number): boolean => {
   const degree = mod12(key - grid.tonic);
   return (
@@ -237,9 +305,11 @@ export const isChordTone = (grid: Grid, chord: Chord.Chord, key: number): boolea
   );
 };
 
+/** A change's tick. */
 export const tickOf = (line: Line, change: Change): number =>
   (line.syllables[change.syllable]?.start ?? 0) + change.at;
 
+/** The syllable sung at a tick, and the ticks into it. */
 const placeAt = (line: Line, tick: number, slack: number): Omit<Change, 'chord'> => {
   let syllable = 0;
   line.syllables.forEach((s, k) => {
@@ -249,9 +319,11 @@ const placeAt = (line: Line, tick: number, slack: number): Omit<Change, 'chord'>
   return { syllable, at: Math.abs(tick - start) <= slack ? 0 : tick - start };
 };
 
+/** Syllable onsets from `from` (inclusive) to before `to`, by place. */
 const onsetsBetween = (line: Line, from: number, to: number, slack: number): number[] =>
   line.syllables.flatMap((s, k) => (s.start >= from - slack && s.start < to - slack ? [k] : []));
 
+/** A target finder: the tick a change at `tick` (its index `i`) moves to before `limit`, if any. */
 type Target = (
   line: Line,
   grid: Grid,
@@ -279,6 +351,7 @@ const toneTarget: Target = (line, grid, i, tick, limit) => {
   return k === undefined ? undefined : line.syllables[k]?.start;
 };
 
+/** The first syllable from tick on (its own only when the tick is its start) longer than the one before it. */
 const longFrom = (line: Line, grid: Grid, tick: number, limit: number) => {
   const k = onsetsBetween(line, tick, limit, slackOf(grid)).find((j) => {
     const [before, here] = [line.syllables[j - 1], line.syllables[j]];
@@ -311,6 +384,7 @@ const strongLongTarget: Target = (line, grid, i, tick, limit) => {
   return longFrom(line, grid, strong, limit) ?? strong;
 };
 
+/** Each change moved to its target, bounded by the next change's place today and the line's end. */
 const moveEach = (line: Line, grid: Grid, target: Target): Change[] => {
   const slack = slackOf(grid);
   return line.changes.map((change, i) => {
@@ -326,6 +400,11 @@ const moveEach = (line: Line, grid: Grid, target: Target): Change[] => {
   });
 };
 
+/**
+ * Folds each change that lasts less than a beat into the chord before it;
+ * a first change still that short gives its place to the change after it.
+ * Only changes from the harmony left sounding are retained.
+ */
 const foldShort = (line: Line, grid: Grid, changes: readonly Change[]): Change[] => {
   const lengthOf = (i: number, list: readonly Change[]) => {
     const [here, next] = [list[i], list[i + 1]];
@@ -362,8 +441,10 @@ const TARGETS: Record<RuleId, (line: Line, grid: Grid) => Change[]> = {
   'strong+long': (line, grid) => moveEach(line, grid, strongLongTarget),
 };
 
+/** A line's changes as a rule places them. */
 export const apply = (id: RuleId, line: Line, grid: Grid): Change[] => TARGETS[id](line, grid);
 
+/** Whether a rule puts a line's changes on exactly these syllables, each on the syllable's start. */
 export const reproduces = (
   id: RuleId,
   line: Line,

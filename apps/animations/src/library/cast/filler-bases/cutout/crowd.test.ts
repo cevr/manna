@@ -22,8 +22,10 @@ type Pt = readonly [number, number];
 
 const SEEDS = Array.from({ length: 1000 }, (_, i) => i);
 
+/** The most busts one plane lays (the feast's crowd plane holds 14, `C-plan.md` §1), and two more. */
 const COUNT = 16;
 
+/** Representative placements: the baby's far table, the feast's crowd plane, and the title's guests plane, at the scales they span. */
 const PLACEMENTS: ReadonlyArray<Placement> = [
   { x: 300, top: 560, scale: 0.25 },
   { x: 700, top: 600, scale: 0.3 },
@@ -40,12 +42,18 @@ const FIGURES = CROWDS.flat();
 
 const RAD = Math.PI / 180;
 
+/** `p` turned `deg` clockwise on screen about `c`. */
 const turn = (p: Pt, c: Pt, deg: number): Pt => {
   const [cos, sin] = [Math.cos(deg * RAD), Math.sin(deg * RAD)];
   const [dx, dy] = [p[0] - c[0], p[1] - c[1]];
   return [c[0] + cos * dx - sin * dy, c[1] + sin * dx + cos * dy];
 };
 
+/**
+ * Where a torso point `p` of `figure`'s bust (a sheet point on the lean)
+ * lands on screen at `at`, time `t`: turned by the lean about the root, laid
+ * by the pose about the root less the origin, then by the canvas transform.
+ */
 const torsoAt = (figure: Figure, at: Placement, t: number) => {
   const { pose, transform } = bustAt(figure, at, t);
   const { lean } = idleAt(figure.idle, t);
@@ -62,6 +70,7 @@ const torsoAt = (figure: Figure, at: Placement, t: number) => {
   };
 };
 
+/** A body's lowest drawn points, the kept box's two foot corners, and its hands' row at the same two sides, in its part sheet's frame. */
 const lowOf = (figure: Figure): ReadonlyArray<Pt> => {
   const { root, hands } = rowsOf(figure.body);
   const frame = FRAMES[figure.body];
@@ -74,6 +83,7 @@ const lowOf = (figure: Figure): ReadonlyArray<Pt> => {
   ];
 };
 
+/** A figure's mantle, or `none`. */
 const mantleOf = (f: Figure) => Option.getOrElse(f.mantle, () => 'none');
 
 describe('the crowd kit', () => {

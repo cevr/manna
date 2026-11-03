@@ -1,3 +1,11 @@
+/**
+ * The tab row pinned over the home list (`PinnedTabs`), mounted in a
+ * browser's document (`src/test/setup.ts`) with the real tab row, driven by
+ * the list's offset alone: over generated scroll paths, from the list's top
+ * to deep in it with turns at random, the pinned row is in reach exactly
+ * while `revealAt` says shown, and the layer holds the tab row and no field.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { RegistryProvider } from '@effect/atom-react';
 import { Option } from 'effect';
@@ -12,9 +20,11 @@ import type { TabName } from './tabs';
 
 const names: ReadonlyArray<TabName> = ['Sections', 'Lists', 'Topics', 'Metres', 'Scripture'];
 
+/** The home list's title, 49 pt at the reader's usual text size: the row's resting place. */
 const rest = 49;
 const height = 48;
 
+/** A seeded run of numbers, so a failing path comes back the same. */
 const seeded = (start: number) => {
   let seed = start;
   return (below: number) => {
@@ -23,6 +33,7 @@ const seeded = (start: number) => {
   };
 };
 
+/** A scroll path from the list's top: runs down and up of random lengths, now and then a fling or a pull past the top. */
 const path = (next: (below: number) => number): ReadonlyArray<number> => {
   const out: Array<number> = [];
   let at = 0;
@@ -39,6 +50,7 @@ const path = (next: (below: number) => number): ReadonlyArray<number> => {
   return out;
 };
 
+/** The pinned row over a list at `scroll`, the tab chosen told to `onSelect`, its reveal handed to `onReveal`. */
 function Pinned({
   scroll,
   onSelect,
@@ -57,6 +69,7 @@ function Pinned({
   );
 }
 
+/** True when `element` or a layer holding it is hidden from assistive technology. */
 const unreached = (element: Element) =>
   Option.isSome(Option.fromNullishOr(element.closest('[aria-hidden="true"]')));
 
@@ -75,6 +88,7 @@ const mount = (onSelect: (name: TabName) => void = () => {}) => {
     ),
   );
   const layer = () => Option.fromNullishOr(host.querySelector('[data-testid="shown-tabs"]'));
+  /** The elements under the layer `selector` finds, none when there is no layer. */
   const inLayer = (selector: string) =>
     Option.match(layer(), {
       onNone: () => [],
@@ -82,12 +96,15 @@ const mount = (onSelect: (name: TabName) => void = () => {}) => {
     });
   const scrollTo = (at: number) => act(() => void (scroll.value = at));
   const through = (offsets: ReadonlyArray<number>) => offsets.forEach(scrollTo);
+  /** In reach: in the tree, and not hidden from touch and assistive technology. */
   const inReach = () => Option.exists(layer(), (found) => !unreached(found));
+  /** What `TabList.show` does on a tab tap: the jump, then the shared offset set to the place. */
   const tap = (at: number) =>
     act(() => {
       reveals.forEach((reveal) => reveal.jump(at));
       scroll.value = at;
     });
+  /** The reader's drag on the list begins. */
   const touch = () => act(() => reveals.forEach((reveal) => reveal.touch()));
   const cover = () => reveals.map((reveal) => reveal.cover.value);
   const close = () => {
@@ -97,6 +114,7 @@ const mount = (onSelect: (name: TabName) => void = () => {}) => {
   return { layer, inLayer, scrollTo, through, inReach, tap, touch, cover, close };
 };
 
+/** Offsets from `from` to `to` in steps of `step` points, as a drag's frames report them. */
 const frames = (from: number, to: number, step: number) => {
   const out: Array<number> = [];
   const sign = Math.sign(to - from);
@@ -105,6 +123,13 @@ const frames = (from: number, to: number, step: number) => {
   return out;
 };
 
+/**
+ * One tap from the shown pinned row: where it was shown, the new tab's kept
+ * place (one in six at or above the resting place), its landing (one in four
+ * held short by a short list's end, `clampedStart`, down to the resting
+ * place), and the remounted list's 1 to 4 reports while it lands (its top, a
+ * place at or above the rest, a place on the way), then the landing.
+ */
 const tapOf = (next: (below: number) => number) => {
   const deep = rest + travel + 1 + next(40000);
   const shownAt = deep - travel - next(Math.min(deep - rest - 1 - travel, 600) + 1);

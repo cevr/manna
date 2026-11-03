@@ -1,6 +1,7 @@
 import { type Author, type Credit, creditRoll } from '@manna/film/canvas';
 import { TITLE, script } from './script.ts';
 
+/** The authors the sources are grouped under, in the order the credits give them, after scripture. */
 const AUTHORS: ReadonlyArray<Author> = [
   { name: 'Ellen G. White' },
   { name: 'E. J. Waggoner' },
@@ -11,6 +12,7 @@ const AUTHORS: ReadonlyArray<Author> = [
   },
 ];
 
+/** The film's roll. */
 export const CREDITS: ReadonlyArray<Credit> = creditRoll(
   TITLE,
   script.flatMap((b) => b.cite ?? []),

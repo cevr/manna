@@ -4,6 +4,7 @@ import { library } from '../../../../apps/animations/sounds/library.ts';
 import { auditLibrary } from './sfx-audit.ts';
 import { Library } from './sfx.ts';
 
+/** `prompt`'s verdict, as the audit reads a library holding one generated sound that asks for it. */
 const auditPrompt = (prompt: string) =>
   auditLibrary(
     Schema.decodeSync(Library)({
@@ -67,6 +68,7 @@ describe('a prompt audited', () => {
   });
 });
 
+/** The app library's verdicts, as `sfx audit` reads them (design 6.1). */
 const VERDICTS = {
   'code-sure': [],
   'code-try': ['rope.creak', 'stone.roll', 'pole.creak'],

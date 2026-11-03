@@ -4,8 +4,10 @@ import { pageHref } from '../core/api.ts';
 import { type AskRecord, askStatus } from '../core/ask.ts';
 import { AskStore } from './ask-store.ts';
 
+/** What `/` says when no ask waits on the owner. */
 const NOTHING_WAITS = 'Nothing waits on you';
 
+/** A one-line page of `/`. */
 const line = (words: string, status: number) =>
   HttpServerResponse.setStatus(
     HttpServerResponse.html(
@@ -14,6 +16,7 @@ const line = (words: string, status: number) =>
     status,
   );
 
+/** `/` for the asks as the store lists them (the newest first). */
 const homeAnswer = (
   asks: ReadonlyArray<Pick<AskRecord, 'id' | 'state'>>,
 ): HttpServerResponse.HttpServerResponse =>
@@ -25,6 +28,7 @@ const homeAnswer = (
     },
   );
 
+/** `/`, read from the store now. */
 export const home = Effect.gen(function* () {
   const asks = yield* AskStore;
   return yield* asks.list.pipe(

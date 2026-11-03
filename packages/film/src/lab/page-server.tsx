@@ -12,6 +12,10 @@ import type { Host } from '../browser/host.ts';
 import { ServerHost } from '../browser/host-server.ts';
 import { FACE_HEAD, faceHold } from '../player/face.ts';
 
+/**
+ * `app` over a host of the page as `asked` (`host-server.ts`: the URL asked,
+ * the asking browser's keys, no window), which lives as long as the render does.
+ */
 export const ServerHosted = (props: {
   readonly asked: PageAsked;
   readonly app: (host: Host) => JSX.Element;
@@ -25,13 +29,19 @@ export const ServerHosted = (props: {
   );
 };
 
+/** A page as its server entry renders it. */
 interface ServedPage {
+  /** The class the page's body carries. */
   readonly bodyClass: string;
+  /** The class of the page's root, where its components mount. */
   readonly rootClass: string;
+  /** The page's styles, in its head before its markup. */
   readonly style: string;
+  /** The page's components for `request`: never reading the browser's globals. */
   readonly app: (request: PageRequest) => JSX.Element;
 }
 
+/** `page` as the lab renders it on the server. */
 export const pageRender = (page: ServedPage): PageRender => ({
   bodyClass: page.bodyClass,
   render: (request, sink) => {

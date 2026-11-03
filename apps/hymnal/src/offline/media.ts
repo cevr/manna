@@ -1,4 +1,5 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noTryCatch, effect/noThrowStatement, eslint/no-await-in-loop -- OPFS adapter: keep writable-stream close/abort and DOMException handling at the host boundary; every public operation enters Effect.tryPromise. */
+/** Browser media lives in OPFS, apart from the HTTP cache and synchronous settings. */
 import { Effect, Layer, Schema } from 'effect';
 import {
   Entry,

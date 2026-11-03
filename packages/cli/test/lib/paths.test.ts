@@ -19,6 +19,11 @@ describe('CLI install-owned data paths', () => {
   });
 });
 
+/** `__MANNA_CLI_ROOT__` is baked into the binary at build time, so it names the
+ *  build machine's checkout. A binary that is copied, installed into a prefix,
+ *  or shipped to another machine must not follow that path — it points at a
+ *  directory that need not exist. These assert the resolution order that makes
+ *  the copy work: exe-adjacent first, build root only as the dev fallback. */
 describe('moved-binary data resolution', () => {
   const BUILD_ROOT = '/Users/builder/checkout/packages/cli';
 

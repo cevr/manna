@@ -1,14 +1,26 @@
 import { Schema } from 'effect';
 
+/** A place or a length in the figure's units: any finite number. */
 export const Units = Schema.Finite;
 
+/** A length in the figure's units that is more than nothing. */
 export const Length = Schema.Finite.check(Schema.isGreaterThan(0));
 
+/** A point in the figure's units, (x, y), y down. */
 export const Point = Schema.Tuple([Schema.Finite, Schema.Finite]);
 
 // oxlint-disable-next-line film/one-clock-epsilon -- a share of an outline's span, no time
 const FLAT = 1e-9;
 
+/**
+ * An outline's points do not all lie at one point or on one line. They all
+ * lie at one point when each lies at the first, and on one line when none
+ * lies off the line through the first and the point farthest from it by
+ * more than `FLAT` of the span between those two, so float error in a
+ * line's numbers does not take its points off it. That is all it checks: an
+ * outline that runs out and back along itself is taken. An outline of fewer
+ * than three points is refused by its length alone.
+ */
 const notOnOneLine = Schema.makeFilter((pts: ReadonlyArray<readonly [number, number]>) => {
   const [first, ...rest] = pts;
   if (first === undefined || rest.length < 2) return true;
@@ -25,8 +37,18 @@ const notOnOneLine = Schema.makeFilter((pts: ReadonlyArray<readonly [number, num
     : 'its points all lie on one line, so it encloses no area';
 });
 
+/**
+ * An outline in the figure's units: three points or more, not all at one
+ * point or on one line (`notOnOneLine`), closed from the last back to the
+ * first.
+ */
 export const Outline = Schema.Array(Point).check(Schema.isMinLength(3), notOnOneLine);
 
+/**
+ * The corners an outline is cut from, in the figure's units: three or more,
+ * not all on one line, no two in turn at one point, so each is rounded along
+ * an edge either side of it.
+ */
 export const Corners = Outline.check(
   Schema.makeFilter((corners: ReadonlyArray<readonly [number, number]>) => {
     const at = corners.findIndex((c, i) => {
@@ -39,14 +61,17 @@ export const Corners = Outline.check(
   }),
 );
 
+/** A share of a whole, more than nothing and less than all. */
 export const Share = Schema.Finite.check(
   Schema.isBetween({ minimum: 0, maximum: 1, exclusiveMinimum: true, exclusiveMaximum: true }),
 );
 
+/** An opacity: more than none, and at most whole. */
 export const Opacity = Schema.Finite.check(
   Schema.isBetween({ minimum: 0, maximum: 1, exclusiveMinimum: true }),
 );
 
+/** An outline cut from its corners: one radius rounds them all, or each corner takes its own, in turn. */
 export const oneRadiusOrEach = Schema.makeFilter(
   (cut: { readonly corners: ReadonlyArray<unknown>; readonly radii: ReadonlyArray<unknown> }) =>
     cut.radii.length === 1 || cut.radii.length === cut.corners.length

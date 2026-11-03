@@ -29,8 +29,10 @@ const manifest: Manifest<SoundManifest> = {
   empty: {},
 };
 
+/** A generated file, keyed by its request's hash. */
 const Asset = Schema.Struct({ hash: Schema.String, file: Schema.String });
 
+/** A manifest of many keyed assets, so racing updates each add their own. */
 const Assets = Schema.Struct({ assets: Schema.Record(Schema.String, Asset) });
 const assets: Manifest<typeof Assets.Type> = {
   file: '/films/test/assets.json',
@@ -38,6 +40,10 @@ const assets: Manifest<typeof Assets.Type> = {
   empty: { assets: {} },
 };
 
+/**
+ * A store over `files`, its locks `locks`: another process, as far as its
+ * locks know, beside every other store over the same ones.
+ */
 const storeOn = (files: Map<string, Uint8Array>, locks: ManifestLockService) =>
   Effect.map(
     Layer.build(
@@ -49,12 +55,19 @@ const storeOn = (files: Map<string, Uint8Array>, locks: ManifestLockService) =>
     Context.get(ContentStore),
   );
 
+/** A store of its own over the disk, its locks this host's: another process, as far as they know. */
 const storeOnDisk = Effect.map(Layer.build(ContentStore.layer), Context.get(ContentStore));
 
+/** An entry `key` added to the assets. */
 const withAsset = (key: string) => (m: typeof Assets.Type) => ({
   assets: { ...m.assets, [key]: { hash: key, file: `${key}.flac` } },
 });
 
+/**
+ * `effect` run while the test clock passes every wait a writer makes for
+ * another's lock, from once `refused` (its first refusal, when the disk is
+ * between it and its first try) is done.
+ */
 const waited = <A, E>(effect: Effect.Effect<A, E>, refused: Effect.Effect<unknown> = Effect.void) =>
   Effect.gen(function* () {
     const running = yield* Effect.forkChild(effect);
@@ -63,6 +76,7 @@ const waited = <A, E>(effect: Effect.Effect<A, E>, refused: Effect.Effect<unknow
     return yield* Fiber.join(running);
   });
 
+/** Bun's lock, telling `refused` when it is refused. */
 const tellingRefusal = (refused: Deferred.Deferred<boolean>): ManifestLockService => ({
   take: (file) =>
     bunManifestLock
@@ -74,6 +88,7 @@ const tellingRefusal = (refused: Deferred.Deferred<boolean>): ManifestLockServic
       ),
 });
 
+/** The timeout of a test that starts a process of its own: a cold start's time is the machine's. */
 const SPAWNS_MS = 30_000;
 
 describe('ContentStore', () => {

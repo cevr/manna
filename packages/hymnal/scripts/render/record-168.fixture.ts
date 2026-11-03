@@ -1,3 +1,4 @@
+/** Hymn 168's record as the first full run wrote it: failed on its violas, which end 0.62 s before the hymn's last event. */
 export const RECORD_168 = {
   hymn: 168,
   key: 'd416dd4f4052276e6ab7068b8485cd43dc2fd902a801a5a06ce0c5407d5c8ffd',

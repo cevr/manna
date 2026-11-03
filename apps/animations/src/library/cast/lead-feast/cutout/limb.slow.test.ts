@@ -13,6 +13,7 @@ const INK_L = 20;
 const MIXED_CONTACT_PX_OF_TWO_BILINEAR_FOOTPRINTS_AT_1X = 8;
 const INK_MIX_ROUNDING_BYTES = 2;
 
+/** Independent rigid-chain oracle: rotate cuff about elbow, then hand about the posed cuff. */
 const inverse = (limb: ReturnType<typeof measuredHand>['limb'], elbow: number, wrist: number) => {
   const e = (elbow * Math.PI) / 180,
     angle = ((elbow + wrist) * Math.PI) / 180;
@@ -110,6 +111,7 @@ const measuredHand = (puppet: Puppet) => {
   return { arm, limb, alpha, sample, clothAt, inkAt };
 };
 
+/** Paper, ink, cloth and skin in the rendered result, independent of source ownership. */
 const kindsOf = (r: Raster) => {
   const kinds = new Uint8Array(r.width * r.height);
   for (let i = 0; i < kinds.length; i++) {

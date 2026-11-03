@@ -41,6 +41,7 @@ const services = Layer.mergeAll(AssetsTest, layerTest(layerOf(WITH_A_FILM))).pip
   Layer.provide(BunServices.layer),
 );
 
+/** A client whose every request is answered by the Worker's policy, in this process. */
 const layerClient = Layer.effect(
   HttpClient.HttpClient,
   Effect.gen(function* () {

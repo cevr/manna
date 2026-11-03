@@ -39,6 +39,11 @@ export class NoteOperationError extends Data.TaggedError(
   scriptOutput?: string;
 }> {}
 
+/**
+ * Lists all notes in the default Notes account.
+ * @returns An Effect that resolves with an array of NoteListItem objects.
+ * @throws NoteOperationError if the AppleScript execution or parsing fails.
+ */
 export const listNotes = Effect.fn('listNotes')(function* () {
   yield* Effect.log('🔄 Fetching list of notes...');
   const script = `
@@ -107,6 +112,12 @@ export const listNotes = Effect.fn('listNotes')(function* () {
   return notes;
 });
 
+/**
+ * Deletes a specific note.
+ * @param noteId The ID of the note to delete.
+ * @returns An Effect that resolves when the deletion is complete.
+ * @throws NoteOperationError if the note is not found or the script fails.
+ */
 export const deleteNote = Effect.fn('deleteNote')(function* (noteId: string) {
   yield* Effect.log(`🔄 Deleting note ID: ${noteId}...`);
   const script = `
@@ -142,6 +153,12 @@ export const deleteNote = Effect.fn('deleteNote')(function* (noteId: string) {
   yield* Effect.log(`✅ Note deleted: ${noteId}.`);
 });
 
+/**
+ * Finds a note by its exact title in a specific folder.
+ * @param title The exact title to search for.
+ * @param folder The folder name to search in.
+ * @returns An Effect that resolves with Option<NoteListItem>.
+ */
 export const findNoteByTitle = Effect.fn('findNoteByTitle')(function* (
   title: string,
   folder: string,

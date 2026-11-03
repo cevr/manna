@@ -10,12 +10,16 @@ import { POSES_PAPERS, TURNAROUND_PAPERS } from './papers.ts';
 
 export { FRAMES, JOINTS };
 
+/** A view of hers, by its name in her sheets' views. */
 type CutView = keyof typeof FRAMES;
 
+/** A view of hers holding the baby, whose arms are cut by their own outlines rather than by a sleeve's edge. */
 type PoseView = 'poses-1' | 'poses-2' | 'poses-3';
 
+/** A turnaround view that shows both her arms: in profile only the near one shows, and her veil hangs behind it. */
 type TwoArmView = Exclude<CutView, 'profileLeft' | 'profileRight' | PoseView>;
 
+/** Each view's veil: every pixel above its hem, the hem's ink with it, which no sleeve takes. */
 const VEIL = {
   front: {
     polygon: [
@@ -84,8 +88,10 @@ const VEIL = {
   },
 } as const satisfies Readonly<Record<TwoArmView, PartRule>>;
 
+/** Her hip's row in each view: the robe is every row below it that her arms and hands leave. */
 const HIP = 330;
 
+/** Each sleeve's inner edge, from the shoulder's row down to the bottom of its round hand. */
 const SLEEVES = {
   front: {
     right: {
@@ -212,6 +218,10 @@ const SLEEVES = {
   Record<TwoArmView, { readonly right: Sleeve; readonly left: Sleeve }>
 >;
 
+/**
+ * In profile to the viewer's left, her left sleeve's back edge: a soft crease
+ * from her lighter back, then out round the cuff's ink.
+ */
 const PL_LEFT: Sleeve = {
   inner: [
     [102, 190],
@@ -230,6 +240,7 @@ const PL_LEFT: Sleeve = {
   cap: 10,
   side: 'left',
 };
+/** Before her left sleeve's front crease, which stays with the sleeve: her body's front, down past her hand. */
 const PL_FRONT = {
   polygon: [
     [-1, 195],
@@ -255,6 +266,7 @@ const PL_FRONT = {
   ],
 } as const;
 
+/** In profile to the viewer's right, her right sleeve's back edge: where her lighter back meets the sleeve's mid blue, then out round the cuff. */
 const PR_RIGHT: Sleeve = {
   inner: [
     [99, 190],
@@ -272,6 +284,7 @@ const PR_RIGHT: Sleeve = {
   cap: 10,
   side: 'right',
 };
+/** Past her right sleeve's front crease, which stays with the sleeve: her body's front, down past her hand. */
 const PR_FRONT = {
   polygon: [
     [FAR, 195],
@@ -417,6 +430,7 @@ const PROFILE_RIGHT: PartCut = {
   ],
 };
 
+/** Her hip's row in each pose (below her hands' reach, standing or seated): the robe is every row below it that her arms, the baby and the stool leave. */
 const POSE_HIP = 445;
 
 const POSES_1: PartCut = {
@@ -765,14 +779,23 @@ const POSES_3: PartCut = {
   ],
 };
 
+/** Her sheet's outline ink (measured on the turnaround: 11,2,0 to 13,3,1). */
 const INK = [12, 2, 0, 255] as const;
 
+/** Where her body's sides run under her arms: out to her shoulders and robe, not in at the sleeves' inner edges. */
 const SIDES = sides({ pronoun: 'her', lower: 'robe', cloth: 'the blue robe and its soft folds' });
 
+/** The paper grain her sheet shows on her body, carried into the paint under her arms. */
 const GRAIN = grain('the blue robe of her body');
 
+/** What every view of her keeps as it is. */
 const KEEP = `Keep every other pixel exactly as it is: the same white veil and its hem, face, robe, feet, ground line, size, position and framing.`;
 
+/**
+ * Each view's moving parts (what a pose moves, whose areas are painted
+ * magenta and repainted beneath), and the words okra repaints them by: what
+ * lies under them, in the sheet's own style.
+ */
 const HIDDEN_ENTRIES = {
   front: {
     moving: ['armRight', 'armLeft'],
@@ -843,10 +866,13 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   ink: INK,
 });
 
+/** How far the clear ground's flood reaches through paper-coloured pixels, 8-steps: her band runs 1 to 5 px wide, and where it meets the fading edge of her ground shadow up to 19, so one pass clears it all; a gap in her ink could let it into her cream cloth no farther. */
 const RIM_BAND_PX_PAST_HER_19_AT_THE_SHADOW_EDGE = 24;
 
+/** A pixel is paper-coloured within this ΔE76 of the view's paper: her band lies about 5 from it, her ink's blend 20 or more. */
 const RIM_NEAR_DE76_BETWEEN_HER_RIM_5_AND_INK_20 = 12;
 
+/** Each view's paper rim, as her part sheets and her drawings beside them (`sheets-clean.ts`) clear it. */
 export const PAPER_RIMS = Records.map(
   { ...TURNAROUND_PAPERS, ...POSES_PAPERS },
   (paper): PaperRim => ({
@@ -856,6 +882,7 @@ export const PAPER_RIMS = Records.map(
   }),
 );
 
+/** What each view's laid part sheet runs before it is written (`film concept parts`): every view clears the pale paper band her paint keeps just outside her ink (251,243,226 at the median on poses-1, against its paper 253,240,215), which her un-matte would read as her cream cloth and draw as a white torn rim. */
 export const CLEAN = Records.map(PAPER_RIMS, clearPaperRim) satisfies Partial<
   Record<keyof typeof CUTS, SheetClean>
 >;

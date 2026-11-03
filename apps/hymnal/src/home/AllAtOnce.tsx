@@ -1,3 +1,16 @@
+/**
+ * `All at once`: the home list zoomed out to one tile per group of the tab
+ * in use (`tilesOf`), over the list. A tile shows its group's name, how many
+ * hymns it holds, and a strip of where they lie from hymn 1 to 695; the
+ * group that holds the hymn the player has is outlined in the accent. A tap
+ * on a tile zooms back in with that group's row at the list's top
+ * (`onPick`); `Done`, or a pinch out on the tiles (`usePinch`), zooms back
+ * in where the list was (`onClose`). The tiles open with the group at the
+ * list's top (`at`) in their first row. The zoom out grows the tiles in
+ * from a little larger, and the zoom in fades them out a little larger
+ * again; with Reduce Motion on, they cross-fade in and out in 150 ms.
+ */
+
 import { useAtomValue } from '@effect/atom-react';
 import { Match, Option } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';
@@ -24,14 +37,17 @@ import { usePinch } from './pinch';
 import { playingNumber } from './playing';
 import { type Tab, type Tile, tilesOf } from './tabs';
 
+/** Tiles in a row, and the space between and around them. */
 const columns = 2;
 const gap = 10;
 
+/** A tile's name lines, its count's line, its strip, and the space inside it. */
 const nameLine = 20;
 const countLine = 18;
 const stripHeight = 4;
 const tilePadding = 12;
 
+/** A tile's height at the reader's text size (`fontScale`): two lines of name, the count, the strip. */
 const tileHeight = (fontScale: number) =>
   2 * Math.ceil(nameLine * fontScale) +
   Math.ceil(countLine * fontScale) +
@@ -39,9 +55,11 @@ const tileHeight = (fontScale: number) =>
   2 * tilePadding +
   8;
 
+/** The bar over the tiles: its line and the space around it. */
 const barLine = 22;
 const barPadding = 11;
 
+/** The tiles' way in and out: the zoom out grows them in, the zoom in fades them out a little larger. */
 const zoomed = {
   entering: new Keyframe({
     0: { opacity: 0, transform: [{ scale: 1.06 }] },
@@ -53,10 +71,15 @@ const zoomed = {
   }).duration(140),
 };
 
+/** With Reduce Motion on, the tiles come and go by a cross-fade in place of the zoom. */
 const faded = { entering: FadeIn.duration(150), exiting: FadeOut.duration(150) };
 
 const idle = Atom.make<Player>(Player.Idle());
 
+/**
+ * The number of the hymn the player has, 0 while idle: it changes with the
+ * hymn alone, so a playback tick draws nothing here (`playingNumber`).
+ */
 const usePlaying = (): number =>
   useAtomValue(
     playingNumber(
@@ -71,6 +94,7 @@ export function AllAtOnce({
   onClose,
 }: {
   readonly tab: Tab;
+  /** The tile of the group at the list's top. */
   readonly at: number;
   readonly onPick: (index: number) => void;
   readonly onClose: () => void;
@@ -140,6 +164,7 @@ export function AllAtOnce({
   );
 }
 
+/** One group's tile: its name, its count, its strip; outlined when it holds the playing hymn. */
 function TileView({
   tile,
   height,

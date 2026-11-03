@@ -1,3 +1,17 @@
+/**
+ * A hymn's chords as the reader shows them over its words, and its sung
+ * syllables, which the page shows whether chords are on or off. The bundle
+ * carries them in a module of their own (`virtual:hymnal-chords`, made by
+ * `vite/chords.ts`), one compact string per hymn, so the words stay as they
+ * are; a hymn's string is decoded the first time its page is shown, and kept
+ * (`chordBook`).
+ *
+ * The chords are the compiled set's `guitar` level, as degrees above the
+ * hymn's key: a move (a transpose and a capo fret) changes the key they are
+ * spelled in and nothing else. Spelling is the hymnal package's own
+ * (`Chord.format`, `Chord.keyOnPitch`); this module only picks the key.
+ */
+
 import * as Chord from '@manna/hymnal/chord';
 import type { Hymn, Part } from '@manna/hymnal/hymn';
 import { Placements, type PlacementPatch } from '@manna/hymnal/playback';
@@ -6,13 +20,16 @@ import { Array as Arr, Effect, Option, Schema } from 'effect';
 
 import type { HymnText, Section } from './text';
 
+/** One sung syllable: its text as printed under the note, and the chords that change on it, in order. */
 export interface Box {
   readonly text: string;
   readonly chords: ReadonlyArray<Chord.Chord>;
 }
 
+/** A word's syllables, which stay together on one row. */
 export type Word = ReadonlyArray<Box>;
 
+/** A part as the reader shows it: words alone, or its lines' words with their chords at a level. */
 type PartChords =
   | { readonly _tag: 'Plain' }
   | {
@@ -24,10 +41,17 @@ type PartChords =
 export interface HymnChords {
   readonly number: number;
   readonly key: Chord.Key;
+  /** Stanza n is `stanzas[n - 1]`. */
   readonly stanzas: ReadonlyArray<PartChords>;
   readonly refrain: Option.Option<PartChords>;
 }
 
+/**
+ * A section's words, with chords on or off: its words alone (`Words`), or
+ * its lines' syllable boxes and their chord changes (`Syllables`).
+ * Both alignment levels keep the compiled syllable anchors. A syllable
+ * with no change shows no chord, including at the start of a line.
+ */
 export type SectionChords =
   | { readonly _tag: 'Words' }
   | {
@@ -44,12 +68,14 @@ const partOf = (chords: HymnChords, section: Section): Option.Option<PartChords>
 
 type SungPart = Extract<PartChords, { readonly _tag: 'Sung' }>;
 
+/** The section's sung part, none for a Plain part or one whose lines are not the section's. */
 const sungOf = (chords: HymnChords, section: Section): Option.Option<SungPart> =>
   Option.filter(
     partOf(chords, section),
     (part): part is SungPart => part._tag === 'Sung' && part.lines.length === section.lines.length,
   );
 
+/** Each section of `text`, in page order, at either source alignment level. */
 export const sectionsOf = (text: HymnText, chords: HymnChords): ReadonlyArray<SectionChords> =>
   text.sections.map((section) =>
     Option.match(sungOf(chords, section), {
@@ -58,6 +84,7 @@ export const sectionsOf = (text: HymnText, chords: HymnChords): ReadonlyArray<Se
     }),
   );
 
+/** Whether any part of the hymn carries a chord. */
 export const hasChords = (chords: HymnChords): boolean =>
   [...chords.stanzas, ...Option.toArray(chords.refrain)].some(
     (part) =>
@@ -67,36 +94,53 @@ export const hasChords = (chords: HymnChords): boolean =>
 
 const mod12 = (n: number) => ((n % 12) + 12) % 12;
 
+/**
+ * A hymn's move: `transpose`, semitones the sounding key is raised (stored
+ * -5..6, so twelve is none), and `capo`, the fret, 0..11: the chords are
+ * shown as shapes that many semitones below the sounding key.
+ */
 export const Move = Schema.Struct({
   transpose: Schema.Int.check(Schema.isBetween({ minimum: -5, maximum: 6 })),
   capo: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 11 })),
 });
 export type Move = typeof Move.Type;
 
+/** No transpose and no capo: the hymn as printed. */
 export const still: Move = { transpose: 0, capo: 0 };
 
+/** `move` with its sounding key raised `by` semitones, wrapped into -5..6. */
 export const transposed = (move: Move, by: number): Move => ({
   ...move,
   transpose: mod12(move.transpose + by + 5) - 5,
 });
 
+/** `move` with its capo `by` frets higher, held to 0..11. */
 export const capoed = (move: Move, by: number): Move => ({
   ...move,
   capo: Math.min(11, Math.max(0, move.capo + by)),
 });
 
+/**
+ * The key `semitones` above `key`: `key` itself at a whole number of
+ * octaves, so a hymn printed in G-flat stays G-flat, and otherwise the key
+ * a signature names on that pitch (`Chord.keyOnPitch`).
+ */
 const keyAbove = (key: Chord.Key, semitones: number): Chord.Key => {
   if (mod12(semitones) === 0) return key;
   return Chord.keyOnPitch(Chord.pitchClass(key.tonic) + semitones, key.minor);
 };
 
+/** The key the hymn sounds in after `move`'s transpose. */
 export const soundingKey = (key: Chord.Key, move: Move): Chord.Key => keyAbove(key, move.transpose);
 
+/** The key the chords are shown in: the sounding key, less the capo. */
 export const playedKey = (key: Chord.Key, move: Move): Chord.Key =>
   keyAbove(key, move.transpose - move.capo);
 
+/** A key as a chord chart names it: "Db", "Dm". */
 export const keyName = (key: Chord.Key): string => `${key.tonic}${mark(key.minor, 'm')}`;
 
+/** `text` where `when` holds, else nothing. */
 const mark = (when: boolean, text: string): string => (when && text) || '';
 
 const EncodedSung = Schema.Tuple([
@@ -125,6 +169,7 @@ const tokenOf = (chord: Chord.Chord): string =>
 
 type Syllable = Extract<Part, { readonly _tag: 'Sung' }>['lines'][number][number];
 
+/** One syllable as its line's string carries it; none for a text the encoding cannot carry. */
 const syllableOf = (syllable: Syllable, joins: boolean): Option.Option<string> => {
   if (/[|~+]/.test(syllable.text)) return Option.none();
   const tokens = Option.getOrElse(Option.fromUndefinedOr(syllable.guitar), () => [])
@@ -156,6 +201,7 @@ const encodePart = (part: Part): Option.Option<EncodedPart> => {
   );
 };
 
+/** `hymn`'s chords as the bundle carries them; none for a syllable the encoding cannot carry. */
 export const encodeHymn = (hymn: Hymn, placements?: Placements): Option.Option<string> =>
   Option.all({
     stanzas: Option.all(hymn.stanzas.map(encodePart)),
@@ -179,6 +225,7 @@ export const encodeHymn = (hymn: Hymn, placements?: Placements): Option.Option<s
 const decodeEncoded = Schema.decodeUnknownOption(Schema.fromJsonString(EncodedHymn));
 const isKey = Schema.is(Chord.Key);
 
+/** The complete finite token vocabulary. Repeated chords share immutable values. */
 const tokens = new Map<string, Chord.Chord>();
 for (let root = 0; root < 12; root++)
   for (const quality of Chord.Quality.literals) {
@@ -187,6 +234,7 @@ for (let root = 0; root < 12; root++)
     for (let bass = 0; bass < 12; bass++)
       tokens.set(`${token}/${bass.toString(16)}`, { root, quality, bass });
   }
+/** A line's syllables, grouped into words. */
 const wordsOf = (line: string): Option.Option<ReadonlyArray<Word>> => {
   const grouped: Array<Array<Box>> = [];
   for (const encoded of line.split('|')) {
@@ -222,6 +270,7 @@ const decodePart = (part: EncodedPart): Option.Option<PartChords> => {
   }));
 };
 
+/** A hymn's chords from its bundled string; none for a string that does not decode. */
 export const decodeHymn = (
   encoded: string,
   placement: Placement = 'beat',
@@ -245,6 +294,7 @@ export const decodeHymn = (
     );
   });
 
+/** Apply numeric alternatives before Simple/Advanced spelling, retaining every word and box. */
 const placed = (
   hymn: HymnChords,
   patches: readonly PlacementPatch[],
@@ -287,11 +337,17 @@ const placed = (
   });
 };
 
+/** The refrain's part, none (decoded) for a hymn with no refrain. */
 const decodeRefrain = (refrain: EncodedPart): Option.Option<Option.Option<PartChords>> => {
   if (refrain === 0) return Option.some(Option.none());
   return Option.map(decodePart(refrain), Option.some);
 };
 
+/**
+ * The bundled chords, each hymn and placement decoded on first use and
+ * kept. A failed hymn and placement has no chords, logged once
+ * (`chords.decode.failed`); `decodes` counts the strings decoded.
+ */
 export const chordBook = (bundled: ReadonlyArray<readonly [number, string]>) => {
   const encoded = new Map(bundled);
   const kept = new Map<string, Option.Option<HymnChords>>();
@@ -308,6 +364,7 @@ export const chordBook = (bundled: ReadonlyArray<readonly [number, string]>) => 
     return chords;
   };
   return {
+    /** The chords of hymn `number`, none when the bundle has none that decode. */
     of: (number: number, placement: Placement = 'beat'): Option.Option<HymnChords> =>
       Option.getOrElse(Option.fromUndefinedOr(kept.get(`${number}:${placement}`)), () => {
         const chords = decode(number, placement);

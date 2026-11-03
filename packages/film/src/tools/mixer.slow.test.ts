@@ -56,6 +56,10 @@ const TAKE = '/films/test/narration/a.mp3';
 
 type Finish = 'done' | 'fail' | 'hang';
 
+/**
+ * Media whose sounds decode to a second of silence at `rate`, and whose WAV
+ * writes land, then finish, fail or hang (completing `hung` as they do).
+ */
 const writingMedia = (
   files: Map<string, Uint8Array>,
   finish: Finish,
@@ -118,8 +122,10 @@ const setup = (
     Layer.provideMerge(store),
     Layer.provide([fs, repo, media, render]),
   );
+  /** `effect` with one mixer and one store, sharing their locks. */
   const run = <A, E>(effect: Effect.Effect<A, E, Mixer | ContentStore>) =>
     effect.pipe(Effect.provide(layer));
+  /** `effect` over the same files and renderer as the mixer's. */
   const beside = <A, E>(effect: Effect.Effect<A, E, FileSystem.FileSystem | SoundRender>) =>
     effect.pipe(Effect.provide([fs, render]));
   const mixing = (stems = false) =>
@@ -132,6 +138,7 @@ const setup = (
   return { files, decoded, hung, mix, mixing, run, beside, read, partials };
 };
 
+/** The film's length in frames: every track is exactly that long. */
 const frames = Math.round(filmEnd(Result.getOrThrow(layout(scenes, timings, 30))) * MIX_RATE);
 
 describe('Mixer', () => {
@@ -285,10 +292,13 @@ describe('Mixer: one variant in its sound’s place', () => {
     sounds,
   };
   const placed = Result.getOrThrow(layout(scenes, timings, 30));
+  /** The key of the film's plan with `playable` at every placement of `sound`, none for its own. */
   const keyWith = (inPlace: Option.Option<{ sound: string; playable: Playable }>) =>
     mixKey(Result.getOrThrow(planOf(placing, placed, { score: Option.none(), inPlace })));
+  /** `source` as it plays, measured as the mix measures a seed. */
   const measured = (source: DerivedSource) =>
     derivedPlayable(source, measurePcm(renderSource(source)));
+  /** The film rendered with `take` heard in `sound`'s place, its takes' files on disk. */
   const rendered = (sound: string, take: string) => {
     const { files, run } = setup('done', MIX_RATE, placing);
     for (const v of [KEPT, WAITING]) files.set(`/lib/${v.file}`, text(v.sha256));
@@ -331,6 +341,7 @@ describe('Mixer: one variant in its sound’s place', () => {
     }),
   );
 
+  /** The renderer, counting each seed it is asked to measure by its source's label. */
   const counting = (counts: Map<string, number>) =>
     Layer.effect(
       SoundRender,
@@ -348,6 +359,7 @@ describe('Mixer: one variant in its sound’s place', () => {
         });
       }),
     ).pipe(Layer.provide(SoundRender.layer));
+  /** The film as its loader gives it: the library resolved, no seed measured. */
   const unmeasured: LoadedFilm = {
     ...placing,
     sounds: {
@@ -358,6 +370,7 @@ describe('Mixer: one variant in its sound’s place', () => {
       trials: sounds.trials,
     },
   };
+  /** A mix of the unmeasured film, its takes' files on disk, its renderer counting into `counts`. */
   const mixedFrom = (counts: Map<string, number>) => {
     const fixture = setup('done', MIX_RATE, unmeasured, counting(counts));
     for (const v of [KEPT, WAITING]) fixture.files.set(`/lib/${v.file}`, text(v.sha256));

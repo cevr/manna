@@ -11,6 +11,14 @@ const TransitionStatusDataAttributes = {
   endingStyle: 'data-ending-style',
 } as const;
 
+/**
+ * Has the browser compute the page's style now, while `element` still has
+ * `data-starting-style`, so removing it next is a style change that runs the
+ * element's CSS transitions from the starting style. Without it the browser
+ * first computes the element's style after the removal (unless something
+ * else happened to read layout or style: a measurement, a focus, a pointer's
+ * hover update) and the element appears without its enter transition.
+ */
 export function computeStartingStyle(element: Element | null | undefined): void {
   if (element?.isConnected) {
     void getComputedStyle(element).transitionProperty;
@@ -37,9 +45,16 @@ export const transitionStatusMapping: StateAttributesMapping<{
 interface TransitionStatusReturn {
   mounted: Accessor<boolean>;
   transitionStatus: Accessor<TransitionStatus>;
+  /** Unmounts a closed popup (the exit transition is done). */
   unmount(): void;
 }
 
+/**
+ * Mounting and the transition status for an `open` flag: mounted while open
+ * and until `unmount()` after it closes; `starting` for the first frame
+ * after opening (`element`'s style computed before it ends), `ending` while
+ * closed but mounted. A popup open from the start shows no starting frame.
+ */
 function createTransitionStatus(
   open: Accessor<boolean>,
   element: Accessor<HTMLElement | null | undefined>,
@@ -88,6 +103,11 @@ function getFiniteAnimations(element: Element): Animation[] {
   });
 }
 
+/**
+ * Returns a function that runs a callback once the element's finite CSS
+ * animations and transitions finish (on the next frame, so ones that just
+ * started are seen).
+ */
 function useAnimationsFinished(element: Accessor<HTMLElement | null | undefined>) {
   const frame = useAnimationFrame();
 
@@ -137,6 +157,7 @@ interface OpenChangeCompleteParameters {
   onComplete: () => void;
 }
 
+/** Calls `onComplete` once the element's animations finish after each change of `open`. */
 export function useOpenChangeComplete(parameters: OpenChangeCompleteParameters) {
   const { enabled = () => true, open, element, onComplete } = parameters;
   const runOnceAnimationsFinish = useAnimationsFinished(element);
@@ -160,6 +181,7 @@ interface UnmountAfterCloseParameters {
   onUnmount: () => void;
 }
 
+/** `createTransitionStatus`, unmounting once the exit animations finish. */
 export function createUnmountAfterClose(parameters: UnmountAfterCloseParameters) {
   const { open, element, onUnmount } = parameters;
   const status = createTransitionStatus(open, element);

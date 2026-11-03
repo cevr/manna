@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { rng } from '../../random.ts';
 import { cosTurn, dbToGain, exp, exp2, log, sinTurn, tanh } from './math.ts';
 
+/** The worst error of `mine` against the host's `host` over `n` seeded draws of `x`. */
 const worst = (
   n: number,
   x: (u: number) => number,
@@ -22,6 +23,7 @@ const worst = (
 };
 
 const N = 20_000;
+/** One unit in the last place of a double near 1. */
 const ULP = Number.EPSILON;
 
 describe('the graph’s own math, against the host’s', () => {

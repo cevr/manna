@@ -1,3 +1,13 @@
+/** The page schema's shape constraints (§6.1, §5).
+ *
+ *  Every assertion here is about a page that a client could not render but that
+ *  a looser schema would happily decode: a lineup missing a section, a lineup in
+ *  the wrong order, or a section that arrives open when §5 says it arrives
+ *  collapsed. Modelling the lineup as an unrestricted `Schema.Array(WikiSection)`
+ *  with a boolean `defaultOpen` permits all three, which is why the tuple and
+ *  the literals exist.
+ */
+
 import { Effect, Option, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
@@ -47,6 +57,10 @@ const page = (sections: readonly unknown[]) => ({
 
 const decode = Schema.decodeUnknownEffect(WikiPage);
 
+/** The candidate is always a `page(...)` fixture — a page-shaped record whose
+ *  `sections` field is the thing under test. Typing the parameter as that
+ *  fixture rather than as `unknown` keeps the contract at the call site: these
+ *  are pages the schema must refuse, not arbitrary values. */
 type PageCandidate = ReturnType<typeof page>;
 
 const rejects = (input: PageCandidate): Effect.Effect<boolean> =>

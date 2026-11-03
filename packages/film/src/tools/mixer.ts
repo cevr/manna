@@ -59,21 +59,31 @@ import {
 import { Media, type MediaService } from './media.ts';
 import { SoundRender, measuredFilm } from './sound-render.ts';
 
+/** What the track was mixed from: `full.json`, written beside `full.wav` by the same mix. */
 export const stampFile = (paths: FilmPaths): string => `${paths.narration}/full.json`;
 
+/** `full.json`: the key (`mixKey`) of the plan the track was mixed from. */
 export const MasterStampJson = repoJson(Schema.Struct({ key: Schema.String }));
 
+/**
+ * The stamp as the store keeps it, as text: a mix writes the track and then
+ * the stamp under this file's lock (`ContentStore.transact`), so two mixes
+ * finishing together never leave one's track under the other's key.
+ */
 export const stampManifest = (paths: FilmPaths): Manifest<string> => ({
   file: stampFile(paths),
   codec: Schema.String,
   empty: '',
 });
 
+/** The track on disk: its measured length in seconds, and the key its stamp names. */
 export interface Master {
   readonly length: number;
+  /** None when the track has no stamp, or one that does not read. */
   readonly key: Option.Option<string>;
 }
 
+/** The film's track on disk, or none when there is no track. */
 export const readMaster = (
   fs: FileSystem.FileSystem,
   media: MediaService,
@@ -91,6 +101,13 @@ export const readMaster = (
     return Option.some({ length, key });
   });
 
+/**
+ * The track against the film it must cover: missing; longer or shorter than
+ * `film.seconds` by more than `tolerance` (a frame); or mixed for another
+ * plan than `film.key`, the one the film mixes to now (none when the plan
+ * does not build: the check names why). A mix is exactly the film's length
+ * and stamped with its plan, so a current one always passes.
+ */
 export const masterFinding = (
   file: string,
   master: Option.Option<Master>,
@@ -110,7 +127,9 @@ export const masterFinding = (
   });
 
 interface MixOptions {
+  /** Also write each bus to `<out>/<film>/stems/<bus>.wav` (the score's as `music.<option>.wav`). */
   readonly stems: boolean;
+  /** The score option to play in place of the one the score names (`mix --score`). */
   readonly score: Option.Option<string>;
 }
 
@@ -125,22 +144,37 @@ type MixError =
   | TakeUnknown
   | CodeError;
 
+/** What a mix is rendered from beyond the film. */
 interface RenderOptions {
+  /** Log each warning the plan earns (stale, missing). */
   readonly warn: boolean;
+  /** The score option to play in place of the one the score names. */
   readonly score: Option.Option<string>;
+  /** One variant of a library sound to play at each of its placements, in place of its own. */
   readonly take: Option.Option<TakeInPlace>;
 }
 
+/**
+ * A variant of a library sound heard where the film plays that sound, by its
+ * id: a take's sha256 (kept or waiting), or a seed's source label (a code
+ * sound's or a code trial's).
+ */
 interface TakeInPlace {
   readonly sound: string;
   readonly take: string;
 }
 
+/** What a plan plays in place of the film's own: a score option, one sound's variant. */
 interface PlanOptions {
   readonly score: Option.Option<string>;
   readonly inPlace: Option.Option<InPlace>;
 }
 
+/**
+ * `take` as it plays in its sound's place: a kept or waiting take by its
+ * sha256, else a seed by its source's label, measured (`measure`);
+ * `TakeUnknown` when the sound has neither.
+ */
 const inPlaceOf = (
   measure: (source: DerivedSource) => Effect.Effect<Measure>,
   sounds: Sounds,
@@ -161,6 +195,7 @@ const inPlaceOf = (
   });
 };
 
+/** A mix rendered in memory, the decoded plan it played, and that plan's key (`mixKey`). */
 interface Rendered {
   readonly plan: MixPlan<Pcm>;
   readonly mixed: Mixed;
@@ -168,16 +203,31 @@ interface Rendered {
 }
 
 interface MixerService {
+  /**
+   * Rebuild `narration/full.wav` from the film's current takes, score and
+   * effects. The track is written beside the old one and replaces it once
+   * whole; a failed or interrupted mix leaves the old track as it was.
+   */
   readonly mix: (film: string, options: MixOptions) => Effect.Effect<void, MixError>;
+  /**
+   * The film's mix in memory, as `mix` would write it, with the plan it
+   * played (decoded): what `check` measures the balance on.
+   */
   readonly render: (
     film: string,
     options: RenderOptions,
   ) => Effect.Effect<Rendered, MixError | PlatformError>;
 }
 
+/** Whether a sound is a file (not rendered from data). */
 const isFile = (source: SoundSource): source is Extract<SoundSource, { readonly _tag: 'File' }> =>
   source._tag === 'File';
 
+/**
+ * `plan` with every sound it plays decoded (a file) or rendered (`rendered`: a
+ * seed of a code sound or of a code trial), each voice file once however many
+ * pieces of it play; the mix never resamples, so a file at another rate fails.
+ */
 const decodePlan = (
   media: MediaService,
   rendered: (source: DerivedSource) => Effect.Effect<Pcm>,
@@ -236,6 +286,10 @@ const decodePlan = (
   });
 };
 
+/**
+ * `plan` without the generated files that are not on disk (a clone that has
+ * not run `sfx pull`), each named in a warning: the mix plays what it has.
+ */
 const presentOnly = (
   exists: (file: string) => Effect.Effect<boolean, PlatformError>,
   plan: MixPlan<SoundSource>,
@@ -263,6 +317,7 @@ const presentOnly = (
     };
   });
 
+/** `film`'s plan, by source, with `options`' score or variant in place of its own. Pure. */
 export const planOf = (
   film: MeasuredFilm,
   placed: ReadonlyArray<Placed>,
@@ -281,6 +336,11 @@ export const planOf = (
     pieces: voicePiecesOf(film),
   });
 
+/**
+ * What `film` mixes to now: the derived sounds it places measured
+ * (`measuredFilm`), its plan (`planOf`), less the files not on disk, each
+ * named in a warning.
+ */
 const filmPlan = (
   film: LoadedFilm,
   placed: ReadonlyArray<Placed>,
@@ -297,6 +357,11 @@ const filmPlan = (
     return yield* presentOnly((file) => fs.exists(file), planned);
   });
 
+/**
+ * The key of the plan `film` mixes to now (`mix`'s own): what a current
+ * master's stamp names. None when the plan does not build; the check names
+ * why.
+ */
 export const planKey = (
   film: LoadedFilm,
   placed: ReadonlyArray<Placed>,
@@ -306,11 +371,13 @@ export const planKey = (
     Effect.option,
   );
 
+/** One bus of the mix, by the name its levels log and its stem take. */
 interface Bus {
   readonly bus: string;
   readonly pcm: Pcm;
 }
 
+/** A level for the log: one decimal, silence as `-inf`. */
 const db = (value: number) =>
   Option.match(Option.liftPredicate(value, Number.isFinite), {
     onNone: () => '-inf',
@@ -327,9 +394,11 @@ export class Mixer extends Context.Service<Mixer, MixerService>()('@manna/film/t
       const store = yield* ContentStore;
       const made = yield* SoundRender;
 
+      /** `pcm` written to `file` as a WAV, whole (`writeWhole`). */
       const writeWav = (file: string, pcm: Pcm) =>
         writeWhole(fs, file, (partial) => media.writeWav(partial, pcm));
 
+      /** `film`'s mix in memory, as loaded: what `render` and `mix` both make. */
       const renderFilm = Effect.fn('Mixer.render')(function* (
         film: LoadedFilm,
         options: RenderOptions,

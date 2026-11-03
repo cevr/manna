@@ -1,3 +1,11 @@
+/**
+ * A player bar button's mark beyond iOS, drawn with Views in a 22-point
+ * box, in `tint`: a speaker with two waves while sound is on, with a slash
+ * across it while it is off; a play triangle, two pause bars, and a ring
+ * with an arrowhead, turning clockwise for retry and counter-clockwise for
+ * again.
+ */
+
 import { Match } from 'effect';
 import type { ReactNode } from 'react';
 import { type ColorValue, StyleSheet, View } from 'react-native';

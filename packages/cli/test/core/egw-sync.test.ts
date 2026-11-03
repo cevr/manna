@@ -181,6 +181,8 @@ describe('EGW corpus sync', () => {
     }).pipe(Effect.provide(layer)),
   );
 
+  /** The parts a durable host runs as separate steps: the plan is plain data,
+   *  and a book's failure is an outcome to persist rather than an error. */
   it.effect('plans every remote book on refresh and returns a failed install as an outcome', () =>
     Effect.gen(function* () {
       const plan = yield* planEgwSync({ lang: 'en', refresh: true, recheckLimit: 0 });
@@ -199,6 +201,9 @@ describe('EGW corpus sync', () => {
     }).pipe(Effect.provide(layer)),
   );
 
+  /** A book whose recorded revision is not the catalog's is downloaded again:
+   *  a moved content hash first, then a book recorded before revisions were
+   *  hashes, up to the run's limit. */
   it.effect('rechecks installed books whose revision moved, content hashes first', () => {
     const withDownload = (bookId: number, code: string, hash: string): EGWSchemas.Book => ({
       ...book(bookId, code),
@@ -249,6 +254,8 @@ describe('EGW corpus sync', () => {
     }).pipe(Effect.provide(library));
   });
 
+  /** An installation error carries no message of its own; the database's
+   *  words are in its cause, and the outcome says them. */
   it.effect('says what the database said when an install fails', () => {
     const failing = Layer.succeed(
       CorpusSupply,

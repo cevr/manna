@@ -3,6 +3,7 @@ import { Effect } from 'effect';
 import type { PageRender } from '../../../src/core/page-render.ts';
 import { served } from '../../../src/lab/fixtures/bundles.ts';
 
+/** `render` of a page to its end: its markup, or the reason it failed. */
 const rendered = (render: PageRender) =>
   Effect.callback<string, string>((resume) => {
     const body: Array<string> = [];
@@ -24,6 +25,7 @@ const rendered = (render: PageRender) =>
     );
   });
 
+/** Long enough to bundle a server entry twice as the lab bundles it. */
 const BUNDLING = 20_000;
 
 describe('a served page is held pure', () => {

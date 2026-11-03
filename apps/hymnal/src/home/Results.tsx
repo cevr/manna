@@ -1,3 +1,11 @@
+/**
+ * The web's search: its field over the hymns its query finds, each opening
+ * at `hrefOf(number)`. While the field is empty it shows `idle` (the home
+ * screen's whole list), or every hymn when it has none. The query and the
+ * results' scroll offset live in the app's registry (`place.ts`), so a search
+ * mounted anew comes back as the reader left it.
+ */
+
 import { useAtom } from '@effect/atom-react';
 import type { Href } from 'one';
 import { type ReactNode, useDeferredValue } from 'react';
@@ -8,6 +16,7 @@ import { HymnList } from '~/reader/HymnList';
 import { searchOffset, searchQuery } from '~/reader/place';
 import { SearchField } from '~/web/SearchField';
 
+/** The search field's label and placeholder. */
 export const searchLabel = 'Number, title or first line';
 
 export function Results({

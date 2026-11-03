@@ -12,8 +12,10 @@ interface CompositeRootProps<State extends object> {
   class?: ClassProp<State> | undefined;
   style?: StyleProp<State> | undefined;
   render?: ComponentRenderFn<HTMLProps, State> | undefined;
+  /** The element's props (children included), merged after the root's own. */
   props?: ReadonlyArray<PropsInput> | undefined;
   state?: State | undefined;
+  /** Where the tab stop starts, among the first items (-1: the first enabled). */
   initialIndex?: ((elements: ReadonlyArray<HTMLElement | null>) => number) | undefined;
 }
 

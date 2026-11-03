@@ -1,3 +1,9 @@
+/**
+ * `sim journey <feature>` over a stand-in `Drive`: the journey file decodes
+ * or is refused naming its path and field, a run prints one JSON line per
+ * step and a summary (each line also kept in `results.jsonl`), and the
+ * first failed step stops the run, names itself, and still stops the video.
+ */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Console, Effect, Exit, FileSystem, Option, Path, Schema } from 'effect';
@@ -15,6 +21,10 @@ interface Call {
 
 const done: Outcome = { platform: 'ios', paths: {}, detail: {} };
 
+/**
+ * A booted iOS drive whose session writes to `out`. `missing` names the
+ * targets that never show; every other step succeeds.
+ */
 const standIn = (calls: Array<Call>, out: string, missing: ReadonlyArray<string>): DriveMembers => {
   const step =
     (op: string) =>
@@ -94,10 +104,12 @@ const journey = {
 };
 
 const toJson = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
+/** A printed line, as plain JSON data. */
 const decodeLine = Schema.decodeUnknownSync(
   Schema.fromJsonString(Schema.toEncoded(Schema.Union([JourneyLine, Failure]))),
 );
 
+/** Write `text` as `features/chords.journey.json` and run `sim <args>` over the stand-in. */
 const runJourney = (text: string, args: ReadonlyArray<string>, missing: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

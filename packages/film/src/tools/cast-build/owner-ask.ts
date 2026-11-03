@@ -5,8 +5,13 @@ import type { FilmName } from '../film-repo.ts';
 import { type Stage, StageFailed, fileInput } from './graph.ts';
 import type { MemberStages } from './stages.ts';
 
+/** The asker the build's asks are made by. */
 const BUILD_ASKER = 'concept build';
 
+/**
+ * The drawings an ask shows, published where the lab serves them: `publish`
+ * answers each need's image `src`, in order.
+ */
 export class DrawingSet extends Context.Service<
   DrawingSet,
   {
@@ -17,6 +22,7 @@ export class DrawingSet extends Context.Service<
   }
 >()('@manna/film/tools/cast-build/DrawingSet') {}
 
+/** One entry the owner must draw (`drawn`) or keep (`kept`), with its drawing's path. */
 export interface OwnerNeed {
   readonly film: FilmName;
   readonly member: string;
@@ -27,8 +33,10 @@ export interface OwnerNeed {
 
 const encoder = new TextEncoder();
 
+/** `<member>/<id>`: a need as the build names it. */
 export const needName = (need: OwnerNeed) => `${need.member}/${need.id}`;
 
+/** The entries across the members built that the owner must draw, or keep once drawn. */
 export const ownerNeeds = (
   members: ReadonlyArray<
     Pick<MemberStages, 'film' | 'member' | 'memberDir' | 'coverage' | 'facts'>
@@ -45,9 +53,11 @@ export const ownerNeeds = (
     }),
   );
 
+/** A keep choice's question: `<member>/<id>: keep this drawing?`. */
 const KEEP_QUESTION = ': keep this drawing?';
 const keepLabel = (need: OwnerNeed) => `${needName(need)}${KEEP_QUESTION}`;
 
+/** The members an ask of the build asks about, read from its keep choices' questions (`keepLabel`). */
 const membersAsked = (record: AskRecord) =>
   new Set(
     Object.values(record.ask.steps)
@@ -56,6 +66,7 @@ const membersAsked = (record: AskRecord) =>
       .map((b) => b.label.split('/')[0] ?? ''),
   );
 
+/** One choice per drawing: keep it (recommended), shown at `src` with its path beside it, or draw it again. */
 const keepChoice = (need: OwnerNeed, n: number, src: string) => ({
   kind: 'choose' as const,
   id: AskName.make(`keep-${n + 1}`),
@@ -74,9 +85,20 @@ const keepChoice = (need: OwnerNeed, n: number, src: string) => ({
   ],
 });
 
+/** `self` failing as the ask stage fails, in its error's words. */
 const asked = <A, E extends { readonly message: string }>(self: Effect.Effect<A, E>) =>
   Effect.mapError(self, (e) => StageFailed.make({ reason: `ask: ${e.message}` }));
 
+/**
+ * The build's one ask, about `film`: every need `kept` lacks, its drawings
+ * published first (`DrawingSet`) so each keep choice shows its own, made once
+ * through the ask store on the asker's open page; then each earlier build ask
+ * about the film that still asks, and asks only about `members` (the members
+ * this build covers), is closed as superseded: a build of one member never
+ * closes another's ask. Its output is the ask's id. Keyed by each drawing's bytes and
+ * the needs' names, so the same needs publish and ask once while their ask
+ * is not closed; once it is, the same needs ask again (`holds`).
+ */
 export const askStage = (
   film: FilmName,
   members: ReadonlyArray<string>,
@@ -133,6 +155,11 @@ export const askStage = (
   };
 };
 
+/**
+ * The build's draws: every need `drawn` lacks, drawn by `draw` (sheet tries
+ * on the image route) only when the build's `--spend okra` allows it, else
+ * the stage waits. Keyed by the needs' names, so the same needs draw once.
+ */
 export const drawStage = <R>(
   needs: ReadonlyArray<OwnerNeed>,
   draw: (needs: ReadonlyArray<OwnerNeed>) => Effect.Effect<unknown, StageFailed, R>,

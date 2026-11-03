@@ -1,12 +1,33 @@
+/**
+ * The source reader, the stills rule's fast check before a build: the
+ * images the sources name. It holds only the forms written here, so the
+ * guard is the build walk (`./build-walk.ts`), which reads every image of
+ * `dist/` by its bytes before a prod deploy. It reads each image
+ * file (by its extension, `IMAGE`) under `public/`, which the build copies
+ * whole into `dist/`, and under `src/`, whose images the build emits when a
+ * module names them; and each image a module under `src/` names, wherever
+ * its file lies. A script names an image by an `import` or `export … from`
+ * statement (not a type-only one), a dynamic `import()` of a string, or a
+ * `new URL(<string>, import.meta.url)`, as the build's own parser (Vite's
+ * `parseSync`) reads it; a stylesheet by a `url()` or an `@import`, as
+ * lightningcss reads it. Tests and type declarations are not served, so a
+ * `.test.` module and a `.d.ts` file are not read.
+ *
+ * `OUTSIDE` names the images outside the stills rule (`./approval.ts`), each
+ * with why; every other served image is a still the record holds.
+ */
 import { Effect, FileSystem, Option, Path, Predicate, Schema } from 'effect';
 import { transform } from 'lightningcss';
 import { type ESTree, parseSync, Visitor } from 'vite';
 
+/** The extensions of an image file a browser draws, in any case. */
 export const IMAGE =
   /\.(?:webp|a?png|jpe?g|jfif|pjpeg|pjp|avifs?|gif|svgz?|ico|cur|bmp|jxl|tiff?|heic|heif|jp2)$/i;
 
+/** The folders whose files the site serves, from the app. */
 export const SERVED_FOLDERS = ['public', 'src'] as const;
 
+/** An image the site serves outside the stills rule, by its path from the app, and why it is outside. */
 export interface Outside {
   readonly image: string;
   readonly why: string;
@@ -15,6 +36,7 @@ export interface Outside {
 const EMBLEM = 'a series mark: fine lines drawn as markup, not a painting';
 const ICON = 'an icon `bun run kit` draws from the wheat on the night, not from a painting';
 
+/** The images the site serves outside the stills rule, each with why. */
 export const OUTSIDE: ReadonlyArray<Outside> = [
   { image: 'public/apple-touch-icon.png', why: ICON },
   { image: 'public/favicon.ico', why: ICON },
@@ -33,10 +55,13 @@ export const OUTSIDE: ReadonlyArray<Outside> = [
   },
 ];
 
+/** The scripts the build's parser reads, by extension. */
 const SCRIPT = /\.(?:[cm]?[jt]sx?)$/;
 
+/** A specifier without its query or fragment (`?raw`, `?url`, `#x`). */
 const bare = (specifier: string) => specifier.replace(/[?#].*$/s, '');
 
+/** A string literal's value, if the expression is one. */
 const stringOf = (node: ESTree.Expression | ESTree.Argument) =>
   Option.liftPredicate(
     node,
@@ -44,17 +69,24 @@ const stringOf = (node: ESTree.Expression | ESTree.Argument) =>
       given.type === 'Literal' && Predicate.isString(given.value),
   ).pipe(Option.map((literal) => literal.value));
 
+/** Whether an argument is `import.meta.url`. */
 const isMetaUrl = (node: ESTree.Argument) =>
   node.type === 'MemberExpression' &&
   node.object.type === 'MetaProperty' &&
   node.property.type === 'Identifier' &&
   node.property.name === 'url';
 
+/** A script the build's parser cannot read. */
 class ScriptUnread extends Schema.TaggedError<ScriptUnread>()('ScriptUnread', {
   file: Schema.String,
   reason: Schema.String,
 }) {}
 
+/**
+ * Every specifier a script names a module or file by, as the build's parser
+ * reads it: an `import` or `export … from` that is not type-only, an
+ * `import()` of a string, a `new URL(<string>, import.meta.url)`.
+ */
 const scriptNames = Effect.fn('Served.scriptNames')(function* (file: string, code: string) {
   const { program, errors } = parseSync(file, code);
   if (errors.length > 0)
@@ -89,6 +121,7 @@ const scriptNames = Effect.fn('Served.scriptNames')(function* (file: string, cod
   return found;
 });
 
+/** Every `url()` and `@import` a stylesheet names, as lightningcss reads it. */
 const styleNames = (file: string, code: string) =>
   (
     transform({
@@ -100,17 +133,20 @@ const styleNames = (file: string, code: string) =>
     .filter((dependency) => dependency.type === 'url' || dependency.type === 'import')
     .map((dependency) => dependency.url);
 
+/** Whether the build reads a file under `src/` as a module: a script or a stylesheet, not a test or a type declaration. */
 const isModule = (file: string) =>
   (SCRIPT.test(file) || file.endsWith('.css')) &&
   !file.includes('.test.') &&
   !file.endsWith('.d.ts');
 
+/** What a module under `src/` names: each specifier the build's parser (a script) or lightningcss (a stylesheet) finds in it. */
 const readNames = (file: string, code: string) =>
   Effect.suspend(() => {
     if (file.endsWith('.css')) return Effect.succeed(styleNames(file, code));
     return scriptNames(file, code);
   });
 
+/** Each module's names, by its path and text: a module read once is not parsed again until its text changes. */
 const read = new Map<string, { readonly code: string; readonly names: ReadonlyArray<string> }>();
 
 const named = Effect.fn('Served.named')(function* (file: string, code: string) {
@@ -121,6 +157,7 @@ const named = Effect.fn('Served.named')(function* (file: string, code: string) {
   return names;
 });
 
+/** The file a specifier in `module` names: a root path (`/x.webp`) from `public/`, a relative one from the module, else as Bun resolves a package. */
 const fileOf = (app: string, module: string, specifier: string) =>
   Effect.gen(function* () {
     const path = yield* Path.Path;
@@ -129,6 +166,7 @@ const fileOf = (app: string, module: string, specifier: string) =>
     return Bun.resolveSync(specifier, path.dirname(module));
   });
 
+/** Every file under the served folders, by its absolute path. */
 const servedFiles = Effect.fn('Served.files')(function* (app: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -142,6 +180,7 @@ const servedFiles = Effect.fn('Served.files')(function* (app: string) {
   return files;
 });
 
+/** Every image file a module names that exists. */
 const namedImages = Effect.fn('Served.namedImages')(function* (app: string, module: string) {
   const fs = yield* FileSystem.FileSystem;
   const names = yield* named(module, yield* fs.readFileString(module));
@@ -153,6 +192,13 @@ const namedImages = Effect.fn('Served.namedImages')(function* (app: string, modu
   return images;
 });
 
+/**
+ * Every image the site serves, by its path from the app (one outside it
+ * starts `../`), sorted: every image file under the served folders, and
+ * every image file a module under `src/` names (a root path, `/x.webp`,
+ * from `public/`). A name with no file behind it serves nothing: the build
+ * refuses it.
+ */
 export const servedImages = Effect.fn('Served.images')(function* (app: string) {
   const path = yield* Path.Path;
   const fromApp = (file: string) => path.relative(app, file).split(path.sep).join('/');

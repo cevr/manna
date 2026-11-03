@@ -57,6 +57,11 @@ const film = Argument.String('film').pipe(
   Argument.withDescription('the film, a folder under src/films'),
 );
 
+/**
+ * What the studio reads of `loaded`: its voice, its script's `heardAs`, each
+ * beat's line, and the sheet set from `script` (each scene's `say` when the
+ * film keeps no `script.ts`) and the film's quotations. Pure.
+ */
 const studioReading = (
   loaded: LoadedFilm,
   script: Option.Option<ReadonlyArray<ScriptLine>>,
@@ -74,11 +79,19 @@ const studioReading = (
     };
   });
 
+/** What the studio reads of the film as it is stored now. */
 export const readingOf = Effect.fn('film.read.voice.reading')(function* (loaded: LoadedFilm) {
   const script = yield* (yield* FilmRepo).script(loaded.paths.name);
   return yield* Effect.fromResult(studioReading(loaded, script, yield* quotesOf(loaded)));
 });
 
+/**
+ * The cue's own span as the film plays it with `patch` applied, when `spans`
+ * has none for it: its source computes part of it (`until: MARK`), so no
+ * literal of the new text says it, and only the film's value, with the write
+ * applied as the file will hold it (`writtenPatch`), is the span the write
+ * would play.
+ */
 const patched = (
   timeline: Option.Option<Readonly<Record<string, Span>>>,
   spans: Readonly<Record<string, Span>>,
@@ -94,6 +107,12 @@ const patched = (
     { onNone: () => ({}), onSome: (span) => ({ [cue]: span }) },
   );
 
+/**
+ * `cue` on `scene`'s clock among the placed scenes, `spans` over the scene's
+ * own and `patch` over the cue's own span where `spans` has none for it
+ * (`patched`), or why the scene's timeline does not resolve; neither when the
+ * scene or the cue is not there. Pure.
+ */
 export const cueOf = (
   placed: ReadonlyArray<Placed>,
   scene: string,
@@ -126,10 +145,16 @@ export const cueOf = (
       ),
   });
 
+/**
+ * What identifies a drawing: its `timeline` and `knobs` objects. Decoded with
+ * `Schema.Unknown`, which passes each value through as the same object, so
+ * the identity survives the decode.
+ */
 const Owner = Schema.Struct({
   timeline: Schema.optionalKey(Schema.Unknown),
   knobs: Schema.optionalKey(Schema.Unknown),
 });
+/** `scenes/index.ts`: the film's scenes, in order. */
 const Registry = Schema.Struct({
   scenes: Schema.Array(Schema.Struct({ id: Schema.String, ...Owner.fields })),
 });
@@ -140,21 +165,26 @@ const decodeExports = Schema.decodeUnknownOption(ModuleExports);
 
 const FIELDS: ReadonlyArray<Field> = ['timeline', 'knobs'];
 
+/** Whether the lab may write a field of a scene's drawing: only the literal the scene reads, alone. */
 type FieldAccess = SceneSite['access'][Field];
 
 const WRITABLE: FieldAccess = { _tag: 'Writable' };
 
+/** An exported drawing call: the file, one name it is exported under, and where the call starts. */
 interface Owned {
   readonly file: string;
   readonly exportName: string;
   readonly at: number;
 }
 
+/** The object a drawing (or a scene spread from one) reads as `field`, when it has one. */
 const identity = (owner: typeof Owner.Type, field: Field): Option.Option<object> =>
   Option.liftPredicate(owner[field], Predicate.isObject);
 
+/** Per field, the drawing calls that declare each object, keyed by the object itself. */
 type Owners = Record<Field, Map<object, Array<Owned>>>;
 
+/** Record under `owners` each drawing `file` exports: its calls, as `exports` evaluates them. */
 const addOwners = (
   owners: Owners,
   file: string,
@@ -175,6 +205,17 @@ const addOwners = (
     }
 };
 
+/**
+ * Every scene's drawing in `film`'s source, located in this process: the
+ * parser lists every exported `drawing({...})` call in the film's folder, the
+ * film's modules and its scene registry (`scenes/index.ts`) are imported, and
+ * a scene belongs to the call whose exported `timeline` (or `knobs`) is the
+ * very object the scene reads. A registry that renames a drawing, or two
+ * files that export the same name, cannot point a scene at the wrong literal:
+ * either the object is the same, or the scene is not located. The files are
+ * parsed as they are now; the imports only prove which export is which
+ * scene, so this runs only in a process that imports the film as it stands.
+ */
 export const locateHere = Effect.fn('film.read.sites.locate')(function* (film: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -217,6 +258,7 @@ export const locateHere = Effect.fn('film.read.sites.locate')(function* (film: s
       FilmModuleInvalid.make({ film, module: 'scenes/index.ts', reason: error.message }),
     ),
   );
+  /** The scenes that read the same object as `field` as `scene` does, in registry order. */
   const readers = (field: Field, scene: (typeof registry.scenes)[number]) =>
     registry.scenes
       .filter((s) =>
@@ -289,6 +331,11 @@ export const locateHere = Effect.fn('film.read.sites.locate')(function* (film: s
   return { sites, unlocated } satisfies Located;
 });
 
+/**
+ * SceneSources located in this process (`locateHere`): a CLI command's own,
+ * in a process that imports the film as it stands. The lab's is
+ * `SceneSources.layer`, which asks a fresh process.
+ */
 export const scenesLocatedHere = Layer.effect(
   SceneSources,
   Effect.gen(function* () {
@@ -310,6 +357,7 @@ const voice = Command.make(
   ),
 );
 
+/** Each beat of a film's script as the words reader and the Board read it: its id, its line, its picture's brief and cast, its sources. Pure. */
 const scriptBeatsOf = (
   script: Option.Option<
     ReadonlyArray<ScriptLine & { readonly picture?: string; readonly cast?: ReadonlyArray<string> }>
@@ -423,6 +471,7 @@ const scenes = Command.make(
   ),
 );
 
+/** `scenes` as the clock lays them out: their lengths, with no cue to resolve (a beat's length never reads one). */
 const untimed = <S extends Timed>(scenes: ReadonlyArray<S>): ReadonlyArray<Omit<S, 'timeline'>> =>
   scenes.map(({ timeline: _timeline, ...scene }) => scene);
 
@@ -492,6 +541,7 @@ const clock = Command.make(
   ),
 );
 
+/** `film read`, run fresh by the lab. */
 export const read = Command.make('read').pipe(
   Command.withDescription(
     'What the lab reads of a film, fresh from disk, as one line of JSON (the lab runs these)',

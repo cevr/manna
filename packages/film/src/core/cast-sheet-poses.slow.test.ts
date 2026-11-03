@@ -201,6 +201,7 @@ describe('a beard under a dark headcloth', () => {
   });
 });
 
+/** The lowest row of `r` that is not paper: the figure's soles. */
 const soleOf = (r: Raster): number => {
   for (let y = r.height - 1; y >= 0; y--)
     for (let x = 0; x < r.width; x++) {
@@ -211,6 +212,7 @@ const soleOf = (r: Raster): number => {
   return r.height - 1;
 };
 
+/** `r` drawn `share` of its size on paper of its own size, centred, its soles on `r`'s ground line. */
 const smaller = (r: Raster, share: number): Raster => {
   const small = scaleRaster(r, share);
   const rgba = new Uint8Array(r.width * r.height * 4);

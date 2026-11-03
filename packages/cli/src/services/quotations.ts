@@ -1,3 +1,15 @@
+/**
+ * Whether a teaching document's quotations are word for word what they cite.
+ *
+ * Scripture bullets are compared with the KJV `manna verse` returns; witness
+ * lines with the paragraph their refcode cites, through the same corpus-wide
+ * lookup as `manna egw lookup` (books, periodicals, letters). A witness must
+ * also be one unspliced clause of at most 30 words.
+ *
+ * `manna check` reports what this finds; `manna export` refuses a document
+ * with any problem, so nothing misquoted reaches Notes.
+ */
+
 import { BunServices } from '@effect/platform-bun';
 import { parseBibleQuery } from '@manna/core/bible';
 import { BibleService } from '@manna/core/bible/service';
@@ -39,6 +51,7 @@ interface QuotationReport {
 }
 
 interface QuotationsService {
+  /** Check every quotation `markdown` makes; `file` only labels the report. */
   readonly check: (
     file: string,
     markdown: string,
@@ -49,6 +62,7 @@ export class Quotations extends Context.Service<Quotations, QuotationsService>()
   '@manna/cli/services/quotations/Quotations',
 ) {}
 
+/** One problem per line, the shape `manna check` and `manna export` print. */
 export const formatProblem = (problem: Problem) =>
   `${problem.file}:${problem.line} ${problem.kind} ${problem.detail}`;
 
@@ -64,6 +78,8 @@ const versesFor = (reference: string) =>
     return yield* versesForBibleQuery(parsed).pipe(Effect.orElseSucceed(() => []));
   });
 
+/** The KJV text a Scripture bullet cites, or none when the reference names no
+ *  verse. A one-chapter book is cited `Jude 14`; the parser wants `Jude 1:14`. */
 const scriptureText = (reference: string) =>
   Effect.gen(function* () {
     let verses = yield* versesFor(reference);
@@ -75,6 +91,8 @@ const scriptureText = (reference: string) =>
     return Option.some(verses.map((verse) => verse.text).join(' '));
   });
 
+/** The text a witness marker cites: the first of its candidate refcodes that
+ *  any paragraph in the corpus is cited as. */
 const witnessText = (refcodes: readonly string[]) =>
   Effect.gen(function* () {
     const writings = yield* WritingsService;
@@ -133,6 +151,8 @@ const CorpusLive = Layer.mergeAll(
   BibleService.Live.pipe(Layer.provide(BibleDbBun.Default), Layer.provide(BunServices.layer)),
 );
 
+/** The corpus databases open only when a document actually quotes something,
+ *  so commands that never check (and documents with no quotations) pay nothing. */
 export const QuotationsLive = Layer.succeed(
   Quotations,
   Quotations.of({

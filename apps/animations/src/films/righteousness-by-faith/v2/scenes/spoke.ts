@@ -30,16 +30,21 @@ import {
 } from '../../kit.ts';
 import { SUN, TREE, arc, dawn, flight, toward, wordLight } from '../../spoken.ts';
 
+/** The book that comes up out of the gold, at the frame's middle. */
 const BOOK: Pt = [960, 560];
 
+/** Through the word-bubble: on its disc, close enough that its gold is past the frame's corners. */
 const FAITH: Camera = {
   x: ICON_ROW.x + ICON_X[0] * ICON_ROW.scale,
   y: ICON_ROW.y + 10 * ICON_ROW.scale,
   zoom: 11,
 };
+/** The asker's two hands at the question, palms up by the shoulders (their reach written each frame). */
 const SHRUG_FAR: GestureAt = { to: [-78, -112], reach: 0, grip: 'palm' };
 const SHRUG_NEAR: GestureAt = { to: [78, -112], reach: 0, grip: 'palm' };
+/** The row's glow and which icon leads, rewritten every frame. */
 const { lit: LIT, lead: LEAD, count: COUNT } = iconScratch([1, 1, 1]);
+/** The gold that falls from the hung word to the tree: the word's light, clear at the ground. */
 const BEAM = [
   [0, C.glow],
   [1, clearOf(C.glow)],

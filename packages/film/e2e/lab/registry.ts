@@ -4,6 +4,12 @@ import { menuEntry } from '../../src/lab/fixtures/gestures.ts';
 import { until, waitFor } from '../../src/lab/fixtures/settled.ts';
 import type { Tab } from '../../src/lab/fixtures/tab.ts';
 
+/**
+ * The page a walk is on, opened by `open` in a child of the case's scope:
+ * `again` gives it back and opens a fresh one, and a step that fails gives
+ * back whichever is open, as the case's scope closes its children
+ * (`film/pages-in-case-scope`).
+ */
 export const pageAfterPage = <P extends { readonly page: Tab }>(
   open: () => Effect.Effect<P, never, Scope.Scope>,
 ) =>
@@ -25,6 +31,7 @@ export const pageAfterPage = <P extends { readonly page: Tab }>(
 
 export const COMMAND_MENU = '[data-role="command-menu"]';
 
+/** Every command ⌘K lists on the page now, a query every id matches (`.`) listing the typed ones too. */
 export const registry = (page: Tab) =>
   Effect.gen(function* () {
     yield* page.press('Control+k');
@@ -39,8 +46,10 @@ export const registry = (page: Tab) =>
     return ids;
   });
 
+/** One per kind of thing a Go to goes to, and one per microphone: entries that share one `go`. */
 const SAMPLED = /^(go\.[^.]+\.|studio\.mic\.)/;
 
+/** The commands of `ids` worth running: each, but one of a family that shares its run. */
 export const sampled = (ids: ReadonlyArray<string>): ReadonlyArray<string> => {
   const seen = new Set<string>();
   return ids.filter((id) => {
@@ -54,6 +63,12 @@ export const sampled = (ids: ReadonlyArray<string>): ReadonlyArray<string> => {
   });
 };
 
+/**
+ * Run `id` from ⌘K by `input`: by the keys, Control+k, its id typed, the arrows down to its
+ * row and Enter; by the pointer, the header's Go to… clicked (Control+k on a page with none), its id typed, the row clicked.
+ * Done once the menu has gone; answers whether ⌘K offered it (a command an earlier run made
+ * unavailable, a take now recording, is not: no run).
+ */
 export const runFromMenu = (page: Tab, id: string, input: Input) =>
   Effect.gen(function* () {
     const row = menuEntry(id);
@@ -88,6 +103,11 @@ export const runFromMenu = (page: Tab, id: string, input: Input) =>
     return true;
   });
 
+/** A floating root, known by its role, as the page's commands know one (`command/context.ts`). */
 export const FLOATING = '[role=dialog], [role=alertdialog], [role=menu], [role=listbox]';
 
+/**
+ * Whether a command left something open: a floating root (a receipt is not one: it waits
+ * beside the page), or the studio's note bar over a frame drawn on.
+ */
 export const LEFT_OPEN = `([...document.querySelectorAll('${FLOATING}')].some((e) => !e.matches('.lab-receipt') && e.checkVisibility()) || document.querySelector('[data-role="note-bar"]') !== null)`;

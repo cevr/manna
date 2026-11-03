@@ -1,3 +1,35 @@
+/**
+ * `bun run screening`: publish a film's milestone to the screening site
+ * (`apps/screening`, films.cvr.im) and list what it holds.
+ *
+ *   bun run screening publish <film> board|render|final [--from <video>] [--dry-run]
+ *   bun run screening list
+ *
+ * `publish` gathers the version's material here and writes it to the site's
+ * bucket through its desk (`@manna/screening` `publishTo`):
+ *
+ * - `board`: renders the Board with its voice, its share copy alone (`film
+ *   render <film> --board --share-only`: one encode a frame, no master; a
+ *   render reuses each unchanged segment, a share copy any Board render of
+ *   the same picture kept included), takes that share copy, a poster still
+ *   from it, and each kept panel of `board.json` in the film's order, made
+ *   960 px wide for a phone;
+ * - `render`: the share copy of the film's latest full render (the
+ *   catalogue's newest `main` render of the whole film at full scale, never
+ *   a look wedge, a Board or a proof: `./screening-renders.ts`) and a poster
+ *   still;
+ * - `final`: the video `--from` names, else the latest full render, the same.
+ *
+ * It names every file by its bytes, uploads those the bucket lacks, writes
+ * the version's page, the film's folder, its manifest and the index, deletes
+ * the files older than the version it replaced, and prints the version's link. `--dry-run`
+ * gathers the same (the Board render included) and prints what it would
+ * upload, writing nothing to the bucket.
+ *
+ * The site's and the desk's URLs and the desk's secret come from `.env`
+ * (`SCREENING_*`), written there by `bun run --cwd ../screening keys
+ * [--stage <stage>]`; the stage they name is the site written to.
+ */
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { Media } from '@manna/film/tools';
 import type { FilmManifest, Material, MaterialFile } from '@manna/screening';
@@ -29,11 +61,14 @@ import {
   newestOf,
 } from './screening-renders.ts';
 
+/** The site's pages are Solid JSX: the plugin that compiles them is registered before they load. */
 const loadSite = Effect.sync(registerSolidSsr).pipe(
   Effect.andThen(() => Effect.promise(() => import('@manna/screening'))),
 );
 
+/** Where a poster still is taken, as a share of the video's length. */
 const POSTER_AT = 0.2;
+/** A poster's width, and a panel's on the page. */
 const POSTER_WIDTH = 1280;
 const PANEL_WIDTH = 960;
 
@@ -47,16 +82,20 @@ class ScreeningFailed extends Schema.TaggedError<ScreeningFailed>()('ScreeningFa
 
 const fail = (reason: string) => Effect.fail(ScreeningFailed.make({ reason }));
 
+/** A Board panel, as far as publishing reads it (`@manna/film`'s `board.json`). */
 const BoardPanel = Schema.Struct({
   beat: Schema.String,
   kept: Schema.OptionFromOptionalKey(Schema.Int),
+  /** A card or verse page the engine sets: no picture. */
   text: Schema.OptionFromOptionalKey(Schema.Unknown),
   tries: Schema.Array(Schema.Struct({ n: Schema.Int, file: Schema.String })),
 });
 const Board = Schema.fromJsonString(Schema.Struct({ panels: Schema.Array(BoardPanel) }));
 
+/** The film's title, as its script names it (`TITLE`). */
 const ScriptModule = Schema.Struct({ TITLE: Schema.String });
 
+/** Where a film's sources and renders are: this app's films, and its outputs (FILMS_OUT moves them, as for `film`). */
 const filmPaths = Effect.fn('screening.paths')(function* (film: string) {
   const path = yield* Path.Path;
   const out = yield* Config.String('FILMS_OUT').pipe(
@@ -70,6 +109,7 @@ const filmPaths = Effect.fn('screening.paths')(function* (film: string) {
   };
 });
 
+/** A variable of `.env` the site's keys script writes; its absence says how to write it. */
 const siteVariable = (name: string) =>
   Config.option(Config.String(name)).pipe(
     Effect.orDie,
@@ -84,6 +124,7 @@ const siteVariable = (name: string) =>
     ),
   );
 
+/** The site's URL and its desk, from `.env`. */
 const openSite = Effect.gen(function* () {
   const site = yield* loadSite;
   const url = yield* siteVariable('SCREENING_URL');
@@ -94,6 +135,7 @@ const openSite = Effect.gen(function* () {
   return { site, url, desk };
 });
 
+/** `file` as material: its bytes' sha256 (streamed through the hash), its size and kind. */
 const materialFile = Effect.fn('screening.file')(function* (
   file: string,
   ext: MaterialFile['ext'],
@@ -105,6 +147,7 @@ const materialFile = Effect.fn('screening.file')(function* (
   return { file, sha256: hash.digest('hex'), bytes: Number(info.size), ext } satisfies MaterialFile;
 });
 
+/** The share copy of the catalogue's newest render that `wanted` admits (`./screening-renders.ts`). */
 const latestShare = Effect.fn('screening.latest')(function* (
   out: string,
   wanted: (render: CatalogueRender) => boolean,
@@ -126,6 +169,7 @@ const latestShare = Effect.fn('screening.latest')(function* (
   );
 });
 
+/** `film render <film> --board --share-only` (the share copy alone, the file the site serves), its output on this terminal. */
 const renderBoard = Effect.fn('screening.renderBoard')(function* (film: string) {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   yield* Console.log(`screening.render film=${film} board`);
@@ -141,6 +185,7 @@ const renderBoard = Effect.fn('screening.renderBoard')(function* (film: string) 
   if (code !== 0) return yield* fail(`the Board render exited ${code}`);
 });
 
+/** A poster still of `video`, a fifth of the way in. */
 const posterOf = Effect.fn('screening.poster')(function* (video: string, to: string) {
   const media = yield* Media;
   const { seconds } = yield* media.timing(video);
@@ -148,6 +193,7 @@ const posterOf = Effect.fn('screening.poster')(function* (video: string, to: str
   return yield* materialFile(to, 'jpg');
 });
 
+/** The film's kept Board panels in its order, each made `PANEL_WIDTH` wide as a JPEG. */
 const keptPanels = Effect.fn('screening.panels')(function* (dir: string, work: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -184,11 +230,13 @@ const keptPanels = Effect.fn('screening.panels')(function* (dir: string, work: s
   );
 });
 
+/** The film's title, from its script. */
 const titleOf = Effect.fn('screening.title')(function* (dir: string) {
   const module: unknown = yield* Effect.promise(() => import(`${dir}/script.ts`));
   return (yield* Schema.decodeUnknownEffect(ScriptModule)(module)).TITLE;
 });
 
+/** Everything `version` of `film` is made of, gathered here. */
 const gather = Effect.fn('screening.gather')(function* (
   film: string,
   version: Material['version'],

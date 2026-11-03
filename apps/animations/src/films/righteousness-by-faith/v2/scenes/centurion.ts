@@ -35,20 +35,29 @@ import {
 } from '../../kit.ts';
 import { arc, flight, wordLight } from '../../spoken.ts';
 
+/** The soldier's hands: out in worry, up to stop, and held open for the word after the cut. */
 const WORRIED: GestureAt = { to: [-80, -90], reach: 0, grip: 'open' };
 const STOPPING: GestureAt = { to: [84, -158], reach: 0, grip: 'palm' };
 const OPEN_FOR_WORD: GestureAt = { to: [72, -74], reach: 0, grip: 'open' };
+/** The open hand as `handOf` reads it, for where the word settles. */
 const HOLDING_WORD: Person = { near: OPEN_FOR_WORD };
+/** How far above the mitten's middle the word rests, in his units. */
 const ON_PALM = 12;
+/** Jesus's hand out to the soldier as he offers to go. */
 const OFFERING: GestureAt = { to: [-118, -112], reach: 0, grip: 'open' };
 
+/** The people's scale on the street. */
 const S = 2.2;
+/** The servant's house, far across town, and its open room. */
 const HOUSE_X = -1100;
 const ROOM = { x: HOUSE_X, y: 790, w: 420, h: 260 };
+/** Where the servant's hips rest on the bed: he lies and sits up about them. */
 const HIP: Pt = [HOUSE_X - 10, 872];
 
+/** Close on the servant at his window: framed on the house, so it stays code. */
 const WINDOW: Camera = { x: HOUSE_X - 20, y: 790, zoom: 2.8 };
 
+/** Where the soldier and Jesus stand, and the street's framings: the street, his face, the town, his hand. */
 const knobs = {
   soldier: [820, 960],
   jesus: [1330, 960],
@@ -73,6 +82,7 @@ interface Roof {
   readonly lit: boolean;
 }
 
+/** A row of flat-roofed houses from x0 to x1, each `w` wide, standing to `top`. */
 const roofs = (seed: number, x0: number, x1: number, low: number, high: number): Roof[] => {
   const r = rng(seed);
   const out: Roof[] = [];
@@ -86,8 +96,14 @@ const roofs = (seed: number, x0: number, x1: number, low: number, high: number):
 };
 
 const FAR = roofs(8, -2400, 2600, 420, 600);
+/** The street's own houses, clear of the servant's. */
 const NEAR = roofs(33, -800, 2400, 480, 640);
 
+/**
+ * The helmet's dome, and the crest's two edges (a plume arched front to back
+ * over it), each about its own centre: `helmet` places them over the head's
+ * centre, the dome 33 units up, the crest's edges 46 and 44.
+ */
 const DOME: Pt[] = Array.from({ length: 17 }, (_, i): Pt => {
   const a = Math.PI + (Math.PI * i) / 16;
   return [Math.cos(a) * 40, Math.sin(a) * 22];
@@ -101,6 +117,10 @@ const CREST_UNDER: Pt[] = Array.from({ length: 13 }, (_, i): Pt => {
   return [Math.cos(a) * 32, Math.sin(a) * 18];
 });
 
+/**
+ * The soldier's helmet and crest, as his person's `onHead`: seeded from the
+ * scene's `headHands` (`crest`, `helmet`), or the person's own hand without.
+ */
 const helmet: HeadPiece = (ctx, [cx, cy], _r, hand, hands) => {
   const crest = [...shifted(CREST_TOP, cx, cy - 46), ...shifted(CREST_UNDER, cx, cy - 44)];
   piece(ctx, crest, C.cutRust, hands?.('crest') ?? sub(hand, 30), {
@@ -138,7 +158,9 @@ const timeline = {
 
 type CenturionFrame = Frame<keyof typeof timeline & string, typeof knobs>;
 
+/** The three icons' light, faith's set each frame (a scratch tuple, so the draw allocates none). */
 const { lit: LIT, lead: LEAD, count: COUNT } = iconScratch();
+/** Each icon's size as the row settles: faith from the word, the other two popping in. */
 const SHOWN: [number, number, number] = [1, 0, 0];
 
 export const centurion = drawing({
@@ -179,6 +201,7 @@ export const centurion = drawing({
   },
 });
 
+/** The street, the town and the servant's house, up to the word held in the soldier's hand. */
 const street = (f: CenturionFrame, hand: Hands) => {
   const { ctx, w, h, t } = f;
   const STREET = knobCamera(f.knob('street'), f.knob('streetZoom'));

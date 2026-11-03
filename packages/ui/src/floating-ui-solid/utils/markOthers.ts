@@ -6,6 +6,7 @@ type Undo = () => void;
 
 interface MarkOthersOptions {
   ariaHidden?: boolean | undefined;
+  /** Hide them with `inert` in place of `aria-hidden`. */
   inert?: boolean | undefined;
   mark?: boolean | undefined;
 }
@@ -28,6 +29,7 @@ let uncontrolledElements = newUncontrolled();
 let markerCounterMap = new WeakMap<Element, number>();
 let lockCount = 0;
 
+/** Whether `node` is hidden by `attribute` already (the page's own, or another popup's). */
 const hiddenBy = (node: Element, attribute: ControlAttribute) => {
   const value = node.getAttribute(attribute);
   return attribute === 'inert' ? value !== null : value !== null && value !== 'false';
@@ -177,6 +179,10 @@ function applyAttributeToOthers(
   };
 }
 
+/**
+ * Marks (and with `ariaHidden` or `inert`, hides) every element outside
+ * `avoidElements`; returns the undo.
+ */
 export function markOthers(avoidElements: Element[], options: MarkOthersOptions = {}): Undo {
   const { ariaHidden = false, inert = false, mark = true } = options;
   const body = ownerDocument(avoidElements[0]).body;

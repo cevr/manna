@@ -1,3 +1,12 @@
+/**
+ * What each page shows. The copy is plain and makes no claim the channel
+ * cannot keep: no film is out yet, so no page lists one, counts one or plays
+ * one. Each series lists its films once they are in `./content.ts`.
+ *
+ * Every page reads as the sky turns from morning to night: the field fading
+ * into the paper, the bands warming toward the wheat, then the dusk and the
+ * night close rising out of it.
+ */
 import { For, Show } from '@solidjs/web';
 import type { JSX } from '@solidjs/web';
 import { Match } from 'effect';
@@ -21,6 +30,7 @@ import {
   unitOf,
 } from './ui/parts.tsx';
 
+/** Mark 4:26–28, the parable the channel is named from. */
 const MARK_4_26_28: ReadonlyArray<Verse> = [
   {
     text: 'And he said, So is the kingdom of God, as if a man should cast seed into the ground;',
@@ -242,9 +252,11 @@ interface PrivacySection {
   readonly title: string;
   readonly band: 'section' | 'section-band';
   readonly words: ReadonlyArray<string>;
+  /** An email address the section ends with, as a link that writes to it. */
   readonly address?: string;
 }
 
+/** What the email list keeps, why, how to leave it, who sees it, and where to write. */
 const PRIVACY: ReadonlyArray<PrivacySection> = [
   {
     id: 'kept',
@@ -368,6 +380,7 @@ interface ViewProps {
   readonly page: Page;
 }
 
+/** A page's body: the header, its own content and the footer. */
 export const View = (props: ViewProps): JSX.Element => (
   <>
     <Header path={props.page.path} />

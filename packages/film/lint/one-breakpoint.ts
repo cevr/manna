@@ -7,17 +7,31 @@ import {
   Visitor,
 } from 'oxlint-plugin-effect/rule-bindings';
 
+/**
+ * A length written out, in any CSS length unit (CSS Values 4 and the
+ * container units): `900px`, `56.25em`, `56ch`, `56rch`, `40rex`, `60vw`,
+ * `40cqi`.
+ */
 const LENGTH = String.raw`\d+(?:\.\d+)?(?:px|r?(?:em|ex|ch|cap|ic|lh)|[sld]?v(?:w|h|i|b|min|max)|cq(?:w|h|i|b|min|max)|cm|mm|q|in|pt|pc)`;
 
+/** A media query's width condition that ends open at an interpolation: `(max-width: `, `(width <= `. */
 const WIDTH_THEN_VALUE = new RegExp(
   String.raw`\(\s*(?:(?:max-|min-)?width\s*:|width\s*(?:[<>]=?|=))\s*$`,
   'u',
 );
 
+/** What follows an interpolation that begins a width condition: `px < width)`, `px <= width <= …`. */
 const VALUE_THEN_WIDTH = new RegExp(String.raw`^[a-z]*\s*(?:[<>]=?|=)\s*width\b`, 'u');
 
+/** A range comparison: `<`, `<=`, `>`, `>=`, `=`. */
 const COMPARED = String.raw`(?:[<>]=?|=)`;
 
+/**
+ * A media query's width written out, with any whitespace CSS allows: the
+ * colon form (`(max-width: 899px)`, `( min-width:900px )`, `(width: 900px)`)
+ * and the range form (`(width >= 900px)`, `(900px <= width)`,
+ * `(400px < width <= 899px)`).
+ */
 const WIDTH = new RegExp(
   [
     String.raw`\(\s*(?:max-|min-)?width\s*:\s*${LENGTH}\s*\)`,
@@ -27,31 +41,46 @@ const WIDTH = new RegExp(
   'g',
 );
 
+/**
+ * Whether the condition at `at` in `text` is a feature query's: its clause
+ * (back to the last `{`, `}` or `;`) opens with `@supports`, which asks
+ * whether a declaration parses (`(width: 900px)`), not how wide the window is.
+ */
 const inSupports = (text: string, at: number) => {
   const before = text.slice(0, at);
   const clause = before.slice(Math.max(...['{', '}', ';'].map((c) => before.lastIndexOf(c))) + 1);
   return /@supports\b/u.test(clause);
 };
 
+/**
+ * Whether `text` writes a media query's width out: a width condition outside
+ * every `@supports`, judged with `lead` (the text before it in its template)
+ * in front, so a clause opened before a template's value runs on after it.
+ */
 const writesWidth = (text: string, lead: string) =>
   Array.from(text.matchAll(WIDTH)).some((m) => !inSupports(lead + text, lead.length + m.index));
 
+/** A template's value, as the text around it is read: a number, which opens and closes no clause. */
 const VALUE = '0';
 
+/** The text of a template's part. */
 const partText = (part: ESTree.TemplateElement) => part.value.cooked ?? part.value.raw;
 
+/** The text in front of a template's part `index`: every part before it, each value read as `VALUE`. */
 const leadOf = (template: ESTree.TemplateLiteral, index: number) =>
   template.quasis
     .slice(0, index)
     .map((part) => partText(part) + VALUE)
     .join('');
 
+/** The text in front of `part` in its template: none when it stands in no template literal (a type's). */
 const leadOfPart = (part: ESTree.TemplateElement) => {
   const template = part.parent;
   if (template.type !== 'TemplateLiteral') return '';
   return leadOf(template, template.quasis.indexOf(part));
 };
 
+/** Whether a template builds a media query's width from a value: the text before the value, or after it, is a width condition. */
 const buildsWidth = (template: ESTree.TemplateLiteral) =>
   template.expressions.some((_, i) => {
     const before = template.quasis[i]?.value.cooked ?? '';

@@ -1,3 +1,9 @@
+/**
+ * The find drums' model: the digits a number is dialled by, the number held
+ * to the book (1 to 695), each drum's turn, a fling over a wrapping drum,
+ * and a drum's detent felt but not heard while the Sound switch is off.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
@@ -87,6 +93,7 @@ describe('the drums are dials', () => {
 });
 
 describe('drumTell over the feel', () => {
+  /** The feel over recording ports, `Sounds and haptics` on, through the drums' Tell. */
   const feel = (loud: () => boolean) => {
     const felt: Array<Haptic> = [];
     const heard: Array<SoundName> = [];

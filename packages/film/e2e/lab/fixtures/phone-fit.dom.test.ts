@@ -4,6 +4,7 @@ import { openTab, respond, servePaths } from '../../../src/lab/fixtures/browsers
 import { fits as fitsOf, fitsPhone, phoneFit } from '../../../src/lab/fixtures/phone-fit.ts';
 import { evaluates } from '../../../src/lab/fixtures/settled.ts';
 
+/** A tab on a phone's window (390 × 844) whose body is `body`. */
 const phonePage = (body: string) =>
   Effect.gen(function* () {
     const html = `<!doctype html><html><head><style>
@@ -23,6 +24,10 @@ const phonePage = (body: string) =>
     return tab;
   });
 
+/**
+ * What the measure answers on a phone's window whose body is `body`, with
+ * `layer` open when given: `fits`, and `part` of `phoneFit`.
+ */
 const measured = (
   body: string,
   fits: boolean,
@@ -40,8 +45,17 @@ const SLIM = `<header style="position:sticky;top:0;height:44px"><button data-act
 const WIDE = `<div style="width:600px;height:10px"></div>`;
 const FAR = `<button data-act="far" style="position:fixed;left:370px;top:400px">far</button>`;
 const TALL = `<header style="position:sticky;top:0;height:300px"></header><div class="page"></div>`;
+/**
+ * A slim header over sections, each headed by a head that sticks under it (an ask's
+ * `2 of 3 · The Board`): four heads show at once, but only the one stuck is chrome.
+ */
 const HEADS = `<header style="position:sticky;top:0;height:44px"></header>${'<section style="height:250px"><h2 style="position:sticky;top:44px;height:60px;margin:0"></h2></section>'.repeat(12)}`;
+/**
+ * A sheet in frames over the whole window, as a sheet's overlay holds its scroll container: the
+ * frames take no pointer, the sheet takes its own.
+ */
 const SHEET = `<div class="page"></div><div class="frame" style="position:fixed;inset:0;pointer-events:none"><div class="frame" style="position:absolute;inset:0"><div data-role="sheet" style="position:absolute;left:0;bottom:0;width:390px;height:500px;pointer-events:auto"><button data-act="close">close</button></div></div></div>`;
+/** A sheet lowered to its one line, fixed in its see-through frame, as the Lab's selection peeks. */
 const PEEK = `<div class="page"></div><div class="frame" style="position:fixed;inset:0;pointer-events:none"><div data-role="sheet" style="position:fixed;left:0;bottom:117px;width:390px;height:69px;pointer-events:auto"></div></div>`;
 
 describe('the phone-fit measure', () => {

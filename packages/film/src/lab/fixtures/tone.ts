@@ -1,3 +1,4 @@
+/** How the tone is laid out: its rate, and its channels. */
 interface ToneLayout {
   readonly rate: number;
   readonly channels: 'mono' | 'left-only';
@@ -7,6 +8,7 @@ const MONO_48K: ToneLayout = { rate: 48000, channels: 'mono' };
 
 const CHANNELS = { mono: 1, 'left-only': 2 } as const;
 
+/** `seconds` of a 440 Hz sine at `amplitude`, as a 16-bit WAV of `layout`. */
 export const tone = (
   seconds: number,
   amplitude: number,

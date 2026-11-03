@@ -36,6 +36,7 @@ export const withTypo = drawing({
   draw: () => {},
 });
 
+/** Reads a value as exactly `A`, so a widened or narrowed knob type fails the typecheck. */
 const is =
   <A>() =>
   (_value: A) => {};
@@ -76,6 +77,7 @@ export const callback = drawing({
   },
 });
 
+/** A rig as a drawing declares it: its timelines and numbers typed, so a pose names only those. */
 const arm: RivePropSpec<'reach', 'lift'> = {
   source: {
     riv: 'arm.riv',

@@ -1,3 +1,9 @@
+/**
+ * Tests for EGW Paragraph Database
+ *
+ * Uses unique temp files for database isolation between tests.
+ */
+
 import { BunServices } from '@effect/platform-bun';
 import * as SqliteBun from '@effect/sql-sqlite-bun/SqliteClient';
 import { Database } from 'bun:sqlite';
@@ -48,6 +54,7 @@ import {
 } from './book-database.js';
 import * as EGWDbBun from './book-database-bun.js';
 
+/** A whole archive as a publication streamed in one chapter. */
 const publicationStream = (archive: PublicationArchive) => ({
   publication: archive.publication,
   chapters: Stream.make(
@@ -165,6 +172,13 @@ const mockArchive = (refcodes: readonly string[]): PublicationArchive => {
   });
 };
 
+/** An archive that reproduces the corpus's real identity shape: `para_id` from
+ *  the paragraph reference and `ref_code` from the archived refcode, so two
+ *  paragraphs may share a `refcode_short` while staying distinct rows.
+ *
+ *  `mockArchive` cannot express it — it derives one refcode per paragraph — and
+ *  `storeParagraphsBatch` cannot either, because its `ref_code` prefers
+ *  `refcode_short` and the two rows would upsert onto each other. */
 const collidingArchive = (
   rows: readonly {
     readonly paragraphId: string;
@@ -204,6 +218,7 @@ const collidingArchive = (
   });
 };
 
+/** Installs a whole archive, streamed as one chapter. */
 const installArchive = (
   db: EGWParagraphDatabaseService,
   archive: PublicationArchive,
@@ -706,6 +721,9 @@ describe('EGWParagraphDatabase', () => {
   });
 
   describe('corpus scope and rank (§6.4)', () => {
+    /** Two books by Ellen White, two by pioneers, all matching the same query.
+     *  Both scopes are non-empty in the unscoped result, so a filter that did
+     *  nothing would be visible immediately. */
     const scopedCorpus = Effect.fn('scopedCorpus')(function* () {
       const db = yield* EGWParagraphDatabase;
       const authored = [
@@ -1013,6 +1031,11 @@ describe('EGWParagraphDatabase', () => {
         }),
       ));
 
+    /** The lookup seeks on `para_id` so SQLite can use an index, and decides on
+     *  `book_code || ':' || para_id`. `para_id` is unique only *within* a book,
+     *  so the seek alone admits a paragraph from every book sharing the value —
+     *  which is exactly the cross-book collision `paragraphIdentity` qualifies
+     *  by book to prevent. This pins that the second predicate still decides. */
     test('does not admit another book sharing a para_id', () =>
       runTest(
         Effect.gen(function* () {
@@ -1030,6 +1053,16 @@ describe('EGWParagraphDatabase', () => {
         }),
       ));
 
+    /** `paragraphIdentity` falls back to `${bookCode}:#${refCode}` when a row
+     *  has no `para_id`, and such a row is *not* resolvable here — SQL's
+     *  `book_code || ':' || para_id` is `NULL` when `para_id` is, so it matches
+     *  nothing. That is long-standing behaviour, not a new limitation, and it
+     *  is inert on the shipped corpus, where no row takes the branch (see
+     *  `paragraphIdentity`). It is pinned because the lookup now also seeks on
+     *  `para_id` for the index: the seek must not be built from a `#` part,
+     *  which would narrow a *mixed* batch and start dropping the ordinary
+     *  identities beside it. Finding nothing is the old cost; dropping good
+     *  rows would be a new one. */
     test('resolves nothing for an identity with no para_id, and does not poison the batch', () =>
       runTest(
         Effect.gen(function* () {
@@ -1208,6 +1241,8 @@ describe('EGWParagraphDatabase', () => {
       ));
   });
 
+  /** The read layer a Worker takes over D1: it reads what the writer built,
+   *  and never creates or migrates anything itself. */
   describe('layerExisting', () => {
     const tableNames = (dbPath: string) => {
       const db = new Database(dbPath);
@@ -1257,6 +1292,19 @@ describe('EGWParagraphDatabase', () => {
       ));
   });
 
+  /** Round-2 B4: the in-memory double and live FTS5 must combine terms the same
+   *  way.
+   *
+   *  The double used `terms.some` — OR — while the shipped query joins quoted
+   *  terms with `FTS_TERM_CONJUNCTION`, which FTS5 reads as AND. That makes
+   *  every multi-word fixture query return a superset of what the corpus would
+   *  return, so a test could state a premise about a top hit that no real
+   *  search produces, and only a run against SQLite would show it.
+   *
+   *  The oracle here is the live database itself rather than a restatement of
+   *  the rule, so the assertion tracks whatever FTS5 actually does with the
+   *  string `ftsQuery` builds. Against the OR double the first expectation
+   *  fails: the double returns all three rows where FTS5 returns one. */
   describe('the in-memory double matches live FTS5 term combination (B4)', () => {
     const CONJUNCTION_BOOKS = [
       {
@@ -1273,6 +1321,7 @@ describe('EGWParagraphDatabase', () => {
       { order: 2, refcode: 'ANDA 1.2', text: 'beta stands alone here' },
       { order: 3, refcode: 'ANDA 1.3', text: 'alpha and beta stand together' },
     ];
+    /** The string `search/service.ts`'s `ftsQuery` emits for `alpha beta`. */
     const bothTerms = Option.getOrThrow(ftsTermQuery('alpha beta'));
 
     const doubleLayer = EGWParagraphDatabase.Test({
@@ -1284,6 +1333,8 @@ describe('EGWParagraphDatabase', () => {
       })),
     });
 
+    /** The double's answer at its own boundary, so the provide is not nested
+     *  inside the live-corpus test's generator. */
     const doubleSearch = (query: string) =>
       Effect.flatMap(EGWParagraphDatabase, (db) =>
         db.searchScoredParagraphs(query, { limit: 50 }),
@@ -1321,6 +1372,10 @@ describe('EGWParagraphDatabase', () => {
       ));
   });
 
+  /** A refcode is looked up as it is cited, across every publication shape:
+   *  books, periodicals (stored with two spaces after the day's comma),
+   *  letters, and codes with an underscore. The live database and the test
+   *  double must give the same answers, so the double cannot drift. */
   describe('getParagraphsByRefcode', () => {
     const corpus: ReadonlyArray<{ readonly book: Book; readonly refcodes: readonly string[] }> = [
       { book: mockBook(501, 'PP'), refcodes: ['PP 35.1', 'PP 351.1', 'PP 351.2', 'PP 352.1'] },
@@ -1397,6 +1452,8 @@ describe('EGWParagraphDatabase', () => {
       ),
     });
 
+    /** The double's answers at its own boundary, so the provide is not nested
+     *  inside the live test's generator. */
     const doubleLookUpAll = lookUpAll.pipe(Effect.provide(doubleLayer));
 
     test('resolves every shape, spacing and case aside, the same live and in the double', () =>

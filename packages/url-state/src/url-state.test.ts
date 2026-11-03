@@ -26,6 +26,7 @@ const stackOf = Effect.gen(function* () {
   return { entries: stack.map((entry) => `${entry.navigation} ${entry.href}`), index };
 });
 
+/** The next `count` entries `Location` commits after the one on screen. */
 const nextEntries = (count: number) =>
   Effect.gen(function* () {
     const location = yield* Location;

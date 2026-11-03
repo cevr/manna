@@ -26,6 +26,19 @@ export const Platform = Layer.provideMerge(BunHttpPlatform.layer, BunServices.la
 export const html = (title: string, script: string) =>
   `<!doctype html><html><head><title>${title}</title></head><body><script type="module" src="${script}"></script></body></html>`;
 
+/**
+ * An app in a temp folder, by its real path (macOS's temp folder is a link,
+ * and the bundler names what it reads by where it lies): its ask page
+ * (`ask.html` over `src/p.ts`, which imports `lib/shared.ts`, another
+ * package's source, with a server entry) and its render page (`sub/index.html`,
+ * an entry below the other), each file as `own` has it if it names
+ * it. The folder is written under another name and renamed into place: a
+ * watch armed a few milliseconds after a save may still be told of it on
+ * macOS (FSEvents hands a new watch the events still on their way), where
+ * inotify never tells one, and those events name the folder written, so a
+ * lab started after hears no save of the folder's making. `write` writes a
+ * file under the folder.
+ */
 export const appFolderWith = (own: Readonly<Record<string, string>>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -63,12 +76,18 @@ export const appFolderWith = (own: Readonly<Record<string, string>>) =>
     return { spec, write };
   });
 
+/** The app as `appFolderWith` writes it, every file its own. */
 export const appFolder = appFolderWith({});
 
+/** A page's reads as it renders, answered `read <path>`. */
 const echoReads = PageReads.of({
   read: (path) => Effect.succeed(new Response(`read ${path}`)),
 });
 
+/**
+ * The pages over a folder, as one lab process serves them, with `bundler`
+ * and `renderer` (one that writes the page's name and URL, by default).
+ */
 export const served = (
   spec: LabPageSpec,
   bundler: Layer.Layer<PageBundler, never, FileSystem.FileSystem | Path.Path>,
@@ -106,9 +125,11 @@ export const served = (
     return { page, ask };
   });
 
+/** The app over Bun's bundler. */
 export const app = Effect.gen(function* () {
   const { spec, write } = yield* appFolder;
   const { page, ask } = yield* served(spec, PageBundler.layer);
+  /** The script of the page `pathname` serves, as its HTML names it. */
   const scriptOf = (pathname: string) =>
     Effect.gen(function* () {
       const text = (yield* ask(pathname)).text;
@@ -116,6 +137,11 @@ export const app = Effect.gen(function* () {
       return (yield* ask(src)).text;
     });
   const script = scriptOf('/asks/a1');
+  /**
+   * A wait past `since`, while `name` is written as `text` until it answers:
+   * the watch may start after the first write, and the same bytes again are
+   * the same change.
+   */
   const waitWriting = (since: number, timeout: Duration.Input, name: string, text: string) =>
     Effect.raceFirst(
       page.wait({ since, server: Option.none(), film: Option.none() }, timeout),
@@ -124,6 +150,7 @@ export const app = Effect.gen(function* () {
         Effect.andThen(Effect.never),
       ),
     );
+  /** A wait past `since` after `name` is written as `text` once: one save, heard or not. */
   const waitOnce = (since: number, timeout: Duration.Input, name: string, text: string) =>
     Effect.andThen(
       write(name, text),
@@ -136,8 +163,18 @@ export const buildOf = (text: string) => Number(/name="lab-build" content="(\d+)
 export const serverOf = (text: string) =>
   /name="lab-server" content="([^"]+)"/.exec(text)?.[1] ?? '';
 
+/** When each film's track in memory was first mixed (ms). */
 export const MIXED_AT = 1_900_000_000_000;
 
+/**
+ * The app over files in memory, for what a film's pages hear of its mixes
+ * where how the box's watch reports a save is not the question: films `f`
+ * and `g`, each with its track mixed once at `MIXED_AT`, the pages built by
+ * the test bundler. A watch hears only what the test tells it: `land` mixes
+ * a film's track (a new mtime) unheard, `mix` mixes it and tells the watch;
+ * each answers the track's new mtime. `armed` waits until the watch of a
+ * film's narration folder runs.
+ */
 export const filmsInMemory = Effect.gen(function* () {
   const html = text('<!doctype html><html><head></head><body></body></html>');
   const files = new Map<string, Uint8Array>([

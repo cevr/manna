@@ -5,14 +5,17 @@ import { renderReads } from './page-render-reads.ts';
 
 const LAB = 'http://127.0.0.1:8229';
 
+/** The bridge, and every message it sent. */
 const bridge = () => {
   const sent: Array<FromRender> = [];
   return { sent, reads: renderReads((message) => sent.push(message)) };
 };
 
+/** The answer to read `read`: `text`, a 200. */
 const answerOf = (read: number, text: string) =>
   ToRender.Answer({ read, status: 200, headers: [], body: new TextEncoder().encode(text) });
 
+/** How a fetch settled: its body's text, or its error as a string. */
 const settled = (fetched: Promise<Response>) =>
   Effect.promise(() =>
     fetched.then(

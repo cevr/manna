@@ -3,6 +3,7 @@ import { Base64 } from 'effect/encoding';
 import { type DialogueRequest, ElevenLabs, type TtsRequest } from '../elevenlabs.ts';
 import { ApiKeyMissing } from '../errors.ts';
 
+/** What the fake ElevenLabs was asked to do. */
 export interface ElevenLabsCalls {
   readonly tts: Array<TtsRequest>;
   readonly dialogue: Array<DialogueRequest>;
@@ -11,27 +12,43 @@ export interface ElevenLabsCalls {
   readonly effects: Array<string>;
 }
 
+/** Characters aligned one per 0.05 s. */
 const aligned = (characters: ReadonlyArray<string>) => ({
   characters: [...characters],
   character_start_times_seconds: characters.map((_, i) => i * 0.05),
   character_end_times_seconds: characters.map((_, i) => i * 0.05 + 0.05),
 });
 
+/** What a fake voice says of a text sent it: its words, a direction (`[pause]`, `<break … />`) left unsaid. */
 const said = (sent: string): string =>
   sent
     .replace(/\[[^\]]*\]|<[^>]*>/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 
+/** The beat a take file belongs to: its name up to the first dot. */
 const beatOfTake = (file: string) =>
   Option.getOrElse(Arr.head(file.slice(file.lastIndexOf('/') + 1).split('.')), () => '');
 
+/** A transcript's words, one every half second, each 0.4 s long. */
 const heardAt = (said: string) =>
   said
     .split(/\s+/)
     .filter((w) => w.length > 0)
     .map((w, i) => ({ text: w, start: i * 0.5, end: i * 0.5 + 0.4, type: 'word' }));
 
+/**
+ * Speech comes back aligned one character per 0.05 s, and its "audio" is the
+ * text itself, padded with one space per take so no two takes are the same
+ * bytes. A dialogue aligns its lines joined with nothing between them, as the
+ * API does, and its audio is the lines read one after another. The transcript
+ * of a take file is what was spoken into it, unless `heard` maps that text to
+ * something else; a person's take (fake FLAC bytes, `fakeMedia.encodeFlac`)
+ * says what `recorded` has for its beat. Every transcript's words are timed
+ * by `heardAt`, unless `untimed`, when the reply carries its text and no words.
+ * A direction sent in the text (`[pause]`, `<break … />`) is aligned, as the
+ * API may align it, and never said.
+ */
 export const fakeElevenLabs = (
   files: Map<string, Uint8Array>,
   calls: ElevenLabsCalls,

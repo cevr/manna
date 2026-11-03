@@ -20,19 +20,35 @@ import { sha256Hex } from './digest.ts';
 import { type LoadedFilm, type PlaceError, placeFilm } from './film-repo.ts';
 import { TALLY_HEADER, talliedCredits } from './library.ts';
 
+/**
+ * What a minute of music costs, in credits (ElevenLabs' help centre, "How much
+ * does Eleven Music cost?": about 900 credits a minute). An estimate for the
+ * plan and the cap; the account's own count is the measure.
+ */
 const MUSIC_CREDITS_PER_MINUTE = 900;
 
+/** The credits a plan is estimated to cost. */
 export const musicCredits = (plan: Plan): number =>
   Math.ceil(
     (plan.chunks.reduce((sum, c) => sum + c.duration_ms, 0) / 60_000) * MUSIC_CREDITS_PER_MINUTE,
   );
 
 export interface ScoreOptions {
+  /** Compose again even when current. */
   readonly force: boolean;
+  /** Print each option's plan, its cost and whether it would be composed, then stop. */
   readonly dryRun: boolean;
+  /** Just this option; every stale one otherwise. */
   readonly only: Option.Option<string>;
+  /** The most credits spent in all, counting what the tally already records. */
   readonly cap: Option.Option<number>;
+  /** A TSV each composed option is appended to: name, hash, seconds, credits. */
   readonly tally: Option.Option<string>;
+  /**
+   * Compose only through this scene: the movements that start before its end,
+   * the last to its end and `MUSIC_TAIL` past it (`musicPlan`). The whole
+   * film otherwise.
+   */
   readonly through: Option.Option<string>;
 }
 
@@ -47,6 +63,7 @@ type ScoreError =
   | StoreError
   | PlatformError;
 
+/** The manifest's scores narrowed to `keep`; `scores` is omitted, never undefined, when none are left. */
 const keepScores = (manifest: SoundManifest, keep: ReadonlySet<string>): SoundManifest => {
   const scores = Object.fromEntries(
     Object.entries(manifest.scores ?? {}).filter(([name]) => keep.has(name)),
@@ -91,6 +108,7 @@ export class Composer extends Context.Service<Composer, ComposerService>()(
             }),
         });
 
+      /** Which of the score's options this run looks at: `only` alone (`ScoreUnknown` when the score lacks it), or all. */
       const chosenOf = (score: Score, only: Option.Option<string>) =>
         Option.match(only, {
           onNone: () => Effect.succeed(scoreOptions(score)),

@@ -1,3 +1,20 @@
+/**
+ * Scrape KJV 1611 Margin Notes with phrase-level anchoring.
+ *
+ * Source: https://en.literaturabautista.com/exhaustive-listing-marginal-notes-1611-edition-king-james-bible
+ *
+ * This source provides phrase-level data showing which text each margin note applies to.
+ * Format: "Genesis 1:6 firmament: Heb. expansion"
+ *   - Reference: Genesis 1:6
+ *   - Phrase: "firmament"
+ *   - Note: "Heb. expansion"
+ *
+ * Output: assets/margin-notes.json with structure:
+ * {
+ *   "1.1.6": [{ "type": "hebrew", "phrase": "firmament", "text": "Heb. expansion" }]
+ * }
+ */
+
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import * as BunHttpClient from '@effect/platform-bun/BunHttpClient';
 import { Effect, FileSystem, Layer, Option, Path, Schema, SchemaGetter } from 'effect';

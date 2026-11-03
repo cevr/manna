@@ -1,14 +1,79 @@
+/**
+ * The stills the owner approved, by their bytes. Two rules:
+ *
+ * - A still is approved only if its SHA-256 equals a file that an image
+ *   block of an approving ask showed, on a step his answer reached, and
+ *   that ask's `stills` answer is `approve`. The hash is the lab's receipt
+ *   (`./lab-asks.ts`), kept by its receipt rule: an image whose src the
+ *   receipt names is served only as its copy. Each file-served image of an
+ *   image block or an option is copied as the ask is made, or the make is
+ *   refused (`AskRefused`, naming the src). A board block's panels and a
+ *   video's poster or frame show live and bind nothing. The lab refuses an
+ *   answer while a copy no longer holds its hash. The kit counts only the
+ *   images the receipt names (`shownOn`): one it holds no hash of shows
+ *   nothing, so a src outside the rule approves no still. So an approval
+ *   binds the bytes the owner was shown before he answered, not his word
+ *   alone and not the set's file as it stands later, and stays true of
+ *   those bytes: a later ask need show only the stills that changed.
+ * - Every image file of the built site (`dist/` after `bun run build`, each
+ *   found by its bytes, `./build-walk.ts`) is an approved still or an image
+ *   outside the rule (`OUTSIDE`, `./served.ts`, each with its reason). The
+ *   build walk is the guard; the source reader (`servedImages`) is a fast
+ *   check the kit and the tests run before a build. An image inside
+ *   another file (a data URL) is no file the walk finds: the content
+ *   policy every response carries (`img-src 'self'`,
+ *   `../src/worker/respond.ts`) has the browser refuse it, so it never
+ *   paints.
+ *
+ * Whether a still's light comes from the sun is his look, given once per
+ * change through a lab ask that shows each still byte for byte as an image
+ * block; the code holds only that what ships is what he was shown.
+ *
+ * `kit/approved-stills.json` holds the approval (the lab ask that shows him
+ * the stills: pending until he answers, then approved with the lab it was
+ * read from, the label of his answer, all his answers, and the SHA-256 of
+ * each file the ask showed on the steps he reached), the earlier approvals
+ * that showed a still's bytes as they stand, and the SHA-256 of each still:
+ * every served image (`servedImages`) not outside the rule. Each ask it
+ * names is saved beside it (`savedAsk`): the lab's record of the ask, and
+ * the hash of each file it showed. Each approval the record keeps is held
+ * to its saved ask (`checkKept`, which `approve` and `shippable` share).
+ *
+ * `unapproved` names each still whose bytes differ from the record, each the
+ * record does not name, and each the record names with no file;
+ * `kit/field-still.slow.test.ts` holds it empty. `bun run kit` and
+ * `bun run kit:field` print it after they write, and never write the record.
+ * `pin` (`bun run kit:pin`, `./pin.ts`) writes the record pending on an ask,
+ * from the stills as they stand, and saves the ask. `approve`
+ * (`bun run kit:approve`, `./approve.ts`) turns it approved from the lab's
+ * record of the ask: its answer, and the receipt of the files its reached
+ * image blocks showed; and saves the ask as answered. `shippable`
+ * (`bun run kit:shippable`, and first in `alchemy.run.ts` on stage `prod`)
+ * refuses a record that is not approved, an approval its saved ask does not
+ * hold, a still no approval's shown files hold, and each image of a fresh
+ * build the record and `OUTSIDE` do not hold.
+ */
 import { Effect, FileSystem, Option, Path, Predicate, Schema } from 'effect';
 
 import { type BuiltImage, buildSite, builtImages, Format, sha256 } from './build-walk.ts';
 import { AskAnswers, type AskRead, LabAsk, LabAsks } from './lab-asks.ts';
 import { OUTSIDE, servedImages } from './served.ts';
 
+/** The record, from the app. */
 export const RECORD = 'kit/approved-stills.json';
 
+/** The question of an ask that asks the owner to approve the stills it shows, by its id, and the option that approves them. */
 export const STILLS_QUESTION = 'stills';
 export const APPROVE = 'approve';
 
+/**
+ * The owner's approval: the lab ask that shows him the stills, pending
+ * until he answers, then approved with the lab it was read from, when he
+ * answered the stills question and the label of his answer, every answer he
+ * gave in that ask in the lab's words, and the SHA-256 of each file its
+ * image blocks showed on the steps he reached, by the block's `src`, as the
+ * lab's receipt holds it.
+ */
 export const Given = Schema.Struct({
   status: Schema.Literal('approved'),
   ask: Schema.String,
@@ -26,6 +91,12 @@ export const Approval = Schema.Union([
 ]);
 export type Approval = typeof Approval.Type;
 
+/**
+ * The record: the approval; the approvals of earlier asks, each kept while
+ * it showed the bytes of a pinned still, so a still unchanged since he
+ * approved it stays approved when a later ask shows only what changed; and
+ * each still's path (from the app) with the SHA-256 of its bytes.
+ */
 export const Approved = Schema.Struct({
   approval: Approval,
   earlier: Schema.Array(Given),
@@ -33,6 +104,14 @@ export const Approved = Schema.Struct({
 });
 export type Approved = typeof Approved.Type;
 
+/**
+ * Where an ask the record names is saved, from the app: the lab's record of
+ * it as the lab gave it, and the SHA-256 of each file its image blocks
+ * showed, by `src`. `pin` saves the ask it pins on with its whole receipt,
+ * `approve` saves it again as answered with the receipt of the steps he
+ * reached (the approval's `shown`), so the committed record's asks are
+ * always saved beside it.
+ */
 export const savedAsk = (ask: string) => ({
   record: `kit/fixtures/ask-${ask}.json`,
   shown: `kit/fixtures/ask-${ask}.shown.json`,
@@ -43,6 +122,7 @@ const ShownJson = Schema.fromJsonString(Schema.Record(Schema.String, Schema.Stri
   space: 2,
 });
 
+/** Ask `ask`, as the lab gave it (`read`), saved at `savedAsk` with the hash of each file it showed (`shown`). */
 const saveAsk = Effect.fn('Approval.saveAsk')(function* (
   app: string,
   ask: string,
@@ -67,10 +147,12 @@ const RecordJson = Schema.fromJsonString(Approved, { space: 2 });
 
 const outside = new Set(OUTSIDE.map(({ image }) => image));
 
+/** Every still: each image the site serves that is not outside the rule, by its path from the app, sorted. */
 export const servedStills = Effect.fn('Approval.served')(function* (app: string) {
   return (yield* servedImages(app)).filter((image) => !outside.has(image));
 });
 
+/** Each still with the SHA-256 of its bytes as they stand. */
 export const hashedStills = Effect.fn('Approval.hashed')(function* (app: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -79,6 +161,7 @@ export const hashedStills = Effect.fn('Approval.hashed')(function* (app: string)
   );
 });
 
+/** The record as it stands. */
 export const readRecord = Effect.fn('Approval.read')(function* (app: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -93,12 +176,19 @@ const writeRecord = Effect.fn('Approval.write')(function* (app: string, record: 
   return record;
 });
 
+/** Why a still is not one the owner approved. */
 export const Why = Schema.Literals(['changed', 'not in the record', 'no file']);
 export type Why = typeof Why.Type;
 
+/** A still that is not one the owner approved, and why. */
 export const Unapproved = Schema.Struct({ still: Schema.String, why: Why });
 export type Unapproved = typeof Unapproved.Type;
 
+/**
+ * Each still that is not one the record holds: served with bytes other than
+ * the record's, served and not in the record, or in the record and not
+ * served. Empty when what ships is what the record holds.
+ */
 export const unapproved = Effect.fn('Approval.unapproved')(function* (app: string) {
   const { stills: approved } = yield* readRecord(app);
   const served = yield* hashedStills(app);
@@ -117,6 +207,7 @@ export const unapproved = Effect.fn('Approval.unapproved')(function* (app: strin
 const listed = (stills: ReadonlyArray<Unapproved>) =>
   stills.map(({ still, why }) => `${still} (${why})`).join(', ');
 
+/** The owner has not answered the ask's stills question. */
 export class AskUnanswered extends Schema.TaggedError<AskUnanswered>()('AskUnanswered', {
   ask: Schema.String,
 }) {
@@ -125,6 +216,7 @@ export class AskUnanswered extends Schema.TaggedError<AskUnanswered>()('AskUnans
   }
 }
 
+/** The owner's answer to the stills question is not the approve choice. */
 export class AskNotApproval extends Schema.TaggedError<AskNotApproval>()('AskNotApproval', {
   ask: Schema.String,
   answer: Schema.String,
@@ -134,6 +226,7 @@ export class AskNotApproval extends Schema.TaggedError<AskNotApproval>()('AskNot
   }
 }
 
+/** The record is not pending on the ask named, so that ask did not show the stills it pins. */
 export class RecordNotPending extends Schema.TaggedError<RecordNotPending>()('RecordNotPending', {
   ask: Schema.String,
   approval: Approval,
@@ -143,6 +236,7 @@ export class RecordNotPending extends Schema.TaggedError<RecordNotPending>()('Re
   }
 }
 
+/** The stills are not the ones the pending record pinned when the ask showed them. */
 export class StillsMoved extends Schema.TaggedError<StillsMoved>()('StillsMoved', {
   ask: Schema.String,
   stills: Schema.Array(Unapproved),
@@ -152,6 +246,7 @@ export class StillsMoved extends Schema.TaggedError<StillsMoved>()('StillsMoved'
   }
 }
 
+/** Pinned stills whose bytes no file the ask's image blocks showed holds. */
 export class StillsNotShown extends Schema.TaggedError<StillsNotShown>()('StillsNotShown', {
   ask: Schema.String,
   stills: Schema.Array(Schema.String),
@@ -161,6 +256,7 @@ export class StillsNotShown extends Schema.TaggedError<StillsNotShown>()('Stills
   }
 }
 
+/** The lab's record of the ask holds no receipt of the files its image blocks showed: it was made before the lab kept receipts. */
 export class AskUnreceipted extends Schema.TaggedError<AskUnreceipted>()('AskUnreceipted', {
   ask: Schema.String,
 }) {
@@ -169,6 +265,7 @@ export class AskUnreceipted extends Schema.TaggedError<AskUnreceipted>()('AskUnr
   }
 }
 
+/** Why an approval the record keeps is not one its saved ask holds. */
 export const Unsound = Schema.Literals([
   'has no saved ask',
   'is not answered approve in its saved ask',
@@ -177,6 +274,7 @@ export const Unsound = Schema.Literals([
 ]);
 export type Unsound = typeof Unsound.Type;
 
+/** An approval the record keeps that its saved ask (`savedAsk`) does not hold. */
 export class ApprovalUnsound extends Schema.TaggedError<ApprovalUnsound>()('ApprovalUnsound', {
   ask: Schema.String,
   why: Unsound,
@@ -186,6 +284,7 @@ export class ApprovalUnsound extends Schema.TaggedError<ApprovalUnsound>()('Appr
   }
 }
 
+/** The record is pending: the owner has not approved the stills. */
 export class ShipPending extends Schema.TaggedError<ShipPending>()('ShipPending', {
   ask: Schema.String,
 }) {
@@ -194,9 +293,11 @@ export class ShipPending extends Schema.TaggedError<ShipPending>()('ShipPending'
   }
 }
 
+/** An image of the built site that is no approved still and no image outside the rule: its path from `dist/` and its format. */
 export const BuiltUnapproved = Schema.Struct({ image: Schema.String, format: Format });
 export type BuiltUnapproved = typeof BuiltUnapproved.Type;
 
+/** Images the built site would serve that the record and `OUTSIDE` do not hold. */
 export class ShipUnapproved extends Schema.TaggedError<ShipUnapproved>()('ShipUnapproved', {
   images: Schema.Array(BuiltUnapproved),
 }) {
@@ -206,6 +307,13 @@ export class ShipUnapproved extends Schema.TaggedError<ShipUnapproved>()('ShipUn
   }
 }
 
+/**
+ * The record written pending on `ask`, from the stills as they stand; the
+ * lab must hold the ask, with its receipt. It keeps each approval of another
+ * ask (the record's own, once approved, and its earlier ones) that showed
+ * the bytes of a pinned still, and saves the ask as the lab gave it with its
+ * receipt.
+ */
 export const pin = Effect.fn('Approval.pin')(function* (app: string, ask: string) {
   const lab = yield* LabAsks;
   const read = yield* lab.read(ask);
@@ -222,11 +330,18 @@ export const pin = Effect.fn('Approval.pin')(function* (app: string, ask: string
   return yield* writeRecord(app, { approval: { status: 'pending', ask }, earlier, stills });
 });
 
+/** The lab's receipt of the ask: the SHA-256 of each file its image blocks show, by `src`, as it made the ask; refused when it kept none. */
 const receiptOf = (held: LabAsk) =>
   Effect.fromOption(Option.fromUndefinedOr(held.shown)).pipe(
     Effect.mapError(() => AskUnreceipted.make({ ask: held.id })),
   );
 
+/**
+ * The `src` of each image block on a step the owner's answers reached (the
+ * steps `answered` names), in the order answered, once each. A step not
+ * answered shows nothing here, and neither does one `answered` names that
+ * the ask lacks: what is not known to be shown counts as not shown.
+ */
 export const imagesShown = (ask: LabAsk) => [
   ...new Set(
     ask.answered.flatMap(({ step }) =>
@@ -247,6 +362,7 @@ export const imagesShown = (ask: LabAsk) => [
   ),
 ];
 
+/** The receipt of each image block on a step the owner reached, by `src`: what the ask showed him. A block the receipt holds no hash of shows nothing. */
 export const shownOn = Effect.fn('Approval.shownOn')(function* (held: LabAsk) {
   const receipt = yield* receiptOf(held);
   return Object.fromEntries(
@@ -258,6 +374,7 @@ export const shownOn = Effect.fn('Approval.shownOn')(function* (held: LabAsk) {
   );
 });
 
+/** Whether two shown sets name the same files with the same hashes. */
 const sameShown = (a: Readonly<Record<string, string>>, b: Readonly<Record<string, string>>) => {
   const keys = Object.keys(a);
   return (
@@ -266,6 +383,14 @@ const sameShown = (a: Readonly<Record<string, string>>, b: Readonly<Record<strin
   );
 };
 
+/**
+ * Why an approval the record keeps is not one its saved ask holds, or none:
+ * the saved ask is not there or is of another ask; it is still asking, or
+ * its stills answer is not the approve choice; or the approval's shown files
+ * are not the saved ones, not the image blocks the saved ask's reached
+ * steps show, or (when the saved ask holds the lab's receipt) not the
+ * receipt's hashes.
+ */
 const unsoundOf = Effect.fn('Approval.unsoundOf')(function* (app: string, given: Given) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -299,6 +424,12 @@ const unsoundOf = Effect.fn('Approval.unsoundOf')(function* (app: string, given:
   return Option.none<Unsound>();
 });
 
+/**
+ * The approvals the record keeps, each held to its saved ask (`unsoundOf`),
+ * and none of the earlier ones on the ask `current` (the record's own):
+ * refused with the first that is not, naming it and why. `approve` checks the
+ * earlier ones before it reads the lab; `shippable`, the approval too.
+ */
 export const checkKept = Effect.fn('Approval.checkKept')(function* (
   app: string,
   current: string,
@@ -314,6 +445,7 @@ export const checkKept = Effect.fn('Approval.checkKept')(function* (
   }
 });
 
+/** Each pinned still (sorted) whose SHA-256 no file of any of the shown sets has. */
 export const stillsNotShown = (
   stills: Approved['stills'],
   ...shown: ReadonlyArray<Readonly<Record<string, string>>>
@@ -324,6 +456,18 @@ export const stillsNotShown = (
     .toSorted();
 };
 
+/**
+ * The pending record turned approved on `ask`, from the lab's record of the
+ * ask. Refused unless the record is pending on that ask, each earlier
+ * approval it keeps is held by its saved ask (`checkKept`), the lab holds
+ * the ask with its receipt, the owner answered it, his answer to the stills
+ * question is the approve choice, every pinned still's SHA-256 is that of a
+ * file an image block on a step he reached showed, by the receipt, or an
+ * earlier approval showed (each other named), and every still is the one
+ * the record pinned. It saves the ask again as the lab gave it answered,
+ * and keeps only the earlier approvals that hold a still this ask did not
+ * show.
+ */
 export const approve = Effect.fn('Approval.approve')(function* (app: string, ask: string) {
   const record = yield* readRecord(app);
   if (record.approval.status !== 'pending' || record.approval.ask !== ask)
@@ -380,6 +524,10 @@ export const approve = Effect.fn('Approval.approve')(function* (app: string, ask
   return { approval, earlier, stills: record.stills };
 });
 
+/**
+ * Each image of the built site at `dist` (by its bytes) whose SHA-256 is no
+ * still's in the record and no image's outside the rule, sorted by path.
+ */
 export const unapprovedBuilt = Effect.fn('Approval.unapprovedBuilt')(function* (
   app: string,
   dist: string,
@@ -396,6 +544,13 @@ export const unapprovedBuilt = Effect.fn('Approval.unapprovedBuilt')(function* (
     .map(({ file, format }) => ({ image: file, format }));
 });
 
+/**
+ * The record as the prod deploy needs it, and the build it ships: the record
+ * approved, each approval it keeps held by its saved ask (`checkKept`), each
+ * still's SHA-256 that of a file an approval showed, then a fresh
+ * `bun run build` whose every image (by its bytes) the record or `OUTSIDE`
+ * holds.
+ */
 export const shippable = Effect.fn('Approval.shippable')(function* (app: string) {
   const path = yield* Path.Path;
   const { approval, earlier, stills } = yield* readRecord(app);
@@ -410,6 +565,7 @@ export const shippable = Effect.fn('Approval.shippable')(function* (app: string)
   return approval;
 });
 
+/** The stills against the record, logged: each one not approved, or that all are. */
 export const reportAgainstRecord = Effect.fn('Approval.report')(function* (app: string) {
   const found = yield* unapproved(app);
   if (found.length === 0) return yield* Effect.logInfo('kit.stills.approved');

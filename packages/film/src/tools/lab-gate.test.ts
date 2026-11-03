@@ -7,6 +7,7 @@ import { labInMemory } from './lab/testing.ts';
 
 const bound = { hostname: '127.0.0.1', port: 4401 } as const;
 
+/** A route beside the API that echoes its body and adds a header as its answer goes out. */
 const echo = HttpRouter.add(
   'POST',
   '/echo',

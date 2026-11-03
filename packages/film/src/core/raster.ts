@@ -1,11 +1,14 @@
+/** A picture: `width` × `height` pixels of four bytes (red, green, blue, alpha), row by row from the top. */
 export interface Raster {
   readonly width: number;
   readonly height: number;
   readonly rgba: Uint8Array;
 }
 
+/** A box in a picture's pixels: left, top, right, bottom (the right and bottom edges outside it). */
 type RasterBox = readonly [x0: number, y0: number, x1: number, y1: number];
 
+/** `box` held inside a `width` × `height` picture, in whole pixels; empty when it holds none of it. */
 const clampBox = (box: RasterBox, width: number, height: number): RasterBox => {
   const x0 = Math.max(0, Math.min(width, Math.floor(Math.min(box[0], box[2]))));
   const y0 = Math.max(0, Math.min(height, Math.floor(Math.min(box[1], box[3]))));
@@ -14,6 +17,7 @@ const clampBox = (box: RasterBox, width: number, height: number): RasterBox => {
   return [x0, y0, x1, y1];
 };
 
+/** The part of `r` inside `box` (`clampBox`). */
 export const cropRaster = (r: Raster, box: RasterBox): Raster => {
   const [x0, y0, x1, y1] = clampBox(box, r.width, r.height);
   const [width, height] = [x1 - x0, y1 - y0];
@@ -26,8 +30,10 @@ export const cropRaster = (r: Raster, box: RasterBox): Raster => {
   return { width, height, rgba };
 };
 
+/** `r` drawn `factor` times its size, each pixel the bilinear blend of the four it falls between. */
 export const scaleRaster = (r: Raster, factor: number): Raster => stretchRaster(r, factor, factor);
 
+/** `r` drawn `fx` times its width and `fy` times its height, each pixel the bilinear blend of the four it falls between. */
 export const stretchRaster = (r: Raster, fx: number, fy: number): Raster => {
   const width = Math.max(1, Math.round(r.width * fx));
   const height = Math.max(1, Math.round(r.height * fy));
@@ -61,6 +67,7 @@ export const stretchRaster = (r: Raster, fx: number, fy: number): Raster => {
   return { width, height, rgba };
 };
 
+/** `pictures` one under another, left-aligned, on white. */
 export const stackRaster = (pictures: ReadonlyArray<Raster>): Raster => {
   const width = Math.max(1, ...pictures.map((p) => p.width));
   const height = pictures.reduce((s, p) => s + p.height, 0);
@@ -74,6 +81,11 @@ export const stackRaster = (pictures: ReadonlyArray<Raster>): Raster => {
   return { width, height, rgba };
 };
 
+/**
+ * `pictures` side by side on white, `gap` pixels apart and round the edge,
+ * each placed down by its own `top` (to the nearest pixel) so the rows they
+ * are aligned by meet.
+ */
 export const besideRaster = (
   pictures: ReadonlyArray<{ readonly raster: Raster; readonly top: number }>,
   gap: number,
@@ -96,11 +108,13 @@ export const besideRaster = (
   return { width, height, rgba };
 };
 
+/** A path to stroke: its points in the picture's pixels, and whether its last point joins its first. */
 export interface RasterPath {
   readonly points: ReadonlyArray<readonly [x: number, y: number]>;
   readonly closed: boolean;
 }
 
+/** `r` with each of `paths` stroked over it `width` pixels wide in `colour` (red, green, blue), opaque; `r` itself unchanged. */
 export const strokeRaster = (
   r: Raster,
   paths: ReadonlyArray<RasterPath>,

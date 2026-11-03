@@ -2,6 +2,12 @@ import { Option } from 'effect';
 import { type Context, selected } from '../../command/context.ts';
 import { Selection, type WordsSelection } from '../../command/selection.ts';
 
+/**
+ * The words selected once `selection` is extended to word `index` of
+ * `scene`: from its first word to that one, whichever comes first; a word
+ * of another section (or no selection) is selected alone. What a shift-tap
+ * and Select to here both make.
+ */
 const extendedTo = (
   selection: Option.Option<WordsSelection>,
   scene: string,
@@ -21,6 +27,12 @@ const extendedTo = (
   });
 };
 
+/**
+ * The words Select to here selects from a word the menu opened on (one
+ * word): the selection in its section extended to it; none with no selection
+ * there, or when it would select what is selected already: the Script's
+ * Select to here (`script/commands.ts`).
+ */
 export const selectedTo = (
   ctx: Context,
   selection: Option.Option<WordsSelection>,

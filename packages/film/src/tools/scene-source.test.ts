@@ -46,6 +46,7 @@ export { hand_ as hand };
 
 const ok = <A, E>(r: Result.Result<A, E>): A => Result.getOrThrow(r);
 
+/** The source outside `[from, to)` of `before` must be the same bytes in `after`. */
 const untouchedOutside = (before: string, after: string, changed: string) => {
   const at = before.indexOf(changed);
   expect(at).toBeGreaterThan(-1);
@@ -455,6 +456,7 @@ export const hand = drawing({
   });
 });
 
+/** What `unlocatable` reports on `source`: the text of each range. */
 const unlocated = (source: string) =>
   unlocatable(source, ok(parseModule(FILE, source))).map((u) => source.slice(u.start, u.end));
 

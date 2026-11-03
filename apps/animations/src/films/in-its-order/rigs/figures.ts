@@ -2,10 +2,16 @@ import { figuresFile } from '@manna/film/style';
 import * as LEAD from '../../../library/cast/lead-feast/rig/lead.ts';
 import { PAPERS as LEAD_FEAST } from '../../../library/cast/lead-feast/rig/papers.ts';
 
+/**
+ * The figures' ink against the house study's: the kept sheets line a head
+ * about 6.5 px of its 199 (0.033), the study's line 0.035 of a head.
+ */
 const WEIGHT = 0.95;
 
+/** Whether the ink's widths are written into the print, bound to no `ink` number: they are bound, so a close shot thins the line. */
 const BAKED = false;
 
+/** IIO's figures file: each artboard by its key, in the order the file draws them, left to right on the stage. */
 export const FIGURES = figuresFile({
   weight: WEIGHT,
   baked: BAKED,
@@ -84,4 +90,5 @@ export const FIGURES = figuresFile({
   },
 });
 
+/** The artboards, by name: what a prop asks the file for. */
 export const ARTBOARDS = FIGURES.artboards;

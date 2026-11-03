@@ -1,3 +1,8 @@
+/**
+ * EGW API Client using Effect-TS
+ * Adapted from Spotify client patterns with Effect-TS
+ */
+
 import type { HttpClientError } from 'effect/http';
 import { HttpClient, HttpClientRequest, HttpClientResponse, UrlParams } from 'effect/http';
 import {
@@ -19,6 +24,9 @@ import { EGWAuth } from './auth.js';
 import { bakedApiBaseUrl, bakedUserAgent, envVar } from './build-defines.js';
 import * as Schemas from './schemas.js';
 
+/**
+ * EGW API Client Errors
+ */
 class EGWApiError extends Schema.TaggedError<EGWApiError>()('EGWApiError', {
   cause: Schema.optional(Schema.Unknown),
   message: Schema.String,
@@ -32,8 +40,14 @@ const JsonString = Schema.Unknown.pipe(
 );
 const encodeJson = Schema.encodeSync(JsonString);
 
+/**
+ * EGW API Client error type (union of possible errors)
+ */
 type EGWApiClientError = EGWApiError | HttpClientError.HttpClientError | Schema.SchemaError;
 
+/**
+ * EGW API Client service interface.
+ */
 interface EGWApiClientService {
   readonly getLanguages: Effect.Effect<readonly Schemas.Language[], EGWApiClientError>;
   readonly getFoldersByLanguage: (
@@ -70,9 +84,15 @@ interface EGWApiClientService {
   readonly getMirrors: Effect.Effect<readonly string[], EGWApiClientError>;
 }
 
+/**
+ * EGW API Client Service
+ */
 export class EGWApiClient extends Context.Service<EGWApiClient, EGWApiClientService>()(
   '@manna/core/egw/client/EGWApiClient',
 ) {
+  /**
+   * Live implementation using HTTP client and EGW Auth.
+   */
   static Live: Layer.Layer<
     EGWApiClient,
     Config.ConfigError | HttpClientError.HttpClientError | Schema.SchemaError,
@@ -100,6 +120,10 @@ export class EGWApiClient extends Context.Service<EGWApiClient, EGWApiClientServ
       const auth = yield* EGWAuth;
       const rawHttpClient = yield* HttpClient.HttpClient;
 
+      /**
+       * Create an instrumented HTTP client with optional baseUrl prepending
+       * @param prependBaseUrl - If true, prepends baseUrl to relative URLs
+       */
       const createHttpClient = (prependBaseUrl: boolean) =>
         rawHttpClient.pipe(
           HttpClient.mapRequest((request) => {
@@ -151,6 +175,11 @@ export class EGWApiClient extends Context.Service<EGWApiClient, EGWApiClientServ
 
       const absoluteUrlHttpClient = createHttpClient(false);
 
+      /**
+       * Retry policy with exponential backoff
+       * Maximum 2 retries (1 initial attempt + 2 retries)
+       * Exponential delays: 100ms, 200ms
+       */
       const retryPolicy = {
         schedule: Schedule.exponential(Duration.millis(100)),
         times: 2,
@@ -166,6 +195,10 @@ export class EGWApiClient extends Context.Service<EGWApiClient, EGWApiClientServ
 
       type PaginatedResponse = Schema.Schema.Type<typeof PaginatedResponse>;
 
+      /**
+       * Fetch a single page of books from a URL
+       * Handles both absolute URLs (from next field) and relative URLs
+       */
       const fetchBooksPage = (url: string): Effect.Effect<PaginatedResponse, EGWApiError> =>
         Effect.gen(function* () {
           const isAbsoluteUrl = url.startsWith('http://') || url.startsWith('https://');
@@ -187,6 +220,10 @@ export class EGWApiClient extends Context.Service<EGWApiClient, EGWApiClientServ
           Effect.retry(retryPolicy),
         );
 
+      /**
+       * Create a stream of books from paginated API responses
+       * Uses Stream.paginateEffect to handle pagination automatically
+       */
       const booksStream = (initialUrl: string): Stream.Stream<Schemas.Book, EGWApiError> =>
         Stream.paginate(initialUrl, (url) =>
           Effect.gen(function* () {
@@ -386,8 +423,14 @@ export class EGWApiClient extends Context.Service<EGWApiClient, EGWApiClientServ
     }),
   );
 
+  /**
+   * Default layer - alias for Live (backwards compatibility).
+   */
   static Default = EGWApiClient.Live;
 
+  /**
+   * Test implementation with mock data.
+   */
   static Test = (
     config: {
       books?: readonly Schemas.Book[];

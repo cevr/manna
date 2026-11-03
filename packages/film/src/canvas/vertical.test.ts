@@ -7,8 +7,10 @@ import { verticalHook } from './vertical.ts';
 const STYLE = { font: '600 60px serif', color: '#2a2520' };
 const TEXT = 'Why was the law given at all, if no one could keep it?';
 
+/** A font's box, as a canvas measures it: the stand-in measures widths alone. */
 const FONT_BOX = { fontBoundingBoxAscent: 48, fontBoundingBoxDescent: 14 };
 
+/** A stand-in page 1080 wide at `k`, logging each call it is asked to make. */
 const page = (k: number) => {
   const calls: Array<string> = [];
   const r = recorder(1080 * k, 1920 * k, {
@@ -25,6 +27,7 @@ const page = (k: number) => {
   return { ctx, calls };
 };
 
+/** The hook drawn at `T`, probed: what it recorded. */
 const probedAt = (T: number, k = 1) => {
   const { ctx, calls } = page(k);
   const sink: ProbeSink = { texts: [], inks: [] };

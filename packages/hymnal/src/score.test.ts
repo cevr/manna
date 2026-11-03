@@ -7,6 +7,7 @@ import * as Midi from './midi.js';
 import * as Fixture from './midi-fixture.js';
 import * as Score from './score.js';
 
+/** A dominant chord, then the closing chord on `tonic` (a pitch class), its third minor or major. */
 const cadence = (tonic: number, minor: boolean): Fixture.Fixture => ({
   fifths: null,
   tracks: [

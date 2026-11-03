@@ -16,8 +16,10 @@ import {
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
+/** What the run's own turbo leaves of its summary. */
 type Own = 'whole' | 'no-line' | 'line-no-file' | 'truncated' | 'no-task' | 'two-lines' | 'outside';
 
+/** Another writer's summary: which workspaces it names, and when it lands beside the run. */
 interface Foreign {
   readonly file: string;
   readonly names: 'same' | 'other' | 'both';
@@ -29,13 +31,17 @@ interface Case {
   readonly label: string;
   readonly own: Own;
   readonly exit: 0 | 1;
+  /** Under the 1 s budget, so the run's exit is turbo's at any host load. */
   readonly ownMs: number;
   readonly foreign: ReadonlyArray<Foreign>;
+  /** x's `test` script as turbo's dry run names it (`bun test` when none). */
   readonly command?: string;
+  /** x's tests cut into parts: its `test` has no command, and each part's run writes its own whole summary of its time. */
   readonly parts?: ReadonlyArray<{ readonly task: string; readonly ms: number }>;
 }
 
 const OWN_FILE = 'own.json';
+/** Where the `outside` case writes its summary, relative to the scratch root. */
 const OUTSIDE_DIR = 'elsewhere';
 
 const json = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
@@ -58,6 +64,7 @@ const foreignSummary = (foreign: Foreign) => summary(NAMED[foreign.names], forei
 
 const write = (file: string, body: string) => `printf '%s' '${body}' > .turbo/runs/${file}`;
 
+/** The stand-in: `turbo run test --dry=json` names x and y; a measuring run plays the case. */
 const standIn = (each: Case) => {
   const during = (when: Foreign['when']) =>
     each.foreign
@@ -138,6 +145,7 @@ const standIn = (each: Case) => {
 const text = (stream: Stream.Stream<Uint8Array, unknown>) =>
   Stream.mkString(Stream.decodeText(stream));
 
+/** A run of a copy of the script in a scratch repository, measuring x over the stand-in. */
 const run = (each: Case) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -212,6 +220,7 @@ const run = (each: Case) =>
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(2)} s`;
 
+/** Every way the run breaks the rule in `each`; none when it holds. */
 const violations = (
   each: Case,
   result: {
@@ -253,6 +262,7 @@ const violations = (
   return found;
 };
 
+/** Runs each case and holds that none breaks the rule. */
 const check = (cases: Effect.Effect<ReadonlyArray<Case>>) =>
   Effect.runPromise(
     Effect.flatMap(cases, (all) =>
@@ -270,6 +280,7 @@ const check = (cases: Effect.Effect<ReadonlyArray<Case>>) =>
     ),
   );
 
+/** mulberry32: a small seeded generator, so a failing seed can be named and replayed. */
 const random = (seed: number) => {
   let state = seed >>> 0;
   return () => {
@@ -298,6 +309,7 @@ const WHENS: ReadonlyArray<Foreign['when']> = [
   'after',
 ];
 
+/** `count` cases: each own summary and exit, with zero to four foreign summaries of any kind and time. */
 const generate = (seed: number, count: number): ReadonlyArray<Case> => {
   const next = random(seed);
   const pick = <A>(items: ReadonlyArray<A>): A => items[Math.floor(next() * items.length)] as A;
@@ -336,6 +348,7 @@ const sameDuring: Foreign = {
   ms: 7_000,
 };
 
+/** The seed of the generated cases: `TEST_BUDGET_SEED` when set, else the clock. */
 const seed = Effect.gen(function* () {
   const given = yield* Config.option(Config.Int('TEST_BUDGET_SEED'));
   return yield* Option.match(given, {

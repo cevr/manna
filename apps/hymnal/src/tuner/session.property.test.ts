@@ -1,3 +1,18 @@
+/**
+ * The sheet's rule over generated worlds: seeded sequences of what a reader
+ * and the phone do (open, a permission read and answered, the app leaving and
+ * coming back, the player sounding and falling quiet, the ear starting,
+ * refusing and ending on its own, a tap, the close), each world answering the
+ * sheet's work as the phone would. After every step:
+ * - the microphone and the player never run at once;
+ * - the microphone is never held with the sheet closed or the app away;
+ * - a start is asked only while active, granted and quiet;
+ * - the player is paused only as the sheet begins to wait on it, and the
+ *   system asks for the microphone at most once in an opening.
+ * Then the world settles (active, granted, quiet, every answer in) and an
+ * open sheet ends up listening.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { Match, Option } from 'effect';
 
@@ -27,6 +42,7 @@ import {
 import { detect } from './pitch';
 import { reading, readingOn, STRINGS, type StringId } from './tuning';
 
+/** A seeded generator of numbers in [0, 1) (mulberry32). */
 const seeded = (seed: number) => {
   let a = seed >>> 0;
   return () => {
@@ -43,14 +59,18 @@ const SEED = Number(process.env['TUNER_SEED'] ?? 20261031);
 const WORLDS = 300;
 const EVENTS = 40;
 
+/** The phone around the sheet: what is pending, and what holds the microphone and the speaker. */
 interface World {
   permission: Permission;
   active: boolean;
+  /** Another route covers the sheet. */
   covered: boolean;
   sounding: boolean;
   microphone: boolean;
+  /** Answers the phone owes the sheet, delivered in a drawn order. */
   pending: Array<Event>;
   asks: number;
+  /** Settling: every start is taken. */
   settling: boolean;
 }
 
@@ -58,6 +78,7 @@ const PERMISSIONS: ReadonlyArray<Permission> = ['undetermined', 'granted', 'deni
 
 const none = Option.none<string>();
 
+/** The reader's answer to the system's ask: the permission from then on. */
 const answer = (world: World, draw: () => number): Option.Option<string> => {
   world.asks += 1;
   if (world.asks > 1) return Option.some('asked twice in one opening');
@@ -84,6 +105,7 @@ const start = (world: World, attempt: number, draw: () => number): Option.Option
   return none;
 };
 
+/** One piece of work, carried out as the phone would; a violation is named, else none. */
 const carryOne = (
   world: World,
   before: Session,
@@ -104,6 +126,7 @@ const carryOne = (
     },
   });
 
+/** Carries out a step's work as the phone would; a violation is named, else none. */
 const carry = (
   world: World,
   before: Session,
@@ -118,6 +141,7 @@ const carry = (
   return violation(world, after);
 };
 
+/** What the phone holds after a step, against the rule. */
 const violation = (world: World, after: Session): Option.Option<string> => {
   if (world.microphone && world.sounding) return Option.some('listening and playing at once');
   if (world.microphone && !world.active) return Option.some('listening while away');
@@ -129,6 +153,10 @@ const violation = (world: World, after: Session): Option.Option<string> => {
   return Option.none();
 };
 
+/**
+ * An answer the phone owes, as it arrives: the paused player falls quiet; a start takes the
+ * microphone as it resolves, and the ear, listening already, answers a start as started.
+ */
 const deliver = (world: World, owed: Event): Event => {
   if (Event.$is('Sounding')(owed)) world.sounding = owed.sounding;
   if (Event.$is('Refused')(owed) && world.microphone)
@@ -137,6 +165,7 @@ const deliver = (world: World, owed: Event): Event => {
   return owed;
 };
 
+/** One drawn happening: an answer the phone owes, or something the reader or the phone does. */
 const happening = (world: World, draw: () => number): Event => {
   const roll = draw();
   if (world.pending.length > 0 && roll < 0.45) {
@@ -169,6 +198,7 @@ const happening = (world: World, draw: () => number): Event => {
   return Event.Closed();
 };
 
+/** Runs the world `seed`, adding to `coveredIn` each phase a `Covered` event met. */
 const run = (seed: number, coveredIn: Set<string>) => {
   const draw = seeded(seed);
   const world: World = {
@@ -206,6 +236,7 @@ const run = (seed: number, coveredIn: Set<string>) => {
   return { seed, broken: 'none', trail: [] };
 };
 
+/** Settles the world: every answer in, the player quiet, granted in Settings and back from away, a tap if it ended. */
 const settle = (
   world: World,
   apply: (event: Event) => Option.Option<string>,

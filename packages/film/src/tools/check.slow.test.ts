@@ -71,8 +71,10 @@ import { holdScenes, holdTimings, spokenTake, testFilm, testVoice } from './film
 
 const frame = { width: 1920, height: 1080 };
 const noTakes: Timings = { voice: '', scenes: {} };
+/** The master's file as the static leg names it. */
 const MASTER = 'narration/full.wav';
 const NO_MASTER: MasterAudio = { master: Option.none(), key: Option.none(), file: MASTER };
+/** `film` and its placed scenes, as the static check reads them. */
 const placedFilm = <Film extends LoadedFilm>(film: Film) =>
   [film, Result.getOrThrow(layout(film.scenes, film.timings, 30))] as const;
 
@@ -82,9 +84,11 @@ const checked = (
   options: CheckOptions,
   audio: MasterAudio,
 ): ReadonlyArray<Reported> => report(staticFindings(film, placed, audio), options).findings;
+/** A layout finding's level: none of them turns on `--allow-stale`. */
 const layoutLevel = (finding: FrameFinding | StaticHold) => levelOf(finding, { allowStale: false });
 const sample: Sample = { scene: 'a', frame: 30, time: 1, at: 'mark go' };
 const tags = (fs: ReadonlyArray<{ readonly _tag: string }>) => fs.map((f) => f._tag);
+/** Every finding but the ending's: these fixtures are too short for end screens (`check-ending.test.ts`). */
 const besideEnding = (r: { readonly finding: { readonly _tag: string } }) =>
   r.finding._tag !== 'EndShort';
 
@@ -1112,6 +1116,7 @@ const option = (movements: Music['movements']): Music => ({
   movements,
 });
 
+/** A score of one option, `piano`, in `movements`. */
 const music = (movements: Music['movements']): Score => ({
   play: 'piano',
   under: -18,
@@ -1194,6 +1199,7 @@ describe('musicFindings', () => {
   });
 });
 
+/** A test library: made and current, stale, unmade with a candidate waiting, a bed, a loud one, and code. */
 const library = defineLibrary({
   'paper.hit': {
     kind: 'generated',
@@ -1349,6 +1355,7 @@ describe('soundFindings', () => {
 
 describe('balanceFindings', () => {
   const RATE = 44100;
+  /** `secs` of a 220 Hz tone at `db` dBFS on both sides, their power summed (silence past `until`). */
   const tone = (secs: number, db: number, until = secs): Pcm => {
     const frames = Math.round(secs * RATE);
     const amp = 10 ** (db / 20);
@@ -1464,6 +1471,7 @@ describe('the audio master', () => {
   const film = testFilm(scenes, recorded);
   const placed = Result.getOrThrow(layout(scenes, recorded, 30));
   const end = filmEnd(placed);
+  /** The key of the plan the film mixes to now. */
   const NOW = 'plan-now';
   const found = (
     length: Option.Option<number>,

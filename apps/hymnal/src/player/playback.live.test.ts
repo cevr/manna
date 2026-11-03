@@ -1,3 +1,12 @@
+/**
+ * The live playback's remote presses (`playback.live.ts`) over a device and
+ * a Media Session the test holds: on the web each press reaches the player
+ * at once and asks One for nothing, after One's `play` dropped the
+ * handlers, after its `setNowPlayingInfo` set its own, and after its `stop`
+ * dropped them with the recording; on a phone One's
+ * lock-screen events reach the player as presses.
+ */
+
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Fiber, Option, Stream } from 'effect';
 
@@ -8,6 +17,13 @@ type Action = 'play' | 'pause' | 'seekto';
 type Handler = Parameters<Session['setActionHandler']>[1];
 type Listener = Parameters<Device['audio']['watchRemoteCommands']>[0];
 
+/**
+ * One's web `Audio` as far as the presses go: `play` and `stop` drop the
+ * Media Session's handlers, `play` loads (its promise waits), `setNowPlayingInfo` sets
+ * One's own (each would resume, pause or seek, and only then tell), and
+ * each call is kept. `watchRemoteCommands` keeps its listener, as a phone's
+ * session does.
+ */
 const fake = () => {
   const handlers = new Map<Action, Handler>();
   const session: Session = {
@@ -65,6 +81,7 @@ const fake = () => {
       addStateListener: () => ({ remove: () => {} }),
     },
   };
+  /** The Media Session's `action` pressed, as the browser calls its handler. */
   const press = (action: Action, seekTime?: number) =>
     Effect.sync(() =>
       Option.getOrThrow(Option.fromNullishOr(handlers.get(action)))({ action, seekTime }),
@@ -72,6 +89,7 @@ const fake = () => {
   return { session, asked, listeners, device, press };
 };
 
+/** The first `count` presses the player hears while `act` runs. */
 const heard = (playback: PlaybackApi, count: number, act: Effect.Effect<void>) =>
   Effect.gen(function* () {
     const presses = yield* Stream.take(playback.remote, count).pipe(

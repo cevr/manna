@@ -1,17 +1,35 @@
 /* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals -- the test reads the app's package.json, turbo.json and test files from disk, synchronously, and parses the two JSON files plainly. */
 
+/**
+ * The app's unit tests run as parts, each a turbo task the gate runs: the
+ * `test:<part>` scripts the commandless `test` of `turbo.json` depends on.
+ * Together the parts run every unit-test file once: each `*.test.ts(x)`
+ * under `src`, `infra`, `scripts` and `vite` that is not a `*.slow.test.*`
+ * file, `src` under the test preload and the rest with none. No part takes a
+ * file outside that set, and each ignores every slow file and names none.
+ *
+ * Each part's command is read with a grammar for the forms the parts use
+ * (`bun test`, `--no-isolate`, `--parallel=<n>`, `--preload <file>`,
+ * `--path-ignore-patterns=<**\/*name* or a path>`, `./` files and folders);
+ * any other word refuses the command, so a part written another way cannot
+ * pass by being read wrong.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const APP = join(import.meta.dir, '..');
 const PRELOAD = './src/test/setup.ts';
+/** The folders that hold unit tests. */
 const ROOTS = ['src', 'infra', 'scripts', 'vite'] as const;
 
+/** A name bun's runner takes for a test file. */
 const TEST_NAME = /(?:\.test|_test|\.spec|_spec)\.[cm]?[jt]sx?$/;
 const UNIT_NAME = /\.test\.tsx?$/;
 const SLOW_NAME = /\.slow\.test\./;
 
+/** Every file under `folder` (a path from the app) whose name bun takes for a test, skipping `node_modules` and dot folders. */
 const testsUnder = (folder: string): ReadonlyArray<string> =>
   readdirSync(join(APP, folder), { withFileTypes: true }).flatMap((entry) => {
     const path = `${folder}/${entry.name}`;
@@ -23,13 +41,18 @@ const testsUnder = (folder: string): ReadonlyArray<string> =>
     return [];
   });
 
+/** One part's command, read: its preloads, the paths it names and the patterns it ignores. */
 interface Part {
+  /** The files it preloads: none, or one. */
   readonly preloads: ReadonlyArray<string>;
   readonly paths: ReadonlyArray<string>;
+  /** Names a file's name may not hold (from `**\/*<name>*`). */
   readonly ignoredNames: ReadonlyArray<string>;
+  /** Paths from the app, a file or a folder, whose files are not taken. */
   readonly ignoredPaths: ReadonlyArray<string>;
 }
 
+/** One word of a command, read. */
 type Word =
   | { readonly _tag: 'Flag' }
   | { readonly _tag: 'Preload'; readonly file: string }
@@ -38,6 +61,7 @@ type Word =
   | { readonly _tag: 'Path'; readonly path: string }
   | { readonly _tag: 'Refused'; readonly word: string };
 
+/** A command read into a part, or refused with the reason. */
 type Read =
   | { readonly _tag: 'Part'; readonly part: Part }
   | { readonly _tag: 'Refused'; readonly reason: string };
@@ -63,9 +87,11 @@ const readWord = (word: string): Word => {
   return { _tag: 'Refused', word };
 };
 
+/** The words of one kind. */
 const tagged = <Tag extends Word['_tag']>(words: ReadonlyArray<Word>, tag: Tag) =>
   words.filter((word): word is Extract<Word, { readonly _tag: Tag }> => word._tag === tag);
 
+/** Reads a part's command, or refuses it on any word outside the grammar or a second preload. */
 const readPart = (command: string): Read => {
   const [bun, test, ...rest] = command
     .trim()
@@ -91,6 +117,7 @@ const readPart = (command: string): Read => {
   };
 };
 
+/** The files `part` takes, as bun does: each test file under a folder it names, or a file it names, less what it ignores. */
 const takenBy = (part: Part): ReadonlyArray<string> =>
   part.paths
     .flatMap((path) => {
@@ -123,6 +150,7 @@ const taken = parts.flatMap(({ name, part }) =>
   takenBy(part).map((file) => ({ name, part, file })),
 );
 
+/** The unit-test set: every `*.test.ts(x)` under the roots that is not slow. */
 const units = ROOTS.flatMap((root) => testsUnder(root)).filter(
   (file) => UNIT_NAME.test(file) && !SLOW_NAME.test(file),
 );

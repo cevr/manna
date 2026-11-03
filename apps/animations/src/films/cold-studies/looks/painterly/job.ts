@@ -15,8 +15,10 @@ import { BRUSH_PX, type Easel, curve, glow, oval, paint, pool, rect, shade } fro
 import { oil } from './oil.ts';
 import { P, R, SERIF } from './palette.ts';
 
+/** The page's printed ink: a warm brown-black, worn. */
 const PRINT = '#2b2119';
 
+/** The verses either side of Job 9:2, as the page prints them (KJV, `manna verse "Job 9:1-3"`). */
 const BEFORE = 'Then Job answered and said,';
 const AFTER = 'If he will contend with him, he cannot answer him one of a thousand.';
 
@@ -27,10 +29,13 @@ const VERSE_STYLE: VerseStyle = {
   lit: P.cream,
 };
 
+/** The page: its corners on the desk. */
 const PAGE = { x: 300, y: 70, w: 1360, h: 960 } as const;
 
+/** The text block's left edge and first baselines. */
 const TEXT = { x: 470, head: 190, v1: 330, v2: 470 } as const;
 
+/** The camera on the page: settled, then pushing toward the phrase as it is highlighted. */
 const camera = (f: JobFrame, draw: (e: Easel) => void) => {
   const { ctx, w, h } = f;
   const settle = f.at('page');
@@ -53,6 +58,7 @@ const camera = (f: JobFrame, draw: (e: Easel) => void) => {
   ctx.restore();
 };
 
+/** The desk, the open book and its page, worn at the edges and foxed. */
 const page = (e: Easel, t: number) => {
   const { ctx } = e;
   const desk: Box = { x: -200, y: -200, w: 2400, h: 1500 };
@@ -122,6 +128,7 @@ const page = (e: Easel, t: number) => {
   glow(ctx, 1560, 150, 900, P.lamp, 0.22 + 0.02 * Math.sin(t * 9.1));
 };
 
+/** The running head, the verses around Job 9:2, and their numbers. */
 const print = (e: Easel, f: JobFrame) => {
   const { ctx } = e;
   const small = { family: SERIF, size: 40, weight: 500, color: PRINT, tracking: 0.12 } as const;
@@ -151,6 +158,12 @@ const print = (e: Easel, f: JobFrame) => {
   });
 };
 
+/**
+ * The flood's brushed edge: teal strokes dragged out past the box the card
+ * floods in through, so its edge reads as paint pushed across the page, not a
+ * cut. The engine clips the card to `floodBox(box, …, f.at('flood'))`; this
+ * fringes that same box, in canvas px.
+ */
 const fringe = (ctx: CanvasRenderingContext2D, from: Box, flood: number) => {
   if (flood <= 0 || flood >= 1) return;
   const { width: W, height: H } = ctx.canvas;
@@ -205,6 +218,7 @@ export const job = (f: JobFrame): Box => {
   return box;
 };
 
+/** The card's ground: deep teal brushed over the whole frame, darker toward its edges. */
 const ground = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
   const e: Easel = { ctx, view: { x: 0, y: 0, w, h }, px: w / BRUSH_PX };
   paint(e, rect({ x: -10, y: -10, w: w + 20, h: h + 20 }), {

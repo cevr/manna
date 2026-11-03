@@ -8,12 +8,14 @@ import { readKnob, readSpans } from './scene-source.ts';
 import { type CueWritten, SceneWriter } from './scene-writer.ts';
 import { writeAnswer } from './write-answer.ts';
 
+/** The fields of a tweak's input it is judged by: what it names, and which cue fields it sets. */
 interface Asked {
   readonly cue?: string;
   readonly knob?: string;
   readonly value?: Knob;
 }
 
+/** A tweak names one cue or one knob, and gives what that one takes. Pure. */
 const oneLiteral = Schema.makeFilter((input: Asked) => {
   const cue = Predicate.hasProperty(input, 'cue');
   const knob = Predicate.hasProperty(input, 'knob');
@@ -56,6 +58,7 @@ const TweakTool = Tool.make('tweak', {
   failure: LabRefused,
 });
 
+/** A cue written, as the tweak answers it: the span as the file now reads it, and where it resolves (or why it does not). */
 const cueAnswer = Effect.fn('tweak.cueAnswer')(function* (
   film: FilmName,
   cue: string,
@@ -71,6 +74,7 @@ const cueAnswer = Effect.fn('tweak.cueAnswer')(function* (
   return yield* writeAnswer(film, written, Effect.succeed({ ...span, ...where }));
 });
 
+/** The tweak: a cue's timing or a knob's value, written and answered. */
 export const tweakCommands = [
   labCommand(TweakTool, {
     run: ({ film: name, scene, cue, knob, value, ...patch }) =>

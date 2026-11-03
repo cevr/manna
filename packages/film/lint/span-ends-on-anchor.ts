@@ -8,8 +8,10 @@ import {
 } from 'oxlint-plugin-effect/rule-bindings';
 import { bindings, type NumberOf, property } from './nodes.ts';
 
+/** How far apart two sums of written seconds may be and still be the same point. */
 const SAME = 1e-9;
 
+/** The `offset` of a span written as `offset: -d, dur: d` (d over 0), when it is one. */
 const endsByHand = (
   numberOf: NumberOf,
   n: ESTree.ObjectExpression,
@@ -21,17 +23,20 @@ const endsByHand = (
   );
 };
 
+/** A string written out: the cue a `with` names. */
 const stringOf = (n: ESTree.Node): Option.Option<string> => {
   if (n.type === 'Literal' && Predicate.isString(n.value)) return Option.some(n.value);
   return Option.none();
 };
 
+/** A span's `offset` in seconds: 0 when it has none, none when it is not a number written out. */
 const offsetOf = (numberOf: NumberOf, n: ESTree.ObjectExpression): Option.Option<number> =>
   Option.match(property(n, 'offset'), {
     onNone: () => Option.some(0),
     onSome: (p) => numberOf(p.value),
   });
 
+/** The `dur` of the cue `name` in the timeline literal `span` sits in, when it is written out. */
 const siblingDur = (
   numberOf: NumberOf,
   span: ESTree.ObjectExpression,
@@ -45,6 +50,7 @@ const siblingDur = (
   });
 };
 
+/** The `dur` of a `with` part whose offset and dur add up to its parent's dur, when it is one. */
 const endsWithParent = (
   numberOf: NumberOf,
   n: ESTree.ObjectExpression,

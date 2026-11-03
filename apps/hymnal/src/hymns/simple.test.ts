@@ -1,3 +1,9 @@
+/**
+ * The Simple rule on lines made for each case: one syllable per box, its
+ * text a letter, its chords degrees above C. Every hymn of the set is walked
+ * in `chords.property.test.ts`.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import * as Chord from '@manna/hymnal/chord';
 import { Option, Schema } from 'effect';
@@ -9,12 +15,14 @@ const C_MAJOR: Chord.Key = { tonic: 'C', minor: false };
 
 const qualityOf = Schema.decodeUnknownSync(Chord.Quality);
 
+/** A chord from its symbol in C: "G", "Dsus4", "Bdim". */
 const named = (symbol: string): Chord.Chord => {
   const [, name = '', suffix = ''] = /^([A-G][#b]?)(.*)$/.exec(symbol) ?? [];
   const quality = qualityOf(suffix.replace(/^\+$/, 'aug'));
   return { root: Chord.pitchClass(name), quality };
 };
 
+/** A line of one-syllable words, each box's chords as symbols in C ("" for none). */
 const line = (...boxes: ReadonlyArray<string>): ReadonlyArray<ReadonlyArray<Box>> =>
   boxes.map((chords, k) => [
     {
@@ -33,6 +41,7 @@ const hymnOf = (...lines: ReadonlyArray<ReadonlyArray<ReadonlyArray<Box>>>): Hym
   refrain: Option.none(),
 });
 
+/** What each box of each line shows, spelled in C. */
 const shown = (hymn: HymnChords): ReadonlyArray<ReadonlyArray<string>> => {
   const part = hymn.stanzas[0];
   if (part?._tag !== 'Sung') return [];
@@ -41,6 +50,7 @@ const shown = (hymn: HymnChords): ReadonlyArray<ReadonlyArray<string>> => {
   );
 };
 
+/** The chords of the first box of a hymn's first stanza. */
 const firstBox = (hymn: HymnChords): ReadonlyArray<Chord.Chord> => {
   const part = hymn.stanzas[0];
   if (part?._tag !== 'Sung') return [];
@@ -52,6 +62,7 @@ const simpleOf = (...lines: ReadonlyArray<ReadonlyArray<ReadonlyArray<Box>>>) =>
 
 const mod12 = (n: number) => ((n % 12) + 12) % 12;
 
+/** Decided 2's plain form of each quality, read alone: the root it moves by and the quality it keeps. */
 const PLAIN: ReadonlyArray<readonly [Chord.Quality, number, '' | 'm' | '7']> = [
   ['', 0, ''],
   ['m', 0, 'm'],

@@ -8,13 +8,16 @@ import { unsaid } from './build.ts';
 import { decodeLock } from './lock.ts';
 import { type Laid, overrideOf, overridesIn, unbacked } from './override.ts';
 
+/** The ask the owner kept and locked the court figures in, and the time the ledger filed his decision there. */
 const LOCK_ASK = 'a92f276635e';
 const LOCK_AT = 1792281444576;
 
+/** An ask about the lead's ear, answered; one about the judge's; and one asked, then withdrawn. */
 const EAR_ASK = 'a1111111111';
 const JUDGE_ASK = 'a2222222222';
 const ARM_ASK = 'a0590057595';
 
+/** An override of the lead's lock, in words the owner said on him after the lock. */
 const SAID = {
   rule: 'FigureLock' as const,
   place: 'lead',
@@ -23,6 +26,7 @@ const SAID = {
   frees: 'b'.repeat(64),
 };
 
+/** An override of the lead's lock, citing the owner's pick on an ask about him after the lock. */
 const PICKED = {
   rule: 'FigureLock' as const,
   place: 'lead',
@@ -31,6 +35,13 @@ const PICKED = {
   frees: 'b'.repeat(64),
 };
 
+/**
+ * A ledger round the lead's lock: before it, a decision on him and one on no
+ * figure; the decision the lock names, on him; after it, his note on the
+ * lead, a decision on no figure, his decision on the lead, one on the judge,
+ * a question on the lead and its answer's picks, a pick on the judge, and an
+ * ask on the lead asked, then withdrawn.
+ */
 const LEDGER = `{
   "production": "righteousness-by-faith",
   "title": "Righteousness by Faith",
@@ -52,8 +63,10 @@ const LEDGER = `{
   ]
 }`;
 
+/** The owner's decisions on that ledger. */
 const DECISIONS = decisionsOf(Schema.decodeSync(repoJson(ProductionFile))(LEDGER));
 
+/** The lead's lock as his file keeps it. */
 const LOCK_FILE = {
   item: 'lead',
   version: 1,
@@ -63,16 +76,21 @@ const LOCK_FILE = {
   seen: { set: 'concepts', file: 'images/lead.png' },
 };
 
+/** The lead's lock's override, laid as its film lays it: after the lock. */
 const onLock = (override: Laid['override']): Laid => ({ item: 'lead', override, since: LOCK_AT });
 
+/** The lead's lock's override, citing `value` for `question` on ask `ask`. */
 const answering = (ask: string, question: string, value: string) =>
   onLock({ ...PICKED, answer: { ask, question, value } });
 
+/** When the ledger filed the lead's lock, as a broken override names it. */
 const AFTER = 'filed after his lock (2026-10-17T23:57:24.576Z)';
 
+/** Why the lead's lock's override, quoting `quote`, is broken. */
 const unsaidWhy = (quote: string) =>
   `lead's override of FigureLock at lead is broken: no decision on his production's ledger at the point item:lead, ${AFTER} says "${quote}": file his words as a decision there (\`film production decide\` with \`--quote\`, \`--set\` and \`--point item:lead\`), then quote them verbatim`;
 
+/** Why the lead's lock's override, citing `value` for `question` on ask `ask`, is broken. */
 const unpickedWhy = (ask: string, question: string, value: string) =>
   `lead's override of FigureLock at lead is broken: no decision on his production's ledger at the point item:lead, ${AFTER} answers ask ${ask} with "${value}" for ${question}: ask him with the point item:lead (the lab's \`ask\`, with its \`production\`, \`set\` and \`point\`), then cite the pick his answer files`;
 

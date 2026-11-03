@@ -1,3 +1,10 @@
+/**
+ * The JSON API's handlers: `/api/search`, `/api/search/batch` and `/health`.
+ *
+ * Its own module, apart from `./main.ts`, so a test can serve the same group
+ * over a fixture corpus. `./main.ts` builds the process; this is what answers.
+ */
+
 import { Effect } from 'effect';
 import { HttpApiBuilder } from 'effect/http-api';
 import type { SqlClient } from 'effect/sql';
@@ -10,6 +17,8 @@ import { VectorIndexLoad } from './vector-index.js';
 
 const DEFAULT_CONTEXT = 1;
 
+/** The JSON wire's defaults, applied where the `HttpApi` leaves a field
+ *  optional. `runSearch` in `./search.ts` takes the full request. */
 export const SearchGroupLive = HttpApiBuilder.group(SearchApi, 'search', (handlers) =>
   Effect.gen(function* () {
     const services = yield* Effect.context<SearchService | SqlClient.SqlClient>();

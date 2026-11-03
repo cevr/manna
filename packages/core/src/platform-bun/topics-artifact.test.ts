@@ -9,6 +9,10 @@ import { layerNativeTopicsArtifacts } from './bible-artifact.js';
 import { verifyTopicsDatabase } from './corpus-verify.js';
 import type { NativeFileArtifactProvenanceStore } from './file-artifact.js';
 
+/** Writes a topics artifact with the §2.2 tables at `file`. `schemaMajor` is a
+ *  string because `meta.value` is a TEXT column: a corrupt version field is a
+ *  string the artifact can really hold, and the verifier's strict parse only
+ *  has a defect to catch if the fixture can write one. */
 const writeArtifact = (
   file: string,
   input: { readonly schemaMajor: string; readonly topics: number; readonly aliases: number },
@@ -53,12 +57,17 @@ const makeProvenanceStore = (): NativeFileArtifactProvenanceStore => {
   };
 };
 
+/** A fresh directory per test, removed when the test's scope closes. Fixed
+ *  paths under `/tmp` would survive a run and collide with the next one. */
 const scratch = (): Effect.Effect<string, never, FileSystem.FileSystem | Scope.Scope> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     return yield* fs.makeTempDirectoryScoped({ prefix: 'bible-topics-native-' }).pipe(Effect.orDie);
   });
 
+/** The acquire-then-install round at its own boundary. The layer is built per
+ *  test from a scratch directory, so the provide belongs here rather than to a
+ *  block nested inside each test's generator. */
 const installFirstSource = (layer: ReturnType<typeof layerNativeTopicsArtifacts>) =>
   Effect.gen(function* () {
     const recipe = yield* TopicsArtifact.Recipe;
@@ -118,6 +127,9 @@ describe('native Topics artifact', () => {
     }));
 });
 
+/** `accepted` carries the page count the verifier must return; `refused` carries
+ *  the exact message it must report. Both are asserted, so a case cannot pass by
+ *  failing for the wrong reason. */
 type TopicsVerifierOutcome =
   | { readonly kind: 'accepted'; readonly installed: number }
   | { readonly kind: 'refused'; readonly message: string };
@@ -135,6 +147,11 @@ interface TopicsVerifierCase {
 const accepted = (installed: number): TopicsVerifierOutcome => ({ kind: 'accepted', installed });
 const refused = (message: string): TopicsVerifierOutcome => ({ kind: 'refused', message });
 
+/** Every value that must not read as a usable schema major.
+ *
+ *  `Number.parseInt('1junk', 10)` is 1, so a lenient parse reads each of these
+ *  as a version this build can serve and installs a file whose version field is
+ *  nonsense. */
 const UNREADABLE_SCHEMA_MAJORS: readonly string[] = [
   '1junk',
   '',
@@ -183,6 +200,8 @@ const TOPICS_VERIFIER_CASES: readonly TopicsVerifierCase[] = [
   })),
 ];
 
+/** The verifier's rules, run against the production verifier through a real
+ *  on-disk artifact. */
 describe('Topics semantic verifier — native adapter', () => {
   const it = itBase.scopedLive.layer(BunFileSystem.layer);
 
@@ -200,6 +219,9 @@ describe('Topics semantic verifier — native adapter', () => {
     );
   }
 
+  /** Not in the shared matrix: "the tables were never created" is a state only
+   *  a native adapter can be handed. The rule it proves is shared — a read
+   *  that fails is a refusal, not a defect — but the fixture is not portable. */
   it('rejects a file missing the artifact tables', () =>
     Effect.gen(function* () {
       const file = `${yield* scratch()}/topics.db`;

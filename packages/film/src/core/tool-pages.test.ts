@@ -12,6 +12,7 @@ import {
   journalPage,
 } from './tool-pages.ts';
 
+/** A page asked for, from an answer's `next`. */
 type CheckAt = Parameters<typeof checkPage>[1];
 type CuesAt = Parameters<typeof cuesPage>[2];
 
@@ -19,8 +20,10 @@ const checkJson = Schema.encodeSync(Schema.fromJsonString(CheckPage));
 const cuesJson = Schema.encodeSync(Schema.fromJsonString(CuesPage));
 const journalJson = Schema.encodeSync(Schema.fromJsonString(JournalPage));
 
+/** A finding's level by its place: errors and warnings in turn. */
 const LEVELS = ['error', 'warning'] as const;
 
+/** A finding of scene `roof` at film second `index`. */
 const finding = (index: number, level: CheckLine['level'], message: string): CheckLine => ({
   level,
   tag: `Finding${index}`,
@@ -128,12 +131,17 @@ describe('checkPage', () => {
   });
 });
 
+/** A scene's line as `film cues` prints it: its placement, then each mark at its second into the scene. */
 const sceneLine = (id: string, marks: number) =>
   `${id.padEnd(11)} start=   0.00 dur=  9.00 speech=0.00–8.00 ${Array.from(
     { length: marks },
     (_, index) => `mark${index}@${(index / 100).toFixed(2)}`,
   ).join(' ')}`;
 
+/**
+ * Every page of `lines` read on from the first, asked with `scope`, as an
+ * agent reads them: joined back into lines, with each answer's `next`.
+ */
 const readAll = (lines: ReadonlyArray<string>, scope: CuesAt = {}) => {
   const read: Array<string> = [];
   const rests: Array<string> = [];

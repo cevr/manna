@@ -1,3 +1,14 @@
+/**
+ * The app icon, held to its config and to its one shape: the native config
+ * names icons that exist at their sizes, in the brand's colours; every
+ * pixel of every icon is the ground, the wheat or a blend of the two; the
+ * Android layers stay inside the launcher's safe circle; and every committed
+ * file is what `bun run icon` draws from `assets/icon/wheat.svg` now.
+ *
+ * The expected colours come from the brand (`@manna/brand`) and the theme,
+ * not from the script's table, so a wrong row in the table is red too.
+ */
+
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { PALETTE } from '@manna/brand';
 import { describe, expect, it } from 'effect-bun-test';
@@ -11,6 +22,7 @@ import { WebManifestJson, draw, faviconSvg, icons, manifest, wheatOf } from './i
 
 const test = it.effect.layer(BunServices.layer);
 
+/** scripts/ → the app's root. */
 const ROOT = `${import.meta.dir}/..`;
 
 type Rgb = readonly [number, number, number];
@@ -27,6 +39,7 @@ const rgb = (hex: string): Rgb => [
   Number.parseInt(hex.slice(5, 7), 16),
 ];
 
+/** A PNG's pixels, from bytes. */
 const pixels = (input: string | Buffer) =>
   Effect.promise(() => sharp(input).raw().toBuffer({ resolveWithObject: true })).pipe(
     Effect.map(({ data, info }): Pixels => ({
@@ -37,6 +50,7 @@ const pixels = (input: string | Buffer) =>
     })),
   );
 
+/** A PNG's pixels, from a file under the app's root. */
 const decode = (file: string) => pixels(`${ROOT}/${file}`);
 
 const meta = (file: string) => Effect.promise(() => sharp(`${ROOT}/${file}`).metadata());
@@ -44,6 +58,7 @@ const meta = (file: string) => Effect.promise(() => sharp(`${ROOT}/${file}`).met
 const NIGHT = PALETTE.night;
 const WHEAT = PALETTE.wheat;
 
+/** Each opaque two-colour icon's ground and wheat. */
 const opaque: ReadonlyArray<readonly [string, string, string]> = [
   ['assets/icon/ios-light.png', WHEAT, NIGHT],
   ['assets/icon/ios-dark.png', NIGHT, WHEAT],
@@ -67,6 +82,12 @@ const at = (p: Pixels, i: number) => {
   return Option.some(`${n % p.width},${Math.floor(n / p.width)}`);
 };
 
+/**
+ * The first pixel (`x,y`) off the segment from ground to wheat: t comes from
+ * the channel the tokens differ most in, and each channel lies within 2 of
+ * ground + t × (wheat − ground). Also the pixels exactly the wheat's colour,
+ * and the ink: t summed over the square, per pixel.
+ */
 const blends = (p: Pixels, ground: Rgb, wheat: Rgb) => {
   const span = [wheat[0] - ground[0], wheat[1] - ground[1], wheat[2] - ground[2]] as const;
   let k = 0;
@@ -92,6 +113,7 @@ const blends = (p: Pixels, ground: Rgb, wheat: Rgb) => {
   return { off: Option.getOrElse(off, () => 'none'), exactly, ink: ink / (p.width * p.height) };
 };
 
+/** The first pixel (`x,y`) farther than `radius` × width from the centre that `drawn` holds drawn. */
 const outside = (p: Pixels, radius: number, drawn: (i: number) => boolean) => {
   const r2 = (radius * p.width) ** 2;
   for (let y = 0; y < p.height; y++) {
@@ -105,11 +127,13 @@ const outside = (p: Pixels, radius: number, drawn: (i: number) => boolean) => {
   return 'none';
 };
 
+/** The `<link rel="icon|apple-touch-icon|manifest">` lines of the web head. */
 const headLinks = (layout: string) =>
   [...layout.matchAll(/<link rel="(icon|apple-touch-icon|manifest)" href="([^"]+)"/g)].map(
     ([, rel = '', href = '']) => ({ rel, href }),
   );
 
+/** A square PNG's side. */
 const sideOf = (file: string) =>
   meta(file).pipe(
     Effect.map((m) => ({ format: m.format, square: m.width === m.height, side: m.width })),

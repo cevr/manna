@@ -1,23 +1,39 @@
+/**
+ * Deck manifest: the types every pipeline stage reads, and `writeManifest`,
+ * which a deck's own `build_manifest.ts` calls with its beats.
+ *
+ * Verse text is never typed by hand: each beat's reference is pulled through
+ * `manna verse --json` and cleaned mechanically.
+ */
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { CANVAS, LAYOUTS, type Character } from './series.ts';
 
 export type Beat = {
+  /** Reference as shown on the slide ("Malachi 4:1, 3"). */
   readonly ref: string;
+  /** Lookup references when `ref` is not one `manna verse` query; parts join with " ... ". */
   readonly lookupRefs?: ReadonlyArray<string>;
   readonly section: string;
+  /** Presenter note for both slides of the pair. */
   readonly note: string;
+  /** Reuse an existing series painting (path relative to the deck dir). */
   readonly sourceImage?: string;
+  /** Prompt subject for a new painting, generated to images/<id>.png. */
   readonly concept?: string;
+  /** Recurring person in the concept: swaps in the canonical character ref. */
   readonly character?: Character;
+  /** A picture of the pose a figure takes (path relative to the decks dir), sent as a reference for the pose alone. */
   readonly poseRef?: string;
 };
 
 export type DeckSpec = {
   readonly title: string;
   readonly subtitle: string;
+  /** File name of the .key, without extension. */
   readonly deckName: string;
   readonly titleConcept: string;
+  /** "Keynote Creator Studio" (series default) or stock "Keynote". */
   readonly app?: string;
   readonly beats: ReadonlyArray<Beat>;
 };

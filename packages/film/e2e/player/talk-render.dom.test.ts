@@ -18,8 +18,14 @@ import {
 const cut = Result.getOrThrow(talkCut(TALK_EDIT, { a: TALK_TAKE }));
 const placed = Result.getOrThrow(layout(cut.scenes, cut.timings, 30));
 
+/** Seconds as the talk's frames. */
 const frameOf = (s: number) => Math.round(s * TALK_FPS);
 
+/**
+ * The take's frame each of the talk's frames shows, by the cut alone: each
+ * section's pieces back to back, each piece the take's frames from its
+ * in-point to its out-point.
+ */
 const SHOWN = cut.sections.flatMap((section) =>
   section.pieces.flatMap((piece) =>
     Array.from(
@@ -29,12 +35,18 @@ const SHOWN = cut.sections.flatMap((section) =>
   ),
 );
 
+/** Where the talk jumps in the take: the frame each piece after the first starts on. */
 const SEAMS = cut.sections.flatMap((section, k) =>
   section.pieces.slice(1).map((piece) => frameOf((placed[k]?.start ?? 0) + piece.at)),
 );
 
+/** The take's clip: every frame the cut reads, and a second past them. */
 const CLIP_FRAMES = Math.max(...SHOWN) + TALK_FPS;
 
+/**
+ * The render page on the talk, its clip served as the mezzanine the render
+ * reads, and the footage library's lock and transcript the page cuts on.
+ */
 const opened = Effect.gen(function* () {
   const clip = yield* numberedClip({
     frames: CLIP_FRAMES,
@@ -48,6 +60,7 @@ const opened = Effect.gen(function* () {
   });
 });
 
+/** One sample per bar across the page's middle row, where the take's bars run and no word is set. */
 const BARS = { x: 0, y: 1920 / 2 - 4, w: 1080, h: 8, cols: BITS, rows: 1 };
 
 describe('a talk renders frame-exact', () => {

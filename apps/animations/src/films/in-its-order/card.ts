@@ -1,6 +1,7 @@
 import type { CardStyle, VerseStyle } from '@manna/film/canvas';
 import { fonts, palette } from './palette.ts';
 
+/** The card's ground: the highlight's colour too. */
 export const CARD_GROUND = palette.night;
 
 export const VERSE_STYLE: VerseStyle = {

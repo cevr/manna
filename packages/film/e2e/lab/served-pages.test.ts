@@ -8,18 +8,25 @@ import { type Asked, type ServedName, servedReads } from '../../src/lab/fixtures
 import type { PLACE_HREFS } from '../../src/lab/fixtures/places.ts';
 import { STUDIO_ASK, STUDIO_PAGE, studioRoutes } from '../../src/lab/fixtures/studio-film.ts';
 
+/** Every place (`PLACE_HREFS`), at a link of a fixture film's. */
 const FILM_HREFS = {
   ask: pageHref.ask(STUDIO_ASK),
   askPage: pageHref.askPage(STUDIO_PAGE),
 } satisfies Record<keyof typeof PLACE_HREFS, string>;
 
+/** Whether a page is one the server renders: the export page is drawn in the browser alone. */
 const isServed = (page: AppPage): page is ServedName => page !== 'render';
 
+/** A read a render made and the status it was answered with. */
 interface Answered {
   readonly path: string;
   readonly status: number;
 }
 
+/**
+ * The fetch of a render of page `name`: its reads answered by the fixture
+ * film, each kept in `answered` with its status.
+ */
 const readsOf = (name: ServedName, answered: Array<Answered>) => {
   const read: Array<Asked> = [];
   const reads = servedReads(name, studioRoutes, read);
@@ -36,6 +43,7 @@ const readsOf = (name: ServedName, answered: Array<Answered>) => {
     );
 };
 
+/** `render` of the page at `href` to its end: its markup, or the reason it failed (a throw is one). */
 const rendered = (
   render: PageRender,
   href: string,
@@ -65,6 +73,7 @@ const rendered = (
     if (Result.isFailure(threw)) sink.fail(`the render threw: ${String(threw.failure)}`);
   });
 
+/** Long enough to bundle the three server entries as the lab bundles them, and render each place. */
 const BUNDLING = 60_000;
 
 describe("every place's server render", () => {

@@ -1,3 +1,8 @@
+/**
+ * A sign-up that ran out unconfirmed deletes the address it gave from the
+ * address book: the one kept by `PENDING_FOR` after it, when the deadline
+ * came. An address kept after that came with a newer sign-up, and stays.
+ */
 import * as Domain from '@alchemy.run/domain';
 import { Duration, Effect } from 'effect';
 

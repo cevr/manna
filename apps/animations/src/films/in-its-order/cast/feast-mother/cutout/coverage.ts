@@ -1,6 +1,7 @@
 import type { CoverageManifest } from '@manna/film/tools';
 
 const FOR = [{ script: 'in-its-order', beats: ['cold'] }];
+/** The house prompt's opening and close, as clip B's (`lead-feast` `raise/clip-b`). */
 const PAPER = 'Flat 2D cut-paper cartoon animation on a static paper background.';
 const CAMERA =
   'Locked camera, no zoom, no pan, same flat colours and thick dark outline throughout.';

@@ -1,11 +1,22 @@
 import type { Rgb } from './cast-sheet-pixels.ts';
 import type { Raster } from './raster.ts';
 
+/** How near the line's ink a body pixel's colour stands (RGB distance, 0-255 a channel) for it to be read as ink. */
 export const KEY_JOIN_INK = 96;
 
+/** Whether `rgb` (0-255) reads as the line's `ink`. */
 export const inkLike = (r: number, g: number, b: number, ink: Rgb) =>
   Math.hypot(r - ink[0], g - ink[1], b - ink[2]) <= KEY_JOIN_INK;
 
+/**
+ * `body` (straight RGBA) with its ink hidden under the drawn `key` laid on
+ * the same grid: each opaque body pixel the key does not cover, within
+ * `width` px of a covered key pixel, takes the nearest one's colour (ties to
+ * the lower row, then the lower column, as the GL flood breaks them) when it
+ * reads as ink, or when one of its eight neighbours does and it stands nearer
+ * the ink than that colour (the line's rim). Every other pixel is kept byte
+ * for byte.
+ */
 export const keyJoin = (body: Raster, key: Raster, ink: Rgb, width: number): Raster => {
   const { width: W, height: H } = body;
   const rgba = Uint8Array.from(body.rgba);
@@ -25,6 +36,7 @@ export const keyJoin = (body: Raster, key: Raster, ink: Rgb, width: number): Ras
   return { width: W, height: H, rgba };
 };
 
+/** Whether one of (`x`, `y`)'s eight neighbours is an opaque body pixel the key does not cover that reads as ink. */
 const besideInk = (body: Raster, key: Raster, ink: Rgb, x: number, y: number) => {
   for (let qy = Math.max(0, y - 1); qy <= Math.min(body.height - 1, y + 1); qy++)
     for (let qx = Math.max(0, x - 1); qx <= Math.min(body.width - 1, x + 1); qx++) {
@@ -35,8 +47,10 @@ const besideInk = (body: Raster, key: Raster, ink: Rgb, x: number, y: number) =>
   return false;
 };
 
+/** Whether `key` covers pixel (`x`, `y`). */
 const covers = (key: Raster, x: number, y: number) => key.rgba[(y * key.width + x) * 4 + 3]! >= 128;
 
+/** The RGBA offset of `key`'s covered pixel nearest (`x`, `y`) within `width` px (ties to the lower row, then column), or -1. */
 const nearestCovered = (key: Raster, x: number, y: number, width: number) => {
   const r = Math.ceil(width);
   let best = -1;

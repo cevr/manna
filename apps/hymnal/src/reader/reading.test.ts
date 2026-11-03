@@ -1,3 +1,7 @@
+/**
+ * The reading settings' schema and the page's text style they give.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { Schema } from 'effect';
 

@@ -1,8 +1,31 @@
+/**
+ * `bun run promise:census`: holds the promise check (`./promise.ts`) to every
+ * way the email list's promise was lost before (`docs/lessons.md`
+ * `email-cadence-limits`, `email-promise-found-by-phrase`,
+ * `email-promise-read-in-sources`, `email-promise-net-whole-words`,
+ * `email-promise-tags-split-words`, `email-promise-unread-attributes`,
+ * `email-promise-held-anywhere`, and the rewrite's round 2 findings, from
+ * `email-promise-invisible-characters` on), and to every source of words it
+ * refuses (`email-promise-fails-closed`). Each case injects one into a copy of the
+ * app's sources, builds the copy as the gate builds the app, runs the check
+ * there, and passes only when the check fails and says each line of the case
+ * (a `*` in a line stands for a build's content hash, a `…` for any words).
+ * A case whose words the sources no longer hold fails too, so no case goes
+ * stale unseen. The gate runs it after the check.
+ *
+ *   bun run promise:census    # prints `promise-census <case> red` per case; exits 1 when one is not
+ */
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { Array as Arr, Console, Data, Effect, FileSystem, Option, Path, Stream } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
+/**
+ * One way the promise was lost, or one source of words the check refuses:
+ * the words put in a file of the app (after the build when `after`, so
+ * `dist/` is no longer the build of what the app holds; a new file of those
+ * words when `find` is empty), and what the check must say of it.
+ */
 interface Case {
   readonly name: string;
   readonly file: string;
@@ -10,6 +33,7 @@ interface Case {
   readonly put: string;
   readonly said: ReadonlyArray<string>;
   readonly after?: boolean;
+  /** The check's printed entries, pasted into the copy's `HELD` as printed, turn it green. */
   readonly held?: boolean;
 }
 
@@ -25,6 +49,7 @@ const THEME_META = '<meta name="theme-color" content={THEME_COLOR} />';
 const PAGE_BODY = '`<body style="margin:0;padding:0;background:${PALETTE.paper};">`,';
 const ONE_CLICK = "'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',";
 
+/** A case that says one more sentence after the promise, on the confirmed page. */
 const confirmedSays = (name: string, sentence: string): Case => ({
   name,
   file: 'src/ui/mail.tsx',
@@ -33,6 +58,7 @@ const confirmedSays = (name: string, sentence: string): Case => ({
   said: [`dist/subscribe/confirmed.html: unheld: ${sentence}`],
 });
 
+/** A case whose markup every notice page prints as it is, after its words; the lines are the confirmed page's. */
 const noticePrints = (name: string, html: string, said: ReadonlyArray<string>): Case => ({
   name,
   file: 'src/ui/mail.tsx',
@@ -41,6 +67,7 @@ const noticePrints = (name: string, html: string, said: ReadonlyArray<string>): 
   said: said.map((line) => `dist/subscribe/confirmed.html: ${line}`),
 });
 
+/** The census: every trigger of the promise's findings (rounds 2 to 4 of `ftb-copy`, rounds 1 and 2 of its rewrite), and every source the check refuses. */
 const CASES: ReadonlyArray<Case> = [
   {
     name: 'r2-M1 the confirmed page drops "and nothing else"',
@@ -402,6 +429,7 @@ const CASES: ReadonlyArray<Case> = [
   ),
 ];
 
+/** What a copy of the app needs to build and to run the check. */
 const COPIED = [
   'src',
   'public',
@@ -413,10 +441,13 @@ const COPIED = [
   'vite.config.ts',
 ];
 
+/** The repo's formatter, from a copy of the app (two levels down, as the app is). */
 const OXFMT = '../../node_modules/.bin/oxfmt';
 
+/** Cases run at once, each building its own copy. */
 const CONCURRENCY = 6;
 
+/** A case's line as the check prints it, a `*` standing for a build's content hash. */
 const saying = (line: string) =>
   new RegExp(
     `^promise ${line
@@ -436,6 +467,7 @@ class CensusMissed extends Data.TaggedError('CensusMissed')<{ readonly missed: n
 const text = <E>(stream: Stream.Stream<Uint8Array, E>) =>
   Stream.mkString(Stream.decodeText(stream));
 
+/** A command's output, stdout then stderr, and its exit code. */
 const exec = (command: string, args: ReadonlyArray<string>, cwd: string) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner;
@@ -449,15 +481,22 @@ const exec = (command: string, args: ReadonlyArray<string>, cwd: string) =>
     return { output: `${stdout}${stderr}`, code: Number(code) };
   }).pipe(Effect.scoped);
 
+/** A printed entry's instruction: the `HELD` list it goes in (its key as the source writes it), or `HELD` itself for a key it does not name. */
 const ENTRY =
   /^promise to hold (?:it|them), paste into HELD(?: under (.+))? in apps\/firsttheblade\/scripts\/promise\.ts:$/;
 
+/** Where a printed entry goes in the check's source: after its list's key, or after `HELD`'s opening. */
 const anchorOf = (key: Option.Option<string>) =>
   Option.match(key, {
     onNone: () => 'const HELD = new Map<string, ReadonlyArray<string>>(\n  Object.entries({\n',
     onSome: (list) => `\n    ${list}: [\n`,
   });
 
+/**
+ * Pastes each entry the check printed into the copy's `scripts/promise.ts`
+ * exactly as printed, then holds the copy to what the entry promises: the
+ * check passes, and the pasted file is formatted as the repo formats it.
+ */
 const holdAsPrinted = (copy: string, output: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -507,6 +546,7 @@ const holdAsPrinted = (copy: string, output: string) =>
     }
   });
 
+/** One case, in its own copy of the app under the repo's `tmp/` (two levels down, as the app is, so its tsconfig's `extends` holds). */
 const runCase = (app: string, scratch: string, found: Case) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

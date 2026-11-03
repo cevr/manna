@@ -15,10 +15,16 @@ import { FileInvalid, type StoreLocked } from './errors.ts';
 import type { FilmPaths } from './film-repo.ts';
 import { RenderJob, type RenderOutput } from './render-plan.ts';
 
+/** The catalogue's file name in a project folder. */
 export const CATALOGUE_FILE = 'catalogue.json';
 
+/** A film's project folder: its name and where its renders go. */
 type ProjectFolder = Pick<FilmPaths, 'name' | 'out'>;
 
+/**
+ * The catalogue's record of `output`, which `job` wrote drawing `scope`'s
+ * sources as `stamp` says, at `at`: its files relative to the project folder.
+ */
 export const renderRecord = (
   project: ProjectFolder,
   job: RenderJob,
@@ -60,18 +66,26 @@ export const renderRecord = (
 export type CatalogueError = CatalogueInvalid | StoreLocked | PlatformError;
 
 interface CatalogueService {
+  /** The film's catalogue as it is on disk: empty before its first render. */
   readonly read: (project: ProjectFolder) => Effect.Effect<Catalogue, CatalogueError>;
+  /** Apply `change` to the catalogue on disk and write it back; `change` also answers. */
   readonly update: <A>(
     project: ProjectFolder,
     change: (catalogue: Catalogue) => readonly [A, Catalogue],
   ) => Effect.Effect<A, CatalogueError>;
+  /**
+   * `update`, for a change that may refuse: a refusal fails before anything is
+   * encoded or written, so the file stays as it was, byte for byte.
+   */
   readonly attempt: <A, E>(
     project: ProjectFolder,
     change: (catalogue: Catalogue) => Result.Result<readonly [A, Catalogue], E>,
   ) => Effect.Effect<A, E | CatalogueError>;
+  /** Record `render` in its slot, in place of the one before it. */
   readonly record: (project: ProjectFolder, render: Render) => Effect.Effect<void, CatalogueError>;
 }
 
+/** A catalogue that does not read (or write) as its schema says: the catalogue's own refusal. */
 const invalid = (error: FileInvalid) =>
   CatalogueInvalid.make({ file: error.file, reason: error.reason });
 

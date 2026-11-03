@@ -3,16 +3,20 @@ import * as NodeAv from 'node-av';
 import type { Pcm } from '../core/audio.ts';
 import { MediaFailed } from '../core/refusals.ts';
 
+/** Frames libswresample may still hold once every input frame is in: its filter, and room to spare. */
 const FLUSH = 4096;
 
+/** Planes as the buffers NodeAV passes to C, from frame `from` on. */
 const buffers = (planes: ReadonlyArray<Float32Array>, from: number) =>
   planes.map((p) => Buffer.from(p.buffer, p.byteOffset + from * 4, p.byteLength - from * 4));
 
+/** A libswresample call's result: a count, or the error it reports. */
 const checked = (ret: number, op: string) => {
   NodeAv.FFmpegError.throwIfError(ret, op);
   return ret;
 };
 
+/** `pcm` (read from `file`) as `channels` channels at `rate` Hz. */
 export const resample = (file: string, pcm: Pcm, rate: number, channels: number) =>
   Effect.acquireUseRelease(
     Effect.sync(() => new NodeAv.SoftwareResampleContext()),

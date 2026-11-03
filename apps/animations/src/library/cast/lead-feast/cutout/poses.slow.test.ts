@@ -8,6 +8,7 @@ import sharp from 'sharp';
 
 const HERE = import.meta.dir;
 
+/** The kept poses sheet cut at poses-1's box. */
 const [x0, y0, x1, y1] = POSES['poses-1'].box;
 const keptPoses1 = Effect.promise(() =>
   sharp(`${HERE}/../cast-sheet/kept/poses.png`)

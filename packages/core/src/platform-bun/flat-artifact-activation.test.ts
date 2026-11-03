@@ -1,3 +1,30 @@
+/** §3.6's activation for a **flat** artifact: one atomic pointer, and a startup
+ *  that will not re-floor a newer generation.
+ *
+ *  Two round-4 findings meet in this file, and both are about the same
+ *  mechanism — that what a host reads is decided by a *pointer*, not by a path
+ *  it assumed.
+ *
+ *  - **B2.** A flat artifact has no `meta` table, so its provenance lives in a
+ *    sidecar. Activating it used to be two renames over two fixed paths, and a
+ *    crash between them left the old bytes wearing the new provenance — a wrong
+ *    receipt rather than an absent one, and nothing could tell, because the
+ *    sidecar was believed rather than checked. The bytes now land under a
+ *    digest-derived filename and the sidecar is renamed last, so the pointer's
+ *    rename *is* the activation; and `current` verifies the file against the
+ *    digest the pointer states.
+ *  - **F2.** `ensure` walks the compiled source list in priority order, and a
+ *    packaged copy outranks a release. Right for a fresh machine; wrong for a
+ *    host that accepted §3.6's offer last week, which launch N+1 silently put
+ *    back a version. The generation ordinal now travels on the candidate, and a
+ *    candidate that does not outrank what is installed is skipped.
+ *
+ *  Everything is the shipped native lifecycle over real files: the real
+ *  installer, the **real** `sidecarProvenanceStore`, real renames. Only the
+ *  semantic verifier is a parameter, which it already was — the flat verifier
+ *  is §9.2's index parser and these bytes are not an index.
+ */
+
 import { BunFileSystem } from '@effect/platform-bun';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
@@ -12,11 +39,17 @@ import { layerNativeFileArtifacts, type NativeFileArtifactSource } from './file-
 const digestOf = (bytes: string): string =>
   `sha256:${bytesToHex(sha256(new TextEncoder().encode(bytes)))}`;
 
+/** The versioned filename an activation lands on, derived exactly as the
+ *  installer derives it — from the digest of the bytes. Restated here rather
+ *  than exported from the adapter, because the claim is that a *reader* can
+ *  find the file from the digest alone, which an exported helper would hide. */
 const generationPath = (destination: string, bytes: string): string =>
   `${destination}.g-${digestOf(bytes).slice('sha256:'.length, 'sha256:'.length + 12)}`;
 
 const sidecarPath = (filename: string): string => `${filename}.provenance.json`;
 
+/** One host wired for §9.2's index: the flat layout,
+ *  the real sidecar store, and whichever sources the case declares. */
 const hostFor = (input: {
   readonly destination: string;
   readonly sources: readonly NativeFileArtifactSource[];
@@ -49,6 +82,9 @@ const releaseAt = (input: {
   generation: Option.map(Option.fromUndefinedOr(input.generation), corpusGeneration),
 });
 
+/** Each supply round at its own boundary. Every case composes its own host layer
+ *  from a scratch directory, so the provide belongs to these helpers rather than
+ *  to a block nested inside each test's generator. */
 const VECTORS_TARGET = { _tag: 'file', corpus: 'vectors' } satisfies {
   readonly _tag: 'file';
   readonly corpus: 'vectors';
@@ -116,6 +152,11 @@ const PIN_BYTES = 'the compiled pin generation three index';
 describe('§3.6 flat artifact activation', () => {
   const test = it.scopedLive.layer(BunFileSystem.layer);
 
+  /** **The pointer names what the host reads** (round-4 B2).
+   *
+   *  The bytes never land on the destination path itself: they land under a
+   *  name derived from their digest, and the sidecar beside the destination is
+   *  what says which of those names is live. */
   test('activates a versioned file behind one pointer', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
@@ -144,6 +185,17 @@ describe('§3.6 flat artifact activation', () => {
       expect(yield* fs.exists(destination)).toBe(false);
     }));
 
+  /** **The crash window** (round-4 B2).
+   *
+   *  The install is simulated at the point the old order failed: the artifact
+   *  bytes are in place under their versioned name, and the pointer has not
+   *  been renamed yet. A host that started here must report the generation it
+   *  already had — not the one whose bytes happen to be on disk, and not
+   *  nothing at all.
+   *
+   *  Before versioned filenames this state was unreachable to observe: the new
+   *  bytes had already replaced the destination, so "the old generation" no
+   *  longer existed anywhere to be reported. */
   test('a torn install reports the generation the pointer still names', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
@@ -174,6 +226,9 @@ describe('§3.6 flat artifact activation', () => {
       expect(Option.getOrUndefined(torn.file)).toBe(generationPath(destination, PIN_BYTES));
     }));
 
+  /** The pointer is **checked**, not believed. A sidecar naming a file whose
+   *  bytes are not the ones it describes is not an activation, and a host must
+   *  say it has none rather than report a generation it does not hold. */
   test('a pointer whose file does not match its digest reports no generation', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
@@ -196,6 +251,15 @@ describe('§3.6 flat artifact activation', () => {
       expect(Option.isNone(provenance)).toBe(true);
     }));
 
+  /** **A newer runtime generation survives a restart** (round-4 F2).
+   *
+   *  The exact scenario the finding names: runtime generation 4 is active, the
+   *  app restarts, and `ensure` runs against a compiled pin at generation 3.
+   *  Startup must install nothing and leave generation 4 serving.
+   *
+   *  The restart is a *new* service graph over the same directory, which is
+   *  what a restart is to this pipeline — the pointer on disk is the only thing
+   *  that carries across. */
   test('startup does not re-floor a runtime generation with an older pin', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
@@ -240,6 +304,9 @@ describe('§3.6 flat artifact activation', () => {
       expect(yield* fs.exists(generationPath(destination, PIN_BYTES))).toBe(false);
     }));
 
+  /** The same rule against a **local** source, which is the shape every host
+   *  actually ships today: a packaged copy states no ordinal at all, and a
+   *  source that is not a published content version cannot outrank one. */
   test('a local source does not replace a runtime generation', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
@@ -272,6 +339,9 @@ describe('§3.6 flat artifact activation', () => {
       );
     }));
 
+  /** The other direction, so the rule is a comparison rather than a refusal to
+   *  ever install again: a pin **above** what is installed is what a fresh app
+   *  version ships, and it must take. */
   test('a pin above the installed generation still installs', () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;

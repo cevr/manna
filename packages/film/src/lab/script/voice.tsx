@@ -25,10 +25,17 @@ import type { WordAt } from '../transcript/lit.ts';
 import { heardAt, retaken, spanOf } from './delivery.ts';
 import { type MarkWrite, MarkingEvent, type MarkingState, spawnMarking } from './marking.ts';
 
+/** How often the takes are asked for again: often while one is still voicing, else now and then (a new day, another film's spend, a take another process made). */
 const ASKED_AGAIN = { voicing: '4 seconds', resting: '1 minute' } as const;
 
+/** A take ready to play: its file and its words, on the take's clock. */
 type Ready = Extract<StagingTake, { readonly _tag: 'Ready' }>;
 
+/**
+ * What the reader is hearing: nothing; a beat's take from `start` to `end`,
+ * the beats after it to follow; or nothing because the browser refused the
+ * sound of beat `beat`'s play until the viewer presses again.
+ */
 type Heard = Data.TaggedEnum<{
   Quiet: {};
   Blocked: { readonly beat: string };
@@ -42,6 +49,7 @@ type Heard = Data.TaggedEnum<{
 }>;
 const Heard = Data.taggedEnum<Heard>();
 
+/** The reader's one write, where it stands. */
 export type Marking = Data.TaggedEnum<{
   Idle: {};
   Writing: { readonly beat: string };
@@ -50,45 +58,76 @@ export type Marking = Data.TaggedEnum<{
 }>;
 export const Marking = Data.taggedEnum<Marking>();
 
+/** A beat's marks as the page read them, and as its write left them. */
 interface Wrote {
   readonly read: ReadonlyArray<Mark>;
   readonly now: ReadonlyArray<Mark>;
 }
 
 interface VoiceContextValue {
+  /** Beat `id`'s staging take: none until the takes are read, or for a beat that says nothing. */
   readonly take: (id: string) => Option.Option<StagingTake>;
+  /** Every spoken beat's staging take, in the reader's order: none until read. */
   readonly takes: Accessor<ReadonlyArray<StagingTake>>;
+  /** The day's staging spend, in characters, and its cap: none until read. */
   readonly spend: Accessor<Option.Option<{ readonly spent: number; readonly cap: number }>>;
+  /** Why the takes could not be read: none while they are, or are being. */
   readonly unread: Accessor<Option.Option<string>>;
+  /** The word being heard: none while nothing is. */
   readonly heard: Accessor<Option.Option<WordAt>>;
+  /** The beat being heard: none while nothing is. */
   readonly hearing: Accessor<Option.Option<string>>;
+  /** The beat whose play the browser refused its sound: none unless the last play was refused so. */
   readonly blocked: Accessor<Option.Option<string>>;
+  /** Hear beat `id`'s take, or words `from`–`to` of it; `on` goes on to the beats after it. */
   readonly hear: (
     id: string,
     words: Option.Option<{ readonly from: number; readonly to: number }>,
     on: boolean,
   ) => void;
+  /** Stop hearing. */
   readonly stop: () => void;
+  /** Where the reader's write of marks stands. */
   readonly marking: Accessor<Marking>;
+  /**
+   * Write beat `beat`'s marks as `marks`, made on its line as the page read
+   * it (`read`; nothing while a write is out). The write carries the line as
+   * the page has it (`marksOf`), so a second mark made before the line is
+   * read again stands on the first.
+   */
   readonly mark: (beat: string, marks: ReadonlyArray<Mark>, read: LineRead) => void;
+  /**
+   * Beat `beat`'s marks as the page has them: `read`, as it read them, or
+   * the marks its own write left there until it reads the line again (the
+   * first read past the write ends it, one with the marks put back too).
+   */
   readonly marksOf: (beat: string, read: ReadonlyArray<Mark>) => ReadonlyArray<Mark>;
+  /** What a beat's head says once its marks are written. */
   readonly written: string;
 }
 
 const VoiceContext = createContext<VoiceContextValue>();
 
+/** The staging voice: only inside `<VoiceOver>` (a film's `<Script.Voice>`, a draft's reader). */
 export const useVoice = (): VoiceContextValue => useContext(VoiceContext);
 
+/** Whether any beat of `voice` is still voicing. */
 const voicing = (voice: ScriptVoice): boolean => voice.beats.some((b) => b.take._tag === 'Voicing');
 
+/** Whether two reads of the takes are the one read (a waiting result keeps its value). */
 const sameRead = (a: Option.Option<ScriptVoice>, b: Option.Option<ScriptVoice>): boolean =>
   Option.isSome(a) && Option.isSome(b) && a.value === b.value;
 
+/** How often to ask again after `voice`. */
 const voicingOrResting = (voice: ScriptVoice): keyof typeof ASKED_AGAIN => {
   if (voicing(voice)) return 'voicing';
   return 'resting';
 };
 
+/**
+ * `read` asked once, then again every few seconds while a beat voices, and
+ * every minute after: what a reader's takes are read through.
+ */
 export const polled = <R,>(read: Effect.Effect<ScriptVoice, LabFailure, R>) =>
   Stream.fromEffectSchedule(
     read,
@@ -99,22 +138,36 @@ export const polled = <R,>(read: Effect.Effect<ScriptVoice, LabFailure, R>) =>
     ),
   );
 
+/** A player a reader's Hear pauses and gives way to: a film's. */
 interface Gives {
   readonly pause: () => void;
   readonly playing: () => boolean;
 }
 
+/** What a reader's staging voice is over: where its takes and its write go, and its beats. */
 export interface VoiceSource {
+  /** The takes, as `polled` reads them on the page's runtime (a stream's atom: it may also fail empty). */
   readonly reading: Atom.Atom<AsyncResult.AsyncResult<ScriptVoice, unknown>>;
+  /** The marks written: its answer is the source's own (a film reloads, a draft shows it). */
   readonly write: Atom.AtomResultFn<MarksPost, unknown, LabFailure>;
+  /** A take's audio, by the name its `Ready` gives it. */
   readonly takeUrl: (file: string) => string;
+  /** The script's beats, in reading order: what Hear goes on through. */
   readonly beats: Accessor<ReadonlyArray<string>>;
+  /** The page's host: the frames Hear lights the word heard on. */
   readonly host: Host;
+  /** The player Hear pauses, and gives way to once it plays: none where the page has none. */
   readonly player: Option.Option<Gives>;
+  /** What a beat's head says once its marks are written. */
   readonly written: string;
+  /**
+   * Reads the script again, once a poll shows a line changed under the
+   * reader (`retaken`): none where a change to the script reloads the page.
+   */
   readonly reread: Option.Option<() => void>;
 }
 
+/** The staging voice over `source`, for the reader inside it (`useVoice`). */
 export const VoiceOver = (props: ParentProps<{ readonly source: VoiceSource }>) => {
   const source = props.source;
   const result = useAtomValue(() => source.reading);
@@ -155,12 +208,14 @@ export const VoiceOver = (props: ParentProps<{ readonly source: VoiceSource }>) 
       return made;
     });
   const [heard, setHeard] = createSignal<Heard>(Heard.Quiet(), { ownedWrite: true });
+  /** The take being heard: what the voice pauses as it stops. */
   let current = Option.none<Playable>();
   let loop = Option.none<Fiber.Fiber<void>>();
   const stopLoop = () => {
     Option.map(loop, (f) => Effect.runFork(Fiber.interrupt(f)));
     loop = Option.none();
   };
+  /** The take silenced and its loop ended: what the voice owns outside its state, let go as the voice goes. */
   const halt = () => {
     stopLoop();
     Option.map(current, (media) => Effect.runFork(media.pause));
@@ -171,6 +226,11 @@ export const VoiceOver = (props: ParentProps<{ readonly source: VoiceSource }>) 
   };
 
   let plays = 0;
+  /**
+   * Play `take` of beat `beat` from `start` to `end`, the beats `next` after
+   * it: heard as the page's one voice (`Media.hear`), so the take another
+   * hearer plays is paused and the film's Play hushes this one.
+   */
   const play = (
     beat: string,
     take: Ready,
@@ -185,9 +245,11 @@ export const VoiceOver = (props: ParentProps<{ readonly source: VoiceSource }>) 
     const mine = () => n === plays;
     setHeard(Heard.Hearing({ beat, words: take.words, end, next, index: Option.none() }));
     Option.map(source.player, (p) => p.pause());
+    /** Quiet, unless a later play took this one's place. */
     const hushed = Effect.sync(() => {
       if (mine()) stop();
     });
+    /** Quiet, saying the browser refused the sound until a press: unless a later play took this one's place. */
     const blocked = Effect.sync(() => {
       if (!mine()) return;
       halt();
@@ -222,6 +284,7 @@ export const VoiceOver = (props: ParentProps<{ readonly source: VoiceSource }>) 
       ),
     );
   };
+  /** The first of `next` with a take ready, played whole, the rest after it; or quiet. */
   const playNext = (next: ReadonlyArray<string>) =>
     Option.match(
       Arr.findFirst(
@@ -233,6 +296,10 @@ export const VoiceOver = (props: ParentProps<{ readonly source: VoiceSource }>) 
         onSome: (b) => Option.map(b.take, (t) => play(b.id, t, 0, t.duration, next.slice(b.i + 1))),
       },
     );
+  /**
+   * One frame of hearing: the word heard lit; at the stretch's end, on to the
+   * next beat; once the film plays, quiet. Some names what follows the frames.
+   */
   const step = (media: Playable): Option.Option<() => void> => {
     const now = untrack(heard);
     if (now._tag !== 'Hearing' || Option.exists(source.player, (p) => p.playing()))

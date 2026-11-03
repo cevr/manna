@@ -1,3 +1,11 @@
+/**
+ * The key panel's Tuner chip mark: a small tuning fork standing upright, two
+ * thin prongs joined in a U over a short stem, drawn with Views in a box 10
+ * points wide and 14 tall, on every platform, in `tint`. It is upright by
+ * construction (nothing in it turns), and it is hidden from VoiceOver: the
+ * chip's word names it.
+ */
+
 import { type ColorValue, StyleSheet, View } from 'react-native';
 
 export function TunerMark({ tint }: { readonly tint: ColorValue }) {
@@ -9,6 +17,7 @@ export function TunerMark({ tint }: { readonly tint: ColorValue }) {
   );
 }
 
+/** The strokes' width: thin, as the chip's 13-point semibold word. */
 const STROKE = 1.5;
 
 const styles = StyleSheet.create({

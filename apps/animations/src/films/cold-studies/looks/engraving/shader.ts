@@ -1,3 +1,4 @@
+/** The vertex stage: object, world and normal for the burin. */
 export const VERTEX = `
 attribute vec2 aHatch;
 attribute float aShade;
@@ -19,6 +20,7 @@ void main() {
 }
 `;
 
+/** The fragment stage: light, then lines. */
 export const FRAGMENT = `
 precision highp float;
 varying vec3 vObj;

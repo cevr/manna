@@ -1,7 +1,9 @@
 import { defineScript } from '@manna/film/core';
 
+/** The film's name: the film, its title card and its credits all read it here. */
 export const TITLE = 'In Its Order';
 
+/** Every brief carries it (CRAFT rule 1). */
 const CARDS =
   "The narration's words appear only as full-screen cards: nothing in the picture carries lettering.";
 
@@ -162,4 +164,5 @@ export const script = defineScript([
   },
 ]);
 
+/** A beat of the film, by its id. */
 export type BeatId = (typeof script)[number]['id'];

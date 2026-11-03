@@ -1,3 +1,16 @@
+/**
+ * `bun run keys [--stage s] [--env file]`: what the publisher needs to reach
+ * a deployed stage, from the stack's outputs, into the publisher's
+ * git-ignored `.env` (`../animations/.env` by default, where
+ * `bun run screening` reads it): the site's URL, the desk's URL and the
+ * desk's secret (`SCREENING_URL`, `SCREENING_DESK_URL`,
+ * `SCREENING_DESK_TOKEN`).
+ *
+ * The deploy keeps the secret in the stack's local state (`.alchemy/`,
+ * git-ignored). It is written beside whatever else `.env` holds, replacing
+ * only the `SCREENING_*` lines, the file readable by its owner alone.
+ * Nothing but the variables' names is printed.
+ */
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { makeLocalState } from 'alchemy/State';
 import { Console, Effect, FileSystem, Option, Path, Redacted, Schema } from 'effect';
@@ -5,14 +18,18 @@ import { Command, Flag } from 'effect/cli';
 
 import { DOMAIN, SERVED_FROM } from '../src/site.ts';
 
+/** The stack `alchemy.run.ts` declares. */
 const STACK = 'screening';
 
+/** The stack's outputs `keys` reads. */
 const SiteOutputs = Schema.Struct({
+  /** The site's `workers.dev` URL; none on a stage served from its custom domain alone. */
   url: Schema.OptionFromOptionalNullOr(Schema.String),
   desk: Schema.String,
   token: Schema.Redacted(Schema.String),
 });
 
+/** The stack was never deployed at the stage (or was destroyed). */
 class SiteNotDeployed extends Schema.TaggedError<SiteNotDeployed>()('SiteNotDeployed', {
   stage: Schema.String,
 }) {
@@ -21,8 +38,10 @@ class SiteNotDeployed extends Schema.TaggedError<SiteNotDeployed>()('SiteNotDepl
   }
 }
 
+/** The variables the publisher reads, and the prefix they share. */
 const PREFIX = 'SCREENING_';
 
+/** `.env` text with `entries` in place of every `SCREENING_*` line it had, every other line kept. */
 const envWith = (existing: string, entries: ReadonlyArray<readonly [string, string]>): string => {
   const kept = existing
     .split('\n')
@@ -36,6 +55,10 @@ const envWith = (existing: string, entries: ReadonlyArray<readonly [string, stri
 
 const bare = (url: string) => url.replace(/\/+$/, '');
 
+/**
+ * The site's address on `stage`: `prod` served from its custom domain is
+ * `https://films.cvr.im`; any other stage, its `workers.dev` URL.
+ */
 const siteUrl = (stage: string, url: Option.Option<string>): string => {
   if (stage === 'prod' && SERVED_FROM === 'custom-domain') return `https://${DOMAIN}`;
   return bare(Option.getOrElse(url, () => ''));

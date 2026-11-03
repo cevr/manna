@@ -16,6 +16,7 @@ const rgbAt = (x: number, y: number) => {
 const INK = '120,98,84';
 const PAPER = new Set(['243,234,216']);
 
+/** A view's column: its mannequin's rows, and the ink runs along a row. */
 const column = (k: number) => {
   const xs = Array.from({ length: Math.floor(step) }, (_, i) => Math.floor(k * step) + i);
   const rows = Array.from({ length: H }, (_, y) => y).filter((y) =>
@@ -108,6 +109,12 @@ describe("a pose sheet's underlay", () => {
 
 describe('an underlay of figures of their own sizes', () => {
   const [w, h] = [512, 512];
+  /**
+   * Each column's mannequin: its height in pixels, and its head read two
+   * ways that bracket it: from the top of the head to the neck (its
+   * narrowest row above the body, a little under the chin) and twice the
+   * top to the head's widest row (a little short of the chin).
+   */
   const sized = (statures: ReadonlyArray<{ height: number; heads: number }>) => {
     const picture = mannequinUnderlay(
       { slots: ['front', 'front'], profiles: [], shown: [1, 2], statures },
@@ -134,7 +141,9 @@ describe('an underlay of figures of their own sizes', () => {
     });
   };
   type Sized = ReturnType<typeof sized>[number];
+  /** Whether a mannequin stands `heads` of its own heads: between its two reads. */
   const stands = (m: Sized, heads: number) => m.heads.under <= heads && heads <= m.heads.over;
+  /** Whether the second stands `share` of the first's height, to 2 %. */
   const shareOf = (grown: Sized, child: Sized, share: number) =>
     Math.abs(child.tall / grown.tall - share) < 0.02;
 

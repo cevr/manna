@@ -1,3 +1,30 @@
+/**
+ * Handbook CLI Commands
+ *
+ * Assemble a finished Bible-handbook study from its per-section markdown files in
+ * one deterministic call — the job the handbook-factory workflow's aggregator/save
+ * agents do, but as a single fast CLI step (no LLM, no flakiness).
+ *
+ *   manna handbook save <dir>            - assemble <dir>/handbook.json + sections → outPath
+ *   manna handbook save <dir> --out X    - write to X instead of the manifest's outPath
+ *   manna handbook save <dir> --dry-run  - print the assembled handbook, write nothing
+ *
+ * The sections directory must contain:
+ *   - the per-section files (e.g. 01-foo.md, 02-bar.md), each starting with "## Title"
+ *   - a handbook.json manifest describing the front matter and the ordered section→part map
+ *
+ * handbook.json shape (the factory writes this straight from the spec):
+ *   {
+ *     "title":   "X — A Bible Handbook Study",
+ *     "topic":   "X — A Bible Handbook Study",        // optional; defaults to title
+ *     "createdAt": "2026-06-26T12:00:00Z",            // optional; defaults to now
+ *     "thesis":  "…paragraph…",
+ *     "method":  "…paragraph…",
+ *     "outPath": "/abs/path/to/final.md",             // optional; --out overrides
+ *     "sections": [ { "file": "01-foo.md", "part": "I — The Method" }, … ]
+ *   }
+ */
+
 import { Argument, Command, Flag } from 'effect/cli';
 import { BunServices } from '@effect/platform-bun';
 import { Console, DateTime, Effect, FileSystem, Option, Schema } from 'effect';
@@ -23,12 +50,22 @@ type HandbookManifest = typeof HandbookManifest.Type;
 
 const decodeHandbookManifest = Schema.decodeUnknownEffect(Schema.fromJsonString(HandbookManifest));
 
+/**
+ * A parsed section: its title (from the first "## " line), the body verbatim
+ * from that heading onward, and the symbols it defines (from the
+ * "**Symbols defined here:**" block) for the appendix.
+ */
 interface ParsedSection {
   readonly title: string;
   readonly body: string;
   readonly definedSymbols: ReadonlyArray<string>;
 }
 
+/**
+ * Strip any leaked agent narration before the first "## " heading, then split
+ * title from body. Returns none (rather than throwing) when no heading is found,
+ * so the caller can report the offending file and exit cleanly.
+ */
 function parseSection(raw: string): Option.Option<ParsedSection> {
   const lines = raw.split('\n');
   const headingIdx = lines.findIndex((l) => /^##\s+\S/.test(l));
@@ -48,6 +85,10 @@ function parseSection(raw: string): Option.Option<ParsedSection> {
   return Option.some({ title, body, definedSymbols });
 }
 
+/**
+ * Pull the bullets under "**Symbols defined here:**" up to the next bold label
+ * or blank-line break. Each returned string is the bullet text without "- ".
+ */
 function extractDefinedSymbols(bodyLines: ReadonlyArray<string>): ReadonlyArray<string> {
   const startIdx = bodyLines.findIndex((l) => /\*\*Symbols defined here:\*\*/i.test(l));
   if (startIdx === -1) return [];
@@ -70,6 +111,7 @@ function extractDefinedSymbols(bodyLines: ReadonlyArray<string>): ReadonlyArray<
   return out;
 }
 
+/** Renumber a section body's heading from "## Title" to "## N. Title". */
 function numberHeading(body: string, n: number, title: string): string {
   const firstNl = body.indexOf('\n');
   let rest = '';
@@ -82,16 +124,22 @@ function partHeading(part: string): string {
   return `Part ${part}`;
 }
 
+/** A leading article ("the", "a", "an") ignored for alphabetizing the appendix. */
 function appendixSortKey(symbolBullet: string): string {
   const m = symbolBullet.match(/\*\*([^*]+)\*\*/);
   const name = (m?.[1] ?? symbolBullet).toLowerCase().trim();
   return name.replace(/^(the|a|an)\s+/, '');
 }
 
+/** Build the YAML frontmatter block. */
 function frontmatter(topic: string, createdAt: string): string {
   return ['---', `created_at: '${createdAt}'`, `topic: ${topic}`, '---'].join('\n');
 }
 
+/**
+ * Assemble the whole handbook markdown from the manifest + parsed sections.
+ * Pure: takes the parsed inputs, returns the final document string.
+ */
 function assemble(
   manifest: HandbookManifest,
   sections: ReadonlyArray<{ parsed: ParsedSection; part: string }>,

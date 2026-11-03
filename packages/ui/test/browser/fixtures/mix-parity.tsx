@@ -6,6 +6,7 @@ import { mix, type Mixin } from '../../../src/mix/mix.ts';
 import { Toggle } from '../../../src/toggle/index.ts';
 import { ToggleGroup } from '../../../src/toggle-group/index.ts';
 
+/** `role="switch"` state as ARIA and a data attribute. */
 function switchable(on: () => boolean): Mixin<HTMLDivElement> {
   return {
     role: 'switch',
@@ -19,6 +20,7 @@ function switchable(on: () => boolean): Mixin<HTMLDivElement> {
   };
 }
 
+/** A ref factory that reports being made (on both sides) and being called (in the browser). */
 function reporting(report: (line: string) => void): RefFactory<HTMLDivElement> {
   report('made');
   return (el) => report(`ref ${el.id}`);

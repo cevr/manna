@@ -3,6 +3,7 @@ import { addInto, duck, fade, limit, limitInto, toFrames } from './dsp.ts';
 
 const RATE = 44100;
 
+/** `n` samples of `value`. */
 const steady = (n: number, value: number) => new Float32Array(n).fill(value);
 
 describe('toFrames', () => {
@@ -65,6 +66,7 @@ describe('duck', () => {
 
 describe('limit', () => {
   const spec = { limit: 0.95, attack: 5, release: 50 };
+  /** The attack window, less a frame: how far the output runs behind. */
   const latency = Math.trunc((RATE * spec.attack) / 1000) - 1;
 
   test('a quiet sound passes unchanged, one attack window late', () => {

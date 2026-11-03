@@ -63,11 +63,17 @@ class BuildFailed extends Schema.TaggedError<BuildFailed>()('BuildFailed', {
   }
 }
 
+/** The app's house look: the block every concept prompt opens with, and its image. */
 interface HouseLook {
   readonly text: string;
   readonly image: string;
 }
 
+/**
+ * The needs not drawn, drawn as sheet tries on the image route (each
+ * member's sheet kind once, its default tries); a key's drawing is its own
+ * tool's (the held keys), so it is named and left.
+ */
 const drawTries = (house: HouseLook) => (needs: ReadonlyArray<OwnerNeed>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -102,6 +108,7 @@ type DrawServices = Effect.Services<ReturnType<ReturnType<typeof drawTries>>>;
 const ReportJson = Schema.fromJsonString(BuildReport);
 const SpendList = Schema.Array(Spend);
 
+/** A stage's line: its state, id, wall time and, when it waits or failed, why. */
 const stageLine = (s: StageReport) =>
   [
     s.state.padEnd(13),

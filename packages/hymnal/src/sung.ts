@@ -1,24 +1,52 @@
+/**
+ * The file as it is sung: a hymn's MIDI file with a verse for each of its
+ * text's stanzas. The compiler times the hymn on it (`compile.ts`) and the
+ * render records it (`scripts/render/run.ts`), so a recording and its timing
+ * come from one file.
+ *
+ * A file whose read (`Score.fromMidi`) plays as many verses as the text has
+ * stanzas, or more, is sung as it stands. A file that plays fewer sings its
+ * last verse again for each stanza past them: each pass runs from the last
+ * verse's start to the file's end (its silent tail included, so no note
+ * crosses into the next pass), and the tempo, meter and key in effect at the
+ * verse's start are stated again at each later pass's start, so each pass
+ * plays as long as the verse does. Events at the file's very end move to the
+ * sung file's end.
+ *
+ * Pure: no file, Bun or Node access.
+ */
+
 import type { Midi, Note } from './midi.js';
 import * as Score from './score.js';
 
+/** A file with no tempo event plays at 120 quarter notes a minute (`midi.ts`). */
 const DEFAULT_TEMPO = 500_000;
 
+/** Where a file's last verse is sung again. */
 export interface Loop {
+  /** The last verse's start, in ticks: the first pass's start. */
   readonly start: number;
+  /** A pass, in ticks: the last verse's start to the file's end. */
   readonly length: number;
+  /** How many times the last verse is sung: once, and once more for each stanza past the file's verses. */
   readonly passes: number;
 }
 
 export interface Sung {
+  /** The file as it is sung: the input itself when it is sung as it stands. */
   readonly midi: Midi;
+  /** The sung file read, a verse for each stanza; its `exact` is the file's own read's. */
   readonly score: Score.Score;
+  /** The verses the file itself plays: its read's count. */
   readonly played: number;
+  /** The loop, when the file plays fewer verses than the text has stanzas. */
   readonly loop: Loop | undefined;
 }
 
 const byStart = (notes: ReadonlyArray<Note>) =>
   [...notes].sort((a, b) => a.start - b.start || a.key - b.key);
 
+/** A hymn's file as it is sung by a text of `stanzas` stanzas. */
 export const of = (midi: Midi, stanzas: number): Sung => {
   const read = Score.fromMidi(midi, stanzas);
   const spans = read.verses.spans;
@@ -37,6 +65,7 @@ export const of = (midi: Midi, stanzas: number): Sung => {
     );
     return { ...track, notes: byStart([...track.notes.filter((n) => n.start < start), ...copies]) };
   });
+  /** A tempo, meter or key list sung through: the verse's events each pass, its opening state stated again. */
   const sungEvents = <E extends { readonly tick: number }>(
     events: ReadonlyArray<E>,
     none: E | undefined,

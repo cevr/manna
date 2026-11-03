@@ -1,10 +1,17 @@
 import { BoxGeometry, BufferAttribute, BufferGeometry, SphereGeometry, Vector3 } from 'three';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
+/** A profile point: radius, height. */
 export type Profile = ReadonlyArray<readonly [number, number]>;
 
+/** How a turned body's surface is pressed: its radius times this at angle `a`, height `y`. */
 export type Press = (a: number, y: number) => number;
 
+/**
+ * A body turned about its y axis from `profile` (bottom to top), `segs`
+ * round, its radius pressed by `press` and squashed front to back by
+ * `depth` (1 round). Its seam is shared, so its normals run smooth all round.
+ */
 export const turned = (
   profile: Profile,
   segs: number,
@@ -41,6 +48,7 @@ export const turned = (
   return g;
 };
 
+/** Folds hanging from `top`, deepening toward the hem: `n` round, `amp` deep at the hem, seeded. */
 export const folds =
   (n: number, amp: number, top: number, seed: number, slant = 0): Press =>
   (a, y) => {
@@ -52,6 +60,11 @@ export const folds =
     return 1 + amp * (0.25 + 0.75 * fall) * wave;
   };
 
+/**
+ * A limb swept along `path`, its radius at each point `radii`, `segs` round.
+ * Its lines run along it and around it (`aHatch`: length along, then the
+ * distance round at a mean radius), its seam doubled so they never wrap.
+ */
 export const swept = (
   path: ReadonlyArray<Vector3>,
   radii: ReadonlyArray<number>,
@@ -113,6 +126,7 @@ export const swept = (
   return g;
 };
 
+/** A block `w` × `h` × `d`, its base at y 0 when `grounded`, centred otherwise. */
 export const block = (w: number, h: number, d: number, grounded = true): BufferGeometry => {
   const g = new BoxGeometry(w, h, d);
   if (grounded) g.translate(0, h / 2, 0);
@@ -123,6 +137,7 @@ export const block = (w: number, h: number, d: number, grounded = true): BufferG
   return g;
 };
 
+/** A bump on the face, by where it sits on the front of a unit head (x across, y up). */
 const bump = (x: number, y: number, cx: number, cy: number, sx: number, sy: number) =>
   Math.exp(-(((x - cx) * (x - cx)) / (sx * sx) + ((y - cy) * (y - cy)) / (sy * sy)));
 
@@ -131,6 +146,12 @@ const smooth = (a: number, b: number, v: number) => {
   return t * t * (3 - 2 * t);
 };
 
+/**
+ * A head modelled as a sculptor roughs one in: an egg, the brow standing
+ * over two sockets, the nose, the cheekbones, the line of the mouth and the
+ * chin, the jaw narrowing. Its chin at y 0, `s` its scale (1 a man's head,
+ * about 0.25 m tall).
+ */
 export const head = (s = 1): BufferGeometry => {
   const g = new SphereGeometry(1, 56, 40);
   const p = g.getAttribute('position');
@@ -174,6 +195,7 @@ export const head = (s = 1): BufferGeometry => {
   return one;
 };
 
+/** Points along a smooth path through `pts` (Catmull–Rom), `n` per leg. */
 export const path = (pts: ReadonlyArray<readonly [number, number, number]>, n = 6): Vector3[] => {
   const v = pts.map(([x, y, z]) => new Vector3(x, y, z));
   const out: Vector3[] = [];
@@ -203,5 +225,6 @@ export const path = (pts: ReadonlyArray<readonly [number, number, number]>, n = 
   return out;
 };
 
+/** Radii from `a` to `b` over `n` points, eased. */
 export const taper = (n: number, a: number, b: number): number[] =>
   Array.from({ length: n }, (_, i) => a + (b - a) * (i / Math.max(1, n - 1)));

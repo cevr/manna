@@ -1,3 +1,22 @@
+/**
+ * The octave class of `detect`, drawn: plucks whose half period or double
+ * stands near the period's own key, each read at its fundamental within 3
+ * cents, or 5 when stiff (the stretched upper partials pull a period
+ * reading sharp). Its own seeded draw (xorshift32), apart from the unit's
+ * acceptance file, over two families:
+ *
+ * - strong even partials over a weak fundamental and weak odd partials,
+ *   which lift the half period's key near the period's (read an octave up
+ *   unless the period's key at the double lag wins);
+ * - high plucks, 500 to 700 Hz, with 6 to 8 partials, whose short period
+ *   puts the sample nearest each key well under it.
+ *
+ * Each across the six strings' bands, 44.1 or 48 kHz, a decay, a start
+ * after the pluck, harmonic or stiff (inharmonicity B in (0, 1e-4]), clean
+ * or under white noise at 30 dB SNR or better: the domain in which the
+ * octave rule holds that the double stands no higher at the true period.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { Array as Arr, Option } from 'effect';
 
@@ -8,6 +27,7 @@ const FRAME = 2048;
 const CASES = 300;
 const SEED = 20_261_031;
 
+/** xorshift32 in [0, 1). */
 const draw = (seed: number) => {
   let state = seed >>> 0 || 1;
   return () => {
@@ -31,7 +51,9 @@ interface Pluck {
   readonly phases: ReadonlyArray<number>;
   readonly decay: number;
   readonly start: number;
+  /** Noise RMS over signal RMS; 0 is clean. */
   readonly noise: number;
+  /** Inharmonicity B: partial n sits at n·hz·√((1 + B n²)/(1 + B)). */
   readonly stiffness: number;
 }
 
@@ -40,11 +62,13 @@ const rateOf = (next: Draw) => {
   return 48_000;
 };
 
+/** Half the plucks clean, half under noise 30 to 60 dB below the signal. */
 const noiseOf = (next: Draw) => {
   if (next() < 0.5) return 0;
   return 10 ** (-between(next, 30, 60) / 20);
 };
 
+/** Half the plucks harmonic, half stiff: B in (0, 1e-4], wound to plain steel strings. */
 const stiffnessOf = (next: Draw) => {
   if (next() < 0.5) return 0;
   return 1e-4 * (1 - next());
@@ -61,6 +85,7 @@ const common = (next: Draw, hz: number, partials: ReadonlyArray<number>): Pluck 
   stiffness: stiffnessOf(next),
 });
 
+/** Fundamental 0.25 to 0.4, even partials 0.6 to 1, odd ones above it 0.02 to 0.1. */
 const evenHeavy = (next: Draw): Pluck => {
   const open = STRINGS[Math.floor(next() * STRINGS.length)]?.hz ?? 110;
   const hz = open * 2 ** (between(next, -50, 50) / 1200);
@@ -73,6 +98,7 @@ const evenHeavy = (next: Draw): Pluck => {
   return common(next, hz, partials);
 };
 
+/** 500 to 700 Hz, 6 to 8 partials, the fundamental 0.25 to 0.4, the rest 0.2 to 1. */
 const high = (next: Draw): Pluck => {
   const hz = between(next, 500, 700);
   const count = 6 + Math.floor(next() * 3);
@@ -100,11 +126,13 @@ const frameOf = (p: Pluck, next: Draw) => {
   return Float32Array.from(out, (x) => ((x + reach * (2 * next() - 1)) / rms) * 0.2);
 };
 
+/** A pluck's bar in cents: 3 harmonic, 5 stiff. */
 const barOf = (p: Pluck) => {
   if (p.stiffness === 0) return 3;
   return 5;
 };
 
+/** The pluck and what `detect` read, when that is no pitch or past its bar. */
 const miss = (p: Pluck, next: Draw) =>
   Option.match(detect(frameOf(p, next), p.rate), {
     onNone: () => Option.some({ hz: p.hz, stiffness: p.stiffness, found: Number.NaN }),

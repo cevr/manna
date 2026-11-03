@@ -1,3 +1,12 @@
+/**
+ * The prod state check over small made-up state folders: a missing or empty
+ * folder is refused; a folder that records the live Worker, D1 and queue
+ * passes; and each of the three, missing, unreadable, of another type or
+ * recording another resource's name (a second D1 made by a deploy that had
+ * no state), is refused by name, with what it records when it records
+ * another. The stack's gate reads the `.alchemy` folder Alchemy runs with, on
+ * stage `prod` only, and the stack runs it before anything else.
+ */
 import { BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
 import { AlchemyContext } from 'alchemy/AlchemyContext';
@@ -9,6 +18,7 @@ import { checkProdState, prodStateGate } from './prod-state.ts';
 
 const STATE = '.alchemy/state/firsttheblade/prod';
 
+/** The live resources, as the state names them. */
 const RESOURCES = [
   {
     file: 'Site.json',
@@ -33,11 +43,13 @@ const RESOURCES = [
   },
 ] as const;
 
+/** A resource's state file as a deploy writes it (made up but for the names), its `attr` given as JSON members. */
 const resource = (resourceType: string, attr: string) =>
   `{"status":"created","logicalId":"Made","resourceType":"${resourceType}","attr":{${attr}},"removalPolicy":"destroy"}`;
 
 const named = (field: string, name: string) => `"${field}":"${name}","madeUpId":"0000"`;
 
+/** Every live resource's file, and one the check does not read. */
 const LIVE: ReadonlyArray<readonly [string, string]> = [
   ...RESOURCES.map(
     ({ file, resourceType, field, name }) =>
@@ -46,6 +58,7 @@ const LIVE: ReadonlyArray<readonly [string, string]> = [
   ['Zone.json', resource('Cloudflare.Zone', '"name":"example.com"')],
 ];
 
+/** A fresh app folder whose prod state folder holds `files`, or with no state folder when none. */
 const appWith = Effect.fn('test.appWith')(function* (
   files: Option.Option<ReadonlyArray<readonly [string, string]>>,
 ) {
@@ -61,6 +74,7 @@ const appWith = Effect.fn('test.appWith')(function* (
   return app;
 });
 
+/** The check's answer for `app`: `pass`, or the line it refuses with. */
 const answer = (app: string) =>
   checkProdState(`${app}/.alchemy`).pipe(
     Effect.match({ onSuccess: () => 'pass', onFailure: (error) => error.message }),
@@ -70,12 +84,18 @@ const Scripts = Schema.fromJsonString(
   Schema.Struct({ scripts: Schema.Record(Schema.String, Schema.String) }),
 );
 
+/** The names `program` imports from `source`, as the module binds them. */
 const importedFrom = (program: ESTree.Program, source: string) =>
   program.body.flatMap((statement) => {
     if (statement.type !== 'ImportDeclaration' || statement.source.value !== source) return [];
     return statement.specifiers.map((specifier) => specifier.local.name);
   });
 
+/**
+ * The first `count` statements of the stack's generator (the third argument
+ * of `export default Alchemy.Stack(…)`, an `Effect.gen`), each as its text in
+ * `source`.
+ */
 const firstStatements = (program: ESTree.Program, source: string, count: number) =>
   program.body.flatMap((statement) => {
     if (statement.type !== 'ExportDefaultDeclaration') return [];

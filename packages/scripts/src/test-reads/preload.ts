@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const log = process.env['MANNA_TEST_READS'] ?? '';
 
+/** Records `target` when it names a path: a string, a file URL or a buffer. */
 const record = (target: unknown) => {
   const named =
     typeof target === 'string'
@@ -21,6 +22,7 @@ const record = (target: unknown) => {
   fs.appendFileSync(log, `${resolve(named)}\n`);
 };
 
+/** `module` with each function `names` lists recording its first argument. */
 const traced = (module: object, names: ReadonlyArray<string>) => {
   const copy: Record<string, unknown> = { ...module };
   for (const name of names) {

@@ -37,11 +37,14 @@ interface MenuPositionerState {
   side: Side;
   align: Align;
   anchorHidden: boolean;
+  /** Why transitions are skipped, if they are. */
   instant: MenuInstantType;
 }
 
 export interface MenuPositionerProps extends BaseUIComponentProps<'div', MenuPositionerState> {
+  /** The gap between the trigger and the popup, in pixels. @default 0 */
   sideOffset?: number | undefined;
+  /** How the popup lines up with the trigger. @default 'center' */
   align?: Align | undefined;
 }
 

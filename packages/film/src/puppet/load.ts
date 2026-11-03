@@ -7,6 +7,7 @@ import { type Puppet, type PuppetSheet, puppetOf, unmattedKey } from '../core/pu
 import type { Raster } from '../core/raster.ts';
 import { PuppetImages, PuppetUnloadable } from './images.ts';
 
+/** `spec`'s sheet: each part PNG read and decoded, checked against its declared size, with its paper and un-matte settings. */
 const sheetFrom = Effect.fn('Puppet.sheet')(function* (spec: PuppetSpec) {
   const images = yield* PuppetImages;
   const unloadable = (reason: string) => PuppetUnloadable.make({ puppet: spec.key, reason });
@@ -41,6 +42,7 @@ const sheetFrom = Effect.fn('Puppet.sheet')(function* (spec: PuppetSpec) {
   } satisfies PuppetSheet;
 });
 
+/** `sheet` skinned on `spec`'s skeleton. */
 const puppetOfSheet = Effect.fn('Puppet.ofSheet')(function* (spec: PuppetSpec, sheet: PuppetSheet) {
   const made = puppetOf(sheet, spec.skeleton);
   if (Result.isFailure(made))
@@ -48,10 +50,18 @@ const puppetOfSheet = Effect.fn('Puppet.ofSheet')(function* (spec: PuppetSpec, s
   return made.success satisfies Puppet;
 });
 
+/** `spec`'s puppet: each part PNG read and decoded, checked against its declared size, skinned on its skeleton. */
 export const puppetFrom = Effect.fn('Puppet.from')(function* (spec: PuppetSpec) {
   return yield* puppetOfSheet(spec, yield* sheetFrom(spec));
 });
 
+/**
+ * `spec`'s drawings (its drawn keys and held hands), each PNG read and
+ * decoded, by name: a key drawn on the sheet's canvas in place of a part
+ * (`part`) un-matted from the sheet's paper as that part is (`unmattedKey`),
+ * so its rim matches the part it stands in for. A key that names a part the
+ * sheet lacks, or is another size than the sheet, fails the load.
+ */
 const drawingsFrom = Effect.fn('Puppet.drawings')(function* (spec: PuppetSpec, sheet: PuppetSheet) {
   const images = yield* PuppetImages;
   const read = yield* Effect.forEach(spec.drawings ?? [], (d) =>
@@ -83,6 +93,7 @@ const drawingsFrom = Effect.fn('Puppet.drawings')(function* (spec: PuppetSpec, s
   return new Map(read) satisfies ReadonlyMap<string, Raster>;
 });
 
+/** One declared puppet, loaded with its drawings, its GL state freed with the scope: what `loadPuppets` stands on a film for each, and what a page that draws one puppet loads (`fixtures/page.ts`). */
 export const loadPuppet = Effect.fn('Puppet.load')(function* (spec: PuppetSpec) {
   const images = yield* PuppetImages;
   const sheet = yield* sheetFrom(spec);
@@ -95,6 +106,13 @@ export const loadPuppet = Effect.fn('Puppet.load')(function* (spec: PuppetSpec) 
   return { puppet, drawings, paints: images.paints, gl } satisfies LoadedPuppet;
 });
 
+/**
+ * Load every puppet `film`'s drawings declare and stand them on it for its
+ * draws, until the caller's scope closes: what a film's load path runs
+ * before its first frame. The film, ready to draw. As `loadRigs`, what the
+ * load acquires is held in a scope of its own that only the load closes
+ * while it runs, then handed to the caller's.
+ */
 export const loadPuppets = Effect.fn('Puppet.loadPuppets')(function* (
   film: Film,
 ): Effect.fn.Return<Film, PuppetUnloadable, PuppetImages | Scope.Scope> {

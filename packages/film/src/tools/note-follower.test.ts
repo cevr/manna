@@ -5,6 +5,7 @@ import { namesMatch, noteChanges } from '../core/lab-events.ts';
 import { addNote, emptyNotes, eventsSince, replyToNote } from '../core/notes.ts';
 import type { NoteEvent } from '../core/schema.ts';
 
+/** The docs that teach an agent to follow the owner's notes, from the repo root. */
 const DOCS = [
   '.claude/skills/film/SKILL.md',
   'packages/film/README.md',
@@ -13,9 +14,11 @@ const DOCS = [
   'apps/animations/README.md',
 ];
 
+/** What the old watch printed of a change: a note made, and a reply of the owner's. */
 const watchPrinted = (event: NoteEvent) =>
   event._tag === 'NoteAdded' || (event._tag === 'NoteReplied' && event.reply.by === 'user');
 
+/** The kinds of every change the old watch printed, over a log with a note, a tweak and the owner's reply. */
 const printedKinds = () => {
   const at = '2026-10-18T10:00:00.000Z';
   const draft = { scene: 'cold', T: 1, frame: 30 };
@@ -34,12 +37,19 @@ const printedKinds = () => {
   return noteChanges(eventsSince(replied, 0).events.filter(watchPrinted)).map((c) => c.kind);
 };
 
+/** The `--name`s a follower's command or its span gives, its brackets and quotes taken off. */
 const namesIn = (command: string) =>
   Array.from(
     command.replace(/[[\]]/g, ' ').matchAll(/--name\s+(?:'([^']*)'|"([^"]*)"|(\S+))/g),
     ([, single, double, bare]) => single ?? double ?? bare ?? '',
   );
 
+/**
+ * Each follower a doc gives for notes, with its `--name`s: a backticked `lab
+ * events --follow` command or a lone `--name <name>` on a line about notes,
+ * and a command list's `lab events` line that follows (`[--follow]`). A span
+ * on a line that says it misses something is a warning, not a follower.
+ */
 const followersIn = (doc: string) =>
   doc.split('\n').flatMap((line) => [
     ...Array.from(

@@ -8,6 +8,7 @@ import {
 } from 'oxlint-plugin-effect/rule-bindings';
 import { type Bindings, bindings, memberName, staticName } from './nodes.ts';
 
+/** The members of `Math` every host gives the same: rounding, sign, comparison, sqrt, the constants. */
 const EXACT: ReadonlySet<string> = new Set([
   'abs',
   'ceil',
@@ -31,11 +32,14 @@ const EXACT: ReadonlySet<string> = new Set([
   'SQRT2',
 ]);
 
+/** The globals `Math` can be read off: `globalThis.Math`. */
 const HOLDERS: ReadonlyArray<string> = ['globalThis', 'window', 'self', 'global'];
 
+/** A module of the graph's folder, and the seeded generator beside it. */
 const GRAPH = /\/core\/synth\/graph\//u;
 const RANDOM = /\/core\/random(?:\.[jt]s)?$/u;
 
+/** What `effect` gives the graph to run: its guards, its schemas and its matcher, no maths. */
 const EFFECT_NAMES: ReadonlySet<string> = new Set(['Match', 'Predicate', 'Schema']);
 
 const MATH_MESSAGE =
@@ -47,6 +51,7 @@ const POW_MESSAGE =
 const IMPORT_MESSAGE =
   "code from outside the sound graph, which may compute with the host's Math: import values from packages/film/src/core/synth/graph/ or core/random.ts, and from effect only Predicate, Schema and Match by name; a type import passes.";
 
+/** Whether `id` is a name written as a key, not read: `x.Math`, `{ Math: 1 }`, a class's or a type's member. */
 const isKey = (id: ESTree.Node): boolean => {
   const parent = id.parent;
   if (parent?.type === 'MemberExpression') return parent.property === id && !parent.computed;
@@ -61,6 +66,7 @@ const isKey = (id: ESTree.Node): boolean => {
   return false;
 };
 
+/** Whether `id` is read for a member of `Math` every host gives the same: `Math.floor`, `Math['PI']`. */
 const readsExact = (id: ESTree.Node): boolean => {
   const parent = id.parent;
   return (
@@ -70,13 +76,16 @@ const readsExact = (id: ESTree.Node): boolean => {
   );
 };
 
+/** Whether `id` reads the global `Math` for anything but an exact member. */
 const readsHostMath = (b: Bindings, id: ESTree.Node): boolean =>
   b.isGlobal(id, 'Math') && !isKey(id) && !readsExact(id);
 
+/** Whether a member expression reads `Math` off a global that holds it: `globalThis.Math`. */
 const readsHeldMath = (b: Bindings, node: ESTree.MemberExpression): boolean =>
   Option.contains(memberName(node), 'Math') &&
   HOLDERS.some((holder) => b.isGlobal(node.object, holder));
 
+/** Whether `from` may give the graph code to run: the graph's own modules, the seeded generator, or effect's `names`. */
 const mayRun = (
   b: Bindings,
   from: string,
@@ -92,6 +101,7 @@ const mayRun = (
   );
 };
 
+/** The names of the values an import takes by name; none when it takes the module whole or its default. */
 const importedValues = (node: ESTree.ImportDeclaration): Option.Option<ReadonlyArray<string>> => {
   const names: Array<string> = [];
   for (const s of node.specifiers) {
@@ -101,16 +111,19 @@ const importedValues = (node: ESTree.ImportDeclaration): Option.Option<ReadonlyA
   return Option.some(names);
 };
 
+/** Whether an import runs code: it takes a value, or nothing (an import for its effects). */
 const importRuns = (node: ESTree.ImportDeclaration): boolean =>
   node.importKind !== 'type' &&
   (node.specifiers.length === 0 ||
     node.specifiers.some((s) => s.type !== 'ImportSpecifier' || s.importKind !== 'type'));
 
+/** The values a re-export hands on, by the name it reads them under. */
 const exportedValues = (node: ESTree.ExportNamedDeclaration): ReadonlyArray<string> =>
   node.specifiers
     .filter((s) => s.exportKind !== 'type')
     .flatMap((s) => Option.toArray(staticName(s.local, false)));
 
+/** The text of a module specifier written as a string. */
 const specifier = (source: ESTree.Node): Option.Option<string> => {
   if (source.type !== 'Literal') return Option.none();
   return Option.liftPredicate(source.value, Predicate.isString);
@@ -130,6 +143,7 @@ export const synthOwnMath = Rule.define({
       Effect.asVoid(
         Effect.when(context.report(Diagnostic.make({ node, message })), Effect.succeed(refused)),
       );
+    /** `node` refused when it runs code that `from` may not give the graph. */
     const runsFrom = (
       node: ESTree.Node,
       runs: boolean,

@@ -1,6 +1,7 @@
 import { Schema } from 'effect';
 import { EncoderName } from '../core/encoder.ts';
 
+/** The app has no `sounds/library.ts` where the tools look for one. */
 export class LibraryMissing extends Schema.TaggedError<LibraryMissing>()('LibraryMissing', {
   file: Schema.String,
 }) {
@@ -9,8 +10,10 @@ export class LibraryMissing extends Schema.TaggedError<LibraryMissing>()('Librar
   }
 }
 
+/** A declared sound with no kept variant: nothing plays where it is named. */
 export class SoundUnmade extends Schema.TaggedError<SoundUnmade>()('SoundUnmade', {
   name: Schema.String,
+  /** Candidates made and waiting for `sfx keep`. */
   candidates: Schema.Int,
 }) {
   override get message() {
@@ -20,6 +23,7 @@ export class SoundUnmade extends Schema.TaggedError<SoundUnmade>()('SoundUnmade'
   }
 }
 
+/** A kept variant whose file is not on disk. */
 export class SoundFileMissing extends Schema.TaggedError<SoundFileMissing>()('SoundFileMissing', {
   name: Schema.String,
   file: Schema.String,
@@ -29,6 +33,7 @@ export class SoundFileMissing extends Schema.TaggedError<SoundFileMissing>()('So
   }
 }
 
+/** A variant's file whose bytes are not the ones the lock kept. */
 export class SoundCorrupt extends Schema.TaggedError<SoundCorrupt>()('SoundCorrupt', {
   name: Schema.String,
   file: Schema.String,
@@ -40,6 +45,7 @@ export class SoundCorrupt extends Schema.TaggedError<SoundCorrupt>()('SoundCorru
   }
 }
 
+/** Kept variants made for another request than the declaration's: they play until new ones are kept. */
 export class SoundStale extends Schema.TaggedError<SoundStale>()('SoundStale', {
   name: Schema.String,
 }) {
@@ -48,6 +54,7 @@ export class SoundStale extends Schema.TaggedError<SoundStale>()('SoundStale', {
   }
 }
 
+/** A sound file in the repo whose licence does not let it be public. */
 export class SoundLicence extends Schema.TaggedError<SoundLicence>()('SoundLicence', {
   file: Schema.String,
   licence: Schema.String,
@@ -57,6 +64,11 @@ export class SoundLicence extends Schema.TaggedError<SoundLicence>()('SoundLicen
   }
 }
 
+/**
+ * A CC BY recording whose kept file `sfx import` changed (cut it, or trimmed a
+ * one-shot's quiet ends) while its licence says `changed: false`: its credit
+ * line would not say the change CC BY asks to be said.
+ */
 export class ChangeUnsaid extends Schema.TaggedError<ChangeUnsaid>()('ChangeUnsaid', {
   name: Schema.String,
   how: Schema.Literals(['cut', 'trimmed']),
@@ -66,6 +78,7 @@ export class ChangeUnsaid extends Schema.TaggedError<ChangeUnsaid>()('ChangeUnsa
   }
 }
 
+/** `sfx check` found errors in the library. */
 export class LibraryCheckFailed extends Schema.TaggedError<LibraryCheckFailed>()(
   'LibraryCheckFailed',
   { errors: Schema.Int, warnings: Schema.Int },
@@ -75,13 +88,16 @@ export class LibraryCheckFailed extends Schema.TaggedError<LibraryCheckFailed>()
   }
 }
 
+/** A seam's variant as its message names it, and what mends it: another take or a trim, or the data of a derived sound's seeds. */
 const SEAM_OF = {
   take: { variant: 'variant', mend: 'pick another take or trim it' },
   seed: { variant: 'seed', mend: 'edit its data until every seed loops' },
 } as const;
 
+/** A bed whose loop point is heard: a level jump or a click where it wraps. */
 export class LoopSeam extends Schema.TaggedError<LoopSeam>()('LoopSeam', {
   name: Schema.String,
+  /** A kept take, or a seed of a code sound or of a code trial. */
   of: Schema.Literals(['take', 'seed']),
   variant: Schema.Int,
   db: Schema.Finite,
@@ -93,6 +109,11 @@ export class LoopSeam extends Schema.TaggedError<LoopSeam>()('LoopSeam', {
   }
 }
 
+/**
+ * An effect placed from its takes' first sample (`sync: 'start'`) whose kept
+ * take starts late in its file: it is heard `onset` late on its cue. The
+ * latest such take is named.
+ */
 export class LeadIn extends Schema.TaggedError<LeadIn>()('LeadIn', {
   effect: Schema.String,
   name: Schema.String,
@@ -105,6 +126,11 @@ export class LeadIn extends Schema.TaggedError<LeadIn>()('LeadIn', {
   }
 }
 
+/**
+ * A CC BY recording the film places whose credit line its roll does not
+ * give: its licence asks for the line. `roll` is false when the film keeps
+ * no `credits.ts` at all.
+ */
 export class SoundCreditMissing extends Schema.TaggedError<SoundCreditMissing>()(
   'SoundCreditMissing',
   {
@@ -119,6 +145,10 @@ export class SoundCreditMissing extends Schema.TaggedError<SoundCreditMissing>()
   }
 }
 
+/**
+ * A code sound with a seed that renders silent (`heardNothing`): where the
+ * film places it, that seed plays nothing.
+ */
 export class SeedSilent extends Schema.TaggedError<SeedSilent>()('SeedSilent', {
   name: Schema.String,
   seed: Schema.Int,
@@ -128,6 +158,7 @@ export class SeedSilent extends Schema.TaggedError<SeedSilent>()('SeedSilent', {
   }
 }
 
+/** A kept take whose onset and hit the lock does not record: a `sync: 'hit'` placement cannot land it. */
 export class TimingUnrecorded extends Schema.TaggedError<TimingUnrecorded>()('TimingUnrecorded', {
   name: Schema.String,
   variant: Schema.Int,
@@ -137,6 +168,7 @@ export class TimingUnrecorded extends Schema.TaggedError<TimingUnrecorded>()('Ti
   }
 }
 
+/** A generated sound's candidates would cost more than the run allows. */
 export class CreditsOverCap extends Schema.TaggedError<CreditsOverCap>()('CreditsOverCap', {
   credits: Schema.Int,
   cap: Schema.Int,
@@ -146,6 +178,7 @@ export class CreditsOverCap extends Schema.TaggedError<CreditsOverCap>()('Credit
   }
 }
 
+/** A paid make run without `--yes`. */
 export class PaidUnconfirmed extends Schema.TaggedError<PaidUnconfirmed>()('PaidUnconfirmed', {
   credits: Schema.Int,
 }) {
@@ -154,6 +187,7 @@ export class PaidUnconfirmed extends Schema.TaggedError<PaidUnconfirmed>()('Paid
   }
 }
 
+/** `sfx keep` or `reject` naming a candidate the sound does not have. */
 export class CandidateMissing extends Schema.TaggedError<CandidateMissing>()('CandidateMissing', {
   name: Schema.String,
   index: Schema.Int,
@@ -164,6 +198,7 @@ export class CandidateMissing extends Schema.TaggedError<CandidateMissing>()('Ca
   }
 }
 
+/** `sfx unkeep` (or `keep --replace`'s undo) naming a kept variant the sound does not have. */
 export class VariantMissing extends Schema.TaggedError<VariantMissing>()('VariantMissing', {
   name: Schema.String,
   index: Schema.Int,
@@ -174,6 +209,7 @@ export class VariantMissing extends Schema.TaggedError<VariantMissing>()('Varian
   }
 }
 
+/** `sfx try` settings no declaration could take (a length outside 0.5–30 s, an influence outside 0–1, an empty prompt). */
 export class TrialInvalid extends Schema.TaggedError<TrialInvalid>()('TrialInvalid', {
   name: Schema.String,
   reason: Schema.String,
@@ -183,6 +219,7 @@ export class TrialInvalid extends Schema.TaggedError<TrialInvalid>()('TrialInval
   }
 }
 
+/** `sfx push` copied a file into the store, and the store then did not hold its bytes. */
 export class StoreCopyFailed extends Schema.TaggedError<StoreCopyFailed>()('StoreCopyFailed', {
   file: Schema.String,
   store: Schema.String,
@@ -192,6 +229,11 @@ export class StoreCopyFailed extends Schema.TaggedError<StoreCopyFailed>()('Stor
   }
 }
 
+/**
+ * The private store could not do `op` on `key`: a file it could not read or
+ * write, an answer from R2 other than the one asked for (its status and S3
+ * error code), or bytes that are not the hash they were stored under.
+ */
 export class StoreFailed extends Schema.TaggedError<StoreFailed>()('StoreFailed', {
   store: Schema.String,
   op: Schema.String,
@@ -203,6 +245,7 @@ export class StoreFailed extends Schema.TaggedError<StoreFailed>()('StoreFailed'
   }
 }
 
+/** A push to a key the store already holds with other bytes: refused, so nothing kept is replaced unasked. */
 export class StoreKeyTaken extends Schema.TaggedError<StoreKeyTaken>()('StoreKeyTaken', {
   key: Schema.String,
   file: Schema.String,
@@ -213,6 +256,7 @@ export class StoreKeyTaken extends Schema.TaggedError<StoreKeyTaken>()('StoreKey
   }
 }
 
+/** The store is an R2 bucket and the environment lacks what reaches it (names only; values are never read into a message). */
 export class StoreCredentialsMissing extends Schema.TaggedError<StoreCredentialsMissing>()(
   'StoreCredentialsMissing',
   { bucket: Schema.String, missing: Schema.Array(Schema.String) },
@@ -224,6 +268,7 @@ export class StoreCredentialsMissing extends Schema.TaggedError<StoreCredentials
   }
 }
 
+/** A command that takes one kind of sound given another (`sfx render` a generated one, `import` a code one). */
 export class SoundKindMismatch extends Schema.TaggedError<SoundKindMismatch>()(
   'SoundKindMismatch',
   { name: Schema.String, kind: Schema.String, wanted: Schema.String },
@@ -233,6 +278,7 @@ export class SoundKindMismatch extends Schema.TaggedError<SoundKindMismatch>()(
   }
 }
 
+/** `sfx import --from --to` naming seconds that hold none of the recording: it ends at `secs`. */
 export class CutEmpty extends Schema.TaggedError<CutEmpty>()('CutEmpty', {
   name: Schema.String,
   from: Schema.Finite,
@@ -244,6 +290,7 @@ export class CutEmpty extends Schema.TaggedError<CutEmpty>()('CutEmpty', {
   }
 }
 
+/** `sfx render --trial` or `sfx compare` on a sound with no code trial: only a generated sound with `code` has one. */
 export class CodeTrialMissing extends Schema.TaggedError<CodeTrialMissing>()('CodeTrialMissing', {
   name: Schema.String,
   kind: Schema.String,
@@ -253,6 +300,12 @@ export class CodeTrialMissing extends Schema.TaggedError<CodeTrialMissing>()('Co
   }
 }
 
+/**
+ * `sfx fit` asked of a sound that is not a recording: a generated take stays
+ * private, and a fit of it would publish a derivative of it; a code sound
+ * has no recording to fit; a code sound kept from a fit (`kept`) plays its
+ * fit file, so a new fit is made of the recording, declared as one again.
+ */
 export class FitRefused extends Schema.TaggedError<FitRefused>()('FitRefused', {
   name: Schema.String,
   kind: Schema.Literals(['generated', 'code', 'kept']),
@@ -266,6 +319,7 @@ export class FitRefused extends Schema.TaggedError<FitRefused>()('FitRefused', {
   }
 }
 
+/** A model `sfx fit` was handed (`--from`), or earshot wrote, that is not one the fit reads. */
 export class FitModelInvalid extends Schema.TaggedError<FitModelInvalid>()('FitModelInvalid', {
   file: Schema.String,
   reason: Schema.String,
@@ -275,6 +329,7 @@ export class FitModelInvalid extends Schema.TaggedError<FitModelInvalid>()('FitM
   }
 }
 
+/** earshot is not installed where `sfx fit` runs it, or not at its pin: how to install it. */
 export class EarshotMissing extends Schema.TaggedError<EarshotMissing>()('EarshotMissing', {
   home: Schema.String,
   reason: Schema.String,
@@ -285,6 +340,7 @@ export class EarshotMissing extends Schema.TaggedError<EarshotMissing>()('Earsho
   }
 }
 
+/** earshot ran and failed: what it printed last. */
 export class EarshotFailed extends Schema.TaggedError<EarshotFailed>()('EarshotFailed', {
   source: Schema.String,
   reason: Schema.String,
@@ -294,6 +350,7 @@ export class EarshotFailed extends Schema.TaggedError<EarshotFailed>()('EarshotF
   }
 }
 
+/** A film module (scenes, voice, sound) that fails to import or has the wrong shape. */
 export class FilmModuleInvalid extends Schema.TaggedError<FilmModuleInvalid>()(
   'FilmModuleInvalid',
   { film: Schema.String, module: Schema.String, reason: Schema.String },
@@ -303,6 +360,7 @@ export class FilmModuleInvalid extends Schema.TaggedError<FilmModuleInvalid>()(
   }
 }
 
+/** A data file (timings.json, manifest.json) that does not decode. */
 export class FileInvalid extends Schema.TaggedError<FileInvalid>()('FileInvalid', {
   file: Schema.String,
   reason: Schema.String,
@@ -320,6 +378,7 @@ export class SoundMissing extends Schema.TaggedError<SoundMissing>()('SoundMissi
   }
 }
 
+/** `--accept-mismatch` bare with no `--only`: it would accept every beat's mismatch unseen. */
 export class AcceptMismatchUnnamed extends Schema.TaggedError<AcceptMismatchUnnamed>()(
   'AcceptMismatchUnnamed',
   {},
@@ -329,12 +388,14 @@ export class AcceptMismatchUnnamed extends Schema.TaggedError<AcceptMismatchUnna
   }
 }
 
+/** Sound effects need an API key; the CLI's OAuth login covers speech and music only. */
 export class ApiKeyMissing extends Schema.TaggedError<ApiKeyMissing>()('ApiKeyMissing', {}) {
   override get message() {
     return 'no ELEVENLABS_API_KEY in env or Keychain';
   }
 }
 
+/** A sound the mix plays that is not at the mix's rate: the mix never resamples. */
 export class SampleRateMismatch extends Schema.TaggedError<SampleRateMismatch>()(
   'SampleRateMismatch',
   { file: Schema.String, rate: Schema.Finite, expected: Schema.Finite },
@@ -344,6 +405,7 @@ export class SampleRateMismatch extends Schema.TaggedError<SampleRateMismatch>()
   }
 }
 
+/** Some named cue ends after its scene does. */
 export class CuesLate extends Schema.TaggedError<CuesLate>()('CuesLate', {
   count: Schema.Int,
 }) {
@@ -352,6 +414,7 @@ export class CuesLate extends Schema.TaggedError<CuesLate>()('CuesLate', {
   }
 }
 
+/** Series drafts the Script reader cannot read (`film drafts`). */
 export class DraftsUnread extends Schema.TaggedError<DraftsUnread>()('DraftsUnread', {
   count: Schema.Int,
 }) {
@@ -360,6 +423,7 @@ export class DraftsUnread extends Schema.TaggedError<DraftsUnread>()('DraftsUnre
   }
 }
 
+/** No Chrome to render with: none where `BUN_CHROME_PATH` points, or none found (`chrome.ts`). */
 export class BrowserMissing extends Schema.TaggedError<BrowserMissing>()('BrowserMissing', {
   executable: Schema.String,
 }) {
@@ -376,6 +440,7 @@ export class BrowserFailed extends Schema.TaggedError<BrowserFailed>()('BrowserF
   }
 }
 
+/** The app's player server did not start (`film doctor` reports it on the encoder line alone). */
 export class PreviewServerFailed extends Schema.TaggedError<PreviewServerFailed>()(
   'PreviewServerFailed',
   { reason: Schema.String },
@@ -385,6 +450,7 @@ export class PreviewServerFailed extends Schema.TaggedError<PreviewServerFailed>
   }
 }
 
+/** The player page did not load, or loaded without an export handle. */
 export class PageLoadFailed extends Schema.TaggedError<PageLoadFailed>()('PageLoadFailed', {
   url: Schema.String,
   reason: Schema.String,
@@ -394,6 +460,7 @@ export class PageLoadFailed extends Schema.TaggedError<PageLoadFailed>()('PageLo
   }
 }
 
+/** The film threw in the page: a render must not keep going on a broken frame. */
 export class PageError extends Schema.TaggedError<PageError>()('PageError', {
   reason: Schema.String,
 }) {
@@ -402,6 +469,7 @@ export class PageError extends Schema.TaggedError<PageError>()('PageError', {
   }
 }
 
+/** The page's renderer process died. A chunk is retried once on a fresh page. */
 export class PageCrashed extends Schema.TaggedError<PageCrashed>()('PageCrashed', {
   reason: Schema.String,
 }) {
@@ -410,6 +478,7 @@ export class PageCrashed extends Schema.TaggedError<PageCrashed>()('PageCrashed'
   }
 }
 
+/** Frame `frame` did not come back from the page. */
 export class FrameFailed extends Schema.TaggedError<FrameFailed>()('FrameFailed', {
   frame: Schema.Int,
   reason: Schema.String,
@@ -419,6 +488,7 @@ export class FrameFailed extends Schema.TaggedError<FrameFailed>()('FrameFailed'
   }
 }
 
+/** The page could not compose the film's look-book. */
 export class LookbookFailed extends Schema.TaggedError<LookbookFailed>()('LookbookFailed', {
   reason: Schema.String,
 }) {
@@ -427,6 +497,7 @@ export class LookbookFailed extends Schema.TaggedError<LookbookFailed>()('Lookbo
   }
 }
 
+/** The page could not compose the contact sheet. */
 export class ContactFailed extends Schema.TaggedError<ContactFailed>()('ContactFailed', {
   reason: Schema.String,
 }) {
@@ -435,6 +506,7 @@ export class ContactFailed extends Schema.TaggedError<ContactFailed>()('ContactF
   }
 }
 
+/** The browser has no H.264 encoder for the film: checked before a frame is drawn. */
 export class EncoderMissing extends Schema.TaggedError<EncoderMissing>()('EncoderMissing', {
   reason: Schema.String,
 }) {
@@ -443,6 +515,7 @@ export class EncoderMissing extends Schema.TaggedError<EncoderMissing>()('Encode
   }
 }
 
+/** The page could not encode frames `[from, to)`. */
 export class EncodeFailed extends Schema.TaggedError<EncodeFailed>()('EncodeFailed', {
   from: Schema.Int,
   to: Schema.Int,
@@ -453,6 +526,7 @@ export class EncodeFailed extends Schema.TaggedError<EncodeFailed>()('EncodeFail
   }
 }
 
+/** The film declares its mixed track but the lossless master is not there. */
 export class AudioMissing extends Schema.TaggedError<AudioMissing>()('AudioMissing', {
   file: Schema.String,
 }) {
@@ -461,10 +535,18 @@ export class AudioMissing extends Schema.TaggedError<AudioMissing>()('AudioMissi
   }
 }
 
+/**
+ * The audio master is not this film's: not as long as the film (`length`: a
+ * mix was cut short, or made for another cut), or as long but mixed for
+ * another plan than the film's now (another score option, a new take, a
+ * moved effect), or never stamped with one.
+ */
 export class AudioStale extends Schema.TaggedError<AudioStale>()('AudioStale', {
   file: Schema.String,
   reason: Schema.Literals(['length', 'mixed for another plan']),
+  /** The master's measured length, in seconds. */
   length: Schema.Finite,
+  /** The film's length, in seconds. */
   film: Schema.Finite,
 }) {
   override get message() {
@@ -476,6 +558,10 @@ export class AudioStale extends Schema.TaggedError<AudioStale>()('AudioStale', {
 
 const FLAG_RULE = { excludes: 'does not go with', needs: 'needs' } as const;
 
+/**
+ * A flag that would be ignored: given with one it `excludes`, or without the
+ * one it `needs`.
+ */
 export class FlagsConflict extends Schema.TaggedError<FlagsConflict>()('FlagsConflict', {
   flag: Schema.String,
   rule: Schema.Literals(['excludes', 'needs']),
@@ -487,8 +573,15 @@ export class FlagsConflict extends Schema.TaggedError<FlagsConflict>()('FlagsCon
   }
 }
 
+/**
+ * A video render that would open more encoders than its encoder allows at
+ * once (tools/render-plan.ts, `encoderLimits`): past 14 the hardware encoder
+ * hangs rather than failing; a software encoder past one a core only fights
+ * for the cores.
+ */
 export class TooManyEncoders extends Schema.TaggedError<TooManyEncoders>()('TooManyEncoders', {
   workers: Schema.Int,
+  /** Each page also encodes the share copy (the hardware encoder's, made in the page). */
   share: Schema.Boolean,
   max: Schema.Int,
   encoder: EncoderName,
@@ -501,6 +594,11 @@ export class TooManyEncoders extends Schema.TaggedError<TooManyEncoders>()('TooM
   }
 }
 
+/**
+ * A film's page draws at another rate than the film declares (its `film.ts`'s
+ * `fps`, the one the tools lay it at): its beats would start on other frames
+ * than the mix, the checks and the segment keys place them on.
+ */
 export class PageRateDiffers extends Schema.TaggedError<PageRateDiffers>()('PageRateDiffers', {
   film: Schema.String,
   page: Schema.Finite,
@@ -511,6 +609,7 @@ export class PageRateDiffers extends Schema.TaggedError<PageRateDiffers>()('Page
   }
 }
 
+/** A render range with no frames in it. */
 export class RangeEmpty extends Schema.TaggedError<RangeEmpty>()('RangeEmpty', {
   from: Schema.Finite,
   to: Schema.Finite,
@@ -520,6 +619,7 @@ export class RangeEmpty extends Schema.TaggedError<RangeEmpty>()('RangeEmpty', {
   }
 }
 
+/** The check found errors; each was printed above. */
 export class CheckFailed extends Schema.TaggedError<CheckFailed>()('CheckFailed', {
   errors: Schema.Int,
   warnings: Schema.Int,
@@ -529,6 +629,7 @@ export class CheckFailed extends Schema.TaggedError<CheckFailed>()('CheckFailed'
   }
 }
 
+/** Another writer held a manifest's lock (`ContentStore`) past every try: a slow or stuck writer. */
 export class StoreLocked extends Schema.TaggedError<StoreLocked>()('StoreLocked', {
   file: Schema.String,
 }) {
@@ -537,6 +638,7 @@ export class StoreLocked extends Schema.TaggedError<StoreLocked>()('StoreLocked'
   }
 }
 
+/** oxfmt failed on a file the lab wrote; the file was put back as it was. */
 export class FormatFailed extends Schema.TaggedError<FormatFailed>()('FormatFailed', {
   file: Schema.String,
   reason: Schema.String,
@@ -546,6 +648,7 @@ export class FormatFailed extends Schema.TaggedError<FormatFailed>()('FormatFail
   }
 }
 
+/** A written value did not read back from the formatted file; the file was put back as it was. */
 export class WriteUnverified extends Schema.TaggedError<WriteUnverified>()('WriteUnverified', {
   file: Schema.String,
   target: Schema.String,
@@ -556,6 +659,7 @@ export class WriteUnverified extends Schema.TaggedError<WriteUnverified>()('Writ
   }
 }
 
+/** A file a recorded text names (a take the timings name) that cannot be brought back beside it. */
 export class NamedFileMissing extends Schema.TaggedError<NamedFileMissing>()('NamedFileMissing', {
   file: Schema.String,
   reason: Schema.String,
@@ -565,6 +669,11 @@ export class NamedFileMissing extends Schema.TaggedError<NamedFileMissing>()('Na
   }
 }
 
+/**
+ * A take a recorded text names whose put-away copies differ, when its name
+ * carries no hash of its audio to say which is it: nothing is brought back
+ * rather than a guess.
+ */
 export class TakeAmbiguous extends Schema.TaggedError<TakeAmbiguous>()('TakeAmbiguous', {
   file: Schema.String,
   copies: Schema.Array(Schema.String),
@@ -574,6 +683,7 @@ export class TakeAmbiguous extends Schema.TaggedError<TakeAmbiguous>()('TakeAmbi
   }
 }
 
+/** `film project approve` or `withdraw` with neither the scenes, an act nor `--all`. */
 export class ApprovalUnnamed extends Schema.TaggedError<ApprovalUnnamed>()('ApprovalUnnamed', {
   film: Schema.String,
   verb: Schema.Literals(['approve', 'withdraw']),
@@ -583,6 +693,7 @@ export class ApprovalUnnamed extends Schema.TaggedError<ApprovalUnnamed>()('Appr
   }
 }
 
+/** A child process that ran past its time limit, and was stopped. */
 export class ProcessTimedOut extends Schema.TaggedError<ProcessTimedOut>()('ProcessTimedOut', {
   command: Schema.String,
   seconds: Schema.Finite,
@@ -592,6 +703,7 @@ export class ProcessTimedOut extends Schema.TaggedError<ProcessTimedOut>()('Proc
   }
 }
 
+/** The film's declared acts do not make YouTube chapters. */
 export class ChaptersInvalid extends Schema.TaggedError<ChaptersInvalid>()('ChaptersInvalid', {
   film: Schema.String,
   reason: Schema.String,
@@ -601,6 +713,7 @@ export class ChaptersInvalid extends Schema.TaggedError<ChaptersInvalid>()('Chap
   }
 }
 
+/** An original whose picture is HDR (HLG, PQ or BT.2020): the render is SDR, and refuses a silent colour shift. */
 export class FootageHdr extends Schema.TaggedError<FootageHdr>()('FootageHdr', {
   file: Schema.String,
 }) {
@@ -609,6 +722,7 @@ export class FootageHdr extends Schema.TaggedError<FootageHdr>()('FootageHdr', {
   }
 }
 
+/** A take with no sound: a talk is cut on what its take says. */
 export class FootageSilent extends Schema.TaggedError<FootageSilent>()('FootageSilent', {
   file: Schema.String,
 }) {
@@ -617,6 +731,7 @@ export class FootageSilent extends Schema.TaggedError<FootageSilent>()('FootageS
   }
 }
 
+/** A name the library already gives other bytes: a take is never overwritten; a second recording is a second name. */
 export class FootageNameTaken extends Schema.TaggedError<FootageNameTaken>()('FootageNameTaken', {
   name: Schema.String,
   file: Schema.String,
@@ -626,6 +741,11 @@ export class FootageNameTaken extends Schema.TaggedError<FootageNameTaken>()('Fo
   }
 }
 
+/**
+ * A name that is no footage name (`core/footage.ts` `FootageName`): its
+ * files would land outside the library's folders, or where the footage route
+ * never serves them. Nothing was written.
+ */
 export class FootageNameInvalid extends Schema.TaggedError<FootageNameInvalid>()(
   'FootageNameInvalid',
   {
@@ -639,6 +759,11 @@ export class FootageNameInvalid extends Schema.TaggedError<FootageNameInvalid>()
   }
 }
 
+/**
+ * A file whose extension the library cannot keep (`core/footage.ts`
+ * `FootageExt`): its original's file and its key in the private store end
+ * in it. Nothing was written.
+ */
 export class FootageExtInvalid extends Schema.TaggedError<FootageExtInvalid>()(
   'FootageExtInvalid',
   {
@@ -652,6 +777,7 @@ export class FootageExtInvalid extends Schema.TaggedError<FootageExtInvalid>()(
   }
 }
 
+/** A name the footage library does not have. */
 export class FootageUnknown extends Schema.TaggedError<FootageUnknown>()('FootageUnknown', {
   name: Schema.String,
   known: Schema.Array(Schema.String),
@@ -663,6 +789,7 @@ export class FootageUnknown extends Schema.TaggedError<FootageUnknown>()('Footag
   }
 }
 
+/** An original the lock names that is not on this machine. */
 export class FootageOriginalMissing extends Schema.TaggedError<FootageOriginalMissing>()(
   'FootageOriginalMissing',
   { name: Schema.String, file: Schema.String },
@@ -672,6 +799,7 @@ export class FootageOriginalMissing extends Schema.TaggedError<FootageOriginalMi
   }
 }
 
+/** A talk asked for what only a narrated film has: its voice is its takes, recorded on camera. */
 export class TalkUnvoiced extends Schema.TaggedError<TalkUnvoiced>()('TalkUnvoiced', {
   film: Schema.String,
 }) {
@@ -680,6 +808,7 @@ export class TalkUnvoiced extends Schema.TaggedError<TalkUnvoiced>()('TalkUnvoic
   }
 }
 
+/** A command for a talk run on a drawn film. */
 export class NotATalk extends Schema.TaggedError<NotATalk>()('NotATalk', {
   film: Schema.String,
 }) {
@@ -688,6 +817,7 @@ export class NotATalk extends Schema.TaggedError<NotATalk>()('NotATalk', {
   }
 }
 
+/** A prune asked for while a render of the film holds its cache. */
 export class CacheBusy extends Schema.TaggedError<CacheBusy>()('CacheBusy', {
   folder: Schema.String,
 }) {
@@ -696,6 +826,7 @@ export class CacheBusy extends Schema.TaggedError<CacheBusy>()('CacheBusy', {
   }
 }
 
+/** A cache folder, or a segment in it, that is a link: its real place is not the film's. */
 export class CacheEscapes extends Schema.TaggedError<CacheEscapes>()('CacheEscapes', {
   folder: Schema.String,
   real: Schema.String,
@@ -705,6 +836,7 @@ export class CacheEscapes extends Schema.TaggedError<CacheEscapes>()('CacheEscap
   }
 }
 
+/** `--days 0` on a cache no render has recorded its segments in: which are the newest render's is unknown. */
 export class CacheUnrecorded extends Schema.TaggedError<CacheUnrecorded>()('CacheUnrecorded', {
   folder: Schema.String,
 }) {
@@ -713,6 +845,11 @@ export class CacheUnrecorded extends Schema.TaggedError<CacheUnrecorded>()('Cach
   }
 }
 
+/**
+ * `--days 0` while outputs the film's catalogue holds have no render
+ * record, each named: their newest renders' segments are unknown (each was
+ * rendered before renders recorded them, or its record does not read).
+ */
 export class CacheOutputUnrecorded extends Schema.TaggedError<CacheOutputUnrecorded>()(
   'CacheOutputUnrecorded',
   { outputs: Schema.NonEmptyArray(Schema.String) },

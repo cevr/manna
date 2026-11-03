@@ -79,18 +79,27 @@ const knobs = {
 
 type RoofFrame = Frame<keyof typeof timeline & string, typeof knobs>;
 
+/** Where the push through the faith icon ends: on its disc in `message`'s row, close enough that the disc is past the frame's corners. */
 const FAITH: Camera = {
   x: GIFTS_AT.gifts[0] + ICON_X[0] * GIFTS_S,
   y: GIFTS_AT.gifts[1],
   zoom: 14,
 };
+/** The window into the house inside the icon's disc, in the icon's units: just inside its rim. */
 const WINDOW_R = 140;
+/** The band row's scale over the story, and how far above the frame it waits. */
 export const BAND_S = 0.32;
 const BAND_ABOVE = -120;
 
+/** The row's glow and lead, rewritten every frame. */
 const { lit: LIT, lead: LEAD, count: COUNT } = iconScratch();
 const ALL: readonly [number, number, number] = [1, 1, 1];
 
+/**
+ * The count's light on the band, from its three numbers' cues (`roof` and
+ * `woman` count alike): each icon leads from its number until the next, then
+ * steps back to kept; the unlit fade by `dim` while the band is up.
+ */
 export const counted = (
   lit: [number, number, number],
   lead: [number, number, number],
@@ -103,6 +112,7 @@ export const counted = (
   lead[1] = two * (1 - clamp(three));
   lead[2] = three;
 };
+/** The house's pose, rewritten every frame. */
 const CAPERNAUM: Posed<House> = {
   cam: WENT,
   tiles: 0,
@@ -136,6 +146,11 @@ export const roof = drawing({
   },
 });
 
+/**
+ * `message`'s page as it leaves it, pushing in through the faith icon: the
+ * house shows inside the icon's disc, and the push carries the disc past the
+ * frame's edges.
+ */
 const opening = (f: RoofFrame, hands: Hands) => {
   const { ctx, w, h } = f;
   ctx.fillStyle = C.paper;
@@ -163,6 +178,7 @@ const opening = (f: RoofFrame, hands: Hands) => {
   ctx.restore();
 };
 
+/** The house in Capernaum, from the roof to the man walking out. */
 const capernaum = (f: RoofFrame) => {
   const { ctx, w, h, t } = f;
   const s = CAPERNAUM;
@@ -197,6 +213,7 @@ const capernaum = (f: RoofFrame) => {
   house(ctx, w, h, f.hand, s);
 };
 
+/** The house as the four let him down, every pose `replay` starts from. */
 const LET_DOWN: Omit<House, 'cam'> = {
   tiles: 1,
   lower: 1,
@@ -218,6 +235,10 @@ const LET_DOWN: Omit<House, 'cam'> = {
   heart: 0,
 };
 
+/**
+ * The count: each spoken number cuts back to its moment, in the framing the
+ * story gave it, held and breathing in a little while its icon lights.
+ */
 const replay = (f: RoofFrame) => {
   const { ctx, w, h, t } = f;
   const s = CAPERNAUM;
@@ -255,6 +276,12 @@ const replay = (f: RoofFrame) => {
   house(ctx, w, h, f.hand, s);
 };
 
+/**
+ * The band of three icons along the top, from "count", the unlit faded: each
+ * pops forward in gold on its spoken number and steps back to kept on the
+ * next; on "proof" a thread of light runs back along the band from the heart
+ * to the robe.
+ */
 const band = (f: RoofFrame) => {
   const shown = f.at('band');
   if (shown <= 0) return;

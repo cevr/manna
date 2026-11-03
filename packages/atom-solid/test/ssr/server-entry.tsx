@@ -10,6 +10,11 @@ import { ANSWER_KEY, Answer, AnswerResult } from './Answer.tsx';
 import { App } from './App.tsx';
 import { Own } from './Own.tsx';
 
+/**
+ * The codes Solid's development build reports on its diagnostics channel
+ * while `render` runs (a pure server render reports none); `None` when the
+ * build has no channel, so a test cannot pass by not listening.
+ */
 export const findings = (render: () => string) => {
   const codes: Array<string> = [];
   const stop = Option.map(Option.fromNullishOr(OBSERVE), (observe) =>
@@ -20,6 +25,7 @@ export const findings = (render: () => string) => {
   return { html, codes: Option.as(stop, codes) };
 };
 
+/** The App's markup for a request to `href`. */
 export const render = (href: string): string =>
   renderToString(() => (
     <RegistryProvider initialValues={[[UrlAtom.layer, layerServer(href)]]}>
@@ -27,6 +33,10 @@ export const render = (href: string): string =>
     </RegistryProvider>
   ));
 
+/**
+ * The markup of a control over a viewer's own value (`Atom.withServerValue`),
+ * read and set: `ran` is called each time the server runs the atom's own read.
+ */
 export const ownPage = (ran: () => void): string => {
   const own = Atom.writable(
     () => {
@@ -42,8 +52,14 @@ export const ownPage = (ran: () => void): string => {
   ));
 };
 
+/** The App rendered with no `RegistryProvider`: a mistake on the server. */
 export const renderWithoutProvider = (): string => renderToString(() => <App />);
 
+/**
+ * The adoption proof's whole page: its markup streamed to the end (the
+ * render waits for the answer `read` gives), the hydration script with the
+ * values the render serialized, and its client entry.
+ */
 export const answerPage = (read: () => Promise<string>): Promise<string> => {
   const answer = Atom.make(Effect.promise(read)).pipe(
     Atom.serializable({ key: ANSWER_KEY, schema: AnswerResult }),
@@ -75,6 +91,7 @@ export const answerPage = (read: () => Promise<string>): Promise<string> => {
   );
 };
 
+/** The whole page: the App's markup, the hydration script, the client entry. */
 export const page = (href: string): string =>
   [
     '<!doctype html><html><head><meta charset="utf-8">',

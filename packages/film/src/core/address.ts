@@ -16,12 +16,14 @@ import type { Interval } from './time.ts';
 
 export { Address, addressKey, addressOfKey, sceneAddress } from './address-schema.ts';
 
+/** What a command was given to name its part: `--act`, `--scene a,b`, `--short`. */
 export interface AddressFlags {
   readonly act: Option.Option<ActName>;
   readonly scene: Option.Option<ReadonlyArray<string>>;
   readonly short: Option.Option<string>;
 }
 
+/** The address `flags` name: the film when none, else the one they name; two or more fail. */
 export const addressOf = (flags: AddressFlags): Result.Result<Address, AddressConflict> => {
   const named: ReadonlyArray<Option.Option<Address>> = [
     Option.map(flags.act, (act): Address => ({ _tag: 'Act', act })),
@@ -43,6 +45,7 @@ export const addressOf = (flags: AddressFlags): Result.Result<Address, AddressCo
   return Result.succeed(Option.getOrElse(Arr.head(given), (): Address => ({ _tag: 'Film' })));
 };
 
+/** A film, as an address is resolved against it. */
 export interface Addressable {
   readonly name: string;
   readonly placed: ReadonlyArray<Placed>;
@@ -50,14 +53,24 @@ export interface Addressable {
   readonly shorts: ReadonlyArray<Short>;
 }
 
+/** An address resolved against its film. */
 export interface Scope {
   readonly address: Address;
+  /** The placed scenes it covers, in film order: every one for the film. */
   readonly scenes: ReadonlyArray<Placed>;
+  /**
+   * Film seconds it spans when it is a stretch of the film (an act, scenes):
+   * none for the whole film, whose range is the command's own, and for a
+   * short, which runs on its own clock.
+   */
   readonly span: Option.Option<Interval>;
+  /** The acts it covers whole, so a colour script is judged on no part of an act. */
   readonly acts: ReadonlyArray<Stretch<Act>>;
+  /** The short, for a short. */
   readonly short: Option.Option<Short>;
 }
 
+/** Why an address does not resolve: a name the film lacks, or acts or a short that do not lay out. */
 export type AddressError =
   | UnknownScene
   | ScenesApart
@@ -66,14 +79,22 @@ export type AddressError =
   | PartError
   | ShortError;
 
+/** The seconds from the first of `scenes` to start to the last to end. */
 const spanOf = (scenes: ReadonlyArray<Placed>): Interval => ({
   from: Math.min(...scenes.map((p) => p.start)),
   to: Math.max(...scenes.map((p) => p.start + p.dur)),
 });
 
+/** `scenes` as the film orders them, each once. */
 const inFilmOrder = (film: Addressable, ids: ReadonlySet<string>) =>
   film.placed.filter((p) => ids.has(p.spec.id));
 
+/**
+ * `address` resolved against `film`: its scenes, its span, the acts it
+ * covers whole and its short. A short's spans are checked on the frames the
+ * film was laid on (its declared rate), so a misspelt scene, mark or cue
+ * fails before a page opens, on the very frames its page draws.
+ */
 export const resolveAddress = (
   film: Addressable,
   address: Address,

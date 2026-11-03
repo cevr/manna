@@ -1,3 +1,4 @@
+/** Integer hash → [0, 1). */
 export const hash = (n: number): number => {
   let x = Math.imul((n | 0) ^ 0x9e3779b9, 0x85ebca6b);
   x ^= x >>> 13;
@@ -9,20 +10,26 @@ export const hash = (n: number): number => {
 export const hash2 = (a: number, b: number): number =>
   hash(Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263));
 
+/** Where an FNV-1a hash starts: its offset basis. */
 export const FNV_START = 2166136261;
 
+/** One step of FNV-1a: `h` with the 32-bit `unit` folded in (unsigned only at the end, by the caller). */
 export const fnvStep = (h: number, unit: number): number => Math.imul(h ^ unit, 16777619);
 
+/** FNV-1a over a string's UTF-16 code units, continued from `h`. */
 export const fnvText = (h: number, s: string): number => {
   let out = h;
   for (let i = 0; i < s.length; i++) out = fnvStep(out, s.charCodeAt(i));
   return out;
 };
 
+/** FNV-1a over a string's UTF-16 code units, as an unsigned 32-bit integer. */
 export const fnv1a = (s: string): number => fnvText(FNV_START, s) >>> 0;
 
+/** Hash a string to a seed, so seeds can be named ("sheep", "robe"). */
 export const seedOf = fnv1a;
 
+/** A seeded generator of floats in [0, 1). */
 export const rng = (seed: number) => {
   let a = seed >>> 0;
   return () => {
@@ -35,6 +42,7 @@ export const rng = (seed: number) => {
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
 
+/** Smooth 1D value noise in [-1, 1]. */
 export const noise1 = (x: number, seed = 0): number => {
   const i = Math.floor(x);
   const f = x - i;
@@ -43,6 +51,7 @@ export const noise1 = (x: number, seed = 0): number => {
   return (a + (b - a) * smooth(f)) * 2 - 1;
 };
 
+/** Smooth 2D value noise in [-1, 1]. */
 const noise2 = (x: number, y: number, seed = 0): number => {
   const xi = Math.floor(x);
   const yi = Math.floor(y);
@@ -58,6 +67,7 @@ const noise2 = (x: number, y: number, seed = 0): number => {
   return (top + (bottom - top) * yf) * 2 - 1;
 };
 
+/** Fractal noise: a few octaves of noise2, normalised to roughly [-1, 1]. */
 export const fbm = (x: number, y: number, seed = 0, octaves = 4): number => {
   let sum = 0;
   let amp = 1;

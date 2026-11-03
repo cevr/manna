@@ -1,8 +1,18 @@
+/**
+ * Each stem as a MIDI file for the sampler: the hymn file's own tempo,
+ * meter and key events at their own ticks, and the stem's notes at their
+ * original ticks. Only velocities are set (per part, humanised by a ±5 drawn
+ * as the listening pilot drew it, by Python's `random` seeded by the hymn and
+ * the stem) and a part may be transposed.
+ * No onset moves, so the recording keeps the MIDI's clock.
+ */
+
 import type { Midi } from '../../src/midi.js';
 import type { Voices } from '../../src/voices.js';
 import { pythonRandom } from './random.js';
 import type { Part, Stem } from './style.js';
 
+/** A note the stem plays: ticks, key and velocity. */
 export interface StemNote {
   readonly start: number;
   readonly end: number;
@@ -15,6 +25,7 @@ const PARTS: ReadonlyArray<Part> = ['S', 'A', 'T', 'B'];
 const byTuple = (a: StemNote, b: StemNote) =>
   a.start - b.start || a.end - b.end || a.key - b.key || a.velocity - b.velocity;
 
+/** `key` moved by octaves into `range` (at least an octave wide), when the stem has one. */
 const folded = (key: number, range: Stem['range']) => {
   if (range === undefined) return key;
   let k = key;
@@ -23,6 +34,12 @@ const folded = (key: number, range: Stem['range']) => {
   return k;
 };
 
+/**
+ * The stem's notes, by start: its parts, transposed and humanised, and
+ * folded into the stem's range when it has one. One key
+ * sounds once at a time: a later onset ends the note before it, and two
+ * onsets on one tick are one note, the longer and the louder.
+ */
 export const stemNotes = (
   voices: Voices,
   stem: Stem,
@@ -79,6 +96,7 @@ const chunk = (id: string, body: ReadonlyArray<number>) => [
   ...body,
 ];
 
+/** Events at absolute ticks as one track's bytes, in the order given, closed by end-of-track. */
 const track = (events: ReadonlyArray<{ readonly tick: number; readonly bytes: number[] }>) => {
   const body: number[] = [];
   let last = 0;
@@ -89,6 +107,12 @@ const track = (events: ReadonlyArray<{ readonly tick: number; readonly bytes: nu
   return chunk('MTrk', [...body, 0, 0xff, 0x2f, 0]);
 };
 
+/**
+ * The hymn file's conductor: every tempo, meter and key event at its own
+ * tick, by tick (the file's order at one tick). A meter is written with the
+ * standard 24 clocks a click and 8 32nds a quarter: the sampler times by
+ * tempo alone.
+ */
 const conductor = (midi: Midi) =>
   [
     ...midi.tempos.map((t) => ({
@@ -112,6 +136,11 @@ const conductor = (midi: Midi) =>
     })),
   ].sort((a, b) => a.tick - b.tick);
 
+/**
+ * A type 1 file of two tracks, the conductor and the notes on channel 1. A
+ * note lasts at least a tick. At one tick the note-offs come before the
+ * note-ons, each by key.
+ */
 export const stemMidi = (midi: Midi, notes: ReadonlyArray<StemNote>): Uint8Array => {
   const events = notes
     .flatMap((n) => [

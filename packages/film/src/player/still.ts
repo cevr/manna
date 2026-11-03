@@ -1,6 +1,7 @@
 import { Array as Arr, Option, Result } from 'effect';
 import { type StillView, viewBox } from '../core/easel.ts';
 
+/** A 2D canvas `width` × `height`, or the page's failure. */
 const sheet = (width: number, height: number) => {
   const made = document.createElement('canvas');
   made.width = width;
@@ -11,8 +12,10 @@ const sheet = (width: number, height: number) => {
   return { canvas: made, ctx };
 };
 
+/** How many blur radii the padding holds: a Gaussian reads about three. */
 const PAD_RADII = 3;
 
+/** The frame on `canvas` shown as `view` asks: the canvas itself when the view changes nothing. */
 export const composeStill = (canvas: HTMLCanvasElement, view: StillView): HTMLCanvasElement => {
   const box = Result.getOrThrow(viewBox(view, canvas.width, canvas.height));
   const whole = box.sw === canvas.width && box.sh === canvas.height;

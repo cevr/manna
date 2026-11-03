@@ -7,18 +7,26 @@ type PlainLead = typeof PlainLeadPart.Type;
 const CanonPart = Schema.TaggedStruct('Canon', {});
 type Canon = typeof CanonPart.Type;
 
+/** A stature, of any kind. */
 export type Stature = PlainLead | Canon;
 
+/** The plain lead's stature, checked. */
 const decodePlainLead = decoder(PlainLeadPart);
 
+/** The canon's stature, checked. */
 const decodeCanon = decoder(CanonPart);
 
+/** A stature's fields as a figure is given them: each kind's own, still to check. */
 type StatureFields = typeof PlainLeadPart.Encoded | typeof CanonPart.Encoded;
 
+/** A stature, checked as its kind. */
 export const decodeStature = (input: StatureFields, part: string): Stature =>
   input._tag === 'Canon' ? decodeCanon(input, part) : decodePlainLead(input, part);
 
+/** The statures. */
 export const Stature = {
+  /** The plain lead's own (character-design 2.3), in every film he leads. */
   PlainLead: (): PlainLead => decodePlainLead({ _tag: 'PlainLead' }, 'Stature.PlainLead'),
+  /** In the cast's height band (the court's canon). */
   Canon: (): Canon => decodeCanon({ _tag: 'Canon' }, 'Stature.Canon'),
 };

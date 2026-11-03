@@ -9,6 +9,7 @@ import { Picture } from '../core/board-render.ts';
 const setup = (host: FakeRenderHost = {}) => {
   const ledger = emptyLedger();
   const layer = Pages.layer.pipe(Layer.provide(fakeRenderHost(ledger, host)));
+  /** `use` run on the pool `open` makes, in a scope of its own that closes after it. */
   const withPool = <A, E>(
     film: string,
     options: PagesOptions,

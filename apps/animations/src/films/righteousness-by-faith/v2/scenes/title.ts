@@ -14,8 +14,14 @@ import { ROOF, cityBack, cityFront } from '../../city.ts';
 import { C, F, person } from '../../kit.ts';
 import { TITLE } from '../script.ts';
 
+/** Where the film's name splits: its first word drops into `word`. */
 const FIRST = TITLE.indexOf(' ');
 
+/**
+ * The film's name as it settles: its words, where it rests (the line's
+ * centre and baseline, in frame px) and its type. `word` opens on a match
+ * cut from it: its first word drops onto the page from exactly here.
+ */
 export const NAME = {
   first: TITLE.slice(0, FIRST),
   rest: TITLE.slice(FIRST),

@@ -20,6 +20,7 @@ const needs: ReadonlyArray<OwnerNeed> = [
   { film, member: 'wife', id: 'turnaround-front', file: WIFE_FRONT, lacks: 'kept' },
 ];
 
+/** The live drawing set over the lab in memory, its review's root `spare` at `/out`. */
 const setOver = (files: Map<string, Uint8Array>) => {
   const lab = labInMemory(files);
   const review = Layer.effect(

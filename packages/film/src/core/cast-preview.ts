@@ -11,12 +11,19 @@ import {
   stretchRaster,
 } from './raster.ts';
 
+/** The head height every view is drawn at, in pixels. */
 const PREVIEW_HEAD = 120;
+/** The space round and between the views. */
 const GAP = 24;
 const BAND: readonly [number, number, number] = [0, 170, 90];
 
 type View = SheetMeasure['views'][number];
 
+/**
+ * A view's head in the sheet's pixels: its own, else the anchor's scaled by
+ * the two figures' heights each over its own heads (a smaller figure's head
+ * is a larger share of it), else its height over its own heads.
+ */
 const headOf = (
   v: View,
   heads: number,
@@ -34,6 +41,7 @@ const headOf = (
     ),
   );
 
+/** One view drawn at `head` pixels a head, its body under the chin to its own `heads` when it stands. */
 const normalised = (
   sheet: Raster,
   v: View,
@@ -52,6 +60,7 @@ const normalised = (
   ]);
 };
 
+/** The try `sheet`, measured as `m` under `options`, each view normalised as the trace will make it, the canon's band across. */
 export const sheetPreview = (sheet: Raster, m: SheetMeasure, options: SheetOptions): Raster => {
   const anchorHeads = statureOf(options, m.anchor).heads;
   const anchor = Option.map(Arr.get(m.views, m.anchor - 1), (view) => ({

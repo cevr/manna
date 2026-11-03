@@ -17,6 +17,7 @@ const Manifest = Schema.fromJsonString(
   }),
 );
 
+/** The workspaces (`apps/*`, `packages/*`) that have a `typecheck` script. */
 const workspacesOf = (root: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

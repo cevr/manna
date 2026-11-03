@@ -16,13 +16,17 @@ import { ImageRoute } from './image-route.ts';
 import { decodePng, encodePng } from './png.ts';
 import { memoryFileSystem, memoryLocks, text } from './host/testing.ts';
 
+/** One image asked of the route. */
 type ImageRequest = Parameters<(typeof ImageRoute)['Service']['draw']>[0];
+/** A line a run prints. */
 type CastLine = Parameters<typeof castLine>[0];
 
 const base: FigureSpec = { ...PLAIN, robeShade: [60, 78, 150], arm: 'sleeve' };
 const at = (eyeShift: number, extra: Partial<FigureSpec> = {}) =>
   drawFigure({ ...base, eyeShift, ...extra });
+/** The front and a view facing the viewer's left: the sheet as asked. */
 const clean = encodePng(drawSheet([at(0), at(-14)]));
+/** The second view facing the viewer's right: drawn the wrong way. */
 const wrong = encodePng(drawSheet([at(0), flipRaster(at(-14, { lit: 'right' }))]));
 
 const FOLDER = '/library/cast/christ/cast-sheet';
@@ -45,6 +49,7 @@ const record: CastSheetRecord = {
   },
 };
 
+/** The member's folder in memory, a route answering `draw`, and every call it took. */
 const castOver = (
   files: Map<string, Uint8Array>,
   calls: Array<ImageRequest>,
@@ -67,6 +72,7 @@ const castOver = (
   );
 };
 
+/** The house block as the app keeps it. */
 const house = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   return yield* fs.readFileString(
@@ -74,6 +80,7 @@ const house = Effect.gen(function* () {
   );
 }).pipe(Effect.provide(BunServices.layer));
 
+/** One try of a sheet (the poses sheet when unnamed), in one lane. */
 const runOf = (kind: 'poses' | 'heads') =>
   Effect.map(house, (block) => ({
     kind,
@@ -84,6 +91,7 @@ const runOf = (kind: 'poses' | 'heads') =>
     houseImage: '/ref/house.png',
   }));
 
+/** A run's record as it stands after, and its lines. */
 const ran = (
   files: Map<string, Uint8Array>,
   lines: Array<CastLine>,
@@ -100,6 +108,7 @@ const ran = (
 
 const underlaid = (r: ImageRequest) => r.refs.includes(`${OUT}/underlay-poses.png`);
 
+/** A record of a member of its own design, no hair showing, its second figure a child. */
 const childBeside: CastSheetRecord = {
   ...record,
   hair: 'none',
@@ -112,6 +121,7 @@ const childBeside: CastSheetRecord = {
   },
 };
 
+/** Each column's mannequin height in pixels on a two-view underlay: from its first inked row to its last. */
 const standing = (png: Uint8Array) => {
   const picture = Result.getOrThrow(decodePng(png));
   const inked = (x: number, y: number) => picture.rgba[(y * picture.width + x) * 4] !== 243;

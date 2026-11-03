@@ -4,24 +4,32 @@ import { DateTime, Effect, Order, Redacted } from 'effect';
 import { Hex } from 'effect/encoding';
 import { sha256Hex } from './digest.ts';
 
+/** An S3 key pair. The secret stays `Redacted` until the signing key is derived. */
 export interface S3Credentials {
   readonly accessKeyId: string;
   readonly secretAccessKey: Redacted.Redacted<string>;
 }
 
+/** One request to sign: its method, its path and query as sent, and the headers to sign. */
 export interface S3Request {
   readonly method: string;
   readonly host: string;
+  /** The path, each segment already encoded (`encodeKey`). */
   readonly path: string;
+  /** The query parameters, unencoded; signed in sorted order. */
   readonly query: ReadonlyArray<readonly [string, string]>;
+  /** Headers to sign beside `host`, `x-amz-date` and `x-amz-content-sha256`. */
   readonly headers: Readonly<Record<string, string>>;
+  /** The payload's sha256, hex. */
   readonly payloadHash: string;
 }
 
+/** The sha256 of no bytes: a GET's, a HEAD's, a list's payload hash. */
 export const EMPTY_SHA256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
 const text = new TextEncoder();
 
+/** RFC 3986 percent-encoding as SigV4 wants it: everything but `A-Z a-z 0-9 - _ . ~` (and `/` when `slash`). */
 export const uriEncode = (value: string, slash: boolean): string =>
   Array.from(text.encode(value), (byte) => {
     const char = String.fromCharCode(byte);
@@ -30,8 +38,10 @@ export const uriEncode = (value: string, slash: boolean): string =>
     return `%${byte.toString(16).toUpperCase().padStart(2, '0')}`;
   }).join('');
 
+/** A store key as a URL path under the bucket: each segment encoded, `/` kept. */
 export const encodeKey = (key: string): string => uriEncode(key, true);
 
+/** HMAC-SHA256 over the platform's native MAC service. */
 export const hmacSha256 = Effect.fnUntraced(function* (
   crypto: Mac.Mac['Service'],
   key: Uint8Array,
@@ -40,11 +50,13 @@ export const hmacSha256 = Effect.fnUntraced(function* (
   return yield* crypto.sign(yield* Mac.key(Mac.hmacSha256, key), message);
 });
 
+/** `20130524T000000Z`: the moment as SigV4 stamps it. */
 const amzDate = (at: DateTime.Utc): string =>
   DateTime.formatIso(at)
     .replace(/\.\d+Z$/, 'Z')
     .replaceAll(/[-:]/g, '');
 
+/** The canonical request, the string to sign's last line hashed from it. */
 const canonicalRequest = (request: S3Request, stamp: string): string => {
   const headers = Object.entries({
     ...Object.fromEntries(
@@ -70,6 +82,7 @@ const canonicalRequest = (request: S3Request, stamp: string): string => {
   ].join('\n');
 };
 
+/** The headers that sign `request` at `at` for `region`: `x-amz-date`, `x-amz-content-sha256`, `authorization`. */
 export const signS3 = Effect.fnUntraced(function* (
   crypto: Mac.Mac['Service'],
   credentials: S3Credentials,

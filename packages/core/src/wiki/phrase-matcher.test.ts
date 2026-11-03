@@ -24,6 +24,9 @@ import {
   type PhraseSpan,
 } from './phrase-matcher.js';
 
+/** Builds a dictionary the way the compiler would: every alias already
+ *  normalized, one topic per alias. Slug is derived from the alias so a failing
+ *  assertion names the phrase that produced the span. */
 const dictionary = (...aliases: readonly string[]): PhraseDictionary =>
   PhraseDictionary.make({
     entries: aliases.map((alias) =>
@@ -37,6 +40,10 @@ const dictionary = (...aliases: readonly string[]): PhraseDictionary =>
     unavailable: Option.none(),
   });
 
+/** The compared shape: the alias and the source text the span actually covers.
+ *  Comparing the sliced text rather than the raw offsets makes an off-by-one in
+ *  the normalized→source projection visible as a wrong word instead of as a
+ *  number nobody can read. */
 const covered = (
   text: string,
   spans: readonly PhraseSpan[],

@@ -2,10 +2,13 @@ import { Array as Arr, Option, Predicate, Schema } from 'effect';
 import type { JsonSchema } from 'effect';
 import type * as Tool from 'effect/ai/Tool';
 
+/** What a field is, read from its JSON Schema: one value (a word, a number, a switch), a list of words or numbers, or JSON. */
 export type FieldKind = 'word' | 'number' | 'switch' | 'words' | 'numbers' | 'json';
 
+/** A field kind that is one value. */
 type Primitive = 'word' | 'number' | 'switch';
 
+/** A field of a command's parameters: its name, its kind, whether it is required, and its words. */
 export interface LabField {
   readonly name: string;
   readonly kind: FieldKind;
@@ -15,6 +18,7 @@ export interface LabField {
 
 const isJsonArray = Schema.is(Schema.Array(Schema.Json));
 
+/** A JSON Schema node, as far as a field is read from one. */
 const Node = Schema.Struct({
   $ref: Schema.optionalKey(Schema.String),
   type: Schema.optionalKey(Schema.Json),
@@ -32,6 +36,7 @@ type Node = typeof Node.Type;
 const readNode = Schema.decodeUnknownOption(Node);
 const NO_NODE: Node = {};
 
+/** The JSON Schema types that are one value, and the kind of each. */
 const PRIMITIVES = new Map<Schema.Json, Primitive>([
   ['string', 'word'],
   ['integer', 'number'],
@@ -39,11 +44,13 @@ const PRIMITIVES = new Map<Schema.Json, Primitive>([
   ['boolean', 'switch'],
 ]);
 
+/** A list of one kind of value. */
 const LISTS = new Map<Primitive, FieldKind>([
   ['word', 'words'],
   ['number', 'numbers'],
 ]);
 
+/** `node` with its `$ref` followed into `defs`. Pure. */
 const resolved = (node: Node, defs: JsonSchema.Definitions): Node =>
   Option.fromUndefinedOr(node.$ref).pipe(
     Option.flatMap((ref) => Option.fromUndefinedOr(defs[ref.replace(/^#\/\$defs\//, '')])),
@@ -51,6 +58,7 @@ const resolved = (node: Node, defs: JsonSchema.Definitions): Node =>
     Option.match({ onNone: () => node, onSome: (target) => resolved(target, defs) }),
   );
 
+/** The one primitive every member of a union is, when they agree. Pure. */
 const unionOf = (
   union: ReadonlyArray<Schema.Json>,
   defs: JsonSchema.Definitions,
@@ -63,6 +71,7 @@ const unionOf = (
   );
 };
 
+/** The primitive a schema node is, when it is one: a word (a string, an enum or a union of them), a number or a switch. Pure. */
 const primitiveOf = (node: Node, defs: JsonSchema.Definitions): Option.Option<Primitive> => {
   const at = resolved(node, defs);
   const word = Option.some<Primitive>('word');
@@ -89,6 +98,7 @@ const primitiveOf = (node: Node, defs: JsonSchema.Definitions): Option.Option<Pr
   );
 };
 
+/** A list field's kind: an array whose every item (its leading ones too, a non-empty list's) is one primitive. Pure. */
 const listOf = (at: Node, defs: JsonSchema.Definitions): Option.Option<FieldKind> => {
   const itemKinds = [
     ...Option.toArray(Option.fromUndefinedOr(at.items)),
@@ -105,6 +115,7 @@ const listOf = (at: Node, defs: JsonSchema.Definitions): Option.Option<FieldKind
   );
 };
 
+/** A field's kind from its JSON Schema node. Pure. */
 const kindOf = (node: Node, defs: JsonSchema.Definitions): FieldKind => {
   const at = resolved(node, defs);
   return Option.getOrElse(
@@ -113,6 +124,11 @@ const kindOf = (node: Node, defs: JsonSchema.Definitions): FieldKind => {
   );
 };
 
+/**
+ * The fields a command takes, as the JSON Schema MCP lists its tool by
+ * says them: each property, its kind, whether it is required and its
+ * description. Pure.
+ */
 export const fieldsOf = (tool: Tool.Any): ReadonlyArray<LabField> => {
   const document = Schema.toJsonSchemaDocument(tool.parametersSchema);
   const defs = document.definitions;
@@ -145,6 +161,11 @@ export const fieldsOf = (tool: Tool.Any): ReadonlyArray<LabField> => {
 const RefRoot = Schema.Struct({ $ref: Schema.String });
 const isRefRoot = Schema.is(RefRoot);
 
+/**
+ * A schema's JSON Schema with an object root, as MCP lists a tool's input
+ * and output: a top-level `$ref` inlined. `excess` says what it does with a
+ * key it does not name: `ignore` (more are allowed) or `error` (none are).
+ */
 export const objectSchema = (schema: Schema.Top, excess: 'ignore' | 'error' = 'ignore') => {
   const document = Schema.toJsonSchemaDocument(schema, { onExcessProperty: excess });
   const { definitions } = document;

@@ -1,5 +1,6 @@
 import type { CodeSound, Node } from '../nodes.ts';
 
+/** A probe: a sound, the seed it renders with (1 when absent), and the code sounds it samples. */
 export interface Probe {
   readonly name: string;
   readonly sound: CodeSound;
@@ -7,6 +8,7 @@ export interface Probe {
   readonly samples?: Readonly<Record<string, CodeSound>>;
 }
 
+/** A short click: white noise under a falling line. */
 const tick: Node = {
   _tag: 'Envelope',
   points: [
@@ -357,6 +359,7 @@ export const PROBES: ReadonlyArray<Probe> = [
   },
 ];
 
+/** Each probe's render pinned by its name: the sha256 of its Float32 samples. */
 export const GOLDEN: ReadonlyMap<string, string> = new Map(
   Object.entries({
     'osc.sine': '3e61195e75ffb4ed3aea51ca32bee97d99225bac13982a2772d0c862b1399edc',

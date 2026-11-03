@@ -44,13 +44,16 @@ import { BodyTooLarge } from '../core/refusals.ts';
 import { STUDIO_MAX_BODY } from '../core/studio.ts';
 import { urlPath } from './review-file.ts';
 
+/** Where the server listens: the name and port it is bound to. */
 interface LabBound {
   readonly hostname?: string;
   readonly port?: number;
 }
 
+/** A web handler as a Bun server takes it: the request and its server. */
 type LabHandler = (request: Request, server: LabBound) => Promise<Response>;
 
+/** The connection a request came on: the server's bound name and port. */
 interface ConnectionService {
   readonly hostname: Option.Option<string>;
   readonly port: Option.Option<number>;
@@ -60,18 +63,27 @@ class Connection extends Context.Service<Connection, ConnectionService>()(
   '@manna/film/tools/Connection',
 ) {}
 
+/** The connection a request came on, as the server it reached is bound. */
 const connectionOf = (server: LabBound): ConnectionService => ({
   hostname: Option.fromUndefinedOr(server.hostname),
   port: Option.fromUndefinedOr(server.port),
 });
 
+/** The names the loopback host answers to, beside the one the server was bound with. */
 const LOOPBACK: ReadonlyArray<string> = ['127.0.0.1', 'localhost'];
+/** `Sec-Fetch-Site` values of a request the server's own page (or a tool, `none`) made. */
 const OWN_FETCH: ReadonlyArray<string> = ['same-origin', 'none'];
 const SAFE_METHODS: ReadonlyArray<string> = ['GET', 'HEAD'];
 
 const header = (request: HttpServerRequest.HttpServerRequest, name: string) =>
   Option.fromUndefinedOr(request.headers[name]);
 
+/**
+ * The Host a request names: its header, else its URL's. A request line in
+ * absolute form (`GET http://other/ HTTP/1.1`) names another authority than
+ * its header, but only a proxy client sends one; a browser on a rebound name
+ * sends origin form, so the header is the name it reached.
+ */
 const hostOf = (request: HttpServerRequest.HttpServerRequest) =>
   Option.getOrElse(
     Option.orElse(header(request, 'host'), () =>
@@ -87,12 +99,28 @@ const hostOf = (request: HttpServerRequest.HttpServerRequest) =>
 
 const refused = (reason: string) => Option.some<Refusal>(RequestRefused.make({ reason }));
 
+/**
+ * A link opened from another site (a chat, a mail): a GET or HEAD the
+ * browser makes for a new document (`Sec-Fetch-Mode: navigate`,
+ * `Sec-Fetch-Dest: document`) of one of the app's pages (`pageAt`) or its home, which the lab sends on to one. The site
+ * cannot read what it answers, and a page runs nothing; the API, a script, a
+ * file and a write stay the server's own.
+ */
 const isNavigation = (request: HttpServerRequest.HttpServerRequest) =>
   SAFE_METHODS.includes(request.method) &&
   Option.contains(header(request, 'sec-fetch-mode'), 'navigate') &&
   Option.contains(header(request, 'sec-fetch-dest'), 'document') &&
   (Option.isSome(pageAt(urlPath(request.url))) || urlPath(request.url) === pageHref.home());
 
+/**
+ * Whether a write carries a body the JSON rule judges: a POST always (a
+ * cross-site form or a no-cors fetch posts one with no preflight), any other
+ * method when it declares one (`Content-Length` above 0, or
+ * `Transfer-Encoding`) or has one to read. A DELETE, PUT, PATCH or OPTIONS
+ * is never a simple request, so another site's page cannot send one without
+ * a preflight the gate refuses; with no body it has nothing to forge (an MCP
+ * client ends its session with a bare DELETE).
+ */
 const carriesBody = (request: HttpServerRequest.HttpServerRequest) =>
   request.method === 'POST' ||
   Option.isSome(header(request, 'transfer-encoding')) ||
@@ -102,12 +130,18 @@ const carriesBody = (request: HttpServerRequest.HttpServerRequest) =>
     onSuccess: (web) => Option.isSome(Option.fromNullishOr(web.body)),
   });
 
+/** A bound name as a Host header carries it: an IPv6 address in brackets. */
 const hostName = (name: string) =>
   Option.match(Option.liftPredicate(name, Str.includes(':')), {
     onNone: () => name,
     onSome: (ipv6) => `[${ipv6}]`,
   });
 
+/**
+ * Whether the server answers `request` at all: `None` when it does, else the
+ * refusal. Each listener (loopback, the owner's phone address) admits its own
+ * name and the loopback names at its own port. Pure: see the gate above.
+ */
 const admit = (
   request: HttpServerRequest.HttpServerRequest,
   connection: ConnectionService,
@@ -141,6 +175,15 @@ const admit = (
     },
   });
 
+/**
+ * `request` as a web request with its body read, when the body is
+ * `STUDIO_MAX_BODY` bytes or less; BodyTooLarge the moment it is not; none
+ * when there is no body to read (or no web request to read it from). The
+ * stream is counted as it comes (a Content-Length over the limit is refused
+ * before a byte is read, one under it is not believed), so a body over the
+ * limit is never held whole. The read request is aborted with the one it
+ * was read from.
+ */
 const bounded = Effect.fn('api.bounded')(function* (request: HttpServerRequest.HttpServerRequest) {
   const tooLarge = BodyTooLarge.make({ limit: STUDIO_MAX_BODY });
   const web = HttpServerRequest.toWebResult(request);
@@ -185,6 +228,7 @@ const bounded = Effect.fn('api.bounded')(function* (request: HttpServerRequest.H
 
 const encodeRefusal = Schema.encodeSync(RefusalSchema);
 
+/** `refusal` as the server answers it: its JSON at its status, logged. */
 const answerRefused = (request: HttpServerRequest.HttpServerRequest, refusal: Refusal) =>
   Effect.logWarning(
     `api.request.refused method=${request.method} path=${urlPath(request.url)} status=${statusOf(refusal)} tag=${refusal._tag} reason="${refusal.message}"`,
@@ -192,8 +236,15 @@ const answerRefused = (request: HttpServerRequest.HttpServerRequest, refusal: Re
     Effect.as(HttpServerResponse.jsonUnsafe(encodeRefusal(refusal), { status: statusOf(refusal) })),
   );
 
+/** The parts of a request HttpApi decodes; its other schema errors are of the answer. */
 const REQUEST_PARTS: ReadonlyArray<string> = ['Params', 'Headers', 'Query', 'Payload'];
 
+/**
+ * `routes`, a schema error answered (HttpApi dies with it, which would answer
+ * an empty 400): a request its route cannot decode as `RequestInvalid`, the
+ * part and the schema's words for why; an answer the server cannot encode
+ * (its body, its headers) as the server's own failure, `ServerFailed`.
+ */
 const decodedOrRefused = <E, R>(
   request: HttpServerRequest.HttpServerRequest,
   routes: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>,
@@ -214,12 +265,30 @@ const decodedOrRefused = <E, R>(
     );
   });
 
+/**
+ * Marks a request whose body the gate has read (`bounded`): the gate admits
+ * it again and hands it to the routes as it is.
+ */
 class BodyRead extends Context.Service<BodyRead, { readonly limit: number }>()(
   '@manna/film/tools/BodyRead',
 ) {}
 
+/**
+ * Whether the gate has admitted the request a route (or a middleware beside
+ * the routes) is answering and read its body (`bounded`): a write the gate
+ * let through, its body whole.
+ */
 export const bodyAdmitted = Effect.map(Effect.serviceOption(BodyRead), Option.isSome);
 
+/**
+ * The gate: a request admitted, a write's body bounded; anything else
+ * answered with its refusal. A write whose body is read is answered by the
+ * server's own handler (`self`) as a new request, never by swapping the
+ * request under the routes: what a route registers to run on its answer
+ * (Effect's pre-response handlers, as MCP's session header) is kept by the
+ * request it was registered on, and only the handler that took that request
+ * runs it.
+ */
 const gate = (self: Deferred.Deferred<OwnHandler>) =>
   HttpRouter.middleware(
     (routes) =>
@@ -255,11 +324,17 @@ const gate = (self: Deferred.Deferred<OwnHandler>) =>
     { global: true },
   );
 
+/** A failure as the contract has it: a Refusal as itself, anything else ServerFailed with its tag and words. */
 const asRefusal = (error: { readonly _tag: string; readonly message: string }): Refusal => {
   if (isRefusal(error)) return error;
   return ServerFailed.make({ tag: error._tag, reason: error.message });
 };
 
+/**
+ * A handler's failure as a route answers it: a Refusal as itself, anything
+ * else as ServerFailed with its tag and words (500); logged either way, with
+ * the request it answers (its method and path) as a refusal's line has.
+ */
 export const answered = <A, E extends { readonly _tag: string; readonly message: string }, R>(
   self: Effect.Effect<A, E, R>,
 ): Effect.Effect<A, Refusal, R> =>
@@ -276,11 +351,22 @@ export const answered = <A, E extends { readonly _tag: string; readonly message:
     }).pipe(Effect.andThen(Effect.fail(refusal)));
   });
 
+/**
+ * The reads a page's render makes of the lab's API, for the page being
+ * answered (`readsOf`): each a GET of a path of the API through the lab's
+ * own handler with the page's Host, so the gate admits it as it admitted
+ * the page; any other path is a 404 RouteUnknown.
+ */
 export class PageReads extends Context.Service<
   PageReads,
   { readonly read: (path: string) => Effect.Effect<Response> }
 >()('@manna/film/tools/PageReads') {}
 
+/**
+ * The app's pages as a route answers them: the response for the request,
+ * never a failure; a page rendered on the server reads the API through
+ * `PageReads`.
+ */
 export type PageAnswer = Effect.Effect<
   HttpServerResponse.HttpServerResponse,
   never,
@@ -291,8 +377,18 @@ export type PageAnswer = Effect.Effect<
   | PageReads
 >;
 
+/** The server's own web handler, with the connection a request came on. */
 type OwnHandler = (request: Request, context: Context.Context<Connection>) => Promise<Response>;
 
+/**
+ * A page's reads of the API while it renders: each a GET of the path at the
+ * Host the page was asked of, answered by the server's own handler on the
+ * page's connection, so the gate admits it as it admitted the page (and
+ * refuses it as it would the page's own fetch), and the same routes answer.
+ * A path outside the API's own prefixes (`own`: a page, a script, a file)
+ * is a 404 RouteUnknown, never asked. A read given up (its render over)
+ * aborts its request, which stops its handler.
+ */
 const readsOf = (
   self: Deferred.Deferred<OwnHandler>,
   own: ReadonlyArray<string>,
@@ -324,10 +420,21 @@ const readsOf = (
     }),
   );
 
+/** The codings a page's answer is sent in, by the request's `Accept-Encoding`, best first. */
 const PAGE_CODINGS: ReadonlyArray<HttpPlatform.CompressionAlgorithm> = ['br', 'gzip'];
 
+/**
+ * One member of an Accept-Encoding as Effect's negotiation reads it
+ * (`acceptMember`, internal to `effect/http`): a coding, and at most a
+ * weight from 0 to 1 with up to three decimals.
+ */
 const ACCEPT_MEMBER = /^([a-z0-9!#$%&'*+.^_`|~-]+)(?:;q=(0(?:\.[0-9]{0,3})?|1(?:\.0{0,3})?))?$/;
 
+/**
+ * `header`'s codings by weight, as Effect's negotiation reads them
+ * (`parseAcceptEncoding`): empty list members are ignored; an empty header
+ * or an unreadable member is answered as if it took no coding.
+ */
 const acceptedOf = (header: string): Option.Option<ReadonlyMap<string, number>> =>
   Option.flatMap(
     Option.liftPredicate(header.trim(), (trimmed) => trimmed !== ''),
@@ -362,6 +469,15 @@ const acceptedOf = (header: string): Option.Option<ReadonlyMap<string, number>> 
       ),
   );
 
+/**
+ * The coding a page's answer is sent in for `accept` (its Accept-Encoding),
+ * as `HttpMiddleware.compression` negotiates it over `PAGE_CODINGS` (Effect
+ * keeps its negotiation internal, so its rules are followed here): the first
+ * the header takes with a weight above 0, named or by `*`; none when Effect
+ * reads the header as none (`acceptedOf`). A file sent already compressed
+ * (`LabPage`'s best brotli) is sent so only when this names its coding, so
+ * a header is answered in the same coding before and after it is made.
+ */
 export const pageCodingOf = (
   accept: Option.Option<string>,
 ): Option.Option<HttpPlatform.CompressionAlgorithm> =>
@@ -369,6 +485,11 @@ export const pageCodingOf = (
     Arr.findFirst(PAGE_CODINGS, (coding) => (accepted.get(coding) ?? accepted.get('*') ?? 0) > 0),
   );
 
+/**
+ * A response's `Vary` once it varies by `dimension` too, by the rule of
+ * Effect's own compression (`varyWith`, internal to `HttpPlatform.make`):
+ * kept as it is when it already names the dimension or `*`.
+ */
 const varyWith = (vary: Option.Option<string>, dimension: string): string =>
   Option.match(vary, {
     onNone: () => dimension,
@@ -379,6 +500,15 @@ const varyWith = (vary: Option.Option<string>, dimension: string): string =>
     },
   });
 
+/**
+ * How a page's answer is compressed: bytes whole, a stream through zlib
+ * flushed at every chunk (`NodeHttpCompression`), so a page's shell reaches
+ * the browser while its render goes on. The platform's own compression of a
+ * stream (`CompressionStream`) holds its bytes until it ends. Marked as
+ * `HttpPlatform.make` marks it (Effect's `wrapCompression`, which it does
+ * not export): the coding named, `Vary` naming `Accept-Encoding` once, a
+ * strong ETag made weak.
+ */
 const FLUSHED: HttpPlatform.Compression = (() => {
   const made = NodeHttpCompression.make(
     HttpPlatform.makeCompressionWeb({
@@ -408,6 +538,11 @@ const FLUSHED: HttpPlatform.Compression = (() => {
   };
 })();
 
+/**
+ * A page's answer compressed by the request's `Accept-Encoding` (`FLUSHED`),
+ * text only, as `HttpMiddleware.compression` judges it: a streamed page
+ * stays streamed.
+ */
 const compressed = <E, R>(
   answer: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>,
   platform: HttpPlatform.HttpPlatform['Service'],
@@ -416,6 +551,13 @@ const compressed = <E, R>(
     Effect.provideService(HttpPlatform.HttpPlatform, { ...platform, compression: FLUSHED }),
   );
 
+/**
+ * What else the server answers, once admitted: the app's pages, for every
+ * path no route takes, except under the API's own prefixes (`own`), where a
+ * path no route takes is a 404 RouteUnknown and never a page. A page is
+ * read, never written: any method but GET and HEAD is a 405. A page's answer
+ * (its HTML, scripts and styles) is compressed (`compressed`).
+ */
 const pageRoute = (
   page: PageAnswer,
   own: ReadonlyArray<string>,
@@ -442,10 +584,22 @@ const pageRoute = (
     }),
   );
 
+/** What an API's routes and the pages are served with beyond the caller's own services. */
 type ServedBy = FileSystem.FileSystem | Path.Path | HttpPlatform.HttpPlatform;
 
+/** Routes beside an API's, outside its prefixes: a fixture's own (the studio harness's control). */
 export type BesideRoutes = Layer.Layer<never, never, HttpRouter.HttpRouter>;
 
+/**
+ * `api`'s routes served as one web handler: the gate in
+ * front of every path, then the routes (and any `beside` them), then `page`
+ * for the paths no route takes outside the API's own. Every request runs
+ * on the caller's services (the router marks the ones `routes`' handlers
+ * need as `Requires`, and the caller's context provides them), the gate's
+ * included, so each line it logs goes through the caller's logging (the
+ * CLI's, to stderr). A handler runs on its request's scope, never the
+ * caller's. Closed when the scope closes.
+ */
 export const serveApi = <
   Id extends string,
   Groups extends HttpApiGroup.Constraint,
@@ -507,15 +661,39 @@ export const serveApi = <
     return answer;
   });
 
+/**
+ * How long a connection stays open with nothing sent: Bun's longest. A
+ * film's first mix renders the whole film before it answers. `changes`
+ * waits at most 120 s. A critique's counsel runs for minutes, but no request
+ * holds it: the critique is a job, and a call answers by
+ * `CRITIQUE_DEADLINE` (50 s from its start) when its match and staging read
+ * end inside it, within the 60 s Claude Code's MCP client gives a tool call
+ * (`easel-mcp.ts`).
+ */
 const LAB_IDLE_SECONDS = 255;
 
+/**
+ * The largest body Bun reads before the gate: the gate's own limit and a
+ * margin, so a body over `STUDIO_MAX_BODY` is the gate's 413 BodyTooLarge;
+ * one past this Bun refuses with its own 413 before any byte is held. Bun
+ * calls neither the handler nor its error hook for that one (a declared
+ * length past the limit), so no line of the lab's can log it; a streamed
+ * body is counted by the gate first, which logs its refusal.
+ */
 export const MAX_REQUEST_BODY = STUDIO_MAX_BODY + 1024 * 1024;
 
+/** Where a lab listens: the interface's name and the port (0: any free one). */
 export interface LabAt {
   readonly hostname: string;
   readonly port: number;
 }
 
+/**
+ * A lab's listener this machine would not bind at `at` (`<host>:<port>`):
+ * no interface has the address, or the port is held. `cause` is Bun's
+ * words, which name every refused bind "Is port … in use?", an address on
+ * no interface included, so the message says both.
+ */
 class LabUnbound extends Schema.TaggedError<LabUnbound>()('LabUnbound', {
   at: Schema.String,
   cause: Schema.String,
@@ -525,6 +703,17 @@ class LabUnbound extends Schema.TaggedError<LabUnbound>()('LabUnbound', {
   }
 }
 
+/**
+ * The lab's HTTP server on `at`: Effect's over `Bun.serve`, with no route or
+ * development server of Bun's (each would answer before the gate), its idle
+ * limit and its body limit. `serveLab` answers every request it takes. The
+ * port is its own: a second lab on a port one holds is refused, never
+ * shares it (Bun, with `development` off, would bind it beside the first,
+ * the newer taking every connection). A bind this machine refuses fails as
+ * `LabUnbound`, naming the address and Bun's words: Effect's adapter calls
+ * `Bun.serve` bare, so its throw would otherwise be a defect, and its own
+ * `ServeError` has no message.
+ */
 export const labServer = (at: LabAt) =>
   Layer.effect(
     HttpServer.HttpServer,
@@ -541,30 +730,45 @@ export const labServer = (at: LabAt) =>
     ),
   );
 
+/** `LabUnbound` at `at` (an IPv6 address in brackets, as a URL names it), for `cause`. */
 const unboundAt = (at: LabAt, cause: unknown) =>
   LabUnbound.make({
     at: `${at.hostname.replace(/^(.*:.*)$/, '[$1]')}:${at.port}`,
     cause: String(cause),
   });
 
+/** The name and port a server is bound to; none for a socket file. */
 const boundOf = (address: NetAddress.SocketAddress): LabBound => {
   if (address._tag === 'UnixPathAddress') return {};
   return { hostname: address.address.toString(), port: address.port };
 };
 
+/** Binds this machine opens as `localhost`: loopback, and every interface. */
 const LOCAL_BINDS: ReadonlyArray<string> = ['127.0.0.1', '[::1]', '0.0.0.0', '[::]'];
 
+/**
+ * `bound`, a URL the server is bound at, as this machine opens it: a
+ * loopback or every-interface bind at `localhost`, one origin for the
+ * owner's settings and his microphone's grant (the gate admits it at every
+ * bind: `LOOPBACK`). Pure.
+ */
 export const localLink = (bound: string): string => {
   const url = new URL(bound);
   if (LOCAL_BINDS.includes(url.hostname)) url.hostname = 'localhost';
   return url.href;
 };
 
+/** The URL the server (`labServer`) is bound at, before it serves. */
 export const boundUrl = Effect.map(
   HttpServer.HttpServer,
   (server) => `${NetAddress.formatUrlUnsafe(server.address)}/`,
 );
 
+/**
+ * Every request the server (`HttpServer`, `labServer`) takes answered by
+ * `handler`, the lab's (`labHandler`), until the scope closes; the server's
+ * URL. The handler's response is sent as it is, a file's bytes included.
+ */
 export const serveLab = Effect.fn('lab.serve')(function* (handler: LabHandler) {
   const server = yield* HttpServer.HttpServer;
   const bound = boundOf(server.address);

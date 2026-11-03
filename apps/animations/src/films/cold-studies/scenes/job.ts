@@ -29,4 +29,5 @@ export const job = drawing({
   ],
 });
 
+/** What a look draws Job's verse and the card with. */
 export type JobFrame = Parameters<typeof job.draw>[0];

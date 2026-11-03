@@ -1,13 +1,41 @@
+/**
+ * The follow on one hymn page: it hears the player's reports, runs the
+ * clock between them (`clock.ts`), marks the sung line and syllable (`marks.ts`)
+ * and asks the page to scroll a line into view.
+ *
+ * It wakes only when something changes: at each report, and at the next
+ * syllable's start or the next line's lead while the player plays. The page
+ * scrolls only while the player plays. It moves to a line `LEAD` ms before
+ * the line is sung, so the line is in view when it starts. A seek (one the
+ * reader asks, of any size, or a report further than `SLACK` from the running
+ * clock) moves the marks at once and scrolls to the line sung there.
+ *
+ * A hand scroll (`drag`) while the player is on the hymn and not paused holds
+ * the page's scroll, not the marks: the page shows a pill (`held`) until the
+ * reader taps it (`resume`, which scrolls to the line sung now), seeks, or
+ * the player pauses or leaves the hymn.
+ *
+ * The host gives it the time, its timers, the scroll and the dev log, so a
+ * test drives it with a hand-moved clock.
+ */
+
 import { Option } from 'effect';
 
 import { type Clock, clockAt, observe, placeOf, SLACK } from './clock';
 import { marksOf, WHOLE } from './marks';
 import { placeAt, type Timeline } from './timeline';
 
+/** How long before a line is sung the page scrolls to it: about one beat. */
 export const LEAD = 600;
 
+/** What the player tells the page, read from its state. */
 export type Report =
+  /** The player is not on this hymn, or has stopped or ended. */
   | { readonly _tag: 'Away' }
+  /**
+   * The player is on this hymn at `at` ms: playing, waiting on the network, or paused. Its
+   * place moves `rate` ms of the hymn for each ms (the player's `rate`), 1 when not told.
+   */
   | {
       readonly _tag: 'Here';
       readonly at: number;
@@ -16,14 +44,20 @@ export type Report =
     };
 
 export interface Host {
+  /** The host's clock, in ms. */
   readonly now: () => number;
+  /** Runs `run` in `ms`; the returned function cancels it. */
   readonly wake: (ms: number, run: () => void) => () => void;
+  /** Scrolls the page so `line` sits a third of the way down it. */
   readonly scrollTo: (line: number, animated: boolean) => void;
+  /** One dev log event, after `[follow] `. */
   readonly log: (event: string) => void;
 }
 
+/** Whether a hand scroll holds the page's scroll: the flag the page's pill reads. */
 export interface Held {
   readonly get: () => boolean;
+  /** Calls `listener` whenever the flag changes. */
   readonly subscribe: (listener: () => void) => () => void;
 }
 
@@ -49,9 +83,12 @@ const heldOf = () => {
 export const followerOf = (timeline: Timeline, host: Host) => {
   const marks = marksOf();
   const held = heldOf();
+  /** The player's last report on this hymn. */
   let last: Report = { _tag: 'Away' };
   let clock: Option.Option<Clock> = Option.none();
+  /** The line the page last scrolled to, `-1` for none. */
   let shown = -1;
+  /** Whether the next tick scrolls to the line sung now, not the one ahead: after a seek. */
   let snap = false;
   let cancel = () => {};
 
@@ -110,6 +147,7 @@ export const followerOf = (timeline: Timeline, host: Host) => {
     tick();
   };
 
+  /** A seek ends a hand pause: the next tick scrolls to the line sung there, even the one shown before the drag. */
   const release = () => {
     if (!held.get()) return;
     held.set(false);
@@ -121,15 +159,21 @@ export const followerOf = (timeline: Timeline, host: Host) => {
     marks,
     report,
     held: { get: held.get, subscribe: held.subscribe } satisfies Held,
+    /** A hand scroll began: hold the page's scroll while the player is on the hymn and not paused. */
     drag: () => {
       if (last._tag === 'Away' || last.state === 'paused' || held.get()) return;
       held.set(true);
       host.log('pause reason=drag');
     },
+    /**
+     * The reader asked the player for a place (`seeks.ts`): a seek of any size, even one inside
+     * the clock's slack, ends a hand pause, and the next report scrolls to the line sung there.
+     */
     seek: () => {
       snap = true;
       release();
     },
+    /** The pill was tapped: scroll to the line sung now and follow again. */
     resume: () => {
       if (!held.get()) return;
       held.set(false);
@@ -140,6 +184,10 @@ export const followerOf = (timeline: Timeline, host: Host) => {
       shown = line;
       host.scrollTo(line, true);
     },
+    /**
+     * A count-in began, the place held: scroll to the line held now, where the count-in is
+     * drawn, even when it was shown before and the reader scrolled away since.
+     */
     show: () => {
       if (Option.isNone(clock) || held.get()) return;
       const line = placeAt(timeline, placeOf(clock.value, host.now())).line;
@@ -147,10 +195,12 @@ export const followerOf = (timeline: Timeline, host: Host) => {
       shown = line;
       host.scrollTo(line, true);
     },
+    /** The page's lines moved (chords, text size, a turn): scroll the shown line back into place. */
     relayout: () => {
       if (Option.isSome(clock) && clock.value.playing && !held.get() && shown >= 0)
         host.scrollTo(shown, false);
     },
+    /** The page is gone: stop waking. */
     stop: () => {
       cancel();
       cancel = () => {};

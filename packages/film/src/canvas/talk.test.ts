@@ -25,6 +25,7 @@ const WORDS = [
   'grace.',
 ];
 
+/** The take, its picture `width` × `height`: one long pause, before word 8. */
 const takeOf = (width: number, height: number) =>
   syntheticTake(
     WORDS,
@@ -50,11 +51,18 @@ const TALK: Talk = {
 
 const TAKE = takeOf(1080, 1920);
 
+/** The talk's page over `take`, made afresh (the page reads its takes and cuts on them: `player/talks.ts`). */
 const talkOf = (take = TAKE, talk: Talk = TALK): Effect.Effect<Film> =>
   Effect.sync(() => createTalk(talk, { a: take }, Result.getOrThrow(talkCut(talk, { a: take }))));
 
+/** A font's box, as a canvas measures it: the stand-in measures widths alone. */
 const FONT_BOX = { fontBoundingBoxAscent: 48, fontBoundingBoxDescent: 14 };
 
+/**
+ * A stand-in page, every call it is asked to make logged with its arguments,
+ * its host decoding each read as a picture of `decoded` px (the take's own
+ * size, as the mezzanine is, unless a proxy's is given).
+ */
 const page = (decoded: { readonly width: number; readonly height: number } = TAKE) => {
   const log: Array<string> = [];
   const images = new Map<unknown, string>();
@@ -71,6 +79,7 @@ const page = (decoded: { readonly width: number; readonly height: number } = TAK
     },
     set: (target, key, value) => Reflect.set(target, key, value),
   });
+  /** A picture for each read, named by it, as the host would decode it. */
   const frame = (read: FootageRead) => {
     const name = `${read.source}@${read.at.toFixed(4)}`;
     const image =
@@ -238,6 +247,7 @@ describe('a talk', () => {
       );
       const shuffled = frames.toSorted((a, b) => ((a * 7919) % 101) - ((b * 7919) % 101));
       expect(shuffled).not.toEqual(frames);
+      /** Each frame's calls, drawn in `order` on a fresh page of a fresh talk, its words set first. */
       const logsIn = (film: Film, order: ReadonlyArray<number>) => {
         const { ctx, log, footage } = page();
         const firstWord = (film.placed[0]?.voice.words[0]?.voiced.start ?? 0) + 0.05;

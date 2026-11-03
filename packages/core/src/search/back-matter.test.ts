@@ -45,6 +45,9 @@ describe('back-matter placement', () => {
     level,
     title,
   });
+  /** `1EGWLM`'s shape: a front list, body letters as `h4` with no part heading
+   *  above them, then a tail of appendix, bibliography and an index whose
+   *  letter dividers are `h4`. */
   const outline = [
     heading(1, 1, 1, 'Letters and Manuscripts'),
     heading(1, 10, 3, 'List of Illustrations'),
@@ -55,6 +58,7 @@ describe('back-matter placement', () => {
     heading(2, 1, 2, 'Appendix'),
     heading(2, 20, 2, 'The Loud Cry'),
   ];
+  /** Each position's closest heading of any level, as the corpus answers. */
   const nearest = [
     { publicationId: 1, puborder: 12, heading: heading(1, 10, 3, 'List of Illustrations') },
     { publicationId: 1, puborder: 31, heading: heading(1, 30, 4, 'Lt 1, 1845') },

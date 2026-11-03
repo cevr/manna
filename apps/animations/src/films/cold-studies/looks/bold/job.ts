@@ -4,6 +4,7 @@ import { VERSE } from '../../look.ts';
 import type { JobFrame } from '../../scenes/job.ts';
 import { FACE, INK, rect } from './flat.ts';
 
+/** The slate column the reference stands in, and the text beside it. */
 const COLUMN = 600;
 const TEXT_X = 720;
 
@@ -68,11 +69,13 @@ export const job = (f: JobFrame): Box => {
   return box;
 };
 
+/** The card's words: lower case but for God's name, and its quotation marks kept. */
 const lowered = (text: string) => (/god/i.test(text) ? text : text.toLowerCase());
 
 const LEAD: TextStyle = { family: FACE, size: 128, weight: 700, color: INK.bone, tracking: -0.035 };
 const PAYOFF: TextStyle = { ...LEAD, size: 128 * 3.2, color: INK.gold, tracking: -0.05 };
 
+/** The card's margin, and how far the payoff's slate offset sits behind it. */
 const MARGIN = 170;
 const OFFSET = 16;
 

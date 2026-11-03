@@ -1,3 +1,9 @@
+/**
+ * `manna check` — verify every quotation in a teaching document against the
+ * corpus it claims to quote, before the document is exported. Any problem
+ * exits 1; `manna export` runs the same check and refuses on a problem.
+ */
+
 import { Argument, Command, Flag } from 'effect/cli';
 import { Console, Effect, FileSystem, Schema, SchemaGetter } from 'effect';
 

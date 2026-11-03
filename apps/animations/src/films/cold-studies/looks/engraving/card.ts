@@ -4,6 +4,7 @@ import type { JobFrame } from '../../scenes/job.ts';
 import { FACE } from './page.ts';
 import { GOLD_INK, GOLD_WASH, INK, layPaper, ruledBox } from './print.ts';
 
+/** The glory behind the payoff: fine rays fanned out to either side of it, longest level with it. */
 const glory = (ctx: CanvasRenderingContext2D, box: Box) => {
   const cx = box.x + box.w / 2;
   const cy = box.y + box.h * 0.5;
@@ -29,6 +30,7 @@ const glory = (ctx: CanvasRenderingContext2D, box: Box) => {
   ctx.restore();
 };
 
+/** The card's sheet: the paper, its ruled border, and over the flood the wash drying back. */
 const sheet = (flood: number) => (ctx: CanvasRenderingContext2D, w: number, h: number) => {
   layPaper(ctx, w, h, 11);
   ctx.save();

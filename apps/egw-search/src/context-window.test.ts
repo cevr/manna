@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { contextSide } from './context-window.js';
 
+/** A context paragraph, named so a failure says which one leaked. */
 const para = (id: string, isHeading = false) => ({ id, isHeading });
 
 const ids = (rows: readonly { readonly id: string }[]): readonly string[] =>

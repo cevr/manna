@@ -25,6 +25,7 @@ const Services = Layer.mergeAll(PageBundler.layer, PageRenderer.layer).pipe(
   Layer.provideMerge(BunServices.layer),
 );
 
+/** The fixture's server bundle, as the lab builds it beside its browser bundle. */
 const fixtureBundle = Effect.gen(function* () {
   const path = yield* Path.Path;
   const bundler = yield* PageBundler;
@@ -40,6 +41,11 @@ const fixtureBundle = Effect.gen(function* () {
   } satisfies ServerBundle;
 });
 
+/**
+ * The same page built from the folder above it: its server entry in a
+ * subfolder of the build's root, as an app with one entry under `src/` has
+ * it, so its chunks name the files at the root by `../`.
+ */
 const nestedBundle = Effect.gen(function* () {
   const path = yield* Path.Path;
   const bundler = yield* PageBundler;
@@ -57,10 +63,13 @@ const nestedBundle = Effect.gen(function* () {
 
 const URL_ASKED = 'http://127.0.0.1:8229/sets/root/folder?view=all';
 
+/** The page as a Mac's browser asks for it at `URL_ASKED`. */
 const ASKED = { url: URL_ASKED, mac: true };
 
+/** A read answered `text` at once. */
 const answering = (text: string) => () => Effect.sync(() => new Response(text));
 
+/** The ask page of `build` rendered as `ASKED`, read whole. */
 const renderOf = (build: RenderBuild, read: (path: string) => Effect.Effect<Response>) =>
   Effect.gen(function* () {
     const renderer = yield* PageRenderer;
@@ -69,6 +78,7 @@ const renderOf = (build: RenderBuild, read: (path: string) => Effect.Effect<Resp
     return { head: page.head, bodyClass: page.bodyClass, markup };
   }).pipe(Effect.scoped);
 
+/** A logger that keeps each build the renderer logs as retired (`lab.render.worker.retired`). */
 const retiredInto = (retired: Array<string>) =>
   Logger.layer([
     Logger.make(({ message }) => {
@@ -78,6 +88,11 @@ const retiredInto = (retired: Array<string>) =>
     }),
   ]);
 
+/**
+ * A server entry whose page reads `/api/given-up` with a signal of its own,
+ * gives that read up once `/api/go` is answered, and ends with what
+ * `/api/kept` answers.
+ */
 const GIVES_UP = `
 export default {
   bodyClass: 'gives-up',
@@ -96,6 +111,7 @@ export default {
 };
 `;
 
+/** A server entry whose page reads `/api/one` and writes the answer's status and text. */
 const READS_ONE = `
 export default {
   bodyClass: 'reads-one',
@@ -108,11 +124,16 @@ export default {
 };
 `;
 
+/** A server bundle of one module, `code`, the ask page's entry. */
 const moduleBundle = (code: string): ServerBundle => ({
   files: [{ path: 'page.js', bytes: new TextEncoder().encode(code) }],
   entries: new Map<AppPage, string>([['ask', 'page.js']]),
 });
 
+/**
+ * The file system, its first temp folder failing to be made: a worker's
+ * spawn that fails (a spawn reads the file system it is rendered with).
+ */
 const failingFirstTempFolder = Layer.effect(
   FileSystem.FileSystem,
   Effect.gen(function* () {
@@ -139,6 +160,7 @@ const failingFirstTempFolder = Layer.effect(
   }),
 );
 
+/** The module instance a page names: one per import of its server entry. */
 const instanceOf = (markup: string) => /<p id="instance"[^>]*>([^<]+)</.exec(markup)?.[1] ?? '';
 
 describe("a page's server render", () => {

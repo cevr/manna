@@ -2,26 +2,35 @@ import { dbToGain, exp, exp2, log } from './math.ts';
 import type { Node, Pitch, Ramp, Value } from './nodes.ts';
 import { noteMidi, pitchHz } from './pitch.ts';
 
+/** A note name names its own pitch: the key it is read in is never used. */
 const ANY_KEY = { tonic: 'C', scale: 'major' } as const;
 
+/** dB as a natural-log factor: a gain of g dB is e^(g · DB_LN). */
 const DB_LN = Math.LN10 / 20;
 
+/** A level (an amplitude ratio) in dB. */
 const db = (level: number): number => log(level) / DB_LN;
 
+/** A note name's frequency in Hz. */
 const hz = (note: string): number => pitchHz(note, ANY_KEY);
 
+/** The twelve semitones above C, named by sharps. */
 const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const;
 
+/** A MIDI number's note name, by sharps. */
 const nameOf = (midi: number): string => `${NAMES[midi % 12] ?? 'C'}${Math.floor(midi / 12) - 1}`;
 
+/** The major pentatonic scale's steps above its root, in semitones. */
 const PENTATONIC = [0, 2, 4, 7, 9] as const;
 
+/** Degree `degree` of `root`'s major pentatonic scale as a note name (past the fifth, the next octave's). */
 const degreeNote = (root: string, degree: number): string => {
   const octaves = Math.floor(degree / PENTATONIC.length);
   const step = PENTATONIC[degree - octaves * PENTATONIC.length] ?? 0;
   return nameOf(noteMidi(root) + 12 * octaves + step);
 };
 
+/** Degrees 0 to `count − 1` of `root`'s major pentatonic scale, as note names. */
 const degreeNotes = (root: string, count: number): readonly [string, ...Array<string>] => [
   degreeNote(root, 0),
   ...Array.from({ length: count - 1 }, (_, k) => degreeNote(root, k + 1)),
@@ -31,6 +40,7 @@ const pink = (secs: number): Node => ({ _tag: 'Noise', color: 'pink', secs });
 
 const brown = (secs: number): Node => ({ _tag: 'Noise', color: 'brown', secs });
 
+/** A fixed lowpass at `at` Hz with a Butterworth Q, as is `highpass`. */
 const lowpass = (at: number, of: Node): Node => ({
   _tag: 'Filter',
   type: 'lowpass',
@@ -49,10 +59,17 @@ const highpass = (at: number, of: Node): Node => ({
 
 const sine = (pitch: number, secs: number): Node => ({ _tag: 'Osc', wave: 'sine', pitch, secs });
 
+/** sinh(x) / x, 1 at 0: the mean of e^(x · u) for u even in [−1, 1]. */
 const sinhc = (x: number): number => (x === 0 ? 1 : (exp(x) - exp(-x)) / (2 * x));
 
+/** How many midpoints the mean over a wobble's knot spacing is taken at. */
 const MEAN_POINTS = 64;
 
+/**
+ * The mean of e^(2c · m) over the graph's wobble m (track.ts): knots even in
+ * [−1, 1), two of them weighted 1 − s and s, s the smoothstep of the place
+ * between them, so the mean at s is sinhc(2c(1 − s)) · sinhc(2c · s).
+ */
 const wobblePower = (c: number): number => {
   let sum = 0;
   for (let j = 0; j < MEAN_POINTS; j++) {
@@ -63,17 +80,28 @@ const wobblePower = (c: number): number => {
   return sum / MEAN_POINTS;
 };
 
+/**
+ * The mean square of a gain `low + (high − low) · w` that wanders smoothly:
+ * w's knots even in [0, 1), smoothstepped between, so E[w] = 1/2 and
+ * E[w²] = 1/3 − E[s]/6 + E[s²]/6 = 131/420.
+ */
 const wanderPower = (low: number, high: number): number => {
   const d = high - low;
   return low * low + low * d + (d * d * 131) / 420;
 };
 
+/**
+ * A gain that wanders between two levels (amplitudes) at about `rate` a
+ * second: a wobble in dB as wide as their ratio, centred where its mean power
+ * is `wanderPower`'s between them.
+ */
 const swaying = (low: number, high: number, rate: number, of: Node): Node => {
   const depth = (db(high) - db(low)) / 2;
   const around = (log(wanderPower(low, high)) - log(wobblePower(depth * DB_LN))) / (2 * DB_LN);
   return { _tag: 'Gain', db: { _tag: 'Wobble', around, depth, rate }, of };
 };
 
+/** A level drawn evenly between two amplitudes by each seed: a one-point envelope. */
 const levelBetween = (min: number, max: number, of: Node): Node => ({
   _tag: 'Envelope',
   points: [[0, { _tag: 'Vary', min, max }]],
@@ -81,8 +109,10 @@ const levelBetween = (min: number, max: number, of: Node): Node => ({
   of,
 });
 
+/** How long a bed's loop crossfade is, in seconds: the bed is made this much longer first. */
 const BED_LOOP = 1;
 
+/** Room tone: brown body and pink hiss under a slow swell of air, made to loop. */
 export const room = (settings: { readonly secs: number }): Node => {
   const made = settings.secs + BED_LOOP;
   return {
@@ -98,6 +128,7 @@ export const room = (settings: { readonly secs: number }): Node => {
   };
 };
 
+/** A struck chime on a degree of the root's major pentatonic scale: variant n rings degree n − 1. */
 export const chime = (settings: {
   readonly root: string;
   readonly partials: 'glass' | 'bell';
@@ -114,6 +145,7 @@ export const chime = (settings: {
   },
 });
 
+/** A low held tone: the root, its octave, its twelfth and its fifth, breathing slowly, made to loop. */
 export const drone = (settings: { readonly root: string; readonly secs: number }): Node => {
   const made = settings.secs + BED_LOOP;
   const root = hz(settings.root);
@@ -132,10 +164,13 @@ export const drone = (settings: { readonly root: string; readonly secs: number }
   };
 };
 
+/** How many straight lines draw the drain's fall. */
 const DRAIN_LINES = 16;
 
+/** The drain's rise: 30 ms. */
 const DRAIN_RISE = 0.03;
 
+/** The drain's level: up over 30 ms, then down as (1 − t/secs)^1.5 to silence at its end. */
 const drainLevels = (
   secs: number,
 ): readonly [readonly [number, number], ...Array<readonly [number, number]>] => {
@@ -150,6 +185,7 @@ const drainLevels = (
   return [[0, 0], ...lines, [secs, 0]];
 };
 
+/** A hollow tone falling from one note to another, breath following it down a band, and fading. */
 export const drain = (settings: {
   readonly from: string;
   readonly to: string;
@@ -187,8 +223,10 @@ export const drain = (settings: {
   };
 };
 
+/** The bloom's chord: root, third, fifth and octave, as degrees of the pentatonic scale. */
 const BLOOM_DEGREES = [0, 2, 3, 5] as const;
 
+/** A soft swell: the root's chord entering note by note under a rising shimmer. */
 export const bloom = (settings: { readonly root: string; readonly secs: number }): Node => {
   const secs = settings.secs;
   const shimmer: Node = {
@@ -235,6 +273,7 @@ export const bloom = (settings: { readonly root: string; readonly secs: number }
   };
 };
 
+/** A few bright plinks on two octaves of the root's scale, one after another, each ringing on. */
 export const notes = (settings: {
   readonly root: string;
   readonly count: number;
@@ -272,13 +311,17 @@ export const notes = (settings: {
   };
 };
 
+/** How long rain's loop crossfade is, in seconds. */
 const RAIN_LOOP = 0.5;
 
+/** How long a drop is: 300 frames at 44.1 kHz. */
 const DROP_SECS = 300 / 44100;
 
+/** A drop's rise, and its fall's time constant, in seconds. */
 const DROP_RISE = 0.0005;
 const DROP_FALL = 0.002;
 
+/** One drop: a level between 0.2 and 1, up over 0.5 ms and down over 2 ms, through a narrow band between 1.5 and 6.5 kHz. */
 const DROP: Node = levelBetween(0.2, 1, {
   _tag: 'Envelope',
   points: [
@@ -303,8 +346,10 @@ const DROP: Node = levelBetween(0.2, 1, {
   },
 });
 
+/** How often rain's drops fall: 176.4 a second on average (1 in 250 frames). */
 const DROPS = 44100 / 250;
 
+/** A tap on a roof tile: a drop's knock, short and bright, its pitch drawn between 1.2 and 3 kHz. */
 const TAP: Node = levelBetween(0.3, 1, {
   _tag: 'Partials',
   pitch: { _tag: 'Vary', min: 1200, max: 3000, curve: 'log' },
@@ -316,6 +361,11 @@ const TAP: Node = levelBetween(0.3, 1, {
   secs: 0.03,
 });
 
+/**
+ * Soft rain, made to loop: a bed of hiss above `hiss` Hz, and drops at
+ * random, 176.4 a second on average; on a roof, `taps` a second on its tiles,
+ * inside the loop with the rest.
+ */
 export const rain = (settings: {
   readonly secs: number;
   readonly hiss: number;
@@ -356,8 +406,10 @@ export const rain = (settings: {
   };
 };
 
+/** A level `gain` dB from full scale. */
 const level = (gain: number): number => dbToGain(gain);
 
+/** `hz` drawn per seed within `spread` semitones either side, evenly in pitch. */
 const around = (hz: number, spread: number): Value<number> => ({
   _tag: 'Vary',
   min: hz / exp2(spread / 12),
@@ -365,6 +417,7 @@ const around = (hz: number, spread: number): Value<number> => ({
   curve: 'log',
 });
 
+/** Its child struck: up over `attack` seconds, then falling evenly in dB, by `depth` dB at `end` seconds. */
 const struck = (attack: number, end: number, depth: number, of: Node): Node => ({
   _tag: 'Envelope',
   points: [
@@ -376,6 +429,13 @@ const struck = (attack: number, end: number, depth: number, of: Node): Node => (
   of,
 });
 
+/**
+ * A burst of noise in a band, struck: up over `attack` seconds and down by
+ * 80 dB at `decay`, its band between `low` and `high` Hz (a Butterworth
+ * highpass and lowpass, 12 dB an octave outside it). Short and bright, it is
+ * a click; soft and dark, a puff of air. Each seed draws both edges within
+ * two semitones.
+ */
 export const burst = (settings: {
   readonly color: 'white' | 'pink' | 'brown';
   readonly low: number;
@@ -400,6 +460,13 @@ export const burst = (settings: {
   },
 });
 
+/**
+ * A thump: a sine struck `octaves` above its pitch and falling to it over
+ * `drop` seconds, as a drum skin's pitch falls, dying away by 80 dB at
+ * `decay`. A highpass an octave under its pitch takes off the rumble its
+ * strike spreads below it. Each seed draws both ends of the fall within a
+ * semitone.
+ */
 export const thump = (settings: {
   readonly hz: number;
   readonly octaves: number;
@@ -423,6 +490,12 @@ export const thump = (settings: {
     }),
   );
 
+/**
+ * How a struck material sounds: the modes it rings with (each a ratio to its
+ * pitch, a level and a decay's time constant), and its click of contact: a
+ * band of noise between two ratios to its pitch, its level in dB over the
+ * modes', and when it has fallen by 80 dB.
+ */
 const MATERIALS = {
   wood: {
     modes: [
@@ -450,6 +523,13 @@ const MATERIALS = {
   },
 } as const;
 
+/**
+ * A knock: `material` struck at `hz`, its modes ringing and dying for up to
+ * `secs`, over its click of contact: a burst of noise in a band at and above
+ * the pitch. A highpass two octaves under its pitch takes off the rumble its
+ * modes' strike spreads below them. Each seed draws the pitch within a
+ * semitone.
+ */
 export const knock = (settings: {
   readonly material: keyof typeof MATERIALS;
   readonly hz: number;
@@ -482,6 +562,13 @@ export const knock = (settings: {
   });
 };
 
+/**
+ * Things landing one after another, `count` of them: the first at `first`
+ * seconds, each next one about `every` seconds after the last (drawn within
+ * a third of it) and `fall` dB quieter, the whole `secs` long. Each lands as
+ * a knock of `material` at `hz`, a soft thud three octaves below it and a
+ * puff of dust between 600 and 1600 Hz, dulled above three times its pitch.
+ */
 export const scatter = (settings: {
   readonly count: number;
   readonly first: number;
@@ -524,6 +611,13 @@ export const scatter = (settings: {
   };
 };
 
+/**
+ * A whoosh: noise above `low` Hz through a band, as something passes close
+ * by. Its level rises evenly in dB from −30 dB at `onset` to its loudest at
+ * `hit` (−8 dB a fifth of a second before it), then falls 40 dB over `fall`
+ * seconds; its band rises to `high` Hz at the hit and falls back. Each seed
+ * draws the band's top within two semitones.
+ */
 export const whoosh = (settings: {
   readonly onset: number;
   readonly hit: number;
@@ -562,6 +656,15 @@ export const whoosh = (settings: {
   };
 };
 
+/**
+ * A hiss: breath forced out. White noise through a high band at `hz`, dulled
+ * above `top`, over the breath behind it (pink noise between 40 and 450 Hz,
+ * its gain `breath` dB), both under one envelope: up evenly over `rise`
+ * seconds, held to `hold`, then falling evenly in dB, by 60 dB at `secs`.
+ * Each seed draws the band within two semitones. The band passes more of its
+ * noise the wider it is: the breath stands about `breath` dB under a band at
+ * 8.5 kHz and q 1.2, and about 5 dB less under one at 3 kHz and q 4.
+ */
 export const hiss = (settings: {
   readonly hz: number;
   readonly q: number;
@@ -604,6 +707,7 @@ export const hiss = (settings: {
   },
 });
 
+/** A pop of a sizzle's crackle: a millisecond of bright noise at a level drawn between 0.2 and 1. */
 const POP: Node = levelBetween(0.2, 1, {
   _tag: 'Filter',
   type: 'highpass',
@@ -612,6 +716,13 @@ const POP: Node = levelBetween(0.2, 1, {
   of: { _tag: 'Noise', color: 'white', secs: 0.0015 },
 });
 
+/**
+ * A sizzle: water on hot metal. A flash of steam (white noise above about
+ * 700 Hz) at `flash` seconds, over steam and a low boil (pink noise above
+ * 60 Hz, 12 dB under it) that fall evenly by 45 dB to `secs`, crackling at
+ * random, `crackle` pops a second. Each seed draws the steam's edge within
+ * two semitones.
+ */
 export const sizzle = (settings: {
   readonly flash: number;
   readonly crackle: number;
@@ -650,6 +761,12 @@ export const sizzle = (settings: {
   };
 };
 
+/**
+ * A steady breeze, made to loop: pink air through a band at `hz` that wanders
+ * slowly three semitones either side, its level swaying by a decibel and a
+ * half, between a highpass at 90 Hz that keeps rumble out and a lowpass at
+ * two and a half times the band that keeps hiss out.
+ */
 export const breeze = (settings: { readonly secs: number; readonly hz: number }): Node => {
   const made = settings.secs + BED_LOOP;
   return {

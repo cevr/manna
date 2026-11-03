@@ -13,6 +13,7 @@ const measuredFixture = (name: string) =>
     return Result.getOrThrow(measureFigure(Result.getOrThrow(decodePng(bytes))));
   }).pipe(Effect.provide(BunServices.layer));
 
+/** The ratio's value; NaN when it is missing, so the test's numbers fail on it. */
 const valueOf = (m: FigureMeasure, ratio: Ratio): number =>
   Option.match(Option.fromUndefinedOr(m.ratios.find((r) => r.ratio === ratio)), {
     onNone: () => Number.NaN,

@@ -1,3 +1,4 @@
+/** The frames a second it is laid at: the tools read it here, as a film's page does. */
 export const fps = 24;
 
 export const look = {

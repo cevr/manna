@@ -1,5 +1,12 @@
+/** A point of a kept view, pixels. */
 type Pt = readonly [number, number];
 
+/**
+ * Each view's arm joints. In poses-1 only their left arm, the near one, is
+ * drawn. In poses-2 (sitting, facing the viewer) both sleeves hang from under
+ * the jaw with no inner ink, so each elbow is a guess along the sleeve's outer
+ * ink.
+ */
 export const JOINTS = {
   'poses-1': {
     shoulderLeft: [150, 125],

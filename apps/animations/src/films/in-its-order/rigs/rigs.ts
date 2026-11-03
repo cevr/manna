@@ -12,8 +12,10 @@ import * as LEAD from '../../../library/cast/lead-feast/rig/lead.ts';
 import { ARTBOARDS, FIGURES } from './figures.ts';
 import figuresRiv from './figures.riv' with { type: 'file' };
 
+/** A traced composition, as `tracedFigure` gives it. */
 type Composed = ReturnType<typeof tracedFigure>;
 
+/** A traced figure's rig: its feet at our origin, its face for `check`, its concept its kept view. */
 const figureProp = (
   artboard: string,
   key: string,
@@ -33,6 +35,10 @@ const figureProp = (
   concept: composed.figure.concept,
 });
 
+/**
+ * A circle hand of `artboard`, its centre at our origin: its paper crawls by
+ * its `boil` timeline, and its view model's one number, `ink`, is the shot's.
+ */
 const handProp = (artboard: string, key: string): RivePropSpec<HandTimeline, never> => ({
   source: { riv: figuresRiv, artboard, timelines: HAND_TIMELINES, numbers: [] },
   engine: 'canvas',
@@ -41,62 +47,73 @@ const handProp = (artboard: string, key: string): RivePropSpec<HandTimeline, nev
   origin: [HAND_ART.width / 2, HAND_ART.height / 2],
 });
 
+/** The series lead from the front, his feet at our origin. */
 export const leadFeastFrontProp = figureProp(
   ARTBOARDS.leadFeastFront,
   'lead-feast-front',
   LEAD.leadFeastFront,
 );
 
+/** The series lead three-quarters to screen left. */
 export const leadFeastThreeQuarterLeftProp = figureProp(
   ARTBOARDS.leadFeastThreeQuarterLeft,
   'lead-feast-three-quarter-left',
   LEAD.leadFeastThreeQuarterLeft,
 );
 
+/** The series lead in profile to screen left. */
 export const leadFeastProfileLeftProp = figureProp(
   ARTBOARDS.leadFeastProfileLeft,
   'lead-feast-profile-left',
   LEAD.leadFeastProfileLeft,
 );
 
+/** The series lead from behind. */
 export const leadFeastBackProp = figureProp(
   ARTBOARDS.leadFeastBack,
   'lead-feast-back',
   LEAD.leadFeastBack,
 );
 
+/** The series lead in profile to screen right. */
 export const leadFeastProfileRightProp = figureProp(
   ARTBOARDS.leadFeastProfileRight,
   'lead-feast-profile-right',
   LEAD.leadFeastProfileRight,
 );
 
+/** The series lead three-quarters to screen right. */
 export const leadFeastThreeQuarterRightProp = figureProp(
   ARTBOARDS.leadFeastThreeQuarterRight,
   'lead-feast-three-quarter-right',
   LEAD.leadFeastThreeQuarterRight,
 );
 
+/** The series lead's hand, in his skin. */
 export const leadFeastHandProp = handProp(ARTBOARDS.leadFeastHand, 'lead-feast-hand');
 
+/** The series lead standing with his near arm raised, a bottle in its hand. */
 export const leadFeastRaisedProp = figureProp(
   ARTBOARDS.leadFeastRaised,
   'lead-feast-raised',
   LEAD.leadFeastRaised,
 );
 
+/** The series lead in profile drinking from the plate at his lips, both arms raised. */
 export const leadFeastDrinkingProp = figureProp(
   ARTBOARDS.leadFeastDrinking,
   'lead-feast-drinking',
   LEAD.leadFeastDrinking,
 );
 
+/** The series lead leaning to the low table, his near hand on the bottle there. */
 export const leadFeastReachingProp = figureProp(
   ARTBOARDS.leadFeastReaching,
   'lead-feast-reaching',
   LEAD.leadFeastReaching,
 );
 
+/** The series lead seated on a low stool. */
 export const leadFeastSeatedProp = figureProp(
   ARTBOARDS.leadFeastSeated,
   'lead-feast-seated',

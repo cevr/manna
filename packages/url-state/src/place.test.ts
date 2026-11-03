@@ -8,6 +8,7 @@ import * as Field from './field.js';
 import * as Place from './place.js';
 import { printHref, readHref } from './url-parts.js';
 
+/** The lab's place, as the README shows it. */
 const Lab = Place.make({
   path: '/films/:film/lab/:scene',
   params: { film: Codec.Segment, scene: Codec.Segment },
@@ -17,8 +18,11 @@ const Lab = Place.make({
   }),
 });
 
+/** A repeated key of fixed words (`?section=bible&section=egw`): the shape of
+ *  egw-search's axes, which read their values through core's codec. */
 const Sections = Schema.Array(Codec.literals(['bible', 'egw', 'pioneer']));
 
+/** A workspace of panes, shaped as egw-search's is. */
 const Pane = Field.struct(
   {
     q: Field.key(Codec.Text, { default: '', history: 'push' }),
@@ -46,6 +50,7 @@ const Workspace = Place.make({
   query: Field.indexed(Pane, { max: 4, key: paneKey, marker: 'q' }),
 });
 
+/** Every building block in every section, for the round-trip property. */
 const Everything = Place.make({
   path: '/sets/:folder/:point',
   params: { folder: Codec.Segment, point: Codec.Segment },
@@ -62,6 +67,7 @@ const Everything = Place.make({
   }),
 });
 
+/** decode(encode(x)) is x for every value the place's type admits. */
 const roundTrips = <A>(place: Place.Place<A>) =>
   Effect.gen(function* () {
     const equivalent = Schema.toEquivalence(Schema.toType(place.schema));
@@ -77,6 +83,8 @@ const roundTrips = <A>(place: Place.Place<A>) =>
     expect(Arbitrary.formatCheckFailure(result)).toBeUndefined();
   });
 
+/** How a link can write a number: as JavaScript prints it, in exponent form,
+ *  with a fixed fraction, far past the safe range, or as `-0`. */
 const NumberText = Arbitrary.all({
   n: Arbitrary.schema(Schema.Finite),
   form: Arbitrary.schema(Schema.Literals(['plain', 'exponent', 'fraction', 'large', 'minus zero'])),
@@ -93,6 +101,8 @@ const NumberText = Arbitrary.all({
   }),
 );
 
+/** A link written by hand reads to a value whose href reads back as itself
+ *  (the first write is the canonical one), and the value is `expected`. */
 const settlesOnce = <A>(
   place: Place.Place<A>,
   link: (text: string) => string,

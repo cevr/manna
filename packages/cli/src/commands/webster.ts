@@ -14,6 +14,7 @@ import { Argument, Command, Flag } from 'effect/cli';
 import { packagedDataCandidates } from '../lib/paths.js';
 import { withSqliteRefresh } from '../lib/sqlite-refresh.js';
 
+/** The optional init leg owns source priority, supply and its user-facing receipt. */
 export const initializeWebster = Effect.fn('WebsterCommand.initialize')(function* (input: {
   readonly directory: string;
   readonly refresh?: boolean;

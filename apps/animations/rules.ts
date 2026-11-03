@@ -1,7 +1,15 @@
+/** The film skill's rule files: the craft rules and the director's vision. */
 const SKILL = `${import.meta.dir}/../../.claude/skills/film`;
 const CRAFT = `${SKILL}/CRAFT.md`;
 const VISION = `${SKILL}/reference/director-vision.md`;
 
+/**
+ * What `film judge` quotes to its counsel: the rules that bear on a scene's
+ * picture. The look, the palette, the colour script, the paper and what we
+ * never do bear on every beat; a STORY beat adds human scale, figures and
+ * staging; an IDEA beat adds words off the picture, repetition as layout and
+ * type.
+ */
 export const JUDGE_RULES = [
   { file: CRAFT, heading: '## 3. Two registers', registers: [] },
   { file: CRAFT, heading: '## 12. The look', registers: [] },
@@ -17,8 +25,14 @@ export const JUDGE_RULES = [
   { file: VISION, heading: '### Type', registers: ['IDEA'] },
 ] as const;
 
+/** The character sheets: how every figure is drawn. */
 const CHARACTERS = `${SKILL}/reference/character-design.md`;
 
+/**
+ * What `film lab critique` quotes to its counsel beside a figure's two crops: how
+ * a figure is drawn in the house look (the K1 look, the grammar every figure
+ * shares, figures and faces, the look's rule).
+ */
 export const CRITIQUE_RULES = [
   { file: CHARACTERS, heading: '## The look these rules assume (K1)' },
   { file: CHARACTERS, heading: '### 2.1 The grammar every figure shares' },

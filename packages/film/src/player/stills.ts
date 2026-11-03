@@ -4,6 +4,7 @@ import type { Film, RenderOptions } from '../canvas/film.ts';
 import { type Footage, type FootageShown, footageAt, readsFootage } from '../browser/footage.ts';
 import { pictureFacesWait } from './face.ts';
 
+/** What stills are drawn from: a film's frame size, rate, the footage its frames read, and its render. */
 interface StillSource extends Pick<Film, 'footageAt'> {
   readonly width: number;
   readonly height: number;
@@ -11,29 +12,58 @@ interface StillSource extends Pick<Film, 'footageAt'> {
   readonly render: (ctx: CanvasRenderingContext2D, T: number, opts?: RenderOptions) => void;
 }
 
+/** A film's stills, drawn as they are wanted. */
 interface Stills {
+  /** A still's size, in canvas px. */
   readonly width: number;
   readonly height: number;
+  /** The still at film second `t`, once drawn. */
   readonly at: (t: number) => Option.Option<HTMLCanvasElement>;
+  /**
+   * Draw `times` next, in the order given, before anything wanted earlier
+   * (which is drawn after them); a time already drawn is skipped.
+   */
   readonly want: (times: ReadonlyArray<number>) => void;
+  /** Hear each still as it is drawn (its film second), until the returned stop. */
   readonly onDrawn: (listener: (t: number) => void) => () => void;
+  /**
+   * Once the faces the film draws in have loaded (at once with none to wait
+   * for); rejects with why when one will not load, and no still is drawn.
+   */
   readonly ready: () => Promise<void>;
+  /**
+   * Every still of `times`, in order, once each is drawn; `progress` hears
+   * each one land. Rejects when the film's faces will not load (`ready`).
+   */
   readonly all: (
     times: ReadonlyArray<number>,
     progress?: (done: number, of: number) => void,
   ) => Promise<ReadonlyArray<HTMLCanvasElement>>;
+  /** How many stills have been drawn, and the page ms spent drawing them. */
   readonly drawn: () => { readonly count: number; readonly ms: number };
+  /**
+   * Draw no more, for good: the queue emptied, the drawing halted at the
+   * next turn, and any later `want` a no-op. What its page calls as it is
+   * left, so a film's stills stop costing a page that no longer shows them.
+   */
   readonly stop: () => void;
 }
 
+/** How the stills are drawn. */
 interface StillsOptions {
+  /** A still's width in canvas px; its height keeps the frame's shape. */
   readonly width: number;
+  /** Whether the stills carry the film's captions. */
   readonly captions: boolean;
+  /** The page's turn between two stills: resolves once the page has had it. */
   readonly turn: () => Promise<unknown>;
+  /** The page clock, in ms: what the drawing is timed by. */
   readonly now: () => number;
+  /** The page's footage: what decodes the frames a talk's stills read. */
   readonly footage: Context.Context<Footage>;
 }
 
+/** A 2D canvas `width` × `height`. */
 const canvasOf = (width: number, height: number) => {
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -43,11 +73,14 @@ const canvasOf = (width: number, height: number) => {
   return { canvas, ctx };
 };
 
+/** The stills of `film`, drawn as `options` say. */
 export const makeStills = (film: StillSource, options: StillsOptions): Stills => {
   const width = Math.round(options.width);
   const height = Math.round((width * film.height) / film.width);
+  /** The frame a time falls in: what a still is kept by. */
   const frameOf = (t: number) => Math.max(0, Math.round(t * film.fps));
   const kept = new Map<number, HTMLCanvasElement>();
+  /** The frames still to draw, first first, each with the film second it was wanted at. */
   let queue: ReadonlyArray<{ readonly frame: number; readonly t: number }> = [];
   const listeners = new Set<(t: number) => void>();
   let full = Option.none<{
@@ -59,6 +92,7 @@ export const makeStills = (film: StillSource, options: StillsOptions): Stills =>
   let count = 0;
   let ms = 0;
 
+  /** Why the stills stopped drawing: a frame's footage the host could not decode. */
   let failed = Option.none<unknown>();
   const failures = new Set<(why: unknown) => void>();
 
@@ -79,6 +113,7 @@ export const makeStills = (film: StillSource, options: StillsOptions): Stills =>
     for (const listener of listeners) listener(t);
   };
 
+  /** Draw the queue's head, then the next after the page's turn, until it is empty. */
   const step = (): Promise<void> => {
     const [next, ...rest] = queue;
     if (next === undefined || stopped) {
@@ -103,6 +138,7 @@ export const makeStills = (film: StillSource, options: StillsOptions): Stills =>
       },
     );
   };
+  /** The load of the faces the film draws in, asked once: none when there are none to wait for. */
   let faces = Option.none<Option.Option<Promise<void>>>();
   const facesLoad = () =>
     Option.getOrElse(faces, () => {

@@ -3,6 +3,7 @@ import { Effect, Option } from 'effect';
 import { hostOf } from './host.ts';
 import { appleAgent, type KeyPress, Keys } from './keys.ts';
 
+/** A key press of `key` (with `held` modifiers), cancelable as the browser's are. */
 const keydown = (
   key: string,
   held: Partial<Record<'shiftKey' | 'metaKey' | 'altKey' | 'isComposing', boolean>> & {
@@ -10,6 +11,7 @@ const keydown = (
   } = {},
 ) => Object.assign(new Event('keydown', { cancelable: true }), { key, ...held });
 
+/** A page the presses are aimed at: the presses `take` heard, and a way to stop hearing. */
 const page = (take: (press: KeyPress) => boolean = () => false) => {
   const focused = new EventTarget();
   const heard: Array<KeyPress> = [];

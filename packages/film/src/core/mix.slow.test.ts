@@ -43,6 +43,7 @@ import { measuredSounds } from './testing.ts';
 
 const RATE = MIX_RATE;
 
+/** `secs` of mono `value`. */
 const mono = (secs: number, value: number): Pcm => {
   const frames = Math.round(secs * RATE);
   return { rate: RATE, frames, channels: [new Float32Array(frames).fill(value)] };
@@ -58,6 +59,7 @@ const plan = (over: Partial<MixPlan<Pcm>>): MixPlan<Pcm> => ({
   ...over,
 });
 
+/** `secs` of a mono sine at `hz`, peaking at `amp` (loudness weighting ignores a constant). */
 const tone = (secs: number, amp: number, hz: number): Pcm => {
   const frames = Math.round(secs * RATE);
   const plane = new Float32Array(frames);
@@ -65,8 +67,10 @@ const tone = (secs: number, amp: number, hz: number): Pcm => {
   return { rate: RATE, frames, channels: [plane] };
 };
 
+/** A bus's left channel at `secs`. */
 const at = (bus: Pcm, secs: number) => bus.channels[0]?.[Math.round(secs * RATE)];
 
+/** Mono at 0.5, spread to a side: −3 dB. */
 const SIDE = Math.fround(0.5 * Math.SQRT1_2);
 
 const take = (sound: Pcm, secs: number) => ({
@@ -164,6 +168,7 @@ describe('renderMix', () => {
   describe('the score against the voice', () => {
     const seconds = 20;
     const score = { option: 'piano', sound: tone(seconds, 0.3, 500), under: -18, alone: -6 };
+    /** `bus`'s loudness from `from` to `to` seconds. */
     const lufs = (bus: Pcm, from: number, to: number) =>
       loudness(slice(bus, Math.round(from * RATE), Math.round((to - from) * RATE))).integrated;
 
@@ -529,6 +534,7 @@ describe('mixPlan', () => {
       expect(new Set(chimes.map((c) => sourceLabel(c.sound))).size).toBe(2);
     });
 
+    /** The plan of `sounds` with `tone.tick` placed at the start of each scene. */
     const ticked = (given: MeasuredSounds) =>
       Result.getOrThrow(
         mixPlan({
@@ -797,6 +803,7 @@ describe("a talk's voice, played in pieces", () => {
   const cut = Result.getOrThrow(talkCut(talk, { a: take }));
   const placed = Result.getOrThrow(layout(cut.scenes, cut.timings, 30));
   const pieces = cut.sections[0]?.pieces ?? [];
+  /** The plan with the section's voice at `file`, known by `content`. */
   const planOf = (file: string, content: string) =>
     Result.getOrThrow(
       mixPlan({
@@ -814,12 +821,14 @@ describe("a talk's voice, played in pieces", () => {
     );
   const VOICE = `/out/footage/${take.source}/voice.flac`;
   const planned = planOf(VOICE, `${take.source} ${VOICE_RECIPE}`);
+  /** The take's voice: `level(i)` at its `i`th sample, with a click (1) at each second of `clicks`. */
   const voiceOf = (level: (i: number) => number, clicks: ReadonlyArray<number>): Pcm => {
     const frames = Math.round(take.envelope.length * 0.01 * RATE);
     const plane = Float32Array.from({ length: frames }, (_, i) => level(i));
     for (const t of clicks) plane[Math.round(t * RATE)] = 1;
     return { rate: RATE, frames, channels: [plane] };
   };
+  /** The voice bus with `voice` as the take's voice file. */
   const busOf = (voice: Pcm) =>
     renderMix({
       ...planned,

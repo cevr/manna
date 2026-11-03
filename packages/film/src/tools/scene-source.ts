@@ -23,13 +23,17 @@ import { SourceRefused } from '../core/refusals.ts';
 import { toMs } from '../core/time.ts';
 import { patchSpan, writtenPatch } from '../core/timeline.ts';
 
+/** A `timeline` or `knobs` property: an object literal, something else, or not there. */
 type Slot =
   | { readonly _tag: 'Literal'; readonly node: ObjectExpression }
   | { readonly _tag: 'Computed'; readonly text: string }
   | { readonly _tag: 'Absent' };
 
+/** One `drawing({...})` call a module exports: its names, and its timeline and knobs literals. */
 export interface DrawingSite {
+  /** Every name the module exports it under (`hand_`, and `hand` from `export { hand_ as hand }`). */
   readonly exports: ReadonlyArray<string>;
+  /** Where the call starts: two export names with the same start are one drawing. */
   readonly at: number;
   readonly timeline: Slot;
   readonly knobs: Slot;
@@ -41,22 +45,32 @@ interface Splice {
   readonly text: string;
 }
 
+/** The keys a span is anchored by; the lab writes the timing fields after them, in order. */
 const ANCHORS: ReadonlyArray<string> = ['mark', 'word', 'after', 'with', 'at'];
 const TIMING = CUE_PATCH_KEYS;
 type TimingKey = keyof CuePatch;
 
+/**
+ * A number as the lab writes it: to the millisecond (`toMs`), never `-0`; the
+ * rule `writtenPatch` applies to a cue write, so a cue's numbers come here
+ * already rounded and print as judged.
+ */
 export const numberText = (v: number) => String(toMs(v));
 
+/** A single-quoted string literal. */
 export const stringText = (v: string) => `'${v.replace(/[\\']/g, (c) => `\\${c}`)}'`;
 
+/** A refusal to edit `target` in `file`, and why. */
 export const refuse = <A>(
   file: string,
   target: string,
   reason: string,
 ): Result.Result<A, SourceRefused> => Result.fail(SourceRefused.make({ file, target, reason }));
 
+/** An expression's text as the source writes it. */
 export const textOf = (source: string, e: Expression) => source.slice(e.start, e.end);
 
+/** Parse a module, or say where it fails to. */
 export const parseModule = (
   file: string,
   source: string,
@@ -68,6 +82,7 @@ export const parseModule = (
   });
 };
 
+/** A property key's name, when it is a plain name or string (not computed). */
 export const keyName = (p: ObjectProperty): Option.Option<string> => {
   if (p.computed) return Option.none();
   if (p.key.type === 'Identifier') return Option.some(p.key.name);
@@ -75,6 +90,10 @@ export const keyName = (p: ObjectProperty): Option.Option<string> => {
   return Option.none();
 };
 
+/**
+ * The property `name` of an object literal, when there is one. Refused when
+ * the object could hide it: a spread, a computed key, or the key twice.
+ */
 export const propertyOf = (
   file: string,
   target: string,
@@ -98,6 +117,7 @@ export const propertyOf = (
   return Result.succeed(Arr.head(found));
 };
 
+/** A number literal, negative ones included. */
 export const numberOf = (e: Expression): Option.Option<number> => {
   if (e.type === 'Literal' && Predicate.isNumber(e.value)) return Option.some(e.value);
   if (
@@ -110,6 +130,7 @@ export const numberOf = (e: Expression): Option.Option<number> => {
   return Option.none();
 };
 
+/** A string literal's text. */
 const stringOf = (e: Expression): Option.Option<string> => {
   if (e.type === 'Literal' && Predicate.isString(e.value)) return Option.some(e.value);
   return Option.none();
@@ -117,12 +138,14 @@ const stringOf = (e: Expression): Option.Option<string> => {
 
 type Element = ArrayExpression['elements'][number];
 
+/** An array element that is an expression (not a hole, not a spread). */
 const expressionOf = (e: Option.Option<Element>): Option.Option<Expression> =>
   Option.filter(
     Option.flatMap(e, Option.fromNullishOr),
     (x): x is Expression => x.type !== 'SpreadElement',
   );
 
+/** A two-number array literal's elements. */
 const pointOf = (e: Expression): Option.Option<readonly [Expression, Expression]> => {
   if (e.type !== 'ArrayExpression' || e.elements.length !== 2) return Option.none();
   return Option.zipWith(
@@ -135,11 +158,13 @@ const pointOf = (e: Expression): Option.Option<readonly [Expression, Expression]
 const isNumberLiteral = (e: Expression) => Option.isSome(numberOf(e));
 const isStringLiteral = (e: Expression) => Option.isSome(stringOf(e));
 
+/** A property's value, unless it is a shorthand (`{ palm }`: a name, not a literal). */
 export const valueOf = (p: ObjectProperty): Option.Option<Expression> => {
   if (p.shorthand) return Option.none();
   return Option.some(p.value);
 };
 
+/** The variable declarations at the top of a module, with `export const` unwrapped. */
 export const declarations = (program: Program) =>
   program.body.flatMap((s: Statement) => {
     if (s.type === 'VariableDeclaration') return [{ exported: false, decl: s }];
@@ -148,6 +173,7 @@ export const declarations = (program: Program) =>
     return [];
   });
 
+/** The local names `drawing` is imported under. */
 const drawingNames = (program: Program): ReadonlySet<string> => {
   const names = new Set<string>();
   for (const s of program.body) {
@@ -163,6 +189,7 @@ const drawingNames = (program: Program): ReadonlySet<string> => {
   return names;
 };
 
+/** `export { local as name }` (no `from`): local → the names it is exported as. */
 const exportedAs = (program: Program): ReadonlyMap<string, ReadonlyArray<string>> => {
   const out = new Map<string, Array<string>>();
   for (const s of program.body) {
@@ -177,6 +204,7 @@ const exportedAs = (program: Program): ReadonlyMap<string, ReadonlyArray<string>
   return out;
 };
 
+/** An object literal, seen through `as const` and `satisfies`. */
 export const objectOf = (e: Expression): Option.Option<ObjectExpression> => {
   if (e.type === 'ObjectExpression') return Option.some(e);
   if (e.type === 'TSAsExpression' || e.type === 'TSSatisfiesExpression')
@@ -184,6 +212,7 @@ export const objectOf = (e: Expression): Option.Option<ObjectExpression> => {
   return Option.none();
 };
 
+/** Module-level `const name = {...}` bindings: a scene lifts its timeline to type its shots. */
 const constObjects = (program: Program): ReadonlyMap<string, ObjectExpression> =>
   new Map(
     declarations(program)
@@ -200,6 +229,7 @@ const constObjects = (program: Program): ReadonlyMap<string, ObjectExpression> =
       ),
   );
 
+/** A slot's value: an object literal inline, or the const literal a name refers to. */
 const literalValue = (
   consts: ReadonlyMap<string, ObjectExpression>,
   value: Expression,
@@ -224,6 +254,7 @@ const slotOf = (
   return { _tag: 'Absent' };
 };
 
+/** The object passed to a top-level `drawing(...)` call, when a declarator's value is one. */
 const drawingCall = (
   names: ReadonlySet<string>,
   value: Option.Option<Expression>,
@@ -236,6 +267,7 @@ const drawingCall = (
   return Option.some({ at: init.start, arg });
 };
 
+/** Every exported `drawing({...})` call in a parsed module. */
 export const drawingSites = (source: string, program: Program): ReadonlyArray<DrawingSite> => {
   const names = drawingNames(program);
   const renamed = exportedAs(program);
@@ -261,12 +293,14 @@ export const drawingSites = (source: string, program: Program): ReadonlyArray<Dr
   );
 };
 
+/** A place in a module the lab cannot locate or edit: the source range to point at, and why. */
 interface Unlocatable {
   readonly start: number;
   readonly end: number;
   readonly reason: string;
 }
 
+/** The slots of a drawing the lab writes to. */
 const SLOTS: ReadonlySet<string> = new Set(['timeline', 'knobs']);
 
 const unlocatableAt = (
@@ -274,6 +308,7 @@ const unlocatableAt = (
   reason: string,
 ): Unlocatable => ({ start: node.start, end: node.end, reason });
 
+/** What the lab cannot prove in a located drawing's object: a spread, a slot twice, a slot that is not a literal. */
 const argumentDefects = (
   consts: ReadonlyMap<string, ObjectExpression>,
   arg: ObjectExpression,
@@ -305,6 +340,7 @@ const argumentDefects = (
   });
 };
 
+/** An object with both a `timeline` and a `draw`: a scene, typed or not. */
 const isScene = (node: ObjectExpression): boolean => {
   const keys = node.properties.flatMap((p) => {
     if (p.type === 'SpreadElement') return [];
@@ -313,12 +349,21 @@ const isScene = (node: ObjectExpression): boolean => {
   return keys.includes('timeline') && keys.includes('draw');
 };
 
+/** Why a `drawing(…)` call the locator skips is skipped. */
 const skippedBecause = (arg: Option.Option<CallExpression['arguments'][number]>): string => {
   if (Option.exists(arg, (a) => a.type === 'ObjectExpression'))
     return 'This drawing({…}) is not a module-level `export const x = drawing({…})` (or a const exported by name): the lab locates only those, so it cannot find this scene.';
   return 'drawing(…) takes an object literal: the lab cannot locate a scene built elsewhere.';
 };
 
+/**
+ * Everything in a module the lab's locator (`drawingSites`) cannot locate or
+ * edit, where it is written: a `drawing(…)` call that is not an exported
+ * module-level declarator, a slot that is not a literal the locator resolves,
+ * `drawing` read off a namespace, and a scene object that skips `drawing()`.
+ * The `film/drawing-literal` lint rule reports exactly these, so the rule and
+ * the lab read a scene the same way.
+ */
 export const unlocatable = (source: string, program: Program): ReadonlyArray<Unlocatable> => {
   const names = drawingNames(program);
   const consts = constObjects(program);
@@ -372,6 +417,7 @@ export const unlocatable = (source: string, program: Program): ReadonlyArray<Unl
   return [...found, ...bare].sort((a, b) => a.start - b.start);
 };
 
+/** The drawing `program` (the parse of `source`) exports as `name`. */
 const siteIn = (
   file: string,
   source: string,
@@ -387,6 +433,7 @@ const siteIn = (
     },
   );
 
+/** The drawing a module exports as `name`, read from its source now. */
 const siteNamed = (
   file: string,
   source: string,
@@ -396,6 +443,7 @@ const siteNamed = (
 
 const matchSlot = Match.type<Slot>();
 
+/** The `timeline` or `knobs` object literal of the drawing exported as `name`. */
 const literalOf = (
   file: string,
   source: string,
@@ -413,6 +461,7 @@ const literalOf = (
     )(site[slot]),
   );
 
+/** The object literal of cue `cue` in the drawing's timeline. */
 const spanOf = (
   file: string,
   source: string,
@@ -433,11 +482,13 @@ const spanOf = (
     }),
   );
 
+/** A boolean literal's value (`ends: true`, `silence: true`). */
 const booleanOf = (e: Expression): Option.Option<boolean> => {
   if (e.type === 'Literal' && Predicate.isBoolean(e.value)) return Option.some(e.value);
   return Option.none();
 };
 
+/** An expression of literals only (numbers, strings, booleans, arrays, objects), as plain data. */
 const plain = (e: Expression): Option.Option<unknown> => {
   const scalar = Option.firstSomeOf<unknown>([numberOf(e), stringOf(e), booleanOf(e)]);
   if (Option.isSome(scalar)) return scalar;
@@ -465,6 +516,7 @@ const plain = (e: Expression): Option.Option<unknown> => {
 const decodeUntil = Schema.decodeUnknownOption(Until, { onExcessProperty: 'error' });
 const decodeSpan = Schema.decodeUnknownOption(Span);
 
+/** A mark or cue/landmark object with every value declared literally. */
 const isUntilLiteral = (e: Expression): boolean =>
   Option.isSome(Option.flatMap(plain(e), decodeUntil));
 
@@ -481,6 +533,7 @@ const applySplices = (source: string, splices: ReadonlyArray<Splice>) =>
     .sort((a, b) => b.start - a.start)
     .reduce((text, s) => text.slice(0, s.start) + s.text + text.slice(s.end), source);
 
+/** The new source, once it still parses. */
 export const spliced = (file: string, source: string, splices: ReadonlyArray<Splice>) => {
   const next = applySplices(source, splices);
   return Result.map(parseModule(file, next), () => next);
@@ -506,6 +559,11 @@ const valueText = (key: TimingKey, patch: CuePatch): Option.Option<string> => {
   }
 };
 
+/**
+ * The literal each key a cue patch sets is written as: a number, a string,
+ * or an end (`isUntilLiteral`: a mark's name, or an object of literals). One
+ * per key of `CuePatch`, so a key added there is a type error here.
+ */
 const CUE_KIND = {
   offset: 'number',
   dur: 'number',
@@ -515,6 +573,7 @@ const CUE_KIND = {
   stagger: 'number',
 } as const satisfies Record<TimingKey, 'number' | 'string' | 'until'>;
 
+/** Whether an expression is the literal `key` is written as (`CUE_KIND`). */
 const isLiteralFor = (key: TimingKey): ((e: Expression) => boolean) =>
   Match.value(CUE_KIND[key]).pipe(
     Match.when('number', () => isNumberLiteral),
@@ -523,12 +582,14 @@ const isLiteralFor = (key: TimingKey): ((e: Expression) => boolean) =>
     Match.exhaustive,
   );
 
+/** The field a span's other end is: a `dur` written replaces `until`, and the reverse. */
 const otherEnd = (key: TimingKey): Option.Option<TimingKey> => {
   if (key === 'dur') return Option.some('until');
   if (key === 'until') return Option.some('dur');
   return Option.none();
 };
 
+/** Where a new field goes: after the last present field that comes before it. */
 const insertAt = (span: ObjectExpression, key: TimingKey): Option.Option<number> => {
   const before = [...ANCHORS, ...TIMING.slice(0, TIMING.indexOf(key))];
   return Option.map(
@@ -540,6 +601,10 @@ const insertAt = (span: ObjectExpression, key: TimingKey): Option.Option<number>
   );
 };
 
+/**
+ * The splice that writes `key` over the span's other end (`until` for a `dur`,
+ * `dur` for an `until`), when it has one: the whole property is replaced.
+ */
 const replaceEnd = (
   file: string,
   source: string,
@@ -569,6 +634,11 @@ const replaceEnd = (
       ),
   });
 
+/**
+ * Where the comma in `source` between `from` and `to` is: text between two
+ * properties, or a property and its object's brace, which holds blanks,
+ * comments and at most that one comma.
+ */
 export const commaBetween = (source: string, from: number, to: number): Option.Option<number> => {
   let i = from;
   while (i < to) {
@@ -587,6 +657,11 @@ export const commaBetween = (source: string, from: number, to: number): Option.O
 
 const isBlank = (c: string) => c === ' ' || c === '\t';
 
+/**
+ * `[start, end)` cut from `source`: its whole line when nothing else is on
+ * it; with the blanks before it when it ends its line, so none trail; else
+ * with the blanks after it when blanks are before it too, so one is left.
+ */
 const cut = (source: string, start: number, end: number): Splice => {
   let from = start;
   while (from > 0 && isBlank(source.charAt(from - 1))) from -= 1;
@@ -600,9 +675,15 @@ const cut = (source: string, start: number, end: number): Splice => {
   return { start, end, text: '' };
 };
 
+/** Whether `source` holds only blanks and line breaks from `from` to `to`. */
 const onlySpace = (source: string, from: number, to: number) =>
   source.slice(from, to).trim() === '';
 
+/**
+ * The splices that take property `p` out of `span` with the comma that joins
+ * it to its neighbour (the one after it, else the one before it), and
+ * nothing else: a comment about it, or about a neighbour, stays.
+ */
 export const removal = (
   source: string,
   span: ObjectExpression,
@@ -634,8 +715,15 @@ export const removal = (
   });
 };
 
+/** Every key a span of any kind declares (`Span`'s members together). */
 type SpanKey = Span extends infer S ? (S extends unknown ? keyof S : never) : never;
 
+/**
+ * What stands in for a span's value the source computes (`until: MARK`), by
+ * its key: a value of the key's type, so the span still decodes and reads the
+ * same on both sides of a write that leaves that value be. Every key of
+ * `Span` has one, so a key added there is a type error here until it does.
+ */
 const STAND_IN = {
   mark: '',
   word: '',
@@ -653,12 +741,18 @@ const STAND_IN = {
   track: 't',
 } satisfies Record<SpanKey, string | number | boolean>;
 
+/** The stand-in for a value under `key`, a key a span declares; none for a key no span has. */
 const standIn = (key: string): Option.Option<string | number | boolean> =>
   Option.flatMap(
     Option.liftPredicate(key, (k): k is SpanKey => Object.hasOwn(STAND_IN, k)),
     (k) => Option.some(STAND_IN[k]),
   );
 
+/**
+ * A span object as a `Span`: every literal value as the source declares it,
+ * and every value it computes by its stand-in (`STAND_IN`). None when the
+ * object does not decode as a span (an `until` beside an `ends`, say).
+ */
 const literalSpan = (span: ObjectExpression): Option.Option<Span> =>
   decodeSpan(
     Object.fromEntries(
@@ -678,6 +772,15 @@ const literalSpan = (span: ObjectExpression): Option.Option<Span> =>
     ),
   );
 
+/**
+ * The splices that take away each key the span declares and the span `patch`
+ * makes of it lacks (`patchSpan`): an `untilOffset` once the end is set
+ * another way or put back on its point, an `ends` once it runs `until` a
+ * point. A key the patch writes in its place (`otherEnd`: a `dur` over an
+ * `until`) is replaced, not taken away. Refused over one in code; and an
+ * `untilOffset` on a span that runs no `until`, and is given none, is refused:
+ * it has no point to be off.
+ */
 const droppedBy = (
   file: string,
   source: string,
@@ -725,6 +828,14 @@ const droppedBy = (
     );
   });
 
+/**
+ * Set a cue's `offset`, `dur`, `until`, `untilOffset`, `ease` or `stagger` in
+ * the drawing exported as `name`: the value's text replaced where it is a
+ * literal, or the field added after the span's anchor; a key the new span
+ * lacks is taken away (`droppedBy`). The patch is written as a scene file
+ * holds it (`writtenPatch`), the one rounding its check judges. The result is
+ * the whole new source.
+ */
 export const editCue = (
   file: string,
   source: string,
@@ -770,6 +881,7 @@ export const editCue = (
     return spliced(file, source, splices);
   });
 
+/** Set a knob of the drawing exported as `name`: a number, or each coordinate of a point. */
 export const editKnob = (
   file: string,
   source: string,
@@ -803,6 +915,14 @@ export const editKnob = (
 
 const sameSpan = Schema.toEquivalence(Span);
 
+/**
+ * What of a write of `patch` to cue `cue` did not land in `after`, the text
+ * written over `before`: none when the span `after` holds, decoded from its
+ * text by `literalSpan` (a value it computes reads as its `STAND_IN`), is the span
+ * `patch` makes of the one `before` held (`patchSpan` over `writtenPatch`);
+ * else the cue, and the span it holds against the one it was to hold, or that
+ * it holds none (it does not decode, as an `until` beside an `ends` would not).
+ */
 export const cueLanded = (
   file: string,
   before: string,
@@ -826,6 +946,7 @@ export const cueLanded = (
     }),
   );
 
+/** A knob's literal value as the source declares it; none when it is computed. */
 export const readKnob = (
   file: string,
   source: string,
@@ -844,6 +965,11 @@ export const readKnob = (
     ),
   );
 
+/**
+ * The spans of the drawing's timeline that are literal through and through,
+ * by cue, as the file declares them now; a computed span (or a timeline that
+ * is not an object literal) is left out.
+ */
 export const readSpans = (
   file: string,
   source: string,
@@ -866,6 +992,7 @@ export const readSpans = (
       ),
   });
 
+/** What a frame's reader names by its first argument: a cue, a knob or a mark. */
 type Reads = 'cue' | 'knob' | 'mark';
 
 const READERS: ReadonlyMap<string, Reads> = new Map([
@@ -879,15 +1006,18 @@ const READERS: ReadonlyMap<string, Reads> = new Map([
   ['spoken', 'mark'],
 ]);
 
+/** The reader that reads the voice from a mark (`f.spoken('take', to?)`), not the mark's one instant. */
 const SPOKEN = 'spoken';
 
 interface Read {
   readonly of: Reads;
   readonly name: string;
   readonly at: CodeRange;
+  /** A `spoken` read's end: the mark its second argument names, or none for the end of speech. None for any other reader. */
   readonly spoken: Option.Option<{ readonly to: Option.Option<string> }>;
 }
 
+/** Argument `i` of `call` as a string literal: none when it has none there, or it is a spread or anything else. */
 const stringArg = (call: CallExpression, i: number): Option.Option<string> =>
   Option.flatMap(Option.fromUndefinedOr(call.arguments[i]), (arg) =>
     Option.flatMap(
@@ -896,12 +1026,27 @@ const stringArg = (call: CallExpression, i: number): Option.Option<string> =>
     ),
   );
 
+/**
+ * How a reader's call reads the clock: an instant or a name (none of a
+ * `spoken` end), or, for `spoken`, the voice to the mark its second argument
+ * names, or to the end of speech when it names none. A `spoken` call whose
+ * second argument is not a string ends where the code computes, which the
+ * view cannot light: no read at all.
+ */
 const spokenOf = (method: string, call: CallExpression): Option.Option<Read['spoken']> => {
   if (method !== SPOKEN) return Option.some(Option.none());
   if (call.arguments.length < 2) return Option.some(Option.some({ to: Option.none() }));
   return Option.map(stringArg(call, 1), (to) => Option.some({ to: Option.some(to) }));
 };
 
+/**
+ * Every call in the module of a frame's cue, knob or mark reader
+ * (`f.at('lift')`, `f.knob(…)`, `f.mark('take')`, `f.spoken('take')`) whose
+ * first argument is a string literal, wherever the call stands: a scene's
+ * helpers read the frame too. Matched by the member's name, so a lookalike on
+ * another object (`list.at('x')`) is a wrong guess the studio's Scene
+ * section only lights, never writes.
+ */
 const readsIn = (program: Program): ReadonlyArray<Read> => {
   const found: Array<Read> = [];
   new Visitor({
@@ -923,6 +1068,11 @@ const readsIn = (program: Program): ReadonlyArray<Read> => {
   return found;
 };
 
+/**
+ * Why a literal's values are not provable, by the writer's own rule
+ * (`propertyOf`): a spread or a computed key could hide any of them, a key
+ * written twice hides one. None for a literal whose every property stands as written.
+ */
 const unprovable = (file: string, slot: Slot): Option.Option<string> => {
   if (slot._tag !== 'Literal') return Option.none();
   const names = literalProperties(slot).flatMap((p) => Option.toArray(keyName(p)));
@@ -934,6 +1084,7 @@ const unprovable = (file: string, slot: Slot): Option.Option<string> => {
   );
 };
 
+/** A literal's properties as the code view lists them: the property's own range (key to value), by name; none while the literal is not provable. */
 const writtenIn = (file: string, slot: Slot) => {
   if (Option.isSome(unprovable(file, slot))) return [];
   return literalProperties(slot).flatMap((p) =>
@@ -944,9 +1095,15 @@ const writtenIn = (file: string, slot: Slot) => {
   );
 };
 
+/** The ranges of `reads` of one kind, by name, in the order they stand. */
 const readsOf = (reads: ReadonlyArray<Read>, of: Reads, name: string): ReadonlyArray<CodeRange> =>
   reads.filter((r) => r.of === of && r.name === name).map((r) => r.at);
 
+/**
+ * Every mark the module's code reads by name, in the order it is first read:
+ * where it is read as an instant (`f.mark('take')`) and where the voice is
+ * read from it (`f.spoken('take')`, to the mark a second argument names).
+ */
 const marksIn = (reads: ReadonlyArray<Read>): SceneCode['marks'] => {
   const marks = reads.filter((r) => r.of === 'mark');
   return Arr.dedupe(marks.map((r) => r.name)).map((name) => {
@@ -969,8 +1126,20 @@ const marksIn = (reads: ReadonlyArray<Read>): SceneCode['marks'] => {
   });
 };
 
+/** Where in the module the drawing exported as `name` writes and reads its cues and knobs, and reads its marks. */
 type SceneRanges = Pick<SceneCode, 'cues' | 'knobs' | 'marks' | 'refused'>;
 
+/**
+ * Where the drawing exported as `name` writes each cue (in its `timeline`
+ * literal) and each knob (in its `knobs`), and every call in the module that
+ * reads one by name, as the studio's Scene section lights them (`GET …/scenes/<scene>/code`):
+ * positions from the same parse the writes splice by, so an offset is a text
+ * range as the file now stands. A cue or knob read by a name the scene does not
+ * declare, or an array's `.at(0)`, is left out. A `timeline` or `knobs` that
+ * is not an object literal lists nothing, and says why. Every mark the code
+ * reads by name is listed, as the file has no narration to check it against:
+ * the view lights only a mark the staged scene says.
+ */
 export const sceneCode = (
   file: string,
   source: string,

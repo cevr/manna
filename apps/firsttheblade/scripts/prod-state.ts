@@ -1,10 +1,29 @@
+/**
+ * The prod state check: it stops a prod plan or deploy when Alchemy's state
+ * for stage `prod` (`.alchemy/state/firsttheblade/prod`, git-ignored, local
+ * to the main checkout) does not record the live site's resources. Without
+ * that state Alchemy plans every resource as new: it makes a second D1 and
+ * queue and binds the live Worker to them (`docs/lessons.md`
+ * `prod-deploy-needs-prod-state`). The stack runs it on stage `prod`
+ * (`prodStateGate`, in `alchemy.run.ts`); `bun run deploy` also runs it
+ * first, so a refusal does not wait for `test:slow`.
+ *
+ *   bun scripts/prod-state.ts    # exits 1 with one line when the app's prod state is not here
+ *
+ * Alchemy's local state keeps one JSON file per resource, named by its
+ * logical id, with the resource's type and, under `attr`, what the cloud
+ * gave back. The check reads the Worker, the list's D1 and the film queue,
+ * each by the name the live resource has.
+ */
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { dotAlchemyDirectory } from 'alchemy/AlchemyContext';
 import { Stage } from 'alchemy/Stage';
 import { Console, Data, Effect, FileSystem, Option, Path, Schema } from 'effect';
 
+/** The prod stage's state folder, under the `.alchemy` folder Alchemy keeps its state in. */
 const PROD_STATE = 'state/firsttheblade/prod';
 
+/** A live resource as the prod state records it: its file, its type, and its name under `attr`. */
 interface Live {
   readonly label: string;
   readonly file: string;
@@ -13,6 +32,7 @@ interface Live {
   readonly name: string;
 }
 
+/** The resources the live site runs on. */
 const LIVE: ReadonlyArray<Live> = [
   {
     label: 'the Site Worker',
@@ -37,6 +57,7 @@ const LIVE: ReadonlyArray<Live> = [
   },
 ];
 
+/** The part of a resource's state file the check reads. */
 const Recorded = Schema.Struct({
   resourceType: Schema.String,
   attr: Schema.Record(Schema.String, Schema.Unknown),
@@ -52,9 +73,15 @@ class ProdStateMissing extends Data.TaggedError('ProdStateMissing')<{
   }
 }
 
+/**
+ * A live resource whose file records another resource: what it records,
+ * what `LIVE` expects, and where to change `LIVE` when the resource was
+ * replaced on purpose.
+ */
 const differs = (live: Live, found: string, expected: string) =>
   `${live.label} (${live.file} records ${found}, not ${expected}; if it was replaced on purpose, change LIVE in apps/firsttheblade/scripts/prod-state.ts)`;
 
+/** What `live` lacks in the state folder `dir`, if anything. */
 const lacking = Effect.fn('ProdState.lacking')(function* (dir: string, live: Live) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -73,6 +100,7 @@ const lacking = Effect.fn('ProdState.lacking')(function* (dir: string, live: Liv
   return Option.some(differs(live, found, live.name));
 });
 
+/** Fails with `ProdStateMissing` unless the prod state under the `.alchemy` folder `dotAlchemy` records every live resource. */
 export const checkProdState = Effect.fn('ProdState.check')(function* (dotAlchemy: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -91,6 +119,13 @@ export const checkProdState = Effect.fn('ProdState.check')(function* (dotAlchemy
   }
 });
 
+/**
+ * The stack's check: `checkProdState` on stage `prod`, over the `.alchemy`
+ * folder this run of Alchemy reads its state from; nothing on any other
+ * stage. `alchemy.run.ts` runs it first, while Alchemy is still building the
+ * stack and before it plans, so every prod plan and deploy runs it, whatever
+ * command starts it.
+ */
 export const prodStateGate = Effect.fn('ProdState.gate')(function* () {
   if ((yield* Stage) !== 'prod') return;
   yield* checkProdState(yield* dotAlchemyDirectory);

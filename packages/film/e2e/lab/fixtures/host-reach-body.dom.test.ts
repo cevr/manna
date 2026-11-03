@@ -10,6 +10,7 @@ import {
 } from '../../../src/lab/fixtures/browsers.ts';
 import { evaluates } from '../../../src/lab/fixtures/settled.ts';
 
+/** `js` (one line) with a source map that reads all of it back to `source`, relative to the film package. */
 const writtenBy = (js: string, source: string) => {
   const map = `{"version":3,"sources":["${source}"],"names":[],"mappings":"AAAA"}`;
   return `${js};window.ran=true\n//# sourceMappingURL=data:application/json;base64,${Base64.encode(map)}`;
@@ -17,6 +18,7 @@ const writtenBy = (js: string, source: string) => {
 
 const FILM_FILE = 'src/lab/shell.tsx';
 
+/** Whether the case that loaded `js` failed, and how. */
 const outcome = (js: string) =>
   Effect.gen(function* () {
     const script = asset('reach.js', respond(js, 'text/javascript'));

@@ -5,6 +5,7 @@ import { Effect, FileSystem, Path, Schema } from 'effect';
 import { importClosure, pluginsOf } from './closure.js';
 import { LintConfig } from './config.js';
 
+/** The repository's two JS plugins, as `.oxlintrc.json` names them. */
 const config = Schema.decodeSync(LintConfig)({
   jsPlugins: ['oxlint-plugin-effect/plugin', './packages/film/lint/plugin.ts'],
 });

@@ -1,5 +1,6 @@
 /* oxlint-disable effect/noGlobals -- a slow test's script runs in a Bun process of its own, spawned synchronously at the file's top, outside any Effect; what it says reaches the test run's own stderr. */
 
+/** What a script wrote, and whether its limit ended it. */
 export interface ScriptRun {
   readonly stdout: string;
   readonly stderr: string;

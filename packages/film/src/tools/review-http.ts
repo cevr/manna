@@ -8,6 +8,7 @@ import { answered } from './api-server.ts';
 import { CACHE, serveFile, urlPath } from './review-file.ts';
 import { Review } from './review.ts';
 
+/** The ref a `/api/review/files/<ref>` URL names: its path after `prefix`, each segment decoded. */
 export const refFromUrl = (url: string, prefix: string): Option.Option<string> => {
   const path = urlPath(url);
   if (!path.startsWith(prefix)) return Option.none();
@@ -18,11 +19,13 @@ export const refFromUrl = (url: string, prefix: string): Option.Option<string> =
   );
 };
 
+/** The ref the request's path names after `prefix`, or ReviewFileUnknown naming the path. */
 const refOf = (request: HttpServerRequest.HttpServerRequest, prefix: string) =>
   Effect.fromOption(refFromUrl(request.url, prefix)).pipe(
     Effect.mapError(() => ReviewFileUnknown.make({ ref: urlPath(request.url) })),
   );
 
+/** The review's own handlers. */
 export const reviewGroup = HttpApiBuilder.group(LabHttpApi, 'review', (handlers) =>
   handlers
     .handle('index', ({ query }) =>

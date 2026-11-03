@@ -4,10 +4,13 @@ import { Schema } from 'effect';
 
 import { useAtomRefresh, useAtomValue } from '../../src/hooks.ts';
 
+/** The answer's place in the page's serialized data. */
 export const ANSWER_KEY = 'answer';
 
+/** The answer as the server sends it: a string, or the read's failure as a defect. */
 export const AnswerResult = AsyncResult.Schema({ success: Schema.String });
 
+/** The read the page shows: the server's own read on the server, the browser's request in the client. */
 export type AnswerAtom = Atom.Atom<AsyncResult.AsyncResult<string>>;
 
 export const Answer = (props: { readonly answer: AnswerAtom }) => {

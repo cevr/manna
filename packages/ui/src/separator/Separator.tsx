@@ -11,6 +11,7 @@ interface SeparatorState {
 }
 
 interface SeparatorProps extends BaseUIComponentProps<'div', SeparatorState> {
+  /** The separator's orientation. @default 'horizontal' */
   orientation?: Orientation | undefined;
 }
 

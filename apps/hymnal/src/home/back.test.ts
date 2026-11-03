@@ -1,7 +1,16 @@
+/**
+ * Android's Back with search open, over a stack of screens. Back goes to
+ * each handler as React Native's `BackHandler` does
+ * (`react-native/Libraries/Utilities/BackHandler.android.js`): the newest
+ * first, until one returns true. The stack's handler, added when the
+ * navigator mounts, is older than search's.
+ */
+
 import { describe, expect, it } from 'bun:test';
 
 import { searchBack } from './back';
 
+/** The home screen with search open on `query`, the stack and its Back handlers. */
 const phone = (query: string) => {
   const state = { screens: ['home'], query, searching: true };
   const stack = () => {

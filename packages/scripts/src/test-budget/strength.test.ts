@@ -8,6 +8,7 @@ import { testDryRun, unitTests } from './units.ts';
 
 const Root = Schema.fromJsonString(Schema.Struct({ workspaces: Schema.Array(Schema.String) }));
 
+/** The lint config's overrides, as far as their files and rules. */
 const LintConfig = Schema.Struct({
   overrides: Schema.Array(
     Schema.Struct({
@@ -17,6 +18,7 @@ const LintConfig = Schema.Struct({
   ),
 });
 
+/** A bunfig's test preloads. */
 const Bunfig = Schema.Struct({
   test: Schema.optionalKey(
     Schema.Struct({ preload: Schema.optionalKey(Schema.Array(Schema.String)) }),

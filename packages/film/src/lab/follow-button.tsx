@@ -1,6 +1,7 @@
 import { Show } from '@solidjs/web';
 import type { Following } from './follow.ts';
 
+/** Follow, while a reader has the box `following` keeps. */
 export const FollowButton = (props: { readonly following: Following }) => (
   <Show when={!props.following.on()}>
     <button

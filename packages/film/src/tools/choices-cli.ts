@@ -34,6 +34,7 @@ const film = Argument.String('film').pipe(
   Argument.withDescription('the film, a folder under src/films'),
 );
 
+/** Each beat's attempts, and the hash of its line as it reads now; a talk has none (its takes are camera footage). */
 const beatAttempts = Effect.fn('film.options.beats')(function* (loaded: LoadedFilm) {
   const takes = yield* Takes;
   if (Option.isSome(loaded.talk)) return [];
@@ -47,6 +48,11 @@ const beatAttempts = Effect.fn('film.options.beats')(function* (loaded: LoadedFi
   );
 });
 
+/**
+ * The film's choice points as its sources stand, with the catalogue's say on
+ * each variant: the derived sounds it places measured here, for each seed's
+ * line and where each effect plays.
+ */
 const pointsOf = Effect.fn('film.options.points')(function* (loaded: LoadedFilm) {
   return filmPoints({
     loaded: yield* measuredFilm(loaded),
@@ -56,6 +62,7 @@ const pointsOf = Effect.fn('film.options.points')(function* (loaded: LoadedFilm)
   });
 });
 
+/** `film check --static --allow-stale` of the loaded film, as the lab and review show it. */
 const staticLines = Effect.fn('film.options.static')(function* (loaded: LoadedFilm) {
   const found = yield* staticLeg(loaded, yield* placeFilm(loaded));
   return report(found, { allowStale: true }).findings.map(lineOf);

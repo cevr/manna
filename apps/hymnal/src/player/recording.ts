@@ -1,3 +1,4 @@
+/** Recording selection below the score clock: every hand-over gets the same fallback policy. */
 import { Clock, Effect, Layer, Option } from 'effect';
 
 import { audioUrl } from '~/remote';

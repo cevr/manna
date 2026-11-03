@@ -8,12 +8,27 @@ import { CUTS } from './cut.ts';
 import { FRAMES } from './frames.ts';
 import { SKELETONS } from './skeleton.ts';
 
+/**
+ * Her sheet's line: the median run of ink across her outer outline, every
+ * 10th row of poses-1 from either side, is 11 px (quartiles 11 and 12), laid
+ * half a pixel wider as the man's is; its ink is the view's darkest 1 %
+ * (median 24,7,1).
+ */
 const LINE = { width: 11.5, ink: [24, 7, 1] } as const;
 
+/**
+ * Her view's paper, the median of its kept view's border ground (its rim is
+ * un-matted from it, `core/unmatte.ts`). Her cream robe and cuffs are painted
+ * near the paper's own colour (253,243,227 on her lap), so no cloth colour is
+ * named to keep: one so near the paper would fill its pockets too. Each lies
+ * inside her ink, where the un-matte's paper does not reach, and the dry run
+ * holds it as hers.
+ */
 const PAPERS = {
   'poses-1': [254, 248, 230],
 } as const;
 
+/** Her puppet of each cut view, by the view's name in her sheet's views: its parts front to back, its part sheet the kept box padded (`frames.ts`), her origin at the kept box's top-left corner, held to the kept box. */
 export const PUPPETS = puppetsOf({
   cast: 'feast-guest-woman',
   cuts: CUTS,

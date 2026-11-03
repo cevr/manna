@@ -22,6 +22,7 @@ import { reachesIn, repoTests } from './test-budget/reach.js';
 import { weakeningFlags } from './test-budget/strength.js';
 import { type UnitTest, testDryRun, unitTests } from './test-budget/units.js';
 
+/** What this reads of turbo's run summary (`--summarize`): each task's span. */
 const RunSummary = Schema.Struct({
   tasks: Schema.Array(
     Schema.Struct({
@@ -31,28 +32,40 @@ const RunSummary = Schema.Struct({
   ),
 });
 
+/** A name given that no workspace's unit-test task answers to. */
 class UnknownWorkspace extends Schema.TaggedError<UnknownWorkspace>()('UnknownWorkspace', {
   message: Schema.String,
 }) {}
 
+/** A workspace with a unit-test task whose script weakens its tests: its time would not be its tests' at full strength. */
 class WeakenedTests extends Schema.TaggedError<WeakenedTests>()('WeakenedTests', {
   message: Schema.String,
 }) {}
 
+/** A workspace with a test file no script of it runs: its time would leave that file out. */
 class UnreachedTests extends Schema.TaggedError<UnreachedTests>()('UnreachedTests', {
   message: Schema.String,
 }) {}
 
+/** A workspace with a test file two of its unit-test tasks run: the gate runs it twice. */
 class DoubledTests extends Schema.TaggedError<DoubledTests>()('DoubledTests', {
   message: Schema.String,
 }) {}
 
+/** A run whose own turbo left no summary this can read: no path printed, or a file that does not decode or names no `<ws>#<task>`. */
 class SummaryUnreadable extends Schema.TaggedError<SummaryUnreadable>()('SummaryUnreadable', {
   message: Schema.String,
 }) {}
 
+/** turbo's line naming the summary it wrote: `Summary:    <root>/.turbo/runs/<id>.json`. */
 const SUMMARY_LINE = /^Summary:\s+(\S.*\.json)\s*$/;
 
+/**
+ * This run's own summary, by the path its own turbo printed: the file, and the
+ * span of `taskId` in it. Nothing else in `.turbo/runs` is read, so a summary
+ * another writer left there (a second budget run, a hand-run turbo) is never
+ * taken for this one.
+ */
 const ownSummary = (runs: string, taskId: string, printed: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -81,6 +94,7 @@ const ownSummary = (runs: string, taskId: string, printed: ReadonlyArray<string>
     return { file, ms: task.value.execution.endTime - task.value.execution.startTime };
   });
 
+/** Runs one unit-test task alone and answers its time and its exit code. */
 const measure = (root: string, unit: UnitTest) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -142,6 +156,7 @@ const measure = (root: string, unit: UnitTest) =>
     };
   });
 
+/** A refusal: its words on stderr, and the run fails. */
 const refuse = (message: string) =>
   Effect.andThen(
     Console.error(message),

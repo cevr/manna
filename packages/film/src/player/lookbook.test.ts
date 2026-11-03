@@ -19,6 +19,7 @@ describe('fontFamilyOf', () => {
 });
 
 describe('composeLookbook', () => {
+  /** A film of `n` one-line scenes: a row of stills each, the sheet growing a row a scene. */
   const filmOf = (n: number) =>
     createFilm({
       fps: 30,

@@ -1,3 +1,6 @@
+/** §10 Milestone 8: "router classifies quoted / refcode / wordy inputs
+ *  correctly". */
+
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 

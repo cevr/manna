@@ -2,6 +2,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Deferred, Effect, Exit, Fiber, Option } from 'effect';
 import { pictureFacesWait } from './face.ts';
 
+/** A face in a page's fonts: how it is shown, and its load, which the test settles. */
 const face = (
   display: FontDisplay,
   status: FontFaceLoadStatus,
@@ -14,8 +15,10 @@ const face = (
   family,
 });
 
+/** A page's fonts holding `faces`. */
 const fontsOf = (faces: ReadonlyArray<ReturnType<typeof face>>) => faces as unknown as FontFaceSet;
 
+/** A load the test settles. */
 const pending = () => {
   let settle = (_: boolean) => {};
   const loaded = new Promise<void>((resolve, reject) => {

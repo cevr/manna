@@ -9,6 +9,7 @@ const INK = [20, 4, 0, 255] as const;
 const CLOTH = NEAR_PAPER;
 const CLEAR = [0, 0, 0, 0] as const;
 
+/** A one-row sheet of one part, `row` its pixels left to right, every opaque pixel the part's own. */
 const sheetOf = (row: ReadonlyArray<readonly [number, number, number, number]>): PartSheet => {
   const rgba = new Uint8Array(row.flat());
   return {
@@ -22,9 +23,11 @@ const sheetOf = (row: ReadonlyArray<readonly [number, number, number, number]>):
   };
 };
 
+/** The sheet `rule` leaves, or the reason it refuses. */
 const ran = (rule: SheetClean, sheet: PartSheet) =>
   Result.match(rule(sheet), { onFailure: (e) => e.message, onSuccess: (s) => s });
 
+/** The sheet `rule` leaves; a refusal throws. */
 const cleaned = (rule: SheetClean, sheet: PartSheet) => Result.getOrThrow(rule(sheet));
 
 const RIM = clearPaperRim({ paper: PAPER, band: 24, near: 12 });
@@ -52,12 +55,14 @@ describe('clearPaperRim', () => {
   });
 });
 
+/** A one-row raster, `row` its pixels left to right. */
 const rowOf = (row: ReadonlyArray<readonly [number, number, number, number]>) => ({
   width: row.length,
   height: 1,
   rgba: new Uint8Array(row.flat()),
 });
 
+/** `paperRimLeftOf` with the guard's own reading, on one cut part and its un-matted pixels. */
 const rimLeft = (
   cut: ReadonlyArray<readonly [number, number, number, number]>,
   unmatted: ReadonlyArray<readonly [number, number, number, number]>,

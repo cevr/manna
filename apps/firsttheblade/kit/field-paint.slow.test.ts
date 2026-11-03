@@ -18,6 +18,7 @@ import {
 
 const WIDTH = 96;
 const HEIGHT = 64;
+/** The field in small: sky above this row, land below. */
 const LAND_FROM = 32;
 
 type Colour = readonly [number, number, number];
@@ -27,11 +28,13 @@ const LAND: Colour = [67, 119, 66];
 const INK: Colour = [20, 30, 25];
 const RAY: Colour = [250, 245, 230];
 
+/** The bare field's colour in a row: sky above the land, land below. */
 const bare = (y: number) => {
   if (y < LAND_FROM) return SKY;
   return LAND;
 };
 
+/** A small field: sky, land, and whatever else `paint` lays on it. */
 const field = (paint: (x: number, y: number) => Colour | false = () => false): Pixels => {
   const data = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
   for (let y = 0; y < HEIGHT; y++)
@@ -48,6 +51,7 @@ const pixel = (image: Pixels, x: number, y: number) =>
 
 const sum = (values: ReadonlyArray<number>) => values.reduce((s, v) => s + v, 0);
 
+/** The sky as `skyMask` should find it: every row above the land. */
 const skyRows = Uint8Array.from({ length: WIDTH * HEIGHT }, (_, i) =>
   Number(i < LAND_FROM * WIDTH),
 );
@@ -93,12 +97,14 @@ describe('the field’s repaint', () => {
   });
 });
 
+/** The far hills at half the master's width: sky above its row 450, the first streak's hill below. */
 const HILLS_WIDTH = 1536;
 const HILLS_HEIGHT = 600;
 const HILLS_SKY = 450;
 const TREE: Colour = [60, 110, 70];
 const [first] = HILL_STREAKS;
 
+/** Where a pixel lies against the first streak, in the master's pixels: along it from its top end, and across (up and right). */
 const against = (x: number, y: number) => {
   const [x0, y0, x1, y1] = first?.line ?? [0, 0, 0, 0];
   const length = Math.hypot(x1 - x0, y1 - y0);
@@ -109,6 +115,7 @@ const against = (x: number, y: number) => {
   return { along: mx * dx + my * dy, across: mx * dy - my * dx, length };
 };
 
+/** A pixel of the streaked hills: sky, the tree, or the hill with half the step either side of the edge. */
 const hillsColour = (
   x: number,
   y: number,
@@ -123,6 +130,7 @@ const hillsColour = (
   return [lifted(0), lifted(1), lifted(2)];
 };
 
+/** The first streak as the painting has it: its hill a step lighter (as measured) up and right of the edge, a tree beside it. */
 const streaked = (): Pixels => {
   const hill = first?.hill ?? [0, 0, 0];
   const step = first?.step ?? [0, 0, 0];
@@ -140,6 +148,7 @@ const hillsSky = Uint8Array.from({ length: HILLS_WIDTH * HILLS_HEIGHT }, (_, i) 
 const hillPixel = (image: Pixels, x: number, y: number) =>
   Array.from(image.data.subarray((y * HILLS_WIDTH + x) * 4, (y * HILLS_WIDTH + x) * 4 + 3));
 
+/** Red, green and blue 6 master px up-right of the first streak's middle minus 6 px down-left. */
 const stepAcross = (image: Pixels) => {
   const [x0, y0, x1, y1] = first?.line ?? [0, 0, 0, 0];
   const length = Math.hypot(x1 - x0, y1 - y0);
@@ -173,18 +182,25 @@ describe('the far hills without the old rays’ edges', () => {
   });
 });
 
+/** The master the streaks' lines and steps were measured on, by the SHA-256 of its bytes. */
 const MEASURED_ON = '912faa678ed6c8793eaab564a40708e604945f377c0b0dfadbc484eb7db38b2e';
 
 const withFiles = it.effect.layer(BunServices.layer);
 
 const MASTER = `${import.meta.dir}/art/field.webp`;
 
+/** An image's red, green and blue, as rows of pixels. */
 const rgbOf = (file: string) =>
   Effect.map(
     Effect.promise(() => sharp(file).removeAlpha().raw().toBuffer({ resolveWithObject: true })),
     ({ data, info }) => ({ data, width: info.width }),
   );
 
+/**
+ * The step across a streak's line on an image at the master's width: the
+ * mean, over the middle of the line, of the pixel 6 px up and right of it
+ * minus the pixel 6 px down and left, in red, green and blue.
+ */
 const measuredStep = (
   image: { readonly data: Uint8Array; readonly width: number },
   line: readonly [number, number, number, number],

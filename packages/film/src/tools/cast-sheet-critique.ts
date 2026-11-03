@@ -9,6 +9,7 @@ import { Critic, type CritiqueTaken } from './critique.ts';
 import { FileInvalid } from './errors.ts';
 import { decodePng, encodePng } from './png.ts';
 
+/** A try the record does not hold, or whose image does not read as its sheet. */
 class CastTryUnknown extends Schema.TaggedError<CastTryUnknown>()('CastTryUnknown', {
   member: Schema.String,
   kind: Schema.String,
@@ -20,13 +21,16 @@ class CastTryUnknown extends Schema.TaggedError<CastTryUnknown>()('CastTryUnknow
   }
 }
 
+/** A layout's numbered clauses ("…: one, …; two, …"), by the view they name. */
 const ORDINALS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'] as const;
 
+/** A sentence's head that names a group of views ("One to three are turned …"), whose words each of its clauses shares. */
 const GROUP = new RegExp(
   `^(?:${ORDINALS.join('|')})\\s+(?:to|and)\\s+(?:${ORDINALS.join('|')})\\b`,
   'i',
 );
 
+/** The words a clause at `at` shares with its group: the head of its sentence, up to the colon, when that head names a group of views; else none. */
 const groupOf = (layout: string, at: number): string => {
   const head =
     layout
@@ -36,6 +40,7 @@ const groupOf = (layout: string, at: number): string => {
   return (GROUP.test(head) && `${head}: `) || '';
 };
 
+/** What `layout` asks of `view`: its numbered clause after the words its group shares, or the whole layout when it numbers none for it. */
 export const askedOf = (layout: string, view: number): string =>
   Option.getOrElse(
     Option.flatMap(Arr.get(ORDINALS, view - 1), (word) =>
@@ -53,16 +58,19 @@ export const askedOf = (layout: string, view: number): string =>
     () => `the sheet's whole layout, which numbers no clause for it: ${layout}`,
   );
 
+/** The measure's flags on one view, as its lines say them. */
 const flaggedOn = (m: SheetMeasure, view: number): ReadonlyArray<string> =>
   m.flags
     .filter((f) => f.views.includes(view))
     .map((f) => `${f.check} (views ${f.views.join(', ')}): ${f.note}`);
 
+/** What a critique of a try answers: its taken findings, and each view no concept faces. */
 interface CastCritique {
   readonly taken: CritiqueTaken;
   readonly unpaired: ReadonlyArray<number>;
 }
 
+/** Critique try `n` of the member's `kind` sheet: each view a kept concept faces, against that concept. */
 export const critiqueCastTry = Effect.fn('Cast.critique')(function* (
   place: { readonly folder: string; readonly out: string },
   kind: SheetKind,

@@ -35,83 +35,129 @@ import { StudioReading } from '../core/studio.ts';
 import type { FilmName } from './film-repo.ts';
 import { type Finished, collectWithin } from './process.ts';
 
+/** `film options list`'s answer: the film's choice points as its sources stand. */
 export class OptionsListed extends Schema.TaggedClass<OptionsListed>()('OptionsListed', {
   points: Schema.Array(ChoicePoint),
 }) {}
 
+/** `film options list --check`'s answer: the points, and the static check of the same sources. */
 export class OptionsChecked extends Schema.TaggedClass<OptionsChecked>()('OptionsChecked', {
   points: Schema.Array(ChoicePoint),
   findings: Schema.Array(CheckLine),
 }) {}
 
+/** `film options mix`'s answer: the mix is written where it was asked. */
 export class OptionsMixed extends Schema.TaggedClass<OptionsMixed>()('OptionsMixed', {}) {}
 
+/** `film options sound`'s answer: the seed is written where it was asked, as a WAV. */
 export class OptionsSounded extends Schema.TaggedClass<OptionsSounded>()('OptionsSounded', {}) {}
 
+/**
+ * `film options keep-voice`'s answer: the attempt is the beat's take, and the
+ * track remixed. A film CLI older than this lab answers `mixed` alone; the
+ * keep has landed all the same, and the take is read from the timings.
+ */
 export class OptionsKept extends Schema.TaggedClass<OptionsKept>()('OptionsKept', {
+  /** The take as the timings now name it. */
   take: Schema.optionalKey(VoiceTiming),
+  /** What the transcriber heard of it. */
   heard: Schema.optionalKey(Schema.String),
+  /** Its word error against the line as it reads now, 0 to 1. */
   wer: Schema.optionalKey(Schema.Finite),
+  /** Whether `narration/full.wav` was rebuilt with the take (false: the log says why). */
   mixed: Schema.Boolean,
 }) {}
 
+/** `film options take`'s answer: the take is kept, unkept or rejected in the library's lock. */
 export class OptionsTaken extends Schema.TaggedClass<OptionsTaken>()('OptionsTaken', {}) {}
 
+/** `film project … --json`'s answer: the project as the run leaves it. */
 export class ProjectRead extends Schema.TaggedClass<ProjectRead>()('ProjectRead', {
   project: Project,
 }) {}
 
+/** A scene's spans as `film read cue --spans` takes them. */
 export const TimelineJson = Schema.fromJsonString(Timeline);
 const encodeTimeline = Schema.encodeEffect(TimelineJson);
 
+/** A cue write as `film read cue --patch` takes it. */
 export const CuePatchJson = Schema.fromJsonString(CuePatch);
 const encodeCuePatch = Schema.encodeEffect(CuePatchJson);
 
+/** `film read voice`'s answer: what the studio reads of the film's script and voice. */
 export class VoiceRead extends Schema.TaggedClass<VoiceRead>()('VoiceRead', {
   reading: StudioReading,
 }) {}
 
+/** `film read script`'s answer: each beat's line, picture and sources, as the words reader reads them. */
 export class ScriptRead extends Schema.TaggedClass<ScriptRead>()('ScriptRead', {
   beats: ScriptBeats.fields.beats,
 }) {}
 
+/**
+ * `film read cue`'s answer: the cue on its scene's clock, or why the scene's
+ * timeline does not resolve; neither when the scene or the cue is not there.
+ */
 export class CueRead extends Schema.TaggedClass<CueRead>()('CueRead', {
   resolved: Schema.optionalKey(ResolvedCue),
   unresolved: Schema.optionalKey(Schema.String),
 }) {}
 
+/** Whether the lab may write a field of a scene's drawing: only the literal the scene reads, alone. */
 const FieldAccess = Schema.Union([
   Schema.TaggedStruct('Writable', {}),
   Schema.TaggedStruct('Refused', { error: Schema.Union([SceneNotLocated, SourceShared]) }),
 ]);
 
+/**
+ * Where a scene's drawing is declared (the file, and a name the file exports
+ * it under), and for each field whether that literal is the one the scene
+ * reads and no other scene does.
+ */
 export const SceneSite = Schema.Struct({
   scene: Schema.String,
   file: Schema.String,
+  /** The file as an answer or a refusal names it: relative to the film's folder, never a path on the box. */
   shown: Schema.String,
   exportName: Schema.String,
   access: Schema.Struct({ timeline: FieldAccess, knobs: FieldAccess }),
 });
 export type SceneSite = typeof SceneSite.Type;
 
+/** `film read sites`'s answer: every scene with a timeline or knobs, located or why not. */
 export class SitesRead extends Schema.TaggedClass<SitesRead>()('SitesRead', {
   sites: Schema.Array(SceneSite),
   unlocated: Schema.Array(SceneNotLocated),
 }) {}
 
+/**
+ * `film read cues`'s answer: each scene's placement, marks and named cues,
+ * one line each as `film cues` prints them (one scene's, when it names one),
+ * and how many cues end after their scene.
+ */
 export class CuesRead extends Schema.TaggedClass<CuesRead>()('CuesRead', {
   lines: Schema.Array(Schema.String),
   late: Schema.Int,
 }) {}
 
+/**
+ * `film read clock`'s answer: a version's clock (its beats' spans, speech,
+ * marks and voice, its acts and its score's movements), as its files stand.
+ */
 export class ClockRead extends Schema.TaggedClass<ClockRead>()('ClockRead', {
   clock: FilmClock,
 }) {}
 
+/** `film read scenes`'s answer: the film's scenes by id, in order, no timeline resolved. */
 export class ScenesRead extends Schema.TaggedClass<ScenesRead>()('ScenesRead', {
   scenes: Schema.Array(Schema.String),
 }) {}
 
+/**
+ * What a fresh run refuses with: the film, choice, variant, scene or act it
+ * could not find, or the take it would not keep (one that says something
+ * else, or an attempt it has not, or one recorded for an earlier line).
+ */
 const FreshRefusal = Schema.Union([
   FilmUnknown,
   ChoiceUnknown,
@@ -127,6 +173,7 @@ const FreshRefusal = Schema.Union([
 ]);
 type FreshRefusal = typeof FreshRefusal.Type;
 
+/** The one line a fresh run prints: its answer, or its refusal. */
 const FreshLine = Schema.Union([
   OptionsListed,
   OptionsChecked,
@@ -147,13 +194,17 @@ const FreshLine = Schema.Union([
 ]);
 type FreshLine = typeof FreshLine.Type;
 
+/** `FreshLine` as the JSON text the child prints and the review reads. */
 const FreshLineJson = Schema.fromJsonString(FreshLine);
 
+/** Print `line` as the run's answer: one line of JSON on stdout. */
 export const printLine = (line: FreshLine) =>
   Effect.flatMap(Schema.encodeEffect(FreshLineJson)(line), (text) => Console.log(text));
 
+/** Whether an error is one a fresh run answers with (its line), not a failure of the run. */
 const isFreshRefusal = Schema.is(FreshRefusal);
 
+/** A failure that names itself: a tag, and words a page can show. */
 interface Named {
   readonly _tag: string;
   readonly message: string;
@@ -165,23 +216,35 @@ const isNamed = (u: unknown): u is Named =>
   Predicate.hasProperty(u, 'message') &&
   Predicate.isString(u.message);
 
+/** The line a failure answers with: a refusal as itself, any other as `ServerFailed`. */
 const failureLine = (error: Named): FreshRefusal | ServerFailed => {
   if (isFreshRefusal(error)) return error;
   return ServerFailed.make({ tag: error._tag, reason: error.message });
 };
 
+/**
+ * `effect` with the failure it names printed as the run's answer (a refusal
+ * as itself, any other as `ServerFailed`), then failed with as before (exit 1).
+ */
 export const answering = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.tapError(effect, (error) => {
     if (isNamed(error)) return printLine(failureLine(error));
     return Effect.void;
   });
 
+/** Whether a line is a failure the run answered with, raised here again as itself. */
 const isFailureLine = Schema.is(Schema.Union([FreshRefusal, ServerFailed]));
 
+/** One finding as `film check --json` prints it: a CheckLine as one line of JSON. */
 export const CheckLineJson = Schema.fromJsonString(CheckLine);
 
 const decodeCheckLine = Schema.decodeUnknownEffect(CheckLineJson);
 
+/**
+ * The findings in `check --json`'s stdout, one per non-empty line. Logs go to
+ * stderr, so a line that does not decode is the CLI and its reader
+ * disagreeing about the format: the run fails, naming the line.
+ */
 export const checkLines = Effect.fn('FreshFilm.checkLines')(function* (
   command: string,
   stdout: string,
@@ -194,12 +257,20 @@ export const checkLines = Effect.fn('FreshFilm.checkLines')(function* (
   );
 });
 
+/** A check that could not run, as the one error finding a page shows. */
 export const failedCheck = (error: FreshProcessFailed): ReadonlyArray<CheckLine> => [
   { level: 'error', tag: error._tag, message: error.message },
 ];
 
+/** A finding as one line of JSON, as `film check --json` prints it. */
 export const encodeCheckLine = Schema.encodeSync(CheckLineJson);
 
+/**
+ * `film check`'s run, answering with `--json` a check that cannot run (the
+ * film does not load, a flag it refuses) as its one error finding, in the
+ * failure's own words, then failing with it as before. A check that ran has
+ * printed its findings, and fails as CheckFailed.
+ */
 export const answeringCheck = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
   input: { readonly json: boolean },
@@ -213,11 +284,25 @@ export const answeringCheck = <A, E, R>(
   });
 };
 
+/**
+ * How long a read may take (a cold start and the film's modules, a few
+ * seconds): the longest the lab holds a request (`LONGEST_WAIT`), so a page's
+ * render that reads through one (`END_WAIT`) hears the read's answer or its
+ * failure before it is cut. Then how long a mix or a kept take may take.
+ */
 const READ_LIMIT = Duration.seconds(LONGEST_WAIT);
 const MIX_LIMIT = Duration.minutes(10);
 
+/**
+ * A check leg a fresh run can take: `static` reads files only; `sound` also
+ * mixes the film; `draw` also draws each scene in its process (no browser).
+ */
 type CheckLeg = 'static' | 'sound' | 'draw';
 
+/**
+ * The longest each leg may take: a lab request waits on `static`; `sound`
+ * renders the whole mix; `draw` draws every frame it probes of each scene.
+ */
 const CHECK_LIMITS: Record<CheckLeg, Duration.Duration> = {
   static: Duration.seconds(30),
   sound: Duration.minutes(5),
@@ -227,34 +312,52 @@ const CHECK_LIMITS: Record<CheckLeg, Duration.Duration> = {
 export type FreshError = FreshProcessFailed | FreshRefusal | ServerFailed;
 
 export interface FreshFilmService {
+  /** The film's choice points, its modules imported as they stand now. */
   readonly choices: (film: FilmName) => Effect.Effect<ReadonlyArray<ChoicePoint>, FreshError>;
+  /** The points and the static check of the same sources, in one run. */
   readonly checked: (film: FilmName) => Effect.Effect<OptionsChecked, FreshError>;
+  /** The film's whole mix with `variant` of `point` in place, written to `to` as an m4a. */
   readonly mix: (
     film: FilmName,
     point: string,
     variant: string,
     to: string,
   ) => Effect.Effect<void, FreshError>;
+  /**
+   * A seed of a sound made from data (`variant`, its source's label: a code
+   * sound's or a code trial's) of the take point `point`, rendered alone and
+   * written to `to` as a WAV.
+   */
   readonly sound: (
     film: FilmName,
     point: string,
     variant: string,
     to: string,
   ) => Effect.Effect<void, FreshError>;
+  /** Keep `beat`'s attempt `file` as its take (a mismatch only when accepted), and remix the track. */
   readonly keepVoice: (
     film: FilmName,
     beat: string,
     file: string,
     options: { readonly acceptMismatch: boolean },
   ) => Effect.Effect<OptionsKept, FreshError>;
+  /** `verb` on the take `take` (a sha256) of point `point`: kept, unkept or rejected in the lock. */
   readonly take: (
     film: FilmName,
     point: string,
     take: string,
     verb: ChoiceVerb,
   ) => Effect.Effect<void, FreshError>;
+  /** What the studio reads of the film's script and voice (`film read voice`). */
   readonly reading: (film: FilmName) => Effect.Effect<StudioReading, FreshError>;
+  /** Each beat of the film's script, its line, picture and sources (`film read script`). */
   readonly script: (film: FilmName) => Effect.Effect<ReadonlyArray<ScriptBeat>, FreshError>;
+  /**
+   * `cue` on `scene`'s clock as the film's files now declare it, `spans` in
+   * place of the scene's own where given, and `patch` applied to the cue's
+   * own span where `spans` has none for it (`film read cue`), or why the
+   * scene's timeline does not resolve.
+   */
   readonly cue: (
     film: FilmName,
     scene: string,
@@ -262,18 +365,41 @@ export interface FreshFilmService {
     spans: Option.Option<Timeline>,
     patch: Option.Option<CuePatch>,
   ) => Effect.Effect<CueRead, FreshError>;
+  /** Where each scene's drawing is declared, as the film's files and modules now stand (`film read sites`). */
   readonly sites: (film: FilmName) => Effect.Effect<SitesRead, FreshError>;
+  /**
+   * Each scene's placement, marks and named cues as `film cues` prints them,
+   * or `scene`'s alone (`UnknownScene` when the film has none of that id),
+   * as the film's files now stand (`film read cues`).
+   */
   readonly cues: (
     film: FilmName,
     scene: Option.Option<string>,
   ) => Effect.Effect<CuesRead, FreshError>;
+  /**
+   * The film's scenes by id, in order, as its files now stand (`film read
+   * scenes`): read without resolving a timeline, so a film one of whose
+   * scenes does not lay out still names them.
+   */
   readonly scenes: (film: FilmName) => Effect.Effect<ReadonlyArray<string>, FreshError>;
+  /**
+   * A version's clock as its files now stand (`film read clock`): the film's
+   * registered scenes and takes, or, with `folder`, the version folder's
+   * (`<film>/<folder>/`: its scenes, takes, acts and score).
+   */
   readonly clock: (
     film: FilmName,
     folder: Option.Option<string>,
   ) => Effect.Effect<FilmClock, FreshError>;
+  /** `film mix <film>`: the track rebuilt from the takes and the sources as they stand. */
   readonly remix: (film: FilmName) => Effect.Effect<void, FreshProcessFailed>;
+  /** `film project <args>` (its `--json` among them): the project as the run leaves it. */
   readonly project: (args: ReadonlyArray<string>) => Effect.Effect<Project, FreshError>;
+  /**
+   * Every finding of `film check <film> --<leg> --allow-stale --json`, of
+   * `scenes` alone when it names some (`--scene`). A check that cannot run
+   * is one error finding (`failedCheck`), logged.
+   */
   readonly check: (
     film: string,
     leg: CheckLeg,
@@ -283,6 +409,7 @@ export interface FreshFilmService {
 
 const decodeLine = Schema.decodeUnknownOption(FreshLineJson);
 
+/** The last line of `stdout` that is a `FreshLine`. */
 const answerIn = (stdout: string): Option.Option<FreshLine> =>
   Option.firstSomeOf(
     stdout
@@ -292,11 +419,13 @@ const answerIn = (stdout: string): Option.Option<FreshLine> =>
       .map((line) => decodeLine(line)),
   );
 
+/** The last lines of what a run printed to stderr, for a failure's reason. */
 const tailOf = (done: Finished) => done.stderr.trim().split('\n').slice(-3).join(' | ');
 
 export class FreshFilm extends Context.Service<FreshFilm, FreshFilmService>()(
   '@manna/film/tools/FreshFilm',
 ) {
+  /** Each read run as `command` (the film CLI, e.g. `['bun', '/app/cli.ts']`) with its arguments. */
   static readonly layer = (command: ReadonlyArray<string>) =>
     Layer.effect(
       FreshFilm,
@@ -304,6 +433,7 @@ export class FreshFilm extends Context.Service<FreshFilm, FreshFilmService>()(
         const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
         const [program = 'bun', ...prefix] = command;
 
+        /** `film <args>` run to its end, called `name`: what it printed, and its exit code. */
         const run = Effect.fn('FreshFilm.run')(function* (
           name: string,
           args: ReadonlyArray<string>,
@@ -321,6 +451,7 @@ export class FreshFilm extends Context.Service<FreshFilm, FreshFilmService>()(
           );
         });
 
+        /** `film <args>`'s one line: its answer, or the failure it printed, raised as itself. */
         const answer = Effect.fn('FreshFilm.answer')(function* (
           args: ReadonlyArray<string>,
           limit: Duration.Duration,
@@ -337,6 +468,7 @@ export class FreshFilm extends Context.Service<FreshFilm, FreshFilmService>()(
           return line;
         });
 
+        /** `film <args>`'s answer when it is `answered`, or that it answered something else. */
         const ask = <A extends FreshLine>(
           args: ReadonlyArray<string>,
           limit: Duration.Duration,
@@ -477,6 +609,7 @@ export class FreshFilm extends Context.Service<FreshFilm, FreshFilmService>()(
           return (yield* ask(['project', ...args], READ_LIMIT, ProjectRead)).project;
         });
 
+        /** `film check <film> --<leg>`, of `scenes` when it names some: its findings; exit 1 is the check failing on them. */
         const findings = Effect.fn('FreshFilm.findings')(function* (
           film: string,
           leg: CheckLeg,

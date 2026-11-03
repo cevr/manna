@@ -7,6 +7,7 @@ import { build } from 'rolldown';
 const app = new URL('..', import.meta.url).pathname;
 const entry = '\0sdk-entry';
 
+/** Bundles one module that calls the SDK, as One's iOS backends do, tree-shaken as the Release bundle is. */
 const bundle = () =>
   Effect.promise(() =>
     build({

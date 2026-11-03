@@ -26,12 +26,14 @@ import { type Rig, keptFor, present, rigOf } from './rig.ts';
 import { ps1, rgb } from './shade.ts';
 import { PAGE, paintPage, pageCanvas } from './type.ts';
 
+/** The card's colours: the highlight's blue is its ground, so the flood is the highlight grown. */
 export const CARD = {
   ground: '#1f3570',
   ink: '#f2e9d7',
   gold: '#e6b347',
 } as const satisfies Record<string, Hex>;
 
+/** The page's type: pixel-sized, in the page's texels. */
 const PAGE_STYLE: VerseStyle = {
   type: { family: fonts.body, size: 23, weight: 600, color: '#2a2420', leading: 1.35 },
   width: 206,
@@ -39,6 +41,7 @@ const PAGE_STYLE: VerseStyle = {
   lit: CARD.ink,
 };
 
+/** The page in the world: its size, and where the book lies. */
 const LEAF = { w: 1.0, h: 1.4 } as const;
 
 interface Desk {
@@ -82,6 +85,7 @@ const build = (r: Rig): Desk => {
 
 const deskSet = keptFor(build);
 
+/** A point on the page (in its texels) as the frame's own pixels: through the 3D camera, the low-res grid and `ctx`. */
 const onFrame = (f: JobFrame, d: Desk, px: number, py: number) => {
   const p = new Vector3((px / PAGE.w - 0.5) * LEAF.w, (0.5 - py / PAGE.h) * LEAF.h, 0);
   p.applyMatrix4(d.page.matrixWorld).project(d.camera);
@@ -91,6 +95,7 @@ const onFrame = (f: JobFrame, d: Desk, px: number, py: number) => {
   return { x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f };
 };
 
+/** The highlight's box on the page, as a box on the frame. */
 const boxOnFrame = (f: JobFrame, d: Desk, b: Box): Box => {
   const corners = [
     onFrame(f, d, b.x, b.y),
@@ -133,6 +138,7 @@ const stage = (f: JobFrame, r: Rig, d: Desk): Box => {
   return boxOnFrame(f, d, lit);
 };
 
+/** Where no WebGL 2 can be had (`check --draw`): the page flat on the frame, the verse set on it. */
 const fallback = (f: JobFrame): Box => {
   const { ctx, w, h } = f;
   ctx.fillStyle = ROOM.fog;
@@ -156,6 +162,7 @@ export const job = (f: JobFrame): Box => {
   return box;
 };
 
+/** The card's face: the reference's bold sans, cream on the blue, "just" gold. */
 const CARD_STYLE: CardStyle = {
   ground: CARD.ground,
   type: {
@@ -180,6 +187,7 @@ const CARD_STYLE: CardStyle = {
   },
 };
 
+/** The reference's lower case, but "God" keeps its capital. */
 const lowered = (word: CardWord): CardWord =>
   /^\W*God\b/.test(word.text) ? word : { ...word, text: word.text.toLowerCase() };
 

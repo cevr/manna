@@ -1,5 +1,17 @@
 #!/usr/bin/env bun
 
+/**
+ * Process TSKe (Treasury of Scripture Knowledge Enhanced) data into JSON.
+ *
+ * Input:  packages/cli/assets/data-raw/tske.txt
+ * Output: packages/core/assets/cross-refs-tske.json
+ *
+ * TSKe format:
+ * - Tab-delimited: "Book Ch:Vs\t<HTML content>"
+ * - Refs in <u> tags: <u>Book_Ch:Vs</u> or <u>Book_Ch:Vs-VsEnd</u>
+ * - Book intros (just book name) and chapter overviews (no verse) are skipped
+ */
+
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { Effect, FileSystem, Option, Path, Schema, SchemaGetter } from 'effect';
 
@@ -127,6 +139,7 @@ function parseTskeRef(raw: string): Option.Option<Reference> {
   return Option.some(ref);
 }
 
+/** Every parseable <u>-tagged ref on a TSKe line. */
 function extractRefs(line: string): Reference[] {
   const refs: Reference[] = [];
   for (const uMatch of line.matchAll(U_TAG_RE)) {
@@ -140,6 +153,7 @@ function extractRefs(line: string): Reference[] {
   return refs;
 }
 
+/** Record a verse's refs, merging into an existing entry for the same verse. */
 function addRefs(crossRefs: Record<string, CrossRefEntry>, key: string, refs: Reference[]): void {
   if (refs.length === 0) return;
   if (crossRefs[key]) {

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { burst, cycle, fly, flyV, stream } from './particles.ts';
 
+/** One call an emitter makes: the index, age and life, then two draws of its rng. */
 type Call = readonly [i: number, age: number, life: number, r0: number, r1: number];
 
 const close = (a: readonly number[], b: readonly number[], digits = 9) => {
@@ -42,6 +43,7 @@ describe('fly', () => {
   });
 });
 
+/** The calls `emit` makes, each its arguments then two draws of its rng. */
 const calls = (
   emit: (fn: (age: number, life: number, r: () => number, i: number) => void) => void,
 ): Call[] => {

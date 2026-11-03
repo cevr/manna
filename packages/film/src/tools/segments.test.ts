@@ -11,6 +11,7 @@ import { secondsAt } from '../core/time.ts';
 import { Segment as FileName } from '../core/segment.ts';
 import { type RenderRead, type Segment, beatSegments } from './segments.ts';
 
+/** Three beats, 5, 5 and 10 seconds: at 30 fps frames 0–149, 150–299 and 300–599. */
 const placed = Result.getOrThrow(
   layout(
     [
@@ -41,6 +42,7 @@ const beats = new Map([
   ['c', 'key-c'],
 ]);
 
+/** Beat `beat`'s one picture panel, held from its start, showing try 1. */
 const panel = (beat: string): Panel => ({
   id: `${beat}.start`,
   beat: BoardName.make(beat),
@@ -60,12 +62,14 @@ const panel = (beat: string): Panel => ({
 
 const board: BoardFile = { ...emptyBoard('f'), panels: [panel('a'), panel('b'), panel('c')] };
 
+/** Each image's bytes as hashed from disk. */
 const images = new Map([
   ['a.png', 'sha-a'],
   ['b.png', 'sha-b'],
   ['c.png', 'sha-c'],
 ]);
 
+/** The whole 20 s film's segments, its Board drawn with `over` in place of each image's hash. */
 const boardSegments = (
   over: Readonly<Record<string, string>> = {},
   more: Partial<RenderRead> = {},
@@ -151,6 +155,7 @@ describe("a render's segments", () => {
   });
 
   test("change a segment's key only where a card whose words change shows", () => {
+    /** The film's segments with c's panel a verse card of `text`. */
     const carded = (text: string) => {
       const card: Panel = {
         id: 'c.start',
@@ -230,6 +235,10 @@ describe("a render's segments", () => {
   });
 });
 
+/**
+ * The film's whole Board with `a` lasting `seconds` (its key `aKey`), b and c
+ * after it as before, each frame reading the film's seconds where `timed`.
+ */
 const laid = (seconds: number, timed: (i: number) => boolean, aKey = 'key-a') => {
   const film = Result.getOrThrow(
     layout(
@@ -253,6 +262,7 @@ const laid = (seconds: number, timed: (i: number) => boolean, aKey = 'key-a') =>
   });
 };
 
+/** A card style whose payoff is underlined once heard. */
 const CARD: CardStyle = {
   ground: '#0e1010',
   type: { family: 'x', size: 60, color: '#f2e9d7' },
@@ -263,6 +273,7 @@ const CARD: CardStyle = {
   },
 };
 
+/** c's one panel a card whose payoff is its line's `Hi`; a and b have none. */
 const carded: BoardFile = {
   ...emptyBoard('f'),
   panels: [
@@ -276,7 +287,9 @@ const carded: BoardFile = {
   ],
 };
 
+/** Frames that read only their beats' and shots' times: a Board's panels. */
 const panels = () => false;
+/** Frames that read the film's seconds: every frame the film draws. */
 const drawn = () => true;
 
 describe('a segment moved by an earlier beat', () => {
@@ -358,6 +371,7 @@ describe('a segment moved by an earlier beat', () => {
         });
         return { placed, board, card: segments.filter((s) => !s.pinned) };
       };
+      /** Every call frame `i` of `board` makes on its canvas, in order. */
       const callsAt = (board: Film, i: number) => {
         const calls: Array<readonly [PropertyKey, ReadonlyArray<unknown>]> = [];
         const r = recorder(1920, 1080, {

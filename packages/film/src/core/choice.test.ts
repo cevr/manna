@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { Result, Schema } from 'effect';
 import { ChoicePoint } from './choice.ts';
 
+/** A point as the wire carries it, with the kind it claims. */
 const wire = (id: string, kind: string) => ({
   id,
   kind,

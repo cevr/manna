@@ -7,7 +7,14 @@ import { ToastContext, type ToastContextValue } from './ToastProviderContext.ts'
 
 interface ToastProviderProps {
   children?: JSX.Element;
+  /**
+   * The maximum number of toasts that can be displayed at once.
+   * When the limit is exceeded, the oldest toasts are marked as `limited` (via the `data-limited`
+   * attribute) rather than removed, so they can be hidden or animated out.
+   * @default 3
+   */
   limit?: number | undefined;
+  /** A global manager for toasts to use outside of the component tree. */
   toastManager?: ToastManager | undefined;
 }
 

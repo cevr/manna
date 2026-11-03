@@ -8,6 +8,7 @@ import { type Hymn, PER_BEAT, type Syllable, sung, type Timing } from './hymn.js
 import * as Midi from './midi.js';
 import * as Placement from './placement.js';
 
+/** A fixed-seed source of numbers in [0, 1) (mulberry32), so each run draws the same lines. */
 const seeded = (seed: number) => {
   let state = seed >>> 0;
   return () => {
@@ -19,6 +20,7 @@ const seeded = (seed: number) => {
   };
 };
 
+/** Every meter the hymnal's files carry. */
 const METERS = [
   [4, 4],
   [3, 4],
@@ -38,6 +40,7 @@ const METERS = [
 
 const QUALITIES: readonly Chord.Quality[] = ['', 'm', '7', 'sus4', 'dim'];
 
+/** Eight ticks a quarter, so a bar is at most 64 ticks and every tick can be looked at. */
 const TPB = 8;
 const SLACK = TPB / 16;
 
@@ -46,6 +49,7 @@ interface Drawn {
   readonly grid: Placement.Grid;
 }
 
+/** One line on one or two meters: syllables on eighths, changes on syllables or between. */
 const draw = (random: () => number): Drawn => {
   const int = (n: number) => Math.floor(random() * n);
   const pick = <A>(items: readonly A[]): A => items[int(items.length)] as A;
@@ -82,6 +86,7 @@ const draw = (random: () => number): Drawn => {
   };
 };
 
+/** Every strong beat's tick strictly between `from` and `to`, found tick by tick with `beatAt`. */
 const strongBetween = (grid: Placement.Grid, from: number, to: number) => {
   const out: number[] = [];
   for (let t = Math.ceil(from + SLACK + 1e-9); t < to - SLACK; t++)
@@ -89,11 +94,13 @@ const strongBetween = (grid: Placement.Grid, from: number, to: number) => {
   return out;
 };
 
+/** A change kept where it was: a line's opening chord with nothing different sounding before it. */
 const opensHeld = (line: Placement.Line, change: Placement.Change) =>
   change.syllable === 0 &&
   change.at === 0 &&
   (line.before === undefined || Chord.equals(line.before, change.chord));
 
+/** Why a line's placed changes break R1, or nothing. */
 const breaches = (line: Placement.Line, grid: Placement.Grid): string[] => {
   const placed = Placement.apply('strong', line, grid);
   const out: string[] = [];
@@ -132,6 +139,14 @@ const breaches = (line: Placement.Line, grid: Placement.Grid): string[] => {
   return out;
 };
 
+/**
+ * A melody that leans on a one-meter grid's strong beats: from each strong
+ * beat to the next, one held note or a run of eighths, and each line ends on
+ * a held note, so every syllable held two beats or more and every line's
+ * last starts on a strong beat. The first line is one held note, so the
+ * melody leans on two strong beats at least. With the first beat off the
+ * strong beats in ticks (half a beat in a bar of one beat, each beat strong).
+ */
 const leaning = (grid: Placement.Grid, random: () => number) => {
   const strong: number[] = [];
   for (let t = 0; strong.length < 3 + Math.floor(random() * 9); t++)
@@ -210,6 +225,7 @@ describe('R1 over drawn lines', () => {
     () =>
       Effect.sync(() => {
         const found: string[] = [];
+        /** A bar's ticks: n notes of a d-th of a whole note, a whole note four quarters. */
         const barOf = ([n, d]: (typeof METERS)[number]) => (TPB * 4 * n) / d;
         for (const first of METERS)
           for (const second of METERS) {
@@ -243,9 +259,15 @@ const pad = (n: number) => String(n).padStart(3, '0');
 interface Loaded {
   readonly hymn: Hymn;
   readonly grid: Placement.Grid;
+  /** Whether its melody confirms the file's bars, the grid R1 strikes on. */
   readonly confirmed: boolean;
 }
 
+/**
+ * The time-signature events a MIDI file may hold: each `FF 58 04` run in its
+ * bytes. A byte of 0xFF starts a meta event or sits inside one's data, so the
+ * count is never short.
+ */
 const signatures = (bytes: Uint8Array) => {
   let count = 0;
   for (let i = bytes.indexOf(0xff); i !== -1; i = bytes.indexOf(0xff, i + 1))
@@ -253,6 +275,7 @@ const signatures = (bytes: Uint8Array) => {
   return count;
 };
 
+/** Each compiled hymn, with its file's meters in the timing's units. */
 const loaded = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const hymns = yield* compiled;
@@ -275,18 +298,29 @@ const loaded = Effect.gen(function* () {
   );
 });
 
+/** One stored line on the timeline, in the timing's units, as R1 read it. */
 interface Walked {
   readonly at: string;
   readonly line: Placement.Line;
+  /** The last chord sung before it, when one was. */
   readonly held: Chord.Chord | undefined;
+  /** The next sung line's start: the time the line owns, its rest included. */
   readonly next: number;
+  /** Whether it is the first line of its laying, whose opening R1 never moves. */
   readonly opens: boolean;
+  /** Whether its first printed syllable shows a chord as it starts. */
   readonly shows: boolean;
+  /** Its full harmony's changes, each at its tick. */
   readonly full: ReadonlyArray<{ readonly tick: number; readonly chord: Chord.Chord }>;
 }
 
 type Sung = ReturnType<typeof sung>[number];
 
+/**
+ * Whether the line at `i` is stored where it is sung: a stanza's lines, and
+ * the refrain's where it is stored from (after stanza 1, or after the last
+ * stanza for a refrain sung after the last alone).
+ */
 const storedAt = (hymn: Hymn, all: readonly Sung[], timing: Timing): ((i: number) => boolean) => {
   const order = hymn.refrain?.order;
   const lastOnly = order === 'first-and-last' || order === 'after-last';
@@ -299,6 +333,7 @@ const storedAt = (hymn: Hymn, all: readonly Sung[], timing: Timing): ((i: number
     all[i]?.verse !== 'refrain' || (from !== undefined && i >= from && i < from + count);
 };
 
+/** A line's placement input as the compiler read it: its sung syllables alone, a shared one carrying none. */
 const inputOf = (
   syllables: readonly Syllable[],
   time: Timing['lines'][number],
@@ -329,6 +364,10 @@ const inputOf = (
   };
 };
 
+/**
+ * Every stored line where the file plays it, in sung order. Lines laid in
+ * even shares or not played are left out: their times are not the notes'.
+ */
 const walked = ({ hymn }: Loaded): Walked[] => {
   const timing = hymn.timing;
   if (timing === undefined) return [];
@@ -367,8 +406,10 @@ const walked = ({ hymn }: Loaded): Walked[] => {
   });
 };
 
+/** The times are whole units: a change can sit a unit off the file's tick. */
 const UNIT_SLACK = PER_BEAT / 16;
 
+/** Why a stored line breaks R1, or nothing. */
 const storedBreaches = (
   { at, line, held, next: owned, opens, shows }: Walked,
   grid: Placement.Grid,
@@ -396,6 +437,15 @@ const storedBreaches = (
   return out;
 };
 
+/**
+ * The guitar changes of a stored line that R1 struck later than the file
+ * plays them: a change after the line's first, on a strong beat of the
+ * file's grid, where the full harmony does not change, to the chord the full
+ * harmony already sounds (simplified) since its last change before. Placed
+ * where the file plays it, a guitar chord changes with the full harmony or to
+ * a chord the full harmony does not sound: none is found in the placement of
+ * the hymns below before R1 struck any chord (measured).
+ */
 const lateChanges = ({ at, line, full }: Walked, grid: Placement.Grid): string[] =>
   line.changes.slice(1).flatMap((change, i) => {
     const tick = Placement.tickOf(line, change);
@@ -438,6 +488,7 @@ describe('R1 over the compiled set', () => {
     }).pipe(Effect.provide(BunServices.layer)),
   );
 
+  /** Stanza 1's lines of a compiled hymn, each its guitar changes as `[syllable, at]`. */
   const stanzaOne = (hymns: readonly Hymn[], n: number) => {
     const part = hymns.find((h) => h.number === n)?.stanzas[0];
     const lines = part?._tag === 'Sung' ? part.lines : [];

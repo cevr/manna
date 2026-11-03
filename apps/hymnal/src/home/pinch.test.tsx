@@ -1,3 +1,12 @@
+/**
+ * The ways into `All at once` past the group headings, on the phone's real
+ * home screen (`Home.native.tsx`) mounted in a browser's document over a
+ * registry of its own (`src/test/setup.ts`): the pinch in on the list and
+ * out on the tiles, played through the gesture's own callbacks
+ * (`src/test/gesture.tsx`), and the `Hymns` heading's VoiceOver action
+ * `All at once`.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { RegistryContext } from '@effect/atom-react';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
@@ -11,6 +20,7 @@ import { actionsOf, perform } from '~/test/props';
 
 import { Home } from './Home.native';
 
+/** The home screen mounted over `registry`, with the test run against it, then unmounted. */
 const withHome = (
   run: (host: HTMLElement, registry: AtomRegistry.AtomRegistry) => void,
   registry = AtomRegistry.make(),
@@ -30,8 +40,10 @@ const withHome = (
   host.remove();
 };
 
+/** Whether `All at once` shows: its heading names the tab in use. */
 const tilesShow = (host: HTMLElement) => (host.textContent ?? '').includes(', all at once');
 
+/** One pinch on the detector `testID`: the fingers land, move through `scales`, and lift at `velocity`. */
 const pinch = (testID: string, scales: ReadonlyArray<number>, velocity = 0) =>
   act(() => {
     const gesture = gestureOf(testID);

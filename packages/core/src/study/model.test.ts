@@ -1,3 +1,12 @@
+/** The one Strong's decoder (should-fix 5).
+ *
+ *  `StrongsNumber` is the whole argument of `manna study strongs`.
+ *
+ *  The assertions below are the contract itself rather than a sample of it, and
+ *  `packages/cli/test/commands/study.test.ts` runs the real command against the
+ *  same inputs.
+ */
+
 import { describe, expect, test } from 'bun:test';
 import { Schema } from 'effect';
 

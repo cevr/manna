@@ -2,10 +2,23 @@ import { Result } from 'effect';
 import type { Raster } from '../core/raster.ts';
 import { type Hex, type Ramp, channelsOf } from './colour.ts';
 
+/** A colour in CIE Lab (D65): lightness L* 0..100, then a* and b*. */
 type Lab = readonly [number, number, number];
 
+/**
+ * The ink cut, L*: a pixel at or under it is line or its ink and keeps its
+ * colour. The cast sheets' line ink is L* 0.1 to 2.1 (`[1, 0, 0]` to
+ * `[20, 4, 0]`) and its anti-aliased rim rises from there; the darkest kit
+ * cloth's house shade (indigo `#4b566b`, shade `#394357`) is L* 28.3, so 15
+ * leaves the line whole and dyes every fold of the cloth.
+ */
 export const INK_CUT = 15;
 
+/**
+ * A dye resolved for one part and one cloth: the lightness knots it reads
+ * (the ink cut, then the drawn shade, base and light, L*) and the Lab each
+ * maps to (the cut's, the cloth's shade, base and light, then white).
+ */
 export interface Dye {
   readonly from: readonly [number, number, number, number];
   readonly to: readonly [Lab, Lab, Lab, Lab, Lab];
@@ -23,12 +36,14 @@ const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 type Row = readonly [number, number, number];
 
+/** Linear sRGB to XYZ (D65), row by row: X, Y, Z. */
 const TO_XYZ: readonly [Row, Row, Row] = [
   [0.4124564, 0.3575761, 0.1804375],
   [0.2126729, 0.7151522, 0.072175],
   [0.0193339, 0.119192, 0.9503041],
 ];
 
+/** XYZ (D65) to linear sRGB, row by row: r, g, b. */
 const TO_RGB: readonly [Row, Row, Row] = [
   [3.2404542, -1.5371385, -0.4985314],
   [-0.969266, 1.8760108, 0.041556],
@@ -37,8 +52,10 @@ const TO_RGB: readonly [Row, Row, Row] = [
 
 const dot = (row: Row, v: Row) => row[0] * v[0] + row[1] * v[1] + row[2] * v[2];
 
+/** `row` as a GLSL `vec3` literal, for `DYE_GLSL`. */
 const vec3Of = (row: Row) => `vec3(${row.join(', ')})`;
 
+/** sRGB `r`, `g`, `b` (0..1 each) in Lab. */
 const labOf = (r: number, g: number, b: number): Lab => {
   const l: Row = [toLinear(r), toLinear(g), toLinear(b)];
   const fx = labF(dot(TO_XYZ[0], l) / WHITE[0]);
@@ -47,6 +64,7 @@ const labOf = (r: number, g: number, b: number): Lab => {
   return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
 };
 
+/** Lab `c` in sRGB, 0..1 a channel, clamped to the gamut channel by channel. */
 const srgbOfLab = ([L, a, b]: Lab): readonly [number, number, number] => {
   const fy = (L + 16) / 116;
   const xyz: Row = [WHITE[0] * labFi(fy + a / 500), labFi(fy), WHITE[2] * labFi(fy - b / 200)];
@@ -57,23 +75,33 @@ const srgbOfLab = ([L, a, b]: Lab): readonly [number, number, number] => {
   ];
 };
 
+/** Hex colour `hex` in Lab. */
 const labOfHex = (hex: Hex): Lab => {
   const [r, g, b] = channelsOf(hex);
   return labOf(r / 255, g / 255, b / 255);
 };
 
+/** Lightness L* of an 8-bit sRGB colour: the coordinate the dye keys on. */
 export const lightnessOf = (r: number, g: number, b: number): number =>
   labOf(r / 255, g / 255, b / 255)[0];
 
+/** Whether lightnesses `ls` rise strictly, each over the one before. */
 const rises = (ls: ReadonlyArray<number>) =>
   ls.every((l, i) => i === 0 || l > (ls[i - 1] ?? Infinity));
 
+/** Ramp `r` in Lab: shade, base, light. */
 const labsOf = (r: Ramp): readonly [Lab, Lab, Lab] => [
   labOfHex(r.shade),
   labOfHex(r.base),
   labOfHex(r.light),
 ];
 
+/**
+ * The Lab of ramp `drawn` (shade, base, light) as a part declares it is drawn
+ * in, or why no dye can map from it: it does not rise in lightness from above
+ * the ink cut to white. A puppet's load checks each part's declared ramp with
+ * it (`puppet/load.ts`), before any draw dyes the part.
+ */
 export const drawnLabs = (drawn: Ramp): Result.Result<readonly [Lab, Lab, Lab], string> => {
   const labs = labsOf(drawn);
   if (!rises([INK_CUT, ...labs.map((c) => c[0]), 100]))
@@ -83,6 +111,7 @@ export const drawnLabs = (drawn: Ramp): Result.Result<readonly [Lab, Lab, Lab], 
   return Result.succeed(labs);
 };
 
+/** The dye from the drawn ramp's Lab (`drawnLabs`) onto `cloth`'s ramp, or why not: `cloth` does not rise in lightness from above the ink cut. */
 const clothKnots = (
   [ds, db, dl]: readonly [Lab, Lab, Lab],
   cloth: Ramp,
@@ -99,15 +128,27 @@ const clothKnots = (
   });
 };
 
+/**
+ * The dye that wears a part drawn in ramp `drawn` in a cloth of ramp `cloth`
+ * (the look's `shaded()` of the cloth's colour), or why not: either ramp
+ * does not rise in lightness from above the ink cut (shade, base, light),
+ * so no map keeps the line and the folds' order both.
+ */
 export const dyeKnots = (drawn: Ramp, cloth: Ramp): Result.Result<Dye, string> =>
   Result.flatMap(drawnLabs(drawn), (labs) => clothKnots(labs, cloth));
 
+/** The Lab `t` (0..1) of the way from `p` to `q`. */
 const mixLab = (p: Lab, q: Lab, t: number): Lab => [
   p[0] + (q[0] - p[0]) * t,
   p[1] + (q[1] - p[1]) * t,
   p[2] + (q[2] - p[2]) * t,
 ];
 
+/**
+ * The colour `dye` gives an 8-bit sRGB pixel, 8-bit sRGB: kept at or under the
+ * ink cut, else its lightness's place between the knots it lies between
+ * carried onto the cloth's Lab there (white past the light).
+ */
 export const dyedRgb = (
   dye: Dye,
   r: number,
@@ -130,6 +171,7 @@ export const dyedRgb = (
   return [Math.round(out[0] * 255), Math.round(out[1] * 255), Math.round(out[2] * 255)];
 };
 
+/** Pixel `i` of RGBA bytes `rgba` dyed in place by `dye`; its alpha kept. */
 export const dyePixel = (dye: Dye, rgba: Uint8Array | Uint8ClampedArray, i: number) => {
   const o = i * 4;
   const [r, g, b] = dyedRgb(dye, rgba[o] ?? 0, rgba[o + 1] ?? 0, rgba[o + 2] ?? 0);
@@ -138,17 +180,25 @@ export const dyePixel = (dye: Dye, rgba: Uint8Array | Uint8ClampedArray, i: numb
   rgba[o + 2] = b;
 };
 
+/** `raster` dyed by `dye`, pixel by pixel, as a new raster: what the shader draws of it. */
 export const dyedRaster = (dye: Dye, raster: Raster): Raster => {
   const rgba = Uint8Array.from(raster.rgba);
   for (let i = 0; i < raster.width * raster.height; i++) dyePixel(dye, rgba, i);
   return { width: raster.width, height: raster.height, rgba };
 };
 
+/** `dye`'s uniforms as `DYE_GLSL` reads them: the knots' lightness (`dyeFrom`) and their Lab (`dyeTo`, five vec3). */
 export const dyeUniforms = (dye: Dye) => ({
   from: Float32Array.from(dye.from),
   to: Float32Array.from(dye.to.flat()),
 });
 
+/**
+ * The dye in GLSL ES 3.00, `dyePixel` step for step: `vec3 dyed(vec3 c)` takes
+ * and gives sRGB 0..1, keyed on the uniforms `dyeFrom` and `dyeTo`
+ * (`dyeUniforms`). Its constants (the white, the two matrices, `EPSILON` and
+ * `KAPPA`) are the CPU's own, written in from the same values.
+ */
 export const DYE_GLSL = `
 uniform vec4 dyeFrom; uniform vec3 dyeTo[5];
 const vec3 DYE_WHITE = ${vec3Of(WHITE)};

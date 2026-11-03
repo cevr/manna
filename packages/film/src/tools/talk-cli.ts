@@ -6,8 +6,10 @@ import { type CutSection, TALK_FORMATS, type TalkTake } from '../core/talk.ts';
 import { NotATalk } from './errors.ts';
 import { FilmRepo, type LoadedTalk } from './film-repo.ts';
 
+/** Words to a printed line. */
 const PER_LINE = 12;
 
+/** The talk's title, its format, and how long it plays against the format's length. */
 const lengthLine = (talk: LoadedTalk): string => {
   const format = TALK_FORMATS[talk.talk.format];
   const { min, max } = format.seconds;
@@ -16,6 +18,7 @@ const lengthLine = (talk: LoadedTalk): string => {
   return `${talk.talk.title}  ${format.title}  plays ${plays.toFixed(2)}s, ${fit} its ${min}–${max}s`;
 };
 
+/** `words` as lines of `[i]word`, `PER_LINE` a line, each struck one `[i]~word~`. */
 const wordLines = (
   take: TalkTake,
   indices: ReadonlyArray<number>,
@@ -34,6 +37,7 @@ const wordLines = (
   );
 };
 
+/** A section's head line and its words, kept and struck. */
 const sectionLines = (talk: LoadedTalk, section: CutSection): ReadonlyArray<string> => {
   const edit = talk.talk.sections.find((s) => s.id === section.id);
   const from = edit?.from ?? 0;
@@ -99,6 +103,7 @@ const words = Command.make(
   ),
 );
 
+/** `film talk`, over the films folder's talks. */
 export const talk = Command.make('talk').pipe(
   Command.withDescription("A talk's edit, read as it plays"),
   Command.withSubcommands([words]),

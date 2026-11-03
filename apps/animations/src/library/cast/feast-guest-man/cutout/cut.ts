@@ -7,8 +7,10 @@ import { JOINTS } from './joints.ts';
 
 export { FRAMES, JOINTS };
 
+/** His chin's row: the head is every row above it, the top of his headcloth's drape with it, as the feast mother's veil is cut; the drape below rides his torso. */
 const CHIN = 267;
 
+/** His hip's row, at his lap below his hands: the robe is every row below it that his arms leave, with his stool, his sandals and his mantle's lower ends. */
 const HIP = 545;
 
 const POSES_1: PartCut = {
@@ -67,16 +69,25 @@ const POSES_1: PartCut = {
   ],
 };
 
+/** His sheet's outline ink, the darkest 1 % of his kept view (median 16,4,0). */
 const INK = [16, 4, 0, 255] as const;
 
+/** Where his body's sides run under his wide sleeves: out to his shoulders and robe, not out to the sleeves' outer edges. */
 const SIDES = sides({
   pronoun: 'his',
   lower: 'robe',
   cloth: 'the walnut-brown mantle and its soft folds',
 });
 
+/** What his view keeps as it is. */
 const KEEP = `Keep every other pixel exactly as it is: the same white headcloth with its indigo band and its drape, face, mantle, robe, stool, sandals, contact shadow, size, position and framing.`;
 
+/**
+ * His view's moving parts (whose areas are painted magenta and repainted
+ * beneath), and the words okra repaints them by: what lies under them, in the
+ * sheet's own style. As the lead's seated view's prompt, it names no grain:
+ * okra reads that sentence as speckle on the lap.
+ */
 const HIDDEN_ENTRIES = {
   'poses-1': {
     moving: ['armRight', 'armLeft'],

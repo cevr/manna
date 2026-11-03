@@ -26,6 +26,7 @@ const tree = () =>
     ['/src/unused.ts', text('export const u = 1;')],
   ]);
 
+/** The tree, with `b.ts` loading a module by a variable path. */
 const loader = () =>
   new Map([...tree(), ['/src/b.ts', text('export const load = (f: string) => import(f);')]]);
 

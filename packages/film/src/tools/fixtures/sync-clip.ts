@@ -10,10 +10,12 @@ import {
   VideoSampleSource,
 } from 'mediabunny';
 
+/** The clip's long and short sides, and its sound's rate. */
 const LONG = 320;
 const SHORT = 180;
 const RATE = 48_000;
 
+/** The two cameras a talk is shot on: their picture's codec, their container and which way up. */
 const CAMERAS = {
   iphone: {
     codec: 'hevc',
@@ -29,25 +31,39 @@ const CAMERAS = {
   },
 } as const;
 
+/** A clapper's clip: how long, at what rate, which frame flashes, and how its clocks sit. */
 export interface SyncClip {
+  /** Whose file it is (above). */
   readonly camera: keyof typeof CAMERAS;
   readonly frames: number;
   readonly fps: number;
+  /** The frame that flashes, the click on its first moment. */
   readonly flash: number;
+  /** When the picture's first frame shows, seconds after the sound's zero. */
   readonly pictureStart: number;
+  /** Whether frames fall off their lattice, each by up to three tenths of a frame, irregularly. */
   readonly variable: boolean;
+  /**
+   * Where someone speaks, as `[from, to]` seconds on the sound's clock (where
+   * the click is put): a tone at a speaking level stands for the voice, so a
+   * talk's take can be cut on it. None by default: a clapper's clip is silent
+   * but for its click.
+   */
   readonly speech?: ReadonlyArray<readonly [number, number]>;
 }
 
+/** When frame `n` of `clip` shows, on the file's clock. */
 const frameTime = (clip: SyncClip, n: number): number =>
   clip.pictureStart + (n + Number(clip.variable) * 0.3 * Math.sin(n * 2.1)) / clip.fps;
 
+/** Frame `n`'s picture as I420: white when it flashes, else near black; the chroma grey. */
 const picture = (clip: SyncClip, n: number): Uint8Array => {
   const bytes = new Uint8Array(LONG * SHORT * 1.5).fill(128);
   bytes.fill([20, 235][Number(n === clip.flash)] ?? 20, 0, LONG * SHORT);
   return bytes;
 };
 
+/** The sound: a quiet hiss, a 220 Hz tone at 0.1 where `speech` says, and a 5 ms click when the flash shows. */
 const sound = (clip: SyncClip, seconds: number): Float32Array => {
   const out = new Float32Array(Math.round(seconds * RATE));
   for (let i = 0; i < out.length; i += 1) out[i] = 0.001 * Math.sin(i * 0.37);
@@ -59,6 +75,7 @@ const sound = (clip: SyncClip, seconds: number): Float32Array => {
   return out;
 };
 
+/** `clip` as its camera writes it: its picture in the camera's codec and container, and its AAC sound. */
 export const syncClip = (clip: SyncClip): Effect.Effect<Uint8Array> =>
   Effect.gen(function* () {
     const camera = CAMERAS[clip.camera];

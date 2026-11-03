@@ -21,6 +21,7 @@ import {
   unloaded,
 } from './redfirst/report.js';
 
+/** A step that did not do its work: the command, its exit code and what it printed. */
 class StepFailed extends Schema.TaggedError<StepFailed>()('StepFailed', {
   command: Schema.String,
   code: Schema.Finite,
@@ -35,6 +36,7 @@ class StepFailed extends Schema.TaggedError<StepFailed>()('StepFailed', {
 const text = <E>(stream: Stream.Stream<Uint8Array, E>) =>
   Stream.mkString(Stream.decodeText(stream));
 
+/** A command's stdout, its stderr and its exit code. */
 const exec = (command: string, args: ReadonlyArray<string>, cwd: string) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner;
@@ -51,6 +53,7 @@ const exec = (command: string, args: ReadonlyArray<string>, cwd: string) =>
 const failed = (command: string, args: ReadonlyArray<string>, code: number, output: string) =>
   StepFailed.make({ command: [command, ...args].join(' '), code, output });
 
+/** A command's stdout, or StepFailed when it exits non-zero. */
 const run = (command: string, args: ReadonlyArray<string>, cwd: string) =>
   Effect.flatMap(exec(command, args, cwd), ({ stdout, stderr, code }) => {
     if (code === 0) return Effect.succeed(stdout);
@@ -59,9 +62,11 @@ const run = (command: string, args: ReadonlyArray<string>, cwd: string) =>
 
 const lines = (out: string) => out.split('\n').filter((line) => line !== '');
 
+/** Test code a test file may lean on: its fixtures and its package's doubles. */
 const isTestCode = (file: string) =>
   isTest(file) || /(^|\/)fixtures\//.test(file) || file.endsWith('/testing.ts');
 
+/** A scratch worktree of `base`, removed with the scope. */
 const worktree = (root: string, base: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -73,6 +78,11 @@ const worktree = (root: string, base: string) =>
     return dir;
   });
 
+/**
+ * The package a file's tests run in, as the prefix its repo paths start with:
+ * the nearest folder above it with a package.json (`packages/film/`), or ''
+ * for the repo's root.
+ */
 const packageOf = Effect.fn('redfirst.packageOf')(function* (root: string, file: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -84,11 +94,16 @@ const packageOf = Effect.fn('redfirst.packageOf')(function* (root: string, file:
   return '';
 });
 
+/**
+ * The probe run beside each package's files: one case that always loads, for
+ * Bun writes no report when no file of a run loads.
+ */
 const PROBE = {
   file: 'redfirst-probe.test.ts',
   text: "import { test } from 'bun:test';\n\ntest('probe', () => {});\n",
 };
 
+/** The cases of `files` (repo paths in the package `prefix` names) run in `tree`. */
 const casesIn = Effect.fn('redfirst.casesIn')(function* (
   tree: string,
   prefix: string,
@@ -117,6 +132,7 @@ const casesIn = Effect.fn('redfirst.casesIn')(function* (
   return casesOf(junit.value, prefix).filter((c) => !c.file.endsWith(PROBE.file));
 });
 
+/** Every case of `files` run in `tree`, package by package. */
 const casesOfFiles = Effect.fn('redfirst.casesOfFiles')(function* (
   root: string,
   tree: string,
@@ -141,6 +157,7 @@ const redfirst = Effect.fn('redfirst')(function* (baseRef: string) {
   const kept = statuses.filter((c) => ['A', 'M', 'R'].includes(c.status));
   const changed = kept.map((c) => c.file);
   const tests = changed.filter((file) => isTest(file) && !isBrowserTier(file));
+  /** A test file's path at the base: its old one when the branch renamed it. */
   const fromOf = new Map(kept.map((c) => [c.file, c.from]));
   const toOf = new Map(kept.map((c) => [c.from, c.file]));
   const skipped = skippedOf(statuses);

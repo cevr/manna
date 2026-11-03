@@ -8,9 +8,11 @@ import { contains } from '../../utils/dom.ts';
 import { stopEvent } from '../utils/event.ts';
 
 interface UseTypeaheadProps {
+  /** The items' labels, in list order. */
   listRef: { current: Array<string | null> };
   activeIndex: number | null;
   onMatch?: ((index: number, event: KeyboardEvent) => void) | undefined;
+  /** The items' elements: a hidden or `:disabled` item is never matched. */
   elementsRef?: { current: Array<HTMLElement | null> } | undefined;
   onTyping?: ((isTyping: boolean) => void) | undefined;
   resetMs?: number | undefined;

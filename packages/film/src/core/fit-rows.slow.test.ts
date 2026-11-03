@@ -5,6 +5,7 @@ import { type Box, RENDER_GROUND, SHEET_GROUND, paint } from './fixtures/fit/fig
 
 const SHEET = paint({ ground: SHEET_GROUND });
 
+/** Where a strip `thick` across and `long` along lies: against the body's right line or 5 px off it (upright), against its foot's line or 5 px under it (across). */
 const PLACES = {
   'upright, against the line': (t: number, l: number): Box => [47, 47 + t, 40, 40 + l],
   'upright, cut loose': (t: number, l: number): Box => [52, 52 + t, 40, 40 + l],

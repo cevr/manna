@@ -2,11 +2,18 @@ import type { Sound } from '@manna/film/core';
 
 import { milk } from './scenes/milk.ts';
 
+/**
+ * Where each of the drinking row's four (the baby, the toddler, the child
+ * and the grown villager) starts coming in, seconds after the `row` cue
+ * starts: the scene staggers them (`f.stagger`), so their starts spread
+ * evenly over the cue's `stagger` share of its `dur`, the first at its start.
+ */
 const comingIn = (count: number): ReadonlyArray<number> => {
   const { dur, stagger } = milk.timeline.row;
   return Array.from({ length: count }, (_, i) => (dur * stagger * i) / (count - 1));
 };
 
+/** What no option plays: the epic, the electronic and the drum kit. */
 const AVOID = [
   'drums',
   'percussion',
@@ -20,12 +27,21 @@ const AVOID = [
   'choir',
 ];
 
+/** The instruments one option turns to past act 1: its melody, its bed and its low end. */
 interface Voicing {
   readonly melody: string;
   readonly bed: string;
   readonly low: string;
 }
 
+/**
+ * The score past act 1, in one option's instruments: the API composes the
+ * whole film in one plan, each movement 3 to 120 s, so every later act has a
+ * movement now, shaped by the script's arc and refined when its scenes are
+ * drawn. The low end swells on the problem (`teeth`, `math`) and on the
+ * climax (`priest`); the landing (`thesis`) is the one stretch the music
+ * plays alone.
+ */
 const later = ({ melody, bed, low }: Voicing) => [
   {
     from: 'stones',

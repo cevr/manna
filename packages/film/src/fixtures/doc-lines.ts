@@ -9,6 +9,7 @@ import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { docLines, readAllDocs } from './doc-anchors.ts';
 
+/** How much of a line the report shows. */
 const SHOWN = 160;
 
 const docLinesOf = Effect.fn('docLines.run')(function* (base: string) {

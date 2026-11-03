@@ -35,6 +35,7 @@ const FILM = [
   '',
 ].join('\n');
 
+/** The lines as a page reads them, their words and their marks: the line a mark write is made on. */
 const DANIEL = Option.some<LineRead>({
   spoken: 'Daniel was taken. He was young.',
   marks: [

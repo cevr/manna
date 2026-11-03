@@ -1,5 +1,6 @@
 import { Schema } from 'effect';
 
+/** A ustar archive's files, in order: each name and its bytes. */
 export const filesIn = (tar: Uint8Array) => {
   const files: Array<readonly [string, Uint8Array]> = [];
   for (let at = 0; at + 512 <= tar.length;) {
@@ -21,6 +22,7 @@ const decodeTruth = Schema.decodeUnknownSync(
   ),
 );
 
+/** Each sample's seed in a shard, by `<split>/<i>`, read from its truth JSON. */
 export const seedsIn = (tar: Uint8Array): Readonly<Record<string, number>> =>
   Object.fromEntries(
     filesIn(tar)

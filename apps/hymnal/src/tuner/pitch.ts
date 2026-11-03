@@ -1,26 +1,75 @@
+/**
+ * The pitch of one frame of sound, by McLeod's pitch method (the
+ * normalised square difference function, NSDF).
+ *
+ * The frame's autocorrelation comes from its power spectrum (two real
+ * FFTs of the zero-padded frame), so a 2048-sample frame costs a few
+ * thousand butterflies, not the million multiplies of the direct sum. The
+ * NSDF normalises each lag by the energy of the samples it overlaps, so a
+ * decaying pluck still reads near 1 at its period. The period is the first
+ * key maximum within `PEAK_SHARE` of the highest: a low string's strong
+ * second partial makes a peak at half the period, lower than the period's
+ * own, and the share keeps the reading on the fundamental. When strong even
+ * partials lift the half-period peak past the share, the key at the double
+ * lag still stands higher by the odd partials' share, so a candidate whose
+ * double rises `OCTAVE_RISE` above it gives way to the double. A parabola
+ * through each peak and its neighbours places it between samples and gives
+ * its height there.
+ *
+ * Silence, a whisper (RMS under `QUIET_RMS`) and a frame whose clearest
+ * period stays under `CLARITY` (noise) have no pitch.
+ */
+
 import { Array as Arr, Option } from 'effect';
 
+/** The lowest pitch read: under a low E tuned down a whole tone (73 Hz). */
 const MIN_HZ = 60;
+/** The highest pitch read: past the high E's 12th fret (659 Hz) with room. */
 const MAX_HZ = 1200;
+/**
+ * The longest lag read, as a share of the frame. A 2048-sample frame at
+ * 96 kHz holds under two periods of a low E, so half the frame (the lowest
+ * pitch `rate / 1024`, 94 Hz there) misses it; at 0.8 the lag reaches
+ * `rate / MIN_HZ` at every rate up to 98 kHz, and the NSDF normalises the
+ * shorter overlap. At 44.1 and 48 kHz `rate / MIN_HZ` is the shorter of the
+ * two, so the share changes nothing there.
+ */
 const LAG_SHARE = 0.8;
+/** A frame quieter than this RMS (full scale 1) is silence or a whisper. */
 const QUIET_RMS = 0.004;
+/** The highest NSDF peak must reach this, or the frame is noise. */
 const CLARITY = 0.7;
+/** The period is the first key maximum at or above this share of the highest. */
 const PEAK_SHARE = 0.9;
+/**
+ * How far the NSDF must rise from a candidate lag to its double for the
+ * double to be the period. At half the true period each odd partial counts
+ * against the NSDF and each even one for it, so the double stands higher by
+ * twice the odd partials' share of the power: 0.047 at the least when the
+ * fundamental is 0.3 of the loudest partial and the other odd ones near
+ * silent. At the true period the double stands no higher (a decay, noise and
+ * a stiff string each lower it), so a rise of 0.02 sits between the two.
+ */
 const OCTAVE_RISE = 0.02;
+/** The double's key is looked for within this share of the doubled lag (a stiff string's period blurs). */
 const OCTAVE_REACH = 0.02;
 
+/** Scratch for one padded size: the FFT's tables and the buffers each frame reuses. */
 interface Plan {
   readonly size: number;
   readonly half: number;
   readonly reversed: Uint32Array;
+  /** e^(-2πi j / half), j < half / 2: the half-size complex FFT's twiddles. */
   readonly cos: Float64Array;
   readonly sin: Float64Array;
+  /** e^(-2πi k / size), k ≤ half: the real FFT's split twiddles. */
   readonly splitCos: Float64Array;
   readonly splitSin: Float64Array;
   readonly re: Float64Array;
   readonly im: Float64Array;
   readonly signal: Float64Array;
   readonly power: Float64Array;
+  /** The real part of the last real FFT, bins 0 to half. */
   readonly spectrumRe: Float64Array;
   readonly spectrumIm: Float64Array;
 }
@@ -66,6 +115,7 @@ const makePlan = (size: number): Plan => {
   return plan;
 };
 
+/** The plan for `size`, made once and kept. */
 const planFor = (size: number): Plan =>
   Option.getOrElse(Option.fromNullishOr(plans.get(size)), () => {
     const plan = makePlan(size);
@@ -73,6 +123,7 @@ const planFor = (size: number): Plan =>
     return plan;
   });
 
+/** The in-place radix-2 FFT of `plan.re`/`plan.im` (length `plan.half`). */
 const fft = (plan: Plan) => {
   const { half, reversed, cos, sin, re, im } = plan;
   for (let i = 0; i < half; i++) {
@@ -109,6 +160,11 @@ const fft = (plan: Plan) => {
   }
 };
 
+/**
+ * The spectrum of the real sequence `input` (length `plan.size`), bins 0 to
+ * `plan.half`, into `plan.spectrumRe`/`plan.spectrumIm`: one half-size
+ * complex FFT of the even and odd samples, then split.
+ */
 const realSpectrum = (plan: Plan, input: Float64Array) => {
   const { half, re, im, splitCos, splitSin, spectrumRe, spectrumIm } = plan;
   for (let k = 0; k < half; k++) {
@@ -139,12 +195,14 @@ interface Key {
   readonly value: number;
 }
 
+/** The smallest power of two at or above `n`: the padded size the FFT needs. */
 const paddedSize = (n: number) => {
   let size = 2;
   while (size < n) size *= 2;
   return size;
 };
 
+/** `frame` less its mean into `signal`, zero past it; returns the centred frame's energy. */
 const centre = (frame: Float32Array, signal: Float64Array) => {
   const length = frame.length;
   let mean = 0;
@@ -160,6 +218,11 @@ const centre = (frame: Float32Array, signal: Float64Array) => {
   return energy;
 };
 
+/**
+ * The autocorrelation r(τ) = IFFT(|X|²) of `plan.signal`, times the size,
+ * into `plan.spectrumRe`: the power spectrum is real and even, so its
+ * inverse is the real part of its forward FFT over the size.
+ */
 const autocorrelate = (plan: Plan) => {
   const { signal, power, spectrumRe, spectrumIm, half, size } = plan;
   realSpectrum(plan, signal);
@@ -171,11 +234,16 @@ const autocorrelate = (plan: Plan) => {
   realSpectrum(plan, power);
 };
 
+/** NSDF n(τ) = 2 r(τ) / m(τ), from the size-scaled r(τ); 0 where no energy overlaps. */
 const nsdfAt = (scaledCorrelation: number, overlap: number, size: number) => {
   if (!(overlap > 0)) return 0;
   return (2 * (scaledCorrelation / size)) / overlap;
 };
 
+/**
+ * The NSDF at lags 0 to `maxLag + 1`, m(τ) the energy of the samples lag τ
+ * overlaps, each lag's taken from the last.
+ */
 const nsdfValues = (plan: Plan, energy: number, length: number, maxLag: number) => {
   const { signal, spectrumRe, size } = plan;
   const values = new Float64Array(maxLag + 2);
@@ -188,6 +256,7 @@ const nsdfValues = (plan: Plan, energy: number, length: number, maxLag: number) 
   return values;
 };
 
+/** The key maxima's lags: each positive lobe's peak after the first negative lobe. */
 const lobePeaks = (values: Float64Array, maxLag: number) => {
   const lobes: Array<number> = [];
   let seenNegative = false;
@@ -215,6 +284,11 @@ const lobePeaks = (values: Float64Array, maxLag: number) => {
   return lobes;
 };
 
+/**
+ * A parabola through the peak at `lag` and its neighbours places the key
+ * between samples and gives its height there: a short period's peak is
+ * sharp, and the sample nearest it can fall well under it.
+ */
 const refine = (values: Float64Array, lag: number): Key => {
   const before = values[lag - 1] ?? 0;
   const at = values[lag] ?? 0;
@@ -225,6 +299,10 @@ const refine = (values: Float64Array, lag: number): Key => {
   return { lag: lag + offset, value: at - ((before - after) * offset) / 4 };
 };
 
+/**
+ * The key maximum at twice `key`'s lag when it stands `OCTAVE_RISE` above
+ * `key`: then `key` is half the period (an octave up), not the period.
+ */
 const undertoneOf = (keys: ReadonlyArray<Key>, key: Key): Option.Option<Key> => {
   const target = 2 * key.lag;
   const reach = Math.max(2, Math.ceil(OCTAVE_REACH * target));
@@ -238,12 +316,14 @@ const undertoneOf = (keys: ReadonlyArray<Key>, key: Key): Option.Option<Key> => 
   return found;
 };
 
+/** `key`, or the period it is a sub-multiple of: the key at its double lag stands clearly higher. */
 const settle = (keys: ReadonlyArray<Key>, key: Key): Key =>
   Option.match(undertoneOf(keys, key), {
     onNone: () => key,
     onSome: (undertone) => settle(keys, undertone),
   });
 
+/** The period's key: the first at or above `PEAK_SHARE` of the highest, settled; none when the highest is under `CLARITY`. */
 const periodKey = (keys: ReadonlyArray<Key>, minLag: number): Option.Option<Key> => {
   let highest = 0;
   for (const key of keys) if (key.lag >= minLag && key.value > highest) highest = key.value;
@@ -253,6 +333,7 @@ const periodKey = (keys: ReadonlyArray<Key>, minLag: number): Option.Option<Key>
   );
 };
 
+/** The fundamental frequency of `frame` (samples at `sampleRate` Hz) in Hz, or `None` when it has none. */
 export const detect = (frame: Float32Array, sampleRate: number): Option.Option<number> => {
   const length = frame.length;
   if (length < 64 || !(sampleRate > 0)) return Option.none();

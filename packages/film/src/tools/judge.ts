@@ -46,31 +46,41 @@ import { Counsel } from './counsel.ts';
 import { FilmRepo, type FilmName, placeFilm } from './film-repo.ts';
 import { Media } from './media.ts';
 
+/** One version of the choice: its name, whether it is the owner's pick, and how its stills are made. */
 interface Version<E, R> {
   readonly name: string;
   readonly picked: boolean;
   readonly detail: string;
+  /** Write the still of each of `moments` to the file at the same place in `files`. */
   readonly draw: (
     moments: Arr.NonEmptyReadonlyArray<JudgeMoment>,
     files: ReadonlyArray<string>,
   ) => Effect.Effect<void, E, R>;
 }
 
+/** A choice the judge can judge here: its point id and its versions. */
 interface Choice<E, R> {
   readonly point: string;
+  /** What the versions differ in, naming none of them: `look ground`. */
   readonly title: string;
   readonly versions: ReadonlyArray<Version<E, R>>;
 }
 
+/** What a judge is asked. */
 interface JudgeAsk<TE, TR> {
   readonly film: FilmName;
   readonly scene: string;
+  /** The choice point to judge (`look:ground`, `render:scenes:roof`); none to find the scene's one. */
   readonly point: Option.Option<string>;
+  /** Draw the captions into every still. */
   readonly captions: boolean;
+  /** The app's rules the packet quotes from (`FilmApp.judge`). */
   readonly rules: ReadonlyArray<JudgeRule>;
+  /** The lab's look route as the caller reaches it (`takeLook`): a look's levels are drawn through it. */
   readonly take: (post: LookPost) => Effect.Effect<LookTaken, TE, TR>;
 }
 
+/** What a judge made: its folder, its files, the key and the ranking. */
 interface Judged {
   readonly dir: string;
   readonly verdict: string;
@@ -80,15 +90,22 @@ interface Judged {
   readonly ranking: Ranking;
 }
 
+/** The judge's folder's stamp for now: `20261004T151200Z`. */
 const stampOf = (now: DateTime.Utc) =>
   DateTime.formatIso(now)
     .replace(/\.\d+Z$/, 'Z')
     .replace(/[-:]/g, '');
 
+/** The most draws a judge makes for a folder of its own before it gives up. */
 const FOLDER_TRIES = 8;
 
 const isAlreadyExists = (error: PlatformError) => error.reason._tag === 'AlreadyExists';
 
+/**
+ * A folder of this run's own under `under`: `<scene>-<stamp>-<draw>`, made
+ * by this run alone (a folder made only if there is none), drawn again on
+ * the rare clash, so two judges in one second never share one.
+ */
 const runFolder = Effect.fnUntraced(function* (under: string, scene: string, now: DateTime.Utc) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -103,8 +120,10 @@ const runFolder = Effect.fnUntraced(function* (under: string, scene: string, now
 
 const encodeKey = Schema.encodeSync(JudgeKeyJson);
 
+/** A still's place in the judge's folder: `stills/B-03.jpg`. */
 const stillName = (label: string, i: number) => `${label}-${String(i + 1).padStart(2, '0')}.jpg`;
 
+/** The scene's render set's videos at `address`, newest variant order aside: main first, then by name. */
 const videosAt = (catalogue: Catalogue, address: Address) =>
   catalogue.renders
     .filter((r) => r.kind === 'video' && addressKey(r.address) === addressKey(address))
@@ -114,8 +133,14 @@ const videosAt = (catalogue: Catalogue, address: Address) =>
         a.variant.localeCompare(b.variant),
     );
 
+/** A point id read, or why it names no point. */
 const decodePoint = Schema.decodeUnknownOption(PointId);
 
+/**
+ * Judge one picture choice at one scene: draw each version's stills at the
+ * same moments, shuffle them under labels, send the packet to the counsel and
+ * write its unblinded verdict. Writes only under `out/<film>/judge/`.
+ */
 export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>) {
   const started = yield* Clock.currentTimeMillis;
   const fs = yield* FileSystem.FileSystem;
@@ -143,6 +168,7 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
     size: JUDGE_SIZE,
   } as const;
 
+  /** Each level of the look `name`, drawn through the easel as a wedge. */
   const lookChoice = (name: string, look: Looks[string]): Choice<TE | PlatformError, TR> => ({
     point: pointIdOf({ _tag: 'Look', name }),
     title: `look \`${name}\` (its level)`,
@@ -165,6 +191,7 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
     })),
   });
 
+  /** Each video of the render set at `address`, its frames cut at the scene's moments. */
   const renderChoice = (address: Address): Choice<JudgePointUnjudged | MediaFailed, never> => {
     const point = pointIdOf({ _tag: 'Render', address });
     return {
@@ -218,6 +245,7 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
 
   type AnyChoice = Choice<TE | PlatformError | JudgePointUnjudged | MediaFailed, TR>;
 
+  /** The choice `ref` names, when it is one the judge sees at this scene. */
   const choiceOf = (id: string, ref: PointRef): Result.Result<AnyChoice, JudgePointUnjudged> => {
     if (ref._tag === 'Look')
       return Option.match(Option.fromUndefinedOr(loaded.looks[ref.name]), {

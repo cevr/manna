@@ -1,3 +1,26 @@
+/**
+ * The key and capo dials, over the bar or in the player sheet, and the
+ * model they share with the bar's key button (`thumb.ts`), bound to the
+ * stores: chords on or off for every hymn, and the page's hymn's move. The
+ * key dial turns through the twelve sounding keys and wraps, the printed
+ * key marked; the capo dial runs from 0 to 11 and stops at each end, each
+ * fret over the key played there, the open keys marked. While the move is
+ * not the hymn as printed, a chip resets it: the printed key and no capo. A
+ * double tap on either dial does the same. On the hymn page's dials, on a
+ * device with the ear, a Tuner chip leads the top row and opens the tuner.
+ *
+ * Over the bar a reset turns both rows home where the reader sees them,
+ * and the dials close `RESET_WAIT` ms after it. Any touch of the reader's
+ * in that wait (a dial, the key button, the page) ends it: a dial touched
+ * keeps the dials open, a tap on the key button closes them at once. A page
+ * turn and the page's going end it too. In the player sheet the dials stay.
+ * No dials stand while chords are off: turned off anywhere, they close.
+ *
+ * The held hymn's sounding key is observed by the player while chords are
+ * on; with chords off it plays as printed (`heardMove`). Capo changes only
+ * the reading; it never reaches the recording.
+ */
+
 import * as Chord from '@manna/hymnal/chord';
 import { useAtom, useAtomValue } from '@effect/atom-react';
 import { Clock, Duration, Effect, Fiber, Match, Option } from 'effect';
@@ -41,12 +64,19 @@ import {
 } from './thumb';
 import { TunerMark } from './TunerMark';
 
+/** What the dials read and set: the app's own stores, or a test's. */
 export const ChordReaderContext = createContext<ChordReader>(reader);
 
+/** How long the dials stay open over the bar after a reset: the turn home (300 ms), then the reader sees it rest. */
 export const RESET_WAIT = 600;
 
+/**
+ * The clock a reset's wait for its close runs on: the live clock, or a
+ * test's `TestClock`, which moves the wait without real time passing.
+ */
 export const ResetClock = createContext<Clock.Clock>(Clock.Clock.defaultValue());
 
+/** The key model of hymn `number`'s page, bound to the stores, and its printed key if it has chords. */
 export const useThumb = (number: number) => {
   const chordReader = use(ChordReaderContext);
   const [chords, setChords] = useAtom(chordReader.chords);
@@ -99,6 +129,7 @@ export const useThumb = (number: number) => {
   useLayoutEffect(() => {
     latest.current = apply;
   });
+  /** A touch of the reader's: it ends any wait for a reset's close. */
   const keep = useCallback(() => setWaiting(false), []);
   const send = useCallback((event: ThumbEvent) => {
     setWaiting(false);
@@ -130,8 +161,14 @@ export const useThumb = (number: number) => {
 
 export type BoundThumb = ReturnType<typeof useThumb>;
 
+/** The key a hymn with no chords steps from: a hold, a tap on the page and the switch's tap read none. */
 const noKey: Chord.Key = { tonic: 'C', minor: false };
 
+/**
+ * The events a hymn with no chords takes: a hold, a tap on the page, and a
+ * tap while chords are off, which turns them on (the key button is the
+ * chords switch on every hymn's page). With chords on a tap opens nothing.
+ */
 const keyless = (event: ThumbEvent, chords: boolean) =>
   ThumbEvent.$is('Hold')(event) ||
   ThumbEvent.$is('TapPage')(event) ||
@@ -139,6 +176,12 @@ const keyless = (event: ThumbEvent, chords: boolean) =>
 
 const sameMove = (a: Move, b: Move) => a.transpose === b.transpose && a.capo === b.capo;
 
+/**
+ * The dials `thumb` shows (`shownOf`), top to bottom, for a hymn printed in
+ * `printed`, each a row of the panel they stand on (`DialPanel`). They draw
+ * again only when the model does: a draw of the bar around them (a playback
+ * tick) hands them the same model, so the 24 stops are not drawn again.
+ */
 export const Dials = memo(function Dials({
   thumb,
   printed,
@@ -220,6 +263,12 @@ export const Dials = memo(function Dials({
   );
 });
 
+/**
+ * The Tuner, on the hymn page's dials on a device with the ear: a small
+ * upright tuning fork (`TunerMark`) and its word. A tap closes the dials (`onPress`, the model's `Tune`) and
+ * opens the tuner over the page at once, so the dials' close plays under it.
+ * It plays no cue: the tuner's path is silent.
+ */
 function TunerChip({ onPress }: { readonly onPress: () => void }) {
   const router = useRouter();
   return (
@@ -238,6 +287,7 @@ function TunerChip({ onPress }: { readonly onPress: () => void }) {
   );
 }
 
+/** Reset, while the move is not the hymn as printed: "↺ Db, no capo". */
 function ResetChip({
   printed,
   onPress,
@@ -257,6 +307,7 @@ function ResetChip({
   );
 }
 
+/** A key on the key dial, the current one in the chord colour: the printed key marked with a dot under it. */
 function KeyName({ stop, current }: { readonly stop: KeyStop; readonly current: boolean }) {
   return (
     <>
@@ -272,6 +323,7 @@ function KeyName({ stop, current }: { readonly stop: KeyStop; readonly current: 
   );
 }
 
+/** A fret on the capo dial: its number over the key played there, the current one and an open key in the chord colour. */
 function Fret({ stop, current }: { readonly stop: CapoStop; readonly current: boolean }) {
   return (
     <>

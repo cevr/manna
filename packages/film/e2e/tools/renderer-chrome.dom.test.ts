@@ -12,6 +12,7 @@ const Seen = Schema.fromJsonString(
   }),
 );
 
+/** A Chrome command line's flags, its executable's path (which has spaces) left out. */
 const flagsOf = (line: string) => line.split(/\s+/).filter((word) => word.startsWith('--'));
 
 describe("the renderer's Chrome on macOS", () => {
@@ -37,6 +38,7 @@ describe("the renderer's Chrome on macOS", () => {
           expect(flags).not.toContain('--disable-gpu');
           expect(flags).toContain('--use-angle=metal');
         }
+        /** The profile folder a Chrome was spawned with. */
         const dataDir = (chromes: ReadonlyArray<string>) =>
           flagsOf(chromes[0] ?? '').find((flag) => flag.startsWith('--user-data-dir='));
         expect(dataDir(seen.second)).toBe(dataDir(seen.first));

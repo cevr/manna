@@ -1,3 +1,15 @@
+/** §10 Milestone 9's "Core tests" bullet, clause by clause.
+ *
+ *  "the update policy is one portable policy — the compiled pin is the floor, a
+ *  newer runtime revision is offered, an artifact whose `schema_major` exceeds
+ *  the app's is refused; … offline yields the pinned floor with no error."
+ *
+ *  Every case here runs `decideUpdate` directly, because that is the *whole* of
+ *  the policy: a policy test that went through a transport would be testing the
+ *  transport. The transport's own claim — that it refuses the same overrun — is
+ *  `manifest-http.test.ts` plus `manifest-live.test.ts`.
+ */
+
 import { Effect, Option, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
@@ -36,18 +48,23 @@ const fetched = (entries: Record<string, ContentManifestEntry>): ManifestFetchOu
 
 const OFFLINE: ManifestFetchOutcome = { _tag: 'unavailable', detail: 'no network' };
 
+/** A build whose compiled pin is `content-v3`, published as generation 3. */
 const pinnedFloor = ContentFloor.make({
   pinned: Option.some(corpusRevision('content-v3')),
   pinnedGeneration: Option.some(corpusGeneration(3)),
   schemaMajor: TOPICS_SCHEMA_MAJOR,
 });
 
+/** The build that ships today: no topics release is published, so the pin is
+ *  `None` (`TOPICS_ARTIFACT_RELEASE`) and so is its generation. */
 const unpinnedFloor = ContentFloor.make({
   pinned: Option.none(),
   pinnedGeneration: Option.none(),
   schemaMajor: TOPICS_SCHEMA_MAJOR,
 });
 
+/** One decision over the topics corpus, so each case below reads as the three
+ *  facts it varies rather than as a four-field literal. */
 const decideTopics = (input: {
   readonly floor?: ContentFloor;
   readonly installed?: number;
@@ -84,6 +101,18 @@ describe('§3.6 the update policy', () => {
     }),
   );
 
+  /** **The downgrade clause** (round-3 F2).
+   *
+   *  A client that already holds generation 5 and reads a manifest naming
+   *  generation 4 is *ahead* of what the publisher currently names — the
+   *  ordinary state during a rollback. It must install nothing, and it must not
+   *  report an error either: nothing is wrong, the client is simply newer.
+   *
+   *  The tags here sort the wrong way on purpose. `content-v4` is
+   *  lexicographically below `content-v5`, so a comparison by revision string
+   *  would also pass; what fails without the generation is the *equality*
+   *  comparison the first cut used, which treated any different tag as newer
+   *  and offered this entry. */
   it.effect('never offers a generation below what is installed', () =>
     Effect.sync(() => {
       expect(
@@ -95,6 +124,9 @@ describe('§3.6 the update policy', () => {
     }),
   );
 
+  /** The same rule where the tags sort the *other* way — a re-published tag
+   *  that reads as "newer" by string and older by ordinal. Only the number
+   *  decides. */
   it.effect('never offers a generation below what is installed, whatever the tag sorts as', () =>
     Effect.sync(() => {
       expect(
@@ -106,6 +138,12 @@ describe('§3.6 the update policy', () => {
     }),
   );
 
+  /** The floor clause, and the one a naive "is it installed?" check gets wrong.
+   *
+   *  With nothing installed, a manifest entry at the compiled pin's generation
+   *  is not an offer: those exact bytes are what the local recipe already
+   *  supplies with no network, so offering them would send a client to the
+   *  release host to download content its own packaged copy contains. */
   it.effect('never offers the compiled pin itself, even with nothing installed', () =>
     Effect.sync(() => {
       expect(
@@ -116,6 +154,9 @@ describe('§3.6 the update policy', () => {
     }),
   );
 
+  /** And nothing *below* the pin either. A manifest naming an older release
+   *  than the one this build ships would otherwise talk a fresh machine into
+   *  downloading content worse than what it already has on disk. */
   it.effect('never offers below the compiled pin', () =>
     Effect.sync(() => {
       expect(
@@ -126,6 +167,8 @@ describe('§3.6 the update policy', () => {
     }),
   );
 
+  /** The other half of the floor: a manifest above the pin is offered when
+   *  nothing is installed, so a fresh install is not stranded on the floor. */
   it.effect('offers above the pin when nothing is installed yet', () =>
     Effect.sync(() => {
       expect(
@@ -136,6 +179,13 @@ describe('§3.6 the update policy', () => {
     }),
   );
 
+  /** **The fresh machine with no network** (round-3 F7).
+   *
+   *  Nothing installed, a compiled pin, and no manifest. §10 M9's clause is
+   *  "offline yields the pinned floor with no error" — and the case that
+   *  actually exercises "the pinned floor" is this one, where the pin is the
+   *  only content the host has. The decision is `offline`, it is a *value*, and
+   *  the floor it reports is the pin. */
   it.effect('a fresh machine with no network reports the pinned floor and no error', () =>
     Effect.sync(() => {
       const decision = decideTopics({ manifest: OFFLINE });
@@ -164,6 +214,8 @@ describe('§3.6 the update policy', () => {
     }),
   );
 
+  /** The gate runs before the comparison. A client somehow holding a too-new
+   *  generation must be told to update the app, not told it is current. */
   it.effect('refuses a too-new schema major even when it matches what is installed', () =>
     Effect.sync(() => {
       expect(
@@ -197,6 +249,8 @@ describe('§3.6 the update policy', () => {
     }),
   );
 
+  /** §3.6's cadence rule the other way round: an *older* schema is content this
+   *  build can still read, so it is not refused. */
   it.effect('accepts an artifact whose schema major is below this build', () =>
     Effect.sync(() => {
       expect(
@@ -224,6 +278,9 @@ describe('§3.6 the update policy', () => {
     }),
   );
 
+  /** A manifest that arrived and named nothing for this corpus is a *check that
+   *  succeeded*, not one that failed. Reporting `offline` here would tell a
+   *  client its network was down whenever the publisher had nothing new. */
   it.effect('reports up-to-date when the manifest carries no entry for the corpus', () =>
     Effect.sync(() => {
       expect(decideTopics({ installed: 3, manifest: fetched({}) })._tag).toBe('up-to-date');
@@ -234,6 +291,13 @@ describe('§3.6 the update policy', () => {
 describe('§3.6 the manifest wire model', () => {
   const decode = Schema.decodeUnknownEffect(Schema.fromJsonString(ContentManifest));
 
+  /** One manifest body, as the **text a publisher would actually serve**.
+   *
+   *  Written out rather than built with an object serializer, because what is
+   *  under test here is the decoder's refusal of shapes the schema's own
+   *  encoder could never produce — a digest that is not a SHA-256, a missing
+   *  size, a plaintext URL. Constructing those through `ContentManifest.make`
+   *  is impossible by design, which is exactly why the fixture has to be bytes. */
   const manifestBody = (entry: string): string =>
     `{"revision":"manifest-2026-08","artifacts":{"topics":{${entry}}}}`;
 
@@ -250,6 +314,9 @@ describe('§3.6 the manifest wire model', () => {
     }),
   );
 
+  /** A digest that is not a SHA-256 is not a trust surface. The whole of §3.6's
+   *  trust posture is "HTTPS plus digest", so a manifest that cannot state one
+   *  must not decode into a value the installer would then use. */
   it.effect('refuses an entry whose digest is not a sha256', () =>
     Effect.gen(function* () {
       const result = yield* Effect.result(
@@ -276,6 +343,11 @@ describe('§3.6 the manifest wire model', () => {
     }),
   );
 
+  /** §3.6's trust surface is HTTPS **plus** digest, and a digest over bytes
+   *  fetched in the clear proves only that the bytes match what an on-path
+   *  attacker wrote into the manifest. So a plaintext URL is refused at the
+   *  decoder, before any client is holding a release it must remember not to
+   *  install (round-3 F4). */
   it.effect('refuses an entry whose url is not https', () =>
     Effect.gen(function* () {
       const result = yield* Effect.result(
@@ -289,6 +361,8 @@ describe('§3.6 the manifest wire model', () => {
     }),
   );
 
+  /** No `file:` either. A manifest that could name a local path would turn the
+   *  update path into an arbitrary-file read on whatever host decoded it. */
   it.effect('refuses an entry whose url is a file path', () =>
     Effect.gen(function* () {
       const result = yield* Effect.result(
@@ -302,6 +376,10 @@ describe('§3.6 the manifest wire model', () => {
     }),
   );
 
+  /** The generation is not optional. An entry without one has no place on the
+   *  order the decision compares by, and admitting it would put the downgrade
+   *  back — a client could not tell whether such an entry was above or below
+   *  what it holds. */
   it.effect('refuses an entry with no generation', () =>
     Effect.gen(function* () {
       const result = yield* Effect.result(
@@ -315,6 +393,17 @@ describe('§3.6 the manifest wire model', () => {
     }),
   );
 
+  /** The design clause the prompt asks for: "design so vectors can ride it
+   *  later without a format break".
+   *
+   *  Asserted over **JSON text**, not a pre-built `ContentManifest` (round-3
+   *  F7): what a publisher adds is a key in a body, and a test that constructed
+   *  the value in TypeScript would have proved the *type* admits two corpora
+   *  while saying nothing about whether the decoder does. It also proves the
+   *  second half of the F8 split — the manifest is keyed by `CorpusFileName`
+   *  even though the update surface is `'topics'` alone, so the day vectors has
+   *  a floor and an installer the literal widens and no published manifest
+   *  breaks. */
   it.effect('decodes a second corpus from the same manifest text, with no format change', () =>
     Effect.gen(function* () {
       const manifest = yield* decode(

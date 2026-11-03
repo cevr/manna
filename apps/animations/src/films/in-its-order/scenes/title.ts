@@ -8,10 +8,13 @@ import { TITLE_SEATS, drawSeats } from './crowd.ts';
 import { restingEyes, restingOf } from './lead.ts';
 import { TABLE_PUPPETS, eyesLook, headMiddle, raising, seatTable, seatedLead } from './table.ts';
 
+/** His look as his eyes read: open, or his single-9 head drawn eyes shut, about his head bone's middle. */
 const leadEyes = eyesLook(headMiddle(TABLE_PUPPETS.lead.skeleton));
 
+/** The lead at rest at scene time `t`: his idle (`restingOf`) and his blinks, the bottle on his lap (his raise's rest key in place of his arm). */
 const atRest = (t: number) => raising(leadEyes(restingEyes(t)), 'raise-rest');
 
+/** The film's name: its strip's centre and size over the sky (panel px), and its type. */
 const NAME = {
   x: 768,
   y: 170,
@@ -20,10 +23,17 @@ const NAME = {
   style: { family: fonts.display, size: 76, weight: 700, color: P.cream, align: 'center' },
 } as const;
 
+/** Where the pull centres, frame px: the table's middle (the panel's [768, 640]). */
 const PIVOT = [960, 700] as const;
 
+/** One step of the path's brush, frame px: its centre, its radius and how far it lies from the foot. */
 type Step = readonly [x: number, y: number, r: number, from: number];
 
+/**
+ * The path's brush walked from the foot to the top in steps of 1 px, moved
+ * from the distance plate's px to the frame's, the radius running straight
+ * between two points as the centre does.
+ */
 const walk = (): ReadonlyArray<Step> => {
   const [dx, dy] = DISTANCE.at;
   const steps: Array<Step> = [];
@@ -49,6 +59,7 @@ const walk = (): ReadonlyArray<Step> => {
 const STEPS = walk();
 const PATH_LENGTH = STEPS.at(-1)?.[3] ?? 0;
 
+/** Clip to the brush's circles from the foot up to `progress` (0..1) of the path's length. */
 const clipPath = (ctx: CanvasRenderingContext2D, progress: number) => {
   const reach = progress * PATH_LENGTH;
   ctx.beginPath();

@@ -7,6 +7,7 @@ import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { declarations } from './coverage.js';
 import { tscScript } from './tsc.js';
 
+/** A seeded generator, so a red run names the same files again. */
 const random = (seed: number) => {
   let state = seed >>> 0;
   return () => {
@@ -37,6 +38,7 @@ const extensions = ['.ts', '.tsx', '.mts', '.cts'];
 const pick = <A>(next: () => number, from: ReadonlyArray<A>): A =>
   from[Math.floor(next() * from.length)] as A;
 
+/** Generated names, plus fixed forms on each side of the rule's edges. */
 const generated = (count: number, seed: number) => {
   const next = random(seed);
   const names = new Set([
@@ -74,6 +76,7 @@ const encodeTsconfig = Schema.encodeEffect(
   ),
 );
 
+/** The names whose type error tsc hides: its declaration files. */
 const typescriptDeclarations = (names: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

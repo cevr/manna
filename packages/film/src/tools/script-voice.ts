@@ -30,12 +30,21 @@ import {
 } from './staging.ts';
 import { StudioReadings } from './studio.ts';
 
+/** How many takes are voiced at once. */
 const VOICING_AT_ONCE = 2;
 
+/** How often the fill looks for beats no take is kept for, in every film. */
 const SWEEP_EVERY = Duration.minutes(1);
 
+/** Whether what speech-to-text heard of a take is near enough its line (`MAX_WORD_ERROR`), as narrate judges it. */
 const saysLine = (take: StagedTake): boolean => take.wer <= MAX_WORD_ERROR;
 
+/**
+ * A kept take as the reader has it: ready to hear, or refused, saying what
+ * was heard, when it misread its line. A misread is read again once the day
+ * it was made has passed (`rereadDue`), never sooner: a misread costs a
+ * reading a day at most, and a fluke heals by itself the next day.
+ */
 const readyOrMisread = (take: StagedTake): StagingTake => {
   if (!saysLine(take))
     return {
@@ -45,22 +54,33 @@ const readyOrMisread = (take: StagedTake): StagingTake => {
   return { _tag: 'Ready', file: take.file, duration: take.duration, words: take.words };
 };
 
+/** A beat to voice: its request's key, what to ask, and how speech-to-text spells the film's names. */
 interface Job {
   readonly key: string;
   readonly ask: StagingAsk;
   readonly heardAs: HeardAs;
+  /** Whether the cache keeps a take for it that misread its line on an earlier day than today (`rereadDue`). */
   readonly reread: boolean;
 }
 
+/**
+ * Whether a kept take is read again `today`: it misread its line, and the
+ * local day it was made (its record's `at`) is before today. Read from the
+ * take's own record, so a restart or a second lab asks no more than one.
+ */
 const rereadDue = (take: StagedTake, today: string): boolean =>
   !saysLine(take) && dayOf(take.at) < today;
 
+/** What the fill has asked for this session: queued (the readers' first), and refused, with why, by key. */
 interface Fill {
+  /** Whether the fill runs: nothing is queued while it does not. */
   readonly running: boolean;
   readonly urgent: ReadonlyArray<Job>;
   readonly background: ReadonlyArray<Job>;
+  /** Being voiced now. */
   readonly voicing: ReadonlySet<string>;
   readonly refused: ReadonlyMap<string, string>;
+  /** The local day the refusals are of: a new day asks again. */
   readonly day: string;
 }
 
@@ -73,9 +93,11 @@ const NO_FILL: Fill = {
   day: '',
 };
 
+/** Whether `fill` has `key` queued or being voiced. */
 const asked = (fill: Fill, key: string) =>
   fill.voicing.has(key) || [...fill.urgent, ...fill.background].some((j) => j.key === key);
 
+/** Each spoken beat of a film as it is asked for: the lines either side its neighbours. */
 const asksOf = (voice: Voice, beats: ReadonlyArray<ReadBeat>): ReadonlyArray<StagingAsk> => {
   const text = (at: number) =>
     Option.getOrElse(
@@ -87,15 +109,18 @@ const asksOf = (voice: Voice, beats: ReadonlyArray<ReadBeat>): ReadonlyArray<Sta
   );
 };
 
+/** Whether a beat is to be voiced: no take is kept for it, or the one kept misread its line before today. */
 const wanted = (beat: { readonly job: Job; readonly kept: Option.Option<StagedTake> }): boolean =>
   Option.isNone(beat.kept) || beat.job.reread;
 
+/** `jobs` queued in `fill`: none twice, none refused. */
 const queued = (fill: Fill, jobs: ReadonlyArray<Job>, urgent: boolean): Fill => {
   if (!fill.running) return fill;
   const fresh = jobs.filter((j) => !fill.refused.has(j.key) && !fill.voicing.has(j.key));
   return queuedIn(fill, fresh, urgent);
 };
 
+/** `fresh` jobs placed in `fill`'s queues: urgent ones first, moved up when already queued behind. */
 const queuedIn = (fill: Fill, fresh: ReadonlyArray<Job>, urgent: boolean): Fill => {
   if (urgent) {
     const keys = new Set(fresh.map((j) => j.key));
@@ -108,6 +133,7 @@ const queuedIn = (fill: Fill, fresh: ReadonlyArray<Job>, urgent: boolean): Fill 
   return { ...fill, background: [...fill.background, ...fresh.filter((j) => !asked(fill, j.key))] };
 };
 
+/** The next job of `fill`, the readers' first, taken out and marked voicing. */
 const next = (fill: Fill): readonly [Option.Option<Job>, Fill] => {
   const job = Option.orElse(Arr.head(fill.urgent), () => Arr.head(fill.background));
   return Option.match(job, {
@@ -125,6 +151,7 @@ const next = (fill: Fill): readonly [Option.Option<Job>, Fill] => {
   });
 };
 
+/** `fill` with `key` voiced: refused for `why`, or done. */
 const settled = (fill: Fill, key: string, why: Option.Option<string>): Fill => ({
   ...fill,
   voicing: new Set([...fill.voicing].filter((k) => k !== key)),
@@ -135,19 +162,31 @@ const settled = (fill: Fill, key: string, why: Option.Option<string>): Fill => (
 });
 
 interface ScriptVoicesService {
+  /**
+   * Each spoken beat of `film` as its staging take stands, and the day's
+   * spend; with the fill on, every beat the cache keeps no take for is queued
+   * ahead of the background.
+   */
   readonly voice: (
     film: FilmName,
   ) => Effect.Effect<ScriptVoice, FreshError | PlatformError | StoreError>;
+  /** Each spoken beat of series draft `draft` as its staging take stands, as `voice` has a film's. */
   readonly draft: (
     series: string,
     draft: string,
   ) => Effect.Effect<ScriptVoice, DraftUnknown | DraftUnread | PlatformError | StoreError>;
+  /**
+   * Keep every film's takes ready until interrupted: the sweep and the
+   * voicing. Until it runs, nothing is queued, and a beat with no take kept
+   * is unvoiced.
+   */
   readonly fill: Effect.Effect<never>;
 }
 
 export class ScriptVoices extends Context.Service<ScriptVoices, ScriptVoicesService>()(
   '@manna/film/tools/ScriptVoices',
 ) {
+  /** Over the staging cache and the narrator. */
   static readonly layer = Layer.effect(
     ScriptVoices,
     Effect.gen(function* () {
@@ -159,6 +198,7 @@ export class ScriptVoices extends Context.Service<ScriptVoices, ScriptVoicesServ
       const state = yield* Ref.make(NO_FILL);
       const signals = yield* Queue.unbounded<void>();
 
+      /** Each spoken beat of `reading`, its job, and its take as the cache keeps it. */
       const beatsIn = (reading: {
         readonly voice: Voice;
         readonly heardAs: HeardAs;
@@ -180,10 +220,12 @@ export class ScriptVoices extends Context.Service<ScriptVoices, ScriptVoicesServ
           });
         });
 
+      /** Each spoken beat of `film`, its job, and its take as the cache keeps it. */
       const beatsOf = Effect.fn('ScriptVoices.beatsOf')(function* (film: FilmName) {
         return yield* beatsIn(yield* readings.reading(film));
       });
 
+      /** Each spoken beat of a series draft, in the staging voice. */
       const draftBeatsOf = Effect.fn('ScriptVoices.draftBeatsOf')(function* (
         series: string,
         draft: string,
@@ -191,6 +233,7 @@ export class ScriptVoices extends Context.Service<ScriptVoices, ScriptVoicesServ
         return yield* beatsIn(yield* drafts.reading(series, draft));
       });
 
+      /** `jobs` queued, a signal for each one new. */
       const enqueue = (jobs: ReadonlyArray<Job>, urgent: boolean) =>
         Effect.gen(function* () {
           const added = yield* Ref.modify(state, (fill) => {
@@ -204,6 +247,7 @@ export class ScriptVoices extends Context.Service<ScriptVoices, ScriptVoicesServ
           );
         });
 
+      /** A beat's take as the reader shows it: ready, else voicing, else refused (past the cap, or misread), else unvoiced. */
       const takeOf = (fill: Fill, key: string, kept: Option.Option<StagedTake>): StagingTake => {
         const ready = Option.filter(kept, saysLine);
         if (Option.isSome(ready))
@@ -222,6 +266,7 @@ export class ScriptVoices extends Context.Service<ScriptVoices, ScriptVoicesServ
         });
       };
 
+      /** `beats` queued ahead of the background, and each one's take as it stands. */
       const voiced = (
         name: string,
         beats: ReadonlyArray<{ readonly job: Job; readonly kept: Option.Option<StagedTake> }>,
@@ -252,6 +297,7 @@ export class ScriptVoices extends Context.Service<ScriptVoices, ScriptVoicesServ
         return yield* voiced(draftKey(series, name), yield* draftBeatsOf(series, name));
       });
 
+      /** A new day asks again what the last refused. */
       const newDay = Effect.gen(function* () {
         const today = dayOf(yield* Clock.currentTimeMillis);
         yield* Ref.update(state, (fill) => {
@@ -260,6 +306,7 @@ export class ScriptVoices extends Context.Service<ScriptVoices, ScriptVoicesServ
         });
       });
 
+      /** Every film's beats with no take kept, queued behind the readers'. */
       const sweep = Effect.gen(function* () {
         yield* newDay;
         yield* Effect.forEach(
@@ -306,6 +353,7 @@ export class ScriptVoices extends Context.Service<ScriptVoices, ScriptVoicesServ
         );
       });
 
+      /** Voice the next job: its take kept, or its refusal said in the reader. */
       const voiceNext = Effect.gen(function* () {
         yield* Queue.take(signals);
         const job = yield* Ref.modify(state, next);
@@ -347,6 +395,11 @@ export class ScriptVoices extends Context.Service<ScriptVoices, ScriptVoicesServ
   );
 }
 
+/**
+ * `fill` run beside the lab, in the caller's scope: a defect in it (a
+ * voicer's die) ends the fill, logged as `staging.fill.died`, never the
+ * lab. Interrupted with the scope.
+ */
 export const fillBeside = (fill: Effect.Effect<never>) =>
   Effect.forkScoped(
     Effect.catchDefect(fill, (defect) =>
@@ -354,4 +407,9 @@ export const fillBeside = (fill: Effect.Effect<never>) =>
     ),
   );
 
+/**
+ * Whether `film lab` keeps every beat's staging take ready
+ * (`FILM_STAGING_FILL`): off unless it is `true`, since the fill spends
+ * ElevenLabs characters, and only the owner's lab start says so.
+ */
 export const stagingFill = Config.Boolean('FILM_STAGING_FILL').pipe(Config.withDefault(false));

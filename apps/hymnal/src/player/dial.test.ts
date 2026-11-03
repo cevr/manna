@@ -1,3 +1,10 @@
+/**
+ * A dial's physics over its whole domain: the twelve keys (wrapping), the
+ * capo's frets 0 to 11 (stopping) and the text sizes (stopping), each let
+ * go from a grid of places along its row, past both ends, at a grid of
+ * speeds both ways, from rest to past the fling cap.
+ */
+
 import { describe, expect, it } from 'bun:test';
 
 import { SIZES } from '~/reader/reading';
@@ -26,6 +33,7 @@ const dials: ReadonlyArray<readonly [string, Detents]> = [
 const tagged = (rest: { readonly cues: ReadonlyArray<{ readonly _tag: string }> }, tag: string) =>
   rest.cues.filter((cue) => cue._tag === tag);
 
+/** Places from two detents before the first to two past the last, a quarter detent apart. */
 const placesOf = (dial: Detents) =>
   Array.from({ length: (dial.count + 4) * 4 + 1 }, (_, k) => (k / 4 - 2) * DETENT);
 
@@ -122,6 +130,11 @@ describe.each(dials)('%s', (_, dial) => {
   });
 });
 
+/**
+ * The detents a reaction passes between two detents it sees (m7): over
+ * every dial of 1 to 12 detents, wrapping and stopping, and every `before`
+ * and `now` from three turns below the row to three turns above it.
+ */
 describe('the detents passed between two detents', () => {
   const every: ReadonlyArray<Detents> = Array.from({ length: 12 }, (_, k) => k + 1).flatMap(
     (count) => [
@@ -178,11 +191,17 @@ it('wraps the key dial past its last key to its first', () => {
   expect(glide(keys, 11 * DETENT, 500).crossed[0]).toBe(0);
 });
 
+/**
+ * Which way a drag turns a dial, as DialView reads it: the place a finger
+ * drags to is the place it started from less the move along the dial
+ * (`along`), and the dial shows the detent nearest that place.
+ */
 describe('the way a drag turns a dial', () => {
   const ones: Detents = { name: 'ones', count: 10, wrap: true };
   const hundreds: Detents = { name: 'hundreds', count: 7, wrap: false };
   const sideways = [-90, -DETENT, -1, 0, 1, DETENT, 90];
 
+  /** The detent a drag of `x`, `y` from detent `from` leaves the dial on. */
   const dragged = (dial: Detents, axis: 'row' | 'column', from: number, x: number, y: number) =>
     ownDetent(dial, detentAt(dragTo(dial, from * DETENT - along(axis, x, y)).place));
 
@@ -209,6 +228,13 @@ describe('the way a drag turns a dial', () => {
   });
 });
 
+/**
+ * The ring a wrapping dial draws its stops on: over windows 10 to 1,200
+ * points wide and places from a million points below the row to a million
+ * above it (whole detents, halves and odd fractions), the slots of the
+ * ring's stops, laid from the notch at the window's middle, cover the window
+ * side by side, each key the one before it plus one.
+ */
 describe('the ring of a wrapping dial', () => {
   const keys: Detents = { name: 'key', count: 12, wrap: true };
   const widths = Array.from({ length: 120 }, (_, k) => (k + 1) * 10);

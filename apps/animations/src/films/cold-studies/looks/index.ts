@@ -20,4 +20,5 @@ const LOOKS: Readonly<Record<Style, Look>> = {
   papercutgl,
 };
 
+/** The look the study plays. */
 export const lookOf = (): Look => LOOKS[STYLE];

@@ -1,3 +1,11 @@
+/**
+ * Write <deckDir>/build-deck.applescript from the manifest: a fresh build of
+ * the whole deck (keynote.ts). `sync_deck.ts` runs it for a deck with no
+ * `.key` yet and edits an existing deck in place; use this alone to read the
+ * script.
+ *
+ *   bun skills/bible/scripts/deck/gen_applescript.ts <deckDir>
+ */
 import { resolve } from 'node:path';
 import { buildScript } from './keynote.ts';
 import { readManifest } from './manifest.ts';

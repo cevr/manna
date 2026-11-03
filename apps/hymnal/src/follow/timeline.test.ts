@@ -12,6 +12,7 @@ const decoded = (encoded: string): Timeline => Option.getOrThrow(timelineOf(enco
 
 const small = decoded('666666,3,4|1,1000,2000,0.500,500;3,2000,1000');
 
+/** The place by a plain scan of every line and syllable: what `placeAt` must agree with. */
 const scanned = (timeline: Timeline, ms: number): Pick<Place, 'line' | 'syllable' | 'word'> => {
   const line = timeline.lines.findLastIndex((l) => l.start <= ms && ms < l.until);
   if (line < 0 || ms >= timeline.end) return { line: -1, syllable: -1, word: -1 };
@@ -80,6 +81,7 @@ describe('a hymn timeline', () => {
   });
 });
 
+/** Where hymn `hymn`'s timeline differs from its compiled timing, line by line. */
 const faultsOf = (hymn: Hymn, timeline: Timeline): ReadonlyArray<string> => {
   const timing = Option.getOrThrow(Option.fromUndefinedOr(hymn.timing));
   const seconds = Timing.secondsAt(timing);
@@ -120,6 +122,7 @@ const faultsOf = (hymn: Hymn, timeline: Timeline): ReadonlyArray<string> => {
   });
 };
 
+/** Where `placeAt` on `timeline` at `ms` differs from a scan, or does not hold until its `nextAt`. */
 const placeFaults = (timeline: Timeline, ms: number, place: Place): ReadonlyArray<string> => {
   const want = scanned(timeline, ms);
   const faults: Array<string> = [];

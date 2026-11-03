@@ -3,6 +3,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem } from 'effect';
 import { profileFolder } from './chrome-profile.ts';
 
+/** A process id past every system's limit: no process runs as it. */
 const STOPPED = 2 ** 30;
 
 describe("a Chrome's profile folder", () => {

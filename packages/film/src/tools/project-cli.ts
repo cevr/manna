@@ -61,6 +61,7 @@ const film = Argument.String('film').pipe(
   Argument.withDescription('the film, a folder under src/films'),
 );
 
+/** `--variant name`: which render of each scene (`main` when none). */
 export const variantFlag = Flag.String('variant').pipe(
   Flag.withSchema(RenderVariantName),
   Flag.withDefault(MAIN_VARIANT),
@@ -69,6 +70,7 @@ export const variantFlag = Flag.String('variant').pipe(
   ),
 );
 
+/** `render`'s `--variant name`: unset, a wedge's render is named for its levels (`wedgeVariant`), any other `main`. */
 export const renderVariantFlag = Flag.String('variant').pipe(
   Flag.withSchema(RenderVariantName),
   Flag.optional,
@@ -87,6 +89,11 @@ const json = Flag.Boolean('json').pipe(
   Flag.withDescription('print the project as one line of JSON'),
 );
 
+/**
+ * Render `job` (drawing `scope` from sources stamped `stamp`) and record what
+ * it wrote in the film's catalogue; a video sent to `--out` lies outside the
+ * project folder and is not recorded.
+ */
 export const renderAndRecord = Effect.fn('film.renderAndRecord')(function* (
   loaded: LoadedFilm,
   scope: Pick<Scope, 'span'>,
@@ -97,6 +104,7 @@ export const renderAndRecord = Effect.fn('film.renderAndRecord')(function* (
   return yield* recordOutput(loaded, scope, job, stamp, output);
 });
 
+/** What `job` wrote recorded in the film's catalogue, unless it went to `--out`. */
 const recordOutput = Effect.fn('film.recordOutput')(function* (
   loaded: LoadedFilm,
   scope: Pick<Scope, 'span'>,
@@ -118,12 +126,14 @@ const recordOutput = Effect.fn('film.recordOutput')(function* (
   return output;
 });
 
+/** A scene video stale by its sound alone, and the video a re-mux cuts its sound into again. */
 interface Recut {
   readonly render: Render;
   readonly clip: string;
   readonly video: Remuxed;
 }
 
+/** `render` as a re-mux takes it: none when it recorded no cut to take again (it is drawn instead). */
 const recutOf = (loaded: LoadedFilm, path: Path.Path, render: Render): Option.Option<Recut> =>
   Option.map(Option.all({ clip: render.files.clip, sound: render.sound }), ({ clip, sound }) => {
     const inProject = (file: string) => path.join(loaded.paths.out, file);
@@ -138,6 +148,7 @@ const recutOf = (loaded: LoadedFilm, path: Path.Path, render: Render): Option.Op
     };
   });
 
+/** Re-mux `recut` with the run's `remux`, and record it as it now sounds. */
 const remuxAndRecord = Effect.fn('film.remuxAndRecord')(function* (
   loaded: LoadedFilm,
   remux: Remux,
@@ -152,12 +163,14 @@ const remuxAndRecord = Effect.fn('film.remuxAndRecord')(function* (
   });
 });
 
+/** The mix a scene's video carries now: the plan the film mixes to, once every take is recorded. */
 const soundNow = (loaded: LoadedFilm, placed: ReadonlyArray<Placed>) =>
   Effect.gen(function* () {
     if (!everyTakeRecorded(placed)) return Option.none<string>();
     return yield* planKey(loaded, placed);
   });
 
+/** The film loaded and laid out, with its scenes' keys now and its address tree keyed. */
 const keyed = Effect.fn('film.project.keyed')(function* (name: string) {
   const loaded = yield* (yield* FilmRepo).load(name);
   const placed = yield* placeFilm(loaded);
@@ -183,6 +196,7 @@ const keyed = Effect.fn('film.project.keyed')(function* (name: string) {
   return { loaded, placed, keys, tree };
 });
 
+/** Each scene with its own stamp's key: what the project compares its renders with. */
 const sceneKeys = (keys: SceneKeys, placed: ReadonlyArray<Placed>) =>
   Arr.zipWith(sceneStamps(keys, placed), placed, ({ scene, stamp }, p) => ({
     scene,
@@ -191,11 +205,13 @@ const sceneKeys = (keys: SceneKeys, placed: ReadonlyArray<Placed>) =>
     drawn: p.spec.storyboard !== true,
   }));
 
+/** What was said, a line each, marked when it was said of an earlier version. */
 const saidLines = (comments: ReadonlyArray<SaidComment>, indent: string): string =>
   comments
     .map((c) => `\n${indent}${Arr.filter(['(earlier) '], () => !c.onThis).join('')}${c.text}`)
     .join('');
 
+/** A scene's state as a word: `current`, `missing`, `stale` (its sources) or `stale:sound`. */
 const stateWord = (scene: ProjectScene): string =>
   Option.match(
     Option.filter(scene.staleBy, (by) => by === 'sound'),
@@ -205,6 +221,7 @@ const stateWord = (scene: ProjectScene): string =>
     },
   );
 
+/** One scene of the project as a line: its state, its approval, its comments, its clip. */
 const sceneLine = (scene: ProjectScene): string => {
   const clip = Option.flatMap(scene.render, (r) => r.files.clip);
   return `  ${scene.scene.padEnd(16)} ${stateWord(scene).padEnd(11)} ${scene.approval.padEnd(9)}${Option.match(
@@ -213,6 +230,7 @@ const sceneLine = (scene: ProjectScene): string => {
   )}${saidLines(scene.comments, '      ')}`;
 };
 
+/** The project as lines: the film's comments, then each act with its comments and its scenes. */
 const projectLines = (project: Project): ReadonlyArray<string> => {
   const inActs = new Set(project.acts.flatMap((a) => a.scenes));
   const scenesOf = (ids: ReadonlyArray<string>) =>
@@ -228,6 +246,7 @@ const projectLines = (project: Project): ReadonlyArray<string> => {
   ];
 };
 
+/** Print the project: one line of JSON (`ProjectRead`, what the review reads), or its lines. */
 const show = (project: Project, asJson: boolean) =>
   Match.value(asJson).pipe(
     Match.when(true, () => printLine(ProjectRead.make({ project }))),
@@ -236,6 +255,7 @@ const show = (project: Project, asJson: boolean) =>
     ),
   );
 
+/** `effect`, the failure it names printed as the answer when the run answers in JSON (the review's read). */
 const answeringIf = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
   input: { readonly json: boolean },
@@ -244,6 +264,7 @@ const answeringIf = <A, E, R>(
   return effect;
 };
 
+/** The film's scenes named by `ids` (every one when none), each checked against the layout and kept with its id. */
 const scenesNamed = (
   loaded: LoadedFilm,
   placed: ReadonlyArray<Placed>,
@@ -263,6 +284,7 @@ const scenesNamed = (
       ),
   );
 
+/** The act `name` of the keyed film, or `UnknownAct` naming the acts it has. */
 const actNamed = (tree: Keyed, name: string) =>
   Effect.fromOption(
     Arr.findFirst(tree.acts, (a) => a.act === name),
@@ -279,16 +301,24 @@ const status = Command.make(
   }, answeringIf),
 );
 
+/** A scene of a `project render` run, as its `scenesNamed` scope. */
 type SceneScope = Effect.Success<ReturnType<typeof scenesNamed>>[number];
 
+/** One scene of a `project render` run: what it needs, and the video a re-mux cuts again. */
 interface SceneRun {
   readonly scope: SceneScope;
   readonly id: string;
   readonly stamp: Stamp;
   readonly need: ReturnType<typeof renderNeed>;
+  /** Some when the scene is stale by its sound alone and its video recorded the cut. */
   readonly recut: Option.Option<Recut>;
 }
 
+/**
+ * What each of `scopes` needs against `catalogue`: current, a re-mux of its
+ * video, or a draw (every one with `force`). The run reads it before it
+ * draws or cuts anything; each scene's record touches its own slot only.
+ */
 const sceneRuns = (run: {
   readonly loaded: LoadedFilm;
   readonly path: Path.Path;
@@ -430,12 +460,14 @@ const renderScenes = <E, R>(renderLayer: Layer.Layer<Renderer, E, R>) =>
     ),
   );
 
+/** What a say on `scene`'s render of `variant` is about, whichever version it is. */
 const topicOfScene = (scene: string, variant: string): Topic => ({
   address: sceneAddress(scene),
   point: Option.none(),
   variant,
 });
 
+/** What `--act` and `--all` do, said for each verb that takes them. */
 const PART_TEXT = {
   approve: {
     act: 'approve every scene of this act whose render is current',
@@ -447,12 +479,14 @@ const PART_TEXT = {
   },
 } as const;
 
+/** `--scene id,id`, `--act name` or `--all`: which parts an approval or a withdrawal is of. */
 const partFlags = (verb: 'approve' | 'withdraw') => ({
   scene: sceneIds.pipe(Flag.withDescription(`${verb} these scenes' renders (id,id)`)),
   act: Flag.String('act').pipe(Flag.optional, Flag.withDescription(PART_TEXT[verb].act)),
   all: Flag.Boolean('all').pipe(Flag.withDefault(false), Flag.withDescription(PART_TEXT[verb].all)),
 });
 
+/** The parts named: at most one of `--scene`, `--act` and `--all`. */
 const partsNamed = (input: {
   readonly scene: Option.Option<ReadonlyArray<string>>;
   readonly act: Option.Option<string>;
@@ -482,11 +516,16 @@ const approveScenes = Command.make(
     const catalogues = yield* RenderCatalogue;
     const at = yield* Clock.currentTimeMillis;
     const op = yield* uniqueId(OpId);
+    /**
+     * Every current scene of `scenes` approved, in one update: those it
+     * approved, and those it made approved, read under the catalogue's lock.
+     */
     const current = (scenes: ReadonlyArray<SceneKey>) =>
       catalogues.update(loaded.paths, (catalogue) => {
         const done = approveCurrent(catalogue, scenes, tree.sound, input.variant, at, op);
         return [{ approved: done.approved, made: done.made }, done.catalogue] as const;
       });
+    /** Why `scene` cannot be approved in `catalogue`, naming how to make it so; none while its render is current. */
     const refusalOf = (
       catalogue: Catalogue,
       { scene, key }: SceneKey,
@@ -506,6 +545,12 @@ const approveScenes = Command.make(
               }),
           ),
       });
+    /**
+     * The scenes `ids` approved, all of them or none: each is checked and
+     * approved in the one write that holds the catalogue's lock, so a render
+     * landing meanwhile is seen (and refused, naming its scene) rather than
+     * skipped.
+     */
     const named = (ids: ReadonlyArray<string>) =>
       Effect.gen(function* () {
         yield* scenesNamed(loaded, placed, Option.some(ids));
@@ -670,6 +715,7 @@ const commentOn = Command.make(
   ),
 );
 
+/** `film project`, its scenes rendered on `renderLayer`. */
 export const project = <E, R>(renderLayer: Layer.Layer<Renderer, E, R>) =>
   status.pipe(
     Command.withDescription(

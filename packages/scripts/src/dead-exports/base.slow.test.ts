@@ -9,6 +9,7 @@ import { TEST_GIT } from '../testing.js';
 
 const FILES: Parameters<typeof grownOver>[1] = { check: 'd/check.ts', debt: 'd/debt.txt' };
 
+/** Runs `git <args>` in `cwd` and answers what it prints. */
 const git = (cwd: string, ...args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
@@ -24,6 +25,7 @@ const git = (cwd: string, ...args: ReadonlyArray<string>) =>
     );
   });
 
+/** Writes `text` to `file` under `dir`. */
 const write = (dir: string, file: string, text: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -32,6 +34,7 @@ const write = (dir: string, file: string, text: string) =>
     yield* fs.writeFileString(path.join(dir, file), text);
   });
 
+/** Commits everything under `dir`; answers the commit. */
 const commit = (dir: string, message: string) =>
   Effect.gen(function* () {
     yield* git(dir, 'add', '-A');
@@ -39,12 +42,14 @@ const commit = (dir: string, message: string) =>
     return yield* git(dir, 'rev-parse', 'HEAD');
   });
 
+/** Sets the debt file to `lines` and commits it. */
 const commitDebt = (dir: string, lines: ReadonlyArray<string>, message: string) =>
   Effect.gen(function* () {
     yield* write(dir, FILES.debt, lines.map((line) => `${line}\n`).join(''));
     return yield* commit(dir, message);
   });
 
+/** A repository whose `main` holds the check and a debt of `a`; answers its directory. */
 const repo = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const dir = yield* fs.makeTempDirectoryScoped({ prefix: 'dead-base-' });

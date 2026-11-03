@@ -1,9 +1,25 @@
+/** §10 Milestone 9's adapter check over a **real transport** (round-3 F5).
+ *
+ *  `manifest-http.test.ts` runs the fixture table through stub clients. That
+ *  proves the mapping from a response onto §3.6's outcomes, and nothing about
+ *  the client that produces the response — a stub has no socket, no status
+ *  line and no header parsing, so a host whose shipped `HttpClient` mishandled
+ *  any of them passed anyway. Milestone 9's claim is about the shipped
+ *  transport, so the table has to reach it for real.
+ *
+ *  This is the Bun leg: the client the CLI composes, against a Bun HTTP server
+ *  on loopback, compared against the one `ADAPTER_EXPECTATIONS`.
+ */
+
 import { Effect, Option } from 'effect';
 import { FetchHttpClient } from 'effect/http';
 import { describe, expect, it } from 'effect-bun-test';
 
 import { ADAPTER_EXPECTATIONS, ADAPTER_ROUTES, liveAdapterConformance } from './testing.js';
 
+/** The fixture cases as an actual origin. Bound to loopback, which is also what
+ *  lets it past the origin gate — a fixture server on any other host would be
+ *  refused before the request and every case would read `offline`. */
 const serveFixtures = Effect.acquireRelease(
   Effect.sync(() => {
     const routes = new Map(ADAPTER_ROUTES);

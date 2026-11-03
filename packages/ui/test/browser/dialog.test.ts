@@ -6,6 +6,7 @@ import { focused, harness, logOf, recordTransitions, scriptClick } from './harne
 
 const h = harness('dialog.tsx');
 
+/** Whether the page's scroll is locked (the scroller's `overflow` is hidden). */
 const scrollLocked = (page: Page) =>
   page.evaluate(() => {
     const html = getComputedStyle(document.documentElement).overflowY;
@@ -243,9 +244,15 @@ describe('Dialog.Popup focus', () => {
 });
 
 describe("Dialog.Popup return focus after the owner's own close", () => {
+  /** Whether the element with the focus shows the ring. */
   const ringed = (page: Page) =>
     page.evaluate(() => document.activeElement?.matches(':focus-visible') ?? false);
 
+  /**
+   * From now on, keep the `focusVisible` each focus of the opener asks for: the ring is
+   * the kit's to state, never the browser's heuristic to guess (which guesses right most
+   * of the time, and wrong under load).
+   */
   const askedRings = (page: Page) =>
     page.evaluate(() => {
       const opener = document.getElementById('open');
@@ -288,6 +295,7 @@ describe("Dialog.Popup return focus after the owner's own close", () => {
     expect(await ringed(page)).toBe(false);
   });
 
+  /** Open the dialog from the `opener` input with the focus on it, then close it by a pointer. */
   const closedByPointerFrom = async (opener: 'range' | 'text') => {
     const page = await h.open('dialog', { query: { closes: 'owner', opener } });
     await page.focus('#open');

@@ -77,13 +77,23 @@ import { LAST_FRAME, onHim, word } from './word.ts';
 
 const L = LAST_FRAME;
 
+/** His breath's period and its offset, as word, seed, spoke and look breathe him (`living`). */
 const BREATH = { period: 4, offset: 2.1 } as const;
 
+/** His head's tip as spoke and look leave him, lifted, and how far it sways. */
 const LIFT = 0.05;
 const SWAY = 0.012;
 
+/**
+ * He is plain: `robe` took the stain away, and the kept panels
+ * (`within.command`, `within.arose`) draw no stain or seal on him.
+ */
 const PLAIN = 0;
 
+/**
+ * The icons in the row, left to right (`spoke.brings`): where each stands,
+ * its size, how wide it stands on the page (its shadows' half-width).
+ */
 const ICONS = [
   { at: ROW.faith, box: ICON_BOX.faith, foot: 70 },
   { at: ROW.cloth, box: ICON_BOX.cloth, foot: 125 },
@@ -91,31 +101,52 @@ const ICONS = [
 ] as const;
 type Icon = (typeof ICONS)[number];
 
+/** An icon's light (spoke's and look's): its reach against its size, how much, and how far it pops as it pulses. */
 const ICON_LIGHT = { reach: 0.65, alpha: 0.85, pop: 0.08 } as const;
+/** How much more the blade's light swells as it pulses (look's open hand's). */
 const PULSE = 0.35;
+/** How much more the cloth glows as `robe` leaves it, its light going out as it dims. */
 const CLOTH_GLOW = 0.35;
+/** The shadows the icons lay on the page (spoke's): their cast's darkness, and their foot's. */
 const ICON_SHADE = { cast: 0.5, foot: 0.8 } as const;
+/** How the open hand and the cloth dim (look's): the page's paper laid over each, how much at its middle, and how far it reaches against the icon's size. */
 const DIM = { alpha: 0.55, reach: 0.95 } as const;
 
+/** Where he looks at us, from his feet. */
 const US: Pt = [LEAD_KNOBS.gazeX, LEAD_KNOBS.gazeY];
 
+/** How far from where he looks at us his eyes' target stands as he reads a thing on the page, his units (spoke's and look's). */
 const READ = 130;
 
+/** "It brings power.": glad, as spoke and look leave him. */
 const GLAD: Expression = { ...EASE, browY: -1.5, browTilt: 0.06, eyes: 1.12, mouth: 0.6 };
+/** Reading the blade as it is named. */
 const READING: Expression = { ...EASE, browY: -1, browTilt: 0.1, eyes: 1.06, mouth: 0.3 };
+/** "Is He mocking her?": the brows up, asking (`word`'s question). */
 const ASKING: Expression = { ...EASE, browY: -2.4, browTilt: 0.18, eyes: 1.1, mouth: -0.2 };
+/** "No.": at ease, the start of a smile. */
 const SURE: Expression = { ...EASE, browY: -1.2, browTilt: 0.06, eyes: 1.04, mouth: 0.7 };
 
+/** Where he looks at the tablets beside him, from his feet (`word`'s). */
 const AT_TABLETS: Pt = [330, -170];
+/** As the seed opens: wonder. */
 const WONDER: Expression = { ...EASE, browY: -2, browTilt: 0.16, eyes: 1.15, mouth: 0.4 };
+/** "His own life": glad. */
 const ALIVE: Expression = { ...EASE, browY: -2.2, browTilt: 0.1, eyes: 1.14, mouth: 1.1 };
+/** Where he looks down at his own chest, from his feet (`word`'s). */
 const AT_CHEST: Pt = [-10, -150];
+/** The law settling into him: down at his chest, wondering. */
 const RECEIVING: Expression = { ...EASE, browY: -1.7, browTilt: 0.14, eyes: 1.08, mouth: 0.5 };
+/** "into their mind,": up at us again, warmed. */
 const WARMED: Expression = { ...EASE, browY: -1.9, browTilt: 0.06, eyes: 1.1, mouth: 1.2 };
+/** How far his head bows as he looks down at his chest, units, and how far his eyes drop with it, units of gaze. */
 const BOW = { nod: 6, down: 140 } as const;
+/** His head's shake on "No.": how far it rocks, radians, and his eyes with it, units; how many times. */
 const SHAKE = { tilt: 0.06, gaze: 45, times: 2 } as const;
 
+/** His numbers (scratch: every one he moves is rewritten each frame). */
 const LN: Record<keyof typeof LEAD_KNOBS, number> = { ...LEAD_KNOBS };
+/** The seed on the open hand (scratch: its pose rewritten each frame). */
 const SEED: OpenSeedPose = {
   x: 0,
   y: 0,
@@ -275,10 +306,13 @@ const knobs = {
 
 type WithinFrame = Frame<keyof typeof timeline & string, typeof knobs, typeof LANDING_RIGS>;
 
+/** `p` on the page, from his feet. */
 const fromFeet = (p: Pt): Pt => [p[0] - L.lead[0], p[1] - L.lead[1]];
 
+/** `a` toward `b` by `k`. */
 const toward = (a: Pt, b: Pt, k: number): Pt => [lerp(a[0], b[0], k), lerp(a[1], b[1], k)];
 
+/** Where he looks to read a point on the page (`p`, from his feet): `READ` toward it. */
 const readingAt = (p: Pt): Pt => {
   const dx = p[0] - US[0];
   const dy = p[1] - US[1];
@@ -286,19 +320,27 @@ const readingAt = (p: Pt): Pt => {
   return [US[0] + (dx / d) * READ, US[1] + (dy / d) * READ];
 };
 
+/** Where he looks to read `icon`: its middle. */
 const readingOf = (icon: Icon): Pt =>
   readingAt(fromFeet([icon.at[0] + icon.box.dx, icon.at[1] - icon.box.up]));
 
+/** One of his hands at `p` on the page. */
 const handAt = (f: WithinFrame, p: Pt) =>
   at(f.ctx, { x: p[0], y: p[1] }, () =>
     f.rive('leadHand', { timelines: [['boil', boilTime(f.boil)]], size: L.handScale }),
   );
 
+/**
+ * His hands toward `far` and `near` (from his feet, upright on the page):
+ * his arms reached to them (`reachHands`, which sets his arms' numbers), so
+ * each lies at its sleeve's end. Answers where each lies, from his feet.
+ */
 const reached = (far: Pt, near: Pt) => {
   const arms = reachHands(LN, far, near);
   return [arms.left, arms.right] as const;
 };
 
+/** His face on the row: reading the blade, glad on "power", his head lifted as spoke and look leave it. */
 const rowPose = (f: WithinFrame) => {
   acted(LN, GLAD, [
     [READING, f.at('toBlade')],
@@ -313,6 +355,7 @@ const rowPose = (f: WithinFrame) => {
   LN.stain = PLAIN;
 };
 
+/** Him on the page, his shadows under him, his hands at rest, with `under` drawn on the page before him and `over` in front of him. */
 const him = (f: WithinFrame, under: () => void, over: () => void) => {
   const { ctx } = f;
   const [fx, fy] = L.lead;
@@ -327,8 +370,15 @@ const him = (f: WithinFrame, under: () => void, over: () => void) => {
   for (const p of hands) handAt(f, onHim(p, 0));
 };
 
+/**
+ * The morning warming the page (within.arose's gold): how much more of the
+ * sun's shafts it lays over it, and its gold light from the corner the sun
+ * stands off (a share of the frame), how far it reaches against the frame's
+ * width, how much.
+ */
 const MORNING = { shafts: 0.7, from: [0.02, 0.02], reach: 0.95, gold: 0.3 } as const;
 
+/** The page's sheet and the sun's shafts across it, `morning` of the way warmed, and `draw` on it under `cam`. */
 const onPage = (f: WithinFrame, cam: Camera, draw: () => void, morning = 0) => {
   const { ctx, w, h } = f;
   piece(ctx, rounded(w / 2, h / 2, L.sheet.w, L.sheet.h, 0), PAGE, f.handsOf(word)('page'), {
@@ -349,6 +399,7 @@ const onPage = (f: WithinFrame, cam: Camera, draw: () => void, morning = 0) => {
   camera(ctx, cam, w, h, draw);
 };
 
+/** The shadows the row lays on the page: each icon's cast down and to the right, and its foot's. */
 const rowShadows = (f: WithinFrame) => {
   const { ctx } = f;
   for (const icon of ICONS) {
@@ -361,6 +412,7 @@ const rowShadows = (f: WithinFrame) => {
   }
 };
 
+/** `icon`'s light behind it, `amount` of it, at `scale` of its size. */
 const iconLight = (f: WithinFrame, icon: Icon, scale: number, amount: number) => {
   const { box } = icon;
   const size = Math.sqrt(box.tall * box.wide) * scale;
@@ -374,6 +426,7 @@ const iconLight = (f: WithinFrame, icon: Icon, scale: number, amount: number) =>
   );
 };
 
+/** The page laid over `icon` out from its middle past its edge, `dim` of the way: it dims without showing its pieces through each other (look's). */
 const dimmed = (f: WithinFrame, icon: Icon, dim: number) => {
   if (dim <= 0) return;
   const { ctx } = f;
@@ -392,6 +445,7 @@ const dimmed = (f: WithinFrame, icon: Icon, dim: number) => {
   ctx.restore();
 };
 
+/** The row: the open hand with the seed on it and the cloth, lit and dimming on "power"; the blade pulsing, its light swelling. */
 const row = (f: WithinFrame) => {
   const { ctx } = f;
   const dim = f.at('dim');
@@ -412,6 +466,7 @@ const row = (f: WithinFrame) => {
   bladeIcon(ctx, blade.at[0], blade.at[1], s);
 };
 
+/** The page as `robe` leaves it: him beside the row, under the row's framing creeping on. */
 const rowShot = (f: WithinFrame) => {
   const shot = f.knobsOf(spoke);
   const rowCam = pushOn(knobCamera(shot('row'), shot('rowZoom')), shot('creep'), 1);
@@ -426,19 +481,27 @@ const rowShot = (f: WithinFrame) => {
   );
 };
 
+/** Where the court's planes line up while the camera sits on it: the panel's middle. */
 const COURT_REST: Pt = [768, 512];
+/** The air the court's far planes fade into, the sky's pale gold low down, and how thick it lies. */
 const TEMPLE_AIR = { haze: '#f7e0c8', thickness: 1.4 } as const;
 
+/** Christ in the court, as woman.told stands Him to her right: His feet, His size. */
 const CHRIST_AT = { x: 1010, y: 905, scale: 1.15 } as const;
+/** His hands at rest from His feet, His units, the one toward her first; and where that one lifts to on "go,". */
 const CHRIST_HANDS: readonly [Pt, Pt] = [
   [-104, -205],
   [98, -198],
 ];
 const SENDING: Pt = [-150, -250];
+/** His circle hands' size against the hand rig's (`court-cast.ts`). */
 const CHRIST_HAND = 1.08;
+/** Christ: kind, the brows easy, the smile court-12 draws in His beard (`court`'s). */
 const KIND: Expression = { ...EASE, browY: -0.8, browTilt: 0.1, mouth: 3 };
+/** Christ's numbers (scratch: every one He moves is rewritten each frame). */
 const CN: Record<keyof typeof CHRIST_KNOBS, number> = { ...CHRIST_KNOBS };
 
+/** Where in the breath she is against the crowd, radians: she breathes on her own. */
 const WOMAN_BREATH = 1.02;
 const WOMAN = {
   x: 560,
@@ -452,10 +515,13 @@ const WOMAN = {
   bob: 7,
   lean: -0.04,
 } as const;
+/** How far her hands swing with her steps, her units. */
 const SWING = 10;
 
+/** Her size: the band's against Christ's as He stands here. */
 const WOMAN_SCALE = heldScale('womanLeft', BAND.woman, CHRIST_AT.scale);
 
+/** The woman now: facing Him, her head lifted; on "go," turned away and walking out, upright. */
 const womanPose = (f: WithinFrame): CamperPose => {
   const home = stand('womanLeft');
   const turn = f.at('turn');
@@ -479,14 +545,17 @@ const womanPose = (f: WithinFrame): CamperPose => {
   };
 };
 
+/** Where her face is, Board pixels, as she stands in `p`. */
 const womanFace = (p: CamperPose): Pt => [p.x, p.y - 0.84 * 366 * p.scale];
 
+/** Where Christ stands in a place: His feet, His size. */
 interface Standing {
   readonly x: number;
   readonly y: number;
   readonly scale: number;
 }
 
+/** One of Christ's circle hands at `p` (from His feet, His units), as He stands at `place`. */
 const christHand = (f: WithinFrame, place: Standing, p: Pt) => {
   const { x, y, scale } = place;
   at(f.ctx, { x: x + p[0] * scale, y: y + p[1] * scale, scale }, () =>
@@ -494,6 +563,7 @@ const christHand = (f: WithinFrame, place: Standing, p: Pt) => {
   );
 };
 
+/** Christ facing her, kind; His hand lifting toward the way out on "go,", His eyes going after her. */
 const christInCourt = (f: WithinFrame, her: CamperPose) => {
   const { ctx } = f;
   const { x, y, scale } = CHRIST_AT;
@@ -516,6 +586,12 @@ const christInCourt = (f: WithinFrame, her: CamperPose) => {
   christHand(f, CHRIST_AT, CHRIST_HANDS[1]);
 };
 
+/**
+ * The temple court in its planes (woman.court, woman.told), farthest first:
+ * the sky, the city and the cypresses; the balustrade, the far columns and
+ * the steps under the sun's shafts; the floor with the stones, Christ and
+ * the woman; the near columns at the frame's edges.
+ */
 const courtShot = (f: WithinFrame) => {
   const { ctx, w, h } = f;
   const wide = knobCamera(f.knob('court'), f.knob('courtZoom'));
@@ -543,18 +619,32 @@ const courtShot = (f: WithinFrame) => {
   );
 };
 
+/** One tablet as `word` leaves them beside him, its lines lit (scratch: rewritten for each tablet). */
 const ONE: TabletsPose = tabletsAt(L.tablets[0], L.tablets[1]);
 
+/**
+ * Where the tablets stand: the near one's bottom-left corner as `word`
+ * leaves it, which stays; the far one's, as `word` leaves it and parted to
+ * within.command's gap, wide enough for the seed with room either side.
+ */
 const TABLET_FOOT = L.tablets[1];
 const NEAR_TABLET = L.tablets[0];
 const FAR_TABLET = { from: L.tablets[0] + TABLET.w + TABLET.gap, to: 975 } as const;
 
+/** The light pouring out between the parted tablets: how high up them from their foot, how far it reaches, how much. */
 const GAP_LIGHT = { up: 150, r: 190, amount: 0.85 } as const;
 
+/**
+ * The seed out of their light (within.command): where it hangs between them
+ * (its middle's height), how high it drops from, how tall it stands; how
+ * much its heart's light shows falling, hanging, and woken; how curled the
+ * blade lies before His life swells it; how far it bobs as it hangs.
+ */
 const SEED_DROP = { y: 715, from: 500, size: 120, bob: 3 } as const;
 const SEED_GLOW = { falling: 0.9, rest: 0.35, alive: 1.15 } as const;
 const CURLED = 0.3;
 
+/** The seed between the tablets (scratch: its pose rewritten each frame). */
 const DROPPED: OpenSeedPose = {
   x: 0,
   y: 0,
@@ -567,15 +657,30 @@ const DROPPED: OpenSeedPose = {
   shown: 0,
 };
 
+/** How far apart the tablets stand now: parted on "Every command", closed again as they settle into him. */
 const apart = (f: WithinFrame) => f.at('part') * (1 - f.at('close'));
 
+/** The far tablet's corner now. */
 const farTablet = (f: WithinFrame) => lerp(FAR_TABLET.from, FAR_TABLET.to, apart(f));
 
+/** The middle of the gap between the tablets now: the pair's middle, where the seed hangs. */
 const gapMiddle = (f: WithinFrame) => (NEAR_TABLET + TABLET.w + farTablet(f)) / 2;
 
+/**
+ * The law into his chest (`write`): where his heart is, from his feet (where
+ * the stain was), and on the page; the tablets' size there against their own,
+ * closed beside each other, small enough to sit inside his tunic; how high
+ * the pair lifts on its way to him.
+ */
 const HEART: Pt = [LEAD.stain.x, LEAD.stain.y];
 const HEART_AT: Pt = onHim(HEART, 0);
 const INSIDE = 0.3;
+/**
+ * The warm light where his heart is: how far it reaches; its warmth laid on
+ * the cloth (a gold tint, so the tunic warms rather than whitens), how much,
+ * and how flat it lies (its height against its width); its glow; how far it
+ * breathes and how slowly; how much more it swells as the lines brighten.
+ */
 const HEART_LIGHT = {
   r: 80,
   tint: '#ffc24a',
@@ -586,6 +691,12 @@ const HEART_LIGHT = {
   period: 2.2,
   lines: 0.25,
 } as const;
+/**
+ * The ten lines in his chest: their thickness, units (the tablets' own lines,
+ * thickened to read at his size), and the soft light round each that makes
+ * it read through the cloth: each layer's width against the line's, and how
+ * much it lays.
+ */
 const CHEST_LINE = {
   width: 4,
   soft: [
@@ -593,7 +704,9 @@ const CHEST_LINE = {
     [2.2, 0.32],
   ],
 } as const;
+/** How far inside his tunic's outline the light in his chest is held, units: clear of its ink at the sides and hem, and of his head at the top. */
 const INSIDE_TUNIC = { side: 7, top: 14, hem: 8 } as const;
+/** His tunic inset clear of its ink, on the page: what the light in his chest is held to. */
 const TUNIC_INSIDE: ReadonlyArray<Pt> = TUNIC.map(([x, y]) =>
   onHim(
     [
@@ -604,10 +717,13 @@ const TUNIC_INSIDE: ReadonlyArray<Pt> = TUNIC.map(([x, y]) =>
   ),
 );
 
+/** The law's middle now, on the page: the pair's middle, half way up them. */
 const lawMiddle = (f: WithinFrame): Pt => [gapMiddle(f), TABLET_FOOT - TABLET.h / 2];
 
+/** The law's size `k` of the way into his chest: it shrinks ahead of its travel, so it is small before it nears his head. */
 const settledSize = (k: number) => lerp(1, INSIDE, 1 - (1 - k) ** 2);
 
+/** The canvas taken `k` of the way into his chest: the law shrinking about its middle to `INSIDE` of its size as its middle goes to his heart. */
 const settling = (f: WithinFrame, k: number) => {
   if (k <= 0) return;
   const [mx, my] = lawMiddle(f);
@@ -617,6 +733,7 @@ const settling = (f: WithinFrame, k: number) => {
   f.ctx.translate(-mx, -my);
 };
 
+/** The ten lines of the tablets standing with their bottom-left corners at `xs`, the near tablet's five first: each line's ends, in the tablets' own place. */
 const tabletLines = (xs: readonly [number, number]): ReadonlyArray<readonly [Pt, Pt]> => {
   const { lines } = TABLET;
   const half = (lines.length * TABLET.w) / 2 - lines.thick / 2;
@@ -633,6 +750,11 @@ const tabletLines = (xs: readonly [number, number]): ReadonlyArray<readonly [Pt,
   );
 };
 
+/**
+ * The ten lines lit, without their stone, at `amount`, under the law's own
+ * transform `s` times its size: each with its soft light round it, so they
+ * read through his tunic once they are in him.
+ */
 const bareLines = (f: WithinFrame, s: number, amount: number) => {
   if (amount <= 0) return;
   const { ctx } = f;
@@ -657,6 +779,7 @@ const bareLines = (f: WithinFrame, s: number, amount: number) => {
   for (const [a, b] of lines) goldLine(ctx, [a, b], width, amount);
 };
 
+/** The seed now: dropping out of the light between the tablets, hanging there, opening, the blade swelling; going into the light as the law settles into him. */
 const seedNow = (f: WithinFrame) => {
   const drop = f.at('drop');
   const life = f.at('life');
@@ -670,6 +793,7 @@ const seedNow = (f: WithinFrame) => {
   return DROPPED;
 };
 
+/** One tablet's shadows on the page, its bottom-left corner at `x`, `amount` of them. */
 const tabletShadows = (f: WithinFrame, x: number, amount: number) => {
   if (amount <= 0) return;
   const { ctx } = f;
@@ -680,6 +804,7 @@ const tabletShadows = (f: WithinFrame, x: number, amount: number) => {
   ctx.restore();
 };
 
+/** One tablet, its bottom-left corner at `x`: its stone, `stone` of it showing, and its five lines lit, their glow swelled `swell`. */
 const tablet = (f: WithinFrame, x: number, swell: number, stone: number) => {
   const { ctx } = f;
   const y = TABLET_FOOT;
@@ -697,6 +822,13 @@ const tablet = (f: WithinFrame, x: number, swell: number, stone: number) => {
   ctx.restore();
 };
 
+/**
+ * The law beside him: their shadows on the page; the two tablets, parting;
+ * the light between them; the seed dropped out of it, its shadow under it.
+ * On `write` the tablets close again and the pair settles into his chest,
+ * its shadows leaving the page, the seed going into the light, the stone
+ * going last and leaving the ten lines lit in him, brighter on "into".
+ */
 const law = (f: WithinFrame) => {
   const { ctx } = f;
   const settle = f.at('settle');
@@ -735,6 +867,7 @@ const law = (f: WithinFrame) => {
   ctx.restore();
 };
 
+/** The warm light where his heart is, held inside his tunic, breathing, swelling as the lines brighten on "into". */
 const heartGlow = (f: WithinFrame) => {
   const { ctx } = f;
   const lit = f.at('heart');
@@ -763,6 +896,12 @@ const heartGlow = (f: WithinFrame) => {
   ctx.restore();
 };
 
+/**
+ * His face beside the law: his eyes on the tablets, to us asking on
+ * "mocking", a shake of his head on "No."; back to the tablets as they part,
+ * down after the seed, wonder as it opens, glad at "His own life"; down at
+ * his chest as the law settles into it, and up to us on "mind,", warmed.
+ */
 const lawPose = (f: WithinFrame) => {
   const receive = f.at('receive') * (1 - f.at('warmed'));
   acted(LN, READING, [
@@ -795,6 +934,11 @@ const lawPose = (f: WithinFrame) => {
   LN.stain = PLAIN;
 };
 
+/**
+ * Him on the page beside the law: `word.all`'s framing creeping on, then
+ * within.command's, creeping in as the seed opens; to him alone as the law
+ * settles into his chest, drawn over him from then on.
+ */
 const lawShot = (f: WithinFrame) => {
   const shot = f.knobsOf(word);
   const lawCam = knobCamera(shot('law'), shot('lawZoom'));
@@ -824,13 +968,17 @@ const lawShot = (f: WithinFrame) => {
   );
 };
 
+/** Hebrews 8:10 on its page (within.write), verbatim, and the phrase the card floods from. */
 const VERSE = {
   ref: 'Hebrews 8:10',
   text: 'For this is the covenant that I will make with the house of Israel after those days, saith the Lord; I will put my laws into their mind, and write them in their hearts: and I will be to them a God, and they shall be to me a people:',
   phrase: 'I will put my laws into their mind, and write them in their hearts:',
 } as const;
+/** How many of the phrase's words have been said as the page lands: "I will put my laws into their mind,". */
 const SAID = 8;
+/** The page the verse is set on, frame px (`cold`'s): the whole frame and a margin; where its text starts, its reference above it. */
 const VERSE_PAGE = { w: 2000, h: 1160, text: { x: 370, y: 370 }, ref: 110 } as const;
+/** The reference's type (`cold`'s). */
 const REF_TYPE = {
   family: F.body,
   size: 34,
@@ -839,6 +987,7 @@ const REF_TYPE = {
   tracking: 0.08,
 } as const;
 
+/** The share of the phrase's highlight the words said before the page lands fill, as `verse` sweeps it (each word and its pad). */
 const saidShare = (ctx: CanvasRenderingContext2D) => {
   const pad = 2 * (VERSE_STYLE.pad?.x ?? VERSE_STYLE.type.size * 0.12);
   const widths = VERSE.phrase
@@ -849,6 +998,12 @@ const saidShare = (ctx: CanvasRenderingContext2D) => {
   return total > 0 ? widths.slice(0, SAID).reduce((sum, x) => sum + x, 0) / total : 0;
 };
 
+/**
+ * The verse's page turning in over him from the right, as `cold` turns
+ * Job's; once it lies, the reference and the verse on it, the phrase lit as
+ * far as it has been said and sweeping on with the voice. Returns the box the
+ * card floods from.
+ */
 const verseShot = (f: WithinFrame): Box | void => {
   const { ctx, w, h } = f;
   const turn = f.at('page');
@@ -873,16 +1028,32 @@ const verseShot = (f: WithinFrame): Box | void => {
   );
 };
 
+/** The card's one word, the payoff, its stop and its closing quote dropped: "hearts". */
 const heartsOnly = (words: ReadonlyArray<CardWord>): ReadonlyArray<CardWord> =>
   words.filter((w) => w.payoff).map((w) => ({ ...w, text: w.text.replace(/[.,:;!?”"]+$/, '') }));
 
+/** Where the room's planes line up while the camera sits on it: the room's framing. */
 const ROOM_REST: Pt = [768, 470];
+/**
+ * The air the room's far planes fade into, the warm dust in the hole's
+ * light, and how thick it lies: thick enough that the crowd behind the bed
+ * stands back in it and the man on his bed stands clear of them.
+ */
 const ROOM_AIR = { haze: '#f1d5b2', thickness: 1.64 } as const;
+/** How far back the crowd behind the bed stands, and the back wall behind them, as planes. */
 const ROOM_DEPTH = { crowd: 1.2, wall: 1.3 } as const;
 
+/** Christ in the room, as within.bed stands Him beside the bed's foot: His feet, His size. */
 const CHRIST_ROOM: Standing = { x: 1130, y: 880, scale: 1.11 };
 
+/** His size: the band's against Christ's as He stands here. */
 const MAN_SCALE = heldScale('climber', BAND.man, CHRIST_ROOM.scale);
+/**
+ * The man on his bed (within.bed), held: his hip on the pallet; his trunk
+ * raised at rest against the pillow and at the top of his strain, and his
+ * head's lift above it; his hands pressing at the bed; how far and how fast
+ * he trembles at the top of his strain.
+ */
 const MAN = {
   hip: hipOn(727, MAN_SCALE),
   rest: 0.3,
@@ -900,16 +1071,20 @@ const MAN = {
   ],
 } as const;
 
+/** His trunk as he strains: up fast off the pillow, then held there, trembling, until he falls back. */
 const STRAINING: ReadonlyArray<Key> = [
   [0, 0],
   [0.7, 1, 'outCubic'],
   [1, 1],
 ];
 
+/** How each held person's breath runs in the room: its period, and how far apart their phases fall. */
 const CROWD_BREATH = { period: 4.3, spread: 0.37 } as const;
 
+/** The light from the hole where it falls on the bed, the man in it (within.bed's man in its light): its middle, its reach, its warm white, how much. */
 const BED_LIGHT = { at: [640, 770], r: 260, color: '#fff1d8', amount: 0.26 } as const;
 
+/** The man now: lying back against the pillow; up on his hands after "bed", and back on "walk,"; again on "however", and back on "wished."; sat up on "arise,". */
 const manPose = (f: WithinFrame): LyingPose => {
   const up = Math.max(
     f.keys('strain', STRAINING) * (1 - f.at('fall')),
@@ -927,6 +1102,14 @@ const manPose = (f: WithinFrame): LyingPose => {
   };
 };
 
+/**
+ * The man risen (roof.went), held: where he stands up in front of the bed,
+ * how far left he has walked by the cut, his turn as he goes, his steps and
+ * how high each lifts him, his lean into the walk; how low he comes up from
+ * (his height squashed about his feet); the bed rolled up in his arms (its
+ * middle from his feet, its length, its thickness and its turn, his units)
+ * and his hands at its two ends.
+ */
 const RISEN = {
   at: [690, 905],
   walk: 380,
@@ -942,6 +1125,7 @@ const RISEN = {
   ],
 } as const;
 
+/** The man risen now: standing up in front of the bed, his bed in his arms; walking out to the left. */
 const risenPose = (f: WithinFrame): CamperPose => {
   const go = f.at('go');
   const walking = go > 0 && go < 1 ? 1 : 0;
@@ -958,22 +1142,28 @@ const risenPose = (f: WithinFrame): CamperPose => {
   };
 };
 
+/** How tall the risen man stands now, against his height: coming up off the bed. */
 const risenHeight = (f: WithinFrame) => lerp(RISEN.low, 1, f.at('stand'));
 
+/** The middle of the bed rolled up in the risen man's arms, Board pixels, as he stands `sy` of his height. */
 const rollAt = (p: CamperPose, sy: number): Pt => [
   p.x + RISEN.roll.at[0] * p.scale,
   p.y + RISEN.roll.at[1] * p.scale * sy,
 ];
 
+/** The rolled bed's length and thickness, Board pixels, at his size. */
 const rollSize = (p: CamperPose): Pt => [RISEN.roll.long * p.scale, RISEN.roll.thick * p.scale];
 
+/** Where the risen man's head is, Board pixels, as he stands `sy` of his height: what eyes on him rest on. */
 const risenHead = (p: CamperPose, sy: number): Pt => {
   const b = bodyOf('climber');
   return [p.x + 0.08 * b.wide * p.facing * p.scale, p.y - (b.tall - b.head / 2) * p.scale * sy];
 };
 
+/** How far a held mass's ink stands out past its paper, its units (look-props' line, drawn under the paper at twice its width). */
 const MASS_INK = 5;
 
+/** Where `p`'s hands are, Board pixels (campMass's, its breath aside). */
 const handsOnPage = (p: CamperPose): Pt[] => {
   const c = Math.cos(p.lean);
   const s = Math.sin(p.lean);
@@ -983,6 +1173,7 @@ const handsOnPage = (p: CamperPose): Pt[] => {
   ]);
 };
 
+/** `who`'s hands again over what it holds in front of it: its mass drawn again within its two hands and their ink. */
 const handsOver = (ctx: CanvasRenderingContext2D, who: CamperName, p: CamperPose) => {
   const r = (0.17 * bodyOf(who).wide + MASS_INK) * p.scale;
   ctx.save();
@@ -996,6 +1187,7 @@ const handsOver = (ctx: CanvasRenderingContext2D, who: CamperName, p: CamperPose
   ctx.restore();
 };
 
+/** The man risen, `sy` of his height as he comes up off the bed: his mass, the bed rolled in his arms, his hands at its ends. */
 const risen = (f: WithinFrame, p: CamperPose, sy: number) => {
   const { ctx } = f;
   ctx.save();
@@ -1014,6 +1206,7 @@ const risen = (f: WithinFrame, p: CamperPose, sy: number) => {
   ctx.restore();
 };
 
+/** Person `h` of the house, held, breathing at its own phase (`i`). */
 const housePerson = (f: WithinFrame, h: Held, i: number) =>
   campMass(
     f.ctx,
@@ -1025,8 +1218,10 @@ const housePerson = (f: WithinFrame, h: Held, i: number) =>
     ),
   );
 
+/** The four at the hole, still: their heads and shoulders within it, and their hands on its edge over the roof. */
 const BEARER_POSES = BEARERS.map((h) => heldPose(h, CHRIST_ROOM.scale, 0));
 
+/** The four seen through the hole: drawn within it, so the roof's edge cuts them. */
 const bearersInHole = (f: WithinFrame) => {
   const { ctx } = f;
   ctx.save();
@@ -1038,14 +1233,17 @@ const bearersInHole = (f: WithinFrame) => {
   ctx.restore();
 };
 
+/** Their hands over the roof's torn edge, holding the ropes: each of the four again, within its two hands. */
 const bearersHands = (f: WithinFrame) =>
   BEARERS.forEach((h, i) => {
     const p = BEARER_POSES[i];
     if (p !== undefined) handsOver(f.ctx, h.who, p);
   });
 
+/** How far a rope sags: let down taut to the bed, and drawn up short, hanging. */
 const ROPE_SAG = { held: 6, up: 9 } as const;
 
+/** The ropes: down to the bed's ties as they let it down (`bed`); loosed and drawn up short, hanging from their hands (`arose`). */
 const ropes = (f: WithinFrame) => {
   const up = f.at('toRise') >= 1;
   ROPES.forEach(([hand, tie], i) =>
@@ -1053,8 +1251,14 @@ const ropes = (f: WithinFrame) => {
   );
 };
 
+/** Where Christ's hand lifts to toward the man as He bids him arise, from His feet, His units. */
 const BIDDING: Pt = [-168, -270];
 
+/**
+ * Christ beside the bed's foot: kind, His eyes on the man's face (`head`) as
+ * he strains and falls back, sits up and goes; His hands at rest, the one
+ * toward the man lifting on "said" and going down again as he walks out.
+ */
 const christInRoom = (f: WithinFrame, head: Pt) => {
   const { ctx } = f;
   const { x, y, scale } = CHRIST_ROOM;
@@ -1079,6 +1283,13 @@ const christInRoom = (f: WithinFrame, head: Pt) => {
   christHand(f, CHRIST_ROOM, CHRIST_HANDS[1]);
 };
 
+/**
+ * The house in Capernaum in its planes (within.bed, roof.saw), farthest
+ * first: the back wall and its doorway, the floor; the crowd behind the bed;
+ * the room's middle, the sky in the hole with the four at its edge, the roof
+ * round it, the light falling through, the people at the sides, the ropes,
+ * the bed with the man on it, Christ; the heads nearest us at the edges.
+ */
 const roomShot = (f: WithinFrame) => {
   const { ctx, w, h } = f;
   const wide = knobCamera(f.knob('room'), f.knob('roomZoom'));
@@ -1133,14 +1344,20 @@ const roomShot = (f: WithinFrame) => {
   );
 };
 
+/** His strain at its top (`we`): how far he leans into it and tips his head with it, radians; how far and how fast he trembles. */
 const STRAIN = { lean: 0.17, tilt: 0.08, tremble: 0.014, rate: 9 } as const;
+/** His hands pressing down as he strains (the man's on his bed), his arms straight and out from his sides, from his feet. */
 const PRESSING = { far: [-65, -149], near: [69, -150] } as const;
+/** Where he looks, from his feet: down at his feet in the page; ahead, the way he strains to go; up ahead as he steps on (within.arose). */
 const AT_FEET: Pt = [24, -40];
 const AHEAD: Pt = [190, -300];
 const UP_AHEAD: Pt = [300, -480];
+/** His step on (within.arose): how far, how high he lifts in it, how far he leans into it; how far his hands swing. */
 const STEP = { on: 80, hop: 14, lean: 0.07, swing: 12 } as const;
 
+/** Looking down at his feet held in the page: worried. */
 const HELD: Expression = { ...EASE, browY: -0.6, browTilt: 0.32, eyes: 1, mouth: -0.5 };
+/** Straining against it: the brows knit and down, the eyes screwed shut, the mouth set. */
 const STRIVING: Expression = {
   ...EASE,
   browY: 2.2,
@@ -1149,20 +1366,32 @@ const STRIVING: Expression = {
   eyeW: 1.15,
   mouth: -0.9,
 };
+/** Spent: the brows' inner ends up, the eyes low, the mouth turned down. */
 const SPENT: Expression = { ...EASE, browY: -0.4, browTilt: 0.42, eyes: 0.88, mouth: -0.9 };
+/** As his feet come free: wonder, the eyes wide. */
 const FREED: Expression = { ...EASE, browY: -2.3, browTilt: 0.2, eyes: 1.18, mouth: 0.5 };
 
+/** His strain now: up into it on "stop", falling back late in "sinning,"; again on "however", spent on "wish.". */
 const strainNow = (f: WithinFrame) =>
   Math.max(
     f.keys('pull', STRAINING) * (1 - f.at('slip')),
     f.keys('pullAgain', STRAINING) * (1 - f.at('spent')),
   );
 
+/** Where his feet are now against where the page held them: his step on, and his lift in it. */
 const stepNow = (f: WithinFrame): Pt => {
   const k = f.at('step');
   return [STEP.on * k, -STEP.hop * Math.sin(Math.PI * k)];
 };
 
+/**
+ * His face and lean held fast and freed: his eyes on his feet in the page,
+ * his head bowed to them; up into the strain on "stop", leaning, his face
+ * screwed up, trembling; back on "sinning,"; again on "however"; spent on
+ * "wish.". On "man" his feet come free and he watches them go, wondering; on
+ * "arose." he leans into his step, his eyes and his head lifted ahead,
+ * warmed.
+ */
 const fastPose = (f: WithinFrame) => {
   const up = strainNow(f);
   const warm = f.at('warm');
@@ -1185,8 +1414,14 @@ const fastPose = (f: WithinFrame) => {
   LN.stain = PLAIN;
 };
 
+/** `side` (from his feet) turned with his lean `lean`, still from his feet. */
 const leanedOn = (side: Pt, lean: number): Pt => fromFeet(onHim(side, lean));
 
+/**
+ * Him on the page, his feet held in it and freed: his shadows; him, stepping
+ * on once free; the page over his feet, tearing off them on "man"; his hands
+ * pressing down as he strains, swinging as he steps.
+ */
 const heldFast = (f: WithinFrame) => {
   const { ctx } = f;
   const [fx, fy] = L.lead;
@@ -1209,6 +1444,11 @@ const heldFast = (f: WithinFrame) => {
   for (const p of hands) handAt(f, onHim([p[0] + off[0], p[1] + off[1]], 0));
 };
 
+/**
+ * Him on the page (`we`, `arose`): held fast under the `we` framing creeping
+ * in; then, back from the room, freed and stepping on, the camera going with
+ * him to within.arose's framing as the morning warms.
+ */
 const fastShot = (f: WithinFrame) => {
   const held = knobCamera(f.knob('we'), f.knob('weZoom'));
   const cam = shotPath(held, [
@@ -1219,6 +1459,7 @@ const fastShot = (f: WithinFrame) => {
   onPage(f, cam, () => heldFast(f), f.at('morning'));
 };
 
+/** The page's own light, lifted off the verse's page as it turns in over him (`cold`'s), and back on the page once the room has cut in. */
 const pageLight = (f: WithinFrame): Light => {
   const off = f.at('page') * (1 - f.at('toRoom'));
   return {

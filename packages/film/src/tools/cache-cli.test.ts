@@ -27,6 +27,7 @@ const DAY = 86_400_000;
 const NOW = 100 * DAY;
 const folder = '/out/f/cache/segments';
 
+/** The film `f` under `/films`, its outputs under `/out`, over `files`. */
 const over = (files: Map<string, Uint8Array>) => {
   files.set('/films/f/scenes/index.ts', text('export default []'));
   return FilmFolder.layer('/films').pipe(
@@ -39,6 +40,7 @@ const over = (files: Map<string, Uint8Array>) => {
   );
 };
 
+/** Segment `key` kept, a chunk of `bytes`, last used `daysAgo` days before NOW. */
 const kept = (key: string, daysAgo: number, bytes: number) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -55,6 +57,7 @@ const kept = (key: string, daysAgo: number, bytes: number) =>
     );
   });
 
+/** Three segments: one unused for ten days, one for three, one the newest render of the film used. */
 const stocked = Effect.gen(function* () {
   yield* TestClock.setTime(NOW);
   yield* kept('old', 10, 1000);
@@ -63,6 +66,7 @@ const stocked = Effect.gen(function* () {
   yield* recordRender('/out/f', '/out/f/film/main.mp4', NOW, ['newest']);
 });
 
+/** `film cache …args` run to its end: its exit, and the lines it printed. */
 const cli = (...args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const lines = yield* Queue.unbounded<string>();
@@ -74,6 +78,7 @@ const cli = (...args: ReadonlyArray<string>) =>
     return { exit, lines: yield* Queue.clear(lines) };
   });
 
+/** The segment folders left, by key. */
 const left = (files: Map<string, Uint8Array>) =>
   [
     ...new Set(

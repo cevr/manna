@@ -9,11 +9,18 @@ import { repoItems } from './sources.js';
 import { historyComment } from './testing.js';
 import { TEST_GIT } from '../testing.js';
 
+/** A rule of each of `selectors`, named by it. */
 const rulesOf = (selectors: ReadonlyArray<Selector>): ReadonlyArray<JudgedRule> =>
   selectors.map((selector) => ({ ...historyComment, id: selector, selector }));
 
+/** The memo of the repo at `dir`, where the repo's config keeps it. */
 const memoOf = (dir: string) => `${dir}/tmp/judged/items.json`;
 
+/**
+ * The items of `selectors` in the repo at `dir`, past `ignorePatterns`,
+ * each with its rule's selector and its text as the run reads it, and the
+ * tree they came from.
+ */
 const treeOf = (
   dir: string,
   ignorePatterns: ReadonlyArray<string>,
@@ -37,11 +44,13 @@ const treeOf = (
     };
   });
 
+/** The comment blocks of the repo at `dir`, past the dist folders. */
 const commentsOf = (dir: string) =>
   Effect.map(treeOf(dir, ['**/dist/**'], ['comments']), ({ items }) =>
     items.map(({ file, line, text }) => ({ file, line, text })),
   );
 
+/** Runs `git <args>` in `cwd`; answers what it prints. */
 const git = (cwd: string, ...args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
@@ -57,6 +66,10 @@ const git = (cwd: string, ...args: ReadonlyArray<string>) =>
     );
   });
 
+/**
+ * A repository whose `main` commits `committed` (each file's lines), then
+ * `tree` written over the working tree uncommitted; answers its directory.
+ */
 const repo = (
   committed: Record<string, ReadonlyArray<string>>,
   tree: Record<string, ReadonlyArray<string>>,

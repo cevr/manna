@@ -23,6 +23,7 @@ const midi168 = Effect.gen(function* () {
 const read = (record: typeof RECORD_168) =>
   Schema.decodeEffect(HymnRecordJson)(JSON.stringify(record));
 
+/** Hymn 168's record with its violas' row changed. */
 const withViolas = (change: { readonly frames?: number; readonly lufs?: 'silent' }) =>
   Schema.decodeEffect(HymnRecordJson)(
     JSON.stringify({

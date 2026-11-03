@@ -25,6 +25,7 @@ import { PageRenderer, RenderFailed } from './page-render.ts';
 import { memoryFileSystem, text } from './host/testing.ts';
 import { Platform, html, appFolder, served, app, buildOf, serverOf } from './fixtures/lab-app.ts';
 
+/** A Mac's Chrome, as its `User-Agent` names it. */
 const MAC_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36';
 
@@ -92,6 +93,7 @@ describe('lab pages', () => {
           page: page.answer,
           beside: Layer.empty,
         });
+        /** `pathname` answered over HTTP for `accept`: its coding, and its body read whole. */
         const sent = (pathname: string, accept: string) =>
           Effect.gen(function* () {
             const response = yield* Effect.promise(() =>
@@ -429,6 +431,12 @@ describe('lab pages', () => {
   );
 });
 
+/**
+ * The app's three pages in a file system in memory (no watch hears a save
+ * there), each page its HTML as written (`PageBundler.layerTest`); `mtimes`
+ * says each file's mtime as its stat reports it (0 unless set), and
+ * `afterRead` runs once each read of a file has been answered.
+ */
 const memoryApp = (
   mtimes: Map<string, number> = new Map(),
   afterRead: (file: string) => Effect.Effect<void> = () => Effect.void,
@@ -467,6 +475,10 @@ const memoryApp = (
   };
 };
 
+/**
+ * The test bundler, whose first build waits once it has read its pages:
+ * `reading` is done then, and the build goes on once `release` is.
+ */
 const holdingFirst = (reading: Deferred.Deferred<boolean>, release: Deferred.Deferred<boolean>) =>
   Layer.effect(
     PageBundler,
@@ -486,6 +498,7 @@ const holdingFirst = (reading: Deferred.Deferred<boolean>, release: Deferred.Def
     }),
   ).pipe(Layer.provide(PageBundler.layerTest));
 
+/** The test bundler, setting `bundled` once a build has read its pages while `armed` is. */
 const noting = (armed: Ref.Ref<boolean>, bundled: Ref.Ref<boolean>) =>
   Layer.effect(
     PageBundler,

@@ -47,12 +47,14 @@ import { LEAD, LEAD_ARMS, LEAD_HAND_SIZE, LEAD_KNOBS, reachHands } from '../rigs
 import { TITLE } from '../script.ts';
 import { title } from './title.ts';
 
+/** How far each group stands off its `cold` place in title's wide, Board pixels. */
 interface Spread {
   readonly lead: Pt;
   readonly prosecutor: Pt;
   readonly judge: Pt;
 }
 
+/** The cast in title's wide: where the Board's pixels sit on its floor, at what size, spread how. */
 interface Wide {
   readonly x: number;
   readonly y: number;
@@ -60,6 +62,7 @@ interface Wide {
   readonly spread: Spread;
 }
 
+/** The film's name on its strip: the strip's centre and size, frame px, and its type. */
 interface Strip {
   readonly x: number;
   readonly y: number;
@@ -100,8 +103,14 @@ const TITLE_POSE: CourtPose = (() => {
   Object.assign(p.judge.numbers, { browY: 1.6, browTilt: -0.3, mouth: -1 });
   return p;
 })();
+/** title's light: the court's, with a little of the film's vignette. */
 const TITLE_LIGHT: Light = { ...LIGHT.room, vignette: 0.1 };
 
+/**
+ * title's court as its last frame draws it, in the frame's pixels: pulled
+ * back to its panel's framing, the film's name settled on its strip, the
+ * strip torn as title tore it (`hands`, title's own).
+ */
 const titleCourt = (f: CourtFrame, w: number, h: number, hands: (key: string) => Hand) => {
   const { ctx } = f;
   const n = TITLE_NAME;
@@ -126,36 +135,59 @@ const titleCourt = (f: CourtFrame, w: number, h: number, hands: (key: string) =>
   ctx.restore();
 };
 
+/** A sheet's size, frame px. */
 interface Sheet {
   readonly w: number;
   readonly h: number;
 }
+/** The page that turns over the court: the whole frame and a margin, as cold's page for Job's verse. */
 const SHEET: Sheet = { w: 2000, h: 1160 };
 
+/** A light of `color` falling to `edge` at the corners, both raised by the ground's lift, as light.ts's `lit` raises the acts' lights. */
 const raisedLight = (color: Hex, edge: Hex): Light => {
   const raised = mix(color, '#ffffff', LIFT / 2);
   return { color: raised, edge: mix(edge, raised, LIFT) };
 };
 
+/**
+ * The page's own light, not its act's: the kept panels (word.all,
+ * word.short, word.fig) lay a warm peach afternoon on the page, the sun at
+ * the upper left, where the seed act's hazed noon (`LIGHT.haze`) is a cool
+ * blue-grey that would grey the Board's peach. The peach is the page's paper
+ * (`PAGE`); the light over it is a warm white, so the lead keeps his lilac
+ * as the panels keep it, its corners falling to a faint rose, with a little
+ * of the film's vignette.
+ */
 const PEACH: Light = { ...raisedLight('#fffaf4', '#f9ecec'), vignette: 0.1 };
 
+/** Where he stands on the page, his feet, in the Board's pixels at his own size (word.all's, scaled to him). */
 const LEAD_AT: Pt = [500, 820];
 
+/** His hands' size against the hand rig's: his sheet's. */
 const HAND_SCALE = LEAD_HAND_SIZE;
 
+/** A pair of places on him, from his feet: on his far side (the page's left) and his near side. */
 interface Sides {
   readonly far: Pt;
   readonly near: Pt;
 }
+/** Where his hands hang at rest at his sleeves' ends, and the shoulders they swing from (his rig's). */
 const HAND_REST: Sides = { far: LEAD_ARMS.left.rest, near: LEAD_ARMS.right.rest };
 const SHOULDER: Sides = { far: LEAD_ARMS.left.shoulder, near: LEAD_ARMS.right.shoulder };
 
+/** Where he looks, from his feet. */
 interface Gazes {
+  /** At us. */
   readonly us: Pt;
+  /** Up and away, wondering. */
   readonly aside: Pt;
+  /** At the floor by his feet, where the line draws itself. */
   readonly floor: Pt;
+  /** At the tablets beside him. */
   readonly tablets: Pt;
+  /** Up at their top, on `short`. */
   readonly top: Pt;
+  /** Down at his chest, at the stain. */
   readonly chest: Pt;
 }
 const GAZE: Gazes = {
@@ -167,9 +199,13 @@ const GAZE: Gazes = {
   chest: [-10, -150],
 };
 
+/** "So is God's verdict a cover-up?": the brows go up, asking. */
 const ASKING: Expression = { ...EASE, browY: -2.4, browTilt: 0.18, eyes: 1.1, mouth: -0.2 };
+/** "What does the word mean?": puzzled, wondering. */
 const WONDERING: Expression = { ...EASE, browY: -1.2, browTilt: 0.3, eyes: 1.05, mouth: -0.3 };
+/** Watching the line draw itself: intent. */
 const INTENT: Expression = { ...EASE, browY: -0.8, browTilt: 0.16, eyes: 1.12, mouth: 0 };
+/** The lines lit: wonder, the start of hope. */
 const LIT_UP: Expression = {
   ...EASE,
   browY: -2.2,
@@ -178,18 +214,28 @@ const LIT_UP: Expression = {
   eyeW: 1.05,
   mouth: 0.5,
 };
+/** "So how do we measure up?": sober, looking at himself. */
 const SOBER: Expression = { ...EASE, browY: -0.6, browTilt: 0.3, eyes: 0.95, mouth: -0.6 };
+/** "We all come up short.": worried, looking up at them. */
 const DWARFED: Expression = { ...EASE, browY: -1.8, browTilt: 0.38, eyes: 1.12, mouth: -1.1 };
+/** "And we do what Adam and Eve did": caught, a glance at us. */
 const CAUGHT: Expression = { ...EASE, browY: 0.6, browTilt: 0.28, eyes: 0.85, mouth: -0.8 };
+/** Covering up: busy, a little sheepish. */
 const BUSY: Expression = { ...EASE, browY: -0.4, browTilt: 0.26, eyes: 0.95, mouth: -0.5 };
+/** "And how is that going?": a level look at us, the lids heavy. */
 const LEVEL: Expression = { ...EASE, browY: 1.4, browTilt: 0.02, eyes: 0.7, mouth: -0.2 };
 
+/** His numbers (scratch: every one he moves is rewritten each frame). */
 const LN: Record<keyof typeof LEAD_KNOBS, number> = { ...LEAD_KNOBS };
+/** The seal pressed over his stain, as `cold` left it (scratch: its place rewritten each frame). */
 const SEAL: SealPose = { x: 0, y: 0, rot: 0, scale: 1, shown: 1, glint: 0 };
 
+/** Where the tablets stand: the left one's bottom-left corner, on the floor beside him (word.all). */
 const TABLETS_AT: Pt = [671, 820];
+/** How tall the tablets stand on `short`: as tall as a doorway, 685 against his 373 (word.short). */
 const DOORWAY = 2.43;
 
+/** The gold line's run: along the floor, how thick it is, and how high it rises before it folds. */
 interface LineRun {
   readonly from: number;
   readonly to: number;
@@ -197,6 +243,7 @@ interface LineRun {
   readonly width: number;
   readonly rise: number;
 }
+/** Under his feet from behind his heels out to where the tablets' far side will stand. */
 const LINE: LineRun = {
   from: LEAD_AT[0] - 150,
   to: TABLETS_AT[0] + 2 * TABLET.w + TABLET.gap,
@@ -204,30 +251,42 @@ const LINE: LineRun = {
   width: 10,
   rise: 22,
 };
+/** How many points each half of the line folds with. */
 const FOLD_POINTS = 64;
 
+/** The tablets (scratch: their size, stone and lines rewritten each frame). */
 const TABS: TabletsPose = tabletsAt(TABLETS_AT[0], TABLETS_AT[1]);
 
+/** A point on the page as units from his feet, upright, and back. */
 export const fromLead = (p: Pt): Pt => [p[0] - LEAD_AT[0], p[1] - LEAD_AT[1]];
 export const onLead = (p: Pt): Pt => [LEAD_AT[0] + p[0], LEAD_AT[1] + p[1]];
 
+/** `p`, from his feet, turned with him as he leans `lean`: where it is on the page. */
 export const onHim = (p: Pt, lean: number): Pt => {
   const c = Math.cos(lean);
   const s = Math.sin(lean);
   return [LEAD_AT[0] + p[0] * c - p[1] * s, LEAD_AT[1] + p[0] * s + p[1] * c];
 };
 
+/** A pinned leaf's cues: its fall, his hand's reach to its pin, his hand's press on it. */
 interface LeafCues {
   readonly fall: 'fall1' | 'fall2' | 'fall3' | 'fall4';
   readonly pin: 'pin1' | 'pin2' | 'pin3' | 'pin4';
   readonly push: 'push1' | 'push2' | 'push3' | 'push4';
 }
 
+/** Where a leaf's veins meet, and its turn (0: its tip up). */
 interface Place {
   readonly at: Pt;
   readonly rot: number;
 }
 
+/**
+ * A leaf coming down: where it starts on the page, the point its path bends
+ * toward (so it comes down beside him and in from the side, never across his
+ * face), how far it sways, how many half sways it makes, its turn at the
+ * start.
+ */
 interface Drift {
   readonly from: Pt;
   readonly bend: Pt;
@@ -236,9 +295,11 @@ interface Drift {
   readonly spin: number;
 }
 
+/** The point `t` along the curve from `a` bent toward `b` to `c`, one axis. */
 const bent = (a: number, b: number, c: number, t: number) =>
   (1 - t) * (1 - t) * a + 2 * t * (1 - t) * b + t * t * c;
 
+/** A leaf he pins: its cues, its drift down, its pin (from the stain's middle), where it lies once it drops (from his feet). */
 interface Pinned {
   readonly cues: LeafCues;
   readonly drift: Drift;
@@ -246,6 +307,12 @@ interface Pinned {
   readonly fallen: Place;
 }
 
+/**
+ * The four leaves he pins, one on each of "leaves", "excuses", "coat" and
+ * "stain", as word.fig lays them: a patchwork round the seal, upper left,
+ * upper right, lower left, lower right, each tip out from it, the blot's edge
+ * showing between them. Each starts above the frame.
+ */
 const PINNED: ReadonlyArray<Pinned> = [
   {
     cues: { fall: 'fall1', pin: 'pin1', push: 'push1' },
@@ -273,12 +340,14 @@ const PINNED: ReadonlyArray<Pinned> = [
   },
 ];
 
+/** A leaf that drifts past him to the floor: its drift, where it lies on the page, and the shares of `stray` it falls through. */
 interface Stray {
   readonly drift: Drift;
   readonly lies: Place;
   readonly from: number;
   readonly to: number;
 }
+/** The two word.fig drifts past him: one by his far side, one between him and the tablets. */
 const STRAYS: ReadonlyArray<Stray> = [
   {
     drift: { from: [330, 225], bend: [300, 560], sway: 30, sways: 5, spin: 0.6 },
@@ -294,6 +363,7 @@ const STRAYS: ReadonlyArray<Stray> = [
   },
 ];
 
+/** Where each leaf lies once it has dropped, on the page: the four he pinned, at his feet, then the two that drifted past him. */
 const FALLEN: ReadonlyArray<Place> = [
   ...PINNED.map((p): Place => ({
     at: [LEAD_AT[0] + p.fallen.at[0], LEAD_AT[1] + p.fallen.at[1]],
@@ -302,6 +372,12 @@ const FALLEN: ReadonlyArray<Place> = [
   ...STRAYS.map((s) => s.lies),
 ];
 
+/**
+ * The page as this scene's last frame leaves it, where `seed` opens: the
+ * sheet and its light; where he stands, his hands' rests and their
+ * size; his last look (`LEVEL`, his eyes on us); where the tablets
+ * stand; and where each leaf lies, dry and flat.
+ */
 export const LAST_FRAME = {
   sheet: SHEET,
   light: PEACH,
@@ -313,12 +389,15 @@ export const LAST_FRAME = {
   leaves: FALLEN,
 } as const;
 
+/** How far out from a leaf's hub his hand presses it on: the middle of its blade. */
 const PRESS_ON = 10;
+/** A press of his hand: in, and off again. */
 const PRESS: ReadonlyArray<Key> = [
   [0, 0],
   [0.4, 1],
   [1, 0],
 ];
+/** How much his hand gives as it presses: a share of its size. */
 const SQUASH = 0.08;
 
 export const word = drawing({

@@ -1,3 +1,34 @@
+/**
+ * The chordfeel study: where a guitarist would strike each chord change,
+ * by each candidate rule in `src/placement.ts`, set beside where the
+ * compiler puts the changes today.
+ *
+ *   bun packages/hymnal/scripts/chordfeel.ts --out <dir> [--seed <n>]
+ *
+ * It takes hymns 373 and 388 and, for each meter, 12 hymns picked with a
+ * fixed seed (every hymn of a meter with fewer), each with a sung first
+ * stanza and timing. For each line of the first stanza and of the refrain
+ * it lays out the beat grid (from the MIDI file's meters, bars counted from
+ * tick 0), the melody note, today's guitar chords and each rule's chords.
+ * A table counts, for each rule, the chords that move or fold and the lines
+ * that change; a rule that does not put 373's refrain line 0 on the owner's
+ * syllables 3 and 7 is marked so.
+ *
+ * For 388 (and 373 beside it) it measures each guitar chord's syllable
+ * today, its onset in the file (the start of the guitar-level harmony span
+ * that holds it), and the syllable whose start is nearest that onset with
+ * the words as laid today and with the same words laid on the file's
+ * soprano. The cause of a chord that is not on its soprano syllable: held
+ * over (a line's first chord sounding from before the line), syllable
+ * split (today's chord stands at the file's change, so only the laying of
+ * the words differs), timing (its syllable has no note), else the
+ * placement rule.
+ *
+ * Writes `<dir>/index.html`, which shows each syllable's text read live from
+ * the compiled hymns for the owner (never commit it), and
+ * `<dir>/summary.json`, numbers and syllable indices only.
+ */
+
 import { Effect, Schema } from 'effect';
 import { mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -32,6 +63,7 @@ if (out === undefined || !Number.isInteger(seed)) {
 const pad = (n: number) => String(n).padStart(3, '0');
 const decodeHymn = Schema.decodeUnknownEffect(Hymn);
 
+/** A fixed-seed shuffle (mulberry32), so the sample is the same every run. */
 const shuffled = <A>(items: readonly A[], from: number): A[] => {
   let state = from >>> 0;
   const next = () => {
@@ -66,6 +98,7 @@ const load = (n: number) =>
     return { hymn, midi, score: Score.fromMidi(midi, hymn.stanzas.length) } satisfies Loaded;
   });
 
+/** One studied line: where it sits in the hymn, its words (for the page alone) and its placement input. */
 interface Studied {
   readonly verse: number | 'refrain';
   readonly line: number;
@@ -75,6 +108,11 @@ interface Studied {
 
 const meterName = (hymn: Hymn) => `${hymn.meter.numerator}/${hymn.meter.denominator}`;
 
+/**
+ * The first stanza's lines and the refrain's, each with its sung times: a
+ * refrain's from where the file plays it after the stanza it is stored
+ * from (the first, or the last when it is sung after the last alone).
+ */
 const studiedLines = ({ hymn, score }: Loaded): Studied[] => {
   const timing = hymn.timing;
   if (timing === undefined) return [];
@@ -132,6 +170,7 @@ const gridOf = ({ score }: Loaded): Placement.Grid => ({
 const same = (a: Placement.Change, b: Placement.Change) =>
   a.syllable === b.syllable && a.at === b.at && Chord.equals(a.chord, b.chord);
 
+/** How a rule's changes differ from today's: changes at a new place, changes folded away. */
 const compare = (today: readonly Placement.Change[], rule: readonly Placement.Change[]) => {
   const moved = rule.filter((c) => !today.some((t) => same(t, c))).length;
   const folded = today.length - rule.length;
@@ -144,17 +183,22 @@ interface Mismatch {
   readonly chord: string;
   readonly syllable: number;
   readonly at: number;
+  /** The guitar-level harmony's change in the file, in ticks. */
   readonly onset: number | undefined;
+  /** The syllable whose start is nearest the onset, as the words are laid today. */
   readonly nearest: Place | undefined;
+  /** The same, with the words laid on the soprano's notes. */
   readonly nearestOnTune: Place | undefined;
   readonly cause: 'agrees' | 'held over' | 'syllable split' | 'timing' | 'placement rule';
 }
 
+/** The tune as the soprano's top voice: the first harmony track. */
 const sopranoOf = (midi: Midi.Midi) => {
   const soprano = Score.harmonyTracks(midi)[0];
   return soprano === undefined ? [] : Score.topVoice(soprano.notes, midi.ticksPerBeat / 16);
 };
 
+/** Which track the compiler reads the tune from: the first sounding track, unless it is a harmony track. */
 const melodyTrack = (midi: Midi.Midi) => {
   const harmony = Score.harmonyTracks(midi);
   const first = midi.tracks.find((track) => track.notes.length > 0);
@@ -166,6 +210,7 @@ const melodyTrack = (midi: Midi.Midi) => {
   };
 };
 
+/** The words of the studied lines laid on the soprano's notes instead: the fit, and each line's syllable starts. */
 const relaid = (loaded: Loaded, lines: readonly Studied[]) => {
   const { midi, hymn, score } = loaded;
   const melody = sopranoOf(midi);
@@ -197,10 +242,12 @@ const relaid = (loaded: Loaded, lines: readonly Studied[]) => {
 };
 
 interface Place {
+  /** The studied line, counted from 0 over the first stanza and the refrain. */
   readonly line: number;
   readonly syllable: number;
 }
 
+/** The syllable, over all the studied lines, whose start is nearest the tick. */
 const placeOf = (starts: ReadonlyArray<readonly number[]>, tick: number): Place | undefined =>
   starts
     .flatMap((line, l) => line.map((start, syllable) => ({ line: l, syllable, start })))
@@ -218,6 +265,12 @@ const placeAt = (starts: ReadonlyArray<readonly number[]>, tick: number): Place 
   return found === undefined ? undefined : { line: found.line, syllable: found.syllable };
 };
 
+/**
+ * Each guitar chord of the studied lines against the file: its onset, the
+ * syllable nearest it as laid today and as laid on the soprano, and why
+ * they differ. The words of the first stanza and the refrain are laid on
+ * the first verse of the file, as the compiler lays stanza 1.
+ */
 const measureChords = (loaded: Loaded, lines: readonly Studied[]) => {
   const { score, midi, hymn } = loaded;
   const slack = score.ticksPerBeat / 16;
@@ -361,6 +414,7 @@ const readHymn = (f: string) =>
     return yield* decodeHymn(json);
   });
 
+/** The hymns on the page: 373, 388, then up to PER_METER of each meter, picked with the seed. */
 const pick = Effect.gen(function* () {
   const files = (yield* Effect.promise(() => readdir(`${DATA}/sdah-1985`)))
     .filter((f) => /^\d{3}\.json$/.test(f))
@@ -419,6 +473,7 @@ interface Tally {
   >;
 }
 
+/** One rule's tally over every studied line of every hymn on the page. */
 const tallyOf = (rule: (typeof Placement.RULES)[number], rows: readonly Row[]): Tally => {
   let moved = 0;
   let folded = 0;
@@ -465,6 +520,7 @@ const tallyOf = (rule: (typeof Placement.RULES)[number], rows: readonly Row[]): 
   };
 };
 
+/** 373 and 388 measured against their files. */
 const studyOf = (loadedBy: ReadonlyMap<number, { loaded: Loaded; lines: Studied[] }>) => {
   const h388 = loadedBy.get(388);
   const h373 = loadedBy.get(373);

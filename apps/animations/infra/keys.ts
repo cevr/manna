@@ -1,3 +1,15 @@
+/**
+ * `bun run store:keys [--stage s]`: the film store's S3 key pair, from the
+ * deployed stack, into this app's git-ignored `.env`, where the film tools
+ * read it (`FILM_STORE_*`, `@manna/film/tools` `PrivateStore`).
+ *
+ * The deploy keeps the token's value in the stack's local state
+ * (`.alchemy/`, git-ignored). R2's S3 API takes the token's id as the access
+ * key id and the sha256 of its value as the secret; both are derived here and
+ * written beside whatever else `.env` holds, replacing only the `FILM_STORE_*`
+ * lines, the file readable by its owner alone. Nothing but the variables'
+ * names is printed.
+ */
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { makeLocalState } from 'alchemy/State';
@@ -6,8 +18,10 @@ import { Digest } from 'effect/crypto';
 import { Hex } from 'effect/encoding';
 import { Command, Flag } from 'effect/cli';
 
+/** The stack `alchemy.run.ts` declares. */
 export const STACK = 'film-store';
 
+/** The stack's outputs `keys` reads. */
 const StoreOutputs = Schema.Struct({
   bucket: Schema.String,
   accountId: Schema.String,
@@ -15,6 +29,7 @@ const StoreOutputs = Schema.Struct({
   token: Schema.Redacted(Schema.String),
 });
 
+/** The stack was never deployed at the stage (or was destroyed). */
 class StoreNotDeployed extends Schema.TaggedError<StoreNotDeployed>()('StoreNotDeployed', {
   stage: Schema.String,
 }) {
@@ -23,8 +38,13 @@ class StoreNotDeployed extends Schema.TaggedError<StoreNotDeployed>()('StoreNotD
   }
 }
 
+/** The variables the film tools read, and the prefix they share. */
 const PREFIX = 'FILM_STORE_';
 
+/**
+ * `.env` text with `entries` in place of every `FILM_STORE_*` line it had,
+ * every other line kept as it was.
+ */
 const envWith = (existing: string, entries: ReadonlyArray<readonly [string, string]>): string => {
   const kept = existing
     .split('\n')

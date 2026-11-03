@@ -1,3 +1,5 @@
+/** The settings button's mark on iOS: the SF Symbol `gearshape`, in the accent. */
+
 import { One } from 'one';
 import { StyleSheet } from 'react-native';
 

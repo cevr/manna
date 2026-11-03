@@ -11,6 +11,7 @@ const nodeOf = (page: Page, type: string) => graphOf(page).find((node) => node['
 
 const pageAt = (path: string) => PAGES.find((page) => page.path === path) ?? PAGES[0]!;
 
+/** A series with one published film, as its page will be once the first is out. */
 const withFilm: Series = {
   ...SERIES[0]!,
   episodes: [

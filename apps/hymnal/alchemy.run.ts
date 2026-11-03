@@ -1,3 +1,15 @@
+/**
+ * The hymnal's cloud, declared as an Alchemy stack: one R2 bucket that serves
+ * the hymn recordings at `https://hymns.cvr.im` (`infra/bucket.ts`).
+ *
+ * Only `prod` exists. The bucket's name and domain are fixed, so a second
+ * stage would adopt the same bucket and domain; any other stage is refused.
+ * `bun run plan` and `bun run deploy` run it from this directory. State lives
+ * in the Cloudflare state store, so every machine sees the same resources.
+ *
+ * The recordings are not part of the stack: `bun run audio:copy` copies them
+ * into the bucket (`infra/audio/copy.ts`).
+ */
 import * as Alchemy from 'alchemy';
 import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Stage } from 'alchemy/Stage';

@@ -4,6 +4,7 @@ import { openTab, respond, servePaths } from '../../../src/lab/fixtures/browsers
 import { phoneFit } from '../../../src/lab/fixtures/phone-fit.ts';
 import { evaluates } from '../../../src/lab/fixtures/settled.ts';
 
+/** What `outside` the measure answers on a phone's window (390 × 844) whose body is `body`. */
 const outside = (body: string, want: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const html = `<!doctype html><html><head><style>

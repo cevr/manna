@@ -20,6 +20,7 @@ const candidates = (key: string): readonly string[] => {
   return [...new Set(result.filter((candidate) => candidate.length >= 2))];
 };
 
+/** Tokens are reader text. Quoted FTS operators cannot enter the grammar. */
 export const searchTerms = (query: string): readonly string[] =>
   query.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
 

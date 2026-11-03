@@ -1,6 +1,22 @@
 import { framesOf } from '../../../cutout/frames.ts';
 import type { CutFrame } from '../../../cutout/table.ts';
 
+/**
+ * Each cut view's frame: the kept sheet it is on, its kept box, and the
+ * pixels its part sheet pads it by (left, top, right, bottom). A standing
+ * view takes 12 rows below, where the shadow fades, and 3 each other side;
+ * the three-quarter view to the viewer's left takes 18, as its shadow runs 17
+ * rows past his soles, the back view 21, as its shadow runs 20 rows past them,
+ * each profile 21, as its shadow runs 18 rows past them, and the three-quarter
+ * view to the viewer's right 23, as its shadow runs 21 rows past them. His
+ * kept pose scattering seed (poses-1, on his kept poses sheet) takes 15, as its
+ * shadow runs 15 rows past its kept box's bottom row, and his kept pose
+ * standing from behind (poses-2, on the same sheet) 15, as its shadow runs 9
+ * rows past it, and his kept pose reaching into the seed bag (poses-3, on the
+ * same sheet) 15, as its shadow runs 14 rows past it, and his kept pose
+ * standing from the front (poses-4, on the same sheet) 15, as its shadow runs
+ * 14 rows past it.
+ */
 export const FRAMES = {
   front: { sheet: 'turnaround', kept: [28, 227, 283, 776], pad: [3, 3, 3, 12] },
   threeQuarterLeft: { sheet: 'turnaround', kept: [308, 227, 538, 776], pad: [3, 3, 3, 18] },
@@ -14,6 +30,8 @@ export const FRAMES = {
   'poses-4': { sheet: 'poses', kept: [1178, 249, 1488, 835], pad: [3, 3, 3, 15] },
 } as const satisfies Readonly<Record<string, CutFrame>>;
 
+/** A cut view, by its name in his sheets' views. */
 export type FramedView = keyof typeof FRAMES;
 
+/** A view's part sheet frame on its kept sheet (its kept box padded, `boxOf`), and where the kept box's top-left corner lies in it (`keptAt`). */
 export const { boxOf, keptAt } = framesOf(FRAMES);

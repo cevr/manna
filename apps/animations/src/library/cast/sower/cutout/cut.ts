@@ -19,8 +19,10 @@ import { POSES_PAPERS, TURNAROUND_PAPERS } from './papers.ts';
 
 export { FRAMES, JOINTS };
 
+/** A view of his, by its name in his sheets' views. */
 type CutView = keyof typeof FRAMES;
 
+/** From in front: the hem's line, lowest between his feet. */
 const FRONT_HEM: Hem = [518, 126, 6, 90];
 const FRONT_RIGHT: Sleeve = {
   inner: [
@@ -141,6 +143,13 @@ const FRONT: PartCut = {
   ],
 };
 
+/**
+ * From three-quarters, turned to the viewer's left: his right arm is the near
+ * one, his left (the far one) holds the seed bag. The hem's line, column by
+ * column from the sheet's left edge: the tunic's side, the hem over his right
+ * sandal, the hem between his feet, over his left sandal, the tunic's side.
+ * His sandals take what lies under it in their columns, the shadow the rest.
+ */
 const TQL_HEM = {
   right: [
     [28, 509],
@@ -275,6 +284,14 @@ const THREE_QUARTER_LEFT: PartCut = {
   ],
 };
 
+/**
+ * The back view, the parts named from his own side: from behind, his right
+ * arm hangs on the viewer's right and his left on the viewer's left, its hand
+ * over the seed bag. The headcloth hangs over his neck and both sleeves' tops;
+ * the olive mantle covers his back. The hem's line, column by column from the
+ * sheet's left edge: the tunic's side, the hem over his left sandal, between
+ * his feet, over his right sandal, the tunic's side.
+ */
 const BACK_HEM = {
   left: [
     [40, 510],
@@ -431,6 +448,15 @@ const BACK: PartCut = {
   ],
 };
 
+/**
+ * In profile to the viewer's left: only his left arm shows, the near one,
+ * over his body's side, with the body on both sides of it (the mantle's front
+ * panel before its front edge, the mantle's edge band and his back behind its
+ * back edge). The hem's line, column by column from the sheet's left edge:
+ * the tunic's front side, the hem over his leading sandal, the hem between
+ * his feet, over his trailing sandal, the tunic's back side. Which sandal is
+ * his left is read from the turn: the near, leading one.
+ */
 const PL_HEM = {
   left: [
     [10, 510],
@@ -469,6 +495,7 @@ const PL_LEFT: Sleeve = {
   side: 'left',
 };
 const plLeft = sleeve(PL_LEFT);
+/** Before the sleeve's front edge: the mantle's front panel, his belt and his body's front, down past the cuff. */
 const PL_FRONT = {
   polygon: [
     [-1, 170],
@@ -536,6 +563,15 @@ const PROFILE_LEFT: PartCut = {
   ],
 };
 
+/**
+ * In profile to the viewer's right: only his right arm shows, the near one,
+ * over his body's side, with the body on both sides of it (his back and the
+ * headcloth's tail behind its back edge, the mantle's front panel and the
+ * strap before its front edge). The hem's line, column by column from the
+ * sheet's left edge: the tunic's back side, the hem over his trailing sandal,
+ * between his feet, over his leading sandal, the tunic's front side. Which
+ * sandal is his right is read from the turn: the near, leading one.
+ */
 const PR_HEM = {
   back: [
     [13, 509],
@@ -584,6 +620,7 @@ const PR_RIGHT: Sleeve = {
   side: 'right',
 };
 const prRight = sleeve(PR_RIGHT);
+/** Past the sleeve's front edge (its shoulder ink, then the crease, then the cuff's ink): the strap, the mantle's front panel, his belt and his body's front, down past the cuff. */
 const PR_FRONT = {
   polygon: [
     [FAR, 170],
@@ -655,6 +692,14 @@ const PROFILE_RIGHT: PartCut = {
   ],
 };
 
+/**
+ * From three-quarters, turned to the viewer's right: his right arm is the near
+ * one, on the viewer's left, with the headcloth's tail over its shoulder; his
+ * left arm, the far one, hangs on the viewer's right with the seed bag mostly
+ * behind it. The hem's line, column by column from the sheet's left edge: the
+ * tunic's side, the hem over his right sandal, between his feet, over his left
+ * sandal, the tunic's side.
+ */
 const TQR_HEM = {
   right: [
     [29, 511],
@@ -802,6 +847,22 @@ const THREE_QUARTER_RIGHT: PartCut = {
   ],
 };
 
+/**
+ * His kept pose scattering seed (poses-1, on his kept poses sheet), turned
+ * three-quarters to the viewer's left, cut as drawn. His right arm (the far
+ * one, on the viewer's left) is flung out level: its sleeve, cuff and round
+ * hand fill the band from above its top ink to below its lower ink, out to
+ * the sheet's left edge, its root on his body's front outline. His left arm
+ * (the near one) hangs, its hand over the seed bag; its inner edge is the
+ * sleeve's inner ink, a crease above it. The ten seeds falling from his far
+ * hand stand free on the paper, one part. The hem's line, column by column:
+ * the robe's front lifting over his leading foot, the hem over it, between
+ * his feet, over his trailing foot, the robe's back. His leading foot (the
+ * viewer's left) is taken as his right, the trailing one as his left. This
+ * sheet's outline ink is [48, 30, 15] (measured); a framed view's cut reads
+ * none, so `INK` below stays the turnaround's. The view is 398 px wide, so its right edges
+ * run to twice `FAR`, past its pad.
+ */
 const P1_HEM = {
   right: [
     [153, 571],
@@ -852,6 +913,7 @@ const P1_SOLES = {
     [340, 360, 582],
   ],
 } as const satisfies Readonly<Record<string, SoleRuns>>;
+/** The ten seeds' boxes (measured), each padded 2 px. */
 const P1_SEEDS = [
   box(17, 288, 31, 311),
   box(47, 308, 62, 330),
@@ -927,6 +989,14 @@ const POSES_1: PartCut = {
   ],
 };
 
+/**
+ * Standing from behind, on his kept poses sheet: as the back view, his left
+ * arm hangs on the viewer's left, its hand over the seed bag, and his right on
+ * the viewer's right. The headcloth hangs as a cape over both sleeves' tops to
+ * a point under which the strap runs; the olive mantle covers his back. The
+ * hem's line, column by column, is the hem ink's lowest row: over his left
+ * sandal, between his feet at column 147, over his right sandal.
+ */
 const P2_HEM = {
   left: [
     [48, 540],
@@ -1126,6 +1196,24 @@ const POSES_2: PartCut = {
   ],
 };
 
+/**
+ * His kept pose reaching into the seed bag (poses-3, on his kept poses sheet),
+ * turned three-quarters to the viewer's left, cut as drawn. His right arm (the
+ * far one, on the viewer's left) is bent across his body: its sleeve runs
+ * from under the headcloth down his front outline to the elbow, then its
+ * forearm back across the mantle and strap to the round hand in the bag's
+ * mouth. Its edge with the mantle above the forearm has no ink; the forearm's
+ * top ink and the hand's ring bound it there. The fingers stay with the arm:
+ * its take runs to row 353 under the hand, so the bag's top lip (row 350) is
+ * the arm's where the hand lies over it. His left arm (the near one) hangs
+ * beside the bag; its inner edge is the sleeve's inner ink, a crease above it.
+ * The headcloth's tail lies over its top. The hem's line, column by column:
+ * the robe's front lifting over his leading foot, the hem over it, between
+ * his feet, over his trailing foot. His leading foot (the viewer's left) is
+ * taken as his right, the trailing one as his left. This sheet's outline ink
+ * is [48, 30, 15] (measured); a framed view's cut reads none, so `INK` below
+ * stays the turnaround's.
+ */
 const P3_HEM = {
   right: [
     [10, 500],
@@ -1399,6 +1487,15 @@ const P4_SOLES = {
   ],
 } as const satisfies Readonly<Record<string, SoleRuns>>;
 
+/**
+ * His kept pose standing from the front (poses-4, on his kept poses sheet),
+ * cut as drawn. His right arm (the viewer's left) hangs at his side, its hand
+ * at the view's left edge; his left (the viewer's right) hangs beside the seed
+ * bag on his left hip, its hand over the bag's top right, at the view's right
+ * edge. The headcloth's tails over his shoulders are torso's below row 170, as
+ * his beard's foot is head's. His sheet's ink is [48, 30, 15] (measured); a
+ * framed cut reads none.
+ */
 const POSES_4: PartCut = {
   parts: [
     { name: 'head', take: [box(-1, -1, FAR, 170), box(118, 170, 194, 184)] },
@@ -1438,12 +1535,24 @@ const POSES_4: PartCut = {
   ],
 };
 
+/**
+ * His outline's ink: the median of his views' dark pixels (measured on the
+ * three-quarter and back views). His kept poses sheet's is [48, 30, 15]
+ * (measured), but a framed cut reads no ink, so his poses take none.
+ */
 const INK = [34, 16, 8, 255] as const;
 
+/** Where his body's sides run under his arms: out to his shoulders and robe, not in at the sleeves' inner edges. */
 const SIDES = sides({ pronoun: 'his', lower: 'robe', cloth: 'the linen tunic and olive mantle' });
 
+/** The paper grain his sheet shows on his body, carried into the paint under his arms. */
 const GRAIN = grain('the linen tunic and olive mantle of his body');
 
+/**
+ * Each view's moving parts (what a pose moves, whose areas are painted
+ * magenta and repainted beneath), and the words okra repaints them by: what
+ * lies under them, in the sheet's own style.
+ */
 const HIDDEN_ENTRIES = {
   front: {
     moving: ['armRight', 'armLeft'],
@@ -1493,8 +1602,10 @@ const HIDDEN_ENTRIES = {
   },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
+/** What his kept sheets show through each of his named gaps. */
 const FEET = 'the ground between his feet';
 
+/** His cut table: each view's cut, how its figure is read, and its gaps. */
 export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   frames: FRAMES,
   views: {
@@ -1533,10 +1644,13 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   ink: INK,
 });
 
+/** How far the clear ground's flood reaches through paper-coloured pixels, 8-steps: his band runs 1 to 4 px wide outside his ink, and through the fading edge of his ground shadow under his feet up to 54 (threeQuarterLeft), so one pass clears it all; his ink is closed on every view, so the flood reaches no cloth at that depth. */
 const RIM_BAND_PX_PAST_HIS_54_AT_THE_SHADOW_EDGE = 64;
 
+/** A pixel is paper-coloured within this ΔE76 of the view's paper: his band lies 4 to 8 from it at the median, his ink's blend farther. */
 const RIM_NEAR_DE76_PAST_HIS_RIM_8 = 12;
 
+/** Each view's paper rim, as his part sheets clear it. */
 export const PAPER_RIMS = Records.map(
   { ...TURNAROUND_PAPERS, ...POSES_PAPERS },
   (paper): PaperRim => ({
@@ -1546,6 +1660,7 @@ export const PAPER_RIMS = Records.map(
   }),
 );
 
+/** What each view's laid part sheet runs before it is written (`film concept parts`): every view clears the pale paper band his paint keeps just outside his ink (251,243,228 at the median on the front, against its paper 250,237,217), which his un-matte would read as his cream linen and draw as a white torn rim. */
 export const CLEAN = Records.map(PAPER_RIMS, clearPaperRim) satisfies Partial<
   Record<keyof typeof CUTS, SheetClean>
 >;

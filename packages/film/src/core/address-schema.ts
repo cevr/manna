@@ -3,6 +3,13 @@ import { Segment } from './segment.ts';
 
 const PART_ID = /^[a-z0-9][a-z0-9-]*$/;
 
+/**
+ * A scene's or a short's id: lower case, digits and dashes, starting with a
+ * letter or a digit (`cold`, `rain-2`). It names the part's files, its
+ * address key and its choice point's id, so it never holds the `,` that
+ * joins a key's ids nor the `:` of a key, and never reads as a flag. A
+ * refusal names the id.
+ */
 export const PartId = Schema.String.check(
   Schema.makeFilter(
     (id: string) =>
@@ -12,6 +19,7 @@ export const PartId = Schema.String.check(
   Schema.isPattern(PART_ID),
 );
 
+/** An act's name (`cold open`): never empty, and never starting with the `-` of a flag. */
 export const ActName = Segment.check(
   Schema.isPattern(/^[^-]/, {
     message: 'an act is named by a word, never empty nor starting with "-"',
@@ -19,12 +27,14 @@ export const ActName = Segment.check(
 );
 export type ActName = typeof ActName.Type;
 
+/** `name` as an act's name, when it is one. */
 const actNamed = Schema.decodeOption(ActName);
 
 const FilmPart = Schema.TaggedStruct('Film', {});
 const ActPart = Schema.TaggedStruct('Act', { act: ActName });
 const ScenesPart = Schema.TaggedStruct('Scenes', { ids: Schema.NonEmptyArray(PartId) });
 
+/** Which part of a film: the whole, one act, some scenes (in the order named), or one short. */
 export const Address = Schema.Union([
   FilmPart,
   ActPart,
@@ -33,6 +43,10 @@ export const Address = Schema.Union([
 ]);
 export type Address = typeof Address.Type;
 
+/**
+ * One address as a string, equal for equal addresses: `film`, `act:<name>`,
+ * `scenes:<id>,<id>`, `short:<id>`. A record keyed by address compares these.
+ */
 export const addressKey = (address: Address): string =>
   Match.valueTags(address, {
     Film: () => 'film',
@@ -41,6 +55,14 @@ export const addressKey = (address: Address): string =>
     Short: ({ id }) => `short:${id}`,
   });
 
+/**
+ * `addressKey`'s inverse: the address `key` is written as, when its shape is
+ * one (`film`, `act:…`, `scenes:…`, `short:…`, with a non-empty name). An
+ * act's name is decoded (it names files); the others are read as they
+ * stand: a caller that needs a valid address judges
+ * the result by `Address` (a choice point's id does, and checks the round
+ * trip).
+ */
 export const addressOfKey = (key: string): Option.Option<Address> => {
   if (key === 'film') return Option.some({ _tag: 'Film' });
   const [kind = '', ...rest] = key.split(':');
@@ -54,4 +76,5 @@ export const addressOfKey = (key: string): Option.Option<Address> => {
   return Option.some({ _tag: 'Scenes', ids });
 };
 
+/** One scene's address. */
 export const sceneAddress = (id: string): Address => ({ _tag: 'Scenes', ids: [id] });

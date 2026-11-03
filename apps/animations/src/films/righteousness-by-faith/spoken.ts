@@ -16,6 +16,10 @@ import { clamp, ease, lerp, staggered } from '@manna/film/core';
 import { C, bubble, piece, type Hands } from './kit.ts';
 import { tree } from './garden.ts';
 
+/**
+ * The word of light at the origin, `size` 1 being 160 units wide: the gold
+ * word-bubble in its own glow. `lit` 0..1 is the glow's strength.
+ */
 export const wordLight = (ctx: CanvasRenderingContext2D, hand: Hand, size = 1, lit = 1) =>
   at(ctx, { x: 0, y: 0, scale: size }, () => {
     glow(ctx, 0, 0, 260, C.glow, 0.95 * lit);
@@ -23,9 +27,16 @@ export const wordLight = (ctx: CanvasRenderingContext2D, hand: Hand, size = 1, l
     bubble(ctx, hand, (i) => sub(hand, 20 + i), { fill: C.gold, ink: C.cream, shadow: 0.2 });
   });
 
+/** The arc a word flies from `from` to `to`, bowed up by `lift` over their midpoint. */
 export const arc = (from: Pt, to: Pt, lift: number): Pt[] =>
   quad(from, [(from[0] + to[0]) / 2, Math.min(from[1], to[1]) - lift], to, 40);
 
+/**
+ * A word in flight along `path`, `p` 0..1 of the way: a trail of light behind
+ * it that fades from the tail, and the word itself at the head, tipped along
+ * its heading like a paper plane. Draws nothing at 0. `trail` false flies it
+ * with no trail, a light on its own (the landing's word into the open hand).
+ */
 export const flight = (
   ctx: CanvasRenderingContext2D,
   path: ReadonlyArray<Pt>,
@@ -63,21 +74,33 @@ export const flight = (
   );
 };
 
+/** Where the dawn's sun stands, and the tree the word draws up. */
 export const SUN: Pt = [960, 300];
 export const TREE: Pt = [1330, 905];
 
+/** How far along the dawn world is; every value 0..1. */
 interface Dawn {
+  /** Night gives way to dawn. */
   readonly flood: number;
+  /** Dawn gives way to teal day. */
   readonly day: number;
+  /** The sun bursts from the word. */
   readonly sun: number;
+  /** Land and water tear in and rise into place. */
   readonly land: number;
+  /** The tree grows up under the hanging word. */
   readonly tree: number;
 }
 
 export const DAWN_DONE: Dawn = { flood: 1, day: 1, sun: 1, land: 1, tree: 1 };
 
+/** Rise from below, staggered: `k` 0..1 is how late this piece starts. */
 const risen = (land: number, k: number) => ease.outBack(staggered(land, k, 0.4));
 
+/**
+ * The dawn world in 1920×1080 frame units: the dark, the sky it floods to,
+ * the sun, cardboard land and water rising into place, and the tree.
+ */
 export const dawn = (ctx: CanvasRenderingContext2D, w: number, h: number, hand: Hands, d: Dawn) => {
   ctx.save();
   ctx.fillStyle = C.night;
@@ -195,4 +218,5 @@ export const dawn = (ctx: CanvasRenderingContext2D, w: number, h: number, hand: 
     );
 };
 
+/** Linear blend, for a camera or a place on its way between two. */
 export const toward = (a: Pt, b: Pt, t: number): Pt => [lerp(a[0], b[0], t), lerp(a[1], b[1], t)];

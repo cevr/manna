@@ -7,6 +7,7 @@ import { CorpusContributionRejectedError, CorpusSourceUnavailableError } from '.
 import { type WritingsContribution, unknownProvenance } from './model.js';
 import { makeWritingsAssetRecipe } from './source.js';
 
+/** A whole archive as a publication streamed in one chapter. */
 const publicationStream = (archive: PublicationArchive) => ({
   publication: archive.publication,
   chapters: Stream.make(
@@ -17,6 +18,7 @@ const publicationStream = (archive: PublicationArchive) => ({
   ),
 });
 
+/** One source the recipe merges. */
 type WritingsAssetSourceService = Parameters<typeof makeWritingsAssetRecipe>[0][number];
 
 const publication = Publication.make({

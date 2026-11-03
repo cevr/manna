@@ -1,9 +1,17 @@
 import { Option, Schema } from 'effect';
 
+/** The folder itself and its parent: a path names them, a name never does. */
 const FOLDERS: ReadonlySet<string> = new Set(['.', '..']);
 
+/**
+ * The keys a record reads off `Object.prototype` instead of its own: in an
+ * object literal `__proto__` sets the prototype, and `constructor` and
+ * `prototype` are found on every object, so a lookup by one answers though
+ * the record never held it.
+ */
 const PROTOTYPE_KEYS: ReadonlySet<string> = new Set(['__proto__', 'constructor', 'prototype']);
 
+/** Why `name` is no segment, in plain words; none when it is one. */
 const refusalOf = (name: string): Option.Option<string> => {
   if (name === '') return Option.some('a name is never empty');
   if (FOLDERS.has(name)) return Option.some(`"${name}" names a folder, never a name`);
@@ -20,8 +28,16 @@ const refusalOf = (name: string): Option.Option<string> => {
   return Option.none();
 };
 
+/** Whether `name` is one path segment no record lookup confuses with the prototype's. */
 export const isSegment = (name: string): boolean => Option.isNone(refusalOf(name));
 
+/**
+ * One path segment, safe as a record key: never empty, `.`, `..`, a `/` or a
+ * `\`, `__proto__`, `constructor` or `prototype`. Branded, so a path or
+ * record builder that takes a `Segment` refuses a bare string: a name is
+ * decoded before it names a file. Each name schema is `Segment.check(…)`,
+ * its own pattern on top.
+ */
 export const Segment = Schema.String.check(
   Schema.makeFilter((name: string) =>
     Option.match(refusalOf(name), { onNone: () => true, onSome: (why) => why }),

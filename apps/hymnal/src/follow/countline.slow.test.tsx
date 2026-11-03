@@ -1,3 +1,19 @@
+/**
+ * The count-in's line: the pulse is drawn over the line the follow holds when
+ * the count-in starts, the first line the stanza choice keeps, and the page
+ * is asked to bring that line into view as the count starts, wherever the
+ * page was. The line stays marked and unlit through the count.
+ *
+ * Cases: hymn 78 with stanza 3 only (line 16) and stanza 2 only (line 8),
+ * a seeded sample of hymns with one later stanza chosen, and hymn 78 with
+ * every stanza (line 0) on a page the follow showed before (a page the
+ * reader scrolled away from). The held line's oracle reads the hymn's
+ * sections apart from the product: the first line of a section sung with
+ * the chosen stanza.
+ *
+ * Hymn numbers, line indices and beats only: no hymn's words are read or printed.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { RegistryContext } from '@effect/atom-react';
 import { Array as Arr, Duration, Option } from 'effect';
@@ -26,6 +42,7 @@ interface Case {
   readonly choice: Choice;
 }
 
+/** The first line sung with `choice`'s lowest stanza, read from the sections: -1 when they disagree with the timing. */
 const heldLineOf = ({ number, choice }: Case): number =>
   Option.match(Option.all([hymnAt(String(number)), book.of(number)]), {
     onNone: () => -1,
@@ -43,6 +60,7 @@ const heldLineOf = ({ number, choice }: Case): number =>
     },
   });
 
+/** Hymns with a timeline that agrees with their sections and more than one stanza, each with its stanza count. */
 const candidates = Arr.range(1, 695).flatMap((number) =>
   Option.match(hymnAt(String(number)), {
     onNone: () => [],
@@ -54,6 +72,7 @@ const candidates = Arr.range(1, 695).flatMap((number) =>
   }),
 );
 
+/** A seeded sample of `size` hymns, each with one stanza from 2 to its count chosen. */
 const sampleOf = (size: number): ReadonlyArray<Case> => {
   let seed = 78;
   const next = (below: number) => {
@@ -66,6 +85,7 @@ const sampleOf = (size: number): ReadonlyArray<Case> => {
   });
 };
 
+/** The page of `number` with `choice`, under a player the test drives; each line the follow asks to scroll to. */
 const mountPage = ({ number, choice }: Case) => {
   const timeline = Option.getOrThrow(book.of(number));
   const hymn = Option.getOrThrow(hymnAt(String(number)));
@@ -109,7 +129,9 @@ const mountPage = ({ number, choice }: Case) => {
     n,
     asked,
     lines,
+    /** The player at the first sung line, with no count-in. */
     tell: (kind: 'Playing' | 'Paused') => act(() => registry.set(state, at(kind))),
+    /** The player counts beat `index` in, held at the first sung line. */
     beat: (index: number) =>
       act(() => {
         registry.set(state, at('Playing'));
@@ -120,6 +142,7 @@ const mountPage = ({ number, choice }: Case) => {
         Arr.filter([k], () => line.getAttribute('aria-selected') === 'true'),
       ),
     pulses: () => [...host.querySelectorAll<HTMLElement>('[data-testid="count-in"]')],
+    /** Whether a syllable or word of line `k` is lit in the accent. */
     lit: (k: number) =>
       Option.match(Arr.get(lines(), k), {
         onNone: () => false,
@@ -138,6 +161,7 @@ const mountPage = ({ number, choice }: Case) => {
 
 type Page = ReturnType<typeof mountPage>;
 
+/** Each beat of the count: the marked lines, the lines holding a pulse in their box, and line `k` lit. */
 const countOf = (page: Page, k: number) =>
   Arr.makeBy(page.n, (index) => {
     page.beat(index);

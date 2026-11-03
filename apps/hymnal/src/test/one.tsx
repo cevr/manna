@@ -1,3 +1,16 @@
+/**
+ * `one` as the app's tests see it: the router's boundary, standing in for
+ * the parts the screens use, as One's web build has them. A link press
+ * opens its href inside the app (recorded in `opened`, and told to each
+ * listener in `opening`), and keeps the browser from following it; a click
+ * with a modifier key, or not the main button, is left to the browser.
+ * `Stack.Screen` draws a header from its options, its title and its right
+ * items, which a test finds in `header` as a reader finds them in the
+ * header; the hymn route's comes from the stack's options (`stack.tsx`). A screen that changes its own
+ * route's params does so in place (`useRouter().setParams`, kept in
+ * `paramsSet`).
+ */
+
 import { Match } from 'effect';
 import {
   type DependencyList,
@@ -11,12 +24,20 @@ import { View } from 'react-native';
 
 import type { StackState } from '~/player/title';
 
+/** The hrefs opened inside the app, oldest first. */
 export const opened: Array<string> = [];
 
+/** Called with each href opened inside the app, as the router shows its screen. */
 export const opening = new Set<(href: string) => void>();
 
 type Press = (event?: MouseEvent) => void;
 
+/**
+ * One's `useLinkTo` on the web (`one/src/link/useLinkTo.tsx`): a plain left
+ * click opens the href in the app, or with `replace` (One's `REPLACE`)
+ * puts it in the shown screen's place, recorded as `replace <href>` in
+ * `routed` and not in `opened`.
+ */
 export function useLinkTo({
   href,
   replace = false,
@@ -42,6 +63,7 @@ export function useLinkTo({
   return { href, role: 'link' as const, onPress };
 }
 
+/** One's `Link` as the screens under test use it: its href resolver (a path, or a path with its params as a query). */
 export const Link = {
   resolveHref: (
     href: string | { readonly pathname: string; readonly params: Record<string, string> },
@@ -54,28 +76,46 @@ export const Link = {
     ),
 };
 
+/** The safe-area insets the screens read, in points: a test sets them, as a phone's would be. */
 export const safeArea = { top: 0, right: 0, bottom: 0, left: 0 };
 
+/** One's `useSafeAreaInsets`: the insets a test set. */
 export const useSafeAreaInsets = () => safeArea;
 
+/** The route's params, as a test sets them: the hymn route reads `number`. */
 export const params: Record<string, string> = {};
 
+/** The shown route's path, as a test sets it: the player layer reads it (`LivePlayer`). */
 export const pathname = { current: '/' };
 
+/** One's `usePathname`: the path a test set. */
 export const usePathname = () => pathname.current;
 
+/** One's `useParams`: the params a test set. */
 export const useParams = <T,>() => params as T;
 
+/** Each change of the shown route's params, oldest first: a change in place, not a screen pushed. */
 export const paramsSet: Array<Record<string, string>> = [];
 
+/**
+ * The stack the shown screen is in, as a test sets it (`useNavigation().getState()`):
+ * its screens, oldest first, and the one shown.
+ */
 export const stack: Shown = { state: { routes: [], index: 0 } };
 
+/** The stack a test shows the screen in. */
 interface Shown {
   state: StackState;
 }
 
+/** Each step the router was told to take, oldest first: `back`, `dismissAll`, `push <href>` or `replace <href>`. */
 export const routed: Array<string> = [];
 
+/**
+ * One's `useRouter`: a screen that changes its own route's params has the
+ * change recorded and made; Back, a return to the stack's first screen, a
+ * push and a replace are recorded in `routed`.
+ */
 export const useRouter = () => ({
   setParams: (next: Record<string, string>) => {
     paramsSet.push(next);
@@ -87,15 +127,22 @@ export const useRouter = () => ({
   replace: (href: string) => void routed.push(`replace ${href}`),
 });
 
+/** One's `useNavigation`, as the screens use it: the stack a test set, and the screen focused. */
 export const useNavigation = () => ({
   getState: () => stack.state,
   isFocused: () => true,
 });
 
+/**
+ * One's `useFocusEffect` for a screen that is always focused (`isFocused`):
+ * the effect runs once the screen is mounted, again when `deps` change, and
+ * its cleanup runs when the screen leaves.
+ */
 export function useFocusEffect(effect: EffectCallback, deps: DependencyList = []) {
   useEffect(effect, deps);
 }
 
+/** A header from a screen's options: named by its title, holding its right items. */
 export const Stack = {
   Screen: ({
     options,
@@ -108,8 +155,10 @@ export const Stack = {
   ),
 };
 
+/** Each keep-awake hold now taken, by its hook's id: a screen keeps the screen on while this is not empty. */
 export const awake = new Set<string>();
 
+/** One's `useKeepAwake`: held from the first frame of the component that calls it, let go when it leaves. */
 export function useKeepAwake() {
   const id = useId();
   useEffect(() => {
@@ -118,4 +167,5 @@ export function useKeepAwake() {
   }, [id]);
 }
 
+/** One's device modules, which no test reaches: the player's tests hand in their own (`playbackOn`). */
 export const One = {};

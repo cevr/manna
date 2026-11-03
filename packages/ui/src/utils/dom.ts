@@ -6,6 +6,7 @@ export function ownerDocument(node: Element | null | undefined): Document {
   return node?.ownerDocument || document;
 }
 
+/** The focused element, looking through open shadow roots. */
 export function activeElement(doc: Document): Element | null {
   let element = doc.activeElement;
   while (element?.shadowRoot?.activeElement != null) {
@@ -14,6 +15,7 @@ export function activeElement(doc: Document): Element | null {
   return element;
 }
 
+/** Whether `child` is `parent` or inside it, crossing shadow roots. */
 export function contains(parent?: Element | null, child?: Element | null): boolean {
   if (!parent || !child) {
     return false;
@@ -34,6 +36,7 @@ export function contains(parent?: Element | null, child?: Element | null): boole
   return false;
 }
 
+/** `Element.closest` that walks out of slots and shadow roots. */
 export function closest<E extends Element = Element>(
   node: Node | null | undefined,
   selector: string,
@@ -51,6 +54,7 @@ export function closest<E extends Element = Element>(
   return null;
 }
 
+/** The event's innermost target, through shadow roots. */
 export function getTarget(event: Event): EventTarget | null {
   if ('composedPath' in event) {
     return event.composedPath()[0] ?? event.target;
@@ -60,6 +64,7 @@ export function getTarget(event: Event): EventTarget | null {
 
 type Listenable = Pick<EventTarget, 'addEventListener' | 'removeEventListener'>;
 
+/** Adds a listener and returns the function that removes it. */
 export function addEventListener<E extends Event = Event>(
   target: Listenable,
   type: string,
@@ -74,6 +79,7 @@ export function addEventListener<E extends Event = Event>(
 
 type Cleanup = false | null | undefined | (() => void);
 
+/** One cleanup that runs each given one in order, skipping the empty ones. */
 export function mergeCleanups(...cleanups: Cleanup[]): () => void {
   return () => {
     for (const cleanup of cleanups) {

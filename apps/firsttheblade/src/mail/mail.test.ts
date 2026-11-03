@@ -46,6 +46,7 @@ const ORIGIN = 'https://firsttheblade.test';
 const ANN = 'Ann@Example.com';
 const FILM = 'path/01';
 
+/** A series with one film out, as the site will list it once one is. */
 const WITH_A_FILM: ReadonlyArray<Series> = SERIES.map((series) => {
   if (series.id !== 'path') return series;
   return {
@@ -62,6 +63,7 @@ const WITH_A_FILM: ReadonlyArray<Series> = SERIES.map((series) => {
   };
 });
 
+/** Each page a route answers with, as the prerender writes it. */
 const PAGES = new Map<string, string>(
   Object.values(MAIL_PAGES).map((path) => [path, `<h1>${path}</h1>`]),
 );
@@ -82,6 +84,7 @@ const AssetsTest = Layer.succeed(
   }),
 );
 
+/** Every line the routes log, as written. */
 class Heard extends Context.Service<Heard, { readonly lines: () => ReadonlyArray<string> }>()(
   'test/Heard',
 ) {}
@@ -105,6 +108,7 @@ const test = it.effect.layer(
   ),
 );
 
+/** The real model, built with the signing port under test, over fresh in-memory tables. */
 const modelWithTokens = (tokens: Tokens['Service']) =>
   Layer.unwrap(
     Clock.clockWith((clock) =>
@@ -150,6 +154,7 @@ const modelWithTokens = (tokens: Tokens['Service']) =>
 const call = (path: string, init: RequestInit = {}) =>
   respond(HttpServerRequest.fromWeb(new Request(`${ORIGIN}${path}`, init)));
 
+/** The sign-up form's post, answered; its work after the answer not yet run. */
 const postSignUp = (fields: Readonly<Record<string, string>>, place = '192.0.2.1') =>
   call('/subscribe', {
     method: 'POST',
@@ -157,15 +162,18 @@ const postSignUp = (fields: Readonly<Record<string, string>>, place = '192.0.2.1
     headers: { 'cf-connecting-ip': place },
   });
 
+/** Runs what waits: a sign-up's work, then the model's policies, projections and commands come due. */
 const settle = Effect.gen(function* () {
   yield* (yield* Settle).settle;
 });
 
+/** How far the film's send has gone, once the roster has caught up with the model. */
 const counts = Effect.gen(function* () {
   yield* settle;
   return yield* (yield* RosterTable).counts(FILM);
 });
 
+/** The sign-up form's post, answered, and its work after the answer run. */
 const signUp = Effect.fn('Test.signUp')(function* (
   fields: Readonly<Record<string, string>>,
   place?: string,
@@ -180,6 +188,7 @@ const header = (response: HttpServerResponse.HttpServerResponse, name: string) =
 
 const TOKEN = /token=([^\s&"<>]+)/;
 
+/** The token in a letter's link. */
 const tokenIn = (text: string) =>
   decodeURIComponent(Option.getOrThrow(Option.fromNullishOr(TOKEN.exec(text)?.[1])));
 
@@ -187,15 +196,18 @@ const letters = Effect.gen(function* () {
   return yield* (yield* Mailbox).letters;
 });
 
+/** The confirm link in a letter's text, as a path on the site. */
 const confirmLinkIn = (text: string) =>
   `/subscribe/confirm?token=${encodeURIComponent(tokenIn(text))}`;
 
+/** Opens a confirm link and presses its page's button: the answer to the press. */
 const pressConfirm = Effect.fn('Test.pressConfirm')(function* (link: string) {
   const opened = yield* call(link);
   expect(opened.status).toBe(200);
   return yield* call(link, { method: 'POST' });
 });
 
+/** Signs `address` up and confirms it from its letter. */
 const joined = Effect.fn('Test.joined')(function* (address: string) {
   yield* signUp({ email: address });
   const confirmed = yield* pressConfirm(confirmLinkIn((yield* letters).at(-1)?.text ?? ''));
@@ -203,6 +215,7 @@ const joined = Effect.fn('Test.joined')(function* (address: string) {
   yield* settle;
 });
 
+/** What `bun run mail:send` posts: its JSON, as text. */
 const admin = (body: string, token = TEST_ADMIN_TOKEN) =>
   call('/mail/send', {
     method: 'POST',
@@ -660,6 +673,7 @@ describe('sending a film', () => {
 });
 
 describe('leaving', () => {
+  /** The leave link of the film letter sent to the list's one subscriber. */
   const leaveLink = Effect.gen(function* () {
     yield* joined(ANN);
     yield* admin(`{"film":"${FILM}"}`);
@@ -678,6 +692,7 @@ describe('leaving', () => {
       expect((yield* call('/unsubscribe')).status).toBe(400);
     }));
 
+  /** The left page, answered 200 and never as a redirect. */
   const expectLeft = Effect.fn('Test.expectLeft')(function* (
     left: HttpServerResponse.HttpServerResponse,
   ) {

@@ -1,3 +1,11 @@
+/**
+ * A press on a hymn row of the home list, from each tab (`tabsOf`), the
+ * Topics tab's rows among them: the row opens that hymn's page
+ * (`hymnHref`), and the pager it opens pages through every hymn in number
+ * order (`pageSource` over the row's `source`), whichever group the row
+ * sits in. Numbers only.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 import bundled from 'virtual:hymnal-indexes';

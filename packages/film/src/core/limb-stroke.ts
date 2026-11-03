@@ -1,3 +1,8 @@
+/**
+ * A stroke limb drawn on the CPU, one pixel at a time: the reference the GPU
+ * path is held to. `limb.ts` measures the limb from its part's paint; this
+ * module draws it posed, from that measure and the part's own paint.
+ */
 import { Option } from 'effect';
 import { labOf, type Rgb } from './cast-sheet-pixels.ts';
 import type { Raster } from './raster.ts';
@@ -17,18 +22,26 @@ import {
 
 type Pt = readonly [number, number];
 
+/** The fold weighs 0.6 of the measured silhouette ink and spans the measured forearm, with no additional inset (fractions of forearm length). */
 const FOLD_WEIGHT = 0.6;
 const FOLD_LENGTH = 1;
 const FOLD_INSET = 0;
 
+/** An affine map `[a, b, c, d, e, f]`: x' = a x + c y + e, y' = b x + d y + f. */
 type Affine = Float64Array;
 
+/**
+ * Where a pixel of the drawn frame lies on a limb's part at rest, by each
+ * rigid piece of the posed limb: the upper arm (its shoulder bone's drawn map
+ * inverted), the forearm (its elbow bone's) and the hand (its wrist bone's).
+ */
 export interface LimbFrames {
   readonly upper: Affine;
   readonly fore: Affine;
   readonly hand: Affine;
 }
 
+/** The premultiplied bilinear sample of a limb's part at the rest point `(sx, sy)` into `into` (rewritten whole): colour 0..255, alpha 0..1. */
 export type LimbSample = (sx: number, sy: number, into: Float64Array) => void;
 
 const mapped = (m: Affine, x: number, y: number): Pt => [
@@ -36,6 +49,7 @@ const mapped = (m: Affine, x: number, y: number): Pt => [
   m[1]! * x + m[3]! * y + m[5]!,
 ];
 
+/** The station line of `side` on segment `fore` (0 the upper arm, 1 the forearm) at `u`: linear between that segment's two stations, held past them. */
 const stationAt = (s: LimbStations, side: LimbSideName, fore: number, u: number) => {
   const [a, b] = [
     [s.shoulder, s.elbowUpper],
@@ -45,6 +59,12 @@ const stationAt = (s: LimbStations, side: LimbSideName, fore: number, u: number)
   return a![side] + t * (b![side] - a![side]);
 };
 
+/**
+ * `side`'s half-width at `u` on segment `fore`, and whether the paint shows
+ * that side's edge there: each knot's measured width where it ends on an
+ * edge, the segment's station line across a fold (whose edge the drawn view
+ * hides), linear between knots.
+ */
 const widthAt = (
   limb: PuppetPartLimb,
   side: LimbSideName,
@@ -63,6 +83,7 @@ const widthAt = (
   return [w0 + (f - k0) * (at(Math.min(n - 1, k0 + 1)) - w0), s.ends[Math.round(f)] !== 'fold'];
 };
 
+/** Convex support envelope of the measured station disks. Their common tangents meet the round ends without a square tube cutting across a cap. */
 const hullOf = (points: Array<Pt>): Array<Pt> => {
   points.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   const cross = (a: Pt, b: Pt, c: Pt) =>
@@ -80,6 +101,7 @@ const hullOf = (points: Array<Pt>): Array<Pt> => {
   return [...half(points), ...half(points.toReversed())];
 };
 
+/** Horizontal spans of a rounded segment in its own pixels. The polygon's sagitta and row spacing are each at most a quarter output pixel. */
 const capsuleOf = (limb: PuppetPartLimb, k: number, scale: number) => {
   const { chain } = limb;
   const a = [chain.shoulder, chain.elbow][k]!;
@@ -161,15 +183,18 @@ const capsuleOf = (limb: PuppetPartLimb, k: number, scale: number) => {
   };
 };
 
+/** `top` (premultiplied) laid over `under`, into `under`. */
 const overInto = (under: Float64Array, top: Float64Array) => {
   const keep = 1 - top[3]!;
   for (let c = 0; c < 4; c++) under[c] = top[c]! + under[c]! * keep;
 };
 
+/** Premultiplied `colour` at alpha `a` laid over `into`, keeping `into`'s alpha: ink painted on cloth. */
 const inked = (into: Float64Array, colour: Rgb, a: number) => {
   for (let c = 0; c < 3; c++) into[c] = into[c]! * (1 - a) + colour[c]! * a * into[3]!;
 };
 
+/** Nearest seeded pixel in Euclidean distance, using separable lower envelopes of squared distances. */
 const nearest = (width: number, height: number, seed: (i: number) => boolean) => {
   const count = width * height;
   const far = width * width + height * height + 1;
@@ -221,6 +246,7 @@ const nearest = (width: number, height: number, seed: (i: number) => boolean) =>
   return { ids, distances };
 };
 
+/** The part's cloth under its ink and hand. Donors are classified on the undyed paint so a dark dye cannot become ink; posing cannot paint an unturned wrist inside the sleeve. */
 const clothSampler = (limb: PuppetPartLimb, sample: LimbSample): LimbSample => {
   const [x0, y0, width, height] = limb.regions.box;
   const pixels = new Float64Array(width * height * 4);
@@ -275,6 +301,7 @@ const preparedCloth = (limb: PuppetPartLimb, texture: Raster, sample: LimbSample
   });
 };
 
+/** Filter the hand's whole-texel ownership together with its paint, so a transformed cuff edge never samples lining into the hand or steps between texels. */
 const sampleHand = (
   limb: PuppetPartLimb,
   sample: LimbSample,
@@ -305,12 +332,14 @@ const sampleHand = (
   }
 };
 
+/** Close the union with a measured pen-radius disk. Eroding its dilation joins concave boundaries by tangent arcs without removing a narrow connection. */
 const closedField = (pixels: Float64Array, width: number, height: number, radius: number) => {
   const inside = nearest(width, height, (i) => pixels[i * 4 + 3]! >= 0.5);
   const outside = nearest(width, height, (i) => inside.distances[i]! > radius * radius);
   return Float64Array.from(outside.distances, (d) => Math.sqrt(d) - radius - 0.5);
 };
 
+/** Change coverage without blending displaced pictures; newly filled ground takes sampled cloth. */
 const coverField = (
   pixels: Float64Array,
   field: Float64Array,
@@ -337,6 +366,7 @@ const coverField = (
   }
 };
 
+/** One completed silhouette receives ink once; transition geometry interpolates distance, never two images or their outlines. */
 const outline = (
   pixels: Float64Array,
   hands: Float64Array,
@@ -394,6 +424,13 @@ const outline = (
   return pixels;
 };
 
+/**
+ * Premultiplied raster of a posed limb over its painted stub in `box`.
+ * Measured round-ended capsules and the painted stub fill one cloth mask;
+ * the hand lies over it. From the transition midpoint to its end, one
+ * distance field moves from the painted silhouette to this capsule union.
+ * The completed boundary, cuff opening and forearm fold receive stroke ink.
+ */
 export const limbStroke = (
   limb: PuppetPartLimb,
   frames: LimbFrames,
@@ -413,6 +450,7 @@ export const limbStroke = (
   ] as const;
   const upper = new Float64Array(4);
   const [fore, hand, past] = [new Float64Array(4), new Float64Array(4), new Float64Array(4)];
+  /** Segment `k`'s `(u, v)` at rest point `q`. */
   const along = (k: number, q: Pt): Pt => {
     const [from, d, u0] = segs[k]!;
     const r = sub(q, from);
@@ -420,6 +458,7 @@ export const limbStroke = (
   };
   const scale = 1 / Math.hypot(frames.upper[0]!, frames.upper[1]!);
   const capsules = [capsuleOf(limb, 0, scale), capsuleOf(limb, 1, scale)];
+  /** The two measured round-ended support envelopes, sampled on their own rigid frames. */
   const tube = (k: number, q: Pt, into: Float64Array) => {
     let distance = capsules[k]!(q);
     if (k === 0) distance = Math.min(distance, along(0, q)[0] * scale);

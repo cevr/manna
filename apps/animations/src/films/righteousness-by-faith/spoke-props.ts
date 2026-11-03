@@ -21,17 +21,26 @@ import { GOLD_GLOW, type Paper, paper } from './page-set.ts';
 import { type OpenSeedPose, glow as shine, openSeed } from './props.ts';
 import { PAPERS } from './rigs/papers.ts';
 
+/** A torn plane of the world: its paper, and the rim its torn edge shows, a lighter cut of its own hue. */
 export interface Torn {
   readonly color: Hex;
   readonly rim: Hex;
 }
 
+/** How far every plane runs past the panels' edges, Board pixels, so the camera can travel and breathe over them. */
 const RUN = { left: -700, right: 2300, top: -900, bottom: 1700 } as const;
 
+/**
+ * A torn edge's roughness, how far its rim shows above it and how high it
+ * lifts off the plane behind, Board pixels: a clean tear, its rim a thin line
+ * (`spoke.dark`); and how much rougher the rim's own tear is than the face's.
+ */
 const TEAR = { torn: 2.5, rim: 2.5, shadow: 0.3, rougher: 1.3 } as const;
 
+/** The props' ink, Board pixels: the cast's, as heavy as his outline and the risen seed's (`seed.life`). */
 export const ICON_LINE = 5;
 
+/** The unlit world (`spoke.dark`): its sky, one flat indigo, and its three bands of land, farthest first. */
 export const DARK = {
   sky: '#25224f',
   bands: [
@@ -41,8 +50,10 @@ export const DARK = {
   ],
 } as const satisfies { readonly sky: Hex; readonly bands: ReadonlyArray<Torn> };
 
+/** The front band as the day reaches it (`spoke.light`): still dark, holding the foreground, a little bluer, its rim lilac. */
 const FRONT_LIT: Torn = { color: '#2b2b6b', rim: '#9a8fd2' };
 
+/** The made world (`spoke.light`): the far hills, the land either side of the water, the water. */
 const MADE = {
   hills: { color: '#c99b94', rim: '#f5dccb' },
   land: { color: '#c9a26b', rim: '#f6e4b8' },
@@ -50,14 +61,17 @@ const MADE = {
   water: { color: '#4ea2a5', rim: '#9fd6cc' },
 } as const satisfies Record<string, Torn>;
 
+/** The water's deep toward the front: where it starts darkening, how far it runs, its colour. */
 const DEEP = { from: 690, run: 220, color: '#2c7c8d' } as const satisfies {
   readonly from: number;
   readonly run: number;
   readonly color: Hex;
 };
 
+/** The sun's glint along the horizon: its middle, its half-length and half-height, its light. */
 const GLINT = { x: 880, y: 642, rx: 300, ry: 9, color: '#fff0bf', alpha: 0.8 } as const;
 
+/** A plane under the top edge `top` (smoothed), down past the frame's foot and out past its sides. */
 const under = (top: ReadonlyArray<Pt>): Pt[] => {
   const edge = spline(top, 8);
   const first = edge[0] ?? [0, 0];
@@ -71,6 +85,7 @@ const under = (top: ReadonlyArray<Pt>): Pt[] => {
   ];
 };
 
+/** The dark's three bands, farthest first, each under its top edge as `spoke.dark` tears it. */
 const BANDS: ReadonlyArray<ReadonlyArray<Pt>> = [
   under([
     [-80, 575],
@@ -110,6 +125,7 @@ const BANDS: ReadonlyArray<ReadonlyArray<Pt>> = [
   ]),
 ];
 
+/** The far hills under their ridge, as `spoke.light` lays it: a long rise on the left, a lower one beyond the water. */
 const HILLS = under([
   [-80, 552],
   [100, 540],
@@ -126,11 +142,13 @@ const HILLS = under([
   [1700, 598],
 ]);
 
+/** The water, from the horizon down. */
 const WATER = under([
   [-80, 636],
   [1700, 636],
 ]);
 
+/** The land on the near side of the water, left: a wedge running out into it. */
 const LAND: ReadonlyArray<Pt> = [
   [RUN.left, 592],
   ...spline(
@@ -150,6 +168,7 @@ const LAND: ReadonlyArray<Pt> = [
   [RUN.left, 672],
 ];
 
+/** The land beyond the water, right: rising from the water's edge to the frame's side. */
 const SHORE: ReadonlyArray<Pt> = [
   [758, 707],
   ...spline(
@@ -171,6 +190,14 @@ const SHORE: ReadonlyArray<Pt> = [
   [760, 709],
 ];
 
+/**
+ * One torn plane of the world, `pts` in `p`, at `alpha`: no ink, its edge
+ * still. Its rim is a sheet of its own under it, the plane's shape lifted
+ * `TEAR.rim` and torn as the face is but a little rougher, so it shows above
+ * the torn edge as a thin uneven line, and it casts the plane's shadow. A
+ * fading plane's rim fades ahead of its face, so the face never shows it
+ * through. The camp in `look` tears its sand and its dunes the same way.
+ */
 export const plane = (
   ctx: CanvasRenderingContext2D,
   pts: ReadonlyArray<Pt>,
@@ -202,8 +229,10 @@ export const plane = (
   );
 };
 
+/** How far a dark band sinks as the land rises in its place, Board pixels. */
 const SINK = 140;
 
+/** The dark's band `i` (0 the farthest), `sunk` of the way down and gone (`itself`). */
 export const darkBand = (ctx: CanvasRenderingContext2D, i: number, hand: Hand, sunk: number) => {
   const pts = BANDS[i];
   const p = DARK.bands[i];
@@ -214,6 +243,7 @@ export const darkBand = (ctx: CanvasRenderingContext2D, i: number, hand: Hand, s
   ctx.restore();
 };
 
+/** The dark's front band, which holds the foreground into the day: `lit` of the way to the day's blue. */
 export const frontBand = (ctx: CanvasRenderingContext2D, hand: Hand, lit: number) => {
   const pts = BANDS[2];
   const dark = DARK.bands[2];
@@ -226,14 +256,17 @@ export const frontBand = (ctx: CanvasRenderingContext2D, hand: Hand, lit: number
   );
 };
 
+/** The far hills. */
 export const hills = (ctx: CanvasRenderingContext2D, hand: Hand) =>
   plane(ctx, HILLS, MADE.hills, hand);
 
+/** The land either side of the water: the near wedge on the left, the shore rising on the right. */
 export const land = (ctx: CanvasRenderingContext2D, hand: Hand) =>
   plane(ctx, LAND, MADE.land, hand);
 export const shore = (ctx: CanvasRenderingContext2D, hand: Hand) =>
   plane(ctx, SHORE, MADE.shore, hand);
 
+/** The water from the horizon down, darkening toward the front, the sun's glint along it at `lit`. */
 export const water = (ctx: CanvasRenderingContext2D, hand: Hand, lit: number) => {
   plane(ctx, WATER, MADE.water, hand);
   wash(ctx, RUN.left, DEEP.from, RUN.right - RUN.left, DEEP.run, [
@@ -252,6 +285,12 @@ export const water = (ctx: CanvasRenderingContext2D, hand: Hand, lit: number) =>
   ctx.restore();
 };
 
+/**
+ * The sun as `spoke.light` sets it: its middle, its disc, its six rays (where
+ * each starts and where its tip reaches, its half-width at each end), the
+ * turn of its first ray, straight up and a little left. The dawn floods out
+ * from it.
+ */
 export const SUN = {
   at: [1190, 298],
   r: 70,
@@ -262,8 +301,10 @@ export const SUN = {
   turn: -1.66,
 } as const;
 
+/** A sky's colours as `spoke.light` paints it, each at its height on the panel. */
 type Stops = ReadonlyArray<readonly [number, Hex]>;
 
+/** The dawn the sky floods to first: violet overhead, rose, gold low down. */
 const DAWN: Stops = [
   [0, '#3d3a7e'],
   [200, '#7d5b8f'],
@@ -272,6 +313,7 @@ const DAWN: Stops = [
   [600, '#f8d79c'],
 ];
 
+/** The day it settles to (`spoke.light`): deep blue-violet overhead, teal, a band of rose, peach and gold at the horizon. */
 const DAY: Stops = [
   [0, '#3c3c84'],
   [150, '#3e6c92'],
@@ -283,12 +325,14 @@ const DAY: Stops = [
   [650, '#f8e2ae'],
 ];
 
+/** `stops` as a wash's, over the sky's whole run, top to bottom. */
 const over = (stops: Stops): Stops =>
   stops.map(([y, c]): readonly [number, Hex] => [(y - RUN.top) / (RUN.bottom - RUN.top), c]);
 
 const DAWN_WASH = over(DAWN);
 const DAY_WASH = over(DAY);
 
+/** `draw` at `alpha` of the context's own; nothing at none. */
 const layer = (ctx: CanvasRenderingContext2D, alpha: number, draw: () => void) => {
   if (alpha <= 0) return;
   ctx.save();
@@ -297,10 +341,17 @@ const layer = (ctx: CanvasRenderingContext2D, alpha: number, draw: () => void) =
   ctx.restore();
 };
 
+/**
+ * How far the dark is drawn back from the sun as the sky floods, Board
+ * pixels: past the farthest sky the frame shows, its soft edge and all; and
+ * how soft that edge is.
+ */
 const FLOOD = { reach: 1700, soft: 360 } as const;
 
+/** How far the flood's edge stands from the sun at `flood` (0..1): the middle of its soft edge. */
 const floodEdge = (flood: number) => FLOOD.reach * flood - FLOOD.soft / 2;
 
+/** The dark's indigo over the whole sky, drawn back from the sun `flood` of the way, its edge soft. */
 const night = (ctx: CanvasRenderingContext2D, flood: number) => {
   if (flood >= 1) return;
   const [x, y] = SUN.at;
@@ -317,6 +368,11 @@ const night = (ctx: CanvasRenderingContext2D, flood: number) => {
   ctx.restore();
 };
 
+/**
+ * The sky: the dark's one indigo, the dawn flooding out from the sun into it
+ * `flood` of the way (the dark drawn back from it, so the two never mix but
+ * at its soft edge), and the day over the dawn `day` of the way.
+ */
 export const sky = (ctx: CanvasRenderingContext2D, flood: number, day: number) => {
   const w = RUN.right - RUN.left;
   const h = RUN.bottom - RUN.top;
@@ -327,13 +383,17 @@ export const sky = (ctx: CanvasRenderingContext2D, flood: number, day: number) =
   night(ctx, flood);
 };
 
+/** The sun's papers: its disc, the light in its middle, its rays. */
 const SUN_PAPER = { disc: '#f6d15a', core: '#fde68f', ray: '#f7d660' } as const;
 
+/** The warm air round the sun, and its own light. */
 const SUN_AIR = { color: '#ffe2a4', r: 620, alpha: 0.75 } as const;
 const SUN_LIGHT = { r: 300, alpha: 0.5 } as const;
 
+/** The ring of light that goes out from it as it bursts, at the flood's edge: how thick at first, how bright. */
 const RING = { width: 30, alpha: 0.7 } as const;
 
+/** One of the sun's rays about (`x`, `y`), at `s` of its size: a strip widening along `a` from its foot out to its tip. */
 const ray = (x: number, y: number, a: number, s: number): Pt[] => {
   const c = Math.cos(a);
   const n = Math.sin(a);
@@ -349,9 +409,16 @@ const ray = (x: number, y: number, a: number, s: number): Pt[] => {
   ];
 };
 
+/** The sun's papers as cut: clean, flat, no rim, lying on the sky. */
 const sunCut = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>, color: Hex, hand: Hand) =>
   cutout(ctx, pts, { color, rim: 0, torn: 1.5, shadow: 0, boil: 'none' }, hand);
 
+/**
+ * The sun, `burst` of the way out of the word (past 1 as it overshoots),
+ * bursting out from its middle as a whole: its light, the warm air round it
+ * `air` of the way in (the day's, as the sky floods: over the dark it would
+ * only grey it), its rays, its disc.
+ */
 export const sun = (ctx: CanvasRenderingContext2D, burst: number, air: number, hand: Hand) => {
   if (burst <= 0) return;
   const [x, y] = SUN.at;
@@ -370,6 +437,7 @@ export const sun = (ctx: CanvasRenderingContext2D, burst: number, air: number, h
   glow(ctx, x - 0.2 * r, y - 0.2 * r, 0.7 * r, SUN_PAPER.core, 0.8 * k);
 };
 
+/** The ring of light going out from the sun as it bursts, at the edge of the flood `flood` of the way out, fading as it goes. */
 export const sunRing = (ctx: CanvasRenderingContext2D, flood: number) => {
   if (flood <= 0 || flood >= 1) return;
   const [x, y] = SUN.at;
@@ -384,8 +452,10 @@ export const sunRing = (ctx: CanvasRenderingContext2D, flood: number) => {
   ctx.restore();
 };
 
+/** The arc the word of light flies (`spoke.light`): in from the dark's left edge, high over the land, down into the sun's left side. */
 const ARC = { from: [70, 415], via: [770, 100], to: [1124, 278] } as const;
 
+/** The point `t` (0..1) along the arc. */
 const along = (t: number): Pt => {
   const u = 1 - t;
   return [
@@ -394,12 +464,18 @@ const along = (t: number): Pt => {
   ];
 };
 
+/** The arc's heading at `t`, radians. */
 const heading = (t: number): number => {
   const dx = 2 * (1 - t) * (ARC.via[0] - ARC.from[0]) + 2 * t * (ARC.to[0] - ARC.via[0]);
   const dy = 2 * (1 - t) * (ARC.via[1] - ARC.from[1]) + 2 * t * (ARC.to[1] - ARC.via[1]);
   return Math.atan2(dy, dx);
 };
 
+/**
+ * The ribbon the word leaves (`spoke.light`): its width at its tail and at
+ * its head, Board pixels; its gold paper and the light along its upper edge;
+ * and its glow, how far it spreads, frame pixels, and its light.
+ */
 const RIBBON = {
   tail: 12,
   head: 44,
@@ -408,8 +484,13 @@ const RIBBON = {
   glow: 30,
   halo: 'rgba(255, 214, 110, 0.9)',
 } as const;
+/** How many points the ribbon is cut with along what is drawn of it. */
 const RIBBON_POINTS = 40;
 
+/**
+ * One edge of the ribbon from `tail` to `head` along the arc: `share` of its
+ * half-width off the middle (1 its lower edge, -1 its upper).
+ */
 const edge = (tail: number, head: number, share: number): Pt[] =>
   Array.from({ length: RIBBON_POINTS + 1 }, (_, i): Pt => {
     const t = lerp(tail, head, i / RIBBON_POINTS);
@@ -419,8 +500,14 @@ const edge = (tail: number, head: number, share: number): Pt[] =>
     return [x - Math.sin(a) * off, y + Math.cos(a) * off];
   });
 
+/** The strip of the ribbon between two of its edges, as one outline. */
 const strip = (a: ReadonlyArray<Pt>, b: ReadonlyArray<Pt>): Pt[] => [...a, ...[...b].reverse()];
 
+/**
+ * The word's ribbon from `tail` to `head` along the arc (each 0..1), at
+ * `alpha`: its glow soft round it, then a strip of gold paper widening
+ * toward the sun, the light along its upper edge. No ink: it is light.
+ */
 export const wordOfLight = (
   ctx: CanvasRenderingContext2D,
   tail: number,
@@ -452,6 +539,7 @@ export const wordOfLight = (
   ctx.restore();
 };
 
+/** The word's light at `t` along the arc, at `amount`: a bright spark, white at its heart. */
 export const spark = (ctx: CanvasRenderingContext2D, t: number, amount: number) => {
   if (amount <= 0) return;
   const [x, y] = along(t);
@@ -459,6 +547,7 @@ export const spark = (ctx: CanvasRenderingContext2D, t: number, amount: number) 
   shine(ctx, x, y, 34, '#fff8e0', amount);
 };
 
+/** The stars called out over the new sky, in the order they come: each one's middle and its size, none in the sun's light. */
 export const STARS: ReadonlyArray<readonly [number, number, number]> = [
   [470, 125, 17],
   [150, 178, 15],
@@ -470,10 +559,13 @@ export const STARS: ReadonlyArray<readonly [number, number, number]> = [
   [1452, 382, 11],
 ];
 
+/** A star's gold paper, creased once, and how deep its points cut in. */
 const STAR_PAPER: Paper = { color: '#f5d164', shade: '#dcae45' };
 const STAR_WAIST = 0.45;
+/** Its glint round it: its reach against its size, its light, how far it twinkles. */
 const STAR_GLINT = { reach: 3.2, alpha: 0.45, twinkle: 0.25 } as const;
 
+/** A five-pointed star of `r` about (`x`, `y`), its point up. */
 const starShape = (x: number, y: number, r: number): Pt[] =>
   Array.from({ length: 10 }, (_, i): Pt => {
     const a = -Math.PI / 2 + (i * Math.PI) / 5;
@@ -481,6 +573,7 @@ const starShape = (x: number, y: number, r: number): Pt[] =>
     return [x + k * Math.cos(a), y + k * Math.sin(a)];
   });
 
+/** A star `k` of the way out (past 1 as it overshoots), its glint twinkling at `twinkle` (-1..1): gold paper, no ink. */
 export const star = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -502,6 +595,7 @@ export const star = (
   cut(ctx, starShape(x, y, r * k), STAR_PAPER, { line: 0, alpha: shown });
 };
 
+/** The seal's wax round as court-cast presses it (`seal`, which keeps it to itself): 23 units, its edge bumped six times, traced from its top. */
 const SEAL_ROUND: ReadonlyArray<Pt> = Array.from({ length: 49 }, (_, i): Pt => {
   const a = -Math.PI / 2 + (i / 48) * 2 * Math.PI;
   const r = 23 + 1.4 * Math.sin(a * 6 + 0.7);
@@ -509,6 +603,7 @@ const SEAL_ROUND: ReadonlyArray<Pt> = Array.from({ length: 49 }, (_, i): Pt => {
 });
 const SEAL_ROUND_LENGTH = length(SEAL_ROUND);
 
+/** Its ribbon's two tails, forked at their ends, hanging under the wax, as court-cast cuts them at its 0.85. */
 const SEAL_TAILS: ReadonlyArray<ReadonlyArray<Pt>> = [-1, 1].map((side) =>
   (
     [
@@ -522,13 +617,21 @@ const SEAL_TAILS: ReadonlyArray<ReadonlyArray<Pt>> = [-1, 1].map((side) =>
   ).map(([x, y]): Pt => [side * x * 0.85, y * 0.85]),
 );
 
+/** How far round the seal its tails may reach, its units: past their forks. */
 const SEAL_CLEAR = 80;
 
+/** `pts` as the current path, open. */
 const path = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>) => {
   ctx.beginPath();
   pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
 };
 
+/**
+ * The seal's outline traced round a thing at (`x`, `y`), `scale` times the
+ * seal's size, at `alpha`: its round `round` of the way round from its top,
+ * then its tails `tails` of the way along, outside the round only (the wax
+ * hid their tops), in the cast's ink.
+ */
 export const sealTrace = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -561,28 +664,42 @@ export const sealTrace = (
   ctx.restore();
 };
 
+/**
+ * The row the word brings, as `spoke.brings` lays it out beside him (his
+ * feet on the page where word's `LAST_FRAME` stands him): each icon's foot
+ * on the page, left to right.
+ */
 export const ROW = {
   faith: [798, 800],
   cloth: [1106, 800],
   blade: [1369, 800],
 } as const satisfies Record<string, Pt>;
 
+/** Each icon at its own size, from its foot: how far across its middle stands, how high, how tall and how wide it is. */
 export const ICON_BOX = {
   faith: { dx: 0, up: 99, tall: 198, wide: 198 },
   cloth: { dx: 2, up: 91, tall: 182, wide: 276 },
   blade: { dx: 38, up: 145, tall: 290, wide: 120 },
 } as const;
 
+/** The open hand of faith: the lead's own hand circle, in his skin (`PAPERS.leadHand`), drawn as big as the row's other icons. */
 const HAND_R = ICON_BOX.faith.up;
 const HAND_PAPER: Paper = { color: PAPERS.leadHand.color, shade: PAPERS.leadHand.shade };
 
+/** The hand circle standing on its foot at (`x`, `y`), `scale` times its size, creased once at the light's angle. */
 export const handCircle = (ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) => {
   const r = HAND_R * scale;
   cut(ctx, ellipseShape(x, y - r, r, r, 72), HAND_PAPER, { line: ICON_LINE });
 };
 
+/**
+ * The gold seed lying on the hand's top (`spoke.brings`), from the hand's
+ * foot at its size: where, how tall, its tilt, its light (low: its light
+ * lies over the hand's ink, which must stay dark).
+ */
 export const ON_HAND = { dx: 8, dy: -201, size: 72, rot: 0.95, glow: 0.3 } as const;
 
+/** The seed on the hand standing at (`x`, `y`), `scale` times its size: its pose written into `out`, shut, lit, lined as the cast. */
 export const seedOnHand = (x: number, y: number, scale: number, out: OpenSeedPose) => {
   out.x = x + ON_HAND.dx * scale;
   out.y = y + ON_HAND.dy * scale;
@@ -596,6 +713,7 @@ export const seedOnHand = (x: number, y: number, scale: number, out: OpenSeedPos
   return out;
 };
 
+/** Faith standing at (`x`, `y`), `scale` times its size: the hand circle with the gold seed on it (`out` the seed's scratch pose). */
 export const faithIcon = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -607,6 +725,7 @@ export const faithIcon = (
   openSeed(ctx, seedOnHand(x, y, scale, out));
 };
 
+/** The white cloth, folded like a tent (`spoke.brings`), from its foot at its own size: the sheet under it, the far leaf hanging from the fold, the near leaf. */
 const CLOTH = {
   under: [
     [-112, -38],
@@ -628,21 +747,29 @@ const CLOTH = {
   ],
 } as const satisfies Record<string, ReadonlyArray<Pt>>;
 
+/** Its paper: the white tunic the lead is given (`PAPERS.robe`), its far side the robe's lilac; the far leaf, the inside of the fold, all in that lilac. */
 const CLOTH_PAPER: Paper = {
   color: PAPERS.robe.color,
   shade: PAPERS.robe.shade ?? PAPERS.robe.color,
 };
 const CLOTH_FAR: Paper = { color: CLOTH_PAPER.shade, shade: CLOTH_PAPER.shade };
 
+/** `pts` from a foot at (`x`, `y`), `scale` times their size. */
 const placed = (pts: ReadonlyArray<Pt>, x: number, y: number, scale: number): Pt[] =>
   pts.map(([px, py]): Pt => [x + px * scale, y + py * scale]);
 
+/** Forgiveness standing at (`x`, `y`), `scale` times its size: the white cloth, folded. */
 export const clothIcon = (ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) => {
   cut(ctx, placed(CLOTH.under, x, y, scale), CLOTH_PAPER, { line: ICON_LINE, flat: true });
   cut(ctx, placed(CLOTH.far, x, y, scale), CLOTH_FAR, { line: ICON_LINE, flat: true });
   cut(ctx, placed(CLOTH.near, x, y, scale), CLOTH_PAPER, { line: ICON_LINE });
 };
 
+/**
+ * The green blade (`spoke.brings`), one tall leaf from its foot at its own
+ * size: its near edge bowed out, its far edge, and the rib down which its
+ * far half darkens, each from its foot to its tip.
+ */
 const BLADE = {
   near: [
     [-12, 0],
@@ -670,11 +797,14 @@ const BLADE = {
   ],
 } as const satisfies Record<string, ReadonlyArray<Pt>>;
 
+/** Its paper: the blade folded in the opened seed (`props.ts` cuts that leaf from this green), grown. */
 const BLADE_PAPER: Paper = paper('#86a85a', 0.6);
 
+/** `pts` filled flat in `color`, no ink. */
 const flat = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>, color: Hex) =>
   cut(ctx, pts, { color, shade: color }, { line: 0, flat: true });
 
+/** Power standing at (`x`, `y`), `scale` times its size: the green blade, its near half lit, its far half its shade, one line round it. */
 export const bladeIcon = (ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) => {
   const near = placed(spline(BLADE.near, 8), x, y, scale);
   const far = placed(spline(BLADE.far, 8), x, y, scale);

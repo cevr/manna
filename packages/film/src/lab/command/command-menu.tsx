@@ -9,10 +9,13 @@ import { type MenuRow, menuRows, rowKey } from '../../command/menu.ts';
 import { EVERYWHERE } from '../../command/target.ts';
 import { deferredRun, hubChanges, hubKeys } from './changes.ts';
 
+/** The command that opens and closes the menu: it is not listed in itself. */
 export const COMMAND_MENU = 'app.command-menu';
 
+/** The command that opens it to go somewhere by name (`/`): not listed in it either. */
 export const GO_TO_COMMAND = 'app.go-to';
 
+/** An ARIA state's text, by whether it holds. */
 const PSEUDO = { true: 'true', false: 'false' } as const;
 
 export const CommandMenu = (props: { readonly hub: Hub }) => {

@@ -16,6 +16,7 @@ import type { State, ByPlace } from './studio-states.ts';
 import { SLOW, PHONE, byPlace, isAt, asked, ASK_READY, PAGE_READY } from './studio-states.ts';
 
 describe('every page fits a phone, 390 × 844 (G8)', () => {
+  /** A page: its name, how it opens, and the layer it opens, which is no chrome. */
   const PAGES: ByPlace<readonly [name: string, open: State['open'], layer?: string]> = {
     ask: [['an ask', asked(pageHref.ask(STUDIO_ASK), ASK_READY)]],
     askPage: [['a page of asks', asked(pageHref.askPage(STUDIO_PAGE), PAGE_READY)]],
@@ -34,6 +35,7 @@ describe('every page fits a phone, 390 × 844 (G8)', () => {
   }
 });
 
+/** The guided ask's cut: its video, and the row its player shows once it has moved. */
 const CUT = '.ak-step[data-step="cut"] [data-material="video"]';
 
 describe('a finger on a slider', () => {

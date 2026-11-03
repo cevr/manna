@@ -4,6 +4,7 @@ import { Effect, FileSystem, Option, Path } from 'effect';
 import { boardFile, narrationFile, narrationPath } from './narration-route.ts';
 import { boardUrls } from '../core/board-render.ts';
 
+/** A films folder with one film, `f`, its narration and an attempt; and `loose`, no film. */
 const films = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

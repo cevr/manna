@@ -6,6 +6,7 @@ import type { Hub } from '../../command/hub.ts';
 import { sheetRows } from '../../command/menu.ts';
 import { hubChanges, hubKeys } from './changes.ts';
 
+/** The command that opens and closes the sheet. */
 export const KEYS_SHEET_COMMAND = 'app.keys';
 
 interface KeysSheetProps {

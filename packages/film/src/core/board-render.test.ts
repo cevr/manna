@@ -21,6 +21,7 @@ import { estimate, hashText } from './narration.ts';
 import { TICKS_PER_FRAME, ticksAt } from './time.ts';
 import { unmeasured } from './voiced.ts';
 
+/** The dissolve's length at a cut with long holds on both sides. */
 const DISSOLVE_S = 0.5;
 
 const marks = (start: number, at: Record<string, number>) => (name: string) =>
@@ -55,23 +56,30 @@ const board: BoardFile = {
 const shots = shotsOf(beats, board);
 const DURATION = 20;
 
+/** The Board's rate in these cases. */
 const FPS = 30;
+/** One tick of the Board's clock, in seconds. */
 const ONE_TICK = 1 / (FPS * TICKS_PER_FRAME);
 
+/** Shots `s` of a film `duration` long at film second `T`. */
 const frameOf = (s: ReadonlyArray<Shot>, duration: number, T: number) =>
   boardFrameAt(boardClock(s, [], duration, FPS), ticksAt(T, FPS));
 
 const frameAt = (T: number) => Option.getOrThrow(frameOf(shots, DURATION, T));
 
+/** How long a panel shown alone holds. */
 const HOLD = 10;
 
+/** Panel `p` held alone from `from`, as the frame `T` seconds in draws it. */
 const alone = (p: Panel, from: number, T: number): Layer =>
   Option.getOrThrow(
     frameOf([Shot.Boarded({ beat: p.beat, panel: p, at: from, from })], from + HOLD, from + T),
   ).layers[0]!;
 
+/** Forty picture panels by id. */
 const ids = Array.from({ length: 40 }, (_, k) => panel('b', `m${k}`, 1));
 
+/** Where a motion starts and ends, as the spec sets them: a push 6 % larger, a pan 4 % of the width, held 4.2 % larger. */
 const startOf = (m: Layer['motion']): Framing =>
   Match.valueTags(m, {
     Still: () => ({ scale: 1, dx: 0 }),
@@ -89,6 +97,7 @@ const close = (got: Framing, want: Framing) => {
   expect(got.dx).toBeCloseTo(want.dx, 6);
 };
 
+/** The panel id a layer shows, or `card` for a beat's storyboard card. */
 const named = (shot: Shot) =>
   Shot.$match(shot, { Boarded: ({ panel: p }) => p.id, Unboarded: ({ beat }) => `${beat} card` });
 
@@ -244,6 +253,7 @@ describe("a scenes render's burn-in", () => {
     ),
   );
   const cold = placed[0]!;
+  /** Film second of `cold`'s mark `name`. */
   const said = (name: string) => cold.start + cold.speechStart + cold.voice.marks.get(name)!;
 
   test("names the time, the beat, and the last mark said: `start` before the beat's first", () => {

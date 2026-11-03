@@ -19,17 +19,20 @@ import { reviewMedia } from './media/testing.ts';
 
 const isVerbRefused = Schema.is(VerbRefused);
 
+/** Film `test`: three silent scenes of a second each, with no acts. */
 const FILM = testFilm(
   ['one', 'two', 'three'].map((id) => ({ id, timeline: { go: { at: 'start', dur: 1 } } })),
   { voice: '', scenes: {} },
 );
 
+/** Each scene's key now. */
 const KEYS = new Map([
   ['one', 'k1'],
   ['two', 'k2'],
   ['three', 'k3'],
 ]);
 
+/** A render of scene `id`, drawn from sources with `key`, carrying the film's mix `mix`. */
 const sceneRender = (id: string, key: string, mix = Option.none<string>()): Render => ({
   address: sceneAddress(id),
   variant: MAIN_VARIANT,
@@ -49,6 +52,11 @@ const sceneRender = (id: string, key: string, mix = Option.none<string>()): Rend
   at: 1,
 });
 
+/**
+ * The catalogue, over memory, where `lands` is recorded just before the
+ * run's first write takes the lock: another run's render, finished between
+ * this run's start and its write.
+ */
 const catalogueWhere = (lands: Render) =>
   Layer.effect(
     RenderCatalogue,
@@ -69,6 +77,7 @@ const catalogueWhere = (lands: Render) =>
     }),
   ).pipe(Layer.provide(RenderCatalogue.layer));
 
+/** The film's services over memory: its film, its keys, and `catalogue`. */
 const servicesWith = (catalogue: Layer.Layer<RenderCatalogue, never, ContentStore | Path.Path>) =>
   Layer.mergeAll(
     Layer.succeed(
@@ -93,11 +102,17 @@ const servicesWith = (catalogue: Layer.Layer<RenderCatalogue, never, ContentStor
     Layer.provideMerge(Layer.mergeAll(memoryFileSystem(new Map()), Path.layer, memoryLocks)),
   );
 
+/** `approve` renders nothing: its renderer is never built. */
 const NO_RENDERER = Layer.effect(Renderer, Effect.die('approve renders nothing'));
 
 const run = (args: ReadonlyArray<string>) =>
   Command.runWith(project(NO_RENDERER), { version: '0' })(args).pipe(Effect.exit);
 
+/**
+ * `approve test --scene one,three`, both current as the run starts, while
+ * `lands` lands just before its write: how it ended, the approvals it left
+ * on `one` and `three`, and how many approvals the catalogue holds.
+ */
 const approveAsLands = (lands: Render) =>
   Effect.gen(function* () {
     const catalogues = yield* RenderCatalogue;

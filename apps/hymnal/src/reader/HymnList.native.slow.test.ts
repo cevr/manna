@@ -1,5 +1,13 @@
 /* oxlint-disable effect/noGlobals -- the test runs a Bun script in a process of its own, so its React Native stand-in never reaches the other tests. */
 
+/**
+ * The phones' hymn list keeps its rows on screen and reuses their views, so
+ * a value a row reads from outside its item reaches the rows only if the
+ * list is told. Each case changes one such value while the list is mounted
+ * (`src/test/phone-list.tsx`) and holds the rows on screen to what a list
+ * mounted under the new value draws.
+ */
+
 import { describe, expect, it } from 'bun:test';
 
 import { runScript } from '../test/script';
@@ -21,12 +29,14 @@ interface Seen {
 
 type Change = 'scheme' | 'fontScale' | 'hrefOf';
 
+/** A search result's row: its name, its height, and how many found lines it draws. */
 interface Found {
   readonly name: string;
   readonly height: string;
   readonly line: number;
 }
 
+/** A list's end at a bottom inset: its rows' frame, the last row drawn, and the space after them. */
 interface End {
   readonly bottom: number;
   readonly rows: number;
@@ -45,6 +55,7 @@ const seen: Partial<Record<Change, Seen>> & {
   };
 } = JSON.parse(run.stdout || '{}');
 
+/** The rows of `kind` on screen both live and fresh, by label, as each draws them. */
 const shared = (rows: Seen, kind: keyof Rows) => {
   const labels = Object.keys(rows.live[kind]).filter((label) => label in rows.fresh[kind]);
   return {

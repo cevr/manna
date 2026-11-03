@@ -1,3 +1,13 @@
+/** The Bun query embedder against the real pinned model (§9.5, §10).
+ *
+ *  **This suite skips loudly.** Model weights are not committed (§10), so on a
+ *  machine that has never downloaded EmbeddingGemma there is nothing to check
+ *  and the honest outcome is a *reported* skip — never a pass. A check that
+ *  quietly succeeds when it ran nothing is the same green as a real one.
+ *
+ *  The Bun adapter is the only query embedder.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { BunServices } from '@effect/platform-bun';
 import {
@@ -19,6 +29,8 @@ import { DOCUMENT_PREFIX, QUERY_PREFIX, truncateToMrl } from './embedding.js';
 import { GOLDEN_QUERIES } from './golden-fixture.js';
 import { DIMENSIONS, MODEL_FINGERPRINT } from './vector-index.js';
 
+/** The queries the adapter is exercised on: §9.7's own set, so this check and
+ *  the acceptance rule cannot drift apart. */
 const QUERIES = GOLDEN_QUERIES.map((golden) => golden.query.text);
 
 const embedWith = (layer: Layer.Layer<QueryEmbedder>, query: string) =>
@@ -27,19 +39,27 @@ const embedWith = (layer: Layer.Layer<QueryEmbedder>, query: string) =>
     Effect.result,
   );
 
+/** The fingerprint an adapter layer declares, read at that layer's own boundary. */
 const fingerprintOf = (layer: Layer.Layer<QueryEmbedder>) =>
   Effect.map(QueryEmbedder, (embedder) => embedder.fingerprint).pipe(Effect.provide(layer));
 
+/** The document side, under the other pinned prefix. */
 const embedDocumentWith = (layer: Layer.Layer<QueryEmbedder>, text: string) =>
   Effect.flatMap(QueryEmbedder, (embedder) => embedder.embedDocument(text)).pipe(
     Effect.provide(layer),
     Effect.result,
   );
 
+/** The adapter, built once for the whole file: each build loads the model's
+ *  weights anew, and every check here is of the one model. Its runtime lives
+ *  as long as the test process; the adapter holds nothing to release. */
 const adapter: Layer.Layer<QueryEmbedder> = Layer.effectContext(
   ManagedRuntime.make(layerBunEmbedder).contextEffect,
 );
 
+/** Where the adapter reads the model's weights: `BIBLE_MODEL_CACHE`, else
+ *  `~/.bible/models`, the order the adapter resolves them in, under the
+ *  model's id (`MODEL_ID` in `embedder-transformers.ts`). */
 const weightsDir = Effect.gen(function* () {
   const override = yield* Config.option(Config.String('BIBLE_MODEL_CACHE'));
   const fallback = yield* bibleHomeModelsFallback;
@@ -66,6 +86,8 @@ const probe = await Effect.runPromise(
   Effect.when(embedWith(adapter, 'probe'), Effect.succeed(modelAvailable)),
 );
 
+/** A document past the model's 2048-token context, embedded once beside the
+ *  probe so its case reads the answer rather than timing the encode. */
 const overLong = 'and the word of the Lord came unto the prophet saying '.repeat(400);
 // oxlint-disable-next-line effect/noAsyncFunction -- embedded once at module evaluation, beside the probe
 const overLongEmbedded = await Effect.runPromise(
@@ -112,7 +134,20 @@ describe('§10 the Bun embedding adapter', () => {
   );
 });
 
+/** §9.5's retrieval contract, against the real weights.
+ *
+ *  These are the tests that would have caught the mean-pooling defect. Shape
+ *  and fingerprint checks are blind to the one failure that matters most: an
+ *  embedding that is the right shape and the wrong geometry.
+ *
+ *  What is checked instead is a property of the *model*: a query must sit closer
+ *  to the paragraph that answers it than to one that does not. That is the only
+ *  thing the vector leg is for, and it is false under any of the three defects
+ *  the fingerprint now names.
+ */
 describe('§9.5 the retrieval embedding, against the real model', () => {
+  /** Cosine over two int8 vectors, which under one fixed quantization scale is
+   *  a monotone function of the float cosine. */
   const cosine = (left: Int8Array, right: Int8Array): number => {
     let dot = 0;
     let leftNorm = 0;
@@ -185,7 +220,17 @@ describe('§9.5 the retrieval embedding, against the real model', () => {
   );
 });
 
+/** The device-independent half of the adapter, which every machine can check.
+ *
+ *  §9.5's MRL truncation and §9.2's quantization are where the query embedder
+ *  and the vector compiler would most plausibly diverge — they are arithmetic
+ *  each could have spelled itself — so they are shared code, and this is the
+ *  test that says so. It runs
+ *  whether or not the model is present, because it needs no model. */
 describe('§9.5 the shared vector post-processing', () => {
+  /** Unwraps a row this build accepts. A `None` here is the test's own premise
+   *  failing, not the assertion under test, so it fails loudly rather than
+   *  defaulting to an empty vector. */
   const accepted = (values: readonly number[]): Float32Array => {
     const truncated = truncateToMrl(values);
     expect(Option.isSome(truncated)).toBe(true);
@@ -212,6 +257,14 @@ describe('§9.5 the shared vector post-processing', () => {
     expect(Math.sqrt(sum)).toBeCloseTo(1, 6);
   });
 
+  /** §10's "reject, never pad" gate (round-2 F9).
+   *
+   *  The earlier implementation read `values[axis] ?? 0`, so a model returning
+   *  fewer than 256 components produced a 256-d vector whose tail was zeros.
+   *  That vector passes every shape check the scan makes, so the ranking it
+   *  produces is a ranking over a query nobody asked — the one failure mode no
+   *  downstream code can detect. These three cases fail against the padding
+   *  implementation and pass against the rejecting one. */
   it('rejects a row shorter than 256 components rather than padding it', () => {
     expect(Option.isNone(truncateToMrl(Array.from({ length: 128 }, () => 0.1)))).toBe(true);
     expect(Option.isNone(truncateToMrl(Array.from({ length: 255 }, () => 0.1)))).toBe(true);

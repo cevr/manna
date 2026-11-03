@@ -1,3 +1,15 @@
+/**
+ * A play after the end obeys `Intro` however it is asked (spec Risk 3,
+ * Decided 9): Sound on, hymn 116 played to its end, then the in-app Resume,
+ * or a lock-screen Play the phone acts on first (it starts the ended
+ * recording again from 0:00, then the app hears `Remote.Play`). With
+ * `Intro` off, at most one poll of the recording below the first sung line
+ * sounds after the press; with it on, the intro sounds as the recording
+ * plays from 0:00.
+ *
+ * On the TestClock with a fake device: nothing sounds. Hymn numbers and ms only.
+ */
+
 import {
   Clock,
   Effect,
@@ -34,6 +46,7 @@ const POLL = 250;
 const HYMN = 116;
 const TAIL = 1500;
 
+/** A device whose recording plays in host time, keeping each span it sounds, and the phone's own play of a lock-screen press. */
 const recorded = (length: number, presses: Queue.Queue<Remote>) => {
   const heard = new Array<{ readonly from: number; readonly to: number; readonly now: number }>();
   let state: Status['state'] = 'idle';
@@ -54,6 +67,7 @@ const recorded = (length: number, presses: Queue.Queue<Remote>) => {
       change();
       return read;
     });
+  /** What the phone does on a play of an ended recording: it starts again from 0:00. */
   const restart = () => {
     if (state === 'ended') at = 0;
     state = 'playing';
@@ -90,6 +104,7 @@ const settle = Effect.forEach(Array.from({ length: 20 }), () => Effect.yieldNow,
   discard: true,
 });
 
+/** Hymn 116 played with Sound on to its end, `Intro` as given; then a play asked `via`; the ms heard below its first sung line after it. */
 const heardAfterTheEnd = (intro: boolean, via: 'in-app' | 'lock-screen') =>
   Effect.gen(function* () {
     const timeline = Option.getOrThrow(book.of(HYMN));

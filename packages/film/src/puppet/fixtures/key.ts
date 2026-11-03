@@ -8,6 +8,7 @@ import { scenesLocatedHere } from '../../tools/read-cli.ts';
 import { sceneFixture } from '../../tools/scene-sources/testing.ts';
 import { Stamps } from '../../tools/stamp.ts';
 
+/** `git` as it answers outside a checkout: no commit, no process. */
 const outsideACheckout = Layer.succeed(
   ChildProcessSpawner.ChildProcessSpawner,
   ChildProcessSpawner.make(() =>
@@ -29,6 +30,11 @@ const outsideACheckout = Layer.succeed(
   ),
 );
 
+/**
+ * The `hand` beat's key in a fixture film whose `hand` scene imports
+ * `module` (a path relative to the film's `scenes/` folder), after `lay`
+ * has written the module and its files under the film's folder.
+ */
 export const handBeatKey = (
   module: string,
   lay: (film: string) => Effect.Effect<void, unknown, FileSystem.FileSystem | Path.Path>,

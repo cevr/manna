@@ -14,6 +14,7 @@ import {
   type Selecting,
 } from './reader.tsx';
 
+/** A film's beat as the reader reads one: its id, its line, its picture as the brief, its sources. */
 const beatRead = (beat: ScriptBeats['beats'][number]): DraftBeatRead => ({
   id: beat.id,
   label: '',
@@ -28,6 +29,11 @@ const beatRead = (beat: ScriptBeats['beats'][number]): DraftBeatRead => ({
   cite: beat.cite,
 });
 
+/**
+ * Film `film`'s script, as `script` reads it on `page`, in the reader: its
+ * beats (only those `only` names, when it names some), or why it cannot be
+ * read; `brief` as the reader shows it.
+ */
 export const FilmScriptReader = (props: {
   readonly page: ReaderPage;
   readonly script: Atom.Atom<AsyncResult.AsyncResult<ScriptBeats, LabFailure>>;

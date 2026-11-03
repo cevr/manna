@@ -23,16 +23,26 @@ import hallFit from './fits/amb.hall.json' with { type: 'json' };
 import houseFit from './fits/amb.house.json' with { type: 'json' };
 import clothFit from './fits/cloth.lift.json' with { type: 'json' };
 
+/** A bed's length when it names none: long enough that its loop point is rarely heard. */
 const BED_SECS = 22;
 
+/** Every bed's level against the voice, generated or code. */
 const BED_LEVEL = -30;
 
+/** A library's entries, as `defineLibrary` reads them. */
 type Entries = Parameters<typeof defineLibrary>[0];
 
+/** A generated sound's code trial, as `defineLibrary` reads it. */
 type CodeTrial = NonNullable<
   Extract<Entries[keyof Entries], { readonly kind: 'generated' }>['code']
 >;
 
+/**
+ * What a generated sound declares beside its prompt: why it needs
+ * ElevenLabs, by name so it is never taken for the prompt, any setting a
+ * trial heard better than the default (absent, the default holds), and its
+ * code trial, if it has one.
+ */
 interface Declared {
   readonly why: string;
   readonly influence?: number;
@@ -54,28 +64,40 @@ const bed = (prompt: string, declared: Declared) =>
     ...declared,
   }) as const;
 
+/** A recorded sound's licence, as `defineLibrary` reads it. */
 type RecordedLicence = Extract<Entries[keyof Entries], { readonly kind: 'recorded' }>['licence'];
 
+/** A recording cut to a bed (`sfx import`): `BED_SECS` at its smallest loop seam, at every bed's level. */
 const recordedBed = (licence: RecordedLicence) =>
   ({ kind: 'recorded', licence, use: 'bed', secs: BED_SECS, level: BED_LEVEL }) as const;
 
+/** A recording cut to a one-shot of `secs` round its loudest moment (`sfx import`). */
 const recordedOneShot = (secs: number, licence: RecordedLicence) =>
   ({ kind: 'recorded', licence, use: 'one-shot', secs }) as const;
 
+/** The licence code kept from a recording's fit keeps: the recording's, a CC BY one `changed`. */
 type KeptLicence = NonNullable<
   Extract<Entries[keyof Entries], { readonly kind: 'code' }>['licence']
 >;
 
+/** A fit file's code and seeds, as `keptFit` reads it. */
 type KeptFit = ReturnType<typeof keptFit>;
 
+/** A recording's fit the owner kept (`keptFit`), as a bed: its code and seeds, the recording's licence, every bed's level. */
 const keptBed = (fit: KeptFit, licence: KeptLicence) =>
   ({ kind: 'code', ...fit, licence, use: 'bed', level: BED_LEVEL }) as const;
 
+/** A recording's fit the owner kept (`keptFit`), as a one-shot: its code and seeds, the recording's licence. */
 const keptOneShot = (fit: KeptFit, licence: KeptLicence) =>
   ({ kind: 'code', ...fit, licence, use: 'one-shot' }) as const;
 
+/** A node of a code sound, as the families return it. */
 type Node = ReturnType<typeof burst>;
 
+/**
+ * A bubble in milk: a sine's ring rising quickly in pitch as a bubble's
+ * does, gone in 50 ms. Each seed draws both ends of the rise.
+ */
 const bubble: Node = {
   _tag: 'Envelope',
   points: [
@@ -601,4 +623,17 @@ export const library = defineLibrary({
   },
 });
 
+/**
+ * Where the private media is kept off the repo: the library's `files/`, the
+ * films' scores (`scores/<film>/`) and review renders (`renders/`). Never a
+ * folder under `~/film-media`: the renders index (`film-media`, run every
+ * minute) deletes every file there it did not mirror itself, and it emptied
+ * the first library's store that way.
+ *
+ * The owner chose a private R2 bucket (`film-store`, declared in
+ * `../alchemy.run.ts`). Until it is deployed this stays the folder; the move
+ * is this line becoming `defineStore({ kind: 'r2', bucket: 'film-store' })`,
+ * then `bun run store:keys` and `bun run sfx push --from ~/film-sounds`
+ * (README, "The private store").
+ */
 export const store = defineStore({ kind: 'folder', folder: '~/film-sounds' });

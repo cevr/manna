@@ -1,3 +1,12 @@
+/**
+ * What the hymn route's screen is made of on every platform: the page's
+ * chord reader, the header (`hymnHeader`), the hymns the web builds a page for,
+ * and the mark that tells the bottom bar which hymn's page is shown and
+ * keeps it in Recent. The web
+ * shows one hymn per route (`HymnScreen.tsx`); a phone swipes between hymns
+ * (`HymnScreen.native.tsx`).
+ */
+
 import { useAtomSet } from '@effect/atom-react';
 import bundled from 'virtual:hymnal-chords';
 import { Option, Record } from 'effect';
@@ -13,6 +22,7 @@ import { settings } from '~/store';
 import type { ChordReader } from './HymnPage';
 import { visited } from './lists';
 
+/** The page's chords: the stored switch, chord style and moves, and every hymn's chords, each decoded on first view; and how the page is set. */
 export const reader: ChordReader = {
   chords: settings.chords,
   style: settings.chordStyle,
@@ -25,6 +35,14 @@ export const reader: ChordReader = {
   favourites: settings.lists.favourites,
 };
 
+/**
+ * The hymn route's header, from the route's number alone: the hymn's title,
+ * or `No hymn <n>` for a number with no hymn. It holds no buttons: the
+ * reader's controls are at the thumb, in the bottom bar and its sheet. The
+ * stack reads it as it lays the screen out (`useStackOptions`), so it is
+ * right on the first frame of every way in: a list's row, a search's result,
+ * a link, a cold start, a pager's settle and an unknown number.
+ */
 export const hymnHeader = (params: RouteParams): Header => {
   const asked = Option.getOrElse(Record.get(params, 'number'), () => '');
   return Option.match(hymnAt(asked), {
@@ -33,10 +51,16 @@ export const hymnHeader = (params: RouteParams): Header => {
   });
 };
 
+/** The stack's headers that follow their route: each hymn's, by its route's name (`app/(hymnal)/hymns/[number].tsx`). */
 export const stackHeaders: Headers = { 'hymns/[number]': hymnHeader };
 
+/** Every hymn's page is rendered when the web is built. */
 export const hymnParams = () => hymns.map((hymn) => ({ number: String(hymn.number) }));
 
+/**
+ * Tells the bottom bar this hymn's page is shown, for as long as it is, and
+ * puts the hymn first in Recent as it opens, or as the pager settles on it.
+ */
 export function Shown({ hymn }: { readonly hymn: Track }) {
   useShowsPage(hymn);
   const recent = useAtomSet(settings.lists.recent);

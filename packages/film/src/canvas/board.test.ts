@@ -18,6 +18,7 @@ const STYLE: CardStyle = {
 };
 
 describe('a Board render', () => {
+  /** Beats `one`, `two` and `three`, 5 s each from 0, saying their lines on an estimate. */
   const beats = Result.getOrThrow(
     layout(
       [
@@ -51,6 +52,7 @@ describe('a Board render', () => {
     ],
   };
 
+  /** A film of beats `one` (a picture), `two` (no panel) and `three` (a card), its own draws logged; a card of its scenes holds over `cards`. */
   const filmOf = (cards: (T: number) => boolean) => {
     const drew: Array<number> = [];
     const f: Film = Schema.decodeSync(Schema.Any)({
@@ -67,6 +69,7 @@ describe('a Board render', () => {
     return { film: f, drew };
   };
 
+  /** The kept try of `one`, a stand-in image 1536 × 1024. */
   const tries = () => {
     const kept = document.createElement('canvas');
     kept.width = 1536;
@@ -141,6 +144,7 @@ describe('a Board render', () => {
       placed: one,
       render: () => {},
     });
+    /** The motion panel `id` moves by, alone over a 5 s hold. */
     const motionOf = (p: Panel) =>
       Option.getOrThrow(
         boardFrameAt(
@@ -157,6 +161,7 @@ describe('a Board render', () => {
         const m = motionOf(p);
         return m._tag === tag && (dir === undefined || ('dir' in m && m.dir === dir));
       })!;
+    /** Where the frame at `T` laid panel `p`'s kept try: its left, top, right and bottom. */
     const rectAt = (p: Panel, T: number) => {
       const calls: Array<ReadonlyArray<unknown>> = [];
       const r = recorder(1920, 1080, {

@@ -1,5 +1,6 @@
 import { Effect, Option, Schema } from 'effect';
 
+/** A page runs a script its HTML holds inline, so its closure cannot be whole. */
 class PageInlineScript extends Schema.TaggedError<PageInlineScript>()('PageInlineScript', {
   page: Schema.String,
 }) {
@@ -8,6 +9,7 @@ class PageInlineScript extends Schema.TaggedError<PageInlineScript>()('PageInlin
   }
 }
 
+/** The specifiers `html` loads: its scripts' `src` and its stylesheets' `href`, in order. */
 export const pageSpecifiers = (page: string, html: string) =>
   Effect.gen(function* () {
     const specifiers: Array<string> = [];

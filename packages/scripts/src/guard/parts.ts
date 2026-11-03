@@ -3,11 +3,17 @@ import type { PlatformError } from 'effect/PlatformError';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
+/** A file and its size in bytes, the cost a part is dealt by. */
 interface Sized {
   readonly name: string;
   readonly bytes: number;
 }
 
+/**
+ * The files dealt into at most `count` parts, largest first, each to the
+ * part with the fewest bytes so far (the first such part on a tie); a part
+ * dealt nothing is left out, and each part lists its files sorted.
+ */
 export const partsOf = (files: ReadonlyArray<Sized>, count: number) => {
   const parts: Array<{ bytes: number; readonly names: Array<string> }> = Array.from(
     { length: Math.max(1, Math.floor(count)) },
@@ -27,16 +33,23 @@ export const partsOf = (files: ReadonlyArray<Sized>, count: number) => {
   return parts.filter((part) => part.names.length > 0).map((part) => part.names.toSorted());
 };
 
+/**
+ * How many parts a machine of `cores` runs, and the threads each gives its
+ * tool: a part per three cores, at most four (four parts cut the lint from
+ * 13.4 s to 4.6 s on twelve cores; six, to 4.1 s), at least one.
+ */
 export const shareOf = (cores: number) => {
   const parts = Math.min(4, Math.max(1, Math.floor(cores / 3)));
   return { parts, threads: Math.max(1, Math.floor(cores / parts)) };
 };
 
+/** One part's run: what it printed (stdout, then stderr) and its exit code. */
 interface PartRun {
   readonly output: string;
   readonly code: number;
 }
 
+/** Runs `bin` with `args` and then `files` in `root`, keeping what it prints. */
 const runPart = (root: string, bin: string, args: ReadonlyArray<string>) =>
   Effect.fn('guard.runPart')(function* (files: ReadonlyArray<string>) {
     const spawner = yield* ChildProcessSpawner;
@@ -58,6 +71,7 @@ const runPart = (root: string, bin: string, args: ReadonlyArray<string>) =>
     );
   });
 
+/** Each of `files` (relative to `root`) with its size: what `partsOf` deals by. */
 export const sizesOf = Effect.fn('guard.sizesOf')(function* (
   root: string,
   files: ReadonlyArray<string>,
@@ -72,6 +86,11 @@ export const sizesOf = Effect.fn('guard.sizesOf')(function* (
   );
 });
 
+/**
+ * Runs the tool `bin` (a path from `root`) once per part, side by side,
+ * `args` before the part's files (relative to `root`), and answers each
+ * part's run in the parts' order, printing nothing.
+ */
 export const runEachPart = Effect.fn('guard.runEachPart')(function* (
   root: string,
   bin: string,
@@ -84,6 +103,12 @@ export const runEachPart = Effect.fn('guard.runEachPart')(function* (
   });
 });
 
+/**
+ * Runs the tool `bin` (a path from `root`) once per part, side by side,
+ * `args` before the part's files (relative to `root`); prints each part's
+ * output in the parts' order once all have ended and answers the highest
+ * exit code, 0 when there is no part.
+ */
 export const runParts = Effect.fn('guard.runParts')(function* (
   root: string,
   bin: string,

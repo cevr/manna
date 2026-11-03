@@ -22,10 +22,13 @@ import {
   trainKeyOf,
 } from './stages.ts';
 
+/** A spread as the lock keeps it: eval.py's also carries its count and mean. */
 const spreadOf = (s: typeof Spread.Type) => ({ median: s.median, p90: s.p90 });
 
+/** An eval:clip stage's output: the clip's lock entry (`clips.ts` `clipEntryOf`). */
 const ClipLockJson = Schema.fromJsonString(ClipLock);
 
+/** Every clip the build judges: how many passed, how many there are, and each judged one's entry by `<member>/<clip>`. */
 const Clips = Schema.Struct({
   passed: Schema.Int,
   of: Schema.Int,
@@ -35,6 +38,7 @@ const Clips = Schema.Struct({
 const Lock = Schema.Struct({
   reader: Schema.String,
   stageKey: Schema.String,
+  /** The reader's train files by basename, each file's SHA-256: what `reader` keys beside the set and the config. */
   trainer: Schema.Record(Schema.String, Schema.String),
   trainset: Schema.String,
   drawings: Schema.Record(Schema.String, Schema.String),
@@ -66,6 +70,7 @@ const LockJson = Schema.fromJsonString(Lock, { space: 2 });
 
 const encoder = new TextEncoder();
 
+/** A clip the lock reports: its member and its id (`raise/clip-b`); its stage is `eval:clip:<clip>@<member>`. */
 export interface LockClip {
   readonly member: string;
   readonly clip: string;
@@ -74,8 +79,13 @@ export interface LockClip {
 const clipStageOf = (c: LockClip) => `eval:clip:${c.clip}@${c.member}`;
 const clipKeyOf = (c: LockClip) => `${c.member}/${c.clip}`;
 
+/** The part of a lock `failedClipsOf` reads. */
 const ClipsJson = Schema.fromJsonString(Schema.Struct({ clips: Clips }));
 
+/**
+ * Each of `clips` the lock (its text) does not pass, as `<member>/<clip>:`
+ * and its failed bars, or `no eval` when the lock has no entry for it.
+ */
 export const failedClipsOf = (text: string, clips: ReadonlyArray<LockClip>) =>
   Effect.map(Schema.decodeEffect(ClipsJson)(text), ({ clips: { byClip } }) =>
     clips.flatMap((c) => {
@@ -90,6 +100,7 @@ export const failedClipsOf = (text: string, clips: ReadonlyArray<LockClip>) =>
     }),
   );
 
+/** A build whose lock does not pass every clip: each one as `failedClipsOf` names it. */
 export class ClipsFailed extends Schema.TaggedError<ClipsFailed>()('ClipsFailed', {
   clips: Schema.Array(Schema.String),
 }) {
@@ -98,6 +109,7 @@ export class ClipsFailed extends Schema.TaggedError<ClipsFailed>()('ClipsFailed'
   }
 }
 
+/** After a build: the lock at `file` passes each of `clips`, else `ClipsFailed` names every one it does not. */
 export const checkClips = Effect.fn('film.cast.checkClips')(function* (
   file: string,
   clips: ReadonlyArray<LockClip>,
@@ -110,11 +122,13 @@ export const checkClips = Effect.fn('film.cast.checkClips')(function* (
 const failed = (what: string) => (e: { readonly message: string }) =>
   StageFailed.make({ reason: `lock ${what}: ${e.message}` });
 
+/** A train that adopted the committed checkpoint: the lock's train lines and spend it noted, kept as they are. */
 const adoptedOf = (train: BuiltRecord) =>
   Option.flatMap(train.note, (note) =>
     Option.map(Schema.decodeOption(AdoptedNote)(note), (n) => n.adopted),
   );
 
+/** The train's lines of the lock: the fit summary it noted, if any, and the stage's wall time. */
 const trainOf = (train: BuiltRecord) =>
   Effect.gen(function* () {
     const stageSec = Math.round(train.ms / 1000);
@@ -134,6 +148,17 @@ const trainOf = (train: BuiltRecord) =>
     };
   });
 
+/**
+ * The lock stage: after the train, every candidate's eval and each clip's
+ * eval, it writes `file` from their outputs. A trained drawing's eval is
+ * required (the lock never names a trained drawing without its held
+ * numbers); an untrained one's joins when it has an output. Every clip
+ * counts in `clips.of`; a clip whose eval has an output carries its entry,
+ * pass or fail, and one with none (its stage failed) is left unpassed, so
+ * the lock is written whatever the clips. `trainFiles` are the reader's
+ * train files (`CastReader.sources.train`), which the reader's key reads and
+ * `trainer` names by their hashes.
+ */
 export const lockStage = (o: {
   readonly file: string;
   readonly candidates: ReadonlyArray<Candidate>;

@@ -27,6 +27,7 @@ const checked = (output: Bun.BuildOutput): Bun.BuildOutput => {
   return output;
 };
 
+/** Builds both halves into `outdir`; returns the server module and the client script. */
 export const build = async (outdir: string) => {
   checked(
     await Bun.build({

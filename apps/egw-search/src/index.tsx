@@ -1,3 +1,10 @@
+/**
+ * The browser entry: mount the page into the element `index.html` names,
+ * under the atom registry the URL lives in. The tab's history is its
+ * `Location`, with the browser's own scroll restoration off: `./scroll.ts`
+ * restores positions once an entry's results are drawn.
+ */
+
 import { RegistryProvider } from '@manna/atom-solid';
 import { layerBrowser } from '@manna/url-state';
 import * as UrlAtom from '@manna/url-state/atom';

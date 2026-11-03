@@ -5,6 +5,7 @@ import { describe, expect, it } from 'effect-bun-test';
 
 import { itemsOf, markdownBeats, parse, selects } from './items.ts';
 
+/** `selector`'s items of `lines` as the file `file`: each item's first line, last line and text. */
 const read = (
   selector: Parameters<typeof itemsOf>[0],
   file: string,
@@ -12,6 +13,7 @@ const read = (
 ) =>
   itemsOf(selector, parse(file, lines.join('\n'))).map((item) => [item.line, item.end, item.text]);
 
+/** `selector`'s keys of `lines` as the file `file`. */
 const keys = (
   selector: Parameters<typeof itemsOf>[0],
   file: string,

@@ -5,6 +5,7 @@ import type { Raster } from '../core/raster.ts';
 import { Result } from 'effect';
 import { decodePng, encodePng } from './png.ts';
 
+/** CRC-32 (the PNG polynomial, reflected), a bit at a time. */
 const crc32Bitwise = (bytes: Uint8Array): number => {
   let crc = 0xffffffff;
   for (const byte of bytes) {
@@ -38,6 +39,7 @@ const chunksOf = (png: Uint8Array): ReadonlyArray<Chunk> => {
   return chunks;
 };
 
+/** PNG's prediction under filter `kind` from left `a`, up `b` and up-left `c`. */
 const predicted = (kind: number, a: number, b: number, c: number): number => {
   const p = a + b - c;
   const [pa, pb, pc] = [Math.abs(p - a), Math.abs(p - b), Math.abs(p - c)];
@@ -47,6 +49,7 @@ const predicted = (kind: number, a: number, b: number, c: number): number => {
   return [0, a, b, (a + b) >> 1, paeth][kind] ?? 0;
 };
 
+/** The rows of an 8-bit RGBA image, unfiltered (PNG's reconstruction); left of a row and above the first read as zero. */
 const unfiltered = (bytes: Uint8Array, width: number, height: number): Uint8Array => {
   const stride = width * 4;
   const out = new Uint8Array(height * stride);
@@ -63,6 +66,7 @@ const unfiltered = (bytes: Uint8Array, width: number, height: number): Uint8Arra
   return out;
 };
 
+/** A raster with a smooth gradient over its top half and a hash's noise below, so rows pick different filters. */
 const RASTER: Raster = (() => {
   const [width, height] = [37, 23];
   const rgba = new Uint8Array(width * height * 4);
@@ -107,6 +111,7 @@ describe('encodePng', () => {
   });
 });
 
+/** A PNG built by hand: its header for `colour` type at 8 bits, its rows each under filter 0. */
 const pngOf = (
   width: number,
   height: number,

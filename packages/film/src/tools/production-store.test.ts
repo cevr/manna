@@ -22,6 +22,7 @@ const HOUR = 3_600_000;
 
 const JsonText = Schema.fromJsonString(Schema.JsonObject);
 
+/** A store over files kept in `files`, the ledgers under `/productions`. */
 const storeOver = (files: Map<string, Uint8Array>) =>
   ProductionStore.layer.pipe(
     Layer.provide(ContentStore.layer),
@@ -221,6 +222,7 @@ describe('film publish: the stamp', () => {
 
   const opened = (n: number) => ({ at: n * HOUR, title: `v${n}`, because: Option.none() });
 
+  /** Publish `/out/styles` holding `text` as its review.json onto `look`, which has opened three versions; the review.json after. */
   const published = (text: string, version: Option.Option<number>) => {
     const files = new Map<string, Uint8Array>();
     return Effect.gen(function* () {

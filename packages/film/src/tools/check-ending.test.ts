@@ -6,9 +6,11 @@ import { DEAD_MAX, deadAir, designedSilences, endShort, staticFindings } from '.
 import { report } from './findings.ts';
 import { holdScenes, holdTimings, testFilm } from './film-repo/testing.ts';
 
+/** No track on disk, and no plan key: what a check before any mix sees. */
 const NO_MASTER = { master: Option.none(), key: Option.none(), file: 'narration/full.wav' };
 
 const WINDOW = 0.05;
+/** `secs` of master at `db`, in `WINDOW` windows. */
 const level = (db: number, secs: number) =>
   Array.from({ length: Math.round(secs / WINDOW) }, () => db);
 

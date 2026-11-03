@@ -7,6 +7,7 @@ interface UseToastManagerReturnValue<Data extends object = object> {
   readonly toasts: ToastObject<Data>[];
 }
 
+/** Returns the array of toasts. */
 export function useToastManager<Data extends object = object>(): UseToastManagerReturnValue<Data> {
   const { state } = useToastProviderContext();
   const toasts = createMemo(() => state().toasts);

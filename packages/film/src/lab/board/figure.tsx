@@ -4,16 +4,20 @@ import type { ParentProps } from 'solid-js';
 import type { Panel as BoardPanel } from '../../core/board.ts';
 import { counted } from '../../core/words.ts';
 
+/** A card's or a verse's words, as the engine sets them. */
 type PanelText = NonNullable<BoardPanel['text']>;
 
+/** What a card's or a verse's thumb says. */
 const thumbSaid = (t: PanelText): string => {
   if (t._tag === 'Card') return `card · “${t.payoff}”`;
   return `verse · ${t.ref}`;
 };
 
+/** How many tries a panel has, said: `1 try`, `2 tries`. */
 const triesSaid = (n: number): string =>
   Bool.match(n === 1, { onTrue: () => '1 try', onFalse: () => `${n} tries` });
 
+/** What a panel shows as its thumb: its try's image (`src`, the board file's URL), or what a card or a verse says. */
 export const PanelThumb = (props: {
   readonly panel: BoardPanel;
   readonly src: Option.Option<string>;
@@ -39,6 +43,7 @@ export const PanelThumb = (props: {
   </Show>
 );
 
+/** A panel's tries and the one kept, and its open notes when it has some: the line under its thumb. */
 const PanelSaid = (props: { readonly panel: BoardPanel; readonly notes: number }) => (
   <span class="lab-board-panel-meta">
     <Show when={!props.panel.text}>
@@ -57,6 +62,12 @@ const PanelSaid = (props: { readonly panel: BoardPanel; readonly notes: number }
   </span>
 );
 
+/**
+ * A panel as a page shows it: its thumb (`thumb`, the page's own: a still
+ * that opens large in an ask), the words said while it holds, its mark
+ * (with what the page adds beside it, `children`), and its tries, the one
+ * kept and its open notes.
+ */
 export const PanelFigure = (
   props: ParentProps<{
     readonly panel: BoardPanel;
@@ -78,6 +89,10 @@ export const PanelFigure = (
   </>
 );
 
+/**
+ * A panel as a page shows it (`PanelFigure`): a card's thumb is its words in
+ * a padded box the width of the panel, its padding inside that width.
+ */
 export const PANEL_THUMB_CSS = `
 .lab-board-thumb { display: flex; align-items: center; justify-content: center; box-sizing: border-box; width: 100%;
   height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--r-1); background: var(--surface-3);

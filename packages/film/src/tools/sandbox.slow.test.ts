@@ -29,12 +29,14 @@ const wordValue = (word: string | Redacted.Redacted<string>): string => {
 const home = '/Users/someone';
 const claude = `${home}/.local/share/claude/versions/2.1.300`;
 
+/** A run of the counsel's process: its argv, folder and environment. */
 interface Spawned {
   readonly argv: ReadonlyArray<string>;
   readonly cwd: string;
   readonly env: Readonly<Partial<Record<string, string>>>;
 }
 
+/** A spawner that keeps each command it is given and answers `answer` on stdout, exiting 0. */
 const answering = (answer: string, spawned: Array<Spawned>) =>
   ChildProcessSpawner.make((command) => {
     if (command._tag === 'StandardCommand')
@@ -65,6 +67,12 @@ const answering = (answer: string, spawned: Array<Spawned>) =>
     );
   });
 
+/**
+ * The counsel asked, through `Counsel.claudeAt`, with `home` as its home
+ * and, where Claude is installed under it, a stand-in for Claude: a shell
+ * script that reads the prompt and runs `body`. Its answer, and the folder
+ * the run's files are kept in.
+ */
 const askingAt = (home: string, body: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

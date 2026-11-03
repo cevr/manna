@@ -6,6 +6,7 @@ import { cropRaster } from '../core/raster.ts';
 import { type CastKeep, fileCastKeep } from './cast-sheet-filing.ts';
 import { decodePng, encodePng } from './png.ts';
 
+/** Keep try `keep.n` of the member's `keep.kind` sheet: its image and views into the folder, the keep into the record. */
 export const keepCastSheet = Effect.fn('Cast.keep')(function* (
   place: { readonly folder: string; readonly out: string },
   keep: CastKeep,

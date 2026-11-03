@@ -1,3 +1,26 @@
+/**
+ * The tuner's focus on fixed seeds: which frames of a guitar's sound, a
+ * talker's voice and a room's noise `hear` shows. A pitch shows once it has
+ * held for a few frames in a row, so a voice, which glides through every
+ * syllable, shows none, and a plucked string, which holds its pitch, shows
+ * within 250 ms and stays shown. The generated sweeps over the whole signal
+ * domains are in `focus.property.slow.test.ts`.
+ *
+ * The rule's edges are held on steady tones (`toneFrame`, which `detect`
+ * reads within a hundredth of a cent, each case checking its readings): the
+ * lock's 10 cents over 4 frames, the follow's 20 cents a frame, the 2 misses
+ * held and the 3rd let go, and the floor at 65 Hz while seeking and while
+ * held. `Focus` is opaque: no caller reads it.
+ *
+ * Every signal is generated here, in memory, from a seed (xorshift32): a
+ * talker (`talk`: glottal pulses through three vowel formants, gliding
+ * syllables, fricatives and bursts, pauses), a plucked string (`pluck`:
+ * partials from the plucking point, each decaying, a pick noise, a sharp
+ * attack), room noise (`room`: white, pink, brown, fan, mains hum), and a
+ * pluck under talk at a named SNR (`mix` with talk at `under(PLUCK_LEVEL,
+ * db)`). Frames are 2048 samples, one after another, as the ear gives them.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
@@ -5,8 +28,10 @@ import { type Focus, hear, unfocused } from './focus';
 import { detect } from './pitch';
 
 const FRAME = 2048;
+/** A pluck's RMS over its first 0.5 s. */
 const PLUCK_LEVEL = 0.1;
 
+/** xorshift32 in [0, 1). */
 type Draw = () => number;
 
 const draw = (seed: number): Draw => {
@@ -23,11 +48,14 @@ const draw = (seed: number): Draw => {
 
 const between = (next: Draw, low: number, high: number) => low + (high - low) * next();
 
+/** A standard normal draw (Box-Muller). */
 const gauss = (next: Draw) =>
   Math.sqrt(-2 * Math.log(Math.max(1e-12, next()))) * Math.cos(2 * Math.PI * next());
 
+/** A uniform draw of mean 0 and variance 1, cheaper than `gauss`: breath noise, the pitch's wander and room noise. */
 const spread = (next: Draw) => (2 * next() - 1) * Math.sqrt(3);
 
+/** -1 or 1, even odds. */
 const sign = (next: Draw) => {
   if (next() < 0.5) return -1;
   return 1;
@@ -37,6 +65,7 @@ const cents = (hz: number, ref: number) => 1200 * Math.log2(hz / ref);
 
 const bySemitones = (semitones: number) => 440 * 2 ** (semitones / 12);
 
+/** Standard tuning, low to high, from A4 = 440 Hz. */
 const STRINGS = [
   { id: 'E2', hz: bySemitones(-29) },
   { id: 'A2', hz: bySemitones(-24) },
@@ -46,11 +75,13 @@ const STRINGS = [
   { id: 'E4', hz: bySemitones(-5) },
 ] as const;
 
+/** 44.1 kHz for even `index`, 48 kHz for odd. */
 const rateOf = (index: number) => {
   if (index % 2 === 0) return 44_100;
   return 48_000;
 };
 
+/** RMS-normalise `signal` in place to `level` over the samples `counted` marks with 1. */
 const normalise = (signal: Float64Array, level: number, counted: Uint8Array) => {
   let sum = 0;
   let count = 0;
@@ -64,6 +95,7 @@ const normalise = (signal: Float64Array, level: number, counted: Uint8Array) => 
   return signal;
 };
 
+/** A two-pole resonator in place, centred each sample at `centre[i]` Hz. */
 const resonate = (signal: Float64Array, rate: number, centre: Float64Array, bandwidth: number) => {
   const r = Math.exp((-Math.PI * bandwidth) / rate);
   let y1 = 0;
@@ -84,6 +116,7 @@ const resonate = (signal: Float64Array, rate: number, centre: Float64Array, band
   return signal;
 };
 
+/** Peterson and Barney's (1952) ten vowels, adult men: F1, F2, F3 in Hz. */
 const VOWELS = [
   [270, 2290, 3010],
   [390, 1990, 2550],
@@ -98,9 +131,12 @@ const VOWELS = [
 ] as const;
 
 interface Talker {
+  /** The voice's mean fundamental, Hz (85 to 255). */
   readonly f0: number;
+  /** The least and most a syllable's pitch glides across its nucleus, semitones (0.5 to 8). */
   readonly minGlide: number;
   readonly maxGlide: number;
+  /** Each glottal cycle's period and amplitude vary by these shares (standard deviations). */
   readonly jitter: number;
   readonly shimmer: number;
 }
@@ -113,6 +149,7 @@ const talker = (f0: number): Talker => ({
   shimmer: 0.04,
 });
 
+/** A talk signal being written: the glottal source, the consonants' noise, the voiced samples and the three formants' centres. */
 interface Tract {
   readonly rate: number;
   readonly n: number;
@@ -125,6 +162,7 @@ interface Tract {
   readonly f3: Float64Array;
 }
 
+/** The glottis between syllables: where in its cycle, this cycle's period and amplitude shares, the vowel last voiced. */
 interface Glottis {
   phase: number;
   period: number;
@@ -132,6 +170,7 @@ interface Glottis {
   vowel: ReadonlyArray<number>;
 }
 
+/** A fricative (30 to 110 ms of noise), a burst (8 to 20 ms and a gap), or nothing, from sample `i`; the sample after it. */
 const consonant = (next: Draw, tract: Tract, i: number) => {
   const kind = next();
   if (kind < 0.45) {
@@ -151,12 +190,18 @@ const consonant = (next: Draw, tract: Tract, i: number) => {
   return i;
 };
 
+/** A Rosenberg glottal flow derivative at `phase` in [0, 1), open quotient 0.6. */
 const pulse = (phase: number) => {
   if (phase < 0.4) return 0.5 * Math.sin((Math.PI * phase) / 0.4);
   if (phase < 0.6) return -Math.sin((Math.PI * (phase - 0.4)) / 0.2);
   return 0;
 };
 
+/**
+ * A vowel nucleus of 80 to 280 ms from sample `i`, its pitch starting `start`
+ * semitones from the voice's mean and gliding up or down across it, with a slow
+ * wander, cycle jitter and shimmer; the sample after it.
+ */
 const nucleus = (
   next: Draw,
   tract: Tract,
@@ -195,6 +240,11 @@ const nucleus = (
   return i + length;
 };
 
+/**
+ * A phrase of 3 to 11 syllables from sample `i`, falling 0.5 to 3 semitones over
+ * it, each syllable accented -2 to +4 semitones, then a pause of 150 to 600 ms;
+ * the sample after the pause.
+ */
 const phrase = (next: Draw, tract: Tract, voice: Talker, glottis: Glottis, i: number) => {
   const syllables = 3 + Math.floor(next() * 9);
   const declination = between(next, -3, -0.5);
@@ -207,11 +257,18 @@ const phrase = (next: Draw, tract: Tract, voice: Talker, glottis: Glottis, i: nu
   return at + Math.floor(between(next, 0.15, 0.6) * tract.rate);
 };
 
+/** The formants' scale: ×1.17 for a voice above 160 Hz (women's and children's vocal tracts are shorter). */
 const formantScale = (f0: number) => {
   if (f0 > 160) return 1.17;
   return 1;
 };
 
+/**
+ * `seconds` of one talker at `rate`, starting 0 to 300 ms in: phrases of
+ * syllables, each nucleus a glottal pulse through three formant resonators at a
+ * vowel (×1.17 above 160 Hz) with breath noise, and its consonant's noise rung
+ * near 3.5 to 6.5 kHz. RMS `level` over the voiced samples.
+ */
 const talk = (next: Draw, rate: number, seconds: number, voice: Talker, level: number) => {
   const n = Math.floor(rate * seconds);
   const scale = formantScale(voice.f0);
@@ -241,20 +298,28 @@ const talk = (next: Draw, rate: number, seconds: number, voice: Talker, level: n
 };
 
 interface Pluck {
+  /** The string's pitch, Hz. */
   readonly hz: number;
+  /** The fundamental's decay time constant, seconds (0.8 to 3); partial k+1 decays 1 + 0.25k times faster. */
   readonly decay: number;
+  /** Inharmonicity B (0, or up to 1e-4): partial n sits at n·hz·√((1 + B n²)/(1 + B)). */
   readonly stiffness: number;
+  /** The plucking point along the string (0.08 to 0.3). */
   readonly position: number;
+  /** Cents sharp at the attack (0 to 8), settling with τ 0.1 s. */
   readonly attack: number;
+  /** A peg turn, cents a second (0 for none), from `turnFrom` seconds after the onset. */
   readonly turn: number;
   readonly turnFrom: number;
 }
 
+/** B up to 1e-4 when stiff, else 0. */
 const stiffnessOf = (next: Draw, stiff: boolean) => {
   if (stiff) return between(next, 0, 1e-4);
   return 0;
 };
 
+/** A pluck at `hz`, harmonic or stiff, its other parameters drawn from their domains. */
 const pluckOf = (next: Draw, hz: number, stiff: boolean): Pluck => ({
   hz,
   decay: between(next, 0.8, 3),
@@ -265,8 +330,15 @@ const pluckOf = (next: Draw, hz: number, stiff: boolean): Pluck => ({
   turnFrom: 0,
 });
 
+/** Samples a partial's turn is held for; the attack and a peg turn move it well under a hundredth of a cent in that time. */
 const BLOCK = 16;
 
+/**
+ * `n` samples at `rate` of a string plucked at sample `at`, silence before it:
+ * partials up to 5 kHz (at most 14), each from the plucking point, a 4 ms pick
+ * noise. RMS `level` over its first 0.5 s. Each partial is a phasor turned and
+ * decayed each sample.
+ */
 const pluck = (next: Draw, rate: number, n: number, at: number, p: Pluck, level = PLUCK_LEVEL) => {
   const count = Math.max(1, Math.min(14, Math.floor(5000 / p.hz)));
   const partials = Array.from({ length: count }, (_, k) => {
@@ -309,6 +381,7 @@ const pluck = (next: Draw, rate: number, n: number, at: number, p: Pluck, level 
 
 type RoomKind = 'white' | 'pink' | 'brown' | 'fan' | 'hum50' | 'hum60';
 
+/** Pink noise (Paul Kellet's filter over white). */
 const pinkNoise = (next: Draw, n: number) => {
   const out = new Float64Array(n);
   let b0 = 0;
@@ -324,6 +397,7 @@ const pinkNoise = (next: Draw, n: number) => {
   return out;
 };
 
+/** Mains hum at `mains` Hz with its 2nd and 3rd harmonics, over a little white noise. */
 const hum = (next: Draw, rate: number, n: number, mains: number) =>
   Float64Array.from({ length: n }, (_, i) => {
     const t = i / rate;
@@ -356,19 +430,24 @@ const ROOMS: Record<RoomKind, (next: Draw, rate: number, n: number) => Float64Ar
   hum60: (next, rate, n) => hum(next, rate, n, 60),
 };
 
+/** `n` samples at `rate` of room noise at RMS `level`: fan is pink noise with tones at 120 and 240 Hz. */
 const room = (next: Draw, rate: number, n: number, kind: RoomKind, level: number) =>
   normalise(ROOMS[kind](next, rate, n), level, new Uint8Array(n).fill(1));
 
+/** The level `db` under `level`: talk under a pluck at an SNR of `db`. */
 const under = (level: number, db: number) => level / 10 ** (db / 20);
 
+/** `signal` with `other` added sample by sample, `signal`'s length. */
 const mix = (signal: Float64Array, other: Float64Array) =>
   signal.map((sample, i) => sample + (other[i] ?? 0));
 
+/** The frames the ear gives: 2048 samples, one after another. */
 const framesOf = (signal: Float64Array) =>
   Array.from({ length: Math.floor(signal.length / FRAME) }, (_, k) =>
     Float32Array.from(signal.subarray(k * FRAME, (k + 1) * FRAME)),
   );
 
+/** Each frame's shown pitch (NaN when none) through `hear` from `from`, and the state each frame met. */
 const listen = (frames: ReadonlyArray<Float32Array>, rate: number, from: Focus = unfocused) => {
   const shown: Array<number> = [];
   const states: Array<Focus> = [];
@@ -382,8 +461,10 @@ const listen = (frames: ReadonlyArray<Float32Array>, rate: number, from: Focus =
   return { shown, states };
 };
 
+/** Milliseconds from the sample `at` to the end of frame `k`. */
 const endMs = (k: number, at: number, rate: number) => (((k + 1) * FRAME - at) / rate) * 1000;
 
+/** Milliseconds from `at` to the end of the first frame after it that `shows`; Infinity when none does. */
 const firstMs = (
   shown: ReadonlyArray<number>,
   at: number,
@@ -395,17 +476,20 @@ const firstMs = (
   return endMs(k, at, rate);
 };
 
+/** The frames shown, each as its index and pitch. */
 const shownFrames = (shown: ReadonlyArray<number>) =>
   shown.flatMap((hz, frame) => {
     if (Number.isNaN(hz)) return [];
     return [{ frame, hz }];
   });
 
+/** `[item]` when `holds`, else none: a failure to report. */
 const when = <A>(holds: boolean, item: A): ReadonlyArray<A> => {
   if (holds) return [item];
   return [];
 };
 
+/** `hz` within 25 cents of the pluck `p`. */
 const near = (hz: number, p: Pluck) => !Number.isNaN(hz) && Math.abs(cents(hz, p.hz)) <= 25;
 
 describe('hear', () => {
@@ -556,8 +640,10 @@ describe('hear', () => {
   );
 });
 
+/** The rate of the edge cases' tones. */
 const TONE_RATE = 44_100;
 
+/** One frame of a steady tone at `hz`, its fundamental with its 2nd and 3rd partials, at `TONE_RATE`; silence for NaN. */
 const toneFrame = (hz: number) =>
   Float32Array.from({ length: FRAME }, (_, i) => {
     if (Number.isNaN(hz)) return 0;
@@ -565,12 +651,22 @@ const toneFrame = (hz: number) =>
     return 0.1 * (Math.sin(t) + 0.5 * Math.sin(2 * t) + 0.3 * Math.sin(3 * t));
   });
 
+/** `hz` moved by `by` cents. */
 const centsFrom = (hz: number, by: number) => hz * 2 ** (by / 1200);
 
+/** A frame's reading's bar: `detect` reads a steady tone within it, so each edge case tests the rule, not the detector. */
 const READ_CENTS = 0.05;
 
+/** No frame: `shows` marks a frame that shows nothing with it. */
 const NONE = -1;
 
+/**
+ * Hears `tones` (Hz a frame, NaN for silence) from the start state. The
+ * frames whose `detect` reading strays past `READ_CENTS` from their tone
+ * (or reads a pitch in silence), and what each frame shows set beside
+ * `shows`: per frame, the index of the frame whose reading it shows, or
+ * `NONE`.
+ */
 const atEdge = (tones: ReadonlyArray<number>, shows: ReadonlyArray<number>) => {
   const frames = tones.map(toneFrame);
   const read = frames.map((frame) => Option.getOrElse(detect(frame, TONE_RATE), () => Number.NaN));
@@ -592,6 +688,7 @@ const atEdge = (tones: ReadonlyArray<number>, shows: ReadonlyArray<number>) => {
   };
 };
 
+/** The A string, the edge cases' pitch. */
 const A2 = STRINGS[1].hz;
 
 describe("hear at the rule's edges", () => {

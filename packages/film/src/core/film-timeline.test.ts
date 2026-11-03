@@ -35,8 +35,10 @@ const cold = clockOf(coldClockJson);
 const rbfV2Board = Schema.decodeUnknownSync(BoardFile)(rbfV2BoardJson);
 const name = Schema.decodeSync(AskName);
 
+/** When each of RBF's versions opened, ms. */
 const OPENED = { 1: 1_000, 2: 2_000, 3: 3_000 } as const;
 
+/** An ask about RBF in `state`, its one page showing `blocks`. */
 const askOf = (
   id: string,
   blocks: ReadonlyArray<AskBlock>,
@@ -57,6 +59,7 @@ const askOf = (
 const ASKING = AskState.Asking({ step: name('ask'), answers: {} });
 const ANSWERED = AskState.Answered({ step: name('done'), answers: {} });
 
+/** An ask whose page shows Board panels `panels`. */
 const askOn = (
   id: string,
   panels: ReadonlyArray<string>,
@@ -64,6 +67,7 @@ const askOn = (
   more: Partial<AskRecord> = {},
 ) => askOf(id, [{ kind: 'board', film: RBF, panels }], state, more);
 
+/** The owner kept v3's script (an ask showing it) and its concept frames (an ask showing pictures alone). */
 const SCRIPT_ASK = askOf('keep-script', [{ kind: 'script', film: RBF }], ANSWERED);
 const CONCEPT_ASK = askOf(
   'keep-concept',
@@ -71,6 +75,7 @@ const CONCEPT_ASK = askOf(
   ANSWERED,
 );
 
+/** RBF's ledger: three versions, the owner's answers to the asks `keeps` filed at each of `keptAt`, and `more`. */
 const ledgerOf = (
   keptAt: ReadonlyArray<number>,
   more: ReadonlyArray<unknown> = [],
@@ -99,12 +104,14 @@ const ledgerOf = (
   });
 const LEDGER = ledgerOf([OPENED[3] + 100]);
 
+/** v2 is a version folder (`v2/`); v3 is on the registered files, and open. */
 const rbfVersions = versionsOf(Option.some(LEDGER), [2], RBF);
 const versionN = (versions: ReadonlyArray<FilmVersion>, n: number) =>
   Result.getOrThrow(pickVersion(RBF, versions, Option.some(n)));
 
 const noNotes = (film: string): NotesFile => ({ film, seq: 0, notes: [] });
 
+/** RBF's sources at version `n`: its own clock and Board; v3, the open version, has no Board yet. */
 const rbf = (n: 2 | 3, more: Partial<TimelineSources> = {}): TimelineSources => ({
   film: RBF,
   ledger: Option.some(LEDGER),
@@ -133,8 +140,10 @@ const beatOf = (clock: FilmClock, id: string) =>
 const markOf = (clock: FilmClock, beat: string, mark: string) =>
   Option.getOrThrow(Arr.findFirst(beatOf(clock, beat).marks, (m) => m.name === mark)).at;
 
+/** The timings of a film with no take yet. */
 const NO_TAKES = { voice: '', scenes: {} };
 
+/** The owner's note on `scene`, `local` seconds in. */
 const noteOn = (id: string, scene: string, local: number, status: Note['status']): Note => ({
   id,
   film: RBF,
@@ -151,6 +160,7 @@ const noteOn = (id: string, scene: string, local: number, status: Note['status']
   createdAt: '2026-10-15T00:00:00.000Z',
 });
 
+/** A main video render of `address` with stamp `key`. */
 const renderOf = (address: Render['address'], key: string): Render => ({
   address,
   variant: MAIN_VARIANT,
@@ -170,6 +180,7 @@ const renderOf = (address: Render['address'], key: string): Render => ({
   at: 1,
 });
 
+/** `board` with `panel` keeping try `n` in place of the one it kept. */
 const keeping = (board: BoardFile, panel: string, n: number): BoardFile => ({
   ...board,
   panels: board.panels.map((p) => Object.assign({ ...p }, p.id === panel && { kept: n })),

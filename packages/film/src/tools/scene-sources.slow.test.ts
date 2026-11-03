@@ -8,8 +8,10 @@ import { scenesLocatedHere } from './read-cli.ts';
 import { SceneSources } from './scene-sources.ts';
 import { sceneFixture } from './scene-sources/testing.ts';
 
+/** The fixture film's folder: a fresh one per test. */
 class Films extends Context.Service<Films, string>()('test/Films') {}
 
+/** A fresh fixture film on disk, and the locator over its films folder. */
 const fixture = Layer.unwrap(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -22,8 +24,13 @@ const fixture = Layer.unwrap(
   }),
 ).pipe(Layer.provideMerge(BunServices.layer));
 
+/** The timeout of a test here that runs the read in a fresh process: a cold start's time is the machine's. */
 const SPAWNS_MS = 30_000;
 
+/**
+ * A fresh fixture film on disk, and the lab's locator over its films folder:
+ * each read runs `film read` in a fresh process (`fixtures/read-cli.ts`).
+ */
 const lab = Layer.unwrap(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -38,11 +45,13 @@ const lab = Layer.unwrap(
   }),
 ).pipe(Layer.provideMerge(BunServices.layer));
 
+/** A drawing of its own, for a scene added while the lab runs. */
 const GAMMA = `import { drawing } from './drawing.ts';
 
 export const gamma = drawing({ timeline: { go: { at: 'start', dur: 1 } }, draw: () => {} });
 `;
 
+/** Both fields writable: each scene reads its drawing's own literals, and no other scene does. */
 const open = { timeline: { _tag: 'Writable' }, knobs: { _tag: 'Writable' } } as const;
 
 describe('scene sources', () => {

@@ -17,8 +17,14 @@ import { AskUnknown } from '../core/refusals.ts';
 import type { AskRead } from './asks-mcp.ts';
 import { type Heard, type LabFeed, STREAM_PACE, type StreamPace, followLab } from './lab-stream.ts';
 
+/** Words in one line, quoted: a newline in them would split the line. */
 const quoted = Schema.encodeSync(Schema.fromJsonString(Schema.String));
 
+/**
+ * What the latch waits for: one ask (answered, closed, or one step of it
+ * answered), every ask on a page (each answered or closed; `page` is any
+ * ask's id, its page the one it is on), or any ask answered.
+ */
 export type AskLatch = Data.TaggedEnum<{
   One: { readonly ask: string; readonly step: Option.Option<string> };
   Page: { readonly page: string };
@@ -26,6 +32,7 @@ export type AskLatch = Data.TaggedEnum<{
 }>;
 export const AskLatch = Data.taggedEnum<AskLatch>();
 
+/** The wait ran past `--timeout`. */
 class AskWaitTimeout extends Schema.TaggedError<AskWaitTimeout>()('AskWaitTimeout', {
   waited: Schema.String,
 }) {
@@ -34,12 +41,15 @@ class AskWaitTimeout extends Schema.TaggedError<AskWaitTimeout>()('AskWaitTimeou
   }
 }
 
+/** The lab as the latch reads it: its feed (`lab-stream.ts`), and every ask, on the feed's session. */
 export interface AskFeed<S, E> extends LabFeed<S, E> {
   readonly asks: (session: S) => Effect.Effect<ReadonlyArray<AskRead>, E>;
 }
 
+/** The pace `film ask wait` reads at: the stream's (`STREAM_PACE`). */
 export const ASK_WAIT_PACE: StreamPace = STREAM_PACE;
 
+/** Whether `change` may move the latch: a reason to read the asks again. */
 const moves = (latch: AskLatch, change: HeardChange): boolean =>
   AskLatch.$match(latch, {
     One: ({ ask }) => change.ask === ask,
@@ -47,6 +57,13 @@ const moves = (latch: AskLatch, change: HeardChange): boolean =>
     Any: () => change.kind === 'ask.answered',
   });
 
+/**
+ * The asks the latch holds on in `asks` (newest first, as the lab lists
+ * them), if it holds: the one ask, or every ask on the page in the order
+ * made; `AskUnknown` when it waits on one the lab does not have. `before`
+ * is the asks already answered or closed at the first read: `Any` waits for
+ * one answered after it.
+ */
 const holds = (
   latch: AskLatch,
   asks: ReadonlyArray<AskRead>,
@@ -88,11 +105,22 @@ const holds = (
   });
 };
 
+/** What the latch ends on: the asks it held on, or an ask the lab does not have. */
 type Latched = Result.Result<ReadonlyArray<AskRead>, AskUnknown>;
 
+/** The asks answered or closed in `asks`: what `Any` does not count. */
 const settled = (asks: ReadonlyArray<AskRead>): ReadonlySet<string> =>
   new Set(asks.filter((a) => a.status !== 'asking').map((a) => a.ask));
 
+/**
+ * The asks once `latch` holds on them (the one ask, or every ask on the
+ * page): at once when it already does, else when a read the stream wakes
+ * says so (a change that moves it, a `reset`, or a new session: a lab
+ * restarted saw what it missed as its baseline, not as a change).
+ * `AskUnknown` for an ask the lab does not have; `AskWaitTimeout` once
+ * `timeout` passes. A lab that does not answer is never a failure: the
+ * stream asks it again on `pace.retry`, and the loss is said once.
+ */
 export const waitForAsk = <S, E extends { readonly message: string }>(
   feed: AskFeed<S, E>,
   latch: AskLatch,
@@ -103,6 +131,7 @@ export const waitForAsk = <S, E extends { readonly message: string }>(
   Effect.gen(function* () {
     const before = yield* Ref.make(Option.none<ReadonlySet<string>>());
 
+    /** The asks read on `session`: what the latch holds on, when it holds. */
     const readAsks = (session: S) =>
       Effect.gen(function* () {
         const asks = yield* feed.asks(session);
@@ -112,6 +141,7 @@ export const waitForAsk = <S, E extends { readonly message: string }>(
         return holds(latch, asks, seen);
       });
 
+    /** The asks read on `session`, as the stream ends on them: held, or an ask the lab does not have. */
     const latched = (session: S) =>
       Effect.map(readAsks(session), (result) =>
         Result.match(result, {
@@ -155,6 +185,7 @@ export const waitForAsk = <S, E extends { readonly message: string }>(
     }),
   );
 
+/** The ask as plain lines: its head (its page among it), each step answered, each answer typed, why it closed, its links. */
 export const askLines = (read: AskRead): ReadonlyArray<string> => [
   `ask ${read.ask} status=${read.status}${Option.match(Option.fromUndefinedOr(read.step), {
     onNone: () => '',

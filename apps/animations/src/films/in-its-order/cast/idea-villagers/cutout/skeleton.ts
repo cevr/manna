@@ -15,6 +15,7 @@ const BODY: Body = {
   band: { above: 50, below: 12, reach: 60 },
 };
 
+/** The baby's body: a head, a torso and two short arms, with a flap band his size. */
 const BABY: Body = {
   skin: BODY.skin,
   arms: BODY.arms,
@@ -22,6 +23,7 @@ const BABY: Body = {
   band: { above: 20, below: 8, reach: 20 },
 };
 
+/** Each cut view's skeleton in its part sheet's frame, by the view's name in their sheet's views. */
 export const SKELETONS = {
   'poses-3': framed(
     keptAt('poses-3'),

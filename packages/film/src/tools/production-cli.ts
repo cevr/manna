@@ -28,6 +28,7 @@ import { ProductionStore } from './production-store.ts';
 import { labClient, labUrl } from './lab-client.ts';
 import { SetsTool } from './sets-mcp.ts';
 
+/** A name that is not a production's (lower case, digits and `-`). */
 class ProductionNameInvalid extends Schema.TaggedError<ProductionNameInvalid>()(
   'ProductionNameInvalid',
   { name: Schema.String },
@@ -37,6 +38,7 @@ class ProductionNameInvalid extends Schema.TaggedError<ProductionNameInvalid>()(
   }
 }
 
+/** A time that does not parse. */
 class TimeInvalid extends Schema.TaggedError<TimeInvalid>()('TimeInvalid', {
   text: Schema.String,
 }) {
@@ -58,6 +60,7 @@ const name = Argument.String('production').pipe(
 
 const iso = (at: number) => DateTime.formatIso(DateTime.makeUnsafe(at));
 
+/** `--at`, an ISO time, as ms since the epoch; now without. */
 const timeOf = (text: Option.Option<string>) =>
   Option.match(text, {
     onNone: () => Clock.currentTimeMillis,
@@ -68,23 +71,27 @@ const timeOf = (text: Option.Option<string>) =>
       }),
   });
 
+/** When it happened: now, or an earlier time an agent records late. */
 const atFlag = (what: string) =>
   Flag.String('at').pipe(
     Flag.optional,
     Flag.withDescription(`when ${what}, an ISO time (now without)`),
   );
 
+/** What a said line opens with, by its kind. */
 const saidVerb = { Decided: 'decided', Noted: 'noted', Asked: 'asked' } as const satisfies Record<
   Said['_tag'],
   string
 >;
 
+/** The current version's mark on its line. */
 const currentMark = (current: boolean): string =>
   Match.value(current).pipe(
     Match.when(true, () => ' (current)'),
     Match.orElse(() => ''),
   );
 
+/** The ledger as `show` prints it: newest version first, the owner's words and filings under each. */
 const ledgerLines = (file: ProductionFile): ReadonlyArray<string> => {
   const current = currentVersion(file);
   return [
@@ -192,6 +199,7 @@ export const production = Command.make('production').pipe(
   Command.withSubcommands([list, show, create, file]),
 );
 
+/** What the running lab says of a set's folder: listed (its ref), not listed, or nothing it could say. */
 type Listing = Data.TaggedEnum<{
   Listed: { readonly ref: string };
   Unlisted: {};
@@ -199,8 +207,18 @@ type Listing = Data.TaggedEnum<{
 }>;
 const Listing = Data.taggedEnum<Listing>();
 
+/** How long `film publish` waits on the lab's answer: the stamp has landed, so a lab that holds the call never holds the line. */
 const LAB_ANSWER_SECONDS = 5;
 
+/**
+ * Whether the lab at `url` lists the set in `folder`, asked of the lab
+ * itself (its `sets`, its index read fresh): the lab reads its own review
+ * roots, which a command run from another checkout (a worktree) does not
+ * share. A lab that does not answer within `LAB_ANSWER_SECONDS`, or answers
+ * in a shape this checkout does not read, leaves it unknown: the publish has
+ * landed either way. The session's end waits at most the lab client's own
+ * limit more, and a listing already received stands through it.
+ */
 const listedByLab = (url: string, folder: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

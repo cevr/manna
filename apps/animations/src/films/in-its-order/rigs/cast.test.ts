@@ -8,6 +8,7 @@ import { ARTBOARDS } from './figures.ts';
 
 type Box = readonly [number, number, number, number];
 
+/** One kept sheet's views, by name and box. */
 interface KeptSheet {
   readonly views: ReadonlyArray<{
     readonly name: string;
@@ -15,17 +16,22 @@ interface KeptSheet {
   }>;
 }
 
+/** What of a record the table answers to: each kind's kept sheet, or its list of single drawings. */
 interface Kept {
   readonly kept: Readonly<Record<string, KeptSheet | ReadonlyArray<KeptSheet>>>;
 }
 
+/** The kinds only the cut-out table draws: a single drawing has no traced rig. */
 const CUT_OUT_ONLY: ReadonlySet<string> = new Set(['single']);
 
+/** A kind's kept sheets as one sheet of all their views. */
 const keptViews = (kept: KeptSheet | ReadonlyArray<KeptSheet>): KeptSheet =>
   'views' in kept ? kept : { views: kept.flatMap((sheet) => sheet.views) };
 
+/** Each member `cold` casts, by his record. */
 const RECORDS: Readonly<Record<keyof typeof CAST, Kept>> = { 'lead-feast': LEAD_FEAST };
 
+/** A view of the table, as the test reads it. */
 type View = (typeof CAST)['lead-feast']['turnaround']['front'];
 
 describe("IIO's cast render table", () => {
@@ -87,6 +93,7 @@ describe("IIO's cast render table", () => {
 
 type Pt = readonly [number, number];
 
+/** A closed cubic chain (each anchor, its out handle, the next anchor's in handle) laid as points along its curves. */
 const curve = (chain: ReadonlyArray<Pt>): Pt[] =>
   chain.flatMap((a, i) => {
     if (i % 3 !== 0) return [];
@@ -99,6 +106,7 @@ const curve = (chain: ReadonlyArray<Pt>): Pt[] =>
     });
   });
 
+/** Whether `p` lies inside `poly`, or within `reach` of its edge. */
 const within = (p: Pt, poly: ReadonlyArray<Pt>, reach: number): boolean => {
   let inside = false;
   let near = Infinity;

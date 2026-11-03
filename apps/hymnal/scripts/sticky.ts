@@ -1,3 +1,34 @@
+/**
+ * `bun scripts/sticky.ts --udid <udid> [--app <Hymnal.app>] [--pass slow|fast|push|all] [--runs 3] --out <dir>`:
+ * the home list's pinned topic row, checked in every frame of a simulator
+ * recording.
+ *
+ * Each pass relaunches the app, scrolls past the large title, records the
+ * screen (`xcrun simctl io recordVideo --codec h264`) while it drives the
+ * list through agent-device, then reads every frame's column left of the
+ * hymn rows' separators and judges where the pinned row's hairline sits
+ * (`sticky/frames.ts`), flush under the search field while an upward scroll
+ * shows it over the list's top (a column through the field's box reads how
+ * far it reaches). It prints one JSON line per pass and run,
+ * `{pass, run, frames, judged, missing, off, worst}`, and exits 0 only when
+ * every pass of every run holds: no frame off by more than 1 pt, and at
+ * least 95% of the frames that show the list judged.
+ *
+ * - `slow`: three 360 pt drags in 1.2 s up, two down, one fling each way.
+ * - `fast`: eight 560 pt drags in 400 ms to leave the top, then, recorded,
+ *   six 560 pt drags in 250 ms each way, never back to the top.
+ * - `push`: open a mid-list hymn and come back by the header's back button,
+ *   then again by agent-device's in-app back (as `sim back` does). It judges
+ *   only the frames where the list stands (`listShows`, read from a second
+ *   column at the screen's right edge), and needs the list in at least
+ *   `PUSH_SHOWN` of its frames. Its video shows a hymn page, so it goes to
+ *   the trash once read.
+ *
+ * Run from `apps/hymnal`, on a Release build (`--app` installs one first).
+ * The defaults are the iPhone 18 Pro's at the default text size: 3 px per
+ * pt, list top 62 pt, topic row 36 pt, hymn row 44 pt, the shown field 52 pt. The app is never played: no pass
+ * presses Play.
+ */
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Duration, Effect, FileSystem, Option, Path, Schema } from 'effect';
@@ -22,6 +53,7 @@ const SESSION = 'sticky-check';
 const PASSES = ['slow', 'fast', 'push'] as const;
 type Pass = (typeof PASSES)[number];
 
+/** A pass's printed line. */
 const Line = Schema.Struct({
   pass: Schema.Literals(PASSES),
   run: Schema.Int,
@@ -33,6 +65,7 @@ const Line = Schema.Struct({
   worst: Schema.Finite,
 });
 
+/** A pass's record: its line, the layout and each frame's verdict. */
 const Record = Schema.Struct({
   ...Line.fields,
   layout: Schema.Struct({
@@ -59,12 +92,14 @@ const Record = Schema.Struct({
 const encodeLine = Schema.encodeSync(Schema.fromJsonString(Line));
 const encodeRecord = Schema.encodeSync(Schema.fromJsonString(Record));
 
+/** A pass did not hold. */
 class StickyFailed extends Schema.TaggedError<StickyFailed>()('StickyFailed', {}) {
   override get message() {
     return 'a pass has a frame off its place, or too few frames judged';
   }
 }
 
+/** A column of the screen, in points from its `edge`, from the screen's top down `band` points. */
 interface Column {
   readonly edge: 'left' | 'right';
   readonly x: number;
@@ -72,22 +107,42 @@ interface Column {
   readonly band: number;
 }
 
+/** A column's left side as ffmpeg's crop reads it, from its edge's distance in pixels. */
 const cropX = { left: (px: number) => `${px}`, right: (px: number) => `iw-${px}` };
 
+/** The column the check judges, in points: left of the hymn rows' separators. */
 const PINNED: Column = { edge: 'left', x: 4, width: 8, band: 260 };
 
+/**
+ * The column that reads how far the search field shown over the list's top
+ * reaches (`coverIn`), in points from the right edge: through the field's
+ * soft box, right of its placeholder and clear of its rounded corners.
+ */
 const FIELD: Column = { edge: 'right', x: 40, width: 8, band: 140 };
 
+/**
+ * The column that tells whether the list stands, in points from the right
+ * edge: right of the hymn titles, where the list draws only its rows'
+ * separators and topic hairlines. It stops above the screen's foot.
+ */
 const WITNESS: Column = { edge: 'right', x: 12, width: 8, band: 600 };
 
+/**
+ * The least share of the `push` pass's frames that must show the list. The
+ * recorder writes a frame only when the screen changes, so the hymn page's
+ * slides outweigh the list's still stretches: the list shows in about a
+ * third of the frames (88 of 282 and 85 of 262, measured).
+ */
 const PUSH_SHOWN_SHARE_UNDER_THE_MEASURED_THIRD = 0.2;
 
+/** The least share of each pass's frames that must show the list: every frame where no page covers it. */
 const LEAST: Record<Pass, number> = {
   slow: 1,
   fast: 1,
   push: PUSH_SHOWN_SHARE_UNDER_THE_MEASURED_THIRD,
 };
 
+/** Whether the list stands in each frame: read from the witness column in the `push` pass, else every frame. */
 const shownIn = Effect.fn('Sticky.shownIn')(function* (
   video: string,
   layout: Layout,
@@ -109,6 +164,7 @@ const pan = (x: number, y: number, dx: number, dy: number, ms: number) =>
 
 const pause = (ms: number) => Effect.sleep(Duration.millis(ms));
 
+/** Relaunch the app on the home list, and scroll it so a topic row is pinned. */
 const launch = Effect.fn('Sticky.launch')(function* (udid: string, pass: Pass) {
   yield* attempt('xcrun', ['simctl', 'terminate', udid, APP_ID], short);
   yield* device(['open', APP_ID, '--platform', 'ios', '--udid', udid, '--relaunch']);
@@ -119,6 +175,7 @@ const launch = Effect.fn('Sticky.launch')(function* (udid: string, pass: Pass) {
   yield* pause(1500);
 });
 
+/** The recorded part of each pass: the gestures a reader makes. */
 const gestures = Effect.fn('Sticky.gestures')(function* (pass: Pass) {
   if (pass === 'slow') {
     for (let i = 0; i < 3; i++) yield* pan(200, 700, 0, -360, 1200);
@@ -147,6 +204,7 @@ const gestures = Effect.fn('Sticky.gestures')(function* (pass: Pass) {
   yield* pause(1000);
 });
 
+/** Record the simulator's screen into `video` while `drive` runs; the recorder stops on SIGINT, as its own Ctrl-C does. */
 const recording = <A, E, R>(udid: string, video: string, drive: Effect.Effect<A, E, R>) =>
   Effect.scoped(
     Effect.gen(function* () {
@@ -166,6 +224,7 @@ const recording = <A, E, R>(udid: string, video: string, drive: Effect.Effect<A,
     }),
   );
 
+/** Every frame's grey column, read through ffmpeg into a raw file beside the video. */
 const columns = Effect.fn('Sticky.columns')(function* (
   video: string,
   layout: Layout,
@@ -206,6 +265,7 @@ const columns = Effect.fn('Sticky.columns')(function* (
   );
 });
 
+/** One pass of one run: drive, record, judge; its summary line, and each frame's verdict in `<pass>-<run>.json`. */
 const check = Effect.fn('Sticky.check')(function* (
   udid: string,
   pass: Pass,

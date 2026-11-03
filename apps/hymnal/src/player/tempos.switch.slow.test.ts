@@ -1,5 +1,16 @@
 /* oxlint-disable effect/noNewPromise, effect/noTernary, effect/noFixedWaitInTests, effect/noGlobals, effect/noNullish -- the fake One answers in promises as One's `Audio` does, and the fake's steps and the async file read settle on the host's event loop, which the TestClock does not move: each tick yields to it. */
 
+/**
+ * The player's `tempos` tells the device a turn of the held hymn's tempo,
+ * and only that: a newly started hymn's play tells its own rate. With Sound
+ * on and the recording playing, starting another hymn must not hand the old
+ * recording the new hymn's rate while the new one loads (recrate B m5). The
+ * stack is the one `LivePlayer` builds: `playerOn` over `cachedPlayback`
+ * over `playbackOn` with a fake One that logs each call as it is issued,
+ * and the offline fixture, its file read made async (as a phone's is) or
+ * kept sync. Hymn 100 at 100 %, hymn 3 at 50 %. Nothing sounds; numbers only.
+ */
+
 import { Effect, Layer, Option, SubscriptionRef } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
@@ -20,6 +31,7 @@ const timeline = {
   lines: [],
 };
 
+/** One's shared audio session as `playbackOn` drives it: each call logged as issued, with the file then playing. */
 const oneLogging = (log: Array<string>) => {
   let state: 'idle' | 'loading' | 'playing' = 'idle';
   let uri = '';
@@ -117,6 +129,7 @@ const switching = (asyncRead: boolean) =>
     return log;
   }).pipe(Effect.provide(TestClock.layer()));
 
+/** The entries of `log` from `from` up to the first that starts with `until`. */
 const between = (log: ReadonlyArray<string>, from: string, until: string) => {
   const after = log.slice(log.indexOf(from) + 1);
   const end = after.findIndex((entry) => entry.startsWith(until));

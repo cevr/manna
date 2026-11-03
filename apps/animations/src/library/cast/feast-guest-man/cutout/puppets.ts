@@ -8,12 +8,27 @@ import { CUTS } from './cut.ts';
 import { FRAMES } from './frames.ts';
 import { SKELETONS } from './skeleton.ts';
 
+/**
+ * His sheet's line: the median run of ink (r+g+b < 200) across his outer
+ * outline, every 10th row of poses-1 from either side, is 11 px (quartiles 10
+ * and 12), laid half a pixel wider as the feast mother's is; its ink is the
+ * view's darkest 1 % (median 16,4,0).
+ */
 const LINE = { width: 11.5, ink: [16, 4, 0] } as const;
 
+/**
+ * His view's paper, the median of its kept view's border ground (its rim is
+ * un-matted from it, `core/unmatte.ts`). His white robe, sleeves and
+ * headcloth are painted in the paper's own colour (254,247,229 on his chest),
+ * so no cloth colour is named to keep: one so near the paper would fill its
+ * pockets too. Each lies inside his ink, where the un-matte's paper does not
+ * reach, and the dry run holds it as his.
+ */
 const PAPERS = {
   'poses-1': [254, 247, 229],
 } as const;
 
+/** His puppet of each cut view, by the view's name in his sheet's views: its parts front to back, its part sheet the kept box padded (`frames.ts`), his origin at the kept box's top-left corner, held to the kept box. */
 export const PUPPETS = puppetsOf({
   cast: 'feast-guest-man',
   cuts: CUTS,

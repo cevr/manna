@@ -15,8 +15,10 @@ type Review = ReviewRecord['reviews'][number];
 
 const blocks = Schema.decodeSync(Schema.Array(AskBlock));
 
+/** The farmer of film `f`, scene `rain`, as a keep keeps him. */
 const FARMER = { film: 'f', scenes: [{ scene: 'rain', figures: ['farmer'] }] } as const;
 
+/** A finding on the farmer at `mark:rain`, saying `what`, nothing done yet. */
 const finding = (what: string) => ({
   id: findingId('f', 'rain', { at: 'mark:rain', figure: 'farmer', aspect: 'head angle', what }),
   at: 'mark:rain',
@@ -25,6 +27,7 @@ const finding = (what: string) => ({
   what,
 });
 
+/** One run over `scene` of film `f` at key `key`, its crops of `figures`. */
 const run = (
   id: string,
   scene: string,
@@ -239,6 +242,7 @@ describe('a review record', () => {
   );
 });
 
+/** The key read the `n`th time (from 0): `keys[n]`, the last once past them. */
 const keysRead = (keys: ReadonlyArray<string>) =>
   Effect.map(Ref.make(0), (reads) =>
     Ref.getAndUpdate(reads, (n) => n + 1).pipe(

@@ -68,10 +68,13 @@ const knobs = {
 
 type WomanFrame = Frame<keyof typeof timeline & string, typeof knobs>;
 
+/** How far above the frame the band waits. */
 const BAND_ABOVE = -120;
 
+/** The row's glow and lead, rewritten every frame. */
 const { lit: LIT, lead: LEAD, count: COUNT } = iconScratch();
 const ALL: readonly [number, number, number] = [1, 1, 1];
+/** The court's pose, rewritten every frame. */
 const LOOK: [number, number] = [0, 0];
 const HER_LOOK: [number, number] = [0, 0];
 const WOMAN: Posed<Temple['woman']> = {
@@ -113,8 +116,10 @@ export const woman = drawing({
   },
 });
 
+/** How far into a speaking cue the mouth moves: none at its edges, open through its middle. */
 const talking = (k: number) => Math.min(1, 4 * Math.min(k, 1 - k));
 
+/** The court's shot this frame. */
 const shot = (f: WomanFrame): Camera => {
   if (f.t >= f.cue('wash').start) return COURT_WIDE;
   if (f.t >= f.mark('told'))
@@ -172,6 +177,10 @@ const court = (f: WomanFrame) => {
   temple(ctx, w, h, f.hand, COURT);
 };
 
+/**
+ * The count: each spoken number cuts back to its moment, in the framing the
+ * story gave it, held and breathing in a little while its icon lights.
+ */
 const replay = (f: WomanFrame) => {
   const { ctx, w, h, t } = f;
   reset(COURT, COURT_GONE);
@@ -216,6 +225,11 @@ const replay = (f: WomanFrame) => {
   temple(ctx, w, h, f.hand, COURT);
 };
 
+/**
+ * The band along the top, from "again", each icon lit on its number; on
+ * "order" it comes down into the section head's row, all three lit, over the
+ * page's glow.
+ */
 const row = (f: WomanFrame, toIdea: number) => {
   const { ctx, w, h } = f;
   const shown = f.at('band');

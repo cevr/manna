@@ -1,3 +1,38 @@
+/**
+ * Checks the hymns' compiled timing, two ways:
+ *
+ *   bun run sync-check --same-as <rev>
+ *   bun run sync-check --set <set> (--all | <hymn>...) [--out <file>] [--jobs <n>] [--within <ms>]
+ *
+ * `--same-as` holds every hymn file (`data/sdah-1985/NNN.json`) to the same
+ * file at `<rev>` once its `timing` is deleted: the timing is the only thing
+ * a recompile with timing may add. It prints one line per file that differs,
+ * then `same-as <rev>: files=<n> differ=<n> missing=<n>`, and exits 1 on any
+ * difference or a file one side lacks.
+ *
+ * `--set` holds each hymn's committed timing to its recording in that key
+ * set (`https://hymns.cvr.im/audio/<set>/sdah/<n>.mp3`). The recording is
+ * fetched into a scratch folder outside the repository (`SYNC_CHECK_CACHE`,
+ * else the system's temporary folder) and decoded by ffmpeg to samples
+ * only; nothing is played. For each sung line that is `played` and not
+ * `even`, its syllables' starts, in seconds through the timing's tempo map
+ * (`secondsAt`, the app's own math), are cross-correlated with the
+ * recording's onset envelope (spectral flux: 22050 Hz, window 1024, hop 128,
+ * each frame timed at its window's centre) over ±200 ms; the lag at the best
+ * match is the line's error. Other lines are counted as skipped. It prints a
+ * line per hymn, then the set's summary:
+ *
+ *   sync <set>: hymns=<n> lines=<n> skipped=<n> median=<ms> p95=<ms> max=<ms> over=<n> within=<ms> failed=<n>
+ *
+ * (`median`, `p95` and `max` of the lines' absolute lags), writes every
+ * line's lag to `--out` as JSON (line indices and times only, no words), and
+ * exits 1 when a line's lag is over `--within` (75 ms by default) or a hymn
+ * could not be measured. The follow tolerates 150 ms; the check holds the
+ * timing to half that, so a constant error the size of a short note fails.
+ * `SHIFT_MS=<ms>` moves every timed start by that much: a control, which a
+ * shift of 120 must fail.
+ */
+
 import { Effect, Schema } from 'effect';
 import { mkdir, readdir } from 'node:fs/promises';
 import os from 'node:os';
@@ -35,6 +70,7 @@ const isHymnFile = (name: string) => /^\d{3}\.json$/.test(name);
 
 const decodeHymn = Schema.decodeEffect(Schema.fromJsonString(Hymn));
 
+/** Each `<rev>:<path>` blob's text, read through one `git cat-file --batch`. */
 const blobsAt = async (rev: string, files: ReadonlyArray<string>) => {
   const git = Bun.spawn(['git', '-C', ROOT, 'cat-file', '--batch'], {
     stdin: 'pipe',
@@ -99,10 +135,22 @@ const RATE = 22050;
 const WIN = 1024;
 const HOP = 128;
 const HOP_S = HOP / RATE;
+/**
+ * How far either way a line's best match is looked for: past the follow's
+ * 150 ms tolerance, and short of a step to the next note for most lines. A
+ * line whose notes lie a regular step apart matches nearly as well one note
+ * over, and with ±300 ms six lines on warm-1 (in hymns 47, 251, 336, 442 and
+ * 525, notes 238-313 ms apart) settled there although their neighbours and
+ * the MIDI's clock agree within 12 ms; ±200 ms finds each of them at 0-12 ms.
+ * Of the 15 014 measured lines, 3 479 have two notes under 300 ms apart and
+ * 1 299 under 200 ms.
+ */
 const MAX_LAG_S = 0.2;
 
+/** An array's value at an index, 0 past its end. */
 const v = (array: ArrayLike<number>, i: number) => array[i] ?? 0;
 
+/** In-place radix-2 FFT of a power-of-two length. */
 const fft = (re: Float64Array, im: Float64Array) => {
   const n = re.length;
   for (let i = 1, j = 0; i < n; i++) {
@@ -138,6 +186,10 @@ const fft = (re: Float64Array, im: Float64Array) => {
   }
 };
 
+/**
+ * The recording's onsets: the positive spectral flux of log magnitudes above
+ * 80 Hz, less its ~100 ms moving mean, so only the peaks stay.
+ */
 const onsetEnvelope = (pcm: Float32Array): Float64Array => {
   const frames = Math.max(0, Math.floor((pcm.length - WIN) / HOP) + 1);
   const hann = new Float64Array(WIN).map((_, i) => 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / WIN));
@@ -174,6 +226,7 @@ const onsetEnvelope = (pcm: Float32Array): Float64Array => {
   return out;
 };
 
+/** The shift (ms) that best lines the onsets (seconds) up with the envelope's peaks. */
 const lagOf = (envelope: Float64Array, onsets: ReadonlyArray<number>) => {
   const reach = Math.round(MAX_LAG_S / HOP_S);
   const scoreAt = (shift: number) => {
@@ -201,6 +254,7 @@ const lagOf = (envelope: Float64Array, onsets: ReadonlyArray<number>) => {
 
 const cacheDir = process.env['SYNC_CHECK_CACHE'] ?? path.join(os.tmpdir(), 'manna-sync-check');
 
+/** The recording's file in the scratch folder, fetched once. */
 const recording = (set: string, n: number) =>
   Effect.tryPromise({
     try: async () => {
@@ -217,6 +271,7 @@ const recording = (set: string, n: number) =>
     catch: (cause) => `fetch ${set}/${n}: ${cause instanceof Error ? cause.message : cause}`,
   });
 
+/** The file's samples, mono at `RATE`, decoded by ffmpeg to data only. */
 const samples = (file: string) =>
   Effect.tryPromise({
     try: async () => {

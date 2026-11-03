@@ -12,6 +12,7 @@ import { contextRows } from './menu.ts';
 
 const ORIGIN = 'https://lab.slow.test';
 
+/** Copy link over a clipboard in memory, and what was written to it. */
 const copier = () => {
   const written: Array<string> = [];
   const [command] = linkCommands(hostOf(Clipboard.memory(written, ORIGIN)));

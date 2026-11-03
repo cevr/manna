@@ -30,6 +30,20 @@ import type { AskPlace } from './place.ts';
 import { AskRoot, useAskRoot } from './root.tsx';
 import { PAGE_CSS } from './style.ts';
 
+/**
+ * An ask's look, read only through the studio's tokens: its own place's, so
+ * it rides with the page (`PlaceStyle`). Its rules name the ask's own parts,
+ * and the material it shows keeps the look it has everywhere: the rules under
+ * `.ak-mat` set only the layout and size an ask's column asks of it (a
+ * pending row's inset, a note's smaller title, and the script's reader run
+ * out over the gutter with its name). The rules that reach past the ask are
+ * the laptop's: the main column keeps no bottom room (`.rv-main:has(.ak-send)`),
+ * the dock no margin, and a still opened full size (`.rv-lightbox`) sits above
+ * the dock, while the ask's Send is held at its floor. What
+ * else differs is the parts' own: the reader leaves out the day's spend by
+ * its `cost` prop, and a video's quiet play is the player's (`PlayedAlone`'s
+ * `quiet`).
+ */
 const ASK_CSS = `
 .ak,.akp{max-width:720px;margin:0 auto}
 .ak-head{display:grid;gap:var(--s-1);padding:var(--s-4) 0 var(--s-3)}
@@ -120,6 +134,7 @@ const ASK_CSS = `
 }
 `;
 
+/** One ask on a page of its own: its head and index, its sections and its send, or what came of it. */
 const OneAsk = (props: {
   readonly id: string;
   readonly first: Accessor<AskRecord>;
@@ -139,6 +154,11 @@ const OneAsk = (props: {
   </Ask.Provider>
 );
 
+/**
+ * One ask of a page of more: while it asks, its head, index, sections and
+ * send; once answered or closed, one line of its answers; the page takes the
+ * owner to it when it is `next` (the first still asking past the first part).
+ */
 const PartAsk = (props: {
   readonly id: string;
   readonly first: Accessor<AskRecord>;
@@ -164,12 +184,14 @@ const PartAsk = (props: {
   </Ask.Provider>
 );
 
+/** The ask `at` names on `page` while it asks, else the first still asking: where the page takes the owner. */
 const nextOn = (page: Page, at: Option.Option<string>): Option.Option<string> =>
   Option.orElse(
     Option.filter(at, (id) => page.asks.some((a) => a.id === id && a.state._tag === 'Asking')),
     () => Option.map(nextAsking(page.asks), (a) => a.id),
   );
 
+/** A page of more than one ask: its title and count, then each ask in the order made. */
 const ManyAsks = (props: {
   readonly page: Accessor<Page>;
   readonly at: Option.Option<string>;
@@ -213,6 +235,12 @@ const ManyAsks = (props: {
   );
 };
 
+/**
+ * The page of asks `of` is on (`of` an ask's id, a page's its first ask's),
+ * taken to ask `at` while it asks, else to the first still asking: one ask
+ * alone as its own page, more as parts of one. Each answer that lands reads
+ * the page again, so its count moves and an ask that joined it shows.
+ */
 const AsksPage = (props: { readonly of: string; readonly at: Option.Option<string> }) => {
   const { meta } = useAskRoot();
   const read = useAtomValue(() => meta.askPage(props.of));
@@ -265,6 +293,7 @@ const AsksPage = (props: { readonly of: string; readonly at: Option.Option<strin
   );
 };
 
+/** What the shell's crumb names a place by: its page's title once read, else what it is. */
 const crumbOf = (place: AskPlace, shown: Option.Option<string>): string =>
   Option.getOrElse(shown, () =>
     Match.value(place).pipe(
@@ -275,6 +304,10 @@ const crumbOf = (place: AskPlace, shown: Option.Option<string>): string =>
     ),
   );
 
+/**
+ * The ask page in the lab's shell: its name the page of asks' title, the
+ * film its asks are of.
+ */
 const Shell = (props: { readonly children: JSX.Element }) => {
   const { state, meta } = useAskRoot();
   const film = () => Option.flatMap(state.ask(), (a) => a.film);
@@ -292,6 +325,7 @@ const Shell = (props: { readonly children: JSX.Element }) => {
   );
 };
 
+/** The page of asks the place names: taken to its ask, or to the first still asking. */
 const Body = () => {
   const { state } = useAskRoot();
   return (
@@ -310,12 +344,14 @@ const Body = () => {
   );
 };
 
+/** What the ask page is rendered with: its host, its commands and its client of the lab. */
 interface AskWith {
   readonly host: Host;
   readonly hub: Hub;
   readonly client: Layer.Layer<LabClient | HttpClient.HttpClient>;
 }
 
+/** The ask page: its shell and its asks in the context menu, with ⌘K, the `?` sheet and the receipts over them. */
 const AskApp = (props: AskWith) => (
   <AskRoot host={props.host} hub={props.hub} client={props.client}>
     <TargetMenu hub={props.hub}>
@@ -329,12 +365,18 @@ const AskApp = (props: AskWith) => (
   </AskRoot>
 );
 
+/** The ask page as the browser and the server both render it (`page-server.tsx`, `page-client.tsx`). */
 export const ASK_PAGE = {
   bodyClass: 'rv',
   rootClass: 'rv-root',
   style: `${SHELL_CSS}${PAGE_CSS}${COMMAND_CSS}`,
 };
 
+/**
+ * The ask page over `host`, reading the lab through `client`: its commands
+ * (`command/hub.ts`, their keys not yet heard) and its app, for the browser
+ * to mount or hydrate and the server to render.
+ */
 export const askOn = (host: Host, client: Layer.Layer<LabClient | HttpClient.HttpClient>) =>
   Effect.map(makeHub('ask', addressOn(host).href), (hub) => ({
     hub,

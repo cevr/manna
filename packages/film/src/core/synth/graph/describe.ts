@@ -9,6 +9,7 @@ import {
   isVary,
 } from './nodes.ts';
 
+/** A number in at most three significant figures. */
 const figure = (x: number): string => String(Number(x.toPrecision(3)));
 
 const pitchText = (pitch: Pitch): string => {
@@ -42,6 +43,7 @@ const timingText = (timing: Repeat['timing']): string =>
     Poisson: (t) => `${valueText(t.rate, figure)}/s for ${secsText(t.secs)}`,
   });
 
+/** What one node is, before its child. */
 const headOf = (node: Node): string => {
   switch (node._tag) {
     case 'Osc':
@@ -76,6 +78,7 @@ const headOf = (node: Node): string => {
   }
 };
 
+/** A code sound's graph in one line. */
 export const describeGraph = (node: Node): string => {
   switch (node._tag) {
     case 'Osc':

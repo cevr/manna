@@ -1,3 +1,15 @@
+/**
+ * The census property: `data/census.json` holds one entry for every hymn
+ * 1-695, in order, each `matches`, `fixed`, `unsettled` or `nopage`, and each
+ * agrees with what the census reads and its builder does not write: the page
+ * inventory (`data/pages.json`) for its deciding page, the viewed rulings and
+ * their crops (`data/crops/NNN/`) for its state and its row, and the base row
+ * read from git at the census's base commit for every word no ruling
+ * changes. The checks are `scripts/census.ts`'s. The cases below are the
+ * census's mutant suite: each is a defect an earlier round shipped, held as a
+ * fixed case the census must refuse, with the problem line it must print.
+ */
+
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, Exit, FileSystem, Option, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -43,6 +55,7 @@ import {
 // oxlint-disable-next-line effect/noAsyncFunction -- built once as the file loads, so no case's time limit holds its cost
 const read = Effect.succeed(await Effect.runPromise(readCensusOnce));
 
+/** The `wordTag` a census line names the words of `text` by. */
 const tag = (text: string) => wordTag(text.split(' ').filter((word) => word !== ''));
 
 const withEntry = (census: Census, n: number, change: (entry: Entry) => Entry): Census => ({
@@ -65,9 +78,15 @@ const withRulings = (sources: Sources, n: number, rulings: readonly Ruling[]): S
   rulings: new Map([...sources.rulings, [n, rulings]]),
 });
 
+/** The deciding page images of hymn `n`. */
 const imagesOf = (sources: Sources, n: number) =>
   decidingOf(sources.inventory).get(n)?.images ?? [];
 
+/**
+ * Hymn `n` rewritten to sing `units`, through a fix file that keeps its base
+ * row as `replaces` (as the census's own fixes do), each line read off its
+ * deciding page.
+ */
 const withFix = (sources: Sources, n: number, units: ReadonlyArray<readonly string[]>): Sources =>
   withFixFile(withRow(sources, n, rowOfUnits(units)), n, {
     number: n,
@@ -77,11 +96,13 @@ const withFix = (sources: Sources, n: number, units: ReadonlyArray<readonly stri
     replaces: baseOf(sources, n),
   });
 
+/** Hymn `n` with no fix file: its row as committed is its printed source. */
 const withoutFix = (sources: Sources, n: number): Sources => ({
   ...sources,
   fixes: new Map([...sources.fixes].filter(([one]) => one !== n)),
 });
 
+/** Hymn `n`'s row and base row both `row`: a row wrong since before the census, which no fix touches. */
 const withBase = (sources: Sources, n: number, row: Verses): Sources => ({
   ...withoutFix(withRow(sources, n, row), n),
   base: new Map([...sources.base, [n, row]]),
@@ -92,12 +113,18 @@ const withOutlines = (sources: Sources, n: number, outlines: readonly Outline[])
   outlines: new Map([...sources.outlines, [n, outlines]]),
 });
 
+/** The one shape reading of hymn `n`. */
 const outlineOf = (sources: Sources, n: number) =>
   Option.getOrThrowWith(
     Option.fromNullishOr(sources.outlines.get(n)?.[0]),
     () => `no shape of ${n}`,
   );
 
+/**
+ * The review's row mutants (r5 findings, `ocr-mutant.ts`): the refrain
+ * dropped, stanzas 2 and 3 swapped, the last stanza dropped, the last line
+ * of the stanza at index k dropped.
+ */
 const mutate = (truth: Verses, mode: string): Verses => {
   const stanzas = truth.filter((v) => v.id >= 0).toSorted((a, b) => a.id - b.id);
   const refrain = truth.filter((v) => v.id < 0);
@@ -124,6 +151,7 @@ const withInventory = (sources: Sources, change: (inventory: Inventory) => Inven
   inventory: change(sources.inventory),
 });
 
+/** The first entry in a state, with its number. */
 const first = (census: Census, row: Entry['row'], also: (entry: Entry) => boolean = () => true) =>
   Option.getOrThrowWith(
     Option.fromNullishOr(census.hymns.find((one) => one.row === row && also(one))),
@@ -136,6 +164,11 @@ const entryOf = (census: Census, n: number) =>
     () => `no entry ${n}`,
   );
 
+/**
+ * A census that holds a `nopage` entry: its own first one, or, when every
+ * page was read, its first ruled-on-nothing `matches` entry written as the
+ * builder writes a hymn no reading reached (no reading, a note, the base row).
+ */
 const withNopage = (census: Census) => {
   const own = census.hymns.find((one) => one.row === 'nopage');
   if (own !== undefined) return { census, entry: own };
@@ -149,9 +182,11 @@ const withNopage = (census: Census) => {
   return { census: made, entry: entryOf(made, n) };
 };
 
+/** A row's units written back as a row: each unit a stanza, no refrain. */
 const rowOfUnits = (units: ReadonlyArray<readonly string[]>): Verses =>
   units.map((unit, id) => ({ id, text: unit.join(' ') }));
 
+/** A blind reading of hymn `n` that sings `units`, each a stanza. */
 const reading = (
   n: number,
   images: readonly string[],
@@ -164,12 +199,15 @@ const reading = (
   ...more,
 });
 
+/** The problems a mutated census or source prints about hymn `n`. */
 const about = (census: Census, sources: Sources, n: number) =>
   problemsOf(census, sources).filter((p) => p.startsWith(`${n} `));
 
+/** What `about` prints for hymn `n`, read with every other entry out of the census (the rest of the book is not read again). */
 const aboutOnly = (census: Census, sources: Sources, n: number) =>
   about({ ...census, hymns: census.hymns.filter((entry) => entry.number === n) }, sources, n);
 
+/** The smallest JPEG the photo check reads: an EXIF orientation (when given) and a frame. */
 const jpeg = (width: number, height: number, orientation?: number) => {
   const exif =
     orientation === undefined
@@ -593,6 +631,7 @@ describe('census', () => {
           keeps,
           quote: "Let's go with your recommendation.",
         }) as const;
+      /** Hymn 58's one disputed ruling, its hymn's other rulings, and its entry relabelled `matches`. */
       const hymn58 = Effect.map(read, ({ census, sources }) => {
         const all = sources.rulings.get(58) ?? [];
         const one = all.find((ruling) => ruling.kind === 'disputed')!;
@@ -607,6 +646,7 @@ describe('census', () => {
           })),
         };
       });
+      /** The first `matches` hymn with rulings, its first ruling made a disputed one answered `page` that settles `settles`. */
       const pageAnswered = Effect.map(read, ({ census, sources }) => {
         const n = first(
           census,
@@ -712,6 +752,7 @@ describe('census', () => {
     });
 
     describe('rulings of one stretch read the page one way (M3)', () => {
+      /** A ruling of hymn `n`'s unit 1 at `at`: its row words, the words it sings, its crops those of `like`. */
       const ruling = (like: Ruling, at: number, row: string, sung: string): Ruling => ({
         ...like,
         sites: [{ unit: 1, at }],
@@ -724,6 +765,7 @@ describe('census', () => {
         judge: 'test',
       });
       const other = (one: Ruling): Ruling => ({ ...one, judge: 'another' });
+      /** Hymn 23, its base unit 1's words, and its first ruling (the crops every case reads). */
       const hymn23 = Effect.map(read, ({ census, sources }) => ({
         census,
         sources,
@@ -1443,6 +1485,7 @@ describe('census', () => {
   });
 
   describe("the owner's answers (rows the page contradicts)", () => {
+    /** The hymns whose committed rulings hold an answer `keeps`, or (`undefined`) an unanswered `disputed` ruling. */
     const answeredBy = (sources: Sources, keeps: 'page' | 'source' | undefined) =>
       [...sources.rulings]
         .filter(([, rulings]) =>
@@ -1464,7 +1507,9 @@ describe('census', () => {
       }),
     );
 
+    /** A compiled line: its syllables, each with its word's place in the line (0 = first). */
     const CompiledLines = Schema.Array(Schema.Array(Schema.Struct({ word: Schema.Int })));
+    /** The parts of a compiled hymn (`data/sdah-1985/NNN.json`) these cases read. */
     const decodeCompiled = Schema.decodeEffect(
       Schema.fromJsonString(
         Schema.Struct({
@@ -1475,6 +1520,7 @@ describe('census', () => {
         }),
       ),
     );
+    /** Each line's first word by its place in the part (1 = the part's first word), and the part's word count. */
     const startsOf = (lines: typeof CompiledLines.Type) => {
       const starts: number[] = [];
       let at = 1;
@@ -1484,6 +1530,7 @@ describe('census', () => {
       }
       return { starts, count: at - 1 };
     };
+    /** The places in the part of the words its shape rows print with a capital, each row offset by the words of the rows before it. */
     const capitalsOf = (
       rows: ReadonlyArray<{ readonly words: number; readonly capitals: readonly number[] }>,
     ) => {
@@ -1495,6 +1542,7 @@ describe('census', () => {
       }
       return capitals;
     };
+    /** Each part (stanzas in order, then the refrain) of each hymn answered page, as compiled and as its shape reading and fix give it. */
     const pageParts = Effect.gen(function* () {
       const { sources } = yield* read;
       const fs = yield* FileSystem.FileSystem;

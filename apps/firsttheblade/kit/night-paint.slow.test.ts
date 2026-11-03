@@ -13,13 +13,16 @@ const HEIGHT = 40;
 
 type Colour = readonly [number, number, number];
 
+/** Round 4's sky, its far hills, its field, its moon and a star, as the painting has them. */
 const SKY: Colour = [30, 43, 80];
 const HILL: Colour = [62, 58, 104];
 const FIELD: Colour = [52, 92, 58];
 const MOON: Colour = [236, 190, 110];
 const STAR: Colour = [250, 240, 205];
+/** The brand's night, `#12354e`, written here as the test's own expectation. */
 const NIGHT_HUE = hueOf(oklab(0x12, 0x35, 0x4e));
 
+/** A small night: sky, hills from row 20, the field from row 30 (75%), a violet fleck in the field, the moon and a star in the sky. */
 const night = (): Pixels => {
   const data = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
   for (let y = 0; y < HEIGHT; y++)

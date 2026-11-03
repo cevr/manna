@@ -1,5 +1,17 @@
 /* oxlint-disable effect/noNodeBuiltinImport, effect/noDynamicImports -- the guard reads the tuner's own source files from disk, synchronously, and asks One's native-source contract (resolved from the app, as One's bundler does) for the Swift module's declaration. */
 
+/**
+ * The tuner's ear only listens: its Swift module takes the session for
+ * input alone (`.record`, mode `.measurement`, no automatic gain), names no
+ * player or output API in any of its files, asks for no permission itself,
+ * removes its tap before it stops the engine, and gives the session back on
+ * every path so a paused hymn may play again.
+ *
+ * Also: the committed declaration of the Swift module is the one One's
+ * native source writes for it now, so the app's typecheck reads its real
+ * contract.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -9,6 +21,7 @@ const app = join(import.meta.dir, '..', '..');
 const swiftFile = join(app, 'native', 'tuner', 'Listen.swift');
 const swift = readFileSync(swiftFile, 'utf8');
 
+/** The ear's own files: its Swift package and the two bindings of it. */
 const earFiles = [
   ...readdirSync(join(app, 'native', 'tuner'))
     .filter((name) => name.endsWith('.swift'))
@@ -18,6 +31,7 @@ const earFiles = [
     .map((name) => join(import.meta.dir, name)),
 ];
 
+/** The names a sound would leave the phone by: players, the engine's output side, playing categories, One's audio. */
 const OUTPUT = [
   'AVAudioPlayer',
   'AVPlayer',
@@ -37,6 +51,7 @@ const OUTPUT = [
   'createPlayer',
 ];
 
+/** Whether the block open at the start of `text` closes within it. */
 const closesBefore = (text: string): boolean => {
   let depth = 0;
   for (const char of text) {

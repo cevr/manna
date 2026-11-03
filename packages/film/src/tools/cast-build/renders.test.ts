@@ -27,6 +27,7 @@ const SPEC: PoseSpec = {
 };
 const COUNTS = { train: 2, held: 1 };
 
+/** The names of a ustar archive's files, in order. */
 const namesIn = (tar: Uint8Array) => filesIn(tar).map(([name]) => name);
 
 describe('the seeds of a shard', () => {

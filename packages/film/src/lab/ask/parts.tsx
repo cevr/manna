@@ -30,12 +30,18 @@ export { Provider } from './context.tsx';
 
 type BlockOf<K extends AskBlock['kind']> = Extract<AskBlock, { readonly kind: K }>;
 
+/**
+ * What a settled ask is in a word, on its chip, and the chip's state. One that waits wears none:
+ * the dock's count (`2 of 3 answered`) already says what is left, and one gold on the page is
+ * the Send's.
+ */
 const SETTLED = {
   answered: { text: 'answered', state: 'approved' },
   closed: { text: 'closed', state: 'stale' },
 } as const;
 type Settled = (typeof SETTLED)[keyof typeof SETTLED];
 
+/** The ask's head, its title drawn by `title`: its state, why it is asked, and by when when it must be. */
 const HeadWith = (props: { readonly title: (text: string) => JSX.Element }) => {
   const { state } = useAsk();
   return (
@@ -71,20 +77,31 @@ const HeadWith = (props: { readonly title: (text: string) => JSX.Element }) => {
   );
 };
 
+/** The ask's head on a page of its own: its title the page's. */
 export const Head = () => <HeadWith title={(text) => <h1>{text}</h1>} />;
 
+/** The ask's head as one part of a page of asks: its title under the page's. */
 export const PartHead = () => <HeadWith title={(text) => <h2 class="ak-part-h">{text}</h2>} />;
 
+/** Ask `ask`'s part of the page: what its elements are found inside. */
 const within = (ask: string): string => `.ak[data-ask="${CSS.escape(ask)}"]`;
 
+/** The block a question of ask `ask` is answered in, by its answer's id. */
 const fieldOf = (ask: string, id: string): Option.Option<HTMLElement> =>
   Option.fromNullishOr(
     document.querySelector<HTMLElement>(`${within(ask)} [data-answer="${CSS.escape(id)}"]`),
   );
 
+/** What takes the focus in a question: its first control. */
 const ANSWERS_IN = 'button, textarea, input';
+/** What takes the focus in a section: its head, so its material is read from the top. */
 const HEAD_IN = '.ak-section-h';
 
+/**
+ * Take the owner to `el` under the header (and its section's head), and give
+ * the focus to the first of `focus` in it, as `input` asked (its ring iff a
+ * key did).
+ */
 const goTo = (el: HTMLElement, focus: string, input: Input) => {
   if (!el.matches('.ak-step'))
     Option.map(
@@ -99,11 +116,17 @@ const goTo = (el: HTMLElement, focus: string, input: Input) => {
   );
 };
 
+/** Section `name` of ask `ask`, by its step. */
 const stepOf = (ask: string, name: string): Option.Option<HTMLElement> =>
   Option.fromNullishOr(
     document.querySelector<HTMLElement>(`${within(ask)} .ak-step[data-step="${CSS.escape(name)}"]`),
   );
 
+/**
+ * A section's title on the page: its place among two or more, quiet, so the
+ * title carries, then its step's title when it has one. A page of one
+ * section has no place to say (`headed`).
+ */
 const SectionTitle = (props: {
   readonly step: Section['step'];
   readonly n: number;
@@ -122,15 +145,23 @@ const SectionTitle = (props: {
   </>
 );
 
+/** Whether a section of `of` has a head: a title, or a place among others to say. */
 const headed = (step: Section['step'], of: number): boolean =>
   Option.isSome(titleOf(step)) || of > 1;
 
+/** A section in the index: its place, and its title when it has one. */
 const indexTitle = (step: Section['step'], n: number): string =>
   Option.match(titleOf(step), {
     onNone: () => `${n}`,
     onSome: (title) => `${n} · ${title}`,
   });
 
+/**
+ * Where the page is going: each section the owner's answers reach, by its
+ * place and title, a jump to its head (its material read from the top),
+ * ✓ once every question it asks is answered. Nothing while the page has
+ * one section.
+ */
 export const Index = () => {
   const { state } = useAsk();
   const { meta } = useAskRoot();
@@ -180,6 +211,7 @@ export const Index = () => {
   );
 };
 
+/** A picture of an ask: its image, and its caption under it. */
 const Img = (props: { readonly image: AskImage; readonly alt: string }) => (
   <figure class="ak-img">
     <img
@@ -192,14 +224,17 @@ const Img = (props: { readonly image: AskImage; readonly alt: string }) => (
   </figure>
 );
 
+/** A title over what follows. */
 export const Heading = (props: { readonly block: BlockOf<'heading'> }) => (
   <h2 class="ak-h">{props.block.text}</h2>
 );
 
+/** The context the owner decides in. */
 export const Prose = (props: { readonly block: BlockOf<'prose'> }) => (
   <p class="ak-prose">{props.block.text}</p>
 );
 
+/** A still, a board try. */
 export const Picture = (props: { readonly block: BlockOf<'image'> }) => (
   <Img
     image={props.block.image}
@@ -207,6 +242,10 @@ export const Picture = (props: { readonly block: BlockOf<'image'> }) => (
   />
 );
 
+/**
+ * Choose one: each option a toggle, its picture over its label, the one the
+ * agent recommends first and marked so; pressing one again takes it back.
+ */
 export const ChooseOne = (props: { readonly block: BlockOf<'choose'> }) => {
   const { state, actions } = useAsk();
   const pictured = () => props.block.options.some((o) => Predicate.isNotUndefined(o.image));
@@ -270,8 +309,13 @@ export const ChooseOne = (props: { readonly block: BlockOf<'choose'> }) => {
   );
 };
 
+/** The id of the words that say question `id` of ask `ask` is still open. */
 const saidId = (ask: string, id: string): string => `ak-said-${ask}-${id}`;
 
+/**
+ * Under question `block`, once a Send was refused for it: what it needs,
+ * its label in sight above it (the send's dock, far from it, names it).
+ */
 const Unanswered = (props: { readonly block: Asking }) => {
   const { state } = useAsk();
   return (
@@ -283,6 +327,7 @@ const Unanswered = (props: { readonly block: Asking }) => {
   );
 };
 
+/** Free text: the owner's words, marked optional unless the agent requires them (`required`). */
 export const FreeText = (props: { readonly block: BlockOf<'free_text'> }) => {
   const { state, actions } = useAsk();
   const missing = () => state.missing() === props.block.id;
@@ -311,6 +356,7 @@ export const FreeText = (props: { readonly block: BlockOf<'free_text'> }) => {
   );
 };
 
+/** One block of a step, drawn by its own part. */
 export const Block = (props: { readonly block: AskBlock }): JSX.Element =>
   Match.value(props.block).pipe(
     Match.discriminatorsExhaustive('kind')({
@@ -327,6 +373,13 @@ export const Block = (props: { readonly block: AskBlock }): JSX.Element =>
     }),
   );
 
+/**
+ * The ask's sections, on one page: each step the owner's answers reach,
+ * headed with its place and its title when it has one, then its blocks. A
+ * section is drawn once by its name: a draft's every keystroke leaves its
+ * fields, and the focus, where they are, and a section a choice leads to
+ * appears under it, or goes, as the choice changes.
+ */
 export const Sections = () => {
   const { state } = useAsk();
   const names = createMemo(() => state.sections().map((s) => s.name));
@@ -361,9 +414,16 @@ export const Sections = () => {
   );
 };
 
+/** How far the page is answered, as the send says it while nothing else is to be said. */
 const answeredText = (questions: ReadonlyArray<{ readonly answered: boolean }>): string =>
   `${questions.filter((q) => q.answered).length} of ${questions.length} answered`;
 
+/**
+ * The send, held in reach at the foot of the page: how many of the page's
+ * questions are answered, or what the last send said, over the one Send. A
+ * Send with a question open takes the owner to it, its words saying what it
+ * needs.
+ */
 export const Submit = () => {
   const { state, actions } = useAsk();
   const { meta } = useAskRoot();
@@ -401,6 +461,7 @@ export const Submit = () => {
   );
 };
 
+/** An answer in words: a choice by its label, the words as they are, or that it was left empty. */
 const answerText = (answer: AskAnswer): string =>
   Match.value(answer).pipe(
     Match.discriminatorsExhaustive('kind')({
@@ -410,6 +471,7 @@ const answerText = (answer: AskAnswer): string =>
     }),
   );
 
+/** The question that asked answer `id`, in the agent's words (its name, when no step asks it). */
 const questionOf = (record: AskRecord, id: string): string =>
   Option.getOrElse(
     Arr.findFirst(Object.values(record.ask.steps).flatMap(askedIn), (b) => b.id === id).pipe(
@@ -418,6 +480,7 @@ const questionOf = (record: AskRecord, id: string): string =>
     () => id,
   );
 
+/** Every answer the ask holds, under the question that asked it: what the owner said. */
 const Answers = (props: { readonly record: AskRecord }) => (
   <dl class="ak-answers">
     <For each={Record.toEntries(props.record.state.answers)}>
@@ -431,6 +494,7 @@ const Answers = (props: { readonly record: AskRecord }) => (
   </dl>
 );
 
+/** The ask once answered or closed: its end's words, or why it was closed, and every answer. */
 export const Outcome = () => {
   const { state } = useAsk();
   return (
@@ -458,6 +522,7 @@ export const Outcome = () => {
   );
 };
 
+/** While the ask is read, or why it cannot be, with a way to read it again. */
 export const Status = () => {
   const { state, actions } = useAsk();
   return (
@@ -483,14 +548,21 @@ export const Status = () => {
   );
 };
 
+/** Whether the ask is settled (answered or closed), once it is read. */
 const settledRecord = (record: Option.Option<AskRecord>): Option.Option<AskRecord> =>
   Option.filter(record, (r) => r.state._tag !== 'Asking');
 
+/** What a part of a page of asks shows while its ask still asks (or is not read yet): its head, its sections and its Send. */
 export const WhileAsking = (props: { readonly children: JSX.Element }) => {
   const { state } = useAsk();
   return <Show when={Option.isNone(settledRecord(state.record()))}>{props.children}</Show>;
 };
 
+/**
+ * A part of a page of asks once its ask is answered or closed: one line, its
+ * title, its state and its answers in words, which opens to every answer
+ * under the question that asked it (`Outcome`).
+ */
 export const Folded = () => {
   const { state } = useAsk();
   return (
@@ -520,8 +592,14 @@ export const Folded = () => {
   );
 };
 
+/** How far down the window a part's top may start and still be in view, so the page leaves it where it is. */
 const IN_VIEW = 2 / 3;
 
+/**
+ * Whether `part` starts in view: below what covers the page's top (its
+ * `scroll-margin-top`, the header's height) and in the window's top
+ * two-thirds.
+ */
 const startsInView = (part: HTMLElement) => {
   const top = part.getBoundingClientRect().top;
   return (
@@ -530,6 +608,11 @@ const startsInView = (part: HTMLElement) => {
   );
 };
 
+/**
+ * Where the page takes the owner: drawn in the part he is to answer next,
+ * it scrolls that part to the top under the header once it is drawn, unless
+ * it already starts in view (the page's head and count stay on screen then).
+ */
 export const TakeTo = () => {
   const { state } = useAsk();
   onSettled(() => {

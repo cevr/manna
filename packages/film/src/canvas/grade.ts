@@ -1,27 +1,41 @@
 import { Schema } from 'effect';
 import { offscreen, type Offscreen } from './paper.ts';
 
+/** An amount the canvas draws: 0..1. */
 const Unit = Schema.Finite.check(Schema.isBetween({ minimum: 0, maximum: 1 }));
+/** A colour as `#rrggbb`. */
 const Rgb = Schema.String.check(Schema.isPattern(/^#[0-9a-fA-F]{6}$/));
 
+/** The brightest light spilling into the air about it. */
 export const BloomStyle = Schema.Struct({
+  /** How strongly the spill is added over the frame, 0..1. */
   amount: Unit,
+  /** How far it spreads, in frame px. */
   radius: Schema.Finite.check(Schema.isGreaterThan(0)),
+  /** The value, 0..1, above which a pixel spills. */
   threshold: Unit,
 });
 export type BloomStyle = typeof BloomStyle.Type;
 
+/** A grade: contrast, saturation and a split tone. */
 export const GradeStyle = Schema.Struct({
+  /** The colour pushed into the shadows (`#rrggbb`); its hue, at `split`. */
   shadows: Rgb,
+  /** The colour pushed into the highlights (`#rrggbb`); its hue, at `split`. */
   highlights: Rgb,
+  /** How strongly the split tone takes, 0..1. */
   split: Unit,
+  /** An S curve's strength, 0 (none) to 1. */
   contrast: Unit,
+  /** 1 leaves the colour alone; under it greys, over it saturates. */
   saturation: Schema.Finite.check(Schema.isBetween({ minimum: 0, maximum: 2 })),
 });
 export type GradeStyle = typeof GradeStyle.Type;
 
+/** A frame's bloom, a quarter of its size each way. */
 const SHRINK = 4;
 
+/** The small canvases a bloom is worked on: the bright pass and its blur. */
 export interface BloomSheets {
   readonly bright: Offscreen;
   readonly soft: Offscreen;
@@ -32,6 +46,11 @@ export const makeBloom = (w: number, h: number): BloomSheets => ({
   soft: offscreen(Math.ceil(w / SHRINK), Math.ceil(h / SHRINK)),
 });
 
+/**
+ * Add the frame's bloom over it: the frame shrunk, each pixel kept only by
+ * how far its value stands over the threshold (its colour kept), blurred by
+ * the radius and added back, `lighter`, at the amount.
+ */
 export const bloom = (
   ctx: CanvasRenderingContext2D,
   sheets: BloomSheets,
@@ -73,6 +92,7 @@ export const bloom = (
   ctx.restore();
 };
 
+/** A grade as tables: the curve per channel value, and the split tone's push per value. */
 interface GradeTables {
   readonly curve: Uint8ClampedArray;
   readonly push: Float32Array;
@@ -85,6 +105,13 @@ const channels = (hex: string): readonly [number, number, number] => [
   Number.parseInt(hex.slice(5, 7), 16),
 ];
 
+/**
+ * The grade's tables, built once: `curve[v]`, the S curve over a channel's
+ * value; `push[3·l + c]`, what channel `c` gains at value `l` (0..255): the
+ * shadows' hue weighted by (1 − l)², the highlights' by l², each as its
+ * difference from its own grey, so the split tone shifts hue and leaves the
+ * value alone.
+ */
 export const gradeTables = (style: GradeStyle): GradeTables => {
   const curve = new Uint8ClampedArray(256);
   for (let v = 0; v < 256; v++) {
@@ -109,6 +136,7 @@ export const gradeTables = (style: GradeStyle): GradeTables => {
   return { curve, push, saturation: style.saturation };
 };
 
+/** Grade every pixel of the `w` × `h` frame by its tables. */
 export const grade = (ctx: CanvasRenderingContext2D, t: GradeTables, w: number, h: number) => {
   const img = ctx.getImageData(0, 0, w, h);
   const d = img.data;

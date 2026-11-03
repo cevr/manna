@@ -9,6 +9,11 @@ import type { Selection } from '../../command/selection.ts';
 import { targetAt, targetAttr } from '../../command/target.ts';
 import { deferredRun, hubChanges, hubKeys } from './changes.ts';
 
+/**
+ * The page's one context menu, over `children`: every `Target` inside opens
+ * it, and so does a press on no thing (the page's own commands). Its one
+ * element, the page's trigger, lays out as its children do.
+ */
 export const TargetMenu = (props: ParentProps<{ readonly hub: Hub }>) => {
   const hub = props.hub;
   const run = deferredRun(hub, 'menu');
@@ -81,6 +86,7 @@ export const TargetMenu = (props: ParentProps<{ readonly hub: Hub }>) => {
   );
 };
 
+/** A thing the page's context menu opens on (a right-click or a long press on it): `of` is the thing. */
 export const Target = (
   props: ComponentProps<typeof ContextMenu.Trigger> & { readonly of: Selection },
 ) => {

@@ -3,6 +3,7 @@ import { type Body, framed, standing } from '../../../cutout/skeleton.ts';
 import { type FramedView, keptAt } from './frames.ts';
 import { JOINTS } from './joints.ts';
 
+/** His parts as his part sheets name them, each on its bones; his sleeves' flaps from his torso, in a band 50 px above each shoulder to 12 below, reaching 60 past it. */
 const BODY: Body = {
   skin: {
     head: ['neck', 'head'],
@@ -16,6 +17,7 @@ const BODY: Body = {
   band: { above: 50, below: 12, reach: 60 },
 };
 
+/** Each cut view's skeleton in its part sheet's frame, by the view's name in his sheets' views. */
 export const SKELETONS = {
   front: framed(
     keptAt('front'),

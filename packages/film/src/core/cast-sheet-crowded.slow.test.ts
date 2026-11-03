@@ -10,14 +10,17 @@ import {
 import { drawFigure, drawSheet, type FigureSpec, flipRaster, PLAIN } from './fixtures/figure.ts';
 import { cropRaster } from './raster.ts';
 
+/** A figure as a turnaround draws it: the robe shaded on its right, the hand at the end of its sleeve, the eyes `eyeShift` px off the face's middle. */
 const base: FigureSpec = { ...PLAIN, robeShade: [60, 78, 150], arm: 'sleeve' };
 const at = (eyeShift: number, extra: Partial<FigureSpec> = {}) =>
   drawFigure({ ...base, eyeShift, ...extra });
+/** A view facing the viewer's right as a painter draws one: the left-facing drawing flipped, its shade drawn on the far side so the lit side stays left. */
 const turned = (eyeShift: number) => flipRaster(at(-eyeShift, { lit: 'right' }));
 
 const turnaround: SheetOptions = { kind: 'turnaround', count: 6, anchor: 1 };
 const read = (sheet: ReturnType<typeof drawSheet>, options: SheetOptions): SheetMeasure =>
   Result.getOrThrow(measureSheet(sheet, options));
+/** Each flag as `<check>:<views>`. */
 const flagsOf = (m: SheetMeasure) => m.flags.map((f) => `${f.check}:${f.views.join(',')}`);
 
 describe('a turnaround painted close together', () => {

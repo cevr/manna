@@ -14,6 +14,7 @@ const fitted = (model: EarshotModel, options: Partial<Parameters<typeof fitSound
     fitSound('probe', model, { size: 'full', use: 'one-shot', rumble: 1, ...options }),
   );
 
+/** A sound as the library reads it: written as JSON, decoded back. */
 const CodeSoundJson = Schema.fromJsonString(CodeSound);
 
 const render = (sound: CodeSound, seed = 1) =>
@@ -28,6 +29,7 @@ const render = (sound: CodeSound, seed = 1) =>
     seed,
   ).channels[0] ?? new Float32Array();
 
+/** The mean square of `plane` from `from` to `to` seconds, in dB. */
 const powerDb = (plane: Float32Array, from: number, to: number) => {
   let sum = 0;
   const a = Math.round(from * SYNTH_RATE);
@@ -36,6 +38,7 @@ const powerDb = (plane: Float32Array, from: number, to: number) => {
   return 10 * Math.log10(sum / (b - a));
 };
 
+/** Every node under `node`, itself first. */
 const nodesOf = (node: Node): ReadonlyArray<Node> => {
   switch (node._tag) {
     case 'Layer':
@@ -65,6 +68,7 @@ const partialsOf = (node: Node) =>
     return n.set;
   });
 
+/** A modal model: `strikes` over one band of noise from 1 to 2 kHz at `noiseDb` from 0 to `noiseTo` seconds. */
 const modal = (
   strikes: ReadonlyArray<{
     t: number;

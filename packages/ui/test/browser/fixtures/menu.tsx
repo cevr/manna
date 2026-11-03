@@ -55,6 +55,11 @@ function FullMenu(): JSX.Element {
   );
 }
 
+/**
+ * A menu whose items are a keyed list, as the lab's rows are:
+ * `window.__reverse()` reverses the list while the menu is open, so the
+ * items' elements move in the DOM.
+ */
 function SortedMenu(): JSX.Element {
   const [names, setNames] = createSignal(['alpha', 'bravo', 'charlie']);
   (window as unknown as { __reverse: () => void }).__reverse = () =>
@@ -81,6 +86,10 @@ function SortedMenu(): JSX.Element {
   );
 }
 
+/**
+ * The lab's shape: the full menu inside a context menu's page trigger, as
+ * every lab page wraps its menus.
+ */
 function MenuInContextMenu(): JSX.Element {
   return (
     <ContextMenu.Root>
@@ -91,6 +100,11 @@ function MenuInContextMenu(): JSX.Element {
   );
 }
 
+/**
+ * A radio group of three films, the owner keeping the checked one (`bravo`
+ * first), and an action item after it; `close=true` closes the menu on a
+ * pick. Each item shows a check while it is checked.
+ */
 function RadioMenu(): JSX.Element {
   const [film, setFilm] = createSignal('bravo');
   return (

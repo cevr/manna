@@ -9,6 +9,13 @@ import { STATUS_ROLE, ScriptReader, type Selecting } from '../words/reader.tsx';
 import { AskApi } from './api.ts';
 import { useAskRoot } from './root.tsx';
 
+/**
+ * Series draft `draft` of `series` in the reader, as its Markdown reads now:
+ * its beats (only those `only` names, when it names some), or why it cannot
+ * be read; a mark write's answer, the draft as the write left it, stands
+ * over the read it was sent over until the draft is read again. With
+ * `cost`, its head says the day's staging spend.
+ */
 export const DraftReader = (props: {
   readonly series: string;
   readonly draft: string;
@@ -89,11 +96,18 @@ export const DraftReader = (props: {
   );
 };
 
+/** A draft's names, as `useDraftTitles` reads them. */
 interface DraftTitles {
   readonly series: () => string;
   readonly draft: () => string;
 }
 
+/**
+ * Series draft `draft` of `series` by its names as the owner knows them:
+ * its series' title, once the series are read, and its own, once it is
+ * (each its file's name until then). The draft page's head and an ask's
+ * script, alike.
+ */
 export const useDraftTitles = (series: string, draft: string): DraftTitles => {
   const { meta, state } = useAskRoot();
   const read = useAtomValue(() => meta.draft(series, draft));

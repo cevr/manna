@@ -1,3 +1,15 @@
+/**
+ * The layout mutations: a hymn's printed source (its fix's stanzas, else its
+ * row's) changed in its layout alone, a line dropped or two swapped, a
+ * stanza moved, the refrain left out, and written back as a row. The census
+ * (`./census.ts`) must tell each one from its page.
+ *
+ * A mutation is named by a recipe (`dropline:2.3/4`: stanza 2's line 3 of
+ * 4 dropped), and made in memory from the committed source, so no hymn text
+ * is copied into a fixture. A recipe names the source's own counts: a source
+ * that no longer has them refuses the recipe, never skips it.
+ */
+
 import { Predicate, Result, Schema } from 'effect';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -33,6 +45,7 @@ import {
   wordsOf,
 } from './census.js';
 
+/** A hymn's printed source as lines: each stanza's lines, in order, and the refrain's lines sung after each. */
 export interface PrintedSource {
   readonly stanzas: ReadonlyArray<readonly string[]>;
   readonly refrain: readonly string[];
@@ -40,6 +53,11 @@ export interface PrintedSource {
 
 const linesOf = (text: string) => text.split('\n').filter((line) => line.trim() !== '');
 
+/**
+ * The printed source of a hymn: its fix's stanzas and its refrain lines that
+ * every stanza sings (a varying part left out), else its row's stanzas by id
+ * and its refrain (id -1, then -2).
+ */
 export const printedSourceOf = (row: Verses, fix: Fix | undefined): PrintedSource =>
   fix !== undefined
     ? {
@@ -59,6 +77,7 @@ export const printedSourceOf = (row: Verses, fix: Fix | undefined): PrintedSourc
           .flatMap((verse) => linesOf(verse.text)),
       };
 
+/** A printed source written back as a row: each stanza by its index, the refrain as -1. */
 export const rowOfSource = (source: PrintedSource): Verses => [
   ...source.stanzas.map((lines, id) => ({ id, text: lines.join('\n') })),
   ...(source.refrain.length > 0 ? [{ id: -1, text: source.refrain.join('\n') }] : []),
@@ -67,6 +86,15 @@ export const rowOfSource = (source: PrintedSource): Verses => [
 const sameWords = (a: readonly string[], b: readonly string[]) =>
   wordsOf(a.join('\n')).join(' ') === wordsOf(b.join('\n')).join(' ');
 
+/**
+ * A recipe applied to a printed source: the mutant, or why the source does
+ * not have what the recipe names.
+ *
+ * - `dropline:<s>.<l>/<n>`: stanza s (of n lines) without its line l;
+ * - `swaplines:<s>.<l>/<n>`: stanza s (of n lines) with lines l and l + 1 swapped (their words differ);
+ * - `swap:<i>-<j>`: stanzas i and j swapped (their words differ);
+ * - `norefrain`: the refrain left out.
+ */
 export const applyRecipe = (
   source: PrintedSource,
   recipe: string,
@@ -107,6 +135,7 @@ export const applyRecipe = (
   return Result.succeed({ stanzas, refrain: source.refrain });
 };
 
+/** The layout properties a row can get wrong (the README's census section names each). */
 export const PROPERTIES = [
   'stanza count',
   'stanza order',
@@ -122,6 +151,14 @@ export const PROPERTIES = [
 ] as const;
 export type Property = (typeof PROPERTIES)[number];
 
+/**
+ * One mutation of a printed source: its property, its name (`dropline:2.3`,
+ * stanza 2's line 3 dropped), the text it makes, the stanzas whose words or
+ * lines it changes (1-based; `all` when it changes the refrain or the
+ * stanzas' count). The census reads the mutant from its text
+ * (`layoutOfMutant`), as it reads a row: no mark of the source is carried
+ * over by the mutation.
+ */
 export interface LayoutMutant {
   readonly property: Property;
   readonly name: string;
@@ -129,18 +166,22 @@ export interface LayoutMutant {
   readonly touches: readonly number[] | 'all';
 }
 
+/** The layout the census reads from a mutant's text (`readText`): each block it changed read again, each it left alone as read. */
 const layoutOfMutant = (mutant: LayoutMutant): PrintedLayout => readText(mutant.text);
 
 const sameLine = (a: string, b: string) => wordsOf(a).join(' ') === wordsOf(b).join(' ');
 const sameBlock = (a: readonly string[], b: readonly string[]) => sameWords(a, b);
 
+/** A line's text as its lead (any whitespace it opens with) and its tokens. */
 const tokensOf = (line: string) => ({
   lead: /^\s*/u.exec(line)?.[0] ?? '',
   tokens: line.split(/\s+/u).filter((token) => token !== ''),
 });
 
+/** A line made of a lead and tokens. */
 const lineOf = (lead: string, tokens: readonly string[]) => `${lead}${tokens.join(' ')}`;
 
+/** A block's line mutations: each as its property, its name's tail, its lines, and whether it moves no word. */
 const lineMutations = function* (lines: readonly string[]) {
   const at = (k: number) => lines[k] ?? '';
   for (let k = 0; k < lines.length; k++) {
@@ -220,6 +261,7 @@ const lineMutations = function* (lines: readonly string[]) {
     } as const;
 };
 
+/** The refrain's runs of lines every stanza sings (its items between the parts that vary), each as its first item's place and its lines. */
 const refrainRuns = (refrain: readonly RefrainText[]) => {
   const runs: Array<{ at: number; lines: string[] }> = [];
   for (const [k, item] of refrain.entries()) {
@@ -231,6 +273,7 @@ const refrainRuns = (refrain: readonly RefrainText[]) => {
   return runs;
 };
 
+/** The refrain lines sung after stanza `i` (1-based), as text: every shared line, and the varying part written for it. */
 const refrainTextAfter = (text: PrintedText, i: number): readonly string[] =>
   (text.refrain ?? []).flatMap((item) =>
     Predicate.isString(item)
@@ -240,6 +283,11 @@ const refrainTextAfter = (text: PrintedText, i: number): readonly string[] =>
 
 const ORDERS = Order.literals;
 
+/**
+ * Every mutation of Decided 3 of one hymn's printed source, against its
+ * shape readings (`outlines`, whose rows no echo makes the words of an extra
+ * row to drop).
+ */
 export const mutantsOf = function* (
   text: PrintedText,
   outlines: readonly Outline[],
@@ -252,11 +300,13 @@ export const mutantsOf = function* (
   yield* extraMutants(text, outlines);
 };
 
+/** A text with other stanzas. */
 const withStanzas = (
   text: PrintedText,
   stanzas: ReadonlyArray<readonly string[]>,
 ): PrintedText => ({ ...text, stanzas });
 
+/** Stanza count, order and split: each stanza dropped, repeated, swapped with each other, split at each line, joined to the next, its boundary moved. */
 const stanzaMutants = function* (text: PrintedText): Generator<LayoutMutant> {
   const stanzas = text.stanzas;
   for (let i = 0; i < stanzas.length; i++) {
@@ -295,6 +345,7 @@ const stanzaMutants = function* (text: PrintedText): Generator<LayoutMutant> {
   }
 };
 
+/** Stanza `i` (0-based) joined to the next, and the boundary between them moved a line either way. */
 const boundaryMutants = function* (text: PrintedText, i: number): Generator<LayoutMutant> {
   const stanzas = text.stanzas;
   const [stanza, next] = [stanzas[i] ?? [], stanzas[i + 1]];
@@ -327,9 +378,11 @@ const boundaryMutants = function* (text: PrintedText, i: number): Generator<Layo
     };
 };
 
+/** A block's line mutation named in the hymn: `dropline:3` of stanza 2 is `dropline:2.3`, `swapends` of the refrain `swapends:refrain.1`. */
 const within = (name: string, unit: string) =>
   name.includes(':') ? name.replace(':', `:${unit}.`) : `${name}:${unit}`;
 
+/** Each stanza's line mutations. */
 const stanzaLineMutants = function* (text: PrintedText): Generator<LayoutMutant> {
   const stanzas = text.stanzas;
   for (let i = 0; i < stanzas.length; i++)
@@ -342,6 +395,11 @@ const stanzaLineMutants = function* (text: PrintedText): Generator<LayoutMutant>
       };
 };
 
+/**
+ * Each line of each other stanza put in at each place of each stanza:
+ * `insertline:2.3/1.4` is stanza 1's line 4 put in before stanza 2's line 3
+ * (place 1 opens the stanza, its count of lines + 1 ends it).
+ */
 const insertMutants = function* (text: PrintedText): Generator<LayoutMutant> {
   const stanzas = text.stanzas;
   for (const [i, stanza] of stanzas.entries())
@@ -358,6 +416,7 @@ const insertMutants = function* (text: PrintedText): Generator<LayoutMutant> {
       }
 };
 
+/** The line mutations of the refrain's lines every stanza sings, and of each part that varies; each part dropped with its siblings kept, the item dropped whole, or its parts sung as one. */
 const refrainLineMutants = function* (text: PrintedText): Generator<LayoutMutant> {
   const items = text.refrain ?? [];
   for (const run of refrainRuns(items))
@@ -408,6 +467,7 @@ const refrainLineMutants = function* (text: PrintedText): Generator<LayoutMutant
   }
 };
 
+/** The refrain dropped, sung in each other order, or put inside one stanza only; with none, a stanza's last line made one. */
 const refrainMutants = function* (text: PrintedText): Generator<LayoutMutant> {
   const stanzas = text.stanzas;
   if (text.refrain === undefined) {
@@ -452,6 +512,7 @@ const refrainMutants = function* (text: PrintedText): Generator<LayoutMutant> {
     };
 };
 
+/** The words of each extra row that is no echo, dropped wherever the source sings them. */
 const extraMutants = function* (
   text: PrintedText,
   outlines: readonly Outline[],
@@ -469,6 +530,11 @@ const extraMutants = function* (
     }
 };
 
+/**
+ * A text with every place a row stands dropped, in each stanza's own lines
+ * and in the refrain's: each token whose words all fall in a place the row
+ * stands goes, and a line left with no token goes with it.
+ */
 const withoutRow = (text: PrintedText, row: Outline['extra'][number]): PrintedText => {
   const drop = (lines: readonly string[]) => {
     const words = lines.flatMap((line) => wordsOf(line));
@@ -511,11 +577,21 @@ const withoutRow = (text: PrintedText, row: Outline['extra'][number]): PrintedTe
   return dropped ? without : text;
 };
 
+/** What one hymn's mutants come to, by property: how many, and the names of those no layout line tells apart. */
 export interface Reach {
   readonly mutants: number;
   readonly unreached: readonly string[];
 }
 
+/**
+ * Every mutant of one hymn held to its shape readings by the census's own
+ * checks (`layoutLinesOf`, `formatProblems`) over the layout the census reads
+ * from the mutant's text: a mutant is reached when it prints a layout line
+ * the hymn as committed does not. The hymn as committed is checked once; a
+ * mutant checks again only the stanzas it touches (each through the census's
+ * own `stanzaCheckOf`), and a mutant that moves no word places no row again.
+ * `book` is the words the book capitalises inside a line (`capitalsOf`).
+ */
 export const reachOf = (
   n: number,
   text: PrintedText,
@@ -552,6 +628,14 @@ export const reachOf = (
   return reach;
 };
 
+/**
+ * Whether a mutant prints a layout line the hymn as committed does not,
+ * against one reading. Where the mutant keeps the stanzas' count and the
+ * reading's shape, a stanza it does not touch is the committed one's check,
+ * and each stanza it touches is placed from the committed placement
+ * (`placing`: the rows its words agree on kept), its lines read as they are
+ * found; the first new one is enough.
+ */
 const reaches = (
   n: number,
   control: {
@@ -589,9 +673,26 @@ const reaches = (
   return false;
 };
 
+/**
+ * The fingerprint of the printed text a reach ruling was ruled on: a ruling
+ * whose `layout` is another hymn's text, or this hymn's before its row
+ * changed, names mutants of a text that is gone (stale).
+ */
 export const fingerprintOf = (text: PrintedText): string =>
   createHash('sha256').update(JSON.stringify(text)).digest('hex').slice(0, 16);
 
+/**
+ * The generated property over the book: every hymn with a deciding page, its
+ * mutants held to its shape readings (`reachOf`). Per property, how many
+ * mutants and how many no layout line tells apart; the hymns with no shape
+ * reading; how many unreached mutants the committed lists hold, the page's
+ * (`unreachable`: no page tells them apart) and the check's (`gaps`: the
+ * page does, the check does not); each mutant on the wrong side of them
+ * (`<n> <name>`): unreached but on neither list, or on one but reached; and
+ * each reach ruling ruled on another text than the hymn's now (`stale`);
+ * and every mutant no layout line tells apart, listed or not (`unreached`,
+ * `<n> <name>`).
+ */
 export interface Domain {
   readonly hymns: number;
   readonly properties: ReadonlyMap<
@@ -606,9 +707,11 @@ export interface Domain {
   readonly unreached: ReadonlySet<string>;
 }
 
+/** A hymn's reach rulings, each with the text it was ruled on: those that list a mutant. */
 const reachRulings = (rulings: readonly Ruling[]) =>
   rulings.filter((ruling) => (ruling.unreachable ?? []).length + (ruling.gaps ?? []).length > 0);
 
+/** Each reach ruling of hymn `n` ruled on another text than `text` (`fingerprintOf`), by its judge. */
 export const staleRulings = (n: number, text: PrintedText, rulings: readonly Ruling[]) => {
   const now = fingerprintOf(text);
   return reachRulings(rulings).flatMap((ruling) =>
@@ -675,6 +778,11 @@ export const domainOf = (sources: Sources): Domain => {
   return { hymns: hymns.length, properties, lists, unread, unlisted, reached, stale, unreached };
 };
 
+/**
+ * One committed fixture: a hymn, its mode (a recipe for `applyRecipe`, or a
+ * generated mutant's name), the review it came from, and for a generated
+ * one the fingerprint of the printed text it was found on (`fingerprintOf`).
+ */
 const Mutant = Schema.Struct({
   number: Schema.Int,
   mode: Schema.String,
@@ -685,6 +793,10 @@ export type Mutant = typeof Mutant.Type;
 
 const MutantsFile = Schema.Struct({ print: Schema.String, mutants: Schema.Array(Mutant) });
 
+/**
+ * The committed layout fixtures (`data/layout-mutants.json`): recipes, never
+ * text. Read at once, so a test can name a case for each.
+ */
 export const layoutMutants = (): readonly Mutant[] =>
   Schema.decodeSync(Schema.fromJsonString(MutantsFile))(
     readFileSync(path.resolve(import.meta.dir, '../data/layout-mutants.json'), 'utf8'),

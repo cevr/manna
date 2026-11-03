@@ -15,6 +15,7 @@ const BODY: Body = {
   band: { above: 50, below: 12, reach: 60 },
 };
 
+/** Her body in a profile to the viewer's left, which draws her left arm only. */
 const PROFILE_LEFT: Body<{ readonly left: string }> = {
   skin: {
     head: ['neck', 'head'],
@@ -26,6 +27,7 @@ const PROFILE_LEFT: Body<{ readonly left: string }> = {
   band: { above: 50, below: 12, reach: 25 },
 };
 
+/** Her body in a profile to the viewer's right, which draws her right arm only: its flap runs from the sheet's left edge, over her back, to the sleeve's front edge. */
 const PROFILE_RIGHT: Body<{ readonly right: string }> = {
   skin: {
     head: ['neck', 'head'],
@@ -37,6 +39,7 @@ const PROFILE_RIGHT: Body<{ readonly right: string }> = {
   band: { above: 50, below: 12, reach: 60 },
 };
 
+/** Her body in a pose holding the baby: he rides her lean, and the stool (poses-2) rides the root as her robe does. */
 const HOLDING: Body = {
   skin: { ...BODY.skin, baby: ['lean'] },
   arms: BODY.arms,
@@ -44,6 +47,7 @@ const HOLDING: Body = {
   band: BODY.band,
 };
 
+/** Her body in poses-1, the baby's cup on her lean with him. */
 const HOLDING_CUP: Body = {
   skin: { ...HOLDING.skin, cup: ['lean'] },
   arms: BODY.arms,
@@ -51,6 +55,7 @@ const HOLDING_CUP: Body = {
   band: BODY.band,
 };
 
+/** Each cut view's skeleton in its part sheet's frame, by the view's name in her sheets' views. */
 export const SKELETONS = {
   front: framed(
     keptAt('front'),

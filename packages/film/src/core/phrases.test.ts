@@ -8,6 +8,7 @@ import { resolveShort } from './shorts.ts';
 import { CLOCK_EPSILON } from './time.ts';
 import { voicedAt } from './voiced.ts';
 
+/** Words half a second apart, each 0.4 s long. */
 const said = (text: string, from = 0): Array<Word> =>
   text.split(' ').map((t, i) => ({ text: t, start: from + i * 0.5, end: from + i * 0.5 + 0.4 }));
 
@@ -93,6 +94,7 @@ describe('quotedWords', () => {
 
 describe('shortPhrases', () => {
   const draw = () => {};
+  /** The two beats laid at `fps`. */
   const placedAt = (fps: number) =>
     Result.getOrThrow(
       layout(

@@ -1,3 +1,10 @@
+/**
+ * The player's controls on the web: the full player (`/player`) and the
+ * bottom bar, over a hymn page or none, mounted in a browser's document
+ * (`src/test/setup.ts`) over a player whose device the test holds
+ * (`src/test/device.ts`).
+ */
+
 import { RegistryContext } from '@effect/atom-react';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -44,16 +51,22 @@ const morning = Option.getOrThrow(hymnAt('100'));
 const setValue = (input: HTMLInputElement, value: string) =>
   Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value);
 
+/** The reader's pointer on the bar: `pointerdown` opens a press, `pointerup` ends it. */
 const pointer = (bar: HTMLInputElement, type: 'pointerdown' | 'pointerup' | 'pointercancel') =>
   bar.dispatchEvent(
     new PointerEvent(type, { bubbles: true, button: 0, pointerId: 1, pointerType: 'touch' }),
   );
 
+/** The reader moves the bar to `value`: the browser sets it and says `input`. */
 const drag = (bar: HTMLInputElement, value: string) => {
   setValue(bar, value);
   bar.dispatchEvent(new Event('input', { bubbles: true }));
 };
 
+/**
+ * The browser's `change` after a drag: it fits the bar's value to its step,
+ * as Chrome does and happy-dom does not, then says `change`.
+ */
 const release = (bar: HTMLInputElement) => {
   const step = Number(bar.step) || 1;
   setValue(bar, String(Math.round(Number(bar.value) / step) * step));
@@ -61,11 +74,16 @@ const release = (bar: HTMLInputElement) => {
 };
 const praise = Option.getOrThrow(hymnAt('1'));
 
+/** A hymn page shown, as its screen says to the bar. */
 function Shows({ track }: { readonly track: Track }) {
   useShowsPage(track);
   return <></>;
 }
 
+/**
+ * The full player over `track`'s page, opened on it (`/player?hymn=<n>`), as
+ * a phone's sheet leaves the page mounted under it, with the bottom bar.
+ */
 const sheetOver = (track: Track) => {
   params['hymn'] = String(track.number);
   return (
@@ -77,11 +95,13 @@ const sheetOver = (track: Track) => {
   );
 };
 
+/** The full player opened on `track` over no hymn page, as the web's sheet is over the home list. */
 const sheetOn = (track: Track) => {
   params['hymn'] = String(track.number);
   return <FullPlayer />;
 };
 
+/** The bottom bar over `page`'s page, or over no hymn page. */
 const barOver = (page: Option.Option<Track>) => (
   <>
     {Option.match(page, { onNone: () => <></>, onSome: (track) => <Shows track={track} /> })}
@@ -89,6 +109,7 @@ const barOver = (page: Option.Option<Track>) => (
   </>
 );
 
+/** The hymn route at `/hymns/<n>`, its header and screen in `page`, and the bottom bar under it. */
 const route = (n: number) => {
   params['number'] = String(n);
   return (
@@ -102,12 +123,18 @@ const route = (n: number) => {
   );
 };
 
+/** The route's params set back to none, as a test that set them ends. */
 const clearParams = () => {
   for (const key of Object.keys(params)) delete params[key];
 };
 
 const schemes = ['light', 'dark'] as const;
 
+/**
+ * The page's roles as `scheme` gives them (`color.ts` writes each as a
+ * `light-dark()` of the two, which the test's document does not resolve);
+ * they go when the `using` ends.
+ */
 const showing = (scheme: (typeof schemes)[number]) => {
   const style = document.createElement('style');
   style.textContent = `:root { ${Object.entries(theme[scheme])
@@ -117,6 +144,7 @@ const showing = (scheme: (typeof schemes)[number]) => {
   return { [Symbol.dispose]: () => style.remove() };
 };
 
+/** A CSS colour (`#rgb`, `#rrggbb`, `rgb()` or `rgba()`) as its red, green and blue. */
 const rgbOf = (css: string): string => {
   const text = css.trim().toLowerCase();
   const hex = (digits: string) =>
@@ -139,6 +167,7 @@ const rgbOf = (css: string): string => {
   );
 };
 
+/** `text` split at its commas outside parentheses. */
 const topLevel = (text: string) => {
   const parts = [''];
   let depth = 0;
@@ -154,6 +183,7 @@ const topLevel = (text: string) => {
   return parts.map((part) => part.trim());
 };
 
+/** A gradient's direction (`to right` or `90deg`) in degrees. */
 const degrees = (direction: string) =>
   Match.value(direction).pipe(
     Match.when('top', () => 0),
@@ -163,6 +193,12 @@ const degrees = (direction: string) =>
     Match.orElse(Number),
   );
 
+/**
+ * A `linear-gradient()` as drawn: its angle, and the colour at each share
+ * of its length (0 to 100), or `blend` where two colours meet over a span.
+ * Each stop takes its positions in percent; a stop with none sits at the
+ * start (the first) or the end (the last).
+ */
 const gradientOf = (css: string) => {
   const inner = Option.getOrThrow(
     Option.fromNullishOr(/^linear-gradient\((.*)\)$/.exec(css.trim())?.[1]),
@@ -206,6 +242,10 @@ const gradientOf = (css: string) => {
   return { angle, at };
 };
 
+/**
+ * `screen` (by default the full player over hymn 100's page) over a fresh
+ * player, mounted in the document; it unmounts when the test's `using` ends.
+ */
 const mount = (
   screen: ReactNode = sheetOver(morning),
   observing: Effect.Effect<void> = Effect.void,
@@ -230,6 +270,7 @@ const mount = (
       </RegistryContext>,
     ),
   );
+  /** Wait, as the page shows each change, until the player's state is one `holds` is true of. */
   const until = (holds: (player: Player) => boolean) =>
     Effect.promise(() =>
       act(() =>
@@ -248,6 +289,7 @@ const mount = (
       ),
     );
   const find = (selector: string) => Option.fromNullishOr(host.querySelector(selector));
+  /** The position bar, once it shows. */
   const bar = () =>
     Option.getOrThrow(
       Option.filter(
@@ -264,13 +306,18 @@ const mount = (
     device,
     until,
     find,
+    /** Every element `selector` matches. */
     all: (selector: string) => [...host.querySelectorAll(selector)],
     bar,
     press,
+    /** A command from elsewhere in the app: another hymn's page, or the lock screen. */
     send: (command: Command) => act(() => registry.set(player.send, command)),
+    /** An atom's value in the page's registry: a setting as the page reads it. */
     get: <A,>(atom: Atom.Atom<A>) => registry.get(atom),
+    /** An atom set from outside the page: a setting the reader set elsewhere. */
     set: <R, W>(atom: Atom.Writable<R, W>, value: W) => act(() => registry.set(atom, value)),
     text: () => host.textContent,
+    /** The player's state now. */
     player: () => registry.get(player.state),
     selection: (selection: Option.Option<RecordingSelection>) =>
       act(() => registry.set(player.recording, selection)),
@@ -521,6 +568,7 @@ describe('the full player', () => {
   it.live('draws Play and Pause in the text on the accent, on an accent fill, in each scheme', () =>
     Effect.gen(function* () {
       using page = mount();
+      /** The button's fill and its title's colour, as the document computes them. */
       const drawn = (label: string) => {
         const button = Option.getOrThrow(
           Option.filter(
@@ -595,6 +643,7 @@ describe('the full player', () => {
 });
 
 describe('the full player’s title', () => {
+  /** The stack under the sheet: `under`, then the sheet on hymn 100, shown. */
   const over = (under: ReadonlyArray<{ readonly name: string; readonly params?: object }>) => {
     stack.state = {
       routes: [...under, { name: 'player', params: { hymn: '100' } }],
@@ -701,6 +750,7 @@ describe('the full player in every state', () => {
   );
 });
 
+/** The bar's button named `label`: its text, the mark it holds, and its `aria-checked`. */
 const markOf = (bar: Element, label: string) => {
   const button = Option.getOrThrow(
     Option.fromNullishOr(bar.querySelector(`[aria-label="${label}"]`)),
@@ -769,6 +819,7 @@ describe('the bottom bar', () => {
 });
 
 describe('a list’s end over the bottom bar', () => {
+  /** A phone list's end space in the layout's stack, and the bar docked under it. */
   const home = (
     <>
       <StackBottom>
@@ -910,6 +961,7 @@ describe('the hymn page with the bottom bar', () => {
 });
 
 describe('the tempo dial in the full player', () => {
+  /** Hymn 100's and 101's tempos, and Sound, set for a test and put back as it ends. */
   const keeping = (page: ReturnType<typeof mount>, sound: boolean) => {
     const was = page.get(settings.sound);
     page.set(settings.tempo(100), 100);
@@ -1019,13 +1071,16 @@ describe('the tempo dial in the full player', () => {
 });
 
 describe('the stanza chips in the full player', () => {
+  /** Hymn 78: four stanzas, the refrain after each. */
   const four = Option.getOrThrow(hymnAt('78'));
+  /** Hymn 78's choice set to all for a test and put back as it ends. */
   const keeping = (page: ReturnType<typeof mount>) => {
     page.set(settings.stanzas(78), []);
     return { [Symbol.dispose]: () => page.set(settings.stanzas(78), []) };
   };
   const before = (first: Element, second: Element) =>
     Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING);
+  /** Each chip in the group, by its testID, and whether it reads checked (`none`: no checked state). */
   const chipsOf = (page: ReturnType<typeof mount>) =>
     page
       .all('[data-testid="stanzas"] [role="button"]')
@@ -1101,6 +1156,12 @@ describe('the stanza chips in the full player', () => {
   );
 });
 
+/**
+ * The web's stack as One draws it (`WebStackHeader`): the focused screen
+ * alone. It starts on the hymn route at `/hymns/<from>`; a link the app
+ * opens becomes the focused screen, with the params its href gives, and the
+ * hymn page under it is gone, as no screen is kept mounted.
+ */
 function WebStack({ from }: { readonly from: number }) {
   const [href, setHref] = useState(`/hymns/${from}`);
   useEffect(() => {
@@ -1121,6 +1182,7 @@ function WebStack({ from }: { readonly from: number }) {
 
 describe('the full player on the web’s stack', () => {
   const three = Option.getOrThrow(hymnAt('3'));
+  /** `/hymns/<from>` on the web's stack, with the docked bar under it. */
   const stack = (from: number) => {
     params['number'] = String(from);
     return (
@@ -1259,6 +1321,12 @@ describe('the full player on the web’s stack', () => {
   );
 });
 
+/**
+ * A bar over `useScrub` alone, at a player that stays at 0:10, its seeks
+ * kept: it lets a drag go once it rests for 20 ms, as iOS's and Android's
+ * bars do, and holds a place it sent for `settle`. It unmounts when the
+ * test's `using` ends.
+ */
 const hooked = (settle: Duration.Input = Duration.seconds(2)) => {
   const sought = new Array<number>();
   const bar = { scrub: Option.none<ReturnType<typeof useScrub>>() };
@@ -1284,13 +1352,16 @@ const hooked = (settle: Duration.Input = Duration.seconds(2)) => {
     sought,
     value: () => scrub().value,
     change: (seconds: number) => act(() => scrub().change(seconds)),
+    /** The web's press by pointer 1: down, a move to `seconds`, and up. */
     drag: (seconds: number) =>
       act(() => {
         scrub().press(1);
         scrub().move(seconds);
         scrub().lift(1);
       }),
+    /** Wait while the bar rests past its `rest`. */
     rest: Effect.promise(() => act(() => Effect.runPromise(Effect.sleep(Duration.millis(60))))),
+    /** Wait, as the bar draws, until `holds` is true of its value. */
     until: (holds: (value: number) => boolean) =>
       Effect.promise(() => act(() => Effect.runPromise(Effect.sleep(Duration.millis(1))))).pipe(
         Effect.map(() => scrub().value),

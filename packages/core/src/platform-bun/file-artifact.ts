@@ -1,3 +1,13 @@
+/** The generic File Corpus lifecycle on disk, under Bun (§3.5).
+ *
+ *  Sources (a local file or a pinned release), the streamed install with its
+ *  digest and size checks, the atomic activation and the provenance stores —
+ *  for any File Corpus, whatever its semantic verifier. The Bible and Topics
+ *  instances live in `bible-artifact.ts`, their verifiers in `corpus-verify.ts`;
+ *  the SQLite helpers here are the ones both the provenance store and those
+ *  verifiers run statements through.
+ */
+
 import * as BunHttpClient from '@effect/platform-bun/BunHttpClient';
 import { Database } from 'bun:sqlite';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -33,22 +43,65 @@ interface ReleaseFileArtifactSource {
   readonly url: string;
   readonly revision: string;
   readonly digest: string;
+  /** The exact byte count the pinned manifest promises; rejected before the
+   *  semantic verifier ever opens the file. */
   readonly size: number;
+  /** The release ordinal these bytes were published under (§3.6), when the
+   *  source states one.
+   *
+   *  What makes startup's install decision able to see that a compiled pin is
+   *  *older* than what this host already installed at runtime — the re-flooring
+   *  round-4 F2 found. `None` for a source with no ordinal, which is every
+   *  local one. Defaulted so no existing call site has to state it. */
   readonly generation?: Option.Option<CorpusGeneration>;
 }
 
 export type NativeFileArtifactSource = LocalFileArtifactSource | ReleaseFileArtifactSource;
 
+/** What kind of file one File Corpus's artifact is.
+ *
+ *  Not a cosmetic distinction: it decides where the lifecycle can put
+ *  provenance. `sqlite` artifacts (Bible, Topics) carry it in a `meta` table
+ *  inside themselves; `flat` artifacts (§9.2's vector index) carry it in a
+ *  sidecar JSON, because there is nowhere inside a pinned binary format to put
+ *  it. Declared by the caller rather than inferred from the bytes — see
+ *  `layerNativeFileArtifacts`. */
 type FileArtifactLayout = 'sqlite' | 'flat';
 
+/** Provenance as it is written down, in the artifact's `meta` table or in a
+ *  sidecar JSON.
+ *
+ *  `generation` is `optionalKey` rather than required, and that is the
+ *  migration: every artifact installed before §3.6's runtime path existed has
+ *  no generation row, and a decoder that demanded one would report every one of
+ *  them as "no verified generation" and re-install from the floor. Absent reads
+ *  back as `None`, which is exactly what a local source means. */
 const StoredProvenance = Schema.Struct({
   source: Schema.String,
   revision: Schema.String,
   digest: Schema.String,
   generation: Schema.optionalKey(Schema.Int),
+  /** The **file this record describes**, for a flat artifact whose provenance
+   *  lives beside it rather than inside it.
+   *
+   *  This is what makes the sidecar a *pointer* rather than a second file that
+   *  has to be kept in step with a first (round-4 B2). A flat activation used to
+   *  be two renames over two fixed paths, and a crash between them left the old
+   *  bytes wearing the new provenance — a wrong receipt, not an absent one, and
+   *  nothing could tell. With a versioned artifact filename here, the sidecar's
+   *  own rename is the single atomic step that makes a generation active, and
+   *  whatever it names is what the host reads.
+   *
+   *  `optionalKey` because a SQLite artifact writes its provenance into itself
+   *  and has no pointer to make, and because a sidecar written before this
+   *  field existed still decodes — as `None`, which the reader treats as the
+   *  destination path itself, exactly what it meant. */
   artifact: Schema.optionalKey(Schema.String),
 });
 
+/** One decoded record back into a `CorpusProvenance`, with the generation read
+ *  as the `Option` the model carries. One function so the SQLite store and the
+ *  sidecar store cannot disagree about what a stored record means. */
 const provenanceFrom = (stored: typeof StoredProvenance.Type): CorpusProvenance =>
   CorpusProvenance.make({
     source: assetSourceId(stored.source),
@@ -57,6 +110,8 @@ const provenanceFrom = (stored: typeof StoredProvenance.Type): CorpusProvenance 
     generation: Option.map(Option.fromUndefinedOr(stored.generation), corpusGeneration),
   });
 
+/** The generation as a struct fragment, so an absent row spreads to nothing
+ *  rather than to an explicit `undefined` the exact-optional decoder refuses. */
 const storedGeneration = (raw: Option.Option<string>): { readonly generation?: number } =>
   Option.match(
     Option.flatMap(raw, (value) => Schema.decodeOption(Schema.Int)(Number(value))),
@@ -74,6 +129,7 @@ export interface NativeFileArtifactProvenanceStore {
 const sourceError = (operation: string, cause: unknown): CorpusSourceUnavailableError =>
   CorpusSourceUnavailableError.make({ operation, cause });
 
+/** Metadata only: SQLite places a symlink-opened database's WAL beside its real path. */
 export const checkSqliteRefresh = Effect.fn('FileArtifact.checkSqliteRefresh')(function* (
   destination: string,
 ) {
@@ -212,6 +268,10 @@ export const closeDatabase = (database: Database) =>
     catch: storeError('close-database'),
   });
 
+/** SQLite can need writable auxiliary state even for a read-only WAL query.
+ * Copy the main file and any committed WAL into a private, scoped directory;
+ * never create sidecars or checkpoint the source. Missing sources still fail.
+ */
 const copySqlite = Effect.fn('FileArtifact.copySqlite')(function* (filename: string) {
   const fs = yield* FileSystem.FileSystem;
   const directory = yield* fs.makeTempDirectoryScoped({ prefix: 'manna-sqlite-check-' });
@@ -279,6 +339,10 @@ export const integrityCheck = (database: Database) =>
     Effect.map((row) => row.integrity_check),
   );
 
+/** A staged database must carry every committed page in its main file before
+ * its side files can be discarded and the main file alone can be activated.
+ * SQLite can refuse a journal-mode change without throwing, so check the mode.
+ */
 const sealDatabase = (database: Database) =>
   Effect.try({
     try: () => database.query('PRAGMA journal_mode=DELETE').get(),
@@ -292,6 +356,8 @@ const sealDatabase = (database: Database) =>
     Effect.asVoid,
   );
 
+/** The SQLite provenance store over `bun:sqlite`: the same `meta` rows through
+ *  the same `StoredProvenance` codec the native store writes and reads. */
 const sqliteProvenanceStore: NativeFileArtifactProvenanceStore = {
   read: (filename) =>
     withDatabaseSnapshot(filename, (database) =>
@@ -365,6 +431,33 @@ const sqliteProvenanceStore: NativeFileArtifactProvenanceStore = {
     ),
 };
 
+/** Provenance for a **flat** artifact, in a sidecar JSON file beside it.
+ *
+ *  The SQLite store above writes `meta` rows *into* the artifact, which is only
+ *  possible because the artifact is a database. §9.2's vector index is a flat
+ *  binary: it has no `meta` table, no schema, and no room for one — the parser
+ *  addresses it from byte zero and any appended bytes make it malformed. The
+ *  default store therefore could not install a `.bvi` at all. It opened the
+ *  candidate file as SQLite and failed before the rename, so no host could
+ *  ever activate a vectors generation (round-2 B1).
+ *
+ *  A sidecar rather than a header field, for two reasons. The format is pinned —
+ *  §9.2 fixes the header and the manifest, and both the compiler and the shipped
+ *  parser agree on their layout — so provenance cannot be added to it without a
+ *  format version bump that every installed index would fail. And provenance is
+ *  *supply* metadata, not index content: which release these bytes came from is
+ *  a fact about the install, and the digest it records is the digest of the file
+ *  without it, which a field inside the file could not be.
+ *
+ *  **Written to the building file's sidecar, then renamed with it.** The
+ *  installer writes provenance to `<destination>.building` and renames that over
+ *  `<destination>`; this store mirrors the same two-step onto
+ *  `<destination>.building.provenance.json` → `<destination>.provenance.json`,
+ *  so an interrupted install leaves the active file *and* its sidecar untouched.
+ *  Reading provenance for a file whose sidecar is missing fails, which the
+ *  lifecycle's `readCurrent` turns into "no current generation" — the correct
+ *  answer for a file this host did not install.
+ */
 const sidecarProvenanceStore: NativeFileArtifactProvenanceStore = {
   read: (filename) => Effect.map(readSidecar(filename), (pointer) => pointer.provenance),
   write: (filename, provenance) =>
@@ -387,8 +480,15 @@ const sidecarProvenanceStore: NativeFileArtifactProvenanceStore = {
     }).pipe(Effect.mapError(storeError('write-provenance')), Effect.provide(BunServices.layer)),
 };
 
+/** What one sidecar says: the provenance, and the file it describes.
+ *
+ *  Two facts rather than one because the pointer is a fact about *storage* and
+ *  the provenance is a fact about the *release* — and only the pointer half is
+ *  what makes the flat activation atomic. */
 interface SidecarPointer {
   readonly provenance: CorpusProvenance;
+  /** The artifact this record describes, absolute. `None` for a sidecar written
+   *  before versioned filenames existed, which meant the destination itself. */
   readonly artifact: Option.Option<string>;
 }
 
@@ -403,6 +503,14 @@ const readSidecar = (filename: string): Effect.Effect<SidecarPointer, unknown> =
     };
   }).pipe(Effect.mapError(storeError('read-provenance')), Effect.provide(BunServices.layer));
 
+/** Writes the **pointer**: the provenance plus the versioned file it describes.
+ *
+ *  Written to a staging sidecar and renamed over the live one as the *last*
+ *  step of an activation, which is what makes a flat install atomic (round-4
+ *  B2). Until that rename lands, the live pointer still names the previous
+ *  generation's file — so a crash mid-install leaves a host reading exactly what
+ *  it was reading before, rather than reading new bytes under old provenance or
+ *  old bytes under new. */
 const writeSidecarPointer = (input: {
   readonly sidecarFor: string;
   readonly artifact: string;
@@ -427,6 +535,13 @@ const writeSidecarPointer = (input: {
     yield* fs.writeFileString(sidecarPath(input.sidecarFor), encoded);
   }).pipe(Effect.mapError(storeError('write-provenance')), Effect.provide(BunServices.layer));
 
+/** The digest of one file on disk, streamed rather than read whole.
+ *
+ *  What makes the pointer *checkable*: `readCurrent` compares this against the
+ *  digest the pointer states, so a pointer that names a file it does not
+ *  describe reports no generation instead of reporting the wrong one
+ *  (round-4 B2). Streamed because a Bible artifact is 150 MB and this runs at
+ *  every startup. */
 const fileDigest = (filename: string): Effect.Effect<string, unknown> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -437,6 +552,13 @@ const fileDigest = (filename: string): Effect.Effect<string, unknown> =>
     return `sha256:${bytesToHex(hasher.digest())}`;
   }).pipe(Effect.provide(BunServices.layer));
 
+/** Removes one retired generation's file, never the one that is live.
+ *
+ *  Best-effort: a file that cannot be removed is disk to reclaim, never a
+ *  reason to fail an activation that already happened, or to turn a failed
+ *  install into a second, different failure. `keep` is the file this run must
+ *  not touch — the generation it just activated, or the one it is falling back
+ *  to. */
 const retire = (
   fs: FileSystem.FileSystem,
   candidate: Option.Option<string>,
@@ -453,8 +575,27 @@ const retire = (
 const generationPath = (destination: string, digest: string): string =>
   `${destination}.g-${digest.slice('sha256:'.length, 'sha256:'.length + 12)}`;
 
+/** Where one artifact's sidecar lives: the artifact's own path plus a suffix.
+ *
+ *  Derived rather than configured, so the sidecar of `x.building` is
+ *  `x.building.provenance.json` and renaming `x.building` → `x` has an exactly
+ *  parallel sidecar rename. One function so the installer, the reader and the
+ *  cleanup cannot disagree about the name. */
 const sidecarPath = (filename: string): string => `${filename}.provenance.json`;
 
+/** What this host currently has activated: the artifact file, and its
+ *  provenance.
+ *
+ *  For a `sqlite` artifact the answer is the destination itself — the file
+ *  carries its own `meta` rows, so there is nothing to point at and nothing to
+ *  cross-check that reading the file does not already check.
+ *
+ *  For a `flat` artifact the pointer decides (round-4 B2), and the pointer is
+ *  **verified against the file it names**: the digest the sidecar states must be
+ *  the digest of those bytes. That is what turns a torn install into "no
+ *  generation" rather than "the wrong generation reported confidently" — the
+ *  sidecar used to be believed unconditionally, so old bytes wearing a new
+ *  sidecar were indistinguishable from a clean activation. */
 interface ActiveGeneration {
   readonly file: string;
   readonly provenance: CorpusProvenance;
@@ -487,6 +628,10 @@ const readActive = (input: {
     return { file, provenance: pointer.provenance };
   }).pipe(Effect.option);
 
+/** Streams one File Corpus Artifact to `<destination>.building`, hashes while
+ *  writing, rejects a manifest-digest mismatch, semantically verifies the
+ *  building file, writes Provenance into it, then renames over the active
+ *  file. Any failure removes the building file and leaves the active one. */
 export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, InstallerId>(input: {
   readonly artifact: FileCorpusArtifact<Corpus, RecipeId, InstallerId>;
   readonly destination: string;
@@ -494,6 +639,11 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
   readonly verify: (filename: string) => Effect.Effect<number, unknown>;
   readonly fetch?: (url: string) => Effect.Effect<Response, unknown>;
   readonly provenanceStore?: NativeFileArtifactProvenanceStore;
+  /** Whether this corpus's artifact is a SQLite database or an opaque blob.
+   *
+   *  It decides where provenance goes: inside the file for a database, in a
+   *  sidecar JSON for a blob. Defaults to `sqlite`, so Bible and Topics are
+   *  unchanged; §9.2's vector index declares `flat`. */
   readonly layout?: FileArtifactLayout;
 }): Layer.Layer<InstallerId | RecipeId> => {
   const corpus = input.artifact.corpus;
@@ -552,6 +702,8 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
         fetchArtifact,
       ),
   });
+  /** One read of what is active, shared by `current` and `activeFile` so the
+   *  two can never disagree about which generation this host holds. */
   const active = readActive({
     destination: input.destination,
     layout,
@@ -559,6 +711,12 @@ export const layerNativeFileArtifacts = <Corpus extends string, RecipeId, Instal
     provenanceStore,
   });
   const activeFile = active.pipe(Effect.map(Option.map((generation) => generation.file)));
+  /** What an install must retire once it succeeds — for a flat artifact only.
+   *
+   *  A SQLite artifact renames over one canonical path and has nothing to
+   *  retire, and reading `active` on that path would run this corpus's semantic
+   *  verifier against the *outgoing* file: an extra open every install would pay
+   *  for nothing, and one the digest-mismatch suites count. */
   const retirementTarget = (): Effect.Effect<Option.Option<string>> => {
     if (layout === 'flat') return activeFile;
     return Effect.succeedNone;

@@ -1,3 +1,5 @@
+/** Test oracle: a verb marker belongs to this entry only after its own bold
+ * heading. Apostrophes, punctuation and SPRED are pinned source layouts. */
 export const hasOwnVerbMarker = (html: string, headword: string): boolean => {
   const letters = (word: string) => word.toLowerCase().replace(/[^a-z]/gu, '');
   const marker =

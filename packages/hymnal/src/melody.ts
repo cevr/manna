@@ -1,3 +1,13 @@
+/**
+ * Which of a hymn's MIDI tracks hold the harmony, and which notes are its
+ * tune. The sound's render reads these (`voices.ts`), so they stand apart
+ * from the score's verse reading, which the sound does not depend on.
+ *
+ * The harmony is a keyboard part (program 5, else 4) on one track per voice
+ * or one per pair of voices; a unison setting puts the melody on its own
+ * track first.
+ */
+
 import type { Midi, Note, Track } from './midi.js';
 
 const KEYBOARDS = [5, 4];
@@ -11,6 +21,12 @@ export const harmonyTracks = (midi: Midi): readonly Track[] => {
   return sounding.slice(0, 4);
 };
 
+/**
+ * The highest voice of a track: a note counts when it starts at or above
+ * every note sounding then. Notes struck within `slack` ticks of each other
+ * are one onset, as a unison part doubles each note a tick or two apart;
+ * of two equal keys there, the shorter is the tune's (the other voice holds).
+ */
 export const topVoice = (notes: readonly Note[], slack: number): Note[] => {
   const onsets: number[][] = [];
   for (const tick of [...new Set(notes.map((note) => note.start))].sort((a, b) => a - b)) {

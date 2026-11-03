@@ -1,10 +1,25 @@
 /* oxlint-disable effect/noGlobals -- the check prints its counts of lines and misses with console.log. */
 
+/**
+ * Acceptance (checkbulk S4 (3), census2 F2): a census line prints no word
+ * that stands inside a quoted span, however the spans nest (`wordlessLine`).
+ *
+ * Generated property over its whole domain as written: every line made of
+ * plain words and quoted spans, straight ("…") or curly (“…”), nested up to
+ * three deep (a curly span inside either kind; a straight one only where no
+ * straight span is open around it, as a straight inside a straight cannot
+ * be read), with
+ * any words between. Synthetic words only: `q<n>x` stands inside a span and
+ * never prints; `p<n>x` stands outside every span and always prints. No
+ * hymn text is read.
+ */
+
 import { Effect } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
 import { wordlessLine } from '../scripts/census.js';
 
+/** mulberry32: the same lines on every run. */
 const seeded = (seed: number) => {
   let state = seed >>> 0;
   return () => {
@@ -24,6 +39,7 @@ const lineOf = (random: () => number) => {
   let n = 0;
   const word = (kind: 'p' | 'q') => `${kind}${(n += 1)}x`;
   const pick = <A>(all: ReadonlyArray<A>): A => all[Math.floor(random() * all.length)] as A;
+  /** `straight`: a straight span is open around this one, so no straight span opens inside it. */
   const span = (style: Style, depth: number, straight = false): string => {
     const parts: string[] = [];
     const count = 1 + Math.floor(random() * 4);

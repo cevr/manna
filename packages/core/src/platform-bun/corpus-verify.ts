@@ -1,3 +1,11 @@
+/** The semantic verifiers of the SQLite File Corpora, under Bun (§3.5).
+ *
+ *  What a candidate Bible or Topics database must hold before the lifecycle in
+ *  `file-artifact.ts` will activate it. SQLite is opened through `bun:sqlite`;
+ *  the Topics *rules* stay single-definition in core (`verifyTopicsArtifact` is
+ *  imported, not restated), so only statement execution lives here.
+ */
+
 import { Database } from 'bun:sqlite';
 
 import {
@@ -21,6 +29,7 @@ import {
   storeError,
 } from './file-artifact.js';
 
+/** The §3.5 Bible gate, asserting exactly what the native verifier asserts. */
 export const verifyBibleDatabase = (filename: string): Effect.Effect<number, unknown> =>
   withDatabaseSnapshot(filename, (database) =>
     Effect.gen(function* () {
@@ -55,6 +64,7 @@ export const verifyBibleDatabase = (filename: string): Effect.Effect<number, unk
     }),
   );
 
+/** The three reads `verifyTopicsArtifact` makes, over one open connection. */
 const bunTopicsReader = (database: Database): TopicsArtifactReader => ({
   integrity: integrityCheck(database),
   meta: (key) =>
@@ -76,6 +86,7 @@ const bunTopicsReader = (database: Database): TopicsArtifactReader => ({
   count: (table) => countRows(database, table),
 });
 
+/** The Topics gate: open, apply the shared rules, close. */
 export const verifyTopicsDatabase = (filename: string): Effect.Effect<number, unknown> =>
   withDatabaseSnapshot(filename, (database) => verifyTopicsArtifact(bunTopicsReader(database)));
 

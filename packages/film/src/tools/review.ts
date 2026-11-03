@@ -57,30 +57,45 @@ import { writeWhole } from './content-store.ts';
 import { AtMtime, fileCache, madeFromName } from './file-cache.ts';
 import { Media, PHONE_COPY, PHONE_RATE } from './media.ts';
 
+/** A folder the review reads, and the label its refs start with. */
 export interface ReviewRoot {
   readonly label: string;
   readonly path: string;
+  /**
+   * Other labels a ref to it may start with (`RefAliases`): refs written
+   * while its checkout's folder had another name. A ref is written with
+   * `label` alone.
+   */
   readonly aliases?: ReadonlyArray<string>;
 }
 
 interface ReviewConfig {
   readonly roots: ReadonlyArray<ReviewRoot>;
+  /** Where derived files are kept. */
   readonly cache: string;
+  /** A video over this many bytes gets a phone copy (`Media.phoneCopy`). */
   readonly phoneOver: number;
+  /** So does a video over this many bits a second (`PHONE_RATE` unless given). */
   readonly phoneRate?: number;
+  /** A video over this many bytes is not played inline; an authored download may still name it. */
   readonly maxVideo: number;
+  /** Whether phone copies are made in the background as the index finds videos that need one; with none made, such a video's phone is `none`. */
   readonly phoneCopies: boolean;
 }
 
 const PHONE_OVER = 40 * 1024 * 1024;
 const MAX_VIDEO = 600 * 1024 * 1024;
+/** How long an index answers before the roots are read again. */
 const INDEX_FRESH = Duration.seconds(15);
 
+/** Folders of working files a walk does not enter (dot-folders neither). */
 const SKIP_DIRS = ['stills', 'frames', 'node_modules'];
+/** How many folders deep a walk goes under a root. */
 const MAX_DEPTH = 8;
 
 type PhoneState = ReviewVideo['phone'];
 
+/** A file a walk found, where it lies. */
 export interface Found {
   readonly path: string;
   readonly ref: string;
@@ -97,6 +112,11 @@ const rootFrom = (entry: string, path: Path.Path): ReviewRoot => {
   return { label: path.basename(at), path: at };
 };
 
+/**
+ * `FILM_REVIEW_ROOTS` read: comma-separated folders, each `label=path` or a
+ * bare path (labelled by its folder's name, and its parent's too when that
+ * collides). Blank entries are skipped.
+ */
 export const parseRoots = (text: string, path: Path.Path): ReadonlyArray<ReviewRoot> => {
   const entries = text
     .split(',')
@@ -112,6 +132,7 @@ export const parseRoots = (text: string, path: Path.Path): ReadonlyArray<ReviewR
 const within = (root: string, at: string, path: Path.Path) =>
   at === root || at.startsWith(`${root}${path.sep}`);
 
+/** The ref of `file` under `roots`: the innermost root holding it. `None` outside them all. */
 export const refOf = (
   roots: ReadonlyArray<ReviewRoot>,
   file: string,
@@ -128,6 +149,11 @@ export const refOf = (
   });
 };
 
+/**
+ * The alias labels of `roots`, each the label of the root it names: an alias
+ * that is a root's own label, or that two roots claim, names none, so a real
+ * root always wins.
+ */
 const aliasesOf = (roots: ReadonlyArray<ReviewRoot>): RefAliases => {
   const labels = new Set(roots.map((root) => root.label));
   const claims = roots.flatMap((root) =>
@@ -140,9 +166,11 @@ const aliasesOf = (roots: ReadonlyArray<ReviewRoot>): RefAliases => {
   );
 };
 
+/** `ref` as `roots` write it: its alias label, if it starts with one, read as its root's label. */
 export const canonicalOf = (roots: ReadonlyArray<ReviewRoot>, ref: string): string =>
   canonicalRef(aliasesOf(roots), ref);
 
+/** The path `ref` names under `roots`, when it names one inside its root (by its label or an alias). */
 export const pathOf = (
   roots: ReadonlyArray<ReviewRoot>,
   ref: string,
@@ -169,19 +197,24 @@ const fileOf = (found: Found): ReviewFile => ({
   mtime: found.mtime,
 });
 
+/** The record files a walk finds: a project's catalogue, a montage's manifest. */
 const MANIFEST_FILE = 'review.json';
 
+/** What one folder is made of: its ref, its record, and the files its record names as found. */
 interface FolderParts<A> {
   readonly ref: string;
   readonly record: A;
+  /** A file the record names (relative to the folder), when it is there. */
   readonly look: (name: string) => Option.Option<Found>;
   readonly phone: (video: Found) => PhoneState;
+  /** A video over this many bytes (a master) is not listed: too big to stream. */
   readonly maxVideo: number;
 }
 
 const found = <A>(parts: FolderParts<A>, names: ReadonlyArray<string>) =>
   names.flatMap((name) => Option.toArray(parts.look(name)));
 
+/** The first of `names` there, as a video small enough to stream. */
 const videoOf = <A>(
   parts: FolderParts<A>,
   names: ReadonlyArray<string>,
@@ -199,6 +232,7 @@ const newestFiles = (files: ReadonlyArray<Found>): ReadonlyArray<ReviewFile> =>
 
 const newestMtime = (files: ReadonlyArray<Found>) => Math.max(0, ...files.map((f) => f.mtime));
 
+/** Every file a render names, relative to its project folder. */
 const renderFiles = (render: Render): ReadonlyArray<string> => [
   ...Option.toArray(render.files.clip),
   ...Option.toArray(render.files.share),
@@ -208,26 +242,32 @@ const renderFiles = (render: Render): ReadonlyArray<string> => [
   ...render.files.images,
 ];
 
+/** Every file a catalogue names, relative to its project folder. */
 export const namesInProject = (catalogue: Catalogue): ReadonlyArray<string> =>
   Arr.dedupe(catalogue.renders.flatMap(renderFiles));
 
+/** A render's files as the review plays it: its share copy, standing in for its master, then its clip. */
 const playedFiles = (render: Render) => [
   ...Option.toArray(render.files.share),
   ...Option.toArray(render.files.clip),
 ];
 
+/** Every file a catalogue's renders play as video, relative to its project folder. */
 const playedInProject = (catalogue: Catalogue): ReadonlyArray<string> =>
   Arr.dedupe(catalogue.renders.flatMap(playedFiles));
 
+/** A render's video as the review plays it: its share copy, standing in for its master. */
 const renderVideo = (parts: FolderParts<Catalogue>, render: Render) =>
   videoOf(parts, playedFiles(render));
 
+/** Where an address's set sits in its project: the film, then by film time, then the shorts. */
 const placeOf = (render: Render): readonly [number, number] => {
   if (render.address._tag === 'Film') return [0, 0];
   if (render.address._tag === 'Short') return [2, 0];
   return [1, Option.match(render.span, { onNone: () => 0, onSome: (s) => s.from })];
 };
 
+/** An address as a set's title: `film`, `act cold open`, `scene cold`, `scenes a, b`, `short verdict`. */
 const addressTitle = (render: Render): string => {
   const address = render.address;
   if (address._tag === 'Film') return 'film';
@@ -237,6 +277,7 @@ const addressTitle = (render: Render): string => {
   return `scenes ${address.ids.join(', ')}`;
 };
 
+/** What a render is, in a line: its size, its commit, and what was said of it. */
 const renderTag = (catalogue: Catalogue, render: Render): string => {
   const said = commentsOn(catalogue, subjectOf(render)).length;
   return [
@@ -246,6 +287,17 @@ const renderTag = (catalogue: Catalogue, render: Render): string => {
   ].join(' · ');
 };
 
+/**
+ * A film's project folder as the review lists it, from its catalogue: one
+ * render choice point per address its videos draw (the film, then acts and
+ * scenes in film order, then shorts), a variant per render (`main` first)
+ * with the owner's approval and comments on it; its stills, sheets and
+ * captions with the folder. A variant's state, and why it is stale, is the
+ * record's (`recordedNow`): stale when a newer render at its address drew
+ * other sources, or a newer video carries another mix (whether the newest is
+ * current against the film's sources now is the project's, read in a fresh
+ * process). Pure.
+ */
 export const projectFolder = (parts: FolderParts<Catalogue>): ReviewFolder => {
   const catalogue = parts.record;
   const videos = catalogue.renders.filter((r) => r.kind === 'video');
@@ -332,9 +384,11 @@ export const projectFolder = (parts: FolderParts<Catalogue>): ReviewFolder => {
 
 type ManifestSet = ReviewManifest['sets'][string];
 
+/** A set's variant ids: its order first, then the rest it describes, by name. */
 const variantIds = (set: ManifestSet): ReadonlyArray<string> =>
   Arr.dedupe([...set.order, ...Object.keys(set.variants).toSorted()]);
 
+/** The files a manifest variant may be, first first: its `file`, else its share copy, then its master. */
 const variantNames = (clip: string, id: string, set: ManifestSet): ReadonlyArray<string> =>
   Option.match(
     Option.flatMap(Rec.get(set.variants, id), (v) => v.file),
@@ -344,6 +398,11 @@ const variantNames = (clip: string, id: string, set: ManifestSet): ReadonlyArray
     },
   );
 
+/**
+ * Every file a manifest names, relative to its folder, each as the names it
+ * may be found by (one, but a variant with no `file`: its share copy or its
+ * master). A file is there when one of its names is.
+ */
 export const filesInMontage = (manifest: ReviewManifest): ReadonlyArray<ReadonlyArray<string>> => [
   ...[...manifest.docs, ...manifest.images, ...manifest.videos, ...manifest.downloads].map(
     (name) => [name],
@@ -356,9 +415,11 @@ export const filesInMontage = (manifest: ReviewManifest): ReadonlyArray<Readonly
   ),
 ];
 
+/** Every file a manifest names (or may, for a variant with no `file`), relative to its folder. */
 export const namesInMontage = (manifest: ReviewManifest): ReadonlyArray<string> =>
   Arr.dedupe(filesInMontage(manifest).flat());
 
+/** Every file a manifest plays as video (its videos and its sets' variants), relative to its folder. */
 const playedInMontage = (manifest: ReviewManifest): ReadonlyArray<string> =>
   Arr.dedupe([
     ...manifest.videos,
@@ -367,6 +428,13 @@ const playedInMontage = (manifest: ReviewManifest): ReadonlyArray<string> =>
     ),
   ]);
 
+/**
+ * A montage as the review lists it, from its manifest: its sets (in clip
+ * order) as render choice points at no address of a film, each variant it
+ * names with its tag and verdict as its lines, its images in manifest
+ * order, and its videos and docs newest first. Missing files are left out
+ * and each image path appears once. Pure.
+ */
 export const montageFolder = (parts: FolderParts<ReviewManifest>): ReviewFolder => {
   const manifest = parts.record;
   const sets = Object.entries(manifest.sets)
@@ -446,6 +514,7 @@ export const montageFolder = (parts: FolderParts<ReviewManifest>): ReviewFolder 
   };
 };
 
+/** Whether a path under a root (its segments, relative) is one a walk looks at. */
 const walked = (rel: string): boolean => {
   const segments = rel.split('/');
   const dirs = segments.slice(0, -1);
@@ -453,6 +522,12 @@ const walked = (rel: string): boolean => {
   return !dirs.some((d) => d.startsWith('.') || SKIP_DIRS.includes(d));
 };
 
+/**
+ * A folder a walk of the roots finds with a record in it: its ref, where it
+ * is, the record the review reads it by, and so its kind: a project (its
+ * `catalogue.json`; a manifest beside it is not a montage) or a montage (a
+ * `review.json` alone).
+ */
 interface ReviewRecord {
   readonly ref: string;
   readonly dir: string;
@@ -460,6 +535,12 @@ interface ReviewRecord {
   readonly kind: 'project' | 'montage';
 }
 
+/**
+ * Every folder under `roots` with a record, as the review walks them (every
+ * level to `MAX_DEPTH`, past dot-folders and working folders), each folder
+ * once by its ref (the innermost root holding it). The one walk: the index,
+ * the change feed and the MCP's `sets` all read it.
+ */
 export const recordsUnder = Effect.fn('Review.recordsUnder')(function* (
   roots: ReadonlyArray<ReviewRoot>,
 ) {
@@ -494,28 +575,59 @@ export const recordsUnder = Effect.fn('Review.recordsUnder')(function* (
 });
 interface ReviewService {
   readonly roots: ReadonlyArray<ReviewRoot>;
+  /** Every folder under the roots with something to review, newest first; read again when `fresh` or stale. */
   readonly index: (fresh: boolean) => Effect.Effect<ReviewIndex>;
+  /**
+   * A record or a file under the roots was written by another than `say` (a
+   * render recorded, a set published, a project's say in its own run): the
+   * index reads them again on its next ask, as after a set's say.
+   */
   readonly written: Effect.Effect<void>;
+  /**
+   * `film`'s whole-film renders under the roots, newest first, by its
+   * project folders' catalogues: the pictures its options are heard against.
+   */
   readonly pictures: (film: string) => Effect.Effect<ReadonlyArray<ReviewVideo>>;
+  /**
+   * `render`'s video in its project folder `dir`, as the review plays it
+   * (its share copy standing in for its master, and its phone copy's
+   * state); none when the roots do not hold it or it is too big to stream.
+   */
   readonly renderVideo: (dir: string, render: Render) => Effect.Effect<Option.Option<ReviewVideo>>;
+  /** The file `ref` names: inside its root, there, a file the index lists. */
   readonly resolve: (ref: string) => Effect.Effect<string, ReviewFileUnknown>;
+  /** A video's length in seconds (its container's index) and its frame rate, kept per path and mtime. */
   readonly duration: (
     ref: string,
   ) => Effect.Effect<ReviewDuration, ReviewFileUnknown | MediaFailed>;
+  /** A JPEG of the video at `at` seconds (10% in when none), `width` wide, from the cache. */
   readonly frame: (
     ref: string,
     at: Option.Option<number>,
     width: number,
   ) => Effect.Effect<string, ReviewFileUnknown | ReviewToolFailed | MediaFailed>;
+  /** The video's phone copy, when it is made; refused once the lab tried and could not make it. */
   readonly phone: (
     ref: string,
   ) => Effect.Effect<Option.Option<string>, ReviewFileUnknown | PhoneCopyFailed>;
+  /**
+   * A derived file in the cache at `name` (`mix/<key>.m4a`): there already, or
+   * made by `make` into the partial path it is given (`writeWhole`: its name
+   * is not the file's, so `make` names its format) and renamed into place
+   * when it succeeds. One maker per name at a time: a caller that may be
+   * asked twice at once runs it through `once`.
+   */
   readonly derive: <E, R>(
     name: string,
     make: (temporary: string) => Effect.Effect<void, E, R>,
   ) => Effect.Effect<string, E | ReviewToolFailed, R>;
 }
 
+/**
+ * `effect` run once per `key` in `running` (a FiberMap in the service's
+ * scope): an ask while it runs joins it, and a caller that stops waiting
+ * leaves it running. The map drops a fiber when it ends.
+ */
 export const once = <K, A, E>(
   running: FiberMap.FiberMap<K, A, E>,
   key: K,
@@ -528,8 +640,10 @@ export const once = <K, A, E>(
     }),
   );
 
+/** How many lengths the review keeps: every video a long review shows, with room. */
 const LENGTHS_KEPT = 4096;
 
+/** Every file ref a folder of the index lists: its sets' videos and notes, and what is in no set. */
 const refsIn = (folder: ReviewFolder): ReadonlyArray<string> => [
   ...folder.sets.flatMap((set) => [
     ...seenVariants(set).map((seen) => seen.video.ref),
@@ -563,6 +677,7 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
             Effect.option,
           );
 
+        /** `file` as it stands now: its mtime, or 0 for a file not there, the key of what is read or made from it. */
         const standing = (file: string) =>
           Effect.map(
             statOf(file),
@@ -587,6 +702,7 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
           });
         });
 
+        /** Whether the index lists `ref`: as it stands, or read again once when it does not. */
         const listed = Effect.fn('Review.listed')(function* (ref: string) {
           const lists = (index: ReviewIndex) =>
             index.folders.some((folder) => refsIn(folder).includes(ref));
@@ -629,6 +745,12 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
             return out;
           });
 
+        /**
+         * Each video's length and frame rate, one read of it (`Media.timing`:
+         * its own, never rounded; none for a file with no video), by path and
+         * mtime, the newest kept; a failed read is kept too, so a file that
+         * cannot be read is read once while it stands.
+         */
         const lengths = yield* fileCache(
           (at) => Effect.result(media.timing(at.file)),
           LENGTHS_KEPT,
@@ -639,8 +761,10 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
           return yield* lengthOf(yield* standing(yield* resolve(ref)));
         });
 
+        /** The frames being made, by name: a scrub that asks for one twice makes it once. */
         const framing = yield* FiberMap.make<string, string, ReviewToolFailed | MediaFailed>();
 
+        /** The cache file's name for what is made from `file` as it stands, with `rest`. */
         const sourceKey = (file: string, rest: ReadonlyArray<string | number>) =>
           Effect.map(standing(file), (at) => madeFromName(at, rest));
 
@@ -680,6 +804,12 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
           return Option.liftPredicate(out, () => there);
         });
 
+        /**
+         * Whether `video` plays as its phone copy: too big to stream whole, or
+         * too dense to play as made (its bytes over its own length, a read of
+         * it kept by `lengths`, over `phoneRate`; a video whose length cannot
+         * be read is judged by its size alone).
+         */
         const copied = (video: Found) => {
           if (video.size > config.phoneOver) return Effect.succeed(true);
           const at = new AtMtime({ file: video.path, mtime: video.mtime });
@@ -740,6 +870,7 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
           }
         });
 
+        /** A record decoded, or none (with a warning) when it does not. */
         const decodeRecord = <A>(file: string, codec: Schema.Codec<A, string>) =>
           fs.readFileString(file).pipe(
             Effect.flatMap(Schema.decodeEffect(codec)),
@@ -752,6 +883,11 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
             ),
           );
 
+        /**
+         * The named files, and the phone state of those among them the review
+         * plays as video (`played`); any other (an image, captions, notes, a
+         * download) is never read for its length and has none.
+         */
         const lookIn = Effect.fn('Review.lookIn')(function* (
           dir: string,
           names: ReadonlyArray<string>,
@@ -783,6 +919,7 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
           return { parts, pending };
         });
 
+        /** A folder the index lists by its record, the videos waiting for phone copies, and its film's pictures. */
         const folderAt = Effect.fn('Review.folderAt')(function* (file: string) {
           const dir = path.dirname(file);
           if (path.basename(file) === CATALOGUE_FILE) {
@@ -835,6 +972,7 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
             (f.downloads?.length ?? 0) >
           0;
 
+        /** What a read of the roots found: the index, and each film's pictures, newest first. */
         interface Read {
           readonly index: ReviewIndex;
           readonly pictures: ReadonlyMap<string, ReadonlyArray<ReviewVideo>>;
@@ -922,6 +1060,12 @@ export class Review extends Context.Service<Review, ReviewService>()('@manna/fil
       }),
     );
 
+  /**
+   * The review's config from the environment: `FILM_REVIEW_ROOTS` (see
+   * `parseRoots`; the app's `defaults` when unset), then any
+   * `FILM_REVIEW_EXTRA_ROOTS` beside them, `FILM_REVIEW_CACHE` (default
+   * `~/.cache/film-review`) and `FILM_REVIEW_PHONE` (`off` makes no phone copies).
+   */
   static readonly layerConfig = <R>(defaults: Effect.Effect<ReadonlyArray<ReviewRoot>, never, R>) =>
     Layer.unwrap(
       Effect.gen(function* () {

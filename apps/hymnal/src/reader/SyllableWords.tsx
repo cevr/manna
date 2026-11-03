@@ -1,3 +1,44 @@
+/**
+ * A sung line drawn as its syllables, chords on or off: a row of words that
+ * wraps between words, each word kept together on one row, with a muted
+ * hyphen between the syllables of one word. The row is indented and its
+ * first word pulled back to the line's start, so a wrapped line hangs
+ * (`HangingLine` does the same for a Plain part's words).
+ *
+ * With chords off, a word is one
+ * text: its syllables are spans of it, each with its own colour, and the
+ * words sit a space apart, as the page's words do. With chords on at either
+ * alignment level, each syllable with a chord over it is a box with its chords over
+ * it (`over`), the words a fixed gap apart; a box widened by a long chord
+ * stretches the hyphen after it; a box that can hold no chord keeps its
+ * hyphen as a span of its text. The chordless syllables that follow a
+ * chordless syllable of the same word join its box as spans of its text, so
+ * they keep the places they had as boxes of their own. A box with no chord
+ * has an empty view as tall as a chord row in its chord's place, and every
+ * box stands on its syllables' foot, so the syllables keep one baseline. A
+ * page draws about one native view a word or a chord, not four a syllable.
+ *
+ * Each text names its first syllable (`syllable-p-l-s`): on the web every
+ * syllable keeps its own id, as a span; on iOS a span is no element, so a
+ * syllable inside a word's text or a joined box is found by its text's id.
+ *
+ * Unboxed, the row is one accessible element that reads the whole line as
+ * words (`label`); the syllables and hyphens are not read on their own.
+ * Boxed, the row is not one element, so each chord keeps its own id on iOS
+ * (`chord-p-l-s`) and each box's label reads its syllables under its chords,
+ * without the visual join or trailing hyphens. While
+ * the line is sung (`follow/`), it is `selected`, its syllables take the
+ * muted colour and the sung syllable the accent: a change of colour only, so
+ * nothing moves. A line the timing gives no syllable times (held to even
+ * shares, not played, or a line-level line its other singings lay
+ * elsewhere; `vite/timing.ts`) is highlighted whole, in the accent on a soft
+ * tint.
+ *
+ * A syllable's text takes no touch, so a tap in the target of the chord over
+ * it (`chordSlop`, 44 points tall) opens that chord wherever the syllable
+ * lies under it; a drag that starts there still scrolls or turns the page.
+ */
+
 import { Array as Arr, Option } from 'effect';
 import { Fragment, type ReactNode } from 'react';
 import {
@@ -18,6 +59,7 @@ import { WithIntro } from '~/follow/IntroLine';
 
 import { usePageText } from './pageText';
 
+/** A syllable of a line: its box, and its place in the line from 0. */
 interface Placed {
   readonly box: Box;
   readonly s: number;
@@ -32,10 +74,14 @@ export function SyllableLine({
   over,
 }: {
   readonly words: ReadonlyArray<Word>;
+  /** The line's words as printed: what a screen reader reads. */
   readonly label: string;
+  /** The line's place, `p-l`: its syllables are `syllable-p-l-s`. */
   readonly at: string;
+  /** The line's place in the hymn as sung, from 0: its mark in the follow. */
   readonly index: number;
   readonly style: StyleProp<TextStyle>;
+  /** What sits over each syllable, its place `p-l-s` given: its chords, when the line is boxed. */
   readonly over: Option.Option<(box: Box, place: string) => ReactNode>;
 }) {
   const { fontScale } = useWindowDimensions();
@@ -44,11 +90,13 @@ export function SyllableLine({
   const starts = wordStarts(words);
   const boxed = Option.isSome(over);
   const textStyle = [style, text.words];
+  /** The muted hyphen between two syllables of one word, as a span of the text before it. */
   const hyphen = (
     <Text style={styles.muted} aria-hidden>
       -
     </Text>
   );
+  /** A run of syllables as one text: the first its own colour, each later one a span after a muted hyphen. */
   const run = (syllables: Arr.NonEmptyReadonlyArray<Placed>, after: ReactNode) => {
     const first = Arr.headNonEmpty(syllables);
     return (
@@ -130,6 +178,13 @@ export function SyllableLine({
   );
 }
 
+/**
+ * A word's syllables in boxes: each syllable with a chord (and the line's
+ * first, which may hold a chord over from the line before) starts a box, and
+ * so does a chordless syllable after one; a chordless syllable after a
+ * chordless one joins its box. A box with no chord is as wide as its text,
+ * so the joined syllables sit where their own boxes stood.
+ */
 const boxesOf = (
   word: Arr.NonEmptyReadonlyArray<Placed>,
 ): ReadonlyArray<Arr.NonEmptyReadonlyArray<Placed>> =>
@@ -144,11 +199,13 @@ const boxesOf = (
     Arr.of(Arr.of(Arr.headNonEmpty(word))),
   );
 
+/** An unboxed line is one element read by its words; a boxed one leaves its chords their own ids. */
 const readAs = (boxed: boolean, label: string) => {
   if (boxed) return { accessible: false };
   return { accessible: true, 'aria-label': label };
 };
 
+/** Each word's first syllable's place in its line, from 0. */
 const wordStarts = (words: ReadonlyArray<Word>): ReadonlyArray<number> =>
   words.reduce<Array<number>>(
     (starts, word, w) => [...starts, (starts[w - 1] ?? 0) + (words[w - 1]?.length ?? 0)],

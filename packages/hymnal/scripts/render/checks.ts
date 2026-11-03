@@ -1,29 +1,51 @@
+/**
+ * What each recording must be before it joins the set, measured on the MP3
+ * as a player decodes it. Every check is a reason to fail the hymn, and the
+ * record keeps each one's value beside its limit. Pure.
+ */
+
 import { momentaryBlocks, type Pcm } from '@manna/film/measure';
 
 export const LIMITS = {
+  /** The decoded length is the MIDI's plus the tail within this, in seconds. */
   length: 0.05,
+  /** dBTP, FFmpeg's ebur128 with `peak=true`. */
   truePeak: -1,
+  /** LU either side of the target, by the film's meter. */
   loudness: 1,
+  /** LU the film's meter and ebur128 may differ. */
   meters: 0.1,
+  /** No decoded sample's magnitude reaches this. */
   clip: 0.999,
+  /** While the MIDI sounds, no run of momentary blocks under `quiet` LUFS lasts longer than this, in seconds. */
   silence: 1,
   quiet: -45,
+  /** The first 10 ms window over `onsetDb` dBFS falls within this of the first note-on, in ms. */
   lag: 30,
   onsetDb: -50,
+  /**
+   * Peak resident memory, bytes: the piano's sampler, any other sampler, the
+   * render's own process. The render's cap is the owner's (2026-10-22): its
+   * peak moves with when the collector runs, up to 1.17 GB with four runs at
+   * once, over a mean of 0.36 GB.
+   */
   memory: { piano: 3.0e9, sampler: 0.5e9, render: 1.5e9 },
 } as const;
 
+/** One check: whether it passed, what was measured and what it was held to. */
 export interface Check {
   readonly ok: boolean;
   readonly value: number;
   readonly limit: number;
 }
 
+/** A span of seconds. */
 export interface Span {
   readonly from: number;
   readonly to: number;
 }
 
+/** Overlapping or touching spans joined, by start. */
 export const merged = (spans: ReadonlyArray<Span>): Span[] => {
   const out: Span[] = [];
   for (const span of [...spans].sort((a, b) => a.from - b.from)) {
@@ -37,6 +59,10 @@ export const merged = (spans: ReadonlyArray<Span>): Span[] => {
 
 const WINDOW = 0.01;
 
+/**
+ * Where the recording first sounds, in seconds: the start of the first 10 ms
+ * window whose power, averaged over the channels, is over `db` dBFS.
+ */
 export const firstSound = (pcm: Pcm, db: number): number | undefined => {
   const size = Math.round(WINDOW * pcm.rate);
   const floor = 10 ** (db / 10);
@@ -49,6 +75,7 @@ export const firstSound = (pcm: Pcm, db: number): number | undefined => {
   return undefined;
 };
 
+/** The longest run of momentary blocks under `quiet` LUFS whose middles fall where a note sounds, in seconds. */
 export const longestQuiet = (pcm: Pcm, sounding: ReadonlyArray<Span>, quiet: number): number => {
   const spans = merged(sounding);
   const isSounding = (t: number) => spans.some((s) => t >= s.from && t < s.to);
@@ -64,6 +91,7 @@ export const longestQuiet = (pcm: Pcm, sounding: ReadonlyArray<Span>, quiet: num
   return longest;
 };
 
+/** The largest sample magnitude. */
 export const samplePeak = (pcm: Pcm) => {
   let peak = 0;
   for (const plane of pcm.channels)
@@ -71,6 +99,7 @@ export const samplePeak = (pcm: Pcm) => {
   return peak;
 };
 
+/** What the master and the meters measured of one hymn, and what its stems and samplers did. */
 export interface Measured {
   readonly seconds: number;
   readonly expectedSeconds: number;
@@ -81,6 +110,7 @@ export interface Measured {
   readonly peak: number;
   readonly longestQuiet: number;
   readonly lagMs: number;
+  /** Each stem with notes: its loudness, its frames, and the frames through its own last note-off (`expectedOf` in `record.ts`). */
   readonly stems: ReadonlyArray<{
     readonly lufs: number;
     readonly frames: number;
@@ -91,6 +121,7 @@ export interface Measured {
 
 const check = (ok: boolean, value: number, limit: number): Check => ({ ok, value, limit });
 
+/** Every check of one hymn, by name. */
 export const checksOf = (m: Measured) => ({
   length: check(
     Math.abs(m.seconds - m.expectedSeconds) <= LIMITS.length,

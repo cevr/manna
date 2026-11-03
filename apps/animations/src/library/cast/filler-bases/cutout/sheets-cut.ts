@@ -14,16 +14,20 @@ import { CUTS, cutOptionsFor, paperOf } from './cut.ts';
 import KEPT from '../cast-sheet/kept/poses.png' with { type: 'file' };
 import { FRAMES, type FramedView, boxOf } from './frames.ts';
 
+/** The sheets folder it writes: its one argument, else its own `sheets/` (the cast build passes a scratch folder to check it). */
 const sheetsFolder = Stdio.Stdio.use(({ args }) =>
   Effect.map(args, (a) => Option.getOrElse(Arr.head(a), () => `${import.meta.dir}/sheets`)),
 );
 
 type Rgb = readonly [number, number, number];
 
+/** Undyed linen, the crowd's base cloth (`docs/casting.md` §2.6). */
 const LINEN: Rgb = [0xd1, 0xc6, 0xb4];
 
+/** Old hair: the pale cool paper, never robe white (`.claude/skills/film/reference/character-design.md`, the plain lead's pale cool paper). */
 const PALE_COOL: Rgb = [0xdb, 0xd6, 0xdc];
 
+/** Each view's dye, by part: the colour its pale px are carried to. A part it does not name is written as drawn. */
 const DYES: Readonly<Record<FramedView, Readonly<Record<string, Rgb>>>> = {
   'poses-1': { torso: LINEN },
   'poses-2': { torso: LINEN },
@@ -31,15 +35,19 @@ const DYES: Readonly<Record<FramedView, Readonly<Record<string, Rgb>>>> = {
   'poses-4': { head: PALE_COOL, torso: LINEN },
 };
 
+/** A px is ground to the outside's flood where its luminance is this or more: the paper and the pale side of the outline's rim. */
 const GROUND = 90;
 
+/** A px counts toward a part's base where its luminance is this or more and it takes all the dye: its cloth or hair, not an ink blend. */
 const PALE = 150;
 
+/** The luminance of `r`'s px `i`. */
 const lumOf = (r: Raster, i: number) =>
   0.299 * (r.rgba[i * 4] ?? 0) +
   0.587 * (r.rgba[i * 4 + 1] ?? 0) +
   0.114 * (r.rgba[i * 4 + 2] ?? 0);
 
+/** How much of the dye a px takes by its saturation, (max − min) / max: all of it at 0.30 or less, none at 0.45 or more, and in between in proportion. */
 const weightOf = (r: number, g: number, b: number) => {
   const max = Math.max(r, g, b);
   if (max === 0) return 0;
@@ -47,6 +55,11 @@ const weightOf = (r: number, g: number, b: number) => {
   return Math.min(1, Math.max(0, (0.45 - saturation) / 0.15));
 };
 
+/**
+ * The px of `view` the outside reaches (1): a flood from its top, left and
+ * right edges through px of luminance `GROUND` or more. Its foot, the bust's
+ * open waist, lets nothing in, as the cut's figure reads it with that row closed.
+ */
 const outsideOf = (view: Raster): Uint8Array => {
   const { width: w, height: h } = view;
   const out = new Uint8Array(w * h);
@@ -73,8 +86,15 @@ const outsideOf = (view: Raster): Uint8Array => {
   return out;
 };
 
+/** The median of `values`, which it sorts. */
 const medianOf = (values: Array<number>) => values.sort((a, b) => a - b)[values.length >> 1] ?? 0;
 
+/**
+ * `part` dyed to `to` where `inside` holds: each channel of each px scaled by
+ * 1 − w + w·to/base, w its `weightOf`, base the per-channel median of the
+ * part's px inside that take all the dye and are `PALE` or lighter. None when
+ * the part has no such px.
+ */
 const dyed = (
   part: Raster,
   inside: Uint8Array,
@@ -106,6 +126,7 @@ const dyed = (
   return Option.some({ raster: { width: w, height: h, rgba: out }, base });
 };
 
+/** The `[x0, y0, x1, y1]` box of `sheet`, its far edges exclusive. */
 const cropOf = (
   sheet: Raster,
   [x0, y0, x1, y1]: readonly [number, number, number, number],
@@ -120,6 +141,7 @@ const cropOf = (
   return { width: w, height: h, rgba };
 };
 
+/** A colour as `r,g,b`. */
 const rgbText = ([r, g, b]: Rgb) => `${r},${g},${b}`;
 
 const cutView = (sheet: Raster, name: FramedView, sheets: string) =>

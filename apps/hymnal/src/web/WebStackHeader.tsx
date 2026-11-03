@@ -1,3 +1,12 @@
+/**
+ * The web's header for the app's stack. One's web stacks are headless, so
+ * this draws, on any screen over the stack's first, a back link to it (that
+ * screen carries its own heading) and the screen's own header buttons
+ * (`headerRight`, as a phone's header draws them); the first screen draws
+ * its own title. On
+ * a phone the native header is used and this is never rendered.
+ */
+
 import { Option, Predicate } from 'effect';
 import { type Href, Link, useStack } from 'one';
 import type { ReactNode } from 'react';
@@ -17,6 +26,7 @@ export function WebStackHeader({ root, title }: { readonly root: Href; readonly 
   );
 }
 
+/** The screen's header buttons, from its `headerRight` option, if it has one. */
 const rightOf = (options: { readonly headerRight?: unknown }): ReactNode =>
   Option.liftPredicate(options.headerRight, Predicate.isFunction).pipe(
     Option.map((right): ReactNode => right({})),

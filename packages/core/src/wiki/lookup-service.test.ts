@@ -1,3 +1,21 @@
+/** Milestone 7 core acceptance (§10).
+ *
+ *  The milestone's acceptance list, claim by claim:
+ *
+ *  1. each resolver group populates independently;
+ *  2. an empty group is present-and-empty, not absent;
+ *  3. `context` inside a verse produces the Strong's group and omitting
+ *     `context` does not;
+ *  4. a lone topic hit is flagged for peek-card treatment.
+ *
+ *  The fixture is "the daily" against Daniel 8 — the phrase §7's own CLI example
+ *  names, and the phrase the §4.5 regression pair in `phrase-fixture.ts` is
+ *  built around — wired against the same four `WikiSectionSources` a topic page
+ *  composes from, so the groups are resolved through the services a host really
+ *  provides rather than through five stubs that could agree with each other and
+ *  with nothing else.
+ */
+
 import { Effect, Exit, Layer, Option, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
@@ -46,6 +64,8 @@ const paragraph = (input: {
   bookCode: input.code,
 });
 
+/** Ten paragraphs carrying the phrase, two past `LOOKUP_HIT_LIMIT`, so the cap
+ *  is a real truncation rather than a number that happens to exceed the data. */
 const WRITINGS_MATCHES = LOOKUP_HIT_LIMIT + 2;
 
 const PARAGRAPHS = [
@@ -59,6 +79,7 @@ const PARAGRAPHS = [
   paragraph({ code: 'PP', refcode: 'PP 1.1', text: 'The creation of the world.' }),
 ];
 
+/** Daniel 8:11 and enough neighbours to push the verse group past its cap. */
 const VERSES = [
   {
     book: DANIEL,
@@ -83,6 +104,11 @@ const VERSES = [
   },
 ];
 
+/** Daniel 8:11's words, as `verse_words` stores them.
+ *
+ *  "the daily" carries H8548 (*tamid*), which is the word the Strong's group is
+ *  supposed to find under a context; "prince" carries a second number so a
+ *  selection covering only one word cannot accidentally report both. */
 const WORDS: readonly VerseWord[] = [
   { text: 'the prince', strongsNumbers: ['H8269'], italic: false },
   { text: 'the daily', strongsNumbers: ['H8548'], italic: false },
@@ -119,6 +145,8 @@ const catalogTopic = (id: string, name: string): TopicDetail =>
     sections: [],
   });
 
+/** Two catalog topics: one the phrase reaches and one it does not, so the
+ *  catalog group is proved to be filtered rather than merely non-empty. */
 const CATALOG = [
   catalogTopic('the-daily', 'The Daily'),
   catalogTopic('the-creation', 'The Creation'),
@@ -132,6 +160,11 @@ const entry = (display: string, slug: string): PhraseDictionaryEntry =>
     canonical: true,
   });
 
+/** The dictionary the topic group resolves against.
+ *
+ *  `the daily sacrifice` is here so the prefix half of the fuzzy rule has
+ *  something to match, and `sanctuary` so a selection that names neither
+ *  produces an empty topic group. */
 const DICTIONARY = PhraseDictionary.make({
   entries: [
     entry('the daily', 'the-daily'),
@@ -142,6 +175,12 @@ const DICTIONARY = PhraseDictionary.make({
   unavailable: Option.none(),
 });
 
+/** A `WikiService` that serves only the dictionary.
+ *
+ *  The topic group's whole input is `WikiService.dictionary`, and the artifact
+ *  machinery that produces a real one is `service.test.ts`'s subject rather
+ *  than this file's. Stubbing the one read keeps the fixture about lookup
+ *  resolution instead of about SQLite. */
 const wikiLayer = (dictionary: PhraseDictionary): Layer.Layer<WikiService> =>
   Layer.succeed(
     WikiService,
@@ -178,6 +217,16 @@ const sourcesLayer = WikiSectionSources.Live.pipe(
   ),
 );
 
+/** The same four sources with nothing in any of them.
+ *
+ *  A second layer rather than a query the fixtures happen not to match, because
+ *  `EGWParagraphDatabase.Test`'s `searchParagraphs` is deliberately query-blind
+ *  — it filters by scope and publication and returns every paragraph otherwise
+ *  (`book-database.ts:1454`, `testSearchMatches:170`). Against that double,
+ *  "the writings group is empty because the phrase is absent" is not a claim a
+ *  fixture phrase can make; an empty library is what actually makes it true.
+ *  The Bible and catalog doubles *do* filter, so their emptiness here is the
+ *  real thing. */
 const emptySourcesLayer = WikiSectionSources.Live.pipe(
   Layer.provide(TopicService.Test([])),
   Layer.provide(BibleDatabase.layerTest({})),
@@ -314,6 +363,8 @@ describe("LookupService.resolve — the Strong's group and its context (§7)", (
 });
 
 describe('LookupService.resolve — the lone topic hit (§7, §5)', () => {
+  /** A dictionary of one phrase that no other source holds, so the topic group
+   *  is the only group with anything in it. */
   const loneDictionary = PhraseDictionary.make({
     entries: [entry('zzzz nothing here', 'lone-topic')],
     unavailable: Option.none(),
@@ -472,6 +523,8 @@ describe('LookupService.resolve — the catalog group and its status', () => {
 });
 
 describe('LookupService.resolve — words are the §4.3 scan the matcher uses', () => {
+  /** The authored alias from `content/topics/three-angels-messages.md`, which
+   *  the corpus reaches almost exclusively as "the third angel's message". */
   const angels = PhraseDictionary.make({
     entries: [entry('third angel', 'three-angels-messages')],
     unavailable: Option.none(),

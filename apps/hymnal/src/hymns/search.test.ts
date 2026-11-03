@@ -1,3 +1,12 @@
+/**
+ * Search's rules, each on a small hymnal of invented words made here, so
+ * each rule is seen alone and no hymn's words are in this file or printed
+ * by it. The sweeps over the real compiled hymnal (every hymn by number
+ * and title, every word typed alone, seeded half-remembered lines) are in
+ * `search.property.slow.test.ts`; each check here compares hymn numbers,
+ * counts and booleans.
+ */
+
 import { fold } from '@manna/hymnal/fold';
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
@@ -5,6 +14,7 @@ import { Option } from 'effect';
 import { find, indexOf, oneEdit, search } from './search';
 import type { HymnText } from './text';
 
+/** A hymn of one stanza, its first line the stanza's first. */
 const hymn = (number: number, title: string, stanza: ReadonlyArray<string>): HymnText => ({
   number,
   title,
@@ -36,6 +46,7 @@ const hymnal: ReadonlyArray<HymnText> = [
 ];
 const index = indexOf(hymnal);
 const numbers = (query: string) => search(index, query).map((h) => h.number);
+/** The line, folded, that hymn `number` was found by for `query`. */
 const lineOf = (query: string, number: number) =>
   Option.map(
     Option.flatMap(

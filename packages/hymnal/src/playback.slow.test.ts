@@ -139,6 +139,7 @@ const refrainFaults = (
   return faults;
 };
 
+/** One independent alignment per stanza, shared by the timing and placement oracles. */
 const alignedStanzas = (score: Score.Score, source: Parameters<typeof compile>[0]) => {
   const stanzas = source.verses.filter((v) => v.id >= 0).toSorted((a, b) => a.id - b.id);
   const refrain = source.verses.find((v) => v.id < 0);
@@ -211,6 +212,7 @@ const referenceStrongAfter = (grid: Placement.Grid, from: number, end: number) =
   return from;
 };
 
+/** Independent event-list oracle. It never calls the production placement rules. */
 const expectedChanges = (
   line: Placement.Line,
   grid: Placement.Grid,

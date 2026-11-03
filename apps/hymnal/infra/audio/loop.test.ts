@@ -1,3 +1,8 @@
+/**
+ * Hymn 663 plays from the set `warm-2` in every key, which holds that hymn
+ * alone; every other hymn plays from `warm-1` as before. The upload accepts a
+ * `warm-2` manifest of exactly hymn 663, and still a whole `warm-1`.
+ */
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect } from 'effect';
 import type { RecordingManifest } from '@manna/hymnal/recording-manifest';
@@ -6,6 +11,7 @@ import { audioKey, audioUrl } from '../../src/remote.ts';
 import { SDAH_HYMNS } from './plan.ts';
 import { manifestRefusals } from './upload-plan.ts';
 
+/** The set `base` moved `offset` semitones: `warm-2-up3`, `warm-1-down2`; 0 is `base`. */
 const setOf = (base: string, offset: number) => {
   let set = base;
   if (offset > 0) set = `${base}-up${offset}`;

@@ -1,6 +1,7 @@
 import type { JSX } from '@solidjs/web';
 import { type Accessor, createContext, createSignal, onCleanup, useContext } from 'solid-js';
 
+/** Each registered item's element and its index. */
 export type CompositeIndexMap = Map<Element, number>;
 
 interface CompositeListRegistration {
@@ -11,6 +12,7 @@ interface CompositeListContextValue {
   register: (node: Element, registration: CompositeListRegistration) => void;
   unregister: (node: Element) => void;
   subscribeMapChange: (fn: (map: CompositeIndexMap) => void) => () => void;
+  /** The next item's index in render order: upstream's `nextIndexRef`. */
   guessIndex: () => number;
 }
 
@@ -29,7 +31,9 @@ interface CompositeListItemEntry {
 
 interface CompositeListProps {
   children?: JSX.Element;
+  /** The items' elements by index: list navigation's `listRef`. */
   elementsRef: { current: Array<HTMLElement | null> };
+  /** The items' labels by index: typeahead's `listRef`. */
   labelsRef?: { current: Array<string | null> } | undefined;
   onMapChange?: ((map: CompositeIndexMap) => void) | undefined;
 }
@@ -63,6 +67,7 @@ function hasMovedNode(entries: MutationRecord[]) {
   return false;
 }
 
+/** The connected items in document order, each with its index there. */
 function getSnapshot(map: Map<Element, CompositeListRegistration>) {
   const items: CompositeListItemEntry[] = [];
   map.forEach((registration, node) => {
@@ -206,15 +211,26 @@ export function CompositeList(props: CompositeListProps): JSX.Element {
 }
 
 interface UseCompositeListItemParameters {
+  /** The typeahead label; the element's text when not given. */
   label?: string | null | undefined;
+  /**
+   * Whether the index starts at the item's place in render order, before its
+   * element registers (-1 otherwise): right for a flat list rendered in
+   * document order, which the server then renders with its indices.
+   */
   guess?: boolean | undefined;
 }
 
 interface UseCompositeListItemReturnValue {
+  /** Pass to the item element's `ref`. */
   ref: (node: HTMLElement | null) => void;
   index: Accessor<number>;
 }
 
+/**
+ * Registers an item in the enclosing `CompositeList`; its index follows its
+ * document position, from its render order's guess until then with `guess`.
+ */
 export function useCompositeListItem(
   params: UseCompositeListItemParameters = {},
 ): UseCompositeListItemReturnValue {

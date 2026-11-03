@@ -38,6 +38,7 @@ import {
   skinHandProp,
 } from './rigs/rigs.ts';
 
+/** The rigs a court scene declares (`drawing({ rigs: COURT_RIGS })`). */
 export const COURT_RIGS = {
   lead: leadProp,
   leadHand: leadHandProp,
@@ -46,6 +47,7 @@ export const COURT_RIGS = {
   skinHand: skinHandProp,
 } as const;
 
+/** The rigs the landing's court declares: the court's, and Christ beside the accused. */
 export const LANDING_RIGS = {
   ...COURT_RIGS,
   christ: christProp,
@@ -57,8 +59,10 @@ export const LANDING_RIGS = {
   christHandOut4: christHandOutProps[3],
 } as const;
 
+/** A circle hand's rig: a figure's paper, or Christ's held out a step bigger. */
 type HandRig = 'leadHand' | 'skinHand' | 'christHand' | `christHandOut${1 | 2 | 3 | 4}`;
 
+/** What drawing the court needs of a frame: its context, its boil tick and its seconds, and the rigs. */
 export interface CourtFrame {
   readonly ctx: CanvasRenderingContext2D;
   readonly t: number;
@@ -84,21 +88,30 @@ type JudgeNumbers = Record<keyof typeof JUDGE_KNOBS, number>;
 type ProsecutorNumbers = Record<keyof typeof PROSECUTOR_KNOBS, number>;
 type ChristNumbers = Record<keyof typeof CHRIST_KNOBS, number>;
 
+/** The seal: where it is (its centre, Board pixels), its turn, its size, and how far it shows. */
 export interface SealPose {
   x: number;
   y: number;
   rot: number;
   scale: number;
   shown: number;
+  /** A glint crossing its gold, 0..1 (0: none). */
   glint: number;
 }
 
+/**
+ * One frame of the court: every figure's numbers and hands, the gavel, the
+ * evidence and the seal; in the landing, Christ beside the accused and the
+ * seeds in their hands.
+ */
 export interface CourtPose {
   readonly lead: {
     numbers: LeadNumbers;
     hands: [Pt, Pt];
     seal: SealPose;
+    /** How far he stands off his place in the dock, Board pixels (the landing makes room beside him). */
     dx: number;
+    /** How far he stands back behind Christ, as court.you sets him (0: beside Him; 1: a pace back, smaller and behind Him). */
     back: number;
     seed: SeedPose;
   };
@@ -106,6 +119,7 @@ export interface CourtPose {
     numbers: ProsecutorNumbers;
     hands: [Pt, Pt];
     carried: CarriedSheet;
+    /** Whether he stands at his table: 0 his place empty. */
     shown: number;
   };
   readonly judge: {
@@ -113,21 +127,29 @@ export interface CourtPose {
     hands: [Pt, Pt];
     grip: [number, number];
     rot: number;
+    /** How bright the bench glows gold from within: 0 not at all. */
     glow: number;
   };
   readonly christ: {
     numbers: ChristNumbers;
     hands: [Pt, Pt];
+    /** Whether He stands beside the accused: 0 not there. */
     shown: number;
+    /** Whether He has turned to us (court.you): 1 His head as court.you draws it, facing the viewer. */
     front: number;
+    /** His near hand's size against its rest, as He holds it out toward us. */
     reach: number;
     seed: SeedPose;
   };
+  /** How many sheets lie on the stack (its last may be partway down, the fraction). */
   stack: number;
+  /** Whether the two laid sheets lie on the table. */
   laid: number;
+  /** How far the bench's light has run over the sheets, blotting their scribble out (0..1). */
   blot: number;
 }
 
+/** A sheet in the prosecutor's hand: where it is, its turn, and whether he holds one. */
 export interface CarriedSheet {
   x: number;
   y: number;
@@ -135,6 +157,7 @@ export interface CarriedSheet {
   shown: number;
 }
 
+/** Where the lead's hands hang at his sides, at his sleeves' ends, and the prosecutor's and judge's at rest. */
 export const HANDS = {
   lead: [
     [PLACE.lead[0] + LEAD_ARMS.left.rest[0], PLACE.lead[1] + LEAD_ARMS.left.rest[1]],
@@ -148,17 +171,20 @@ export const HANDS = {
     [1192, BENCH_TOP - 6],
     [1360, BENCH_TOP - 6],
   ],
+  /** Christ's, on the dock's rail beside the lead, where court-12 sets them. */
   christ: [
     [390, 576],
     [546, 573],
   ],
 } as const satisfies Record<string, readonly [Pt, Pt]>;
 
+/** The gavel lying on the bench: its grip, and its turn (its head up and to the left). */
 export const GAVEL_REST = { grip: [1132, 364], rot: 0.57 } as const satisfies {
   readonly grip: Pt;
   readonly rot: number;
 };
 
+/** The court at rest: everyone in their place, nothing moving. A fresh pose (a scene keeps one and rewrites it). */
 export const restPose = (): CourtPose => ({
   lead: {
     numbers: { ...LEAD_KNOBS },
@@ -194,6 +220,7 @@ export const restPose = (): CourtPose => ({
   blot: 0,
 });
 
+/** Where the stain's middle is on the lead as he leans `lean`, Board pixels: where the seal presses. */
 export const stainAt = (lean: number): Pt => {
   const [fx, fy] = PLACE.lead;
   const { x, y } = LEAD.stain;
@@ -202,8 +229,16 @@ export const stainAt = (lean: number): Pt => {
   return [fx + x * c - y * s, fy + x * s + y * c];
 };
 
+/** The seal's measures, units: its wax, the ring pressed round the R, the R, and its ribbon's scale. */
 const SEAL = { wax: 23, ring: 16, letter: 22, ribbon: 0.85 } as const;
 
+/**
+ * The gold wax seal with its ribbon tail, the R pressed into its wax: at its
+ * pose, over his stain, smaller than the stain so its scarlet shows round it.
+ * A glint crosses the wax under the ring and the R, so the R stays clear.
+ * Its lines and its R are the prop's own marks, under any card, so they are
+ * drawn `unprobed`.
+ */
 export const seal = (ctx: CanvasRenderingContext2D, s: SealPose) => {
   if (s.shown <= 0) return;
   ctx.save();
@@ -280,19 +315,30 @@ export const seal = (ctx: CanvasRenderingContext2D, s: SealPose) => {
   ctx.restore();
 };
 
+/**
+ * A circle hand of `rig` at `p`, drawn `size` times the hand rig: its size is
+ * the pose's, so the hand reads the shot its figure stands in.
+ */
 const handAt = (f: CourtFrame, rig: HandRig, p: Pt, size: number) =>
   at(f.ctx, { x: p[0], y: p[1] }, () =>
     f.rive(rig, { timelines: [['boil', boilTime(f.boil)]], size }),
   );
 
+/** A figure's own timelines on this frame: its breath, offset so no two breathe as one, and its boil. */
 export const living = (f: CourtFrame, period: number, offset: number) =>
   [
     ['breath', (f.t + offset) % period],
     ['boil', boilTime(f.boil)],
   ] as const;
 
+/**
+ * Each figure's hands' size against the hand rig's, so each is the share of
+ * its head's width the concept draws: the judge's 0.45, the prosecutor's
+ * 0.44 (the lead's are his sheet's, `LEAD_HAND_SIZE`).
+ */
 const HAND = { judge: 1.23, prosecutor: 1.14, christ: 1.08 } as const;
 
+/** Christ's hand rigs by size: His own, then each held-out step. */
 const CHRIST_HANDS = [
   [1, 'christHand'],
   [HAND_OUT_STEPS[0], 'christHandOut1'],
@@ -301,12 +347,18 @@ const CHRIST_HANDS = [
   [HAND_OUT_STEPS[3], 'christHandOut4'],
 ] as const;
 
+/**
+ * Christ's near hand held out `reach` times its size: the step nearest the
+ * reach, scaled the rest of the way, so the circle grows as He reaches to us
+ * and its ink stays the house line (within 8 %) rather than swelling with it.
+ */
 const heldOut = (f: CourtFrame, p: Pt, reach: number) => {
   const off = (size: number) => Math.abs(Math.log(reach / size));
   const [size, rig] = CHRIST_HANDS.reduce((a, b) => (off(b[0]) < off(a[0]) ? b : a));
   handAt(f, rig, p, (HAND.christ * reach) / size);
 };
 
+/** The bench and the judge behind it: his chair, the block and the gavel, his hands on the bench. */
 const judgeGroup = (f: CourtFrame, p: CourtPose) => {
   const { ctx } = f;
   chair(ctx);
@@ -320,6 +372,7 @@ const judgeGroup = (f: CourtFrame, p: CourtPose) => {
   for (const h of p.judge.hands) handAt(f, 'skinHand', h, HAND.judge);
 };
 
+/** The table and the prosecutor behind it: the evidence on it, the sheet in his hand, his hands. */
 const prosecutorGroup = (f: CourtFrame, p: CourtPose) => {
   const { ctx } = f;
   const here = p.prosecutor.shown > 0;
@@ -349,8 +402,15 @@ const prosecutorGroup = (f: CourtFrame, p: CourtPose) => {
   if (here) for (const h of p.prosecutor.hands) handAt(f, 'skinHand', h, HAND.prosecutor);
 };
 
+/** The lead a pace back (`back` 1): how much smaller he stands, and how far up the floor his feet go, Board pixels. */
 const BACK = { scale: 0.28, rise: 100 } as const;
 
+/**
+ * The dock and who stands behind it: Christ beside the lead when He is
+ * there, the lead in front of Him, or a pace behind Him when he is set
+ * back (`back`); the seal over the lead's stain; their hands on the rail,
+ * and the seeds in their hands.
+ */
 const leadGroup = (f: CourtFrame, p: CourtPose) => {
   const { ctx } = f;
   const christ = p.christ.shown > 0;
@@ -410,6 +470,10 @@ const leadGroup = (f: CourtFrame, p: CourtPose) => {
   seedProp(ctx, p.christ.seed);
 };
 
+/**
+ * How far each group stands off its panels' place, Board pixels: none in
+ * `cold`; `title`'s wide spreads them over the floor as its panel does.
+ */
 interface CourtSpread {
   readonly lead: Pt;
   readonly prosecutor: Pt;
@@ -417,6 +481,7 @@ interface CourtSpread {
 }
 const IN_PLACE: CourtSpread = { lead: [0, 0], prosecutor: [0, 0], judge: [0, 0] };
 
+/** `draw`, moved `by`. */
 const moved = (ctx: CanvasRenderingContext2D, by: Pt, draw: () => void) => {
   ctx.save();
   ctx.translate(by[0], by[1]);
@@ -424,12 +489,14 @@ const moved = (ctx: CanvasRenderingContext2D, by: Pt, draw: () => void) => {
   ctx.restore();
 };
 
+/** The furniture's shadows on the floor, under every group. */
 export const courtShadows = (ctx: CanvasRenderingContext2D, spread = IN_PLACE) => {
   moved(ctx, spread.judge, () => benchShadow(ctx));
   moved(ctx, spread.prosecutor, () => tableShadow(ctx));
   moved(ctx, spread.lead, () => dockShadow(ctx));
 };
 
+/** The court's people and furniture at `p`, back to front, over the floor. */
 export const courtFigures = (f: CourtFrame, p: CourtPose, spread = IN_PLACE) => {
   moved(f.ctx, spread.judge, () => judgeGroup(f, p));
   moved(f.ctx, spread.prosecutor, () => prosecutorGroup(f, p));

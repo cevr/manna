@@ -5,6 +5,7 @@ import { type Puppet, puppetOf } from './puppet.ts';
 
 const [W, H] = [40, 60];
 
+/** A 40 × 60 figure: a body column and a right arm out to the left of it, each its own colour. */
 const FIGURE: Puppet = (() => {
   const paint = (inside: (x: number, y: number) => boolean, rgb: readonly number[]) => {
     const rgba = new Uint8Array(W * H * 4);

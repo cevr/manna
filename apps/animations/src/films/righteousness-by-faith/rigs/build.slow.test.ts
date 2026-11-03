@@ -160,6 +160,7 @@ describe("RBF's figures", () => {
   );
 });
 
+/** RBF's figures file with `him` laid in the prosecutor's place: a figure `figure` composed of his parts with one changed (`PROSECUTOR_SPEC`), since the file lays no copy of a composed one. */
 const laid = (him: typeof prosecutor) =>
   figuresFile({
     weight: FIGURES.weight,
@@ -167,17 +168,20 @@ const laid = (him: typeof prosecutor) =>
     boards: { ...FIGURES.boards, prosecutor: { ...FIGURES.boards.prosecutor, figure: him } },
   });
 
+/** The prosecutor's parts with his ear a unit further back. */
 const MOVED = {
   ...PROSECUTOR_SPEC,
   ear: Ear.Round({ at: [54, 17.5], r: [10, 16.5], paper: PAPERS.ear }),
 };
 
+/** What an override of the prosecutor's lock carries, whatever it cites and frees. */
 const OVERRIDE = {
   rule: 'FigureLock',
   place: 'prosecutor',
   reason: 'his ear a unit back',
 } as const;
 
+/** The overrides of RBF's figures with the prosecutor's lock carrying one citing `cited` that frees a changed print of him. */
 const freed = (
   cited:
     | { readonly quote: string }

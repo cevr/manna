@@ -8,11 +8,13 @@ import { hydrateRoot } from 'react-dom/client';
 
 import { App } from './app';
 
+/** A time the list moved by itself: where the reader left it, and where it went. */
 export interface Jump {
   readonly left: number;
   readonly went: number;
 }
 
+/** A row drawn on screen: its name, its centre and its height. */
 export interface Seen {
   readonly label: string;
   readonly x: number;
@@ -20,30 +22,84 @@ export interface Seen {
   readonly height: number;
 }
 
+/** The first frame that draws a list come back. */
 export interface First {
   readonly drawn: boolean;
   readonly blank: number;
+  /** Frames before it that drew the scroller with no row. */
   readonly empty: number;
 }
 
+/** What the test drives the page through. */
 export interface Hymnal {
+  /** What hydration reported: each recoverable error, and each console error about hydration. */
   readonly errors: Array<string>;
+  /** Whether the page has hydrated. */
   hydrated: boolean;
+  /**
+   * Whether a trusted scroll event reached the list's scroller while
+   * `hydrate()` had not yet been called: a scroll the list cannot have seen,
+   * so it must be told of it. Set at the event; a page loads with it false.
+   */
   eventBeforeHydration: boolean;
+  /**
+   * Waits for that event: answers once a trusted scroll event has reached
+   * the list's scroller before hydration, and fails when none has within a
+   * second.
+   */
   readonly heard: () => Promise<void>;
+  /** Hydrates the page now (with `?hold`; without it, it hydrated as it loaded). */
   readonly hydrate: () => void;
+  /** The list's scroll offset now, and the most it can scroll; none while no list is shown. */
   readonly place: () => { readonly top: number; readonly max: number } | undefined;
+  /** Scrolls the list to `top` as a reader does, and answers where the browser took it. */
   readonly scroll: (top: number) => number;
+  /** Each time the list moved by itself after the reader last scrolled it. */
   readonly jumps: Array<Jump>;
+  /** Whether the app shows the screen at `path` (the address changes before it). */
   readonly on: (path: string) => boolean;
+  /** Whether a list is shown with a row fully on screen. */
   readonly showing: () => boolean;
+  /** The fully shown row nearest the list's middle. */
   readonly middle: () => Seen;
+  /** How many pixels of the list's shown part, where it has rows, show no row. */
   readonly blank: () => number;
+  /**
+   * Answers, in the first frame that draws the list at `path` with rows,
+   * whether the row named `label` is fully on screen, and how many pixels of
+   * rows on screen are blank; and how many frames before it drew the list's
+   * scroller with no row.
+   */
   readonly watch: (path: string, label: string) => Promise<First>;
+  /** The last `watch` asked for. */
   watching?: Promise<First>;
+  /**
+   * Scrolls the list three rows from `top` toward its middle, as the
+   * reader's last scroll but one, and answers once the list has had that
+   * scroll's event and its end: the list then knows that offset, not `top`.
+   */
   readonly away: (top: number) => Promise<number>;
+  /**
+   * Moves the list to its top as soon as it comes back: in the microtask
+   * after the change to the page that drew it at an offset, as a reader's
+   * move at once would. Answers that offset when it has moved it, or 0
+   * when no list came back at an offset within two seconds.
+   */
   readonly early: () => Promise<number>;
+  /**
+   * Leaves the list in one task, as a reader who scrolls and presses at
+   * once: scrolls it to `top`, then clicks the fully shown row nearest its
+   * middle, or the tab bar's link named `tab`. Answers the offset it left
+   * at and the row.
+   */
   readonly leave: (top: number, tab?: string) => { readonly top: number; readonly label: string };
+  /**
+   * Whether the list the last `leave` left is out of the page, and no
+   * scroll event, the browser's or a dispatched one, reached its scroller
+   * while it was in the page after `leave` scrolled it: the list never heard
+   * of that scroll, as with a press at once. False when the list heard of
+   * it, as after a pause, or is still in the page.
+   */
   readonly leftBeforeScrollEvent: () => boolean;
 }
 
@@ -53,16 +109,19 @@ declare global {
   }
 }
 
+/** The element that scrolls the list, when a list is shown. */
 const scroller = (): HTMLElement | undefined =>
   [...document.querySelectorAll<HTMLElement>('#root div')].find((node) =>
     /(auto|scroll)/.test(getComputedStyle(node).overflowY),
   );
 
+/** The list's rows drawn now, each named "<number>, <title>". */
 const rows = (node: HTMLElement) =>
   [...node.querySelectorAll<HTMLElement>('[aria-label]')].filter((row) =>
     /^\d+, /.test(row.getAttribute('aria-label') ?? ''),
   );
 
+/** The rows fully inside the list's window. */
 const shown = (node: HTMLElement) => {
   const view = node.getBoundingClientRect();
   return rows(node)
@@ -70,6 +129,7 @@ const shown = (node: HTMLElement) => {
     .filter(({ box }) => box.top >= view.top - 0.5 && box.bottom <= view.bottom + 0.5);
 };
 
+/** The fully shown row nearest the list's middle. */
 const middleOf = (node: HTMLElement) => {
   const seen = shown(node);
   const found = seen[Math.floor(seen.length / 2)];
@@ -77,6 +137,7 @@ const middleOf = (node: HTMLElement) => {
   return found;
 };
 
+/** How many pixels of the list's shown part, where it has rows, show no row. */
 const blankOf = (node: HTMLElement) => {
   const view = node.getBoundingClientRect();
   const top = view.top;
@@ -99,10 +160,13 @@ const blankOf = (node: HTMLElement) => {
 const errors: Array<string> = [];
 const jumps: Array<Jump> = [];
 
+/** Where the reader last left the list, and its scroller then. */
 let left: { readonly node: HTMLElement; readonly top: number } | undefined;
 
+/** When the reader last turned a wheel: the scrolls it makes are his. */
 let wheeled = -Infinity;
 
+/** The scroller the last `leave` left, and whether a scroll event reached it in the page since. */
 let departure: { readonly node: HTMLElement; heard: boolean } | undefined;
 
 addEventListener('wheel', () => void (wheeled = performance.now()), {
@@ -126,8 +190,10 @@ document.addEventListener(
   true,
 );
 
+/** Whether `hydrate()` has been called. */
 let hydrating = false;
 
+/** What `heard()` does when the event comes, while it waits. */
 let onHeard: (() => void) | undefined;
 
 document.addEventListener(

@@ -30,6 +30,7 @@ import { freshFilm, noSource, noStudio, echoPages, noRenders } from '../film-ser
 import { reviewMedia } from '../media/testing.ts';
 import { withTimelines } from '../lab/testing.ts';
 
+/** A score option as film `f` offers it. */
 const reviewOption = (id: string, picked: boolean) => ({
   id,
   label: id,
@@ -41,6 +42,7 @@ const reviewOption = (id: string, picked: boolean) => ({
   key: id,
 });
 
+/** Film `f`'s choices: one score of two options, `warm` playing. */
 const REVIEW_CHOICES: FilmChoices = {
   film: 'f',
   pictures: [],
@@ -55,17 +57,20 @@ const REVIEW_CHOICES: FilmChoices = {
   ],
 };
 
+/** Film `f`'s project: one scene, `a`, not yet rendered. */
 export const REVIEW_PROJECT: Project = projectOf(
   emptyCatalogue('f'),
   { key: 'fk', sound: Option.none(), acts: [], scenes: [{ scene: 'a', key: 'k1' }] },
   'main',
 );
 
+/** The `film project` args each fresh run of one review fixture was asked for, in order. */
 class ReviewProjectRuns extends Context.Service<
   ReviewProjectRuns,
   ReadonlyArray<ReadonlyArray<string>>
 >()('test/ReviewProjectRuns') {}
 
+/** The pick of `bright`, in `sound.ts` of film `f` under `films`. */
 const reviewPickIn = (films: string): Change => ({
   id: ChangeId.make('pick-bright'),
   film: 'f',
@@ -80,6 +85,12 @@ const reviewPickIn = (films: string): Change => ({
 
 const reviewUnused = Effect.die('not used by the review routes');
 
+/**
+ * Film `f`'s services, faked over a films folder that holds only `f`: its
+ * choices, a pick of `bright` that lands, an undo of it, and a check with
+ * nothing to say. Every other name is no film of the app's. Each fresh run
+ * of `film project` is noted in `runs`.
+ */
 const reviewFilmServices = (films: string, runs: Array<ReadonlyArray<string>>) => {
   const PICK = reviewPickIn(films);
   return Layer.mergeAll(
@@ -148,6 +159,11 @@ const reviewFilmServices = (films: string, runs: Array<ReadonlyArray<string>>) =
   );
 };
 
+/**
+ * The lab's handler over the review fixture's services, built once with the
+ * fixture, as a server builds it once for its life: each of a case's requests
+ * is answered by the same handler.
+ */
 class ReviewTestLab extends Context.Service<
   ReviewTestLab,
   Effect.Success<ReturnType<typeof labHandler>>
@@ -155,6 +171,12 @@ class ReviewTestLab extends Context.Service<
 
 export class ReviewTestRoot extends Context.Service<ReviewTestRoot, string>()('test/Root') {}
 
+/**
+ * The review over `out/art` (a set of two), its videos `seconds` long and a
+ * frame the video copied; its fresh `film project` runs, its own, are
+ * `ReviewProjectRuns`. With `phoneCopies`, a video over 1,000 bytes gets its
+ * phone copy made in the background, as the index finds it.
+ */
 export const reviewHttpFixtureLasting = (seconds: number, phoneCopies = false) =>
   Layer.unwrap(
     Effect.gen(function* () {
@@ -231,15 +253,19 @@ export const reviewHttpFixtureLasting = (seconds: number, phoneCopies = false) =
     Layer.provideMerge(Layer.mergeAll(BunServices.layer, BunHttpPlatform.layer)),
   );
 
+/** The review fixture, its videos 12.5 s long. */
 export const reviewHttpFixture = reviewHttpFixtureLasting(12.5);
 
+/** The listener a review test's request comes on: the owner's phone address (a tailnet one), on 8229. */
 const reviewTestBound = { hostname: '100.64.0.9', port: 8229 } as const;
 
+/** The Host a page served on that listener names. */
 export const REVIEW_TEST_HOST = '100.64.0.9:8229';
 
 export const reviewTestGet = (path: string, headers: Record<string, string> = {}) =>
   new Request(`http://127.0.0.1:8229${path}`, { method: 'GET', headers });
 
+/** `request` answered by the case's lab (`ReviewTestLab`), as the phone's listener hands it over. */
 export const reviewTestAsk = (request: Request) =>
   Effect.gen(function* () {
     const review = yield* ReviewTestLab;

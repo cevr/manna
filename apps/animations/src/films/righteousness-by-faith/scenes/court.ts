@@ -10,9 +10,13 @@ import { HAND_OUT } from '../rigs/hand-rig.ts';
 import { JUDGE_KNOBS } from '../rigs/judge-rig.ts';
 import { LEAD_ARMS } from '../rigs/lead-rig.ts';
 
+/** In white, quiet, not yet sure: the brows a little up. */
 const QUIET: Expression = { ...EASE, browTilt: 0.18, browY: -0.5, mouth: 0.2 };
+/** No one comes: the brows lift, the start of a smile. */
 const RELIEF: Expression = { ...EASE, browY: -1.6, browTilt: 0.2, eyes: 1.08, mouth: 0.8 };
+/** Looking up at Christ beside him: open, smiling. */
 const GLAD: Expression = { ...EASE, browY: -2, browTilt: 0.16, eyes: 1.1, mouth: 1.4 };
+/** The seed in his open hand, his head up: wonder and joy. */
 const JOY: Expression = {
   ...EASE,
   browY: -2.6,
@@ -22,15 +26,22 @@ const JOY: Expression = {
   mouth: 1.8,
 };
 
+/** Christ: kind, the brows easy, the smile court-12 draws in His beard. */
 const KIND: Expression = { ...EASE, browY: -0.8, browTilt: 0.1, mouth: 3 };
+/** Christ to us: the brows lifting as He offers, the smile a little wider. */
 const OFFER: Expression = { ...EASE, browY: -1.8, browTilt: 0.16, eyes: 1.05, mouth: 3.6 };
 
+/** The judge in the landing: kind, smiling down at the dock. */
 const BENCH_KIND: Expression = { ...EASE, browY: -1, browTilt: 0.12, mouth: 1 };
+/** In the bench's glow: the smile full. */
 const BENCH_GLAD: Expression = { ...EASE, browY: -1.6, browTilt: 0.14, eyes: 1.05, mouth: 1.6 };
 
+/** How far the lead stands off his `cold` place, Board pixels: left, to make room for Christ (`court.beside`). */
 const LEAD_DX = -28;
+/** The lead's feet in the landing. */
 const LEAD_AT: Pt = [PLACE.lead[0] + LEAD_DX, PLACE.lead[1]];
 
+/** Where the lead looks, from his feet: at us, the empty table, Christ, the blade, his seed, the leaves, the bench. */
 const LEAD_GAZE = {
   us: [0, -300],
   table: [492, -125],
@@ -41,36 +52,46 @@ const LEAD_GAZE = {
   bench: [1044, -529],
 } as const satisfies Record<string, Pt>;
 
+/** Where Christ looks, from His feet: at the lead, and at us (His eyes in their sockets). */
 const CHRIST_GAZE = {
   lead: [-202, -315],
   us: [-21, -382],
 } as const satisfies Record<string, Pt>;
 
+/** The lead's hands at his sides, moved with him. */
 const LEAD_HANDS: readonly [Pt, Pt] = [
   [HANDS.lead[0][0] + LEAD_DX, HANDS.lead[0][1]],
   [HANDS.lead[1][0] + LEAD_DX, HANDS.lead[1][1]],
 ];
+/** His near hand lifted open before him, the seed on it (`takes`), and his shoulder it swings from. */
 const LEAD_OPEN: Pt = [338, 556];
 const LEAD_SHOULDER: Pt = [
   LEAD_AT[0] + LEAD_ARMS.right.shoulder[0],
   LEAD_AT[1] + LEAD_ARMS.right.shoulder[1],
 ];
 
+/** Christ's near hand held out to the lead with the seed, and to us (`you`), and the shoulder it swings from. */
 const CHRIST_OFFER: Pt = [384, 560];
 const CHRIST_TO_US: Pt = [431, 475];
+/** How much bigger the seed on His hand reads held out toward us. */
 const REACH = 1.6;
 const CHRIST_SHOULDER: Pt = [420, 450];
 
+/** A seed sits on a hand this far above its centre. */
 const ON_HAND = 17;
+/** How much higher it stands on His hand held out to us. */
 const SEAT_UP = 3.5;
+/** How far right of His palm's top it stands held out to us, as court.you sets it on the ring. */
 const SEAT_RIGHT = 9.5;
 
+/** The dry fig leaves on the floor by the dock: each its place and turn. */
 const LEAVES = [
   [150, 868, 0.15],
   [222, 884, -0.25],
   [262, 916, 0.35],
 ] as const;
 
+/** The court's pose (scratch: rewritten each frame). */
 const POSE = (() => {
   const p = restPose();
   p.prosecutor.shown = 0;
@@ -82,6 +103,7 @@ const POSE = (() => {
   return p;
 })();
 
+/** `a` to `b` by `k`, both points. */
 const toward = (a: Pt, b: Pt, k: number): Pt => [lerp(a[0], b[0], k), lerp(a[1], b[1], k)];
 
 export const court = drawing({

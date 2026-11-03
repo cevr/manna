@@ -4,14 +4,24 @@ import { Schema } from 'effect';
 
 import { SELECTORS } from './items.ts';
 
+/** A rule's options, as `.oxlintrc.json` writes them. */
 export const RuleOptions = Schema.Struct({
   selector: Schema.Literals(SELECTORS),
+  /** What one item is, as each item's instructions name it ("code comment"). */
   subject: Schema.String,
   instructions: Schema.String,
+  /** Each label and what it means. */
   criteria: Schema.Record(Schema.String, Schema.String),
+  /** The label whose probability reports. */
   reports: Schema.String,
+  /** The probability of `reports` at and above which an item reports. */
   threshold: Schema.Finite.check(Schema.isBetween({ minimum: 0, maximum: 1 })),
   message: Schema.String,
+  /**
+   * How many characters of this rule's items a token of the model's input
+   * holds, as measured over a sample of them: the runner budgets a request
+   * by it (`run.ts`); 3.2, under the least any rule measured, when left out.
+   */
   charsPerToken: Schema.optionalKey(Schema.Finite.check(Schema.isGreaterThan(0))),
 }).check(
   Schema.makeFilter(
@@ -23,19 +33,35 @@ export const RuleOptions = Schema.Struct({
 
 export type RuleOptions = typeof RuleOptions.Type;
 
+/** A rule as a run reads it: its options, its id (`judged/<id>`), and whether it gates. */
 export interface JudgedRule extends RuleOptions {
+  /** The rule's name in its reports. */
   readonly id: string;
   readonly severity: 'warn' | 'error';
 }
 
+/** The settings every judged rule shares (`settings.judged`). */
 export const Settings = Schema.Struct({
+  /** The TypeSafe model the rules ask, by its exact id: their thresholds were measured on it. */
   model: Schema.String,
+  /** Where the answers are kept, from git's common dir, so every checkout shares them (`store.ts`). */
   store: Schema.String,
+  /**
+   * The checkout's own files of the judged lint, from its root: the memo of
+   * its items (`sources.ts`) and its last run's findings (`findings.ts`).
+   */
   checkout: Schema.String,
 });
 
 export type Settings = typeof Settings.Type;
 
+/**
+ * A rule's part of the cache's keys: a hash of the words the model reads for
+ * it, its subject, its instructions and each label and its meaning, so an
+ * edit to any of them asks again. Its id, selector, threshold, reporting
+ * label, message and characters a token are no part of it: the model reads
+ * none of them.
+ */
 export const ruleKey = (rule: Pick<RuleOptions, 'subject' | 'instructions' | 'criteria'>) =>
   bytesToHex(
     sha256(
@@ -51,4 +77,5 @@ export const ruleKey = (rule: Pick<RuleOptions, 'subject' | 'instructions' | 'cr
     ),
   );
 
+/** A model's name in the cache's keys. */
 export const cacheModel = (model: string) => `typesafe/${model}`;

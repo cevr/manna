@@ -7,11 +7,13 @@ import { type Item, type Selector, itemsOf, markdownBeats, parse, selects } from
 import { type JudgedRule, ruleKey } from './rule.js';
 import { cacheKey } from './store.js';
 
+/** One item of a source: its selector, its file and the item. */
 interface SourceItem extends Item {
   readonly selector: Selector;
   readonly file: string;
 }
 
+/** An item a rule reads, keyed for that rule: its rule, its file, its first line and offset, and its key in the store. */
 interface TreeItem {
   readonly rule: JudgedRule;
   readonly file: string;
@@ -20,6 +22,7 @@ interface TreeItem {
   readonly key: string;
 }
 
+/** An item the memo holds: its rule by id, its line and offset, and its key in the store. */
 const MemoItem = Schema.Struct({
   rule: Schema.String,
   line: Schema.Finite,
@@ -39,6 +42,7 @@ const Memo = Schema.fromJsonString(
 
 type Memo = typeof Memo.Type;
 
+/** A file's text no longer holds an item the run read in it: the file changed during the run. */
 class ItemsMoved extends Schema.TaggedError<ItemsMoved>()('ItemsMoved', { file: Schema.String }) {
   override get message() {
     return `${this.file} changed while the judged lint read it`;
@@ -47,10 +51,12 @@ class ItemsMoved extends Schema.TaggedError<ItemsMoved>()('ItemsMoved', { file: 
 
 const TYPESCRIPT = /\.[cm]?tsx?$/;
 
+/** Whether the judged lint reads `file`: a TypeScript source (no `.d.ts`) none of the lint's ignore patterns names, or Markdown. */
 const linted = (file: string, ignored: ReadonlyArray<Glob>) =>
   (file.endsWith('.md') || (TYPESCRIPT.test(file) && !file.endsWith('.d.ts'))) &&
   !ignored.some((glob) => glob.match(file));
 
+/** The items of `selectors` in one source. */
 const itemsIn = (
   file: string,
   text: string,
@@ -66,6 +72,7 @@ const itemsIn = (
   );
 };
 
+/** The form of a memo made for `rules` on `model` by this code (`makersHash`): a hash of them all. */
 const formOf = (rules: ReadonlyArray<JudgedRule>, model: string) =>
   Effect.sync(() =>
     textHash(
@@ -77,6 +84,7 @@ const formOf = (rules: ReadonlyArray<JudgedRule>, model: string) =>
     ),
   );
 
+/** The memo at `file` if it was made in `form`; none when it is missing, does not read, or was made otherwise. */
 const readMemo = (file: string, form: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -87,6 +95,7 @@ const readMemo = (file: string, form: string) =>
     Effect.map((memo) => Option.filter(memo, (read) => read.form === form)),
   );
 
+/** Writes `memo` to `file` whole: a temporary file beside it, renamed over it. */
 const writeMemo = (file: string, memo: Memo) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -97,6 +106,7 @@ const writeMemo = (file: string, memo: Memo) =>
     yield* fs.rename(temporary, file);
   });
 
+/** Whether `next` holds other files, or a file of another text, than `memo`. */
 const memoChanged = (memo: Option.Option<Memo>, next: Memo) =>
   Option.match(memo, {
     onNone: () => true,
@@ -109,6 +119,11 @@ const memoChanged = (memo: Option.Option<Memo>, next: Memo) =>
     },
   });
 
+/**
+ * The items `rules` read in every file of the gate's at `root` the judged
+ * lint reads, past the lint's `ignorePatterns`, each keyed for its rule on
+ * `model`; a file the memo at `memoFile` holds by its hash is not parsed.
+ */
 export const repoItems = Effect.fn('judged.repoItems')(function* (
   root: string,
   ignorePatterns: ReadonlyArray<string>,
@@ -126,6 +141,7 @@ export const repoItems = Effect.fn('judged.repoItems')(function* (
   const kept = yield* readMemo(memo.file, form);
   const byId = new Map(rules.map((rule) => [rule.id, rule]));
   const ruleKeys = new Map(rules.map((rule) => [rule.id, ruleKey(rule)]));
+  /** Each rule's items of a file's source items, keyed for it. */
   const keyed = (found: ReadonlyArray<SourceItem>) =>
     rules.flatMap((rule) =>
       found
@@ -187,6 +203,7 @@ export const repoItems = Effect.fn('judged.repoItems')(function* (
     yield* writeMemo(memo.file, next).pipe(
       Effect.catch((error) => Console.error(`[judged] memo not kept detail=${error._tag}`)),
     );
+  /** The texts of a file's items, by key, read again from the file. */
   const textsIn = (file: string) =>
     Effect.map(
       fs.readFileString(path.join(root, file)),

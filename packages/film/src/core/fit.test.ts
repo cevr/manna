@@ -5,6 +5,7 @@ type Pt = readonly [number, number];
 
 const OPTS = { tolerance: 1, reach: 6, corner: (40 * Math.PI) / 180 };
 
+/** A closed line through `corners`, a point every pixel along each side. */
 const walked = (corners: ReadonlyArray<Pt>): Pt[] =>
   corners.flatMap((a, i) => {
     const b = corners[(i + 1) % corners.length] ?? a;
@@ -15,6 +16,7 @@ const walked = (corners: ReadonlyArray<Pt>): Pt[] =>
     ]);
   });
 
+/** The farthest any of `pts` lies from the line `line` (its nearest point). */
 const farthestFrom = (pts: ReadonlyArray<Pt>, line: ReadonlyArray<Pt>) =>
   Math.max(...pts.map((p) => Math.min(...line.map((q) => Math.hypot(q[0] - p[0], q[1] - p[1])))));
 

@@ -14,6 +14,7 @@ const PALETTE = `export const looks = {
 } as const;
 `;
 
+/** A film folder holding only its palette, in a fresh directory: its palette's path. */
 const paletteFile = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -29,6 +30,7 @@ const layer = Layer.mergeAll(
   FetchHttpClient.layer,
 );
 
+/** The body a GET of `url` answers, and its status. */
 const get = (url: string) =>
   Effect.gen(function* () {
     const response = yield* HttpClient.get(url);

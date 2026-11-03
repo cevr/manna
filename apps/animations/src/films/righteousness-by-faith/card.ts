@@ -1,6 +1,7 @@
 import type { CardStyle, VerseStyle } from '@manna/film/canvas';
 import { C, F } from './kit.ts';
 
+/** The card's ground: the highlight's colour too. */
 export const CARD_GROUND = C.night;
 
 export const VERSE_STYLE: VerseStyle = {

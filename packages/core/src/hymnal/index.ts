@@ -1,3 +1,9 @@
+/**
+ * Hymnal Module
+ *
+ * Provides access to 695 SDA hymns and 225 liturgical readings, in 68 categories.
+ */
+
 export {
   HymnalService,
   HymnalError,

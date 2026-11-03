@@ -37,14 +37,22 @@ interface MenuStoreOptions {
 export interface MenuStore extends PopupStore {
   readonly parent: MenuParent;
   openMethod: Accessor<InteractionType | null>;
+  /** The id the menu's popup carries as `data-rootownerid`. */
   rootId: Accessor<string>;
+  /** The highlighted item's index (`null` for none). */
   activeIndex: Accessor<number | null>;
   setActiveIndex: (index: number | null) => void;
+  /**
+   * Keeps the highlight on its item when the items' indexes change (items
+   * moved in the DOM while the menu is open): the item list's `onMapChange`.
+   */
   followActiveItem: (map: CompositeIndexMap) => void;
   isActive: (index: number) => boolean;
   instantType: Accessor<MenuInstantType>;
   lastOpenChangeReason: Accessor<MenuChangeEventReason | null>;
+  /** Asks the menu to open or close (through `onOpenChange`, which may cancel). */
   setOpen: (open: boolean, details: BaseUIChangeEventDetails) => void;
+  /** Applies an accepted open change with the menu's own state. */
   applyMenuOpenState: (
     open: boolean,
     details: BaseUIChangeEventDetails,
@@ -53,6 +61,7 @@ export interface MenuStore extends PopupStore {
   readonly itemDomElements: { current: Array<HTMLElement | null> };
   readonly itemLabels: { current: Array<string | null> };
   readonly typingRef: { current: boolean };
+  /** Whether a mouseup on an item activates it (a press on the trigger dragged onto it). */
   allowMouseUpTriggerRef: { current: boolean };
 }
 

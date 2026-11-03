@@ -5,13 +5,16 @@ import type { LabelTable } from './label.ts';
 import type { Raster } from './raster.ts';
 import { labelMasks } from './trace.ts';
 
+/** A point of the view, pixels: (0, 0) is the top-left pixel's top-left corner. */
 type PartPt = readonly [x: number, y: number];
 
+/** What takes a pixel: a polygon, a disc, or a part label's region on the view. */
 export type PartRule =
   | { readonly polygon: ReadonlyArray<PartPt> }
   | { readonly disc: { readonly c: PartPt; readonly r: number } }
   | { readonly label: string };
 
+/** One part of a cut: its name, the rules that take a pixel for it, those that leave a pixel to the parts behind it, the joint it turns about, where it has one, and its role: `shadow` for his shadow on the ground, which the un-matte reads as no wall (`UnmatteOptions.shadow`). */
 interface PartCutEntry {
   readonly name: string;
   readonly take: ReadonlyArray<PartRule>;
@@ -20,16 +23,19 @@ interface PartCutEntry {
   readonly role?: 'shadow';
 }
 
+/** A cut: a view's parts, front to back. */
 export interface PartCut {
   readonly parts: ReadonlyArray<PartCutEntry>;
 }
 
+/** What a cut reads beside the view: the figure (1 on its pixels; `cutFigureOf` the view, naming no gap, unless given), and the member's colour classes and part labels its label rules pick by. */
 export interface PartCutOptions {
   readonly figure?: Uint8Array;
   readonly classes?: Readonly<Record<string, ReadonlyArray<string>>>;
   readonly labels?: LabelTable;
 }
 
+/** A part as pixels: the view's bytes where it owns a pixel, its paint where a part in front hides it, alpha 0 elsewhere; how many pixels it owns, and how many are painted. */
 export interface PartLayer {
   readonly name: string;
   readonly pixels: Raster;
@@ -37,6 +43,7 @@ export interface PartLayer {
   readonly painted: number;
 }
 
+/** A view's parts, front to back, and each pixel's owner (0 the ground, k + 1 the part at k). */
 export interface PartSheet {
   readonly width: number;
   readonly height: number;
@@ -44,8 +51,20 @@ export interface PartSheet {
   readonly owner: Uint8Array;
 }
 
+/**
+ * A member's rule for one view's part sheet once its paint is laid (`CLEAN`
+ * in his cut table, `tools/part-sheet-cli.ts`): the sheet as the rule leaves
+ * its parts' pixels and each pixel's owner. A pixel the rule clears is the
+ * ground's (owner 0); one it moves to another part is that part's. The parts'
+ * counts are read again from what it returns (`countedOf`), so a rule sets
+ * pixels and owners alone. Pure, and the same sheet in gives the same bytes
+ * out: the part sheet is made again from its answer and this rule. A rule
+ * that names a part the sheet lacks refuses (`SheetCleanRefused`), so a
+ * misnamed part fails the view instead of moving pixels by a wrong index.
+ */
 export type SheetClean = (sheet: PartSheet) => Result.Result<PartSheet, SheetCleanRefused>;
 
+/** A view's rule that cannot run on its laid sheet: a part it names that the sheet lacks. */
 export class SheetCleanRefused extends Schema.TaggedError<SheetCleanRefused>()(
   'SheetCleanRefused',
   { reason: Schema.String },
@@ -55,6 +74,7 @@ export class SheetCleanRefused extends Schema.TaggedError<SheetCleanRefused>()(
   }
 }
 
+/** `sheet` with each part's counts read from its pixels and the owners: kept, the pixels it owns; painted, the pixels it holds (alpha above 0) that another part or the ground owns. */
 export const countedOf = (sheet: PartSheet): PartSheet => ({
   ...sheet,
   parts: sheet.parts.map((p, k) => {
@@ -68,6 +88,7 @@ export const countedOf = (sheet: PartSheet): PartSheet => ({
   }),
 });
 
+/** A cut the view cannot be cut by: a figure pixel no part takes, a label that picks no region, a figure of another size, two parts of one name, more parts than the owner map holds. */
 class PartCutRefused extends Schema.TaggedError<PartCutRefused>()('PartCutRefused', {
   reason: Schema.String,
 }) {
@@ -76,6 +97,7 @@ class PartCutRefused extends Schema.TaggedError<PartCutRefused>()('PartCutRefuse
   }
 }
 
+/** Paint that would show at rest (a pixel no part in front of the part owns), or paint for a part the sheet does not hold. */
 class PartPaintRefused extends Schema.TaggedError<PartPaintRefused>()('PartPaintRefused', {
   reason: Schema.String,
 }) {
@@ -84,25 +106,41 @@ class PartPaintRefused extends Schema.TaggedError<PartPaintRefused>()('PartPaint
   }
 }
 
+/** The most parts a sheet holds: its owner map is one byte a pixel, 0 for the ground. */
 const MOST_PARTS = 254;
 
+/** How near the ground colour enclosed paper is, ΔE76: the border's paper and its grain, not a garment's pale cream. */
 const PAPER_DE = 3;
 
+/** The least piece of enclosed paper, pixels, and the least it spans both ways: thinner pale runs are the light rim a sheet paints just inside its line. */
 const PAPER_LEAST = 24;
 const PAPER_ACROSS = 8;
 
+/** An enclosed paper piece: its box (px, the far edges exclusive), its pixels, and the gap points that lie in it. */
 interface PaperPiece {
   readonly box: Box;
   readonly area: number;
   readonly gaps: ReadonlyArray<PartPt>;
+  /** Its pixels, each by its index in the view. */
   readonly pixels: ReadonlyArray<number>;
 }
 
+/** A view's paper read: its figure (1 on its pixels) and its enclosed paper pieces. */
 interface PaperRead {
   readonly figure: Uint8Array;
   readonly pieces: ReadonlyArray<PaperPiece>;
 }
 
+/**
+ * The view's enclosed paper and its figure. A piece is one of the fit rows'
+ * holes that holds a run of the ground's own colour wide both ways, with its
+ * grain and its rim. A pale garment (a swaddle, a veil, a robe's highlight)
+ * reads so, as the ground between the feet does, and no pixel measure tells
+ * them apart, so the figure holds every piece but the ones a gap point lies
+ * in: the gaps a view names where its kept sheet shows the ground through. A
+ * hole of a garment's cream (a knot's highlight) is no piece. A gap point off
+ * every piece opens nothing.
+ */
 export const enclosedPaperOf = (view: Raster, gaps: ReadonlyArray<PartPt> = []): PaperRead => {
   const { width: w, height: h } = view;
   const { figure, holes, ground } = figureOf(view);
@@ -152,9 +190,11 @@ export const enclosedPaperOf = (view: Raster, gaps: ReadonlyArray<PartPt> = []):
   };
 };
 
+/** The view's figure: what the fit rows read, every enclosed paper piece held but the gaps a view names (`enclosedPaperOf`). */
 export const cutFigureOf = (view: Raster, gaps: ReadonlyArray<PartPt> = []): Uint8Array =>
   enclosedPaperOf(view, gaps).figure;
 
+/** Whether point (`x`, `y`) lies inside `poly`, even-odd. */
 const insidePolygon = (poly: ReadonlyArray<PartPt>, x: number, y: number): boolean => {
   let inside = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -165,6 +205,7 @@ const insidePolygon = (poly: ReadonlyArray<PartPt>, x: number, y: number): boole
   return inside;
 };
 
+/** A rule as a test of pixel `i`'s centre; a label rule reads its label's mask. */
 type Holds = (x: number, y: number, i: number) => boolean;
 
 const holdsOf = (rule: PartRule, masks: Readonly<Record<string, Uint8Array>>): Holds => {
@@ -182,6 +223,7 @@ const holdsOf = (rule: PartRule, masks: Readonly<Record<string, Uint8Array>>): H
   return (_x, _y, i) => mask?.[i] === 1;
 };
 
+/** The labels a cut's rules name. */
 const labelsNamed = (cut: PartCut): ReadonlyArray<string> =>
   Arr.dedupe(
     cut.parts
@@ -190,6 +232,7 @@ const labelsNamed = (cut: PartCut): ReadonlyArray<string> =>
       .map((r) => r.label),
   );
 
+/** The label rules' masks on the view, or why a label cannot be read. */
 const masksFor = (
   view: Raster,
   cut: PartCut,
@@ -215,6 +258,7 @@ const masksFor = (
   );
 };
 
+/** Why a cut's own build refuses it, before any pixel is read: too many parts, a name twice, a figure of another size. */
 const cutRefusal = (view: Raster, cut: PartCut, options: PartCutOptions): Option.Option<string> => {
   const n = view.width * view.height;
   const twice = cut.parts.find((p, k) => cut.parts.findIndex((q) => q.name === p.name) !== k);
@@ -232,6 +276,7 @@ const cutRefusal = (view: Raster, cut: PartCut, options: PartCutOptions): Option
   ]);
 };
 
+/** Each pixel's owner: 0 for the ground, k + 1 for the first part (front to back) whose `take` holds the pixel's centre and whose `unless` does not; with the figure pixels no part takes. */
 const ownersOf = (
   view: Raster,
   cut: PartCut,
@@ -256,6 +301,13 @@ const ownersOf = (
   return { owner, untaken, first };
 };
 
+/**
+ * `view` cut by `cut` into a part sheet: each figure pixel owned by the first
+ * part that takes it, each part holding the view's bytes where it owns a
+ * pixel and alpha 0 elsewhere. Refused, saying why, where a figure pixel is
+ * left untaken (how many, and the first), a label rule's label picks no
+ * region, or the cut itself is wrong (`cutRefusal`).
+ */
 export const cutParts = (
   view: Raster,
   cut: PartCut,
@@ -290,6 +342,7 @@ export const cutParts = (
   return Result.succeed({ width: view.width, height: view.height, parts, owner });
 };
 
+/** The sheet's parts laid back to front over `ground` (transparent unless given), each pixel a part holds (alpha above 0) replacing what lies under it. */
 export const recompose = (sheet: PartSheet, ground?: Raster): Raster => {
   const rgba = Uint8Array.from(ground?.rgba ?? new Uint8Array(sheet.width * sheet.height * 4));
   for (let k = sheet.parts.length - 1; k >= 0; k--) {
@@ -300,6 +353,14 @@ export const recompose = (sheet: PartSheet, ground?: Raster): Raster => {
   return { width: sheet.width, height: sheet.height, rgba };
 };
 
+/**
+ * `sheet` with `paint`'s bytes laid into part `part` at each pixel `where`
+ * marks (1), each one a pixel a part in front of `part` owns and is opaque on,
+ * so that paint never shows at rest. Refused, laying nothing, where any marked
+ * pixel is not (the ground, the part's own, a part behind it, a front part's
+ * pixel of alpha below 255), for a part the sheet does not hold, or for paint
+ * or a mask of another size.
+ */
 export const paintHidden = (
   sheet: PartSheet,
   part: string,
@@ -340,9 +401,12 @@ export const paintHidden = (
   return Result.succeed({ ...sheet, parts });
 };
 
+/** The L* under which a pixel is ink, as the cast checks read it. */
 const INK_L = 40;
+/** The L* where an antialiased edge reaches its paint's side: from INK_L up to it a pixel's ink share falls to none. */
 const INK_EDGE_L = 60;
 
+/** The median Lab, channel by channel, of the ink pixels (L* under 40) among those `at` picks; none when it picks no ink. */
 export const inkOf = (r: Raster, at: (i: number) => boolean): Option.Option<Rgb> => {
   const inks: Rgb[] = [];
   for (let i = 0; i < r.width * r.height; i++) {
@@ -356,6 +420,7 @@ export const inkOf = (r: Raster, at: (i: number) => boolean): Option.Option<Rgb>
   return Option.some([median(0), median(1), median(2)] as const);
 };
 
+/** The sRGB bytes of a Lab colour (D65), `labOf`'s inverse, each channel held to 0-255. */
 export const rgbOfLab = (lab: Rgb): Rgb => {
   const fy = (lab[0] + 16) / 116;
   const inv = (t: number) => {
@@ -375,6 +440,7 @@ export const rgbOfLab = (lab: Rgb): Rgb => {
   ];
 };
 
+/** Each pixel that is a visible ink pixel (alpha above 0, L* under 40) or touches one, the eight around it. */
 const nearInk = (key: Raster, ls: Float64Array): Uint8Array => {
   const { width: w, height: h } = key;
   const near = new Uint8Array(w * h);
@@ -388,6 +454,20 @@ const nearInk = (key: Raster, ls: Float64Array): Uint8Array => {
   return near;
 };
 
+/**
+ * A drawn key with its ink moved to `ink` (a Lab colour, the kept view's own
+ * ink, `inkOf`), every ink edge where it was. Lightness: each pixel that is
+ * ink or touches ink (any alpha) takes L* 40 + s (L* - 40), s the ratio of
+ * `ink`'s and the key's ink median's depths under 40, so the key's ink median
+ * lands on `ink`'s L* and every L* 40 crossing a bilinear read finds (any
+ * read whose 2x2 cell holds ink) stays where it was: the ink's width does not
+ * change at any sub-pixel step. Colour: each ink pixel's a* and b* move by
+ * the key's ink median's distance to `ink`, and each pixel up to L* 60 by
+ * that share of it falling to none at 60. A pixel neither ink nor beside ink
+ * is not touched; no alpha changes; a pixel whose bytes would round across
+ * L* 40 keeps its own colour, so the ink is the same pixels before and after.
+ * A key with no ink comes back as it was.
+ */
 export const inkTo = (key: Raster, ink: Rgb): Raster => {
   const own = inkOf(key, (i) => key.rgba[i * 4 + 3] === 255);
   if (Option.isNone(own)) return key;

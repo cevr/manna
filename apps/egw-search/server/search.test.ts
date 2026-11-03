@@ -105,6 +105,7 @@ const seed = Effect.gen(function* () {
 });
 
 interface Fixture {
+  /** Context statements run, counted at the lookup. */
   readonly calls: { value: number };
   readonly layer: Layer.Layer<SearchService | SqlClient.SqlClient>;
 }
@@ -123,6 +124,7 @@ const run = <A, E>(
   program: Effect.Effect<A, E, SearchService | SqlClient.SqlClient>,
 ) => program.pipe(Effect.provide(fixture.layer), Effect.runPromise);
 
+/** The batch pipeline over the real lookup, counting each context read. */
 const batch = (fixture: Fixture, requests: readonly SearchRequest[]) =>
   runSearchBatchWith(requests, (anchors, radius) => {
     fixture.calls.value += 1;

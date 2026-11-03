@@ -17,14 +17,45 @@ import { expect } from 'bun:test';
 import { getCallSequence, type ServiceCall } from './sequence-recorder.js';
 import { createTestLayer, type TestLayerConfig } from './test-layer.js';
 
+/**
+ * Result from running a CLI command.
+ */
 export interface RunCliResult {
+  /** The exit status of the command */
   exit: Exit.Exit<void, unknown>;
+  /** All recorded service calls in order */
   calls: ServiceCall[];
+  /** Whether the command succeeded */
   success: boolean;
+  /**
+   * Everything the command wrote through `Console.log`, joined with newlines.
+   *
+   * A command's stdout is a contract with the scripts and agents that pipe it,
+   * and asserting on the payload a helper *would* produce leaves the last hop —
+   * helper to `Console.log` — untested. That hop is where a hand-written
+   * projection can reappear. Captured here rather than per test so any command
+   * test can assert on real output.
+   */
   stdout: string;
+  /**
+   * Everything the command wrote through `Console.error`, joined with newlines.
+   *
+   * Diagnostics belong here rather than in {@link stdout} — `--json` pipes
+   * stdout and a diagnostic line in that stream corrupts the payload a script
+   * is parsing — so a command whose only job on failure is to name what broke
+   * writes nothing a stdout assertion can see. Captured for the same reason
+   * stdout is: the last hop, helper to console, is where a message can be
+   * dropped.
+   */
   stderr: string;
 }
 
+/**
+ * The `HOME` a command sees under test: a new folder in the system's temp
+ * folder for each run, removed when the run ends. A command that opens its
+ * local databases there (`~/.bible/…`) starts each run from none, and writes
+ * nothing into the workspace or after the test.
+ */
 const withTestHome = <A>(use: (home: string) => Effect.Effect<A>): Effect.Effect<A> =>
   Effect.scoped(
     Effect.gen(function* () {
@@ -34,6 +65,21 @@ const withTestHome = <A>(use: (home: string) => Effect.Effect<A>): Effect.Effect
     }),
   ).pipe(Effect.orDie, Effect.provide(BunServices.layer));
 
+/** The one place the test harness's own layer is provided.
+ *
+ *  The run itself is a whole program — the CLI plus the call-sequence read that
+ *  has to happen inside the same layer scope — so it carries its provide at its
+ *  own boundary here rather than partway through {@link runCli}'s generator.
+ *
+ *  Order matters in `Layer.mergeAll`: later layers overwrite earlier ones for
+ *  shared services. The mock `layer` must come last so its FileSystem/Path
+ *  mocks beat BunServices' real implementations. `Logger.layer([])` suppresses
+ *  logs during tests unless debugging.
+ *
+ *  The call sequence is captured regardless of whether the CLI succeeded or
+ *  failed — failed runs still record observable side effects before the failure
+ *  point, and tests need to assert on them.
+ */
 const runProvided = (
   cli: (args: string[]) => Effect.Effect<void, unknown, unknown>,
   args: string[],
@@ -107,6 +153,8 @@ export const runCli = <Name extends string, Input, ContextInput, E, R>(
     };
   });
 
+/** Does a recorded call partially match an expected one? Only the expected
+ *  call's own properties are checked. */
 const callMatches = (actualCall: ServiceCall, expectedCall: Partial<ServiceCall>): boolean =>
   actualCall._tag === expectedCall._tag &&
   Object.entries(expectedCall).every(([key, value]) => {
@@ -120,6 +168,15 @@ const callMatches = (actualCall: ServiceCall, expectedCall: Partial<ServiceCall>
     return actualValue === value;
   });
 
+/**
+ * Assertion helper for verifying call sequences.
+ *
+ * Checks that the expected calls appear in order within the actual calls.
+ * Each expected call can be a partial match - only specified properties are checked.
+ *
+ * @param actual The actual recorded service calls
+ * @param expected Expected calls in order (partial matches allowed)
+ */
 export const expectSequence = (actual: ServiceCall[], expected: Array<Partial<ServiceCall>>) => {
   let actualIndex = 0;
 
@@ -140,15 +197,28 @@ export const expectSequence = (actual: ServiceCall[], expected: Array<Partial<Se
   }
 };
 
+/**
+ * Assert that a specific call type appears exactly N times.
+ */
 export const expectCallCount = (calls: ServiceCall[], tag: ServiceCall['_tag'], count: number) => {
   const actual = calls.filter((c) => c._tag === tag).length;
   expect(actual).toBe(count);
 };
 
+/**
+ * Assert that no calls of a specific type were made.
+ */
 export const expectNoCalls = (calls: ServiceCall[], tag: ServiceCall['_tag']) => {
   expectCallCount(calls, tag, 0);
 };
 
+/**
+ * Assert that all expected calls are present (order-independent).
+ * Use this when you want to verify calls happened but don't care about order.
+ *
+ * @param actual The actual recorded service calls
+ * @param expected Expected calls (partial matches allowed)
+ */
 export const expectContains = (actual: ServiceCall[], expected: Array<Partial<ServiceCall>>) => {
   for (const expectedCall of expected) {
     const found = actual.some((actualCall) => callMatches(actualCall, expectedCall));

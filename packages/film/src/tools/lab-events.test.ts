@@ -37,6 +37,7 @@ const board: BoardFile = {
 
 const boardJson = Schema.encodeSync(BoardFileJson)(board);
 
+/** A tweak asked of a panel: the one note the lab adds (`request_tweak`). */
 const tweak = {
   scene: 'cold',
   T: 1,

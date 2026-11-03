@@ -1,7 +1,9 @@
 import { createEffect, createUniqueId } from 'solid-js';
 
+/** Sets the registered id from the current one. */
 export type RegisterId = (update: (current: string | undefined) => string | undefined) => void;
 
+/** The part's id, registered through `register` while the part renders. */
 export function useRegisteredId(
   props: { readonly id?: string | false | undefined },
   register: RegisterId,

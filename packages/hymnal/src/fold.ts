@@ -1,3 +1,4 @@
+/** Lower case, accents dropped, apostrophes joined, other punctuation a space. */
 export const fold = (text: string): string =>
   text
     .normalize('NFD')

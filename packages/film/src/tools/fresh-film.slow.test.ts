@@ -37,6 +37,7 @@ const error = {
 
 const encode = Schema.encodeSync(CheckLineJson);
 
+/** The timeout of a test here that runs the read in a fresh process: a cold start's time is the machine's. */
 const SPAWNS_MS = 30_000;
 
 describe('check lines', () => {
@@ -86,6 +87,11 @@ const mismatch = TakeMismatch.make({
   wer: 0.5,
 });
 
+/**
+ * The film CLI answering each run with the line `answer` gives its
+ * arguments, and exit 0 unless `answer` says otherwise. Each run's arguments
+ * are pushed to `runs`.
+ */
 const cliAnswering = (
   runs: Array<ReadonlyArray<string>>,
   answer: (args: ReadonlyArray<string>) => { readonly line: string; readonly exit?: number },
@@ -116,6 +122,12 @@ const cliAnswering = (
     }),
   );
 
+/**
+ * The film CLI as `film options keep-voice` answers: the take kept when it is
+ * passed `--accept-mismatch`, else refused for saying something else. Each
+ * run's arguments are pushed to `runs`. `answer` is the line it answers
+ * with when it keeps the take.
+ */
 const keepVoiceCli = (
   runs: Array<ReadonlyArray<string>>,
   answer = Schema.encodeSync(Schema.fromJsonString(OptionsKept))(kept),

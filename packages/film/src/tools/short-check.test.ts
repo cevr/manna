@@ -21,6 +21,7 @@ import {
 import { type ShortFinding, levelOf } from './findings.ts';
 import { voicedAt } from '../core/voiced.ts';
 
+/** How bad a short's finding is; `--allow-stale` does not touch any. */
 const level = (finding: ShortFinding) => levelOf(finding, { allowStale: false });
 
 const resolved = (duration: number): ResolvedShort => ({
@@ -42,6 +43,7 @@ const phrase = (start: number, end: number, text = 'one two'): Phrase => ({
   })),
 });
 
+/** A line of text at page px `[x, y]`, `w` × `h`, as the probe reports it. */
 const box = (text: string, x: number, y: number, w: number, h: number): TextBox => ({
   text,
   scene: 'a',
@@ -60,6 +62,7 @@ const box = (text: string, x: number, y: number, w: number, h: number): TextBox 
   scale: 1,
 });
 
+/** The short's own line (its hook or a caption), as the page tags it. */
 const own = (t: TextBox): TextBox => ({ ...t, caption: true });
 
 const frame = (...texts: ReadonlyArray<TextBox>): Probed => ({ texts, inks: [] });
@@ -282,6 +285,7 @@ describe('a talk, checked as a vertical film', () => {
     expect(Option.isSome(shortLength(talk(70, 'question')))).toBe(true);
   });
 
+  /** A frame of the take's footage at source second `at`, with the same line of text. */
   const shot = (at: number): Probed => ({
     texts: [box('word', 100, 100, 100, 40)],
     inks: [],

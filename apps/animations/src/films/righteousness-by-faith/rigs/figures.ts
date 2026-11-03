@@ -6,10 +6,23 @@ import { judge } from './judge-rig.ts';
 import { lead } from './lead-rig.ts';
 import { prosecutor } from './prosecutor-rig.ts';
 
+/**
+ * The figures' ink against the study's: the concept `cold-34` lines a head
+ * 8 px of 164 (0.049), the study's line 0.035 of the lead's head.
+ */
 const WEIGHT = 1.45;
 
+/**
+ * Whether the ink's widths are written into the print, bound to no `ink`
+ * number. They are bound: the owner chose a thinner line in close shots (his
+ * answer `line`: thin, on the cast's ask) and said it of RBF's
+ * figures (2026-10-20: "For the RBF, that's okay."), filed at each locked
+ * figure's point (`item:<item>` on its ledger); a bound print is other
+ * text, so each lock carries an override freeing it (`FigureLock`).
+ */
 const BAKED = false;
 
+/** RBF's figures file: each artboard by its key, in the order the file draws them, left to right on the stage. */
 export const FIGURES = figuresFile({
   weight: WEIGHT,
   baked: BAKED,
@@ -67,4 +80,5 @@ export const FIGURES = figuresFile({
   },
 });
 
+/** The artboards, by name: what a prop asks the file for. */
 export const ARTBOARDS = FIGURES.artboards;

@@ -10,10 +10,14 @@ const [W, H] = [64, 48];
 const RED = [200, 40, 40] as const;
 const BLUE = [40, 60, 200] as const;
 const GREEN = [40, 200, 80] as const;
+/** The green band's alpha: half clear. */
 const HALF = 128;
+/** The clear band's width, at the plate's open left edge. */
 const CLEAR = 16;
+/** Where the half-clear green band starts. */
 const BAND = 48;
 
+/** The plate's RGBA: clear left of `CLEAR`, red above blue, green at `HALF` alpha from `BAND`. */
 const plateRgba = () => {
   const rgba = new Uint8Array(W * H * 4);
   for (let y = 0; y < H; y++)
@@ -33,6 +37,7 @@ const SPEC_MODULE = `import png from './plate.png' with { type: 'file' };
 export const PLATE = { key: 'fixture/plate', png, size: [${W}, ${H}], at: [${AT.join(', ')}], scale: ${SCALE}, open: ['left'] };
 `;
 
+/** The same spec in Bun, for the quad (its png is never read here). */
 const SPEC: PaintingSpec = {
   key: 'fixture/plate',
   png: 'plate.png',
@@ -42,6 +47,7 @@ const SPEC: PaintingSpec = {
   open: ['left'],
 };
 
+/** The plate's module and PNG written into `dir`. */
 const lay = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -53,6 +59,7 @@ const lay = (dir: string) =>
     yield* fs.writeFileString(path.join(dir, 'spec.ts'), SPEC_MODULE);
   });
 
+/** The screen pixel the plate pixel (u, v)'s centre lands on, under `m`. */
 const screenOf = (m: PlateFrames['matrix'], u: number, v: number) => {
   const px = AT[0] + SCALE * (u + 0.5);
   const py = AT[1] + SCALE * (v + 0.5);
@@ -64,11 +71,13 @@ const rgbAt = (r: Raster, x: number, y: number) => {
   return [r.rgba[i]!, r.rgba[i + 1]!, r.rgba[i + 2]!] as const;
 };
 
+/** The largest channel difference between two colours. */
 const off = (p: ReadonlyArray<number>, q: ReadonlyArray<number>) =>
   Math.max(...p.map((c, k) => Math.abs(c - q[k]!)));
 
 const luma = (p: ReadonlyArray<number>) => 0.299 * p[0]! + 0.587 * p[1]! + 0.114 * p[2]!;
 
+/** The box of the pixels where the two frames differ by more than `by` in a channel. */
 const differs = (a: Raster, b: Raster, by: number) => {
   let [x0, y0, x1, y1] = [a.width, a.height, -1, -1];
   for (let y = 0; y < a.height; y++)

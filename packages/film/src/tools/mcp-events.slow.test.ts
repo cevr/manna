@@ -24,12 +24,15 @@ import { text } from './host/testing.ts';
 import { NOTES_LAB, labInMemory } from './lab/testing.ts';
 import { type LabFetch, labWithMcp, mcpPost } from './lab-mcp/testing.ts';
 
+/** A secret of 32 bytes, as a subscriber makes one. */
 const SECRET = `whsec_${Base64.encode(new Uint8Array(32).fill(7))}`;
 
+/** JSON read as a client reads it: the test names the fields it checks. */
 const readJson: (text: string) => any = Schema.decodeUnknownSync(
   Schema.fromJsonString(Schema.Json),
 );
 
+/** What the callback heard: the path it was posted to, its headers and its body as sent. */
 interface Heard {
   readonly path: string;
   readonly headers: Readonly<Record<string, string>>;
@@ -41,6 +44,11 @@ const Challenge = Schema.fromJsonString(
 );
 const readChallenge = Schema.decodeUnknownOption(Challenge);
 
+/**
+ * A subscriber's callback on a local port: each POST offered to `heard` as
+ * it comes; a verification echoed (unless `echo` is false); a delivery
+ * answered with the next of `statuses`, 200 once they are spent.
+ */
 const callback = Effect.gen(function* () {
   const heard = yield* Queue.unbounded<Heard>();
   const statuses = yield* Ref.make<ReadonlyArray<number>>([]);
@@ -70,6 +78,7 @@ const callback = Effect.gen(function* () {
   return { heard, statuses, echo, url: HttpServer.formatAddress(http.address) };
 });
 
+/** Whether `heard` is signed with `secret` as Standard Webhooks signs: `v1,` base64 HMAC-SHA256 of `<id>.<timestamp>.<body>`, keyed by the secret's base64 after `whsec_`. */
 const signedWith = (secret: string, heard: Heard) => {
   const key = Result.getOrThrow(Base64.decode(secret.slice('whsec_'.length)));
   const expected = new Bun.CryptoHasher('sha256', key)
@@ -78,6 +87,7 @@ const signedWith = (secret: string, heard: Heard) => {
   return (heard.headers['webhook-signature'] ?? '').split(' ').includes(`v1,${expected}`);
 };
 
+/** The answer's one message: its JSON, or the last event of a stream of them. */
 const lastMessage = (body: string) =>
   readJson(
     body
@@ -87,6 +97,7 @@ const lastMessage = (body: string) =>
       .at(-1) ?? body,
   );
 
+/** A 2026-07-28 request to the lab's MCP, its answer's JSON. */
 const rpc = (lab: LabFetch, method: string, params: Schema.JsonObject = {}) =>
   Effect.flatMap(
     mcpPost(
@@ -112,6 +123,7 @@ const rpc = (lab: LabFetch, method: string, params: Schema.JsonObject = {}) =>
       ),
   );
 
+/** A tweak the owner asked of film `f`'s panel `cold.judge`, written to its notes through the store. */
 const ownerNote = (words: string) =>
   Effect.gen(function* () {
     const notes = yield* NotesStore;
@@ -128,6 +140,7 @@ const ownerNote = (words: string) =>
     );
   });
 
+/** A subscription to `name` (of film `f` unless `args` says otherwise) at the callback's `path`, with `more` of subscribe's params (its `secret` the delivery's). */
 const subscribeAt = (
   url: string,
   { secret = SECRET, ...more }: { readonly secret?: string } & Schema.JsonObject = {},

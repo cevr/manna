@@ -25,6 +25,7 @@ const read = (
     page: { id: page, links: { local: `http://127.0.0.1:8229/asks/page/${page}` } },
   }) satisfies AskRead;
 
+/** A lab that did not answer, in its words. */
 interface Lost {
   readonly message: string;
 }
@@ -43,15 +44,22 @@ const change = (ask: string, kind: LabChange['kind']): LabChange => ({
 const ok = Result.succeed;
 const lost = Result.fail;
 
+/** The feed's answer past a cursor, as the fake lab gives it. */
 const answer = (
   cursor: string,
   changes: ReadonlyArray<LabChange> = [],
   reset = false,
 ): Result.Result<LabChanges, string> => ok({ cursor, changes, reset });
 
+/** The asks, as the fake lab lists them. */
 const listed = (...asks: ReadonlyArray<AskRead>): Result.Result<ReadonlyArray<AskRead>, string> =>
   ok(asks);
 
+/**
+ * A fake lab: `changes` answers its script in turn (then never), `asks` its
+ * own (then its last again); every call is written down as `<session>
+ * <what>`. A failed step is a lost lab, in its words.
+ */
 const fakeLab = (
   changes: Array<Result.Result<LabChanges, string>>,
   asks: Array<Result.Result<ReadonlyArray<AskRead>, string>>,

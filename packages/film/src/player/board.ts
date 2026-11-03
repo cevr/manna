@@ -5,11 +5,13 @@ import { boardUrls } from '../core/board-render.ts';
 import { BoardUnreadable } from '../core/errors.ts';
 import type { BoardImage } from '../canvas/board.ts';
 
+/** A film's Board as the page draws it: the record, and each shown try's image by its file. */
 interface LoadedBoard {
   readonly board: BoardFile;
   readonly images: ReadonlyMap<string, BoardImage>;
 }
 
+/** The bytes at `url`, read through the page's client; any failure or non-2xx status is `BoardUnreadable`. */
 const bytesAt = (film: string, url: string) =>
   Effect.gen(function* () {
     const unreadable = (reason: string) => BoardUnreadable.make({ film, url, reason });
@@ -19,6 +21,7 @@ const bytesAt = (film: string, url: string) =>
     return yield* Effect.mapError(res.arrayBuffer, (e) => unreadable(e.message));
   });
 
+/** Film `id`'s Board: its record, and the image of each picture panel's shown try, decoded. */
 export const loadBoard = (
   id: string,
 ): Effect.Effect<LoadedBoard, BoardUnreadable, HttpClient.HttpClient> =>

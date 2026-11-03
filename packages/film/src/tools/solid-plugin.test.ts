@@ -3,8 +3,10 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Option, Predicate } from 'effect';
 import { solidPlugin } from './solid-plugin.ts';
 
+/** The plugin's loader: it compiles off the bundler's thread, so each load is a promise. */
 type Loader = (args: OnLoadArgs) => Promise<OnLoadResult>;
 
+/** The plugin's `.tsx` loader, as the bundler is handed it. */
 const loader = Effect.suspend(() => {
   let found = Option.none<Loader>();
   const build = {

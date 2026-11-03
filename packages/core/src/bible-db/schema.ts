@@ -2,6 +2,7 @@ import { Effect } from 'effect';
 import type * as SqlClient from 'effect/sql/SqlClient';
 import type { SqlError } from 'effect/sql/SqlError';
 
+/** Canonical unified Bible schema. */
 const BIBLE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS books (

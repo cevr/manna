@@ -19,6 +19,7 @@ const WRITTEN = `export const script = [
 ];
 `;
 
+/** RBF's shape: a voiced beat, a silent title, and a thesis its `min` holds longer than its words. */
 const LIKE_RBF = `export const script = [
   { id: 'cold', say: 'one two three four five six' },
   { id: 'title' },
@@ -26,6 +27,7 @@ const LIKE_RBF = `export const script = [
 ];
 `;
 
+/** The acts and the score's movements the film declares, each on the beat it begins on. */
 const ACTS = [
   { from: 'cold', name: 'open' },
   { from: 'title', name: 'close' },
@@ -35,6 +37,7 @@ const MOVEMENTS = [
   { from: 'look', name: 'rise' },
 ];
 
+/** Every stat names a newer mtime, so the lab reads the clock fresh each time, as it would after each write. */
 class Ticking extends Map<string, number> {
   private n = 0;
   override get(_key: string) {
@@ -43,10 +46,12 @@ class Ticking extends Map<string, number> {
   }
 }
 
+/** Each beat line of a script (`{ id: 'cold', say: '…', tail: 3 }`, one a line): its id, its words, its holds and its `min`. */
 const BEAT_LINE = /\{ id: '(\w+)'(.*)\}/;
 const SAY = /say: '([^']*)'/;
 const HOLD = /(lead|tail|min): ([\d.]+)/g;
 
+/** The beats a script writes, in order: their ids, words, declared holds and `min`, read as its text stands. */
 const beatsOf = (source: string) =>
   source.split('\n').flatMap((line) =>
     Option.match(Option.fromNullishOr(BEAT_LINE.exec(line)), {
@@ -66,6 +71,7 @@ const beatsOf = (source: string) =>
     }),
   );
 
+/** The clock of `files`' script as it now stands: its beats in order, their declared holds, laid out. */
 const clockOf = (files: Map<string, Uint8Array>) =>
   Effect.sync(() => {
     const beats = beatsOf(new TextDecoder().decode(files.get(SCRIPT)));
@@ -101,6 +107,7 @@ const provided = <A, E, R>(
   );
 };
 
+/** Film `f`'s production, one version open on its registered files. */
 const produced = Effect.flatMap(ProductionStore, (productions) =>
   productions.start('f', {
     title: 'F',
@@ -111,6 +118,7 @@ const produced = Effect.flatMap(ProductionStore, (productions) =>
   }),
 );
 
+/** The notes the ledger holds, as `[text, by]`. */
 const ledgerNotes = Effect.gen(function* () {
   const file = Option.getOrThrow(yield* (yield* ProductionStore).read('f'));
   return file.said.map((s) => [s.text, Option.getOrElse(s.by, () => '')]);
@@ -118,6 +126,7 @@ const ledgerNotes = Effect.gen(function* () {
 
 const scriptNow = (files: Map<string, Uint8Array>) => new TextDecoder().decode(files.get(SCRIPT));
 
+/** The beats the script lane shows, as `[beat, start]`. */
 const scriptLane = (timeline: { lanes: ReadonlyArray<{ track: string; clips: any }> }) =>
   timeline.lanes
     .find((l) => l.track === 'script')

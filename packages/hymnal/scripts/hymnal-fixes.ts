@@ -1,3 +1,27 @@
+/**
+ * Applies printed corrections to independent source text, recompiles JSON,
+ * then rebuilds SQLite through its sole writer, compile-db.ts:
+ *
+ *   bun packages/hymnal/scripts/hymnal-fixes.ts [--out <absolute-db-file>]
+ *
+ * A printed source is `data/fixes/<NNN>.json`: the hymn as its page prints
+ * it, each line with where it was read. Its refrain is a list of lines, and a
+ * part of it that the page prints once for each stanza (`varies`, each with
+ * the stanzas it follows) stands among them. The row is laid out as the
+ * compiler reads it:
+ *
+ * - a refrain that varies: no single refrain fits every stanza, so each
+ *   stanza is written with the refrain sung after it, its own part in place,
+ *   as ids 0 to n - 1, and the hymn has no refrain of its own;
+ * - a refrain that does not vary: the stanzas as ids 0 to n - 1 and the
+ *   refrain as id -1 (where it is sung is `data/fixes/refrains.json`'s);
+ * - no refrain: the stanzas as ids 0 to n - 1.
+ *
+ * Only the rows with a printed source are written. The output depends on the
+ * sources alone, so a rerun writes the same rows. `--out` selects the generated
+ * database; it never selects an input database.
+ */
+
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, Schema } from 'effect';
 import { readdirSync } from 'node:fs';
@@ -30,6 +54,7 @@ const Verses = Schema.fromJsonString(
 const textOf = (lines: ReadonlyArray<{ readonly text: string }>) =>
   lines.map((line) => line.text).join('\n');
 
+/** The refrain's lines as sung after stanza `n` (1-based), its varying part resolved. */
 const refrainAfter = (printed: Printed, n: number) =>
   (printed.refrain?.lines ?? []).flatMap((item) => {
     if (!('varies' in item)) return [item];
@@ -39,6 +64,7 @@ const refrainAfter = (printed: Printed, n: number) =>
     return part.lines;
   });
 
+/** The row's verses as the compiler reads them. */
 const versesOf = (printed: Printed): typeof Verses.Type => {
   const refrain = printed.refrain;
   if (refrain !== undefined && refrain.lines.some((item) => 'varies' in item))

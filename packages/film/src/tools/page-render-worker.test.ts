@@ -9,6 +9,11 @@ const Services = renderWorkers.pipe(Layer.provideMerge(BunServices.layer));
 
 const URL_ASKED = 'http://127.0.0.1:8229/films/toy/choices';
 
+/**
+ * A server entry that loads only once `gate` opens: it says `loading` on the
+ * gate's channel and waits for `open`. Its page heads with whether its signal
+ * is aborted, and reads the lab's API.
+ */
 const gatedEntry = (gate: string) => `
 const channel = new BroadcastChannel('${gate}');
 await new Promise((open) => {
@@ -28,6 +33,7 @@ export default {
 };
 `;
 
+/** A server entry whose page heads and ends at once. */
 const FAST_ENTRY = `
 export default {
   bodyClass: 'fast',
@@ -71,6 +77,7 @@ describe("a build's render worker", () => {
             return Queue.offer(coming, message);
           })
           .pipe(Effect.forkScoped);
+        /** Waits for render `id`'s message tagged `tag`. */
         const heardFrom = (id: number, tag: FromRender['_tag']) =>
           Effect.gen(function* () {
             while (true) {

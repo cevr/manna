@@ -25,10 +25,12 @@ import { isDegree } from './graph/pitch.ts';
 import type { ResolvedSound } from './graph/plan.ts';
 import { MAX_CODE_SECS, MAX_CODE_WORK } from './graph/units.ts';
 
+/** The key a sound with no degree names: C major stands in, never heard. */
 const NO_KEY: Key = { tonic: 'C', scale: 'major' };
 
 const CodeJson = Schema.fromJsonString(CodeSound);
 
+/** A node's children, in order. */
 const childrenOf = (node: Node): ReadonlyArray<Node> => {
   switch (node._tag) {
     case 'Osc':
@@ -45,8 +47,10 @@ const childrenOf = (node: Node): ReadonlyArray<Node> => {
   }
 };
 
+/** Every node of a graph, its root first, each before its children. */
 const nodesOf = (root: Node): ReadonlyArray<Node> => [root, ...childrenOf(root).flatMap(nodesOf)];
 
+/** The values a signal moves between: a value held, a ramp's ends, each point's, the centre of a wobble or an LFO. */
 const signalValues = <U>(signal: Signal<U>): ReadonlyArray<Value<U>> => {
   if (Predicate.isTagged(signal, 'Ramp')) return [signal.from, signal.to];
   if (Predicate.isTagged(signal, 'Points')) return signal.points.map(([, value]) => value);
@@ -55,6 +59,7 @@ const signalValues = <U>(signal: Signal<U>): ReadonlyArray<Value<U>> => {
   return [signal];
 };
 
+/** The pitches a node can play. */
 const pitchesOf = (node: Node): ReadonlyArray<Pitch> => {
   switch (node._tag) {
     case 'Osc':
@@ -68,6 +73,7 @@ const pitchesOf = (node: Node): ReadonlyArray<Pitch> => {
   }
 };
 
+/** The first stream name two of `nodes` share. */
 const sharedStream = (nodes: ReadonlyArray<Node>): Option.Option<string> => {
   const seen = new Set<string>();
   for (const node of nodes) {
@@ -78,16 +84,19 @@ const sharedStream = (nodes: ReadonlyArray<Node>): Option.Option<string> => {
   return Option.none();
 };
 
+/** A sound resolved, and its most: what a sound that samples it adds. */
 interface Walked {
   readonly sound: ResolvedSound;
   readonly bound: Bound;
 }
 
+/** One walk of a library: the sounds resolved so far, each once however often it is sampled. */
 interface Walk {
   readonly library: Library;
   readonly done: Map<string, Result.Result<Walked, CodeError>>;
 }
 
+/** `name`, sampled by the last of `stack`: resolved once, refused when it is not a code sound or closes a ring. */
 const sampled = (
   walk: Walk,
   stack: ReadonlyArray<string>,
@@ -110,6 +119,7 @@ const sampled = (
   return walked;
 };
 
+/** `sound`, under `name`, checked and resolved: what it samples first. */
 const walkSound = (
   walk: Walk,
   stack: ReadonlyArray<string>,
@@ -154,16 +164,23 @@ const walkSound = (
   });
 };
 
+/** A code trial resolved: its graph ready to render, and how many seeds it plays. */
 export interface ResolvedTrial {
   readonly sound: ResolvedSound;
   readonly variants: number;
 }
 
+/** A library's code resolved: its code sounds, and its entries' code trials, each by its entry's name. */
 interface ResolvedCode {
   readonly code: ReadonlyMap<string, ResolvedSound>;
   readonly trials: ReadonlyMap<string, ResolvedTrial>;
 }
 
+/**
+ * Every code sound and code trial of `library` resolved, its recordings'
+ * trials from `fits` (by name), or the first refusal: a fit no recording
+ * takes first, then in the library's order.
+ */
 export const resolveCode = (
   library: Library,
   fits: ReadonlyMap<string, CodeTrial> = new Map(),

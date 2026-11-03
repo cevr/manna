@@ -206,6 +206,17 @@ describe('WritingsService', () => {
       expect(hits.every((hit) => hit.publication.code === 'PP')).toBe(true);
     }).pipe(Effect.provide(TestLayer)));
 
+  /** Reader text reaches FTS5 as terms, not as a query expression.
+   *
+   *  `manna egw ref "PP 45.3"` parses `ref` as a query word and searched for
+   *  `ref PP 45.3`; FTS5 read the `.` as syntax and the whole command died with
+   *  `fts5: syntax error near "."`. The CLI, `egw study`, the wiki lookup panel
+   *  and the web API's search handler all hand this method raw reader text, so
+   *  the sanitizing belongs here rather than at any one of them.
+   *
+   *  The assertion is that the search *answers*, because the defect was a
+   *  failure rather than a wrong ranking: against the unsanitized method every
+   *  one of these queries is a crash. */
   test('sanitizes FTS5 punctuation in reader text rather than failing on it', () =>
     Effect.gen(function* () {
       const writings = yield* WritingsService;
@@ -225,6 +236,9 @@ describe('WritingsService', () => {
       expect(plain.length).toBeGreaterThan(0);
     }).pipe(Effect.provide(TestLayer)));
 
+  /** Punctuation alone names no term, and an empty MATCH is a second syntax
+   *  error. It is the same unanswerable request as `""` and reuses that reason
+   *  rather than widening an error schema every caller maps over. */
   test('rejects a query that is punctuation only, as an empty query', () =>
     Effect.gen(function* () {
       const writings = yield* WritingsService;

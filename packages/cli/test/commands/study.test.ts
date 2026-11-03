@@ -1,3 +1,16 @@
+/** Milestone 5's CLI JSON workflow (§8.2, §10).
+ *
+ *  `manna study verse "Dan 8:13" --json` and `manna study strongs H8548 --json`
+ *  must print the study service's own result through the core codecs
+ *  (`VerseStudyJson`, `StrongsStudyJson`).
+ *
+ *  Replacing `verseStudyJson(bundle)` in `study.ts` with a hand-mapped object
+ *  is the drift these guard against. They run the real command — argument
+ *  parsing, layer resolution, encoder, `Console.log` — and compare what
+ *  actually reached stdout with the service's answer for the same inputs,
+ *  encoded here.
+ */
+
 import {
   StrongsStudyJson,
   StudyService,
@@ -22,11 +35,17 @@ import { Effect, Option, Schema, SchemaGetter } from 'effect';
 import { StudyLayer, strongsStudyJson, study, verseStudyJson } from '../../src/commands/study.js';
 import { runCli } from '../lib/run-cli.js';
 
+/** The layer the two commands resolve under test. Substituted through
+ *  `StudyLayer`, the reference whose default is the installed `~/.bible`
+ *  corpora, so the command under test is the production command and only its
+ *  data source moved. */
 const fixture: Layer.Layer<StudyService> = studyFixtureLayer;
 
 const runStudy = (args: readonly string[]) =>
   runCli(study, [...args], {}).pipe(Effect.provideService(StudyLayer, fixture));
 
+/** The CLI's serializer, declared here so the comparison is a property of the
+ *  payload rather than of this test's own formatting choices. */
 const JsonText = Schema.Unknown.pipe(
   Schema.encodeTo(Schema.String, {
     decode: SchemaGetter.parseJson(),
@@ -36,12 +55,18 @@ const JsonText = Schema.Unknown.pipe(
 
 const serialize = Schema.encodeUnknownEffect(JsonText);
 
+/** The JSON text the core codec produces for one bundle.
+ *
+ *  Two steps: `VerseStudyJson` encodes the bundle, and the result is
+ *  serialized. Comparing text rather than objects is the point: JSON is what a
+ *  script piping `--json` actually receives. */
 const verseWireText = (bundle: VerseStudy): Effect.Effect<string, Schema.SchemaError> =>
   Effect.flatMap(Schema.encodeEffect(VerseStudyJson)(bundle), serialize);
 
 const strongsWireText = (result: StrongsStudy): Effect.Effect<string, Schema.SchemaError> =>
   Effect.flatMap(Schema.encodeEffect(StrongsStudyJson)(result), serialize);
 
+/** The service the command resolves, asked directly. */
 const askStudy = <A, E>(use: Effect.Effect<A, E, StudyService>): Effect.Effect<A, E> =>
   use.pipe(Effect.provide(fixture));
 
@@ -198,6 +223,13 @@ describe('the CLI encoders are the core schemas', () => {
   );
 });
 
+/** Should-fix 9's CLI half: a malformed corpus row is reported *by name*.
+ *
+ *  The error was already typed and already carried `source`, `operation` and
+ *  `row` — and the CLI printed the schema's `message` and nothing else, so an
+ *  operator was told a row was malformed and given no way to find it. The three
+ *  fields exist for exactly that, and reaching stderr is the only place they do
+ *  the reader any good. */
 describe('manna study verse against a malformed corpus row', () => {
   const runMalformed = (args: readonly string[]) =>
     runCli(study, [...args], {}).pipe(

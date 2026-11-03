@@ -124,16 +124,26 @@ const film = Argument.String('film').pipe(
   Argument.withDescription('the film, a folder under src/films'),
 );
 
+/** `--only a,b` as a set of ids. */
 const only = Flag.String('only').pipe(
   Flag.optional,
   Flag.map(Option.map((ids: string) => new Set(ids.split(',')))),
 );
+/** `--scene a,b`: scenes by id, for `check` and `render`. */
 const scenes = Flag.String('scene').pipe(
   Flag.optional,
   Flag.map(Option.map((ids: string) => ids.split(','))),
 );
+/** `--short <id>`: one of the film's shorts (`shorts.ts`). */
 const short = Flag.String('short').pipe(Flag.optional);
 
+/**
+ * The part of the film the address flags name (`addressOf`), resolved once
+ * against the film's layout (`resolveAddress`), so a misspelt act, scene,
+ * short, mark or cue fails before a page or a browser starts. A short is only
+ * checked here, on the film's clock: its page resolves it on its own frame
+ * rate (`Checker.cut`, the renderer).
+ */
 const scopeOf = (loaded: LoadedFilm, placed: ReadonlyArray<Placed>, flags: AddressFlags) =>
   Effect.fromResult(
     Result.flatMap(addressOf(flags), (address) =>
@@ -144,8 +154,13 @@ const scopeOf = (loaded: LoadedFilm, placed: ReadonlyArray<Placed>, flags: Addre
     ),
   );
 
+/** `--act <name>`: one of the film's acts (`look.acts`). */
 const act = Flag.String('act').pipe(Flag.withSchema(ActName), Flag.optional);
 
+/**
+ * `--accept-mismatch a,b`: the beats that may keep a take whose transcript
+ * does not match; bare, the `--only` beats (`accept.ts`).
+ */
 const acceptMismatch = (what: string) =>
   Flag.String('accept-mismatch').pipe(
     Flag.optional,
@@ -158,24 +173,30 @@ const dryRun = Flag.Boolean('dry-run').pipe(
   Flag.withDescription('print what would be generated, then stop'),
 );
 
+/** What a paid run needs before it spends a credit: a logged-in CLI. The remix after it runs in-process. */
 const paidPreflight = Effect.gen(function* () {
   yield* (yield* ElevenLabs).ready;
 });
 
+/** How a doctor check can fail: a tool missing or broken. */
 type ToolError =
   | BrowserMissing
   | BrowserFailed
   | ElevenLabsFailed
   | EncoderReadyError
   | PreviewServerFailed;
+/** What a doctor check needs from the platform. */
 type ToolNeeds = FileSystem.FileSystem | Path.Path | ChildProcessSpawner.ChildProcessSpawner;
 
 interface ToolCheck<E, R> {
   readonly tool: string;
+  /** The commands that need it. */
   readonly needed: string;
+  /** What it found, said after `ok` (empty when there is nothing to add). */
   readonly run: Effect.Effect<string, E, R>;
 }
 
+/** A doctor line: `ok` and what was found, or `missing` and why. */
 const toolLine = (
   { tool, needed }: { readonly tool: string; readonly needed: string },
   result: Result.Result<string, { readonly message: string }>,
@@ -189,6 +210,11 @@ const toolLine = (
     onFailure: (error) => `missing ${tool.padEnd(11)} (${needed}): ${error.message}`,
   });
 
+/**
+ * The doctor. The encoder check serves the app's own player, as `render`
+ * does; a player that does not start fails that line alone
+ * (`PreviewServerFailed`), and every other line still prints.
+ */
 const doctor = <E, R>(previewServer: Layer.Layer<PreviewServer, E, R>) => {
   const served = previewServer.pipe(
     Layer.catchCause((cause) =>
@@ -449,6 +475,7 @@ const script = Command.make(
   ),
 );
 
+/** The pace a draft's spoken time is read at, as the staging voice reads (`series/README.md`). */
 const DRAFT_WPM = 155;
 
 const drafts = Command.make(
@@ -494,6 +521,7 @@ const drafts = Command.make(
 );
 
 const cues = <E, R>(checkLayer: Layer.Layer<Checker, E, R>) => {
+  /** The short on the film's frames, at the rate the film declares: the frames its page draws. */
   const shortCut = Effect.fn('film.cues.short')(function* (loaded: LoadedFilm, declared: Short) {
     return yield* (yield* Checker).cut(loaded, declared);
   }, Effect.provide(checkLayer));
@@ -696,6 +724,7 @@ const check = <E, R>(
   );
 };
 
+/** Print each finding (a line, or a line of JSON), log the count, and fail on any error. */
 const printReport = Effect.fn('film.check.report')(function* (
   name: string,
   what: 'film' | 'short',
@@ -712,8 +741,14 @@ const printReport = Effect.fn('film.check.report')(function* (
   if (errors > 0) return yield* CheckFailed.make({ errors, warnings });
 });
 
+/** `--stills 3,10.5`: seconds, each a finite number. */
 const Seconds = Schema.Array(Schema.FiniteFromString);
 
+/**
+ * `film render`, drawn on the app's PreviewServer, or with `--level` on a
+ * wedge of its render page (`renderPage`, the films' narration from `films`):
+ * the look at that level, the palette's pick unwritten (`tools/wedge.ts`).
+ */
 const render = <E, R>(
   renderLayer: Layer.Layer<Renderer, E, R>,
   renderPage: string,
@@ -966,13 +1001,32 @@ const lab = <E>(
     ),
   );
 
+/** What the app hands the CLI: where its films are, and the servers for its player page. */
 interface FilmApp<E> {
+  /** The films folder (`<film>/scenes`, `<film>/narration`, ...), the one the player imports. */
   readonly films: string;
+  /** The app's sound library folder (`library.ts`, its lock, `files/`, `public/`), shared by its films. */
   readonly sounds: string;
+  /** The app's footage library folder (its lock, `transcripts/`, `files/`), shared by its talks. */
   readonly footage: string;
+  /** The app's series folder (`<series>/scripts/<draft>.md`): the drafts the lab reads and marks beside the films. */
   readonly series: string;
+  /**
+   * The app's own folders for what a run makes: `out`, its renders, sheets and
+   * project folders (`FILMS_OUT`); `lab`, the lab's notes (`FILMS_LAB`); and
+   * `productions`, the productions' ledgers, committed (`FILMS_PRODUCTIONS`).
+   * The environment's value wins when it names one, so a test points a run
+   * elsewhere; the shell's directory never decides.
+   */
   readonly folders: { readonly out: string; readonly lab: string; readonly productions: string };
+  /** The player, served while `render` or `check` runs. */
   readonly previewServer: Layer.Layer<PreviewServer, E>;
+  /**
+   * The lab, served while `lab` runs: where it listens (the host and port the
+   * app chooses; the framework's server, `labServer`, answers there), its
+   * pages (the app's HTML entries: `LabPage`), and the roots of the renders
+   * it reviews when `FILM_REVIEW_ROOTS` names none.
+   */
   readonly lab: {
     readonly at: Effect.Effect<LabAt, E>;
     readonly pages: Omit<LabPageSpec, 'films' | 'footage'>;
@@ -982,12 +1036,40 @@ interface FilmApp<E> {
       FileSystem.FileSystem | Path.Path
     >;
   };
+  /**
+   * The command that runs this CLI (e.g. `['bun', '/app/cli.ts']`): the lab
+   * runs `check --static` through it in a fresh process after each write, so
+   * the check reads the scene files as the write left them, and the review
+   * reads a film's options, keeps its takes and makes their mixes through it
+   * (`options`, `FreshFilm`).
+   */
   readonly self: ReadonlyArray<string>;
+  /**
+   * What `film judge` quotes: sections of the app's rule files, each by its
+   * heading line, for every beat or only for a beat in one of its registers
+   * (`STORY`, `IDEA`). A section its file lacks fails the judge
+   * (`JudgeRuleMissing`).
+   */
   readonly judge: { readonly rules: ReadonlyArray<JudgeRule> };
+  /**
+   * What `film lab critique` and the lab's `critique` tool quote: the sections of
+   * the app's rule files on how a figure is drawn, each by its heading line.
+   * A section its file lacks is the critique's skip, logged.
+   */
   readonly critique: { readonly rules: ReadonlyArray<CritiqueRule> };
+  /**
+   * The app's house look: `text`, the block every concept prompt opens with,
+   * and `image`, its picture, every concept try's first reference. `film
+   * concept` reads them from here, wherever it runs.
+   */
   readonly house: { readonly text: string; readonly image: string };
 }
 
+/**
+ * Run the `film` CLI over the app's films, with its player servers. The
+ * server and the browser start only for `render` and the layout leg of
+ * `check`, and stop with them; the lab server runs while `lab` does.
+ */
 export const runFilmCli = <E>({
   films,
   sounds,
@@ -1076,6 +1158,11 @@ export const runFilmCli = <E>({
   );
 };
 
+/**
+ * A failure as the CLI reports it: a typed error by its tag and message only
+ * (its stack is where Schema built the error, not where the run went wrong);
+ * a defect, or anything but an Error, as the whole cause, stack included.
+ */
 const reportOf = (cause: Cause.Cause<unknown>): unknown =>
   Option.match(
     Option.filter(
@@ -1088,6 +1175,7 @@ const reportOf = (cause: Cause.Cause<unknown>): unknown =>
     },
   );
 
+/** What runMain reports of a failure (not an interrupt, nor an error marked unreported), as an error log. */
 const reportFailure = (cause: Cause.Cause<unknown>) =>
   Effect.when(
     Effect.logError(reportOf(cause)),

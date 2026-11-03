@@ -19,24 +19,44 @@ import type { PhoneCopy } from '../../core/served.ts';
 import { LabClient, type LabFailure, called } from '../api.ts';
 
 interface AskCalls {
+  /** Every folder with something to review (a video or a document an ask shows); `fresh` walks the roots again now. */
   readonly index: (fresh: boolean) => Effect.Effect<ReviewIndex, LabFailure>;
+  /** A video's length, in seconds, and its frames a second as its own packets give them (never rounded; none when it has no video). */
   readonly duration: (ref: string) => Effect.Effect<ReviewDuration, LabFailure>;
+  /** A doc's text (a set's notes, a folder's markdown). */
   readonly text: (ref: string) => Effect.Effect<string, LabFailure>;
+  /**
+   * Where a video's phone copy stands: its URL asked for its head alone, none
+   * of its bytes; made (200), failed (422, \`PhoneCopyFailed\`), else still
+   * being made.
+   */
   readonly phoneCopy: (ref: string) => Effect.Effect<PhoneCopy, LabFailure>;
+  /** A film's storyboard as its record stands now (`core/board.ts`). */
   readonly board: (film: string) => Effect.Effect<BoardFile, LabFailure>;
+  /** An agent's ask, as the lab keeps it (`core/ask.ts`). */
   readonly ask: (id: string) => Effect.Effect<AskRecord, LabFailure>;
+  /** The page of asks ask `id` is on: every ask on it, in the order made. */
   readonly askPage: (id: string) => Effect.Effect<AsksPage, LabFailure>;
+  /** The owner's answers to ask `id`'s page, each section's in order: the ask as they leave it. */
   readonly answer: (
     id: string,
     sections: ReadonlyArray<{ readonly step: AskName; readonly values: StepValues }>,
   ) => Effect.Effect<AskRecord, LabFailure>;
+  /** A film's script as its `script.ts` reads now: each beat's line, picture and sources. */
   readonly script: (film: string) => Effect.Effect<ScriptBeats, LabFailure>;
+  /** Each spoken beat of a film's script as its staging take stands, and the day's spend. */
   readonly filmVoice: (film: string) => Effect.Effect<ScriptVoice, LabFailure>;
+  /** A beat's delivery marks written into a film's `script.ts`. */
   readonly filmMarks: (film: string, post: MarksPost) => Effect.Effect<LabWrite, LabFailure>;
+  /** A film's recorded takes of beat `beat`, newest first, the kept one among them. */
   readonly attempts: (film: string, beat: string) => Effect.Effect<StudioAttempts, LabFailure>;
+  /** The app's series and their drafts. */
   readonly series: Effect.Effect<SeriesList, LabFailure>;
+  /** Series draft `draft` of `series`, as its Markdown reads now. */
   readonly draft: (series: string, draft: string) => Effect.Effect<DraftRead, LabFailure>;
+  /** Each spoken beat of a series draft as its staging take stands, and the day's spend. */
   readonly draftVoice: (series: string, draft: string) => Effect.Effect<ScriptVoice, LabFailure>;
+  /** A beat's delivery marks written into a series draft: the draft as it leaves it. */
   readonly draftMarks: (
     series: string,
     draft: string,
@@ -46,11 +66,13 @@ interface AskCalls {
 
 export class AskApi extends Context.Service<AskApi, AskCalls>()('@manna/film/lab/AskApi') {}
 
+/** A file's text when it is served; the server's refusal (JSON, by the contract) when not. */
 const fileText = (res: HttpClientResponse.HttpClientResponse) => {
   if (res.status >= 200 && res.status < 300) return res.text;
   return Effect.flatMap(HttpClientResponse.schemaBodyJson(Refusal)(res), Effect.fail);
 };
 
+/** The ask page's routes on the page's own origin: a doc's URL is a path, resolved against the page's address. */
 const makeAskApi = Effect.fn('lab.ask.api')(function* () {
   const lab = yield* LabClient;
   const http = yield* HttpClient.HttpClient;
@@ -89,5 +111,6 @@ const makeAskApi = Effect.fn('lab.ask.api')(function* () {
   return api;
 });
 
+/** The ask page's routes on the page's own origin, over the page's one client (given at its root). */
 export const askApiLayer: Layer.Layer<AskApi, never, LabClient | HttpClient.HttpClient> =
   Layer.effect(AskApi, makeAskApi());

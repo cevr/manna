@@ -5,6 +5,7 @@ import { CallRefused, type Invoke, framePage, launchArgs, lumaGrid } from './bro
 import { EncodeFailed, FrameFailed } from './errors.ts';
 import { testExportInfo } from './browser/testing.ts';
 
+/** A page whose every call hands back `answer`, or is refused with `refused`. */
 const pageAnswering = (answer: Effect.Effect<unknown, CallRefused>) => {
   const invoke: Invoke = () => answer;
   return framePage(testExportInfo, 'Test film', invoke);

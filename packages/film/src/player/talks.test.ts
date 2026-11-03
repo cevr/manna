@@ -49,6 +49,7 @@ const ENTRY = {
   },
 };
 
+/** The library's files as the footage route serves them, its lock as `lock`. */
 const libraryOf = (lock: FootageLock) =>
   Effect.gen(function* () {
     const transcript = yield* Schema.encodeEffect(FootageTranscriptJson)({
@@ -65,6 +66,11 @@ const libraryOf = (lock: FootageLock) =>
 
 const HEARD: FootageLock = { version: 1, footage: { 'take.why': { ...ENTRY, transcript: FILE } } };
 
+/**
+ * A client on a stand-in page answering each path from `files`, a 404 for
+ * any other, noting the paths it was asked: bun has no `location`, so a
+ * page-relative URL is resolved against an origin here.
+ */
 const serving = (files: ReadonlyMap<string, string>) => {
   const asked: Array<string> = [];
   const client = HttpClient.make((request, url) => {
@@ -84,6 +90,10 @@ const serving = (files: ReadonlyMap<string, string>) => {
 
 const isUnreadable = Schema.is(TalkUnreadable);
 
+/**
+ * Talk `why`'s module as the page loads it, its edit `talk.ts` exporting
+ * `module`, over `files`; the page's refusal, if it is `TalkUnreadable`.
+ */
 const pageOf = (files: ReadonlyMap<string, string>, module: unknown = { talk: TALK }) => {
   const { layer, asked } = serving(files);
   const loaded = Effect.tryPromise({

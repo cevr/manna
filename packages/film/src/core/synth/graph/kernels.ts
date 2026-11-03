@@ -4,6 +4,7 @@ import type { FILTERS, PARTIAL_SETS } from './nodes.ts';
 import { triangle } from './track.ts';
 import { CONTROL, SYNTH_RATE } from './units.ts';
 
+/** The PolyBLEP residual at phase `t` (turns) for a step of `dt` turns a frame. */
 const blep = (t: number, dt: number): number => {
   if (t < dt) {
     const x = t / dt;
@@ -16,10 +17,12 @@ const blep = (t: number, dt: number): number => {
   return 0;
 };
 
+/** The fraction of `t`, in [0, 1). */
 const frac = (t: number): number => t - Math.floor(t);
 
 type Wave = 'sine' | 'triangle' | 'saw' | 'square';
 
+/** One sample of `wave` at phase `p` (turns), stepping `dt` turns a frame, high for `duty` of a square's cycle. */
 const waveAt = (wave: Wave, p: number, dt: number, duty: number): number => {
   switch (wave) {
     case 'sine':
@@ -33,6 +36,7 @@ const waveAt = (wave: Wave, p: number, dt: number, duty: number): number => {
   }
 };
 
+/** A tone: `wave` at `hz[i]` from `phase` (turns); saw and square band-limited by PolyBLEP. */
 export const oscillate = (
   out: Float32Array,
   n: number,
@@ -53,8 +57,14 @@ export const oscillate = (
 
 type Color = 'white' | 'pink' | 'brown';
 
+/** Brown noise: a leaky random walk, each step `STEP` of a white sample, divided by `LEAK`, read at `GAIN`. */
 const BROWN = { step: 0.02, leak: 1.02, gain: 3.5 } as const;
 
+/**
+ * Pink noise: Paul Kellet's economy filter over white noise, about −3 dB an
+ * octave: three leaky sums (each a pole and the white sample's weight into
+ * it) and the white sample at `direct`, read at `gain`.
+ */
 const PINK = {
   sums: [
     [0.99765, 0.099046],
@@ -65,6 +75,7 @@ const PINK = {
   gain: 0.25,
 } as const;
 
+/** Noise from the stream `seed`, in order, so a longer noise keeps its first samples. */
 export const noise = (out: Float32Array, n: number, color: Color, seed: number): void => {
   const r = rng(seed);
   if (color === 'white') {
@@ -92,8 +103,10 @@ export const noise = (out: Float32Array, n: number, color: Color, seed: number):
   }
 };
 
+/** A white sample's power: the variance of a uniform draw on [−1, 1). */
 const WHITE_POWER = 1 / 3;
 
+/** 1 / (1 − p·e^(−jw)) at `turns` of the rate, as its real and imaginary parts. */
 const onePole = (p: number, turns: number): readonly [number, number] => {
   const re = 1 - p * cosTurn(turns);
   const im = p * sinTurn(turns);
@@ -101,6 +114,11 @@ const onePole = (p: number, turns: number): readonly [number, number] => {
   return [re / d, -im / d];
 };
 
+/**
+ * The power density of `color`'s noise at `hz`: its white sample's power
+ * through the colour's filter, so its mean from 0 to the Nyquist is the
+ * noise's power. What a fit levels a band of noise by.
+ */
 export const noisePower = (color: Color, hz: number): number => {
   if (color === 'white') return WHITE_POWER;
   const turns = hz / SYNTH_RATE;
@@ -119,6 +137,7 @@ export const noisePower = (color: Color, hz: number): number => {
   return WHITE_POWER * PINK.gain * PINK.gain * (re * re + im * im);
 };
 
+/** A struck mode: its ratio to the pitch, its level, its decay's time constant in seconds. */
 interface Mode {
   readonly ratio: number;
   readonly level: number;
@@ -126,6 +145,7 @@ interface Mode {
   readonly phase?: number;
 }
 
+/** The named sets of struck modes. */
 export const MODES: Readonly<Record<(typeof PARTIAL_SETS)[number], ReadonlyArray<Mode>>> = {
   glass: [
     { ratio: 1, level: 1, decay: 1.3 },
@@ -142,8 +162,15 @@ export const MODES: Readonly<Record<(typeof PARTIAL_SETS)[number], ReadonlyArray
   ],
 };
 
+/** Below this share of its level a mode's decay is no longer heard: its loop stops there. */
 const DECAYED = 1e-9;
 
+/**
+ * Struck modes at `hz`: each a sine from its own phase, or one drawn in order
+ * from `seed` (every mode draws, so a phase named leaves the others' draws as
+ * they were; a mode above the Nyquist is skipped after its draw), a linear attack over
+ * `attack` frames and an exponential decay from frame 0.
+ */
 export const strike = (
   out: Float32Array,
   n: number,
@@ -169,18 +196,22 @@ export const strike = (
   }
 };
 
+/** `out` times `gain[i]`, a linear gain. */
 export const amplify = (out: Float32Array, n: number, gain: Float64Array): void => {
   for (let i = 0; i < n; i++) out[i] = (out[i] ?? 0) * (gain[i] ?? 0);
 };
 
+/** `out` times one gain. */
 export const scale = (out: Float32Array, n: number, gain: number): void => {
   for (let i = 0; i < n; i++) out[i] = (out[i] ?? 0) * gain;
 };
 
+/** A track of levels in dB, as linear gains, in place. */
 export const gainsOf = (db: Float64Array, n: number): void => {
   for (let i = 0; i < n; i++) db[i] = dbToGain(db[i] ?? 0);
 };
 
+/** Faded in over the first `fadeIn` frames and out over the last `fadeOut` (linear; 0 is no fade). */
 export const fade = (out: Float32Array, n: number, fadeIn: number, fadeOut: number): void => {
   for (let i = 0; i < n; i++) {
     const rise = fadeIn > 0 ? i / fadeIn : 1;
@@ -191,6 +222,7 @@ export const fade = (out: Float32Array, n: number, fadeIn: number, fadeOut: numb
 
 type Transfer = 'tanh' | 'soft' | 'hard' | 'fold';
 
+/** One sample through a drive's transfer curve. */
 const transferred = (transfer: Transfer, x: number): number => {
   switch (transfer) {
     case 'tanh':
@@ -208,6 +240,7 @@ const transferred = (transfer: Transfer, x: number): number => {
   }
 };
 
+/** `out` driven by `gain[i]` (linear) through `transfer`. */
 export const drive = (
   out: Float32Array,
   n: number,
@@ -217,6 +250,7 @@ export const drive = (
   for (let i = 0; i < n; i++) out[i] = transferred(transfer, (out[i] ?? 0) * (gain[i] ?? 0));
 };
 
+/** `out` held at `hz[i]` (sample and hold): a new sample each time the hold's phase turns over. */
 export const hold = (out: Float32Array, n: number, hz: Float64Array): void => {
   let phase = 1;
   let held = 0;
@@ -230,11 +264,17 @@ export const hold = (out: Float32Array, n: number, hz: Float64Array): void => {
   }
 };
 
+/** `out` at `bits` bits: each sample rounded to a step of 2^(1 − bits). */
 export const quantize = (out: Float32Array, n: number, bits: number): void => {
   const steps = exp2(bits - 1);
   for (let i = 0; i < n; i++) out[i] = Math.round((out[i] ?? 0) * steps) / steps;
 };
 
+/**
+ * `from` (its first `m` frames) played `ratio` times as fast into `n` frames
+ * of `out`: a four-point Catmull–Rom read between samples, silence past its
+ * ends. No anti-alias filter: a `Filter` before it removes what would fold.
+ */
 export const resample = (
   from: Float32Array,
   m: number,
@@ -260,6 +300,7 @@ export const resample = (
 
 type FilterType = (typeof FILTERS)[number];
 
+/** A normalised biquad: `y = b0 x + b1 x1 + b2 x2 − a1 y1 − a2 y2`. */
 interface Coefficients {
   b0: number;
   b1: number;
@@ -268,8 +309,10 @@ interface Coefficients {
   a2: number;
 }
 
+/** The highest frequency a filter is set to: just under the Nyquist, where its design holds. */
 const TOP_HZ = 0.49 * SYNTH_RATE;
 
+/** `c` set to `b / a0` and `a / a0`. */
 const normalise = (
   c: Coefficients,
   b: readonly [number, number, number],
@@ -282,6 +325,7 @@ const normalise = (
   c.a2 = a[2] / a[0];
 };
 
+/** A shelf's coefficients (the Audio EQ Cookbook's, its slope set by Q): `low` boosts below `hz`. */
 const shelf = (c: Coefficients, low: boolean, cs: number, alpha: number, gain: number) => {
   const s = 2 * Math.sqrt(gain) * alpha;
   const up = gain + 1;
@@ -298,6 +342,7 @@ const shelf = (c: Coefficients, low: boolean, cs: number, alpha: number, gain: n
   );
 };
 
+/** `c` set to the Audio EQ Cookbook's design of `type` at `hz`, `q` and `db`. */
 const design = (c: Coefficients, type: FilterType, hz: number, q: number, db: number): void => {
   const turns = Math.min(TOP_HZ, Math.max(1, hz)) / SYNTH_RATE;
   const cs = cosTurn(turns);
@@ -329,6 +374,10 @@ const design = (c: Coefficients, type: FilterType, hz: number, q: number, db: nu
   }
 };
 
+/**
+ * A held `type` biquad at `hz`, `q` and `db`, as its power response: |H(f)|²
+ * at `at` Hz. What a fit levels a band of noise by.
+ */
 export const filterResponse = (
   type: FilterType,
   hz: number,
@@ -349,13 +398,16 @@ export const filterResponse = (
   };
 };
 
+/** What a filter reads each `CONTROL` frames: its frequency, Q and gain at that frame. */
 export interface FilterTracks {
   readonly hz: Float64Array;
   readonly q: Float64Array;
   readonly db: Float64Array;
+  /** Whether all three hold still, so one design serves every frame. */
   readonly held: boolean;
 }
 
+/** `out` through a `type` biquad (direct form I), redesigned every `CONTROL` frames unless held. */
 export const biquad = (
   out: Float32Array,
   n: number,
@@ -380,8 +432,10 @@ export const biquad = (
   }
 };
 
+/** The longest echo a delay takes, in frames. */
 const MOST_DELAY = 2 * SYNTH_RATE;
 
+/** An echo `secs[i]` behind (read between samples), fed back by `feedback`, mixed in by `wet`. */
 export const echo = (
   out: Float32Array,
   n: number,
@@ -406,30 +460,43 @@ export const echo = (
   }
 };
 
+/** The ring an echo of at most `secs` needs, in frames. */
 export const ringFrames = (secs: number): number =>
   Math.min(MOST_DELAY, Math.ceil(secs * SYNTH_RATE)) + 2;
 
+/** Freeverb's comb lengths at 44.1 kHz (Jezar, public domain). */
 export const COMBS = [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617] as const;
+/** Freeverb's allpass lengths at 44.1 kHz. */
 export const ALLPASSES = [556, 441, 341, 225] as const;
 
+/** What reaches Freeverb's combs: its fixed input gain. */
 const FREEVERB_IN = 0.015;
+/** Freeverb's wet scale. */
 const FREEVERB_WET = 3;
 
+/** A room's settings: its combs' feedback, their lowpass's coefficient, and the wet mix. */
 interface Room {
   readonly feedback: number;
   readonly damp: number;
   readonly wet: number;
 }
 
+/** A room's feedback for `size` in [0, 1] (Freeverb's room scale). */
 export const roomFeedback = (size: number): number => size * 0.28 + 0.7;
 
+/** A comb's one-pole lowpass coefficient for a corner at `hz`. */
 export const dampOf = (hz: number): number => exp((-2 * Math.PI * hz) / SYNTH_RATE);
 
+/** A room's delay lines: Freeverb's 8 combs and 4 allpasses, each its own length, zeroed. */
 interface RoomLines {
   readonly combs: ReadonlyArray<Float64Array>;
   readonly allpasses: ReadonlyArray<Float64Array>;
 }
 
+/**
+ * The 8 combs in parallel for one frame: each reads its line, lowpasses it
+ * (its state in `kept`) and writes `input` plus that, fed back.
+ */
 const combs = (lines: RoomLines, at: Int32Array, kept: Float64Array, input: number, room: Room) => {
   let sum = 0;
   for (let c = 0; c < lines.combs.length; c++) {
@@ -446,6 +513,7 @@ const combs = (lines: RoomLines, at: Int32Array, kept: Float64Array, input: numb
   return sum;
 };
 
+/** The 4 allpasses in series for one frame (feedback 0.5); their places follow the combs' in `at`. */
 const allpasses = (lines: RoomLines, at: Int32Array, input: number) => {
   let acc = input;
   for (let a = 0; a < lines.allpasses.length; a++) {
@@ -460,6 +528,7 @@ const allpasses = (lines: RoomLines, at: Int32Array, input: number) => {
   return acc;
 };
 
+/** A mono Freeverb over `out`: 8 combs in parallel, then 4 allpasses in series. */
 export const reverb = (out: Float32Array, n: number, room: Room, lines: RoomLines): void => {
   const kept = new Float64Array(lines.combs.length);
   const at = new Int32Array(lines.combs.length + lines.allpasses.length);
@@ -470,6 +539,7 @@ export const reverb = (out: Float32Array, n: number, room: Room, lines: RoomLine
   }
 };
 
+/** `from`'s last `k` of `m` frames crossfaded (equal power) into its head, so its end runs on into its start. */
 export const crossfade = (from: Float32Array, m: number, out: Float32Array, k: number): void => {
   const n = m - k;
   for (let i = 0; i < k; i++) {
@@ -479,6 +549,7 @@ export const crossfade = (from: Float32Array, m: number, out: Float32Array, k: n
   for (let i = k; i < n; i++) out[i] = from[i] ?? 0;
 };
 
+/** `x` (its first `n` frames) times `gain`, added into `into` from frame `at`. */
 export const addInto = (
   into: Float32Array,
   x: Float32Array,
@@ -489,6 +560,7 @@ export const addInto = (
   for (let i = 0; i < n; i++) into[at + i] = (into[at + i] ?? 0) + (x[i] ?? 0) * gain;
 };
 
+/** `out` scaled so its sample peak sits at `db` dBFS; silence stays silent. */
 export const peakTo = (out: Float32Array, n: number, db: number): void => {
   let peak = 0;
   for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(out[i] ?? 0));

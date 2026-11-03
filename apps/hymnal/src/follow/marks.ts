@@ -1,11 +1,17 @@
+/** The mark of a line that is not being sung. */
 export const OFF = -2;
 
+/** A sung line with no individual syllable times, highlighted whole. */
 export const WHOLE = -3;
 
 export interface Marks {
+  /** The line's mark: `OFF`, `WHOLE`, or its sung syllable (`-1` during a timed rest). */
   readonly markOf: (line: number) => number;
+  /** Calls `listener` whenever the line's mark changes. */
   readonly subscribe: (line: number, listener: () => void) => () => void;
+  /** Marks `line` (`-1` for none) with `WHOLE` or its sung `syllable` (`-1` during a timed rest). */
   readonly set: (line: number, syllable: number) => void;
+  /** The sung line, `-1` for none. */
   readonly line: () => number;
 }
 

@@ -3,7 +3,9 @@ import { describe, expect, it } from 'effect-bun-test';
 import { asset, openTab, respond, scriptOf, servePaths } from '../../src/lab/fixtures/browsers.ts';
 import type { FaceCase, FaceDelta } from '../../src/canvas/fixtures/face-pixels.ts';
 
+/** The most a pre-blended face may drift from the look, per channel /255: 8-bit rounding. */
 const ROUNDING = 4;
+/** The most it may drift on average over the canvas, per channel /255. */
 const MEAN = 0.3;
 
 const at = (sx: number, sy: number, rot = 0, x = 400, y = 300): FaceCase['m'] => [
@@ -15,6 +17,7 @@ const at = (sx: number, sy: number, rot = 0, x = 400, y = 300): FaceCase['m'] =>
   y,
 ];
 
+/** Transforms the pre-blended fill must take (and match the look under). */
 const flat: ReadonlyArray<readonly [string, FaceCase['m']]> = [
   ['identity', at(1, 1)],
   ['a fractional offset', at(1, 1, 0, 400.37, 300.61)],
@@ -23,6 +26,7 @@ const flat: ReadonlyArray<readonly [string, FaceCase['m']]> = [
   ['a camera pulled back to 0.3', at(0.3, 0.3)],
 ];
 
+/** Transforms that magnify the face: pushed-in cameras and squash landings. */
 const magnified: ReadonlyArray<readonly [string, FaceCase['m']]> = [
   ['a camera pushed in to 1.1', at(1.1, 1.1)],
   ['a camera pushed in to 1.4', at(1.4, 1.4)],
@@ -38,6 +42,7 @@ const colors = ['#c0392b', '#2c3e50', '#f4d03f', '#7fb3d5', '#101010'];
 const cases = (group: typeof flat) =>
   group.flatMap(([name, m]) => colors.map((color): FaceCase => ({ name, m, color })));
 
+/** The fixture page's script, bundled for the browser once, as the file loads. */
 const fixture = Effect.succeed(
   // oxlint-disable-next-line effect/noAsyncFunction -- built once as the file loads, so no case's time limit holds its cost
   await Effect.runPromise(
@@ -56,6 +61,10 @@ const fixture = Effect.succeed(
   ),
 );
 
+/**
+ * Each case drawn both ways in one page: a tab of the browser tests' Chrome,
+ * which draws with the renderer's software 2D canvas (`tools/browser.ts`).
+ */
 const deltas = (faces: ReadonlyArray<FaceCase>) =>
   Effect.gen(function* () {
     const script = yield* fixture;
@@ -74,8 +83,10 @@ const deltas = (faces: ReadonlyArray<FaceCase>) =>
     return yield* page.evaluate<ReadonlyArray<FaceDelta>>(`faceDeltas(${json(faces)})`);
   });
 
+/** The cases as JSON, to hand to the page. */
 const json = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
+/** The cases that drift past rounding, named, so a failure says which. */
 const drifting = (ds: ReadonlyArray<FaceDelta>) =>
   ds
     .filter((d) => d.max > ROUNDING || d.mean > MEAN)

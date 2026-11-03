@@ -25,6 +25,7 @@ import { printingTo } from './host/testing.ts';
 import { labInMemory } from './lab/testing.ts';
 import { labWithMcp, mcpSession } from './lab-mcp/testing.ts';
 
+/** A command over a word, a count, a switch, a list and a record. */
 const Sample = Tool.make('sample', {
   description: 'A sample command.',
   parameters: Schema.Struct({
@@ -149,12 +150,14 @@ describe('a lab command', () => {
   );
 });
 
+/** `film lab …` as the CLI registers it (`labSubcommands`, what `cli.ts` serves). */
 const filmLab = Command.make('film').pipe(
   Command.withSubcommands([
     Command.make('lab').pipe(Command.withSubcommands(labSubcommands('/films'))),
   ]),
 );
 
+/** The subcommands `film lab --help` lists, and the flags `film lab <name> --help` lists for one: what a terminal is offered. */
 const helpOf = (args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const lines = yield* Queue.unbounded<string>();
@@ -173,6 +176,7 @@ const helpOf = (args: ReadonlyArray<string>) =>
       ),
     );
     const help = (yield* Queue.clear(lines)).join('\n').split('\n');
+    /** The first word of each line of the section headed `heading`, up to its blank line or the end. */
     const section = (heading: string) => {
       const from = help.indexOf(heading);
       const rest = help.slice(from + 1);

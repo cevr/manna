@@ -1,5 +1,33 @@
 /* oxlint-disable effect/noGlobals, effect/noAsyncFunction, effect/noReduceAccumulatorCopy -- Bun's loader takes the list's stand-in as source text, so the paths it imports are written into it as JSON literals; the screens are imported only once the stand-in is registered; the stack model folds a handful of steps. */
 
+/**
+ * A hymn chosen on a hymn page takes that page's place in the stack (owner,
+ * 2026-11-01: "when using the hymn number dial inside another hymn, it
+ * should [not push] a new [screen but] replace the current hymn", then
+ * "same with search"). The `#` drums' `Open` and a search's result, used on
+ * a hymn page, replace the page, so Back returns to where the reader came
+ * from, never to the hymn just left; the hymn the page already shows stays,
+ * and nothing moves. Off a hymn page (the home list) both push as before.
+ *
+ * Mounted as the layout nests them: the player layer (`LivePlayer`, the
+ * find bar, the `#` and its drums) over the stack's wrapper (`StackBottom`,
+ * the search's results) over the shown screens, in a browser's document
+ * (`src/test/setup.ts`). A stand-in hymn page says it shows its hymn as a
+ * page does (`useShowsPage`), so the bar and its find bar stand over it;
+ * the home list and Recent are stand-ins too, since the find bar and the
+ * results belong to the player layer and the wrapper. The results are the
+ * real `HymnList.native` and its real rows, pressed as a reader presses
+ * them; only LegendList is a plain list (it draws no row without a layout,
+ * which the document has none of), so this file runs in a process of its
+ * own (`test:slow`).
+ *
+ * The router's steps are read from the `one` stand-in: a pushing link's
+ * press in `opened`, and `useRouter`'s steps and a replacing link's press
+ * (`useLinkTo({ href, replace: true })`, One's `REPLACE`) in `routed`. A
+ * small stack model applies them, then Back. Numbers only: no hymn's words
+ * are read or printed.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { plugin } from 'bun';
 import { Option } from 'effect';
@@ -37,6 +65,7 @@ const { StackBottom } = await import('~/player/StackBottom');
 const { modeAt, pagesFrom, searchOpen, searchQuery } = await import('~/reader/place');
 const { opened, pathname, routed } = await import('~/test/one');
 
+/** A stand-in hymn page: it shows hymn `n`, so the bar and its find bar stand over it. */
 function Page({ n }: { readonly n: number }) {
   useShowsPage({ number: n, title: 'Stand-in' });
   return <View testID={`page-${n}`} />;
@@ -48,6 +77,7 @@ const home: Screen = { path: '/', draw: () => <View key="home" testID="home" /> 
 const recent: Screen = { path: '/recent', draw: () => <View key="recent" testID="recent" /> };
 const hymn = (n: number): Screen => ({ path: `/hymns/${n}`, draw: () => <Page key={n} n={n} /> });
 
+/** The stack `screens`, the last shown, over a registry of its own; `show` draws another stack over the same registry. */
 const mount = (...screens: ReadonlyArray<Screen>) => {
   routed.splice(0);
   opened.splice(0);
@@ -87,6 +117,7 @@ const byId = (host: HTMLElement, id: string) =>
 const button = (host: HTMLElement, label: string) =>
   Option.fromNullishOr(host.querySelector<HTMLElement>(`[role="button"][aria-label="${label}"]`));
 const box = (host: HTMLElement) => Option.fromNullishOr(host.querySelector('input'));
+/** A press on `element`, which must be there. */
 const press = (what: string, element: Option.Option<HTMLElement>) => {
   expect({ [what]: Option.isSome(element) }).toEqual({ [what]: true });
   act(() => Option.map(element, (found) => found.click()));
@@ -98,6 +129,7 @@ const type = (host: HTMLElement, words: string) =>
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }),
   );
+/** The search's result row of hymn `n`: the link around its number. */
 const row = (host: HTMLElement, n: number) =>
   Option.fromNullishOr(
     [...host.querySelectorAll<HTMLElement>('[data-testid="search"] [data-testid="row-number"]')]
@@ -105,8 +137,10 @@ const row = (host: HTMLElement, n: number) =>
       ?.closest<HTMLElement>('[role="link"]'),
   );
 
+/** The router's steps since the mount: `routed` as it stands, then each pushing link's href. */
 const steps = () => [...routed, ...opened.map((href) => `push ${href}`)];
 
+/** The stack `paths` after `taken`, then Back. */
 const backFrom = (paths: ReadonlyArray<string>, taken: ReadonlyArray<string>) =>
   [...taken, 'back'].reduce<ReadonlyArray<string>>((stack, step) => {
     const [verb, href = ''] = step.split(' ');
@@ -116,12 +150,14 @@ const backFrom = (paths: ReadonlyArray<string>, taken: ReadonlyArray<string>) =>
     return [...stack, `unknown step ${step}`];
   }, paths);
 
+/** The `#`, the drums turned to `n` (as each detent's `dialFind` leaves them), and `Open`. */
 const dialAndOpen = (phone: Phone, n: number) => {
   press('#', byId(phone.host, 'find-number'));
   act(() => phone.registry.set(find, Find.Open({ number: n })));
   press('Open', byId(phone.host, 'find-open'));
 };
 
+/** `Search`, the query `words`, and a press on hymn `n`'s result. */
 const searchAndOpen = (phone: Phone, words: string, n: number) => {
   press('Search', button(phone.host, 'Search'));
   type(phone.host, words);

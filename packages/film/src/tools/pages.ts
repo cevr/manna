@@ -5,19 +5,35 @@ import type { PageCrashed, PageError } from './errors.ts';
 import { PreviewServer } from './preview-server.ts';
 import { Picture, pictureParams } from '../core/board-render.ts';
 
+/** How a pool of export pages draws. */
 export interface PagesOptions {
+  /** Pages open at once (at least one). */
   readonly workers: number;
+  /** Draw the captions in (`?captions=0` when not). */
   readonly captions: boolean;
+  /**
+   * The server whose render page they open: a wedge's (`film render
+   * --level`, `serveWedge`), whose page draws a look at another level than it
+   * plays; none opens the PreviewServer's, the sources as written.
+   */
   readonly server: Option.Option<string>;
+  /** What they draw: the film's scenes (none), or its Board (`film render --board`, `pictureParams`). */
   readonly picture?: Picture;
 }
 
+/** A film page open in `workers` export pages. */
 export interface ExportPages {
   readonly info: ExportInfo;
+  /** The page's title: the film's (or the short's) title, as the player sets it. */
   readonly title: string;
+  /**
+   * Run `use` on a free page and hand the page back when it ends; a page
+   * that crashed under it is dropped for a fresh one.
+   */
   readonly use: <A, E, R>(
     use: (page: FramePage) => Effect.Effect<A, E, R>,
   ) => Effect.Effect<A, E | PageOpenError, R>;
+  /** One call of the export handle on a free page (`FramePage.call`). */
   readonly call: <K extends ExportCall>(
     name: K,
     ...args: CallArgs[K]
@@ -25,12 +41,14 @@ export interface ExportPages {
 }
 
 interface PagesService {
+  /** `film`'s export page (a film's name, a cut's or a short's page name), pooled, in the current scope. */
   readonly open: (
     film: string,
     options: PagesOptions,
   ) => Effect.Effect<ExportPages, PageOpenError, Scope.Scope>;
 }
 
+/** The player's export page for `film` on the app's server at `server`, drawing `picture` (its scenes, no burn-in, unless given). */
 export const exportUrl = (
   server: string,
   film: string,
@@ -45,6 +63,7 @@ export const exportUrl = (
   ].join('&')}`;
 
 export class Pages extends Context.Service<Pages, PagesService>()('@manna/film/tools/Pages') {
+  /** Export pages in the `Browser`, on the app's `PreviewServer`. */
   static readonly layer = Layer.effect(
     Pages,
     Effect.gen(function* () {

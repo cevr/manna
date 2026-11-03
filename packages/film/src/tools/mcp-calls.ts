@@ -1,5 +1,6 @@
 import { Boolean as Bool, Cause, Clock, Effect, Exit, Option, Schema } from 'effect';
 
+/** The arguments a call is logged by: names and ids, never words. */
 const LOGGED_ARGS = [
   'film',
   'note',
@@ -18,11 +19,13 @@ const LOGGED_ARGS = [
   'figure',
 ] as const;
 
+/** A tool call's arguments as far as its line reads them: the logged ones, each a name, an id or a count. */
 export type CallParams = { readonly [Arg in (typeof LOGGED_ARGS)[number]]?: string | number };
 
 const isJsonObject = Schema.is(Schema.JsonObject);
 const isLogged = Schema.is(Schema.Union([Schema.String, Schema.Finite]));
 
+/** A call's raw arguments as its line reads them: each logged one that is a word or a number. Pure. */
 export const callParamsOf = (raw: Schema.Json): CallParams =>
   Option.match(Option.liftPredicate(raw, isJsonObject), {
     onNone: () => ({}),
@@ -39,6 +42,7 @@ export const callParamsOf = (raw: Schema.Json): CallParams =>
       ),
   });
 
+/** `params`' logged arguments, as ` key=value` each (`LOGGED_ARGS`). Pure. */
 const callArgs = (params: CallParams): string =>
   LOGGED_ARGS.flatMap((key) =>
     Option.fromUndefinedOr(params[key]).pipe(
@@ -46,6 +50,7 @@ const callArgs = (params: CallParams): string =>
     ),
   ).join('');
 
+/** How a call ended, as its line says it. */
 const outcomeOf = <A, E>(exit: Exit.Exit<A, E>) =>
   Exit.match(exit, {
     onSuccess: () => 'ok',
@@ -56,6 +61,10 @@ const outcomeOf = <A, E>(exit: Exit.Exit<A, E>) =>
       }),
   });
 
+/**
+ * The tool `tool`'s handler `handle`, each call logged once as it ends
+ * (`[mcp] tool=…`): its ids (`callArgs`), how it ended and how long it took.
+ */
 export const logged =
   <P extends CallParams, C, A, E, R>(
     tool: string,

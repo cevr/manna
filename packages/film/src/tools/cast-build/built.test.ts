@@ -15,6 +15,7 @@ const COVERAGE: Coverage = {
   ],
 };
 
+/** The member's cut and fit stages, as `memberStages` names them; the fit rows pass unless `failing`. */
 const stagesOf = (failing: boolean): ReadonlyArray<Stage<never>> => [
   {
     id: 'cut:turnaround-front@m',

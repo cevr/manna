@@ -1,3 +1,4 @@
+/** Generate numeric sidecars without writing lyric-bearing compiled hymns. */
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Effect, Result, Schema } from 'effect';
@@ -79,6 +80,7 @@ const ownSource = (sources: ReturnType<typeof fingerprints>, number: number) => 
   return source === undefined ? mismatch('source', number) : source;
 };
 
+/** Both native and web build derivations use the same checked numeric join. */
 export const readPlayback = (hymns: readonly Hymn[]): readonly Hymn[] => {
   const decodedManifest = Result.try(() =>
     decodeManifest(readFileSync(join(folder, 'manifest.json'), 'utf8')),
@@ -118,6 +120,7 @@ const validPlacementTargets = (hymn: Hymn, placements: Placements) => {
   return true;
 };
 
+/** Numeric placement alternatives for the shared native/web chord bundle. */
 export const readPlacementPatches = (hymns: readonly Hymn[]): ReadonlyMap<number, Placements> => {
   const decodedManifest = Result.try(() =>
     decodeManifest(readFileSync(join(folder, 'manifest.json'), 'utf8')),
@@ -142,6 +145,7 @@ export const readPlacementPatches = (hymns: readonly Hymn[]): ReadonlyMap<number
   return rows;
 };
 
+/** Fresh compilation is in memory. No source text enters generated files. */
 const countsOf = (hymn: Hymn) => {
   const parts = [...hymn.stanzas, ...(hymn.refrain === undefined ? [] : [hymn.refrain.part])];
   const sungParts = parts.filter((part) => part._tag === 'Sung');

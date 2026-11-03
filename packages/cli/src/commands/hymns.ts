@@ -1,3 +1,9 @@
+/**
+ * Hymns Command
+ *
+ * CLI commands for querying the SDA Hymnal's 695 hymns and 225 liturgical readings.
+ */
+
 import { Argument, Command, Flag } from 'effect/cli';
 import { BunServices } from '@effect/platform-bun';
 import type { CategoryId, HymnId, HymnVerse } from '@manna/core/hymnal';
@@ -24,6 +30,14 @@ const limitFlag = Flag.Int('limit').pipe(
   Flag.optional,
 );
 
+/** The Bun implementation, not `HymnalService.Live`.
+ *
+ *  The service split into a platform-free tag (`@manna/core/hymnal`) and a
+ *  `bun:sqlite` implementation (`@manna/core/hymnal/bun`), and the old `.Live`
+ *  static went with it. Reaching for it here left `undefined.pipe(...)`, which
+ *  TypeScript could not catch: the tag is a callable object, so a missing
+ *  static is `any`-adjacent rather than a type error, and the command failed
+ *  only when its layer was built. */
 const HymnalLive = layerHymnalBun.pipe(Layer.provide(BunServices.layer));
 
 function formatHymnFull(hymn: {
@@ -51,6 +65,7 @@ function formatHymnFull(hymn: {
   return lines.join('\n');
 }
 
+/** The topic, tune and metre names the back-matter indexes give a hymn, one line each, empty ones left out. */
 function formatIndexes(indexes: HymnIndexes): readonly string[] {
   const lines: string[] = [];
   const add = (label: string, names: readonly string[]) => {

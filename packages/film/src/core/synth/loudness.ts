@@ -1,11 +1,13 @@
 import type { Pcm } from '../audio.ts';
 
+/** A sound's loudness: integrated and momentary max in LUFS, sample peak in dBFS; silence is -Infinity. */
 interface Loudness {
   readonly integrated: number;
   readonly momentaryMax: number;
   readonly peak: number;
 }
 
+/** A normalised biquad: `y = b0 x + b1 x1 + b2 x2 - a1 y1 - a2 y2`. */
 interface Coefficients {
   readonly b0: number;
   readonly b1: number;
@@ -14,6 +16,7 @@ interface Coefficients {
   readonly a2: number;
 }
 
+/** `x` through one biquad (direct form I); a new array. */
 const runBiquad = (x: Float32Array, c: Coefficients): Float32Array => {
   const out = new Float32Array(x.length);
   let x1 = 0;
@@ -32,11 +35,18 @@ const runBiquad = (x: Float32Array, c: Coefficients): Float32Array => {
   return out;
 };
 
+/** BS.1770's block and hop, in seconds. */
 const BLOCK = 0.4;
 const HOP = 0.1;
+/** The gates: absolute, and relative to the mean of what passed the absolute one. */
 export const ABSOLUTE_GATE = -70;
 const RELATIVE_GATE = -10;
 
+/**
+ * The K-weighting's two stages at `rate`, designed from the standard's analog
+ * parameters by the bilinear transform as libebur128 does: the shelf, then
+ * the RLB high-pass.
+ */
 const kWeighting = (rate: number): ReadonlyArray<Coefficients> => {
   const shelf = (() => {
     const k = Math.tan((Math.PI * 1681.974450955533) / rate);
@@ -61,8 +71,10 @@ const kWeighting = (rate: number): ReadonlyArray<Coefficients> => {
   return [shelf, highPass];
 };
 
+/** A mean-square power as loudness. */
 const lufsOf = (power: number): number => -0.691 + 10 * Math.log10(power);
 
+/** The sum over channels of each block's mean square, K-weighted: one power per block. */
 const blockPowers = (pcm: Pcm): ReadonlyArray<number> => {
   const block = Math.round(BLOCK * pcm.rate);
   const hop = Math.round(HOP * pcm.rate);
@@ -86,12 +98,14 @@ const blockPowers = (pcm: Pcm): ReadonlyArray<number> => {
 const meanOf = (xs: ReadonlyArray<number>): number =>
   xs.reduce((sum, x) => sum + x, 0) / Math.max(1, xs.length);
 
+/** One of BS.1770's momentary blocks: its span in seconds and its loudness in LUFS (silence is -Infinity). */
 interface Block {
   readonly from: number;
   readonly to: number;
   readonly lufs: number;
 }
 
+/** `pcm`'s momentary loudness, ungated: each 400 ms block, 100 ms apart from its start, in order. */
 export const momentaryBlocks = (pcm: Pcm): ReadonlyArray<Block> => {
   const hop = Math.round(HOP * pcm.rate) / pcm.rate;
   const block = Math.round(BLOCK * pcm.rate) / pcm.rate;
@@ -102,6 +116,7 @@ export const momentaryBlocks = (pcm: Pcm): ReadonlyArray<Block> => {
   }));
 };
 
+/** `pcm`'s loudness. */
 export const loudness = (pcm: Pcm): Loudness => {
   const powers = blockPowers(pcm);
   const loud = powers.filter((p) => lufsOf(p) > ABSOLUTE_GATE);

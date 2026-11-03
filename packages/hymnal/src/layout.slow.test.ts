@@ -1,3 +1,19 @@
+/**
+ * The layout property: every row is held to its 1985 page in its layout, not
+ * only its words. A row can sing the right words in the wrong shape (a line
+ * dropped, two lines swapped, a stanza moved, the refrain left out), and the
+ * census's shape check (`outlineEntryProblems`, which `problemsOf` runs for
+ * every entry) must print a `<n> shape (` line for each that the hymn as
+ * committed does not print.
+ *
+ * The fixtures are `data/layout-mutants.json`: recipes and generated names,
+ * never text. A recipe is applied in memory to the hymn's committed printed
+ * source; a generated name is found among the mutants of the hymn's printed
+ * text, whose fingerprint the fixture holds. Either is written back as the
+ * hymn's row and base row with its fix dropped (a row wrong since before the
+ * census, which no fix touches).
+ */
+
 import { Console, Effect, Predicate, Result } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
@@ -41,6 +57,7 @@ const { census, sources } = await Effect.runPromise(readCensusOnce);
 const domain = domainOf(sources);
 const runs = hymnRunsOf(sources.rows);
 
+/** Hymn `n`'s row and base row both `row`, its fix dropped. */
 const withBase = (base: Sources, n: number, row: Verses): Sources => ({
   ...base,
   rows: new Map([...base.rows, [n, row]]),
@@ -48,6 +65,7 @@ const withBase = (base: Sources, n: number, row: Verses): Sources => ({
   fixes: new Map([...base.fixes].filter(([one]) => one !== n)),
 });
 
+/** The layout lines the census's per-hymn shape check prints for hymn `n`. */
 const layoutLines = (one: Sources, n: number, of: Census = census) => {
   const entry = of.hymns.find((hymn) => hymn.number === n);
   if (entry === undefined) return [`${n} has no entry`];
@@ -56,30 +74,36 @@ const layoutLines = (one: Sources, n: number, of: Census = census) => {
   );
 };
 
+/** The lines of `after` that `before` does not print. */
 const newLines = (before: readonly string[], after: readonly string[]) => {
   const seen = new Set(before);
   return after.filter((line) => !seen.has(line));
 };
 
+/** Hymn `n`'s printed source as committed, and the recipe's mutant of it (or why it does not apply). */
 const mutantOf = (n: number, mode: string) => {
   const source = printedSourceOf(sources.rows.get(n) ?? [], sources.fixes.get(n));
   return { source, mutant: applyRecipe(source, mode) };
 };
 
+/** Hymn `n`'s printed text as committed. */
 const textOf = (n: number) =>
   printedTextOf(sources.rows.get(n) ?? [], sources.fixes.get(n), sources.orders.get(n));
 
+/** A printed text written back as a row: its stanzas, and the refrain lines every stanza sings. */
 const rowOfText = (text: PrintedText): Verses =>
   rowOfSource({
     stanzas: text.stanzas,
     refrain: (text.refrain ?? []).flatMap((item) => (Predicate.isString(item) ? [item] : [])),
   });
 
+/** Hymn `n`'s mutants, by name. */
 const mutantsByName = (n: number, text: PrintedText) =>
   new Map<string, LayoutMutant>(
     [...mutantsOf(text, outlinesOf(sources, n).outlines)].map((one) => [one.name, one]),
   );
 
+/** The names the committed reach rulings of hymn `n` list. */
 const listedOf = (n: number) =>
   new Set(
     (sources.rulings.get(n) ?? []).flatMap((ruling) => [
@@ -88,6 +112,7 @@ const listedOf = (n: number) =>
     ]),
   );
 
+/** A shape reading of one stanza of rows (count, first, middle and last words each), as a test writes one. */
 const outlineWith = (
   rows: ReadonlyArray<{ words: number; first: string; mid: string; last: string }>,
 ): Outline => ({
@@ -107,6 +132,7 @@ const outlineWith = (
   odd: '',
 });
 
+/** A text of stanzas, no refrain. */
 const plain = (stanzas: ReadonlyArray<readonly string[]>): PrintedText => ({
   stanzas,
   refrain: undefined,

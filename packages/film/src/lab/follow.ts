@@ -2,39 +2,63 @@ import { Option } from 'effect';
 import { placeTo, revealTo } from './follow-rule.ts';
 import { type Accessor, createEffect, createSignal, untrack } from 'solid-js';
 
+/** How far a scroll may land from where the view put the box and still be the view's: rounding to the device's pixels. */
 const SLACK = 1;
 
+/** The rows a target spans in its box: one row, or the first and the last of several. */
 interface Span {
   readonly first: HTMLElement;
   readonly last: HTMLElement;
 }
 
 interface FollowOptions {
+  /** The box that scrolls, once it is laid out. */
   readonly box: () => Option.Option<HTMLElement>;
+  /** What the box scrolls, watched for a resize too. */
   readonly content: () => Option.Option<HTMLElement>;
+  /** The target as a key: `''` for none. A frame that does not move the target keeps the key. */
   readonly target: Accessor<string>;
+  /** The rows the target `key` spans, as they stand. */
   readonly span: (key: string) => Option.Option<Span>;
+  /** How much of the box's top and bottom a row must keep clear of to count as in sight. */
   readonly clear: (box: HTMLElement) => { readonly top: number; readonly bottom: number };
+  /** Whether the view places the box now (no reader has taken it): told when a reader scrolls it, and on Play. */
   readonly following: Following;
+  /**
+   * What a press opened under the rows, as a key (`''` for none; its rows
+   * from `span`, the last the box it opened): brought into sight once, as
+   * the key changes, whether or not the view is placing.
+   */
   readonly opened?: Accessor<string>;
 }
 
+/**
+ * Whether a view places its box: on until a reader scrolls it (`suspend`),
+ * and on again on Play, its Follow button (`follow-button.tsx`) or a seek of
+ * the view's own (`resume`). The view makes one and gives it to `useFollow`.
+ */
 export interface Following {
   readonly on: Accessor<boolean>;
   readonly resume: () => void;
   readonly suspend: () => void;
 }
 
+/** A view's `Following`, on as it mounts. */
 export const createFollowing = (): Following => {
   const [on, setOn] = createSignal(true, { ownedWrite: true });
   return { on, resume: () => setOn(true), suspend: () => setOn(false) };
 };
 
+/** The page's clock as Follow hears it: a signal that moves with each frame drawn, and whether it plays. */
 export interface FollowClock {
   readonly drawn: Accessor<unknown>;
   readonly playing: () => boolean;
 }
 
+/**
+ * The span's top and bottom in the box's own scroll coordinates, whatever sits
+ * between them: each of its rows asked once, so a one-row span is one read.
+ */
 const extentOf = (box: HTMLElement, span: Span) => {
   const origin = box.getBoundingClientRect().top - box.scrollTop;
   const first = span.first.getBoundingClientRect();
@@ -47,6 +71,11 @@ const extentOf = (box: HTMLElement, span: Span) => {
   return { top: first.top - origin, bottom: last.bottom - origin };
 };
 
+/**
+ * Follow `options.target` in `options.box` while `options.following.on()`, by the rule above, on the page's `clock`.
+ * Mount it with the view. Answers whether a reader has the box now, its scroll event heard or still on its way
+ * (`following.suspend` told if so): what anything that would move the view on the page's word (a settle on a line) asks first.
+ */
 export const useFollow = (options: FollowOptions, clock: FollowClock): (() => boolean) => {
   const playingNow = () => untrack(clock.playing);
   let anchor = 0;
@@ -92,6 +121,7 @@ export const useFollow = (options: FollowOptions, clock: FollowClock): (() => bo
       }),
   );
 
+  /** What a press opened under the rows, as its key: `''` while nothing is open, or for a view that opens nothing. */
   const opened = () =>
     Option.getOrElse(
       Option.map(Option.fromUndefinedOr(options.opened), (o) => o()),

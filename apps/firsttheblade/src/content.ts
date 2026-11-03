@@ -1,12 +1,27 @@
+/**
+ * The channel's words: the verse it is named for, and its four series. Every
+ * quotation is the King James Version, word for word (`manna verse`), and a
+ * partial verse is one continuous run of its words. The copy follows the
+ * series' voice rules (apps/animations/series/README.md): for all
+ * Christians, warm, no insider terms, and no claim about films that are not
+ * out yet.
+ *
+ * A series' films are data: add an `Episode` to its `episodes` when a film
+ * is published, and its page lists it.
+ */
+
 export interface Verse {
   readonly text: string;
   readonly ref: string;
 }
 
 export interface Episode {
+  /** Its number in the series, as the films' labels print it ("01"). */
   readonly no: string;
   readonly title: string;
+  /** The YouTube video id (`watch?v=<id>`). */
   readonly youtubeId: string;
+  /** The day it was published on YouTube (`2026-11-07`): the sitemap's date and the search result's. */
   readonly published: string;
   readonly summary: string;
 }
@@ -18,6 +33,7 @@ export interface Part {
 
 export type SeriesId = 'path' | 'land' | 'taught' | 'remedies';
 
+/** What a series' episodes are called, one and many, by its form. */
 export const UNITS = {
   'Storybook films': { one: 'film', many: 'films' },
   Talks: { one: 'talk', many: 'talks' },
@@ -26,17 +42,21 @@ export const UNITS = {
 export interface Series {
   readonly id: SeriesId;
   readonly slug: string;
+  /** The slugs it went by before, each answered with a 301 to its page (`worker/respond.ts`): a live link keeps working after a rename. */
   readonly formerSlugs: ReadonlyArray<string>;
   readonly name: string;
+  /** What it is about, and what form it takes. */
   readonly subject: string;
   readonly form: keyof typeof UNITS;
   readonly verse: Verse;
+  /** One sentence, for its card. */
   readonly line: string;
   readonly about: ReadonlyArray<string>;
   readonly parts: ReadonlyArray<Part>;
   readonly episodes: ReadonlyArray<Episode>;
 }
 
+/** The night verse: the sower sleeps and rises, and the seed grows. */
 export const MARK_4_27: Verse = {
   text: 'And should sleep, and rise night and day, and the seed should spring and grow up, he knoweth not how.',
   ref: 'Mark 4:27',

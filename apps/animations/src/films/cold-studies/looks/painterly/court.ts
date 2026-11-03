@@ -18,18 +18,21 @@ import {
   writ,
 } from './room.ts';
 
+/** A camera: where it looks in the world, and how near. */
 interface Cam {
   readonly x: number;
   readonly y: number;
   readonly zoom: number;
 }
 
+/** The camera at `k` of the way from `a` to `b`. */
 const toward = (a: Cam, b: Cam, k: number): Cam => ({
   x: lerp(a.x, b.x, k),
   y: lerp(a.y, b.y, k),
   zoom: lerp(a.zoom, b.zoom, k),
 });
 
+/** Each shot's camera where it starts and where it has pushed to by its cut. */
 const SHOTS = {
   wide: [
     { x: 950, y: 500, zoom: 1.1 },
@@ -49,6 +52,7 @@ const SHOTS = {
   ],
 } as const satisfies Record<string, readonly [Cam, Cam]>;
 
+/** The gavel across its cue: up, a beat held, down hard on the block, a small bounce, at rest. */
 const RAISE: ReadonlyArray<Key> = [
   [0, 0],
   [0.373, 1],
@@ -57,6 +61,7 @@ const RAISE: ReadonlyArray<Key> = [
   [1, 0],
 ];
 
+/** The camera `cam` over the frame, and the easel it paints on. */
 const shoot = (f: CourtFrame, cam: Cam, draw: (e: Easel) => void) => {
   const { ctx, w, h } = f;
   ctx.save();
@@ -73,6 +78,7 @@ const shoot = (f: CourtFrame, cam: Cam, draw: (e: Easel) => void) => {
   ctx.restore();
 };
 
+/** The shot in play and how far its push has gone, from the cues: each cut falls on a cue's first frame. */
 const shot = (f: CourtFrame): Cam => {
   const span = (from: number, to: number) => clamp((f.t - from) / Math.max(0.01, to - from));
   const bow = f.cue('bow').start;

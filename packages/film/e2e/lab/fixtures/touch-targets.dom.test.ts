@@ -4,6 +4,7 @@ import { openTab, respond, servePaths } from '../../../src/lab/fixtures/browsers
 import { evaluates } from '../../../src/lab/fixtures/settled.ts';
 import { PHONE_HIT, undersizedTargets } from '../../../src/lab/fixtures/touch-targets.ts';
 
+/** What the measure answers on a phone-wide page whose body is `body`, within `within` when given. */
 const offenders = (body: string, want: ReadonlyArray<string>, within?: string) =>
   Effect.gen(function* () {
     const html = `<!doctype html><html><head><style>
@@ -56,6 +57,7 @@ describe('the touch-target measure', () => {
     ),
   );
 
+  /** A hit-slop 44 px square, centred on its 18 × 22 target by its offsets alone. */
   const CENTRED = `<style>.slop { position: absolute; } .slop::before { content: ''; position: absolute; left: -13px; top: -11px; width: 44px; height: 44px; }</style>`;
 
   it.live(

@@ -48,6 +48,10 @@ export interface AIService {
   ) => Effect.Effect<{ object: A }, AIError>;
 }
 
+/**
+ * Convert an Effect Schema to an AI SDK schema.
+ * Uses JSONSchema.make for the JSON schema and Schema.decodeUnknownSync for validation.
+ */
 function toAISchema<A>(schema: Schema.Decoder<A>) {
   const doc = Schema.toJsonSchemaDocument(schema);
   const js = { ...doc.schema };
@@ -70,6 +74,10 @@ function toAISchema<A>(schema: Schema.Decoder<A>) {
 }
 
 export class AI extends Context.Service<AI, AIService>()('@manna/cli/services/ai') {
+  /**
+   * Create AI layer from models, deferring to existing AI if present.
+   * This allows tests to provide mock AI that takes precedence.
+   */
   static fromModel(models: ModelService): Layer.Layer<AI> {
     return Layer.effect(
       AI,

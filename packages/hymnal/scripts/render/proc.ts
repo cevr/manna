@@ -1,7 +1,13 @@
+/**
+ * The render's child processes and its one error: a command run to its end
+ * with its output kept, and a failure that names its step and says why.
+ */
+
 import { Effect, Schema, Stream } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
+/** A step of the render that could not be done: its name and the tool's own words. */
 export class RenderFailed extends Schema.TaggedError<RenderFailed>()('RenderFailed', {
   step: Schema.String,
   reason: Schema.String,
@@ -11,6 +17,7 @@ export class RenderFailed extends Schema.TaggedError<RenderFailed>()('RenderFail
   }
 }
 
+/** `command` run to its end in `cwd`: its exit code and both outputs as text. */
 export const run = (command: string, args: ReadonlyArray<string>, cwd?: string) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner;
@@ -33,6 +40,7 @@ export const run = (command: string, args: ReadonlyArray<string>, cwd?: string) 
     ),
   );
 
+/** `command` run to its end; a non-zero exit fails as `step` with the last of its output. */
 export const runOk = (step: string, command: string, args: ReadonlyArray<string>, cwd?: string) =>
   run(command, args, cwd).pipe(
     Effect.filterOrFail(

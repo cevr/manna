@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { Option } from 'effect';
 import { type Row, rangesOf } from './lit.ts';
 
+/** A word at offset `from` of the one text. */
 const row = (index: number, text: string, from: number): Row => ({
   index,
   text,

@@ -15,8 +15,11 @@ import {
   question,
 } from '../../court.ts';
 
+/** Where the figure's near hand touches the robe on "receive": its own chest, on its own side. */
 const TOUCH: Pt = [8, -80];
+/** Where it holds the word, out palm up in front of them, in their units. */
 const HELD_OUT: Pt = [44, -112];
+/** The near hand: palm up for the word, morphing to open on the sleeve (written each frame). */
 const NEAR: Posed<GestureAt> = {
   to: [HELD_OUT[0], HELD_OUT[1]],
   reach: 0,
@@ -26,6 +29,7 @@ const NEAR: Posed<GestureAt> = {
   turn: 0,
 };
 
+/** The gavel's soft fall across its cue: the cold open's arc, landing without the bounce. */
 const SWING: ReadonlyArray<Key> = [
   [0, GAVEL_REST],
   [0.373, -0.2],

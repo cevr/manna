@@ -10,14 +10,17 @@ import {
   parseSync,
 } from 'oxc-parser';
 
+/** The framework's source, recursively; the app's entries, its own top-level modules. */
 const SWEPT = [
   { dir: 'packages/film/src', recursive: true },
   { dir: 'apps/animations', recursive: false },
 ] as const;
 
+/** What a test builds its own graph in: a fake's, not the app's. */
 const TESTS = /(^|\/)(node_modules|fixtures)\/|\.test\.tsx?$|(^|\/)testing\.ts$/;
 const SOURCE = /\.tsx?$/;
 
+/** The layers the root builds and no other module may: each service, by the member read off it to build one. */
 const GUARDED: ReadonlyArray<readonly [service: string, member: string]> = [
   ...[
     'FilmRepo',
@@ -42,13 +45,16 @@ const GUARDED: ReadonlyArray<readonly [service: string, member: string]> = [
   ['Review', 'layerConfig'],
 ];
 
+/** The root's services, as it declares them. */
 const SERVICES = 'filmServices';
 
+/** Where the guard reads modules: their sources by path, and the workspace's package entries. */
 interface World {
   readonly read: (file: string) => Effect.Effect<Option.Option<string>>;
   readonly packages: ReadonlyMap<string, string>;
 }
 
+/** A module as the guard reads it: its source, its tree, its records, its top-level `const A = B` aliases. */
 interface Module {
   readonly source: string;
   readonly program: Program;
@@ -56,11 +62,13 @@ interface Module {
   readonly aliases: ReadonlyMap<string, string>;
 }
 
+/** How the parser reads `file`: JSX only in a `.tsx`. */
 const langOf = (file: string): 'ts' | 'tsx' => {
   if (file.endsWith('.tsx')) return 'tsx';
   return 'ts';
 };
 
+/** Each top-level `const A = B` (B a name), exported or not: A → B. */
 const aliasesOf = (program: Program): ReadonlyMap<string, string> =>
   new Map(
     program.body
@@ -81,6 +89,7 @@ const aliasesOf = (program: Program): ReadonlyMap<string, string> =>
       }),
   );
 
+/** The member `m` reads by name (`a.b`, `a['b']`); none for one computed otherwise. */
 const memberName = (m: MemberExpression): Option.Option<string> => {
   if (m.type !== 'MemberExpression' || !('property' in m)) return Option.none();
   if (!m.computed && m.property.type === 'Identifier') return Option.some(m.property.name);
@@ -89,8 +98,15 @@ const memberName = (m: MemberExpression): Option.Option<string> => {
   return Option.none();
 };
 
+/** The line of `source` that offset `at` falls on, from 1. */
 const lineOf = (source: string, at: number) => source.slice(0, at).split('\n').length;
 
+/**
+ * The guard over `world`: each binding's origin, `file#name` of the module
+ * that declares it (`file#*` for a namespace), followed through imports,
+ * re-exports and `const` aliases; none for one outside the world (a
+ * package of no workspace's).
+ */
 const bindings = (world: World, path: Path.Path) => {
   const parsed = new Map<string, Option.Option<Module>>();
   const parse = (file: string): Effect.Effect<Option.Option<Module>> =>
@@ -116,6 +132,7 @@ const bindings = (world: World, path: Path.Path) => {
     return Option.fromUndefinedOr(world.packages.get(specifier));
   };
 
+  /** Where `name`, as `file` exports it, is declared. */
   const exported = (
     file: string,
     name: string,
@@ -161,6 +178,7 @@ const bindings = (world: World, path: Path.Path) => {
       return Option.none();
     });
 
+  /** What `name` names at the top of `file`: an import's origin, an alias's, else the module's own. */
   const local = (
     file: string,
     name: string,
@@ -193,6 +211,7 @@ const bindings = (world: World, path: Path.Path) => {
       );
     });
 
+  /** The origin of what `expression` names in `file`: a name, or a namespace's member (`ns.Name`). */
   const originOf = (file: string, expression: Expression): Effect.Effect<Option.Option<string>> => {
     if (expression.type === 'Identifier') return local(file, expression.name, new Set());
     if (expression.type !== 'MemberExpression' || expression.object.type !== 'Identifier')
@@ -205,6 +224,7 @@ const bindings = (world: World, path: Path.Path) => {
     });
   };
 
+  /** Each member read and call in `file`'s code (a type's `typeof X.y` is neither). */
   const sitesOf = (file: string) =>
     Effect.map(parse(file), (module) =>
       Option.map(module, (m) => {
@@ -225,6 +245,7 @@ const bindings = (world: World, path: Path.Path) => {
   return { local, originOf, sitesOf };
 };
 
+/** The sites among `files` (`path:line`) that build a layer the root builds, in order. */
 const builtIn = (world: World, root: string, files: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const { local, originOf, sitesOf } = bindings(world, yield* Path.Path);
@@ -260,6 +281,7 @@ const builtIn = (world: World, root: string, files: ReadonlyArray<string>) =>
     return found.flat();
   });
 
+/** The files among `files` that call the root's services, in order. */
 const consumersIn = (world: World, root: string, files: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const { local, originOf, sitesOf } = bindings(world, yield* Path.Path);
@@ -284,6 +306,7 @@ const consumersIn = (world: World, root: string, files: ReadonlyArray<string>) =
     return files.filter((_, i) => calling[i]).toSorted();
   });
 
+/** The film package's entries as its `package.json` declares them. */
 const PackageExports = Schema.fromJsonString(
   Schema.Struct({ exports: Schema.Record(Schema.String, Schema.String) }),
 );
@@ -330,6 +353,7 @@ const disk = await Effect.runPromise(
   }).pipe(Effect.provide(BunServices.layer)),
 );
 
+/** A world of `modules` alone, under `/w/`, beside a root of the same shape as the real one. */
 const made = (modules: Readonly<Record<string, string>>) => {
   const all = {
     'film-repo.ts': 'export class FilmRepo { static layer = 1 }',
@@ -351,6 +375,7 @@ const made = (modules: Readonly<Record<string, string>>) => {
   return { world, files: Object.keys(modules).map((name) => `/w/${name}`) };
 };
 
+/** What the guard finds in `modules`: the layers built, and who asks for the services. */
 const findings = (modules: Readonly<Record<string, string>>) =>
   Effect.gen(function* () {
     const { world, files } = made(modules);

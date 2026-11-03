@@ -16,14 +16,21 @@ import { measuredFilm } from '../../src/tools/sound-render.ts';
 import { emptyCalls, fakeElevenLabs } from '../../src/tools/elevenlabs/testing.ts';
 import { privateFolder } from '../../src/tools/host/testing.ts';
 
+/** What the speaker says, one word every half second from zero, as the fake hears it. */
 const SAID = 'The law was given to show us our need of a Saviour';
 const WORDS = SAID.split(' ');
 
+/**
+ * Where the voice is in the take: inside each word's aligned span, but word
+ * 8 ("need"), which the aligner gives the pause before it: its voice comes
+ * late, after a pause longer than the talk's `gaps`.
+ */
 const SPEECH = WORDS.map((_, i): readonly [number, number] => [
   0.5 * i + 0.05,
   0.5 * i + 0.35,
 ]).with(8, [4.25, 4.35]);
 
+/** The take: a ZV-E10's file, 6.3 s at 30, the clapper's flash between the first two words. */
 const CLIP = {
   camera: 'zv-e10',
   frames: 189,
@@ -34,6 +41,7 @@ const CLIP = {
   speech: SPEECH,
 } as const;
 
+/** The edit: the first section strikes "was", the second plays through the late "need". */
 const TALK: Talk = {
   title: 'Why the law?',
   format: 'question',
@@ -44,8 +52,14 @@ const TALK: Talk = {
   ],
 };
 
+/** What the fake ElevenLabs was asked: one hearing, however often the take is made. */
 const calls = emptyCalls();
 
+/**
+ * The film services over a temp folder, its footage library's speech-to-text
+ * faked (every word heard where the fake hears it, one every half second,
+ * each 0.4 s long) and its private store a folder in it.
+ */
 const world = Layer.unwrap(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -70,6 +84,7 @@ const world = Layer.unwrap(
   }),
 ).pipe(Layer.provideMerge(Layer.merge(BunServices.layer, BunCrypto.layerMac)));
 
+/** Every file under `dir` with its bytes' hash, by path. */
 const tree = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

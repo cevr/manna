@@ -4,20 +4,24 @@ import { type ClipRequest, adoptClip, clipRequestOf } from './clips.ts';
 import type { Clip, Coverage } from './coverage.ts';
 import { type Stage, StageFailed } from './graph.ts';
 
+/** Bumped when the stage's code makes other bytes from the same request. */
 const VERSION = '1';
 
+/** A given frame's hash when its PNG is not in the checkout: the request cannot be sent. */
 const ABSENT = 'absent';
 
 const Json = Schema.fromJsonString(Schema.Unknown);
 const decodeJson = Schema.decodeUnknownOption(Json);
 const encodeJson = Schema.encodeSync(Json);
 
+/** A clip's files, beside its mp4: its provenance and its given frames. */
 const filesOf = (path: Path.Path, memberDir: string, file: string) => {
   const mp4 = path.join(memberDir, file);
   const stem = mp4.replace(/\.mp4$/, '');
   return { mp4, provenance: `${stem}.json`, first: `${stem}.first.png`, last: `${stem}.last.png` };
 };
 
+/** The request's content as the stage's key reads it: its endpoint, its input and its frames' hashes. */
 const keyOf = (r: ClipRequest) =>
   encodeJson({
     endpoint: r.endpoint,
@@ -28,6 +32,7 @@ const keyOf = (r: ClipRequest) =>
     }),
   });
 
+/** The stage that adopts `clip`'s committed mp4, made by `request`. */
 const clipMakeStage = (o: {
   readonly member: string;
   readonly memberDir: string;
@@ -35,6 +40,7 @@ const clipMakeStage = (o: {
   readonly request: ClipRequest;
 }): Stage<FileSystem.FileSystem | Path.Path> => {
   const id = `clip:${o.clip.id}@${o.member}`;
+  /** The committed clip as `adoptClip` judges it against the request: the mp4's bytes, or the reason the stage fails. */
   const committed = Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
@@ -90,6 +96,7 @@ const clipMakeStage = (o: {
   };
 };
 
+/** Each of the member's clips as its clip-make stage, its request read from the checkout at `root`. */
 export const clipMakeStages = Effect.fn('cast.build.clipMake')(function* (
   m: {
     readonly member: string;

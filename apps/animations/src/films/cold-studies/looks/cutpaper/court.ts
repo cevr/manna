@@ -25,6 +25,7 @@ import {
 import { C, person, piece } from '../../../righteousness-by-faith/kit.ts';
 import type { CourtFrame } from '../../scenes/court.ts';
 
+/** The evidence: nine sheets, each its own small turn and drift. */
 const SHEETS = (() => {
   const r = rng(1889);
   return Array.from({ length: 9 }, (_, i) => ({
@@ -34,6 +35,7 @@ const SHEETS = (() => {
   }));
 })();
 
+/** The gavel's fall across its cue: raised, down hard, a bounce, at rest on the block. */
 const SWING: ReadonlyArray<Key> = [
   [0, GAVEL_REST],
   [0.373, -0.3],
@@ -42,14 +44,20 @@ const SWING: ReadonlyArray<Key> = [
   [1, 1.58],
 ];
 
+/**
+ * The bench as the court cuts it, in the bench sheet's units: its face, the
+ * rim along its top (over the judge's feet) and the gavel's block on the rim.
+ */
 export const BENCH = {
   face: rectShape(860, 475, 640, 380),
   rim: rounded(1180, 472, 690, 34, 6),
   block: rounded(1436, 448, 76, 14, 4),
 } as const;
 
+/** The verdict, rewritten each frame (scratch, so the draw allocates none). */
 const VERDICT = { fill: 1, shown: 0 } satisfies Stamp;
 
+/** The accused as the control draws them: the kit's paper person, head down on "you did it", up at the verdict. */
 export const paperAccused = (f: CourtFrame) => {
   const bow = f.at('bow') * (1 - f.at('lift'));
   const face = {
@@ -61,11 +69,18 @@ export const paperAccused = (f: CourtFrame) => {
   person(f.ctx, face, f.hand('accused'));
 };
 
+/**
+ * The judge at the bench: `behind` it (drawn before the bench, in frame
+ * units, as he leans `lean` of the way in) and `over` it (his hand on the
+ * gavel, turned `swing`, drawn after the bench and its block, among the
+ * court's `props`).
+ */
 export interface Bench {
   readonly behind: (f: CourtFrame, lean: number) => void;
   readonly over: (f: CourtFrame, swing: number, lean: number, props: Props) => void;
 }
 
+/** The judge as the control draws him: the kit's robe, bands and head, and the court's gavel in his paper hand. */
 const paperJudge: Bench = {
   behind: (f, lean) => {
     const { ctx } = f;
@@ -106,6 +121,7 @@ const paperJudge: Bench = {
   over: (f, swing, lean) => judgeGavel(f.ctx, f.hand, swing, lean, 10 * lean),
 };
 
+/** The paper of the court's props: the bench and its rim, panels and gavel block, and the evidence sheets (cycled), with the sheets', the block's and the gavel's ink. */
 export interface Props {
   readonly bench: Hex;
   readonly rim: Hex;
@@ -114,9 +130,11 @@ export interface Props {
   readonly sheets: ReadonlyArray<Hex>;
   readonly sheetInk: Hex;
   readonly blockInk: Hex;
+  /** The gavel's line: the kit's outline, as the court's `gavel` draws it. */
   readonly gavelInk: Hex;
 }
 
+/** The control's props. */
 export const paperProps: Props = {
   bench: C.paperTone,
   rim: C.inkSoft,
@@ -128,6 +146,12 @@ export const paperProps: Props = {
   gavelInk: C.outline,
 };
 
+/**
+ * The court with its accused drawn by `accused`, feet at the origin, its
+ * judge by `judge` (the control's paper people, or rigs: `looks/rive/`,
+ * `looks/papercut/`) and its props in `props`: everything else is the
+ * control's own.
+ */
 export const courtWith =
   (accused: (f: CourtFrame) => void, judge: Bench = paperJudge, props: Props = paperProps) =>
   (f: CourtFrame) => {

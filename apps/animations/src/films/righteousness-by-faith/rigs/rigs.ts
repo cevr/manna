@@ -23,6 +23,7 @@ import { JUDGE_FACE_CHECK, JUDGE_KNOBS, judge } from './judge-rig.ts';
 import { LEAD_FACE_CHECK, LEAD_KNOBS, lead } from './lead-rig.ts';
 import { PROSECUTOR_FACE_CHECK, PROSECUTOR_KNOBS, prosecutor } from './prosecutor-rig.ts';
 
+/** The plain lead: his feet at our origin. */
 export const leadProp: RivePropSpec<FigureTimeline, keyof typeof LEAD_KNOBS> = {
   source: {
     riv: figuresRiv,
@@ -38,6 +39,7 @@ export const leadProp: RivePropSpec<FigureTimeline, keyof typeof LEAD_KNOBS> = {
   concept: lead.concept,
 };
 
+/** The judge: his robe's middle at his head's height at our origin. */
 export const judgeProp: RivePropSpec<FigureTimeline, keyof typeof JUDGE_KNOBS> = {
   source: {
     riv: figuresRiv,
@@ -53,6 +55,7 @@ export const judgeProp: RivePropSpec<FigureTimeline, keyof typeof JUDGE_KNOBS> =
   concept: judge.concept,
 };
 
+/** The prosecutor: his feet at our origin. */
 export const prosecutorProp: RivePropSpec<FigureTimeline, keyof typeof PROSECUTOR_KNOBS> = {
   source: {
     riv: figuresRiv,
@@ -68,6 +71,7 @@ export const prosecutorProp: RivePropSpec<FigureTimeline, keyof typeof PROSECUTO
   concept: prosecutor.concept,
 };
 
+/** Christ: His feet at our origin. */
 export const christProp: RivePropSpec<FigureTimeline, keyof typeof CHRIST_KNOBS> = {
   source: {
     riv: figuresRiv,
@@ -83,6 +87,7 @@ export const christProp: RivePropSpec<FigureTimeline, keyof typeof CHRIST_KNOBS>
   concept: christ.concept,
 };
 
+/** Christ turned to us (court.you): His feet at our origin, where `christProp`'s are. */
 export const christFrontProp: RivePropSpec<FigureTimeline, keyof typeof CHRIST_FRONT_KNOBS> = {
   source: {
     riv: figuresRiv,
@@ -98,6 +103,7 @@ export const christFrontProp: RivePropSpec<FigureTimeline, keyof typeof CHRIST_F
   concept: christFront.concept,
 };
 
+/** The farmer of the rain: his feet at our origin. */
 export const farmerProp: RivePropSpec<FigureTimeline, keyof typeof FARMER_KNOBS> = {
   source: {
     riv: figuresRiv,
@@ -113,6 +119,10 @@ export const farmerProp: RivePropSpec<FigureTimeline, keyof typeof FARMER_KNOBS>
   concept: farmer.concept,
 };
 
+/**
+ * A circle hand of `artboard`, its centre at our origin: its paper crawls by its `boil`
+ * timeline, and its view model's one number, `ink`, is the shot's (`FIGURES.shot`).
+ */
 const handProp = (artboard: string, key: string, size = 1): RivePropSpec<HandTimeline, never> => ({
   source: { riv: figuresRiv, artboard, timelines: HAND_TIMELINES, numbers: [] },
   engine: 'canvas',
@@ -121,12 +131,16 @@ const handProp = (artboard: string, key: string, size = 1): RivePropSpec<HandTim
   origin: [(HAND_ART.width * size) / 2, (HAND_ART.height * size) / 2],
 });
 
+/** The lead's hand, in his paper. */
 export const leadHandProp = handProp(ARTBOARDS.leadHand, 'lead-hand');
 
+/** A hand in the house look's skin: the judge's and the prosecutor's. */
 export const skinHandProp = handProp(ARTBOARDS.skinHand, 'skin-hand');
 
+/** Christ's hand, in His skin. */
 export const christHandProp = handProp(ARTBOARDS.christHand, 'christ-hand');
 
+/** Christ's hand held out to us, a step each of `HAND_OUT_STEPS`, in the house line. */
 export const christHandOutProps = [
   handProp(ARTBOARDS.christHandOut1, 'christ-hand-out-1', HAND_OUT_STEPS[0]),
   handProp(ARTBOARDS.christHandOut2, 'christ-hand-out-2', HAND_OUT_STEPS[1]),
@@ -134,4 +148,5 @@ export const christHandOutProps = [
   handProp(ARTBOARDS.christHandOut4, 'christ-hand-out-4', HAND_OUT_STEPS[3]),
 ] as const;
 
+/** The farmer's hand, in his skin. */
 export const farmerHandProp = handProp(ARTBOARDS.farmerHand, 'farmer-hand');

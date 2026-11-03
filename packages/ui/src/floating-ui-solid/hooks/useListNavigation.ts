@@ -27,18 +27,24 @@ function isStationaryWebKitPointer(event: MouseEvent | PointerEvent) {
   return platform.engine.webkit && event.movementX === 0 && event.movementY === 0;
 }
 
+/** Whether `key` moves along the list. */
 function isListKey(key: string) {
   return key === ARROW_UP || key === ARROW_DOWN;
 }
 
+/** Whether `key` moves toward the list's end (or, opening it, starts at the first item). */
 function isToEndKey(key: string) {
   return key === ARROW_DOWN || key === 'Enter' || key === ' ' || key === '';
 }
 
 interface UseListNavigationProps {
+  /** The items in DOM order; the list owner keeps it current. */
   listRef: { current: Array<HTMLElement | null> };
+  /** The highlighted index (`null` for none). Read live. */
   activeIndex: number | null;
+  /** Called when navigation moves the highlight. */
   onNavigate?: ((activeIndex: number | null, event: Event | undefined) => void) | undefined;
+  /** Whether the list is nested (upstream's submenu; here a context menu, as upstream marks it). */
   nested?: boolean | undefined;
 }
 

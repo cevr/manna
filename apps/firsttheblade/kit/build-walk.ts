@@ -1,9 +1,29 @@
+/**
+ * The build walk: every image of the built site, read from its bytes. After
+ * `bun run build` (`buildSite`), each file under `dist/` is an image when its
+ * first bytes are one (`formatOf`), whatever its name, its extension or its
+ * folder: JPEG, PNG and APNG, GIF, WebP, AVIF and HEIF (any ISO media file,
+ * by its `ftyp` box, so a video of that family counts too), JPEG XL, BMP,
+ * ICO and CUR, TIFF, JPEG 2000, and SVG by its root element in any encoding
+ * XML allows (UTF-16 either end first, and any other by its bytes, as its
+ * markup is ASCII). A gzipped file is read by what it
+ * unzips to. A file named as an image (`IMAGE`) that no signature reads is
+ * an image of format `unknown`, so a form the walk does not know is refused,
+ * not passed. An image inside another file (a data URL in a page, a
+ * stylesheet or a script) is no file the walk can find, and it needs
+ * none: the content policy every response carries (`img-src 'self'`,
+ * `../src/worker/respond.ts`) has the browser refuse it, however it is
+ * spelled. Reading the sources cannot list what the build emits, as each
+ * reader holds only the forms its author thought of; the bytes the build
+ * wrote are what the site serves.
+ */
 import { Effect, FileSystem, Option, Path, Schema, Stream } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
 import { IMAGE } from './served.ts';
 
+/** The image formats the walk reads, by their bytes; `unknown` is a file named as an image whose bytes no signature reads. */
 export const Format = Schema.Literals([
   'jpeg',
   'png',
@@ -20,9 +40,11 @@ export const Format = Schema.Literals([
 ]);
 export type Format = typeof Format.Type;
 
+/** Whether `bytes` hold `expected` from `at`. */
 const holds = (bytes: Uint8Array, at: number, expected: ReadonlyArray<number>) =>
   bytes.length >= at + expected.length && expected.every((byte, i) => bytes[at + i] === byte);
 
+/** Whether `bytes` hold the ASCII `text` from `at`. */
 const says = (bytes: Uint8Array, at: number, text: string) =>
   holds(
     bytes,
@@ -33,22 +55,34 @@ const says = (bytes: Uint8Array, at: number, text: string) =>
 const u16 = (bytes: Uint8Array, at: number) => (bytes[at] ?? 0) | ((bytes[at + 1] ?? 0) << 8);
 const u32 = (bytes: Uint8Array, at: number) => u16(bytes, at) + u16(bytes, at + 2) * 0x10000;
 
+/** The sizes of a BMP's DIB header, one per version of it. */
 const DIB = new Set([12, 16, 40, 52, 56, 64, 108, 124]);
 
+/** The XML a file may open with before its root element: a declaration, a processing instruction, a comment, a doctype (with its internal subset), white space. */
 const PROLOG = /^(?:\s+|<\?[\s\S]*?\?>|<!--[\s\S]*?-->|<!DOCTYPE(?:[^[>]|\[[\s\S]*?\])*>)*/i;
 
+/** The root element of an SVG, with a namespace prefix or none. */
 const SVG_ROOT = /^<(?:[\w.-]+:)?svg[\s/>]/i;
 
 const UTF16LE = new TextDecoder('utf-16le');
 const UTF16BE = new TextDecoder('utf-16be');
+/** Each byte as one character: the markup the root test reads is ASCII, so any encoding XML allows that keeps ASCII as its bytes (UTF-8, ISO-8859-1 and the like) reads the same through it. */
 const BYTES = new TextDecoder('latin1');
 
+/**
+ * The readings of the bytes as XML text: UTF-16 little and big end first (a
+ * byte order mark dropped), and each byte as one character, past a UTF-8
+ * byte order mark. All three are read, a mark or none, so a file is an SVG
+ * when any reading of it opens with an `svg` root: the walk errs toward an
+ * image.
+ */
 const readings = (bytes: Uint8Array) => [
   UTF16LE.decode(bytes),
   UTF16BE.decode(bytes),
   BYTES.decode(bytes.subarray(Number(holds(bytes, 0, [0xef, 0xbb, 0xbf])) * 3)),
 ];
 
+/** Whether the bytes are a text file whose root element is `svg`, in any reading of them. */
 const isSvg = (bytes: Uint8Array) =>
   readings(bytes).some((text) => SVG_ROOT.test(text.replace(/^\ufeff/, '').replace(PROLOG, '')));
 
@@ -89,6 +123,7 @@ const gunzipped = Option.liftThrowable((bytes: Uint8Array) =>
   Bun.gunzipSync(new Uint8Array(bytes)),
 );
 
+/** The image format the bytes are, read from their first bytes (a gzipped file by what it unzips to), or none. */
 export const formatOf = (bytes: Uint8Array): Option.Option<Format> => {
   const found = Option.fromUndefinedOr(SIGNATURES.find(([, is]) => is(bytes))).pipe(
     Option.map(([format]) => format),
@@ -100,15 +135,18 @@ export const formatOf = (bytes: Uint8Array): Option.Option<Format> => {
   );
 };
 
+/** The SHA-256 of bytes, in hex. */
 export const sha256 = (bytes: Uint8Array) =>
   new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
 
+/** An image of the built site: its path from `dist/`, its format, and the SHA-256 of its bytes. */
 export interface BuiltImage {
   readonly file: string;
   readonly format: Format;
   readonly hash: string;
 }
 
+/** Every image under `dist`, by its bytes, sorted by path. */
 export const builtImages = Effect.fn('BuildWalk.images')(function* (dist: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -133,6 +171,7 @@ export const builtImages = Effect.fn('BuildWalk.images')(function* (dist: string
   return found.filter(Option.isSome).map(({ value }) => value);
 });
 
+/** The build did not finish. */
 export class BuildFailed extends Schema.TaggedError<BuildFailed>()('BuildFailed', {
   app: Schema.String,
   code: Schema.Finite,
@@ -146,6 +185,7 @@ export class BuildFailed extends Schema.TaggedError<BuildFailed>()('BuildFailed'
 const text = <E>(stream: Stream.Stream<Uint8Array, E>) =>
   Stream.mkString(Stream.decodeText(stream));
 
+/** `bun run build` in `app`, as the prod deploy builds the site; refused with the build's last lines when it fails. */
 export const buildSite = Effect.fn('BuildWalk.build')(function* (app: string) {
   const spawner = yield* ChildProcessSpawner;
   const child = yield* spawner.spawn(

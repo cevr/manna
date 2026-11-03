@@ -7,6 +7,7 @@ import { useToastRootContext } from './ToastRootContext.ts';
 import { isRenderableNode } from './utils.ts';
 
 interface ToastTitleState {
+  /** The type of the toast. */
   type: string | undefined;
 }
 

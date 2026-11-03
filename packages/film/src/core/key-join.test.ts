@@ -7,6 +7,7 @@ const INK: Rgb = [20, 16, 12];
 const SKIN: Rgb = [230, 180, 140];
 const SLEEVE: Rgb = [200, 190, 170];
 
+/** A `w` × `h` raster painted by `at`: an RGB, opaque, or `'clear'`. */
 const raster = (w: number, h: number, at: (x: number, y: number) => Rgb | 'clear'): Raster => {
   const rgba = new Uint8Array(w * h * 4);
   for (let y = 0; y < h; y++)
@@ -22,11 +23,13 @@ const rgbAt = (r: Raster, x: number, y: number) => {
 };
 const alphaAt = (r: Raster, x: number, y: number) => r.rgba[(y * r.width + x) * 4 + 3];
 
+/** A torso: clear above row 10, its shoulder line inked on rows 10-11, skin below. */
 const torsoAt = (_x: number, y: number): Rgb | 'clear' => {
   if (y < 10) return 'clear';
   if (y <= 11) return INK;
   return SKIN;
 };
+/** A key over it: x 6-13, rows 0-9, its sides inked, its cut end (row 9) its paint. */
 const keyAt = (x: number, y: number): Rgb | 'clear' => {
   if (y > 9 || x < 6 || x > 13) return 'clear';
   if (x === 6 || x === 13) return INK;

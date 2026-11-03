@@ -1,5 +1,18 @@
 /* oxlint-disable effect/noGlobals -- the phone's list runs as a Bun script in a process of its own (`list-feel.tsx`), so its React Native stand-in never reaches the other screens, and its report is read as the JSON it prints. */
 
+/**
+ * The app's screens under a Feel whose two ports record their calls: bar J
+ * on a hymn page, the player sheet, Settings and the phone's hymn list,
+ * mounted as `thumb.slow.test.tsx` mounts them (a browser's document, a
+ * player over a device the test holds, a reader's store the test holds).
+ * Each touch gives exactly its cues, in order, and each cue its body; the
+ * `Sounds and haptics` switch silences both ports; and no touch reaches the
+ * player's device but what the control itself sends.
+ *
+ * The Feel's clock moves a second each read, so no tick is held back by
+ * the floor and no sound by the sounds' gap: both are `feel.test.ts`'s.
+ */
+
 import { RegistryContext } from '@effect/atom-react';
 import { describe, expect, it } from 'effect-bun-test';
 import { Duration, Effect, Option, Stream } from 'effect';
@@ -32,12 +45,14 @@ import { bodyOf, type Haptic, type SoundName } from './body';
 import { type Cue, CueProvider, plain, useCue } from './cue';
 import { FeelProvider } from './FeelProvider';
 
+/** The cues told, and what each port was told, over one stretch. */
 interface Taken {
   readonly cues: ReadonlyArray<Cue>;
   readonly felt: ReadonlyArray<Haptic>;
   readonly heard: ReadonlyArray<SoundName>;
 }
 
+/** What the Feel's ports were told, and the cues the controls told it. */
 const recorder = () => {
   const cues: Array<Cue> = [];
   const felt: Array<Haptic> = [];
@@ -50,6 +65,7 @@ const recorder = () => {
     haptics: { play: (haptic: Haptic) => void felt.push(haptic) },
     voice: { port: { play: (sound: SoundName) => void heard.push(sound) }, load: Effect.void },
     clock: () => (clock += 1000),
+    /** Everything recorded so far, then cleared. */
     take: (): Taken => {
       const taken = { cues: [...cues], felt: [...felt], heard: [...heard] };
       cues.splice(0);
@@ -62,12 +78,14 @@ const recorder = () => {
 
 type Recorder = ReturnType<typeof recorder>;
 
+/** The cues `cues` and the bodies the table gives them, as `take` reads them. */
 const expected = (cues: ReadonlyArray<Cue>): Taken => ({
   cues,
   felt: cues.map((cue) => bodyOf(cue).haptic),
   heard: cues.flatMap((cue) => Option.toArray(bodyOf(cue).sound)),
 });
 
+/** Records each cue told under it, then hands it on to the Feel above. */
 function Spy({ into, children }: { readonly into: Recorder; readonly children: ReactNode }) {
   const tell = useCue();
   return (
@@ -84,6 +102,7 @@ function Spy({ into, children }: { readonly into: Recorder; readonly children: R
 
 const chordsOn = () => new Map([['chords', 'true']]);
 
+/** Hymn 100's route: its header, its page with its own bar, the docked bar, and the sheet when `sheet`. */
 const route =
   (sheet = false) =>
   (reader: ChordReader) => {
@@ -104,6 +123,7 @@ const route =
     );
   };
 
+/** `screen` under a recording Feel, a fresh player and the reader's store `device`; it unmounts when the `using` ends. */
 const mount = (
   screen: (reader: ChordReader) => ReactNode,
   device: Map<string, string> = chordsOn(),
@@ -180,6 +200,7 @@ const mount = (
     get,
     click,
     press: (label: string) => click(get(`[aria-label="${label}"]`)),
+    /** What the device was asked: each URL played, each place sought, each stop. */
     asked: () => ({
       played: [...played.device.played],
       sought: [...played.device.sought],
@@ -198,6 +219,7 @@ type Page = ReturnType<typeof mount>;
 
 const keyButton = (page: Page) => page.get('[role="button"][aria-label="Key"]');
 
+/** The key button held down until the hold turns chords to `to`, then let go. */
 const hold = (page: Page, to: boolean) =>
   Effect.gen(function* () {
     const button = keyButton(page);
@@ -209,6 +231,7 @@ const hold = (page: Page, to: boolean) =>
     });
   });
 
+/** A drag of dial `testID` by `by` detents in one update, then let go at `velocity` points a second. */
 const fling = (testID: string, by: number, velocity: number) => {
   const pan = () => gestureOf(`${testID}-pan`);
   act(() => pan().onBegin?.({ x: 0, y: 0 }));

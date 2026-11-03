@@ -1,3 +1,14 @@
+/**
+ * Process raw Bible study data into JSON assets for bundling.
+ *
+ * This script processes:
+ * 1. Cross-references from OpenBible.info TSV
+ * 2. Strong's Hebrew and Greek dictionaries
+ * 3. KJV verses with Strong's numbers
+ *
+ * Output files are placed in assets/ for bundling with the CLI.
+ */
+
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { Effect, FileSystem, Option, Path, Schema, SchemaGetter } from 'effect';
 
@@ -209,6 +220,9 @@ interface StrongsEntry {
   kjvDef?: string;
 }
 
+/**
+ * Clean HTML entities from string
+ */
 function cleanHtmlEntities(str: string): string {
   return str
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
@@ -236,6 +250,9 @@ interface VerseWithStrongs {
   words: WordWithStrongs[];
 }
 
+/**
+ * Parse OpenBible reference format: "Gen.1.1" or "Ps.89.11-Ps.89.12"
+ */
 function parseOpenBibleRef(ref: string): Option.Option<Reference> {
   const rangeParts = ref.split('-');
   const mainRef = Option.fromNullishOr(rangeParts[0]);
@@ -273,10 +290,16 @@ function parseOpenBibleRef(ref: string): Option.Option<Reference> {
   return Option.some(result);
 }
 
+/**
+ * Create a reference key for our format: "1.1.1" (book.chapter.verse)
+ */
 function refKey(ref: Reference): string {
   return `${ref.book}.${ref.chapter}.${ref.verse}`;
 }
 
+/**
+ * Process cross-references TSV
+ */
 const processCrossRefs = Effect.fn('processCrossRefs')(function* (dataRaw: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -320,6 +343,9 @@ const processCrossRefs = Effect.fn('processCrossRefs')(function* (dataRaw: strin
 const optionalClean = (value?: string) =>
   Option.getOrUndefined(Option.map(Option.fromNullishOr(value), cleanHtmlEntities));
 
+/**
+ * Load the lexicon.json (kaiserlik/kjv) - has Greek and Hebrew
+ */
 const loadLexicon = Effect.fn('loadLexicon')(function* (
   dataRaw: string,
   strongs: Record<string, StrongsEntry>,
@@ -346,6 +372,10 @@ const loadLexicon = Effect.fn('loadLexicon')(function* (
   yield* Effect.log(`  Loaded ${Object.keys(lexiconData.value).length} entries from lexicon.json`);
 });
 
+/**
+ * The JSON object an OpenScriptures dictionary file assigns to its `var`.
+ * None when the file is unreadable (warned) or the assignment isn't found.
+ */
 const readDictionarySource = Effect.fn('readDictionarySource')(function* (
   filePath: string,
   assignment: RegExp,
@@ -360,6 +390,11 @@ const readDictionarySource = Effect.fn('readDictionarySource')(function* (
   return Option.fromNullishOr(content.value.match(assignment)?.[1]);
 });
 
+/**
+ * Merge OpenScriptures entries into the lexicon: add an entry if we don't
+ * have it or ours has no definition; otherwise only fill a missing
+ * pronunciation. Returns how many entries were added/replaced.
+ */
 function mergeOpenScriptures(
   strongs: Record<string, StrongsEntry>,
   entries: ReadonlyArray<readonly [string, StrongsEntry]>,
@@ -378,6 +413,9 @@ function mergeOpenScriptures(
   return added;
 }
 
+/**
+ * Supplement with OpenScriptures Hebrew data (has more detail)
+ */
 const mergeHebrew = Effect.fn('mergeHebrew')(function* (
   dataRaw: string,
   strongs: Record<string, StrongsEntry>,
@@ -411,6 +449,9 @@ const mergeHebrew = Effect.fn('mergeHebrew')(function* (
   yield* Effect.log(`  Added/updated ${added} Hebrew entries from OpenScriptures`);
 });
 
+/**
+ * Supplement with OpenScriptures Greek data
+ */
 const mergeGreek = Effect.fn('mergeGreek')(function* (
   dataRaw: string,
   strongs: Record<string, StrongsEntry>,
@@ -444,6 +485,9 @@ const mergeGreek = Effect.fn('mergeGreek')(function* (
   yield* Effect.log(`  Added/updated ${added} Greek entries from OpenScriptures`);
 });
 
+/**
+ * Process Strong's dictionaries from multiple sources
+ */
 const processStrongs = Effect.fn('processStrongs')(function* (dataRaw: string) {
   yield* Effect.log("Processing Strong's dictionaries...");
 
@@ -455,6 +499,10 @@ const processStrongs = Effect.fn('processStrongs')(function* (dataRaw: string) {
   return strongs;
 });
 
+/**
+ * Parse a word with inline Strong's numbers: "beginning[H7225]" or "was[G2258]"
+ * Returns the word and any Strong's numbers
+ */
 function parseWordWithStrongs(text: string): WordWithStrongs {
   const strongsPattern = /\[([HG]\d+)\]/g;
   const strongs: string[] = [];
@@ -478,6 +526,10 @@ function parseWordWithStrongs(text: string): WordWithStrongs {
   return result;
 }
 
+/**
+ * Split a verse into words and parse Strong's numbers.
+ * Words are separated by spaces, but punctuation sticks to words.
+ */
 function parseVerseWords(englishText: string): WordWithStrongs[] {
   const words: WordWithStrongs[] = [];
   for (const rawWord of englishText.split(/\s+/)) {
@@ -490,6 +542,10 @@ function parseVerseWords(englishText: string): WordWithStrongs[] {
   return words;
 }
 
+/**
+ * Flatten one book's nested chapters into verses:
+ * { "Gen|1": { "Gen|1|1": { "en": "..." } } }
+ */
 function bookVerses(
   bookNum: number,
   bookContent: Record<string, Record<string, { readonly en: string }>>,
@@ -517,6 +573,9 @@ function bookVerses(
   return verses;
 }
 
+/**
+ * Read one KJV-with-Strong's book file into verses (none if unknown or unparseable).
+ */
 const processKjvBook = Effect.fn('processKjvBook')(function* (kjvDir: string, file: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -543,6 +602,9 @@ const processKjvBook = Effect.fn('processKjvBook')(function* (kjvDir: string, fi
   return bookVerses(bookNum.value, bookContent);
 });
 
+/**
+ * Process KJV with Strong's numbers
+ */
 const processKjvStrongs = Effect.fn('processKjvStrongs')(function* (dataRaw: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

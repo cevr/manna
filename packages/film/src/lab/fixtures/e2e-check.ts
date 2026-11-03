@@ -40,25 +40,34 @@ import {
   verdictOf,
 } from './e2e-verdict.ts';
 
+/** The host's e2e lock, the one the workspaces' docs name. */
 const LOCK = '/tmp/manna-e2e.lock';
 
+/** Set on the run that holds the lock. */
 const HELD = 'FILM_E2E_CHECK_LOCKED';
 
+/** How many times a failure is rerun alone. */
 const ALONE = 3;
 
+/** How long the check waits for the host's load to fall to its core count before it runs anyway. */
 const LOAD_WAIT = Duration.minutes(20);
+/** How often it reads the load meanwhile. */
 const LOAD_POLL = Duration.seconds(15);
 
+/** The package's scripts, for the suite's own command. */
 const Scripts = Schema.fromJsonString(
   Schema.Struct({ scripts: Schema.Struct({ 'test:e2e': Schema.String }) }),
 );
 
+/** A check's record, as JSON. */
 const RecordedJson = Schema.fromJsonString(Recorded);
 
+/** A flag the check does not take. */
 class FlagRefused extends Schema.TaggedError<FlagRefused>()('FlagRefused', {
   message: Schema.String,
 }) {}
 
+/** The flags, as `--base <log>` and `--log <log>`; anything else is refused. */
 const flagsOf = (args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const flags = { base: Option.none<string>(), log: Option.none<string>() };
@@ -79,6 +88,7 @@ const flagsOf = (args: ReadonlyArray<string>) =>
     return flags;
   });
 
+/** Run `command` with `args`; answer its exit code. */
 const exitOf = (
   command: string,
   args: ReadonlyArray<string>,
@@ -91,6 +101,7 @@ const exitOf = (
     }),
   );
 
+/** Run `command` with `args`; answer what it printed. */
 const outputOf = (command: string, args: ReadonlyArray<string>) =>
   Effect.scoped(
     Effect.gen(function* () {
@@ -102,8 +113,14 @@ const outputOf = (command: string, args: ReadonlyArray<string>) =>
     }),
   );
 
+/** The host's processes, as `ps` lists them: `pid ppid command` a line. */
 const processes = outputOf('ps', ['-A', '-o', 'pid=', '-o', 'ppid=', '-o', 'command=']);
 
+/**
+ * Whether an ancestor of this process is a `lockf` holding LOCK
+ * itself: the lock file and each file an ancestor locks compared as the file
+ * system resolves them (a path that does not resolve, as written).
+ */
 const heldOutside = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const commands = ancestorsIn(yield* processes, process.pid);
@@ -119,6 +136,7 @@ const heldOutside = Effect.gen(function* () {
   return heldByAncestor(commands, LOCK, (path) => resolved.get(path) ?? path);
 });
 
+/** Run this check again under the host's lock, `lockf -k` (which keeps the lock file). */
 const underLock = (args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     yield* Console.log(
@@ -133,11 +151,16 @@ const underLock = (args: ReadonlyArray<string>) =>
     });
   });
 
+/** The host's one-minute load average and its core count. */
 const loadNow = Effect.sync(() => {
   const [load = 0] = loadavg();
   return { load, cores: availableParallelism() };
 });
 
+/**
+ * Wait, at most LOAD_WAIT, for the load to fall to the core count, saying so
+ * each minute; answer the load the suite starts at, in words, with the wait.
+ */
 const quiet = Effect.gen(function* () {
   const started = yield* Clock.currentTimeMillis;
   const elapsed = Effect.map(Clock.currentTimeMillis, (now) => Math.round((now - started) / 1000));

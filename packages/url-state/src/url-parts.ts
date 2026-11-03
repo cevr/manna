@@ -1,7 +1,31 @@
+/**
+ * An href as three raw parts, and the one printer.
+ *
+ * `UrlPartsFromHref` is the only code in the package that reads or writes
+ * URL syntax. Decoding splits an href into its path segments (percent-decoded),
+ * its query entries and its hash entries, each a record of a key to every
+ * value it was given, in order. Encoding the same schema the other way is how
+ * every href is printed:
+ *
+ * - each path segment by `encodeURIComponent`, keeping `:`, `@` and `,`
+ *   readable, so a value holding `/` (a folder ref) stays one segment as `%2F`;
+ * - the query by `URLSearchParams` (`+` for a space; byte-for-byte what a
+ *   browser form and egw-search's links have always produced);
+ * - the hash as `key=value&key=value`, keeping `,`, `:`, `/` and `@` readable,
+ *   so a value such as `1.5,4` or `a/b` prints as written.
+ *
+ * Decoding is total: a segment or hash value whose percent-encoding is broken
+ * is kept as written.
+ *
+ * Record order is insertion order, except that JavaScript lists integer-like
+ * keys (`?2=a`) first; no place in this repo uses one.
+ */
+
 import { Option, Result, Schema, SchemaTransformation } from 'effect';
 
 import { parseHref } from './location.js';
 
+/** One section's entries: each key and every value it was given, in order. */
 export const Raw = Schema.Record(Schema.String, Schema.Array(Schema.String));
 export type Raw = typeof Raw.Type;
 
@@ -12,14 +36,21 @@ export const UrlParts = Schema.Struct({
 });
 export type UrlParts = typeof UrlParts.Type;
 
+/**
+ * A URL component percent-decoded: its text, or, when an escape in it is
+ * broken (`%`, `%E0%A4%A`), a failure holding it as written. The one
+ * decoder of a URL's escapes (lint: no `decodeURIComponent` elsewhere).
+ */
 export const decodeComponent = (text: string): Result.Result<string, string> =>
   Result.mapError(
     Result.try(() => decodeURIComponent(text)),
     () => text,
   );
 
+/** A component decoded, or kept as written when its escape is broken: decoding a URL is total. */
 const decodedOrAsWritten = (text: string): string => Result.merge(decodeComponent(text));
 
+/** `encodeURIComponent`, then the given escapes put back as their characters. */
 const encodeKeeping =
   (kept: RegExp) =>
   (text: string): string =>
@@ -28,6 +59,7 @@ const encodeKeeping =
 const encodeSegment = encodeKeeping(/%3A|%40|%2C/gi);
 const encodeHashPart = encodeKeeping(/%2C|%3A|%2F|%40/gi);
 
+/** Entries into a record, keeping first-seen key order and every value. */
 const collect = (entries: Iterable<readonly [string, string]>): Raw => {
   const record = new Map<string, string[]>();
   for (const [key, value] of entries) record.set(key, [...(record.get(key) ?? []), value]);
@@ -51,6 +83,7 @@ const splitHash = (hash: string): Array<readonly [string, string]> =>
 const entriesOf = (record: Raw): Array<readonly [string, string]> =>
   Object.entries(record).flatMap(([key, values]) => values.map((value) => [key, value] as const));
 
+/** The root is no segments; `/a/` is `a` and an empty last segment. */
 const segmentsOf = (pathname: string): ReadonlyArray<string> => {
   if (pathname === '/') return [];
   return pathname.split('/').slice(1).map(decodedOrAsWritten);
@@ -76,6 +109,7 @@ const toHref = (parts: UrlParts): string => {
   return `${path}${prefixed('?', search)}${prefixed('#', hash)}`;
 };
 
+/** `text` behind its delimiter, or nothing when there is no text. */
 const prefixed = (delimiter: string, text: string): string =>
   Option.match(
     Option.liftPredicate(text, (part) => part !== ''),
@@ -85,10 +119,14 @@ const prefixed = (delimiter: string, text: string): string =>
     },
   );
 
+/** An href (path-relative or absolute) as its parts; encoding prints the
+ *  path-relative href. */
 export const UrlPartsFromHref = Schema.String.pipe(
   Schema.decodeTo(UrlParts, SchemaTransformation.transform({ decode: toParts, encode: toHref })),
 );
 
+/** The href of some parts: the one printer. */
 export const printHref: (parts: UrlParts) => string = Schema.encodeSync(UrlPartsFromHref);
 
+/** The parts of an href. */
 export const readHref: (href: string) => UrlParts = Schema.decodeSync(UrlPartsFromHref);

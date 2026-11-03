@@ -27,39 +27,51 @@ import { FootageMedia, type FootageProbed } from './footage-media.ts';
 import { Media } from './media.ts';
 import { resample } from './resample.ts';
 
+/** A promise mediabunny made, failing as `op` on `file`. */
 const attempt = <A>(op: MediaFailed['op'], file: string, run: () => Promise<A>) =>
   Effect.tryPromise({
     try: run,
     catch: (cause) => MediaFailed.make({ op, file, reason: String(cause) }),
   });
 
+/** `value`, or `op` on `file` failed for want of `what`. */
 const present = <A>(op: MediaFailed['op'], file: string, what: string, value: A) =>
   Effect.fromOption(Option.fromNullishOr(value), () =>
     MediaFailed.make({ op, file, reason: `no ${what}` }),
   );
 
+/** `file` opened in place, until the scope closes. */
 const opened = (file: string): Effect.Effect<Input, never, Scope.Scope> =>
   Effect.acquireRelease(
     Effect.sync(() => new Input({ source: new FilePathSource(file), formats: ALL_FORMATS })),
     (input) => Effect.sync(() => input.dispose()),
   );
 
+/** `file`'s picture, or why it has none. */
 const pictureOf = (file: string, input: Input) =>
   Effect.flatMap(
     attempt('read', file, () => input.getPrimaryVideoTrack()),
     (track) => present('read', file, 'picture in it', track),
   );
 
+/** `file`'s sound, if it has any. */
 const soundOf = (file: string, input: Input) =>
   Effect.map(
     attempt('read', file, () => input.getPrimaryAudioTrack()),
     (track) => Option.fromNullishOr(track),
   );
 
+/**
+ * Where each copy's index goes: the proxy streams to a phone, so at its head;
+ * the mezzanine is read whole by the render, and too big to hold in memory
+ * to put it there.
+ */
 const FAST_START = { mezzanine: false, proxy: 'in-memory' } as const;
 
+/** A size rounded to an even number of pixels, as H.264's 4:2:0 asks. */
 const even = (n: number) => Math.max(2, Math.round(n / 2) * 2);
 
+/** A copy's size: the original's, or brought down to `long` on its long side. */
 const sizeFor = (picture: FootagePicture, long: Option.Option<number>) =>
   Option.match(
     Option.filter(long, (side) => side < Math.max(picture.width, picture.height)),
@@ -72,6 +84,7 @@ const sizeFor = (picture: FootagePicture, long: Option.Option<number>) =>
     },
   );
 
+/** `track`'s probe: its codec, displayed size, rotation, rate and where it starts. */
 const probePicture = (file: string, track: InputVideoTrack) =>
   Effect.gen(function* () {
     const codec = yield* attempt('read', file, () => track.getCodec());
@@ -88,6 +101,7 @@ const probePicture = (file: string, track: InputVideoTrack) =>
     return picture;
   });
 
+/** `track`'s probe: its codec, rate and channels. */
 const probeSound = (file: string, track: InputAudioTrack) =>
   Effect.gen(function* () {
     const codec = yield* attempt('read', file, () => track.getCodec());
@@ -98,6 +112,7 @@ const probeSound = (file: string, track: InputAudioTrack) =>
     };
   });
 
+/** Blocks of sound, each at its frame on the voice's clock, laid into one channel of `frames` frames. */
 const laid = (
   rate: number,
   blocks: ReadonlyArray<{ readonly at: number; readonly pcm: Pcm }>,
@@ -112,6 +127,7 @@ const laid = (
   return { rate, frames: out.length, channels: [out] };
 };
 
+/** The footage library's media in-process, over the media service's coders and the files on disk. */
 export const layer = Layer.effect(
   FootageMedia,
   Effect.gen(function* () {
@@ -144,6 +160,7 @@ export const layer = Layer.effect(
       );
     });
 
+    /** The copy written to `partial`, frame by frame. */
     const copyInto = (file: string, picture: FootagePicture, copy: FootageCopy, partial: string) =>
       Effect.scoped(
         Effect.gen(function* () {

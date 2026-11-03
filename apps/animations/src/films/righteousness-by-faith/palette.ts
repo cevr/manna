@@ -2,19 +2,35 @@ import { type Hex, mix } from '@manna/film/canvas';
 import type { Looks } from '@manna/film/core';
 import { parchment, peoplePaper } from '@manna/film/style';
 
+/**
+ * The looks the film chooses between, at named levels. `ground`: how far the
+ * ground is lifted toward light paper, `now` the chipboard as first cut (the
+ * owner's pick, 2026-09-30), `light` and `lighter` the two lifts they
+ * compared. The review lists each level and a pick rewrites `play`; every
+ * value below and in `light.ts` and `acts.ts` follows it.
+ */
 export const looks = {
   ground: { options: { now: 0, light: 0.5, lighter: 0.75 }, play: 'now' },
 } as const satisfies Looks;
 export type Ground = keyof typeof looks.ground.options;
 
+/** The film's ground level: the level `looks.ground` plays. */
 export const GROUND: Ground = looks.ground.play;
 
+/** The lift, 0..1: the share of the way each ground colour rises toward `LIGHT_PAPER`. */
 export const LIFT: number = looks.ground.options[GROUND];
 
+/** The warm light paper the ground rises toward: under the robe's white and the glow. */
 const LIGHT_PAPER: Hex = '#f3ebdd';
 
+/**
+ * A ground colour lifted by `share` of the film's lift. Walls take all of it;
+ * skies, floors and dark props less, so skies keep their colour and floors
+ * stay under the figures.
+ */
 const ground = (base: Hex, share = 1): Hex => mix(base, LIGHT_PAPER, LIFT * share);
 
+/** The share of the lift a sky takes: enough to lighten it, not so much it washes out. */
 const SKY = 0.4;
 
 export const palette = {

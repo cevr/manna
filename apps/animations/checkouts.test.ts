@@ -3,6 +3,7 @@ import { BunServices } from '@effect/platform-bun';
 import { Effect, FileSystem, Path } from 'effect';
 import { checkoutRootsOf } from './checkouts.ts';
 
+/** A checkout at `dir` whose root package is `name`, with its app's `made` folder (renders: `out`). */
 const checkout = (dir: string, name: string, made = 'out') =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -45,6 +46,7 @@ describe('the checkouts', () => {
         const path = yield* Path.Path;
         const home = yield* fs.realPath(yield* fs.makeTempDirectoryScoped());
         const rifts = path.join(home, '.rifts', 'bible-tools');
+        /** `name`, a git worktree of the checkout `main`, as `git worktree add` lays one out. */
         const worktree = (main: string, dir: string) =>
           Effect.gen(function* () {
             const admin = path.join(main, '.git', 'worktrees', path.basename(dir));

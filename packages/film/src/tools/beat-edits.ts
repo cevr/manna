@@ -39,14 +39,17 @@ import {
   UNDO_DEPTH,
 } from './source-writer.ts';
 
+/** A move as it is asked: `beat` of version `version` (the open one when none) before `before` (the end when none), by `by`. */
 interface MoveAsk {
   readonly film: string;
   readonly version: Option.Option<number>;
   readonly beat: string;
   readonly before: MovedBefore;
+  /** Who asks: `the studio` for the page, an agent's name for its tools. */
   readonly by: string;
 }
 
+/** A hold as it is asked: `beat`'s `edge` held `seconds` (snapped and kept inside its floors). */
 interface HoldAsk {
   readonly film: string;
   readonly version: Option.Option<number>;
@@ -56,20 +59,24 @@ interface HoldAsk {
   readonly by: string;
 }
 
+/** An edit as it answers: the change it made (none when the script was already so), what it set, and what it says to the owner. */
 export interface Edited {
   readonly change: Option.Option<Change>;
   readonly target: string;
   readonly said: string;
 }
 
+/** Why an edit did not land: the film, the version or its timeline does not read, the edit is refused, or the write is. */
 type EditError = TimelineError | RewriteError | SourceRefused | HoldUnchanged;
 
 interface BeatEditsService {
   readonly move: (ask: MoveAsk) => Effect.Effect<Edited, EditError>;
   readonly hold: (ask: HoldAsk) => Effect.Effect<Edited, EditError>;
+  /** Undo the film's newest change, any writer's; asked for one change, only that one (`StepAsk`). */
   readonly undo: (film: string, ask: StepAsk) => Effect.Effect<Edited, StepError | EditError>;
 }
 
+/** The script of `version`: its own folder's (`v<n>/script.ts`), else the film's own; refused for a version a later one replaced in place. */
 const scriptOf = (
   dir: string,
   version: FilmVersion,
@@ -93,9 +100,11 @@ const isScript = (l: Lane): l is Extract<Lane, { readonly track: 'script' }> =>
   l.track === 'script';
 const isSound = (l: Lane): l is Extract<Lane, { readonly track: 'sound' }> => l.track === 'sound';
 
+/** The script lane's clips of `timeline`: its beats in order. */
 const scriptClips = (timeline: FilmTimeline) =>
   timeline.lanes.filter(isScript).flatMap((l) => l.clips);
 
+/** The parts a move must keep in order: the acts, and the score's movements, each as declared. */
 const partsOf = (timeline: FilmTimeline) => [
   timeline.bands.map((b) => ({ from: b.from, name: b.name })),
   timeline.lanes
@@ -104,8 +113,14 @@ const partsOf = (timeline: FilmTimeline) => [
     .map((c) => ({ from: c.from, name: c.movement })),
 ];
 
+/** What each film's beat edits said, by the change's id, oldest first. */
 type Words = ReadonlyMap<string, ReadonlyMap<string, string>>;
 
+/**
+ * `all` with `film`'s change `id` saying `said`. A film keeps the words of its
+ * newest UNDO_DEPTH changes: an older one has as many newer changes above it,
+ * so its history no longer holds it.
+ */
 const wordsKept = (all: Words, film: string, id: string, said: string): Words => {
   const own = Option.getOrElse(
     Option.fromUndefinedOr(all.get(film)),
@@ -114,6 +129,7 @@ const wordsKept = (all: Words, film: string, id: string, said: string): Words =>
   return new Map([...all, [film, new Map([...own, [id, said] as const].slice(-UNDO_DEPTH))]]);
 };
 
+/** What an undo's change set, without the undo's own `undo `. */
 const setBy = (target: string) => target.replace(/^undo /, '');
 
 export class BeatEdits extends Context.Service<BeatEdits, BeatEditsService>()(
@@ -130,6 +146,11 @@ export class BeatEdits extends Context.Service<BeatEdits, BeatEditsService>()(
       const films = yield* Effect.context<FilmFolder>();
       const words = yield* Ref.make<Words>(new Map());
 
+      /**
+       * The agents' work `said` asks for, on `production`'s ledger while the
+       * change stands: one note, filed by `by` at `at`, withdrawn by its text,
+       * time and filer. None for a film with no production.
+       */
       const filing = (production: Option.Option<string>, said: string, by: string, at: number) =>
         Option.map(production, (p): Files => {
           const text = workFiled(said);
@@ -164,6 +185,7 @@ export class BeatEdits extends Context.Service<BeatEdits, BeatEditsService>()(
           };
         });
 
+      /** `film`'s timeline at `version`, and the script file that version plays. */
       const versionOf = Effect.fn('BeatEdits.versionOf')(function* (
         film: FilmName,
         version: Option.Option<number>,
@@ -178,6 +200,7 @@ export class BeatEdits extends Context.Service<BeatEdits, BeatEditsService>()(
         return { timeline, file };
       });
 
+      /** One rewrite of `file`, filing its work, its words kept for its Undo. */
       const written = Effect.fn('BeatEdits.written')(function* (
         film: FilmName,
         timeline: FilmTimeline,
@@ -186,6 +209,7 @@ export class BeatEdits extends Context.Service<BeatEdits, BeatEditsService>()(
           readonly beat: string;
           readonly target: string;
           readonly said: string;
+          /** What it says when the script is already so. */
           readonly already: string;
           readonly by: string;
         },

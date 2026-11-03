@@ -96,6 +96,10 @@ const board: BoardFile = {
   approvals: [],
 };
 
+/**
+ * Film `f` with a board panel and its two tries' images (none kept: the
+ * Board shows the first), and a still an agent made outside the lab.
+ */
 const files = () =>
   new Map<string, Uint8Array>([
     ['/films/f/scenes/index.ts', text('export {};\n')],
@@ -110,6 +114,11 @@ const files = () =>
     ['/elsewhere/judge-faces/calm.png', text('a calm judge')],
   ]);
 
+/**
+ * The review itself rooted at the lab's own out/ (`FILMS_OUT`, here its
+ * default under the working folder), then `others`: its index read and kept,
+ * as the page's is, until a write drops it.
+ */
 const reviewAt = (others: ReadonlyArray<{ readonly label: string; readonly path: string }>) =>
   Layer.unwrap(
     Effect.map(Path.Path, (path) =>
@@ -141,10 +150,12 @@ const providedWith =
     );
 const provided = providedWith(reviewAtOut);
 
+/** JSON as a request carries it and an answer is read. */
 const JsonText = Schema.fromJsonString(Schema.Json);
 const writeJson = Schema.encodeSync(JsonText);
 const readJson = Schema.decodeUnknownEffect(JsonText);
 
+/** A tweak the owner asked of film `f`'s panel `cold.judge`, written to its notes through the store. */
 const ownerNote = (words: string) =>
   Effect.gen(function* () {
     const notes = yield* NotesStore;
@@ -543,6 +554,7 @@ describe('the sets the MCP lists', () => {
   );
 });
 
+/** `body` posted to an ask's answer route, as a page posts it: its status and what it answered. */
 const answerPosted = (lab: LabFetch, ask: string, body: Schema.Json) =>
   Effect.flatMap(
     Effect.promise(() =>
@@ -558,6 +570,7 @@ const answerPosted = (lab: LabFetch, ask: string, body: Schema.Json) =>
     (r) => Effect.promise(() => r.json().then((answer) => ({ status: r.status, body: answer }))),
   );
 
+/** The owner's answers to a step of an ask, as its page posts them: one section. */
 const ownerAnswers = (lab: LabFetch, ask: string, step: string, values: Record<string, string>) =>
   answerPosted(lab, ask, { sections: [{ step, values }] });
 
@@ -974,6 +987,7 @@ describe('asks through the MCP', () => {
   );
 });
 
+/** `film production`, `film publish`, `film lab <command>` and `film lab events` as the CLI serves them, this checkout's films folder `/films`. */
 const filmCommand = Command.make('film').pipe(
   Command.withSubcommands([
     production,
@@ -982,6 +996,7 @@ const filmCommand = Command.make('film').pipe(
   ]),
 );
 
+/** The terminal `film …` runs in against the lab at `MCP_BASE`, its requests answered by `fetch`, and printing to `console`. */
 const onTerminal =
   (fetch: (request: Request) => Promise<Response>, console: Console.Console) =>
   <A, E, R>(run: Effect.Effect<A, E, R>) =>
@@ -1009,6 +1024,11 @@ const onTerminal =
       ),
     );
 
+/**
+ * `film …args` run to its end against the lab at `MCP_BASE`, its requests
+ * answered by `fetch` (the lab's handler, or no lab at all): whether it
+ * succeeded, its printed lines, and its failure's words.
+ */
 const filmCli = (fetch: (request: Request) => Promise<Response>, args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const lines = yield* Queue.unbounded<string>();
@@ -1031,6 +1051,11 @@ const filmCli = (fetch: (request: Request) => Promise<Response>, args: ReadonlyA
     };
   });
 
+/**
+ * `film …args` running against the lab at `MCP_BASE`, its requests answered
+ * by `fetch`: each line it prints offered to `out` as printed, each it says
+ * on stderr to `err`, until its fiber is interrupted.
+ */
 const filmRunning = (fetch: (request: Request) => Promise<Response>, args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const out = yield* Queue.unbounded<string>();
@@ -1047,8 +1072,14 @@ const filmRunning = (fetch: (request: Request) => Promise<Response>, args: Reado
     return { out, err, fiber };
   });
 
+/** A request on a line that is down. */
 class LineDown extends Schema.TaggedError<LineDown>()('LineDown', {}) {}
 
+/**
+ * The lab's handler behind a line that can drop: `drop` fails every request
+ * in flight and each one after it, as a lab restarted or a network gone
+ * does, until `restore`.
+ */
 const droppable = (lab: LabFetch) =>
   Effect.map(SubscriptionRef.make(false), (down) => ({
     fetch: (request: Request) =>
@@ -1066,6 +1097,11 @@ const droppable = (lab: LabFetch) =>
     restore: SubscriptionRef.set(down, false),
   }));
 
+/**
+ * The lab's handler behind a line that drops only its feed's polls: `drop`
+ * fails each `changes` call in flight and each one after it, as a lab whose
+ * feed hangs up does, while every other request is answered.
+ */
 const pollsDroppable = (lab: LabFetch) =>
   Effect.map(SubscriptionRef.make(false), (down) => ({
     fetch: (request: Request) =>
@@ -1087,8 +1123,10 @@ const pollsDroppable = (lab: LabFetch) =>
     drop: SubscriptionRef.set(down, true),
   }));
 
+/** A change as the lab's feed answers it, edited by a test. */
 type ChangeJson = { readonly [key: string]: Schema.Json };
 
+/** A `changes` answer as JSON-RPC carries it: its result's structured content. */
 const ChangesAnswer = Schema.fromJsonString(
   Schema.Struct({
     jsonrpc: Schema.String,
@@ -1104,6 +1142,11 @@ const ChangesAnswer = Schema.fromJsonString(
 );
 const changesAnswer = Schema.decodeUnknownOption(ChangesAnswer);
 
+/**
+ * The lab's handler with each `changes` answer's result passed through
+ * `edit` (its structured content, and its text the same): the feed of a
+ * lab that runs other code than this checkout.
+ */
 const changesEdited =
   (lab: LabFetch, edit: (result: { readonly changes: ReadonlyArray<ChangeJson> }) => Schema.Json) =>
   (request: Request) =>
@@ -1134,9 +1177,15 @@ const changesEdited =
       }),
     );
 
+/** A `changes` call's `name` and `film` arguments, wherever they sit in the call's JSON. */
 const FILTER_ARGUMENT =
   /,"(?:name|film)":(?:\[[^\]]*\]|"[^"]*")|"(?:name|film)":(?:\[[^\]]*\]|"[^"]*"),?/g;
 
+/**
+ * The lab's handler as an older lab answers `changes`: it reads no `name` or
+ * `film` (its tool took only `since` and `wait`), and its changes carry no
+ * `id` or `read`.
+ */
 const olderLab = (lab: LabFetch) =>
   changesEdited(
     (request, server) =>
@@ -1166,6 +1215,7 @@ const olderLab = (lab: LabFetch) =>
     }),
   );
 
+/** A request on a line that is down, counted on `attempts` as it is made. */
 const countedDroppable = (lab: LabFetch) =>
   Effect.gen(function* () {
     const line = yield* droppable(lab);
@@ -1185,6 +1235,7 @@ const countedDroppable = (lab: LabFetch) =>
     };
   });
 
+/** A `film lab events` line's cursor (`cursor=<epoch>.<seq>`). */
 const cursorIn = (line: string) =>
   Option.getOrThrow(Option.fromNullishOr(/ cursor=(\S+)/.exec(line)?.[1]));
 
@@ -1502,6 +1553,7 @@ describe("film lab events' outages", () => {
 });
 
 describe('a set a terminal published', () => {
+  /** `film …args` in a terminal of its own: its own review (a layer of its own, so built anew), as another process has, beside the lab's. */
   const elsewhere = (lab: LabFetch, args: ReadonlyArray<string>) =>
     filmCli((request) => lab(request, mcpBound), args).pipe(Effect.provide(reviewAt([])));
 
@@ -1726,6 +1778,7 @@ describe('film lab ask', () => {
   );
 });
 
+/** The stamp a publish leaves on a set's review.json. */
 const Stamped = Schema.Struct({
   production: Schema.optionalKey(Schema.String),
   version: Schema.optionalKey(Schema.Int),
@@ -1922,11 +1975,13 @@ describe('film publish', () => {
   );
 });
 
+/** The questions filed on production `f`'s ledger, by their words. */
 const waitingOnF = Effect.gen(function* () {
   const ledger = Option.getOrThrow(yield* (yield* ProductionStore).read('f'));
   return ledger.said.flatMap((s) => (s._tag === 'Asked' && [s.text]) || []);
 });
 
+/** Production `f`, with the set `judge-faces` published into the lab's out/. */
 const productionWithSet = Effect.fn('productionWithSet')(function* (
   tool: (name: string, args?: Schema.Json) => Effect.Effect<any>,
 ) {
@@ -2255,6 +2310,7 @@ describe("the owner's word through the MCP", () => {
   );
 });
 
+/** The lab's handler as an HTTP client sees it; `polling` is told once a client waits on `changes`. */
 const httpOf = (lab: LabFetch, polling: Deferred.Deferred<void>) =>
   HttpClient.make((request) =>
     Effect.gen(function* () {

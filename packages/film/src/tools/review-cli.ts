@@ -38,8 +38,10 @@ import { filmsOut } from './film-repo.ts';
 import { FreshFilm } from './fresh-film.ts';
 import { labUrl } from './lab-client.ts';
 
+/** The fewest distinct places a review takes: one still is a glance, not a review. */
 const REVIEW_PLACES = 2;
 
+/** How many places a review takes at once: each is a match and a counsel run. */
 const PLACES_AT_ONCE = 4;
 
 class ReviewRefused extends Schema.TaggedError<ReviewRefused>()('ReviewRefused', {
@@ -50,8 +52,10 @@ class ReviewRefused extends Schema.TaggedError<ReviewRefused>()('ReviewRefused',
   }
 }
 
+/** A set's manifest as JSON, every field kept: the review adds its page and crops and leaves the rest. */
 const ManifestJson = repoJson(Schema.JsonObject);
 
+/** The two lists of a manifest the review adds to, as written there (none: empty). */
 const Listed = Schema.Struct({
   docs: Schema.optionalKey(Schema.Array(Schema.String)),
   images: Schema.optionalKey(Schema.Array(Schema.String)),
@@ -115,6 +119,7 @@ export const review = (films: string, rules: ReadonlyArray<CritiqueRule>) =>
           ),
       });
 
+      /** `record` written as the set's record and page, both listed in its manifest with `images`. */
       const written = (record: ReviewRecord, images: ReadonlyArray<string>) =>
         Effect.gen(function* () {
           yield* fs.makeDirectory(path.dirname(recordFile), { recursive: true });

@@ -4,11 +4,13 @@ import { Effect, FileSystem, Option, Path, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import plugin from './plugin.ts';
 
+/** The timeout of a test here that spawns (oxlint): a cold start's time is the machine's (effect/requireSpawnBudget). */
 const SPAWNS_MS = 30_000;
 
 const text = (stream: Stream.Stream<Uint8Array, unknown>) =>
   Stream.mkString(Stream.decodeText(stream));
 
+/** The location and corrective message of every oxlint report in `--format unix`. */
 const reported = (
   out: string,
 ): ReadonlyArray<{ readonly site: string; readonly message: string }> =>
@@ -25,6 +27,7 @@ const reported = (
       ),
     );
 
+/** `file:line rule` for every line a fixture marks RED. */
 const marked = (file: string, source: string): ReadonlyArray<string> =>
   source
     .split('\n')
@@ -37,6 +40,7 @@ const marked = (file: string, source: string): ReadonlyArray<string> =>
       ),
     );
 
+/** Corrective advice users receive for each rule, including the two timing repairs. */
 const MESSAGES = {
   'no-history-comment.ts:4 film/no-history-comment':
     'a pass number in a comment tells history: say what the code does today and why; how it got here lives in the ledger and git log.',
@@ -140,6 +144,7 @@ const MESSAGES = {
     'a Chrome spawned past openView: open it through openView (packages/film/src/tools/chrome.ts), which mutes its audio whatever flags the caller asks for.',
 } as const satisfies Readonly<Record<string, string>>;
 
+/** oxlint over the fixtures with the fixtures' config: what it reported, and its exit code. */
 const lintFixtures = Effect.fn('test.lintFixtures')(function* () {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   const path = yield* Path.Path;

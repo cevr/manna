@@ -29,18 +29,25 @@ describe('the series scripts', () => {
 
 const KNOWN_STALE: ReadonlyArray<string> = [];
 
+/** An entry block's number, where its line opens: `**11b · …`. */
 const ENTRY = /(?<=^\*\*)\d{2}[a-z]?(?= · )/gmu;
+/** A "Builds on" line's words, from its label to the next bold label or the line's end. */
 const BUILDS_ON = /(?<=\*\*Builds on:\*\*)[^\n]*?(?=\*\*|$)/gmu;
+/** The numbers an arrow points to: `→ 51`, `→ **52, 57**`. */
 const ARROW = /(?<=→ ?(?:\*\*)?)\d{2}[a-z]?(?:, \d{2}[a-z]?)*/gu;
+/** In a "Builds on" line, what is no episode number: a code span, a date, a number after a word with a capital. */
 const NOT_AN_EPISODE =
   /`[^`\n]*`|\b\d{4}-\d{2}-\d{2}\b|(?:\b[1-3] )?\b[A-Z][A-Za-z]*\.? \d+(?:[:.]\d+)*(?:[–-]\d+(?:[:.]\d+)*)?/gu;
+/** An episode number: two digits and maybe a letter, with no digit, letter, verse or decimal joined to it. */
 const EPISODE = /(?<![\w.:])\d{2}[a-z]?(?![\w:]|\.\d)/gu;
 
+/** A number a plan builds on or points to, and the line it stands on. */
 interface Reference {
   readonly line: number;
   readonly episode: string;
 }
 
+/** A reference with no entry block: as KNOWN_STALE names it, and where it stands. */
 interface Dangling {
   readonly listed: string;
   readonly where: string;
@@ -49,6 +56,7 @@ interface Dangling {
 const matchesIn = (text: string, pattern: RegExp): ReadonlyArray<string> =>
   Array.from(text.matchAll(pattern), (found) => found[0]);
 
+/** The episode numbers each line of a plan builds on or points to, once a line. */
 const referencesIn = (plan: string): ReadonlyArray<Reference> =>
   plan.split('\n').flatMap((text, index) => {
     const read = [
@@ -94,11 +102,16 @@ describe('the series plans', () => {
   );
 });
 
+/** An entry block's number and title, where its line opens: `**03 · As It Reads**`. */
 const ENTRY_TITLE = /^\*\*(\d{2}[a-z]?) · (.+?)\*\*/gmu;
+/** A script's own heading, two digits and no letter: `# 03 · As It Reads`. */
 const HEADING = /^# (\d{2}) · (.+)$/mu;
+/** A script's header line that names its series and its place. */
 const SERIES_LINE = /^Series: (.+)$/mu;
+/** A place in a series: `3 of 44`. */
 const PLACE = /^(\d+) of (\d+)$/u;
 
+/** What is untrue in `plan`'s numbering: its entries run 01 to their count, in order, no letter. */
 const planFaults = (
   plan: string,
   entries: ReadonlyArray<readonly [string, string]>,
@@ -110,6 +123,7 @@ const planFaults = (
   );
 };
 
+/** What is untrue in `script`'s heading or place against its plan's `entries`. */
 const placeFaults = (
   path: string,
   script: string,

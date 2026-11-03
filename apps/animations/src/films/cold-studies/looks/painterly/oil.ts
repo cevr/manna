@@ -1,12 +1,19 @@
 import { glCanvas } from '@manna/film/canvas';
 import { P } from './palette.ts';
 
+/** How strongly a frame is painted over. */
 export interface Oil {
+  /** The Kuwahara's sample pitch, px at 1920 wide: its reach is three of these. */
   readonly brush: number;
+  /** The ink's weight, 0 none. */
   readonly ink: number;
+  /** The canvas weave's depth, 0 none. */
   readonly weave: number;
+  /** The paint's relief, 0 flat. */
   readonly impasto: number;
+  /** How deep each stroke's bristle streaks are, 0 none. */
   readonly bristles: number;
+  /** The frame's time, seconds: the leaf's sheen travels with it. */
   readonly t: number;
 }
 
@@ -16,6 +23,7 @@ void main() {
   gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
 }`;
 
+/** What both passes share: the frame, its size, and how they read it. */
 const COMMON = `#version 300 es
 precision highp float;
 uniform sampler2D src;
@@ -29,6 +37,12 @@ float lum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 `;
 
+/**
+ * The first pass, at half the frame's size (a quarter of its pixels, and the
+ * filter the costliest part): a Kuwahara over one 5 x 5 grid of taps, 1.5
+ * pitch apart (a reach of three pitches), each tap counted in every quadrant
+ * it falls in (3 x 3 each), so the shared middle row and column are read once.
+ */
 const KUWAHARA = `${COMMON}
 void main() {
   vec2 p = gl_FragCoord.xy * 2.0;
@@ -56,6 +70,7 @@ void main() {
   outColor = vec4((m0 * w0 + m1 * w1 + m2 * w2 + m3 * w3) / (w0 + w1 + w2 + w3), 1.0);
 }`;
 
+/** The second pass, at the frame's size: the Kuwahara's paint drawn up, then ink, bristles, relief, weave and leaf. */
 const FRAGMENT = `${COMMON}
 uniform sampler2D paint;
 uniform float unit;
@@ -151,11 +166,16 @@ void main() {
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }`;
 
+/** A linked program and its uniforms, looked up once each. */
 interface Program {
   readonly program: WebGLProgram;
   readonly at: (name: string) => WebGLUniformLocation | null;
 }
 
+/**
+ * A context's compiled pass: its two programs, the texture the frame is read
+ * into, and the half-size texture (and its framebuffer) the Kuwahara paints.
+ */
 interface Pass {
   readonly kuwahara: Program;
   readonly finish: Program;
@@ -165,6 +185,7 @@ interface Pass {
   readonly fbo: WebGLFramebuffer;
 }
 
+/** Each WebGL 2 context's pass, compiled the first time it paints; none where it would not compile. */
 const passes = new WeakMap<WebGL2RenderingContext, Pass | null>();
 
 const shader = (gl: WebGL2RenderingContext, kind: number, source: string) => {
@@ -192,6 +213,7 @@ const link = (gl: WebGL2RenderingContext, fragment: string): Program | null => {
   return { program, at };
 };
 
+/** A texture read smoothly and held at its edges. */
 const smoothTexture = (gl: WebGL2RenderingContext) => {
   const texture = gl.createTexture();
   if (texture === null) return null;
@@ -222,6 +244,7 @@ const compile = (gl: WebGL2RenderingContext): Pass | null => {
   return { kuwahara, finish, vao, texture, half, fbo };
 };
 
+/** A hex colour as the shader's three floats. */
 const rgb = (hex: string): [number, number, number] => {
   const n = Number.parseInt(hex.slice(1), 16);
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
@@ -230,6 +253,11 @@ const rgb = (hex: string): [number, number, number] => {
 const GOLD = rgb(P.gold);
 const INK = rgb(P.ink);
 
+/**
+ * The frame on `ctx` painted over in oil, in place: read whole, drawn back
+ * through the pass (inside any clip `ctx` holds). False where no WebGL 2
+ * canvas can be made, the frame left as it was.
+ */
 export const oil = (ctx: CanvasRenderingContext2D, o: Oil): boolean => {
   const { width, height } = ctx.canvas;
   if (width <= 0 || height <= 0) return false;

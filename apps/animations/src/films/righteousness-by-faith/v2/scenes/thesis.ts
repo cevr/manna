@@ -21,9 +21,11 @@ import {
   landingCourt,
 } from '../../court.ts';
 
+/** Where the camera enters the city: close on the rooftop (derived from the roof, so not a knob). */
 const ROOFTOP: Camera = { x: ROOF.x - 20, y: ROOF.top - 70, zoom: 3.4 };
 
 const ANSWER = 'THE LORD OUR RIGHTEOUSNESS';
+/** The answer's plate, over the place the question stood. */
 const PLATE = rectShape(210, QUESTION_AT[1] - 88, 1500, 116);
 const answerStyle = {
   family: F.display,

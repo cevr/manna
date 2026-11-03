@@ -30,17 +30,24 @@ import { reviewMedia } from './media/testing.ts';
 
 const film = 'sample' as FilmName;
 
+/** Where the test's film lives: its temp folder, its films, its rule file and its out folder. */
 class Here extends Context.Service<
   Here,
   { readonly root: string; readonly rules: string; readonly out: string }
 >()('test/judge/Here') {}
 
+/**
+ * What the counsel could read as it was asked: the prompt's folder, every
+ * file in it by name (`names`, below the folder) and the words of each that
+ * is no image (`texts`).
+ */
 interface Seen {
   readonly folder: string;
   readonly names: ReadonlyArray<string>;
   readonly texts: ReadonlyArray<string>;
 }
 
+/** `inner`, but noting first what the counsel could read (`Seen`) in `seen`, the film's folder at `root`. */
 const reading = (root: string, seen: Array<Seen>) =>
   Layer.effect(
     Counsel,
@@ -64,6 +71,12 @@ const reading = (root: string, seen: Array<Seen>) =>
     }),
   );
 
+/**
+ * The sample film copied to a temp folder, with a palette whose look has
+ * `options`, and a rule file; the judge's services over it, its counsel
+ * answering `answer`, every prompt in `asked`, every media call in `calls`,
+ * what the counsel could read in `seen`; or `counsel`, when given, in its place.
+ */
 const judging = (
   options: string,
   answer: (prompt: string) => string,
@@ -108,6 +121,7 @@ const judging = (
     }),
   ).pipe(Layer.provideMerge(BunServices.layer));
 
+/** A look route that writes each still as its level's name, under `root`. */
 const fakeTake = (root: string) => (post: LookPost) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -123,6 +137,7 @@ const fakeTake = (root: string) => (post: LookPost) =>
     return { build: 'b', looks } satisfies LookTaken;
   }).pipe(Effect.orDie);
 
+/** A counsel that ranks the labels in reverse, with a section each. */
 const reversed = (prompt: string) => {
   const labels = [...prompt.matchAll(/^### ([A-H])$/gm)].map((m) => m[1] ?? '');
   return [
@@ -138,6 +153,13 @@ const reversed = (prompt: string) => {
 
 const decodeKey = Schema.decodeSync(JudgeKeyJson);
 
+/**
+ * A counsel's run, in the sandbox, from the packet's folder, that answers no
+ * preference on stdout with what it could read: whether it read the packet
+ * (its prompt on stdin, and the file), each still it found beside it, and
+ * each of the paths it is given, `SEEN` (a folder listed, a file's first
+ * byte read) or `ABSENT`.
+ */
 const PROBE = [
   'echo "RANKING: no preference"',
   'echo',
@@ -149,6 +171,7 @@ const PROBE = [
   'done',
 ].join('\n');
 
+/** The probe, run in the counsel's sandbox, given each of `paths` to try. */
 const probing = (paths: Ref.Ref<ReadonlyArray<string>>) =>
   Counsel.sandboxed((folders) =>
     Effect.map(Ref.get(paths), (tried): SandboxedRun => ({
@@ -158,6 +181,7 @@ const probing = (paths: Ref.Ref<ReadonlyArray<string>>) =>
     })),
   );
 
+/** Whether sandbox-exec can make a sandbox here: macOS's, so on macOS alone. */
 const sandboxHere = Effect.scoped(
   Effect.gen(function* () {
     if (process.platform !== 'darwin') return false;
@@ -169,6 +193,7 @@ const sandboxHere = Effect.scoped(
   }),
 ).pipe(Effect.orElseSucceed(() => false));
 
+/** The judge of scene `open` at `point`, quoting `rules` (the look's alone, unless given). */
 const judgeOpen = (point: Option.Option<string>, rules?: (file: string) => Array<JudgeRule>) =>
   Effect.gen(function* () {
     const here = yield* Here;
@@ -185,6 +210,7 @@ const judgeOpen = (point: Option.Option<string>, rules?: (file: string) => Array
     });
   });
 
+/** The key a judge wrote. */
 const keyOf = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

@@ -27,6 +27,7 @@ import { encodePng } from './png.ts';
 import { collectWithin } from './process.ts';
 import { memoryFileSystem, text } from './host/testing.ts';
 
+/** What a joined film holds: each track's kind and codec, every packet's time, and its length. */
 const readBack = Effect.fn('test.readBack')(function* (file: string) {
   const bytes = yield* (yield* FileSystem.FileSystem).readFile(file);
   const input = new Input({ source: new BufferSource(bytes), formats: ALL_FORMATS });
@@ -47,6 +48,7 @@ const readBack = Effect.fn('test.readBack')(function* (file: string) {
   ).pipe(Effect.ensuring(Effect.sync(() => input.dispose())));
 });
 
+/** A second of stereo sine at 44.1 kHz. */
 const second = () => {
   const wave = Float32Array.from({ length: 44100 }, (_, i) => Math.sin(i / 7) * 0.5);
   return { rate: 44100, frames: 44100, channels: [wave, wave.slice()] };
@@ -54,6 +56,7 @@ const second = () => {
 
 const fixture = (name: string) => `${import.meta.dir}/fixtures/${name}`;
 
+/** Media over an in-memory disk holding the fixtures and a file that is not media; the disk is there to read back. */
 const MediaOnFixtures = Layer.unwrap(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -65,8 +68,13 @@ const MediaOnFixtures = Layer.unwrap(
   }),
 ).pipe(Layer.provide(BunServices.layer));
 
+/**
+ * Media over the real disk: a joined film is written by position, straight
+ * through Bun's file system, so it joins into a temporary directory.
+ */
 const MediaOnDisk = Layer.provideMerge(Media.layer, BunServices.layer);
 
+/** Media over an in-memory disk holding the MP3 fixture. */
 const MediaWithTone = Layer.unwrap(
   Effect.gen(function* () {
     const tone = yield* (yield* FileSystem.FileSystem).readFile(fixture('tone.mp3'));
@@ -74,11 +82,17 @@ const MediaWithTone = Layer.unwrap(
   }),
 ).pipe(Layer.provide(BunServices.layer));
 
+/** A sound's first channel's root mean square. */
 const rms = (pcm: Pcm) => {
   const samples = pcm.channels[0] ?? new Float32Array();
   return Math.sqrt(samples.reduce((sum, s) => sum + s * s, 0) / Math.max(1, samples.length));
 };
 
+/**
+ * `pcm` as an M4A: AAC in an MP4, as a phone's recorder saves it. Its
+ * samples go in a frame of priming early, so the encoder's first packet sits
+ * before zero, where the edit list skips it (as `Media.encodeAac` does).
+ */
 const m4a = (pcm: Pcm) =>
   Effect.gen(function* () {
     const target = new BufferTarget();
@@ -101,6 +115,7 @@ const m4a = (pcm: Pcm) =>
     return new Uint8Array(Option.getOrThrow(Option.fromNullishOr(target.buffer)));
   });
 
+/** One channel of 16-bit samples as an AIFF file (big-endian, its rate an 80-bit float). */
 const aiff16 = (rate: number, samples: Int16Array) => {
   const bytes = new Uint8Array(54 + samples.length * 2);
   const view = new DataView(bytes.buffer);
@@ -122,6 +137,7 @@ const aiff16 = (rate: number, samples: Int16Array) => {
   return bytes;
 };
 
+/** A made clip's size and length: under 720 lines, so its phone copy keeps its size and frames compare pixel for pixel. */
 interface Clip {
   readonly width: number;
   readonly height: number;
@@ -129,6 +145,13 @@ interface Clip {
   readonly frames: number;
 }
 
+/**
+ * A clip whose every frame holds detail of its own, as a render's grain,
+ * dither or crawling hatching does: one seeded texture under grain drawn
+ * fresh each frame, and a bar moving down it, encoded by x264 near
+ * losslessly (quantizer 8). Its frames follow on from one another (no cut),
+ * so an encoder places its key frames by its own rhythm.
+ */
 const grainyClip = (file: string, clip: Clip) =>
   Effect.gen(function* () {
     const { width, height, fps, frames } = clip;
@@ -164,6 +187,7 @@ const grainyClip = (file: string, clip: Clip) =>
     yield* Effect.promise(() => output.finalize());
   });
 
+/** Each frame of `file`'s video (`clip`'s size), in order of showing, as its luma plane, and its key frames' times. */
 const lumas = Effect.fn('test.lumas')(function* (file: string, { width, height }: Clip) {
   const input = new Input({ source: new FilePathSource(file), formats: ALL_FORMATS });
   const track = yield* Effect.flatMap(
@@ -199,11 +223,13 @@ const lumas = Effect.fn('test.lumas')(function* (file: string, { width, height }
   return { pictures: [...pictures], keys: Arr.sort([...keys], Order.Number) };
 });
 
+/** How near picture `a` is to `b`: the PSNR of their lumas, in dB. */
 const psnr = (a: Uint8Array, b: Uint8Array) => {
   const squared = a.reduce((sum, v, i) => sum + (v - (b[i] ?? 0)) ** 2, 0) / a.length;
   return 10 * Math.log10((255 * 255) / Math.max(squared, 1e-9));
 };
 
+/** A directory that is gone once the scope closes. */
 const tempDir = Effect.gen(function* () {
   return yield* (yield* FileSystem.FileSystem).makeTempDirectoryScoped();
 });
@@ -551,6 +577,7 @@ describe('Media', () => {
           const media = yield* Media;
           const fs = yield* FileSystem.FileSystem;
           const dir = yield* tempDir;
+          /** The rate read from `frames` frames made at `fps`, timed in the file as `timing` says. */
           const rateAt = Effect.fn('Media.test.rateAt')(function* (
             fps: number,
             frames: number,

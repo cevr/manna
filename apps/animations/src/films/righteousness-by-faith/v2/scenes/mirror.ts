@@ -23,6 +23,7 @@ import { type GestureAt, C, type Person, handOf, person, piece } from '../../kit
 import { apron, tree } from '../../garden.ts';
 import { ring, tabletShape, tablets } from '../../law.ts';
 
+/** The stains the leaves hide and the mirror shows, in a person's units. */
 const STAINS = [
   blob(-14, -96, 26, 22, 31),
   blob(16, -62, 32, 26, 32),
@@ -30,12 +31,20 @@ const STAINS = [
   blob(12, -112, 14, 12, 34),
 ];
 
+/**
+ * The sewer's hands: the patch held in the far hand, the needle in the near,
+ * which rises to `PROMISING` on the promise holding the needle and, as it
+ * lands, opens from its hold to show its palm (written each frame).
+ */
 const PATCH: GestureAt = { to: [-18, -86], reach: 0, grip: 'hold' };
 const NEEDLE: Posed<GestureAt> = { to: [22, -86], reach: 0, grip: 'palm', was: 'hold', change: 0 };
 const PROMISING: Pt = [60, -176];
+/** The needle, from the fingers that hold it to its eye, and where its thread is stitched into the apron, in a person's units. */
 const NEEDLE_EYE: Pt = [10, -22];
 const STITCHED: Pt = [-6, -70];
+/** How far the needle falls from the opening hand, in a person's units. */
 const NEEDLE_FALL = 60;
+/** The viewer's cloth hand at the glass (and its reflection's), rubbing up and down about `SCRUB_AT`. */
 const SCRUB_AT: Pt = [70, -124];
 const SCRUBBING: GestureAt = { to: [SCRUB_AT[0], SCRUB_AT[1]], reach: 0, grip: 'hold' };
 const SCRUBBER: Person = { near: SCRUBBING };
@@ -85,6 +94,7 @@ export const mirror = drawing({
   },
 });
 
+/** The garden: the circle closes round the figure, who sews fig leaves. */
 const garden = (f: MirrorFrame) => {
   const { ctx, w, h, t } = f;
   const [fx, fy] = f.knob('figure');
@@ -208,6 +218,7 @@ const garden = (f: MirrorFrame) => {
   );
 };
 
+/** The tablets stand up as a mirror; the glass shows every stain. */
 const glass = (f: MirrorFrame) => {
   const { ctx, w, h, t } = f;
   const [mx, my] = f.knob('mirror');

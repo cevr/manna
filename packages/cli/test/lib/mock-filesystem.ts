@@ -12,6 +12,9 @@ import {
 
 import { CallSequence, type ServiceCall } from './sequence-recorder.js';
 
+/**
+ * Create a file system error for testing.
+ */
 const createFileError = (method: string, path: string, message: string) =>
   PlatformError.systemError({
     _tag: 'NotFound',
@@ -21,16 +24,31 @@ const createFileError = (method: string, path: string, message: string) =>
     description: message,
   });
 
+/**
+ * Configuration for the mock file system.
+ */
 export interface MockFileSystemConfig {
+  /** Initial files in the mock file system. path -> content */
   files: Record<string, string | Uint8Array>;
+  /** Initial directories that exist */
   directories?: string[];
 }
 
+/**
+ * Mutable state for tracking file system changes during tests.
+ */
 export interface MockFileSystemState {
   files: Map<string, string | Uint8Array>;
   directories: Set<string>;
 }
 
+/**
+ * Create a mock FileSystem layer that records all calls.
+ *
+ * The layer requires `CallSequence` (which is provided alongside it in
+ * test-layer.ts), and bakes the ref into each method so individual method
+ * effects don't carry the `CallSequence` requirement.
+ */
 export const createMockFileSystemLayer = (config: MockFileSystemConfig) => {
   const state: MockFileSystemState = {
     files: new Map(Object.entries(config.files)),

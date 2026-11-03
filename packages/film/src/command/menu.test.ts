@@ -13,6 +13,7 @@ const command = (id: string, group: string, label: string): Command => ({
   run: () => Effect.succeed(Receipt.Quiet()),
 });
 
+/** A command found only by typing in ⌘K (`Command.typed`). */
 const typed: Command = {
   ...command('go.scene.cold', 'Go to', 'Go to scene cold'),
   typed: true,

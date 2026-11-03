@@ -1,5 +1,12 @@
 import type { Movement, Music, Sound } from '@manna/film/core';
 
+/**
+ * The score's movements, one per turn of the music (each 3–120 s, from its
+ * scene to the next movement's). They turn more often than the film's acts
+ * (`acts.ts`) and need not fall on them: `Power within` runs from `within`
+ * across the landing's first scene. Styles here are the mood and shape; each
+ * option brings its own instruments.
+ */
 const movements: ReadonlyArray<Movement> = [
   {
     from: 'cold',
@@ -100,6 +107,7 @@ const movements: ReadonlyArray<Movement> = [
   },
 ];
 
+/** What no option may do: sing, speak, or turn into a trailer. */
 const avoid = [
   'vocals',
   'choir',
@@ -119,6 +127,11 @@ const option = (styles: ReadonlyArray<string>, extra: ReadonlyArray<string> = []
   movements,
 });
 
+/**
+ * The paper room's level (dB against the voice). Room tone is broadband and
+ * never ducks, so it reads louder than its loudness says: −25 measures about
+ * 19 dB under the voice while it speaks.
+ */
 const PAPER_ROOM_DB = -25;
 
 export const sound: Sound = {

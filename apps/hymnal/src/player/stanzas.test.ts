@@ -1,3 +1,11 @@
+/**
+ * The stanza choice on small hand-built hymns (placeholder lines, no hymn's
+ * words): the stored choice's schema, the kept lines with a refrain bound to
+ * a stanza and one that is the hymn's own, a cut's lines and maps, and the
+ * chips' toggle. Every compiled hymn and every subset of its stanzas is
+ * `stanzas.choice.slow.test.ts`.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { Schema } from 'effect';
 
@@ -26,6 +34,7 @@ describe('a stored choice', () => {
   });
 });
 
+/** Two stanzas of two lines, each with a refrain of one line after it, then the hymn's own closing refrain. */
 const sections: ReadonlyArray<Section> = [
   { kind: 'stanza', n: 1, lines: ['a', 'b'] },
   { kind: 'refrain', stanza: 1, lines: ['r'] },
@@ -56,6 +65,7 @@ const line = (start: number, until: number, syllables: ReadonlyArray<number>): T
   words: syllables.map((_, k) => k),
 });
 
+/** A lead of 1000 ms, then three lines of 1000, 2000 and 3000 ms. */
 const timeline: Timeline = {
   tempo: { microsPerQuarter: 500_000, numerator: 4, denominator: 4 },
   first: 1000,
@@ -138,10 +148,12 @@ describe('a chip’s tap', () => {
   });
 });
 
+/** Every ascending choice of the numbers 0..9, the empty one too: 1024 in all. */
 const choices: ReadonlyArray<ReadonlyArray<number>> = Array.from({ length: 1 << 10 }, (_, bits) =>
   Array.from({ length: 10 }, (_, n) => n).filter((n) => (bits & (1 << n)) !== 0),
 );
 
+/** A hymn of `count` stanzas of one line each, so the kept lines are the kept stanzas. */
 const stanzasOf = (count: number): ReadonlyArray<Section> =>
   Array.from({ length: count }, (_, k) => ({ kind: 'stanza' as const, n: k + 1, lines: ['x'] }));
 

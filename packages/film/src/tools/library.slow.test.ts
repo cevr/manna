@@ -117,6 +117,11 @@ const LIBRARY = `export const library = {
 export const store = { kind: 'folder', folder: 'STORE' };
 `;
 
+/**
+ * `secs` of a seeded noise burst with a fast attack and a decay, as 16-bit
+ * little-endian stereo interleaved (as the sound model sends `pcm_44100`), the
+ * right channel at half the left.
+ */
 const burst = (seed: number, secs: number): Uint8Array => {
   const frames = Math.round(secs * 44100);
   const r = rng(seed);
@@ -131,6 +136,7 @@ const burst = (seed: number, secs: number): Uint8Array => {
   return bytes;
 };
 
+/** ElevenLabs that makes only sound effects, each a new burst, and counts them. */
 const fakeSfx = (calls: Array<SoundEffectRequest>) =>
   Layer.effect(
     ElevenLabs,
@@ -158,6 +164,7 @@ const fakeSfx = (calls: Array<SoundEffectRequest>) =>
     }),
   );
 
+/** Where one test's fixture library lives, and the paid calls it saw. */
 class Fixture extends Context.Service<
   Fixture,
   {
@@ -165,12 +172,16 @@ class Fixture extends Context.Service<
     readonly storeDir: string;
     readonly tally: string;
     readonly calls: Array<SoundEffectRequest>;
+    /** Every sheet the library wrote, by its file. */
     readonly sheets: Map<string, Raster>;
+    /** Every card the library wrote, by its file: its picture and its sound. */
     readonly cards: Map<string, { readonly image: Raster; readonly pcm: Pcm }>;
+    /** Every recording the fake earshot was asked to fit. */
     readonly fitted: Array<string>;
   }
 >()('test/Fixture') {}
 
+/** The model the fake earshot writes for every recording: one strike of two modes over three bands of noise. */
 const FIT_MODEL = `{
   "kind": "modal",
   "length_s": 0.4,
@@ -187,6 +198,7 @@ const FIT_MODEL = `{
   }
 }`;
 
+/** A fixture library in a fresh temporary folder, its store beside it, and the service over it. */
 const fixture = Layer.unwrap(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -257,6 +269,7 @@ const madeOnce = await Effect.runPromise(
   }).pipe(Effect.provide(fixture), Effect.orDie),
 );
 
+/** The fixture with its generated sounds already made: `madeOnce` written into it. */
 const made = Layer.effectDiscard(
   Effect.gen(function* () {
     const { dir } = yield* Fixture;
@@ -277,6 +290,7 @@ const made = Layer.effectDiscard(
   }).pipe(Effect.orDie),
 ).pipe(Layer.provideMerge(fixture));
 
+/** A test body with the fixture's paths. */
 const withLibrary = <A, E, R>(
   body: (at: Fixture['Service']) => Effect.Effect<A, E, R>,
 ): Effect.Effect<A, E, R | Fixture> =>
@@ -284,6 +298,10 @@ const withLibrary = <A, E, R>(
     return yield* body(yield* Fixture);
   });
 
+/**
+ * A mono WAV of `secs` beside the fixture's sounds folder: a tone burst for
+ * each `[at, secs, peak]`, silence between.
+ */
 const recording = (
   dir: string,
   name: string,
@@ -303,6 +321,7 @@ const recording = (
     return file;
   });
 
+/** A mono WAV at `file` of ten seconds of seeded noise at `level(t)`. */
 const noise = (file: string, seed: number, level: (t: number) => number) =>
   Effect.gen(function* () {
     const media = yield* Media;
@@ -314,13 +333,20 @@ const noise = (file: string, seed: number, level: (t: number) => number) =>
     return file;
   });
 
+/** A path's last part: a file's name. */
 const named = (files: ReadonlyArray<string>) =>
   files.map((file) => file.slice(file.lastIndexOf('/') + 1));
 
+/** The colours a sheet draws its marks in. */
 const MARKS = { onset: '84,222,120', hit: '255,84,84', loop: '84,206,255' } as const;
 
+/** What a case reads when no sheet was written: a picture with no columns, so no marks. */
 const NO_SHEET: Raster = { width: 0, height: 0, rgba: new Uint8Array() };
 
+/**
+ * A sheet's marks, left to right: each column whose pixel in the black rows
+ * between the spectrogram and the waveform (row 402) is a mark's colour.
+ */
 const marksOn = (sheet: Raster) =>
   Array.from({ length: sheet.width }, (_, x) => x).flatMap((x) => {
     const i = (402 * sheet.width + x) * 4;
@@ -331,6 +357,7 @@ const marksOn = (sheet: Raster) =>
     });
   });
 
+/** A file the lock kept that is gone or not its bytes. */
 const fileBroken = Predicate.or(
   Predicate.isTagged('SoundFileMissing'),
   Predicate.isTagged('SoundCorrupt'),

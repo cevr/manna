@@ -17,6 +17,7 @@ import {
 } from './schema.ts';
 import { voicedAt } from './voiced.ts';
 
+/** The app's folder, whose tool-written records the formatter has already passed over. */
 const APP = new URL('../../../../apps/animations/', import.meta.url).pathname;
 
 const JsonFile = repoJson(Schema.Json);
@@ -36,6 +37,7 @@ const take: VoiceTiming = {
 const decodes = (a: VoiceTiming) =>
   Result.isSuccess(Schema.decodeResult(Timings)({ voice: 'v', scenes: { a } }));
 
+/** `take` with word `i` changed. */
 const withWord = (i: number, word: Partial<TakeWord>): VoiceTiming => ({
   ...take,
   words: take.words.map((w, k) => {
@@ -103,6 +105,7 @@ describe('Timings', () => {
 });
 
 describe('Timed', () => {
+  /** A scene as JSON text, decoded as the tools decode a scene module. */
   const decodes = (json: string) =>
     Result.isSuccess(Schema.decodeResult(Schema.fromJsonString(Timed))(json));
 

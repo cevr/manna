@@ -20,6 +20,7 @@ const line = (start: number, syllables: ReadonlyArray<number>): TimedLine => ({
   words: syllables.map((_, k) => k),
 });
 
+/** Three lines a second each from 1 s: two words, then a line with no note times, then two words. */
 const three: Timeline = {
   tempo: { microsPerQuarter: 500000, numerator: 4, denominator: 4 },
   lines: [line(1000, [1000, 1500]), line(2000, []), line(3000, [3000, 3400])],
@@ -27,6 +28,7 @@ const three: Timeline = {
   end: 4000,
 };
 
+/** A follower over `timeline` on a hand-moved clock: what it scrolled to and logged. */
 const harness = (timeline: Timeline = three) => {
   let now = 0;
   let timers: Array<{ at: number; run: () => void }> = [];
@@ -45,6 +47,7 @@ const harness = (timeline: Timeline = three) => {
     log: (event) => logged.push(event),
   };
   const follower = followerOf(timeline, host);
+  /** Moves the clock to `to`, running each timer due on the way. */
   const advance = (to: number) => {
     for (;;) {
       const due = timers.filter((t) => t.at <= to).toSorted((a, b) => a.at - b.at)[0];
@@ -238,6 +241,7 @@ describe('followerOf', () => {
 });
 
 describe('followerOf at a tempo, Sound off (unit tempo, A3)', () => {
+  /** One poll of the player, ms of the host's clock. */
   const POLL = 250;
   const hymn = Option.getOrThrow(timingBook(bundled).of(100));
 
@@ -251,6 +255,7 @@ describe('followerOf at a tempo, Sound off (unit tempo, A3)', () => {
       };
       const expected = (t: number) => placeAt(hymn, hymn.first + rate * t).line;
       let last = { line: -1, syllable: -1 };
+      /** The lit line at host time `t` is the one the hymn's place puts there, and no earlier one. */
       const check = (t: number) => {
         const now = lit();
         expect({ t, line: now.line }).toEqual({ t, line: expected(t) });
@@ -277,6 +282,7 @@ describe('the bundled timing of a hand-made hymn 11, through the follower', () =
   const hymn = Option.getOrThrow(Arr.findFirst(readPlaybackHymns(), (one) => one.number === 11));
   const timing = Option.getOrThrow(Option.fromUndefinedOr(hymn.timing));
   const line1 = Option.getOrThrow(Arr.get(timing.lines, 1));
+  /** Hymn 11 with line 1's syllable times replaced. */
   const withLine1 = (syllables: ReadonlyArray<number>): Hymn => ({
     ...hymn,
     timing: {
@@ -287,6 +293,7 @@ describe('the bundled timing of a hand-made hymn 11, through the follower', () =
   const timelineFor = (one: Hymn): Timeline =>
     Option.getOrThrow(timelineOf(Option.getOrThrow(encodeTiming(one, () => versesOf(one)))));
   const base = timelineFor(hymn);
+  /** Line 1's mark with the player paused at `at` ms. */
   const markAt = (timeline: Timeline, at: number) => {
     const h = harness(timeline);
     h.report({ _tag: 'Here', at, state: 'paused' });
@@ -334,6 +341,7 @@ describe('the bundled timing of a hand-made hymn 11, through the follower', () =
 
   const verse3 = Option.getOrThrow(Arr.get(versesOf(hymn), 2));
   const line18 = Option.getOrThrow(Arr.get(timing.lines, 18));
+  /** Hymn 11 with line 18 sung from `syllables`, its start at the first of them. */
   const withLine18 = (syllables: ReadonlyArray<number>): Hymn => ({
     ...hymn,
     timing: {
@@ -343,6 +351,7 @@ describe('the bundled timing of a hand-made hymn 11, through the follower', () =
       ),
     },
   });
+  /** Line 18 laid `by` notes earlier on its verse than compiled. */
   const earlier = (by: number): ReadonlyArray<number> =>
     Arr.makeBy(line18.syllables.length, (k) => verse3[12 + k - by]?.at ?? 0);
   const litOf = (timeline: Timeline) =>
@@ -364,6 +373,7 @@ describe('the bundled timing of a hand-made hymn 11, through the follower', () =
 describe('the bundled timing of line-level parts, against the sung file', () => {
   const book = timingBook(bundled);
   const hymns = readPlaybackHymns();
+  /** Hymn `number`'s bundled timeline. */
   const timelineOfHymn = (number: number) => Option.getOrThrow(book.of(number));
 
   it('lights the owner’s hymn 11 on every line, its 16 line-level lines included', () => {

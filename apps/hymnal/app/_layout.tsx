@@ -8,6 +8,7 @@ import { FeelProvider } from '~/feel/FeelProvider';
 import { settings } from '~/store';
 import { webColors } from '~/color';
 
+/** Shows the stored appearance: the page's colour scheme, or the app's interface style. */
 function AppearanceFollower() {
   const appearance = useAtomValue(settings.appearance);
   useEffect(() => applyAppearance(appearance), [appearance]);

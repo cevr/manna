@@ -1,3 +1,19 @@
+/**
+ * wordlight acceptance (page): on hymn 11's page, drawn by react-native-web
+ * under happy-dom, with chords on (the owner's view) and off, the player at
+ * stanza 1's second line (line index 1) lights one syllable in the accent,
+ * the one the score sings then, and mutes the rest of the line, with no
+ * whole-line tint; as the place moves through the line the light moves on.
+ *
+ * The page hears the player through its state alone, so a writable atom
+ * stands in for the player's state (as `follow.slow.test.tsx` does). The
+ * oracle reads the compiled timing through the tempo map, never the
+ * bundled encoding.
+ *
+ * Run from `apps/hymnal` with `--preload ./src/test/setup.ts`, the file
+ * placed at `src/follow/wordlight.acceptance.slow.test.tsx`.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import * as Timing from '@manna/hymnal/timing';
 import { RegistryContext } from '@effect/atom-react';
@@ -19,6 +35,7 @@ const ACCENT = 'var(--accent)';
 const MUTED = 'var(--muted)';
 const SOFT = 'var(--soft)';
 
+/** Line 1 of hymn 11 as the score lays it: its span and its syllables' times, in ms. */
 const owners = () => {
   const hymn = Option.getOrThrow(Arr.findFirst(readPlaybackHymns(), (one) => one.number === 11));
   const timing = Option.getOrThrow(Option.fromUndefinedOr(hymn.timing));
@@ -33,12 +50,14 @@ const owners = () => {
   };
 };
 
+/** The syllable sung at `t` on a line with these times: the last at or before it, `-1` before the first. */
 const sungAt = (times: ReadonlyArray<number>, t: number) =>
   Option.getOrElse(
     Arr.findLastIndex(times, (time) => time <= t),
     () => -1,
   );
 
+/** Hymn 11's page over a player whose state the test sets; it unmounts when the `using` ends. */
 const mount = (chords: boolean) => {
   const hymn = Option.getOrThrow(hymnAt('11'));
   const track = { number: 11, title: hymn.title };
@@ -66,6 +85,7 @@ const mount = (chords: boolean) => {
         done(0, 1000 + 100 * k),
     }),
   );
+  /** The player plays at `ms` into the hymn. */
   const at = (ms: number) => {
     const told = { track, at: ms / 1000, length: Option.none<number>() };
     act(() => registry.set(state, Player.Playing(told)));
@@ -74,6 +94,7 @@ const mount = (chords: boolean) => {
     lines().flatMap((line, k) =>
       Arr.filter([k], () => line.getAttribute('aria-selected') === 'true'),
     );
+  /** Each syllable of line `k`: its colour and its ground. */
   const syllables = (k: number) =>
     Option.match(Arr.get(lines(), k), {
       onNone: () => [],

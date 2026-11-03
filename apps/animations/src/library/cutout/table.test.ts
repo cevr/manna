@@ -11,6 +11,7 @@ type Rgba = readonly [number, number, number, number];
 const PAPER: Rgba = [236, 226, 204, 255];
 const INK: Rgba = [42, 30, 24, 255];
 
+/** A synthetic view, each pixel the colour `paint` gives it. */
 const raster = (width: number, height: number, paint: (x: number, y: number) => Rgba) => {
   const rgba = new Uint8Array(width * height * 4);
   for (let y = 0; y < height; y++)
@@ -18,6 +19,7 @@ const raster = (width: number, height: number, paint: (x: number, y: number) => 
   return { width, height, rgba };
 };
 
+/** Paper, with a block from (x0, y0) to (x1, y1) inclusive: ringed in ink and filled with paper (a gap narrower than the cut's least enclosed paper); `open` leaves its bottom row unringed. */
 const ringed =
   (x0: number, y0: number, x1: number, y1: number, open: boolean) =>
   (x: number, y: number): Rgba => {
@@ -131,6 +133,7 @@ describe('padded', () => {
   });
 });
 
+/** The owner of pixel (x, y) when `cut` lays a `width` by `height` view whose every pixel is the figure's (0 the ground, k + 1 the part at k), or -1 if the cut refuses. */
 const ownerAt = (cut: PartCut, width: number, height: number, x: number, y: number) =>
   Result.match(
     cutParts(
@@ -234,6 +237,7 @@ describe('framedFigure', () => {
   const [w, h] = [frame.kept[2] - frame.kept[0], frame.kept[3] - frame.kept[1]];
   const [pw, ph] = [w + frame.pad[0] + frame.pad[2], h + frame.pad[1] + frame.pad[3]];
   const onView = (x: number, y: number) => y * pw + x;
+  /** A point of the padded view, in the kept view's pixels. */
   const kept = (x: number, y: number) => [x - frame.pad[0], y - frame.pad[1]] as const;
 
   test('holds every pocket of paper its ink encloses but a named gap; a gap on the open ground opens nothing', () => {

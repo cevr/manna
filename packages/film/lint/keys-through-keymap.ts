@@ -7,6 +7,7 @@ const KEYS =
 const MENU =
   'open a context menu through @manna/ui ContextMenu over the selection’s commands (packages/film/src/lab/command/)';
 
+/** Each listener the rule refuses, by its event, and the way instead. */
 const EVENTS: ReadonlyMap<string, string> = new Map([
   ['keydown', KEYS],
   ['keyup', KEYS],
@@ -14,17 +15,21 @@ const EVENTS: ReadonlyMap<string, string> = new Map([
   ['contextmenu', MENU],
 ]);
 
+/** The host's own targets: their key events are another rule's. */
 const HOSTS: ReadonlyArray<string> = ['window', 'document', 'globalThis', 'self'];
 
+/** Whether a target is the host's own: one of its globals, bound nowhere in the file (`nodes.ts`). */
 const isHost = (b: Bindings, target: ESTree.Node): boolean =>
   HOSTS.some((name) => b.isGlobal(target, name));
 
+/** A JSX attribute's name as written: `onKeyDown`, or `on:keydown` for a namespaced one. */
 const attrName = (attr: ESTree.JSXAttribute): string => {
   if (attr.name.type === 'JSXNamespacedName')
     return `${attr.name.namespace.name}:${attr.name.name.name}`;
   return attr.name.name;
 };
 
+/** The event a JSX handler attribute names (`onKeyDown`, `on:keydown`, `onkeydown`), if any. */
 const handled = (attr: ESTree.JSXAttribute): Option.Option<string> => {
   const lower = attrName(attr).toLowerCase();
   return Option.liftPredicate(
@@ -33,6 +38,7 @@ const handled = (attr: ESTree.JSXAttribute): Option.Option<string> => {
   );
 };
 
+/** The event an `.addEventListener` call names on a target not the host's, or `contextmenu` on the host's. */
 const listened = (b: Bindings, call: ESTree.CallExpression): Option.Option<string> => {
   const callee = call.callee;
   const first = call.arguments.at(0);
@@ -48,6 +54,7 @@ const listened = (b: Bindings, call: ESTree.CallExpression): Option.Option<strin
   return Option.liftPredicate(first.value, (event) => !onHost || event === 'contextmenu');
 };
 
+/** The event a handler property set on a target not the host's names (`el.onkeydown = …`), or `oncontextmenu` on the host's. */
 const assigned = (b: Bindings, assign: ESTree.AssignmentExpression): Option.Option<string> => {
   const left = assign.left;
   if (left.type !== 'MemberExpression') return Option.none();

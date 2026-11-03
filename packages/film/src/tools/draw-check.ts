@@ -16,18 +16,23 @@ import { framesOf, secondsAt } from '../core/time.ts';
 import { inkOverFace } from './check.ts';
 import { type DrawFinding, DrawThrew, FrameImpure, InkOverFace, PaintingEdge } from './findings.ts';
 
+/** A font's size in px, when its shorthand names one. */
 const fontPx = (font: string): number =>
   Option.getOrElse(
     Option.map(Option.fromNullishOr(/(\d+(?:\.\d+)?)px/.exec(font)?.[1]), Number),
     () => 10,
   );
 
+/** How wide the stand-in sets text: half an em a character, near enough to place a line. */
 const measure = (font: string, text: string) => fontPx(font) * 0.5 * text.length;
 
+/** The stand-in keeps nothing: the leg asks only whether each frame draws, what it asks, and what it probes. */
 const BLANK = { record: false, measure } as const;
 
+/** A fresh stand-in context for one draw. */
 const blank = () => recorder(1920, 1080, BLANK).ctx;
 
+/** A probe's sink that collects faces and painted plates as well as text and ink. */
 const sinkOf = (): Required<Pick<ProbeSink, 'texts' | 'inks' | 'faces' | 'paintings'>> => ({
   texts: [],
   inks: [],
@@ -35,6 +40,7 @@ const sinkOf = (): Required<Pick<ProbeSink, 'texts' | 'inks' | 'faces' | 'painti
   paintings: [],
 });
 
+/** What a frame asks of its context and never paints: factories and queries. */
 const UNLOGGED: ReadonlySet<PropertyKey> = new Set([
   'createLinearGradient',
   'createRadialGradient',
@@ -49,8 +55,10 @@ const UNLOGGED: ReadonlySet<PropertyKey> = new Set([
   'getLineDash',
 ]);
 
+/** A call or a property set: its name, and its arguments as `kept`. */
 type Call = readonly [name: PropertyKey, args: ReadonlyArray<unknown>];
 
+/** Arguments as the log keeps them: a canvas by its number, another object as its kind, anything else itself. */
 const kept = (args: ReadonlyArray<unknown>): ReadonlyArray<unknown> =>
   args.map((v) => {
     if (Predicate.isFunction(v)) return '<function>';
@@ -59,9 +67,16 @@ const kept = (args: ReadonlyArray<unknown>): ReadonlyArray<unknown> =>
     return v;
   });
 
+/** The paper: a full-frame image drawn at 0, 0 (`drawImage(canvas, 0, 0)`). */
 const atOrigin = (key: PropertyKey, args: ReadonlyArray<unknown>) =>
   key === 'drawImage' && args.length === 3 && args[1] === 0 && args[2] === 0;
 
+/**
+ * A stand-in context that logs what is left on a frame, as the calls from
+ * the last time its paper (the first image it draws at 0, 0) is drawn: a draw
+ * the compositor threw away and drew again from the paper is gone. `onCall`
+ * sees each call but a factory or a query; `fresh` starts over at each paper.
+ */
 const logging = (
   onCall: (key: PropertyKey, args: ReadonlyArray<unknown>) => void,
   fresh: () => void,
@@ -80,9 +95,11 @@ const logging = (
   }).ctx;
 };
 
+/** Scratch for hashing a number by its bits. */
 const bits = new Float64Array(1);
 const words = new Uint32Array(bits.buffer);
 
+/** Each call name's own hash, worked out once. */
 const nameHashes = new Map<PropertyKey, number>();
 const nameHash = (key: PropertyKey) =>
   Option.getOrElse(Option.fromUndefinedOr(nameHashes.get(key)), () => {
@@ -91,6 +108,11 @@ const nameHash = (key: PropertyKey) =>
     return h;
   });
 
+/**
+ * A hash of what a frame at `T` leaves on it, and how many calls that is:
+ * cheap, for every sample. Drawn with `probe` collecting, as every draw of a
+ * moment is, so a probe's own reads are the same in both logs.
+ */
 const fingerprintAt = (film: Film, T: number, probe: ProbeSink) => {
   let hash = FNV_START;
   let calls = 0;
@@ -115,6 +137,7 @@ const fingerprintAt = (film: Film, T: number, probe: ProbeSink) => {
   return `${calls}:${hash >>> 0}`;
 };
 
+/** What a frame at `T` leaves on it, call by call: to name the first difference once one is found. */
 const callsAt = (film: Film, T: number, probe: ProbeSink): ReadonlyArray<Call> => {
   const log: Call[] = [];
   const ctx = logging(
@@ -127,6 +150,7 @@ const callsAt = (film: Film, T: number, probe: ProbeSink): ReadonlyArray<Call> =
   return log;
 };
 
+/** Whether two logs make the same call at `k`. */
 const sameAt = (a: ReadonlyArray<Call>, b: ReadonlyArray<Call>, k: number) =>
   Option.exists(
     Option.all([Option.fromUndefinedOr(a[k]), Option.fromUndefinedOr(b[k])]),
@@ -134,12 +158,17 @@ const sameAt = (a: ReadonlyArray<Call>, b: ReadonlyArray<Call>, k: number) =>
       x[0] === y[0] && x[1].length === y[1].length && x[1].every((v, i) => Object.is(v, y[1][i])),
   );
 
+/** A log's call at `k`, as written. */
 const shownAt = (log: ReadonlyArray<Call>, k: number) =>
   Option.match(Option.fromUndefinedOr(log[k]), {
     onNone: () => 'nothing',
     onSome: ([name, args]) => `${String(name)}(${args.map(String).join(', ')})`,
   });
 
+/**
+ * Frame `frame` drawn after the next frame, then after the one before: what
+ * each left, by `at`. The second draw's probe is `probe`, the moment's.
+ */
 const bothWays = <A>(
   film: Film,
   frame: number,
@@ -154,6 +183,11 @@ const bothWays = <A>(
   return { afterNext, afterBefore };
 };
 
+/**
+ * Where frame `frame` is not pure: drawn after the next frame, then after the
+ * one before, what is left on it differs; the first call that differs. What
+ * the frame drawn after the one before probes lands in `probe`.
+ */
 export const impureAt = (
   film: Film,
   frame: number,
@@ -177,14 +211,22 @@ export const impureAt = (
   );
 };
 
+/** A moment the leg draws, and whether it is also checked for purity. */
 interface DrawMoment {
   readonly scene: string;
   readonly at: string;
   readonly frame: number;
+  /** Film seconds. */
   readonly time: number;
   readonly pure: boolean;
 }
 
+/**
+ * The moments a film is drawn at: `sceneMoments` (every cue's edges and each
+ * scene's 60% point), each scene's first and last frame, and each cue's
+ * midpoint. Where a cue starts and each 60% point are also checked for
+ * purity: a sample, as a frame there costs four draws.
+ */
 const drawMoments = (film: Film): ReadonlyArray<DrawMoment> => {
   const fps = film.fps;
   const sampled = sceneMoments(film.placed, fps, { marks: false }).map((m) => ({
@@ -218,6 +260,7 @@ const drawMoments = (film: Film): ReadonlyArray<DrawMoment> => {
   return [...sampled, ...edges];
 };
 
+/** Each non-open edge of a plate the frame painted that shows inside the `width` × `height` frame. */
 const paintingEdges = (
   sample: { readonly time: number; readonly at: string },
   probe: ProbeSink,
@@ -239,6 +282,7 @@ const paintingEdges = (
     ];
   });
 
+/** Draw moment `m` (four draws where it is checked for purity, one elsewhere): what it found. */
 const drawAt = (film: Film, m: DrawMoment): Effect.Effect<ReadonlyArray<DrawFinding>> => {
   const where = { scene: m.scene, time: m.time, at: m.at };
   const sample = { ...where, frame: m.frame };
@@ -264,6 +308,13 @@ const drawAt = (film: Film, m: DrawMoment): Effect.Effect<ReadonlyArray<DrawFind
   );
 };
 
+/**
+ * Ink over the faces of a scene in many frames, as one finding per scene: the
+ * first seen face it lies over (the moment the owner is sent to), the most
+ * strokes over any one face, every line of text, and how many sampled frames
+ * show it (a frame with ink over two faces counts once). They are listed in
+ * film order, by that first moment, as the owner reads them scene by scene.
+ */
 const mergeFaces = (found: ReadonlyArray<DrawFinding>): ReadonlyArray<DrawFinding> => {
   const faces = Arr.groupBy(
     found.filter((f) => f._tag === 'InkOverFace'),
@@ -289,6 +340,11 @@ const mergeFaces = (found: ReadonlyArray<DrawFinding>): ReadonlyArray<DrawFindin
   ];
 };
 
+/**
+ * A painted plate's showing edges in many frames, as one finding per scene
+ * and painting: the first moment an edge shows (the moment the owner is sent
+ * to) and every edge seen at any moment, in film order.
+ */
 const mergeEdges = (found: ReadonlyArray<DrawFinding>): ReadonlyArray<DrawFinding> => {
   const shown = found.filter((f) => f._tag === 'PaintingEdge');
   const merged = Object.values(Arr.groupBy(shown, (f) => f.scene)).flatMap((scene) =>
@@ -304,6 +360,17 @@ const mergeEdges = (found: ReadonlyArray<DrawFinding>): ReadonlyArray<DrawFindin
   ];
 };
 
+/**
+ * The draw leg: under a stand-in document, the film `build` makes (its
+ * canvases stand-ins too), each moment of its scenes named in `scenes`
+ * (every one when empty) drawn: what threw, what is not pure and what ink
+ * lies over a face. The film's rigs are loaded first, through Rive's Bun
+ * runtime (`RiveRuntimeBun`), and posed for real, and its puppets through
+ * the `PuppetImages` the caller gives (`PuppetImagesBun` for `check --draw`),
+ * and its painted plates through the `PaintingImages` it gives
+ * (`PaintingImagesBun`): a rig, puppet or painting that cannot load fails
+ * the leg, naming it.
+ */
 export const drawFindings = (
   build: () => Film,
   scenes: ReadonlySet<string> = new Set(),
@@ -320,6 +387,7 @@ export const drawFindings = (
     return mergeEdges(mergeFaces(found.flat()));
   }).pipe(Effect.provide(RiveRuntimeBun));
 
+/** How many moments `drawFindings` draws in `film`, and how many it checks for purity. */
 export const momentCounts = (film: Film) => {
   const moments = drawMoments(film);
   return { moments: moments.length, pure: moments.filter((m) => m.pure).length };

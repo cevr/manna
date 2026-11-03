@@ -1,6 +1,7 @@
 import { Effect, Layer } from 'effect';
 import { PageLoad } from './page-load.ts';
 
+/** This tab's loads. */
 export const pageLoadLayer: Layer.Layer<PageLoad> = Layer.succeed(
   PageLoad,
   PageLoad.of({

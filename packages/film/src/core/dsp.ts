@@ -1,5 +1,7 @@
+/** `secs` as a frame count at `rate`, to the nearest frame. */
 export const toFrames = (secs: number, rate: number): number => Math.round(secs * rate);
 
+/** Add `src` × `gain` into `dst` from frame `at`; what falls past `dst`'s end is dropped. */
 export const addInto = (
   dst: ReadonlyArray<Float32Array>,
   src: ReadonlyArray<Float32Array>,
@@ -15,12 +17,19 @@ export const addInto = (
   }
 };
 
+/** A linear fade (afade, `curve=tri`). */
 interface Fade {
   readonly type: 'in' | 'out';
+  /** The first frame of the fade. */
   readonly start: number;
+  /** Its length in frames. */
   readonly frames: number;
 }
 
+/**
+ * Apply `spec` in place (af_afade.c `fade_gain` with `curve=tri`): a fade-in
+ * is silent before `start`; a fade-out is silent after `start + frames`.
+ */
 export const fade = (channels: ReadonlyArray<Float32Array>, spec: Fade): void => {
   for (const channel of channels)
     for (let i = 0; i < channel.length; i++) {
@@ -30,14 +39,19 @@ export const fade = (channels: ReadonlyArray<Float32Array>, spec: Fade): void =>
     }
 };
 
+/** Downward compression keyed by another signal (sidechaincompress). */
 export interface Duck {
+  /** Linear level the key must pass. */
   readonly threshold: number;
   readonly ratio: number;
+  /** Milliseconds. */
   readonly attack: number;
   readonly release: number;
+  /** Knee width as a level ratio. */
   readonly knee: number;
 }
 
+/** The knee's curve (libavfilter hermite.h `hermite_interpolation`). */
 const hermite = (
   x: number,
   x0: number,
@@ -57,6 +71,11 @@ const hermite = (
   return ct3 * t3 + ct2 * t2 + ct1 * t + p0;
 };
 
+/**
+ * Duck `main` in place under `key` (af_sidechaincompress.c `compressor` with
+ * its defaults: RMS detection, channels averaged, downward, no makeup, fully
+ * wet).
+ */
 export const duck = (
   main: ReadonlyArray<Float32Array>,
   key: ReadonlyArray<Float32Array>,
@@ -95,16 +114,26 @@ export const duck = (
   }
 };
 
+/** A brick-wall limiter with look-ahead (alimiter). */
 export interface Limit {
+  /** Linear ceiling. */
   readonly limit: number;
+  /** Milliseconds. */
   readonly attack: number;
   readonly release: number;
 }
 
+/**
+ * The limiter's running state, as alimiter's context keeps it: one interleaved
+ * ring of `bufferSize` samples (the attack window), the gain now (`att`) and
+ * its step per frame (`delta`), and the queue of gain steps still to take
+ * (`nextpos`/`nextdelta`, `nextlen` of them from `nextiter`).
+ */
 interface Limiter {
   readonly channels: number;
   readonly bufferSize: number;
   readonly ceiling: number;
+  /** Frames the release takes to recover from full attenuation. */
   readonly releaseFrames: number;
   readonly buffer: Float64Array;
   readonly nextdelta: Float64Array;
@@ -116,12 +145,17 @@ interface Limiter {
   nextlen: number;
 }
 
+/** The loudest channel of the frame at ring index `at`. */
 const peakAt = (l: Limiter, at: number): number => {
   let peak = 0;
   for (let c = 0; c < l.channels; c++) peak = Math.max(peak, Math.abs(l.buffer[at + c] ?? 0));
   return peak;
 };
 
+/**
+ * The first queued step, from `nextiter`, that the frame just in (`peak` over
+ * the ceiling) makes steeper: lowered to reach it, and its index; -1 when none.
+ */
 const steepenQueued = (l: Limiter, peak: number): number => {
   for (let i = l.nextiter; i < l.nextiter + l.nextlen; i++) {
     const j = i % l.bufferSize;
@@ -137,6 +171,11 @@ const steepenQueued = (l: Limiter, peak: number): number => {
   return -1;
 };
 
+/**
+ * Queue the gain steps a frame over the ceiling needs: a steeper fall than
+ * the one under way restarts the queue at it; otherwise it steepens a queued
+ * step and queues its own release after it.
+ */
 const queuePeak = (l: Limiter, peak: number): void => {
   const patt = Math.min(l.ceiling / peak, 1);
   const rdelta = (1 - patt) / l.releaseFrames;
@@ -159,6 +198,10 @@ const queuePeak = (l: Limiter, peak: number): void => {
   l.nextlen++;
 };
 
+/**
+ * Past the frame leaving the ring at `oldest`: take the queued step due there,
+ * then hold the gain inside (0, 1] and snap what is within rounding of 1 or 0.
+ */
 const advance = (l: Limiter, oldest: number): void => {
   if (oldest === l.nextpos[l.nextiter]) {
     l.delta = l.nextdelta[l.nextiter] ?? 0;
@@ -182,6 +225,7 @@ const advance = (l: Limiter, oldest: number): void => {
   if (l.delta !== 0 && Math.abs(l.delta) < 0.00000000000001) l.delta = 0;
 };
 
+/** `input` through `limitInto`, as new channels `input`'s length. */
 export const limit = (
   input: ReadonlyArray<Float32Array>,
   rate: number,
@@ -193,6 +237,12 @@ export const limit = (
   return out;
 };
 
+/**
+ * `input` through af_alimiter.c `filter_frame` with `level=false`, no
+ * auto-release and no latency compensation, written into `out`: the output
+ * runs one attack window (less a frame) behind the input, as alimiter's does.
+ * `out` may be `input` itself: each frame is read before it is written.
+ */
 export const limitInto = (
   input: ReadonlyArray<Float32Array>,
   rate: number,

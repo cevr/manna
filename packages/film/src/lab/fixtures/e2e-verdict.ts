@@ -1,36 +1,55 @@
 import { Array as Arr, Match, Option, Schema } from 'effect';
 
+/**
+ * A failure: its file, when the log names it; its name, as bun prints a case
+ * (`describe > case`) or what happened to the file; and whether a rerun runs
+ * the file whole (a worker that crashed, an error between tests) rather than
+ * the case alone.
+ */
 export interface Failure {
   readonly file: Option.Option<string>;
   readonly name: string;
   readonly whole: boolean;
 }
 
+/** CI's line prefix (`job\tstep\t<timestamp> `), and its group markers. */
 const CI_PREFIX = /^[^\t\n]*\t[^\t\n]*\t\d{4}-\d\d-\d\dT[\d:.]+Z ?/;
 const CI_GROUP = /^##\[(?:group|endgroup)\]/;
 // oxlint-disable-next-line no-control-regex -- the colours bun prints are escape sequences
 const ANSI = /\u001b\[[0-9;]*m/g;
 
+/** A file's header, as bun opens its cases: `e2e/lab/shell.dom.test.ts:`. */
 const HEADER = /^(\S+\.test\.tsx?):$/;
+/** A failed case: `(fail) name [12.3ms]` locally, `✗ name [12.3ms]` in CI. */
 const FAILED = /^(?:\(fail\)|✗) (.+?)(?: \[[\d.]+m?s\])?$/;
+/** A worker that died with its file: the file is the failure. */
 const CRASHED = /^(\S+\.test\.tsx?) \(worker crashed: \w+\)$/;
+/** The summary of failures bun repeats at the end of a parallel run: its names add none. */
 const SUMMARY = /^\d+ tests? failed:$/;
+/** An error bun caught outside any case, in the file whose header is above it. */
 const BETWEEN = /^# Unhandled error between tests$/;
+/** How many such errors bun counted, in its summary. */
 const ERRORS = /^\s*(\d+) errors?$/;
+/** The line bun ends a finished run with. */
 const RAN = /^Ran (\d+) tests? across \d+ files?\./m;
 
+/** What a failure caught between tests is called. */
 export const BETWEEN_TESTS = 'an error between tests';
+/** What an error bun counted, but the log does not place in a file, is called. */
 const UNPLACED = 'an error bun counted that the log does not place';
 
+/** `values` where `holds`, else nothing: a list's optional part. */
 const when = <A>(holds: boolean, ...values: ReadonlyArray<A>): ReadonlyArray<A> =>
   values.filter(() => holds);
 
 const clean = (line: string) => line.replace(CI_PREFIX, '').replace(CI_GROUP, '').replace(ANSI, '');
 const cleaned = (text: string) => text.split('\n').map(clean);
 
+/** The first group `pattern` captures in `line`, if it matches. */
 const captured = (pattern: RegExp, line: string): Option.Option<string> =>
   Option.flatMap(Option.fromNullishOr(pattern.exec(line)), (m) => Option.fromNullishOr(m[1]));
 
+/** Whether `a` and `b` are the same failure: the same name and kind, and the same file where both name one. */
 const same = (a: Failure, b: Failure): boolean =>
   a.name === b.name &&
   a.whole === b.whole &&
@@ -39,6 +58,13 @@ const same = (a: Failure, b: Failure): boolean =>
     () => true,
   );
 
+/**
+ * The failures of `log`, each once, in the order they first failed: each
+ * failed case under the file bun printed above it, each crashed worker's
+ * file, each error caught between tests in its file, and, when bun counted
+ * more errors than the log places, one unplaced failure for each of the rest.
+ * The summary bun repeats at the end of a parallel run adds no case.
+ */
 export const failuresIn = (log: string): ReadonlyArray<Failure> => {
   const found: Array<Failure> = [];
   const add = (failure: Failure) => {
@@ -70,13 +96,32 @@ export const failuresIn = (log: string): ReadonlyArray<Failure> => {
   return found;
 };
 
+/** Whether the suite of `log` finished: bun printed its `Ran N tests across M files` line. */
 export const finishedIn = (log: string): boolean => RAN.test(cleaned(log).join('\n'));
 
+/**
+ * The flag of the suite that spreads its files over workers, which a rerun
+ * alone leaves out: one worker runs the rerun. `--max-concurrency` stays, so a
+ * file rerun whole runs no more of its cases at once than the suite did (bun's
+ * own default is 20).
+ */
 const WORKERS = '--parallel';
 
+/**
+ * The `bun test -t` pattern that runs `name` alone: bun matches a case by
+ * its describe blocks and its own name joined by spaces, where it prints them
+ * joined by ` > `.
+ */
 const casePattern = (name: string): string =>
   `^${name.replaceAll(' > ', ' ').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`;
 
+/**
+ * The command that reruns `failure` alone, from the suite's own script
+ * (`test:e2e`, `bun src/lab/fixtures/run-suite.ts … e2e`): its runner and
+ * flags but `--parallel` (as `--parallel=n` or `--parallel n`), so one
+ * worker runs it at the suite's own concurrency, on the failure's file, and
+ * on the case alone unless the failure is the file's.
+ */
 export const aloneArgs = (suite: string, failure: Failure): ReadonlyArray<string> => {
   const tokens = suite.split(/\s+/).filter((arg) => arg !== '' && arg !== 'e2e');
   const kept = tokens.filter((arg, i) => {
@@ -91,14 +136,24 @@ export const aloneArgs = (suite: string, failure: Failure): ReadonlyArray<string
   ];
 };
 
+/** What one rerun alone showed: it passed, it failed, or it ran no test (a filter that matched none, a run cut short). */
 export const Run = Schema.Literals(['pass', 'fail', 'none']);
 export type Run = typeof Run.Type;
 
+/** How many cases failed, in bun's summary of a run. */
 const FAILS = /^\s*(\d+) fail$/;
 
+/** The count bun's summary gives on its first line `pattern` matches, if it printed one. */
 const countIn = (lines: ReadonlyArray<string>, pattern: RegExp): Option.Option<number> =>
   Arr.findFirst(lines, (line) => Option.map(captured(pattern, line), Number));
 
+/**
+ * A rerun's outcome from its exit code and output. Bun's own summary decides
+ * when it printed one: a failed case or an error it counted is a fail, and
+ * none failed is a pass, whatever the exit after it (the runner's own, once
+ * bun is done: a cleanup that failed is not the case's). With no summary of
+ * the failures, the exit decides.
+ */
 export const runOf = (exit: number, output: string): Run => {
   const lines = cleaned(output);
   const ran = Option.filter(Option.map(captured(RAN, lines.join('\n')), Number), (n) => n > 0);
@@ -113,19 +168,26 @@ export const runOf = (exit: number, output: string): Run => {
   );
 };
 
+/** What a failure is, by its reruns alone and the base's. */
 const Verdict = Schema.Literals(['unit-caused', 'unresolved', 'green-alone', 'base']);
 type Verdict = typeof Verdict.Type;
 
 const VERDICTS: ReadonlyArray<Verdict> = ['unit-caused', 'unresolved', 'green-alone', 'base'];
 
+/** The verdicts that block. */
 const BLOCKING: ReadonlyArray<Verdict> = ['unit-caused', 'unresolved'];
 
+/** One row of the verdict: the failure, its reruns alone, its verdict. */
 export interface Judged {
   readonly failure: Failure;
   readonly alone: ReadonlyArray<Run>;
   readonly verdict: Verdict;
 }
 
+/**
+ * What the base showed: the failures its suite logged, whether that suite
+ * finished, and, when the base's log is a check's, what its reruns alone saw.
+ */
 export interface Base {
   readonly failed: ReadonlyArray<Failure>;
   readonly finished: boolean;
@@ -136,6 +198,12 @@ const red = (runs: ReadonlyArray<Run>) => runs.includes('fail');
 const green = (runs: ReadonlyArray<Run>) =>
   Arr.isReadonlyArrayNonEmpty(runs) && runs.every((run) => run === 'pass');
 
+/**
+ * A failure's verdict from its reruns alone here and what the base showed:
+ * green alone; else red alone at the base too (`base`); else passed at the
+ * base, by its check's reruns or its finished suite (`unit-caused`); else
+ * `unresolved`, as is any failure that could not be rerun alone.
+ */
 export const verdictOf = (
   failure: Failure,
   alone: ReadonlyArray<Run>,
@@ -155,6 +223,7 @@ export const verdictOf = (
   return 'unresolved';
 };
 
+/** What a check keeps beside its log (`<log>.verdict.json`), for a later check to read as its base. */
 export const Recorded = Schema.Struct({
   finished: Schema.Boolean,
   judged: Schema.Array(
@@ -169,6 +238,7 @@ export const Recorded = Schema.Struct({
 });
 export type Recorded = typeof Recorded.Type;
 
+/** A check's record of its run. */
 export const recordOf = (finished: boolean, judged: ReadonlyArray<Judged>): Recorded => ({
   finished,
   judged: judged.map((j) => ({
@@ -180,6 +250,7 @@ export const recordOf = (finished: boolean, judged: ReadonlyArray<Judged>): Reco
   })),
 });
 
+/** The base as its check recorded it. */
 export const baseOfRecord = (record: Recorded): Base => {
   const judged = record.judged.map((j) => ({
     failure: { file: Option.fromNullishOr(j.file), name: j.name, whole: j.whole },
@@ -189,12 +260,14 @@ export const baseOfRecord = (record: Recorded): Base => {
   return { failed: judged.map((j) => j.failure), finished: record.finished, alone: judged };
 };
 
+/** The base as its log alone shows it, no rerun known. */
 export const baseOfLog = (log: string): Base => ({
   failed: failuresIn(log),
   finished: finishedIn(log),
   alone: [],
 });
 
+/** The command lines of `pid`'s ancestors, nearest first, from `ps -A -o pid= -o ppid= -o command=`. */
 export const ancestorsIn = (ps: string, pid: number): ReadonlyArray<string> => {
   const table = new Map(
     ps
@@ -219,8 +292,10 @@ export const ancestorsIn = (ps: string, pid: number): ReadonlyArray<string> => {
   return commands;
 };
 
+/** A locker's options that take a value as the next word: `lockf -t 5`. */
 const VALUED = new Set(['-t']);
 
+/** A locker's first word past its options. */
 const operandOf = (args: ReadonlyArray<string>): Option.Option<string> =>
   Option.flatMap(Arr.head(args), (head) => {
     if (!head.startsWith('-')) return Option.some(head);
@@ -228,12 +303,24 @@ const operandOf = (args: ReadonlyArray<string>): Option.Option<string> =>
     return operandOf(args.slice(1));
   });
 
+/**
+ * The file a command holds locked, when the command is a locker: its program
+ * `lockf` (by any path), its first word past its options. A
+ * shell whose script names a locker is not one: the locker it starts is a
+ * process, and an ancestor, of its own.
+ */
 export const lockedBy = (command: string): Option.Option<string> => {
   const [program = '', ...args] = command.trim().split(/\s+/);
   if (!/^(?:\S*\/)?lockf$/.test(program)) return Option.none();
   return operandOf(args);
 };
 
+/**
+ * Whether one of `commands` (this process's ancestors' command lines) holds
+ * `lock` already: a `lockf` on that very file, the two paths
+ * compared by `realPath` (macOS's `/tmp` is `/private/tmp`). A check run
+ * inside one runs in that hold, rather than wait on itself.
+ */
 export const heldByAncestor = (
   commands: ReadonlyArray<string>,
   lock: string,
@@ -245,6 +332,7 @@ export const heldByAncestor = (
   );
 };
 
+/** The load a suite started at, in words: the cores, how long the check waited for it, and whether it fell. */
 export const loadWords = (host: {
   readonly load: number;
   readonly cores: number;
@@ -256,6 +344,7 @@ export const loadWords = (host: {
     ...when(host.load > host.cores, 'still above the core count: ran anyway'),
   ].join(', ');
 
+/** What blocks the suite as a whole: it never finished, or it failed and named nothing. */
 const suiteProblems = (input: {
   readonly exit: number;
   readonly finished: boolean;
@@ -271,6 +360,7 @@ const suiteProblems = (input: {
   ),
 ];
 
+/** Whether the verdict blocks: a unit-caused or unresolved failure, or a suite that never finished or named nothing. */
 export const blocks = (input: {
   readonly exit: number;
   readonly finished: boolean;
@@ -279,12 +369,14 @@ export const blocks = (input: {
   Arr.isReadonlyArrayNonEmpty(suiteProblems(input)) ||
   input.judged.some((j) => BLOCKING.includes(j.verdict));
 
+/** The reruns alone as the table prints them. */
 const aloneCell = (alone: ReadonlyArray<Run>) =>
   Option.match(Option.liftPredicate(alone, Arr.isReadonlyArrayNonEmpty), {
     onNone: () => '—',
     onSome: (runs) => runs.join(' '),
   });
 
+/** The verdict file: what ran, what blocks, then each failure with its class, the blocking first. */
 export const verdictMarkdown = (input: {
   readonly log: string;
   readonly base: Option.Option<{ readonly path: string; readonly reruns: boolean }>;

@@ -10,11 +10,13 @@ import {
 const MESSAGE =
   'a Chrome spawned past openView: open it through openView (packages/film/src/tools/chrome.ts), which mutes its audio whatever flags the caller asks for.';
 
+/** Whether a member expression reads `name` off its object, as `.name` or `['name']`. */
 const reads = (node: ESTree.MemberExpression, name: string): boolean => {
   if (node.computed) return node.property.type === 'Literal' && node.property.value === name;
   return node.property.type === 'Identifier' && node.property.name === name;
 };
 
+/** Whether a node is `Bun` or `globalThis.Bun`. */
 const isBun = (node: ESTree.Node): boolean =>
   (node.type === 'Identifier' && node.name === 'Bun') ||
   (node.type === 'MemberExpression' &&
@@ -22,6 +24,7 @@ const isBun = (node: ESTree.Node): boolean =>
     node.object.name === 'globalThis' &&
     reads(node, 'Bun'));
 
+/** Whether a `new` builds a `Bun.WebView`. */
 const spawnsWebView = (node: ESTree.NewExpression) =>
   node.callee.type === 'MemberExpression' &&
   reads(node.callee, 'WebView') &&

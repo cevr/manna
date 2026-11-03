@@ -43,6 +43,7 @@ test('a scene drawn in 3D falls back in the stand-in, every frame drawn', () => 
   expect([...new Set(fell)].toSorted((x, y) => x - y)).toEqual(times);
 });
 
+/** A WebGL 2 context's stand-in: lost when told, or when let go. */
 interface FakeGl {
   readonly id: number;
   lost: boolean;
@@ -51,6 +52,7 @@ interface FakeGl {
   readonly getExtension: (name: string) => { readonly loseContext: () => void } | null;
 }
 
+/** A document whose canvases make WebGL 2 contexts while `can.make` holds, and the contexts made. */
 const glDom = () => {
   const can = { make: true };
   const contexts: FakeGl[] = [];
@@ -79,6 +81,7 @@ const glDom = () => {
   return { can, contexts, document };
 };
 
+/** Run `draw` with `dom` as the document, put back after. */
 const withGl = <A>(dom: ReturnType<typeof glDom>, draw: () => A): A =>
   Effect.runSync(
     Effect.acquireUseRelease(
@@ -92,6 +95,7 @@ const withGl = <A>(dom: ReturnType<typeof glDom>, draw: () => A): A =>
     ),
   );
 
+/** The id of the fake context a canvas holds. */
 const idOf = (one: ReturnType<typeof glCanvas>) => Reflect.get(Object(one?.gl), 'id');
 
 test('a 3D canvas is kept per key, and made anew when its context is lost or its size changes', () => {

@@ -5,6 +5,7 @@ import { C, F, piece } from '../../../righteousness-by-faith/kit.ts';
 import { VERSE } from '../../look.ts';
 import type { JobFrame } from '../../scenes/job.ts';
 
+/** The page: where it sits, centred, and its size. */
 const PAGE = { x: 960, y: 540, w: 1400, h: 520 } as const;
 
 export const job = (f: JobFrame): Box => {

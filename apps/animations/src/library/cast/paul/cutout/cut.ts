@@ -5,8 +5,10 @@ import { FRAMES } from './frames.ts';
 
 export { FRAMES };
 
+/** A view of his, by its name in his sheet's views. */
 type CutView = keyof typeof FRAMES;
 
+/** His bust three-quarters to the viewer's left (heads-1), the line at the foot of his beard. */
 const HEADS_1 = bustCut({
   neighbour: [box(236, 40, FAR, 170)],
   line: [
@@ -31,6 +33,7 @@ const HEADS_1 = bustCut({
   pivot: [118, 240],
 });
 
+/** His bust with his head bowed down to the viewer's left (heads-2). */
 const HEADS_2 = bustCut({
   neighbour: [box(-1, 265, 8, FAR), box(230, 40, FAR, 120)],
   line: [
@@ -58,6 +61,7 @@ const HEADS_2 = bustCut({
   pivot: [124, 244],
 });
 
+/** His bust three-quarters to the viewer's left (heads-3). */
 const HEADS_3 = bustCut({
   neighbour: [box(-1, 285, 6, FAR)],
   line: [
@@ -82,6 +86,7 @@ const HEADS_3 = bustCut({
   pivot: [112, 244],
 });
 
+/** His bust facing the viewer (heads-4), his beard's foot a rounded point. */
 const HEADS_4 = bustCut({
   line: [
     [FAR, 223],
@@ -106,6 +111,7 @@ const HEADS_4 = bustCut({
   pivot: [117, 240],
 });
 
+/** His bust facing the viewer (heads-5). */
 const HEADS_5 = bustCut({
   line: [
     [FAR, 222],
@@ -130,6 +136,7 @@ const HEADS_5 = bustCut({
   pivot: [121, 242],
 });
 
+/** His bust facing the viewer, his mouth open (heads-6). */
 const HEADS_6 = bustCut({
   line: [
     [FAR, 222],
@@ -150,8 +157,14 @@ const HEADS_6 = bustCut({
   pivot: [123, 240],
 });
 
+/** His sheet's ink, for the row that closes a bust's foot. */
 const INK = [42, 21, 7, 255] as const;
 
+/**
+ * His words for what lies behind his head once it is cut away, and how he is
+ * turned in each view. The shared bust moves only his head, so okra repaints
+ * only what it hid, in the sheet's own style.
+ */
 const HIDDEN_ENTRIES = bustHidden(
   {
     head: 'his bald crown, the dark hair at its sides and back, his face, ears and long beard',
@@ -168,6 +181,7 @@ const HIDDEN_ENTRIES = bustHidden(
   } satisfies Readonly<Record<CutView, string>>,
 );
 
+/** His cut table: each view's cut and how its figure is read. */
 export const { CUTS, cutOptionsFor, HIDDEN, paperOf } = cutTable({
   frames: FRAMES,
   views: {

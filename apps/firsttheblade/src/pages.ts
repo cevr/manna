@@ -1,7 +1,15 @@
+/**
+ * The site's pages as data: where each is served, the file the prerender
+ * writes for it, and what its head says (title, description, the card a link
+ * to it shows). The prerender draws each one (`./views.tsx`); the sitemap
+ * lists every listed page: not the not-found page, nor the email list's
+ * notices, which only its routes send people to (`./mail/paths.ts`).
+ */
 import { MARK_4_28, SERIES, type Series } from './content.ts';
 import { MAIL_PAGES } from './mail/paths.ts';
 import { CHANNEL, ORIGIN } from './site.ts';
 
+/** The email list's pages that tell how a step went, each by its key in `MAIL_PAGES`. */
 export type NoticeId = Exclude<keyof typeof MAIL_PAGES, 'confirm' | 'leave'>;
 
 export type PageView =
@@ -15,12 +23,16 @@ export type PageView =
   | { readonly _tag: 'NotFound' };
 
 export interface Page {
+  /** The path it is served at (`/about`); `htmlHandling` serves `about.html` there. */
   readonly path: string;
+  /** The file the prerender writes, relative to `dist/`. */
   readonly file: string;
   readonly title: string;
   readonly description: string;
+  /** The link card: a 1200 × 630 picture under `public/og/`. */
   readonly image: string;
   readonly imageAlt: string;
+  /** Whether search engines and the sitemap list it. */
   readonly listed: boolean;
   readonly view: PageView;
 }
@@ -41,6 +53,7 @@ const seriesPage = (series: Series): Page => ({
   view: { _tag: 'Series', series },
 });
 
+/** Each notice's title, which is also its heading. */
 export const NOTICE_TITLES: Readonly<Record<NoticeId, string>> = {
   check: 'Check your inbox',
   confirmed: 'You are on the list',
@@ -56,6 +69,7 @@ const HOME_CARD = {
   imageAlt: `${CHANNEL.name}: “${MARK_4_28.text}” ${MARK_4_28.ref}.`,
 } as const;
 
+/** A page of the email list's, served only where its routes send people. */
 const listPage = (path: string, name: string, view: PageView): Page => ({
   path,
   file: `${path.slice(1)}.html`,
@@ -126,4 +140,5 @@ export const PAGES: ReadonlyArray<Page> = [
   },
 ];
 
+/** An absolute URL on the canonical origin. */
 export const absolute = (path: string) => `${ORIGIN}${path}`;

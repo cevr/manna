@@ -2,17 +2,26 @@ import { Context, Duration, Effect, FileSystem, Layer, Option, Schema } from 'ef
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { collectWithin } from './process.ts';
 
+/** One image asked of the route: the prompt, its reference images (paths), its size, where it lands. */
 interface ImageRequest {
   readonly prompt: string;
   readonly refs: ReadonlyArray<string>;
+  /** `1536x1024`. */
   readonly size: string;
   readonly out: string;
 }
 
+/** The size a board panel is drawn at: the film's 16:9 frame, as near as the route draws. */
 export const PANEL_SIZE = '1536x1024';
 
+/** The portrait size the route draws exactly (2:3): an edit of a standing figure's view, padded to it. */
 export const PORTRAIT = { width: 1024, height: 1536 } as const;
 
+/**
+ * An edit asked of the route: one reference image, the picture to edit, with
+ * the areas to repaint flat magenta in it (the route takes no mask of its
+ * own), drawn back at the portrait size.
+ */
 export const editRequest = (prompt: string, picture: string, out: string): ImageRequest => ({
   prompt,
   refs: [picture],
@@ -20,8 +29,10 @@ export const editRequest = (prompt: string, picture: string, out: string): Image
   out,
 });
 
+/** The longest one image may take before the call is stopped. */
 const IMAGE_LIMIT = Duration.minutes(6);
 
+/** A call that drew nothing: the route's own words for why. */
 class ImageRouteFailed extends Schema.TaggedError<ImageRouteFailed>()('ImageRouteFailed', {
   reason: Schema.String,
 }) {
@@ -30,6 +41,7 @@ class ImageRouteFailed extends Schema.TaggedError<ImageRouteFailed>()('ImageRout
   }
 }
 
+/** A prompt naming something private: it never leaves the machine. */
 class PromptPersonal extends Schema.TaggedError<PromptPersonal>()('PromptPersonal', {
   found: Schema.String,
 }) {
@@ -38,6 +50,7 @@ class PromptPersonal extends Schema.TaggedError<PromptPersonal>()('PromptPersona
   }
 }
 
+/** What a prompt must never carry: a home path, an email address, a key or token. */
 const PERSONAL: ReadonlyArray<readonly [string, RegExp]> = [
   ['a home path', /(?:\/Users\/|\/home\/|~\/)[^\s]*/],
   ['an email address', /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/],
@@ -45,9 +58,11 @@ const PERSONAL: ReadonlyArray<readonly [string, RegExp]> = [
   ['a token', /\b[A-Za-z0-9+/_-]{40,}={0,2}/],
 ];
 
+/** What private thing `prompt` names, if any (what it is, never the thing itself). */
 const personalIn = (prompt: string): Option.Option<string> =>
   Option.fromUndefinedOr(PERSONAL.find(([, re]) => re.test(prompt))?.[0]);
 
+/** The arguments of one `okra image` call: never `--model`. */
 const okraArgs = (request: ImageRequest): ReadonlyArray<string> => [
   'image',
   request.prompt,
@@ -58,18 +73,21 @@ const okraArgs = (request: ImageRequest): ReadonlyArray<string> => [
   request.out,
 ];
 
+/** The command line of one call, as the route runs it: what a record quotes. */
 export const okraCommand = (request: ImageRequest): ReadonlyArray<string> => [
   'okra',
   ...okraArgs(request),
 ];
 
 interface ImageRouteService {
+  /** Draw one image to `request.out`. */
   readonly draw: (request: ImageRequest) => Effect.Effect<void, ImageRouteFailed | PromptPersonal>;
 }
 
 export class ImageRoute extends Context.Service<ImageRoute, ImageRouteService>()(
   '@manna/film/tools/ImageRoute',
 ) {
+  /** `okra image` on its Codex route. */
   static readonly layer = Layer.effect(
     ImageRoute,
     Effect.gen(function* () {
@@ -94,6 +112,10 @@ export class ImageRoute extends Context.Service<ImageRoute, ImageRouteService>()
     }),
   );
 
+  /**
+   * A route that draws `bytes(request)` to `request.out` (tests, a dry run):
+   * the same guard, nothing sent anywhere.
+   */
   static readonly fake = (bytes: (request: ImageRequest) => Uint8Array) =>
     Layer.effect(
       ImageRoute,

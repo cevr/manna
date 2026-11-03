@@ -123,4 +123,5 @@ const FACES: ReadonlyArray<Face> = [
   { family: 'Gaegu', style: 'normal', weight: '700', url: gaegu700Latin, range: SUBSETS.latin },
 ];
 
+/** The films' faces, asked for: added to the page's fonts and fetched the first time a film asks. */
 export const faces = pictureFaces(FACES);

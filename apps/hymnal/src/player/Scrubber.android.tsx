@@ -1,3 +1,9 @@
+/**
+ * Android's position bar: Material 3's `Slider` (One's `One.Android.Slider`),
+ * in the accent. Like iOS's, it tells each value as the reader drags, so a
+ * drag seeks once it has rested for `rest`.
+ */
+
 import { Duration, Option } from 'effect';
 import { One } from 'one';
 import { StyleSheet } from 'react-native';

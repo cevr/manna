@@ -5,6 +5,13 @@ import { createEffect, createSignal, createUniqueId } from 'solid-js';
 import { pressed } from '../pressed.ts';
 import { BRIEF_LINES } from './style.ts';
 
+/**
+ * A picture's brief, in a box that on a phone shows three lines, the line
+ * read aloud under it in sight, until More opens it, or a key lands on a
+ * link it hides. More is there only while the three lines hide some of it.
+ * The film's reader fills it with its linked names (`Picture`), a series
+ * draft's with its text (`review/draft.tsx`).
+ */
 export const BriefBox = (props: ParentProps) => {
   const [open, setOpen] = createSignal(false, { ownedWrite: true });
   const [clips, setClips] = createSignal(false, { ownedWrite: true });

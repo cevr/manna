@@ -8,11 +8,13 @@ import { type Rig, keptFor, present, rigOf } from './rig.ts';
 import { ps1, rgb } from './shade.ts';
 import { verdictPlate } from './type.ts';
 
+/** The room's colours: a cool, even light, no sun (the cold open's act light). */
 export const ROOM = {
   fog: '#aab4bf',
   gold: '#e6b347',
 } as const satisfies Record<string, Hex>;
 
+/** The evidence: file boxes and paper stacks, where each comes to rest on the table or the floor beside it. */
 interface Item {
   readonly kind: 'box' | 'stack';
   readonly x: number;
@@ -21,8 +23,10 @@ interface Item {
   readonly turn: number;
 }
 
+/** The table's top. */
 const TABLE = { x: 0.9, z: 0.35, top: 0.82 } as const;
 
+/** How many pieces land on the table before the rest spill to the floor. */
 const ON_TABLE = 24;
 
 const ITEMS: ReadonlyArray<Item> = (() => {
@@ -53,8 +57,10 @@ const ITEMS: ReadonlyArray<Item> = (() => {
   });
 })();
 
+/** Where the people stand. */
 const ACCUSED = new Vector3(-1.3, 0, 0.5);
 const JUDGE = new Vector3(0, 1.5, -5.45);
+/** The verdict plate's place on the bench front. */
 const PLATE = new Vector3(-0.05, 1.62, -4.16);
 
 interface Set {
@@ -66,6 +72,7 @@ interface Set {
   readonly plate: Group;
 }
 
+/** A placer: `geo` in `mat` at (x, y, z) in one scene. */
 type Placer = (
   geo: Parameters<typeof put>[1],
   mat: Parameters<typeof put>[2],
@@ -74,6 +81,7 @@ type Placer = (
   z: number,
 ) => ReturnType<typeof put>;
 
+/** The room's shell: floor, runner, stone walls with their pilasters and windows, the doors. */
 const shell = (r: Rig, at: Placer) => {
   const w = r.world;
   const t = r.tex;
@@ -233,6 +241,7 @@ const build = (r: Rig): Set => {
 
 const courtSet = keptFor(build);
 
+/** A camera move: where it starts and ends, what it looks at, and its lens. */
 interface Shot {
   readonly from: readonly [number, number, number];
   readonly to: readonly [number, number, number];
@@ -249,6 +258,7 @@ const CRANE: Shot = {
   fov: 50,
 };
 
+/** The five shots, in order, each cut in on its mark (the first on the scene's start). */
 const SHOTS: ReadonlyArray<Shot> = [
   CRANE,
   {
@@ -281,6 +291,7 @@ const SHOTS: ReadonlyArray<Shot> = [
   },
 ];
 
+/** The gavel's arc across `gavel`: raised, down hard on the block, a bounce, at rest on it. */
 const SWING: ReadonlyArray<Key> = [
   [0, 1.25],
   [0.373, 2.6],
@@ -288,6 +299,7 @@ const SWING: ReadonlyArray<Key> = [
   [0.797, 1.6, 'outQuad'],
   [1, 1.35],
 ];
+/** The plate's scale across `stamp`: in large, a give, settled. */
 const STAMP_POP: ReadonlyArray<Key> = [
   [0, 1.35],
   [0.6, 0.94, 'outCubic'],
@@ -300,8 +312,10 @@ const v3 = (
   k: number,
 ) => new Vector3(lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k));
 
+/** The shot playing at `f.t` and how far through it, from the marks it cuts on. */
 interface Playing {
   readonly shot: Shot;
+  /** How far through it, eased. */
   readonly k: number;
 }
 
@@ -315,6 +329,7 @@ const shotAt = (f: CourtFrame): Playing => {
   return { shot, k: ease.inOutSine(clamp((f.t - start) / Math.max(end - start, 1e-3))) };
 };
 
+/** Every value the court shows at `f.t`, then the render. */
 const stage = (f: CourtFrame, r: Rig, s: Set) => {
   const w = r.world;
   const stamp = f.at('stamp');
@@ -387,6 +402,7 @@ const stage = (f: CourtFrame, r: Rig, s: Set) => {
   r.renderer.render(s.scene, s.camera);
 };
 
+/** Where no WebGL 2 can be had (`check --draw`): the room in flat blocks, no type. */
 const fallback = (f: CourtFrame) => {
   const { ctx, w, h } = f;
   ctx.fillStyle = ROOM.fog;

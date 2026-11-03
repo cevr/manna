@@ -1,3 +1,5 @@
+/** Bun runtime composition for the driver-agnostic BibleDatabase service. */
+
 import * as SqliteBun from '@effect/sql-sqlite-bun/SqliteClient';
 import { Config, Effect, FileSystem, Layer, Path } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';

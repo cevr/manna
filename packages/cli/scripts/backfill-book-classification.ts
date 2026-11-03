@@ -1,3 +1,24 @@
+/**
+ * Backfill the library's own classification onto `books`.
+ *
+ * The corpus was synced before `book_type`, `book_subtype`, `folder_id` and
+ * `section` existed on the `books` table, so 1,486 rows carry no
+ * classification at all and every filter built on one is inert. This walks the
+ * content API's folder tree once, reads the book records under each folder,
+ * and writes the four columns.
+ *
+ * **Read-only against the 3M-row `paragraphs` table.** It touches `books`
+ * alone, which is 1,486 rows, so it is safe to re-run and takes seconds rather
+ * than the hours a re-sync would.
+ *
+ * `section` is the one field no book record carries: it is the name of the
+ * top-level folder a book sits under, which only the tree knows. So the walk
+ * carries each folder's root down to its books rather than deriving it
+ * afterwards from `folder_id`.
+ *
+ *   bun packages/cli/scripts/backfill-book-classification.ts [--dry-run]
+ */
+
 import { Database } from 'bun:sqlite';
 
 import { SECTION_BY_ROOT_FOLDER, type CorpusSection } from '@manna/core/writings';
@@ -71,6 +92,9 @@ const get = async <A>(path: string, bearer: string): Promise<A> => {
   return response.json() as Promise<A>;
 };
 
+/** Every folder that holds books, tagged with the top-level section it sits
+ *  under. The root's own name is the section, so it is captured on the way
+ *  down rather than looked up on the way back. */
 const leaves = (
   nodes: readonly FolderNode[],
   root?: string,

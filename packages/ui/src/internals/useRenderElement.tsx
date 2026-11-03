@@ -20,9 +20,13 @@ export interface UseRenderElementComponentProps<State> {
 }
 
 interface UseRenderElementParameters<State> {
+  /** The state the `data-*` attributes, `class`, `style` and `render` read. */
   state?: State | undefined;
+  /** Refs the rendered element is passed to, besides any in `props`. */
   ref?: unknown;
+  /** The element's props: one set, or several merged left to right. */
   props?: PropsInput | ReadonlyArray<PropsInput> | undefined;
+  /** Replaces the default `data-*` attribute of a state key. */
   stateAttributesMapping?: StateAttributesMapping<State> | undefined;
 }
 
@@ -36,6 +40,7 @@ function resolveStyle<State>(value: StyleProp<State> | undefined, state: State) 
   return typeof value === 'function' ? value(state) : value;
 }
 
+/** A live props view over a computed record, its keys free to change. */
 export function propsFromAccessor(read: () => HTMLProps): HTMLProps {
   return new Proxy<HTMLProps>(
     {},
@@ -53,6 +58,7 @@ export function propsFromAccessor(read: () => HTMLProps): HTMLProps {
   );
 }
 
+/** The merged props a part's element receives (without rendering it). */
 function useRenderElementProps<State extends object>(
   componentProps: UseRenderElementComponentProps<State>,
   params: UseRenderElementParameters<State>,
@@ -77,6 +83,7 @@ function useRenderElementProps<State extends object>(
   return mergePropsN([propsFromAccessor(stateAttributes), resolved, own]);
 }
 
+/** Renders a part's element, or the user's `render` in its place. */
 export function useRenderElement<State extends object>(
   element: IntrinsicTagName | undefined,
   componentProps: UseRenderElementComponentProps<State>,

@@ -1,3 +1,14 @@
+/** `sharp`, as compiled into the CLI binary: absent on purpose.
+ *
+ *  `@huggingface/transformers` imports `sharp` for its *image* pipelines, and
+ *  sharp's loader throws at require time inside a `bun build --compile` binary
+ *  (its platform package and libvips dylib are not embeddable). The CLI's one
+ *  use of transformers is text embedding — `AutoTokenizer` + `AutoModel` over
+ *  EmbeddingGemma — which never touches an image, so the bundler resolves
+ *  `sharp` to this stub instead. Anything that *does* reach for it fails with
+ *  a named error rather than sharp's dlopen message.
+ */
+
 const unavailable = (): never => {
   throw new Error('sharp is not bundled into the compiled manna CLI (text-only build)');
 };

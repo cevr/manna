@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { Option, Result } from 'effect';
 import { readAiff } from './aiff.ts';
 
+/** An AIFF (or, given a `type`, an AIFF-C) of `channels` × `frames` samples, at 44.1 kHz. */
 const aiff = (
   options: { channels: number; bits: number; type: Option.Option<string> },
   write: (view: DataView, at: number, index: number) => void,

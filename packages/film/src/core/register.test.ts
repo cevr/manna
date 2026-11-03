@@ -4,6 +4,7 @@ import { drawPoint, drawSimilar, fitSimilarity, padInto } from './register.ts';
 
 type Similarity = Parameters<typeof drawSimilar>[3];
 
+/** A 64 × 64 picture of smooth colour waves, no two nearby pixels alike. */
 const PICTURE: Raster = (() => {
   const [w, h] = [64, 64];
   const rgba = new Uint8Array(w * h * 4);
@@ -21,6 +22,7 @@ const PICTURE: Raster = (() => {
   return { width: w, height: h, rgba };
 })();
 
+/** The farthest a view corner of a 24 × 24 view lies between two similarities, pixels. */
 const apart = (a: Similarity, b: Similarity) =>
   Math.max(
     ...[

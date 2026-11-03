@@ -7,6 +7,7 @@ import { type Recorder, applyAffine, recorder, withDom } from './fixtures/stand-
 
 const W = 320;
 const H = 180;
+/** Every scene's length: long enough that its 60 % point is well inside it. */
 const DUR = 10;
 const INK = '#000';
 
@@ -23,12 +24,15 @@ const plane: SceneSpec['draw'] = (f) =>
   multiplane(f.ctx, { x: W / 2, y: H / 2 }, W, H, [{ z: 1, draw: () => square(f) }], {
     fibre: 0,
   });
+/** No camera in its first half, a camera in its second. */
 const mixed: SceneSpec['draw'] = (f) => (f.t < f.dur / 2 ? still(f) : shot(f));
 
 const scenes = { still, shot, plane, mixed, held: still, heldShot: shot };
+/** The scenes that set their own breath: none, in a film that breathes. */
 const HELD = new Set(['held', 'heldShot']);
 const ORDER = Object.keys(scenes);
 
+/** The film, made afresh: nothing it drew before carries into it. */
 const film = (): Film =>
   withDom(() =>
     createFilm({
@@ -46,6 +50,7 @@ const film = (): Film =>
     }),
   );
 
+/** One frame of `scene`, `through` its length (0..1): what it drew and the knobs it read. */
 const frame = (into: Film, scene: string, through: number) => {
   const r: Recorder = recorder(W, H);
   const knobs: NonNullable<RenderOptions['knobs']> = [];
@@ -53,6 +58,10 @@ const frame = (into: Film, scene: string, through: number) => {
   return { r, knobs };
 };
 
+/**
+ * What is left on the frame: everything drawn since the last paper, which is
+ * opaque and covers the frame, so what a frame drew before it is gone.
+ */
 const shown = (r: Recorder) => {
   const paper = r.ops.findLastIndex(
     (op) => op._tag === 'Image' && op.alpha === 1 && op.comp === 'source-over',
@@ -66,6 +75,7 @@ const shown = (r: Recorder) => {
     );
 };
 
+/** Where the square landed: its centre and width on the frame. */
 const landed = (r: Recorder) => {
   const fills = shown(r).filter((op) => op._tag === 'Fill' && op.style === INK);
   expect(fills).toHaveLength(1);
@@ -74,6 +84,7 @@ const landed = (r: Recorder) => {
   return { x, y, w: 40 * Math.hypot(m[0], m[1]) };
 };
 
+/** One breath at 60 % of a scene: the square pushed in and slid left, from the frame's centre. */
 const BREATH = Math.sin(Math.PI * 0.6);
 const ONCE = { x: W / 2 - DRIFT.x * BREATH, y: H / 2, w: 40 * (1 + DRIFT.zoom * BREATH) };
 const FRAMED = { x: W / 2, y: H / 2, w: 40 };

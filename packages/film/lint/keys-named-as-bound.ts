@@ -5,9 +5,14 @@ import { memberName } from './nodes.ts';
 const FOLLOW =
   "name the key as bound now: hubKeys' titled or text (packages/film/src/lab/command/changes.ts)";
 
+/** A key in brackets, as a title writes one: a single key, a modifier's mark, a named key or a chord. */
 const KEY_IN_BRACKETS =
   /\((?:[⌘⇧⌥⌃←→↑↓][^()]*|(?:Esc|Space|Enter|Tab|Home|End)|(?:Ctrl|Shift|Alt)\+[^()]*|[^\s()])\)/u;
 
+/**
+ * The text an expression writes when it is a string or a template: its
+ * literal parts, a space where each value goes (a value is no key written).
+ */
 const written = (node: ESTree.Node): Option.Option<string> => {
   if (node.type === 'Literal' && Predicate.isString(node.value)) return Option.some(node.value);
   if (node.type === 'TemplateLiteral')
@@ -16,17 +21,21 @@ const written = (node: ESTree.Node): Option.Option<string> => {
   return Option.none();
 };
 
+/** Whether `node` writes a key in brackets into its text. */
 const namesAKey = (node: ESTree.Node): boolean =>
   Option.exists(written(node), (text) => KEY_IN_BRACKETS.test(text));
 
+/** A call that reads the keymap directly: `hub.keysOf(id)`. */
 const readsKeymap = (call: ESTree.CallExpression): boolean =>
   call.callee.type === 'MemberExpression' && Option.contains(memberName(call.callee), 'keysOf');
 
+/** A JSX `title` written with a key in it. */
 const titleAttr = (attr: ESTree.JSXAttribute): boolean =>
   attr.name.type === 'JSXIdentifier' &&
   attr.name.name === 'title' &&
   Option.exists(Option.fromNullishOr(attr.value), namesAKey);
 
+/** An assignment of a title written with a key in it: `button.title = 'Next (→)'`. */
 const titleSet = (assign: ESTree.AssignmentExpression): boolean =>
   assign.left.type === 'MemberExpression' &&
   Option.contains(memberName(assign.left), 'title') &&

@@ -1,18 +1,33 @@
 import { Schema } from 'effect';
 
+/** A scale of the player's sheet: the properties it sets, the tokens its steps are, and the tokens it takes whole. */
 interface Scale {
   readonly what: string;
+  /** A property's name it sets, as a pattern's source. */
   readonly property: string;
+  /** Its steps: each token whose name starts with this, at its px. */
   readonly steps: string;
+  /** The tokens its properties take whole, off its steps. */
   readonly named: ReadonlyArray<string>;
 }
 
+/** The token a gap or a margin takes whole to draw a line between two things (§3): no step, and no padding's. */
 const HAIRLINE = '--hairline';
 
+/**
+ * The transport docked on the shell's floor, its height a sum the sheet computes
+ * (`calc(var(--hit) + 2 * var(--s-2) + 1px)`): a page's padding clears it
+ * (player.css's `padding-bottom`), and nothing else takes it as a length.
+ */
 const DOCK = '--dock-h';
 
 const SIDES = '(?:-(?:top|right|bottom|left|inline|block)(?:-(?:start|end))?)?';
 
+/**
+ * The space, type and radius scales, each over every property that sets it:
+ * a side's or a logical side's padding and margin (a padding's the dock too;
+ * a margin's and a gap's the hairline), a gap, a corner's radius.
+ */
 const SCALES: ReadonlyArray<Scale> = [
   { what: 'space', property: `^padding${SIDES}$`, steps: '--s-', named: [DOCK] },
   {
@@ -31,16 +46,30 @@ const SCALES: ReadonlyArray<Scale> = [
   },
 ];
 
+/**
+ * A mock's geometry that is not spacing, named once where it lives (lab.css):
+ * the cue lanes' label column, which the strip's padding clears.
+ */
 const GEOMETRY: ReadonlyArray<string> = ['--cue-names'];
 
 const json = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
+/**
+ * A selector that reaches no element: which one (its block's place in its
+ * sheet, and its place in the block's list, the same on every page that
+ * wears the sheet), the sheet, and the lines that name it.
+ */
 export interface Unreached {
   readonly id: string;
   readonly sheet: string;
   readonly lines: ReadonlyArray<string>;
 }
 
+/**
+ * What one pointer's read of a page found: its reds, its own selectors
+ * unreached, its shared sheets' selectors unreached, and the shared sheets it
+ * wears.
+ */
 export interface Raw {
   readonly reds: ReadonlyArray<string>;
   readonly unreached: ReadonlyArray<Unreached>;
@@ -48,6 +77,15 @@ export interface Raw {
   readonly wears: ReadonlyArray<string>;
 }
 
+/**
+ * The scripts that read the page `file` is. `pass`, run once a viewport, reads
+ * it there (keeping what it finds on the page) and answers the widths the
+ * page's queries name. `raw` answers what this pointer found (`Raw`).
+ * `found(other)`, given the other pointer's `raw`, answers every finding,
+ * one line each: a sheet it does not wear, a token it writes, a length off
+ * its scale (on either pointer), and a selector of the page's own that
+ * reaches no element on either (the same selector of the same block).
+ */
 export const mockLengths = (file: string) => {
   const input = json({ file, scales: SCALES, geometry: GEOMETRY });
   return {
@@ -57,6 +95,7 @@ export const mockLengths = (file: string) => {
   };
 };
 
+/** The page's side. */
 const PAGE = `(input, step, other) => {
   const KEY = Symbol.for('film.mockLengths');
   const state = window[KEY] ?? (window[KEY] = setup());

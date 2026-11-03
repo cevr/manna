@@ -29,6 +29,7 @@ interface BuildRecord {
   file: string;
 }
 
+/** Resolve one beat's image against the beat-sheet directory and check it exists. */
 const beatRecord = (dir: string, b: typeof Beat.Type) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -51,6 +52,7 @@ const beatRecord = (dir: string, b: typeof Beat.Type) =>
     return record;
   });
 
+/** The AppleScript that builds, saves and (unless --open) closes the deck. */
 const keynoteBuildScript = (
   records: ReadonlyArray<BuildRecord>,
   outPath: string,

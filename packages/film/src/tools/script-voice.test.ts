@@ -33,6 +33,7 @@ const reading: StudioReading = {
 
 const film = 'rbf' as FilmName;
 
+/** A talk's draft, one spoken beat marked and one that says nothing. */
 const DRAFT = [
   '# By Grace',
   '',
@@ -43,6 +44,11 @@ const DRAFT = [
   '',
 ].join('\n');
 
+/**
+ * The service over memory (`files`, shared by two labs), one film read as
+ * `reading`, the series folder holding `drafts` (path under it → Markdown),
+ * the day capped at `cap`, the films listed as `names` lists them.
+ */
 const voices = (
   cap: number,
   heard: ReadonlyMap<string, string> = new Map(),
@@ -82,6 +88,7 @@ const voices = (
 const tags = (v: { readonly beats: ReadonlyArray<{ readonly take: { readonly _tag: string } }> }) =>
   v.beats.map((b) => b.take._tag);
 
+/** The film's voice once nothing of it is voicing. */
 const settledVoice = Effect.gen(function* () {
   const service = yield* ScriptVoices;
   return yield* service.voice(film).pipe(
@@ -138,6 +145,7 @@ describe('ScriptVoices', () => {
       const files = new Map<string, Uint8Array>();
       const first = voices(1000, heard, new Map(), files);
       const second = voices(1000, heard, new Map(), files);
+      /** A lab's fill run until nothing of the film is voicing, and the film's voice then. */
       const filled = (layer: typeof first.layer) =>
         Effect.gen(function* () {
           yield* Effect.forkScoped((yield* ScriptVoices).fill);

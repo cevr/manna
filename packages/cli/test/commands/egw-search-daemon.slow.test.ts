@@ -1,3 +1,14 @@
+/** The search daemon, end to end over a real unix socket.
+ *
+ *  The daemon's one claim is transparency: a query answered over the socket is
+ *  the same value the in-process service returns. So the fixture serves the
+ *  golden corpus through `runSearchDaemon`, and the assertions compare the
+ *  daemon's answers byte-for-byte (as the one wire encoding) against the same
+ *  `SearchService` asked directly — plus the lifecycle facts the client leans
+ *  on: the status handshake, `--stop`, idle retirement, and crash residue on
+ *  the socket path.
+ */
+
 import { SearchQuery, SearchResultJson, SearchService } from '@manna/core/search';
 import { goldenSearchLayer } from '@manna/core/search/testing';
 import { BunServices } from '@effect/platform-bun';
@@ -33,6 +44,8 @@ const QUERY = SearchQuery.make({
   limit: Option.some(20),
 });
 
+/** Polls the socket until the daemon answers — bounded, so a daemon that never
+ *  comes up fails the test instead of hanging it. */
 const awaitDaemon = (socketPath: string) =>
   probeSearchDaemon(socketPath).pipe(
     Effect.flatMap(

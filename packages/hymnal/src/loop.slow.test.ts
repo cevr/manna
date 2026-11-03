@@ -1,3 +1,11 @@
+/**
+ * Every hymn's committed timing plays each of its lines, but a refrain sung
+ * before any stanza (laid inside the intro); and hymn 663, whose file plays
+ * one verse for six stanzas, sings that verse once for each stanza, in its
+ * corpus file and in its playback sidecar alike. Only hymn numbers, line
+ * indexes, ticks and seconds are reported.
+ */
+
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Array as Arr, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -14,6 +22,7 @@ const pad = (n: number) => String(n).padStart(3, '0');
 const decodeHymn = Schema.decodeUnknownEffect(Schema.fromJsonString(Hymn));
 const decodePlayback = Schema.decodeUnknownEffect(Schema.fromJsonString(Playback));
 
+/** A file of the package's data folder, as text. */
 const readData = (...parts: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -21,6 +30,7 @@ const readData = (...parts: ReadonlyArray<string>) =>
     return yield* fs.readFileString(path.join(import.meta.dir, '..', 'data', ...parts));
   });
 
+/** Every hymn's corpus file, decoded, joined with its playback sidecar as the app's build joins it. */
 const playbackHymns = Effect.gen(function* () {
   const hymns = yield* Effect.forEach(Arr.range(1, 695), (n) =>
     readData('sdah-1985', `${pad(n)}.json`).pipe(Effect.flatMap(decodeHymn)),
@@ -28,6 +38,12 @@ const playbackHymns = Effect.gen(function* () {
   return readPlayback(hymns);
 });
 
+/**
+ * A hymn's timing lines the file does not play, by index: `excused` when the
+ * line is a refrain sung before any stanza that ends inside the intro,
+ * `faults` otherwise (and line -1 when the timing is missing or does not
+ * have one entry per sung line).
+ */
 const unplayedOf = (hymn: Hymn) => {
   const lines = sung(hymn);
   const firstStanza = lines.findIndex((line) => line.verse !== 'refrain');
@@ -53,9 +69,11 @@ const unplayedOf = (hymn: Hymn) => {
   );
 };
 
+/** 663's pass, in `PER_BEAT` units: 9216 ticks of its 384-tick-a-beat file. */
 const PASS = 2304;
 const PASS_SECONDS = 15.945102;
 
+/** What a 663 timing breaks of six passes: each stanza's first line at its pass's start, every line played. */
 const passProblems = (timing: Timing, firsts: ReadonlyArray<number>): ReadonlyArray<string> => {
   const seconds = secondsAt(timing);
   const starts = firsts.map((i) =>

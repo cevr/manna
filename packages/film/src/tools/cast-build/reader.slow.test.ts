@@ -6,6 +6,7 @@ import { trainStage } from './stages.ts';
 
 const live = CastReader.layer.pipe(Layer.provideMerge(BunServices.layer));
 
+/** The train config's backbone and input, as its JSON names them. */
 const decodeTrainConfig = Schema.decodeUnknownSync(
   Schema.fromJsonString(
     Schema.Struct({
@@ -15,12 +16,21 @@ const decodeTrainConfig = Schema.decodeUnknownSync(
   ),
 );
 
+/** A file of this folder's, read off disk. */
 const fileHere = (name: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     return yield* fs.readFileString(new URL(name, import.meta.url).pathname);
   });
 
+/**
+ * Each source the scan reads and the first names it imports, sorted:
+ * every import form, wherever a statement starts; strings and comments
+ * that read as imports; strings and formatted strings that a hand
+ * tokenizer lost its place in (a docstring holding an open `from … (`, a
+ * comment ending in a backslash, a quote in a format spec, a backslash
+ * before a formatted string's `{`).
+ */
 const FORMS: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = [
   ['import a, b as c', ['a', 'b']],
   ['import x as y', ['x']],
@@ -65,6 +75,7 @@ const FORMS: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = [
   ['a = rf\'\\{"""\'"""}\'\nimport helper\nb = 1  # """', ['helper']],
 ];
 
+/** Each source the scan refuses, the folders it is scanned with, and the start of its reason. */
 const FAULTS: ReadonlyArray<readonly [string, ReadonlyArray<string>, string]> = [
   ['import model\nx = 1 import helper\n', [], 'line 2: CPython cannot parse it'],
   ['import model\nfrom helper import a,\n', [], 'line 2: CPython cannot parse it'],
@@ -100,6 +111,7 @@ const FAULTS: ReadonlyArray<readonly [string, ReadonlyArray<string>, string]> = 
   ['import model\nimport tests.helpers\n', ['tests'], 'line 2: it imports tests, a folder'],
 ];
 
+/** `py` scanned by the real scan, with `folders`. */
 const scanned = (py: ReadonlyMap<string, string>, folders: ReadonlyArray<string> = []) =>
   scanOf(py, new Set(folders)).pipe(Effect.provide(BunServices.layer));
 

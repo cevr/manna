@@ -6,17 +6,20 @@ import { type Element, argb, el, num } from './rml.ts';
 
 export type Pt = readonly [number, number];
 
+/** 0 below `e0`, 1 past `e1`, smooth between. */
 export const smooth = (e0: number, e1: number, x: number) => {
   const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
   return t * t * (3 - 2 * t);
 };
 
+/** Points round an ellipse, clockwise on screen (y down), from its right. */
 export const ellipse = (cx: number, cy: number, rx: number, ry: number, n: number): Pt[] =>
   Array.from({ length: n }, (_, i) => {
     const a = (2 * Math.PI * i) / n;
     return [cx + rx * Math.cos(a), cy + ry * Math.sin(a)] as const;
   });
 
+/** The box round `pts`. */
 export const boxOf = (pts: ReadonlyArray<Pt>): Box => ({
   x0: Math.min(...pts.map(([x]) => x)),
   y0: Math.min(...pts.map(([, y]) => y)),
@@ -24,6 +27,7 @@ export const boxOf = (pts: ReadonlyArray<Pt>): Box => ({
   y1: Math.max(...pts.map(([, y]) => y)),
 });
 
+/** A box in a piece's own units. */
 interface Box {
   readonly x0: number;
   readonly y0: number;
@@ -31,6 +35,12 @@ interface Box {
   readonly y1: number;
 }
 
+/**
+ * Where the crease cuts `box`: a gradient's axis across the box along the
+ * light, and the share of the way along it the paper turns. The line it
+ * draws is square to the axis, so it runs from the box's upper right toward
+ * its lower left.
+ */
 export const creaseOf = (box: Box, crease: Crease = {}) => {
   const toward = crease.toward ?? LIGHT.toward;
   const dx = Math.cos(toward);
@@ -45,8 +55,10 @@ export const creaseOf = (box: Box, crease: Crease = {}) => {
   };
 };
 
+/** A colour as a paint. */
 const solid = (hex: string, alpha = 1) => el('SolidColor', { colorValue: argb(hex, alpha) });
 
+/** The paper over `box`, `color` on the light's side of the crease and `shade` past it, cut sharp unless `crease.soft`. */
 const creased = (color: string, shade: string, box: Box, crease: Crease = {}): Element => {
   const { start, end, at } = creaseOf(box, crease);
   const soft = crease.soft ?? 0;
@@ -59,49 +71,121 @@ const creased = (color: string, shade: string, box: Box, crease: Crease = {}): E
   ]);
 };
 
+/**
+ * A piece of the figure a cast shadow falls on: its key (`piece`) and its
+ * paper's shade, which the shadow lays there.
+ */
 interface Surface {
   readonly key: string;
   readonly shade: string;
 }
 
+/** A figure piece's paint. */
 export interface PieceLook {
   readonly color: string;
+  /** The paper past the crease; none for a piece too small or thin to crease (a stain, a band). */
   readonly shade?: string;
+  /** Its ramp's light: the light core along its cut edge (outline `edge` or `both`), its one highlight. */
   readonly light: string;
+  /** What its ink carries (`INK`): a silhouette's line (`outer`, the default), a small silhouette piece's (`small`), trim's, or none. */
   readonly ink?: keyof typeof INK | 'none';
+  /** The cutout's lift off the sheet, 0..1: a small cast shadow to the light's far side. */
   readonly shadow?: number;
+  /**
+   * The shade of what the cast shadow falls on past the figure (its ramp's,
+   * `ramps`): the parchment sheet's unless said.
+   */
   readonly cast?: string;
+  /**
+   * `host`: what lies past the figure under this piece is the host's scenery
+   * (the judge's hand over the bench), so the host lays its cast, in the
+   * shade of each surface there, and the rig lays none.
+   */
   readonly ground?: 'host';
+  /**
+   * The figure's own pieces this one's cast shadow can fall on, and its
+   * backmost piece. Given, the shadow is laid once per surface, in that
+   * surface's shade, clipped to it and drawn just over it, and once in
+   * `cast` behind the whole figure, where only the sheet shows it: a cast
+   * shadow is the shade of the surface it falls on (CRAFT 12).
+   */
   readonly over?: { readonly surfaces: ReadonlyArray<Surface>; readonly behind: string };
+  /** Where its crease falls and how softly, when not the look's (`Crease`). */
   readonly crease?: Crease;
+  /**
+   * The light edge just inside its outline on the light's side, units wide,
+   * in `light`, fading out toward the crease (`rimOf`); given, it takes the
+   * place of the light core on the cut.
+   */
   readonly rim?: number;
+  /** Colour laid inside the paper, clipped to it (`Tone`): a lock of hair, the shade under a hairline. */
   readonly tones?: ReadonlyArray<Tone>;
 }
 
+/**
+ * Colour laid inside a piece and clipped to its paper: an outline of its
+ * own in the piece's units, in `color` at `alpha`; `soft`, it fades from
+ * its middle to nothing at its edge (a radial ramp), so it blends into the
+ * paper with no edge of its own.
+ */
 interface Tone {
   readonly pts: ReadonlyArray<Pt>;
   readonly color: string;
   readonly alpha?: number;
   readonly soft?: boolean;
+  /** Its points a chain of cubics (`cubicPath`), not points the smooth path runs through. */
   readonly cubic?: true;
 }
 
+/** The grey paper of a person, its far side and its light: the figure ramp. */
 const FIGURE: PieceLook = {
   color: R.figure.base,
   shade: R.figure.shade,
   light: R.figure.light,
 };
 
+/**
+ * How strongly a cast shadow lays its surface's shade per unit of lift: a
+ * piece lifted 0.35 (the default) lays it at about half, which darkens the
+ * parchment as much as the old 30 % warm black did, in the shade's own hue.
+ */
 const CAST = 1.4;
 
+/** How opaque a cast shadow lifted `lift` lays its surface's shade (`CAST`). */
 const castAlpha = (lift: number) => Math.min(1, CAST * lift);
 
+/**
+ * The ink's weights, in units at the court's scale, by what a line carries,
+ * as a line centred on the cut edge (outline `line`): a figure's
+ * silhouette (`outer`) is the heaviest line in the frame, so the eye finds
+ * the people first; its small pieces (`small`: a hand, a leg) and its trim
+ * (`trim`: a sash, a band, a tail) lighter; the face's marks are the kit's
+ * own and lighter still (`KIT.brow`, `KIT.mouthLine`).
+ */
 const INK = { outer: 5, small: 3.5, trim: 2.5 } as const;
 
+/**
+ * What a silhouette's line shows outside its paper under the thick outline
+ * (outline `thick` or `both`), units: RimWorld's figures-first line
+ * (`.claude/skills/film/reference/rimworld-study.md`), about 3 % of the accused's
+ * height on the head and body, a little less on a hand or a leg.
+ */
 const OUTSIDE = { outer: 6, small: 5 } as const;
 
+/**
+ * The light core's half-width on a cut edge (outline `edge` or `both`),
+ * units: about 1.5 px a side at the court's camera. Its colour is the
+ * paper's ramp light (`PieceLook.light`): the edge of a cut catching the
+ * room, leaning to the key's warm hue.
+ */
 const CORE = 1;
 
+/**
+ * The widths of a piece's edge strokes under `d`'s outline, units: the ink
+ * laid outside the paper (a stroke under it, twice as wide as what shows,
+ * the paper covering its inner half), the ink centred on the cut, and the
+ * light core straddling the cut; 0 for a stroke the outline does not lay.
+ */
 const edgeWidths = (d: Direction, weight: keyof typeof INK) => {
   const heavy = d.weight ?? 1;
   if (d.outline === 'line' || (d.outline === 'thick' && weight === 'trim'))
@@ -112,17 +196,29 @@ const edgeWidths = (d: Direction, weight: keyof typeof INK) => {
   return { under: showing > 0 ? 2 * (showing + core) : 0, centred: 0, core: 2 * core };
 };
 
+/** The ink a silhouette lays under its parts' papers, units wide (what shows outside, twice). */
 const silhouetteInk = (d: Direction, weight: keyof typeof INK) => {
   const w = edgeWidths(d, weight);
   return Math.max(w.under - w.core, w.centred);
 };
 
+/**
+ * How far a piece's edge under `d` covers what lies just outside its cut,
+ * units: half its widest stroke (ink or light core), 0 for a piece with none.
+ */
 const inkCover = (d: Direction, weight: keyof typeof INK | 'none') => {
   if (weight === 'none') return 0;
   const w = edgeWidths(d, weight);
   return Math.max(w.under, w.centred, w.core) / 2;
 };
 
+/**
+ * A piece's edge under its figure's outline and in its ink, as the strokes
+ * under its paper and over it (`edgeWidths`); its light core in `light`.
+ * Each ink stroke binds its width to the figure's `ink` (`Figure.inkBind`)
+ * above the width the paper and the core (`cored`: the piece lays one) cover,
+ * so the ink that shows past them is `ink` times its width.
+ */
 const edgeOf = (fig: Figure, weight: keyof typeof INK, light: string, cored: boolean) => {
   const d = fig.direction;
   const ink = (thickness: number, floor: number) =>
@@ -146,14 +242,35 @@ const edgeOf = (fig: Figure, weight: keyof typeof INK, light: string, cored: boo
   };
 };
 
+/**
+ * A cast shadow per unit of a piece's lift, units: how far it falls from the
+ * piece along the light (`x`, `y`, to the light's far side) and its
+ * feather's strength.
+ */
 const LIFT = { x: 3, y: 5, feather: 6 } as const;
 
+/**
+ * How far the Rive Renderer paints a feather past its shape, per unit of
+ * its strength (`paint_outset.hpp`: a feather's outset is 1.5 times it), and
+ * the antialiasing pixel past that, units.
+ */
 const FEATHER_REACH = 1.5;
 const AA = 1;
 
+/**
+ * Whether a cast lifted `lift` shows past an edge that covers `cover`
+ * (`inkCover`): its offset along the light, its feather's reach and a pixel
+ * of antialiasing past the ink. A cast the ink hides is not laid: no shadow,
+ * no casts on the figure's surfaces, no boil echo (R3-M2).
+ */
 const castShows = (lift: number, cover: number) =>
   lift > 0 && Math.hypot(LIFT.x, LIFT.y) * lift + FEATHER_REACH * LIFT.feather * lift + AA > cover;
 
+/**
+ * A cast shadow in `shade`, lifted `lift`: a feathered copy of its shape's
+ * outline toward the light's far side, as a fill (`clockwise`, the one rule
+ * the Rive Renderer feathers without pixel local storage).
+ */
 const shadowFill = (shade: string, lift: number) =>
   el('Fill', { fillRule: 'clockwise', name: 'Shadow' }, [
     solid(shade, castAlpha(lift)),
@@ -165,11 +282,20 @@ const shadowFill = (shade: string, lift: number) =>
     }),
   ]);
 
+/** A piece's lift off the sheet. */
 const liftOf = (look: PieceLook) => look.shadow ?? 0.35;
 
+/** Whether `look`'s cast shows past its own edge under `d` (`castShows`). */
 const castOf = (d: Direction, look: PieceLook) =>
   castShows(liftOf(look), inkCover(d, look.ink ?? 'outer'));
 
+/**
+ * The paints of a piece over `box` under `d`, bottom to top as Rive stacks a
+ * shape's paints (last on top). A part of a silhouette (`inside`) lays only
+ * its paper: its silhouette lays the one shadow and the one ink line round
+ * all its parts (`silhouette`). A piece with a rim (`look.rim`) lays no light
+ * core: its rim is the light on its edge (`rimOf`).
+ */
 const paints = (fig: Figure, look: PieceLook, box: Box, inside = false): Element[] => {
   const d = fig.direction;
   const paper = el('Fill', { name: 'Paper' }, [
@@ -192,27 +318,53 @@ const paints = (fig: Figure, look: PieceLook, box: Box, inside = false): Element
   return out;
 };
 
+/** One timeline's keys: object name → property → keys. */
 type K = readonly [number, number, ('io' | 'out' | 'in' | 'linear' | 'hold')?];
 type Tracks = Readonly<Record<string, Readonly<Record<string, ReadonlyArray<K>>>>>;
 
+/** A figure's numbers, by name, at rest. */
 type Numbers = Readonly<Record<string, number>>;
 
+/**
+ * One figure (an artboard) of the project: the art direction it is drawn
+ * in; its names, each made an id once and namespaced to the figure so two
+ * rigs never share one; the outline vertices its boil keys; and its view
+ * model, whose numbers its parts bind.
+ */
 export interface Figure {
   readonly name: string;
   readonly direction: Direction;
+  /** Where its artboard sits on the editor's stage, left to right, so the file opens laid out. */
   readonly stage: number;
   readonly idOf: (name: string) => string;
+  /** A bind of view-model number `knob` into the property `key` of the element it sits in. */
   readonly bind: (knob: string, key: number) => Element;
+  /**
+   * The bind of an ink stroke's width to the view model's `ink` (`INK_NUMBER`),
+   * none when its direction bakes the ink (`Direction.baked`): `ink` 1 draws
+   * it `full` units wide, and each step of `ink` moves it by `full - floor`,
+   * where `floor` is the width its paper and its light core cover.
+   */
   readonly inkBind: (full: number, floor: number) => ReadonlyArray<Element>;
+  /** The converters its ink binds through (`inkBind`), one per width, for the file's root. */
   readonly converters: () => ReadonlyArray<Element>;
+  /** Key each of `pts` (the vertices `key.i`) to crawl within `amp` units of where it is cut, on the boil's ticks. */
   readonly boil: (key: string, pts: ReadonlyArray<Pt>, amp: number) => void;
+  /** Key each of `pts` (the vertices `key.i`) to crawl within `amp` units as one: the whole outline moved, its shape kept (a curl about its centre). */
   readonly boilWhole: (key: string, pts: ReadonlyArray<Pt>, amp: number) => void;
+  /**
+   * Key the `n` vertices `key.i` to crawl exactly as `like.i` do (a cast
+   * shadow following its piece), each `shift[i]` units off it when given (a
+   * rim inset into its piece).
+   */
   readonly echo: (key: string, like: string, n: number, shift?: ReadonlyArray<Pt>) => void;
   readonly boilTracks: () => Tracks;
 }
 
+/** A stroke's `thickness`, as a bind's property key (`rive schema Stroke`). */
 const THICKNESS = 47;
 
+/** A figure of the project in `direction`, its ids from `next` (one counter for the whole file). */
 export const figure = (
   next: () => string,
   name: string,
@@ -301,14 +453,23 @@ export const figure = (
   };
 };
 
+/**
+ * The paper's crawl: a new outline on each of the film's boil ticks (twelve a
+ * second, the engine's `BOIL_FPS`), each point wandering slowly round where
+ * it was cut, never jumping: a figure's line crawls, it does not tick
+ * (DIRECTION, "Boil"). The loop is four seconds, long enough not to read as
+ * a loop.
+ */
 const BOIL = { fps: 12, seconds: 4, ticks: 48 } as const;
 
+/** Its harmonics: cycles a loop and share of the wander, so a point moves at most about 0.21 `amp` a tick. */
 const CRAWL = [
   [1, 0.58],
   [2, 0.25],
   [3, 0.17],
 ] as const;
 
+/** One axis of a point's crawl, within `amp` units: a sum of slow loops at random phases. */
 const crawl = (r: () => number, amp: number) => {
   const phases = CRAWL.map(() => r() * 2 * Math.PI);
   return (tick: number) =>
@@ -319,8 +480,10 @@ const crawl = (r: () => number, amp: number) => {
     );
 };
 
+/** Where the boil timeline stands on the film's boil tick `tick` (`f.boil`). */
 export const boilTime = (tick: number) => (tick % BOIL.ticks) / BOIL.fps + 1e-4;
 
+/** The vertex `key.i` at `p`, its handles along the line from `prev` to `next` (`tension` 0 for a corner). */
 const vertex = (fig: Figure, name: string, p: Pt, around: readonly [Pt, Pt], tension: number) => {
   const dx = around[1][0] - around[0][0];
   const dy = around[1][1] - around[0][1];
@@ -334,6 +497,10 @@ const vertex = (fig: Figure, name: string, p: Pt, around: readonly [Pt, Pt], ten
   });
 };
 
+/**
+ * A smooth path through `pts` (Catmull-Rom as mirrored cubics), each vertex
+ * named `key.i` so the boil keys it.
+ */
 const smoothPath = (fig: Figure, key: string, pts: ReadonlyArray<Pt>, closed = true): Element => {
   const n = pts.length;
   const vertices = pts.map((p, i) => {
@@ -345,12 +512,19 @@ const smoothPath = (fig: Figure, key: string, pts: ReadonlyArray<Pt>, closed = t
   return el('PointsPath', { isClosed: closed, isClockwise: true, name: 'Path' }, vertices);
 };
 
+/** A handle from `from` to `to`, as a detached vertex writes it: its angle and its length. */
 const handle = (from: Pt, to: Pt) => {
   const [dx, dy] = [to[0] - from[0], to[1] - from[1]];
   const distance = Math.hypot(dx, dy);
   return { rotation: distance === 0 ? 0 : Math.atan2(dy, dx), distance };
 };
 
+/**
+ * A closed path along a chain of cubics (`core/fit.ts`: each anchor, its out
+ * handle, the next anchor's in handle, and so on round): each anchor a
+ * detached vertex named `key.j`, so the boil keys it and its handles ride
+ * with it, and each handle its own way, so a corner stays a corner.
+ */
 const cubicPath = (fig: Figure, key: string, chain: ReadonlyArray<Pt>): Element => {
   const n = Math.floor(chain.length / 3);
   const vertices = Array.from({ length: n }, (_, j) => {
@@ -372,12 +546,21 @@ const cubicPath = (fig: Figure, key: string, chain: ReadonlyArray<Pt>): Element 
   return el('PointsPath', { isClosed: true, isClockwise: true, name: 'Path' }, vertices);
 };
 
+/** A closed path through `pts`: a chain of cubics' (`cubicPath`) when `cubic`, else the smooth path through them. */
 const pathOf = (fig: Figure, key: string, pts: ReadonlyArray<Pt>, cubic?: true) =>
   cubic === true ? cubicPath(fig, key, pts) : smoothPath(fig, key, pts);
 
+/** The vertices a path through `pts` has, as the boil keys them: a chain's anchors, or every point. */
 const vertexPts = (pts: ReadonlyArray<Pt>, cubic?: true): ReadonlyArray<Pt> =>
   cubic === true ? pts.filter((_, i) => i % 3 === 0) : pts;
 
+/**
+ * A piece of the figure: a closed smooth outline through `pts`, painted
+ * `look` with its crease across its own box, and its outline on the boil
+ * (`boil` units; 0 holds it still). A piece that lies over others
+ * of its figure (`look.over`) comes as a node: the piece, then its cast
+ * shadows (`casts`), when they show past its edge (`castShows`).
+ */
 export const piece = (
   fig: Figure,
   key: string,
@@ -386,6 +569,11 @@ export const piece = (
   opts: { readonly boil?: number; readonly cubic?: true } = {},
 ): Element => paperOf(fig, { key, pts, look, ...opts }, false);
 
+/**
+ * A piece's paper and what lies on it, front first: its rim (`rimOf`), its
+ * tones (`toneOf`), the paper, then its casts over its figure (`casts`). A
+ * part of a silhouette (`inside`) lays no ink, no shadow and no casts.
+ */
 const paperOf = (fig: Figure, part: Part, inside: boolean): Element => {
   const { key, pts, look } = part;
   const boil = part.boil ?? 0.9;
@@ -411,12 +599,18 @@ const paperOf = (fig: Figure, part: Part, inside: boolean): Element => {
   ]);
 };
 
+/** Twice the signed area of `pts` (positive clockwise, y down). */
 const turning = (pts: ReadonlyArray<Pt>) =>
   pts.reduce((sum, p, i) => {
     const q = pts[(i + 1) % pts.length] ?? p;
     return sum + p[0] * q[1] - q[0] * p[1];
   }, 0);
 
+/**
+ * `pts` moved `by` units inward, each along its normal (square to the line
+ * from its neighbour before to its neighbour after): an outline inset into
+ * its own paper. Pure.
+ */
 const inset = (pts: ReadonlyArray<Pt>, by: number): Pt[] => {
   const n = pts.length;
   const side = turning(pts) > 0 ? 1 : -1;
@@ -430,6 +624,11 @@ const inset = (pts: ReadonlyArray<Pt>, by: number): Pt[] => {
   });
 };
 
+/**
+ * A chain of cubics (`cubicPath`) moved `by` units inward: each anchor and
+ * its two handles together, along the anchor's normal as `inset` finds it
+ * among the anchors, so its curve keeps its shape.
+ */
 const insetChain = (chain: ReadonlyArray<Pt>, by: number): Pt[] => {
   const anchors = chain.filter((_, i) => i % 3 === 0);
   const moved = inset(anchors, by);
@@ -441,8 +640,15 @@ const insetChain = (chain: ReadonlyArray<Pt>, by: number): Pt[] => {
   });
 };
 
+/** How far toward the crease a rim keeps its whole light before it fades, a share of the way. */
 const RIM_HOLD = 0.6;
 
+/**
+ * A piece's rim: the light just inside its outline, `width` units, in its
+ * paper's `light`, full on the light's side (`RIM_HOLD` of the way) and gone by its crease, so the
+ * edge facing the light catches it and the far edge does not. A stroke on
+ * the outline inset by half its width, crawling with the piece.
+ */
 const rimOf = (fig: Figure, part: Part, width: number, box: Box, boils: boolean): Element => {
   const name = `${part.key}Rim`;
   const pts = part.cubic === true ? insetChain(part.pts, width / 2) : inset(part.pts, width / 2);
@@ -469,6 +675,12 @@ const rimOf = (fig: Figure, part: Part, width: number, box: Box, boils: boolean)
   ]);
 };
 
+/**
+ * The lit side of a piece that turns in a crescent (`Crease.crescent`): its
+ * outline moved `share` of its half-size back toward the light, in its
+ * colour, clipped to its paper and crawling with it, so its shade shows only
+ * as the crescent the move uncovers on the far side.
+ */
 const litOf = (fig: Figure, part: Part, share: number, box: Box, boils: boolean): Element => {
   const name = `${part.key}Lit`;
   const toward = part.look.crease?.toward ?? LIGHT.toward;
@@ -492,6 +704,7 @@ const litOf = (fig: Figure, part: Part, share: number, box: Box, boils: boolean)
   ]);
 };
 
+/** The tone `i` of the piece `key`, clipped to its paper (`Tone`). */
 const toneOf = (fig: Figure, key: string, tone: Tone, i: number): Element => {
   const name = `${key}Tone${i}`;
   const box = boxOf(tone.pts);
@@ -516,22 +729,36 @@ const toneOf = (fig: Figure, key: string, tone: Tone, i: number): Element => {
   ]);
 };
 
+/** One part of a silhouette, or a piece: its key, its outline, its paint and its boil. */
 export interface Part {
   readonly key: string;
   readonly pts: ReadonlyArray<Pt>;
   readonly look: PieceLook;
   readonly boil?: number;
+  /** Its points a chain of cubics (`cubicPath`), not points the smooth path runs through. */
   readonly cubic?: true;
+  /** How it crawls on the boil: each vertex on its own (unless given), or `whole`, its shape kept (`Figure.boilWhole`). */
   readonly crawl?: 'whole';
+  /** The joints it turns on, outermost first, each about its point by its number: its points are where it is traced, so each joint turns it about a point in the same frame. */
   readonly frames?: ReadonlyArray<Frame>;
 }
 
+/** A joint a part turns on: about `at`, units in the part's frame, by the view model's number `knob` (radians), its node named `name`. */
 interface Frame {
   readonly at: Pt;
   readonly knob: string;
   readonly name: string;
 }
 
+/**
+ * `part`'s `inner` in its joints (`frames`, outermost first): a node at
+ * each joint's point turned by its number, the point taken off again inside
+ * it, so a part traced in the figure's frame turns about each joint in turn.
+ * A paper and its ink are each made in their own nodes (`role`), bound to the
+ * same numbers, so the paper and its line turn as one; each node is named for
+ * its part, so two parts on one joint (a forearm and its upper sleeve, both
+ * on the shoulder) each have their own.
+ */
 const framed = (fig: Figure, part: Part, role: string, inner: Element): Element =>
   (part.frames ?? []).reduceRight<Element>((held, f) => {
     const name = `${part.key}${f.name}${role}`;
@@ -543,6 +770,26 @@ const framed = (fig: Figure, part: Part, role: string, inner: Element): Element 
 
 const isPart = (layer: Part | Element): layer is Part => 'pts' in layer;
 
+/**
+ * One cut-out made of several papers: a head with its hair and its ear, as
+ * the concept draws it, with one ink line round the outside of the whole and
+ * none where its papers meet. `layers` are its parts and any other element
+ * laid among them (the face kit), front first. Each part lays its paper, its
+ * rim and its tones, unstroked; behind them all one shape holds every
+ * part's outline, crawling with it, and lays the ink under every paper and
+ * the one cast shadow, so the line shows only where no paper covers it: round
+ * the silhouette. A light rim inside the line is the backmost part's alone
+ * (the head), so it runs only where nothing lies over that part's edge,
+ * round the silhouette: a part laid over it (an ear, hair, a beard) is
+ * composed of a paper with no rim (`unrimmed`, InnerRim), for its rim would
+ * draw a light border inside the outline. A part that turns on joints
+ * (`frames`, an arm bent at its elbow) lays its paper and its outline in its
+ * joints' nodes: a path finds the shape it draws in through every node above
+ * it, so the one line still runs round the whole however the joints turn. A
+ * line laid `behind` a drawable is drawn just behind it, wherever it stands
+ * in the rig (a head's line behind its garment, so the garment's neck covers
+ * it at the chin). A rig declares the parts and gets one outline.
+ */
 export const silhouette = (
   fig: Figure,
   key: string,
@@ -582,6 +829,7 @@ export const silhouette = (
   return el('Node', { name: key, id: fig.idOf(key) }, [...drawn, ink]);
 };
 
+/** The rule that draws the drawable `name` just behind the drawable `target`. */
 const behindOf = (fig: Figure, name: string, target: string): Element =>
   el(
     'DrawRules',
@@ -596,6 +844,14 @@ const behindOf = (fig: Figure, name: string, target: string): Element =>
     ],
   );
 
+/**
+ * The cast shadows of the piece `key` over the surfaces of its figure: one
+ * per surface, in its shade, clipped to it and drawn just over it, so a piece
+ * between them covers it as it covers that surface; and one in the ground's
+ * shade (`look.cast`) drawn behind the figure's backmost piece, so only the
+ * sheet past the figure shows it. Each is the piece's outline again,
+ * crawling with it.
+ */
 const casts = (
   fig: Figure,
   part: Part,
@@ -639,13 +895,26 @@ const casts = (
   ];
 };
 
+/** The outline points of a hand of radius `r`: a circle, twelve points round so it boils like the rest of the paper. */
 const handOutline = (r: number): Pt[] => ellipse(0, 0, r, r, 12);
 
+/** A hand's lift off the sheet: a little less than a body piece's. */
 const HAND_LIFT = 0.3;
 
+/**
+ * The hand: a plain circle of paper of radius `r` at the origin, creased like
+ * every piece. No thumb, no fingers: a grip or a point reads from where the
+ * circle sits and how it travels.
+ */
 export const hand = (fig: Figure, key: string, r: number, look: PieceLook = FIGURE): Element =>
   piece(fig, key, handOutline(r), { ink: 'small', shadow: HAND_LIFT, ...look }, { boil: 0.6 });
 
+/**
+ * Where a hand is `reach` of the way from `rest` to `to`, travelling round
+ * `shoulder`: its angle and its distance about the shoulder each eased
+ * between the two, so the hand swings on an arc bowed away from the body
+ * rather than sliding on a line. Pure.
+ */
 export const reachAbout = (shoulder: Pt, rest: Pt, to: Pt, reach: number): Pt => {
   const k = Math.max(0, Math.min(1, reach));
   const a0 = Math.atan2(rest[1] - shoulder[1], rest[0] - shoulder[0]);
@@ -659,25 +928,44 @@ export const reachAbout = (shoulder: Pt, rest: Pt, to: Pt, reach: number): Pt =>
   return [shoulder[0] + Math.cos(a) * r, shoulder[1] + Math.sin(a) * r];
 };
 
+/**
+ * The face's view-model numbers and what each moves, at rest. The kit is
+ * drawn at the accused's size; a bigger head scales the whole kit, so every
+ * number means the same on every face.
+ */
 export const FACE = {
+  /** Where the eyes look, in the figure's units from its origin. */
   gazeX: 0,
   gazeY: 0,
+  /** How far a head turns after the gaze, 0..1: kept in the view model, though no part the kit draws binds it. */
   follow: 0,
+  /** The eyes' height (1 at rest, 0 shut, past 1 wide open) and width. */
   eyes: 1,
   eyeW: 1,
+  /** The brows' rise, units, negative up. */
   browY: 0,
+  /** The brows' turn, radians: past 0 their inner ends rise (worry, hope); below, they knit. */
   browTilt: 0,
+  /** The mouth line's middle, units below its corners: past 0 a smile, below 0 turned down. */
   mouth: 0,
+  /** The mouth line's opacity: 0 where the open mouth takes its place. */
   mouthLine: 1,
+  /** The open mouth, an "oh", 0 closed to 1 open. */
   mouthOpen: 0,
 } as const;
 export type FaceKnob = keyof typeof FACE;
 
+/** The face's parts, in the kit's units about the face's centre. */
 const KIT: FaceShape = {
   eyes: [-12, 13],
   eyeY: -7,
   eye: [6.8, 8.8],
+  /** How far an eye may leave its socket after the gaze. */
   roam: 3,
+  /**
+   * How far the features slide across the head after the gaze, and how hard
+   * the gaze pulls them: a flat face turns by its features, not its outline.
+   */
   turn: 4,
   turnPull: 0.05,
   brows: [-13, 13],
@@ -689,6 +977,13 @@ const KIT: FaceShape = {
   mouthLine: 3,
 };
 
+/**
+ * Where and how big the face's marks are, in the kit's units about the
+ * face's centre: the eyes' x, their height (`eyeY`) and size (width,
+ * height), how far an eye roams and the features turn; the brows' x, height,
+ * half-length and stroke; the mouth's place, half-width and stroke. A figure
+ * drawn to its own sheet gives the parts it draws otherwise (`faceKit`).
+ */
 interface FaceShape {
   readonly eyes: readonly [number, number];
   readonly eyeY: number;
@@ -705,8 +1000,10 @@ interface FaceShape {
   readonly mouthLine: number;
 }
 
+/** The kit's marks with `shape`'s in their place: where a figure's sheet draws each (`FaceShape`). */
 export const kitMarks = (shape: Partial<FaceShape> = {}): FaceShape => ({ ...KIT, ...shape });
 
+/** The view model's property keys the kit binds (`rive schema`). */
 const KEY = {
   x: 13,
   y: 14,
@@ -717,6 +1014,7 @@ const KEY = {
   vertexY: 25,
 } as const;
 
+/** One brow: a short arched stroke turned by `browTilt`; the left one mirrored, so both inner ends rise together. */
 const brow = (fig: Figure, k: FaceShape, side: 'L' | 'R', x: number) =>
   el('Node', { x, y: k.browY, scaleX: side === 'L' ? -1 : 1, name: `brow${side}Side` }, [
     el('Shape', { name: `brow${side}`, id: fig.idOf(`brow${side}`) }, [
@@ -738,9 +1036,11 @@ const brow = (fig: Figure, k: FaceShape, side: 'L' | 'R', x: number) =>
     ]),
   ]);
 
+/** An ellipse `w` × `h` about its shape's origin. */
 const ellipsePath = (w: number, h: number) =>
   el('Ellipse', { width: w, height: h, originX: 0.5, originY: 0.5, name: 'Path' });
 
+/** One eye: pulled toward the gaze, held inside its socket, its height and width the view model's. */
 const eye = (fig: Figure, k: FaceShape, side: 'L' | 'R', x: number, scale: number) =>
   el('Shape', { x, y: k.eyeY, name: `eye${side}`, id: fig.idOf(`eye${side}`) }, [
     ellipsePath(k.eye[0], k.eye[1]),
@@ -756,6 +1056,7 @@ const eye = (fig: Figure, k: FaceShape, side: 'L' | 'R', x: number, scale: numbe
     fig.bind('eyeW', KEY.scaleX),
   ]);
 
+/** The mouth: a line whose middle bends (smile, frown), as wide as `mouthW` says where the face opts into it, and an "oh" that opens over it. */
 const mouth = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKnob>) =>
   el('Node', { x: k.mouth[0], y: k.mouth[1], name: 'mouth', id: fig.idOf('mouth') }, [
     el('Shape', { scaleX: 0, scaleY: 0, name: 'mouthOh', id: fig.idOf('mouthOh') }, [
@@ -783,13 +1084,40 @@ const mouth = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKnob>) =
     ]),
   ]);
 
+/**
+ * What a face may do past the kit's own, each a figure opts into
+ * (`KitA.extra`), each moved by a number of its own that rests where the
+ * kit is, so a figure that opts into none prints as before. Its marks, each
+ * shown by its number (0 hides it): `wince`, eyes squeezed shut as `>` `<`
+ * and a wavering mouth; `glad`, eyes shut in a smile, two arches, and a wide
+ * smile. An expression that shows one sets the kit's eyes and its mouth line
+ * to 0. Its slides, for a sheet that draws a face's marks elsewhere on the
+ * head than the kit lays them: `marksY`, every mark and its rest together,
+ * kit units down the face (negative up), as a sheet draws a nod by the marks
+ * alone inside a head that holds still; `mouthY`, the kit's mouth alone, kit
+ * units down; `mouthW`, the kit's mouth line's width, 1 the kit's.
+ */
 export const EXTRA_FACE = { wince: 0, glad: 0, marksY: 0, mouthY: 0, mouthW: 1 } as const;
 
+/**
+ * The glad smile, each a share of the kit's mouth's half-width: how far
+ * each corner lies from its middle, how far the corners rise and how far its
+ * middle dips. A glad face's sheet draws its smile near twice the width of
+ * the kit's line at rest (lead-feast heads-6: 53 px against 30).
+ */
 const GLAD_MOUTH = { half: 1.75, lift: 0.12, dip: 0.42 } as const;
 
+/**
+ * A shut eye's marks, shares of the kit's eye height: how far the wince's
+ * chevron reaches above and below the eye's middle, so a knit brow above it
+ * stays a mark of its own; and how far the glad arch's ends lie below its
+ * middle and its middle above, a shallow arc as a glad face's sheet draws
+ * it (lead-feast heads-6: about 5 px of rise over 25).
+ */
 const SHUT_EYE = { chevron: 0.3, gladEnds: 0.1, gladMiddle: 0.1 } as const;
 export type ExtraFaceKnob = keyof typeof EXTRA_FACE;
 
+/** An ink stroke of the kit along `path`, `thickness` wide, shown by the number `knob`. */
 const markShape = (
   fig: Figure,
   key: string,
@@ -806,6 +1134,7 @@ const markShape = (
     fig.bind(knob, KEY.opacity),
   ]);
 
+/** An open line of straight segments through `pts`. */
 const straightPath = (pts: ReadonlyArray<Pt>) =>
   el(
     'PointsPath',
@@ -813,6 +1142,7 @@ const straightPath = (pts: ReadonlyArray<Pt>) =>
     pts.map(([x, y], i) => el('StraightVertex', { x, y, name: `p${i}` })),
   );
 
+/** The extra marks `extra` names, each in its place on the kit `k`. */
 const extraMarks = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKnob>): Element[] => {
   const [w, h] = k.eye;
   const sides = [
@@ -901,6 +1231,15 @@ const extraMarks = (fig: Figure, k: FaceShape, extra: ReadonlyArray<ExtraFaceKno
   return extra.flatMap((m) => marks[m]());
 };
 
+/**
+ * The face, centred at (x, y) in its parent's frame and `scale` times the
+ * kit's size: brows, eyes and mouth, each moved by the figure's view-model
+ * numbers (`FACE`), and the eyes' sockets; the features together slide a
+ * little toward the gaze (`turn`). `shape` gives the marks a figure's
+ * sheet draws otherwise than the kit (`FaceShape`), and `extra` the marks
+ * and slides past the kit's it opts into (`EXTRA_FACE`). Named `face`, the node
+ * `check`'s face probe reads.
+ */
 export const faceKit = (
   fig: Figure,
   at: { x: number; y: number; scale?: number },
@@ -946,6 +1285,7 @@ export const faceKit = (
   );
 };
 
+/** The gaze target the eyes and the features follow, at rest at `knobs`' gaze. */
 export const gazeTarget = (fig: Figure, knobs: Numbers) =>
   el('Node', { x: knobs['gazeX'], y: knobs['gazeY'], name: 'gaze', id: fig.idOf('gaze') }, [
     fig.bind('gazeX', KEY.x),
@@ -971,6 +1311,7 @@ const keyframes = (keys: ReadonlyArray<K>, fps: number): Element[] =>
     ]);
   });
 
+/** One named timeline of the figure, `seconds` long: its tracks keyed by object name. */
 export const timeline = (
   fig: Figure,
   name: string,
@@ -1000,9 +1341,19 @@ export const timeline = (
   );
 };
 
+/** The figure's boil: every outline it registered, crawling tick by tick and held between. */
 export const boilTimeline = (fig: Figure) =>
   timeline(fig, 'boil', BOIL.seconds, fig.boilTracks(), { fps: BOIL.fps, loop: true });
 
+/**
+ * The figure's artboard: `width` × `height`, its content and timelines and
+ * the view model `Figure` whose numbers its parts bind: `given`'s, and the
+ * ink's (`INK_NUMBER`, 1) unless its direction bakes the ink; the artboard's
+ * default, which the film binds an instance of to each frame's own artboard
+ * (`f.rive`), so no state machine is needed to apply its binds. Beside the
+ * artboard lie the converters its ink binds through (`Figure.inkBind`). A
+ * baked artboard given no numbers has no view model.
+ */
 export const artboard = (
   fig: Figure,
   size: { readonly width: number; readonly height: number },

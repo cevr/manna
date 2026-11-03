@@ -7,6 +7,10 @@ export interface ContextMenuAnchor {
 export interface ContextMenuRootContext {
   anchor: Accessor<ContextMenuAnchor>;
   setAnchor: (anchor: ContextMenuAnchor) => void;
+  /**
+   * The trigger whose press opened the menu last (each trigger's own symbol):
+   * one root may serve many triggers, and only this one says the menu is open.
+   */
   opener: Accessor<symbol | null>;
   setOpener: (trigger: symbol) => void;
   internalBackdropRef: { current: HTMLElement | null };
@@ -21,6 +25,7 @@ export function useContextMenuRootContext(): ContextMenuRootContext | null {
   return useContext(ContextMenuRootContext);
 }
 
+/** The context menu around a part that only works inside one; throws outside. */
 export function useContextMenuRootContextStrict(): ContextMenuRootContext {
   const context = useContext(ContextMenuRootContext);
   if (context === null) {

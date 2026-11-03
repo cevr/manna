@@ -31,6 +31,7 @@ const DIR = '/app/footage';
 const OUT = '/app/out';
 const STORE = '/store';
 
+/** A phone's take as the fake probe reads it: 1080×1920 at 30, AAC sound. */
 const TAKE_PROBE: FootageProbe = {
   container: 'MP4',
   duration: 12,
@@ -46,6 +47,10 @@ const TAKE_PROBE: FootageProbe = {
   sound: { codec: 'aac', rate: 48_000, channels: 1 },
 };
 
+/**
+ * What the fake probe reads of a file by its words: `hdr` makes it HDR,
+ * `silent` leaves it no sound, anything else is a phone's take.
+ */
 const probeOf = (said: string) => {
   const silent = said.includes('silent');
   const { sound: _sound, ...withoutSound } = TAKE_PROBE;
@@ -55,6 +60,10 @@ const probeOf = (said: string) => {
   };
 };
 
+/**
+ * A disk that lets every other fiber run before each step it takes: two
+ * runs at once interleave at every read and write, as two processes would.
+ */
 const sharedDisk = (files: Map<string, Uint8Array>) =>
   Layer.effect(
     FileSystem.FileSystem,
@@ -69,6 +78,10 @@ const sharedDisk = (files: Map<string, Uint8Array>) =>
     ),
   ).pipe(Layer.provide(memoryFileSystem(files, new Set())));
 
+/**
+ * The fake hearing, each held until `together` are under way: that many
+ * `make`s hear at once, and land their transcripts at once.
+ */
 const hearingTogether = (
   files: Map<string, Uint8Array>,
   calls: ElevenLabsCalls,
@@ -93,6 +106,7 @@ const hearingTogether = (
     }),
   ).pipe(Layer.provide(fakeElevenLabs(files, calls)));
 
+/** The library's world: one disk, its media faked, a folder for its private store. */
 const world = (
   files: Map<string, Uint8Array>,
   calls: ElevenLabsCalls,
@@ -126,6 +140,7 @@ const world = (
   );
 };
 
+/** A take named `name`, with no terms. */
 const asTake = (name: string) => ({
   name,
   kind: 'take' as const,
@@ -135,12 +150,14 @@ const asTake = (name: string) => ({
   tags: [],
 });
 
+/** The failure `exit` ended with, if it failed. */
 const failureOf = <A, E>(exit: Exit.Exit<A, E>) =>
   Exit.match(exit, {
     onSuccess: () => Option.none<E>(),
     onFailure: (cause) => Cause.findErrorOption(cause),
   });
 
+/** The lock as it was written. */
 const lockIn = (files: Map<string, Uint8Array>) =>
   Schema.decodeEffect(FootageLockJson)(
     new TextDecoder().decode(files.get(`${DIR}/library.lock.json`)),
@@ -379,6 +396,7 @@ describe('the footage library', () => {
       }),
   );
 
+  /** A lock entry as a hand might edit it, before anything checks it. */
   const handEdited = {
     kind: 'take',
     sha256: 'a'.repeat(64),

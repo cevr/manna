@@ -13,6 +13,7 @@ import { Review } from '../review.ts';
 import { buildGraph } from './graph.ts';
 import { DrawingSet, type OwnerNeed, askStage, drawStage, ownerNeeds } from './owner-ask.ts';
 
+/** What a build is asked with, as `buildGraph` takes it. */
 type BuildOptions = Parameters<typeof buildGraph>[1];
 
 const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
@@ -28,6 +29,7 @@ const film = 'in-its-order' as FilmName;
 
 type Member = Parameters<typeof ownerNeeds>[0][number];
 
+/** lead-feast: front drawn and kept, side and back drawn and not kept, k2 not drawn. */
 const member = {
   film,
   member: 'lead-feast',
@@ -48,6 +50,7 @@ const member = {
   },
 } as unknown as Member;
 
+/** wife: her front drawn and not kept. */
 const wife = {
   film,
   member: 'wife',
@@ -65,6 +68,7 @@ const WIFE_FRONT = '/m/wife/views/front.png';
 const SIDE = '/m/lead-feast/views/side.png';
 const BACK = '/m/lead-feast/views/back.png';
 
+/** The film's folder, and the two drawings not kept. */
 const filesOf = () =>
   new Map<string, Uint8Array>([
     [`/films/${film}/scenes/index.ts`, text('export {};\n')],
@@ -73,8 +77,14 @@ const filesOf = () =>
     [WIFE_FRONT, text('wife front v1')],
   ]);
 
+/** Where the set below puts a need's drawing, as the review names it. */
 const refOf = (need: OwnerNeed) => `cast-keep/${need.member}/${need.id}.png`;
 
+/**
+ * The lab in memory over `files`, its review serving what the set below
+ * published under `/out`, and a set that copies each drawing there and
+ * answers its review route, each publish recorded in `published`.
+ */
 const labOver = (files: Map<string, Uint8Array>, published: Array<ReadonlyArray<string>>) => {
   const review = Layer.effect(
     Review,
@@ -109,6 +119,7 @@ const labOver = (files: Map<string, Uint8Array>, published: Array<ReadonlyArray<
   );
 };
 
+/** An ask store whose lab is down: every call fails as locked, and is named in `called`. */
 const labDown = (called: Array<string>) => {
   const down = (what: string) =>
     Effect.suspend(() => {
@@ -128,6 +139,7 @@ const labDown = (called: Array<string>) => {
   });
 };
 
+/** The build's asks about the film that still ask; the lab shows their asker as `concept build`. */
 const openAsks = Effect.map(
   Effect.flatMap(Effect.service(AskStore), (asks) => asks.list),
   (all) =>
@@ -136,6 +148,7 @@ const openAsks = Effect.map(
     ),
 );
 
+/** Each keep choice of `record`: its label, and its keep option's image. */
 const keepChoices = (record: AskRecord) =>
   Object.values(record.ask.steps)
     .flatMap(askedIn)
@@ -145,6 +158,7 @@ const keepChoices = (record: AskRecord) =>
       image: b.options.find((o) => o.value === 'keep')?.image,
     }));
 
+/** The bytes ask `id` shows at `src` (its copy's route), as the lab serves them. */
 const shownBytes = (id: string, src: string) =>
   Effect.flatMap(Effect.service(AskStore), (asks) =>
     Effect.map(asks.shownFile(id, decodeURIComponent(src.split('/').pop() ?? '')), (shown) =>
@@ -152,6 +166,7 @@ const shownBytes = (id: string, src: string) =>
     ),
   );
 
+/** The one ask of `asks`; a defect when there is none. */
 const only = (asks: ReadonlyArray<AskRecord>) =>
   Effect.fromOption(Option.fromUndefinedOr(asks[0])).pipe(Effect.orDie);
 
@@ -259,6 +274,7 @@ describe('the build asks the owner once', () => {
       const files = filesOf();
       const lead = [askStage(film, ['lead-feast'], ownerNeeds([member]))];
       const her = [askStage(film, ['wife'], ownerNeeds([wife]))];
+      /** The open asks with a keep choice about `who`. */
       const openAbout = (who: string) =>
         Effect.map(openAsks, (open) =>
           open.filter((r) => keepChoices(r).some((c) => c.label.startsWith(`${who}/`))),

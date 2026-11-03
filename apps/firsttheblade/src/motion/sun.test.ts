@@ -4,6 +4,7 @@ import { COARSE_POINTER, LESS_MOTION, raysTurn } from './query.ts';
 import { ASPECT, SUN, sunLight, TURN } from './sun.ts';
 import { turnAt } from './testing.ts';
 
+/** A seeded draw in [0, 1). */
 const draws = (seed: number) => {
   let state = seed >>> 0;
   return () => {
@@ -12,6 +13,7 @@ const draws = (seed: number) => {
   };
 };
 
+/** Times drawn from a seed: within a period, many periods on, and a tab left open for days. */
 const times = (seed: number, count: number) => {
   const draw = draws(seed);
   return Array.from(
@@ -20,11 +22,13 @@ const times = (seed: number, count: number) => {
   );
 };
 
+/** A browser that matches exactly the queries it is given. */
 const matching =
   (...matched: ReadonlyArray<string>) =>
   (query: string) =>
     matched.includes(query);
 
+/** The sun's light at `d` widths out of its centre, toward `angle`. */
 const along = (angle: number, d: number) =>
   sunLight(SUN.u + Math.cos(angle) * d, SUN.v + Math.sin(angle) * d * ASPECT);
 

@@ -4,6 +4,7 @@ import { createSignal, Show } from 'solid-js';
 import { Dialog } from '../../../src/dialog/index.ts';
 import { log, param } from './log.ts';
 
+/** An owner's open state and the plain button that opens it. */
 function ownerOpen(id: string) {
   const [open, setOpen] = createSignal(false);
   const Opener = (props: { children: JSX.Element }) => (
@@ -65,6 +66,7 @@ function BasicDialog(): JSX.Element {
   );
 }
 
+/** Three dialogs side by side, each opened from the one before. */
 function SideBySide(): JSX.Element {
   const first = ownerOpen('open');
   const [second, setSecond] = createSignal(false);
@@ -123,6 +125,10 @@ function Animated(): JSX.Element {
   );
 }
 
+/**
+ * A modal dialog's internal backdrop is a fixed layer over the page; the
+ * popups are positioned so they stack above it, as any styled dialog does.
+ */
 function withPopupStyles(fixture: () => JSX.Element): () => JSX.Element {
   return () => (
     <>

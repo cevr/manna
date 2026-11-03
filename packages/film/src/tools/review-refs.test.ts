@@ -16,6 +16,7 @@ const roots = [
   { label: 'rbf-arms-rig', path: '/m/.rifts/manna/rbf-arms-rig/out' },
 ];
 
+/** A folder `ref` of the index with one document and one loose video. */
 const folder = (ref: string): ReviewFolder => ({
   ref,
   title: Option.none(),

@@ -45,6 +45,7 @@ const panelFlag = Flag.String('panel').pipe(
   Flag.withDescription('the panel, <beat>.<at>: its beat and the mark it is held from (or start)'),
 );
 
+/** The film's beats as the board reads them, from its script. */
 const beatsOf = Effect.fn('Board.beats')(function* (name: FilmName) {
   const script = yield* (yield* FilmRepo).script(name);
   return yield* Option.match(script, {
@@ -64,6 +65,7 @@ const beatsOf = Effect.fn('Board.beats')(function* (name: FilmName) {
   });
 });
 
+/** The film's acts (its declared look), none when it declares none. */
 const actsOf = Effect.fn('Board.acts')(function* (name: FilmName) {
   const loaded = yield* (yield* FilmRepo).load(name);
   return Option.match(loaded.look, { onNone: () => [], onSome: (look) => look.acts });
@@ -71,6 +73,7 @@ const actsOf = Effect.fn('Board.acts')(function* (name: FilmName) {
 
 const tryExtNamed = Schema.decodeUnknownOption(TryExt);
 
+/** The extension of an image brought in as a try (`png` when it has none), or the refusal naming the file. */
 const tryExtOf = (film: FilmName, source: string) =>
   Effect.gen(function* () {
     const path = yield* Path.Path;
@@ -85,6 +88,7 @@ const tryExtOf = (film: FilmName, source: string) =>
     );
   });
 
+/** `<beat>.<at>` read against the script: a beat it has, and a mark of its line (or `start`). */
 const panelIn = (name: FilmName, beats: ReadonlyArray<BoardBeat>, id: string) =>
   Effect.gen(function* () {
     const dot = id.indexOf('.');
@@ -115,11 +119,13 @@ const panelIn = (name: FilmName, beats: ReadonlyArray<BoardBeat>, id: string) =>
     return { beat: found.value, beatId: names.value.beatId, at: names.value.mark };
   });
 
+/** Where `board` places panels: the film's order, every panel it holds and `id`. */
 const orderWith = (beats: ReadonlyArray<BoardBeat>, board: BoardFile, id: string) =>
   filmOrder(beats, [...board.panels.map((p) => p.id), id]);
 
 const emit = (line: Parameters<typeof makeLine>[0]) => Console.log(makeLine(line));
 
+/** `board style`: the film's board look, its reference image copied into the board folder. */
 const style = Command.make(
   'style',
   {
@@ -171,6 +177,7 @@ const style = Command.make(
   Command.withDescription("Set the film's board look: its style block, reference image and world"),
 );
 
+/** `board import`: images made elsewhere, as tries of a panel. */
 const importTries = Command.make(
   'import',
   {
@@ -250,6 +257,7 @@ const importTries = Command.make(
   }),
 ).pipe(Command.withDescription('Bring images made elsewhere into the board as tries of a panel'));
 
+/** A text panel set: a card or a verse page, in place of a picture. */
 const setText = (
   input: { film: string; panel: string },
   text: (beat: BoardBeat, at: BoardName) => Effect.Effect<PanelText, BoardRefused>,
@@ -382,6 +390,7 @@ const tweak = Command.make(
   ),
 );
 
+/** `film board`, with its subcommands; the image route is `okra image` (Codex route). */
 export const board = Command.make(
   'board',
   {

@@ -1,3 +1,8 @@
+/**
+ * The appearance setting shown on a phone: the app's interface style, which
+ * the system bars, the theme's dynamic colours and `useColorScheme` all follow.
+ */
+
 import { Appearance as RN } from 'react-native';
 
 import type { Appearance } from './settings';

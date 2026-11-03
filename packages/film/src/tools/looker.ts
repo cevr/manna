@@ -21,10 +21,17 @@ import { Pages } from './pages.ts';
 
 type LookError = PageOpenError | PageError | PageCrashed | FrameFailed;
 
+/** Frames one page draws per call. */
 const BATCH = 40;
+/** The hands pass keeps no picture: its thumbs are one pixel. */
 const HANDS_THUMB = 1;
 
 interface LookerService {
+  /**
+   * Draw the scenes `scope` covers (`resolveAddress`: every one for the whole
+   * film) at 2 fps, small, on `workers` pages drawing on `server` (a wedge's,
+   * `check --level`; none for the PreviewServer), and measure each.
+   */
   readonly look: (
     film: LoadedFilm,
     workers: number,
@@ -55,6 +62,7 @@ export class Looker extends Context.Service<Looker, LookerService>()('@manna/fil
               server,
             });
             const info = pool.info;
+            /** `samples` drawn on the pool, each as a `w` × `h` thumb, in order. */
             const drawAll = (samples: ReadonlyArray<LookSample>, w: number, h: number) =>
               Effect.map(
                 Effect.forEach(

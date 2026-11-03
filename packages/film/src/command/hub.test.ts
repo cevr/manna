@@ -7,6 +7,7 @@ import { type Command, type Receipt, quietly, said } from './command.ts';
 import { makeHub } from './hub.ts';
 import { pageHref } from '../core/api.ts';
 
+/** The modifiers a press holds. */
 interface Held {
   readonly shiftKey?: boolean;
   readonly altKey?: boolean;
@@ -14,6 +15,7 @@ interface Held {
   readonly ctrlKey?: boolean;
 }
 
+/** A page whose presses go to `target`, with a hub at `href`, on a Mac's keyboard unless `mac` is false. */
 const pageWith = (href = pageHref.ask('a1'), mac = true) => {
   const target = new EventTarget();
   const host = hostOf(

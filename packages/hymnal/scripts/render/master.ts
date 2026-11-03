@@ -1,3 +1,21 @@
+/**
+ * The master, in-process through NodeAV's FFmpeg (pinned by the lockfile):
+ *
+ * 1. The dry mix to −20 LUFS, the room (`afir` with the listening pilot's
+ *    impulse response, mixed at its wet level), a gentle compressor, and a
+ *    fade over the tail's last 0.8 s, into a float WAV.
+ * 2. That to −16 LUFS, limited at −2 dBFS by `alimiter` with its latency
+ *    compensated (so no onset moves: the words are synced to the MIDI's
+ *    clock), and encoded by LAME at 192 kb/s CBR, 44.1 kHz stereo,
+ *    bit-exact, carrying the credits as its one comment.
+ * 3. The MP3 decoded as a player decodes it and measured by `ebur128`
+ *    (integrated loudness and true peak); the gain is corrected and step 2
+ *    run again until the MP3 is within 0.2 LU of the target, at most 3 times.
+ *
+ * The filter parameters are the listening pilot's, which the owner chose by
+ * ear. Every filter and the encoder run on one thread.
+ */
+
 import type { Pcm } from '@manna/film/measure';
 import { Effect } from 'effect';
 import { Decoder, Demuxer, Encoder, FilterAPI, Muxer } from 'node-av/api';
@@ -14,18 +32,22 @@ import type { Style } from './style.js';
 
 Log.setLevel(AV_LOG_ERROR);
 
+/** What `ebur128` read of a file, and the file decoded. */
 export interface Measure {
   readonly lufs: number;
+  /** dBTP. */
   readonly truePeak: number;
   readonly pcm: Pcm;
 }
 
+/** A path FFmpeg's filter graph takes inside quotes: none of the characters its parsers treat as syntax. */
 const graphPath = (file: string) => {
   if (/['\\[\],;:]/.test(file))
     throw new Error(`${file}: a path with ' \\ [ ] , ; or : cannot go into a filter graph`);
   return `'${file}'`;
 };
 
+/** Planar float chunks joined into one plane per channel. */
 const joined = (chunks: ReadonlyArray<ReadonlyArray<Float32Array>>, rate: number): Pcm => {
   const frames = chunks.reduce((n, c) => n + (c[0]?.length ?? 0), 0);
   const channels = [0, 1].map(() => new Float32Array(frames));
@@ -37,6 +59,7 @@ const joined = (chunks: ReadonlyArray<ReadonlyArray<Float32Array>>, rate: number
   return { rate, frames, channels };
 };
 
+/** `file` decoded to stereo float and measured by `ebur128` (true peak on). */
 const measureFile = async (file: string, rate: number): Promise<Measure> => {
   await using input = await Demuxer.open(file);
   const stream = input.audio();
@@ -68,6 +91,7 @@ const measureFile = async (file: string, rate: number): Promise<Measure> => {
   return { lufs, truePeak: 20 * Math.log10(peak), pcm: joined(chunks, rate) };
 };
 
+/** `input` through `graph` into `output`, encoded by `encoder` and written by `format`'s muxer. */
 const filterFile = async (
   input: string,
   graph: string,
@@ -98,6 +122,14 @@ const filterFile = async (
   await encodeAll(encoder, frames, (packet) => mux.writePacket(packet, index));
 };
 
+/**
+ * `frames` encoded, each packet written. NodeAV's encoder chunks audio into
+ * the codec's frame size through a FIFO whose flush keeps only whole frames,
+ * so a short last frame would be dropped (the MP3 one frame short). The MP3
+ * graph hands over frames of exactly that size (`asetnsamples`), so the FIFO
+ * stays empty, and the short last frame goes to the codec context directly,
+ * as FFmpeg's own CLI sends it (LAME takes a small last frame).
+ */
 const encodeAll = async (
   encoder: Encoder,
   frames: AsyncIterable<Frame | null>,
@@ -128,6 +160,7 @@ const encodeAll = async (
   for await (const packet of encoder.flushPackets()) await write(packet);
 };
 
+/** Samples in one MPEG-1 Layer III frame. */
 const MP3_FRAME = 1152;
 
 const floatWav = () => Encoder.create(FF_ENCODER_PCM_F32LE, { threadCount: 1 });
@@ -139,10 +172,15 @@ const mp3 = (bitrate: string) => async () => {
 };
 
 export interface MasterInput {
+  /** The dry mix, a float WAV. */
   readonly dry: string;
+  /** The room's impulse response, a float WAV. */
   readonly ir: string;
+  /** Where the mastered float WAV goes between passes (deleted after). */
   readonly pre: string;
+  /** The MP3 to write. */
   readonly out: string;
+  /** The dry mix's length in seconds: the fade ends there. */
   readonly seconds: number;
   readonly comment: string;
   readonly style: Pick<Style, 'rate' | 'reverb' | 'fade' | 'master'>;
@@ -179,6 +217,7 @@ const master = async (job: MasterInput): Promise<Mastered> => {
   }
 };
 
+/** The master (see the module's doc): the MP3 at `out`, measured. */
 export const masterHymn = (job: MasterInput) =>
   Effect.tryPromise({
     try: () => master(job),

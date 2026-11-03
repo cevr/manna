@@ -1,3 +1,4 @@
+/** Synthetic external boundaries for controlled storage/HTTP schedules. No media is fetched. */
 import { Effect, Layer } from 'effect';
 import {
   type Entry,

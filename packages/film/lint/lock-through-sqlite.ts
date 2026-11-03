@@ -8,13 +8,19 @@ import {
 } from 'oxlint-plugin-effect/rule-bindings';
 import { type Bindings, bindings, type Module } from './nodes.ts';
 
+/** The lock's module, `tools/manifest-lock-bun.ts`, which exports `lockFile`. */
 const isLock: Module = (from) => /(?:^|\/)manifest-lock-bun(?:\.[jt]s)?$/u.test(from);
 
+/** A lock file's name: a dot, a name, `.lock`, at the end of a path or a name's piece. */
 const LOCK_NAME = /(?:^|\/)\.[^/]*\.lock$/u;
 
 const MESSAGE =
   "a manifest's lock file named outside its lock: SQLite alone opens it (packages/film/src/tools/manifest-lock-bun.ts), since closing any other handle on it lets go of the process's lock.";
 
+/**
+ * Whether a template literal builds a lock file's name (`` `.${name}.lock` ``):
+ * its text with a name standing for each value.
+ */
 const buildsLockName = (node: ESTree.TemplateLiteral) =>
   LOCK_NAME.test(
     node.quasis
@@ -22,6 +28,7 @@ const buildsLockName = (node: ESTree.TemplateLiteral) =>
       .join('x'),
   );
 
+/** Whether a node names a lock file, or asks for one's path. */
 const namesLock = (b: Bindings, node: ESTree.Node): boolean => {
   if (node.type === 'Literal') return Predicate.isString(node.value) && LOCK_NAME.test(node.value);
   if (node.type === 'TemplateLiteral') return buildsLockName(node);

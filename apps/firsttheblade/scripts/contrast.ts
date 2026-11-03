@@ -1,3 +1,24 @@
+/**
+ * `bun run contrast`: the built pages' text contrast as a browser draws it.
+ * It serves `dist/` through the Worker's policy (as `bun run preview` does),
+ * opens every page at the phone board (390 px) and the desktop board
+ * (1440 px), and holds each run of text against what is drawn behind it.
+ *
+ * Each visible text node's boxes are found, the page is drawn again with all
+ * text transparent, and each box's pixels are compared with the text's own
+ * colour. A run passes when 95% of its pixels meet WCAG 2.2 AA: 4.5:1, or
+ * 3:1 for large text (24 px, or 18.66 px bold). The wordmark is a logo
+ * (`data-logo`), which AA exempts. At the desktop board the page is measured
+ * again with the pointer on each link and button drawn on it, since a hover may
+ * change any colour (phones have no hover); one the pointer cannot reach fails
+ * the run. A hover is drawn again only where it changed something: each
+ * element's paint (its colours, its pseudo-elements', its box) is read at rest
+ * and under the pointer, and the runs inside the changed elements' boxes are
+ * measured against a shot of that region alone (a changed pseudo-element, or
+ * a page that grew or shrank, is measured whole). The pages are measured seven
+ * at a time. Build first (`bun run build`); the run fails when any text falls
+ * short. The site's `test:slow` runs it after the build.
+ */
 import { BunRuntime } from '@effect/platform-bun';
 import { chromium, type Browser, type Page } from '@playwright/test';
 import { Array as Arr, Data, Effect, Option, Order } from 'effect';
@@ -7,11 +28,15 @@ import { PAGES } from '../src/pages.ts';
 import { layerLocal } from '../src/worker/local.ts';
 
 const WIDTHS = [1440, 390] as const;
+/** The board measured under the pointer. */
 const HOVER_WIDTH = 1440;
 const HIDE = 'contrast-hide';
 const TARGET = 'data-contrast-target';
+/** How long a hover, or the transitions it starts, may take. */
 const STEP_TIMEOUT = 5000;
+/** Pages measured at once, each in its own browser context. */
 const CONCURRENCY = 7;
+/** What an element paints with: a hover that changes none of these draws nothing new. */
 const PAINT = [
   'color',
   'background-color',
@@ -46,8 +71,10 @@ const PAINT = [
   'display',
 ] as const;
 
+/** A box in page pixels: left, top, width, height. */
 type Box = readonly [number, number, number, number];
 
+/** An element's paint as one page reads it. */
 interface Paint {
   readonly own: string;
   readonly pseudo: string;
@@ -60,6 +87,7 @@ interface PaintState {
   readonly elements: ReadonlyArray<Paint>;
 }
 
+/** A run of text as the page lays it out: its boxes, in page pixels. */
 interface Run {
   readonly text: string;
   readonly px: number;
@@ -71,7 +99,9 @@ interface Run {
 interface Measured {
   readonly text: string;
   readonly px: number;
+  /** The ratio 95% of the run's pixels meet. */
   readonly p95: number;
+  /** AA's bar for the run's size. */
   readonly bar: number;
 }
 
@@ -101,13 +131,16 @@ const step = <A>(name: string, run: () => PromiseLike<A>) =>
     catch: (cause) => new BrowserError({ step: name, cause }),
   });
 
+/** In the page: every image loads now. */
 const eager = () => {
   for (const image of document.images) image.loading = 'eager';
 };
 
+/** In the page: every face and every image is in. */
 const settled = () =>
   document.fonts.status === 'loaded' && [...document.images].every((image) => image.complete);
 
+/** In the page: each visible run of text and its boxes; then all text is hidden. */
 const collectRuns = (hideId: string): ReadonlyArray<Run> => {
   const found: Array<Run> = [];
   const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -141,6 +174,7 @@ const collectRuns = (hideId: string): ReadonlyArray<Run> => {
   return found;
 };
 
+/** In the page: every transition has finished (an endless animation never does, so it is not waited on). */
 const still = () =>
   document
     .getAnimations()
@@ -148,6 +182,7 @@ const still = () =>
       (animation) => !(animation instanceof CSSTransition) || animation.playState !== 'running',
     );
 
+/** In the page: every element's paint, its pseudo-elements' and its box, in document order. */
 const paintState = (props: ReadonlyArray<string>): PaintState => {
   const read = (style: CSSStyleDeclaration) =>
     props.map((prop) => style.getPropertyValue(prop)).join(';');
@@ -166,6 +201,10 @@ const paintState = (props: ReadonlyArray<string>): PaintState => {
   };
 };
 
+/**
+ * In the page: the link scrolled to the middle of the screen, the middle of
+ * its first box, and whether the pointer there lands on the link.
+ */
 const pointAt = (selector: string) => {
   const target = document.querySelector(selector);
   if (!target) return { x: 0, y: 0, reaches: false };
@@ -177,11 +216,17 @@ const pointAt = (selector: string) => {
   return { x, y, reaches: Boolean(hit) && target.contains(hit) };
 };
 
+/** In the page: the text drawn again. */
 const reveal = (hide: string) => {
   const style = document.getElementById(hide);
   if (style) style.remove();
 };
 
+/**
+ * In the page: each link and button drawn on the page, marked by an index,
+ * and its name; and the names of those left out (off the page until focused,
+ * hidden, or with no words to measure).
+ */
 const markTargets = (attribute: string) => {
   const nameOf = (element: Element) =>
     (element.textContent || '').trim().replace(/\s+/g, ' ') ||
@@ -203,6 +248,7 @@ const markTargets = (attribute: string) => {
   };
 };
 
+/** In the page: each run's contrast against the text-free drawing behind it. */
 const contrastOf = (input: {
   readonly data: string;
   readonly origin: readonly [number, number];
@@ -255,6 +301,7 @@ const contrastOf = (input: {
   });
 };
 
+/** What a hover changed: nothing, or the region of the page it drew anew. */
 type Change = { readonly _tag: 'Same' } | { readonly _tag: 'Region'; readonly box: Box };
 
 const sameBox = (a: Box, b: Box) =>
@@ -262,6 +309,7 @@ const sameBox = (a: Box, b: Box) =>
 
 const visible = (box: Box) => box[2] > 0 && box[3] > 0;
 
+/** The region a hover changed, from the page's paint at rest and under the pointer. */
 const changeOf = (rest: PaintState, now: PaintState): Change => {
   const whole: Change = { _tag: 'Region', box: [0, 0, now.width, now.height] };
   if (
@@ -345,6 +393,7 @@ const measure = Effect.fn('Contrast.measure')(function* (
   return { rest, hover, hovered: targets.names.length, drawn };
 }, Effect.scoped);
 
+/** Every run on the page, measured against the page as drawn without its text. */
 const measureRuns = Effect.fn('Contrast.measureRuns')(function* (page: Page) {
   const runs = yield* step('runs', () => page.evaluate(collectRuns, HIDE));
   const shot = yield* step('shot', () => page.screenshot({ fullPage: true, type: 'png' }));
@@ -355,6 +404,7 @@ const measureRuns = Effect.fn('Contrast.measureRuns')(function* (page: Page) {
   return measured;
 });
 
+/** The runs that meet `box`, measured against a shot of that region drawn without its text. */
 const measureRegion = Effect.fn('Contrast.measureRegion')(function* (page: Page, box: Box) {
   const all = yield* step('runs', () => page.evaluate(collectRuns, HIDE));
   const runs = all.filter((run) => run.rects.some((rect) => meets(rect, box)));
@@ -429,6 +479,10 @@ const contrast = HttpServer.addressFormattedWith((base) =>
   }).pipe(Effect.scoped),
 );
 
+/**
+ * `dist/` through the Worker's policy, for as long as the measure runs, on a
+ * port the system picks, so two workspaces can measure at once.
+ */
 const Preview = layerLocal({ port: 0, hostname: '127.0.0.1' });
 
 contrast.pipe(Effect.provide(Preview), BunRuntime.runMain);

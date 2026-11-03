@@ -2,6 +2,12 @@ import { offscreen } from '../canvas/paper.ts';
 import type { ProbeSink } from '../canvas/probe.ts';
 import type { FaceMark, HandMark } from '../core/export-handle.ts';
 
+/**
+ * The look pass (`film check`, `film lookbook`): each of `frames` drawn by
+ * `draw` into `sink` (done once the frame's footage is decoded and it is
+ * drawn), then shrunk to a `w` × `h` RGBA thumb; the thumbs end to end, and
+ * the faces and hands each frame declared. One frame at a time, in order.
+ */
 export const lookFrames = async (
   draw: (i: number, sink: ProbeSink) => Promise<void>,
   canvas: HTMLCanvasElement,

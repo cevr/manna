@@ -3,17 +3,21 @@ import { bustSkeleton } from '../../../cutout/bust.ts';
 import { framed, type Rooted } from '../../../cutout/skeleton.ts';
 import { FRAMES, type FramedView, keptAt } from './frames.ts';
 
+/** A view's foot: its kept box's height, crown to waist, where the lean rises from. */
 const footOf = (view: FramedView) => FRAMES[view].kept[3] - FRAMES[view].kept[1];
 
+/** A house part's bones: on the head alone, on the lean alone, or draped over both. */
 const HEAD = ['head'];
 const LEAN = ['lean'];
 const DRAPED = ['lean', 'head'];
 
+/** A bust's skeleton with its view's house parts' skins added beside its head's and torso's. */
 const dressed = (bust: Rooted, house: Skeleton['skin']): Rooted => ({
   ...bust,
   skin: { ...house, ...bust.skin },
 });
 
+/** Each cut view's skeleton, in its part sheet's frame. */
 export const SKELETONS = {
   'poses-1': framed(
     keptAt('poses-1'),

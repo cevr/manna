@@ -2,12 +2,20 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem } from 'effect';
 
+/** The source tree this guard reads. */
 const ROOT = import.meta.dir;
 
+/** The one file colours and type are written in. */
 const TOKENS = 'player/tokens.css';
 
+/** The UI faces' registration, which names the families their files hold. */
 const FACE = 'player/face.ts';
 
+/**
+ * Not the studio's chrome: canvas code and the house look's figures draw the
+ * film's pixels in the film's own colours, the reading sheet is a page
+ * printed on paper, and sound code names a noise's colour, which is heard.
+ */
 const OUTSIDE = [
   'canvas/',
   'style/',
@@ -18,17 +26,34 @@ const OUTSIDE = [
   'core/synth/',
 ];
 
+/** The colours a reader names by word. */
 const NAMED = 'white|black|red|green|blue|gray|grey|yellow|orange|purple|pink|silver';
 
+/** A colour property, as CSS writes it or as a style object, `.style` or an SVG attribute does. */
 const COLOUR_PROPERTY =
   'color|background(?:-?[cC]olor)?|border(?:-?[a-zA-Z]+)?-?[cC]olor|outline-?[cC]olor|fill|stroke|stop-?[cC]olor|flood-?[cC]olor';
 
+/**
+ * Where a property `name` (a CSS or style-object key, or a `.style` key) is
+ * set, up to where its value begins: `name:` or `'name':`, `.name =`, or
+ * `['name'] =` by its key in brackets.
+ */
 const setting = (name: string) => `${name}(?:['"\`]?\\s*:|['"\`]\\s*\\]\\s*=|\\s*=)`;
 
+/**
+ * As `setting`, for a CSS name (`font-size`): set by `:` or by its key in
+ * brackets, never by a bare `=` (an attribute's).
+ */
 const cssSetting = (name: string) => `${name}(?:['"\`]?\\s*:|['"\`]\\s*\\]\\s*=)`;
 
+/**
+ * Not a token: the value, from where it begins, is no `var(…)` and no
+ * `inherit`, quoted or not. Looked at once, from that one place: a quote
+ * skipped is never a place to look again from.
+ */
 const NOT_TOKEN = `(?!\\s*['"\`]?\\s*(?:var\\(|inherit))`;
 
+/** What a line may not hold: each with the reason a reader gets, and any file it spares. */
 const RULES: ReadonlyArray<{
   readonly why: string;
   readonly pattern: RegExp;
@@ -90,20 +115,24 @@ const RULES: ReadonlyArray<{
   },
 ];
 
+/** A stylesheet or a module; a test quotes literals freely. */
 const SOURCE = /\.(?:css|tsx?)$/;
 const TEST = /\.test\.tsx?$/;
 
+/** Is `file` a source of the studio's chrome? */
 const isChrome = (file: string) =>
   SOURCE.test(file) &&
   !TEST.test(file) &&
   file !== TOKENS &&
   !OUTSIDE.some((prefix) => file.startsWith(prefix));
 
+/** The rules `line` of `file` breaks. */
 const broken = (file: string, line: string) =>
   RULES.filter(
     (rule) => rule.pattern.test(line) && !(rule.spares ?? []).some((spared) => spared === file),
   );
 
+/** Every line of the studio's styling sources that breaks a rule: `file:line why: text`. */
 const offences = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const files = yield* fs.readDirectory(ROOT, { recursive: true });
@@ -123,6 +152,7 @@ const offences = Effect.gen(function* () {
   return found.flat().toSorted();
 });
 
+/** The first family a CSS family list names, unquoted (`'Geist Mono', monospace` → `Geist Mono`). */
 const firstFamily = (list: string) => (list.split(',')[0] ?? '').trim().replace(/^['"]|['"]$/g, '');
 
 describe('the studio reads its look only through its tokens', () => {

@@ -1,3 +1,16 @@
+/**
+ * The page shown, over generated stacks: 1000 seeded runs of up to 40 of a
+ * reader's steps (a hymn page pushed, any of three hymns, the same one
+ * twice allowed; a sheet opened over the top page and closed; a page turn
+ * on the top page; a back), and the stack's own (a lower page's effects run
+ * again with no focus). The stack plays each step as React Navigation's
+ * native stack does: a screen's effects run while it is focused, the one
+ * before the last, or the one a sheet lies over, and are cleaned up while it
+ * is paused; the events of one step come in any order. After every step, the
+ * page shown is the top hymn page of the stack (the page under an open
+ * sheet), and none while the stack holds no hymn page.
+ */
+
 import { describe, expect, it } from 'bun:test';
 
 import { Array as Arr, Effect, Equal, Option, Random } from 'effect';
@@ -16,6 +29,7 @@ const hymnPage = (number: number): Screen => ({
   page: { mark: Symbol(number), track: { number, title: `Hymn ${number}` } },
 });
 
+/** Whether the screen at `i` runs its effects: focused, before the last, or under a sheet. */
 const runs = (stack: ReadonlyArray<Screen>, i: number) =>
   i >= stack.length - 2 || stack[i + 1]?._tag === 'Sheet';
 
@@ -27,6 +41,7 @@ const marksRunning = (stack: ReadonlyArray<Screen>) =>
     ),
   );
 
+/** The events the stack's change from `before` to `after` makes, a page's own in order, pages shuffled. */
 const changed = (
   before: ReadonlyArray<Screen>,
   after: ReadonlyArray<Screen>,
@@ -53,12 +68,14 @@ const changed = (
 
 type Step = 'push' | 'sheet' | 'turn' | 'back' | 'remount';
 
+/** The top hymn page: the last screen, or the one under the sheet. */
 const topHymn = (stack: ReadonlyArray<Screen>): Option.Option<number> =>
   Option.flatMap(
     Arr.findLast(stack, (screen) => screen._tag === 'Hymn'),
     (screen) => (screen._tag === 'Hymn' && Option.some(screen.page.track.number)) || Option.none(),
   );
 
+/** One run: the steps taken and, after each, the page shown and the top hymn page. */
 const runOf = (seed: number) =>
   Effect.runSync(
     Effect.gen(function* () {

@@ -1,3 +1,17 @@
+/**
+ * Bar J on a hymn page, mounted in a browser's document (`src/test/setup.ts`)
+ * over a player whose device the test holds (`src/test/device.ts`) and a
+ * reader's store the test holds (`src/test/reader.ts`): the key button and
+ * its dials, the hold, reset, the spring and the seeker, the sound left
+ * alone by every dial, and the player sheet's reader settings.
+ *
+ * Animations land at once (`src/test/reanimated.tsx`), so each frame is read
+ * as it is once its spring has settled. A drag is played through its
+ * gesture's own callbacks (`src/test/gesture.tsx`); VoiceOver's actions and
+ * a hold through the props react-native-web keeps off the DOM
+ * (`src/test/props.ts`).
+ */
+
 import { RegistryContext } from '@effect/atom-react';
 import { spyOn } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
@@ -34,6 +48,11 @@ const morning = Option.getOrThrow(hymnAt('100'));
 
 const chordsOn = () => new Map([['chords', 'true']]);
 
+/**
+ * The hymn route at `/hymns/<n>` over `reader`: its header, its page with
+ * the page's own bar, as the screen draws them; the docked bar; and the player
+ * sheet on the hymn when `sheet`.
+ */
 const route =
   (n: number, sheet = false) =>
   (reader: ChordReader) => {
@@ -54,6 +73,7 @@ const route =
     );
   };
 
+/** Turns the page of `turning`'s route to another hymn, as a settle of the pager does. */
 const turned = { to: (_n: number) => {} };
 
 function Turning({ first, reader }: { readonly first: number; readonly reader: ChordReader }) {
@@ -74,10 +94,16 @@ function Turning({ first, reader }: { readonly first: number; readonly reader: C
   );
 }
 
+/** The hymn route at `/hymns/<first>`, whose page the test turns (`turned.to`). */
 const turning = (first: number) => (reader: ChordReader) => (
   <Turning first={first} reader={reader} />
 );
 
+/**
+ * The stops dial `testID` draws at its notch, as their transforms place
+ * them: each stop's own detent, its slot's distance from the notch under
+ * half a detent.
+ */
 const atNotch = (page: Page, testID: string) =>
   page
     .all(`[data-testid^="${testID}-stop-"]`)
@@ -96,6 +122,7 @@ const clearParams = () => {
   for (const key of Object.keys(params)) delete params[key];
 };
 
+/** `screen` over a fresh player and the reader's store `device`, mounted; it unmounts when the `using` ends. */
 const mount = (
   screen: (reader: ChordReader) => ReactNode,
   device: Map<string, string> = chordsOn(),
@@ -146,6 +173,7 @@ const mount = (
         ),
       ),
     );
+  /** Wait until chords are `on`, as the reader's store says. */
   const untilChords = (on: boolean) =>
     Effect.promise(() =>
       act(() =>
@@ -179,8 +207,10 @@ const mount = (
         );
       }),
     sends: () => sends,
+    /** The reset clock moved on `ms`, with React told of what was set as it moved. */
     advance: (ms: number) =>
       Effect.promise(() => act(() => Effect.runPromise(clock.adjust(Duration.millis(ms))))),
+    /** Hymn `n`'s move written to the reader's store, as a dial elsewhere (the twin) writes it. */
     setMove: (n: number, move: { readonly transpose: number; readonly capo: number }) =>
       registry.set(reader.move(n), move),
     player: () => registry.get(player.state),
@@ -200,8 +230,13 @@ const keyButton = (page: Page) => page.get('[role="button"][aria-label="Key"]');
 const dial = (page: Page, label: string) => page.find(`[role="slider"][aria-label="${label}"]`);
 const valueOf = (page: Page, label: string) =>
   Option.map(dial(page, label), (found) => found.getAttribute('aria-valuetext'));
+/** The dial named `label` turned one detent, as VoiceOver turns it. */
 const turn = (page: Page, label: string, way: 'increment' | 'decrement' = 'increment') =>
   perform(Option.getOrThrow(dial(page, label)), way);
+/**
+ * The key button held down until the hold turns chords to `to`, then let go:
+ * the press, the hold, the release, and the click the browser sends after it.
+ */
 const hold = (page: Page, to: boolean) =>
   Effect.gen(function* () {
     const button = keyButton(page);
@@ -212,6 +247,7 @@ const hold = (page: Page, to: boolean) =>
       button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
     });
   });
+/** A tap on the key button. */
 const tapKey = (page: Page) =>
   act(() => {
     keyButton(page).dispatchEvent(
@@ -219,6 +255,10 @@ const tapKey = (page: Page) =>
     );
   });
 
+/**
+ * A tap as a finger makes it, the press first: after a hold the button lets
+ * no click go until a new press starts.
+ */
 const pressKey = (page: Page) =>
   act(() => {
     const button = keyButton(page);
@@ -227,12 +267,14 @@ const pressKey = (page: Page) =>
     }
   });
 
+/** One straight drag that starts on the detector of gesture `testID`; the test id of the pan that took it, if one did. */
 const dragged = (testID: string, touch: Parameters<typeof drag>[1]) => {
   let took = Option.none<string>();
   act(() => void (took = drag(testID, touch)));
   return took;
 };
 
+/** The frame's height over the home indicator, as its spring has set it. */
 const heightOf = (page: Page) =>
   Number.parseFloat(getComputedStyle(page.get('[data-testid="bar-spring"]')).height);
 
@@ -819,6 +861,11 @@ describe('the player sheet over a hymn page', () => {
   );
 });
 
+/**
+ * Hymn `n`'s key button and its open dials as the bar draws them, holding the
+ * Tuner when `tuner` (the bar tells the device's ear, which the web lacks),
+ * every cue told to `cues`.
+ */
 const keyPanel = (n: number, tuner: boolean, cues: Array<Cue>) => () => {
   params['number'] = String(n);
   return (
@@ -894,6 +941,7 @@ describe('the Tuner on the key button’s dials', () => {
   );
 });
 
+/** The panel's transform as drawn, empty when it only fades. */
 const panelMotion = (page: Page) =>
   getComputedStyle(page.get('[data-testid="dials-panel"]')).transform;
 

@@ -19,6 +19,7 @@ import { recorder, withDom } from './fixtures/stand-in.ts';
 import { type ProbeSink, probing } from './probe.ts';
 
 const SHOULDER: Pt = [17, -111];
+/** A near hand floating at rest beside the hip, the figure's breath held. */
 const NEAR: HandRoot = { shoulder: SHOULDER, rest: [42, -50], away: 1, breath: 0 };
 const FAR: HandRoot = { shoulder: [-17, -111], rest: [-42, -50], away: -1, breath: 0 };
 const STYLE: HandStyle = {
@@ -31,12 +32,15 @@ const STYLE: HandStyle = {
 
 const dist = (a: Pt, b: Pt) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
+/** The furthest any point moved between two point lists, point for point. */
 const moved = (a: ReadonlyArray<Pt>, b: ReadonlyArray<Pt>) =>
   Math.max(...a.map((p, i) => Math.hypot(p[0] - (b[i]?.[0] ?? 0), p[1] - (b[i]?.[1] ?? 0))));
 
+/** The hand's path from its rest to `to`, `n` steps of reach. */
 const path = (root: HandRoot, to: Pt, n = 400, grip?: Gesture['grip']): Pt[] =>
   Array.from({ length: n + 1 }, (_, k) => handAt(root, { to, reach: k / n, grip }, STYLE));
 
+/** Targets a figure's hands work at: out, up, over the head, across the chest, down across the belly, far out. */
 const TARGETS: ReadonlyArray<Pt> = [
   [90, -60],
   [60, -190],
@@ -144,11 +148,13 @@ describe('a floating hand', () => {
   });
 });
 
+/** A copy of a mitten's palm outline: `handShape` writes into a buffer it reuses. */
 const shapeOf = (g: Gesture | undefined, s: number): Pt[] =>
   handShape(g, s).map(([x, y]): Pt => [x, y]);
 
 describe("a hand's grip", () => {
   const TO: Pt = [90, -60];
+  /** In unit shape: a step moving any point more than this is a frame that swaps a grip. */
   const STEP = 0.02;
 
   test('forms from the open rest as it arrives, as before, when it names no grip it was', () => {
@@ -194,8 +200,10 @@ describe("a hand's grip", () => {
   });
 });
 
+/** A copy of an outline: `closeShape` writes into buffers it reuses. */
 const copy = (pts: ReadonlyArray<Pt>): Pt[] => pts.map(([x, y]): Pt => [x, y]);
 
+/** The nearest distance from `p` to the closed outline `poly`. */
 const toOutline = (p: Pt, poly: ReadonlyArray<Pt>) => {
   let best = Number.POSITIVE_INFINITY;
   for (let i = 0; i < poly.length; i++) {
@@ -211,9 +219,11 @@ const toOutline = (p: Pt, poly: ReadonlyArray<Pt>) => {
   return best;
 };
 
+/** How far apart two closed outlines are as shapes (however their points are numbered): the farther of the two one-way distances. */
 const apart = (a: ReadonlyArray<Pt>, b: ReadonlyArray<Pt>) =>
   Math.max(...a.map((p) => toOutline(p, b)), ...b.map((p) => toOutline(p, a)));
 
+/** Whether `p` lies inside the closed outline `poly`. */
 const inside = (p: Pt, poly: ReadonlyArray<Pt>) => {
   let hit = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -228,6 +238,7 @@ const inside = (p: Pt, poly: ReadonlyArray<Pt>) => {
   return hit;
 };
 
+/** The largest turn (radians) between two neighbouring edges of a closed outline: its sharpest corner. */
 const sharpest = (poly: ReadonlyArray<Pt>) => {
   let worst = 0;
   const n = poly.length - 1;
@@ -257,6 +268,7 @@ const take = (s: CloseShape): Taken => ({
   scalars: [s.curl, s.over, s.creaseInk],
 });
 
+/** The palm's middle, where a light or the gifts are laid. */
 const PALM_MIDDLE: Pt = [0, 0];
 const top = (pts: ReadonlyArray<Pt>) => Math.min(...pts.map((p) => p[1]));
 const bottom = (pts: ReadonlyArray<Pt>) => Math.max(...pts.map((p) => p[1]));
@@ -360,6 +372,7 @@ describe('the palm-up turn', () => {
 });
 
 describe('floatingHand declares itself', () => {
+  /** The hands a check probing hands collects from one `floatingHand` draw. */
   const declared = (g: Gesture | undefined, seen?: Parameters<typeof floatingHand>[5], alpha = 1) =>
     withDom(() => {
       const { ctx } = recorder();

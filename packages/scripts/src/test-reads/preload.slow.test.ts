@@ -6,6 +6,7 @@ import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
 import { readsEnv } from './env.ts';
 
+/** A test that reads a file, imports a module and loads a native library. */
 const FIXTURE = `import { expect, test } from 'bun:test';
 
 import { value } from './module.ts';

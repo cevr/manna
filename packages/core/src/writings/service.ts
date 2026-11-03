@@ -131,6 +131,10 @@ export interface WritingsServiceApi {
     reference: PublicationReference,
     refcode: string,
   ) => Effect.Effect<Option.Option<Paragraph>, WritingsError>;
+  /** Every paragraph in the corpus that `refcode` cites — books, periodicals,
+   *  letters — as typed, spacing and case aside: the paragraph it names, and
+   *  the paragraphs under it when it names a page or a letter (`PP 351`,
+   *  `11LtMs, Lt 1a, 1896`). Empty when nothing matches. */
   readonly paragraphsByRefcode: (
     refcode: string,
   ) => Effect.Effect<readonly RefcodeMatch[], WritingsError>;
@@ -140,6 +144,8 @@ export interface WritingsServiceApi {
   readonly headings: (
     reference: PublicationReference,
   ) => Effect.Effect<readonly Heading[], WritingsError>;
+  /** Full-text search in FTS relevance order, optionally narrowed to one
+   *  publication or to one half of the corpus by author (§6.4). */
   readonly search: (
     query: string,
     options?: {
@@ -148,6 +154,13 @@ export interface WritingsServiceApi {
       readonly scope?: CorpusScope;
     },
   ) => Effect.Effect<readonly SearchHit[], WritingsError>;
+  /** How many paragraphs `search` matches under the same query and scope,
+   *  ignoring any `limit`.
+   *
+   *  Its own call rather than a field on the hits because a caller wants either
+   *  the page of results or the size of the tail, rarely both at the same cost:
+   *  the row query decodes every hit it returns, and this one decodes nothing.
+   *  The §6.1 sections need both, and they ask for them concurrently. */
   readonly searchCount: (
     query: string,
     options?: {
@@ -423,6 +436,9 @@ export class WritingsService extends Context.Service<WritingsService, WritingsSe
         });
       };
 
+      /** The same two guards `search` applies, minus the limit one it has no
+       *  parameter for: an empty query is still not a search, and a count of a
+       *  non-search is not zero — it is a rejected request. */
       const searchCount: WritingsServiceApi['searchCount'] = (query, options) => {
         if (query.trim().length === 0) {
           return Effect.fail(WritingsInvalidSearchError.make({ reason: 'empty-query' }));

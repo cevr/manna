@@ -110,6 +110,7 @@ describe('stagingRequest', () => {
   });
 });
 
+/** The cache over memory alone, its days capped at `cap`. */
 const cacheOnly = (cap: number) => {
   const files = new Map<string, Uint8Array>();
   return StagingCache.layer('/staging', cap).pipe(
@@ -142,6 +143,7 @@ describe('the day’s spend', () => {
   );
 });
 
+/** Narrator's staging over memory, its cache capped at `cap`; every take decodes to 3 s of silence. */
 const staging = (cap: number) => {
   const files = new Map<string, Uint8Array>();
   const calls: ElevenLabsCalls = emptyCalls();

@@ -17,6 +17,11 @@ import { emitArtifact } from './emit.js';
 import { openCatalogLookup, openParagraphLookup } from './lookups.js';
 import { parseTopicSource } from './source.js';
 
+/** Defaults resolve against the repo root, not the caller's cwd: the root
+ *  `build:topics` script runs this from `packages/scripts`, and a default that
+ *  silently meant a different directory depending on who invoked it would be a
+ *  trap. `import.meta.dir` is this file, three levels below the package root
+ *  and five below the repo root. */
 const repoRoot = new URL('../../../../', import.meta.url).pathname.replace(/\/$/u, '');
 
 const content = Flag.String('content').pipe(
@@ -29,6 +34,8 @@ const out = Flag.String('out').pipe(
   Flag.withDescription('Destination path for the compiled topics.db'),
 );
 
+/** Empty means "derive from HOME inside the handler": a default read at module
+ *  load would bake one machine's home directory into the flag's help text. */
 const bibleDb = Flag.String('bible-db').pipe(
   Flag.withDefault(''),
   Flag.withDescription('bible.db to resolve catalog overlay keys against (default ~/.bible)'),

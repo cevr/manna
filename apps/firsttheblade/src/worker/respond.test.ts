@@ -9,6 +9,7 @@ import { Assets, requestUrl } from './assets.ts';
 import { MAIL_ROUTES } from '../mail/paths.ts';
 import { CACHE, CONTENT_SECURITY_POLICY, MOVED, respond, withCharset } from './respond.ts';
 
+/** The site's files as a map from path to body and type: a file of each kind the build writes. */
 const FILES = new Map<string, readonly [string, string]>([
   ['/', ['<h1>home</h1>', 'text/html; charset=utf-8']],
   ['/about', ['<h1>about</h1>', 'text/html; charset=utf-8']],
@@ -26,6 +27,7 @@ const FILES = new Map<string, readonly [string, string]>([
   ['/llms.txt', ['# First the Blade', 'text/plain']],
 ]);
 
+/** A file whose read the host fails: the policy dies on it. */
 const BROKEN = '/assets/broken-abc12345.css';
 
 const AssetsTest = Layer.succeed(
@@ -48,6 +50,7 @@ const AssetsTest = Layer.succeed(
 const get = (path: string, method = 'GET') =>
   respond(HttpServerRequest.fromWeb(new Request(`https://firsttheblade.test${path}`, { method })));
 
+/** A seeded draw in [0, 1). */
 const draws = (seed: number) => {
   let state = seed >>> 0;
   return () => {
@@ -59,6 +62,10 @@ const draws = (seed: number) => {
 const pick = <A>(next: () => number, from: readonly [A, ...ReadonlyArray<A>]): A =>
   from[Math.floor(next() * from.length)] ?? from[0];
 
+/**
+ * A content policy's directives, as a browser reads them (CSP Level 3): by
+ * `;`, each name in any case, and the first of a name the one that holds.
+ */
 const directivesOf = (policy: string): ReadonlyMap<string, ReadonlyArray<string>> => {
   const directives = new Map<string, ReadonlyArray<string>>();
   for (const written of policy.split(';')) {
@@ -69,6 +76,12 @@ const directivesOf = (policy: string): ReadonlyMap<string, ReadonlyArray<string>
   return directives;
 };
 
+/**
+ * The directives through which a page can paint a picture, each with the
+ * ones a browser falls back to when it is not written: an image (`img`, a
+ * stylesheet's `url()`, an icon, a poster), an `<object>` or `<embed>`, a
+ * frame, and a video.
+ */
 const PICTURE_DIRECTIVES: ReadonlyArray<ReadonlyArray<string>> = [
   ['img-src', 'default-src'],
   ['object-src', 'default-src'],
@@ -77,8 +90,15 @@ const PICTURE_DIRECTIVES: ReadonlyArray<ReadonlyArray<string>> = [
   ['media-src', 'default-src'],
 ];
 
+/** The sources that let in only what this origin serves. */
 const SELF_ONLY = new Set(["'self'", "'none'"]);
 
+/**
+ * Each way `policy` lets a picture in from anywhere but this origin: a
+ * picture directive (or the one it falls back to) holding a source other
+ * than `'self'` or `'none'` (`data:`, `blob:`, `*`, a scheme or a host), or
+ * none of them written, so anything loads.
+ */
 const foreignPictures = (policy: string): ReadonlyArray<string> => {
   const directives = directivesOf(policy);
   return PICTURE_DIRECTIVES.flatMap((chain) => {
@@ -97,6 +117,7 @@ const foreignPictures = (policy: string): ReadonlyArray<string> => {
   });
 };
 
+/** Characters a drawn path's segments are made of, escapes, dots and words beyond ASCII among them. */
 const PATH_CHARACTERS: readonly [string, ...ReadonlyArray<string>] = [
   'a',
   'z',
@@ -113,6 +134,7 @@ const PATH_CHARACTERS: readonly [string, ...ReadonlyArray<string>] = [
   '..',
 ];
 
+/** A path no file is at: up to four segments drawn from `PATH_CHARACTERS`, a trailing slash or not. */
 const strayPath = (next: () => number) => {
   const segments = Array.from({ length: 1 + Math.floor(next() * 4) }, () =>
     Array.from({ length: 1 + Math.floor(next() * 6) }, () => pick(next, PATH_CHARACTERS)).join(''),
@@ -120,9 +142,18 @@ const strayPath = (next: () => number) => {
   return `/${segments.join('/')}${pick(next, ['/', '', ''])}`;
 };
 
+/** A query, or none. */
 const query = (next: () => number) =>
   pick(next, ['', '?utm_source=youtube', '?token=x', '?a=data:image/png;base64,AA']);
 
+/**
+ * A request of each kind the Worker answers, drawn at random: a file the
+ * build writes (a page, a script, a stylesheet, a font, a picture, a
+ * manifest), a path with no file (the not-found page) and the not-found page
+ * itself, a path that starts `//`, a series' former path (a 301), an email
+ * list route under each method, any path under a method no file takes (a
+ * 405), and a file whose read the host fails (a 500).
+ */
 const drawnRequest = (next: () => number): readonly [string, string] => {
   const files = [...FILES.keys()] as [string, ...Array<string>];
   const methods = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'] as const;

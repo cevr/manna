@@ -13,6 +13,7 @@ const NOW = 100 * DAY;
 const out = '/out/f';
 const folder = `${out}/cache/segments`;
 
+/** Segment `key` kept whole under `segments`, `bytes` in its one chunk, last used `daysAgo` days before NOW. */
 const kept = (key: string, daysAgo: number, bytes = 100, segments = folder) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -29,6 +30,7 @@ const kept = (key: string, daysAgo: number, bytes = 100, segments = folder) =>
     );
   });
 
+/** The film's catalogue holding a video at each of `clips` (relative to `/out/f`), as a render's caller records it. */
 const catalogued = (clips: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -57,6 +59,7 @@ const catalogued = (clips: ReadonlyArray<string>) =>
     );
   });
 
+/** What a prune is told: when, how many days, which keys to keep. */
 type PruneRule = Parameters<typeof pruneIdle>[1];
 
 const ruleOf = (rule: Partial<PruneRule>): PruneRule => ({
@@ -66,9 +69,11 @@ const ruleOf = (rule: Partial<PruneRule>): PruneRule => ({
   ...rule,
 });
 
+/** `film cache --prune` on the film at `at` (`/out/f`, unless given). */
 const prune = (rule: Partial<PruneRule> = {}, dry = false, at = out) =>
   pruneIdle(at, ruleOf(rule), dry);
 
+/** The segment folders left under the segments folder, by key. */
 const left = (files: Map<string, Uint8Array>) =>
   [
     ...new Set(
@@ -78,6 +83,7 @@ const left = (files: Map<string, Uint8Array>) =>
     ),
   ].toSorted();
 
+/** Over `files` in memory, its locks in memory and shared by everything the test runs. */
 const over =
   (files: Map<string, Uint8Array>, mtimes: ReadonlyMap<string, number> = new Map()) =>
   <A, E>(effect: Effect.Effect<A, E, FileSystem.FileSystem | Path.Path>) =>
@@ -86,6 +92,7 @@ const over =
       Effect.provide([memoryFileSystem(files, new Set(), mtimes), Path.layer]),
     );
 
+/** The typed failure a run ended with, if it failed. */
 const failure = <A, E>(exit: Exit.Exit<A, E>) =>
   Exit.match(exit, { onSuccess: () => Option.none<E>(), onFailure: Cause.findErrorOption });
 
@@ -294,6 +301,7 @@ describe('pruning a film’s render cache', () => {
 });
 
 describe('pruning a film’s render cache through a link', () => {
+  /** A film's outputs under a temp folder, and a folder elsewhere holding an old segment and a sentinel. */
   const linked = Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
@@ -306,6 +314,7 @@ describe('pruning a film’s render cache through a link', () => {
     return { fs, path, film, elsewhere };
   });
 
+  /** What the prune failed with, and whether the old segment and the sentinel elsewhere are still there. */
   const pruneThrough = (film: string, elsewhere: string) =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;

@@ -24,6 +24,7 @@ import type { PixelBox } from '../core/figure.ts';
 import { Segment } from '../core/segment.ts';
 import { ContentStore } from './content-store.ts';
 
+/** A kind kept already, or a try the record does not hold, or one whose image no longer reads as its sheet. */
 class SheetKept extends Schema.TaggedError<SheetKept>()('SheetKept', {
   member: Schema.String,
   kind: SheetKind,
@@ -34,6 +35,7 @@ class SheetKept extends Schema.TaggedError<SheetKept>()('SheetKept', {
   }
 }
 
+/** What the owner chose: the kind, the try, his why, the ask he answered it on, and whether it replaces the kind's keep. */
 export interface CastKeep {
   readonly kind: SheetKind;
   readonly n: number;
@@ -42,6 +44,7 @@ export interface CastKeep {
   readonly replace: boolean;
 }
 
+/** A try as the caller cut it: its bytes as drawn, and each view's number, name, box and crop. */
 interface CastCut {
   readonly bytes: Uint8Array;
   readonly views: ReadonlyArray<{
@@ -52,12 +55,14 @@ interface CastCut {
   }>;
 }
 
+/** What the cut is given: the try, the kind's plan, and the refusal its own failures read as. */
 interface CutOf {
   readonly tried: CastTry;
   readonly plan: CastKindPlan;
   readonly refused: (reason: string) => SheetKept;
 }
 
+/** The keep a replace moves aside, and the ask it is replaced on: none on a first keep; a refusal's reason when the keep may not go ahead. */
 const replacing = (
   was: Option.Option<CastKept>,
   keep: CastKeep,
@@ -85,6 +90,7 @@ const replacing = (
       }),
   });
 
+/** The views a keep keeps: every view the try cut, or on a replace the views the old keep kept (a member that keeps some views of a sheet it shares keeps the same ones); a view the old keep kept that the try lacks is a refusal's reason. */
 const viewsKept = <V extends { readonly view: number }>(
   cut: ReadonlyArray<V>,
   was: Option.Option<CastKept>,
@@ -102,6 +108,7 @@ const viewsKept = <V extends { readonly view: number }>(
     },
   });
 
+/** The folder a replace sets the old keep aside in: `base`, else `base-2`, `base-3` …, the first the record's history does not name. */
 const historyFolder = (record: CastSheetRecord, base: string): string => {
   const taken = new Set((record.replaced ?? []).map((r) => r.folder));
   return Option.getOrElse(
@@ -115,6 +122,7 @@ const historyFolder = (record: CastSheetRecord, base: string): string => {
   );
 };
 
+/** File the keep of try `keep.n` of the member's `keep.kind` sheet, cut by `cut`: its image and views into the folder, the keep into the record. */
 export const fileCastKeep = Effect.fn('Cast.file')(function* <E, R>(
   place: { readonly folder: string },
   keep: CastKeep,
@@ -213,6 +221,7 @@ export const fileCastKeep = Effect.fn('Cast.file')(function* <E, R>(
   );
 });
 
+/** A missing record reads as one with no sheets, so its keep is refused before anything is written. */
 const emptyRecord: CastSheetRecord = {
   member: Segment.make('unrecorded'),
   scope: 'film',

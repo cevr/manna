@@ -1,5 +1,6 @@
 import { defineScript } from '@manna/film/core';
 
+/** The study's name. */
 export const TITLE = 'Cold open: the looks';
 
 export const script = defineScript([
@@ -22,4 +23,5 @@ export const script = defineScript([
   },
 ]);
 
+/** A beat's id. */
 export type BeatId = (typeof script)[number]['id'];

@@ -26,12 +26,20 @@ import { FORMAT_LIMIT, SourceWriter } from './source-writer.ts';
 import { freshHere } from './film-services/testing.ts';
 import { sceneFixture } from './scene-sources/testing.ts';
 
+/** The timeout of a test here that spawns (bunx oxfmt, sh, sleep): a cold start's time is the machine's (effect/requireSpawnBudget). */
 const SPAWNS_MS = 30_000;
 
+/** The fixture's film, by name. */
 const F = Schema.decodeSync(FilmName)('f');
 
+/** The fixture's hand scene: a fresh copy per test. */
 class HandFile extends Context.Service<HandFile, string>()('test/HandFile') {}
 
+/**
+ * The writer over a fresh fixture. `spawning` stands in front of every child
+ * process the writer starts, given the hand file: a test uses it to act as an
+ * editor saving the file while oxfmt runs, or to make oxfmt fail.
+ */
 const fixtureWith = (
   spawning: (
     file: string,
@@ -70,6 +78,7 @@ const fixtureWith = (
 
 const fixture = fixtureWith();
 
+/** A registry that overrides the timeline `hand` spreads: the scene reads its own, not hand.ts's. */
 const OVERRIDDEN = `import { hand } from './hand.ts';
 
 export const scenes = [
@@ -77,6 +86,7 @@ export const scenes = [
 ];
 `;
 
+/** A registry where two scenes spread one drawing: both read hand.ts's literals. */
 const SHARED = `import { hand } from './hand.ts';
 
 export const scenes = [
@@ -87,23 +97,31 @@ export const scenes = [
 
 const keep = (_: string, command: ChildProcess.Command) => Effect.succeed(command);
 
+/** Whether `command` is the writer's oxfmt run. */
 const isOxfmt = (command: ChildProcess.Command) =>
   command._tag === 'StandardCommand' && command.args.includes('oxfmt');
 
+/** oxfmt as `cat`: the text as it was, so a test that writes many times spends no format run on each. */
 const formatAsIs = (_: string, command: ChildProcess.Command) =>
   Effect.sync((): ChildProcess.Command => {
     if (!isOxfmt(command) || command._tag !== 'StandardCommand') return command;
     return ChildProcess.make('cat', [], command.options);
   });
 
+/** What an editor saves: its buffer (the file as it was before the lab's write) plus a new line. */
 const EDITOR_LINE = '// a line typed in the editor\n';
 
+/**
+ * A manifest beside the hand scene: names under `kept`, encoded compactly by
+ * the store's codec (not as oxfmt leaves it), as the library's lock is.
+ */
 const ledgerOf = (hand: string): Manifest<Readonly<Record<string, ReadonlyArray<string>>>> => ({
   file: `${hand.slice(0, hand.lastIndexOf('/'))}/ledger.json`,
   codec: Schema.fromJsonString(Schema.Record(Schema.String, Schema.Array(Schema.String))),
   empty: {},
 });
 
+/** `name` appended under `kept` through a store of its own: another process holding the file's lock. */
 const appended = (hand: string, name: string) =>
   Effect.gen(function* () {
     const store = yield* ContentStore;
@@ -117,6 +135,7 @@ const read = Effect.fn('test.read')(function* () {
   return yield* (yield* FileSystem.FileSystem).readFileString(yield* HandFile);
 });
 
+/** oxfmt's verdict on the file: 0 when it would change nothing. */
 const oxfmtCheck = Effect.fn('test.oxfmtCheck')(function* () {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   return Number(
@@ -437,6 +456,7 @@ describe.concurrent('scene writer', () => {
     SPAWNS_MS,
   );
 
+  /** Done when the hung oxfmt below has started. */
   const hung = Deferred.makeUnsafe<boolean>();
 
   it.effect(

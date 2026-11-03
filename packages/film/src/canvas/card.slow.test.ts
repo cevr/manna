@@ -10,6 +10,11 @@ import { voicedAt } from '../core/voiced.ts';
 
 const LINE = 'Job asked it: {job}How should man be just with God?';
 
+/**
+ * The line's words as an estimate times them, each heard 0.15 s into its span
+ * (as a take's are, its aligned start leading the voice), and its one mark at
+ * the aligned start.
+ */
 const voice = () => {
   const words = estimate('Job asked it: How should man be just with God?').map((w) => ({
     ...w,
@@ -25,6 +30,7 @@ const STYLE: CardStyle = {
   payoffColor: '#e6b347',
 };
 
+/** A stand-in 1920 × 1080 context, every character 10 px a 60 px size (scaled with the font). */
 const context = () =>
   recorder(1920, 1080, {
     measure: (font, text) => text.length * 0.5 * Number(/(\d+(?:\.\d+)?)px/.exec(font)?.[1] ?? 10),
@@ -61,6 +67,7 @@ describe('cardWords', () => {
 describe("the card's layout", () => {
   const words = Result.getOrThrow(cardWords('job', voice(), 0, { from: 'job', payoff: 'just' }));
 
+  /** Every word the card sets, once all are heard, where the check reads it. */
   const setIn = (style: CardStyle) => {
     const { ctx } = context();
     const sink: ProbeSink = { texts: [], inks: [] };
@@ -101,6 +108,7 @@ describe("the card's layout", () => {
 describe('fullCard', () => {
   const words = Result.getOrThrow(cardWords('job', voice(), 0, { from: 'job', payoff: 'just' }));
 
+  /** The words `fullCard` puts down at scene second `t`, as the check reads them. */
   const shownAt = (t: number, style: CardStyle = STYLE) => {
     const { ctx, fills } = context();
     const sink: ProbeSink = { texts: [], inks: [] };
@@ -226,6 +234,7 @@ test('a flood grows from its box to the whole frame', () => {
 });
 
 describe('a scene with a card', () => {
+  /** A film of one scene with a card over `card` and a flood over `flood`, logging which draws ran. */
   const carded = () => {
     const ran: string[] = [];
     const scene = drawing({
@@ -276,6 +285,11 @@ describe('a scene with a card', () => {
     expect(at(card.end + 0.01)).toEqual(['scene']);
   });
 
+  /**
+   * A film whose scene's highlight moves with the scene's time, and the
+   * flood's clip at `at` (of the flood cue) once the frames at `before` were
+   * drawn on the same film: the rect laid just before the card is drawn.
+   */
   const floodAt = (
     at: (flood: { readonly start: number; readonly end: number }) => number,
     before: ReadonlyArray<number>,
@@ -356,6 +370,7 @@ describe('a scene with a card', () => {
     ).toThrow('no box to flood from');
   });
 
+  /** A captioned film of one scene whose card holds to its end and paints only a 5 px mark, no ground. */
   const bare = () => {
     const scene = drawing({
       timeline: { card: { mark: 'job', until: { at: 'end' } } },
@@ -500,6 +515,7 @@ describe('a scene with a card', () => {
       ],
     });
     const at = film.placed[1]?.start ?? Number.NaN;
+    /** The alpha of each multiply over the whole frame at `T`. */
     const shades = (T: number) => {
       const r = recorder(1920, 1080);
       withDom(() => film.render(r.ctx, T));

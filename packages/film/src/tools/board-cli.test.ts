@@ -13,6 +13,7 @@ import { memoryFileSystem, memoryLocks, text } from './host/testing.ts';
 
 const film = FilmName.make('f');
 
+/** The board's services over `files` (the terminal and stdio are Bun's): the film `f` under `/films`, one beat `cold`; no process runs. */
 const over = (files: Map<string, Uint8Array>) => {
   files.set('/films/f/scenes/index.ts', text('export default []'));
   files.set('/in/a.png', text('image a'));
@@ -50,6 +51,7 @@ const run = (args: ReadonlyArray<string>) =>
     Effect.exit,
   );
 
+/** Why a run was refused, if it was. */
 const refused = (exit: Exit.Exit<unknown, unknown>) =>
   Exit.match(exit, {
     onSuccess: () => Option.none<string>(),

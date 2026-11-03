@@ -1,3 +1,14 @@
+/** The vector artifact's lifecycle: when it is read, what a read failure means,
+ *  and what a defect means.
+ *
+ *  Three properties that are invisible to a result-shaped assertion, because
+ *  each is about *how* the answer was reached rather than what it was. A search
+ *  that reparses a 246 MB index on every keystroke returns the right rows; so
+ *  does one that reports a cancelled fiber as "no index installed". Both are
+ *  bugs, and only a test that counts reads or inspects the failure channel can
+ *  see them.
+ */
+
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, Exit, FileSystem, Layer, Option, Ref } from 'effect';
 
@@ -31,12 +42,20 @@ const query = (text: string) =>
     limit: Option.none(),
   });
 
+/** How many times the counting byte source below was read.
+ *
+ *  Its own service, so the layer that counts and the test that asserts share
+ *  one `Ref` while the whole graph is still built once, at the test boundary. */
 class ReadCount extends Context.Service<ReadCount, Ref.Ref<number>>()(
   '@manna/core/search/test/ReadCount',
 ) {
   static readonly Live: Layer.Layer<ReadCount> = Layer.effect(ReadCount, Ref.make(0));
 }
 
+/** A byte source that counts its own reads. The index bytes are the same every
+ *  time, so no result assertion could tell one read from twenty — the count is
+ *  the only observable that distinguishes a scoped resource from a per-query
+ *  parse. */
 const countingBytes: Layer.Layer<VectorIndexBytes, never, ReadCount> = Layer.effect(
   VectorIndexBytes,
   Effect.gen(function* () {
@@ -48,6 +67,9 @@ const countingBytes: Layer.Layer<VectorIndexBytes, never, ReadCount> = Layer.eff
   }),
 );
 
+/** `SearchService.Live` directly, not `goldenSearchLayer`: the fixture builder
+ *  supplies its own `VectorIndexBytes` from the `index` argument, which would
+ *  shadow the counting source and make this test read zero. */
 const countingSearch: Layer.Layer<SearchService | ReadCount> = SearchService.Live.pipe(
   Layer.provide(goldenSearchSources),
   Layer.provide(countingBytes),
@@ -72,11 +94,13 @@ describe('§9.6 the index is read once, not once per query', () => {
 });
 
 describe('§6.5 the filesystem reader degrades on faults and not on defects', () => {
+  /** A `FileSystem` whose `exists` dies rather than failing. */
   const dyingFileSystem = Layer.succeed(
     FileSystem.FileSystem,
     FileSystem.makeNoop({ exists: () => Effect.die(new Error('stat blew up')) }),
   );
 
+  /** A `FileSystem` whose `readFile` dies, with the file reported present. */
   const dyingRead = Layer.succeed(
     FileSystem.FileSystem,
     FileSystem.makeNoop({

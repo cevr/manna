@@ -15,11 +15,13 @@ import { LIMITS, ask, partsOf, questionKey } from './run.js';
 import { repoItems } from './sources.js';
 import { storeFileOf } from './store.js';
 
+/** `n / d` to two places, `-` for none. */
 const share = (n: number, d: number) => {
   if (d === 0) return '-';
   return (n / d).toFixed(2);
 };
 
+/** A mean to two places, `-` when there was nothing to take it over. */
 const mean = (n: number) => {
   if (Number.isNaN(n)) return '-';
   return n.toFixed(2);

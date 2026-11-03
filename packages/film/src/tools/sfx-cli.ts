@@ -36,8 +36,10 @@ import { CheckLineJson } from './fresh-film.ts';
 
 const encodeCheckLine = Schema.encodeSync(CheckLineJson);
 
+/** Which sounds `sfx list` prints. */
 type ListFilter = 'all' | 'missing' | 'stale';
 
+/** Where a sound's audio comes from, as `list` names it. */
 const sourceOf = (entry: LibraryEntry): string => {
   switch (entry.kind) {
     case 'generated':
@@ -52,6 +54,13 @@ const sourceOf = (entry: LibraryEntry): string => {
   }
 };
 
+/**
+ * One line per sound: name, kind, use, state (current, stale, missing, or
+ * derived for a code sound), variants kept (and candidates waiting),
+ * level in dB relative to the voice, kept loudness and source, and `+ code
+ * trial` when it has one. `family` narrows to one family (`paper`); `filter`
+ * to the missing or stale.
+ */
 const listLines = (
   loaded: Pick<LoadedLibrary, 'library' | 'lock' | 'trials'>,
   family: Option.Option<string>,
@@ -90,6 +99,7 @@ const listLines = (
       ];
     });
 
+/** Each job `make` would run, and the total it would spend. */
 const planLines = (jobs: ReadonlyArray<MakeJob>): ReadonlyArray<string> => [
   ...jobs.map(
     (job) =>
@@ -98,11 +108,13 @@ const planLines = (jobs: ReadonlyArray<MakeJob>): ReadonlyArray<string> => [
   `total ${jobs.reduce((sum, job) => sum + job.count, 0)} candidates, ${jobs.reduce((sum, job) => sum + job.credits, 0)} credits`,
 ];
 
+/** A number with its sign, to `digits` places: how far a figure moved. */
 const signed = (value: number, digits: number): string => {
   if (value > 0) return `+${value.toFixed(digits)}`;
   return value.toFixed(digits);
 };
 
+/** The columns a profile is printed in: each heading's width, the label's first. */
 const PROFILE_COLUMNS: ReadonlyArray<readonly [string, number]> = [
   ['', 10],
   ['secs', 6],
@@ -118,6 +130,7 @@ const PROFILE_COLUMNS: ReadonlyArray<readonly [string, number]> = [
   ['<30 Hz', 7],
 ];
 
+/** A row of `PROFILE_COLUMNS`: the label left, each figure right. */
 const profileRow = (cells: ReadonlyArray<string>): string =>
   cells
     .map((cell, i) => {
@@ -127,6 +140,7 @@ const profileRow = (cells: ReadonlyArray<string>): string =>
     })
     .join(' ');
 
+/** A profile's numbers under `PROFILE_COLUMNS`: seconds, LUFS, dBFS, Hz, a share as a percentage. */
 const profileLine = (label: string, p: Profile): string =>
   profileRow([
     label,
@@ -143,6 +157,11 @@ const profileLine = (label: string, p: Profile): string =>
     `${(p.rumble * 100).toFixed(1)} %`,
   ]);
 
+/**
+ * What `compare` prints: each render of what plays and of the code trial,
+ * each side's median, the bands either median hears (each band's share of
+ * the power in dB, and how far the trial moved it), and the distances.
+ */
 const compareLines = (name: string, compared: Comparison): ReadonlyArray<string> => {
   const plays = medianProfile(Arr.map(compared.plays, (m) => m.profile));
   const trial = medianProfile(Arr.map(compared.trial, (m) => m.profile));
@@ -167,12 +186,19 @@ const compareLines = (name: string, compared: Comparison): ReadonlyArray<string>
   ];
 };
 
+/** A film's effect that places a sound: the film, the effect and what it lands on its cue. */
 interface Placing {
   readonly film: string;
   readonly effect: string;
   readonly sync: NonNullable<SoundEffect['sync']>;
 }
 
+/**
+ * The sync check `compare` prints: how far each film's placement of the
+ * sound would hear the hit move if the code trial played in place of what
+ * plays now, the medians' move and the worst seed's, marked where the worst
+ * passes `HIT_MOVE`, or where what plays has no hit to hear (`HEARD_HIT`).
+ */
 const syncLines = (
   compared: Comparison,
   placings: ReadonlyArray<Placing>,
@@ -193,6 +219,7 @@ const syncLines = (
   ];
 };
 
+/** Every film's effects that place `name`, each read from the film's `sound.ts` alone. */
 const placingsOf = Effect.fn('film.sfx.placings')(function* (name: string) {
   const repo = yield* FilmRepo;
   const films = yield* (yield* FilmFolder).names;
@@ -211,6 +238,11 @@ const placingsOf = Effect.fn('film.sfx.placings')(function* (name: string) {
   );
 });
 
+/**
+ * What `audit` prints: each generated sound's verdict, the rule's reason and
+ * the prompt's words that decided it, marked when it has a code trial; then
+ * how many have each verdict.
+ */
 const auditLines = (loaded: Pick<LoadedLibrary, 'library' | 'trials'>): ReadonlyArray<string> => {
   const audited = auditLibrary(loaded.library);
   const counts = Object.entries(VERDICT_LABEL).map(
@@ -686,6 +718,7 @@ const push = Command.make(
   ),
 );
 
+/** `film sfx`, over the app's library (`SoundLibrary`). */
 export const sfx = Command.make('sfx').pipe(
   Command.withDescription("The app's sound library: list, plan, make, curate, check and sync it"),
   Command.withSubcommands([

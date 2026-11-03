@@ -19,6 +19,7 @@ import { type Element, ids } from './rig/rml.ts';
 const SKIN = paper({ color: '#ece7fa', shade: '#c9bcf2', light: '#fffffb' }, 'skin');
 const WHITE = paper({ color: '#fcfbfc', shade: '#dcd9ec', light: '#ffffff' }, 'white');
 
+/** A lock as its file keeps it, on the plain lead. */
 const LOCK = {
   item: 'lead',
   version: 1,
@@ -28,6 +29,7 @@ const LOCK = {
   seen: { set: 'concepts', file: 'images/lead.png' },
 };
 
+/** An override of the lead's lock, freeing one print of him. */
 const OVERRIDE = {
   rule: 'FigureLock' as const,
   place: 'lead',
@@ -36,6 +38,7 @@ const OVERRIDE = {
   quote: 'words a test stands in for',
 };
 
+/** A plain figure's parts, of `skin`, its hands of it too. */
 const plainOf = (skin: typeof SKIN) => ({
   concept: { image: { set: 'concepts', file: 'images/lead.png' }, box: [0, 0, 100, 200] as const },
   art: { width: 360, height: 470, feet: [180, 440] as const },
@@ -59,6 +62,7 @@ const plainOf = (skin: typeof SKIN) => ({
 const lead = figure({ ...plainOf(SKIN), lock: LOCK });
 const other = figure(plainOf(WHITE));
 
+/** A file of two figures, each with its hands' artboard, the second's hand twice the house's. */
 const FILE = figuresFile({
   weight: 1,
   boards: {
@@ -69,9 +73,11 @@ const FILE = figuresFile({
   },
 });
 
+/** Each artboard's `key` attribute in `rml`, in the order it prints them. */
 const artboards = (rml: string, key: string) =>
   Array.from(rml.matchAll(new RegExp(`<Artboard [^>]*\\b${key}="([^"]+)"`, 'g')), (m) => m[1]);
 
+/** Each stroke's thickness in `rml`. */
 const thicknesses = (rml: string) =>
   Array.from(rml.matchAll(/<Stroke thickness="([^"]+)"/g), (m) => Number(m[1]));
 
@@ -217,10 +223,12 @@ describe("a film's figures file", () => {
   });
 });
 
+/** `e` and every element under it, front first. */
 const under = (e: Element): Element[] => [e, ...e.children.flatMap(under)];
 const attr = (e: Element, key: string) => e.attrs.find(([k]) => k === key)?.[1];
 const nameOf = (e: Element) => attr(e, 'name');
 
+/** A range mapper's output for `v`, as Rive maps it: linear, unclamped. */
 const mapped = (c: Element, v: number) => {
   const n = (key: string) => Number(attr(c, key));
   return (
@@ -229,6 +237,7 @@ const mapped = (c: Element, v: number) => {
   );
 };
 
+/** The plain lead's artboard and his hand's, drawn in `direction`, as their root elements. */
 const drawnIn = (direction: typeof DIRECTION) => {
   const next = ids();
   return [
@@ -237,6 +246,7 @@ const drawnIn = (direction: typeof DIRECTION) => {
   ];
 };
 
+/** Each ink stroke under `roots`, with the shape it lies in and the root it is drawn under. */
 const inkStrokes = (roots: ReadonlyArray<Element>) =>
   roots.flatMap((root) =>
     under(root)

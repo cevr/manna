@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 
 import { claimPress, liftHeldByOther, pressHeldByOther } from './press.ts';
 
+/** A pointer event with only the id the registry reads. */
 const lift = (type: 'pointerup' | 'pointercancel', pointerId: number) =>
   Object.assign(new Event(type), { pointerId });
 

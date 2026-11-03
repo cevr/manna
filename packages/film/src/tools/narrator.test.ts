@@ -57,6 +57,7 @@ const take = (spoken: string, file: string) => ({
   source: 'elevenlabs' as const,
 });
 
+/** `a` recorded under the test voice, `b` never recorded. */
 const recorded: Timings = {
   voice: voiceKey(testVoice),
   scenes: { a: take('Hello world.', 'a.mp3') },
@@ -71,6 +72,7 @@ const defaults: NarrateOptions = {
 
 const TIMINGS = '/films/test/narration/timings.json';
 
+/** Where the staging cache keeps its takes and the day's spend, beside the film. */
 const STAGING = '/staging';
 
 const setup = (timings: Timings, heard: ReadonlyMap<string, string> = new Map(), decoded?: Pcm) => {
@@ -90,6 +92,7 @@ const setup = (timings: Timings, heard: ReadonlyMap<string, string> = new Map(),
   return { files, calls, layer };
 };
 
+/** Plan from what is stored, record, and return the timings written. */
 const narrate = (
   layer: Layer.Layer<Narrator | ContentStore>,
   voice: Voice = testVoice,
@@ -108,6 +111,7 @@ const narrate = (
 
 const spoken = (calls: ElevenLabsCalls) => calls.tts.map((r) => r.text);
 
+/** A host's processes as a sweep sees them: its name and which pids run. */
 const processesOn = (host: string, alive: (pid: number) => boolean) =>
   Effect.provideService(Processes, { host, alive: (pid) => Effect.succeed(alive(pid)) });
 
@@ -308,6 +312,7 @@ describe('Narrator', () => {
       ...take(spoken, file),
       source: 'recorded' as const,
     });
+    /** `a` read by the owner and current, `b` read by the owner before its line changed. */
     const owned: Timings = {
       voice: voiceKey(testVoice),
       scenes: { a: person('Hello world.', 'a.mp3'), b: person('The first line.', 'b.mp3') },
@@ -439,6 +444,7 @@ describe('Narrator', () => {
   describe('crash safety', () => {
     const DIR = '/films/test/narration';
     const said = 'Hello world.';
+    /** `a` recorded, its file on disk and its timings in agreement. */
     const agreed = (): Map<string, Uint8Array> => {
       const audio = text(said);
       const timings: Timings = {
@@ -474,6 +480,7 @@ describe('Narrator', () => {
       return narrate(layer, testVoice, reRecordA);
     };
 
+    /** Every take the timings mark current is on disk, and is the audio they describe. */
     const expectAgreement = (files: Map<string, Uint8Array>) => {
       const timings = Schema.decodeSync(TimingsJson)(new TextDecoder().decode(files.get(TIMINGS)));
       for (const [id, take] of Object.entries(timings.scenes)) {
@@ -597,11 +604,15 @@ describe('Narrator', () => {
 
   describe('two writers on one film', () => {
     const DIR = '/films/test/narration';
+    /** One host in memory: its paths, and its manifest locks, which every store of a test shares. */
     const host = () =>
       Layer.mergeAll(Path.layer, Layer.succeed(ManifestLock, memoryManifestLock()));
+    /** A film's files: just its timings, `recorded`. */
     const filed = () => new Map([[TIMINGS, text(Schema.encodeSync(TimingsJson)(recorded))]]);
+    /** A file system over `files`, as another process sees them. */
     const fileSystemOf = (files: Map<string, Uint8Array>) =>
       Effect.map(Layer.build(memoryFileSystem(files)), Context.get(FileSystem.FileSystem));
+    /** The sweep a second `film narrate` opens with, through `fs`: its store its own, so its locks another process's. */
     const sweepElsewhere = (fs: FileSystem.FileSystem) =>
       Effect.gen(function* () {
         const disk = Layer.succeed(FileSystem.FileSystem, fs);
@@ -614,6 +625,10 @@ describe('Narrator', () => {
           Effect.provideService(FileSystem.FileSystem, fs),
         );
       });
+    /**
+     * A `film narrate` of beat `b` through `fs`, a process of its own, its
+     * speech-to-text answering once `heard` is done.
+     */
     const firstRun = (
       fs: FileSystem.FileSystem,
       files: Map<string, Uint8Array>,
@@ -634,6 +649,7 @@ describe('Narrator', () => {
         ),
       );
     };
+    /** Whether the take the timings name for `b` is in `narration/`. */
     const placed = (files: Map<string, Uint8Array>, after: Timings) => {
       const file = after.scenes['b']?.file ?? '';
       return { file, inNarration: files.has(`${DIR}/${file}`) };
@@ -714,6 +730,10 @@ describe('Narrator', () => {
       }).pipe(Effect.scoped, Effect.provide(host())),
     );
 
+    /**
+     * A mix landing its track through `fs`, under no timings lock: paused
+     * once its partial is written, and landing when `finish` is done.
+     */
     const midMix = (fs: FileSystem.FileSystem) =>
       Effect.gen(function* () {
         const [begun, finish] = [yield* Deferred.make<boolean>(), yield* Deferred.make<boolean>()];
@@ -734,6 +754,7 @@ describe('Narrator', () => {
         return { mixing, finish };
       });
 
+    /** The partials in `narration/`. */
     const partialsIn = (files: Map<string, Uint8Array>) =>
       [...files.keys()].filter((f) => f.startsWith(`${DIR}/`) && f.endsWith('.partial'));
 

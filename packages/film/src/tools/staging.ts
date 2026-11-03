@@ -25,17 +25,26 @@ import { ContentStore, type Manifest, type StoreError } from './content-store.ts
 import { sha256Hex } from './digest.ts';
 import { type DialogueRequest, type TtsRequest, sendsNeighbours } from './elevenlabs.ts';
 
+/** A kept take's audio, as the cache names it: the SHA-256 of its bytes and its kind. */
 const TAKE_AUDIO = /^[0-9a-f]{64}\.(?:mp3|flac)$/;
 
+/**
+ * The name a take's audio is kept under: the SHA-256 of its bytes, so a
+ * name always holds the same audio (the lab serves it as immutable) and a
+ * reading made afresh is a new name, never the old one overwritten.
+ */
 export const audioName = (audio: Uint8Array, ext: '.mp3' | '.flac'): string =>
   `${sha256Hex(audio)}${ext}`;
 
+/** The characters a day may spend on staging takes when `FILM_STAGING_DAILY_CAP` names none. */
 const STAGING_DAILY_CAP = 100_000;
 
+/** A voice's own pace, in words a minute, where it is measured: what a model that takes a speed is aimed from. */
 const VOICE_PACE: ReadonlyMap<string, number> = new Map([
   [STAGING_VOICE_ID, STAGING_VOICE_WORDS_PER_MINUTE],
 ]);
 
+/** A beat to stage: its line, who reads it, and the lines either side (sent only to models that take them). */
 export interface StagingAsk {
   readonly beat: ReadBeat;
   readonly voice: Voice;
@@ -43,18 +52,24 @@ export interface StagingAsk {
   readonly next: string;
 }
 
+/** What is sent for a beat: one voice's text-to-speech, or a cast's dialogue. */
 type SpeechRequest =
   | { readonly _tag: 'Tts'; readonly request: TtsRequest }
   | { readonly _tag: 'Dialogue'; readonly request: DialogueRequest };
 
+/** A beat's request, compiled: what is sent, what is done to the take after, its cost and its key. */
 export interface StagingRequest {
   readonly speech: SpeechRequest;
   readonly compiled: Compiled;
+  /** The characters ElevenLabs counts: every character of the text sent. */
   readonly characters: number;
+  /** The SHA-256 of what is sent: the reading ElevenLabs makes, and what it costs, kept under it. */
   readonly sent: string;
+  /** The SHA-256 of everything the take depends on (what is sent, and each hold set in it after): the take's key. */
   readonly key: string;
 }
 
+/** Each line's words, `[from, to)` in the beat's words. */
 const wordRanges = (lines: ReadonlyArray<Line>) =>
   lines.reduce<ReadonlyArray<{ readonly line: Line; readonly from: number; readonly to: number }>>(
     (ranges, line) => {
@@ -68,6 +83,12 @@ const wordRanges = (lines: ReadonlyArray<Line>) =>
     [],
   );
 
+/**
+ * A beat's staging request: its words compiled with its marks for its
+ * voice's model, a cast's lines each sent its own words, a reader sent the
+ * speed that aims its measured pace at `PACE.aim` where the model takes one
+ * (a speed `voice.ts` names wins), and the key of all of it. Pure.
+ */
 export const stagingRequest = (ask: StagingAsk): StagingRequest => {
   const words = ask.beat.text.split(/\s+/).filter((w) => w.length > 0);
   const { voice } = ask;
@@ -75,6 +96,7 @@ export const stagingRequest = (ask: StagingAsk): StagingRequest => {
   return speechRequest(ask, voice, words);
 };
 
+/** A cast's beat as one dialogue, each line sent its own words compiled. */
 const dialogueRequest = (
   ask: StagingAsk,
   cast: Cast,
@@ -100,6 +122,11 @@ const dialogueRequest = (
   };
 };
 
+/**
+ * One reader's beat through text-to-speech: its words compiled, the speed
+ * that aims its measured pace at 155 where the model takes one (a `speed`
+ * its settings name wins), and its neighbours where the model takes them.
+ */
 const speechRequest = (
   ask: StagingAsk,
   reader: Reader,
@@ -135,27 +162,39 @@ const speechRequest = (
   };
 };
 
+/** The lines either side, as a model is sent them: none to v4 and v3 (`sendsNeighbours`). */
 const neighboursOf = (ask: StagingAsk, model: string) => {
   if (sendsNeighbours(model)) return { previous: ask.previous, next: ask.next };
   return { previous: '', next: '' };
 };
 
+/** A request as its key is made: every field that changes the take, settings by name. */
 const RequestKey = Schema.fromJsonString(
   Schema.Struct({
     op: Schema.Literals(['tts', 'dialogue']),
     model: Schema.String,
     settings: Schema.Array(Schema.Tuple([Schema.String, Schema.Finite])),
+    /** Each line's voice and the text it is sent. */
     inputs: Schema.Array(Schema.Tuple([Schema.String, Schema.String])),
     previous: Schema.String,
     next: Schema.String,
   }),
 );
 
+/** Settings by name, so the same settings written in another order key the same. */
 const settingsKey = (settings: Readonly<Record<string, number>>) =>
   Object.entries(settings).toSorted(([a], [b]) => a.localeCompare(b));
 
+/** The holds set in a take, as its key has them: each gap's word and seconds, in order. */
 const HoldsKey = Schema.fromJsonString(Schema.Array(Schema.Tuple([Schema.Int, Schema.Finite])));
 
+/**
+ * A request's two keys, under the cache's version: `sent`, the SHA-256 of
+ * what is sent (the reading), and `key`, of the reading with each hold set
+ * in it after (the take). Holds stand apart because v4 and v3 are sent one
+ * `[pause]` for every pause: a hold's seconds changed is the same reading,
+ * set again, at no cost.
+ */
 const keysOf = (compiled: Compiled, request: typeof RequestKey.Type) => {
   const sent = sha256Hex(`staging/2 sent ${Schema.encodeSync(RequestKey)(request)}`);
   const holds = compiled.holds
@@ -164,32 +203,42 @@ const keysOf = (compiled: Compiled, request: typeof RequestKey.Type) => {
   return { sent, key: sha256Hex(`staging/2 take ${sent} ${Schema.encodeSync(HoldsKey)(holds)}`) };
 };
 
+/** A staging take as the cache keeps it: the take narrate would keep, ready to hear or make current. */
 export const StagedTake = Schema.Struct({
+  /** Its audio's name in the cache (`audioName`): an `.mp3` as sent, or a `.flac` once a hold or the tail was set in it. */
   file: Schema.String,
   duration: Seconds,
   words: Schema.Array(TakeWord),
+  /** What speech-to-text heard it say. */
   heard: Schema.String,
   wer: Schema.Finite,
+  /** The characters it cost. */
   characters: Schema.Int,
+  /** When it was made, epoch milliseconds. */
   at: Schema.Finite,
 });
 export type StagedTake = typeof StagedTake.Type;
 
+/** A request's record in the cache: absent (`null` on disk) until a take is kept for it. */
 const StagedJson = Schema.fromJsonString(Schema.OptionFromNullOr(StagedTake));
 
+/** The characters spent on staging takes, by local day (`YYYY-MM-DD`). */
 const Spend = Schema.Struct({ days: Schema.Record(Schema.String, Schema.Int) });
 type Spend = typeof Spend.Type;
 const SpendJson = Schema.fromJsonString(Spend);
 
+/** A day's staging spend against its cap. */
 interface Spent {
   readonly day: string;
   readonly spent: number;
   readonly cap: number;
 }
 
+/** The local day of epoch milliseconds `ms`: `YYYY-MM-DD`. */
 export const dayOf = (ms: number): string =>
   DateTime.formatIsoDate(DateTime.makeZonedUnsafe(ms, { timeZone: DateTime.zoneMakeLocal() }));
 
+/** The spend with `characters` charged to `day`, or the cap that refuses them. Pure. */
 const charged = (
   spend: Spend,
   day: string,
@@ -206,36 +255,52 @@ const charged = (
   return Result.succeed({ days: { ...Object.fromEntries(kept), [day]: spent + characters } });
 };
 
+/** A take and its audio, as made. */
 export interface Made {
   readonly take: StagedTake;
   readonly audio: Uint8Array;
 }
 
+/** A take and its audio, and whether the cache kept it already. */
 type Reading = Made & { readonly cached: boolean };
 
+/** How long a reading's second asker waits for the first's: a reading takes seconds, its lock's tries a few. */
 const READING_WAIT = { times: 60, every: Duration.seconds(1) } as const;
 
 interface StagingCacheService {
+  /** The take a request made, when the cache holds it and its audio. */
   readonly get: (key: string) => Effect.Effect<Option.Option<StagedTake>, StoreError>;
+  /** A take made for a request, kept: its audio first, then its record naming it. */
   readonly put: (
     key: string,
     take: StagedTake,
     audio: Uint8Array,
   ) => Effect.Effect<void, StoreError>;
+  /**
+   * The reading `sent` names (a take as ElevenLabs sent it): the cache's,
+   * when it keeps one `reuse` accepts, else `make`'s, kept. One maker at a
+   * time for a reading, across processes: whoever asks second waits its
+   * turn, then finds the first's and makes nothing, spends nothing.
+   */
   readonly reading: <E, R>(
     sent: string,
     reuse: (take: StagedTake) => boolean,
     make: Effect.Effect<Made, E, R>,
   ) => Effect.Effect<Reading, E | StoreError, R>;
+  /** Where a kept take's audio is. */
   readonly audioOf: (take: StagedTake) => string;
+  /** Where the audio a take names as `file` is, when the cache keeps it: none for any other name. */
   readonly audioNamed: (file: string) => Effect.Effect<Option.Option<string>, StoreError>;
+  /** Charge the day `characters`, or refuse them past the cap: nothing is charged then. */
   readonly charge: (characters: number) => Effect.Effect<Spent, StagingCapReached | StoreError>;
+  /** The day's spend so far. */
   readonly today: Effect.Effect<Spent, StoreError>;
 }
 
 export class StagingCache extends Context.Service<StagingCache, StagingCacheService>()(
   '@manna/film/tools/StagingCache',
 ) {
+  /** The cache in `dir`, its days capped at `cap` characters. */
   static readonly layer = (dir: string, cap: number = STAGING_DAILY_CAP) =>
     Layer.effect(
       StagingCache,
@@ -337,6 +402,10 @@ export class StagingCache extends Context.Service<StagingCache, StagingCacheServ
       }),
     );
 
+  /**
+   * The cache `FILM_STAGING_DIR` names (`~/.cache/bible-film/staging` by
+   * default), capped by `FILM_STAGING_DAILY_CAP` characters a day.
+   */
   static readonly fromConfig = Layer.unwrap(
     Effect.gen(function* () {
       const path = yield* Path.Path;

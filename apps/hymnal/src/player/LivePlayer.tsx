@@ -1,3 +1,29 @@
+/**
+ * The app's one player, over the device's playback (`playback.live.ts`)
+ * under the score clock (`sound.ts`), which the Sound setting switches, its
+ * seeks counted for the page's follow (`seeks.ts`).
+ * It follows the lock screen and Control Center while the app shows it.
+ *
+ * Over the screens it draws the bar's `#` (`FIND_LABEL`) where `findPlace`
+ * puts it on the page the route draws, just above the bar while that page
+ * draws one, and the find drums it
+ * opens (`FindDrums.tsx`), with their `Open` (`pressFind`).
+ * `Open` pushes the hymn dialled, or on a hymn page puts it in the page's
+ * place, and on the page's own hymn moves nothing (`openingAt`); either
+ * closes a search open on that page, as a search's result does. On
+ * every screen the `#` is the last button of the find bar (`FindBar.tsx`),
+ * which also holds `Search`, in the same place: one find bar for the home
+ * list and a hymn page alike, so it lives on and glides between their places
+ * (`glideOf`), and stands over a hymn page's bar from the render the path
+ * moves to it (`findPlace`). It
+ * tells the lists the room the `#` takes (`FindRoom`). The drums close on a
+ * move to another screen or where the `#` leaves (`findMoved`), and on a tap
+ * outside them: while they are open a layer lies over the screens and the
+ * bar, under the drums and the `#`, and takes that tap, so it reaches
+ * nothing behind. The find bar lies over it too and lets a tap on any of
+ * its views but the `#` through to it.
+ */
+
 import { useAtom, useAtomMount, useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Effect, Match, Option, SubscriptionRef } from 'effect';
 import { usePathname, useRouter, useSafeAreaInsets } from 'one';
@@ -54,7 +80,9 @@ import { keptOf } from './stanzas';
 import { offlineLive } from '~/offline/live';
 import { SaveShown } from '~/offline/Open';
 
+/** Whether the recording sounds, as the score clock reads it: the Sound setting, set at mount. */
 const sound = Effect.runSync(SubscriptionRef.make(true));
+/** The lines of a hymn's timeline a choice of its stanzas keeps, from its words' sections. */
 const keptFor = (hymn: number, stanzas: ReadonlyArray<number>): ReadonlyArray<boolean> =>
   Option.match(hymnAt(String(hymn)), {
     onNone: () => [],
@@ -68,6 +96,7 @@ const player = playerOn(
   settings.stanzas,
   settings.intro,
 );
+/** The context's one value: a draw again (the Sound switch) hands every reader the same player, so no page draws again for it. */
 const provided = Option.some(player);
 
 export function LivePlayer({ children }: { readonly children: ReactNode }) {
@@ -87,8 +116,10 @@ export function LivePlayer({ children }: { readonly children: ReactNode }) {
   );
 }
 
+/** Whether the book holds the hymn a route's number segment names: the hymn route draws its page and bar. */
 const holds = (segment: string): boolean => Option.isSome(hymnAt(segment));
 
+/** The screens, told the room the `#` takes, with the `#` over them where `findPlace` puts it. */
 function Finding({ children }: { readonly children: ReactNode }) {
   const state = useAtomValue(player.state);
   const shown = useShownPage();
@@ -120,6 +151,12 @@ function Finding({ children }: { readonly children: ReactNode }) {
   );
 }
 
+/**
+ * The `#`, its bottom `bottom` points over the window's where it stands
+ * (`at`), and the drums over it while open, over a layer across the whole
+ * window that closes them on a tap (`FindPress.Outside`). The `#` is the last
+ * button of the find bar (`FindBar`) of the screen at `path`, after `Search`.
+ */
 function FindNumber({
   bar,
   path,
@@ -228,6 +265,7 @@ function FindNumber({
   );
 }
 
+/** The drums' act on the dialled hymn (`Open`). */
 function Act({
   testID,
   label,

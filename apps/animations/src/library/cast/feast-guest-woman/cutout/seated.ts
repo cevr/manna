@@ -5,6 +5,7 @@ import RECORD from './seated/frames/record.json' with { type: 'json' };
 import smile from './seated/frames/smile.png' with { type: 'file' };
 import turn from './seated/frames/turn.png' with { type: 'file' };
 
+/** Her seated keys, read once from the record. */
 export const SEATED = seatedFrames(
   'feast-guest-woman',
   Schema.decodeUnknownSync(SeatedRecord)(RECORD),

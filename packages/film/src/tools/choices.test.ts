@@ -29,6 +29,7 @@ import { fakeMedia } from './media/testing.ts';
 
 const scenes: ReadonlyArray<Timed> = [{ id: 'a', say: 'Hello {wave} world.' }];
 
+/** `a` staged by ElevenLabs. */
 const staged: Timings = {
   voice: voiceKey(testVoice),
   scenes: {
@@ -48,12 +49,14 @@ const NARRATION = film.paths.narration;
 const TIMINGS = film.paths.timings.file;
 const MASTER = masterFile(film.paths);
 
+/** The film's `sound.ts`: a score of two options, `piano` playing, under the voice at -18 dB. */
 const SOUND_FILE = `${film.paths.dir}/sound.ts`;
 const SOUND = `export const sound = {
   score: { play: 'piano', under: -18, options: { piano: {}, strings: {} } },
 };
 `;
 
+/** A score option as `film options list` offers it. */
 const scoreOption = (id: string, picked: boolean) => ({
   id,
   label: id,
@@ -65,6 +68,7 @@ const scoreOption = (id: string, picked: boolean) => ({
   key: id,
 });
 
+/** The film's points as `film options list` reads `SOUND`: its score, `piano` playing. */
 const scorePoints = () =>
   Effect.succeed([
     withSay(Option.none(), {
@@ -76,8 +80,10 @@ const scorePoints = () =>
     }),
   ]);
 
+/** The app's sound library folder: its lock holds one take of `tone.tick` from before it was code. */
 const LIBRARY = '/lib';
 
+/** The take the lock holds. */
 const EARLIER: Variant = {
   request: 'a request from before',
   file: 'files/tone.tick/earlier.flac',
@@ -91,6 +97,7 @@ const EARLIER: Variant = {
   credits: 40,
 };
 
+/** A `film options sound` the fresh process ran: where it was asked to write the seed. */
 interface Sounded {
   readonly film: string;
   readonly point: string;
@@ -99,9 +106,13 @@ interface Sounded {
 }
 
 const setup = (
+  /** What `film mix` does: a test that watches a remake holds it. */
   remixing: Effect.Effect<void> = Effect.void,
+  /** What `film options list` answers; the voice points read from the files when not given. */
   points: Option.Option<FreshFilmService['choices']> = Option.none(),
+  /** What the transcriber hears a reading of the line as; the line itself when none. */
   heardAs: Option.Option<string> = Option.none(),
+  /** What `film options sound` does before it writes the seed: a test that watches a render holds it. */
   sounding: Effect.Effect<void> = Effect.void,
 ) => {
   const files = new Map<string, Uint8Array>([
@@ -204,8 +215,10 @@ const setup = (
   return { files, layer, sounded };
 };
 
+/** The film's timings as they are stored now. */
 const timings = ContentStore.use((store) => store.read(film.paths.timings));
 
+/** `file` imported as beat `a`'s take, outside the lab (as `takes import` would, `--accept-mismatch` when `accepted`): its take's file. */
 const imported = (file: string, accepted = false) =>
   Effect.gen(function* () {
     const loaded = yield* (yield* FilmRepo).load(F);
@@ -372,6 +385,7 @@ describe('Choices: a score picked', () => {
   );
 });
 
+/** The take files in `narration/` itself (not its attempts), by name. */
 const takesIn = (files: ReadonlyMap<string, Uint8Array>) =>
   [...files.keys()]
     .filter((f) => f.startsWith(`${NARRATION}/a.`))
@@ -381,6 +395,7 @@ describe('Choices: a seed of a sound made from data', () => {
   const POINT = pointIdOf({ _tag: 'Take', sound: 'tone.tick' });
   const SEED = 'code:render:graph/1';
   const heard = { _tag: 'Heard' as const, alone: true, inPlace: true };
+  /** `tone.tick`'s point as `film options list` offers a code sound's: its seed, and the take its lock holds. */
   const seedPoints = () =>
     Effect.succeed([
       withSay(Option.none(), {

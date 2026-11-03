@@ -18,6 +18,7 @@ const estimateTotal = () =>
     return value;
   });
 
+/** Progress redraws only this leaf, never Settings or the hymn pager. */
 export function Downloads() {
   const state = AsyncResult.getOrElse(useAtomValue(progress), () => empty);
   const result = useAtomValue(send);

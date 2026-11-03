@@ -1,3 +1,16 @@
+/**
+ * `shippable`, the prod deploy's gate: it refuses a pending record and an
+ * approval whose shown files, with its earlier approvals', do not hold every
+ * still before it builds, each approval's ask saved beside the record; then
+ * it builds the site and refuses each built image, found by its bytes, that
+ * no approved still and no image outside the rule holds. One real build of a
+ * copy of the app carries the forms the source reader missed (a template
+ * `new URL`, an `import.meta.glob`, a `.jfif` import, a `.jxl` under
+ * `public/`), each with bytes the owner never saw: exactly those are
+ * refused, and every other image of the build passes. On stage `prod` it
+ * runs; any other stage skips it. The stack runs it second, after the prod
+ * state check (`scripts/prod-state.test.ts` holds that order).
+ */
 import { BunServices } from '@effect/platform-bun';
 import { Stage } from 'alchemy/Stage';
 import { describe, expect, it } from 'effect-bun-test';
@@ -23,8 +36,10 @@ const APP = `${import.meta.dir}/..`;
 const ASK = 'a1b2c3d4e5f';
 const EARLIER = 'b1c2d3e4f5a';
 const FIELD = 'src/art/field-768.webp';
+/** The images outside the rule the page reads as text (`?raw`) into its markup, so the build writes no file of them. */
 const INLINE = ['src/art/wheat.svg'];
 
+/** What a copy of the app needs to build, beside its record, a link to the app's `node_modules` and the repo's `tsconfig.json` its own extends. */
 const COPIED = [
   'src',
   'public',
@@ -38,6 +53,7 @@ const COPIED = [
 const LabAskJson = Schema.fromJsonString(LabAsk, { space: 2 });
 const ShownJson = Schema.fromJsonString(Schema.Record(Schema.String, Schema.String));
 
+/** `given`'s ask saved at `root` (`savedAsk`), as the lab gives it answered approve: one step whose image blocks show its files, with their receipt. */
 const savedFor = (root: string, given: Given) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -63,6 +79,7 @@ const savedFor = (root: string, given: Given) =>
     );
   });
 
+/** The record at `root` over its stills as they stand, the approval `of` gives for them, and the earlier approvals `before` gives, each approval's ask saved beside it. */
 const recordWith = (
   root: string,
   of: (stills: Approved['stills']) => Approved['approval'],
@@ -78,8 +95,10 @@ const recordWith = (
     yield* Effect.forEach(given, (approval) => savedFor(root, approval));
   });
 
+/** The record at `root` pending on `ASK`, whatever the committed record's approval is. */
 const pendingAt = (root: string) => recordWith(root, () => ({ status: 'pending', ask: ASK }));
 
+/** An approval on `ask` whose shown files are `shown`. */
 const givenOn = (ask: string, shown: Record<string, string>): Approved['earlier'][number] => ({
   status: 'approved',
   ask,
@@ -90,6 +109,7 @@ const givenOn = (ask: string, shown: Record<string, string>): Approved['earlier'
   shown,
 });
 
+/** The record at `root` turned approved on `ASK`, its shown files those `shows` gives for its stills, with an earlier approval on `EARLIER` of each set `before` gives. */
 const approvedWith = (
   root: string,
   shows: (stills: Approved['stills']) => Record<string, string>,
@@ -104,6 +124,7 @@ const approvedWith = (
 const shownAll = (stills: Approved['stills']) =>
   Object.fromEntries(Object.entries(stills).map(([still, hash]) => [`/files/${still}`, hash]));
 
+/** The stills but the field at 768 shown, and the field at 768 alone. */
 const shownBut = (stills: Approved['stills']) => {
   const { [FIELD]: _, ...rest } = stills;
   return shownAll(rest);
@@ -113,6 +134,7 @@ const shownField = (stills: Approved['stills']) => ({ [`/files/${FIELD}`]: still
 const tagOf = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A, E, R>) =>
   effect.pipe(Effect.match({ onFailure: (error) => error._tag, onSuccess: () => 'shippable' }));
 
+/** A seeded draw in [0, 1). */
 const draws = (seed: number) => {
   let state = seed >>> 0;
   return () => {

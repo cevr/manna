@@ -5,8 +5,11 @@ import { describe, expect, it } from 'effect-bun-test';
 import { WikiSectionSources } from './section-composer.js';
 import { sectionSourcesOver } from './section-sources.js';
 
+/** A connection that opens: an in-memory database. */
 const opens = () => SqliteBun.layer({ filename: ':memory:' });
 
+/** A connection to a file that is not there, opened the way a host opens
+ *  `bible.db`: the SQL client reports it as a typed `SqlError`. */
 const willNotOpen = () =>
   SqliteBun.layer({
     filename: '/nonexistent-directory-xyz/bible.db',
@@ -15,6 +18,8 @@ const willNotOpen = () =>
     create: false,
   });
 
+/** What the sections resolve to over a wiring, built inside the effect so a
+ *  construction failure is the exit's, not the test's. */
 const sourcingOver = (layer: Layer.Layer<WikiSectionSources>) =>
   Effect.exit(
     Effect.gen(function* () {

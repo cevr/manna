@@ -5,6 +5,7 @@ import { ToolFailure } from '../core/api.ts';
 import { type LookPost, ToolFailed } from '../core/easel.ts';
 import { failureJson, takeLook } from './easel-client.ts';
 
+/** A lab that answers every request with `status` and `body`, each request counted in `asked`. */
 const labAnswering = (status: number, body: string, asked: Array<string>) =>
   Layer.succeed(
     HttpClient.HttpClient,

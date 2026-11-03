@@ -1,3 +1,18 @@
+/**
+ * The tuner's string pick, mounted in a browser's document
+ * (`src/test/setup.ts`): a tap on a string's circle chooses that string and
+ * turns `Auto` off; a second tap on the chosen string lets it go and turns
+ * `Auto` back on; the `Auto` switch turns either way. VoiceOver reads the
+ * chosen circle as selected, and its hint names what a second tap does.
+ *
+ * The test never listens: off iOS the screen has no ear and no permission
+ * module, so it rests as denied and only its controls are pressed.
+ *
+ * The rule is checked against a model written here, over its whole domain:
+ * every target (Auto, or one of the six strings) with every press (each
+ * string's circle, and the switch), the screen read after each press.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { RegistryProvider } from '@effect/atom-react';
 import { Array as Arr, Data, Option } from 'effect';
@@ -9,10 +24,13 @@ import { propsWith } from '../test/props';
 import { TunerScreen } from './Tuner';
 import type { StringId } from './tuning';
 
+/** The six strings, low to high. */
 const IDS: ReadonlyArray<StringId> = ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'];
 
+/** The hint VoiceOver reads on the chosen string: a second tap goes back to Auto. */
 const HINT = 'Goes back to Auto';
 
+/** The string the switch chooses when it turns Auto off with nothing heard: the lowest. */
 const LOWEST: StringId = 'E2';
 
 type Press = Data.TaggedEnum<{
@@ -23,6 +41,7 @@ const Press = Data.taggedEnum<Press>();
 
 const PRESSES: ReadonlyArray<Press> = [Press.Switch(), ...IDS.map((id) => Press.Tap({ id }))];
 
+/** The rule as the owner asked it, written apart from the screen: none is Auto. */
 const after = (target: Option.Option<StringId>, press: Press): Option.Option<StringId> =>
   Press.$match(press, {
     Tap: ({ id }) => {
@@ -40,6 +59,7 @@ const nameOf = (target: Option.Option<StringId>) => Option.getOrElse(target, () 
 const pressName = (press: Press) =>
   Press.$match(press, { Tap: ({ id }) => `tap ${id}`, Switch: () => 'switch' });
 
+/** The tuner mounted in the document; it unmounts when the test's `using` ends. */
 const mount = () => {
   const host = document.createElement('div');
   document.body.append(host);
@@ -65,6 +85,7 @@ const byTestId = (host: HTMLElement, id: string) =>
 
 const circle = (host: HTMLElement, id: StringId) => byTestId(host, `tuner-string-${id}`);
 
+/** A left click, as a tap reaches a pressable on the web. */
 const click = (element: Element) =>
   act(
     () =>
@@ -79,9 +100,11 @@ const press = (host: HTMLElement, each: Press) =>
     Switch: () => click(byTestId(host, 'tuner-auto')),
   });
 
+/** The hint the circle hands VoiceOver (`accessibilityHint`, which react-native-web keeps off the DOM), if any. */
 const hintOf = (element: Element): Option.Option<unknown> =>
   Option.liftThrowable(() => propsWith(element, 'accessibilityHint')['accessibilityHint'])();
 
+/** What the screen shows of the pick: the strings selected, Auto's switch, and the strings whose hint goes back to Auto. */
 const shown = (host: HTMLElement) => ({
   selected: IDS.filter((id) => circle(host, id).getAttribute('aria-selected') === 'true'),
   auto: byTestId(host, 'tuner-auto').getAttribute('aria-checked') === 'true',
@@ -90,12 +113,14 @@ const shown = (host: HTMLElement) => ({
 
 type Shown = ReturnType<typeof shown>;
 
+/** What the screen must show for `target`. */
 const want = (target: Option.Option<StringId>): Shown => ({
   selected: Option.toArray(target),
   auto: Option.isNone(target),
   backToAuto: Option.toArray(target),
 });
 
+/** `selected=[D3] auto=false hint=[D3]`, one line for a miss. */
 const told = ({ selected, auto, backToAuto }: Shown) =>
   `selected=[${selected.join(' ')}] auto=${String(auto)} hint=[${backToAuto.join(' ')}]`;
 

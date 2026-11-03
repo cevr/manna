@@ -1,3 +1,8 @@
+/**
+ * Whenever a confirm link is issued, its letter is sent. A letter that does
+ * not go gives its link back, so the next sign-up issues one at once instead
+ * of waiting out `RESEND_AFTER`.
+ */
 import * as Domain from '@alchemy.run/domain';
 import { Effect } from 'effect';
 

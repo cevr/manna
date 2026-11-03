@@ -4,6 +4,12 @@ import { Effect, FileSystem, Option, Path } from 'effect';
 
 const test = it.effect.layer(BunServices.layer);
 
+/**
+ * Words and turns that make the site read as if no one wrote it (owner,
+ * 2026-10-20, `docs/lessons.md` `ai-sounding-site-copy`). The first row is
+ * the owner's own never-words (`.claude/skills/film/reference/owner-voice.md`
+ * section 6); the rest are stock phrases of web copy.
+ */
 const STOCK: ReadonlyArray<RegExp> = [
   /\b(?:amazing|awesome|wonderful|beautiful|journey|wow)\b/i,
   /\b(?:dive into|delve|unlock|embark|empower|tapestry|game-changer|stay tuned)\b/i,
@@ -12,6 +18,7 @@ const STOCK: ReadonlyArray<RegExp> = [
   /a little, and then a little more/i,
 ];
 
+/** The "not X but Y" turn, said either way round, and its "not just" cousin. */
 const TURNS: ReadonlyArray<RegExp> = [
   /\bnot\b[^.?!;:]{1,60}?\bbut\b/i,
   /,\s(?:not|never)\s(?:a|an|the)\s\w+/i,
@@ -20,6 +27,7 @@ const TURNS: ReadonlyArray<RegExp> = [
 
 const DASHES: ReadonlyArray<RegExp> = [/—/, /\s--\s/];
 
+/** The books of the KJV, as a reference names them. */
 const BOOKS: ReadonlyArray<string> = [
   ...['Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy', 'Joshua', 'Judges', 'Ruth'],
   ...['1 Samuel', '2 Samuel', '1 Kings', '2 Kings', '1 Chronicles', '2 Chronicles', 'Ezra'],
@@ -33,10 +41,17 @@ const BOOKS: ReadonlyArray<string> = [
   'Revelation',
 ];
 
+/** A Scripture reference as the site writes one: Mark 4:28, 1 John 3:2, Psalm 37:3-5, Song of Solomon 2:1. */
 const REFERENCE = String.raw`(?:${BOOKS.join('|')}) \d+:\d+(?:-\d+)?`;
 
 const STRING = /"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g;
 
+/**
+ * A Verse (an object with `text` and a Scripture `ref`, in either order) is
+ * Scripture quoted word for word, so its text is blanked: the KJV may say
+ * "Wonderful" where the site may not. An object whose `ref` is no Scripture
+ * reference keeps its text.
+ */
 const blankVerses = (code: string) =>
   code.replace(/\{[^{}]*\}/g, (object) =>
     Option.match(
@@ -54,6 +69,11 @@ const blankVerses = (code: string) =>
     ),
   );
 
+/**
+ * The words of a source file: each string, template and JSX text, as Bun's
+ * transpiler gives them (comments gone, JSX lines joined), with its
+ * whitespace collapsed and every Verse's text left out.
+ */
 const sourceWords =
   (loader: 'ts' | 'tsx') =>
   (text: string): ReadonlyArray<string> =>
@@ -61,6 +81,11 @@ const sourceWords =
       collapse,
     );
 
+/**
+ * The words of a Markdown page: each paragraph, list item and table row, whitespace
+ * collapsed, with each quoted verse and its reference ("..." Mark 4:28) left
+ * out.
+ */
 const markdownWords = (text: string): ReadonlyArray<string> =>
   text
     .split(/\n\s*\n|\n(?=\||\s*(?:-|\d+\.) )/)
@@ -70,6 +95,7 @@ const markdownWords = (text: string): ReadonlyArray<string> =>
 
 const collapse = (words: string) => words.replace(/\\n|\s+/g, ' ').trim();
 
+/** How the words of each kind of file are read, by its extension. */
 const READERS = {
   '.ts': sourceWords('ts'),
   '.tsx': sourceWords('tsx'),
@@ -87,11 +113,13 @@ const wordsOf = (file: string, text: string): ReadonlyArray<string> =>
     },
   );
 
+/** What a string breaks of the copy rules, if anything. */
 const breaches = (words: string): ReadonlyArray<string> =>
   [...STOCK, ...TURNS, ...DASHES].flatMap((pattern) =>
     Option.toArray(Option.fromNullishOr(pattern.exec(words)?.[0])),
   );
 
+/** The site's source files and the channel kit's pages, by path from the app. */
 const copyFiles = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

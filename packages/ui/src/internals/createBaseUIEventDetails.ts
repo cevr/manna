@@ -1,3 +1,4 @@
+/** The details of a change a callback may cancel. */
 export type BaseUIChangeEventDetails<Reason extends string = string> = {
   reason: Reason;
   event: Event;

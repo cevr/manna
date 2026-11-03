@@ -1,3 +1,9 @@
+/**
+ * `bun run sim <command>`: drive the hymnal on the `verify-hymnal` simulator
+ * or in a headless browser, one JSON result per command on stdout. The
+ * commands: `scripts/sim/command.ts`; the drive: `scripts/sim/drive.ts`. The
+ * verify-hymnal skill (`.claude/skills/verify-hymnal`) drives through it.
+ */
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Effect, Layer, Path, Stdio } from 'effect';

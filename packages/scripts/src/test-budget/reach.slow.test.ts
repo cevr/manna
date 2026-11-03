@@ -7,8 +7,17 @@ import { fileURLToPath } from 'node:url';
 import { reachesIn, repoTests } from './reach.ts';
 import { testDryRun, unitTests } from './units.ts';
 
+/** A test file's text: one that imports its runner. */
 const RUNNER = "import { test } from 'bun:test';\n";
 
+/**
+ * How `scripts` (a workspace at `w`, `/repo/w`, its playwright configs
+ * `configs`, its `.gitignore` texts by folder `gitignores`, its bunfig's
+ * text `bunfig`, its wrappers of `bun test` `wrappers`) reach each of
+ * `files` (paths from `w`, each its text in `texts` or a test's), its
+ * unit-test tasks `units` (`test` when not given), as `<file>: <script>`, or
+ * `none`.
+ */
 const reaches = (
   scripts: Record<string, string>,
   files: ReadonlyArray<string>,

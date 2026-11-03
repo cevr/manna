@@ -79,6 +79,9 @@ const api: EGWApiClientService = {
   getMirrors: Effect.succeed([]),
 };
 
+/** The supply round at its own boundary. Each test composes its own layer from
+ *  that test's API double, so the provide belongs here rather than to a block
+ *  nested inside the test's generator. */
 const ensureWritings = (layer: Layer.Layer<CorpusSupply, never, Digest.Digest>) =>
   Effect.flatMap(CorpusSupply, (supply) =>
     supply.ensure(

@@ -1,3 +1,8 @@
+/**
+ * The copy job's hashes on Bun: `Bun.CryptoHasher`, which hashes a buffer in
+ * native code. Effect's `Crypto.digest` has no MD5, and git's blob id needs
+ * its header hashed before the bytes.
+ */
 import { Layer } from 'effect';
 
 import { Hash } from './stores.ts';

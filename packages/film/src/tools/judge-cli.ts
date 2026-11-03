@@ -10,8 +10,10 @@ import { labUrl } from './lab-client.ts';
 import { filmNamed } from './film-repo.ts';
 import { judge as judgeScene } from './judge.ts';
 
+/** A value as one JSON line. */
 const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
+/** `film judge` over the films in `films`, quoting the app's `rules`. */
 export const judge = (films: string, rules: ReadonlyArray<JudgeRule>) =>
   Command.make(
     'judge',

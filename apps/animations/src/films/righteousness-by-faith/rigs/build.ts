@@ -8,10 +8,13 @@ import { ARTBOARDS, FIGURES } from './figures.ts';
 
 const here = import.meta.dir;
 
+/** RBF's production ledger, committed with the film (`apps/animations/productions/`): the owner's decisions, which a lock names and an override cites. */
 export const LEDGER = `${here}/../../../../productions/righteousness-by-faith.json`;
 
+/** The CLI's problems as JSON text, for the failure's message. */
 const ProblemsJson = Schema.fromJsonString(Schema.Array(Schema.Unknown));
 
+/** The Rive CLI built the project but reported problems with it: as it printed them. */
 class RiveProblems extends Schema.TaggedError<RiveProblems>()('RiveProblems', {
   problems: Schema.String,
 }) {
@@ -20,6 +23,7 @@ class RiveProblems extends Schema.TaggedError<RiveProblems>()('RiveProblems', {
   }
 }
 
+/** An override on a figure cites a word that is not the owner's on that figure: no decision on RBF's ledger at its point (`item:<item>`), after the lock it frees, says its quote or filed the pick it cites. Why, each. */
 class OverridesUnsaid extends Schema.TaggedError<OverridesUnsaid>()('OverridesUnsaid', {
   unsaid: Schema.Array(Schema.String),
 }) {
@@ -28,6 +32,7 @@ class OverridesUnsaid extends Schema.TaggedError<OverridesUnsaid>()('OverridesUn
   }
 }
 
+/** A locked figure's print is not the one its lock holds and no override backed by the owner's decision on him frees it, or its lock names no decision on RBF's ledger: why, each. */
 class LocksBroken extends Schema.TaggedError<LocksBroken>()('LocksBroken', {
   broken: Schema.Array(Schema.String),
 }) {
@@ -36,6 +41,7 @@ class LocksBroken extends Schema.TaggedError<LocksBroken>()('LocksBroken', {
   }
 }
 
+/** The committed figures and their stamp, beside this file. */
 const committed = { riv: `${here}/figures.riv`, stamp: `${here}/figures.stamp.json` };
 
 const build = Effect.gen(function* () {

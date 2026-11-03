@@ -41,20 +41,25 @@ import { FilmParam, LabRefused, refused } from './lab-mcp-parts.ts';
 import { noteLine } from './notes-lines.ts';
 import { NotesStore } from './notes-store.ts';
 
+/** A note as an agent reads it: the record, its page and its still on disk. */
 export const NoteRead = Schema.Struct({
   ...Note.fields,
+  /** The lab page it is on. */
   links: LabLinks,
+  /** Its still, a PNG on this machine. */
   stillFile: Schema.String,
 });
 
 export const NotesRead = Schema.Struct({
   film: Schema.String,
+  /** The note log's last change. */
   seq: Schema.Int,
   notes: Schema.Array(NoteRead),
 });
 
 const TryRead = Schema.Struct({
   n: Schema.Int,
+  /** The image, on this machine. */
   file: Schema.String,
   made: Schema.String,
   note: Schema.optionalKey(Schema.String),
@@ -65,7 +70,9 @@ const TryRead = Schema.Struct({
 const PanelRead = Schema.Struct({
   ...Struct.omit(Panel.fields, ['tries']),
   tries: Schema.Array(TryRead),
+  /** Its beat's board approval: approved as it stands, stale (a pick since), or none. */
   approval: Schema.Literals(['approved', 'stale', 'none']),
+  /** Drawn from what has changed since (its kept try, or every try when none is kept): the members whose sheet changed, those it was drawn before the library sheet of, whether its picture's words changed, and what to do. */
   stale: Schema.optionalKey(
     Schema.Struct({
       members: Schema.Array(Schema.String),
@@ -88,6 +95,7 @@ export const BoardRead = Schema.Struct({
       at: Schema.String,
     }),
   ),
+  /** The images the board names that are missing from its folder, or changed since they were filed. */
   problems: Schema.Array(
     Schema.Struct({ file: Schema.String, problem: Schema.Literals(['missing', 'changed']) }),
   ),
@@ -134,6 +142,7 @@ const RequestTweak = Tool.make('request_tweak', {
   failure: LabRefused,
 });
 
+/** A board as a write leaves it. */
 const BoardWritten = BoardRead;
 
 const KeepTry = Tool.make('keep_try', {
@@ -169,6 +178,7 @@ const WithdrawBeat = Tool.make('withdraw_beat', {
   failure: LabRefused,
 });
 
+/** A film's notes and board as the tools, the resources and the prompt read and write them. */
 export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
   const fs = yield* FileSystem.FileSystem;
   const links = yield* LabAddress;
@@ -255,6 +265,7 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
     };
   });
 
+  /** `film`'s board changed by `change` (a pick, an approval, a withdrawal), read back as `board` reads it. */
   const boardChanged = Effect.fn('LabMcp.boardChanged')(function* (
     name: string,
     change: (board: BoardFile, at: string) => Result.Result<BoardFile, BoardRefusal>,
@@ -323,8 +334,10 @@ export const notesReads = Effect.fn('LabMcp.notesReads')(function* () {
   return { notesOf, boardOf, boardChanged, resolve, requestTweak };
 });
 
+/** The work of the notes' and the board's commands. */
 const lab = notesReads();
 
+/** The notes' and the board's commands. */
 export const notesCommands = [
   labCommand(Notes, {
     run: ({ film, status }) => Effect.flatMap(lab, (l) => l.notesOf(film, status ?? 'unresolved')),

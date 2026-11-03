@@ -75,6 +75,7 @@ describe('a cutout on the stand-in takes the face path it takes on a canvas', ()
     [0, 120],
   ];
 
+  /** Whether a cutout drawn after `before` soft-lit its pastel over the face (the two-pass draw). */
   const layers = (before: (ctx: CanvasRenderingContext2D) => void) =>
     withDom(() => {
       let softLit = false;

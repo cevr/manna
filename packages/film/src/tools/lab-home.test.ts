@@ -6,6 +6,7 @@ import { AskName, AskRecord, AskState } from '../core/ask.ts';
 import { AskStore } from './ask-store.ts';
 import { home } from './lab-home.ts';
 
+/** An ask `id` in `state`, decoded as the store decodes it. */
 const ask = (id: string, state: AskState): AskRecord => ({
   ...Schema.decodeSync(AskRecord)({
     id,
@@ -25,6 +26,7 @@ const answered = (id: string) =>
   ask(id, AskState.Answered({ step: AskName.make('pick'), answers: {} }));
 const closed = (id: string) => ask(id, AskState.Closed({ answers: {}, why: 'acted on' }));
 
+/** `/` over a store whose list answers `list`. */
 const homeOver = (list: AskStore['Service']['list']) =>
   home.pipe(
     Effect.provide(
@@ -36,6 +38,7 @@ const homeOver = (list: AskStore['Service']['list']) =>
     ),
   );
 
+/** The words of an answer's body. */
 const words = (answer: HttpServerResponse.HttpServerResponse) => {
   expect(answer.body._tag).toBe('Uint8Array');
   if (answer.body._tag !== 'Uint8Array') return '';

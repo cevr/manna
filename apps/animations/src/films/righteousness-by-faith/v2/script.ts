@@ -1,5 +1,6 @@
 import { defineScript } from '@manna/film/core';
 
+/** The film's name: the film, its title card and its credits all read it here. */
 export const TITLE = 'Righteousness by Faith';
 
 export const script = defineScript([
@@ -235,4 +236,5 @@ export const script = defineScript([
   },
 ]);
 
+/** A beat's id: the name a drawing, a light and a short take it by. */
 export type BeatId = (typeof script)[number]['id'];

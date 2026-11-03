@@ -38,17 +38,23 @@ import { sha256Hex } from './digest.ts';
 import type { FilmName } from './film-repo.ts';
 import { ImageRoute, PANEL_SIZE } from './image-route.ts';
 
+/** The most beats drawn at once: the image route's own limit. */
 export const MOST_LANES = 3;
 
+/** The tries a panel gets by default: two, to keep one and say why. */
 export const TRIES = 2;
 
+/** A run of the board: what it draws, and how. */
 interface MakeOptions {
+  /** Only these beats (all when empty). */
   readonly beats: ReadonlyArray<string>;
   readonly tries: number;
   readonly lanes: number;
+  /** Print each prompt and draw nothing. */
   readonly dryRun: boolean;
 }
 
+/** A line a run prints for each try: made, failed, or (dry) the prompt it would send. */
 type MakeLine =
   | {
       readonly _tag: 'Made';
@@ -60,6 +66,7 @@ type MakeLine =
   | {
       readonly _tag: 'Failed';
       readonly panel: string;
+      /** Which of the run's tries of the panel it was, from 1: a failed try takes no number. */
       readonly attempt: number;
       readonly reason: string;
     }
@@ -76,6 +83,7 @@ type MakeLine =
       readonly refs: ReadonlyArray<string>;
     };
 
+/** One line of a run's output. */
 export const makeLine: (line: MakeLine) => string = Match.type<MakeLine>().pipe(
   Match.tagsExhaustive({
     Made: (line) =>
@@ -88,6 +96,7 @@ export const makeLine: (line: MakeLine) => string = Match.type<MakeLine>().pipe(
   }),
 );
 
+/** The board's style, or the refusal that says how to set it. */
 const styleOf = (film: string, board: BoardFile) =>
   Effect.fromOption(Option.fromUndefinedOr(board.style)).pipe(
     Effect.mapError(() =>
@@ -99,11 +108,23 @@ const styleOf = (film: string, board: BoardFile) =>
     ),
   );
 
+/** A panel a run draws, and how many tries it still lacks. */
 interface ToDraw {
   readonly at: BoardName;
   readonly count: number;
 }
 
+/**
+ * A beat's panels to draw, each with the tries it still lacks of `tries`: each
+ * planned at (`plannedAts`) the board has no panel for, or a picture panel a
+ * run started (its tries all generated, fewer than `tries`, none kept). A beat
+ * boarded by hand (a picture panel held from a mark the plan does not pick,
+ * imported or set) keeps its own panels: a run only finishes those it began.
+ * A panel with a kept try, an import, a tweak or a text the engine sets is
+ * left as it stands, but a stale panel (`board-stale.ts`: drawn from words
+ * or a cast that has changed since) gets new tries until `tries` of its own
+ * are drawn from them as they stand; its keep stays.
+ */
 const toDraw = (
   board: BoardFile,
   beat: BoardBeat,
@@ -137,6 +158,7 @@ const toDraw = (
   });
 };
 
+/** Everything one try needs from the film. */
 interface TryContext {
   readonly film: FilmName;
   readonly style: BoardStyle;
@@ -144,6 +166,7 @@ interface TryContext {
   readonly beats: ReadonlyArray<BoardBeat>;
 }
 
+/** What a try is drawn from: its prompt, the references ahead of the cast's, the cast's files, the words of its picture. */
 interface TryDrawn {
   readonly prompt: string;
   readonly refs: ReadonlyArray<string>;
@@ -151,6 +174,12 @@ interface TryDrawn {
   readonly words: ReadonlyArray<string>;
 }
 
+/**
+ * One try of a panel drawn and recorded; its number, file and how long it took. The image is drawn to a file of its
+ * own and numbered only as it is recorded, under the board's lock, so a run and a tweak drawing one panel at once never
+ * share a number or overwrite each other's image. Each cast file is read once and its bytes copied beside the image,
+ * so the route is sent the very bytes the try records the sha256 of. The route tried twice before it fails.
+ */
 const drawTry = Effect.fn('Board.drawTry')(function* (
   ctx: TryContext,
   beat: BoardName,
@@ -229,6 +258,10 @@ const drawTry = Effect.fn('Board.drawTry')(function* (
   return { tries: recorded, seconds };
 });
 
+/**
+ * `count` tries of a panel, each numbered as it lands (a try that draws
+ * nothing prints why, naming its attempt, and takes no number); the numbers made.
+ */
 const drawTries = (
   ctx: TryContext,
   beat: BoardName,
@@ -264,6 +297,12 @@ const drawTries = (
     },
   );
 
+/**
+ * Draw every panel the board still lacks for `options.beats` (all beats when
+ * none): `options.tries` tries each, `options.lanes` beats at once. Each try
+ * prints one line as it lands (`emit`); a try that fails twice prints why and
+ * the run goes on; three panels failing in a row stop it (the route is down).
+ */
 export const makeBoard = Effect.fn('Board.make')(function* (
   film: FilmName,
   beats: ReadonlyArray<BoardBeat>,
@@ -357,11 +396,19 @@ export const makeBoard = Effect.fn('Board.make')(function* (
     });
 });
 
+/** What a tweak made: the panel and the tries. */
 interface Tweaked {
   readonly panel: string;
   readonly tries: ReadonlyArray<number>;
 }
 
+/**
+ * Make `note`'s panel again (`film board tweak`): from the try the note was
+ * written on (`--ref`), the note's words and, when it carries a sketch, its
+ * still (the panel with the sketch on it, copied into the board folder) as a
+ * third reference; `tries` tries added to the panel's history, made `tweak`
+ * and naming the note. The kept try stays kept until one is picked.
+ */
 export const tweakPanel = Effect.fn('Board.tweak')(function* (
   film: FilmName,
   beats: ReadonlyArray<BoardBeat>,
@@ -441,6 +488,11 @@ export const tweakPanel = Effect.fn('Board.tweak')(function* (
   return { panel: panel.id, tries: made } satisfies Tweaked;
 });
 
+/**
+ * The library reference of each member `beats` draw, read once by member:
+ * a member with no record, or a reference not on disk, refuses the run
+ * before any panel is drawn.
+ */
 const castOf = Effect.fn('Board.cast')(function* (film: FilmName, beats: ReadonlyArray<BoardBeat>) {
   const members = Arr.dedupe(beats.flatMap((b) => b.cast));
   const locks = yield* Effect.forEach(members, (member) =>
@@ -449,11 +501,17 @@ const castOf = Effect.fn('Board.cast')(function* (film: FilmName, beats: Readonl
   return new Map(locks);
 });
 
+/** A cast file a try is drawn from: its member, its path as the board folder reaches it. */
 interface CastFile {
   readonly member: string;
   readonly file: string;
 }
 
+/**
+ * A beat's library references in its cast's order, each member once, and
+ * their files as the board folder reaches them. Each member's files lie in
+ * its own folder, so no file is sent twice.
+ */
 const beatCast = (
   locks: ReadonlyMap<string, CastLock>,
   beat: BoardBeat,
@@ -469,6 +527,7 @@ const beatCast = (
   return { cast, files };
 };
 
+/** A refusal of a step on the board, raised for `film`. */
 export const refusedIn =
   (film: string) =>
   <A>(r: Result.Result<A, { readonly reason: string }>) =>

@@ -2,6 +2,7 @@ import type { LabelTable, TracePart, TracePt, TraceSheet, TraceSheetView } from 
 import { Option } from 'effect';
 import { LABELS } from './labels.ts';
 
+/** The sheet's colour classes: each its lit side and its shade, sampled from the kept turnaround. */
 export const CLASSES = {
   cream: ['#fde1bc', '#e3bea0', '#feecca', '#f7d8b2'],
   teal: ['#4e7182', '#58859b', '#61898d', '#4e768b', '#3f5f73'],
@@ -11,8 +12,10 @@ export const CLASSES = {
   hairDark: ['#563124', '#4f2b21', '#543022', '#5a3324'],
 } as const;
 
+/** The hair's classes, light to dark: his curls, and his sandals' straps. */
 const BROWN = ['hairLight', 'hair', 'hairDark'];
 
+/** A box as a polygon. */
 export const rect = (x0: number, y0: number, x1: number, y1: number): TracePt[] => [
   [x0, y0],
   [x1, y0],
@@ -20,15 +23,18 @@ export const rect = (x0: number, y0: number, x1: number, y1: number): TracePt[] 
   [x0, y1],
 ];
 
+/** An oval as a polygon of 16 points, `rx` across and `ry` down from its middle. */
 export const oval = (cx: number, cy: number, rx: number, ry: number): TracePt[] =>
   Array.from({ length: 16 }, (_, i): TracePt => [
     Math.round((cx + rx * Math.cos((i / 16) * 2 * Math.PI)) * 2) / 2,
     Math.round((cy + ry * Math.sin((i / 16) * 2 * Math.PI)) * 2) / 2,
   ]);
 
+/** `pts` moved by `by`. */
 const shifted = (pts: ReadonlyArray<TracePt>, by: TracePt): TracePt[] =>
   pts.map(([x, y]) => [x + by[0], y + by[1]]);
 
+/** A polygon swollen `by` pixels: each point moved that far from its middle. */
 const swollen = (pts: ReadonlyArray<TracePt>, by: number): TracePt[] => {
   const [mx, my] = [
     pts.reduce((s, [x]) => s + x, 0) / Math.max(1, pts.length),
@@ -40,17 +46,22 @@ const swollen = (pts: ReadonlyArray<TracePt>, by: number): TracePt[] => {
   });
 };
 
+/** How far past an ear's lobe its band's tone runs, sheet pixels: past his head's edge there, which it is laid inside. */
 const LOBE_UNDER = 4;
 
+/** Where the sheet lays the sash's rose shade: each piece again, this far to its right and down, under it. */
 const SASH_SHADE: TracePt = [4, 2];
 
+/** How far the knot's shade, 2 px wider than it all round, lies to its right and down. */
 const KNOT_SHADE: TracePt = [1, 2];
 
+/** A hanging end of the sash: its left and right edges and its row where it leaves the knot, and again where it ends, sheet pixels. */
 interface SashEnd {
   readonly top: readonly [left: number, right: number, row: number];
   readonly bottom: readonly [left: number, right: number, row: number];
 }
 
+/** A hanging end as the quad it is: it narrows or widens, and leans, from its top to its end. */
 const endOf = ({ top, bottom }: SashEnd): TracePt[] => [
   [top[0], top[2]],
   [top[1], top[2]],
@@ -58,12 +69,19 @@ const endOf = ({ top, bottom }: SashEnd): TracePt[] => [
   [bottom[0], bottom[2]],
 ];
 
+/** The sash as the sheet paints it on a view: its band across the waist, its two ends, and its knot (an oval: its middle, its half-width and half-height) where the view shows one. */
 interface Sash {
   readonly band: readonly [number, number, number, number];
   readonly ends: ReadonlyArray<SashEnd>;
   readonly knots: ReadonlyArray<readonly [number, number, number, number]>;
 }
 
+/**
+ * The sash's tones: its band and ends, each the silhouette cut to its
+ * polygon on his garment, as one; then its knot over them; each with its rose
+ * shade, the same piece moved `SASH_SHADE` to its right and down, laid under
+ * it, as the sheet lights it.
+ */
 const sashParts = (s: Sash) => {
   const pieces = [rect(...s.band), ...s.ends.map(endOf)];
   const piece = (clip: TracePt[]) =>
@@ -106,27 +124,43 @@ const sashParts = (s: Sash) => {
   } satisfies Record<string, TracePart>;
 };
 
+/** Where the head is cut from the garment: `open` where the sheet draws no line under the chin (the head runs down into the neck to `row`), `closed` at its chin's `row`. */
 interface Chin {
   readonly kind: 'open' | 'closed';
   readonly row: number;
+  /** Round the line the sheet paints under his chin in brown with no ink (his jaw, rising to his ear on a turned head), the polygon his jaw tone is read in: under an open chin, a band about his face's seed unless given. */
   readonly line?: ReadonlyArray<TracePt>;
+  /** Round the rose shade the sheet paints under that line (up to his ear and down the far side of his neck on a turned head), the polygon his jaw's shade is read in: none unless given. */
   readonly shade?: ReadonlyArray<TracePt>;
+  /** Where that line meets his ink at his chin's corner, a polygon over both: the line starts under the ink (none unless given). */
   readonly corner?: ReadonlyArray<TracePt>;
+  /** Where that line lightens toward his ear, the polygon it is laid lighter in (none unless given). */
   readonly fade?: ReadonlyArray<TracePt>;
+  /** How the sheet paints that line: in brown (`brown`, unless given), or in a deep rose (`rose`, his poses: #d47048, L 133 to 140), read nearer it than his rose shade. */
   readonly paint?: keyof typeof JAW_LINE;
 }
 
+/**
+ * The colour his jaw's line is read nearer than his skin's colours, lit and
+ * shaded, by how the sheet paints it: the sheet's brown (the line lightens
+ * toward his ear, so it is read by colour, not by his hair's classes alone),
+ * or its deep rose, nearer it than his shade's rose.
+ */
 const JAW_LINE = {
   brown: { near: '#985636', far: ['#fdaf70', '#f8a062', '#e58a62', '#e07a50'] },
   rose: { near: '#d47048', far: ['#fdaf70', '#f8a062', '#e8875a', '#f2a06c', '#e58d5f'] },
 } as const;
 
+/** The rose shade under his jaw's line, read nearer than his lit skin. */
 const JAW_SHADE = { near: '#e8875a', far: ['#f2a06c', '#fdaf70', '#feb476', '#fcdb9c', '#f9cb8a'] };
 
+/** The soft rose round that shade (L 170 to 182, #f3a374 at 414,352), read nearer than his lit skin. */
 const JAW_SOFT = { near: '#f2a06c', far: ['#fdaf70', '#feb476', '#fcdb9c', '#f9cb8a'] };
 
+/** How far either side of the face's seed the jaw's deep shade is read, sheet pixels. */
 const JAW_REACH = 36;
 
+/** How far above the chin's row the garment is read from, how tall the band the shade under the jaw is read in, and how far above that band the jaw's deep shade is read from, by the chin's kind. */
 const CHIN = {
   open: {
     garment: 25,
@@ -146,8 +180,10 @@ const CHIN = {
   },
 } as const;
 
+/** How a part is picked: by a seed in the sheet's pixels, or by a label of the view's table (`labels.ts`). */
 type Picked = TracePt | { readonly label: string };
 
+/** A part's pick as the tracer takes it: its seed, or its label. */
 const pickOf = (
   p: Picked,
 ): { readonly seeds: ReadonlyArray<TracePt> } | { readonly label: string } => {
@@ -155,30 +191,43 @@ const pickOf = (
   return { seeds: [p] };
 };
 
+/** How an arm is read: as the silhouette cut to its polygon, or (lying on the garment, in profile) as the region the sheet's ink closes round its sleeve, by its seed or its label. */
 type ArmPick =
   | { readonly silhouette: true }
   | { readonly seeds: ReadonlyArray<TracePt>; readonly grow: number }
   | { readonly label: string; readonly grow: number };
 
+/** An arm read as the silhouette cut to its polygon. */
 const SILHOUETTE: ArmPick = { silhouette: true };
 
+/** An arm read as its sleeve's region, seeded at `p` or labelled `p`, grown through its ink to meet its hand at its cuff. */
 export const sleeveAt = (p: Picked): ArmPick => ({ ...pickOf(p), grow: 6 });
 
+/** An arm: how it is read, its polygon, the row under its armpit, and how its hand is picked. */
 interface ArmSpec {
   readonly pick: ArmPick;
   readonly clip: TracePt[];
   readonly below: number;
   readonly hand: Picked;
+  /** Raised clear of his side: the polygon of its sleeve his garment gives up, all but its root at his shoulder (that stays the garment's, so the arm turns inside it). */
   readonly off?: TracePt[];
+  /** Where the sheet paints its sleeve's edge in a shade darker than its seed reaches, with no line between it and his garment: the polygon its sleeve runs out to. */
   readonly plus?: TracePt[];
 }
 
+/** What the garment keeps where the arms lie: beside it, it gives up what they cover below the armpit and each hand with its ring of ink (else the ring's inner half stays the garment's, a hook bared when the arm swings); on it (a profile), it keeps all. */
 const UNDER_ARMS = {
   beside: ['armNearBelow', 'armFarBelow', 'handNearRing', 'handFarRing'],
   onGarment: [],
   raised: ['armNearOff', 'armFarOff', 'armFarBelow', 'handNearRing', 'handFarRing'],
 } as const;
 
+/**
+ * The profile right's sleeve, its back edge on the line where the sheet's
+ * teal strip behind it meets its cream (x 1087-1088, rows 436-532). The
+ * polygon bounds the sleeve's region there, so its growth through the
+ * strip's shaded teal stops at that line and the edge stays straight.
+ */
 const PROFILE_RIGHT_SLEEVE: TracePt[] = [
   [1091, 405],
   [1166, 405],
@@ -187,6 +236,7 @@ const PROFILE_RIGHT_SLEEVE: TracePt[] = [
   [1088, 436],
 ];
 
+/** The three-quarter right's ear, read off the sheet round its skin: its skin runs on into his cheek (no line at x 1349), and its lobe turns in at its lower left, where the band of hair under it meets his hair (x 1329-1331, rows 330-335). */
 const THREE_QUARTER_RIGHT_EAR: TracePt[] = [
   [1330, 303],
   [1340, 302],
@@ -201,54 +251,101 @@ const THREE_QUARTER_RIGHT_EAR: TracePt[] = [
   [1327, 308],
 ];
 
+/** A labelled ear: its label, and the point its box and its band are cut round, sheet pixels (it picks no region: its label does), where the view cuts either round a point. */
 interface EarAt {
   readonly label: string;
   readonly at?: TracePt;
 }
 
+/** What one standing view is read from: its parts' seeds or its labels, and the polygons the sheet parts by colour alone. */
 interface Standing {
   readonly box: readonly [number, number, number, number];
   readonly out: string;
   readonly about: string;
+  /** The view's part labels (`labels.ts`): none for a view picked by seeds alone. */
   readonly labels?: LabelTable;
+  /** How his face is picked; a labelled face names its chin's line (`chin.line`), since the line round its seed is read from a point. */
   readonly face: Picked;
+  /** The face's marks (a view from behind shows none). */
   readonly marked: Pick<TraceSheetView, 'marks'>;
+  /** Each ear: both from in front or behind, the one that shows on a turned head (`earNear`). */
   readonly ears: { readonly earNear: TracePt | EarAt; readonly earFar?: TracePt | EarAt };
+  /**
+   * An ear the sheet draws with no line between it and his cheek (its skin
+   * runs on into his face, a turned head's), as the polygon round it read
+   * off the sheet (the oval it is, or its skin's own edge where its lobe
+   * turns in). Its skin is cut there, never a box of his face.
+   */
   readonly earClips?: {
     readonly earNear?: ReadonlyArray<TracePt>;
     readonly earFar?: ReadonlyArray<TracePt>;
   };
+  /**
+   * Where the sheet paints the dark brown band beside an ear as its contour
+   * (a front: between his ear and his cheek, and round its outer edge), it is
+   * laid on his head as a tone (`earBand`), not as his hair (`tone`). Where
+   * the band under a turned head's ear is parted from his hair by the sheet's
+   * line, it is laid so too, under the ear alone (`under`): his hair is one
+   * piece, so a parted band is lost from it. Elsewhere the band runs on into
+   * his hair and is his hair (`hair`).
+   */
   readonly earBand?: keyof typeof EAR_BAND_CLIP;
+  /**
+   * An ear whose lobe the sheet draws inside its line (the front's far ear:
+   * its lower third dark brown and ink), as the polygon round it, read off
+   * the sheet's outer edge less the house's line (7 px): the ear is read
+   * within it, and his head and the band's tone run out to it, so the lobe is
+   * round, in the band's brown, and the line round it keeps its width.
+   */
   readonly earLobes?: {
     readonly earNear?: ReadonlyArray<TracePt>;
     readonly earFar?: ReadonlyArray<TracePt>;
   };
+  /** Where an ear's outline turns as sharply as the sheet draws it (the tip of a crescent ear seen from behind), vouched for (`TracePart.sharp`). */
   readonly earSharp?: ReadonlyArray<TracePt>;
+  /** Where an ear is turned to the light, its skin lit as his face's but for its hollow (the three-quarter right's): read there as a tone (`earLit`) on the ear's deeper paper. None unless given. */
   readonly earLit?: ReadonlyArray<TracePt>;
   readonly chin: Chin;
+  /** Where his head's outline turns back as sharply as the sheet draws it (his nape under his curls), vouched for (`TracePart.sharp`). */
   readonly sharp: ReadonlyArray<TracePt>;
+  /** The lit rim a view paints down his face's edge, as more of his skin's samples (none unless given): paler than his skin, nearer his cream than it. */
   readonly skinLit?: ReadonlyArray<string>;
+  /** How far his hair is opened where a view draws the band behind his ear thinner than 2 px opens clean (2 unless given). */
   readonly hairOpen?: number;
+  /**
+   * Where the sheet paints his hair into his line as dark as its ink (L 40
+   * to 43, behind an ear down to his neck), so a reading of the line takes
+   * it, and his head and hair stop short of his silhouette: the polygon round
+   * it, read off the sheet's outer edge less the house's line (7 px). His
+   * head, his hair and its dark run out to it. None unless given.
+   */
   readonly hairReach?: ReadonlyArray<TracePt>;
   readonly near: ArmSpec;
   readonly far: ArmSpec;
   readonly arms: keyof typeof UNDER_ARMS;
+  /** His neck's seeds, or its label, where it shows as a tone on the garment (from behind). */
   readonly necks: ReadonlyArray<TracePt> | { readonly label: string };
+  /** What stands beside him in his view (a stool), as a polygon, no part of him: none for a view with nothing there. */
   readonly beside: TracePt[];
   readonly sash: Sash;
   readonly hem: number;
   readonly split: number;
 }
 
+/** How far above and below an ear's seed its box runs, sheet pixels. */
 const EAR_REACH = 26;
 
+/** The box round an ear's seed its skin is read within, from `top` above the seed. */
 const earBox = (seed: TracePt, top = EAR_REACH) =>
   rect(seed[0] - 16, seed[1] - top, seed[0] + 16, seed[1] + EAR_REACH);
 
+/** How far above an ear's seed his hair gives its brown up to the band's tone, sheet pixels: the ear's top, where the sheet's hair ends over it. */
 const BAND_TOP = 18;
 
+/** How far round an ear's seed the band under a turned head's ear is read, sheet pixels: from its lobe's lower half (the ear's skin is not brown) to where it tapers out down his neck, and from the band's far end to its near (x 1329-1362, rows 335-372 on the three-quarter right; x 232-262, rows 378-393 on poses-1). */
 const UNDER_EAR = { from: 10, to: 52, left: 32, right: 24 } as const;
 
+/** Where an ear's band is read as its tone, by how the view lays it: in the ear's box from `top` above its seed (`tone`), under the ear alone (`under`), or nowhere (`hair`: it runs on into his hair). */
 const EAR_BAND_CLIP = {
   tone: earBox,
   under: (seed: TracePt, _top: number): TracePt[] =>
@@ -261,6 +358,7 @@ const EAR_BAND_CLIP = {
   hair: (_seed: TracePt, _top: number): TracePt[] => [],
 } as const;
 
+/** An ear picked by `pick` (its seed or its label): flat skin cut inside his head, within `clip` (a box round its point, the oval the sheet draws it where its skin runs on into his cheek, or the polygon round its lobe). */
 const ear = (
   pick: ReturnType<typeof pickOf>,
   clip: ReadonlyArray<TracePt>,
@@ -277,26 +375,31 @@ const ear = (
     doc: "An ear, flat skin cut inside his head: its ink is his head's, and the hair beside it lies round it.",
   }) satisfies TracePart;
 
+/** A polygon `cut` round an ear's point: a bare point (its seed too) or a labelled ear's; none round a labelled ear that gives none. */
 const cutRound = (e: TracePt | EarAt, cut: (at: TracePt) => TracePt[]): TracePt[] => {
   if (!('label' in e)) return cut(e);
   return Option.match(Option.fromUndefinedOr(e.at), { onNone: () => [], onSome: cut });
 };
 
+/** An ear's pick: its label, else its point as its seed. */
 const earPick = (e: TracePt | EarAt) => {
   if ('label' in e) return pickOf({ label: e.label });
   return pickOf(e);
 };
 
+/** The band round a seeded face's point his jaw's deep shade is read in, from `jaw` above `row` to 12 below it: none round a labelled face (it names its chin's line). */
 const jawAround = (face: Picked, row: number, jaw: number): TracePt[] => {
   if ('label' in face) return [];
   return rect(face[0] - JAW_REACH, row - jaw, face[0] + JAW_REACH, row + 12);
 };
 
+/** His neck's pick: its label, or its seeds (none: no neck read). */
 const neckPick = (necks: Standing['necks']) => {
   if ('label' in necks) return { label: necks.label };
   return { seeds: necks };
 };
 
+/** A standing view's parts: his head, hair and ears; his garment, its mantle, sash and neck; his arms and hands; his feet and straps. */
 export const standing = (v: Standing): TraceSheetView => {
   const [x0, y0, x1, y1] = v.box;
   const wide = (a: number, b: number) => rect(x0 - 10, a, x1 + 10, b);

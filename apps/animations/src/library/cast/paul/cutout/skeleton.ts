@@ -3,6 +3,7 @@ import { bustSkeleton } from '../../../cutout/bust.ts';
 import { framed } from '../../../cutout/skeleton.ts';
 import { type FramedView, keptAt } from './frames.ts';
 
+/** Each cut view's skeleton, in its part sheet's frame. */
 export const SKELETONS = {
   'heads-1': framed(keptAt('heads-1'), bustSkeleton([118, 240], 305)),
   'heads-2': framed(keptAt('heads-2'), bustSkeleton([124, 244], 297)),

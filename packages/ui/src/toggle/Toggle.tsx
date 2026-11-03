@@ -7,6 +7,7 @@ import { useButton } from '../internals/useButton.ts';
 import { useToggleGroupContext } from '../toggle-group/ToggleGroupContext.ts';
 
 interface ToggleState {
+  /** Whether the toggle is pressed. */
   pressed: boolean;
 }
 
@@ -14,6 +15,7 @@ interface ToggleProps<Value extends string = string> extends Omit<
   BaseUIComponentProps<'button', ToggleState>,
   'disabled'
 > {
+  /** The toggle's value in its group. */
   value: Value;
 }
 

@@ -9,6 +9,7 @@ export function isKeyboardClick(reason: string | null, event: Event | undefined)
   );
 }
 
+/** The `data-rootownerid` of the menu `node` is inside, if any. */
 export function findRootOwnerId(node: Node): string | undefined {
   if (isHTMLElement(node) && node.hasAttribute('data-rootownerid')) {
     return node.getAttribute('data-rootownerid') ?? undefined;

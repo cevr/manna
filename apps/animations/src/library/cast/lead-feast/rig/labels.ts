@@ -2,10 +2,13 @@ import type { LabelTable } from '@manna/film/tools';
 
 const SKIN = ['skin'];
 
+/** His mantle's teal runs on into a sleeve of it with no line between them, where a render draws them apart: a label for other labels' rules, compared by no fit row. */
 const MANTLE = 'His mantle: the largest run of teal, a teal sleeve with it.';
 
+/** His face: the largest region of his skin, on every view that shows it. */
 const FACE = { face: { classes: SKIN, doc: 'His face: the largest run of his skin.' } } as const;
 
+/** His hands from in front or turned: the skin below his face, each to its side of it. */
 const HANDS = {
   handNear: {
     classes: SKIN,
@@ -19,6 +22,7 @@ const HANDS = {
   },
 } as const;
 
+/** From in front: his face, his ears beside it and against it, his hands. */
 const FRONT = {
   ...FACE,
   earNear: {
@@ -34,8 +38,16 @@ const FRONT = {
   ...HANDS,
 } as const satisfies LabelTable;
 
+/** Turned three-quarters: his face (his ear's skin runs on into it, so the ear is his face's region), his hands. */
 const TURNED = { ...FACE, ...HANDS } as const satisfies LabelTable;
 
+/**
+ * From behind: his head's paper is his hair, the largest of it; his neck the
+ * skin against it; his ears the skin above his neck, either side of it; his
+ * hands the skin below it, each against the sleeve it comes from (the
+ * mantle's teal on screen left, the cream on screen right), so neither of his
+ * heels, as large, is read.
+ */
 const BACK = {
   face: { classes: ['hair'], doc: "His head's paper from behind: the largest run of his hair." },
   neck: {
@@ -71,6 +83,7 @@ const BACK = {
   },
 } as const satisfies LabelTable;
 
+/** In profile: his face (his ear's skin runs on into it), his mantle, and his one hand, the skin below his face against his mantle. */
 const PROFILE = {
   ...FACE,
   mantle: { classes: ['teal'], compared: false, doc: MANTLE },
@@ -81,6 +94,7 @@ const PROFILE = {
   },
 } as const satisfies LabelTable;
 
+/** In profile to screen left, his sleeve is his mantle's teal. */
 const PROFILE_LEFT = {
   ...PROFILE,
   sleeve: {
@@ -90,6 +104,7 @@ const PROFILE_LEFT = {
   },
 } as const satisfies LabelTable;
 
+/** In profile to screen right, his sleeve is the cream between his face and his hand. */
 const PROFILE_RIGHT = {
   ...PROFILE,
   sleeve: {
@@ -99,6 +114,7 @@ const PROFILE_RIGHT = {
   },
 } as const satisfies LabelTable;
 
+/** Each turnaround view's labels. */
 export const LABELS = {
   front: FRONT,
   threeQuarterLeft: TURNED,

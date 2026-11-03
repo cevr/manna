@@ -1,3 +1,25 @@
+/**
+ * The run around the hymns: the resume key, the machine's guards, the checks,
+ * the record and the manifest. The sound itself is `audio.ts`.
+ *
+ * - **Resume.** A hymn's key covers what shapes its sound and nothing else
+ *   (`configOf`, `AUDIO_SOURCES`). A hymn whose record stands (`resume.ts`)
+ *   is checked again from its record (`record.ts`): kept when it passes,
+ *   with its record's verdict written anew when that changed, and rendered
+ *   again only when it fails, since only a render measures it afresh.
+ * - **Guards.** Before a hymn renders, the run waits while swap use is over
+ *   8 GB or the 1-minute load is over its ceiling, 12 unless `--load` names
+ *   another (one line when it starts waiting; the wait is left out of the
+ *   hymn's times), and stops when the output's disk has under 3 GB free.
+ *   Neither changes a hymn's sound, so neither is in its key.
+ * - **Memory.** Each sampler's peak comes from `time -l`, and the render's
+ *   own is sampled every 250 ms over the mix and the master; the record
+ *   keeps each, and the memory check holds them.
+ * - **Files.** `<n>.mp3` and `<n>.json` are written to `.part` files and
+ *   renamed. A failed hymn also gets `<n>.png`, the film's sheet of it,
+ *   which goes once the hymn passes.
+ */
+
 import { encodePng, loudness, sheetOf } from '@manna/film/measure';
 import { Effect, FileSystem, Path, Schema } from 'effect';
 import * as Midi from '../../src/midi.js';
@@ -21,8 +43,11 @@ import { sha256Hex } from './sfizz.js';
 import { keyedStyle, moveText } from './keys.js';
 import type { Style } from './style.js';
 
+/** Everything a hymn's render reads besides its MIDI file. */
 export interface Setup extends AudioSetup {
+  /** Semitones from the printed key (`keys.ts`): 0 for the set itself (`warm-1`, `warm-2`), else a key set (`keySet`). */
   readonly transpose: number;
+  /** The 1-minute load over which a hymn waits to render (`GUARDS.load` unless the CLI names another). */
   readonly load: number;
   readonly set: string;
   readonly out: string;
@@ -32,6 +57,13 @@ export interface Setup extends AudioSetup {
   readonly configHash: string;
 }
 
+/**
+ * The files whose bytes shape a recording, by path from the repository
+ * root: every module `audio.ts` reaches, the film's meter and sum that level
+ * the stems, and the room. `sources.test.ts` holds this list to the imports.
+ * The instruments, the sampler's build, NodeAV and the credits go into the
+ * config as themselves (`configOf`).
+ */
 export const AUDIO_SOURCES = [
   'packages/film/src/core/dsp.ts',
   'packages/film/src/core/synth/loudness.ts',
@@ -51,8 +83,14 @@ export const AUDIO_SOURCES = [
   'packages/hymnal/src/voices.ts',
 ] as const;
 
+/** The module that moves the style into another key: in a key set's config, not the printed key's. */
 const KEYS_SOURCE = 'packages/hymnal/scripts/render/keys.ts';
 
+/**
+ * The config every hymn's key shares: the style, the instrument lock, the
+ * tools, the credits and `AUDIO_SOURCES`; in another key also the transpose
+ * and `keys.ts`, which the printed key's config leaves out.
+ */
 export const configOf = (
   style: Style,
   tools: {
@@ -81,6 +119,7 @@ export const configOf = (
     ]);
   });
 
+/** sysctl's swap in use, in bytes, and the 1-minute load. */
 const machine = Effect.gen(function* () {
   const swap = (yield* runOk('sysctl', 'sysctl', ['-n', 'vm.swapusage'])).stdout;
   const load = (yield* runOk('sysctl', 'sysctl', ['-n', 'vm.loadavg'])).stdout;
@@ -92,6 +131,7 @@ const machine = Effect.gen(function* () {
   };
 });
 
+/** Free bytes on the disk that holds `dir`. */
 const freeBytes = (dir: string) =>
   Effect.map(runOk('df', 'df', ['-k', dir]), (out) => {
     const row = out.stdout.trim().split('\n').at(-1) ?? '';
@@ -105,6 +145,7 @@ export const GUARDS = {
   poll: '20 seconds',
 } as const;
 
+/** Waits while the machine is over its swap or `load` ceiling; fails when the disk is nearly full. Answers the seconds waited. */
 export const guard = (out: string, load: number) =>
   Effect.gen(function* () {
     if ((yield* freeBytes(out)) < GUARDS.disk)
@@ -129,6 +170,7 @@ export const guard = (out: string, load: number) =>
     return (performance.now() - started) / 1000;
   });
 
+/** The render's own peak resident memory while `self` runs, sampled every 250 ms. */
 const sampledRss = <A, E, R>(self: Effect.Effect<A, E, R>) =>
   Effect.acquireUseRelease(
     Effect.sync(() => {
@@ -156,6 +198,7 @@ const md5Hex = (bytes: Uint8Array) => {
 
 const utf8 = (text: string) => new TextEncoder().encode(text);
 
+/** Writes `bytes` to `file` through a `.part` file. */
 const writeAtomic = (file: string, bytes: Uint8Array) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -163,8 +206,10 @@ const writeAtomic = (file: string, bytes: Uint8Array) =>
     yield* fs.rename(`${file}.part`, file);
   });
 
+/** A record as its file's text. */
 const recordText = <A>(value: A) => utf8(`${JSON.stringify(value, null, 2)}\n`);
 
+/** The record of `hymn` in `out`, typed and whole, when there is one that reads. */
 export const readRecord = (out: string, hymn: number) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -178,10 +223,15 @@ export const readRecord = (out: string, hymn: number) =>
     }).pipe(Effect.orElseSucceed(() => undefined));
   });
 
+/** The stanza count of a compiled hymn's text, all `sourceOf` reads of it. */
 const StanzasJson = Schema.fromJsonString(
   Schema.Struct({ verses: Schema.Struct({ text: Schema.Int }) }),
 );
 
+/**
+ * The source hash of a looped file: its bytes, the loop and the source of
+ * `sung.ts`, which makes the sung file from them.
+ */
 const loopedSha256 = (bytes: Uint8Array, loop: Sung.Loop, sung: Uint8Array) =>
   new Bun.CryptoHasher('sha256')
     .update(bytes)
@@ -189,6 +239,14 @@ const loopedSha256 = (bytes: Uint8Array, loop: Sung.Loop, sung: Uint8Array) =>
     .update(sung)
     .digest('hex');
 
+/**
+ * A hymn's sung file (`sung.ts`: its MIDI file, its last verse sung again
+ * for each stanza of its compiled text past the verses the file plays):
+ * parsed, its source hash, the style in the run's key for its parts with
+ * each stem an octave moved (`keys.ts`), and what it asks of the recording.
+ * A file sung as it stands keeps its bytes' sha256, so its recordings stand;
+ * a looped file's hash also covers the loop and `sung.ts` (`loopedSha256`).
+ */
 export const sourceOf = (style: Style, hymn: number, transpose = 0) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -219,6 +277,13 @@ export const sourceOf = (style: Style, hymn: number, transpose = 0) =>
 
 type Source = Effect.Success<ReturnType<typeof sourceOf>>;
 
+/**
+ * Where a hymn stands in the set under today's config and checks: to
+ * render (no record, another config, or an MP3 that is not the recorded
+ * one), or its record checked again, which `stands` or `fails`. With
+ * `uploaded`, a record whose MP3 is gone stands on its record: the stream
+ * deletes a key set's MP3 only once R2 holds the record's bytes.
+ */
 export const standingOf = (setup: Setup, hymn: number, source: Source, uploaded = false) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -241,12 +306,14 @@ export const standingOf = (setup: Setup, hymn: number, source: Source, uploaded 
     return { kind: passed(checks) ? 'stands' : 'fails', ...record, checks } as const;
   });
 
+/** What one hymn came to: kept from an earlier run, rendered and passed, or rendered and failed. */
 export interface Outcome {
   readonly hymn: number;
   readonly status: 'kept' | 'passed' | 'failed';
   readonly line: string;
 }
 
+/** Removes `<n>.png`, a failed hymn's sheet, once the hymn passes. */
 const dropSheet = (out: string, hymn: number) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -255,6 +322,7 @@ const dropSheet = (out: string, hymn: number) =>
     if (yield* fs.exists(sheet)) yield* fs.remove(sheet);
   });
 
+/** Renders `hymn` into `setup.out`, or keeps it (see the module's doc). */
 export const renderHymn = (setup: Setup, hymn: number) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -385,6 +453,7 @@ export const renderHymn = (setup: Setup, hymn: number) =>
     return { hymn, status: ok ? 'passed' : 'failed', line } satisfies Outcome;
   });
 
+/** One hymn's row of the manifest, from its record and today's verdict on it. */
 const manifestRow = (record: HymnRecord, passedNow: boolean) => ({
   hymn: record.hymn,
   key: recordingKey(record.hymn),
@@ -399,6 +468,13 @@ const manifestRow = (record: HymnRecord, passedNow: boolean) => ({
   passed: passedNow,
 });
 
+/**
+ * The set's manifest from the records in `setup.out` that stand under
+ * today's config, each passed or failed by today's checks, written to
+ * `manifest.json`; a record that does not stand (another config, or an MP3
+ * that is not its own) is left out and named in `left`. With `uploaded`
+ * (the stream's key sets), a record whose MP3 is gone stands on its record.
+ */
 export const writeManifest = (setup: Setup, uploaded = false) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -438,4 +514,5 @@ export const writeManifest = (setup: Setup, uploaded = false) =>
     return { manifest, left: left.sort((a, b) => a - b) };
   });
 
+/** The room's impulse response, the float WAV beside the render's sources (`STYLE.reverb.ir`). */
 export const roomOf = (style: Style) => `${import.meta.dir}/${style.reverb.ir}`;

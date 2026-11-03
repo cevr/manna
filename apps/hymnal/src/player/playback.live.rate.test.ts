@@ -1,3 +1,13 @@
+/**
+ * The live playback at a hymn's tempo (unit `recrate`, acceptance A1): each
+ * play tells One's shared session its rate before it plays, a play that
+ * names none plays at 1, a tempo turned while it holds a recording reaches
+ * One at once, and a hand-over's retained place runs on at the play's rate.
+ * One's `Audio` is the test's fake, on the TestClock: nothing sounds.
+ *
+ * Final path: `apps/hymnal/src/player/playback.live.rate.test.ts`.
+ */
+
 import { Effect, Fiber, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { TestClock } from 'effect/testing';
@@ -5,9 +15,17 @@ import { TestClock } from 'effect/testing';
 import { type Device, playbackOn } from './playback.live';
 
 const URI = 'https://hymns.cvr.im/audio/sdah/100.mp3';
+/** Every detent of the Tempo dial, in percent. */
 const TEMPI = Array.from({ length: 21 }, (_, i) => 50 + 5 * i);
+/** How soon the adapter asks a refused seek again, ms (`askAgainAfter`). */
 const AGAIN = 100;
 
+/**
+ * One's `Audio` as a phone has it, each call kept in order: `rate <r>`,
+ * `play <uri>`, `seek <ms>`, `pause`, `resume`, `status`, `announce`. A seek
+ * is refused while `refusing` holds, as AVPlayer refuses one before the
+ * recording is ready; the session says `loading` until then.
+ */
 const fake = () => {
   const asked = new Array<string>();
   const sought = new Array<number>();
@@ -48,6 +66,7 @@ const fake = () => {
   return { asked, sought, held, device };
 };
 
+/** The rate One's session was told last before the play of `uri`, if any. */
 const rateBefore = (asked: ReadonlyArray<string>, uri: string) =>
   Option.fromNullishOr(
     asked
@@ -56,6 +75,7 @@ const rateBefore = (asked: ReadonlyArray<string>, uri: string) =>
       .at(-1),
   );
 
+/** Let the adapter's promises and fibers run on. */
 const settle = Effect.forEach(Array.from({ length: 20 }), () => Effect.yieldNow, {
   discard: true,
 });

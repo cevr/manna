@@ -14,17 +14,24 @@ import {
 import { Media } from '../../tools/media.ts';
 import { BITS, CLIP_H, CLIP_W, numberOf } from './numbered-frames.ts';
 
+/** The Y (luma) of a one bar and a zero bar: video white and video black. */
 const LUMA = [16, 235] as const;
 
+/**
+ * mediabunny's coders in Bun, registered once for every clip: the media
+ * service registers them as it is built (x264 for H.264, FFmpeg to decode).
+ */
 const registered = Effect.runSync(
   Effect.cached(Effect.scoped(Layer.build(Layer.provide(Media.layer, BunServices.layer)))),
 );
 
+/** A clip's picture size, in px. */
 interface ClipSize {
   readonly width: number;
   readonly height: number;
 }
 
+/** Frame `n`'s picture at `size`, as I420: its bars in the luma plane, the chroma grey. */
 const picture = (n: number, { width, height }: ClipSize): Uint8Array => {
   const luma = width * height;
   const bytes = new Uint8Array(luma * 1.5).fill(128);
@@ -35,6 +42,10 @@ const picture = (n: number, { width, height }: ClipSize): Uint8Array => {
   return bytes;
 };
 
+/**
+ * A clip of `frames` numbered frames at `fps`, a key frame every `keyEvery`
+ * seconds, `size` px (`CLIP_W` × `CLIP_H` unless given): its MP4 bytes.
+ */
 export const numberedClip = (options: {
   readonly frames: number;
   readonly fps: number;
@@ -80,6 +91,7 @@ export const numberedClip = (options: {
     return new Uint8Array(buffer);
   }).pipe(Effect.orDie);
 
+/** The number decoded `sample` shows, read across its middle row's luma. */
 const numberShown = (sample: VideoSample): Effect.Effect<number> =>
   Effect.gen(function* () {
     const plane = new Uint8Array(sample.allocationSize({ format: 'I420' }));
@@ -97,11 +109,13 @@ const numberShown = (sample: VideoSample): Effect.Effect<number> =>
     );
   });
 
+/** The sample a decode's step gave, if it gave one: none once it is over. */
 const sampleIn = (got: IteratorResult<VideoSample, void>): Option.Option<VideoSample> => {
   if (got.done === true) return Option.none();
   return Option.some(got.value);
 };
 
+/** The number each frame of the MP4 `bytes` shows, in order, read from its decoded luma. */
 export const numbersIn = (bytes: Uint8Array): Effect.Effect<ReadonlyArray<number>> =>
   Effect.gen(function* () {
     yield* registered;

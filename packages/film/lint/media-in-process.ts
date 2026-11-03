@@ -7,16 +7,19 @@ import {
   Visitor,
 } from 'oxlint-plugin-effect/rule-bindings';
 
+/** A tool's name as a word: the encoder or the prober. */
 const NAMES_TOOL = /\b(?:ffmpeg|ffprobe)\b/u;
 
 const MESSAGE =
   "a string names FFmpeg's command-line tool: the film reads and writes media in-process (mediabunny, and FFmpeg's libraries through NodeAV), never through a process.";
 
+/** A template's text, with its holes left out. */
 const templateText = (node: ESTree.TemplateLiteral) =>
   node.quasis
     .map((q) => Option.getOrElse(Option.fromNullishOr(q.value.cooked), () => q.value.raw))
     .join(' ');
 
+/** Whether a node is a string or template naming a tool. */
 const namesTool = (node: ESTree.Node): boolean => {
   if (node.type === 'Literal') return Predicate.isString(node.value) && NAMES_TOOL.test(node.value);
   if (node.type === 'TemplateLiteral') return NAMES_TOOL.test(templateText(node));

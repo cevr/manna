@@ -1,5 +1,6 @@
 import type { Pt } from '@manna/film/style';
 
+/** The prosecutor's head: a tall rounded block turned three-quarters to screen left, its jaw one curve into a broad chin, the tuft over his brow, his ear behind. */
 export const PROSECUTOR_HEAD: ReadonlyArray<Pt> = [
   [-20.6, -77.5],
   [-7.7, -80.8],
@@ -55,6 +56,7 @@ export const PROSECUTOR_HEAD: ReadonlyArray<Pt> = [
   [-33.8, -71.2],
 ];
 
+/** His short black hair: a peaked tuft over the brow at the front, the hairline sloping across, full over the back of his head and down behind his ear. */
 export const PROSECUTOR_HAIR: ReadonlyArray<Pt> = [
   [-21.0, -79.5],
   [-8.1, -82.7],
@@ -103,6 +105,7 @@ export const PROSECUTOR_HAIR: ReadonlyArray<Pt> = [
   [-34.2, -73.1],
 ];
 
+/** The judge's head: an egg-shaped face narrowing to the chin under curly hair in lumps, his ear behind. */
 export const JUDGE_HEAD: ReadonlyArray<Pt> = [
   [-7.7, -87.7],
   [3.3, -88.7],
@@ -158,6 +161,7 @@ export const JUDGE_HEAD: ReadonlyArray<Pt> = [
   [-14.3, -86.0],
 ];
 
+/** His curly grey hair: lumps along the crown and puffs over the sides, its hairline uneven and arched. */
 export const JUDGE_HAIR: ReadonlyArray<Pt> = [
   [-8.0, -89.7],
   [3.0, -90.8],

@@ -1,3 +1,18 @@
+/**
+ * Acceptance (tidyup A1): the find drums keep `Open` and lose `Play`, as the
+ * owner asked (2026-11-02): "let's remove [Play] from here. It's kind of rare
+ * that we'd want to play a song alone. Just keep it open." The drums as the
+ * app's player layer draws them (`LivePlayer`), mounted in a browser's
+ * document over a stand-in home screen (`src/test/setup.ts`).
+ *
+ * - Open, the drums' panel holds one button, `Open`, and no `Play`.
+ * - `Open` opens the dialled hymn's page and closes the drums; no hymn starts.
+ *
+ * Hymn numbers only: no hymn's words are read or printed.
+ *
+ * Final path: `apps/hymnal/src/player/finddrums.open.test.tsx`.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { RegistryProvider } from '@effect/atom-react';
 import { Option } from 'effect';
@@ -9,6 +24,7 @@ import { pathname, routed } from '~/test/one';
 
 import { LivePlayer } from './LivePlayer';
 
+/** The player layer over a stand-in home screen, mounted in the document; it unmounts when the test's `using` ends. */
 const mount = () => {
   pathname.current = '/';
   routed.splice(0);
@@ -29,6 +45,7 @@ const mount = () => {
   return {
     one,
     get,
+    /** One press, as a finger's tap reaches it on the web. */
     click: (selector: string) => act(() => get(selector).click()),
     [Symbol.dispose]: () => {
       act(() => root.unmount());

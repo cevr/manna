@@ -1,3 +1,17 @@
+/** Reading EGW-scope paragraphs out of the writings database, for embedding.
+ *
+ *  `bun:sqlite` directly, the way `topics-compiler/lookups.ts` does: the
+ *  compiler is Bun build tooling rather than portable runtime core, and a
+ *  streaming read of ~961,761 rows wants the synchronous driver rather than a
+ *  service graph.
+ *
+ *  The scope is `EGW_SCOPE_AUTHORS`, imported rather than restated. §9.2 pins
+ *  the index to exactly that partition, and a builder that enumerated its own
+ *  author list would be free to disagree with the search that reads the result —
+ *  which is the one disagreement nothing downstream could detect, because the
+ *  index would simply contain paragraphs the scope filter never asks about.
+ */
+
 import { vectorDocument } from '@manna/core/search';
 import { EGW_SCOPE_AUTHORS } from '@manna/core/writings';
 import { Database } from 'bun:sqlite';
@@ -5,6 +19,16 @@ import { Database } from 'bun:sqlite';
 import type { VectorSourceRow } from './emit.js';
 import { Effect, Option, Schema } from 'effect';
 
+/** Why the source read could not produce a corpus.
+ *
+ *  A tagged error on the error channel rather than an empty array. The previous
+ *  shape returned `[]` for *every* failure — an unopenable file, a renamed
+ *  column, a schema the decoder rejected — and `main.ts` reports an empty
+ *  corpus as "no EGW-scope paragraphs in <file>", which points the operator at
+ *  the corpus when the fault is in the query. A build tool that turns a schema
+ *  break into "your database is empty" is a build tool that gets debugged in
+ *  the wrong place.
+ */
 export class VectorSourceError extends Schema.TaggedError<VectorSourceError>()(
   'VectorSourceError',
   { message: Schema.String },
@@ -22,6 +46,24 @@ const Rows = Schema.Array(
 
 const decodeRows = Schema.decodeUnknownEffect(Rows);
 
+/** Every EGW-scope paragraph, in a stable order.
+ *
+ *  Ordered by `(book_code, puborder)` so the emitted buffer's row order is a
+ *  function of the corpus rather than of SQLite's join plan. That is what makes
+ *  a rebuild over unchanged input produce an identical artifact — and therefore
+ *  an identical digest, which is the whole trust surface the supply pipeline
+ *  rests on.
+ *
+ *  `--limit` exists because §10 forbids running this over the full corpus during
+ *  the milestone: 961,761 embeddings is hours of GPU time, and what has to be
+ *  proven here is the writer, not the corpus.
+ *
+ *  The database is an `acquireUseRelease` resource. The previous shape opened it
+ *  inside `Effect.sync` and closed it on the success path only, so a decode
+ *  failure or an interruption leaked the handle and its WAL — and a build tool
+ *  that leaks a read handle on a 4.5 GB database leaves the file locked for
+ *  whatever runs next.
+ */
 export const readVectorSource = (input: {
   readonly filename: string;
   readonly limit: Option.Option<number>;

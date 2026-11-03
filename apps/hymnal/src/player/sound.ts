@@ -1,3 +1,54 @@
+/**
+ * The score clock: a silent `PlaybackApi` under the player (`player.ts`),
+ * over the device's own.
+ *
+ * The place moves at the held hymn's tempo (`rate` of the play's options,
+ * then each `setRate`; 1000 ms a second until told), with sound on or off.
+ * With sound on, the device plays the recording at the tempo: each device
+ * play carries the tempo as it stands, a turn reaches the device's
+ * `setRate`, and the device's statuses, which name no rate, get the tempo's.
+ * A hymn whose timeline runs past the recording's end (stanzas the
+ * recording does not play) goes on silently at the tempo from there to the
+ * timeline's end, and the status gives the timeline's length. With sound
+ * off, nothing sounds: the clock runs from the first sung line and gives the
+ * status the device would. A play from the start whose options ask a count-in
+ * (`PlayOptions.countIn`) first holds the place at the first sung line for
+ * one bar of the hymn's first tempo (`countin.ts`) at the rate: the status
+ * says Playing there and tells the count's time left (`Status.countInMs`),
+ * and `beats` tells each beat as it comes, on deadlines from the play. A
+ * Pause leaves the count and a Resume counts again from its first beat; a
+ * turn of the tempo keeps the share of the count left in the hymn's time; a
+ * seek or a switch on leaves it. With sound on, a play from the start whose
+ * options say `intro: false` plays the recording from the first sung line.
+ * A switch mid-play hands
+ * the place over: off pauses the device and runs the clock from the
+ * device's place; on plays the recording from the clock's place. `pace`
+ * tells the rate the place moves at.
+ *
+ * Every change of rate, place or playing takes the place at the old run's
+ * rate first, then starts the new run from it (`run`).
+ *
+ * A play sings the stanzas its options name (`PlayOptions.stanzas`, all when
+ * none), and `setStanzas` changes them mid-play. The clock holds the place in
+ * sung time: the held hymn's timeline cut to the choice (`stanzas.ts`'s
+ * `cutOf`), whose length, place and seeks the player reads and asks. The
+ * device's place is the recording's: each play and seek asks it at
+ * `recordingAt` of the sung place, and each status it tells is read at
+ * `sungAt`, as is a lock screen's seek. A change of choice keeps the place
+ * in the recording, or moves it on to the next sung line's start when its
+ * line is no longer sung. With sound on, the skipper seeks the device across
+ * each span of the recording the choice skips, from a sleep that ends at the
+ * span's start at the tempo; each change wakes it to look again, and so does
+ * a move the device makes of its own (a load that began to sound).
+ *
+ * Commands, tempo changes and Sound switches update the clock under one lock. The status
+ * observer reads the device outside it and accepts replies only for the
+ * current generation, so a former observer cannot delay a new Play. Pending
+ * device plays also hold no lock: Pause, Stop and Sound switches go on while
+ * they load. A hand-over (a switch, a new play, a stop) answers that play with the
+ * place as it stands, and the device's late answer is dropped.
+ */
+
 import {
   Array as Arr,
   Clock,
@@ -28,6 +79,7 @@ import {
 } from './player';
 import { ALL, type Cut, cutOf, whole } from './stanzas';
 
+/** The hymn a recording's URL plays: its file is `<number>.mp3` (`src/remote.ts`). */
 export const hymnOf = (uri: string): Option.Option<number> =>
   Option.fromNullishOr(/\/(\d+)\.mp3$/.exec(uri)?.[1]).pipe(Option.map(Number));
 
@@ -37,6 +89,10 @@ const stateOf = (ended: boolean, playing: boolean): Status['state'] => {
   return 'paused';
 };
 
+/**
+ * The silent clock's status at `now`, held at the timeline's `end`; off 1000 ms a second, with
+ * the rate it runs at (a status that names none moves at 1).
+ */
 const clockStatus = (run: Run, end: number, now: number): Status => {
   const at = Math.min(placeOf(run, now), end);
   const status: Status = {
@@ -48,37 +104,56 @@ const clockStatus = (run: Run, end: number, now: number): Status => {
   return { ...status, rate: run.rate };
 };
 
+/**
+ * The device's status with the rate it plays at: One's statuses name none, and the device
+ * plays at the tempo it was told (a status that names none moves at 1).
+ */
 const atTempo = (status: Status, rate: number): Status => {
   if (rate === 1) return status;
   return { ...status, rate };
 };
 
+/**
+ * The slack a count-in's edges keep, in ms: a read at a beat's deadline, or this close before
+ * it, reads that beat, and one this close before the count's end reads it ended, so no wait
+ * for the next edge is shorter than the clock's own steps.
+ */
 const COUNT_SLACK = 1e-6;
 
+/** Two beats the same: none, or the same index of the same count. */
 const sameBeat = (a: Option.Option<Beat>, b: Option.Option<Beat>) =>
   Option.match(a, {
     onNone: () => Option.isNone(b),
     onSome: (it) => Option.exists(b, (other) => other.index === it.index && other.of === it.of),
   });
 
+/** Whether the device moves, or is about to. */
 const moving = (status: Status) => status.state === 'playing' || status.state === 'loading';
 
+/** A tempo's rate as the clock takes it: one that is not a positive number runs at 1. */
 const rateOf = (rate?: number) =>
   Option.fromNullishOr(rate).pipe(
     Option.filter((it) => Number.isFinite(it) && it > 0),
     Option.getOrElse(() => 1),
   );
 
+/**
+ * Which sung lines of hymn `hymn`'s timeline a choice of `stanzas` keeps, one flag per line
+ * (`stanzas.ts`'s `keptOf` over the hymn's words).
+ */
 export type KeptFor = (hymn: number, stanzas: ReadonlyArray<number>) => ReadonlyArray<boolean>;
 
+/** No flags: every line is kept. */
 const keepsAll: KeptFor = () => [];
 
+/** A hymn's timeline and the cut of it the held choice sings. */
 interface Score {
   readonly hymn: number;
   readonly timeline: Timeline;
   readonly cut: Cut;
 }
 
+/** Hymn `hymn`'s `timeline` cut to `stanzas` by `keptFor` (`cutOf` keeps every line when the flags disagree). */
 const scoreOf = (
   hymn: number,
   timeline: Timeline,
@@ -89,6 +164,7 @@ const scoreOf = (
   return { hymn, timeline, cut: cutOf(timeline, keptFor(hymn, stanzas)) };
 };
 
+/** A device's status, its places in the recording's time, read in `cut`'s sung time. */
 const sungStatus = (status: Status, cut: Cut): Status => {
   if (cut.skips.length === 0) return status;
   const sung = (ms: Option.Option<number>) => Option.map(ms, cut.sungAt);
@@ -106,6 +182,12 @@ const sungStatus = (status: Status, cut: Cut): Status => {
   };
 };
 
+/**
+ * What a call does once it has set what the clock holds: answer with a
+ * status, or ask the device to play `uri` from `at` in the recording's time
+ * (outside the lock), as hand-over `turn`, which ends early once `over` is
+ * done.
+ */
 type Step = Data.TaggedEnum<{
   Answer: { readonly status: Status };
   Sound: {
@@ -118,23 +200,44 @@ type Step = Data.TaggedEnum<{
 }>;
 const Step = Data.taggedEnum<Step>();
 
+/** What the score clock holds across the calls. */
 interface Held {
   uri: Option.Option<string>;
+  /** The held hymn's timeline and its cut to `stanzas`. */
   score: Option.Option<Score>;
+  /** The stanzas the held play sings, `[]` for all. */
   stanzas: ReadonlyArray<number>;
+  /** The silent clock while it runs (sound off, or past the recording's end); none while the device plays. */
   clock: Option.Option<Run>;
+  /**
+   * The held play's count-in, from its start until it ends or a seek, a new play or a switch on
+   * leaves it: while it lasts the playing clock is stamped at its end, so the place holds at the
+   * first sung line until then. A Pause keeps it, so the Resume counts again.
+   */
   count: Option.Option<CountIn>;
+  /** The recording's length as the device last told it, in the recording's ms. */
   recorded: Option.Option<number>;
+  /** Whether the device holds a recording this clock asked it to play. */
   sounding: boolean;
+  /** Whether a device play this clock asked is still loading (its answer not yet taken). */
   loading: boolean;
+  /** How many times the place was handed over; a device play answers only its own turn. */
   turn: number;
+  /** Done with the next turn at the next hand-over: a device play still loading answers then. */
   over: Deferred.Deferred<number>;
   options: Option.Option<PlayOptions>;
   selection: Option.Option<RecordingSelection>;
   intent: Intent;
+  /** The held hymn's tempo: ms of the hymn for each ms the recording or the silent clock runs. */
   rate: number;
 }
 
+/**
+ * The score clock over `device`: `timelineFor` gives a hymn's timeline,
+ * `sound` says whether the recording sounds (each change of it hands the
+ * place over, for as long as the scope lasts), and `keptFor` which lines a
+ * choice of stanzas keeps (every line when not given).
+ */
 export const scoreClock = (
   device: PlaybackApi,
   timelineFor: (hymn: number) => Option.Option<Timeline>,
@@ -145,6 +248,7 @@ export const scoreClock = (
     const lock = yield* Semaphore.make(1);
     let revision = 0;
     let lastStatus: Status = { state: 'idle', positionMs: 0 };
+    /** Done at the next change while the held choice skips a span: the skipper then looks again. */
     let changed = yield* Deferred.make<void>();
     const held: Held = {
       uri: Option.none(),
@@ -162,16 +266,22 @@ export const scoreClock = (
       selection: Option.none(),
       rate: 1,
     };
+    /** The rate the place moves at: the held tempo, sound on or off; 1 while nothing is held. */
     const pace = yield* SubscriptionRef.make(1);
     const paceNow = Effect.sync(() => held.rate);
     const tellPace = Effect.flatMap(paceNow, (rate) => SubscriptionRef.set(pace, rate));
+    /** The held cut: the hymn as the held choice sings it; none while nothing is held. */
     const cut = () => Option.map(held.score, (score) => score.cut);
+    /** The sung end: the cut's. */
     const end = () => Option.match(cut(), { onNone: () => 0, onSome: (c) => c.timeline.end });
     const first = () => Option.match(cut(), { onNone: () => 0, onSome: (c) => c.timeline.first });
+    /** The recording's time of sung time `sung`. */
     const recordingAt = (sung: number) =>
       Option.match(cut(), { onNone: () => sung, onSome: (c) => c.recordingAt(sung) });
+    /** The sung time of the recording's time `at`. */
     const sungAt = (at: number) =>
       Option.match(cut(), { onNone: () => at, onSome: (c) => c.sungAt(at) });
+    /** The recording's spans the held choice skips. */
     const skips = () => Option.match(cut(), { onNone: () => [], onSome: (c) => c.skips });
     const selected = (status: Status): Status =>
       Option.match(held.selection, {
@@ -179,6 +289,7 @@ export const scoreClock = (
         onSome: (recording) => ({ ...status, recording }),
       });
 
+    /** The held count-in and its clock while it counts at `now`: the clock plays, stamped ahead. */
     const countingAt = (now: number) =>
       Option.flatMap(held.count, (count) =>
         Option.map(
@@ -186,12 +297,14 @@ export const scoreClock = (
           (clock) => ({ count, clock }),
         ),
       );
+    /** The beat the count-in stands at `now`, from 0; none while it does not count. */
     const beatAt = (now: number): Option.Option<Beat> =>
       Option.map(countingAt(now), ({ count, clock }) => {
         const left = (clock.stamp - now) * clock.rate;
         const index = count.beats - Math.ceil((left - COUNT_SLACK * clock.rate) / count.beatMs);
         return { index: Math.min(Math.max(index, 0), count.beats - 1), of: count.beats };
       });
+    /** The host ms from `now` to the next beat, or to the count's end after the last one. */
     const toNextBeat = (now: number) =>
       Option.flatMap(countingAt(now), ({ count, clock }) =>
         Option.map(
@@ -199,6 +312,7 @@ export const scoreClock = (
           ({ index, of }) => clock.stamp - ((of - index - 1) * count.beatMs) / clock.rate - now,
         ),
       );
+    /** The silent clock's status at `now`, with the count-in's time left while it counts. */
     const clockNow = (clock: Run, now: number): Status => {
       const status = selected(clockStatus(clock, end(), now));
       return Option.match(countingAt(now), {
@@ -207,24 +321,33 @@ export const scoreClock = (
       });
     };
 
+    /** The beat the count-in stands at, none while it does not count. */
     const beat = yield* SubscriptionRef.make<Option.Option<Beat>>(Option.none());
+    /** Done at the next change: the ticker then reads the beat again. */
     let ticked = yield* Deferred.make<void>();
+    /** Tell the beat as it stands, and wake the ticker: a change may move the next beat. */
     const tellBeat = Effect.gen(function* () {
       yield* SubscriptionRef.set(beat, beatAt(yield* Clock.currentTimeMillis));
       yield* Deferred.completeWith(ticked, Effect.void);
       ticked = yield* Deferred.make<void>();
     });
+    /** A count-in that has run its bar is over: a Pause after it keeps no count for the Resume. */
     const countEnded = Effect.map(Clock.currentTimeMillis, (now) => {
       if (Option.exists(held.clock, (clock) => clock.playing && clock.stamp - now <= COUNT_SLACK))
         held.count = Option.none();
     });
 
+    /** Wake the skipper, when the held choice skips a span: a change may move what it waits on. */
     const wake = Effect.gen(function* () {
       if (skips().length === 0) return;
       yield* Deferred.completeWith(changed, Effect.void);
       changed = yield* Deferred.make<void>();
     });
 
+    /**
+     * A command or play answer invalidates observations made before it, wakes the skipper and
+     * tells the beat.
+     */
     const changing = <A, E>(change: Effect.Effect<A, E>) =>
       lock.withPermit(
         Effect.sync(() => {
@@ -236,6 +359,7 @@ export const scoreClock = (
         ),
       );
 
+    /** The place changes hands: a device play still loading answers now, and its own answer is dropped. */
     const handOver = Effect.gen(function* () {
       held.turn += 1;
       held.loading = false;
@@ -244,11 +368,16 @@ export const scoreClock = (
       held.over = yield* Deferred.make<number>();
     });
 
+    /** The clock's place and whether it plays, at `now`. */
     const placed = (clock: Run, now: number) => ({
       at: Math.min(placeOf(clock, now), end()),
       playing: clock.playing,
     });
 
+    /**
+     * Run the clock from `at`, playing or held, at the pace as it stands. A caller takes `at`
+     * from the run before at that run's own rate (`placed`), so no change moves the place.
+     */
     const run = (at: number, playing: boolean) =>
       Effect.gen(function* () {
         const now = yield* Clock.currentTimeMillis;
@@ -259,6 +388,10 @@ export const scoreClock = (
         return selected(clockStatus(clock, end(), now));
       });
 
+    /**
+     * Count the held play in: the clock plays from the first sung line, stamped one bar of the
+     * hymn's first tempo at the pace ahead, so the place holds there until the bar is counted.
+     */
     const countFrom = Effect.gen(function* () {
       const count = Option.map(held.score, (score) => countInOf(score.timeline.tempo));
       if (Option.isNone(count)) return yield* run(first(), true);
@@ -272,6 +405,10 @@ export const scoreClock = (
       return clockNow(clock, now);
     });
 
+    /**
+     * The silent clock, if it runs, started again from its place as it stands at the pace now.
+     * A count-in keeps the share of its bar left, in the hymn's time, and counts it at the pace.
+     */
     const rebase = Effect.gen(function* () {
       if (Option.isNone(held.clock)) return;
       const now = yield* Clock.currentTimeMillis;
@@ -287,6 +424,11 @@ export const scoreClock = (
       yield* run(at, playing);
     });
 
+    /**
+     * The device's status as the player reads it: in sung time, at the tempo's rate, with the
+     * timeline's length, and past the recording's end, the silent clock on to the timeline's
+     * end. A move the device made of its own (a load that began to sound) wakes the skipper.
+     */
     const fromDevice = (told: Status) =>
       Effect.gen(function* () {
         const status = atTempo(
@@ -306,12 +448,14 @@ export const scoreClock = (
         });
       });
 
+    /** A stale play answers from memory and never waits on a native observer. */
     const current = Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis;
       if (Option.isSome(held.clock)) return clockNow(held.clock.value, now);
       return selected(lastStatus);
     });
 
+    /** Observe without holding a command behind a native status round trip. */
     const readStatus: Effect.Effect<Status, PlaybackError> = Effect.gen(function* () {
       const snapshot = yield* lock.withPermit(
         Effect.gen(function* () {
@@ -337,10 +481,15 @@ export const scoreClock = (
       });
     });
 
+    /** Whether the recording holds sung place `at`, as far as the device has told. */
     const recordedAt = (at: number) =>
       at < end() &&
       Option.match(held.recorded, { onNone: () => true, onSome: (ms) => recordingAt(at) < ms });
 
+    /**
+     * Hand the place to the device: it is to play the recording from sung place `at`, at the
+     * held tempo as it stands (a turn since the play leaves the play's own `rate` behind).
+     */
     const sounded = (uri: string, at: number, continuous: boolean, options?: PlayOptions) =>
       Effect.gen(function* () {
         yield* handOver;
@@ -373,6 +522,11 @@ export const scoreClock = (
     const answer = (status: Effect.Effect<Status, PlaybackError>) =>
       Effect.map(status, (it) => Step.Answer({ status: it }));
 
+    /**
+     * The device's answer to the play of `turn`, or none when the place was
+     * handed over first. A play handed over answers with the place as it
+     * stands; the clock runs then, so a device that starts late is paused.
+     */
     const played = (turn: number, told: Option.Option<Exit.Exit<Status, PlaybackError>>) =>
       Effect.gen(function* () {
         if (held.turn === turn) held.loading = false;
@@ -381,6 +535,7 @@ export const scoreClock = (
         return yield* current;
       });
 
+    /** Carry a step out: a device play runs outside the lock, and its answer is taken under it. */
     const settle = (step: Step): Effect.Effect<Status, PlaybackError> =>
       Step.$match(step, {
         Answer: ({ status }) => Effect.succeed(status),
@@ -391,14 +546,17 @@ export const scoreClock = (
           ).pipe(Effect.flatMap((told) => changing(played(turn, told)))),
       });
 
+    /** `step` under the lock, then carried out. */
     const locked = (step: Effect.Effect<Step, PlaybackError>) =>
       Effect.flatMap(changing(step), settle);
 
+    /** The sung place a device play from `fromMs` sounds from: with the intro off, a start is the first sung line. */
     const soundFrom = (fromMs: number, introOff: boolean) => {
       if (fromMs <= 0 && introOff) return first();
       return fromMs;
     };
 
+    /** The silent clock's run of a play from `fromMs`: a start the play asks counted in counts in. */
     const silentFrom = (fromMs: number, countsIn: boolean) => {
       if (fromMs <= 0 && countsIn && held.intent === 'play') return countFrom;
       return run(Math.max(fromMs, 0) || first(), held.intent === 'play');
@@ -450,9 +608,14 @@ export const scoreClock = (
         return yield* answer(silentFrom(fromMs, options?.countIn === true));
       });
 
+    /** Whether the held play's options ask `key` to be `value`. */
     const asks = (key: 'intro' | 'countIn', value: boolean) =>
       Option.exists(held.options, (options) => options[key] === value);
 
+    /**
+     * A Resume of the silent clock: a count-in going on goes on; one a Pause left counts again,
+     * as does a play from the start again past the end when the held play asks one.
+     */
     const resumeClock = (clock: Run) =>
       Effect.gen(function* () {
         held.intent = 'play';
@@ -479,6 +642,7 @@ export const scoreClock = (
         return yield* answer(run(Math.min(ms, end()), clock.playing));
       });
 
+    /** A seek while the device plays: past the recording's end, the silent clock takes it. */
     const seekDevice = (ms: number) =>
       Effect.gen(function* () {
         if (Option.isNone(held.score) || recordedAt(ms) || ms >= end())
@@ -488,6 +652,7 @@ export const scoreClock = (
         return yield* run(ms, moving(before));
       });
 
+    /** On a switch of `sound`: hand the place over; on, the device's play to carry out. */
     const switchTo = (on: boolean) =>
       Effect.gen(function* () {
         const uri = Option.getOrElse(held.uri, () => '');
@@ -528,9 +693,15 @@ export const scoreClock = (
       Effect.forkScoped,
     );
 
+    /** Whether the skipper has a device to watch: it sounds the held recording, no play loading. */
     const watching = () =>
       held.sounding && !held.loading && Option.isNone(held.clock) && skips().length > 0;
 
+    /**
+     * Under the lock: when the device stands in a skipped span, seek it to the span's end; then
+     * the host's ms until the next skipped span starts at the tempo, or none while the device
+     * does not play or plays past the last one.
+     */
     const skipFrom = (status: Status): Effect.Effect<Option.Option<number>, PlaybackError> =>
       Effect.gen(function* () {
         if (status.state !== 'playing') return Option.none();
@@ -544,6 +715,11 @@ export const scoreClock = (
         return yield* skipFrom({ ...after, positionMs: Math.max(after.positionMs, skip.to) });
       });
 
+    /**
+     * Under the lock: a device paused in a skipped span is sought to the span's end now, where
+     * the status already shows it, so a resume sounds none of the span even while the device
+     * tells `loading` before it plays.
+     */
     const skipPaused = (status: Status): Effect.Effect<void, PlaybackError> =>
       Effect.gen(function* () {
         if (status.state !== 'paused') return;
@@ -554,6 +730,11 @@ export const scoreClock = (
         yield* device.seek(into.value.to);
       });
 
+    /**
+     * One look of the skipper: the device read outside the lock, as `readStatus` does, and taken
+     * only when no change came between. It gives the change to wait on, and how long to sleep
+     * before looking again, if there is a span ahead.
+     */
     const look = Effect.gen(function* () {
       const seen = yield* lock.withPermit(
         Effect.sync(() => ({ revision, woken: changed, watching: watching() })),
@@ -601,6 +782,11 @@ export const scoreClock = (
       });
     }).pipe(Effect.forever, Effect.forkScoped);
 
+    /**
+     * A new choice of stanzas for the held hymn: the place keeps its place in the recording,
+     * or moves on to the next sung line's start; a device that plays or stands paused in a span
+     * now skipped is sought across it at once.
+     */
     const choose = (stanzas: ReadonlyArray<number>) =>
       Effect.gen(function* () {
         const now = yield* Clock.currentTimeMillis;
@@ -710,6 +896,7 @@ export const scoreClock = (
     return api;
   });
 
+/** The player's playback: the score clock over `device`'s (`LivePlayer.tsx`). */
 export const soundOn = <R>(
   device: Layer.Layer<Playback, never, R>,
   timelineFor: (hymn: number) => Option.Option<Timeline>,

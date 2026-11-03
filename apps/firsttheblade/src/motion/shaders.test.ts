@@ -4,6 +4,7 @@ import { FIELD_FRAGMENT, NIGHT_FRAGMENT } from './shaders.ts';
 import { TURN } from './sun.ts';
 import { turnAt } from './testing.ts';
 
+/** The swing and period of each turn the field's shader writes: `float turn = u_turning * <swing> * sin(<2π> * t / <period>);`. */
 const turnsIn = (source: string) =>
   Array.from(
     source.matchAll(
@@ -12,6 +13,7 @@ const turnsIn = (source: string) =>
     (m) => ({ swing: Number(m[1]), tau: Number(m[2]), period: Number(m[3]) }),
   );
 
+/** Whether a field shader writes one turn, multiplied by `u_turning`, with the swing and period of `TURN`. */
 const writesTurn = (source: string) => {
   const turns = turnsIn(source);
   return (
@@ -20,13 +22,20 @@ const writesTurn = (source: string) => {
   );
 };
 
+/**
+ * The least sway the hero's plants may have: a tip that moves enough to be
+ * seen at a glance: the sway the owner saw and chose "Keep it" (ask
+ * abdbb63c754).
+ */
 const SWAY_FLOOR = 0.016;
 
+/** The share of the width a plant's tip is pushed by, as the field's shader writes it. */
 const pushIn = (source: string) =>
   Array.from(source.matchAll(/float push = .*\* sway \* ([0-9.e-]+) \* u_ramp;/g), (m) =>
     Number(m[1]),
   );
 
+/** The arguments of each call of `name` in a GLSL source, split at the call's own commas. */
 const calls = (source: string, name: string) => {
   const found: Array<ReadonlyArray<string>> = [];
   let from = source.indexOf(`${name}(`);
@@ -51,6 +60,11 @@ const calls = (source: string, name: string) => {
   return found;
 };
 
+/**
+ * Every `smoothstep(a, b, x)` whose edges are both written as numbers and are
+ * not in order: GLSL ES 3.00 leaves the result undefined when `a >= b`, so a
+ * fall is written `1.0 - smoothstep(b, a, x)`.
+ */
 const unorderedEdges = (source: string) =>
   calls(source, 'smoothstep').flatMap(([a = '', b = '']) => {
     const low = Number(a);

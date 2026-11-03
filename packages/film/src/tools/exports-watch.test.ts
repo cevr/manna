@@ -10,6 +10,7 @@ import {
 } from './exports-watch.ts';
 import { memoryFileSystem, text } from './host/testing.ts';
 
+/** How often the test's watch reads. */
 const EVERY = '3 seconds';
 
 const FILM = (exports: string) =>
@@ -30,6 +31,7 @@ const inMemory = (files: Map<string, Uint8Array>) =>
     Path.layer,
   );
 
+/** What a watch's failure says: its tag and the files it names. */
 const changed = (e: { readonly _tag: string; readonly files: ReadonlyArray<string> }) => ({
   _tag: e._tag,
   files: e.files,

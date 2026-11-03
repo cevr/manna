@@ -1,3 +1,10 @@
+/**
+ * The `index_*` tables hold every index as decoded: made-up sets drawn from a
+ * fixed seed, with every optional key both present and absent, are written
+ * to an in-memory database and read back equal, and the comparison names an
+ * index whose rows differ. The committed files' round trip is
+ * `index-tables.slow.test.ts`.
+ */
 import { Database } from 'bun:sqlite';
 import { describe, expect, it } from 'bun:test';
 
@@ -21,6 +28,7 @@ const roundTrip = (sources: IndexSources) => {
   return read;
 };
 
+/** A fixed-seed source of numbers in [0, 1) (mulberry32), so each run draws the same sets. */
 const seeded = (seed: number) => {
   let state = seed >>> 0;
   return () => {
@@ -32,6 +40,7 @@ const seeded = (seed: number) => {
   };
 };
 
+/** Made-up encoded index files over a seed: small, with every optional key both present and absent. */
 const generator = (random: () => number) => {
   const int = (min: number, max: number) => min + Math.floor(random() * (max - min + 1));
   const chance = (p = 0.5) => random() < p;

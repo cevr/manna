@@ -23,12 +23,14 @@ const wordValue = (word: string | Redacted.Redacted<string>): string => {
 
 const EARSHOT_PIN = Earshot.pin;
 
+/** A run of a process: its argv, folder and environment. */
 interface Spawned {
   readonly argv: ReadonlyArray<string>;
   readonly cwd: string;
   readonly env: Readonly<Partial<Record<string, string>>>;
 }
 
+/** What the fake answers: git's head and status, and the model the driver writes to its last argument. */
 interface Answers {
   readonly head: string;
   readonly status: string;
@@ -50,6 +52,7 @@ const handleOf = (stdout: string, exitCode = 0) =>
     unref: Effect.succeed(Effect.void),
   });
 
+/** A spawner that keeps each command, answers git from `answers`, and for the sandbox writes the model where the driver would. */
 const answering = (answers: Answers, spawned: Array<Spawned>) =>
   Effect.map(FileSystem.FileSystem, (fs) =>
     ChildProcessSpawner.make((command) => {
@@ -75,6 +78,7 @@ const answering = (answers: Answers, spawned: Array<Spawned>) =>
     }),
   );
 
+/** earshot at a fixture home (its clone and virtualenv made unless `bare`), over the fake spawner. */
 const fitting = (answers: Answers, options: { readonly bare?: boolean } = {}) => {
   const spawned: Array<Spawned> = [];
   return Effect.gen(function* () {

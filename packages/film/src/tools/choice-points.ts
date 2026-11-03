@@ -32,12 +32,14 @@ import { type ScoreOptionState, scoreOptionState, scoreOptions } from '../core/s
 import { type LoadedFilm, type MeasuredFilm, voicePiecesOf } from './film-repo.ts';
 import type { Attempt } from './takes.ts';
 
+/** How a score option's state in the store reads as a variant's. */
 const SCORE_STATE: Record<ScoreOptionState['_tag'], VariantState> = {
   Current: 'current',
   Stale: 'stale',
   Missing: 'missing',
 };
 
+/** The scenes `ids` name, as one address: the film when none. */
 const scenesAddress = (ids: ReadonlyArray<string>): Address =>
   Option.match(Arr.head(Arr.dedupe(ids)), {
     onNone: (): Address => ({ _tag: 'Film' }),
@@ -47,19 +49,23 @@ const scenesAddress = (ids: ReadonlyArray<string>): Address =>
     }),
   });
 
+/** The scene playing at film second `at` (`sceneAt`, the film's one rule). */
 const sceneOfTime = (placed: ReadonlyArray<Placed>, at: number) =>
   Option.match(sceneAt(placed, at), { onNone: () => '', onSome: (p) => p.spec.id });
 
+/** What a score option is now: the hash it was composed at (none when never composed). */
 const scoreKey = (state: ScoreOptionState): string => {
   if (state._tag === 'Missing') return '';
   return state.asset.hash;
 };
 
+/** A state as a variant's: `current`, else `stale`. */
 const currentOr = (current: boolean): VariantState => {
   if (current) return 'current';
   return 'stale';
 };
 
+/** The score's options, the one `play` names picked, each heard as the film's mix with it. */
 export const scorePoint = (
   loaded: LoadedFilm,
   placed: ReadonlyArray<Placed>,
@@ -91,6 +97,7 @@ export const scorePoint = (
     }),
   );
 
+/** How a take is listed: its name in the list, whether it plays, and what can become of it, or why nothing can. */
 interface TakeStanding {
   readonly name: string;
   readonly picked: boolean;
@@ -98,6 +105,7 @@ interface TakeStanding {
   readonly fixed: Option.Option<string>;
 }
 
+/** A kept take plays, and can wait again; a waiting one can be kept or rejected. */
 const KEPT: TakeStanding = { name: 'kept', picked: true, verbs: ['unpick'], fixed: Option.none() };
 const WAITING: TakeStanding = {
   name: 'candidate',
@@ -106,10 +114,13 @@ const WAITING: TakeStanding = {
   fixed: Option.none(),
 };
 
+/** Why no verb reaches a code sound's seed. */
 const SEED_FIXED = 'a code sound is tuned by editing its data';
 
+/** Why no verb reaches a code trial's seed: the owner chooses a swap in an ask. */
 const TRIAL_FIXED = 'a code trial is tuned by editing its data, and chosen in an ask';
 
+/** A take the lock still holds for a sound now made by code: heard beside its seeds, never played. */
 const WAS: TakeStanding = {
   name: 'was',
   picked: false,
@@ -117,6 +128,7 @@ const WAS: TakeStanding = {
   fixed: Option.some(`${SEED_FIXED}: its seeds play, not its takes`),
 };
 
+/** A lock variant as a take, as `standing` lists it, its 1-based index in that list. */
 const takeOf = (
   entry: LibraryEntry,
   variant: Variant,
@@ -140,14 +152,17 @@ const takeOf = (
   };
 };
 
+/** A sound's kept takes as they play. */
 const keptOf = (lock: Option.Option<LockEntry>): ReadonlyArray<Variant> =>
   Option.match(lock, { onNone: () => [], onSome: (l) => l.variants });
 
+/** A generated or recorded sound's takes: the kept ones as they play, then those waiting for the current request. */
 const takesOf = (entry: LibraryEntry, lock: Option.Option<LockEntry>) => [
   ...keptOf(lock).map((v, i) => takeOf(entry, v, KEPT, i + 1)),
   ...pendingOf(entry, lock).map((v, i) => takeOf(entry, v, WAITING, i + 1)),
 ];
 
+/** A seed as a variant: its source's label its id, how loud it measured when it is measured. */
 const seedOf = (
   sounds: MeasuredSounds,
   source: DerivedSource,
@@ -172,16 +187,19 @@ const seedOf = (
   };
 };
 
+/** `name`'s code trial's seeds, never picked: heard beside what plays. */
 const trialSeedsOf = (sounds: MeasuredSounds, name: string): ReadonlyArray<VariantDraft> =>
   trialSources(sounds, name).map((source, i) =>
     seedOf(sounds, source, `code trial ${i + 1}`, false, TRIAL_FIXED),
   );
 
+/** A take point's variants, and the lines that count them. */
 interface TakeVariants {
   readonly lines: ReadonlyArray<string>;
   readonly variants: ReadonlyArray<VariantDraft>;
 }
 
+/** A sound's seeds or its takes, then its code trial's seeds, each list counted in a line. */
 const variantsOf = (sounds: MeasuredSounds, name: string, entry: LibraryEntry): TakeVariants => {
   const lock = Option.fromUndefinedOr(sounds.lock[name]);
   const trials = trialSeedsOf(sounds, name);
@@ -209,6 +227,11 @@ const variantsOf = (sounds: MeasuredSounds, name: string, entry: LibraryEntry): 
   };
 };
 
+/**
+ * The film's mix plan as its sources stand (none when the film has no
+ * sound), or why it does not build: a bed or effect naming a cue a
+ * re-timing removed.
+ */
 const planOf = (
   loaded: MeasuredFilm,
   placed: ReadonlyArray<Placed>,
@@ -233,18 +256,21 @@ const planOf = (
       ),
   });
 
+/** A point's line saying why its placements are not shown, when the plan does not build. */
 const unplacedLines = (plan: Result.Result<unknown, MixPlanError>): ReadonlyArray<string> =>
   Result.match(plan, {
     onSuccess: () => [],
     onFailure: (error) => [`placed nowhere: the mix does not build (${error.message})`],
   });
 
+/** One placement of an effect: its name in `sound.ts`, its library sound, its film second. */
 interface Placement {
   readonly effect: string;
   readonly sound: string;
   readonly at: number;
 }
 
+/** Where each effect of the plan plays. */
 const placementsOf = (
   sound: Sound,
   plan: Result.Result<Option.Option<MixPlan<SoundSource>>, MixPlanError>,
@@ -262,11 +288,13 @@ const placementsOf = (
     ),
   );
 
+/** A placement as a mark: its time, and which effect in which scene. */
 const markOf = (placed: ReadonlyArray<Placed>, p: Placement): ChoiceMark => ({
   t: p.at,
   label: `${p.effect} in ${sceneOfTime(placed, p.at)}`,
 });
 
+/** The library sounds the film's effects place, with where, and their takes or seeds and a code trial's seeds. */
 export const takePoints = (
   loaded: MeasuredFilm,
   placed: ReadonlyArray<Placed>,
@@ -299,6 +327,7 @@ export const takePoints = (
     },
   });
 
+/** Each look the film chooses between (`looks` in `palette.ts`), its levels, `play` picked. */
 export const lookPoints = (loaded: LoadedFilm): ReadonlyArray<PointDraft> =>
   Object.entries(loaded.looks).map(([name, look]): PointDraft => ({
     ref: { _tag: 'Look', name },
@@ -320,12 +349,15 @@ export const lookPoints = (loaded: LoadedFilm): ReadonlyArray<PointDraft> =>
     }),
   }));
 
+/** A beat's recorded attempts, and whether each is for its line as it reads now. */
 export interface BeatAttempts {
   readonly beat: string;
+  /** The script's hash now: an attempt at another hash was made for an earlier line. */
   readonly hash: string;
   readonly attempts: ReadonlyArray<Attempt>;
 }
 
+/** Each beat with an attempt: its attempts (newest first), the one its timings name picked. */
 export const voicePoints = (
   loaded: LoadedFilm,
   beats: ReadonlyArray<BeatAttempts>,
@@ -362,13 +394,20 @@ export const voicePoints = (
       };
     });
 
+/**
+ * What a film's points are read from: the film with the derived sounds it
+ * places measured (a seed's line, where each effect plays), and beside it its
+ * beats' attempts.
+ */
 interface PointInputs {
   readonly loaded: MeasuredFilm;
   readonly placed: ReadonlyArray<Placed>;
   readonly beats: ReadonlyArray<BeatAttempts>;
+  /** The film's catalogue: the owner's approvals and comments. */
   readonly catalogue: Option.Option<Catalogue>;
 }
 
+/** The film's choice points as its sources stand: score, looks, takes, voices. */
 export const filmPoints = (inputs: PointInputs): ReadonlyArray<ChoicePoint> =>
   [
     ...Option.toArray(scorePoint(inputs.loaded, inputs.placed)),

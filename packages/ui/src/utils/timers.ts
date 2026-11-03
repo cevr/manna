@@ -27,6 +27,7 @@ export class Timeout {
   };
 }
 
+/** A `Timeout` cleared when the current owner is disposed. */
 export function useTimeout(): Timeout {
   const timeout = new Timeout();
   onCleanup(timeout.clear);
@@ -52,6 +53,7 @@ export class AnimationFrame {
   };
 }
 
+/** An `AnimationFrame` cancelled when the current owner is disposed. */
 export function useAnimationFrame(): AnimationFrame {
   const frame = new AnimationFrame();
   onCleanup(frame.cancel);

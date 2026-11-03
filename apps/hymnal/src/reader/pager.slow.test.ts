@@ -1,5 +1,12 @@
 /* oxlint-disable effect/noGlobals -- the test runs a Bun script in a process of its own, so its React Native stand-in never reaches the other tests. */
 
+/**
+ * The phones' hymn pager (`HymnScreen.native.tsx`), mounted on LegendList's
+ * phone build under the bottom bar by `src/test/phone-pager.tsx`, which
+ * prints what each case saw. A settle is the pager's scroll view told, as
+ * iOS tells it, that its glide ended on a page.
+ */
+
 import { describe, expect, it } from 'bun:test';
 
 import { runScript } from '../test/script';
@@ -27,11 +34,13 @@ interface Seen {
   readonly bar: BarPlace;
 }
 
+/** Where the bottom bar is drawn: how many there are, and how many lie in the hymn's screen. */
 interface BarPlace {
   readonly bars: number;
   readonly inScreen: number;
 }
 
+/** Where a favourite's star sits in its row, as the phone stand-in drew it. */
 type StarPlace =
   | 'missing'
   | {
@@ -97,8 +106,10 @@ interface Run {
 }
 
 const run = runScript(Bun.resolveSync('../test/phone-pager.tsx', import.meta.dir));
+/** The script's last line is its report; the lines before it are the app's own logs. */
 const seen: Run = JSON.parse(run.stdout.trim().split('\n').at(-1) ?? 'null');
 
+/** A screen 390 points wide: page `i` starts at `i` screens. */
 const width = 390;
 
 describe('the pager’s source', () => {

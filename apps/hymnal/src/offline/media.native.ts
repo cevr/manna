@@ -1,4 +1,5 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noTryCatch, effect/noThrowStatement, eslint/no-await-in-loop -- One filesystem adapter: close native file handles and check storage invariants within the same Promise operation, wrapped once by Effect.tryPromise. */
+/** Native media uses application support, never the platform's evictable cache. */
 import { Effect, Layer, Option, Schema } from 'effect';
 import { One } from 'one';
 import {

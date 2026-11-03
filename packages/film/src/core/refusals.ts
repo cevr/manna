@@ -1,5 +1,6 @@
 import { Option, Schema } from 'effect';
 
+/** A name that is none of the films in the folder: answered with the films there are, no path. */
 export class FilmUnknown extends Schema.TaggedError<FilmUnknown>()('FilmUnknown', {
   film: Schema.String,
   known: Schema.Array(Schema.String),
@@ -9,11 +10,18 @@ export class FilmUnknown extends Schema.TaggedError<FilmUnknown>()('FilmUnknown'
   }
 }
 
+/**
+ * A take that does not say its script: the transcript is too far from the
+ * text. Its message says what was heard, not how to accept it: the command
+ * line and the studio's panel each add their own way.
+ */
 export class TakeMismatch extends Schema.TaggedError<TakeMismatch>()('TakeMismatch', {
   id: Schema.String,
   script: Schema.String,
+  /** The transcript; the wire keeps `heard` for existing lab and CLI readers. */
   heard: Schema.String,
   wer: Schema.Finite,
+  /** The attempt the studio saved of it, which its panel's "accept anyway" keeps. */
   attempt: Schema.optionalKey(Schema.String),
 }) {
   override get message() {
@@ -21,6 +29,10 @@ export class TakeMismatch extends Schema.TaggedError<TakeMismatch>()('TakeMismat
   }
 }
 
+/**
+ * A person's recording that cannot become a take: named for no beat, with
+ * nothing in it louder than the room, or one file with no beat to be.
+ */
 export class RecordingInvalid extends Schema.TaggedError<RecordingInvalid>()('RecordingInvalid', {
   file: Schema.String,
   reason: Schema.String,
@@ -30,6 +42,7 @@ export class RecordingInvalid extends Schema.TaggedError<RecordingInvalid>()('Re
   }
 }
 
+/** A recording the studio was sent that is not one: not base64, or of a type no recorder makes. */
 export class AudioInvalid extends Schema.TaggedError<AudioInvalid>()('AudioInvalid', {
   reason: Schema.String,
 }) {
@@ -38,6 +51,12 @@ export class AudioInvalid extends Schema.TaggedError<AudioInvalid>()('AudioInval
   }
 }
 
+/**
+ * A recording sent to the studio in a lossy codec (Opus, AAC, MP3). A
+ * person's take is the film's final voice and its master is lossless, so the
+ * studio takes PCM (WAV) or FLAC only: a lossy upload would bake its codec's
+ * loss into the master.
+ */
 export class RecordingLossy extends Schema.TaggedError<RecordingLossy>()('RecordingLossy', {
   type: Schema.String,
 }) {
@@ -46,7 +65,9 @@ export class RecordingLossy extends Schema.TaggedError<RecordingLossy>()('Record
   }
 }
 
+/** A request body over what the studio reads, refused before it is read whole. */
 export class BodyTooLarge extends Schema.TaggedError<BodyTooLarge>()('BodyTooLarge', {
+  /** The most the route reads, in bytes. */
   limit: Schema.Int,
 }) {
   override get message() {
@@ -64,6 +85,7 @@ export class ElevenLabsFailed extends Schema.TaggedError<ElevenLabsFailed>()('El
   }
 }
 
+/** A staging take's audio asked for by a name the staging cache keeps none under. */
 export class StagingTakeUnknown extends Schema.TaggedError<StagingTakeUnknown>()(
   'StagingTakeUnknown',
   { file: Schema.String },
@@ -73,6 +95,7 @@ export class StagingTakeUnknown extends Schema.TaggedError<StagingTakeUnknown>()
   }
 }
 
+/** A series draft asked for by a name the app's series keep none under: answered with the drafts there are. */
 export class DraftUnknown extends Schema.TaggedError<DraftUnknown>()('DraftUnknown', {
   series: Schema.String,
   draft: Schema.String,
@@ -83,6 +106,10 @@ export class DraftUnknown extends Schema.TaggedError<DraftUnknown>()('DraftUnkno
   }
 }
 
+/**
+ * A series draft whose Markdown the Script reader cannot read (`core/draft.ts`):
+ * no beats, or a line it could not voice, named by its beat.
+ */
 export class DraftUnread extends Schema.TaggedError<DraftUnread>()('DraftUnread', {
   draft: Schema.String,
   reason: Schema.String,
@@ -92,9 +119,15 @@ export class DraftUnread extends Schema.TaggedError<DraftUnread>()('DraftUnread'
   }
 }
 
+/**
+ * A staging take refused before it is asked for: it would take the day's
+ * ElevenLabs characters past the cap (`FILM_STAGING_DAILY_CAP`). Nothing was
+ * sent; the take is made once the day turns or the cap is raised.
+ */
 export class StagingCapReached extends Schema.TaggedError<StagingCapReached>()(
   'StagingCapReached',
   {
+    /** The local day, `YYYY-MM-DD`. */
     day: Schema.String,
     spent: Schema.Int,
     asked: Schema.Int,
@@ -106,8 +139,10 @@ export class StagingCapReached extends Schema.TaggedError<StagingCapReached>()(
   }
 }
 
+/** Speech-to-text heard words in a take but timed none of them: nothing to time the script by. */
 export class SttUntimed extends Schema.TaggedError<SttUntimed>()('SttUntimed', {
   file: Schema.String,
+  /** The word count in its transcript; `heard` is the established wire key. */
   heard: Schema.Int,
 }) {
   override get message() {
@@ -115,6 +150,7 @@ export class SttUntimed extends Schema.TaggedError<SttUntimed>()('SttUntimed', {
   }
 }
 
+/** A media file that could not be read, decoded, written or joined into a film. */
 export class MediaFailed extends Schema.TaggedError<MediaFailed>()('MediaFailed', {
   op: Schema.Literals(['read', 'decode', 'encode', 'write', 'join']),
   file: Schema.String,
@@ -125,9 +161,11 @@ export class MediaFailed extends Schema.TaggedError<MediaFailed>()('MediaFailed'
   }
 }
 
+/** `reply` or `resolve` named a note the film's lab does not have. */
 export class NoteNotFound extends Schema.TaggedError<NoteNotFound>()('NoteNotFound', {
   film: Schema.String,
   id: Schema.String,
+  /** The ids the film's notes do have. */
   known: Schema.Array(Schema.String),
 }) {
   override get message() {
@@ -136,6 +174,7 @@ export class NoteNotFound extends Schema.TaggedError<NoteNotFound>()('NoteNotFou
   }
 }
 
+/** A scene whose drawing the lab cannot find in the film's source files. */
 export class SceneNotLocated extends Schema.TaggedError<SceneNotLocated>()('SceneNotLocated', {
   film: Schema.String,
   scene: Schema.String,
@@ -146,6 +185,10 @@ export class SceneNotLocated extends Schema.TaggedError<SceneNotLocated>()('Scen
   }
 }
 
+/**
+ * A literal more than one scene reads (each spreads one drawing): a write for
+ * one scene would move the others too, so the lab does not make it.
+ */
 export class SourceShared extends Schema.TaggedError<SourceShared>()('SourceShared', {
   film: Schema.String,
   field: Schema.Literals(['timeline', 'knobs']),
@@ -157,6 +200,10 @@ export class SourceShared extends Schema.TaggedError<SourceShared>()('SourceShar
   }
 }
 
+/**
+ * An edit the lab will not make: the target is not a literal it can prove it
+ * rewrites (a computed value, a spread, a shorthand), or it does not exist.
+ */
 export class SourceRefused extends Schema.TaggedError<SourceRefused>()('SourceRefused', {
   file: Schema.String,
   target: Schema.String,
@@ -167,6 +214,10 @@ export class SourceRefused extends Schema.TaggedError<SourceRefused>()('SourceRe
   }
 }
 
+/**
+ * A cue timing the lab will not write: with it, the scene's timeline does not
+ * resolve (e.g. a span that would end before it starts). The file is untouched.
+ */
 export class TimelineUnresolved extends Schema.TaggedError<TimelineUnresolved>()(
   'TimelineUnresolved',
   {
@@ -180,6 +231,10 @@ export class TimelineUnresolved extends Schema.TaggedError<TimelineUnresolved>()
   }
 }
 
+/**
+ * The scene file changed on disk (an editor saved it) between the lab reading
+ * it and writing it back: the lab writes nothing over it, and the change stays.
+ */
 export class SourceChanged extends Schema.TaggedError<SourceChanged>()('SourceChanged', {
   file: Schema.String,
   target: Schema.String,
@@ -189,6 +244,7 @@ export class SourceChanged extends Schema.TaggedError<SourceChanged>()('SourceCh
   }
 }
 
+/** A ref that names no file under the review's roots (an unknown root, a path out of it, or nothing there). */
 export class ReviewFileUnknown extends Schema.TaggedError<ReviewFileUnknown>()(
   'ReviewFileUnknown',
   { ref: Schema.String },
@@ -198,6 +254,7 @@ export class ReviewFileUnknown extends Schema.TaggedError<ReviewFileUnknown>()(
   }
 }
 
+/** A video's 720p phone copy asked for before it is made (the index says when it is ready). */
 export class PhoneCopyUnmade extends Schema.TaggedError<PhoneCopyUnmade>()('PhoneCopyUnmade', {
   ref: Schema.String,
 }) {
@@ -206,6 +263,7 @@ export class PhoneCopyUnmade extends Schema.TaggedError<PhoneCopyUnmade>()('Phon
   }
 }
 
+/** A video's 720p phone copy the lab tried to make and could not (its log says why): it plays as made. */
 export class PhoneCopyFailed extends Schema.TaggedError<PhoneCopyFailed>()('PhoneCopyFailed', {
   ref: Schema.String,
 }) {
@@ -214,6 +272,7 @@ export class PhoneCopyFailed extends Schema.TaggedError<PhoneCopyFailed>()('Phon
   }
 }
 
+/** A note's still named that the film's notes do not hold. */
 export class StillUnknown extends Schema.TaggedError<StillUnknown>()('StillUnknown', {
   film: Schema.String,
   name: Schema.String,
@@ -223,6 +282,7 @@ export class StillUnknown extends Schema.TaggedError<StillUnknown>()('StillUnkno
   }
 }
 
+/** A studio attempt named that the beat never recorded. */
 export class AttemptUnknown extends Schema.TaggedError<AttemptUnknown>()('AttemptUnknown', {
   beat: Schema.String,
   file: Schema.String,
@@ -232,6 +292,11 @@ export class AttemptUnknown extends Schema.TaggedError<AttemptUnknown>()('Attemp
   }
 }
 
+/**
+ * A run of the film CLI in a fresh process (`film options`, `film project`,
+ * `film check`) that gave no answer: it failed, timed out, or printed
+ * something else.
+ */
 export class FreshProcessFailed extends Schema.TaggedError<FreshProcessFailed>()(
   'FreshProcessFailed',
   {
@@ -244,6 +309,7 @@ export class FreshProcessFailed extends Schema.TaggedError<FreshProcessFailed>()
   }
 }
 
+/** A choice point the film does not have. */
 export class ChoiceUnknown extends Schema.TaggedError<ChoiceUnknown>()('ChoiceUnknown', {
   film: Schema.String,
   point: Schema.String,
@@ -255,6 +321,7 @@ export class ChoiceUnknown extends Schema.TaggedError<ChoiceUnknown>()('ChoiceUn
   }
 }
 
+/** A variant a choice point does not have: a score option, a take, an attempt, a level. */
 export class VariantUnknown extends Schema.TaggedError<VariantUnknown>()('VariantUnknown', {
   film: Schema.String,
   point: Schema.String,
@@ -267,6 +334,11 @@ export class VariantUnknown extends Schema.TaggedError<VariantUnknown>()('Varian
   }
 }
 
+/**
+ * A verb its variant's state or its point's kind does not allow: only a
+ * waiting take is kept or rejected, only a kept one unkept; a render is
+ * approved, never picked; a knob is set, never picked.
+ */
 export class VerbRefused extends Schema.TaggedError<VerbRefused>()('VerbRefused', {
   point: Schema.String,
   variant: Schema.String,
@@ -278,10 +350,17 @@ export class VerbRefused extends Schema.TaggedError<VerbRefused>()('VerbRefused'
   }
 }
 
+/**
+ * A say on a version that was made again (or dropped) since it was shown: the
+ * say was for the version the reviewer saw, so nothing is written; read the
+ * set again and say it of the version now there.
+ */
 export class VersionChanged extends Schema.TaggedError<VersionChanged>()('VersionChanged', {
   point: Schema.String,
   variant: Schema.String,
+  /** The version's key as it was shown. */
   shown: Schema.String,
+  /** Its key now, if it is still there. */
   now: Schema.Option(Schema.String),
 }) {
   override get message() {
@@ -293,6 +372,7 @@ export class VersionChanged extends Schema.TaggedError<VersionChanged>()('Versio
   }
 }
 
+/** The command that renders `variant` of `scene`: what a refusal over a missing or stale render names. */
 export const renderCommand = (film: string, scene: string, variant: string) =>
   `film project render ${film} --scene ${scene} --variant ${variant}`;
 
@@ -306,6 +386,7 @@ export class SceneNotRendered extends Schema.TaggedError<SceneNotRendered>()('Sc
   }
 }
 
+/** A project folder's `catalogue.json` that does not read. */
 export class CatalogueInvalid extends Schema.TaggedError<CatalogueInvalid>()('CatalogueInvalid', {
   file: Schema.String,
   reason: Schema.String,
@@ -315,6 +396,7 @@ export class CatalogueInvalid extends Schema.TaggedError<CatalogueInvalid>()('Ca
   }
 }
 
+/** A take named by its sha256 that a sound has neither kept nor waiting. */
 export class TakeUnknown extends Schema.TaggedError<TakeUnknown>()('TakeUnknown', {
   sound: Schema.String,
   take: Schema.String,
@@ -324,6 +406,7 @@ export class TakeUnknown extends Schema.TaggedError<TakeUnknown>()('TakeUnknown'
   }
 }
 
+/** A derived file the review makes (a frame, a length, a phone copy, a mix) that its cache could not keep. */
 export class ReviewToolFailed extends Schema.TaggedError<ReviewToolFailed>()('ReviewToolFailed', {
   tool: Schema.Literal('cache'),
   ref: Schema.String,
@@ -334,6 +417,7 @@ export class ReviewToolFailed extends Schema.TaggedError<ReviewToolFailed>()('Re
   }
 }
 
+/** An undo with no write to undo, or one whose file has changed since the write. */
 export class UndoUnavailable extends Schema.TaggedError<UndoUnavailable>()('UndoUnavailable', {
   reason: Schema.String,
 }) {
@@ -342,6 +426,11 @@ export class UndoUnavailable extends Schema.TaggedError<UndoUnavailable>()('Undo
   }
 }
 
+/**
+ * An Undo asked for one change (a receipt's: `StepAsk.change`) that is not
+ * the one it would undo now: another change came after it, or it is no
+ * longer in the film's history. Nothing is written.
+ */
 export class StepNotNewest extends Schema.TaggedError<StepNotNewest>()('StepNotNewest', {
   reason: Schema.String,
 }) {
@@ -350,8 +439,17 @@ export class StepNotNewest extends Schema.TaggedError<StepNotNewest>()('StepNotN
   }
 }
 
+/**
+ * Why an undo cannot take a change while `top` (the change it would take,
+ * by its target) stands before it, in the lab's refusal (`StepNotNewest`).
+ */
 export const newerFirst = (top: string): string => `${top} came after it: undo that first`;
 
+/**
+ * A hold the studio will not write, because the film would play no
+ * differently: the beat has no words for a hold to stand before or after, or
+ * its `min` holds it at its length whatever the tail asks. Nothing is written.
+ */
 export class HoldUnchanged extends Schema.TaggedError<HoldUnchanged>()('HoldUnchanged', {
   beat: Schema.String,
   edge: Schema.Literals(['lead', 'tail']),
@@ -362,9 +460,12 @@ export class HoldUnchanged extends Schema.TaggedError<HoldUnchanged>()('HoldUnch
   }
 }
 
+/** A production moved forward past the version the mover saw. */
 export class VersionMoved extends Schema.TaggedError<VersionMoved>()('VersionMoved', {
   production: Schema.String,
+  /** The version the mover saw. */
   after: Schema.Int,
+  /** The production's current version. */
   current: Schema.Int,
 }) {
   override get message() {
@@ -372,8 +473,10 @@ export class VersionMoved extends Schema.TaggedError<VersionMoved>()('VersionMov
   }
 }
 
+/** A move forward an agent asked of a version that holds no decision of the owner's: only his word moves a production. */
 export class Undecided extends Schema.TaggedError<Undecided>()('Undecided', {
   production: Schema.String,
+  /** The version open now. */
   version: Schema.Int,
 }) {
   override get message() {
@@ -381,10 +484,14 @@ export class Undecided extends Schema.TaggedError<Undecided>()('Undecided', {
   }
 }
 
+/** A move forward an agent asked on a decision the version open now does not hold: the move names the decision of his it is on. */
 export class DecisionUnknown extends Schema.TaggedError<DecisionUnknown>()('DecisionUnknown', {
   production: Schema.String,
+  /** The version open now. */
   version: Schema.Int,
+  /** The time the agent named. */
   at: Schema.Finite,
+  /** The decisions the version holds, newest first. */
   held: Schema.Array(Schema.Struct({ at: Schema.Finite, text: Schema.String })),
 }) {
   override get message() {
@@ -392,7 +499,9 @@ export class DecisionUnknown extends Schema.TaggedError<DecisionUnknown>()('Deci
   }
 }
 
+/** The owner's word aimed at a choice with no set, or a variant with no choice: what it is about does not say where. */
 export class WordUnaimed extends Schema.TaggedError<WordUnaimed>()('WordUnaimed', {
+  /** What it names without what holds it: `point` (no `set`) or `variant` (no `point`). */
   names: Schema.Literals(['point', 'variant']),
 }) {
   override get message() {
@@ -405,6 +514,7 @@ export class WordUnaimed extends Schema.TaggedError<WordUnaimed>()('WordUnaimed'
   }
 }
 
+/** A change to a film's storyboard it cannot make: a panel or try it lacks, a pick before approval, a card its line does not say. */
 export class BoardRefused extends Schema.TaggedError<BoardRefused>()('BoardRefused', {
   film: Schema.String,
   reason: Schema.String,
@@ -414,6 +524,7 @@ export class BoardRefused extends Schema.TaggedError<BoardRefused>()('BoardRefus
   }
 }
 
+/** A board image named that the film's board does not hold, or whose bytes are not the ones recorded. */
 export class BoardFileUnknown extends Schema.TaggedError<BoardFileUnknown>()('BoardFileUnknown', {
   film: Schema.String,
   file: Schema.String,
@@ -424,6 +535,7 @@ export class BoardFileUnknown extends Schema.TaggedError<BoardFileUnknown>()('Bo
   }
 }
 
+/** An ask the lab does not have (`FILMS_LAB/asks/<id>.json`). */
 export class AskUnknown extends Schema.TaggedError<AskUnknown>()('AskUnknown', {
   id: Schema.String,
 }) {
@@ -432,6 +544,7 @@ export class AskUnknown extends Schema.TaggedError<AskUnknown>()('AskUnknown', {
   }
 }
 
+/** An answer or a close the ask cannot take as it stands: answered, closed, at another step, past its deadline, or not fitting. */
 export class AskRefused extends Schema.TaggedError<AskRefused>()('AskRefused', {
   id: Schema.String,
   reason: Schema.String,
@@ -441,6 +554,7 @@ export class AskRefused extends Schema.TaggedError<AskRefused>()('AskRefused', {
   }
 }
 
+/** An ask that may not render: what is wrong with its machine. */
 export class AskInvalid extends Schema.TaggedError<AskInvalid>()('AskInvalid', {
   problems: Schema.Array(Schema.String),
 }) {
@@ -449,6 +563,7 @@ export class AskInvalid extends Schema.TaggedError<AskInvalid>()('AskInvalid', {
   }
 }
 
+/** A film version its production's ledger does not have (`timeline`): answered with the versions it has. */
 export class FilmVersionUnknown extends Schema.TaggedError<FilmVersionUnknown>()(
   'FilmVersionUnknown',
   {
@@ -462,6 +577,11 @@ export class FilmVersionUnknown extends Schema.TaggedError<FilmVersionUnknown>()
   }
 }
 
+/**
+ * A film version whose files are kept nowhere (`timeline`): a version
+ * superseded in place, its script neither registered nor in a version
+ * folder. Answered with the versions whose files are kept.
+ */
 export class FilmVersionUnkept extends Schema.TaggedError<FilmVersionUnkept>()(
   'FilmVersionUnkept',
   {

@@ -13,11 +13,13 @@ import { numberedClip, numbersIn } from '../../src/lab/fixtures/numbered-clip.ts
 import { BITS, CLIP_H, CLIP_W, numberOf } from '../../src/lab/fixtures/numbered-frames.ts';
 import { openRender } from '../../src/lab/fixtures/render-harness.ts';
 
+/** The render page on the footage film, its clip served as the mezzanine the render reads. */
 const opened = Effect.gen(function* () {
   const clip = yield* numberedClip({ frames: FOOTAGE_CLIP_FRAMES, fps: FOOTAGE_FPS, keyEvery: 1 });
   return yield* openRender(FOOTAGE, { [footageHref(FOOTAGE_SOURCE, 'mezzanine')]: clip });
 });
 
+/** One sample per bar across the middle row of the frame. */
 const BARS = { x: 0, y: CLIP_H / 2 - 4, w: CLIP_W, h: 8, cols: BITS, rows: 1 };
 
 describe('footage is frame-exact', () => {

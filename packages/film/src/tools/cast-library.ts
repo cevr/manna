@@ -4,6 +4,7 @@ import { type CastLock, castLock } from '../core/cast-lock.ts';
 import { FileInvalid } from './errors.ts';
 import { FilmFolder } from './film-repo.ts';
 
+/** A member with no `cast-sheet.json` in the film's cast or the library's. */
 class CastUnfound extends Schema.TaggedError<CastUnfound>()('CastUnfound', {
   member: Schema.String,
   looked: Schema.Array(Schema.String),
@@ -13,6 +14,7 @@ class CastUnfound extends Schema.TaggedError<CastUnfound>()('CastUnfound', {
   }
 }
 
+/** A file the member's library reference names that is not on disk. */
 class CastReferenceMissing extends Schema.TaggedError<CastReferenceMissing>()(
   'CastReferenceMissing',
   { member: Schema.String, file: Schema.String },
@@ -22,6 +24,7 @@ class CastReferenceMissing extends Schema.TaggedError<CastReferenceMissing>()(
   }
 }
 
+/** The member's sheet folder: the film's own role's when it has one, else the library's. */
 export const castFolder = Effect.fn('Cast.folder')(function* (film: string, member: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -38,6 +41,7 @@ export const castFolder = Effect.fn('Cast.folder')(function* (film: string, memb
   );
 });
 
+/** The member's library reference for `film`, each file as an absolute path and on disk. */
 export const castReference = Effect.fn('Cast.reference')(function* (film: string, member: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

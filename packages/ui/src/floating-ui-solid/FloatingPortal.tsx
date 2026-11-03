@@ -31,6 +31,7 @@ import {
 
 export type MaybeRef<T> = T | { current: T };
 
+/** The element itself, or a ref object's `current`. */
 export function resolveRef<T extends Element | null | undefined>(maybeRef: MaybeRef<T>): T {
   if (maybeRef == null) {
     return maybeRef as T;
@@ -66,6 +67,14 @@ const attr = createAttribute('portal');
 interface FloatingPortalState {}
 
 export interface FloatingPortalProps extends BaseUIComponentProps<'div', FloatingPortalState> {
+  /**
+   * Render the portal node where the portal is written, not moved into the
+   * enclosing portal's node or the body: the same in the server's render and the browser's, so a
+   * popup open at the first render is in the server's markup and hydrates
+   * there. For a popup positioned against the window (`position: fixed`)
+   * under no ancestor that would hold it (a transform, a filter, `contain`).
+   * @default false
+   */
   inline?: boolean | undefined;
 }
 

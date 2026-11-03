@@ -9,6 +9,7 @@ const CLOSE = ActName.make('close');
 
 const none = { act: Option.none(), scene: Option.none(), short: Option.none() };
 
+/** Four scenes of 4, 5, 6 and 7 s, two acts, and one short over `b`. */
 const film: Addressable = {
   name: 'f',
   placed: Result.getOrThrow(

@@ -8,17 +8,27 @@ const h = harness('toast.tsx');
 
 const roots = (page: Page) => page.locator('[data-testid="root"]');
 
+/** Opens the receipt fixture on Playwright's clock. */
 const openReceipt = async (query: Record<string, string> = {}) => {
   const page = await h.open('receipt', { query });
   await page.clock.install();
   return page;
 };
 
+/**
+ * Holds the page's clock: from here only `runFor` moves it, so the wall time a
+ * click, a hover or a slow machine takes spends none of a toast's timeout and
+ * a margin of 100 ms is exact. A second ahead of the page's time, so the jump
+ * is never into the past; nothing is pending before a toast is raised. The
+ * exits still run: each `runFor` past a dismissal fires the frames the exit
+ * waits on, and the exit's own animation runs on the browser's time.
+ */
 const hold = async (page: Page) => {
   const now = await page.evaluate(() => Date.now());
   await page.clock.pauseAt(now + 1000);
 };
 
+/** Drags with the mouse from the element's centre by (dx, dy), in steps. */
 const drag = async (page: Page, selector: string, dx: number, dy: number, steps = 10) => {
   const box = await page.locator(selector).first().boundingBox();
   if (!box) {

@@ -5,12 +5,14 @@ import type { Raster } from '../../core/raster.ts';
 import { launchArgs } from '../../tools/browser.ts';
 import { openView } from '../../tools/chrome.ts';
 
+/** Where the puppet is declared: a module's export, and the key under it when the export is a table. */
 export interface PuppetAt {
   readonly module: string;
   readonly name: string;
   readonly key?: string;
 }
 
+/** The page's calls: a pose drawn (with a look when given) and read back, a pose drawn wearing a dress and read back, and the ms of each of `poses` drawn into a 1920 × 1080 frame. */
 export interface PuppetPage {
   readonly draw: (pose: PuppetPose, look?: PuppetLook) => Effect.Effect<Raster>;
   readonly dressed: (pose: PuppetPose, dress: PuppetDress) => Effect.Effect<Raster>;
@@ -23,8 +25,10 @@ export interface PuppetPage {
 
 const FILM = new URL('../..', import.meta.url).pathname;
 
+/** `v` as a JavaScript literal in the page's source. */
 const literal = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
+/** A look as the page's source passes it: `undefined` for none. */
 const lookOf = (look?: PuppetLook) =>
   Option.match(Option.fromUndefinedOr(look), { onNone: () => 'undefined', onSome: literal });
 
@@ -94,11 +98,14 @@ try {
 }
 `;
 
+/** The page's one HTML file: the built entry. */
 const INDEX =
   '<!doctype html><html><head><meta charset="utf-8"></head><body><script type="module" src="/entry.js"></script></body></html>';
 
+/** Waits in the page for its load: `ready`, or why not. */
 const LOADED = `new Promise((done) => { const t0 = Date.now(); const look = () => window.ready ? done('ready') : window.loadError ? done('error: ' + window.loadError) : Date.now() - t0 > 60000 ? done('timeout') : setTimeout(look, 20); look(); })`;
 
+/** The built page's files on loopback: a file asked for that is not there answers 404. */
 const served = (out: string, path: Path.Path) =>
   Effect.acquireRelease(
     Effect.sync(() =>
@@ -123,6 +130,7 @@ const served = (out: string, path: Path.Path) =>
     (s) => Effect.promise(() => s.stop(true)),
   );
 
+/** The page of the puppet `at` declares, open for the scope. */
 export const puppetPage = Effect.fn('test.puppetPage')(function* (at: PuppetAt) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -151,6 +159,7 @@ export const puppetPage = Effect.fn('test.puppetPage')(function* (at: PuppetAt) 
     view.evaluate<[number, number]>('window.probe.size'),
   );
   const renderer = yield* Effect.promise(() => view.evaluate<string>('window.probe.renderer'));
+  /** The raster a call of `window.probe.draw` in the page reads back. */
   const drawn = (call: string) =>
     Effect.promise(() => view.evaluate<string>(call)).pipe(
       Effect.map((b64): Raster => ({

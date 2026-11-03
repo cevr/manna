@@ -8,6 +8,7 @@ interface FocusGuardProps {
   ref?: ((el: HTMLSpanElement) => void) | undefined;
   'data-type'?: string | undefined;
   onFocus?: ((event: FocusEvent) => void) | undefined;
+  /** Whether the guard is out of the Tab order and the accessibility tree, standing by. */
   hidden?: boolean | undefined;
 }
 
@@ -29,6 +30,7 @@ export function FocusGuard(props: FocusGuardProps): JSX.Element {
 }
 
 interface InternalBackdropProps extends JSX.HTMLAttributes<HTMLDivElement> {
+  /** An element left uncovered (the trigger), so presses reach it. */
   cutout?: Element | null | undefined;
 }
 

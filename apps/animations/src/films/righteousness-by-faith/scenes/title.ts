@@ -6,6 +6,11 @@ import { C, F, piece } from '../kit.ts';
 import { LIGHT } from '../light.ts';
 import { TITLE } from '../script.ts';
 
+/**
+ * The cast in the wide: the Board's pixels scaled to the panel's size of
+ * them and moved onto its floor, each group spread off its `cold` place as
+ * the panel spreads them (Board pixels).
+ */
 const CAST = {
   x: 425,
   y: 315,
@@ -13,6 +18,7 @@ const CAST = {
   spread: { lead: [0, 0], prosecutor: [98, 27], judge: [258, 60] },
 } as const;
 
+/** The film's name: its strip's centre and size on the back wall, frame px, and its type. */
 const NAME = {
   x: 990,
   y: 200,
@@ -21,6 +27,7 @@ const NAME = {
   style: { family: F.display, size: 82, weight: 700, color: C.cream, align: 'center' },
 } as const;
 
+/** The court as the panel stages it: the case before the verdict. */
 const POSE = (() => {
   const p = restPose();
   p.stack = 1;

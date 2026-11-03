@@ -1,16 +1,20 @@
 import { type Hex, mix } from '@manna/film/canvas';
 import { rng } from '@manna/film/core';
 
+/** The paper and the inks. */
 export const INK: Hex = '#1b1612';
 export const PAPER: Hex = '#efe4ca';
 export const PAPER_DEEP: Hex = '#e2d3b2';
+/** The gold of the Word: a hand-laid wash, and its ink for type. */
 export const GOLD_WASH: Hex = '#e3b04b';
 export const GOLD_INK: Hex = '#a8741a';
 
+/** The picture on the sheet: the plate's printed area, frame px. */
 export const PICTURE = { x: 70, y: 52, w: 1780, h: 976 } as const;
 
 const sheets = new Map<string, HTMLCanvasElement>();
 
+/** The paper alone at `w` × `h` px: cream, mottled, with fibres and a few foxing spots. */
 export const paper = (w: number, h: number, seed: number): HTMLCanvasElement => {
   const key = `${w}x${h}:${seed}`;
   const have = sheets.get(key);
@@ -60,6 +64,7 @@ export const paper = (w: number, h: number, seed: number): HTMLCanvasElement => 
   return c;
 };
 
+/** Lay the paper over the whole frame (`w` × `h` in frame units), at the context's own resolution. */
 export const layPaper = (ctx: CanvasRenderingContext2D, w: number, h: number, seed = 7) => {
   const m = ctx.getTransform();
   const s = Math.hypot(m.a, m.b) || 1;
@@ -67,6 +72,7 @@ export const layPaper = (ctx: CanvasRenderingContext2D, w: number, h: number, se
   ctx.drawImage(sheet, 0, 0, w, h);
 };
 
+/** A ruled line as a thin filled bar (`x0, y0` to `x1, y1`, axis-aligned), `t` thick. */
 const rule = (
   ctx: CanvasRenderingContext2D,
   x0: number,
@@ -83,6 +89,7 @@ const rule = (
   );
 };
 
+/** A box's four ruled sides. */
 export const ruledBox = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -97,6 +104,12 @@ export const ruledBox = (
   rule(ctx, x + w, y, x + w, y + h, t);
 };
 
+/**
+ * The plate's impression round `box`: the paper inside pressed a shade
+ * deeper and smoother, its edge a bevel (a shadow on two sides, a light on
+ * the others), and the picture's border ruled in ink, a heavy line within a
+ * hairline.
+ */
 export const plate = (
   ctx: CanvasRenderingContext2D,
   box: { x: number; y: number; w: number; h: number },

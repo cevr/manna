@@ -5,8 +5,11 @@ import { Machine } from 'effect-machine';
 import type * as Atom from 'effect/reactivity/Atom';
 
 interface ActorProps<A, R> {
+  /** The runtime the actor runs on: the page's. */
   readonly runtime: Atom.AtomRuntime<R>;
+  /** What spawns and starts it. */
   readonly spawn: Effect.Effect<A, never, R | Scope.Scope>;
+  /** The provider's body, given the actor once it is spawned. */
   readonly children: (actor: A) => JSX.Element;
 }
 
@@ -20,6 +23,7 @@ const Spawned = <A, R>(props: ActorProps<A, R>) => {
   );
 };
 
+/** The actor `spawn` makes on `runtime`, given to `children` once it is spawned. */
 export const Actor = <A, R>(props: ActorProps<A, R>) => (
   <Loading>
     <Spawned {...props} />

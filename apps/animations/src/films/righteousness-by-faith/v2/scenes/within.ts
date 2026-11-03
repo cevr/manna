@@ -40,12 +40,16 @@ import { COURT_FORGIVEN, RECALL_RISE, house, recall, temple, went } from '../../
 import { roof } from './roof.ts';
 import { woman } from './woman.ts';
 
+/** The panel beside them. */
 const PANEL: Pt = [1260, 520];
 const PANEL_W = 900;
 const PANEL_H = 640;
 
+/** Each hand held out open at the side, at the heart's height. */
 const OPEN_HAND: Pt = [78, -80];
+/** How many glows light the way from the heart out to each hand. */
 const RUN_STEPS = 6;
+/** The warmed figure: grey paper toward cream, touched with the word's gold. */
 const WARM_BODY = mix(C.cream, C.gold, 0.22);
 const WARM_SHADE = mix(C.cream, C.gold, 0.45);
 
@@ -91,6 +95,7 @@ export const within = drawing({
   },
 });
 
+/** A: the page, the figure on it, and later the panel beside them. */
 const page = (f: WithinFrame) => {
   const { ctx, w, h } = f;
   sky(ctx, w, h, [
@@ -113,6 +118,7 @@ const page = (f: WithinFrame) => {
   });
 };
 
+/** The circle, as big as the universe, coming home to the chest; gone once the heart is in. */
 const circle = (f: WithinFrame, chest: Pt) => {
   const { ctx } = f;
   const gone = f.at('heartOut');
@@ -149,12 +155,18 @@ const WORLDS = [
   [0.05, -0.7, 9],
 ] as const;
 
+/** Both hands open out on `arms`, from their rest beside the body, and brought back on `closeOut`. */
 const OPEN_FAR: GestureAt = { to: [-OPEN_HAND[0], OPEN_HAND[1]], reach: 0, grip: 'open' };
 const OPEN_NEAR: GestureAt = { to: [OPEN_HAND[0], OPEN_HAND[1]], reach: 0, grip: 'open' };
 const LOOK: [number, number] = [0, 0];
 const POSE: Person = { look: LOOK, far: OPEN_FAR, near: OPEN_NEAR };
 const GLOW_AT: [number, number] = [0, 0];
 
+/**
+ * The figure, in their own units: asking, then the heart in the chest; after
+ * the icons, hands out with the glow running to them open, warming on
+ * "become", and the hands lowered again on "plain".
+ */
 const figure = (f: WithinFrame, aside: number) => {
   const { ctx } = f;
   const { hand } = f;
@@ -188,6 +200,11 @@ const figure = (f: WithinFrame, aside: number) => {
   running(f, open);
 };
 
+/**
+ * The glow running out from the heart to each open hand, over `run`: straight
+ * from the heart to the hand, the way the power goes, never up through the
+ * shoulders along an arm that is not there.
+ */
 const running = (f: WithinFrame, open: number) => {
   const { ctx } = f;
   const run = f.at('run');
@@ -207,12 +224,14 @@ const running = (f: WithinFrame, open: number) => {
   }
 };
 const SIDES = [-1, 1] as const;
+/** The point `k` of the way from `a` to `b`, written into `out`. */
 const toward = (a: Pt, b: Pt, k: number, out: [number, number]): [number, number] => {
   out[0] = lerp(a[0], b[0], k);
   out[1] = lerp(a[1], b[1], k);
   return out;
 };
 
+/** The panel: first the past, closed and forgiven; then the path ahead. */
 const panel = (f: WithinFrame, aside: number) => {
   const { ctx } = f;
   const { hand } = f;
@@ -254,6 +273,7 @@ const panel = (f: WithinFrame, aside: number) => {
   });
 };
 
+/** The hills, the path ahead and the figure walking it, flowers where they have stepped. */
 const path = (f: WithinFrame) => {
   const { ctx } = f;
   const { hand } = f;
@@ -299,6 +319,7 @@ const path = (f: WithinFrame) => {
     person(ctx, WALKER, hand('walker'));
   });
 };
+/** The walker: the same figure, still warm. */
 const WALKER: Person = {
   body: WARM_BODY,
   skin: WARM_BODY,
@@ -306,13 +327,20 @@ const WALKER: Person = {
   look: [3, -1],
   browTilt: 0.1,
 };
+/** The ribbon tied across the closed book. */
 const RIBBON = rectShape(-40, -160, 40, 320);
+/** Scratch for a point along the path. */
 const AT: [number, number] = [0, 0];
 const STEM: Pt[] = [
   [0, 0],
   [0, -30],
 ];
 
+/**
+ * The row's glow: faith kept, forgiveness settling from `robe`'s full glow,
+ * the heart lighting; the robe leading as `robe` left it, until the heart
+ * pops forward on "power"; the unlit faded.
+ */
 const {
   lit: LIT,
   lead: LEAD,
@@ -322,6 +350,11 @@ const {
   dim: 1,
 });
 
+/**
+ * B: the section head's icon row, as `robe` leaves it (the woman's plate
+ * under the robe going as the row settles), the heart lighting on "power";
+ * on "bed" the plate under the heart.
+ */
 const iconsShot = (f: WithinFrame, alpha: number) => {
   const { ctx, w, h } = f;
   const { hand } = f;
@@ -362,4 +395,5 @@ const iconsShot = (f: WithinFrame, alpha: number) => {
   ctx.restore();
 };
 
+/** How far out he has walked as the heart lights, and by the time the figure comes back. */
 const WALKED = [0.35, 0.85] as const;

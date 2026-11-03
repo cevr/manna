@@ -1,3 +1,37 @@
+/**
+ * Acceptance (countin A2): the count-in and the intro start, Sound off and
+ * Sound on, over the score clock over a fake device on the TestClock.
+ *
+ * - Sound off, `Intro` on: Play from the start holds the place at the first
+ *   sung line (`first`) through one bar of the meter's beat at the hymn's
+ *   tempo: the player's `countIn` atom gives `Some({ index: k, of: beats })`
+ *   at the play's time plus `k × beatMs / rate` (none early, none skipped),
+ *   then `None` at `beats × beatMs / rate`; through it the player is Playing
+ *   at `first` and the place stands; then it runs from `first` at the rate.
+ *   The device is asked for nothing. Over the lowest hymn of each meter the
+ *   bundle carries, and hymn 78 with stanza 3 chosen, at 50, 100 and 150 %.
+ * - Sound off, `Intro` off, and the defaults (no `intro` atom): no beat, the
+ *   place runs from `first` at once, as on base.
+ * - Sound on: `Intro` on plays the recording from 0; off plays it from the
+ *   first sung line, of the chosen stanzas when a choice is held (hymn 78,
+ *   stanza 3: line 16's recording start), with no seek and no beat.
+ * - Each play carries `intro` and `countIn` as the atom stands at the play;
+ *   with no atom it carries neither.
+ * - During a count-in: Pause leaves it and keeps the place, Play counts in
+ *   again from beat 0; a tempo change keeps the beat in progress's share and
+ *   counts the rest at the new rate; an `Intro` change waits for the next
+ *   play; a Sound switch on leaves it and plays the device at `first`; a seek
+ *   leaves it and moves the place. A play that does not start at the start
+ *   (a resume mid-hymn, a seek then Play) has no count-in.
+ *
+ * The test's own oracle counts the beat from the meter (simple meters the
+ * denominator's note, compound ones over three the dotted note), apart from
+ * `tempo.ts` and `countin.ts`. Numbers only: hymns by number, lines by index,
+ * times in ms; no hymn's words are read into a message.
+ *
+ * Final path: `apps/hymnal/src/player/countin.play.test.ts`.
+ */
+
 import {
   Array as Arr,
   Clock,
@@ -34,18 +68,26 @@ import { keptOf } from './stanzas';
 
 const book = timingBook(bundled);
 
+/** One poll of the player (`statusEvery`), ms. */
 const POLL = 250;
+/** How far a beat or a held place may stray from the oracle's, ms. */
 const EXACT = 1;
+/** The dial's tempos the count-in is checked at, percent. */
 const TEMPOS: ReadonlyArray<number> = [50, 100, 150];
+/** A hymn in 4/4 with a long lead: four beats of 1090.909 ms, `first` 25089 ms. */
 const LONG = 116;
+/** A four-stanza hymn with its refrain after each stanza (stanzas A2). */
 const CHOICES = 78;
+/** Stanza 3 of hymn 78 is sung on lines 16 to 23 (stanzas A2's oracle). */
 const STANZA_3 = [3];
 const STANZA_3_FIRST = 16;
+/** The fake recording runs this far past the timeline's end, ms. */
 const TAIL = 1500;
 
 const timelineAt = (number: number): Timeline => Option.getOrThrow(book.of(number));
 const trackOf = (number: number) => ({ number, title: `Hymn ${number}` });
 
+/** The lowest hymn of each meter at plan time (spec, Acceptance). */
 const LOWEST_PER_METER = {
   '3/4': 1,
   '4/4': 2,
@@ -65,6 +107,7 @@ const LOWEST_PER_METER = {
 
 const meterOf = (tempo: FirstTempo) => `${tempo.numerator}/${tempo.denominator}`;
 
+/** The lowest hymn of each meter the bundle carries, by meter. */
 const lowestPerMeter = (): Readonly<Record<string, number>> => {
   const lowest = new Map<string, number>();
   for (const [number] of bundled) {
@@ -74,17 +117,24 @@ const lowestPerMeter = (): Readonly<Record<string, number>> => {
   return Object.fromEntries(lowest);
 };
 
+/** A count-in as the oracle counts it: how many beats, and one beat's length in hymn ms. */
 interface Counted {
   readonly beats: number;
   readonly beatMs: number;
 }
 
+/**
+ * The oracle's beat in quarter notes: a meter of more than three to the bar
+ * in a multiple of three, over a half note or shorter, beats the dotted note
+ * worth three of its denominator's; every other meter beats the denominator's.
+ */
 const quartersOf = (tempo: FirstTempo) => {
   const compound = tempo.numerator > 3 && tempo.numerator % 3 === 0 && tempo.denominator >= 2;
   if (compound) return 12 / tempo.denominator;
   return 4 / tempo.denominator;
 };
 
+/** One bar of the meter's beat at the hymn's first tempo. */
 const countedOf = (tempo: FirstTempo): Counted => {
   const quarters = quartersOf(tempo);
   return {
@@ -93,19 +143,23 @@ const countedOf = (tempo: FirstTempo): Counted => {
   };
 };
 
+/** The host ms after the play that count `k` comes at `rate`; `k = beats` is the first sung line. */
 const countAt = (counted: Counted, rate: number, k: number) => (k * counted.beatMs) / rate;
 
+/** A beat as the test reads it: `index/of`, or `none`. */
 const keyOf = (beat: Option.Option<{ readonly index: number; readonly of: number }>) =>
   Option.match(beat, {
     onNone: () => 'none',
     onSome: ({ index, of }) => `${index}/${of}`,
   });
 
+/** The keys a count-in of `beats` gives, in order: each beat, then `none`. */
 const countKeys = (beats: number) => [
   ...Array.from({ length: beats }, (_, k) => `${k}/${beats}`),
   'none',
 ];
 
+/** The place a player shows, ms, rounded; `none` when it shows none. */
 const placeOf = (player: Player) =>
   Player.$match(player, {
     Playing: ({ at }) => `Playing@${Math.round(at * 1000)}`,
@@ -118,18 +172,25 @@ const placeOf = (player: Player) =>
     Failed: () => 'Failed',
   });
 
+/** The place in ms a Playing player shows, else NaN. */
 const playingAt = (player: Player) =>
   Option.liftPredicate(player, Player.$is('Playing')).pipe(
     Option.map((playing) => playing.at * 1000),
     Option.getOrElse(() => Number.NaN),
   );
 
+/** One play the device was asked for: from where, at what host time, and the options it carried. */
 interface Asked {
   readonly fromMs: number;
   readonly now: number;
   readonly options: Option.Option<PlayOptions>;
 }
 
+/**
+ * A device holding a recording `length` ms long that plays at 1000 ms a
+ * second, and what it was asked: each play with its options, each seek and
+ * resume, and each piece of the recording it sounded (`heard`).
+ */
 const recorded = (length: number) => {
   const asked = {
     plays: new Array<Asked>(),
@@ -189,32 +250,44 @@ const recorded = (length: number) => {
   return { device, asked };
 };
 
+/** The lines of a hymn's timeline a choice keeps, as `LivePlayer.tsx` gives them. */
 const keptFor = (number: number, stanzas: ReadonlyArray<number>): ReadonlyArray<boolean> =>
   Arr.findFirst(hymns, (it) => it.number === number).pipe(
     Option.map((it) => keptOf(it.sections, stanzas)),
     Option.getOrElse(() => []),
   );
 
+/** Every hymn as printed: no transpose, no capo. */
 const printed = Atom.make(still);
 
+/** Let the player's fibers run what the clock's last move woke. */
 const settle = Effect.forEach(Array.from({ length: 20 }), () => Effect.yieldNow, {
   discard: true,
 });
 
+/** What the app is built with: Sound, the `intro` atom (none: the defaults), hymn 78's choice. */
 interface Built {
   readonly on: boolean;
   readonly intro: Option.Option<boolean>;
   readonly chosen?: ReadonlyArray<number>;
+  /** Over the score clock (`soundOn`), or straight over the fake device. */
   readonly scored?: boolean;
   readonly length?: number;
 }
 
+/** A read of the player at a host time: its place and its beat. */
 interface Read {
   readonly now: number;
   readonly player: Player;
   readonly beat: string;
 }
 
+/**
+ * The app's player as `LivePlayer.tsx` builds it, over the score clock over
+ * the fake device, with each hymn's tempo in its own atom, hymn 78's stanza
+ * choice held in `choice` (every other hymn's is all), and the `intro` atom
+ * as `built` gives it. Every value the `countIn` atom takes is kept, in order.
+ */
 const composed = (built: Built) =>
   Effect.gen(function* () {
     const clock = yield* TestClock.testClockWith(Effect.succeed);
@@ -258,6 +331,7 @@ const composed = (built: Built) =>
         onNone: () => 'none',
         onSome: (atom) => keyOf(registry.get(atom)),
       });
+    /** Each value the `countIn` atom took, with the host's time, from its first read. */
     const beats = new Array<{ readonly now: number; readonly beat: string }>();
     beats.push({ now: clock.currentTimeMillisUnsafe(), beat: beatNow() });
     Option.map(counting, (atom) =>
@@ -273,31 +347,41 @@ const composed = (built: Built) =>
     return {
       asked: fake.asked,
       beats,
+      /**
+       * The distinct beats the atom stood at from the mark `from` (`beats.length` then) on, in
+       * order: the one it stood at then, and each it took after.
+       */
       beatsFrom: (from: number) =>
         Arr.dedupeAdjacent(beats.slice(Math.max(0, from - 1)).map((it) => it.beat)),
       state,
       beatNow,
+      /** Set a hymn's tempo, as the sheet's dial does, and let the player take it. */
       tempo: (number: number, tempo: number) =>
         Effect.andThen(
           Effect.sync(() => registry.set(tempoFor(number), tempo)),
           settle,
         ),
+      /** Set the `Intro` switch and let the player take it. */
       setIntro: (to: boolean) =>
         Effect.andThen(
           Effect.sync(() => registry.set(intro, to)),
           settle,
         ),
+      /** Send a command and let the player take it; the host's time it was taken at. */
       send: (command: Command) =>
         Effect.andThen(
           Effect.sync(() => registry.set(player.send, command)),
           Effect.andThen(settle, Clock.currentTimeMillis),
         ),
+      /** Switch Sound and let the score clock hand the place over; the host's time it was switched at. */
       switchSound: (to: boolean) =>
         Effect.andThen(
           SubscriptionRef.set(sound, to),
           Effect.andThen(settle, Clock.currentTimeMillis),
         ),
+      /** Move the clock on to the host's time `now` and read the player there. */
       at: (now: number) => Effect.andThen(Effect.andThen(clock.setTime(now), settle), read),
+      /** Move the clock on `ms` a poll at a time, reading the player after each. */
       walk: (ms: number) =>
         Effect.gen(function* () {
           const reads = new Array<Read>();
@@ -314,6 +398,11 @@ const composed = (built: Built) =>
 
 type App = Effect.Success<ReturnType<typeof composed>>;
 
+/**
+ * The places shown in `reads` that stray from a place running at `rate` from
+ * `from` at the host's time `since`: ahead of it by more than `EXACT`, or
+ * behind it by more than one poll's run.
+ */
 const straysOf = (
   reads: ReadonlyArray<Read>,
   from: number,
@@ -327,6 +416,10 @@ const straysOf = (
     return [`${now}: ${placeOf(player)}, expected ${Math.round(expected)}`];
   });
 
+/**
+ * A count-in from the play at host time `t0`: the reads one ms before and
+ * after each count, the hold's places, and the run's places after it.
+ */
 const countIn = (app: App, hymn: number, rate: number, t0: number) =>
   Effect.gen(function* () {
     const { first, tempo } = timelineAt(hymn);
@@ -362,6 +455,7 @@ const countIn = (app: App, hymn: number, rate: number, t0: number) =>
     };
   });
 
+/** The keys `countIn` reads one ms before and after each count: beat k−1 then k, `none` last. */
 const aroundOf = (beats: number) => [
   `0/${beats}`,
   ...Array.from({ length: beats }, (_, j) => {
@@ -541,6 +635,7 @@ describe('each play carries the Intro switch as it stands at the play', () => {
 describe('during a count-in (hymn 116, Sound off, Intro on)', () => {
   const { first, tempo } = timelineAt(LONG);
   const counted = countedOf(tempo);
+  /** Start hymn 116 at 100 % and stand halfway through beat 1; the play's host time. */
   const midBeat1 = (app: App) =>
     Effect.gen(function* () {
       const t0 = yield* app.send(Command.Start({ track: trackOf(LONG) }));

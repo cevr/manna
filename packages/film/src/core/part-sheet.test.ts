@@ -19,6 +19,7 @@ const PAPER: Rgba = [244, 232, 212, 255];
 const INK: Rgba = [24, 20, 18, 255];
 const CREAM: Rgba = [250, 210, 150, 255];
 
+/** A `w` × `h` view of paper with each pixel `paint` gives painted, and its figure (1 where painted). */
 const viewOf = (w: number, h: number, paint: (x: number, y: number) => Option.Option<Rgba>) => {
   const rgba = new Uint8Array(w * h * 4);
   const figure = new Uint8Array(w * h);
@@ -34,6 +35,7 @@ const viewOf = (w: number, h: number, paint: (x: number, y: number) => Option.Op
   return { view: { width: w, height: h, rgba } satisfies Raster, figure };
 };
 
+/** A 32 × 32 figure: a red disc (the head) over a blue box (the body), each pixel its own colour so a moved byte shows. */
 const { view: FIGURE, figure: FIGURE_MASK } = viewOf(32, 32, (x, y) =>
   Option.firstSomeOf([
     Option.liftPredicate(
@@ -71,6 +73,7 @@ const sheetOf = (cut: PartCut = CUT) =>
 
 const ownerAt = (s: ReturnType<typeof sheetOf>, x: number, y: number) => s.owner[y * s.width + x];
 
+/** Why a result was refused, or `accepted`. */
 const reasonOf = (r: Result.Result<unknown, { readonly reason: string }>) =>
   Result.match(r, { onSuccess: () => 'accepted', onFailure: (e) => e.reason });
 

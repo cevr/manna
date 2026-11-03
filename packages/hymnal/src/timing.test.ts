@@ -8,6 +8,7 @@ import { type Clock, type Laying, secondsAt, timingOf } from './timing.js';
 
 const fit = { notes: 2, syllables: 2, melismas: 0, shared: { inWord: 0, acrossWords: 0 }, cost: 0 };
 
+/** A sung part, one line per count, each of that many syllables. */
 const sungPart = (...counts: [number, ...number[]]): Part => {
   const line = (count: number) => {
     const syllables = Array.from({ length: count }, (_, word) => ({
@@ -45,6 +46,7 @@ const hymnOf = (stanzas: readonly Part[], refrain?: { order: Order; part: Part }
 
 const clock: Clock = { ticksPerBeat: 96, tempos: [], lastTick: 320 };
 
+/** Verse v's span, [100 + 100v, 200 + 100v): a stanza line at its start, a refrain line at +50. */
 const verse = (v: number, extra: Partial<Laying> = {}): Laying => ({
   span: { start: 100 + 100 * v, end: 200 + 100 * v },
   stanza: 1,
@@ -251,6 +253,7 @@ describe('secondsAt', () => {
   );
 });
 
+/** Why a committed hymn's timing breaks the rules, or nothing. */
 const faults = (hymn: Hymn): string[] => {
   const timing = hymn.timing;
   if (timing === undefined) return ['no timing'];

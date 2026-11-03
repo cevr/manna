@@ -5,6 +5,7 @@ import { type PicksFound, fillPicks } from './ask-store.ts';
 import { ContentStore } from './content-store.ts';
 import { ProductionStore } from './production-store.ts';
 
+/** A decision's line: its production, its ask, and the picks filed on it, or why none. */
 const lineOf = (production: string, found: PicksFound): string =>
   Match.value(found).pipe(
     Match.tagsExhaustive({
@@ -16,6 +17,7 @@ const lineOf = (production: string, found: PicksFound): string =>
     }),
   );
 
+/** Run the fill over the app's ledgers (`productions`) and its lab's asks (`lab`), a line each. */
 export const runFillPicks = (folders: {
   readonly lab: string;
   readonly productions: string;

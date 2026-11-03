@@ -3,8 +3,10 @@ import { parse, readsWord } from './narration.ts';
 import { repoJson } from './schema.ts';
 import { Segment } from './segment.ts';
 
+/** The most panels a beat's board plans from its picture's marks. */
 const PANELS_PER_BEAT = 3;
 
+/** A name the board writes into a file name and a link: a beat's id, a mark, a style's id. */
 export const BoardName = Segment.check(
   Schema.isPattern(/^[A-Za-z0-9_-]+$/, {
     message: 'a name of letters, digits, `_` and `-`',
@@ -12,13 +14,17 @@ export const BoardName = Segment.check(
 );
 export type BoardName = typeof BoardName.Type;
 
+/** `name` as a board name, when it is one. */
 export const boardNamed = Schema.decodeUnknownOption(BoardName);
 
+/** Where a panel is held from when the beat's picture names no mark: the beat's start. */
 export const PANEL_START = BoardName.make('start');
 
+/** How a try was made: by the board's own prompt, brought in from elsewhere, or made again on a note. */
 const TryMade = Schema.Literals(['generate', 'import', 'tweak']);
 type TryMade = typeof TryMade.Type;
 
+/** A file in the board's folder: never a path. */
 const BoardFileName = Segment.check(
   Schema.isPattern(/^[A-Za-z0-9_.-]+\.(png|jpe?g|webp)$/, {
     message: 'a file of the board folder (letters, digits, `_`, `.`, `-`; an image)',
@@ -26,6 +32,7 @@ const BoardFileName = Segment.check(
 );
 type BoardFileName = typeof BoardFileName.Type;
 
+/** A cast reference a try was drawn from, and what it held then. */
 const TryCast = Schema.Struct({
   member: Schema.String,
   file: Schema.String,
@@ -33,82 +40,130 @@ const TryCast = Schema.Struct({
 });
 export type TryCast = typeof TryCast.Type;
 
+/** One image tried for a panel. */
 export const BoardTry = Schema.Struct({
+  /** Its number in the panel's history, from 1. */
   n: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
+  /** The image, in the board's folder. */
   file: BoardFileName,
+  /** The image's sha256 (hex), so a copy brought from elsewhere is known to be the same. */
   sha256: Schema.String,
   made: TryMade,
+  /** The prompt the image route was sent, exactly; an import made elsewhere carries the one it was made with. */
   prompt: Schema.optionalKey(Schema.String),
+  /** The references the call carried, in order, as the board's folder reaches them: the style's ref, a panel's try, a sketch, then each cast member's library record. */
   refs: Schema.Array(Schema.String),
+  /** What each cast reference among `refs` held when the try was drawn: its member, its path as in `refs`, its sha256. A try drawn before tries recorded it has none. */
   cast: Schema.optionalKey(Schema.Array(TryCast)),
+  /** The words of the panel's own picture the prompt carried (`pictureWords`: the beat's brief, the words it holds from). A try drawn before tries recorded them has none. */
   words: Schema.optionalKey(Schema.Array(Schema.String)),
+  /** The note a tweak answers (`n12`). */
   note: Schema.optionalKey(Schema.String),
+  /** Where an import came from, said plainly (`rbfconcepts 9005-court-a`). */
   from: Schema.optionalKey(Schema.String),
+  /** ISO time. */
   at: Schema.String,
 });
 export type BoardTry = typeof BoardTry.Type;
 
+/**
+ * What the engine sets on a panel in place of a picture (CRAFT rule 1: the
+ * narration's words appear only as a full-screen card): a `Card`, the words
+ * heard from the panel's mark to `to` (the end of the line when none), set
+ * exactly as spoken in the film's card style, `payoff` large; or a `Verse`,
+ * Scripture on its page (verbatim, KJV), its phrase highlighted. Never an
+ * image: the image route letters badly, and a card's words are the take's.
+ */
 export const PanelText = Schema.Union([
   Schema.TaggedStruct('Card', {
     to: Schema.optionalKey(BoardName),
+    /** The payoff word, read as a take is checked: the first of the card's words that reads it. */
     payoff: Schema.String.check(Schema.isNonEmpty()),
   }),
   Schema.TaggedStruct('Verse', {
+    /** `Job 9:2`. */
     ref: Schema.String.check(Schema.isNonEmpty()),
+    /** The verse as printed, verbatim. */
     text: Schema.String.check(Schema.isNonEmpty()),
+    /** The phrase highlighted: a run of `text`'s words. */
     phrase: Schema.String.check(Schema.isNonEmpty()),
   }),
 ]).pipe(Schema.toTaggedUnion('_tag'));
 export type PanelText = typeof PanelText.Type;
 
+/**
+ * A panel: one held frame of a beat, from its mark (or the beat's start)
+ * until the next panel. A picture panel is the images tried for it; a text
+ * panel (`text`) is set by the engine and has no tries.
+ */
 export const Panel = Schema.Struct({
+  /** `<beat>.<at>`: what a note, a link and the CLI name it by. */
   id: Schema.String,
   beat: BoardName,
+  /** The `{mark}` it is held from, or `start`. */
   at: BoardName,
   tries: Schema.Array(BoardTry),
+  /** The try kept (its `n`); none until one is picked. */
   kept: Schema.optionalKey(Schema.Int),
+  /** Why it was kept, in a sentence. */
   why: Schema.optionalKey(Schema.String),
+  /** A card or a verse page the engine sets, in place of a picture. */
   text: Schema.optionalKey(PanelText),
 });
 export type Panel = typeof Panel.Type;
 
+/** The film's board look: one style block and its reference image, and the film's world in a paragraph. */
 export const BoardStyle = Schema.Struct({
+  /** The style's id, as the looks study names it (`9005`). */
   id: BoardName,
   name: Schema.String,
+  /** The style block every prompt opens with. */
   block: Schema.String,
+  /** The style's reference image, in the board's folder. */
   ref: BoardFileName,
   sha256: Schema.String,
+  /** What every panel shares: the film's world, its palette and its cast, in a paragraph. */
   world: Schema.optionalKey(Schema.String),
 });
 export type BoardStyle = typeof BoardStyle.Type;
 
+/** A beat's board approved: the tries kept when it was, so a later pick makes it stale. */
 const BeatApproval = Schema.Struct({
   beat: BoardName,
   kept: Schema.Array(Schema.Struct({ panel: Schema.String, try: Schema.Int })),
+  /** ISO time. */
   at: Schema.String,
 });
 type BeatApproval = typeof BeatApproval.Type;
 
+/** `board.json`: a film's storyboard. */
 export const BoardFile = Schema.Struct({
   film: Schema.String,
   style: Schema.optionalKey(BoardStyle),
+  /** In the film's order: by beat, then by where in the beat's line each is held from. */
   panels: Schema.Array(Panel),
   approvals: Schema.Array(BeatApproval),
 });
 export type BoardFile = typeof BoardFile.Type;
 
+/** `board.json` on disk. */
 export const BoardFileJson = repoJson(BoardFile);
 
+/** A film's board before its first panel. */
 export const emptyBoard = (film: string): BoardFile => ({ film, panels: [], approvals: [] });
 
+/** A panel's id: its beat and where it is held from. */
 export const panelId = (beat: string, at: string): string => `${beat}.${at}`;
 
+/** What a try's image is: the extensions a board file may end in (`BoardFileName`). */
 export const TryExt = Schema.Literals(['png', 'jpg', 'jpeg', 'webp']);
 export type TryExt = typeof TryExt.Type;
 
+/** The style's reference image, as the board folder keeps it. */
 export const styleFile = (id: BoardName, ext: TryExt): BoardFileName =>
   BoardFileName.make(`style.${id}.${ext}`);
 
+/** The image file of try `n` of the panel held from `at` in `beat`. */
 export const tryFile = (
   beat: BoardName,
   at: BoardName,
@@ -116,24 +171,37 @@ export const tryFile = (
   ext: TryExt = 'png',
 ): BoardFileName => BoardFileName.make(`${beat}.${at}.${n}.${ext}`);
 
+/** The panel `id` of `board`. */
 export const panelById = (board: BoardFile, id: string): Option.Option<Panel> =>
   Arr.findFirst(board.panels, (p) => p.id === id);
 
+/** The panels of `beat`, in the order its line holds them. */
 export const panelsOf = (board: BoardFile, beat: string): ReadonlyArray<Panel> =>
   board.panels.filter((p) => p.beat === beat);
 
+/** The picture panels of `beat`: the ones the image route draws. */
 const pictures = (board: BoardFile, beat: string): ReadonlyArray<Panel> =>
   panelsOf(board, beat).filter((p) => Predicate.isUndefined(p.text));
 
+/** Try `n` of `panel`. */
 export const tryOf = (panel: Panel, n: number): Option.Option<BoardTry> =>
   Arr.findFirst(panel.tries, (t) => t.n === n);
 
+/** The try a panel shows: the one kept, else its first. None for a panel with no try yet. */
 export const shownTry = (panel: Panel): Option.Option<BoardTry> =>
   Option.orElse(
     Option.flatMap(Option.fromUndefinedOr(panel.kept), (n) => tryOf(panel, n)),
     () => Arr.head(panel.tries),
   );
 
+/**
+ * The picture panel a scene stages `time` seconds in, and the try it shows:
+ * of `beat`'s picture panels (a scene plays the beat of its id), the one
+ * held from the latest of its marks heard by then (`marks`, seconds into the
+ * scene, as `SceneTimes` keeps them), else the one held from the beat's
+ * start. None where no picture panel is held by then, or the one held has
+ * no try.
+ */
 export const panelStagedAt = (
   board: BoardFile,
   beat: string,
@@ -158,9 +226,17 @@ export const panelStagedAt = (
   });
 };
 
+/** The next try's number in `panel`'s history. */
 export const nextTry = (panel: Panel): number =>
   Arr.reduce(panel.tries, 0, (most, t) => Math.max(most, t.n)) + 1;
 
+/**
+ * Where a beat's panels are held from, as its picture names them: each
+ * `{mark}` of its line the picture names in backticks, in the order the line
+ * says them, at most `PANELS_PER_BEAT` (the first, the last, and the ones
+ * between evenly); a beat whose picture names none of its marks, or that says
+ * nothing, gets one panel at its start.
+ */
 export const plannedAts = (
   beat: string,
   say: Option.Option<string>,
@@ -186,12 +262,14 @@ export const plannedAts = (
   return spread(marks, PANELS_PER_BEAT);
 };
 
+/** At most `n` of `items`: the first, the last and the ones between them evenly. */
 const spread = <A>(items: ReadonlyArray<A>, n: number): ReadonlyArray<A> => {
   if (items.length <= n) return items;
   const picks = Arr.makeBy(n, (i) => Math.round((i * (items.length - 1)) / (n - 1)));
   return Arr.dedupe(picks).flatMap((i) => Option.toArray(Arr.get(items, i)));
 };
 
+/** `board` with `panel` in it: replacing the one of the same id, else placed by `order` (each beat's ats, in the film's order). */
 export const withPanel = (
   board: BoardFile,
   panel: Panel,
@@ -209,15 +287,18 @@ export const withPanel = (
   };
 };
 
+/** `panel` with `tries` added to its history. */
 export const withTries = (panel: Panel, tries: ReadonlyArray<BoardTry>): Panel => ({
   ...panel,
   tries: [...panel.tries, ...tries],
 });
 
+/** Why a pick, an approval or a withdrawal is refused: what was asked, and why not. */
 export interface BoardRefusal {
   readonly reason: string;
 }
 
+/** `board` with try `n` of panel `id` kept, for `why`. */
 export const pickTry = (
   board: BoardFile,
   id: string,
@@ -258,14 +339,20 @@ export const pickTry = (
   });
 };
 
+/** Whether a beat's board is approved as it stands, approved on tries since changed, or not at all. */
 const BoardApprovalState = Schema.Literals(['none', 'approved', 'stale']);
 type BoardApprovalState = typeof BoardApprovalState.Type;
 
+/** The tries a beat's board keeps now, picture panel by picture panel. */
 const keptNow = (board: BoardFile, beat: string) =>
   pictures(board, beat).flatMap((p) =>
     Option.toArray(Option.map(Option.fromUndefinedOr(p.kept), (n) => ({ panel: p.id, try: n }))),
   );
 
+/**
+ * `beat`'s approval state: approved while its picture panels are the ones approved, each keeping the try it kept
+ * then; a panel added since (picked or not) or a pick changed makes it stale.
+ */
 export const approvalOf = (board: BoardFile, beat: string): BoardApprovalState =>
   Option.match(
     Arr.findFirst(board.approvals, (a) => a.beat === beat),
@@ -284,6 +371,7 @@ export const approvalOf = (board: BoardFile, beat: string): BoardApprovalState =
     },
   );
 
+/** `board` with `beat`'s board approved at `at`: refused while a panel of it keeps no try. */
 export const approveBeat = (
   board: BoardFile,
   beat: BoardName,
@@ -306,6 +394,7 @@ export const approveBeat = (
   });
 };
 
+/** `board` with `beat`'s approval withdrawn: refused when it has none. */
 export const withdrawBeat = (
   board: BoardFile,
   beat: string,
@@ -315,6 +404,12 @@ export const withdrawBeat = (
   return Result.succeed({ ...board, approvals: board.approvals.filter((a) => a.beat !== beat) });
 };
 
+/**
+ * The words a card panel held from `at` sets, as the beat's line says them
+ * (from its mark, or the line's start, to `to`, or its end), and the index of
+ * its payoff among them; or why not: a mark the line lacks, no word between
+ * the marks, a payoff none of them reads.
+ */
 export const cardLine = (
   beat: string,
   say: string,
@@ -362,11 +457,17 @@ export const cardLine = (
     },
   );
 
+/** A beat as the board's order reads it: its id and its line. */
 interface OrderBeat {
   readonly id: string;
   readonly say: Option.Option<string>;
 }
 
+/**
+ * `ids` (`<beat>.<at>`) in the film's order: by beat as the script runs,
+ * then by where in its line each is held from (its start first). An id of a
+ * beat or a mark the script lacks goes last, in the order given.
+ */
 export const filmOrder = (
   beats: ReadonlyArray<OrderBeat>,
   ids: ReadonlyArray<string>,
@@ -395,6 +496,7 @@ export const filmOrder = (
     .map((x) => x.id);
 };
 
+/** Whether `phrase` is a run of `text`'s words, as a verse panel highlights it. */
 export const phraseIn = (text: string, phrase: string): boolean => {
   const words = text.split(/\s+/).filter((w) => w.length > 0);
   const want = phrase.split(/\s+/).filter((w) => w.length > 0);

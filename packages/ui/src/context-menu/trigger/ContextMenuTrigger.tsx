@@ -21,6 +21,7 @@ import { useTimeout } from '../../utils/timers.ts';
 import { useContextMenuRootContextStrict } from '../root/ContextMenuRootContext.ts';
 
 interface ContextMenuTriggerState {
+  /** Whether the context menu is open. */
   open: boolean;
 }
 
@@ -41,6 +42,7 @@ export function ContextMenuTrigger(componentProps: ContextMenuTriggerProps): JSX
   let pressOpened = false;
   let mouseUpAbortController: AbortController | null = null;
 
+  /** Open the menu at `x`, `y`: true when it opened, false when the root's `onOpenChange` cancelled. */
   function handleLongPress(x: number, y: number, event: MouseEvent | TouchEvent): boolean {
     const isTouchEvent = event.type.startsWith('touch');
     contextMenu.initialCursorPointRef.current = { x, y };
@@ -132,6 +134,7 @@ export function ContextMenuTrigger(componentProps: ContextMenuTriggerProps): JSX
     });
   }
 
+  /** A pending long press whose touch has moved past the threshold to `x`, `y` is cancelled. */
   function cancelIfMoved(x: number, y: number) {
     if (longPressTimeout.isStarted() && touchPosition) {
       const deltaX = Math.abs(x - touchPosition.x);
@@ -142,6 +145,11 @@ export function ContextMenuTrigger(componentProps: ContextMenuTriggerProps): JSX
     }
   }
 
+  /**
+   * The finger lifts: a pending long press is cancelled, and the lift of the
+   * press that opened the menu is spent, so the browser clicks nothing under
+   * the finger (the menu opens at the touch, an item under it).
+   */
   function handleTouchEnd(event: TouchEvent) {
     cancelLongPress();
     if (pressOpened) {
@@ -174,6 +182,7 @@ export function ContextMenuTrigger(componentProps: ContextMenuTriggerProps): JSX
     cancelIfMoved(event.clientX, event.clientY);
   }
 
+  /** Whether another (a drag that started) holds the touch press: then the menu does not open on it. */
   function pressTaken(): boolean {
     return pressPointer !== null && pressHeldByOther(pressPointer, self);
   }

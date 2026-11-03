@@ -297,6 +297,9 @@ describe('renderVerseSegments: the fixed application order', () => {
     expect(renderVerseSegments({ text: raw })).toEqual(segmentVerseText(raw));
   });
 
+  /** The one verse that exercises all four layers at once: a pilcrow, a margin
+   *  anchor, a red-letter quote, a translator bracket inside it, and a
+   *  dictionary phrase in the plain tail. */
   const FOUR_LAYER_VERSE = '¶ He said, ‹the daily [sacrifice] is taken›, and the sanctuary fell.';
 
   const rendered = (): TextSegment[] =>
@@ -306,6 +309,8 @@ describe('renderVerseSegments: the fixed application order', () => {
       phrases: (segments) => matchSegments(automaton, segments),
     });
 
+  /** Which layer produced each segment, in output order — the observable form
+   *  of "the order is fixed". */
   const layers = (segments: readonly TextSegment[]): readonly SegmentLayer[] => {
     const seen: SegmentLayer[] = [];
     for (const segment of segments) {

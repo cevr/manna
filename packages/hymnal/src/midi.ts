@@ -1,3 +1,9 @@
+/**
+ * Standard MIDI File reading: the notes, programs, meters and keys a hymn's
+ * file holds, by track. Times are in ticks; `ticksPerBeat` turns them into
+ * quarter-note beats.
+ */
+
 import { Effect, Schema } from 'effect';
 
 export class MidiParseError extends Schema.TaggedError<MidiParseError>()('MidiParseError', {
@@ -15,6 +21,7 @@ export interface Note {
 export interface Track {
   readonly name: string;
   readonly notes: readonly Note[];
+  /** The first program change on the track, when it has one. */
   readonly program: number | undefined;
 }
 
@@ -26,10 +33,12 @@ export interface TimeSignature {
 
 export interface KeySignature {
   readonly tick: number;
+  /** Flats are negative, sharps positive (-7..7). */
   readonly fifths: number;
   readonly minor: boolean;
 }
 
+/** A `set_tempo` event: from `tick` on, a quarter note lasts `microsPerQuarter` microseconds. */
 export interface Tempo {
   readonly tick: number;
   readonly microsPerQuarter: number;
@@ -40,7 +49,9 @@ export interface Midi {
   readonly tracks: readonly Track[];
   readonly timeSignatures: readonly TimeSignature[];
   readonly keySignatures: readonly KeySignature[];
+  /** Every tempo event of every track, by tick; at one tick, in the file's track order. */
   readonly tempos: readonly Tempo[];
+  /** The tick of the file's last event: the latest track end. */
   readonly lastTick: number;
 }
 
@@ -74,6 +85,7 @@ class Reader {
     return ((this.u8() << 24) | (this.u8() << 16) | (this.u8() << 8) | this.u8()) >>> 0;
   }
 
+  /** A variable-length quantity: seven bits a byte, the high bit set on all but the last. */
   varint(): number {
     let value = 0;
     for (let i = 0; i < 4; i++) {
@@ -100,6 +112,7 @@ class Reader {
 
 const latin1 = new TextDecoder('latin1');
 
+/** A track as it is read: the running status, its name and program, and the notes still sounding. */
 class TrackReader {
   tick = 0;
   status = 0;
@@ -115,6 +128,7 @@ class TrackReader {
     private readonly tempos: Tempo[],
   ) {}
 
+  /** A meta event; false at the end of the track. */
   meta(): boolean {
     const type = this.reader.u8();
     const data = this.reader.take(this.reader.varint());
@@ -162,6 +176,7 @@ class TrackReader {
     }
   }
 
+  /** The next event; false at the end of the track. */
   event(): boolean {
     this.tick += this.reader.varint();
     let byte = this.reader.u8();
@@ -179,6 +194,7 @@ class TrackReader {
   }
 }
 
+/** A track and the tick of its last event. */
 const readTrack = (
   reader: Reader,
   end: number,
@@ -229,6 +245,7 @@ const read = (bytes: Uint8Array): Midi => {
   };
 };
 
+/** Reads a Standard MIDI File (format 0 or 1, metrical time). */
 export const parse = (bytes: Uint8Array): Effect.Effect<Midi, MidiParseError> =>
   Effect.try({
     try: () => read(bytes),
@@ -238,8 +255,14 @@ export const parse = (bytes: Uint8Array): Effect.Effect<Midi, MidiParseError> =>
         : MidiParseError.make({ offset: -1, reason: String(error) }),
   });
 
+/** A file with no tempo event plays at 120 quarter notes a minute. */
 const DEFAULT_TEMPO = 500_000;
 
+/**
+ * Ticks to seconds through the file's tempo map, as a player reads it: each
+ * tempo event takes effect at its tick, and of two at one tick the later in
+ * the file wins.
+ */
 export const secondsAt =
   (midi: Midi) =>
   (tick: number): number => {
@@ -255,4 +278,5 @@ export const secondsAt =
     return seconds + ((tick - from) * tempo) / 1e6 / midi.ticksPerBeat;
   };
 
+/** How long the file plays, in seconds: to its last event. */
 export const secondsOf = (midi: Midi): number => secondsAt(midi)(midi.lastTick);

@@ -4,19 +4,31 @@ import { DEFAULT_TAIL, MIN_LEAD, beatLength } from './layout.ts';
 import { onTheMs } from './time.ts';
 import type { BeatHold } from './timeline-schema.ts';
 
+/** A beat's two holds: the time before its words, and the time after them. */
 export type HoldEdge = 'lead' | 'tail';
 
+/** A hold snaps to this step, film seconds. */
 const HOLD_STEP = 0.1;
 
+/** The longest hold the studio writes: past it a beat is no longer a hold but a scene of its own. */
 const MAX_HOLD = 30;
 
+/** Where a beat goes: before another beat, or to the end (none). */
 export type MovedBefore = Option.Option<string>;
 
+/** A part laid on the beats (an act, a score movement): the beat it begins on, and its name. */
 export interface PartOn {
   readonly from: string;
   readonly name: string;
 }
 
+/**
+ * `ids` with `beat` moved before `before` (to the end when none); refused,
+ * in words, when either is not one of `ids`, when the move is no move (onto
+ * itself, or just before the beat already after it), or when a part of one
+ * of `parts` (the acts, the movements: each list in its declared order)
+ * would no longer play in that order.
+ */
 export const movedOrder = (
   ids: ReadonlyArray<string>,
   beat: string,
@@ -48,12 +60,20 @@ export const movedOrder = (
   });
 };
 
+/** Each edge's floor in the layout. */
 const FLOOR = { lead: MIN_LEAD, tail: DEFAULT_TAIL } satisfies Record<HoldEdge, number>;
 
+/** Where each edge's hold stands against the beat's words. */
 const SIDE = { lead: 'before', tail: 'after' } satisfies Record<HoldEdge, string>;
 
+/** A hold's floor: the layout's (`MIN_LEAD`, `DEFAULT_TAIL`), or the beat's own when it already holds less. */
 const holdFloor = (edge: HoldEdge, now: number): number => Math.min(FLOOR[edge], onTheMs(now));
 
+/**
+ * The hold a trim asks for, as it is written: its floor (`holdFloor` of
+ * `now`, the beat's hold now) when it asks that or less, even off the grid;
+ * else snapped to `HOLD_STEP`, at or above the floor and at most `MAX_HOLD`.
+ */
 export const heldWithin = (edge: HoldEdge, asked: number, now: number): number => {
   const floor = holdFloor(edge, now);
   if (onTheMs(asked) <= floor) return floor;
@@ -61,9 +81,15 @@ export const heldWithin = (edge: HoldEdge, asked: number, now: number): number =
   return onTheMs(Math.min(MAX_HOLD, Math.max(floor, snapped)));
 };
 
+/**
+ * The value a hold is written as in the script: none for a tail on the
+ * default (`DEFAULT_TAIL`: the field is taken away), else the seconds. A
+ * lead is always written: its default follows the beat's entrance.
+ */
 export const holdWritten = (edge: HoldEdge, value: number): Option.Option<number> =>
   Option.liftPredicate(onTheMs(value), (v) => edge === 'lead' || v !== DEFAULT_TAIL);
 
+/** A beat as a hold reads it: its id, its length, where its words are heard (none when silent), and its holds. */
 interface HeldBeat {
   readonly beat: string;
   readonly dur: number;
@@ -71,17 +97,24 @@ interface HeldBeat {
   readonly hold: BeatHold;
 }
 
+/** The seconds a beat's words take: 0 for a silent beat. */
 const wordsOf = (b: HeldBeat): number =>
   Option.match(Option.fromUndefinedOr(b.speech), {
     onNone: () => 0,
     onSome: (s) => onTheMs(s.end - s.start),
   });
 
+/** A beat once a hold is written: its length, and its holds as the layout lays them. */
 interface Held {
   readonly dur: number;
   readonly hold: BeatHold;
 }
 
+/**
+ * `b` once its `edge` hold is `to`, laid by the layout's own rule
+ * (`beatLength`): a lead moves its words, a tail what follows them, and its
+ * `min` holds it to its length at least; a silent beat keeps its length.
+ */
 export const heldTo = (b: HeldBeat, edge: HoldEdge, to: number): Held => {
   const words = wordsOf(b);
   const lead = Bool.match(edge === 'lead' && words > 0, {
@@ -104,6 +137,11 @@ export const heldTo = (b: HeldBeat, edge: HoldEdge, to: number): Held => {
   };
 };
 
+/**
+ * Why `b`'s `edge` held at `to` would change nothing the film plays: it has
+ * no words for a hold to stand before or after, or its `min` holds it at its
+ * length whatever a tail up to `to` asks. None when the hold changes it.
+ */
 export const holdUnchanged = (b: HeldBeat, edge: HoldEdge, to: number): Option.Option<string> => {
   const words = wordsOf(b);
   if (words === 0)
@@ -128,12 +166,19 @@ export const holdUnchanged = (b: HeldBeat, edge: HoldEdge, to: number): Option.O
   );
 };
 
+/** The pause between two beats' words, film seconds: from where one's words end to where the next's begin. */
 interface Seam {
   readonly from: string;
   readonly to: string;
   readonly seconds: number;
 }
 
+/**
+ * The seams on either side of `beat` among `beats` (the script's, in film
+ * order), as the clock times the words: the one into it and the one out of
+ * it, each where both beats have words. A take's trailing silence counts as
+ * words here; `film check` measures its seams from the last voiced word.
+ */
 export const seamsAround = (beats: ReadonlyArray<HeldBeat>, beat: string): ReadonlyArray<Seam> => {
   const at = beats.findIndex((b) => b.beat === beat);
   if (at < 0) return [];
@@ -152,25 +197,32 @@ export const seamsAround = (beats: ReadonlyArray<HeldBeat>, beat: string): Reado
   );
 };
 
+/** What a move says to the owner. */
 export const movedWords = (beat: string, before: MovedBefore): string =>
   Option.match(before, {
     onNone: () => `Moved ${beat} to the end.`,
     onSome: (b) => `Moved ${beat} before ${b}.`,
   });
 
+/** A signed span of seconds as a trim's readout says it: `+3.0 s`, `−0.4 s`. */
 const signedSeconds = (s: number): string => {
   const shown = Math.abs(s).toFixed(1);
   return Bool.match(s < 0, { onTrue: () => `−${shown} s`, onFalse: () => `+${shown} s` });
 };
 
+/** What a hold set says to the owner. */
 export const heldWords = (beat: string, edge: HoldEdge, from: number, to: number): string =>
   `Held ${beat} ${signedSeconds(to - from)} ${SIDE[edge]} its words.`;
 
+/** What a hold already where it is asked says to the owner. */
 export const heldAlready = (beat: string, edge: HoldEdge, value: number): string =>
   `${beat} already holds ${value.toFixed(1)} s ${SIDE[edge]} its words.`;
 
+/** An undone change as the owner's words name it (`Undone: Moved look to the end.`): the words its edit said, or what it set. */
 export const undone = (words: string): string => `Undone: ${words}`;
 
+/** What every edit of the script tells the owner comes next: the agents' part. */
 export const AGENTS_AFTER = 'Agents re-time and re-check.';
 
+/** The work an edit files for the agents on the production's ledger. */
 export const workFiled = (said: string): string => `${said} Re-time, re-check seams, re-render.`;

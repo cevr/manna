@@ -4,6 +4,7 @@ import { Effect } from 'effect';
 import type { WebsterEntry } from '../model.js';
 import { normalizeHeadword } from '../source.js';
 
+/** Synthetic tiny artifact for adapter contract tests; never installable. */
 export const writeWebsterFixture = (filename: string, entries: readonly WebsterEntry[]) =>
   Effect.acquireUseRelease(
     Effect.sync(() => new Database(filename)),

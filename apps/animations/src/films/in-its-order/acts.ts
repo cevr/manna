@@ -1,5 +1,6 @@
 import type { Look } from '@manna/film/core';
 
+/** The film's shape and colour script: its acts, in film order. */
 export const look = {
   acts: [
     {
@@ -40,4 +41,5 @@ export const look = {
   ],
 } as const satisfies typeof Look.Encoded;
 
+/** One of the film's acts, by name. */
 export type ActName = (typeof look.acts)[number]['name'];

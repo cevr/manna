@@ -17,6 +17,7 @@ const read = (file: string) =>
 
 const EMBLEMS = ['path', 'land', 'taught', 'remedies'] as const;
 
+/** Every `d` a drawing names, in order. */
 const ds = (svg: string) => Array.from(svg.matchAll(/ d="([^"]+)"/g), (found) => found[1]);
 
 describe('the series marks laid in the page', () => {

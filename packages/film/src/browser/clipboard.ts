@@ -1,16 +1,19 @@
 import { Context, Data, Effect, Layer } from 'effect';
 
+/** The browser would not take the text. */
 export class ClipboardRefused extends Data.TaggedError('ClipboardRefused')<{
   readonly reason: string;
 }> {}
 
 interface ClipboardOps {
+  /** Put the link to `href` (a path of this site, `/films/a/lab/b?cue=c#t=1`) on the clipboard, whole. */
   readonly copyLink: (href: string) => Effect.Effect<void, ClipboardRefused>;
 }
 
 export class Clipboard extends Context.Service<Clipboard, ClipboardOps>()(
   '@manna/film/browser/Clipboard',
 ) {
+  /** A clipboard in memory at `origin`: each link written is pushed onto `written`. */
   static readonly memory = (written: Array<string>, origin: string): Layer.Layer<Clipboard> =>
     Layer.succeed(
       Clipboard,

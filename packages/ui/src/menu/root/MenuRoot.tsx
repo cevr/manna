@@ -24,10 +24,15 @@ import { MenuRootContext, useMenuRootContextOptional } from './MenuRootContext.t
 
 export interface MenuRootProps {
   onOpenChange?: ((open: boolean, eventDetails: MenuChangeEventDetails) => void) | undefined;
+  /** Called after the open or close transition finishes. */
   onOpenChangeComplete?: ((open: boolean) => void) | undefined;
   children?: JSX.Element;
 }
 
+/**
+ * Groups all parts of the menu.
+ * Doesn't render its own HTML element.
+ */
 export function MenuRoot(props: MenuRootProps): JSX.Element {
   const contextMenuContext = useContextMenuRootContext();
   const enclosingStore = useMenuRootContextOptional()?.store;

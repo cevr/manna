@@ -1,6 +1,7 @@
 import { Array as Arr } from 'effect';
 import type { Point } from './schema.ts';
 
+/** Whether `p` lies inside the polygon `poly` (even-odd; any winding, convex or not). */
 export const insidePolygon = (poly: ReadonlyArray<Point>, p: Point): boolean =>
   poly.reduce((inside, a, i) => {
     const b = Arr.getUnsafe(poly, (i + poly.length - 1) % poly.length);

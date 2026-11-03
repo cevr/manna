@@ -28,8 +28,10 @@ import { withTimelines } from './lab/testing.ts';
 import { labWithMcp, mcpSession } from './lab-mcp/testing.ts';
 import { sceneFixture } from './scene-sources/testing.ts';
 
+/** The fixture's hand scene file. */
 class HandFile extends Context.Service<HandFile, string>()('test/HandFile') {}
 
+/** A check that reports one warning, and counts its runs. */
 const checks: Array<string> = [];
 const fakeCheck = freshHere({
   check: (film) =>
@@ -39,6 +41,7 @@ const fakeCheck = freshHere({
     }),
 });
 
+/** The film repo over `films`, but loading the film fails (its paths still resolve). */
 const brokenRepo = (films: string) =>
   Layer.effect(
     FilmRepo,
@@ -97,6 +100,7 @@ const fixtureWith = (repoOver: (films: string) => ReturnType<typeof FilmRepo.lay
 
 const fixture = fixtureWith(FilmRepo.layer);
 
+/** The lab with its MCP over the fixture, and an agent's session on it: `tweak` and the rest by name. */
 const agent = Effect.gen(function* () {
   const { lab } = yield* labWithMcp;
   const { tool } = yield* mcpSession(lab);

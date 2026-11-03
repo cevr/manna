@@ -27,6 +27,12 @@ import {
   type NativeFileArtifactSource,
 } from './file-artifact.js';
 
+/** A second File Corpus declared exactly the way a real third corpus will be:
+ *  its own corpus name, its own two service keys, its own label, its own
+ *  Corpus Storage Identity, its own semantic verifier. Its name is deliberately
+ *  outside `CorpusFileName`, which is what proves the lifecycle is no longer
+ *  bible-branded and no longer needs the receipt vocabulary widened to be
+ *  exercised. */
 class FixtureArtifactRecipe extends Context.Service<
   FixtureArtifactRecipe,
   FileArtifactRecipeService
@@ -37,6 +43,9 @@ class FixtureArtifactInstaller extends Context.Service<
   FileArtifactInstallerService
 >()('@manna/core/corpus-supply/test/FixtureArtifactInstaller') {}
 
+/** The wiring read at its own boundary: the layer under test is built per case
+ *  from a temp directory, so the provide belongs to this helper rather than to a
+ *  block nested inside the test's generator. */
 const readWiredSlots = <Wired>(
   layer: Layer.Layer<Wired>,
 ): Effect.Effect<{ readonly own: boolean; readonly other: boolean }> =>
@@ -67,6 +76,10 @@ const makeProvenanceStore = (): NativeFileArtifactProvenanceStore => {
   };
 };
 
+/** Drives the lifecycle through the fixture corpus's own Recipe and Installer
+ *  keys rather than `CorpusSupply`, so the test observes exactly what the
+ *  parameterized adapter does with the bytes its recipe hands it. Returns one
+ *  receipt per declared source, in recipe priority order. */
 const install = (input: {
   readonly destination: string;
   readonly sources: readonly NativeFileArtifactSource[];
@@ -93,6 +106,8 @@ const install = (input: {
     ),
   );
 
+/** Reads the corpus name an installer stamped on a failure. An unregistered
+ *  corpus must leave it unset rather than borrow a registered corpus's name. */
 const reportedCorpus = (
   failure: CorpusSourceUnavailableError | CorpusInstallationError | SqliteRefreshRefused,
 ): Option.Option<CorpusName> => {
@@ -166,6 +181,10 @@ const topicsFixture = (filename: string, count: number) =>
     (db) => Effect.sync(() => db.close()),
   );
 
+/** Capture a real synced rollback journal while its transaction is open, then
+ * close the writer before reusing the captured bytes. This models a crash's
+ * hot side file without spawning or signalling any process.
+ */
 const hotJournal = (filename: string) =>
   Effect.acquireUseRelease(
     Effect.sync(() => new Database(filename, { create: false })),

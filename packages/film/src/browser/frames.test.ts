@@ -5,6 +5,7 @@ import { manualFrames } from './fixtures/frames.ts';
 import { Frames } from './frames.ts';
 import { hostOf } from './host.ts';
 
+/** Frames run by hand, on a host of their own. */
 const manual = () => {
   const frames = manualFrames();
   return { ...frames, host: hostOf(frames.layer) };

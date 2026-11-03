@@ -63,46 +63,57 @@ import {
 } from './track.ts';
 import { SYNTH_RATE, framesOf, poissonCap } from './units.ts';
 
+/** A code sound ready to render: its graph, the key its degrees name, and the code sounds it samples, each resolved. */
 export interface ResolvedSound {
   readonly name: string;
   readonly sound: CodeSound;
+  /** The sound's key; a sound with no degree pitch names none, and C major stands in, never heard. */
   readonly key: Key;
   readonly samples: ReadonlyMap<string, ResolvedSound>;
+  /** The hash of its graph and of each sound it samples: its request key. */
   readonly hash: string;
 }
 
+/** A node planned: its length in frames, and the fill that writes them into a zeroed array at least that long. */
 interface Planned {
   readonly frames: number;
   readonly fill: (out: Float32Array) => void;
 }
 
+/** What one render shares across its nodes: buffers to borrow, zeroed, and the samples it has made. */
 export interface Kit {
   readonly take: (frames: number) => Float32Array;
   readonly give: (buffer: Float32Array) => void;
   readonly takeWide: (frames: number) => Float64Array;
   readonly giveWide: (buffer: Float64Array) => void;
+  /** `sound` rendered alone with `seed`, peaked: made once in a render, however often it is sampled. */
   readonly sample: (sound: ResolvedSound, seed: number) => Float32Array;
 }
 
+/** One render: its seed (the variant a `Pick` by seed plays), its sound, and its kit. */
 interface Render {
   readonly seed: number;
   readonly sound: ResolvedSound;
   readonly kit: Kit;
 }
 
+/** Where a node sits: its path, and the repetitions a named stream adds to its name. */
 interface Slot {
   readonly path: string;
   readonly reps: string;
 }
 
+/** The root's slot. */
 export const ROOT: Slot = { path: '', reps: '' };
 
+/** A node being planned: its draws, where its children's paths start, and its render. */
 interface At extends Draws {
   readonly base: string;
   readonly reps: string;
   readonly render: Render;
 }
 
+/** A node's draws at `slot`: its seed from its stream's name, else from its path. */
 const placed = (node: Node, slot: Slot, render: Render): At => {
   const base = node.stream === undefined ? slot.path : `${node.stream}${slot.reps}`;
   return {
@@ -118,20 +129,24 @@ const childOf = (at: At, index: number): Slot => ({ path: `${at.base}/${index}`,
 
 const tickOf = (at: At, k: number): Slot => ({ path: `${at.base}/${k}`, reps: `${at.reps}#${k}` });
 
+/** A pitch's unit in this render: Hz from its key, moved in octaves. */
 const pitchUnit = (at: At): Unit<Pitch> => ({
   toNumber: (pitch) => pitchHz(pitch, at.render.sound.key),
   pitch: true,
 });
 
+/** A length in seconds, drawn, as frames. */
 const framesAt = (secs: Value<number>, at: Draws, field: string): number =>
   framesOf(drawValue(secs, plain, at, field));
 
+/** `track`'s first `frames` frames in a borrowed array: give it back after. */
 const written = (kit: Kit, track: Track, frames: number): Float64Array => {
   const out = kit.takeWide(frames);
   writeTrack(track, out, frames);
   return out;
 };
 
+/** A child changed in place: its length, its fill, then `change` over its frames. */
 const changed = (child: Planned, change: (out: Float32Array, n: number) => void): Planned => ({
   frames: child.frames,
   fill: (out) => {
@@ -140,12 +155,14 @@ const changed = (child: Planned, change: (out: Float32Array, n: number) => void)
   },
 });
 
+/** A child of a mix: its onset in frames, its gain, and its plan. */
 interface Part {
   readonly at: number;
   readonly gain: number;
   readonly child: Planned;
 }
 
+/** Parts mixed, each from its onset: `frames` long, each part cut there, else as long as the latest one's end. */
 const mixOf = (kit: Kit, parts: ReadonlyArray<Part>, frames?: number): Planned => {
   const length =
     frames ?? parts.reduce((most, part) => Math.max(most, part.at + part.child.frames), 0);
@@ -188,6 +205,7 @@ const planNoise = (node: Noise, at: At): Planned => {
   return { frames, fill: (out) => noise(out, frames, node.color, seed) };
 };
 
+/** A struck note's attack when none is written, in seconds. */
 const STRIKE_ATTACK = 0.006;
 
 const planPartials = (node: Partials, at: At): Planned => {
@@ -202,6 +220,7 @@ const planPartials = (node: Partials, at: At): Planned => {
   return { frames, fill: (out) => strike(out, frames, hz, modes, struck, seed) };
 };
 
+/** No frames: what a sample the resolve walk has not found plays (it refuses that sound first). */
 const SILENT: Planned = { frames: 0, fill: () => undefined };
 
 const planSample = (node: Sample, at: At): Planned => {
@@ -308,6 +327,7 @@ const planFilter = (node: Filter, at: At): Planned => {
   });
 };
 
+/** The largest of a track's first `n` frames. */
 const largest = (x: Float64Array, n: number): number => {
   let most = 0;
   for (let i = 0; i < n; i++) most = Math.max(most, x[i] ?? 0);
@@ -400,6 +420,7 @@ const planSequence = (node: Sequence, at: At): Planned => {
   return mixOf(at.render.kit, parts);
 };
 
+/** A Poisson process's onsets in frames: intervals drawn in order, until `secs` or its cap. */
 const poissonOnsets = (rate: number, secs: number, seed: number): ReadonlyArray<number> => {
   const r = rng(seed);
   const end = framesOf(secs);
@@ -415,6 +436,7 @@ const poissonOnsets = (rate: number, secs: number, seed: number): ReadonlyArray<
   return onsets;
 };
 
+/** A repeat's onsets in frames, each rounded once from its own time. */
 const onsetsOf = (timing: Repeat['timing'], at: Draws): ReadonlyArray<number> =>
   Match.valueTags(timing, {
     Count: (t) => {
@@ -447,6 +469,7 @@ const planRepeat = (node: Repeat, at: At): Planned =>
     })),
   );
 
+/** `node` planned at `slot` of `render`. */
 export const planNode = (node: Node, slot: Slot, render: Render): Planned => {
   const at = placed(node, slot, render);
   return Match.valueTags(node, {

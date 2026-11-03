@@ -1,3 +1,16 @@
+/** The adapter's caching discipline, without the model.
+ *
+ *  §9.5's embedder is loaded lazily, and *when* a failed load is remembered is a
+ *  correctness property rather than a performance one: `Effect.cached` caches
+ *  the result including failures and indefinitely, so a reader who searched once
+ *  while the model was still downloading would get `EmbedderUnavailable` for the
+ *  rest of the process's life — including long after the download finished.
+ *
+ *  Driving this through the real loader would make the test a 300M-parameter
+ *  download, so the cell is tested directly against a counting loader that fails
+ *  once and then succeeds. That is the exact sequence the trap describes.
+ */
+
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Ref } from 'effect';
 

@@ -4,8 +4,10 @@ import { HttpClient, HttpClientResponse } from 'effect/http';
 import { PuppetImagesBrowser } from './images-browser.ts';
 import { PuppetImages } from './images.ts';
 
+/** The page's globals the test stands in for. */
 const GLOBALS = ['createImageBitmap', 'document'] as const;
 
+/** A page whose decoder hands back 2 × 2 bitmaps it counts the closes of, and whose canvases have no 2D context. */
 const pageWithNo2d = Effect.acquireRelease(
   Effect.sync(() => {
     const saved = GLOBALS.map(
@@ -32,6 +34,7 @@ const pageWithNo2d = Effect.acquireRelease(
     }),
 );
 
+/** A client that answers every URL with a PNG's first bytes. */
 const pngBytes = Layer.succeed(
   HttpClient.HttpClient,
   HttpClient.make((request) =>

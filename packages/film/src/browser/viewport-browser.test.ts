@@ -3,6 +3,7 @@ import { Duration, Effect, Option, Stream } from 'effect';
 import { Viewport } from './viewport.ts';
 import { viewportLayer } from './viewport-browser.ts';
 
+/** A window whose answer to every query is `matches`, changed (and told) by `set`. */
 const fakeWindow = (matches: boolean) => {
   const list = Object.assign(new EventTarget(), { matches, media: '' });
   const set = (to: boolean) => {
@@ -12,6 +13,7 @@ const fakeWindow = (matches: boolean) => {
   return { list, set };
 };
 
+/** Runs `effect` with `matchMedia` answered by `list`, the window's own put back after. */
 const withWindow = <A, E, R>(list: EventTarget, effect: Effect.Effect<A, E, R>) =>
   Effect.acquireUseRelease(
     Effect.sync(() => {

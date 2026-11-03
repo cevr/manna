@@ -14,8 +14,13 @@ import {
   unprobed,
 } from './probe.ts';
 
+/**
+ * A stand-in context (bun has no canvas): attaching and detaching a probe only
+ * keys a WeakMap by it, and no draw here touches it.
+ */
 const context = (): CanvasRenderingContext2D => Schema.decodeSync(Schema.Any)({});
 
+/** A stand-in context the probe can read: an identity transform, full opacity. */
 const drawable = (): CanvasRenderingContext2D =>
   Schema.decodeSync(Schema.Any)({
     globalAlpha: 1,
@@ -24,6 +29,7 @@ const drawable = (): CanvasRenderingContext2D =>
 
 const probe = (): Probe => ({ sink: { texts: [], inks: [] }, scene: 'a', dx: 0, alpha: 1 });
 
+/** A hand's grip as the hand declares it: all hold, or half way from hold to palm. */
 const HOLD = { open: 0, hold: 1, point: 0, palm: 0 } as const;
 const TURNING = { open: 0, hold: 0.5, point: 0, palm: 0.5 } as const;
 
@@ -126,6 +132,7 @@ describe('probe', () => {
 });
 
 describe('probeHand', () => {
+  /** A context scaled 2× and moved (100, 50): what the person's units land on. */
   const placed = (): CanvasRenderingContext2D =>
     Schema.decodeSync(Schema.Any)({
       globalAlpha: 0.5,

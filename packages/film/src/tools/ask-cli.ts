@@ -8,6 +8,7 @@ import { ASK_WAIT_PACE, type AskFeed, AskLatch, askLines, waitForAsk } from './a
 import { isLostLab, labClient, labUrl } from './lab-client.ts';
 import { labFeed } from './lab-stream.ts';
 
+/** A wait asked two ways at once, or neither. */
 class AskWaitInvalid extends Schema.TaggedError<AskWaitInvalid>()('AskWaitInvalid', {
   reason: Schema.String,
 }) {
@@ -18,6 +19,7 @@ class AskWaitInvalid extends Schema.TaggedError<AskWaitInvalid>()('AskWaitInvali
 
 const readJson = Schema.encodeSync(Schema.fromJsonString(AskRead));
 
+/** What a wait is asked to end on, from its argument and flags, or why they do not fit together. */
 const latchOf = (input: {
   readonly ask: Option.Option<string>;
   readonly step: Option.Option<string>;

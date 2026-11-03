@@ -16,6 +16,7 @@ import { setsReads } from './sets-mcp.ts';
 
 const out = '/out/f';
 
+/** A video of `address` at `clip` (relative to the film's folder), as an agent records it. */
 const videoAt = (address: Render['address'], clip: string): Omit<Render, 'at'> => ({
   address,
   variant: MAIN_VARIANT,
@@ -34,6 +35,7 @@ const videoAt = (address: Render['address'], clip: string): Omit<Render, 'at'> =
   sound: Option.none(),
 });
 
+/** Segment `key` kept whole in the film's cache. */
 const kept = (key: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -51,6 +53,7 @@ const kept = (key: string) =>
     );
   });
 
+/** Film `f` in memory, with two videos in its folder; the lab's roots hold `/out`. */
 const lab = () => {
   const files = new Map([
     ['/films/f/scenes/index.ts', text('export {};\n')],

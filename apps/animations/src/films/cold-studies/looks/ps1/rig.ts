@@ -3,6 +3,11 @@ import { WebGLRenderer } from 'three';
 import { type World, world } from './shade.ts';
 import { type Textures, textures } from './textures.ts';
 
+/**
+ * The internal resolution: the console's 320-pixel width at 16:9, so a
+ * 1080p frame is exactly 6 × and the half-scale review render 3 × (no
+ * uneven pixel columns).
+ */
 export const LOW = { w: 320, h: 180 } as const;
 
 export interface Rig {
@@ -14,6 +19,7 @@ export interface Rig {
 
 const rigs = new WeakMap<WebGL2RenderingContext, Rig>();
 
+/** The rig, made the first time; none where no WebGL 2 context can be made (`check --draw`'s stand-in). */
 export const rigOf = (): Rig | undefined => {
   const gl = glCanvas('cold-studies/ps1', LOW.w, LOW.h);
   if (gl === undefined) return undefined;
@@ -27,6 +33,7 @@ export const rigOf = (): Rig | undefined => {
   return made;
 };
 
+/** One set built for a rig and kept with it: `build` runs once per rig. */
 export const keptFor = <S>(build: (r: Rig) => S) => {
   const sets = new WeakMap<Rig, S>();
   return (r: Rig): S => {
@@ -38,6 +45,7 @@ export const keptFor = <S>(build: (r: Rig) => S) => {
   };
 };
 
+/** The rendered canvas over the whole frame, scaled up nearest-neighbour. */
 export const present = (
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,

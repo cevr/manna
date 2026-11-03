@@ -24,6 +24,7 @@ const FILM = [
 
 const text = (s: string) => new TextEncoder().encode(s);
 
+/** The drafts under `/series`, over `files` in memory. */
 const drafts = (files: Map<string, Uint8Array>, root = Option.some('/series')) =>
   SeriesDrafts.layer(root).pipe(
     Layer.provide([storeLayer(files), memoryFileSystem(files), Path.layer]),
@@ -39,6 +40,7 @@ const seeded = () =>
     ['/series/README.md', text('# Series\n')],
   ]);
 
+/** `files` in memory, and beside the series a link to nothing: listed, its `stat` not found. */
 const dangling = (files: Map<string, Uint8Array>) =>
   Layer.effect(
     FileSystem.FileSystem,
@@ -69,6 +71,7 @@ const dangling = (files: Map<string, Uint8Array>) =>
     ),
   ).pipe(Layer.provide(memoryFileSystem(files)));
 
+/** `files` in memory, but a folder the box may not read: `readDirectory` refused. */
 const unreadable = (files: Map<string, Uint8Array>) =>
   Layer.effect(
     FileSystem.FileSystem,

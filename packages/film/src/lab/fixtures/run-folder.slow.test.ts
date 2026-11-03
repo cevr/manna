@@ -5,6 +5,7 @@ import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { namingFolder, namingProcesses, runFolder } from './run-folder.ts';
 
+/** The timeout of a test that starts a process of its own: a cold start's time is the machine's. */
 const SPAWNS_MS = 30_000;
 
 describe("an e2e run's folder", () => {

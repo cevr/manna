@@ -23,6 +23,7 @@ import { castFolder } from './cast-library.ts';
 import { FilmFolder, filmNamed, importFilmModule } from './film-repo.ts';
 import { decodePng } from './png.ts';
 
+/** A fit that cannot be made: an unknown view or puppet, a table or sheet that does not load. */
 class FitRefused extends Schema.TaggedError<FitRefused>()('FitRefused', {
   member: Schema.String,
   reason: Schema.String,
@@ -32,10 +33,12 @@ class FitRefused extends Schema.TaggedError<FitRefused>()('FitRefused', {
   }
 }
 
+/** How far a fit turns a bone, degrees: the most a mesh bends; a bigger move is a drawn key. */
 const REACH = 15;
 
 const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
+/** Six places after the point: a fit's numbers as the record keeps them. */
 const kept = (v: number) => Math.round(v * 1e6) / 1e6;
 
 export const fit = Command.make(

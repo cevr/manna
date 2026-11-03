@@ -9,23 +9,35 @@ import { targetBoxes } from '../../src/lab/fixtures/touch-targets.ts';
 import { faceHold } from '../../src/player/face.ts';
 import { ASK_READY, DEVICES, SLOW } from './studio-states.ts';
 
+/**
+ * How far, in CSS px, a target's edge or size may move after the first
+ * painted frame: half a pixel, the most an edge moves without its painted
+ * edge jumping a whole pixel.
+ */
 const SHIFT_PX = 0.5;
 
+/** The hold on the page's root, as the page server writes it: the attribute it shows the root by, its cap. */
 const { shown: FACES_SHOWN, capMs: FACE_CAP_MS } = faceHold(`[${PAGE_ROOT}]`);
 
+/** The UI faces' families: Geist, which `--font` names first, and Geist Mono, which `--font-mono` does. */
 const FAMILIES = ['Geist', 'Geist Mono'];
 
+/** Face `family`'s files in the page's fonts. */
 const filesOf = (family: string) =>
   `[...document.fonts].filter((f) => f.family.replaceAll('"', '') === '${family}')`;
 
+/** The UI faces' files in the page's fonts. */
 const UI_FACES = `[${FAMILIES.map((family) => `...${filesOf(family)}`).join(', ')}]`;
 
+/** Each UI face has a file loaded: the first paint's, its latin. */
 const EACH_LOADED = FAMILIES.map(
   (family) => `${filesOf(family)}.some((f) => f.status === 'loaded')`,
 ).join(' && ');
 
+/** The page's root, where its components mount. */
 const ROOT = `document.querySelector('[${PAGE_ROOT}]')`;
 
+/** The width of a line named in `family` alone, `serif` while its file has not landed. */
 const ALONE = `[${FAMILIES.map(
   (family) => `(() => {
     const probe = document.createElement('span');
@@ -38,8 +50,18 @@ const ALONE = `[${FAMILIES.map(
   })()`,
 ).join(', ')}]`;
 
+/** The label a case looks at while the faces are held: marked by `ARM`. */
 const LABEL = '[data-face-label]';
 
+/**
+ * Run once the root is in the page, while the faces are held: marks the
+ * first label in the root (a button or link with words, inside the viewport)
+ * as `LABEL`, keeps the line set in each face alone (`__alone`), and arms
+ * the record of the first painted frame: at the moment the root is shown
+ * (`FACES_SHOWN` set), before the frame it shows in paints, how it was
+ * shown, whether each face had loaded, and every target's box
+ * (`targetBoxes`), kept as `__first`. True once armed.
+ */
 const ARM = `(() => {
   if (window.__armed) return true;
   const root = ${ROOT};
@@ -65,10 +87,21 @@ const ARM = `(() => {
   return true;
 })()`;
 
+/** How the root is shown (`FACES_SHOWN`), `none` while it is not. */
 const SHOWN = `(document.documentElement.getAttribute('${FACES_SHOWN}') ?? 'none')`;
 
+/**
+ * The page while the faces are held: the root's computed visibility, how
+ * it is shown, whether the UI faces' files are on the page, and how many
+ * have loaded.
+ */
 const HELD = `[getComputedStyle(${ROOT}).visibility, ${SHOWN}, ${UI_FACES}.length > 0, ${UI_FACES}.filter((f) => f.status === 'loaded').length]`;
 
+/**
+ * `then` read once the fonts have settled and two frames have painted
+ * since: started once, its answer kept on the page as `__settled` (true
+ * once there).
+ */
 const settled = (then: string) => `(() => {
   window.__settling ??= document.fonts.ready
     .then(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))))
@@ -76,6 +109,13 @@ const settled = (then: string) => `(() => {
   return window.__settled !== undefined;
 })()`;
 
+/**
+ * The page once the faces have landed, against its first painted frame
+ * (`__first`): how the root was shown and whether each face had loaded by
+ * then, whether each line named in a face alone changed since it was held
+ * (so the held page truly had no face), and each target whose edge or size
+ * moved more than `SHIFT_PX` since that frame, as `target: first → now`.
+ */
 const AGAINST_FIRST = `(() => {
   const first = window.__first;
   const now = ${targetBoxes('exact')};
@@ -96,12 +136,14 @@ const AGAINST_FIRST = `(() => {
   ];
 })()`;
 
+/** What `AGAINST_FIRST` answers of a page whose first painted frame was in its faces and stood still. */
 const STILL = [
   'shown in',
   'each face loaded at the first paint true',
   ...FAMILIES.map((_, i) => `held without face ${i} true`),
 ];
 
+/** The page's line that its root was shown in the fallbacks. */
 const LATE = `[lab] fonts.late reason=cap cap_ms=${FACE_CAP_MS}`;
 
 for (const device of DEVICES) {

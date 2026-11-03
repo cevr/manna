@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { fbm, hash, hash2, noise1, rng, seedOf } from './random.ts';
 
+/** The 2D value noise `fbm` stacks: one octave of it. */
 const noise2 = (x: number, y: number, seed: number) => fbm(x, y, seed, 1);
 
+/** Evenly spread sample points, negative and fractional included. */
 const XS = Array.from({ length: 200 }, (_, i) => (i - 100) * 0.37);
 
 describe('random', () => {

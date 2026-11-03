@@ -1,3 +1,31 @@
+/**
+ * `bun run audio:upload --set DIR [--dry-run]`: a rendered set of hymn
+ * recordings (`packages/hymnal/scripts/render/`) into the R2 bucket, under
+ * `audio/<set>/sdah/<n>.mp3`, beside the copied recordings.
+ *
+ * 1. Read the set's `manifest.json` and refuse it unless it is a set the
+ *    app plays (`RECORDING_SETS`) and holds exactly its hymns once, each
+ *    passed: every hymn 1 to 695 for `warm-1`, hymn 663 alone for `warm-2`
+ *    (`./upload-plan.ts`).
+ * 2. Read every MP3 of the set and refuse the set if any is missing or its
+ *    sha256 or MD5 is not the manifest's: nothing is uploaded from a set that
+ *    does not match its manifest.
+ * 3. List the set's prefix in R2 once (a dry run lists nothing and never
+ *    touches R2 or the credentials).
+ * 4. Plan each hymn: keep, upload or conflict. A conflict is a key R2 holds
+ *    with other bytes; it is never replaced, and the run says to render the
+ *    hymn into a later set.
+ * 5. Upload, 4 at a time, as `audio/mpeg` with a year's `immutable` cache;
+ *    R2's answer must carry the manifest's MD5 and size.
+ * 6. List the prefix again and check every hymn.
+ *
+ * A failed hymn never stops the others; the run fails at the end unless
+ * every hymn is verified. The last line sums it:
+ * `audio-upload <run|dry-run> set=<set> kept K uploaded U conflict C failed F verified V/N`, N the set's hymns.
+ *
+ * A real run writes with the owner's Alchemy Cloudflare profile, as
+ * `./copy.ts` does.
+ */
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { ManifestJson, type RecordingManifest } from '@manna/hymnal/recording-manifest';
@@ -18,6 +46,7 @@ import {
   setPrefix,
 } from './upload-plan.ts';
 
+/** The set could not be uploaded at all: its manifest or its files refused, with why. */
 export class UploadRefused extends Schema.TaggedError<UploadRefused>()('UploadRefused', {
   reasons: Schema.Array(Schema.String),
 }) {
@@ -26,6 +55,7 @@ export class UploadRefused extends Schema.TaggedError<UploadRefused>()('UploadRe
   }
 }
 
+/** The run ended with a hymn failed, in conflict or not verified. */
 export class UploadIncomplete extends Schema.TaggedError<UploadIncomplete>()('UploadIncomplete', {
   failed: Schema.Finite,
   conflict: Schema.Finite,
@@ -51,6 +81,7 @@ const sha256Hex = (bytes: Uint8Array) => {
   return hasher.digest('hex');
 };
 
+/** The set's manifest, refused unless it reads and can be uploaded. */
 const readManifest = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -67,6 +98,7 @@ const readManifest = (dir: string) =>
     return manifest;
   });
 
+/** A hymn's MP3 as the set holds it, or why it is not the manifest's. */
 const readHymn = (dir: string, hymn: RecordingManifest['hymns'][number]) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -87,6 +119,7 @@ const readHymn = (dir: string, hymn: RecordingManifest['hymns'][number]) =>
     return bytes;
   });
 
+/** Every MP3 of the set read once and held to the manifest; the set is refused on any miss. */
 const checkFiles = (dir: string, manifest: RecordingManifest) =>
   Effect.gen(function* () {
     const misses = yield* Effect.forEach(
@@ -107,6 +140,7 @@ const failed = (hymn: number, reason: string) =>
     Effect.as(Outcome.Failed({ hymn })),
   );
 
+/** Upload one hymn and check R2 stored the manifest's MD5 and size. */
 const put = (dir: string, item: Extract<UploadItem, { readonly _tag: 'Upload' }>) =>
   Effect.gen(function* () {
     const target = yield* Target;
@@ -136,6 +170,7 @@ const act = (dir: string) => (item: UploadItem) =>
 const count = (outcomes: ReadonlyArray<Outcome>, tag: Outcome['_tag']) =>
   outcomes.filter((outcome) => outcome._tag === tag).length;
 
+/** The hymns R2 holds as the manifest has them: the run's last check. */
 const verify = (manifest: RecordingManifest) =>
   Effect.gen(function* () {
     const target = yield* Target;
@@ -160,6 +195,7 @@ const summary = (
     `audio-upload ${mode} set=${manifest.set} kept ${n.kept} uploaded ${n.uploaded} conflict ${n.conflict} failed ${n.failed} verified ${n.verified}/${manifest.hymns.length}`,
   );
 
+/** Read and check the set, R2 never: what a run would upload. */
 export const dryRun = (set: string) =>
   Effect.gen(function* () {
     const dir = (yield* Path.Path).resolve(set);
@@ -178,6 +214,7 @@ export const dryRun = (set: string) =>
     });
   });
 
+/** Upload every hymn of the set R2 lacks, then check R2 holds them all. */
 export const run = (set: string) =>
   Effect.gen(function* () {
     const dir = (yield* Path.Path).resolve(set);

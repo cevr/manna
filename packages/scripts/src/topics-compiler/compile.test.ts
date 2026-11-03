@@ -5,6 +5,10 @@ import { describe, expect, it } from 'effect-bun-test';
 import { compileTopics, type CatalogLookup, type ParagraphLookup } from './compile.js';
 import { parseTopicSource, type TopicSource } from './source.js';
 
+/** A writings database holding exactly the paragraphs a test declares. The
+ *  compiler's citation pass is the whole point of these fixtures, so the
+ *  approved pages here carry synthetic refcodes rather than depending on a
+ *  developer having any particular EGW book installed. */
 const paragraphs = (entries: Readonly<Record<string, readonly string[]>>): ParagraphLookup => ({
   paragraphsFor: (refcode) =>
     Effect.succeed(
@@ -23,6 +27,12 @@ const catalog = (entries: Readonly<Record<string, readonly string[]>>): CatalogL
     ),
 });
 
+/** Renders a failed exit's tagged error — tag and fields both — so a test can
+ *  assert which error the compiler raised and on which value, without
+ *  pattern-matching every error shape by hand. `Cause.pretty` shows only the
+ *  tag, and the field is exactly what these assertions are about. A successful
+ *  exit renders empty, which fails the assertion the same way a wrong error
+ *  would. */
 const FailureText = Schema.encodeUnknownSync(
   Schema.Unknown.pipe(
     Schema.encodeTo(Schema.String, {
@@ -414,6 +424,10 @@ describe('alias normalization', () => {
 });
 
 describe('content revision digest', () => {
+  /** Every authored frontmatter field, and the body, must move the digest:
+   *  `content_revision` is derived from it, and an unchanged revision tells the
+   *  supply pipeline the installed artifact is already current — so a field the
+   *  digest ignores is a field an edit to which never reaches a host. */
   interface Page {
     readonly slug: string;
     readonly title: string;
@@ -579,7 +593,13 @@ describe('citation text', () => {
   );
 });
 
+/** The pre-pass runs before CommonMark, so it has to honour the two places
+ *  CommonMark keeps text literal — code, and backslash escapes. Without that it
+ *  rewrites the very text an author marked as "show this, do not use it". */
 describe('protected markdown', () => {
+  /** Counts the inline nodes of one tag across a compiled page's thesis. Reads
+   *  the typed tree rather than a rendered string, so a test says exactly which
+   *  node kind it means. */
   const tagCount = (blocks: readonly Block[], tag: Inline['_tag']): number => {
     let found = 0;
     const walk = (content: readonly Inline[]): void => {

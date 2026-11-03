@@ -1,3 +1,30 @@
+/** Resumable embedding for the vector compiler.
+ *
+ *  The full EGW scope is ~11 hours of single-threaded ONNX inference, and the
+ *  first release run died mid-flight — an all-or-nothing pass is the wrong
+ *  shape for a job that long. This module makes the embed loop restartable:
+ *
+ *  - vectors append to `<out>.part` as they are produced, one flush per
+ *    `FLUSH_EVERY` rows, so at most one flush window of work is ever lost;
+ *  - `<out>.checkpoint.json` records how far the part file is *known good*
+ *    (count, fingerprint, dimensions, and the identity of the last row), and
+ *    is rewritten after every flush;
+ *  - on start, a checkpoint that matches the current source order resumes the
+ *    loop at `completed`; anything inconsistent — different fingerprint, a
+ *    source whose row at `completed - 1` is not the recorded identity, a part
+ *    file shorter than the checkpoint claims — discards the pair and starts
+ *    clean.
+ *
+ *  A part file *longer* than the checkpoint claims is the crash window between
+ *  "bytes appended" and "checkpoint rewritten": the tail is unaccounted for,
+ *  so it is truncated back to the last checkpointed byte rather than trusted.
+ *
+ *  Resumability leans on the source being deterministic: `readVectorSource`
+ *  orders by `(book_code, puborder)`, and the writings database does not
+ *  change under a build. The identity check on the last completed row is what
+ *  turns that assumption into a verified precondition.
+ */
+
 import { DIMENSIONS, MODEL_FINGERPRINT, QueryEmbedder } from '@manna/core/search';
 import { Clock, Console, Effect, FileSystem, Option, Schema } from 'effect';
 
@@ -5,15 +32,19 @@ import { paragraphIdentity } from '@manna/core/egw-db';
 
 import type { VectorSourceRow } from './emit.js';
 
+/** §9.2's join key for one source row — the same derivation `emit.ts` uses. */
 const identityOf = (row: VectorSourceRow): string =>
   paragraphIdentity(row.bookCode, Option.some(row.paraId), row.refcode);
 
+/** Rows between flushes. At ~25 rows/s this is ~20 seconds of exposure. */
 const FLUSH_EVERY = 500;
 
 class VectorCheckpoint extends Schema.Class<VectorCheckpoint>('VectorCompiler/VectorCheckpoint')({
   fingerprint: Schema.NonEmptyString,
   dimensions: Schema.Finite.pipe(Schema.check(Schema.isInt(), Schema.isGreaterThan(0))),
+  /** Rows fully embedded and flushed to the part file. */
   completed: Schema.Finite.pipe(Schema.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0))),
+  /** Identity of row `completed - 1`, the resume-order witness. */
   lastIdentity: Schema.NonEmptyString,
 }) {}
 
@@ -28,6 +59,7 @@ class CompilerEmbedError extends Schema.TaggedError<CompilerEmbedError>()('Compi
 export const partPath = (out: string): string => `${out}.part`;
 export const checkpointPath = (out: string): string => `${out}.checkpoint.json`;
 
+/** Where to pick the loop back up, verified against the current source. */
 const resumePoint = (
   rows: readonly VectorSourceRow[],
   out: string,
@@ -84,6 +116,13 @@ const resumePoint = (
     return checkpoint.completed;
   });
 
+/** One log line per flush: absolute progress, percent, session rate, ETA.
+ *
+ *  Rate counts only rows embedded by *this* process (`done - startRow`), so a
+ *  resumed run reports its own speed rather than a number inflated by work a
+ *  previous run already banked. Written to stderr like the rest of the
+ *  progress channel — stdout carries the `--json` manifest.
+ */
 const reportProgress = (input: {
   readonly startedAt: number;
   readonly startRow: number;
@@ -105,6 +144,7 @@ const reportProgress = (input: {
     );
   });
 
+/** Embeds every row, checkpointing as it goes; returns the full vector set. */
 export const embedAllResumable = (
   rows: readonly VectorSourceRow[],
   out: string,
@@ -175,6 +215,7 @@ export const embedAllResumable = (
     return new Int8Array(bytes.buffer, bytes.byteOffset, bytes.length);
   });
 
+/** Removes the working files once the final artifact is written. */
 export const clearCheckpoint = (out: string): Effect.Effect<void, never, FileSystem.FileSystem> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

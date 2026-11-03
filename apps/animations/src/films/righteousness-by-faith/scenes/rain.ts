@@ -8,7 +8,9 @@ import { FARMER_ARM, FARMER_HANDS, FARMER_KNOBS } from '../rigs/farmer-rig.ts';
 import { PANEL } from '../rigs/farmer-traced.ts';
 import { farmerHandProp, farmerProp } from '../rigs/rigs.ts';
 
+/** Waiting at the field's edge: easy, hopeful, the start of a smile. */
 const WAITING: Expression = { ...EASE, browY: -0.6, browTilt: 0.18, mouth: 1.2 };
+/** His face lifted to the rain, as rain.rain draws it: the brows up and in, glad. */
 const LIFTED: Expression = {
   ...EASE,
   browY: -2.4,
@@ -16,11 +18,15 @@ const LIFTED: Expression = {
   mouth: 2.8,
 };
 
+/** His feet and his size in the field: rain.rain's own, his face at a third of the frame, cut at his knees. */
 const FARMER_AT: Pt = [PANEL.feet[0], PANEL.feet[1]];
 const FARMER_SCALE = 1 / PANEL.scale;
+/** His hands' size against the hand rig's: rain.rain's, 66 panel pixels across inside their ink. */
 const HAND = 0.96;
+/** Where he looks, from his feet in his units: across the field, then up into the rain. */
 const GAZE = { field: [320, -380], up: [230, -640] } as const satisfies Record<string, Pt>;
 
+/** The court's pose for the callback: no one at the table; the bench's light over it. */
 const POSE = (() => {
   const p = restPose();
   p.prosecutor.shown = 0;
@@ -31,6 +37,7 @@ const POSE = (() => {
   return p;
 })();
 
+/** The farmer's numbers (scratch: rewritten each frame). */
 const FN: Record<keyof typeof FARMER_KNOBS, number> = { ...FARMER_KNOBS };
 
 export const rain = drawing({
@@ -168,6 +175,7 @@ export const rain = drawing({
   },
 });
 
+/** The bench's light laid across the table toward the dock, as far as it has run (`amount`). */
 const beam = (ctx: CanvasRenderingContext2D, amount: number) => {
   if (amount <= 0) return;
   const front = lerp(BENCH_BEAM.from, BENCH_BEAM.to, amount);

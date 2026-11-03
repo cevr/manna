@@ -6,7 +6,9 @@ import { useRenderElement } from '../internals/useRenderElement.tsx';
 import { useToastRootContext } from './ToastRootContext.ts';
 
 interface ToastContentState {
+  /** Whether the toast viewport is expanded. */
   expanded: boolean;
+  /** Whether the toast is behind the frontmost toast in the stack. */
   behind: boolean;
 }
 

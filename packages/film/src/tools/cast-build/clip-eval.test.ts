@@ -6,6 +6,7 @@ import { memoryFileSystem } from '../host/testing.ts';
 import { decodePng } from '../png.ts';
 import { CANVAS, declaredBands, rasterOfRgb24, writeCanvases } from './clip-eval.ts';
 
+/** A `w` × `h` raster, each pixel's grey from `at`. */
 const grey = (w: number, h: number, at: (x: number, y: number) => number): Raster => {
   const rgba = new Uint8Array(w * h * 4);
   for (let y = 0; y < h; y++)
@@ -13,6 +14,7 @@ const grey = (w: number, h: number, at: (x: number, y: number) => number): Raste
   return { width: w, height: h, rgba };
 };
 
+/** A 12 × 12 paper frame with the box `[left, top, right, bottom)` inked. */
 const inked = (l: number, t: number, r: number, b: number) =>
   grey(12, 12, (x, y) => 235 - 205 * Number(x >= l && x < r && y >= t && y < b));
 

@@ -1,11 +1,18 @@
 import type { Pt } from '@manna/film/style';
 
+/**
+ * The panel's pixels to the cast's canon: 0.555 units a pixel, about his
+ * head's centre (the head's papers) or his feet (the body's), his feet 450
+ * units under his headcloth's top as the cast's height band stands him,
+ * below the panel's foot (it cuts him at his knees).
+ */
 export const PANEL = { scale: 0.555, head: [445, 410], feet: [440, 1100.5] } as const satisfies {
   readonly scale: number;
   readonly head: Pt;
   readonly feet: Pt;
 };
 
+/** His headcloth, its outer edge on the inner edge of the panel's ink: the cap over his head down to the band, and the flap down his near side over his shoulder, cut square at its foot; its inner edge runs under the band and down his near cheek. */
 export const CLOTH: Pt[] = [
   [304, 412],
   [312, 400],
@@ -56,6 +63,16 @@ export const CLOTH: Pt[] = [
   [311, 430],
 ];
 
+/**
+ * The cloth's dark edge down his near cheek, from the band to his shoulder,
+ * as the panel paints it: 10 pixels at his eyes, widening to his jaw beside
+ * the beard, then narrowing under the beard so that it and the head's ink
+ * read as the one dark band the panel draws down to the vest (19 pixels).
+ * A paper of its own over the cloth, its inner side 2 pixels past the
+ * cloth's edge, so the face tucks under it and no cloth shows between it
+ * and the ink. Its sides carry points along their length so the smooth path
+ * keeps to them.
+ */
 export const CLOTH_EDGE: Pt[] = [
   [374, 372],
   [391, 356],
@@ -81,6 +98,11 @@ export const CLOTH_EDGE: Pt[] = [
   [377, 392],
 ];
 
+/**
+ * The cloth's edge in the light, as the panel paints it: a warm brown down
+ * to his eyes' height, a darker brown to his cheek, its own dark from there
+ * to the beard. Laid on the edge.
+ */
 export const CLOTH_EDGE_BROWN: Pt[] = [
   [360, 340],
   [400, 340],
@@ -94,6 +116,7 @@ export const CLOTH_EDGE_DUSK: Pt[] = [
   [360, 446],
 ];
 
+/** The band round his head, measured on the panel's columns: across his brow from the knot at his far temple, dropping steeply round his near side, thickening to its end at the back of his head. */
 export const BAND: Pt[] = [
   [508, 324],
   [500, 320],
@@ -133,6 +156,7 @@ export const BAND: Pt[] = [
   [509, 337],
 ];
 
+/** The band's near end, lit on its outer side where it turns round his head toward the window: laid on the band. */
 export const BAND_LIT: Pt[] = [
   [352, 352],
   [350, 362],
@@ -148,6 +172,11 @@ export const BAND_LIT: Pt[] = [
   [330, 355],
 ];
 
+/**
+ * The headcloth's front edge showing under the band across his brow, as
+ * rain.rain paints it: a tan strip 9 pixels deep along the band's lower edge.
+ * Laid on his face, under the band.
+ */
 export const CLOTH_BROW: Pt[] = [
   [383, 368],
   [400, 355],
@@ -169,6 +198,7 @@ export const CLOTH_BROW: Pt[] = [
   [383, 379],
 ];
 
+/** His face's paper: from under the band, its far edge the silhouette, under the beard and the cloth's edge. */
 export const FACE: Pt[] = [
   [401, 338],
   [429, 332],
@@ -195,6 +225,12 @@ export const FACE: Pt[] = [
   [385, 350],
 ];
 
+/**
+ * The shade down the far side of his nose, the nose turned toward screen
+ * right: a chevron under his far eye, its point out toward his far cheek
+ * (the panel's: half an eye spacing below the eyes, half an eye spacing
+ * across). Laid on his face.
+ */
 export const NOSE: Pt[] = [
   [494, 401],
   [504, 409],
@@ -212,6 +248,13 @@ export const NOSE: Pt[] = [
   [490, 405],
 ];
 
+/**
+ * The shade down his near cheek, against the cloth's edge: a wedge, 5
+ * pixels wide 15 under the band, 8 at his eyes, 16 at mid-nose and about
+ * 30 at the beard, its inner edge a slant (the panel's samples). Laid on
+ * his face; `CHEEK_SOFT`, a step between it and the lit skin, softens its
+ * inner edge.
+ */
 export const CHEEK_SHADE: Pt[] = [
   [372, 378],
   [388, 381],
@@ -233,10 +276,12 @@ export const CHEEK_SHADE: Pt[] = [
   [372, 440],
 ];
 
+/** The cheek shade's inner edge, 4 pixels wider: a half step from the shade to the lit skin, laid under it. */
 export const CHEEK_SOFT: Pt[] = CHEEK_SHADE.map(([x, y], i): Pt =>
   i >= 1 && i <= 15 ? [x + 4, y + (i === 1 ? -1 : 0)] : [x, y],
 );
 
+/** His beard: round under his jaw, up his near cheek to the cloth, his moustache over his mouth. */
 export const BEARD: Pt[] = [
   [376, 440],
   [385, 441],
@@ -263,6 +308,7 @@ export const BEARD: Pt[] = [
   [375, 468],
 ];
 
+/** His lower lip under the smile, in the beard. */
 export const LIP: Pt[] = [
   [468, 488],
   [472, 472],
@@ -274,6 +320,7 @@ export const LIP: Pt[] = [
   [494, 485],
 ];
 
+/** His face's marks, panel pixels: each eye's centre and size, each brow's ends, the mouth's ends and its middle. */
 export const MARKS = {
   eyes: [
     [443.9, 406.4],
@@ -298,6 +345,7 @@ export const MARKS = {
   mouthLine: 4.5,
 } as const;
 
+/** His tunic: from under his beard, the neck's far side down to his shoulders turned, his near side under his sleeve, his far side straight down past his raised arm to the hem. */
 export const TUNIC: Pt[] = [
   [380, 476],
   [420, 492],
@@ -329,6 +377,7 @@ export const TUNIC: Pt[] = [
   [350, 548],
 ];
 
+/** His vest's near front, from his shoulder to the hem, its outer edge where the panel draws it, widening below his hand's height to his side. */
 export const VEST_NEAR: Pt[] = [
   [322, 568],
   [345, 558],
@@ -351,6 +400,7 @@ export const VEST_NEAR: Pt[] = [
   [326, 598],
 ];
 
+/** His vest's far front, turned from the light. */
 export const VEST_FAR: Pt[] = [
   [500, 552],
   [512, 580],
@@ -372,6 +422,7 @@ export const VEST_FAR: Pt[] = [
   [522, 566],
 ];
 
+/** The tunic's far half between the vest's fronts, past its crease, which slants from under his neck down toward his near knee as the panel draws it. */
 export const TUNIC_FOLD: Pt[] = [
   [476, 600],
   [500, 600],
@@ -391,6 +442,7 @@ export const TUNIC_FOLD: Pt[] = [
   [481, 660],
 ];
 
+/** His neck in the tunic's V under his beard, the V's point sharp (its points close about it). */
 export const NECK: Pt[] = [
   [376, 470],
   [500, 500],
@@ -402,6 +454,11 @@ export const NECK: Pt[] = [
   [380, 552],
 ];
 
+/**
+ * His near sleeve on the tunic, as the panel paints it: from under his
+ * headcloth's flap down his near side to its cuff above his near hand, in
+ * from the tunic's lit edge, its inner side under the vest's outer edge.
+ */
 export const NEAR_SLEEVE: Pt[] = [
   [326, 566],
   [316, 590],
@@ -419,6 +476,12 @@ export const NEAR_SLEEVE: Pt[] = [
   [326, 598],
 ];
 
+/**
+ * His far arm in its sleeve, raised to the rain as the panel draws it: its
+ * top edge from his side up to the hand, the cuff's end under the hand, its
+ * underside back to his side, and its root inside the tunic, where it turns
+ * on `ARM_PIVOT` without leaving the tunic's paper.
+ */
 export const FAR_SLEEVE: Pt[] = [
   [578, 690],
   [600, 679],
@@ -440,6 +503,7 @@ export const FAR_SLEEVE: Pt[] = [
   [565, 672],
 ];
 
+/** The light along the raised sleeve's top edge, as the panel paints it. */
 export const FAR_SLEEVE_LIT: Pt[] = [
   [578, 690],
   [600, 679],
@@ -453,6 +517,7 @@ export const FAR_SLEEVE_LIT: Pt[] = [
   [580, 700],
 ];
 
+/** The raised sleeve's cuff, its open end in shadow under the hand. */
 export const FAR_CUFF: Pt[] = [
   [662, 700],
   [690, 690],
@@ -463,8 +528,15 @@ export const FAR_CUFF: Pt[] = [
   [668, 730],
 ];
 
+/** Where his far arm turns, inside the tunic: as far from the raised hand as from the hand at rest. */
 export const ARM_PIVOT: Pt = [558, 674];
 
+/**
+ * His hands' centres, each at the end of its sleeve: the near one at his
+ * near cuff; the far one at rest by his side, its sleeve hanging, and raised
+ * at the raised sleeve's cuff, over the cuff's open end in its shade, a
+ * little past the sleeve's farthest point, as the rain comes on.
+ */
 export const HANDS = {
   near: [330, 815],
   far: [614, 795],

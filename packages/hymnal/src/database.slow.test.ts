@@ -1,3 +1,4 @@
+/** All comparisons report only number, table, field and index. No corpus value enters a matcher. */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Database } from 'bun:sqlite';
 import {
@@ -217,6 +218,7 @@ type Row = Partial<
 const rows = (db: Database, sql: string, ...args: Array<number | string>) =>
   db.query<Row, Array<number | string>>(sql).all(...args);
 
+/** Word groups are an independent oracle for the stored text projection. */
 const textLines = (part: Part) => {
   if (part._tag === 'Plain') return part.lines;
   return part.lines.map((line) => {
@@ -236,6 +238,7 @@ const fields = (
 ) => Object.entries(expected).every(([field, value]) => actual?.[field] === value);
 type Check = (ok: boolean, table: string, field: string, index?: number) => void;
 
+/** Return safe coordinates rather than raw actual/expected objects. Also used by mutation probes. */
 const auditHymn = (db: Database, hymn: Hymn): readonly string[] => {
   const faults: string[] = [];
   const check = (ok: boolean, table: string, field: string, index = 0) => {
@@ -431,6 +434,7 @@ const assertNoFaults = (faults: readonly string[]) => {
   expect(faults.length === 0, faults.slice(0, 8).join(',')).toBe(true);
 };
 
+/** One row per entry of each index file, as `writeIndexTables` folds them. */
 const indexCounts = ({ indexes: ix, rulings }: DatabaseSources) => {
   const n = (...lists: Array<readonly unknown[] | undefined>) =>
     lists.reduce((sum: number, list) => sum + (list?.length ?? 0), 0);
@@ -514,6 +518,7 @@ const auditMetadata = (db: Database, sources: DatabaseSources) => {
   auditConstraints(db);
 };
 
+/** Exercise the shipped constraints at the artifact seam, without exporting its DDL for tests. */
 const auditConstraints = (db: Database) => {
   db.exec('PRAGMA foreign_keys=ON');
   expect(() => db.exec("INSERT INTO lines VALUES(-1,999999,0,'fixture')")).toThrow();

@@ -33,7 +33,12 @@ interface ElementProps {
 }
 
 interface UseDismissProps {
+  /** Whether an outside press closes it, or a function deciding per event. */
   outsidePress?: boolean | ((event: MouseEvent | TouchEvent) => boolean) | undefined;
+  /**
+   * `sloppy` closes on pointer down outside; `intentional` waits for the click,
+   * so a drag that starts inside never closes it. Per pointer type, or a function.
+   */
   outsidePressEvent?:
     | PressType
     | { mouse: PressType; touch: PressType }

@@ -1,14 +1,35 @@
+/**
+ * Apple Notes Utilities
+ *
+ * Shared utilities for Apple Notes integration, including:
+ * - AppleScript string escaping
+ * - Markdown title extraction
+ * - HTML styling for Apple Notes
+ */
+
 import { Option } from 'effect';
 
+/**
+ * Escape string for AppleScript embedding.
+ * Handles backslashes and double quotes.
+ */
 export function escapeAppleScriptString(str: string): string {
   return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
+/**
+ * Extract title from Markdown content (first H1 heading).
+ * Returns Option.none() if no H1 heading is found.
+ */
 export function extractTitleFromMarkdown(markdownContent: string): Option.Option<string> {
   const h1Match = markdownContent.match(/^\s*#\s+(.*?)(\s+#*)?$/m);
   return Option.fromNullishOr(h1Match?.[1]?.trim());
 }
 
+/**
+ * CSS styles for Apple Notes HTML content.
+ * Optimized for readability in Apple Notes.
+ */
 const APPLE_NOTES_STYLES = `
   body {
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
@@ -114,6 +135,9 @@ const APPLE_NOTES_STYLES = `
   }
 `;
 
+/**
+ * Wrap HTML content with Apple Notes styling.
+ */
 export function wrapWithAppleNotesStyle(htmlContent: string): string {
   return `
     <html>
@@ -128,6 +152,11 @@ export function wrapWithAppleNotesStyle(htmlContent: string): string {
   `;
 }
 
+/**
+ * Process markdown content for Apple Notes:
+ * - Removes H1 heading (used as note title)
+ * - Adds extra line breaks between sections for better readability
+ */
 export function prepareMarkdownForAppleNotes(
   markdownContent: string,
   keepH1: boolean = false,

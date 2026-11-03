@@ -20,6 +20,7 @@ import {
 import { voicedAt } from './voiced.ts';
 
 const draw = () => {};
+/** No recorded takes: every scene is estimated. */
 const noTakes: Timings = { voice: '', scenes: {} };
 const placed = Result.getOrThrow(
   layout(
@@ -40,16 +41,20 @@ const a = Option.getOrThrow(Arr.get(placed, 0));
 const b = Option.getOrThrow(Arr.get(placed, 1));
 const fps = 30;
 
+/** A mark's film time. */
 const markAt = (p: Placed, name: string) =>
   p.start + p.speechStart + Option.getOrThrow(Option.fromNullishOr(p.voice.marks.get(name)));
+/** A named cue, scene-local. */
 const cueOf = (p: Placed, name: string) =>
   Option.getOrThrow(Option.fromNullishOr(p.cues.get(name)));
+/** The `i`th span of a resolved short. */
 const spanOf = (cut: ResolvedShort, i: number) => Option.getOrThrow(Arr.get(cut.spans, i));
 const lengthOf = (span: { readonly from: number; readonly to: number }) => span.to - span.from;
 
 const short = (spans: Short['spans']): Short => ({ id: 'cut', title: 'A cut', spans });
 const resolved = (spans: Short['spans']) => Result.getOrThrow(resolveShort(placed, short(spans)));
 
+/** The failure's tag, or `ok`. */
 const outcome = <A, E extends { readonly _tag: string }>(r: Result.Result<A, E>) =>
   Result.match(r, { onSuccess: () => 'ok', onFailure: (e) => e._tag });
 

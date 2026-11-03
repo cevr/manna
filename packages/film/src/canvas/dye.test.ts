@@ -3,6 +3,7 @@ import { Result } from 'effect';
 import { type Hex, type Ramp, type Shading, channelsOf, ramp } from './colour.ts';
 import { type Dye, INK_CUT, dyeKnots, dyePixel, dyedRaster, dyedRgb, lightnessOf } from './dye.ts';
 
+/** The house's key light and knobs (`style/house.ts`, which the engine may not import): a cloth's ramp as the look's `shaded()` gives it. */
 const KEY: Hex = '#f3e9c8';
 const SHADING: Shading = {
   turn: 20,
@@ -15,6 +16,7 @@ const SHADING: Shading = {
 };
 const clothRamp = (base: Hex): Ramp => ramp(base, KEY, SHADING);
 
+/** A seeded generator of 0..1 (mulberry32). */
 const seeded = (seed: number) => {
   let a = seed >>> 0;
   return () => {
@@ -33,6 +35,7 @@ const byte = (rng: Rng) => Math.floor(rng() * 256);
 const hexOf = (rng: Rng): Hex =>
   `#${[byte(rng), byte(rng), byte(rng)].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 
+/** Pair `seed`: a part drawn in one random cloth's ramp, worn in another's. */
 const pairOf = (seed: number) => {
   const rng = seeded(seed);
   const drawn = clothRamp(hexOf(rng));
@@ -40,6 +43,7 @@ const pairOf = (seed: number) => {
   return { drawn, cloth, made: dyeKnots(drawn, cloth) };
 };
 
+/** The dyes of the first `count` pairs, each with its seed; the pairs the dye refuses left out. */
 const dyes = (count: number): ReadonlyArray<{ readonly seed: number; readonly dye: Dye }> =>
   Array.from({ length: count }, (_, seed) =>
     Result.match(pairOf(seed).made, {

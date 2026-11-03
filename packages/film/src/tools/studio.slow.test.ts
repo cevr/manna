@@ -60,9 +60,12 @@ const film = testFilm(scenes, staged);
 
 const setup = (
   recorded: ReadonlyMap<string, string>,
+  /** What `film mix` does beside being counted: a test that times the mixes slows it. */
   remixing: Effect.Effect<void> = Effect.void,
+  /** What stands around each fresh keep of `beat`: a test that times the keeps marks them. */
   keeping: <A, E>(beat: string, keep: Effect.Effect<A, E>) => Effect.Effect<A, E> = (_, keep) =>
     keep,
+  /** What `keep-voice` answers of what it kept: a test of an older film CLI says less. */
   answering: (kept: OptionsKept) => OptionsKept = (kept) => kept,
 ) => {
   const files = new Map<string, Uint8Array>([
@@ -74,8 +77,11 @@ const setup = (
     ],
   ]);
   const mixes: Array<string> = [];
+  /** How many fresh reads of the script and voice the studio asked for. */
   const reads: Array<string> = [];
+  /** The film's sources' stamp: a test moves it when it changes a source. */
   const stamp = { now: 1 };
+  /** The film's lines as its files say them now: a test edits one while the lab runs. */
   const source = { scenes: film.scenes };
   const repo = Layer.effect(
     FilmRepo,
@@ -190,6 +196,7 @@ const call = (request: Request) =>
     return { status: res.status, type, body };
   });
 
+/** Beat `a`'s attempt `file`, heard as `heard`, its take's text hashed as `hash`, recorded at `at`. */
 const attemptOf = (file: string, heard: string, hash: string, at: number): Attempt => ({
   beat: 'a',
   file,
@@ -199,6 +206,7 @@ const attemptOf = (file: string, heard: string, hash: string, at: number): Attem
   at,
 });
 
+/** Beat `a`'s attempts on disk: the take its timings name, and an older line's. */
 const seeded = (files: Map<string, Uint8Array>) => {
   const attempts = [
     attemptOf('a.old.flac', 'Hello there world.', 'h-old', 1),

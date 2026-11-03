@@ -3,13 +3,19 @@ import { type Key, clamp, keys, lerp, rng } from '@manna/film/core';
 import type { CourtFrame } from '../../scenes/court.ts';
 import { FACE, INK, bar, disc, frame, poly, rect } from './flat.ts';
 
+/** Where the floor meets the wall: everyone stands on it. */
 const FLOOR = 880;
+/** The accused: feet on the floor, screen left, facing the bench. */
 const ACCUSED = { x: 450, y: FLOOR } as const;
+/** The judge's head, behind the bench. */
 const JUDGE = { x: 1190, y: 350 } as const;
+/** The bench's face and its rim. */
 const BENCH = { x: 860, y: 520, w: 660, h: FLOOR - 520 } as const;
+/** The gavel's block on the rim, and the judge's hand that holds it (the pivot). */
 const BLOCK = { x: 1330, y: 490 } as const;
 const GRIP = { x: 1425, y: 420 } as const;
 
+/** The evidence: files dropped one on another, each its own width and set. */
 const FILES = (() => {
   const r = rng(1844);
   return Array.from({ length: 15 }, (_, i) => ({
@@ -22,6 +28,7 @@ const FILES = (() => {
 const FILE_H = 40;
 const STACK_X = 695;
 
+/** The gavel's raise across its cue: up, down hard, a small bounce, at rest. */
 const SWING: ReadonlyArray<Key> = [
   [0, 0],
   [0.373, 1],
@@ -30,6 +37,7 @@ const SWING: ReadonlyArray<Key> = [
   [1, 0],
 ];
 
+/** A camera: the world point at the frame's centre, how far in, and how far off square. */
 interface Shot {
   readonly x: number;
   readonly y: number;
@@ -37,12 +45,14 @@ interface Shot {
   readonly tilt: number;
 }
 
+/** The accused at rest, bowed, or lifting to the verdict. */
 interface Pose {
   readonly bow: number;
   readonly lift: number;
   readonly breath: number;
 }
 
+/** A disc's cap: the arc from `a0` to `a1` closed by its chord. */
 const cap = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -59,6 +69,7 @@ const cap = (
   ctx.fill();
 };
 
+/** An ellipse, flat (an eye that narrows as it closes). */
 const oval = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -73,6 +84,7 @@ const oval = (
   ctx.fill();
 };
 
+/** The accused: a garment of the deep slate, the scarlet stain on it, a face turned to the bench. */
 const accused = (ctx: CanvasRenderingContext2D, p: Pose) => {
   const sway = p.breath * 4;
   const body: ReadonlyArray<readonly [number, number]> = [
@@ -117,6 +129,7 @@ const accused = (ctx: CanvasRenderingContext2D, p: Pose) => {
   ctx.restore();
 };
 
+/** The judge, behind the bench: an ink robe, two bands, a heavy brow; leaning in by `lean`. */
 const judge = (ctx: CanvasRenderingContext2D, lean: number, breath: number) => {
   const { x, y } = JUDGE;
   const lx = -16 * lean;
@@ -146,6 +159,7 @@ const judge = (ctx: CanvasRenderingContext2D, lean: number, breath: number) => {
   rect(ctx, hx - 0.15 * r, hy + 0.5 * r, 0.3 * r, 0.06 * r, INK.ink);
 };
 
+/** The gavel at `raise` (0 down on its block, 1 high), in the judge's floating hand. */
 const gavel = (ctx: CanvasRenderingContext2D, raise: number, lean: number) => {
   const gx = GRIP.x - 10 * lean;
   const gy = GRIP.y + 12 * lean - 40 * raise;
@@ -164,6 +178,7 @@ const gavel = (ctx: CanvasRenderingContext2D, raise: number, lean: number) => {
   disc(ctx, gx, gy, 27, INK.face);
 };
 
+/** The room's pieces as they slam together over the opening: each 0→1. */
 interface Built {
   readonly floor: number;
   readonly wall: number;
@@ -172,6 +187,7 @@ interface Built {
   readonly accused: number;
 }
 
+/** The whole room, in the world's own units (1920 × 1080 at a zoom of 1). */
 const room = (f: CourtFrame, built: Built) => {
   const { ctx } = f;
   const breath = Math.sin(f.t * 2.3);
@@ -219,6 +235,7 @@ const room = (f: CourtFrame, built: Built) => {
   ctx.restore();
 };
 
+/** The verdict: a hollow gold stamp slammed across the bench, its letters cut as outlines. */
 const stamp = (f: CourtFrame) => {
   const { ctx } = f;
   const k = f.at('stamp');

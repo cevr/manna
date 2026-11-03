@@ -10,8 +10,10 @@ interface CompositeItemProps<State extends object> extends UseCompositeItemParam
   class?: ClassProp<State> | undefined;
   style?: StyleProp<State> | undefined;
   render?: ComponentRenderFn<HTMLProps, State> | undefined;
+  /** The element's props (children included), merged after the item's own. */
   props?: ReadonlyArray<PropsInput> | undefined;
   state?: State | undefined;
+  /** @default 'div' */
   tag?: IntrinsicTagName | undefined;
 }
 

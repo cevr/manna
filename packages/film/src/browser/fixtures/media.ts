@@ -1,6 +1,7 @@
 import { Effect, Option } from 'effect';
 import { type MediaElement, type Playable, playableOf } from '../media.ts';
 
+/** `HAVE_ENOUGH_DATA`. */
 const LOADED = 4;
 
 class FakeElement extends EventTarget implements MediaElement {
@@ -37,13 +38,16 @@ class FakeElement extends EventTarget implements MediaElement {
     );
   }
 
+  /** Its seeks never finish: no `seeked` comes, so each seek stays pending. */
   holdsSeeks = false;
   readonly #listening = new Map<string, number>();
 
+  /** How many listeners of `type` are on it now; one whose signal aborted is gone. */
   listening(type: string): number {
     return this.#listening.get(type) ?? 0;
   }
 
+  /** The adapter listens to it only until a signal aborts. */
   override addEventListener(
     type: string,
     listener: EventListener,
@@ -78,6 +82,7 @@ class FakeElement extends EventTarget implements MediaElement {
     this.paused = true;
   }
 
+  /** It has loaded `seconds` of media and can play: `loadedmetadata` and `canplay`. */
   finishLoading(seconds: number) {
     this.duration = seconds;
     this.readyState = LOADED;
@@ -85,6 +90,7 @@ class FakeElement extends EventTarget implements MediaElement {
     this.fire('canplay');
   }
 
+  /** It was asked to load its media again. */
   load() {
     this.asked.push('load');
   }
@@ -94,6 +100,7 @@ class FakeElement extends EventTarget implements MediaElement {
   }
 }
 
+/** A stand-in element (refusing each play with the error named `refuse`, when given), and its `Playable`. */
 export const fakeMedia = (refuse?: string) => {
   const el = new FakeElement(Option.fromUndefinedOr(refuse));
   const media: Playable = playableOf(el);

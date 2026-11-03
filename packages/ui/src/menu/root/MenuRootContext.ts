@@ -6,6 +6,7 @@ import type { MenuParent, MenuStore } from '../store/MenuStore.ts';
 export interface MenuRootContext {
   store: MenuStore;
   parent: MenuParent;
+  /** The props of the trigger that opened the menu (`active`) or of another trigger. */
   triggerProps: (active: boolean) => HTMLProps;
   popupProps: HTMLProps;
   itemProps: HTMLProps;

@@ -1,3 +1,25 @@
+/**
+ * The device's playback: One's `Audio` session, the same calls on a phone
+ * (AVPlayer on iOS, with the lock screen and Control Center through
+ * `MPNowPlayingSession`) and on the web (an `HTMLAudioElement` and the Media
+ * Session). Each call's failure is a `PlaybackError` naming the call.
+ *
+ * The recording plays at the hymn's tempo with its pitch kept (One's
+ * `setPlaybackRate`, from `patches/one@2.11.1.patch`). One's session keeps
+ * its rate across plays and stops, so each play tells it the play's rate
+ * first (1 when the play names none), and a tempo turned while it holds the
+ * recording tells it again (`setRate`).
+ *
+ * A phone's session plays or pauses at the lock screen's press, then tells
+ * One's listeners. On the web One's own Media Session handlers wait for the
+ * element to play before they tell (`Audio.resume` waits on `play()`), so
+ * the page would show the old state for as long as the recording loads.
+ * There the page owns the handlers: each press is told at once and does
+ * nothing else, and the player's command asks One. One drops the handlers
+ * at each `play` and `stop` and sets its own at each `setNowPlayingInfo`,
+ * so the page sets its own after each.
+ */
+
 import { Clock, Duration, Effect, Layer, Match, Option, Queue, Stream } from 'effect';
 import { One } from 'one';
 import { Platform } from 'react-native';
@@ -13,6 +35,7 @@ import {
   type Intent,
 } from './player';
 
+/** One's `Audio` and `Network` as the playback uses them. */
 export interface Device {
   readonly audio: Pick<
     typeof One.Audio,
@@ -29,15 +52,19 @@ export interface Device {
   readonly network: Pick<typeof One.Network, 'getState' | 'addStateListener'>;
 }
 
+/** The Media Session's handlers as the page sets them. */
 export type Session = Pick<MediaSession, 'setActionHandler'>;
 
+/** How soon a refused seek is asked again: a cadence, never a limit. */
 const askAgainAfter = Duration.millis(100);
 
+/** Whether the device holds a recording that can take a seek. */
 const holdsRecording = (status: Status) =>
   status.state === 'loading' || status.state === 'playing' || status.state === 'paused';
 
 const awaitsPlay = (status: Status) => status.state === 'paused' || status.state === 'loading';
 
+/** A play's rate: 1 when the play names none. */
 const rateOf = (options?: PlayOptions) => options?.rate ?? 1;
 
 const call = <A>(operation: string, run: () => Promise<A>) =>
@@ -46,11 +73,16 @@ const call = <A>(operation: string, run: () => Promise<A>) =>
     catch: (cause) => PlaybackError.make({ operation, message: String(cause) }),
   });
 
+/**
+ * The playback over `device`, read at each call; on the web, `session` is
+ * the page's Media Session, whose presses reach the player at once.
+ */
 export const playbackOn = (device: () => Device, session: Option.Option<Session>): PlaybackApi => {
   const audio = () => device().audio;
   let turn = 0;
   let wants: Intent = 'play';
   let heldForLanding = false;
+  /** The rate One's session was told last: ms of the recording for each ms. */
   let rate = 1;
   const paused = () => wants === 'pause';
   let retained: Option.Option<{ readonly clock: Run; readonly continuous: boolean }> =
@@ -64,8 +96,10 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
     );
   const stale = () =>
     PlaybackError.make({ operation: 'superseded', message: 'newer playback owns the session' });
+  /** The page's Media Session presses, kept until the player takes them. */
   const pressed = Effect.runSync(Queue.unbounded<Remote>());
   const tell = (remote: Remote) => void Queue.offerUnsafe(pressed, remote);
+  /** The page's handlers in place of One's: each press told at once. */
   const own = () =>
     Option.map(session, (it) => {
       it.setActionHandler('play', () => tell(Remote.Play()));
@@ -74,6 +108,7 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
         tell(Remote.Seek({ seconds: Option.fromNullishOr(details.seekTime) })),
       );
     });
+  /** One's own lock-screen listener, on a phone. */
   const native = Stream.callback<Remote>((queue) =>
     Effect.acquireRelease(
       Effect.sync(() =>
@@ -95,6 +130,13 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
       (stop) => Effect.sync(stop),
     ),
   );
+  /**
+   * One's connection: the state now, then each change One tells, in order.
+   * A change told while the state now is read waits behind it. A device
+   * whose connection cannot be read is taken as online, so a failure says
+   * the recording could not play, never that it needs a connection the
+   * device may have.
+   */
   const connection = Stream.callback<boolean>((queue) =>
     Effect.gen(function* () {
       const early = new Array<boolean>();
@@ -111,6 +153,13 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
       tell = (online) => void Queue.offerUnsafe(queue, online);
     }),
   );
+  /**
+   * Seek to `fromMs` until the device takes it: a phone refuses a seek until
+   * the recording is ready, so a refused seek is asked again while the
+   * device holds the recording (loading, playing or paused). The adapter
+   * gives nothing up by a time or a count of its own: the player owns the
+   * wait, and a newer command cuts the asking off.
+   */
   const landAt = (
     fromMs: number,
     owner: number,
@@ -146,6 +195,12 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
         }),
       ),
     );
+  /**
+   * Tell One `rate`, then play `uri`. One runs a session's calls in the order they are made
+   * (the main queue on a phone; at once on the web), so the recording starts at the rate and
+   * the first seek lands where the retained place is. Both are asked in one step, so nothing
+   * comes between the play and the page's handlers. A refused rate fails the play.
+   */
   const playAt = (uri: string, to: number) =>
     Effect.try({
       try: () => {
@@ -270,6 +325,7 @@ export const playbackOn = (device: () => Device, session: Option.Option<Session>
   });
 };
 
+/** The page's Media Session: the web's, where the browser has one. */
 const webSession = (): Option.Option<Session> =>
   Option.liftPredicate(Platform.OS, (os) => os === 'web').pipe(
     Option.flatMap(() => Option.fromNullishOr(globalThis.navigator?.mediaSession)),

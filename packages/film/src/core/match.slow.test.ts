@@ -12,6 +12,7 @@ import {
   sideBySide,
 } from './match.ts';
 
+/** The side-by-side's head height, and the magenta its concept's outline is stroked in. */
 const SIDE_HEAD = 200;
 const OUTLINE_COLOUR = [232, 0, 140] as const;
 

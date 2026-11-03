@@ -236,6 +236,7 @@ class ScrollLocker {
 
 const SCROLL_LOCKER = new ScrollLocker();
 
+/** Locks the page's scroll while `enabled()` is true. */
 export function useScrollLock(
   enabled: Accessor<boolean>,
   referenceElement: Accessor<Element | null> = () => null,
@@ -253,6 +254,10 @@ export function useScrollLock(
 
 const VIEWPORT_WIDTH_TOLERANCE_PX = 20;
 
+/**
+ * The scroll lock of an anchored popup: always when opened by mouse or
+ * keyboard; when opened by touch, only if the popup is nearly viewport-wide.
+ */
 export function useAnchoredPopupScrollLock(
   enabled: Accessor<boolean>,
   touchOpen: Accessor<boolean>,

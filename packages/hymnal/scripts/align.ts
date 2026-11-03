@@ -1,3 +1,14 @@
+/**
+ * Lays one verse's words on its notes in a hymn's MIDI file and prints each
+ * line cut into its sung syllables, a melisma marked with the notes it holds
+ * (`is_2`), to check the placement by eye against the printed hymn.
+ *
+ *   bun run align <file.mid> <verses> <verse> < lines.txt
+ *
+ * `verses` is the number of verses the text has, `verse` the one to lay (1
+ * the first); the lines on stdin are that verse's, its refrain's after them.
+ */
+
 import { Effect } from 'effect';
 
 import { Align, Midi, Score } from '../src/index.js';

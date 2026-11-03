@@ -40,6 +40,7 @@ import { LIGHT } from '../../light.ts';
 
 const LOOM: Pt = [1045, 560];
 
+/** The stain beneath the robe, as the flakes it breaks into: each one's place in the lens, and its size. */
 const FLAKES: ReadonlyArray<readonly [number, number, number]> = [
   [-40, -30, 70],
   [30, -46, 60],
@@ -48,18 +49,24 @@ const FLAKES: ReadonlyArray<readonly [number, number, number]> = [
   [-58, 34, 52],
   [14, -4, 58],
 ];
+/** How far left the flakes are carried: out of the frame, the way the clothes went. */
 const CARRIED = 1500;
 
+/** Where the gavel lies on the bench: its handle's foot, the head to its left. */
 const GAVEL_ON: Pt = [COURT_BENCH[0], COURT_BENCH[1] - 36];
+/** Lying on its side, the handle down the bench to the left of its head. */
 const GAVEL_LIE = -Math.PI / 2 + 0.22;
+/** Joshua's chest in the court: `JS` times the person's chest height above his feet. */
 const JOSHUA_CHEST_Y = JOSHUA[1] - 80 * JS;
 
+/** Christ's hand reaching out to Joshua on "clothe", open; its reach rewritten each frame (scratch). */
 const REACHING: Posed<Gesture> = { to: [-64, -108], reach: 0, grip: 'open' };
 const reachingOut = (reach: number): Gesture => {
   REACHING.reach = reach;
   return REACHING;
 };
 
+/** A little loom, as a shape of light. */
 const loomFrame = (
   ctx: CanvasRenderingContext2D,
   s: number,
@@ -110,16 +117,21 @@ const timeline = {
 } as const;
 
 const knobs = {
+  /** The court on "judicial", framed on Joshua, the Angel and the bench; it drifts in toward "reclaim". */
   judged: [1180, 600],
   judgedZoom: 1.22,
+  /** How close the drift has come by "reclaim". */
   judgedInZoom: 1.3,
+  /** How much of the first light is left once the loom has woven: the rest is day. */
   woven: 0.5,
+  /** Where the push from the court ends, on the loom, and how close. */
   atLoom: [1045, 560],
   atLoomZoom: 4.2,
 } as const;
 
 type RobeFrame = Frame<keyof typeof timeline & string, typeof knobs>;
 
+/** The first light, its amount rewritten each frame (scratch). */
 const DAWN = { ...LIGHT.firstLight, amount: 1 };
 
 export const robe = drawing({
@@ -145,6 +157,7 @@ export const robe = drawing({
   },
 });
 
+/** A: the court, wide, until the push reaches the loom. */
 const courtWide = (f: RobeFrame) => {
   const { ctx, w, h, t } = f;
   const { hand } = f;
@@ -190,6 +203,7 @@ const courtWide = (f: RobeFrame) => {
   });
 };
 
+/** B: the loom in the light, weaving through the quotation. */
 const weaving = (f: RobeFrame) => {
   const { ctx, w, h } = f;
   const { hand } = f;
@@ -243,6 +257,7 @@ const weaving = (f: RobeFrame) => {
     });
 };
 
+/** B2: close on Joshua's face as the robe settles on him. */
 const robed = (f: RobeFrame) => {
   const { ctx, w, h } = f;
   const { hand } = f;
@@ -275,6 +290,7 @@ const robed = (f: RobeFrame) => {
   );
 };
 
+/** C: the doubt, a tiny cloak over a stain. */
 const cloaked = (f: RobeFrame) => {
   const { ctx, w, h, t } = f;
   const { hand } = f;
@@ -325,6 +341,7 @@ const cloaked = (f: RobeFrame) => {
   );
 };
 
+/** Close on Joshua in the robe, his face at human scale: `beneath` and `reclaimed` share it. */
 const closeOnJoshua = (f: RobeFrame, pose: Person) => {
   const { ctx, w, h, hand } = f;
   courtWall(ctx, w, h);
@@ -335,6 +352,7 @@ const closeOnJoshua = (f: RobeFrame, pose: Person) => {
   ctx.restore();
   piece(ctx, ROBE_D, C.robe, hand('robeD'), { role: 'figure', line: 7 });
 };
+/** Joshua's scale close on his face. */
 const FACE_SCALE = 4.6;
 const ROBE_D: Pt[] = [
   [840, 550],
@@ -345,9 +363,15 @@ const ROBE_D: Pt[] = [
   [400, 790],
 ];
 const JOSHUA_DOWN: Person = { onHead: turban, look: [0, 3.5], browTilt: 0.25 };
+/** Joshua reclaimed, looking up glad: rewritten each frame, never made per frame. */
 const GLAD_LOOK: [number, number] = [0, 0];
 const GLAD: Person = { onHead: turban, look: GLAD_LOOK };
 
+/**
+ * D: beneath the robe. The lens opens on the stain there, and on "away" it
+ * breaks into its flakes and each is carried out left, the way the clothes
+ * went, leaving clean grey paper; then the lens shuts.
+ */
 const beneath = (f: RobeFrame) => {
   const { ctx } = f;
   const { hand } = f;
@@ -398,6 +422,11 @@ const beneath = (f: RobeFrame) => {
   });
 };
 
+/**
+ * D2: the court on "judicial", Joshua robed. The cold open's gavel rests on
+ * the bench, the ruling standing; over the line a warm glow rises in
+ * Joshua's chest, the "more than" a ruling.
+ */
 const judged = (f: RobeFrame) => {
   const { ctx, w, h } = f;
   const { hand } = f;
@@ -436,6 +465,10 @@ const judged = (f: RobeFrame) => {
   );
 };
 
+/**
+ * D3: on "reclaim", close on Joshua's face again; under the robe a warm glow
+ * rises where the heart is, and he looks up, glad, on "reclaiming".
+ */
 const reclaimed = (f: RobeFrame) => {
   const { ctx } = f;
   const warm = f.at('warm');
@@ -457,12 +490,14 @@ const reclaimed = (f: RobeFrame) => {
   ctx.restore();
 };
 
+/** The icons' glow: faith kept from its section, the robe lighting and leading as it lights, the heart faded. */
 const {
   lit: ICONS_LIT,
   lead: ICONS_LEAD,
   count: ICONS_COUNT,
 } = iconScratch([ICON_KEPT, 0, 0], { lead: [0, 0, 0], dim: 1 });
 
+/** E: after the quotation, pull back to the section head's icon row, the robe lit and leading. */
 const iconsBack = (f: RobeFrame, toIcons: number) => {
   const { ctx, w, h, hand } = f;
   const pull = f.at('pullBack');

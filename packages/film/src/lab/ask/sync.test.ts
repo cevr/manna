@@ -7,8 +7,10 @@ import { Media } from '../../browser/media.ts';
 import { SyncEvent, SyncState, UNKNOWN_END } from './sync-machine.ts';
 import { makeSync } from './sync.ts';
 
+/** Let the forked plays settle: their answers heard, and what came of them told. */
 const settle = Effect.repeat(Effect.yieldNow, { times: 10 });
 
+/** A set's clock at `t` seconds, `a` audible. */
 const clock = (t: number, seek = 0) => ({
   t,
   start: 0,
@@ -19,6 +21,7 @@ const clock = (t: number, seek = 0) => ({
   seek,
 });
 
+/** A driver over two stand-in videos, `a` (the clock) and `b`, both loaded; what it told the machine. */
 const rig = (refuse?: { readonly a?: string; readonly b?: string }) => {
   const frames = manualFrames();
   const told: Array<SyncEvent> = [];

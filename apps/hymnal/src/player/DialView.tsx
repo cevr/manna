@@ -1,3 +1,58 @@
+/**
+ * A dial: a row with its name at the left and a row of detents, `DETENT`
+ * points apart, that slides past a notch at the row's middle. The detent at
+ * the notch is the dial's value. A finger drags the row sideways and flings
+ * it; let go, the row glides on and snaps to a detent (`dial.ts`). A dial
+ * of any finite, ordered list of stops either wraps (the keys) or stops at
+ * its ends (the capo, the text size), where a drag stops and cues a wall.
+ *
+ * A dial draws no surface of its own: it lies on the panel the open dials
+ * stand on (`DialPanel`). Each stop is drawn by its distance from the notch,
+ * as card J draws it: the stop at the notch 1.3 times the size of its
+ * neighbours, and the stops fading toward the row's ends. The notch
+ * stretches and settles on each detent the row reaches.
+ *
+ * The drag, the glide and every stop's size run as worklets on the UI
+ * thread; JavaScript is called only when the row reaches a new detent, not
+ * once per frame: it is told a `detent` cue for each detent passed since the
+ * last, in order, and `onTurn` once with the latest. A value set from
+ * outside (the twin dial in the player sheet) turns the row the short way to
+ * it, and tells nothing back; a reset (`resets`) turns it home on a slower
+ * curve, so the reader sees it go home. A touch that stops such a turn and
+ * lifts with no drag lets it go on to the dial's value, the value as it is
+ * at the lift: one set from outside while the finger is down (a second
+ * finger on the twin dial or on Reset) is where the row goes. Only a row
+ * the finger or its glide moved snaps to the nearest detent. The dial's own
+ * turns come back to it as its value, in order and maybe late (a busy
+ * JavaScript thread takes them seconds after the glide has ended): the row
+ * never turns back for them.
+ * A double tap asks for a reset. VoiceOver reads the dial as adjustable:
+ * a swipe up or down turns it one detent.
+ *
+ * A wrapping row's stops stand on a ring (`ringOf`): each one is placed
+ * every frame, on the UI thread, at the copy of it nearest the notch
+ * (`slotOf`), so at any place, however far and fast the row is flung, every
+ * slot of the window shows a key, in order.
+ *
+ * The name keeps one line at every text size, whole: its column is as wide
+ * as the widest row's name (`ROW_TITLES`) drawn at the text size showing,
+ * and `TITLE` points at the least, so the notches of the rows line up and
+ * the column follows a change of the system's text size as the text does.
+ * Every text in the row grows with Dynamic Type at most `MOST_SCALE` times,
+ * as a fixed-height control's text does.
+ *
+ * The drag is a gesture handler's pan that needs a sideways move to begin,
+ * so a vertical scroll under the dial still scrolls, and the dial lies over
+ * the page, outside the pager, so a drag on it never turns the page.
+ *
+ * A dial with `axis` `column` is a drum (the find drums): it draws no name,
+ * only a window `DRUM_WINDOW` tall, the detent at the notch with one above
+ * and one below; its stops run down the window, and its pan needs a
+ * vertical move to begin. A finger dragged up brings the higher detents to
+ * the notch, as on a picker wheel. Only the axis differs (`AXES`, `along`):
+ * the drag, glide, cues, ring and VoiceOver are the row's.
+ */
+
 import { Array as Arr, Match, Option } from 'effect';
 import { memo, type ReactNode, useEffect, useRef, useState } from 'react';
 import {
@@ -47,51 +102,84 @@ import {
 } from './dial';
 import { useReduceMotion } from './motion';
 
+/**
+ * Which way the dial runs: `row` (the default), sideways with its name, the
+ * small word `title`, at the left; `column`, a drum, up and down with no name.
+ */
 type Runs =
   | { readonly axis?: 'row'; readonly title: string }
   | { readonly axis: 'column'; readonly title?: never };
 
 export type DialProps<A> = Runs & {
+  /** Which dial it is: its detents' cues name it (`~/feel/cue`). */
   readonly dial: DialName;
+  /** What VoiceOver names the dial by, and a test finds it by. */
   readonly label: string;
   readonly stops: ReadonlyArray<A>;
+  /** The stop at the notch. */
   readonly index: number;
   readonly wrap: boolean;
+  /** What VoiceOver reads for the dial's value. */
   readonly said: string;
+  /** A stop drawn in its detent; `current` while it sits at the notch. */
   readonly drawStop: (stop: A, current: boolean) => ReactNode;
+  /**
+   * The row reached detent `n`: among the dial's own on a wrapping dial;
+   * on a stopping one, one past an end when VoiceOver turns it there.
+   */
   readonly onTurn: (n: number) => void;
+  /** A double tap. */
   readonly onReset?: () => void;
+  /** A finger came down on the dial. */
   readonly onTouch?: () => void;
+  /**
+   * How many resets the dial's owner has told: an index that comes with a
+   * new count is a reset, and the row turns home on the reset's curve.
+   */
   readonly resets?: number;
   readonly testID: string;
 };
 
+/** The width of the dial's name at its left, in points, at the system's default text size. */
 const TITLE = 58;
 
+/** The most a dial's texts grow with the system's text size: the row's height is fixed. */
 export const MOST_SCALE = 1.3;
 
+/** How long a reset turns the row home, on the strong ease-in-out: slow enough to see. */
 export const RESET_TURN = 300;
 
+/** How long a value set from outside turns the row to it. */
 const FOLLOW_TURN = 240;
 
+/** How far a stop is drawn from the notch, in detents, before it is at its faintest. */
 const FADE = 3.6;
 
+/** How long the notch stretches and settles on each detent, in milliseconds. */
 const NOTCH = 140;
 
+/** How tall a drum's window is: the detent at the notch and one above and below it. */
 const DRUM_WINDOW = 3 * DETENT;
 
+/** A stop moved `by` points from the notch along `axis`. */
 const shifted = (axis: Axis, by: number) => {
   'worklet';
   if (axis === 'column') return { translateY: by };
   return { translateX: by };
 };
 
+/** The notch stretched `by` times across `axis`: down from a row's top, right from a drum's left. */
 const stretched = (axis: Axis, by: number) => {
   'worklet';
   if (axis === 'column') return { scaleX: by };
   return { scaleY: by };
 };
 
+/**
+ * The names of the rows drawn one over another, so every row's name column
+ * is as wide as the widest of them: the player's and settings' dials, the
+ * only rows, share one column.
+ */
 const ROW_TITLES = ['KEY', 'CAPO', 'SIZE', 'PLACE', 'TEMPO'] as const;
 
 function Dial<A>(props: DialProps<A>) {
@@ -127,6 +215,7 @@ function Dial<A>(props: DialProps<A>) {
   const homed = useRef(resets);
   const told = useRef<Array<number>>([]);
 
+  /** The row turns to `to`, a value set from outside, on `timing`; a touch that stops it and never drags lets it go on. */
   const follow = (to: number, timing: WithTimingConfig) => {
     'worklet';
     aim.value = to;
@@ -158,6 +247,7 @@ function Dial<A>(props: DialProps<A>) {
     );
   }, [index, resets]);
 
+  /** The row passed `crossed` (own detents, in order): a cue for each, one turn to the last. */
   const turned = (crossed: ReadonlyArray<number>) => {
     for (const at of crossed) cue({ _tag: 'detent', dial, at });
     for (const last of crossed.slice(-1)) {
@@ -183,6 +273,7 @@ function Dial<A>(props: DialProps<A>) {
     },
   );
 
+  /** The row glides on from where it is at `speed` points a second, and snaps to a detent. */
   const settle = (speed: number) => {
     'worklet';
     const rest = glide(detents, place.value, speed);
@@ -328,6 +419,10 @@ function Dial<A>(props: DialProps<A>) {
   );
 }
 
+/**
+ * A row's name at its left, whole on one line, in a column as wide as the
+ * widest row's name (`ROW_TITLES`) at the text size showing.
+ */
 function RowName({ title }: { readonly title: string }) {
   return (
     <View style={styles.titleColumn} aria-hidden>
@@ -354,6 +449,13 @@ function RowName({ title }: { readonly title: string }) {
   );
 }
 
+/**
+ * Drawn stop `n` in its slot (`slotOf`, on the row's ring), drawn by its
+ * distance `d` from the notch, in detents (card J): scale
+ * `1 + 0.3·max(0, 1 − |d|)`, opacity `0.2 + 0.8·max(0, 1 − |d|/3.6)`, all
+ * worked out on the UI thread each frame. Its test id names the stop it
+ * draws among the dial's own (`<dial>-stop-<own>`).
+ */
 function Stop({
   n,
   own,
@@ -387,6 +489,13 @@ function Stop({
   );
 }
 
+/**
+ * Whether a dial draws as it did: its handlers are read through `live`, and
+ * a stop is drawn from the stop and whether it is current alone, so a
+ * handler's new identity draws nothing again. A dial redraws when its stops,
+ * its value, its words or its resets change, not each time the player's
+ * place does.
+ */
 const same = <A,>(a: DialProps<A>, b: DialProps<A>) =>
   a.dial === b.dial &&
   a.label === b.label &&
@@ -485,6 +594,12 @@ const styles = StyleSheet.create({
   },
 });
 
+/**
+ * What a dial draws and reads by its axis: a row's pan begins on a sideways
+ * move and fails on a vertical one, and a drum's the other way about; its
+ * stops are laid from the notch along the axis, by `offset` from the
+ * window's start.
+ */
 const AXES = {
   row: {
     pan: { activeOffsetX: [-6, 6], failOffsetY: [-14, 14] },

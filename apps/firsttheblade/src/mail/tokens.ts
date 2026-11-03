@@ -1,3 +1,22 @@
+/**
+ * The list's keyed hashes, under a key only the Worker holds
+ * (`MAIL_TOKEN_KEY`, a Worker secret), each an HMAC-SHA-256 (WebCrypto, in
+ * Bun and on Workers alike):
+ *
+ * - A subscriber's id is the hash of its address (`idOf`): one address is
+ *   always one subscriber, and the model's event log, which keeps it for
+ *   good, names no one (`../list/Subscriber.id.ts`).
+ * - The links in the list's emails carry a signed token, so the list stores
+ *   none: the hash of the token's purpose and its subscriber's id.
+ *
+ * - A confirm token also names when it was issued: it works for seven days
+ *   (`CONFIRM_FOR`, `../list/timing.ts`), and only while it is the newest one
+ *   its subscriber was sent (the model checks that, `../list/`).
+ * - An unsubscribe token never runs out: a link in an old email still works.
+ *
+ * The text is `c.<id>.<issued>.<signature>` or `u.<id>.<signature>`, the
+ * signature in base64url, so it travels in a URL as it is.
+ */
 import { Context, Effect, Layer, Option, Redacted, Result } from 'effect';
 import { Base64Url, Hex } from 'effect/encoding';
 
@@ -8,17 +27,23 @@ export type Token =
   | { readonly _tag: 'Confirm'; readonly subscriber: SubscriberId; readonly issued: number }
   | { readonly _tag: 'Unsubscribe'; readonly subscriber: SubscriberId };
 
+/** The shortest key the Worker takes: 32 bytes, as 64 hex digits. */
 const MIN_KEY_BYTES = 32;
 
+/** Signed with every token, so a signature made for anything else never reads as one. */
 const CONTEXT = 'firsttheblade-mail-v2';
 
+/** Hashed with every address, so an id is never a token's signature, nor one a token's. */
 const ID_CONTEXT = 'firsttheblade-subscriber-v1';
 
+/** An id's length in bytes: 128 bits of the hash, 22 characters of base64url. */
 const ID_BYTES = 16;
 
 export interface TokensService {
+  /** The subscriber an address is. */
   readonly idOf: (address: Address) => Effect.Effect<SubscriberId>;
   readonly sign: (token: Token) => Effect.Effect<string>;
+  /** The token a text carries, when its signature is good; none for anything else. */
   readonly read: (text: string) => Effect.Effect<Option.Option<Token>>;
 }
 
@@ -32,6 +57,7 @@ const payloadOf = (token: Token) => {
 const ID = /^[A-Za-z0-9_-]{22}$/;
 const TIME = /^[0-9]{1,16}$/;
 
+/** The token a payload names, when it names one. */
 const tokenOf = (payload: string): Option.Option<Token> => {
   const [purpose, id = '', issued = '', ...rest] = payload.split('.');
   if (rest.length > 0 || !ID.test(id)) return Option.none();
@@ -50,6 +76,7 @@ const tokenOf = (payload: string): Option.Option<Token> => {
 
 const bytes = (text: string, context = CONTEXT) => new TextEncoder().encode(`${context}:${text}`);
 
+/** The key, from its hex text; a Worker given a short or malformed one cannot start. */
 const importKey = (key: Redacted.Redacted<string>) =>
   Effect.gen(function* () {
     const raw = Hex.decode(Redacted.value(key).trim());

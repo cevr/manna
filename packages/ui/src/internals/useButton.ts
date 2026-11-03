@@ -10,6 +10,10 @@ interface ModifierState {
   metaKey: boolean;
 }
 
+/**
+ * Dispatches a click carrying the source event's modifier keys (`click()`
+ * reports none). `detail` 0 and `pointerType` `''` mark a keyboard click.
+ */
 export function dispatchClickWithModifiers(
   target: Element,
   sourceEvent: ModifierState,
@@ -31,7 +35,9 @@ export function dispatchClickWithModifiers(
 }
 
 interface UseButtonParameters {
+  /** Whether the element is a native `<button>`. */
   native?: boolean | undefined;
+  /** Whether the button is an item of a composite widget (Space acts on keydown). */
   composite?: boolean | undefined;
 }
 
@@ -39,6 +45,12 @@ function isButtonElement(elem: Element | null): elem is HTMLButtonElement {
   return isHTMLElement(elem) && elem.tagName === 'BUTTON';
 }
 
+/**
+ * The button's behaviour as a mixin. A part puts it first among its props, so
+ * their key handlers run before its own and may stop them with
+ * `event.preventBaseUIHandler()`, and their attributes win over its. Typed
+ * for a `<button>`; with `native: false` it reads only what every element has.
+ */
 export function useButton(params: UseButtonParameters = {}): Mixin<HTMLButtonElement> {
   const native = params.native ?? true;
   const composite = params.composite ?? false;

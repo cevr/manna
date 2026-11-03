@@ -38,6 +38,7 @@ import {
   tabbable,
 } from './utils/tabbable.ts';
 
+/** How a popup was opened or closed: by pointer type, keyboard, or `''` when unknown. */
 export type InteractionType = 'mouse' | 'touch' | 'pen' | 'keyboard' | '';
 
 function getEventType(
@@ -103,6 +104,7 @@ function getFirstTabbableElement(container: Element | null) {
   return tabbable(container)[0] || container;
 }
 
+/** A dialog popup with nothing tabbable inside takes focus itself; otherwise it stays out of the Tab order. */
 function handleTabIndex(floatingFocusElement: HTMLElement) {
   if (
     floatingFocusElement.hasAttribute('tabindex') &&
@@ -142,15 +144,25 @@ type FocusTarget =
 interface FloatingFocusManagerProps {
   children?: JSX.Element;
   context: FloatingRootContext;
+  /** How the popup was opened; `null` means programmatically (focus returns to what had it). */
   openInteractionType?: InteractionType | null | undefined;
   disabled?: boolean | undefined;
+  /**
+   * What takes focus on open: `true` the first tabbable element (else the
+   * popup), `false` nothing, an element, or a function of the open type.
+   */
   initialFocus?: FocusTarget | undefined;
+  /** Where focus goes when the focused element inside is removed: `true` a nearby tabbable, `'popup'` the popup. */
   restoreFocus?: boolean | 'popup' | undefined;
+  /** Whether focus is trapped inside and the rest of the page hidden from assistive tech. */
   modal?: boolean | undefined;
+  /** Whether focus leaving the popup and its trigger closes it. */
   closeOnFocusOut?: boolean | undefined;
   nextFocusableElement?: MaybeRef<HTMLElement | null> | null | undefined;
   previousFocusableElement?: MaybeRef<HTMLElement | null> | null | undefined;
+  /** Receives the guard before the content, to focus the popup programmatically. */
   beforeContentFocusGuardRef?: { current: HTMLSpanElement | null } | undefined;
+  /** Elements outside the popup that count as inside it. */
   getInsideElements?: (() => Array<Element | null | undefined>) | undefined;
 }
 

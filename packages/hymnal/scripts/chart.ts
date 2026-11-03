@@ -1,3 +1,11 @@
+/**
+ * Prints the chords a hymn's MIDI file gives one verse, a melody note at a
+ * time (`bar:note[chord]`, a change under a held note marked `~`), to check
+ * a file by eye against the printed hymn.
+ *
+ *   bun run chart <file.mid> [verses=3] [full|guitar]
+ */
+
 import { Effect } from 'effect';
 
 import { Chord, Harmony, Midi, Score } from '../src/index.js';

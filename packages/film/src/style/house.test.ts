@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { inkAt } from './house.ts';
 
+/** The scale at which a house head fills `share` of the frame's height. */
 const filling = (share: number) => share / 144;
 
+/** Where the line starts to thin, and where it is thinnest: a head a fifth of the frame, and three tenths. */
 const RAMP = { from: 0.2, full: 0.3 } as const;
 
 describe("the figures' line by the shot", () => {

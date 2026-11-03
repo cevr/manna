@@ -15,6 +15,7 @@ import {
   stressToggled,
 } from './delivery.ts';
 
+/** A take word said from `start` to `end`. */
 const word = (text: string, start: number, end: number): TakeWord => ({
   text,
   start,
@@ -22,6 +23,7 @@ const word = (text: string, start: number, end: number): TakeWord => ({
   voiced: voicedAt(start, end),
 });
 
+/** A line's delivery marks as the reader reads them; none of a line that does not parse. */
 const deliveryOf = (beat: string, say: string): ReadonlyArray<Mark> =>
   Result.match(parse(beat, say), {
     onFailure: () => [],

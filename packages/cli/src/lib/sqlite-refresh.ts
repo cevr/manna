@@ -1,6 +1,7 @@
 import { Effect, FileSystem } from 'effect';
 import { checkSqliteRefresh } from '@manna/core/corpus-supply/bun';
 
+/** Default init skips existing files; every requested replacement or missing-slot install checks core's policy. */
 export const withSqliteRefresh = <A, E, R>(
   destination: string,
   refresh: boolean,

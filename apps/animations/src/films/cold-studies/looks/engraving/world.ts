@@ -19,20 +19,26 @@ import {
   turned,
 } from './shapes.ts';
 
+/** The colour script's scarlet, as a watercolour wash on the print. */
 const SCARLET: readonly [number, number, number] = [0.72, 0.13, 0.1];
 
+/** Where the people stand. */
 export const ACCUSED_AT = [-2.4, 0, -0.6] as const;
 export const JUDGE_AT = [2.5, 0.75, -7.0] as const;
+/** The judgment seat's height over the dais, and the bench's. */
 const SEAT = 0.6;
 const BENCH = 0.95;
+/** The evidence table's top. */
 export const EVIDENCE_AT = [-3.55, 0.5, -1.2] as const;
 
+/** The accused, posed each frame through these. */
 export interface Accused {
   readonly root: Group;
   readonly torso: Group;
   readonly head: Group;
 }
 
+/** The judge, posed each frame through these. */
 export interface Judge {
   readonly root: Group;
   readonly torso: Group;
@@ -40,6 +46,7 @@ export interface Judge {
   readonly arm: Group;
 }
 
+/** One item of evidence and where it comes to rest. */
 export interface Exhibit {
   readonly mesh: Mesh;
   readonly rest: readonly [number, number, number];
@@ -49,6 +56,7 @@ export interface Exhibit {
 
 export interface World {
   readonly scene: Group;
+  /** What casts the window's shadow (the walls and ceiling do not). */
   readonly casters: ReadonlyArray<Object3D>;
   readonly blind: ReadonlyArray<Object3D>;
   readonly accused: Accused;
@@ -62,6 +70,7 @@ const mesh = (g: BufferGeometry, m: Material, x = 0, y = 0, z = 0): Mesh => {
   return o;
 };
 
+/** A column: base, shaft with its swell, capital. */
 const COLUMN: Profile = [
   [0, 0],
   [0.78, 0],
@@ -80,6 +89,7 @@ const COLUMN: Profile = [
   [0, 9.0],
 ];
 
+/** A head, egg-shaped, chin at 0. */
 const HEAD: Profile = [
   [0, 0],
   [0.04, 0.008],
@@ -561,6 +571,7 @@ const judge = (light: HallLight, seed: number): Judge => {
   return { root, torso, head, arm };
 };
 
+/** Nine exhibits: scrolls and tablets, each its own place on the pile. */
 const exhibits = (light: HallLight, seed: number): Exhibit[] => {
   const r = rng(seed);
   const parchment = burin(light, { albedo: 0.88, mode: 2, radius: 0.06, spacing: 0.012, rim: 0.5 });

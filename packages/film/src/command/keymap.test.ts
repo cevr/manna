@@ -28,6 +28,7 @@ const command = (id: string, over: Partial<Omit<Command, 'touch'>> = {}): Comman
 
 const page = contextAt('ask', '/films/f/studio');
 
+/** What `p` does among `commands` in `ctx`: the command and step it runs, `owned` or `pass`. */
 const does = (p: KeyPress, commands: ReadonlyArray<Command>, ctx: Context = page) =>
   Resolved.$match(resolve(p, ctx, commands, bindingsOf(commands)), {
     Run: ({ command, how }) => `${command.id} ${how.step}`,
@@ -35,6 +36,7 @@ const does = (p: KeyPress, commands: ReadonlyArray<Command>, ctx: Context = page
     Pass: () => 'pass',
   });
 
+/** Whether `p` runs a command bound to `chord` alone: the chord the press reads as. */
 const readsAs = (p: KeyPress, chord: string): boolean =>
   does(p, [command('bound', { keys: [chord] })]) === 'bound normal';
 

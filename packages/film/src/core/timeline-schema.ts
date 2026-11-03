@@ -2,35 +2,53 @@ import { Schema } from 'effect';
 import { PanelText } from './board.ts';
 import { RenderKind } from './catalogue.ts';
 
+/** How a beat's voice stands: no words, words read at the reading pace, a staging take, the owner's take. */
 const BeatVoice = Schema.Literals(['silent', 'estimated', 'staging', 'owner']);
 export type BeatVoice = typeof BeatVoice.Type;
 
+/** A named moment, in film seconds. */
 const TimedMark = Schema.Struct({ name: Schema.String, at: Schema.Finite });
 
+/**
+ * A beat's holds as laid out: the seconds before its words (`lead`) and
+ * after them to its end (`tail`), which of them its script declares (the
+ * rest are the layout's defaults), and what its tail asks and its `min`.
+ */
 const BeatHold = Schema.Struct({
+  /** Seconds before its words: 0 for a silent beat. */
   lead: Schema.Finite,
+  /** Seconds from its words' end to its end: its `min`'s share in it too (all of it for a silent beat). */
   tail: Schema.Finite,
+  /** The holds its script declares. */
   declared: Schema.Array(Schema.Literals(['lead', 'tail'])),
+  /** The tail it asks for (its own, else the default), before its `min` holds it longer. */
   asked: Schema.Finite,
+  /** The length its `min` holds it to at least: 0 when it declares none. */
   min: Schema.Finite,
 });
 export type BeatHold = typeof BeatHold.Type;
 
+/** One beat on the clock: where it sits, where its words are heard, its marks, its voice and whether a scene draws it. */
 const ClockBeat = Schema.Struct({
   id: Schema.String,
   start: Schema.Finite,
   dur: Schema.Finite,
   hold: BeatHold,
+  /** Where its words are heard, film seconds; none for a silent beat. */
   speech: Schema.optionalKey(Schema.Struct({ start: Schema.Finite, end: Schema.Finite })),
+  /** Its `{mark}`s, film seconds. */
   marks: Schema.Array(TimedMark),
+  /** Its words as its take says them, each from the film second it starts; none for a clock read before they were kept. */
   words: Schema.optionalKey(
     Schema.Array(Schema.Struct({ text: Schema.String, start: Schema.Finite })),
   ),
   voice: BeatVoice,
+  /** Whether a scene draws it (a beat `storyboard()` sets plays as its card, drawn by none). */
   drawn: Schema.Boolean,
 });
 export type ClockBeat = typeof ClockBeat.Type;
 
+/** A part laid over the clock (an act, a score movement): its name, the beat it starts on, its film seconds. */
 const ClockPart = Schema.Struct({
   name: Schema.String,
   from: Schema.String,
@@ -39,6 +57,7 @@ const ClockPart = Schema.Struct({
 });
 export type ClockPart = typeof ClockPart.Type;
 
+/** A version's clock: the rate it is laid at (the film's declared `fps`), its beats in order, its acts, and the movements of the score it plays. */
 export const FilmClock = Schema.Struct({
   fps: Schema.Finite,
   beats: Schema.Array(ClockBeat),
@@ -47,9 +66,15 @@ export const FilmClock = Schema.Struct({
 });
 export type FilmClock = typeof FilmClock.Type;
 
+/**
+ * Where a version's files are: its own folder (`<film>/v<n>/script.ts`), the
+ * film's registered files (the newest version without a folder), or nowhere
+ * (a version a later one replaced in place).
+ */
 const VersionFiles = Schema.Literals(['folder', 'film', 'none']);
 export type VersionFiles = typeof VersionFiles.Type;
 
+/** A version as the timeline names it: its number, its title, whether it is the open one, and where its files are. */
 const FilmVersion = Schema.Struct({
   n: Schema.Int,
   title: Schema.String,
@@ -58,6 +83,7 @@ const FilmVersion = Schema.Struct({
 });
 export type FilmVersion = typeof FilmVersion.Type;
 
+/** The nine stages of the flow, in order. */
 export const Stage = Schema.Literals([
   'script',
   'concept',
@@ -71,6 +97,7 @@ export const Stage = Schema.Literals([
 ]);
 export type Stage = typeof Stage.Type;
 
+/** The seven tracks: a stage each, but the animatic (the Board on the voice clock) and the shorts (on the render's versions). */
 export const Track = Schema.Literals([
   'script',
   'concept',
@@ -82,9 +109,11 @@ export const Track = Schema.Literals([
 ]);
 export type Track = typeof Track.Type;
 
+/** Where a clip stands: made, kept (the one chosen), or approved by the owner. */
 const ClipState = Schema.Literals(['made', 'kept', 'approved']);
 export type ClipState = typeof ClipState.Type;
 
+/** How a clip's span is known: measured (a take, a declared hold) or estimated (words at the reading pace). */
 const ClipClock = Schema.Literals(['measured', 'estimated']);
 export type ClipClock = typeof ClipClock.Type;
 
@@ -95,31 +124,46 @@ const ClipFields = {
   clock: ClipClock,
 };
 
+/** A beat of the script: its id, where its words are heard, its marks. */
 const ScriptClip = Schema.Struct({
   ...ClipFields,
   beat: Schema.String,
   speech: Schema.optionalKey(Schema.Struct({ start: Schema.Finite, end: Schema.Finite })),
   marks: Schema.Array(TimedMark),
+  /** Its holds, which a trim of its edges sets. */
   hold: BeatHold,
 });
 export type ScriptClip = typeof ScriptClip.Type;
 
+/**
+ * A Board panel where the animatic shows it (a beat's first from the beat's
+ * start, a later one from its mark), held to the next panel or its beat's
+ * end: its try shown, or a card the engine sets.
+ */
 const BoardClip = Schema.Struct({
   ...ClipFields,
   panel: Schema.String,
   beat: Schema.String,
+  /** The mark it is said on, or `start`. */
   mark: Schema.String,
+  /** Film seconds its mark is said at (the beat's start for `start`, or a mark its line lacks). */
   markAt: Schema.Finite,
+  /** The try shown (the kept one, else the first); none for a card. */
   try: Schema.optionalKey(Schema.Int),
+  /** The shown try's image, by the name the board record gives it (`board/<file>`); none for a card. */
   file: Schema.optionalKey(Schema.String),
+  /** Whether it is a card or a verse page the engine sets, not a picture. */
   card: Schema.Boolean,
+  /** What the engine sets on a card panel: a card's mark, end and payoff, or a verse's page. */
   text: Schema.optionalKey(PanelText),
+  /** A card's words as its line says them (`cardSaid`), the payoff marked; none when they do not read. */
   words: Schema.optionalKey(
     Schema.Array(Schema.Struct({ text: Schema.String, payoff: Schema.Boolean })),
   ),
 });
 export type BoardClip = typeof BoardClip.Type;
 
+/** A beat's take over its speech: the staging voice's (made) or the owner's (kept). */
 const VoiceClip = Schema.Struct({
   ...ClipFields,
   beat: Schema.String,
@@ -127,9 +171,11 @@ const VoiceClip = Schema.Struct({
 });
 export type VoiceClip = typeof VoiceClip.Type;
 
+/** A beat a scene draws, over the beat's span: approved when its render is. */
 const SceneClip = Schema.Struct({ ...ClipFields, beat: Schema.String });
 export type SceneClip = typeof SceneClip.Type;
 
+/** A score movement, from its beat to the next movement's. */
 const SoundClip = Schema.Struct({
   ...ClipFields,
   movement: Schema.String,
@@ -137,14 +183,17 @@ const SoundClip = Schema.Struct({
 });
 export type SoundClip = typeof SoundClip.Type;
 
+/** A render in the catalogue over its address's span. */
 const RenderClip = Schema.Struct({
   ...ClipFields,
+  /** Its address, as `addressKey` writes it (`film`, `act:valley`, `scenes:a,b`). */
   address: Schema.String,
   variant: Schema.String,
   kind: RenderKind,
 });
 export type RenderClip = typeof RenderClip.Type;
 
+/** One lane: a track with material, its clips in film order. */
 const Lane = Schema.Union([
   Schema.Struct({ track: Schema.tag('script'), clips: Schema.Array(ScriptClip) }),
   Schema.Struct({ track: Schema.tag('board'), clips: Schema.Array(BoardClip) }),
@@ -155,6 +204,7 @@ const Lane = Schema.Union([
 ]).pipe(Schema.toTaggedUnion('track'));
 export type Lane = typeof Lane.Type;
 
+/** A stage of the flow as the version stands: reached (it has material), a gap (no record to read yet), or ahead (with what starts it). */
 export const FlowStage = Schema.Union([
   Schema.Struct({ state: Schema.tag('reached'), stage: Stage }),
   Schema.Struct({ state: Schema.tag('gap'), stage: Stage, why: Schema.String }),
@@ -162,6 +212,7 @@ export const FlowStage = Schema.Union([
 ]).pipe(Schema.toTaggedUnion('state'));
 export type FlowStage = typeof FlowStage.Type;
 
+/** The Next row: the first stage ahead, with what starts it, the gap it starts from (when the stage before it is one), and the later ones. */
 const NextRow = Schema.Struct({
   stage: Stage,
   starts: Schema.String,
@@ -170,17 +221,20 @@ const NextRow = Schema.Struct({
 });
 export type NextRow = typeof NextRow.Type;
 
+/** A flag above the ruler for what waits on the owner: an open ask, or his note not yet done. Its `kind` is its one word. */
 const Marker = Schema.Union([
   Schema.Struct({
     kind: Schema.tag('ask'),
     id: Schema.String,
     title: Schema.String,
     at: Schema.Finite,
+    /** Its lab page. */
     href: Schema.String,
   }),
   Schema.Struct({
     kind: Schema.tag('note'),
     id: Schema.String,
+    /** Its words, in a line. */
     text: Schema.String,
     beat: Schema.String,
     at: Schema.Finite,
@@ -190,6 +244,7 @@ const Marker = Schema.Union([
 ]).pipe(Schema.toTaggedUnion('kind'));
 export type Marker = typeof Marker.Type;
 
+/** One thing that waits on the owner: an open ask, a note an agent answered, a beat whose Board is ready to approve. */
 const Waiting = Schema.Union([
   Schema.Struct({
     kind: Schema.tag('ask'),
@@ -207,6 +262,10 @@ const Waiting = Schema.Union([
 ]).pipe(Schema.toTaggedUnion('kind'));
 export type Waiting = typeof Waiting.Type;
 
+/**
+ * The header's line: the version's stage among the nine, what waits on the
+ * owner (`waits`, only when something does: "N wait on you").
+ */
 const TimelineHeader = Schema.Struct({
   stage: Stage,
   waits: Schema.optionalKey(
@@ -215,14 +274,19 @@ const TimelineHeader = Schema.Struct({
 });
 type TimelineHeader = typeof TimelineHeader.Type;
 
+/** A film's timeline at one version: what the `timeline` tool answers. */
 export const FilmTimeline = Schema.Struct({
   film: Schema.String,
+  /** The production whose ledger names its versions; none for a film with no ledger. */
   production: Schema.optionalKey(Schema.String),
   version: FilmVersion,
   versions: Schema.Array(FilmVersion),
+  /** Film seconds, the last beat's end. */
   duration: Schema.Finite,
+  /** The act bands, from the version's declared acts. */
   bands: Schema.Array(ClockPart),
   lanes: Schema.Array(Lane),
+  /** Each of the nine stages as the version stands. */
   flow: Schema.Array(FlowStage),
   next: Schema.optionalKey(NextRow),
   markers: Schema.Array(Marker),

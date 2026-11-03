@@ -1,3 +1,12 @@
+/**
+ * Prints lines of a hymn with each word cut into its sung syllables, as a
+ * hymnal prints them under the notes ("Al-might-y"): one line in, one out.
+ * A word that may be sung shorter takes its likeliest count.
+ *
+ *   bun run split "Praise to the Lord, the Almighty, the King of creation!"
+ *   bun run split < lines.txt
+ */
+
 import { Syllables } from '../src/index.js';
 
 const cutLine = (line: string) =>

@@ -3,9 +3,14 @@ import type { PlatformError } from 'effect/PlatformError';
 
 const isAlreadyExists = (error: PlatformError) => error.reason._tag === 'AlreadyExists';
 
+/** The numbers of the numbered folders `names` holds. */
 const numbersIn = (names: ReadonlyArray<string>) =>
   names.filter((n) => /^\d+$/.test(n)).map(Number);
 
+/**
+ * The next numbered folder under `root`, made by this call alone: its number
+ * and its path. A number another run made first is passed over for the next.
+ */
 export const reserveNumbered = Effect.fn('reserveNumbered')(function* (root: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

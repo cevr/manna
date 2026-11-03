@@ -13,6 +13,7 @@ const flagsOf = (m: SheetMeasure) => m.flags.map((f) => `${f.check}:${f.views.jo
 const unmeasuredOf = (m: SheetMeasure, view: number) =>
   m.unmeasured.filter((u) => u.view === view && u.check !== 'hairBeard').map((u) => u.check);
 
+/** A hand raised beside the head (its middle 56 px above the chin), on nothing, a sleeve or a bare forearm from the shoulder. */
 const raised = (kind: 'free' | 'sleeve' | 'bare') =>
   at({ limb: { hand: [318, 160], from: [[250, 262]], kind } });
 
@@ -113,6 +114,7 @@ describe('a hand held low beside the hem', () => {
   });
 });
 
+/** A colour, painted on top of a drawn figure wherever `inside` holds (the robe and the head too). */
 type Rgb = readonly [number, number, number];
 const INK: Rgb = [58, 38, 28];
 const SKIN: Rgb = [226, 178, 146];
@@ -131,11 +133,13 @@ const band =
     const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / (dx * dx + dy * dy)));
     return Math.hypot(x - (a[0] + t * dx), y - (a[1] + t * dy)) <= w;
   };
+/** A hand at `hand` painted on top of the figure, alone. */
 const alone = (hand: readonly [number, number]) => {
   const r = at();
   paint(r, disc(hand[0], hand[1], 28), INK);
   return paint(r, disc(hand[0], hand[1], 22), SKIN);
 };
+/** A hand at `hand` painted on top of the figure, on a limb from `from` of `fill`: its ink, then its fill. */
 const onLimb = (hand: readonly [number, number], from: readonly [number, number], fill: Rgb) => {
   const r = at();
   paint(r, band(from, hand, 22), INK);

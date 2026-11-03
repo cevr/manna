@@ -1,6 +1,21 @@
 /* oxlint-disable effect/noGlobals, effect/noAsyncFunction -- Bun's loader takes the list's stand-in as source text, so the paths it imports are written into it as JSON literals; the screens are imported only once the stand-in is registered. */
 /* oxlint-disable effect/noTestLifecycleHooks -- a React screen test: the safe area is set for the file and animations land after each case. */
 
+/**
+ * Acceptance (checkbulk S1): the find bar stands where the page the route
+ * draws puts it, in the real player layer.
+ *
+ * - An unknown hymn number's route draws no hymn page and no bar (the
+ *   route's `NoHymn`); with the player idle, no find bar stands there.
+ * - The home list over a hymn page that still says it shows (a link to `/`
+ *   from a hymn page), with the player idle, docks the find bar.
+ *
+ * Mounted as `findglide.slow.test.tsx` mounts the layers: the player layer
+ * (`LivePlayer`) over the stack's wrapper (`StackBottom`) over stand-in
+ * screens, in a browser's document (`src/test/setup.ts`). Numbers only: no
+ * hymn's words are read or printed.
+ */
+
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'bun:test';
 import { plugin } from 'bun';
 import { Option } from 'effect';
@@ -38,7 +53,9 @@ const { useShowsPage } = await import('~/player/page');
 const { StackBottom } = await import('~/player/StackBottom');
 const { pathname, safeArea } = await import('~/test/one');
 
+/** The device's bottom inset: a phone's home indicator. */
 const INSET = 34;
+/** The bar docked on the home list: its bottom over the window's. */
 const DOCKED = INSET + DOCKED_LIFT;
 
 beforeAll(() => {
@@ -49,6 +66,7 @@ afterAll(() => {
 });
 afterEach(() => landAnimations());
 
+/** A stand-in hymn page: it shows hymn `n`, so the bar and its find bar stand over it. */
 function Page({ n }: { readonly n: number }) {
   useShowsPage({ number: n, title: 'Stand-in' });
   return <View testID={`page-${n}`} />;
@@ -57,11 +75,13 @@ function Page({ n }: { readonly n: number }) {
 type Screen = { readonly path: string; readonly draw: () => React.ReactNode };
 const home: Screen = { path: '/', draw: () => <View key="home" testID="home" /> };
 const hymn = (n: number): Screen => ({ path: `/hymns/${n}`, draw: () => <Page key={n} n={n} /> });
+/** The hymn route's `NoHymn` for a number the book does not hold: it says no page shows and draws no bar. */
 const noHymn = (segment: string): Screen => ({
   path: `/hymns/${segment}`,
   draw: () => <View key={`none-${segment}`} testID="no-hymn" />,
 });
 
+/** The stack `screens`, the last shown, over a registry of its own. */
 const mount = (...screens: ReadonlyArray<Screen>) => {
   const registry = AtomRegistry.make();
   const host = document.createElement('div');
@@ -91,11 +111,13 @@ const mount = (...screens: ReadonlyArray<Screen>) => {
 
 const style = (element: Element) => getComputedStyle(element);
 
+/** A transform's move along `axis`, 0 when it draws none. */
 const moved = (element: Element, axis: 'X' | 'Y') => {
   const drawn = new RegExp(`translate${axis}\\((-?[\\d.]+)px\\)`).exec(style(element).transform);
   return Number(drawn?.[1] ?? 0);
 };
 
+/** Where the bar stands: its bottom over the window's, as its `bottom` and any move up draw it. */
 const standing = (find: HTMLElement) =>
   Math.round(Number.parseFloat(style(find).bottom) - moved(find, 'Y'));
 

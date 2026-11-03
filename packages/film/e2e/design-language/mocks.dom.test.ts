@@ -16,6 +16,7 @@ const TYPES = new Map([
 
 const typeOf = (path: string) => TYPES.get(path.split('.').pop() ?? '') ?? 'text/plain';
 
+/** The pages of the repo the mocks load, by their paths from the root: each mock, its sheets, the player's tokens; `pages` beside them. */
 const serve = (pages: Readonly<Record<string, string>>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -32,12 +33,14 @@ const serve = (pages: Readonly<Record<string, string>>) =>
     return servePaths(Object.fromEntries([...repo, ...planted]));
   }).pipe(Effect.provide(BunServices.layer));
 
+/** A page to read: its name in the findings, its path, and the planted pages served beside the repo's. */
 interface Page {
   readonly file: string;
   readonly path: string;
   readonly pages: Readonly<Record<string, string>>;
 }
 
+/** The page read on one pointer, at each width its queries name, then `then` on the tab. */
 const visit = <A, E, R>(
   page: Page,
   coarse: boolean,
@@ -63,20 +66,32 @@ const visit = <A, E, R>(
     return yield* then(tab, script);
   }).pipe(Effect.scoped);
 
+/** What one pointer found, read once the passes are done (each pass is synchronous, so nothing is left to settle). */
 const rawOf = (page: Page, coarse: boolean) =>
   visit(page, coarse, (tab, script) => tab.evaluate<Raw>(script.raw));
 
+/**
+ * What the check finds on a page, read on the phone's pointer and then the
+ * desk's: every red either finds, and each of the page's own selectors that
+ * reaches no element on either: `want`.
+ */
 const read = (page: Page, want: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const phone = yield* rawOf(page, true);
     yield* visit(page, false, (tab, script) => evaluates(tab, script.found(phone), want));
   });
 
+/** A page's read for the sheets it shares: the selectors it reaches on neither pointer, by their place, and the sheets it wears. */
 interface Wearer {
   readonly unreached: ReadonlyMap<string, Unreached>;
   readonly wears: ReadonlyArray<string>;
 }
 
+/**
+ * The selectors of the shared sheets that no page wearing their sheet
+ * reaches on either pointer (a selector of lab.css is judged on the pages
+ * that link lab.css), each named once.
+ */
 const sharedUnreached = (pages: ReadonlyArray<Page>) =>
   Effect.gen(function* () {
     const wearers = yield* Effect.forEach(
@@ -103,9 +118,11 @@ const sharedUnreached = (pages: ReadonlyArray<Page>) =>
 
 const wears = `<link rel="stylesheet" href="${TOKENS}"><link rel="stylesheet" href="${MOCKS}/kit.css">`;
 
+/** A planted page's html: `head` (the tokens and the kit), its own `css` over `body`. */
 const pageOf = (css: string, body: string, head = wears) =>
   `<!doctype html><html><head>${head}<style>${css}</style></head><body>${body}</body></html>`;
 
+/** A planted mock, `case.html` (or `file`): wearing the tokens and the kit (or `head`), its own `css` over `body`. */
 const planted = (
   css: string,
   body: string,
@@ -116,6 +133,7 @@ const planted = (
 
 const SLOW = 30_000;
 
+/** The mocks, one case each: named here, as a case is named before any runs; the first case holds the list to the folder. */
 const MOCK_PAGES = [
   'choices.html',
   'films.html',

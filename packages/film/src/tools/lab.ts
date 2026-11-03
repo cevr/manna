@@ -28,8 +28,14 @@ import { writeAnswer } from './write-answer.ts';
 import { type StudioReadings, studioGroup } from './studio.ts';
 import type { Takes } from './takes.ts';
 
+/** How many films' scripts the lab keeps read: one film, a few stamps of it. */
 const SCRIPTS_KEPT = 8;
 
+/**
+ * A staging take's audio, `file` as the staging cache names it
+ * (`audioNamed`: a name, never a path), else StagingTakeUnknown. Named by
+ * its request's key, a take's audio never changes.
+ */
 const stagingTakeAnswer = (request: HttpServerRequest.HttpServerRequest, file: string) =>
   Effect.gen(function* () {
     const found = yield* (yield* StagingCache).audioNamed(file);
@@ -37,6 +43,12 @@ const stagingTakeAnswer = (request: HttpServerRequest.HttpServerRequest, file: s
     return yield* serveFile(request, found.value, CACHE.hashed);
   });
 
+/**
+ * The film's script as the words reader reads it: each beat's line, picture
+ * and sources, read fresh (`FreshFilm.script`) and kept under the film's
+ * source stamp, so a line or a brief fixed while the lab is open is read once
+ * after the change. A failed read is not kept.
+ */
 const scriptGroup = HttpApiBuilder.group(LabHttpApi, 'script', (handlers) =>
   Effect.gen(function* () {
     const fresh = yield* FreshFilm;
@@ -70,6 +82,13 @@ const scriptGroup = HttpApiBuilder.group(LabHttpApi, 'script', (handlers) =>
   }),
 );
 
+/**
+ * A beat's delivery marks written into the film's `script.ts`: one splice
+ * of its `say` literal, read back only when the line parses with the words
+ * it had and exactly the marks asked (`sayMissed`). Its staging take is
+ * voiced again by the fill, under its new key; no take of the film's is
+ * touched.
+ */
 const marksWrite = (name: string, payload: MarksPost) =>
   answered(
     Effect.gen(function* () {
@@ -92,6 +111,12 @@ const marksWrite = (name: string, payload: MarksPost) =>
     }),
   );
 
+/**
+ * The app's series drafts beside its films: the list, a draft's beats, each
+ * spoken beat's staging take (voiced as a film's are, in the staging voice)
+ * and its audio, and a beat's delivery marks written into the draft's
+ * Markdown (`SeriesDrafts.mark`), answered with the draft as it now reads.
+ */
 const seriesGroup = HttpApiBuilder.group(LabHttpApi, 'series', (handlers) =>
   handlers
     .handle('list', () => answered(Effect.flatMap(SeriesDrafts, (d) => d.list)))
@@ -124,6 +149,11 @@ const seriesGroup = HttpApiBuilder.group(LabHttpApi, 'series', (handlers) =>
     ),
 );
 
+/**
+ * The film's storyboard as an ask shows it: its record, the panels
+ * `film board` would draw again and why, and its images (named by panel and
+ * try, written once).
+ */
 const boardGroup = HttpApiBuilder.group(LabHttpApi, 'board', (handlers) =>
   handlers
     .handle('read', ({ params }) =>
@@ -154,6 +184,7 @@ const boardGroup = HttpApiBuilder.group(LabHttpApi, 'board', (handlers) =>
     ),
 );
 
+/** The pages' build: a wait that answers once a source a build read changes, or the page's film is mixed, or at once for a page another server served. */
 const pageGroup = HttpApiBuilder.group(LabHttpApi, 'page', (handlers) =>
   handlers.handle('wait', ({ query }) =>
     answered(
@@ -171,6 +202,7 @@ const pageGroup = HttpApiBuilder.group(LabHttpApi, 'page', (handlers) =>
   ),
 );
 
+/** A look: stills of a scene as its sources stand, from the page the lab holds warm (`Easel`). */
 const looksGroup = HttpApiBuilder.group(LabHttpApi, 'looks', (handlers) =>
   handlers.handle('take', ({ params, payload }) =>
     answered(
@@ -182,6 +214,7 @@ const looksGroup = HttpApiBuilder.group(LabHttpApi, 'looks', (handlers) =>
   ),
 );
 
+/** A match: a scene's figures held against their concepts, from the page the lab holds warm (`Easel`). */
 const matchesGroup = HttpApiBuilder.group(LabHttpApi, 'matches', (handlers) =>
   handlers.handle('take', ({ params, payload }) =>
     answered(
@@ -193,8 +226,24 @@ const matchesGroup = HttpApiBuilder.group(LabHttpApi, 'matches', (handlers) =>
   ),
 );
 
+/**
+ * Where the owner's phone opens the lab (`FILM_LAB_PHONE_URL`, this
+ * machine's tailnet address by its IP: `http://100.92.183.50:8230/`), when it
+ * is set: `film lab` listens there itself, behind the same gate, which admits
+ * the bound IP (a name the address resolves from is not).
+ */
 export const labPhone = Config.option(Config.URL('FILM_LAB_PHONE_URL'));
 
+/**
+ * What the lab's handlers run with: the asks, the Board, the film's folder,
+ * its source (read, a beat's marks written), its takes, the renders' index,
+ * the pages, the easel, and `FreshFilm` for every read of a film's modules.
+ * The lab runs for days and keeps a module as it first imported it, so
+ * nothing here loads a film (`FilmRepo`), the sound library
+ * (`SoundLibrary`) or mixes in process (`Mixer`): the script and the beats
+ * are read fresh (`StudioReadings`, `ScriptVoices`). `lab-context.types.ts`
+ * fails the typecheck if a loader joins.
+ */
 export type LabContext =
   | AskStore
   | BoardStore
@@ -214,6 +263,14 @@ export type LabContext =
   | LabPage
   | Easel;
 
+/**
+ * The lab's whole server as one web handler over the services the caller
+ * runs with (`LabContext`): every request passes the gate first, the pages
+ * included, so a foreign Host reads nothing; then the API's routes answer
+ * theirs, for any film the app has, and the pages the rest. A fixture's own
+ * routes (`beside`, outside `/api/`) pass the same gate. Every listener
+ * serves this one handler. Closed when the scope closes.
+ */
 export const labHandler = Effect.fn('film.lab.handler')(function* (
   beside: BesideRoutes = Layer.empty,
 ) {

@@ -3,11 +3,14 @@ import { describe, expect, it } from 'effect-bun-test';
 import { asset, openTab, respond, scriptOf, servePaths } from '../../src/lab/fixtures/browsers.ts';
 import type { AfterLoss, RiveFrame } from '../../src/canvas/fixtures/rive-pixels.ts';
 
+/** The five times compared: the reach off, on, mid-swing and left at rest. */
 const TARGETS = [0.1, 0.6, 1.1, 1.6, 1.95];
 
+/** Two histories drawn before each target: far ahead and behind, and from the scene's end. */
 const HISTORY_A = [3.9, 0.3, 2.2];
 const HISTORY_B = [1.0, 3.1];
 
+/** The fixture page's script and the files it loads (the runtimes' wasm, the rig), bundled once, as the file loads. */
 const fixture = Effect.succeed(
   // oxlint-disable-next-line effect/noAsyncFunction -- built once as the file loads, so no case's time limit holds its cost
   await Effect.runPromise(
@@ -34,8 +37,10 @@ const fixture = Effect.succeed(
   ),
 );
 
+/** Times as JSON, to hand to the page. */
 const json = Schema.encodeSync(Schema.fromJsonString(Schema.Array(Schema.Finite)));
 
+/** A page of its own with the fixture's script loaded. */
 const fixturePage = () =>
   Effect.gen(function* () {
     const files = yield* fixture;
@@ -68,6 +73,7 @@ const fixturePage = () =>
     return page;
   });
 
+/** `targets`' frames after `histories` (one after another), in one page. */
 const framesOn = (
   histories: ReadonlyArray<ReadonlyArray<number>>,
   targets: ReadonlyArray<number> = TARGETS,

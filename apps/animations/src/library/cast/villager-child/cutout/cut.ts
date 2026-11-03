@@ -104,12 +104,20 @@ const POSES_5: PartCut = {
   ],
 };
 
+/** His ink line (r+g+b < 120, median, measured). */
 const INK = [29, 14, 5, 255] as const;
 
+/** How okra closes his body's sides where his arms lay. */
 const SIDES = sides({ pronoun: 'his', lower: 'tunic', cloth: 'the linen tunic' });
 
+/** The paper grain his sheet shows on his body, carried into the paint under his arms. */
 const GRAIN = grain('the linen tunic of his body');
 
+/**
+ * Each view's moving parts (what a pose moves, whose areas are painted
+ * magenta and repainted beneath), and the words okra repaints them by: what
+ * lies under them, in the sheet's own style.
+ */
 const HIDDEN_ENTRIES = {
   'poses-5': {
     moving: ['armRight', 'armLeft'],

@@ -24,6 +24,7 @@ const CHARGE = Segment.make('charge');
 
 const WORDS = ['Is', 'the', 'um', 'verdict', 'a', 'cover', 'up', 'No', 'it', 'is', 'not'];
 
+/** A talk over one take, its sections as given. */
 const talkOf = (sections: Talk['sections'], extra: Partial<Talk> = {}): Talk => ({
   title: 'Is the verdict a cover-up?',
   format: 'question',
@@ -35,8 +36,10 @@ const talkOf = (sections: Talk['sections'], extra: Partial<Talk> = {}): Talk => 
 const cutOf = (talk: Talk, take: TalkTake = syntheticTake(WORDS)) =>
   Result.getOrThrow(talkCut(talk, { a: take }));
 
+/** Whether `t` falls on a frame of the talk's rate. */
 const onFrame = (t: number) => Math.abs(t * TALK_FPS - Math.round(t * TALK_FPS)) < 1e-6;
 
+/** Every piece edge of `cut` is on a frame and outside every kept word's voiced span. */
 const seamsHold = (cut: TalkCut, take: TalkTake) => {
   for (const section of cut.sections)
     for (const piece of section.pieces)
@@ -419,6 +422,7 @@ describe("a talk's takes, from the footage library", () => {
 });
 
 describe("a talk's captions", () => {
+  /** Two sections of one take: the second plays words 7 to 10, its "No" quoted. */
   const talk = talkOf(
     [
       { id: 'claim', take: 'a', from: 0, to: 6, cut: [[2, 2]] },

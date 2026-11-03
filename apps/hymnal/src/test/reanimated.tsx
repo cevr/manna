@@ -1,5 +1,31 @@
 /* oxlint-disable effect/noNullish, effect/noRuntimeTypeof, effect/noUnknownParameters, effect/noUnsafeDictionaryType -- a stand-in for Reanimated keeps its API: a reaction's first previous value is null, and an animation is told from a value by its shape. */
 
+/**
+ * `react-native-reanimated` and `react-native-worklets` as the app's tests
+ * see them: the parts the bar and its dials use, run on the JavaScript
+ * thread. A shared value is a box; an animation set on it (`withSpring`,
+ * `withTiming`) lands on its target at once and calls its callback, as an
+ * animation that has settled would; an animated style and a reaction run
+ * again whenever any shared value changes. A plain set of the value a
+ * shared value already holds changes nothing and tells no one, as in
+ * Reanimated; an animation set always runs. A worklet scheduled on React
+ * Native's thread runs at once. A test reads each frame as it is once its
+ * animations have settled.
+ *
+ * Each animation is kept in `animations`, with where its value began, so a
+ * test reads where a spring started. Between `holdAnimations` and
+ * `landAnimations` an animation waits, as one under way on a device, and
+ * `cancelAnimation` stops it half way.
+ *
+ * A test that reads every frame steps the waiting timings instead
+ * (`stepAnimations`): each moves along its own duration and curve (the
+ * curves of `Easing` are Reanimated's own), a frame at a time, and lands at
+ * its end; `cancelAnimation` stops a stepped one where it stands. A stepped
+ * timing that is stopped, or that a new value or animation replaces, is told
+ * it did not finish on the next frame, as Reanimated tells it: after a
+ * touch's next callbacks may have run.
+ */
+
 import {
   type ComponentType,
   forwardRef,
@@ -22,9 +48,11 @@ interface Animation<T> {
   readonly animation: Kind;
   readonly to: T;
   readonly done?: (finished: boolean) => void;
+  /** The config it was set with: a timing's duration and easing. */
   readonly config?: unknown;
 }
 
+/** Reanimated's timing defaults: 300 ms, on a quadratic ease in and out. */
 const TIMING = 300;
 const curveOf = (config: unknown): ((t: number) => number) => {
   if (typeof config === 'object' && config !== null && 'easing' in config)
@@ -40,32 +68,39 @@ const durationOf = (config: unknown): number => {
 const isAnimation = <T,>(next: T | Animation<T>): next is Animation<T> =>
   typeof next === 'object' && next !== null && 'animation' in next;
 
+/** Each animation set on a shared value: its kind, where the value was as it began, and its target. */
 export const animations: Array<{
   readonly kind: Kind;
   readonly from: unknown;
   readonly to: unknown;
 }> = [];
 
+/** While held, an animation set waits, unlanded, until `landAnimations`, or a `cancelAnimation` stops it. */
 let held = false;
 const waiting = new Map<
   SharedValue<unknown>,
   {
     readonly land: () => void;
     readonly stop: () => void;
+    /** Moves it on by `ms`; whether it still runs after (a spring waits until landed). */
     readonly step: (ms: number) => boolean;
+    /** A new value or animation takes its place. */
     readonly replaced: () => void;
   }
 >();
 
+/** The callbacks owed to stepped timings that were stopped or replaced: told on the next frame. */
 const late: Array<() => void> = [];
 const tellLate = () => {
   for (const owed of late.splice(0)) owed();
 };
 
+/** Animations set from now wait, as ones under way on a device. */
 export const holdAnimations = () => {
   held = true;
 };
 
+/** Every waiting animation lands, and animations land at once again. */
 export const landAnimations = () => {
   held = false;
   tellLate();
@@ -73,6 +108,11 @@ export const landAnimations = () => {
   waiting.clear();
 };
 
+/**
+ * Every waiting timing moves on by `ms` (a frame, 16 ms, at most), as a
+ * device draws its next frame, and lands once its duration has passed. It
+ * gives whether a timing still runs after it; a spring waits until landed.
+ */
 export const stepAnimations = (ms = 16): boolean => {
   tellLate();
   let running = false;
@@ -164,14 +204,19 @@ const animate =
 export const withSpring = animate('spring');
 export const withTiming = animate('timing');
 
+/** A delayed animation is the animation: it lands at once with the rest. */
 export const withDelay = <T,>(_ms: number, next: T): T => next;
 
+/** A sequence lands where its last step goes, and calls that step's callback. */
 export const withSequence = <T,>(...steps: ReadonlyArray<T>): T => steps.at(-1) as T;
 
+/** Whether the device asks for reduced motion: a test's device does not. */
 export const useReducedMotion = () => false;
 
+/** How an animation answers the device's reduced-motion setting. */
 export const ReduceMotion = { System: 'system', Always: 'always', Never: 'never' } as const;
 
+/** A waiting animation stops half way along, as a touch stops one under way. */
 export const cancelAnimation = (value: SharedValue<unknown>) => {
   const under = waiting.get(value);
   if (under === undefined) return;
@@ -179,6 +224,7 @@ export const cancelAnimation = (value: SharedValue<unknown>) => {
   under.stop();
 };
 
+/** Draws again whenever a shared value is set. */
 const useTold = () => {
   const [, force] = useReducer((n: number) => n + 1, 0);
   useEffect(() => {
@@ -220,6 +266,7 @@ export const useAnimatedReaction = <T,>(
 
 type Curve = (t: number) => number;
 
+/** A cubic Bézier from (0, 0) to (1, 1) through (x1, y1) and (x2, y2), as CSS draws one: y at x, x found by halving. */
 const bezier = (x1: number, y1: number, x2: number, y2: number): Curve => {
   const at = (a: number, b: number, s: number) =>
     3 * a * s * (1 - s) ** 2 + 3 * b * s ** 2 * (1 - s) + s ** 3;
@@ -235,6 +282,7 @@ const bezier = (x1: number, y1: number, x2: number, y2: number): Curve => {
   };
 };
 
+/** Reanimated's curves, each from 0 at 0 to 1 at 1 (`exp`'s ends a thousandth off, as Reanimated's are). */
 export const Easing = {
   linear: (t: number) => t,
   quad: (t: number) => t * t,
@@ -254,6 +302,7 @@ export const Easing = {
   bezier,
 };
 
+/** A view that takes Reanimated's layout props and draws as a plain one. */
 const animated = <P extends object>(Plain: ComponentType<P>) =>
   forwardRef<
     unknown,
@@ -262,12 +311,16 @@ const animated = <P extends object>(Plain: ComponentType<P>) =>
     return <Plain {...(props as P)} ref={ref} />;
   });
 
+/** An animated view's ref: a plain one. */
 export const useAnimatedRef = <T,>() => useRef<T | null>(null);
 
+/** A scroll from the UI thread: no scroll view runs under a test. */
 export const scrollTo = (_ref: unknown, _x: number, _y: number, _animated: boolean) => {};
 
+/** A view's animated props, read once as a style is. */
 export const useAnimatedProps = <P,>(props: () => P): P => props();
 
+/** A scroll view's offset written to a shared value: a test writes the value itself. */
 export const useScrollViewOffset = (_ref: unknown, _offset: SharedValue<number>) => {};
 
 const Animated = {
@@ -279,6 +332,7 @@ const Animated = {
 
 export default Animated;
 
+/** A layout animation's builder: every step gives the builder again. */
 const layout: Record<string, unknown> = {};
 for (const step of ['duration', 'delay', 'springify', 'damping', 'withInitialValues'])
   layout[step] = () => layout;
@@ -287,12 +341,14 @@ export const FadeOut = layout;
 export const FadeInDown = layout;
 export const FadeOutDown = layout;
 
+/** A keyframe animation: its frames are dropped, and `duration` gives it again. */
 export class Keyframe {
   duration(_ms: number) {
     return this;
   }
 }
 
+/** `react-native-worklets`: a function scheduled on React Native's thread runs at once. */
 export const scheduleOnRN = <A extends ReadonlyArray<unknown>>(
   run: (...args: A) => void,
   ...args: A

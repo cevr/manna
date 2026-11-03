@@ -6,6 +6,7 @@ import { answered } from './api-server.ts';
 import { AskStore } from './ask-store.ts';
 import { CACHE } from './review-file.ts';
 
+/** The type of a copy by its extension: an image an ask shows. */
 const IMAGE_TYPES: Record<string, string> = {
   png: 'image/png',
   jpg: 'image/jpeg',

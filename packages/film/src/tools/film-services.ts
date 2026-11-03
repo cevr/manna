@@ -67,25 +67,65 @@ import { SeriesDrafts } from './series-drafts.ts';
 import { StagingCache } from './staging.ts';
 import { Takes } from './takes.ts';
 
+/** What the film's services are built over: the app's folders, and how it reads a film fresh. */
 interface FilmServicesSpec {
+  /** The films folder (`<film>/scenes`, `<film>/narration`, ...). */
   readonly films: string;
+  /** The app's sound library folder (`library.ts`, its lock, `files/`, `public/`). */
   readonly sounds: string;
+  /** The app's footage library folder (its lock, `transcripts/`, `files/`), shared by its talks. */
   readonly footage: string;
+  /**
+   * The app's folders for what a run makes (`FILMS_OUT`), the lab's notes
+   * (`FILMS_LAB`) and the productions' ledgers (`FILMS_PRODUCTIONS`); the
+   * environment's value wins when it names one.
+   */
   readonly folders: { readonly out: string; readonly lab: string; readonly productions: string };
+  /** The command that runs the app's CLI: the lab reads, checks and mixes a film through it, fresh (`FreshFilm`). */
   readonly self: ReadonlyArray<string>;
+  /** The roots of the renders the lab reviews when `FILM_REVIEW_ROOTS` names none. */
   readonly roots: Effect.Effect<
     ReadonlyArray<ReviewRoot>,
     never,
     FileSystem.FileSystem | Path.Path
   >;
+  /**
+   * ElevenLabs: the real one (`ElevenLabs.layer`), or a fixture's fake, which
+   * may read the film and its media.
+   */
   readonly elevenLabs: Layer.Layer<ElevenLabs, never, FilmRepo | Media | BunServices.BunServices>;
+  /**
+   * The private store the sound and footage libraries keep their originals
+   * in: none given, the one the app's `sounds/library.ts` declares (built
+   * here, `PrivateStore.layer`); a test gives a folder of its own, so it
+   * never builds the live one.
+   */
   readonly privateStore: Option.Option<
     Layer.Layer<PrivateStore, never, FileSystem.FileSystem | Path.Path>
   >;
+  /**
+   * The folder staging takes and the day's spend are kept in: none given,
+   * the one every checkout shares (`StagingCache.fromConfig`,
+   * `~/.cache/bible-film/staging`), so the daily cap holds across them; a
+   * test gives a folder of its own.
+   */
   readonly staging: Option.Option<string>;
+  /**
+   * The app's series folder (`<series>/scripts/<draft>.md`), whose drafts the
+   * lab reads and marks beside its films (`SeriesDrafts`); none given, it
+   * lists no series.
+   */
   readonly series: Option.Option<string>;
 }
 
+/**
+ * The services every `film` command and the lab run with: the films and their
+ * notes, a film's source (read, written, stepped, its scenes located fresh
+ * for the lab and in process for a command's stamps), the paid tools and the
+ * media, the sound library, the footage library and their private store, the narrator, composer and
+ * mixer, the renders' catalogue and the review over the roots, the choices,
+ * the takes and the studio's readings, under the app's folders.
+ */
 export const filmServices = (spec: FilmServicesSpec) => {
   const Platform = Layer.merge(BunServices.layer, BunCrypto.layerMac);
   const Folders = ConfigProvider.layerAdd(
@@ -173,14 +213,25 @@ export const filmServices = (spec: FilmServicesSpec) => {
   );
 };
 
+/**
+ * The lab's pages, built from the app's entries and watched while the lab
+ * runs (`LabPage`), and the easel's warm pages over them, in this process's
+ * Chrome (`Easel`; Chrome starts only for a look).
+ */
 export const labPages = (spec: LabPageSpec) =>
   Easel.layer.pipe(
     Layer.provideMerge(LabPage.layer(spec)),
     Layer.provide(Layer.mergeAll(PageBundler.layer, PageRenderer.layer, Browser.layer)),
   );
 
+/** How often the lab's change feed reads the files it watches. */
 const FEED_EVERY = Duration.seconds(2);
 
+/**
+ * The lab's routes with its MCP beside `beside`: every link at the lab's own
+ * `links` (local, and the phone's when it listens there), over a change feed
+ * and its event subscriptions (`mcp-events.ts`), kept while the scope is open.
+ */
 const mcpRoutes = Effect.fn('film.lab.mcp')(function* (links: LabLinks, beside: BesideRoutes) {
   const events = yield* Layer.build(LabEvents.layer({ links, every: FEED_EVERY }));
   const services = yield* Effect.context<LabMcpNeeds>();
@@ -203,6 +254,12 @@ const mcpRoutes = Effect.fn('film.lab.mcp')(function* (links: LabLinks, beside: 
   );
 });
 
+/**
+ * The lab's listener at the owner's phone address (`phone`, `labPhone`):
+ * bound until the scope closes, with its link; none when it is not set. One
+ * this machine cannot bind (the tailnet down) or not plain `http` is logged
+ * (`lab.phone.unbound`), and the lab serves loopback alone.
+ */
 const phoneListener = Effect.fn('film.lab.phone')(function* (phone: Option.Option<URL>) {
   if (Option.isNone(phone)) return Option.none();
   const url = phone.value;
@@ -223,6 +280,15 @@ const phoneListener = Effect.fn('film.lab.phone')(function* (phone: Option.Optio
   );
 });
 
+/**
+ * The lab served at `at`, and at the owner's phone address (`phone`) when
+ * one is given, until the scope closes: one handler behind the gate on
+ * every listener (a fixture's own routes, `beside`, behind it too), then
+ * the easel's pages, which are the lab's own, served where it is bound.
+ * With `mcp`, the lab is also an MCP server at `/mcp` for agents, over a
+ * change feed the lab keeps while it runs (`lab-mcp.ts`). Its links: on
+ * this machine (`localhost`), and the phone's when it listens there.
+ */
 export const startLab = Effect.fn('film.lab.start')(function* (
   at: LabAt,
   phone: Option.Option<URL> = Option.none(),

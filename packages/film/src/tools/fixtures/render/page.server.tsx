@@ -4,6 +4,7 @@ import { createMemo } from 'solid-js';
 import type { PageRequest } from '../../../core/page-render.ts';
 import { pageRender } from '../../../lab/page-server.tsx';
 
+/** This import of the module. */
 const INSTANCE = Effect.runSync(Random.nextIntBetween(0, 36 ** 6)).toString(36);
 
 const Fixture = (props: { readonly request: PageRequest }) => {

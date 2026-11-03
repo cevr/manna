@@ -34,8 +34,10 @@ import { memoryFileSystem, memoryManifestLock, text } from './host/testing.ts';
 import { ManifestLock } from './manifest-lock.ts';
 import { pruneIdle, readCache, recordRender } from './segment-cache.ts';
 
+/** The rate the films here declare, and their pages draw at. */
 const FPS = 2;
 
+/** Three beats, 5, 5 and 10 seconds, at 2 fps: frames 0–9, 10–19 and 20–39. */
 const film = {
   ...testFilm(
     [
@@ -82,6 +84,11 @@ const video = (
 const keyed = (scenes: ReadonlyMap<string, string> = keys, fresh = false) =>
   Reuse.Keyed({ beats: scenes, fresh });
 
+/**
+ * Five beats at 2 fps: frames 0–11, 12–24, b's 25–34, 35–47 and 48–59.
+ * Drawn whole, b's frames are two chunks, 25–30 and 30–35 (a chunk is 30
+ * frames at least, then cut at the beats); drawn alone, one.
+ */
 const longer = {
   film: {
     ...testFilm(
@@ -100,19 +107,29 @@ const longer = {
 };
 const longerKeys = new Map([...keys, ['a2', 'key-a2'], ['c2', 'key-c2']]);
 
+/** How a fake page draws frame `i` (`FakeRenderHost.frame`). */
 type Draw = (i: number) => Effect.Effect<void, PageError>;
 
+/**
+ * A film and its page: what it lays out, what its page says of it, and
+ * which of its frames read the film's seconds (every one by default).
+ */
 interface Stage {
   readonly film: typeof film;
   readonly info: ExportInfo;
   readonly filmTimed?: (i: number) => boolean;
+  /** What its media does once a join is recorded (nothing by default). */
   readonly join?: (film: JoinedFilm) => Effect.Effect<void, MediaFailed>;
 }
 
+/** Renders into one project folder, kept in memory across them: what each drew and joined. */
 const project = (files = new Map<string, Uint8Array>(), stage: Stage = { film, info }) => {
   const folders = new Set<string>();
+  /** The host's cache locks: every render of the project, and a prune by hand, take the same. */
   const lock = memoryManifestLock();
+  /** Every render's cache lines, as they are logged. */
   const cacheLines: Array<string> = [];
+  /** Whether a write of a render's record (`cache/renders/`) is refused, as a full disk refuses it. */
   const refusing = { records: false };
   const disk = Layer.effect(
     FileSystem.FileSystem,
@@ -135,6 +152,7 @@ const project = (files = new Map<string, Uint8Array>(), stage: Stage = { film, i
         ),
     })),
   ).pipe(Layer.provide(memoryFileSystem(files, folders)));
+  /** `job` rendered into the project, its film laid out and paged as `on` (the project's by default). */
   const render = (job: RenderJob, draw: Draw = () => Effect.void, on: Stage = stage) => {
     const ledger = emptyLedger();
     const lines: Array<string> = [];
@@ -182,13 +200,19 @@ const project = (files = new Map<string, Uint8Array>(), stage: Stage = { film, i
       Effect.provide([layer, logged]),
     );
   };
+  /** `film cache --prune` on the project, by `rule`, at `now`, taking the cache as a render does. */
   const pruneByHand = (now: number, days: number) =>
     pruneIdle(film.paths.out, { now, days, keep: new Set() }, false).pipe(
       Effect.provideService(ManifestLock, lock),
       Effect.provide([memoryFileSystem(files, folders), Path.layer]),
     );
+  /** Over the project folder: the cache as `film cache` reads it, a render recorded by hand, the catalogue written. */
   const onFiles = <A, E>(effect: Effect.Effect<A, E, FileSystem.FileSystem | Path.Path>) =>
     effect.pipe(Effect.provide([memoryFileSystem(files, folders), Path.layer]));
+  /**
+   * The film's catalogue holding a video at each of `clips`, as a render's
+   * caller records it, and a share copy alone at each of `shares`.
+   */
   const catalogued = (clips: ReadonlyArray<string>, shares: ReadonlyArray<string> = []) =>
     Effect.gen(function* () {
       const rel = (file: string) => Option.some(file.slice(`${film.paths.out}/`.length));
@@ -220,12 +244,14 @@ const project = (files = new Map<string, Uint8Array>(), stage: Stage = { film, i
         text(yield* Schema.encodeEffect(CatalogueJson)(catalogue)),
       );
     });
+  /** The film's Board written where its page reads it, and each of its images. */
   const boarded = (record: BoardFile, images: Readonly<Record<string, string>>) =>
     Effect.gen(function* () {
       files.set('/films/test/board.json', text(yield* Schema.encodeEffect(BoardFileJson)(record)));
       for (const [file, bytes] of Object.entries(images))
         files.set(`/films/test/board/${file}`, text(bytes));
     });
+  /** Once `n` chunk files of the folder hold `content` (a fake chunk's `mp4 <from>-<to>`). */
   const holding = (content: string, n = 1): Effect.Effect<void> =>
     Effect.suspend(() =>
       Bool.match(
@@ -237,6 +263,7 @@ const project = (files = new Map<string, Uint8Array>(), stage: Stage = { film, i
         },
       ),
     );
+  /** What each file of `joined` holds, beside the frames its place says it holds. */
   const held = (joined: ReadonlyArray<{ readonly file: string; readonly at: number }>) => ({
     held: joined.map((s) => read(files.get(s.file) ?? new Uint8Array())),
     placed: joined.map(
@@ -261,6 +288,11 @@ const read = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
 
 const DAY = 86_400_000;
 
+/**
+ * A clock stopped at day `days`: what a render marks and prunes by. A wait
+ * on it (a fake page's frame, a render waiting its turn at the cache) only
+ * yields, so no test waits in real time.
+ */
 const onDay = (days: number): Clock.Clock => {
   const ms = days * DAY;
   const ns = BigInt(ms) * 1_000_000n;
@@ -275,8 +307,10 @@ const onDay = (days: number): Clock.Clock => {
   };
 };
 
+/** A test's renders on day 0: each fake frame yields where the live clock waits a millisecond. */
 const atDayZero = Effect.provideService(Clock.Clock, onDay(0));
 
+/** Once `ready` holds, yielding between looks. */
 const until = (ready: () => boolean): Effect.Effect<void> =>
   Effect.suspend(() =>
     Bool.match(ready(), {
@@ -285,6 +319,7 @@ const until = (ready: () => boolean): Effect.Effect<void> =>
     }),
   );
 
+/** Beat `beat`'s one picture panel, held from its start, showing try 1. */
 const panel = (beat: string): Panel => ({
   id: `${beat}.start`,
   beat: BoardName.make(beat),
@@ -418,6 +453,7 @@ describe.concurrent("a film render's segments", () => {
     () =>
       Effect.gen(function* () {
         const { render } = project();
+        /** A render on day `days`. */
         const on = (days: number, job: RenderJob) =>
           render(job).pipe(Effect.provideService(Clock.Clock, onDay(days)));
         yield* on(0, video(keyed()));
@@ -538,6 +574,7 @@ describe.concurrent("a film render's segments", () => {
               scene,
               ...Arr.filter([first.target], () => written === 'catalogued'),
             ]);
+            /** Once a join is recorded: the record's write refused from then on, or the join failed. */
             const stopping: Stage = {
               film,
               info,
@@ -584,6 +621,7 @@ describe.concurrent("a film render's segments", () => {
     }).pipe(atDayZero),
   );
 
+  /** The film with a a second longer, two frames at 2 fps: b at frames 12–21, c at 22–41. */
   const lengthened = (filmTimed?: (i: number) => boolean): Stage => ({
     film: {
       ...testFilm(

@@ -25,10 +25,12 @@ import {
   unrecommended,
 } from './ask.ts';
 
+/** An ask, a page's blocks and a step's name as an agent writes them, decoded as the lab decodes them. */
 const askOf = Schema.decodeSync(AskSchema);
 const pageOf = Schema.decodeSync(Schema.Array(AskBlock));
 const step = Schema.decodeSync(AskName);
 
+/** A one-page ask as an agent writes it, before any decode. */
 const onePage = (page: ReadonlyArray<unknown>) => ({
   start: 'ask',
   steps: { ask: { blocks: page, next: [{ to: 'done' }] }, done: { end: true } },
@@ -40,6 +42,7 @@ const tries = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({
   image: { board: { film: 'f', panel: 'word.church', try: n } },
 }));
 
+/** The proof: choose a try; 7 or 8 asks why; done. */
 const proof = askOf({
   start: 'pick',
   steps: {

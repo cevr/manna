@@ -26,12 +26,21 @@ const settle = Effect.gen(function* () {
 });
 
 interface Mounted<A> {
+  /** The provider's registry, as the hooks found it. */
   readonly registry: AtomRegistry.AtomRegistry;
   readonly result: A;
+  /** Disposes the hooks' owner, leaving the provider and its registry. */
   readonly disposeOwner: () => void;
+  /** Disposes the hooks' owner, then the provider, which disposes its registry. */
   readonly dispose: () => void;
 }
 
+/**
+ * Runs `body` under a `RegistryProvider` of its own, as a page's components
+ * run, with the provider's `options`. `body` runs in an owner of its own
+ * inside the provider, so a test can dispose the hooks and still read the
+ * registry they used.
+ */
 const mount = <A>(
   body: () => A,
   options: Omit<Parameters<typeof RegistryProvider>[0], 'children'> = {},
@@ -290,6 +299,15 @@ describe('atom thunk changes', () => {
 describe('first synchronous read', () => {
   const test = it.scoped;
 
+  /**
+   * Every value-carrying accessor is typed `Accessor<A>`, with no `undefined`
+   * in the union, so a read taken in the same synchronous pass that created the
+   * hook must already yield the real value. A signal alone cannot honour that:
+   * Solid 2 queues the seeding write until the next flush, so the accessor
+   * would return `undefined` until then. These tests read the accessor inside
+   * the `mount` body — before any `flush()` or `settle` — which is the earliest
+   * point a component could observe it.
+   */
   test('useAtomValue returns the seeded value before any flush', () =>
     Effect.gen(function* () {
       const counter = Atom.make(42);
@@ -299,6 +317,13 @@ describe('first synchronous read', () => {
       expect(owned.result).toBe(42);
     }));
 
+  /**
+   * The value lives in a plain cell and the signal only notifies, so the two
+   * could drift apart: an update that writes the cell without marking the
+   * accessor dirty would still read correctly here but never re-run a tracking
+   * computation. This asserts both halves at once — a synchronously fresh cell
+   * *and* a live dependency edge — across a write that happens after mount.
+   */
   test('a write is visible synchronously and still notifies trackers', () =>
     Effect.gen(function* () {
       const counter = Atom.make(0).pipe(Atom.keepAlive);
@@ -362,6 +387,15 @@ describe('the promiseExit setter mode', () => {
 describe('a registry disposed before its hooks unsubscribe', () => {
   const test = it.scoped;
 
+  /**
+   * Solid runs one owner's cleanups in reverse registration order (unwind),
+   * and a child's before its owner's, so `RegistryProvider`, which registers
+   * `registry.dispose()` before its children run, disposes the registry after
+   * their unsubscribes. The other order can still happen (a registry disposed
+   * from elsewhere while hooks are subscribed). This test disposes the
+   * registry first, then the hooks' owner, and asserts the unsubscribes
+   * neither throw nor leave listeners.
+   */
   test('the unsubscribes neither leak nor throw', () =>
     Effect.gen(function* () {
       const counter = Atom.make(0).pipe(Atom.keepAlive);
@@ -386,6 +420,17 @@ describe('a registry disposed before its hooks unsubscribe', () => {
 describe('Solid development mode', () => {
   const test = it.scoped;
 
+  /**
+   * The package tests run under `--conditions=browser --conditions=development`,
+   * which resolves `solid-js` to `dist/dev.js`. Only that build exports a `DEV`
+   * object — the production build exports `undefined` — so this assertion fails
+   * the moment the test script loses either condition and the owned-scope write
+   * guard stops running.
+   *
+   * Guarding by marker rather than by triggering the error is deliberate: an
+   * uncaught owned-scope write halts Solid's scheduler process-wide
+   * (`REACTIVITY_HALTED`), which would poison every test that followed it.
+   */
   test('runs against the development build of solid-js', () => {
     expect(DEV).toBeDefined();
     return Effect.void;

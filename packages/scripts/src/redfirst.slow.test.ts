@@ -8,6 +8,7 @@ import { TEST_GIT as GIT } from './testing.js';
 const text = (stream: Stream.Stream<Uint8Array, unknown>) =>
   Stream.mkString(Stream.decodeText(stream));
 
+/** A command in `dir`: its stdout, its stderr and its exit code. */
 const exec = (dir: string, command: string, args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner;
@@ -32,6 +33,7 @@ const badBase = Effect.gen(function* () {
   return yield* exec(dir, 'bun', [path.join(import.meta.dir, 'redfirst.ts'), 'no-such-base']);
 }).pipe(Effect.scoped, Effect.provide(BunServices.layer));
 
+/** A base with a module, and a head that adds a module and the one test of it. */
 const newModule = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -51,9 +53,11 @@ const newModule = Effect.gen(function* () {
   return yield* exec(dir, 'bun', [path.join(import.meta.dir, 'redfirst.ts'), 'HEAD~1']);
 }).pipe(Effect.scoped, Effect.provide(BunServices.layer));
 
+/** Bytes that are not UTF-8, as a PNG's are: a text round trip changes them. */
 const BINARY = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0xff, 0xfe, 0x00, 0x80];
 const BINARY_SOURCE = `[${BINARY.join(', ')}]`;
 
+/** A head that adds binary fixtures and a test of their bytes alone, which no base source can fail. */
 const binaryFixture = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

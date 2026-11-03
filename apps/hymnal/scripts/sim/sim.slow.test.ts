@@ -1,3 +1,10 @@
+/**
+ * `sim.ts` without a device: its commands run over a stand-in spawner that
+ * answers each tool as the test scripts it, and a dev server that never
+ * answers. Each prints one result the result schema reads back; a failure
+ * prints its tagged error and fails the command; `serve` kills the server
+ * it started when its scope closes; and the real script exits non-zero.
+ */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -21,6 +28,7 @@ import { runSim } from './command.ts';
 import { DriveLive, type Place } from './drive.ts';
 import { Result, type Session } from './result.ts';
 
+/** How the stand-in answers one run: its exit code and stdout, or a run that never ends. */
 type Answer =
   | { readonly _tag: 'Exits'; readonly exitCode: number; readonly stdout: string }
   | { readonly _tag: 'Hangs' };
@@ -30,6 +38,7 @@ interface Spawned {
   killed: boolean;
 }
 
+/** A spawner that answers each run by `script(line)` and records every run and kill. */
 const standIn = (
   script: (line: string) => Answer,
   started: Option.Option<Deferred.Deferred<void>> = Option.none(),
@@ -64,6 +73,7 @@ const standIn = (
   return { layer, runs };
 };
 
+/** A run's exit code and stdout as its answer gives them. */
 const outputOf = (answer: Answer) => {
   if (answer._tag === 'Hangs') return { exitCode: Effect.never, stdout: Stream.never };
   return {
@@ -81,6 +91,7 @@ const ok = (stdout = ''): Answer => ({ _tag: 'Exits', exitCode: 0, stdout });
 const failed = (stdout = ''): Answer => ({ _tag: 'Exits', exitCode: 1, stdout });
 const hangs: Answer = { _tag: 'Hangs' };
 
+/** A dev server that answers every request 503: never ready. */
 const ServerDown = Layer.succeed(
   HttpClient.HttpClient,
   HttpClient.make((request) =>
@@ -106,6 +117,11 @@ const session = (platform: Session['platform'], out: string): Session => ({
 const encodeJson = Schema.encodeSync(Schema.fromJsonString(Schema.toType(Schema.Unknown)));
 const decodeResult = Schema.decodeUnknownSync(Schema.fromJsonString(Result));
 
+/**
+ * Run `sim <args>` over the stand-in, in a state folder of its own (with
+ * `drive` as its session when given; `{state}` in an argument names the
+ * folder): the lines it printed and its exit.
+ */
 const sim = (
   args: ReadonlyArray<string>,
   answers: ReturnType<typeof standIn>,

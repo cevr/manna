@@ -6,6 +6,7 @@ import {
   WEBSTER_PROJECTION_VERSION,
 } from '@manna/core/webster';
 
+/** Full production census and FTS contract, with minimal synthetic definition text. */
 export const compactWebster = (filename: string) =>
   Effect.acquireUseRelease(
     Effect.sync(() => new Database(filename)),

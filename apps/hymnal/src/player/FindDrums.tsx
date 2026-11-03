@@ -1,3 +1,14 @@
+/**
+ * The find drums: three dials, hundreds, tens and ones, that dial a hymn's
+ * number in the book (`drums.ts`). They stand side by side in one row, left
+ * to right, each an equal share of the width, and each is a `DialView`
+ * standing as a vertical drum (`axis` `column`) that draws its digits and no
+ * name, so a finger swipes it up or
+ * down like a picker wheel and flings it, and VoiceOver turns it a step at a
+ * time (increment and decrement). A drum's detent is felt always and heard
+ * only while the player's Sound switch is on (`drumTell`).
+ */
+
 import { RegistryContext, useAtomMount } from '@effect/atom-react';
 import { type ReactNode, use, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -10,18 +21,21 @@ import { PanelRow, ROW_GAP } from './DialPanel';
 import { DialView, MOST_SCALE } from './DialView';
 import { digitsOf, type Drum, DRUM_ORDER, DRUMS, drumTell, turn } from './drums';
 
+/** Each drum's name, as VoiceOver says it; a drum draws no name, only its digits. */
 const LABELS: Readonly<Record<Drum, string>> = {
   hundreds: 'Hundreds',
   tens: 'Tens',
   ones: 'Ones',
 };
 
+/** Each drum's digits, in turn order. */
 const STOPS: Readonly<Record<Drum, ReadonlyArray<number>>> = {
   hundreds: Array.from({ length: DRUMS.hundreds.count }, (_, digit) => digit),
   tens: Array.from({ length: DRUMS.tens.count }, (_, digit) => digit),
   ones: Array.from({ length: DRUMS.ones.count }, (_, digit) => digit),
 };
 
+/** The drums on `number`; `onDial` hears each number a turn dials, held to the book. */
 export function FindDrums({
   number,
   onDial,
@@ -60,6 +74,7 @@ export function FindDrums({
   );
 }
 
+/** A digit in its detent, the current one in the chord colour. */
 function Digit({ digit, current }: { readonly digit: number; readonly current: boolean }) {
   return (
     <Text

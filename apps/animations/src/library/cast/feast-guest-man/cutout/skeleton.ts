@@ -15,6 +15,7 @@ const BODY: Body = {
   band: { above: 50, below: 12, reach: 60 },
 };
 
+/** His cut view's skeleton in its part sheet's frame, by the view's name in his sheet's views. */
 export const SKELETONS = {
   'poses-1': framed(
     keptAt('poses-1'),

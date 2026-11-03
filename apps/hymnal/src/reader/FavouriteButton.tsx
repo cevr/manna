@@ -1,3 +1,11 @@
+/**
+ * The hymn page head's `Favourite` button, at the end of the number's row:
+ * a press keeps the hymn among the reader's Favourites (`lists.favourites`,
+ * in number order), a second press takes it out, each with its chime
+ * (`favourite-on`, `favourite-off`). Selected while the hymn is a
+ * favourite, drawn as a star, filled then.
+ */
+
 import { useAtom } from '@effect/atom-react';
 import type * as Atom from 'effect/reactivity/Atom';
 import { Pressable, StyleSheet } from 'react-native';

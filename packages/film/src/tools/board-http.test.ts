@@ -53,6 +53,7 @@ const board: BoardFile = {
   approvals: [],
 };
 
+/** Film `f` with its board record and its first try's image. */
 const files = () =>
   new Map<string, Uint8Array>([
     ['/films/f/scenes/index.ts', text('export {};\n')],

@@ -8,6 +8,7 @@ export const FRAMES = {
   'single-15': { sheet: 'single', kept: [291, 274, 742, 1403], pad: [3, 3, 3, 17] },
 } as const satisfies Readonly<Record<string, CutFrame>>;
 
+/** A view of theirs that is framed, by its name in their sheet's views. */
 export type FramedView = keyof typeof FRAMES;
 
 export const { boxOf, keptAt } = framesOf(FRAMES);

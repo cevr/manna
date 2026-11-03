@@ -18,20 +18,24 @@ const isEffect: Module = (from) => from === 'effect';
 const isEffectModule: Module = (from) => from === 'effect/Effect';
 const isRuntimeModule: Module = (from) => from === 'effect/ManagedRuntime';
 
+/** Whether a call makes a runtime: `ManagedRuntime.make(…)` off `effect`, or `make` off `effect/ManagedRuntime`. */
 const makesRuntime = (b: Bindings, call: ESTree.CallExpression) =>
   b.callsImport(call, isRuntimeModule, 'make') ||
   (call.callee.type === 'MemberExpression' &&
     Option.contains(memberName(call.callee), 'make') &&
     b.importsAs(call.callee.object, isEffect, 'ManagedRuntime'));
 
+/** Whether a call's value is held by a name: `const runtime = ManagedRuntime.make(layer)`. */
 const heldByName = (call: ESTree.CallExpression) =>
   Option.exists(
     Option.fromNullishOr(call.parent),
     (parent) => parent.type === 'VariableDeclarator' && parent.init === call,
   );
 
+/** effect's memo makers: each runs what it wraps on its first use alone. */
 const MEMOS = ['cached', 'cachedWithTTL', 'cachedInvalidateWithTTL'];
 
+/** Which memo maker a node names: `Effect.cached`, an alias, or `cached` off `effect/Effect`. */
 const memoNamed = (b: Bindings, node: ESTree.Node): Option.Option<string> => {
   if (node.type === 'MemberExpression')
     return Option.filter(
@@ -46,15 +50,28 @@ const memoNamed = (b: Bindings, node: ESTree.Node): Option.Option<string> => {
 
 const isFunctionModule: Module = (from) => from === 'effect/Function';
 
+/** Whether a callee is effect's `name` (`pipe`, `flow`), off `effect` or `effect/Function`. */
 const isEffectFunction = (b: Bindings, callee: ESTree.Node, name: string) =>
   b.importsAs(callee, isEffect, name) || b.importsAs(callee, isFunctionModule, name);
 
+/**
+ * Whether a call applies its steps to a value: `read.pipe(…)`, or
+ * `pipe(read, …)` off effect. A `flow(…)` composes a function, which applies
+ * nothing until it is called.
+ */
 const isPipe = (b: Bindings, call: ESTree.CallExpression) =>
   (call.callee.type === 'MemberExpression' && Option.contains(memberName(call.callee), 'pipe')) ||
   isEffectFunction(b, call.callee, 'pipe');
 
+/** How many definitions deep a name is followed to what it holds. */
 const DEPTH = 4;
 
+/**
+ * Whether a node is a memo maker, a function that makes a memo when applied
+ * to an effect: a memo maker itself (`Effect.cached`), a TTL form given its
+ * ttl alone (`Effect.cachedWithTTL(ttl)`), a `flow(…)` with one among its
+ * steps, or a name a file's own definition binds to one of these.
+ */
 const isMaker = (b: Bindings, node: ESTree.Node, depth = 0): boolean => {
   if (depth > DEPTH) return false;
   if (Option.isSome(memoNamed(b, node))) return true;
@@ -75,12 +92,18 @@ const isMaker = (b: Bindings, node: ESTree.Node, depth = 0): boolean => {
   );
 };
 
+/**
+ * Whether a call makes a memo: a memo maker given its effect (`cached(read)`,
+ * `cachedWithTTL(read, ttl)`), or a memo maker applied
+ * (`cachedWithTTL(ttl)(read)`, `withinMinute(read)`).
+ */
 const makesMemo = (b: Bindings, call: ESTree.CallExpression) =>
   Option.match(memoNamed(b, call.callee), {
     onSome: (name) => call.arguments.length >= 1 + Number(name !== 'cached'),
     onNone: () => call.arguments.length >= 1 && isMaker(b, call.callee),
   });
 
+/** The steps of a pipe that are a memo maker: `read.pipe(Effect.cached)`, `pipe(read, cachedWithTTL(ttl))`. */
 const memosPiped = (b: Bindings, call: ESTree.CallExpression) => {
   if (!isPipe(b, call)) return [];
   if (call.callee.type === 'MemberExpression')
@@ -88,6 +111,7 @@ const memosPiped = (b: Bindings, call: ESTree.CallExpression) => {
   return call.arguments.slice(1).filter((step) => isMaker(b, step));
 };
 
+/** The node a callee chain starts at: `describe` for `describe.each(rows)(…)`. */
 const rootOf = (n: ESTree.Node): Option.Option<ESTree.Node> => {
   if (n.type === 'Identifier') return Option.some(n);
   if (n.type === 'MemberExpression') return rootOf(n.object);
@@ -100,6 +124,7 @@ const isFunction = (n: ESTree.Node) =>
   n.type === 'FunctionExpression' ||
   n.type === 'FunctionDeclaration';
 
+/** Whether a function is a `describe` body: the runner runs it as the file loads. */
 const isDescribeBody = (b: Bindings, fn: ESTree.Node) =>
   Option.exists(
     Option.fromNullishOr(fn.parent),
@@ -109,6 +134,7 @@ const isDescribeBody = (b: Bindings, fn: ESTree.Node) =>
       Option.exists(rootOf(call.callee), (root) => b.isRunner(root, 'describe')),
   );
 
+/** Whether a call runs as the file loads: inside no function but `describe` bodies. */
 const runsAtLoad = (b: Bindings, call: ESTree.Node) =>
   ancestors(call).every((n) => !isFunction(n) || isDescribeBody(b, n));
 

@@ -22,6 +22,7 @@ import { ElevenLabs } from './elevenlabs.ts';
 import { filmServices } from './film-services.ts';
 import { privateFolder } from './host/testing.ts';
 
+/** The console a run prints to: each line it logs, offered to `lines`. */
 const printingTo = (lines: Queue.Queue<string>): Console.Console => ({
   ...globalThis.console,
   log: (...args: ReadonlyArray<unknown>) => {
@@ -29,6 +30,10 @@ const printingTo = (lines: Queue.Queue<string>): Console.Console => ({
   },
 });
 
+/**
+ * The film services on a temp folder with one film, `f`. Nothing that costs
+ * anything is reached: ElevenLabs is unimplemented.
+ */
 const world = Layer.unwrap(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -56,6 +61,7 @@ const world = Layer.unwrap(
   }),
 ).pipe(Layer.provideMerge(Layer.merge(BunServices.layer, BunCrypto.layerMac)));
 
+/** `film options …args` run to its end: its exit, and the lines it printed. */
 const cli = (...args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const lines = yield* Queue.unbounded<string>();

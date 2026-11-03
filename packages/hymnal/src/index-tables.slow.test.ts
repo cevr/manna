@@ -1,3 +1,9 @@
+/**
+ * The 12 committed index files (`data/indexes/`), written to the `index_*`
+ * tables of an in-memory database, read back as decoded, and the comparison
+ * names an index or the rulings once they differ. Slow: it decodes and
+ * stores the whole 1.8 MB set, which the hymnal unit tests' 1 s cannot hold.
+ */
 import { Database } from 'bun:sqlite';
 import { expect, it } from 'bun:test';
 /* oxlint-disable effect/noNodeBuiltinImport -- reads the committed index files, read-only. */

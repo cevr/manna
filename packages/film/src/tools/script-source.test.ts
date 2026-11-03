@@ -28,6 +28,7 @@ const marks: ReadonlyArray<Mark> = [
   { _tag: 'Stress', word: 5 },
 ];
 
+/** Beat cold's words as a page reads them (its cues and marks never said), and its line as read: no marks yet. */
 const WORDS = "Not by works. It's by faith.";
 const READ = Option.some<LineRead>({ spoken: WORDS, marks: [] });
 

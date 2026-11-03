@@ -11,59 +11,123 @@ import {
   runningOf,
 } from './sync-machine.ts';
 
+/** How far a video may drift from the clock before it is put back on it, in seconds. */
 const DRIFT_S = 0.2;
 
+/** How far the clock moves before the machine hears of it, in seconds. */
 const TICK_S = 0.05;
 
+/** How far into its frame a seek lands, in frames. */
 const INTO_FRAME = 0.25;
 
+/**
+ * Where a seek of the clock to `t` (counting `fps` frames a second) lands on
+ * a video at `own` frames a second: the clock's frame is the one its
+ * timecode reads (`frameRead`), and the video lands a quarter of one of its
+ * own frames into its frame that holds that frame's start. A step's time is
+ * its frame's start (`n / fps`), and Chrome keeps an element's time a
+ * microsecond short of some frames' starts (frame 25 at 24 fps, 62 at 30),
+ * which shows the frame before; inside the frame, it shows that frame's
+ * picture. So each video shows its own frame at the clock's frame, at any
+ * rate of either, and a scrub or a `#t=` shows the frame its timecode reads.
+ * The clock's own time stays as the machine has it (`t`).
+ */
 const landing = (t: number, fps: number, own: number): number =>
   (frameAtOrBefore(frameRead(t, fps) / fps, own) + INTO_FRAME) / own;
 
+/**
+ * Whether `video` has drifted from the clock's video at `t` far enough to be
+ * put back on it: the drift pull seeks it to `t` itself (a playing picture
+ * needs no quarter in), so a video put back is never found drifted again by
+ * where it landed, at any rate.
+ */
 const drifted = (video: number, t: number): boolean => Math.abs(video - t) > DRIFT_S;
 
 export interface SyncDriver {
+  /**
+   * A variant's video joins the set, in the place of any it had: it takes the
+   * clock, the rate and the sound as they are. What it gives lets this video
+   * go (its element gone, its placeholder back), and leaves a video attached
+   * in its place since as it is.
+   */
   readonly attach: (id: string, video: Playable) => () => void;
+  /** The machine's state, made so. */
   readonly apply: (state: SyncState) => void;
+  /**
+   * The clock is `id`'s video from now on (another version leads: the one it
+   * followed left the set, or another plays first here): the machine is told
+   * its end, and whether its media failed or ended already; every media
+   * event after is heard against it.
+   */
   readonly follow: (id: string) => void;
+  /**
+   * `id`'s video runs at `fps` frames a second, its own (`Media.timing`, as
+   * the server reads it for the file it is now): each seek lands it in its
+   * own frames (`landing`); none (not read yet, or no rate its frames tell)
+   * lands it by the clock's rate, as the clock itself then counts. It is put
+   * on its frame again now. For any video that joins as `id`, from now on.
+   */
   readonly timed: (id: string, fps: Option.Option<number>) => void;
+  /** Every video paused, every listener and the clock's loop stopped. */
   readonly stop: () => void;
 }
 
 interface Attached {
   readonly video: Playable;
+  /** Aborted when the video is let go: its listeners, and its seeks and plays, end. */
   readonly held: AbortController;
 }
 
+/**
+ * The driver of a set whose clock is the video of `leader` (until it
+ * `follow`s another), telling the machine through `send`.
+ */
 export const makeSync = (
   leader: string,
   send: (event: SyncEvent) => void,
   host: Context.Context<Frames | Media>,
 ): SyncDriver => {
   const videos = new Map<string, Attached>();
+  /** Each version's video's own frames a second, once told (`timed`). */
   const rates = new Map<string, number>();
   let current = Option.none<SyncState>();
   let seek = -1;
+  /** The clock's rate the videos last landed by: a new one puts them on its frames again. */
   let grid = -1;
   let told = -1;
+  /** The stop of the clock's loop, while it runs. */
   let looping = Option.none<() => void>();
+  /** The version whose video is the clock: every media event is heard against it. */
   let leading = leader;
 
+  /**
+   * The videos whose media failed (an `error`, a play the browser would not
+   * start), each with why: out of the set's way.
+   */
   const broken = new Map<Attached, string>();
   const all = () => [...videos.values()];
   const working = () => all().filter((a) => !broken.has(a));
+  /** The clock: the leading version's video, none until it is attached. */
   const clock = () => Option.fromUndefinedOr(videos.get(leading));
 
+  /** Do `effect` on the host, without waiting for it. */
   const fork = (effect: Effect.Effect<unknown, never, Frames | Media>) => {
     Effect.runForkWith(host)(effect);
   };
+  /** Do `effect` on the host while `a` stays attached, without waiting for it. */
   const forkOn = (a: Attached, effect: Effect.Effect<unknown, never, Frames | Media>) => {
     Effect.runForkWith(host)(effect, { signal: a.held.signal });
   };
+  /** `id`'s media cannot play, for `reason`: the machine told, when it is the clock's. */
   const failed = (id: string, a: Attached, reason: string) => {
     broken.set(a, reason);
     if (id === leading) send(Events.MediaFailed({ reason }));
   };
+  /**
+   * Play `id`'s video `a`; a browser that will not play sound unasked plays it
+   * muted; one that cannot play it at all fails it (`failed`); a pause before
+   * it started is left as it is.
+   */
   const play = (id: string, a: Attached) =>
     forkOn(
       a,
@@ -75,6 +139,7 @@ export const makeSync = (
         ),
       ),
     );
+  /** `id`'s video `a` put where the clock at `state` stands, in its own frames (`landing`). */
   const land = (id: string, a: Attached, state: SyncState) =>
     forkOn(
       a,
@@ -94,6 +159,10 @@ export const makeSync = (
     }
   };
 
+  /**
+   * Each frame while it runs: tell the machine the clock's time, and pull
+   * drifters back; on while the set plays or waits for its videos.
+   */
   const step = (): boolean =>
     Option.exists(current, (state) => {
       Option.map(clock(), (master) => {
@@ -155,6 +224,7 @@ export const makeSync = (
     halt();
   };
 
+  /** Let `a` go, when it is still `id`'s video: its listeners, seeks and plays end, and it pauses. */
   const release = (id: string, a: Attached) => {
     if (videos.get(id) !== a) return;
     a.held.abort();
@@ -163,6 +233,7 @@ export const makeSync = (
     broken.delete(a);
   };
 
+  /** The machine told the clock's end, when `id` leads and its video is measured. */
   const measure = (id: string, video: Playable) => {
     if (id === leading && Number.isFinite(video.duration()))
       send(Events.Measured({ end: video.duration() }));

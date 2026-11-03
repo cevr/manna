@@ -18,20 +18,25 @@ const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
 const PRUNE = 'it says how --prune prunes';
 
+/** Flags that mean something only with `--prune`. */
 const CACHE_RULES: ReadonlyArray<FlagRule> = [
   ['days', 'needs', 'prune', PRUNE],
   ['dry-run', 'needs', 'prune', PRUNE],
 ];
 
+/** Bytes as a line says them: `853.6MB`. */
 const megabytes = (bytes: number) => `${(bytes / 1e6).toFixed(1)}MB`;
 
+/** When a segment was last used, as an ISO time. */
 const usedAt = (segment: CachedSegment) => DateTime.formatIso(DateTime.makeUnsafe(segment.used));
 
+/** The cache as one line: its segments, the folders still drawn, and every byte. */
 const cacheLine = (film: string, cache: SegmentCache) => {
   const bytes = cacheBytes(cache);
   return `cache film=${film} segments=${cache.segments.length} drawing=${cache.drawing.length} bytes=${bytes} size=${megabytes(bytes)}`;
 };
 
+/** A prune as lines: each segment removed (or, dry, that would be), then what it freed and what is left. */
 const prunedLines = (pruned: Pruned, days: number, dry: boolean): ReadonlyArray<string> => {
   const verb = Bool.match(dry, {
     onTrue: () => 'cache.would-remove',
@@ -44,6 +49,7 @@ const prunedLines = (pruned: Pruned, days: number, dry: boolean): ReadonlyArray<
   ];
 };
 
+/** The cache, and the prune when there was one, as one JSON object. */
 const cacheJson = (
   film: string,
   cache: SegmentCache,

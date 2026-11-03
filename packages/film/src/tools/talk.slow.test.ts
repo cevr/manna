@@ -49,17 +49,21 @@ import { emptyLedger, fakeRenderHost, textBox } from './browser/testing.ts';
 import { emptyCalls, fakeElevenLabs } from './elevenlabs/testing.ts';
 import { privateFolder } from './host/testing.ts';
 
+/** A vertical finding at a second of the talk: a line of text, or its hook. */
 const atASecond = Predicate.or(
   Predicate.isTagged('ShortUnsafeText'),
   Predicate.isTagged('ShortHook'),
 );
 
+/** What the speaker says. */
 const WORDS = 'The law was given to show us our need of a Saviour'.split(' ');
 
+/** The take's original's hash, whose head names its source. */
 const SHA = `0123456789ab${'d'.repeat(52)}`;
 const SOURCE = 'why-the-law/0123456789ab';
 const TRANSCRIPT = 'why-the-law.0123456789ab.json';
 
+/** The take as heard: a word every 0.4 s, but a long pause before word 8 ("need"). */
 const TAKE = syntheticTake(
   WORDS,
   WORDS.map((_, i) => [0.1, 0.9][Number(i === 8)] ?? 0.1),
@@ -67,6 +71,7 @@ const TAKE = syntheticTake(
   { width: 1920, height: 1080 },
 );
 
+/** The edit: the first section strikes "was", the second plays through the late "need". */
 const TALK: Talk = {
   title: 'Why the law?',
   format: 'question',
@@ -77,12 +82,19 @@ const TALK: Talk = {
   ],
 };
 
+/** Where the world's folders are: the films, the footage library and the outputs. */
 interface Folders {
   readonly films: string;
   readonly footage: string;
   readonly out: string;
 }
 
+/**
+ * The film services over a temp folder holding the library (its lock, the
+ * take's transcript) and the talk; nothing that costs anything is reached:
+ * the speech-to-text is a fake that is never asked, the private store a
+ * folder.
+ */
 const worldOf = (made: (folders: Folders) => void) =>
   Layer.unwrap(
     Effect.gen(function* () {
@@ -158,6 +170,7 @@ const worldOf = (made: (folders: Folders) => void) =>
     }),
   ).pipe(Layer.provideMerge(Layer.merge(BunServices.layer, BunCrypto.layerMac)));
 
+/** The console a run prints to: each line it logs, offered to `lines`. */
 const printingTo = (lines: Queue.Queue<string>): Console.Console => ({
   ...globalThis.console,
   log: (...args: ReadonlyArray<unknown>) => {
@@ -165,6 +178,7 @@ const printingTo = (lines: Queue.Queue<string>): Console.Console => ({
   },
 });
 
+/** `command …args` run to its end: its exit, and the lines it printed. */
 const run = <N extends string, I, C, E, R>(
   command: Command.Command<N, I, C, E, R>,
   args: ReadonlyArray<string>,
@@ -179,6 +193,7 @@ const run = <N extends string, I, C, E, R>(
     return { exit, lines: yield* Queue.clear(lines) };
   });
 
+/** A page's HTTP client answered by the footage route over the world's library, as the player serves it. */
 const routeClient = (folders: Folders) =>
   Layer.succeed(
     HttpClient.HttpClient,
@@ -315,6 +330,7 @@ describe('a talk through the tools', () => {
       }).pipe(Effect.provide(world)),
   );
 
+  /** The browser leg's pages: the talk's, drawn 1080 px wide, a caption reaching x 888 below y 840 (under TikTok's buttons). */
   const pages = Layer.mergeAll(Checker.layer, Looker.layer).pipe(
     Layer.provide(
       fakeRenderHost(emptyLedger(), {

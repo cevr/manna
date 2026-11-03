@@ -2,6 +2,7 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Effect } from 'effect';
 import { compile } from '../../../src/lab/fixtures/bundles.ts';
 
+/** Long enough to bundle two pages. */
 const BUNDLING = 20_000;
 
 describe("the fixture pages' decoder", () => {

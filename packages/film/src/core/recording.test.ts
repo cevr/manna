@@ -12,6 +12,10 @@ import {
 
 const RATE = 48000;
 
+/**
+ * `before` s of room noise, `secs` s of a 220 Hz tone at `amp`, then `after` s
+ * of room noise, on `channels` channels.
+ */
 const recording = (before: number, secs: number, after: number, amp: number, channels = 1): Pcm => {
   const frames = Math.round((before + secs + after) * RATE);
   const plane = new Float32Array(frames);
@@ -27,6 +31,7 @@ const recording = (before: number, secs: number, after: number, amp: number, cha
 
 const secs = (pcm: Pcm) => pcm.frames / pcm.rate;
 
+/** Recordings one after another. */
 const joined = (...parts: ReadonlyArray<Pcm>): Pcm => concat(RATE, 1, parts);
 
 describe('prepareTake', () => {

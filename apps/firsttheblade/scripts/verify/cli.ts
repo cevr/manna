@@ -1,3 +1,18 @@
+/**
+ * The verify helpers' commands (`.claude/skills/verify-firsttheblade`),
+ * each run as a script of the app (`bun run verify:<command>`), with no
+ * `.env` read (`bun --no-env-file`): every one prints one JSON line on
+ * success, and a tagged error and a non-zero exit on failure.
+ *
+ * - `launch --root <dir> --port <p>`: the preview in a scratch root, held
+ *   until it is stopped; prints its record once it answers.
+ * - `stop --root <dir>`: stops that preview by its recorded PID.
+ * - `doctor --root <dir>` | `--origin <url>`: is the instance worth driving.
+ * - `outbox --root <dir> [--to <address>]`: the letters the preview wrote.
+ * - `drive <journey>… --root <dir> --port <p> --evidence <dir> [--no-video]`:
+ *   the confirm journeys on a preview of their own.
+ * - `stage up|down --stage agent-<name> --root <dir>`: a throwaway stage.
+ */
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { Effect, Layer, Option } from 'effect';
 import { Argument, Command, Flag } from 'effect/cli';

@@ -28,26 +28,35 @@ import { LabRefused, refused } from './lab-mcp-parts.ts';
 import { ProductionStore } from './production-store.ts';
 import { setsReads } from './sets-mcp.ts';
 
+/** An ask as an agent reads it: where its run is and what the owner answered, typed. */
 export const AskRead = Schema.Struct({
   ask: Schema.String,
   title: Schema.String,
   by: Schema.String,
   status: Schema.Literals(['asking', 'answered', 'closed']),
+  /** The step the run is on while it asks, or the end it reached. */
   step: Schema.optionalKey(Schema.String),
+  /** Every answer so far, by the name of the block that asked it. */
   answers: Schema.Record(Schema.String, AskAnswer),
+  /** Each step answered, in order, with when. */
   answered: Schema.Array(Schema.Struct({ step: Schema.String, at: Schema.String })),
+  /** Why it was closed, once it is. */
   closed: Schema.optionalKey(Schema.String),
   deadline: Schema.optionalKey(Schema.String),
   production: Schema.optionalKey(Schema.String),
   set: Schema.optionalKey(Schema.String),
   point: Schema.optionalKey(Schema.String),
+  /** The ask's own links: they open its page, at this ask. */
   links: LabLinks,
+  /** The page it is on (by the id of the ask that opened it), and the page's links. */
   page: Schema.Struct({ id: Schema.String, links: LabLinks }),
 });
 export type AskRead = typeof AskRead.Type;
 
+/** What `ask` answers: the ask as `ask_read` reads it, and whether it opened its page or joined one. */
 const AskMade = Schema.Struct({
   ...AskRead.fields,
+  /** `opened page a…` or `joined page a…, 2 asks`. */
   onPage: Schema.String,
 });
 
@@ -69,13 +78,17 @@ const AskTool = Tool.make('ask', {
     deadline: Schema.optionalKey(Schema.String),
     production: Schema.optionalKey(ProductionId),
     set: Schema.optionalKey(Schema.String),
+    /** The choice in that set it is about (a point id): a pick there answers it too. */
     point: Schema.optionalKey(Schema.String),
+    /** The owner's own words, verbatim, that let a keep be asked without the set's review record. */
     override: Schema.optionalKey(
       Schema.Struct({ quote: Schema.String.check(Schema.isNonEmpty(), Schema.isMaxLength(4000)) }),
     ),
     blocks: Schema.optionalKey(Schema.Array(AskBlock)),
+    /** The words the one page ends on, for `blocks`. */
     thanks: Schema.optionalKey(Schema.String),
     machine: Schema.optionalKey(Ask),
+    /** The page it goes on: an ask's id (that ask's page, still asking), or `new`. */
     page: Schema.optionalKey(Schema.String.check(Schema.isNonEmpty(), Schema.isMaxLength(40))),
   }),
   success: AskMade,
@@ -111,6 +124,11 @@ const CloseAsk = Tool.make('close_ask', {
   failure: LabRefused,
 }).annotate(Tool.Idempotent, true);
 
+/**
+ * What the owner said in chat, as `decide` and `note` file it: plainly, in
+ * his own words (required, never blank: the words are what shows he said
+ * it), who heard it, and what it is about.
+ */
 const OwnerWordParams = Schema.Struct({
   production: ProductionId.annotate({
     description:
@@ -148,6 +166,7 @@ const OwnerWordParams = Schema.Struct({
   ),
 });
 
+/** What `decide` and `note` answer: the word as filed, the version it landed in, and the timeline's link there. */
 const WordFiled = Schema.Struct({
   production: Schema.String,
   version: Schema.Int,
@@ -171,6 +190,7 @@ const NoteTool = Tool.make('note', {
   failure: LabRefused,
 });
 
+/** What `forward` moves a production by: the version the agent read as current, what the next is for, and the decision of the owner's it moves on. */
 const ForwardParams = Schema.Struct({
   production: OwnerWordParams.fields.production,
   after: VersionNumber.annotate({
@@ -186,6 +206,7 @@ const ForwardParams = Schema.Struct({
   }),
 });
 
+/** What `forward` answers: the version opened, the decision it opened on, and the timeline's link there. */
 const MovedForward = Schema.Struct({
   production: Schema.String,
   version: Schema.Int,
@@ -202,6 +223,7 @@ const ForwardTool = Tool.make('forward', {
   failure: LabRefused,
 });
 
+/** The asks and the timelines as the tools read and write them. */
 const asksReads = Effect.fn('LabMcp.asksReads')(function* () {
   const asks = yield* AskStore;
   const productions = yield* ProductionStore;
@@ -303,6 +325,12 @@ const asksReads = Effect.fn('LabMcp.asksReads')(function* () {
     return askRead(record);
   });
 
+  /**
+   * The owner's word from chat on its production's timeline, through the
+   * store's own `say` (as `film lab decide|note`, refused by it, as the
+   * terminal's is, when not aimed: `aimedWord`), in the version open now: its
+   * words, who filed it, and the set, choice and variant it is about.
+   */
   const fileWord = Effect.fn('LabMcp.fileWord')(function* (
     tag: OwnerWord['_tag'],
     given: typeof OwnerWordParams.Type,
@@ -342,6 +370,11 @@ const asksReads = Effect.fn('LabMcp.asksReads')(function* () {
     };
   });
 
+  /**
+   * The production moved forward on the decision of the owner's the agent
+   * names (`forwardOnDecision`), through the store's own `forward`, which
+   * refuses it under the lock when the production moved on since the read.
+   */
   const forward = Effect.fn('LabMcp.forward')(function* (given: typeof ForwardParams.Type) {
     const production = given.production;
     const read = yield* refused(productions.read(production));
@@ -366,8 +399,10 @@ const asksReads = Effect.fn('LabMcp.asksReads')(function* () {
   return { ask, askOf, asksOf, closeAsk, fileWord, forward };
 });
 
+/** The work of the asks' and the timelines' commands. */
 const lab = asksReads();
 
+/** An ask made, as a terminal reads it: where it waits, its page and its links, and how to wait on its answer. Pure. */
 const askLines = (asked: typeof AskMade.Type): ReadonlyArray<string> => [
   `asked ${asked.ask}${Option.match(Option.fromUndefinedOr(asked.production), {
     onNone: () => '',
@@ -393,11 +428,17 @@ const askLines = (asked: typeof AskMade.Type): ReadonlyArray<string> => [
   `then: bun cli.ts ask wait ${asked.ask} in the background (it exits once answered, with the answers; --page ${asked.page.id} for every ask on the page); close_ask it once acted on`,
 ];
 
+/**
+ * The ask, run in the lab alone: an ask made while the same asker's earlier
+ * one still asks joins its page, and the store groups them under a lock it
+ * holds in memory (`AskStore`).
+ */
 export const askInLab = labCommand(AskTool, {
   run: (given) => Effect.flatMap(lab, (l) => l.ask(given)),
   lines: askLines,
 });
 
+/** The asks' and the timelines' commands any process runs: each write holds the store's file lock. */
 export const asksCommands = [
   labCommand(AskReadTool, { run: ({ ask }) => Effect.flatMap(lab, (l) => l.askOf(ask)) }),
   labCommand(AsksTool, {

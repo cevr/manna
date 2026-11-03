@@ -36,6 +36,7 @@ import {
   piece,
 } from '../../kit.ts';
 
+/** What the figure holds up to pay with, bottom to top: a kind and its offset. */
 const STACK = [
   ['card', -4],
   ['coin', 6],
@@ -45,8 +46,10 @@ const STACK = [
   ['coin', -2],
 ] as const;
 
+/** Bites on the figure in the camp, in their units. */
 const BITES = [blob(-18, -40, 12, 10, 41), blob(16, -86, 10, 9, 42), blob(-8, -110, 9, 8, 43)];
 
+/** The snakes in the sand: where each lies, its length and its seed. */
 const SNAKES = [
   [340, 985, 150, 1],
   [620, 1030, 120, 2],
@@ -61,15 +64,21 @@ const TENTS = [
   [1790, 4],
 ] as const;
 
+/** The figure on the parchment: where they stand and their scale. */
 const FIGURE_A: Pt = [820, 960];
 const FIGURE_A_S = 2.1;
+/** The stack's bottom card, held up clear over the head (its top is at -203). */
 const STACK_Y = -226;
+/** Where each hand holds the bottom card: its ends, outside the head. */
 const HOLD_AT: Pt = [44, STACK_Y + 4];
 const HOLD_FAR: GestureAt = { to: [-HOLD_AT[0], HOLD_AT[1]], reach: 0, grip: 'hold' };
+/** The near hand: on the stack, then down to `OFFER_AT`, turning palm up (`palmUp`). */
 const OFFER_AT: Pt = [50, -130];
 const OPEN: GestureAt = { to: [HOLD_AT[0], HOLD_AT[1]], reach: 0, grip: 'hold', turn: 0 };
+/** The close-up: where its palm's middle sits, and its scale. */
 const CLOSE_AT: Pt = [960, 720];
 const CLOSE_S = 1.6;
+/** The push from the figure's palm-up hand into the close-up, and how far it magnifies the figure. */
 const PUSH: HandPush = {
   from: [FIGURE_A[0] + OFFER_AT[0] * FIGURE_A_S, FIGURE_A[1] + OFFER_AT[1] * FIGURE_A_S],
   figureScale: FIGURE_A_S,
@@ -77,12 +86,16 @@ const PUSH: HandPush = {
   scale: CLOSE_S,
 };
 const INTO_HAND = pushZoom(FIGURE_A_S, CLOSE_S);
+/** Where the light laid in the close-up starts, above the frame, in the hand's units. */
 const LIGHT_FROM = -680;
+/** The climber's hands on the pole, one high and one low (their x follows the pole each frame). */
 const ON_POLE_HIGH: GestureAt = { to: [0, -150], reach: 0, grip: 'hold' };
 const ON_POLE_LOW: GestureAt = { to: [0, -95], reach: 0, grip: 'hold' };
+/** Their hands as they look up, together at the chest (reach written each frame). */
 const AT_CHEST_NEAR: GestureAt = { to: [16, -104], reach: 0, grip: 'open' };
 const AT_CHEST_FAR: GestureAt = { to: [-12, -100], reach: 0, grip: 'open' };
 
+/** The pole stands this tall above the ground. */
 const POLE_H = 620;
 
 const timeline = {
@@ -425,10 +438,18 @@ export const look = drawing({
   },
 });
 
+/** The row's glow: faith lit, the other two not yet; faith leads and they fade (rewritten every frame). */
 const { lit: LIT, lead: LEAD, count: COUNT } = iconScratch([1, 0, 0]);
+/** The four at the hole, framed by the `hole` knobs (its camera rewritten every frame). */
 const HOLE_CAM: Camera = { x: 960, y: 540, zoom: 1 };
 const HOLE: House = { ...AT_THE_HOLE, cam: HOLE_CAM };
 
+/**
+ * After the last word: faith's icon, close, pulls back to the section head's
+ * row, its gold glowing; for a breath the four faces at the hole in the roof
+ * show under it, lit gold from below (`roof`'s callback), and go as the row
+ * settles for `declared` to open on.
+ */
 const row = (f: LookFrame, shown: number) => {
   const { ctx, w, h } = f;
   const pull = f.at('pullBack');

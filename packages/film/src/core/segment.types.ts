@@ -16,4 +16,5 @@ export const bareAct: Address = { _tag: 'Act', act: 'cold open' };
 // @ts-expect-error a library read by a bare string: `constructor` would read the prototype's
 export const bareSound = library['paper.slide'];
 
+/** A try's file from decoded names. */
 export const named = tryFile(BoardName.make('cold'), PANEL_START, 1);

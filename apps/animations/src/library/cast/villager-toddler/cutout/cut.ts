@@ -7,8 +7,21 @@ import { JOINTS } from './joints.ts';
 
 export { FRAMES, JOINTS };
 
+/** A view of theirs, by its name in their sheets' views. */
 type CutView = keyof typeof FRAMES;
 
+/**
+ * Running towards the viewer's left, leaning forward, on their kept poses
+ * sheet: the big bald head with its tuft at the top left, the ear at about
+ * x120-135, y65-100. Only their left arm, the near one, shows: its sleeve
+ * leaves their body under the ear (the root a crease with no ink, x148-164)
+ * and runs out level behind them to the round hand at the view's right edge
+ * (ring x195-241, y86-130); the sleeve's lower ink runs y148-157 (x164-214).
+ * Right of x154 and above y158 every pixel is the arm's or paper. The lead
+ * foot is at the bottom left, its sole lowest on y285; the back foot, heel up,
+ * at the right, its sole lowest on y282. The hem's lowest ink rises from y267
+ * (x115-145) to y255 at its right end (x185) and to y235 over the lead foot.
+ */
 const P1_HEM = [
   [-1, 236],
   [38, 236],
@@ -30,6 +43,7 @@ const P1_HEM = [
   [180, 259],
   [186, 256],
 ] as const;
+/** Each sole's lowest ink, by columns (measured). */
 const P1_SOLES = {
   left: [
     [8, 12, 249],
@@ -152,6 +166,17 @@ const POSES_1: PartCut = {
   ],
 };
 
+/**
+ * Sitting on the ground facing the viewer, legs out in front, on their kept
+ * poses sheet: the big bald head with its tuft and ears above, its jaw's
+ * lower ink on y128 (x43-64 and x104-127), the neck's skin x68-101 below it.
+ * Both sleeves hang from under the jaw, their outer ink running down and out
+ * to the round hands beside the lap (rings x20-61 and x109-148, y168-202);
+ * the sleeves have no inner ink, so their inner edges (x56 and x110) are
+ * guesses. The sandals' tops meet each hand's lower ink (left foot x0-60, its
+ * top from y196; right foot x120-165, from about y194); the ground shadow
+ * runs on past both sides of the box.
+ */
 const P2_RIGHT: Sleeve = {
   inner: [
     [56, 118],
@@ -174,6 +199,7 @@ const P2_LEFT: Sleeve = {
 };
 const p2Right = sleeve(P2_RIGHT);
 const p2Left = sleeve(P2_LEFT);
+/** Each round hand and the sleeve's lower end, from the cuff's row to 1-2 px under the hand's lower ink and above the sandal's top. */
 const P2_HANDS = {
   right: {
     polygon: [
@@ -227,10 +253,24 @@ const POSES_2: PartCut = {
   ],
 };
 
+/**
+ * Their outline is [29, 14, 5] (measured); a framed cut reads no ink, so
+ * their poses take none.
+ */
 const INK = [29, 14, 5, 255] as const;
 
+/** The paper grain their sheet shows on their body, carried into the paint under the arm. */
 const GRAIN = grain('the linen tunic of their body');
 
+/**
+ * Each view's moving parts (what a pose moves, whose areas are painted
+ * magenta and repainted beneath), and the words okra repaints them by: what
+ * lies under them, in the sheet's own style. Their sides and shade are
+ * written here for each pose (their back's one curve, the lavender far side),
+ * not by the shared `sides` and `shade` (which take `their` too): those say
+ * other things, and the prompts okra repainted these sheets by stay as sent
+ * (`film concept parts --check`).
+ */
 const HIDDEN_ENTRIES = {
   'poses-1': {
     moving: ['armLeft'],
@@ -242,6 +282,7 @@ const HIDDEN_ENTRIES = {
   },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
+/** Their cut table: each view's cut and how its figure is read. */
 export const { CUTS, cutOptionsFor, HIDDEN, paperOf } = cutTable({
   frames: FRAMES,
   views: {

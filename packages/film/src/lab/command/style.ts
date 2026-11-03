@@ -1,5 +1,9 @@
 import { PHONE } from '../viewport.ts';
 
+/**
+ * The command surfaces' own constants: the four paddings and heights they
+ * compose from studio tokens, and the geometry no studio token holds.
+ */
 const COMMAND_TOKENS = `
 body {
   --cmd-row-pad: var(--s-2) var(--s-3);
@@ -147,4 +151,5 @@ const COMMAND_RULES = `
 .lab-receipt-close { border: 0; color: var(--text-2); }
 `;
 
+/** The command surfaces' stylesheet: the tokens, then the rules that read them. */
 export const COMMAND_CSS = `${COMMAND_TOKENS}${COMMAND_RULES}`;

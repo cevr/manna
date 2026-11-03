@@ -1,13 +1,44 @@
+/** The Topics semantic verifier (§3.5), written against a three-read reader
+ *  rather than against a SQLite driver.
+ *
+ *  The rules here are driver-free; `platform-bun/corpus-verify.ts` supplies
+ *  the `bun:sqlite` reader. Keeping the driver out means the gate a candidate
+ *  must pass is one portable function, and the adapter carries only how to run
+ *  a statement.
+ *
+ *  The rules are: SQLite integrity, a schema major this build can read, and the
+ *  two positive counts the spec requires — pages, and the phrase dictionary that
+ *  makes them reachable. It returns the page count the Activation reports as
+ *  `installed`.
+ *
+ *  An empty artifact is honest output from the compiler when every authored core
+ *  is still `status: draft`, but honest is not the same as installable:
+ *  activating it would swap a working generation out for a file that can never
+ *  answer a lookup. Refusing it is exactly this verifier's job — the compiler
+ *  says what it built, the verifier says what may be installed. */
+
 import { Effect, Option } from 'effect';
 
 import { readTopicsSchemaMajor, TOPICS_SCHEMA_MAJOR } from './file-artifact.js';
 
+/** What a driver must be able to do for the verifier to run. Three reads, all
+ *  of them the driver's own concern to execute and the verifier's to interpret.
+ *
+ *  Every method fails rather than throwing: a missing table is a verification
+ *  failure like any other — the artifact is not the artifact it claims to be —
+ *  and the adapter is responsible for turning its driver's exception into that
+ *  failure before the verifier sees it. */
 export interface TopicsArtifactReader {
+  /** The `integrity_check` pragma's single value. */
   readonly integrity: Effect.Effect<string, unknown>;
+  /** `meta.value` for a key, or `None` when no such row exists. */
   readonly meta: (key: string) => Effect.Effect<Option.Option<string>, unknown>;
+  /** `SELECT COUNT(*)` over one table. Fails when the table is absent. */
   readonly count: (table: string) => Effect.Effect<number, unknown>;
 }
 
+/** Every way the Topics verifier refuses a candidate, as the exact message an
+ *  adapter reports. */
 const TOPICS_VERIFY_MESSAGES = {
   integrity: 'SQLite integrity check failed',
   unreadableSchemaMajor: 'Topics Artifact has no readable schema_major',

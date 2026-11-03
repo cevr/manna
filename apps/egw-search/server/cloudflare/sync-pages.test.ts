@@ -19,6 +19,8 @@ const REPORTS = new Map([
   ],
 ]);
 
+/** The newer report also has its page stored; the older one has only its
+ *  Markdown, as a report published before pages were. */
 const FILES = new Map([
   ...[...REPORTS].map(([name, text]) => [reportKey(name), text] as const),
   [reportPageKey('20261018T090012Z'), '<!doctype html><p>stored page</p>'],
@@ -35,8 +37,10 @@ const store: ReportStore = {
     ),
 };
 
+/** The routes as the Worker mounts them. */
 const { handler } = HttpRouter.toWebHandler(syncRoutes(store), { disableLogger: true });
 
+/** The answer to a path, as the browser gets it. */
 const answer = (path: string) =>
   Effect.gen(function* () {
     const web = yield* Effect.promise(() => handler(new Request(`https://egw.test${path}`)));

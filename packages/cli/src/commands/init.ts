@@ -1,3 +1,14 @@
+/**
+ * Init CLI Command
+ *
+ * `manna init` - Initialize all databases in ~/.bible/
+ *
+ * Downloads pre-built databases from GitHub:
+ * - bible.db: KJV text, Strong's concordance, cross-references
+ * - hymnal.db: 695 SDA hymns and 225 liturgical readings
+ * - egw-paragraphs.db: too large to host — prints sync instructions
+ */
+
 import {
   BIBLE_ARTIFACT_RELEASE,
   CorpusSupply,
@@ -80,6 +91,7 @@ const downloadFile = (url: string, dest: string, label: string) =>
     );
   });
 
+/** Hymnal acquisition is separate from other corpora so callers can supply an isolated destination. */
 const ensureHymnal = Effect.fn('Init.ensureHymnal')(function* (
   destination: string,
   refresh: boolean,
@@ -102,6 +114,7 @@ const artifactStatus = (receipt: CorpusSupplyReceipt): string => {
   return 'ready';
 };
 
+/** Build the native Bible/Topics supply used by an isolated artifact operation. */
 const artifactSupply = (bibleDir: string, path: Path.Path) => {
   const bibleArtifacts = layerNativeBibleArtifacts({
     destination: path.join(bibleDir, 'bible.db'),

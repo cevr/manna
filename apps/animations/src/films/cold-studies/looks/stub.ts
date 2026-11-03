@@ -4,6 +4,7 @@ import { type Look, VERSE } from '../look.ts';
 import type { CourtFrame } from '../scenes/court.ts';
 import type { JobFrame } from '../scenes/job.ts';
 
+/** A stub's colours: its ground, its ink and the payoff's. */
 interface StubColors {
   readonly ground: Hex;
   readonly ink: Hex;
@@ -19,6 +20,7 @@ const label = (size: number, color: Hex): TextStyle => ({
   tracking: 0.12,
 });
 
+/** The ground over the whole frame, and the look's name over it with `what` beneath. */
 const named = (f: CourtFrame | JobFrame, name: string, what: string, c: StubColors, y: number) => {
   const { ctx, w, h } = f;
   ctx.fillStyle = c.ground;

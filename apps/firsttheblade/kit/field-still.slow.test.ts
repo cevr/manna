@@ -1,3 +1,25 @@
+/**
+ * The stills rule's fast check over the source, before a build: every image
+ * the sources name is in the approval record or in a named list of images
+ * outside the rule, each with its reason (`OUTSIDE`, `./served.ts`); and each
+ * still is byte-identical to the one the record pins
+ * (`kit/approved-stills.json`, `./approval.ts`). The guard over what ships
+ * is the build walk (`./build-walk.ts`, `./shippable.slow.test.ts`), and over
+ * what the owner saw the approval's shown files (`./approval.slow.test.ts`).
+ *
+ * The stills as they stand match the record, and the served images are the
+ * record's and the outside list's. Over a copy of the app's served folders,
+ * every change is refused, generated from a seed: over every still, a byte
+ * flipped at any offset, a re-encode at another quality, one pixel moved
+ * (its encode shown to differ from the same encode unmoved), another still's
+ * bytes swapped in, the file dropped; and an image added under any served
+ * folder by any name and image extension, or named from any module under
+ * `src/` by any import form or a stylesheet's `url()`, which the record does
+ * not name. So is every light the earlier light guards let through (each
+ * case named by the review that found it), rebuilt from the stills of the
+ * base before this rule and the master, in each probe's order, and encoded
+ * as the kit encodes.
+ */
 import { BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Effect, FileSystem, Match, Option, Path, Stream } from 'effect';
@@ -23,10 +45,13 @@ const test = it.effect.layer(BunServices.layer);
 
 const APP = `${import.meta.dir}/..`;
 
+/** The widths the page's `srcset` serves. */
 const WIDTHS = [768, 1536, 3072] as const;
 
+/** The quality the kit encodes the stills at, as sharp takes it. */
 const KIT_QUALITY = Math.round(QUALITY * 100);
 
+/** A seeded draw in [0, 1). */
 const draws = (seed: number) => {
   let state = seed >>> 0;
   return () => {
@@ -35,6 +60,7 @@ const draws = (seed: number) => {
   };
 };
 
+/** Pixels from a file or encoded bytes, at a width when one is asked. */
 const decoded = (input: string | Uint8Array, width: Option.Option<number> = Option.none()) =>
   Effect.gen(function* () {
     const sized = Option.match(width, {
@@ -52,11 +78,13 @@ const decoded = (input: string | Uint8Array, width: Option.Option<number> = Opti
     return pixels;
   });
 
+/** How a still is encoded again: at a quality (0 to 100), and without loss where its format can. */
 interface Encoding {
   readonly lossless: boolean;
   readonly quality: number;
 }
 
+/** Pixels encoded in a still's own format (by its file's extension); a PNG is always lossless, its quality its compression. */
 const encoded = (still: string, image: Pixels, { lossless, quality }: Encoding) => {
   const raw = sharp(Buffer.from(image.data), {
     raw: { width: image.width, height: image.height, channels: 4 },
@@ -72,16 +100,19 @@ const encoded = (still: string, image: Pixels, { lossless, quality }: Encoding) 
   );
 };
 
+/** A change to a copy of the app: its name, the files it writes (each from the app), and their bytes, or none to drop the file. */
 interface Change {
   readonly name: string;
   readonly writes: ReadonlyArray<readonly [string, Option.Option<Uint8Array>]>;
 }
 
+/** A change that writes bytes over a file (or a new one). */
 const written = (name: string, file: string, bytes: Uint8Array): Change => ({
   name,
   writes: [[file, Option.some(bytes)]],
 });
 
+/** What the provenance check finds in the copy after each change, the files it wrote put back between them. */
 const foundAfter = Effect.fn('FieldStill.foundAfter')(function* (
   root: string,
   changes: ReadonlyArray<Change>,
@@ -111,17 +142,31 @@ const foundAfter = Effect.fn('FieldStill.foundAfter')(function* (
   return found;
 });
 
+/** The changes to one still, and whether its moved pixel survives the encode. */
 interface StillChanges {
   readonly changes: ReadonlyArray<Change>;
   readonly moved: readonly [string, boolean];
 }
 
+/** How many channel codes two pixel sets of one size differ in. */
 const codesApart = (a: Pixels, b: Pixels) => {
   let apart = 0;
   for (let i = 0; i < a.data.length; i++) if (a.data[i] !== b.data[i]) apart++;
   return apart;
 };
 
+/**
+ * One pixel of `image` moved, drawn from `next`, encoded as `still` is, and
+ * whether the move survives the encode. A WebP or a PNG is written without
+ * loss, one channel one code off: it survives when the bytes decode to the
+ * pixels unmoved but that one code, so they differ from the same encode
+ * unmoved, which decodes to the pixels as they are; its quality is 1, the
+ * fastest, which in a lossless encode spends less effort on size and keeps
+ * every pixel. A JPEG has no lossless
+ * encode, and at quality 100 one code can vanish in it: its channel moves by
+ * the fewest codes (1, 2, 4, …) whose encode differs from the same encode
+ * of the pixels unmoved, and it survives when one does.
+ */
 const movedPixel = Effect.fn('FieldStill.movedPixel')(function* (
   still: string,
   image: Pixels,
@@ -152,6 +197,7 @@ const movedPixel = Effect.fn('FieldStill.movedPixel')(function* (
   return { name: named(by), bytes, survives: !Buffer.from(bytes).equals(Buffer.from(control)) };
 });
 
+/** Every change to one still, drawn from `next`: what it is, and the bytes or the drop. */
 const changesOf = Effect.fn('FieldStill.changesOf')(function* (
   still: string,
   others: ReadonlyArray<string>,
@@ -185,6 +231,7 @@ const changesOf = Effect.fn('FieldStill.changesOf')(function* (
   return result;
 });
 
+/** What each change should leave: exactly one still refused, and why. */
 const refusedEach = (found: ReadonlyArray<readonly [string, ReadonlyArray<Unapproved>]>) =>
   found.map(([name, problems]) => [name, problems.length] as const);
 
@@ -193,6 +240,7 @@ type Colour = readonly [number, number, number];
 const WHITE: Colour = [255, 255, 255];
 const GOLD: Colour = [255, 210, 90];
 
+/** A ray as the earlier guards' tests drew one: a band from its origin along its angle, fading over its reach. */
 interface Ray {
   readonly u: number;
   readonly v: number;
@@ -202,6 +250,7 @@ interface Ray {
   readonly colour: Colour;
 }
 
+/** The ray painted over a still's sky at `strength` (0 to 1). */
 const withRay = (still: Pixels, sky: Uint8Array, ray: Ray, strength: number): Pixels => {
   const { width, height } = still;
   const data = new Uint8ClampedArray(still.data);
@@ -224,6 +273,7 @@ const withRay = (still: Pixels, sky: Uint8Array, ray: Ray, strength: number): Pi
   return { width, height, data };
 };
 
+/** Two pixel sets mixed, `t` of the way from `from` to `to`, each code rounded. */
 const mixed = (from: Pixels, to: Pixels, t: number): Pixels => {
   const data = new Uint8ClampedArray(from.data.length);
   for (let i = 0; i < data.length; i++) {
@@ -233,6 +283,7 @@ const mixed = (from: Pixels, to: Pixels, t: number): Pixels => {
   return { ...from, data };
 };
 
+/** Round 2's two beams from the top-left corner, painted hard over the sky. */
 const beams = (still: Pixels, sky: Uint8Array, colour: Colour): Pixels => {
   const { width, height } = still;
   const data = new Uint8ClampedArray(still.data);
@@ -246,12 +297,14 @@ const beams = (still: Pixels, sky: Uint8Array, colour: Colour): Pixels => {
   return { width, height, data };
 };
 
+/** The sky painted out with a hill's colour, so a guard reading the sky finds none. */
 const skyless = (still: Pixels, sky: Uint8Array): Pixels => {
   const data = new Uint8ClampedArray(still.data);
   for (let i = 0; i < sky.length; i++) if (sky[i] === 1) data.set([120, 150, 110], i * 4);
   return { ...still, data };
 };
 
+/** The master lit as the kit lights it, and lit with its old rays repainted first. */
 const kitLit = (master: Pixels) => {
   const sky = skyMask(master);
   return {
@@ -260,6 +313,11 @@ const kitLit = (master: Pixels) => {
   };
 };
 
+/**
+ * The kit's still with its ray repaint cut short (to `reach` of
+ * `REPAINT_TO`) or weakened (`weight` of the clear sky laid over the old
+ * rays): the master lit and the repainted master lit, mixed column by column.
+ */
 const kitStill = ({ lit, repainted }: ReturnType<typeof kitLit>, reach: number, weight: number) => {
   const { width } = lit;
   const to = reach * REPAINT_TO * width;
@@ -276,8 +334,10 @@ const kitStill = ({ lit, repainted }: ReturnType<typeof kitLit>, reach: number, 
 const MASTER = `${import.meta.dir}/art/field.webp`;
 const stillAt = (width: number) => `src/art/field-${width}.webp`;
 
+/** The commit before the stills rule: its stills carry the old light, rays from the top left. */
 const BASE = 'c56180093';
 
+/** A still's bytes as the base commit holds them. */
 const baseStill = (width: number) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner;
@@ -299,6 +359,7 @@ const baseStill = (width: number) =>
     return bytes;
   }).pipe(Effect.scoped);
 
+/** Pixels resized to a width, as sharp resizes them. */
 const resized = (image: Pixels, width: number) =>
   Effect.map(
     Effect.promise(() =>
@@ -316,6 +377,14 @@ const resized = (image: Pixels, width: number) =>
     }),
   );
 
+/**
+ * Round 2's kit regression, as its probe painted it: the old rays repainted
+ * with clear sky only to `repaintTo` of the width (the kit's is
+ * `REPAINT_TO`), at `weight`, by the probe's copy of the kit's step and its
+ * constants; then the sun's light laid on. The light is the same at each
+ * pixel whatever the others are, so only the columns repainted are lit
+ * again; the rest are `lit`, the master lit whole.
+ */
 const withoutRaysAs = (
   image: Pixels,
   sky: Uint8Array,
@@ -354,6 +423,15 @@ const withoutRaysAs = (
   return { width, height, data };
 };
 
+/**
+ * Each light the earlier light guards let through, rebuilt in its probe's
+ * order and encoded as the kit encodes: round 1's old still is the base's;
+ * round 2 mixes head's 768 still toward the base's, paints its beams over
+ * head's own sky, paints the sky out, and runs the kit's regression on the
+ * master at 3072 then resizes to 768; round 3 paints its rays over head's
+ * stills on the master's sky at each width, runs the kit at 1536 on the
+ * master resized, and mixes head's 3072 still toward the master.
+ */
 const earlierLights = Effect.fn('FieldStill.earlierLights')(function* () {
   const [head768, head3072, base768, master, master768, master1536] = yield* Effect.all(
     [
@@ -461,10 +539,12 @@ const earlierLights = Effect.fn('FieldStill.earlierLights')(function* () {
   ];
 });
 
+/** The image extensions the generator draws from, each as a served file may spell it. */
 const EXTENSIONS = ['webp', 'png', 'jpg', 'jpeg', 'avif', 'gif', 'svg', 'ico'] as const;
 
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
 
+/** A name drawn from `next`: a letter, then up to 11 letters, digits or dashes. */
 const nameFrom = (next: () => number) => {
   const tail = `${LETTERS}0123456789-`;
   const length = Math.floor(next() * 12);
@@ -474,6 +554,7 @@ const nameFrom = (next: () => number) => {
   );
 };
 
+/** An image file name drawn from `next`: any name, any image extension, any letter of it upper case. */
 const imageFrom = (next: () => number) => {
   const extension = EXTENSIONS[Math.floor(next() * EXTENSIONS.length)] ?? 'webp';
   const spelt = Array.from(extension, (c) => [c, c.toUpperCase()][Number(next() < 0.3)]).join('');
@@ -483,6 +564,7 @@ const imageFrom = (next: () => number) => {
 const pick = <A>(items: readonly [A, ...ReadonlyArray<A>], next: () => number): A =>
   items[Math.floor(next() * items.length)] ?? items[0];
 
+/** How a script names an image, by its specifier: each form the build loads a file by. */
 const SCRIPT_FORMS: ReadonlyArray<(specifier: string, id: string) => string> = [
   (s, id) => `import ${id} from '${s}';`,
   (s) => `import '${s}';`,
@@ -492,12 +574,19 @@ const SCRIPT_FORMS: ReadonlyArray<(specifier: string, id: string) => string> = [
   (s, id) => `export const ${id} = new URL('${s}', import.meta.url);`,
 ];
 
+/** How a stylesheet names an image. */
 const STYLE_FORMS: ReadonlyArray<(specifier: string, id: string) => string> = [
   (s, id) => `.${id} { background: url(${s}); }`,
   (s, id) => `.${id} { background-image: url("${s}"); }`,
   (s, id) => `@media (min-width: 1px) { .${id} { mask: url('${s}#a') no-repeat; } }`,
 ];
 
+/**
+ * An image added that the record does not name, drawn from `next`: a file
+ * under a served folder (one there or a new one), or a file outside them
+ * that a module under `src/` names by a script's import form or a
+ * stylesheet's `url()`. Answers the change and the image's path from the app.
+ */
 const addedImage = Effect.fn('FieldStill.addedImage')(function* (
   n: number,
   modules: readonly [string, ...ReadonlyArray<string>],
@@ -541,6 +630,7 @@ const addedImage = Effect.fn('FieldStill.addedImage')(function* (
   return [change, file] as const;
 });
 
+/** The modules under `src/` the build reads, by their path from the app. */
 const sourceModules = Effect.fn('FieldStill.sourceModules')(function* () {
   const fs = yield* FileSystem.FileSystem;
   const entries = yield* fs.readDirectory(`${APP}/src`, { recursive: true });

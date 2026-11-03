@@ -22,6 +22,7 @@ import { memoryFileSystem, text } from './host/testing.ts';
 
 const RULES = '# Rules\n\n## The look\n\nOne silhouette outline; hair has no ink of its own.\n';
 
+/** A match of two figures written under a temp folder's `out/f/match/s/`, with a rule file beside it. */
 const written = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -401,8 +402,10 @@ describe.concurrent("a cast sheet's critique", () => {
   );
 });
 
+/** Where the jobs' match keeps its one figure's files, in memory. */
 const STEM = '/out/f/match/s/lead.t0001.00.bb.1';
 
+/** One figure, lead, matched in scene s, its crops in memory. */
 const LEAD: MatchTaken = {
   build: 'b.1',
   scene: 's',
@@ -430,17 +433,24 @@ const LEAD_ANSWER = [
   '```',
 ].join('\n');
 
+/** A staging that names `picture` alone: each picture a packet of its own. */
 const pictured = (picture: string): CritiqueStaging => ({
   panel: Option.none(),
   picture: Option.some(picture),
 });
 
+/** How a counsel's runs went: how many were asked, how many at once now and at most, and how many it was told to reach. */
 interface Runs {
   n: number;
   now: number;
   most: number;
 }
 
+/**
+ * A counsel whose run waits on `gate` when `held` says so of its packet,
+ * and answers `LEAD_ANSWER`; it counts its runs, and `reached` is done once
+ * `want` runs have been asked.
+ */
 const gatedCounsel = (
   gate: Deferred.Deferred<boolean>,
   held: (packet: string) => boolean,
@@ -468,6 +478,7 @@ const gatedCounsel = (
     }),
   );
 
+/** The critic over `LEAD`'s crops in memory, asking `counsel`; `files` holds them. */
 const jobsCritic = (
   files: Map<string, Uint8Array>,
   counsel: Layer.Layer<Counsel, never, FileSystem.FileSystem | Path.Path>,
@@ -484,6 +495,7 @@ const jobsCritic = (
     (built) => Context.get(built, Critic),
   );
 
+/** `LEAD`'s rule file and crops, in memory. */
 const leadFiles = () =>
   new Map<string, Uint8Array>([
     ['/rules.md', text(RULES)],

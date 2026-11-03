@@ -1,3 +1,15 @@
+/** §10: "verify the writer with synthetic vectors in a test."
+ *
+ *  The builder is not run over the corpus here — that is what §10 forbids, and
+ *  what `--limit` exists to prevent by accident. What is verified is the thing a
+ *  corpus run could not tell you anyway: that the buffer the writer produces is
+ *  the buffer the reader expects, vector for vector and range for range.
+ *
+ *  The vectors are synthetic and the embedder is not involved. A wrong offset,
+ *  a manifest that names ranges the buffer does not have, or an id table out of
+ *  step with the rows would all survive a real embedding run and all fail here.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import {
   DIMENSIONS,
@@ -11,6 +23,10 @@ import {
 
 import { bookRanges, paragraphIds, type VectorSourceRow } from './emit.js';
 
+/** `paraId` is the corpus's own paragraph identifier, distinct from the display
+ *  refcode: §9.2's join key is built from it because two rows can share a
+ *  refcode (17,078 pairs do in the shipped corpus) and a refcode-keyed index
+ *  silently fuses the wrong paragraph. The fixture spells both. */
 const row = (bookCode: string, refcode: string, text: string, paraId: string): VectorSourceRow => ({
   bookCode,
   refcode,
@@ -18,6 +34,8 @@ const row = (bookCode: string, refcode: string, text: string, paraId: string): V
   paraId,
 });
 
+/** Nine paragraphs across three books, deliberately not evenly split: a manifest
+ *  builder that assumed equal-sized books would pass on a balanced fixture. */
 const ROWS: readonly VectorSourceRow[] = [
   row('GC', 'GC 425.1', 'the sanctuary in heaven', '14879.1'),
   row('GC', 'GC 425.2', 'it concerns every soul', '14879.2'),
@@ -30,6 +48,8 @@ const ROWS: readonly VectorSourceRow[] = [
   row('EW', 'EW 281.1', 'the sealing', '12001.3'),
 ];
 
+/** A distinct, reproducible vector per row. Distinct matters: identical vectors
+ *  would make an offset error invisible, because every row would score alike. */
 const syntheticVectors = (rows: readonly VectorSourceRow[]): Int8Array => {
   const vectors = new Int8Array(rows.length * DIMENSIONS);
   rows.forEach((_row, index) => {

@@ -6,6 +6,7 @@ import { ContentStore } from '../content-store.ts';
 import { FilmRepo } from '../film-repo.ts';
 import { read } from '../read-cli.ts';
 
+/** The film CLI with `read` alone: `film read …`. */
 const film = Command.make('film').pipe(Command.withSubcommands([read]));
 
 Stdio.Stdio.use(({ args }) =>

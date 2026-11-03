@@ -19,8 +19,10 @@ afterAll(async () => {
   await build.dispose();
 });
 
+/** The markers Solid's server build adds for hydration: not attributes a mixin gives. */
 const HYDRATION_MARKERS = ['_hk', 'data-hk'];
 
+/** Each element's attributes, `style` as the browser serializes the declarations it parsed. */
 const attributesIn = (
   page: Page,
   html: string | null,

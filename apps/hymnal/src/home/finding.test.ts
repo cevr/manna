@@ -19,6 +19,7 @@ import {
   tilesAt,
 } from './finding';
 
+/** A seeded run of numbers, so a failing sequence comes back the same. */
 const seeded = (start: number) => {
   let seed = start;
   return (below: number) => {

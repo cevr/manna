@@ -20,6 +20,7 @@ const Live = FootageMedia.layer.pipe(
   Layer.provideMerge(BunServices.layer),
 );
 
+/** `file`'s picture, open until the scope closes. */
 const pictureIn = (file: string) =>
   Effect.gen(function* () {
     const input = yield* Effect.acquireRelease(
@@ -30,6 +31,7 @@ const pictureIn = (file: string) =>
     return yield* Effect.fromNullishOr(track).pipe(Effect.orDie);
   });
 
+/** When `track`'s first bright frame shows: the flash. Every frame is decoded, so no decoder is left running. */
 const flashIn = (track: InputVideoTrack) =>
   Stream.fromAsyncIterable(new VideoSampleSink(track).samples(), String).pipe(
     Stream.mapEffect((sample) =>
@@ -49,6 +51,7 @@ const flashIn = (track: InputVideoTrack) =>
     Effect.orDie,
   );
 
+/** Every packet's time and length and whether it is a key frame, in decode order. */
 const packetsIn = (track: InputVideoTrack) =>
   Stream.fromAsyncIterable(new EncodedPacketSink(track).packets(), String).pipe(
     Stream.map((packet) => ({
@@ -60,6 +63,7 @@ const packetsIn = (track: InputVideoTrack) =>
     Effect.orDie,
   );
 
+/** The clip made, imported into its mezzanine and proxy and its voice; where the flash and the click fall in them. */
 const synced = (clip: SyncClip) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -87,14 +91,17 @@ const synced = (clip: SyncClip) =>
     };
   });
 
+/** The longest run between key frames, in seconds, by their times. */
 const longestGap = (packets: ReadonlyArray<{ readonly at: number; readonly key: boolean }>) => {
   const keys = packets.filter((p) => p.key).map((p) => p.at);
   const end = Math.max(...packets.map((p) => p.at));
   return Math.max(...[...keys, end].slice(1).map((at, k) => at - (keys[k] ?? 0)));
 };
 
+/** Each camera's file extension, as it names its files. */
 const CONTAINERS = { iphone: '.mov', 'zv-e10': '.mp4' } as const;
 
+/** Each camera's picture codec, as the probe names it. */
 const CODECS = { iphone: 'hevc', 'zv-e10': 'avc' } as const;
 
 const CLIPS: ReadonlyArray<readonly [string, SyncClip]> = [

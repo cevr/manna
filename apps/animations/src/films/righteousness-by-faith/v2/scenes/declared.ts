@@ -34,15 +34,31 @@ import { type Stamp, FIGURE_STAIN_SPOTS, REST as COURT, stamp } from '../../cour
 import { DAWN_DONE, SUN, arc, dawn, flight } from '../../spoken.ts';
 
 const FS = 3.8;
+/** The figure's chest this frame, where the verdict sinks and the word lands (scratch, set from the `fig` knob). */
 const CHEST: [number, number] = [0, 0];
 
+/** Where the verdict drifts in from, level with where it hangs: across from where the card was. */
 const STAMP_FROM_X = 1240;
+/**
+ * The column the verdict passes down, clear of the face: the head's right
+ * edge (its 35-unit radius at the figure's scale) plus half the label (the
+ * stamp's gold edge, 262 wide, at its scale) and a margin, so no part of it
+ * crosses the face on the way.
+ */
 const sideX = (figX: number, stampScale: number) => figX + 35 * FS + 262 * stampScale + 40;
+/** Where the verdict is this frame: one scratch point, reused. */
 const AT: [number, number] = [0, 0];
 
+/** The way round the face runs in three legs, each starting a third of the way on. */
 const LEG = 2 / 3;
+/** Leg `i` (0 out, 1 along, 2 in) of the way `p` round the face, 0→1. */
 const leg = (p: number, i: number) => staggered(p, i / 2, LEG);
 
+/**
+ * Sets `AT` to the point `p` (0..1) along the way from `a` to `b` round the
+ * face: out level to the `side` column, along it to `b`'s height, then in
+ * level to `b`, each leg eased. The label never crosses the face.
+ */
 const aroundFace = (
   a: readonly [number, number],
   b: readonly [number, number],
@@ -56,30 +72,36 @@ const aroundFace = (
   AT[1] = lerp(a[1], b[1], along);
 };
 
+/** The sink across its cue: settling its weight in place first, then round the face into the chest. */
 const SINK_PATH: ReadonlyArray<Key> = [
   [0.2, 0],
   [1, 1, 'linear'],
 ];
+/** The little rise as it takes its weight. */
 const SINK_RISE: ReadonlyArray<Key> = [
   [0, 0],
   [0.1, -20, 'outCubic'],
   [0.2, 0, 'inCubic'],
 ];
+/** The squash as it takes its weight: down, over, and settled. */
 const SINK_SQUASH: ReadonlyArray<Key> = [
   [0, 1],
   [0.1, 0.9, 'outCubic'],
   [0.18, 1.06, 'inCubic'],
   [0.26, 1, 'outCubic'],
 ];
+/** It fades only once it is small inside the chest, its letters kept until then. */
 const SINK_OUT: ReadonlyArray<Key> = [
   [0.92, 0],
   [1, 1, 'linear'],
 ];
+/** The chest's glow, lit as the verdict goes in. */
 const SINK_WARM: ReadonlyArray<Key> = [
   [0.85, 0],
   [1, 1, 'linear'],
 ];
 
+/** The word card: its centre, and each line's baseline and size. */
 const CARD: Pt = [1240, 440];
 const LINES = [
   {
@@ -111,18 +133,25 @@ const LINES = [
   },
 ] as const;
 
+/** The stains on the garment, in the figure's units: the cold open's two and one more (centre, size, seed). */
 const STAINS = [...FIGURE_STAIN_SPOTS, [-16, -100, 18, 14, 13]] as const;
 const STAIN_SHAPES = STAINS.map(([x, y, sw, sh, seed]) => blob(x, y, sw, sh, seed));
+/** Where the light in the chest spreads from, in the figure's units. */
 const BLOOM_AT: Pt = [-4, -82];
+/** How fast the wash runs out from the light, and each stain's distance along it (its reach, 0..). */
 const WASH_RATE = 2.2;
 const STAIN_REACH = STAINS.map(([x, y]) => Math.hypot(x - BLOOM_AT[0], y - BLOOM_AT[1]) / 40);
+/** One scratch list of the stains' wash, reused every frame. */
 const WASH: number[] = STAINS.map(() => 0);
+/** The cloth's colour from grey paper to warm cream, in steps. */
 const CLOTH_WARMS = Array.from({ length: 17 }, (_, i) => mix(C.figure, C.cream, (0.7 * i) / 16));
 
+/** The dawn panel behind the figure, in frame units, and its scale on the dawn world. */
 const PANEL = { x: 1010, y: 150, w: 780, h: 440 };
 const PANEL_SCALE = PANEL.w / 1920;
 const PANEL_SUN: Pt = [PANEL.x + SUN[0] * PANEL_SCALE, PANEL.y + SUN[1] * PANEL_SCALE];
 
+/** The verdict's place and size this frame: `sx`/`sy` squash it as it lands heavy. */
 interface Verdict extends Stamp {
   readonly x: number;
   readonly y: number;
@@ -130,6 +159,7 @@ interface Verdict extends Stamp {
   readonly squash: number;
 }
 
+/** The verdict and its placement, rewritten each frame (scratch, so the draw allocates none). */
 const VERDICT = {
   x: 0,
   y: 0,
@@ -150,6 +180,7 @@ const verdictAt = (ctx: CanvasRenderingContext2D, hand: Hands, v: Verdict) => {
   at(ctx, VERDICT_AT, () => stamp(ctx, hand, v));
 };
 
+/** The word card, its three lines written in as they are spoken. */
 const card = (
   ctx: CanvasRenderingContext2D,
   hand: Hands,
@@ -187,6 +218,7 @@ const card = (
     );
   });
 
+/** The dawn from `spoke`, in its torn frame, at `shown` scale. */
 const panel = (ctx: CanvasRenderingContext2D, hand: Hands, shown: number) =>
   at(ctx, { x: PANEL.x + PANEL.w / 2, y: PANEL.y + PANEL.h / 2, scale: shown }, () =>
     at(ctx, { x: -PANEL.w / 2, y: -PANEL.h / 2 }, () => {
@@ -205,6 +237,11 @@ const panel = (ctx: CanvasRenderingContext2D, hand: Hands, shown: number) =>
     }),
   );
 
+/**
+ * Gold in the chest: the glow the sunk verdict leaves (`warm`), and on
+ * `made` the light spreading through the garment from inside, a glow held to
+ * the cloth, never a patch laid on it.
+ */
 const chest = (ctx: CanvasRenderingContext2D, figure: Person, warm: number, bloom: number) => {
   const lit = Math.max(0.8 * warm, bloom);
   if (lit > 0) glow(ctx, 0, -80, 50, C.glow, 0.5 * lit);
@@ -217,15 +254,26 @@ const chest = (ctx: CanvasRenderingContext2D, figure: Person, warm: number, bloo
   ctx.restore();
 };
 
+/**
+ * How far each stain is washed out at `bloom`, into `out`: from the light in
+ * the chest outward, the nearest first, every one gone before the light has
+ * fully spread.
+ */
 const washStains = (out: number[], bloom: number) => {
   for (let i = 0; i < STAIN_REACH.length; i++)
     out[i] = clamp(WASH_RATE * bloom - (STAIN_REACH[i] ?? 0));
   return out;
 };
 
+/** The garment's colour as the light spreads through it: grey paper warming to cream, in steps. */
 const clothAt = (bloom: number) =>
   CLOTH_WARMS[Math.round(clamp(bloom) * (CLOTH_WARMS.length - 1))] ?? C.figure;
 
+/**
+ * The row's glow and lead, written each frame: faith leading as `look` left
+ * it, then on "now" stepping back to kept as the robe pops forward; the heart
+ * faded. And how far above the frame the row lifts to.
+ */
 const {
   lit: ROW_LIT,
   lead: ROW_LEAD,
@@ -233,6 +281,7 @@ const {
 } = iconScratch([1, 0, 0], { lead: [1, 0, 0], dim: 1 });
 const ROW_GONE = -320;
 
+/** Where the doubtful hand goes: under the chin, in front of the body. */
 const DOUBT_AT: Pt = [-10, -100];
 
 export const declared = drawing({
@@ -276,6 +325,13 @@ export const declared = drawing({
     const sink = f.at('sink');
     const into = f.keys('sink', SINK_PATH);
 
+    /**
+     * The verdict: drifts in over the head, goes round the face to lie over
+     * the stains and back, fills word by word through the quotation, then,
+     * solid, takes its weight and goes round the face into the chest. Placed
+     * under the camera, where its knobs and the figure's are read, so the
+     * lab's handles land where they are drawn.
+     */
     const placeVerdict = (fig: readonly [number, number]) => {
       const hang = f.knob('hang');
       const patch = f.knob('patch');

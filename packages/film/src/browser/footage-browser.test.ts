@@ -4,24 +4,34 @@ import { standInDom } from '../canvas/fixtures/stand-in.ts';
 import { FootageDecoders, footageLayer } from './footage-browser.ts';
 import { Footage } from './footage.ts';
 
+/** What the stand-in made, and what it was asked to let go. */
 interface Counted {
+  /** Decoders made (`samplesAtTimestamps`), and returned. */
   made: number;
   returned: number;
+  /** Frames handed out (`toVideoFrame`), and closed. */
   decoded: number;
   frames: number;
 }
 
 const counted = (): Counted => ({ made: 0, returned: 0, decoded: 0, frames: 0 });
 
+/** A source whose opening waits: `asked` once the host asks for its picture, which it gives once `open` is done. */
 interface Gate {
   readonly asked: Deferred.Deferred<void>;
   readonly open: Deferred.Deferred<void>;
 }
 
+/** `value`, as mediabunny's promises answer. */
 const settled = <A>(value: A) => Effect.runPromise(Effect.succeed(value));
 
+/** An iterator's end, as mediabunny's samples answer it. */
 const DONE = { done: true } as const;
 
+/**
+ * mediabunny, as far as the host uses it, its sources named by URL: those in
+ * `closed` have no picture, those `gated` open when their gate says.
+ */
 const standIn = (count: Counted, closed: ReadonlySet<string>, gated: ReadonlyMap<string, Gate>) => {
   const sample = (at: number) => ({
     timestamp: at,
@@ -92,8 +102,10 @@ const standIn = (count: Counted, closed: ReadonlySet<string>, gated: ReadonlyMap
   return module as unknown as Awaited<ReturnType<Decoders['load']>>;
 };
 
+/** What the host is given mediabunny as. */
 type Decoders = Parameters<typeof FootageDecoders.of>[0];
 
+/** The live host over the stand-in, given where the page's host gives the module, each source read at its own name. */
 const hostOver = (
   count: Counted,
   closed: ReadonlySet<string> = new Set(),

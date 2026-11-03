@@ -1,3 +1,23 @@
+/**
+ * The phones' hymn list as rows: first each of the reader's own lists that
+ * holds a hymn (`shelves`: Recent), under a header row that names it and
+ * opens its own screen (`href`); then each run of hymns in one topic, under
+ * a row that names the topic.
+ * The list pins a topic's row at its top while its hymns scroll under it
+ * (`sticky`, the topic rows' indices). A shelf's header is not pinned: the
+ * pinned copy lets touches through to the list, so a pinned header could not
+ * take a press.
+ *
+ * A row's place comes from the hymns' own order alone: a topic that comes
+ * back after another gets a second row, keyed by its own first hymn. A hymn
+ * row carries the hymns a press on it pages through (`source`): every hymn
+ * of the list under the topics, in its order, a shelf's rows too (a shelf
+ * pages through its own hymns only from its own screen). A hymn row of one of the
+ * reader's `favourites` is starred (`favourite`), wherever it shows. A
+ * search's result found by a line other than its title carries that line
+ * (`line`), which its row shows under the title; every other row has none.
+ */
+
 import { Option } from 'effect';
 
 import type { Shelf } from './lists';
@@ -16,11 +36,14 @@ export type Row<Hymn> =
 
 export interface Rows<Hymn> {
   readonly rows: ReadonlyArray<Row<Hymn>>;
+  /** The index of every topic row, ascending. */
   readonly sticky: ReadonlyArray<number>;
 }
 
+/** No favourites: a list drawn without the reader's lists. */
 const none: ReadonlySet<number> = new Set();
 
+/** No found lines: a list that is not a search's results. */
 const noLines: ReadonlyMap<number, string> = new Map();
 
 export const rowsOf = <Hymn extends { readonly number: number; readonly topic: string }>(
@@ -60,6 +83,14 @@ export const rowsOf = <Hymn extends { readonly number: number; readonly topic: s
   return { rows, sticky };
 };
 
+/**
+ * A home tab's list (`home/tabs.ts`): each group under a pinned row that
+ * names it, then its hymns. A hymn in several groups has a row in each, so a
+ * row's key names its tab, its group's place and its hymn. Every row pages
+ * through the whole hymnal in number order (`hymns`, as the home list holds
+ * them), whichever group it is in. A group number with no hymn in `hymns`
+ * has no row.
+ */
 export const groupRowsOf = <Hymn extends { readonly number: number }>(
   tab: string,
   groups: ReadonlyArray<{ readonly name: string; readonly hymns: ReadonlyArray<number> }>,
@@ -90,6 +121,11 @@ export const groupRowsOf = <Hymn extends { readonly number: number }>(
   return { rows, sticky };
 };
 
+/**
+ * A list with no topic rows, such as a search's results: a row per hymn,
+ * each paging through them all, each carrying the line `lines` gives its
+ * hymn (the line a search found it by).
+ */
 export const plainRowsOf = <Hymn extends { readonly number: number }>(
   hymns: ReadonlyArray<Hymn>,
   favourites: ReadonlySet<number> = none,
@@ -109,8 +145,18 @@ export const plainRowsOf = <Hymn extends { readonly number: number }>(
   };
 };
 
+/** How many of a search's strongest matches stand above `Hymns about this`. */
 export const STRONG = 5;
 
+/**
+ * A search's results with the hymns about it (`about`, nearest first): the
+ * strongest matches, at most `STRONG`, then a section `Hymns about this`
+ * holding the hymns about the query that are not among those, then the rest
+ * of the matches, but those the section shows, under a section `More
+ * matches`. Each hymn shows once, and a section with no hymn has no row.
+ * With no hymns about the query the results are `plainRowsOf`'s. Every row
+ * pages through the hymns in the order shown.
+ */
 export const resultRowsOf = <Hymn extends { readonly number: number }>(
   found: ReadonlyArray<Hymn>,
   about: ReadonlyArray<Hymn>,

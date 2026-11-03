@@ -1,14 +1,17 @@
 import { DoubleSide, FrontSide, ShaderMaterial, type Texture, Vector2, Vector3 } from 'three';
 
+/** `#rrggbb` as the shader's 0–1 channels, unconverted. */
 export const rgb = (hex: string): Vector3 => {
   const n = Number.parseInt(hex.slice(1), 16);
   return new Vector3(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
 };
 
+/** One value a shader reads, shared by every material that holds the same object. */
 interface Uniform<T> {
   value: T;
 }
 
+/** The light and fog every material in one world reads: set once a frame, before it renders. */
 export interface World {
   readonly res: Uniform<Vector2>;
   readonly ambient: Uniform<Vector3>;
@@ -100,14 +103,19 @@ void main() {
 }
 `;
 
+/** How one surface draws: its texture (none: flat), its colour over it, and whether it gives light. */
 export interface Paint {
   readonly map?: Texture;
   readonly tint?: string;
+  /** 0 lit by the room to 1 its own light (a window, gold). */
   readonly emissive?: number;
+  /** Both faces drawn (a page, a card). */
   readonly double?: boolean;
+  /** The snapping grid's coarseness in low-res pixels: 1 the console's, 2 coarser still. */
   readonly snap?: number;
 }
 
+/** A material that reads `w`'s light and fog, painted `p`. */
 export const ps1 = (w: World, p: Paint): ShaderMaterial =>
   new ShaderMaterial({
     vertexShader: VERTEX,

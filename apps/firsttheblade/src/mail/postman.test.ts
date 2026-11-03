@@ -25,6 +25,7 @@ type Json =
   // oxlint-disable-next-line effect/noNullish -- JSON null is an intentional signing-defect payload, not optional domain state.
   null | boolean | number | string | ReadonlyArray<Json> | { readonly [key: string]: Json };
 
+/** A bounded deterministic JSON generator: primitives, strings, arrays and nested records. */
 const defectValue = (seed: number, depth = 0): Json => {
   const next = (seed * 1664525 + 1013904223) >>> 0;
   const choice = next % 6;
@@ -37,6 +38,7 @@ const defectValue = (seed: number, depth = 0): Json => {
   return { payload: defectValue(next, depth + 1), nested: defectValue(next + 2, depth + 1) };
 };
 
+/** External ports only: the adapter and the model's recovery policy remain real. */
 const fixture = (sign: Tokens['Service']['sign'], send: Mailer['Service']['send']) =>
   Effect.gen(function* () {
     const book = yield* AddressBook.memory;

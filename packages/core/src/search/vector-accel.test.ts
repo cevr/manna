@@ -1,3 +1,16 @@
+/** The accelerated scan must answer exactly what the pure scan answers.
+ *
+ *  This is the property the whole tiering rests on. `vector-index.ts` promises
+ *  the scan "runs byte-identically on every host", and an accelerator that
+ *  returned *nearly* the same neighbors would break that promise in the way that is hardest to notice: a result page
+ *  that differs by one row between a developer's laptop and the deployment.
+ *
+ *  Equality rather than a tolerance, because the arithmetic permits it. Every
+ *  value in the chain is an integer — int8 inputs, int16 products, int32 sums —
+ *  and 256 terms cannot overflow or round. A tolerance here would be hiding
+ *  exactly the bug this file exists to catch.
+ */
+
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Option, Schedule } from 'effect';
 
@@ -12,6 +25,7 @@ import { scanVectorIndex, type VectorIndex, type VectorManifest } from './vector
 
 const DIMENSIONS = 256;
 
+/** A deterministic index, so a failure reproduces. */
 const makeIndex = (count: number, seed: number): VectorIndex => {
   let state = seed;
   const next = (): number => {

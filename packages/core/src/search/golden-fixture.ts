@@ -1,3 +1,24 @@
+/** §9.7's golden query set, and the corpus it runs against.
+ *
+ *  "Ordered result identities and fallback behavior must match within declared
+ *  numeric tolerances." That is only checkable if there is *one* set, in one
+ *  module, that every client imports — a fixture copied into several suites is
+ *  several fixtures whose agreement is a coincidence waiting to end, which is
+ *  the argument `wiki/testing.ts` already makes for the Daniel 8 phrase fixture.
+ *
+ *  Exported through `@manna/core/search/testing`, never through
+ *  `@manna/core/search`: a synthetic ten-paragraph corpus sitting in the
+ *  namespace an app imports `SearchService` from is a corpus a shipped code path
+ *  can reach for. Core's own suites import this file relatively.
+ *
+ *  **The queries are chosen to cover §9.3's table and §9.6's absences**, which is
+ *  what §12 leaves open ("which queries and how many are chosen when Milestone 8
+ *  starts"). Each one is here because it is the only query in the set that
+ *  exercises some branch: the quoted one is the only phrase route, the refcode
+ *  one is the only locate route, the one-word one is the only non-wordy hybrid,
+ *  and the strong-hit one is the only short-circuit.
+ */
+
 import { Effect, Layer, Option, Schema } from 'effect';
 
 import { Node } from '../egw/ast.js';
@@ -34,6 +55,12 @@ const book = (code: string, title: string, author: string, id: number): BookRow 
   created_at: '2026-01-01T00:00:00Z',
 });
 
+/** Two EGW books and one pioneer book.
+ *
+ *  The pioneer book is what makes the scope tests non-vacuous: §9.2 pins the
+ *  vector index to the EGW/White-Estate partition, so a `pioneer`-scoped query
+ *  must reach paragraphs the index cannot contain — and a fixture with only EGW
+ *  books could not tell a working scope filter from an absent one. */
 export const GOLDEN_BOOKS: readonly BookRow[] = [
   book('GC', 'The Great Controversy', 'Ellen Gould White', 1),
   book('DA', 'The Desire of Ages', 'Ellen Gould White', 2),
@@ -56,6 +83,14 @@ const paragraph = (input: {
   ftsRank: input.ftsRank,
 });
 
+/** Ten paragraphs, with the FTS ranks the double reports.
+ *
+ *  The ranks are the fixture's most load-bearing data: `GC 425.1` carries a rank
+ *  that clears `STRONG_BM25_THRESHOLD` and separates from the runner-up by more
+ *  than `BM25_SEPARATION_RATIO`, which is what makes the short-circuit query
+ *  short-circuit. The rest sit in the weak regime so the hybrid queries reach the
+ *  vector leg. Negative, because that is what FTS5 reports and the fixture models
+ *  what SQLite would say rather than what the pipeline prefers. */
 export const GOLDEN_PARAGRAPHS: readonly TestParagraph[] = [
   paragraph({
     bookCode: 'GC',
@@ -129,6 +164,11 @@ export const GOLDEN_PARAGRAPHS: readonly TestParagraph[] = [
   }),
 ];
 
+/** The EGW-scope paragraph ids the index covers, in buffer order.
+ *
+ *  Exactly the `GC` and `DA` paragraphs: §9.2 pins the index to the
+ *  EGW/White-Estate partition, and a fixture index that also covered `DAR` would
+ *  let a scope bug pass. */
 export const GOLDEN_VECTOR_IDS: readonly string[] = GOLDEN_PARAGRAPHS.filter(
   (row) => row.bookCode !== 'DAR',
 ).map((row) =>
@@ -139,6 +179,13 @@ export const GOLDEN_VECTOR_IDS: readonly string[] = GOLDEN_PARAGRAPHS.filter(
   ),
 );
 
+/** A deterministic pseudo-embedding.
+ *
+ *  Not a real one, and it does not need to be: what the fixture has to pin is
+ *  that the *scan* returns a stable, reproducible order for a given query, which
+ *  a deterministic hash gives without a 300M-parameter model in the test suite.
+ *  The real adapters are checked against each other in the adapter parity test,
+ *  which is the only place a real model belongs. */
 export const goldenVector = (seed: string): Int8Array => {
   const values = new Float32Array(DIMENSIONS);
   let state = 2166136261;
@@ -152,6 +199,8 @@ export const goldenVector = (seed: string): Int8Array => {
   return quantize(values);
 };
 
+/** The fixture index: one vector per EGW-scope paragraph, in `GOLDEN_VECTOR_IDS`
+ *  order, under the pinned fingerprint. */
 export const goldenVectorIndexBytes = (fingerprint: string = MODEL_FINGERPRINT): ArrayBuffer => {
   const vectors = new Int8Array(GOLDEN_VECTOR_IDS.length * DIMENSIONS);
   GOLDEN_VECTOR_IDS.forEach((id, row) => {
@@ -175,7 +224,27 @@ export const goldenVectorIndexBytes = (fingerprint: string = MODEL_FINGERPRINT):
   });
 };
 
+/** The one topic the golden set matches, and the query it matches.
+ *
+ *  A topic group above a search ranking is an *application's* group now, not a
+ *  field of `SearchResult` — but it is still the same query text on all three
+ *  surfaces, so the pair stays here beside the queries rather than being
+ *  re-invented in each app's suite. A surface that renders topics beside its
+ *  results pairs {@link goldenTopicCatalog} with {@link goldenSearchLayer} and
+ *  asserts that this query names this slug.
+ *
+ *  With an empty catalog every assertion about the group is vacuously true —
+ *  "topics is an array" passes, and so does "two topic sets are equal",
+ *  because both are empty. That is what this one entry exists to stop.
+ *
+ *  The name is the query text verbatim because `TopicService.Test` matches by
+ *  substring on the name — the double's rule, not the corpus's. The slug is
+ *  what the group carries and what the assertions pin.
+ */
 export const GOLDEN_TOPIC_QUERY = 'what happens at the close of probation';
+/** Branded, because that is what a `SearchTopicHit.slug` is: a test that
+ *  compares against a plain string is comparing against a different type than
+ *  the one the result carries. */
 export const GOLDEN_TOPIC_SLUG = topicSlug('close-of-probation');
 
 const GOLDEN_TOPICS: readonly TopicDetail[] = [
@@ -187,15 +256,37 @@ const GOLDEN_TOPICS: readonly TopicDetail[] = [
   }),
 ];
 
+/** The wiki the golden query set is paired with, for the surfaces that show a
+ *  topic group beside their results.
+ *
+ *  Separate from {@link goldenSearchSources} on purpose, and that separation is
+ *  the point of the change it came from: searching the writings does not read a
+ *  topics artifact, so the search fixture must not carry one either. An app that
+ *  fetches topics provides this layer next to its search layer, exactly as it
+ *  composes the two services in production.
+ *
+ *  `WikiService.Absent` rather than an artifact, because §3.5's steady state is
+ *  a catalog with no authored cores and `list` still answers from it — which is
+ *  what {@link GOLDEN_TOPIC_SLUG} is found through. */
 export const goldenTopicCatalog: Layer.Layer<WikiService> = WikiService.Absent.pipe(
   Layer.provide(TopicService.Test(GOLDEN_TOPICS)),
   Layer.provide(WikiSectionSources.NotWired),
 );
 
+/** One golden query and what §9 says must happen to it.
+ *
+ *  The expectation is the *route* and the *vector absence*, not a result list.
+ *  §9.7 asks clients to agree on "ordered result identities and
+ *  fallback behavior", and the identities are compared client-to-client at run
+ *  time — pinning them here would pin this fixture corpus into the acceptance
+ *  rule, and the rule is about agreement rather than about these ten paragraphs.
+ *  The route and the absence *are* pinned, because they are §9.3's and §9.6's
+ *  contract and must not vary by host at all. */
 export interface GoldenQuery {
   readonly label: string;
   readonly query: SearchQuery;
   readonly route: SearchRoute;
+  /** `None` when the vector leg is expected to run. */
   readonly absence: Option.Option<VectorAbsenceReason>;
 }
 
@@ -210,6 +301,11 @@ const query = (input: {
     limit: Option.none(),
   });
 
+/** The set, when a valid index and a working embedder are both present.
+ *
+ *  Six queries, each the only one covering its branch. Anything a seventh would
+ *  add is a variation on one of these, and §9.7's rule is that clients agree —
+ *  which a longer set makes slower to check and no stronger. */
 export const GOLDEN_QUERIES: readonly GoldenQuery[] = [
   {
     label: 'quoted phrase routes lexical-only',
@@ -249,6 +345,12 @@ export const GOLDEN_QUERIES: readonly GoldenQuery[] = [
   },
 ];
 
+/** The fixture corpus alone, without a choice of index bytes.
+ *
+ *  Exported for the one suite that must supply its own `VectorIndexBytes` — the
+ *  read-counting test in `vector-artifact.test.ts`, which cannot use
+ *  {@link goldenSearchLayer} because that builder provides the byte source from
+ *  its `index` argument and would shadow the counting one. */
 export const goldenSearchSources: Layer.Layer<SearchCorpusSources> = Layer.unwrap(
   Effect.gen(function* () {
     return SearchCorpusSources.wired({

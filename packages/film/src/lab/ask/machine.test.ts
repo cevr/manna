@@ -7,6 +7,7 @@ import { type LabFailure, called } from '../api.ts';
 import { AskApi } from './api.ts';
 import { AskPageEvent, AskPageState, spawnAskPage } from './machine.ts';
 
+/** A step's name, decoded as the lab decodes it. */
 const step = Schema.decodeSync(AskName);
 
 const asking = Schema.decodeSync(AskRecord)({
@@ -49,6 +50,7 @@ const picked: AskRecord = {
   answered: [{ step: step('pick'), values: { try: '7' }, at: '2026-10-14T00:01:00.000Z' }],
 };
 
+/** The ask once try 7 and its why, left empty, are answered: at its end. */
 const ended: AskRecord = {
   ...picked,
   state: AskState.Answered({
@@ -60,6 +62,7 @@ const ended: AskRecord = {
 
 const unused = () => Effect.die('not called by an ask page');
 
+/** The lab as the page calls it: `reads` answered in turn, each send told to `sent` and answered by `answer`. */
 type Sent = ReadonlyArray<{ readonly step: string; readonly values: StepValues }>;
 
 const fakeLab = (
@@ -92,6 +95,7 @@ const fakeLab = (
     }),
   );
 
+/** Ask `id`'s page, opening on its first read through the fake lab (the review's `askRead`, there). */
 const pageOn = (id: string) =>
   spawnAskPage(
     id,
@@ -101,12 +105,14 @@ const pageOn = (id: string) =>
 const opened = (record: AskRecord, said = '') =>
   AskPageState.Open({ page: { record, draft: {} }, said, missing: '' });
 
+/** The draft a state shows: none before the ask is read. */
 const draftIn = (s: AskPageState): StepValues =>
   Match.value(s).pipe(
     Match.tag('Open', 'Sending', 'Rereading', 'Gone', (p) => p.page.draft),
     Match.orElse(() => ({})),
   );
 
+/** Where a re-read leaves the page: gone, or never read. */
 const shutOut = Predicate.or(Predicate.isTagged('Gone'), Predicate.isTagged('Unreadable'));
 
 describe("an ask's page", () => {

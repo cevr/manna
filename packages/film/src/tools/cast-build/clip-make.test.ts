@@ -28,6 +28,7 @@ const clip = (over: { readonly seed?: number; readonly last?: string } = {}) => 
   seed: over.seed ?? 7,
 });
 
+/** A checkout at `root` holding member `m` at `<root>/cast/m`, its clip's first frame, and `extra` from the root. */
 const checkout = (root: string, extra: Record<string, Uint8Array> = {}) =>
   new Map<string, Uint8Array>([
     [`${root}/cast/m/cutout/raise/clip/clip-b.first.png`, FIRST],

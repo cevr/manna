@@ -2,6 +2,7 @@ import { Option } from 'effect';
 import type { Note } from '../core/schema.ts';
 import { sketchSummary } from '../core/sketch.ts';
 
+/** Text in double quotes, on one line. */
 const quoted = (text: string) =>
   `"${text.replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll('\n', '\\n')}"`;
 
@@ -48,5 +49,13 @@ const fields = (note: Note) => {
   ].join('');
 };
 
+/**
+ * A note as of change `seq` (it was made then, or last changed then), its
+ * still at `stillFile`:
+ * `note id=n3 seq=3 status=open scene=hand T=230.38 local=4.12 frame=6911 cue=topple:end ... still=/…/n3.png text="…"`
+ * (`local=`, `range=3.20-4.00`, `source=scenes/hand.ts:118 line="…"` and
+ * `words=hand:4-6 said="…" kind=correction replace="…"`, and
+ * `panel=cold.righteous try=1 ask=tweak sketch="pen 2, arrow 1"` only on a note that has them).
+ */
 export const noteLine = (note: Note & { readonly stillFile: string }, seq: number) =>
   `note id=${note.id} seq=${seq} status=${note.status} ${fields(note)} replies=${note.thread.length} still=${note.stillFile} text=${quoted(note.text)}`;

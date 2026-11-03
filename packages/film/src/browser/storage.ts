@@ -4,8 +4,10 @@ import * as AsyncResult from 'effect/reactivity/AsyncResult';
 import * as Atom from 'effect/reactivity/Atom';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 
+/** A store of per-viewer settings: what `Atom.kvs` and `keptText` read and write through. */
 export type StoreRuntime = Atom.AtomRuntime<KeyValueStore.KeyValueStore>;
 
+/** A store over `storage`, or one in memory when the page may not use it. */
 export const storeOver = (storage: () => Storage): StoreRuntime =>
   Atom.runtime(
     Layer.unwrap(
@@ -16,11 +18,18 @@ export const storeOver = (storage: () => Storage): StoreRuntime =>
     ),
   );
 
+/** A value kept as JSON: read once, kept in memory, written through on each `set`. */
 export interface KeptJson<A> {
   readonly get: () => A;
   readonly set: (value: A) => void;
 }
 
+/**
+ * The value kept under `key` in `store` as `schema`'s JSON, `defaultValue`
+ * when nothing is (or what is fails the schema): read once as it is made,
+ * then each `set` keeps it in memory and writes it through. Over a server
+ * render's store (one in memory, empty) it is the default.
+ */
 export const keptJson = <S extends Schema.ConstraintCodec<unknown, unknown>>(
   store: StoreRuntime,
   key: string,
@@ -36,6 +45,15 @@ export const keptJson = <S extends Schema.ConstraintCodec<unknown, unknown>>(
   };
 };
 
+/**
+ * The text kept under `key` in `store`, as it is stored (none when nothing
+ * is, or the store cannot be read); a write keeps the text given.
+ *
+ * What a viewer kept is in their browser, which a page rendered on the
+ * server has not seen: its server value is none (`Atom.withServerValue`),
+ * which the server renders and the client hydrates with before it reads
+ * the store (`@manna/atom-solid`'s hooks).
+ */
 export const keptText = (
   store: StoreRuntime,
   key: string,

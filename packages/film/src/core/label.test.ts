@@ -4,6 +4,7 @@ import { type LabelRegion, type LabelTable, labelRegions } from './label.ts';
 import type { Raster } from './raster.ts';
 import { traceView } from './trace.ts';
 
+/** A region of `cls` round centre (`x`, `y`), `r` each way, its size its box's. */
 const region = (id: number, cls: string, x: number, y: number, r: number): LabelRegion => ({
   id,
   class: cls,
@@ -12,6 +13,7 @@ const region = (id: number, cls: string, x: number, y: number, r: number): Label
   size: (2 * r) ** 2,
 });
 
+/** A face, two ears beside it (the near one larger), two hands below, and a cream robe. */
 const REGIONS = [
   region(1, 'skin', 50, 30, 15),
   region(2, 'skin', 28, 30, 4),
@@ -21,6 +23,7 @@ const REGIONS = [
   region(6, 'cream', 50, 80, 20),
 ];
 
+/** Regions 2 and 3 touch region 1; region 5 touches region 6. */
 const touches = (a: number, b: number) =>
   [
     [1, 2],
@@ -36,6 +39,7 @@ const ids = (table: LabelTable) => {
   };
 };
 
+/** Every label picked, as `ids` gives them, none refused. */
 const all = (picked: Readonly<Record<string, number>>) => ({ picked, refused: [] });
 
 describe('labelRegions', () => {
@@ -99,12 +103,14 @@ const SKIN: Rgb = [253, 175, 112];
 const W = 80;
 const H = 40;
 
+/** The colour at distance `d` from the nearest disc's edge: the ground outside, the ink within 2 px inside, the skin past it. */
 const colourAt = (d: number): Rgb => {
   if (d > 0) return GROUND;
   if (d > -2) return INK;
   return SKIN;
 };
 
+/** Two skin discs side by side, each inside a 2 px ink ring, on the ground: the left one larger. */
 const sheet = (): Raster => {
   const rgba = new Uint8Array(W * H * 4);
   const discs = [

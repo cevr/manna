@@ -23,15 +23,28 @@ import {
 } from './mock-quotations.js';
 import { CallSequenceLayer, type CallSequence, type ServiceCall } from './sequence-recorder.js';
 
+/**
+ * Configuration for creating a test layer.
+ */
 export interface TestLayerConfig {
+  /** Mock file system state */
   files?: MockFileSystemConfig;
+  /** Mock AI responses */
   ai?: MockAIConfig;
+  /** Mock HTTP responses */
   http?: MockHttpConfig;
+  /** Mock AppleScript configuration */
   appleScript?: MockAppleScriptConfig;
+  /** Quotation problems `manna check`/`manna export` should see */
   quotations?: MockQuotationsConfig;
 }
 
+/**
+ * State returned from creating a test layer.
+ * Includes cleanup functions and mutable state for assertions.
+ */
 export interface TestLayerState {
+  /** The composed layer to provide to the CLI */
   layer: Layer.Layer<
     | FileSystem.FileSystem
     | Path.Path
@@ -42,9 +55,16 @@ export interface TestLayerState {
     | Quotations
     | CallSequence
   >;
+  /** Get all calls recorded (from services and external) */
   getAllCalls: () => ServiceCall[];
 }
 
+/**
+ * Create a composite test layer with all mocked services.
+ *
+ * This follows the Effect testing pattern of providing mock layers
+ * for all external dependencies while running actual command logic.
+ */
 export const createTestLayer = (config: TestLayerConfig = {}): TestLayerState => {
   const appleScriptState: MockAppleScriptState = { calls: [] };
   const chimeState: MockChimeState = { calls: [] };

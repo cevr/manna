@@ -5,14 +5,22 @@ import { type PageSink, isPageRender } from '../core/page-render.ts';
 import { FromRender, ToRender } from './page-render-protocol.ts';
 import { renderReads } from './page-render-reads.ts';
 
+/** A page's server entry, imported in this worker (once: a module is kept for the thread's life). */
 const serverEntry = (module: string): Promise<unknown> => import(module);
 
 const serve = Effect.gen(function* () {
   const runner = yield* (yield* WorkerRunner.WorkerRunnerPlatform).start<FromRender, ToRender>();
   const send = (message: FromRender) => runner.sendUnsafe(0, message);
   const reads = renderReads(send);
+  /** Each render under way, by its id, from its `Render` until it is over. */
   const renders = yield* FiberMap.make<number>();
 
+  /**
+   * Render the page `message` asks for, its writes sent on, until it ends or
+   * fails (its `Failed`). Interrupted (a `Cancel`), it stops where it is: a
+   * render whose entry is still loading opens no read and never renders, and
+   * one rendering has its signal aborted.
+   */
   const render = (message: ToRender & { readonly _tag: 'Render' }) => {
     const { id } = message;
     return Effect.gen(function* () {
@@ -33,6 +41,7 @@ const serve = Effect.gen(function* () {
       if (!isPageRender(page))
         return yield* Effect.fail("the page's server entry exports no PageRender as its default");
       const over = yield* Deferred.make<void, string>();
+      /** `said` sent while the render is live; a render over says nothing more. */
       const say = (said: FromRender) => {
         if (live.open) send(said);
       };

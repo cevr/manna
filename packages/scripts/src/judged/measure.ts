@@ -19,10 +19,13 @@ const Case = Schema.Struct({
 
 const Corpus = Schema.fromJsonString(Schema.Struct({ cases: Schema.Array(Case) }));
 
+/** The other thresholds a measure prints precision and recall at. */
 const SWEEP = [0.5, 0.6, 0.7, 0.8, 0.9, 0.95];
 
+/** A rule's id as its corpus' file name: `testOracle` → `test-oracle`. */
 const kebab = (id: string) => id.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 
+/** `n / d` to two places, `-` for none. */
 const share = (n: number, d: number) => {
   if (d === 0) return '-';
   return (n / d).toFixed(2);

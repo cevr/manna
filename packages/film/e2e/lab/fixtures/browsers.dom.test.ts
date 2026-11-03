@@ -11,6 +11,10 @@ import {
 import { evaluates } from '../../../src/lab/fixtures/settled.ts';
 import { type Request, type Tab, jsonOf } from '../../../src/lab/fixtures/tab.ts';
 
+/**
+ * A page whose script answers `window.served` from its server's `/probe`; its server holds
+ * `/hold` unanswered, and `held` is done once it has.
+ */
 const page = (word: string) => {
   const script = asset(
     'probe.js',
@@ -37,6 +41,7 @@ const page = (word: string) => {
   };
 };
 
+/** The page's state, as one JSON value a wait can compare. */
 const STATE = `JSON.stringify({
   init: globalThis.dirty ?? 'none',
   local: localStorage.length,

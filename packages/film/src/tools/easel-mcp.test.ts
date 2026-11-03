@@ -32,29 +32,43 @@ import { text } from './host/testing.ts';
 import { labInMemory } from './lab/testing.ts';
 import { labWithMcp, mcpSession } from './lab-mcp/testing.ts';
 
+/** The films folder the lab serves: the asker's, when it is the same checkout. */
 const FILMS = '/films';
 
+/**
+ * How many bytes the easel draws each still of a scene with: `huge`'s one
+ * still is past what one image of a model's request may be; five of
+ * `heavy`'s, each under that, are past what one look may answer.
+ */
 const STILL_BYTES = new Map([
   ['roof', 3],
   ['huge', 3_750_001],
   ['heavy', 3_200_000],
 ]);
 
+/** A still's file extension by its format. */
 const EXTENSION: Readonly<Record<LookPost['view']['format'], string>> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
 };
 
+/** A look the easel was asked: the film, and what was posted. */
 interface Asked {
   readonly film: string;
   readonly post: LookPost;
 }
 
+/** A match the easel was asked: the film, and what was posted. */
 interface MatchAsked {
   readonly film: string;
   readonly post: MatchPost;
 }
 
+/**
+ * An easel that draws each place of a look as a still of its scene's bytes,
+ * written where the lab's own writes them, and keeps each look it was asked;
+ * a scene `broken` is the pages' build failing.
+ */
 const easelDrawing = (
   files: Map<string, Uint8Array>,
   asked: Array<Asked>,
@@ -125,6 +139,7 @@ const easelDrawing = (
     }),
   );
 
+/** The lab in memory over film `f` (scenes roof and gate), its easel `easelDrawing`, its fresh runs `fresh`, its critic `critic` (one that skips, unless given). */
 const labOver = (
   files: Map<string, Uint8Array>,
   asked: Array<Asked>,
@@ -148,9 +163,11 @@ const labOver = (
   );
 };
 
+/** Film `f`, a drawn film. */
 const filmFiles = () =>
   new Map<string, Uint8Array>([['/films/f/scenes/index.ts', text('export {};\n')]]);
 
+/** What a fresh `film read cues` of film `f` answers: its scenes, roof and gate, and one late cue. */
 const cuesOfF = (_film: string, scene: Option.Option<string>) =>
   Option.match(
     Option.filter(scene, (id) => id !== 'roof' && id !== 'gate'),
@@ -169,10 +186,13 @@ const cuesOfF = (_film: string, scene: Option.Option<string>) =>
     },
   );
 
+/** What a fresh `film read scenes` of film `f` answers: roof and gate, no timeline resolved. */
 const scenesOfF = () => Effect.succeed(['roof', 'gate']);
 
+/** A tool's arguments, as a client sends them. */
 type Args = Readonly<Record<string, Schema.Json>>;
 
+/** A logger that keeps each `[mcp]` line logged into `lines`, its time cut. */
 const mcpLinesIn = (lines: Array<string>) =>
   Logger.layer([
     Logger.make(({ message }) => {
@@ -181,6 +201,7 @@ const mcpLinesIn = (lines: Array<string>) =>
     }),
   ]);
 
+/** A look's answer whole, as the client reads it: its content, and whether it is an error. */
 const look = (call: (method: string, params: Schema.Json) => Effect.Effect<any>, args: Args) =>
   call('tools/call', { name: 'look', arguments: { films: FILMS, film: 'f', ...args } });
 
@@ -378,6 +399,7 @@ describe.concurrent("the easel's tools on the MCP", () => {
     },
   );
 
+  /** Film `f` as a critique reads it: the look's rules, scene roof's Board panel, its script's picture. */
   const critiqueFiles = () => {
     const files = filmFiles();
     files.set('/rules.md', text('# Rules\n\n## The look\n\nOne silhouette outline.\n'));
@@ -427,6 +449,7 @@ describe.concurrent("the easel's tools on the MCP", () => {
     '- **head angle**: front, the concept three-quarter',
     '',
   ].join('\n');
+  /** The lab over `critiqueFiles`, its critic asking `counsel`. */
   const critiqueLab = (
     files: Map<string, Uint8Array>,
     counsel: Layer.Layer<Counsel, never, FileSystem.FileSystem | Path.Path>,
@@ -447,6 +470,7 @@ describe.concurrent("the easel's tools on the MCP", () => {
       ),
       mcpLinesIn(lines),
     );
+  /** A counsel that answers once `answer` is completed: `asked` is done as soon as it is asked, and it counts its runs. */
   const heldCounsel = (
     asked: Deferred.Deferred<boolean>,
     answer: Deferred.Deferred<string, CounselFailed>,

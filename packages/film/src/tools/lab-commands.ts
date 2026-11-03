@@ -27,6 +27,7 @@ import { SetRead, setsCommands, setsReads } from './sets-mcp.ts';
 import { timelineCommands } from './timeline-mcp.ts';
 import { tweakCommands } from './tweak-mcp.ts';
 
+/** The longest a `changes` call waits for a change, in seconds: well inside the lab's idle limit. */
 const MAX_WAIT_S = 120;
 
 const FilmRead = Schema.Struct({
@@ -41,7 +42,9 @@ const FilmRead = Schema.Struct({
 });
 
 export const OverviewRead = Schema.Struct({
+  /** The lab's address as the owner opens it. */
   lab: LabLinks,
+  /** The change feed's cursor now: hand it to `changes`. */
   cursor: Schema.String,
   films: Schema.Array(FilmRead),
   sets: Schema.Array(SetRead),
@@ -76,6 +79,7 @@ export const Changes = Tool.make('changes', {
   failure: LabRefused,
 }).annotate(Tool.Readonly, true);
 
+/** The lab as the overview, the resources and the prompt read it. */
 export const overviewRead = Effect.gen(function* () {
   const notes = yield* NotesStore;
   const boards = yield* BoardStore;
@@ -149,6 +153,7 @@ const labCommands = [
   }),
 ];
 
+/** What a command over the lab's files needs: its stores, its folders and the lab's address. */
 type HereNeeds =
   | AskStore
   | ProductionStore
@@ -163,6 +168,7 @@ type HereNeeds =
   | FileSystem.FileSystem
   | Path.Path;
 
+/** What a command over the running lab needs beside: its change feed, its easel and critic, the timelines, the agents' lines, and the film's one history (the script's edits, a scene's literals). */
 export type InLabNeeds =
   | HereNeeds
   | LabEvents
@@ -172,6 +178,7 @@ export type InLabNeeds =
   | BeatEdits
   | SceneWriter;
 
+/** The commands a terminal runs in its own process. */
 export const hereCommands: ReadonlyArray<LabCommand<HereNeeds>> = [
   ...notesCommands,
   ...setsCommands,
@@ -179,6 +186,7 @@ export const hereCommands: ReadonlyArray<LabCommand<HereNeeds>> = [
   ...easelCommands,
 ];
 
+/** The commands only the running lab runs: a terminal asks the lab. */
 export const inLabCommands: ReadonlyArray<LabCommand<InLabNeeds>> = [
   ...labCommands,
   askInLab,
@@ -187,6 +195,7 @@ export const inLabCommands: ReadonlyArray<LabCommand<InLabNeeds>> = [
   ...easelInLab,
 ];
 
+/** The whole set, as the lab serves it. */
 export const allCommands: ReadonlyArray<LabCommand<InLabNeeds>> = [
   ...inLabCommands,
   ...hereCommands,

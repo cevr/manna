@@ -1,3 +1,23 @@
+/**
+ * The sampler: sfizz_render 1.2.3, built from its release tarball (pinned by
+ * sha256) with `sfizz-render-float.patch` (pinned by sha256), which makes it
+ * write 32-bit float WAV. As released it truncates to 16 bits, which leaves
+ * a quiet stem (the contrabass sits near −45 LUFS before levelling) grainy.
+ *
+ * The build lands in `<cache>/sfizz-1.2.3-<patch sha8>/`, so a changed patch
+ * builds anew. Two flags make 1.2.3 build on macOS 27's clang: arm64 is
+ * named `aarch64` (sfizz's `arm.*` match would give it 32-bit ARM flags),
+ * and atomic_queue's `template` keyword without an argument list is a
+ * warning, not an error. A compiler that still refuses fails with its own
+ * words: no other sfizz stands in.
+ *
+ * Each instrument is loaded whole before the first note (a wrapper SFZ with
+ * `hint_ram_based=1` beside it). Streamed, sfizz reads each sample past its
+ * preload on a background thread, and an offline render that outpaces the
+ * loader plays a note short: two renders of one stem differed by up to
+ * 24 dB in the first notes. Loaded whole, they are bit-identical.
+ */
+
 import { Effect, FileSystem, Path } from 'effect';
 import { RenderFailed, run, runOk } from './proc.js';
 import type { Style } from './style.js';
@@ -26,6 +46,7 @@ const fetchBytes = (url: string) =>
     catch: (cause) => RenderFailed.make({ step: `download ${url}`, reason: String(cause) }),
   });
 
+/** cmake and a C++ compiler, or a failure naming what is missing. */
 const toolsPresent = Effect.gen(function* () {
   const missing: string[] = [];
   for (const tool of ['cmake', 'c++', 'tar', 'patch']) {
@@ -39,6 +60,7 @@ const toolsPresent = Effect.gen(function* () {
     });
 });
 
+/** The patched sfizz_render, built once into the cache: its path and its sha256. */
 export const sfizzBinary = (cache: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -110,6 +132,7 @@ export const sfizzBinary = (cache: string) =>
     return { binary, sha256: sha256Hex(yield* fs.readFile(binary)) };
   });
 
+/** The wrapper beside `sfz` that loads every sample into RAM before the first note. */
 export const ramSfz = (instruments: string, sfz: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -122,11 +145,16 @@ export const ramSfz = (instruments: string, sfz: string) =>
     return wrapper;
   });
 
+/** What one sampler run did: its peak resident memory in bytes and its wall time in seconds. */
 export interface SamplerRun {
   readonly rss: number;
   readonly seconds: number;
 }
 
+/**
+ * One stem through the sampler, under `/usr/bin/time -l` (its peak memory)
+ * and `nice -n 10`: `midi` to the float WAV `wav`.
+ */
 export const sample = (
   binary: string,
   sfz: string,

@@ -1,7 +1,19 @@
+/**
+ * Bible Books Data
+ *
+ * Static data for all 66 books of the Bible.
+ * Renderer-agnostic - shared by application and command-line hosts.
+ */
+
 import { Option } from 'effect';
 
 import { Book, type Reference as BibleReference, bookNumber, chapterNumber } from './model.js';
 
+/**
+ * Book name aliases for reference parsing
+ * Maps lowercase aliases to book numbers (1-66). A Map, not an object, so a
+ * lookup by user input never reaches an inherited key such as `constructor`.
+ */
 export const BIBLE_BOOK_ALIASES: ReadonlyMap<string, number> = new Map(
   Object.entries({
     gen: 1,
@@ -181,6 +193,9 @@ export const BIBLE_BOOK_ALIASES: ReadonlyMap<string, number> = new Map(
   }),
 );
 
+/**
+ * All 66 books of the Bible with metadata
+ */
 interface BookSeed {
   readonly number: number;
   readonly name: string;
@@ -285,6 +300,10 @@ export function getBibleBookByName(name: string): Option.Option<Book> {
   return Option.fromUndefinedOr(BOOK_BY_NAME.get(name.trim().toLowerCase()));
 }
 
+/**
+ * Format a reference for display
+ * Supports optional verse ranges (e.g., "John 3:16-18")
+ */
 export function formatBibleReference(ref: BibleReference): string {
   let startBook: number;
   if (ref._tag === 'range') {

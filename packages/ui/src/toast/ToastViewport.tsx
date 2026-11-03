@@ -19,6 +19,7 @@ import { useToastProviderContext, useToastSelector } from './ToastProviderContex
 import { isFocusVisible } from './utils.ts';
 
 interface ToastViewportState {
+  /** Whether toasts are expanded in the viewport. */
   expanded: boolean;
 }
 

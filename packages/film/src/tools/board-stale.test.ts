@@ -49,6 +49,7 @@ const style = {
   sha256: 'x',
 };
 
+/** A keep of `kind` replaced on `at`: try 1 kept (the views it cut, `views`), try 2 in its place. */
 const replacedAt = (
   at: string,
   kind: SheetKind = 'turnaround',
@@ -67,6 +68,7 @@ const replacedAt = (
   at,
 });
 
+/** A member's record in the library (Christ's unless named), its turnaround kept, with the keeps `replaced` named. */
 const christ = (
   files: Map<string, Uint8Array>,
   replaced: ReadonlyArray<ReturnType<typeof replacedAt>> = [],
@@ -86,6 +88,7 @@ const christ = (
   files.set(`${sheet}/kept/turnaround.png`, text('kept turnaround'));
 };
 
+/** A board over memory, the film `f` under `/films`, with the lab's reads beside it. */
 const boardOver = (
   files: Map<string, Uint8Array>,
   route: Layer.Layer<ImageRoute, never, FileSystem.FileSystem> = ImageRoute.fake(() =>
@@ -127,6 +130,7 @@ const styled = Effect.gen(function* () {
   yield* store.modify(film, (b) => Result.succeed({ ...b, style: { ...style, sha256 } }));
 });
 
+/** A run of the supper beat (as `drawn` has it, `beat` unless given), `tries` tries a panel; the lines it printed. */
 const run = (tries: number, drawn: BoardBeat = beat) =>
   Effect.gen(function* () {
     const lines: Array<string> = [];
@@ -263,6 +267,7 @@ describe('a kept panel whose cast sheet changed', () => {
     },
   );
 
+  /** The board's stale panels over `panels`, each one kept try from before tries recorded their cast, drawn from `ref`. */
   const staleOver = (files: Map<string, Uint8Array>, panels: ReadonlyArray<[string, string]>) =>
     Effect.gen(function* () {
       const store = yield* BoardStore;

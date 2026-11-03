@@ -1,9 +1,24 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noGlobals, eslint/no-await-in-loop, effect/noNullish, effect/noTernary, effect/noRuntimeTypeof, effect/noUnsafeDictionaryType -- a script at Bun's boundary, as the browser harness is: the screens are imported only once the phone's stand-ins are registered (`phone.ts`), it drives React one step after another and waits on what the document shows, reads the stand-in scroll view's props as React Native hands them over, and prints its report on stdout. */
 
+/**
+ * Mounts the phones' hymn screen (`HymnScreen.native.tsx`), its pager on
+ * LegendList's phone build, under the bottom bar and a player on a fake
+ * device, on the phone `phone.ts` stands in for, and prints as JSON what
+ * each case saw: the pages drawn, the header, the pager's first offset, each
+ * route change, and the player. A settle is the pager's scroll view told
+ * its glide ended at a page, as iOS tells it. No hymn's words are printed.
+ */
+
 import { phone } from './phone';
 
 const { scrolls } = phone({ nativeList: true });
 
+/**
+ * Each hymn page's draws, by its hymn's number: the page's module is loaded
+ * with its `HymnPage` renamed and a wrapper exported in its place, which
+ * counts a draw and draws the real page, memoized as the real one is, so a
+ * page that is skipped is not counted.
+ */
 const pageDraws = new Map<number, number>();
 Object.assign(globalThis, { hymnalPageDraws: pageDraws });
 {
@@ -55,10 +70,13 @@ const { opened, params, paramsSet } = await import('./one');
 
 const width = 390;
 
+/** The web's list offset, which the phones' list takes and leaves alone. */
 const offset = Atom.make(0);
 
+/** A moment of the event loop, for the stand-in views' layout and the player's device. */
 const tick = () => act(() => Effect.runPromise(Effect.sleep(Duration.millis(10))));
 
+/** Waits until `holds` is true, for two seconds at most; answers whether it came true. */
 const waitFor = async (holds: () => boolean) => {
   for (let i = 0; i < 200; i++) {
     if (holds()) return true;
@@ -67,12 +85,15 @@ const waitFor = async (holds: () => boolean) => {
   return false;
 };
 
+/** The route's screen is drawn: its header and at least one page. */
 const drawn = (host: HTMLElement) =>
   host.querySelector('[data-testid="header"]') !== null &&
   host.querySelector('[data-testid="hymn-name"]') !== null;
 
+/** A list's rows are drawn. */
 const listed = (host: HTMLElement) => host.querySelector('[aria-label*=", "]') !== null;
 
+/** A fresh app: its registry, a player on a fake device, and a host in the document. */
 const app = () => {
   opened.splice(0);
   paramsSet.splice(0);
@@ -84,6 +105,7 @@ const app = () => {
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host);
+  /** Draws `node`, then waits until `ready` holds of the document: the lists draw their items once their views report their size. */
   const show = async (node: ReturnType<typeof h>, ready: (host: HTMLElement) => boolean) => {
     await act(async () => {
       root.render(
@@ -108,6 +130,7 @@ const app = () => {
 
 type App = ReturnType<typeof app>;
 
+/** The hymn route's screen at `/hymns/<n>` with the bar under it, as the router draws it. */
 const route = (shown: App, n: number) => {
   params['number'] = String(n);
   return shown.show(
@@ -122,8 +145,10 @@ const route = (shown: App, n: number) => {
   );
 };
 
+/** Draws the route again at its params now, as the router does after `setParams`. */
 const again = (shown: App) => route(shown, Number(params['number']));
 
+/** What the screen shows: the hymns whose pages are drawn, the headers and their titles' hymns. */
 const seen = (shown: App) => {
   const headers = [...shown.host.querySelectorAll('[data-testid="header"]')];
   const pages = [...shown.host.querySelectorAll('[data-testid="hymn-number"]')].map((number) =>
@@ -157,11 +182,17 @@ const seen = (shown: App) => {
   };
 };
 
+/** Where the bottom bar is drawn: how many there are, and how many lie in the hymn's screen. */
 const barPlace = (shown: App) => ({
   bars: shown.host.querySelectorAll('[aria-label="Player"]').length,
   inScreen: shown.host.querySelectorAll('[data-testid="page"] [aria-label="Player"]').length,
 });
 
+/**
+ * The strip at the left edge whose pans go back: how many there are, whether
+ * it comes after the pager among its siblings (so it lies over it), and where
+ * it is laid.
+ */
 const edgeOf = (shown: App) => {
   const edges = [...shown.host.querySelectorAll('[data-testid="back-edge"]')];
   const edge = edges[0];
@@ -178,6 +209,7 @@ const edgeOf = (shown: App) => {
   };
 };
 
+/** The pager's glide ends on page `index`, as iOS tells it. */
 const settle = async (shown: App, index: number) => {
   await act(async () => {
     const props = scrolls.sideways.at(-1) ?? {};
@@ -196,6 +228,7 @@ const settle = async (shown: App, index: number) => {
   await again(shown);
 };
 
+/** A press on the row labelled `label` of a list. */
 const press = (shown: App, label: string) =>
   act(async () => {
     shown.host
@@ -203,6 +236,7 @@ const press = (shown: App, label: string) =>
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
   });
 
+/** Waits until the player's state is one `holds` is true of. */
 const until = (shown: App, holds: (state: { readonly _tag: string }) => boolean) =>
   waitFor(() => holds(shown.registry.get(shown.player.state)));
 
@@ -246,15 +280,21 @@ const out: Record<string, unknown> = {};
   shown.close();
 }
 
+/** The named rows (shelves and topics) the list draws, in its order: each heading's label. */
 const headings = (host: HTMLElement) =>
   [...host.querySelectorAll('[role="heading"]')].map((row) => row.getAttribute('aria-label'));
 
+/** The rows the list draws, in its order: each row's hymn number, or its heading's or button's label. */
 const rowsDrawn = (host: HTMLElement) =>
   [...host.querySelectorAll('[role="heading"], [role="button"], [role="link"]')].map(
     (row) =>
       /^\d+/.exec(row.getAttribute('aria-label') ?? '')?.[0] ?? row.getAttribute('aria-label'),
   );
 
+/**
+ * Where each favourite's star sits in its row: inside the title or not, after
+ * the title, and drawn at the number's size.
+ */
 const starPlaces = (host: HTMLElement) =>
   [...host.querySelectorAll('[role="link"]')]
     .filter((row) => (row.getAttribute('aria-label') ?? '').endsWith(', favourite'))

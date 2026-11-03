@@ -10,8 +10,10 @@ import { FilmTimelines } from './film-timeline.ts';
 import { LabAddress, labCommand } from './lab-command.ts';
 import { FilmParam, LabRefused, refused } from './lab-mcp-parts.ts';
 
+/** A timeline as an agent reads it: the model, and the lab's address its `href`s are paths under. */
 const TimelineRead = Schema.Struct({
   ...FilmTimeline.fields,
+  /** The lab's own address (on this machine, and from the owner's phone): each `href` is a path under it. */
   lab: LabLinks,
 });
 
@@ -31,10 +33,12 @@ const TimelineTool = Tool.make('timeline', {
   failure: LabRefused,
 }).annotate(Tool.Readonly, true);
 
+/** An edit as an agent reads it: the change it made (the id `undo` takes), what it set, and what it says. */
 const EditRead = Schema.Struct({
   change: Schema.optionalKey(ChangeId),
   target: Schema.String,
   said: Schema.String,
+  /** A hold's: the seams into and out of its beat as the version reads after it, seconds from the end of one beat's take to the next's words (a take that ends in silence is heard as a longer pause). */
   seams: Schema.optionalKey(
     Schema.Array(Schema.Struct({ from: Schema.String, to: Schema.String, seconds: Schema.Finite })),
   ),
@@ -93,12 +97,14 @@ const UndoTool = Tool.make('undo', {
   failure: LabRefused,
 });
 
+/** An edit as the tools answer it. */
 const editRead = (edited: Edited) => ({
   ...Option.match(edited.change, { onNone: () => ({}), onSome: (c) => ({ change: c.id }) }),
   target: edited.target,
   said: edited.said,
 });
 
+/** The script lane's clips of `timeline`: its beats in film order. */
 const scriptLane = (timeline: FilmTimeline) =>
   timeline.lanes.flatMap((lane) =>
     Match.value(lane).pipe(
@@ -107,6 +113,7 @@ const scriptLane = (timeline: FilmTimeline) =>
     ),
   );
 
+/** The timeline's commands: its read, and the edits of a version's script. */
 export const timelineCommands = [
   labCommand(BeatMoveTool, {
     run: ({ film, version, beat, before, by }) =>

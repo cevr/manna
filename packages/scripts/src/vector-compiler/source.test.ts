@@ -1,5 +1,21 @@
 /* oxlint-disable effect/noNodeBuiltinImport -- build tooling, not portable runtime core: this suite creates real SQLite files in a temp directory to drive `bun:sqlite`'s own failures, which is the whole point of it. */
 
+/** The vector compiler's source read, at its failure edges (round-2 F15).
+ *
+ *  `readVectorSource` had no test at all. Its two deliberate design decisions —
+ *  failures land on a typed error channel rather than collapsing into an empty
+ *  corpus, and the database handle is an `acquireUseRelease` resource so it
+ *  closes on *every* exit — are both invisible on the happy path. A regression
+ *  in either one produces a build that either debugs in the wrong place ("your
+ *  database is empty" when the fault is the query) or leaks a read handle and a
+ *  WAL on a 4.5 GB file.
+ *
+ *  Real SQLite databases in a temp directory rather than a driver double: what
+ *  is under test is how this code behaves against `bun:sqlite`'s actual errors —
+ *  an unopenable path, a missing table, a renamed column — and a double would
+ *  only assert that the test can imitate them.
+ */
+
 import { EGW_SCOPE_AUTHORS } from '@manna/core/writings';
 import { Database } from 'bun:sqlite';
 import { describe, expect, it } from 'bun:test';
@@ -10,6 +26,10 @@ import path from 'node:path';
 
 import { readVectorSource, VectorSourceError } from './source.js';
 
+/** Runs `body` in a temp directory of its own, removed on every exit — the
+ *  body's failed expectation too — so a run leaves nothing under
+ *  `os.tmpdir()`. A resource of the test rather than an `afterAll`: each test
+ *  owns its databases, and no hook outlives one. */
 const inWorkspace = <A>(body: (workspace: string) => A): A =>
   Effect.runSync(
     Effect.acquireUseRelease(
@@ -21,12 +41,17 @@ const inWorkspace = <A>(body: (workspace: string) => A): A =>
 
 const AUTHOR = EGW_SCOPE_AUTHORS[0] ?? 'Ellen Gould White';
 
+/** A corpus-shaped database in `workspace`. `paraIdType` lets one test declare
+ *  a column type the decoder rejects, so the *decoder* — rather than the
+ *  query — is what fails. */
 const makeDatabase = (
   workspace: string,
   input: {
     readonly name: string;
     readonly rows?: readonly {
       readonly bookCode: string;
+      /** `None` writes SQL NULL — the corpus's own "no identity" state, which is
+       *  one of the rows §9.2 must drop. */
       readonly paraId: Option.Option<string>;
       readonly refcodeShort: Option.Option<string>;
       readonly text: string;
@@ -73,6 +98,9 @@ const makeDatabase = (
   return filename;
 };
 
+/** `Result` rather than `Exit`: `readVectorSource` declares exactly one error
+ *  type, so the failure side *is* a `VectorSourceError` and the test can read
+ *  its message directly rather than picking through a cause. */
 const run = (filename: string, limit = Option.none<number>()) =>
   Effect.runSync(Effect.result(readVectorSource({ filename, limit })));
 
@@ -131,6 +159,17 @@ describe('readVectorSource — failures reach the error channel (F15)', () => {
 });
 
 describe('readVectorSource — the handle is released on every exit (F15)', () => {
+  /** Runs `readVectorSource` with `Database.prototype.close` counted.
+   *
+   *  Observing the call rather than a filesystem side effect, because there is
+   *  no side effect to observe: SQLite lets a second connection create and drop
+   *  tables while a `readonly` handle is still open, so a probe that tried to
+   *  write would report "released" for a leaked handle and could never fail.
+   *  What `acquireUseRelease` promises is exactly that `close()` runs on every
+   *  exit, so that is what is counted.
+   *
+   *  `Effect.acquireUseRelease` restores the prototype, so the instrumentation
+   *  cannot outlive the assertion even if the read dies. */
   const countingCloses = (filename: string) =>
     Effect.runSync(
       Effect.acquireUseRelease(

@@ -2,11 +2,13 @@ import { describe, expect, test } from 'bun:test';
 import { Option } from 'effect';
 import { type Workspace, deadExports, recordOf } from './graph.js';
 
+/** A workspace of `sources` (path → text): specifiers are relative, roots and test code as given. */
 const workspaceOf = (
   sources: Readonly<Record<string, string>>,
   options: {
     readonly roots: ReadonlyArray<string>;
     readonly tests?: RegExp;
+    /** The files whose exports are checked; default: every file that is no test. */
     readonly checked?: RegExp;
   },
 ): Workspace => {

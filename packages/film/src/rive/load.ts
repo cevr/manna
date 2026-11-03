@@ -11,15 +11,19 @@ import {
 import { RigNameMissing, RigUnloadable } from '../core/errors.ts';
 import { RiveRuntime } from './runtime.ts';
 
+/** `acquire`'s value, freed by `free` when the load's scope closes. */
 const owned = <A, E>(acquire: Effect.Effect<A, E>, free: (a: A) => void) =>
   Effect.acquireRelease(acquire, (a) => Effect.sync(() => free(a)));
 
+/** What the runtime answered for a name, or `missing` where it answered none. */
 const found = <A, E>(value: A, missing: () => E) =>
   Effect.mapError(Effect.fromOption(Option.fromNullishOr(value)), () => missing());
 
+/** The `count` names `nameAt` reads, in the file's order. */
 const namesOf = (count: number, nameAt: (i: number) => string) =>
   Array.from({ length: count }, (_, i) => nameAt(i));
 
+/** The file's artboard names: each read from an instance made for it and deleted at once. */
 const artboardNames = (file: File) =>
   namesOf(file.artboardCount(), (i) => {
     const artboard = file.artboardByIndex(i);
@@ -28,6 +32,7 @@ const artboardNames = (file: File) =>
     return name;
   });
 
+/** The file's bytes made into a file, which the scope unrefs. */
 const fileOf = (spec: RivePropSpec, runtime: RiveCanvas, bytes: Uint8Array) => {
   const unloadable = (reason: string) => RigUnloadable.make({ rig: spec.key, reason });
   return owned(
@@ -42,9 +47,15 @@ const fileOf = (spec: RivePropSpec, runtime: RiveCanvas, bytes: Uint8Array) => {
   );
 };
 
+/** The view model's numbers a pose may set: the declared ones, else every one the model has. */
 const numberNames = (spec: RivePropSpec, has: ReadonlyArray<string>) =>
   Option.getOrElse(Option.fromNullishOr(spec.source.numbers), () => has);
 
+/**
+ * One declared rig: its file parsed once, every name it declares checked on an
+ * instance of its artboard, every object the scope's. Its frames make their
+ * own instances (`drawRig`).
+ */
 const loadRig = Effect.fn('Rive.loadRig')(function* (spec: RivePropSpec) {
   const rive = yield* RiveRuntime;
   const relabel = (error: RigUnloadable) =>
@@ -123,6 +134,20 @@ const loadRig = Effect.fn('Rive.loadRig')(function* (spec: RivePropSpec) {
   return rig;
 });
 
+/**
+ * Load every rig `film`'s drawings declare and stand them on it for its draws,
+ * until the caller's scope closes: what a film's load path runs before its
+ * first frame (`narratedFilms` in a page, `check --draw` in Bun). The film,
+ * ready to draw.
+ *
+ * What the load acquires is held in a scope of its own, which only the load
+ * can close while it runs: interrupted or failed, it closes that scope and so
+ * releases it all; done, it hands the scope to the caller's, which closes it
+ * with itself. So nothing is released while the load still uses it, whenever
+ * the caller's scope closes: one closed before the hand-over (its owner left
+ * mid-load) closes the load's at once, after the load is done, and the film
+ * is given with no rig standing, refusing to draw one.
+ */
 export const loadRigs = Effect.fn('Rive.loadRigs')(function* (
   film: Film,
 ): Effect.fn.Return<Film, RigUnloadable | RigNameMissing, RiveRuntime | Scope.Scope> {

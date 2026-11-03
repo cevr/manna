@@ -39,86 +39,160 @@ import { SCORE, aloneSpans, aloneWeights, applyScore, scoreGains, speechSpans } 
 import { loudness } from './synth/loudness.ts';
 import { cueTime, partialRange, playedOption, scoreOptionState } from './sound.ts';
 
+/** Every mix runs at this rate; the takes, score and library sounds are made at it. */
 export const MIX_RATE = 44100;
 
+/** How far a bed sits under the voice: gentle ratio, slow release so it breathes back. */
 export const BED_DUCK: Duck = { threshold: 0.02, ratio: 2, attack: 120, release: 1500, knee: 4 };
 
+/** The ceiling the summed track may not pass. */
 export const LIMIT: Limit = { limit: 0.95, attack: 5, release: 50 };
 
+/**
+ * Mastering: the summed track is brought to `loudness` (integrated LUFS, CRAFT
+ * rule 10) by one clean gain, up or down, before the limiter; a lift stops
+ * where it would take the track's peak past `LIMIT`, so mastering never makes
+ * the limiter work. The buses keep their balance; only the master moves.
+ */
 export const MASTER = { loudness: -18 } as const;
 
+/** The score fades in over its first `MUSIC_FADE_IN` seconds and out over the film's last `MUSIC_FADE_OUT`. */
 const MUSIC_FADE_IN = 2;
 const MUSIC_FADE_OUT = 6;
 
+/** A bed fades in and out over this many seconds when it names no `fade`. */
 const BED_FADE = 1;
 
+/** A bed crosses into itself over this many seconds where it wraps (at most a quarter of its length). */
 const BED_CROSSFADE = 0.5;
 
+/**
+ * Where a bed `secs` long begins to cross into its own head as the mix loops
+ * it, in seconds into it: `BED_CROSSFADE` before its end, or a quarter of it
+ * when it is shorter than two seconds (as `loopFill` takes it).
+ */
 export const bedWrapAt = (secs: number): number => secs - Math.min(BED_CROSSFADE, secs / 4);
 
+/** One sound on a bus: where it starts (seconds into the film), how loud, and its pitch nudge. */
 export interface Placement<A> {
+  /** What the film calls it: the effect's id in `sound.ts`, or the take's scene. */
   readonly name: string;
   readonly sound: A;
   readonly at: number;
   readonly gain: number;
+  /** Semitones; the sound is resampled, so its length changes with it. */
   readonly pitch: number;
 }
 
+/**
+ * A take on the voice bus. A staging take (`staged`) is levelled here, as
+ * `takes import` levels a recording (`takeLift`): ElevenLabs sends each at its
+ * own level, so the mix brings its speech to the one the film is balanced
+ * on. A person's take was levelled when it was imported and plays as it is.
+ *
+ * A take plays its sound whole, from its start (a scene's take), or one piece
+ * of it: `dur` seconds from `from` into it, faded in and out over `fade`
+ * seconds (a talk's section, several pieces of its take's voice, each faded
+ * `CUT_FADE` at its seams so a cut never clicks, as a beat cut from a reading
+ * is: `align.ts`).
+ */
 export interface Take<A> extends Placement<A> {
   readonly staged: boolean;
+  /** Seconds into the sound it starts playing from. */
   readonly from: number;
+  /** How long it plays; none to the sound's end. */
   readonly dur: Option.Option<number>;
+  /** Seconds each end fades over. */
   readonly fade: number;
+  /**
+   * What its sound is, for the key, when its file's name does not say: a
+   * talk's voice (every take's is `voice.flac`) is its source and the
+   * recipe it was made by. None for a file named by its content.
+   */
   readonly content: Option.Option<string>;
 }
 
+/** Whether `take` plays its sound whole, from its start, unfaded: a scene's take. */
 const playsWhole = <A>(take: Take<A>): boolean =>
   take.from === 0 && Option.isNone(take.dur) && take.fade === 0;
 
+/**
+ * A talk's section's voice: its take's voice file, what that voice is (its
+ * source and the recipe it was made by: the key reads this, not the file's
+ * name), and the stretches of it the section plays (`talk.ts`).
+ */
 export interface VoicePieces {
   readonly file: string;
   readonly content: string;
   readonly pieces: ReadonlyArray<Piece>;
 }
 
+/**
+ * The score option the mix plays: one sound under the whole film, from its
+ * start, at `under` dB against the voice where anyone speaks and `alone` dB
+ * where no one does (`score.ts`).
+ */
 export interface ScoreBed<A> {
+  /** The option's name in the film's score. */
   readonly option: string;
   readonly sound: A;
   readonly under: number;
   readonly alone: number;
 }
 
+/** A library bed: its sound looped from `from` to `to` (film seconds), faded at each end. */
 export interface BedSpan<A> {
   readonly sound: A;
   readonly from: number;
   readonly to: number;
   readonly gain: number;
+  /** Seconds each end fades over. */
   readonly fade: number;
+  /** Ducks under the voice (room tone does not). */
   readonly duck: boolean;
 }
 
+/** What plays where. `A` is how a sound is named: its source, then its decoded audio. */
 export interface MixPlan<A> {
+  /** The track's length: the film's. */
   readonly seconds: number;
+  /** Each recorded take. */
   readonly voice: ReadonlyArray<Take<A>>;
+  /** The score option that plays, or none. */
   readonly score: Option.Option<ScoreBed<A>>;
+  /** Each bed over its span. */
   readonly beds: ReadonlyArray<BedSpan<A>>;
+  /** Each effect on each of its cues. */
   readonly effects: ReadonlyArray<Placement<A>>;
+  /** Stale or missing assets; the mix still plays what it has. */
   readonly warnings: ReadonlyArray<string>;
 }
 
 interface MixInput {
+  /** The film's name: the default identity for each effect's variant and jitter. */
   readonly film: string;
   readonly placed: ReadonlyArray<Placed>;
   readonly sound: Option.Option<Sound>;
   readonly manifest: SoundManifest;
+  /** The app's sound library, what was made for it, and the derived sounds placed measured. */
   readonly sounds: MeasuredSounds;
+  /** Directory of the voice takes. */
   readonly narration: string;
+  /** Directory of the generated score. */
   readonly soundDir: string;
+  /** The score option to play in place of the one the score names (`mix --score`). */
   readonly play: Option.Option<string>;
+  /** One sound's variant to play at its every placement, in place of its own (`film options mix`). */
   readonly inPlace: Option.Option<InPlace>;
+  /** A talk's sections' voices, by scene, played in pieces in place of a take (none for a drawn film). */
   readonly pieces: ReadonlyMap<string, VoicePieces>;
 }
 
+/**
+ * A variant heard in its sound's place: a take kept or waiting, or a seed
+ * (the sound's own, or its code trial's), levelled and nudged as the sound's
+ * placements play it.
+ */
 export interface InPlace {
   readonly sound: string;
   readonly playable: Playable;
@@ -135,6 +209,10 @@ export type MixPlanError =
   | UnknownSound
   | SoundUseMismatch;
 
+/**
+ * A sound's variants that play: the one heard in its place, else its own, or
+ * a warning when none does (and one when they are stale or unmeasured).
+ */
 const variantsFor = (
   input: MixInput,
   name: string,
@@ -158,19 +236,23 @@ const variantsFor = (
   return playablesOf(sounds, name, entry);
 };
 
+/** One placement waiting for its variant: which effect, its sound, its time and its level. */
 interface Pending extends Placing {
   readonly playables: ReadonlyArray<Playable>;
   readonly level: number;
   readonly sync: Sync;
 }
 
+/** What a placement lands on its cue (`SoundEffect.sync`). */
 type Sync = NonNullable<SoundEffect['sync']>;
 
+/** How far before its cue a variant starts: its onset or its hit, as the placement syncs it. */
 const leadOf = (p: Pending, playable: Playable): number => {
   if (p.sync === 'start') return 0;
   return Option.getOrElse(playable[p.sync], () => 0);
 };
 
+/** Each effect on each of its cues, its variant chosen and nudged, levelled against the voice. */
 const effectPlacements = (input: MixInput, sound: Sound, warnings: Array<string>) =>
   Result.gen(function* () {
     const pending: Array<Pending> = [];
@@ -216,6 +298,7 @@ const effectPlacements = (input: MixInput, sound: Sound, warnings: Array<string>
     );
   });
 
+/** Each bed over its span, levelled against the voice; a bed's k-th span plays its k-th variant. */
 const bedSpans = (input: MixInput, sound: Sound, warnings: Array<string>) =>
   Result.gen(function* () {
     const spans: Array<BedSpan<SoundSource>> = [];
@@ -253,6 +336,7 @@ const bedSpans = (input: MixInput, sound: Sound, warnings: Array<string>) =>
     return spans;
   });
 
+/** What plays where, by source. Pure. */
 export const mixPlan = (input: MixInput): Result.Result<MixPlan<SoundSource>, MixPlanError> =>
   Result.gen(function* () {
     const { placed, manifest } = input;
@@ -334,11 +418,22 @@ export const mixPlan = (input: MixInput): Result.Result<MixPlan<SoundSource>, Mi
     return { seconds: filmEnd(placed), voice, score: played, beds, effects, warnings };
   });
 
+/**
+ * A sound as the key reads it: a file by its name, which carries its content
+ * hash (a take's `<scene>.<hash>`, a score's `<option>-<hash>`, a library
+ * variant's sha256), so the key reads the same in every checkout; a code
+ * sound by its renderer's version, its graph's hash and its seed.
+ */
 const soundKey = (source: SoundSource): string => {
   if (source._tag === 'File') return source.file.slice(source.file.lastIndexOf('/') + 1);
   return sourceLabel(source);
 };
 
+/**
+ * A piece's in-point, length (none to its sound's end) and fade, as the key
+ * reads them: nothing for a take played whole, so a drawn film's key reads as
+ * it always has.
+ */
 const pieceKey = (take: Take<SoundSource>): ReadonlyArray<number> =>
   Option.match(
     Option.liftPredicate(take, (t) => !playsWhole(t)),
@@ -348,8 +443,17 @@ const pieceKey = (take: Take<SoundSource>): ReadonlyArray<number> =>
     },
   );
 
+/** A key's fields as one line of JSON. */
 const KeyJson = Schema.fromJsonString(Schema.Json);
 
+/**
+ * What a mix of `plan` sounds like, as one hash: every sound it plays, where,
+ * how loud and at what pitch, the score option and its levels, and the
+ * levels `renderMix` masters, fades and ducks by. Two plans with one key mix
+ * to the same track; `mix` writes the key beside the master, so a master
+ * mixed for another plan (another score option, a new take, a moved effect)
+ * is known stale although it is as long as the film. Warnings are not heard.
+ */
 export const mixKey = (plan: MixPlan<SoundSource>): string =>
   hashText(
     Schema.encodeSync(KeyJson)({
@@ -383,8 +487,10 @@ export const mixKey = (plan: MixPlan<SoundSource>): string =>
     }),
   );
 
+/** The track, and each bus alone (for balancing by measurement): all `MIX_RATE`, stereo, the film's length. */
 export interface Mixed {
   readonly master: Pcm;
+  /** The mastering gain the summed buses took on the way to `master`, in dB (`MASTER`). */
   readonly masterGain: number;
   readonly voice: Pcm;
   readonly music: Option.Option<Pcm>;
@@ -392,15 +498,18 @@ export interface Mixed {
   readonly effects: Option.Option<Pcm>;
 }
 
+/** A silent stereo bus `frames` long. */
 const bus = (frames: number): Array<Float32Array> =>
   Array.from({ length: 2 }, () => new Float32Array(frames));
 
+/** A bus as PCM. */
 const pcm = (frames: number, channels: ReadonlyArray<Float32Array>): Pcm => ({
   rate: MIX_RATE,
   frames,
   channels,
 });
 
+/** `sound` resampled up or down by `semitones` (linear interpolation): higher is shorter. */
 export const repitch = (sound: Pcm, semitones: number): Pcm => {
   if (semitones === 0) return sound;
   const ratio = 2 ** (semitones / 12);
@@ -421,6 +530,10 @@ export const repitch = (sound: Pcm, semitones: number): Pcm => {
   };
 };
 
+/**
+ * `sound` looped to fill `frames`: each repeat crosses into the next over
+ * `cross` frames (equal power), so the wrap is not heard as a cut.
+ */
 export const loopFill = (
   sound: ReadonlyArray<Float32Array>,
   length: number,
@@ -445,6 +558,7 @@ export const loopFill = (
   return out;
 };
 
+/** The beds, ducked or not, on one stereo bus. */
 const renderBeds = (
   beds: ReadonlyArray<BedSpan<Pcm>>,
   voice: ReadonlyArray<Float32Array>,
@@ -472,6 +586,7 @@ const renderBeds = (
   return ducked;
 };
 
+/** The gain, in dB, that brings `track` to `MASTER.loudness` without taking its peak past `LIMIT`; 0 for silence. */
 const masteringGain = (track: Pcm): number => {
   const { integrated, peak } = loudness(track);
   if (!Number.isFinite(integrated) || !Number.isFinite(peak)) return 0;
@@ -479,6 +594,10 @@ const masteringGain = (track: Pcm): number => {
   return Math.min(MASTER.loudness - integrated, headroom);
 };
 
+/**
+ * What a take plays, in stereo: its sound whole, or its piece (`from`, `dur`)
+ * with each end faded over `fade`.
+ */
 const played = (take: Take<Pcm>): ReadonlyArray<Float32Array> => {
   if (playsWhole(take)) return toStereo(take.sound).channels;
   const first = Math.min(take.sound.frames, toFrames(take.from, MIX_RATE));
@@ -489,6 +608,12 @@ const played = (take: Take<Pcm>): ReadonlyArray<Float32Array> => {
   return toStereo(fadeEdges(slice(take.sound, first, last - first), take.fade)).channels;
 };
 
+/**
+ * Play `plan` out over decoded audio, every sound at `MIX_RATE`: the takes
+ * summed on the voice bus; the score under the voice and alone in its pauses,
+ * each levelled against the voice, then faded in and out; the beds looped over
+ * their spans; the effects at their gains and pitches; all summed and limited.
+ */
 export const renderMix = (plan: MixPlan<Pcm>): Mixed => {
   const frames = toFrames(plan.seconds, MIX_RATE);
   const at = (secs: number) => toFrames(secs, MIX_RATE);

@@ -7,11 +7,13 @@ import {
   Visitor,
 } from 'oxlint-plugin-effect/rule-bindings';
 
+/** A test seam of the repo's own: a relative path or a `@manna/` export whose last piece is `testing`. */
 const SEAM = /^(?:\.{1,2}\/|@manna\/)(?:.*\/)?testing(?:\.[cm]?[jt]sx?)?$/u;
 
 const MESSAGE =
   "a test seam imported by product code: a testing.ts module holds a package's test-only doubles and fixtures, so a shipped import never reaches one. Move what this file needs out of the seam, into the module it belongs to.";
 
+/** Whether a module source names a test seam, written as a string. */
 const namesSeam = (source: ESTree.Node): boolean =>
   source.type === 'Literal' && Predicate.isString(source.value) && SEAM.test(source.value);
 

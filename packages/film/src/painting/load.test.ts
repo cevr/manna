@@ -6,6 +6,7 @@ import { recorder, standInDom } from '../canvas/fixtures/stand-in.ts';
 import { NEAR, SKY, paintingImages } from './fixtures/sky.ts';
 import { loadPaintings, paintedEdges } from './load.ts';
 
+/** A film of `scenes`, four seconds each. */
 const filmOf = (scenes: ReadonlyArray<Pick<SceneSpec, 'id' | 'paintings' | 'draw'>>) =>
   createFilm({
     fps: 30,
@@ -15,12 +16,14 @@ const filmOf = (scenes: ReadonlyArray<Pick<SceneSpec, 'id' | 'paintings' | 'draw
     scenes: scenes.map((s) => ({ ...s, min: 4 })),
   });
 
+/** Two scenes sharing the sky, one with the near plate too. */
 const twoScenes = () =>
   filmOf([
     { id: 'one', paintings: { sky: SKY, near: NEAR }, draw: (f) => f.painting('sky') },
     { id: 'two', paintings: { sky: SKY }, draw: (f) => f.painting('sky') },
   ]);
 
+/** A 4 x 3 RGBA picture, opaque but where `clear` says. */
 const tiny = (clear: (x: number, y: number) => boolean) => {
   const rgba = new Uint8Array(4 * 3 * 4);
   for (let y = 0; y < 3; y++)
@@ -28,9 +31,11 @@ const tiny = (clear: (x: number, y: number) => boolean) => {
   return rgba;
 };
 
+/** The tiny plate read with `rgba` as its bytes. */
 const tinyImages = (clear: (x: number, y: number) => boolean) =>
   paintingImages([TINY], () => ({ image: Option.none(), rgba: Option.some(tiny(clear)) })).layer;
 
+/** A film whose one scene paints the tiny plate. */
 const tinyFilm = () => filmOf([{ id: 't', paintings: { t: TINY }, draw: (f) => f.painting('t') }]);
 
 const TINY: PaintingSpec = {

@@ -1,3 +1,26 @@
+/**
+ * iOS's position bar, drawn here: a track, the part played in the accent,
+ * and a thumb. SwiftUI's `Slider` (One's `One.iOS.Slider`) is not used: One
+ * builds it with a step, always (it refuses a step of 0), and iOS 26 draws a
+ * stepped slider's ticks under its track, which at a second a step read as
+ * a stray line. This bar knows the touch that drags it, as the web's does:
+ * the place under the finger is the drag, and the drag is sent once the
+ * finger lifts. A tap is a drag that begins and lifts at one point: the
+ * place under it is sent at once. VoiceOver adjusts it ten seconds a swipe,
+ * and its double tap does nothing.
+ * While the length is not known the bar is still, in the muted role.
+ *
+ * The touch is a gesture handler's pan (`usePanGesture`), a UIKit gesture of
+ * its own that begins at the touch: while it holds the finger, the sheet's
+ * pan and its scroll view's cannot begin, so a drag on the bar in any
+ * direction never moves the sheet. React Native's touch responder cannot
+ * hold a touch from a native gesture: the sheet took the drag from it. The
+ * pan presses at the touch and activates on any move; a touch that never
+ * moves fails it, and a tap gesture competing with it takes that touch. The
+ * two end in no set order, and both press the bar's one pointer, so the tap
+ * sends one seek either way.
+ */
+
 import { Match } from 'effect';
 import { useRef, useState } from 'react';
 import { type AccessibilityActionEvent, StyleSheet, View } from 'react-native';
@@ -13,10 +36,12 @@ import { color, useAccent } from '~/color';
 
 import { nudged, placeAt, type ScrubberProps, useScrub } from './scrub';
 
+/** The one touch a bar on iOS follows: its pan holds one at a time. */
 const TOUCH = 1;
 
 const THUMB = 20;
 
+/** VoiceOver's double tap on the bar: it is adjusted, never activated. */
 const ignore = () => {};
 
 export function Scrubber(props: ScrubberProps) {
@@ -28,6 +53,7 @@ export function Scrubber(props: ScrubberProps) {
     Match.when(true, () => color.muted),
     Match.orElse(() => accent),
   );
+  /** The place under the touch at `x`, along the track (the thumb's half inset at each end). */
   const under = (x: number) => placeAt(x - THUMB / 2, width - THUMB, scrub.max);
   const live = useRef({ scrub, under });
   live.current = { scrub, under };

@@ -1,3 +1,26 @@
+/**
+ * A newly installed book's vectors: its paragraphs read from the corpus,
+ * embedded through Workers AI and upserted into Vectorize, a page at a time.
+ *
+ * The index was built once from the whole corpus (`vectors.bvi`); after that,
+ * a book the weekly sync installs has no vectors until this adds them, and a
+ * search's vector leg cannot find it. Which paragraphs get a vector, and
+ * under what identity, is the compiler's rule (`vectorDocument`,
+ * `paragraphIdentity`), and the metadata is the filter's
+ * (`vectorMetadata`): a book embedded here is indexed exactly as the
+ * compiler would have indexed it, except for the apparatus (`isApparatus`):
+ * the web search never returns it, so this index leaves it out rather than
+ * store and bill for vectors no query reads.
+ *
+ * A page is one durable step of the sync's Workflow: one read, a few model
+ * calls, one upsert. Upserting is idempotent by id, so a retried page writes
+ * the same vectors again rather than duplicates.
+ *
+ * A book installed again (a recheck) keeps the vectors of the paragraphs it
+ * did not change: its pages read only the paragraphs the install added or
+ * edited (`scope: 'changed'`), and the vectors of the ones it removed are
+ * deleted (`removedVectorIds`).
+ */
 import { Array as Arr, Effect, Option, Schema } from 'effect';
 import * as SqlClient from 'effect/sql/SqlClient';
 
@@ -7,8 +30,11 @@ import { APPARATUS_AUTHORS, APPARATUS_TYPES, EGW_SCOPE_AUTHORS } from '@manna/co
 
 import { vectorMetadata } from './vectorize.ts';
 
+/** Paragraphs per page: one upsert, and a few model calls of
+ *  `EMBEDDING_BATCH`. Well inside Vectorize's 1,000 vectors per upsert. */
 export const BOOK_VECTORS_PAGE = 500;
 
+/** The part of the Vectorize binding a page writes through. */
 export interface VectorizeUpsert {
   readonly upsert: (
     vectors: {
@@ -19,11 +45,17 @@ export interface VectorizeUpsert {
   ) => Promise<unknown>;
 }
 
+/** Which of a book's paragraphs a page embeds: all of them (a first
+ *  install), or those its latest install added or edited (a recheck). */
 export type BookVectorsScope = 'book' | 'changed';
 
+/** What one page did, as plain data: a Workflow step's result. */
 export interface BookVectorsPage {
+  /** Paragraph rows read. Fewer than `BOOK_VECTORS_PAGE` is the book's end. */
   readonly read: number;
+  /** Vectors upserted: the rows the index holds (`vectorDocument`). */
   readonly upserted: number;
+  /** The last row read, where the next page starts. */
   readonly after: number;
 }
 
@@ -51,6 +83,12 @@ const Rows = Schema.Array(
 
 const encodeNames = Schema.encodeSync(Schema.fromJsonString(Schema.Array(Schema.String)));
 
+/** One page of a book's vectors, from the row after `after`.
+ *
+ *  Rows come in `rowid` order, which is unique and is the order the install
+ *  wrote them in. A book outside the vector scope (`EGW_SCOPE_AUTHORS`), or
+ *  apparatus by its author or type (`isApparatus`), reads no rows, so its
+ *  first page is its last. */
 export const bookVectorsPage = Effect.fn('BookVectors.page')(function* (
   page: { readonly bookId: number; readonly after: number; readonly scope: BookVectorsScope },
   embed: (
@@ -162,6 +200,10 @@ const RemovedRows = Schema.Array(
   }),
 );
 
+/** The vector ids of the paragraphs a book's latest install removed: the
+ *  identities `bookVectorsPage` gave them, for the index to forget. A
+ *  paragraph that never had a vector yields an id the index does not hold,
+ *  which a delete ignores. */
 export const removedVectorIds = Effect.fn('BookVectors.removedIds')(function* (bookId: number) {
   const sql = yield* SqlClient.SqlClient;
   const rows = yield* sql`
@@ -182,12 +224,15 @@ export const removedVectorIds = Effect.fn('BookVectors.removedIds')(function* (b
   );
 });
 
+/** Ids per delete: Vectorize refuses more than a hundred in one call. */
 export const VECTOR_DELETE_LIMIT = 100;
 
+/** The part of the Vectorize binding a delete goes through. */
 export interface VectorizeDelete {
   readonly deleteByIds: (ids: string[]) => Promise<unknown>;
 }
 
+/** Forget a book's vectors by id, a call per hundred. */
 export const deleteVectorIds = Effect.fn('BookVectors.delete')(function* (
   bookId: number,
   ids: readonly string[],

@@ -8,16 +8,20 @@ import {
 } from 'oxlint-plugin-effect/rule-bindings';
 import { type Bindings, bindings, isFilmTime, memberName, type NumberOf } from './nodes.ts';
 
+/** The largest number a bare nudge is: below it is float noise, at it a tenth of a millisecond. */
 const NOISE = 1e-4;
 
+/** The largest step by hand: a millisecond, the finest time a file keeps. */
 const MILLISECOND = 1e-3;
 
 const MESSAGE =
   'a nudge written beside a time: put the time on its grid through packages/film/src/core/time.ts (frameAtOrAfter, frameAtOrBefore, onTheMs, heardAtOrAfter, justBefore), or judge two times one with CLOCK_EPSILON, so one owner rounds every time.';
 
+/** Whether `node` writes a nudge out: a number above 0 and below `NOISE`. */
 const isNudge = (node: ESTree.Node) =>
   node.type === 'Literal' && Predicate.isNumber(node.value) && node.value > 0 && node.value < NOISE;
 
+/** The value of `x op y`, when both are known. */
 const folded = (
   numberOf: NumberOf,
   node: ESTree.BinaryExpression,
@@ -27,6 +31,13 @@ const folded = (
     op(a, b),
   );
 
+/**
+ * The value of a number written out (`1e-3`, `-1e-3`), named by a top-level
+ * const by its lexical binding (`HALF_MS`, not a parameter of that name), or
+ * folded from a product or quotient of such (`1 / 1000`). A const holding a
+ * nudge (`const NUDGE = 5e-5`) has no value here: its literal is judged where
+ * it is written, refused or said there to be no time.
+ */
 const valueOf = (numberOf: NumberOf, node: ESTree.Node): Option.Option<number> => {
   if (node.type === 'BinaryExpression' && node.operator === '/')
     return folded(numberOf, node, (x, y) => x / y);
@@ -42,6 +53,7 @@ const valueOf = (numberOf: NumberOf, node: ESTree.Node): Option.Option<number> =
   return Option.none();
 };
 
+/** Whether `node` writes a nudge out anywhere in it: the `Literal` visit reports that one. */
 const holdsNudge = (node: ESTree.Node): boolean => {
   if (isNudge(node)) return true;
   if (node.type === 'ParenthesizedExpression') return holdsNudge(node.expression);
@@ -50,6 +62,7 @@ const holdsNudge = (node: ESTree.Node): boolean => {
   return false;
 };
 
+/** Whether `node` is a step of a millisecond or less, either way, that no nudge written in it already reports. */
 const isStep = (numberOf: NumberOf, node: ESTree.Node): boolean => {
   if (holdsNudge(node)) return false;
   return Option.exists(
@@ -58,15 +71,21 @@ const isStep = (numberOf: NumberOf, node: ESTree.Node): boolean => {
   );
 };
 
+/**
+ * Whether `node` adds or takes a millisecond, or less, written out: on the
+ * right of `+` or `-`, or on the left of `+` (`1e-3 - t` is no step).
+ */
 const stepsByHand = (numberOf: NumberOf, node: ESTree.BinaryExpression): boolean => {
   if (node.operator !== '+' && node.operator !== '-') return false;
   if (node.operator === '-') return isStep(numberOf, node.right);
   return isStep(numberOf, node.right) || isStep(numberOf, node.left);
 };
 
+/** Whether `node` reads `core/time.ts`'s `CLOCK_EPSILON`: by its name, an alias, or off the module whole. */
 const isEpsilon = (b: Bindings, node: ESTree.Node) =>
   b.readsImport(node, isFilmTime, 'CLOCK_EPSILON');
 
+/** Whether `CLOCK_EPSILON` is added or taken anywhere in `node`'s arithmetic: `(x + CLOCK_EPSILON) * fps`. */
 const nudgedByEpsilon = (b: Bindings, node: ESTree.Node): boolean => {
   if (node.type === 'ParenthesizedExpression') return nudgedByEpsilon(b, node.expression);
   if (node.type === 'UnaryExpression') return nudgedByEpsilon(b, node.argument);
@@ -79,8 +98,10 @@ const nudgedByEpsilon = (b: Bindings, node: ESTree.Node): boolean => {
   return nudgedByEpsilon(b, node.left) || nudgedByEpsilon(b, node.right);
 };
 
+/** The global `Math`'s roundings. */
 const ROUNDINGS: ReadonlyArray<string> = ['ceil', 'floor', 'round', 'trunc'];
 
+/** Whether `call` rounds a value that has `CLOCK_EPSILON` added or taken: `Math.ceil(x - CLOCK_EPSILON)`. */
 const roundsWithEpsilon = (b: Bindings, call: ESTree.CallExpression) => {
   const { callee } = call;
   if (callee.type !== 'MemberExpression' || !b.isGlobal(callee.object, 'Math')) return false;

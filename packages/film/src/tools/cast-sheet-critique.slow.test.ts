@@ -18,6 +18,7 @@ const ANSWER = [
   '```',
 ].join('\n');
 
+/** `sheet` as the route can answer it with its paper left out: every paper pixel transparent, its colour a dark grey no eye sees. */
 const bare = (sheet: Raster): Raster => {
   const rgba = Uint8Array.from(sheet.rgba);
   for (let i = 0; i < rgba.length; i += 4)
@@ -25,8 +26,10 @@ const bare = (sheet: Raster): Raster => {
   return { ...sheet, rgba };
 };
 
+/** Every packet the counsel was asked. */
 const asked: Array<string> = [];
 
+/** The critic over a rule file of its own, its counsel a stub answering `ANSWER`. */
 const critic = Layer.unwrap(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -38,6 +41,7 @@ const critic = Layer.unwrap(
   }),
 );
 
+/** The try `poses-1.png` (a front view and one more, painted with no paper), critiqued with `layout`: the critique, the packets asked and the first view's crop. */
 const critiqued = (layout: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

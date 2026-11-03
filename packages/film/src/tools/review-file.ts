@@ -2,8 +2,23 @@ import { Effect } from 'effect';
 import { HttpServerRequest, HttpStaticServer } from 'effect/http';
 import { ReviewFileUnknown } from '../core/refusals.ts';
 
+/**
+ * What the static server's own table lacks among the files the review serves:
+ * a mix (m4a; a phone's Safari will not play `application/octet-stream`) and
+ * a caption file.
+ */
 const MIME_TYPES = { m4a: 'audio/mp4', vtt: 'text/vtt; charset=utf-8' };
 
+/**
+ * The cache policies the lab answers a file with, by how it changes under
+ * its URL: `fresh`, asked again on every load (a render or a mix rewritten
+ * in place, a render's phone copy or frame, named by the render's ref and
+ * not its version, a film's narration); `derived`, named by what it is made
+ * of (a take or an attempt by its hash, a note's still by its number), kept
+ * a day; `hashed`, a build's script or style named by its own bytes' hash,
+ * kept a year, immutable; `none`, never stored (a page, built from the
+ * source as it stands, and a redirect to one).
+ */
 export const CACHE = {
   none: 'no-store',
   fresh: 'no-cache',
@@ -11,8 +26,14 @@ export const CACHE = {
   hashed: 'max-age=31536000, immutable',
 } as const;
 
+/** The path a request's `url` asks for, without its query. */
 export const urlPath = (url: string): string => url.split('?')[0] ?? '';
 
+/**
+ * The file at `file` as `request` asks for it. A file gone since it resolved
+ * is a ReviewFileUnknown naming the path the request asked for, never the
+ * file's place on the box.
+ */
 export const serveFile = Effect.fn('review.serveFile')(function* (
   request: HttpServerRequest.HttpServerRequest,
   file: string,

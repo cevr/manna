@@ -11,11 +11,14 @@ import {
   travel,
 } from './reveal';
 
+/** The list's own tab row meets the list's top 49 pt down, under the title, at the reader's usual text size. */
 const rest = 49;
 
+/** The row's state after the list passes through each offset in turn, from its opening. */
 const through = (offsets: ReadonlyArray<number>, start: Reveal = hidden(rest)) =>
   offsets.reduce((state, scroll) => revealAt(state, scroll, rest), start);
 
+/** Offsets from `from` to `to` in steps of `step` points, as frames of a scroll report them. */
 const frames = (from: number, to: number, step: number) => {
   const out: Array<number> = [];
   const sign = Math.sign(to - from);
@@ -62,6 +65,7 @@ describe('the tab row pinned over the home list', () => {
 });
 
 describe('a jump the app makes', () => {
+  /** The row after the jump to `at`, the list's reports while it lands, then the reader's touch at the last. */
   const landed = (start: Reveal, at: number, reports: ReadonlyArray<number>) => {
     const held = through([at, ...reports], jumped(start, at));
     return touched(held, reports.at(-1) ?? at, rest);

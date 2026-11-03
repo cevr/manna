@@ -21,6 +21,12 @@ import { LONGEST_WAIT, WaitTimeout } from './wait.ts';
 
 type PlaceName = Exclude<keyof typeof Places, 'home'>;
 
+/**
+ * Links to every page as the app writes them, each with the place it opens,
+ * the page that serves it, and the href the place writes back for it: a
+ * canonical link comes back byte for byte; the rest normalise (defaults left
+ * out, keys a place does not declare dropped).
+ */
 const LINKS: ReadonlyArray<
   readonly [href: string, place: PlaceName, page: AppPage, written: string]
 > = [

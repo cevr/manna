@@ -18,6 +18,7 @@ const noise = (secs: number, stream?: string): Node =>
 
 const sample = (sound: string): Node => ({ _tag: 'Sample', sound });
 
+/** A generated sound whose code trial plays `play` with two seeds. */
 const trialled = (play: Node): LibraryEntry => ({
   kind: 'generated',
   prompt: 'a whoosh',
@@ -27,9 +28,11 @@ const trialled = (play: Node): LibraryEntry => ({
   code: { sound: { play }, variants: 2 },
 });
 
+/** `library`'s code sounds resolved: its keys typed as names, as `defineLibrary` types them. */
 const resolved = <const L extends Library>(library: L) =>
   Result.map(resolveCode(library), (walk) => walk.code);
 
+/** The refusal's tag and fields, or the code sounds and the trials resolved. */
 const walked = <const L extends Library>(library: L) =>
   Result.match(resolveCode(library), {
     onSuccess: (walk) => ({ resolved: [...walk.code.keys()], trials: [...walk.trials.keys()] }),

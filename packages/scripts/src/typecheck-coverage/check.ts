@@ -5,6 +5,7 @@ import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { declarations, isSource, listedFiles, uncovered } from './coverage.js';
 import { tscScript } from './tsc.js';
 
+/** tsc could not list the program: its exit code and what it printed. */
 class ListFailed extends Schema.TaggedError<ListFailed>()('ListFailed', {
   code: Schema.Finite,
   output: Schema.String,
@@ -15,6 +16,7 @@ class ListFailed extends Schema.TaggedError<ListFailed>()('ListFailed', {
   override readonly [Runtime.errorReported] = false;
 }
 
+/** Files the program leaves out. */
 class Uncovered extends Schema.TaggedError<Uncovered>()('Uncovered', {
   files: Schema.Array(Schema.String),
 }) {
@@ -27,6 +29,7 @@ class Uncovered extends Schema.TaggedError<Uncovered>()('Uncovered', {
   override readonly [Runtime.errorReported] = false;
 }
 
+/** Declaration files, whose own errors `skipLibCheck` hides. */
 class Unchecked extends Schema.TaggedError<Unchecked>()('Unchecked', {
   files: Schema.Array(Schema.String),
 }) {
@@ -42,6 +45,7 @@ class Unchecked extends Schema.TaggedError<Unchecked>()('Unchecked', {
 const text = <E>(stream: Stream.Stream<Uint8Array, E>) =>
   Stream.mkString(Stream.decodeText(stream));
 
+/** The program's files, each an absolute path as tsc prints it. */
 const programOf = (tsconfig: string) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner;
@@ -61,6 +65,7 @@ const programOf = (tsconfig: string) =>
     return listedFiles(stdout);
   }).pipe(Effect.scoped);
 
+/** Checks the package at `packageRoot` against its own tsconfig.json. */
 export const check = (packageRoot: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

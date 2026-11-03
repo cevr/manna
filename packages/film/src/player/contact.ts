@@ -1,7 +1,15 @@
+/** Tiles across. */
 const COLS = 6;
+/** A tile's width; its height keeps the frame's shape. */
 const TILE_W = 480;
+/** Between tiles. */
 const GAP = 4;
 
+/**
+ * `frames` drawn by `draw` onto `canvas` (done once the frame is drawn, its
+ * footage decoded first), one after another, and tiled into a sheet in
+ * order, left to right and top to bottom.
+ */
 export const composeContact = async (
   draw: (i: number) => Promise<void>,
   canvas: HTMLCanvasElement,

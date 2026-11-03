@@ -1,3 +1,10 @@
+/**
+ * The letters a preview wrote instead of sending (`../../src/mail/mailer.ts`
+ * `layerOutbox`): one file a letter, `<n>.txt`, its headers (`To:`,
+ * `Subject:`, a film's `List-Unsubscribe`), a blank line, then its text. A
+ * letter's link is the one a person opens in it: the confirm link of a
+ * confirm letter, the leave link at the foot of a film's.
+ */
 import { Effect, FileSystem, Option, Path, Schedule } from 'effect';
 
 import { MAIL_ROUTES } from '../../src/mail/paths.ts';
@@ -6,6 +13,7 @@ import { type Letter, NotReady } from './model.ts';
 const CONFIRM_LINK = new RegExp(`https?://\\S+${MAIL_ROUTES.confirm}\\?token=\\S+`);
 const LEAVE_LINK = new RegExp(`https?://\\S+${MAIL_ROUTES.unsubscribe}\\?token=\\S+`);
 
+/** Text kept as proof, each link's token shown as `<token>`: a live link stays out of the record. */
 export const redactTokens = (text: string) => text.replace(/([?&]token=)[^\s"'<>&]+/g, '$1<token>');
 
 const header = (lines: ReadonlyArray<string>, name: string) =>
@@ -16,6 +24,7 @@ const header = (lines: ReadonlyArray<string>, name: string) =>
     () => '',
   );
 
+/** A letter's file as the outbox wrote it, read back. */
 export const parseLetter = (file: string, text: string): Letter => {
   const [head = '', ...body] = text.split('\n\n');
   const lines = head.split('\n');
@@ -29,6 +38,7 @@ export const parseLetter = (file: string, text: string): Letter => {
   return { ...base, kind: 'other' };
 };
 
+/** Every letter in `outbox`, oldest first; none when the outbox is not there yet. */
 export const readOutbox = Effect.fn('Verify.readOutbox')(function* (outbox: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -45,6 +55,7 @@ export const readOutbox = Effect.fn('Verify.readOutbox')(function* (outbox: stri
   return letters.toSorted((a, b) => a.n - b.n);
 });
 
+/** The newest letter to `to`, waited for: a sign-up's letter is written after its answer. */
 export const awaitLetter = Effect.fn('Verify.awaitLetter')(function* (outbox: string, to: string) {
   return yield* readOutbox(outbox).pipe(
     Effect.flatMap((letters) =>

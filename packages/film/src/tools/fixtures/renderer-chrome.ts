@@ -6,6 +6,7 @@ import { launchArgs } from '../browser.ts';
 import { openView } from '../chrome.ts';
 import { collect } from '../process.ts';
 
+/** The command lines of the Chromes this process spawned (their parent is this process). */
 const ours = Effect.gen(function* () {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   const ps = yield* collect(
@@ -22,6 +23,7 @@ const ours = Effect.gen(function* () {
     .map(([pid = '', , ...args]) => ({ pid: Number(pid), args: args.join(' ') }));
 });
 
+/** A view with the renderer's flags, open while the Chrome under it is read. */
 const viewed = Effect.scoped(
   Effect.gen(function* () {
     const view = yield* openView(launchArgs, { width: 800, height: 600 });
@@ -30,6 +32,7 @@ const viewed = Effect.scoped(
   }),
 );
 
+/** What the test reads: this process's pid and each Chrome's command line. */
 const Seen = Schema.fromJsonString(
   Schema.Struct({
     pid: Schema.Finite,

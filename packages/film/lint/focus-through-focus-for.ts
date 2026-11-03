@@ -11,11 +11,14 @@ import { memberName } from './nodes.ts';
 const MESSAGE =
   'a focus moved from script past focusFor: call focusFor(el, input) (packages/film/src/lab/focus.ts) with the input that asked, so the ring shows iff a key did.';
 
+/** Whether `node` reads a member named `name`. */
 const reads = (node: ESTree.Node, name: string): boolean =>
   node.type === 'MemberExpression' && Option.contains(memberName(node), name);
 
+/** The ways a function is called by another name: `call`, `apply`, `bind`. */
 const INDIRECT = ['call', 'apply', 'bind'];
 
+/** Whether a call moves the focus: `el.focus(…)`, or `el.focus.call(…)` and its kin. */
 const movesFocus = (call: ESTree.CallExpression): boolean => {
   const callee = call.callee;
   if (callee.type !== 'MemberExpression') return false;

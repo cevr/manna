@@ -1,5 +1,6 @@
 import type { FramedView } from './frames.ts';
 
+/** Each cut view's paper, the median of its kept view's border ground (its rim is un-matted from it, `core/unmatte.ts`). */
 export const PAPERS = {
   'heads-1': [252, 243, 226],
   'heads-2': [252, 243, 226],

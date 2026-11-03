@@ -20,7 +20,9 @@ const sub = (a: Pt, b: Pt): Pt => [a[0] - b[0], a[1] - b[1]];
 const dot = (a: Pt, b: Pt) => a[0] * b[0] + a[1] * b[1];
 const along = (p: Pt, d: Pt, l: number): Pt => [p[0] + l * d[0], p[1] + l * d[1]];
 const unit = (a: Pt): Pt => [a[0] / Math.hypot(...a), a[1] / Math.hypot(...a)];
+/** The side a positive elbow turn opens of a segment running along `d`, as the fixtures draw it. */
 const opens = (d: Pt): Pt => [d[1], -d[0]];
+/** `p`'s `(u, v)` on the line from `a` along `d`, u counted on from `from`. */
 const frame = (p: Pt, a: Pt, d: Pt, from: number): Pt => [
   from + dot(sub(p, a), d),
   dot(sub(p, a), opens(d)),
@@ -31,6 +33,7 @@ const toSegment = (p: Pt, a: Pt, d: Pt, l: number) => {
   return Math.hypot(q[0] - t * d[0], q[1] - t * d[1]);
 };
 
+/** Which sides a fixture inks: `[inner, outer]`. */
 type Inked = readonly [boolean, boolean];
 const BOTH: Inked = [true, true];
 const NONE: Inked = [false, false];
@@ -52,6 +55,7 @@ const SKIN = [240, 170, 120] as const;
 const STUB = 14;
 const HAND = along(C, D, 14);
 
+/** The sleeve's colour at (u, v), or none off the sleeve. */
 const sleeveAt = (u: number, v: number, inked: Inked): ReadonlyArray<Rgb> => {
   const w = Math.max(0, u);
   const sides: ReadonlyArray<readonly [number, Rgb]> = [
@@ -85,6 +89,7 @@ const paint = (
 
 const armPixels = (inked: Inked) => paint(W, H, (x, y) => texelAt(x, y, inked));
 
+/** `r` with each texel of a colour `pairs` names in its colour there. */
 const recoloured = (r: Raster, pairs: ReadonlyArray<readonly [Rgb, Rgb]>): Raster => {
   const rgba = r.rgba.slice();
   for (let i = 0; i < rgba.length; i += 4)
@@ -107,6 +112,7 @@ const SKELETON: Skeleton = {
 const ARM = armPixels(BOTH);
 const SHEET: PuppetSheet = { width: W, height: H, parts: [{ name: 'arm', pixels: ARM }] };
 const JOINTS = { shoulder: S, elbow: E, wrist: C };
+/** Cloth as dark as ink (L* about 13) under a darker ink: no edge shows where its ink ends. */
 const DARK_SLEEVE = recoloured(ARM, [
   [LIGHT, [40, 30, 30]],
   [DARK, [40, 30, 30]],
@@ -188,6 +194,7 @@ const HALF = Result.getOrThrow(
 );
 const HALF_LIMB = Option.getOrThrow(Option.fromUndefinedOr(HALF.parts[0]!.limb));
 
+/** Acceptance E's OKLab distance, distinct from the measurement's CIE Lab. */
 const oklab = (rgb: Rgb): Rgb => {
   const linear = rgb.map((c) => {
     const v = c / 255;
@@ -217,6 +224,7 @@ const bentAt = (elbowRight: number, wristRight = 0) =>
     return r;
   });
 
+/** Brute-force distance to the raster's alpha boundary: independent of the stroke's distance transform. */
 const nearBoundary = (r: Raster, x: number, y: number, width: number, alpha = 128) => {
   const radius = Math.ceil(width);
   for (let dy = -radius; dy <= radius; dy++)
@@ -292,6 +300,7 @@ const ghostInk = (r: Raster, width: number) => {
   return ghost;
 };
 
+/** Directed pixel-cell boundaries, traced independently of the renderer's mask operations. */
 const boundaryEdges = (r: Raster) => {
   const stride = r.width + 1;
   const edges = new Map<number, Array<number>>();
@@ -395,6 +404,7 @@ const silhouetteIoU = (before: Raster, after: Raster) => {
   return inter / union;
 };
 
+/** Skin outside the posed hand, restricted to forearm-frame hand texels (the ghost-wrist oracle). */
 const ghostSkin = (
   half: Parameters<typeof rasterOf>[0],
   numbers: Readonly<Record<string, number>>,
@@ -708,6 +718,7 @@ describe('rasterOf stroke silhouette', () => {
   });
 });
 
+/** Where the bent limb's widths stray more than 1 px from the drawing, or a side ends on what the drawing does not. */
 const bentFaults = (limb: PuppetPartLimb) => {
   const faults: Array<string> = [];
   for (let k = 0; k < limb.outer.widths.length; k++) {
@@ -908,6 +919,7 @@ const lcg = (start: number) => {
   };
 };
 
+/** What a blend at turn `t` (wrapped to `w`) gets wrong: a weight outside [0, 1] or a ramp end not exact. */
 const endFaults = (t: number, w: number, a: { sleeve: number; fold: number }) => {
   const [f0, f1] = LIMB.fade;
   const [g0, g1] = LIMB.fold;
@@ -920,6 +932,7 @@ const endFaults = (t: number, w: number, a: { sleeve: number; fold: number }) =>
   return faults.filter(([fault]) => fault).map(([, what]) => what);
 };
 
+/** Where the weights, sorted by wrapped turn, fall back or jump across a quarter degree. */
 const stepFaults = (samples: Array<readonly [number, number, number]>) => {
   const sorted = samples.toSorted((x, y) => x[0] - y[0]);
   const faults: Array<string> = [];

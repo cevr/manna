@@ -10,9 +10,11 @@ import type { FlagRule } from './render-plan.ts';
 
 interface CueReport {
   readonly lines: ReadonlyArray<string>;
+  /** Named cues that end after their scene does. */
   readonly late: number;
 }
 
+/** Which scenes to report: all, or the one `only` names, which must exist. */
 const sceneFilter = (
   placed: ReadonlyArray<Placed>,
   only: Option.Option<string>,
@@ -24,9 +26,14 @@ const sceneFilter = (
 
 interface CueLine {
   readonly line: string;
+  /** Named cues on this line that end after the scene. */
   readonly late: number;
 }
 
+/**
+ * `seam=0.60`: the pause from this scene's last word to the next scene's
+ * first, when both speak; `(LONG)` when `check` warns of it (`SeamLong`).
+ */
 const seamOf = (p: Placed, next: Option.Option<Placed>, long: ReadonlySet<string>) =>
   Option.match(
     Option.flatMap(next, (q) => seamAfter(p, q)),
@@ -39,6 +46,7 @@ const seamOf = (p: Placed, next: Option.Option<Placed>, long: ReadonlySet<string
     },
   );
 
+/** ` (until {first} + 0.10 s)`: where a cue ends off the point it runs until; nothing on the point or for a dur. */
 const offPoint = (p: Placed, cue: string): string =>
   Option.match(
     Option.flatMap(Option.fromNullishOr(p.spec.timeline?.[cue]), (span) =>
@@ -73,6 +81,7 @@ const lineOf = (p: Placed, seam: string): CueLine => {
   return { line: parts.join(''), late } satisfies CueLine;
 };
 
+/** Each scene's placement, marks and cues. */
 export const sceneReport = (
   placed: ReadonlyArray<Placed>,
   only: Option.Option<string>,
@@ -86,6 +95,10 @@ export const sceneReport = (
     return { lines: rows.map((r) => r.line), late: rows.reduce((n, r) => n + r.late, 0) };
   });
 
+/**
+ * A sound cue's point as the report prints it: `lower`, `lower.end`,
+ * `{three}`, `{gift}~faith`, `@speech`; nothing for the scene's start.
+ */
 const anchorLabel = (cue: Cue): string =>
   Option.getOrElse(
     Option.firstSomeOf([
@@ -106,8 +119,14 @@ const anchorLabel = (cue: Cue): string =>
     () => '',
   );
 
+/** How an effect meets its cue, as the report marks it: its start (unmarked), its onset or its hit. */
 const SYNC_LABEL = { start: '', onset: ' onset', hit: ' hit' } as const;
 
+/**
+ * Each effect placement's film time and library sound (marked `onset` or
+ * `hit` where that moment of the sound, not its first sample, lands there),
+ * then each bed's span.
+ */
 export const soundReport = (
   sound: Sound,
   placed: ReadonlyArray<Placed>,
@@ -135,6 +154,7 @@ export const soundReport = (
     return lines;
   });
 
+/** `film cues` flags that would each print a different report. */
 export const CUES_RULES: ReadonlyArray<FlagRule> = [
   ['short', 'excludes', 'sound', '--short prints the short, --sound the effects'],
   ['short', 'excludes', 'scene', "a short's spans are its scenes"],
@@ -142,6 +162,10 @@ export const CUES_RULES: ReadonlyArray<FlagRule> = [
 
 const range = (from: number, to: number) => `${from.toFixed(3).padStart(8)}–${to.toFixed(3)}`;
 
+/**
+ * A short's spans, resolved on the film's frames (`Checker.cut`): each one's
+ * film time and its time in the short, then the short's length.
+ */
 export const shortReport = (cut: ResolvedShort): ReadonlyArray<string> => [
   `short ${cut.id} "${cut.title}" at ${cut.fps} fps`,
   ...cut.spans.map((span, i) => {

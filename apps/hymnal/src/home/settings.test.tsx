@@ -1,3 +1,8 @@
+/**
+ * The Settings route, the sheet the home screen's gear opens, rendered to
+ * HTML as the web build renders it.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { RegistryProvider } from '@effect/atom-react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -11,6 +16,7 @@ const html = () =>
     </RegistryProvider>,
   );
 
+/** Each radio's label and whether it is checked, in page order. */
 const radiosOf = (page: string) =>
   [
     ...page.matchAll(

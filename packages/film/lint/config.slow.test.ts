@@ -4,8 +4,10 @@ import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Schema, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
+/** The timeout of a test here that spawns (oxlint): a cold start's time is the machine's (effect/requireSpawnBudget). */
 const SPAWNS_MS = 30_000;
 
+/** The names a host name is reached through: the global object's, and chains of them. */
 const QUALIFIERS: ReadonlyArray<string> = [
   'window',
   'globalThis',
@@ -17,6 +19,7 @@ const QUALIFIERS: ReadonlyArray<string> = [
   'globalThis.window',
 ];
 
+/** The URL's names: banned to every page, reached through Location. */
 const URL_NAMES: ReadonlyArray<string> = [
   'history',
   'location',
@@ -25,10 +28,16 @@ const URL_NAMES: ReadonlyArray<string> = [
   'navigation',
 ];
 
+/** The ids made unique (`uniqueId`), never by hand: module names, not the host's, so never under a global. */
 const BRANDS: ReadonlyArray<string> = ['ChangeId', 'RequestId', 'OpId'];
 
+/** The URL's events: heard only through Location. */
 const URL_EVENTS: ReadonlyArray<string> = ['popstate', 'hashchange'];
 
+/**
+ * The global object reached through a chain or an alias of itself, then a
+ * banned name (every chain but `Reflect.get`, which is `effect/noReflectGet`'s).
+ */
 const CHAINS: ReadonlyArray<string> = [
   'globalThis.window.location;',
   'window.self.fetch(url);',
@@ -46,6 +55,11 @@ const CHAINS: ReadonlyArray<string> = [
   '{ const { defaultView } = document; defaultView.fetch(url); }',
 ];
 
+/**
+ * A host global held under a name or a place of the page's own: an alias the
+ * rule follows to its banned use, or a hold it cannot follow, refused itself.
+ * Each line is a block of its own, so the names never meet.
+ */
 const HOLDS: ReadonlyArray<string> = [
   '{ const perf = performance; perf.now(); }',
   '{ const { now } = performance; now(); }',
@@ -60,6 +74,7 @@ const HOLDS: ReadonlyArray<string> = [
   '{ function returned() { return navigator; } }',
 ];
 
+/** The film's host names called and constructed: read as the names are. */
 const CALLS: ReadonlyArray<string> = [
   'window.performance.now();',
   'new window.Audio();',
@@ -69,11 +84,14 @@ const CALLS: ReadonlyArray<string> = [
 
 const Allow = Schema.Struct({ allow: Schema.optionalKey(Schema.Array(Schema.String)) });
 
+/** Every way oxlint lets a rule's severity be spelled: a rule's options are read under any of them. */
 const SEVERITIES = ['error', 'deny', 2, 'warn', 1, 'off', 'allow', 0] as const;
 const Severity = Schema.Literals(SEVERITIES);
+/** A rule's config with its options. */
 const withOptions = <S extends Schema.Top>(options: S) =>
   Schema.TupleWithRest(Schema.Tuple([Severity]), [options]);
 
+/** One of `effect/noGlobals`' bans on a global: all of its members, or the listed `properties`. */
 const MemberBan = Schema.Struct({
   properties: Schema.optionalKey(Schema.Array(Schema.String)),
   use: Schema.String,
@@ -91,11 +109,13 @@ const Property = Schema.Struct({
   message: Schema.String,
 });
 type Property = typeof Property.Type;
+/** A property ban of `no-restricted-properties`: on any object when it names none. */
 const AnyProperty = Schema.Struct({
   object: Schema.optionalKey(Schema.String),
   property: Schema.String,
   message: Schema.String,
 });
+/** The config oxlint runs a probe of property bans with. */
 const PropertiesConfig = Schema.fromJsonString(
   Schema.Struct({
     rules: Schema.Struct({ 'no-restricted-properties': withOptions(AnyProperty) }),
@@ -117,6 +137,7 @@ const Config = Schema.Struct({
 });
 const Package = Schema.Struct({ exports: Schema.Record(Schema.String, Schema.String) });
 
+/** The config oxlint runs a probe of a block's own rules with. */
 const RulesConfig = Schema.fromJsonString(
   Schema.Struct({
     jsPlugins: Schema.Array(Schema.String),
@@ -124,6 +145,7 @@ const RulesConfig = Schema.fromJsonString(
   }),
 );
 
+/** The config oxlint runs the probe with: only the host bans and the brands. */
 const ProbeConfig = Schema.fromJsonString(
   Schema.Struct({
     jsPlugins: Schema.Array(Schema.String),
@@ -134,17 +156,21 @@ const ProbeConfig = Schema.fromJsonString(
   }),
 );
 
+/** The rule `key`'s value in `o`. */
 const ruleIn = (o: Override, key: string) =>
   Option.flatMap(Option.fromUndefinedOr(o.rules), (rules) => Option.fromUndefinedOr(rules[key]));
 
+/** The options of the rule `key` in `o`, read as `schema`: none when it is only a severity, or absent. */
 const optionsIn = <A>(o: Override, key: string, schema: Schema.Decoder<A>): ReadonlyArray<A> =>
   Option.match(Option.flatMap(ruleIn(o, key), Schema.decodeUnknownOption(withOptions(schema))), {
     onNone: () => [],
     onSome: ([, ...options]) => options,
   });
 
+/** A block's host bans: `effect/noGlobals`' options (none when it keeps the built-in list only). */
 const hostBans = (o: Override): NoGlobals => optionsIn(o, 'effect/noGlobals', NoGlobals)[0] ?? {};
 
+/** A block's bans, one a line: `global name` for a whole global, `object.property` for a member. */
 interface Ban {
   readonly ban: string;
   readonly form: string;
@@ -168,6 +194,7 @@ const bansOf = (options: NoGlobals): ReadonlyArray<Ban> =>
 
 const ROOT = Effect.map(Path.Path, (path) => path.join(import.meta.dir, '..', '..', '..'));
 
+/** A repo file (JSON, with comments) read as `schema`. */
 const readJson = Effect.fn('test.lintConfig.readJson')(function* <A>(
   repoPath: string,
   schema: Schema.Decoder<A>,
@@ -178,6 +205,7 @@ const readJson = Effect.fn('test.lintConfig.readJson')(function* <A>(
   return yield* Schema.decodeUnknownEffect(schema)(JSONC.parse(text));
 });
 
+/** Each URL event a block lets its files hear themselves, with the block's files. */
 const urlEventsAllowed = (overrides: ReadonlyArray<Override>) =>
   overrides.flatMap((o) =>
     optionsIn(o, 'film/host-events-through-adapter', Allow).flatMap(({ allow = [] }) =>
@@ -185,6 +213,11 @@ const urlEventsAllowed = (overrides: ReadonlyArray<Override>) =>
     ),
   );
 
+/**
+ * The film's host bans' block, every block that bans a URL name (the film's,
+ * `@manna/url-state`'s and egw-search's, and egw-search's scroll adapter), and
+ * the blocks that let files hear some host events themselves.
+ */
 const hostBlocks = (config: typeof Config.Type) => {
   const adapterRule = (o: Override) => ruleIn(o, 'film/host-events-through-adapter');
   const banned = config.overrides.find((o) => Option.contains(adapterRule(o), 'error'));
@@ -198,8 +231,10 @@ const hostBlocks = (config: typeof Config.Type) => {
   return { banned: banned as Override, url, allowing };
 };
 
+/** Whether a ban keeps the address bar out of a page. */
 const isUrl = (ban: Ban) => ban.use.includes("@manna/url-state's Location");
 
+/** The film block's URL bans a block lacks, as `global name` or `object.property`. */
 const urlBansMissing = (film: Override, block: Override): ReadonlyArray<string> => {
   const held = new Set(bansOf(hostBans(block)).map((b) => b.ban));
   return bansOf(hostBans(film))
@@ -208,15 +243,19 @@ const urlBansMissing = (film: Override, block: Override): ReadonlyArray<string> 
     .filter((ban) => !held.has(ban));
 };
 
+/** Every form a page could reach a banned host name in, one statement a line. */
 const probeOf = (options: NoGlobals): ReadonlyArray<string> =>
   bansOf(options).flatMap(({ form }) => [`${form};`, ...QUALIFIERS.map((q) => `${q}.${form};`)]);
 
+/** Each brand a block bans minting, minted by hand. */
 const brandsMade = (properties: ReadonlyArray<Property>): ReadonlyArray<string> =>
   properties.filter((p) => BRANDS.includes(p.object)).map((p) => `${p.object}.${p.property}('x');`);
 
+/** Whether a block's files reach the film's or the films' source. */
 const overFilmSource = (o: Override) =>
   o.files.some((f) => f.includes('packages/film/src/') || f.includes('apps/animations/src/'));
 
+/** The brands a block that lists no-restricted-properties over the film's source leaves mintable. */
 const brandsUnbanned = (o: Override): ReadonlyArray<string> => {
   const held = optionsIn(o, 'no-restricted-properties', Property)
     .filter((p) => p.property === 'make')
@@ -224,6 +263,7 @@ const brandsUnbanned = (o: Override): ReadonlyArray<string> => {
   return BRANDS.filter((brand) => !held.includes(brand));
 };
 
+/** The 1-based lines oxlint reported one of `rules` on (by the name it prints, `noGlobals`), in `--format unix`. */
 const reportedLines = (
   out: string,
   rules: ReadonlyArray<string> = ['noGlobals', 'no-restricted-properties'],
@@ -243,10 +283,12 @@ const reportedLines = (
       .map((report) => report.line),
   );
 
+/** The plugin's build as the repo installs it. */
 const PLUGIN = Effect.map(Effect.all([Path.Path, ROOT]), ([path, root]) =>
   path.join(root, 'node_modules', 'oxlint-plugin-effect', 'dist', 'plugin.js'),
 );
 
+/** oxlint over `source` as `probe.ts` with the oxlint.json `config`: what it reported. */
 const oxlintOver = Effect.fn('test.lintConfig.oxlintOver')(function* (
   config: string,
   source: string,
@@ -279,6 +321,7 @@ const oxlintOver = Effect.fn('test.lintConfig.oxlintOver')(function* (
   );
 });
 
+/** oxlint over `source` with only the host bans `options` and the brands `properties` on: what it reported. */
 const lint = Effect.fn('test.lintConfig.lint')(function* (
   options: NoGlobals,
   properties: ReadonlyArray<Property>,
@@ -294,6 +337,7 @@ const lint = Effect.fn('test.lintConfig.lint')(function* (
   return yield* oxlintOver(config, source);
 });
 
+/** The probe's lines oxlint left unreported. */
 const unreported = Effect.fn('test.lintConfig.unreported')(function* (
   options: NoGlobals,
   properties: ReadonlyArray<Property>,

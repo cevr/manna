@@ -11,17 +11,21 @@ import {
 } from '../core/footage.ts';
 import { CACHE, serveFile } from './review-file.ts';
 
+/** Where a server finds footage: the library (`dir`, its lock) and the outputs folder its copies are made under (`out`). */
 export interface FootageRoot {
   readonly dir: string;
   readonly out: string;
 }
 
+/** The route's own URLs: everything under `/footage/`. */
 const FOOTAGE_PREFIX = '/footage/';
 
+/** A copy's URL: a footage name, the head of its original's hash, and the copy. */
 const FOOTAGE_URL = /^\/footage\/([a-z0-9][a-z0-9.-]*)\/([0-9a-f]{12})\/(mezzanine|proxy)\.mp4$/;
 
 const isCopy = Schema.is(Schema.Literals(FOOTAGE_COPIES));
 
+/** The name, hash head and copy a footage URL names, when it is a copy's. */
 const named = (pathname: string) =>
   Option.flatMap(Option.fromNullishOr(FOOTAGE_URL.exec(pathname)), ([, name, sha12, copy]) =>
     Option.all({
@@ -31,6 +35,7 @@ const named = (pathname: string) =>
     }),
   );
 
+/** Whether `pathname` is the footage route's, and no page's: `/footage/…`. */
 export const isFootageUrl = (pathname: string): boolean => pathname.startsWith(FOOTAGE_PREFIX);
 
 const NOT_FOUND = HttpServerResponse.text('not found', {
@@ -38,6 +43,7 @@ const NOT_FOUND = HttpServerResponse.text('not found', {
   headers: { 'cache-control': CACHE.none },
 });
 
+/** The library's lock as it stands, or none (no library yet, or one that does not read). */
 const lockOf = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -47,8 +53,14 @@ const lockOf = (dir: string) =>
       .pipe(Effect.flatMap(Schema.decodeEffect(FootageLockJson)), Effect.option);
   });
 
+/** A transcript's URL: `/footage/transcripts/<file>`. */
 const TRANSCRIPT_URL = /^\/footage\/transcripts\/([^/]+)$/;
 
+/**
+ * The library file `pathname` names, if the route serves it: the lock, or a
+ * transcript the lock names now (one path segment, `isTranscriptFile`),
+ * on disk.
+ */
 const libraryFile = Effect.fn('libraryFile')(function* (root: FootageRoot, pathname: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -70,6 +82,7 @@ const libraryFile = Effect.fn('libraryFile')(function* (root: FootageRoot, pathn
   return Option.none<string>();
 });
 
+/** The copy `pathname` names under `root`, if it is one the route serves: listed, made and on disk. */
 const footageFile = Effect.fn('footageFile')(function* (root: FootageRoot, pathname: string) {
   const fs = yield* FileSystem.FileSystem;
   const library = yield* libraryFile(root, pathname);
@@ -85,6 +98,7 @@ const footageFile = Effect.fn('footageFile')(function* (root: FootageRoot, pathn
   return Option.none<string>();
 });
 
+/** The answer to `request` for the footage URL `pathname`: its copy, whole or by range, else a 404. */
 export const footageResponse = (
   root: FootageRoot,
   request: HttpServerRequest.HttpServerRequest,
@@ -104,8 +118,14 @@ export const footageResponse = (
     }),
   );
 
+/** The disk and the HTTP platform the route answers through in Bun. */
 const RouteServices = BunHttpPlatform.layer.pipe(Layer.provideMerge(BunServices.layer));
 
+/**
+ * The route as a web handler, for a server that is not an Effect one (the
+ * app's player, `Bun.serve`): a request for a footage URL answered as
+ * `footageResponse` answers it.
+ */
 export const footageHandler = (root: FootageRoot): ((request: Request) => Promise<Response>) => {
   const handle = HttpEffect.toWebHandler(
     Effect.gen(function* () {

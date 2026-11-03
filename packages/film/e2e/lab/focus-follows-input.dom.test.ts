@@ -15,14 +15,22 @@ import { LEFT_OPEN, pageAfterPage, registry, runFromMenu, sampled } from './regi
 import { ASK_READY } from './studio-states.ts';
 
 const SLOW = 30_000;
+/** A page's whole registry, each command run twice. */
 const REGISTRY = 240_000;
 
 const INPUTS: ReadonlyArray<Input> = ['key', 'pointer'];
 
+/** A page-side function: an element's name, as `tag.class.class[role=…]`. */
 const NAME = `((el) => el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className.trim() !== '' ? '.' + el.className.trim().split(/\\s+/).join('.') : '') + (el.hasAttribute('role') ? '[role=' + el.getAttribute('role') + ']' : '') + (el.dataset.act === undefined ? '' : '[data-act=' + el.dataset.act + ']'))`;
 
+/** A text field: the browser shows the ring on it whatever focused it. */
 const TEXT_FIELD = `input:not([type=button],[type=checkbox],[type=radio],[type=range],[type=submit],[type=reset],[type=color],[type=file],[type=image]), textarea, [contenteditable]:not([contenteditable=false])`;
 
+/**
+ * A script that, from now on, keeps every focus move as `[element, shown, text field]` (the
+ * shown ones and the ones without the ring alike, unlike a watch on `:focus-visible` matches),
+ * and counts animation frames; listening once per document.
+ */
 const WATCH = `(() => {
   window.focusMoves = [];
   window.focusFrames = 0;
@@ -48,6 +56,11 @@ const WATCH = `(() => {
   return true;
 })()`;
 
+/**
+ * What the watch saw and where the focus is now: each move, then the focus left (none on the
+ * body), each as `[element, shown, text field]`; whether this page armed the watch, whether
+ * the window has the focus, and whether a command tried to leave the page.
+ */
 const SEEN = `({
   watching: Array.isArray(window.focusMoves),
   moves: Array.isArray(window.focusMoves) ? window.focusMoves : [],
@@ -58,15 +71,20 @@ const SEEN = `({
 
 type Stop = readonly [element: string, shown: boolean, text: boolean];
 interface Seen {
+  /** Whether the page armed the watch: a page opened again since has not. */
   readonly watching: boolean;
   readonly moves: ReadonlyArray<Stop>;
+  /** The focus left, none when it is on the body. */
   readonly left: ReadonlyArray<Stop>;
   readonly focused: boolean;
+  /** A command tried to open another part: it was kept here, and the page is opened again. */
   readonly leaving: boolean;
 }
 
+/** How a stop looks, by whether it shows the ring. */
 const LOOK = { true: 'shows the ring', false: 'shows none' } as const;
 
+/** Each stop of `seen` whose ring is not what `input` asks: shown iff the keyboard asked, a text field always. */
 const wrong = (path: string, input: Input, seen: Seen): ReadonlyArray<string> => {
   if (!seen.focused)
     return [`${path} by ${input}: the window has no focus, so nothing can be read`];
@@ -77,10 +95,24 @@ const wrong = (path: string, input: Input, seen: Seen): ReadonlyArray<string> =>
   return [...seen.moves.flatMap(off('moved to')), ...seen.left.flatMap(off('left on'))];
 };
 
+/**
+ * Three frames since the watch was armed, or a page that is going (another part opened: the
+ * watch goes with it, and the page is opened again), or a new page, which never armed one.
+ */
 const SETTLED = `window.focusFrames === undefined || window.focusFrames >= 3 || window.focusLeaving === true`;
 
+/**
+ * Two frames on the page's clock: a focus a popup queued for its next frame as it opened (the
+ * kit's initial focus, `enqueueFocus`) has landed by then, since a frame asked for earlier runs
+ * first.
+ */
 const FRAMES_SETTLED = `new Promise((settled) => requestAnimationFrame(() => requestAnimationFrame(() => settled(true))))`;
 
+/**
+ * Arm the watch once the page's queued focus has landed (`FRAMES_SETTLED`), so a move the
+ * opening asked for is never read as the path's; then, after `path`, wait three frames and
+ * read what it saw, with what the path answered.
+ */
 const watchedThen = <A>(page: Tab, path: Effect.Effect<A>) =>
   Effect.gen(function* () {
     yield* page.evaluate(FRAMES_SETTLED);
@@ -92,16 +124,34 @@ const watchedThen = <A>(page: Tab, path: Effect.Effect<A>) =>
     return [answered, yield* page.evaluate<Seen>(SEEN)] as const;
   });
 
+/** Arm the watch; then, after `path`, wait three frames and read what it saw. */
 const watched = (page: Tab, path: Effect.Effect<void>) =>
   Effect.map(watchedThen(page, path), ([, seen]) => seen);
 
+/** A page the property opens, by its name. */
 interface Opened {
   readonly name: string;
   readonly open: () => Effect.Effect<{ readonly page: Tab }, never, Scope.Scope>;
+  /**
+   * The commands (by id, or a family's prefix) that move the focus on this page as it opens,
+   * each with the element it moves it to (by name, `NAME`): each must run by both inputs and
+   * move the focus there, so a site a command reaches is proved reached, not only listed.
+   */
   readonly moves: ReadonlyArray<readonly [command: string, to: RegExp]>;
+  /**
+   * The commands (by id) that must run on this page by both inputs, whose focus move ⌘K's own
+   * closing takes back (a text field's: the follow-up in `rings/state.md`); the cases below
+   * move it by their keys.
+   */
   readonly runs: ReadonlyArray<string>;
 }
 
+/**
+ * Run every command of the page's registry from ⌘K by each input, on the page `opened`
+ * opens; a command that leaves the page (another part) or leaves a root open has the page
+ * opened again before the next. Fails naming each stop whose ring is not the input's, and
+ * each command of `opened.moves` that did not run, or ran and moved no focus.
+ */
 const everyCommand = (opened: Opened) =>
   Effect.gen(function* () {
     const walk = yield* pageAfterPage(opened.open);
@@ -110,6 +160,7 @@ const everyCommand = (opened: Opened) =>
     const failures: Array<string> = [];
     const ran: Array<string> = [];
     const reached: Array<string> = [];
+    /** Where each of `opened.moves` moved the focus instead, by input. */
     const went = new Map<string, string>();
     for (const id of ids)
       for (const input of INPUTS) {
@@ -149,6 +200,7 @@ const everyCommand = (opened: Opened) =>
     expect(unrun).toEqual([]);
   });
 
+/** The pages whose registries the property runs, each at a desk. */
 const PAGES: ReadonlyArray<Opened> = [
   {
     name: "an agent's ask",
@@ -162,6 +214,11 @@ const PAGES: ReadonlyArray<Opened> = [
   },
 ];
 
+/**
+ * A case that runs alone, its scope closed at its end, a timeout's included (`it.scopedLive.serial`):
+ * `:focus-visible` matches only in the window that has the focus, and a sibling case opening
+ * its own tab at once takes it.
+ */
 const alone = <A, E>(name: string, body: Effect.Effect<A, E, Scope.Scope>, timeout = SLOW) =>
   it.scopedLive.serial(name, () => Effect.asVoid(body), timeout);
 
@@ -172,11 +229,17 @@ for (const opened of PAGES)
     REGISTRY,
   );
 
+/** How each input asks, as a case's name says it. */
 const ASKED = { key: 'pressed', pointer: 'clicked' } as const;
 
+/** Fail naming each stop `seen` holds whose ring is not `input`'s. */
 const holds = (path: string, input: Input, seen: Seen) =>
   Effect.sync(() => expect(wrong(path, input, seen)).toEqual([]));
 
+/**
+ * An ask's goTo (`ask/parts.tsx`): its index's entry takes the owner to a section's head, and
+ * a Send with a question open to the question's first control, each ringed iff the keyboard asked.
+ */
 const ASK_GOES = [
   {
     path: "an ask's index entry",

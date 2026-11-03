@@ -1,3 +1,27 @@
+/**
+ * Compares a compiled hymn with a hand chart, syllable by syllable, and
+ * prints each difference:
+ *
+ *   bun run golden <compiled.json> <chart.chordpro> [--level full|guitar|both] [--allow <file>]
+ *
+ * Each chart section (stanza n or the refrain, at the full or guitar level)
+ * is compared with the compiled part, letters only (case and punctuation
+ * ignored), one line per difference:
+ *
+ *   diff <hymn> <part> <level> <n> <kind> "<syllable>" chart=<chords> compiled=<chords>
+ *
+ * `kind` is `count` (the part's syllable counts differ: `<n>` is 0 and the
+ * chords slots hold the counts; the part's syllables are not compared),
+ * `cut` (a syllable's letters differ) or `chord`; `<n>` is the syllable's
+ * place in the part, from 1. A difference the allow file names (`<hymn>
+ * <part> <level> <n> <reason…>` a line) prints as `allowed …` instead. Then
+ * a line per level:
+ *
+ *   golden <hymn> <level> parts=<n> syllables=<n> diffs=<n> allowed=<n>
+ *
+ * It exits 1 on any `diff`.
+ */
+
 import { Effect, Schema } from 'effect';
 
 import * as ChordPro from '../src/chordpro.js';

@@ -10,24 +10,45 @@ import {
   Output,
 } from 'mediabunny';
 
+/** The frames a second the segment was encoded at. */
 const SEGMENT_FPS = 30;
 
 const SEGMENT = new URL('../../tools/fixtures/segment-a.mp4', import.meta.url).pathname;
 
+/** `value`, or the fixture dies saying what it lacked. */
 const present = <A>(what: string, value: A) =>
   Option.match(Option.fromNullishOr(value), {
     onNone: () => Effect.die(`the segment has no ${what}`),
     onSome: Effect.succeed,
   });
 
+/** How a rated video's frames are timed in its file. */
 export interface RatedTiming {
+  /** Ticks a second of the track's timescale: the rate's own by default (1000 is a millisecond one). */
   readonly timescale?: number;
+  /**
+   * A coarser clock each frame's time is first truncated to (s), as a
+   * millisecond clock's times (a WebM's) are kept on a finer timescale by a
+   * stream copy into an MP4 (16000 is FFmpeg's for a 1/1000 time base).
+   */
   readonly grid?: number;
+  /** The last frame's own duration (s), as a whole clip's is written apart; a frame's by default. */
   readonly last?: number;
+  /**
+   * Frames left out, their places kept empty, as a capture drops frames under
+   * load: a file for its timing only, since the pictures after a dropped
+   * frame no longer decode up to the next key frame (each pass of the
+   * segment starts with one).
+   */
   readonly drop?: ReadonlyArray<number>;
+  /** Frames whose time is moved, each by its seconds, before it is put on the timescale. */
   readonly nudge?: ReadonlyArray<readonly [frame: number, by: number]>;
 }
 
+/**
+ * `frames` of the segment's frames, laid over and over, at `fps` a second:
+ * `frames / fps` seconds, timed as `timing` says (`RatedTiming`).
+ */
 export const ratedVideo = (
   fps: number,
   frames: number,
@@ -59,6 +80,7 @@ export const ratedVideo = (
       output.addVideoTrack(source, { frameRate: timescale });
       yield* Effect.promise(() => output.start());
       const moved = new Map(nudge);
+      /** Frame `frame`'s time: on the coarser clock, when there is one, truncated; then nudged. */
       const at = (frame: number) =>
         Option.match(Option.fromUndefinedOr(grid), {
           onNone: () => frame / fps,

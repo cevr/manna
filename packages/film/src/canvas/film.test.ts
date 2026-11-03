@@ -65,6 +65,7 @@ describe('createFilm finish and caption plate', () => {
 });
 
 describe('a frame hears the names it reads off its clock', () => {
+  /** A film whose one scene reads cue `go` every frame, the voice from `{word}` to `{end}` in its first second, and cue `later` after it. */
   const branching = () =>
     createFilm({
       ...spec(),
@@ -196,6 +197,7 @@ describe('a frame hears the names it reads off its clock', () => {
 describe('a scene with more than one card', () => {
   const LINE =
     'He is {righteous}righteous, they said. And Job asked: {job}How should man be just with God?';
+  /** A film of one scene with a card over `one` and another over `two` (`timeline`), logging which draws ran. */
   const twoCards = (timeline: {
     readonly one: { readonly mark: string; readonly dur: number };
     readonly two: { readonly mark: string; readonly until: { readonly at: 'end' } };
@@ -258,6 +260,7 @@ describe('a scene with more than one card', () => {
 
 describe("a callback reads another scene's knobs", () => {
   const city = drawing({ timeline: {}, knobs: { at: [1200, 640], zoom: 1.3 }, draw: () => {} });
+  /** A film whose second scene reads the first's framing, logging what it saw. */
   const calling = () => {
     const seen: Array<readonly [readonly [number, number], number]> = [];
     const back = drawing({

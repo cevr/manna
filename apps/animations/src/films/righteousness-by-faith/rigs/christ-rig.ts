@@ -43,11 +43,14 @@ import {
 } from './christ-traced.ts';
 import { PAPERS } from './papers.ts';
 
+/** His head's centre from His feet, and the robe's top under His beard, units. */
 const HEAD = { x: -2, y: -390.5 } as const;
 const NECK = -322;
 
+/** His breath: 5 s in and out, His trunk 0.8% taller from the hem at its top, His neck 2.5 units up with it. */
 const BREATH = { period: 5, trunk: 1.008, neck: -2.5 } as const;
 
+/** His lower lip under the smile in His beard, about His head's centre: court-12's pale crescent. */
 const LIP = roundedPolygon(
   [
     [-38, 39.5],
@@ -60,14 +63,30 @@ const LIP = roundedPolygon(
   2,
 );
 
+/**
+ * The shade the beard lays on the hair beside it, the dark band both concepts
+ * paint between the beard and the locks (court-12 and court.you, 0.13 to
+ * 0.18 in value): a saturated brown at 0.16 (the ink's value, never its
+ * grey), a step under each lock, so the beard's edge reads against the hair.
+ */
 const BEARD_SHADOW = '#29190f';
 
+/**
+ * His hair's tones (court-12): the window's soft light over the parting
+ * (#a0653f), the lit chestnut cut just inside the ink over the fringe
+ * (#ae6a41), and the beard's shade on the lock behind it.
+ */
 const HAIR_TONES = [
   { pts: ellipse(-30, -52, 16, 7, 14), color: '#8f5c3a', soft: true },
   { pts: CHRIST_LIT, color: '#a86640' },
   { pts: CHRIST_BEARD_SHADOW, color: BEARD_SHADOW },
 ] as const;
 
+/**
+ * His robe, as robe-5 cuts it on the court's canon: from under His beard
+ * the shoulders fall to the sleeves' ends at His hands, the robe narrower
+ * below them and flaring a little to a hem that sags at its middle.
+ */
 const ROBE_CUT: Pt[] = [
   [-32.4, -334],
   [31, -334],
@@ -103,9 +122,15 @@ const ROBE_RADII = [
   20, 20, 6, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 6, 60, 6, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 6,
 ];
 
+/** A cut robe's hem: the foot of its sagging middle, where the robe breathes about. */
 const hemOf = (corners: ReadonlyArray<Pt>, radii: ReadonlyArray<number>) =>
   Math.max(...roundedPolygon(corners, radii).map(([, y]) => y));
 
+/**
+ * The gold sash's right edge, court-12's from His far shoulder down to where
+ * the dock hides it, then robe-5's to its end at His near side; its left
+ * edge runs off the robe there, so the robe's outline cuts it.
+ */
 const SASH_RIGHT: Pt[] = [
   [40, -345],
   [38, -322],
@@ -141,12 +166,14 @@ const SASH_LEFT: Pt[] = [
   [-95, -60],
 ];
 
+/** The sash's shade: a band along its right edge, 7 units across (court-12 #b48457 on #dca561). */
 const sashShade = (right: ReadonlyArray<Pt>): Pt[] => [
   ...right,
   ...right.map(([x, y]): Pt => [x - 7, y]).reverse(),
 ];
 const SASH_SHADE = sashShade(SASH_RIGHT);
 
+/** The neckline: His skin in the robe's V under the beard, its top in the beard's shadow. */
 const NECKLINE = roundedPolygon(
   [
     [-25, -330],
@@ -162,6 +189,7 @@ const NECK_SHADE: Pt[] = [
   [-17, -312],
 ];
 
+/** The robe's shade: all of it past the sash's right edge, a lilac (court-12 #cdbecb), its edge the sash's. */
 const ROBE_SHADE: Pt[] = [...SASH_RIGHT, [140, -62], [140, -345]];
 
 const ROBE_SHADING = { pts: ROBE_SHADE, color: '#cdbecb' } as const;
@@ -172,6 +200,7 @@ const SASH_TONES = [
 const NECK_SKIN = '#fbbb87';
 const NECK_SKIN_SHADE = '#e59a76';
 
+/** What lies on His robe three-quarters on: its shade, the sash, His skin in the robe's V. */
 const ROBE_TONES = [
   ROBE_SHADING,
   ...SASH_TONES,
@@ -179,8 +208,14 @@ const ROBE_TONES = [
   { pts: NECK_SHADE, color: NECK_SKIN_SHADE, skin: true },
 ] as const;
 
+/** A sandal's sole: a dark leather (robe-5 draws it as heavy as the line). */
 const SOLE = '#43291c';
 
+/**
+ * His sandals under the hem, as robe-5 sets them, the toes out: the near
+ * foot's toe to screen left, a strap across it; the far foot a dome to
+ * screen right.
+ */
 const SANDALS = Sandals({
   paper: PAPERS.christSkin,
   near: {
@@ -217,6 +252,12 @@ const SANDALS = Sandals({
   sole: SOLE,
 });
 
+/**
+ * What every view of Him is: His artboard, His canon, His stance, His
+ * sandals and His hands, 0.35 of His head across (the court lays each at
+ * 1.08 times the house hand, `court-cast.ts`: 41 units across against His
+ * head's 116).
+ */
 const HIM = {
   art: { width: 300, height: 520, feet: [150, 495] },
   stature: Stature.Canon(),
@@ -225,6 +266,7 @@ const HIM = {
   hands: Hands({ paper: PAPERS.christHand, share: 0.35 }),
 } as const;
 
+/** His robe three-quarters on: robe-5's cut and paper. */
 const ROBE = {
   corners: ROBE_CUT,
   radii: ROBE_RADII,
@@ -232,8 +274,15 @@ const ROBE = {
   paper: PAPERS.whiteRobe,
 };
 
+/** His lip's look: court-12's crescent, in either view. */
 const lipOf = (outline: ReadonlyArray<Pt>) => ({ outline, paper: PAPERS.christLip });
 
+/**
+ * Christ three-quarters on (court-12), His face toward the accused at His
+ * right (screen left): His head set 2 units left of His robe's middle,
+ * uncanted; His ear in His hair; His face Kit A's marks where court-12
+ * draws them, at rest the smile court-12 draws, His eyes on the accused.
+ */
 export const christ = figure({
   ...HIM,
   concept: {
@@ -274,16 +323,26 @@ export const christ = figure({
   body: Robe.Cut({ ...ROBE, tones: ROBE_TONES }),
 });
 
+/** His numbers at rest: His eyes on the accused at His right (screen left), the smile court-12 draws. */
 export const CHRIST_KNOBS = christ.knobs;
 
+/** court.you's pixels to units about His head's centre. */
 const fromFront = ([x, y]: Pt): Pt => [
   +((x - FRONT_PANEL.head[0]) * FRONT_PANEL.scale).toFixed(2),
   +((y - FRONT_PANEL.head[1]) * FRONT_PANEL.scale).toFixed(2),
 ];
 const front = (pts: ReadonlyArray<Pt>) => pts.map(fromFront);
+/** court.you's pixels to units from His feet, for what lies on the robe. */
 const frontBody = (pts: ReadonlyArray<Pt>) =>
   front(pts).map(([x, y]): Pt => [+(x + HEAD.x).toFixed(2), +(y + HEAD.y).toFixed(2)]);
 
+/**
+ * The robe turned to us, court.you's sides on robe-5's cut: the shoulders
+ * as court.you draws them, wider than the three-quarter figure's; past where
+ * His hands cover court.you's edges, the far side runs on to the sleeve's
+ * end and the near side down to robe-5's, and from the sleeves' ends round
+ * the hem the robe is robe-5's (`ROBE_CUT`).
+ */
 const FRONT_ROBE_CUT: Pt[] = [
   [-32.4, -334],
   [44, -334],
@@ -313,6 +372,11 @@ const FRONT_ROBE = {
   paper: PAPERS.whiteRobe,
 };
 
+/**
+ * The sash turned to us, court.you's: from over the far shoulder across the
+ * chest; past the rail's last baluster it runs on to robe-5's near hip, and
+ * the robe's outline cuts what runs off it.
+ */
 const FRONT_SASH_RIGHT: Pt[] = [
   [80, -345],
   ...frontBody(FRONT_SASH.right),
@@ -322,6 +386,7 @@ const FRONT_SASH_RIGHT: Pt[] = [
 ];
 const FRONT_SASH_LEFT: Pt[] = [[40, -345], ...frontBody(FRONT_SASH.left), [-95, -130], [-95, -60]];
 
+/** The robe turned to us: court.you's broad V under the beard, the sash laid over its right side. */
 const FRONT_ROBE_TONES = [
   { pts: [...FRONT_SASH_RIGHT, [140, -62], [140, -345]] satisfies Pt[], color: ROBE_SHADING.color },
   { pts: frontBody(FRONT_NECK), color: NECK_SKIN, skin: true },
@@ -329,9 +394,22 @@ const FRONT_ROBE_TONES = [
   { pts: [...FRONT_SASH_LEFT, ...[...FRONT_SASH_RIGHT].reverse()], color: SASH_TONES[0].color },
   { pts: sashShade(FRONT_SASH_RIGHT), color: SASH_TONES[1].color },
 ] as const;
+/** His head turned to us, in units about its centre: court.you's outline inside the ink. */
 const FRONT_HEAD = front(FRONT_REGION);
+/**
+ * The locks beside the beard, as court.you paints them: the far one in the
+ * shade (0.23 in value), the near one toward the window a step lighter
+ * (0.30); the beard's shade band lies between each and the beard.
+ */
 const LOCK = { near: '#4c2e1e', far: '#3a241c' } as const;
 
+/**
+ * Christ turned to us (`court.you`, the kept try 2): the same figure, frame,
+ * feet and hands, His robe and sash turned with Him, His head as court.you
+ * draws it facing the viewer, both ears in His hair, His mouth open in the
+ * smile, His face Kit A's marks traced there and turned as His eye line tips. The scene turns Him by showing
+ * this artboard in place of `christ`'s.
+ */
 export const christFront = figure({
   ...HIM,
   concept: {
@@ -373,8 +451,10 @@ export const christFront = figure({
   body: Robe.Cut({ ...FRONT_ROBE, tones: FRONT_ROBE_TONES }),
 });
 
+/** His numbers turned to us: His eyes on the viewer, the smile court.you draws. */
 export const CHRIST_FRONT_KNOBS = christFront.knobs;
 
+/** The face `check` reads, in a view: its node, and His head's height in that view. */
 const faceCheckOf = (outline: ReadonlyArray<Pt>) => {
   const ys = outline.map(([, y]) => y);
   return { node: 'face', height: Math.max(...ys) - Math.min(...ys) } as const;

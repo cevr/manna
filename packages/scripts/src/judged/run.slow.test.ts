@@ -10,8 +10,10 @@ import { judgedModel } from './model.js';
 import { type JudgedRule, ruleKey } from './rule.js';
 import { findingLine, judge, partsOf, runLine } from './run.js';
 
+/** An item a judged rule reads. */
 type RuleItem = Parameters<typeof judge>[1][number];
 
+/** A run's options but how it reads the texts it asks about: `judgeBy` reads them from its cases. */
 type Options = Omit<Parameters<typeof judge>[2], 'textsOf'>;
 import { type Answer, type Verdict, MAX_AGE_DAYS, cacheKey, dayOf } from './store.js';
 import { env, historyComment, missing, typesafeHttp } from './testing.js';
@@ -21,6 +23,7 @@ const labelOf = (p: number) => {
   return 'today';
 };
 
+/** Each of `keys` answered `today` for sure. */
 const allToday = (keys: ReadonlyArray<string>) =>
   Object.fromEntries(
     keys.map((k) => [
@@ -31,6 +34,7 @@ const allToday = (keys: ReadonlyArray<string>) =>
 
 const NO_USAGE = { inputTokens: 0, outputTokens: 0 };
 
+/** A fake model: p(history) for each text by `pOf`; it records each request's keys, texts and instructions. */
 const countingModel = (pOf: (text: string) => number) => {
   const requests: Array<{
     keys: Array<string>;
@@ -68,6 +72,10 @@ const countingModel = (pOf: (text: string) => number) => {
   return { layer, requests };
 };
 
+/**
+ * An item as a case writes it: its text, its own key its text unless the
+ * case names one, and its offset 0 unless the case names one.
+ */
 type CaseItem = Omit<RuleItem, 'rule' | 'key' | 'start'> & {
   readonly text: string;
   readonly key?: string;
@@ -86,6 +94,7 @@ const P = new Map([
   ['Before the batch this read argv.', 0.89],
 ]);
 
+/** A run's limits, its store in a temporary folder. */
 const judging = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -101,6 +110,7 @@ const judging = Effect.gen(function* () {
   return options;
 });
 
+/** Keeps `fresh` in the store at `file` on the clock's day, as a run that read nothing else. */
 const keep = (file: string, fresh: ReadonlyMap<string, Verdict>) =>
   Effect.flatMap(Clock.currentTimeMillis, (now) =>
     keepAnswers(file, { fresh, read: new Set(), day: dayOf(now) }),
@@ -109,6 +119,11 @@ const keep = (file: string, fresh: ReadonlyMap<string, Verdict>) =>
 const withFs = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   effect.pipe(Effect.scoped, Effect.provide(BunServices.layer));
 
+/**
+ * Judges `items`, each by its rule, as the runner does: each keyed in the
+ * store for its rule on the options' model, each asked text read from its
+ * case.
+ */
 const judgeAll = (
   rules: ReadonlyArray<JudgedRule>,
   items: ReadonlyArray<CaseItem & { readonly rule: JudgedRule }>,
@@ -136,6 +151,7 @@ const judgeAll = (
   );
 };
 
+/** Judges `items` by `rule` alone: its one outcome. */
 const judgeBy = (rule: JudgedRule, items: ReadonlyArray<CaseItem>, options: Options) =>
   Effect.map(
     judgeAll(
@@ -146,6 +162,7 @@ const judgeBy = (rule: JudgedRule, items: ReadonlyArray<CaseItem>, options: Opti
     (outcomes) => outcomes[0]!,
   );
 
+/** `texts` asked by `rule`, cut into parts (a question's own limit 30,000 unless `limits` names one): each part's texts. */
 const partsOfTexts = (
   rule: JudgedRule,
   texts: ReadonlyArray<string>,
@@ -570,6 +587,12 @@ describe('a judged rule', () => {
   );
 });
 
+/**
+ * The lint's model over a fake TypeSafe answering every request with
+ * `status` and `body` (of the request's question keys), its key in the
+ * environment; it records the requests' URLs. `keyless` is the same model
+ * with no key, in the environment or the keychain.
+ */
 const typesafeAnswering = (
   status: Parameters<typeof typesafeHttp>[0],
   body: (keys: ReadonlyArray<string>) => unknown,
@@ -594,6 +617,12 @@ const choice = (label: string, history: number) => ({
   confidence: 0.96,
 });
 
+/**
+ * `effect` run on the test clock, moved on 50 ms at a time until it ends:
+ * its retries' waits pass. The run reads and writes the store by real I/O,
+ * so the clock moves until the run is done, yielding to the event loop
+ * between ticks: a count of ticks runs out before slow I/O ends.
+ */
 const ticking = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.gen(function* () {
     const done = yield* Ref.make(false);
@@ -605,6 +634,7 @@ const ticking = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     return yield* Fiber.join(fiber);
   });
 
+/** Judges ITEMS through `layer`, expects no finding, and answers the run's `[judged]` line. */
 const lineOver = <E>(layer: Layer.Layer<DecisionModel.DecisionModel, E>) =>
   Effect.gen(function* () {
     const outcome = yield* judgeBy(historyComment, ITEMS, yield* judging);
@@ -612,6 +642,7 @@ const lineOver = <E>(layer: Layer.Layer<DecisionModel.DecisionModel, E>) =>
     return runLine(outcome);
   }).pipe(Effect.provide(layer), withFs);
 
+/** Judges twenty items through `layer`, a part each, and answers the run's `[judged]` line. */
 const onePartEachOver = <E>(layer: Layer.Layer<DecisionModel.DecisionModel, E>) =>
   Effect.gen(function* () {
     const items = Array.from({ length: 20 }, (_, i) => ({
@@ -622,6 +653,7 @@ const onePartEachOver = <E>(layer: Layer.Layer<DecisionModel.DecisionModel, E>) 
     return runLine(yield* judgeBy(historyComment, items, { ...(yield* judging), bound: 1 }));
   }).pipe(Effect.provide(layer), withFs);
 
+/** The answer TypeSafe gives the first item, history; every other is today. */
 const FIRST = new Map([['c0', choice('history', 0.96)]]);
 
 describe("a judged rule's store", () => {
@@ -642,8 +674,10 @@ describe("a judged rule's store", () => {
     }).pipe(withFs),
   );
 
+  /** The store's lock file beside `storeFile`. */
   const lockOf = (storeFile: string) => storeFile.replace(/store\.json$/, '.store.json.lock');
 
+  /** SQLite's write lock on the store's lock file, held for the scope, as another run would hold it. */
   const holding = (storeFile: string) =>
     Effect.acquireRelease(
       Effect.gen(function* () {
@@ -696,6 +730,7 @@ describe("a judged rule's store", () => {
     }).pipe(withFs),
   );
 
+  /** The real file system, but writing the store's partial file first does `before` to that path. */
   const writingPartial = (
     before: (fs: FileSystem.FileSystem, partial: string) => Effect.Effect<void, unknown>,
   ) =>
@@ -885,6 +920,12 @@ describe('a judged rule never fails on its model', () => {
     }),
   );
 
+  /**
+   * Judges ITEMS through a TypeSafe that refuses the first two requests with
+   * `refused` (each naming `retry-after: 2`) and answers the third; expects
+   * the answer kept, and the waits between the sends at least `waits` and
+   * under twice each.
+   */
   const retried = (
     refused: number,
     waits: readonly [number, number],

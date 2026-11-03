@@ -1,5 +1,6 @@
 type Pt = readonly [number, number];
 
+/** Each view's joints, view pixels: a shoulder at the sleeve's middle a little below the shoulder's curve, an elbow at the sleeve's middle on its axis. */
 export const JOINTS = {
   front: {
     shoulderRight: [43, 250],

@@ -5,6 +5,7 @@ import type { BaseUIComponentProps } from '../../internals/types.ts';
 import { useRenderElement } from '../../internals/useRenderElement.tsx';
 import { type RegisterId, useRegisteredId } from '../../utils/useRegisteredId.ts';
 
+/** Sets the id labelling the group. */
 type MenuGroupContextValue = RegisterId;
 
 export const MenuGroupContext = createContext<MenuGroupContextValue | null>(null);
@@ -19,6 +20,7 @@ function useMenuGroupRootContext(): MenuGroupContextValue {
   return context;
 }
 
+/** The label id a group's label registers. */
 export function createGroupLabelId() {
   const [labelId, setLabelId] = createSignal<string | undefined>(undefined, { ownedWrite: true });
   const update: MenuGroupContextValue = (fn) => setLabelId((current) => fn(current));
@@ -51,6 +53,7 @@ interface MenuGroupLabelState {}
 
 interface MenuGroupLabelProps extends BaseUIComponentProps<'div', MenuGroupLabelState> {}
 
+/** The label of a `Menu.Group`; hidden from assistive tech, which reads it as the group's name. */
 export function MenuGroupLabel(componentProps: MenuGroupLabelProps): JSX.Element {
   const elementProps = omit(componentProps, 'class', 'style', 'render', 'id');
   const id = useRegisteredId(componentProps, useMenuGroupRootContext());

@@ -4,6 +4,7 @@ import type { State, ToastStore } from './store.ts';
 
 export interface ToastContextValue {
   store: ToastStore;
+  /** The store's state, as a signal (updates once the change flushes). */
   state: Accessor<State>;
 }
 
@@ -17,6 +18,7 @@ export function useToastProviderContext(): ToastContextValue {
   return context;
 }
 
+/** A memo over one selection of the provider's state. */
 export function useToastSelector<T>(
   context: ToastContextValue,
   selector: (state: State) => T,

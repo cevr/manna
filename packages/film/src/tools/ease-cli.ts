@@ -6,8 +6,10 @@ import { renderEase } from './ease.ts';
 import { filmNamed } from './film-repo.ts';
 import type { Pages } from './pages.ts';
 
+/** A segment flag, `<a>-<b>` (frames, both drawn). */
 const Segment = Schema.TemplateLiteralParser([Schema.Int, '-', Schema.Int]);
 
+/** `film concept ease`, drawing on `pages` (the app's export pages). */
 export const ease = <E, R>(pages: Layer.Layer<Pages, E, R>) =>
   Command.make(
     'ease',

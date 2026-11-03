@@ -8,16 +8,20 @@ import { RigUnloadable } from '../core/errors.ts';
 import { onceScoped } from '../core/once.ts';
 import { RiveRuntime } from './runtime.ts';
 
+/** Each engine's module, loaded with the first rig it draws. */
 const loadCanvas = () => import('@rive-app/canvas-advanced');
 const loadGl = () => import('@rive-app/webgl2-advanced');
 
+/** Why `engine`'s runtime would not start. */
 const unstarted = (engine: RiveEngine) => (cause: unknown) =>
   RigUnloadable.make({ rig: `the ${engine} runtime`, reason: String(cause) });
 
+/** Whether this page can make a WebGL 2 context, which the Rive Renderer draws with. */
 const hasWebGl2 = Effect.sync(() =>
   Option.isSome(Option.fromNullishOr(document.createElement('canvas').getContext('webgl2'))),
 );
 
+/** Each engine's runtime, started. */
 const ENGINES = {
   canvas: Effect.flatMap(
     Effect.tryPromise({ try: loadCanvas, catch: unstarted('canvas') }),

@@ -9,6 +9,7 @@ import {
 import { fonts } from '../../palette.ts';
 import { VERSE } from '../../look.ts';
 
+/** A 2D canvas off the page, `w` × `h`. */
 const sheet = (w: number, h: number) => {
   const canvas = document.createElement('canvas');
   canvas.width = w;
@@ -16,8 +17,10 @@ const sheet = (w: number, h: number) => {
   return canvas;
 };
 
+/** The hand type in the world is set with: still, no boil. */
 const STILL: Hand = { boil: 0, seed: 1 };
 
+/** "Righteous" in gold on a cream plate with a dark rule round it: the verdict, stamped. */
 export const verdictPlate = (): HTMLCanvasElement => {
   const canvas = sheet(144, 36);
   const ctx = canvas.getContext('2d');
@@ -38,12 +41,19 @@ export const verdictPlate = (): HTMLCanvasElement => {
   return canvas;
 };
 
+/** Job's page: its size in texels, its paper and ink. */
 export const PAGE = { w: 256, h: 360, paper: '#e9e1cc', ink: '#2a2420', rule: '#9a8a70' } as const;
 
+/** Where the verse starts on the page, and the reference above it. */
 const TEXT = { x: 18, y: 104, ref: 62 } as const;
 
+/** A canvas for the page, made once with the desk it lies on. */
 export const pageCanvas = (): HTMLCanvasElement => sheet(PAGE.w, PAGE.h);
 
+/**
+ * Job 9:2 painted whole onto `canvas`, the phrase highlighted `highlight` of
+ * the way, in `style`; returns the highlight's last line, in the page's texels.
+ */
 export const paintPage = (
   canvas: HTMLCanvasElement,
   highlight: number,

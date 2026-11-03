@@ -32,6 +32,7 @@ import { IMPORT_RULES } from './library.ts';
 import { testExportInfo } from './browser/testing.ts';
 import { Picture, pictureVariant } from '../core/board-render.ts';
 
+/** A film of three scenes, 4, 5 and 6 s, and one short over its first. */
 const cutShort = {
   id: 'cut',
   title: 'A cut',
@@ -53,6 +54,7 @@ const threeScenes = {
   look: Option.none(),
   shorts: [cutShort],
 };
+/** `address` resolved against the three-scene film. */
 const scoped = (address: Address) => Result.getOrThrow(resolveAddress(threeScenes, address));
 const bc = scoped({ _tag: 'Scenes', ids: ['b', 'c'] });
 
@@ -311,6 +313,7 @@ describe('jobOf', () => {
 });
 
 describe('segmentChunks, one segment', () => {
+  /** One segment's frames `[from, to)`, chunked for `workers` pages. */
   const oneSegment = (from: number, to: number, workers: number) =>
     segmentChunks([{ from, to }], workers);
 
@@ -325,6 +328,7 @@ describe('segmentChunks, one segment', () => {
     }
   });
 
+  /** The frames in each chunk, in order. */
   const sizes = (from: number, to: number, workers: number) =>
     oneSegment(from, to, workers).map((c) => c.to - c.from);
 

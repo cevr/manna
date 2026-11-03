@@ -8,6 +8,7 @@ const here = contextAt('ask', '/films/talk/studio?sel=beat:ask#t=1');
 
 const words = (scene: string, from: number, to: number): WordsSelection =>
   Selection.cases.Words.make({ scene, from, to });
+/** The menu opened on word `index` of `scene`. */
 const onWord = (scene: string, index: number): Context =>
   withSelection(here, [words(scene, index, index)]);
 

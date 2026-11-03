@@ -15,6 +15,7 @@ import {
 import { type Key, clamp, hash2, keys, lerp } from '@manna/film/core';
 import { C, CHEST, type Person, person, piece, type Hands } from './kit.ts';
 
+/** A fig leaf, stem at (0, 0), pointing up, about 60 units long at size 1. */
 const leafShape = (s: number, seed: number): Pt[] =>
   spline(
     Array.from({ length: 15 }, (_, i): Pt => {
@@ -27,6 +28,10 @@ const leafShape = (s: number, seed: number): Pt[] =>
     true,
   );
 
+/**
+ * A fig-leaf apron over a person's garment (in the person's units): `count`
+ * leaves shown, `droop` 0..1 wilts them brown and lets them hang.
+ */
 const APRON: ReadonlyArray<readonly [number, number, number]> = [
   [-16, -44, -0.3],
   [18, -46, 0.35],
@@ -73,26 +78,39 @@ export const apron = (
   });
 };
 
+/** A tree's shape: every tree in the film is this one tree at another size. */
 interface Tree {
+  /** The trunk's height and width. */
   readonly height: number;
   readonly trunk: number;
+  /** How many leaf lobes ring the crown, and how far they sit from its centre. */
   readonly lobes: number;
   readonly spread: number;
+  /** The lobes' two colours, alternating from the back. */
   readonly leaves: readonly [string, string];
+  /** The trunk's board. */
   readonly bark?: string;
+  /** Turns the ring of lobes and reseeds their shapes, so neighbours differ. */
   readonly seed?: number;
+  /** 0..1: the trunk climbs over 0–0.6, then the crown opens out of it over 0.4–1. */
   readonly grow?: number;
 }
 
+/** The trunk climbs over the first 0.6 of a tree's growth. */
 const TRUNK: ReadonlyArray<Key> = [
   [0, 0],
   [0.6, 1, 'outCubic'],
 ];
+/** The crown opens out of it over the last 0.6, a settling pop. */
 const CROWN: ReadonlyArray<Key> = [
   [0.4, 0],
   [1, 1, 'outBack'],
 ];
 
+/**
+ * A tree, feet at (0, 0): a board trunk and a crown of leaf lobes ringed
+ * around its top, each lobe about 2 × `spread` wide.
+ */
 export const tree = (ctx: CanvasRenderingContext2D, hand: Hand, t: Tree) => {
   const seed = t.seed ?? 0;
   const grow = t.grow ?? 1;
@@ -122,6 +140,10 @@ export const tree = (ctx: CanvasRenderingContext2D, hand: Hand, t: Tree) => {
   });
 };
 
+/**
+ * The path ahead, near left to far right, and the hill it climbs, in its
+ * view's units: `within`'s `second` panel, and the view from `daily`'s window.
+ */
 export const PATH_AHEAD: ReadonlyArray<Pt> = [
   [-360, 250],
   [-180, 200],
@@ -132,6 +154,7 @@ export const PATH_AHEAD: ReadonlyArray<Pt> = [
 ];
 export const PATH_HILL = blob(0, 260, 1100, 420, 31);
 
+/** Where the path ahead is at `t` 0..1 along it, written into `out`. */
 export const alongPath = (t: number, out: [number, number]): [number, number] => {
   const k = clamp(t) * (PATH_AHEAD.length - 1);
   const i = Math.min(PATH_AHEAD.length - 2, Math.floor(k));
@@ -142,8 +165,17 @@ export const alongPath = (t: number, out: [number, number]): [number, number] =>
   return out;
 };
 
+/** The resting figure's default: plain grey paper. */
 const PAPER: Person = {};
 
+/**
+ * The Sabbath rest (Heb 4:10), full frame: a cardboard field at golden hour,
+ * tools set down, the figure leaning against a tree with its face to the low
+ * sun. `settle` 0..1 eases the push-in back to rest; `rest` 0..1 settles the
+ * figure and swells the sun. `dress` is what the figure wears (grey paper
+ * unless given) and `lit` 0..1 glows the heart in their chest: `daily`'s
+ * Sabbath, the robed figure from `robe` at rest.
+ */
 export const restingField = (
   ctx: CanvasRenderingContext2D,
   w: number,

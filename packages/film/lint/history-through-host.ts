@@ -10,49 +10,62 @@ import { definitionOf, importsAs, keyName, memberName, unwrapped } from './nodes
 
 const URL_STATE = '@manna/url-state';
 
+/** The module that owns the address bar: `addressOn` is imported from a path ending here. */
 const HOST_MODULE = /(?:^|\/)browser\/host\.ts$/u;
 
 const MESSAGE =
   "a history move chosen here: a place's field declares its policy (Place.history, @manna/url-state), and the address bar is written through addressOn (packages/film/src/browser/host.ts).";
 
+/** What a value is, of those this rule watches: the `Location` service, the bar `addressOn` gives, or `UrlState`. */
 type Held = 'location' | 'bar' | 'urlState';
 
+/** The moves a page never reads off what it holds. */
 const REFUSED: Readonly<Record<Held, ReadonlyArray<string>>> = {
   location: ['push', 'replace', 'back', 'forward', 'go'],
   bar: ['back', 'forward'],
   urlState: ['navigate'],
 };
 
+/** Every move refused on anything: the names worth asking what their receiver holds. */
 const MOVES: ReadonlySet<string> = new Set(Object.values(REFUSED).flat());
 
+/** An answer read from the scope tree. */
 type Reads<A> = Effect.Effect<A, never, RuleContext>;
 
+/** What a value holds: none, or one of `Held`. */
 type Holds = Reads<Option.Option<Held>>;
 
 const no: Reads<boolean> = Effect.succeed(false);
 
+/** Whether any answer is yes, asked in order. */
 const some = (answers: ReadonlyArray<Reads<boolean>>): Reads<boolean> =>
   Effect.map(Effect.all(answers), (all) => all.some((a) => a));
 
+/** The first answer that holds something, asked in order. */
 const first = (answers: ReadonlyArray<Holds>): Holds =>
   Effect.map(Effect.all(answers), (all) => Option.firstSomeOf(all));
 
+/** `held` when `yes`, else nothing. */
 const holds = (held: Held, yes: Reads<boolean>): Holds =>
   Effect.map(yes, (y) => Option.liftPredicate(held, () => y));
 
+/** Whether a module is `@manna/url-state`. */
 const isUrlState = (from: string) => from === URL_STATE;
 
+/** Whether `node` reads `@manna/url-state`'s export `name`: imported, or `<url-state ns>.name`. */
 const readsUrlState = (node: ESTree.Node, name: string): Reads<boolean> => {
   if (node.type === 'Identifier') return importsAs(node, isUrlState, name);
   if (node.type !== 'MemberExpression' || !Option.contains(memberName(node), name)) return no;
   return importsAs(node.object, isUrlState, '*');
 };
 
+/** `UrlState.UrlState`: the service read off url-state's `UrlState` namespace. */
 const isUrlStateTag = (n: ESTree.Node): Reads<boolean> => {
   if (n.type !== 'MemberExpression' || !Option.contains(memberName(n), 'UrlState')) return no;
   return readsUrlState(unwrapped(n.object), 'UrlState');
 };
 
+/** The service `node` names: url-state's `Location`, or its `UrlState.UrlState`. */
 const serviceNamed = (node: ESTree.Node): Holds => {
   const n = unwrapped(node);
   return first([
@@ -61,6 +74,7 @@ const serviceNamed = (node: ESTree.Node): Holds => {
   ]);
 };
 
+/** `<service>`, or `<service>.asEffect()`: the effect that gives the service. */
 const serviceEffect = (node: ESTree.Node): Holds => {
   const n = unwrapped(node);
   if (
@@ -72,18 +86,21 @@ const serviceEffect = (node: ESTree.Node): Holds => {
   return serviceNamed(n);
 };
 
+/** `yield* <service>`. */
 const yieldsService = (node: ESTree.Node): Holds => {
   if (node.type !== 'YieldExpression' || !node.delegate || !node.argument)
     return Effect.succeedNone;
   return serviceEffect(node.argument);
 };
 
+/** Whether `node` names effect's `Context`: bound to `import { Context } from 'effect'`, or to `effect/Context` whole. */
 const isContext = (node: ESTree.Node): Reads<boolean> =>
   some([
     importsAs(node, (from) => from === 'effect', 'Context'),
     importsAs(node, (from) => from === 'effect/Context', '*'),
   ]);
 
+/** `Context.get(context, <service>)` or `Context.getUnsafe(context, <service>)`: the service, out of a context. */
 const takenFromContext = (node: ESTree.Node): Holds => {
   if (node.type !== 'CallExpression' || node.callee.type !== 'MemberExpression')
     return Effect.succeedNone;
@@ -97,11 +114,13 @@ const takenFromContext = (node: ESTree.Node): Holds => {
   });
 };
 
+/** `addressOn(host)`, under a name bound to `browser/host.ts`'s `addressOn`. */
 const makesBar = (node: ESTree.Node): Reads<boolean> => {
   if (node.type !== 'CallExpression') return no;
   return importsAs(unwrapped(node.callee), (from) => HOST_MODULE.test(from), 'addressOn');
 };
 
+/** `<service>.use` or `<service>.useSync`: the service `callee` hands its callback. */
 const usedOn = (callee: ESTree.Node): Holds => {
   if (
     callee.type !== 'MemberExpression' ||
@@ -111,6 +130,7 @@ const usedOn = (callee: ESTree.Node): Holds => {
   return serviceNamed(callee.object);
 };
 
+/** `<service>.asEffect().pipe(…, call, …)`: the service `call` is piped on. */
 const pipedOn = (call: ESTree.Node): Holds => {
   const piped = call.parent;
   if (
@@ -123,6 +143,12 @@ const pipedOn = (call: ESTree.Node): Holds => {
   return serviceEffect(piped.callee.object);
 };
 
+/**
+ * The service a function is handed: the callback of `<service>.use(…)`, of a
+ * call that also takes `<service>.asEffect()` (`Effect.flatMap(
+ * Location.asEffect(), fn)`), or of a call piped on it (`Location.asEffect()
+ * .pipe(Effect.flatMap(fn))`).
+ */
 const givenService = (fn: ESTree.Node): Holds => {
   const call = fn.parent;
   if (call?.type !== 'CallExpression' || !call.arguments.some((a) => a === fn))
@@ -131,15 +157,18 @@ const givenService = (fn: ESTree.Node): Holds => {
   return first([usedOn(call.callee), ...beside, pipedOn(call)]);
 };
 
+/** Whether `param` is a parameter of the function `fn`. */
 const isParameter = (fn: ESTree.Node, param: ESTree.Node) =>
   (fn.type === 'ArrowFunctionExpression' || fn.type === 'FunctionExpression') &&
   fn.params.some((p) => p === param);
 
+/** What a parameter of a function handed a service holds: that service. */
 const givenAsParameter = (fn: ESTree.Node, param: ESTree.Node): Holds => {
   if (!isParameter(fn, param)) return Effect.succeedNone;
   return givenService(fn);
 };
 
+/** What `receiver` holds, where it is read: a service, the bar, or nothing. */
 const heldBy = (receiver: ESTree.Node): Holds => {
   const value = unwrapped(receiver);
   return Effect.flatMap(
@@ -151,6 +180,7 @@ const heldBy = (receiver: ESTree.Node): Holds => {
   );
 };
 
+/** What `value`, no service read in place, holds: the bar it makes, or what its binding holds. */
 const heldByBarOrBinding = (value: ESTree.Node): Holds =>
   Effect.flatMap(makesBar(value), (bar) => {
     if (bar) return Effect.succeedSome<Held>('bar');
@@ -165,6 +195,7 @@ const heldByBarOrBinding = (value: ESTree.Node): Holds =>
     });
   });
 
+/** What an object pattern takes apart: `const { replace } = yield* Location`, `const { back } = addressOn(host)`. */
 const destructured = (pattern: ESTree.ObjectPattern): Holds => {
   const owner = pattern.parent;
   if (owner.type === 'VariableDeclarator' && owner.id === pattern && owner.init)
@@ -172,6 +203,7 @@ const destructured = (pattern: ESTree.ObjectPattern): Holds => {
   return givenAsParameter(owner, pattern);
 };
 
+/** Whether `name` is a move refused on what `held` reads as. */
 const refusedOn = (held: Holds, name: string): Reads<boolean> =>
   Effect.map(held, (h) => Option.exists(h, (on) => REFUSED[on].includes(name)));
 

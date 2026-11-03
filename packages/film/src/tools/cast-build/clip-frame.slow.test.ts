@@ -5,6 +5,7 @@ import { firstFrameOf, lastFrameOf } from './clip-frame.ts';
 
 const PAPER = [240, 230, 210] as const;
 
+/** A `w` × `h` sheet: a body column standing on row `feet` and a right arm out to its left. */
 const figure = (w: number, h: number, feet: number): Puppet => {
   const paint = (inside: (x: number, y: number) => boolean, rgb: readonly number[]) => {
     const rgba = new Uint8Array(w * h * 4);
@@ -57,6 +58,7 @@ const px = (img: { readonly width: number; readonly rgba: Uint8Array }, x: numbe
   ...img.rgba.subarray((y * img.width + x) * 4, (y * img.width + x) * 4 + 4),
 ];
 
+/** The lowest row whose pixel in column `x` is nearer the body's blue than the paper. */
 const standsOn = (
   img: { readonly width: number; readonly height: number; readonly rgba: Uint8Array },
   x: number,

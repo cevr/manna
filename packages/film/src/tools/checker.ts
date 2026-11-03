@@ -49,8 +49,11 @@ import { type ExportPages, Pages } from './pages.ts';
 type LayoutCheckError = PageOpenError | PageError | PageCrashed | FrameFailed | PlaceError;
 
 interface LayoutCheckOptions {
+  /** Pages probing at once. */
   readonly workers: number;
+  /** The part of the film probed (`resolveAddress`): every scene for the whole film. */
   readonly scope: Scope;
+  /** The server its pages draw on: a wedge's (`check --level`, `wedgeServer`), or none for the PreviewServer. */
   readonly server: Option.Option<string>;
 }
 
@@ -58,6 +61,7 @@ type ProbeFrame = (
   i: number,
 ) => Effect.Effect<Probed, PageOpenError | PageError | PageCrashed | FrameFailed>;
 
+/** Probe frames on `pages`, each at most once however many runs reach it: `seen` keeps them. */
 const probedOnce =
   (pages: ExportPages, seen: Map<number, Probed>): ProbeFrame =>
   (i) =>
@@ -69,11 +73,17 @@ const probedOnce =
           .pipe(Effect.tap((probed) => Effect.sync(() => void seen.set(i, probed)))),
     });
 
+/** What probing across one hold candidate found, and how many frames it drew. */
 interface HoldProbe {
   readonly holds: ReadonlyArray<StaticHold>;
   readonly frames: number;
 }
 
+/**
+ * The last of `frames`, in order, that holds still against `anchor` before
+ * one moves; `from` when the first moves. They are probed `workers` at a
+ * time, so a run grows on every page at once.
+ */
 const reach = (
   probeAt: ProbeFrame,
   workers: number,
@@ -93,6 +103,14 @@ const reach = (
     return still;
   });
 
+/**
+ * A hold candidate is a `StaticHold` when a run of its boil ticks over
+ * `HOLD` holds still against one of them: the longest such run is reported.
+ * The grid ticks are probed first; where two in a row hold still, the run
+ * grows from the first of them tick by tick each way until a tick moves, so
+ * motion no cue declares ends a run and the still stretch after it is still
+ * found. Most candidates that move show it at their grid.
+ */
 const confirmHold = (
   pages: ExportPages,
   workers: number,
@@ -127,24 +145,47 @@ const confirmHold = (
   });
 
 interface ShortCheckOptions {
+  /** Pages probing at once. */
   readonly workers: number;
+  /** The safe zone its text is held to. */
   readonly zone: SafeZoneName;
+  /** Only what its words tell: no frame is probed (the page is opened for its frame rate alone). */
   readonly static: boolean;
 }
 
 type ShortCheckError = LayoutCheckError | ShortError;
 
 interface CheckerService {
+  /**
+   * Probe every sampled frame and return what collides, one finding per pair
+   * and scene; then probe across each hold candidate and return the ones that
+   * hold still.
+   */
   readonly layout: (
     film: LoadedFilm,
     options: LayoutCheckOptions,
   ) => Effect.Effect<ReadonlyArray<LayoutFinding>, LayoutCheckError>;
+  /** A short on the film's frames, at the rate the film declares: the frames its page draws and the renderer cuts. */
   readonly cut: (film: LoadedFilm, short: Short) => Effect.Effect<ResolvedShort, ShortCheckError>;
+  /**
+   * Check a short, resolved on the film's frames: what its words tell (its
+   * length, its first word, its loop's silence); then, unless `static`, its
+   * page probed every half second and at each phrase's first frame for text
+   * past the safe zone, the open for motion and the film's title card, and
+   * its first and last frames' band for the loop.
+   */
   readonly short: (
     film: LoadedFilm,
     short: Short,
     options: ShortCheckOptions,
   ) => Effect.Effect<ReadonlyArray<ShortFinding>, ShortCheckError>;
+  /**
+   * A talk's page probed every half second and at each phrase's first frame
+   * for text past every platform's zone (`platforms`), and its open for motion
+   * (its footage moving is motion), only over the film seconds `span` covers
+   * when it has one (`--scene`, `--act`): the open only where it lies in it.
+   * What its words tell is the static leg's (`talkWords`).
+   */
   readonly talk: (
     film: LoadedFilm,
     talk: TalkVertical,
@@ -155,6 +196,7 @@ interface CheckerService {
 export class Checker extends Context.Service<Checker, CheckerService>()(
   '@manna/film/tools/Checker',
 ) {
+  /** On pages of its own (`Pages`), in the `Browser`, on the app's `PreviewServer`. */
   static readonly layer = Layer.effect(
     Checker,
     Effect.gen(function* () {
@@ -210,6 +252,11 @@ export class Checker extends Context.Service<Checker, CheckerService>()(
         );
       });
 
+      /**
+       * The short resolved on the film's layout, at the rate the film declares
+       * (the one its page draws at): the frames the renderer draws, and its
+       * phrases.
+       */
       const resolved = Effect.fnUntraced(function* (film: LoadedFilm, declared: Short) {
         const placed = yield* placeFilm(film);
         const cut = yield* Effect.fromResult(resolveShort(placed, declared));

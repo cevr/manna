@@ -26,6 +26,7 @@ const noise = (secs: number, seed: number) => {
   const r = rng(seed);
   return Float32Array.from({ length: Math.round(secs * RATE) }, () => (r() * 2 - 1) * 0.5);
 };
+/** `plane` through a one-pole low-pass at `hz`. */
 const lowPassed = (plane: Float32Array, hz: number) => {
   const a = Math.exp((-2 * Math.PI * hz) / RATE);
   let y = 0;
@@ -34,6 +35,7 @@ const lowPassed = (plane: Float32Array, hz: number) => {
     return y;
   });
 };
+/** A band's share, by its index (0 is 31.5 Hz, 15 is 1 kHz, 24 is 8 kHz). */
 const band = (profile: Profile, k: number) => profile.bands[k] ?? 0;
 
 describe('profileOf', () => {

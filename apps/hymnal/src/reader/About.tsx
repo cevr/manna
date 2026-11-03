@@ -1,3 +1,24 @@
+/**
+ * The sheet `About this hymn` opens from a hymn's page: `More like this`,
+ * the hymns whose meaning lies nearest the hymn's (`moreLike`, from the
+ * shipped vectors); `Topics`, the Topical index's topics the hymn is listed
+ * under; `Scripture`, the passages the Scriptural index gives it; and `Sing
+ * to another tune`, the other hymns of its metre (`indexes.ts`). A section
+ * the indexes give nothing for is left out.
+ *
+ * A hymn row closes the sheet and opens that hymn's page over the one it
+ * came from. A topic or a passage closes the sheet and the pages under it
+ * and shows home: a topic opens the home list's `Topics` tab at that topic
+ * (`openAtTopic`), and a passage searches the hymns for where it begins
+ * (`searchQuery`, `searchOpen`, `passageQuery`). When home is not the
+ * stack's first screen (a link opened the hymn or the sheet), home replaces
+ * it (`homeSteps`).
+ *
+ * The sheet is a route, `/about?hymn=<number>`, presented as a native form
+ * sheet with a grabber (`aboutSheetOptions`), of one family with the player
+ * and chord sheets: a drag down closes it, as does `Done`.
+ */
+
 import { useAtomSet } from '@effect/atom-react';
 import { Array as Arr, Option } from 'effect';
 import type { ReactNode } from 'react';
@@ -12,17 +33,28 @@ import type { StackState } from '~/player/title';
 
 import { openAtTopic, searchAt, searchOpen, searchQuery } from './place';
 
+/** The home route's file name, as the stack names its screens. */
 const homeRoute = 'index';
 
+/**
+ * The steps that take the stack shown in `state` (the sheet on top) to the
+ * home screen: the screens over the stack's first are closed when there are
+ * any, and the first is replaced by home when it is not home (a hymn or the
+ * sheet opened by a link, with nothing under it). Closing to a first screen
+ * that is home keeps the home screen as it was.
+ */
 const homeSteps = (state: StackState) => ({
   dismiss: state.index > 0,
   replace: !Arr.head(state.routes).pipe(Option.exists((route) => route.name === homeRoute)),
 });
 
+/** How many hymns `More like this` lists. */
 export const MORE_LIKE = 8;
 
+/** The sheet's route for hymn `number`. */
 export const aboutHref = (number: number): Href => `/about?hymn=${number}`;
 
+/** How the stack presents the about route: a form sheet with a grabber, no header. */
 export const aboutSheetOptions = {
   title: 'About this hymn',
   headerShown: false,
@@ -31,6 +63,7 @@ export const aboutSheetOptions = {
   sheetAllowedDetents: [0.5, 1],
 } satisfies StackScreenOptions;
 
+/** The about route's screen: the sheet for the hymn its params name, or a word that they name none. */
 export function AboutScreen() {
   const params = useParams<{ readonly hymn?: string }>();
   return <AboutSheet hymn={hymnAt(String(params.hymn ?? ''))} />;
@@ -111,6 +144,7 @@ function AboutSheet({ hymn }: { readonly hymn: Option.Option<HymnText> }) {
   );
 }
 
+/** A section of the sheet under its heading, or nothing when it has no rows. */
 function Group({ name, children }: { readonly name: string; readonly children: Array<ReactNode> }) {
   if (children.length === 0) return <></>;
   return (
@@ -129,6 +163,7 @@ function Group({ name, children }: { readonly name: string; readonly children: A
   );
 }
 
+/** A row for each of `numbers` that is a hymn, its test id `<prefix>-<number>`. */
 const hymnRows = (
   numbers: ReadonlyArray<number>,
   prefix: string,
@@ -147,6 +182,7 @@ const hymnRows = (
     )),
   );
 
+/** A hymn: its number and title, a press away from its page. */
 function HymnRow({
   testID,
   hymn,
@@ -179,6 +215,7 @@ function HymnRow({
   );
 }
 
+/** A topic or a passage: its name, a quiet detail after it, a press away from its place on home. */
 function SearchRow({
   testID,
   label,

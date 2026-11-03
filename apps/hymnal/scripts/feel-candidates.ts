@@ -1,3 +1,24 @@
+/**
+ * `bun scripts/feel-candidates.ts --out <dir>`: the dials' sound candidates
+ * as WAV files, for the owner to hear by ear (`src/feel/voice.ts`, `THOCKS`
+ * and `TONES`), and a `README.txt` that names each file. The tables hold
+ * the owner's pick alone now; a later pick adds its candidates to them and
+ * renders them here beside it.
+ *
+ * Each candidate gets three takes, each a 16-bit mono WAV at the voice's
+ * rate:
+ * - `one`: one detent (a key tone's is C);
+ * - `slow`: a slow turn of 12 detents, 300 ms apart (a key tone's runs C up
+ *   to B);
+ * - `fling`: a fast fling of 20 detents, 17 ms apart (3,000 pt/s over 52 pt
+ *   detents), told to the Feel itself (`feelOver`), so the take holds only
+ *   the sounds the app would play: a sound that would start over the last
+ *   one is dropped.
+ *
+ * The README marks the candidates the app plays (`PICKED`). Nothing here
+ * plays a sound.
+ */
+
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Console, Effect, FileSystem, Option, Path } from 'effect';
@@ -18,6 +39,7 @@ import {
   wavOf,
 } from '../src/feel/voice.ts';
 
+/** A take of a candidate: how its detents are told. */
 export const TAKES = [
   { take: 'one', count: 1, gap: 0 },
   { take: 'slow', count: 12, gap: 300 },
@@ -26,6 +48,7 @@ export const TAKES = [
 
 export type Kind = 'thock' | 'tone';
 
+/** A rendered take: its file's name, what it is, how many detents were told and how many sounded, and its bytes. */
 export interface CandidateFile {
   readonly file: string;
   readonly kind: Kind;
@@ -34,17 +57,21 @@ export interface CandidateFile {
   readonly picked: boolean;
   readonly take: (typeof TAKES)[number]['take'];
   readonly told: number;
+  /** Each sound that played: when it started, in milliseconds from the take's start, and how long its file is. */
   readonly sounded: ReadonlyArray<{ readonly at: number; readonly ms: number }>;
   readonly ms: number;
   readonly wav: Uint8Array;
 }
 
+/** A sound's recipe in a candidate's voice: none for a name the voice holds none of. */
 const recipeOf = (recipes: ReadonlyMap<SoundName, Recipe>, sound: SoundName) =>
   Option.fromNullishOr(recipes.get(sound));
 
+/** How long a sound plays in a candidate's voice, in milliseconds: 0 for one it holds none of. */
 const lengthIn = (recipes: ReadonlyMap<SoundName, Recipe>, sound: SoundName) =>
   Option.match(recipeOf(recipes, sound), { onNone: () => 0, onSome: lengthMs });
 
+/** The detents of a take: `count` of them on `dial`, `gap` ms apart, told to a Feel over these sounds. */
 const told = (
   dial: DialName,
   count: number,
@@ -69,6 +96,7 @@ const told = (
   return heard;
 };
 
+/** The sounds `heard`, each at its start, mixed into one take. */
 const mix = (
   heard: ReadonlyArray<readonly [number, SoundName]>,
   recipes: ReadonlyMap<SoundName, Recipe>,
@@ -88,6 +116,7 @@ const mix = (
   return out;
 };
 
+/** Every candidate's three takes. */
 export const candidateFiles = (): ReadonlyArray<CandidateFile> => {
   const kinds = [
     ...Object.entries(THOCKS).map(([name, c]) => ({
@@ -133,6 +162,7 @@ const TAKE_LINES: Record<(typeof TAKES)[number]['take'], string> = {
   fling: 'a fast fling: 20 detents, 17 ms apart, as the app plays it',
 };
 
+/** The README that names each file. */
 export const readmeOf = (files: ReadonlyArray<CandidateFile>): string => {
   const kinds: ReadonlyArray<readonly [Kind, string]> = [
     ['thock', 'The thock: the capo and text-size dials.'],

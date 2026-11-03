@@ -7,18 +7,27 @@ import type { Hub } from '../../command/hub.ts';
 import { type MenuRow, rowKey } from '../../command/menu.ts';
 import { deferredRun, hubChanges, hubKeys } from './changes.ts';
 
+/** A button that opens a menu of commands, and the rows it lists. */
 interface RowsMenuProps {
   readonly hub: Hub;
+  /** Its rows, of the commands available in the context the menu opened in. */
   readonly rows: (available: ReadonlyArray<Command>, ctx: Context) => ReadonlyArray<MenuRow>;
+  /** Its menu's `data-role`, for the page's tests and styles. */
   readonly role: string;
+  /** The edge of the button its menu lines up with. */
   readonly align: 'start' | 'end';
+  /** The button's own words or icon. */
   readonly children: JSX.Element;
+  /** What it is, for the pointer's tip (and a screen reader, without `label`). */
   readonly title: string;
+  /** Its name for a screen reader, when its title does not say it. */
   readonly label?: string;
+  /** Its `data-act`, for the page's tests and styles. */
   readonly act: string;
   readonly class?: string;
 }
 
+/** A button that opens the rows `rows` lists of the commands available now. */
 export const RowsMenu = (props: RowsMenuProps) => {
   const hub = props.hub;
   const changes = hubChanges(hub);

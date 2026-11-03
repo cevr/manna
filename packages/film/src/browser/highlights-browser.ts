@@ -1,17 +1,20 @@
 import { Effect, Layer, Option } from 'effect';
 import { Highlights } from './highlights.ts';
 
+/** The page's highlight registry, when the browser has one. */
 const registry = (): Option.Option<HighlightRegistry> =>
   Option.flatMap(
     Option.liftPredicate(globalThis, (g) => 'CSS' in g),
     (g) => Option.fromNullishOr(g.CSS.highlights),
   );
 
+/** A text node and the offset of its first character in the whole text. */
 interface Piece {
   readonly node: Text;
   readonly from: number;
 }
 
+/** The text `root` holds: itself, or the text of each child that says where it starts (`data-from`). */
 const piecesOf = (root: Node): ReadonlyArray<Piece> => {
   if (root instanceof Text) return [{ node: root, from: 0 }];
   if (!(root instanceof Element)) return [];
@@ -22,6 +25,7 @@ const piecesOf = (root: Node): ReadonlyArray<Piece> => {
   });
 };
 
+/** Whether `range` ends where its text does, and nothing but blank text lies from there to the start of `node`. */
 const blankTo = (range: Range, node: Text): boolean => {
   const end = range.endContainer;
   if (!(end instanceof Text) || range.endOffset !== end.length) return false;
@@ -31,6 +35,13 @@ const blankTo = (range: Range, node: Text): boolean => {
   return between.toString().trim() === '';
 };
 
+/**
+ * `ranges` cut at the pieces: one `Range` for each run of pieces a range
+ * reaches into. A run goes on from one piece to the next only across blank
+ * text (the spaces between a line's words), so a span of words is painted
+ * whole, and is cut wherever anything else stands between them (a mark's
+ * chip, a note's marker, a line number).
+ */
 const rangesIn = (
   pieces: ReadonlyArray<Piece>,
   ranges: ReadonlyArray<readonly [number, number]>,
@@ -57,6 +68,7 @@ const rangesIn = (
     return runs;
   });
 
+/** This page's highlights. */
 export const highlightsLayer: Layer.Layer<Highlights> = Layer.succeed(
   Highlights,
   Highlights.of({

@@ -4,6 +4,7 @@ import { viewRows } from '../../command/menu.ts';
 import { KEYS_SHEET_COMMAND } from './keys-sheet.tsx';
 import { RowsMenu } from './command-chip.tsx';
 
+/** The `⋯` button and its menu, for `hub`'s page. */
 export const ViewMenu = (props: { readonly hub: Hub }) => (
   <RowsMenu
     hub={props.hub}

@@ -17,6 +17,7 @@ const scenes: ReadonlyArray<Timed> = [
   { id: 'b', say: 'The second line.' },
 ];
 
+/** `a` staged by ElevenLabs. */
 const staged: Timings = {
   voice: voiceKey(testVoice),
   scenes: {
@@ -34,6 +35,7 @@ const TIMINGS = '/films/test/narration/timings.json';
 const NARRATION = '/films/test/narration';
 const defaults: ImportOptions = { only: Option.none(), acceptMismatch: new Set(), whole: false };
 
+/** What the owner said into each recording, by beat. */
 const said = new Map([
   ['a', 'Hello world.'],
   ['b', 'The second line.'],
@@ -60,12 +62,14 @@ const setup = (recorded: ReadonlyMap<string, string> = said, untimed = false) =>
   return { files, calls, layer };
 };
 
+/** The film as the tools load it now, from what is stored. */
 const loaded = Effect.gen(function* () {
   const film = testFilm(scenes, staged);
   const timings = yield* (yield* ContentStore).read(film.paths.timings);
   return { ...film, timings } satisfies LoadedFilm;
 });
 
+/** `film` as a take is kept against it. */
 const voiced = (film: LoadedFilm) => Effect.orDie(Effect.fromResult(voicedOf(film)));
 
 const importing = (path: string, options: ImportOptions = defaults) =>
@@ -317,6 +321,7 @@ describe('Takes', () => {
       const a = text('take A');
       const file = `a.${contentHash(c)}.mp3`;
       const attempts = `${NARRATION}/attempts/a`;
+      /** Timings naming `take` as a's take. */
       const naming = (take: string) =>
         Schema.encodeSync(TimingsJson)({
           ...staged,

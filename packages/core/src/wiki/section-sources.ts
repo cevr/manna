@@ -1,3 +1,9 @@
+/** The wiki's corpus-backed layers over the SQL connections they read.
+ *
+ *  Driver-agnostic: a host adapter (`service-bun.ts`) opens the connections
+ *  and hands them here, so which connection feeds which service is decided in
+ *  one place, and the degradation posture holds whatever order they open in. */
+
 import { Layer } from 'effect';
 import type * as SqlClient from 'effect/sql/SqlClient';
 import type { SqlError } from 'effect/sql/SqlError';
@@ -9,11 +15,28 @@ import { TopicService } from '../topics/service.js';
 import { WritingsService } from '../writings/service.js';
 import { WikiSectionSources } from './section-composer.js';
 
+/** One SQL connection, as a host opens it: a file that will not open is a
+ *  typed `SqlError`. */
 type Connection = Layer.Layer<SqlClient.SqlClient, SqlError>;
 
+/** The topic catalog, from `bible.db`'s topic tables.
+ *
+ *  A catalog that will not open stays a typed `SqlError`, and each composition
+ *  says what it means: the section sources degrade to `NotWired` (§3.5), a
+ *  wiki reports `Broken`. Dying here would hide it from the section sources'
+ *  classifier, which reads a died `SqlError` as a fault, not an absence; the
+ *  wiki's `Layer.catchCause` would still report it as `Broken`. */
 export const catalogOver = (connection: Connection): Layer.Layer<TopicService, SqlError> =>
   TopicService.Live.pipe(Layer.provide(connection));
 
+/** The four §6 section sources: the topic catalog and the Bible database
+ *  (two connections to `bible.db`) and the EGW writings library.
+ *
+ *  A corpus that will not open makes this layer *degraded* rather than fatal:
+ *  §3.5's degradation posture applies to the sections too, and a CLI that
+ *  cannot open the EGW library should still print a topic's authored core. It
+ *  still provides `WikiSectionSources`, as `NotWired`, so the page carries the
+ *  reason rather than six sections nobody can account for. */
 export const sectionSourcesOver = (connections: {
   readonly bible: Connection;
   readonly catalog: Connection;

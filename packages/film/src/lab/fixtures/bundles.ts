@@ -4,6 +4,12 @@ import type { BunPlugin } from 'bun';
 import { type PageRender, isPageRender } from '../../core/page-render.ts';
 import { solidPlugin, solidPluginFor } from '../../tools/solid-plugin.ts';
 
+/**
+ * A font file a fixture script imports, named from the pages' root as the
+ * lab's build names it (`/<file>.woff2`): the fixtures' fake server answers
+ * it as the lab's asset route does (`faceFiles`, `harness.ts`), so a test
+ * can hold the UI faces' files and read the page laid out without it.
+ */
 const servedFonts: BunPlugin = {
   name: 'served-fonts',
   setup(build) {
@@ -14,6 +20,12 @@ const servedFonts: BunPlugin = {
   },
 };
 
+/**
+ * The fixtures are classic scripts, which cannot name `import.meta`. Effect's
+ * config reader does (`import.meta?.env`); a bundle keeps that module when a
+ * page loads a module lazily (all of Effect then stays
+ * in the script), so the reader's environment is read as absent.
+ */
 const classicScript: BunPlugin = {
   name: 'classic-script',
   setup(build) {
@@ -33,10 +45,22 @@ const classicScript: BunPlugin = {
 
 export const ENTRIES = ['ask-page.ts', 'ask-hydrated-page.ts', 'render-page.ts'];
 
+/**
+ * The entries bundled with Solid's development build, whose pages say what
+ * a production build keeps quiet: each hydration mismatch, as a warning.
+ */
 const DEVELOPMENT: ReadonlySet<string> = new Set(['ask-hydrated-page.ts']);
 
+/** The entries whose tests show a talk's footage: their bundles keep the decoder. */
 const FOOTAGE_PAGES: ReadonlySet<string> = new Set(['render-page.ts']);
 
+/**
+ * The footage host loads its decoder (mediabunny) with a talk's first frame.
+ * The lab's build keeps it in a chunk of its own that a page with no talk
+ * never fetches (`splitting`); a fixture is one classic script, which would
+ * carry the whole decoder, and its inline map, into every page. A page whose
+ * tests show no footage is bundled with that load failing by name instead.
+ */
 const noDecoder: BunPlugin = {
   name: 'no-decoder',
   setup(build) {
@@ -95,18 +119,30 @@ export const bundled = (entry: string) =>
     }),
   ).pipe(Effect.orDie);
 
+/** What Solid's diagnostics channel tells a listener of a finding: its code, and its words. */
 interface Finding {
   readonly code: string;
   readonly message: string;
 }
 
+/** Solid's diagnostics channel (`OBSERVE.diagnostics`), which its development build exports. */
 interface Diagnostics {
   readonly subscribe: (listener: (finding: Finding) => void) => () => void;
 }
 
+/** Whether `value` is Solid's diagnostics channel. */
 const isDiagnostics = (value: unknown): value is Diagnostics =>
   Predicate.hasProperty(value, 'subscribe') && Predicate.isFunction(value.subscribe);
 
+/**
+ * `render`, failing every render in which the page wrote a signal or a store
+ * (Solid's `SERVER_WRITE`, heard on its diagnostics channel `diagnostics`):
+ * a server's render is pure, its state flowing from its reads, never a
+ * setter. Solid disposes the render's owners as its stream ends, so what
+ * their cleanups write is heard too: the render's end is passed on once
+ * that is done. Solid tells of each kind of write once per loaded module, so
+ * the first render that writes fails, and the test that made it.
+ */
 const pure = (render: PageRender, diagnostics: Diagnostics): PageRender => ({
   bodyClass: render.bodyClass,
   render: (request, sink) => {
@@ -136,6 +172,15 @@ const pure = (render: PageRender, diagnostics: Diagnostics): PageRender => ({
   },
 });
 
+/**
+ * The page render a server entry (`module`, a path) exports as
+ * `name`, bundled as the lab bundles it (`solidPluginFor('ssr')`, for Bun)
+ * into a folder of its own and loaded from there, and held pure (`pure`):
+ * the bundle exports Solid's diagnostics channel beside it, from the copy of
+ * Solid its render runs on, and a build with none dies, so no render passes
+ * for want of a listener. The folder is gone once the module is loaded (it
+ * is one file, read whole).
+ */
 export const servedFile = (module: string, name: string): Effect.Effect<PageRender> =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -170,5 +215,6 @@ export const servedFile = (module: string, name: string): Effect.Effect<PageRend
     return pure(render, loaded.OBSERVE.diagnostics);
   }).pipe(Effect.scoped, Effect.orDie, Effect.provide(BunServices.layer));
 
+/** `servedFile` for a server entry of this folder (`entry`). */
 export const served = (entry: string, name: string): Effect.Effect<PageRender> =>
   servedFile(`${import.meta.dir}/${entry}`, name);

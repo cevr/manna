@@ -6,9 +6,11 @@ import { SHELL_CSS } from './page-shell-style.ts';
 import { PAGE_CSS } from './ask/style.ts';
 import { PHONE, WIDE } from './viewport.ts';
 
+/** Every `(max-width: …px)` and `(min-width: …px)` in `css`. */
 const widthsIn = (css: string): ReadonlyArray<string> =>
   [...css.matchAll(/\((?:max|min)-width:\s*\d+px\)/g)].map((m) => m[0]);
 
+/** The widths in `css` that are neither `PHONE` nor `WIDE`. */
 const offWidths = (css: string) => widthsIn(css).filter((w) => w !== PHONE && w !== WIDE);
 
 describe("the studio's breakpoint", () => {

@@ -83,9 +83,21 @@ import { FRAMES } from './frames.ts';
 import { POSES_PAPERS, type PosesView, TURNAROUND_PAPERS, type TurnaroundView } from './papers.ts';
 import { SKELETONS } from './skeleton.ts';
 
+/**
+ * Each sheet's line, which a look draws again near what moved: the median run
+ * of ink (L* < 40) across his outline on every one of his ten kept views is
+ * 9 px, read the way that reads 8 px on the lead's front (laid at 8.5), so his
+ * line is laid at 9.5; each sheet's ink is its own, the turnaround's darker.
+ */
 const TURNAROUND_LINE = { width: 9.5, ink: [35, 17, 8] } as const;
 const POSES_LINE = { width: 9.5, ink: [48, 30, 15] } as const;
 
+/**
+ * His linen's lit rim, lighter than his papers, so the un-matte's line from
+ * the paper to his ink does not reach it: kept as his, not cleared as paper
+ * (`core/unmatte.ts`, `keep`). Read from the kept crops' tunic beside his
+ * outline on the front and back.
+ */
 const LINEN = [
   [253, 243, 220],
   [253, 238, 210],
@@ -93,8 +105,10 @@ const LINEN = [
   [252, 249, 228],
 ] as const satisfies ReadonlyArray<readonly [number, number, number]>;
 
+/** His seed: specks thinner than the un-matte's band, which keep their ochre on another paper (`core/unmatte.ts`, `thin`). */
 const THIN = ['seed'] as const;
 
+/** His turnaround's puppets, by the view's name in his sheets' views (`library/cutout/puppets.ts`). */
 const TURNAROUND = puppetsOf<TurnaroundView>({
   cast: 'sower',
   frames: FRAMES,
@@ -166,6 +180,7 @@ const TURNAROUND = puppetsOf<TurnaroundView>({
   },
 });
 
+/** His poses' puppets, by the view's name in his sheets' views (`library/cutout/puppets.ts`). */
 const POSES = puppetsOf<PosesView>({
   cast: 'sower',
   frames: FRAMES,
@@ -220,4 +235,5 @@ const POSES = puppetsOf<PosesView>({
   },
 });
 
+/** Each cut view's puppet, by the view's name in his sheets' views: its parts front to back, its part sheet the kept box padded (`frames.ts`), his origin at the kept box's top-left corner, held to the kept box. */
 export const PUPPETS = { ...TURNAROUND, ...POSES };

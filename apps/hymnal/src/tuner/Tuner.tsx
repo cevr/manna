@@ -1,3 +1,31 @@
+/**
+ * The tuner, full screen: a gauge from flat to sharp with its needle and a
+ * hint under it, the string's name and the note heard, and a headstock with
+ * three pegs a side and the six strings' names in circles beside them. A tap
+ * on a circle picks that string, and the reading then measures from it
+ * however far off the pitch is (`readingOn`); a second tap on the picked
+ * string lets it go, back to Auto, which reads against the nearest string
+ * (`reading`). The Auto switch turns either way. Each open starts in Auto. A
+ * string that held in tune keeps its tick.
+ *
+ * It listens through the ear (`native.ios.ts`) or, in a development build, a
+ * fed tone (`?feed=E2:-12`), and reads each frame on the JavaScript thread
+ * through the focus (`hear`, `focus.ts`): a pitch shows only once it has held
+ * for a few frames, so the gliding pitch of talk in the room does not reach
+ * the screen; a level vowel or a sung note held about 170 ms can. The focus
+ * starts afresh each time listening starts and each time the screen rests.
+ * When it listens, asks, pauses and stops is the session's rule
+ * (`session.ts`): this file only hands the world's events to it (the app's
+ * state, the navigation's focus, the player's sounding) and carries out the
+ * work it names. The reading's words go to VoiceOver when they
+ * change, at most once a `LABEL_EVERY`. The tuner plays nothing: no cue, no
+ * tone, no haptic.
+ *
+ * The screen is a route, `/tuner`, a full-screen modal (`_layout.tsx`),
+ * opened from the hymn page's bar, the chord sheet's head and Settings where
+ * the device has the ear (`available`).
+ */
+
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import type { Cause } from 'effect';
 import { Clock, Data, Duration, Effect, Fiber, Match, Option } from 'effect';
@@ -58,22 +86,28 @@ import { type Reading, reading, readingOn, type StringId } from './tuning';
 
 const dev = typeof __DEV__ !== 'undefined' && __DEV__;
 
+/** One log line, written whole (`[tuner] …`) so each reads as the drives grep it. */
 const log = (line: string) => Effect.runSync(Effect.logInfo(line));
 
+/** Runs `effect` on its own fiber, answering nothing. */
 const fork = (effect: Effect.Effect<unknown>) => {
   Effect.runFork(effect);
 };
 
+/** A device with no ear: off iOS, where a link still reaches the tuner. */
 class NoEar extends Data.TaggedError('NoEar')<{}> {}
 
+/** What the screen listens to: the ear, or a fed tone. */
 export interface Source {
   readonly name: 'mic' | 'feed';
+  /** Starts, and answers the sample rate. */
   readonly start: Effect.Effect<number, Cause.UnknownError | NoEar>;
   readonly stop: Effect.Effect<void>;
   readonly onFrame: (listener: (frame: Float32Array) => void) => () => void;
   readonly onEnd: (listener: (reason: ListenEnd) => void) => () => void;
 }
 
+/** The phone around the screen: the permission, Settings and whether the app is active. */
 export interface Device {
   readonly readPermission: Effect.Effect<Permission, Cause.UnknownError>;
   readonly askPermission: Effect.Effect<Permission, Cause.UnknownError>;
@@ -97,6 +131,7 @@ const liveDevice: Device = {
 
 const noEnd = () => () => {};
 
+/** The ear as a source; with none (off iOS) a start is refused. */
 const earSource = (ear: Option.Option<Listen>): Source =>
   Option.match(ear, {
     onNone: () => ({
@@ -115,6 +150,7 @@ const earSource = (ear: Option.Option<Listen>): Source =>
     }),
   });
 
+/** A fed tone at `FEED_RATE`, a frame each frame's length: it never starts the ear, and plays nothing. */
 const feedSource = (feed: Feed): Source => {
   const listeners = new Set<(frame: Float32Array) => void>();
   let running: Option.Option<Fiber.Fiber<never>> = Option.none();
@@ -145,6 +181,7 @@ const feedSource = (feed: Feed): Source => {
   };
 };
 
+/** Whether the player sounds or is about to: loading, playing or buffering. */
 const soundingOf: (state: Player) => boolean = Player.$match({
   Idle: () => false,
   Loading: () => true,
@@ -156,6 +193,7 @@ const soundingOf: (state: Player) => boolean = Player.$match({
   Failed: () => false,
 });
 
+/** The tuner route's screen: the ear, or in a development build the feed its params name. */
 export function TunerScreen() {
   const params = useParams<{ readonly feed?: string }>();
   const source = useMemo(
@@ -190,6 +228,7 @@ function WithPlayer({
   return <Tuner device={device} source={source} sounding={sounding} pause={pause} />;
 }
 
+/** What the screen shows of the frames: the reading, and the strings lit. */
 interface Shown {
   readonly heard: Option.Option<Pick<Reading, 'string' | 'note' | 'octave' | 'inTune'>>;
   readonly tuned: ReadonlySet<StringId>;
@@ -197,6 +236,7 @@ interface Shown {
 
 const nothing: Shown = { heard: Option.none(), tuned: new Set() };
 
+/** Whether two readings show the same: the string, the note and whether it is in tune. */
 const sameHeard = (was: Shown['heard'], now: Shown['heard']): boolean =>
   Option.match(was, {
     onNone: () => Option.isNone(now),
@@ -211,6 +251,7 @@ const sameHeard = (was: Shown['heard'], now: Shown['heard']): boolean =>
       ),
   });
 
+/** The note heard, small under the string's name: `E2`, `A2 · in tune`, or nothing. */
 const noteOf = (heard: Shown['heard']): string =>
   Option.match(heard, {
     onNone: () => '',
@@ -220,15 +261,19 @@ const noteOf = (heard: Shown['heard']): string =>
     },
   });
 
+/** The words read aloud change at most this often. */
 const LABEL_EVERY = 1000;
 
+/** How many frames between two `frame ms` lines. */
 const LOG_EVERY = 10;
 
+/** The string a frame is read against when nothing was heard and Auto is turned off. */
 const LOWEST: StringId = 'E2';
 
 const isListening = (session: Option.Option<Session>) =>
   Option.exists(session, (now) => now.phase._tag === 'Listening');
 
+/** The screen over its device, its source and the player's sounding. */
 export function Tuner({
   device,
   source,
@@ -267,6 +312,11 @@ export function Tuner({
   const latest = useRef({ device, source, pause });
   latest.current = { device, source, pause };
 
+  /**
+   * Says the reading's words, at most once a `LABEL_EVERY`; the latest words
+   * win. Words that differ from the last said go to VoiceOver too (a no-op
+   * with it off); the log names the announcement, never its words.
+   */
   const hush = useCallback(() => {
     const said = spoken.current;
     if (Option.isSome(said.pending)) fork(Fiber.interrupt(said.pending.value));
@@ -293,12 +343,14 @@ export function Tuner({
     [hush],
   );
 
+  /** Says the words `phase` gives the reading; a phase that shows no reading says nothing. */
   const voice = useCallback(
     (phase: Phase['_tag'], heard: Option.Option<Reading>) =>
       Option.match(wordsOf(phase, heard), { onNone: hush, onSome: say }),
     [hush, say],
   );
 
+  /** Back to rest in `phase`: nothing heard, nothing held, the needle at centre. */
   const rest = useCallback(
     (phase: Phase['_tag']) => {
       focused.current = unfocused;
@@ -316,6 +368,7 @@ export function Tuner({
     [needle, inTune, voice],
   );
 
+  /** The string the frames are read against: one picked, or none for Auto. Logged when it changes. */
   const aimAt = useCallback((next: Option.Option<StringId>) => {
     if (Option.getOrUndefined(aim.current) === Option.getOrUndefined(next)) return;
     aim.current = next;
@@ -324,6 +377,11 @@ export function Tuner({
     log(`[tuner] target id=${Option.getOrElse(next, () => 'auto')}`);
   }, []);
 
+  /**
+   * A tap on a string's circle: the picked string goes back to Auto, any
+   * other is picked. It reads `aim`, not the last render's `target`, so two
+   * taps before a render still end in Auto.
+   */
   const pick = useCallback(
     (id: StringId) => {
       if (Option.contains(aim.current, id)) return aimAt(Option.none());
@@ -332,6 +390,7 @@ export function Tuner({
     [aimAt],
   );
 
+  /** Auto on clears the target; off picks the string last heard, or the lowest. */
   const toggleAuto = useCallback(() => {
     if (Option.isSome(aim.current)) return aimAt(Option.none());
     aimAt(Option.some(Option.getOrElse(last.current, () => LOWEST)));
@@ -351,6 +410,7 @@ export function Tuner({
   };
   const tell = (event: Event) => dispatch.current(event);
 
+  /** A permission read or answer, logged; a failed one is as denied. */
   const permission = (ask: Effect.Effect<Permission, Cause.UnknownError>) =>
     ask.pipe(
       Effect.orElseSucceed((): Permission => 'denied'),
@@ -397,6 +457,11 @@ export function Tuner({
     });
   };
 
+  /**
+   * One frame through the focus (`hear`), its shown pitch read against the
+   * target or the nearest string: the needle, the latch, the words, the
+   * string last heard and Auto's lit circle all take the focused reading.
+   */
   const read = useCallback(
     (frame: Float32Array) => {
       const target = aim.current;
@@ -420,6 +485,7 @@ export function Tuner({
     [needle, inTune, voice],
   );
 
+  /** A frame in: read on a later turn, so a frame that comes while the last is in work is dropped, never queued. */
   const take = useCallback(
     (frame: Float32Array) => {
       if (busy.current || !isListening(session.current)) return;
@@ -582,12 +648,16 @@ export function Tuner({
   );
 }
 
+/** The needle's swing either side of centre, in degrees, at `NEEDLE_CENTS`. */
 const SWING = 50;
 
+/** The gauge's radius, from the needle's pivot to the scale's ticks, in points. */
 const RADIUS = 130;
 
+/** The scale's ticks, in cents: one each 10, and the in-tune window's edges at ±5. */
 const TICKS = [-50, -40, -30, -20, -10, -5, 0, 5, 10, 20, 30, 40, 50] as const;
 
+/** The gauge: an arc of ticks from flat to sharp, the in-tune window marked in the accent, the needle over them. */
 function Gauge({
   accent,
   swing,
@@ -634,8 +704,15 @@ function Gauge({
   );
 }
 
+/** The strings across the headstock, low to high, as they run down from the nut. */
 const ACROSS: ReadonlyArray<StringId> = [...LEFT].reverse().concat(RIGHT);
 
+/**
+ * The headstock, in Views: three pegs down each side (`LEFT`, `RIGHT`), each
+ * string's circle beside its peg, and the six strings running from the pegs
+ * down past the nut. The lit string's circle is filled and its string drawn
+ * in the accent; a tuned one carries a tick.
+ */
 function Headstock({
   lit,
   picked,
@@ -697,13 +774,21 @@ function Headstock({
   );
 }
 
+/** What a second tap on the picked string does, as VoiceOver reads it after the circle's name. */
 const BACK_TO_AUTO = 'Goes back to Auto';
 
+/** The circle's VoiceOver hint: the picked string's says a second tap goes back to Auto; the others have none. */
 const pickedHint = (picked: boolean): Option.Option<string> => {
   if (picked) return Option.some(BACK_TO_AUTO);
   return Option.none();
 };
 
+/**
+ * One string's circle: its letter, filled while lit, a tick once tuned; it
+ * springs lightly when picked. Picked, VoiceOver reads it as selected, with
+ * a hint that a second tap goes back to Auto. Lit is not picked: in Auto the
+ * string heard is lit, and none is selected.
+ */
 function StringCircle({
   id,
   lit,

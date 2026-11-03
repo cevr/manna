@@ -31,6 +31,7 @@ import { memoryFileSystem, printingTo, text } from './host/testing.ts';
 
 const HOUSE = { text: '/app/docs/ref/house-look.txt', image: '/app/docs/ref/house-look.png' };
 
+/** The house block as the app keeps it. */
 const houseBlock = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   return yield* fs.readFileString(
@@ -38,6 +39,7 @@ const houseBlock = Effect.gen(function* () {
   );
 }).pipe(Effect.provide(BunServices.layer));
 
+/** A memory store holding the app's house block, a look, references, a layout and a heads sheet; nothing under the shell's folder; no films. */
 const over = () =>
   Layer.mergeAll(
     ContentStore.layer,
@@ -72,13 +74,16 @@ const files = () =>
     Path.layer,
   );
 
+/** No export pages: these runs draw no cast render. */
 const NO_PAGES = Layer.succeed(
   Pages,
   Pages.of({ open: () => Effect.die('no export pages in this test') }),
 );
 
+/** No render page: no command run here keys a fit by it. */
 const NO_RENDER_PAGE = '/nonexistent/render-page.html';
 
+/** `film concept …args`: its exit and what it printed. */
 const run = (args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const lines = yield* Queue.unbounded<string>();
@@ -88,6 +93,7 @@ const run = (args: ReadonlyArray<string>) =>
     return { exit, printed: (yield* Queue.clear(lines)).join('\n') };
   });
 
+/** The tag of the typed failure a run ended on, `none` when it succeeded. */
 const failureTag = (exit: Exit.Exit<unknown, unknown>) =>
   Exit.match(exit, {
     onSuccess: () => 'none',
@@ -98,6 +104,7 @@ const failureTag = (exit: Exit.Exit<unknown, unknown>) =>
       }),
   });
 
+/** Three front busts: two level, the third bowed (shorter on the page, its eyes lower). */
 const HEADS = encodePng(
   drawSheet(
     [{}, {}, { ry: 56, eyeBelow: 22 }].map((nod) =>
@@ -117,6 +124,7 @@ const HEADS = encodePng(
 
 const LOOK = ['--look', '/m/look.md', '--references', '/m/refs.md'];
 
+/** A member of its own design in film f: 2.6 of her heads, no hair, her pose sheet's second figure a child. */
 const KID = '/films/f/cast/kid/cast-sheet';
 const KID_RECORD = {
   member: Segment.make('kid'),
@@ -137,6 +145,7 @@ const KID_RECORD = {
   },
 };
 
+/** Her pose sheet drawn as the record names it: she stands about 2.66 of her heads (386 px), the child 2.2 of its own at 0.75 of her height. */
 const KID_SHEET = (() => {
   const figure = {
     ...PLAIN,

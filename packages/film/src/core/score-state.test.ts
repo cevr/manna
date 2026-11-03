@@ -18,6 +18,7 @@ const music: Music = {
 };
 const option = { name: 'piano', music };
 
+/** Scene `a` lasting `secs`, then `b` lasting `last`. */
 const timed = (secs: number, last = 6) =>
   Result.getOrThrow(
     layout(

@@ -1,5 +1,13 @@
+/**
+ * How a rule may be freed. `none`: by nothing (the owner's "never",
+ * "ever"). `owner`: by his word alone, since no part carries an override of
+ * it, so a change to it is asked of him first. `override`: by an override a
+ * part carries, citing his decision on the figure, in his words or by his
+ * pick (`override.ts`).
+ */
 export type Way = 'none' | 'owner' | 'override';
 
+/** A rule: what it says, where it is written, and its way out. */
 interface Rule {
   readonly says: string;
   readonly source: string;
@@ -43,4 +51,5 @@ export const RULES = {
   },
 } as const satisfies Record<string, Rule>;
 
+/** A rule, by its id. */
 export type RuleId = keyof typeof RULES;

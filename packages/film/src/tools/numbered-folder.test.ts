@@ -3,6 +3,7 @@ import { Deferred, Effect, FileSystem, Layer, Path, Ref } from 'effect';
 import { memoryFileSystem } from './host/testing.ts';
 import { reserveNumbered } from './numbered-folder.ts';
 
+/** The in-memory file system, its folder reads held until `runs` of them have begun: runs that read the root at once. */
 const readingAtOnce = (folders: Set<string>, runs: number) =>
   Layer.effect(
     FileSystem.FileSystem,
@@ -24,6 +25,7 @@ const readingAtOnce = (folders: Set<string>, runs: number) =>
     }),
   ).pipe(Layer.provide(memoryFileSystem(new Map(), folders)));
 
+/** `effect` run over `fs` and the paths. */
 const over =
   (fs: Layer.Layer<FileSystem.FileSystem>) =>
   <A, E>(effect: Effect.Effect<A, E, FileSystem.FileSystem | Path.Path>) =>

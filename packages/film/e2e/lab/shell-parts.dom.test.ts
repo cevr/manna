@@ -4,6 +4,7 @@ import { evaluates } from '../../src/lab/fixtures/settled.ts';
 import { type Tab, jsonOf } from '../../src/lab/fixtures/tab.ts';
 import { DEVICES, type Device, LAPTOP, SLOW, STATES, byPlace } from './studio-states.ts';
 
+/** The parts of the shell, by name: the header, the page's name and Go to. */
 const PARTS = {
   header: '.sh-header',
   crumb: '.sh-crumb',
@@ -12,6 +13,7 @@ const PARTS = {
 
 type Part = keyof typeof PARTS;
 
+/** The computed properties that make a part look as it does. */
 const LOOK = [
   'color',
   'backgroundColor',
@@ -56,12 +58,20 @@ const LOOK = [
   'columnGap',
 ];
 
+/** A look, as the page computes it: each property of `LOOK` by name. */
 type Look = { readonly [property: string]: string };
 
+/** Each part in any state: its selector up to its first attribute or pseudo-class (`.sh-films`). */
 const ANY_PART = [
   ...new Set(Object.values(PARTS).map((selector) => selector.replace(/[[:].*$/, ''))),
 ];
 
+/**
+ * In the page: `look(el)`, the computed value of each property of `LOOK` on
+ * `el`; and `childLook(el)`, its first child's look, or `none`, or `part`
+ * when the child is itself a part (the header's Films link), matched as that
+ * part in its own state.
+ */
 const LOOK_OF = `const look = (el) => {
   const style = getComputedStyle(el);
   return Object.fromEntries(${jsonOf(LOOK)}.map((property) => [property, style[property]]));
@@ -73,6 +83,7 @@ const childLook = (el) => {
   return look(child);
 };`;
 
+/** An expression run in the page: each part present, as every match of it, each with its look and its first child's. */
 const LOOKS = `(() => {
   ${LOOK_OF}
   return Object.fromEntries(Object.entries(${jsonOf(PARTS)}).flatMap(([part, selector]) => {
@@ -82,13 +93,23 @@ const LOOKS = `(() => {
   }));
 })()`;
 
+/** A part a page's own state leaves out, and what that state is: none is left out now. */
 const LEFT_OUT: Partial<Record<Part, string>> = {};
 
+/** The parts every page draws. */
 const REQUIRED: ReadonlyArray<string> = Object.keys(PARTS);
 
+/** An expression run in the page: the parts `looks` (`LOOKS` as the page reads) has none of, by name; a whole reference, none. */
 const MISSING = (looks: string) =>
   `Object.keys(${jsonOf(PARTS)}).filter((part) => !(part in ${looks}))`;
 
+/**
+ * What the page draws otherwise than `reference`, a whole one (`MISSING`),
+ * as sentences: a part of `required` it lacks, and for each match of a part
+ * (the second Studio link is `studio 2`), a property off the reference's
+ * first match, its first child missing or a property of it off the reference's. A part
+ * it need not draw is matched when it draws it.
+ */
 const DIFFERENCES = (reference: string, required: ReadonlyArray<string>) => `(() => {
   ${LOOK_OF}
   const ref = ${reference};
@@ -118,24 +139,35 @@ const DIFFERENCES = (reference: string, required: ReadonlyArray<string>) => `(()
   });
 })()`;
 
+/** The controls of the shell, which a pointer and the keyboard's focus land on. */
 const CONTROLS: ReadonlyArray<Part> = ['goto'];
 
+/** The controls each device's header shows: the same on both. */
 const CONTROLS_ON: Readonly<Record<Device['budget'], ReadonlyArray<Part>>> = {
   phone: CONTROLS,
   laptop: CONTROLS,
 };
 
+/** A point on the page, in its viewport's pixels. */
 interface Point {
   readonly x: number;
   readonly y: number;
 }
 
+/**
+ * Where a viewer can hold each control on a page: its middle, for each one
+ * drawn and not left out by the page's own state (`LEFT_OUT`); `covered`, each
+ * such control the pointer cannot reach at its middle (a layer over it), which
+ * is a failure, never a control skipped; and `rest`, a point on the header
+ * over none, for the pointer to wait on.
+ */
 interface Holds {
   readonly at: { readonly [part: string]: Point };
   readonly covered: ReadonlyArray<Part>;
   readonly rest: Point;
 }
 
+/** An expression run in the page: its `Holds`. */
 const HOLDS = `(() => {
   const parts = ${jsonOf(PARTS)};
   const leftOut = ${jsonOf(LEFT_OUT)};
@@ -162,6 +194,12 @@ const HOLDS = `(() => {
   return { at, covered, rest };
 })()`;
 
+/**
+ * An expression run in the page: the look of each of `held`'s controls with
+ * the keyboard's focus put on it (and taken off once read), with `held`: `yes`,
+ * or why not (`not :focus-visible`), so a state the page never takes is a
+ * difference, never a match.
+ */
 const FOCUSED = (held: ReadonlyArray<Part>) => `(() => {
   ${LOOK_OF}
   const parts = ${jsonOf(PARTS)};
@@ -174,17 +212,25 @@ const FOCUSED = (held: ReadonlyArray<Part>) => `(() => {
   }));
 })()`;
 
+/** An expression run in the page: the look of `part`'s first match, with whether the pointer is over it (`held`). */
 const HOVERED = (part: Part) => `(() => {
   ${LOOK_OF}
   const el = document.querySelector(${jsonOf(PARTS[part])});
   return { held: el.matches(':hover') ? 'yes' : 'not :hover', ...look(el) };
 })()`;
 
+/** Each of `held`'s controls on `page`, by part, as it looks focused and under the pointer. */
 interface HeldLooks {
   readonly focus: { readonly [part: string]: Look };
   readonly hover: { readonly [part: string]: Look };
 }
 
+/**
+ * The look of each of `held`'s controls on `page` with the keyboard's focus on
+ * it and with the pointer over it. The Tab offers no DevTools call to force a
+ * state, so each is the viewer's own: the focus put on it as a key would, the
+ * pointer waiting at `holds.rest` meanwhile, then the mouse moved to its middle.
+ */
 const heldLooks = (page: Tab, holds: Holds, held: ReadonlyArray<Part>) =>
   Effect.gen(function* () {
     yield* page.mouse.move(holds.rest.x, holds.rest.y);
@@ -198,8 +244,15 @@ const heldLooks = (page: Tab, holds: Holds, held: ReadonlyArray<Part>) =>
     return { focus, hover };
   });
 
+/** What a held look is read for: whether the state held, then the look. */
 const HELD_READ = ['held', ...LOOK];
 
+/**
+ * Each property `mine` holds otherwise than `theirs`, as a sentence; a state
+ * that did not hold on the page is one (`held`). The reference (a Set) is
+ * the one read against: a state it never took is no look to match, so that is the sentence, and
+ * neither taking a state is a failure, never a match.
+ */
 const heldOff = (name: string, mine: Look, theirs: Look): ReadonlyArray<string> => {
   if (theirs['held'] !== 'yes')
     return [`${name}: the reference's never took it (${theirs['held']})`];
@@ -208,6 +261,14 @@ const heldOff = (name: string, mine: Look, theirs: Look): ReadonlyArray<string> 
   );
 };
 
+/**
+ * Each control a viewer can hold both on `page` and on the reference (`ref`),
+ * focused and under the pointer, read against the reference's held the same way.
+ * The reference holds every one of `controls` (one it cannot is a sentence); a page
+ * holds each it draws but those its own state leaves out (`LEFT_OUT`), and a
+ * control it draws that the pointer cannot reach is a sentence, never one
+ * skipped.
+ */
 const heldDifferences = (ref: Tab, page: Tab, controls: ReadonlyArray<Part> = CONTROLS) =>
   Effect.gen(function* () {
     const refHolds = yield* ref.evaluate<Holds>(HOLDS);
@@ -227,6 +288,7 @@ const heldDifferences = (ref: Tab, page: Tab, controls: ReadonlyArray<Part> = CO
     ];
   });
 
+/** The reference every place is read against: an ask as it opens (`STATES.ask`'s first case). */
 const reference = (viewport: Device['viewport']) =>
   Option.match(
     Arr.findFirst(byPlace(STATES), ([place]) => place === 'ask'),
@@ -236,6 +298,7 @@ const reference = (viewport: Device['viewport']) =>
     },
   );
 
+/** Each place's first case, the place as it opens, but the reference's own (an ask). */
 const OTHER_PLACES = byPlace(STATES).filter(
   ([place], i, all) => place !== 'ask' && all.findIndex(([first]) => first === place) === i,
 );
@@ -261,9 +324,11 @@ for (const device of DEVICES) {
   });
 }
 
+/** In the page: a sheet of `css` added over the shell, as a page's own rule would be. */
 const plant = (css: string) =>
   `(() => { const s = document.createElement('style'); s.textContent = ${jsonOf(css)}; document.head.append(s); return true; })()`;
 
+/** In the page: `differences`' sentences, each up to its property (`studio 2 color`). */
 const named = (differences: string) => `${differences}.map((d) => d.split(' is ')[0])`;
 
 describe("the shell guard's own probe", () => {
@@ -359,8 +424,17 @@ describe("the shell guard's own probe", () => {
   );
 });
 
+/** The kit's states a button is drawn in (`.sh-btn[data-state]`, `page-shell-style.ts`). */
 const KIT_STATES = ['findings', 'warning', 'recording'] as const;
 
+/**
+ * One kit button per state at the top of a page's body, its real ground,
+ * and `window.kitRead(state, held)`: whether the button is in the state
+ * `held` names (`rest`, `hover`, `pressed`, `focus`), then its words' and its
+ * edge's WCAG contrast against the background it draws, each colour composed
+ * (alpha and all) onto the grounds under it, as `kitShort` lines short of
+ * 4.5:1 for the words (1.4.3) or 3:1 for the edge (1.4.11).
+ */
 const KIT_BUTTONS = `(() => {
   const host = document.querySelector('.sh-body');
   for (const state of ${jsonOf(KIT_STATES)}) {

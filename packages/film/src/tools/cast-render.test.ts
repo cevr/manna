@@ -4,6 +4,7 @@ import type { CastModule, CutoutView } from '../canvas/cast.ts';
 import { CastSheetRecord } from '../core/cast-record.ts';
 import { renderedKinds } from './cast-kinds.ts';
 
+/** A cut-out view with one bare part: enough for the table to name it. */
 const view: CutoutView = {
   box: [0, 0, 16, 16],
   at: [8, 8],
@@ -17,6 +18,7 @@ const view: CutoutView = {
   pose: { numbers: {}, root: [8, 8], scale: 1 },
 };
 
+/** A table that cuts the lead's front turnaround and no pose. */
 const table: CastModule = {
   CUTOUT: { lead: { turnaround: { front: view } } },
   SHEETS: { lead: { turnaround: { width: 64, height: 64, scale: 1 } } },
@@ -29,6 +31,7 @@ const kept = (name: string) => ({
   views: [{ view: 1, name, box: [0, 0, 16, 16] as const }],
 });
 
+/** The lead kept a front turnaround and a first pose. */
 const record = Schema.decodeSync(CastSheetRecord)({
   member: 'lead',
   scope: 'film',

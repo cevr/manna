@@ -17,6 +17,7 @@ import { media } from './media-cli.ts';
 import { folderStore } from './media-store.ts';
 import { PrivateStore } from './private-store.ts';
 
+/** The private store, a folder at `store`, and renders under `out`. */
 const storeAt = (out: string, store: string) =>
   Layer.merge(
     Layer.effect(
@@ -30,12 +31,14 @@ const storeAt = (out: string, store: string) =>
     ConfigProvider.layer(ConfigProvider.fromUnknown({ FILMS_OUT: out })),
   );
 
+/** `film media …args` with renders under `out` and the store in `store`: how it ended. */
 const run = (out: string, store: string, args: ReadonlyArray<string>) =>
   Command.runWith(media, { version: '0' })(args).pipe(
     Effect.provide(storeAt(out, store)),
     Effect.exit,
   );
 
+/** Whether a run ended refusing a key the store holds with other bytes. */
 const keyTaken = (exit: Exit.Exit<unknown, unknown>) =>
   Exit.match(exit, {
     onSuccess: () => false,

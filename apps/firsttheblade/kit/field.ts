@@ -1,3 +1,20 @@
+/**
+ * `bun run kit:field`: the hero's still and its wind map, made from the
+ * painted field (`kit/art/field.webp`, brand round 5's repaint at 3072 px)
+ * by `./field-paint.ts`, in a browser that reads and writes the WebP files.
+ *
+ * - `src/art/field-{768,1536,3072}.webp`: the field with the rays that came
+ *   from the top left taken off its sky, their old edges taken off the far
+ *   hills left of the sun, and the sun's own light laid on.
+ * - `src/art/field-wind.png`: the map the hero's wind and shimmer read
+ *   (`src/motion/shaders.ts`), lossless, since its channels are numbers.
+ *
+ * Run `bun run kit` after, so the link cards are drawn from the new still.
+ * Each run ends by naming the stills that differ from the owner's approval
+ * (`./approval.ts`); it never writes the record. A changed still goes to him
+ * as a lab ask that shows it byte for byte as an image block before
+ * `bun run kit:approve` records it.
+ */
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { chromium, type Page } from '@playwright/test';
 import { Data, Effect, FileSystem } from 'effect';
@@ -16,6 +33,7 @@ import {
 const KIT = import.meta.dir;
 const ART = `${KIT}/../src/art`;
 
+/** The widths the page's `srcset` offers, and the wind map's. */
 const WIDTHS = [768, 1536, 3072] as const;
 const WIND_WIDTH = 768;
 
@@ -30,12 +48,14 @@ const step = <A>(name: string, run: () => PromiseLike<A>) =>
     catch: (cause) => new BrowserError({ step: name, cause }),
   });
 
+/** An image's pixels as base64, for the trip into and out of the page. */
 interface Carried {
   readonly width: number;
   readonly height: number;
   readonly base64: string;
 }
 
+/** In the page: a picture's pixels, read from its data URL. */
 const decodeIn = (src: string) => {
   const image = new Image();
   image.src = src;
@@ -55,6 +75,7 @@ const decodeIn = (src: string) => {
   });
 };
 
+/** In the page: pixels written as a file of one type at each width, smoothed down. */
 const encodeIn = ([carried, widths, type, quality]: readonly [
   Carried,
   ReadonlyArray<number>,

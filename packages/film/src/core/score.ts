@@ -3,12 +3,20 @@ import { loudness } from './synth/loudness.ts';
 import type { Interval } from './time.ts';
 
 export const SCORE = {
+  /** The voice is read in windows this long (seconds); one under `SPEECH_GATE` is no one speaking. */
   window: 0.1,
+  /** A pause at least this long (seconds) lets the score play alone. */
   alone: 3,
+  /** The score waits this long after the voice stops before it rises, and is down this long before it speaks. */
   lead: 0.25,
+  /** Each rise and fall between `under` and `alone` takes this long (seconds). */
   ramp: 1,
 } as const;
 
+/**
+ * Where the voice speaks: each run of windows over `SPEECH_GATE`, in film
+ * seconds (the last window may be short; a span in it ends at the voice's end).
+ */
 export const speechSpans = (voice: Pcm): ReadonlyArray<Interval> => {
   const size = Math.max(1, Math.round(SCORE.window * voice.rate));
   const end = voice.frames / voice.rate;
@@ -27,12 +35,18 @@ export const speechSpans = (voice: Pcm): ReadonlyArray<Interval> => {
   return spans;
 };
 
+/**
+ * A stretch where the score plays alone: `hold` at the alone level, with a
+ * ramp up into it (none where the film opens without a voice) and down out of
+ * it (none where the film ends without one).
+ */
 interface Alone {
   readonly hold: Interval;
   readonly rise: boolean;
   readonly fall: boolean;
 }
 
+/** Each pause in `speech` long enough for the score to play alone, over a film `seconds` long. */
 export const aloneSpans = (
   speech: ReadonlyArray<Interval>,
   seconds: number,
@@ -55,6 +69,10 @@ export const aloneSpans = (
   return out;
 };
 
+/**
+ * How far into `alone` the score is at each frame: 0 under the voice, 1 alone,
+ * linear through each ramp.
+ */
 export const aloneWeights = (
   spans: ReadonlyArray<Alone>,
   rate: number,
@@ -77,6 +95,7 @@ export const aloneWeights = (
   return weights;
 };
 
+/** `pcm`'s frames where `keep` holds, joined end to end (a measure, not something to play). */
 const where = (pcm: Pcm, weights: Float32Array, keep: (w: number) => boolean): Pcm => {
   const blocks: Array<Pcm> = [];
   let open = -1;
@@ -91,11 +110,17 @@ const where = (pcm: Pcm, weights: Float32Array, keep: (w: number) => boolean): P
   return concat(pcm.rate, pcm.channels.length, blocks);
 };
 
+/** The two gains (linear) the score plays at: under the voice, and alone. */
 interface ScoreGains {
   readonly under: number;
   readonly alone: number;
 }
 
+/**
+ * The gains that put `score` `under` dB and `alone` dB against `voice`, each
+ * measured where the score plays at it. Where the score is silent (or never
+ * plays at one of them) that gain is 1: there is nothing to level.
+ */
 export const scoreGains = (
   score: Pcm,
   voice: Pcm,
@@ -120,6 +145,7 @@ export const scoreGains = (
   };
 };
 
+/** Apply the envelope in place: each frame at its weight between the two gains, in dB. */
 export const applyScore = (
   channels: ReadonlyArray<Float32Array>,
   weights: Float32Array,

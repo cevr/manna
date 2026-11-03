@@ -3,11 +3,17 @@ import { type Rgb, labsOf, rgbAt } from './cast-sheet-pixels.ts';
 import { rgbOfLab } from './part-sheet.ts';
 import type { Raster } from './raster.ts';
 
+/**
+ * The house ink's width across a figure's outline, sheet px: the kept front's arm read across its
+ * outline (the median run of L* < 40, 0.25 px steps from its alpha edge inward).
+ */
 export const INK_WIDTH = 7.75;
+/** How far past the house line a drawn outline may run and still be taken into it, px. */
 const OUTLINE_SLACK = 6;
 
 export type KeyPt = readonly [number, number];
 
+/** Drawn px = s × view px + (dx, dy); `error` the mean channel difference over the still pixels; `ground` the drawing's paper. */
 export interface KeyFit {
   readonly s: number;
   readonly dx: number;
@@ -16,6 +22,7 @@ export interface KeyFit {
   readonly ground: Rgb;
 }
 
+/** A limb's bones in the frame's px: root to elbow (radius `rUpper`), elbow to wrist (radius `rFore`). */
 export interface Limb {
   readonly root: KeyPt;
   readonly elbow: KeyPt;
@@ -24,6 +31,7 @@ export interface Limb {
   readonly rFore: number;
 }
 
+/** The cut limb's pixels (opaque inside, clear outside) and its box's top left in the frame. */
 export interface LimbCut {
   readonly raster: Raster;
   readonly at: KeyPt;
@@ -35,6 +43,7 @@ const rgbOrGround = (r: Raster, x: number, y: number, ground: Rgb): Rgb => {
 };
 const median = (vs: readonly number[]) => [...vs].sort((a, b) => a - b)[vs.length >> 1] ?? 0;
 type Box = readonly [x0: number, y0: number, x1: number, y1: number];
+/** The box (inclusive) of the pixels `keep` holds; [∞, ∞, -1, -1] when it holds none. */
 const boxWhere = (width: number, n: number, keep: (i: number) => boolean): Box => {
   let [x0, y0, x1, y1] = [Infinity, Infinity, -1, -1];
   for (let i = 0; i < n; i++) {
@@ -47,6 +56,7 @@ const boxWhere = (width: number, n: number, keep: (i: number) => boolean): Box =
 const away = (c: Rgb, d: Rgb) =>
   Math.abs(c[0] - d[0]) + Math.abs(c[1] - d[1]) + Math.abs(c[2] - d[2]);
 
+/** The paper: the median of the border's pixels, channel by channel. */
 export const groundOfKey = (r: Raster): Rgb => {
   const cs: Rgb[] = [];
   for (let x = 0; x < r.width; x += 2) cs.push(rgbAt(r, x), rgbAt(r, (r.height - 1) * r.width + x));
@@ -55,9 +65,14 @@ export const groundOfKey = (r: Raster): Rgb => {
   return [median(cs.map((c) => c[0])), median(cs.map((c) => c[1])), median(cs.map((c) => c[2]))];
 };
 
+/** The box (inclusive) of the pixels more than 60 away from the paper. */
 const boxOf = (r: Raster, ground: Rgb) =>
   boxWhere(r.width, r.width * r.height, (i) => away(rgbAt(r, i), ground) > 60);
 
+/**
+ * The scored pixels: every second pixel of `view` that `still` keeps, each its
+ * place and its view colour, read once, since the search scores them 2,000 times.
+ */
 const scoredOf = (view: Raster, still: (x: number, y: number) => boolean) => {
   const xs: number[] = [];
   const ys: number[] = [];
@@ -72,6 +87,7 @@ const scoredOf = (view: Raster, still: (x: number, y: number) => boolean) => {
   return { xs, ys, seen };
 };
 
+/** The search's start: the figures' boxes, heights matched, right edges and tops met. */
 const startOf = (drawn: Raster, view: Raster, ground: Rgb) => {
   const [, vy0, vx1, vy1] = boxOf(view, groundOfKey(view));
   const [, dy0, dx1, dy1] = boxOf(drawn, ground);
@@ -79,6 +95,11 @@ const startOf = (drawn: Raster, view: Raster, ground: Rgb) => {
   return { s, dx: dx1 - s * vx1, dy: dy0 - s * vy0 };
 };
 
+/**
+ * `drawn` registered to `view`: a start from the figures' boxes (heights
+ * matched, right edges and tops met), then a grid search in three stages over
+ * scale and shift, scored on every second pixel of `view` that `still` keeps.
+ */
 export const fitKey = (
   drawn: Raster,
   view: Raster,
@@ -133,6 +154,11 @@ const bilinear = (r: Raster, x: number, y: number, ground: Rgb): Rgb => {
   return [mix(0), mix(1), mix(2)];
 };
 
+/**
+ * `drawn` resampled by `fit` into a `width` × `height` frame whose pixel
+ * (x, y) lies on the view's (x - origin[0], y - origin[1]); opaque, 3x3
+ * bilinear samples a pixel.
+ */
 export const keyInFrame = (
   drawn: Raster,
   fit: KeyFit,
@@ -165,6 +191,7 @@ const STEPS = [
   [0, -1],
 ] as const;
 
+/** The pixels reached from `seeds` through 4-neighbours that `pass` lets in. */
 const flood = (
   width: number,
   height: number,
@@ -205,6 +232,7 @@ const segDist = (p: KeyPt, a: KeyPt, b: KeyPt) => {
   return Math.hypot(p[0] - a[0] - t * vx, p[1] - a[1] - t * vy);
 };
 
+/** Each pixel's class: ink (L* under 40), skin (warm and light), figure (away from the paper), inside the capsules. */
 const classesOf = (r: Raster, ground: Rgb, limb: Limb) => {
   const n = r.width * r.height;
   const [ink, skin, fig, cap] = [
@@ -231,6 +259,7 @@ const classesOf = (r: Raster, ground: Rgb, limb: Limb) => {
   return { ink, skin, fig, cap };
 };
 
+/** Every pixel within `radius` of one `of` marks. */
 const grown = (width: number, height: number, of: Uint8Array, radius: number) => {
   const out = new Uint8Array(width * height);
   for (let i = 0; i < width * height; i++) {
@@ -262,14 +291,20 @@ const cropped = (r: Raster, mask: Uint8Array): LimbCut => {
   return { raster: { width, height, rgba }, at: [x0, y0] };
 };
 
+/** The line's depth: a hair past `INK_WIDTH`, so a reading on 0.25 px steps from the edge keeps it. */
 const LINE = INK_WIDTH + 0.02;
 
+/** Each mask px's depth (its centre's distance to the nearest open px square) and its unit normal. */
 interface DepthField {
   readonly depth: Float64Array;
   readonly nx: Float64Array;
   readonly ny: Float64Array;
 }
 
+/**
+ * The depth field of `mask` in a `w` x `h` frame, stamped from every open px (off the frame is
+ * open) beside the mask, `reach` px round it.
+ */
 const depthField = (
   w: number,
   h: number,
@@ -313,6 +348,10 @@ const depthField = (
   return field;
 };
 
+/**
+ * The colour of the px across the line at depth `d`, mixed in Lab from `ink` toward `base` so the
+ * bilinear crossing of L* 40 falls at `LINE`.
+ */
 const crossingColour = (ink: Rgb, base: Rgb, d: number): Rgb => {
   const t = LINE - d;
   const target = (() => {
@@ -324,6 +363,15 @@ const crossingColour = (ink: Rgb, base: Rgb, d: number): Rgb => {
   return rgbOfLab([mix(0), mix(1), mix(2)]);
 };
 
+/**
+ * `r` with the outline of `mask`'s silhouette inked at `INK_WIDTH` in `ink` (Lab). The silhouette's
+ * edge is every side of the mask but its cut ends: where `open` px (out of the mask) meet it. Px
+ * under the line's depth less half a px are ink; the px across it is mixed toward the ink so the
+ * bilinear L* 40 crossing falls at `LINE`. A drawn outline that runs on past the line (its ink
+ * unbroken from the line, ending within `OUTLINE_SLACK`) gives way to the paint behind it, so the
+ * drawing's line and the house line are one. Deeper px, and ink that runs on deeper (a fold, dark
+ * paint), are untouched.
+ */
 const outlined = (r: Raster, mask: Uint8Array, open: (i: number) => boolean, ink: Rgb): Raster => {
   const { width: w, height: h } = r;
   const n = w * h;
@@ -335,12 +383,17 @@ const outlined = (r: Raster, mask: Uint8Array, open: (i: number) => boolean, ink
   const isInk = (i: number) => (labs[i]?.[0] ?? 100) < 40;
   const rgba = Uint8Array.from(r.rgba);
   const full = rgbOfLab(ink);
+  /** The px `k` px along px `i`'s normal (inward for k > 0), or -1 off the mask. */
   const along = (i: number, k: number) => {
     const x = Math.floor((i % w) + 0.5 + (nx[i] ?? 0) * k);
     const y = Math.floor(Math.floor(i / w) + 0.5 + (ny[i] ?? 0) * k);
     if (x < 0 || y < 0 || x >= w || y >= h || mask[y * w + x] !== 1) return -1;
     return y * w + x;
   };
+  /**
+   * For an ink px at or past the line: the paint behind it when it is a drawn outline running on
+   * past the line (ink unbroken back to the line, and paint within the slack behind it), else -1.
+   */
   const behindOf = (i: number) => {
     const d = depthAt(i);
     for (let k = 1; k <= d - LINE + 0.5; k++) {
@@ -354,6 +407,7 @@ const outlined = (r: Raster, mask: Uint8Array, open: (i: number) => boolean, ink
     }
     return -1;
   };
+  /** Paint (not ink) stands behind itself; ink stands behind its paint, if any. */
   const paintBehind = (i: number) => {
     if (isInk(i)) return behindOf(i);
     return i;
@@ -371,6 +425,7 @@ const outlined = (r: Raster, mask: Uint8Array, open: (i: number) => boolean, ink
   return { ...r, rgba };
 };
 
+/** `limb` cut out of `r` (a key in its frame, on paper `ground`); with `line` (the ink's Lab), its silhouette inked at `INK_WIDTH`. */
 export const cutLimb = (
   r: Raster,
   ground: Rgb,
@@ -404,6 +459,11 @@ export const cutLimb = (
   return cropped(lined, mask);
 };
 
+/**
+ * Where a circle hand stands on a limb: `reach` px past the wrist along elbow to wrist, so the
+ * hand meets the cuff at the same distance in every pose. (The drawn key keeps no hand: the cut
+ * stops at the wrist, and the kept hand is laid over at this point.)
+ */
 export const handPast = (elbow: KeyPt, wrist: KeyPt, reach: number): KeyPt => {
   const [dx, dy] = [wrist[0] - elbow[0], wrist[1] - elbow[1]];
   const n = Math.hypot(dx, dy) || 1;

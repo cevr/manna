@@ -2,22 +2,27 @@ import { hookAlpha } from '../core/shorts.ts';
 import type { ShortLook } from './film.ts';
 import { type Probe, recordText } from './probe.ts';
 
+/** Where a vertical film sets its hook, in 1080 × 1920 px: every line centred on `centre`. */
 interface HookLayout {
   readonly centre: number;
   readonly hook: { readonly y: number; readonly width: number };
 }
 
+/** A line of set text, measured once: where it sits in 1080 × 1920 px. */
 interface SetLine {
   readonly text: string;
+  /** Its centre's height. */
   readonly y: number;
   readonly width: number;
 }
 
+/** A line's box: its height above and below its centre, in the font it is set in. */
 interface LineBox {
   readonly ascent: number;
   readonly descent: number;
 }
 
+/** `text` broken into lines at most `width` wide in `ctx`'s font, greedily by word. */
 const wrap = (
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -36,11 +41,13 @@ const wrap = (
   return lines;
 };
 
+/** A block of set text: its lines, and the box each line's glyphs fill. */
 interface SetBlock {
   readonly lines: ReadonlyArray<SetLine>;
   readonly box: LineBox;
 }
 
+/** `text` set in `font`, wrapped to `width` and centred as a block on `y`: measured once. */
 const setBlock = (
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -64,16 +71,23 @@ const setBlock = (
   return { lines, box };
 };
 
+/** A vertical film's hook, drawn each frame it shows. */
 interface VerticalHook {
+  /** The hook at film second `T`, while it shows; recorded as the caption's when `probe` is given. */
   readonly draw: (ctx: CanvasRenderingContext2D, T: number, probe: Probe | undefined) => void;
 }
 
+/**
+ * The hook `text` (none: a film with no hook draws nothing) in `style`, set
+ * where `layout` puts it, drawn `k` page px per px.
+ */
 export const verticalHook = (
   text: string | undefined,
   style: ShortLook['hook'],
   k: number,
   layout: HookLayout,
 ): VerticalHook => {
+  /** The hook, set once on the first frame that draws it. */
   let hook: SetBlock | undefined;
   const hookOf = (ctx: CanvasRenderingContext2D, line: string) =>
     (hook ??= setBlock(ctx, line, style.font, layout.hook.width, layout.hook.y));

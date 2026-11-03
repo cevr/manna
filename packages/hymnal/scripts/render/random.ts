@@ -1,8 +1,23 @@
+/**
+ * CPython's `random.Random(seed)` for a string seed, and its `randint`: the
+ * Mersenne Twister (MT19937) seeded as Python 3 seeds it (seed version 2,
+ * the seed's UTF-8 bytes followed by their SHA-512, read as one big-endian
+ * integer and fed to `init_by_array` as 32-bit words, least significant
+ * first), and `randint(a, b)` as `a + _randbelow(b − a + 1)`, which draws
+ * `getrandbits(k)` until the draw falls below the range.
+ *
+ * The velocities the owner heard in the listening pilot were drawn by
+ * Python's `random` from the seed `<hymn padded>-<style>-<stem>`. Drawing the
+ * same numbers keeps every stem's velocities note for note the pilot's.
+ * Pure.
+ */
+
 import { createHash } from 'node:crypto';
 
 const N = 624;
 const M = 397;
 
+/** The seed's words as CPython's `random_seed` reads a str: UTF-8 then SHA-512, big-endian, least significant word first. */
 const keyOf = (seed: string): number[] => {
   const bytes = Buffer.from(seed, 'utf8');
   const all = Buffer.concat([bytes, createHash('sha512').update(bytes).digest()]);
@@ -16,6 +31,7 @@ const keyOf = (seed: string): number[] => {
   return key;
 };
 
+/** MT19937's state after `init_by_array(key)`. */
 const stateOf = (key: ReadonlyArray<number>) => {
   const mt = new Uint32Array(N);
   mt[0] = 19650218;
@@ -49,6 +65,7 @@ const stateOf = (key: ReadonlyArray<number>) => {
   return mt;
 };
 
+/** CPython's `random.Random(seed)` for a string seed: `randint` draws what Python's draws, in order. */
 export const pythonRandom = (seed: string) => {
   const mt = stateOf(keyOf(seed));
   let index = N;
@@ -68,6 +85,7 @@ export const pythonRandom = (seed: string) => {
     return y >>> 0;
   };
   return {
+    /** A whole number from `a` to `b`, both included (`b − a` under 2³¹). */
     randint: (a: number, b: number) => {
       const n = b - a + 1;
       const bits = 32 - Math.clz32(n);

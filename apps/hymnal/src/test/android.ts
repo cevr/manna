@@ -1,5 +1,12 @@
 /* oxlint-disable effect/noGlobals, effect/noAsyncFunction -- a script at Bun's boundary: its loader takes the stand-in module as source text, and the colour module is imported only once the stand-in is registered. */
 
+/**
+ * Loads `color.native.ts` as an Android build does and prints its role names,
+ * or fails. `react-native` stands in with Android's rules: `Platform.select`
+ * takes `android`, else `default`, and `DynamicColorIOS` throws, as React
+ * Native's non-iOS `PlatformColorValueTypesIOS.js` does.
+ */
+
 import { plugin } from 'bun';
 
 plugin({

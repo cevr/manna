@@ -14,6 +14,7 @@ export const Lab = Place.make({
 
 const lab = UrlAtom.place(Lab);
 
+/** The playhead as the URL writes it. */
 const timeOf = Schema.encodeSync(Codec.Finite);
 
 export const App = () => {

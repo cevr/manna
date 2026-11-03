@@ -16,4 +16,5 @@ export const court = drawing({
   light: () => lookOf().light ?? { color: '#ffffff', amount: 0 },
 });
 
+/** What a look draws the court with. */
 export type CourtFrame = Parameters<typeof court.draw>[0];

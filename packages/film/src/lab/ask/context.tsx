@@ -26,24 +26,36 @@ import {
   spawnAskPage,
 } from './machine.ts';
 
+/** Where the tab keeps ask `ask`'s draft, unsent. */
 const keptDraftKey = (ask: string) => `film-review.ask-draft:${ask}`;
 
+/** Where the page is: reading the ask, open on it, sending its answers, or unable to read it. */
 type AskPhase = AskPageState['_tag'];
 
 interface AskStateValue {
+  /** The ask's id: what its part on the page is found by (`data-ask`). */
   readonly id: string;
   readonly phase: Accessor<AskPhase>;
+  /** The ask as last read. */
   readonly record: Accessor<Option.Option<AskRecord>>;
+  /** The page's sections, from where the run is as far as the draft reaches; none once it is not asking. */
   readonly sections: Accessor<ReadonlyArray<Section>>;
+  /** The owner's answer `id` as drafted ('' when not). */
   readonly drafted: (id: string) => string;
+  /** The questions the page waits on, in page order, and whether each is answered. */
   readonly questions: Accessor<ReadonlyArray<Question>>;
+  /** What the last send or read said: why it was refused, or why the ask cannot be read. */
   readonly said: Accessor<string>;
+  /** The question the last Send was refused for: the first left open ('' when none). */
   readonly missing: Accessor<string>;
 }
 
 interface AskActions {
+  /** Set the owner's answer `id` to `value`. */
   readonly set: (id: string, value: string) => void;
+  /** Send the page's answers. */
   readonly submit: () => void;
+  /** Read the ask again, once it could not be read. */
   readonly retry: () => void;
 }
 
@@ -54,8 +66,10 @@ interface AskContextValue {
 
 const AskContext = createContext<AskContextValue>();
 
+/** The ask's context: only inside `<Ask.Provider>`. */
 export const useAsk = (): AskContextValue => useContext(AskContext);
 
+/** The page, once the ask is read: every state past the first read holds it. */
 const pageOf = (s: AskPageState): Option.Option<Page> =>
   Match.value(s).pipe(
     Match.tag('Open', 'Sending', 'Rereading', 'Gone', (o) => Option.some(o.page)),
@@ -72,6 +86,11 @@ const saidOf = (s: AskPageState): string =>
     Match.orElse(() => ''),
   );
 
+/**
+ * The tab's kept draft of ask `ask`, for the page in `page`: once the page has
+ * settled it is read and sent as `Restored` the first time the page is open,
+ * and from then on each draft the page holds is written.
+ */
 const keepDraft = (
   ask: string,
   page: Accessor<AskPageState>,
@@ -94,6 +113,10 @@ const keepDraft = (
   );
 };
 
+/**
+ * Where `record`'s run stands, in a word that changes with each answer the
+ * lab keeps and its close: what tells the page an answer landed.
+ */
 const runOf = (record: Option.Option<AskRecord>): string =>
   Option.match(record, {
     onNone: () => '',
@@ -151,6 +174,12 @@ const Body = (
   return <AskContext value={value}>{props.children}</AskContext>;
 };
 
+/**
+ * Ask `ask`'s state and actions, for its part's parts. It opens on `first`,
+ * the ask as its page's read had it (`askPage`), the one the shell names the
+ * page by; `moved` hears each move of its run past it, so the page reads its
+ * asks again.
+ */
 export const Provider = (
   props: ParentProps<{
     readonly ask: string;

@@ -1,3 +1,10 @@
+/**
+ * The score clock (`sound.ts`) over a device the test holds, under the
+ * TestClock: sound off runs silently from the first sung line, a switch
+ * mid-play hands the place over, and a hymn the recording does not play to
+ * its end runs on silently to its timeline's end.
+ */
+
 import { Clock, Effect, Layer, Option, References, Stream, SubscriptionRef } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
@@ -23,6 +30,10 @@ import { hymnOf, scoreClock, soundOn } from './sound';
 const book = timingBook(bundled);
 const timelineOf = (hymn: number): Timeline => Option.getOrThrow(book.of(hymn));
 
+/**
+ * A hymn whose recording plays its first two lines and leaves the last two
+ * unplayed: 8 s of recording, then 12 s of silent stanzas to the timeline's end.
+ */
 const unplayedTail: Timeline = {
   tempo: { microsPerQuarter: 500_000, numerator: 4, denominator: 4 },
   lines: [
@@ -42,8 +53,13 @@ const unplayedTail: Timeline = {
   end: 20_000,
 };
 
+/** One poll of the player (`statusEvery`), ms. */
 const POLL = 250;
 
+/**
+ * A device holding a recording `length` ms long that moves with the clock at the rate it was
+ * told (a play's `rate`, else 1, then each `setRate`), and what it was asked.
+ */
 const recording = (length: number) => {
   const asked = { play: new Array<readonly [string, number]>(), pause: 0, stop: 0 };
   let state: Status['state'] = 'idle';
@@ -101,6 +117,7 @@ const recording = (length: number) => {
   return { device, asked };
 };
 
+/** The score clock over `device`, sound set to `on`. */
 const clockOver = (device: PlaybackApi, on: boolean) =>
   Effect.gen(function* () {
     const sound = yield* SubscriptionRef.make(on);
@@ -224,10 +241,12 @@ describe('the score clock', () => {
   );
 });
 
+/** Let the player's fibers run what the clock's last move woke. */
 const settle = Effect.forEach(Array.from({ length: 10 }), () => Effect.yieldNow, {
   discard: true,
 });
 
+/** `device`, with the options of each play it was asked kept in `options`. */
 const optionsOf = (device: PlaybackApi) => {
   const options = new Array<Option.Option<PlayOptions>>();
   const kept: PlaybackApi = {
@@ -241,6 +260,7 @@ const optionsOf = (device: PlaybackApi) => {
   return { device: kept, options };
 };
 
+/** A play's options at `rate`, as the player asks it. */
 const at = (rate: number): PlayOptions => ({
   continuous: false,
   ready: false,
@@ -249,6 +269,7 @@ const at = (rate: number): PlayOptions => ({
   rate,
 });
 
+/** The recording `at` names, as the score clock's status gives it back. */
 const selection = { number: 100, requested: 0, effective: 0 };
 
 describe('the score clock at a tempo', () => {
@@ -443,6 +464,7 @@ describe('the score clock at a tempo', () => {
   );
 });
 
+/** The device's playback with a `play` that never answers: the device loads and says nothing more. */
 const hung = (layer: Layer.Layer<Playback>) =>
   Layer.effect(Playback)(
     Effect.gen(function* () {
@@ -454,6 +476,11 @@ const hung = (layer: Layer.Layer<Playback>) =>
     }),
   ).pipe(Layer.provide(layer));
 
+/**
+ * The app's player as `LivePlayer.tsx` builds it, over the score clock over a
+ * device the test holds, sound set to `on`, on the test's clock; its
+ * commands and lock-screen follower run until the test's `using` ends.
+ */
 const composed = (
   on: boolean,
   device: (layer: Layer.Layer<Playback>) => Layer.Layer<Playback> = (layer) => layer,
@@ -481,6 +508,7 @@ const composed = (
       sound,
       state,
       send: (command: Command) => registry.set(player.send, command),
+      /** The player's state once `holds` is true of it, moving the clock a poll at a time for at most `ms`. */
       until: (holds: (player: Player) => boolean, ms: number) =>
         Effect.gen(function* () {
           yield* settle;

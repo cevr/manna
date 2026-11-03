@@ -19,6 +19,10 @@ import { RiveRuntime } from './runtime.ts';
 import { RiveRuntimeBun } from './runtime-bun.ts';
 import inkRiv from './fixtures/ink/build/ink.riv' with { type: 'file' };
 
+/**
+ * A `Path2D` that writes its commands down, so two drawings compare number
+ * for number: what Rive's Canvas 2D renderer builds each path into.
+ */
 class WrittenPath {
   readonly ops: string[] = [];
   moveTo(x: number, y: number) {
@@ -38,6 +42,7 @@ class WrittenPath {
   }
 }
 
+/** The matrix `addPath` is handed: its six numbers, as Rive sets them. */
 class DOMMatrix2D {
   a = 1;
   b = 0;
@@ -47,6 +52,7 @@ class DOMMatrix2D {
   f = 0;
 }
 
+/** The class `name` set on the global object for the scope, put back (or deleted) when it closes. */
 const globalFor = <A>(name: 'Path2D' | 'DOMMatrix', value: A) =>
   Effect.acquireRelease(
     Effect.sync(() => {
@@ -61,6 +67,11 @@ const globalFor = <A>(name: 'Path2D' | 'DOMMatrix', value: A) =>
       }),
   );
 
+/**
+ * Rive's Canvas 2D runtime in Bun: the stand-in document, a `Path2D` that
+ * writes its commands down and a `DOMMatrix` stand for the layer's scope.
+ * Every engine is this one, and it paints (`writtenContext`).
+ */
 const RiveRuntimePainted = Layer.effect(
   RiveRuntime,
   Effect.gen(function* () {
@@ -84,6 +95,7 @@ const RiveRuntimePainted = Layer.effect(
   }),
 ).pipe(Layer.provide(BunFileSystem.layer));
 
+/** `film` with its rigs' stand recorded: the loaded rigs, as the loader hands them to the film. */
 const watched = (film: Film) => {
   const stood: Array<ReadonlyMap<RivePropSpec, LoadedRig>> = [];
   const seen: Film = {
@@ -99,6 +111,7 @@ const watched = (film: Film) => {
   return { film: seen, stood };
 };
 
+/** The fixture rig drawn by `engine`, loaded in a scope of its own: the spec, the loaded rig, and the scope to close. */
 const armLoaded = (engine: RiveEngine) =>
   Effect.gen(function* () {
     const spec = armRig(engine);
@@ -111,8 +124,15 @@ const armLoaded = (engine: RiveEngine) =>
     return { spec, rig, scope };
   });
 
+/** The fixture rig loaded by the Bun layer, which poses and draws nothing. */
 const loadedArm = armLoaded('webgl2').pipe(Effect.provide(RiveRuntimeBun));
 
+/**
+ * A 2D context that writes down each path filled, clipped or stroked and
+ * each transform set, as text, and answers nothing else. Not the stand-in:
+ * Rive's Canvas 2D renderer passes through any method its context has, and
+ * the stand-in has every one.
+ */
 const writtenContext = (written: string[]): CanvasRenderingContext2D => {
   const quiet = () => {};
   const paths = (kind: string) => (path: WrittenPath) => {
@@ -134,12 +154,17 @@ const writtenContext = (written: string[]): CanvasRenderingContext2D => {
   return ctx;
 };
 
+/**
+ * The paths Rive's Canvas 2D renderer fills (and clips, and strokes) for
+ * `rig` posed to `p`, each after the transform it was set under, as text.
+ */
 const drawnPaths = (spec: RivePropSpec, rig: LoadedRig, p: ArmPose) => {
   const written: string[] = [];
   expect(drawRig(writtenContext(written), spec, rig, p)).toBeUndefined();
   return written.join('\n');
 };
 
+/** How far right of its own origin each path filled reaches: the greatest x of its points, in draw order. */
 const reaches = (drawn: string) =>
   [...drawn.matchAll(/^fill (.*)$/gm)].map((line) =>
     Math.max(
@@ -156,6 +181,7 @@ const reaches = (drawn: string) =>
     ),
   );
 
+/** The ink fixture (`fixtures/ink/ink.rml`), its ink at the model's default. */
 const INK_RIG: RivePropSpec<never, typeof INK_NUMBER> = {
   source: { riv: inkRiv, artboard: 'Ink', timelines: [], numbers: [INK_NUMBER] },
   engine: 'canvas',
@@ -163,8 +189,15 @@ const INK_RIG: RivePropSpec<never, typeof INK_NUMBER> = {
   origin: [50, 50],
 };
 
+/** The fixture's strokes in the order drawn, at ink 1: the sash's centred ink, then the disc's ink and its light core over it. */
 const INK_AT_REST = [5, 14, 2] as const;
 
+/**
+ * A 2D context `height` pixels high, `pixels` per unit of the space it draws
+ * in (scaled by `scale`, kept by `save` and `restore`), that writes down each
+ * stroke's width (`lineWidth` as the stroke is made) and, in `drawn`, the
+ * pixels a unit it is made at, and answers nothing else.
+ */
 const strokedContext = (
   widths: number[],
   pixels = 1,
@@ -200,6 +233,7 @@ const strokedContext = (
   return ctx;
 };
 
+/** The ink fixture loaded with its Canvas 2D renderer painting, in a scope of its own. */
 const inkLoaded = (spec: RivePropSpec) =>
   Effect.gen(function* () {
     const { film, stood } = watched(
@@ -211,6 +245,7 @@ const inkLoaded = (spec: RivePropSpec) =>
     return { rig, scope };
   });
 
+/** Each stroke's width as `spec`'s rig draws at `pose`, `pixels` per unit of a 100 px frame. */
 const strokeWidths = (
   spec: RivePropSpec,
   rig: LoadedRig,
@@ -226,6 +261,7 @@ const strokeWidths = (
   return widths;
 };
 
+/** Two histories: one reaching far with the IK full on, one lifted and slack. */
 const HISTORY_A: ReadonlyArray<ArmPose> = [
   { timelines: [['reach', 1.9]], numbers: { reach: 1, lift: 20 } },
   {
@@ -242,6 +278,7 @@ const HISTORY_B: ReadonlyArray<ArmPose> = [
   { timelines: [['reach', 0.7]], numbers: { lift: 100 } },
 ];
 
+/** How many times the shuffled history visits, over the arm's four seconds. */
 const SHUFFLED = 60;
 
 describe('the Rive engine', () => {

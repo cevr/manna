@@ -16,11 +16,13 @@ const measured = (name: string) =>
 
 const kindsOf = (name: string) => Effect.map(measured(name), (m) => m.artifacts.map((a) => a.kind));
 
+/** How finely each facing row is read back: a turn to three places, a roll to a tenth of a degree. */
 const PLACES = new Map([
   ['turn', 1000],
   ['roll', 10],
 ]);
 
+/** The facing rows of the concept `concept` against the scene `scene`, by name: each side's value, rounded, and whether it flags. */
 const facingRows = (concept: string, scene: string) =>
   Effect.map(Effect.all([measured(concept), measured(scene)]), ([c, s]) =>
     Object.fromEntries(
@@ -43,6 +45,7 @@ const facingRows = (concept: string, scene: string) =>
     ),
   );
 
+/** Whether the rows flag, by name. */
 const flagsOf = (rows: Readonly<Record<string, { readonly flagged: boolean }>>) =>
   Object.fromEntries(Object.entries(rows).map(([name, row]) => [name, row.flagged]));
 

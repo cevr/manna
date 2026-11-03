@@ -9,13 +9,27 @@ import { DialogRootContext } from './DialogRootContext.ts';
 
 interface DialogRootProps {
   open?: boolean | undefined;
+  /**
+   * Whether the open dialog is modal: focus trapped, page scroll locked and
+   * outside pointer interaction blocked. Otherwise the rest of the page stays
+   * interactive. @default true
+   */
   modal?: boolean | undefined;
   onOpenChange?: ((open: boolean, eventDetails: DialogChangeEventDetails) => void) | undefined;
+  /** Called after the open or close transition finishes. */
   onOpenChangeComplete?: ((open: boolean) => void) | undefined;
+  /**
+   * Whether outside presses leave the dialog open (for a non-modal dialog,
+   * also focus moving outside). @default false
+   */
   disablePointerDismissal?: boolean | undefined;
   children?: JSX.Element;
 }
 
+/**
+ * Groups all parts of the dialog.
+ * Doesn't render its own HTML element.
+ */
 export function DialogRoot(props: DialogRootProps): JSX.Element {
   const modal = () => props.modal ?? true;
   const disablePointerDismissal = () => props.disablePointerDismissal ?? false;

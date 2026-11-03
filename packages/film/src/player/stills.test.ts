@@ -6,8 +6,10 @@ import { Footage } from '../browser/footage.ts';
 import { hostOf } from '../browser/host.ts';
 import { makeStills } from './stills.ts';
 
+/** A page with no footage: a drawn film's stills never ask for any. */
 const NO_FOOTAGE = hostOf(Footage.none);
 
+/** A film that draws nothing and remembers each time it was asked to draw. */
 const recording = () => {
   const times: Array<number> = [];
   return {
@@ -16,10 +18,12 @@ const recording = () => {
   };
 };
 
+/** A page whose turns the test hands out one at a time. */
 const turns = () => {
   const waiting: Array<() => void> = [];
   return {
     turn: () => new Promise<void>((resolve) => waiting.push(resolve)),
+    /** Give the page its next turn, and let the stills draw on. */
     next: () =>
       Effect.promise(async () => {
         waiting.shift()?.();

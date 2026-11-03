@@ -16,6 +16,7 @@ import {
 } from './book-vectors.ts';
 import { UNCLASSIFIED } from './vectorize.ts';
 
+/** A corpus with the schema the writer builds, over one in-memory file. */
 const corpus = EGWParagraphDatabase.layerCore.pipe(
   Layer.provideMerge(SqliteClient.layer({ filename: ':memory:' })),
   Layer.orDie,
@@ -43,6 +44,7 @@ const paragraph = (bookId: number, order: number, paraId: Option.Option<string>,
     `;
   });
 
+/** An embedder that answers one vector per text, and counts what it was given. */
 const embedder = (seen: string[]) => (texts: readonly string[]) =>
   Effect.sync(() => {
     seen.push(...texts);

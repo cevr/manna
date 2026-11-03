@@ -19,6 +19,7 @@ const FINDING = findingId('f', 'a', {
   what: HEAD_ANGLE,
 });
 
+/** A review of film `f`'s scene `a` at the key it has now (`REVIEW_PROJECT`), its one finding done. */
 const RECORD: ReviewRecord = {
   reviews: [
     {
@@ -52,8 +53,10 @@ const RECORD: ReviewRecord = {
   ],
 };
 
+/** The still of the farmer the asks show, a file of the set. */
 const FARMER = 'p5/rbf/farmer.png';
 
+/** The lab over set `p5/rbf`, its review record `record` beside its page (none: the set lists no record). */
 const run = <A, E>(
   self: Effect.Effect<A, E, AskStore | ProductionStore>,
   record: ReviewRecord | 'none',
@@ -91,10 +94,13 @@ const run = <A, E>(
   );
 };
 
+/** The farmer of `film`'s scene `a`, as a keep keeps him. */
 const farmerOf = (film: string) => ({ film, scenes: [{ scene: 'a', figures: ['farmer'] }] });
 
+/** The forms of ask the gate meets: the farmer shown and approved or refined, typed or not; a script kept. */
 type Form = 'approve' | 'refine' | 'untyped' | 'script' | 'other-film';
 
+/** One page of form `form`: what it shows and what it recommends. */
 const askOfForm = (form: Form): Ask =>
   oneQuestion(
     Schema.decodeSync(Schema.Array(AskBlock))(
@@ -149,6 +155,11 @@ const askOfForm = (form: Form): Ask =>
 
 const aimed = { production: 'rbf', set: 'p5/rbf' } as const;
 
+/**
+ * Why an ask aimed at `aim` of form `form` is refused, as the store says
+ * it (its problems, one a line), or `kept` with the override it keeps;
+ * production `rbf` (the film `f`) started first.
+ */
 const asked = (aim: Partial<AskDraftAim>, form: Form) =>
   Effect.gen(function* () {
     const productions = yield* ProductionStore;

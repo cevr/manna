@@ -1,3 +1,28 @@
+/**
+ * Mirror the remote EGW catalog into the local corpus.
+ *
+ * Lives in core rather than beside the CLI command because it has two callers
+ * with nothing else in common: `manna egw sync` at a terminal, and the weekly
+ * Workflow beside the deployed search Worker. Only the presentation differs —
+ * the flags, the progress lines and the exit code are the CLI's; the
+ * traversal, the failure classification and the report are the domain's.
+ *
+ * A sync installs the books the corpus lacks, and rechecks the books it has
+ * whose revision moved (`./egw-revision.ts`): each is downloaded again, and
+ * the install records which paragraphs it changed (`paragraph_changes`).
+ * Rechecks are capped per run, so a catalog that moves every book at once is
+ * worked through over several runs rather than in one.
+ *
+ * The sync is three parts — `planEgwSync`, `installEgwBook` per book, and
+ * `reportEgwSync` — because the two callers run them differently. The CLI
+ * runs them in one process (`syncEgwCorpus`). The Workflow runs each as a
+ * durable step, so an install that fails is retried on its own and a run
+ * that is evicted resumes at the book it reached rather than from the start.
+ *
+ * Depends on `EGWApiClient`, `EGWParagraphDatabase` and `CorpusSupply` from
+ * context, so a caller supplies its own database connection.
+ */
+
 import { Array as Arr, Cause, Effect, Exit, Option, Predicate, Ref, Schema, Stream } from 'effect';
 
 import { EGWApiClient } from '../egw/index.js';
@@ -24,6 +49,7 @@ interface EgwSyncOptions {
   readonly lang: string;
   readonly concurrency: number;
   readonly refresh: boolean;
+  /** Installed books whose revision moved to download again this run. */
   readonly recheckLimit: number;
   readonly onProgress: (progress: EgwSyncProgress) => Effect.Effect<void>;
 }
@@ -33,17 +59,26 @@ export interface EgwSyncFailure {
   readonly code: string;
   readonly title: string;
   readonly error: string;
+  /** True when the library is known to withhold this book's content, so the
+   *  failure is the documented outcome rather than news. See
+   *  `KNOWN_UNAVAILABLE`. */
   readonly expected: boolean;
 }
 
 interface EgwSyncReport {
   readonly remote: number;
   readonly installedBefore: number;
+  /** Installed books downloaded again because their revision moved. */
   readonly rechecked: number;
+  /** Installed books whose revision moved, left for a later run. */
   readonly recheckLeft: number;
   readonly attempted: number;
   readonly installed: number;
   readonly failed: number;
+  /** `failed` minus the known-unavailable books. This is the number a weekly
+   *  report should alarm on: `failed` is never zero and never will be, so a
+   *  monitor watching it would fire every week and be ignored by the second
+   *  week. */
   readonly unexpectedFailures: number;
   readonly present: number;
   readonly missing: readonly {
@@ -62,6 +97,7 @@ class EgwSyncInputError extends Schema.TaggedError<EgwSyncInputError>()('EgwSync
 const hasContent = (book: Option.Option<BookRow>): boolean =>
   Option.exists(book, (value) => value.paragraph_count > 0);
 
+/** What one error says of itself: its message, else its tag. */
 const ownMessage = (cause: unknown): readonly string[] => {
   if (Predicate.isString(cause)) return [cause];
   if (Predicate.hasProperty(cause, 'message') && Predicate.isString(cause.message)) {
@@ -73,8 +109,10 @@ const ownMessage = (cause: unknown): readonly string[] => {
   return [];
 };
 
+/** How deep a chain of causes is read. */
 const CAUSE_DEPTH = 6;
 
+/** Each message down a chain of causes, outermost first. */
 const causeMessages = (cause: unknown, depth: number): readonly string[] => {
   if (depth === 0) return [];
   let inner: readonly string[] = [];
@@ -82,6 +120,8 @@ const causeMessages = (cause: unknown, depth: number): readonly string[] => {
   return [...ownMessage(cause), ...inner];
 };
 
+/** A failure in words, every cause's included: an installation error says
+ *  only its tag, and what the database said is in its cause. */
 const messageFromCause = (cause: unknown): string => {
   const messages = Arr.dedupe(
     causeMessages(cause, CAUSE_DEPTH).filter((message) => message.length > 0),
@@ -93,28 +133,44 @@ const messageFromCause = (cause: unknown): string => {
 const readBooks = (database: EGWParagraphDatabaseService) =>
   Stream.runCollect(database.getAllBooks).pipe(Effect.map((books) => [...books]));
 
+/** A book of the remote catalog, as much of it as a sync carries between its
+ *  steps. Plain data, so a durable host (the Worker's Workflow) can persist
+ *  it as a step result. */
 export interface EgwSyncBook {
   readonly id: number;
   readonly code: string;
   readonly title: string;
+  /** The catalog's revision of the book (`egwBookRevision`). */
   readonly revision: string;
 }
 
 export interface EgwSyncPlan {
   readonly remote: readonly EgwSyncBook[];
+  /** Remote books the database held content for before the sync. */
   readonly installedBefore: number;
+  /** The books this sync installs, in catalog order. */
   readonly pending: readonly EgwSyncBook[];
+  /** Installed books whose content hash moved: the library changed them.
+   *  Downloaded again first. */
   readonly changed: readonly EgwSyncBook[];
+  /** Installed books recorded before revisions were content hashes, so their
+   *  text was never checked against the library's: downloaded again after
+   *  `changed`, within the run's limit. What differs is the older import's
+   *  gap, not the library's change. */
   readonly verify: readonly EgwSyncBook[];
+  /** Books to recheck beyond this sync's limit, left for a later run. */
   readonly recheckLeft: number;
 }
 
+/** What an install changed in a book that was already there. All zero for a
+ *  first install, and for a recheck that found the same text. */
 export interface EgwParagraphChangeCounts {
   readonly added: number;
   readonly removed: number;
   readonly edited: number;
 }
 
+/** One book's install: done, or failed with the reason recorded. */
 export type EgwBookOutcome =
   | {
       readonly _tag: 'Installed';
@@ -123,11 +179,15 @@ export type EgwBookOutcome =
     }
   | { readonly _tag: 'Failed'; readonly failure: EgwSyncFailure };
 
+/** The failure an outcome carries, when the install failed. */
 export const failureOf = (outcome: EgwBookOutcome): Option.Option<EgwSyncFailure> => {
   if (outcome._tag === 'Failed') return Option.some(outcome.failure);
   return Option.none();
 };
 
+/** The remote catalog against the database: what is there, and what to install.
+ *  `refresh` installs every remote book; otherwise those without content, and
+ *  up to `recheckLimit` installed books whose revision moved. */
 export const planEgwSync = Effect.fn('EgwSync.plan')(function* (options: {
   readonly lang: string;
   readonly refresh: boolean;
@@ -190,6 +250,10 @@ export const planEgwSync = Effect.fn('EgwSync.plan')(function* (options: {
 
 const NO_CHANGES: EgwParagraphChangeCounts = { added: 0, removed: 0, edited: 0 };
 
+/** The paragraphs the install of a book's recorded revision changed. Read
+ *  by the revision rather than taken from the install, so a retried step
+ *  that finds the book current still sees the changes its first attempt
+ *  made. */
 export const latestParagraphChanges = Effect.fn('EgwSync.latestChanges')(function* (
   bookId: number,
 ) {
@@ -207,6 +271,9 @@ const changesOf = Effect.fn('EgwSync.changesOf')(function* (bookId: number) {
   return { added: count('added'), removed: count('removed'), edited: count('edited') };
 });
 
+/** Install one book. A failure is an outcome, not an error: it is recorded
+ *  in `sync_status` and returned, so one book never stops the rest. Only an
+ *  interruption propagates. */
 export const installEgwBook = Effect.fn('EgwSync.installBook')(function* (
   book: EgwSyncBook,
   options: { readonly refresh: boolean },
@@ -242,6 +309,8 @@ export const installEgwBook = Effect.fn('EgwSync.installBook')(function* (
   return failed;
 });
 
+/** The report of a sync: the plan, the failures among its installs, and the
+ *  database as it stands after them. */
 export const reportEgwSync = Effect.fn('EgwSync.report')(function* (
   plan: EgwSyncPlan,
   failures: readonly EgwSyncFailure[],

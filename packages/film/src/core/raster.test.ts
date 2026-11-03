@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { besideRaster, cropRaster, type Raster, scaleRaster, strokeRaster } from './raster.ts';
 
+/** A `width` × `height` picture, each pixel's red its column and green its row. */
 const ramp = (width: number, height: number): Raster => {
   const rgba = new Uint8Array(width * height * 4);
   for (let y = 0; y < height; y++)

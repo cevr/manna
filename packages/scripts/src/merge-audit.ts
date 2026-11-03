@@ -20,22 +20,30 @@ class NotAMerge extends Schema.TaggedError<NotAMerge>()('NotAMerge', {
   override readonly [Runtime.errorReported] = false;
 }
 
+/**
+ * A git command's stdout, whatever its exit code: `merge-tree` exits 1 on a
+ * conflict, and its tree is still the answer. `--review` reads the root
+ * through `gitChecked`, which fails on a non-zero exit.
+ */
 const git = (args: ReadonlyArray<string>) =>
   Effect.flatMap(ChildProcessSpawner, (spawner) =>
     spawner.string(ChildProcess.make('git', args, { forceKillAfter: '5 seconds' })),
   );
 
+/** A commit's full sha, or none when `ref` names no commit. */
 const shaOf = (ref: string) =>
   git(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]).pipe(
     Effect.map((out) => Option.liftPredicate(out.trim(), (sha) => sha !== '')),
     Effect.orElseSucceed(() => Option.none<string>()),
   );
 
+/** A file's text at a commit or tree; empty where it does not exist. */
 const textAt = (tree: string, file: string) =>
   git(['show', `${tree}:${file}`]).pipe(Effect.orElseSucceed(() => ''));
 
 const lines = (out: string) => out.split('\n').filter((line) => line !== '');
 
+/** Print one merge's audit: its head line, then each file its resolution changed. */
 const auditOne = (merge: string, second: string, inside: Option.Option<string>) =>
   Effect.gen(function* () {
     const first = `${merge}^1`;
@@ -56,6 +64,7 @@ const auditOne = (merge: string, second: string, inside: Option.Option<string>) 
     );
   });
 
+/** A merge's second parent, or NotAMerge naming `ref`. */
 const secondOf = (merge: string, ref: string) =>
   Effect.flatMap(shaOf(`${merge}^2`), (sha) =>
     Effect.fromOption(sha).pipe(Effect.mapError(() => NotAMerge.make({ commit: ref }))),
@@ -73,6 +82,7 @@ const audit = Effect.fn('mergeAudit')(function* (ref: string) {
   );
 });
 
+/** A git step `--review` reads (the root): it exited non-zero. */
 class GitFailed extends Schema.TaggedError<GitFailed>()('GitFailed', {
   command: Schema.String,
   output: Schema.String,
@@ -83,6 +93,7 @@ class GitFailed extends Schema.TaggedError<GitFailed>()('GitFailed', {
   override readonly [Runtime.errorReported] = false;
 }
 
+/** A git command's stdout, or GitFailed with what it printed when it exits non-zero. */
 const gitChecked = (args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner;
@@ -104,6 +115,7 @@ const gitChecked = (args: ReadonlyArray<string>) =>
     });
   }).pipe(Effect.scoped);
 
+/** A review whose findings are not all routed to the ledger, or a ledger whose guards do not hold. */
 class Unrouted extends Schema.TaggedError<Unrouted>()('Unrouted', {
   problems: Schema.Finite,
 }) {
@@ -113,6 +125,11 @@ class Unrouted extends Schema.TaggedError<Unrouted>()('Unrouted', {
   override readonly [Runtime.errorReported] = false;
 }
 
+/**
+ * `--review <file>…`: each finding of the reviews routed to the ledger entry
+ * that cites it, each finding's guard lines read, and the ledger held to its
+ * guards, at the checkout's root.
+ */
 const review = Effect.fn('mergeAudit.review')(function* (files: ReadonlyArray<string>) {
   const root = (yield* gitChecked(['rev-parse', '--show-toplevel'])).trim();
   const routes = yield* reviewRoutes(root, files);

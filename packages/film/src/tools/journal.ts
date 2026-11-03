@@ -1,37 +1,51 @@
 import { Array as Arr, DateTime, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { FilmFolder, type FilmName } from './film-repo.ts';
 
+/** A note with no words. */
 class JournalEmpty extends Schema.TaggedError<JournalEmpty>()('JournalEmpty', {}) {
   override get message() {
     return 'a journal note needs words: what was seen, heard or measured';
   }
 }
 
+/** The journal's file name in a film's folder. */
 const JOURNAL_FILE = 'journal.md';
 
+/** The rule at the top of every journal. */
 export const JOURNAL_RULE =
   'Observations, never instructions: what was seen, heard or measured while making this film, each dated and placed. A decision lands in the source and a request is a lab note; an entry says what is, never what to do.';
 
+/** The heading of a new journal. */
 const header = (film: string) => `# Journal: ${film}\n\n${JOURNAL_RULE}\n`;
 
+/** Where an entry is said: a scene by its id, or the whole film. */
 const FILM_WIDE = 'film';
 
+/** One entry: when, where, and what was observed. */
 export interface JournalEntry {
+  /** ISO 8601, to the second, UTC. */
   readonly at: string;
+  /** The scene's id, or `film` for the whole film. */
   readonly scene: string;
   readonly text: string;
 }
 
+/** The longest `read` answers, as printed: a reader's tool result stays under 8,000 characters. */
 const JOURNAL_CAP = 7_000;
 
+/** How many entries `read` answers unless asked. */
 export const JOURNAL_LAST = 20;
 
+/** An entry's heading line: `## <at> · <scene>`. */
 const HEADING = /^## (\S+) · (\S+)$/;
 
+/** Words as one line: whitespace runs made one space; a leading `#` escaped so it stays text. */
 const oneLine = (text: string) => text.trim().replace(/\s+/g, ' ').replace(/^#/, '\\#');
 
+/** An entry as the file holds it. */
 const entryBlock = (entry: JournalEntry) => `\n## ${entry.at} · ${entry.scene}\n\n${entry.text}\n`;
 
+/** The entries of a journal's text, in file order. */
 export const entriesOf = (text: string): ReadonlyArray<JournalEntry> => {
   const entries: Array<JournalEntry> = [];
   const lines = text.split('\n');
@@ -49,13 +63,19 @@ export const entriesOf = (text: string): ReadonlyArray<JournalEntry> => {
   return entries;
 };
 
+/** An entry as `read` prints it: one line. */
 export const entryLine = (entry: JournalEntry) => `${entry.at} scene=${entry.scene} ${entry.text}`;
 
+/** What `read` answers: the lines, oldest first, and how many matching entries it left out. */
 interface JournalPage {
   readonly lines: ReadonlyArray<string>;
   readonly left: number;
 }
 
+/**
+ * The newest of `entries` in `scene` (all, without one): at most `last`, then
+ * as many of those as fit in `cap` characters printed, newest kept first.
+ */
 export const pageOf = (
   entries: ReadonlyArray<JournalEntry>,
   scene: Option.Option<string>,
@@ -78,18 +98,25 @@ export const pageOf = (
   return { lines: Arr.reverse(kept), left: matching.length - kept.length };
 };
 
+/** The journal's file for `film`. */
 const fileOf = Effect.fn('journal.file')(function* (film: FilmName) {
   const folder = yield* FilmFolder;
   const path = yield* Path.Path;
   return path.join(folder.paths(film).dir, JOURNAL_FILE);
 });
 
+/** The journal's text, empty when the film has none yet. */
 const textOf = Effect.fn('journal.text')(function* (file: string) {
   const fs = yield* FileSystem.FileSystem;
   if (!(yield* fs.exists(file))) return '';
   return yield* fs.readFileString(file);
 });
 
+/**
+ * Append an observation to `film`'s journal, said of `scene` (the whole film
+ * without one), at the time now: the file and its rule made first when the
+ * film has none. Empty words are refused.
+ */
 export const note = Effect.fn('journal.note')(function* (
   film: FilmName,
   words: string,
@@ -123,6 +150,7 @@ export const note = Effect.fn('journal.note')(function* (
   return { file, entry };
 });
 
+/** The newest entries of `film`'s journal (`pageOf`), and its file. */
 export const read = Effect.fn('journal.read')(function* (
   film: FilmName,
   scene: Option.Option<string>,

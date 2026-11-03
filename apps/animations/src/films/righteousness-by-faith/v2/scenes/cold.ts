@@ -38,6 +38,7 @@ const SHEETS = (() => {
   }));
 })();
 
+/** The gavel's fall across its cue: raised, down hard, a bounce, at rest on the block. */
 const SWING: ReadonlyArray<Key> = [
   [0, GAVEL_REST],
   [0.373, -0.3],
@@ -45,6 +46,7 @@ const SWING: ReadonlyArray<Key> = [
   [0.797, 1.4, 'outQuad'],
   [1, 1.58],
 ];
+/** The verdict, rewritten each frame (scratch, so the draw allocates none). */
 const VERDICT = { fill: 1, shown: 0 } satisfies Stamp;
 
 export const cold = drawing({

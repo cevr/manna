@@ -36,6 +36,10 @@ const view: StillView = { mode: 'value', captions: false, format: 'image/png' };
 
 const film = 'f' as FilmName;
 
+/**
+ * What the lab serves at a URL the easel opened (`pageAt`, as the lab's
+ * server reads it): its origin, the page, the film and the build it pins.
+ */
 const servedAt = (href: string) => {
   const url = new URL(href);
   return {
@@ -46,6 +50,7 @@ const servedAt = (href: string) => {
   };
 };
 
+/** The pages' build as the test sets it: `now`, which a look asks. */
 const pagesAt = (now: Ref.Ref<PagesNow>) =>
   Layer.effect(
     LabPage,
@@ -58,6 +63,10 @@ const built = (build: number): PagesNow => ({
   failed: Option.none(),
 });
 
+/**
+ * An easel over a fake browser whose page draws `frame`, and answers its
+ * scenes once `opening` is done, with the build in `now`.
+ */
 const easelLayer = (
   files: Map<string, Uint8Array>,
   now: Ref.Ref<PagesNow>,

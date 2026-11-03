@@ -5,6 +5,7 @@ import type { TakeWord } from '../core/schema.ts';
 import { cardSaid } from '../core/narration.ts';
 import { clamp, ease, lerp } from '../core/time.ts';
 
+/** A rectangle on the frame (or in a drawing's own space), in px. */
 export interface Box {
   readonly x: number;
   readonly y: number;
@@ -12,29 +13,60 @@ export interface Box {
   readonly h: number;
 }
 
+/** A word a card sets: its text as said, when it is heard (scene seconds), and whether it is the payoff. */
 export interface CardWord {
   readonly text: string;
   readonly at: number;
   readonly payoff: boolean;
 }
 
+/**
+ * One of a scene's full-screen cards, as its drawing declares it
+ * (`drawing({ cards })`): `C` names the drawing's cues and `F` is its frame.
+ */
 export interface CardSpec<C extends string, F> {
+  /** The cue the card holds the frame for: a hard cut in at its start, a hard cut out at its end. */
   readonly cue: C;
+  /** The mark its words start at: every word heard from there to `to` (the end of the speech when none). */
   readonly from: string;
   readonly to?: string;
+  /** The payoff word, read as a take is checked (`readsWord`): the first of the card's words that reads it. */
   readonly payoff: string;
+  /**
+   * The highlight the card floods in from: over `cue` the card grows from
+   * the box the scene's draw returned on the same frame (the highlight's, in
+   * the canvas's own pixels, as `verse` returns it) to the whole frame, drawn
+   * over the lit scene. A draw that returns no box while the flood holds
+   * stops the frame.
+   */
   readonly flood?: {
     readonly cue: C;
+    /**
+     * The flood's edge as the look draws it, in place of the box's straight
+     * one: called on the card's own layer, in the canvas's pixels (no
+     * transform), with the box grown so far (`floodBox`), the cue's eased
+     * progress `at` and the scene's frame, it paints where the card shows
+     * (its alpha is the card's: a ragged edge, a soft wash). The engine keeps
+     * the card only there and lays it over the lit scene.
+     */
     readonly mask?: (ctx: CanvasRenderingContext2D, box: Box, at: number, f: F) => void;
   };
+  /** The card, over the film's paper: the look's ground and typography (`fullCard`, or its own). */
   readonly draw: (f: F, words: ReadonlyArray<CardWord>) => void;
 }
 
+/** The words a card's voice says, as `cardWords` reads them. */
 interface CardVoice {
   readonly words: ReadonlyArray<TakeWord>;
   readonly marks: ReadonlyMap<string, number>;
 }
 
+/**
+ * The words `card` sets from a scene's voice, each at the scene second it is
+ * heard (`speechStart` plus its voiced start), the payoff marked; or why
+ * none: a mark the line lacks, no word between the marks, or no word that
+ * reads the payoff.
+ */
 export const cardWords = (
   scene: string,
   voice: CardVoice,
@@ -49,41 +81,67 @@ export const cardWords = (
     })),
   );
 
+/** How a look sets a card: its ground, its face and sizes, and the payoff's colour and treatment. */
 export interface CardStyle {
+  /** The ground over the whole frame: a colour, or a painter for a ground of the look's own. */
   readonly ground: string | ((ctx: CanvasRenderingContext2D, w: number, h: number) => void);
+  /** The lead-in words' face, size (px on the frame) and ink. */
   readonly type: TextStyle;
+  /** The payoff's size as a multiple of the lead-in's: two to three (CRAFT rule 1). */
   readonly payoffScale: number;
+  /** The payoff's ink, from the colour script (scarlet for sin, white for the robe, gold for the Word). */
   readonly payoffColor: string;
+  /** The payoff's own face, weight or tracking, over the lead-in's. */
   readonly payoffType?: Partial<Omit<TextStyle, 'size' | 'color'>>;
+  /** How the words are cased: as said (the default), lower case (the reference's) or upper case. */
   readonly case?: 'said' | 'lower' | 'upper';
+  /** Flush left (the reference's, the default) or centred. */
   readonly align?: 'left' | 'center';
+  /** The space either side of the words, px. Defaults to 9 % of the frame's width (the reference's 8.6 %). */
   readonly margin?: number;
+  /** How long each word takes to rise in, seconds: the reference's three frames at 60 fps. */
   readonly rise?: number;
+  /**
+   * The payoff's treatment, drawn once it is heard: `box` where it is set on
+   * the frame, `since` the seconds since it was heard. Over the word unless
+   * `under` (a highlight box, a glow).
+   */
   readonly treatment?: {
     readonly under?: boolean;
     readonly draw: (ctx: CanvasRenderingContext2D, box: Box, since: number) => void;
   };
 }
 
+/** The reference's word rise: three frames at 60 fps. */
 const RISE = 0.05;
 
+/** A word as `cardLayout` sets it: its text cased, its type and its box. */
 interface SetWord extends CardWord {
   readonly set: string;
   readonly style: TextStyle;
+  /** Its baseline's left end. */
   readonly x: number;
   readonly y: number;
+  /** Its box, from the top of its line to the bottom. */
   readonly box: Box;
 }
 
 const cased = (text: string, how: CardStyle['case']) =>
   how === 'lower' ? text.toLowerCase() : how === 'upper' ? text.toUpperCase() : text;
 
+/** A line of a card being set: its words, their type and its width. */
 interface Line {
   readonly words: Array<{ readonly word: CardWord; readonly set: string; readonly w: number }>;
   readonly style: TextStyle;
   width: number;
 }
 
+/**
+ * The card's words set on a `w` × `h` frame: the lead-in in lines that wrap
+ * inside the margins, the payoff on a line of its own at its scale, the block
+ * centred on the frame's height, flush left or centred. Pure: it measures in
+ * `ctx`'s fonts and draws nothing.
+ */
 const cardLayout = (
   ctx: CanvasRenderingContext2D,
   words: ReadonlyArray<CardWord>,
@@ -137,6 +195,7 @@ const cardLayout = (
   return out;
 };
 
+/** What `fullCard` draws with: a frame's context, size, scene clock and hands. */
 interface CardFrame {
   readonly ctx: CanvasRenderingContext2D;
   readonly w: number;
@@ -145,6 +204,12 @@ interface CardFrame {
   hand(key: string | number): Hand;
 }
 
+/**
+ * A full-screen card in `style`: its ground over the whole frame, then each
+ * word from the moment it is heard, rising in over `rise`, the payoff at its
+ * scale and colour with its treatment. Text goes through `write`, so `film
+ * check` reads every word.
+ */
 export const fullCard = (f: CardFrame, words: ReadonlyArray<CardWord>, style: CardStyle) => {
   const { ctx, w, h, t } = f;
   ctx.save();
@@ -169,6 +234,7 @@ export const fullCard = (f: CardFrame, words: ReadonlyArray<CardWord>, style: Ca
   ctx.restore();
 };
 
+/** `from` grown toward the whole `w` × `h` frame by `p`, eased: where a flood stands. */
 export const floodBox = (from: Box, w: number, h: number, p: number): Box => {
   const e = ease.inOutCubic(clamp(p));
   return {
@@ -179,30 +245,45 @@ export const floodBox = (from: Box, w: number, h: number, p: number): Box => {
   };
 };
 
+/** A verse on its page: the text as printed (KJV, verbatim) and the phrase a card lifts from it. */
 export interface Verse {
   readonly text: string;
+  /** The phrase highlighted: a run of `text`'s words, as printed. */
   readonly phrase: string;
 }
 
+/** How a look sets a verse: its type, how wide it runs, and the highlight's colour. */
 export interface VerseStyle {
   readonly type: TextStyle;
+  /** How wide the text runs before it wraps, px in the drawing's space. */
   readonly width: number;
+  /** The highlight's colour: the card's ground, so the flood is the highlight grown. */
   readonly highlight: string;
+  /** The ink of the words the highlight covers, where the type's would not read on it (the card's ink). */
   readonly lit?: string;
+  /**
+   * How far the highlight reaches past each word, px in the drawing's space:
+   * `x` each side (0.12 of the type's size when unset), `y` above and below
+   * (none when unset). Bars on one line that meet are filled as one, so an
+   * `x` of half a space or more joins a line's highlight into one bar.
+   */
   readonly pad?: { readonly x?: number; readonly y?: number };
 }
 
+/** A verse set: its lines, and the phrase's words as boxes in reading order. */
 interface VerseSet {
   readonly lines: ReadonlyArray<{ readonly text: string; readonly y: number }>;
   readonly phrase: ReadonlyArray<Box>;
 }
 
+/** The first run of `words` that is `phrase`'s words, by index; none when it is not there. */
 const phraseAt = (words: ReadonlyArray<string>, phrase: ReadonlyArray<string>) => {
   for (let i = 0; i + phrase.length <= words.length; i++)
     if (phrase.every((p, k) => words[i + k] === p)) return Option.some(i);
   return Option.none<number>();
 };
 
+/** `verse` set in `style` with its first baseline at (x, y): its lines and the phrase's word boxes. */
 const verseLayout = (
   ctx: CanvasRenderingContext2D,
   verse: Verse,
@@ -244,6 +325,7 @@ const verseLayout = (
   return { lines, phrase: boxes };
 };
 
+/** A box widened by `x` px each side and `y` px above and below. */
 const padded = (b: Box, x: number, y: number): Box => ({
   x: b.x - x,
   y: b.y - y,
@@ -251,6 +333,7 @@ const padded = (b: Box, x: number, y: number): Box => ({
   h: b.h + 2 * y,
 });
 
+/** `bars` in reading order, each run of them on one line that meets or overlaps filled as one bar. */
 const joined = (bars: ReadonlyArray<Box>): ReadonlyArray<Box> =>
   bars.reduce<Array<Box>>((out, b) => {
     const prev = out.at(-1);
@@ -262,6 +345,7 @@ const joined = (bars: ReadonlyArray<Box>): ReadonlyArray<Box> =>
     return out;
   }, []);
 
+/** The smallest box round `boxes` (an empty box at the origin when there are none). */
 const boxAround = (boxes: ReadonlyArray<Box>): Box => {
   if (boxes.length === 0) return { x: 0, y: 0, w: 0, h: 0 };
   const x0 = Math.min(...boxes.map((b) => b.x));
@@ -271,6 +355,7 @@ const boxAround = (boxes: ReadonlyArray<Box>): Box => {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 };
 
+/** `b` (in `ctx`'s current space) on the frame: the box round its corners as the transform puts them. */
 const onFrame = (ctx: CanvasRenderingContext2D, b: Box): Box => {
   const m = ctx.getTransform();
   const corners = [
@@ -287,6 +372,16 @@ const onFrame = (ctx: CanvasRenderingContext2D, b: Box): Box => {
   return boxAround(corners);
 };
 
+/**
+ * `verse` on its page at (x, y) (its first baseline), the phrase highlighted
+ * `highlight` of the way along its words (0 none, 1 all, swept in reading
+ * order), the text set over the highlight, in `lit` ink where it covers it.
+ * Returns the box of the phrase's last line, where the sweep ends (on a line
+ * the phrase shares with words it does not hold, those stay outside it), in
+ * the canvas's own pixels, through every transform it was drawn under (a
+ * camera, the render's scale): where a card's flood starts. The page itself
+ * (paper, a column rule, a verse number) is the look's to draw under it.
+ */
 export const verse = (
   ctx: CanvasRenderingContext2D,
   v: Verse,

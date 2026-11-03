@@ -1,3 +1,27 @@
+/**
+ * The site on Cloudflare: one Worker that serves `dist/` from its static
+ * assets, with every request passing through the policy in `./respond.ts`
+ * first (`runWorkerFirst`), so its headers and its 404 hold for every file.
+ *
+ * Where it is served from follows the stage and `SERVED_FROM`
+ * (`../site.ts`): `prod` takes the Worker name `firsttheblade` (so its
+ * `workers.dev` host is `firsttheblade.<subdomain>.workers.dev`), and with
+ * `SERVED_FROM = 'custom-domain'` it takes the apex domain, redirects `www`
+ * and each of `REDIRECTED_DOMAINS` (with its `www`) to it, and turns its
+ * `workers.dev` host off. Any other stage is a throwaway copy on a
+ * generated `workers.dev` name and never takes the site's hostnames; it
+ * shares the sending domain with prod (`./domain.ts`).
+ *
+ * The email list's routes run in the same Worker, over D1, Email Sending, a
+ * Queue and a Rate Limit, with the list's model on Durable Objects
+ * (`./mail.ts`). Its two secrets, `MAIL_TOKEN_KEY` (the key its ids and links
+ * are hashed with) and `MAIL_ADMIN_TOKEN` (what `bun run mail:send` must
+ * show), are read from the deployer's environment and bound as Worker
+ * secrets; they are never in the repository. The Worker is also the queue's
+ * consumer: each batch of a film's send is delivered here
+ * (`../mail/deliver.ts`). A sign-up never confirmed runs out on its own
+ * schedule, in the model (`../list/SignUpExpiry.policy.ts`).
+ */
 import { Stage } from 'alchemy/Stage';
 import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Context, Effect, Layer, Option, Schema, Stream } from 'effect';
@@ -16,11 +40,18 @@ import { respond } from './respond.ts';
 
 const readDelivery = Schema.decodeUnknownOption(Delivery);
 
+/**
+ * `effect` with the services built as the Worker started, under the event's
+ * own: the event's execution context and runtime win. The services were
+ * captured with the start's placeholders for both, which only an event's
+ * replace (a `waitUntil` through the placeholder dies).
+ */
 const withServices =
   <S, Event = never>(services: Context.Context<S>) =>
   <A, E>(effect: Effect.Effect<A, E, S | Event>) =>
     Effect.updateContext(effect, (event: Context.Context<Event>) => Context.merge(services, event));
 
+/** The Worker's answer to a request: the policy, over the site's services. */
 const serve = (services: Context.Context<MailServices>) =>
   Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest;
@@ -34,6 +65,7 @@ const ASSETS = {
   notFoundHandling: 'none',
 } as const;
 
+/** What `prod` claims, by where the site is served from. */
 const PRODUCTION: Record<ServedFrom, Cloudflare.WorkerProps> = {
   'workers.dev': { name: WORKER_NAME, workersDev: true },
   'custom-domain': {
@@ -46,6 +78,11 @@ const PRODUCTION: Record<ServedFrom, Cloudflare.WorkerProps> = {
   },
 };
 
+/**
+ * The props, by stage. They are read at deploy time, where the stage is
+ * known; the running Worker reads them too, without one, and needs only
+ * the base.
+ */
 const props = Effect.gen(function* () {
   const stage = yield* Effect.serviceOption(Stage);
   const base = { main: import.meta.url, assets: ASSETS };

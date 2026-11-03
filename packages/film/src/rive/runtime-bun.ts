@@ -6,11 +6,14 @@ import { RigUnloadable } from '../core/errors.ts';
 import { onceScoped } from '../core/once.ts';
 import { RiveRuntime } from './runtime.ts';
 
+/** The WebGL 2 runtime's module, loaded with the first rig. */
 const loadGl = () => import('@rive-app/webgl2-advanced');
 
+/** Why the runtime would not start. */
 const unstarted = (cause: unknown) =>
   RigUnloadable.make({ rig: 'the WebGL 2 runtime', reason: String(cause) });
 
+/** The runtime started from `wasm` (its bytes), under a stand-in document that comes down once it has. */
 const started = (wasm: Uint8Array) =>
   Effect.flatMap(Effect.tryPromise({ try: loadGl, catch: unstarted }), (module) =>
     standInDom().pipe(

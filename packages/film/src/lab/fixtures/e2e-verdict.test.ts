@@ -22,9 +22,11 @@ import {
   verdictOf,
 } from './e2e-verdict.ts';
 
+/** The suite's script, as `packages/film/package.json` names it. */
 const SUITE =
   'bun src/lab/fixtures/run-suite.ts --parallel --no-isolate --max-concurrency=3 --preload ./e2e/preload.ts --timeout 20000 e2e';
 
+/** A local run's output, as `bun test` prints it to a file. */
 const LOCAL = [
   'e2e/lab/shell.dom.test.ts:',
   '(pass) the lab shell > Go to… opens the menu [812.20ms]',
@@ -39,6 +41,7 @@ const LOCAL = [
   'Ran 3 tests across 2 files. [21.40s]',
 ].join('\n');
 
+/** The same as CI prints it (`gh run view --log-failed`): prefixed, grouped, coloured, summed up at the end. */
 const CI = [
   'e2e\tRun bun run test:e2e\t2026-10-15T12:44:41.8043526Z ##[group]e2e/lab/fixtures/browsers.dom.test.ts:',
   'e2e\tRun bun run test:e2e\t2026-10-15T12:44:41.9Z \u001b[31m✗\u001b[0m the pool of views > lends a view to the next case with nothing of the last case left in it [986.57ms]',
@@ -48,6 +51,7 @@ const CI = [
   'e2e\tRun bun run test:e2e\t2026-10-15T12:44:43.1Z ✗ the pool of views > lends a view to the next case with nothing of the last case left in it [986.57ms]',
 ].join('\n');
 
+/** A run in which a case timed out and its fiber failed after it, between tests (round 1's `e2e-1.log`). */
 const BETWEEN = [
   'e2e/lab/editor/editor.dom.test.ts:',
   "(fail) the cue strip > a receipt's Undo pressed before the reloaded page knows the step says so [20011.23ms]",
@@ -69,6 +73,7 @@ const POOL =
 const BACK = 'the lab shell > Back undoes a pick, and Forward makes it again';
 const back: Failure = { file: Option.some('e2e/lab/shell.dom.test.ts'), name: BACK, whole: false };
 
+/** A base whose suite finished, failing `failed`, its check having rerun `alone`. */
 const baseWith = (
   failed: ReadonlyArray<Failure>,
   alone: ReadonlyArray<Judged> = [],

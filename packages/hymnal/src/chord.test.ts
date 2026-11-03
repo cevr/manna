@@ -10,6 +10,7 @@ const named = (keys: number[], key: Chord.Key) => {
   return chord === undefined ? undefined : Chord.format(chord, key);
 };
 
+/** Each quality's notes: semitones above the root, and the letters above the root's letter. */
 const MEMBERS: Record<Chord.Quality, ReadonlyArray<readonly [number, number]>> = {
   '': [
     [0, 0],
@@ -93,8 +94,13 @@ const MEMBERS: Record<Chord.Quality, ReadonlyArray<readonly [number, number]>> =
 const LETTERS = 'CDEFGAB';
 const NATURALS = [0, 2, 4, 5, 7, 9, 11];
 
+/**
+ * The letter each degree is written on, as steps above the tonic's letter,
+ * in major and minor keys alike: b2, 2, b3, 3, 4, #4, 5, b6, 6, b7, 7.
+ */
 const DEGREE_LETTERS = [0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6];
 
+/** How each quality is written after its root. */
 const SUFFIXES: Record<Chord.Quality, string> = {
   '': '',
   m: 'm',
@@ -112,6 +118,7 @@ const SUFFIXES: Record<Chord.Quality, string> = {
   '7sus4': '7sus4',
 };
 
+/** A spelled note's pitch class, read here rather than through the module. */
 const pitchOf = (name: string) =>
   ([...name.slice(1)].reduce(
     (pc, c) => pc + (c === '#' ? 1 : -1),
@@ -120,6 +127,7 @@ const pitchOf = (name: string) =>
     12) %
   12;
 
+/** The note on a letter (steps from C, any octave) at a pitch class; undefined past two accidentals. */
 const onLetter = (letter: number, pc: number): string | undefined => {
   const at = ((letter % 7) + 7) % 7;
   const offset = (pc - (NATURALS[at] ?? 0) + 12) % 12;
@@ -140,6 +148,7 @@ const onLetter = (letter: number, pc: number): string | undefined => {
   return accidental === undefined ? undefined : `${LETTERS[at]}${accidental}`;
 };
 
+/** Every key the schema admits, from every tonic a signature could be written with, in both modes. */
 const KEYS = [...LETTERS]
   .flatMap((letter) => [letter, `${letter}#`, `${letter}b`])
   .flatMap((tonic) => [
@@ -148,9 +157,16 @@ const KEYS = [...LETTERS]
   ])
   .filter(Schema.is(Chord.Key));
 
+/** A diminished chord on #1, #2 or #5 of a major key: the leading tone of ii, iii or vi. */
 const leadsUp = (key: Chord.Key, chord: Chord.Chord) =>
   !key.minor && ['dim', 'dim7', 'm7b5'].includes(chord.quality) && [1, 3, 8].includes(chord.root);
 
+/**
+ * The symbol a score writes, by letter arithmetic alone: the root on its
+ * degree's letter (a raised diminished root on the letter below), a member
+ * bass on the letter its interval gives unless that takes three accidentals,
+ * any other bass on its degree's letter.
+ */
 const expected = (key: Chord.Key, chord: Chord.Chord): string => {
   const tonicLetter = LETTERS.indexOf(key.tonic[0] ?? 'C');
   const tonic = pitchOf(key.tonic);
@@ -167,6 +183,7 @@ const expected = (key: Chord.Key, chord: Chord.Chord): string => {
   return `${symbol}/${asMember ?? onLetter(degreeLetter(chord.bass), pc) ?? '?'}`;
 };
 
+/** What is wrong with a chord's symbol in a key: none when it is the one a score writes. */
 const misspelled = (key: Chord.Key, chord: Chord.Chord): string[] => {
   const symbol = Chord.format(chord, key);
   const want = expected(key, chord);

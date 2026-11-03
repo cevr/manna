@@ -17,22 +17,29 @@ interface MenuItemState {
 }
 
 interface MenuItemProps extends BaseUIComponentProps<'div', MenuItemState> {
+  /** The text typeahead matches; the item's text content when not given. */
   label?: string | undefined;
 }
 
 interface MenuItemParams {
+  /** The id the user gave the item, if any. */
   readonly id: string | false | undefined;
+  /** The text typeahead matches; the item's text content when not given. */
   readonly label: () => string | undefined;
+  /** Whether a press closes the menu. */
   readonly closeOnClick: () => boolean;
 }
 
 interface MenuItemBehaviour {
   readonly highlighted: () => boolean;
+  /** The item's own props (its id, its tab stop, its presses) and the root's item props. */
   readonly props: ReadonlyArray<PropsInput>;
+  /** The button behaviour, merged first, under the item's role and the user's props. */
   readonly button: Mixin<HTMLButtonElement>;
   readonly ref: (el: HTMLElement) => void;
 }
 
+/** What makes an element one of a menu's items: its place in the roving focus, its presses, its release after a drag. */
 export function useMenuItem(params: MenuItemParams): MenuItemBehaviour {
   const { store, parent, itemProps } = useMenuRootContext();
   const contextMenu = parent.type === 'context-menu' ? parent.context : null;

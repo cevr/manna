@@ -1,3 +1,10 @@
+/** §9.2's format, and §10's "verify the writer with synthetic vectors".
+ *
+ *  The writer and the reader are tested against each other because they are the
+ *  only two things that have to agree about the layout — and because §10 asks
+ *  the builder to be verified without running it over the real 961,761-paragraph
+ *  corpus. */
+
 import { describe, expect, it } from 'bun:test';
 import { Effect, Schema } from 'effect';
 
@@ -25,6 +32,8 @@ const vectorFor = (seed: number): Int8Array => {
 const synthetic = (input?: {
   readonly fingerprint?: string;
   readonly ids?: readonly string[];
+  /** Overrides the derived book ranges, so a test can write a manifest that
+   *  overlaps, gaps, or reaches past the buffer — the states §9.6 refuses. */
   readonly books?: readonly VectorBookRange[];
 }): ArrayBuffer => {
   const ids = input?.ids ?? ['GC:GC 425.1', 'GC:GC 425.2', 'DA:DA 311.5'];
@@ -46,6 +55,8 @@ const synthetic = (input?: {
   });
 };
 
+/** A fixture that would not parse is a broken fixture, not a test failure the
+ *  suite can report anything useful about — so it is a defect. */
 class FixtureDidNotParse extends Schema.TaggedError<FixtureDidNotParse>()(
   'Search/FixtureDidNotParse',
   { fault: Schema.String },
@@ -183,6 +194,8 @@ describe('§9.6 what the parser refuses', () => {
 
 describe('§9.2 the scan', () => {
   const index = parsed(synthetic());
+  /** The neighbors half of a scan, for the assertions that are about ranking
+   *  rather than about how much of the index was read. */
   const neighborsOf = (query: Int8Array, options: Parameters<typeof scanVectorIndex>[2]) =>
     scanVectorIndex(index, query, options).neighbors;
 
@@ -217,6 +230,10 @@ describe('§9.2 the scan', () => {
     expect(neighbors.map((neighbor) => neighbor.paragraphId)).toEqual(['DA:DA 311.5']);
   });
 
+  /** Round-2 B6: `scanned` is the count of rows the scan computed a dot product
+   *  for, not the size of the index it was given. The fixture's three vectors
+   *  are two GC rows and one DA row, so the two numbers differ for every
+   *  narrowed scan and an implementation reporting `index.count` fails here. */
   it('reports how many rows it actually scanned', () => {
     expect(index.count).toBe(3);
     expect(scanVectorIndex(index, vectorFor(1), { topK: 5 }).scanned).toBe(3);

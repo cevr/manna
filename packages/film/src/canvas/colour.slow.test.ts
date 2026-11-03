@@ -39,6 +39,7 @@ const linear = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) 
 const f = (t: number) => (t > 216 / 24389 ? Math.cbrt(t) : ((24389 / 27) * t + 16) / 116);
 const fi = (t: number) => (t ** 3 > 216 / 24389 ? t ** 3 : (116 * t - 16) / (24389 / 27));
 
+/** `hex` in CIE LCh (D65). */
 const lch = (hex: string) => {
   const [r, g, b] = [0, 1, 2].map((i) => linear(channel(hex, i))) as [number, number, number];
   const x = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / WHITE[0]);
@@ -52,6 +53,7 @@ const lch = (hex: string) => {
   };
 };
 
+/** Whether LCh (L, C, h) is a colour sRGB can show. */
 const shows = (L: number, C: number, h: number) => {
   const fy = (L + 16) / 116;
   const [a, b] = [C * Math.cos((h * Math.PI) / 180), C * Math.sin((h * Math.PI) / 180)];
@@ -63,6 +65,7 @@ const shows = (L: number, C: number, h: number) => {
   ].every((v) => v >= -1e-4 && v <= 1 + 1e-4);
 };
 
+/** The most chroma sRGB shows at lightness `L` and hue `h`. */
 const most = (L: number, h: number) => {
   let [lo, hi] = [0, 160];
   for (let i = 0; i < 30; i++) {
@@ -73,13 +76,24 @@ const most = (L: number, h: number) => {
   return lo;
 };
 
+/** How far apart two hues are, the short way round. */
 const apart = (h: number, k: number) => {
   const d = Math.abs(h - k) % 360;
   return d > 180 ? 360 - d : d;
 };
 
+/** How far a hex colour's hue can stray by rounding, at chroma `C`: degrees. */
 const slack = (C: number) => (Math.atan(1 / Math.max(C, 1)) * 180) / Math.PI;
 
+/**
+ * Why `r` is no CRAFT 12 ramp under `key` at knobs `k`: its shade must be
+ * darker, turned toward the key's complement by at least `k.turn` (or onto
+ * it), and at least as chromatic as its base and `k.deep`; its light
+ * lighter, leaning to the key's hue the same way, and at least `k.warm`
+ * chromatic. A near-neutral is held to the same turn: CRAFT 12 asks it to
+ * turn toward the complement, not to land on it. Chroma the gamut cannot show
+ * at that lightness and hue is excused.
+ */
 const faults = (r: Ramp, key: Hex, k: Shading): string[] => {
   const [b, s, l] = [lch(r.base), lch(r.shade), lch(r.light)];
   const keyHue = lch(key).h;
@@ -107,6 +121,7 @@ const faults = (r: Ramp, key: Hex, k: Shading): string[] => {
   return out;
 };
 
+/** A colour of LCh (L, C, h), its chroma lowered as far as sRGB needs. */
 const hexOf = (L: number, C: number, h: number): Hex => {
   const c = Math.min(C, most(L, h));
   const fy = (L + 16) / 116;
@@ -120,6 +135,7 @@ const hexOf = (L: number, C: number, h: number): Hex => {
   return `#${byte(3.2404542 * X - 1.5371385 * Y - 0.4985314 * Z)}${byte(-0.969266 * X + 1.8760108 * Y + 0.041556 * Z)}${byte(0.0556434 * X - 0.2040259 * Y + 1.0572252 * Z)}`;
 };
 
+/** The house look's knobs (`style/house.ts` `shading`, fitted to K1). */
 const FILM: Shading = {
   turn: 20,
   dark: 0.22,
@@ -130,6 +146,7 @@ const FILM: Shading = {
   fade: 0.6,
 };
 
+/** Knobs from gentle to strong (the second at CRAFT 12's floors), and the paper-cut look's. */
 const KNOBS: ReadonlyArray<Shading> = [
   { turn: 25, dark: 0.16, lift: 0.45, deep: 14, neutral: 0.7, warm: 7, fade: 0.6 },
   { turn: 10, dark: 0.1, lift: 0.1, deep: 6, neutral: 0, warm: 6, fade: 0.9 },
@@ -137,6 +154,7 @@ const KNOBS: ReadonlyArray<Shading> = [
   FILM,
 ];
 
+/** Key lights round the wheel, pale and stronger, and a cool night and a warm cream. */
 const KEYS: ReadonlyArray<Hex> = [
   ...Array.from({ length: 12 }, (_, i) => hexOf(88, 14, i * 30)),
   ...Array.from({ length: 12 }, (_, i) => hexOf(80, 30, i * 30 + 15)),
@@ -144,6 +162,7 @@ const KEYS: ReadonlyArray<Hex> = [
   '#f3e9c8',
 ];
 
+/** Bases across the gamut, seeded, with the greys and the ends. */
 const BASES: ReadonlyArray<Hex> = (() => {
   const r = rng(1218);
   const byte = () =>

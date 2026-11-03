@@ -2,9 +2,15 @@ import { Effect, FileSystem, Option, Schedule, Stream } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
+/** How often the release asks again whether the folder's processes have ended. */
 const ASK_AGAIN = '50 millis';
+/** How long a process asked to end (SIGTERM) has before it is killed (SIGKILL). */
 const GRACE = '5 seconds';
 
+/**
+ * The processes of `ps` (`pid command` a line) whose command line names a
+ * path in `folder` (`<folder>/…`), this process left out.
+ */
 export const namingFolder = (ps: string, folder: string, self: number): ReadonlyArray<number> =>
   ps.split('\n').flatMap((line) =>
     Option.toArray(
@@ -18,6 +24,7 @@ export const namingFolder = (ps: string, folder: string, self: number): Readonly
     ),
   );
 
+/** The host's processes, as `ps` lists them: `pid command` a line. */
 const processes = Effect.scoped(
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner;
@@ -31,14 +38,20 @@ const processes = Effect.scoped(
   }),
 );
 
+/** The processes, this one left out, whose command line names a path in `folder`. */
 export const namingProcesses = (folder: string) =>
   Effect.map(processes, (ps) => namingFolder(ps, folder, process.pid));
 
+/** Send `signal` to each of `pids`; one already gone is passed over. */
 const signal = (pids: ReadonlyArray<number>, sig: NodeJS.Signals) =>
   Effect.forEach(pids, (pid) => Effect.ignore(Effect.try(() => process.kill(pid, sig))), {
     discard: true,
   });
 
+/**
+ * End the processes that name a path in `folder`, and wait until none runs:
+ * each asked to end, and killed if it still runs after GRACE.
+ */
 const endProcessesIn = (folder: string) =>
   Effect.gen(function* () {
     const running = namingProcesses(folder);
@@ -53,6 +66,7 @@ const endProcessesIn = (folder: string) =>
     yield* ended;
   });
 
+/** A folder of the run's own under the temp folder, `prefix` its name's start; released as above. */
 export const runFolder = (prefix: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

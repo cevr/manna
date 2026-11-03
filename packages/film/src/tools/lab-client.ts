@@ -12,14 +12,18 @@ import {
 import { HttpClient, HttpClientRequest } from 'effect/http';
 import { MCP_PATH } from './lab-mcp.ts';
 
+/** The protocol version the client speaks. */
 const PROTOCOL = '2025-06-18';
 
+/** How long a session's end waits on the lab before its scope closes without it. */
 const END_SECONDS = 5;
 
+/** The lab a command asks: the always-on one unless `FILM_LAB_URL` names another (a spare lab's port). */
 export const labUrl = Config.String('FILM_LAB_URL').pipe(
   Config.withDefault('http://127.0.0.1:8229/'),
 );
 
+/** No lab answered at `url`. */
 class LabUnanswered extends Schema.TaggedError<LabUnanswered>()('LabUnanswered', {
   url: Schema.String,
   reason: Schema.String,
@@ -29,6 +33,7 @@ class LabUnanswered extends Schema.TaggedError<LabUnanswered>()('LabUnanswered',
   }
 }
 
+/** The lab at `url` answered `tool` in a shape this checkout does not read: the two run different code. */
 class LabAnswerUnread extends Schema.TaggedError<LabAnswerUnread>()('LabAnswerUnread', {
   url: Schema.String,
   tool: Schema.String,
@@ -39,9 +44,11 @@ class LabAnswerUnread extends Schema.TaggedError<LabAnswerUnread>()('LabAnswerUn
   }
 }
 
+/** Whether `error` is no lab answering (asked again by a stream), not a refusal or an answer this checkout does not read. Pure. */
 export const isLostLab = (error: { readonly message: string }): boolean =>
   Predicate.isTagged(error, 'LabUnanswered');
 
+/** A tool of the lab's that refused a call, in the lab's words. */
 class LabToolRefused extends Schema.TaggedError<LabToolRefused>()('LabToolRefused', {
   tool: Schema.String,
   reason: Schema.String,
@@ -51,12 +58,14 @@ class LabToolRefused extends Schema.TaggedError<LabToolRefused>()('LabToolRefuse
   }
 }
 
+/** A tool of the lab's MCP as the client calls it (`Tool.make` in lab-mcp.ts): its name, what it takes, what it answers. */
 interface LabTool<P, PE, S, SE> {
   readonly name: string;
   readonly parametersSchema: Schema.Codec<P, PE>;
   readonly successSchema: Schema.Codec<S, SE>;
 }
 
+/** A message the client sends that calls no tool: the handshake, its notification. */
 const Sent = Schema.fromJsonString(
   Schema.Struct({
     jsonrpc: Schema.Literal('2.0'),
@@ -66,6 +75,7 @@ const Sent = Schema.fromJsonString(
   }),
 );
 
+/** A call of a tool as the lab reads it: its name, and its arguments as JSON. */
 const Call = Schema.fromJsonString(
   Schema.Struct({
     jsonrpc: Schema.Literal('2.0'),
@@ -77,6 +87,7 @@ const Call = Schema.fromJsonString(
 
 const readJsonValue = Schema.decodeUnknownEffect(Schema.Json);
 
+/** The lab's answer to a request, by the request's id: a tool's result, or the call refused unread. */
 const Answer = Schema.Struct({
   id: Schema.optionalKey(Schema.Union([Schema.String, Schema.Finite])),
   result: Schema.optionalKey(
@@ -92,16 +103,19 @@ const Answer = Schema.Struct({
 });
 const readAnswer = Schema.decodeOption(Schema.fromJsonString(Answer));
 
+/** A refusal the lab sent encoded (`LabRefused`): its words. */
 const readRefusal = Schema.decodeOption(
   Schema.fromJsonString(Schema.Struct({ reason: Schema.String })),
 );
 
+/** A refusal's words: the lab's `reason` when it sent the refusal encoded, else its text as it is. */
 const refusalWords = (text: string): string =>
   Option.getOrElse(
     Option.map(readRefusal(text), (r) => r.reason),
     () => text,
   );
 
+/** An answer as the lab sends it: one JSON body, or server-sent events with the answer among them. */
 const messagesOf = (contentType: Option.Option<string>, body: string): ReadonlyArray<string> =>
   Bool.match(
     Option.exists(contentType, (t) => t.startsWith('text/event-stream')),
@@ -115,11 +129,18 @@ const messagesOf = (contentType: Option.Option<string>, body: string): ReadonlyA
     },
   );
 
+/**
+ * A client of the lab's MCP at `url`: `session` begins a session, answers
+ * its id and ends it when its scope closes; `call` calls one of the lab's
+ * tools in it, typed by the tool. A session the lab no longer knows (it
+ * restarted) answers 404, so `LabUnanswered`: the caller starts another.
+ */
 export const labClient = Effect.fn('LabClient.make')(function* (url: string) {
   const http = yield* HttpClient.HttpClient;
   const endpoint = new URL(MCP_PATH, url).href;
   const ids = yield* Ref.make(0);
   const unanswered = (reason: string) => LabUnanswered.make({ url, reason });
+  /** An answer this checkout does not read. */
   const unread = (tool: string, reason: string) => LabAnswerUnread.make({ url, tool, reason });
 
   const post = (body: string, session: Option.Option<string>) =>
@@ -141,6 +162,7 @@ export const labClient = Effect.fn('LabClient.make')(function* (url: string) {
   const send = (message: typeof Sent.Type, session: Option.Option<string>) =>
     Effect.flatMap(Effect.orDie(Schema.encodeEffect(Sent)(message)), (body) => post(body, session));
 
+  /** The handshake's first half: `initialize`, answered with the session's id. */
   const initialize = Effect.gen(function* () {
     const started = yield* send(
       {
@@ -164,6 +186,12 @@ export const labClient = Effect.fn('LabClient.make')(function* (url: string) {
     );
   });
 
+  /**
+   * `session` ended in the lab, as the MCP spec ends one: a DELETE with no
+   * body. A lab that already forgot it (it restarted), has gone, or holds
+   * the call past `END_SECONDS` is left as it is: a scope never waits on a
+   * lab that does not answer to close.
+   */
   const end = (session: string) =>
     http
       .execute(
@@ -182,12 +210,23 @@ export const labClient = Effect.fn('LabClient.make')(function* (url: string) {
         Effect.ignore,
       );
 
+  /**
+   * A session for as long as its scope: started now, ended when the scope
+   * closes. Its end is kept the moment the lab names it, so a handshake
+   * that fails after that (`notifications/initialized` lost) ends it too.
+   * The handshake can be interrupted (a caller's time limit on a lab that
+   * holds the call). The lab names the session only in its answer, so a
+   * session it opened whose answer the interrupt drops is never ended: it
+   * stays in the lab, idle, until the lab restarts (its transport keeps no
+   * expiry), as one a killed client leaves does.
+   */
   const session = Effect.gen(function* () {
     const id = yield* Effect.acquireRelease(Effect.interruptible(initialize), end);
     yield* send({ jsonrpc: '2.0', method: 'notifications/initialized' }, Option.some(id));
     return id;
   });
 
+  /** One of the lab's tools called by `name` in `session` with `args`: its structured answer, as JSON. */
   const callJson = (session: string, name: string, args: Schema.Json) =>
     Effect.gen(function* () {
       const id = yield* Ref.updateAndGet(ids, (n) => n + 1);
@@ -233,6 +272,7 @@ export const labClient = Effect.fn('LabClient.make')(function* (url: string) {
       );
     });
 
+  /** One of the lab's tools called in `session`: its arguments encoded by its parameters, its answer decoded by `success`. */
   const read = <P, PE, S, SE, A, AE>(
     session: string,
     tool: LabTool<P, PE, S, SE>,
@@ -255,6 +295,7 @@ export const labClient = Effect.fn('LabClient.make')(function* (url: string) {
       );
     });
 
+  /** One of the lab's tools called in `session`, typed by the tool: its arguments encoded by its parameters, its answer decoded by its success. */
   const call = <P, PE, S, SE>(session: string, tool: LabTool<P, PE, S, SE>, params: P) =>
     read(session, tool, params, tool.successSchema);
 

@@ -8,26 +8,34 @@ import {
   parseSync,
 } from 'oxc-parser';
 
+/** What one import takes from `from`: some of its names, or (None) the module whole. */
 interface Take {
   readonly from: string;
   readonly names: Option.Option<ReadonlyArray<string>>;
 }
 
+/** An `export { imported as name } from from`, or (`imported` None) `export * as name from from`. */
 interface Reexport {
   readonly from: string;
   readonly imported: Option.Option<string>;
   readonly name: string;
 }
 
+/** A module's imports and exports. */
 export interface ModuleRecord {
+  /** The names it exports (as renamed): declarations, `export { … }` and re-exports. */
   readonly exports: ReadonlyArray<string>;
+  /** Its `import`s and `import()`s. */
   readonly takes: ReadonlyArray<Take>;
+  /** Its named re-exports: each takes only what its own name's users take. */
   readonly reexports: ReadonlyArray<Reexport>;
+  /** Its `export * from` sources: a name taken from it is taken from them too. */
   readonly stars: ReadonlyArray<string>;
 }
 
 type Parsed = ReturnType<typeof parseSync>['module'];
 
+/** A name as an import or export entry spells it; a default is `default`. */
 const nameOf = (entry: ImportName | ExportImportName | ExportExportName): Option.Option<string> => {
   if (entry.kind === 'Default') return Option.some('default');
   return Option.fromNullishOr(entry.name);
@@ -37,6 +45,7 @@ type StaticImport = Parsed['staticImports'][number];
 type ImportEntry = StaticImport['entries'][number];
 type ExportEntry = Parsed['staticExports'][number]['entries'][number];
 
+/** Whether a statement only names its bindings to bring them in or pass them on: an import, `export { x }` and `export default x`. */
 const namesOnly = (statement: Program['body'][number]): boolean => {
   if (statement.type === 'ImportDeclaration') return true;
   if (statement.type === 'ExportNamedDeclaration')
@@ -46,6 +55,12 @@ const namesOnly = (statement: Program['body'][number]): boolean => {
   return false;
 };
 
+/**
+ * Every name the module's own code mentions: each identifier outside the
+ * statements that only bring a binding in or pass it on. A mention that
+ * shadows an import, or a property of the same name, still counts, so the
+ * check errs toward alive.
+ */
 const mentionsOf = (program: Program): ReadonlySet<string> => {
   const found = new Set<string>();
   new Visitor({
@@ -55,6 +70,7 @@ const mentionsOf = (program: Program): ReadonlySet<string> => {
   return found;
 };
 
+/** Whether `exported` passes on the binding `entry` of import `i`: `export { x }` of it, or `export default x`. */
 const passesBinding = (i: StaticImport, entry: ImportEntry, exported: ExportEntry): boolean =>
   Option.match(Option.fromNullishOr(exported.moduleRequest), {
     onNone: () => exported.localName.name === entry.localName.value,
@@ -67,6 +83,7 @@ const passesBinding = (i: StaticImport, entry: ImportEntry, exported: ExportEntr
       ),
   });
 
+/** The names the module's own code mentions, read from its syntax tree only when it exports an import again. */
 const mentionsFor = (parsed: ReturnType<typeof parseSync>): ReadonlySet<string> => {
   const exported = parsed.module.staticExports.flatMap((e) => e.entries);
   const passes = parsed.module.staticImports.some((i) =>
@@ -76,6 +93,12 @@ const mentionsFor = (parsed: ReturnType<typeof parseSync>): ReadonlySet<string> 
   return mentionsOf(parsed.program);
 };
 
+/**
+ * An `import … from`: the names the module's own code uses, or the module
+ * whole for a used `import * as`. A binding the module only exports again
+ * takes nothing itself: its export passes a take through like `export { x }
+ * from`, so it takes only what its own name's users take.
+ */
 const importTake = (
   i: StaticImport,
   exported: ReadonlyArray<ExportEntry>,
@@ -93,6 +116,7 @@ const importTake = (
   };
 };
 
+/** The re-exports `export { x }` and `export default x` make of an imported binding `x` (the parser keeps them local). */
 const forwardsOf = (
   imports: ReadonlyArray<StaticImport>,
   exported: ReadonlyArray<ExportEntry>,
@@ -115,6 +139,7 @@ const forwardsOf = (
       ),
     );
 
+/** An `export … from` but `export *`: the one name it passes on, or the module whole for `export * as`. */
 const reexportOf = (
   e: Parsed['staticExports'][number]['entries'][number],
 ): ReadonlyArray<Reexport> =>
@@ -133,11 +158,13 @@ const reexportOf = (
     ),
   );
 
+/** How the parser reads `file`: JSX only in a `.tsx`. */
 const langOf = (file: string): 'ts' | 'tsx' => {
   if (file.endsWith('.tsx')) return 'tsx';
   return 'ts';
 };
 
+/** An `import('…')` with a literal specifier: the module whole. */
 const dynamicTake = (source: string, d: Parsed['dynamicImports'][number]): ReadonlyArray<Take> =>
   Option.toArray(
     Option.map(
@@ -148,6 +175,7 @@ const dynamicTake = (source: string, d: Parsed['dynamicImports'][number]): Reado
     ),
   );
 
+/** `file`'s exports and takes, read from its `source`. */
 export const recordOf = (file: string, source: string): ModuleRecord => {
   const parsed = parseSync(file, source, { lang: langOf(file), sourceType: 'module' });
   const { module } = parsed;
@@ -171,18 +199,28 @@ export const recordOf = (file: string, source: string): ModuleRecord => {
   };
 };
 
+/** The key a module is marked used under when something takes it whole. */
 const WHOLE = '*';
 
+/** Where a specifier points: a file of the workspace (relative to its root), or none (a dependency). */
 export type Resolve = (user: string, from: string) => Option.Option<string>;
 
+/** The workspace: each file's record, who may consume, what is checked, and where it is run from. */
 export interface Workspace {
   readonly records: ReadonlyMap<string, ModuleRecord>;
   readonly resolve: Resolve;
+  /** Whether `file` is code that uses its imports for real (not a test, a fixture or a lint rule). */
   readonly consumes: (file: string) => boolean;
+  /** Whether `file`'s exports are checked. */
   readonly checked: (file: string) => boolean;
+  /**
+   * The files something outside the module graph runs: an app, a bin, a
+   * script, a worker. A root that is not checked has its exports loaded whole.
+   */
   readonly roots: ReadonlySet<string>;
 }
 
+/** The modules `file` imports, re-exports or passes through; none for a file that is no consumer. */
 const reachesFrom = (workspace: Workspace, file: string): ReadonlyArray<string> => {
   const { records, resolve, consumes } = workspace;
   return Option.match(Option.fromUndefinedOr(records.get(file)), {
@@ -198,6 +236,7 @@ const reachesFrom = (workspace: Workspace, file: string): ReadonlyArray<string> 
   });
 };
 
+/** Every module a consuming module reachable from the roots imports, re-exports or passes through. */
 const reachable = (workspace: Workspace): ReadonlySet<string> => {
   const reached = new Set<string>();
   const visit = (file: string): void => {
@@ -209,6 +248,7 @@ const reachable = (workspace: Workspace): ReadonlySet<string> => {
   return reached;
 };
 
+/** What a name taken from `module` also takes from the modules that pass it on. */
 const passedOn = (
   { records, resolve }: Workspace,
   module: string,
@@ -233,6 +273,7 @@ const passedOn = (
     ],
   });
 
+/** Each `module, name` that a consuming module in `reached` imports from another module. */
 const importsOf = (
   workspace: Workspace,
   reached: ReadonlySet<string>,
@@ -249,6 +290,11 @@ const importsOf = (
       ),
     );
 
+/**
+ * Every `module#name` a consuming module reachable from a root takes, a name
+ * taken from a module that passes it on (`export *`, `export { x } from`)
+ * taken from the module behind it too, and `module#*` for a module taken whole.
+ */
 const takenNames = (workspace: Workspace): ReadonlySet<string> => {
   const { consumes, checked, roots } = workspace;
   const used = new Set<string>();
@@ -263,6 +309,13 @@ const takenNames = (workspace: Workspace): ReadonlySet<string> => {
   return used;
 };
 
+/**
+ * Each export of a checked module that no other consuming module reachable
+ * from a root takes, as `file name`: a name its own file alone reads, or only
+ * a test reads, or only an unreachable cycle reads, is not exported. A
+ * package's entry is checked like any module: every package is private, so
+ * its exports have no user beyond the workspace.
+ */
 export const deadExports = (workspace: Workspace): ReadonlyArray<string> => {
   const { records, checked } = workspace;
   const used = takenNames(workspace);

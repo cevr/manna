@@ -1,5 +1,28 @@
 /* oxlint-disable effect/noTernary, effect/noNullish, effect/maxCognitiveComplexity -- the acceptance oracle writes the find-place rule out as plain branches, apart from the product's Option code, so the two cannot share a mistake. */
 
+/**
+ * Acceptance (checkbulk S1): the find bar's place follows the page the
+ * route draws, not the last hymn page that said it shows.
+ *
+ * The rule, over its whole domain as written (every path class, a held or
+ * unheld hymn number, every shown page, every player state, raised or not):
+ *
+ * - The bar is drawn on a sheet's path (`/settings`, `/player`, `/chord`,
+ *   `/about`, `/tuner`) as `barFor(state, shown)` draws it: while a page
+ *   shows under the sheet or the player holds a hymn.
+ * - A held hymn's page (`/hymns/<n>`, `holds(n)`) always draws its bar.
+ * - Every other path (`/`, `/recent`, an unknown path, an unheld hymn
+ *   number such as `/hymns/9999`, `/hymns/0`, `/hymns/abc`, `/hymns/007`)
+ *   draws the bar only while the player holds a hymn.
+ * - Drawn: the `#` gives way while a control is raised (`Yielded`), else it
+ *   stands over the bar (`OverBar`) at the bar's height (`SOUNDING` while
+ *   the player sounds, else `REST`). Not drawn: docked on `/`, else nowhere.
+ *
+ * `heightOf` is the bar's one height rule, in `bar.ts`, for every state.
+ * Enumerated exhaustively (no generator is needed: the domain is finite).
+ * Numbers and stand-in titles only.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
@@ -10,6 +33,7 @@ const three: Track = { number: 3, title: 'Three' };
 const four: Track = { number: 4, title: 'Four' };
 const length = Option.some(120);
 
+/** Every state of the player holding `track`: all seven tags that hold one. */
 const holding = (track: Track): ReadonlyArray<Player> => [
   Player.Loading({ track }),
   Player.Playing({ track, at: 30, length }),
@@ -26,7 +50,9 @@ const shownPages: ReadonlyArray<Option.Option<Track>> = [
   Option.some(four),
 ];
 
+/** The book's hymns as `hymnAt` reads a route's number: 1 to 695, no leading zero. */
 const book = (n: string): boolean => /^[1-9]\d*$/.test(n) && Number(n) <= 695;
+/** A book that holds no hymn: every hymn path is unheld, so the rule reads `holds`, not a range of its own. */
 const none = (_: string): boolean => false;
 const holdsAll = [
   { name: 'book', holds: book },
@@ -51,6 +77,7 @@ const paths = [
   '/elsewhere',
 ];
 
+/** The place as the rule compares it: its tag, and the bar's height while it stands over the bar. */
 type Seen = { readonly tag: FindAt['_tag']; readonly height: number };
 const heightFor = (state: Player): number => (sounding(state) && SOUNDING) || REST;
 const seen = (at: FindAt): Seen =>
@@ -69,6 +96,7 @@ interface Input {
   readonly raised: boolean;
 }
 
+/** The rule, written out on its own. */
 const want = ({ path, holds, shown, state, raised }: Input): Seen => {
   const hymn = /^\/hymns\/([^/]+)$/.exec(path)?.[1];
   const holding = Option.isSome(trackOf(state));

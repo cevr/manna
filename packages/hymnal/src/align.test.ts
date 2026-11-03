@@ -6,6 +6,7 @@ import * as Midi from './midi.js';
 import * as Fixture from './midi-fixture.js';
 import * as Score from './score.js';
 
+/** One verse of a tune in 4/4, a bass striking with every note so none moves alone. */
 const tune = (soprano: Fixture.Voice) =>
   Effect.gen(function* () {
     const bass = soprano.map(([key, beats]) => [key - 24, beats] as const);

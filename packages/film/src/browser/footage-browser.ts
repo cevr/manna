@@ -4,12 +4,16 @@ import type { Input, VideoSample, VideoSampleSink } from 'mediabunny';
 import type { FootageFrames, FootageRead } from '../canvas/film.ts';
 import { Footage, FootageFrameMissing } from './footage.ts';
 
+/** A source's samples at a run's times, in order (`samplesAtTimestamps`). */
 type Samples = ReturnType<VideoSampleSink['samplesAtTimestamps']>;
 
+/** How many decoded frames the host keeps for `ready`: a frame's few sources, and a still beside a seek. */
 const KEPT = 8;
 
+/** How many sources a frame's reads are decoded from at once. */
 const AT_ONCE = 4;
 
+/** What the host uses of mediabunny. */
 type Mediabunny = Pick<
   typeof MediabunnyModule,
   'Input' | 'UrlSource' | 'ALL_FORMATS' | 'VideoSampleSink'
@@ -17,6 +21,11 @@ type Mediabunny = Pick<
 
 const loadMediabunny = (): Promise<Mediabunny> => import('mediabunny');
 
+/**
+ * mediabunny for the footage host, loaded with its first read: the page's
+ * own (`FootageDecoders.layer`, which imports the module), provided where the
+ * host is built (`host-browser.ts`).
+ */
 export class FootageDecoders extends Context.Service<
   FootageDecoders,
   { readonly load: () => Promise<Mediabunny> }
@@ -27,24 +36,31 @@ export class FootageDecoders extends Context.Service<
   );
 }
 
+/** Why a run's read failed when its run had ended first. */
 const RUN_ENDED = 'its run had ended';
 
+/** A read's key in the kept frames. */
 const keyOf = (read: FootageRead) => `${read.source}@${read.at}`;
 
+/** A promise mediabunny made, as an Effect failing with why. */
 const ask = <A>(promise: () => Promise<A>): Effect.Effect<A, string> =>
   Effect.tryPromise({ try: promise, catch: String });
 
+/** What mediabunny answered, or `why` there was nothing. */
 const present = <A>(found: Effect.Effect<A, string>, why: string) =>
   Effect.flatMap(found, (value) => Effect.fromOption(Option.fromNullishOr(value), () => why));
 
+/** The sample a run's step gave, if it gave one: none once the run is over. */
 const sampleIn = (got: Awaited<ReturnType<Samples['next']>>): Option.Option<VideoSample> => {
   if (got.done === true) return Option.none();
   return Option.fromNullishOr(got.value);
 };
 
+/** A failure of mediabunny's for `read`, named. */
 const missing = (read: FootageRead) => (why: string) =>
   new FootageFrameMissing({ source: read.source, at: read.at, why });
 
+/** `sample` copied whole onto a canvas of the host's, and let go. */
 const copied = (sample: VideoSample): Effect.Effect<HTMLCanvasElement> =>
   Effect.sync(() => {
     const canvas = document.createElement('canvas');
@@ -65,6 +81,10 @@ const copied = (sample: VideoSample): Effect.Effect<HTMLCanvasElement> =>
     Effect.ensuring(Effect.sync(() => sample.close())),
   );
 
+/**
+ * The live footage of a page that reads each source's copy at `urlOf(source)`,
+ * through the mediabunny it is given (`FootageDecoders`).
+ */
 export const footageLayer = (
   urlOf: (source: string) => string,
 ): Layer.Layer<Footage, never, FootageDecoders> =>
@@ -77,6 +97,7 @@ export const footageLayer = (
       yield* Effect.addFinalizer(() =>
         Effect.sync(() => inputs.forEach((input) => input.dispose())),
       );
+      /** Each source's sink, opened once (one at a time) and kept: one that would not open is asked again next time. */
       const sinks = new Map<string, VideoSampleSink>();
       const opening = yield* Semaphore.make(1);
       const sinkOf = (source: string): Effect.Effect<VideoSampleSink, string> =>
@@ -102,6 +123,7 @@ export const footageLayer = (
           }),
         );
 
+      /** The frames decoded for `ready`, oldest first. */
       const kept = new Map<string, HTMLCanvasElement>();
       const keep = (key: string, canvas: HTMLCanvasElement) => {
         kept.delete(key);
@@ -111,6 +133,7 @@ export const footageLayer = (
           kept.delete(old);
         }
       };
+      /** `read`'s frame, by its key: the one kept, else decoded and kept. */
       const decodeOne = (
         read: FootageRead,
       ): Effect.Effect<readonly [string, HTMLCanvasElement], FootageFrameMissing> =>
@@ -129,6 +152,7 @@ export const footageLayer = (
             }).pipe(Effect.mapError(missing(read))),
         });
 
+      /** A run over `frames`: each source's samples at the times the run reads it, in order. */
       const runOf = (frames: ReadonlyArray<ReadonlyArray<FootageRead>>) =>
         Effect.gen(function* () {
           const scope = yield* Effect.scope;
@@ -138,7 +162,13 @@ export const footageLayer = (
               ...Option.getOrElse(Option.fromUndefinedOr(times.get(read.source)), () => []),
               read.at,
             ]);
+          /**
+           * Whether the run's scope has closed. A read may outlive it (the
+           * render runs each frame's on a fiber of its own): what it would
+           * make after, nothing would let go, so it makes nothing and fails.
+           */
           let ended = false;
+          /** Each source's samples, made when the run first reads it, never once the run has ended. */
           const iterators = new Map<string, Samples>();
           const iteratorOf = (source: string): Effect.Effect<Samples, string> =>
             Option.match(Option.fromUndefinedOr(iterators.get(source)), {
@@ -155,6 +185,7 @@ export const footageLayer = (
                   }),
                 ),
             });
+          /** The frames the last `next` handed out: let go at the next, or when the run ends. */
           let held: Array<VideoFrame> = [];
           const letGo = Effect.sync(() => {
             held.forEach((frame) => frame.close());

@@ -2,8 +2,10 @@ import { Effect, Option } from 'effect';
 import { Diagnostic, type ESTree, Rule, RuleContext } from 'oxlint-plugin-effect/rule-bindings';
 import { ancestors, type Bindings, bindings, collect, memberName, type Module } from './nodes.ts';
 
+/** The module the touch gesture is exported from. */
 const isGestures: Module = (from) => /(?:^|\/)fixtures\/gestures(?:\.[jt]s)?$/u.test(from);
 
+/** The node a callee chain starts at: `it` for `it.effect.layer(x)(…)`. */
 const rootOf = (n: ESTree.Node): Option.Option<ESTree.Node> => {
   if (n.type === 'Identifier') return Option.some(n);
   if (n.type === 'MemberExpression') return rootOf(n.object);
@@ -14,6 +16,11 @@ const rootOf = (n: ESTree.Node): Option.Option<ESTree.Node> => {
 const isFunction = (n: ESTree.Node) =>
   n.type === 'ArrowFunctionExpression' || n.type === 'FunctionExpression';
 
+/**
+ * A call of the runner's `test.serial(…)`, or of an effect-bun-test runner's
+ * `.serial` form (`it.live.serial(…)`), which registers its case with
+ * `test.serial`.
+ */
 const isSerialTest = (b: Bindings, n: ESTree.Node) => {
   if (n.type !== 'CallExpression' || n.callee.type !== 'MemberExpression') return false;
   if (!Option.contains(memberName(n.callee), 'serial')) return false;
@@ -22,11 +29,13 @@ const isSerialTest = (b: Bindings, n: ESTree.Node) => {
   return on.type === 'MemberExpression' && !on.computed && b.isRunner(on.object, 'it');
 };
 
+/** A test: the runner's `it…(name, body, …)` or `test…(name, body, …)`. */
 const isTest = (b: Bindings, n: ESTree.Node) =>
   n.type === 'CallExpression' &&
   Option.exists(rootOf(n.callee), (root) => b.isRunner(root, 'it') || b.isRunner(root, 'test')) &&
   n.arguments.some(isFunction);
 
+/** `<x>.finger`: the identifier `finger` read off a tab. */
 const isFinger = (n: ESTree.Node) =>
   n.type === 'Identifier' &&
   n.name === 'finger' &&
@@ -34,6 +43,7 @@ const isFinger = (n: ESTree.Node) =>
   n.parent.property === n &&
   !n.parent.computed;
 
+/** The touch gesture: `touch` (or its alias) where it is used, or the `touch` of `gestures.touch`. */
 const isGesture = (b: Bindings, n: ESTree.Node) => {
   if (n.type !== 'Identifier') return false;
   const p = n.parent;
@@ -42,6 +52,11 @@ const isGesture = (b: Bindings, n: ESTree.Node) => {
   return isUse(n) && b.importsAs(n, isGestures, 'touch');
 };
 
+/**
+ * `{ finger }` or `{ finger: tip }` taken apart from a tab: the `finger` key
+ * of a pattern, with the name it binds (none when it binds no one name, as
+ * a pattern within the pattern).
+ */
 const fingerTakenApart = (n: ESTree.Node): Option.Option<Option.Option<ESTree.Node>> => {
   if (n.type !== 'Identifier' || n.name !== 'finger') return Option.none();
   const p = n.parent;
@@ -50,15 +65,18 @@ const fingerTakenApart = (n: ESTree.Node): Option.Option<Option.Option<ESTree.No
   return Option.some(boundName(p.value));
 };
 
+/** The one name a pattern binds (`tip`, `tip = x`), or none. */
 const boundName = (b: ESTree.Node): Option.Option<ESTree.Node> => {
   if (b.type === 'Identifier') return Option.some(b);
   if (b.type === 'AssignmentPattern') return boundName(b.left);
   return Option.none();
 };
 
+/** Whether an identifier is a use of a name, not a declaration of one or a member's or key's name. */
 const isUse = (n: ESTree.Node) =>
   Option.exists(Option.fromUndefinedOr(ancestors(n).at(0)), (p) => usedIn(n, p));
 
+/** Whether `n` stands as a use in `p`, its parent. */
 const usedIn = (n: ESTree.Node, p: ESTree.Node) => {
   if (p.type === 'MemberExpression') return p.object === n || p.computed;
   if (p.type === 'Property' && p.parent.type === 'ObjectPattern') return p.computed && p.key === n;
@@ -74,12 +92,19 @@ const usedIn = (n: ESTree.Node, p: ESTree.Node) => {
   );
 };
 
+/** Where a touch or a use stands: a serial test's body, another test's, a declaration (by the name it binds), or none. */
 type Host =
   | { readonly _tag: 'Serial' }
   | { readonly _tag: 'Test' }
   | { readonly _tag: 'Declared'; readonly binding: ESTree.Node }
   | { readonly _tag: 'Loose' };
 
+/**
+ * Where `n` stands. A declaration hosts it only when `n` is inside a
+ * function of the declaration's (a helper's body, a step's): an initializer
+ * that reaches `n` with no function between runs as it is declared, so `n`
+ * stands where the declaration does.
+ */
 const hostOf = (b: Bindings, n: ESTree.Node): Host => {
   const up = ancestors(n);
   if (up.some((a) => isSerialTest(b, a))) return { _tag: 'Serial' };
@@ -98,8 +123,10 @@ const hostOf = (b: Bindings, n: ESTree.Node): Host => {
   return { _tag: 'Loose' };
 };
 
+/** A touch, or a use of a name the file binds, outside a serial test's body. */
 interface Seen {
   readonly node: ESTree.Node;
+  /** The binding of the name used; none for a touch, which touches whatever it is called. */
   readonly used: Option.Option<ESTree.Node>;
   readonly host: Exclude<Host, { readonly _tag: 'Serial' }>;
 }
@@ -124,9 +151,11 @@ const seen =
     return Option.some({ node: n, used, host });
   };
 
+/** Whether a sighting touches, given the bindings that do. */
 const touches = (s: Seen, touching: ReadonlySet<ESTree.Node>) =>
   Option.match(s.used, { onNone: () => true, onSome: (binding) => touching.has(binding) });
 
+/** The bindings that touch: each declaration whose value touches or uses one that does. */
 const touchingBindings = (all: ReadonlyArray<Seen>) => {
   const touching = new Set<ESTree.Node>();
   let grew = true;

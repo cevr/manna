@@ -15,9 +15,11 @@ import type { Probe } from './probe.ts';
 import { burnedCaptions } from './short-captions.ts';
 import { verticalHook } from './vertical.ts';
 
+/** A talk's page, in px. */
 const WIDTH = 1080;
 const HEIGHT = 1920;
 
+/** The part of a take's picture a frame shows, in the take's px. */
 interface Crop {
   readonly sx: number;
   readonly sy: number;
@@ -25,6 +27,11 @@ interface Crop {
   readonly sh: number;
 }
 
+/**
+ * The 9:16 crop of a `width` × `height` picture about `frame`, `zoom` times
+ * in from the largest 9:16 rectangle the picture holds (never out past it),
+ * kept inside the picture.
+ */
 const cropOf = (
   picture: { readonly width: number; readonly height: number },
   frame: Point,
@@ -42,13 +49,16 @@ const cropOf = (
   };
 };
 
+/** A size in px. */
 interface Size {
   readonly width: number;
   readonly height: number;
 }
 
+/** A side of a picture, in px: a positive number. */
 const pxOf = Schema.decodeUnknownOption(Schema.Finite.check(Schema.isGreaterThan(0)));
 
+/** A read the host was given to decode before the frame was drawn, and did not: never drawn black. */
 class FootageUndecoded extends Data.TaggedError('FootageUndecoded')<{
   readonly source: string;
   readonly at: number;
@@ -58,6 +68,11 @@ class FootageUndecoded extends Data.TaggedError('FootageUndecoded')<{
   }
 }
 
+/**
+ * The size of a picture the host decoded, in its own px: a video frame's as
+ * displayed, else its width and height; `otherwise` for a picture that says
+ * neither.
+ */
 const sizeOf = (image: CanvasImageSource, otherwise: Size): Size => {
   const px = (key: string) => pxOf(Reflect.get(image, key));
   return Option.getOrElse(
@@ -71,17 +86,26 @@ const sizeOf = (image: CanvasImageSource, otherwise: Size): Size => {
 const isPoint = Schema.is(Point);
 const isKnob = Schema.is(Knob);
 
+/** Knob `name` of `knobs` when it is a point. */
 const pointKnob = (knobs: ReadonlyMap<string, Knob>, name: string): Option.Option<Point> =>
   Option.filter(Option.fromUndefinedOr(knobs.get(name)), isPoint);
 
+/** Knob `name` of `knobs` when it is a number. */
 const numberKnob = (knobs: ReadonlyMap<string, Knob>, name: string): Option.Option<number> =>
   Option.filter(
     Option.fromUndefinedOr(knobs.get(name)),
     (k): k is number => isKnob(k) && !isPoint(k),
   );
 
+/** The paper under a frame the host gave no footage for: plain, never a frame of the take. */
 const BARE = '#000000';
 
+/**
+ * `talk`'s page over its takes (`takes`, by the talk's keys for them, as
+ * `talkTakes` reads them from the footage library) and its cut on them
+ * (`talkCut`): the cut laid out as a film's scenes are, each frame the
+ * take's frame its cut names.
+ */
 export const createTalk = (
   talk: Talk,
   takes: Readonly<Record<string, TalkTake>>,
@@ -102,6 +126,7 @@ export const createTalk = (
     },
   });
   const style = base.look.short;
+  /** Each section as it plays, and the take it plays, by scene. */
   const sections = new Map(
     cut.sections.flatMap((section) =>
       Option.toArray(
@@ -115,6 +140,7 @@ export const createTalk = (
     caption: TALK_LAYOUT.caption,
   });
 
+  /** The section playing at `T`, and where in it. */
   const playing = (T: number) => {
     const p = base.sceneAt(T);
     return Option.map(Option.fromUndefinedOr(sections.get(p.spec.id)), (s) => ({
@@ -124,6 +150,13 @@ export const createTalk = (
     }));
   };
 
+  /**
+   * The take's frame `T` shows: the piece of its section playing at `T` (its
+   * last piece past its end), at the same distance from the piece's in-point
+   * on the take's frames, read mid-frame. `T` is in the frame that starts at
+   * or before it, so the picture leaves a piece on the frame the sound does,
+   * at any `T` (a preview's clock, a note's still), not only a frame's start.
+   */
   const readAt = (T: number): Option.Option<FootageRead> =>
     Option.map(playing(T), ({ section, take, t }) => {
       const frame = frameAtOrBefore(t, TALK_FPS);
@@ -138,6 +171,7 @@ export const createTalk = (
 
   const footageAt = (T: number): ReadonlyArray<FootageRead> => Option.toArray(readAt(T));
 
+  /** The take's frame at `T`, cropped by its section's knobs. */
   const drawTake = (ctx: CanvasRenderingContext2D, T: number, opts: RenderOptions) => {
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);

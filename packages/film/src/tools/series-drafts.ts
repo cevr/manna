@@ -22,18 +22,23 @@ import { ContentStore, type StoreError } from './content-store.ts';
 import { WriteUnverified } from './errors.ts';
 import { readBeat } from './narrator.ts';
 
+/** Where a series keeps its drafts, under its folder. */
 const SCRIPTS = 'scripts';
 
+/** Where a series keeps its plan, whose title names it. */
 const PLAN = 'series.md';
 
+/** A draft by its series and its file's name: `theology/01-in-its-order`. */
 export const draftKey = (series: string, draft: string) => `${series}/${draft}`;
 
+/** A draft as a take is kept against it: the staging voice, no spellings of its own, its spoken beats. */
 interface DraftReading {
   readonly voice: Voice;
   readonly heardAs: HeardAs;
   readonly beats: ReadonlyArray<ReadBeat>;
 }
 
+/** A Markdown file's title: its first `# ` heading, up to a colon (`# Taught of the Lord: plan`). */
 const titleOf = (markdown: string, fallback: string): string =>
   Option.getOrElse(
     Option.map(
@@ -43,6 +48,7 @@ const titleOf = (markdown: string, fallback: string): string =>
     () => fallback,
   );
 
+/** A draft as the reader is answered it: each beat's line, brief and sources, no place in the Markdown. */
 export const draftRead = (series: string, draft: string, read: Draft): DraftRead => ({
   series,
   draft,
@@ -59,10 +65,15 @@ export const draftRead = (series: string, draft: string, read: Draft): DraftRead
 type DraftError = DraftUnknown | DraftUnread | PlatformError;
 
 interface SeriesDraftsService {
+  /** Every series with drafts, and its drafts, in name order. */
   readonly list: Effect.Effect<SeriesList, PlatformError>;
+  /** Every draft's key (`draftKey`), in the list's order. */
   readonly keys: Effect.Effect<ReadonlyArray<readonly [string, string]>, PlatformError>;
+  /** Draft `draft` of `series`, read as its Markdown stands now. */
   readonly read: (series: string, draft: string) => Effect.Effect<Draft, DraftError>;
+  /** Draft `draft` of `series` as a take is kept against it. */
   readonly reading: (series: string, draft: string) => Effect.Effect<DraftReading, DraftError>;
+  /** The marks `post` asks for written on its beat, made on the words it read: the draft as the write leaves it. */
   readonly mark: (
     series: string,
     draft: string,
@@ -76,6 +87,7 @@ interface SeriesDraftsService {
 export class SeriesDrafts extends Context.Service<SeriesDrafts, SeriesDraftsService>()(
   '@manna/film/tools/SeriesDrafts',
 ) {
+  /** The drafts under `root` (the app's `series` folder); none when the app has no series. */
   static readonly layer = (root: Option.Option<string>) =>
     Layer.effect(
       SeriesDrafts,
@@ -134,6 +146,7 @@ export class SeriesDrafts extends Context.Service<SeriesDrafts, SeriesDraftsServ
           l.series.flatMap((s) => s.drafts.map((d) => [s.name, d.name] as const)),
         );
 
+        /** The file of a draft the folder lists: never a path it does not hold. */
         const fileOf = Effect.fn('SeriesDrafts.fileOf')(function* (series: string, draft: string) {
           const known = yield* keys;
           const listed = known.some(([s, d]) => s === series && d === draft);
@@ -146,6 +159,7 @@ export class SeriesDrafts extends Context.Service<SeriesDrafts, SeriesDraftsServ
           return path.join(root.value, series, SCRIPTS, `${draft}.md`);
         });
 
+        /** A draft's Markdown decoded with the reader's codec, or why it does not read. */
         const readText = (series: string, draft: string, markdown: string) =>
           Effect.mapError(Schema.decodeEffect(DraftMarkdown)(markdown), (e) =>
             DraftUnread.make({ draft: draftKey(series, draft), reason: e.message }),

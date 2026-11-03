@@ -31,12 +31,14 @@ import {
 
 const SETTINGS = { scale: 0.5, captions: true };
 
+/** Approve runs' ops, as `uniqueId(OpId)` or the CLI's `--given` decode makes them. */
 const OP_1 = OpId.make('op-1');
 const OP_2 = OpId.make('op-2');
 const OP_A = OpId.make('op-a');
 const OP_B = OpId.make('op-b');
 const OP_C = OpId.make('op-c');
 
+/** A render of scene `id`'s main variant, drawn from sources with `key`. */
 const sceneRender = (id: string, key: string, at = 1): Render => ({
   address: sceneAddress(id),
   variant: MAIN_VARIANT,
@@ -59,6 +61,7 @@ const sceneRender = (id: string, key: string, at = 1): Render => ({
 const withRenders = (...renders: ReadonlyArray<Render>): Catalogue =>
   renders.reduce(recordRender, emptyCatalogue('f'));
 
+/** The film as its scenes alone, keyed now (no acts). */
 const keyed = (scenes: ReadonlyArray<SceneKey>): Keyed => ({
   key: 'film-k',
   sound: Option.none(),
@@ -66,6 +69,7 @@ const keyed = (scenes: ReadonlyArray<SceneKey>): Keyed => ({
   scenes,
 });
 
+/** What is said of `render`: its variant as stamped. */
 const of = subjectOf;
 
 describe('a scene render against its sources', () => {
@@ -121,11 +125,13 @@ describe('a scene render against its sources', () => {
   });
 });
 
+/** `render` carrying the film's master as mixed from plan `mix`, cut at its span. */
 const sounding = (render: Render, mix: string): Render => ({
   ...render,
   sound: Option.some({ mix: Option.some(mix), pieces: [{ start: 0, duration: 4 }] }),
 });
 
+/** The film keyed now with the film's mix key `sound`. */
 const heard = (scenes: ReadonlyArray<SceneKey>, sound: string): Keyed => ({
   ...keyed(scenes),
   sound: Option.some(sound),

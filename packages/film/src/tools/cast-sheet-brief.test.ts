@@ -12,6 +12,7 @@ import {
 } from '../core/cast-record.ts';
 import { castSheetBrief, headsWords, turnaroundLayout } from './cast-sheet-brief.ts';
 
+/** The house block as the app keeps it. */
 const houseBlock = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   return yield* fs.readFileString(
@@ -19,6 +20,7 @@ const houseBlock = Effect.gen(function* () {
   );
 }).pipe(Effect.provide(BunServices.layer));
 
+/** How a member is drawn across its sheet: its heads, its smaller figures, whether its hair shows and whether it has a beard. */
 interface Drawn {
   readonly heads: number;
   readonly figures: ReadonlyArray<ViewFigure>;
@@ -26,8 +28,10 @@ interface Drawn {
   readonly beard: boolean;
 }
 
+/** How a canon member with hair and a beard is drawn: the default the tests vary. */
 const CANON_MEMBER: Drawn = { heads: CANON_HEADS, figures: [], hair: true, beard: true };
 
+/** A sheet's brief over `house`, a turnaround's unless `kind` says, its figures the canon's unless `drawn` says. */
 const briefOver = (house: string, kind: SheetKind = 'turnaround', drawn: Partial<Drawn> = {}) =>
   castSheetBrief({
     kind,
@@ -343,6 +347,7 @@ describe('a hand that floats', () => {
       const fs = yield* FileSystem.FileSystem;
       const house = yield* houseBlock;
       const app = new URL('../../../../apps/animations/src', import.meta.url).pathname;
+      /** The members' sheet folders under `cast`, where a `cast-sheet.json` is. */
       const sheetsIn = (cast: string) =>
         Effect.gen(function* () {
           const members = yield* fs

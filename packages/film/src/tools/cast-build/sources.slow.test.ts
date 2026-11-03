@@ -10,18 +10,21 @@ import { FILMS, RENDER_PAGE, serve } from '../../../../../apps/animations/server
 import { UndeclaredImport } from './imports.ts';
 import { cutterSources, filmCastSources, pageSources, stageSources } from './sources.ts';
 
+/** The files among inputs, by path. */
 const pathsOf = (inputs: ReadonlyArray<Input>) =>
   inputs.flatMap((i) => {
     if (i._tag === 'File') return [i.path];
     return [];
   });
 
+/** A stage kind's source files, as `stageSources` makes them its inputs. */
 const sourceFiles = (kind: keyof Effect.Success<typeof stageSources>) =>
   Effect.map(stageSources, (all) => pathsOf(all[kind]));
 
 const local = Layer.mergeAll(BunFileSystem.layer, Path.layer);
 const ends = (files: ReadonlyArray<string>) => files.map((f) => f.split('/src/').at(-1));
 const UNMATTE = new URL('../../core/unmatte.ts', import.meta.url).pathname;
+/** A file of the render page's, by its path from the framework's `src`. */
 const player = (file: string) => new URL(`../../player/${file}`, import.meta.url).pathname;
 
 describe('stage sources', () => {

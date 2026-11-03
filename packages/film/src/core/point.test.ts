@@ -4,8 +4,10 @@ import { ActName } from './address-schema.ts';
 import { CatalogueJson } from './catalogue.ts';
 import { PointId, PointRef, pointIdOf } from './point.ts';
 
+/** The point an id names, when it names one: the id read as `PointId` decodes it. */
 const pointRefOf = Schema.decodeOption(PointId);
 
+/** Every kind of point, and the string it has always been written as. */
 const written: ReadonlyArray<readonly [PointRef, string]> = [
   [{ _tag: 'Score' }, 'score'],
   [{ _tag: 'Take', sound: 'paper.slide' }, 'take:paper.slide'],

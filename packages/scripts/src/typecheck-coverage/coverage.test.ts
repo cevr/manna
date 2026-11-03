@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { declarations, isSource, listedFiles, uncovered } from './coverage.js';
 
+/** Listed files whose real path is their listed path. */
 const asListed = (files: ReadonlyArray<string>) =>
   files.map((file) => ({ listed: file, disk: file }));
 
@@ -46,6 +47,7 @@ describe("the files a tsconfig's program leaves out", () => {
   });
 });
 
+/** Program files that tsc spells as the disk does. */
 const asOnDisk = (files: ReadonlyArray<string>) =>
   files.map((file) => ({ spelled: `/r/${file}`, disk: file }));
 

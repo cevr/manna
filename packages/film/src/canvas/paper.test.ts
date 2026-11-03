@@ -6,6 +6,7 @@ import { grainShift, makeGrain, makePaper } from './paper.ts';
 
 const mod = (a: number, n: number) => ((a % n) + n) % n;
 
+/** The pixels each `putImageData` under `make` put, in call order. */
 const putPixels = (make: () => unknown): ReadonlyArray<Uint8ClampedArray> => {
   const put: Array<Uint8ClampedArray> = [];
   withDom(make, {

@@ -6,6 +6,7 @@ import { focused, harness, logOf } from './harness.ts';
 
 const h = harness('context-menu.tsx');
 
+/** The centre of the trigger area. */
 const areaCentre = async (page: Page): Promise<{ x: number; y: number }> => {
   const box = await page.locator('#area').boundingBox();
   if (!box) {
@@ -14,6 +15,7 @@ const areaCentre = async (page: Page): Promise<{ x: number; y: number }> => {
   return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
 };
 
+/** Dispatches a TouchEvent of `type` at (x, y) with `count` fingers on the element there. */
 const touch = (
   page: Page,
   type: 'touchstart' | 'touchmove' | 'touchend',
@@ -43,6 +45,11 @@ const touch = (
     [type, x, y, count] as const,
   );
 
+/**
+ * A finger as the browser's own touch input (CDP `Input.dispatchTouchEvent`):
+ * its touches, and the gestures and clicks the browser makes of them, are
+ * the browser's, at real time.
+ */
 const finger = async (page: Page) => {
   const cdp = await page.context().newCDPSession(page);
   return {
@@ -52,12 +59,14 @@ const finger = async (page: Page) => {
   };
 };
 
+/** The `id` of what is at (x, y), or of its nearest ancestor with one. */
 const idAt = (page: Page, x: number, y: number): Promise<string> =>
   page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('[id]')?.id ?? '', [
     x,
     y,
   ] as const);
 
+/** The centre of `selector`'s box. */
 const centreOf = async (page: Page, selector: string): Promise<{ x: number; y: number }> => {
   const box = await page.locator(selector).boundingBox();
   if (!box) {
@@ -66,6 +75,7 @@ const centreOf = async (page: Page, selector: string): Promise<{ x: number; y: n
   return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
 };
 
+/** Whether a `contextmenu` event dispatched on `selector` had its default prevented. */
 const nativeMenuBlocked = (page: Page, selector: string): Promise<boolean> =>
   page.evaluate((selector) => {
     const el = document.querySelector(selector);
@@ -77,6 +87,7 @@ const nativeMenuBlocked = (page: Page, selector: string): Promise<boolean> =>
     return event.defaultPrevented;
   }, selector);
 
+/** Whether the page's scroll is locked (the scroller's `overflow` is hidden). */
 const scrollLocked = (page: Page): Promise<boolean> =>
   page.evaluate(() =>
     [document.documentElement, document.body].some(

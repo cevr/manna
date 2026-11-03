@@ -9,6 +9,7 @@ import { useMenuRootContext } from '../root/MenuRootContext.ts';
 
 const MenuPortalContext = createContext(false);
 
+/** Throws outside a `Menu.Portal`: the positioner must render inside one. */
 export function useMenuPortalContext(): void {
   if (!useContext(MenuPortalContext)) {
     throw new Error('Base UI: <Menu.Portal> is missing.');

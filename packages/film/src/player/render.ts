@@ -30,6 +30,12 @@ declare global {
   }
 }
 
+/**
+ * Mount the render page for `films` (the film its address names): the film
+ * staged with no chrome and no UI faces, drawing only the film's own faces,
+ * and, once they have loaded, the handle the renderer drives on
+ * `window.__film`.
+ */
 export const mountRender = (films: Films): void => {
   const host = hostOf(BrowserHost.render);
   const href = addressOn(host).href();
@@ -52,6 +58,11 @@ export const mountRender = (films: Films): void => {
     });
 };
 
+/**
+ * `staged` drawing `picture`: its scenes as staged (their review copy with
+ * the burn-in over each frame, `scenesReview`), or its Board (`boardFilm`),
+ * the board and its kept tries read and decoded first.
+ */
 const onPicture = (staged: Staged, picture: Picture): Promise<Staged> =>
   Picture.$match(picture, {
     Scenes: ({ review }) =>
@@ -73,6 +84,12 @@ const onPicture = (staged: Staged, picture: Picture): Promise<Staged> =>
       ),
   });
 
+/**
+ * `use` given each of `times`' footage in turn (`next`, once per time, in
+ * order), decoded as one run (`Footage.run`): an export chunk's frames. The
+ * run's decoders are let go when `use` settles. A film that reads none is
+ * given nothing for every time, with no decoder made.
+ */
 const withFootageRun = <A>(
   host: Host,
   film: Film,
@@ -97,13 +114,25 @@ const withFootageRun = <A>(
       ),
   });
 
+/**
+ * The handle the tools drive a staged film through (`ExportHandle`,
+ * core/export-handle.ts). Every draw is timed the same way (`drawn`): the
+ * frame drawn, then rastered by a one-pixel read before the clock stops, so
+ * the canvas's recorded drawing is paid for in the draw and not later by
+ * whatever reads the canvas next (an encoder, `toBlob`).
+ */
 const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): ExportHandle => {
+  /** The page clock in ms (`monotonicMs`): what every draw and encode is timed by. */
   const nowMs = monotonicMs(host);
+  /** Frame `i`'s footage, decoded (nothing, at once, for a film that reads none). */
   const footageOf = (i: number) =>
     Effect.runPromiseWith(host)(footageAt(film, secondsAt(i, film.fps)));
+  /** Frame `i` drawn with its footage and `extra` options. */
   const drawWith = (i: number, shown: FootageShown, extra: RenderOptions = {}) =>
     film.render(ctx, secondsAt(i, film.fps), { captions: captions.on, ...shown, ...extra });
+  /** Frame `i` drawn, once its footage is decoded. */
   const draw = async (i: number) => drawWith(i, await footageOf(i));
+  /** Draw frame `i` with its decoded footage and raster it: the ms it took, the decoding not in it. */
   const drawn = (i: number, shown: FootageShown) => {
     const began = nowMs();
     drawWith(i, shown);

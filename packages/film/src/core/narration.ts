@@ -31,20 +31,34 @@ import {
 import { heardAtOrAfter, justBefore } from './time.ts';
 import { unmeasured } from './voiced.ts';
 
+/** Another voice takes the line: `{@name}` before a word. */
 export interface Turn {
+  /** The voice's name in the cast. */
   readonly voice: string;
+  /** Index of the first word it reads. */
   readonly word: number;
 }
 
 export interface Parsed {
+  /** Text as spoken, marks, turns and delivery marks removed. */
   readonly spoken: string;
+  /** Mark name → index of the word it precedes. */
   readonly marks: ReadonlyMap<string, number>;
+  /** Where the line changes voice, in order. */
   readonly turns: ReadonlyArray<Turn>;
+  /** How the line is said (`delivery.ts`), in reading order. */
   readonly delivery: ReadonlyArray<Mark>;
 }
 
+/** `{name}` is a mark, `{@name}` a turn. */
 const TOKEN = /\{(@?)([a-zA-Z0-9_-]+)\}/g;
 
+/**
+ * Scene `scene`'s line `text` read: its spoken words, its marks, its turns
+ * and its delivery marks. A mark named twice, a turn with no word of its own,
+ * a brace that is none of these, or a delivery mark that does not fit the
+ * words (`marksMisfit`) fails naming the scene.
+ */
 export const parse = (scene: string, text: string): Result.Result<Parsed, LineError> => {
   const marks = new Map<string, number>();
   const turns: Turn[] = [];
@@ -78,6 +92,7 @@ export const parse = (scene: string, text: string): Result.Result<Parsed, LineEr
   return finished(scene, { spoken: words.join(' '), marks, turns, delivery: inOrder(delivery) });
 };
 
+/** The delivery marks token `token` writes at word `at`, or the first that names no mark. */
 const deliveryIn = (
   scene: string,
   token: string,
@@ -91,6 +106,11 @@ const deliveryIn = (
     ),
   );
 
+/**
+ * The word a token says once its cues, turns and marks are out: none for a
+ * token of those alone. A brace left in it is a token no reader knows, and
+ * fails: it is never spoken.
+ */
 const wordOf = (
   scene: string,
   token: string,
@@ -105,6 +125,7 @@ const wordOf = (
   });
 };
 
+/** A line read whole, checked: its last turn has a word after it, and its marks fit its words. */
 const finished = (scene: string, parsed: Parsed): Result.Result<Parsed, LineError> => {
   const words = parsed.spoken.split(' ').filter((w) => w.length > 0).length;
   const last = Arr.last(parsed.turns);
@@ -125,8 +146,19 @@ const finished = (scene: string, parsed: Parsed): Result.Result<Parsed, LineErro
   });
 };
 
+/** Each chunk of `text` and the whitespace between, as `withDelivery` rewrites it: chunks at even indices. */
 const chunksOf = (text: string): ReadonlyArray<string> => text.trim().split(/(\s+)/);
 
+/**
+ * Line `text` with its delivery marks set to `marks` (placed on its spoken
+ * words by index, as `parse` reads them): every delivery token it had taken
+ * out, and each mark written back where it reads, a stress just before its
+ * word (`{cue}{*}word`), a pause as a token of its own after the word before
+ * its gap (`word, {/} next`). Everything else, its cues and turns, its words
+ * and the spaces between them, stays as written, so a line given the marks
+ * it has comes back as it was written canonically. The marks are not
+ * checked: `parse` the result.
+ */
 export const withDelivery = (text: string, marks: ReadonlyArray<Mark>): string => {
   const chunks = chunksOf(text).map((chunk) => chunk.replace(DELIVERY, ''));
   const saying = chunks.flatMap((chunk, i) => {
@@ -149,8 +181,10 @@ export const withDelivery = (text: string, marks: ReadonlyArray<Mark>): string =
     .trim();
 };
 
+/** The cues and turns a chunk opens with, before its word. */
 const LEADING_TOKENS = /^(?:\{@?[a-zA-Z0-9_-]+\})*/;
 
+/** Chunk `chunk`, which says word `word`, with its stress before the word and the pause after it written in. */
 const markedWord = (chunk: string, word: number, marks: ReadonlyArray<Mark>): string => {
   const from = Option.getOrElse(
     Option.map(Option.fromNullishOr(LEADING_TOKENS.exec(chunk)), (lead) => lead[0].length),
@@ -167,6 +201,11 @@ const markedWord = (chunk: string, word: number, marks: ReadonlyArray<Mark>): st
   return `${chunk.slice(0, from)}${stress}${chunk.slice(from)}${pause}`;
 };
 
+/**
+ * What a take says and who says it: the spoken words, with each turn written
+ * `{@name}` before its first word. A take is kept under this text's hash, so
+ * moving a turn re-records the take; with no turns it is the spoken text.
+ */
 export const takeScript = (parsed: Pick<Parsed, 'spoken' | 'turns'>): string => {
   const turns = new Map(parsed.turns.map((t) => [t.word, t.voice]));
   if (turns.size === 0) return parsed.spoken;
@@ -179,13 +218,20 @@ export const takeScript = (parsed: Pick<Parsed, 'spoken' | 'turns'>): string => 
     .join(' ');
 };
 
+/** One voice's stretch of a take. */
 export const Line = Schema.Struct({
+  /** Its voice's name in the cast; empty when one voice reads the film. */
   name: Schema.String,
   voiceId: Schema.String,
   text: Schema.String,
 });
 export type Line = typeof Line.Type;
 
+/**
+ * The lines a take is read in: the whole take for a film with one voice, and
+ * for a cast, a line per turn, the first read by the cast's first voice. A
+ * turn to a voice the film does not have fails with the voices it does.
+ */
 export const linesOf = (
   scene: string,
   parsed: Pick<Parsed, 'spoken' | 'turns'>,
@@ -223,8 +269,10 @@ export const linesOf = (
   return Result.succeed(lines);
 };
 
+/** A text's key for content-addressed assets: its FNV-1a as eight hex digits. */
 export const hashText = (s: string): string => fnv1a(s).toString(16).padStart(8, '0');
 
+/** The voice part of `timings.json`: a take recorded under another key is stale. */
 export const voiceKey = (voice: Voice): string => {
   const settings = Schema.encodeSync(VoiceKey)(voice.settings);
   if (!isCast(voice)) return `${voice.voiceId}/${voice.model}/${settings}`;
@@ -232,26 +280,45 @@ export const voiceKey = (voice: Voice): string => {
   return `${voices}/${voice.model}/${settings}`;
 };
 
+/** Why a beat's take no longer fits it: said once, read by the studio and `check`. */
 export const TakeStaleReason = Schema.Literals(['missing', 'text changed', 'voice changed']);
 export type TakeStaleReason = typeof TakeStaleReason.Type;
 
+/**
+ * Where a beat's take stands: current and read by a person (`Recorded`),
+ * current and read by the staging voice (`Staging`), or `Stale`. A person's
+ * take is read by no voice in the film, so a change of staging voice never
+ * stales it; only a change of its words does. `recorded` says whether the
+ * stale take was a person's, which staging must not replace unasked.
+ */
 export type TakeState =
   | { readonly _tag: 'Recorded' }
   | { readonly _tag: 'Staging' }
   | { readonly _tag: 'Stale'; readonly reason: TakeStaleReason; readonly recorded: boolean };
 
+/**
+ * A line's delivery marks as a staging take keeps them (`VoiceTiming.delivered`):
+ * none for a line with none, so a take of an unmarked line is stored as before.
+ */
 const deliveryKey = (marks: ReadonlyArray<Mark>): Option.Option<string> =>
   Option.map(
     Option.liftPredicate(inOrder(marks), (m) => m.length > 0),
     (m) => hashText(m.map((mark) => `${markAt(mark)}${tokenOf(mark)}`).join(' ')),
   );
 
+/** A staging take's `delivered`, for a line marked `marks`: absent for a line with none. */
 export const deliveredAs = (marks: ReadonlyArray<Mark>): Pick<VoiceTiming, 'delivered'> =>
   Option.match(deliveryKey(marks), {
     onNone: () => ({}),
     onSome: (delivered) => ({ delivered }),
   });
 
+/**
+ * The state of the take `timings` keep for beat `id`, whose take script is
+ * `script` and whose line is marked `delivery`, under `voice` (`voiceKey`).
+ * A staging take read with other marks is stale (`text changed`: the marks
+ * are part of the line as written); a person's take is judged by its words.
+ */
 export const takeState = (
   id: string,
   script: string,
@@ -272,6 +339,10 @@ export const takeState = (
   return { _tag: 'Staging' };
 };
 
+/**
+ * Words with estimated times: ~2.7 words/s, longer words take longer, and
+ * punctuation adds a pause. Close enough to lay out a cut before recording.
+ */
 export const estimate = (spoken: string): Word[] => {
   const out: Word[] = [];
   let t = 0;
@@ -286,6 +357,12 @@ export const estimate = (spoken: string): Word[] => {
   return out;
 };
 
+/**
+ * Words only, as a take is checked against its script (`narrator`'s word
+ * error): composed (NFC, so an accent is one letter however it was typed),
+ * lower case, apostrophes dropped (`God’s` is `gods`), and every other mark a
+ * break (`cover-up` is `cover`, `up`). Letters are any script's, accents kept.
+ */
 export const normalizeWords = (s: string): ReadonlyArray<string> =>
   s
     .normalize('NFC')
@@ -295,6 +372,11 @@ export const normalizeWords = (s: string): ReadonlyArray<string> =>
     .split(/\s+/)
     .filter((w) => w.length > 0);
 
+/**
+ * Whether a spoken word reads `word`, both normalised as a take is checked
+ * (`normalizeWords`): `“Not,` reads `not`, `God’s` reads `god's`, and
+ * `cover-up` reads `cover`, `up` and `cover-up`, a whole part at a time.
+ */
 export const readsWord = (text: string, word: string): boolean => {
   const said = normalizeWords(text);
   const want = normalizeWords(word);
@@ -304,12 +386,21 @@ export const readsWord = (text: string, word: string): boolean => {
   return false;
 };
 
+/** A sentence ends here: on a full stop, a question or an exclamation, before any closing quote or bracket. */
 export const SENTENCE = /[.?!][”’"')\]]*$/;
+/** A clause ends here: on a comma, a dash, a colon, a semicolon or an ellipsis, before any closing quote or bracket. */
 export const CLAUSE = /[,—–;:…][”’"')\]]*$/;
 
+/** Whether a spoken word ends a sentence (`SENTENCE`). */
 export const endsSentence = (text: string): boolean => SENTENCE.test(text);
+/** Whether a spoken word ends a clause (`CLAUSE`). */
 export const endsClause = (text: string): boolean => CLAUSE.test(text);
 
+/**
+ * When the first word said at or after `from` (seconds, on the words' clock)
+ * that reads `word` starts; none when the line never says it there. A word
+ * pin (`{ mark, word }`) lands here.
+ */
 export const wordAfter = (
   words: ReadonlyArray<Word>,
   from: number,
@@ -320,6 +411,14 @@ export const wordAfter = (
     (w) => w.start,
   );
 
+/**
+ * The words a card sets (`PanelText`'s `Card`) from a line's `words`, each
+ * with when it starts on the clock `marks` keep: those heard from mark
+ * `card.from` to mark `card.to` (the line's end when none), and the index of
+ * the first that reads `card.payoff`; or why none: a mark the line lacks, no
+ * word between the marks, or no word that reads the payoff. The engine's card
+ * (`canvas/card.ts`) and the studio's timeline set a card by this one rule.
+ */
 export const cardSaid = <W extends { readonly text: string; readonly start: number }>(
   scene: string,
   words: ReadonlyArray<W>,
@@ -350,6 +449,11 @@ export const cardSaid = <W extends { readonly text: string; readonly start: numb
   );
 };
 
+/**
+ * Words as spoken in a recorded take. ElevenLabs aligns characters; group them
+ * back into the words of `spoken`. A dialogue joins its lines with nothing
+ * between them, so each line's first character (`breaks`) starts a word too.
+ */
 export const wordsFromAlignment = (
   spoken: string,
   chars: ReadonlyArray<string>,
@@ -385,6 +489,13 @@ export const wordsFromAlignment = (
   return Result.succeed(out);
 };
 
+/**
+ * Words held inside a take `duration` seconds long. The alignment runs on the
+ * speech model's clock and the take is measured from its encoded file; the
+ * two can disagree by a frame or, at the end of a long line, by more. A word
+ * past the end ends at it (and starts there at the latest), so the timings
+ * always fit the audio they time.
+ */
 export const heldInside = (words: ReadonlyArray<Word>, duration: number): Word[] =>
   words.map((w) => {
     const start = Math.min(Math.max(0, w.start), duration);
@@ -393,16 +504,27 @@ export const heldInside = (words: ReadonlyArray<Word>, duration: number): Word[]
 
 export interface SceneVoice {
   readonly spoken: string;
+  /** Each word's aligned span and where it is heard; an estimate is heard over its span. */
   readonly words: ReadonlyArray<TakeWord>;
+  /** Seconds of speech (0 for a silent scene). */
   readonly duration: number;
   readonly marks: ReadonlyMap<string, number>;
+  /** Where another voice takes the line. */
   readonly turns: ReadonlyArray<Turn>;
+  /** How the line is said (`delivery.ts`), in reading order. */
   readonly delivery: ReadonlyArray<Mark>;
+  /** Audio file, when a current recording exists. */
   readonly file: string | undefined;
   readonly recorded: boolean;
+  /** Who read the current take (the staging voice or a person); none without one. */
   readonly source: TakeSource | undefined;
 }
 
+/**
+ * Where a scene's voice stops speaking, in seconds from its start: the end of
+ * the last word heard, so silence a take trails is not counted as speech.
+ * The take's length when it has no words.
+ */
 export const lastVoiced = (voice: SceneVoice): number =>
   Math.min(
     voice.duration,
@@ -412,6 +534,10 @@ export const lastVoiced = (voice: SceneVoice): number =>
     ),
   );
 
+/**
+ * The voice for one scene: recorded when the take matches the text,
+ * estimated otherwise; a line that does not parse fails naming the scene.
+ */
 export const voiceFor = (
   id: string,
   text: string,

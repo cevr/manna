@@ -1,6 +1,27 @@
 /* oxlint-disable effect/noGlobals, effect/noAsyncFunction -- Bun's loader takes the list's stand-in as source text, so the paths it imports are written into it as JSON literals; the screens are imported only once the stand-in is registered. */
 /* oxlint-disable effect/noTestLifecycleHooks, effect/noNewPromise -- a React screen test: the role sheet and the safe area are set for the file and animations land after each case; Reduce Motion stands in as the platform's promise. */
 
+/**
+ * The whole find bar glides between its two places as a hymn opens or
+ * closes (owner, 2026-11-01: "search and the pound key ... should slide and
+ * it should glide the whole bar when we go from a hymn page to hymn list"):
+ * docked on the home list, over the bar on a hymn page. A hymn page put in
+ * another's place (numreplace) keeps the bar's place and its node, so
+ * nothing glides and nothing mounts again. With Reduce Motion the bar jumps
+ * to its place under a 150 ms fade. The `#` the player layer draws takes
+ * the chosen ink while it is the chosen control and the glass's ink while
+ * Search is.
+ *
+ * Mounted as the layout nests them, as `numreplace.slow.test.tsx` mounts
+ * them: the player layer (`LivePlayer`) over the stack's wrapper
+ * (`StackBottom`) over stand-in screens, in a browser's document
+ * (`src/test/setup.ts`), where an animation waits between `holdAnimations`
+ * and `landAnimations` as one under way on a device, and a timing moves a
+ * frame at a time under `stepAnimations`. LegendList is a plain list, so
+ * this file runs in a process of its own (`test:slow`). Numbers only: no
+ * hymn's words are read or printed.
+ */
+
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'bun:test';
 import { plugin } from 'bun';
 import { Option } from 'effect';
@@ -39,10 +60,13 @@ const { useShowsPage } = await import('~/player/page');
 const { StackBottom } = await import('~/player/StackBottom');
 const { pathname, safeArea } = await import('~/test/one');
 
+/** The device's bottom inset: a phone's home indicator. */
 const INSET = 34;
+/** The bar's two places, its bottom over the window's: docked on the home list, over the resting bar on a hymn page. */
 const DOCKED = INSET + DOCKED_LIFT;
 const OVER_BAR = INSET + REST + HASH_GAP;
 
+/** The roles the bar's ink reads, each a colour of its own, so a computed colour names its role (`color.ts`). */
 const ROLES = ['accent', 'ink', 'onGlass', 'glassChosen', 'onGlassChosen'] as const;
 const role = (name: (typeof ROLES)[number]) => `rgb(${ROLES.indexOf(name) + 1}, 3, 4)`;
 const roleSheet = document.createElement('style');
@@ -57,6 +81,7 @@ afterAll(() => {
 });
 afterEach(() => landAnimations());
 
+/** A stand-in hymn page: it shows hymn `n`, so the bar and its find bar stand over it. */
 function Page({ n }: { readonly n: number }) {
   useShowsPage({ number: n, title: 'Stand-in' });
   return <View testID={`page-${n}`} />;
@@ -66,6 +91,7 @@ type Screen = { readonly path: string; readonly draw: () => React.ReactNode };
 const home: Screen = { path: '/', draw: () => <View key="home" testID="home" /> };
 const hymn = (n: number): Screen => ({ path: `/hymns/${n}`, draw: () => <Page key={n} n={n} /> });
 
+/** The stack `screens`, the last shown, over a registry of its own; `show` draws another stack over the same registry. */
 const mount = (...screens: ReadonlyArray<Screen>) => {
   const registry = AtomRegistry.make();
   const host = document.createElement('div');
@@ -103,14 +129,17 @@ const mount = (...screens: ReadonlyArray<Screen>) => {
 
 const style = (element: Element) => getComputedStyle(element);
 
+/** A transform's move along `axis`, 0 when it draws none. */
 const moved = (element: Element, axis: 'X' | 'Y') => {
   const drawn = new RegExp(`translate${axis}\\((-?[\\d.]+)px\\)`).exec(style(element).transform);
   return Number(drawn?.[1] ?? 0);
 };
 
+/** Where the bar stands: its bottom over the window's, as its `bottom` and any move up draw it. */
 const standing = (find: HTMLElement) =>
   Math.round(Number.parseFloat(style(find).bottom) - moved(find, 'Y'));
 
+/** How opaque the bar draws: the least of the bar's own view and its row. */
 const opacity = (find: HTMLElement) =>
   Math.min(
     ...[find, ...find.querySelectorAll('[data-testid="find-bar"]')].map((view) => {
@@ -119,9 +148,11 @@ const opacity = (find: HTMLElement) =>
     }),
   );
 
+/** Every animation set since `from` that moves a value. */
 const movingSince = (from: number) =>
   animations.slice(from).filter((animation) => animation.from !== animation.to);
 
+/** Reduce Motion on, as the system tells it, for the bar mounted after. */
 const reduceMotion = () => {
   const was = AccessibilityInfo.isReduceMotionEnabled;
   AccessibilityInfo.isReduceMotionEnabled = () => Promise.resolve(true);
@@ -206,6 +237,7 @@ describe('the find bar between the home list and a hymn page', () => {
 });
 
 describe('the # the player layer draws in the find bar', () => {
+  /** The `#`'s ink. */
   const ink = (host: HTMLElement) => {
     const glyph = Option.fromNullishOr(
       host.querySelector<HTMLElement>(

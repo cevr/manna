@@ -1,5 +1,17 @@
 /* oxlint-disable effect/noNodeBuiltinImport, effect/noDynamicImports -- the guard reads the Feel's own source files from disk, synchronously, and asks One's native-source contract (resolved from the app, as One's bundler does) for the Swift module's declaration. */
 
+/**
+ * The voice never touches the app's audio session: no file of the Feel
+ * (`src/feel/`) or of its Swift package (`native/feel/`) names an audio
+ * session, a player or One's audio, since each of those sets the session's
+ * category, which ignores the silent switch and can duck or stop the
+ * hymn's recording. Sounds go through System Sound Services only.
+ *
+ * Also: the committed declaration of the Swift module is the one One's
+ * native source writes for it now, so the app's typecheck reads its real
+ * contract.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -8,6 +20,7 @@ import { join, relative } from 'node:path';
 const app = join(import.meta.dir, '..', '..');
 const roots = [join(app, 'src', 'feel'), join(app, 'native', 'feel')];
 
+/** The names a sound must never reach the session by, written apart so this file does not hold them whole. */
 const BANNED = [
   ['AVAudio', 'Session'],
   ['AVAudio', 'Player'],
@@ -17,6 +30,11 @@ const BANNED = [
   ['create', 'Player'],
 ].map((parts) => parts.join(''));
 
+/**
+ * One's native source writes `.one-native-source.*` (gitignored) beside the
+ * Swift from `Voice.swift` and its declaration, which the scan reads; it
+ * reads only tracked files, so a task's hash covers every file it reads.
+ */
 const generated = (name: string) => name.startsWith('.one-native-source.');
 
 const filesUnder = (dir: string): ReadonlyArray<string> =>

@@ -2,6 +2,11 @@ import { describe, expect, it, yieldFibers } from 'effect-bun-test';
 import { Deferred, Effect, Exit, Fiber, Option, Scheduler, Scope } from 'effect';
 import { onceScoped } from './once.ts';
 
+/**
+ * A run no interruption stops once begun, as a WebAssembly engine's start is
+ * (a promise with no signal): it counts itself in `runs` when `opened`
+ * resolves, whoever still waits for it, and answers its count.
+ */
 const uncancellable = (opened: Promise<void>, runs: { count: number }) =>
   Effect.promise(() =>
     opened.then(() => {
@@ -10,12 +15,18 @@ const uncancellable = (opened: Promise<void>, runs: { count: number }) =>
     }),
   );
 
+/** A gate a test opens: the promise a run waits on, and its opening. */
 const gate = () => {
   // oxlint-disable-next-line effect/noNewPromise -- the run under test is a promise with no signal, as an engine's start is
   const { promise, resolve } = Promise.withResolvers<void>();
   return { opened: promise, open: Effect.sync(() => resolve()) };
 };
 
+/**
+ * A scheduler that makes `caller` yield once, at its first step after it has
+ * queued a task (the fork of the run): the moment between the fork and the
+ * record of it that an interruption must not split.
+ */
 const yieldAfterFork = (caller: { fiber: Option.Option<Fiber.Fiber<unknown, unknown>> }) => {
   const mixed = new Scheduler.MixedScheduler();
   const state = { armed: false, yielded: false };

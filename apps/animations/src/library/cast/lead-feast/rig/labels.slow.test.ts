@@ -6,6 +6,7 @@ import { TRACE } from './trace.ts';
 
 const APP = `${import.meta.dir}/../../../../..`;
 
+/** `film concept trace <spec> --check` from the app's folder: its exit code and its lines. */
 const check = (spec: string) =>
   Effect.scoped(
     Effect.gen(function* () {

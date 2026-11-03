@@ -5,15 +5,28 @@ import type { PublicationStream } from '../writings/archive.js';
 import { PublicationId } from '../writings/model.js';
 import type { CorpusContributionRejectedError, CorpusSourceUnavailableError } from './errors.js';
 
+/** The corpora installed as one verified file: a pinned manifest, a digest, a
+ *  semantic verifier, an atomic swap. `makeFileCorpusArtifact` is parameterized
+ *  by this vocabulary, so adding a file corpus adds a name here and nothing
+ *  else to the lifecycle. */
 export const CorpusFileName = Schema.Literals(['bible', 'topics', 'vectors', 'webster']);
 export type CorpusFileName = typeof CorpusFileName.Type;
 
+/** The corpora installed per publication through a SQL transaction rather than
+ *  as a replaceable file. */
 const CorpusStreamName = Schema.Literals(['writings']);
 type CorpusStreamName = typeof CorpusStreamName.Type;
 
+/** The closed set of corpora the supply pipeline can install. Extending the
+ *  pipeline with a new corpus artifact starts by adding its name to one of the
+ *  two vocabularies above — every receipt, activation, and error narrows from
+ *  this single union. */
 export const CorpusName = Schema.Union([CorpusFileName, CorpusStreamName]);
 export type CorpusName = typeof CorpusName.Type;
 
+/** What one Activation or skip refers to: the sole artifact of a File Corpus
+ *  or one Writings publication. A File Corpus installs a single artifact, so
+ *  `canonical` identifies it whichever corpus it belongs to. */
 const CorpusIdentity = Schema.Union([Schema.Literal('canonical'), PublicationId]);
 type CorpusIdentity = typeof CorpusIdentity.Type;
 
@@ -29,6 +42,15 @@ const CorpusDigest = Schema.String.pipe(
 );
 type CorpusDigest = typeof CorpusDigest.Type;
 
+/** The monotonic ordinal of one published content version (§3.6).
+ *
+ *  A revision is a *tag* — `db-v2`, `content-2026-08` — and tags have no order a
+ *  publisher and a client could both be trusted to compute. Ordering by tag
+ *  string is what let a manifest naming an *older* version read as "different
+ *  from installed, therefore newer" and talk a client into a downgrade
+ *  (round-3 F2). The generation is the number that carries the order the tag
+ *  cannot: the publisher increments it once per release, and a client installs
+ *  only above what it holds. */
 export const CorpusGeneration = Schema.Int.pipe(
   Schema.check(Schema.isGreaterThanOrEqualTo(0)),
   Schema.brand('CorpusSupply/Generation'),
@@ -41,11 +63,24 @@ export class CorpusProvenance extends Schema.Class<CorpusProvenance>('CorpusSupp
   source: AssetSourceId,
   revision: CorpusRevision,
   digest: Schema.Option(CorpusDigest),
+  /** The release ordinal these bytes were published under, when they came from
+   *  a source that states one.
+   *
+   *  `None` for every local source — a packaged copy, a workspace build, a
+   *  writings publication — because none of them is a *published content
+   *  version* and inventing an ordinal for them would put the compiled floor
+   *  and a runtime release on one scale they do not share. A runtime install
+   *  records the manifest entry's own generation here, which is what makes a
+   *  later startup able to see that what it holds is newer than the pin
+   *  (round-3 F2). Defaulted so no existing construction site has to state it. */
   generation: Schema.Option(CorpusGeneration).pipe(
     Schema.withConstructorDefault(Effect.succeed(Option.none<CorpusGeneration>())),
   ),
 }) {}
 
+/** One publication from a source: where it came from, and its chapters as
+ *  they are read. Reading a chapter can still fail, so the stream carries the
+ *  source's own errors. */
 export interface WritingsContribution {
   readonly provenance: CorpusProvenance;
   readonly publication: PublicationStream<
@@ -57,6 +92,8 @@ export class BootstrapTarget extends Schema.TaggedClass<BootstrapTarget>(
   'CorpusSupply/BootstrapTarget',
 )('bootstrap', {}) {}
 
+/** Ensure one File Corpus. The corpus name is a field rather than a tag so a
+ *  new file corpus widens `CorpusFileName` alone. */
 class FileCorpusTarget extends Schema.TaggedClass<FileCorpusTarget>(
   'CorpusSupply/FileCorpusTarget',
 )('file', {
@@ -92,6 +129,10 @@ export class CorpusSupplyReceipt extends Schema.Class<CorpusSupplyReceipt>('Corp
 
 const decodeCorpusName = Schema.decodeUnknownExit(CorpusName);
 
+/** Narrows any corpus name to the receipt vocabulary. A host adapter is
+ *  parameterized by an arbitrary corpus name so a test can drive it with a
+ *  corpus that is deliberately unregistered; only a registered name is allowed
+ *  to decorate an error the pipeline surfaces. */
 export const registeredCorpusName = (corpus: string): Option.Option<CorpusName> =>
   Exit.match(decodeCorpusName(corpus), {
     onFailure: () => Option.none(),
@@ -109,6 +150,9 @@ export const unknownProvenance = (source: string, revision: string): CorpusProve
     digest: Option.none(),
   });
 
+/** Provenance whose digest names the bytes a source downloaded: known before
+ *  any of them is parsed, so an install can be skipped without reading the
+ *  publication. */
 export const provenanceForBytes = Effect.fn('CorpusSupply.provenanceForBytes')(function* (
   crypto: Digest.Digest['Service'],
   source: string,

@@ -6,6 +6,7 @@ import { scenesReview } from './review.ts';
 import { layout, sceneAt } from '../core/layout.ts';
 
 describe("a scenes render's review copy", () => {
+  /** Beats `one` (a line with a mark) and `two`, 5 s each from 0, on an estimate. */
   const beats = Result.getOrThrow(
     layout(
       [
@@ -16,6 +17,7 @@ describe("a scenes render's review copy", () => {
       30,
     ),
   );
+  /** A film of `beats` that logs each call in order (its own draw, then the burn-in's text); a card holds over `cards`. */
   const filmOf = (cards: (T: number) => boolean) => {
     const calls: Array<string> = [];
     const f: Film = Schema.decodeSync(Schema.Any)({

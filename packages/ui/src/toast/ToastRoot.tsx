@@ -24,26 +24,41 @@ import { ToastRootContext, type ToastRootContextValue } from './ToastRootContext
 import type { ToastObject } from './types.ts';
 
 const ToastRootCssVars = {
+  /** Indicates the horizontal swipe movement of the toast. */
   swipeMovementX: '--toast-swipe-movement-x',
+  /** Indicates the vertical swipe movement of the toast. */
   swipeMovementY: '--toast-swipe-movement-y',
 } as const;
 
 const ToastRootDataAttributes = {
+  /** Present when the toast is expanded in the viewport. */
   expanded: 'data-expanded',
+  /** Present when the toast was limited because the toast limit was exceeded. */
   limited: 'data-limited',
+  /** The type of the toast. */
   type: 'data-type',
+  /** Present when the toast is being swiped. */
   swiping: 'data-swiping',
+  /** The direction the toast was swiped. */
   swipeDirection: 'data-swipe-direction',
+  /** Present when the toast begins animating in. */
   startingStyle: 'data-starting-style',
+  /** Present when the toast is animating out. */
   endingStyle: 'data-ending-style',
 } as const;
 
 interface ToastRootState {
+  /** The transition status of the component. */
   transitionStatus: TransitionStatus;
+  /** Whether the toasts in the viewport are expanded. */
   expanded: boolean;
+  /** Whether the toast was limited because the toast limit was exceeded. */
   limited: boolean;
+  /** The type of the toast. */
   type: string | undefined;
+  /** Whether the toast is being swiped. */
   swiping: boolean;
+  /** The direction the toast is being swiped. */
   swipeDirection: SwipeDirection | undefined;
 }
 
@@ -57,7 +72,12 @@ const toastRootStateAttributesMapping: StateAttributesMapping<ToastRootState> = 
 type ToastRootToastObject<Data extends object = object> = ToastObject<Data>;
 
 interface ToastRootProps extends BaseUIComponentProps<'div', ToastRootState> {
+  /** The toast to render. */
   toast: ToastRootToastObject;
+  /**
+   * Direction(s) in which the toast can be swiped to dismiss.
+   * @default ['down', 'right']
+   */
   swipeDirection?: SwipeDirection | SwipeDirection[] | undefined;
 }
 

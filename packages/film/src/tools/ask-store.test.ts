@@ -58,6 +58,7 @@ const board: BoardFile = {
   approvals: [],
 };
 
+/** The film's files: its Board, and each try's image, which an ask copies as it is made (the receipt rule). */
 const files = () =>
   new Map<string, Uint8Array>([
     ['/films/f/scenes/index.ts', text('export {};\n')],
@@ -66,10 +67,12 @@ const files = () =>
     ['/films/f/board/word.church.7.png', text('try 7 as drawn')],
   ]);
 
+/** An ask, a page's blocks and a step's name as an agent writes them, decoded as the lab decodes them. */
 const askOf = Schema.decodeSync(AskSchema);
 const pageOf = Schema.decodeSync(Schema.Array(AskBlock));
 const step = Schema.decodeSync(AskName);
 
+/** The proof: choose a try of the panel; 7 asks why; done. */
 const proof = (tries: ReadonlyArray<number>): Ask =>
   askOf({
     start: 'pick',
@@ -113,6 +116,7 @@ const run = <A, E>(
   >,
 ) => self.pipe(Effect.provide(labInMemory(files())));
 
+/** A decision filed by hand at `hour` on 2026-10-18 that names `ask` and carries no picks. */
 const decidedOn = (ask: string, hour: number): OwnerWord => ({
   _tag: 'Decided',
   at: Date.UTC(2026, 9, 18, hour),
@@ -126,6 +130,7 @@ const decidedOn = (ask: string, hour: number): OwnerWord => ({
   by: Option.some('agent'),
 });
 
+/** What a fill found, a line each: the production, the ask, and the picks filled or why none. */
 const told = (found: ReadonlyArray<{ production: string; found: PicksFound }>) =>
   found.map(({ production, found: f }) => [
     production,
@@ -133,13 +138,20 @@ const told = (found: ReadonlyArray<{ production: string; found: PicksFound }>) =
     Match.value(f).pipe(Match.tagsExhaustive({ Filled: (x) => x.picks, Left: (x) => x.why })),
   ]);
 
+/** `f`'s ledger with no picks on its decisions, as a store that files none writes it. */
 const unpickedF = (productions: ProductionStore['Service']) =>
   productions.modify('f', (file) =>
     Result.succeed({ ...file, said: file.said.map((s) => ({ ...s, picks: Option.none() })) }),
   );
 
+/** The ask a decision filed between the fill's list and its write names (`racing`). */
 const LATE = 'a0000000003';
 
+/**
+ * The production store with a decision on `LATE`, no picks on it, filed on a
+ * ledger just before each `attempt` takes its lock: as if filed after the
+ * fill's list read the ledger.
+ */
 const racing = Layer.effect(
   ProductionStore,
   Effect.gen(function* () {
@@ -620,6 +632,7 @@ describe('the asks on disk', () => {
   );
 });
 
+/** A one-choice ask by `by`, as an agent makes it in sequence. */
 const choice = (by: string, title: string) => ({
   title,
   why: 'the beat waits',
@@ -639,6 +652,7 @@ const choice = (by: string, title: string) => ({
   ),
 });
 
+/** `id`'s one step answered: its ask settled. */
 const answerOne = (asks: AskStore['Service'], id: string) =>
   asks.answerPage(id, [{ step: step('ask'), values: { pick: 'a' } }]);
 

@@ -1,11 +1,14 @@
 import { Option } from 'effect';
 
+/** The budget, in milliseconds, for each unit-test task. */
 const BUDGET_MS = 1_000;
 
+/** A workspace's own budget for each of its unit-test tasks, in milliseconds, where it is not `BUDGET_MS`. */
 const OWN_BUDGET_MS = new Map([['@manna/film', 1_100]]);
 
 const budgetOf = (workspace: string): number => OWN_BUDGET_MS.get(workspace) ?? BUDGET_MS;
 
+/** One unit-test task, run alone: its workspace, its id (`<ws>#<task>`), its time (none when its own summary did not read) and its exit code. */
 interface Task {
   readonly workspace: string;
   readonly taskId: string;
@@ -13,6 +16,7 @@ interface Task {
   readonly exitCode: number;
 }
 
+/** A task that has a time. */
 interface Timed {
   readonly workspace: string;
   readonly taskId: string;
@@ -20,17 +24,20 @@ interface Timed {
   readonly exitCode: number;
 }
 
+/** The tasks as they were timed, one after another, with the load averages before the first and the core count. */
 interface Run {
   readonly tasks: ReadonlyArray<Task>;
   readonly load: Load;
   readonly cores: number;
 }
 
+/** The 1- and 5-minute load averages. */
 interface Load {
   readonly one: number;
   readonly five: number;
 }
 
+/** What the budget says of a run: the report to print, what to print as the failure, and the exit code. */
 interface Judged {
   readonly report: ReadonlyArray<string>;
   readonly failure: ReadonlyArray<string>;
@@ -42,8 +49,10 @@ const seconds = (ms: number) => `${(ms / 1000).toFixed(2)} s`;
 const averages = (load: Load) =>
   `${load.one.toFixed(1)} over 1 min and ${load.five.toFixed(1)} over 5 min`;
 
+/** Whether the machine was at or below its cores by both averages before the run. */
 const quiet = (run: Run) => run.load.one <= run.cores && run.load.five <= run.cores;
 
+/** The budget's verdict on `run`. */
 export const judge = (run: Run): Judged => {
   const timed = run.tasks
     .flatMap((task): ReadonlyArray<Timed> =>

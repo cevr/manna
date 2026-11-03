@@ -35,15 +35,19 @@ describe('a place named exempt from a guard', () => {
   });
 });
 
+/** The roles the command surfaces' sources name: `data-role="…"`, or the `role="…-menu"` a menu hands its popup (an ARIA role has no hyphen before `menu`). */
 const ROLE = /(?:data-role="([\w-]+)"|\brole="([\w-]+-menu)")/g;
 
+/** The roles in those sources that are a part of a surface (a toast, a hint), not one. */
 const PARTS: ReadonlySet<string> = new Set(['receipt']);
 
+/** The command surfaces `sources` name, each by its `data-role`. */
 const surfacesOf = (sources: ReadonlyArray<string>): ReadonlyArray<string> =>
   Array.from(
     new Set(sources.flatMap((s) => Array.from(s.matchAll(ROLE), (m) => m[1] ?? m[2] ?? ''))),
   ).filter((role) => role !== '' && !PARTS.has(role));
 
+/** The surfaces among `surfaces` that none of `layers` is: no case opens and measures them. */
 const unopened = (surfaces: ReadonlyArray<string>, layers: ReadonlyArray<string>) =>
   surfaces.filter((role) => !layers.some((layer) => layer.includes(`data-role="${role}"`)));
 

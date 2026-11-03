@@ -1,3 +1,5 @@
+/** The find bar's search mark beyond iOS: a ring and its handle, in `tint`. */
+
 import { type ColorValue, StyleSheet, View } from 'react-native';
 
 export function Magnifier({ tint }: { readonly tint: ColorValue }) {

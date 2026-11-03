@@ -2,8 +2,15 @@ import { createContext, useContext } from 'solid-js';
 
 export interface ToggleGroupContextValue<Value> {
   readonly value: readonly Value[];
+  /** Offers the owner the value pressing (or releasing) `newValue` makes. */
   setGroupValue: (newValue: Value, nextPressed: boolean) => void;
+  /** Whether focus is in the group (on one of its toggles). */
   holdsFocus: () => boolean;
+  /**
+   * Moves focus where a press on content that takes no focus moves it: to
+   * the group's nearest focusable ancestor (a dialog's popup), else off every
+   * control (to `body`).
+   */
   releaseFocus: () => void;
 }
 

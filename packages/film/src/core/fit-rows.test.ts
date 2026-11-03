@@ -29,12 +29,14 @@ const within = (r: FitRow) =>
     onSome: (max) => r.value <= max,
   });
 
+/** The figure's papers and a hand's skin, each painted on the render as on the sheet. */
 const CLASSES = {
   cream: { sheet: ['#fde1bc'], paper: ['#fde1bc'] },
   teal: { sheet: ['#61898d'], paper: ['#61898d'] },
   skin: { sheet: ['#fdaf70'], paper: ['#fdaf70'] },
 } as const;
 
+/** The row named `name` of `rows`. */
 const rowNamed = (rows: ReadonlyArray<FitRow>, name: string) => rows.find((r) => r.name === name);
 
 describe('fitRows', () => {
@@ -261,6 +263,7 @@ describe('fitRows', () => {
 
 type Rgba = readonly [number, number, number, number];
 
+/** A cut-out's crop and a kept sheet's: 48 px square, a box figure `[6, 42)²` (moved `dx` right) inside a 3 px line of ink, its inside `cloth`, `at` painted over it, `outside` round it. */
 const S = 48;
 type At = (x: number, y: number) => Option.Option<Rgba>;
 const inside = (v: number, lo: number, hi: number) => v >= lo && v < hi;
@@ -280,6 +283,7 @@ const crop = (outside: Rgba, cloth: Rgb, at: At = () => Option.none(), dx = 0): 
   return { width: S, height: S, rgba };
 };
 
+/** `at` for the box `[x0, x1) × [y0, y1)`: `px` inside it. */
 const boxOf =
   ([x0, x1, y0, y1]: readonly [number, number, number, number], px: Rgba): At =>
   (x, y) =>
@@ -292,10 +296,13 @@ const either =
 
 const CLEAR: Rgba = [0, 0, 0, 0];
 const SHEET_PAPER: Rgba = [...SHEET_GROUND, 255];
+/** A 2 px speck of the sheet's paper (ΔE 5.2 off its ground) in the ground: grain the flood steps round. */
 const GRAIN = boxOf([2, 4, 20, 22], [...PAPER, 255]);
 
+/** A posed crop read as the cut-out path reads it: over its own measuring ground. */
 const overOwn = (posed: Raster) => overGround(posed, measuringGround([posed]));
 
+/** The least ΔE76 from `c` to every opaque pixel of `r`. */
 const leastDeltaE = (c: Rgb, r: Raster) => {
   let least = Infinity;
   for (let i = 0; i < S * S; i++)

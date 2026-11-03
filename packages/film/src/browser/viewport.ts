@@ -1,14 +1,23 @@
 import { Context, Effect, Layer, Option, Stream } from 'effect';
 
 interface ViewportOps {
+  /** Whether the window matches `query` (a CSS media query) now. */
   readonly matches: (query: string) => Effect.Effect<boolean>;
+  /**
+   * Whether the window matches `query`: the answer as it subscribes, then each change. A reader
+   * that read `matches` earlier and subscribes later (a Solid owner, once settled) still ends at
+   * the window's answer when the window changed in between.
+   */
   readonly changes: (query: string) => Stream.Stream<boolean>;
 }
 
+/** A phone held upright: its width in CSS pixels, as the studio is designed for first. */
 const PHONE_WIDTH = 390;
 
+/** The width a `(max-width: …px)` or `(min-width: …px)` query names, and which of the two it is. */
 const WIDTH_QUERY = /^\(\s*(max|min)-width\s*:\s*(\d+(?:\.\d+)?)px\s*\)$/;
 
+/** The answers of a phone's window: its width, its finger (`pointer: coarse`), no hover. */
 const PHONE_FEATURES: ReadonlyMap<string, boolean> = new Map([
   ['(pointer: coarse)', true],
   ['(pointer: fine)', false],
@@ -16,6 +25,7 @@ const PHONE_FEATURES: ReadonlyMap<string, boolean> = new Map([
   ['(hover: hover)', false],
 ]);
 
+/** Whether a phone's window matches `query`; a query it does not know is no match. */
 const phoneMatches = (query: string): boolean =>
   Option.match(Option.fromNullishOr(WIDTH_QUERY.exec(query.trim())), {
     onSome: ([, side, width]) => {
@@ -28,8 +38,10 @@ const phoneMatches = (query: string): boolean =>
 export class Viewport extends Context.Service<Viewport, ViewportOps>()(
   '@manna/film/browser/Viewport',
 ) {
+  /** What a server render answers for `query`: a client's hydration shows the same first. */
   static readonly served = phoneMatches;
 
+  /** A phone's window that never changes: what a server render answers for. */
   static readonly layerPhone: Layer.Layer<Viewport> = Layer.succeed(
     Viewport,
     Viewport.of({

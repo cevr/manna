@@ -1,3 +1,17 @@
+/**
+ * The player at a hymn's tempo with Sound on (unit `recrate`, acceptance
+ * A2): the recording plays at the held hymn's tempo, for every tempo the
+ * Tempo dial offers, and the place the player shows moves with it; a tempo
+ * turned mid-play reaches the device and moves on from where the place
+ * stands; a Sound switch off and on keeps the tempo turned last; the silent
+ * tail past the recording's end runs at the tempo; and the statuses name the
+ * rate. Nothing sounds: the device is the test's fake, which moves its place
+ * at the rate it was told (a play's `rate`, else 1, then each `setRate`) on
+ * the TestClock, and whose statuses name no rate, as One's do.
+ *
+ * Final path: `apps/hymnal/src/player/sound.rate.test.ts`.
+ */
+
 import { Clock, Effect, Layer, Match, Option, References, Stream, SubscriptionRef } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import * as Atom from 'effect/reactivity/Atom';
@@ -22,13 +36,21 @@ import { scoreClock, soundOn } from './sound';
 
 const book = timingBook(bundled);
 
+/** One poll of the player (`statusEvery`), ms. */
 const POLL = 250;
+/** Every detent of the Tempo dial, in percent. */
 const TEMPI = Array.from({ length: 21 }, (_, i) => 50 + 5 * i);
+/** Hymn 100's recording is longer than any run here at any tempo, ms. */
 const LONG = 600_000;
 
 const morning = { number: 100, title: 'Hymn 100' };
+/** Every hymn as printed: no transpose, no capo. */
 const printed = Atom.make(still);
 
+/**
+ * A hymn whose recording plays its first two lines and leaves the last two
+ * unplayed: 8 s of recording, then 12 s of silent stanzas to the timeline's end.
+ */
 const unplayedTail: Timeline = {
   tempo: { microsPerQuarter: 500_000, numerator: 4, denominator: 4 },
   lines: [
@@ -48,6 +70,10 @@ const unplayedTail: Timeline = {
   end: 20_000,
 };
 
+/**
+ * A device holding a recording `length` ms long whose place moves at the rate
+ * it was told, and each rate it took, in order (`rates`), with each play.
+ */
 const rated = (length: number) => {
   const asked = {
     plays: new Array<{ readonly uri: string; readonly fromMs: number; readonly rate: number }>(),
@@ -108,13 +134,20 @@ const rated = (length: number) => {
   return { device, asked };
 };
 
+/** Let the player's fibers run what the clock's last move woke. */
 const settle = Effect.forEach(Array.from({ length: 10 }), () => Effect.yieldNow, {
   discard: true,
 });
 
+/** The place the player shows, ms, while it plays. */
 const placeOf = (player: Player) =>
   Option.getOrThrow(Option.liftPredicate(player, Player.$is('Playing'))).at * 1000;
 
+/**
+ * The app's player as `LivePlayer.tsx` builds it, over the score clock over
+ * the rate-keeping device, Sound on, with hymn 100's tempo held in `tempo`
+ * (percent) and every other hymn at 100.
+ */
 const composed = (initial: number) =>
   Effect.gen(function* () {
     const clock = yield* TestClock.testClockWith(Effect.succeed);
@@ -148,9 +181,11 @@ const composed = (initial: number) =>
       asked: fake.asked,
       sound,
       state,
+      /** The rate the screens show the place moving at (`player.rate`). */
       rate: () => registry.get(player.rate),
       setTempo: (percent: number) => registry.set(tempo, percent),
       send: (command: Command) => registry.set(player.send, command),
+      /** Move the clock on `ms`, a poll at a time. */
       run: (ms: number) =>
         Effect.gen(function* () {
           for (let t = 0; t < ms; t += POLL) {

@@ -63,11 +63,13 @@ import {
   type FilmTimeline,
 } from './timeline-schema.ts';
 
+/** What a part declares: the beat it begins on and its name (an act, a movement). */
 interface PartOf {
   readonly from: string;
   readonly name: string;
 }
 
+/** `parts` laid over `placed` (`stretchesOf`): each one's film seconds. */
 const partsOn = (
   parts: ReadonlyArray<PartOf>,
   placed: ReadonlyArray<Placed>,
@@ -76,6 +78,7 @@ const partsOn = (
     stretches.map((s) => ({ name: s.part.name, from: s.part.from, start: s.from, end: s.to })),
   );
 
+/** How a placed beat's voice stands. */
 const voiceOf = (p: Placed): BeatVoice => {
   if (p.voice.spoken.length === 0) return 'silent';
   if (!p.voice.recorded) return 'estimated';
@@ -83,6 +86,11 @@ const voiceOf = (p: Placed): BeatVoice => {
   return 'staging';
 };
 
+/**
+ * Placed beat `p` on the film's clock: its span, speech and marks in film
+ * seconds (a mark at the speech's start plus the take's, or the estimate's,
+ * offset), its voice, and `drawn`, whether a scene draws it. Pure.
+ */
 export const clockBeat = (p: Placed, drawn: boolean): ClockBeat => {
   const speechStart = p.start + p.speechStart;
   return {
@@ -112,6 +120,12 @@ export const clockBeat = (p: Placed, drawn: boolean): ClockBeat => {
   };
 };
 
+/**
+ * The clock of beats `placed` at `fps`: each beat on the film's clock (`clockBeat`),
+ * whether `drawn` says a scene draws it; the acts and the score's movements
+ * laid over them. Fails with the first part that names no beat or is
+ * declared out of order. Pure.
+ */
 export const filmClock = (
   placed: ReadonlyArray<Placed>,
   fps: number,
@@ -131,6 +145,12 @@ export const filmClock = (
     };
   });
 
+/**
+ * A film's versions: its production ledger's (`versions`, oldest first; the
+ * last is open), each with a folder when `folders` names its number, the
+ * newest of the others on the film's registered files; a film with no
+ * ledger has one version, open, on its files. Pure.
+ */
 export const versionsOf = (
   ledger: Option.Option<{ readonly versions: ReadonlyArray<{ readonly title: string }> }>,
   folders: ReadonlyArray<number>,
@@ -155,6 +175,11 @@ export const versionsOf = (
     },
   });
 
+/**
+ * The version a caller names, else the open one: `FilmVersionUnknown` for a
+ * number the film has not, `FilmVersionUnkept` for one whose files are kept
+ * nowhere. Pure.
+ */
 export const pickVersion = (
   film: string,
   versions: ReadonlyArray<FilmVersion>,
@@ -190,19 +215,33 @@ export const pickVersion = (
 
 const STAGES: ReadonlyArray<Stage> = Stage.literals;
 
+/**
+ * What the model is made from: the version's clock and Board (each read from
+ * the version's own files: its folder, or the film's registered files), the
+ * open version's Board (what waits on the owner's approval), and, keyed by
+ * the film and not by a version, its catalogue, notes, the lab's asks and the
+ * production's ledger.
+ */
 interface TimelineSources {
   readonly film: string;
+  /** The production's ledger: its versions and the owner's words; none for a film with no ledger. */
   readonly ledger: Option.Option<ProductionFile>;
   readonly version: FilmVersion;
   readonly versions: ReadonlyArray<FilmVersion>;
   readonly clock: FilmClock;
+  /** The version's Board (`board.json` in its files): its lane. */
   readonly board: BoardFile;
+  /** The open version's Board: the beats it holds ready to approve wait on the owner. */
   readonly openBoard: BoardFile;
+  /** The film's renders (`catalogue.json`): a render records no version, so the registered files' alone. */
   readonly catalogue: Catalogue;
+  /** The film's notes, timed on the registered files' clock. */
   readonly notes: NotesFile;
+  /** The lab's asks; those about the film are read. */
   readonly asks: ReadonlyArray<AskRecord>;
 }
 
+/** What starts each stage, said as the Next row says it. */
 const STARTS: Readonly<Record<Stage, string>> = {
   script: 'Script starts from the series draft the owner keeps',
   concept: 'Concept starts from the kept script',
@@ -215,10 +254,12 @@ const STARTS: Readonly<Record<Stage, string>> = {
   shorts: 'Shorts are cut from the approved render',
 };
 
+/** What the Next row says of its stage when the stage it starts from is a gap. */
 const STARTS_WITHOUT: Readonly<Partial<Record<Stage, string>>> = {
   board: 'Board starts from kept concept frames, and none is kept yet',
 };
 
+/** Why the concept stage is a gap. */
 const CONCEPT_GAP =
   'no decision on the production keeps a concept frame yet (the frames keep no record of their own)';
 
@@ -230,6 +271,7 @@ const clockOfBeat = (beat: ClockBeat): ClipClock =>
 
 const end = (beat: ClockBeat) => beat.start + beat.dur;
 
+/** The script's beats: kept once the script stage is done, else made. */
 const scriptLane = (clock: FilmClock, kept: boolean): ReadonlyArray<ScriptClip> =>
   clock.beats.map((b) => ({
     start: b.start,
@@ -245,8 +287,10 @@ const scriptLane = (clock: FilmClock, kept: boolean): ReadonlyArray<ScriptClip> 
     hold: b.hold,
   }));
 
+/** Whether a panel is a card or a verse page the engine sets. */
 const isCard = (panel: Panel) => Option.isSome(Option.fromUndefinedOr(panel.text));
 
+/** A clock beat as the animatic times it (`core/animatic.ts`): the studio's Board lane and a Board render (`core/board-render.ts`) both. */
 export const timedBeat = (beat: ClockBeat): TimedBeat => ({
   id: beat.id,
   start: beat.start,
@@ -258,6 +302,12 @@ export const timedBeat = (beat: ClockBeat): TimedBeat => ({
     ),
 });
 
+/**
+ * The words card `text` of a panel held from mark `at` sets from `beat`'s
+ * line (`cardSaid`, the engine's rule): a panel held from the beat's start
+ * sets from its first word, as the engine's card does; none for a verse, or
+ * words that do not read.
+ */
 const cardWordsOf = (
   beat: ClockBeat,
   at: string,
@@ -284,6 +334,11 @@ const cardWordsOf = (
   );
 };
 
+/**
+ * The Board's panels as the animatic shows them (`shotsOf`, the one rule):
+ * each from where it shows (a beat's first panel from the beat's start, a
+ * later one from its mark) to the next panel of its beat, or the beat's end.
+ */
 const boardLane = (clock: FilmClock, board: BoardFile): ReadonlyArray<BoardClip> => {
   const boarded = shotsOf(clock.beats.map(timedBeat), board).flatMap((shot) =>
     Shot.$match(shot, { Boarded: (b) => [b], Unboarded: () => [] }),
@@ -334,6 +389,7 @@ const boardLane = (clock: FilmClock, board: BoardFile): ReadonlyArray<BoardClip>
   });
 };
 
+/** Each beat's take over its speech: the staging voice's made, the owner's kept. */
 const voiceLane = (clock: FilmClock): ReadonlyArray<VoiceClip> =>
   clock.beats.flatMap((b) =>
     Option.toArray(
@@ -363,12 +419,14 @@ const voiceLane = (clock: FilmClock): ReadonlyArray<VoiceClip> =>
     ),
   );
 
+/** Whether the owner approved `beat`'s scene render as it stands. */
 const sceneApproved = (catalogue: Catalogue, beat: string): boolean =>
   Option.exists(
     renderIn(catalogue, sceneSlot(beat, MAIN_VARIANT)),
     (render) => approvalState(catalogue, subjectOf(render)) === 'approved',
   );
 
+/** Each beat a scene draws, approved when its render is. */
 const scenesLane = (clock: FilmClock, catalogue: Catalogue): ReadonlyArray<SceneClip> =>
   clock.beats
     .filter((b) => b.drawn)
@@ -383,12 +441,14 @@ const scenesLane = (clock: FilmClock, catalogue: Catalogue): ReadonlyArray<Scene
       beat: b.id,
     }));
 
+/** Whether any beat over `[start, end)` is estimated. */
 const estimatedOver = (clock: FilmClock, start: number, until: number): ClipClock =>
   Bool.match(
     clock.beats.some((b) => b.start < until && end(b) > start && b.voice === 'estimated'),
     { onTrue: (): ClipClock => 'estimated', onFalse: (): ClipClock => 'measured' },
   );
 
+/** The score's movements, each from its beat to the next one's. */
 const soundLane = (clock: FilmClock): ReadonlyArray<SoundClip> =>
   clock.movements.map((m) => ({
     start: m.start,
@@ -399,6 +459,13 @@ const soundLane = (clock: FilmClock): ReadonlyArray<SoundClip> =>
     from: m.from,
   }));
 
+/**
+ * Where a render sits on the clock: the span it recorded when it was made
+ * (so a render made on an older clock stays where it was made, and the page
+ * shows it out of step), else its address's span now: the film, an act's
+ * stretch, or scenes from the first named to the end of the last (a render
+ * of scenes apart covers the beats between them).
+ */
 const spanOf = (
   clock: FilmClock,
   address: Address,
@@ -424,9 +491,11 @@ const spanOf = (
     }),
   );
 
+/** Whether the owner approved `render` as it stands. */
 const renderApproved = (catalogue: Catalogue, render: Catalogue['renders'][number]) =>
   approvalState(catalogue, subjectOf(render)) === 'approved';
 
+/** The catalogue's videos of the film, an act or scenes, each over its span; approved when the owner approved it as it is. */
 const renderLane = (
   clock: FilmClock,
   catalogue: Catalogue,
@@ -456,12 +525,14 @@ const renderLane = (
 
 const NO_RENDERS: Catalogue = { film: '', renders: [], approvals: [], comments: [] };
 
+/** The catalogue the version shows: the film's for its registered files; a version folder's renders are not told apart, so none. */
 const catalogueOf = (sources: TimelineSources): Catalogue =>
   Bool.match(sources.version.files === 'film', {
     onTrue: () => sources.catalogue,
     onFalse: () => NO_RENDERS,
   });
 
+/** The lanes after the script's that have material, in track order. */
 const laterLanes = (sources: TimelineSources, duration: number): ReadonlyArray<Lane> => {
   const { clock } = sources;
   const catalogue = catalogueOf(sources);
@@ -475,6 +546,12 @@ const laterLanes = (sources: TimelineSources, duration: number): ReadonlyArray<L
   return lanes.filter((lane) => lane.clips.length > 0);
 };
 
+/**
+ * The stage a decision keeps by the ask it answers: the script when the ask
+ * shows it, the concept when it shows pictures that are no Board try and no
+ * other material (the concept frames are shown that way: they keep no record
+ * of their own yet).
+ */
 const keptBy = (ask: AskRecord): Option.Option<'script' | 'concept'> => {
   const materials = materialsIn(ask.ask);
   if (materials.some(({ block }) => block.kind === 'script')) return Option.some('script');
@@ -489,6 +566,7 @@ const keptBy = (ask: AskRecord): Option.Option<'script' | 'concept'> => {
   return Option.liftPredicate('concept' as const, () => materials.length === 0 && pictures);
 };
 
+/** The stages the owner's decisions filed in the version keep (an ask's answer, by what its ask showed). */
 const keptIn = (sources: TimelineSources): ReadonlySet<Stage> =>
   new Set(
     Option.match(sources.ledger, {
@@ -505,6 +583,7 @@ const keptIn = (sources: TimelineSources): ReadonlySet<Stage> =>
     }),
   );
 
+/** Which stages have material in the version: the script its beats, a later stage its lane, the concept a decision that keeps it, the animatic the Board and the voice, the shorts a short's render. */
 const reachedOf = (
   sources: TimelineSources,
   lanes: ReadonlyArray<Lane>,
@@ -524,6 +603,7 @@ const reachedOf = (
   };
 };
 
+/** Each stage as the version stands: reached, a gap (the concept, with no decision keeping it), or ahead. */
 const flowOf = (reached: Readonly<Record<Stage, boolean>>): ReadonlyArray<FlowStage> =>
   STAGES.map((stage): FlowStage => {
     if (reached[stage]) return { state: 'reached', stage };
@@ -531,6 +611,16 @@ const flowOf = (reached: Readonly<Record<Stage, boolean>>): ReadonlyArray<FlowSt
     return { state: 'ahead', stage, starts: STARTS[stage] };
   });
 
+/**
+ * Whether each stage is done, as the film skill's flow says "done when".
+ * The stages that keep no sign-off of their own (script, concept, animatic,
+ * sound) are done once a later stage has material, and the script and the
+ * concept also once a decision filed in the version keeps them. The Board is
+ * done when every beat is approved, the voice when every spoken beat is the
+ * owner's take, the scenes when every beat is drawn and its scene approved,
+ * the render when a render of the film is approved, the shorts when a
+ * short's is.
+ */
 const doneOf = (
   sources: TimelineSources,
   reached: Readonly<Record<Stage, boolean>>,
@@ -560,12 +650,17 @@ const doneOf = (
   };
 };
 
+/** The header's stage: the first, in the flow's order, that is not done (the stages after it do not count); the last when all are. */
 const stageOf = (done: Readonly<Record<Stage, boolean>>): Stage =>
   Option.getOrElse(
     Arr.findFirst(STAGES, (s) => !done[s]),
     (): Stage => 'shorts',
   );
 
+/**
+ * The Next row: the first stage ahead with what starts it, and the later
+ * ones; when the stage it starts from is a gap, it says so and names it.
+ */
 const nextOf = (flow: ReadonlyArray<FlowStage>): Option.Option<NextRow> => {
   const ahead = flow.flatMap((f) =>
     FlowStage.match(f, { reached: () => [], gap: () => [], ahead: (a) => [a] }),
@@ -594,6 +689,7 @@ const nextOf = (flow: ReadonlyArray<FlowStage>): Option.Option<NextRow> => {
   });
 };
 
+/** Whether an ask is about the film: it names it, or its production. */
 const asksAbout = (sources: TimelineSources): ReadonlyArray<AskRecord> =>
   sources.asks.filter(
     (a) =>
@@ -601,9 +697,15 @@ const asksAbout = (sources: TimelineSources): ReadonlyArray<AskRecord> =>
       Option.exists(sources.ledger, (file) => a.production === file.production),
   );
 
+/** When an ask was made, ms; none for a time that does not read. */
 const madeAt = (ask: AskRecord): Option.Option<number> =>
   Option.map(DateTime.make(ask.created), (t) => t.epochMilliseconds);
 
+/**
+ * The asks that wait on the owner: those asking, less one whose set and
+ * choice a decision filed since it was made has answered (the owner decided
+ * in chat and the agent filed it, and the ask is not closed yet).
+ */
 const waitingAsks = (sources: TimelineSources): ReadonlyArray<AskRecord> =>
   asksAbout(sources).filter(
     (ask) =>
@@ -619,6 +721,7 @@ const waitingAsks = (sources: TimelineSources): ReadonlyArray<AskRecord> =>
       ),
   );
 
+/** The beat an ask's material names first on this film: a script's first beat, a panel's beat, a take's. */
 const askBeat = (film: string, ask: AskRecord): Option.Option<string> =>
   Arr.findFirst(materialsIn(ask.ask), ({ block }): Option.Option<string> =>
     Match.value(block).pipe(
@@ -646,6 +749,7 @@ const askBeat = (film: string, ask: AskRecord): Option.Option<string> =>
     ),
   );
 
+/** The flags: each waiting ask at the first beat it names (the film's start when it names none), and, on the film's registered files, each note not yet done (`unresolved`) at its time. */
 const markersOf = (
   sources: TimelineSources,
   asks: ReadonlyArray<AskRecord>,
@@ -686,12 +790,14 @@ const markersOf = (
   );
 };
 
+/** The beats whose Board is ready to approve: every picture panel keeps a try, and the beat is not approved as it stands. */
 const beatsToApprove = (board: BoardFile): ReadonlyArray<string> =>
   Arr.dedupe(board.panels.map((p) => p.beat)).filter(
     (beat) =>
       Result.isSuccess(approveBeat(board, beat, '')) && approvalOf(board, beat) !== 'approved',
   );
 
+/** What waits on the owner: the waiting asks and the notes an agent answered (film-wide), and the beats the open version's Board holds ready to approve. */
 const waitingOf = (
   sources: TimelineSources,
   asks: ReadonlyArray<AskRecord>,
@@ -712,6 +818,7 @@ const waitingOf = (
   })),
 ];
 
+/** The film's timeline at the sources' version. Pure. */
 export const timelineOf = (sources: TimelineSources): FilmTimeline => {
   const duration = Option.getOrElse(Option.map(Arr.last(sources.clock.beats), end), () => 0);
   const kept = keptIn(sources);
@@ -749,6 +856,7 @@ export const timelineOf = (sources: TimelineSources): FilmTimeline => {
   };
 };
 
+/** `timeline` with only the lanes of `tracks`, when it names some. Pure. */
 export const onlyTracks = (
   timeline: FilmTimeline,
   tracks: Option.Option<ReadonlyArray<Track>>,

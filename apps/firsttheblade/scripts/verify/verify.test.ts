@@ -14,10 +14,13 @@ import { agentStage, workersDevUrl } from './stage.ts';
 
 const ORIGIN = 'http://127.0.0.1:8599';
 
+/** The verify skill this app's helpers serve. */
 const SKILL_DIR = `${import.meta.dir}/../../../../.claude/skills/verify-firsttheblade`;
 
+/** A page or a list route written in a code span (`/subscribe/check`; `/series/<slug>` left out; `/about/` read as the page it redirects to). */
 const SITE_PATH = /`(\/(?:subscribe|unsubscribe|series|privacy|about)[\w/-]*(?:[?#][^`<]*)?)`/g;
 
+/** Every path the site serves a page or a list route at. */
 const SITE_PATHS: ReadonlySet<string> = new Set([
   ...PAGES.map((page) => page.path),
   ...Object.values(MAIL_ROUTES),
@@ -34,6 +37,7 @@ const episode = {
   summary: 'A summary for the test.',
 };
 
+/** The outbox directory a test writes to, made fresh and removed after it. */
 class Outbox extends Context.Service<Outbox, string>()('test/Outbox') {}
 
 const OutboxDir = Layer.effect(
@@ -45,11 +49,13 @@ const OutboxDir = Layer.effect(
   }),
 );
 
+/** The preview's own mailer, writing to that outbox. */
 const OutboxLayer = Layer.unwrap(Effect.map(Effect.service(Outbox), layerOutbox)).pipe(
   Layer.provideMerge(OutboxDir),
   Layer.provideMerge(BunServices.layer),
 );
 
+/** A confirm letter and a film's letter, sent through the preview's mailer. */
 const written = Effect.gen(function* () {
   const outbox = yield* Outbox;
   const series = yield* Effect.fromOption(Arr.head(SERIES));

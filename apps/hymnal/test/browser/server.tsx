@@ -1,11 +1,25 @@
 /* oxlint-disable effect/noGlobals, effect/noAsyncFunction -- the browser test's server, a host boundary: Bun's loader takes each stand-in module as source text, and the app is imported once its boundaries are in place. */
 
+/**
+ * The browser test's server render: each page is the app's HTML rendered
+ * here, with no window (react-native-web measures a window 0 high, as on
+ * One's server and in its static build), and its styles, as the app's root
+ * layout writes them (`app/_layout.tsx`). The page's script then hydrates
+ * it (`page.tsx`). The boundaries are the bundler's, as `src/test/setup.ts`
+ * sets them for the other tests.
+ */
+
 import { plugin } from 'bun';
 import { renderToString } from 'react-dom/server';
 
 import { readIndexes } from '../../vite/indexes';
 import { readWords } from '../../vite/words';
 
+/**
+ * Each bundled data module as JSON, by its name: every hymn's words and the
+ * hymnal's back-matter indexes, read once. The server's render and the
+ * page's bundle both take them.
+ */
 export const data = {
   'virtual:hymnal': JSON.stringify(readWords()),
   'virtual:hymnal-indexes': JSON.stringify(readIndexes()),
@@ -38,6 +52,7 @@ const { webColors } = await import('~/color');
 
 AppRegistry.registerComponent('styles', () => () => <></>);
 
+/** The page the app's server answers at `path`; its script is at `/page.js`. */
 export const render = (path: string): string => {
   const body = renderToString(<App path={path} />);
   // @ts-expect-error react-native-web's own API, as `app/_layout.tsx` calls it

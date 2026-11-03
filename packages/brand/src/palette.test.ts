@@ -1,9 +1,15 @@
+/**
+ * The brand's roles are what their doc comments say they are: each tint is
+ * its colour mixed toward white or toward the other colour by the share it
+ * names, and the accent reads at WCAG AA on each light ground it names.
+ */
 import { describe, expect, test } from 'bun:test';
 
 import { PALETTE } from './palette';
 
 const rgb = (hex: string) => [1, 3, 5].map((at) => Number.parseInt(hex.slice(at, at + 2), 16));
 
+/** `a` mixed `t` of the way toward `b`, per sRGB channel, rounded. */
 const mix = (a: string, b: string, t: number) => {
   const to = rgb(b);
   return `#${rgb(a)

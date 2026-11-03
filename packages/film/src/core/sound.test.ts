@@ -14,8 +14,10 @@ import {
   scoreOptions,
 } from './sound.ts';
 
+/** No recorded takes: every scene is estimated. */
 const noTakes: Timings = { voice: '', scenes: {} };
 
+/** The failure's tag, or `ok`. */
 const outcome = <A, E extends { readonly _tag: string }>(r: Result.Result<A, E>) =>
   Result.match(r, { onSuccess: () => 'ok', onFailure: (e) => e._tag });
 

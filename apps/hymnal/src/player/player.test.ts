@@ -1,3 +1,9 @@
+/**
+ * The player over a device the test holds (`src/test/device.ts`): each
+ * state and each move between them, as the reader and the lock screen
+ * make them. A test waits on the state it expects, never a fixed time.
+ */
+
 import { Duration, Effect, Option, Schedule, Stream } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
@@ -7,20 +13,27 @@ import { audioUrl } from '~/remote';
 import { fakeDevice } from '../test/device';
 import { Command, Player, playerOn } from './player';
 
+/** The states in the order they came, each once however many reads repeat it. */
 const moves = (tags: ReadonlyArray<Player['_tag']>) =>
   tags.filter((tag, index) => index === 0 || tag !== tags[index - 1]);
 
 const morning = { number: 100, title: 'Great Is Thy Faithfulness' };
 const praise = { number: 1, title: 'Praise to the Lord' };
 
+/**
+ * The app with a player over a fresh device, its commands and lock-screen
+ * follower running; its registry, and the reads it runs, end with the test's `using`.
+ */
 const open = () => {
   const { device, layer } = fakeDevice();
   const player = playerOn(layer, Duration.millis(1));
   const registry = AtomRegistry.make();
   registry.mount(player.send);
   registry.mount(player.remote);
+  /** Each state the player showed, in order. */
   const shown = new Array<Player['_tag']>();
   const unwatch = registry.subscribe(player.state, (state) => void shown.push(state._tag));
+  /** The player's state once `holds` is true of it. */
   const until = (holds: (player: Player) => boolean) =>
     AtomRegistry.toStream(registry, player.state).pipe(
       Stream.filter(holds),
@@ -35,6 +48,7 @@ const open = () => {
     device,
     until,
     send: (command: Command) => registry.set(player.send, command),
+    /** The states shown from now on, by name. */
     since: () => {
       const from = shown.length;
       return () => shown.slice(from);

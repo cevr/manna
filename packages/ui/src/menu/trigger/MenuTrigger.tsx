@@ -17,6 +17,7 @@ import { useMenuRootContext } from '../root/MenuRootContext.ts';
 import { findRootOwnerId } from '../utils/isKeyboardOpen.ts';
 
 interface MenuTriggerState {
+  /** Whether the menu is open and was opened by this trigger. */
   open: boolean;
 }
 

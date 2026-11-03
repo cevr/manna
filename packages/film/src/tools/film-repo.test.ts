@@ -236,6 +236,7 @@ describe('placeFilm', () => {
           { id: 'a', say: 'Hi.', lead: 0, tail: 0 },
           { id: 'b', min: 5 },
         ];
+        /** Each beat's first frame with `a`'s take `seconds` long, as the tools and the page lay it. */
         const framesWith = (seconds: number) =>
           Effect.gen(function* () {
             const timings = {

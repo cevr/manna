@@ -1,3 +1,16 @@
+/**
+ * EGW token persistence port.
+ *
+ * `EGWAuth` needs somewhere to cache the OAuth access token between runs so
+ * it doesn't hit /connect/token on every request. The "where" depends on the
+ * host process:
+ *   - CLI / sync workers: filesystem (data/tokens.json next to the binary)
+ *   - Tests: in-memory ref
+ *
+ * Split out so each host wires its own layer, and persistence is the explicit
+ * pluggable surface.
+ */
+
 import { Context, Effect, FileSystem, Layer, Option, Path, Redacted, Ref, Schema } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
 
@@ -42,6 +55,10 @@ interface EGWTokenStoreService {
 export class EGWTokenStore extends Context.Service<EGWTokenStore, EGWTokenStoreService>()(
   '@manna/core/egw/token-store/EGWTokenStore',
 ) {
+  /**
+   * Filesystem-backed token store. Writes JSON to `tokenFile` (resolved against
+   * cwd if relative); ensures the parent directory exists on construction.
+   */
   static layerFileSystem = (tokenFile: string) =>
     Layer.effect(
       EGWTokenStore,
@@ -70,6 +87,9 @@ export class EGWTokenStore extends Context.Service<EGWTokenStore, EGWTokenStoreS
       }),
     );
 
+  /** Held in memory for the life of the layer: for a host with no disk to
+   *  keep a token on (a Worker), and for tests. A client-credentials token
+   *  is cheap to fetch again, so losing it with the layer costs one request. */
   static layerMemory = (initial: Option.Option<AccessToken> = Option.none()) =>
     Layer.effect(
       EGWTokenStore,
@@ -82,5 +102,6 @@ export class EGWTokenStore extends Context.Service<EGWTokenStore, EGWTokenStoreS
       }),
     );
 
+  /** In-memory test layer. */
   static layerTest = EGWTokenStore.layerMemory;
 }

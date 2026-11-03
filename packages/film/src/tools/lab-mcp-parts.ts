@@ -1,5 +1,6 @@
 import { Effect, Option, type Path, Schema } from 'effect';
 
+/** A tool's refusal, said in words the agent reads. */
 export class LabRefused extends Schema.TaggedError<LabRefused>()('LabRefused', {
   reason: Schema.String,
 }) {
@@ -8,8 +9,10 @@ export class LabRefused extends Schema.TaggedError<LabRefused>()('LabRefused', {
   }
 }
 
+/** The lab's MCP server as it names itself: in its handshake, and on each events result (`_meta`). */
 export const LAB_SERVER = { name: 'film-lab', version: '0.1.0' } as const;
 
+/** Any failure of a tool's work, as the tool answers it. */
 export const refused = <A, R>(self: Effect.Effect<A, { readonly message: string }, R>) =>
   Effect.mapError(self, (error) => LabRefused.make({ reason: error.message }));
 
@@ -17,6 +20,7 @@ export const FilmParam = Schema.Struct({
   film: Schema.String.annotate({ description: 'The film, by name (see `overview`).' }),
 });
 
+/** A path under `root` that stays under it: `rel` relative, with no `..` out of it. */
 export const inside = (path: Path.Path, root: string, rel: string): Option.Option<string> => {
   if (path.isAbsolute(rel)) return Option.none();
   const at = path.resolve(root, rel);

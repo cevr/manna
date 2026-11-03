@@ -8,8 +8,14 @@ import {
   parseSync,
 } from 'oxc-parser';
 
+/** The tools that use a guarded entry as its users do: the draw leg draws into the stand-in. */
 const TOOL_USERS: ReadonlySet<string> = new Set(['packages/film/src/tools/draw-check.ts']);
 
+/**
+ * The directories whose modules export only what another file imports by
+ * name (a test or a lint fixture counts, an `export * from` passes a name
+ * through): an export its own file alone reads is not exported.
+ */
 const SWEPT = [
   'packages/film/src/core/',
   'packages/film/src/lab/',
@@ -22,16 +28,29 @@ const SWEPT = [
   'packages/film/lint/',
 ] as const;
 
+/**
+ * The modules in a swept directory whose exports have a reader the sweep
+ * cannot see, and so are not swept:
+ * - a `.types.ts` file is a compile-time check, and its exports keep its
+ *   `@ts-expect-error` lines compiled;
+ * - a fixture film's modules export what the film loader reads by name
+ *   (`scenes`, `voice`, `look`, `script`);
+ * - a lint fixture is a film's code a rule reads;
+ * - the server-write page exports the renders `served` bundles by name.
+ * A default export is its loader's (oxlint's plugin), and is not swept either.
+ */
 const UNSWEPT = (file: string) =>
   file.endsWith('.types.ts') ||
   file.includes('/fixtures/films/') ||
   file.startsWith('packages/film/lint/fixtures/') ||
   file === 'packages/film/src/lab/fixtures/server-write-page.tsx';
 
+/** `packages/film/package.json`'s specifiers: `./core` → `./src/core/index.ts`. */
 const PackageExports = Schema.fromJsonString(
   Schema.Struct({ exports: Schema.Record(Schema.String, Schema.String) }),
 );
 
+/** Each guarded entry: its specifier under `@manna/film/` and its file under packages/film. */
 const ENTRIES = [
   { entry: 'canvas', file: 'src/canvas/index.ts' },
   { entry: 'player', file: 'src/player/index.ts' },
@@ -42,17 +61,23 @@ const ENTRIES = [
   { entry: 'style/build', file: 'src/style/build.ts' },
 ] as const;
 
+/** What one import or re-export takes from `from`: some of its names, or (None) the module whole. */
 interface Take {
   readonly from: string;
   readonly names: Option.Option<ReadonlyArray<string>>;
 }
 
+/** A module's imports and exports, as the parser reads them. */
 interface ModuleRecord {
+  /** The names it exports (as renamed): declarations, `export { … }` and re-exports. */
   readonly exports: ReadonlyArray<string>;
+  /** Its `import`s, `import()`s and `export … from`s. */
   readonly takes: ReadonlyArray<Take>;
+  /** Its `export * from` sources: a name taken from it is taken from them too. */
   readonly stars: ReadonlyArray<string>;
 }
 
+/** A name as an import or export entry spells it; a default is `default`. */
 const nameOf = (entry: ImportName | ExportImportName | ExportExportName): Option.Option<string> => {
   if (entry.kind === 'Default') return Option.some('default');
   return Option.fromNullishOr(entry.name);
@@ -60,6 +85,7 @@ const nameOf = (entry: ImportName | ExportImportName | ExportExportName): Option
 
 type Parsed = ReturnType<typeof parseSync>['module'];
 
+/** An `import … from`: its names, or the module whole for `import * as`. */
 const importTake = (i: Parsed['staticImports'][number]): Take => {
   if (i.entries.some((e) => e.importName.kind === 'NamespaceObject'))
     return { from: i.moduleRequest.value, names: Option.none() };
@@ -69,6 +95,7 @@ const importTake = (i: Parsed['staticImports'][number]): Take => {
   };
 };
 
+/** An `export … from` but `export *`: its one name, or the module whole for `export * as`. */
 const reexportTake = (e: Parsed['staticExports'][number]['entries'][number]): ReadonlyArray<Take> =>
   Option.toArray(
     Option.map(
@@ -83,11 +110,13 @@ const reexportTake = (e: Parsed['staticExports'][number]['entries'][number]): Re
     ),
   );
 
+/** How the parser reads `file`: JSX only in a `.tsx`. */
 const langOf = (file: string): 'ts' | 'tsx' => {
   if (file.endsWith('.tsx')) return 'tsx';
   return 'ts';
 };
 
+/** An `import('…')` with a literal specifier: the module whole. */
 const dynamicTake = (source: string, d: Parsed['dynamicImports'][number]): ReadonlyArray<Take> =>
   Option.toArray(
     Option.map(
@@ -119,14 +148,21 @@ const recordOf = (file: string, source: string): ModuleRecord => {
   };
 };
 
+/** The key a module's name is marked used under; `*` marks the module whole. */
 const WHOLE = '*';
 
+/**
+ * Whether `file` is where a user of an entry lives: a film's code, or a test
+ * or its fixture. An app's `out/` is output, and tests copy films into it and
+ * remove them while this walks, so it is never read.
+ */
 const isUser = (file: string) =>
   /\.tsx?$/.test(file) &&
   !file.includes('node_modules') &&
   !/^apps\/[^/]+\/out\//.test(file) &&
   (file.startsWith('apps/') || /\.test\.tsx?$/.test(file) || file.includes('/fixtures/'));
 
+/** The original public-entry guard's directories; the internal sweep also reads lint's tools. */
 const inEntryScope = (file: string) =>
   file.startsWith('apps/') ||
   file.startsWith('packages/film/src/') ||
@@ -236,6 +272,7 @@ describe('the package entries', () => {
         yield* fs.readFileString(path.join(films, 'package.json')),
       );
 
+      /** The file `from` names, as `user` imports it: a relative path, or the package's specifier. */
       const resolved = (user: string, from: string): Option.Option<string> => {
         if (from.startsWith('.'))
           return Option.some(path.relative(root, path.resolve(root, path.dirname(user), from)));

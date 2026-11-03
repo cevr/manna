@@ -62,6 +62,7 @@ const expectAllClosed = (ledger: RenderLedger) => {
   expect(ledger.pages.closed).toBe(ledger.pages.opened);
 };
 
+/** Frame of scene a's `hit` cue start, where the fake page draws a collision. */
 const hitFrame = Math.round(2 * testExportInfo.fps);
 
 describe('Checker', () => {
@@ -134,6 +135,7 @@ describe('Checker', () => {
       }),
   );
 
+  /** Check the 9 s `long` candidate on a page whose figure sits `dx(frame)` px off its place. */
   const checkLong = (dx: (i: number) => number) => {
     const figure = inkMark('fill', [
       [900, 500],
@@ -181,6 +183,7 @@ describe('Checker', () => {
 });
 
 describe('Checker.short', () => {
+  /** A 2 s short of scene a (to its cue), drawn 1080 px wide so page px are short px. */
   const short: Short = {
     id: 'cut',
     title: 'Cut',

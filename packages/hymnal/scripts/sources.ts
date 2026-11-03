@@ -1,3 +1,13 @@
+/**
+ * What the compiler is given for each hymn, built one way for the compile
+ * script and for the test that compiles every hymn fresh: the row's title
+ * and verses from source-text.json, the MIDI file's bytes, why it is held back (if
+ * it is), and where its refrain is sung (`data/fixes/refrains.json`, read
+ * off each refrain hymn's page: source text cannot say it). Every refrain hymn
+ * is listed there, and only those: a refrain with no place, or a place for a
+ * hymn with no refrain, is refused, never filled with a default.
+ */
+
 import { Effect, Schema } from 'effect';
 
 import type { compile } from '../src/compile.js';
@@ -5,6 +15,7 @@ import { Order } from '../src/hymn.js';
 
 type Source = Parameters<typeof compile>[0];
 
+/** Hymns held back as plain text, each with its reason. */
 export const HELD: ReadonlyMap<number, string> = new Map(
   [225, 262, 403, 453, 580].map((n) => [n, 'verse split misplaced, spot check 2026-10-17']),
 );
@@ -16,16 +27,19 @@ const Refrains = Schema.fromJsonString(
   }),
 );
 
+/** Where each listed hymn's refrain is sung, from the text of `data/fixes/refrains.json`. */
 export const decodeOrders = (text: string) =>
   Schema.decodeEffect(Refrains)(text).pipe(
     Effect.map(({ hymns }) => new Map(hymns.map((hymn) => [hymn.number, hymn.order]))),
   );
 
+/** A hymn whose refrain `refrains.json` does not place, or a place it lists for a hymn with no refrain. */
 class RefrainPlaceError extends Schema.TaggedError<RefrainPlaceError>()('RefrainPlaceError', {
   number: Schema.Int,
   reason: Schema.Literals(['a refrain with no place', 'a place with no refrain']),
 }) {}
 
+/** Hymn n's source: its row, its MIDI file, its held reason and where its refrain is sung. */
 export const sourceOf = (
   row: {
     readonly number: number;

@@ -1,3 +1,9 @@
+/**
+ * The stream against a fake sampler and a fake R2, on a real folder in the
+ * temp directory: the fake renderer writes what `render.ts` writes (the MP3,
+ * its record, a work folder), R2 is a `Ref` of objects, so a run of 20 hymns
+ * takes milliseconds and touches no network.
+ */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { KEY_TRANSPOSES } from '@manna/hymnal/recordings';
 import { describe, expect, it } from 'effect-bun-test';
@@ -30,18 +36,25 @@ const recording = (hymn: number, transpose: number) =>
   new TextEncoder().encode(`recording of hymn ${hymn} at ${transpose}`);
 
 interface Fakes {
+  /** R2's objects by key. */
   readonly r2: Ref.Ref<ReadonlyMap<string, TargetObject>>;
   readonly puts: Ref.Ref<ReadonlyArray<{ key: string; metadata: PutMetadata }>>;
   readonly renders: Ref.Ref<ReadonlyArray<number>>;
   readonly manifests: Ref.Ref<number>;
+  /** The set each render and manifest was asked for, in order. */
   readonly asked: Ref.Ref<ReadonlyArray<string>>;
+  /** The most hymns' MP3s and work folders seen on disk at once. */
   readonly peak: Ref.Ref<number>;
 }
 
 interface Behaviour {
+  /** Hymns whose render fails a check. */
   readonly failing?: ReadonlySet<number>;
+  /** Hymns whose upload R2 refuses. */
   readonly refused?: ReadonlySet<number>;
+  /** A hymn whose render never ends: the run is stopped there. */
   readonly hang?: { readonly hymn: number; readonly started: Deferred.Deferred<number> };
+  /** Each hymn's moved stems, as the record holds them. */
   readonly moves?: ReadonlyMap<
     number,
     ReadonlyArray<{ stem: string; octave: number; folded: number }>
@@ -59,6 +72,7 @@ const fakesOf = Effect.gen(function* () {
   } satisfies Fakes;
 });
 
+/** A record as `render.ts` writes it, by the fields the stream reads and a few more. */
 const FakeRecord = Schema.fromJsonString(
   Schema.Struct({
     hymn: Schema.Int,
@@ -74,6 +88,7 @@ const FakeRecord = Schema.fromJsonString(
   }),
 );
 
+/** The hymns whose MP3 or work folder is on disk now. */
 const onDisk = (fs: FileSystem.FileSystem, out: string, work: string) =>
   Effect.gen(function* () {
     const mp3s = (yield* fs.readDirectory(out)).filter((f) => f.endsWith('.mp3'));
@@ -159,9 +174,11 @@ const layerOf = (fakes: Fakes, behaviour: Behaviour = {}) => {
   return Layer.mergeAll(target, renderer.pipe(Layer.provide(HashBun)), HashBun, quiet);
 };
 
+/** The stream over the fakes. */
 const streamed = (options: StreamOptions, fakes: Fakes, behaviour: Behaviour = {}) =>
   stream(options).pipe(Effect.provide(layerOf(fakes, behaviour)));
 
+/** A cache folder in the temp directory, removed with the test's scope. */
 const cacheDir = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   return yield* fs.makeTempDirectoryScoped({ prefix: 'hymn-stream-' });

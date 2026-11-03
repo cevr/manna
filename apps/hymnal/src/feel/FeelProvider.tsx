@@ -1,3 +1,13 @@
+/**
+ * Gives every control under it the Feel (`feel.ts`): the app's haptics and
+ * its voice, while `Sounds and haptics` (`settings.feel`) is on. The Tell
+ * keeps one identity for the app's life and reads the switch as each cue
+ * comes, so neither a cue nor the switch redraws a page.
+ *
+ * The voice loads after the first screen has drawn, in one background
+ * pass, so it is never on the launch path; a cue before then is felt only.
+ */
+
 import { RegistryContext } from '@effect/atom-react';
 import { Effect, Option } from 'effect';
 import type * as Atom from 'effect/reactivity/Atom';
@@ -14,6 +24,7 @@ import { silentVoice, type Voice, voiceOver } from './sound';
 // oxlint-disable-next-line effect/noGlobals -- the touch path's clock: a sync read for the ticks' floor and the sounds' gap, with no Effect run per cue.
 const now = () => performance.now();
 
+/** The app's voice: System Sound Services on iOS, none elsewhere. */
 const liveVoice: Voice = Option.match(voiceNative, {
   onNone: () => silentVoice,
   onSome: (native) => voiceOver(native, now),
@@ -29,7 +40,9 @@ export function FeelProvider({
   readonly children: ReactNode;
   readonly haptics?: HapticsPort;
   readonly voice?: Voice;
+  /** The switch the Feel reads. */
   readonly on?: Atom.Atom<boolean>;
+  /** The time, in milliseconds, the ticks' floor and the sounds' gap read. */
   readonly clock?: () => number;
 }) {
   const registry = use(RegistryContext);

@@ -16,6 +16,7 @@ const at = (eyeShift: number, extra: Partial<FigureSpec> = {}) =>
 const poses = encodePng(drawSheet([at(0), at(-14)]));
 const posesAgain = encodePng(drawSheet([at(0), at(-12)]));
 
+/** `sheet` as the route can answer it with its paper left out: every paper pixel transparent, its colour a dark grey no eye sees. */
 const bare = (sheet: Raster): Raster => {
   const rgba = Uint8Array.from(sheet.rgba);
   for (let i = 0; i < rgba.length; i += 4)

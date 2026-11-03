@@ -1,3 +1,24 @@
+/**
+ * The Worker's whole policy, over the email list's routes
+ * (`../mail/routes.ts`) and the site's files (`./assets.ts`):
+ *
+ * - the list's routes answer first, each with the methods it takes, and
+ *   none of their answers is kept (`no-store`);
+ * - a file is answered to GET and HEAD only; any other method is 405;
+ * - a series' former path answers a 301 to its page, query kept, so a
+ *   link shared before a rename still lands (`formerSlugs` in
+ *   `../content.ts`);
+ * - a path that names no file answers with the not-found page, as 404;
+ * - every response says how long to keep it: fingerprinted files under
+ *   `/assets/` for a year, pages not at all without asking again, and the
+ *   rest (icons, link cards, the sitemap) for a day;
+ * - every response carries the security headers: the content policy, no
+ *   sniffing, no framing, a strict referrer and HTTPS only; a request the
+ *   policy dies on (a file read that fails) answers an empty 500 that
+ *   carries them too;
+ * - a text file (a page, llms.txt, the sitemap) says it is UTF-8, which
+ *   every file the prerender writes is.
+ */
 import { Effect, Option, Predicate } from 'effect';
 import { Headers, type HttpServerRequest, HttpServerResponse } from 'effect/http';
 
@@ -12,6 +33,11 @@ export const CACHE = {
   never: 'no-store',
 } as const;
 
+/**
+ * The content policy: everything from this origin and nothing else. The
+ * pages carry no inline script or style, so neither is allowed, and a form
+ * posts only to this site (the sign-up and the leave button).
+ */
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self'",
@@ -37,8 +63,13 @@ export const SECURITY_HEADERS = {
 
 const ALLOWED_METHODS = new Set(['GET', 'HEAD']);
 
+/** The not-found page's path; asked for directly, it is still a 404. */
 const NOT_FOUND_PATH = '/404';
 
+/**
+ * Each series' former path, to the path of its page. The assets answer a
+ * path with or without its trailing slash, so a former path does too.
+ */
 export const MOVED: ReadonlyMap<string, string> = new Map(
   SERIES.flatMap((series) =>
     series.formerSlugs.map((former) => [`/series/${former}`, `/series/${series.slug}`] as const),
@@ -52,6 +83,7 @@ const isHtml = (response: HttpServerResponse.HttpServerResponse) =>
     type.startsWith('text/html'),
   );
 
+/** How long a response may be kept, by what it is. */
 export const cacheControl = (
   pathname: string,
   response: HttpServerResponse.HttpServerResponse,
@@ -64,6 +96,7 @@ export const cacheControl = (
 
 const TEXT_TYPES = ['text/', 'application/xml', 'application/json', 'application/manifest+json'];
 
+/** The content type with its charset: a text type the host left without one is UTF-8. */
 export const withCharset = (contentType: string) => {
   if (contentType.includes('charset=')) return contentType;
   if (!TEXT_TYPES.some((type) => contentType.startsWith(type))) return contentType;
@@ -113,6 +146,11 @@ const answer = Effect.fn('Site.answer')(function* (request: HttpServerRequest.Ht
   return finish(NOT_FOUND_PATH, HttpServerResponse.setStatus(page, 404));
 });
 
+/**
+ * The policy's answer to `request`. A defect (a file read the host fails)
+ * is logged by its kind and answered as an empty 500 with the security
+ * headers, so no response the Worker sends goes without its content policy.
+ */
 export const respond = (request: HttpServerRequest.HttpServerRequest) =>
   answer(request).pipe(
     Effect.catchDefect((defect) =>

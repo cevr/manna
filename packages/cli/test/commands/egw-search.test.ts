@@ -1,3 +1,15 @@
+/** The CLI's `--json` is `SearchResultJson` over the service's own result.
+ *
+ *  `--json` is a contract with every script that pipes it, so it must be the
+ *  one wire codec over the value `SearchService` returned — not a hand-written
+ *  projection that could drift from `SearchResult` without anything failing.
+ *
+ *  So these tests run the real command — argument parsing, the layer seam, the
+ *  encoder, `Console.log` — and compare its captured stdout to the bytes the
+ *  same query produces when asked of the service directly, over the same
+ *  fixture corpus.
+ */
+
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option, Ref, Schema } from 'effect';
 import {
@@ -25,6 +37,9 @@ import { SearchLayer, verifiedVectorIndex } from '../../src/commands/egw/search-
 import { WikiLayer } from '../../src/commands/wiki.js';
 import { runCli } from '../lib/run-cli.js';
 
+/** The fixture embedder core's parity test uses, so both sides of the
+ *  comparison are looking at the same vectors rather than at two plausible
+ *  ones. */
 const embedder = Layer.succeed(
   QueryEmbedder,
   QueryEmbedder.of({
@@ -34,32 +49,59 @@ const embedder = Layer.succeed(
   }),
 );
 
+/** One service instance for both seams: a difference in service construction
+ *  must not be able to hide behind a difference the test was not looking for. */
 const fixtureSearch = goldenSearchLayer({
   index: Option.some(goldenVectorIndexBytes()),
   embedder,
 });
 
+/** A query §9.3 considers wordy, so it routes to the hybrid path and the vector
+ *  leg is actually attempted. */
 const WORDY_QUERY = 'what happens at the close of probation';
 
+/** A fixture host with no vector index and no embedder — the ordinary machine,
+ *  and the one §9.6's typed absence exists for. */
 const lexicalOnlySearch = goldenSearchLayer();
 
+/** A wiki that will not open, which is the one failure the topic fetch has to
+ *  absorb: the group is a garnish on an answer that is already complete, so a
+ *  refusing artifact must cost the caller the group and nothing else. */
 const brokenWiki = WikiService.Broken({
   operation: 'list',
   message: 'topics.db is not readable',
 });
 
+/** The command's own `--json`, captured from real stdout. */
 const cliJson = (args: readonly string[], layer = fixtureSearch) =>
   runCli(egwSearch, [...args, '--json'], {}).pipe(Effect.provideService(SearchLayer, layer));
 
+/** The same query asked of the service directly, encoded the way the CLI
+ *  encodes it.
+ *
+ *  The codec is restated here rather than imported from the command, because
+ *  what is under test is that the command produces *these* bytes. Importing the
+ *  command's own helper would make the assertion true by construction. */
 const serviceJson = (query: SearchQuery, layer = fixtureSearch) =>
   Effect.flatMap(SearchService, (service) => service.query(query)).pipe(
     Effect.flatMap(Schema.encodeEffect(Schema.fromJsonString(SearchResultJson, { space: 2 }))),
     Effect.provide(layer),
   );
 
+/** The result the command produced, read as a value rather than as text.
+ *
+ *  The command's stdout is compared byte-for-byte in the parity tests above; the
+ *  behavioral assertions below need the *value*, and `SearchResultJson` does not
+ *  round-trip through its own encoder — `Schema.Option` encodes to Effect's
+ *  tagged `{_id:"Option"}` form, which its decoder does not read back. Rather
+ *  than assert on a hand-parsed shape, these run the same query through the
+ *  service the command ran it through: byte parity already proves the command
+ *  emitted exactly this value. */
 const resultOf = (query: SearchQuery, layer = fixtureSearch) =>
   Effect.flatMap(SearchService, (service) => service.query(query)).pipe(Effect.provide(layer));
 
+/** The command's argument list for a golden query. The CLI defaults `--limit`
+ *  to 20, so a query that does not pin one is asked with 20 on both sides. */
 const argsFor = (query: SearchQuery): readonly string[] => {
   const args: string[] = [query.text];
   if (Option.isSome(query.scope)) args.push('--scope', query.scope.value);
@@ -67,6 +109,10 @@ const argsFor = (query: SearchQuery): readonly string[] => {
   return args;
 };
 
+/** The same query, asked with the limit the CLI's flag default supplies.
+ *
+ *  Rebuilt through `SearchQuery.make` rather than spread-and-patched, so the
+ *  service is asked a value the schema has actually constructed. */
 const withCliLimit = (query: SearchQuery): SearchQuery =>
   SearchQuery.make({
     text: query.text,
@@ -104,6 +150,17 @@ describe('manna egw search — §9.7 golden query set', () => {
     }),
   );
 
+  /** Round-2 B5: the printed topic link is the route the app decodes.
+   *
+   *  The formatter printed `/<slug>`, and `route/codec.ts` has no such route —
+   *  a topic page is `/wiki/<slug>`, so every link the CLI printed 404'd. The
+   *  assertion is the exact line rather than a substring, because the whole
+   *  defect was one missing path segment and a `toContain(slug)` passes on the
+   *  broken output.
+   *
+   *  It now also covers the fetch: the group comes from `WikiLayer` beside the
+   *  search rather than off the result, so a command that stopped asking would
+   *  print no bullet at all and fail here. */
   it.scopedLive('prints the topic group as the /wiki route the app decodes', () =>
     Effect.gen(function* () {
       const cli = yield* runCli(egwSearch, [GOLDEN_TOPIC_QUERY], {}).pipe(
@@ -206,6 +263,17 @@ describe('manna egw search — narrowings reach the service', () => {
   );
 });
 
+/** Round-2 F8: the CLI reads the vector artifact exactly once at startup.
+ *
+ *  §9.2's index is ~246 MB. The CLI has to parse it to decide whether it is one
+ *  this build may scan, and the earlier shape then handed the *byte source* to
+ *  `SearchService.Live`, which read and parsed the whole file again — two full
+ *  reads and two copies of the vector region on every `manna egw search`
+ *  invocation, for one decision. No result assertion can see that: both shapes
+ *  return identical rows. Counting the reads is the only observable, and
+ *  `core/src/search/vector-artifact.test.ts` already counts the per-query case,
+ *  which this pair of startup reads slipped past.
+ */
 describe('manna egw search — the index is read once at startup (F8)', () => {
   const intactReads = Ref.makeUnsafe(0);
   const intactBytes = goldenVectorIndexBytes();

@@ -7,6 +7,11 @@ import type { Box, Word } from '~/hymns/chords';
 
 import { SyllableLine } from './SyllableWords';
 
+/**
+ * iOS's paragraph uses its explicit label, else the complete attributed
+ * string: even an aria-hidden inline span contributes its characters.
+ * The web stand-in exposes both inputs; this is not the DOM accessible name.
+ */
 const paragraphLabel = (paragraph: Element): string =>
   paragraph.getAttribute('aria-label') ?? paragraph.textContent ?? '';
 

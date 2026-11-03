@@ -15,14 +15,19 @@ import { type BoxEdge, unmatte } from './unmatte.ts';
 
 type Pt = readonly [number, number];
 
+/** The grid a part's mesh is laid on, px. */
 const MESH_STEP = 3;
 
+/** How much nearer one bone than the other a vertex at a joint may lie and still be shared by both, px (at most half the shorter bone). */
 const BLEND = 18;
 
+/** How many weights a mesh holds a vertex: a chain of four bones (a body bone, shoulder, elbow, wrist) may share one vertex at once. A vertex with more keeps its heaviest, scaled to total 1. */
 const WEIGHTS = 4;
 
+/** How far from a shoulder's pivot a flap's vertex lies wholly on the body, px. */
 const FLAP_REACH = 34;
 
+/** A bone: its name, its parent's, the joint it turns about and the end it points to, sheet px. */
 interface PuppetBone {
   readonly name: string;
   readonly parent?: string;
@@ -30,6 +35,13 @@ interface PuppetBone {
   readonly tip: Pt;
 }
 
+/**
+ * A shoulder flap: `part` (an arm) takes the pixels of `from` (the body's
+ * part) inside `region` (a polygon about the shoulder) into its texture;
+ * its vertices there lie on `body` (a bone its skin names) by how far they
+ * lie from `bone`'s pivot, 0 within `cap` px, 1 at `reach` px, above the
+ * pivot along `bone`.
+ */
 interface PuppetFlap {
   readonly part: string;
   readonly from: string;
@@ -40,6 +52,7 @@ interface PuppetFlap {
   readonly region: ReadonlyArray<Pt>;
 }
 
+/** A skeleton: its bones (each parent before its children), each part's skin (the bones it lies on), its flaps, its stroke limbs (`core/limb.ts`), and the root (rest: the first bone's pivot). */
 export interface Skeleton {
   readonly bones: ReadonlyArray<PuppetBone>;
   readonly skin: Readonly<Record<string, ReadonlyArray<string>>>;
@@ -48,12 +61,14 @@ export interface Skeleton {
   readonly root?: Pt;
 }
 
+/** A pose: each bone's number in degrees (one left out is 0), where the root stands, and the one scale about it. */
 export interface PuppetPose {
   readonly numbers: Readonly<Record<string, number>>;
   readonly root: Pt;
   readonly scale: number;
 }
 
+/** A part's mesh: its vertices (flat x, y, sheet px), its triangles (flat, three vertex indices each), and each vertex's weights as bone indices and amounts (`WEIGHTS` a vertex, -1 none). */
 interface PuppetMesh {
   readonly vertices: Float64Array;
   readonly triangles: Uint32Array;
@@ -61,15 +76,20 @@ interface PuppetMesh {
   readonly amounts: Float64Array;
 }
 
+/** A part of a puppet: its name, its pixels (its texture), what each part in front of it hides, its mesh, and its stroke limb, if it has one. */
 interface PuppetPart {
   readonly name: string;
   readonly pixels: Raster;
+  /** By each part in front of it: the paint the un-matte cleared behind that part's rim (hidden at rest), shown once either of the two parts moves; none where nothing was cleared. */
   readonly revealed: ReadonlyArray<Raster | undefined>;
+  /** By each part in front of it of another skin: the seal laid over this part along the line it shares with that part, shown while neither moves (`sealsShown`); none where it seals nothing. */
   readonly seals: ReadonlyArray<Raster | undefined>;
   readonly mesh: PuppetMesh;
+  /** Its stroke limb as `limbOf` measured it from its texture, where the skeleton declares one. */
   readonly limb?: PuppetPartLimb;
 }
 
+/** A puppet: the sheet's size, its parts front to back, its bones and its rest root. */
 export interface Puppet {
   readonly width: number;
   readonly height: number;
@@ -78,16 +98,23 @@ export interface Puppet {
   readonly root: Pt;
 }
 
+/** What a puppet is made from: a part sheet's size and parts, front to back, and the paper they were cut from, if their edges are to be un-matted from it (`core/unmatte.ts`). */
 export interface PuppetSheet {
   readonly width: number;
   readonly height: number;
   readonly parts: ReadonlyArray<{ readonly name: string; readonly pixels: Raster }>;
   readonly paper?: Rgb;
+  /** His cloth colours, which the un-matte keeps where its line does not reach them (`UnmatteOptions.keep`). */
   readonly keep?: ReadonlyArray<Rgb>;
+  /** His thin parts by name, whose rim keeps its hue (`UnmatteOptions.thin`). */
   readonly thin?: ReadonlyArray<string>;
+  /** His shadow parts by name, which wall nothing in (`UnmatteOptions.shadow`). */
   readonly shadow?: ReadonlyArray<string>;
+  /** The sheet's box edges his figure leaves through: when given, paper the box cuts off on any other edge is un-matted (`UnmatteOptions.open`). */
   readonly open?: ReadonlyArray<BoxEdge>;
+  /** His paper's grain, luma: a rim pixel darker than the paper by more than it is kept whole (`UnmatteOptions.grain`). */
   readonly grain?: number;
+  /** By a front part's name, how many px each part behind it of another skin reaches under its cut edge (`underlapped`); a part not named gives none. */
   readonly underlap?: Readonly<Record<string, number>>;
 }
 
@@ -96,6 +123,7 @@ const smooth = (e0: number, e1: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
+/** The distance from `p` to the segment `a`–`b`. */
 const segmentDistance = (p: Pt, a: Pt, b: Pt) => {
   const [dx, dy] = [b[0] - a[0], b[1] - a[1]];
   const len2 = dx * dx + dy * dy;
@@ -104,6 +132,7 @@ const segmentDistance = (p: Pt, a: Pt, b: Pt) => {
   return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
 };
 
+/** `p` along bone `b`'s axis from `from` (its pivot unless given), px. */
 const along = (p: Pt, b: PuppetBone, from: Pt = b.pivot) => {
   const [dx, dy] = [b.tip[0] - b.pivot[0], b.tip[1] - b.pivot[1]];
   const len = Math.hypot(dx, dy) || 1;
@@ -112,6 +141,7 @@ const along = (p: Pt, b: PuppetBone, from: Pt = b.pivot) => {
 
 const boneLength = (b: PuppetBone) => Math.hypot(b.tip[0] - b.pivot[0], b.tip[1] - b.pivot[1]);
 
+/** Whether a pixel centre `(x, y)` lies inside `poly` (even-odd). */
 const inside = (poly: ReadonlyArray<Pt>, x: number, y: number) => {
   let c = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -121,6 +151,14 @@ const inside = (poly: ReadonlyArray<Pt>, x: number, y: number) => {
   return c;
 };
 
+/**
+ * The weights of a vertex at `p` on `skin` (bone indices into `bones`), totalling 1: the
+ * joints of the skin's tree that holds the nearest bone, composed from its root down. A
+ * bone keeps the share that reaches it less what its child joints pass on, each child's k
+ * of it (scaled down where they total over 1), so on a chain each weight is a product of
+ * its joints' k (upper 1 - k1, forearm k1 (1 - k2), hand k1 k2). Each k is continuous in
+ * `p`, so the weights are too, where two joints' blends overlap on one bone as anywhere.
+ */
 const weightsAt = (
   p: Pt,
   skin: ReadonlyArray<number>,
@@ -150,6 +188,7 @@ const weightsAt = (
   return weights;
 };
 
+/** The bone of `skin` whose segment lies nearest `p`. */
 const nearestBone = (p: Pt, skin: ReadonlyArray<number>, bones: ReadonlyArray<PuppetBone>) => {
   let near = skin[0]!;
   let best = Infinity;
@@ -160,9 +199,16 @@ const nearestBone = (p: Pt, skin: ReadonlyArray<number>, bones: ReadonlyArray<Pu
   return near;
 };
 
+/** The blend of the joint of `parent` and `child`: `BLEND`, at most half the shorter bone. */
 const blendOf = (parent: PuppetBone, child: PuppetBone) =>
   Math.min(BLEND, 0.5 * Math.min(boneLength(parent), boneLength(child)));
 
+/**
+ * How much of the blend a joint keeps on its parent's side: (1 - cos α) / 2 of the
+ * angle α its bones make at rest (1 straight, 1/2 at a right angle, about 0.15 folded
+ * to 45°), at least 0.05. In a fold the parent's paint lies beside the child's, so a
+ * wide blend there would carry the parent's own paint with the child.
+ */
 const spread = (parent: PuppetBone, child: PuppetBone) => {
   const e = child.pivot;
   const [ax, ay] = [parent.pivot[0] - e[0], parent.pivot[1] - e[1]];
@@ -171,6 +217,12 @@ const spread = (parent: PuppetBone, child: PuppetBone) => {
   return Math.max(0.05, (1 - cos) / 2);
 };
 
+/**
+ * The weights of a flap's vertex at `p`: its arm weights, the flap's bone (`flapBone`, an
+ * index into `bones`) giving the body `w` of its own amount, `w` the flap's share by how far
+ * `p` lies from that bone's pivot. Every other arm bone keeps its amount, so a hand that
+ * rests by the shoulder turns with its forearm, and each weight is continuous in `p`.
+ */
 const flapped = (
   p: Pt,
   arm: Array<[number, number]>,
@@ -191,6 +243,7 @@ const flapped = (
   return [...kept, [body, own * w]];
 };
 
+/** A part's mesh over `alpha`'s cells, weighted on `skin`. */
 const meshOf = (
   width: number,
   height: number,
@@ -240,6 +293,13 @@ const meshOf = (
   };
 };
 
+/**
+ * Why a skeleton cannot skin a sheet: a bone named twice or before its
+ * parent, a skin, flap or stroke limb naming what is not there, a flap on an
+ * arm too long for a vertex's weights, a stroke limb that does not fit, or
+ * stroke limbs their parts' pixels cannot measure. In that last case `limbs`
+ * holds every refused limb, typed, and `reason` their messages.
+ */
 class PuppetRefused extends Schema.TaggedError<PuppetRefused>()('PuppetRefused', {
   reason: Schema.String,
   limbs: Schema.optionalKey(Schema.Array(LimbRefused)),
@@ -249,6 +309,7 @@ class PuppetRefused extends Schema.TaggedError<PuppetRefused>()('PuppetRefused',
   }
 }
 
+/** Why `skeleton` cannot skin `sheet`, if it cannot: a bone named twice or before its parent, a skin or flap naming a part or bone that is not there, two flaps on one part, a flap resting on a bone its arm's skin does not name, a flap on an arm of more bones than a vertex holds beside the body, or a stroke limb that does not fit (`limbRefusal`). */
 const refusal = (sheet: PuppetSheet, skeleton: Skeleton): string | undefined => {
   const seen = new Set<string>();
   for (const b of skeleton.bones) {
@@ -271,6 +332,16 @@ const refusal = (sheet: PuppetSheet, skeleton: Skeleton): string | undefined => 
   return flapRefusal(skeleton, names, seen) ?? limbRefusal(skeleton, names);
 };
 
+/**
+ * Why `skeleton`'s stroke limbs cannot skin a sheet of the parts `names`, if
+ * they cannot: a limb naming a part or bone that is not there, two limbs on
+ * one part, bones that are not a parent chain (shoulder, its child the elbow,
+ * its child the wrist), a chain bone the part's skin does not name, or a fade
+ * or fold whose ends do not increase. A flap on a limb's part is allowed:
+ * `limbsOf` masks the body texels it adds out of the sleeve and into the
+ * stub, and `limbOf` refuses the limb (`flap-reach`) when one lies on the
+ * forearm or past `FLAP_REACH` of the upper arm.
+ */
 const limbRefusal = (skeleton: Skeleton, names: ReadonlySet<string>): string | undefined => {
   const byName = new Map(skeleton.bones.map((b) => [b.name, b]));
   const limbed = new Set<string>();
@@ -296,6 +367,7 @@ const limbRefusal = (skeleton: Skeleton, names: ReadonlySet<string>): string | u
   return undefined;
 };
 
+/** Why `skeleton`'s flaps cannot skin a sheet of the parts `names` with the bones `seen`, if they cannot. */
 const flapRefusal = (
   skeleton: Skeleton,
   names: ReadonlySet<string>,
@@ -318,6 +390,7 @@ const flapRefusal = (
   return undefined;
 };
 
+/** Each part's pixels, with its flap's body pixels where it has one (at most one flap a part, `refusal`). */
 const flappedParts = (sheet: PuppetSheet, skeleton: Skeleton): ReadonlyArray<Uint8Array> => {
   const flapOf = new Map((skeleton.flaps ?? []).map((f) => [f.part, f]));
   return sheet.parts.map((part) => {
@@ -329,6 +402,15 @@ const flappedParts = (sheet: PuppetSheet, skeleton: Skeleton): ReadonlyArray<Uin
   });
 };
 
+/**
+ * Each declared limb measured from its part's texture on its rest joints, by
+ * part (at most one a part, `refusal`); else every limb refused. The body
+ * pixels a flap took into the part are marked for `limbOf`, which keeps them
+ * out of the sleeve's widths and wholly in the stub: the lead's right
+ * shoulder band reaches 20.4 px down his upper arm, past the shoulder's line,
+ * and the stroke must never redraw it with the arm. A body texel past
+ * `FLAP_REACH` of the upper arm, or on the forearm, refuses the limb.
+ */
 const limbsOf = (
   sheet: PuppetSheet,
   skeleton: Skeleton,
@@ -355,6 +437,7 @@ const limbsOf = (
   return refused.length > 0 ? Result.fail(refused) : Result.succeed(limbs);
 };
 
+/** The texels `flapped` holds that `own` does not (a byte a texel, 1 for each): its flap's body pixels; none when the part has no flap. */
 const flapBody = (own: Uint8Array, flapped: Uint8Array): Option.Option<Uint8Array> => {
   if (flapped === own) return Option.none();
   const body = new Uint8Array(own.length / 4);
@@ -363,6 +446,7 @@ const flapBody = (own: Uint8Array, flapped: Uint8Array): Option.Option<Uint8Arra
   return Option.some(body);
 };
 
+/** How a sheet's parts are un-matted from its paper (`UnmatteOptions`), its named parts by index. */
 const unmatteOptions = (sheet: PuppetSheet) => ({
   keep: sheet.keep,
   thin: sheet.parts.flatMap((p, k) => (sheet.thin?.includes(p.name) === true ? [k] : [])),
@@ -371,6 +455,14 @@ const unmatteOptions = (sheet: PuppetSheet) => ({
   grain: sheet.grain,
 });
 
+/**
+ * A key drawn on the sheet's own canvas in place of part `part` (a head
+ * with its eyes shut), its edge un-matted from the sheet's paper as that
+ * part's is, with the key in the part's place among the others; its pixels
+ * as given when the sheet has no paper. Refused, naming why, when the sheet
+ * has no part of that name or the key is another size than the sheet: such
+ * a key would keep its paper rim and pop on the frames it shows.
+ */
 export const unmattedKey = (
   sheet: PuppetSheet,
   skeleton: Skeleton,
@@ -393,6 +485,13 @@ export const unmattedKey = (
   );
 };
 
+/**
+ * The puppet of `sheet` on `skeleton`: each part's mesh, weighted on its
+ * skin, its texture its pixels (with its flap's body pixels, where it has
+ * one), and each stroke limb it declares measured from its part's texture
+ * (`limbOf`); refused for a skeleton that does not fit the sheet, or a limb
+ * whose part cannot be measured (the refusal's reason is `LimbRefused`'s).
+ */
 export const puppetOf = (
   sheet: PuppetSheet,
   skeleton: Skeleton,
@@ -470,6 +569,15 @@ export const puppetOf = (
   });
 };
 
+/**
+ * The paint the un-matte cleared from part `k` behind each part in front of
+ * it, given back as `k` shows with that part gone: for each front part `j`,
+ * at `k`'s pixels where `j` is the frontmost holder, `k`'s pixel was
+ * cleared, and it had one, `k`'s pixel un-matted with `j` gone (`without`),
+ * so its own rim there (the sheet's paper outside its line) is un-matted as
+ * any rim is; none where nothing was given back behind `j`. What a pose
+ * shows of `k` once `j` moves away from there.
+ */
 const revealedOf = (
   before: ReadonlyArray<Uint8Array>,
   after: ReadonlyArray<Uint8Array>,
@@ -494,6 +602,12 @@ const revealedOf = (
   return out;
 };
 
+/**
+ * Lays `texture`'s opaque pixels round each pixel `layer` gives back into
+ * `layer`, so the bilinear sample along the line between the two is opaque
+ * rather than two partial covers `over` leaves light. Each such pixel lies
+ * on the same pixel of the texture drawn under it, so it changes nothing else.
+ */
 const borderOf = (layer: Uint8Array, texture: Uint8Array, W: number, H: number) => {
   const given = Uint8Array.from(layer);
   for (let y = 0; y < H; y++)
@@ -508,6 +622,15 @@ const borderOf = (layer: Uint8Array, texture: Uint8Array, W: number, H: number) 
     }
 };
 
+/**
+ * Each part's texture sealed under the parts in front of it that move with
+ * it (the same skin, `skins` a key a part): one px more of its own paint
+ * where it has none and such a front part is opaque (`sealOf`). Two parts
+ * cut along one line hold complementary hard edges there; drawn at a
+ * fractional scale, each edge's bilinear sample covers part of the pixel the
+ * line crosses and `over` leaves a light seam along it. The seal fills it
+ * from behind, and at rest the front part hides it.
+ */
 const sealed = (
   textures: ReadonlyArray<Uint8Array>,
   skins: ReadonlyArray<string>,
@@ -524,6 +647,20 @@ const sealed = (
     return out;
   });
 
+/**
+ * Each part's texture reaching under the cut edge of each part in front of
+ * it that the sheet names in `underlap`, of another skin: for a front part
+ * `f` named with n px, each pixel where the part behind has no paint of its
+ * own, `f`'s un-matted pixel is opaque, and a path of at most n 4-way steps
+ * through such pixels leads from the part's own paint takes `f`'s pixel.
+ * Two skins' parts cut along one line move apart, so a turned head would
+ * open the line and show the ground; with this the part behind shows `f`'s
+ * paint there, which at rest `f` hides. Where it fills a pixel the un-matte
+ * cleared, that is what shows once `f` moves (`revealedOf` gives back
+ * nothing there), and it seals the line (`sealsOf` lays none). A part that
+ * moves far (an arm) is not named: the part behind would keep a ghost of it.
+ * A pixel two named parts reach takes the front one's.
+ */
 const underlapped = (
   textures: ReadonlyArray<Uint8Array>,
   unmatted: ReadonlyArray<Uint8Array>,
@@ -541,6 +678,11 @@ const underlapped = (
   return out;
 };
 
+/**
+ * `texture` with `paint`'s pixels laid in where it has none and `underReach`
+ * reaches from `own` (the texture before any underlap): a copy where it lays
+ * any, so no sheet's pixels change.
+ */
 const laidUnder = (
   texture: Uint8Array,
   own: Uint8Array,
@@ -557,6 +699,10 @@ const laidUnder = (
   return out;
 };
 
+/**
+ * The pixels (a mask, 1 a pixel) a path of at most `n` 4-way steps leads to
+ * from `own`'s paint through pixels where `paint` is opaque and `own` has none.
+ */
 const underReach = (paint: Uint8Array, own: Uint8Array, n: number, W: number, H: number) => {
   const reached = new Uint8Array(W * H);
   const open = (u: number, v: number) =>
@@ -583,6 +729,17 @@ const underReach = (paint: Uint8Array, own: Uint8Array, n: number, W: number, H:
   return reached;
 };
 
+/**
+ * The seals laid over part `k` by each part in front of it of another skin,
+ * by that front part: one px more of `k`'s paint where it has none and the
+ * frontmost opaque part there is of another skin (`sealOf`: `k`'s colour, so
+ * drawn over `k` and under the front part the line blends as one paint's),
+ * with `k`'s own opaque pixels beside each, so the bilinear sample along the
+ * line is opaque. At rest the front part hides the seal and the opaque pixels
+ * lie on themselves; once either part moves the line opens, so a seal shows
+ * only while neither does (`sealsShown`). Two skins' parts move apart, so
+ * this cannot go into `k`'s texture as `sealed` does for one skin's.
+ */
 const sealsOf = (
   unmatted: ReadonlyArray<Uint8Array>,
   textures: ReadonlyArray<Uint8Array>,
@@ -616,10 +773,12 @@ const sealsOf = (
   return out;
 };
 
+/** The eight pixels round one, as `[dx, dy]`: the texels a bilinear sample beside it can reach. */
 const AROUND = [-1, 0, 1].flatMap((dy) =>
   [-1, 0, 1].flatMap((dx) => (dx === 0 && dy === 0 ? [] : [[dx, dy] as const])),
 );
 
+/** The four pixels beside one, as `[dx, dy]`. */
 const BESIDE = [
   [1, 0],
   [-1, 0],
@@ -627,6 +786,7 @@ const BESIDE = [
   [0, -1],
 ] as const;
 
+/** The rounded mean colour, opaque, of `own`'s opaque pixels beside `(x, y)` (4-way); none where none is. */
 const meanBeside = (own: Uint8Array, x: number, y: number, W: number, H: number) => {
   const sum = [0, 0, 0];
   let n = 0;
@@ -642,6 +802,12 @@ const meanBeside = (own: Uint8Array, x: number, y: number, W: number, H: number)
   return [...sum.map((s) => Math.round(s / n)), 255];
 };
 
+/**
+ * One px more of `own`'s paint, alone: at each pixel (byte offset `i`) where
+ * `own` has none, `holds(i)`, and an opaque pixel of its own lies beside it,
+ * the mean of those beside it (`meanBeside`); clear elsewhere. None where it
+ * seals nothing.
+ */
 const sealOf = (
   own: Uint8Array,
   holds: (i: number) => boolean,
@@ -661,6 +827,7 @@ const sealOf = (
   return out;
 };
 
+/** `own`'s pixels with `body`'s inside `region` where `own` has none: an arm's texture with its shoulder flap. */
 const withFlap = (own: Raster, body: Raster, region: ReadonlyArray<Pt>) => {
   const { width: W, height: H } = own;
   const rgba = Uint8Array.from(own.rgba);
@@ -673,12 +840,14 @@ const withFlap = (own: Raster, body: Raster, region: ReadonlyArray<Pt>) => {
   return rgba;
 };
 
+/** `puppet` at rest: every bone at 0, the root where it rests, at scale 1. */
 export const restPose = (puppet: Puppet): PuppetPose => ({
   numbers: {},
   root: puppet.root,
   scale: 1,
 });
 
+/** Each bone's world transform at `numbers`, as `[a, b, c, d, e, f]` (x' = a x + c y + e, y' = b x + d y + f), six a bone. */
 export const boneTransforms = (
   bones: ReadonlyArray<PuppetBone>,
   numbers: Readonly<Record<string, number>>,
@@ -711,6 +880,7 @@ export const boneTransforms = (
   return m;
 };
 
+/** `mesh`'s vertices posed into `out` (flat x, y): its bones' transforms `m` blended by its weights, the root moved by `(dx, dy)` and sized by `scale` about `root`. */
 export const poseMesh = <O extends Float64Array | Float32Array>(
   mesh: PuppetMesh,
   m: Float64Array,
@@ -742,6 +912,10 @@ export const poseMesh = <O extends Float64Array | Float32Array>(
   return out;
 };
 
+/**
+ * Each part's vertices posed at `pose` (flat x, y), in its mesh's vertex order.
+ * Exported as the skinning's contract seam: the unit's acceptance reads the posed mesh through it.
+ */
 export const posedVertices = (puppet: Puppet, pose: PuppetPose): ReadonlyArray<Float64Array> => {
   const m = boneTransforms(puppet.bones, pose.numbers);
   return puppet.parts.map((p) =>
@@ -749,6 +923,10 @@ export const posedVertices = (puppet: Puppet, pose: PuppetPose): ReadonlyArray<F
   );
 };
 
+/**
+ * Whether part `k`'s mesh lies on a bone `m` (`boneTransforms`) turns away from the bind pose.
+ * Exact: a bone at 0 under still parents is the identity to the bit (cos 0 is 1, sin 0 is 0).
+ */
 export const partTurned = (puppet: Puppet, k: number, m: Float64Array): boolean => {
   const bones = puppet.parts[k]!.mesh.bones;
   for (let i = 0; i < bones.length; i++) {
@@ -758,6 +936,12 @@ export const partTurned = (puppet: Puppet, k: number, m: Float64Array): boolean 
   return false;
 };
 
+/**
+ * The seals laid over part `k` this frame (`PuppetPart.seals`, as each draw
+ * path holds them): those of front parts that do not move, and none once `k`
+ * moves itself, since a seal closes the line two still parts share. The one
+ * rule both draw paths follow.
+ */
 export const sealsShown = <T>(
   seals: ReadonlyArray<T | undefined>,
   k: number,
@@ -767,6 +951,14 @@ export const sealsShown = <T>(
   return seals.filter((s, j): s is T => s !== undefined && !moving(j));
 };
 
+/**
+ * The revealed paint laid over part `k` this frame (`PuppetPart.revealed`, as
+ * each draw path holds it): what each part in front of `k` hid under its
+ * rim, laid on `k`'s own mesh, shown once either of the two moves, since
+ * either move can carry that paint out from under the rim. None while
+ * neither moves, so a still figure draws its textures alone. The one rule
+ * every draw path follows.
+ */
 export const revealedShown = <T>(
   revealed: ReadonlyArray<T | undefined>,
   k: number,
@@ -776,6 +968,17 @@ export const revealedShown = <T>(
   return revealed.filter((r, j): r is T => r !== undefined && (self || moving(j)));
 };
 
+/**
+ * `puppet` drawn at `pose` in its sheet's frame (or a frame `size` px from the same origin) over transparent ground: the
+ * parts back to front, each pixel whose centre a posed triangle holds
+ * inverse-mapped to the part's texture, sampled bilinear on premultiplied
+ * texels, laid over what lies under it, then each seal it shows
+ * (`sealsShown`) and each revealed paint it shows (`revealedShown`) over it on
+ * the same triangles. Each triangle is laid in turn, in its
+ * mesh's order, so where a fold turns two triangles of one part over one pixel
+ * the later lies over the earlier, as the GL path's blend lays them; a pixel
+ * centre on an edge two triangles share goes to one of them (`edgeHolds`).
+ */
 export const rasterOf = (
   puppet: Puppet,
   pose: PuppetPose,
@@ -807,6 +1010,7 @@ export const rasterOf = (
   return unpremultiplied(acc, W, H);
 };
 
+/** Each of `layers` (a part's texture, then its seals and revealed paint) laid over `acc` (`W` × `H`, its origin at `origin` of the frame) on `part`'s posed vertices `q`, triangle by triangle in mesh order. */
 const layPart = (
   acc: Float64Array,
   part: PuppetPart,
@@ -822,6 +1026,7 @@ const layPart = (
       layTriangle(acc, tex, part.mesh.vertices, shifted, [t[i]!, t[i + 1]!, t[i + 2]!], [W, H]);
 };
 
+/** Each limb's part's pixels kept only on its stub (alpha times the stub's share): what the stroke leaves painted. */
 const STUBS = new WeakMap<PuppetPartLimb, WeakMap<Raster, Raster>>();
 
 const stubOf = (limb: PuppetPartLimb, pixels: Raster): Raster => {
@@ -843,6 +1048,7 @@ const stubOf = (limb: PuppetPartLimb, pixels: Raster): Raster => {
   return stub;
 };
 
+/** Bone `name`'s drawn map at `pose` (its transform in `m`, then the root's move and scale), inverted: drawn point → rest point. */
 const restMap = (puppet: Puppet, pose: PuppetPose, m: Float64Array, name: string) => {
   const o = puppet.bones.findIndex((b) => b.name === name) * 6;
   const s = pose.scale;
@@ -853,6 +1059,12 @@ const restMap = (puppet: Puppet, pose: PuppetPose, m: Float64Array, name: string
   return Float64Array.from([d, -b, -c, a, c * f - d * e, b * e - a * f], (v) => v / det);
 };
 
+/**
+ * A part with a stroke limb past the midpoint of its transition window
+ * laid over `acc`: over the box its posed mesh and its limb's rigid pieces
+ * reach. The transition interpolates one silhouette's distance field;
+ * displaced outlines and hands are never overlaid at partial opacity.
+ */
 const layLimb = (
   acc: Float64Array,
   puppet: Puppet,
@@ -928,6 +1140,7 @@ const layLimb = (
     }
 };
 
+/** The premultiplied bilinear sample of `tex` (a `W` × `H` RGBA texture) at `(sx, sy)` into `into`: colour in 0..255, alpha in 0..1. */
 const sampleAt = (tex: Raster, sx: number, sy: number, into: Float64Array) => {
   const { width: W, height: H, rgba } = tex;
   const bx = Math.floor(sx - 0.5);
@@ -949,8 +1162,10 @@ const sampleAt = (tex: Raster, sx: number, sy: number, into: Float64Array) => {
   }
 };
 
+/** One sample's scratch, rewritten whole by each `sampleAt`. */
 const SAMPLE = new Float64Array(4);
 
+/** An edge's function `a·x + b·y + c`, positive inside its triangle, and whether a point on it (0) is the triangle's. */
 interface Edge {
   readonly a: number;
   readonly b: number;
@@ -958,6 +1173,13 @@ interface Edge {
   readonly tie: boolean;
 }
 
+/**
+ * The edge `u`–`v` of a triangle whose signed area has sign `s`. Its function
+ * is made from the lower-indexed end, so the two triangles that share an edge
+ * hold exact negations of one another; a point on the edge itself goes to the
+ * triangle whose inward normal `(a, b)` points down, or right when the edge
+ * lies flat: a top-left fill rule.
+ */
 const edgeOf = (q: Float64Array, u: number, v: number, s: number): Edge => {
   const [lo, hi, f] = u < v ? [u, v, s] : [v, u, -s];
   const lx = q[2 * lo]!;
@@ -969,11 +1191,13 @@ const edgeOf = (q: Float64Array, u: number, v: number, s: number): Edge => {
   return { a, b, c: f * (dy * lx - dx * ly), tie: b > 0 || (b === 0 && a > 0) };
 };
 
+/** The weight `(px, py)` has from the vertex across `e`: its edge function, or `NaN` outside. */
 const edgeHolds = (e: Edge, px: number, py: number): number => {
   const w = e.a * px + e.b * py + e.c;
   return w > 0 || (w === 0 && e.tie) ? w : Number.NaN;
 };
 
+/** A part's posed triangle `tri` (bind vertices `src`, posed `q`) laid over `acc`: each pixel whose centre it holds inverse-mapped to `tex`, the part's texture or one of its seals. */
 const layTriangle = (
   acc: Float64Array,
   tex: Raster,
@@ -1019,11 +1243,13 @@ const layTriangle = (
     }
 };
 
+/** `s` (premultiplied) laid over `acc` at `o`. */
 const over = (acc: Float64Array, o: number, s: Float64Array) => {
   const keep = 1 - s[3]!;
   for (let c = 0; c < 4; c++) acc[o + c] = s[c]! + acc[o + c]! * keep;
 };
 
+/** `acc` (premultiplied) as RGBA bytes: a pixel whose alpha rounds to 0 is clear. */
 const unpremultiplied = (acc: Float64Array, W: number, H: number): Raster => {
   const rgba = new Uint8Array(W * H * 4);
   for (let p = 0; p < W * H; p++) {

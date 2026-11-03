@@ -2,16 +2,21 @@ import type { Pcm } from './audio.ts';
 import { Heard, type HeardWord, type TakeWord, type Voiced, type Word } from './schema.ts';
 import { toMs } from './time.ts';
 
+/** A window is voiced when its level is over this, in dBFS. */
 const VOICE_GATE_DB = -40;
+/** The windows the level is read over, in seconds. */
 const VOICE_WINDOW = 0.01;
 
+/** The gate as a mean square: `VOICE_GATE_DB` is 10·log10 of it. */
 const GATE = 10 ** (VOICE_GATE_DB / 10);
 
+/** A voice heard from `start` to `end` seconds of its take: where heard seconds are made. */
 export const voicedAt = (start: number, end: number): Voiced => ({
   start: Heard.make(start),
   end: Heard.make(end),
 });
 
+/** The mean square of `pcm` over frames `[from, to)`, every channel together. */
 const meanSquare = (pcm: Pcm, from: number, to: number): number => {
   let sum = 0;
   let n = 0;
@@ -24,6 +29,13 @@ const meanSquare = (pcm: Pcm, from: number, to: number): number => {
   return sum / Math.max(1, n);
 };
 
+/**
+ * Where the voice is heard inside the take's seconds `[start, end]`: from the
+ * first `VOICE_WINDOW` window over the gate to the end of the last, windows
+ * counted from `start` and the last cut at `end`. A span no window of which
+ * passes the gate holds no voice: the aligner has put the word's voice past
+ * it (in the next word's span), so the word is heard no sooner than `end`.
+ */
 export const voicedSpan = (pcm: Pcm, start: number, end: number): Voiced => {
   const step = Math.max(1, Math.round(VOICE_WINDOW * pcm.rate));
   const from = Math.max(0, Math.round(start * pcm.rate));
@@ -41,6 +53,7 @@ export const voicedSpan = (pcm: Pcm, start: number, end: number): Voiced => {
   return voicedAt(on, Math.min(end, Math.max(on, toMs(last / pcm.rate))));
 };
 
+/** Each word of a take with where its voice is heard, read from the take's audio. */
 export const voicedWords = (words: ReadonlyArray<Word>, pcm: Pcm): Array<TakeWord> =>
   words.map((w) => ({
     text: w.text,
@@ -49,8 +62,10 @@ export const voicedWords = (words: ReadonlyArray<Word>, pcm: Pcm): Array<TakeWor
     voiced: voicedSpan(pcm, w.start, w.end),
   }));
 
+/** Words with no audio to measure (an estimate's): each is heard over its whole span, by declaration. */
 export const unmeasured = (words: ReadonlyArray<Word>): Array<TakeWord> =>
   words.map((w) => ({ ...w, voiced: voicedAt(w.start, w.end) }));
 
+/** Words timed by their voice: each word's span is where it is heard. */
 export const heard = (words: ReadonlyArray<TakeWord>): Array<HeardWord> =>
   words.map((w) => ({ text: w.text, start: w.voiced.start, end: w.voiced.end }));

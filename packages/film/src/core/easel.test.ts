@@ -13,6 +13,7 @@ import {
   wedgeVariant,
 } from './easel.ts';
 
+/** A scene 10 s long from film second 4.01, a mark at 2 s, a cue from 1 to 3 s. */
 const scene: SceneTimes = {
   id: 'roof',
   start: 4.01,

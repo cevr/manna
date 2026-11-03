@@ -1,3 +1,5 @@
+/** The find bar's search mark on iOS: the SF Symbol `magnifyingglass`, in `tint`. */
+
 import { One } from 'one';
 import { type ColorValue, StyleSheet } from 'react-native';
 

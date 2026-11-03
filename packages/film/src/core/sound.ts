@@ -22,20 +22,34 @@ import {
   type SoundManifest,
 } from './schema.ts';
 
+/** The API refuses chunks shorter than this. */
 const MIN_CHUNK_MS = 3000;
 
+/** The API refuses chunks longer than this. */
 export const MAX_CHUNK_MS = 120_000;
 
+/**
+ * Seconds the score's last movement is composed past the film's end. A composed
+ * ending decays to silence on its own; landing it after the cut means the
+ * film's last seconds hear the mix's fade-out over music still playing, not
+ * dead air (the mix trims the tail).
+ */
 export const MUSIC_TAIL = 6;
 
+/** One option of a score, by its name. */
 interface ScoreOption {
   readonly name: string;
   readonly music: Music;
 }
 
+/** Each of the score's options, in the order `sound.ts` declares them. */
 export const scoreOptions = (score: Score): ReadonlyArray<ScoreOption> =>
   Object.entries(score.options).map(([name, music]) => ({ name, music }));
 
+/**
+ * The option the mix plays: the one asked for by name, or else the one the
+ * score plays (`play`); a name the score lacks is `ScoreUnknown`.
+ */
 export const playedOption = (
   score: Score,
   asked: Option.Option<string>,
@@ -47,6 +61,7 @@ export const playedOption = (
   );
 };
 
+/** Absolute film time of a cue: its scene's start, its offset, and its point in the scene. */
 export const cueTime = (
   cue: Cue,
   placed: ReadonlyArray<Placed>,
@@ -57,11 +72,17 @@ export const cueTime = (
     return p.start + Option.getOrElse(Option.fromNullishOr(cue.offset), () => 0) + anchor;
   });
 
+/** How long one movement of the score lasts, in whole milliseconds, as its plan sends it. */
 interface MovementSpan {
   readonly movement: Movement;
   readonly ms: number;
 }
 
+/**
+ * Where a score composed through `through` ends: that scene's end, or the
+ * film's when it names none (the whole score). `UnknownScene` when the film
+ * has no such scene.
+ */
 export const scoreEnd = (
   placed: ReadonlyArray<Placed>,
   through: Option.Option<string>,
@@ -71,6 +92,16 @@ export const scoreEnd = (
     onSome: (scene) => Result.map(sceneOf(placed, scene), (p) => p.start + p.dur),
   });
 
+/**
+ * Each movement's length, from where its stretch starts (`stretchesOf`: its
+ * scene, the first at 0) to the next one's (the last to the score's end,
+ * `scoreEnd`, and `MUSIC_TAIL` past it), with `MovementTooShort` or
+ * `MovementTooLong` in place of a movement outside the API's chunk lengths.
+ * A score composed through a scene keeps only the movements that start before
+ * that scene's end, so the movements after it are neither composed nor
+ * measured. Fails as an act does: the first movement naming no scene, or
+ * declared out of film order; or with `UnknownScene` when `through` names none.
+ */
 export const movementSpans = (
   music: Music,
   placed: ReadonlyArray<Placed>,
@@ -95,6 +126,13 @@ export const movementSpans = (
     });
   });
 
+/**
+ * The score's plan: each movement lasts from its scene to the next one's, and
+ * carries the film-wide styles ahead of its own. The movement's name is a
+ * structure tag, never a lyric. Composed through a scene, it holds the
+ * movements that start before that scene's end (`movementSpans`). Fails with
+ * the first movement `movementSpans` refuses.
+ */
 export const musicPlan = (
   music: Music,
   placed: ReadonlyArray<Placed>,
@@ -122,19 +160,38 @@ export const musicPlan = (
 export const musicKey = (music: Music, plan: Plan): string =>
   hashText(Schema.encodeSync(MusicRequestKey)({ model: music.model, plan }));
 
+/** Why a composed option no longer fits: the film was re-timed (the plan's key now), or no plan holds. */
 type ScoreStale = { readonly _tag: 'Retimed'; readonly key: string } | PartError | MovementLength;
 
+/**
+ * Where a score option stands against what was composed for it, the one
+ * answer the mix, the check, the composer and the review read: `Current` when
+ * the manifest holds a file composed for the plan as the film now times it;
+ * `Stale` when it holds one composed for another plan, or when no plan holds
+ * any longer (a movement outside the API's chunk lengths, a movement naming
+ * no scene or out of film order): the file still plays, with a warning; `Missing` when nothing was
+ * composed. A score composed through a scene (`asset.through`) is judged by
+ * its own range's plan: a timing change after that scene leaves it current.
+ */
 export type ScoreOptionState =
   | { readonly _tag: 'Current'; readonly asset: ScoreAsset; readonly key: string }
   | { readonly _tag: 'Stale'; readonly asset: ScoreAsset; readonly why: ScoreStale }
   | { readonly _tag: 'Missing' };
 
+/** A partial score's range: the scene it was composed through, where its music ends, and where the film does. */
 export interface PartialRange {
   readonly through: string;
+  /** Film seconds its music ends at: the scene's end and `MUSIC_TAIL`. */
   readonly to: number;
+  /** The film's end. */
   readonly end: number;
 }
 
+/**
+ * The range of a current option composed through a scene, when the film runs
+ * on past that scene: what the mix and the check name, as the rest of the
+ * film plays without music. None for a whole score.
+ */
 export const partialRange = (
   state: ScoreOptionState,
   placed: ReadonlyArray<Placed>,
@@ -149,6 +206,7 @@ export const partialRange = (
   );
 };
 
+/** `option`'s state against `manifest`, for the film as `placed` times it. */
 export const scoreOptionState = (
   option: ScoreOption,
   placed: ReadonlyArray<Placed>,

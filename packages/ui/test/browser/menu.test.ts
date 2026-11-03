@@ -6,6 +6,7 @@ import { focused, harness, logOf, recordTransitions } from './harness.ts';
 
 const h = harness('menu.tsx');
 
+/** The positioner's CSS variables, by name. */
 const positionerVars = (page: Page) =>
   page
     .locator('#positioner')

@@ -1,9 +1,32 @@
 /* oxlint-disable effect/noNullish, effect/noThrowStatement, effect/noNewError, effect/noRuntimeTypeof -- a stand-in for the gesture handler: a gesture a test asks for and no detector drew is a broken test, and an offset is a number or a range, as the handler takes it. */
 
+/**
+ * `react-native-gesture-handler` as the app's tests see it: a detector
+ * draws its child, and keeps the gesture it was handed in `gestures`, the
+ * latest last (each gesture of a composed one on its own), with the
+ * gestures of the detectors around it (`within`), so a test plays the touch
+ * a platform's recognizer would report through the gesture's own
+ * callbacks, and finds a gesture by its `testID` (`gestureOf`). A root view
+ * is a plain view.
+ *
+ * `drag` plays one straight drag that starts on a detector, against every
+ * pan around it, as the handler decides between them: each pan begins at
+ * the touch; the first whose activation offsets the drag leaves before its
+ * fail offsets wins it (the innermost first, at the same point), and the
+ * others fail.
+ *
+ * `touchDown` and `touchUp` play a still tap on a tap gesture's detector:
+ * the finger lands, and every pan beside the tap and around it begins; it
+ * lifts, and each pan fails while the tap activates, in an order the test
+ * picks. A test that wraps each in its own `act` lets the bar draw between
+ * the finger landing and lifting, as it does on a phone.
+ */
+
 import { Option } from 'effect';
 import { createContext, type ReactNode, use } from 'react';
 import { View } from 'react-native';
 
+/** The touch a gesture reports: where the finger is along the view, and how far and fast it moved, in points. */
 interface Touch {
   readonly x: number;
   readonly y?: number;
@@ -11,12 +34,15 @@ interface Touch {
   readonly translationY?: number;
   readonly velocityX?: number;
   readonly velocityY?: number;
+  /** A pinch's scale (1 where the fingers landed) and its velocity, in scale per second. */
   readonly scale?: number;
   readonly velocity?: number;
 }
 
+/** A pan's offset: one way past a number, or out of a range either way. */
 type Offset = number | readonly [number, number];
 
+/** A gesture's config, as a screen hands it to `usePanGesture`, `useTapGesture` or `usePinchGesture`. */
 export interface PanConfig {
   readonly testID?: string;
   readonly enabled?: boolean;
@@ -34,6 +60,7 @@ export interface PanConfig {
   readonly onFinalize?: (end: Touch & { readonly canceled: boolean }) => void;
 }
 
+/** A gesture as a detector drew it: a pan or another kind, the gestures its own detector holds, and those of the detectors around it, innermost first. */
 export interface Drawn extends PanConfig {
   readonly pan: boolean;
   readonly beside: ReadonlyArray<PanConfig>;
@@ -44,8 +71,10 @@ interface Composed {
   readonly composed: ReadonlyArray<PanConfig | Composed>;
 }
 
+/** Each gesture a detector was drawn with, the latest last. */
 export const gestures: Array<Drawn> = [];
 
+/** The gesture last drawn with `testID`. */
 export const gestureOf = (testID: string): Drawn => {
   const found = gestures.findLast((gesture) => gesture.testID === testID);
   if (found === undefined) throw new Error(`no gesture ${testID} was drawn`);
@@ -70,6 +99,7 @@ export const useSimultaneousGestures = compose;
 const flat = (gesture: PanConfig | Composed): ReadonlyArray<PanConfig> =>
   ('composed' in gesture && gesture.composed.flatMap(flat)) || [gesture as PanConfig];
 
+/** The gestures of the detectors around the one drawing, innermost first. */
 const Around = createContext<ReadonlyArray<PanConfig>>([]);
 
 export function GestureDetector({
@@ -97,10 +127,12 @@ export function GestureHandlerRootView({
   return <View style={style}>{children}</View>;
 }
 
+/** Whether translation `t` lies past `offset`. */
 const past = (offset: Offset, t: number) =>
   (typeof offset === 'number' && ((offset < 0 && t < offset) || (offset >= 0 && t > offset))) ||
   (typeof offset !== 'number' && (t < offset[0] || t > offset[1]));
 
+/** A pan with no offset and no distance set activates once it has moved this far, as the handler's does. */
 const DEFAULT_DISTANCE = 10;
 
 const activates = (pan: PanConfig, tx: number, ty: number) => {
@@ -117,6 +149,11 @@ const fails = (pan: PanConfig, tx: number, ty: number) =>
   (pan.failOffsetX !== undefined && past(pan.failOffsetX, tx)) ||
   (pan.failOffsetY !== undefined && past(pan.failOffsetY, ty));
 
+/**
+ * One straight drag of `dx`, `dy` points from `x`, `y` on the detector of
+ * the gesture `testID`, against each pan around it. It gives the test id
+ * of the pan that took the drag, if one did.
+ */
 export const drag = (
   testID: string,
   { x = 0, y = 0, dx, dy }: { x?: number; y?: number; dx: number; dy: number },
@@ -153,6 +190,7 @@ export const drag = (
   return Option.fromNullishOr(winner?.testID);
 };
 
+/** Each enabled pan a touch on `start`'s detector reaches, as its detector last drew it: those beside it, then those around it. */
 const pansAt = (start: Drawn) =>
   [...start.beside, ...start.within]
     .map(
@@ -164,14 +202,21 @@ const pansAt = (start: Drawn) =>
     )
     .filter((gesture) => gesture.pan && gesture.enabled !== false);
 
+/** Which ends first as a still finger lifts: the tap's activation, or the pans' failure. UIKit gives no order. */
 export type TapOrder = 'tap-first' | 'pans-first';
 
+/** A still finger lands at `x`, `y` on the detector of the tap `testID`: each pan it reaches begins, then the tap. */
 export const touchDown = (testID: string, { x = 0, y = 0 }: { x?: number; y?: number }) => {
   const start = gestureOf(testID);
   for (const pan of pansAt(start)) pan.onBegin?.({ x, y });
   if (start.enabled !== false) start.onBegin?.({ x, y });
 };
 
+/**
+ * The still finger lifts where it landed: each pan it reached fails (its
+ * `onFinalize` canceled, never activated), and an enabled tap activates and
+ * ends, in `order`. Each gesture is read as its detector last drew it.
+ */
 export const touchUp = (
   testID: string,
   { x = 0, y = 0 }: { x?: number; y?: number },

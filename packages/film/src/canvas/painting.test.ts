@@ -13,6 +13,7 @@ const SPEC: PaintingSpec = {
   scale: 1.5,
 };
 
+/** A probe whose sink collects paintings. */
 const probeFor = (marks: PaintingMark[]): Probe => ({
   sink: { texts: [], inks: [], paintings: marks },
   scene: 'plate',

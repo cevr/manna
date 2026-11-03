@@ -14,8 +14,10 @@ import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { sha256Hex } from '../digest.ts';
 import { collectWithin, isNotFound } from '../process.ts';
 
+/** The reader's Python project: `packages/film/reader/`. */
 const READER_DIR = `${import.meta.dir}/../../../reader`;
 
+/** The reader's train settings: a fixed step count on one GPU type, no wall-clock stop. */
 interface TrainConfig {
   readonly steps: number;
   readonly batch: number;
@@ -23,18 +25,24 @@ interface TrainConfig {
   readonly seed: number;
   readonly gpu: string;
   readonly precision: string;
+  /** The backbone's name (`facebook/dinov2-small`), and the input it reads in px. */
   readonly backbone: string;
   readonly inputSide: { readonly width: number; readonly height: number };
 }
 
 interface TrainJob {
+  /** The training set's hash: its tar on the data volume is `/sets/<trainset>.tar`. */
   readonly trainset: string;
+  /** The reader's key: its checkpoint on the volume is `/readers/<key>.pt`, once promoted. */
   readonly key: string;
+  /** This train's own name: it writes its checkpoint on the volume at `/runs/<key>/<run>.pt`, never at the key's. */
   readonly run: string;
+  /** The set's shards, one tar per drawing, in the set's order. */
   readonly shards: ReadonlyArray<string>;
   readonly config: TrainConfig;
 }
 
+/** What a read reads: a clip (an mp4 mapped onto the canvas) or a folder of canvas PNGs. */
 type Frames = { readonly clip: string } | { readonly pngs: string };
 
 class ReaderMissing extends Schema.TaggedError<ReaderMissing>()('ReaderMissing', {
@@ -57,12 +65,19 @@ class ReaderFailed extends Schema.TaggedError<ReaderFailed>()('ReaderFailed', {
 
 export type ReaderError = ReaderMissing | ReaderFailed;
 
+/** A train's yield: the checkpoint's bytes, the fit's result (train.py's JSON: steps, sec_per_step, last_loss…) and its Modal app id. */
 interface Trained {
   readonly checkpoint: Uint8Array;
+  /** The last line of the train's stdout that is a JSON object ('' when none is). */
   readonly result: string;
   readonly app: Option.Option<string>;
 }
 
+/**
+ * A train's stdout read: `modal run` prints the app's URL (`…/apps/…/ap-<id>`)
+ * and its own lines around the fit's JSON, so the result is the last line
+ * that reads as a JSON object, not the last line.
+ */
 const trainedOf = (stdout: string): Omit<Trained, 'checkpoint'> => ({
   result:
     stdout
@@ -72,12 +87,14 @@ const trainedOf = (stdout: string): Omit<Trained, 'checkpoint'> => ({
   app: Option.map(Option.fromNullishOr(/\bap-[A-Za-z0-9]+/.exec(stdout)), (m) => m[0]),
 });
 
+/** The reader's files by role, each sorted: what a train runs, what a read runs, what an eval runs (`rolesOf`). */
 interface ReaderSources {
   readonly train: ReadonlyArray<string>;
   readonly read: ReadonlyArray<string>;
   readonly eval: ReadonlyArray<string>;
 }
 
+/** A reader folder whose roles cannot be derived from its imports: a scan fault (`SCAN`), no python3, or an entry script missing. */
 class ReaderScanFailed extends Schema.TaggedError<ReaderScanFailed>()('ReaderScanFailed', {
   file: Schema.String,
   reason: Schema.String,
@@ -87,14 +104,35 @@ class ReaderScanFailed extends Schema.TaggedError<ReaderScanFailed>()('ReaderSca
   }
 }
 
+/** The local environment a read or an eval runs under: the project's pins and the lock its venv is made from. */
 const ENVIRONMENT = ['pyproject.toml', 'uv.lock'];
+/** Each role's entry scripts, whose local-import closures it runs. */
 const ENTRIES = {
   train: ['modal_app.py'],
   read: ['read.py'],
   eval: ['read.py', 'eval.py'],
 } as const satisfies Record<keyof ReaderSources, ReadonlyArray<string>>;
+/** The roles that run locally, under the environment; a train runs in the Modal image. */
 const LOCAL: ReadonlySet<keyof ReaderSources> = new Set(['read', 'eval']);
 
+/**
+ * The scan, run as `python3 -I -B -c`: CPython's own parser reads each
+ * file of the reader folder, so no string, comment or formatted string can
+ * hide an import from it. Its stdin is `{"files": {name: text}, "folders":
+ * [name]}`. It prints `{name: [first names]}` and exits 0: every module
+ * each file imports, wherever the import stands (indented, in a function,
+ * in a one-line suite), by its first name (`import a.b as c, d` names `a`
+ * and `d`; `from x.y import z` names `x`). On a file's earliest fault it
+ * prints `{"file", "reason"}` (the reason starts `line N:`) and exits 1: a
+ * file CPython cannot parse; a relative import; a dynamic load, which hides
+ * an edge (a name, attribute, string or imported name of `importlib`,
+ * `runpy`, `pkgutil`, `__import__` or `import_module`, or a bare name
+ * `exec`, `eval` or `compile`; an attribute `.eval()` is a method, not the
+ * builtin); or an import of one of the folder's own folders (a package the
+ * scan does not follow). A load whose module name is built at run time from
+ * no such name (a `sys.path` edit to a subfolder) is not seen; the folder
+ * holds none.
+ */
 const SCAN = String.raw`
 import ast, json, sys, warnings
 
@@ -152,25 +190,39 @@ for file, text in sorted(job["files"].items()):
 print(json.dumps(found))
 `;
 
+/** The scan's limit: CPython parses a few small files in well under a second. */
 const SCAN_LIMIT = Duration.seconds(30);
 
+/** What the scan reads on its stdin: the folder's `.py` files by name and text, and its folders' names. */
 const ScanJob = Schema.fromJsonString(
   Schema.Struct({
     files: Schema.Record(Schema.String, Schema.String),
     folders: Schema.Array(Schema.String),
   }),
 );
+/** The scan's answer: each file's imports by first name, sorted. */
 const ScanImports = Schema.fromJsonString(
   Schema.Record(Schema.String, Schema.Array(Schema.String)),
 );
+/** The scan's fault: the file and the reason, which names the line. */
 const ScanFault = Schema.fromJsonString(
   Schema.Struct({ file: Schema.String, reason: Schema.String }),
 );
 
+/** Each `.py` file of a reader folder, by name, and the modules it imports, by first name (`SCAN`). */
 type Imports = ReadonlyMap<string, ReadonlyArray<string>>;
 
+/** A scan that ended with no answer of `SCAN`'s: a failure that names python3 and what it printed. */
 const scanBroke = (reason: string) => ReaderScanFailed.make({ file: 'python3', reason });
 
+/**
+ * The imports of `py` (a reader folder's `.py` files by name and text),
+ * read by CPython in one spawn (`SCAN`), with `folders` (the folder's own
+ * folders) refused as imports. It fails with the scan's fault (its file,
+ * and the reason with the line), or, when python3 cannot run, answers no
+ * JSON of the scan's or leaves a file out, a failure naming python3: never
+ * with an import left out.
+ */
 export const scanOf = (py: ReadonlyMap<string, string>, folders: ReadonlySet<string>) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
@@ -217,6 +269,12 @@ export const scanOf = (py: ReadonlyMap<string, string>, folders: ReadonlySet<str
     return yield* ReaderScanFailed.make(fault);
   });
 
+/**
+ * The reader's files by role, by name, from `imports` (`scanOf`). Each role
+ * is the closure of its entries over their local imports (an import naming
+ * a `<name>.py` of the folder, followed transitively), with the environment
+ * for a local role, sorted. A missing entry fails the scan.
+ */
 export const rolesOf = (imports: Imports): Effect.Effect<ReaderSources, ReaderScanFailed> =>
   Effect.gen(function* () {
     const closureOf = (role: keyof ReaderSources) =>
@@ -245,6 +303,7 @@ export const rolesOf = (imports: Imports): Effect.Effect<ReaderSources, ReaderSc
     };
   });
 
+/** The roles of the reader folder `dir`, from its `.py` files and the names of its folders (whose files are not read), as absolute paths. */
 const sourcesIn = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -260,18 +319,28 @@ const sourcesIn = (dir: string) =>
   });
 
 interface CastReaderService {
+  /** The reader's files by role, as absolute paths, each sorted (`rolesOf`). */
   readonly sources: ReaderSources;
+  /** `frames` read by the checkpoint at `ckpt`: read.py's JSON (every class's probability per frame); each frame as mapped onto the canvas written to `mapped` as `<id>.png`, when named. */
   readonly read: (
     ckpt: string,
     frames: Frames,
     mapped?: string,
   ) => Effect.Effect<string, ReaderError>;
+  /** The held samples of `shard` (a drawing's renders tar) read by `ckpt` and scored: eval.py's JSON. */
   readonly evaluate: (ckpt: string, shard: string) => Effect.Effect<string, ReaderError>;
+  /** One reader trained on Modal: the checkpoint's bytes, the fit's result JSON and the Modal app it ran in. It spends. */
   readonly train: (job: TrainJob) => Effect.Effect<Trained, ReaderError>;
+  /** Make run `run`'s checkpoint the key's: `/runs/<key>/<run>.pt` copied to `/readers/<key>.pt` on the volume. It runs no GPU. */
   readonly promote: (key: string, run: string) => Effect.Effect<void, ReaderError>;
+  /** The reader's pytest cases, run in its environment: pytest's output. */
   readonly test: Effect.Effect<string, ReaderError>;
 }
 
+/**
+ * The driver, run as `python -I -B -c`: the reader's folder, a script's
+ * name and the script's arguments.
+ */
 const DRIVER = `
 import runpy, sys
 folder, script = sys.argv[1:3]
@@ -283,16 +352,19 @@ runpy.run_path(folder + '/' + script + '.py', run_name='__main__')
 const READ_LIMIT = Duration.minutes(30);
 const TRAIN_LIMIT = Duration.hours(3);
 
+/** read.py's arguments for `frames`, each made absolute by `resolve` (the scripts run in the reader's folder). */
 const frameArgs = (frames: Frames, resolve: (p: string) => string): ReadonlyArray<string> => {
   if ('clip' in frames) return ['--mp4', resolve(frames.clip)];
   return ['--pngs', resolve(frames.pngs)];
 };
 
+/** The last lines a run printed, for its failure. */
 const tailOf = (text: string) => text.trim().split('\n').slice(-6).join('\n');
 
 export class CastReader extends Context.Service<CastReader, CastReaderService>()(
   '@manna/film/tools/cast-build/CastReader',
 ) {
+  /** The reader in folder `folder`, in its uv environment under `FILM_READER_HOME` (else ~/.cache/bible-film/reader). */
   static readonly layerIn = (folder: string) =>
     Layer.effect(
       CastReader,
@@ -317,6 +389,7 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
           if (!there) return yield* ReaderMissing.make({ venv, install });
         });
 
+        /** `python -I -B` with `args`, its stdout on success. */
         const python_ = (what: string, args: ReadonlyArray<string>, limit: Duration.Duration) =>
           Effect.gen(function* () {
             yield* ready;
@@ -467,8 +540,18 @@ export class CastReader extends Context.Service<CastReader, CastReaderService>()
       }),
     );
 
+  /** The reader of `packages/film/reader/`, in its uv environment. */
   static readonly layer = CastReader.layerIn(READER_DIR);
 
+  /**
+   * A reader that answers from `answers` and runs nothing; `asked` records
+   * each call as `<what> <argument>`. An eval answers what `answers.evaluate`
+   * makes of the shard ('{}' without it). A train runs
+   * `answers.training` before it answers: what happens while it runs; it
+   * reads `answers.trainStdout` as the live train reads `modal run`'s
+   * stdout. A promote fails with `answers.promoteFails` as its reason, when
+   * it is given.
+   */
   static readonly layerTest = (
     answers: {
       readonly read?: string;

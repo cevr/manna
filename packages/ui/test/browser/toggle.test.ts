@@ -4,6 +4,7 @@ import { expect as see } from '@playwright/test';
 
 import { focused, harness, logOf } from './harness.ts';
 
+/** Runs `run` over `items` one after another (each step waits on the page). */
 const inSequence = <T>(items: ReadonlyArray<T>, run: (item: T) => Promise<void>) =>
   items.reduce<Promise<void>>(
     (previous, item) => previous.then(() => run(item)),

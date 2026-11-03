@@ -46,6 +46,12 @@ function AreaMenu(): JSX.Element {
   );
 }
 
+/**
+ * The lab's shape: one root, the page's own trigger (`display: contents`)
+ * wrapping two target triggers and a blank stretch. Each open logs the
+ * target its event landed on (`page` for none). The items' text leads with
+ * a key chord, so only their `label` starts with the name.
+ */
 function NestedTargets(): JSX.Element {
   const targetOf = (event: Event) =>
     (event.target as Element | null)?.closest('[data-target]')?.getAttribute('data-target') ??

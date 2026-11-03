@@ -1,3 +1,10 @@
+/**
+ * Driver-agnostic query service for the unified Bible database.
+ *
+ * This module owns the canonical query contract while platform modules provide
+ * a concrete Effect SQL driver.
+ */
+
 import { Context, Effect, Layer, Option, Predicate, Schema } from 'effect';
 import * as SqlClient from 'effect/sql/SqlClient';
 import type { SqlError } from 'effect/sql/SqlError';

@@ -1,3 +1,14 @@
+/** Bun runtime composition for the driver-agnostic `StudyService`.
+ *
+ *  The two corpora the bundle reads, opened the way every other Bun consumer of
+ *  them opens them: `bible.db` read-only and immutable, the writings library
+ *  read-write because `EGWParagraphDatabase.layerCore` initializes its schema on
+ *  construction.
+ *
+ *  Nothing about what a bundle contains is decided here — this module supplies
+ *  drivers, exactly as `wiki/service-bun.ts` does for the wiki.
+ */
+
 import * as SqliteBun from '@effect/sql-sqlite-bun/SqliteClient';
 import { Layer } from 'effect';
 

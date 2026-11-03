@@ -5,6 +5,7 @@ import { Media, Played } from './media.ts';
 
 const media = Media.layerOver(() => fakeMedia().media);
 
+/** A hearer's hushed effect, and how often it was told. */
 const hearer = () => {
   const told: Array<string> = [];
   return { told, hushed: (who: string) => Effect.sync(() => told.push(who)) };

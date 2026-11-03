@@ -51,6 +51,9 @@ import {
 } from '../../src/commands/wiki.js';
 import { runCli } from '../lib/run-cli.js';
 
+/** The catalog ships inside the verified `bible.db`, so it is available in every
+ *  state the wiki can be in — including the one this file is about, where no
+ *  topics artifact is installed. */
 const catalog = TopicService.Test([
   TopicDetail.make({
     id: Schema.decodeSync(TopicId)('sanctuary'),
@@ -142,6 +145,10 @@ describe('manna wiki topics --json', () => {
   );
 });
 
+/** The layer the two commands resolve under test. Substituted through
+ *  `WikiLayer`, the reference whose default is the installed `~/.bible`
+ *  corpora, so the command under test is the production command and only its
+ *  data source moved. */
 const fixtureWiki: Layer.Layer<WikiService> = WikiService.Absent.pipe(
   Layer.provide(catalog),
   Layer.provide(WikiSectionSources.NotWired),
@@ -150,6 +157,8 @@ const fixtureWiki: Layer.Layer<WikiService> = WikiService.Absent.pipe(
 const runWiki = (args: readonly string[]) =>
   runCli(wiki, [...args], {}).pipe(Effect.provideService(WikiLayer, fixtureWiki));
 
+/** The CLI's serializer, declared here so the comparison is a property of the
+ *  payload rather than of this test's own formatting choices. */
 const JsonText = Schema.Unknown.pipe(
   Schema.encodeTo(Schema.String, {
     decode: SchemaGetter.parseJson(),
@@ -159,17 +168,32 @@ const JsonText = Schema.Unknown.pipe(
 
 const serialize = Schema.encodeUnknownEffect(JsonText);
 
+/** The JSON text `WikiPageJson` encodes for one page.
+ *
+ *  Two steps, because that is what the seam is: `WikiPageJson` encodes the
+ *  page, and the result is serialized. Comparing text rather than objects is
+ *  the point. JSON is what a client actually receives, and two encoders
+ *  agreeing in memory while disagreeing on the wire is exactly the drift a
+ *  shared codec removes. */
 const pageWireText = (page: WikiPage): Effect.Effect<string, Schema.SchemaError> =>
   Effect.flatMap(Schema.encodeEffect(WikiPageJson)(page), serialize);
 
+/** One composed topic page, resolved through a given wiring.
+ *
+ *  A named function rather than an inline `Effect.provide` inside each test's
+ *  generator: the layer is per-test data — several of these tests build one over
+ *  a scoped temp directory — so the provide belongs at this helper's own
+ *  boundary rather than partway through a run. */
 const composeTopicPage = (layer: Layer.Layer<WikiService>, slug: string) =>
   Effect.flatMap(WikiService, (service) => service.topic(topicSlug(slug))).pipe(
     Effect.provide(layer),
   );
 
+/** The alias dictionary a wiring compiles, resolved the same way. */
 const composeDictionary = (layer: Layer.Layer<WikiService>) =>
   Effect.flatMap(WikiService, (service) => service.dictionary).pipe(Effect.provide(layer));
 
+/** The listing envelope the `topics` command prints, resolved the same way. */
 const composeTopicsEnvelope = (layer: Layer.Layer<WikiService>) =>
   Effect.gen(function* () {
     const service = yield* WikiService;
@@ -241,6 +265,8 @@ const writeDictionaryArtifact = (file: string): string => {
   return file;
 };
 
+/** The installed-artifact path, through the same `layerBun` the production
+ *  command resolves — only the filename moved. */
 const dictionaryWiki = (file: string): Layer.Layer<WikiService> =>
   layerBun(file).pipe(
     Layer.provide(catalog),
@@ -294,6 +320,9 @@ describe('manna wiki matches', () => {
     }));
 });
 
+/** The `2300-days` page as `content/topics/2300-days.md` declares it: the slug,
+ *  the title, and the six authored aliases. Written into a fixture artifact
+ *  because the source is still a draft — see the note above. */
 const TWENTY_THREE_HUNDRED = {
   slug: '2300-days',
   title: '2300 Days / 1844',
@@ -408,6 +437,10 @@ describe('manna wiki topic 2300-days --json', () => {
     }));
 });
 
+/** The fixture artifact, written through the DDL the fixture module owns and
+ *  the rows it declares. Neither is spelled here: a fixture the suite half
+ *  writes itself is a fixture that can drift from the two other seams reading
+ *  it. */
 const writePopulatedArtifact = (file: string): string => {
   const database = new Database(file, { create: true });
   database.exec(WIKI_ARTIFACT_DDL);
@@ -416,6 +449,9 @@ const writePopulatedArtifact = (file: string): string => {
   return file;
 };
 
+/** The production `layerBun`, over the wired sources rather than `NotWired` —
+ *  the one difference from `dictionaryWiki` above, and the whole of what makes
+ *  the assertions below non-vacuous. */
 const populatedWiki = (file: string): Layer.Layer<WikiService> =>
   layerBun(file).pipe(
     Layer.provide(WIKI_PAGE_FIXTURE_CATALOG),

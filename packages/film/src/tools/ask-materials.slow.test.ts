@@ -43,6 +43,7 @@ const TALK = [
   '',
 ].join('\n');
 
+/** A try of panel cold.judge, its file `cold.judge.<n>.png`. */
 const tried = (n: number) => ({
   n,
   file: Segment.make(`cold.judge.${n}.png`),
@@ -67,6 +68,7 @@ const board: BoardFile = {
 
 const listed = (ref: string, name: string) => ({ ref, name, size: 10, mtime: 1 });
 
+/** The review's one set: its notes in Markdown and its cut. */
 const index: ReviewIndex = {
   folders: [
     {
@@ -82,6 +84,7 @@ const index: ReviewIndex = {
   ],
 };
 
+/** A still the set holds, served under the review's files route, and the set's other stills. */
 const STILL = 'p5/rbf/still.png';
 const STILLS = [STILL, 'p5/rbf/b.png', 'p5/rbf/c.png', 'p5/rbf/d.png'];
 
@@ -91,6 +94,7 @@ const refs = [
   'p5/rbf/gone.png',
 ];
 
+/** A seeded draw in [0, 1) (mulberry32). */
 const draws = (seed: number) => {
   let state = seed >>> 0;
   return () => {
@@ -102,6 +106,7 @@ const draws = (seed: number) => {
   };
 };
 
+/** The review over that index: a ref it lists is its file; any other is unknown. */
 const review = Layer.effect(
   Review,
   Effect.map(Effect.service(Review), (none) =>
@@ -126,6 +131,7 @@ const attempt: Attempt = {
   at: 1,
 };
 
+/** A beat's attempts as the studio keeps them on disk. */
 const ledger = (attempts: ReadonlyArray<Attempt>) =>
   text(
     Schema.encodeSync(Schema.fromJsonString(Schema.Struct({ attempts: Schema.Array(Attempt) })))({
@@ -141,6 +147,7 @@ const beat = (id: string, said: string): ReadBeat => ({
   delivery: [],
 });
 
+/** Film `f` as the studio reads it: one beat, `cold`. */
 const reading: StudioReading = {
   voice: stagingVoice,
   heardAs: {},
@@ -148,8 +155,10 @@ const reading: StudioReading = {
   sheet: [],
 };
 
+/** The take cold's timings name: an attempt kept, a staging take (none of its attempts), or none. */
 type Timed = 'attempt' | 'staging' | 'none';
 
+/** A staging take of cold's, in `narration/` and none of its attempts. */
 const staging = {
   hash: 'h',
   file: 'cold.0cbdb0cac54f.flac',
@@ -158,6 +167,12 @@ const staging = {
   source: 'elevenlabs',
 } as const;
 
+/**
+ * The lab's files: film `f`, its Board, its timings (cold's take as `timed`
+ * says), cold's attempts, a series draft; and, outside `f`, another
+ * folder's ledger that holds an attempt of the same name, which a beat that
+ * climbs out of `f`'s attempts would read.
+ */
 const seeded = (timed: Timed) =>
   new Map<string, Uint8Array>([
     ['/films/f/scenes/index.ts', text('export {};\n')],
@@ -182,6 +197,7 @@ const seeded = (timed: Timed) =>
     [`/out/${STILL}`, text('the still as the ask is made')],
   ]);
 
+/** The asks over the lab in memory (its files `files`), their material read through the review above, the studio's real reads and the draft. */
 const run = <A, E, R>(
   self: Effect.Effect<A, E, R>,
   timed: Timed = 'attempt',
@@ -209,6 +225,7 @@ const run = <A, E, R>(
   );
 };
 
+/** One step showing `material`, then a choice about it. */
 const about = (material: AskBlock): Ask =>
   oneQuestion(
     Schema.decodeSync(Schema.Array(AskBlock))([
@@ -227,6 +244,7 @@ const about = (material: AskBlock): Ask =>
 
 const asked = (ask: Ask) => ({ title: 'Read it', why: 'the cut waits', by: 'agent', ask });
 
+/** Why an ask showing `material` is refused, or none when it is kept. */
 const refusal = (material: AskBlock) =>
   Effect.flatMap(Effect.service(AskStore), (asks) =>
     asks.make(asked(about(material))).pipe(
@@ -235,11 +253,19 @@ const refusal = (material: AskBlock) =>
     ),
   );
 
+/** The board's tries with a file, and one it names whose file is missing. */
 const TRIES = [1, 2, 3] as const;
 const MISSING_TRY = 9;
+/** The notes' stills with a file. */
 const NOTE_STILLS = ['n1.png', 'n2.png'] as const;
+/** A set file the review lists whose file is not there. */
 const GONE = 'p5/rbf/gone.png';
 
+/**
+ * A file an ask's image may show, of each kind the receipt rule copies:
+ * where the lab keeps it, the image as an agent names it, and the src its
+ * route serves.
+ */
 interface Source {
   readonly kind: 'set' | 'try' | 'still';
   readonly file: string;
@@ -268,8 +294,10 @@ const stillSource = (name: string): Source => ({
 const setSources = STILLS.map(setSource);
 const trySources = TRIES.map(trySource);
 const stillSources = NOTE_STILLS.map(stillSource);
+/** One source of each kind whose file is not there as the ask is made. */
 const missingSources = [setSource(GONE), trySource(MISSING_TRY), stillSource('n9.png')];
 
+/** An image a page shows: a source's file, or a video's frame. */
 type Shown = { readonly _tag: 'File'; readonly source: Source } | { readonly _tag: 'Frame' };
 const shownKind = (shown: Shown): string =>
   Match.value(shown).pipe(
@@ -284,12 +312,18 @@ const sourcesOf = (shown: Shown): ReadonlyArray<Source> =>
     Match.exhaustive,
   );
 
+/** Where a step's images go (an image block, or an option each), and whether it shows a board block and a video. */
 interface Layout {
   readonly inOption: ReadonlyArray<boolean>;
   readonly board: boolean;
   readonly video: boolean;
 }
 
+/**
+ * An ask drawn at random: each step's images and their layout, and its
+ * fault: none, a source whose file is missing, or one whose copy fails
+ * (`poisoned`).
+ */
 interface Drawn {
   readonly pages: ReadonlyArray<ReadonlyArray<Shown>>;
   readonly layouts: ReadonlyArray<Layout>;
@@ -297,6 +331,7 @@ interface Drawn {
   readonly poisoned: Option.Option<Source>;
 }
 
+/** What a drawn ask shows, by kind: each image's, where it is placed, its live blocks and its steps. */
 const kindsOf = ({ pages, layouts }: Drawn): ReadonlyArray<string> => [
   ...pages.flat().map(shownKind),
   ...layouts.flatMap((layout) => [
@@ -316,12 +351,19 @@ const kindsOf = ({ pages, layouts }: Drawn): ReadonlyArray<string> => [
 const problemsIf = (holds: boolean, kind: string): ReadonlyArray<string> =>
   Bool.match(holds, { onTrue: () => [kind], onFalse: () => [] });
 
+/** An ask kept, the steps it has and the receipt it was made with. */
 interface Made {
   readonly record: AskRecord;
   readonly steps: number;
   readonly receipt: Readonly<Record<string, string>>;
 }
 
+/**
+ * An ask of `pages.length` steps, `s0` on to `done`: step `s` shows
+ * `pages[s]`, each as `imageOf` names it, in an image block or on an option
+ * of its own as `layouts[s]` says, a board block and a video when it says,
+ * then asks `k<s>`, `yes` recommended.
+ */
 const askOver = (
   { pages, layouts }: Pick<Drawn, 'pages' | 'layouts'>,
   imageOf: (shown: Shown) => typeof AskImage.Encoded,
@@ -375,11 +417,13 @@ const askOver = (
     ]),
   });
 
+/** The board and video blocks of `ask`, which show live. */
 const liveBlocks = (ask: Ask) =>
   Object.values(ask.steps)
     .filter((step) => 'blocks' in step)
     .flatMap((step) => step.blocks.filter((b) => b.kind === 'board' || b.kind === 'video'));
 
+/** The lab's files, with a copy that fails for each file in `poisoned`: the file is there, but reads as none. */
 class Poisoned extends Map<string, Uint8Array> {
   readonly poisoned = new Set<string>();
   override get(key: string) {
@@ -389,6 +433,7 @@ class Poisoned extends Map<string, Uint8Array> {
   }
 }
 
+/** What the lab answers a GET of `src` with: its status, cache policy, type and bytes' SHA-256. */
 const fetched = (lab: LabFetch, src: string) =>
   Effect.gen(function* () {
     const res = yield* Effect.promise(() =>
@@ -538,6 +583,7 @@ describe('the material an ask shows', () => {
         Uint8Array.from({ length: 1 + Math.floor(next() * 40) }, () => Math.floor(next() * 256));
       const sources = [...setSources, ...trySources, ...stillSources];
       const hashOf = (file: string) => sha256Hex(files.get(file) ?? new Uint8Array());
+      /** New bytes for `source`'s file: fresh ones, another source's, or its own again. */
       const rewrite = (source: Source) => {
         const roll = next();
         const from = Bool.match(roll < 0.75, {
@@ -550,6 +596,7 @@ describe('the material an ask shows', () => {
         });
         files.set(source.file, bytes);
       };
+      /** Rewrites at a random time: some files, or none. */
       const rewriteSome = () => {
         if (next() < 0.4) return;
         for (const source of sources.filter(() => next() < 0.4)) rewrite(source);
@@ -602,6 +649,7 @@ describe('the material an ask shows', () => {
           const asks = yield* AskStore;
           const lab = yield* labHandler();
           const seen = new Set<string>();
+          /** Ask `drawn` made: refused naming its fault, else kept as the oracle says. */
           const makeOf = (i: number, drawn: Drawn) =>
             Effect.gen(function* () {
               const ask = askOver(drawn, (shown) =>
@@ -668,6 +716,7 @@ describe('the material an ask shows', () => {
                 receipt: record.shown ?? {},
               });
             });
+          /** Ask `made` answered: what it serves at each copy, through the store and the lab's route, is what it was made with. */
           const answerOf = (i: number, { record, steps, receipt }: Made) =>
             Effect.gen(function* () {
               rewriteSome();
@@ -766,6 +815,7 @@ describe('the material an ask shows', () => {
             hash: sha256Hex(made),
           });
           const before = (yield* asks.list).length;
+          /** Why an ask showing `src` is refused: its tag and message. */
           const refused = (src: string) =>
             Effect.map(
               Effect.flip(asks.make(asked(about({ kind: 'image', image: { src } })))),

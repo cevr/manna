@@ -1,5 +1,10 @@
 import { Schema } from 'effect';
 
+/**
+ * Decoded OAuth access token. Lives in its own module so both `EGWAuth`
+ * (which mints them) and `EGWTokenStore` (which persists them) can depend
+ * on it without forming a cycle.
+ */
 export class AccessToken extends Schema.Class<AccessToken>('lib/EGW/Auth/AccessToken')({
   accessToken: Schema.Redacted(Schema.NonEmptyString),
   refreshToken: Schema.optional(Schema.Redacted(Schema.NonEmptyString)),

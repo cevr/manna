@@ -5,6 +5,9 @@ import { Effect, Option, Schema } from 'effect';
 import { blocksToText, collectCitations, parseBody, type ParsedBody } from './markdown.js';
 import type { TopicSource } from './source.js';
 
+/** Every way a *set* of authored sources can be rejected. Each is one of §3.4's
+ *  named compile errors, kept as a distinct tag so a failing build says which
+ *  rule broke rather than "compile failed". */
 class DuplicateAliasError extends Schema.TaggedError<DuplicateAliasError>()('DuplicateAliasError', {
   alias: Schema.String,
   slugs: Schema.Array(Schema.String),
@@ -30,10 +33,15 @@ class UnknownRelatedSlugError extends Schema.TaggedError<UnknownRelatedSlugError
   { slug: Schema.String, related: Schema.String },
 ) {}
 
+/** Resolves one refcode to the paragraphs that carry it. Injected rather than
+ *  imported so the compile core stays free of the writings database and the
+ *  tests can supply synthetic approved pages. */
 export interface ParagraphLookup {
   readonly paragraphsFor: (refcode: string) => Effect.Effect<readonly string[]>;
 }
 
+/** Resolves a catalog topic *name* to the ids claiming it. More than one id is
+ *  the §2.4 ambiguity that fails the compile. */
 export interface CatalogLookup {
   readonly revision: string;
   readonly idsForName: (name: string) => Effect.Effect<readonly string[]>;
@@ -78,6 +86,11 @@ export interface CompiledTopics {
   readonly schemaMinor: number;
 }
 
+/** Normalized-substring comparison for citation verification (§3.4 step 6).
+ *  Whitespace and the curly/straight quote and dash distinctions are collapsed
+ *  on both sides: EGW source text uses typographic punctuation an author
+ *  retyping a quote will not reproduce byte for byte, and failing a real quote
+ *  over a smart apostrophe would make the pass noise rather than a guarantee. */
 const normalizeQuote = (text: string): string =>
   text
     .toLowerCase()
@@ -87,10 +100,25 @@ const normalizeQuote = (text: string): string =>
     .replace(/\s+/gu, ' ')
     .trim();
 
+/** Whether a normalized quote asserts anything at all.
+ *
+ *  A quote that carries no letter and no digit — blank, or `"..."`, or `"—"` —
+ *  is not merely short: it is a substring of any paragraph that happens to hold
+ *  the same punctuation, so the citation "verifies" without the source ever
+ *  having said the thing. Emptiness is the extreme case of the same defect, not
+ *  a separate one, so one predicate covers both. */
 const QUOTES_TEXT = /[\p{L}\p{N}]/u;
 
 const quotesText = (quote: string): boolean => QUOTES_TEXT.test(quote);
 
+/** One source's authored state, as the digest reads it: every field that alters
+ *  a compiled row, each named and each kept in its own slot.
+ *
+ *  `content_revision` is derived from this digest, and the supply pipeline
+ *  treats an unchanged revision as "already current" — so any field the digest
+ *  ignores is a field an author can change without the artifact ever reaching a
+ *  host. Title, aliases, related, catalog, and status all alter the compiled
+ *  rows, so all of them are here. */
 interface DigestFields {
   readonly slug: string;
   readonly title: string;
@@ -114,6 +142,18 @@ const digestFields = (source: TopicSource): DigestFields => {
   };
 };
 
+/** Frames one field so no two different field sets can produce the same bytes.
+ *
+ *  Three framings stack, and each closes a distinct collision:
+ *
+ *  - The field's *name* is hashed, so a value cannot migrate between fields
+ *    unnoticed. Flat concatenation let `aliases: ['x'], related: ['target']`
+ *    and `aliases: ['x', 'target'], related: []` hash to the same bytes — the
+ *    two lists ran together into one undifferentiated run of values.
+ *  - Each list's *count* is hashed, so dropping a trailing entry changes the
+ *    digest even when every remaining value is unchanged.
+ *  - Each value is *length-prefixed*, so `['ab']` and `['a', 'b']` differ:
+ *    without it there is no delimiter that cannot also occur inside a value. */
 const hashScalar = (hasher: Bun.CryptoHasher, name: string, value: string): void => {
   hasher.update(`${name}:${String(value.length)}:${value}`);
 };
@@ -123,6 +163,7 @@ const hashList = (hasher: Bun.CryptoHasher, name: string, values: readonly strin
   for (const value of values) hasher.update(`${String(value.length)}:${value}`);
 };
 
+/** Stable listing order, independent of directory iteration order. */
 const sortBySlug = (sources: readonly TopicSource[]): readonly TopicSource[] =>
   [...sources].sort((a, b) => a.frontmatter.slug.localeCompare(b.frontmatter.slug));
 
@@ -142,6 +183,7 @@ const sourceDigest = (sources: readonly TopicSource[]): Effect.Effect<string> =>
     return hasher.digest('hex');
   });
 
+/** Appends `value` to the list `key` owns, creating the list on first use. */
 const appendTo = <V>(map: Map<string, V[]>, key: string, value: V): void => {
   const owned = map.get(key) ?? [];
   owned.push(value);
@@ -158,6 +200,8 @@ const rejectDuplicateSlugs = Effect.fn('TopicsCompiler.rejectDuplicateSlugs')(fu
   }
 });
 
+/** One topic row per source, plus each source's parsed body keyed by slug for
+ *  the passes that read it again (backlinks, citations). */
 const compileTopicRows = (ordered: readonly TopicSource[]) => {
   const topics: CompiledTopic[] = [];
   const parsed = new Map<string, ParsedBody>();
@@ -175,6 +219,8 @@ const compileTopicRows = (ordered: readonly TopicSource[]) => {
   return { topics, parsed };
 };
 
+/** One source's alias rows. The canonical alias is the topic's title, so every
+ *  flagship page is reachable by its own name even when the author listed none. */
 const sourceAliases = (source: TopicSource): readonly CompiledAlias[] => {
   const slug = source.frontmatter.slug;
   const entries = [
@@ -224,6 +270,8 @@ const compileAuthoredEdges = Effect.fn('TopicsCompiler.authoredEdges')(function*
 const edgeKey = (edge: Pick<CompiledEdge, 'from' | 'to' | 'kind'>): string =>
   `${edge.from} ${edge.to} ${edge.kind}`;
 
+/** The backlinks one flagship body contributes. `edgeKeys` is shared across
+ *  sources and grows as backlinks are recorded. */
 const sourceBacklinks = (
   from: string,
   body: ParsedBody,
@@ -245,6 +293,10 @@ const sourceBacklinks = (
   return backlinks;
 };
 
+/** Compile-derived backlinks (§2.3). Runs the alias dictionary over every
+ *  flagship body and records flagship→flagship hits. Word-boundary matched on
+ *  the normalized text so a phrase inside a longer word does not create an
+ *  edge. */
 const deriveBacklinks = (
   ordered: readonly TopicSource[],
   parsed: ReadonlyMap<string, ParsedBody>,
@@ -263,6 +315,8 @@ const deriveBacklinks = (
   });
 };
 
+/** Overlay keying (§2.4) for one source: its catalog key, none when the name
+ *  matches nothing, or the ambiguity error when it matches more than one. */
 const catalogKeyFor = Effect.fn('TopicsCompiler.catalogKey')(function* (
   source: TopicSource,
   catalog: CatalogLookup,
@@ -296,6 +350,8 @@ const compileCatalogKeys = Effect.fn('TopicsCompiler.catalogKeys')(function* (
   return catalogKeys;
 });
 
+/** Why one citation fails verification (§3.4 step 6), or none when its quote
+ *  appears in a paragraph its refcode resolves to. */
 const citationFailure = Effect.fn('TopicsCompiler.citationFailure')(function* (
   citation: CitationInline,
   paragraphs: ParagraphLookup,
@@ -338,6 +394,7 @@ const verifySourceCitations = Effect.fn('TopicsCompiler.verifySourceCitations')(
   }
 });
 
+/** Citation verification (§3.4 step 6) across every approved source. */
 const verifyCitations = Effect.fn('TopicsCompiler.verifyCitations')(function* (
   ordered: readonly TopicSource[],
   parsed: ReadonlyMap<string, ParsedBody>,
@@ -350,6 +407,9 @@ const verifyCitations = Effect.fn('TopicsCompiler.verifyCitations')(function* (
   }
 });
 
+/** Compiles every approved source into the artifact's row set. Draft sources
+ *  are dropped before anything else runs (§3.3), so a draft cannot trip a
+ *  duplicate-alias or citation error and cannot contribute a row. */
 export const compileTopics = Effect.fn('TopicsCompiler.compile')(function* (input: {
   readonly sources: readonly TopicSource[];
   readonly paragraphs: ParagraphLookup;
@@ -378,6 +438,13 @@ export const compileTopics = Effect.fn('TopicsCompiler.compile')(function* (inpu
   } satisfies CompiledTopics;
 });
 
+/** Word-boundary containment over already-normalized text. Avoids building a
+ *  RegExp from an alias, which would let punctuation in a phrase change the
+ *  pattern's meaning.
+ *
+ *  The boundary predicate is core's `isBoundaryAt`, the same one the runtime
+ *  matcher applies — a backlink the compiler records and a hot phrase the reader
+ *  sees must agree about what counts as a word. */
 const containsPhrase = (haystack: string, phrase: string): boolean => {
   if (phrase.length === 0) return false;
   let from = 0;

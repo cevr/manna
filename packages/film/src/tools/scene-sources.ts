@@ -22,26 +22,37 @@ import { sceneCode } from './scene-source.ts';
 
 export type { SceneSite } from './fresh-film.ts';
 
+/** A drawing's field the lab writes: `timeline` for cues, `knobs` for knobs. */
 export type Field = 'timeline' | 'knobs';
 
+/** Every scene with a timeline or knobs: located, or why not. */
 export interface Located {
   readonly sites: ReadonlyMap<string, SceneSite>;
   readonly unlocated: ReadonlyArray<SceneNotLocated>;
 }
 
+/** Why a film's scenes could not be located: the film, a module that does not load, a fresh run, a read. */
 export type LocateError = FilmUnknown | FilmModuleInvalid | FreshError | PlatformError;
 
 interface SceneSourcesService {
+  /** Find every scene's drawing in the film's source. */
   readonly locate: (film: string) => Effect.Effect<Located, LocateError>;
+  /** One scene's drawing, or why it has none the lab can edit. */
   readonly site: (
     film: string,
     scene: string,
   ) => Effect.Effect<SceneSite, LocateError | SceneNotLocated>;
+  /** One scene's drawing where the lab may write `field`, or why it may not. */
   readonly writable: (
     film: string,
     scene: string,
     field: Field,
   ) => Effect.Effect<SceneSite, LocateError | SceneNotLocated | SourceShared>;
+  /**
+   * One scene's file as it stands now, and where in it each cue and knob
+   * is written and read (`sceneCode`); read-only, so a field the lab may not
+   * write is listed all the same.
+   */
   readonly code: (
     film: string,
     scene: string,
@@ -53,11 +64,13 @@ interface SceneSourcesService {
   >;
 }
 
+/** How many films' sites the lab keeps: one film, a few stamps of it. */
 const SITES_KEPT = 8;
 
 export class SceneSources extends Context.Service<SceneSources, SceneSourcesService>()(
   '@manna/film/tools/SceneSources',
 ) {
+  /** The service over a way to locate a film's scenes: each scene's site, and what of it is writable. */
   static readonly over = Effect.fn('SceneSources.over')(function* (
     locate: SceneSourcesService['locate'],
   ) {
@@ -102,6 +115,12 @@ export class SceneSources extends Context.Service<SceneSources, SceneSourcesServ
     return SceneSources.of({ locate, site, writable, code: readCode });
   });
 
+  /**
+   * The lab's: each film's scenes located by a fresh process (`film read
+   * sites`), kept under the film's source stamp, so a locate costs a fresh
+   * process only after a file under the film changed. A failed read is not
+   * kept.
+   */
   static readonly layer = Layer.effect(
     SceneSources,
     Effect.gen(function* () {

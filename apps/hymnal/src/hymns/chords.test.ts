@@ -1,3 +1,10 @@
+/**
+ * The reader's move and the chord book: a transpose wraps through the twelve
+ * keys, a capo stops at its first and last fret, a key at rest is the key as
+ * printed, and a hymn's chords are decoded once, or are none when they do not
+ * decode.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 

@@ -13,6 +13,7 @@ const MEDIA: ReadonlySet<string> = new Set(['audio', 'video']);
 const MESSAGE =
   "a media element made by hand: play sound and pictures through the player's media module (packages/film/src/browser/media.ts), which owns what an element does a page cannot see.";
 
+/** Whether a call makes a media element: `….createElement('audio')`. */
 const createsMedia = (call: ESTree.CallExpression): boolean => {
   const [tag] = call.arguments;
   return (

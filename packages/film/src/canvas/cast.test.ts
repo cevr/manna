@@ -10,8 +10,10 @@ import {
 } from './cast.ts';
 import type { RivePropSpec } from './rive.ts';
 
+/** A rectangle as a path takes it: its corner, its width and its height. */
 type Rect = readonly [number, number, number, number];
 
+/** Each clip `clipCast` lays on a context for `view`: its path's rectangles and its fill rule. */
 const recordedClips = (view: CastView, views: ReadonlyArray<CastView>) => {
   const clips: Array<{ readonly rects: ReadonlyArray<Rect>; readonly rule: CanvasFillRule }> = [];
   let path: Rect[] = [];
@@ -40,6 +42,7 @@ const rig = (key: string): RivePropSpec => ({
 const prop = (name: string, layer?: CastProp['layer']): CastProp =>
   layer === undefined ? { name, draw: () => {} } : { name, draw: () => {}, layer };
 
+/** A drawing's name: its prop's, the figure's rig's, or the rig drawn with it. */
 const named = (view: CastView) =>
   castDrawOrder(view).map((d) =>
     d.kind === 'prop' ? d.prop.name : d.kind === 'figure' ? view.rig.key : d.with.rig.key,

@@ -6,6 +6,7 @@ import { type TraceSheet, type Traced, traceView, tracedModule } from '../core/t
 import { importFilmModule } from './film-repo.ts';
 import { decodePng } from './png.ts';
 
+/** A spec that exports no `TRACE`, or names no view asked for, or a view the sheet cannot be read by. */
 class TraceUnread extends Schema.TaggedError<TraceUnread>()('TraceUnread', {
   spec: Schema.String,
   reason: Schema.String,
@@ -15,14 +16,17 @@ class TraceUnread extends Schema.TaggedError<TraceUnread>()('TraceUnread', {
   }
 }
 
+/** Whether `u` is a trace spec: a record with its member, its sheet and its views. */
 const isSheet = (u: unknown): u is TraceSheet =>
   Predicate.isObject(u) &&
   Predicate.hasProperty(u, 'views') &&
   Predicate.hasProperty(u, 'sheet') &&
   Predicate.hasProperty(u, 'member');
 
+/** A trace spec's module: its `TRACE`. */
 const TraceModule = Schema.Struct({ TRACE: Schema.declare(isSheet) });
 
+/** The spec module's `TRACE`, read from its path. */
 const specAt = Effect.fn('Trace.spec')(function* (file: string) {
   const loaded: unknown = yield* Effect.tryPromise({
     try: () => importFilmModule(file),
@@ -39,9 +43,11 @@ const specAt = Effect.fn('Trace.spec')(function* (file: string) {
   return m.TRACE;
 });
 
+/** What a traced view holds, in a line. */
 const counted = (t: Traced) =>
   `outlines=${Object.keys(t.outlines).length} tones=${Object.keys(t.tones).length} circles=${Object.keys(t.circles).length} marks=${Option.isSome(Option.fromUndefinedOr(t.marks))}`;
 
+/** The region each label picked, in a line: ` labels=face:#72 skin 11241px,…`; nothing for a view picked by seeds alone. */
 const labelledLine = (t: Traced) =>
   Arr.match(Object.entries(t.labelled), {
     onEmpty: () => '',
@@ -49,12 +55,14 @@ const labelledLine = (t: Traced) =>
       ` labels=${picks.map(([label, r]) => `${label}:#${r.id} ${r.class} ${r.size}px`).join(',')}`,
   });
 
+/** A table's text as the formatter that runs on a commit cannot change it: its whitespace, its semicolons and its trailing commas gone (it wraps a type over lines, ending each member with one, and closes a wrapped list with one). */
 const unspaced = (text: string) =>
   text
     .replace(/\s+/g, '')
     .replace(/;/g, '')
     .replace(/,(?=[\]}])/g, '');
 
+/** Where table `traced` first parts from table `kept` as the formatter leaves it: none when they hold the same, else the 40 characters of each from there. */
 const firstChange = (kept: string, traced: string): Option.Option<string> => {
   const [a, b] = [unspaced(kept), unspaced(traced)];
   const at = Arr.findFirstIndex(Arr.fromIterable(b), (c, i) => c !== a[i]);

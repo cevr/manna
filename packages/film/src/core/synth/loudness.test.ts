@@ -4,6 +4,7 @@ import { loudness } from './loudness.ts';
 
 const RATE = 44100;
 
+/** `secs` of a `hz` sine at linear `amp`, on each of `channels` channels. */
 const sine = (hz: number, amp: number, secs: number, channels = 1): Pcm => {
   const frames = Math.round(secs * RATE);
   const plane = new Float32Array(frames);

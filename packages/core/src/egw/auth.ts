@@ -1,3 +1,8 @@
+/**
+ * EGW Authentication Service using Effect-TS
+ * Adapted from Spotify auth patterns with Effect-TS
+ */
+
 import type { HttpClientError } from 'effect/http';
 import {
   HttpBody,
@@ -33,11 +38,17 @@ import {
 } from './build-defines.js';
 import { EGWTokenStore } from './token-store.js';
 
+/**
+ * EGW Auth Errors
+ */
 class EGWAuthError extends Schema.TaggedError<EGWAuthError>()('EGWAuthError', {
   cause: Schema.optional(Schema.Unknown),
   message: Schema.String,
 }) {}
 
+/**
+ * OAuth Token Response from API
+ */
 const OAuthTokenResponse = Schema.Struct({
   access_token: Schema.String,
   refresh_token: Schema.optional(Schema.String),
@@ -50,6 +61,9 @@ const RequestLogBody = Schema.fromJsonString(Schema.Record(Schema.String, Schema
 const decodeRequestLogBody = Schema.decodeUnknownOption(RequestLogBody);
 const encodeJson = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
+/**
+ * Transform OAuth token response to AccessToken
+ */
 const decodeOAuthToAccessToken = (
   encoded: typeof OAuthTokenResponse.Type,
 ): Effect.Effect<AccessToken> =>
@@ -67,13 +81,22 @@ const decodeOAuthToAccessToken = (
     });
   });
 
+/**
+ * EGW Auth service interface.
+ */
 interface EGWAuthService {
   readonly getToken: Effect.Effect<AccessToken>;
 }
 
+/**
+ * EGW Authentication Service
+ */
 export class EGWAuth extends Context.Service<EGWAuth, EGWAuthService>()(
   '@manna/core/egw/auth/EGWAuth',
 ) {
+  /**
+   * Live implementation using OAuth2 client credentials flow.
+   */
   static Live: Layer.Layer<
     EGWAuth,
     | Config.ConfigError
@@ -287,6 +310,15 @@ export class EGWAuth extends Context.Service<EGWAuth, EGWAuthService>()(
     }),
   );
 
+  /**
+   * Convenience layer that bundles `Live` with a filesystem-backed
+   * `EGWTokenStore`. Use this in Node-hosted contexts (CLI, sync workers, dev
+   * scripts) where the token file lives on disk.
+   *
+   * Pass `tokenFile` to override the default `data/tokens.json` path
+   * (otherwise reads `EGW_TOKEN_FILE` from env, with `data/tokens.json` as the
+   * fallback).
+   */
   static layerLiveFs = (
     tokenFile?: string,
   ): Layer.Layer<
@@ -305,6 +337,9 @@ export class EGWAuth extends Context.Service<EGWAuth, EGWAuthService>()(
     return Layer.provide(EGWAuth.Live, EGWTokenStore.layerFileSystem(path));
   };
 
+  /**
+   * Test implementation with a mock token.
+   */
   static Test = (token?: AccessToken): Layer.Layer<EGWAuth> =>
     Layer.succeed(
       EGWAuth,

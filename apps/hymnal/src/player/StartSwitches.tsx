@@ -1,3 +1,18 @@
+/**
+ * The player sheet's `Start` group: how Play begins a hymn from its start,
+ * the same for every hymn (`settings.intro`, `settings.click`).
+ *
+ * - `Intro`, on by default: with Sound on the recording plays from 0, its
+ *   introduction first; with Sound off the score clock counts one bar of the
+ *   hymn's meter in (`countin.ts`) before the first sung line. Off, both
+ *   start at the first sung line.
+ * - `Click`, off by default: each beat of the count-in is told as a `beat`
+ *   cue, heard while `Sounds and haptics` is on. It does nothing with
+ *   `Intro` off, so it is disabled then, its value kept.
+ *
+ * A change while a hymn plays waits for the next Play.
+ */
+
 import { useAtom } from '@effect/atom-react';
 import { memo } from 'react';
 import { StyleSheet, Switch, Text, View } from 'react-native';

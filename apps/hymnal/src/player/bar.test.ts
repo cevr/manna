@@ -1,3 +1,9 @@
+/**
+ * Which hymn the bottom bar acts on, over every case of the player: on a
+ * hymn page the page's hymn, unless another hymn sounds; off a page, the
+ * held hymn, or nothing.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
@@ -31,6 +37,7 @@ const three: Track = { number: 3, title: 'Three' };
 const four: Track = { number: 4, title: 'Four' };
 const length = Option.some(120);
 
+/** Every state of the player holding `track`. */
 const holding = (track: Track) => ({
   Loading: Player.Loading({ track }),
   Playing: Player.Playing({ track, at: 30, length }),

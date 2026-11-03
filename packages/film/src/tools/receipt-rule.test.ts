@@ -3,11 +3,26 @@ import { Effect, FileSystem, Option, SchemaAST } from 'effect';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { AskRecord, RECEIPT_RULE } from '../core/ask.ts';
 
+/** The repo's root, from this file. */
 const ROOT = `${import.meta.dir}/../../../..`;
 
-const DOCS_STATING_THE_RULE = ['packages/film/README.md', 'docs/lessons.md'];
+/** Each place that states the rule, from the root. */
+const PLACES = [
+  'packages/film/src/tools/ask-store.ts',
+  'packages/film/src/core/api.ts',
+  'packages/film/README.md',
+  'docs/lessons.md',
+  'apps/firsttheblade/kit/approval.ts',
+];
 
-const prose = (text: string) => text.replace(/\s+/g, ' ').toLowerCase();
+/** `text` read as prose: a comment's markers and every run of space dropped to one, in lower case. */
+const prose = (text: string) =>
+  text
+    .split('\n')
+    .map((line) => line.replace(/^\s*(\/\/|\/\*\*|\*\/|\*)?\s?/, ''))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
 
 const read = (place: string) =>
   Effect.flatMap(FileSystem.FileSystem, (fs) => fs.readFileString(`${ROOT}/${place}`));
@@ -29,7 +44,7 @@ describe('the receipt rule', () => {
 
   it.effect('is stated word for word in each doc that states it', () =>
     Effect.gen(function* () {
-      const missing = yield* Effect.filter(DOCS_STATING_THE_RULE, (place) =>
+      const missing = yield* Effect.filter(PLACES, (place) =>
         Effect.map(read(place), (text) => !prose(text).includes(prose(RECEIPT_RULE))),
       );
       expect(missing).toEqual([]);

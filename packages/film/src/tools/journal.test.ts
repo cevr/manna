@@ -15,6 +15,7 @@ import {
 
 const film = 'f' as FilmName;
 
+/** A films folder in a temp directory with film `f`, and its folder. */
 const filmsHere = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -29,6 +30,14 @@ const withFolder = <A, E, R>(films: string, effect: Effect.Effect<A, E, R>) =>
 
 const entry = (at: string, scene: string, text: string): JournalEntry => ({ at, scene, text });
 
+/**
+ * The disk as `fs`, but the first note to make `file` held at the moment it
+ * has made it, until the test releases it (`release`); `made` is done then.
+ * Made by an exclusive open, as the operating system does it: the file is
+ * there, empty, before the writing that follows lands at its start, so a
+ * note appending in between is written over. Made by a link, the file is
+ * there whole, and the hold changes nothing.
+ */
 const holdingMaker = (
   fs: FileSystem.FileSystem,
   file: string,

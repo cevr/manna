@@ -1,3 +1,8 @@
+/**
+ * The brand the owner picked (2026-10-24): Moonlit wheat, lockup D in small
+ * capitals with the bare wheat, the series marks in fine lines, and no cut
+ * paper on the site or in the kit, read from the sources.
+ */
 import { BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Path } from 'effect';
@@ -20,6 +25,7 @@ const exists = (file: string) =>
     return yield* fs.exists(path.join(import.meta.dir, file));
   });
 
+/** OKLCH of a `#rrggbb`. */
 const oklch = (hex: string) => {
   const lin = (c: number) => {
     if (c <= 0.04045) return c / 12.92;
@@ -38,7 +44,9 @@ const apart = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs
 
 const WHEAT = '#ffefae';
 const NIGHT = '#12354e';
+/** Below this chroma a colour reads as grey, so its hue says nothing. */
 const GREY = 0.035;
+/** How far a role's hue may move from the wheat's or the night's. */
 const HUE = 15;
 
 const EMBLEMS = ['path', 'land', 'taught', 'remedies'] as const;

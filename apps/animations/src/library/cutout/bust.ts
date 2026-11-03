@@ -4,8 +4,15 @@ import { CUT_AWAY, KEEP_REST } from './prompts.ts';
 import { FAR, type Pt, box } from './rules.ts';
 import type { Rooted } from './skeleton.ts';
 
+/** The rules a part takes its pixels by. */
 type Take = PartCut['parts'][number]['take'];
 
+/**
+ * A bust's skeleton in view pixels: the lean rises from the view's foot
+ * (`foot`, the view's height) straight below the head's pivot (`pivot`, the
+ * foot of his beard) up to it, and the head turns on the head bone above it.
+ * His head part lies on the head bone, his torso on the lean.
+ */
 export const bustSkeleton = (pivot: Pt, foot: number): Rooted => ({
   bones: [
     { name: 'lean', pivot: [pivot[0], foot], tip: pivot },
@@ -15,12 +22,17 @@ export const bustSkeleton = (pivot: Pt, foot: number): Rooted => ({
   root: [pivot[0], foot],
 });
 
+/** A view's bust, in view pixels. */
 export interface Bust {
+  /** The head's lower edge, from one side of the view to the other: the head is the box above it. */
   readonly line: readonly Pt[];
+  /** Where the head turns. */
   readonly pivot: Pt;
+  /** Pixels in the view's box that another view on the sheet draws: a still first part, so that the cutter leaves no figure pixel in no part. */
   readonly neighbour?: Take;
 }
 
+/** A bust's cut: its still `neighbour` first when it has one, then his head above the line, turning at the pivot, then the rest of him as the torso. */
 export const bustCut = ({ line, pivot, neighbour }: Bust): PartCut => ({
   parts: [
     ...Option.match(Option.fromUndefinedOr(neighbour), {
@@ -32,11 +44,21 @@ export const bustCut = ({ line, pivot, neighbour }: Bust): PartCut => ({
   ],
 });
 
+/** A member's words for what lies behind his head. */
 export interface BehindHead {
+  /** What his head holds, as the prompt names what was cut away. */
   readonly head: string;
+  /** What follows "as what lies behind his head", from its punctuation on: his neck, and what else his head covered. */
   readonly behind: string;
 }
 
+/**
+ * Each view's hidden entry, given how he is turned in it (`turns`, a sentence
+ * with its leading space): only his head moves, so his torso and any
+ * neighbour stay and nothing is repainted under them, and okra repaints what
+ * lies behind his head in the member's words, the same in every view but for
+ * his turn.
+ */
 export const bustHidden = <V extends string>(
   { head, behind }: BehindHead,
   turns: Readonly<Record<V, string>>,

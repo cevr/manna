@@ -5,6 +5,7 @@ import { asset, openTab, respond, scriptOf, servePaths } from './browsers.ts';
 import { bundled } from './bundles.ts';
 import { jsonOf } from './tab.ts';
 
+/** The render page with its script. */
 const renderScript = Effect.runSync(
   Effect.cached(
     Effect.map(bundled('render-page.ts'), (js) =>
@@ -13,14 +14,17 @@ const renderScript = Effect.runSync(
   ),
 );
 
+/** A render page open on a film: each call of its export handle. */
 interface RenderPage {
   readonly call: <K extends ExportCall>(
     name: K,
     ...args: CallArgs[K]
   ) => Effect.Effect<WireAnswers[K]>;
+  /** What the page threw, and every warning and error it logged. */
   readonly errors: ReadonlyArray<string>;
 }
 
+/** A served file's type, by its extension: JSON (the footage library's lock and transcripts), else video. */
 const typeOf = (path: string): string =>
   Option.match(
     Option.liftPredicate(path, (p) => p.endsWith('.json')),
@@ -30,6 +34,11 @@ const typeOf = (path: string): string =>
     },
   );
 
+/**
+ * The render page open on `film` (`?film=<film>&export`), with `files`
+ * answered at their paths (a footage source's copies, the footage library's
+ * lock and transcripts) and anything else a 404, once its handle is up.
+ */
 export const openRender = (
   film: string,
   files: Readonly<Record<string, Uint8Array | string>> = {},

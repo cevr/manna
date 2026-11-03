@@ -9,10 +9,15 @@ import { PageBundler } from './lab-page.ts';
 import { boardFile, isBoardUrl, isNarrationUrl, narrationFile } from './narration-route.ts';
 import { CACHE, urlPath } from './review-file.ts';
 
+/** The module a film declares its looks in (`export const looks`), in its folder. */
 export const PALETTE_FILE = 'palette.ts';
 
 type Wedged = Result.Result<string, LookLevelUnknown | SourceRefused>;
 
+/**
+ * `source` (the palette at `file`) as a pick of each of `levels` would write
+ * it, each look and level checked against the ones it declares.
+ */
 const wedgedPalette = (
   file: string,
   source: string,
@@ -43,6 +48,12 @@ const wedgedPalette = (
     ),
   );
 
+/**
+ * The files a wedge at `levels` reads as other text than they hold, by their
+ * real path (the bundler names a file so): the film's palette (`file`, its
+ * `PALETTE_FILE`) as the picks would write it, read through `fs`. None for no
+ * levels; the file itself is only read.
+ */
 export const paletteSwaps = Effect.fn('wedge.paletteSwaps')(function* (
   fs: FileSystem.FileSystem,
   file: string,
@@ -62,6 +73,7 @@ export const paletteSwaps = Effect.fn('wedge.paletteSwaps')(function* (
   return new Map([[real, text]]);
 });
 
+/** A narration or board file's media type, by its extension. */
 const MEDIA = new Map([
   ['.flac', 'audio/flac'],
   ['.wav', 'audio/wav'],
@@ -75,11 +87,20 @@ const MEDIA = new Map([
 
 const NOT_FOUND = HttpServerResponse.text('not found', { status: 404 });
 
+/** The built file a request's path asks for: the root is the page itself, `html`. */
 const builtPath = (pathname: string, html: string): string => {
   if (pathname === '/') return `/${html}`;
   return pathname;
 };
 
+/**
+ * The render page `page` (the app's HTML entry, `LabPageSpec.pages.render`)
+ * built with each file of `swaps` read as its text there, and served with
+ * the films' narration (`films`) on loopback until the scope closes: the
+ * server's root URL, which the renderer opens as it opens the PreviewServer's
+ * (`/?film=<name>&export`). A build that fails, or that reads none of
+ * `swaps`, is `PagesBroken`.
+ */
 const serveWedge = Effect.fn('wedge.serve')(function* (
   page: string,
   films: string,
@@ -136,6 +157,11 @@ const serveWedge = Effect.fn('wedge.serve')(function* (
   return url;
 });
 
+/**
+ * The server a render draws on for `swaps`: a wedge's (`serveWedge`), held
+ * for the scope, or none for no swaps, so the PreviewServer draws the
+ * sources as written.
+ */
 export const wedgeServer = (page: string, films: string, swaps: ReadonlyMap<string, string>) => {
   if (swaps.size === 0) return Effect.succeedNone;
   return Effect.asSome(serveWedge(page, films, swaps));

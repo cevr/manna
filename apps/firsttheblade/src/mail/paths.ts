@@ -1,25 +1,41 @@
+/** The routes the Worker answers before it looks for a file. */
 export const MAIL_ROUTES = {
+  /** POST: the sign-up form. */
   subscribe: '/subscribe',
+  /** GET: the confirm page for the token in the confirm letter's link; POST: confirm (the page's button). */
   confirm: '/subscribe/confirm',
+  /** GET: the leave page for a token; POST: leave (the page's button, or a mail app's one click). */
   unsubscribe: '/unsubscribe',
+  /** POST, with the admin token: send a film to the list (`bun run mail:send`). */
   send: '/mail/send',
 } as const;
 
+/** The pages the routes answer with, each written by the prerender. */
 export const MAIL_PAGES = {
+  /** After a sign-up, whoever signed up. */
   check: '/subscribe/check',
+  /** The one-button page; served only at the confirm route, with its token. */
   confirm: '/subscribe/confirm',
   confirmed: '/subscribe/confirmed',
+  /** A confirm link that ran out or was replaced. */
   expired: '/subscribe/expired',
+  /** A sign-up whose address is not one. */
   address: '/subscribe/address',
+  /** Too many sign-ups from one place at once. */
   busy: '/subscribe/busy',
+  /** The one-button page; served only at the unsubscribe route, with its token. */
   leave: '/unsubscribe',
   left: '/unsubscribe/done',
+  /** A leave link whose token does not read. */
   badLink: '/unsubscribe/invalid',
 } as const;
 
+/** The sign-up form's fields. */
 export const SIGNUP_FIELDS = {
   email: 'email',
+  /** The honeypot: a field no person sees, which a bot that fills every field fills. */
   honeypot: 'website',
 } as const;
 
+/** The confirm page's form, which the browser's entry (`../client.tsx`) submits as the page opens. */
 export const CONFIRM_FORM_ID = 'confirm';

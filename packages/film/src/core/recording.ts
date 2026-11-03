@@ -11,22 +11,57 @@ import {
   windowPowers,
 } from './audio.ts';
 
+/**
+ * The staging takes' loudness, in dBFS: `speech` is the median of their
+ * speech level (`speechLevel`; −17.10, from −17.90 to −15.67), and `ceiling`
+ * the peak a take may reach (theirs run −0.4 to −3.0, median −1.3).
+ */
 export const TAKE_LEVEL = { speech: -17.1, ceiling: -1 } as const;
 
+/**
+ * The silence the staging takes keep, in seconds: before the first 10 ms
+ * that reaches the gate (median 0.07) and after the last (median 0.00:
+ * ElevenLabs ends a take on its last sound).
+ */
 export const TAKE_PAD = { lead: 0.07, tail: 0 } as const;
 
+/** Sound is measured this many seconds at a time. */
 const TAKE_WINDOW_S = 0.01;
 
+/**
+ * A window is speech when it is within this many dB of the take's loudest.
+ * The staging takes' loudest window is about −9.5 dBFS, so this is the −50
+ * dBFS gate their padding was measured at.
+ */
 const TAKE_GATE_DB_UNDER_LOUDEST = 40;
 
+/**
+ * A recording whose loudest speech is under this, in dBFS, holds none:
+ * a quiet room reads −70 or lower, a voice at a normal distance −30 or higher.
+ */
 const TAKE_FLOOR_DBFS = -60;
 
+/**
+ * Sound over the gate is speech when it lasts this long, in seconds, counting
+ * any gaps under `TAKE_HOLD` inside it: a click, a tap or a lip smack is
+ * shorter, and is trimmed with the silence around it.
+ */
 const TAKE_MIN_SPEECH_S = 0.1;
 
+/** Speech goes on across a gap under this, in seconds: a stop inside a word, or a breath between two. */
 const TAKE_HOLD_S = 0.25;
 
+/** A take fades in and out over this long, in seconds, so neither trim clicks. */
 const TAKE_FADE_S = 0.005;
 
+/**
+ * How loud the speech in `pcm` is, in dBFS, with pauses left out: the mean
+ * power of its `TAKE_WINDOW` windows over −70 dBFS and within 10 dB of those
+ * windows' mean, gated in two stages as ITU-R BS.1770-4 gates loudness (on
+ * 10 ms windows, not its 400 ms blocks, so a pause's edges touch one window
+ * each; no K-weighting). A pause is under the gate, so pausing longer never
+ * makes a take louder or quieter. −Infinity when nothing passes.
+ */
 export const speechLevel = (pcm: Pcm): number => {
   const window = Math.max(1, Math.round(TAKE_WINDOW_S * pcm.rate));
   const powers = [...windowPowers(toMono(pcm), window)].map((db) => 10 ** (db / 10));
@@ -40,11 +75,16 @@ export const speechLevel = (pcm: Pcm): number => {
   return db(meanOf(gated));
 };
 
+/** A run of windows, `[from, to)`. */
 interface Run {
   readonly from: number;
   readonly to: number;
 }
 
+/**
+ * The runs of windows at or over `gate` that are speech: joined across gaps
+ * under `hold` windows, and kept when `min` windows long or longer.
+ */
 const speechRuns = (
   level: ReadonlyArray<number>,
   gate: number,
@@ -61,6 +101,12 @@ const speechRuns = (
   return runs.filter((r) => r.to - r.from >= min);
 };
 
+/**
+ * Where the speech in a mono recording starts and ends, in frames: the first
+ * and last run of sound within `TAKE_GATE` of its loudest speech that lasts
+ * (a click or tap outside it is not speech). None when no speech in it
+ * reaches `TAKE_FLOOR`.
+ */
 const speechBounds = (
   mono: Pcm,
 ): Option.Option<{ readonly onset: number; readonly end: number }> => {
@@ -79,8 +125,20 @@ const speechBounds = (
   }));
 };
 
+/**
+ * Silence after a staging take's last speech, in seconds, that is left as
+ * ElevenLabs sent it: more is trimmed (`trimTail`).
+ */
 export const TAKE_TAIL_SLACK = 0.1;
 
+/**
+ * A staging take with the silence after its last speech trimmed to
+ * `TAKE_PAD.tail`, as `prepareTake` trims a recording's, faded over
+ * `TAKE_FADE`: a take that trails seconds of silence would hold its scene
+ * and the next voice back by them. Its lead and level are ElevenLabs' own,
+ * kept. None when it ends within `TAKE_TAIL_SLACK` of its speech, or holds
+ * none: the take is kept as it was sent.
+ */
 export const trimTail = (take: Pcm): Option.Option<Pcm> =>
   Option.flatMap(speechBounds(toMono(take)), ({ end }) => {
     const to = Math.min(take.frames, end + Math.round(TAKE_PAD.tail * take.rate));
@@ -88,6 +146,13 @@ export const trimTail = (take: Pcm): Option.Option<Pcm> =>
     return Option.some(fadeEdges(slice(take, 0, to), TAKE_FADE_S));
   });
 
+/**
+ * A take with each gap edit made (`core/delivery.ts` `holdsIn`): silence put
+ * in at the edit's second, or that much taken out around it, each side of a
+ * cut faded over `TAKE_FADE` so no click is left. The edits come latest
+ * first, so each second is where the take still has it. None when there is
+ * nothing to edit.
+ */
 export const withGaps = (
   take: Pcm,
   edits: ReadonlyArray<{ readonly at: number; readonly by: number }>,
@@ -96,6 +161,7 @@ export const withGaps = (
   return Option.some(edits.reduce(withGap, take));
 };
 
+/** `pcm` with frames `[from, to)` replaced by `put` frames of silence, each side faded. */
 const spliced = (pcm: Pcm, from: number, to: number, put: number): Pcm =>
   concat(pcm.rate, pcm.channels.length, [
     fadeEdges(slice(pcm, 0, from), TAKE_FADE_S),
@@ -103,6 +169,7 @@ const spliced = (pcm: Pcm, from: number, to: number, put: number): Pcm =>
     fadeEdges(slice(pcm, to, pcm.frames - to), TAKE_FADE_S),
   ]);
 
+/** One gap edit made: silence put in at its second, or its length cut out around it. */
 const withGap = (pcm: Pcm, edit: { readonly at: number; readonly by: number }): Pcm => {
   const at = Math.min(pcm.frames, Math.max(0, Math.round(edit.at * pcm.rate)));
   const by = Math.round(Math.abs(edit.by) * pcm.rate);
@@ -111,6 +178,15 @@ const withGap = (pcm: Pcm, edit: { readonly at: number; readonly by: number }): 
   return spliced(pcm, from, Math.min(pcm.frames, from + by), 0);
 };
 
+/**
+ * The recording as a take: one channel at its own rate, from `TAKE_PAD.lead`
+ * before the first speech to `TAKE_PAD.tail` after the last (a click or tap
+ * outside the speech trimmed with the silence), faded over `TAKE_FADE` at
+ * both ends, and made louder or quieter by one gain: to `TAKE_LEVEL.speech`,
+ * or less when that would take its peak past `TAKE_LEVEL.ceiling`. Nothing
+ * limits or compresses it, so the voice keeps its own dynamics. None when no
+ * speech in it reaches `TAKE_FLOOR`.
+ */
 export const prepareTake = (recording: Pcm): Option.Option<Pcm> => {
   const mono = toMono(recording);
   const bounds = speechBounds(mono);
@@ -131,6 +207,12 @@ export const prepareTake = (recording: Pcm): Option.Option<Pcm> => {
   return Option.some(gain(trimmed, takeLift(trimmed)));
 };
 
+/**
+ * The one gain, in dB, that puts a take's speech at `TAKE_LEVEL.speech`, or
+ * less when that would take its peak past `TAKE_LEVEL.ceiling`: how a
+ * recording is levelled on import, and a staging take in the mix. 0 for a
+ * take with no speech.
+ */
 export const takeLift = (take: Pcm): number => {
   const lift = Math.min(
     TAKE_LEVEL.speech - speechLevel(take),

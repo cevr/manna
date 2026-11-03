@@ -1,13 +1,54 @@
+/**
+ * What the page can prove of the device from its status reads and the acts
+ * between them.
+ *
+ * A read is the device's state at one unknown instant inside
+ * `[asked, answered]`. Every move of the place that sound did not make
+ * comes from an act (a page command, a lock-screen press, a play from a
+ * place), and the page knows each act before it handles any read that shows
+ * it: One applies a lock-screen press and calls its listeners in one
+ * main-thread task, its status reads resolve in later ones, and Nitro sends
+ * both to JS through one queue. So a pair of reads with no act between them
+ * proves:
+ *
+ * - silence, when the place stayed within 2 ms and both say `loading` or
+ *   `playing`: the device made no sound over `[answered_a, asked_b]`,
+ *   whatever the gap;
+ * - sound, when the place moved on more than 2 ms and the second says
+ *   `playing`;
+ * - nothing otherwise, though a place that moved on more than 2 ms shows
+ *   the device sounded at some instant between them.
+ *
+ * A read asked before the latest act is stale, and so is one asked before
+ * an answer that said `ended`: it may show the device before its end. One
+ * asked before the answer that landed the act may show the device before the
+ * landing: it closes no pair, though ahead of the answer by the sound since, it starts the
+ * next one; its `ended` still lands. An act that moves the device to a
+ * place is pending until it lands, and a read's place never lands it:
+ * One answers the page's seek only at the seek's completion (iOS
+ * `HybridOneAudio.swift:198-207`, Android `HybridOneAudio.kt:293-304`, the
+ * web's `seeked`), so the act lands at the answer of the page's seek, or of
+ * the play (past 0, the answer of the adapter's seek), when the answer's
+ * place lies in `[target - 2 ms, target + 2 ms + (answered - known)]`, the
+ * target clamped to the answer's length. A read
+ * or an answer that says `ended` lands every act. No sound pair is taken
+ * while an act is pending; two reads at one place still prove silence then,
+ * since a landing would have moved the place. No length of a gap and no
+ * count of reads proves anything.
+ */
+
 import { Match, Option } from 'effect';
 
 import type { Status } from './player';
 
+/** One status read: asked at `asked`, answered at `answered`, in ms. */
 export interface Read {
   readonly asked: number;
   readonly answered: number;
   readonly status: Status;
 }
 
+/** An act's place that has not landed; `after`, the latest read since it, which a silence pair may start from. */
 interface Pending {
   readonly target: number;
   readonly known: number;
@@ -15,32 +56,60 @@ interface Pending {
 }
 
 export interface Proof {
+  /** When the page learnt of the latest act. */
   readonly known: number;
+  /** When the page had the answer that landed the latest act: a read asked before pairs with nothing. */
   readonly landed: number;
+  /** When the page had an answer that said `ended` since the latest act: a read asked before is stale. */
   readonly endedAt: number;
   readonly pending: Option.Option<Pending>;
+  /**
+   * An act an `ended` read landed before the device could have reached the end from its place:
+   * a later `ended` read as soon after it keeps its place too.
+   */
   readonly short: Option.Option<Pending>;
+  /** The read the next read pairs with. */
   readonly last: Option.Option<Read>;
+  /** The `answered` of the first read of the silence run since the latest act. */
   readonly quietFrom: Option.Option<number>;
+  /** Whether this load (the latest `play`) has sounded. */
   readonly sounded: boolean;
+  /** The sound the latest sound pair of this load proved. */
   readonly heard: Option.Option<Heard>;
+  /** The reader's place, in ms: where a read with no act pending last saw the device once this load sounded, or the latest seek since. */
   readonly place: Option.Option<number>;
 }
 
+/**
+ * The sound a pair proved: `at`, an instant the device sounded at or after (the pair's first
+ * ask plus the sound the place moved by), the place it left the device at, and whether an act
+ * came since the pair.
+ */
 interface Heard {
   readonly at: number;
+  /** The place the pair ended at, in ms. */
   readonly place: number;
   readonly acted: boolean;
+  /**
+   * Whether the device showed no sound since the pair and before the latest act landed: a
+   * silence run, or a read not playing at the place the sound left it (`stopped`).
+   */
   readonly quiet: boolean;
 }
 
+/**
+ * What a read proved: stale, its act still pending (`ahead` when its place moved on from the
+ * read before it since the act: the device sounded or landed), or the pair it closed.
+ */
 export type Seen = 'stale' | 'pending' | 'ahead' | 'opened' | 'silence' | 'sound' | 'nothing';
 
+/** The proof after a read, and what the read proved. */
 export interface Proved {
   readonly proof: Proof;
   readonly seen: Seen;
 }
 
+/** Before any load. */
 export const none: Proof = {
   known: Number.NEGATIVE_INFINITY,
   landed: Number.NEGATIVE_INFINITY,
@@ -54,8 +123,14 @@ export const none: Proof = {
   place: Option.none(),
 };
 
+/** The slack a place keeps: One rounds a seek to 1/600 s, and Android's to whole ms. */
 const slack = 2;
 
+/**
+ * An act known at `now`. One that moves the device to `target` (ms) is
+ * pending until its answer lands it, and becomes the reader's place; one
+ * with no place leaves an earlier act pending. No pair spans an act.
+ */
 export const acted = (proof: Proof, now: number, target: Option.Option<number>): Proof => ({
   ...proof,
   known: now,
@@ -74,12 +149,18 @@ export const acted = (proof: Proof, now: number, target: Option.Option<number>):
   place: Option.orElse(target, () => proof.place),
 });
 
+/**
+ * The device already stands at `place` by an act the page follows, known at
+ * `now` (a lock-screen play that took an ended recording back to its start):
+ * nothing is pending, and no pair spans the act.
+ */
 export const followed = (proof: Proof, now: number, place: number): Proof => ({
   ...acted(proof, now, Option.none()),
   pending: Option.none(),
   place: Option.some(place),
 });
 
+/** A load (a `play`) from `from` ms, known at `now`: nothing has sounded; the reader's place is `from` past 0. */
 export const loaded = (now: number, from: number): Proof => ({
   ...acted(none, now, Option.some(from)),
   place: Option.liftPredicate(from, (at) => at > 0),
@@ -87,6 +168,7 @@ export const loaded = (now: number, from: number): Proof => ({
 
 const moving = (state: Status['state']) => state === 'loading' || state === 'playing';
 
+/** What the pair `a`, `b` proves. */
 export const pairOf = (a: Read, b: Read): 'silence' | 'sound' | 'nothing' => {
   const moved = b.status.positionMs - a.status.positionMs;
   if (Math.abs(moved) <= slack && moving(a.status.state) && moving(b.status.state))
@@ -95,11 +177,16 @@ export const pairOf = (a: Read, b: Read): 'silence' | 'sound' | 'nothing' => {
   return 'nothing';
 };
 
+/**
+ * The sound a pair `a`, `b` proved: an instant the device sounded at or after (`a`'s ask plus the
+ * sound), and the place it ended at.
+ */
 const heardOf = (a: Read, b: Read) => ({
   at: a.asked + b.status.positionMs - a.status.positionMs,
   place: b.status.positionMs,
 });
 
+/** The pair `last`, `read` closed, and the proof after it. */
 const paired = (proof: Proof, read: Read): Proved =>
   Option.match(proof.last, {
     onNone: () => ({ proof: { ...proof, last: Option.some(read) }, seen: 'opened' }),
@@ -137,6 +224,7 @@ const paired = (proof: Proof, read: Read): Proved =>
     },
   });
 
+/** An end lands every act, and leaves no place to go back to: a play after it is from 0:00 (P8). */
 const ended = (proof: Proof): Proof => ({
   ...proof,
   pending: Option.none(),
@@ -146,6 +234,10 @@ const ended = (proof: Proof): Proof => ({
   place: Option.none(),
 });
 
+/**
+ * A read with no act pending shows where the device is: once this load has
+ * sounded, that is the reader's place, as across an act that moved nothing.
+ */
 const placed = (after: Proved, read: Read): Proved => {
   const letGo =
     read.status.state === 'idle' || (read.status.state === 'failed' && read.status.positionMs <= 0);
@@ -159,11 +251,22 @@ const placed = (after: Proved, read: Read): Proved => {
   return { ...after, proof: { ...after.proof, place: Option.some(read.status.positionMs) } };
 };
 
+/**
+ * Whether an `ended` read shows the device before `pending` landed: a seek's completion clears
+ * an end (iOS `HybridOneAudio.swift:204`, Android `HybridOneAudio.kt:302`), and from a target
+ * short of the end the device reaches it no faster than time passes. The end still lands the
+ * act, but the act's place stays the reader's (P7). A device that has not yet given its length
+ * stands at its end when it says `ended`: the read's place is the end then.
+ */
 const beforeLanding = (pending: Pending, read: Read) => {
   const length = read.status.durationMs ?? read.status.positionMs;
   return length - pending.target > read.answered - pending.known + slack;
 };
 
+/**
+ * The proof after `read`, and what it proved. `landable`: whether the device is still asked the
+ * latest act's place, so the act may still land after an `ended` read.
+ */
 export const readOf = (proof: Proof, read: Read, landable: boolean): Proved => {
   const after = proved(proof, read, landable);
   if (after.seen === 'stale' || !stopped(proof, read)) return after;
@@ -176,6 +279,11 @@ export const readOf = (proof: Proof, read: Read, landable: boolean): Proved => {
   };
 };
 
+/**
+ * Whether `read` shows the device stopped before the latest act landed: not playing, with no
+ * act since its sound, or asked before the landing at the place the sound left it and not at the
+ * act's. A read while the act is pending may show the landing, so it tells nothing.
+ */
 const stopped = (proof: Proof, read: Read) =>
   read.status.state !== 'playing' &&
   read.status.state !== 'ended' &&
@@ -192,10 +300,12 @@ const stopped = (proof: Proof, read: Read) =>
     onSome: () => false,
   });
 
+/** Whether `read` shows the device at `place` or past it by no more than sound since `since`. */
 const near = (read: Read, place: number, since: number) =>
   read.status.positionMs >= place - slack &&
   read.status.positionMs <= place + slack + (read.answered - since);
 
+/** The proof after `read`, before what `stopped` adds. */
 const proved = (proof: Proof, read: Read, landable: boolean): Proved => {
   if (read.asked < proof.known) return { proof, seen: 'stale' };
   if (read.status.state === 'ended') {
@@ -266,11 +376,23 @@ const proved = (proof: Proof, read: Read, landable: boolean): Proved => {
   });
 };
 
+/** The proof after a seek's answer, and whether the answer landed the act. */
 interface Answered {
   readonly proof: Proof;
   readonly landed: boolean;
 }
 
+/**
+ * The proof after the device answered the page's seek to `target` ms (or a
+ * play's seek) with `answer`, and whether the act landed. It lands when the
+ * act is still the pending one, known by the ask, and the answer's place
+ * lies in the window, or when an answer asked since the latest act says
+ * `ended`. An answer may come after later commands: an act known after its
+ * ask is not the one it answers. A landing is the device's answer to the
+ * reader's act, so it breaks the silence run and starts the wait again (P4),
+ * also onto the place the device already stood at. The answer opens the next pair only if it was asked since the latest act:
+ * its status is the device's after the landing, never a sound pair's end.
+ */
 export const answered = (proof: Proof, answer: Read, target: number): Answered => {
   const fresh = answer.asked >= proof.known;
   if (answer.status.state === 'ended' && fresh)
@@ -302,9 +424,11 @@ export const answered = (proof: Proof, answer: Read, target: number): Answered =
   };
 };
 
+/** How long silence has been proved, as of `read`: from the run's first read to `read`'s ask. */
 export const silentFor = (proof: Proof, read: Read) =>
   Option.match(proof.quietFrom, { onNone: () => 0, onSome: (from) => read.asked - from });
 
+/** A replacement keeps a pending seek, else the furthest proved or valid current place. */
 export const replacementAt = (proof: Proof, status: Option.Option<Status>): number => {
   if (Option.isSome(proof.pending)) return proof.pending.value.target;
   let at = Option.getOrElse(proof.place, () => 0);

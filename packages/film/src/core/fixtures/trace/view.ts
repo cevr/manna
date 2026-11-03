@@ -1,10 +1,13 @@
 import type { Raster } from '../../raster.ts';
 import type { traceView } from '../../trace.ts';
 
+/** A view as the tracer reads it. */
 export type TraceView = Parameters<typeof traceView>[1];
 
+/** The least gap between two of an outline's points: a third of RIVE.md's 8 px step, so no spike from a fine step. */
 export const LEAST_GAP = 8 / 3;
 
+/** A sheet 120 × 220 on white: a round skin head inked round, over a cream body inked round, its lower half a teal shade. */
 export const sheet = (): Raster => {
   const [width, height] = [120, 220];
   const rgba = new Uint8Array(width * height * 4).fill(255);
@@ -14,6 +17,7 @@ export const sheet = (): Raster => {
     rgba[i + 1] = g;
     rgba[i + 2] = b;
   };
+  /** Every pixel `inside` takes painted `colour`, later layers over earlier. */
   const layer = (
     colour: readonly [number, number, number],
     inside: (x: number, y: number) => boolean,
@@ -41,6 +45,7 @@ export const VIEW: TraceView = {
   },
 };
 
+/** The box round `pts`. */
 export const boxOf = (
   pts: ReadonlyArray<readonly [number, number]>,
 ): readonly [number, number, number, number] => [

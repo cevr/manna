@@ -20,6 +20,7 @@ interface DialogPopupState {
 
 interface DialogPopupProps extends BaseUIComponentProps<'div', DialogPopupState> {}
 
+/** Stops the composite navigation keys from reaching a widget around the popup. */
 function stopCompositeKeys(event: KeyboardEvent) {
   if (COMPOSITE_KEYS.has(event.key)) {
     event.stopPropagation();
@@ -31,6 +32,7 @@ interface DialogPopupFocusProps {
   children: JSX.Element;
 }
 
+/** The focus manager the popup renders in. */
 function DialogPopupFocus(props: DialogPopupFocusProps): JSX.Element {
   const store = props.store;
   return (
@@ -47,6 +49,7 @@ function DialogPopupFocus(props: DialogPopupFocusProps): JSX.Element {
   );
 }
 
+/** The popup's element props: its id, labels, role and keys. */
 function dialogPopupProps(store: DialogStore, componentProps: Pick<DialogPopupProps, 'id'>) {
   return {
     get id() {
@@ -64,6 +67,7 @@ function dialogPopupProps(store: DialogStore, componentProps: Pick<DialogPopupPr
   };
 }
 
+/** Calls the root's `onOpenChangeComplete(true)` once the popup's enter animations finish. */
 function useDialogOpenChangeComplete(store: DialogStore) {
   useOpenChangeComplete({
     open: store.open,
@@ -76,6 +80,10 @@ function useDialogOpenChangeComplete(store: DialogStore) {
   });
 }
 
+/**
+ * A container for the dialog contents.
+ * Renders a `<div>` element.
+ */
 export function DialogPopup(componentProps: DialogPopupProps): JSX.Element {
   const { store, popupProps } = useDialogRootContext();
   useDialogPortalContext();

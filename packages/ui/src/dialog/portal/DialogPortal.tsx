@@ -10,6 +10,7 @@ import { useDialogRootContext } from '../root/DialogRootContext.ts';
 
 const DialogPortalContext = createContext(false);
 
+/** Throws outside a `Dialog.Portal`: the popup must render inside one. */
 export function useDialogPortalContext(): void {
   if (!useContext(DialogPortalContext)) {
     throw new Error('Base UI: <Dialog.Portal> is missing.');
@@ -18,6 +19,11 @@ export function useDialogPortalContext(): void {
 
 interface DialogPortalProps extends FloatingPortalProps {}
 
+/**
+ * A portal element that moves the popup to a different part of the DOM.
+ * By default, the portal element is appended to `<body>`.
+ * Renders a `<div>` element.
+ */
 export function DialogPortal(props: DialogPortalProps): JSX.Element {
   const { store } = useDialogRootContext();
 

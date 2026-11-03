@@ -5,14 +5,19 @@ import { LabAddress } from '../lab-command.ts';
 import { type LabMcpNeeds, MCP_PATH, labMcp } from '../lab-mcp.ts';
 import { McpEvents } from '../mcp-events.ts';
 
+/** The lab's address on this machine in an MCP test (`localhost`, as `localLink` names a loopback bind): where its local links point. */
 export const MCP_BASE = 'http://localhost:4401/';
 
+/** The lab's address on the owner's phone, in an MCP test. */
 export const MCP_PHONE = 'http://100.64.0.9:8230/';
 
+/** The server a request comes in on: the lab's own bind. */
 export const mcpBound = { hostname: '127.0.0.1', port: 4401 } as const;
 
+/** The lab's handler as a client's request reaches it. */
 export type LabFetch = (request: Request, server: typeof mcpBound) => Promise<Response>;
 
+/** How a test's lab delivers MCP events: a delivery tried twice more at once, a callback verified for 10 minutes. */
 const MCP_EVENTS_PACE: Parameters<typeof McpEvents.at>[0] = {
   retry: Schedule.forever,
   retries: 2,
@@ -20,6 +25,11 @@ const MCP_EVENTS_PACE: Parameters<typeof McpEvents.at>[0] = {
   answerWithin: '10 seconds',
 };
 
+/**
+ * The lab's handler with its MCP beside it, over a feed the test reads
+ * (`look`) when it says, and its event subscriptions (`mcp-events.ts`),
+ * which post to their callbacks by fetch.
+ */
 export const labWithMcp = Effect.gen(function* () {
   const links = { local: MCP_BASE, phone: MCP_PHONE };
   const events = yield* LabEvents.make({ links });
@@ -40,12 +50,14 @@ export const labWithMcp = Effect.gen(function* () {
   return { lab, events };
 });
 
+/** JSON as an MCP request carries it and its answer is read. */
 const McpJson = Schema.fromJsonString(Schema.Json);
 
 const writeMcpJson = Schema.encodeSync(McpJson);
 
 const readMcpJson = Schema.decodeUnknownEffect(McpJson);
 
+/** One JSON-RPC message posted to the lab's MCP, `headers` beside the ones every call sends. */
 export const mcpPost = (
   lab: LabFetch,
   body: Schema.Json,
@@ -66,6 +78,7 @@ export const mcpPost = (
     ),
   );
 
+/** The messages of an answer: JSON, or, the client taking both, server-sent events (any notifications the server queued, then the answer). */
 const answerTexts = (answer: Response, body: string): ReadonlyArray<string> => {
   const streamed = Option.exists(Option.fromNullishOr(answer.headers.get('content-type')), (type) =>
     type.startsWith('text/event-stream'),
@@ -80,6 +93,11 @@ const answerTexts = (answer: Response, body: string): ReadonlyArray<string> => {
   });
 };
 
+/**
+ * A JSON-RPC client of the lab's MCP: a session started (the test dies when
+ * the lab answers the handshake otherwise, or names no session), then each
+ * call's result, and each tool's structured answer or its refusal's words.
+ */
 export const mcpSession = Effect.fn('mcpSession')(function* (lab: LabFetch) {
   const started = yield* mcpPost(lab, {
     jsonrpc: '2.0',
@@ -118,6 +136,7 @@ export const mcpSession = Effect.fn('mcpSession')(function* (lab: LabFetch) {
       content: [{ type: 'text', text: writeMcpJson(said?.error) }],
     }));
   });
+  /** A tool's structured answer, or its refusal's words. */
   const tool = (name: string, args: Schema.Json = {}) =>
     Effect.map(call('tools/call', { name, arguments: args }), (result) =>
       Bool.match(result.isError === true, {

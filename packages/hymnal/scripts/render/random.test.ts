@@ -3,6 +3,7 @@ import { describe, expect, it } from 'effect-bun-test';
 
 import { pythonRandom } from './random.js';
 
+/** `n` draws of `randint(a, b)` from one generator. */
 const draws = (seed: string, n: number, a: number, b: number) => {
   const { randint } = pythonRandom(seed);
   return Array.from({ length: n }, () => randint(a, b));

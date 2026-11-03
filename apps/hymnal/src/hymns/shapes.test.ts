@@ -1,3 +1,11 @@
+/**
+ * The fingerings a guitarist knows by name: the open chords, the F barre at
+ * the first fret, the Bm barre at the second, and C7 with its fingers. Each
+ * is written as a chart writes it: the frets from the low E ("x32010") and
+ * the fingers ("-32-1-", `-` for none), with the barre and the box's first
+ * fret.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import * as Chord from '@manna/hymnal/chord';
 import { Match, Option } from 'effect';
@@ -7,6 +15,7 @@ import { type Barre, describe as words, type Fingering, fingeringOf, type Play }
 
 const C_MAJOR: Chord.Key = { tonic: 'C', minor: false };
 
+/** A chord named in C major: its root's name and its quality. */
 const named = (root: string, quality: Chord.Quality): Chord.Chord => ({
   root: Chord.pitchClass(root),
   quality,
@@ -27,6 +36,7 @@ const fingerOf = (play: Play) => {
   return '-';
 };
 
+/** A fingering as a chart writes it. */
 const chart = (fingering: Fingering) => ({
   frets: fingering.strings.map(fretOf).join(''),
   fingers: fingering.strings.map(fingerOf).join(''),

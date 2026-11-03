@@ -1,3 +1,16 @@
+/** §10 Milestone 8's core tests, minus the two that have their own files.
+ *
+ *  - strong-BM25 short-circuit skips the vector leg on a confident lexical top hit
+ *  - absent index yields lexical-only results carrying `VectorIndexUnavailable`
+ *  - a model-fingerprint mismatch invalidates the vector leg rather than
+ *    returning wrong neighbors
+ *  - the ranking is writings rows and nothing else
+ *
+ *  Every one of them fails without the code it names: the fixture's FTS ranks
+ *  put the short-circuit query in the strong regime and everything else in the
+ *  weak one, so removing the short-circuit changes an assertion here rather than
+ *  changing nothing. */
+
 import { describe, expect, it, test } from 'effect-bun-test';
 import { Effect, Layer, Match, Option } from 'effect';
 
@@ -28,6 +41,9 @@ import {
   STRONG_SIGNAL_MIN_SCORE,
 } from './service.js';
 
+/** An embedder that always answers, under whichever fingerprint it is given.
+ *  The fingerprint is a parameter because the mismatch test's whole premise is
+ *  an adapter and an index that disagree. */
 const embedderLayer = (fingerprint: string): Layer.Layer<QueryEmbedder> =>
   Layer.succeed(
     QueryEmbedder,
@@ -57,6 +73,7 @@ const search = (
     ),
   ).pipe(Effect.provide(layer));
 
+/** The same call for an already-built {@link SearchQuery}, as the golden set holds. */
 const queryWith = (query: SearchQuery, layer: Layer.Layer<SearchService>) =>
   Effect.flatMap(SearchService, (service) => service.query(query)).pipe(Effect.provide(layer));
 
@@ -114,6 +131,17 @@ describe('§9.3 the strong-BM25 short-circuit', () => {
     expect(isStrongLexicalHit([])).toBe(false);
   });
 
+  /** The selectivity gate, asserted against the counts actually measured on the
+   *  deployed corpus rather than round numbers. `ORDER BY rank` scores every
+   *  match, so its cost is linear in these figures — `the` cost 2,129 ms and
+   *  `sabbath` 82 ms — and the threshold is where a term stops discriminating
+   *  at all: the top hit for `the` is a paragraph repeating the word, scored
+   *  `-0.000`.
+   *
+   *  The boundary is asserted from both sides because the two nearest real
+   *  terms sit close to it: `is` at 775,189 is gated and `god` at 570,900 is
+   *  not, and `god` is a legitimate one-word search in this corpus. A change
+   *  that gated it would trade a working query for a latency number. */
   test('gates only terms that match too much of the corpus to rank', () => {
     expect(isNonSelective(1_621_088)).toBe(true);
     expect(isNonSelective(940_692)).toBe(true);
@@ -147,6 +175,10 @@ describe('§9.3 the strong-BM25 short-circuit', () => {
     }),
   );
 
+  /** Round-2 B6: the result reports what the scan considered, not the size of
+   *  the index. The fixture's `DA` range holds 3 of its 7 vectors, so a
+   *  book-narrowed query separates the two numbers and an implementation
+   *  reporting `index.count` fails this assertion. */
   it.effect('reports the narrowed scan’s own count for a book-scoped query', () =>
     Effect.gen(function* () {
       const daVectors = GOLDEN_VECTOR_IDS.filter((id) => id.startsWith('DA:')).length;
@@ -398,6 +430,9 @@ describe('§6.5 the legs degrade on corpus faults and not on defects', () => {
 });
 
 describe('headings and back matter rank after prose', () => {
+  /** One book whose outline has a chapter, an appendix, and a chapter after
+   *  it. The ranks put the heading and the index line above the prose, which
+   *  is what BM25's length normalization does to them in production. */
   const row = (input: {
     readonly order: number;
     readonly text: string;

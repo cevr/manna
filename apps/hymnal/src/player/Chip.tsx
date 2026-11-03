@@ -1,3 +1,14 @@
+/**
+ * The player's chip: a pill 32 points high, whatever it holds, with a hit
+ * area of 44 (the slop), its width following its words and never under 44,
+ * so a one-figure chip is as wide a target as it is high. The 13-point word at
+ * the dials' largest text (1.3) fits in it. A `mark` drawn before the word
+ * (the Tuner's fork) sits in a row with it. The chip is a button named
+ * `label`; its words are what it shows. A chip given `checked` also says
+ * whether it is checked, as VoiceOver reads it, and a checked chip stands on
+ * the chosen mark (`chosen`, `onChosen`) instead of the pill.
+ */
+
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 

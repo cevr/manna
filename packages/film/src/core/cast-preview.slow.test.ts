@@ -10,6 +10,7 @@ const sheet = drawSheet([drawFigure(base), drawFigure({ ...base, robeDepth: 380 
 const previewOf = (options: SheetOptions) =>
   sheetPreview(sheet, Result.getOrThrow(measureSheet(sheet, options)), options);
 
+/** The lowest row of the preview that is not white or the band's green, in each half. */
 const lowestInk = (r: ReturnType<typeof previewOf>, half: 0 | 1) => {
   const xs = Array.from({ length: r.width / 2 }, (_, i) => Math.floor(half * (r.width / 2)) + i);
   const inked = (x: number, y: number) => {

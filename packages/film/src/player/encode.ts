@@ -12,28 +12,69 @@ import {
 import type { Copies, Encoder, EncoderChoice } from '../core/encoder.ts';
 import { secondsAt } from '../core/time.ts';
 
+/** How one encoder encodes the master, and the share copy when it makes one in the page. */
 interface Settings {
   readonly hardwareAcceleration: 'prefer-hardware' | 'prefer-software';
   readonly master: Quality;
+  /** The share copy encoded beside the master, or `null`: that encoder's share is made after the join. */
   readonly share: Quality | null;
+  /**
+   * Copies of the chunk's first frame encoded ahead of it and dropped, so the
+   * chunk opens on a key frame the rate control has settled on.
+   */
   readonly preroll: number;
 }
 
+/**
+ * Each encoder's settings. Its qualities are marked pure: built at load
+ * but read only by an encode, so a page that loads the player's entry and
+ * never encodes (every studio page, through a film's `narratedFilms` and
+ * faces) drops this module and mediabunny from its bundle.
+ */
 export const SETTINGS = {
   Hardware: {
     hardwareAcceleration: 'prefer-hardware',
+    /** The master: quantizer 16, about 37 Mbps at 1080p30 on this film. */
     master: /* @__PURE__ */ new Quality({ quantizer: 16 }),
+    /**
+     * The share copy: quantizer 26, the smallest that keeps the paper's
+     * grain. A 4 Mbps target smoothed the grain away entirely.
+     */
     share: /* @__PURE__ */ new Quality({ quantizer: 26 }),
+    /** A fixed quantizer has no rate control to settle: the first frame is coded like every other. */
     preroll: 0,
   },
   Software: {
     hardwareAcceleration: 'prefer-software',
+    /**
+     * Chromium's software H.264 encoder (OpenH264) refuses quantizer rate
+     * control ("Unsupported bitrate mode"), so it takes a bitrate: the
+     * master asks for 37 Mbps, variable, about what the hardware master's
+     * quantizer 16 comes to. What it comes to and the grain it keeps are
+     * measured in packages/film/README.md ("Encoders").
+     */
     master: /* @__PURE__ */ new Quality({ bitrate: 37_000_000, bitrateMode: 'variable' }),
+    /**
+     * No share copy: this encoder kept the grain only at 24 Mbps, 1.16 GB for
+     * the film, so a software render makes none (`jobOf`, tools/render-plan.ts).
+     */
     share: null,
+    /**
+     * OpenH264 codes a session's first frame at a coarse fixed quantizer,
+     * whatever the bitrate, so a chunk would open on a soft frame, a blink
+     * every chunk (measured in packages/film/README.md, "Software master: the
+     * pre-roll"). A later frame is coded at the settled quantizer, so the
+     * chunk's first frame goes in twice ahead of itself, stamped before 0, and
+     * is dropped.
+     */
     preroll: 2,
   },
 } satisfies Readonly<Record<Encoder['_tag'], Settings>>;
 
+/**
+ * The first of `candidates` that `can` encode with, tried in order and no
+ * further once one says yes; `Missing` with `reason` when none does.
+ */
 export const chooseEncoder = (
   candidates: ReadonlyArray<Encoder>,
   can: (encoder: Encoder) => Promise<boolean>,
@@ -47,15 +88,19 @@ export const chooseEncoder = (
     Promise.resolve({ _tag: 'Missing', reason }),
   );
 
+/** A key frame every this many seconds, and at the start of every chunk. */
 const KEY_FRAME_EVERY = 2;
 
+/** H.264 wants even dimensions. */
 const even = (n: number) => Math.max(2, Math.round(n / 2) * 2);
 
+/** The size a frame is encoded at: the canvas, scaled by `scale`. */
 const encodedSize = (width: number, height: number, scale: number) => ({
   width: even(width * scale),
   height: even(height * scale),
 });
 
+/** What `encoder` is configured with for `quality`, encoding a `width`×`height` canvas at `scale`. */
 export const config = (
   width: number,
   height: number,
@@ -74,17 +119,23 @@ export const config = (
   return { ...base, transform: { ...encodedSize(width, height, scale), fit: 'fill' } };
 };
 
+/** One copy the page encodes, and the quality it is encoded at. */
 interface Copy {
   readonly copy: 'master' | 'share';
   readonly quality: Quality;
 }
 
+/** The copies each choice of `Copies` holds. */
 const HOLDS = {
   master: ['master'],
   'master+share': ['master', 'share'],
   share: ['share'],
 } as const satisfies Readonly<Record<Copies, ReadonlyArray<Copy['copy']>>>;
 
+/**
+ * The copies `encoder` encodes in the page of `copies`, each at its quality:
+ * the master's, then the share copy's where it makes one there.
+ */
 export const qualities = (encoder: Encoder, copies: Copies): ReadonlyArray<Copy> => {
   const settings = SETTINGS[encoder._tag];
   const share = [settings.share].flatMap((quality): ReadonlyArray<Copy> => {
@@ -97,6 +148,11 @@ export const qualities = (encoder: Encoder, copies: Copies): ReadonlyArray<Copy>
   );
 };
 
+/**
+ * The encoder this browser encodes the film with at `scale`: the first of
+ * `candidates` that takes the settings of each of `copies` it encodes in the
+ * page. The renderer asks once, before drawing a frame.
+ */
 export const encoderChoice = (
   canvas: HTMLCanvasElement,
   fps: number,
@@ -125,14 +181,18 @@ export const encoderChoice = (
   );
 };
 
+/** A chunk encoded: each copy made in the page, the master and the share copy. */
 interface EncodedChunk {
   readonly master: Uint8Array | undefined;
   readonly share: Uint8Array | undefined;
 }
 
+/** One encoder taking the canvas into an MP4 of its own. */
 interface Rendition {
   readonly start: () => Promise<unknown>;
+  /** The chunk's first frame, already drawn, encoded ahead of it and dropped. */
   readonly warm: () => Promise<void>;
+  /** The canvas as the frame at `t` seconds; `first` is the chunk's first frame. */
   readonly add: (t: number, first: boolean) => Promise<unknown>;
   readonly finalize: () => Promise<unknown>;
   readonly cancel: () => Promise<unknown>;
@@ -144,6 +204,7 @@ const written = (target: BufferTarget) => () => {
   return new Uint8Array(target.buffer);
 };
 
+/** The canvas encoded straight into its MP4: every packet the encoder makes is kept. */
 const direct = (canvas: HTMLCanvasElement, fps: number, video: VideoEncodingConfig): Rendition => {
   const target = new BufferTarget();
   const output = new Output({ format: new Mp4OutputFormat(), target });
@@ -159,6 +220,16 @@ const direct = (canvas: HTMLCanvasElement, fps: number, video: VideoEncodingConf
   };
 };
 
+/**
+ * The canvas encoded in a session of its own (mediabunny still picks the
+ * encoder's configuration and scales the frame), whose packets from time 0
+ * on are copied into the chunk's MP4: the `preroll` frames stamped before 0
+ * settle the rate control and are dropped. mediabunny writes every packet a
+ * `CanvasSource` makes, so the session writes into a `NullTarget` and the
+ * kept packets go through an `EncodedVideoPacketSource`, the first with the
+ * encoder's decoder config. The chunk's first frame is forced to a key frame,
+ * so the MP4 opens on one.
+ */
 const prerolled = (
   canvas: HTMLCanvasElement,
   fps: number,
@@ -205,6 +276,7 @@ const prerolled = (
   };
 };
 
+/** `encoder`'s rendition of the canvas at `quality`. */
 const rendition = (
   canvas: HTMLCanvasElement,
   fps: number,
@@ -217,6 +289,11 @@ const rendition = (
   return preroll === 0 ? direct(canvas, fps, video) : prerolled(canvas, fps, video, preroll);
 };
 
+/**
+ * Frames `[from, to)` drawn by `draw` onto `canvas` and encoded by `encoder`
+ * into each of `copies` it makes in the page (the master, the small share
+ * copy, or both in the same pass), each an MP4 whose first frame plays at 0.
+ */
 export const encodeChunk = async (
   draw: (i: number) => Promise<void>,
   canvas: HTMLCanvasElement,

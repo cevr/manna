@@ -8,13 +8,16 @@ import { JudgedLint, judgedLintLayer } from './config.js';
 import { RULE_IDS } from '../../lint/judged.ts';
 import { historyComment } from './testing.js';
 
+/** What the test reads of a lint config: its rules' names. */
 const Entries = Schema.Struct({ rules: Schema.Record(Schema.String, Schema.Unknown) });
 
+/** The judged lint of the repo at `dir`, as a run reads it. */
 const lintOf = (dir: string) =>
   Effect.gen(function* () {
     return yield* JudgedLint;
   }).pipe(Effect.provide(judgedLintLayer(dir)));
 
+/** The judged lint a repo whose `.oxlintrc.json` is `text` declares. */
 const readJudgedConfig = (text: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -31,6 +34,7 @@ const readJudgedConfig = (text: string) =>
 const SETTINGS =
   '"settings": { "judged": { "model": "m", "store": "judged/s.json", "checkout": "tmp/j" } }';
 
+/** A config's text: its settings and `rules`. */
 const configOf = (rules: string) => `{ ${SETTINGS}, "rules": { ${rules} } }`;
 
 const OPTIONS = `{

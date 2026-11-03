@@ -1,3 +1,11 @@
+/**
+ * The bucket in memory, as both Workers see it: the desk writes it
+ * (`Store`, `./desk.ts`) and the site reads it (`Shelf`, `./respond.ts`).
+ * The tests run a publish and the site over one of these. It holds the
+ * hosts' limits: a request body (a whole write, a part) of `maxBody` bytes at
+ * most, as a Worker takes, and R2's rule for a multipart write, every part
+ * but the last of one size.
+ */
 import { Effect, Option } from 'effect';
 
 import type { Store, UploadedPart } from './desk.ts';
@@ -121,6 +129,7 @@ export const memoryBucket = (maxBody: number) => {
       ),
   };
 
+  /** The multipart writes begun and neither finished nor aborted. */
   const openUploads = () => uploads.size;
 
   return { objects, store, shelf, openUploads };

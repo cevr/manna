@@ -14,6 +14,10 @@ interface DialogBackdropState {
 
 interface DialogBackdropProps extends BaseUIComponentProps<'div', DialogBackdropState> {}
 
+/**
+ * An overlay displayed beneath the popup.
+ * Renders a `<div>` element.
+ */
 export function DialogBackdrop(componentProps: DialogBackdropProps): JSX.Element {
   const { store } = useDialogRootContext();
   const elementProps = omit(componentProps, 'class', 'style', 'render');

@@ -29,6 +29,7 @@ type LookupReference = Exclude<EGWParsedRef, EGWSearchQuery>;
 
 type PageLookup = EGWParagraphRef | EGWParagraphRangeRef | EGWPageRef;
 
+/** Narrow a page's paragraphs to the ones a paragraph or paragraph-range ref names. */
 const selectParagraphs = (parsed: PageLookup, paragraphs: ReadonlyArray<Paragraph>) => {
   if (parsed._tag === 'paragraph') {
     return paragraphs.filter(

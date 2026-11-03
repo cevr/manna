@@ -5,16 +5,20 @@ import { palette } from './palette.ts';
 
 type Pt = readonly [number, number];
 
+/** The props' ink line, units: a little lighter than a figure's. */
 const LINE = 4;
 
+/** How softly a prop's paper turns at its crease, a share of the way along the light. */
 const SOFT = 0.06;
 
+/** A paper's lit colour and its shade, toward the light's complement, as the kept sheets paint them. */
 const PAPER = {
   milk: { lit: '#fde9c8', shade: '#e6d0c4' },
   teat: { lit: '#fab85e', shade: '#e5943b' },
   wood: { lit: '#8a5233', shade: '#5f4535' },
 } as const;
 
+/** A path round a box with round corners. */
 const roundRect = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -27,6 +31,7 @@ const roundRect = (
   ctx.roundRect(x, y, w, h, r);
 };
 
+/** The current path filled in `paper` over the box from `from` to `to`, creased at the house's light, and inked round. */
 const inked = (
   ctx: CanvasRenderingContext2D,
   paper: { readonly lit: string; readonly shade: string },
@@ -47,8 +52,16 @@ const inked = (
   unprobed(ctx, () => ctx.stroke());
 };
 
+/**
+ * The teat's shape, units at size 1, its ink's half width in each: its
+ * foot's half width on the collar, its neck's (its round tip's radius), and
+ * how high its tip's middle stands over the collar, as the sheet draws it
+ * (poses-1: its paper 32 px across at its foot, 10 at its tip, 24 tall, at
+ * 1.37 px a unit).
+ */
 const TEAT = { foot: 13.5, neck: 5.5, rise: 14 } as const;
 
+/** The baby's bottle, its body's bottom middle at `at`: a cream body, its collar, its orange teat on the collar; `size` 1 is 33 units across and 48 tall. */
 export const bottle =
   (at: Pt, size = 1) =>
   (ctx: CanvasRenderingContext2D) => {
@@ -70,8 +83,15 @@ export const bottle =
     inked(ctx, PAPER.teat, [x - foot, rise - neck], [x + foot, collar]);
   };
 
+/** The plate's half width and its depth below its rim, units. */
 const PLATE = { r: 44, deep: 28, rim: 9 } as const;
 
+/**
+ * The wooden plate, a deep dish tipped into the mouth, its rim's middle at
+ * `at`, tipped `tilt` radians (positive lowers its rim's screen-right end):
+ * its round body under its rim, seen from outside, its far lip the top of its
+ * outline.
+ */
 export const plate = (at: Pt, tilt: number) => (ctx: CanvasRenderingContext2D) => {
   const { r, deep, rim } = PLATE;
   ctx.save();
@@ -85,6 +105,7 @@ export const plate = (at: Pt, tilt: number) => (ctx: CanvasRenderingContext2D) =
   ctx.restore();
 };
 
+/** A low table, its top's left and right ends `x0`, `x1` at height `top` (negative up), on one leg from `leg` to `leg + 22` down to the ground. */
 export const table =
   (x0: number, x1: number, top: number, leg: number) => (ctx: CanvasRenderingContext2D) => {
     roundRect(ctx, leg, top + 16, 22, -top - 16, 2);
@@ -93,6 +114,7 @@ export const table =
     inked(ctx, PAPER.wood, [x0, top], [x1, top + 17]);
   };
 
+/** A low stool, its seat's left and right ends `x0`, `x1` at height `top` (negative up), on two legs. */
 export const stool = (x0: number, x1: number, top: number) => (ctx: CanvasRenderingContext2D) => {
   for (const x of [x0 + 6, x1 - 22]) {
     roundRect(ctx, x, top + 12, 16, -top - 12, 2);

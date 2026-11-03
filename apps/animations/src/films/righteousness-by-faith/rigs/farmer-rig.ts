@@ -44,6 +44,7 @@ import {
 } from './farmer-traced.ts';
 import { PAPERS } from './papers.ts';
 
+/** A panel point in canon units about `origin` (a panel point). */
 const canon =
   (origin: Pt) =>
   ([x, y]: Pt): Pt => [
@@ -55,34 +56,50 @@ const fromFeet = canon(PANEL.feet);
 const headParts = (pts: ReadonlyArray<Pt>) => pts.map(fromHead);
 const bodyParts = (pts: ReadonlyArray<Pt>) => pts.map(fromFeet);
 
+/** His head's centre from his feet, and the tunic's top under his beard, units. */
 const HEAD = { x: fromFeet(PANEL.head)[0], y: fromFeet(PANEL.head)[1] } as const;
 const NECK_Y = fromFeet([0, 540])[1];
 
+/** His breath: 5 s in and out, his trunk 0.8% taller from the hem at its top, his neck 2.5 units up with it. */
 const BREATH = { period: 5, trunk: 1.008, neck: -2.5 } as const;
 
+/** His vest, as rain.rain paints it (sampled): a dark brown wool, its far front turned toward rose. */
 const WALNUT = '#714b38';
 const WALNUT_SHADE = '#7a4d3f';
+/** The band's near end in the light: a tan. */
 const BAND_TAN = '#d4965b';
+/** The cloth's edge above his cheek, as the panel paints it (sampled): a brown at his eyes, a darker one under them. */
 const CLOTH_EDGE_UPPER = '#553a26';
 const CLOTH_EDGE_MID = '#46301f';
+/** The shade down his nose, as the panel paints it: richer than the skin, toward rose. */
 const NOSE_SHADE = '#db8b59';
+/** His near cheek in the cloth's shadow, as the panel paints it: turned 5° toward rose from the lit skin (CRAFT rule 12). */
 const CHEEK_SKIN = '#e39964';
+/** Half way from the lit skin to the cheek's shade: the shade's soft inner edge. */
 const CHEEK_HALF = '#eca66b';
+/** His near sleeve, as the panel paints it: the tunic's tan a step into its shade. */
 const NEAR_SLEEVE_TAN = '#cb9f74';
+/** The far sleeve's open cuff in shadow under his hand, as the panel paints it. */
 const CUFF_SHADE = '#946f56';
+/** His neck in the tunic's V, in the beard's shadow. */
 const NECK_SKIN = '#e29662';
 
+/** His eyes' lean past the eye line's tip: the panel leans them 20° from upright, the line tips them 10°. */
 const EYE_LEAN = -0.175;
 
+/** His face's marks as the panel draws them, in the face kit's frame about his eyes' middle, the features' turn 1.5. */
 const KIT = tracedKit(MARKS, PANEL, 1.5);
 
+/** Half his far brow's length, units: the kit draws both his brows that long. */
 const BROW_HALF = (() => {
   const [[x0, y0], [x1, y1]] = MARKS.brows[1];
   return +((Math.hypot(x1 - x0, y1 - y0) / 2) * PANEL.scale).toFixed(2);
 })();
 
+/** A sandal's sole under a foot: a dark leather. */
 const SOLE = '#43291c';
 
+/** His sandals under the hem, the toes out, as wide apart as his tunic is wide: a strap across the near foot. */
 const SANDALS = Sandals({
   paper: PAPERS.farmerSkin,
   near: {
@@ -119,24 +136,30 @@ const SANDALS = Sandals({
   sole: SOLE,
 });
 
+/** His tunic from his feet, as the panel cuts it and below its foot runs on to the hem. */
 const TUNIC_OUTLINE = bodyParts(TUNIC);
 
+/** His tunic's hem: its lowest point, where it breathes about. */
 const HEM = Math.max(...TUNIC_OUTLINE.map(([, y]) => y));
 
+/** His hands' centres from his feet, units: the near one at its cuff, the far one at rest and raised (`HANDS`). */
 export const FARMER_HANDS = {
   near: fromFeet(HANDS.near),
   far: fromFeet(HANDS.far),
   raised: fromFeet(HANDS.raised),
 } as const;
 
+/** His far arm's pivot, and its hand raised at its cuff: the pose its sleeve is traced in (`HANDS.raised`). */
 const PIVOT = fromFeet(ARM_PIVOT);
 const RAISED = FARMER_HANDS.raised;
 
+/** The turn about `PIVOT` that takes the raised hand to the hand at rest by his side: his far arm's number at rest. */
 const REST = (() => {
   const angle = ([x, y]: Pt) => Math.atan2(y - PIVOT[1], x - PIVOT[0]);
   return +(angle(FARMER_HANDS.far) - angle(RAISED)).toFixed(4);
 })();
 
+/** His far arm in its sleeve, traced raised, its paper his tunic's sleeve's with the light along its top and its cuff's shade. */
 const FAR_ARM = Arm({
   pivot: PIVOT,
   rest: REST,
@@ -149,6 +172,14 @@ const FAR_ARM = Arm({
   ],
 });
 
+/**
+ * The farmer in rain.rain: his headcloth, his beard with his lip in it, his
+ * face Kit A's marks where the panel draws them, at rest the smile it
+ * draws, his face lifted to the rain at screen right; his tunic with his
+ * near sleeve, his vest and the shade of a fold laid on it; his far arm in
+ * its sleeve behind it, at rest down his side; his hands 0.4 of his head
+ * across (rain.rain draws them 66 px across, his face 165).
+ */
 export const farmer = figure({
   art: { width: 360, height: 520, feet: [160, 495] },
   concept: {
@@ -219,13 +250,19 @@ export const farmer = figure({
   hands: Hands({ paper: PAPERS.farmerHand, share: 0.4 }),
 });
 
+/**
+ * His far arm: its turn at rest, radians from the raised pose it is traced
+ * in, and `hand`, the centre of its hand at its cuff at a turn (`armHand`).
+ */
 export const FARMER_ARM = {
   rest: REST,
   hand: (turn: number): Pt => armHand(FAR_ARM, turn),
 } as const;
 
+/** His numbers at rest: his face lifted to the rain at screen right, the smile rain.rain draws, his far arm down. */
 export const FARMER_KNOBS = farmer.knobs;
 
+/** The face `check` reads: its node, and his head's height. */
 export const FARMER_FACE_CHECK = (() => {
   const ys = headParts(FACE).map(([, y]) => y);
   return { node: 'face', height: Math.max(...ys) - Math.min(...ys) } as const;

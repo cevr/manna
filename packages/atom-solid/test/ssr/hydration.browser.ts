@@ -13,6 +13,7 @@ let outdir: string;
 let browser: Browser;
 let server: ReturnType<typeof Bun.serve>;
 
+/** The reads of the answer the server's own render made. */
 let serverReads = 0;
 
 beforeAll(async () => {

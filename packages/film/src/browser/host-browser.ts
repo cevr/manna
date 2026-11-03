@@ -15,8 +15,10 @@ import { pageLoadLayer } from './page-load-browser.ts';
 import { pointerLayer } from './pointer-browser.ts';
 import { viewportLayer } from './viewport-browser.ts';
 
+/** The address bar, with `UrlState` over it. */
 const addressLayer = UrlState.layer.pipe(Layer.provideMerge(layerBrowser()));
 
+/** The page's host over the browser's own APIs, its media `media`, its footage read from `copy`. */
 const hostWith = (
   media: Layer.Layer<Media, never, Frames | Viewport>,
   copy: FootageCopy = 'proxy',
@@ -34,7 +36,9 @@ const hostWith = (
     addressLayer,
   );
 
+/** The page's host over the browser's own APIs. */
 export const BrowserHost = {
   layer: hostWith(mediaLayer),
+  /** The render page's host: its footage read from the mezzanine, which the render conforms from. */
   render: hostWith(mediaLayer, 'mezzanine'),
 };

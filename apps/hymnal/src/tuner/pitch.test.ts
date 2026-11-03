@@ -1,3 +1,12 @@
+/**
+ * The pitch of a frame and its reading, on fixed cases: each string's sine,
+ * a plucked string, the plucks whose half period can read an octave up, the
+ * high plucks whose keys must be read between samples, the frames with no
+ * pitch (resonant noise among them), a DC offset, the low strings at 96 kHz, and the
+ * reading's note, string and in-tune window. The generated sweeps are in
+ * `pitch.property.slow.test.ts` and the unit's acceptance file.
+ */
+
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
@@ -9,11 +18,16 @@ const FRAME = 2048;
 interface Voice {
   readonly hz: number;
   readonly rate: number;
+  /** Amplitude of partial k+1, the fundamental first. */
   readonly partials: ReadonlyArray<number>;
   readonly phase: number;
+  /** Decay time constant in seconds; Infinity holds the level. */
   readonly decay: number;
+  /** Seconds since the pluck at the frame's first sample. */
   readonly start: number;
+  /** Inharmonicity B: partial n sits at n·hz·√((1 + B n²)/(1 + B)). */
   readonly stiffness: number;
+  /** The frame's RMS. */
   readonly rms: number;
 }
 
@@ -51,6 +65,7 @@ const frameOf = (v: Voice) => {
   return Float32Array.from(out, (x) => (x / rms) * v.rms);
 };
 
+/** Cents from `hz` to what `detect` found in `v`'s frame; NaN when it found none. */
 const centsOff = (v: Voice) =>
   Option.match(detect(frameOf(v), v.rate), {
     onNone: () => Number.NaN,
@@ -59,6 +74,7 @@ const centsOff = (v: Voice) =>
 
 const cents = (hz: number, by: number) => hz * 2 ** (by / 1200);
 
+/** A plucked steel string: falling partials, B = 1e-4, a decay. */
 const PLUCK = [1, 0.7, 0.45, 0.3, 0.2, 0.12, 0.08, 0.05];
 
 describe('detect', () => {

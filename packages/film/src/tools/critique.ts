@@ -41,16 +41,19 @@ import { sha256Hex } from './digest.ts';
 import { FilmName } from './film-repo.ts';
 import { FreshFilm } from './fresh-film.ts';
 
+/** One figure critiqued: its findings, the file they are written in, and whether the answer was kept from before. */
 const FigureCritiqued = Schema.Struct({
   figure: Schema.String,
   findings: Schema.Array(CritiqueFinding),
   file: Schema.String,
 });
 
+/** A critique's answer: each figure's, whether it was kept from before, and why it was skipped when it was. */
 export const CritiqueTaken = Schema.Struct({
   figures: Schema.Array(FigureCritiqued),
   cached: Schema.Boolean,
   skipped: Schema.optionalKey(Schema.String),
+  /** Each finding the answer gave that did not read, or named no figure asked about. */
   rejected: Schema.Array(Schema.String),
 });
 export type CritiqueTaken = typeof CritiqueTaken.Type;
@@ -62,6 +65,7 @@ const KeptAnswer = Schema.fromJsonString(
   }),
 );
 
+/** A rule section its file lacks, or a rule file that cannot be read: the critic is not built without it. */
 class CritiqueRuleMissing extends Schema.TaggedError<CritiqueRuleMissing>()('CritiqueRuleMissing', {
   file: Schema.String,
   heading: Schema.String,
@@ -71,15 +75,22 @@ class CritiqueRuleMissing extends Schema.TaggedError<CritiqueRuleMissing>()('Cri
   }
 }
 
+/** One view of a cast sheet try to critique: its name, its crop and its concept's at 1:1, the measure's lines on it, and the file its findings go to. */
 interface SheetView {
   readonly figure: string;
   readonly concept: string;
   readonly sheet: string;
   readonly flagged: ReadonlyArray<string>;
   readonly file: string;
+  /** What the sheet's layout asks of this view: its numbered clause, or the whole layout when it numbers none. */
   readonly layout: Option.Option<string>;
 }
 
+/**
+ * A cast sheet's views to critique: a try's (`sheet`, each held to its
+ * layout's words) or a render's (`render`, each rig held to its kept view);
+ * where they are, in words, and the folder its answers are kept in.
+ */
 interface SheetCritique {
   readonly drawn?: 'sheet' | 'render';
   readonly place: string;
@@ -87,11 +98,13 @@ interface SheetCritique {
   readonly views: ReadonlyArray<SheetView>;
 }
 
+/** A critique job as read: the match it critiques, and its answer once the counsel has given it. */
 interface CritiqueJob {
   readonly match: MatchTaken;
   readonly critique: Option.Option<CritiqueTaken>;
 }
 
+/** A job the critic does not keep: never started, finished and dropped past its time or count, or the lab restarted since. */
 class CritiqueJobUnknown extends Schema.TaggedError<CritiqueJobUnknown>()('CritiqueJobUnknown', {
   handle: Schema.String,
 }) {
@@ -101,20 +114,30 @@ class CritiqueJobUnknown extends Schema.TaggedError<CritiqueJobUnknown>()('Criti
 }
 
 interface CriticService {
+  /** The figures `taken` matched, critiqued against their concepts in design and against `staging` in state: never fails, a skip is said and logged. */
   readonly critique: (taken: MatchTaken, staging: CritiqueStaging) => Effect.Effect<CritiqueTaken>;
+  /**
+   * The same critique as a job in the critic's scope, answered by its
+   * handle at once: the same figures over the same packet while one runs
+   * are that job's handle, not a second run.
+   */
   readonly start: (taken: MatchTaken, staging: CritiqueStaging) => Effect.Effect<string>;
+  /** The job `handle`, waited on at most `within`: its answer when given by then. */
   readonly job: (
     handle: string,
     within: Duration.Duration,
   ) => Effect.Effect<CritiqueJob, CritiqueJobUnknown>;
+  /** A cast sheet try's views, each critiqued against its concept: never fails, a skip is said and logged. */
   readonly critiqueSheet: (sheet: SheetCritique) => Effect.Effect<CritiqueTaken>;
 }
 
+/** What one critique is asked about: what it was drawn in, where, how its log names it, the folder its answers are kept in, and each figure (its crops' paths and the file its findings go to). */
 interface CritiqueAsk {
   readonly drawn: CritiqueDrawn;
   readonly place: string;
   readonly logged: string;
   readonly keptDir: string;
+  /** Where the place stages the figures (a scene's); a sheet's views are unstaged. */
   readonly staging: CritiqueStaging;
   readonly figures: ReadonlyArray<{
     readonly figure: string;
@@ -127,25 +150,36 @@ interface CritiqueAsk {
   }>;
 }
 
+/** An ask as it is asked: the ask (a Board image that cannot be read left out), the hash of its prompt and crops, and its kept answer's file. */
 interface Prepared {
   readonly ask: CritiqueAsk;
   readonly hash: string;
   readonly kept: string;
 }
 
+/** How many finished jobs the critic keeps: past it the one read least recently is dropped. A running job is kept until it ends. */
 const JOBS_KEPT = 32;
 
+/** How long a finished job is kept from its end. */
 const JOB_KEPT_FOR = Duration.hours(1);
 
+/**
+ * How many counsel runs the critic asks at once: as many as `film review`
+ * critiques places at once. A run past them waits its turn, its job's
+ * handle answered meanwhile.
+ */
 const COUNSEL_RUNS = 4;
 
+/** A job's handle: the first 16 hex of the hash of what names it. Pure. */
 const handleOf = (names: ReadonlyArray<string>): string => sha256Hex(names.join('\n')).slice(0, 16);
 
+/** A job as kept: the match it critiques, and the answer its fiber gives. */
 interface Job {
   readonly match: MatchTaken;
   readonly done: Deferred.Deferred<CritiqueTaken>;
 }
 
+/** The skip a job whose fiber ended without an answer is read as. */
 const diedAs = (why: string): CritiqueTaken => ({
   figures: [],
   cached: false,
@@ -153,6 +187,14 @@ const diedAs = (why: string): CritiqueTaken => ({
   rejected: [],
 });
 
+/**
+ * The critic's jobs, in the scope of the layer that makes them: each a
+ * critique running in its own fiber and the answer it gives, by handle. A
+ * running job is kept until it ends, and a start whose handle names one
+ * answers it; a finished one is kept `JOB_KEPT_FOR` from its end, at most
+ * `JOBS_KEPT` of them, and a start of its handle starts it again (its kept
+ * answer makes that quick).
+ */
 const jobsIn = Effect.gen(function* () {
   const scope = yield* Effect.scope;
   const running = MutableHashMap.empty<string, Job>();
@@ -215,11 +257,13 @@ const jobsIn = Effect.gen(function* () {
   return { start, job };
 });
 
+/** The rows a figure's table flagged, as `matchLines` says them. */
 const flaggedOf = (m: MatchTaken['figures'][number]): ReadonlyArray<string> =>
   matchLines(m)
     .slice(1)
     .map((line) => line.trim());
 
+/** Each figure as the packet names it: its crops by their files beside the packet, and its flagged rows. */
 const figuresOf = (ask: CritiqueAsk): ReadonlyArray<CritiqueFigure> =>
   ask.figures.map((f) => ({
     figure: f.figure,
@@ -230,6 +274,7 @@ const figuresOf = (ask: CritiqueAsk): ReadonlyArray<CritiqueFigure> =>
     boundary: f.boundary,
   }));
 
+/** A match's figures as a critique asks them: drawn in its scene, at its place, each written beside its table. */
 const askOfMatch = (taken: MatchTaken, staging: CritiqueStaging, path: Path.Path): CritiqueAsk => ({
   drawn: 'scene',
   staging,
@@ -250,6 +295,7 @@ const askOfMatch = (taken: MatchTaken, staging: CritiqueStaging, path: Path.Path
   })),
 });
 
+/** A cast sheet try's views as a critique asks them. */
 const askOfSheet = (sheet: SheetCritique): CritiqueAsk => ({
   drawn: sheet.drawn ?? 'sheet',
   staging: UNSTAGED,
@@ -267,6 +313,7 @@ const askOfSheet = (sheet: SheetCritique): CritiqueAsk => ({
   })),
 });
 
+/** `found`, or none with the reason logged (`critique.unstaged`): a staging that cannot be read leaves the critique unstaged, never refused. */
 const orUnstaged = <A, E extends { readonly message: string }, R>(
   found: Effect.Effect<Option.Option<A>, E, R>,
   what: string,
@@ -283,6 +330,14 @@ const orUnstaged = <A, E extends { readonly message: string }, R>(
     ),
   );
 
+/**
+ * Where `film` stages `taken`'s figures: the Board panel its scene's beat
+ * (a scene plays the beat of its id) shows at the match's time, by its
+ * marks, with the shown try's image as the board keeps it, and the
+ * script's picture of the beat. Fails open: a name that is no film's, or a
+ * board, an image or a script that cannot be read, is that part left out,
+ * logged.
+ */
 export const stagingAt = Effect.fn('Critic.stagingAt')(function* (name: string, taken: MatchTaken) {
   const named = Schema.decodeOption(FilmName)(name);
   if (Option.isNone(named)) {
@@ -322,6 +377,7 @@ export const stagingAt = Effect.fn('Critic.stagingAt')(function* (name: string, 
 });
 
 export class Critic extends Context.Service<Critic, CriticService>()('@manna/film/tools/Critic') {
+  /** The critic over the app's rule sections `rules` (`FilmApp.critique`), asking the counsel; refused when a section is missing. */
   static readonly layer = (rules: ReadonlyArray<CritiqueRule>) =>
     Layer.effect(
       Critic,
@@ -349,6 +405,7 @@ export class Critic extends Context.Service<Critic, CriticService>()('@manna/fil
           }),
         );
 
+        /** The counsel's findings on the ask's figures (their crops copied beside the packet), or why there are none. */
         const asked = (ask: CritiqueAsk, kept: string): Effect.Effect<CritiqueRead, string> =>
           Effect.scoped(
             Effect.gen(function* () {
@@ -406,12 +463,19 @@ export class Critic extends Context.Service<Critic, CriticService>()('@manna/fil
             ),
           );
 
+        /** The answer kept for `hash`, when one was. */
         const keptAnswer = (kept: string) =>
           fs.readFileString(kept).pipe(
             Effect.flatMap((text) => Schema.decodeEffect(KeptAnswer)(text)),
             Effect.option,
           );
 
+        /**
+         * The ask as it is asked: its crops read and hashed with the prompt
+         * (but the place), where its answer is kept. A Board panel whose image
+         * cannot be read is left out, logged (`critique.unstaged`): the rest
+         * is critiqued unstaged.
+         */
         const prepared = (ask: CritiqueAsk): Effect.Effect<Prepared, string> =>
           Effect.gen(function* () {
             const crops = yield* Effect.forEach(ask.figures, (f) =>
@@ -459,6 +523,7 @@ export class Critic extends Context.Service<Critic, CriticService>()('@manna/fil
             ),
           );
 
+        /** The prepared ask's findings, kept from before or asked. */
         const answered = (ready: Prepared) =>
           Effect.gen(function* () {
             const before = yield* keptAnswer(ready.kept);
@@ -470,6 +535,7 @@ export class Critic extends Context.Service<Critic, CriticService>()('@manna/fil
             ),
           );
 
+        /** The ask critiqued from what `prepared` read of it: each figure's file written, the run logged. */
         const critiquedFrom = Effect.fn('Critic.critiqued')(function* (
           ask: CritiqueAsk,
           ready: Result.Result<Prepared, string>,
@@ -539,6 +605,7 @@ export class Critic extends Context.Service<Critic, CriticService>()('@manna/fil
       }),
     );
 
+  /** A critic that skips every critique, saying `reason`: a lab that runs no counsel (a harness, a test). */
   static readonly skipping = (reason: string) =>
     Layer.effect(
       Critic,

@@ -1,8 +1,10 @@
 import { type Clear, type Hex, clearOf } from './colour.ts';
 import { keepAtMost } from './paper.ts';
 
+/** The most unit gradients kept per context, of each kind. */
 export const GRADIENTS_KEPT = 64;
 
+/** What a unit gradient lights: each kind keeps its own. */
 type UnitKind = 'glow' | 'sky' | 'ground';
 
 const kept: Record<UnitKind, WeakMap<CanvasRenderingContext2D, Map<string, CanvasGradient>>> = {
@@ -11,6 +13,12 @@ const kept: Record<UnitKind, WeakMap<CanvasRenderingContext2D, Map<string, Canva
   ground: new WeakMap(),
 };
 
+/**
+ * `ctx`'s unit gradient of `kind` under `key`: the one kept, else `make(ctx,
+ * of)`'s, kept (the oldest let go past `GRADIENTS_KEPT`). `key` names what
+ * the gradient holds, so equal lights share one; `make` draws it at unit
+ * size, from `of`, for the transform to place.
+ */
 export const unitGradient = <A>(
   ctx: CanvasRenderingContext2D,
   kind: UnitKind,
@@ -29,6 +37,7 @@ export const unitGradient = <A>(
   return keepAtMost(mine, key, make(ctx, of), GRADIENTS_KEPT);
 };
 
+/** A glow's gradient: the colour at its heart, the same colour clear at its rim. */
 const glowGradient = (ctx: CanvasRenderingContext2D, color: Hex) => {
   const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
   g.addColorStop(0, color);
@@ -36,6 +45,11 @@ const glowGradient = (ctx: CanvasRenderingContext2D, color: Hex) => {
   return g;
 };
 
+/**
+ * A soft round light of hex `color` centred on (x, y), `r` across its
+ * radius, strongest at its centre and clear at its rim, at `alpha` (past 1
+ * counts as 1) of the context's own.
+ */
 export const glow = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -55,12 +69,14 @@ export const glow = (
   ctx.restore();
 };
 
+/** A sky's stops as one key: each position and colour, in order. */
 const skyKey = (stops: ReadonlyArray<readonly [number, Hex | Clear]>) => {
   let key = '';
   for (const [at, color] of stops) key += `${at} ${color};`;
   return key;
 };
 
+/** A wash's gradient: its stops down one unit. */
 const washGradient = (
   ctx: CanvasRenderingContext2D,
   stops: ReadonlyArray<readonly [number, Hex | Clear]>,
@@ -70,6 +86,10 @@ const washGradient = (
   return g;
 };
 
+/**
+ * A vertical gradient over the rect at (x, y), `w` × `h`, top to bottom:
+ * `stops` are [position 0..1, colour]. A light that falls (a beam) is one.
+ */
 export const wash = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -88,6 +108,7 @@ export const wash = (
   ctx.restore();
 };
 
+/** A vertical gradient over the whole `w` × `h` frame, top to bottom: `stops` are [position 0..1, colour]. */
 export const sky = (
   ctx: CanvasRenderingContext2D,
   w: number,

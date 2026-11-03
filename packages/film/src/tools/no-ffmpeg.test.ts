@@ -4,6 +4,7 @@ import { Effect, FileSystem } from 'effect';
 
 const repo = `${import.meta.dir}/../../../..`;
 
+/** The docs an agent reads before touching the film's media. */
 const DOCS = [
   'packages/film/README.md',
   'apps/animations/README.md',
@@ -11,10 +12,16 @@ const DOCS = [
   '.claude/skills/film/CRAFT.md',
 ];
 
+/** The CLI named: `ffmpeg`, `ffprobe`, or "the ffmpeg CLI". */
 const NAMES_CLI = /`(ffmpeg|ffprobe)`|ffmpeg CLI/;
 
+/** A clause that says the CLI is not used. */
 const REFUSES = /\b(never|no|not|nothing|fails|refuses)\b/i;
 
+/**
+ * The clauses of `text` that name the CLI and do not refuse it: a paragraph
+ * read as one line (Markdown wraps), cut at each sentence, `;` and table cell.
+ */
 const cliUsesIn = (text: string) =>
   text
     .split(/\n\s*\n/)

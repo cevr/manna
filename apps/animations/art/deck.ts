@@ -1,6 +1,8 @@
 import type { ArtAxis, ArtDeck } from '@manna/film/tools';
 
+/** An option drawn only in 2D: the Canvas 2D kit. */
 const ONLY_2D = ['dimension/3d'];
+/** An option drawn only in 3D: three.js through `glCanvas`. */
 const ONLY_3D = ['dimension/2d'];
 
 const dimension: ArtAxis = {

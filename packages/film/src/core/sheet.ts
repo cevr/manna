@@ -3,48 +3,63 @@ import type { LineError } from './errors.ts';
 import { type Parsed, normalizeWords, parse } from './narration.ts';
 import { isAbbreviation } from './spoken.ts';
 
+/** A verified quotation (a film's `quotes.jsonl`): whose words, where they are. */
 export interface Quote {
   readonly ref: string;
   readonly author: string;
   readonly text: string;
 }
 
+/** A beat of the script as the sheet reads it. */
 export interface ScriptLine {
   readonly id: string;
   readonly say?: string;
   readonly cite: ReadonlyArray<string>;
 }
 
+/**
+ * A stretch of a beat: words to read (and who reads them), or a quotation set
+ * apart. The sheet, the studio's reading and the lab's panel read this one
+ * shape.
+ */
 const Part = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal('line'),
+    /** The reader a turn names; absent for the film's one voice. */
     voice: Schema.optionalKey(Schema.String),
     text: Schema.String,
   }),
   Schema.Struct({
     kind: Schema.Literal('quotation'),
     text: Schema.String,
+    /** `author, ref` of the `quotes.jsonl` record whose words hold it. */
     by: Schema.optionalKey(Schema.String),
   }),
 ]);
 type Part = typeof Part.Type;
 
+/** A beat on the reading sheet: the take's file, its parts to read and the sources it cites. */
 export const SheetBeat = Schema.Struct({
   id: Schema.String,
+  /** The name to save the take under, for `takes import`. */
   file: Schema.String,
   parts: Schema.Array(Part),
+  /** The beat's sources, as the script cites them. */
   sources: Schema.Array(Schema.String),
 });
 export type SheetBeat = typeof SheetBeat.Type;
 
+/** A quotation mark: “…”. */
 const QUOTATION = /(“[^”]*”)/;
 
+/** Whether `words` appear, in order and together, in `within`. */
 const holds = (within: ReadonlyArray<string>, words: ReadonlyArray<string>): boolean =>
   words.length > 0 &&
   Arr.makeBy(Math.max(0, within.length - words.length + 1), (i) => i).some((i) =>
     words.every((w, k) => within[i + k] === w),
   );
 
+/** The source a quotation's words are verified in: `author, ref`. */
 const sourceOf = (quotes: ReadonlyArray<Quote>, text: string): Option.Option<string> => {
   const words = normalizeWords(text);
   return Option.map(
@@ -53,12 +68,14 @@ const sourceOf = (quotes: ReadonlyArray<Quote>, text: string): Option.Option<str
   );
 };
 
+/** A sentence ends in a breath; an abbreviation's full stop (`Mrs.`, `St.`) ends none. */
 const breathe = (text: string): string =>
   text.replace(/(\S*)([.?!])\s+(?=\S)/g, (all, word: string, stop: string) => {
     if (stop === '.' && isAbbreviation(word)) return all;
     return `${word}${stop} / `;
   });
 
+/** One voice's words split at its quotations. */
 const partsOf = (
   voice: Option.Option<string>,
   text: string,
@@ -81,6 +98,7 @@ const partsOf = (
       });
     });
 
+/** The words of a line, cut where each turn hands it on. */
 const voicesOf = (parsed: Parsed) => {
   const words = parsed.spoken.split(' ');
   const starts = [0, ...parsed.turns.map((t) => t.word).filter((w) => w > 0)];
@@ -98,6 +116,7 @@ const voicesOf = (parsed: Parsed) => {
   }));
 };
 
+/** The sheet's beats: every beat with words, in script order; a line that does not parse fails naming its beat. */
 export const sheetBeats = (
   script: ReadonlyArray<ScriptLine>,
   quotes: ReadonlyArray<Quote>,
@@ -125,6 +144,7 @@ export const sheetBeats = (
 const HOW_TO =
   'Read each beat as its own take and save it under the name shown, then run `film takes import <film> <folder>`. `/` is a breath. A quotation is set apart: read it as quoted.';
 
+/** A line's text, with its reader when a turn names one. */
 const spoken = (voice: Option.Option<string>, text: string, name: (v: string) => string) =>
   Option.match(voice, {
     onNone: () => text,
@@ -140,6 +160,7 @@ const markdownPart = (part: Part): string => {
   });
 };
 
+/** The sheet as Markdown. */
 export const sheetMarkdown = (film: string, beats: ReadonlyArray<SheetBeat>): string =>
   [
     `# ${film}: reading sheet`,
@@ -183,6 +204,7 @@ cite { display: block; font: .85rem/1.4 system-ui, sans-serif; color: var(--mute
 @media print { body { background: none; font-size: 13pt; } section { page-break-inside: avoid; } }
 `;
 
+/** The sheet as a page to print. */
 export const sheetHtml = (film: string, beats: ReadonlyArray<SheetBeat>): string => {
   const sections = beats.map((beat, i) => {
     const sources = Arr.filter(

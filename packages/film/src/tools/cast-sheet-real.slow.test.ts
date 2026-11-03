@@ -16,6 +16,7 @@ const sheetAt = (name: string) =>
     return Result.getOrThrow(decodePng(bytes));
   }).pipe(Effect.provide(BunServices.layer));
 
+/** The sheet's six figures, each cropped on the sheet's full height, laid out again in `order` (1-based). */
 const reordered = (sheet: Raster, order: ReadonlyArray<number>) => {
   const figures = figuresOf(sheet, 6).figures;
   const crops = figures.map((f) =>
@@ -75,6 +76,7 @@ describe("a heads sheet whose locks widen some heads' boxes", () => {
   );
 });
 
+/** A bare forearm painted on christ-poses-l2's view 2, joined as flat skin to the hand it holds under the chin, run down toward the waist's middle: its ink, then its skin. */
 const withForearm = (sheet: Raster) => {
   const r = { ...sheet, rgba: Uint8Array.from(sheet.rgba) };
   const at = (x: number, y: number) => {

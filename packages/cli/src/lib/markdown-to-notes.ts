@@ -16,9 +16,15 @@ export class MarkdownParseError extends Data.TaggedError(
   content: string;
 }> {}
 
+/**
+ * Options for creating the Apple Note.
+ */
 interface CreateSimpleNoteOptions {
+  /** Override the title automatically extracted from Markdown H1. Defaults to 'Untitled Note' if no H1 found. */
   title?: string;
+  /** Set to true to bring the Notes application to the foreground after creation. Defaults to false. */
   activateNotesApp?: boolean;
+  /** Target folder name in Apple Notes. If the folder doesn't exist, it will be created. */
   folder?: string;
 }
 
@@ -34,6 +40,16 @@ const parseMarkdown = Effect.fn('parseMarkdown')(function* (content: string) {
   });
 });
 
+/**
+ * Converts Markdown content to HTML and creates a new note in the default
+ * account and folder of Apple Notes.
+ * Requires macOS and potentially Automation permissions for Notes.
+ *
+ * @param markdownContent The raw Markdown string to convert.
+ * @param options Optional configuration for the note title and activation behavior.
+ * @returns An Effect that resolves with the final title used for the note upon successful creation.
+ * @throws An error if the AppleScript execution fails (e.g., permissions issues).
+ */
 export const makeAppleNoteFromMarkdown = Effect.fn('makeAppleNoteFromMarkdown')(function* (
   markdownContent: string,
   options: CreateSimpleNoteOptions = {},
@@ -106,11 +122,26 @@ export const makeAppleNoteFromMarkdown = Effect.fn('makeAppleNoteFromMarkdown')(
   return { title: finalNoteTitle, noteId };
 });
 
+/**
+ * Options for updating an existing Apple Note.
+ */
 interface UpdateNoteOptions {
+  /** Override the title. If not provided, uses the H1 from markdown or keeps existing title. */
   title?: string;
+  /** Set to true to bring the Notes application to the foreground after update. Defaults to false. */
   activateNotesApp?: boolean;
 }
 
+/**
+ * Converts Markdown content to HTML and updates an existing note in Apple Notes.
+ * Requires macOS and potentially Automation permissions for Notes.
+ *
+ * @param noteId The ID of the note to update.
+ * @param markdownContent The raw Markdown string to convert.
+ * @param options Optional configuration for the note title and activation behavior.
+ * @returns An Effect that resolves with the final title used for the note upon successful update.
+ * @throws An error if the AppleScript execution fails (e.g., permissions issues, note not found).
+ */
 export const updateAppleNoteFromMarkdown = Effect.fn('updateAppleNoteFromMarkdown')(function* (
   noteId: string,
   markdownContent: string,
@@ -171,6 +202,14 @@ export const updateAppleNoteFromMarkdown = Effect.fn('updateAppleNoteFromMarkdow
   return finalNoteTitle;
 });
 
+/**
+ * Move an existing Apple Note into a target folder.
+ * If the folder doesn't exist, it will be created at the root level
+ * (Apple Notes AppleScript does not support nested folder creation).
+ *
+ * @param noteId The ID of the note to move.
+ * @param folder Target folder name.
+ */
 export const moveAppleNoteToFolder = Effect.fn('moveAppleNoteToFolder')(function* (
   noteId: string,
   folder: string,

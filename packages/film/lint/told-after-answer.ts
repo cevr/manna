@@ -13,10 +13,12 @@ import {
 const MESSAGE =
   'a fake route completes a Deferred itself: the case waiting on it runs on at once, inside the call, and an answer made after reads what the case changed then. Tell through the harness: told(Deferred.done(asked, Exit.void), json(…)) runs the tell once its answer is made.';
 
+/** The harness the fake routes and `told` are exported from. */
 const isHarness: Module = (from) => /(?:^|\/)fixtures\/harness(?:\.[jt]s)?$/u.test(from);
 const isEffect: Module = (from) => from === 'effect';
 const isDeferredModule: Module = (from) => from === 'effect/Deferred';
 
+/** The calls of effect's `Deferred` that complete one. */
 const TELLS: ReadonlyArray<string> = [
   'complete',
   'completeWith',
@@ -35,8 +37,14 @@ const TELLS: ReadonlyArray<string> = [
   'sync',
 ];
 
+/** The one that completes a `Deferred` as it is called, not as an effect run later. */
 const UNSAFE = 'doneUnsafe';
 
+/**
+ * The `Deferred` call that completes one which `call` makes, by its name:
+ * `Deferred.done(…)` off effect's `Deferred`, `D.done(…)` off the module
+ * imported whole, `done(…)` imported from it.
+ */
 const tellOf = (b: Bindings, call: ESTree.CallExpression): Option.Option<string> => {
   const callee = unwrapped(call.callee);
   return Option.fromUndefinedOr(
@@ -55,6 +63,7 @@ const isFunction = (n: ESTree.Node): boolean =>
   n.type === 'FunctionExpression' ||
   n.type === 'FunctionDeclaration';
 
+/** The answer handed to a `route(…)` call: the function written there, or the one a name there is bound to. */
 const answerOf = (b: Bindings, call: ESTree.CallExpression): Option.Option<ESTree.Node> => {
   const handed = Option.map(Option.fromUndefinedOr(call.arguments[2]), unwrapped);
   return Option.flatMap(handed, (n) => {
@@ -73,14 +82,17 @@ const answerOf = (b: Bindings, call: ESTree.CallExpression): Option.Option<ESTre
   });
 };
 
+/** Whether `inner` lies inside `outer`. */
 const inside = (inner: ESTree.Node, outer: ESTree.Node): boolean =>
   ancestors(inner).some((n) => n === outer);
 
+/** The `Deferred` a tell completes, as written: its first argument, `into`'s second. */
 const completed = (call: ESTree.CallExpression, name: string): Option.Option<ESTree.Node> => {
   if (name === 'into') return Option.fromUndefinedOr(call.arguments[1]);
   return Option.fromUndefinedOr(call.arguments[0]);
 };
 
+/** Whether the tell completes a `Deferred` the answer declares itself. */
 const ownOf = (b: Bindings, call: ESTree.CallExpression, name: string, answer: ESTree.Node) =>
   Option.exists(completed(call, name), (arg) => {
     const n = unwrapped(arg);
@@ -89,6 +101,11 @@ const ownOf = (b: Bindings, call: ESTree.CallExpression, name: string, answer: E
     );
   });
 
+/**
+ * Whether the tell stands inside `told`'s first argument within the answer:
+ * an effect `told` runs once its answer is made. `doneUnsafe` completes as it
+ * is called, so it stands there only inside a function of that argument.
+ */
 const throughTold = (
   b: Bindings,
   call: ESTree.CallExpression,

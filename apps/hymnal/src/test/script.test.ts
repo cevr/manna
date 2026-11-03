@@ -4,6 +4,13 @@ import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+/**
+ * Every file `test:slow` runs spawns a `bun` script only through `runScript`
+ * (`./script.ts`), which ends it at a limit. A bare synchronous spawn blocks
+ * the event loop, so no case's timeout ends a script that hangs, and the run
+ * waits on it for good. An asynchronous `Bun.spawn` stays under its case's
+ * timeout, so it is not read here.
+ */
 const app = join(import.meta.dir, '../..');
 const scripts: Record<string, string> = JSON.parse(
   readFileSync(join(app, 'package.json'), 'utf8'),

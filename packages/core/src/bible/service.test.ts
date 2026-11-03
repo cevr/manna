@@ -15,6 +15,9 @@ const verses = [
 
 const TestLayer = BibleService.Live.pipe(Layer.provide(BibleDatabase.layerTest({ verses })));
 
+/** The same canon with one KJV marginal note, so §10 M6's margin layer has real
+ *  data to draw. Genesis 1:1's `beginning` carries a Hebrew note in the shipped
+ *  corpus, which is the row this fixture mirrors. */
 const MarginLayer = BibleService.Live.pipe(
   Layer.provide(
     BibleDatabase.layerTest({

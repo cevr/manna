@@ -9,6 +9,7 @@ import { standInDom } from '../canvas/fixtures/stand-in.ts';
 import { HANGING_FACE, armFilm, armPose, armRig, armScene } from '../canvas/fixtures/arm.ts';
 import { drawFindings, impureAt, momentCounts } from './draw-check.ts';
 
+/** A film of the given scenes, four seconds each. */
 const filmOf = (...scenes: ReadonlyArray<readonly [string, SceneSpec['draw']]>) =>
   createFilm({
     fps: 30,
@@ -19,8 +20,10 @@ const filmOf = (...scenes: ReadonlyArray<readonly [string, SceneSpec['draw']]>) 
     captions: { font: '38px x', color: '#000000', plate: '#ffffff' },
   });
 
+/** The images the leg loads through: the block puppet's part and the fixture plates, from memory. */
 const images = () => Layer.mergeAll(blockImages().layer, paintingImages().layer);
 
+/** A film of scenes that each paint one plate, four seconds each. */
 const paintedFilm = (...scenes: ReadonlyArray<Pick<SceneSpec, 'id' | 'paintings' | 'draw'>>) =>
   createFilm({
     fps: 30,
@@ -30,6 +33,7 @@ const paintedFilm = (...scenes: ReadonlyArray<Pick<SceneSpec, 'id' | 'paintings'
     scenes: scenes.map((s) => ({ ...s, min: 4 })),
   });
 
+/** A face declared at (960, 540), 200 px tall, and a rope drawn across it after. */
 const roped: SceneSpec['draw'] = (f) => {
   probeFace(f.ctx, 960, 540, 200);
   stroke(

@@ -9,6 +9,7 @@ import { ruleKey } from '../src/judged/rule.ts';
 import { MAX_AGE_DAYS, Store, cacheKey, dayOf } from '../src/judged/store.ts';
 import { historyComment } from '../src/judged/testing.ts';
 
+/** The timeout of a test here that spawns (oxlint): a cold start's time is the machine's. */
 const SPAWNS_MS = 30_000;
 
 const PLUGIN = new URL('./judged.ts', import.meta.url).pathname;
@@ -25,6 +26,7 @@ const SOURCE = [
   'const c = 3;',
 ].join('\n');
 
+/** The history comment moved to another file, indented in a block and wrapped. */
 const MOVED = [
   'export const f = () => {',
   '  // This used to retry;',
@@ -33,6 +35,7 @@ const MOVED = [
   '};',
 ].join('\n');
 
+/** Runs oxlint in `cwd`; answers its exit code and the judged lines it prints. */
 const oxlint = (cwd: string) =>
   Effect.scoped(
     Effect.gen(function* () {
@@ -59,6 +62,7 @@ const oxlint = (cwd: string) =>
     }),
   );
 
+/** A scratch repo linted by historyComment alone at `severity` (its selector `selector`), its store `.git/kept.json`. */
 const scratch = (severity: 'warn' | 'error', selector: string = historyComment.selector) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -80,6 +84,7 @@ const scratch = (severity: 'warn' | 'error', selector: string = historyComment.s
     return dir;
   });
 
+/** The store answering each of `SOURCE`'s comments history at the given probability. */
 const storeOf = (ps: ReadonlyArray<number>) => {
   const keyOf = (text: string) => cacheKey(ruleKey(historyComment), 'typesafe/jev-1.13.0', text);
   const comments = itemsOf('comments', parse('src/x.ts', SOURCE));

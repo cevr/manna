@@ -1,4 +1,23 @@
 import { SecureRandom } from 'effect/crypto';
+/**
+ * The list off Cloudflare: its model hosted in memory (`./model.ts`), its
+ * tables in SQLite in memory with the migrations applied
+ * (`./sql-sqlite.ts`), and a token key made fresh each run:
+ *
+ * - `layerTest`: what the tests run the routes against, with the films they
+ *   name (`./films.ts`). Its mailer and its queue keep what they are given
+ *   (`Mailbox`, `Queued`), and nothing runs after an answer until
+ *   `Settle.settle`: a sign-up's work, then the model's policies and
+ *   projections, and every scheduled command come due. The model reads the
+ *   `TestClock` the layer brings, which the tests move. Its admin token is
+ *   `TEST_ADMIN_TOKEN`.
+ * - `layerPreview`: the site on a laptop (`../worker/local.ts`). Each letter is
+ *   written to a file in `outbox` instead of being sent; a sign-up's work, the
+ *   model's policies and a film's send run at once. The admin token is
+ *   `MAIL_ADMIN_TOKEN` when it is set.
+ *
+ * Both need the platform's file system (`BunServices.layer`).
+ */
 import * as InMemory from '@alchemy.run/domain/InMemory';
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { Clock, Config, Context, Duration, Effect, Layer, Redacted } from 'effect';
@@ -18,6 +37,7 @@ import { layer as tokensLayer } from './tokens.ts';
 
 export const TEST_ADMIN_TOKEN = 'test-admin-token';
 
+/** A key of 32 random bytes, which no one but this run holds. */
 const freshKey = Effect.gen(function* () {
   const crypto = yield* SecureRandom.SecureRandom;
   return Redacted.make(Hex.encode(yield* crypto.randomBytes(32)));
@@ -25,19 +45,36 @@ const freshKey = Effect.gen(function* () {
 
 const freshTokens = Layer.unwrap(Effect.map(freshKey, tokensLayer));
 
+/** Runs what waits in the tests: a sign-up's work, then everything the model has to deliver or has come due. */
 export class Settle extends Context.Service<Settle, { readonly settle: Effect.Effect<void> }>()(
   'firsttheblade/Settle',
 ) {}
 
+/**
+ * The model's memory platform, its commands stamped by the clock the layer
+ * is built under (a test's `TestClock`). `manual` holds every delivery until
+ * `drain`; otherwise each runs in the background as it is made.
+ */
 const memoryPlatform = (manual: boolean) =>
   Clock.clockWith((clock) =>
     Effect.sync(() => InMemory.make({ manual, now: () => clock.currentTimeMillisUnsafe() })),
   );
 
+/**
+ * The live clock (a test's clock never moves by itself): a promise a policy
+ * waits on, as WebCrypto's, settles in its own time, not the test's.
+ */
 const live = Clock.Clock.defaultValue();
 
+/** How long the model may take to go idle: real time, as a busy machine runs the tests. */
 const SETTLE_WITHIN = Duration.seconds(5);
 
+/**
+ * Delivers until nothing is left: a policy's run is forked, and may commit
+ * more to deliver or wait on a promise, so the platform is drained, a turn of
+ * the event loop at a time, until it stays idle. A policy or projection that
+ * failed is a defect of the test.
+ */
 const drained = (control: InMemory.Control) =>
   Effect.gen(function* () {
     const until = live.currentTimeMillisUnsafe() + Duration.toMillis(SETTLE_WITHIN);
@@ -54,6 +91,7 @@ const drained = (control: InMemory.Control) =>
     return yield* Effect.die(new Error('the model did not settle'));
   });
 
+/** The model in memory over the tables, with `Settle` for the tests. */
 const layerModelTest = Layer.unwrap(
   Effect.gen(function* () {
     const platform = yield* memoryPlatform(true);

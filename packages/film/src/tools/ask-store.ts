@@ -71,6 +71,7 @@ import { sha256Hex, sha256OfFile } from './digest.ts';
 import { type FilmFolder, filmNamed } from './film-repo.ts';
 import { ProductionStore } from './production-store.ts';
 
+/** What an agent asks with: its title, why, who it is, by when, the film, and the machine. */
 interface AskDraft {
   readonly title: string;
   readonly why: string;
@@ -79,25 +80,48 @@ interface AskDraft {
   readonly production?: string;
   readonly set?: string;
   readonly point?: string;
+  /** The owner's own words, verbatim, that let a keep be asked without the set's review record. */
   readonly override?: { readonly quote: string };
   readonly deadline?: string;
+  /** The page it goes on: an ask's id (the page that ask is on, which must still ask), or `new`; none: the asker's open page, else a new one. */
   readonly page?: string;
   readonly ask: Ask;
 }
 
 interface AskStoreService {
+  /** The folder the asks are kept in. */
   readonly dir: string;
+  /** The record file of ask `id`. */
   readonly file: (id: string) => string;
+  /**
+   * A new ask, aimed (`aimedWord`: a `point` names its `set`), its machine
+   * checked and its board tries found, or why it may not render; its question
+   * filed. It goes on the page `draft.page` names, or the asker's open one,
+   * or a page of its own: a page named that no longer asks is refused.
+   */
   readonly make: (
     draft: AskDraft,
   ) => Effect.Effect<AskRecord, WordUnaimed | AskInvalid | AskUnknown | AskRefused | StoreError>;
   readonly read: (id: string) => Effect.Effect<AskRecord, AskUnknown | StoreError>;
+  /** The page ask `id` is on (an opener's id is its page's): its asks, in the order made. */
   readonly page: (id: string) => Effect.Effect<AsksPage, AskUnknown | StoreError>;
+  /** Every ask, the newest first. */
   readonly list: Effect.Effect<ReadonlyArray<AskRecord>, StoreError>;
+  /**
+   * The owner's answers to the ask's page, each section's in order, all
+   * kept or none: a step answered already takes the same answer again and
+   * refuses another; past the deadline, or not fitting its step, refused.
+   * The ask as they leave it.
+   */
   readonly answerPage: (
     id: string,
     sections: ReadonlyArray<{ readonly step: AskName; readonly values: StepValues }>,
   ) => Effect.Effect<AskRecord, AskUnknown | AskRefused | StoreError>;
+  /**
+   * The bytes of the copy ask `id` shows as `file` (`<sha256><.ext>`, its
+   * `src` an `askShownUrl`), read once: only a copy its receipt names, else
+   * ReviewFileUnknown; AskRefused when they no longer hold its hash.
+   */
   readonly shownFile: (
     id: string,
     file: string,
@@ -105,14 +129,18 @@ interface AskStoreService {
     { readonly name: string; readonly bytes: Uint8Array },
     AskUnknown | AskRefused | ReviewFileUnknown | StoreError
   >;
+  /** The ask closed, `why` (withdrawn, or filed once answered): what was answered is kept, and filed. */
   readonly close: (
     id: string,
     why: string,
   ) => Effect.Effect<AskRecord, AskUnknown | AskRefused | StoreError>;
 }
 
+/** The one step of `MISSING`'s ask: its end. */
 const MISSING_END = AskName.make('done');
+/** `MISSING`'s ask: it starts at its end. */
 const MISSING_ASK: Ask = { start: MISSING_END, steps: { [MISSING_END]: { end: true } } };
+/** No record: what a manifest read gives for an ask that is not on disk. */
 const MISSING: AskRecord = {
   id: AskName.make('missing'),
   title: '-',
@@ -124,6 +152,7 @@ const MISSING: AskRecord = {
   answered: [],
 };
 
+/** An ask's id: `a` and ten hex digits. */
 const newId = Effect.map(
   Effect.all([Random.nextIntBetween(0, 0x100000), Random.nextIntBetween(0, 0x100000)]),
   (halves) => AskName.make(`a${halves.map((h) => h.toString(16).padStart(5, '0')).join('')}`),
@@ -131,19 +160,23 @@ const newId = Effect.map(
 
 const ASK_ID = /^a[0-9a-f]{10}$/;
 
+/** A copy's name in `asks/shown/`: its bytes' SHA-256, and its file's extension. */
 const COPY = /^([0-9a-f]{64})(\.[a-z0-9]{1,8})?$/;
 
+/** A copy an ask shows: its route under the ask, and the SHA-256 of its bytes. */
 interface Copy {
   readonly src: string;
   readonly hash: string;
 }
 
+/** How an image an ask shows becomes its copy: a file the lab serves copied, or an earlier ask's copy shown again. */
 type Plan =
   | { readonly _tag: 'Copy'; readonly src: string; readonly file: string }
   | { readonly _tag: 'Shown'; readonly src: string; readonly copy: Copy };
 
 const copyPlan = (src: string, file: string) => Option.some<Plan>({ _tag: 'Copy', src, file });
 
+/** Stand-ins `askShownUrl` keeps as written, so its route reads back as a pattern. */
 const ASK_AT = 'askxroutexask';
 const FILE_AT = 'askxroutexfile';
 const SHOWN_ROUTE = new RegExp(
@@ -153,6 +186,7 @@ const SHOWN_ROUTE = new RegExp(
     .replace(FILE_AT, '([^/]+)')}$`,
 );
 
+/** The ask and copy name of `src` when it is an ask's copy's route (`askShownUrl`); none for any other. */
 const shownRouteOf = (src: string) =>
   Option.flatMap(
     Option.fromNullishOr(SHOWN_ROUTE.exec(new URL(src, 'http://lab.invalid').pathname)),
@@ -163,18 +197,21 @@ const shownRouteOf = (src: string) =>
       }),
   );
 
+/** The extension a copy of `file` keeps, so it is served as its type: lower case, else none. */
 const extensionOf = (file: string): string =>
   Option.getOrElse(
     Option.fromNullishOr(/\.[A-Za-z0-9]{1,8}$/.exec(file)?.[0]),
     () => '',
   ).toLowerCase();
 
+/** The folder the asks are kept in: `FILMS_LAB/asks` (the app's `lab/` under `runFilmCli`, else `<cwd>/lab`). */
 const asksDir = Effect.gen(function* () {
   const path = yield* Path.Path;
   const root = yield* Config.String('FILMS_LAB').pipe(Config.withDefault(path.resolve('lab')));
   return path.join(root, 'asks');
 });
 
+/** The record at `file`, as the store reads and writes it: `empty` when it is not there. */
 const recordAt = (file: string, empty = MISSING): Manifest<AskRecord> => ({
   file,
   codec: AskRecordJson,
@@ -184,6 +221,7 @@ const recordAt = (file: string, empty = MISSING): Manifest<AskRecord> => ({
 export class AskStore extends Context.Service<AskStore, AskStoreService>()(
   '@manna/film/tools/AskStore',
 ) {
+  /** Asks under `FILMS_LAB/asks` (the app's `lab/` under `runFilmCli`, else `<cwd>/lab`). */
   static readonly layer = Layer.effect(
     AskStore,
     Effect.gen(function* () {
@@ -197,10 +235,12 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
       const dir = yield* asksDir;
 
       const file = (id: string) => path.join(dir, `${id}.json`);
+      /** Where the copies of the images asks show are kept, each named by its SHA-256 (`COPY`). */
       const shownDir = path.join(dir, 'shown');
       const manifest = (id: string, empty = MISSING) => recordAt(file(id), empty);
       const now = Effect.map(DateTime.now, DateTime.formatIso);
 
+      /** `image` with its `src`: a board try's file found on its film's board. */
       const found = (image: AskImage) =>
         Option.match(Option.fromUndefinedOr(image.board), {
           onNone: () => Effect.succeedSome(image),
@@ -222,8 +262,10 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
             }),
         });
 
+      /** A board try's key, as the images found are kept by. */
       const keyOf = (ref: BoardTryRef) => `${ref.film}\u0000${ref.panel}\u0000${ref.try}`;
 
+      /** `ask` with every image's `src` found, or the board tries it names that are not on their boards. */
       const located = Effect.fn('AskStore.located')(function* (ask: Ask) {
         const refs = imagesIn(ask).flatMap((i) => Option.toArray(Option.fromUndefinedOr(i.board)));
         const srcs = new Map<string, string>();
@@ -256,6 +298,11 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
         return { ask: withSrc, missing: [...new Set(missing)] };
       });
 
+      /**
+       * The ask's words on its production's timeline, each filed once by the
+       * ask's id: its question (when it names a set), and once closed, its
+       * answers (answered to its end) or its withdrawal (closed before).
+       */
       const filed = (record: AskRecord) =>
         Option.match(Option.fromUndefinedOr(record.production), {
           onNone: () => Effect.void,
@@ -271,6 +318,12 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
 
       const making = yield* Semaphore.make(1);
 
+      /**
+       * The page a new ask by `by` goes on, by its opener's id: the one
+       * `named` says (an ask's page, which must still ask; `new`, none),
+       * else the newest ask of the asker's that still asks, else none (it
+       * opens its own).
+       */
       const pageFor = (by: string, named: Option.Option<string>) =>
         Effect.gen(function* () {
           if (Option.contains(named, NEW_PAGE)) return Option.none<AskName>();
@@ -289,6 +342,7 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
           );
         });
 
+      /** The film production `production`'s ledger names, as the keep gate takes it: none when it names none or is not kept. */
       const productionFilmOf = (production: Option.Option<string>) =>
         Option.match(production, {
           onNone: () => Effect.succeed({}),
@@ -350,6 +404,12 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
         );
       });
 
+      /**
+       * `file`'s bytes copied into `shownDir` under their SHA-256: copied
+       * first, then the copy hashed, so the name is of the bytes kept however
+       * the file changes meanwhile. Two copies of the same bytes land on one
+       * name, the same bytes. Its name, or none when the file does not read.
+       */
       const copied = (file: string) =>
         Effect.gen(function* () {
           yield* fs.makeDirectory(shownDir, { recursive: true });
@@ -366,6 +426,20 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
           }).pipe(Effect.onError(() => Effect.ignore(fs.remove(partial, { force: true }))));
         }).pipe(Effect.orElseSucceed(() => Option.none<{ hash: string; name: string }>()));
 
+      /**
+       * The receipt rule: an image whose src the receipt names is served
+       * only as its copy. Each file-served image of an image block or an
+       * option is copied as the ask is made, or the make is refused
+       * (`AskRefused`, naming the src). A board block's panels and a video's
+       * poster or frame show live and bind nothing. An image that shows an
+       * earlier ask's copy shows the same copy again, while that ask's
+       * receipt names it and its bytes hold its hash (`shownAgain`).
+       *
+       * `ask` (ask `id`'s) with each file-served image showing its copy
+       * (`copied`), and the receipt: each copy's `src` with its SHA-256.
+       * Every src is resolved before any file is copied, so a make refused
+       * for a file the lab does not serve copies nothing.
+       */
       const receipted = (id: AskName, ask: Ask) =>
         Effect.gen(function* () {
           const planned = yield* Effect.forEach(yield* materials.served(ask), ([src, at]) =>
@@ -414,12 +488,19 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
           return { ask: showing, shown };
         });
 
+      /** The make of ask `id` refused, naming each image (`why`) it could not show as a copy made with it. */
       const refusedImages = (id: AskName, why: ReadonlyArray<string>) =>
         AskRefused.make({
           id,
           reason: `its images show only copies made with it, and ${why.join('; ')}: make it again`,
         });
 
+      /**
+       * What ask `id` shows at `src`, which no route of the lab's material
+       * serves: an earlier ask's copy (`askShownUrl`) shown again, once the
+       * earlier ask's receipt names it and its bytes still hold its hash,
+       * as the same copy under ask `id`'s route; else why it cannot be shown.
+       */
       const shownAgain = (id: AskName, src: string) =>
         Option.match(shownRouteOf(src), {
           onNone: () =>
@@ -449,6 +530,7 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
             ),
         });
 
+      /** `draft` kept as new ask `id`, its machine `ask` (its images found, each showing its copy) and their receipt `shown`, on `page` (none: its own). */
       const kept = (
         id: AskName,
         draft: AskDraft,
@@ -527,9 +609,16 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
         );
       });
 
+      /** `state` moved by `event` through the ask's machine. */
       const moved = (ask: Ask, state: AskState, event: AskEvent) =>
         Machine.replay(askMachine(ask, state), [event], { from: state });
 
+      /**
+       * `current` moved by the owner's `values` for step `step`, sent at
+       * `when`: the same answer to a step answered already is answered as it
+       * was; a different one, one past the deadline, or one that does not
+       * fit (`answerRefusal`) is refused.
+       */
       const stepped = (current: AskRecord, step: AskName, values: StepValues, when: string) =>
         Effect.gen(function* () {
           const refuse = (reason: string) => AskRefused.make({ id: current.id, reason });
@@ -550,6 +639,7 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
           } satisfies AskRecord;
         });
 
+      /** The name in `shownDir` of the copy `src` shows for ask `id` with hash `hash`: none when `src` is no such copy's route. */
       const copyOf = (id: string, src: string, hash: string) => {
         const prefix = askShownUrl(id, '');
         return Option.filter(
@@ -561,6 +651,12 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
         );
       };
 
+      /**
+       * Why `record`'s page breaks the receipt rule (`receipted`): each `src`
+       * its receipt names that is not a copy of its hash the ask made, or
+       * whose copy is gone or no longer holds its hash. None for an ask kept
+       * before receipts: it binds no bytes.
+       */
       const unbacked = (record: AskRecord) =>
         Effect.map(
           Effect.forEach(Object.entries(record.shown ?? {}), ([src, hash]) =>
@@ -661,6 +757,14 @@ export class AskStore extends Context.Service<AskStore, AskStoreService>()(
   );
 }
 
+/**
+ * What an ask files on its production's timeline as it stands at `now`: its
+ * question, when it names a set (at the time it was made); and once closed,
+ * the owner's decision (its answers, answered to its end, at the time of his
+ * last answer: his words as its quote, and each choice's value as his picks,
+ * which an override may cite) or its withdrawal (a note, closed before, at
+ * the time it was closed; `now` for a record with no close time).
+ */
 const askWords = (record: AskRecord, now: number): ReadonlyArray<Said> => {
   const set = Option.map(Option.fromUndefinedOr(record.set), setPathOf);
   const on = {
@@ -744,20 +848,36 @@ const askWords = (record: AskRecord, now: number): ReadonlyArray<Said> => {
   return [...question, ...closing];
 };
 
+/**
+ * What a decision an ask filed with no picks of the owner's on it gets from
+ * the ask's record (`fillPicks`): the picks its close files, or why none.
+ */
 export type PicksFound = Data.TaggedEnum<{
+  /** The picks its close files (`askWords`): each choice's value, by its question's name. */
   Filled: { readonly ask: string; readonly picks: Readonly<Record<string, string>> };
+  /** None, and why. */
   Left: { readonly ask: string; readonly why: string };
 }>;
 const PicksFound = Data.taggedEnum<PicksFound>();
 
+/** An ask's record as read for its decision: the record, or why there is none to read. */
 type Read = Result.Result<AskRecord, string>;
 
+/** The asks of the decisions on `file` with no picks on them, each by its id, in the ledger's order. */
 const unpicked = (file: ProductionFile): ReadonlyArray<string> =>
   file.said.flatMap((s) => Option.toArray(unpickedAsk(s)));
 
+/** The ask a decision names when it carries no picks; none for any other word. */
 const unpickedAsk = (said: Said): Option.Option<string> =>
   Option.filter(said.ask, () => said._tag === 'Decided' && Option.isNone(said.picks));
 
+/**
+ * What the record of `ask` (or why there is none to read) gives its decision
+ * on `production`'s ledger: the picks its close files there (`askWords`;
+ * the time it files them at plays no part), or why none: the ask files on
+ * another production, it is not closed, it was closed before its end, or he
+ * answered it by no choice.
+ */
 const foundFor = (production: string, ask: string, record: Read): PicksFound =>
   Result.match(record, {
     onFailure: (why) => PicksFound.Left({ ask, why }),
@@ -786,6 +906,12 @@ const foundFor = (production: string, ask: string, record: Read): PicksFound =>
     },
   });
 
+/**
+ * `file` with each decision on it that names its ask and carries no picks
+ * given the picks that ask's record files (`foundFor`, the record by
+ * `recordOf`), and what each such decision found. Nothing else changes: the
+ * decision keeps every other field and its place.
+ */
 const picksFiled = (file: ProductionFile, recordOf: (ask: string) => Read) => {
   const found = unpicked(file).map((ask) => foundFor(file.production, ask, recordOf(ask)));
   const filled = new Map(
@@ -800,16 +926,33 @@ const picksFiled = (file: ProductionFile, recordOf: (ask: string) => Read) => {
   return { file: { ...file, said }, found };
 };
 
+/** A ledger's fill that files no pick: nothing is written, and each decision's find is answered. */
 class NothingFiled extends Data.TaggedError('NothingFiled')<{
   readonly found: ReadonlyArray<PicksFound>;
 }> {}
 
+/**
+ * The owner's picks filed onto each decision on a production's ledger (the
+ * ledgers `ProductionStore` lists) that names its ask and carries none: the
+ * picks the ask's record in the lab's asks (`FILMS_LAB/asks/<id>.json`)
+ * files at its close (`askWords`), each a choice's value by its question's
+ * name, so an override may cite them (`style/override.ts`). A decision is
+ * left as it is when its ask's record is not there or does not read (it
+ * does not decode, or the platform cannot read it), files on another
+ * production, is not closed or was closed before its end, or was answered by
+ * no choice: no pick is made up. Nothing else on a ledger changes, and a
+ * ledger with nothing to fill is not written, so a second run writes nothing.
+ * Each ledger is filled as read under the lock its write takes, so what each
+ * such decision found, filled or left and why, in the ledger's order, is
+ * what the write did.
+ */
 export const fillPicks = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const store = yield* ContentStore;
   const productions = yield* ProductionStore;
   const dir = yield* asksDir;
+  /** The record of `ask`, or why there is none to read. */
   const recordOf = (ask: string): Effect.Effect<Read> =>
     Effect.gen(function* () {
       const file = path.join(dir, `${ask}.json`);
@@ -850,6 +993,7 @@ export const fillPicks = Effect.gen(function* () {
   return found.flat();
 });
 
+/** Whether two steps' answers are the same: the same names, each the same value. */
 const sameValues = (a: StepValues, b: StepValues): boolean => {
   const keys = Object.keys(a);
   return keys.length === Object.keys(b).length && keys.every((k) => a[k] === b[k]);

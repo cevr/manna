@@ -5,6 +5,7 @@ import RAISE_JSON from './raise/record.json' with { type: 'json' };
 import POSES1_JSON from './poses/poses-poses-1.json' with { type: 'json' };
 import { PUPPETS } from './puppets.ts';
 
+/** poses-1, fitted from his front or threeQuarterLeft puppet; the line is left as the drawings draw it 42 sheet px round the held hand (the raise's). */
 const POSES1 = fitted({
   view: 'poses-1',
   puppets: { front: PUPPETS.front, threeQuarterLeft: PUPPETS.threeQuarterLeft },
@@ -15,10 +16,18 @@ const POSES1 = fitted({
   quiet: 42,
 });
 
+/** Each fitted pose view: the puppet it was fitted from, the pose, every puppet's loss (lower is nearer), the fit's time, ms, and the kept box it was fitted on. */
 export const POSES = {
   'poses-1': POSES1.record,
 } as const;
 
+/**
+ * The fit rows each pose view's cut-out fails that the kept poses sheet's
+ * own proportions explain (`name/band/part`), why, and the proportion
+ * measured on the kept poses sheet and on the kept turnaround view the
+ * puppet is fitted from. Each pair is read by the fit rows' ground mask
+ * over the whole figure, its height H the first to the last figure row.
+ */
 export const NAMED: Readonly<
   Record<
     keyof typeof POSES,
@@ -43,4 +52,10 @@ export const NAMED: Readonly<
   ],
 };
 
+/**
+ * poses-1 as his cut-out draws it: the fitted puppet's body at the fitted
+ * pose, poses-1's own raised arm laid in place of his `armRight` and its
+ * hand and bottle held, each where poses-1 draws it; standing on the poses
+ * sheet where the kept view's crop does, held to its fit rows.
+ */
 export const poses1View = POSES1.view;

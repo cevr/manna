@@ -1,3 +1,38 @@
+/**
+ * Acceptance (stanzas A2): the player follows a stanza choice, Sound off and
+ * Sound on, over the score clock over a fake device on the TestClock.
+ *
+ * Hymn 78 (four stanzas of four lines, a four-line refrain after each, 32
+ * sung lines) with stanzas 1 and 3 chosen: the kept lines are each chosen
+ * stanza's lines and the refrain sung after it. The place the player shows
+ * is in sung time: the lead before the first sung line as recorded, the kept
+ * lines one after another from it, then the recording's tail.
+ *
+ * - Sound off: the place runs from the first sung line at 1000 ms a second
+ *   through the kept lines only, the status length is the cut's end, the
+ *   player ends there, and the device is asked for nothing.
+ * - Sound on: the device plays the recording from 0, and at each skipped
+ *   span's start the score clock seeks it to the next kept span's start (the
+ *   tail's for the last); the device sounds no skipped span for more than
+ *   25 ms and every kept span, the lead and the tail whole; the place runs on
+ *   with no jump to the sung length (the cut's end plus the tail).
+ * - A choice changed mid-play remaps the place through the recording: onto
+ *   a skipped line it moves on to the next kept line's start, never back in
+ *   the hymn; back to all stanzas it keeps the line and the offset; with
+ *   Sound on the device is sought there at once.
+ * - A Sound switch off and on hands the place over with no jump: the device
+ *   is silent while off and plays from the recording's place of the sung
+ *   place when on, then seeks across the next skip.
+ *
+ * The test's own oracle binds each line to its stanza from the words'
+ * sections (a refrain to the stanza sung before it) and cuts the timeline
+ * itself, so it shares no code with `stanzas.ts`. Numbers only: lines by
+ * index, stanzas by number, times in ms; no hymn's words are read into a
+ * message.
+ *
+ * Final path: `apps/hymnal/src/player/stanzas.play.test.ts`.
+ */
+
 import {
   Array as Arr,
   Clock,
@@ -32,18 +67,30 @@ import { soundOn } from './sound';
 
 const book = timingBook(bundled);
 
+/** One poll of the player (`statusEvery`), ms. */
 const POLL = 250;
+/** How far past a skipped span's start the device may sound, ms. */
 const NEAR = 25;
+/** A four-stanza hymn with its refrain after each stanza. */
 const HYMN = 78;
 const CHOSEN: ReadonlyArray<number> = [1, 3];
+/** The fake recording runs this far past the timeline's end, ms. */
 const TAIL = 1500;
 
 const track = { number: HYMN, title: `Hymn ${HYMN}` };
+/** Every hymn as printed: no transpose, no capo. */
 const printed = Atom.make(still);
+/** Every hymn at its written tempo. */
 const asWritten = Atom.make(100);
 const timeline = Option.getOrThrow(book.of(HYMN));
+/** The fake recording's length, ms. */
 const LENGTH = timeline.end + TAIL;
 
+/**
+ * The stanza each sung line of hymn `number` belongs to, from its words'
+ * sections: a stanza's line to its own, a refrain's line to the stanza sung
+ * before it (0 before any), as an after-each hymn binds it.
+ */
 const ownersOf = (number: number): ReadonlyArray<number> => {
   const sections = Arr.findFirst(hymns, (it) => it.number === number).pipe(
     Option.map((it) => it.sections),
@@ -56,9 +103,11 @@ const ownersOf = (number: number): ReadonlyArray<number> => {
   });
 };
 
+/** The test's `keptFor`: a line is kept when no stanza is chosen, it belongs to none, or its stanza is chosen. */
 const keptFor = (number: number, stanzas: ReadonlyArray<number>): ReadonlyArray<boolean> =>
   ownersOf(number).map((owner) => stanzas.length === 0 || owner === 0 || stanzas.includes(owner));
 
+/** A kept line: its index, its span in the recording, and where it starts in sung time. */
 interface Kept {
   readonly line: number;
   readonly start: number;
@@ -66,13 +115,16 @@ interface Kept {
   readonly sung: number;
 }
 
+/** A span of the recording no kept line sounds: skipped lines up to the next kept start (or the end). */
 interface Skip {
   readonly from: number;
   readonly to: number;
 }
 
+/** Hymn 78's timeline cut to a choice, as the oracle computes it. */
 interface Cut {
   readonly kept: ReadonlyArray<Kept>;
+  /** The cut's end in sung time: the first sung line plus the kept lengths. */
   readonly end: number;
   readonly skips: ReadonlyArray<Skip>;
 }
@@ -100,6 +152,7 @@ const cutBy = (stanzas: ReadonlyArray<number>): Cut => {
   return { kept, end: sung, skips };
 };
 
+/** The recording's time of sung time `sung` on `cut`. */
 const recordingAt = (cut: Cut, sung: number) => {
   if (sung < timeline.first) return sung;
   if (sung >= cut.end) return timeline.end + (sung - cut.end);
@@ -107,6 +160,7 @@ const recordingAt = (cut: Cut, sung: number) => {
   return span.start + (sung - span.sung);
 };
 
+/** The sung time of recording time `at` on `cut`: inside a skipped line, the next kept line's start. */
 const sungAt = (cut: Cut, at: number) => {
   if (at < timeline.first) return at;
   if (at >= timeline.end) return cut.end + (at - timeline.end);
@@ -116,11 +170,13 @@ const sungAt = (cut: Cut, at: number) => {
   );
 };
 
+/** The kept line sung time `sung` stands in on `cut`. */
 const lineAt = (cut: Cut, sung: number) =>
   Arr.findFirst(cut.kept, (it) => it.sung <= sung && sung < it.sung + lengthOf(it)).pipe(
     Option.map((it) => it.line),
   );
 
+/** The middle of line `index` in sung time on `cut`. */
 const middleOf = (cut: Cut, index: number) =>
   Option.getOrThrow(
     Arr.findFirst(cut.kept, (it) => it.line === index).pipe(
@@ -128,6 +184,12 @@ const middleOf = (cut: Cut, index: number) =>
     ),
   );
 
+/**
+ * A device holding a recording `LENGTH` ms long that plays at 1000 ms a
+ * second, and what it was asked: each play and seek with the host's time
+ * (`now`) and, for a seek, the place it left (`from`); and each piece of the
+ * recording it sounded (`heard`).
+ */
 const recorded = () => {
   const asked = {
     plays: new Array<{ readonly fromMs: number; readonly now: number }>(),
@@ -185,15 +247,18 @@ const recorded = () => {
   return { device, asked };
 };
 
+/** Let the player's fibers run what the clock's last move woke. */
 const settle = Effect.forEach(Array.from({ length: 10 }), () => Effect.yieldNow, {
   discard: true,
 });
 
+/** The player as the test read it after a poll, at the host's time `now`. */
 interface Sample {
   readonly now: number;
   readonly player: Player;
 }
 
+/** A Playing sample: the place and the length the player shows, ms. */
 interface Shown {
   readonly now: number;
   readonly at: number;
@@ -216,18 +281,26 @@ const shownIn = (samples: ReadonlyArray<Sample>): ReadonlyArray<Shown> =>
     ),
   );
 
+/** The most a shown place strays from `expected` at its time, ms. */
 const driftOf = (shown: ReadonlyArray<Shown>, expected: (now: number) => number) =>
   Math.max(0, ...shown.map((it) => Math.abs(it.at - expected(it.now))));
 
+/** The host's time the player first showed Ended, or Infinity. */
 const endedAt = (samples: ReadonlyArray<Sample>) =>
   Arr.findFirst(samples, (it) => Player.$is('Ended')(it.player)).pipe(
     Option.map((it) => it.now),
     Option.getOrElse(() => Number.POSITIVE_INFINITY),
   );
 
+/** How much of the recording between `from` and `to` the device sounded, ms. */
 const heardOf = (heard: ReadonlyArray<readonly [number, number]>, from: number, to: number) =>
   heard.reduce((sum, [a, b]) => sum + Math.max(0, Math.min(to, b) - Math.max(from, a)), 0);
 
+/**
+ * The app's player as `LivePlayer.tsx` builds it, over the score clock over
+ * the fake device, with hymn 78's stanza choice held in `choice` (every
+ * other hymn's is all), Sound on or off.
+ */
 const composed = (chosen: ReadonlyArray<number>, on: boolean) =>
   Effect.gen(function* () {
     const clock = yield* TestClock.testClockWith(Effect.succeed);
@@ -262,21 +335,25 @@ const composed = (chosen: ReadonlyArray<number>, on: boolean) =>
       asked: fake.asked,
       sound,
       state,
+      /** Choose hymn 78's stanzas, as the sheet's chips do, and let the player take it. */
       choose: (stanzas: ReadonlyArray<number>) =>
         Effect.andThen(
           Effect.sync(() => registry.set(choice, stanzas)),
           settle,
         ),
+      /** Send a command and let the player take it; the host's time it was taken at. */
       send: (command: Command) =>
         Effect.andThen(
           Effect.sync(() => registry.set(player.send, command)),
           Effect.andThen(settle, Clock.currentTimeMillis),
         ),
+      /** Switch Sound and let the score clock hand the place over; the host's time it was switched at. */
       switchSound: (to: boolean) =>
         Effect.andThen(
           SubscriptionRef.set(sound, to),
           Effect.andThen(settle, Clock.currentTimeMillis),
         ),
+      /** Move the clock on up to `ms`, a poll at a time, reading the player after each, until it ends. */
       walk: (ms: number) =>
         Effect.gen(function* () {
           const samples = new Array<Sample>();

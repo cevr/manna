@@ -22,6 +22,7 @@ import {
 import { renderCode } from '../../src/core/synth/graph/render.ts';
 import { resolveCode } from '../../src/core/synth/resolve.ts';
 
+/** The tones as the app declares them, rain and the breeze as long as a bed, and each one-shot family at one second long. */
 const TIMED: ReadonlyArray<readonly [string, Node]> = [
   ['room', room({ secs: 8 })],
   ['chime', chime({ root: 'D5', partials: 'glass', secs: 1.5 })],
@@ -43,6 +44,7 @@ const TIMED: ReadonlyArray<readonly [string, Node]> = [
   ['sizzle', sizzle({ flash: 0.05, crackle: 120, secs: 1 })],
 ];
 
+/** The budget for a second of sound on this laptop, in milliseconds. */
 const PER_SECOND_MS = 20;
 
 const RUNS = 7;
@@ -52,6 +54,7 @@ const median = (values: ReadonlyArray<number>): number => {
   return sorted[Math.floor(sorted.length / 2)] ?? 0;
 };
 
+/** How long `render` takes, in milliseconds, on the live clock. */
 const timed = (render: () => unknown) =>
   Effect.gen(function* () {
     const start = yield* Clock.currentTimeNanos;

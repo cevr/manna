@@ -63,6 +63,12 @@ describe('workspace URL', () => {
   });
 });
 
+/**
+ * Links as this app has written and read them, each with the href the app
+ * writes back for it: the canonical ones come back byte for byte, and the
+ * rest normalise the way they always have (defaults left out, unknown keys
+ * and values dropped, `limit` clamped, the walk stopping at a gap).
+ */
 const LINKS: ReadonlyArray<readonly [search: string, written: string]> = [
   ['', '/'],
   ['q=latter+rain', '/?q=latter+rain'],

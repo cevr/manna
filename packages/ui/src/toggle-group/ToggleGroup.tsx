@@ -15,12 +15,15 @@ interface ToggleGroupProps<Value extends string = string> extends BaseUIComponen
   'div',
   ToggleGroupState
 > {
+  /** The values of the pressed toggles. */
   value: readonly Value[];
+  /** Called with the values a press offers: the pressed toggle's alone, or none. */
   onValueChange: (groupValue: Value[]) => void;
 }
 
 const STATE: ToggleGroupState = {};
 
+/** The toggle drawn pressed, among the group's first toggles (-1: none). */
 const pressedIndex = (elements: ReadonlyArray<HTMLElement | null>) =>
   elements.findIndex((el) => el?.getAttribute('aria-pressed') === 'true');
 

@@ -1,3 +1,12 @@
+/** §10 Milestone 8: "RRF k=60 with ×2 original weighting and top-rank bonuses
+ *  reproduces the fusion fixture exactly."
+ *
+ *  "Exactly" is the word that shapes this file. The fixture below is not a
+ *  regression snapshot taken from the implementation — it is the arithmetic
+ *  written out by hand from §9.4's four rules, so a change to the formula fails
+ *  here even if the new formula is self-consistent. A fixture generated from the
+ *  code it tests can only ever prove the code is deterministic. */
+
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
@@ -11,6 +20,9 @@ import {
   TOP_RANK_BONUS,
 } from './fusion.js';
 
+/** §9.4's four constants, pinned. A silent change to any of them reorders every
+ *  result a client shows, so they are asserted rather than imported and
+ *  trusted. */
 describe('§9.4 the pinned constants', () => {
   it('is RRF with k = 60', () => {
     expect(RRF_K).toBe(60);
@@ -52,9 +64,25 @@ describe('§9.4 the one bonus', () => {
   });
 });
 
+/** Two ranked lists over five documents, chosen so every branch of §9.4 shows
+ *  up in the answer:
+ *
+ *  - `a` tops the lexical list and sits 4th in the vector list — the confident
+ *    top hit that also has broad agreement.
+ *  - `b` is 2nd lexically and 1st by vector — a top-rank bonus in each list,
+ *    one of them weighted.
+ *  - `c` is 3rd in both — the bonus band twice, no #1.
+ *  - `d` appears only in the lexical list, deep.
+ *  - `e` appears only in the vector list, at its #2. */
 const LEXICAL = ['a', 'b', 'c', 'd'];
 const VECTOR = ['b', 'e', 'c', 'a'];
 
+/** The scores, computed by hand from qmd's formula: sum `weight / (60 + rank)`
+ *  over the lists, then add ONE unweighted bonus from the document's best rank
+ *  in any list.
+ *
+ *  Every line is `Σ weight/(k+rank)` + `bonus(min rank)`, written out rather
+ *  than derived, so a change back to a per-list or weighted bonus fails here. */
 const EXPECTED = {
   a: 2 / 61 + 1 / 64 + TOP_RANK_BONUS,
   b: 2 / 62 + 1 / 61 + TOP_RANK_BONUS,

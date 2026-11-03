@@ -8,6 +8,7 @@ import { Toggle } from '../../../src/toggle/index.ts';
 import { ToggleGroup } from '../../../src/toggle-group/index.ts';
 import { log } from './log.ts';
 
+/** A toggle whose element logs the `tabindex` the browser gives it, and each change of it. */
 function Probed(props: { value: string }): JSX.Element {
   return (
     <Toggle
@@ -32,6 +33,7 @@ function Probed(props: { value: string }): JSX.Element {
   );
 }
 
+/** The group, its owner's value starting at `initial`, after the spread element. */
 const group = (initial: ReadonlyArray<string>) =>
   function Group(): JSX.Element {
     const [value, setValue] = createSignal<readonly string[]>(initial);

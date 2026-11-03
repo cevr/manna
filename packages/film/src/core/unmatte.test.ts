@@ -7,6 +7,7 @@ const PAPER: Rgb = [250, 240, 220];
 const INK: Rgb = [20, 12, 8];
 const FILL: Rgb = [240, 230, 205];
 
+/** Each column's colour from 3 on: a 40 % ink mix, a px bluer than the paper, ink (5..6), then a light fill (7..15). */
 const COLUMNS: ReadonlyArray<Rgb> = [
   [20 * 0.4 + 250 * 0.6, 12 * 0.4 + 240 * 0.6, 8 * 0.4 + 220 * 0.6].map(
     Math.round,
@@ -17,6 +18,7 @@ const COLUMNS: ReadonlyArray<Rgb> = [
   ...Array.from({ length: W - 7 }, () => FILL),
 ];
 
+/** A row-banded part: columns 0..2 ground, then `COLUMNS`. */
 const part = () => {
   const rgba = new Uint8Array(W * H * 4);
   for (let y = 0; y < H; y++)
@@ -139,6 +141,7 @@ describe('unmatte', () => {
       expect(px(x)).toEqual([...src.subarray((4 * w + x) * 4, (4 * w + x) * 4 + 4)]);
   });
 
+  /** `part()` with column `x` painted `colour`. */
   const partWith = (x: number, colour: Rgb) => {
     const rgba = part();
     for (let y = 0; y < H; y++) rgba.set([...colour, 255], (y * W + x) * 4);
@@ -207,6 +210,7 @@ describe('unmatte, a light px the figure encloses', () => {
   const NEAR: Rgb = [252, 243, 224];
   const MIX = COLUMNS[0]!;
 
+  /** A square figure on x, y 3..16 of a 20 × 20 frame, its outline a 40 % ink mix round tan and ink along its foot (an inked part, not a shadow), with `paint` laid over it. */
   const figure = (paint: ReadonlyArray<readonly [number, number, Rgb]>) => {
     const rgba = new Uint8Array(S * S * 4);
     for (let y = 3; y <= 16; y++)
@@ -317,6 +321,7 @@ describe('unmatte, a light px the figure encloses', () => {
       for (let x = x0; x <= x1; x++) rgba.set([...c, 255], (y * S + x) * 4);
     return rgba;
   };
+  /** An ink body (x 6..11, y 3..11) on two legs of the ink mix (x 6..7, 10..11) to row `bottom`, a 2 px `LIGHT` gap (x 8..9) between them. */
   const legs = (bottom: number) => {
     const rgba = paint(new Uint8Array(S * S * 4), [6, 11], [3, 11], INK);
     paint(rgba, [6, 7], [12, bottom], MIX);
@@ -428,6 +433,7 @@ describe('unmatte, a light px the figure encloses', () => {
     for (const [x, y] of gap(15)) expect(px(out!, x, y)[3]).toBe(0);
   });
 
+  /** His feet (an ink body on x 5..12, y 3..14, a 2 px `LIGHT` gap at x 8..9, y 8..14), and below them a 72 px part of the shadow's paint, inked at both ends (x 1..3 and 16..18, a third of its px) when `inked`, un-matted with `shadow` named. */
   const feetOver = (inked: boolean, shadow: ReadonlyArray<number>) => {
     const body = paint(new Uint8Array(S * S * 4), [5, 12], [3, 14], INK);
     paint(body, [8, 9], [8, 14], LIGHT);

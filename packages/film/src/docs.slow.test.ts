@@ -28,28 +28,54 @@ import {
   readDoc,
 } from './fixtures/doc-anchors.ts';
 
+/** What the docs are read against. */
 interface Code {
   readonly routes: ReadonlySet<string>;
   readonly registered: ReadonlySet<string>;
   readonly enabled: ReadonlySet<string>;
+  /** The film package's entries and its src's (`lint`, `lab`): `film/lab` names a directory, never a rule. */
   readonly entries: ReadonlySet<string>;
+  /** The binaries installed for the root and each workspace (`vite`, `tsc`): `bun run` runs one that no script names. */
   readonly bins: ReadonlySet<string>;
+  /** The scripts of the root, the app and this package: where the docs run scripts from. */
   readonly scripts: ReadonlySet<string>;
+  /** Each workspace package's scripts, by its directory (`apps/animations`), for a run in it (`--cwd`). */
   readonly scriptsAt: ReadonlyMap<string, ReadonlySet<string>>;
+  /** The scripts that run a film command (`bun cli.ts <command>`). */
   readonly filmCommands: ReadonlySet<string>;
+  /** The film commands those scripts run, by the CLI's own name (`film check`). */
   readonly commands: ReadonlySet<string>;
   readonly flags: ReadonlySet<string>;
   readonly tags: ReadonlySet<string>;
+  /**
+   * Every capitalised name src's code has (`SoundCheck`, `PageShell`,
+   * `Schema.TaggedError`): one it declares (a type, a class, a schema, a
+   * component), imports (named, a namespace or a default), or reads off a
+   * module.
+   */
   readonly names: ReadonlySet<string>;
+  /**
+   * Every name the repo's code writes, as the parser reads it (`wordsOf`):
+   * the identifiers, module paths and one-name strings of the `.ts` and
+   * `.tsx` files of the root and each workspace's tree, and the keys of
+   * their top's config (`.json`, `.toml`; installed packages and ignored
+   * output left out). A library's call the code makes (`drawImage`) and a
+   * config's key (`jsPlugins`) are written; a comment, a sentence in a
+   * string and a test's title are not, so a name only they keep goes stale
+   * when a rename leaves them. This file is left out: its probes name what
+   * the code lacks.
+   */
   readonly written: ReadonlySet<string>;
 }
 
+/** `/api/films/<film>/board/stale?beat=` as declared: `/api/films/:film/board/stale`; a `<ref>` is the rest of the path. */
 const declaredPath = (written: string) =>
   written
     .replace(/\[?\?.*$/, '')
     .replaceAll('<ref>', '*')
     .replace(/<(\w+)>/g, ':$1');
 
+/** The path a span writes, read against the path before it: `…/stale` below it, `/board` beside it. */
 const pathAfter = (before: string, written: string) => {
   if (written.startsWith('…/')) return `${before}${written.slice(1)}`;
   if (/^\/[^/]+$/.test(written) && before !== '')
@@ -57,6 +83,7 @@ const pathAfter = (before: string, written: string) => {
   return written;
 };
 
+/** A route row's first cell read into `METHOD path`s, each span against the one before. */
 const routesInCell = (cell: string): ReadonlyArray<string> => {
   const out: Array<string> = [];
   let method = '';
@@ -72,6 +99,7 @@ const routesInCell = (cell: string): ReadonlyArray<string> => {
   return out;
 };
 
+/** Every route the doc's tables document: rows whose first cell starts with a method. */
 const documentedRoutes = (markdown: Markdown): ReadonlyArray<string> =>
   matches(proseOf(markdown), /^\| *(`(?:GET|POST|PUT|DELETE) [^|]*)\|/gm).flatMap((m) =>
     routesInCell(firstGroup(m)),
@@ -82,8 +110,13 @@ const routeDrift = (markdown: Markdown, code: Code) =>
     .filter((route) => !code.routes.has(route))
     .map((route) => `route ${route} is declared by no API`);
 
+/** A path the lab's API has or once had: under `/api/`, or the old `/review/…` and `/lab/<film>/…`. */
 const API_PATH = /^\/(?:api|review)\/|^\/lab\/(?:<film>|:film)\//;
 
+/**
+ * Each route written in running text: a span `GET /api/…` is a declared
+ * route, and a bare API path (`/api/review/frame`) is the path of one.
+ */
 const spanDrift = (markdown: Markdown, code: Code) => {
   const paths = new Set(Array.from(code.routes).map((route) => route.replace(/^\S+ /, '')));
   return matches(proseOf(markdown), SPAN).flatMap((m) =>
@@ -108,9 +141,16 @@ const spanDrift = (markdown: Markdown, code: Code) => {
   );
 };
 
+/** A path under one of the lab's page roots: a page, or a file route served beside the pages. */
 const PAGE_PATH = /^\/(?:films|sets|series|folders|productions|asks|studio)\/\S*$/;
+/** The lab's file routes beside its pages, a placeholder or a concrete name in each word: a film's narration and its Board's files. */
 const SERVED_BESIDE = /^\/films\/[^/]+\/(?:narration\/[^/]+|board\.json|board\/[^/]+)$/;
 
+/**
+ * Each lab page a text writes in a span (`/asks/<ask>`, `/films/<film>/export?build=<kept>`),
+ * its words (`<film>`, `:film`) any: a page `pageAt` serves, or a file route beside them.
+ * A framework doc's only: the prior arts record each page as it landed.
+ */
 const pageDrift = (markdown: Markdown) =>
   matches(proseOf(markdown), SPAN).flatMap((m) => {
     const span = group(m, 2).trim();
@@ -120,25 +160,41 @@ const pageDrift = (markdown: Markdown) =>
     return [`page ${span} is no page of the lab`];
   });
 
+/**
+ * Each rule a doc names, in the form the plugin registers (`film/no-read-once`,
+ * a name of lowercase words joined by hyphens): a `film/<entry>` of the film
+ * package or its src (`film/lint`, `film/lab`) names a directory, not a rule.
+ */
 const ruleDrift = (markdown: Markdown, code: Code) =>
   matches(proseOf(markdown), /`film\/([a-z]+(?:-[a-z]+)*)`/g)
     .map(firstGroup)
     .filter((rule) => !code.registered.has(rule) && !code.entries.has(rule))
     .map((rule) => `rule film/${rule} is not registered`);
 
+/** `bun run`'s options that take a value (`--cwd apps/animations`); any other is a switch. */
 const VALUED = '--cwd|--filter|-F|--env-file|--config|-c|--preload|-r';
 
+/**
+ * Each `bun run` a text writes, its options before what it runs (runtime
+ * flags, `--bun`, `--watch`, among them): the package it runs in (`--cwd`),
+ * what it runs (a script, a binary, or a file, `./cli.ts`), and the rest of
+ * its command up to a `#` comment, the span's end or the line's (the next
+ * line, the next fence's, the next heading's, holds a run of its own).
+ */
 const BUN_RUN = new RegExp(
   `\\bbun run((?:\\s+(?:(?:${VALUED})[= ]\\S+|--?[a-z][\\w-]*))*)\\s+((?:\\.{1,2}/)?[a-z][\\w.:/-]*)([^#\`\\n]*)`,
   'g',
 );
 
 interface Run {
+  /** Where it runs (`--cwd`, the root's `.` as `''`); none, from any of the places the docs run scripts from. */
   readonly cwd: Option.Option<string>;
+  /** What it runs: a script's name, a binary's, or a file's (`cli.ts`). */
   readonly script: string;
   readonly rest: string;
 }
 
+/** Each `bun run` a text writes. */
 const runsIn = (text: string): ReadonlyArray<Run> =>
   matches(text, BUN_RUN).map((m) => ({
     cwd: Option.map(Option.fromNullOr(/--cwd[= ](\S+)/.exec(group(m, 1))), (cwd) =>
@@ -150,12 +206,18 @@ const runsIn = (text: string): ReadonlyArray<Run> =>
     rest: group(m, 3),
   }));
 
+/** The scripts a run can name: its package's (`--cwd`), else those of the places the docs run from. */
 const scriptsFor = (run: Run, code: Code): ReadonlySet<string> =>
   Option.match(run.cwd, {
     onNone: () => code.scripts,
     onSome: (cwd) => code.scriptsAt.get(cwd) ?? new Set<string>(),
   });
 
+/**
+ * Each `bun run` a doc writes, in its prose or its code, that names a script
+ * no package has: not an installed binary (`bun run --bun vite build`), nor a
+ * file (`cli.ts`, `src/x.ts`; a name with a dot or a slash that no script has).
+ */
 const scriptDrift = (markdown: Markdown, code: Code) =>
   runsIn(markdown.lines.map((line) => line.text).join('\n'))
     .filter(
@@ -166,35 +228,44 @@ const scriptDrift = (markdown: Markdown, code: Code) =>
     )
     .map((run) => `bun run ${run.script}: no such script`);
 
+/** A doc's prose: the lines of its paragraphs, headings, list items and table rows, each code span in backticks. */
 const proseOf = (markdown: Markdown) =>
   markdown.lines
     .filter((line) => !line.code)
     .map((line) => line.text)
     .join('\n');
 
+/** A code span in a line of prose (`spanOf`): its text. */
 const SPAN = /(`+) ?(.*?) ?\1/g;
 
+/** An anchor as the tree has it: the file it names under the doc's bases, and that file's text. */
 interface Found {
   readonly anchor: Anchor;
+  /** Under none of the doc's bases (its first directory is none of theirs): another tree's path. */
   readonly ours: boolean;
   readonly file: Option.Option<string>;
   readonly text: Option.Option<string>;
 }
 
+/** A file's code without its comments, which may still name what the code dropped. */
 const uncommented = (text: string) => text.replace(/\/\*[\s\S]*?\*\/|(?<![:'"`\w])\/\/.*$/gm, '');
 
+/** A name code declares, and where it starts. */
 interface Declared {
   readonly name: string;
   readonly at: number;
+  /** A declaration's (a binding's) span, where its members are; none for a member or a key, which binds nothing. */
   readonly spans: Option.Option<{ readonly start: number; readonly end: number }>;
 }
 
+/** The name an identifier or a string writes (`read`, `'read'`); none for a computed key or a private one. */
 const nameOf = (node: Node): ReadonlyArray<string> => {
   if (node.type === 'Identifier') return [node.name];
   if (node.type === 'Literal' && Predicate.isString(node.value)) return [node.value];
   return [];
 };
 
+/** The names a binding pattern binds: `a`, `{ a, b: c }`'s `a` and `c`, `[d, , ...e]`'s `d` and `e`. */
 const boundBy = (pattern: Node): ReadonlyArray<string> => {
   if (pattern.type === 'ObjectPattern') return pattern.properties.flatMap(boundBy);
   if (pattern.type === 'Property') return boundBy(pattern.value);
@@ -207,12 +278,21 @@ const boundBy = (pattern: Node): ReadonlyArray<string> => {
   return nameOf(pattern);
 };
 
+/**
+ * Each name a program declares, read by the parser: a binding (`const`,
+ * `let`, a destructure, a function, a class, an interface, a type, an enum
+ * and its members, a namespace, an export's name), each with its span; a
+ * member of a class or of a type, and an object literal's key, which bind
+ * nothing. A call names nothing, and a comment is no code.
+ */
 const declaredIn = (program: Program): ReadonlyArray<Declared> => {
   const out: Array<Declared> = [];
   const add = (names: ReadonlyArray<string>, at: number, spans: Declared['spans']) =>
     names.forEach((name) => out.push({ name, at, spans }));
+  /** A declaration's own name, when it has one (`class {}` has none), over the declaration's span. */
   const id = (name: Option.Option<Node>, node: { readonly start: number; readonly end: number }) =>
     add(Option.toArray(name).flatMap(nameOf), node.start, Option.some(node));
+  /** A member's name, written as an identifier or a string (`[key]` names none). */
   const member = (key: Node, computed: boolean, at: number) => {
     if (!computed) add(nameOf(key), at, Option.none());
   };
@@ -244,8 +324,10 @@ const declaredIn = (program: Program): ReadonlyArray<Declared> => {
   return out;
 };
 
+/** A file's code as `declares` reads it: its text, and its declarations as the parser reads them, once. */
 interface Source {
   readonly text: string;
+  /** None when the parser cannot read it. */
   readonly declared: Option.Option<ReadonlyArray<Declared>>;
 }
 
@@ -257,6 +339,15 @@ const sourceOf = (text: string, file: string): Source => {
   };
 };
 
+/**
+ * Whether a file's code declares a symbol: `Review` bound in it by a
+ * declaration (a key of an object it hands a call, `use({ Review })`, or a
+ * member of a type, `interface Deps { Review }`, binds nothing), and for
+ * `Review.read` each later part declared within one declaration that binds
+ * `Review`, any of them (a local of an earlier function named the same is
+ * not the one): a binding, a member, or a key of an object literal of its
+ * own (`Schema.Struct({ read })`); a `'lab'` as written.
+ */
 const declaresIn = (source: Source, symbol: string) => {
   if (symbol.startsWith("'")) {
     const code = uncommented(source.text).replace(
@@ -279,11 +370,14 @@ const declaresIn = (source: Source, symbol: string) => {
   );
 };
 
+/** `declaresIn` over a text; `file` names the dialect (`.tsx`). */
 const declares = (text: string, symbol: string, file = 'code.ts') =>
   declaresIn(sourceOf(text, file), symbol);
 
+/** A package's name (`@manna/url-state`), written as a path: no file of this tree. */
 const PACKAGE_NAME = /^@[\w-]+\/[\w.-]+/;
 
+/** The directories the repo's root `.gitignore` names (`tmp/`, `**\/test-results/`): output, never in the tree. */
 const ignoredDirectories = (gitignore: string): ReadonlySet<string> =>
   new Set(
     gitignore
@@ -297,6 +391,12 @@ const ignoredDirectories = (gitignore: string): ReadonlySet<string> =>
       .filter((line) => /^[\w.-]+$/.test(line)),
   );
 
+/**
+ * What a doc's anchors name that the tree lacks: a path that is gone, a
+ * symbol its file no longer declares, or a `path:line` (a line moves under
+ * an edit and still resolves; a symbol fails when it is renamed). A receipt
+ * at a commit or of a deletion names the tree as it was, so it is not read.
+ */
 const anchorDrift = (
   found: ReadonlyArray<Found>,
   sourceAt: (file: string, text: string) => Source,
@@ -314,6 +414,12 @@ const anchorDrift = (
       }),
     ]);
 
+/**
+ * Each anchor looked up under the doc's bases: the first base that has its
+ * first directory (and it is not ignored output) reads it. Under none, it is another tree's path, unless the
+ * doc is whole and it is neither a package's (`@manna/url-state`, an
+ * installed `effect/Schema`) nor ignored output (`tmp/logs`).
+ */
 const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, doc: Doc) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -364,15 +470,30 @@ const findAnchors = Effect.fn('test.docs.findAnchors')(function* (root: string, 
   );
 });
 
+/** The `--flag`s in a command's words that no `Flag` declares (`--no-x` by its `x`). */
 const undeclaredFlags = (words: string, code: Code) =>
   matches(words, /(?:^|\s|\[)--([a-z][a-z\d-]*)/g)
     .map(firstGroup)
     .filter((flag) => !code.flags.has(flag.replace(/^no-/, '')));
 
+/** A film command run by the CLI's own name (`film check --static --json`), up to a `#` comment. */
 const FILM_BIN = /(?:^|[\s(])film ([a-z][\w-]*)([^#]*)/g;
 
+/** Text that starts with the bin, after a shell's prompt (`$ `). */
 const AT_BIN = /^\s*(?:\$\s+)?film /;
 
+/**
+ * Where a line writes a command. In a code block: each command of the line
+ * that starts with the bin, the line cut at its shell comment (` # warns; …`)
+ * and split at `&&`, `||`, `;` and `|`
+ * (`cd apps/animations && film check …`); a block's comment
+ * (`// the film render pass …`) starts with none. In prose (a paragraph's
+ * line, a list item's or a quote's, its mark the parser's): each code span,
+ * and a line that starts with the bin up to its first span, unless it holds
+ * a sentence's `;` or `, ` (`film render writes stills; Vite takes --host`;
+ * a command's list is written `--scene a,b`, no space). A
+ * sentence that says "film" elsewhere is no command.
+ */
 const commandsIn = (line: Line): ReadonlyArray<string> => {
   if (line.code)
     return line.text
@@ -385,6 +506,11 @@ const commandsIn = (line: Line): ReadonlyArray<string> => {
   return [head, ...spans];
 };
 
+/**
+ * Each `--flag` given to a film command on a line, before its `#` comment:
+ * by its script (`bun run render <film> --stills`) or by the CLI's name
+ * (`film check --static`), written as a command.
+ */
 const flagDrift = (line: Line, code: Code) => [
   ...runsIn(line.text)
     .filter((run) => code.filmCommands.has(run.script))
@@ -403,8 +529,17 @@ const flagDrift = (line: Line, code: Code) => [
     ),
 ];
 
+/** A finding's name: a tagged error's (`DeadAir`, `TextOverlap`). */
 const FINDING = /\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b/g;
 
+/**
+ * On a line that runs `check`, each finding it names: every name on a
+ * command line (`bun run check <film>  # warns VoiceLevel`); on a line that
+ * names the run in passing (`` `bun run check <film> --sound` adds
+ * `DeadAir` ``), each name in a span the code has as nothing else (a type
+ * beside it, `SoundCheck`, a component, `PageShell`, or a name read off a
+ * module, `TaggedError`, is not a finding named).
+ */
 const findingDrift = (line: string, code: Code) => {
   const commandLine = /^\s*(?:bun run|film) check\b/.test(line);
   if (!commandLine && !/`(?:bun run|film) check\b/.test(line)) return [];
@@ -415,16 +550,46 @@ const findingDrift = (line: string, code: Code) => {
     .map((name) => `${name} is no finding`);
 };
 
+/** A code span that is a name, dotted or called: `drawRig`, `Effect.runPromise`, `loadRigs()`, `loadRigs(film)`. */
 const BARE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*(?:\([^()]*\))?$/;
 
+/** A file's name (`load.ts`, `NORTH_STAR.md`, `arm.riv`): the anchors' to read, not a name of the code. */
 const FILE_NAME =
   /\.(?:md|[cm]?[jt]sx?|json|jsonc|toml|ya?ml|riv|rml|css|html|svg|png|jpe?g|webp|wav|mp3|mp4|vtt|txt|lock|sh)$/;
 
+/**
+ * A part of a name written as code, never as a word of a sentence:
+ * camelCase (`drawRig`), a PascalCase compound (`RiveEngine`), one led by
+ * an acronym (`DOMParser`; letters only, so an id such as a playlist's is
+ * none), UPPER_SNAKE (`FILM_SRC`) or an all-caps name of five letters or
+ * more (`KNOBS`). A lowercase word (`clear`), a capitalised one (`Look`), a
+ * short acronym (`GET`, `RIVE`) and a one-letter lead (`XZoom`, a pattern of
+ * names) read as English, a unit, a protocol or a placeholder, and are not
+ * read.
+ */
 const CODE_NAME =
   /^(?:[a-z][a-z\d]*[A-Z][A-Za-z\d]*|[A-Z][a-z\d]+(?:[A-Z][a-z\d]*)+|[A-Z]{2,}[A-Z][a-z]+(?:[A-Z][a-z]+)*|[A-Z][A-Z\d]*(?:_[A-Z\d]+)+|[A-Z][A-Z\d]{4,})$/;
 
+/**
+ * A receipt right after a span: `` `name` at `<commit>` `` names the tree as
+ * it was, so that span is not read. A commit's hash holds a letter, so a
+ * long number (`16777216`) is none.
+ */
 const AT_COMMIT = /^\s+at\s+`(?=[0-9a-f]*[a-f])[0-9a-f]{7,40}`/;
 
+/**
+ * Each name a doc writes alone in a code span of its prose that the code
+ * does not write (`written`, `Code.written`): each part of the span written
+ * as code (`CODE_NAME`; `KNOBS` in `` `KNOBS[…]` `` is not alone; a symbol
+ * after a path is read here too, as a word, and by its anchor, in its file),
+ * so a renamed or removed name fails here. Not read: a code block
+ * (commands, sketches); a link's text when it links a URL, since a name of
+ * another tool is written as a link to its source
+ * (`` [`waitUntil`](https://motioncanvas.io/api/core/flow) ``), while a link
+ * to a file of ours is read; a line about another repo; and a span followed
+ * by its receipt, `at <commit>`. A name to come (a proposal's) is not
+ * written as code.
+ */
 const bareNameDrift = (text: string, written: ReadonlySet<string>) =>
   markdownOf(text, 'local')
     .lines.filter((line) => !line.code && !ANOTHER_REPO.test(line.text))
@@ -442,6 +607,7 @@ const bareNameDrift = (text: string, written: ReadonlySet<string>) =>
         .map((part) => `\`${span}\`: the code writes no ${part}`),
     );
 
+/** What a doc names that the code does not have, one line each. */
 const drift = (doc: Doc, code: Code): ReadonlyArray<string> => {
   const markdown = markdownOf(doc.text);
   return [
@@ -458,6 +624,7 @@ const drift = (doc: Doc, code: Code): ReadonlyArray<string> => {
   ].map((what) => `${doc.path}: ${what}`);
 };
 
+/** Every declared route documented: the declared routes no table row names. */
 const undocumented = (docs: ReadonlyArray<Doc>, code: Code): ReadonlyArray<string> => {
   const documented = new Set(docs.flatMap((doc) => documentedRoutes(markdownOf(doc.text))));
   return Array.from(code.routes).filter((route) => !documented.has(route));
@@ -467,6 +634,12 @@ const Scripts = Schema.fromJsonString(
   Schema.Struct({ scripts: Schema.Record(Schema.String, Schema.String) }),
 );
 
+/**
+ * The workspaces in `parent` (`apps`, `packages`) under `root`, as the
+ * root's workspace globs (`packages/*`) take them: each folder there that
+ * holds a `package.json`, by its path from the root. A file beside them
+ * (Finder's `.DS_Store`) or a folder with no `package.json` is none.
+ */
 const workspacesIn = (root: string, parent: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -485,14 +658,19 @@ const workspacesIn = (root: string, parent: string) =>
     );
   });
 
+/** A file of code `Code.written` reads, at any depth. */
 const CODE_FILE = /\.tsx?$/;
 
+/** A config file `Code.written` reads at a package's top (`.oxlintrc.json`, `bunfig.toml`); deeper, a `.json` is data (the corpora's assets). */
 const CONFIG_FILE = /\.(?:jsonc?|toml)$/;
 
+/** A text that is one name (`'AnswerUnencoded'`, `'LAB_PORT'`), never a sentence or a path. */
 const ONE_NAME = /^[A-Za-z_$][\w$]*$/;
 
+/** The calls whose first argument is a test's title (`describe('loadRigs', …)`, `it.effect.layer(l)('…')`). */
 const TEST_RUNNERS: ReadonlySet<string> = new Set(['describe', 'it', 'test', 'bench']);
 
+/** The name a call's callee starts from: `it` for `it.effect.layer(l)`. */
 const calleeRoot = (node: Node): string => {
   if (node.type === 'MemberExpression') return calleeRoot(node.object);
   if (node.type === 'CallExpression') return calleeRoot(node.callee);
@@ -503,6 +681,7 @@ const calleeRoot = (node: Node): string => {
 const isJsonObject = (value: Schema.Json): value is Schema.JsonObject =>
   Predicate.isObject(value) && !Array.isArray(value);
 
+/** A config's keys, and its values that are one name, at any depth. */
 const configWords = (value: Schema.Json, values: boolean): ReadonlyArray<string> => {
   if (Array.isArray(value)) return value.flatMap((v: Schema.Json) => configWords(v, values));
   if (isJsonObject(value))
@@ -513,12 +692,22 @@ const configWords = (value: Schema.Json, values: boolean): ReadonlyArray<string>
 
 const decodeJson = Schema.decodeUnknownSync(Schema.Json);
 
+/** A module path's words (`./dir/load.ts`: `dir`, `load`, `ts`); none for a computed import. */
 const pathWords = (source: Option.Option<Node>): ReadonlyArray<string> =>
   Option.toArray(source).flatMap((node) => {
     if (node.type !== 'Literal' || !Predicate.isString(node.value)) return [];
     return matches(node.value, /[A-Za-z_$][\w$]*/g).map((m) => m[0]);
   });
 
+/**
+ * The names a file writes as an editor's rename reads them, by the parser.
+ * Code (`.ts`, `.tsx`): each identifier (a binding, a reference, a member, a
+ * key, a JSX tag), the words of each module path it imports or exports
+ * from, and each string that is one name (a tag, an env key), unless it is a
+ * test's title. A comment, a sentence in a string or a template, and a
+ * title are prose: a rename leaves them as they were, so they keep no name.
+ * JSON: its keys and the values that are one name. TOML: its keys.
+ */
 const wordsOf = (file: string, text: string): ReadonlyArray<string> => {
   if (/\.jsonc?$/.test(file)) return configWords(decodeJson(JSONC.parse(text)), true);
   if (file.endsWith('.toml')) return configWords(decodeJson(TOML.parse(text)), false);
@@ -548,10 +737,20 @@ const wordsOf = (file: string, text: string): ReadonlyArray<string> => {
   ];
 };
 
+/**
+ * Where `writtenIn` keeps the names each file writes between runs, from the
+ * repo's root: under the film package's installed packages, never in the tree.
+ */
 const WRITTEN_CACHE = 'packages/film/node_modules/.cache/film-docs/written.json';
 
+/** How many of the tree's entries `writtenIn` stats or reads at once: the file system's waits overlap. */
 const WALK = 32;
 
+/**
+ * The names each file wrote when last read, by its path and the hash of its
+ * text, and the hash of what read them (`reader`): this file's text and the
+ * lock, so a change to how names are read reads every file anew.
+ */
 const WrittenCache = Schema.fromJsonString(
   Schema.Struct({
     reader: Schema.String,
@@ -562,6 +761,7 @@ const WrittenCache = Schema.fromJsonString(
   }),
 );
 
+/** The names kept at `cache` by the same `reader`; none when there are none, they do not decode, or another reader kept them. */
 const keptWords = (cache: string, reader: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -579,6 +779,7 @@ const keptWords = (cache: string, reader: string) =>
     );
   });
 
+/** Keep `written` at `cache`, whole or not at all: written beside it, then moved over it. */
 const keepWords = (cache: string, written: typeof WrittenCache.Type) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -589,6 +790,14 @@ const keepWords = (cache: string, written: typeof WrittenCache.Type) =>
     yield* fs.rename(beside, cache);
   });
 
+/**
+ * The names the repo's code writes (`Code.written`, `wordsOf`): the root's
+ * own code and config, and each workspace's config and the code of its
+ * tree, past installed packages and the directories the root's
+ * `.gitignore` names. Each file's names are kept between runs
+ * (`WRITTEN_CACHE`) by the hash of its text, so a file read before and
+ * unchanged since is not parsed again.
+ */
 const writtenIn = Effect.fn('test.docs.writtenIn')(function* (
   root: string,
   workspaces: ReadonlyArray<string>,
@@ -597,6 +806,7 @@ const writtenIn = Effect.fn('test.docs.writtenIn')(function* (
   const path = yield* Path.Path;
   const ignored = ignoredDirectories(yield* fs.readFileString(path.join(root, '.gitignore')));
   const self = path.relative(root, import.meta.path);
+  /** A directory's files `Code.written` reads; at its `top`, its config too, and under it only when `deep`. */
   const filesIn = (
     dir: string,
     top: boolean,
@@ -661,6 +871,7 @@ const writtenIn = Effect.fn('test.docs.writtenIn')(function* (
   return new Set(read.flatMap((each) => each.words));
 });
 
+/** The repo's code as the docs name it. */
 const readCode = Effect.fn('test.docs.readCode')(function* (root: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -673,6 +884,7 @@ const readCode = Effect.fn('test.docs.readCode')(function* (root: string) {
         (f) => read(dir, f),
       ),
     );
+  /** A directory's entries; none for a directory that is not there (a package with no binaries). */
   const entriesOf = (dir: string) =>
     Effect.map(Effect.option(fs.readDirectory(at(dir))), (names) =>
       Option.getOrElse(names, (): ReadonlyArray<string> => []),
@@ -735,6 +947,11 @@ const readCode = Effect.fn('test.docs.readCode')(function* (root: string) {
   } satisfies Code;
 });
 
+/**
+ * Each file a doc's anchors name, parsed once for every doc's test: the text
+ * it was parsed from beside it, so a file read again with other text is
+ * parsed again.
+ */
 const parsed = new Map<string, { readonly text: string; readonly source: Source }>();
 
 const sourceAt = (file: string, text: string) =>
@@ -747,6 +964,7 @@ const sourceAt = (file: string, text: string) =>
     },
   ).source;
 
+/** What each doc's anchors name that the tree lacks, one line each: each file they name parsed once (`parsed`). */
 const anchorsDrift = (root: string, docs: ReadonlyArray<Doc>) =>
   Effect.map(
     Effect.forEach(docs, (doc) =>
@@ -759,16 +977,19 @@ const anchorsDrift = (root: string, docs: ReadonlyArray<Doc>) =>
 
 const ROOT = Effect.map(Path.Path, (path) => path.join(import.meta.dir, '..', '..', '..'));
 
+/** Every doc the test reads, listed as the file loads: a test each. */
 const PLACES = docPlaces(`${import.meta.dir}/../../..`);
 
 const codeRead = Effect.runPromiseExit(
   Effect.flatMap(ROOT, readCode).pipe(Effect.provide(BunServices.layer)),
 );
 
+/** The repo's code as the docs name it, read once (`readCode`). */
 const repoCode = Effect.flatten(Effect.promise(() => codeRead));
 
 const TOKENS_CSS = 'packages/film/src/player/tokens.css';
 
+/** The design language's §3 block, as the parser reads it: the first css code block under `## 3. Tokens`. */
 const tokenBlock = (doc: string) => {
   let section = '';
   const blocks: Array<string> = [];
@@ -785,21 +1006,30 @@ const tokenBlock = (doc: string) => {
   return blocks[0] ?? '';
 };
 
+/** The player's sheet from its tokens (`:root {`) to the end of their queries, before the ground every page stands on. */
 const declaredTokens = (sheet: string) => {
   const start = sheet.indexOf(':root {');
   const end = sheet.indexOf('/* The ground every page');
   return `${sheet.slice(start, end).trimEnd()}\n`;
 };
 
+/**
+ * Where a comment names a `METHOD /api/…`: the method, and the path just
+ * after it. A path that starts with no name (`/api/…`) stands for every
+ * route, and names none.
+ */
 const CITED_ROUTE = /\b(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)\s+`?(?=\/api\/[a-z$<:])/g;
 
+/** The bracket that opens each closing one. */
 const OPENER = { ')': '(', ']': '[', '}': '{' } as const;
 
 const closes = (c: string): c is keyof typeof OPENER => c in OPENER;
 
+/** Whether `c` ends a path whose brackets `open` are open: a space, a quote, a backtick, or a bracket the path did not open. */
 const endsPath = (c: string, open: ReadonlyArray<string>) =>
   /[\s'"`]/.test(c) || (closes(c) && open.at(-1) !== OPENER[c]);
 
+/** Where the `${…}` at `at` in `text` ends: just past the brace that closes it, whatever it holds. */
 const templateEnd = (text: string, at: number): number => {
   let depth = 0;
   for (let i = at + 1; i < text.length; i += 1) {
@@ -809,11 +1039,19 @@ const templateEnd = (text: string, at: number): number => {
   return text.length;
 };
 
+/** A path a comment cites: as written, and as read (each `${…}` in it `${}`). */
 interface Cited {
   readonly written: string;
   readonly read: string;
 }
 
+/**
+ * The path written at the start of `text`, whole. It runs to a space, a
+ * quote, a backtick, or a bracket it did not open (a parenthesis around
+ * it); a bracket it opens is its own (`knob(extra)`), a `${…}` is read to
+ * the brace that closes it, and the stops that end a sentence (`.,;:`) are
+ * not its own.
+ */
 const citedPath = (text: string): Cited => {
   const open: Array<string> = [];
   let read = '';
@@ -837,21 +1075,31 @@ const citedPath = (text: string): Cited => {
   };
 };
 
+/** A cited path as the API matches it: each parameter (`<x>`, `:x`, `${…}`) one segment, no query or hash. */
 const pathOf = (read: string) =>
   read
     .replace(/\$\{\}|<[^>\s]+>|(?<=\/):\w+/g, 'x')
     .split(/[?#]/)
     .at(0) ?? '';
 
+/**
+ * Where a comment names a bare `/api/…` path, no method before it: not
+ * inside a longer path or a URL's host (`http://lab/api/…`), not a word's.
+ */
 const CITED_PATH = /(?<![\w/.:-])(?=\/api\/[a-z$<:])/g;
 
+/** A method just before a cited path (`GET /api/…`, `` POST `/api/…` ``): the route form reads it. */
 const AFTER_METHOD = /\b(?:GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)\s+`?$/;
 
+/** What the API declares, as a comment's route or path is read against it. */
 interface Api {
+  /** Whether it declares `method` at `pathname`. */
   readonly has: (method: string, pathname: string) => boolean;
+  /** Whether `pathname` is a route's path under any method, or leads to some (`/api/films/probe`). */
   readonly reaches: (pathname: string) => boolean;
 }
 
+/** Whether `pathname`'s segments lead `route`'s: each the route's own, or any for a `:param`, `*` the rest. */
 const leads = (pathname: string, route: string) => {
   const cited = pathname.split('/');
   const declared = route.split('/');
@@ -871,9 +1119,19 @@ const apiOf = (api: typeof LabHttpApi): Api => {
   };
 };
 
+/**
+ * Each route or path a comment in `text` names that the API does not
+ * declare, with its file and line: the comments as the parser (oxc) reads
+ * them, so a comment after code or a block's unstarred body is read, and a
+ * string that looks like one is not. A route (`GET /api/…`) is the method's;
+ * a bare path is any method's route, a prefix of some (`/api/`,
+ * `/api/films/probe`), or a path the file's own code writes (the routes a
+ * test's own server answers, `tools/page-render.slow.test.ts`).
+ */
 const commentRouteDrift = (file: string, text: string, api: Api): ReadonlyArray<string> => {
   const parsed = parseSync(file, text);
   if (parsed.errors.length > 0) return [`${file}: the parser cannot read it`];
+  /** The file's code, its comments left out, joined once: read for a bare path the API lacks. */
   const parts: Array<string> = [];
   let after = 0;
   for (const comment of parsed.comments) {
@@ -1380,6 +1638,13 @@ describe('the docs', () => {
   );
 });
 
+/**
+ * What a doc names that the code lacks, beyond its anchors, by its role: a
+ * framework doc's every name (`drift`), a passing doc's routes and spans
+ * (the owner's runbook, the prior arts and the app's README name routes
+ * too), an anchored doc's none, and a verify skill's doc each `bun run`
+ * (`bun run --cwd apps/firsttheblade verify:drive`: a script of that package).
+ */
 const NAMES_DRIFT: Record<DocPlace['role'], (doc: Doc, code: Code) => ReadonlyArray<string>> = {
   framework: drift,
   spanned: (doc, code) =>
