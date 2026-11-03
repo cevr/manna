@@ -155,16 +155,16 @@ const lint = Effect.fn('lintJudged')(function* (strict: boolean, read: Ref.Ref<n
 });
 
 /**
- * Reviews the repo's items by the store's answers alone, failing where
- * `bun run lint` fails on the same store: it prints every kept finding, as
- * it writes no findings file for oxlint to report one by, and each rule's
- * review line, and fails on a finding of a rule at `error`, Markdown's too.
+ * Reviews the repo's items by the store's answers alone, as the lint does:
+ * it prints and fails on the findings oxlint cannot report (a Markdown
+ * series script), of a rule at `error`, and prints each rule's review line.
+ * oxlint reports the rest from the store itself (`lint/judged.ts`).
  */
 const review = Effect.fn('lintReview')(function* (read: Ref.Ref<number>) {
   const outcomes = yield* judgeRepo(read);
-  const printed = yield* printFindings(outcomes, true);
+  const own = yield* printFindings(outcomes, false);
   yield* Effect.forEach(outcomes, (outcome) => Console.log(reviewLine(outcome)));
-  yield* gate(printed, false);
+  yield* gate(own, false);
 });
 
 const commandOf = (read: Ref.Ref<number>) =>

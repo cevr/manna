@@ -583,10 +583,9 @@ describe('the judged lint reads the whole repo, by content', () => {
 
 /**
  * The review's output for `repo` once `reviewed` made it: a.ts judged
- * history (its kept finding printed, as no findings file is written for
- * oxlint), b.ts unjudged.
+ * history (its kept finding oxlint's to report), b.ts unjudged.
  */
-const REVIEW_OUT = [FINDING, '[judged] rule=historyComment items=2 judged=1 unjudged=1 findings=1'];
+const REVIEW_OUT = ['[judged] rule=historyComment items=2 judged=1 unjudged=1 findings=1'];
 
 /**
  * `repo` once the lint judged `src/a.ts` history and kept it, its answer
@@ -732,7 +731,7 @@ describe('the judged review (lint:review) reads the store alone', () => {
   );
 
   it.live(
-    'prints and fails on a kept finding of a rule at error in a file oxlint lints, as no findings file is written for oxlint to fail on',
+    'leaves a kept finding of a rule at error in a file oxlint lints to oxlint, which fails on it from the store with no findings file, as the lint does',
     () =>
       withFs(
         Effect.gen(function* () {
@@ -740,26 +739,29 @@ describe('the judged review (lint:review) reads the store alone', () => {
           const path = yield* Path.Path;
           const script =
             "export const script = {\n  beats: [{ id: 'a', say: 'Ellen White said, rest.' }],\n};\n";
-          const dir = yield* repoOf(
-            'scriptSpeech',
-            'apps/animations/src/films/x/script.ts',
-            script,
-            script,
-          );
+          const file = 'apps/animations/src/films/x/script.ts';
+          const dir = yield* repoOf('scriptSpeech', file, script, script);
           const lint = yield* inProcess(dir, [], answering('breach', 'clean').layer);
           expect(Exit.isSuccess(lint.exit)).toBe(true);
           yield* fs.remove(path.join(dir, 'tmp'), { recursive: true });
           const review = yield* inReview(dir);
-          expect(Exit.isFailure(review.exit)).toBe(true);
-          expect(review.out).toHaveLength(2);
-          expect(review.out[0]).toStartWith(
-            'apps/animations/src/films/x/script.ts:2 error judged(scriptSpeech):',
-          );
-          expect(review.out[1]).toBe(
+          expect(Exit.isSuccess(review.exit)).toBe(true);
+          expect(review.out).toEqual([
             '[judged] rule=scriptSpeech items=1 judged=1 unjudged=0 findings=1',
-          );
+          ]);
           expect(yield* fs.exists(path.join(dir, 'tmp'))).toBe(false);
+          const oxlint = yield* run(dir, OXLINT, [
+            '--format',
+            'unix',
+            '-c',
+            '.oxlintrc.json',
+            'apps',
+          ]);
+          expect(oxlint.code).not.toBe(0);
+          expect(oxlint.stdout).toContain(`${file}:2:`);
+          expect(oxlint.stdout).toContain('[Error/judged(scriptSpeech)]');
         }),
       ),
+    SPAWNS_MS,
   );
 });
