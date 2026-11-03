@@ -1091,11 +1091,15 @@ const layPart = (
 };
 
 /** Each limb's part's pixels kept only on its stub (alpha times the stub's share): what the stroke leaves painted. */
-const STUBS = new WeakMap<PuppetPartLimb, Raster>();
+const STUBS = new WeakMap<PuppetPartLimb, WeakMap<Raster, Raster>>();
 
 const stubOf = (limb: PuppetPartLimb, pixels: Raster): Raster => {
-  const known = STUBS.get(limb);
-  if (known !== undefined) return known;
+  const textures = Option.getOrElse(
+    Option.fromUndefinedOr(STUBS.get(limb)),
+    () => new WeakMap<Raster, Raster>(),
+  );
+  const known = Option.fromUndefinedOr(textures.get(pixels));
+  if (Option.isSome(known)) return known.value;
   const rgba = Uint8Array.from(pixels.rgba);
   for (let y = 0; y < pixels.height; y++)
     for (let x = 0; x < pixels.width; x++) {
@@ -1103,7 +1107,8 @@ const stubOf = (limb: PuppetPartLimb, pixels: Raster): Raster => {
       rgba[o] = Math.round(rgba[o]! * limbShares(limb, x, y)[0]);
     }
   const stub = { width: pixels.width, height: pixels.height, rgba };
-  STUBS.set(limb, stub);
+  textures.set(pixels, stub);
+  STUBS.set(limb, textures);
   return stub;
 };
 

@@ -13,12 +13,13 @@
 // the slow suite.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
+import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Option, Path, Result } from 'effect';
 import type { Ramp } from '../canvas/colour.ts';
 import { type Dye, dyeKnots, dyedRaster, lightnessOf } from '../canvas/dye.ts';
 import { labOf } from '../core/cast-sheet-pixels.ts';
-import { type PuppetPose, rasterOf } from '../core/puppet.ts';
+import { type PuppetPose, puppetOf, rasterOf } from '../core/puppet.ts';
 import type { Raster } from '../core/raster.ts';
 import { encodePng } from '../tools/png.ts';
 import { handBeatKey } from './fixtures/key.ts';
@@ -27,6 +28,103 @@ import { puppetFrom } from './load.ts';
 import { PuppetImagesBun } from './images-bun.ts';
 
 const [W, H] = [96, 64];
+
+/** A half-scale inked sleeve with two flat shade planes and its own skin hand. */
+const strokeDyeFixture = () => {
+  const width = 100,
+    height = 150;
+  const INK = [34, 15, 3] as const,
+    LIGHT = [236, 214, 178] as const,
+    DARK = [196, 170, 136] as const,
+    SKIN = [240, 170, 120] as const;
+  const rgba = new Uint8Array(width * height * 4);
+  const norm = Math.hypot(30, 110),
+    dx = 30 / norm,
+    dy = 110 / norm;
+  const length = norm + Math.hypot(27, 99);
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) {
+      const X = 2 * x + 0.5,
+        Y = 2 * y + 0.5;
+      const u = (X - 60) * dx + (Y - 40) * dy,
+        v = (X - 60) * dy - (Y - 40) * dx;
+      let colour: ReadonlyArray<number> = [];
+      if (Math.hypot(X - 117 - 14 * dx, Y - 249 - 14 * dy) <= 14 && u > length) colour = SKIN;
+      else if (u >= -14 && u <= length) {
+        let half = 20 - 0.02 * Math.max(0, u);
+        colour = DARK;
+        if (v >= 0) {
+          half = 26 - 0.03 * Math.max(0, u);
+          colour = LIGHT;
+        }
+        if (Math.abs(v) > half) colour = [];
+        else if (Math.abs(v) > half - 4) colour = INK;
+      }
+      if (colour.length > 0) rgba.set([...colour, 255], (y * width + x) * 4);
+    }
+  const fixture = Result.getOrThrow(
+    puppetOf(
+      { width, height, parts: [{ name: 'arm', pixels: { width, height, rgba } }] },
+      {
+        bones: [
+          { name: 'shoulderRight', pivot: [30, 20], tip: [45, 75] },
+          { name: 'elbowRight', parent: 'shoulderRight', pivot: [45, 75], tip: [58.5, 124.5] },
+          {
+            name: 'wristRight',
+            parent: 'elbowRight',
+            pivot: [58.5, 124.5],
+            tip: [58.5 + 10 * dx, 124.5 + 10 * dy],
+          },
+        ],
+        skin: { arm: ['shoulderRight', 'elbowRight', 'wristRight'] },
+        limbs: [{ part: 'arm', bones: ['shoulderRight', 'elbowRight', 'wristRight'] }],
+      },
+    ),
+  );
+  return { puppet: fixture, palette: [INK, LIGHT, DARK, SKIN] };
+};
+
+// This CPU colour check lives above core so it can use the canvas dye without
+// reversing the dependency. It opens no browser and listens on no socket.
+describe('stroke dye reference', () => {
+  test('dyed flat paint equals dyedRaster within one byte, with unchanged coverage even when cloth dyes below INK_L', () => {
+    const dye = Result.getOrThrow(
+      dyeKnots(
+        { shade: '#c4aa88', base: '#ddc49d', light: '#ecd6b2' },
+        { shade: '#303030', base: '#3a3431', light: '#57453a' },
+      ),
+    );
+
+    const { puppet, palette } = strokeDyeFixture();
+    const dyed = {
+      ...puppet,
+      parts: puppet.parts.map((p) => ({ ...p, pixels: dyedRaster(dye, p.pixels) })),
+    };
+    for (const elbowRight of [0, 20, 45, 90]) {
+      const pose = { numbers: { elbowRight }, root: puppet.root, scale: 1 };
+      const raw = rasterOf(puppet, pose);
+      const want = dyedRaster(dye, raw);
+      const got = rasterOf(dyed, pose);
+      let worst = 0,
+        alpha = 0,
+        checked = 0;
+      for (let i = 0; i < got.rgba.length; i += 4) {
+        alpha = Math.max(alpha, Math.abs(got.rgba[i + 3]! - want.rgba[i + 3]!));
+        if (
+          raw.rgba[i + 3] !== 255 ||
+          !palette.some((rgb) => rgb.every((v, c) => raw.rgba[i + c] === v))
+        )
+          continue;
+        checked++;
+        for (let c = 0; c < 3; c++)
+          worst = Math.max(worst, Math.abs(got.rgba[i + c]! - want.rgba[i + c]!));
+      }
+      expect(checked).toBeGreaterThan(500);
+      expect(alpha).toBe(0);
+      expect(worst).toBeLessThanOrEqual(1);
+    }
+  });
+});
 
 /** The fixture's two parts: a sleeve (a band from (10, 26) to (86, 38)) over a body (a box below it). */
 const partsOf = (tint = 0) => {

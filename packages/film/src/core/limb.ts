@@ -161,10 +161,12 @@ export interface LimbStations {
   readonly crease: Pt;
 }
 
-/** A limb's regions over the box `[x, y, width, height]` that holds the part's paint: two bytes a texel, row by row, the stub's share and the hand's, of 255; the sleeve's is the rest. */
+/** A limb's regions over the box `[x, y, width, height]` that holds the part's paint: two share bytes per texel (stub and hand, of 255; sleeve is the rest), and a separate undyed cloth donor mask. */
 interface LimbRegions {
   readonly box: readonly [number, number, number, number];
   readonly shares: DataView;
+  /** Cloth donors measured before dye: neither ink, hand nor skin-coloured cuff flecks. */
+  readonly cloth: DataView;
 }
 
 /** A stroke limb as `puppetOf` measured it from its part's pixels: its rule, its rest chain, its knots `step` px apart along the sleeve, knot k at u = (k + ½) step (none on the shoulder's or the cuff's line, where a side's reach would read the paint's end), its two sides (`outer` the side a positive elbow turn opens), its ink's colour (the median of each channel) and width (the median depth where a side shows ink), and its regions. */
@@ -459,7 +461,7 @@ const endOf = (run: Run): LimbEnd => {
 
 const finite = (p: Pt) => Number.isFinite(p[0]) && Number.isFinite(p[1]);
 
-/** The first skin across the opening, distinguished from the lining by measured chroma. Lightness is omitted so a shaded lining stays cloth. Rays outside the skin keep the closest measured skin boundary, including the hand's outline on its own frame. */
+/** The skin across the opening, distinguished from the lining by measured chroma. Prefer a run spanning the measured pen radius over an isolated brush fleck; keep the first skin on rays whose painted hand is narrower than that radius. Lightness is omitted so a shaded lining stays cloth. Rays outside the skin keep the closest measured skin boundary, including the hand's outline on its own frame. */
 const cuffEdgeOf = (t: Texels, chain: LimbChain, cuff: LimbStation, inkWidth: number) => {
   const length = chain.upper + chain.fore;
   const d = unit(sub(chain.cuff, chain.elbow));
@@ -493,21 +495,32 @@ const cuffEdgeOf = (t: Texels, chain: LimbChain, cuff: LimbStation, inkWidth: nu
     (a, b) => chroma(b, cloth) - chroma(a, cloth),
   )[0];
   if (!skin || chroma(skin, cloth) === 0) return Result.fail('no distinct skin on the cuff axis');
-  for (let i = 0; i <= lo + Math.ceil(cuff.outer); i++) {
-    const v = i - lo;
+  const skinEdge = (v: number) => {
+    let first = Number.POSITIVE_INFINITY,
+      start = Number.POSITIVE_INFINITY;
     for (let s = length - 2 * inkWidth; s <= length + reach; s += INK_STEP) {
       const [x, y] = at(s, v);
       const opaque = t.holds(x, y) && t.byte(x, y, 3) >= 128;
       if (!opaque) {
+        start = Number.POSITIVE_INFINITY;
         if (s >= length) break;
         continue;
       }
       const lab = labOf(t.rgb(x, y));
       if (lab[0] >= INK_L && chroma(lab, skin) < chroma(lab, cloth)) {
-        edges.set(i, s);
-        break;
-      }
+        first = Math.min(first, s);
+        start = Math.min(start, s);
+        if (s - start + INK_STEP >= inkWidth / 2) {
+          first = start;
+          break;
+        }
+      } else start = Number.POSITIVE_INFINITY;
     }
+    return first;
+  };
+  for (let i = 0; i <= lo + Math.ceil(cuff.outer); i++) {
+    const first = skinEdge(i - lo);
+    if (Number.isFinite(first)) edges.set(i, first);
   }
   if (edges.size === 0) return Result.fail('no skin boundary across the cuff');
   const measured = [...edges.entries()];
@@ -518,9 +531,15 @@ const cuffEdgeOf = (t: Texels, chain: LimbChain, cuff: LimbStation, inkWidth: nu
     })[1];
   const measuredEdges = new Float64Array(lo + Math.ceil(cuff.outer) + 1);
   for (let i = 0; i < measuredEdges.length; i++) measuredEdges[i] = nearestEdge(i);
-  return Result.succeed((v: number) => {
-    const i = Math.max(0, Math.min(measuredEdges.length - 1, Math.round(v) + lo));
-    return Option.getOrThrow(Option.fromUndefinedOr(measuredEdges[i]));
+  return Result.succeed({
+    edge: (v: number) => {
+      const i = Math.max(0, Math.min(measuredEdges.length - 1, Math.round(v) + lo));
+      return Option.getOrThrow(Option.fromUndefinedOr(measuredEdges[i]));
+    },
+    cloth: (x: number, y: number) => {
+      const lab = labOf(t.rgb(x, y));
+      return lab[0] >= INK_L && chroma(lab, cloth) <= chroma(lab, skin);
+    },
   });
 };
 
@@ -529,20 +548,22 @@ const regionsOf = (
   pixels: Raster,
   t: Texels,
   chain: LimbChain,
-  edge: (v: number) => number,
+  cuff: { readonly edge: (v: number) => number; readonly cloth: (x: number, y: number) => boolean },
 ): LimbRegions => {
   const box = paintBox(pixels, t);
   const [bx, by, bw, bh] = box;
   const shares = new Uint8Array(bw * bh * 2);
+  const cloth = new Uint8Array(bw * bh);
   for (let y = 0; y < bh; y++)
     for (let x = 0; x < bw; x++) {
       const [u, v] = unroll(chain, [bx + x + 0.5, by + y + 0.5]);
       const body = t.isBody(bx + x, by + y);
       const stub = Math.round(255 * Math.max(Number(body), clamp01(0.5 - u / FEATHER)));
-      const hand = Number(!body && u >= edge(v)) * 255;
+      const hand = Number(!body && u >= cuff.edge(v)) * 255;
       shares.set([stub, hand], 2 * (y * bw + x));
+      cloth[y * bw + x] = Number(hand === 0 && cuff.cloth(bx + x, by + y));
     }
-  return { box, shares: bytes(shares) };
+  return { box, shares: bytes(shares), cloth: bytes(cloth) };
 };
 
 /**

@@ -4803,3 +4803,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** On hymn 11 at 0:27, with Sound on, no syllable of the sung line lit. The app's timing encoder (`apps/hymnal/vite/timing.ts`) wrote a line's syllable times only for a part of chord level `syllable`, so 16 of hymn 11's 24 sung lines, and 1 045 played lines of `line`-level parts in 100 hymns, were marked whole, and in the chords view the whole mark (accent on a soft tint) barely shows on the dark ground.
 - **Cause:** The encoder read the chord level as a yes or no for the follow. A `line`-level line's times are its notes' times, but the words the compiler laid on those notes are less sure: in 110 such lines (hymn 189's refrain after stanzas 2 and 3 among them) another singing on the same notes puts the words elsewhere. The encoder now carries the times of every played, not-even Sung line whose times fit it (one per syllable, in order, inside the line), and at `line` level only when its other singings on the same notes of the sung file agree (a refrain line each syllable on the same note, a stanza line opening within one note); any other line is marked whole.
 - **Guard:** code: `apps/hymnal/src/follow/wordlight.acceptance.test.ts` `every line whose note times may light it lights its sung syllable at each syllable start, between starts and at generated times; any other line is marked whole`; `apps/hymnal/src/follow/follower.test.ts` `lights no line-level line whose words another lit singing on the same notes lays elsewhere`
+
+### stroke-cloth-excludes-the-hand
+
+- **Date:** 2026-11-02
+- **Kind:** review
+- **Said:** "A turned wrist leaves a second wrist of skin on the forearm"
+- **Source:** stroke-limbs/round-s3-findings.md M1
+- **Wrong:** The sleeve's round cuff sampled skin from hand-owned texels on the forearm's frame; turning the hand exposed a second wrist.
+- **Cause:** The nearest cloth sampler excluded ink but accepted the hand as a donor. Donors now come from a cloth mask measured before dye, excluding hand ownership and skin-coloured cuff flecks.
+- **Guard:** code: `packages/film/src/core/limb.test.ts` `generated elbow and wrist turns leave zero skin outside the posed hand`
+
+### cuff-cut-ignores-isolated-brush-flecks
+
+- **Date:** 2026-11-02
+- **Kind:** review
+- **Said:** "A 2-row tooth in the cut."
+- **Source:** stroke-limbs/blocked.md F1 (implementor confirmation of round-s3-findings.md's unnumbered cut tooth)
+- **Wrong:** Two rays found a half-pixel skin-coloured fleck in the lining and pulled the hand's cut about 14 px before its neighbouring rays.
+- **Cause:** The first matching sample became the cut. The measurement now prefers a skin run spanning the measured pen radius, retaining the first skin when the whole painted hand on that ray is narrower.
+- **Guard:** code: `packages/film/src/core/limb.test.ts` `an isolated skin-coloured brush fleck in the lining cannot pull a tooth into the hand cut`

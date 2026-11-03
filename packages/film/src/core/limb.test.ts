@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Option, Result, Schema } from 'effect';
+import { labOf } from './cast-sheet-pixels.ts';
 import {
   LimbRefused,
   type PuppetLimb,
@@ -183,6 +184,44 @@ const BENT_PUPPET = Result.getOrThrow(
     { bones: BENT_BONES, skin: { arm: [...CHAIN] }, limbs: [DECLARED] },
   ),
 );
+
+const HALF = Result.getOrThrow(
+  puppetOf(
+    {
+      width: W / 2,
+      height: H / 2,
+      parts: [{ name: 'arm', pixels: paint(W / 2, H / 2, (x, y) => texelAt(2 * x, 2 * y, BOTH)) }],
+    },
+    {
+      bones: BONES.map((b) => ({
+        ...b,
+        pivot: [b.pivot[0] / 2, b.pivot[1] / 2] as const,
+        tip: [b.tip[0] / 2, b.tip[1] / 2] as const,
+      })),
+      skin: { arm: [...CHAIN] },
+      limbs: [DECLARED],
+    },
+  ),
+);
+const HALF_LIMB = Option.getOrThrow(Option.fromUndefinedOr(HALF.parts[0]!.limb));
+
+/** Acceptance E's OKLab distance, distinct from the measurement's CIE Lab. */
+const oklab = (rgb: Rgb): Rgb => {
+  const linear = rgb.map((c) => {
+    const v = c / 255;
+    if (v <= 0.04045) return v / 12.92;
+    return ((v + 0.055) / 1.055) ** 2.4;
+  });
+  const [r, g, b] = linear as [number, number, number];
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+};
 
 // Frame results are pure. Reuse identical fixture poses across the ink,
 // connectivity and curvature assertions without rerasterizing each one.
@@ -377,7 +416,179 @@ const silhouetteIoU = (before: Raster, after: Raster) => {
   return inter / union;
 };
 
+/** Skin outside the posed hand, restricted to forearm-frame hand texels (the ghost-wrist oracle). */
+const ghostSkin = (
+  half: Parameters<typeof rasterOf>[0],
+  numbers: Readonly<Record<string, number>>,
+  r: Raster,
+) => {
+  const part = half.parts[0]!;
+  const limb = Option.getOrThrow(Option.fromUndefinedOr(part.limb));
+  const alpha = (x: number, y: number) => {
+    if (x < 0 || y < 0 || x >= half.width || y >= half.height) return 0;
+    return part.pixels.rgba[(y * half.width + x) * 4 + 3]! / 255;
+  };
+  const m = boneTransforms(half.bones, numbers);
+  const rest = (bone: number, x: number, y: number): Pt => {
+    const i = 6 * bone,
+      dx = x - m[i + 4]!,
+      dy = y - m[i + 5]!;
+    return [m[i]! * dx + m[i + 1]! * dy, m[i + 2]! * dx + m[i + 3]! * dy];
+  };
+  let skin = 0;
+  for (let y = 0; y < r.height; y++)
+    for (let x = 0; x < r.width; x++) {
+      const i = (y * r.width + x) * 4;
+      if (r.rgba[i + 3]! < 128 || r.rgba[i]! < 90) continue;
+      const [hx, hy] = rest(2, x + 0.5, y + 0.5);
+      const bx = Math.floor(hx - 0.5),
+        by = Math.floor(hy - 0.5);
+      const fx = hx - 0.5 - bx,
+        fy = hy - 0.5 - by;
+      let hand = 0;
+      for (let k = 0; k < 4; k++) {
+        const dx = k & 1,
+          dy = k >> 1;
+        hand +=
+          [1 - fx, fx][dx]! *
+          [1 - fy, fy][dy]! *
+          limbShares(limb, bx + dx, by + dy)[2] *
+          alpha(bx + dx, by + dy);
+      }
+      if (hand >= 0.5) continue;
+      const [sx, sy] = rest(1, x + 0.5, y + 0.5);
+      if (
+        alpha(Math.floor(sx), Math.floor(sy)) < 0.5 ||
+        limbShares(limb, Math.floor(sx), Math.floor(sy))[2] < 0.5
+      )
+        continue;
+      const lab = labOf([r.rgba[i]!, r.rgba[i + 1]!, r.rgba[i + 2]!]);
+      const distance = (c: Rgb) => {
+        const of = labOf(c);
+        return Math.hypot(lab[1] - of[1], lab[2] - of[2]);
+      };
+      if (distance(SKIN) < Math.min(distance(LIGHT), distance(DARK))) skin++;
+    }
+  return skin;
+};
+
 describe('rasterOf stroke silhouette', () => {
+  test('the stub keeps painted coverage but its interior source ink becomes cloth in the single silhouette', () => {
+    const pixels = paint(W / 2, H / 2, (x, y) => {
+      const [u] = frame([2 * x + 0.5, 2 * y + 0.5], S, D, 0);
+      if (u > -8 && u < -4 && ARM.rgba[(2 * y * W + 2 * x) * 4 + 3]! > 0) return [INK];
+      return texelAt(2 * x, 2 * y, BOTH);
+    });
+    const puppet = Result.getOrThrow(
+      puppetOf(
+        { width: W / 2, height: H / 2, parts: [{ name: 'arm', pixels }] },
+        { bones: HALF.bones, skin: { arm: [...CHAIN] }, limbs: [DECLARED] },
+      ),
+    );
+    const p = along(along(S, D, -6), OUTER, -8);
+    const i = (Math.floor(p[1] / 2) * (W / 2) + Math.floor(p[0] / 2)) * 4;
+    const painted = rasterOf(puppet, { numbers: {}, root: puppet.root, scale: 1 });
+    expect([...painted.rgba.subarray(i, i + 4)]).toEqual([...INK, 255]);
+    for (const elbowRight of [25, 45, 90]) {
+      const r = rasterOf(puppet, { numbers: { elbowRight }, root: puppet.root, scale: 1 });
+      expect(r.rgba[i + 3]).toBe(255);
+      expect(r.rgba[i]!).toBeGreaterThan(150);
+    }
+  });
+  test('fixture D: no extra bare cloth near elbow or wrist at 0, 20, 45 and 90 degrees', () => {
+    const bare = (r: Raster, elbow: number) => {
+      const theta = (elbow * Math.PI) / 180;
+      const d = sub(BC, BE);
+      const wrist: Pt = [
+        BE[0] + Math.cos(theta) * d[0] - Math.sin(theta) * d[1],
+        BE[1] + Math.sin(theta) * d[0] + Math.cos(theta) * d[1],
+      ];
+      let count = 0;
+      for (let y = 1; y < r.height - 1; y++)
+        for (let x = 1; x < r.width - 1; x++) {
+          if (
+            Math.hypot(x - BE[0], y - BE[1]) > 0.6 * B_FORE &&
+            Math.hypot(x - wrist[0], y - wrist[1]) > 0.35 * B_FORE
+          )
+            continue;
+          const i = (y * r.width + x) * 4;
+          if (
+            r.rgba[i + 3]! < 128 ||
+            0.2126 * r.rgba[i]! + 0.7152 * r.rgba[i + 1]! + 0.0722 * r.rgba[i + 2]! < 90
+          )
+            continue;
+          if ([i - 4, i + 4, i - 4 * r.width, i + 4 * r.width].some((j) => r.rgba[j + 3]! < 128))
+            count++;
+        }
+      return count;
+    };
+    const rest = bare(bentAt(0), 0);
+    for (const elbow of [0, 20, 45, 90])
+      expect(bare(bentAt(elbow, -0.85 * elbow), elbow) - rest).toBeLessThanOrEqual(12);
+  });
+  test('fixture E: the forced stroke at rest matches its painted silhouette and cloth', () => {
+    const puppet = HALF;
+    const pose = { numbers: {}, root: puppet.root, scale: 1 };
+    const painted = rasterOf(puppet, pose);
+    const forced = {
+      ...puppet,
+      parts: puppet.parts.map((p) => ({ ...p, limb: { ...HALF_LIMB, fade: [-2, -1] as const } })),
+    };
+    const stroke = rasterOf(forced, pose);
+    expect(silhouetteIoU(painted, stroke)).toBeGreaterThanOrEqual(0.97);
+    let total = 0,
+      checked = 0;
+    for (let i = 0; i < painted.rgba.length; i += 4) {
+      if (painted.rgba[i + 3]! < 128 || stroke.rgba[i + 3]! < 128 || painted.rgba[i]! < 90)
+        continue;
+      const a = oklab([painted.rgba[i]!, painted.rgba[i + 1]!, painted.rgba[i + 2]!]);
+      const b = oklab([stroke.rgba[i]!, stroke.rgba[i + 1]!, stroke.rgba[i + 2]!]);
+      total += Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(500);
+    expect(total / checked).toBeLessThanOrEqual(0.035);
+  });
+  test('generated elbow and wrist turns leave zero skin outside the posed hand', () => {
+    const half = Result.getOrThrow(
+      puppetOf(
+        {
+          width: BW / 2,
+          height: BH / 2,
+          parts: [
+            { name: 'arm', pixels: paint(BW / 2, BH / 2, (x, y) => bentTexel(2 * x, 2 * y)) },
+          ],
+        },
+        {
+          bones: BENT_BONES.map((b) => ({
+            ...b,
+            pivot: [b.pivot[0] / 2, b.pivot[1] / 2] as const,
+            tip: [b.tip[0] / 2, b.tip[1] / 2] as const,
+          })),
+          skin: { arm: [...CHAIN] },
+          limbs: [DECLARED],
+        },
+      ),
+    );
+    const rng = lcg(716);
+    const poses: Array<readonly [number, number]> = [
+      [25, -120],
+      [25, 120],
+      [60, -51],
+      [90, 76.5],
+      [120, 0],
+      [120, -102],
+    ];
+    for (let i = 0; i < 10; i++) poses.push([25 + 95 * rng(), -120 + 240 * rng()]);
+    const failures: Array<string> = [];
+    for (const [elbowRight, wristRight] of poses) {
+      const numbers = { elbowRight, wristRight };
+      const r = rasterOf(half, { numbers, root: half.root, scale: 1 });
+      const skin = ghostSkin(half, numbers, r);
+      if (skin > 0) failures.push(`${elbowRight}/${wristRight}: ${skin}`);
+    }
+    expect(failures).toEqual([]);
+  });
   test('the measured ink width doubles with the figure, rather than staying in output pixels', () => {
     const small = Result.getOrThrow(
       puppetOf(
@@ -607,6 +818,22 @@ describe('limbOf', () => {
         if (hand > 0 && hand < 1) partial++;
       }
     expect(partial).toBe(0);
+  });
+
+  test('an isolated skin-coloured brush fleck in the lining cannot pull a tooth into the hand cut', () => {
+    const lined = paint(W, H, (x, y) => {
+      const [u] = frame([x + 0.5, y + 0.5], S, D, 0);
+      if (u > CUFF && u < CUFF + 8 && ARM.rgba[(y * W + x) * 4 + 3]! > 0) {
+        if (u > CUFF + 2 && u < CUFF + 3) return [SKIN];
+        return [DARK];
+      }
+      return texelAt(x, y, BOTH);
+    });
+    const limb = Result.getOrThrow(limbOf('arm', lined, JOINTS, DECLARED));
+    const p = along(along(C, D, 5), OUTER, 3);
+    expect(limbShares(limb, Math.floor(p[0]), Math.floor(p[1]))[2]).toBe(0);
+    const skin = along(along(C, D, 12), OUTER, 3);
+    expect(limbShares(limb, Math.floor(skin[0]), Math.floor(skin[1]))[2]).toBe(1);
   });
 
   test('refuses an arm it cannot measure, naming the kind', () => {

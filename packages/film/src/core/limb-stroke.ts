@@ -20,6 +20,11 @@ import {
 
 type Pt = readonly [number, number];
 
+/** The fold weighs 0.6 of the measured silhouette ink and spans the measured forearm, with no additional inset (fractions of forearm length). */
+const FOLD_WEIGHT = 0.6;
+const FOLD_LENGTH = 1;
+const FOLD_INSET = 0;
+
 /** An affine map `[a, b, c, d, e, f]`: x' = a x + c y + e, y' = b x + d y + f. */
 type Affine = Float64Array;
 
@@ -239,29 +244,29 @@ const nearest = (width: number, height: number, seed: (i: number) => boolean) =>
   return { ids, distances };
 };
 
-/** The part's cloth under its source ink, sampled before posing so a bilinear ink/cloth edge cannot leave a second line inside the union. */
+/** The part's cloth under its ink and hand. Donors are classified on the undyed paint so a dark dye cannot become ink; posing cannot paint an unturned wrist inside the sleeve. */
 const clothSampler = (limb: PuppetPartLimb, sample: LimbSample): LimbSample => {
   const [x0, y0, width, height] = limb.regions.box;
   const pixels = new Float64Array(width * height * 4);
-  const ink = new Uint8Array(width * height);
+  const excluded = new Uint8Array(width * height);
   for (let y = 0; y < height; y++)
     for (let x = 0; x < width; x++) {
       const i = y * width + x;
       const p = pixels.subarray(i * 4, i * 4 + 4);
       sample(x0 + x + 0.5, y0 + y + 0.5, p);
-      if (p[3]! > 0 && labOf([p[0]! / p[3]!, p[1]! / p[3]!, p[2]! / p[3]!])[0] < INK_L) ink[i] = 1;
+      if (limb.regions.cloth.getUint8(i) === 0) excluded[i] = 1;
     }
-  const fromInk = nearest(width, height, (i) => ink[i] === 1);
+  const fromExcluded = nearest(width, height, (i) => excluded[i] === 1);
   // The four neighbours of a bilinear sample reach a diagonal texel: keep
-  // that one-texel antialias fringe out of both the ink and its donor cloth.
+  // that one-texel antialias fringe out of the excluded paint's donor cloth.
   const cloth = nearest(
     width,
     height,
-    (i) => pixels[i * 4 + 3]! >= 0.5 && fromInk.distances[i]! > 2,
+    (i) => pixels[i * 4 + 3]! >= 0.5 && fromExcluded.distances[i]! > 2,
   );
   for (let i = 0; i < width * height; i++) {
     let j = i * 4;
-    if (pixels[j + 3]! < 0.5 || fromInk.distances[i]! <= 2) j = cloth.ids[i]! * 4;
+    if (pixels[j + 3]! < 0.5 || fromExcluded.distances[i]! <= 2) j = cloth.ids[i]! * 4;
     if (j < 0) continue;
     for (let c = 0; c < 3; c++) pixels[i * 4 + c] = pixels[j + c]! / pixels[j + 3]!;
     pixels[i * 4 + 3] = 1;
@@ -415,7 +420,6 @@ export const limbStroke = (
   const { fold } = limbBlend(limb, numbers);
   const { chain, ink, inkWidth } = limb;
   const sampleCloth = clothSampler(limb, sample);
-  const length = chain.upper + chain.fore;
   const segs = [
     [chain.shoulder, unit(sub(chain.elbow, chain.shoulder)), 0],
     [chain.elbow, unit(sub(chain.cuff, chain.elbow)), chain.upper],
@@ -460,6 +464,9 @@ export const limbStroke = (
       const qh = mapped(frames.hand, px, py);
       const upperDistance = tube(0, qu, upper);
       past.set(stub);
+      // The stub contributes its painted coverage and cloth to one garment.
+      // Its source ink is replaced so an interior shoulder seam cannot become
+      // a second outline; the completed union receives the measured ink once.
       if (
         stub[3]! > 0 &&
         labOf([stub[0]! / stub[3]!, stub[1]! / stub[3]!, stub[2]! / stub[3]!])[0] < INK_L
@@ -479,8 +486,16 @@ export const limbStroke = (
       hands.set(hand, o);
       const [u, v] = along(1, qf);
       const [w] = widthAt(limb, 'outer', 1, u);
-      if (u >= chain.upper && u <= length && v >= 0)
-        folds[i] = clamp01(v - (w - inkWidth) + 0.5) * fore[3]! * upper[3]! * fold;
+      if (u >= chain.upper && u <= chain.upper + FOLD_LENGTH * chain.fore && v >= 0) {
+        const from = w - FOLD_INSET * chain.fore - FOLD_WEIGHT * inkWidth;
+        const to = from + FOLD_WEIGHT * inkWidth;
+        folds[i] =
+          clamp01((v - from) * scale + 0.5) *
+          clamp01((to - v) * scale + 0.5) *
+          fore[3]! *
+          upper[3]! *
+          fold;
+      }
     }
   return outline(
     pixels,
