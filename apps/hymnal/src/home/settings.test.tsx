@@ -25,7 +25,7 @@ const radiosOf = (page: string) =>
   ].map(([, checked, label]) => ({ label, checked: checked === 'true' }));
 
 describe('the Settings route', () => {
-  it('shows its heading, the Appearance choices with System checked, then the Chord style choices with Simple checked, at first', () => {
+  it('shows its heading, the Appearance choices with System checked, and under Chords only its switch, at first', () => {
     const page = html();
     expect({
       heading: page.includes('>Settings<'),
@@ -39,28 +39,24 @@ describe('the Settings route', () => {
       radios: radiosOf(page),
     }).toEqual({
       heading: true,
-      groups: ['Appearance', 'Chord style', 'Chord placement'],
+      groups: ['Appearance'],
       chords: true,
       downloads: true,
       radios: [
         { label: 'System', checked: true },
         { label: 'Light', checked: false },
         { label: 'Dark', checked: false },
-        { label: 'Simple', checked: true },
-        { label: 'Advanced', checked: false },
-        { label: 'On the beat', checked: true },
-        { label: 'Simpler', checked: false },
-        { label: 'As the file plays', checked: false },
       ],
     });
   });
 
-  it('holds the switch Sounds and haptics, on at first, after the chord style and before About', () => {
+  it('holds the switch Sounds and haptics, on at first, after the Chords switch and before About', () => {
     const page = html();
     const at = (text: string) => page.indexOf(text);
+    const chords = at('aria-label="Chords"');
     expect({
       on: /<input (?=[^>]*aria-label="Sounds and haptics")(?=[^>]*checked)/.test(page),
-      after: at('aria-label="Sounds and haptics"') > at('aria-label="Advanced"'),
+      after: chords > -1 && at('aria-label="Sounds and haptics"') > chords,
       before: at('aria-label="Sounds and haptics"') < at('>About<'),
     }).toEqual({ on: true, after: true, before: true });
   });
@@ -71,15 +67,6 @@ describe('the Settings route', () => {
       [...page.matchAll(/<div (?=[^>]*role="radio")(?=[^>]*aria-label="([^"]+)")/g)].map(
         ([, label]) => label,
       ),
-    ).toEqual([
-      'System',
-      'Light',
-      'Dark',
-      'Simple',
-      'Advanced',
-      'On the beat',
-      'Simpler',
-      'As the file plays',
-    ]);
+    ).toEqual(['System', 'Light', 'Dark']);
   });
 });

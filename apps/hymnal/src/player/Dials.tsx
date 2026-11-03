@@ -14,9 +14,11 @@
  * in that wait (a dial, the key button, the page) ends it: a dial touched
  * keeps the dials open, a tap on the key button closes them at once. A page
  * turn and the page's going end it too. In the player sheet the dials stay.
+ * No dials stand while chords are off: turned off anywhere, they close.
  *
- * The held hymn's sounding key is observed by the player. Capo and chords
- * change only the reading; neither reaches the recording.
+ * The held hymn's sounding key is observed by the player while chords are
+ * on; with chords off it plays as printed (`heardMove`). Capo changes only
+ * the reading; it never reaches the recording.
  */
 
 import * as Chord from '@manna/hymnal/chord';
@@ -98,6 +100,12 @@ export const useThumb = (number: number) => {
   const [openOn, setOpenOn] = useState(number);
   if (openOn !== number) {
     setOpenOn(number);
+    setOpen(false);
+    setWaiting(false);
+  }
+  // No dials stand with chords off: chords turned off away from these dials (the sheet's
+  // switch, Settings, another page's hold) find them closed, and closed when chords return.
+  if (open && !chords) {
     setOpen(false);
     setWaiting(false);
   }

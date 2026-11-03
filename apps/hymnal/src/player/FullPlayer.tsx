@@ -13,12 +13,13 @@
  * offers Retry. Under the player: the held hymn's `Tempo` dial (`TempoDial`),
  * which the recording follows too while Sound is on, and its stanza choice
  * (`StanzaChips`, none for a hymn of one stanza), and the `Start` group
- * (`StartSwitches`: `Intro` and `Click`); then,
- * over the hymn's own page, a `Chords` switch (the bar's hold, with no long
- * press) and its key and capo dials
- * with reset (`Dials`); then the reader's settings, the text size dial, the
- * font, the line spacing and the screen kept on.
- * The placement dial belongs to the sheet's named hymn even when no reader is mounted.
+ * (`StartSwitches`: `Intro` and `Click`); then `Chord settings`
+ * (`ChordSection`): a `Chords` switch (the bar's hold, with no long press)
+ * whenever the sheet holds a hymn, and, only while chords are on, the key and
+ * capo dials with reset (`Dials`, over the hymn's own page) and the placement
+ * dial, which belongs to the sheet's named hymn even when no reader is
+ * mounted; then the reader's settings, the text size dial, the font, the line
+ * spacing and the screen kept on.
  */
 
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
@@ -177,8 +178,7 @@ function Held({
       <TempoDial key={`tempo-${track.number}`} number={track.number} />
       <StanzaChips number={track.number} />
       <StartSwitches />
-      <PageChords track={track} />
-      <PlacementDial key={track.number} number={track.number} />
+      <ChordSection key={track.number} track={track} />
       <Reading />
     </ScrollView>
   );
@@ -234,44 +234,41 @@ function Nothing() {
 }
 
 /**
- * The key and capo dials, and reset, while the sheet is over `track`'s own
- * page and it has chords: the same dials as over the bar, in one chord
- * section.
+ * `Chord settings` for the sheet's hymn: the `Chords` switch, on every hymn
+ * the sheet holds, over its page or not; then, while chords are on, the key
+ * and capo dials with reset (over the hymn's own page, if it has chords: the
+ * same dials as over the bar) and the placement dial (none for a hymn with
+ * no chords). Turned off, the switch hides them all again.
  */
-const PageChords = memo(function PageChords({ track }: { readonly track: Track }) {
-  return Option.match(
-    Option.filter(useShownPage(), (shown) => shown.number === track.number),
-    {
-      onNone: () => <></>,
-      onSome: (shown) => <ChordSection number={shown.number} />,
-    },
+const ChordSection = memo(function ChordSection({ track }: { readonly track: Track }) {
+  const thumb = useThumb(track.number);
+  const ownPage = Option.exists(useShownPage(), (shown) => shown.number === track.number);
+  const dials = Option.filter(thumb.printed, () => thumb.state.chords && ownPage);
+  return (
+    <View role="group" aria-label="Chord settings" style={[styles.section, styles.control]}>
+      <View style={styles.switchRow}>
+        <Text style={styles.switchLabel} dynamicTypeRamp="body" aria-hidden>
+          Chords
+        </Text>
+        {/* The bar's hold, as a switch: no long press needed. React Native's Switch reads `accessibilityLabel` on every platform. */}
+        <Switch
+          accessibilityLabel="Chords"
+          value={thumb.state.chords}
+          onValueChange={() => thumb.send(ThumbEvent.Hold())}
+        />
+      </View>
+      {Option.match(dials, {
+        onNone: () => <></>,
+        onSome: (printed) => (
+          <DialPanel>
+            <Dials thumb={thumb} printed={printed} tuner={false} />
+          </DialPanel>
+        ),
+      })}
+      {thumb.state.chords && <PlacementDial number={track.number} />}
+    </View>
   );
 });
-
-function ChordSection({ number }: { readonly number: number }) {
-  const thumb = useThumb(number);
-  return Option.match(thumb.printed, {
-    onNone: () => <></>,
-    onSome: (printed) => (
-      <View role="group" aria-label="Chord settings" style={[styles.section, styles.control]}>
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel} dynamicTypeRamp="body" aria-hidden>
-            Chords
-          </Text>
-          {/* The bar's hold, as a switch: no long press needed. React Native's Switch reads `accessibilityLabel` on every platform. */}
-          <Switch
-            accessibilityLabel="Chords"
-            value={thumb.state.chords}
-            onValueChange={() => thumb.send(ThumbEvent.Hold())}
-          />
-        </View>
-        <DialPanel>
-          <Dials thumb={thumb} printed={printed} tuner={false} />
-        </DialPanel>
-      </View>
-    ),
-  });
-}
 
 /** The reader's settings: the text size, the font, the line spacing, the screen kept on. */
 const Reading = memo(function Reading() {
