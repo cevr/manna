@@ -4823,3 +4823,13 @@ The form of an entry, each field on its own line:
 - **Wrong:** Two rays found a half-pixel skin-coloured fleck in the lining and pulled the hand's cut about 14 px before its neighbouring rays.
 - **Cause:** The first matching sample became the cut. The measurement now prefers a skin run spanning the measured pen radius, retaining the first skin when the whole painted hand on that ray is narrower.
 - **Guard:** code: `packages/film/src/core/limb.test.ts` `an isolated skin-coloured brush fleck in the lining cannot pull a tooth into the hand cut`
+
+### stroke-cuff-hides-its-artificial-hand-cut
+
+- **Date:** 2026-11-03
+- **Kind:** owner
+- **Said:** "from about 55 deg to 110 deg the hand's painted cut edge shows as a jagged, uninked strip of orange skin below the hand"
+- **Source:** stroke-limbs/round-7-request.md (owner's bending-arm clip correction)
+- **Wrong:** The hand's cut touched cloth inside the silhouette with no ink, and ambiguous brown cuff paint could remain as a skin-coloured fleck on the forearm.
+- **Cause:** Cuff ink was multiplied by the union's outer silhouette band, which vanishes at an internal contact; donor classification accepted paint almost on the cloth/skin bisector. The cloth lip now covers the hand's raw cut by a measured pen radius, the cuff opening receives its own ink, and only unambiguous cloth donates to the sleeve.
+- **Guard:** code: `apps/animations/src/library/cast/lead-feast/cutout/limb.slow.test.ts` `has no uninked hand-skin edge exposed at the cuff`; `apps/animations/src/library/cast/lead-feast/cutout/limb.slow.test.ts` `has zero skin pixels outside the posed hand coverage`

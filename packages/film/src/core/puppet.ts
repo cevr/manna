@@ -1191,6 +1191,7 @@ const layLimb = (
     limb,
     frames,
     pose.numbers,
+    part.pixels,
     (sx, sy, into) => sampleAt(part.pixels, sx, sy, into),
     [x0, y0, bw, bh],
     stub,

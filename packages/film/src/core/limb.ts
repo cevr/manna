@@ -538,7 +538,10 @@ const cuffEdgeOf = (t: Texels, chain: LimbChain, cuff: LimbStation, inkWidth: nu
     },
     cloth: (x: number, y: number) => {
       const lab = labOf(t.rgb(x, y));
-      return lab[0] >= INK_L && chroma(lab, cloth) <= chroma(lab, skin);
+      // Mixed cuff paint can lie almost on the cloth/skin bisector. A donor
+      // must be twice as close to measured cloth; ambiguous paint borrows
+      // unambiguous cloth instead of leaving a skin-coloured fleck behind.
+      return lab[0] >= INK_L && 2 * chroma(lab, cloth) <= chroma(lab, skin);
     },
   });
 };

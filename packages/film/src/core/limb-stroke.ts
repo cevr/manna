@@ -3,7 +3,9 @@
  * path is held to. `limb.ts` measures the limb from its part's paint; this
  * module draws it posed, from that measure and the part's own paint.
  */
+import { Option } from 'effect';
 import { labOf, type Rgb } from './cast-sheet-pixels.ts';
+import type { Raster } from './raster.ts';
 import {
   INK_L,
   type LimbSideName,
@@ -287,6 +289,22 @@ const clothSampler = (limb: PuppetPartLimb, sample: LimbSample): LimbSample => {
   };
 };
 
+// Prepared cloth depends on immutable source paint and measurement, never
+// the pose. Include texture identity so a dyed part cannot reuse plain cloth.
+const CLOTH = new WeakMap<PuppetPartLimb, WeakMap<Raster, LimbSample>>();
+const preparedCloth = (limb: PuppetPartLimb, texture: Raster, sample: LimbSample) => {
+  const textures = Option.getOrElse(
+    Option.fromUndefinedOr(CLOTH.get(limb)),
+    () => new WeakMap<Raster, LimbSample>(),
+  );
+  return Option.getOrElse(Option.fromUndefinedOr(textures.get(texture)), () => {
+    const prepared = clothSampler(limb, sample);
+    textures.set(texture, prepared);
+    CLOTH.set(limb, textures);
+    return prepared;
+  });
+};
+
 /** Filter the hand's whole-texel ownership together with its paint, so a transformed cuff edge never samples lining into the hand or steps between texels. */
 const sampleHand = (
   limb: PuppetPartLimb,
@@ -371,8 +389,17 @@ const outline = (
   const eroded = nearest(width, height, (i) => garment[i]! >= radius);
   const opened = Float64Array.from(eroded.distances, (d) => radius + 0.5 - Math.sqrt(d));
   coverField(pixels, opened, width, fill);
-  for (let i = 0; i < width * height; i++)
-    overInto(pixels.subarray(i * 4, i * 4 + 4), hands.subarray(i * 4, i * 4 + 4));
+  const handCuts = nearest(width, height, (i) => handGround[i]! >= 0.5);
+  // The sleeve lip covers the hand's artificial cut by one measured pen
+  // radius. Its round offset hides source cut teeth inside the opening.
+  for (let i = 0; i < width * height; i++) {
+    const o = i * 4;
+    const keep = clamp01(Math.sqrt(handCuts.distances[i]!) - radius + 0.5);
+    const alpha = hands[o + 3]! * keep;
+    for (let c = 0; c < 3; c++) pixels[o + c] = hands[o + c]! * keep + pixels[o + c]! * (1 - alpha);
+    pixels[o + 3] = alpha + pixels[o + 3]! * (1 - alpha);
+    hands[o + 3] = alpha;
+  }
   // A round ink join has the pen's radius: half its measured width.
   const field = closedField(pixels, width, height, inkWidth / 2);
   let reference = field;
@@ -386,7 +413,6 @@ const outline = (
   }
   coverField(pixels, mixed, width, fill);
   const boundary = nearest(width, height, (i) => pixels[i * 4 + 3]! < 0.5);
-  const handCuts = nearest(width, height, (i) => handGround[i]! >= 0.5);
   for (let i = 0; i < width * height; i++) {
     const into = pixels.subarray(i * 4, i * 4 + 4);
     const band = clamp01(inkWidth + 0.5 - Math.sqrt(boundary.distances[i]!));
@@ -395,7 +421,11 @@ const outline = (
     inked(
       into,
       ink,
-      Math.max(band * (1 - handAlpha + handAlpha * handCut), folds[i]! * (1 - handAlpha)),
+      Math.max(
+        band * (1 - handAlpha + handAlpha * handCut),
+        handAlpha * handCut,
+        folds[i]! * (1 - handAlpha),
+      ),
     );
   }
   return pixels;
@@ -406,12 +436,13 @@ const outline = (
  * Measured round-ended capsules and the painted stub fill one cloth mask;
  * the hand lies over it. From the transition midpoint to its end, one
  * distance field moves from the painted silhouette to this capsule union.
- * Only the completed boundary and the forearm fold receive stroke ink.
+ * The completed boundary, cuff opening and forearm fold receive stroke ink.
  */
 export const limbStroke = (
   limb: PuppetPartLimb,
   frames: LimbFrames,
   numbers: Readonly<Record<string, number>>,
+  texture: Raster,
   sample: LimbSample,
   box: readonly [number, number, number, number],
   stubPixels: Float64Array,
@@ -419,7 +450,7 @@ export const limbStroke = (
 ) => {
   const { fold } = limbBlend(limb, numbers);
   const { chain, ink, inkWidth } = limb;
-  const sampleCloth = clothSampler(limb, sample);
+  const sampleCloth = preparedCloth(limb, texture, sample);
   const segs = [
     [chain.shoulder, unit(sub(chain.elbow, chain.shoulder)), 0],
     [chain.elbow, unit(sub(chain.cuff, chain.elbow)), chain.upper],

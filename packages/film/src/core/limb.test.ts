@@ -264,12 +264,18 @@ const strayInk = (r: Raster, elbow: number, width: number) => {
         BE[1] - Math.sin(turn) * dx + Math.cos(turn) * dy,
       ];
       const [u, v] = frame(q, BE, BD2, B_UPPER);
+      // The cuff opening is an inked contact, separate from the silhouette.
+      const cuff =
+        u >= B_UPPER + B_FORE - width &&
+        u <= B_UPPER + B_FORE + 2 * width &&
+        Math.abs(v) <=
+          Math.max(BENT_LIMB.stations.cuff.inner, BENT_LIMB.stations.cuff.outer) + width;
       const fold =
         elbow > 60 &&
         u >= B_UPPER &&
         u <= B_UPPER + B_FORE &&
         Math.abs(v - bentOuter(u)) <= width + 1;
-      if (!fold) stray++;
+      if (!fold && !cuff) stray++;
     }
   return stray;
 };
@@ -690,12 +696,12 @@ describe('rasterOf stroke silhouette', () => {
       expect(components(r)).toBe(1);
     }
   });
-  test('at 45 degrees the sleeve has no ink strictly inside its single outline', () => {
+  test('at 45 degrees ink stays on the single outline or cuff opening', () => {
     const r = bentAt(45);
     expect(strayInk(r, 45, BENT_LIMB.inkWidth)).toBe(0);
   });
 
-  test('at 90 degrees ink stays on the union boundary or the measured outer fold', () => {
+  test('at 90 degrees ink stays on the union boundary, cuff opening or measured outer fold', () => {
     const r = bentAt(90);
     expect(strayInk(r, 90, BENT_LIMB.inkWidth)).toBe(0);
   });

@@ -2752,8 +2752,14 @@ the widths, ink and cuff from the part. `core/limb-stroke.ts` builds each
 segment from the common tangent envelope of its measured disks, with round
 ends of half their full width. The capsule union joins the shoulder stub
 and cuff with tangent arcs at the measured ink's pen radius. The hand
-overlaps the sleeve, preserving its painted outline; the lining stays on
-the forearm. One completed silhouette boundary and the outer fold (60–90°)
+overlaps the sleeve, preserving its painted outer outline; a cloth lip
+covers its artificial wrist cut by that pen radius and the opening receives
+ink even inside the silhouette. The lining stays on the forearm. Cloth
+donors must be twice as close in chroma to measured cloth as to skin, so
+ambiguous cuff paint cannot leave skin-coloured flecks on the sleeve.
+Prepared cloth is reused across poses by limb and source texture identity;
+a dyed texture prepares its own cloth.
+One completed silhouette boundary, the cuff opening and the outer fold (60–90°)
 receive ink. A part without a limb, or below its transition midpoint,
 follows the painted path exactly.
 
