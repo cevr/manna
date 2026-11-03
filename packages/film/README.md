@@ -3861,8 +3861,9 @@ lint:review` (`packages/scripts/src/lint-review.ts`) in place of `bun run
 lint`: the same runner over a read-only store and a model that refuses, so
 it reads no key, calls no host, takes no lock and writes nothing, counts the
 items the store holds no answer for as `unjudged`, and prints and gates as
-the runner does, so it fails where the lint fails on the same store (with
-no findings file written, the plugin reports from the store). The runner never fails on its
+the runner does, so it fails where the lint fails on the same store (its
+oxlint runs the plugin in review mode, `JUDGED_REVIEW=1`, which reports from
+the store and never from a findings file). The runner never fails on its
 model or its host: no key (`TYPESAFE_API_KEY`, else the keychain item
 `typesafe-api-key` within 2 s), a part past 5 s, an account with no
 credits left, a rate limit or an overloaded host (a 429 or a 529, each sent
