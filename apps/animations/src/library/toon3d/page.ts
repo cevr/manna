@@ -63,7 +63,9 @@ void main() {
  * The ink: a pixel is ink when a pixel of another id lies within the line's
  * half-width of it and the pair draws a line, so every line is centred on
  * the boundary between two parts, a constant width in screen pixels, and
- * drawn once whichever side it is seen from.
+ * drawn once whichever side it is seen from. A part folded over itself (a
+ * bent forearm across its own upper arm) draws an inner line where its depth
+ * jumps by more than the gap, as the concept draws a limb over itself.
  */
 const INK_FRAGMENT = `
 uniform sampler2D uColour;
@@ -91,7 +93,10 @@ void main() {
       if (d > uOutline) continue;
       vec4 other = texture2D(uIds, vUv + vec2(dx, dy) / uSize);
       float b = floor(other.r * 255.0 + 0.5);
-      if (b == a) continue;
+      if (b == a) {
+        if (a > 0.0 && d <= uInner && abs(other.g - own.g) > uGap) ink = 1.0;
+        continue;
+      }
       float k = pairOf(a, b);
       if (k == 1.0) ink = 1.0;
       if (k == 2.0 && d <= uInner) ink = 1.0;
@@ -175,7 +180,7 @@ const renderer = (spec: MemberSpec) => {
       uSize: { value: new Vector2(1, 1) },
       uOutline: { value: (spec.ink.outline * SUPERSAMPLE) / 2 },
       uInner: { value: (spec.ink.inner * SUPERSAMPLE) / 2 },
-      uGap: { value: 0.12 },
+      uGap: { value: 0.05 },
       uInk: { value: hexColour(spec.ink.colour) },
     },
   });
