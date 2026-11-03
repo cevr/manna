@@ -98,20 +98,29 @@ describe('the key model', () => {
       expect(next.cues).toEqual((state.chords && []) || [plain('chords-on')]);
     }));
 
-  it('flips chords on a hold, and leaves the move and the dials', () =>
+  it('flips chords on a hold and leaves the move; a hold to off closes the dials, a hold to on leaves them', () =>
     each((printed, state, event) => {
       if (event._tag !== 'Hold') return;
       const next = step(printed, state, event);
-      expect(next.state).toEqual({ ...state, chords: !state.chords });
+      expect(next.state).toEqual({
+        ...state,
+        chords: !state.chords,
+        open: !state.chords && state.open,
+      });
       expect(next.cues).toEqual([plain((state.chords && 'chords-off') || 'chords-on')]);
     }));
 
-  it('opens closed dials on a tap and closes open ones, with a press; a tap on the page closes them', () =>
+  it('with chords on, opens closed dials on a tap and closes open ones, with a press; with chords off, a tap turns chords on and opens nothing; a tap on the page closes them', () =>
     each((printed, state, event) => {
-      if (event._tag === 'Tap')
+      if (event._tag === 'Tap' && state.chords)
         expect(step(printed, state, event)).toEqual({
           state: { ...state, open: !state.open },
           cues: [plain('press')],
+        });
+      if (event._tag === 'Tap' && !state.chords)
+        expect(step(printed, state, event)).toEqual({
+          state: { ...state, chords: true, open: false },
+          cues: [plain('chords-on')],
         });
       if (event._tag === 'TapPage')
         expect(step(printed, state, event)).toEqual({

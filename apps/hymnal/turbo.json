@@ -53,7 +53,7 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
         "!src/home/**/*.test.*",
-        "!src/player/{countin.lockplay,countin,keyplay,page,playback.live.rate,playback.live,player,scrub,scrubber.ios,sound.rate,sound,stanzas.play,stanzas,thumb}.test.*",
+        "!src/player/{countin.lockplay,countin,keyplay,page,playback.live.rate,playback.live,player,scrub,scrubber.ios,sound.rate,sound,stanzas.play,stanzas,thumb,thumb.chordmode}.test.*",
         "!src/reader/**/*.test.*",
         "!src/follow/**/*.test.*",
         "!src/hymns/**/*.test.*",

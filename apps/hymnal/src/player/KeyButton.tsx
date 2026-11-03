@@ -4,8 +4,9 @@
  * sounding key, or "CAPO n" over the key the chords are played in. A tap
  * opens the key and capo dials above the bar, and closes them; a hold
  * (450 ms) turns chords on or off, and no tap follows it. With chords off
- * it is the guitar's head alone, dim, and a tap opens the key dial alone.
- * VoiceOver turns chords on or off by the button's action.
+ * it is the guitar's head alone, dim: the chords switch, on every hymn's
+ * page, and a tap turns chords on and opens nothing. Its hint says what a
+ * tap does, and VoiceOver turns chords on or off by the button's action.
  *
  * The button presses in under a finger, as a mechanical switch does: it
  * shrinks steadily to 0.90 of its size over the hold, as card J does, and
@@ -78,6 +79,11 @@ export function KeyButton({
     onNone: () => (state.chords && 'No chords') || 'Chords off',
     onSome: (key) => saidOf(key, state),
   });
+  // What a tap does: with chords off it turns them on; with chords on it opens the dials, on a hymn that has chords.
+  const hint = Match.value(state.chords).pipe(
+    Match.when(false, () => Option.some('Turns chords on')),
+    Match.orElse(() => Option.as(printed, 'Opens the key and capo dials')),
+  );
   const act = ({ nativeEvent }: AccessibilityActionEvent) => {
     if (nativeEvent.actionName === 'chords') send(ThumbEvent.Hold());
   };
@@ -111,6 +117,7 @@ export function KeyButton({
       aria-label="Key"
       aria-valuetext={said}
       aria-expanded={state.open}
+      accessibilityHint={Option.getOrUndefined(hint)}
       accessibilityActions={[
         { name: 'chords', label: (state.chords && 'Turn chords off') || 'Turn chords on' },
       ]}

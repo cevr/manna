@@ -1,9 +1,12 @@
 /**
  * The bar's key button and its dials, as a model, pure: whether chords show
  * (for every hymn), the page's hymn's move (its transpose and its capo), and
- * whether the dials above the bar are open. A tap on the key button opens
- * the dials, or closes them (a press cue); a tap on the page closes them; a hold turns
- * chords on or off. The key dial turns the sounding key, and turning it
+ * whether the dials above the bar are open. With chords off the key button
+ * is the chords switch: a tap turns chords on and opens nothing (a chords-on
+ * cue). With chords on a tap opens the dials, or closes them (a press cue).
+ * A tap on the page closes them. A hold turns chords on or off, and a hold
+ * that turns them off closes the dials: no step leaves them open with chords
+ * off. The key dial turns the sounding key, and turning it
  * turns chords on, keeping the key turned to. The capo dial sets the fret,
  * held to 0 to 11: a turn past an end stays at the end and cues a wall.
  * Reset is the hymn as printed: its key and no capo. Over the bar the dials
@@ -72,10 +75,16 @@ const chordsCue = (on: boolean): Cue => plain((on && 'chords-on') || 'chords-off
 /** The state after `event`, for a hymn printed in `printed`, and the cues it makes. */
 export const step = (printed: Chord.Key, state: Thumb, event: ThumbEvent): Step =>
   ThumbEvent.$match(event, {
-    Tap: () => ({ state: { ...state, open: !state.open }, cues: [plain('press')] }),
+    // With chords off the key button is the chords switch: a tap turns chords on and opens nothing.
+    Tap: () => {
+      if (!state.chords)
+        return { state: { ...state, chords: true, open: false }, cues: [chordsCue(true)] };
+      return { state: { ...state, open: !state.open }, cues: [plain('press')] };
+    },
     TapPage: () => ({ state: { ...state, open: false }, cues: [] }),
+    // A hold that turns chords off closes the dials, so no dials stand with chords off.
     Hold: () => ({
-      state: { ...state, chords: !state.chords },
+      state: { ...state, chords: !state.chords, open: state.open && !state.chords },
       cues: [chordsCue(!state.chords)],
     }),
     TurnKey: ({ pitch }) => ({
