@@ -109,12 +109,12 @@ const curlCentres = (spec: MemberSpec): ReadonlyArray<Vec3> => {
   return out;
 };
 
-/** A flat strip from `top` to `bottom`, `width` across and a little thick, facing +z. */
-const strip = (top: Vec3, bottom: Vec3, width: number): BufferGeometry => {
+/** A flat strip from `top` to `bottom`, `width` across and `thickness` deep, facing +z. */
+const strip = (top: Vec3, bottom: Vec3, width: number, thickness: number): BufferGeometry => {
   const a = v3(top);
   const b = v3(bottom);
   const along = b.clone().sub(a);
-  const g = new BoxGeometry(width, along.length(), 0.03);
+  const g = new BoxGeometry(width, along.length(), thickness);
   g.applyQuaternion(new Quaternion().setFromUnitVectors(DOWN, along.clone().normalize()));
   const mid = a.clone().add(b).multiplyScalar(0.5);
   g.translate(mid.x, mid.y, mid.z);
@@ -284,7 +284,7 @@ export const buildFigure = (spec: MemberSpec): Figure => {
         ellipsoid(c, [spec.hair.curls.radius, spec.hair.curls.radius, spec.hair.curls.radius], 10),
       ),
     ),
-    plain(PART.hair, p.hair, headProxy),
+    plain(PART.hair, p.hair, surface),
     turn,
   );
   add(loft(spec.neck, 32, 2), { ...plain(PART.neck, p.skin, surface), shaded: true }, turn);
@@ -314,7 +314,7 @@ export const buildFigure = (spec: MemberSpec): Figure => {
   );
   spec.sash.ends.forEach((end, i) =>
     add(
-      strip(end.top, end.bottom, end.width),
+      strip(end.top, end.bottom, end.width, spec.sash.thickness),
       plain([PART.endR, PART.endL][i] ?? PART.endL, p.sash, surface),
       turn,
     ),

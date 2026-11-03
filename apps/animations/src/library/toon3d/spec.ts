@@ -101,6 +101,8 @@ export interface Sash {
     readonly bottom: Vec3;
     readonly width: number;
   }>;
+  /** The ends' thickness: edge-on (in profile) an end still shows as a cream sliver inside its lines, as the concept draws it. */
+  readonly thickness: number;
 }
 
 /**
