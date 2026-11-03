@@ -260,6 +260,12 @@ describe('limbOf', () => {
     expect(Result.isFailure(r) && r.failure.detail).toMatch(/0 end on cloth/);
   });
 
+  test('refuses one side as dark as its ink though the other side ends every dark run on cloth', () => {
+    const r = limbOf('arm', recoloured(ARM, [[LIGHT, [40, 30, 30]]]), JOINTS, DECLARED);
+    expect(kindOf(r)).toBe('ink-unbounded');
+    expect(Result.isFailure(r) && r.failure.detail).toMatch(/^on its outer side /);
+  });
+
   test('refuses a cuff that is not a finite point under its own kind, never throwing', () => {
     for (const cuff of [
       [Number.POSITIVE_INFINITY, 1],

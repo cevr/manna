@@ -511,30 +511,41 @@ export const limbOf = (
   const measured = measureSides(t, chain, knots, step);
   if (Result.isFailure(measured)) return refuse(...measured.failure);
   const { sides, found } = measured.success;
-  const ends = [...sides.outer.ends, ...sides.inner.ends];
-  const [inked, unbounded] = [
-    ends.filter((e) => e === 'ink'),
-    ends.filter((e) => e === 'unbounded'),
-  ];
-  if (inked.length === 0 && unbounded.length === 0)
+  const count = (side: LimbSideName, end: LimbEnd) =>
+    sides[side].ends.filter((e) => e === end).length;
+  if (
+    count('outer', 'ink') +
+      count('inner', 'ink') +
+      count('outer', 'unbounded') +
+      count('inner', 'unbounded') ===
+    0
+  )
     return refuse('no-ink', `no knot's edge shows a texel under L* ${INK_L}`);
-  if (inked.length < unbounded.length)
-    return refuse(
-      'ink-unbounded',
-      `${unbounded.length} knots' dark runs reach the chain and ${inked.length} end on cloth over L* ${INK_L}`,
-    );
   const depths = [...sides.outer.inks, ...sides.inner.inks].filter((d) => d > 0);
   const channel = (c: 0 | 1 | 2) => median(found.map((x) => x[c]));
-  return Result.succeed({
-    bones: declared.bones,
-    fade: Option.getOrElse(Option.fromUndefinedOr(declared.fade), () => LIMB_FADE),
-    fold: Option.getOrElse(Option.fromUndefinedOr(declared.fold), () => LIMB_FOLD),
-    chain,
-    step,
-    outer: sides.outer,
-    inner: sides.inner,
-    ink: [channel(0), channel(1), channel(2)],
-    inkWidth: median(depths),
-    regions: regionsOf(pixels, t, chain),
-  });
+  return Option.match(
+    Option.fromUndefinedOr(
+      (['outer', 'inner'] as const).find((side) => count(side, 'ink') < count(side, 'unbounded')),
+    ),
+    {
+      onSome: (side) =>
+        refuse(
+          'ink-unbounded',
+          `on its ${side} side ${count(side, 'unbounded')} knots' dark runs reach the chain and ${count(side, 'ink')} end on cloth over L* ${INK_L}`,
+        ),
+      onNone: () =>
+        Result.succeed({
+          bones: declared.bones,
+          fade: Option.getOrElse(Option.fromUndefinedOr(declared.fade), () => LIMB_FADE),
+          fold: Option.getOrElse(Option.fromUndefinedOr(declared.fold), () => LIMB_FOLD),
+          chain,
+          step,
+          outer: sides.outer,
+          inner: sides.inner,
+          ink: [channel(0), channel(1), channel(2)] as const,
+          inkWidth: median(depths),
+          regions: regionsOf(pixels, t, chain),
+        }),
+    },
+  );
 };
