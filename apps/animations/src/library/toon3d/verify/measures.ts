@@ -327,11 +327,13 @@ export const enclosedGround = (ids: Raster, background: (id: number) => boolean)
 
 /**
  * Background pixels the figure encloses that show in the finished `colour`
- * frame: tears and holes, of any size. An enclosed component at least half of
- * whose pixels the reference's enclosed ground `held` also holds is drawn so
- * (the space between an arm and the body the reference frame has too), and
- * is no tear. Ground the ink covers (the sliver between a hem and two rounded
- * feet) is not seen, so it is no tear.
+ * frame and that the reference's enclosed ground `held` lacks at that place:
+ * tears and holes, of any size, read pixel by pixel. Enclosed ground the
+ * reference holds there is drawn so (the space between an arm and the body
+ * the reference frame has too); any enclosed pixel beyond it is new and is a
+ * tear, however much of its region the reference holds. Ground the ink covers
+ * (the sliver between a hem and two rounded feet) is not seen, so it is no
+ * tear.
  */
 export const tears = (
   ids: Raster,
@@ -339,12 +341,9 @@ export const tears = (
   background: (id: number) => boolean,
   held: Uint8Array,
 ): number => {
-  const { width: w, height: h } = ids;
   const ink = inkMask(colour);
   const enclosed = enclosedGround(ids, background);
-  return components(w, h, (i) => enclosed[i] === 1)
-    .filter((c) => 2 * c.filter((i) => held[i] === 1).length < c.length)
-    .reduce((sum, c) => sum + c.filter((i) => ink[i] === 0).length, 0);
+  return enclosed.reduce((sum, e, i) => sum + Number(e === 1 && held[i] !== 1 && ink[i] === 0), 0);
 };
 
 /** The distance from `p` to the segment `from` → `to`. */

@@ -54,6 +54,26 @@ const inRect = (x: number, y: number, x0: number, y0: number, x1: number, y1: nu
 
 const read = <A>(o: Option.Option<A>): A => Option.getOrThrowWith(o, () => 'expected a reading');
 
+/** A seeded generator of numbers in [0, 1) (mulberry32), so a generated case fails the same way each run. */
+const seeded = (seed: number) => {
+  let s = seed >>> 0;
+  return (): number => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+/** A whole number in [lo, hi] drawn from `r`. */
+const between = (r: () => number, lo: number, hi: number): number =>
+  lo + Math.floor(r() * (hi - lo + 1));
+
+/** One of `xs`, drawn from `r`. */
+const oneOf = <A>(r: () => number, xs: ReadonlyArray<A>): A =>
+  Option.getOrThrow(Option.fromUndefinedOr(xs[Math.floor(r() * xs.length)]));
+
 describe('colour', () => {
   test('white and black lie ΔE 100 apart, and a colour lies 0 from itself', () => {
     expect(deltaE([255, 255, 255], [0, 0, 0])).toBeCloseTo(100, 1);
@@ -199,6 +219,103 @@ describe('tears', () => {
       return BASE;
     });
     expect(tears(ids, colour, (id) => id === 0, new Uint8Array(40 * 40))).toBe(9);
+  });
+
+  test('a reference hole grown to twice its width reads every new pixel outside it: 10 × 10 held, 20 × 10 shown, 100 px', () => {
+    const grown = (width: number) =>
+      idsOf(80, 80, (x, y) => {
+        if (inRect(x, y, 25, 25, 24 + width, 34)) return 0;
+        if (inRect(x, y, 5, 5, 74, 74)) return 5;
+        return 0;
+      });
+    const shown = (width: number) =>
+      paint(80, 80, (x, y) => {
+        if (inRect(x, y, 25, 25, 24 + width, 34)) return PAPER;
+        return BASE;
+      });
+    const held = enclosedGround(grown(10), ground);
+    expect(tears(grown(20), shown(20), ground, held)).toBe(100);
+    expect([10, 11, 15, 19, 20, 21].map((w) => tears(grown(w), shown(w), ground, held))).toEqual([
+      0, 10, 50, 90, 100, 110,
+    ]);
+  });
+
+  test('generated held holes and frames: every enclosed pixel that shows and lies outside the reference holes is a tear, overlap of any share', () => {
+    type Rect = readonly [x0: number, y0: number, x1: number, y1: number];
+    const S = 40;
+    const r = seeded(31);
+    const inAny = (rects: ReadonlyArray<Rect>, x: number, y: number) =>
+      rects.some(([x0, y0, x1, y1]) => inRect(x, y, x0, y0, x1, y1));
+    const holeIds = (rects: ReadonlyArray<Rect>) =>
+      idsOf(S, S, (x, y) => {
+        if (inAny(rects, x, y)) return 0;
+        if (inRect(x, y, 2, 2, S - 3, S - 3)) return 5;
+        return 0;
+      });
+    const rect = (): Rect => {
+      const x0 = between(r, 3, 30);
+      const y0 = between(r, 3, 30);
+      return [x0, y0, between(r, x0, 36), between(r, y0, 36)];
+    };
+    const clip = ([x0, y0, x1, y1]: Rect): Rect => [
+      Math.max(3, x0),
+      Math.max(3, y0),
+      Math.min(36, x1),
+      Math.min(36, y1),
+    ];
+    const kinds = { same: 0, grown: 0, half: 0, fresh: 0, inked: 0, outside: 0 };
+    for (let n = 0; n < 160; n++) {
+      const heldRects = Array.from({ length: between(r, 1, 2) }, rect);
+      const [hx0, hy0, hx1, hy1] = oneOf(r, heldRects);
+      const kind = oneOf(r, ['same', 'grown', 'half', 'fresh'] as const);
+      kinds[kind]++;
+      const width = hx1 - hx0 + 1;
+      const shownRects: ReadonlyArray<Rect> = [
+        ...heldRects.filter(() => r() < 0.7),
+        ...{
+          same: [[hx0, hy0, hx1, hy1] as const],
+          grown: [
+            clip([
+              hx0 - between(r, 0, 4),
+              hy0 - between(r, 0, 4),
+              hx1 + between(r, 0, 4),
+              hy1 + between(r, 0, 4),
+            ]),
+          ],
+          half: [clip([hx0 + Math.floor(width / 2), hy0, hx1 + Math.floor(width / 2), hy1])],
+          fresh: [rect()],
+        }[kind],
+      ];
+      const inkOf = (on: boolean): Rect => {
+        if (on) return rect();
+        return [0, 0, -1, -1];
+      };
+      const ink = inkOf(r() < 0.4);
+      if (ink[2] >= ink[0]) kinds.inked++;
+      const colour = paint(S, S, (x, y) => {
+        if (inRect(x, y, ...ink)) return INK;
+        if (inAny(shownRects, x, y)) return PAPER;
+        return BASE;
+      });
+      const held = enclosedGround(holeIds(heldRects), ground);
+      const heldAt = (x: number, y: number) => held[y * S + x] === 1;
+      let expected = 0;
+      let heldMatches = true;
+      for (let y = 0; y < S; y++)
+        for (let x = 0; x < S; x++) {
+          heldMatches &&= heldAt(x, y) === inAny(heldRects, x, y);
+          if (inAny(shownRects, x, y) && !inRect(x, y, ...ink) && !inAny(heldRects, x, y))
+            expected++;
+        }
+      if (expected > 0) kinds.outside++;
+      expect(heldMatches).toBe(true);
+      expect({ n, kind, tears: tears(holeIds(shownRects), colour, ground, held) }).toEqual({
+        n,
+        kind,
+        tears: expected,
+      });
+    }
+    expect(Object.values(kinds).every((k) => k >= 20)).toBe(true);
   });
 });
 
