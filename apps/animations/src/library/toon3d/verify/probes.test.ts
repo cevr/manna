@@ -439,7 +439,35 @@ const badProbes = (
   });
 };
 
+/** Each pair of a view's probes of different parts whose boxes share a pixel: one pixel shows one part. */
+const crossings = (view: ViewName, list: ReadonlyArray<ColourProbe>): ReadonlyArray<string> =>
+  list.flatMap((a, k) =>
+    list.slice(k + 1).flatMap((b) => {
+      const p = probeBox(a);
+      const q = probeBox(b);
+      const share = p.x0 <= q.x1 && q.x0 <= p.x1 && p.y0 <= q.y1 && q.y0 <= p.y1;
+      return [`${view} ${a.id} and ${b.id} share pixels`].filter(() => share && a.part !== b.part);
+    }),
+  );
+
 describe("the lead's authored colour probes", () => {
+  it.effect('no two probes of different parts share a pixel', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const probes = yield* Schema.decodeEffect(ColourProbesJson)(
+        yield* fs.readFileString(probesFile('lead-feast')),
+      );
+      expect(VIEWS.flatMap((view) => crossings(view, probes.views[view]))).toEqual([]);
+      expect(
+        crossings('front', [
+          { id: 'head.base.9', part: 'head', paint: 'base', box: [10, 10, 4, 4] },
+          { id: 'ear.base.9', part: 'ear', paint: 'base', box: [13, 13, 4, 4] },
+          { id: 'ear.base.8', part: 'ear', paint: 'base', box: [14, 10, 4, 4] },
+        ]),
+      ).toEqual(['front head.base.9 and ear.base.9 share pixels']);
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
   it.effect(
     'every probe box lies inside the figure and is flat in its kept view, and each view has probes',
     () =>

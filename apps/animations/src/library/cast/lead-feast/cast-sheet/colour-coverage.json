@@ -178,13 +178,17 @@
         "paint": "base",
         "probes": ["head.base.0", "head.base.1", "head.base.2", "head.base.3"]
       },
-      { "part": "head", "paint": "shade", "probes": ["head.shade.0", "head.shade.1"] },
+      {
+        "part": "head",
+        "paint": "shade",
+        "probes": ["head.shade.0", "head.shade.1", "head.shade.2"]
+      },
       {
         "part": "ear",
         "paint": "base",
         "probes": ["ear.base.0", "ear.base.1", "ear.base.2", "ear.base.3"]
       },
-      { "part": "ear", "paint": "shade", "probes": ["ear.shade.0", "ear.shade.1", "ear.shade.2"] },
+      { "part": "ear", "paint": "shade", "probes": ["ear.shade.0", "ear.shade.1"] },
       { "part": "neck", "paint": "base", "probes": ["neck.base.0"] },
       { "part": "neck", "paint": "shade", "probes": ["neck.shade.0", "neck.shade.1"] },
       {
@@ -364,7 +368,8 @@
           "mantle.shade.12",
           "mantle.shade.13",
           "mantle.shade.14",
-          "mantle.shade.15"
+          "mantle.shade.15",
+          "mantle.shade.16"
         ]
       },
       {
@@ -428,7 +433,7 @@
         "unavailable": "not shown: the far hand is hidden behind the body in profile"
       },
       { "part": "handL", "paint": "base", "probes": ["handL.base.0"] },
-      { "part": "handL", "paint": "shade", "probes": ["handL.shade.0", "handL.shade.1"] },
+      { "part": "handL", "paint": "shade", "probes": ["handL.shade.0"] },
       {
         "part": "foot",
         "paint": "base",
