@@ -19,6 +19,7 @@ import { settings } from '~/store';
 import { color, useAccent } from '~/color';
 import { placements } from '~/settings';
 import { Downloads } from '~/offline/Downloads';
+import { chordsCue } from '~/player/thumb';
 import { available } from '~/tuner/native';
 
 interface Choice<A extends string> {
@@ -145,7 +146,7 @@ function ChordsSwitch() {
   const cue = useCue();
   const turn = (to: boolean) => {
     setOn(to);
-    cue(plain((to && 'chords-on') || 'chords-off'));
+    cue(chordsCue(to));
   };
   return (
     <View style={[styles.group, styles.row]}>

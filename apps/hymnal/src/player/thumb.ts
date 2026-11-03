@@ -76,7 +76,8 @@ export const transposeTo = (printed: Chord.Key, pitch: number): number =>
 /** Whether `move` is the hymn as printed. */
 export const isStill = (move: Move): boolean => move.transpose === 0 && move.capo === 0;
 
-const chordsCue = (on: boolean): Cue => plain((on && 'chords-on') || 'chords-off');
+/** The cue a switch of chords to `on` gives, at every door: the bar's tap or hold, and Settings' switch. */
+export const chordsCue = (on: boolean): Cue => plain((on && 'chords-on') || 'chords-off');
 
 /** The state after `event`, for a hymn printed in `printed`, and the cues it makes. */
 export const step = (printed: Chord.Key, state: Thumb, event: ThumbEvent): Step =>
