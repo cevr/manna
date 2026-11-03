@@ -310,7 +310,7 @@ export const measureFrame = (
     frame,
     ink: inkWidth(colour, box),
     doubled: doubledInk(colour, box),
-    tears: tears(ids, isGround),
+    tears: tears(ids, colour, isGround),
     upper: widthAcross(ids, PART.sleeveR, bones.upper, ALONG),
     fore: widthAcross(ids, PART.sleeveR, bones.fore, ALONG),
   };

@@ -3,6 +3,7 @@ import { Option } from 'effect';
 import {
   deltaE,
   deltaLab,
+  depthCode,
   doubledInk,
   faceMarks,
   faceOffset,
@@ -103,7 +104,22 @@ describe('tears', () => {
       if (inRect(x, y, 2, 2, 37, 37)) return 5;
       return 0;
     });
-    expect(tears(ids, (id) => id === 0)).toBe(9);
+    const clear = paint(40, 40, () => PAPER);
+    expect(tears(ids, clear, (id) => id === 0)).toBe(9);
+  });
+
+  test('ground the ink covers is no tear: only enclosed ground that shows in the frame counts', () => {
+    const ids = idsOf(40, 40, (x, y) => {
+      if (inRect(x, y, 18, 18, 20, 20)) return 0;
+      if (inRect(x, y, 28, 28, 30, 30)) return 0;
+      if (inRect(x, y, 2, 2, 37, 37)) return 5;
+      return 0;
+    });
+    const colour = paint(40, 40, (x, y) => {
+      if (inRect(x, y, 17, 17, 21, 21)) return INK;
+      return BASE;
+    });
+    expect(tears(ids, colour, (id) => id === 0)).toBe(9);
   });
 });
 
@@ -133,6 +149,48 @@ describe('widthAcross', () => {
     const short = read(widthAcross(tube(Math.PI / 6, 5, 24), 8, axis(Math.PI / 6, 24), at));
     expect(Math.abs(long - 10)).toBeLessThanOrEqual(1);
     expect(Math.abs(short - 10)).toBeLessThanOrEqual(1);
+  });
+
+  test('a run stops where the part folds over itself: a tube with its own part lying in front of it reads its own width', () => {
+    const ids = paint(120, 120, (x, y) => {
+      const front = Number(inRect(x, y, 20, 65, 100, 84));
+      const back = Number(inRect(x, y, 20, 55, 100, 64));
+      const id = Number(front + back > 0) * 96;
+      return [id, depthCode(10 - 0.3 * front), id];
+    });
+    const width = read(
+      widthAcross(
+        ids,
+        8,
+        [
+          [20, 60],
+          [100, 60],
+        ],
+        [0.3, 0.5, 0.7],
+      ),
+    );
+    expect(width).toBeCloseTo(10, 0);
+  });
+
+  test("a cylinder's depth, curving away to its silhouette, is one part: its whole width reads", () => {
+    const ids = paint(120, 120, (x, y) => {
+      const across = Math.abs(y + 0.5 - 60);
+      const id = Number(across <= 15 && x >= 20 && x <= 100) * 96;
+      const depth = 10 - Math.sqrt(Math.max(0, 15 ** 2 - across ** 2)) / 100;
+      return [id, depthCode(depth), id];
+    });
+    const width = read(
+      widthAcross(
+        ids,
+        8,
+        [
+          [20, 60],
+          [100, 60],
+        ],
+        [0.5],
+      ),
+    );
+    expect(width).toBeCloseTo(30, 0);
   });
 
   test('a bone under 4 px on screen has no width', () => {

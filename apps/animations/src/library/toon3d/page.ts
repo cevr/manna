@@ -17,6 +17,7 @@ import {
   WebGLRenderTarget,
 } from 'three';
 import { buildFigure, inkClass, type InkClass } from './figure.ts';
+import { IDS_PASS } from './ids.ts';
 import { LOOK_PAINTS } from './lead-feast.ts';
 import type { MemberSpec, Pose } from './spec.ts';
 
@@ -130,7 +131,7 @@ void main() {
 }
 `;
 
-/** The ids pass for measures: each pixel's id × 12 as grey, no ink, no paper. */
+/** The ids pass for measures, encoded as `IDS_PASS` says: each pixel's id in red and blue, its view depth in green; no ink, no paper. */
 const IDS_FRAGMENT = `
 uniform sampler2D uIds;
 uniform vec2 uSize;
@@ -139,8 +140,10 @@ varying vec2 vUv;
 void main() {
   vec2 px = floor(vUv * uSize);
   vec2 at = (px * uFactor + floor(uFactor / 2.0) + 0.5) / (uSize * uFactor);
-  float id = floor(texture2D(uIds, at).r * 255.0 + 0.5);
-  gl_FragColor = vec4(vec3(id * 12.0 / 255.0), 1.0);
+  vec4 own = texture2D(uIds, at);
+  float id = floor(own.r * 255.0 + 0.5) * ${IDS_PASS.idStep.toFixed(1)} / 255.0;
+  float depth = clamp(floor((own.g - ${IDS_PASS.depthFrom.toFixed(1)}) * ${IDS_PASS.depthLevels.toFixed(1)} + 0.5), 0.0, 255.0) / 255.0;
+  gl_FragColor = vec4(id, depth, id, 1.0);
 }
 `;
 

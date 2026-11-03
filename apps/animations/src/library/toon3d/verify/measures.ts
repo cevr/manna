@@ -1,4 +1,5 @@
 import { Option } from 'effect';
+import { IDS_PASS } from '../ids.ts';
 
 /** A picture as RGBA bytes, row by row. */
 export interface Raster {
@@ -201,8 +202,20 @@ export const boxOf = (mask: Uint8Array, w: number): Option.Option<Box> => {
 /** The whole picture as a box. */
 export const wholeBox = (r: Raster): Box => ({ x0: 0, y0: 0, x1: r.width - 1, y1: r.height - 1 });
 
-/** A part id from the ids pass, which writes id × 12 as grey. */
-export const idAt = (ids: Raster, i: number): number => Math.round((ids.rgba[i * 4] ?? 0) / 12);
+/** A part id from the ids pass (`IDS_PASS`: id × 12 in red). */
+export const idAt = (ids: Raster, i: number): number =>
+  Math.round((ids.rgba[i * 4] ?? 0) / IDS_PASS.idStep);
+
+/** A view depth (heads) as the ids pass's green level (`IDS_PASS`). */
+export const depthCode = (depth: number): number =>
+  Math.min(255, Math.max(0, Math.round((depth - IDS_PASS.depthFrom) * IDS_PASS.depthLevels)));
+
+/** A pixel's view depth (heads) from the ids pass. */
+export const depthAt = (ids: Raster, i: number): number =>
+  IDS_PASS.depthFrom + (ids.rgba[i * 4 + 1] ?? 0) / IDS_PASS.depthLevels;
+
+/** A depth step (heads) wider than this between neighbours of one part is a fold, the part lying over itself; the ink pass lines the same step (`uGap`). */
+export const FOLD_GAP = 0.05;
 
 /** Ink: pixels darker than L* 24 (the drawn ink sits near L* 12; the darkest paint, the hair's shade, near L* 30). */
 export const INK_LIGHTNESS = 24;
@@ -285,9 +298,15 @@ export const doubledInk = (r: Raster, box: Box): number => {
   return n;
 };
 
-/** Background pixels (ids `background` holds) the figure encloses, in components under 64 px: tears and pin holes. */
-export const tears = (ids: Raster, background: (id: number) => boolean): number => {
+/**
+ * Background pixels (ids `background` holds) the figure encloses, in
+ * components under 64 px, that show in the finished `colour` frame: tears
+ * and pin holes. Ground the ink covers (the sliver between a hem and two
+ * rounded feet) is not seen, so it is no tear.
+ */
+export const tears = (ids: Raster, colour: Raster, background: (id: number) => boolean): number => {
   const { width: w, height: h } = ids;
+  const ink = inkMask(colour);
   const onEdge = (i: number): boolean => {
     const x = i % w;
     const y = Math.floor(i / w);
@@ -295,7 +314,7 @@ export const tears = (ids: Raster, background: (id: number) => boolean): number 
   };
   return components(w, h, (i) => background(idAt(ids, i)))
     .filter((c) => c.length < 64 && !c.some(onEdge))
-    .reduce((sum, c) => sum + c.length, 0);
+    .reduce((sum, c) => sum + c.filter((i) => ink[i] === 0).length, 0);
 };
 
 /**
@@ -303,7 +322,9 @@ export const tears = (ids: Raster, background: (id: number) => boolean): number 
  * `from` → `to` (pixel centres), the run of pixels of id `part` along the
  * segment's normal through that point, and the median run. Measured across
  * the bone's projected axis, a tube keeps its width however far it turns
- * toward the camera; none when the segment is under 4 px long or no sample
+ * toward the camera. A run ends where the depth steps by more than
+ * `FOLD_GAP`, so a forearm folded over its own upper arm reads its own
+ * width, not both. None when the segment is under 4 px long or no sample
  * lands in the part.
  */
 export const widthAcross = (
@@ -319,22 +340,35 @@ export const widthAcross = (
   if (length < 4) return Option.none();
   const nx = -dy / length;
   const ny = dx / length;
-  const inPart = (x: number, y: number): boolean => {
+  const pixel = (x: number, y: number): Option.Option<number> => {
     const X = Math.floor(x);
     const Y = Math.floor(y);
-    if (X < 0 || Y < 0 || X >= ids.width || Y >= ids.height) return false;
-    return idAt(ids, Y * ids.width + X) === part;
+    if (X < 0 || Y < 0 || X >= ids.width || Y >= ids.height) return Option.none();
+    const i = Y * ids.width + X;
+    if (idAt(ids, i) !== part) return Option.none();
+    return Option.some(i);
   };
   const step = 0.25;
+  /** Steps from the centre along (sx, sy) while the part goes on, with no fold between neighbours. */
+  const reach = (cx: number, cy: number, sx: number, sy: number, start: number): number => {
+    let at = start;
+    let k = 1;
+    for (;;) {
+      const next = pixel(cx + sx * k * step, cy + sy * k * step);
+      if (Option.isNone(next)) return k;
+      if (Math.abs(depthAt(ids, next.value) - depthAt(ids, at)) > FOLD_GAP) return k;
+      at = next.value;
+      k++;
+    }
+  };
   const runs: Array<number> = [];
   for (const f of fractions) {
     const cx = from[0] + dx * f;
     const cy = from[1] + dy * f;
-    if (!inPart(cx, cy)) continue;
-    let k = 1;
-    while (inPart(cx + nx * k * step, cy + ny * k * step)) k++;
-    let j = 1;
-    while (inPart(cx - nx * j * step, cy - ny * j * step)) j++;
+    const centre = pixel(cx, cy);
+    if (Option.isNone(centre)) continue;
+    const k = reach(cx, cy, nx, ny, centre.value);
+    const j = reach(cx, cy, -nx, -ny, centre.value);
     runs.push((k + j - 1) * step);
   }
   return median(runs);
