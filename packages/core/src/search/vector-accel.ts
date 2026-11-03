@@ -165,7 +165,7 @@ const loadNative = (target: AccelTarget): Effect.Effect<Option.Option<VectorAcce
   Effect.gen(function* () {
     const moduleName = 'bun:ffi';
     const ffi = yield* Effect.tryPromise({
-      try: () => import(moduleName) as Promise<FfiModule>,
+      try: () => import(/* @vite-ignore */ moduleName) as Promise<FfiModule>,
       catch: () => new AccelUnavailable({ tier: 'ffi' }),
     });
     const type = (name: string): unknown => ffi.FFIType[name];
