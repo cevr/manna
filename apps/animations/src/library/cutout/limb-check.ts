@@ -245,3 +245,152 @@ export const bareEdges = (r: Raster, measured: ReturnType<typeof measuredHand>, 
     }
   return count;
 };
+
+/** Acceptance E's OKLab colour distance and silhouette overlap in one box. */
+export const colourMatch = (
+  painted: Raster,
+  stroke: Raster,
+  box: readonly [number, number, number, number],
+) => {
+  const oklab = (r: number, g: number, b: number): readonly [number, number, number] => {
+    const linear = (c: number) => {
+      const v = c / 255;
+      if (v <= 0.04045) return v / 12.92;
+      return ((v + 0.055) / 1.055) ** 2.4;
+    };
+    const R = linear(r),
+      G = linear(g),
+      B = linear(b);
+    const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
+    const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B);
+    const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
+    return [
+      0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+      1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+      0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+    ];
+  };
+  let inter = 0,
+    union = 0,
+    total = 0,
+    count = 0;
+  for (let y = box[1]; y < box[3]; y++)
+    for (let x = box[0]; x < box[2]; x++) {
+      const i = (y * painted.width + x) * 4;
+      const a = painted.rgba[i + 3]! >= 128,
+        b = stroke.rgba[i + 3]! >= 128;
+      if (a || b) union++;
+      if (!a || !b) continue;
+      inter++;
+      if (
+        0.2126 * painted.rgba[i]! + 0.7152 * painted.rgba[i + 1]! + 0.0722 * painted.rgba[i + 2]! <
+        90
+      )
+        continue;
+      const p = oklab(painted.rgba[i]!, painted.rgba[i + 1]!, painted.rgba[i + 2]!);
+      const q = oklab(stroke.rgba[i]!, stroke.rgba[i + 1]!, stroke.rgba[i + 2]!);
+      total += Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+      count++;
+    }
+  return { iou: inter / Math.max(1, union), de: total / Math.max(1, count) };
+};
+
+/** New interior ink near the fixed shoulder, compared with the painted
+ * whole figure. The rigid hand and moving forearm support (including their
+ * measured ink/filter footprints) are excluded: their outlines are not a
+ * fixed shoulder seam. The remaining count has no allowance. */
+export const shoulderInk = (
+  engine: Raster,
+  painted: Raster,
+  measured: ReturnType<typeof measuredHand>,
+  elbow: number,
+  offset: Pt = [0, 0],
+  wrist = 0,
+) => {
+  const { shoulder, upper, fore, elbow: e } = measured.limb.chain;
+  const sx = shoulder[0] + offset[0],
+    sy = shoulder[1] + offset[1];
+  const a = (elbow * Math.PI) / 180,
+    dx = measured.wrist[0] - e[0],
+    dy = measured.wrist[1] - e[1];
+  const wx = e[0] + Math.cos(a) * dx - Math.sin(a) * dy + offset[0];
+  const wy = e[1] + Math.sin(a) * dx + Math.cos(a) * dy + offset[1];
+  const handFrame = inverse(measured, elbow, wrist);
+  const foreFrame = inverse(measured, elbow, 0);
+  const dfx = (measured.limb.chain.cuff[0] - e[0]) / fore;
+  const dfy = (measured.limb.chain.cuff[1] - e[1]) / fore;
+  const foreWidth =
+    Math.max(
+      measured.limb.stations.elbowFore.inner,
+      measured.limb.stations.elbowFore.outer,
+      measured.limb.stations.cuff.inner,
+      measured.limb.stations.cuff.outer,
+      ...measured.limb.outer.widths,
+      ...measured.limb.inner.widths,
+    ) +
+    measured.limb.inkWidth +
+    Math.SQRT2;
+  const ink = (r: Raster, i: number) =>
+    r.rgba[i * 4 + 3]! >= 128 &&
+    labOf([r.rgba[i * 4]!, r.rgba[i * 4 + 1]!, r.rgba[i * 4 + 2]!])[0] < INK_L;
+  const near = (x: number, y: number, reach: number, hit: (i: number) => boolean) => {
+    const radius = Math.ceil(reach);
+    for (let dy = -radius; dy <= radius; dy++)
+      for (let dx = -radius; dx <= radius; dx++) {
+        if (dx * dx + dy * dy > reach * reach) continue;
+        const xx = x + dx,
+          yy = y + dy;
+        if (xx < 0 || yy < 0 || xx >= engine.width || yy >= engine.height) return true;
+        if (hit(yy * engine.width + xx)) return true;
+      }
+    return false;
+  };
+  const moving = (x: number, y: number) => {
+    const handRadius = Math.max(
+      0.35 * fore,
+      measured.limb.stations.cuff.inner + measured.limb.inkWidth,
+      measured.limb.stations.cuff.outer + measured.limb.inkWidth,
+    );
+    if ((x - wx) ** 2 + (y - wy) ** 2 <= handRadius ** 2) return true;
+    const h = mapped(handFrame, x + 0.5 - offset[0], y + 0.5 - offset[1]);
+    if (measured.sample(h[0], h[1], true) > 0) return true;
+    const q = mapped(foreFrame, x + 0.5 - offset[0], y + 0.5 - offset[1]);
+    const rx = q[0] - e[0],
+      ry = q[1] - e[1],
+      u = rx * dfx + ry * dfy;
+    return u >= -foreWidth && u <= fore + foreWidth && Math.abs(rx * dfy - ry * dfx) <= foreWidth;
+  };
+  const handFringe = (x: number, y: number) => {
+    const q = mapped(handFrame, x + 0.5 - offset[0], y + 0.5 - offset[1]);
+    const radius = measured.limb.inkWidth / 2 + Math.SQRT2;
+    const reach = Math.ceil(radius);
+    for (let dx = -reach; dx <= reach; dx++)
+      for (let dy = -reach; dy <= reach; dy++) {
+        if (dx * dx + dy * dy > radius * radius) continue;
+        if (measured.sample(q[0] + dx, q[1] + dy, true) > 0) return true;
+      }
+    return false;
+  };
+  let count = 0;
+  const radius = 0.6 * upper,
+    width = measured.limb.inkWidth;
+  for (
+    let y = Math.max(0, Math.floor(sy - radius));
+    y <= Math.min(engine.height - 1, sy + radius);
+    y++
+  )
+    for (
+      let x = Math.max(0, Math.floor(sx - radius));
+      x <= Math.min(engine.width - 1, sx + radius);
+      x++
+    ) {
+      if ((x - sx) ** 2 + (y - sy) ** 2 > radius * radius || moving(x, y)) continue;
+      const i = y * engine.width + x;
+      if (!ink(engine, i) || painted.rgba[i * 4 + 3]! < 128) continue;
+      if (near(x, y, width + 1, (j) => engine.rgba[j * 4 + 3]! < 128)) continue;
+      if (near(x, y, width / 2 + 1, (j) => ink(painted, j))) continue;
+      if (handFringe(x, y)) continue;
+      count++;
+    }
+  return count;
+};
