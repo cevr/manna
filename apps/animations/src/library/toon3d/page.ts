@@ -17,7 +17,7 @@ import {
   WebGLRenderTarget,
 } from 'three';
 import { buildFigure, inkClass, type InkClass } from './figure.ts';
-import { LOOK_PAINTS, leadFeast } from './lead-feast.ts';
+import { LOOK_PAINTS } from './lead-feast.ts';
 import type { MemberSpec, Pose } from './spec.ts';
 
 /** One render: the image's size, where the soles' centre sits in it (px), px per head unit, the turn and the pose. */
@@ -271,6 +271,11 @@ const renderer = (spec: MemberSpec) => {
   };
 };
 
-const render = renderer(leadFeast);
-Reflect.set(window, 'toon3d', { render });
+/** The page's handle: `load` builds a member's figure and leaves `render` for it. */
+const toon3d = {
+  load: (spec: MemberSpec): void => {
+    Reflect.set(toon3d, 'render', renderer(spec));
+  },
+};
+Reflect.set(window, 'toon3d', toon3d);
 Reflect.set(window, 'ready', true);

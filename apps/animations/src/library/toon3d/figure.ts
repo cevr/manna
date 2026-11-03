@@ -145,6 +145,9 @@ export interface ArmChain {
   readonly points: ReadonlyArray<SweepPoint>;
   readonly hinge: Vector3;
   readonly hand: Vector3;
+  /** The bones' joints, where the straight upper arm and forearm meet and where the forearm ends. */
+  readonly elbow: Vector3;
+  readonly wrist: Vector3;
 }
 
 /**
@@ -219,6 +222,8 @@ export const armChain = (arm: Arm, pose: ArmPose, side: 1 | -1): ArmChain => {
     points,
     hinge,
     hand: wrist.clone().addScaledVector(handDir, arm.hand * 0.75),
+    elbow,
+    wrist,
   };
 };
 

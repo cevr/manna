@@ -1,7 +1,7 @@
 import { Effect, Schema, type Scope } from 'effect';
 import { Base64 } from 'effect/encoding';
 import type { RenderRequest } from './page.ts';
-import { REST, type Pose } from './spec.ts';
+import { REST, type MemberSpec, type Pose } from './spec.ts';
 
 /** The figure's page failed: its build, its Chrome, its script or a render. */
 export class Toon3dFailed extends Schema.TaggedError<Toon3dFailed>()('Toon3dFailed', {
@@ -72,10 +72,13 @@ const pngOf = (dataUrl: string) =>
  * runs on a blank page and leaves `window.toon3d.render`, which the returned
  * renderer calls once per request.
  */
-export const toon3dPage = (size: {
-  readonly width: number;
-  readonly height: number;
-}): Effect.Effect<RenderPng, Toon3dFailed, Scope.Scope> =>
+export const toon3dPage = (
+  size: {
+    readonly width: number;
+    readonly height: number;
+  },
+  spec: MemberSpec,
+): Effect.Effect<RenderPng, Toon3dFailed, Scope.Scope> =>
   Effect.gen(function* () {
     const script = yield* pageScript;
     const view = yield* Effect.acquireRelease(
@@ -95,6 +98,10 @@ export const toon3dPage = (size: {
       catch: failed,
     });
     if (loaded !== 'ready') return yield* Toon3dFailed.make({ reason: loaded });
+    yield* Effect.tryPromise({
+      try: () => view.evaluate<string>(`String(window.toon3d.load(${jsonOf(spec)}))`),
+      catch: failed,
+    });
     return (req: RenderRequest) =>
       Effect.tryPromise({
         try: () => view.evaluate<string>(`window.toon3d.render(${jsonOf(req)})`),
