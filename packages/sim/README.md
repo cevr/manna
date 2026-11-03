@@ -35,26 +35,37 @@ verify-hymnal skill drives through them.
 run over the contained host of their place (`src/host.ts`): a FileSystem and
 a ChildProcessSpawner built over the platform's from the drive's roots, the
 place's app, state and features folders, the output folder a session names,
-and a given `.app`. Every path is resolved at the moment of use, each link on
-it followed, and must lie under the canonical form of every root that holds
-it; a tool's absolute arguments and cwd are checked as it spawns, and the
-trees a tool acts on whole (derived data, the app it signs or installs, the
-native folder the prebuild writes, less CocoaPods' header links) hold no link
-out of their root. A refusal fails the command as `Escaped`. oxlint keeps
-`node:fs`, `child_process` and Bun's file and spawn calls out of the sources.
+and a given `.app`. Every path is resolved at the moment of use as the kernel
+walks it: a link's raw target takes the link's place among the components
+still to walk, so a `..` after a link leaves the link's target, never the
+link. It must lie under the canonical form of every root that holds it; a
+tool's absolute arguments and cwd are checked as it spawns, and the trees a
+tool acts on whole (derived data, the app it signs or installs, the native
+folder the prebuild writes, less CocoaPods' header links) hold no link out of
+their root anywhere a tool can reach, through every folder a link inside them
+leads to. A refusal fails the command as `Escaped` and prints its failure
+line once, a journey's refused results file and `serve`'s refused output
+folder included. oxlint keeps `node:fs`, `child_process` and Bun's file and
+spawn calls out of the sources.
 
 ## Tests
 
 - `bun run test`: the commands over a stand-in Drive, the journeys, the App
   property over one representative generated app (`app.property.test.ts`),
   and the contained host on the four ways a link once led the driver out of
-  the app and on the layouts a real checkout has (`host.test.ts`).
+  the app and on the layouts a real checkout has, and its resolver and tree
+  walk against the OS on the review's receipts (`host.test.ts`), and the
+  review's layouts through `sim` (`host.scenarios.test.ts`).
 - `bun run test:slow`: the commands over the live Drive with a stand-in
   host, a script launched as a process (`sim.slow.test.ts`), the App
   property complete, over 128 generated apps and the edges
   (`app.property.slow.test.ts`), the contained host over every command, link
-  kind and component (`contain.slow.test.ts`), and the static leg's oxlint
-  block (`lint.slow.test.ts`).
+  kind and component (`contain.slow.test.ts`), its resolver and tree walk
+  against libc's `realpath` and an independent component walk on 400
+  generated link worlds of each kind (`host.differential.slow.test.ts`,
+  `src/fixtures/oracle.ts`), every command with each host call refused in
+  turn (`refusals.slow.test.ts`), and the static leg's oxlint block
+  (`lint.slow.test.ts`).
 
 The package's tests use a probe app (`src/fixtures/probe.ts`) whose every
 value differs from every other and from any real app's; the contained

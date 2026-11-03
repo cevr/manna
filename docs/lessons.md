@@ -4863,3 +4863,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** A driver source could read, write or spawn through `node:fs`, `child_process` or Bun's own file and spawn calls, which the contained host never sees.
 - **Cause:** Nothing kept a host call inside the Effect services the contained host replaces.
 - **Guard:** lint:no-restricted-imports, proof `packages/sim/src/lint.slow.test.ts` `reports every direct file, process and Bun host call, and nothing else`
+
+### sim-host-decides-a-path-unlike-the-os
+
+- **Date:** 2026-11-03
+- **Kind:** review
+- **Said:** "Resolving a link target normalizes `..` before following its preceding link"
+- **Source:** hymnapp/simkit/round-1-findings.md M2 and M1 (the rewrite)
+- **Wrong:** The contained host approved `ios/Hymnal/Info.plist -> ../Hop/../Trap.plist` with `Hop` a link out, because it folded `Hop/..` before it followed `Hop`; and it approved derived data or a workspace that was an alias inside the app whose descendants linked out, because its tree walk checked an alias's target and did not enter it.
+- **Cause:** The resolver and the tree walk were hand-written approximations of the kernel, held only against the plants the census named. The resolver now puts a link's raw target among the components still to walk, and the tree walk enters every folder a link inside the tree leads to, once per canonical path; both are held against libc's `realpath` and an independent component walk on generated link worlds.
+- **Guard:** code: `packages/sim/src/host.differential.slow.test.ts` `agrees with the OS on worlds`; `packages/sim/src/host.test.ts` `decides as the OS lands`
+
+### sim-refusal-escapes-without-its-failure-line
+
+- **Date:** 2026-11-03
+- **Kind:** review
+- **Said:** "Containment refusals escape journey/serve without failure JSON"
+- **Source:** hymnapp/simkit/round-1-findings.md M3 (the rewrite)
+- **Wrong:** A refused journey results file and a refused `serve` output folder failed the command with no failure line on stdout: the journey printed its step and stopped, and `serve` failed with a raw host error.
+- **Cause:** The journey reported only its loading, and wrote each line to the results file with nothing to report the write's own failure; `serve` reported nothing. Each output-folder write in a journey now prints its failure line, and `serve` prints its result as every other command does.
+- **Guard:** code: `packages/sim/src/refusals.slow.test.ts` `each refused call fails typed and prints its failure line once`; `packages/sim/src/host.scenarios.test.ts` `prints the refusal when the journey results file leads out`, `prints the refusal when the server output folder leads out`
