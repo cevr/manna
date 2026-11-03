@@ -458,18 +458,62 @@ const endOf = (run: Run): LimbEnd => {
 
 const finite = (p: Pt) => Number.isFinite(p[0]) && Number.isFinite(p[1]);
 
-/** The regions over the box of `pixels`' paint: each texel's stub and hand shares by its u on `chain`, a flap's body pixels wholly stub (painted, on the flap's weights, never redrawn by the stroke). */
-const regionsOf = (pixels: Raster, t: Texels, chain: LimbChain): LimbRegions => {
+/**
+ * The sleeve's painted end across its opening: for each whole `v` from
+ * `-cuff.inner` to `cuff.outer` (index `v + ceil(cuff.inner)`), the u where
+ * the cuff's own ink run ends, read outward along the forearm from one
+ * feather inside the cuff's u. The run must begin within `inkWidth` past the
+ * cuff's u (else the next dark run is the hand's outline, and the end stays
+ * the cuff's u); it ends on the first opaque texel that is not ink, or on
+ * clear paint. The sleeve's lip past the chain's cuff point then moves with
+ * the forearm, and the hand starts where its own paint does.
+ */
+const cuffEdgeOf = (t: Texels, chain: LimbChain, cuff: LimbStation, inkWidth: number) => {
   const length = chain.upper + chain.fore;
+  const d = unit(sub(chain.cuff, chain.elbow));
+  const n = opens(d);
+  const lo = Math.ceil(cuff.inner);
+  const edges = new Float64Array(lo + Math.ceil(cuff.outer) + 1).fill(length);
+  const isInk = (x: number, y: number) => labOf(t.rgb(x, y))[0] < INK_L;
+  for (let i = 0; i < edges.length; i++) {
+    const v = i - lo;
+    let seen = false;
+    for (let s = length - FEATHER; s <= length + 2 * inkWidth; s += INK_STEP) {
+      const p: Pt = [
+        chain.elbow[0] + (s - chain.upper) * d[0] + v * n[0],
+        chain.elbow[1] + (s - chain.upper) * d[1] + v * n[1],
+      ];
+      const [x, y] = [Math.floor(p[0]), Math.floor(p[1])];
+      const opaque = t.holds(x, y) && t.byte(x, y, 3) >= 128;
+      const ink = opaque && isInk(x, y);
+      if (!seen && s > length + inkWidth) break;
+      if (seen && !ink) {
+        edges[i] = Math.max(length, s);
+        break;
+      }
+      seen = seen || ink;
+    }
+  }
+  return (v: number) =>
+    Option.getOrElse(Option.fromUndefinedOr(edges[Math.round(v) + lo]), () => length);
+};
+
+/** The regions over the box of `pixels`' paint: each texel's stub and hand shares by its u on `chain`, the hand's from the sleeve's painted end (`edge`, `cuffEdgeOf`), a flap's body pixels wholly stub (painted, on the flap's weights, never redrawn by the stroke). */
+const regionsOf = (
+  pixels: Raster,
+  t: Texels,
+  chain: LimbChain,
+  edge: (v: number) => number,
+): LimbRegions => {
   const box = paintBox(pixels, t);
   const [bx, by, bw, bh] = box;
   const shares = new Uint8Array(bw * bh * 2);
   for (let y = 0; y < bh; y++)
     for (let x = 0; x < bw; x++) {
-      const [u] = unroll(chain, [bx + x + 0.5, by + y + 0.5]);
+      const [u, v] = unroll(chain, [bx + x + 0.5, by + y + 0.5]);
       const body = t.isBody(bx + x, by + y);
       const stub = Math.round(255 * Math.max(Number(body), clamp01(0.5 - u / FEATHER)));
-      const hand = Number(!body) * Math.round(255 * clamp01(0.5 + (u - length) / FEATHER));
+      const hand = Number(!body) * Math.round(255 * clamp01(0.5 + (u - edge(v)) / FEATHER));
       shares.set([stub, hand], 2 * (y * bw + x));
     }
   return { box, shares: bytes(shares) };
@@ -688,7 +732,12 @@ export const limbOf = (
           inner: sides.inner,
           ink: [channel(0), channel(1), channel(2)] as const,
           inkWidth: median(depths),
-          regions: regionsOf(pixels, t, chain),
+          regions: regionsOf(
+            pixels,
+            t,
+            chain,
+            cuffEdgeOf(t, chain, stations.success.cuff, median(depths)),
+          ),
           stations: stations.success,
         }),
     },

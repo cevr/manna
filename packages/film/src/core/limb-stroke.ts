@@ -106,10 +106,14 @@ const inked = (into: Float64Array, colour: Rgb, a: number) => {
  *   tubes' end lines part (at rest, the outer corner);
  * - the upper arm's tube, on the shoulder bone, added to the stub (their
  *   shares part each texel between them);
- * - the cuff's ink, across the sleeve's opening past its end, under the
- *   hand: shown where the hand's paint does not cover it;
- * - the forearm's tube, on the elbow bone, with the hand, on the wrist bone,
- *   added to it (their shares part each texel between them).
+ * - the cuff's ink, across the sleeve's opening (to its measured half-widths)
+ *   past its end, under the hand: shown where the hand's paint does not
+ *   cover it;
+ * - the hand, on the wrist bone, at its share (past the sleeve's painted
+ *   end);
+ * - the forearm's tube, on the elbow bone, over the hand: the wrist runs
+ *   into the sleeve, and a texel drawn by both frames shows the sleeve
+ *   whole, never the two at partial alpha.
  * Each tube spans its segment's u, out to each side's width (`widthAt`): an
  * edge side shows the paint as it is, ink and all; a fold side ends at its
  * width, inked over `inkWidth` where the paint runs on past it (a cut inside
@@ -149,7 +153,7 @@ export const limbStroke = (
   const tube = (k: number, q: Pt, shown: number, into: Float64Array) => {
     into.fill(0);
     const [u, v] = along(k, q);
-    const within = [u <= chain.upper, u >= chain.upper && u <= length + FEATHER][k]!;
+    const within = [u <= chain.upper, u >= chain.upper && u <= length + 2 * inkWidth + FEATHER][k]!;
     if (!within) return;
     const side = SIDES[Number(v >= 0)]!;
     const [w, edge] = widthAt(limb, side, k, u);
@@ -209,6 +213,7 @@ export const limbStroke = (
     cuff.fill(0);
     const [u, v] = along(1, qf);
     if (!(u > length && u <= length + inkWidth)) return;
+    if (Math.abs(v) > limb.stations.cuff[SIDES[Number(v >= 0)]!]) return;
     const inside = restAt(1, length - FEATHER, v);
     sample(inside[0], inside[1], past);
     const a = past[3]!;
@@ -224,10 +229,12 @@ export const limbStroke = (
     cuffInk(qf);
     tube(1, qf, Math.max(fold, 1 - upper[3]!), fore);
     sample(qh[0], qh[1], hand);
-    added(fore, hand, limbShares(limb, Math.floor(qh[0]), Math.floor(qh[1]))[2]);
+    const handShare = limbShares(limb, Math.floor(qh[0]), Math.floor(qh[1]))[2];
+    for (let c = 0; c < 4; c++) hand[c] = hand[c]! * handShare;
     into.set(joint);
     overInto(into, upper);
     overInto(into, cuff);
+    overInto(into, hand);
     overInto(into, fore);
   };
 };
