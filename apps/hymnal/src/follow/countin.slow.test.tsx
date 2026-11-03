@@ -1,40 +1,3 @@
-/**
- * Acceptance (countin A3): the count-in's pulse over line 0, the click as
- * data, and the sheet's `Start` group, drawn by react-native-web under
- * happy-dom.
- *
- * - The pulse: under a provided player whose `countIn` atom steps beat 0 to
- *   n - 1 while the player is `Playing` at the first sung line (as the score
- *   clock holds it through a count-in), the page's line 0 has the element
- *   `count-in`: a progress bar named `Count-in`, value text `Beat <k> of <n>`
- *   (k from 1), no live region, n marks (`count-in-mark`, in order) with the
- *   first k lit in the accent. It is drawn beside line 0 in the box the two
- *   share, absolutely, so line 0's box keeps its height. While it shows,
- *   line 0 is the marked line and none of its syllables is lit. It is gone at
- *   `None`. Over the lowest hymn of every meter the bundle carries, n its
- *   count-in's beats (`countInOf`).
- * - Reduce Motion: on, no element of the pulse carries a scale transform;
- *   off, the newly lit mark (or an element inside it) is scaled.
- * - The click as data, told to a recording `Tell`: with `click` on, each new
- *   beat tells exactly one `{ _tag: 'beat', accent: index === 0 }` and
- *   nothing else, never twice for one beat (the same beat again, or a new
- *   report of the player's state, tells nothing), and nothing on mount; with
- *   `click` off nothing is told. `bodyOf` gives a `beat` the thock and an
- *   impact haptic (`medium` on the accent, `light` after); `feelOver` with
- *   `on()` false plays neither port for it, and with `on()` true plays the
- *   haptic and the thock once each, on fake ports: nothing sounds.
- * - The sheet on hymn 78: a group `Start` after the stanza chips and before
- *   the `Chords` switch, its switches `Intro` (checked) and `Click`
- *   (unchecked); `Click` turns on and reads back; a tap on `Intro` unchecks
- *   it and disables `Click`, its value kept; both read back from settings.
- *   `Click` reads disabled to assistive tech only while `Intro` is off: on
- *   the web its `aria-disabled`, on iOS its `accessibilityState`.
- *
- * Hymn numbers, line indices and beats only: no hymn's words are read or printed.
- *
- * Final path: `apps/hymnal/src/follow/countin.slow.test.tsx`.
- */
-
 import { describe, expect, it, spyOn } from 'bun:test';
 import { RegistryContext } from '@effect/atom-react';
 import { Array as Arr, Duration, Effect, Option } from 'effect';
@@ -73,7 +36,6 @@ const trackOf = (number: number): Track => ({
   title: Option.getOrThrow(hymnAt(String(number))).title,
 });
 
-/** The lowest hymn of each meter the timing bundle carries, in hymn order. */
 const lowestOfEachMeter = () => {
   const seen = new Set<string>();
   return Arr.filter(Arr.range(1, 695), (number) =>
@@ -89,12 +51,10 @@ const lowestOfEachMeter = () => {
   );
 };
 
-/** `el` and every element inside it. */
 const within = (el: Element) => [el, ...el.querySelectorAll('*')];
 
 const styleOf = (el: Element) => Option.liftPredicate(el, (it) => it instanceof HTMLElement);
 
-/** Whether `el`, or an element inside it, is painted in the accent. */
 const lit = (el: Element) =>
   within(el).some((it) =>
     Option.match(styleOf(it), {
@@ -104,7 +64,6 @@ const lit = (el: Element) =>
     }),
   );
 
-/** Whether `el`, or an element inside it, carries a scale transform. */
 const scaled = (el: Element) =>
   within(el).some((it) =>
     Option.match(styleOf(it), {
@@ -114,13 +73,8 @@ const scaled = (el: Element) =>
     }),
   );
 
-/** Lets the page take what a promise hands it: the system's Reduce Motion read. */
 const settle = Effect.promise(() => act(() => Effect.runPromise(Effect.void)));
 
-/**
- * Hymn `number`'s page over a player whose state and count-in the test sets,
- * every stanza chosen, `click` as given, each cue told into `told`.
- */
 const mountPage = (number: number, click: boolean) => {
   const timeline = timelineOf(number);
   const hymn = Option.getOrThrow(hymnAt(String(number)));
@@ -148,19 +102,16 @@ const mountPage = (number: number, click: boolean) => {
   );
   const playingAtFirst = () =>
     Player.Playing({ track, at: timeline.first / 1000, length: Option.none<number>() });
-  /** The player holds the first sung line, on beat `index` of `of` (a fresh value each time). */
   const beat = (index: number, of: number) =>
     act(() => {
       registry.set(state, playingAtFirst());
       registry.set(countIn, Option.some({ index, of }));
     });
-  /** The count-in left: the player runs from the first sung line. */
   const done = () =>
     act(() => {
       registry.set(countIn, Option.none());
       registry.set(state, playingAtFirst());
     });
-  /** The player's state told again, the beat unchanged. */
   const again = () => act(() => registry.set(state, playingAtFirst()));
   const lines = () => [...host.querySelectorAll<HTMLElement>('[data-testid="line"]')];
   const lineZero = () => Option.getOrThrow(Arr.get(lines(), 0));
@@ -168,7 +119,6 @@ const mountPage = (number: number, click: boolean) => {
     lines().flatMap((line, k) =>
       Arr.filter([k], () => line.getAttribute('aria-selected') === 'true'),
     );
-  /** In line `k`, the colour of each syllable, or of each word in a Plain line. */
   const colours = (k: number) =>
     Option.match(Arr.get(lines(), k), {
       onNone: () => [],
@@ -202,14 +152,12 @@ const mountPage = (number: number, click: boolean) => {
 
 type Page = ReturnType<typeof mountPage>;
 
-/** The one pulse showing. */
 const pulseOf = (page: Page) => {
   const [shown, ...more] = page.pulses();
   expect(more).toEqual([]);
   return Option.getOrThrow(Option.fromNullishOr(shown));
 };
 
-/** Whether an element on the way from `el` up to `box` (not `box` itself) is drawn absolutely. */
 const absoluteUnder = (el: Element, box: Element): boolean =>
   Option.match(
     Option.filter(Option.fromNullishOr(el.parentElement), () => el !== box),
@@ -254,7 +202,6 @@ describe('the count-in pulse over line 0', () => {
           live: 'off',
           lit: Arr.range(1, n).map((m) => m <= k),
         });
-        // Beside line 0 in the box the two share, drawn absolutely: line 0's box keeps its height.
         const zero = page.lineZero();
         expect(zero.parentElement).toBe(box);
         expect(box.firstElementChild).toBe(zero);
@@ -267,7 +214,6 @@ describe('the count-in pulse over line 0', () => {
           inBox: true,
           absolute: true,
         });
-        // Line 0 is the marked line, and nothing in it runs ahead of the count.
         expect(page.selected()).toEqual([0]);
         expect(page.colours(0)).not.toContain(ACCENT);
       }
@@ -318,12 +264,10 @@ describe('the click as data', () => {
       const n = countInOf(timelineOf(number).tempo).beats;
       using page = mountPage(number, true);
       expect(page.told).toEqual([]);
-      // Two count-ins in a row, as a Play, a Pause and a Play give.
       for (const round of [1, 2]) {
         for (const index of Arr.range(0, n - 1)) {
           const before = page.told.length;
           page.beat(index, n);
-          // The same beat again, and the player's state told again: no new cue.
           page.beat(index, n);
           page.again();
           expect({ number, round, index, told: page.told.slice(before) }).toEqual({
@@ -389,13 +333,11 @@ describe('the click as data', () => {
   });
 });
 
-/** A hymn page shown, as its screen says to the sheet. */
 function Shows({ track }: { readonly track: Track }) {
   useShowsPage(track);
   return <></>;
 }
 
-/** The full player opened on hymn `number`'s page, over an idle player. */
 const mountSheet = (number: number) => {
   const track = trackOf(number);
   params['hymn'] = String(number);
@@ -535,7 +477,6 @@ describe('the sheet’s Start group', () => {
 
   it('gives Click the accessibility state VoiceOver reads on iOS: disabled only while Intro is off', () => {
     using sheet = mountSheet(78);
-    // react-native-web draws no DOM for `accessibilityState`: it is read from the props Click was drawn with.
     const state = () => propsWith(sheet.click(), 'accessibilityState')['accessibilityState'];
     const on = state();
     sheet.tap(sheet.intro());

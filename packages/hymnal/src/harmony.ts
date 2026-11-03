@@ -1,10 +1,3 @@
-/**
- * The harmony of one verse as chords, and each melody note's chords: the
- * one it starts on when the harmony changes there, and any changes while it
- * is held. Two readings: `full`, every chord the four voices make that lasts
- * half a beat, and `guitar`, what a guitarist strums.
- */
-
 import * as Chord from './chord.js';
 import type { Note } from './midi.js';
 import type { Score } from './score.js';
@@ -19,19 +12,11 @@ export type Level = 'full' | 'guitar';
 
 const tonicOf = (score: Score) => Chord.pitchClass(score.key.tonic);
 
-/** A sampled chord; `pedal` when it names the upper voices over a bass outside them. */
 interface Sampled extends Span {
   readonly pedal: boolean;
 }
 
-/**
- * The chord sounding at each onset in [from, to): the one its notes name, else
- * the chord above a foreign bass, else the one chord a passing tone leaves
- * (`Chord.overBass`, `Chord.withoutOne`); a set none names keeps the last
- * chord sounding.
- */
 const sample = (score: Score, from: number, to: number): Sampled[] => {
-  // The notes sounding at some point in [from, to), in the score's order.
   const near = score.harmony.filter((note) => note.start < to && note.end > from);
   const onsets = [
     ...new Set([from, ...near.map((n) => n.start).filter((t) => t > from && t < to)]),
@@ -65,10 +50,6 @@ const merge = <S extends Span>(spans: readonly S[]): S[] =>
     return out;
   }, []);
 
-/**
- * Drops a chord over a foreign bass that leaves and returns to the same
- * chord: the upper voices moving over a held bass, not a change.
- */
 const dropPedals = (spans: readonly Sampled[]): Span[] => {
   const out: Sampled[] = [];
   spans.forEach((span, i) => {
@@ -84,7 +65,6 @@ const dropPedals = (spans: readonly Sampled[]): Span[] => {
   return out;
 };
 
-/** Folds spans shorter than `min` ticks into the chord before them (the first into the one after). */
 const dropShort = (spans: readonly Span[], min: number): Span[] => {
   const out: Span[] = [];
   for (const span of spans) {
@@ -99,7 +79,6 @@ const dropShort = (spans: readonly Span[], min: number): Span[] => {
   return merge(out);
 };
 
-/** Drops a chord shorter than a beat that leaves and returns to the same chord: a neighbor, not a change. */
 const dropNeighbors = (spans: readonly Span[], beat: number): Span[] => {
   const out = [...spans];
   for (let i = 1; i < out.length - 1; i++) {
@@ -115,13 +94,6 @@ const dropNeighbors = (spans: readonly Span[], beat: number): Span[] => {
 
 const mod12 = (n: number) => ((n % 12) + 12) % 12;
 
-/**
- * A sixth chord in root position sounds the same notes as the seventh chord a
- * minor third below in first inversion (Bb6 is Gm7/Bb). It is that seventh
- * chord when the harmony goes on to the chord a fourth above its root, as
- * ii goes to V, unless it holds the chord before it with the sixth added
- * over it (Gbmaj7 to Gb6).
- */
 const readSixths = (spans: readonly Span[]): Span[] =>
   spans.map((span, i) => {
     const { root, quality, bass } = span.chord;
@@ -134,7 +106,6 @@ const readSixths = (spans: readonly Span[]): Span[] =>
     return { ...span, chord: { root: below, quality: seventh, bass: root } };
   });
 
-/** The chords of [from, to) at a level. */
 export const chords = (score: Score, from: number, to: number, level: Level): Span[] => {
   const beat = score.ticksPerBeat;
   const full = merge(
@@ -146,16 +117,10 @@ export const chords = (score: Score, from: number, to: number, level: Level): Sp
 };
 
 export interface Change {
-  /** Ticks after the note starts: 0 is the note's own chord. */
   readonly offset: number;
   readonly chord: Chord.Chord;
 }
 
-/**
- * Each melody note in [from, to) with the chord changes that fall on it:
- * a change belongs to the note sounding (or last sung) when it comes. The
- * first note always carries the chord sounding at its start.
- */
 export const onNotes = (
   score: Score,
   from: number,

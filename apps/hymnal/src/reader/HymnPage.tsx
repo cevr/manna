@@ -1,31 +1,3 @@
-/**
- * A hymn's words in the order it is sung: its section and first passage as a
- * quiet line (a button, `About this hymn`, that opens the hymn's sheet), its
- * number and title in one row (the number first, the `Favourite` button
- * last), a notice while chords are on and the hymn has none, then each stanza under its number and the refrain, marked,
- * each time it is sung. The theme's ink on its ground, set as the reader
- * chose in the player sheet (`reading.ts`) and scaled by the system's text
- * size. A printed line that wraps hangs under its first word. While the page
- * is shown, the screen stays on if the reader asked for it (`KeepAwake`).
- *
- * Each sung line is drawn as its syllables, a hyphen between the syllables
- * of a word (`SyllableWords.tsx`), whether chords are on or off: the
- * syllables come from the hymn's bundled chords, decoded once when the page
- * is shown. A Plain part is its words (`HangingLine`). With chords on, each
- * section is drawn under its chords (`Chords.tsx`) in the key the hymn's
- * own move reaches: Simple chords (`simple.ts`) unless the reader chose
- * Advanced in Settings.
- *
- * While the player plays this hymn, the page follows it (`follow/`): the
- * sung line and syllable are marked, and the page scrolls each line in
- * before it is sung.
- *
- * With chords on, a tap on a chord pushes the sheet of how to play it
- * (`ChordSheet.tsx`), over the page and apart from the follow: the chords
- * reach the page through a context, and the page pushes the sheet's route
- * with the chords and the key they are played in.
- */
-
 import type * as Chord from '@manna/hymnal/chord';
 import { useAtomValue } from '@effect/atom-react';
 import { Array as Arr, Option } from 'effect';
@@ -74,11 +46,6 @@ import { SyllableLine } from './SyllableWords';
 import { PageTextProvider, pageTextOf } from './pageText';
 import { readingStyle } from './reading';
 
-/**
- * What the page reads its chords and its setting from: the stored chords
- * choice and chord style, each hymn's move, the bundled chords, the reading settings, and
- * the reader's Favourites.
- */
 export interface ChordReader {
   readonly chords: Atom.Writable<boolean>;
   readonly style: Atom.Atom<ChordStyle>;
@@ -91,7 +58,6 @@ export interface ChordReader {
   readonly favourites: Atom.Writable<ReadonlyArray<number>>;
 }
 
-/** The hymn's words under its number and title: drawn again by its own stores, never by a page beside it. */
 export const HymnPage = memo(function HymnPage({
   hymn,
   reader,
@@ -105,7 +71,6 @@ export const HymnPage = memo(function HymnPage({
   const move = useAtomValue(reader.move(hymn.number));
   const placement = useAtomValue(reader.effectivePlacement(hymn.number));
   const wordsBook = useMemo(() => reader.book.of(hymn.number), [reader.book, hymn.number]);
-  // The hymn's syllables are drawn with chords on or off, so its string is decoded once it is shown.
   const book = useMemo(
     () => reader.book.of(hymn.number, placement),
     [reader.book, hymn.number, placement],
@@ -126,7 +91,6 @@ export const HymnPage = memo(function HymnPage({
   });
   const follow = useFollow(hymn.number);
   const router = useRouter();
-  // The tap reads the key played at the tap, and stays one function so the chords do not draw again.
   const now = useRef({ router, played });
   now.current = { router, played };
   const tap = useCallback(
@@ -184,7 +148,6 @@ export const HymnPage = memo(function HymnPage({
   );
 });
 
-/** The head line's words: the section, and the first passage with how many more follow it. */
 const headLine = (section: string, passages: ReadonlyArray<Passage>) =>
   Option.match(Arr.head(passages), {
     onNone: () => section,
@@ -194,13 +157,6 @@ const headLine = (section: string, passages: ReadonlyArray<Passage>) =>
     },
   });
 
-/**
- * The page's quiet head line: the hymn's section, then the first passage the
- * Scriptural index gives it (`+N` for the rest), a button `About this hymn`
- * that opens the sheet of its topics, passages and the hymns like it. Drawn
- * again only when its hymn, section or accent change, never with the page
- * around it.
- */
 const AboutLine = memo(function AboutLine({
   number,
   section,
@@ -236,7 +192,6 @@ const AboutLine = memo(function AboutLine({
   );
 });
 
-/** Hands the lines the reader's size, font and spacing, under the system's text size. */
 function PageText({
   reading,
   children,
@@ -255,22 +210,17 @@ function PageText({
   return <PageTextProvider value={text}>{children}</PageTextProvider>;
 }
 
-/** A section drawn as its words alone. */
 const wordsAlone: SectionChords = { _tag: 'Words' };
 
-/** The key chords are spelled in while none are shown. */
 const hymnKeyAtRest = { tonic: 'C', minor: false } as const;
 
-/** Every section, as its syllables or under its chords: drawn again only when the chords come or go. */
 const Sections = memo(function Sections({
   hymn,
   book,
   chords,
 }: {
   readonly hymn: HymnText;
-  /** The hymn's syllables and chords as bundled, shown or not. */
   readonly book: Option.Option<HymnChords>;
-  /** The chords shown, none while chords are off. */
   readonly chords: Option.Option<HymnChords>;
 }) {
   const shown = useMemo(
@@ -281,7 +231,6 @@ const Sections = memo(function Sections({
       }),
     [hymn, chords],
   );
-  // With chords off, only the bundled syllable text is used.
   const syllables = useMemo(
     () =>
       Option.match(book, {
@@ -303,7 +252,6 @@ const Sections = memo(function Sections({
   ));
 });
 
-/** Each section's first line's place in the hymn as sung, from 0: the sections are its runs. */
 const firstLines = (sections: ReadonlyArray<Section>): ReadonlyArray<number> =>
   sections.reduce<Array<number>>(
     (firsts, _, k) => [...firsts, (firsts[k - 1] ?? 0) + (sections[k - 1]?.lines.length ?? 0)],
@@ -338,7 +286,6 @@ function SectionView(props: BodyProps) {
   );
 }
 
-/** A section's lines: the words alone (a Plain part), its syllables, or under their chords. */
 function Body({
   section,
   shown,
@@ -364,7 +311,6 @@ function Body({
   ));
 }
 
-/** A section under its label: the stanza's number, or "Refrain". */
 function Block({
   name,
   label,
@@ -413,21 +359,13 @@ export function NoHymn({ number }: { readonly number: string }) {
 }
 
 const styles = StyleSheet.create({
-  // A pager page is drawn before the pager's height is known, at its words'
-  // height; once the page takes the pager's height, iOS keeps this frame at
-  // the words' height unless it is bounded by its page, and a frame as tall as
-  // its words has nothing to scroll.
   frame: { flex: 1, maxHeight: '100%' },
-  // The pill a hand scroll shows stands over the sounding bar, which lies over the page's foot.
   overBar: { position: 'absolute', left: 0, right: 0, top: 0, bottom: RISE },
   page: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 48, gap: 24 },
   head: { gap: 4 },
-  // The quiet line is a button as wide as its words, so a tap beside it does nothing.
   about: { alignSelf: 'flex-start' },
   topic: { fontSize: 13, color: color.muted },
   pressed: { opacity: 0.5 },
-  // The number and title share a baseline; the Favourite button sits at the
-  // row's top, level with their first line.
   name: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   words: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexShrink: 1 },
   number: { fontSize: 22, fontWeight: '600', fontVariant: ['tabular-nums'] },

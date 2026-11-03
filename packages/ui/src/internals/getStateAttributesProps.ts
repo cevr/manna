@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/internals/getStateAttributesProps.ts
-//
-// A part's state as `data-*` attributes: `true` becomes a bare attribute,
-// another truthy value its string, a falsy one nothing; a mapping replaces
-// the default for a key.
-
 export type StateAttributesMapping<State> = {
   [Property in keyof State]?: (state: State[Property]) => Record<string, string> | null;
 };

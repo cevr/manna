@@ -1,33 +1,3 @@
-/**
- * The key sets of one set (`warm-1`, or a later set such as `warm-2`) as a
- * stream (`./stream.ts`): for each key in the stepper's order
- * (`KEY_TRANSPOSES`), each hymn the set holds is rendered, checked, uploaded to R2,
- * read back from R2, and only then deleted from the disk. At most
- * `parallel` hymns are in hand at once, so the disk holds at most that many
- * hymns' MP3s and work folders, whatever the number of hymns.
- *
- * Each hymn, in this order:
- *
- * 1. **Kept.** Its record passed and R2 holds the record's bytes (size and
- *    MD5): no render, no upload; a local MP3 or work folder left is deleted.
- * 2. **Rendered.** The renderer (`render.ts --skip-manifest`) renders it, or
- *    keeps a local MP3 that still stands; the run then reads the record and
- *    the MP3 back. A hymn whose record did not pass, or whose MP3 is not the
- *    record's, is failed: its MP3 and work folder are deleted, its record
- *    (and the render's sheet) stay, and nothing is uploaded.
- * 3. **Uploaded.** A key R2 already holds with other bytes is never
- *    replaced: the hymn fails and its MP3 stays. Otherwise the MP3 goes up
- *    as `audio/mpeg` with a year's immutable cache, R2's answer must hold the
- *    record's MD5 and size, and a listing of the key must say the same. Only
- *    then are the MP3 and the work folder deleted. A failed upload deletes
- *    nothing.
- *
- * A stop (SIGTERM, an interruption) leaves at most the hymns in hand
- * unfinished; the next run keeps what R2 holds and renders the rest again.
- * After each key, the renderer writes the key's manifest
- * (`render.ts --manifest-only`). Every line goes to the console and to
- * `<cache>/stream.log`.
- */
 import {
   KEY_TRANSPOSES,
   RECORDING_SETS,
@@ -42,7 +12,6 @@ import type { TargetObject } from './stores.ts';
 import { Hash, Target } from './stores.ts';
 import { SET_CACHE_CONTROL, setKey, setPrefix } from './upload-plan.ts';
 
-/** The stream could not go on: a renderer that could not run, or R2 that could not list a key. */
 export class StreamFailed extends Schema.TaggedError<StreamFailed>()('StreamFailed', {
   reason: Schema.String,
 }) {
@@ -51,24 +20,16 @@ export class StreamFailed extends Schema.TaggedError<StreamFailed>()('StreamFail
   }
 }
 
-/** What a render process answered: its exit code and the end of its output. */
 export interface Rendered {
   readonly code: number;
   readonly tail: string;
 }
 
-/** Where one key set's hymns are rendered: its set folder and its work folder. */
 export interface Dirs {
   readonly out: string;
   readonly work: string;
 }
 
-/**
- * The render, one process a hymn so each keeps its own memory
- * (`./stream.ts` runs `render.ts`; the tests a fake). It writes
- * `<out>/<n>.mp3`, `<out>/<n>.json` and `<work>/<n>/`, and `manifest`
- * writes `<out>/manifest.json`.
- */
 export class Renderer extends Context.Service<
   Renderer,
   {
@@ -81,13 +42,11 @@ export class Renderer extends Context.Service<
   }
 >()('@manna/hymnal-app/infra/audio/Renderer') {}
 
-/** A key set's folders under the render cache, as `render.ts` names them. */
 export const setDirs = (cache: string, set: string): Dirs => ({
   out: `${cache}/sets/${set}`,
   work: `${cache}/work-${set}`,
 });
 
-/** `--keys`: `all` (the stepper's order), or transposes from -5 to 6 other than 0, comma-separated. */
 export const keysOf = (text: string): Result.Result<ReadonlyArray<number>, string> => {
   if (text === 'all') return Result.succeed(KEY_TRANSPOSES);
   const keys = text.split(',').map((part) => Number(part.trim()));
@@ -99,7 +58,6 @@ export const keysOf = (text: string): Result.Result<ReadonlyArray<number>, strin
   return Result.succeed(keys);
 };
 
-/** `--hymns`: hymn numbers from 1 to 695, unpadded and comma-separated, in the order given. */
 export const hymnsOf = (text: string): Result.Result<ReadonlyArray<number>, string> => {
   const hymns = text.split(',').map((part) => Number(part.trim()));
   const wrong = hymns.some((n) => !Number.isInteger(n) || n < 1 || n > 695);
@@ -110,7 +68,6 @@ export const hymnsOf = (text: string): Result.Result<ReadonlyArray<number>, stri
 
 const Move = Schema.Struct({ stem: Schema.String, octave: Schema.Int, folded: Schema.Int });
 
-/** The fields of a hymn's record (`render.ts`'s `<n>.json`) the stream reads. */
 const StreamRecord = Schema.fromJsonString(
   Schema.Struct({
     hymn: Schema.Int,
@@ -125,20 +82,17 @@ type StreamRecord = typeof StreamRecord.Type;
 
 const SIGNED = new Intl.NumberFormat('en-US', { signDisplay: 'exceptZero' });
 
-/** A moved stem as `render.ts` says it: `bass -12`, `violas +12 folded 3`. */
 const moveText = (move: typeof Move.Type) => {
   const text = `${move.stem} ${SIGNED.format(move.octave)}`;
   if (move.folded === 0) return text;
   return `${text} folded ${move.folded}`;
 };
 
-/** The hymn's moved stems as its line says them, or nothing. */
 const movedText = (moves: ReadonlyArray<typeof Move.Type>) => {
   if (moves.length === 0) return '';
   return `moved ${moves.map(moveText).join(', ')}`;
 };
 
-/** A process's last line of output, or `otherwise` when it printed none. */
 const lastLine = (text: string, otherwise: string) =>
   Option.getOrElse(
     Option.filter(Option.fromUndefinedOr(text.trim().split('\n').at(-1)), (line) => line !== ''),
@@ -160,7 +114,6 @@ interface Counts {
   readonly failed: number;
 }
 
-/** A line's detail: why a hymn failed after a colon, what else a hymn did after a comma. */
 const detailText = (status: Status, detail: string) => {
   if (detail === '') return '';
   if (status === 'failed') return `: ${detail}`;
@@ -170,10 +123,8 @@ const detailText = (status: Status, detail: string) => {
 const countsText = (n: Counts, of: number) =>
   `rendered ${n.rendered} kept ${n.kept} uploaded ${n.uploaded} failed ${n.failed} of ${of}`;
 
-/** One hymn of one key: its record read, rendered when R2 lacks it, uploaded, read back, deleted. */
 const streamHymn = (
   key: {
-    /** The set the key set moves (`warm-1`), as `render.ts --set` takes it. */
     readonly base: string;
     readonly set: string;
     readonly transpose: number;
@@ -272,19 +223,13 @@ const streamHymn = (
   });
 
 export interface StreamOptions {
-  /** The render cache: `sets/<set>/`, `work-<set>/` and `stream.log` are under it. */
   readonly cache: string;
-  /** The set whose key sets are streamed (`RECORDING_SETS`): `warm-1`, or `warm-2` for hymn 663. */
   readonly set: string;
-  /** The transposes, in the order they stream. */
   readonly keys: ReadonlyArray<number>;
-  /** Hymns the set holds, each one. */
   readonly hymns: ReadonlyArray<number>;
-  /** Hymns in hand at once. */
   readonly parallel: number;
 }
 
-/** Every key's hymns streamed to R2; answers how many hymns failed in all. */
 export const stream = (options: StreamOptions) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

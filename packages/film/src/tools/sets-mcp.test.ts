@@ -1,8 +1,3 @@
-// `record_render`'s work (`setsReads().recordRender`) over a project folder in
-// memory: a video made another way gets a render record of its lead file,
-// empty unless a local render of that file left one, so `film cache --prune
-// --days 0` runs after it.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { ConfigProvider, Effect, FileSystem, Layer, Option, Path } from 'effect';
 import { MAIN_VARIANT, type Render } from '../core/catalogue.ts';
@@ -21,7 +16,6 @@ import { setsReads } from './sets-mcp.ts';
 
 const out = '/out/f';
 
-/** A video of `address` at `clip` (relative to the film's folder), as an agent records it. */
 const videoAt = (address: Render['address'], clip: string): Omit<Render, 'at'> => ({
   address,
   variant: MAIN_VARIANT,
@@ -40,7 +34,6 @@ const videoAt = (address: Render['address'], clip: string): Omit<Render, 'at'> =
   sound: Option.none(),
 });
 
-/** Segment `key` kept whole in the film's cache. */
 const kept = (key: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -58,7 +51,6 @@ const kept = (key: string) =>
     );
   });
 
-/** Film `f` in memory, with two videos in its folder; the lab's roots hold `/out`. */
 const lab = () => {
   const files = new Map([
     ['/films/f/scenes/index.ts', text('export {};\n')],
@@ -95,7 +87,6 @@ describe('record_render', () => {
         yield* kept('used');
         yield* kept('mine');
         yield* kept('stale');
-        // Another output's render recorded what it used; `scenes/b` was rendered here.
         yield* recordRender(out, `${out}/scenes/a/main.mp4`, 0, ['used']);
         yield* recordRender(out, `${out}/scenes/b/main.mp4`, 0, ['mine']);
         const sets = yield* setsReads();

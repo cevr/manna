@@ -1,6 +1,3 @@
-// Every drawing the cast pipeline needs of Paul (`film concept coverage`):
-// his six kept heads, each cut as a bust. Pure data.
-
 import type { CoverageManifest } from '@manna/film/tools';
 
 const FOR = [{ script: 'in-its-order', beats: ['bottle'] }];

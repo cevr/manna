@@ -10,12 +10,6 @@ import {
   Sink,
   Stream,
 } from 'effect';
-// earshot as `sfx fit` runs it (`Earshot.layer`, a recording spawner in place
-// of git and the sandbox): refused with its install line when its clone or
-// virtualenv is missing, or its clone is off the pin or changed; otherwise
-// run as `python -I -B` under a sandbox with no network, reading its clone,
-// its virtualenv and the recording's folder and writing only its scratch
-// folder, Hugging Face offline, the model it wrote read back.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -29,14 +23,12 @@ const wordValue = (word: string | Redacted.Redacted<string>): string => {
 
 const EARSHOT_PIN = Earshot.pin;
 
-/** A run of a process: its argv, folder and environment. */
 interface Spawned {
   readonly argv: ReadonlyArray<string>;
   readonly cwd: string;
   readonly env: Readonly<Partial<Record<string, string>>>;
 }
 
-/** What the fake answers: git's head and status, and the model the driver writes to its last argument. */
 interface Answers {
   readonly head: string;
   readonly status: string;
@@ -58,7 +50,6 @@ const handleOf = (stdout: string, exitCode = 0) =>
     unref: Effect.succeed(Effect.void),
   });
 
-/** A spawner that keeps each command, answers git from `answers`, and for the sandbox writes the model where the driver would. */
 const answering = (answers: Answers, spawned: Array<Spawned>) =>
   Effect.map(FileSystem.FileSystem, (fs) =>
     ChildProcessSpawner.make((command) => {
@@ -84,7 +75,6 @@ const answering = (answers: Answers, spawned: Array<Spawned>) =>
     }),
   );
 
-/** earshot at a fixture home (its clone and virtualenv made unless `bare`), over the fake spawner. */
 const fitting = (answers: Answers, options: { readonly bare?: boolean } = {}) => {
   const spawned: Array<Spawned> = [];
   return Effect.gen(function* () {
@@ -147,7 +137,6 @@ describe('earshot, as `sfx fit` runs it', () => {
       );
       expect(messages[0]).toContain(`not the pin ${EARSHOT_PIN}`);
       expect(messages[1]).toContain('earshot/forge/fit/auto.py');
-      // Neither ran the fit: only git read the clone.
       expect(changed.spawned.every(({ argv }) => argv[0] === 'git')).toBe(true);
     }),
   );
@@ -183,7 +172,6 @@ describe('earshot, as `sfx fit` runs it', () => {
           MPLCONFIGDIR: `${scratch}/matplotlib`,
           PYTHONDONTWRITEBYTECODE: '1',
         });
-        // The driver fits with no description.
         expect(argv[7]).toContain('clap=False');
       }),
   );

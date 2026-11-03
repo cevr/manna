@@ -1,25 +1,9 @@
-// The shell is one look on every page: at each place (`STATES`' first case,
-// the place as it opens), on each device, every part of its header draws
-// with the computed style an ask's draws it with: each match of a part, its
-// first child (the crumb's words), and each control with the pointer over
-// it and with the keyboard's focus on it. A page's own element rule that
-// outweighs a shell part (a link's `color`, a `font`, a margin) shows here as
-// the part and the property it moved. An ask (`STATES.ask`'s first case) is
-// the reference; every page draws every part, so no part goes unmatched by
-// being missing from either.
-// Each state is checked to hold before it is read: a state the reference
-// never took, or a control its pointer cannot reach, is a failure, and so is
-// a control the page draws (and does not leave out by its own state) that a
-// layer keeps from the pointer. A kit button in a state's colour reads at AA on
-// the ground it draws, at rest, hovered, pressed and focused.
-
 import { Array as Arr, Effect, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { evaluates } from '../../src/lab/fixtures/settled.ts';
 import { type Tab, jsonOf } from '../../src/lab/fixtures/tab.ts';
 import { DEVICES, type Device, LAPTOP, SLOW, STATES, byPlace } from './studio-states.ts';
 
-/** The parts of the shell, by name: the header, the page's name and Go to. */
 const PARTS = {
   header: '.sh-header',
   crumb: '.sh-crumb',
@@ -28,7 +12,6 @@ const PARTS = {
 
 type Part = keyof typeof PARTS;
 
-/** The computed properties that make a part look as it does. */
 const LOOK = [
   'color',
   'backgroundColor',
@@ -73,20 +56,12 @@ const LOOK = [
   'columnGap',
 ];
 
-/** A look, as the page computes it: each property of `LOOK` by name. */
 type Look = { readonly [property: string]: string };
 
-/** Each part in any state: its selector up to its first attribute or pseudo-class (`.sh-films`). */
 const ANY_PART = [
   ...new Set(Object.values(PARTS).map((selector) => selector.replace(/[[:].*$/, ''))),
 ];
 
-/**
- * In the page: `look(el)`, the computed value of each property of `LOOK` on
- * `el`; and `childLook(el)`, its first child's look, or `none`, or `part`
- * when the child is itself a part (the header's Films link), matched as that
- * part in its own state.
- */
 const LOOK_OF = `const look = (el) => {
   const style = getComputedStyle(el);
   return Object.fromEntries(${jsonOf(LOOK)}.map((property) => [property, style[property]]));
@@ -98,7 +73,6 @@ const childLook = (el) => {
   return look(child);
 };`;
 
-/** An expression run in the page: each part present, as every match of it, each with its look and its first child's. */
 const LOOKS = `(() => {
   ${LOOK_OF}
   return Object.fromEntries(Object.entries(${jsonOf(PARTS)}).flatMap(([part, selector]) => {
@@ -108,23 +82,13 @@ const LOOKS = `(() => {
   }));
 })()`;
 
-/** A part a page's own state leaves out, and what that state is: none is left out now. */
 const LEFT_OUT: Partial<Record<Part, string>> = {};
 
-/** The parts every page draws. */
 const REQUIRED: ReadonlyArray<string> = Object.keys(PARTS);
 
-/** An expression run in the page: the parts `looks` (`LOOKS` as the page reads) has none of, by name; a whole reference, none. */
 const MISSING = (looks: string) =>
   `Object.keys(${jsonOf(PARTS)}).filter((part) => !(part in ${looks}))`;
 
-/**
- * What the page draws otherwise than `reference`, a whole one (`MISSING`),
- * as sentences: a part of `required` it lacks, and for each match of a part
- * (the second Studio link is `studio 2`), a property off the reference's
- * first match, its first child missing or a property of it off the reference's. A part
- * it need not draw is matched when it draws it.
- */
 const DIFFERENCES = (reference: string, required: ReadonlyArray<string>) => `(() => {
   ${LOOK_OF}
   const ref = ${reference};
@@ -154,35 +118,24 @@ const DIFFERENCES = (reference: string, required: ReadonlyArray<string>) => `(()
   });
 })()`;
 
-/** The controls of the shell, which a pointer and the keyboard's focus land on. */
 const CONTROLS: ReadonlyArray<Part> = ['goto'];
 
-/** The controls each device's header shows: the same on both. */
 const CONTROLS_ON: Readonly<Record<Device['budget'], ReadonlyArray<Part>>> = {
   phone: CONTROLS,
   laptop: CONTROLS,
 };
 
-/** A point on the page, in its viewport's pixels. */
 interface Point {
   readonly x: number;
   readonly y: number;
 }
 
-/**
- * Where a viewer can hold each control on a page: its middle, for each one
- * drawn and not left out by the page's own state (`LEFT_OUT`); `covered`, each
- * such control the pointer cannot reach at its middle (a layer over it), which
- * is a failure, never a control skipped; and `rest`, a point on the header
- * over none, for the pointer to wait on.
- */
 interface Holds {
   readonly at: { readonly [part: string]: Point };
   readonly covered: ReadonlyArray<Part>;
   readonly rest: Point;
 }
 
-/** An expression run in the page: its `Holds`. */
 const HOLDS = `(() => {
   const parts = ${jsonOf(PARTS)};
   const leftOut = ${jsonOf(LEFT_OUT)};
@@ -209,12 +162,6 @@ const HOLDS = `(() => {
   return { at, covered, rest };
 })()`;
 
-/**
- * An expression run in the page: the look of each of `held`'s controls with
- * the keyboard's focus put on it (and taken off once read), with `held`: `yes`,
- * or why not (`not :focus-visible`), so a state the page never takes is a
- * difference, never a match.
- */
 const FOCUSED = (held: ReadonlyArray<Part>) => `(() => {
   ${LOOK_OF}
   const parts = ${jsonOf(PARTS)};
@@ -227,25 +174,17 @@ const FOCUSED = (held: ReadonlyArray<Part>) => `(() => {
   }));
 })()`;
 
-/** An expression run in the page: the look of `part`'s first match, with whether the pointer is over it (`held`). */
 const HOVERED = (part: Part) => `(() => {
   ${LOOK_OF}
   const el = document.querySelector(${jsonOf(PARTS[part])});
   return { held: el.matches(':hover') ? 'yes' : 'not :hover', ...look(el) };
 })()`;
 
-/** Each of `held`'s controls on `page`, by part, as it looks focused and under the pointer. */
 interface HeldLooks {
   readonly focus: { readonly [part: string]: Look };
   readonly hover: { readonly [part: string]: Look };
 }
 
-/**
- * The look of each of `held`'s controls on `page` with the keyboard's focus on
- * it and with the pointer over it. The Tab offers no DevTools call to force a
- * state, so each is the viewer's own: the focus put on it as a key would, the
- * pointer waiting at `holds.rest` meanwhile, then the mouse moved to its middle.
- */
 const heldLooks = (page: Tab, holds: Holds, held: ReadonlyArray<Part>) =>
   Effect.gen(function* () {
     yield* page.mouse.move(holds.rest.x, holds.rest.y);
@@ -259,15 +198,8 @@ const heldLooks = (page: Tab, holds: Holds, held: ReadonlyArray<Part>) =>
     return { focus, hover };
   });
 
-/** What a held look is read for: whether the state held, then the look. */
 const HELD_READ = ['held', ...LOOK];
 
-/**
- * Each property `mine` holds otherwise than `theirs`, as a sentence; a state
- * that did not hold on the page is one (`held`). The reference (a Set) is
- * the one read against: a state it never took is no look to match, so that is the sentence, and
- * neither taking a state is a failure, never a match.
- */
 const heldOff = (name: string, mine: Look, theirs: Look): ReadonlyArray<string> => {
   if (theirs['held'] !== 'yes')
     return [`${name}: the reference's never took it (${theirs['held']})`];
@@ -276,14 +208,6 @@ const heldOff = (name: string, mine: Look, theirs: Look): ReadonlyArray<string> 
   );
 };
 
-/**
- * Each control a viewer can hold both on `page` and on the reference (`ref`),
- * focused and under the pointer, read against the reference's held the same way.
- * The reference holds every one of `controls` (one it cannot is a sentence); a page
- * holds each it draws but those its own state leaves out (`LEFT_OUT`), and a
- * control it draws that the pointer cannot reach is a sentence, never one
- * skipped.
- */
 const heldDifferences = (ref: Tab, page: Tab, controls: ReadonlyArray<Part> = CONTROLS) =>
   Effect.gen(function* () {
     const refHolds = yield* ref.evaluate<Holds>(HOLDS);
@@ -303,7 +227,6 @@ const heldDifferences = (ref: Tab, page: Tab, controls: ReadonlyArray<Part> = CO
     ];
   });
 
-/** The reference every place is read against: an ask as it opens (`STATES.ask`'s first case). */
 const reference = (viewport: Device['viewport']) =>
   Option.match(
     Arr.findFirst(byPlace(STATES), ([place]) => place === 'ask'),
@@ -313,7 +236,6 @@ const reference = (viewport: Device['viewport']) =>
     },
   );
 
-/** Each place's first case, the place as it opens, but the reference's own (an ask). */
 const OTHER_PLACES = byPlace(STATES).filter(
   ([place], i, all) => place !== 'ask' && all.findIndex(([first]) => first === place) === i,
 );
@@ -326,8 +248,6 @@ for (const device of DEVICES) {
         () =>
           Effect.gen(function* () {
             const refPage = yield* reference(device.viewport);
-            // The Set draws every part, the reference each is matched against, and each match
-            // of a part draws as its first does.
             yield* evaluates(refPage, MISSING(LOOKS), []);
             const ref = yield* refPage.evaluate<unknown>(LOOKS);
             yield* evaluates(refPage, DIFFERENCES(jsonOf(ref), REQUIRED), []);
@@ -341,11 +261,9 @@ for (const device of DEVICES) {
   });
 }
 
-/** In the page: a sheet of `css` added over the shell, as a page's own rule would be. */
 const plant = (css: string) =>
   `(() => { const s = document.createElement('style'); s.textContent = ${jsonOf(css)}; document.head.append(s); return true; })()`;
 
-/** In the page: `differences`' sentences, each up to its property (`studio 2 color`). */
 const named = (differences: string) => `${differences}.map((d) => d.split(' is ')[0])`;
 
 describe("the shell guard's own probe", () => {
@@ -366,15 +284,12 @@ describe("the shell guard's own probe", () => {
       Effect.gen(function* () {
         const page = yield* reference(LAPTOP.viewport);
         const ref = yield* page.evaluate<unknown>(LOOKS);
-        // A second Go to after the first: a later match of a part.
         yield* page.evaluate(
           `(() => { const a = document.querySelector(${jsonOf(PARTS.goto)}); a.after(a.cloneNode(true)); return true; })()`,
         );
         yield* page.evaluate(
           plant(
             [
-              // Each a property no child inherits and no colour follows (`currentColor`), but
-              // the italic, which the crumb's words take: so each sentence is the plant's own.
               `${PARTS.goto} ~ ${PARTS.goto} { background-color: rgb(255, 0, 0) !important; }`,
               '.sh-header { opacity: 0.4 !important; margin-left: 12px !important; column-gap: 30px !important; }',
               '.sh-crumb > :first-child { background-color: rgb(255, 0, 0) !important; }',
@@ -415,8 +330,6 @@ describe("the shell guard's own probe", () => {
           'goto focus boxShadow',
           'goto hover backgroundColor',
         ]);
-        // A control the keyboard cannot focus takes no focus state: its read says so, and a
-        // state the page never takes, the reference's taken, is a difference.
         const disable = `document.querySelector('.sh-goto').setAttribute('disabled', '')`;
         yield* page.evaluate(disable);
         yield* evaluates(page, `${FOCUSED(['goto'])}.goto.held`, 'not :focus-visible');
@@ -425,18 +338,14 @@ describe("the shell guard's own probe", () => {
         expect(
           (yield* heldDifferences(ref, page)).filter((d) => d.startsWith('goto focus held')),
         ).toEqual(["goto focus held is not :focus-visible, the reference's yes"]);
-        // Neither taking it is no match: the reference never took it.
         yield* ref.evaluate(disable);
         expect(unheld(yield* heldDifferences(ref, page))).toEqual([
           "goto focus: the reference's never took it (not :focus-visible)",
         ]);
-        // Nor is a control the reference's pointer cannot reach.
         yield* ref.evaluate(plant('.sh-header .sh-goto { pointer-events: none !important; }'));
         expect((yield* heldDifferences(ref, page)).filter((d) => d.startsWith('goto'))).toEqual([
           "goto: the reference's cannot be held",
         ]);
-        // Nor is a control of the page's a stray layer covers: the planted hover rule goes
-        // unread under it, so each covered control is the sentence, never one skipped.
         yield* page.evaluate(
           `(() => { const layer = document.createElement('div'); layer.style.cssText = 'position: fixed; inset: 0; z-index: 2147483647; background: transparent'; document.body.append(layer); return true; })()`,
         );
@@ -450,17 +359,8 @@ describe("the shell guard's own probe", () => {
   );
 });
 
-/** The kit's states a button is drawn in (`.sh-btn[data-state]`, `page-shell-style.ts`). */
 const KIT_STATES = ['findings', 'warning', 'recording'] as const;
 
-/**
- * One kit button per state at the top of a page's body, its real ground,
- * and `window.kitRead(state, held)`: whether the button is in the state
- * `held` names (`rest`, `hover`, `pressed`, `focus`), then its words' and its
- * edge's WCAG contrast against the background it draws, each colour composed
- * (alpha and all) onto the grounds under it, as `kitShort` lines short of
- * 4.5:1 for the words (1.4.3) or 3:1 for the edge (1.4.11).
- */
 const KIT_BUTTONS = `(() => {
   const host = document.querySelector('.sh-body');
   for (const state of ${jsonOf(KIT_STATES)}) {
@@ -501,7 +401,6 @@ describe("the kit's state colours", () => {
         yield* page.evaluate(KIT_BUTTONS);
         const at = (state: string) => `document.querySelector('[data-kit="${state}"]')`;
         for (const state of KIT_STATES) {
-          // Each state driven as the viewer would, and read while it holds.
           yield* page.mouse.move(1, 1);
           yield* page.evaluate(`window.kitRead('${state}', 'rest'); true`);
           const box = yield* page.box(`[data-kit="${state}"]`);
@@ -515,7 +414,6 @@ describe("the kit's state colours", () => {
             `${at(state)}.focus({ focusVisible: true }); window.kitRead('${state}', 'focus'); ${at(state)}.blur(); true`,
           );
         }
-        // Each ratio short of its bar, and each state the button was not in when read.
         yield* evaluates(page, 'window.kitShort', []);
       }).pipe(Effect.scoped),
     SLOW,

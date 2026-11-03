@@ -1,15 +1,3 @@
-// The title, painted to its kept panel (`title.start.2`): the feast's
-// courtyard under the teal sky as the painter's plates (`plates/plates.ts`),
-// a small dawn light on the green hill and the gold path drawing on up to it.
-// The cold open's people sit behind the long table (`seatTable`): a man
-// guest in his idle, the lead at rest in his idle (`atRest`), a woman guest in her idle, each guest in its neutral key, and
-// the mother with her baby behind the woman, so the cut to the cold open keeps
-// one table, and the feast's crowd at the table's two ends, three busts each
-// (`TITLE_CROWD`), on the guests' plane under the table. The camera pulls back from a near
-// framing to the panel's own, each plane by its distance (`PLANES`), while
-// the film's name settles on a torn strip of the film's dark paper over the
-// sky: the only text (`CARDS`).
-
 import { drawing, piece, probePlate, rounded, write } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
 import { fonts, palette as P } from '../palette.ts';
@@ -20,13 +8,10 @@ import { TITLE_SEATS, drawSeats } from './crowd.ts';
 import { restingEyes, restingOf } from './lead.ts';
 import { TABLE_PUPPETS, eyesLook, headMiddle, raising, seatTable, seatedLead } from './table.ts';
 
-/** His look as his eyes read: open, or his single-9 head drawn eyes shut, about his head bone's middle. */
 const leadEyes = eyesLook(headMiddle(TABLE_PUPPETS.lead.skeleton));
 
-/** The lead at rest at scene time `t`: his idle (`restingOf`) and his blinks, the bottle on his lap (his raise's rest key in place of his arm). */
 const atRest = (t: number) => raising(leadEyes(restingEyes(t)), 'raise-rest');
 
-/** The film's name: its strip's centre and size over the sky (panel px), and its type. */
 const NAME = {
   x: 768,
   y: 170,
@@ -35,17 +20,10 @@ const NAME = {
   style: { family: fonts.display, size: 76, weight: 700, color: P.cream, align: 'center' },
 } as const;
 
-/** Where the pull centres, frame px: the table's middle (the panel's [768, 640]). */
 const PIVOT = [960, 700] as const;
 
-/** One step of the path's brush, frame px: its centre, its radius and how far it lies from the foot. */
 type Step = readonly [x: number, y: number, r: number, from: number];
 
-/**
- * The path's brush walked from the foot to the top in steps of 1 px, moved
- * from the distance plate's px to the frame's, the radius running straight
- * between two points as the centre does.
- */
 const walk = (): ReadonlyArray<Step> => {
   const [dx, dy] = DISTANCE.at;
   const steps: Array<Step> = [];
@@ -71,7 +49,6 @@ const walk = (): ReadonlyArray<Step> => {
 const STEPS = walk();
 const PATH_LENGTH = STEPS.at(-1)?.[3] ?? 0;
 
-/** Clip to the brush's circles from the foot up to `progress` (0..1) of the path's length. */
 const clipPath = (ctx: CanvasRenderingContext2D, progress: number) => {
   const reach = progress * PATH_LENGTH;
   ctx.beginPath();
@@ -85,13 +62,11 @@ const clipPath = (ctx: CanvasRenderingContext2D, progress: number) => {
 
 export const title = drawing({
   timeline: {
-    // The camera keeps pulling back over the whole title.
     pull: { at: 'start', until: { at: 'end' }, ease: 'outCubic' },
     settle: { at: 'start', offset: 0.25, dur: 0.8, ease: 'outCubic' },
     path: { at: 'start', offset: 0.6, dur: 1.4, ease: 'inOutCubic' },
   },
   knobs: {
-    // How close the pull starts on the nearest plane; it ends on the panel's own framing.
     near: 1.12,
   },
   puppets: { ...TABLE_PUPPETS, ...CROWD_PUPPETS },
@@ -105,7 +80,6 @@ export const title = drawing({
   draw: (f) => {
     const { ctx, w } = f;
     const zoom = lerp(f.knob('near'), 1, f.at('pull'));
-    // One plane: frame px, pulled about the pivot by its share of the zoom.
     const plane = (z: number, draw: () => void) => {
       const k = 1 + (zoom - 1) / z;
       ctx.save();
@@ -116,7 +90,6 @@ export const title = drawing({
       draw();
       ctx.restore();
     };
-    // Inside a plane, the kept panel's px.
     const panel = (draw: () => void) => {
       ctx.save();
       ctx.scale(PANEL.scale, PANEL.scale);
@@ -127,7 +100,6 @@ export const title = drawing({
     plane(PLANES.sky, () => f.painting('sky'));
     plane(PLANES.distance, () => {
       f.painting('distance');
-      // The painter's gold path, revealed along its length from the foot.
       const path = f.at('path');
       if (path <= 0) return;
       ctx.save();
@@ -143,7 +115,6 @@ export const title = drawing({
       }),
     );
     plane(PLANES.table, () => f.painting('table'));
-    // The name, on a torn strip of the film's dark paper, settling over the sky.
     plane(PLANES.sky, () =>
       panel(() => {
         const settle = f.at('settle');

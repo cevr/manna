@@ -1,7 +1,3 @@
-// In each state the touch guard opens (`studio-states.ts`), on both devices,
-// everything drawn is drawn in the tokens (`untokened`,
-// `fixtures/drawn-tokens.ts`), a failure naming each value off them.
-
 import { describe, it } from 'effect-bun-test';
 import { SLOW, DEVICES, byPlace, STATES, drawnIn } from './studio-states.ts';
 

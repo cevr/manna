@@ -23,7 +23,6 @@ import {
 import { WritingsAssetRecipe } from './source.js';
 import { BibleArtifact, WebsterArtifact } from './file-artifact.js';
 
-/** A whole archive as a publication streamed in one chapter. */
 const publicationStream = (archive: PublicationArchive) => ({
   publication: archive.publication,
   chapters: Stream.make(
@@ -172,9 +171,6 @@ describe('CorpusSupply', () => {
     }).pipe(Effect.provide(makeLayer({ needsSync: true }))),
   );
 
-  // Declared beside the test rather than inside its generator so the layer that
-  // counts through them is built at the test's own boundary, where the provide
-  // belongs. The assertions still read them.
   let catalogCalls = 0;
   let acquireCalls = 0;
 
@@ -237,8 +233,6 @@ describe('CorpusSupply', () => {
     }).pipe(Effect.provide(makeLayer({ needsSync: true, includeBible: false }))),
   );
 
-  /** A wired recipe whose every source refuses to acquire — an offline host, or
-   *  one whose only source is a release with no published artifact yet. */
   const offline = (current: Option.Option<CorpusProvenance>) => {
     const recipe = BibleArtifact.layerRecipe({
       sources: [
@@ -261,10 +255,6 @@ describe('CorpusSupply', () => {
 
   it.effect('keeps a verified active artifact when no source can be acquired', () =>
     Effect.gen(function* () {
-      // The stale-fallback state (§3.5): the installed file passed digest and
-      // semantic verification before activation, so an offline host keeps
-      // serving it. Reporting an error here made hosts warn about a corpus that
-      // was working perfectly.
       const supply = yield* CorpusSupply;
       const receipt = yield* supply.ensure(
         CorpusSupplyInput.make({ target: Target.file('bible') }),
@@ -277,8 +267,6 @@ describe('CorpusSupply', () => {
 
   it.effect('still fails when nothing is installed and no source can be acquired', () =>
     Effect.gen(function* () {
-      // Bible is fail-closed at startup. With no active artifact there is
-      // nothing to fall back to, so the acquisition failure must still surface.
       const supply = yield* CorpusSupply;
       const failure = yield* Effect.flip(
         supply.ensure(CorpusSupplyInput.make({ target: Target.file('bible') })),

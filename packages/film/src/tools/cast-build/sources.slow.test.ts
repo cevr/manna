@@ -1,8 +1,3 @@
-// Each stage kind's sources are the closure of the local files its entry
-// modules run, so a code change anywhere a stage runs reaches its key: a
-// change to `core/unmatte.ts`, which the puppet a shard renders runs, stales
-// a warm renders stage with no VERSION bump.
-
 import * as BunFileSystem from '@effect/platform-bun/BunFileSystem';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Path } from 'effect';
@@ -15,21 +10,18 @@ import { FILMS, RENDER_PAGE, serve } from '../../../../../apps/animations/server
 import { UndeclaredImport } from './imports.ts';
 import { cutterSources, filmCastSources, pageSources, stageSources } from './sources.ts';
 
-/** The files among inputs, by path. */
 const pathsOf = (inputs: ReadonlyArray<Input>) =>
   inputs.flatMap((i) => {
     if (i._tag === 'File') return [i.path];
     return [];
   });
 
-/** A stage kind's source files, as `stageSources` makes them its inputs. */
 const sourceFiles = (kind: keyof Effect.Success<typeof stageSources>) =>
   Effect.map(stageSources, (all) => pathsOf(all[kind]));
 
 const local = Layer.mergeAll(BunFileSystem.layer, Path.layer);
 const ends = (files: ReadonlyArray<string>) => files.map((f) => f.split('/src/').at(-1));
 const UNMATTE = new URL('../../core/unmatte.ts', import.meta.url).pathname;
-/** A file of the render page's, by its path from the framework's `src`. */
 const player = (file: string) => new URL(`../../player/${file}`, import.meta.url).pathname;
 
 describe('stage sources', () => {
@@ -110,8 +102,6 @@ describe('stage sources', () => {
         Effect.flatMap((response) => response.text),
         Effect.orDie,
       );
-      // the server answers the page bundled: its scripts and stylesheets linked as
-      // chunks, the rest of its HTML as written
       const bare = (html: string) =>
         html
           .replace(/<script\b[^>]*>\s*<\/script>|<link\b[^>]*>/g, '')
@@ -119,7 +109,6 @@ describe('stage sources', () => {
           .trim();
       expect(bare(served)).toBe(bare(yield* fs.readFileString(RENDER_PAGE)));
       expect(served).toMatch(/<script\b[^>]*\bsrc="\/chunk-/);
-      // the page's closure reaches the export half of the page, which no import of the render does
       expect(ends(yield* Effect.map(pageSources(RENDER_PAGE), pathsOf))).toEqual(
         expect.arrayContaining([
           'main.ts',

@@ -23,7 +23,6 @@ const midi168 = Effect.gen(function* () {
 const read = (record: typeof RECORD_168) =>
   Schema.decodeEffect(HymnRecordJson)(JSON.stringify(record));
 
-/** Hymn 168's record with its violas' row changed. */
 const withViolas = (change: { readonly frames?: number; readonly lufs?: 'silent' }) =>
   Schema.decodeEffect(HymnRecordJson)(
     JSON.stringify({
@@ -38,7 +37,6 @@ describe("a hymn's record", () => {
       const record = yield* read(RECORD_168);
       const expected = expectedOf(yield* midi168, STYLE, 168);
       const again = checksOf(measuredOf(record, expected, STYLE.master.targetLufs));
-      // The record keeps the length to the microsecond, so the length's value moves by under that.
       for (const [name, check] of Object.entries(RECORD_168.checks)) {
         if (name === 'stems') continue;
         const now = again[name as keyof typeof again];

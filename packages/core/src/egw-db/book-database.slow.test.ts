@@ -1,9 +1,3 @@
-/**
- * Tests for EGW Paragraph Database
- *
- * Uses unique temp files for database isolation between tests.
- */
-
 import { BunServices } from '@effect/platform-bun';
 import * as SqliteBun from '@effect/sql-sqlite-bun/SqliteClient';
 import { Database } from 'bun:sqlite';
@@ -54,7 +48,6 @@ import {
 } from './book-database.js';
 import * as EGWDbBun from './book-database-bun.js';
 
-/** A whole archive as a publication streamed in one chapter. */
 const publicationStream = (archive: PublicationArchive) => ({
   publication: archive.publication,
   chapters: Stream.make(
@@ -65,10 +58,8 @@ const publicationStream = (archive: PublicationArchive) => ({
   ),
 });
 
-// Wire-shape fields the schema encodes as `null` when absent.
 const wireNull = Option.getOrNull(Option.none<never>());
 
-// Helper to run scoped effects in tests with fresh database
 const runTestAt = <A, E, R>(
   dbPath: string,
   effect: Effect.Effect<A, E, EGWParagraphDatabase | R>,
@@ -100,7 +91,6 @@ const runTestWithPath = <A, E, R>(
 const runTest = <A, E, R>(effect: Effect.Effect<A, E, EGWParagraphDatabase | R>) =>
   runTestWithPath(() => effect);
 
-// Helper to create a mock book
 const mockBook = (id: number, code: string): Book => ({
   book_id: id,
   code,
@@ -119,7 +109,6 @@ const mockBook = (id: number, code: string): Book => ({
   npages: 100,
 });
 
-// Helper to create a mock paragraph
 const mockParagraph = (puborder: number, refcodeShort: string): Paragraph => ({
   para_id: Option.some(`para-${puborder}`),
   id_prev: wireNull,
@@ -176,13 +165,6 @@ const mockArchive = (refcodes: readonly string[]): PublicationArchive => {
   });
 };
 
-/** An archive that reproduces the corpus's real identity shape: `para_id` from
- *  the paragraph reference and `ref_code` from the archived refcode, so two
- *  paragraphs may share a `refcode_short` while staying distinct rows.
- *
- *  `mockArchive` cannot express it — it derives one refcode per paragraph — and
- *  `storeParagraphsBatch` cannot either, because its `ref_code` prefers
- *  `refcode_short` and the two rows would upsert onto each other. */
 const collidingArchive = (
   rows: readonly {
     readonly paragraphId: string;
@@ -194,7 +176,6 @@ const collidingArchive = (
   const code = publicationCode('2ChS');
   const paragraphs = rows.map((row, index) =>
     ArchivedParagraph.make({
-      // The row's own `ref_code`: distinct per paragraph, as in the corpus.
       refcode: row.paragraphId,
       paragraph: WritingsParagraph.make({
         reference: WritingsReference.paragraph(id, row.paragraphId),
@@ -202,7 +183,6 @@ const collidingArchive = (
         order: publicationOrder(index + 1),
         page: Option.none(),
         number: Option.none(),
-        // The shared `refcode_short` — the collision itself.
         refcode: Option.some(row.refcode),
         nodes: [{ _tag: 'Text', text: row.text }],
         elementType: Option.some('paragraph'),
@@ -224,7 +204,6 @@ const collidingArchive = (
   });
 };
 
-/** Installs a whole archive, streamed as one chapter. */
 const installArchive = (
   db: EGWParagraphDatabaseService,
   archive: PublicationArchive,
@@ -425,7 +404,6 @@ describe('EGWParagraphDatabase', () => {
             folder_id: 12,
           });
 
-          // A packaged archive says nothing about the library's folders.
           yield* installArchive(db, plain);
           const kept = Option.getOrThrow(yield* db.getBookByCode('TEST'));
           expect(kept).toMatchObject({ section: 'egw-writings', book_type: 'book' });
@@ -436,7 +414,6 @@ describe('EGWParagraphDatabase', () => {
       runTest(
         Effect.gen(function* () {
           const db = yield* EGWParagraphDatabase;
-          // Three paragraphs whose JSON is over 600 KB each: no two fit one chunk.
           const long = 'x'.repeat(300_000);
           const plain = mockArchive(['TEST 1.1', 'TEST 1.2', 'TEST 1.3']);
           const installed = yield* installArchive(
@@ -469,7 +446,6 @@ describe('EGWParagraphDatabase', () => {
           const db = yield* EGWParagraphDatabase;
           yield* installArchive(db, mockArchive(['TEST 1.1']));
 
-          // A crash between the stage and the swap leaves rows behind.
           const raw = new Database(dbPath);
           raw.run(
             `INSERT INTO paragraphs_incoming (
@@ -517,8 +493,6 @@ describe('EGWParagraphDatabase', () => {
               .all();
           const before = rows();
 
-          // 1.1 stays, 1.2 is reworded, 1.3 goes, 1.4 comes; 1.4 gains a
-          // reference beside the one 1.1 keeps.
           const next = mockArchive(['TEST 1.1', 'TEST 1.2', 'TEST 1.4']);
           yield* installArchive(
             db,
@@ -551,7 +525,6 @@ describe('EGWParagraphDatabase', () => {
           raw.close();
 
           expect(after.map((row) => row.ref_code)).toEqual(['TEST 1.1', 'TEST 1.2', 'TEST 1.4']);
-          // The unchanged row is the same row; the reworded one keeps its key and rowid.
           expect(after[0]).toEqual(before[0]);
           expect(after[1]?.rowid).toBe(before[1]?.rowid);
           expect(after[1]?.content_text).toBe('Revised wording');
@@ -577,7 +550,6 @@ describe('EGWParagraphDatabase', () => {
       runTestWithPath((dbPath) =>
         Effect.gen(function* () {
           const db = yield* EGWParagraphDatabase;
-          // The first call makes the table, which holds nothing yet.
           expect(yield* db.pruneParagraphChanges('9999', 10)).toBe(0);
 
           const raw = new Database(dbPath);
@@ -636,11 +608,9 @@ describe('EGWParagraphDatabase', () => {
         Effect.gen(function* () {
           const db = yield* EGWParagraphDatabase;
 
-          // Initially no status
           const initial = yield* db.getSyncStatus(1);
           expect(Option.isNone(initial)).toBe(true);
 
-          // Set pending status
           yield* db.setSyncStatus(1, 'PP', 'pending', 0);
           const pending = yield* db.getSyncStatus(1);
           expect(Option.isSome(pending)).toBe(true);
@@ -648,7 +618,6 @@ describe('EGWParagraphDatabase', () => {
             expect(pending.value.status).toBe('pending');
           }
 
-          // Update to success
           yield* db.setSyncStatus(1, 'PP', 'success', 100);
           const success = yield* db.getSyncStatus(1);
           expect(Option.isSome(success)).toBe(true);
@@ -718,21 +687,17 @@ describe('EGWParagraphDatabase', () => {
         Effect.gen(function* () {
           const db = yield* EGWParagraphDatabase;
 
-          // Never synced - needs sync
           const needsNew = yield* db.needsSync(999);
           expect(needsNew).toBe(true);
 
-          // Pending - needs sync
           yield* db.setSyncStatus(30, 'TEST1', 'pending', 0);
           const needsPending = yield* db.needsSync(30);
           expect(needsPending).toBe(true);
 
-          // Failed - needs sync
           yield* db.setSyncStatus(31, 'TEST2', 'failed', 0, 'Error');
           const needsFailed = yield* db.needsSync(31);
           expect(needsFailed).toBe(true);
 
-          // Success - does not need sync
           yield* db.setSyncStatus(32, 'TEST3', 'success', 100);
           const needsSuccess = yield* db.needsSync(32);
           expect(needsSuccess).toBe(false);
@@ -741,9 +706,6 @@ describe('EGWParagraphDatabase', () => {
   });
 
   describe('corpus scope and rank (§6.4)', () => {
-    /** Two books by Ellen White, two by pioneers, all matching the same query.
-     *  Both scopes are non-empty in the unscoped result, so a filter that did
-     *  nothing would be visible immediately. */
     const scopedCorpus = Effect.fn('scopedCorpus')(function* () {
       const db = yield* EGWParagraphDatabase;
       const authored = [
@@ -778,16 +740,9 @@ describe('EGWParagraphDatabase', () => {
           const pioneer = yield* db.searchParagraphs('sanctuary', { limit: 50, scope: 'pioneer' });
 
           expect(codes(all)).toEqual(['SCOPEDAR', 'SCOPEEST', 'SCOPEGC', 'SCOPEJVH']);
-          // Ellen White and the White Estate, and nothing else.
           expect(codes(egw)).toEqual(['SCOPEEST', 'SCOPEGC']);
-          // The complement, not a curated allow-list: every author who is not
-          // Ellen White is a pioneer witness.
           expect(codes(pioneer)).toEqual(['SCOPEDAR', 'SCOPEJVH']);
-          // The partition is exact — the two halves reconstruct the whole and
-          // overlap nowhere, which no pair of independent filters would.
           expect([...codes(egw), ...codes(pioneer)].toSorted()).toEqual(codes(all));
-          // Omitting the scope means the whole corpus, so every pre-§6.4 caller
-          // keeps the behavior it was written against.
           expect(codes(yield* db.searchParagraphs('sanctuary', { limit: 50 }))).toEqual(codes(all));
         }),
       ));
@@ -844,8 +799,6 @@ describe('EGWParagraphDatabase', () => {
       runTest(
         Effect.gen(function* () {
           const db = yield* scopedCorpus();
-          // Both filters apply: a book outside the scope yields nothing rather
-          // than one of them silently winning.
           expect(
             yield* db.searchParagraphs('sanctuary', { bookCode: 'SCOPEGC', scope: 'egw' }),
           ).toHaveLength(1);
@@ -859,15 +812,9 @@ describe('EGWParagraphDatabase', () => {
       runTest(
         Effect.gen(function* () {
           const db = yield* scopedCorpus();
-          // The whole point of a separate statement: the row query stops at the
-          // cap, so its length can never report the tail. §6.1's `total` means
-          // the pre-cap count, and a "show all" affordance that only ever sees
-          // `limit` rows is an affordance that never appears.
           const capped = yield* db.searchParagraphs('sanctuary', { limit: 1 });
           expect(capped).toHaveLength(1);
           expect(yield* db.countSearchParagraphs('sanctuary')).toBe(4);
-          // The same filters, or it is counting something else. Both scopes and
-          // the book filter have to move the count exactly as they move the rows.
           expect(yield* db.countSearchParagraphs('sanctuary', { scope: 'egw' })).toBe(2);
           expect(yield* db.countSearchParagraphs('sanctuary', { scope: 'pioneer' })).toBe(2);
           expect(
@@ -880,10 +827,6 @@ describe('EGWParagraphDatabase', () => {
       runTest(
         Effect.gen(function* () {
           const db = yield* EGWParagraphDatabase;
-          // BM25 rewards term density, so the shortest paragraph containing the
-          // term ranks best. Inserted worst-first, so an unordered query would
-          // return them in exactly the reverse of the expected order — the
-          // pre-§6.4 behavior this test exists to rule out.
           const texts = [
             { refcode: 'RANK 3.1', text: `sanctuary ${'filler word '.repeat(60)}` },
             { refcode: 'RANK 2.1', text: `sanctuary ${'filler word '.repeat(20)}` },
@@ -903,22 +846,11 @@ describe('EGWParagraphDatabase', () => {
             'RANK 2.1',
             'RANK 3.1',
           ]);
-          // The cap selects the best N rather than an arbitrary N: without an
-          // `ORDER BY` the limit would take whichever rows the join reached
-          // first, which is insertion order here.
-          //
-          // Both statements order by `bm25(paragraphs_fts)` rather than the
-          // bare `rank`, which is the same ranking by a cheaper code path (see
-          // the statement comment; ~14% of the lexical leg). This assertion is
-          // what makes that swap safe to keep: the expected order above is
-          // BM25's, so reverting to `rank` must not change it and neither may
-          // any future reshaping of the statement.
           const capped = yield* db.searchParagraphs('sanctuary', { limit: 2 });
           expect(capped.map((hit) => Option.getOrElse(hit.refcode_short, () => ''))).toEqual([
             'RANK 1.1',
             'RANK 2.1',
           ]);
-          // Stable: the same query returns the same order every time.
           const again = yield* db.searchParagraphs('sanctuary', { limit: 10 });
           expect(again.map((hit) => Option.getOrElse(hit.refcode_short, () => ''))).toEqual(
             ranked.map((hit) => Option.getOrElse(hit.refcode_short, () => '')),
@@ -926,11 +858,6 @@ describe('EGWParagraphDatabase', () => {
         }),
       ));
 
-    // §9's lexical leg reads scores, which no other query returns — so it is
-    // its own statement against the real schema, and the only place a wrong
-    // column name shows up. The service degrades on a failed leg by design
-    // (§9.6), so a broken statement here surfaces as "no results" rather than
-    // as an error, and every fixture-backed test still passes.
     test('returns BM25 scores over the real schema', () =>
       runTest(
         Effect.gen(function* () {
@@ -954,32 +881,19 @@ describe('EGWParagraphDatabase', () => {
 
           const first = Arr.get(scored, 0);
           if (Option.isNone(first)) return;
-          // The three things §9.4 needs from a row and no other query supplies:
-          // the book identity it fuses on, the decoded text it snippets, and a
-          // rank to compare. FTS5's `rank` is a negative BM25, so a positive
-          // value would mean the column is not what this code thinks it is.
           expect(first.value.bookCode).toBe('SCORED');
           expect(first.value.rank).toBeLessThan(0);
           expect(first.value.nodes.length).toBeGreaterThan(0);
 
-          // Ordered best-first, which is what the short-circuit reads.
           const ranks = scored.map((row) => row.rank);
           expect([...ranks].sort((left, right) => left - right)).toEqual(ranks);
         }),
       ));
 
-    // §9.2's join key. The live corpus has 961,750 non-empty EGW-scope rows but
-    // only 944,672 distinct `book:refcode` pairs, so keying the index on the
-    // refcode would silently point 17,078 paragraphs at another paragraph's
-    // vector. `para_id` is distinct on all 3,012,004 rows.
     test('scores carry a paragraph identity that separates same-refcode rows', () =>
       runTest(
         Effect.gen(function* () {
           const db = yield* EGWParagraphDatabase;
-          // The corpus's own shape, taken from a real collision: book `2ChS`
-          // gives two distinct paragraphs the same `refcode_short` "2ChS 321"
-          // and distinct `ref_code`/`para_id` (14879.1475, 14879.1476). Keying
-          // on the refcode maps both onto one id; keying on `para_id` does not.
           yield* installArchive(
             db,
             collidingArchive([
@@ -990,20 +904,15 @@ describe('EGWParagraphDatabase', () => {
 
           const scored = yield* db.searchScoredParagraphs('sanctuary', { limit: 10 });
           expect(scored).toHaveLength(2);
-          // Both rows report the one refcode the corpus gives them...
           expect(
             new Set(scored.map((row) => Option.getOrElse(row.refcode_short, () => ''))),
           ).toEqual(new Set(['2ChS 321']));
-          // ...and two distinct identities, which is the whole point.
           const identities = scored.map((row) => row.para_id);
           expect(new Set(identities).size).toBe(2);
           expect([...identities].sort()).toEqual(['2ChS:14879.1475', '2ChS:14879.1476']);
         }),
       ));
 
-    // Search reads a book's outline to demote back matter: the `h1`–`h3`
-    // headings, and each hit's closest heading of any level. Both statements
-    // are SQL the double cannot prove (a JSON parameter and a backward seek).
     test('reads a book outline and the nearest heading of each position', () =>
       runTest(
         Effect.gen(function* () {
@@ -1075,9 +984,6 @@ describe('EGWParagraphDatabase', () => {
         }),
       ));
 
-    // §9.4's fusion ranks ids from two legs, and the vector leg returns ids the
-    // lexical leg never saw. Without this lookup those ids have no row and are
-    // dropped, which removes the recall hybrid search exists to buy.
     test('fetches rows for identities FTS never matched', () =>
       runTest(
         Effect.gen(function* () {
@@ -1090,8 +996,6 @@ describe('EGWParagraphDatabase', () => {
             ]),
           );
 
-          // The word the lexical leg would never match on this row — the row is
-          // reachable only because the vector leg named its identity.
           const lexical = yield* db.searchScoredParagraphs('husbandry', { limit: 10 });
           expect(lexical.map((row) => row.para_id)).toEqual(['2ChS:vonly-2']);
 
@@ -1102,50 +1006,30 @@ describe('EGWParagraphDatabase', () => {
           expect(only.value.para_id).toBe('2ChS:vonly-1');
           expect(only.value.bookCode).toBe('2ChS');
           expect(only.value.nodes.length).toBeGreaterThan(0);
-          // No FTS match produced it, so it carries no BM25 evidence.
           expect(only.value.rank).toBe(0);
 
-          // An unknown key matches nothing rather than erroring or matching all.
           expect(yield* db.findParagraphsByIdentity(['2ChS:absent'])).toHaveLength(0);
           expect(yield* db.findParagraphsByIdentity([])).toHaveLength(0);
         }),
       ));
 
-    /** The lookup seeks on `para_id` so SQLite can use an index, and decides on
-     *  `book_code || ':' || para_id`. `para_id` is unique only *within* a book,
-     *  so the seek alone admits a paragraph from every book sharing the value —
-     *  which is exactly the cross-book collision `paragraphIdentity` qualifies
-     *  by book to prevent. This pins that the second predicate still decides. */
     test('does not admit another book sharing a para_id', () =>
       runTest(
         Effect.gen(function* () {
           const db = yield* EGWParagraphDatabase;
           const wanted = mockBook(410, 'WANTED');
           const other = mockBook(411, 'OTHER');
-          // `mockParagraph` derives `para_id` from `puborder`, so the same
-          // argument in both books is the collision.
           yield* db.storeParagraphsBatch([mockParagraph(7, 'WANTED 1.1')], wanted);
           yield* db.storeParagraphsBatch([mockParagraph(7, 'OTHER 1.1')], other);
 
           const found = yield* db.findParagraphsByIdentity(['WANTED:para-7']);
           expect(found.map((row) => row.bookCode)).toEqual(['WANTED']);
 
-          // And both are still reachable when both are asked for.
           const both = yield* db.findParagraphsByIdentity(['WANTED:para-7', 'OTHER:para-7']);
           expect(both.map((row) => row.bookCode).toSorted()).toEqual(['OTHER', 'WANTED']);
         }),
       ));
 
-    /** `paragraphIdentity` falls back to `${bookCode}:#${refCode}` when a row
-     *  has no `para_id`, and such a row is *not* resolvable here — SQL's
-     *  `book_code || ':' || para_id` is `NULL` when `para_id` is, so it matches
-     *  nothing. That is long-standing behaviour, not a new limitation, and it
-     *  is inert on the shipped corpus, where no row takes the branch (see
-     *  `paragraphIdentity`). It is pinned because the lookup now also seeks on
-     *  `para_id` for the index: the seek must not be built from a `#` part,
-     *  which would narrow a *mixed* batch and start dropping the ordinary
-     *  identities beside it. Finding nothing is the old cost; dropping good
-     *  rows would be a new one. */
     test('resolves nothing for an identity with no para_id, and does not poison the batch', () =>
       runTest(
         Effect.gen(function* () {
@@ -1163,7 +1047,6 @@ describe('EGWParagraphDatabase', () => {
           expect(headless).toBe('NOPARA:#NOPARA 1.1');
           expect(yield* db.findParagraphsByIdentity([headless])).toHaveLength(0);
 
-          // The ordinary identity beside it still resolves.
           const mixed = yield* db.findParagraphsByIdentity([headless, 'NOPARA:para-4']);
           expect(mixed.map((row) => row.para_id)).toEqual(['NOPARA:para-4']);
         }),
@@ -1213,7 +1096,6 @@ describe('EGWParagraphDatabase', () => {
           const count = yield* db.storeParagraphsBatch(paragraphs, book);
           expect(count).toBe(3);
 
-          // Verify book was created
           const storedBook = yield* db.getBookByCode('BATCH');
           expect(Option.isSome(storedBook)).toBe(true);
           if (Option.isSome(storedBook)) {
@@ -1252,11 +1134,9 @@ describe('EGWParagraphDatabase', () => {
           const db = yield* EGWParagraphDatabase;
           const book = mockBook(101, '1BC');
 
-          // First store paragraphs so foreign key constraint is satisfied
           const paragraphs = [mockParagraph(1, '1BC 100.1'), mockParagraph(2, '1BC 100.2')];
           yield* db.storeParagraphsBatch(paragraphs, book);
 
-          // Store Bible refs
           const refs = [
             {
               bookId: 101,
@@ -1284,7 +1164,6 @@ describe('EGWParagraphDatabase', () => {
           const count = yield* db.storeBibleRefsBatch(refs);
           expect(count).toBe(3);
 
-          // Verify we can look up by Bible reference
           const results = yield* db.getParagraphsByBibleRef(43, 3, 16);
           expect(results.length).toBe(1);
           expect(results[0]?.bookCode).toBe('1BC');
@@ -1307,7 +1186,6 @@ describe('EGWParagraphDatabase', () => {
             expect(retrieved.value.book_id).toBe(200);
           }
 
-          // Case insensitive
           const lowerCase = yield* db.getBookByCode('test');
           expect(Option.isSome(lowerCase)).toBe(true);
         }),
@@ -1330,8 +1208,6 @@ describe('EGWParagraphDatabase', () => {
       ));
   });
 
-  /** The read layer a Worker takes over D1: it reads what the writer built,
-   *  and never creates or migrates anything itself. */
   describe('layerExisting', () => {
     const tableNames = (dbPath: string) => {
       const db = new Database(dbPath);
@@ -1381,19 +1257,6 @@ describe('EGWParagraphDatabase', () => {
       ));
   });
 
-  /** Round-2 B4: the in-memory double and live FTS5 must combine terms the same
-   *  way.
-   *
-   *  The double used `terms.some` — OR — while the shipped query joins quoted
-   *  terms with `FTS_TERM_CONJUNCTION`, which FTS5 reads as AND. That makes
-   *  every multi-word fixture query return a superset of what the corpus would
-   *  return, so a test could state a premise about a top hit that no real
-   *  search produces, and only a run against SQLite would show it.
-   *
-   *  The oracle here is the live database itself rather than a restatement of
-   *  the rule, so the assertion tracks whatever FTS5 actually does with the
-   *  string `ftsQuery` builds. Against the OR double the first expectation
-   *  fails: the double returns all three rows where FTS5 returns one. */
   describe('the in-memory double matches live FTS5 term combination (B4)', () => {
     const CONJUNCTION_BOOKS = [
       {
@@ -1410,7 +1273,6 @@ describe('EGWParagraphDatabase', () => {
       { order: 2, refcode: 'ANDA 1.2', text: 'beta stands alone here' },
       { order: 3, refcode: 'ANDA 1.3', text: 'alpha and beta stand together' },
     ];
-    /** The string `search/service.ts`'s `ftsQuery` emits for `alpha beta`. */
     const bothTerms = Option.getOrThrow(ftsTermQuery('alpha beta'));
 
     const doubleLayer = EGWParagraphDatabase.Test({
@@ -1422,8 +1284,6 @@ describe('EGWParagraphDatabase', () => {
       })),
     });
 
-    /** The double's answer at its own boundary, so the provide is not nested
-     *  inside the live-corpus test's generator. */
     const doubleSearch = (query: string) =>
       Effect.flatMap(EGWParagraphDatabase, (db) =>
         db.searchScoredParagraphs(query, { limit: 50 }),
@@ -1450,13 +1310,9 @@ describe('EGWParagraphDatabase', () => {
           const liveBoth = yield* live.searchScoredParagraphs(bothTerms, { limit: 50 });
           const doubleBoth = yield* doubleSearch(bothTerms);
 
-          // FTS5's own answer: only the row carrying both terms.
           expect(refcodes(liveBoth)).toEqual(['ANDA 1.3']);
-          // And the double agrees, which is the contract.
           expect(refcodes(doubleBoth)).toEqual(refcodes(liveBoth));
 
-          // A single term still matches every row that contains it, on both
-          // sides — so the fix is AND between terms, not a narrower match.
           const liveOne = yield* live.searchScoredParagraphs('"alpha"', { limit: 50 });
           const doubleOne = yield* doubleSearch('"alpha"');
           expect(refcodes(liveOne)).toEqual(['ANDA 1.1', 'ANDA 1.3']);
@@ -1465,10 +1321,6 @@ describe('EGWParagraphDatabase', () => {
       ));
   });
 
-  /** A refcode is looked up as it is cited, across every publication shape:
-   *  books, periodicals (stored with two spaces after the day's comma),
-   *  letters, and codes with an underscore. The live database and the test
-   *  double must give the same answers, so the double cannot drift. */
   describe('getParagraphsByRefcode', () => {
     const corpus: ReadonlyArray<{ readonly book: Book; readonly refcodes: readonly string[] }> = [
       { book: mockBook(501, 'PP'), refcodes: ['PP 35.1', 'PP 351.1', 'PP 351.2', 'PP 352.1'] },
@@ -1545,8 +1397,6 @@ describe('EGWParagraphDatabase', () => {
       ),
     });
 
-    /** The double's answers at its own boundary, so the provide is not nested
-     *  inside the live test's generator. */
     const doubleLookUpAll = lookUpAll.pipe(Effect.provide(doubleLayer));
 
     test('resolves every shape, spacing and case aside, the same live and in the double', () =>

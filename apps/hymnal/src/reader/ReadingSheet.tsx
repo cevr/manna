@@ -1,10 +1,3 @@
-/**
- * The reader's settings, in the player sheet: the words' size on a dial of
- * steps, their font, the space between lines, and whether the screen stays
- * on while a hymn is shown. Each choice is kept under its `reading.*` key
- * and the page behind the sheet follows it at once.
- */
-
 import { useAtom } from '@effect/atom-react';
 import type * as Atom from 'effect/reactivity/Atom';
 import { Pressable, StyleSheet, Switch, Text, type TextStyle, View } from 'react-native';
@@ -39,7 +32,6 @@ export function ReadingControls({ reading }: { readonly reading: ReadingSettings
   );
 }
 
-/** Each font, its name drawn in its own face. */
 const fonts: ReadonlyArray<Choice<Font>> = [
   { value: 'system', label: 'System', style: {} },
   {
@@ -55,14 +47,9 @@ const spacings: ReadonlyArray<Choice<Spacing>> = [
   { value: 'roomy', label: 'Roomy', style: {} },
 ];
 
-/** The size as a share of the page's first size: 100% as it has always been. */
 const shareOf = (size: number) =>
   `${Math.round((pointsAt(size) / (SIZES[DEFAULT_SIZE] ?? 17)) * 100)}%`;
 
-/**
- * The words' size, a stopping dial over the steps, each drawn as an "A" of
- * its size (held to the dial's height), the share read out.
- */
 function TextSize({ size }: { readonly size: Atom.Writable<number> }) {
   const [step, setStep] = useAtom(size);
   return (
@@ -109,7 +96,6 @@ interface Choice<A extends string> {
   readonly style: TextStyle;
 }
 
-/** A radio group: one row per choice, the chosen one checked. */
 function Choices<A extends string>({
   label,
   value,
@@ -160,7 +146,7 @@ function Awake({ awake }: { readonly awake: Atom.Writable<boolean> }) {
       <Text style={styles.label} dynamicTypeRamp="body" aria-hidden>
         Keep screen on
       </Text>
-      {/* React Native's Switch hands iOS no `aria-label`; it reads `accessibilityLabel` on every platform. */}
+      {}
       <Switch accessibilityLabel="Keep screen on" value={on} onValueChange={turn} />
     </View>
   );

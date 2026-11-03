@@ -1,4 +1,3 @@
-/** All comparisons report only number, table, field and index. No corpus value enters a matcher. */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Database } from 'bun:sqlite';
 import {
@@ -103,7 +102,6 @@ it.effect(
       const fs = yield* FileSystem.FileSystem;
       const dir = yield* fs.makeTempDirectoryScoped();
       const legacy = `${dir}/legacy.db`;
-      // The independent source capture preserves every v0 title and ordered verse byte.
       const source = yield* readSourceText();
       yield* Effect.acquireUseRelease(
         Effect.sync(() => new Database(legacy)),
@@ -219,7 +217,6 @@ type Row = Partial<
 const rows = (db: Database, sql: string, ...args: Array<number | string>) =>
   db.query<Row, Array<number | string>>(sql).all(...args);
 
-/** Word groups are an independent oracle for the stored text projection. */
 const textLines = (part: Part) => {
   if (part._tag === 'Plain') return part.lines;
   return part.lines.map((line) => {
@@ -239,7 +236,6 @@ const fields = (
 ) => Object.entries(expected).every(([field, value]) => actual?.[field] === value);
 type Check = (ok: boolean, table: string, field: string, index?: number) => void;
 
-/** Return safe coordinates rather than raw actual/expected objects. Also used by mutation probes. */
 const auditHymn = (db: Database, hymn: Hymn): readonly string[] => {
   const faults: string[] = [];
   const check = (ok: boolean, table: string, field: string, index = 0) => {
@@ -432,11 +428,9 @@ const auditTiming = (
 };
 
 const assertNoFaults = (faults: readonly string[]) => {
-  // Coordinates contain no corpus values, even when an assertion fails.
   expect(faults.length === 0, faults.slice(0, 8).join(',')).toBe(true);
 };
 
-/** One row per entry of each index file, as `writeIndexTables` folds them. */
 const indexCounts = ({ indexes: ix, rulings }: DatabaseSources) => {
   const n = (...lists: Array<readonly unknown[] | undefined>) =>
     lists.reduce((sum: number, list) => sum + (list?.length ?? 0), 0);
@@ -520,7 +514,6 @@ const auditMetadata = (db: Database, sources: DatabaseSources) => {
   auditConstraints(db);
 };
 
-/** Exercise the shipped constraints at the artifact seam, without exporting its DDL for tests. */
 const auditConstraints = (db: Database) => {
   db.exec('PRAGMA foreign_keys=ON');
   expect(() => db.exec("INSERT INTO lines VALUES(-1,999999,0,'fixture')")).toThrow();
@@ -826,7 +819,6 @@ describe('generated corpus', () => {
         ];
         for (const [i, sql] of mutations.entries()) {
           db.exec('SAVEPOINT mutation');
-          // Delete dependents before the occurrence mutant, preserving actual FK enforcement.
           if (i === 5)
             db.exec(
               `DELETE FROM syllable_times WHERE line_time_id=(SELECT id FROM line_times WHERE hymn_id=${hymn.number} ORDER BY ordinal DESC LIMIT 1)`,
@@ -867,7 +859,6 @@ describe('generated corpus', () => {
         const sources = yield* readDatabaseSources();
         const a = `${dir}/a.db`,
           b = `${dir}/b.db`;
-        // This assignment also checks that the build does not require a caller's Scope.
         const build: Effect.Effect<void, unknown, FileSystem.FileSystem | Path.Path> =
           buildDatabase(a, sources);
         yield* build;

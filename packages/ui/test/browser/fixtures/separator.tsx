@@ -1,4 +1,3 @@
-// Fixtures for the separator: one of each orientation, and one left to its default.
 import type { JSX } from '@solidjs/web';
 
 import { Separator } from '../../../src/separator/Separator.tsx';

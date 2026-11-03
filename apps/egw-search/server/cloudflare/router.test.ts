@@ -11,12 +11,6 @@ import { SearchRequest, type SearchSlot } from '../api.js';
 import { VectorIndexLoad } from '../vector-index.js';
 import { searchRouter } from './router.ts';
 
-/**
- * The Worker builds its router on the first request, inside that request's
- * fiber. These tests build it the same way and then ask it again, so a
- * router that kept anything of the first request answers the second wrong.
- */
-
 const services = Layer.mergeAll(
   goldenSearchLayer(),
   Layer.succeed(VectorIndexLoad, VectorIndexLoad.of({ readiness: Effect.succeed('ready') })),
@@ -38,7 +32,6 @@ const searching = (q: string): SearchRequest => ({
 
 const batchBody = S.encodeSync(S.fromJsonString(S.Struct({ requests: S.Array(SearchRequest) })));
 
-/** A POST to the batch endpoint, as the page sends one search. */
 const batchRequest = (q: string) =>
   HttpServerRequest.fromWeb(
     new Request('http://localhost/api/search/batch', {
@@ -48,7 +41,6 @@ const batchRequest = (q: string) =>
     }),
   );
 
-/** The batch's one answer, a line per hit. */
 const hitLines = (response: HttpServerResponse.HttpServerResponse) =>
   Effect.promise((): Promise<{ readonly results: readonly SearchSlot[] }> =>
     HttpServerResponse.toWeb(response).json(),
@@ -61,8 +53,6 @@ const hitLines = (response: HttpServerResponse.HttpServerResponse) =>
     ),
   );
 
-/** The router built lazily, as the Worker builds it, and a search through
- *  it: the first search builds it. */
 const lazyRouter = Effect.gen(function* () {
   const scope = yield* Scope.Scope;
   const context = yield* Layer.build(services);

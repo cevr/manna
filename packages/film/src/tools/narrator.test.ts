@@ -1,6 +1,3 @@
-// Narrator with fakes: which beats are recorded, and what a take that says
-// something else does. No network, no media files.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
@@ -60,7 +57,6 @@ const take = (spoken: string, file: string) => ({
   source: 'elevenlabs' as const,
 });
 
-/** `a` recorded under the test voice, `b` never recorded. */
 const recorded: Timings = {
   voice: voiceKey(testVoice),
   scenes: { a: take('Hello world.', 'a.mp3') },
@@ -75,7 +71,6 @@ const defaults: NarrateOptions = {
 
 const TIMINGS = '/films/test/narration/timings.json';
 
-/** Where the staging cache keeps its takes and the day's spend, beside the film. */
 const STAGING = '/staging';
 
 const setup = (timings: Timings, heard: ReadonlyMap<string, string> = new Map(), decoded?: Pcm) => {
@@ -95,7 +90,6 @@ const setup = (timings: Timings, heard: ReadonlyMap<string, string> = new Map(),
   return { files, calls, layer };
 };
 
-/** Plan from what is stored, record, and return the timings written. */
 const narrate = (
   layer: Layer.Layer<Narrator | ContentStore>,
   voice: Voice = testVoice,
@@ -114,7 +108,6 @@ const narrate = (
 
 const spoken = (calls: ElevenLabsCalls) => calls.tts.map((r) => r.text);
 
-/** A host's processes as a sweep sees them: its name and which pids run. */
 const processesOn = (host: string, alive: (pid: number) => boolean) =>
   Effect.provideService(Processes, { host, alive: (pid) => Effect.succeed(alive(pid)) });
 
@@ -126,7 +119,6 @@ describe('Narrator', () => {
       expect(spoken(calls)).toEqual(['The second line.']);
       expect(after.scenes['b']?.hash).toBe(hashText('The second line.'));
       expect(after.scenes['a']).toEqual(recorded.scenes['a']);
-      // A new take has a name of its own; the timings name it.
       expect(after.scenes['b']?.file).toMatch(/^b\.[0-9a-f]{12}\.mp3$/);
       expect(files.has(`/films/test/narration/${after.scenes['b']?.file}`)).toBe(true);
 
@@ -137,7 +129,6 @@ describe('Narrator', () => {
 
   it.effect("a word timed past the take's end is held inside it, not refused by the timings", () =>
     Effect.gen(function* () {
-      // The fake take measures 2.5 s; its alignment runs one character per 0.05 s, to 4 s.
       const long = 'This line runs on and on, far past the end of the audio it was made from.';
       const { layer } = setup(recorded);
       const after = yield* narrate(layer, testVoice, defaults, [{ id: 'b', say: long }]);
@@ -155,7 +146,6 @@ describe('Narrator', () => {
 
   it.effect('a staged take says where each word is heard, read from the take itself', () =>
     Effect.gen(function* () {
-      // The take is silent for its first 0.1 s, then speaks to its end.
       const rate = 8000;
       const voice = Float32Array.from(
         { length: 3 * rate },
@@ -168,7 +158,6 @@ describe('Narrator', () => {
       });
       const after = yield* narrate(layer);
       const [the, second] = after.scenes['b']?.words ?? [];
-      // One character per 0.05 s: "The" is aligned from 0, heard from 0.1 s.
       expect([the?.text, the?.start, the?.voiced.start]).toEqual(['The', 0, 0.1]);
       expect<ReadonlyArray<number>>([second?.voiced.start ?? -1, second?.voiced.end ?? -1]).toEqual(
         [second?.start ?? -1, second?.end ?? -1],
@@ -178,7 +167,6 @@ describe('Narrator', () => {
 
   it.effect("a staged take's silent tail is trimmed, as an import's is, into a FLAC", () =>
     Effect.gen(function* () {
-      // The take speaks from 0.07 s to 1.2 s, then trails 1.8 s of silence.
       const rate = 8000;
       const voice = Float32Array.from(
         { length: 3 * rate },
@@ -197,7 +185,6 @@ describe('Narrator', () => {
       expect(take?.file).toMatch(/^b\.[0-9a-f]{12}\.flac$/);
       expect(take?.duration).toBeCloseTo(1.2, 1);
       expect(files.has(`/films/test/narration/${take?.file}`)).toBe(true);
-      // The MP3 it was trimmed from is not kept.
       const mp3s = [...files.keys()].filter((f) => /\/narration\/b\.[0-9a-f]{12}\.mp3$/.test(f));
       expect(mp3s).toEqual([]);
       for (const w of take?.words ?? []) expect(w.end).toBeLessThanOrEqual(take?.duration ?? 0);
@@ -239,7 +226,6 @@ describe('Narrator', () => {
         new TextDecoder().decode(files.get(TIMINGS)),
       );
       expect(stored).toEqual(recorded);
-      // The rejected take is not left on disk.
       expect([...files.keys()].filter((f) => f.startsWith('/films/test/narration/b'))).toEqual([]);
     }),
   );
@@ -287,7 +273,6 @@ describe('Narrator', () => {
         ]);
         const take = after.scenes['d'];
         expect(take?.hash).toBe(hashText(takeScript(Result.getOrThrow(parse('d', said)))));
-        // Every word is its own, across the joins between lines.
         expect(take?.words.map((w) => w.text)).toEqual(
           Result.getOrThrow(parse('d', said)).spoken.split(' '),
         );
@@ -323,7 +308,6 @@ describe('Narrator', () => {
       ...take(spoken, file),
       source: 'recorded' as const,
     });
-    /** `a` read by the owner and current, `b` read by the owner before its line changed. */
     const owned: Timings = {
       voice: voiceKey(testVoice),
       scenes: { a: person('Hello world.', 'a.mp3'), b: person('The first line.', 'b.mp3') },
@@ -399,7 +383,6 @@ describe('Narrator', () => {
     it.effect("a renamed beat's recorded take is kept and reported, never swept", () => {
       const { files, layer } = setup(owned);
       files.set('/films/test/narration/a.mp3', text('Hello world.'));
-      // `a` renamed `hello`: the person's take names a beat the film no longer has.
       const renamed = scenes.map((s) => {
         if (s.id === 'a') return { ...s, id: 'hello' };
         return s;
@@ -456,7 +439,6 @@ describe('Narrator', () => {
   describe('crash safety', () => {
     const DIR = '/films/test/narration';
     const said = 'Hello world.';
-    /** `a` recorded, its file on disk and its timings in agreement. */
     const agreed = (): Map<string, Uint8Array> => {
       const audio = text(said);
       const timings: Timings = {
@@ -492,7 +474,6 @@ describe('Narrator', () => {
       return narrate(layer, testVoice, reRecordA);
     };
 
-    /** Every take the timings mark current is on disk, and is the audio they describe. */
     const expectAgreement = (files: Map<string, Uint8Array>) => {
       const timings = Schema.decodeSync(TimingsJson)(new TextDecoder().decode(files.get(TIMINGS)));
       for (const [id, take] of Object.entries(timings.scenes)) {
@@ -506,7 +487,6 @@ describe('Narrator', () => {
 
     it.effect('a re-recorded take and its timings agree after a crash at any step', () =>
       Effect.gen(function* () {
-        // Count the steps of a clean run, then crash at each one in turn.
         const clean = agreed();
         const counted = crashingFileSystem(clean, 0);
         yield* run(clean, counted.layer);
@@ -525,9 +505,7 @@ describe('Narrator', () => {
         const files = agreed();
         files.set(`${DIR}/b.take.mp3`, text('stray'));
         files.set(`${DIR}/a.0123456789ab.mp3`, text('orphan'));
-        // A replaced recorded take's committed FLAC, whose attempt this machine does not have.
         files.set(`${DIR}/b.0123456789ab.flac`, text('replaced master'));
-        // A partial that names no writer: whose it is cannot be told, so it stays.
         const unowned = `${TIMINGS}.partial`;
         files.set(unowned, text('{'));
         const layer = Narrator.layer.pipe(
@@ -549,7 +527,6 @@ describe('Narrator', () => {
         );
         const current = Object.values(takes.scenes).map((t) => `${DIR}/${t.file}`);
         expect(left).toEqual([`${DIR}/full.wav`, TIMINGS, unowned, ...current].toSorted());
-        // No take is deleted: each is put away under its beat's attempts, byte for byte.
         expect(
           [
             `${DIR}/attempts/b/b.take.mp3`,
@@ -587,7 +564,6 @@ describe('Narrator', () => {
         yield* Deferred.make<boolean>(),
         yield* Deferred.make<boolean>(),
       ];
-      // The narrate's locks say when it asks for the timings' lock.
       const asking: ManifestLockService = {
         take: (file) =>
           Effect.andThen(
@@ -595,13 +571,9 @@ describe('Narrator', () => {
             bunManifestLock.take(file),
           ),
       };
-      // Each store is its own layer: another process, as far as any lock knows.
       const own = Effect.map(Layer.build(ContentStore.layer), Context.get(ContentStore));
       const lab = yield* own;
       const narrate = yield* own.pipe(Effect.provideService(ManifestLock, asking));
-      // The lab's Undo, as `land` makes it: under the timings' lock, the take
-      // brought back first, then the timings that name it, once the sweep
-      // has asked for the lock (or, holding none, swept).
       const undo = lab.holding(paths.timings, () =>
         Effect.gen(function* () {
           yield* fs.copyFile(`${paths.narration}/attempts/a/${back}`, `${paths.narration}/${back}`);
@@ -612,7 +584,6 @@ describe('Narrator', () => {
       );
       const undoing = yield* Effect.forkChild(undo);
       yield* Deferred.await(brought);
-      // `film narrate` sweeps the narration while the Undo holds the lock.
       yield* sweepNarration(paths).pipe(
         Effect.provideService(ContentStore, narrate),
         Effect.ensuring(Deferred.succeed(swept, true)),
@@ -626,15 +597,11 @@ describe('Narrator', () => {
 
   describe('two writers on one film', () => {
     const DIR = '/films/test/narration';
-    /** One host in memory: its paths, and its manifest locks, which every store of a test shares. */
     const host = () =>
       Layer.mergeAll(Path.layer, Layer.succeed(ManifestLock, memoryManifestLock()));
-    /** A film's files: just its timings, `recorded`. */
     const filed = () => new Map([[TIMINGS, text(Schema.encodeSync(TimingsJson)(recorded))]]);
-    /** A file system over `files`, as another process sees them. */
     const fileSystemOf = (files: Map<string, Uint8Array>) =>
       Effect.map(Layer.build(memoryFileSystem(files)), Context.get(FileSystem.FileSystem));
-    /** The sweep a second `film narrate` opens with, through `fs`: its store its own, so its locks another process's. */
     const sweepElsewhere = (fs: FileSystem.FileSystem) =>
       Effect.gen(function* () {
         const disk = Layer.succeed(FileSystem.FileSystem, fs);
@@ -647,10 +614,6 @@ describe('Narrator', () => {
           Effect.provideService(FileSystem.FileSystem, fs),
         );
       });
-    /**
-     * A `film narrate` of beat `b` through `fs`, a process of its own, its
-     * speech-to-text answering once `heard` is done.
-     */
     const firstRun = (
       fs: FileSystem.FileSystem,
       files: Map<string, Uint8Array>,
@@ -671,7 +634,6 @@ describe('Narrator', () => {
         ),
       );
     };
-    /** Whether the take the timings name for `b` is in `narration/`. */
     const placed = (files: Map<string, Uint8Array>, after: Timings) => {
       const file = after.scenes['b']?.file ?? '';
       return { file, inNarration: files.has(`${DIR}/${file}`) };
@@ -682,7 +644,6 @@ describe('Narrator', () => {
         const files = filed();
         const fs = yield* fileSystemOf(files);
         const [asked, answer] = [yield* Deferred.make<boolean>(), yield* Deferred.make<boolean>()];
-        // The first run's take is sent to speech-to-text, and its answer waits.
         const recording = yield* Effect.forkChild(
           firstRun(
             fs,
@@ -691,7 +652,6 @@ describe('Narrator', () => {
           ),
         );
         yield* Deferred.await(asked);
-        // A second `film narrate` starts, and sweeps, while the first waits.
         yield* sweepElsewhere(fs);
         const putAway = [...files.keys()].filter((f) => f.startsWith(`${DIR}/attempts/`));
         yield* Deferred.succeed(answer, true);
@@ -712,7 +672,6 @@ describe('Narrator', () => {
           yield* Deferred.make<boolean>(),
           yield* Deferred.make<boolean>(),
         ];
-        // The first run says when its take lands in narration/, and waits there.
         const placing = FileSystem.FileSystem.of({
           ...fs,
           rename: (from, to) => {
@@ -725,7 +684,6 @@ describe('Narrator', () => {
               );
           },
         });
-        // The second says when it finds the timings' lock held, and waits for it.
         const locks = yield* ManifestLock;
         const asking: ManifestLockService = {
           take: (file) =>
@@ -742,7 +700,6 @@ describe('Narrator', () => {
         };
         const recording = yield* Effect.forkChild(firstRun(placing, files));
         yield* Deferred.await(landed);
-        // A second `film narrate` sweeps: it waits for the lock, or, holding none, sweeps.
         const sweeping = yield* Effect.forkChild(
           sweepElsewhere(fs).pipe(
             Effect.provideService(ManifestLock, asking),
@@ -757,10 +714,6 @@ describe('Narrator', () => {
       }).pipe(Effect.scoped, Effect.provide(host())),
     );
 
-    /**
-     * A mix landing its track through `fs`, under no timings lock: paused
-     * once its partial is written, and landing when `finish` is done.
-     */
     const midMix = (fs: FileSystem.FileSystem) =>
       Effect.gen(function* () {
         const [begun, finish] = [yield* Deferred.make<boolean>(), yield* Deferred.make<boolean>()];
@@ -781,7 +734,6 @@ describe('Narrator', () => {
         return { mixing, finish };
       });
 
-    /** The partials in `narration/`. */
     const partialsIn = (files: Map<string, Uint8Array>) =>
       [...files.keys()].filter((f) => f.startsWith(`${DIR}/`) && f.endsWith('.partial'));
 
@@ -805,7 +757,6 @@ describe('Narrator', () => {
       Effect.gen(function* () {
         const files = filed();
         const fs = yield* fileSystemOf(files);
-        // The writer's partial is on disk; then, as far as this host knows, its process is gone.
         const { mixing } = yield* midMix(fs);
         expect(partialsIn(files)).toHaveLength(1);
         yield* sweepElsewhere(fs).pipe(processesOn('here', () => false));
@@ -822,11 +773,9 @@ describe('Narrator', () => {
       Effect.gen(function* () {
         const files = filed();
         const fs = yield* fileSystemOf(files);
-        // A partial that names only its pid, which runs on some host but not here.
         const partial = `${DIR}/full.wav.4242-7.partial`;
         files.set(partial, text('the mix'));
         yield* sweepElsewhere(fs).pipe(processesOn('here', () => false));
-        // The mix lands its track.
         expect(Exit.isSuccess(yield* Effect.exit(fs.rename(partial, `${DIR}/full.wav`)))).toBe(
           true,
         );
@@ -840,9 +789,7 @@ describe('Narrator', () => {
         Effect.gen(function* () {
           const files = filed();
           const fs = yield* fileSystemOf(files);
-          // The mix runs on another host sharing the folder.
           const { mixing, finish } = yield* midMix(fs).pipe(processesOn('elsewhere', () => true));
-          // Here, no process has the mix's pid.
           yield* sweepElsewhere(fs).pipe(processesOn('here', () => false));
           yield* Deferred.succeed(finish, true);
           expect(Exit.isSuccess(yield* Fiber.join(mixing))).toBe(true);

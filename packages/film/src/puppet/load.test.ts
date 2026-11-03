@@ -5,7 +5,6 @@ import type { PuppetSpec } from '../canvas/puppet.ts';
 import { PuppetImages, PuppetUnloadable } from './images.ts';
 import { puppetFrom } from './load.ts';
 
-/** A one-part puppet whose sleeve declares it is drawn in `ramp`. */
 const specOf = (ramp: Ramp): PuppetSpec => ({
   key: 'test/sleeve',
   size: [8, 8],
@@ -14,7 +13,6 @@ const specOf = (ramp: Ramp): PuppetSpec => ({
   origin: [0, 0],
 });
 
-/** The load's failure for `spec`, over images that answer every PNG with a refusal and note each one asked for. */
 const refusalOf = (spec: PuppetSpec) => {
   const asked: string[] = [];
   const images = Layer.succeed(

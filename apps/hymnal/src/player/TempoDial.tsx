@@ -1,27 +1,3 @@
-/**
- * A hymn's tempo in the player sheet: a stopping dial over the stops, 50 %
- * to 150 % in steps of 5 % (`tempo.ts`), each drawn as its number, the
- * percent read out. Each turn is kept under the hymn's `tempo.<n>` key, and
- * the player keeps it at once (`playerOn`'s `tempoFor`): with Sound on the
- * recording plays at it with its pitch kept, with Sound off the score clock
- * runs at it, and the follow keeps step either way.
- *
- * Under the dial, a row reads the hymn's beat and its bpm at the dial's
- * tempo (`♩ = 90`, one label for VoiceOver: `quarter note = 90`), counted
- * from the hymn's first tempo as the timing bundle carries it, and a `Tap`
- * chip sets the dial from taps at the beat: from the fourth tap of a run on,
- * each sets the stop nearest the tapped bpm (`tap`). The run is kept here,
- * not in settings; a pause over 3 s starts it over. A hymn whose timing
- * does not decode draws neither, and the dial is as it is.
- *
- * While the hymn's tempo is not 100 %, `Reset tempo` (`↺ 100%`) stands
- * before `Tap`, with Sound on or off and whether the timing decodes or not.
- * A press sets this hymn's tempo to 100 % and turns the dial home on the
- * reset's curve, as the key panel's Reset does (`Dials.tsx`); it tells the
- * `reset` cue and no detent. `Tap` stays at the row's trailing end, so it
- * does not move as the reset comes and goes.
- */
-
 import { useAtom } from '@effect/atom-react';
 import { Clock, Option } from 'effect';
 import { createContext, memo, use, useMemo, useRef, useState } from 'react';
@@ -50,17 +26,12 @@ import {
   type TapRun,
 } from './tempo';
 
-/**
- * The clock `Tap` reads each tap's time from: the live clock, or a test's
- * `TestClock`, which moves between taps without real time passing.
- */
 export const TapClock = createContext<Clock.Clock>(Clock.Clock.defaultValue());
 
 export const TempoDial = memo(function TempoDial({ number }: { readonly number: number }) {
   const [tempo, setTempo] = useAtom(settings.tempo(number));
   const first = useMemo(() => Option.map(book.of(number), (timeline) => timeline.tempo), [number]);
   const cue = useCue();
-  // How many resets were pressed here: the dial turns home on the reset's curve when the count moves.
   const [resets, setResets] = useState(0);
   const away = tempo !== DEFAULT_TEMPO;
   const reset = () => {
@@ -104,7 +75,6 @@ export const TempoDial = memo(function TempoDial({ number }: { readonly number: 
   );
 });
 
-/** A stop of the dial: its percent, the one at the notch in the chord colour. */
 function TempoMark({ stop, current }: { readonly stop: number; readonly current: boolean }) {
   return (
     <Text
@@ -118,10 +88,6 @@ function TempoMark({ stop, current }: { readonly stop: number; readonly current:
   );
 }
 
-/**
- * The hymn's beat and its bpm at the dial's `tempo`: the beat's note drawn,
- * then `= <bpm>`. VoiceOver reads it as one element, the note named.
- */
 function BpmReadOut({
   first,
   tempo,
@@ -141,19 +107,11 @@ function BpmReadOut({
   );
 }
 
-/** Flags on a note's stem, by the denominator that writes it: an eighth has one, a sixteenth two. */
 const FLAGS: ReadonlyMap<number, number> = new Map([
   [8, 1],
   [16, 2],
 ]);
 
-/**
- * A beat's note drawn with Views, in a box 14 points wide and 18 tall, in
- * `tint`: an oval head, open for a whole or half note, filled for shorter
- * ones; a stem for all but the whole note; a flag on it for each eighth's
- * halving; a dot after the head for a dotted note. Hidden from VoiceOver:
- * the read-out's label names the note.
- */
 function NoteMark({ beat, tint }: { readonly beat: Beat; readonly tint: ColorValue }) {
   const flags = Option.getOrElse(Option.fromUndefinedOr(FLAGS.get(beat.note)), () => 0);
   return (
@@ -174,11 +132,6 @@ function NoteMark({ beat, tint }: { readonly beat: Beat; readonly tint: ColorVal
   );
 }
 
-/**
- * `Tap`: each press reads its time from `TapClock` first, tells `press`, and
- * adds the tap to the run; from the fourth tap of a run on, the dial is set
- * to the stop the run asks of a hymn of `hymnBpm`.
- */
 function TapChip({
   hymnBpm,
   onTempo,
@@ -208,7 +161,6 @@ function TapChip({
   );
 }
 
-/** `Reset tempo`, while the hymn's tempo is not 100 %: "↺ 100%". */
 function ResetChip({ onPress }: { readonly onPress: () => void }) {
   return (
     <Chip testID="tempo-reset" label="Reset tempo" hint="Back to 100%" onPress={onPress}>
@@ -217,7 +169,6 @@ function ResetChip({ onPress }: { readonly onPress: () => void }) {
   );
 }
 
-/** The note mark's strokes: thin, as the read-out's semibold figures. */
 const STROKE = 1.5;
 
 const styles = StyleSheet.create({
@@ -230,7 +181,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
-  // Trailing in the row even with no read-out before it.
   chips: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 'auto' },
   readOut: { flexDirection: 'row', alignItems: 'center' },
   bpm: {

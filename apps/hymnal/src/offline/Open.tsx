@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { useShownPage } from '~/player/page';
 import { Action, send } from './live';
 
-/** Only the visible page queues a save; pre-rendered pager neighbours do not. */
 export function SaveShown() {
   const shown = useShownPage();
   const number = Option.getOrElse(

@@ -1,11 +1,3 @@
-// The faces the films draw in (`palette.ts` names them), each subset a file
-// of its own under `assets/fonts` (Google Fonts' cuts, OFL), declared as
-// their `@font-face` rules were: the same family, style, weight and
-// characters per file, in the same order. A film's loader asks for them as it
-// reads the film (`narratedFilms`), so a page with no film fetches none, and
-// only what draws the film waits for them (`pictureFacesWait`): none holds a
-// page's first paint or the film's bar.
-
 import { type Face, SUBSETS, pictureFaces } from '@manna/film/player';
 import ebGaramondItalicGreek from '../../assets/fonts/EBGaramond-italic-greek.woff2';
 import ebGaramondItalicLatinExt from '../../assets/fonts/EBGaramond-italic-latin-ext.woff2';
@@ -131,5 +123,4 @@ const FACES: ReadonlyArray<Face> = [
   { family: 'Gaegu', style: 'normal', weight: '700', url: gaegu700Latin, range: SUBSETS.latin },
 ];
 
-/** The films' faces, asked for: added to the page's fonts and fetched the first time a film asks. */
 export const faces = pictureFaces(FACES);

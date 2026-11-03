@@ -1,39 +1,3 @@
-// The lab's pages, built in the lab's own process and answered behind its
-// gate: the app's HTML entries (its lab, its review and its player), bundled
-// with the framework's Solid plugin as Bun's page server would bundle them,
-// but by `Bun.build` here (`PageBundler`), so every file is answered by a
-// route `admit` has passed (Bun's own routes would answer before the gate,
-// and its development server has no Host check). A build takes about a tenth
-// of a second, so there is no build step: the pages are built when first
-// asked, and again when asked after a file the last build read has changed.
-// The lab runs for days, so the folders of the files the last build read are
-// watched (`FileSystem.watch`; a package's `node_modules` aside), with the
-// entries' folders from the start and, after a failed build, the folders of
-// the files the bundler named; a folder still read keeps its watch, and a
-// file read in a newly watched folder, or new to the read set, that changed
-// from a second before its build began is one more change. Each build prints
-// the files it read (length and hash) before and after it reads them: a save
-// the newest build already holds by content is no change, however late the
-// watch hears it (judged once no build is reading), and a look asks a build
-// whose files print as they stand (`built`). Each change to
-// one of those files is numbered (the build), and an open page that waits on
-// `/api/review/build?since=` hears of it and reloads onto the new code. A
-// film's mixed track
-// (`narration/full.wav`) is no source, but a page plays the one it loaded:
-// once one is asked for, there or not (a film before its first mix), its
-// folder is watched too, or the nearest one there on the way to it until the
-// mix makes it, and a mix landing it (last, and whole, by a rename: the mix
-// finished) is one more change, with no new build, that a page waiting with
-// that film (`&film=`) hears and no other. A take's timings, saved before its mix, are none,
-// so a page reloads once, onto the new track. Each lab process draws its own
-// id (`server`): a page served by an earlier process hears at once that it
-// is old code.
-//
-// A build that fails answers its page as the failure, the bundler's words,
-// is tried again on each request and, while a page waits, by its wait every
-// half second (the failed page asks only its wait), and the page reloads
-// itself once a build is made; the lab itself keeps serving.
-
 import {
   Array as Arr,
   Clock,
@@ -79,59 +43,29 @@ import { isNarrationUrl, narrationPath } from './narration-route.ts';
 import { narrationUrls } from '../player/narrated.ts';
 import { CACHE, serveFile } from './review-file.ts';
 
-/** What the app builds its pages from. */
 export interface LabPageSpec {
-  /** Each page's HTML entry; the places each is served at are the framework's (`Places`, `pageAt`). */
   readonly pages: Readonly<Record<AppPage, string>>;
-  /**
-   * Each page the server renders: its server entry (`*.server.tsx`), the
-   * same components as its HTML entry's script, compiled for the server
-   * (`solidPluginFor('ssr')`). A page with none is drawn in the browser alone.
-   */
   readonly servers: Partial<Readonly<Record<AppPage, string>>>;
-  /** The films folder, whose narration the pages play (`/films/<film>/narration/<file>`). */
   readonly films: string;
-  /**
-   * The footage library and the outputs folder its copies are made under,
-   * whose takes' copies the pages play (`/footage/<name>/<sha12>/<copy>.mp4`).
-   */
   readonly footage: FootageRoot;
 }
 
-/** A built file: its bytes and its media type. */
 interface BuiltFile {
   readonly bytes: Uint8Array;
   readonly type: string;
 }
 
-/**
- * A build's script, style or map as it is asked for: its bytes and media
- * type, and, for text worth compressing (`squeezable`), its brotli at the
- * best quality (`BEST_BR`), made once in the background after the build
- * (`squeeze`) and shared by every kept build that makes the same file (a
- * file is named by its hash, so the same name is the same bytes). Until it
- * is made, the file is compressed per request, as a page is.
- */
 interface AssetFile extends BuiltFile {
   readonly best: Option.Option<Deferred.Deferred<Uint8Array>>;
 }
 
-/** The brotli quality a build's files are kept at: the smallest, made once per file. */
 const BEST_BR = 11;
 
-/** The least a file weighs to be kept compressed: the compression middleware's own floor. */
 const SQUEEZE_FROM = 1024;
 
-/**
- * Whether `file` is kept compressed: a script or a style (text) of at least
- * `SQUEEZE_FROM` bytes. A map is not: only the devtools ask for one, and
- * the maps are most of a build's bytes (all of a build's files at the best
- * took 24 s; its scripts and styles alone a fraction).
- */
 const squeezable = (file: BuiltFile): boolean =>
   file.bytes.byteLength >= SQUEEZE_FROM && file.type.startsWith('text/');
 
-/** `bytes` at brotli's best quality, in zlib's thread pool, off the lab's thread. */
 const brotliBest = (bytes: Uint8Array) =>
   Effect.callback<Uint8Array, Error>((resume) => {
     brotliCompress(
@@ -152,31 +86,15 @@ const brotliBest = (bytes: Uint8Array) =>
     );
   });
 
-/** A built file at its path relative to the build's root (`lab.html`, `chunk-….js`). */
 type BuiltAt = BuiltFile & { readonly path: string };
 
-/**
- * What a build made: the browser's outputs and the server's, each by its
- * path relative to the build's root (`lab.html`, `chunk-….js`,
- * `src/review.server.js`), and the files the two read, absolute: a change
- * to a file either read is a change to the pages.
- */
 interface Bundled {
   readonly outputs: ReadonlyArray<BuiltAt>;
   readonly server: ReadonlyArray<BuiltAt>;
   readonly inputs: ReadonlyArray<string>;
-  /** The files the server's build read, absolute: what a page's server render may run. */
   readonly serverInputs: ReadonlyArray<string>;
 }
 
-/**
- * The film code among `files` (absolute) a server's build read: a module of
- * a film (under the films folder, `films`), of a scene (in a `scenes/`
- * folder outside the framework's own source, `framework`: the framework's
- * own `scenes/` modules are no film's), or the drawing of stills (`player/stills.ts`). A
- * page's server render draws no film (Fresh reads: the server never imports
- * a film's modules); the browser's copy of the page does.
- */
 const filmCode = (
   path: Path.Path,
   files: ReadonlyArray<string>,
@@ -192,34 +110,20 @@ const filmCode = (
   );
 };
 
-/** The framework's own source, beside this module: its `scenes/` modules are no film's. */
 const FRAMEWORK = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
 
-/** A build the bundler refused: its words, and the files they name, absolute. */
 interface BundleFailed {
   readonly reason: string;
   readonly files: ReadonlyArray<string>;
 }
 
-/**
- * How a build reads its sources: the path its pages link their files from,
- * and files read as other text than they hold, by absolute path (a wedge: a
- * look drawn at another level than its pick, the pick unwritten,
- * `tools/easel.ts`).
- */
 interface BundleHow {
   readonly publicPath: string;
   readonly swaps: ReadonlyMap<string, string>;
-  /**
-   * The server entries built beside the pages, absolute, from the same
-   * sources: none for a build no server renders (a wedge, drawn in the
-   * browser alone).
-   */
   readonly servers: ReadonlyArray<string>;
 }
 
 interface PageBundlerService {
-  /** The pages `entries` (HTML files under `root`) bundled for the browser as `how` says, or why not. */
   readonly bundle: (
     entries: ReadonlyArray<string>,
     root: string,
@@ -227,21 +131,18 @@ interface PageBundlerService {
   ) => Effect.Effect<Bundled, BundleFailed>;
 }
 
-/** What a bundler said of a build it threw for: each of its messages, a line each. */
 const bundlerWords = (cause: unknown): string => {
   if (Predicate.hasProperty(cause, 'errors') && Array.isArray(cause.errors))
     return cause.errors.map(String).join('\n');
   return String(cause);
 };
 
-/** A bundler's thrown messages, each with where it is, when it says. */
 const BundlerMessages = Schema.Struct({
   errors: Schema.Array(
     Schema.Struct({ position: Schema.NullOr(Schema.Struct({ file: Schema.String })) }),
   ),
 });
 
-/** The files a bundler's messages name, as it named them. */
 const bundlerFiles = (cause: unknown): ReadonlyArray<string> =>
   Option.match(Schema.decodeUnknownOption(BundlerMessages)(cause), {
     onNone: () => [],
@@ -253,14 +154,8 @@ const bundlerFiles = (cause: unknown): ReadonlyArray<string> =>
       ),
   });
 
-/** `text` matched literally in a regular expression. */
 const literally = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/**
- * A plugin that loads each file of `swaps` as its text there, and notes in
- * `read` each one the build read, so a swap no build reached is refused
- * rather than drawn as the source it was meant to replace.
- */
 const swapPlugin = (swaps: ReadonlyMap<string, string>, read: Set<string>): BunPlugin => ({
   name: 'film-wedge',
   setup(build) {
@@ -275,11 +170,9 @@ const swapPlugin = (swaps: ReadonlyMap<string, string>, read: Set<string>): BunP
   },
 });
 
-/** A `Bun.build` as the pages take it: its outputs at their paths, and the files it read, absolute. */
 const bunBuild = (path: Path.Path, config: Bun.BuildConfig) =>
   Effect.gen(function* () {
     const out = yield* Effect.tryPromise({
-      // A failed build throws its messages (an AggregateError), caught here.
       try: () => Bun.build({ ...config, metafile: true, throw: true }),
       catch: (cause): BundleFailed => ({
         reason: bundlerWords(cause),
@@ -296,17 +189,10 @@ const bunBuild = (path: Path.Path, config: Bun.BuildConfig) =>
         }),
       ),
     );
-    // The metafile names inputs relative to this process's directory.
     const inputs = Object.keys(out.metafile?.inputs ?? {}).map((input) => path.resolve(input));
     return { outputs, inputs };
   });
 
-/**
- * `Bun.build` over the pages with the framework's Solid plugin, for the
- * browser, and over their server entries with its server output, from the
- * same sources (the server bundle's own `node_modules` resolve to their
- * server builds by Bun's `bun` target); `path` resolves what they read.
- */
 const bunBundle =
   (path: Path.Path) => (entries: ReadonlyArray<string>, root: string, how: BundleHow) =>
     Effect.gen(function* () {
@@ -318,14 +204,9 @@ const bunBundle =
           bunBuild(path, {
             entrypoints: [...entries],
             root,
-            // Every page links its scripts and styles from the root (`/chunk-….js`), so a
-            // page served under a film's path (`/films/<film>/lab/<scene>`) finds them.
             publicPath: how.publicPath,
             plugins: [...swaps, solidPluginFor('dom')],
             target: 'browser',
-            // Solid's development build, whatever NODE_ENV the lab runs under: its
-            // diagnostics (a hydration mismatch, a read outside a tracking scope)
-            // are what the served end-to-end tests read.
             conditions: ['development'],
             splitting: true,
             minify: true,
@@ -358,14 +239,6 @@ const bunBundle =
       } satisfies Bundled;
     });
 
-/**
- * Every package a build imports left out of it, pinned to the file it
- * resolves to from the module importing it: the output imports each by its
- * absolute path, so wherever the output is put it runs the very modules the
- * source would (the engine and three this process runs), not whatever a
- * folder near the output resolves. A runtime's own (`node:`, `bun:`) stays
- * as written.
- */
 const pinPackages = (path: Path.Path): BunPlugin => ({
   name: 'film-pin-packages',
   setup(build) {
@@ -376,17 +249,6 @@ const pinPackages = (path: Path.Path): BunPlugin => ({
   },
 });
 
-/**
- * The module `file` built for this process (Bun's `bun` target), with each
- * of `swaps` read as its text there, and every package it imports pinned to
- * the file the source resolves it to (`pinPackages`), so the output runs the
- * same engine and three as this process wherever it is put: the output, or
- * why not. The files it imports by path (`with { type: 'file' }`, a rig's
- * `.riv`) are named under `into`, the absolute directory the output is
- * written to, so each path reads from any directory, as the module as written
- * gives it. A build that reads none of `swaps` cannot draw them changed, and
- * is refused.
- */
 export const bunModule = (
   path: Path.Path,
   file: string,
@@ -410,28 +272,19 @@ export const bunModule = (
     return built.outputs;
   });
 
-/** A file as the test bundler answers it: a page's HTML, or a module. */
 const typeOf = (file: string): string => {
   if (file.endsWith('.html')) return 'text/html;charset=utf-8';
   return 'text/javascript';
 };
 
-/** The bundler the pages are built with. */
 export class PageBundler extends Context.Service<PageBundler, PageBundlerService>()(
   '@manna/film/tools/PageBundler',
 ) {
-  /** Bun's bundler with the framework's Solid plugin. */
   static readonly layer = Layer.effect(
     PageBundler,
     Effect.map(Path.Path, (path) => PageBundler.of({ bundle: bunBundle(path) })),
   );
 
-  /**
-   * A bundler for tests that need no browser code: each entry is its own
-   * page, its HTML as written (or as swapped), read from the file system;
-   * each server entry its own module, as written; and the entries are all
-   * a build reads.
-   */
   static readonly layerTest = Layer.effect(
     PageBundler,
     Effect.gen(function* () {
@@ -470,92 +323,51 @@ export class PageBundler extends Context.Service<PageBundler, PageBundlerService
   );
 }
 
-/**
- * One build: its number, and its pages' HTML by page and its other files
- * (scripts, styles, maps) by the path they are asked for, or the bundler's words.
- */
 interface Built {
-  /** The changes it is stamped with: a page waits past it. Answered again, the changes seen then. */
   readonly build: number;
-  /** Its own number among the builds kept, the one it was made as: its pages at `?build=<kept>`. */
   readonly kept: number;
-  /** When it began reading its sources, ms since the epoch: a file saved since may not be in it. */
   readonly started: number;
-  /** How far it holds the bytes it read (`Freshness`); a failed build is `Unsure`. */
   readonly fresh: Freshness;
-  /** Each file it read (a package's `node_modules` aside) by its print once it was made (`printOf`). */
   readonly prints: ReadonlyMap<string, string>;
   readonly outcome:
     | {
         readonly _tag: 'Built';
         readonly pages: ReadonlyMap<AppPage, BuiltFile>;
         readonly files: ReadonlyMap<string, AssetFile>;
-        /** Its server bundle: its modules by their paths from the root, and each rendered page's entry. */
         readonly server: ServerBundle;
       }
     | { readonly _tag: 'Failed'; readonly reason: string };
 }
 
-/**
- * How far a build holds the bytes it read. `Steady`: every file it read had
- * the same print just before it began and once it was made, so it read them
- * as they stood. `Moved`: one was saved while it read, so it may hold the
- * bytes before the save (one more change, built again). `Unsure`: one it
- * read was printed only once it was made (no build had read it before), so
- * a save while it read cannot be told; a look builds again rather than
- * trust it.
- */
 type Freshness = 'Steady' | 'Moved' | 'Unsure';
 
-/** A file's bytes in a few characters: their length and their hash, so two that differ differ here. */
 const printOf = (bytes: Uint8Array): string => `${bytes.length}:${Bun.hash(bytes).toString(36)}`;
 
-/** The print of a file that is not there. */
 const GONE = 'gone';
 
-/** How many builds a look makes at most while the files it reads keep moving under it. */
 const BUILD_TRIES = 3;
 
-/** How many builds' files stay answered: a page loaded from one may still fetch its chunks. */
 const KEPT = 3;
-/** Saves land as a burst (a formatter, several files): a waiting page hears of them once settled. */
 const SETTLE = Duration.millis(150);
-/** How long a new watch is given to start before the files it now watches are checked. */
 const ARMING = Duration.millis(250);
-/** How far a file's mtime may lag the clock: a save during a build is counted from this before it began. */
 const MTIME_LAG = Duration.seconds(1);
-/** How often a wait builds again while the last build failed. */
 const RETRY = Duration.millis(500);
-/** How many of a track's counted mixes stay named (`heardAt`): a write's answer asks for its own soon after. */
 const COUNTED_KEPT = 8;
 
-/**
- * What a page asks its wait with: the build it was served, by which server
- * when it knows, and the film whose track it plays, if any (only that
- * film's mix wakes it).
- */
 interface Served {
   readonly since: number;
   readonly server: Option.Option<string>;
   readonly film: Option.Option<string>;
 }
 
-/**
- * The changes seen: `n` numbers each one (a page is stamped with it), `all`
- * is the number of the last one every page hears (a source changed, a
- * failed build built), and `mixed` that of each film's last mix, which only
- * a page playing that film hears.
- */
 interface Changes {
   readonly n: number;
   readonly all: number;
   readonly mixed: ReadonlyMap<string, number>;
 }
 
-/** One more change, which every page hears. */
 const forAll = (seen: Changes): Changes => ({ ...seen, n: seen.n + 1, all: seen.n + 1 });
 
-/** One more change: `film`'s mix, which only a page playing it hears. */
 const mixOf =
   (film: string) =>
   (seen: Changes): Changes => ({
@@ -564,7 +376,6 @@ const mixOf =
     mixed: new Map([...seen.mixed, [film, seen.n + 1]]),
   });
 
-/** The number of the last change a page playing `film` (or none) hears. */
 const heardBy =
   (film: Option.Option<string>) =>
   (seen: Changes): number =>
@@ -577,80 +388,36 @@ const heardBy =
     );
 
 interface LabPageService {
-  /** The page, script, style or narration the request asks for, or a 404. */
   readonly answer: PageAnswer;
-  /**
-   * The pages' build as the sources stand: past `since` once a source
-   * changes, held up to `timeout` (a query's, at most `LONGEST_WAIT`); at
-   * once when the page was served by another server.
-   */
   readonly wait: (served: Served, timeout: Duration.Input) => Effect.Effect<PageBuild>;
-  /**
-   * The build a page playing `film` hears the mix that landed its track at
-   * mtime `at` by: the change that mix was counted as (counted now, when no
-   * watch has yet), so a write's answer names its own mix and no later one.
-   * None when no page listens for the film's mixes, or that mix was never
-   * counted (a later one landed before any watch saw it).
-   */
   readonly heardAt: (film: string, at: number) => Effect.Effect<Option.Option<PageBuild>>;
-  /**
-   * The pages as the sources stand now, every save made before the call in
-   * them, judged by content and not by mtime: the build answered, after any
-   * build under way is waited out, is judged at the moment it is answered,
-   * once made and published: its files printed alike before and after it
-   * read them (`Steady`) and print so still. A save no watch has heard yet,
-   * one in the build's own second, or one landing after the build printed
-   * what it read, is built first; a build a save moved is never answered.
-   * The answer names the build (`kept`), whose pages `?build=<kept>` serve
-   * as it was made, and the bundler's words when it failed (a look's
-   * freshness, `tools/easel.ts`).
-   */
   readonly built: Effect.Effect<PagesNow>;
-  /**
-   * The pages as `built` answers them, but with each file of `swaps` read as
-   * its text there: a wedge, one look drawn at another level than its pick
-   * with the pick unwritten (`tools/easel.ts`). Built once per build and
-   * swap, its pages answered at their own paths with `?wedge=<id>` and its
-   * files under `/wedge/<id>/`, the last few kept; `wedge` is empty when it
-   * did not build, and `failed` says why.
-   */
   readonly wedge: (swaps: ReadonlyMap<string, string>) => Effect.Effect<Wedged>;
 }
 
-/** The pages' build now, and why it failed when it did. */
 export interface PagesNow {
   readonly build: PageBuild;
-  /**
-   * The build answered, by its number among the builds kept: its pages,
-   * asked with `?build=<kept>`, are served as it was made and judged, never
-   * a build made after (a look's page).
-   */
   readonly kept: number;
   readonly failed: Option.Option<string>;
 }
 
-/** A wedge of the pages' build now: its id, empty when it did not build. */
 interface Wedged extends PagesNow {
   readonly wedge: string;
 }
 
-/** Where a wedge's files are answered: `/wedge/<id>/chunk-….js`. */
 const WEDGE_PATH = '/wedge/';
 
-/** A wedge built: its id, its pages' HTML by page, and its files by the path they are asked for. */
 interface WedgeBuilt {
   readonly id: string;
   readonly pages: ReadonlyMap<AppPage, BuiltFile>;
   readonly files: ReadonlyMap<string, AssetFile>;
 }
 
-/** How many of a build's files are checked at once for a save no watch heard. */
 const STATS_AT_ONCE = 32;
 
 export class LabPage extends Context.Service<LabPage, LabPageService>()(
   '@manna/film/tools/LabPage',
 ) {
-  /** The app's pages over `spec`, watched while the scope is open, each with a server entry rendered by `PageRenderer`. */
   static layer(
     spec: LabPageSpec,
   ): Layer.Layer<LabPage, never, FileSystem.FileSystem | Path.Path | PageBundler | PageRenderer> {
@@ -664,32 +431,20 @@ const escapeHtml = (text: string) =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c,
   );
 
-/** The build a page was served from, for its wait: `<meta name="lab-build">` and `lab-server`. */
 const stamped = (html: string, build: PageBuild) =>
   html.replace(
     '</head>',
     `<meta name="lab-build" content="${build.build}" /><meta name="lab-server" content="${escapeHtml(build.server)}" /></head>`,
   );
 
-/** A page's body's opening tag, and its attributes. */
 const BODY_OPEN = /<body\b([^>]*)>/i;
 
-/** A body's opening tag with `attributes`, its class joined by `extra`. */
 const bodyWith = (attributes: string, extra: string): string => {
   const classed = /\bclass="([^"]*)"/.exec(attributes);
   if (Predicate.isNull(classed)) return `<body${attributes} class="${escapeHtml(extra)}">`;
   return `<body${attributes.replace(classed[0], `class="${classed[1]} ${escapeHtml(extra)}"`)}>`;
 };
 
-/**
- * A built page split around where its render goes: before, the page up to
- * its body's opening tag, with the render's head before `</head>` and its
- * body's class on `<body>`; after, the rest of the body. The page's own
- * scripts and stylesheet are in its head (Bun's HTML bundler puts them
- * there), so they are in before and fetched while the render streams; a
- * module script still waits until the document ends, so the browser's copy
- * finds the markup. None for a page with no head or body to put them in.
- */
 export const splice = (
   html: string,
   page: Pick<RenderedPage, 'head' | 'bodyClass'>,
@@ -704,17 +459,11 @@ export const splice = (
   });
 };
 
-/** The URL a page was asked at, whole: its path and query at the Host it was asked of. */
 const urlOf = (request: HttpServerRequest.HttpServerRequest): string => {
   const host = Option.getOrElse(Option.fromUndefinedOr(request.headers['host']), () => 'lab');
   return new URL(request.url, `http://${host}`).href;
 };
 
-/**
- * What a page was asked at and by which browser: its URL whole, and whether
- * the browser keys as a Mac (`appleAgent` of its `User-Agent`), so the
- * server labels the page's chords as that browser will.
- */
 const askedOf = (request: HttpServerRequest.HttpServerRequest): PageAsked => ({
   url: urlOf(request),
   mac: appleAgent(
@@ -722,28 +471,18 @@ const askedOf = (request: HttpServerRequest.HttpServerRequest): PageAsked => ({
   ),
 });
 
-/** `text` as a script's string literal. */
 const jsonText = Schema.encodeSync(Schema.fromJsonString(Schema.String));
 
-/** How long the failed page waits before it asks again, on any answer that is not a newer build. */
 const FAILED_PAUSE_MS = 2000;
 
-/** The studio's tokens (`player/tokens.css`), which the failed page reads: it has no bundle to link. */
 const TOKENS_FILE = `${import.meta.dir}/../player/tokens.css`;
 
-/** The failed page's look over the studio's `tokens`: its words in the studio's face and colours. */
 const failedStyle = (tokens: string) =>
   `${tokens}` +
   'body{margin:0;padding:var(--s-6);background:var(--surface-0);color:var(--text-1);' +
   'font-family:var(--font);font-size:var(--fs-3);line-height:var(--lh-3)}' +
   'h1{font-size:var(--fs-5);line-height:var(--lh-5);font-weight:var(--w-3)}pre{white-space:pre-wrap}';
 
-/**
- * A failed build's page, in the studio's `tokens`: the bundler's words,
- * reloading itself once a build past it answers, or one from another
- * server; it pauses before asking again on every other answer (a refusal,
- * a proxy's 502, no answer).
- */
 const failedPage = (reason: string, build: PageBuild, tokens: string) =>
   stamped(
     `<!doctype html><html><head><meta charset="utf-8" /><title>Lab: the page did not build</title><style>${failedStyle(tokens)}</style></head>`,
@@ -757,25 +496,21 @@ const failedPage = (reason: string, build: PageBuild, tokens: string) =>
   `await new Promise(f=>setTimeout(f,${FAILED_PAUSE_MS}))}})()</script>` +
   `</body></html>`;
 
-/** Why a build failed: the bundler's words; none for one that built. */
 const failureOf = (built: Built): Option.Option<string> => {
   if (built.outcome._tag === 'Failed') return Option.some(built.outcome.reason);
   return Option.none();
 };
 
-/** A build's pages' HTML; a failed one has none. */
 const pagesOf = (built: Built): ReadonlyMap<AppPage, BuiltFile> => {
   if (built.outcome._tag === 'Built') return built.outcome.pages;
   return new Map();
 };
 
-/** A build's files; a failed one has none. */
 const filesOf = (built: Built): ReadonlyMap<string, AssetFile> => {
   if (built.outcome._tag === 'Built') return built.outcome.files;
   return new Map();
 };
 
-/** The deepest folder every one of `dirs` (absolute) lies under. */
 const commonDir = (dirs: ReadonlyArray<string>): string => {
   const [first = [], ...rest] = dirs.map((dir) => dir.split('/'));
   const common = rest.reduce((shared, parts) => {
@@ -789,20 +524,12 @@ const commonDir = (dirs: ReadonlyArray<string>): string => {
 const NOT_FOUND = HttpServerResponse.text('not found', { status: 404 });
 const HTML = 'text/html;charset=utf-8';
 
-/** An id for this process's builds, unlike any other process's: its start, and a draw. */
 const serverId = Effect.gen(function* () {
   const started = yield* Clock.currentTimeMillis;
   const draw = yield* Random.nextIntBetween(0, 36 ** 4);
   return `${started.toString(36)}-${draw.toString(36)}`;
 });
 
-/**
- * `spec` with its pages, its server entries and its films folder by their
- * real paths: the bundler names each file it read by where it lies (one in
- * a folder reached through a link, as macOS's temp folder is, by the link's
- * target), and the watches, the files read and their prints must name one
- * file one way. One not there stays as given, resolved.
- */
 const realSpec = (fs: FileSystem.FileSystem, path: Path.Path, spec: LabPageSpec) => {
   const real = (file: string) =>
     fs.realPath(file).pipe(Effect.orElseSucceed(() => path.resolve(file)));
@@ -834,43 +561,24 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
   const renderer = yield* PageRenderer;
   const scope = yield* Effect.scope;
   const server = yield* serverId;
-  // The tokens the failed page reads; a lab without them answers that page unstyled.
   const tokens = yield* fs.readFileString(TOKENS_FILE).pipe(Effect.orElseSucceed(() => ''));
-  // The changes seen, each one a page waiting past it hears (`heardBy`): a page is stamped with `n`.
   const changes = yield* SubscriptionRef.make<Changes>({ n: 0, all: 0, mixed: new Map() });
-  // The number of changes at the last change to a file a build reads: a build made at or past
-  // it is current. A track mixed since (`masters`) wakes its film's pages and needs no build.
   const sourced = yield* Ref.make(0);
-  // The files the last build read, absolute: only a change to one of them makes a new build.
-  // None before a build has read any, or after one failed: then every change does.
   const read = yield* Ref.make(Option.none<ReadonlySet<string>>());
-  // Each film's mixed track a page asked for, absolute, whether it was there or not (a film
-  // before its first mix), and its mtime as last heard (none: not there). The mix lands it
-  // last and whole (a rename), so a new mtime is the mix finished, and a page loaded then
-  // plays the new track.
   const masters = yield* Ref.make<ReadonlyMap<string, Option.Option<number>>>(new Map());
-  // Each track's mtimes as counted, newest last (COUNTED_KEPT of them), each with the change
-  // it was counted as: the build its film's pages hear that mix by (`heardAt`).
   const counted = yield* Ref.make<ReadonlyMap<string, ReadonlyArray<readonly [number, number]>>>(
     new Map(),
   );
-  // One track's landing counted at a time, so a mtime is never seen before its count is kept.
   const landing = yield* Semaphore.make(1);
   const films = path.resolve(spec.films);
-  // Each folder watched, and the fiber watching it; changed by one at a time (a build, a track served).
   const watchers = yield* Ref.make<ReadonlyMap<string, Fiber.Fiber<void>>>(new Map());
   const watching = yield* Semaphore.make(1);
-  // The folders the last build asked to have watched, the tracks' aside.
   const asked = yield* Ref.make<ReadonlyArray<string>>([]);
   const builds = yield* Ref.make<ReadonlyArray<Built>>([]);
   const building = yield* Semaphore.make(1);
-  // The wedges kept, newest first (`wedge`), built one at a time.
   const wedges = yield* Ref.make<ReadonlyArray<WedgeBuilt>>([]);
   const wedging = yield* Semaphore.make(1);
-  // One wait at a time builds again after a failure (`retryFailed`), however many pages wait.
   const retrying = yield* Semaphore.make(1);
-  // Bun names each output by its entry's path relative to the build's root: the
-  // entries' common folder, given to the build so the names cannot drift.
   const entries = Record.toEntries(spec.pages);
   const htmls = entries.map(([, html]) => path.resolve(html));
   const servers = entries.flatMap(([page]) =>
@@ -884,43 +592,36 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
   const serverEntries = servers.map(([, entry]) => entry);
   const root = commonDir([...htmls, ...serverEntries].map(path.dirname));
   const pageOf = new Map(entries.map(([page, html]) => [path.relative(root, html), page]));
-  // Each server entry's module, as the bundler names it: its path from the root, as `.js`.
   const serverModules = new Map(
     servers.map(([page, entry]) => [
       page,
       path.relative(root, entry).replace(/\.[cm]?tsx?$/, '.js'),
     ]),
   );
-  /** The lab's own build: its files linked from the root, every source as written, its server entries beside. */
   const asWritten: BundleHow = { publicPath: '/', swaps: new Map(), servers: serverEntries };
 
-  /** The folders `files` lie in, sorted, once each; a package's `node_modules` aside. */
   const foldersOf = (files: ReadonlyArray<string>) =>
     Arr.sort(
       Arr.dedupe(files.filter((file) => !file.includes('/node_modules/')).map(path.dirname)),
       Order.String,
     );
 
-  /** One more change, to a file a build reads: the next page asked is built again. */
   const sourceChanged = Effect.flatMap(SubscriptionRef.updateAndGet(changes, forAll), (seen) =>
     Ref.set(sourced, seen.n),
   );
 
-  /** `file`'s mtime, none when it is not there. */
   const mtimeOf = (file: string) =>
     fs.stat(file).pipe(
       Effect.map((info) => Option.map(info.mtime, (at) => at.getTime())),
       Effect.orElseSucceed(() => Option.none<number>()),
     );
 
-  /** `file`'s print now (`printOf`), `GONE` when it is not there. */
   const printNow = (file: string) =>
     fs.readFile(file).pipe(
       Effect.map(printOf),
       Effect.orElseSucceed(() => GONE),
     );
 
-  /** Each of `files` by its print now, a package's `node_modules` aside. */
   const printsOf = (files: Iterable<string>) =>
     Effect.map(
       Effect.forEach(
@@ -931,11 +632,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       (pairs): ReadonlyMap<string, string> => new Map(pairs),
     );
 
-  /**
-   * Whether `file` is as the newest build read it: that build is `Steady`
-   * and the file's print now is the one it made. A watch's event for a save
-   * the build already holds (a look built it first) is then no change.
-   */
   const unmoved = (file: string) =>
     Effect.gen(function* () {
       const newest = Arr.head(yield* Ref.get(builds));
@@ -945,19 +641,8 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       return (yield* printNow(file)) === print.value;
     });
 
-  /** The film a track (`<films>/<film>/narration/full.wav`) is of. */
   const filmOf = (master: string) => path.basename(path.dirname(path.dirname(master)));
 
-  /**
-   * Whether `master`, a track a page asked for, landed since last heard: a
-   * new mtime is one more change, which only its film's pages hear. The
-   * mix always lands the track by a rename (`writeWholeWith` in mixer.ts,
-   * then `fs.rename` onto it), never by writes in place, so one mix is one
-   * new mtime; a watch's event, a check after arming and a write asking
-   * for its own mix (`heardAt`) that all see it count it once, and keep the
-   * change it was counted as: one step a write's request that leaves cannot
-   * cut, so a mtime is never kept without its count.
-   */
   const landed = (master: string) =>
     landing.withPermit(
       Effect.uninterruptible(
@@ -983,12 +668,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       ),
     );
 
-  /**
-   * The build `film`'s pages hear the mix that landed its track at `at` by:
-   * the track counted first, if no watch has yet (`landed`), then the change
-   * that mtime was counted as; none when no page asked for the track, or
-   * that mtime was never counted.
-   */
   const heardAt = (film: string, at: number): Effect.Effect<Option.Option<PageBuild>> =>
     Effect.gen(function* () {
       const master = Arr.findFirst(
@@ -1007,23 +686,15 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       );
     });
 
-  /** Each of `tracks` that landed while no watch reached it, checked once new watches are armed. */
   const landedUnwatched = (tracks: ReadonlyArray<string>) =>
     Effect.andThen(Effect.sleep(ARMING), Effect.forEach(tracks, landed, { discard: true })).pipe(
       Effect.forkIn(scope),
     );
 
-  // Each change to a file the last build read is one more change, and a new build; a mix
-  // landing a track a page asked for is one more change alone, for its film; a folder made
-  // on the way to such a track (a film's first mix makes `narration/`) moves the watch down
-  // to it; anything else (a take's timings before its mix, a render, a note) is none.
   const heard = (file: string): Effect.Effect<void> =>
     Effect.gen(function* () {
       const inputs = yield* Ref.get(read);
       if (Option.match(inputs, { onNone: () => true, onSome: (set) => set.has(file) })) {
-        // A save the newest build already holds (a look built it before the watch heard) is
-        // none. Judged once no build is reading: a build under way may hold the save or not,
-        // and says which only when it is done.
         return yield* building.withPermit(
           Effect.flatMap(unmoved(file), (held) => {
             if (held) return Effect.void;
@@ -1035,7 +706,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       if (tracks.includes(file)) return yield* landed(file);
       const below = tracks.filter((track) => track.startsWith(`${file}/`));
       if (below.length === 0) return;
-      // Forked: the new watch may let go of the folder this one is heard in.
       yield* Effect.forkIn(
         Effect.andThen(rewatchAfter(Effect.void), landedUnwatched(below)),
         scope,
@@ -1052,7 +722,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       Stream.runForEach(heard),
     );
 
-  /** The nearest folder on the way to `dir` that is there, no higher than the films folder. */
   const nearest = (dir: string): Effect.Effect<string> =>
     Effect.flatMap(
       fs.exists(dir).pipe(Effect.orElseSucceed(() => false)),
@@ -1062,13 +731,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       },
     );
 
-  /**
-   * Watch exactly the folders the builds ask for (`asked`) and, for each
-   * track asked for, its folder, or the nearest one there on the way to it:
-   * a folder already watched keeps its watch (a save there is never between
-   * two watches), one no longer named is let go, and the folders newly
-   * watched are answered. Run by `rewatchAfter`.
-   */
   const rewatch: Effect.Effect<ReadonlyArray<string>> = Effect.gen(function* () {
     const tracks = yield* Effect.forEach((yield* Ref.get(masters)).keys(), (track) =>
       nearest(path.dirname(track)),
@@ -1086,27 +748,11 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
     return added;
   });
 
-  /**
-   * `change` to what is watched, then the watches made to match it
-   * (`rewatch`), under `watching` and as one step: a request that leaves
-   * part-way (its client gone) cannot cut it, so `watchers` names every
-   * watch running and no watch that ended.
-   */
   const rewatchAfter = (change: Effect.Effect<void>) =>
     watching.withPermit(Effect.uninterruptible(Effect.andThen(change, rewatch)));
 
-  /** Watch exactly `dirs` for the builds, beside the tracks' folders; answers the folders newly watched. */
   const watchOnly = (dirs: ReadonlyArray<string>) => rewatchAfter(Ref.set(asked, dirs));
 
-  /**
-   * `file`, asked for at `pathname`, there or not: when it is its film's
-   * mixed track, it is watched for from now on (through the nearest folder
-   * there, before a film's first mix), so the next mix wakes the film's
-   * pages; one that landed before the watch was armed is heard after. The
-   * track kept and its check after arming are one step a request that
-   * leaves cannot cut: every later ask finds the track kept and checks
-   * nothing.
-   */
   const trackAsked = (pathname: string, file: string) =>
     Effect.gen(function* () {
       const master = path.resolve(file);
@@ -1121,29 +767,18 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       );
     });
 
-  /**
-   * A save no watch counted: once new watches are armed, a file of
-   * `suspects` the newest build does not hold as it stands (`unmoved`) and
-   * changed since `started` (the build began reading, less MTIME_LAG) is one
-   * more change. A suspect is a file the build read that a watch could not
-   * count: in a folder newly watched, or new to the read set (the watch
-   * judged its save against the build before).
-   */
   const missed = (suspects: ReadonlyArray<string>, started: number) =>
     Effect.gen(function* () {
       if (suspects.length === 0) return;
       yield* Effect.sleep(ARMING);
       const since = started - Duration.toMillis(MTIME_LAG);
-      // Judged once no build is reading, as a watch's save is (`heard`).
       const changed = yield* building.withPermit(
         Effect.forEach(suspects, (file) =>
           Effect.gen(function* () {
-            // A file the newest build no longer reads is none of its business, as for a watch.
             if (Option.exists(yield* Ref.get(read), (set) => !set.has(file))) return false;
             if (yield* unmoved(file)) return false;
             return yield* fs.stat(file).pipe(
               Effect.map((info) => Option.exists(info.mtime, (at) => at.getTime() >= since)),
-              // Gone since the build read it: changed.
               Effect.orElseSucceed(() => true),
             );
           }),
@@ -1154,13 +789,8 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       yield* sourceChanged;
     }).pipe(Effect.forkIn(scope));
 
-  // Before any build: the entries' folders, so a first build that fails still hears its fix.
   yield* watchOnly(foldersOf([...htmls, ...serverEntries]));
 
-  /**
-   * How far a build that read the files `after` prints, printed `before`
-   * just before it began, holds them (`Freshness`).
-   */
   const freshness = (
     before: ReadonlyMap<string, string>,
     after: ReadonlyMap<string, string>,
@@ -1174,12 +804,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
     return 'Steady';
   };
 
-  /**
-   * A build's files (`made`, each by the path it is asked at) as it answers
-   * them: each squeezable one given its best brotli, shared with a kept
-   * build's file of the same path or made once in the background (`squeeze`),
-   * which the lab's scope stops.
-   */
   const assetsOf = Effect.fnUntraced(function* (made: ReadonlyArray<readonly [string, BuiltFile]>) {
     const kept = new Map((yield* Ref.get(builds)).flatMap((b) => [...filesOf(b)]));
     const files = new Map<string, AssetFile>();
@@ -1198,11 +822,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
     return files;
   });
 
-  /**
-   * Each of `fresh` compressed at the best (`brotliBest`), one at a time so
-   * a build takes one of zlib's threads; one that fails stays compressed
-   * per request, and is logged.
-   */
   const squeeze = (
     fresh: ReadonlyArray<readonly [string, Uint8Array, Deferred.Deferred<Uint8Array>]>,
   ) =>
@@ -1229,8 +848,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
 
   const bundle = Effect.fnUntraced(function* (build: number) {
     const started = yield* Clock.currentTimeMillis;
-    // The files the last build read, printed before this one reads them: one whose print
-    // differs once this build is made was saved while it read.
     const printedBefore = yield* Option.match(yield* Ref.get(read), {
       onNone: () => Effect.succeed<ReadonlyMap<string, string>>(new Map()),
       onSome: printsOf,
@@ -1257,7 +874,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
               (input) =>
                 !input.includes('/node_modules/') &&
                 (added.includes(path.dirname(input)) ||
-                  // With no read set before, the watch counted every save.
                   Option.exists(before, (set) => !set.has(input))),
             ),
             started,
@@ -1279,8 +895,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       ),
       Effect.catch((failed) =>
         Effect.gen(function* () {
-          // Every change makes a new build now; the folders kept, and those of the files
-          // the bundler named, so a fix to any of them is heard.
           yield* Ref.set(read, Option.none());
           const kept = yield* Ref.get(asked);
           const added = yield* watchOnly(
@@ -1301,20 +915,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
     return { build, kept: build, started, fresh, prints, outcome } satisfies Built;
   });
 
-  /**
-   * The build as the sources stand: the last one if nothing it read changed
-   * since, else a new one. A failed build is tried again on each ask, and by
-   * a waiting page's wait (`retryFailed`), since a fix may lie where no watch reaches (the bundler names the importer, not
-   * the file it missed); one that then builds takes a new number, so a failed
-   * page waiting past the old one reloads. Asks at once share one build. The
-   * last build answered again is stamped with the changes seen now, a mix
-   * since among them, so its page waits past them. A build a save moved while
-   * it read (`Moved`) is one more change once made: the next ask builds again,
-   * and a waiting page hears it. Run under `building`, as one step: a request
-   * that leaves while it builds (its client gone) leaves the build to end, so
-   * the builds kept, the files read and the watches always agree (`Bun.build`
-   * cannot be stopped anyway).
-   */
   const currentHeld = Effect.uninterruptible(
     Effect.gen(function* () {
       const now = (yield* SubscriptionRef.get(changes)).n;
@@ -1341,17 +941,9 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
   );
   const current = building.withPermit(currentHeld);
 
-  /** The build a page playing `film` (or none) hears now. */
   const now = (film: Option.Option<string>) =>
     Effect.map(SubscriptionRef.get(changes), (seen) => ({ build: heardBy(film)(seen), server }));
 
-  /**
-   * While the last build failed, build again every RETRY, for as long as a
-   * page waits: a fix may lie where no watch reaches, or the bundler may still
-   * hold what the failed build read a moment ago, and a failed page asks
-   * nothing but its wait. One that builds takes a new number (`current`),
-   * which the waiting pages hear. One wait at a time does it; it never ends.
-   */
   const retryFailed = retrying.withPermit(
     Effect.forever(
       Effect.gen(function* () {
@@ -1362,11 +954,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
     ),
   );
 
-  /**
-   * A page waiting with `film` hears its mixes though it never played the
-   * track (a review tab of the film's choices): the track is watched from
-   * the wait on, as a page that loaded it does.
-   */
   const filmWaited = (film: string): Effect.Effect<void> =>
     Effect.gen(function* () {
       const pathname = narrationUrls(film).audio;
@@ -1393,14 +980,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
     );
   };
 
-  /**
-   * `html`, a page of the build `built` as its browser bundle made it,
-   * rendered on the server as `asked` by its server entry: the page's markup
-   * streamed into it as it is written. A render that fails before its head
-   * answers the page as made, which the browser renders itself; one that
-   * fails later (or is cut, `END_WAIT`) leaves what it wrote and the mark of
-   * a cut (`PAGE_CUT_MARK`), and the browser renders that page anew too.
-   */
   const rendered = (
     name: AppPage,
     html: string,
@@ -1442,7 +1021,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       }),
     );
 
-  /** A page's HTML as the sources stand, built now if they changed: asked again each load. */
   const page = (name: AppPage) =>
     Effect.gen(function* () {
       const built = yield* current;
@@ -1457,7 +1035,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       if (Option.isNone(html)) return NOT_FOUND;
       const text = stamped(new TextDecoder().decode(html.value.bytes), stamp);
       const request = yield* HttpServerRequest.HttpServerRequest;
-      // A page with a server entry is rendered for a GET; a HEAD is answered its headers alone.
       if (request.method !== 'GET' || !built.outcome.server.entries.has(name))
         return HttpServerResponse.text(text, {
           contentType: HTML,
@@ -1472,12 +1049,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       });
     });
 
-  /**
-   * A script, style or map by its path, in the builds and wedges kept: each
-   * named by its hash, so never changed. Sent as its best brotli once that
-   * is made and the request's coding is br (`pageCodingOf`); else as it is,
-   * for the server's compression to compress per request.
-   */
   const asset = (pathname: string) =>
     Effect.gen(function* () {
       const kept = [
@@ -1513,7 +1084,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       );
     });
 
-  /** A page as one build made it, unstamped (it waits on no build); none is a 404. */
   const asMade = (html: Option.Option<BuiltFile>) =>
     Option.match(html, {
       onNone: () => NOT_FOUND,
@@ -1524,7 +1094,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
         }),
     });
 
-  /** A wedge's page (`?wedge=<id>`) as it was built; a wedge no longer kept is a 404. */
   const wedgePage = (name: AppPage, id: string) =>
     Effect.map(Ref.get(wedges), (kept) =>
       asMade(
@@ -1535,11 +1104,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       ),
     );
 
-  /**
-   * A kept build's page (`?build=<kept>`, `PagesNow.kept`) as it was made:
-   * the build a look was answered, whatever was built since; a build no
-   * longer kept, or one that failed, is a 404.
-   */
   const keptPage = (name: AppPage, id: string) =>
     Effect.map(Ref.get(builds), (kept) =>
       asMade(
@@ -1550,11 +1114,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       ),
     );
 
-  /**
-   * The narration a page plays: the studio rewrites it in place (a take
-   * kept, the track remixed), so asked again each load. A film's track is
-   * watched for once asked, there or not (a 404 before its first mix).
-   */
   const narration = (request: HttpServerRequest.HttpServerRequest, pathname: string) =>
     narrationPath(spec.films, pathname).pipe(
       Effect.flatMap(
@@ -1577,9 +1136,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       }),
     );
 
-  // A narration file or a footage copy by its exact URL, then a built file, then the page the
-  // path serves (`pageAt`, the places); anything else, a chunk of a build no longer kept among them, is
-  // a 404 and never a page's HTML.
   const answer = Effect.gen(function* () {
     const request = yield* HttpServerRequest.HttpServerRequest;
     const url = new URL(request.url, 'http://lab');
@@ -1600,11 +1156,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
     });
   });
 
-  /**
-   * Whether `made` holds its files as they stand now: it read them as they
-   * stood (`Steady`), and each one's print now is the one it made, so no
-   * save since, heard or not, whatever its mtime, is missing from it.
-   */
   const holds = (made: Built) =>
     Effect.gen(function* () {
       if (made.fresh !== 'Steady') return false;
@@ -1612,14 +1163,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       return [...made.prints].every(([file, print]) => now.get(file) === print);
     });
 
-  /**
-   * The build a look is answered, under `building`, so a build under way is
-   * waited out: the one `current` answers (kept, or made now, its watches
-   * and checks set), judged last, at the moment it is answered, by whether
-   * it holds its files as they stand (`holds`). One that does not is one
-   * more change and a new build; a build whose files keep moving
-   * `BUILD_TRIES` times is answered as failed.
-   */
   const freshHeld = (tries: number): Effect.Effect<Built> =>
     Effect.gen(function* () {
       const made = yield* currentHeld;
@@ -1643,7 +1186,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
     failed: failureOf(made),
   })) satisfies Effect.Effect<PagesNow>;
 
-  /** The text that names a set of swaps: each file and its text, in file order. */
   const swapsKey = (swaps: ReadonlyMap<string, string>) =>
     Arr.sort(
       [...swaps.entries()],
@@ -1652,8 +1194,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
       .map(([file, text]) => `${file}\n${text}`)
       .join('\n\0\n');
 
-  // The wedges, built one at a time from the build as it stands: a wedge of a build
-  // is built once per swap and answered from then on.
   const wedge = (swaps: ReadonlyMap<string, string>) =>
     wedging.withPermit(
       Effect.gen(function* () {
@@ -1670,8 +1210,6 @@ const make = Effect.fnUntraced(function* (given: LabPageSpec) {
           yield* Effect.log(`lab.page.wedge id=${id} outcome=Failed`);
           return { ...now, failed: Option.some(made.failure.reason), wedge: '' } satisfies Wedged;
         }
-        // A wedge's files are asked for only by the easel's browser on the box, so each
-        // is compressed per request, never squeezed at the best as a build's are.
         const pages = new Map<AppPage, BuiltFile>();
         const files = new Map<string, AssetFile>();
         for (const { path: name, ...file } of made.success.outputs)

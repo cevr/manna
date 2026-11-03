@@ -1,13 +1,3 @@
-// A page's render on the server, for its server entry (`*.server.tsx`,
-// `core/page-render.ts`): Solid's `renderToStream` of the page's components,
-// the same ones its browser entry hydrates, inside the page's root
-// (`PAGE_ROOT`). The head holds Solid's hydration script (the values the
-// render serializes are read by it), the page's styles and the UI faces
-// (`FACE_HEAD`, each face's latin preloaded), and the hold that keeps the
-// root out of paint until those have loaded (`faceHold`), so the first paint
-// is styled and set in the studio's faces before any script runs. A failure that fails
-// the render is the sink's; one a boundary shows is the page's own.
-
 import { type JSX, generateHydrationScript, renderToStream } from '@solidjs/web';
 import { Effect, Exit, Layer, Scope } from 'effect';
 import { onCleanup } from 'solid-js';
@@ -22,10 +12,6 @@ import type { Host } from '../browser/host.ts';
 import { ServerHost } from '../browser/host-server.ts';
 import { FACE_HEAD, faceHold } from '../player/face.ts';
 
-/**
- * `app` over a host of the page as `asked` (`host-server.ts`: the URL asked,
- * the asking browser's keys, no window), which lives as long as the render does.
- */
 export const ServerHosted = (props: {
   readonly asked: PageAsked;
   readonly app: (host: Host) => JSX.Element;
@@ -39,25 +25,18 @@ export const ServerHosted = (props: {
   );
 };
 
-/** A page as its server entry renders it. */
 interface ServedPage {
-  /** The class the page's body carries. */
   readonly bodyClass: string;
-  /** The class of the page's root, where its components mount. */
   readonly rootClass: string;
-  /** The page's styles, in its head before its markup. */
   readonly style: string;
-  /** The page's components for `request`: never reading the browser's globals. */
   readonly app: (request: PageRequest) => JSX.Element;
 }
 
-/** `page` as the lab renders it on the server. */
 export const pageRender = (page: ServedPage): PageRender => ({
   bodyClass: page.bodyClass,
   render: (request, sink) => {
     const heads: Array<string> = [];
     let opened = false;
-    // The head and the root's opening tag, once: before the render's first piece.
     const open = () => {
       if (opened) return;
       opened = true;

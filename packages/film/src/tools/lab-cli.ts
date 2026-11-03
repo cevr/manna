@@ -1,28 +1,3 @@
-// The lab's command set on the command line: `film lab <command>`, each
-// made from its definition (`lab-command.ts`) and nothing else. A flag for
-// each field of the command's parameters, by the field's own name, read as
-// the JSON Schema MCP lists the tool by says the field is: a word, a number,
-// a switch, a repeated flag for a list of words or numbers (numbers also
-// comma-separated: `--crop 0,0,400,300`), and JSON text
-// for anything else (`--blocks '[…]'`). `--input '<json>'` gives the whole
-// input as one object (a flag given beside it wins), and `--json` prints the
-// answer as its success schema encodes it, one line; without it, the
-// command's plain lines. The input is read by the command's own parameters
-// (`LabCommand.call` or `.input`), so a terminal is refused in the words an
-// MCP client is.
-//
-// Where it runs follows from the set (`lab-commands.ts`): a command over
-// the lab's files runs here, in this process, through the same stores the
-// lab writes through (each write holds its file's lock across processes); a
-// command over what only the running lab holds (its change feed, its easel,
-// its asks' page lock, the agents' "doing now" lines) is called on the lab at
-// `FILM_LAB_URL` through its MCP (`lab-client.ts`). A field the terminal
-// knows (`films`: this checkout's films folder) is filled when not given.
-// A command of the lab's that answers a job's handle before the job is done
-// (`critique`) has `film lab <name> wait <handle>`: it asks again with the
-// handle until the answer is done, then prints it, for an agent to run in
-// the background as it runs `film ask wait`.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -46,27 +21,22 @@ import { labClient, labUrl } from './lab-client.ts';
 
 const isJsonObject = Schema.is(Schema.JsonObject);
 
-/** What a flag reads before the command reads it: a value given, or none. */
 type Given = Option.Option<Schema.Json>;
 
 const readJson = Schema.decodeOption(Schema.fromJsonString(Schema.Json));
 const readNumber = Schema.decodeOption(Schema.FiniteFromString);
 const jsonText = Schema.encodeSync(Schema.fromJsonString(Schema.Json));
 
-/** A number's text as its number, or kept as text when it is none, for the command's schema to refuse. Pure. */
 const numberOf = (text: string): Schema.Json => Option.getOrElse(readNumber(text), () => text);
 
-/** The fields the terminal fills when not given (`CliContext`). */
 const KNOWN: ReadonlyArray<string> = ['films'];
 
-/** What a field's flag help adds after its description. */
 const NOTES: ReadonlyArray<readonly [(field: LabField) => boolean, string]> = [
   [(field) => KNOWN.includes(field.name), "this checkout's films folder, unless given"],
   [(field) => field.required && !KNOWN.includes(field.name), ' (required)'],
   [(field) => field.kind === 'json', ' [JSON]'],
 ];
 
-/** A field's flag: the value as given, typed by its kind (JSON text kept as text, read with the rest of the input). */
 const flagOf = (field: LabField): Flag.Flag<Given> => {
   const described = (flag: Flag.Flag<Given>) =>
     Flag.withDescription(
@@ -92,17 +62,13 @@ const flagOf = (field: LabField): Flag.Flag<Given> => {
   return described(flags[field.kind]());
 };
 
-/** What the terminal fills in a command's input when its flag is not given. */
 interface CliContext {
-  /** This checkout's films folder, absolute: the `films` an easel command takes. */
   readonly films: string;
 }
 
-/** A command's input that does not read before the command reads it: `--input`, or a flag's JSON. */
 const unread = (command: string, reason: string) =>
   LabCommandRefused.make({ command, tag: 'LabInputUnread', reason });
 
-/** A field's value as given: a JSON field's text read as JSON, any other as it is. */
 const fieldValue = (command: string, field: LabField, value: Schema.Json) =>
   Bool.match(field.kind === 'json', {
     onFalse: () => Effect.succeed(value),
@@ -113,14 +79,8 @@ const fieldValue = (command: string, field: LabField, value: Schema.Json) =>
       ),
   });
 
-/** One field of a command's input: its name and its value. */
 type Entry = readonly [string, Schema.Json];
 
-/**
- * The raw input `given` flags say, over `--input`'s object, a field the
- * terminal knows filled from `context` when neither gives it; or why
- * `--input` or a flag's JSON does not read.
- */
 const rawInput = (
   command: string,
   fields: ReadonlyArray<LabField>,
@@ -154,11 +114,9 @@ const rawInput = (
     return { ...filled, ...known };
   });
 
-/** A failure as `--json` prints it: its tag and its words, one line. */
 export const failureLine = (error: { readonly _tag: string; readonly message: string }): string =>
   jsonText({ _tag: error._tag, message: error.message });
 
-/** One command as `film lab <name>`, answered by `answer` (here, or by the lab). */
 const cliCommand = <E extends { readonly _tag: string; readonly message: string }, R>(
   tool: Tool.Any,
   answer: (raw: Schema.JsonObject) => Effect.Effect<Answered, E, R>,
@@ -198,7 +156,6 @@ const cliCommand = <E extends { readonly _tag: string; readonly message: string 
   );
 };
 
-/** A command asked of the running lab: its input checked here, sent, and its answer read back as its own. */
 const askedOfLab = (command: LabCommand<unknown>) => (raw: Schema.JsonObject) =>
   Effect.scoped(
     Effect.gen(function* () {
@@ -218,18 +175,12 @@ const askedOfLab = (command: LabCommand<unknown>) => (raw: Schema.JsonObject) =>
     }),
   );
 
-/** How a command's answer is printed: one line of JSON, or its plain lines. */
 const printed = (answered: Answered, json: boolean) =>
   Bool.match(json, {
     onTrue: () => Console.log(jsonText(answered.json)),
     onFalse: () => Effect.forEach(answered.lines, (line) => Console.log(line), { discard: true }),
   });
 
-/**
- * `film lab <name> wait <handle>`: `command` asked of the lab with the
- * handle until `done` holds of its answer (each ask waits on the lab's
- * side), then printed.
- */
 const waitOf = (
   command: LabCommand<unknown>,
   done: (json: Schema.Json) => boolean,
@@ -264,7 +215,6 @@ const waitOf = (
     ),
   );
 
-/** The lab's own links as a terminal reaches it: `FILM_LAB_URL` on this machine, and `FILM_LAB_PHONE_URL`. */
 export const addressFromConfig = Layer.effect(
   LabAddress,
   Effect.gen(function* () {
@@ -277,11 +227,6 @@ export const addressFromConfig = Layer.effect(
   }),
 );
 
-/**
- * The set as `film lab`'s subcommands: `here` run in this process over
- * `RHere`, the ones only the lab holds asked of it; each of those named in
- * `jobs` (its answer done when the predicate holds) with its `wait`.
- */
 export const labCliCommands = <RHere>(
   set: {
     readonly here: ReadonlyArray<LabCommand<RHere>>;

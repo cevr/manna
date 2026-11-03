@@ -1,6 +1,3 @@
-// The credits give each source once: a work cited in several beats is one
-// entry with its places merged, and no locator is left on a line alone.
-
 import { describe, expect, test } from 'bun:test';
 import { type Author, creditRoll } from './credits.ts';
 

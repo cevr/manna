@@ -1,19 +1,3 @@
-/**
- * `bun run mail:send <series>/<no>`: sends a film to the email list, once it
- * is in `src/content.ts` and the site that lists it is deployed. It asks the
- * Worker's send route (`src/mail/routes.ts`), which puts one delivery for
- * each confirmed subscriber on the queue; the Worker sends them a batch at a
- * time, and a subscriber already sent the film is passed over, so running it
- * again finishes a send that stopped and sends no one the film twice.
- *
- * `--dry-run` only counts: who is on the list, who was sent the film, who is
- * still waiting, and how many sends stopped before their outcome was kept
- * (unsure: their letter may have gone, so they are not sent again).
- * `--origin` names the site to ask (a throwaway stage's `workers.dev`
- * address); the film's links lead back to it. The admin secret
- * is `MAIL_ADMIN_TOKEN`, read from the environment (Bun loads `.env` here),
- * the same value the Worker was deployed with.
- */
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { Config, Console, Effect, Layer, Schema } from 'effect';
 import { Argument, Command, Flag } from 'effect/cli';
@@ -23,7 +7,6 @@ import { SendAnswer, SendRequest } from '../src/mail/admin.ts';
 import { MAIL_ROUTES } from '../src/mail/paths.ts';
 import { ORIGIN } from '../src/site.ts';
 
-/** The Worker refused the send; its words and status are the message. */
 class SendFailed extends Schema.TaggedError<SendFailed>()('SendFailed', {
   message: Schema.String,
 }) {}

@@ -1,15 +1,3 @@
-// Upstream: packages/react/src/menu/radio-item/MenuRadioItem.tsx,
-// packages/react/src/menu/radio-item/MenuRadioItemContext.ts,
-// packages/react/src/menu/radio-item/MenuRadioItemDataAttributes.ts,
-// packages/react/src/menu/utils/stateAttributesMapping.ts
-//
-// An item of a `Menu.RadioGroup` (`role="menuitemradio"`): checked
-// (`aria-checked`, `data-checked`; else `data-unchecked`) while its `value`
-// is the group's, and a press offers its value to the group's owner. It is
-// an item as `Menu.Item` is (`useMenuItem`: the roving focus, Enter and
-// Space, a release after a drag), and keeps the menu open on a press
-// unless `closeOnClick`. Upstream's `disabled` and the filter's items are
-// left out.
 import type { JSX } from '@solidjs/web';
 import { createContext, omit, untrack, useContext } from 'solid-js';
 
@@ -24,7 +12,6 @@ interface MenuRadioItemState {
   checked: boolean;
 }
 
-/** `checked` as `data-checked`, and its absence as `data-unchecked`. */
 export const checkedMapping: StateAttributesMapping<{ checked: boolean }> = {
   checked: (value): Record<string, string> =>
     value ? { 'data-checked': '' } : { 'data-unchecked': '' },
@@ -43,11 +30,8 @@ export function useMenuRadioItemContext(): MenuRadioItemState {
 }
 
 interface MenuRadioItemProps extends BaseUIComponentProps<'div', MenuRadioItemState> {
-  /** The value the group holds while this item is checked. */
   value: unknown;
-  /** The text typeahead matches; the item's text content when not given. */
   label?: string | undefined;
-  /** Whether a press closes the menu. @default false */
   closeOnClick?: boolean | undefined;
 }
 
@@ -79,7 +63,6 @@ export function MenuRadioItem(componentProps: MenuRadioItemProps): JSX.Element {
     },
   };
 
-  // A thunk, built under the provider below so its indicator reads it.
   const element = () =>
     useRenderElement('div', componentProps, {
       state,

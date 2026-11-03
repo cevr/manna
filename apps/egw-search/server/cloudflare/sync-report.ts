@@ -1,17 +1,3 @@
-/**
- * The full report of a corpus sync, in Markdown.
- *
- * The run's mail says what a week brought and shows its first changes
- * (`./sync-mail.ts`); this is the rest, kept in R2 (`SyncReports`) and served
- * at `egw.cvr.im/sync/<name>` (`./sync-pages.ts`), or read in a terminal with
- * `manna egw report`. It lists every book added, every paragraph a library
- * update changed (edits word by word), what checking an older book against
- * the library corrected, and what failed.
- *
- * Plain functions over plain data: the Workflow reads the changes and writes
- * the file; nothing here touches either.
- */
-
 import { Array as Arr, Option } from 'effect';
 
 import {
@@ -24,7 +10,6 @@ import type { ParagraphChangeRow } from '@manna/core/egw-db';
 
 import { wordDiff } from './word-diff.ts';
 
-/** The parts of the sync's report the mail and the report read. */
 export interface SyncCounts {
   readonly remote: number;
   readonly installedBefore: number;
@@ -33,48 +18,37 @@ export interface SyncCounts {
   readonly failures: readonly EgwSyncFailure[];
 }
 
-/** A book installed again, and what that changed in it. */
 export interface RecheckedBook {
   readonly book: EgwSyncBook;
   readonly changes: EgwParagraphChangeCounts;
 }
 
-/** A book whose vectors failed after it was installed. */
 export interface VectorFailure {
   readonly id: number;
   readonly reason: string;
 }
 
-/** What a sync did, as plain data. */
 export interface SyncRun {
   readonly counts: SyncCounts;
-  /** Books the corpus did not have. */
   readonly added: readonly EgwSyncBook[];
-  /** Books whose content hash moved: the library changed them. */
   readonly updated: readonly RecheckedBook[];
-  /** Older books checked against the library for the first time. */
   readonly verified: readonly RecheckedBook[];
-  /** Books still to recheck, left for a later run. */
   readonly recheckLeft: number;
   readonly vectorFailures: readonly VectorFailure[];
 }
 
-/** One changed paragraph, with the book it is in. */
 export interface BookChange {
   readonly book: EgwSyncBook;
   readonly change: ParagraphChangeRow;
 }
 
-/** The paragraphs each rechecked book changed, by book id. */
 export type ChangesByBook = ReadonlyMap<number, readonly ParagraphChangeRow[]>;
 
-/** The changes a library update made, in the order the report lists them. */
 export const updateChanges = (run: SyncRun, changes: ChangesByBook): readonly BookChange[] =>
   run.updated.flatMap(({ book }) =>
     (changes.get(book.id) ?? []).map((change) => ({ book, change })),
   );
 
-/** How many changes a recheck made, said in words: `2 edited, 1 added`. */
 export const changeSummary = (changes: EgwParagraphChangeCounts): string => {
   const parts = [
     [changes.edited, 'edited'],
@@ -91,13 +65,9 @@ export const changeSummary = (changes: EgwParagraphChangeCounts): string => {
 export const changeCount = (changes: EgwParagraphChangeCounts): number =>
   changes.added + changes.removed + changes.edited;
 
-/** Where a paragraph is: its refcode, else its book and id. */
 export const changeLabel = (book: EgwSyncBook, change: ParagraphChangeRow): string =>
   change.refcode_short ?? `${book.code} ${change.para_id ?? change.ref_code}`;
 
-/** Why the library withholds these books, by the known list's reasons:
- *  `13 need an EGW subscription, 5 are translations licensed for reading
- *  only`. */
 export const withheldReasons = (bookIds: readonly number[]): string => {
   const reasons = bookIds.map((id) => unavailableReason(id));
   const count = (reason: string) =>
@@ -121,12 +91,9 @@ export const withheldReasons = (bookIds: readonly number[]): string => {
 
 const MARKDOWN_SPECIAL = /[\\`*_[\]{}()<>#+\-.!|~]/g;
 
-/** Text as Markdown shows it literally: no emphasis, link or HTML in a
- *  paragraph's words becomes markup. */
 export const escapeMarkdown = (text: string): string =>
   text.replace(MARKDOWN_SPECIAL, (character) => `\\${character}`);
 
-/** An edited paragraph as one quote: removed words struck, added ones bold. */
 const editedQuote = (before: string, after: string): string =>
   wordDiff(before, after)
     .map((segment) => {
@@ -153,22 +120,16 @@ const bookHeading = (book: EgwSyncBook) =>
 const bookLine = (book: EgwSyncBook) =>
   `- **${escapeMarkdown(book.code)}** ${escapeMarkdown(book.title)}`;
 
-/** Lines shown only when a list has something in it. */
 const ifAny = <A>(items: readonly A[], lines: (some: readonly A[]) => readonly string[]) =>
   Arr.match(items, { onEmpty: (): readonly string[] => [], onNonEmpty: lines });
 
-/** The changes a book's section quotes, and how many more it only counts. */
 interface Quoted {
   readonly rows: readonly ParagraphChangeRow[];
   readonly rest: number;
 }
 
-/** Whether a recheck's added paragraphs are quoted: a library update's are;
- *  a verified book's are counted only. */
 const quotesAdded = (kind: 'updated' | 'verified') => kind === 'updated';
 
-/** The books a section quotes: those that changed, less, for a verified
- *  book, those that only gained paragraphs. */
 const quotedBooks = (books: readonly RecheckedBook[], kind: 'updated' | 'verified') =>
   books.filter(
     ({ changes: counts }) =>
@@ -210,17 +171,13 @@ const recheckedSection = (
   ]);
 };
 
-/** How a report is written: whole, or as a page that quotes at most
- *  `quoteLimit` changes and links the whole for the rest. */
 export interface ReportForm {
   readonly quoteLimit: Option.Option<number>;
   readonly markdownHref: string;
 }
 
-/** The whole report: every change quoted. */
 export const WHOLE: ReportForm = { quoteLimit: Option.none(), markdownHref: '' };
 
-/** Each quoted book's changes, in report order, within the form's limit. */
 const quotesOf = (run: SyncRun, changes: ChangesByBook, form: ReportForm) => {
   const books = [
     ...quotedBooks(run.updated, 'updated').map((book) => [book, 'updated'] as const),
@@ -242,7 +199,6 @@ const quotesOf = (run: SyncRun, changes: ChangesByBook, form: ReportForm) => {
 const failureLine = (failure: EgwSyncFailure) =>
   `- **${escapeMarkdown(failure.code)}** ${escapeMarkdown(failure.title)}: ${escapeMarkdown(failure.error)}`;
 
-/** The report of one run, in the form asked. */
 export const syncReport = (
   run: SyncRun,
   changes: ChangesByBook,

@@ -1,35 +1,14 @@
-// The console's rasteriser, as one three.js material. Every surface in the
-// ps1 world draws through it, so the whole frame has the same faults the
-// hardware had:
-//
-// - each vertex snapped to the low-res pixel grid after projection (the
-//   wobble as the camera drifts);
-// - textures mapped affinely: the UVs are interpolated in screen space, not
-//   corrected for depth, so a near polygon's texture swims and bends;
-// - light computed at the vertices only (Gouraud): an ambient, one sun and
-//   one gold point light, the verdict's;
-// - fog per vertex, to the background's colour;
-// - every pixel dithered with a 4 × 4 ordered (Bayer) matrix and cut to
-//   15-bit colour (5 bits a channel).
-//
-// Colours stay in the console's own space: sRGB numbers in, sRGB numbers out,
-// no linear light and no tone mapping (a `Vec3` from `rgb`, never a three.js
-// `Color`, which would convert them).
-
 import { DoubleSide, FrontSide, ShaderMaterial, type Texture, Vector2, Vector3 } from 'three';
 
-/** `#rrggbb` as the shader's 0–1 channels, unconverted. */
 export const rgb = (hex: string): Vector3 => {
   const n = Number.parseInt(hex.slice(1), 16);
   return new Vector3(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
 };
 
-/** One value a shader reads, shared by every material that holds the same object. */
 interface Uniform<T> {
   value: T;
 }
 
-/** The light and fog every material in one world reads: set once a frame, before it renders. */
 export interface World {
   readonly res: Uniform<Vector2>;
   readonly ambient: Uniform<Vector3>;
@@ -56,7 +35,7 @@ export const world = (w: number, h: number): World => ({
   fogFar: { value: 40 },
 });
 
-const VERTEX = /* glsl */ `
+const VERTEX = `
 uniform vec2 res;
 uniform vec3 ambient;
 uniform vec3 sunDir;
@@ -94,7 +73,7 @@ void main() {
 }
 `;
 
-const FRAGMENT = /* glsl */ `
+const FRAGMENT = `
 uniform sampler2D map;
 uniform float hasMap;
 uniform vec3 tint;
@@ -121,19 +100,14 @@ void main() {
 }
 `;
 
-/** How one surface draws: its texture (none: flat), its colour over it, and whether it gives light. */
 export interface Paint {
   readonly map?: Texture;
   readonly tint?: string;
-  /** 0 lit by the room to 1 its own light (a window, gold). */
   readonly emissive?: number;
-  /** Both faces drawn (a page, a card). */
   readonly double?: boolean;
-  /** The snapping grid's coarseness in low-res pixels: 1 the console's, 2 coarser still. */
   readonly snap?: number;
 }
 
-/** A material that reads `w`'s light and fog, painted `p`. */
 export const ps1 = (w: World, p: Paint): ShaderMaterial =>
   new ShaderMaterial({
     vertexShader: VERTEX,

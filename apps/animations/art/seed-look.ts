@@ -1,30 +1,11 @@
-/**
- * `bun run seed-look [--seed n] [--count k] [--out dir]`: new art directions
- * for the looks study, drawn from the deck (`art/deck.ts`) by a seed. Each is
- * printed as a markdown style brief citing its seed and the deck's version,
- * so the same seed draws the same brief whenever it is run again; with
- * `--out`, each is also written to `<dir>/<name>.md`. With no `--seed` a
- * random one is taken and printed.
- *
- * A batch (`--count` over 1) takes seed after seed from `--seed`, keeping a
- * draw when it keeps its distance from the existing looks and the batch's
- * earlier draws, half of it 2D and half 3D; the seeds it passes over are
- * listed after it, with why.
- *
- * The draw is the film framework's (`@manna/film/tools`' `drawBatch`); the
- * deck is this app's, which is why the command is an app script and not a
- * `film` CLI command: the film CLI serves any film and has no deck.
- */
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { artBrief, conflicts, drawBatch } from '@manna/film/tools';
 import { Console, Effect, FileSystem, Option, Path, Random, Schema } from 'effect';
 import { Command, Flag } from 'effect/cli';
 import { DECK } from './deck.ts';
 
-/** How a brief names the command that regenerates it. */
 const COMMAND = 'bun run seed-look';
 
-/** An existing look's profile in the deck names an option it lacks, or picks that cannot stand together. */
 class DeckConflict extends Schema.TaggedError<DeckConflict>()('DeckConflict', {
   look: Schema.String,
   pairs: Schema.Array(Schema.String),
@@ -34,7 +15,6 @@ class DeckConflict extends Schema.TaggedError<DeckConflict>()('DeckConflict', {
   }
 }
 
-/** A conflict as the refusal names it: a pick the deck lacks names itself twice. */
 const said = ([a, b]: readonly [string, string]): string => {
   if (a === b) return `${a} (no such option)`;
   return `${a} with ${b}`;
@@ -59,7 +39,6 @@ const seedLook = Command.make(
   Effect.fn('art.seedLook')(function* (input) {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
-    // A look the draws keep away from must be one the deck can describe.
     for (const look of DECK.existing) {
       const found = conflicts(DECK, look.picks);
       if (found.length > 0)

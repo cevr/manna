@@ -1,5 +1,4 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noTryCatch, effect/noThrowStatement, eslint/no-await-in-loop -- One filesystem adapter: close native file handles and check storage invariants within the same Promise operation, wrapped once by Effect.tryPromise. */
-/** Native media uses application support, never the platform's evictable cache. */
 import { Effect, Layer, Option, Schema } from 'effect';
 import { One } from 'one';
 import {
@@ -26,8 +25,6 @@ export const mediaLayer = Layer.sync(Media, () => {
   let protectedAll = false;
   const made = new Set<string>();
   let base = Option.none<string>();
-  // Resolve the native directory within an operation's typed Promise boundary.
-  // A missing filesystem must not prevent the online player from starting.
   const support = () =>
     Option.match(base, {
       onSome: (uri) => uri,
@@ -51,7 +48,6 @@ export const mediaLayer = Layer.sync(Media, () => {
     }
     made.add(storage);
   };
-  // A stray (a hymn that plays from another set's storage) is never listed.
   const listIn = async (storage: string, found: Map<string, Entry>) => {
     await ready(storage);
     for (const file of await fs.readDirectory(root(storage))) {

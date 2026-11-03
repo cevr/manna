@@ -1,29 +1,17 @@
-// A puppet posed at random for a pose reader's training set: each bone's
-// number drawn within its own limits (`limitsOf`, from the puppet's drawn
-// rest), the figure drawn by `rasterOf` at a random scale and place on the
-// reader's canvas, over its paper jittered in tone, then a 1 px blur
-// (`sample`). Each comes with its truth: the numbers, each bone's world
-// angle, each joint's canvas px, and the joints its puppet lacks (`masked`).
-// One seed draws one sample (`mulberry32`): the same seed gives the same
-// bytes. Pure.
-
 import { type Puppet, type PuppetPose, boneTransforms, rasterOf } from './puppet.ts';
 import type { Raster } from './raster.ts';
 
 type Pt = readonly [number, number];
 type Rgb = readonly [number, number, number];
 
-/** The reader's canvas: a 253 × 678 sheet padded 140 px left and right (raised arms reach past the sheet). */
 export const SAMPLE_SIZE: Pt = [533, 678];
 
-/** A drawing to sample: its puppet, the paper it lies on, and the canvas (`SAMPLE_SIZE` unless named). */
 export interface PoseSpec {
   readonly puppet: Puppet;
   readonly paper: Rgb;
   readonly size?: Pt;
 }
 
-/** A sample's truth: where and how large the figure stands, its paper, its numbers, each bone's world angle, each joint's canvas px, and the joints its puppet lacks. */
 interface PoseTruth {
   readonly root: Pt;
   readonly scale: number;
@@ -39,7 +27,6 @@ interface PoseSample {
   readonly truth: PoseTruth;
 }
 
-/** A seeded uniform draw in [0, 1): mulberry32, so one seed gives one sequence on every host. */
 const mulberry32 = (seed: number) => {
   let s = seed | 0;
   return () => {
@@ -50,7 +37,6 @@ const mulberry32 = (seed: number) => {
   };
 };
 
-/** The reader's joints by name: the bone each lies on, at its pivot or its tip. */
 const JOINTS = {
   hip: ['lean', 'pivot'],
   neckBase: ['neck', 'pivot'],
@@ -66,7 +52,6 @@ const JOINTS = {
   handL: ['wristLeft', 'tip'],
 } as const satisfies Readonly<Record<string, readonly [string, 'pivot' | 'tip']>>;
 
-/** Each joint's canvas px at `pose`, for the joints of bones the puppet has: a pivot moves with its parent, a tip with its bone. */
 export const jointsOf = (p: Puppet, pose: PuppetPose) => {
   const m = boneTransforms(p.bones, pose.numbers);
   const idx = new Map(p.bones.map((b, i) => [b.name, i]));
@@ -93,7 +78,6 @@ export const jointsOf = (p: Puppet, pose: PuppetPose) => {
   return out;
 };
 
-/** Each bone's world angle, degrees: its number plus its forebears'. */
 const worldOf = (p: Puppet, numbers: Readonly<Record<string, number>>) => {
   const w: Record<string, number> = {};
   for (const b of p.bones) w[b.name] = (numbers[b.name] ?? 0) + (b.parent ? w[b.parent]! : 0);
@@ -102,21 +86,11 @@ const worldOf = (p: Puppet, numbers: Readonly<Record<string, number>>) => {
 
 const deg = (p: Pt, q: Pt) => (Math.atan2(q[1] - p[1], q[0] - p[0]) * 180) / Math.PI;
 const wrapDeg = (a: number) => ((((a + 180) % 360) + 360) % 360) - 180;
-/** A range widened to hold [-20, 20] (the drawn rest and its neighbours) and capped at ±170. */
 const aroundRest = ([lo, hi]: Pt): Pt => [
   +Math.max(-170, Math.min(lo, -20)).toFixed(1),
   +Math.min(170, Math.max(hi, 20)).toFixed(1),
 ];
 
-/**
- * A puppet's limits, each bone's number range in degrees relative to its
- * drawn rest: lean and neck [-8, 8], head [-15, 15], wrists [-40, 40]. Each
- * arm takes a side by its shoulder pivot's x against the hip's (left of it
- * on screen, or right of it, mirrored): the upper arm's screen angle ranges
- * over [64, 214] on the left and [-34, 116] on the right, the forearm's bend
- * against it over [-150, 10] and [-10, 150]. Each range is made relative to
- * the drawn rest's angle, so a drawing already bent is not bent past it.
- */
 const limitsOf = (p: Puppet) => {
   const by = new Map(p.bones.map((b) => [b.name, b]));
   const hip = by.get('lean')?.pivot ?? p.root;
@@ -138,13 +112,11 @@ const limitsOf = (p: Puppet) => {
 
 type Bone = Puppet['bones'][number];
 
-/** An arm bone's range: its side by its shoulder's pivot against the hip, made relative to its drawn rest. */
 const armLimits = (b: Bone, shoulder: Bone, hip: Pt): Pt => {
   const left = shoulder.pivot[0] < hip[0];
   const a0 = deg(shoulder.pivot, shoulder.tip);
   if (b === shoulder) {
     const [lo, hi] = left ? [64, 214] : [-34, 116];
-    // the rest angle unwrapped next to the range's middle
     const c = wrapDeg(a0 - (lo + hi) / 2) + (lo + hi) / 2;
     return aroundRest([lo - c, hi - c]);
   }
@@ -153,13 +125,11 @@ const armLimits = (b: Bone, shoulder: Bone, hip: Pt): Pt => {
   return aroundRest([lo - f0, hi - f0]);
 };
 
-/** The canvas root of a puppet drawn at `scale` with its sheet's centre at canvas x `cx` and its sheet's bottom at canvas y `bottom`. */
 const placeOf = (p: Puppet, scale: number, cx: number, bottom: number): Pt => [
   cx + scale * (p.root[0] - p.width / 2),
   bottom + scale * (p.root[1] - p.height),
 ];
 
-/** The drawn raster over `paper`, then a 1 px blur (3 × 3 binomial), opaque. */
 const onPaper = (r: Raster, paper: Rgb): Raster => {
   const { width: W, height: H } = r;
   const flat = new Float32Array(W * H * 3);
@@ -186,7 +156,6 @@ const onPaper = (r: Raster, paper: Rgb): Raster => {
   return { width: W, height: H, rgba: out };
 };
 
-/** One sample's place: the scale (the largest that fits the sheet on the canvas, 13 px spare across, times U(0.82, 1)), the root (centred ±15 px, the bottom anywhere it fits) and the paper (tone ±6, each channel ±4). */
 const placed = (spec: PoseSpec, rnd: () => number) => {
   const { puppet: p } = spec;
   const [W, H] = spec.size ?? SAMPLE_SIZE;
@@ -203,7 +172,6 @@ const placed = (spec: PoseSpec, rnd: () => number) => {
   return { scale, root, paper };
 };
 
-/** The frame at a pose and paper: the figure over paper and its truth. */
 const frameOf = (
   spec: PoseSpec,
   numbers: Readonly<Record<string, number>>,
@@ -228,7 +196,6 @@ const frameOf = (
   };
 };
 
-/** A pose drawn uniform within the limits, to three decimals. */
 const keyPose = (p: Puppet, limits: Record<string, Pt>, rnd: () => number) =>
   Object.fromEntries(
     p.bones.map((b) => {
@@ -237,7 +204,6 @@ const keyPose = (p: Puppet, limits: Record<string, Pt>, rnd: () => number) =>
     }),
   );
 
-/** One sample at `seed`: a pose within the limits, at a random scale, place and paper. */
 export const sample = (spec: PoseSpec, seed: number): PoseSample => {
   const rnd = mulberry32(seed);
   const numbers = keyPose(spec.puppet, limitsOf(spec.puppet), rnd);

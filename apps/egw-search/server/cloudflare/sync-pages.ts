@@ -1,55 +1,21 @@
-/**
- * The weekly sync's reports, read on the search's own site.
- *
- * The sync writes each run's report into R2 twice (`./sync-report.ts`): the
- * whole report as Markdown, and its page, which quotes at most a few hundred
- * changes and links the whole for the rest, rendered to HTML once when the
- * run publishes it (`reportPage`). The run's mail links the page. The routes:
- *
- * | Path                  | Answer                                          |
- * | --------------------- | ----------------------------------------------- |
- * | `/sync`, `/sync/`     | every report, newest first                      |
- * | `/sync/<name>`        | one report's page                               |
- * | `/sync/<name>.md`     | one report's whole Markdown, as text            |
- * | `/sync/latest[.md]`   | a redirect to the newest report, either way     |
- *
- * Both files are streamed from R2 as they are stored, so a page costs a read
- * and no rendering however large its run was. A report written before pages
- * were stored is rendered from its Markdown instead. A report never changes
- * once published, so its answers are cached for a day.
- *
- * `manna egw report` reads the `.md` and renders it in a terminal.
- *
- * The report escapes every paragraph's text, so its Markdown carries no HTML
- * of its own; the renderer escapes any that appears anyway.
- */
-
 import { Array as Arr, Effect, Option } from 'effect';
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from 'effect/http';
 import { Marked } from 'marked';
 
-/** A stored file, to send as it is or to read. Consume one or the other. */
 export interface StoredFile {
-  /** The bytes as the platform holds them, handed to the response untouched. */
   readonly body: ReadableStream<Uint8Array> | string;
   readonly text: Effect.Effect<string>;
 }
 
-/** Where the reports are, as the routes read them. */
 export interface ReportStore {
-  /** Every report's name, oldest first. */
   readonly names: Effect.Effect<readonly string[]>;
-  /** The file under an R2 key, when there is one. */
   readonly open: (key: string) => Effect.Effect<Option.Option<StoredFile>>;
 }
 
-/** The R2 key a report's whole Markdown is kept under. */
 export const reportKey = (name: string) => `reports/${name}.md`;
 
-/** The R2 key a report's rendered page is kept under. */
 export const reportPageKey = (name: string) => `pages/${name}.html`;
 
-/** A report's name from its key, for a key that is a report's. */
 export const nameOfKey = (key: string): Option.Option<string> =>
   Option.map(
     Option.fromNullishOr(/^reports\/([0-9TZ]+)\.md$/.exec(key)),
@@ -74,7 +40,6 @@ const markdown = new Marked({
   renderer: { html: ({ text }) => escapeHtml(text) },
 });
 
-/** A name as people read it: `20261018T090012Z` is `2026-10-18 09:00 UTC`. */
 const readableName = (name: string) =>
   name.replace(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})\d*Z$/, '$1-$2-$3 $4:$5 UTC');
 
@@ -129,9 +94,7 @@ const document = (title: string, body: string) => `<!doctype html>
 
 const page = (title: string, body: string) => HttpServerResponse.html(document(title, body));
 
-/** A report kept as it is: cached for a day. */
 const KEPT = { 'cache-control': 'public, max-age=86400' };
-/** What moves with each run: the index, and where `latest` points. */
 const MOVING = { 'cache-control': 'public, max-age=60' };
 
 const notFound = () =>
@@ -151,7 +114,6 @@ const indexPage = (names: readonly string[]) => {
   );
 };
 
-/** A report's page, as HTML: written once, when its run publishes it. */
 export const reportPage = (name: string, markdownText: string): string =>
   document(
     `EGW sync, ${readableName(name)}`,
@@ -162,7 +124,6 @@ export const reportPage = (name: string, markdownText: string): string =>
 const sent = (file: StoredFile, contentType: string) =>
   HttpServerResponse.raw(file.body, { contentType, headers: KEPT });
 
-/** The answer to a path under `/sync/`. */
 export const syncAnswer = Effect.fn('SyncPages.answer')(function* (
   store: ReportStore,
   path: string,
@@ -193,8 +154,6 @@ export const syncAnswer = Effect.fn('SyncPages.answer')(function* (
   );
 });
 
-/** The routes under `/sync`, beside the search's API. The pattern also
- *  matches `/sync` itself, which answers the index. */
 export const syncRoutes = (store: ReportStore) =>
   HttpRouter.add(
     'GET',

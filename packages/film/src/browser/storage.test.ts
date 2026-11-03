@@ -1,18 +1,9 @@
-// A text kept in a store (the microphone, the review's quality and filter):
-// none until one is kept, then the text as it was given, on the next page
-// too, and stored as it is (the bytes the pages always wrote). Storage that
-// throws, or that the page may not use, keeps the text while the page lives.
-// A value kept as JSON is its default until kept, then what was kept, on the
-// next page too; what does not decode is the default; a store that refuses
-// keeps it while the page lives.
-
 import { describe, expect, test } from 'bun:test';
 import { Option, Schema } from 'effect';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
 import { deniedStorage, memoryStorage, refusingStorage } from './fixtures/storage.ts';
 import { keptJson, keptText, storeOver } from './storage.ts';
 
-/** A page over `storage`: its own store and registry, as each page load has. */
 const page = (storage: () => Storage) => {
   const kept = keptText(storeOver(storage), 'film-lab-mic');
   const registry = AtomRegistry.make();
@@ -32,7 +23,6 @@ describe('keptText', () => {
     expect(first.read()).toEqual(Option.some('usb-1'));
     expect(storage.items.get('film-lab-mic')).toBe('usb-1');
     expect(page(() => storage).read()).toEqual(Option.some('usb-1'));
-    // An empty text is kept as one (the microphone's "browser default").
     page(() => storage).keep('');
     expect(storage.items.get('film-lab-mic')).toBe('');
     expect(page(() => storage).read()).toEqual(Option.some(''));

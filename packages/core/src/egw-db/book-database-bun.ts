@@ -1,11 +1,3 @@
-/**
- * Bun-runtime layer constructors for EGWParagraphDatabase.
- *
- * Kept separate from `book-database.ts` so that consumers that bring their own
- * `SqlClient` can import the driver-agnostic core without pulling
- * `@effect/sql-sqlite-bun` (and its `bun:sqlite` import) in.
- */
-
 import * as SqliteBun from '@effect/sql-sqlite-bun/SqliteClient';
 import { Config, Effect, FileSystem, Layer, Path } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
@@ -13,11 +5,6 @@ import type { SqlError } from 'effect/sql/SqlError';
 
 import { EGWParagraphDatabase } from './book-database.js';
 
-/**
- * Convenience layer for Bun runtimes. Resolves the database file from the
- * `EGW_PARAGRAPH_DB` config (default: ~/.bible/egw-paragraphs.db), ensures the
- * containing directory exists, and provides a sqlite-bun SqlClient.
- */
 export const layerBunConfig: Layer.Layer<
   EGWParagraphDatabase,
   SqlError | Config.ConfigError | PlatformError,
@@ -44,17 +31,9 @@ export const layerBunConfig: Layer.Layer<
   ),
 );
 
-/**
- * Convenience layer for Bun runtimes that uses a fixed filename. Skips
- * directory creation — caller is responsible for ensuring the parent exists.
- */
 export const layerBun = (filename: string): Layer.Layer<EGWParagraphDatabase, SqlError> =>
   EGWParagraphDatabase.layerCore.pipe(Layer.provide(SqliteBun.layer({ filename })));
 
-/**
- * Backwards-compatible alias. Resolves the EGW_PARAGRAPH_DB config and
- * provides sqlite-bun. Same dependency surface as the old `Live` layer.
- */
 export const Live: Layer.Layer<
   EGWParagraphDatabase,
   SqlError | Config.ConfigError | PlatformError,

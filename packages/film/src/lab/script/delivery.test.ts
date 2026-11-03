@@ -15,7 +15,6 @@ import {
   stressToggled,
 } from './delivery.ts';
 
-/** A take word said from `start` to `end`. */
 const word = (text: string, start: number, end: number): TakeWord => ({
   text,
   start,
@@ -23,7 +22,6 @@ const word = (text: string, start: number, end: number): TakeWord => ({
   voiced: voicedAt(start, end),
 });
 
-/** A line's delivery marks as the reader reads them; none of a line that does not parse. */
 const deliveryOf = (beat: string, say: string): ReadonlyArray<Mark> =>
   Result.match(parse(beat, say), {
     onFailure: () => [],
@@ -64,7 +62,6 @@ describe('the reader’s delivery marks', () => {
 });
 
 describe('a staging take as the reader plays it', () => {
-  // Two words a second: 120 wpm, under the band.
   const words = [word('Not', 0.1, 0.5), word('by', 0.6, 0.8), word('works.', 0.9, 1.6)];
 
   test('its pace, against the band', () => {

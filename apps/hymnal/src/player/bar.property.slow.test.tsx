@@ -1,58 +1,3 @@
-/**
- * The web position bar under any run of the reader's input, in Chrome's
- * event order, against playback the test moves (`Tick`): a seeded generator
- * of presses (moved and let go, let go where they began, cancelled, their
- * capture lost, the browser's `change` sent or not), and inside a press any
- * of: the eight keys Chrome steps a range with (the arrows, PageUp,
- * PageDown, Home, End), tapped, or held down across other events so that
- * they repeat, their `keyup` coming later or never (the focus moved, and it
- * lands elsewhere); modifier keys tapped; a second pointer that goes down
- * and up, cancels or loses its capture; another mouse button pressed and
- * let go; playback started and halted. Between presses: the same keys, a
- * press of another button with keys and a screen reader's steps inside it,
- * a screen reader's step, and playback's ticks between any two events. A
- * run starts anywhere, and often at either end of the bar, where a key may
- * move nothing.
- *
- * The input state belongs to the run, not to a gesture: a modifier key goes
- * down and comes up as a gesture of its own, between presses and inside
- * them, so a press may open, a key step and a second pointer go down with
- * any modifier held. Pointer ids are Chromium's (measured, playerfix r3
- * review `touchid.log`: a mouse, a touch, a touch, a mouse went down as ids
- * 1, 2, 3, 1): the mouse is 1, and each touch, the press's own or a second
- * one, takes a new id from 2.
- *
- * A press belongs to the pointer that opened it with the main button: it
- * opens at that pointer's `pointerdown` and ends at the first of its
- * `pointerup`, `pointercancel` and `lostpointercapture`. In every run:
- * - a step key's step is sent at once, Chrome's step from where the bar
- *   was, inside a press or outside one, and a screen reader's step outside
- *   one; a key that moves nothing sends nothing, and changes nothing after it;
- * - only the pointer that opened a press ends it: a seek is sent at its
- *   `pointerup` when the value differs from where the bar was as the drag
- *   began, or from the last key's step in that drag, and at no other end;
- * - no step is lost and none is sent twice: the seeks sent are the seeks
- *   owed, in order, after every event;
- * - with no press open, the bar is within 1 s of playback at each tick;
- * - no press stays open: each run ends with a screen reader's step and
- *   three seconds of playback.
- *
- * The test is Chrome where happy-dom is not: a step key's `keydown`, unless
- * the page prevents its default, steps the value (`range_input_type.cc`: an
- * arrow a step, a page key a tenth of the range, Home and End its ends,
- * fitted to the step and the range) and says `input` and `change` when the
- * value moved, nothing when it did not, whatever modifier is down and
- * whether the `keydown` repeats a key held (`repeat: true`); every key and
- * pointer event says the modifiers down then; a range input fits each value
- * written to it to its step (`fitted`), and after a press `change` comes
- * only when the value differs from the one at the last `change` (the
- * press's start, or a key's step in it). Chrome captures the pointer of a
- * press: a touch's capture is let go at its release, a mouse's after the
- * release's `change` (both measured). Chrome moves no thumb while a second
- * touch is down (measured), and another mouse button pressed inside a press
- * is a `pointermove`, as Pointer Events chord buttons.
- */
-
 import { describe, expect, test } from 'effect-bun-test';
 import { Effect, Match, Option, Random } from 'effect';
 import { act } from 'react';
@@ -62,7 +7,6 @@ import { Scrubber } from './Scrubber';
 
 type Pointer = 'mouse' | 'touch';
 
-/** The keys Chrome steps a range input with. */
 const stepKeys = [
   'ArrowLeft',
   'ArrowRight',
@@ -76,52 +20,37 @@ const stepKeys = [
 type StepKey = (typeof stepKeys)[number];
 type Modifier = 'Shift' | 'Alt' | 'Meta' | 'Control';
 
-/** One event of the run, or a tick of playback. */
 type Step =
   | { readonly _tag: 'Tick'; readonly seconds: number }
   | { readonly _tag: 'Play' }
   | { readonly _tag: 'Halt' }
-  /** The press's pointer goes down with the main button, by its id. */
   | { readonly _tag: 'Down'; readonly pointer: Pointer; readonly id: number }
-  /** The thumb to a second, or `back` to where the press's value was at its last `change`. */
   | { readonly _tag: 'Move'; readonly to: number | 'back' }
   | { readonly _tag: 'Up' }
   | { readonly _tag: 'Cancel' }
   | { readonly _tag: 'Lost' }
-  /** The press's pointer lifts after its capture was lost. */
   | { readonly _tag: 'Late' }
-  /** The browser's `change`, if Chrome owes one; `dropped` when this run skips it. */
   | { readonly _tag: 'Change'; readonly dropped: boolean }
-  /** A step key goes down, or repeats while held. */
   | { readonly _tag: 'KeyDown'; readonly key: StepKey }
-  /** A step key comes up on the bar, or `lost` elsewhere (the focus moved). */
   | { readonly _tag: 'KeyUp'; readonly key: StepKey; readonly lost: boolean }
   | { readonly _tag: 'Modifier'; readonly key: Modifier }
-  /** A modifier key goes down and stays down. */
   | { readonly _tag: 'Hold'; readonly key: Modifier }
-  /** A held modifier key comes up. */
   | { readonly _tag: 'Free'; readonly key: Modifier }
-  /** A second pointer, a touch of its own id: down, up, cancelled or its capture lost. */
   | {
       readonly _tag: 'Second';
       readonly phase: 'down' | 'up' | 'cancel' | 'lost';
       readonly id: number;
     }
-  /** Another mouse button inside a mouse press: a `pointermove` that says it. */
   | { readonly _tag: 'Chord'; readonly button: 1 | 2; readonly phase: 'down' | 'up' }
-  /** Another mouse button's own press, with no press open. */
   | { readonly _tag: 'Other'; readonly button: 1 | 2; readonly phase: 'down' | 'up' }
-  /** A screen reader steps the bar: `input` and `change`, with no key. */
   | { readonly _tag: 'Assist' };
 
-/** A run: where playback starts, whether it plays, and the steps. */
 interface Run {
   readonly at: number;
   readonly playing: boolean;
   readonly steps: ReadonlyArray<Step>;
 }
 
-/** A step, in a line of a broken run. */
 const said: (step: Step) => string = Match.type<Step>().pipe(
   Match.tagsExhaustive({
     Tick: ({ seconds }) => `tick ${seconds.toFixed(2)}`,
@@ -150,26 +79,17 @@ const said: (step: Step) => string = Match.type<Step>().pipe(
 
 const modifiers: ReadonlyArray<Modifier> = ['Shift', 'Alt', 'Meta', 'Control'];
 
-/** Hymn 100's length: a fraction past a whole second, as the recording says it. */
 const length = 239.82;
-/** The bar's last second. */
 const top = Math.floor(length);
 
 const valueOf = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
 
-/** A value written to a range input of step 1, as Chrome keeps it: a whole second, inside its range. */
 const fitted = (bar: HTMLInputElement, written: string) => {
   const max = Number(bar.max) || 0;
   const near = Math.round(Math.min(Math.max(Number(written), 0), max));
-  // A step past the top falls back a step.
   return String(Math.min(near, Math.floor(max)));
 };
 
-/**
- * Chrome's range input in this document while the run lasts: React's writes
- * are fitted to the step, as the reader's are. React reads the setter when it
- * mounts the input, so this comes first.
- */
 const chromeRanges = () => {
   Object.defineProperty(HTMLInputElement.prototype, 'value', {
     ...valueOf,
@@ -193,35 +113,26 @@ const chromeRanges = () => {
   };
 };
 
-/** A pointer of the run: its kind, and the id Chromium gave it. */
 interface Held {
   readonly kind: Pointer;
   readonly id: number;
 }
 
-/** Chrome and playback, modelled apart from the bar: the seeks owed, and where playback is. */
 interface Model {
   at: number;
   playing: boolean;
   pressed: Option.Option<Held>;
-  /** The press whose capture was lost: its pointer may still lift. */
   lost: Option.Option<Held>;
-  /** The value at the last `change` while a press moves it (its start, or a key's step), as Chrome keeps it. */
   before: Option.Option<number>;
-  /** A `change` Chrome owes after the press ended. */
   owed: boolean;
-  /** A mouse's capture, let go after the `change` its release owes. */
   held: Option.Option<Held>;
-  /** A second pointer is down: Chrome moves no thumb. */
   second: boolean;
   readonly seeks: Array<number>;
 }
 
-/** Chromium's id for the mouse; each touch takes a new one from `firstTouch`. */
 const mouseId = 1;
 const firstTouch = 2;
 
-/** The web bar at `model`'s playback, in the document until the `using` ends; each seek it sends kept. */
 const mounted = (model: Model) => {
   const host = document.createElement('div');
   document.body.append(host);
@@ -235,7 +146,6 @@ const mounted = (model: Model) => {
           length={Option.some(length)}
           onSeek={(seconds) => {
             sent.push(seconds);
-            // The device lands the seek; the bar hears of it at the next tick.
             model.at = seconds;
           }}
         />,
@@ -258,7 +168,6 @@ const mounted = (model: Model) => {
   };
 };
 
-/** Runs `run` against the web bar; a broken rule is said with the steps up to it. */
 const play = (run: Run): Option.Option<string> => {
   using _chrome = chromeRanges();
   const model: Model = {
@@ -275,7 +184,6 @@ const play = (run: Run): Option.Option<string> => {
   using page = mounted(model);
   const { bar, sent } = page;
   const value = () => Number(bar.value);
-  /** Dispatches `event` on the bar, or on `at`; whether the page left its default to the browser. */
   const fire = (event: Event, at: EventTarget = bar) => {
     let open = true;
     act(() => {
@@ -283,7 +191,6 @@ const play = (run: Run): Option.Option<string> => {
     });
     return open;
   };
-  /** The keys down now: Chrome says a key down again a repeat, and every event says the modifiers down. */
   const down = new Set<string>();
   const modified = () => ({
     shiftKey: down.has('Shift'),
@@ -291,10 +198,6 @@ const play = (run: Run): Option.Option<string> => {
     ctrlKey: down.has('Control'),
     metaKey: down.has('Meta'),
   });
-  /**
-   * A pointer event of `held`. Pointer Events make one pointer of each kind
-   * primary: the mouse, and the first touch down while no other touch is.
-   */
   const pointer = (
     type: string,
     { kind, id }: Held,
@@ -333,30 +236,19 @@ const play = (run: Run): Option.Option<string> => {
       at,
     );
   };
-  /** The browser sets the value and says `input`. */
   const input = (to: number) => {
     valueOf?.set?.call(bar, fitted(bar, String(to)));
     fire(new Event('input', { bubbles: true }));
   };
-  /** A step the reader asked for at once (a key, a screen reader) is owed: sent before the event is over. */
   const owe = (to: number) => {
     model.seeks.push(to);
-    // Inside a drag, Chrome's `change` after the press now compares with this
-    // value. Before the press's first move, the page's own writes (playback)
-    // set the value it compares with, as at a press with no key.
     if (Option.isSome(model.before)) model.before = Option.some(to);
   };
-  /** A step the browser makes: `input`, then `change`. */
   const step = (to: number) => {
     owe(to);
     input(to);
     fire(new Event('change', { bubbles: true }));
   };
-  /**
-   * Where Chrome steps the bar from `from` for `name` (`range_input_type.cc`):
-   * an arrow a step, a page key a tenth of the range (or a step, if more),
-   * Home and End its ends, fitted to the step inside the range.
-   */
   const stepOf = (name: StepKey, from: number) => {
     const max = Number(bar.max) || 0;
     const page = Math.max(1, max / 10);
@@ -373,19 +265,16 @@ const play = (run: Run): Option.Option<string> => {
     );
     return Number(fitted(bar, String(raw)));
   };
-  /** The press's pointer moves the value: Chrome sets it and says `input`, if it changed. */
   const edit = (to: number) => {
     if (model.second || to === value()) return;
     if (Option.isNone(model.before)) model.before = Option.some(value());
     input(to);
   };
-  /** The press ends: Chrome owes a `change` when the value is not the one at its last `change`. */
   const end = () => {
     model.owed = Option.exists(model.before, (before) => before !== value());
     model.pressed = Option.none();
     model.before = Option.none();
   };
-  /** The pointer of the press open now; the mouse with none. */
   const pressing = () => Option.getOrElse(model.pressed, () => mouse);
   const broke = (rule: string, index: number) =>
     Option.some(
@@ -409,9 +298,7 @@ const play = (run: Run): Option.Option<string> => {
       index,
       () => Option.isNone(model.pressed) && Math.abs(value() - model.at) > 1,
     ).pipe(Option.flatMap(() => broke('the bar is off playback with no press open', index)));
-  /** The `buttons` bit of a mouse button other than the main one (Pointer Events: right 2, middle 4). */
   const masks = { 1: 4, 2: 2 } as const;
-  /** Whether a button is held after its phase. */
   const held = { down: 1, up: 0 } as const;
   const events = { down: 'pointerdown', up: 'pointerup' } as const;
   const apply = Match.type<Step>().pipe(
@@ -468,7 +355,6 @@ const play = (run: Run): Option.Option<string> => {
         const to = stepOf(name, value());
         const moves = to !== value();
         if (moves) owe(to);
-        // Chrome steps in the keydown's default action, after the page's handlers.
         if (key('keydown', name) && moves) {
           input(to);
           fire(new Event('change', { bubbles: true }));
@@ -528,11 +414,6 @@ const play = (run: Run): Option.Option<string> => {
   return Option.orElse(seeksHold(run.steps.length - 1), () => follows(run.steps.length - 1));
 };
 
-/**
- * Every run ends with a screen reader's step (a press left open takes it as
- * a drag, unsent) and three seconds of playback (a drag left open holds the
- * bar off it).
- */
 const closing: ReadonlyArray<Step> = [
   { _tag: 'Tick', seconds: 0.25 },
   { _tag: 'Assist' },
@@ -543,7 +424,6 @@ const closing: ReadonlyArray<Step> = [
   { _tag: 'Tick', seconds: 1 },
 ];
 
-/** One of `choices`, each as likely as its weight. */
 const weighted = <A,>(
   choices: readonly [readonly [number, A], ...ReadonlyArray<readonly [number, A]>],
 ) =>
@@ -554,7 +434,6 @@ const weighted = <A,>(
       if (left < weight) return choice;
       left -= weight;
     }
-    // Only a rounding past the last weight comes here.
     return choices[0][1];
   });
 
@@ -565,38 +444,25 @@ const tick = Effect.map(Random.nextBetween(0.05, 0.5), (seconds): Step => ({
   seconds,
 }));
 
-/** Ticks of playback, none to two, between two events. */
 const ticks = Effect.gen(function* () {
   const count = yield* Random.nextIntBetween(0, 2);
   return yield* Effect.forEach(Array.from({ length: count }), () => tick);
 });
 
-/**
- * The run's input state, apart from its gestures: the step key held down,
- * if any (its `keyup` has not come yet), the modifiers held down, and the
- * last touch id Chromium gave.
- */
 interface Keys {
   held: Option.Option<StepKey>;
   readonly modifiers: Set<Modifier>;
   touch: number;
 }
 
-/** A new touch's id: Chromium gives each touch the next one. */
 const touchId = (keys: Keys) => {
   keys.touch += 1;
   return keys.touch;
 };
 
-/** A step key's `keyup`, on the bar or, a time in four, elsewhere (the focus moved). */
 const keyUp = (key: StepKey) =>
   Effect.map(chance(0.25), (lost): Step => ({ _tag: 'KeyUp', key, lost }));
 
-/**
- * A step key: with none held, a tap (down, repeated while held, then up)
- * or a key held down from now on; with one held, a repeat of it or its
- * `keyup`.
- */
 const keyed = (keys: Keys) =>
   Option.match(keys.held, {
     onSome: (key) =>
@@ -618,10 +484,8 @@ const keyed = (keys: Keys) =>
       }),
   });
 
-/** The modifiers not held down now. */
 const free = (keys: Keys) => modifiers.filter((key) => !keys.modifiers.has(key));
 
-/** A modifier not held, tapped; with all four held, nothing. */
 const modifier = (keys: Keys) =>
   Option.match(
     Option.liftPredicate(free(keys), (left) => left.length > 0),
@@ -632,10 +496,6 @@ const modifier = (keys: Keys) =>
     },
   );
 
-/**
- * A modifier goes down and stays down, or one held comes up: the run's own
- * gesture, between presses or inside one.
- */
 const holding = (keys: Keys) =>
   Effect.gen(function* () {
     const down = [...keys.modifiers];
@@ -650,12 +510,6 @@ const holding = (keys: Keys) =>
     return [{ _tag: 'Hold', key }] satisfies Array<Step>;
   });
 
-/**
- * A press of the main button: down (with the run's modifiers held, by the
- * mouse's id or a new touch's), then any of moves, keys, a second pointer,
- * another button, a modifier down or up, playback started or halted; then
- * its end and its `change`.
- */
 const press = (keys: Keys) =>
   Effect.gen(function* () {
     const pointer = yield* Random.choice(['mouse', 'touch'] as const);
@@ -733,7 +587,6 @@ const press = (keys: Keys) =>
     }
     if (Option.isSome(chord)) run.push({ _tag: 'Chord', button: chord.value, phase: 'up' });
     if (moved && (yield* chance(0.35))) run.push({ _tag: 'Move', to: 'back' }, ...(yield* ticks));
-    // A second pointer still down lifts before the first one, or after it.
     const lastLifts = Option.isSome(second) && (yield* chance(0.5));
     const lifts = Option.map(second, (id): Step => ({ _tag: 'Second', phase: 'up', id }));
     if (!lastLifts) run.push(...Option.toArray(lifts));
@@ -745,13 +598,11 @@ const press = (keys: Keys) =>
     run.push(ending);
     if (ending._tag === 'Lost' && (yield* chance(0.5))) run.push({ _tag: 'Late' });
     if (lastLifts) run.push(...Option.toArray(lifts));
-    // The modifiers held stay down past the press: the run lets them up when it will.
     run.push(...(yield* ticks));
     run.push({ _tag: 'Change', dropped: yield* chance(0.2) });
     return run;
   });
 
-/** A press of another mouse button, with keys and a screen reader's steps inside it. */
 const otherPress = (keys: Keys) =>
   Effect.gen(function* () {
     const button = yield* Random.choice([1, 2] as const);
@@ -775,12 +626,10 @@ const otherPress = (keys: Keys) =>
         ...(yield* ticks),
       );
     }
-    // A right button's menu can take the release.
     if (button === 1 || (yield* chance(0.5))) run.push({ _tag: 'Other', button, phase: 'up' });
     return run;
   });
 
-/** One gesture of the run, or a change of playback. */
 const gesture = (keys: Keys) =>
   Effect.gen(function* () {
     const kind = yield* weighted([
@@ -808,11 +657,9 @@ const gesture = (keys: Keys) =>
     );
   });
 
-/** The run seeded by `seed`. */
 const runOf = (seed: number): Run =>
   Effect.runSync(
     Effect.gen(function* () {
-      // At either end of the bar a key may move nothing.
       const at = yield* Effect.flatten(
         weighted([
           [0.5, Random.nextBetween(0, length)],
@@ -827,19 +674,15 @@ const runOf = (seed: number): Run =>
       for (const _ of Array.from({ length: count })) {
         run.push(...(yield* gesture(keys)), ...(yield* ticks));
       }
-      // A key still held comes up, or its `keyup` lands elsewhere, or never comes.
       if (Option.isSome(keys.held) && (yield* chance(0.5))) run.push(yield* keyUp(keys.held.value));
       return { at, playing, steps: [...run, ...closing] };
     }).pipe(Random.withSeed(seed)),
   );
 
-/** How many seeded runs the property tries, in cases of `slice` seeds each. */
 const runs = 400;
 const slice = 10;
 
 describe('the web position bar under any run of input', () => {
-  // Each case its own slice of the seeds: every seed runs, and each case
-  // stays a small share of its timeout while the browser test runs beside it.
   for (const from of Array.from({ length: runs / slice }, (_, i) => i * slice)) {
     test(`keeps its rules over seeded runs ${from} to ${from + slice - 1} of presses, keys, pointers and ticks`, () => {
       const broken = Array.from({ length: slice }, (_, i) => from + i)
@@ -849,7 +692,6 @@ describe('the web position bar under any run of input', () => {
     });
   }
 
-  // Each defect found before, as a fixed run of steps that shows it.
   const drag = (to: ReadonlyArray<number>): Array<Step> =>
     to.map((second): Step => ({ _tag: 'Move', to: second }));
   const playFor = (seconds: number): Array<Step> =>
@@ -857,7 +699,6 @@ describe('the web position bar under any run of input', () => {
       _tag: 'Tick',
       seconds: 0.25,
     }));
-  /** A step key pressed and let go on the bar. */
   const tap = (key: StepKey): Array<Step> => [
     { _tag: 'KeyDown', key },
     { _tag: 'KeyUp', key, lost: false },
@@ -1148,7 +989,6 @@ describe('the web position bar under any run of input', () => {
     expect(play({ at: 30, playing: false, steps: [...steps, ...closing] })).toEqual(Option.none());
   });
 
-  // Each step key inside a drag seeks at once, by its own step.
   for (const key of ['PageUp', 'PageDown', 'Home', 'End'] as const) {
     test(`playerfix r1 M3: ${key} inside a mouse drag at 1:40 seeks at once`, () => {
       expect(

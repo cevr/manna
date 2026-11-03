@@ -1,7 +1,3 @@
-// The lab's film services in memory for the tool tests (`film-services.ts`):
-// a fresh film's runs answered from what a test gives, voices kept here, and
-// the services a test does not call standing in as ones that die if called.
-
 import type { Context, FileSystem, Path } from 'effect';
 import { Effect, Layer, Option, Schema, Sink, Stream } from 'effect';
 import { type ChildProcess, ChildProcessSpawner } from 'effect/process';
@@ -37,7 +33,6 @@ import { Choices } from '../choices.ts';
 import { HttpServerRequest, HttpServerResponse } from 'effect/http';
 import { LabPage } from '../lab-page.ts';
 
-/** `route`'s path filled in: every `:film` naming `film`, every other param and a trailing `*` naming `x`. */
 export const routePath = (route: Route, film: string): string =>
   route.path
     .split('/')
@@ -50,10 +45,6 @@ export const routePath = (route: Route, film: string): string =>
 
 const unusedSource = Effect.die('the scene source is not called here');
 
-/**
- * FreshFilm that answers only the runs a test gives it: any other run dies,
- * naming itself, since no test here spawns the film CLI unless it says so.
- */
 export const freshFilm = (given: Partial<FreshFilmService>) => {
   const unused = (run: string) => () => Effect.die(`no fresh \`film ${run}\` here`);
   return Layer.succeed(
@@ -80,7 +71,6 @@ export const freshFilm = (given: Partial<FreshFilmService>) => {
   );
 };
 
-/** What a command is given on stdin, when it is given a stream. */
 const stdinOf = (
   command: ChildProcess.Command,
 ): Stream.Stream<Uint8Array, PlatformError.PlatformError> => {
@@ -90,12 +80,6 @@ const stdinOf = (
   return Stream.empty;
 };
 
-/**
- * A child process spawner whose every run prints back what it was given on
- * stdin and exits 0: oxfmt that leaves a text as it is. The SourceWriter
- * formats what it writes through oxfmt; over an in-memory film there is no
- * folder to run it from, and the text it formats is not what a test checks.
- */
 export const formatAsIs = Layer.succeed(
   ChildProcessSpawner.ChildProcessSpawner,
   ChildProcessSpawner.make((command) => {
@@ -120,7 +104,6 @@ export const formatAsIs = Layer.succeed(
 
 const isFilmUnknown = Schema.is(FilmUnknown);
 
-/** A failure as a fresh run answers it: a film it cannot find as itself, any other as `ServerFailed`. */
 const freshFailure = (error: { readonly _tag: string; readonly message: string }) => {
   if (isFilmUnknown(error)) return error;
   return ServerFailed.make({ tag: error._tag, reason: error.message });
@@ -128,11 +111,6 @@ const freshFailure = (error: { readonly _tag: string; readonly message: string }
 
 const isKeepRefusal = Schema.is(Schema.Union([TakeMismatch, RecordingInvalid]));
 
-/**
- * `film options list` run in this process over the test's `FilmRepo` and
- * `Takes` (in `context`), for a film whose only points are its voices: each
- * beat's attempts, as `film options list` lists them.
- */
 export const voicesHere = (context: Context.Context<FilmRepo | Takes>) => (film: string) =>
   Effect.gen(function* () {
     const loaded = yield* (yield* FilmRepo).load(film);
@@ -148,13 +126,6 @@ export const voicesHere = (context: Context.Context<FilmRepo | Takes>) => (film:
     return voicePoints(loaded, attempts).map((draft) => withSay(Option.none(), draft));
   }).pipe(Effect.provideContext(context), Effect.orDie);
 
-/**
- * `film options keep-voice` run in this process over the test's `FilmRepo`
- * and `Takes` (in `context`), as the fresh run would over the same files:
- * the attempt kept, `mixing` standing in for its mix (answering whether it
- * mixed), a take it will not keep refused as itself, any other failure as
- * `ServerFailed`.
- */
 export const keepVoiceHere =
   (
     context: Context.Context<FilmRepo | Takes>,
@@ -174,12 +145,6 @@ export const keepVoiceHere =
       }),
     );
 
-/**
- * `freshFilm(given)` whose `film read cue` and `film read sites` run in this
- * process over the test's `FilmRepo` and its folder, as the fresh run would
- * over the same files: a film that does not load fails the run. A test's
- * film is a fresh folder, so this process's imports of it are its files.
- */
 export const freshHere = (given: Partial<FreshFilmService>) =>
   Layer.unwrap(
     Effect.map(
@@ -222,11 +187,6 @@ export const freshHere = (given: Partial<FreshFilmService>) =>
     ),
   );
 
-/**
- * The scenes' source services where a test calls none of their routes (it
- * may still write through a real SourceWriter): the lab's handler serves
- * them too, so they only have to exist.
- */
 export const noScenes = Layer.mergeAll(
   Layer.succeed(
     SceneSources,
@@ -243,10 +203,6 @@ export const noScenes = Layer.mergeAll(
   ),
 );
 
-/**
- * The scene source's services where a test calls none of its routes: the
- * lab's handler serves them too, so they only have to exist.
- */
 export const noWrites = Layer.succeed(
   SourceWriter,
   SourceWriter.of({
@@ -254,28 +210,16 @@ export const noWrites = Layer.succeed(
     around: () => unusedSource,
     undo: () => unusedSource,
     history: () => unusedSource,
-    // Nothing lands through a writer no test calls.
     landings: Effect.succeed([]),
   }),
 );
 
-/** No film's source behind the lab: its scenes and its writer only have to exist. */
 export const noSource = Layer.mergeAll(noScenes, noWrites);
 
-/**
- * A real SourceWriter over a lab in memory (`labInMemory`'s `writes`), oxfmt
- * leaving each text as it is (`formatAsIs`): the studio's edits land in the
- * test's files and step back and on.
- */
 export const writesInMemory = SourceWriter.layer.pipe(Layer.provide(formatAsIs));
 
 const unstaged = Effect.die('the staging takes are not called here');
 
-/**
- * The Script reader's staging takes, and an app with no series drafts, where
- * a test calls none of their routes: the lab's handler serves them too, so
- * they only have to exist.
- */
 export const noStaging = Layer.mergeAll(
   Layer.succeed(
     ScriptVoices,
@@ -305,10 +249,6 @@ export const noStaging = Layer.mergeAll(
   ),
 );
 
-/**
- * The studio's services where a test calls none of its routes: the lab's
- * handler serves the studio too, so they only have to exist.
- */
 export const noStudio = Layer.mergeAll(
   Layer.succeed(
     Takes,
@@ -334,17 +274,11 @@ export const noStudio = Layer.mergeAll(
 
 const unreviewed = (op: string) => Effect.die(`the review is not called here (${op})`);
 
-/**
- * The review's renders where a test calls none of their routes (it may still
- * pick through a real Choices): the lab's handler serves them too, so they
- * only have to exist.
- */
 export const noRenders = Layer.succeed(
   Review,
   Review.of({
     roots: [],
     index: () => unreviewed('index'),
-    // A write tells the review it wrote: with no review there is nothing to drop.
     written: Effect.void,
     pictures: () => unreviewed('pictures'),
     renderVideo: () => unreviewed('renderVideo'),
@@ -356,11 +290,6 @@ export const noRenders = Layer.succeed(
   }),
 );
 
-/**
- * The review's services where a test calls none of its routes (the renders,
- * the choices): the lab's handler serves them too, so they only have to
- * exist.
- */
 export const noReview = Layer.mergeAll(
   noRenders,
   Layer.succeed(
@@ -376,11 +305,6 @@ export const noReview = Layer.mergeAll(
   ),
 );
 
-/**
- * The lab's pages as a test sees them: each answers its path, a wait the
- * build it was asked past, and no page hears a mix; the easel draws nothing
- * (a look fails `LookFailed`), since no browser runs.
- */
 export const echoPages = Layer.mergeAll(
   Layer.succeed(
     LabPage,

@@ -97,7 +97,6 @@ it.scoped(
       for (const folder of [home, `${bin}/data`, cwd])
         yield* fs.makeDirectory(folder, { recursive: true });
       const executable = `${bin}/manna`;
-      // Compile production entry without reading or embedding a developer .env.
       const built = yield* Effect.promise(() =>
         Bun.build({
           entrypoints: [`${root}/packages/cli/src/main.ts`],

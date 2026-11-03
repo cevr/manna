@@ -1,42 +1,3 @@
-// Media files, in-process: how long a file plays, a sound decoded to PCM, PCM
-// written out as WAV or as an AAC `.m4a` (a review's mix), and a film joined
-// from its video segments with its track. mediabunny reads and writes the
-// containers (pure TypeScript); MP3 decodes through mpg123 (WASM), gapless;
-// AAC encodes through FFmpeg's encoder built to WASM
-// (@mediabunny/aac-encoder). Every byte moves through the FileSystem service
-// but a joined film's, which mediabunny writes by position itself, and a
-// container's length, which it reads in place. A render's master is a
-// browser's H.264 (player/encode.ts), and joining only copies its packets,
-// as it does a hardware render's share copy. A software render's share copy
-// is made here after the join, a mediabunny conversion through x264
-// (`x264.ts`); a re-mux copies its packets, reordered frames and all, beside
-// the new track.
-//
-// The review's stills and phone copies of a render are made here too: a
-// still is the frame at a time, decoded by mediabunny and written as a JPEG
-// (`jpeg.ts`); a phone copy is a mediabunny conversion to H.264 at 720p at
-// most (a smaller video keeps its size) through x264 at its own settings
-// (CRF 23 at preset medium, averaging `PHONE_RATE` at most, a key frame
-// every second, on two threads: `media.ts` `PHONE_ENCODE`), its track copied.
-// A card is a picture held over a sound, at those settings: a sound's sheet
-// over its line-up, the clip an ask plays (`sfx ab`). Its picture never
-// moves, so it runs at a frame a second, each frame a key frame (the phone
-// copy's interval): a player shows it wherever it seeks, and the encoder
-// spends nothing on frames that only repeat it.
-//
-// A person's recording comes in whatever a recorder wrote (WAV, FLAC, AIFF,
-// M4A, MP3, or an Ogg a library's preview is) at whatever rate its microphone ran, and loads in-process,
-// sample for sample: mediabunny opens the container and decodes PCM; MP3
-// goes through mpg123 as above; FLAC, AAC (and Opus, Vorbis) and H.264
-// through FFmpeg's own decoders in-process (@mediabunny/server, NodeAV: Bun
-// has no WebCodecs decoder), an AAC's priming dropped as the MP4's edit
-// list says; AIFF, which mediabunny has no reader for, is plain PCM read
-// here (`aiff.ts`). The mixdown to one channel and the rate change are
-// libswresample's (`resample.ts`). A person's take is the film's final
-// voice, so it leaves lossless: a 24-bit FLAC master, libFLAC's
-// (@mediabunny/flac-encoder, WASM), which decodes back sample for sample.
-// Staging takes stay the MP3s ElevenLabs sends.
-
 import { registerAacEncoder } from '@mediabunny/aac-encoder';
 import { registerFlacEncoder } from '@mediabunny/flac-encoder';
 import { registerMediabunnyServer } from '@mediabunny/server';
@@ -101,38 +62,18 @@ import {
   type Timing,
 } from './media.ts';
 
-/**
- * The rate a phone copy of a `seconds`-long video asks x264 for: under
- * `PHONE_RATE` by as much as its buffer could add (x264 spends at most the
- * rate over the video's length and a full buffer), so the copy averages
- * `PHONE_RATE` at most however short it is.
- */
 const phoneRateFor = (seconds: number) =>
   Math.max(1, Math.floor((PHONE_RATE * seconds) / (seconds + PHONE_ENCODE.bufferSeconds)));
 
-/** How long one still may take, and one phone copy. */
 const STILL_LIMIT = Duration.minutes(1);
 const PHONE_LIMIT = Duration.minutes(30);
 
-/** Sound is written this many frames at a time. */
 const WRITE_BLOCK = 65536;
 
-/** The film's track, as AAC, at this many bits a second. */
 const AAC_BITRATE = 192_000;
-/** An AAC packet carries this many frames. */
 const AAC_FRAME = 1024;
-/**
- * The AAC encoder delays its output by one frame of priming yet stamps its
- * first packet 0, so the track would play 23 ms late. Its samples go in that
- * much early instead; the MP4's edit list skips the priming.
- */
 const AAC_PRIMING = 1024;
 
-/**
- * A file read and opened: its bytes, mediabunny's view of them, and what
- * decodes it: mpg123 an MP3, `aiff.ts` an AIFF, mediabunny anything else (a
- * FLAC through FFmpeg's decoder, measured as decoded).
- */
 interface Opened {
   readonly file: string;
   readonly bytes: Uint8Array;
@@ -140,14 +81,12 @@ interface Opened {
   readonly codec: 'mp3' | 'flac' | 'aiff' | 'other';
 }
 
-/** A promise from mediabunny or mpg123, failing as `op` on `file`. */
 const attempt = <A>(op: MediaFailed['op'], file: string, run: () => Promise<A>) =>
   Effect.tryPromise({
     try: run,
     catch: (cause) => MediaFailed.make({ op, file, reason: String(cause) }),
   });
 
-/** A call that may throw, failing as `op` on `file`. */
 const attemptSync = <A>(op: MediaFailed['op'], file: string, run: () => A) =>
   Effect.try({
     try: run,
@@ -163,11 +102,6 @@ const audioTrack = (opened: Opened) =>
       ),
   );
 
-/**
- * An MP3, decoded whole by mpg123 so its encoder delay and padding come off
- * (gapless). mpg123 always hands back two channels; the track says how many
- * are real.
- */
 const decodeMp3 = (opened: Opened, track: InputAudioTrack) =>
   Effect.acquireUseRelease(
     Effect.sync(() => new MPEGDecoder()),
@@ -194,11 +128,6 @@ const decodeMp3 = (opened: Opened, track: InputAudioTrack) =>
     (decoder) => Effect.sync(() => decoder.free()),
   );
 
-/**
- * One block of samples as planar PCM, less any frames before zero (an AAC
- * encoder's priming, which the MP4's edit list skips);
- * the block is closed once copied.
- */
 const planar = (file: string, track: InputAudioTrack, sample: AudioSample) =>
   attemptSync('decode', file, (): Pcm => {
     const early = Math.round(-sample.timestamp * sample.sampleRate);
@@ -214,10 +143,6 @@ const planar = (file: string, track: InputAudioTrack, sample: AudioSample) =>
     };
   }).pipe(Effect.ensuring(Effect.sync(() => sample.close())));
 
-/**
- * Any other sound, block by block: PCM (a WAV) mediabunny decodes itself;
- * AAC, Opus and Vorbis go through @mediabunny/server's FFmpeg decoders.
- */
 const decodeSamples = (opened: Opened, track: InputAudioTrack) =>
   Stream.fromAsyncIterable(new AudioSampleSink(track).samples(), (cause) =>
     MediaFailed.make({ op: 'decode', file: opened.file, reason: String(cause) }),
@@ -244,7 +169,6 @@ const decodeOpened = (opened: Opened) =>
     return yield* decodeSamples(opened, track);
   });
 
-/** `pcm`'s frames `[from, from + frames)` as one sample, `at` seconds in. */
 const block = (pcm: Pcm, from: number, frames: number, at: number) => {
   const data = new Float32Array(frames * pcm.channels.length);
   for (const [c, plane] of pcm.channels.entries())
@@ -258,7 +182,6 @@ const block = (pcm: Pcm, from: number, frames: number, at: number) => {
   });
 };
 
-/** An H.264 description (its SPS and PPS) as hex. */
 const hex = (description: AllowSharedBufferSource) => {
   if (ArrayBuffer.isView(description))
     return new Uint8Array(
@@ -269,7 +192,6 @@ const hex = (description: AllowSharedBufferSource) => {
   return new Uint8Array(description).toHex();
 };
 
-/** What must agree between segments for their packets to play on in one track. */
 const configKey = (config: VideoDecoderConfig) =>
   [
     config.codec,
@@ -277,21 +199,11 @@ const configKey = (config: VideoDecoderConfig) =>
     Option.match(Option.fromNullishOr(config.description), { onNone: () => '', onSome: hex }),
   ].join(' ');
 
-/** `value`, or `op` on `file` failed for want of `what`. */
 const present = <A>(op: MediaFailed['op'], file: string, what: string, value: A) =>
   Effect.fromOption(Option.fromNullishOr(value), () =>
     MediaFailed.make({ op, file, reason: `no ${what}` }),
   );
 
-/**
- * `film` written to its file. mediabunny writes the index into the space
- * reserved at the head (fast start) once the last packet is in, so the file is
- * written by position: `FilePathTarget` holds its own handle on Bun's file
- * system and writes each chunk at its offset, closing the handle when the
- * output finalizes or cancels. (Effect's file handle cannot: under Bun, its
- * `fs.write(fd, data, undefined, undefined, position)` appends.) Segments
- * still come in through `fs`.
- */
 const joinInto = (fs: FileSystem.FileSystem, film: JoinedFilm) =>
   Effect.gen(function* () {
     const { out } = film;
@@ -305,14 +217,6 @@ const joinInto = (fs: FileSystem.FileSystem, film: JoinedFilm) =>
       return { aac, source, written: 0 };
     });
 
-    /**
-     * The track's packets that start before `until` seconds and are not yet
-     * written. Each video packet is preceded by the sound due before it, so
-     * the two reach the muxer side by side: it holds every track's chunks in
-     * memory until all of its tracks have one, and a fast start sizes its
-     * index only then (a track of reordered frames, x264's, with no sound yet
-     * fails there).
-     */
     const soundTo = (until: number) =>
       Option.match(audio, {
         onNone: () => Effect.void,
@@ -332,7 +236,6 @@ const joinInto = (fs: FileSystem.FileSystem, film: JoinedFilm) =>
           }),
       });
 
-    /** One segment's packets, moved to its place, each after the sound due before it; its config's key. */
     const copy = (segment: Segment, first: Option.Option<string>) =>
       Effect.scoped(
         Effect.gen(function* () {
@@ -396,16 +299,9 @@ const joinInto = (fs: FileSystem.FileSystem, film: JoinedFilm) =>
     }).pipe(Effect.onError(() => Effect.ignore(attempt('write', out, () => output.cancel()))));
   });
 
-/** The name a track's encode fails under: it has no file of its own. */
 const TRACK = 'the track';
-/** The name a take's master encodes under, as `takes.ts` names the file it keeps. */
 const TAKE = 'take.flac';
 
-/**
- * `pcm` through the AAC encoder into a muxer that keeps nothing, its packets
- * kept as they come out. The samples go in `AAC_PRIMING` frames early, so the
- * first packet is stamped before zero and the MP4's edit list skips it.
- */
 const encodeTrack = (pcm: Pcm) =>
   Effect.gen(function* () {
     const packets: Array<EncodedPacket> = [];
@@ -442,7 +338,6 @@ const encodeTrack = (pcm: Pcm) =>
     return track;
   });
 
-/** `effect` failed as `op` on `file` once it runs past `limit`. */
 const within = <A>(
   op: MediaFailed['op'],
   file: string,
@@ -455,87 +350,32 @@ const within = <A>(
       Effect.fail(MediaFailed.make({ op, file, reason: `took over ${Duration.format(limit)}` })),
   });
 
-/** `file` opened by mediabunny where it lies (a render is never read whole), until the scope closes. */
 const openInPlace = (file: string) =>
   Effect.acquireRelease(
     Effect.sync(() => new Input({ source: new FilePathSource(file), formats: ALL_FORMATS })),
     (opened) => Effect.sync(() => opened.dispose()),
   );
 
-/** `file`'s video track, failing as `op` when it has none. */
 const videoTrackOf = (op: MediaFailed['op'], file: string, input: Input) =>
   Effect.flatMap(
     attempt(op, file, () => input.getPrimaryVideoTrack()),
     (track) => present(op, file, 'video track', track),
   );
 
-/** The frames a video's frame rate is read from: a few seconds of a film. */
 const RATE_PACKETS = 120;
 
-/** The greatest whole count of ticks both `a` and `b` are whole multiples of. */
 const gcd = (a: number, b: number): number => {
   let [x, y] = [Math.abs(a), Math.abs(b)];
   while (y > 0) [x, y] = [y, x % y];
   return x;
 };
 
-/**
- * The rate frames starting at `ticks` (whole ticks of `1 / resolution` s
- * from the first frame's start, in order) were made at, as far as their
- * times can tell:
- *
- * - their clock is the coarsest step every start is a whole count of (their
- *   greatest common divisor), not the timescale that keeps them: a
- *   millisecond clock's times copied onto a 16000 timescale tell no more
- *   than they did on a 1000 one;
- * - the candidates are the whole rate (30) and its 1000/1001 rate
- *   (30000/1001, NTSC's 29.97) nearest the measured one;
- * - a clock of half a candidate's frame or more cannot tell that rate from
- *   its neighbours: it is the frames' own spacing (an exactly timed file,
- *   whose starts all lie on its frames, at 0.5 or 1.25 fps or with frames
- *   dropped), and a grid of the rate near it could hold the starts by
- *   putting two on one of its frames (1.25 fps on 1 fps's grid), or by
- *   skipping every other frame of its own (0.5 fps on 1 fps's). When either
- *   candidate's frame is that coarse, neither is claimed (the two are a
- *   thousandth apart: a clock that cannot tell one cannot tell them apart):
- *   as measured, below, which is exact for an exactly timed file;
- * - a grid holds the starts only if some two consecutive starts sit on
- *   adjacent lines of it, so a grid that holds them by skipping lines (0.5
- *   fps a tick off its frames on 1 fps's grid, on a clock fine enough to
- *   tell) names no rate;
- * - a candidate is taken when its frame grid puts every start within one
- *   step of its time and the other's does not. Each start is its frame's time put on the
- *   clock, truncated or rounded, so the made rate's offsets from its grid lie
- *   within a step of each other: strictly, unless a time lay halfway between
- *   two ticks and was rounded the other way from another, when they lie a
- *   whole step apart. So a grid holding every start strictly within a step
- *   is taken first; one that needs a start a whole step off, only when no
- *   grid holds them strictly. The frame times alone judge, so a last frame's
- *   own duration (written apart, rounded on its own) names no rate;
- * - else, both fitting (the times cannot tell them apart, as 10 frames on a
- *   millisecond clock cannot) or neither (another rate, or a variable one),
- *   the rate as measured: the frames over their span, in whole ticks, so a
- *   file timed exactly (a frame a whole count of ticks) reads its rate
- *   exactly. Neither is claimed: as measured, every start the times hold is
- *   within a step of its frame either way.
- *
- * None for fewer than two frames, or frames with no span.
- */
 const rateOfTicks = (ticks: ReadonlyArray<number>, resolution: number): Option.Option<number> =>
   Option.map(
     Option.filter(Arr.last(ticks), (span) => ticks.length > 1 && span > 0),
     (span) => {
       const step = Arr.reduce(ticks, 0, gcd);
       const measured = ((ticks.length - 1) * resolution) / span;
-      /**
-       * How far apart `num / den` frames a second's grid puts the starts'
-       * offsets from it, and the step they are judged against, both in ticks
-       * times `num`: whole counts, so a bound is met or not, exactly. A grid
-       * no two consecutive starts sit on adjacent lines of holds them by
-       * skipping lines, so it is no frame grid of theirs: it holds nothing.
-       * The clock tells this grid only while its step is under half the
-       * grid's frame.
-       */
       const spreadOf = (num: number, den: number) => {
         const period = resolution * den;
         const lines = ticks.map((at) => Math.round((at * num) / period));
@@ -559,7 +399,6 @@ const rateOfTicks = (ticks: ReadonlyArray<number>, resolution: number): Option.O
         ],
         (each) => each.rate > 0,
       );
-      /** The one rate whose spread `holds` against its step, if one alone does. */
       const only = (holds: (each: { spread: number; step: number }) => boolean) => {
         const fitting = Arr.filter(spreads, holds);
         return Option.map(
@@ -582,13 +421,7 @@ const rateOfTicks = (ticks: ReadonlyArray<number>, resolution: number): Option.O
     },
   );
 
-/**
- * The start times (s) of the first `RATE_PACKETS` frames of `track`, in
- * presentation order: read on past them while a packet still comes before
- * the latest, as a reordered (B-frame) stream sends one.
- */
 const firstFrameTimes = (file: string, track: InputVideoTrack) => {
-  // From the first packet to the last: no packet bounds the read.
   const unbounded = Option.getOrUndefined(Option.none<EncodedPacket>());
   return Stream.fromAsyncIterable(
     new EncodedPacketSink(track).packets(unbounded, unbounded, { metadataOnly: true }),
@@ -614,11 +447,6 @@ const firstFrameTimes = (file: string, track: InputVideoTrack) => {
   );
 };
 
-/**
- * The frame rate of the video in `input` (`file` opened), as its own frames'
- * times say (`rateOfTicks`, over its first `RATE_PACKETS`). None for a file
- * with no video track, or none readable.
- */
 const frameRateIn = (file: string, input: Input): Effect.Effect<Option.Option<number>> =>
   Effect.gen(function* () {
     const track = yield* videoTrackOf('read', file, input);
@@ -632,18 +460,10 @@ const frameRateIn = (file: string, input: Input): Effect.Effect<Option.Option<nu
     );
   }).pipe(Effect.orElseSucceed(() => Option.none<number>()));
 
-/** An even count of pixels, as H.264's 4:2:0 wants. */
 const even = (n: number) => Math.max(2, Math.round(n / 2) * 2);
 
-/** An even count of pixels no more than `n`. */
 const evenDown = (n: number) => Math.max(2, Math.floor(n / 2) * 2);
 
-/**
- * `video` converted by mediabunny into an MP4 at `out`: its picture decoded,
- * sized by `size` from its own (none: as it is) and encoded again to H.264
- * at the `quality` its length asks (x264, `x264.ts`), its track copied, the
- * index at the head. Cancelled when interrupted.
- */
 const reencode = (
   video: string,
   out: string,
@@ -688,7 +508,6 @@ const reencode = (
     }),
   );
 
-/** The frame `video` shows at `at` seconds, decoded, as a JPEG `width` pixels wide. */
 const frameJpeg = (video: string, at: number, width: number) =>
   Effect.scoped(
     Effect.gen(function* () {
@@ -705,17 +524,12 @@ const frameJpeg = (video: string, at: number, width: number) =>
     }),
   );
 
-/** A picture as x264 takes it: its size (even) and its I420 planes. */
 interface I420 {
   readonly width: number;
   readonly height: number;
   readonly bytes: Uint8Array;
 }
 
-/**
- * `image` as I420 (BT.601, video range), each chroma sample the mean of its
- * 2 × 2 block; an odd last row or column is left out, as I420 halves both.
- */
 const i420Of = (image: Raster): I420 => {
   const width = evenDown(image.width);
   const height = evenDown(image.height);
@@ -745,17 +559,8 @@ const i420Of = (image: Raster): I420 => {
   return { width, height, bytes };
 };
 
-/** A card's frames a second: one, a key frame each at the phone copy's interval. */
 const CARD_FPS = 1;
 
-/**
- * `image` held over `track` (`seconds` long) as an MP4 held in memory, the
- * index at its head: every frame the one picture, `CARD_FPS` a second and the
- * last held for what the sound has left, through x264 at the phone copy's
- * settings (a bitrate asks for them: `x264.ts`); the track's packets beside
- * it. The muxer holds every chunk until it finishes, so the track goes in
- * whole before the picture.
- */
 const cardFile = (file: string, image: Raster, track: AacTrack, seconds: number) =>
   Effect.gen(function* () {
     const picture = i420Of(image);
@@ -766,11 +571,9 @@ const cardFile = (file: string, image: Raster, track: AacTrack, seconds: number)
       bitrate: phoneRateFor(seconds),
       keyFrameInterval: PHONE_ENCODE.keyEvery,
     });
-    // No rate on the track: mediabunny would snap the last frame's length to it.
     output.addVideoTrack(video);
     const audio = new EncodedAudioPacketSource('aac');
     output.addAudioTrack(audio);
-    // The last frame lasts as long as the sound has left, so the picture ends with it.
     const heldFor = (n: number) => {
       const left = seconds - n / CARD_FPS;
       if (left > 0 && left < 1 / CARD_FPS) return left;
@@ -807,11 +610,6 @@ const cardFile = (file: string, image: Raster, track: AacTrack, seconds: number)
     );
   });
 
-/**
- * `pcm` as an AAC track in an MP4 held in memory: the encoder's packets
- * muxed with the index at the head (fast start), so a phone plays it as it
- * streams.
- */
 const aacFile = (file: string, track: AacTrack) =>
   Effect.gen(function* () {
     const target = new BufferTarget();
@@ -834,20 +632,10 @@ const aacFile = (file: string, track: AacTrack) =>
     );
   });
 
-/** The media service in-process, its coders registered as it is built. */
 export const layer = Layer.effect(
   Media,
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
-    // Bun has no AAC of its own; this one is mediabunny's to use from here on.
-    // It encodes in a worker thread, which listens on `worker_threads` under
-    // Bun (mediabunny 1.61.0 and later).
-    // So is libFLAC's, for a take's master, in its own worker the same way.
-    // mediabunny takes the first coder registered that can: these two come
-    // before @mediabunny/server's FFmpeg ones, which are here for the
-    // decoders Bun lacks (AAC, Opus, Vorbis, H.264) and the scaling a phone
-    // copy needs; H.264 encodes through x264 (`x264.ts`), registered first
-    // too. No hardware context: nothing here asks the GPU.
     yield* Effect.sync(() => {
       registerAacEncoder();
       registerFlacEncoder();
@@ -856,7 +644,6 @@ export const layer = Layer.effect(
       registerMediabunnyServer({ hardwareContext: null });
     });
 
-    /** `file` read and open until the scope closes. */
     const open = (file: string) =>
       Effect.gen(function* () {
         const bytes = yield* fs
@@ -870,13 +657,11 @@ export const layer = Layer.effect(
           Effect.sync(() => new Input({ source: new BufferSource(bytes), formats: ALL_FORMATS })),
           (opened) => Effect.sync(() => opened.dispose()),
         );
-        // mediabunny has no AIFF reader: one is read by `aiff.ts`, the Input left unread.
         if (isAiff(bytes)) {
           const aiff: Opened = { file, bytes, input, codec: 'aiff' };
           return aiff;
         }
         const format = yield* attempt('read', file, () => input.getFormat());
-        // By identity: mediabunny's formats are singletons (a Match pattern would compare fields).
         const codec = Match.value(format).pipe(
           Match.when(
             (f) => f === MP3,
@@ -892,13 +677,6 @@ export const layer = Layer.effect(
         return opened;
       });
 
-    /**
-     * `file`'s length by its container's index, read in place on the disk
-     * by mediabunny (a render of hundreds of megabytes is never read whole).
-     * None for an MP3 or a FLAC, whose length is what they decode to, and
-     * for a file it cannot open there (an AIFF, or a file on a test's
-     * in-memory disk): those are read through `fs` as before.
-     */
     const indexedTiming = (file: string) =>
       Effect.scoped(
         Effect.gen(function* () {
@@ -985,7 +763,6 @@ export const layer = Layer.effect(
         );
     });
 
-    /** The video packets `file` holds, counted by mediabunny in place on the disk. */
     const videoPackets = (file: string) =>
       Effect.scoped(
         Effect.gen(function* () {
@@ -995,7 +772,6 @@ export const layer = Layer.effect(
         }),
       );
 
-    /** `file` written whole by `write` (`writeWhole`); a failure is the file's `MediaFailed`. */
     const mediaWhole = <E extends { readonly message: string }>(
       file: string,
       write: (partial: string) => Effect.Effect<void, E | MediaFailed>,
@@ -1009,7 +785,6 @@ export const layer = Layer.effect(
         ),
       );
 
-    // A failed or interrupted join leaves the file that was there before.
     const join = Effect.fn('Media.join')(function* (film: JoinedFilm) {
       yield* mediaWhole(film.out, (partial) => joinInto(fs, { ...film, out: partial }));
     });
@@ -1058,8 +833,6 @@ export const layer = Layer.effect(
     });
 
     const phoneCopy = Effect.fn('Media.phoneCopy')(function* (video: string, out: string) {
-      // A video no taller than the copy keeps its size, made even by a line
-      // at most: a copy never scales up.
       const { height } = PHONE_ENCODE;
       const phone = reencode(
         video,
@@ -1102,7 +875,6 @@ export const layer = Layer.effect(
 
     const load = Effect.fn('Media.load')(function* (file: string, rate: number) {
       const recording = yield* decode(file);
-      // One channel at the rate already: nothing to convert.
       if (recording.channels.length === 1 && recording.rate === rate) return recording;
       return yield* resample(file, recording, rate, 1);
     });
@@ -1110,8 +882,6 @@ export const layer = Layer.effect(
     const encodeFlac = Effect.fn('Media.encodeFlac')(function* (pcm: Pcm) {
       const target = new BufferTarget();
       const output = new Output({ format: new FlacOutputFormat(), target });
-      // Float in, 24 bits out (libFLAC's depth for float samples): the one
-      // quantisation, 144 dB down, needs no dither.
       const source = new AudioSampleSource({ codec: 'flac' });
       output.addAudioTrack(source);
       yield* Effect.gen(function* () {

@@ -11,10 +11,8 @@ import { STYLE } from './style.js';
 
 const test = it.scopedLive.layer(BunServices.layer);
 
-/** An MP3's stand-in: the run only hashes it when the record stands. */
 const MP3 = new TextEncoder().encode('not audio');
 
-/** A set in a fresh folder under `config`, whose sampler is not there: a hymn that renders fails. */
 const setOf = (config: string, transpose = 0) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -50,7 +48,6 @@ const midiSha = (hymn: number) =>
     return sha256Hex(yield* fs.readFile(file));
   });
 
-/** Hymn 168's record and stand-in MP3 in `setup.out`, under `config`, changed by `change`. */
 const put = (
   setup: Setup,
   config: string,
@@ -65,7 +62,6 @@ const put = (
       sha256: change.sha256 ?? sha256Hex(MP3),
       rss: { ...RECORD_168.rss, render: change.render ?? RECORD_168.rss.render },
     };
-    // The memory check as a run under another cap recorded it.
     if (change.limit !== undefined)
       record.checks = {
         ...record.checks,

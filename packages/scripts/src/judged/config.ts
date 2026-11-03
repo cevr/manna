@@ -1,9 +1,3 @@
-// The judged rules as the repo's lint config writes them: each
-// `judged/<id>` entry of `.oxlintrc.json`'s `rules` that is not `off`, its
-// options decoded as a rule (`rule.ts`), with `settings.judged` and the
-// config's ignore patterns. The config is the rules' one source: the oxlint
-// plugin reads the same entries as its options.
-
 import { JSONC } from 'bun';
 import { Context, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
 
@@ -15,7 +9,6 @@ const PREFIX = 'judged/';
 
 const Severity = Schema.Literals(['off', 'warn', 'error']);
 
-/** An entry of the config's `rules`: a severity, or a severity and its options. */
 const Entry = Schema.Union([Severity, Schema.Array(Schema.Unknown)]);
 
 const LintConfig = Schema.Struct({
@@ -24,10 +17,8 @@ const LintConfig = Schema.Struct({
   rules: Schema.optional(Schema.Record(Schema.String, Entry)),
 });
 
-/** An entry with options: `[severity, options]`. */
 const WithOptions = Schema.Tuple([Severity, RuleOptions]);
 
-/** The repo's lint config is not JSONC, or a judged entry, or its settings, is not the shape it reads. */
 class LintConfigUnreadable extends Schema.TaggedError<LintConfigUnreadable>()(
   'LintConfigUnreadable',
   { file: Schema.String, detail: Schema.String },
@@ -37,14 +28,12 @@ class LintConfigUnreadable extends Schema.TaggedError<LintConfigUnreadable>()(
   }
 }
 
-/** What a run reads of the lint config. */
 interface JudgedConfig {
   readonly ignorePatterns: ReadonlyArray<string>;
   readonly settings: Settings;
   readonly rules: ReadonlyArray<JudgedRule>;
 }
 
-/** The judged rule an entry `judged/<id>` declares: none when it is `off`. */
 const ruleOf = (file: string, name: string, entry: typeof Entry.Type) => {
   const id = name.slice(PREFIX.length);
   if (entry === 'off') return Effect.succeed(Option.none<JudgedRule>());
@@ -64,7 +53,6 @@ const ruleOf = (file: string, name: string, entry: typeof Entry.Type) => {
   );
 };
 
-/** The lint config's text, read as the judged lint reads it. */
 const readJudgedConfig = Effect.fn('judged.readConfig')(function* (file: string, text: string) {
   const config = yield* Effect.try({
     try: () => JSONC.parse(text),
@@ -95,7 +83,6 @@ const readJudgedConfig = Effect.fn('judged.readConfig')(function* (file: string,
   return judged;
 });
 
-/** The judged rules of the repo at `root`, from its `.oxlintrc.json`. */
 const judgedConfig = Effect.fn('judged.config')(function* (root: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -105,13 +92,11 @@ const judgedConfig = Effect.fn('judged.config')(function* (root: string) {
   );
 });
 
-/** The repo the judged lint runs in: its root, and its lint config's judged rules. */
 export class JudgedLint extends Context.Service<
   JudgedLint,
   JudgedConfig & { readonly root: string }
 >()('judged/JudgedLint') {}
 
-/** The judged lint of the repo at `cwd`. */
 export const judgedLintLayer = (cwd: string) =>
   Layer.effect(JudgedLint)(
     Effect.gen(function* () {

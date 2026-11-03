@@ -8,7 +8,6 @@ import { type Clock, type Laying, secondsAt, timingOf } from './timing.js';
 
 const fit = { notes: 2, syllables: 2, melismas: 0, shared: { inWord: 0, acrossWords: 0 }, cost: 0 };
 
-/** A sung part, one line per count, each of that many syllables. */
 const sungPart = (...counts: [number, ...number[]]): Part => {
   const line = (count: number) => {
     const syllables = Array.from({ length: count }, (_, word) => ({
@@ -44,10 +43,8 @@ const hymnOf = (stanzas: readonly Part[], refrain?: { order: Order; part: Part }
   refrain,
 });
 
-// 96 ticks a beat, so a tick is one unit of the timing.
 const clock: Clock = { ticksPerBeat: 96, tempos: [], lastTick: 320 };
 
-/** Verse v's span, [100 + 100v, 200 + 100v): a stanza line at its start, a refrain line at +50. */
 const verse = (v: number, extra: Partial<Laying> = {}): Laying => ({
   span: { start: 100 + 100 * v, end: 200 + 100 * v },
   stanza: 1,
@@ -93,7 +90,6 @@ describe('timingOf', () => {
         played: false,
         even: false,
       });
-      // An intro shorter than the refrain: even shares from the file's start.
       const short = [
         verse(0, {
           span: { start: 30, end: 200 },
@@ -197,8 +193,6 @@ describe('timingOf', () => {
     'keeps the file’s seconds at every tempo time when the tempo events lie off the grid',
     () =>
       Effect.sync(() => {
-        // 400 clocks from a fixed seed: resolutions on and off the grid, tempo
-        // events at any tick, fermata-slow tempos among them.
         let seed = 254;
         const next = (below: number) => {
           seed = (seed * 1_103_515_245 + 12_345) % 2_147_483_648;
@@ -236,8 +230,6 @@ describe('timingOf', () => {
           };
           for (const [time] of timing.tempos)
             expect(Math.abs(seconds(time) - file((time * ticksPerBeat) / 96))).toBeLessThan(1e-5);
-          // The end lies within half a grid step of the file's end: at most a
-          // half step at the slowest tempo, 8 000 000 µs / 96 / 2 ≈ 42 ms.
           expect(Math.abs(seconds(timing.end) - file(at.lastTick))).toBeLessThan(0.042);
         }
       }),
@@ -259,7 +251,6 @@ describe('secondsAt', () => {
   );
 });
 
-/** Why a committed hymn's timing breaks the rules, or nothing. */
 const faults = (hymn: Hymn): string[] => {
   const timing = hymn.timing;
   if (timing === undefined) return ['no timing'];
@@ -286,7 +277,6 @@ const faults = (hymn: Hymn): string[] => {
       if (time.syllables.length !== count)
         out.push(`${at}: ${time.syllables.length} syllables for ${count}`);
     } else if (!time.even || time.syllables.length > 0) out.push(`${at}: a Plain line not even`);
-    // The sung file plays every line but a refrain sung before any stanza.
     const unplayed = line.verse === 'refrain' && stanza === 0;
     if (unplayed && time.played) out.push(`${at}: played, though the file does not play it`);
     if (!unplayed && !time.played) out.push(`${at}: not played, though the sung file plays it`);

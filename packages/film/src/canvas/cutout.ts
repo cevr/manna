@@ -1,7 +1,3 @@
-// Cut paper. A cutout is a coloured sheet with a torn edge, a rim of the white
-// paper core showing where it tore, pastel grain on its face, and a soft
-// shadow where it lifts off the sheet beneath.
-
 import { type Vec2, vec2 } from 'math';
 import { type Boil, type Hand, type Path, type Pt, boilPhase, resample } from './ink.ts';
 import { offscreen, patternOf } from './paper.ts';
@@ -10,17 +6,12 @@ import { hash2, noise1, rng } from '../core/random.ts';
 
 interface CutoutStyle {
   color: string;
-  /** Torn-edge roughness in px; 0 cuts clean like scissors. */
   torn?: number;
-  /** Width of the white torn rim in px; 0 for none. */
   rim?: number;
   rimColor?: string;
-  /** Shadow strength 0..1. */
   shadow?: number;
-  /** Pastel grain strength 0..1. */
   grain?: number;
   alpha?: number;
-  /** How the torn edge boils (`ink.ts`, `Boil`): `tick` by default; a figure's `crawl`, scenery's `none`. */
   boil?: Boil;
 }
 
@@ -28,11 +19,6 @@ const PAPER_CORE = '#fbf6ea';
 
 const heights = new WeakMap<CanvasRenderingContext2D, number>();
 
-/**
- * Draw with every cutout's shadow cast from `height` times its usual height
- * above the sheet beneath: a longer, softer, fainter shadow, as a layer
- * nearer the camera casts on the one behind it. Heights nest by multiplying.
- */
 export const raised = (ctx: CanvasRenderingContext2D, height: number, draw: () => void) => {
   const before = heights.get(ctx);
   heights.set(ctx, (before ?? 1) * height);
@@ -44,22 +30,17 @@ export const raised = (ctx: CanvasRenderingContext2D, height: number, draw: () =
   }
 };
 
-/** The height every cutout drawn now casts its shadow from, as `raised` set it: 1 on the sheet itself. */
 export const heightOf = (ctx: CanvasRenderingContext2D) => heights.get(ctx) ?? 1;
 
-/** Scratch for the outward normal at each point, written and read within one step. */
 const normal: Vec2 = [0, 0];
 
-/** How far a boil tick moves a torn edge's whisper of boil, in noise phase. */
 const TEAR_TICK_PHASE = 0.9;
 
-/** Push a closed outline outward by `amount` plus torn noise, its boil at `phase`. */
 const tear = (shape: Path, amount: number, rough: number, seed: number, phase: number): Pt[] => {
   const closed = [...shape, shape[0] ?? [0, 0]];
   const pts = resample(closed, 3);
   const n = pts.length;
   if (n < 3) return pts;
-  // Winding decides which normal points out.
   let area = 0;
   for (let i = 0; i < n - 1; i++) {
     const a = pts[i] ?? [0, 0];
@@ -79,7 +60,6 @@ const tear = (shape: Path, amount: number, rough: number, seed: number, phase: n
     vec2.normalize(normal, normal);
     const nx = normal[0] * out;
     const ny = normal[1] * out;
-    // Torn fibre: coarse wander + fine tooth, and a whisper of boil.
     const d =
       amount +
       rough * (0.65 * noise1(s * 0.035, seed) + 0.35 * (hash2(i, seed) * 2 - 1)) +
@@ -97,7 +77,6 @@ const trace = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>) => {
 
 let pastel: HTMLCanvasElement | undefined;
 
-/** Directional crayon streaks, light and dark, on a transparent tile. */
 const pastelTile = (): HTMLCanvasElement => {
   if (pastel !== undefined) return pastel;
   const { c, ctx } = offscreen(320, 320);
@@ -120,24 +99,15 @@ const pastelTile = (): HTMLCanvasElement => {
   return c;
 };
 
-/** A cutout face's colour and pastel pre-blended: the tile soft-lit over the flat colour. */
 interface Face {
   readonly tile: HTMLCanvasElement;
-  /** The colour covers the tile fully, so the face can be one opaque fill. */
   readonly opaque: boolean;
 }
 
-/** How many pre-blended faces stay built before the memo starts over. */
 const FACES = 128;
 const faces = new Map<string, Map<number, Face>>();
 let faceCount = 0;
 
-/**
- * The pastel tile soft-lit over flat `color` at strength `grain`: what the
- * face shows where today's clip-and-soft-light draw lands on an opaque face.
- * Built once per (colour, grain) and memoised; the tile is a function of its
- * key alone, so the memo never changes a pixel, only how often it is built.
- */
 const faceOf = (color: string, grain: number): Face => {
   const have = faces.get(color)?.get(grain);
   if (have !== undefined) return have;
@@ -160,7 +130,6 @@ const faceOf = (color: string, grain: number): Face => {
   return face;
 };
 
-/** The canvas state a face is drawn under, as far as pre-blending depends on it. */
 export type FaceState = Pick<
   CanvasRenderingContext2D,
   | 'globalAlpha'
@@ -172,30 +141,19 @@ export type FaceState = Pick<
   | 'shadowOffsetY'
 >;
 
-/** The shadow a fill casts under this state draws nothing. */
 const shadowless = (s: FaceState) =>
   s.shadowColor === 'rgba(0, 0, 0, 0)' ||
   s.shadowColor === 'transparent' ||
   (s.shadowBlur === 0 && s.shadowOffsetX === 0 && s.shadowOffsetY === 0);
 
-/**
- * A face can take its pastel pre-blended (one fill of the blended tile)
- * only where that lands the same pixels as filling the colour and then
- * soft-lighting the pastel over it: drawn opaque, source-over, unfiltered and
- * casting no shadow. Anything else (a faded or composited cutout, a blurred
- * plane, a caller's shadow) keeps the two-pass draw, as does a face the
- * transform magnifies (`magnifies`).
- */
 export const preblends = (s: FaceState): boolean =>
   s.globalAlpha === 1 &&
   s.globalCompositeOperation === 'source-over' &&
   s.filter === 'none' &&
   shadowless(s);
 
-/** The linear part of a canvas transform: what scales, squashes and turns a face. */
 type Linear = Pick<DOMMatrixReadOnly, 'a' | 'b' | 'c' | 'd'>;
 
-/** How far `m` stretches a face at most, along any direction: its larger singular value. */
 export const stretchOf = (m: Linear): number => {
   const p = m.a * m.a + m.b * m.b;
   const q = m.c * m.c + m.d * m.d;
@@ -203,33 +161,18 @@ export const stretchOf = (m: Linear): number => {
   return Math.sqrt((p + q) / 2 + Math.sqrt(((p - q) / 2) ** 2 + r * r));
 };
 
-/** The most a face may be stretched and still take its pastel pre-blended. */
 const PREBLEND_STRETCH = 1.05;
 
-/**
- * `m` magnifies a face past what pre-blending holds to. A magnified pre-blended
- * tile resamples the blend, where the look soft-lights the resampled pastel;
- * soft-light is not linear, so a camera push to 1.4 or a squash landing drifts
- * up to 11/255 from the look. Turned, shifted or pulled-back faces stay within
- * 8-bit rounding (`cutout.pixel.test.ts`).
- */
 export const magnifies = (m: Linear): boolean => stretchOf(m) > PREBLEND_STRETCH;
 
-/** Scratch for a face pattern's placement, written before each fill. */
 const PLACED = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
 
-/**
- * Where a face's pastel sits: shifted by the hand's seed, so neighbours never
- * line up. The context keeps one pattern per tile (`patternOf`), placed here
- * before every fill.
- */
 const pastelAt = (pattern: CanvasPattern, hand: Hand) => {
   PLACED.e = hand.seed % 320;
   PLACED.f = (hand.seed >> 8) % 320;
   pattern.setTransform(PLACED);
 };
 
-/** The face in one fill of its pre-blended tile; false when this face cannot take it. */
 export const blendedFace = (
   ctx: CanvasRenderingContext2D,
   face: ReadonlyArray<Pt>,
@@ -249,10 +192,6 @@ export const blendedFace = (
   return true;
 };
 
-/**
- * The face as a flat fill with the pastel soft-lit over it, clipped to the
- * face: the look itself, which `blendedFace` must match wherever it draws.
- */
 export const layeredFace = (
   ctx: CanvasRenderingContext2D,
   face: ReadonlyArray<Pt>,
@@ -278,7 +217,6 @@ export const layeredFace = (
   ctx.restore();
 };
 
-/** Draw a torn-paper cutout of `shape`. */
 export const cutout = (
   ctx: CanvasRenderingContext2D,
   shape: Path,
@@ -293,7 +231,6 @@ export const cutout = (
   ctx.save();
   ctx.globalAlpha *= style.alpha ?? 1;
 
-  // Rim (the white core where the sheet tore), carrying the shadow.
   const lift = style.shadow ?? 0.5;
   const under = rim > 0 ? tear(shape, rim, torn * 1.3, hand.seed + 17, phase) : face;
   if (lift > 0) {
@@ -313,7 +250,6 @@ export const cutout = (
     ctx.fill();
   }
 
-  // Face, with its pastel grain.
   const grain = style.grain ?? 0.6;
   if (!blendedFace(ctx, face, style, grain, hand)) layeredFace(ctx, face, style, grain, hand);
   const probe = probeOf(ctx);
@@ -326,12 +262,10 @@ export interface Place {
   y: number;
   rot?: number;
   scale?: number;
-  /** Non-uniform squash, for springy landings. */
   sx?: number;
   sy?: number;
 }
 
-/** Draw in a local frame placed at (x, y), rotated and scaled about it. */
 export const at = (ctx: CanvasRenderingContext2D, p: Place, draw: () => void) => {
   ctx.save();
   ctx.translate(p.x, p.y);

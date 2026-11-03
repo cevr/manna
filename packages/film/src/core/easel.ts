@@ -1,28 +1,17 @@
-// The easel's words, shared by the page, the lab and the CLI: where a look is
-// taken in a scene (seconds into it, `mark:<name>`, `cue:<name>[@<share>]`),
-// how it is shown (a crop at 1:1, a long side, the value or squint view), and
-// what the lab answers. A look is one still of the scene as its sources stand,
-// drawn by a page the lab holds warm (`tools/easel.ts`): no render. Pure.
-
 import { Array as Arr, Match, Option, Order, Result, Schema } from 'effect';
 import { MAIN_VARIANT, RenderVariantName } from './catalogue.ts';
 import type { Placed } from './layout.ts';
 import { framesOf, secondsAt } from './time.ts';
 
-/** A scene's clock as a look reads it: where it sits in the film, and its marks and cues in scene-local seconds. */
 export const SceneTimes = Schema.Struct({
   id: Schema.String,
-  /** Film seconds it starts at. */
   start: Schema.Finite,
   dur: Schema.Finite,
-  /** Each mark's word, heard at this many seconds into the scene. */
   marks: Schema.Record(Schema.String, Schema.Finite),
-  /** Each named cue's span, in seconds into the scene. */
   cues: Schema.Record(Schema.String, Schema.Struct({ start: Schema.Finite, end: Schema.Finite })),
 });
 export type SceneTimes = typeof SceneTimes.Type;
 
-/** A placed scene's clock (`SceneTimes`): what the page hands the lab, and the judge reads in its own process. */
 export const sceneTimesOf = (p: Placed): SceneTimes => ({
   id: p.spec.id,
   start: p.start,
@@ -31,12 +20,6 @@ export const sceneTimesOf = (p: Placed): SceneTimes => ({
   cues: Object.fromEntries([...p.cues].map(([name, c]) => [name, { start: c.start, end: c.end }])),
 });
 
-// ---------------------------------------------------------------------------
-// What a look refuses, each its own class (a tool reads the tag): the request
-// unreadable, a mark or cue the scene lacks, seconds past its end, the pages
-// not built, the page failing, and a lab that serves another checkout.
-
-/** A look asked in words the lab cannot read: a place, a crop. */
 export class LookInvalid extends Schema.TaggedError<LookInvalid>()('LookInvalid', {
   reason: Schema.String,
 }) {
@@ -45,7 +28,6 @@ export class LookInvalid extends Schema.TaggedError<LookInvalid>()('LookInvalid'
   }
 }
 
-/** A mark or cue the scene does not have: named with the ones it has. */
 export class LookPlaceUnknown extends Schema.TaggedError<LookPlaceUnknown>()('LookPlaceUnknown', {
   scene: Schema.String,
   kind: Schema.Literals(['mark', 'cue']),
@@ -57,7 +39,6 @@ export class LookPlaceUnknown extends Schema.TaggedError<LookPlaceUnknown>()('Lo
   }
 }
 
-/** Seconds past the scene's end. */
 export class LookOutOfRange extends Schema.TaggedError<LookOutOfRange>()('LookOutOfRange', {
   scene: Schema.String,
   seconds: Schema.Finite,
@@ -68,7 +49,6 @@ export class LookOutOfRange extends Schema.TaggedError<LookOutOfRange>()('LookOu
   }
 }
 
-/** The lab's pages did not build: the bundler's words, and no still. */
 export class PagesBroken extends Schema.TaggedError<PagesBroken>()('PagesBroken', {
   reason: Schema.String,
 }) {
@@ -77,7 +57,6 @@ export class PagesBroken extends Schema.TaggedError<PagesBroken>()('PagesBroken'
   }
 }
 
-/** The page could not draw the look: the scene threw, the page crashed or did not load. */
 export class LookFailed extends Schema.TaggedError<LookFailed>()('LookFailed', {
   reason: Schema.String,
 }) {
@@ -86,7 +65,6 @@ export class LookFailed extends Schema.TaggedError<LookFailed>()('LookFailed', {
   }
 }
 
-/** A lab serving another checkout's films than the asker edits. */
 export class LabElsewhere extends Schema.TaggedError<LabElsewhere>()('LabElsewhere', {
   lab: Schema.String,
   here: Schema.String,
@@ -96,7 +74,6 @@ export class LabElsewhere extends Schema.TaggedError<LabElsewhere>()('LabElsewhe
   }
 }
 
-/** No lab answered the look at `url`, or it answered something else than a look. */
 export class LabDown extends Schema.TaggedError<LabDown>()('LabDown', {
   url: Schema.String,
   reason: Schema.String,
@@ -106,11 +83,6 @@ export class LabDown extends Schema.TaggedError<LabDown>()('LabDown', {
   }
 }
 
-/**
- * A tool's failure that no other tag names (a file it could not read, a
- * film that would not load), as the tool prints it: the tag it failed with,
- * and its words.
- */
 export class ToolFailed extends Schema.TaggedError<ToolFailed>()('ToolFailed', {
   failed: Schema.String,
   reason: Schema.String,
@@ -120,7 +92,6 @@ export class ToolFailed extends Schema.TaggedError<ToolFailed>()('ToolFailed', {
   }
 }
 
-/** A wedge naming a look `palette.ts` does not declare, or a level its look lacks. */
 export class LookLevelUnknown extends Schema.TaggedError<LookLevelUnknown>()('LookLevelUnknown', {
   look: Schema.String,
   level: Schema.String,
@@ -134,10 +105,8 @@ export class LookLevelUnknown extends Schema.TaggedError<LookLevelUnknown>()('Lo
   }
 }
 
-/** Why a place names no frame of a scene. */
 export type PlaceError = LookInvalid | LookPlaceUnknown | LookOutOfRange;
 
-/** Where in a scene a look is taken, as written: seconds, a mark, or a share of a cue (0 its start). */
 type LookAt =
   | { readonly _tag: 'Seconds'; readonly seconds: number }
   | { readonly _tag: 'Mark'; readonly mark: string }
@@ -147,7 +116,6 @@ const SECONDS = /^\d+(?:\.\d+)?$/;
 
 const invalid = (reason: string) => Result.fail(LookInvalid.make({ reason }));
 
-/** `text` read as a place in a scene, or why it is none. */
 export const lookAtOf = (text: string): Result.Result<LookAt, LookInvalid> => {
   if (SECONDS.test(text)) return Result.succeed({ _tag: 'Seconds', seconds: Number(text) });
   if (text.startsWith('mark:') && text.length > 5)
@@ -169,16 +137,12 @@ export const lookAtOf = (text: string): Result.Result<LookAt, LookInvalid> => {
   });
 };
 
-/** A look's place resolved: the frame drawn, and its time in seconds into the scene. */
 interface Moment {
-  /** The place as it was written. */
   readonly at: string;
   readonly frame: number;
-  /** Seconds into the scene of the frame drawn. */
   readonly time: number;
 }
 
-/** The scene-local second `at` names in `scene`, or why it names none. */
 const secondOf = (
   scene: SceneTimes,
   at: LookAt,
@@ -214,11 +178,6 @@ const secondOf = (
       ),
   });
 
-/**
- * `text` (`lookAtOf`) as the frame of `scene` it names at `fps`: the nearest
- * frame, held inside the scene's own frames, and that frame's time in the
- * scene. A place unreadable or the scene lacks, or seconds past its end, fails.
- */
 export const momentOf = (
   scene: SceneTimes,
   fps: number,
@@ -233,30 +192,17 @@ export const momentOf = (
     }),
   );
 
-/** How a look is shown: plain, in greys (`value`), or in greys and blurred to read its masses (`squint`). */
 export const LookMode = Schema.Literals(['plain', 'value', 'squint']);
 export type LookMode = typeof LookMode.Type;
 
-/**
- * The file format a look takes unless told: a crop is read pixel by pixel,
- * so lossless PNG; a whole frame is read for its composition, so JPEG (at
- * 0.95), since the paper's grain makes a 1920×1080 PNG about 4 MB and a
- * reader's image store takes about 2 MB.
- */
 export const formatFor = (cropped: boolean): StillView['format'] => {
   if (cropped) return 'image/png';
   return 'image/jpeg';
 };
 
-/** A region of the frame: two opposite corners, in canvas pixels. */
 const Crop = Schema.Tuple([Schema.Finite, Schema.Finite, Schema.Finite, Schema.Finite]);
 type Crop = typeof Crop.Type;
 
-/**
- * `--level look=level` flags (`film render`) as a wedge's
- * levels, each look once; a flag of another shape, or a look given twice, is
- * `LookInvalid`. No flags is no wedge: the levels the film plays.
- */
 export const levelsOf = (
   flags: ReadonlyArray<string>,
 ): Result.Result<Readonly<Record<string, string>>, LookInvalid> =>
@@ -281,14 +227,6 @@ export const levelsOf = (
     },
   );
 
-/**
- * The variant a render writes: the one `--variant` names; else, for a wedge
- * (`levels`), one named for its levels, look by look in order
- * (`style-ps1`, `ground-light-style-ps1`), so a wedge never writes over the
- * film's `main`; else `main`. A wedge `--variant` names `main`, or a level
- * whose name would not make a variant's, is `LookInvalid`, to be named
- * otherwise with `--variant`.
- */
 export const wedgeVariant = (
   variant: Option.Option<RenderVariantName>,
   levels: Readonly<Record<string, string>>,
@@ -305,14 +243,8 @@ export const wedgeVariant = (
   );
 };
 
-/** The longest side a look is asked at. */
 const LOOK_MAX_SIZE = 4096;
 
-/**
- * How a look is shown, as it crosses into the page (plain data): the region
- * (the whole frame without one) at 1:1 unless `size` sets the long side, the
- * mode, the captions burned in or not, and the file's format.
- */
 export const StillView = Schema.Struct({
   crop: Schema.optionalKey(Crop),
   size: Schema.optionalKey(
@@ -324,7 +256,6 @@ export const StillView = Schema.Struct({
 });
 export type StillView = typeof StillView.Type;
 
-/** A look's region and size in pixels, and the canvas filter it is drawn through. */
 interface ViewBox {
   readonly sx: number;
   readonly sy: number;
@@ -332,21 +263,12 @@ interface ViewBox {
   readonly sh: number;
   readonly dw: number;
   readonly dh: number;
-  /** Drawn in greys (`value`, `squint`). */
   readonly grey: boolean;
-  /** The blur's radius in pixels of the still: 0 but for `squint`. */
   readonly blur: number;
 }
 
-/** The squint's blur, as a share of the look's long side (claude-paint's easel: 1.2 %, at least 2 px). */
 const SQUINT = 0.012;
 
-/**
- * `view` over a `width` × `height` frame: its crop held to the frame (a crop
- * wholly off it, or with no area, is the reason), at 1:1 or scaled to `size`
- * on its long side, and its mode: greys for `value`, greys and a blur for
- * `squint`.
- */
 export const viewBox = (
   view: StillView,
   width: number,
@@ -383,65 +305,43 @@ export const viewBox = (
   return Result.succeed({ sx, sy, sw, sh, dw, dh, grey, blur });
 };
 
-/** A look asked of the lab: the scene, its places (`momentOf`), how it is shown, and the films folder the asker edits. */
 export const LookPost = Schema.Struct({
   scene: Schema.String,
   at: Schema.NonEmptyArray(Schema.String),
   view: StillView,
-  /**
-   * The asker's films folder, absolute: a lab serving another checkout's
-   * films refuses (`LabElsewhere`) rather than show their scene.
-   */
   from: Schema.optionalKey(Schema.String),
-  /**
-   * A wedge: each look named drawn at the level given in place of the one it
-   * plays (`palette.ts`'s `looks`), the pick left unwritten, so the levels a
-   * choice offers are seen side by side before one is picked.
-   */
   levels: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
 });
 export type LookPost = typeof LookPost.Type;
 
-/** A wedge's levels as one name, in look order: `ground-light`; empty for none. */
 export const wedgeName = (levels: Readonly<Record<string, string>>): string =>
   Object.entries(levels)
     .toSorted(([a], [b]) => a.localeCompare(b))
     .map(([look, level]) => `${look}-${level}`)
     .join('.');
 
-/** One still a look wrote: its file, and where it was taken. */
 export const Look = Schema.Struct({
-  /** The PNG or JPEG, absolute, under the film's `out/<film>/look/<scene>/`. */
   file: Schema.String,
   scene: Schema.String,
   at: Schema.String,
   frame: Schema.Int,
-  /** Seconds into the scene of the frame drawn. */
   time: Schema.Finite,
   width: Schema.Int,
   height: Schema.Int,
 });
 export type Look = typeof Look.Type;
 
-/** What the lab answers a look: the build the stills were drawn from, and each still. */
 export const LookTaken = Schema.Struct({
-  /** The pages' build, `<server>.<number>`: a still of another build may show other code. */
   build: Schema.String,
   looks: Schema.Array(Look),
 });
 export type LookTaken = typeof LookTaken.Type;
 
-/** A still's file extension by its format. */
 const EXTENSION: Readonly<Record<StillView['format'], string>> = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
 };
 
-/**
- * A still's file name in its scene's folder: its time, how it is shown and
- * the build it was drawn from, so a still once written is never rewritten
- * with other pixels (frames are pure: one build and one view draw one image).
- */
 export const lookFileName = (
   moment: Moment,
   view: StillView,
@@ -460,6 +360,5 @@ export const lookFileName = (
   return `${parts.join('.')}.${EXTENSION[view.format]}`;
 };
 
-/** A look as the CLI prints it: one line, its file first. */
 export const lookLine = (look: Look, build: string): string =>
   `${look.file} scene=${look.scene} at=${look.at} t=${look.time.toFixed(2)} frame=${look.frame} size=${look.width}x${look.height} build=${build}`;

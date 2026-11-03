@@ -4,8 +4,6 @@ import { conflictedPaths, fileLines, lostEdits } from './audit.js';
 
 const doc = (...lines: ReadonlyArray<string>) => lines.join('\n');
 
-// Pass 7, merge 8fdce7ef: main (^1) had landed p7-media's edit of the film
-// skill; the conflict was resolved to p7-films' (^2) file.
 const BASE = doc('# Film', '- `bun run doctor` checks ffmpeg and chromium.', '- Keep takes.');
 const MAIN = doc(
   '# Film',

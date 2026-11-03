@@ -1,13 +1,5 @@
-// The renderer's probes: one short graph per node kind and per branch of each
-// (every wave, colour, set of modes, filter, drive, timing, curve and draw),
-// each rendered at its seed and pinned by the sha256 of its Float32 samples.
-// `RENDER_VERSION` is the first 8 hex of the sha256 of these pins, so a DSP
-// edit that moves one sample of one probe moves the version, and with it the
-// key of every code sound's render and mix.
-
 import type { CodeSound, Node } from '../nodes.ts';
 
-/** A probe: a sound, the seed it renders with (1 when absent), and the code sounds it samples. */
 export interface Probe {
   readonly name: string;
   readonly sound: CodeSound;
@@ -15,7 +7,6 @@ export interface Probe {
   readonly samples?: Readonly<Record<string, CodeSound>>;
 }
 
-/** A short click: white noise under a falling line. */
 const tick: Node = {
   _tag: 'Envelope',
   points: [
@@ -87,7 +78,6 @@ const play = (node: Node): CodeSound => ({ play: node });
 const TICKS = { 'probe.tick': play(tick) };
 
 export const PROBES: ReadonlyArray<Probe> = [
-  // Sources.
   { name: 'osc.sine', sound: play({ _tag: 'Osc', wave: 'sine', pitch: 'A4', secs: 0.1 }) },
   {
     name: 'osc.triangle',
@@ -161,7 +151,6 @@ export const PROBES: ReadonlyArray<Probe> = [
     sound: play({ _tag: 'Sample', sound: 'probe.tick' }),
     samples: TICKS,
   },
-  // Shapers.
   { name: 'gain.held', sound: play({ _tag: 'Gain', db: -6, of: sine('A3', 0.05) }) },
   {
     name: 'gain.ramp',
@@ -229,7 +218,6 @@ export const PROBES: ReadonlyArray<Probe> = [
       of: { _tag: 'Partials', pitch: 'A4', set: 'glass', secs: 0.1 },
     }),
   },
-  // The filter, each type.
   { name: 'filter.lowpass', sound: play(filtered('lowpass', 0.707)) },
   { name: 'filter.highpass', sound: play(filtered('highpass', 0.707)) },
   { name: 'filter.bandpass', sound: play(filtered('bandpass', 4)) },
@@ -255,7 +243,6 @@ export const PROBES: ReadonlyArray<Probe> = [
       of: white(0.1),
     }),
   },
-  // Space.
   {
     name: 'delay.held',
     sound: play({ _tag: 'Delay', secs: 0.013, feedback: 0.5, wet: 0.5, tail: 0.1, of: tick }),
@@ -283,7 +270,6 @@ export const PROBES: ReadonlyArray<Probe> = [
       of: { _tag: 'Noise', color: 'pink', secs: 0.15 },
     }),
   },
-  // Time.
   {
     name: 'layer',
     sound: play({
@@ -330,7 +316,6 @@ export const PROBES: ReadonlyArray<Probe> = [
     name: 'repeat.poisson',
     sound: play({ _tag: 'Repeat', timing: { _tag: 'Poisson', rate: 40, secs: 0.2 }, of: tick }),
   },
-  // Draws.
   { name: 'pick.seed.1', sound: play(triad('seed')) },
   { name: 'pick.seed.2', sound: play(triad('seed')), seed: 2 },
   { name: 'pick.seed.4', sound: play(triad('seed')), seed: 4 },
@@ -372,7 +357,6 @@ export const PROBES: ReadonlyArray<Probe> = [
   },
 ];
 
-/** Each probe's render pinned by its name: the sha256 of its Float32 samples. */
 export const GOLDEN: ReadonlyMap<string, string> = new Map(
   Object.entries({
     'osc.sine': '3e61195e75ffb4ed3aea51ca32bee97d99225bac13982a2772d0c862b1399edc',

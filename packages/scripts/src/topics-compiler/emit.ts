@@ -4,9 +4,6 @@ import { Clock, DateTime, Effect, FileSystem, Schema } from 'effect';
 
 import type { CompiledTopics } from './compile.js';
 
-/** The §2.2 DDL, verbatim. The artifact is created from scratch on every
- *  compile, so there is no migration path to keep and the schema in the repo is
- *  always exactly the schema on disk. */
 const DDL = `
 CREATE TABLE meta (
   key TEXT PRIMARY KEY,
@@ -48,9 +45,6 @@ CREATE INDEX idx_topic_edges_to ON topic_edges(to_slug);
 
 const encodeBlocks = Schema.encodeSync(BlocksJson);
 
-/** Writing the artifact is infrastructure, not a compile rule: a failure here
- *  means the disk or the SQLite driver failed, which no caller can recover
- *  from, so it dies rather than joining `CompileError`. */
 class ArtifactWriteError extends Schema.TaggedError<ArtifactWriteError>()('ArtifactWriteError', {
   cause: Schema.Unknown,
 }) {}
@@ -62,10 +56,6 @@ interface EmittedArtifact {
   readonly revision: string;
 }
 
-/** Writes the artifact and returns the manifest §3.4 step 7 asks for. The
- *  revision is the source digest's prefix: content-addressed, so recompiling an
- *  unchanged content set produces the same revision and the supply pipeline
- *  correctly reports it as already current. */
 export const emitArtifact = Effect.fn('TopicsCompiler.emit')(function* (input: {
   readonly compiled: CompiledTopics;
   readonly destination: string;
@@ -74,8 +64,6 @@ export const emitArtifact = Effect.fn('TopicsCompiler.emit')(function* (input: {
   const revision = `topics-${compiled.sourceDigest.slice(0, 12)}`;
   const fs = yield* FileSystem.FileSystem;
   const compiledAt = yield* Clock.currentTimeMillis;
-  // A fresh file every compile: the emitter owns the whole artifact, so a
-  // leftover from a previous run must not survive into this one.
   yield* fs.remove(input.destination, { force: true }).pipe(Effect.orDie);
   yield* Effect.acquireUseRelease(
     Effect.try({

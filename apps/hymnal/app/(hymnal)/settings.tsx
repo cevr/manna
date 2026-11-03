@@ -38,7 +38,6 @@ const chordStyles: ReadonlyArray<Choice<ChordStyle>> = [
   { value: 'advanced', label: 'Advanced' },
 ];
 
-/** Settings, a sheet over the home screen on a phone: it draws its own heading, the sheet no header. */
 export default function Settings() {
   const chords = useAtomValue(settings.chords);
   return (
@@ -65,7 +64,6 @@ export default function Settings() {
   );
 }
 
-/** A group's heading; a heading below another group stands apart from it, as About's does. */
 function Heading({ children, style }: { readonly children: string; readonly style?: TextStyle }) {
   return (
     <Text role="heading" aria-level={2} style={[styles.heading, style]} dynamicTypeRamp="footnote">
@@ -74,7 +72,6 @@ function Heading({ children, style }: { readonly children: string; readonly styl
   );
 }
 
-/** A radio group: one row per choice, the chosen one checked. */
 function Choices<A extends string>({
   label,
   value,
@@ -113,16 +110,11 @@ function Choices<A extends string>({
   );
 }
 
-/**
- * `Sounds and haptics`: whether the controls are felt and heard. Turned on,
- * it is felt at once (`switch-on`); turned off, it says nothing.
- */
 function FeelSwitch() {
   const [on, setOn] = useAtom(settings.feel);
   const cue = useCue();
   const turn = (to: boolean) => {
     setOn(to);
-    // Told after the write: the Feel reads the switch as the cue comes.
     if (to) cue(plain('switch-on'));
   };
   return (
@@ -130,17 +122,12 @@ function FeelSwitch() {
       <Text style={styles.label} dynamicTypeRamp="body" aria-hidden>
         Sounds and haptics
       </Text>
-      {/* React Native's Switch hands iOS no `aria-label`; it reads `accessibilityLabel` on every platform. */}
+      {}
       <Switch accessibilityLabel="Sounds and haptics" value={on} onValueChange={turn} />
     </View>
   );
 }
 
-/**
- * `Chords`: whether the chords show, with every control for playing them
- * (here `Chord style`, `Chord placement` and `Tuner`). The same setting as
- * the player sheet's switch and the bar's guitar head, felt as they are.
- */
 function ChordsSwitch() {
   const [on, setOn] = useAtom(settings.chords);
   const cue = useCue();
@@ -158,7 +145,6 @@ function ChordsSwitch() {
   );
 }
 
-/** `Tuner`: opens the guitar tuner over Settings. */
 function TunerRow() {
   const router = useRouter();
   return (

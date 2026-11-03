@@ -1,12 +1,3 @@
-/**
- * Each cue's body: the haptic it is felt by and the sound it is heard by.
- * The haptics carry Apple's names (One's `Haptics`); the sounds are the
- * voice's (`voice.ts`). Only a dial's detent and a count-in's beat are
- * heard: the key dial sounds each key at its own pitch class, the capo and
- * text-size dials thock, and a beat thocks with an impact, `medium` on the
- * count-in's first beat and `light` after. Every other cue is felt only.
- */
-
 import { Option, Predicate } from 'effect';
 
 import type { Cue } from './cue';
@@ -16,12 +7,10 @@ export type Haptic =
   | { readonly _tag: 'impact'; readonly style: 'light' | 'medium' | 'soft' | 'rigid' }
   | { readonly _tag: 'notification'; readonly type: 'success' };
 
-/** The voice's sounds by name (`voice.ts`, `RECIPES`). */
 export type SoundName = `key-${number}` | 'thock';
 
 export interface Body {
   readonly haptic: Haptic;
-  /** The sound it is heard by: none for every cue but a dial's detent and a beat. */
   readonly sound: Option.Option<SoundName>;
 }
 
@@ -32,12 +21,10 @@ const impact = (style: 'light' | 'medium' | 'soft' | 'rigid'): Haptic => ({
 });
 const light = impact('light');
 
-/** A body felt only. */
 const felt = (haptic: Haptic): Body => ({ haptic, sound: Option.none() });
 
 const mod = (n: number, by: number) => ((n % by) + by) % by;
 
-/** The haptic each cue but a dial's detent and a beat is felt by. */
 const FELT: Record<Exclude<Cue['_tag'], 'detent' | 'beat'>, Haptic> = {
   section: light,
   wall: impact('rigid'),
@@ -62,13 +49,11 @@ const FELT: Record<Exclude<Cue['_tag'], 'detent' | 'beat'>, Haptic> = {
   'rail-tick': selection,
 };
 
-/** A count-in's beat is felt harder on its first beat, the accent. */
 const beatHaptic = (accent: boolean): Haptic => {
   if (accent) return impact('medium');
   return light;
 };
 
-/** The body cue `cue` is given. */
 export const bodyOf = (cue: Cue): Body => {
   if (cue._tag === 'beat') return { haptic: beatHaptic(cue.accent), sound: Option.some('thock') };
   if (cue._tag !== 'detent') return felt(FELT[cue._tag]);
@@ -77,11 +62,9 @@ export const bodyOf = (cue: Cue): Body => {
   return { haptic: selection, sound: Option.some('thock') };
 };
 
-/** Whether a cue is a tick: its haptic keeps the floor (`FLOOR`) from the last tick's. */
 export const isTick: (cue: Cue) => boolean = Predicate.or(
   Predicate.isTagged('detent'),
   Predicate.or(Predicate.isTagged('seek-tick'), Predicate.isTagged('rail-tick')),
 );
 
-/** The least time between two ticks' haptics, in milliseconds, so a fast fling is still felt as a ratchet. */
 export const FLOOR = 30;

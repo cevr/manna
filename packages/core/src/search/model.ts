@@ -1,22 +1,3 @@
-/** The hybrid-search wire model (§9).
- *
- *  Every type here crosses the search daemon's `search.query`, and the same
- *  classes are `manna egw search --json`'s codec — one shared codec per
- *  payload, exactly as `LookupResultJson` and `WikiPageJson` are, so the daemon
- *  response and the CLI's JSON are one value encoded by one schema rather than
- *  two projections that drift.
- *
- *  Two shapes this module exists to enforce:
- *
- *  1. **§9.4's pinned topics group.** `topics` is a field beside `paragraphs`,
- *     never an entry inside it. A topic page and a paragraph are different kinds
- *     of answer, and a client that had to filter one out of a mixed list is a
- *     client that will eventually rank them together.
- *  2. **§9.6's typed absence.** `vector` carries why the vector leg did not run,
- *     as the same value in every client. A silent quality drop and a
- *     host-specific branch are the two failure modes it exists to prevent.
- */
-
 import { Option, Schema } from 'effect';
 
 import { WritingsBookCode } from '../writings/book-code.js';
@@ -24,70 +5,21 @@ import { CorpusScope } from '../writings/corpus-scope.js';
 import { CorpusFilterSchema, NO_FILTER, type CorpusFilter } from '../writings/corpus-class.js';
 import { TopicSlug, TopicStatus } from '../wiki/model.js';
 
-// ---------------------------------------------------------------------------
-// The query and its route (§9.3)
-// ---------------------------------------------------------------------------
-
-/** How the router read the query (§9.3's table, as a value on the result).
- *
- *  On the result rather than inferred by each client from the query text: the
- *  routing rules are core's, the three surfaces render the route differently
- *  ("exact phrase", "jumped to GC 425"), and a client that re-derived the route
- *  from the raw string would be a second implementation of §9.3.
- *
- *  `phrase` — a quoted string: exact phrase, lexical only.
- *  `locate` — a refcode pattern: the locate-jump.
- *  `hybrid` — everything else: lexical, plus the vector leg when §9.3's two
- *  conditions hold.
- */
 const SearchRoute = Schema.Literals(['phrase', 'locate', 'hybrid']);
 export type SearchRoute = typeof SearchRoute.Type;
 
-/** Why the vector leg did not contribute to this result (§9.6).
- *
- *  A closed union rather than a boolean, because the four reasons call for four
- *  different things from the reader: `absent` is an install away, `fingerprint`
- *  is an app update away, `embedder` is a capability the host lacks, and
- *  `short-circuit` is the engine working as designed. Collapsing them to
- *  "degraded" would tell a reader on a host with no embedder the same thing it
- *  tells a reader whose index is simply not downloaded yet.
- *
- *  `short-circuit` is here rather than modelled apart because §9.6 asks for one
- *  question — did the vector leg run, and if not, why — and a client rendering
- *  two absence channels would have to decide which one wins.
- */
 export const VectorAbsenceReason = Schema.Literals([
-  /** No vector artifact is installed on this host. */
   'absent',
-  /** An artifact is installed, but its model fingerprint is not the one this
-   *  build embeds queries with, so its neighbors would be meaningless. */
   'fingerprint',
-  /** No query embedder is available: no model files where the adapter was
-   *  configured to find them. */
   'embedder',
-  /** §9.3's strong-BM25 short-circuit fired: the lexical top hit was strong and
-   *  clearly separated, so the vector leg was deliberately skipped. */
   'short-circuit',
-  /** The route was `phrase` or `locate`, which §9.3 makes lexical-only. */
   'route',
-  /** An artifact is installed, and the host is still reading it. A server
-   *  that opens its port before the index is in memory answers text-only
-   *  until then; the next search after the load runs the vector leg. */
   'loading',
 ]);
 export type VectorAbsenceReason = typeof VectorAbsenceReason.Type;
 
-/** §9.6's typed absence, or its negation.
- *
- *  A tagged pair rather than `Option<reason>` because "the vector leg ran" is
- *  itself information a client shows — the result carries semantic neighbors —
- *  and `None` reads as "no reason" rather than "no absence". The `ran` case
- *  carries the fingerprint it ran under so a client can say which model
- *  produced the neighbors it is looking at.
- */
 export class VectorLegRan extends Schema.TaggedClass<VectorLegRan>('Search/VectorLegRan')('ran', {
   fingerprint: Schema.NonEmptyString,
-  /** How many paragraphs the scan considered. */
   scanned: Schema.Finite.pipe(Schema.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0))),
 }) {}
 
@@ -100,255 +32,83 @@ export class VectorIndexUnavailable extends Schema.TaggedClass<VectorIndexUnavai
 export const VectorLegStatus = Schema.Union([VectorLegRan, VectorIndexUnavailable]);
 export type VectorLegStatus = typeof VectorLegStatus.Type;
 
-/** The one constructor for §9.6's absence, so every producer spells it the
- *  same way and a grep for the reason finds one site per reason. */
 export const vectorUnavailable = (reason: VectorAbsenceReason): VectorIndexUnavailable =>
   VectorIndexUnavailable.make({ reason });
 
-// ---------------------------------------------------------------------------
-// Results
-// ---------------------------------------------------------------------------
-
-/** One paragraph the search found, with the provenance of *how* it was found.
- *
- *  `lexical` and `vector` are the two source ranks that produced this row, each
- *  `Option` because a hit can come from either list or both. They are carried
- *  rather than discarded because the fusion score alone cannot tell a reader
- *  (or a test) whether a row is here because the words matched or because the
- *  meaning did — which is the whole observable difference hybrid search makes.
- */
 export class SearchParagraphHit extends Schema.Class<SearchParagraphHit>('Search/ParagraphHit')({
-  /** The stable paragraph identity the vector index joins on. */
   paragraphId: Schema.NonEmptyString,
-  /** The publication's numeric id, which is what the reader route addresses a
-   *  writings paragraph by: `/writings/<publicationId>/p/<rawParaId>`.
-   *
-   *  Carried on the hit rather than derived by each client, because it cannot
-   *  be derived at all — `bookCode` is a code (`GC`, `DA`), not a number, and
-   *  the app's route decoder requires a positive integer in that segment. The
-   *  UI built links out of `bookCode` and `paragraphId` and produced a path no
-   *  decoder accepts, so every result link 404'd (round-2 B2). Putting the
-   *  route's own inputs on the wire is what keeps each client from inventing a
-   *  different broken path. */
   publicationId: Schema.Finite.pipe(Schema.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1))),
-  /** The corpus's own `para_id`, unqualified — the second half of the route.
-   *
-   *  Absent for a paragraph the corpus stores without one, which is exactly the
-   *  set of paragraphs that have no addressable route; a client draws those
-   *  without a link rather than with a broken one. */
   rawParaId: Schema.Option(Schema.NonEmptyString),
-  /** The citation this paragraph is addressed by, absent for the ~563 rows the
-   *  corpus stores without one.
-   *
-   *  `Option` rather than `NonEmptyString` because those rows are real
-   *  paragraphs with real content — signatures, datelines, "This chapter is
-   *  based on..." notes — that the upstream ingest never assigned a page to.
-   *  They are legitimately uncitable, not corrupt, which is the same thing
-   *  `rawParaId` above says about the same kind of row.
-   *
-   *  It was `NonEmptyString`, and the mismatch was a `Die`: one such row
-   *  reaching a result page failed the whole query with a 500 rather than the
-   *  one hit, so `controversy` — which reaches `GC `, a row with an empty
-   *  `ref_code` — could not be searched at all. A result a reader cannot cite
-   *  is still a result worth returning. */
   refcode: Schema.Option(Schema.NonEmptyString),
   bookCode: Schema.NonEmptyString,
   bookTitle: Schema.NonEmptyString,
   author: Schema.NonEmptyString,
   snippet: Schema.String,
-  /** Whether this hit is a chapter or section heading rather than prose.
-   *
-   *  A heading and a sentence arrive at a client as the same shape — a refcode
-   *  and a line of text — so nothing distinguishes "The Loud Cry" the chapter
-   *  title from "The Loud Cry" written mid-paragraph. BM25's length
-   *  normalization makes that a common case rather than an edge one: a short
-   *  title containing the whole query outranks the prose that discusses it, and
-   *  32 of the top 40 production results for `latter rain` are headings.
-   *
-   *  A field rather than a filter, deliberately. A heading *is* a real answer —
-   *  it names the chapter that treats the subject, which is often exactly what
-   *  a reader wants — so the repair is to say what the row is, not to hide it.
-   *  The ranking orders headings after prose, and this says why one is there. */
   isHeading: Schema.Boolean,
-  /** Whether this hit frames the text rather than says anything: a letter's
-   *  date or signature, a picture's caption, the scripture at the head of a
-   *  reading (`isFurniture`). The ranking orders it with the headings. */
   isFurniture: Schema.Boolean,
-  /** Whether this hit sits in its book's back matter: an appendix, a table of
-   *  contents, a bibliography or an index (see `back-matter.ts`).
-   *
-   *  The ranking orders these last, after headings: an index line such as
-   *  "Latter rain, 178, 300, 306" names where a subject is treated without
-   *  treating it. A hit here is still an answer, so it is ordered, not hidden. */
   backMatter: Schema.Boolean,
-  /** The RRF score this row fused to, §9.4's k=60 formula. */
   score: Schema.Finite,
-  /** 1-based rank in the lexical list, absent when only the vector leg found it. */
   lexicalRank: Schema.Option(
     Schema.Finite.pipe(Schema.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1))),
   ),
-  /** 1-based rank in the vector list, absent when only the lexical leg found it. */
   vectorRank: Schema.Option(
     Schema.Finite.pipe(Schema.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1))),
   ),
 }) {}
 
-/** One topic page the query names — §9.4's pinned group.
- *
- *  The same three fields `LookupCatalogMatch` carries, and deliberately not that
- *  class: a lookup match answers "what did this selection mean", a search topic
- *  answers "which page is this query about", and the two surfaces cap and order
- *  them differently. Sharing the class would tie §7's panel to §9's result page.
- *
- *  Not a field of `SearchResult` — see that class for why. It stays here, with
- *  `SEARCH_TOPIC_LIMIT`, because it is the *shape* of a search-page topic group
- *  and the surfaces that render one should agree on it. What changed is who
- *  fetches it: the application that has a wiki, rather than the service that
- *  searches the writings.
- */
 export class SearchTopicHit extends Schema.Class<SearchTopicHit>('Search/TopicHit')({
   slug: TopicSlug,
   title: Schema.NonEmptyString,
   status: TopicStatus,
 }) {}
 
-/** Where a `locate` route landed (§9.3's locate-jump).
- *
- *  `Option`-shaped on the result rather than a fourth route: a refcode that
- *  matches the *pattern* but names nothing in the library is still a `locate`
- *  query — the router read it correctly — and the honest answer is the route
- *  plus no destination, not a re-route to hybrid behind the reader's back.
- */
 export class SearchLocateTarget extends Schema.Class<SearchLocateTarget>('Search/LocateTarget')({
   refcode: Schema.NonEmptyString,
   bookCode: Schema.NonEmptyString,
   bookTitle: Schema.NonEmptyString,
   paragraphId: Schema.NonEmptyString,
-  /** The two route inputs, for the same reason `SearchParagraphHit` carries
-   *  them: the jump target is a *link*, and `/writings/<publicationId>/p/<id>`
-   *  is the only shape the app decodes (round-2 B2). */
   publicationId: Schema.Finite.pipe(Schema.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1))),
   rawParaId: Schema.Option(Schema.NonEmptyString),
 }) {}
 
-/** The whole answer to one query (§9).
- *
- *  Field order is render order: the located paragraph if the route found one,
- *  then the fused paragraph ranking. Every field is present and no field is
- *  optional, so the clients cannot disagree about whether a group exists this
- *  time.
- *
- *  **Retrieval over the corpus, and nothing else.** The pinned topics group
- *  used to be a field here, fetched by the search service from `WikiService` on
- *  every query. That made a wiki a dependency of *searching the writings*: a
- *  host with no topics artifact logged a degradation on every single query, and
- *  the two surfaces that do want topics paid a lookup inside the hot path they
- *  could not see or skip. Topics are a property of an application that has
- *  them, so an app that wants them asks for them beside its search rather than
- *  through it — see `SearchTopicHit`.
- */
 export class SearchResult extends Schema.Class<SearchResult>('Search/Result')({
-  /** The query as it was asked, echoed so an async client can tell which
-   *  request a result belongs to. */
   query: Schema.NonEmptyString,
   route: SearchRoute,
   scope: CorpusScope,
   locate: Schema.Option(SearchLocateTarget),
   paragraphs: Schema.Array(SearchParagraphHit),
-  /** §9.6's typed absence, or the fingerprint the vector leg ran under. */
   vector: VectorLegStatus,
-  /** Whether the lexical leg declined to rank because the query matches too
-   *  much of the corpus to discriminate — see `NON_SELECTIVE_MATCHES`.
-   *
-   *  Carried rather than inferred from an empty `paragraphs`, because "no
-   *  paragraph matched your query" and "your query matched half the corpus"
-   *  are opposite facts that an empty list spells identically. A reader who
-   *  searched `the` and was shown "no matches" would reasonably conclude the
-   *  corpus lacks the word. */
   nonSelective: Schema.Boolean,
 }) {}
 
-/** The one wire encoding of a search result, shared by the search daemon's
- *  `search.query` and `manna egw search --json`, named for the same reason
- *  `LookupResultJson` is: neither surface enumerates fields, and a field added
- *  to `SearchResult` reaches both at once. */
 export const SearchResultJson = SearchResult;
 export type SearchResultJson = typeof SearchResultJson.Encoded;
 
-/** How many paragraph rows one search answers with.
- *
- *  A results-page cap rather than §7's glance cap, which is why it is 20 rather
- *  than `LOOKUP_HIT_LIMIT`'s 8: this surface is the thing the reader came for,
- *  not one group among five. */
 const SEARCH_HIT_LIMIT = 20;
 
-/** How many topic pages the pinned group carries.
- *
- *  Small for §7's reason: a pinned group is an identity answer, and a column of
- *  twelve candidate topics above the results is not pinning anything. */
 export const SEARCH_TOPIC_LIMIT = 5;
 
-/** How many rows each leg contributes to the fusion before it is cut.
- *
- *  Larger than `SEARCH_HIT_LIMIT` because fusion is the point: a row ranked 24th
- *  lexically and 3rd by vector belongs in the top 20 of the fused list, and a
- *  leg truncated at 20 could never propose it. qmd's 30 is what §9.4's "no
- *  cross-encoder rerank over 30 candidates" sizes its budget against. */
 const SEARCH_CANDIDATE_LIMIT = 30;
 
-/** How many candidates each leg fetches for a query asking for `limit` hits.
- *
- *  `SEARCH_CANDIDATE_LIMIT` is the floor, not the value: it is sized against
- *  `SEARCH_HIT_LIMIT` (20), and a caller asking for 100 hits from a 30-row
- *  candidate pool can never receive more than 30 — the fused list is built out
- *  of what the legs proposed. The multiplier keeps fusion's headroom
- *  proportional rather than fixed, so a row ranked 60th lexically and 3rd by
- *  vector can still reach a 40-hit page the way a 24th/3rd row reaches a
- *  20-hit one.
- *
- *  Capped, because each leg's cost is linear in this number and the vector
- *  scan's `topK` is the same value: an unbounded request would turn one query
- *  into a full-index sort. */
 export const candidateLimit = (limit: number): number =>
   Math.min(Math.max(SEARCH_CANDIDATE_LIMIT, limit * 3), 600);
 
-/** The default corpus scope for a search.
- *
- *  `egw` rather than `all`, because §9.2 pins the vector index to exactly the
- *  EGW/White-Estate partition: outside it the hybrid half of hybrid search
- *  cannot contribute, and a default that silently ran lexical-only would make
- *  the milestone's headline behavior opt-in. A reader who wants the pioneers
- *  asks for them. */
 const SEARCH_DEFAULT_SCOPE: CorpusScope = 'egw';
 
-/** What a caller asks for. Scope and book are the two narrowings §10's UI
- *  parity shares through URL state; `limit` is the client's page size. */
 export class SearchQuery extends Schema.Class<SearchQuery>('Search/Query')({
   text: Schema.NonEmptyString,
   scope: Schema.Option(CorpusScope),
   bookCode: Schema.Option(WritingsBookCode),
-  /** The library-classification filters (section, type, subtype, apparatus).
-   *
-   *  Optional with a `NO_FILTER` default rather than an `Option`: every
-   *  existing caller constructs a `SearchQuery` without it, and an absent
-   *  filter and an empty filter mean exactly the same thing to the SQL below —
-   *  so there is nothing for a `None` to distinguish. */
   filter: Schema.optionalKey(CorpusFilterSchema),
   limit: Schema.Option(
     Schema.Finite.pipe(Schema.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(1))),
   ),
 }) {}
 
-/** The scope a query runs under, with the default applied once.
- *
- *  Here rather than at each call site, so the CLI, the daemon and the web
- *  surface cannot disagree about what an unspecified scope means. */
 export const queryScope = (query: SearchQuery): CorpusScope =>
   Option.getOrElse(query.scope, () => SEARCH_DEFAULT_SCOPE);
 
 export const queryLimit = (query: SearchQuery): number =>
   Option.getOrElse(query.limit, () => SEARCH_HIT_LIMIT);
 
-/** The classification filters a query runs under, with the default applied
- *  once — the `queryScope` pattern, for the same reason. */
 export const queryFilter = (query: SearchQuery): CorpusFilter => query.filter ?? NO_FILTER;

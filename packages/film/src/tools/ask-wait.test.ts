@@ -1,12 +1,3 @@
-// `film ask wait`'s latch over a fake lab: an ask answered before the wait
-// ends it at once; one answered later is heard through the feed and read
-// again; a step's latch ends on that step; a lab that drops is asked again
-// and read on from the last cursor, the loss said once; a `reset` reads the asks again (a lab
-// restarted saw the answer as its baseline); `--any` counts only an ask
-// answered after it began; an unknown ask and a timeout are typed failures.
-// What it held on prints a line each, every answer typed, words quoted so a
-// newline cannot split a line.
-
 import { Duration, Effect, Exit, Fiber, Logger, Option, Result, Schedule } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { TestClock } from 'effect/testing';
@@ -34,7 +25,6 @@ const read = (
     page: { id: page, links: { local: `http://127.0.0.1:8229/asks/page/${page}` } },
   }) satisfies AskRead;
 
-/** A lab that did not answer, in its words. */
 interface Lost {
   readonly message: string;
 }
@@ -53,22 +43,15 @@ const change = (ask: string, kind: LabChange['kind']): LabChange => ({
 const ok = Result.succeed;
 const lost = Result.fail;
 
-/** The feed's answer past a cursor, as the fake lab gives it. */
 const answer = (
   cursor: string,
   changes: ReadonlyArray<LabChange> = [],
   reset = false,
 ): Result.Result<LabChanges, string> => ok({ cursor, changes, reset });
 
-/** The asks, as the fake lab lists them. */
 const listed = (...asks: ReadonlyArray<AskRead>): Result.Result<ReadonlyArray<AskRead>, string> =>
   ok(asks);
 
-/**
- * A fake lab: `changes` answers its script in turn (then never), `asks` its
- * own (then its last again); every call is written down as `<session>
- * <what>`. A failed step is a lost lab, in its words.
- */
 const fakeLab = (
   changes: Array<Result.Result<LabChanges, string>>,
   asks: Array<Result.Result<ReadonlyArray<AskRead>, string>>,
@@ -328,9 +311,7 @@ describe("film ask wait's latch on a page", () => {
             answer('e.3', [change('a3', 'ask.answered')]),
           ],
           [
-            // Newest first, as the lab lists them: a2 joined a1's page, b1 is another page.
             listed(read('b1', 'asking'), read('a2', 'asking', [], 'a1'), read('a1', 'answered')),
-            // An ask joined the page as the last one there was answered: the latch waits for it too.
             listed(
               read('a3', 'asking', [], 'a1'),
               read('a2', 'answered', [], 'a1'),
@@ -350,7 +331,6 @@ describe("film ask wait's latch on a page", () => {
           ],
         );
         const got = yield* waitForAsk(lab.feed, AskLatch.Page({ page: 'a2' }), PACE, Option.none());
-        // Every ask on the page, in the order made; the other page's waits on.
         expect(got.map((a) => `${a.ask} ${a.status}`)).toEqual([
           'a1 closed',
           'a2 answered',

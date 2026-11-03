@@ -1,17 +1,3 @@
-/** Shared fixtures for the study seam's host tests.
- *
- *  Behind `@manna/core/study/testing` rather than the production barrel, for
- *  the reason `wiki/testing.ts` is: these are test doubles, and a shipped import
- *  must not be able to reach them through the same path it reaches
- *  `StudyService` through.
- *
- *  What lives here is **study fixtures and nothing else**: `studyFixtureLayer`,
- *  a `StudyService` over a Daniel 8:13 whose five sections are all populated, so
- *  a bundle that arrived whole is distinguishable from one that arrived empty.
- *  The CLI's `manna study` suite and core's own study tests read this one
- *  input, so a fixture change reaches both at once.
- */
-
 import { Layer, Option } from 'effect';
 
 import { bookNumber, chapterNumber, verseNumber } from '../bible/model.js';
@@ -28,23 +14,14 @@ import { EGWParagraphDatabase, type BibleRefRow, type BookRow } from '../egw-db/
 import type { Paragraph } from '../egw/schemas.js';
 import { StudyService } from './service.js';
 
-/** Wire-shape fields the EGW paragraph schema encodes as `null` when absent. */
 const wireNull = Option.getOrNull(Option.none<never>());
 
-/** The fixture verse: Daniel 8:13, the reference §8.2 and the CLI acceptance
- *  workflow both name.
- *
- *  Branded rather than left as plain numbers, because every consumer passes them
- *  into a branded position — `Reference.verse` — and branding once here is
- *  what keeps each test file from restating the constructor. */
 export const FIXTURE_BOOK = bookNumber(27);
 export const FIXTURE_CHAPTER = chapterNumber(8);
 export const FIXTURE_VERSE = verseNumber(13);
 export const FIXTURE_LABEL = 'Daniel 8:13';
 export const FIXTURE_TEXT = 'Then I heard one saint speaking…';
 
-/** How many concordance hits the fixture holds for `H8548`. Exported so a test
- *  asserting a cap can state the uncapped total without restating the array. */
 export const FIXTURE_CONCORDANCE_TOTAL = 9;
 
 const commentaryBook: BookRow = {
@@ -56,9 +33,6 @@ const commentaryBook: BookRow = {
   created_at: '2026-01-01',
 };
 
-/** Deliberately not a Bible Commentary volume: this is the row that must land
- *  in `parallelWritings` while `5BC` lands in `commentary`, which is the
- *  partition §8.1's two bundle fields require. */
 const greatControversy: BookRow = {
   book_id: 502,
   book_code: 'GC',
@@ -106,25 +80,11 @@ const writingsDatabase = EGWParagraphDatabase.Test({
   bibleRefs: [bibleRef(501, '5BC 1116.1'), bibleRef(502, 'GC 324.1')],
 });
 
-/** The book the malformed fixture cites: a real row with no title.
- *
- *  Every book in the corpus has a title and nothing documents an exception, so
- *  a blank one is a genuine defect — the artifact disagrees with the schema.
- *  That is deliberately *not* true of a blank refcode, which ~563 paragraphs
- *  legitimately have (see `StudyRefcode`), and which used to play this part
- *  until it turned out to be absence rather than a fault. */
 const untitledBook: BookRow = {
   ...greatControversy,
   book_title: '',
 };
 
-/** A writings library holding one citation the wire model refuses.
- *
- *  The cited book has a blank `book_title`, and `StudyParallelWriting
- *  .bookTitle` is `NonEmptyString`, so the row cannot decode and
- *  `StudyService.verse` fails with `StudyCorpusDataError`. Shared so the
- *  service's tests and the CLI's agree about what a corpus fault *looks like*
- *  downstream — the CLI must print the row rather than only the message. */
 const malformedWritingsDatabase = EGWParagraphDatabase.Test({
   books: [untitledBook],
   paragraphs: [paragraph('GC', 'GC 324.1', 'A citation whose book has no title.')],
@@ -194,26 +154,14 @@ const bibleDatabase = BibleDatabase.layerTest({
   concordanceHits: { H8548: tamidHits },
 });
 
-/** The one `StudyService` every host suite resolves — the real service over the
- *  real `EGWCommentaryService`, so the commentary/parallel split is exercised by
- *  the same reverse lookup the live corpus uses rather than by two stubs that
- *  could agree with each other and with nothing else. */
 export const studyFixtureLayer: Layer.Layer<StudyService> = StudyService.Live.pipe(
   Layer.provide(bibleDatabase),
   Layer.provide(EGWCommentaryService.Live.pipe(Layer.provide(writingsDatabase))),
 );
 
-/** The same service over a corpus holding one row the wire model refuses, so
- *  `verse` fails with `StudyCorpusDataError` and the seams downstream can be
- *  asked what they do with it. `strongs` is unaffected — the malformed row is a
- *  writings citation — which is what keeps a suite from mistaking "everything
- *  fails here" for the claim. */
 export const malformedStudyFixtureLayer: Layer.Layer<StudyService> = StudyService.Live.pipe(
   Layer.provide(bibleDatabase),
   Layer.provide(EGWCommentaryService.Live.pipe(Layer.provide(malformedWritingsDatabase))),
 );
 
-/** The row identity `malformedStudyFixtureLayer`'s failure carries: the
- *  publication code and refcode, which is what an operator opens the corpus
- *  with. */
 export const FIXTURE_MALFORMED_ROW = 'GC 324.1';

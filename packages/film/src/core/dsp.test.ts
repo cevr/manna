@@ -3,7 +3,6 @@ import { addInto, duck, fade, limit, limitInto, toFrames } from './dsp.ts';
 
 const RATE = 44100;
 
-/** `n` samples of `value`. */
 const steady = (n: number, value: number) => new Float32Array(n).fill(value);
 
 describe('toFrames', () => {
@@ -54,7 +53,6 @@ describe('duck', () => {
   test('a steady key settles the bed on the ratio above the threshold', () => {
     const bed = steady(2 * RATE, 0.3);
     duck([bed], [steady(2 * RATE, 0.5)], RATE, spec);
-    // 20 dB·log(0.5/0.02) over the threshold, 3:1, leaves a third: (0.02/0.5)^(2/3) of the level.
     expect(bed.at(-1)).toBeCloseTo(0.3 * (0.02 / 0.5) ** (2 / 3), 4);
   });
 
@@ -67,7 +65,6 @@ describe('duck', () => {
 
 describe('limit', () => {
   const spec = { limit: 0.95, attack: 5, release: 50 };
-  /** The attack window, less a frame: how far the output runs behind. */
   const latency = Math.trunc((RATE * spec.attack) / 1000) - 1;
 
   test('a quiet sound passes unchanged, one attack window late', () => {
@@ -90,7 +87,6 @@ describe('limit', () => {
   test('limited in place, a sound comes out as it does into new channels', () => {
     const tone = (gain: number) =>
       Array.from({ length: RATE / 4 }, (_, i) => Math.sin(i / 20) * gain);
-    // Quiet, then loud enough that the limiter works.
     const input = () => Float32Array.from([...tone(0.3), ...tone(2)]);
     const fresh = limit([input(), input()], RATE, spec);
     const inPlace = [input(), input()];

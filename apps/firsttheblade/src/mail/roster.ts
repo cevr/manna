@@ -1,36 +1,20 @@
-/**
- * The roster, over the database's port (`./sql.ts`), in the `roster` and
- * `roster_letters` tables: who is on the list and which film letters each was
- * sent. The model's `Roster` projection writes it through `layerStore`
- * (`../list/RosterStore.ts`); a film's send reads it (`./routes.ts`). It
- * follows the model a moment behind, so a count may miss a change just made;
- * each letter is still claimed in the model before it goes (`./deliver.ts`).
- */
 import { Context, Effect, Layer, Match, Schema } from 'effect';
 
 import { type RosterChange, RosterStore } from '../list/RosterStore.ts';
 import { SubscriberId } from '../list/Subscriber.id.ts';
 import { Sql, SqlError, type SqlValue, type Statement } from './sql.ts';
 
-/** What a film's send has reached. */
 export interface FilmCounts {
   readonly confirmed: number;
   readonly sent: number;
   readonly refused: number;
-  /** Confirmed, and neither sent the film, refused it, nor being sent it. */
   readonly waiting: number;
-  /**
-   * Started and never finished: the send stopped before its outcome was
-   * kept. The letter may have gone, so it is never sent again.
-   */
   readonly unsure: number;
 }
 
 export interface RosterTableService {
-  /** Applies changes in order, in one transaction. */
   readonly record: (changes: ReadonlyArray<RosterChange>) => Effect.Effect<void, SqlError>;
   readonly counts: (film: string) => Effect.Effect<FilmCounts, SqlError>;
-  /** The next confirmed subscribers after `after` (by id) still waiting for the film. */
   readonly waiting: (
     film: string,
     after: string,
@@ -61,7 +45,6 @@ const RETURNED = statement(
   `DELETE FROM roster_letters WHERE film = ? AND subscriber = ? AND letter = 'sending'`,
 );
 
-/** Not sent the film, refused it, nor being sent it. */
 const NO_LETTER =
   'NOT EXISTS (SELECT 1 FROM roster_letters l WHERE l.film = ? AND l.subscriber = r.subscriber)';
 
@@ -91,7 +74,6 @@ const CountsRow = Schema.Struct({
 });
 const SubscriberRow = Schema.Struct({ subscriber: SubscriberId });
 
-/** The statement a change runs, with its values. */
 const stepOf = (change: RosterChange) =>
   Match.value(change).pipe(
     Match.tagsExhaustive({
@@ -113,7 +95,6 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const sql = yield* Sql;
 
-    /** The rows a statement answers, each read as `row`. */
     const rows = <A, I>(
       row: Schema.Codec<A, I>,
       query: Statement,
@@ -156,10 +137,6 @@ export const layer = Layer.effect(
   }),
 );
 
-/**
- * The model's roster store over this table. A write that fails is a defect:
- * the platform delivers the batch again.
- */
 export const layerStore = Layer.effect(
   RosterStore,
   Effect.gen(function* () {

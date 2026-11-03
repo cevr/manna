@@ -1,12 +1,3 @@
-/**
- * The phone's home list beneath `All at once` (`UnderTiles` in
- * `Home.native.tsx`), mounted in a browser's document (`src/test/setup.ts`)
- * with the real tiles and tab row over stand-in rows: while the tiles show,
- * assistive technology reaches only their heading, Done and the tiles, and
- * the list, its tabs and the title's buttons are hidden beneath them; once
- * the tiles close, the list is reachable again.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { RegistryProvider } from '@effect/atom-react';
 import { Option } from 'effect';
@@ -26,7 +17,6 @@ import { tabNamed, tabsOf } from './tabs';
 const tabs = tabsOf({ hymns, favourites: [], recent: [], indexes: bundled });
 const tab = tabNamed(tabs, 'Topics');
 
-/** The home screen's layers: tab row, five rows and the title's two buttons, under `tiles`. */
 const home = (tiles: Option.Option<ReactNode>) => (
   <RegistryProvider>
     <UnderTiles tiles={tiles}>
@@ -44,11 +34,9 @@ const home = (tiles: Option.Option<ReactNode>) => (
 
 const tiles = Option.some(<AllAtOnce tab={tab} at={0} onPick={() => {}} onClose={() => {}} />);
 
-/** True when `element` or a layer holding it is hidden from assistive technology. */
 const hidden = (element: Element) =>
   Option.isSome(Option.fromNullishOr(element.closest('[aria-hidden="true"]')));
 
-/** How many rows, tabs, title buttons, Done buttons and tiles assistive technology reaches. */
 const reach = (host: HTMLElement) => {
   const count = (selector: string) =>
     [...host.querySelectorAll(selector)].filter((element) => !hidden(element)).length;

@@ -1,25 +1,3 @@
-/** One **non-empty** topic page, shared by every seam that claims the UI renders
- *  what the wire carries (§10 Milestone 6).
- *
- *  The acceptance is "`manna wiki topic <slug> --json` matches, section for
- *  section and identity for identity, what the UI renders". Until this module
- *  `packages/cli/test/commands/wiki.test.ts` asserted it over pages whose
- *  sections were **empty**: it ran the real command against
- *  `WikiSectionSources.NotWired`, so what it proved was six empty lists in the
- *  right order.
- *
- *  Six empty sections satisfy almost any projection, including a deleted one. So
- *  this module is the one fixture with content in **every** section, and the one
- *  wiring that produces it: `wikiPageFixtureSources()` is a real
- *  `WikiSectionSources.Live` over test corpora, so the CLI runs the actual
- *  composer over actual rows rather than being handed a page. The identities
- *  below are what the suites assert, and they are stated once.
- *
- *  Test-only, and reached through `@manna/core/wiki/testing` for the reason
- *  `phrase-fixture.ts` is: importable across packages is not part of the
- *  product.
- */
-
 import { Effect, Layer, Option, Schema } from 'effect';
 
 import {
@@ -55,22 +33,10 @@ import { normalizeAlias } from './normalize.js';
 import { composeSections, WikiSectionSources } from './section-composer.js';
 import { WikiService } from './service.js';
 
-/** The page under test, and the identities every seam asserts.
- *
- *  `sanctuary` because the phrase really occurs in the installed corpora, so
- *  FTS produces hits for sections 2 and 4 rather than a gap there.
- *
- *  The key verses are John 11's, which is what the Nave's-shaped catalog entry
- *  below points at — the composer takes section 1 from the catalog, and the
- *  three other verse-derived sections (commentary, cross-references) hang off
- *  it, so one set of verses drives four of the six. */
 export const WIKI_PAGE_FIXTURE = {
   slug: 'sanctuary',
   title: 'The Sanctuary',
-  /** The canonical alias, which is the phrase §6.2's handoff pre-fills and the
-   *  FTS behind sections 2 and 4 runs on. */
   phrase: 'sanctuary',
-  /** The neighbour section 6 renders, reached over an authored edge. */
   related: { slug: 'day-of-atonement', title: 'Day of Atonement' },
   thesis: 'The sanctuary is the framework of the plan of redemption.',
 } satisfies {
@@ -83,9 +49,6 @@ export const WIKI_PAGE_FIXTURE = {
 
 const CATALOG_ID = 'naves-topical-bible.sanctuary';
 
-/** The catalog entry section 1 is composed from. Three single verses rather
- *  than a range, so every key verse resolves to text the overlay can light and
- *  to a commentary/cross-reference row below. */
 const CATALOG = TopicDetail.make({
   id: Schema.decodeSync(TopicId)(CATALOG_ID),
   name: 'SANCTUARY',
@@ -102,8 +65,6 @@ const CATALOG = TopicDetail.make({
   ],
 });
 
-/** Every key verse carries the fixture phrase, so the overlay has something to
- *  match in section 1 and the identities below are the labels a reader sees. */
 const VERSES = [1, 5, 9].map((verse) => ({
   book: 43,
   chapter: 11,
@@ -112,23 +73,12 @@ const VERSES = [1, 5, 9].map((verse) => ({
   text: `John 11:${String(verse)} names the sanctuary and its service.`,
 }));
 
-/** §7's own command line, as fixture data: `manna wiki lookup "the daily"
- *  --context "Dan 8:13"`.
- *
- *  Daniel 8:13 rather than an invented address, because it is the verse §7 and
- *  §10's CLI workflow name — and its real KJV wording carries both `the daily`
- *  and `the sanctuary`, so the fixture phrase and the milestone's own example
- *  selection are located in the *same* verse. Before Milestone 7's review the
- *  lookup fixture had no `verse_words` at all, which made every context-bearing
- *  assertion pass over an empty Strong's group — a handler that dropped
- *  `context` entirely would have satisfied them. */
 export const LOOKUP_CONTEXT = { book: 27, chapter: 8, verse: 13 } satisfies {
   readonly book: number;
   readonly chapter: number;
   readonly verse: number;
 };
 
-/** The same address as the branded value every seam passes over its own wire. */
 export const LOOKUP_CONTEXT_REFERENCE: VerseReference = Reference.verse(
   LOOKUP_CONTEXT.book,
   LOOKUP_CONTEXT.chapter,
@@ -141,8 +91,6 @@ const LOOKUP_CONTEXT_VERSE = {
   text: 'How long shall be the vision concerning the daily sacrifice, and the transgression of desolation, to give both the sanctuary and the host to be trodden under foot?',
 };
 
-/** Daniel 8:13's words, as `verse_words` stores them: the two the milestone's
- *  selections cover, and one they do not. */
 const LOOKUP_CONTEXT_WORDS = [
   { text: 'the daily', strongsNumbers: ['H8548'], italic: false },
   { text: 'sanctuary', strongsNumbers: ['H6944'], italic: false },
@@ -225,10 +173,6 @@ const book = (input: {
   created_at: '2026-01-01T00:00:00.000Z',
 });
 
-/** One EGW book and one pioneer book, so sections 2 and 4 fill from **different
- *  corpus scopes** rather than one section standing in for both. `ABSENT` is the
- *  book the thesis cites and the library does not hold, which is what puts a
- *  §6.3 `missingBooks` entry beside section 2's ranked hits. */
 const BOOKS = [
   book({ id: 1, code: 'GC', title: 'The Great Controversy', author: EGW_AUTHOR, paragraphs: 1 }),
   book({
@@ -267,15 +211,8 @@ const PARAGRAPHS = [
   paragraph({ code: 'DAR', refcode: 'DAR 1.1', text: 'the sanctuary of Daniel' }),
 ];
 
-/** The identities each section renders, in order — one line per item, the line
- *  the reader can point at. Asserted by the CLI suite over the encoded page. */
 export type WikiPageFixtureIdentities = Readonly<Record<WikiSectionKind, readonly string[]>>;
 
-/** The identities one lineup carries, read straight off the model.
- *
- *  This is the *wire's* answer to "what does each section name", compared
- *  against {@link WIKI_PAGE_FIXTURE_IDENTITIES}. A UI that drew a different
- *  field, or drew nothing, disagrees with this. */
 export const wikiSectionIdentities = (sections: WikiSectionLineup): WikiPageFixtureIdentities => ({
   'key-verses': sections[0].items.map((passage) => passage.label),
   'egw-statements': sections[1].items.map((hit) => hit.refcode),
@@ -294,11 +231,6 @@ export const WIKI_PAGE_FIXTURE_IDENTITIES = {
   'related-topics': [WIKI_PAGE_FIXTURE.related.title],
 } satisfies WikiPageFixtureIdentities;
 
-/** The thesis, encoded as the artifact's `thesis_ast` column holds it.
- *
- *  It cites `ABSENT 12.3` deliberately: the citation is what makes §6.3's
- *  get-this-book affordance render beside section 2, which is a piece of markup
- *  as capable of silently disappearing as the item lists are. */
 export const wikiPageFixtureThesis = (): string =>
   Schema.encodeSync(BlocksJson)([
     ParagraphBlock.make({
@@ -314,16 +246,6 @@ export const wikiPageFixtureThesis = (): string =>
 
 export const wikiPageFixtureEmptyBlocks = (): string => Schema.encodeSync(BlocksJson)([]);
 
-/** The artifact rows the fixture page needs, as the statements a caller runs
- *  against an already-created schema.
- *
- *  Rows rather than a `Database` handle, because the two callers open SQLite
- *  through different bindings: the CLI suite runs under Bun and uses
- *  `bun:sqlite`, the Playwright e2e runs under Node and must use `node:sqlite`
- *  (a `bun:` import fails to resolve before its runner starts). Both drivers
- *  take `(sql, params)`, so the rows are portable where a handle would not be —
- *  and the fixture stays one description of one page rather than two that agree
- *  today. */
 export interface WikiPageFixtureRow {
   readonly sql: string;
   readonly params: readonly (string | number)[];
@@ -338,9 +260,6 @@ export const wikiPageFixtureRows = (): readonly WikiPageFixtureRow[] => {
       sql: topic,
       params: [WIKI_PAGE_FIXTURE.slug, WIKI_PAGE_FIXTURE.title, wikiPageFixtureThesis(), empty, 0],
     },
-    // The neighbour section 6 renders. A real row rather than a dangling edge:
-    // the composer resolves a related topic's title from the artifact, and an
-    // edge to a page that does not exist composes to nothing.
     {
       sql: topic,
       params: [WIKI_PAGE_FIXTURE.related.slug, WIKI_PAGE_FIXTURE.related.title, empty, empty, 1],
@@ -365,10 +284,6 @@ export const wikiPageFixtureRows = (): readonly WikiPageFixtureRow[] => {
   ];
 };
 
-/** The artifact schema every seam writes the rows into. The DDL a compiled
- *  artifact carries — stated once here rather than pasted into each suite, which
- *  is how a column added by the compiler comes to be missing from three
- *  fixtures. */
 export const WIKI_ARTIFACT_DDL = `
   CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   CREATE TABLE topics (slug TEXT PRIMARY KEY, title TEXT NOT NULL, thesis_ast TEXT NOT NULL, body_ast TEXT NOT NULL, position INTEGER NOT NULL);
@@ -378,15 +293,6 @@ export const WIKI_ARTIFACT_DDL = `
   INSERT INTO meta (key, value) VALUES ('schema_major', '1');
 `;
 
-/** The wired sources that turn the artifact above into a page with content in
- *  every section.
- *
- *  `WikiSectionSources.Live` over test databases — the production composition,
- *  not a stub of it — so a suite that provides this runs the real composer. The
- *  CLI suite provides it in place of `NotWired`, which is the whole of what made
- *  its assertions vacuous. */
-/** The fixture library, named so the lookup fixture and the page sources
- *  share one `WritingsService.Live` build rather than racing two. */
 export const WIKI_PAGE_FIXTURE_WRITINGS: Layer.Layer<WritingsService> = WritingsService.Live.pipe(
   Layer.provide(EGWParagraphDatabase.Test({ books: BOOKS, paragraphs: PARAGRAPHS })),
 );
@@ -406,19 +312,6 @@ export const WIKI_PAGE_FIXTURE_SOURCES: Layer.Layer<WikiSectionSources> =
     Layer.provide(WIKI_PAGE_FIXTURE_WRITINGS),
   );
 
-/** The fixture page, composed by the **real composer** over the same sources,
- *  without a SQLite file.
- *
- *  `WikiService` reaches the composer through an artifact; that path is what the
- *  CLI suite exercises, and it needs `bun:sqlite`. This is the same
- *  composition one layer down, with no SQL dependency: `composeSections` over
- *  `wikiPageFixtureSources`, with the two artifact reads the composer takes as
- *  closures (`titleOf`, `backlinksTo`) answered from the fixture's own rows.
- *
- *  The two paths cannot silently diverge: the CLI suite asserts its
- *  artifact-composed page against {@link WIKI_PAGE_FIXTURE_IDENTITIES}, and the
- *  app suite asserts this one against the same table. A change that moved one
- *  and not the other fails on whichever side it landed. */
 export const WIKI_PAGE_FIXTURE_PAGE: Effect.Effect<WikiPage> = Effect.gen(function* () {
   const sourcing = yield* WikiSectionSources;
   if (sourcing._tag === 'not-wired') {
@@ -456,14 +349,10 @@ export const WIKI_PAGE_FIXTURE_PAGE: Effect.Effect<WikiPage> = Effect.gen(functi
     title: WIKI_PAGE_FIXTURE.title,
     core: Option.some(core),
     catalogId: Option.some(CATALOG.id),
-    // The artifact's `topics` table, as the two rows the fixture writes.
     titleOf: (slug) => {
       if (String(slug) !== WIKI_PAGE_FIXTURE.related.slug) return Effect.succeedNone;
       return Effect.succeedSome(WIKI_PAGE_FIXTURE.related.title);
     },
-    // No page points *at* the fixture, so section 6 is the authored edge
-    // alone — the same list the artifact produces, where the reverse edge is
-    // likewise absent.
     backlinksTo: () => Effect.succeed([]),
   });
   return WikiPage.make({
@@ -477,19 +366,8 @@ export const WIKI_PAGE_FIXTURE_PAGE: Effect.Effect<WikiPage> = Effect.gen(functi
   });
 }).pipe(Effect.provide(WIKI_PAGE_FIXTURE_SOURCES));
 
-/** The catalog the fixture's `topic_catalog_keys` row points at. A suite that
- *  resolves `WikiService` has to provide `TopicService` beside the sources, and
- *  it must be **this** catalog — the composer reads section 1 from it, and a
- *  different one would leave the page's key verses empty while every other
- *  section filled. */
 export const WIKI_PAGE_FIXTURE_CATALOG: Layer.Layer<TopicService> = TopicService.Test([CATALOG]);
 
-/** The dictionary select-to-lookup's topic group resolves against (§7).
- *
- *  The fixture page's own canonical alias, so a lookup of `sanctuary` finds the
- *  same page the rest of this module composes — one fixture, one subject, and
- *  the topic group's answer is checkable against `WIKI_PAGE_FIXTURE.slug`
- *  rather than against a second invented vocabulary. */
 export const WIKI_LOOKUP_FIXTURE_DICTIONARY: PhraseDictionary = PhraseDictionary.make({
   entries: [
     PhraseDictionaryEntry.make({
@@ -502,17 +380,6 @@ export const WIKI_LOOKUP_FIXTURE_DICTIONARY: PhraseDictionary = PhraseDictionary
   unavailable: Option.none(),
 });
 
-/** The one `LookupService` every seam's suite resolves (§7).
- *
- *  The real service over the real `WikiSectionSources` this module already
- *  builds, so all five groups are exercised by the same four corpora a topic
- *  page composes from, and every suite compares one input rather than
- *  hand-copied ones.
- *
- *  The wiki half is a dictionary-only stand-in rather than the artifact layer:
- *  the artifact path needs `bun:sqlite` and a temp file, which is
- *  `WIKI_ARTIFACT_DDL`'s business, and the topic group reads nothing from a
- *  page. */
 export const WIKI_LOOKUP_FIXTURE_LAYER: Layer.Layer<LookupService> = LookupService.Live.pipe(
   Layer.provide(
     Layer.succeed(

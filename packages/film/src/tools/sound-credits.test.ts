@@ -1,7 +1,3 @@
-// A CC BY recording a film places owes its line: on the credit roll under a
-// "Sound" head, in the whole film's video description with its pages linked,
-// and `film check` fails the film whose roll does not give it.
-
 import { describe, expect, test } from 'bun:test';
 import { Option, Result } from 'effect';
 import { type Credit, creditRoll } from '../canvas/credits.ts';
@@ -53,7 +49,6 @@ describe('the credit roll', () => {
     expect(roll[head]?.kind).toBe('head');
     const items = roll.slice(head + 1);
     expect(items.every((c) => c.kind === 'item')).toBe(true);
-    // Wrapped at the measure, as every line of the roll is.
     expect(items.map((c) => c.text).join(' ')).toBe(LINE);
     expect(items.length).toBeGreaterThan(1);
   });
@@ -69,7 +64,6 @@ describe('film check', () => {
   const timings = { voice: '', scenes: {} };
   const placed = Result.getOrThrow(layout(scenes, timings, 30));
   const sounds = measuredSounds(library, {}, '/sounds');
-  /** What the static leg says of the film's credits, placing `sound` and rolling `credits`. */
   const creditsFound = (sound: Sound, credits: Option.Option<ReadonlyArray<Credit>>) =>
     staticFindings(
       { ...testFilm(scenes, timings), sound: Option.some(sound), sounds, credits },

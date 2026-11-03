@@ -1,17 +1,3 @@
-/** The resumable embed loop: crash, resume, and byte-identical completion.
- *
- *  The stub embedder is deterministic (each text embeds to a vector derived
- *  from its own characters), so "the resumed run produced the same index as a
- *  single uninterrupted pass" is checkable byte for byte — which is the whole
- *  claim resumability makes.
- *
- *  One embedder layer serves every test, provided once at each test's
- *  boundary; what varies mid-test is its *budget*, a mutable cell the tests
- *  refill. A fresh layer per call would need `Effect.provide` inside the test
- *  body, which is exactly the provisioning-at-the-boundary rule this repo
- *  lints for.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { DIMENSIONS, QueryEmbedder, QueryEmbedderUnavailable } from '@manna/core/search';
 import { BunServices } from '@effect/platform-bun';
@@ -32,7 +18,6 @@ const ROWS: readonly VectorSourceRow[] = Array.from({ length: 1200 }, (_, index)
   row('GC', `GC ${String(index + 1)}.1`, `paragraph number ${String(index)}`, `${String(index)}.1`),
 );
 
-/** Deterministic per-text vector: byte i is a function of the text and i. */
 const vectorFor = (text: string): Int8Array => {
   const out = new Int8Array(DIMENSIONS);
   let seed = 0;
@@ -41,9 +26,6 @@ const vectorFor = (text: string): Int8Array => {
   return out;
 };
 
-/** Embeds remaining before the stub starts failing; None means unlimited.
- *  A module-level cell rather than a per-layer parameter so one layer serves
- *  every test — see the header. Tests run sequentially and each sets it. */
 const budget = { remaining: Option.none<number>() };
 
 const spend = (): Effect.Effect<void, QueryEmbedderUnavailable> =>
@@ -80,9 +62,6 @@ describe('resumable vector embedding', () => {
       const dir = yield* fs.makeTempDirectoryScoped();
       const out = `${dir}/vectors.bvi`;
 
-      // Pass 1: dies after 700 embeds — past the first 500-row flush, inside
-      // the second window, so the checkpoint records 500 and the tail of the
-      // second window is lost work.
       budget.remaining = Option.some(700);
       const first = yield* embedAllResumable(ROWS, out).pipe(Effect.exit);
       expect(first._tag).toBe('Failure');
@@ -91,9 +70,6 @@ describe('resumable vector embedding', () => {
       const partial = yield* fs.stat(partPath(out));
       expect(Number(partial.size)).toBe(500 * DIMENSIONS);
 
-      // Pass 2 must complete from row 500, not row 0 — the budget proves it:
-      // finishing needs 700 embeds and a from-scratch pass would need 1200,
-      // which this refill cannot cover.
       budget.remaining = Option.some(701);
       const resumed = yield* embedAllResumable(ROWS, out);
 
@@ -113,8 +89,6 @@ describe('resumable vector embedding', () => {
       const first = yield* embedAllResumable(ROWS, out).pipe(Effect.exit);
       expect(first._tag).toBe('Failure');
 
-      // Simulate the append-then-crash window: bytes beyond what the
-      // checkpoint accounts for.
       yield* Effect.scoped(
         Effect.gen(function* () {
           const handle = yield* fs.open(partPath(out), { flag: 'a' });
@@ -122,8 +96,6 @@ describe('resumable vector embedding', () => {
         }),
       );
 
-      // The tail cut, the run resumes from row 500: the 700 embeds left fit
-      // this refill, and the 1200 of a run started over do not.
       budget.remaining = Option.some(700);
       const resumed = yield* embedAllResumable(ROWS, out);
 
@@ -148,7 +120,6 @@ describe('resumable vector embedding', () => {
         }),
       );
 
-      // A file system whose truncate fails (a full disk, a lost permission).
       const lines: string[] = [];
       const failingTruncate = FileSystem.FileSystem.of({
         ...fs,
@@ -187,9 +158,6 @@ describe('resumable vector embedding', () => {
       const first = yield* embedAllResumable(ROWS, out).pipe(Effect.exit);
       expect(first._tag).toBe('Failure');
 
-      // A different source in the same order slot: the recorded identity no
-      // longer matches, so resuming would splice two corpora. The unlimited
-      // budget lets the full restart run to completion.
       budget.remaining = Option.none();
       const reordered = [...ROWS.slice(600), ...ROWS.slice(0, 600)];
       const resumed = yield* embedAllResumable(reordered, out);

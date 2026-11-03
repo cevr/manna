@@ -1,25 +1,10 @@
-// `--accept-mismatch`: which beats may keep a take whose transcript does not
-// match its line. It names them (`--accept-mismatch a,b`), so accepting one
-// beat's known mismatch never waves through another's; bare, it means the
-// `--only` beats, and without `--only` it names nothing and fails.
-//
-// Pure: the CLI resolves the flag before a take is recorded or imported, and
-// prints a TakeMismatch with the flags that re-record or keep it.
-
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import { UnknownScene } from '../core/errors.ts';
 import { TakeMismatch } from '../core/refusals.ts';
 import { AcceptMismatchUnnamed } from './errors.ts';
 
-/** The flag's name on the command line. */
 const ACCEPT_MISMATCH = '--accept-mismatch';
 
-/**
- * The beats `--accept-mismatch` accepts: none without it, the ones it names,
- * or bare (an empty value) the `--only` beats. A named beat the film does not
- * have (`known`) fails UnknownScene; bare without `--only`,
- * AcceptMismatchUnnamed.
- */
 export const acceptedBeats = (
   flag: Option.Option<string>,
   only: Option.Option<ReadonlySet<string>>,
@@ -37,11 +22,6 @@ export const acceptedBeats = (
   return Result.succeed(new Set(named));
 };
 
-/**
- * The command line with a bare `--accept-mismatch` (last, or before another
- * flag) given an empty value (`--accept-mismatch=`), so the parser reads it
- * as bare instead of wanting the next word. Everything else as it was.
- */
 export const bareAcceptMismatch = (args: ReadonlyArray<string>): ReadonlyArray<string> =>
   args.map((arg, i) => {
     const next = Arr.get(args, i + 1);
@@ -55,7 +35,6 @@ export const bareAcceptMismatch = (args: ReadonlyArray<string>): ReadonlyArray<s
     return arg;
   });
 
-/** A TakeMismatch as the command line prints it (the same tag and fields): with the flags that re-record or keep it. */
 class TakeMismatchToRerun extends Schema.TaggedError<TakeMismatchToRerun>()(
   'TakeMismatch',
   TakeMismatch.fields,
@@ -71,7 +50,6 @@ class TakeMismatchToRerun extends Schema.TaggedError<TakeMismatchToRerun>()(
   }
 }
 
-/** A run's failure as the command line prints it: a TakeMismatch with its flags, any other as it is. */
 export const atTheCommandLine = <E>(error: E): E | TakeMismatchToRerun => {
   if (Schema.is(TakeMismatch)(error))
     return TakeMismatchToRerun.make({

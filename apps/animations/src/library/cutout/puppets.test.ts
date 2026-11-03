@@ -6,13 +6,11 @@ import { type CutPuppet, type PuppetMember, puppetsOf } from './puppets.ts';
 
 const SRC = `${import.meta.dir}/../..`;
 
-/** Every member's puppets file, the library's cast and each film's own. */
 const MEMBERS = [
   ...new Glob('library/cast/*/cutout/puppets.ts').scanSync(SRC),
   ...new Glob('films/*/cast/*/cutout/puppets.ts').scanSync(SRC),
 ].toSorted();
 
-/** A member's puppets file as this test reads it. */
 interface PuppetsModule {
   readonly PUPPETS: Readonly<Record<string, CutPuppet>>;
 }
@@ -20,7 +18,6 @@ interface PuppetsModule {
 const ROOT = { bones: [], skin: {}, root: [0, 0] } as const;
 const FRAME = { sheet: 'turnaround', kept: [0, 0, 10, 10], pad: [1, 1, 1, 1] } as const;
 
-/** A member of one view, `front`, whose cut lists `parts` front to back. */
 const member = (parts: PartCut['parts']): PuppetMember<'front'> => ({
   cast: 'probe',
   frames: { front: FRAME },

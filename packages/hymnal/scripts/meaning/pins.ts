@@ -1,11 +1,3 @@
-/**
- * What the meaning table is built from, pinned: the model (EmbeddingGemma
- * v1, 300M, its ONNX export at fp32), the English word list (BERT's
- * uncased vocabulary), and the runtime that runs the model. Each file is
- * fetched from its repository at a fixed revision and checked against its
- * SHA-256 before it is used (`fetch.ts`); a file that differs fails the build.
- */
-
 export interface Pinned {
   readonly path: string;
   readonly size: number;
@@ -18,7 +10,6 @@ export interface Source {
   readonly files: ReadonlyArray<Pinned>;
 }
 
-/** EmbeddingGemma v1 (Gemma Terms of Use), the ONNX export the research measured. */
 export const MODEL: Source = {
   repo: 'onnx-community/embeddinggemma-300m-ONNX',
   revision: '5090578d9565bb06545b4552f76e6bc2c93e4a66',
@@ -61,7 +52,6 @@ export const MODEL: Source = {
   ],
 };
 
-/** BERT's uncased vocabulary (Apache 2.0): its whole words are the English the table knows beside the hymnal's own. */
 export const VOCABULARY: Source = {
   repo: 'google-bert/bert-base-uncased',
   revision: '86b5e0934494bd15c9632b12f734a8a67f723594',
@@ -74,7 +64,6 @@ export const VOCABULARY: Source = {
   ],
 };
 
-/** The runtime, installed into the cache (never the repo): transformers.js and the ONNX runtime it runs on. */
 export const RUNTIME = {
   dependencies: { '@huggingface/transformers': '4.3.1' },
   overrides: {
@@ -85,13 +74,10 @@ export const RUNTIME = {
   },
 } as const;
 
-/** EmbeddingGemma's prompts: a query, and a document with its title. */
 export const queryPrompt = (text: string) => `task: search result | query: ${text}`;
 export const documentPrompt = (title: string, text: string) => `title: ${title} | text: ${text}`;
 
-/** The model's full width: the table keeps every dimension. */
 export const DIMS = 768;
 
-/** Words per model call, and the runtime's threads: fixed, so two builds run the same arithmetic. */
 export const BATCH = 64;
 export const THREADS = 4;

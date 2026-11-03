@@ -1,10 +1,3 @@
-/**
- * Every sign-up gets its deadline, `PENDING_FOR` after it, and so does a
- * subscriber imported while it waited to confirm. Only the newest sign-up's
- * deadline records anything (`ExpireSignUp`), so a later sign-up or a
- * confirmation makes the earlier ones nothing. A deadline already past, as an
- * old import's may be, comes due at once.
- */
 import * as Domain from '@alchemy.run/domain';
 import { DateTime, Duration, Effect } from 'effect';
 

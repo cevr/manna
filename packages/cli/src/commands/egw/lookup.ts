@@ -29,7 +29,6 @@ type LookupReference = Exclude<EGWParsedRef, EGWSearchQuery>;
 
 type PageLookup = EGWParagraphRef | EGWParagraphRangeRef | EGWPageRef;
 
-/** Narrow a page's paragraphs to the ones a paragraph or paragraph-range ref names. */
 const selectParagraphs = (parsed: PageLookup, paragraphs: ReadonlyArray<Paragraph>) => {
   if (parsed._tag === 'paragraph') {
     return paragraphs.filter(
@@ -127,7 +126,6 @@ const printRefcodeMatches = (matches: readonly RefcodeMatch[]) =>
     matches,
     (match, index) =>
       Effect.gen(function* () {
-        // A heading wherever the publication changes; matches arrive grouped.
         if (index === 0 || matches[index - 1]?.publication.id !== match.publication.id) {
           const { title, code, author } = match.publication;
           yield* Console.log(`${title} (${code}) — ${author}\n`);
@@ -289,11 +287,6 @@ export const egwLookup = Command.make('lookup', { ref, json }, (args) =>
       return;
     }
 
-    // A bare publication code (`PP`) asks for the table of contents and a
-    // page range (`PP 351-355`) for pages; neither is how a paragraph is
-    // cited. Everything else is a refcode, resolved against the whole corpus
-    // as it is cited: books, periodicals (`PTUK February 4, 1897, page 70.2`),
-    // letters (`11LtMs, Lt 1a, 1896, par. 14`).
     const parsed = parseEGWRef(refStr);
     if (parsed._tag !== 'book' && parsed._tag !== 'page-range') {
       const service = yield* WritingsService;

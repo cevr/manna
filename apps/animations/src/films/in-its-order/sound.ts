@@ -1,45 +1,12 @@
-// In Its Order's sound: act 1's score and code sounds (`feast`: the cold
-// open, the title card and the milk page).
-//
-// The score has three options, each a whole score in its own musical
-// language for a warm, hopeful, plain teaching film: no drums, no trailer
-// swell. Act 1 is written out: it turns at the joke at the feast (`cold`),
-// the title card, where the music stands alone (`title`), and the plain word
-// (`milk`); the later acts' movements (`later`) are shaped by the script's
-// arc until their scenes are drawn. The score is generated, so composing it
-// costs credits and waits for the owner's yes: `parlour` is composed through
-// `milk` (`score --through milk`), and the later acts play no music until a
-// whole-film compose. Every other sound here is a code sound from the library
-// (`apps/animations/sounds/library.ts`).
-//
-// Beds: the courtyard's air under the cold open and the title card; the paper
-// room under the milk page; the milk's pour from where its ribbon reaches the
-// cup until the stream stops, once for each cup.
-//
-// Effects: what the picture does by hand is a one-shot on the cue that draws
-// it. The scroll drops on the table, bounces once and unrolls; the dropper
-// comes down over the cup and goes. On `need` the drinking row's four come in
-// on a rising chime each, and the grown lead comes in on the baby's note: the
-// library's five chimes rotate from each effect's name, so `comeIn` rings
-// D5 E5 F#5 A5 and `lastIn` rings D5. The bottle in the cold open has no
-// sound: the camera pushes in on it and it never moves.
-
 import type { Sound } from '@manna/film/core';
 
 import { milk } from './scenes/milk.ts';
 
-/**
- * Where each of the drinking row's four (the baby, the toddler, the child
- * and the grown villager) starts coming in, seconds after the `row` cue
- * starts: the scene staggers them (`f.stagger`), so their starts spread
- * evenly over the cue's `stagger` share of its `dur`, the first at its start.
- */
 const comingIn = (count: number): ReadonlyArray<number> => {
   const { dur, stagger } = milk.timeline.row;
   return Array.from({ length: count }, (_, i) => (dur * stagger * i) / (count - 1));
 };
 
-/** What no option plays: the epic, the electronic and the drum kit. */
 const AVOID = [
   'drums',
   'percussion',
@@ -53,21 +20,12 @@ const AVOID = [
   'choir',
 ];
 
-/** The instruments one option turns to past act 1: its melody, its bed and its low end. */
 interface Voicing {
   readonly melody: string;
   readonly bed: string;
   readonly low: string;
 }
 
-/**
- * The score past act 1, in one option's instruments: the API composes the
- * whole film in one plan, each movement 3 to 120 s, so every later act has a
- * movement now, shaped by the script's arc and refined when its scenes are
- * drawn. The low end swells on the problem (`teeth`, `math`) and on the
- * climax (`priest`); the landing (`thesis`) is the one stretch the music
- * plays alone.
- */
 const later = ({ melody, bed, low }: Voicing) => [
   {
     from: 'stones',
@@ -112,8 +70,6 @@ export const sound: Sound = {
     under: -18.5,
     alone: -6,
     options: {
-      // Felt piano and a small string section: the warm, plain teaching
-      // sound, with pizzicato for the joke.
       parlour: {
         model: 'music_v2_5',
         styles: [
@@ -163,8 +119,6 @@ export const sound: Sound = {
           }),
         ],
       },
-      // Fingerpicked nylon guitar, upright bass and clarinet: a homespun,
-      // village sound, with glockenspiel for the joke.
       folk: {
         model: 'music_v2_5',
         styles: [
@@ -213,8 +167,6 @@ export const sound: Sound = {
           }),
         ],
       },
-      // Flute, oboe, harp and celesta: a storybook pastoral sound, with
-      // bassoon for the joke.
       storybook: {
         model: 'music_v2_5',
         styles: [
@@ -295,9 +247,6 @@ export const sound: Sound = {
     },
   ],
   effects: {
-    // ── The cold open: the scroll ──────────────────────────────────────────
-    // It lands as `drop` ends, lands again softer as its bounce (`hop`)
-    // ends, and its unroll's last flop lands near `unroll`'s end.
     drop: {
       sound: 'scroll.drop',
       level: -16,
@@ -317,9 +266,6 @@ export const sound: Sound = {
       at: [{ scene: 'cold', cue: 'unfurl' }],
     },
 
-    // ── The milk page: the dropper ─────────────────────────────────────────
-    // It comes down fastest as `ink` starts and leaves fastest as `away`
-    // ends; its bead hangs and no drop falls, so it has no drip.
     lower: {
       sound: 'paper.whoosh',
       level: -24,
@@ -333,7 +279,6 @@ export const sound: Sound = {
       at: [{ scene: 'milk', cue: 'away', edge: 'end' }],
     },
 
-    // ── The milk page: the drinking row ────────────────────────────────────
     comeIn: {
       sound: 'tone.chime',
       level: -24,

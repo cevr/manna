@@ -1,15 +1,7 @@
-// Upstream: packages/react/src/utils/useSwipeDismiss.ts,
-// packages/react/src/utils/getElementTransform.ts
-//
-// A swipe's pure geometry, for the toast, which runs its own swipe: how far a
-// drag travels in a direction, its damping against the allowed directions,
-// and an element's computed translation and scale. Upstream's gesture hook
-// around them, which names the file, is left out: no part reads it.
 import { ownerWindow } from './dom.ts';
 
 export type SwipeDirection = 'up' | 'down' | 'left' | 'right';
 
-/** How far a drag of (`deltaX`, `deltaY`) travels in `direction`. */
 export function getDisplacement(direction: SwipeDirection, deltaX: number, deltaY: number) {
   switch (direction) {
     case 'up':
@@ -25,10 +17,6 @@ export function getDisplacement(direction: SwipeDirection, deltaX: number, delta
   }
 }
 
-/**
- * The 2D translation and scale of a computed `transform` value (`matrix(…)`
- * or `matrix3d(…)`); identity for `none` or anything unparsable.
- */
 export function parseTransform(transform: string | null | undefined) {
   let translateX = 0;
   let translateY = 0;
@@ -53,22 +41,12 @@ export function parseTransform(transform: string | null | undefined) {
   return { x: translateX, y: translateY, scale };
 }
 
-/**
- * The 2D translation and scale of the element's computed `transform`. The
- * `translate`, `rotate` and `scale` longhands are separate properties and
- * are not reflected in it.
- */
 export function getElementTransform(element: HTMLElement, computedStyle?: CSSStyleDeclaration) {
   return parseTransform(
     (computedStyle ?? ownerWindow(element).getComputedStyle(element)).transform,
   );
 }
 
-/**
- * Damps movement against the allowed directions: on an allowed axis, travel
- * the wrong way grows with the square root of the distance; on an axis with
- * no allowed direction, all travel does.
- */
 export function applyDirectionalDamping(
   deltaX: number,
   deltaY: number,

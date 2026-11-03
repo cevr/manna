@@ -1,17 +1,3 @@
-/**
- * The open search across the stack's screens, as the layout nests the
- * player layer (`LivePlayer`) over the stack's wrapper (`StackBottom`),
- * mounted in a browser's document over a registry of its own
- * (`src/test/setup.ts`), on the real home screen or a stand-in hymn page:
- *
- * - a hymn pushed from the home list's results and popped again brings back
- *   the same results, mounted once, so their scroll place and their hymns
- *   about the query are as the reader left them;
- * - the box takes focus, and the keyboard rises, only on the press of
- *   `Search` that opened its search: never on the way back from a result,
- *   and never on a later search the press did not open.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { RegistryContext } from '@effect/atom-react';
 import { Option } from 'effect';
@@ -28,7 +14,6 @@ import { pathname } from '~/test/one';
 
 import { Home } from './Home.native';
 
-/** A stand-in hymn page: the page shows, so the player's bar and its find bar stand over it. */
 function Page({ n }: { readonly n: number }) {
   useShowsPage({ number: n, title: 'Stand-in' });
   return <View testID={`page-${n}`} />;
@@ -39,7 +24,6 @@ type Screen = { readonly path: string; readonly draw: () => ReactNode };
 const home: Screen = { path: '/', draw: () => <Home key="home" /> };
 const hymn = (n: number): Screen => ({ path: `/hymns/${n}`, draw: () => <Page key={n} n={n} /> });
 
-/** The stack from `first` up, its last screen shown, mounted over a registry of its own; `show` pushes or pops to another stack. */
 const mount = (first: Screen, ...rest: ReadonlyArray<Screen>) => {
   const registry = AtomRegistry.make();
   const host = document.createElement('div');
@@ -80,10 +64,8 @@ const box = (host: HTMLElement) => Option.fromNullishOr(host.querySelector('inpu
 const boxFocused = (host: HTMLElement) =>
   Option.exists(box(host), (input) => document.activeElement === input);
 const blur = (host: HTMLElement) => Option.map(box(host), (input) => input.blur());
-/** Whether `element` lies hidden from assistive technology, itself or by an ancestor. */
 const hidden = (element: Element) =>
   Option.isSome(Option.fromNullishOr(element.closest('[aria-hidden="true"]')));
-/** Whether the search's results stand in reach. */
 const resultsInReach = (host: HTMLElement) =>
   Option.exists(byId(host, 'search'), (found) => !hidden(found));
 
@@ -95,7 +77,6 @@ const type = (host: HTMLElement, words: string) =>
     }),
   );
 
-// On a hymn page a result takes the page's place and closes the search (`numreplace.slow.test.tsx`).
 describe('back from a result to search on the home list', () => {
   const base = home;
   it('returns to the same results, mounted once and in reach, with the keyboard down', () => {
@@ -105,7 +86,6 @@ describe('back from a result to search on the home list', () => {
     const opened = byId(phone.host, 'search');
     const focusedAtPress = boxFocused(phone.host);
     blur(phone.host);
-    // A result pushes hymn 100; Back pops it.
     phone.show(base, hymn(100));
     const onPushed = { results: resultsInReach(phone.host), box: Option.isSome(box(phone.host)) };
     phone.show(base);
@@ -138,7 +118,6 @@ describe('the search a press on Search did not open', () => {
     const focusedAtPress = boxFocused(phone.host);
     blur(phone.host);
     press(button(phone.host, 'Cancel'));
-    // About this hymn's Scripture row: the query, the search at the home list, and the pop to it.
     act(() => {
       phone.registry.set(searchQuery, '1');
       phone.registry.set(searchOpen, searchAt('/', 'about'));

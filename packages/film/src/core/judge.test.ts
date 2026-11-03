@@ -1,8 +1,3 @@
-// The judge's words: the moments it shows (marks and cue middles, one per
-// frame, spread evenly past the cap), the register a picture names, the rule
-// sections it quotes, the ranking it reads from an answer, and the verdict it
-// unblinds; the packet names no version.
-
 import { describe, expect, test } from 'bun:test';
 import { Option, Result } from 'effect';
 import type { SceneTimes } from './easel.ts';
@@ -40,10 +35,8 @@ describe('the moments a judge shows', () => {
   });
 
   test("one per frame as the look draws them: the film's frames, counted from its start", () => {
-    // At 30 fps from 4.01 s, 1 s and 1.01 s in are frames 150 and 151: two stills.
     const off = (marks: Record<string, number>): SceneTimes => ({ ...scene(marks), start: 4.01 });
     expect(judgeMoments(off({ a: 1, b: 1.01 }), 30).map((m) => m.at)).toEqual(['mark:a', 'mark:b']);
-    // 1.01 s and 1.02 s in are both frame 151: one still.
     expect(judgeMoments(off({ a: 1.01, b: 1.02 }), 30).map((m) => m.at)).toEqual(['mark:a']);
   });
 

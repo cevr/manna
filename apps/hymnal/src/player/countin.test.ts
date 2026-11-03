@@ -1,29 +1,3 @@
-/**
- * Acceptance (countin A1): the count-in's beats from each hymn's first tempo
- * and meter, and the host times they fall at on the dial.
- *
- * - The oracle counts a bar plainly, apart from the product's code: a
- *   compound meter (more than three to the bar, a multiple of three, over a
- *   half note or shorter) counts its notes in threes, every other meter
- *   counts each note; one bar lasts numerator × (4 / denominator) quarters
- *   of `microsPerQuarter` µs.
- * - The whole domain as written: numerators 1 to 16 over denominators 1, 2,
- *   4, 8, 16, each with generated quarter lengths from a fixed seed; then
- *   every hymn the timing bundle carries, as the follow decodes it.
- * - `countInOf(tempo)` gives `{ beats, beatMs }`: a whole number of beats,
- *   at least one, that fill exactly one bar, each the meter's own beat
- *   (`beatOf`), so the dial's bpm read-out counts the same beat.
- * - `beatTimes(countIn, rate)`: beat k at k × beatMs / rate host ms, then
- *   the first sung line at beats × beatMs / rate; over every hymn at every
- *   dial stop through `rateOf`, and generated rates.
- * - Fixed cases: hymn 78 in 3 of 1000 ms, hymn 116 in 4 of 1090.909 ms,
- *   hymn 33 (6/8) in 2 dotted quarters, hymn 131 (1/2) in 1.
- *
- * Numbers only: no hymn's words are read or printed.
- *
- * Final path: `apps/hymnal/src/player/countin.test.ts`.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 import bundled from 'virtual:hymnal-timing';
@@ -32,7 +6,6 @@ import { timelineOf, type FirstTempo } from '../follow/timeline';
 import * as Count from './countin';
 import * as Tempo from './tempo';
 
-/** A seeded generator of numbers in [0, 1) (mulberry32). */
 const seeded = (seed: number) => {
   let a = seed >>> 0;
   return () => {
@@ -45,26 +18,20 @@ const seeded = (seed: number) => {
 };
 
 const SEED = 20261102;
-/** Generated quarter lengths for each meter of the domain. */
 const DRAWS = 40;
-/** Generated rates for each hymn, beside the dial's stops. */
 const RATES = 4;
-/** Ms of slack for sums of the same terms taken in another order. */
 const NEAR = 1e-6;
 
 const near = (a: number, b: number) => Math.abs(a - b) <= NEAR * Math.max(1, Math.abs(b));
 
-/** The beats a bar of the meter is counted in, written out plainly. */
 const oracleBeats = (numerator: number, denominator: number): number => {
   if (numerator > 3 && numerator % 3 === 0 && denominator >= 2) return numerator / 3;
   return numerator;
 };
 
-/** One bar of the tempo, in ms. */
 const barMs = (tempo: FirstTempo) =>
   (tempo.numerator * (4 / tempo.denominator) * tempo.microsPerQuarter) / 1000;
 
-/** What is wrong with `countInOf(tempo)`, by the oracle; empty when right. */
 const countInWrong = (tempo: FirstTempo): ReadonlyArray<string> => {
   const said = `${tempo.numerator}/${tempo.denominator} at ${tempo.microsPerQuarter}`;
   const got = Count.countInOf(tempo);
@@ -81,7 +48,6 @@ const countInWrong = (tempo: FirstTempo): ReadonlyArray<string> => {
   return wrong;
 };
 
-/** What is wrong with `beatTimes(countIn, rate)`, by the rule; empty when right. */
 const timesWrong = (countIn: Count.CountIn, rate: number, said: string): ReadonlyArray<string> => {
   const got = Count.beatTimes(countIn, rate);
   const expected = Array.from({ length: countIn.beats + 1 }, (_, k) => (k * countIn.beatMs) / rate);
@@ -96,7 +62,6 @@ const timesWrong = (countIn: Count.CountIn, rate: number, said: string): Readonl
 
 const DENOMINATORS = [1, 2, 4, 8, 16];
 
-/** Every meter of the domain, each with `DRAWS` quarter lengths from 150 000 to 3 000 000 µs. */
 const domain = (): ReadonlyArray<FirstTempo> => {
   const draw = seeded(SEED);
   const tempos: Array<FirstTempo> = [];
@@ -111,7 +76,6 @@ const domain = (): ReadonlyArray<FirstTempo> => {
   return tempos;
 };
 
-/** Every hymn the timing bundle carries, with its first tempo as the follow decodes it. */
 const hymns = bundled.map(([number, encoded]) => ({
   number,
   tempo: Option.getOrThrow(timelineOf(encoded)).tempo,
@@ -119,7 +83,6 @@ const hymns = bundled.map(([number, encoded]) => ({
 
 const tempoOf = new Map(hymns.map((hymn) => [hymn.number, hymn.tempo]));
 
-/** Hymn `number`'s first tempo; a hymn the bundle lacks fails the case. */
 const tempoAt = (number: number): FirstTempo =>
   Option.getOrThrow(Option.fromUndefinedOr(tempoOf.get(number)));
 

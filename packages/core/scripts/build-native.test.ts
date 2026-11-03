@@ -37,7 +37,6 @@ it.scopedLive(
       yield* fs.copyFile(path.join(import.meta.dir, 'build-native.sh'), script);
       yield* fs.writeFileString(path.join(bin, 'zig'), fakeZig);
       yield* fs.chmod(path.join(bin, 'zig'), 0o755);
-      // The wasm stamp hashes its source; both sources and every output belong to this fixture.
       for (const name of ['vector-scan.c', 'vector-scan-wasm.c']) {
         yield* fs.writeFileString(path.join(workspace, 'native', name), 'synthetic source');
       }

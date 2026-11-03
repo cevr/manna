@@ -1,26 +1,12 @@
-// A picture drawn into a view's pixels by one similarity (a uniform scale and
-// a shift), and that similarity fitted on colour: the move that lays a
-// picture made from the view (okra's repaint of a padded copy of it) back
-// over the view, found where the picture should still show the view's own
-// pixels. A view point X is the picture's point (X - d) / s, both in pixel
-// corners; each view pixel takes the picture's mean over its footprint, read
-// exactly from the picture's summed areas. The fit is a coordinate descent
-// from a start (the padding's own move), each step halved when no move
-// lowers the mean RGB distance over the pixels asked, until a shift step is
-// under a 32nd of a pixel; a scale step turns about those pixels' middle, so
-// that it does not shift them. Pure and deterministic.
-
 import type { Raster } from './raster.ts';
 import { stretchRaster } from './raster.ts';
 
-/** A view point X is the picture's point (X - (dx, dy)) / s. */
 interface Similarity {
   readonly s: number;
   readonly dx: number;
   readonly dy: number;
 }
 
-/** A picture's summed areas: (w + 1) × (h + 1) totals of red, green and blue (three a corner) from the top-left corner. */
 interface Summed {
   readonly w: number;
   readonly h: number;
@@ -42,13 +28,7 @@ const summedOf = (r: Raster): Summed => {
   return { w, h, sums };
 };
 
-/**
- * Adds `sign` times the totals from the corner to point (x, y), held inside
- * the picture, into `out` (red, green, blue): bilinear between the four
- * corner totals, exact for pixels of one colour each.
- */
 const addTotal = (p: Summed, x: number, y: number, sign: number, out: Float64Array) => {
-  // the scoring loop calls this four times a pixel: plain locals, no array per call
   const cx = Math.max(0, Math.min(p.w, x));
   const cy = Math.max(0, Math.min(p.h, y));
   const x0 = Math.min(p.w - 1, Math.floor(cx));
@@ -73,7 +53,6 @@ const addTotal = (p: Summed, x: number, y: number, sign: number, out: Float64Arr
           (t[b + 3 + c] ?? 0) * wd);
 };
 
-/** View pixel `i`'s colour under `fit` into `out` (red, green, blue): the picture's mean over the pixel's footprint, a footprint past the picture's edge keeping at least its edge's last pixel. */
 const colourInto = (
   p: Summed,
   width: number,
@@ -113,7 +92,6 @@ const drawSummed = (p: Summed, width: number, height: number, fit: Similarity): 
   return { width, height, rgba };
 };
 
-/** `picture` drawn into a `width` × `height` view by `fit`, opaque: each pixel the picture's mean over its footprint. */
 export const drawSimilar = (
   picture: Raster,
   width: number,
@@ -121,11 +99,6 @@ export const drawSimilar = (
   fit: Similarity,
 ): Raster => drawSummed(summedOf(picture), width, height, fit);
 
-/**
- * `picture` drawn into a `width` × `height` view by `fit`, each view pixel
- * the one picture pixel under its centre (held inside the picture): no
- * averaging, so the picture's own grain stays in each pixel it gives.
- */
 export const drawPoint = (
   picture: Raster,
   width: number,
@@ -144,24 +117,14 @@ export const drawPoint = (
   return { width, height, rgba };
 };
 
-/** The most a fit's shift step starts at, pixels, and its scale step, a part of the scale. */
 const SHIFT_STEP = 4;
 const SCALE_STEP = 0.02;
-/** The fit stops once a shift step is under this, pixels. */
 const LEAST_STEP = 1 / 32;
 
-/** A similarity fitted, and its score: the mean RGB distance (0-765) over the pixels asked. */
 interface SimilarityFit extends Similarity {
   readonly score: number;
 }
 
-/**
- * The similarity, near `start`, that draws `picture` closest to `view` in
- * colour over the pixels `where` marks (1): a coordinate descent with
- * halving steps on the scale and the shift, the scale turned about the
- * marked pixels' middle. `where` marks the pixels the picture should still
- * show as the view does.
- */
 export const fitSimilarity = (
   view: Raster,
   picture: Raster,
@@ -192,7 +155,6 @@ export const fitSimilarity = (
     }
     return s / Math.max(1, at.length);
   };
-  /** `f` scaled by `k` about the marked pixels' middle. */
   const scaled = (f: Similarity, k: number): Similarity => ({
     s: f.s * k,
     dx: cx - (cx - f.dx) * k,
@@ -218,11 +180,6 @@ export const fitSimilarity = (
   return best;
 };
 
-/**
- * `view` laid in the middle of a `width` × `height` picture of `ground`,
- * scaled as large as it fits (bilinear), and the similarity that lays the
- * picture back over the view.
- */
 export const padInto = (
   view: Raster,
   width: number,
@@ -239,7 +196,6 @@ export const padInto = (
       big.rgba.subarray(y * big.width * 4, (y + 1) * big.width * 4),
       ((oy + y) * width + ox) * 4,
     );
-  // the drawn size over the view's: each axis rounds to whole pixels, so the mean of the two
   const f = (big.width / view.width + big.height / view.height) / 2;
   return { picture: { width, height, rgba }, fit: { s: 1 / f, dx: -ox / f, dy: -oy / f } };
 };

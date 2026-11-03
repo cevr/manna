@@ -1,4 +1,3 @@
-/** Bun-only corpus projection. The phone imports hymn.ts, never this module. */
 import type { Database } from 'bun:sqlite';
 import { Effect, Option, Schema } from 'effect';
 
@@ -86,7 +85,6 @@ export class CorpusDatabaseError extends Schema.TaggedError<CorpusDatabaseError>
     cause: Schema.optional(SQLiteCause),
   },
 ) {
-  /** Codes carry the SQLite failure without SQL, parameters or corpus values. */
   static fromSqlite = (operation: string, cause: unknown) =>
     CorpusDatabaseError.make({
       operation,
@@ -107,7 +105,6 @@ const partLines = (part: StoredPart): readonly string[] => {
   );
 };
 
-/** Relational checks complement the source schemas. Failure carries only number and field. */
 const validateSources = Effect.fn('CorpusDatabase.validate')(function* (sources: DatabaseSources) {
   const { source, hymns, index, topics, metres, census } = sources;
   if (hymns.length !== 695 || hymns.some((h, i) => h.number !== i + 1))
@@ -258,7 +255,6 @@ const insertInto = (db: Database, table: string, columns: string) => {
   return (...values: Binding[]) => query.run(...values);
 };
 
-/** SQLite mutation stays behind this one writer, invoked only by compile-db.ts. */
 export const populateDatabase = Effect.fn('CorpusDatabase.populate')(function* (
   db: Database,
   sources: DatabaseSources,
@@ -432,7 +428,6 @@ const writeTiming = (
   timing.lines.forEach((line, i) => {
     const occurrence = occurrences[i];
     const source = occurrence && parts.get(occurrence.verse)?.[occurrence.line];
-    // validateSources proves this mapping; the FK additionally refuses a missing source line.
     const id = Number(
       lineTime(
         hymn.number,
@@ -510,11 +505,6 @@ const writeEvidence = (db: Database, sources: DatabaseSources) => {
       );
 };
 
-/**
- * Run on the closed/reopened candidate too, before atomic publication. The
- * `index_*` tables must read back as the decoded index files they were built
- * from; the first index that differs names the failure (`indexes:<name>`).
- */
 export const checkDatabase = Effect.fn('CorpusDatabase.check')(function* (
   db: Database,
   expected: IndexSources,

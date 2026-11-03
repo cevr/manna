@@ -10,11 +10,8 @@ import { type Place, type Timeline, placeAt, timelineOf, timingBook } from './ti
 
 const decoded = (encoded: string): Timeline => Option.getOrThrow(timelineOf(encoded));
 
-// A quarter of 666666 µs in 3/4, then two lines: a lit line of two words (syllables at 1000, 1500 |
-// 2000) and a line marked whole.
 const small = decoded('666666,3,4|1,1000,2000,0.500,500;3,2000,1000');
 
-/** The place by a plain scan of every line and syllable: what `placeAt` must agree with. */
 const scanned = (timeline: Timeline, ms: number): Pick<Place, 'line' | 'syllable' | 'word'> => {
   const line = timeline.lines.findLastIndex((l) => l.start <= ms && ms < l.until);
   if (line < 0 || ms >= timeline.end) return { line: -1, syllable: -1, word: -1 };
@@ -44,7 +41,6 @@ describe('a hymn timeline', () => {
   });
 
   it('refuses a string that does not decode', () => {
-    // Each refused as it stands (no head) and after a valid head (its lines are malformed).
     for (const bad of ['', '1,0', '4,0,10', '1,-1,10', '1,0,10,0.x', '1,0,10;;'])
       for (const encoded of [bad, `500000,4,4|${bad}`])
         expect(Option.isNone(timelineOf(encoded))).toBe(true);
@@ -84,7 +80,6 @@ describe('a hymn timeline', () => {
   });
 });
 
-/** Where hymn `hymn`'s timeline differs from its compiled timing, line by line. */
 const faultsOf = (hymn: Hymn, timeline: Timeline): ReadonlyArray<string> => {
   const timing = Option.getOrThrow(Option.fromUndefinedOr(hymn.timing));
   const seconds = Timing.secondsAt(timing);
@@ -99,9 +94,6 @@ const faultsOf = (hymn: Hymn, timeline: Timeline): ReadonlyArray<string> => {
     const flags = [want.played, want.even].join() === [got.played, got.even].join();
     if (!flags || !same([got.start, got.until], [ms(want.start), ms(want.until)]))
       return [`${at}: times or flags`];
-    // A line may be lit when it has note times that fit it: one per syllable, in order, inside the
-    // line. At `syllable` level it is lit; at `line` level it is lit or whole, as its other singings
-    // on the same notes agree (`follower.test.ts` holds the agreement to the sung file).
     const syllables = Match.value(line.part).pipe(
       Match.tag('Sung', (part) => part.lines[line.line] ?? []),
       Match.orElse(() => []),
@@ -115,7 +107,6 @@ const faultsOf = (hymn: Hymn, timeline: Timeline): ReadonlyArray<string> => {
       if (got.syllables.length === 0) return [];
       return [`${at}: lit where words may not be`];
     }
-    // Syllables of one word share a word; each new word takes the next place.
     const loose = Match.value(line.part).pipe(
       Match.tag('Sung', (part) => part.level === 'line'),
       Match.orElse(() => false),
@@ -129,7 +120,6 @@ const faultsOf = (hymn: Hymn, timeline: Timeline): ReadonlyArray<string> => {
   });
 };
 
-/** Where `placeAt` on `timeline` at `ms` differs from a scan, or does not hold until its `nextAt`. */
 const placeFaults = (timeline: Timeline, ms: number, place: Place): ReadonlyArray<string> => {
   const want = scanned(timeline, ms);
   const faults: Array<string> = [];
@@ -174,7 +164,6 @@ describe('every bundled hymn timeline', () => {
       for (const ms of times) {
         const place = placeAt(timeline, ms);
         faults.push(...placeFaults(timeline, ms, place).map((fault) => `${number} ${fault}`));
-        // Monotone up to the end: never back to an earlier line or syllable.
         const back =
           place.line < last.line || (place.line === last.line && place.syllable < last.syllable);
         if (ms < timeline.end && place.line >= 0) {

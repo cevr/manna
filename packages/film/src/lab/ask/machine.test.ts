@@ -1,13 +1,3 @@
-// An ask's page machine, with no DOM, over a fake lab: it reads the ask and
-// opens on its one page, from where its run is; a draft that does not fit is
-// said, not sent; a send carries every section the draft reaches, in order,
-// and lands on the end; optional words left empty go unsent; a refusal (the
-// phone answered first) reads the ask again and says why; an ask that cannot
-// be read says so. The owner's draft survives every outcome: an edit made
-// while a send or a re-read is out is kept, a re-read the store fails keeps
-// the page, an ask gone from the lab still shows the draft, and an edit the
-// landed send did not carry is named.
-
 import { Deferred, Effect, Layer, Match, Predicate, Schema, SubscriptionRef } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { AskName, AskRecord, AskState, type StepValues } from '../../core/ask.ts';
@@ -17,7 +7,6 @@ import { type LabFailure, called } from '../api.ts';
 import { AskApi } from './api.ts';
 import { AskPageEvent, AskPageState, spawnAskPage } from './machine.ts';
 
-/** A step's name, decoded as the lab decodes it. */
 const step = Schema.decodeSync(AskName);
 
 const asking = Schema.decodeSync(AskRecord)({
@@ -60,7 +49,6 @@ const picked: AskRecord = {
   answered: [{ step: step('pick'), values: { try: '7' }, at: '2026-10-14T00:01:00.000Z' }],
 };
 
-/** The ask once try 7 and its why, left empty, are answered: at its end. */
 const ended: AskRecord = {
   ...picked,
   state: AskState.Answered({
@@ -72,7 +60,6 @@ const ended: AskRecord = {
 
 const unused = () => Effect.die('not called by an ask page');
 
-/** The lab as the page calls it: `reads` answered in turn, each send told to `sent` and answered by `answer`. */
 type Sent = ReadonlyArray<{ readonly step: string; readonly values: StepValues }>;
 
 const fakeLab = (
@@ -105,7 +92,6 @@ const fakeLab = (
     }),
   );
 
-/** Ask `id`'s page, opening on its first read through the fake lab (the review's `askRead`, there). */
 const pageOn = (id: string) =>
   spawnAskPage(
     id,
@@ -115,14 +101,12 @@ const pageOn = (id: string) =>
 const opened = (record: AskRecord, said = '') =>
   AskPageState.Open({ page: { record, draft: {} }, said, missing: '' });
 
-/** The draft a state shows: none before the ask is read. */
 const draftIn = (s: AskPageState): StepValues =>
   Match.value(s).pipe(
     Match.tag('Open', 'Sending', 'Rereading', 'Gone', (p) => p.page.draft),
     Match.orElse(() => ({})),
   );
 
-/** Where a re-read leaves the page: gone, or never read. */
 const shutOut = Predicate.or(Predicate.isTagged('Gone'), Predicate.isTagged('Unreadable'));
 
 describe("an ask's page", () => {
@@ -140,7 +124,6 @@ describe("an ask's page", () => {
           said: 'Which? needs a choice',
           missing: 'try',
         });
-        // Try 7 asks why: its section is on the page now, its words optional.
         yield* actor.send(AskPageEvent.Set({ id: 'try', value: '7' }));
         yield* actor.send(AskPageEvent.Submit);
         yield* actor.waitFor((s) => s._tag === 'Open' && s.page.record.state._tag === 'Answered');
@@ -252,17 +235,14 @@ describe("an ask's page", () => {
         yield* actor.send(AskPageEvent.Set({ id: 'try', value: '7' }));
         yield* actor.send(AskPageEvent.Set({ id: 'why', value: 'the steadier voice' }));
         yield* actor.send(AskPageEvent.Submit);
-        // While the ask is read again, the page keeps its record and draft: its sections stay.
         expect(yield* actor.waitFor(AskPageState.Rereading)).toEqual(
           AskPageState.Rereading({
             page: { record: asking, draft: { try: '7', why: 'the steadier voice' } },
             said: 'ask "a0123456789": step pick is answered already',
           }),
         );
-        // An edit while the ask is read again is the owner's: it is kept.
         yield* actor.send(AskPageEvent.Set({ id: 'why', value: 'the steadier voice, and slower' }));
         yield* Deferred.succeed(reread, true);
-        // The phone picked try 7: the why step is still open, its words as last typed.
         expect(yield* actor.waitFor(AskPageState.Open)).toEqual(
           AskPageState.Open({
             page: { record: picked, draft: { why: 'the steadier voice, and slower' } },
@@ -296,7 +276,6 @@ describe("an ask's page", () => {
       yield* Deferred.succeed(out, true);
       const back = yield* actor.waitFor((s) => s._tag === 'Open' && s.said !== '');
       expect(draftIn(back)).toEqual({ try: '7', why: 'typed while it was out' });
-      // The send carried the draft as it was at Send.
       expect(sent).toEqual([
         [
           { step: 'pick', values: { try: '7' } },
@@ -404,7 +383,6 @@ describe("an ask's page", () => {
         const actor = yield* pageOn(asking.id);
         yield* actor.waitFor(AskPageState.Open);
         yield* actor.send(AskPageEvent.Set({ id: 'why', value: 'typed since' }));
-        // Try 7 brings why onto the page; a stale id of no question on it is dropped.
         yield* actor.send(AskPageEvent.Restored({ draft: { try: '7', why: 'kept', gone: 'x' } }));
         const back = yield* actor.waitFor((s) => draftIn(s)['try'] === '7');
         expect(draftIn(back)).toEqual({ try: '7', why: 'typed since' });

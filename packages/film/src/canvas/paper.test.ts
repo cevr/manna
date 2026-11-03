@@ -1,9 +1,3 @@
-// Film grain is copied out of a pre-drawn sheet at an offset per tick. The
-// offset must show each frame pixel the same tile pixel the shifted repeat
-// pattern showed (translated by (137, 71) px a tick), stay inside the sheet's
-// extra tile, and depend on the tick alone, so a boiled grain still changes
-// every tick and any frame draws alone.
-
 import type { Vec2 } from 'math';
 import { describe, expect, test } from 'bun:test';
 import { Predicate } from 'effect';
@@ -12,7 +6,6 @@ import { grainShift, makeGrain, makePaper } from './paper.ts';
 
 const mod = (a: number, n: number) => ((a % n) + n) % n;
 
-/** The pixels each `putImageData` under `make` put, in call order. */
 const putPixels = (make: () => unknown): ReadonlyArray<Uint8ClampedArray> => {
   const put: Array<Uint8ClampedArray> = [];
   withDom(make, {
@@ -25,10 +18,6 @@ const putPixels = (make: () => unknown): ReadonlyArray<Uint8ClampedArray> => {
   return put;
 };
 
-// The noise a paper's mottling and a grain's tiles are made of is kept by
-// seed and size, so a second film with the same paper copies it. Each film
-// gets its own pixels: a write into one film's put pixels never reaches the
-// next film's, and a different seed or size never reads another's noise.
 describe('noise kept by seed and size', () => {
   const makers = {
     'grain tiles': (seed: number, size: number) => () => makeGrain(size, 2, seed, 8, 8),
@@ -47,7 +36,6 @@ describe('noise kept by seed and size', () => {
       expect(second.length).toBeGreaterThan(0);
       for (const data of second) expect(data.some((v) => v !== 7)).toBe(true);
       expect(putPixels(maker(48_212, 24))[0]).not.toEqual(kept[0]);
-      // A smaller film handed the bigger film's noise could not copy it in.
       expect(putPixels(maker(48_211, 23)).map((data) => data.length)).toEqual(
         kept.map(() => 23 * 23 * 4),
       );
@@ -67,7 +55,6 @@ describe('grainShift', () => {
         expect(out[1]).toBeGreaterThanOrEqual(0);
         expect(out[1]).toBeLessThan(size);
         for (let x = 0; x < size * 2 + 3; x += 7) {
-          // Pattern translated by (tx, ty): frame pixel x shows tile pixel x - tx.
           expect(mod(x + out[0], size)).toBe(mod(x - boil * 137, size));
           expect(mod(x + out[1], size)).toBe(mod(x - boil * 71, size));
         }

@@ -1,10 +1,3 @@
-/**
- * The Gemma Terms of Use, as Google publishes them at
- * https://ai.google.dev/gemma/terms (last modified April 1, 2026; read
- * 2026-10-28), word for word: the copy of the Agreement that section 3.1
- * asks to be given with `meaning.js`, a Model Derivative of EmbeddingGemma
- * (`LICENSE`, `NOTICE`). Settings → About shows it in the app.
- */
 export const gemmaTerms = `
 The terms below apply to Gemma models listed in the Appendix at bottom of this page. For Gemma 4 terms, see the Gemma 4 license (https://ai.google.dev/gemma/apache_2).
 

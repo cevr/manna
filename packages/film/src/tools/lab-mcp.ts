@@ -1,28 +1,3 @@
-// The lab as an MCP server, for agents: the running lab answers MCP at
-// `/mcp` (Streamable HTTP, Effect's `McpServer`), so an agent reads what
-// the owner said and kept in the lab, acts on it, and hears of each change
-// as it happens, instead of reading files and handing links back and forth.
-//
-// Its tools are the lab's command set (`lab-commands.ts`), each served from
-// its one definition (`lab-command.ts`): its arguments decoded by its
-// parameters (bad ones are the call's `InvalidParams`), its answer encoded by
-// its success as the structured answer and as JSON text (or, for a command
-// whose answer is pictures, its lines and images beside the structured
-// answer), its refusal said in its words, and each call logged once
-// (`mcp-calls.ts`). `film lab <name>` is made from the same definitions
-// (`lab-cli.ts`), so a terminal and an agent take the same actions by the
-// same names. Every write goes through the store the page writes through,
-// so there is no second write path.
-//
-// Resources (`lab://…`) say the same reads for a client that attaches them;
-// the `inbox` prompt opens a session on what waits.
-//
-// The lab is reached on loopback and from the owner's phone over the
-// tailnet (the lab listens on that address itself), and nowhere else, so
-// `/mcp` asks no token (owner, 2026-10-14: secure by obscurity). The lab's
-// gate (`api-server.ts`) runs first, as for any path, and Effect's server
-// refuses a request with a foreign `Origin`.
-
 import { Array as Arr, Cause, Context, Effect, Layer, Option, Schema } from 'effect';
 import * as McpProtocol from 'effect/ai/McpProtocol';
 import * as McpSchema from 'effect/ai/McpSchema';
@@ -42,19 +17,14 @@ import { BoardRead, type NoteRead, NotesRead, notesReads } from './notes-mcp.ts'
 
 export const MCP_PATH = '/mcp';
 
-// ---------------------------------------------------------------------------
-// A command as a tool
-
 const errorResult = (text: string) =>
   McpSchema.CallToolResult.make({ isError: true, content: [{ type: 'text', text }] });
 
-/** A failure that is no refusal of the command's (a defect), logged and said plainly. */
 const INTERNAL = 'Tool execution failed due to an internal server error.';
 
 const jsonText = Schema.encodeSync(Schema.fromJsonString(Schema.Json));
 const readPayload = Schema.decodeUnknownEffect(Schema.Json);
 
-/** A call's answer as a toolkit says it: the structured answer and its JSON text, or the command's pictures beside it. */
 const resultOf = (answered: Answered) =>
   Effect.map(
     Option.getOrElse(answered.pictured, () =>
@@ -66,17 +36,11 @@ const resultOf = (answered: Answered) =>
       McpSchema.CallToolResult.make({ structuredContent: answered.json, content: [...content] }),
   );
 
-/** A command's input and output as MCP lists them. */
 interface ListedSchemas {
   readonly inputSchema: McpSchema.ToolJson;
   readonly outputSchema: McpSchema.ToolOutputJson;
 }
 
-/**
- * Each command's schemas as MCP lists them, derived the first time a server
- * registers it and kept: a command's definition is fixed, and every server
- * built in a process (each lab, each MCP test) lists the same JSON Schema.
- */
 const listed = new WeakMap<LabCommand<InLabNeeds>, ListedSchemas>();
 
 const listedSchemas = (command: LabCommand<InLabNeeds>) =>
@@ -97,11 +61,6 @@ const listedSchemas = (command: LabCommand<InLabNeeds>) =>
       }).pipe(Effect.orDie),
   });
 
-/**
- * `command` registered on the server, over `services`: its call read, run,
- * logged once, and answered as a toolkit answers. Input that does not read
- * is the call's `InvalidParams`; a refusal is an error result in its words.
- */
 const registered = (command: LabCommand<InLabNeeds>, services: Context.Context<InLabNeeds>) =>
   Effect.gen(function* () {
     const server = yield* McpServer.McpServer;
@@ -144,7 +103,6 @@ const registered = (command: LabCommand<InLabNeeds>, services: Context.Context<I
     });
   });
 
-/** Every command of the set as a tool of the lab's MCP. */
 const commandTools = Layer.effectDiscard(
   Effect.gen(function* () {
     const services = yield* Effect.context<InLabNeeds>();
@@ -154,16 +112,11 @@ const commandTools = Layer.effectDiscard(
   }),
 ).pipe(Layer.provide(McpServer.McpServer.layer));
 
-// ---------------------------------------------------------------------------
-// Resources and the prompt
-
-/** A read as a resource's JSON. */
 const json = <S extends Schema.Top>(schema: S) =>
   Schema.encodeEffect(Schema.fromJsonString(schema, { space: 2 }));
 
 const filmParam = McpSchema.param('film', Schema.String);
 
-/** The lab's reads as resources: what a client attaches by `@lab:lab://…`. */
 const resources = (() => {
   const reads = Effect.gen(function* () {
     const events = yield* LabEvents;
@@ -214,7 +167,6 @@ const resources = (() => {
   );
 })();
 
-/** One line a waiting note is listed by in the prompt. */
 const noteLine = (note: typeof NoteRead.Type) => {
   const panel = Option.fromUndefinedOr(note.panel);
   const asks = Option.match(
@@ -256,9 +208,6 @@ const inbox = McpServer.prompt({
     }),
 });
 
-// ---------------------------------------------------------------------------
-// The server
-
 const INSTRUCTIONS = [
   "The film lab, where the owner answers the agents' asks: multiple-choice questions over the material itself (a script, a film's Board, a video, a take, a set's document). Beside the asks it holds each film's Board (tries kept, beats approved, tweaks asked of a panel), the sets of renders and the productions' ledgers. Read with `overview`, `asks`, `notes`, `board`, `catalogue`, `sets`, `set`, `timeline`; act with `ask`, `request_tweak`, `keep_try`, `resolve`, `publish_set`, `record_render`.",
   "Listen with `changes`: pass the cursor from `overview` as `since` and a `wait` in seconds; it answers as soon as something changes (an answer to an ask, a tweak asked or redrawn, a kept try, an approval or withdrawal, a comment, a render or set, a word on a production's timeline, a film's source written through the lab), each change with its film, panel or render, its words and its lab link. Call it again with the cursor it answers.",
@@ -269,19 +218,8 @@ const INSTRUCTIONS = [
   EASEL_INSTRUCTIONS,
 ].join('\n\n');
 
-/**
- * What the lab's MCP runs over beside its router, its change feed and its
- * address: the lab's stores, its easel and its critic, its fresh runs of the
- * film CLI and the films' timelines.
- */
 export type LabMcpNeeds = Exclude<InLabNeeds, LabEvents | LabAddress>;
 
-/**
- * The lab's MCP at `/mcp` on the lab's router, over its stores and its change
- * feed. The routes it adds are the lab's own: the gate (`api-server.ts`)
- * runs first, as for every path. A client ends its session with a DELETE
- * (the transport keeps a session until then: it has no expiry).
- */
 export const labMcp = Layer.unwrap(
   Effect.gen(function* () {
     const services = yield* Effect.context<InLabNeeds>();

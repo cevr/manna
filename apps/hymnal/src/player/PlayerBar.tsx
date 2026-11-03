@@ -1,34 +1,3 @@
-/**
- * The bottom bar. On a hymn page it is that hymn's player, unless another
- * hymn sounds; off a page it shows only while the player holds a hymn
- * (`barFor`). While the player holds a hymn, the bar is docked under the
- * stack (`PlayerBar`, in the hymnal's layout), as the player plays on across
- * screens. While it holds none, the hymn page draws the bar as its own
- * (`PageBar`), so the bar comes in with the page's push and goes out with
- * its back, frame for frame.
- *
- * Everything is at the thumb, left to right: on a hymn page, the key button
- * (`KeyButton`) for the page's hymn; the opener, which opens the player
- * sheet on the bar's hymn (`/player?hymn=<n>`, with `page=<m>` while another
- * hymn sounds over the reader), and holds the hymn's number
- * and title only when the bar's hymn is not the page's own; the Sound
- * switch; and the player's button. While another hymn sounds over a page,
- * a compact Play for the page's hymn sits before Sound. The opener is the
- * row's only flexible item, so it takes whatever width the marks leave. On a
- * device with the ear, the key button's dials hold the way to the tuner
- * (`Dials`, which the bar tells `available`). A swipe up on the bar opens the
- * sheet too. Over a hymn page, a pan from the docked bar's
- * left edge goes back, as the stack's own edge pan does above the bar
- * (`BackEdge`).
- *
- * Play springs the bar taller, 56 to 88 points, and shows the seeker under
- * the buttons (`Seeker`); Pause settles it back. The bar and the key dials
- * above it lie in an overlay over the screen, its full width, that takes
- * no touch of its own: the screen keeps only the bar's resting height under
- * it (`room`), so the spring and the dials move no layout, and every touch
- * on the bar, its dials and the page lands inside a view that holds it.
- */
-
 import { useAtom, useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Match, Option } from 'effect';
 import { type Href, Link, useLinkTo, useRouter, useSafeAreaInsets } from 'one';
@@ -77,7 +46,6 @@ import { ThumbEvent } from './thumb';
 import { RecordingNotice } from './RecordingNotice';
 import { PlayPage } from './PlayPage';
 
-/** The bar docked under the stack, while the player holds a hymn. */
 export function PlayerBar() {
   return Option.match(usePlayer(), {
     onNone: () => <></>,
@@ -85,7 +53,6 @@ export function PlayerBar() {
   });
 }
 
-/** The bar `track`'s page draws as its own, while the player holds no hymn. */
 export function PageBar({ track }: { readonly track: Track }) {
   return Option.match(usePlayer(), {
     onNone: () => <></>,
@@ -93,7 +60,6 @@ export function PageBar({ track }: { readonly track: Track }) {
   });
 }
 
-/** The docked bar the player's state and the page shown give: the stack's bottom follows it. */
 export const useDockedBar = (player: HymnPlayer) =>
   dockedBar(useAtomValue(player.state), useShownPage());
 
@@ -115,21 +81,13 @@ function OnPage({ player, track }: { readonly player: HymnPlayer; readonly track
 interface Drawing {
   readonly track: Track;
   readonly state: Player;
-  /** The page's hymn, when another hymn sounds over it. */
   readonly page: Option.Option<Track>;
-  /** The hymn page shown, if one is. */
   readonly shown: Option.Option<Track>;
   readonly send: (command: Command) => void;
   readonly inset: number;
-  /** Whether the bar is docked under the stack, not a page's own. */
   readonly docked: boolean;
 }
 
-/**
- * `bar` drawn: nothing, or the screen's room for the bar at rest, and over
- * the screen the bar in its frame over the home indicator, with the key
- * dials of the page shown (`page`), if one is.
- */
 function Drawn({
   bar,
   page,
@@ -159,36 +117,23 @@ function Drawn({
   });
 }
 
-/** The hymn number the key model is held on off a hymn page: no hymn has it, so it has no chords and no dials. */
 const NO_PAGE = 0;
 
-/** The dials' panel's inset from the screen's sides, and its gap over the bar's top, in points. */
 const SIDE = 12;
 const PANEL_GAP = 10;
 
-/** The lit key button's centre from the panel's left edge, before the button has laid out. */
 const KEY_CENTRE = 35;
 
-/**
- * The overlay: the bar, and the key button and dials of the page shown. One
- * overlay draws every page and none, so a page turn, or a move to a screen
- * with no page, keeps the bar's frame, its spring and its seeker as they
- * are; only the key button and the dials follow the page. The dials stand
- * on their panel (`DialPopover`), which opens out of the key button and
- * closes back into it.
- */
 function Overlay({ drawing }: { readonly drawing: Drawing }) {
   const model = useThumb(
     Option.match(drawing.shown, { onNone: () => NO_PAGE, onSome: (hymn) => hymn.number }),
   );
   const thumb = Option.map(drawing.shown, () => model);
   const open = Option.filter(thumb, (bound) => bound.state.open);
-  // The bar's `#` gives way while the dials stand over the bar.
   useRaised(Option.isSome(open));
   const dials = Option.flatMap(thumb, (bound) =>
     Option.map(bound.printed, (printed) => ({ bound, printed })),
   );
-  // The key button's centre from the panel's left edge, as the button lays out: the dials open out of it.
   const keyAt = useSharedValue(KEY_CENTRE);
   const keyLaidOut = (event: LayoutChangeEvent) => {
     const { x, width } = event.nativeEvent.layout;
@@ -209,7 +154,7 @@ function Overlay({ drawing }: { readonly drawing: Drawing }) {
         ),
       })}
       <View pointerEvents="box-none" style={styles.dock}>
-        {/* The popover stays while it closes, on a turn to a page with no chords or to no page too. */}
+        {}
         <View pointerEvents="box-none" style={styles.dials}>
           <DialPopover
             open={Option.isSome(Option.filter(dials, ({ bound }) => bound.state.open))}
@@ -230,7 +175,6 @@ function Overlay({ drawing }: { readonly drawing: Drawing }) {
   );
 }
 
-/** The bar in its frame: its row of buttons, the seeker under them while the player sounds and the bar stands tall (`heightOf`). */
 function Frame({
   drawing,
   thumb,
@@ -243,7 +187,6 @@ function Frame({
   const { track, state, page, shown, send, inset } = drawing;
   const cue = useCue();
   const target = heightOf(state);
-  // The frame comes in at rest, so the first Play springs it up from the page's own bar.
   const height = useSharedValue(REST);
   useEffect(() => {
     height.value = withSpring(target, BAR_SPRING);
@@ -273,7 +216,7 @@ function Frame({
     <View role="region" aria-label="Player" style={[styles.frame, { paddingBottom: inset }]}>
       <Animated.View testID="bar-spring" style={[styles.spring, springing]}>
         <GestureHandlerRootView style={styles.root}>
-          {/* The swipe holds the seeker too: a swipe up from anywhere on the bar opens the sheet. */}
+          {}
           <GestureDetector gesture={swipe}>
             <View>
               <View style={styles.bar}>
@@ -312,17 +255,9 @@ function Frame({
   );
 }
 
-/** How far a pan on the docked bar's edge strip goes right, or how fast, to go back. */
 const BACK_PAN = 40;
 const BACK_SPEED = 500;
 
-/**
- * The docked bar's left edge: a strip as wide as the bar's own padding,
- * over the whole bar, where a pan to the right goes back, as the stack's
- * own edge pan does above the bar. The docked bar lies outside the stack, so
- * the stack's back gesture never gets a touch that starts on it; a hymn
- * page's own bar lies in its screen, and needs no strip.
- */
 function BackEdge() {
   const router = useRouter();
   const back = usePanGesture({
@@ -344,14 +279,6 @@ function BackEdge() {
   );
 }
 
-/**
- * The bar's body: a button that opens the player sheet on the bar's hymn
- * (`/player?hymn=<n>`, with `page=<m>` for a differing reader), so the sheet
- * keeps that hymn, offers the page's Play and follows it after a swap,
- * whether or not the page stays mounted. It names the hymn (`named`) unless
- * the bar's hymn is the page's own, which the page already names; then it
- * shows a grabber, as the sheet it opens has.
- */
 function Opener({
   track,
   state,
@@ -395,12 +322,6 @@ function Opener({
   );
 }
 
-/**
- * Whether Play sounds the recording: on, a speaker with waves in the accent;
- * off, a speaker with a slash, muted, and the score clock runs (`sound.ts`).
- * It sits left of the player's button, so Play keeps its place at the bar's
- * end.
- */
 function Sound() {
   const [on, setOn] = useAtom(settings.sound);
   const accent = useAccent();
@@ -422,11 +343,6 @@ function Sound() {
   );
 }
 
-/**
- * The player's buttons for the bar's hymn (`buttonsOf`) as marks in the
- * accent, the size of the Sound mark; a spinner in the same box while it
- * loads.
- */
 function Buttons({
   track,
   state,
@@ -466,7 +382,6 @@ function Buttons({
   );
 }
 
-/** A mark's target: 44 by 44, `color.soft` behind it while pressed. */
 const pressedSoft = ({ pressed }: { readonly pressed: boolean }) => [
   styles.mark,
   pressed && styles.pressed,
@@ -508,7 +423,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   pressed: { backgroundColor: color.soft },
-  // Over the bar's own left padding, the key button right of it.
   backEdge: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 12 },
   fill: { flex: 1 },
 });

@@ -1,24 +1,14 @@
-// The `film` oxlint plugin, run for real: oxlint lints each fixture in
-// `fixtures/` with only this plugin on, and what it reports must be exactly the
-// lines a fixture marks `// RED film/<rule>`, with corrective advice pinned
-// for every rule the plugin defines. Every rule resolves names
-// through scope, which only a real oxlint run provides, so its fixture is its
-// test. drawing-literal has its fixture here too, and the lab locator it runs
-// (`unlocatable`) is tested on source in src/tools/scene-source.test.ts.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import plugin from './plugin.ts';
 
-/** The timeout of a test here that spawns (oxlint): a cold start's time is the machine's (effect/requireSpawnBudget). */
 const SPAWNS_MS = 30_000;
 
 const text = (stream: Stream.Stream<Uint8Array, unknown>) =>
   Stream.mkString(Stream.decodeText(stream));
 
-/** The location and corrective message of every oxlint report in `--format unix`. */
 const reported = (
   out: string,
 ): ReadonlyArray<{ readonly site: string; readonly message: string }> =>
@@ -35,7 +25,6 @@ const reported = (
       ),
     );
 
-/** `file:line rule` for every line a fixture marks RED. */
 const marked = (file: string, source: string): ReadonlyArray<string> =>
   source
     .split('\n')
@@ -48,7 +37,6 @@ const marked = (file: string, source: string): ReadonlyArray<string> =>
       ),
     );
 
-/** Corrective advice users receive for each rule, including the two timing repairs. */
 const MESSAGES = {
   'no-history-comment.ts:4 film/no-history-comment':
     'a pass number in a comment tells history: say what the code does today and why; how it got here lives in the ledger and git log.',
@@ -152,7 +140,6 @@ const MESSAGES = {
     'a Chrome spawned past openView: open it through openView (packages/film/src/tools/chrome.ts), which mutes its audio whatever flags the caller asks for.',
 } as const satisfies Readonly<Record<string, string>>;
 
-/** oxlint over the fixtures with the fixtures' config: what it reported, and its exit code. */
 const lintFixtures = Effect.fn('test.lintFixtures')(function* () {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   const path = yield* Path.Path;
@@ -190,7 +177,6 @@ describe('film oxlint plugin', () => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const dir = path.join(import.meta.dir, 'fixtures');
-        // A fixture may sit in a folder its module tests read (`core/`); oxlint reports it by its name.
         const files = (yield* fs.readDirectory(dir, { recursive: true })).filter((f) =>
           /\.tsx?$/.test(f),
         );

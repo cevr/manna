@@ -1,56 +1,29 @@
-// A scene's painted plates (`PaintingSpec`): a PNG with alpha in the film's
-// folder, painted at the fidelity of the concept art and drawn as one plane
-// under the scene's current transform (`f.painting`). The scene owns the
-// parallax law: it calls `f.painting` inside a `multiplane` plane (z = the
-// divisor) or a plane function of its own, and the engine adds no camera law.
-// A plate's top-left sits at `at` (scene px) at rest, and each plate pixel
-// covers `scale` scene px. Its `open` edges are clear (alpha 0) and may show;
-// any other edge that shows inside the frame at a drawn moment is a
-// `PaintingEdge` finding of `check --draw` (`tools/draw-check.ts`).
-//
-// The png is imported `with { type: 'file' }` beside the spec, never written
-// as a path string: the stamp (`tools/stamp.ts`) follows the import and keys
-// every beat that draws the plate by the PNG's bytes.
-
 import { Option } from 'effect';
 import type { PaintingMark, Probe } from './probe.ts';
 
-/** One edge of a plate's rectangle, in the plate's own frame. */
 export type Edge = 'top' | 'right' | 'bottom' | 'left';
 
-/** The four edges in quad order: each runs from its corner to the next. */
 export const EDGES: ReadonlyArray<Edge> = ['top', 'right', 'bottom', 'left'];
 
-/** A painted plate a scene declares, as it declares a puppet. */
 export interface PaintingSpec {
-  /** A stable id, named in load errors and findings. */
   readonly key: string;
-  /** The PNG, imported `with { type: 'file' }` beside the spec. */
   readonly png: string;
-  /** The PNG's pixel size; a read of another size fails the load. */
   readonly size: readonly [number, number];
-  /** Scene px of the plate's top-left at rest. Default [0, 0]. */
   readonly at?: readonly [number, number];
-  /** Scene px per plate px. Default 1. */
   readonly scale?: number;
-  /** The edges that are clear (alpha 0) and may show inside the frame. */
   readonly open?: ReadonlyArray<Edge>;
 }
 
-/** A scene's paintings by the name its drawing calls them. */
 export type Paintings = Readonly<Record<string, PaintingSpec>>;
 
-/** A painting loaded for the draw: the image a page draws, none where nothing is drawn (Bun). */
 export interface LoadedPainting {
   readonly image: Option.Option<CanvasImageSource>;
 }
 
 type Point = readonly [number, number];
 
-/** The four screen corners (tl, tr, br, bl) of a plate's rectangle. */
 export type Quad = readonly [Point, Point, Point, Point];
 
-/** `spec`'s rectangle mapped by `m` · translate(at) · scale(scale): the corners `drawImage(image, 0, 0)` lands on. */
 export const paintingQuad = (
   m: Pick<DOMMatrixReadOnly, 'a' | 'b' | 'c' | 'd' | 'e' | 'f'>,
   spec: PaintingSpec,
@@ -66,7 +39,6 @@ export const paintingQuad = (
   return [at(0, 0), at(w, 0), at(w, h), at(0, h)];
 };
 
-/** The length of segment p..q strictly inside the open rectangle (0, 0)..(w, h): 0 when it only touches the border (Liang-Barsky). */
 const inside = (p: Point, q: Point, w: number, h: number): number => {
   const dx = q[0] - p[0];
   const dy = q[1] - p[1];
@@ -90,7 +62,6 @@ const inside = (p: Point, q: Point, w: number, h: number): number => {
   return (t1 - t0) * Math.hypot(dx, dy);
 };
 
-/** The edges of `quad` with part of their segment strictly inside the frame (0, 0)..(w, h); one exactly on the border does not show. */
 export const shownEdges = (quad: Quad, w: number, h: number): ReadonlyArray<Edge> => {
   const [tl, tr, br, bl] = quad;
   const sides: Readonly<Record<Edge, readonly [Point, Point]>> = {
@@ -102,13 +73,6 @@ export const shownEdges = (quad: Quad, w: number, h: number): ReadonlyArray<Edge
   return EDGES.filter((edge) => inside(...sides[edge], w, h) > 0);
 };
 
-/**
- * Paint `spec` as a plane under `ctx`'s current transform: translate(at),
- * scale(scale), the image at (0, 0), smoothing fixed at 'high'. With no image
- * (Bun's check) nothing is drawn. Either way, a probe that collects
- * paintings records the plate's screen quad from the same transform the draw
- * uses, so the check sees what the page paints.
- */
 export const drawPainting = (
   ctx: CanvasRenderingContext2D,
   spec: PaintingSpec,

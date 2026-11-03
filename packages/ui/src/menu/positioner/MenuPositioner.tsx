@@ -1,13 +1,3 @@
-// Upstream: packages/react/src/menu/positioner/MenuPositioner.tsx,
-// packages/react/src/menu/positioner/MenuPositionerContext.ts,
-// packages/react/src/context-menu/positioner/ContextMenuPositioner.tsx
-//
-// Positions the menu's popup under its trigger, or, in a context menu, at
-// the pointer: fixed, start-aligned and nudged -5/2 off the point so its
-// first item sits under it, shifting over the point to stay on screen. The
-// open menu is modal: a transparent backdrop covers the page (with a hole
-// over a top-level menu's trigger), and page scroll is locked unless a touch
-// opened it.
 import { isServer, type JSX } from '@solidjs/web';
 import { createContext, omit, onCleanup, Show, untrack, useContext } from 'solid-js';
 
@@ -47,14 +37,11 @@ interface MenuPositionerState {
   side: Side;
   align: Align;
   anchorHidden: boolean;
-  /** Why transitions are skipped, if they are. */
   instant: MenuInstantType;
 }
 
 export interface MenuPositionerProps extends BaseUIComponentProps<'div', MenuPositionerState> {
-  /** The gap between the trigger and the popup, in pixels. @default 0 */
   sideOffset?: number | undefined;
-  /** How the popup lines up with the trigger. @default 'center' */
   align?: Align | undefined;
 }
 
@@ -84,7 +71,6 @@ export function MenuPositioner(componentProps: MenuPositionerProps): JSX.Element
     shiftCrossAxis: contextMenu !== undefined,
   });
 
-  // The server set no element to let go.
   onCleanup(() => {
     if (!isServer) store.setPositionerElement(null);
   });
@@ -137,7 +123,7 @@ export function MenuPositioner(componentProps: MenuPositionerProps): JSX.Element
         labelsRef={store.itemLabels}
         onMapChange={store.followActiveItem}
       >
-        {/* Built inside the providers, so the popup and items read them. */}
+        {}
         {untrack(() =>
           usePositioner(componentProps, state, {
             styles: positioner.positionerStyles,

@@ -16,7 +16,6 @@ const JsonString = Schema.Unknown.pipe(
 );
 const encodeJson = Schema.encodeUnknownEffect(JsonString);
 
-// Variadic args to capture "john 3:16" or "john" "3:16" etc.
 const query = Argument.String('query').pipe(Argument.variadic());
 
 const jsonFlag = Flag.Boolean('json').pipe(
@@ -29,7 +28,6 @@ const limitFlag = Flag.Int('limit').pipe(
   Flag.optional,
 );
 
-// Format a single verse for output
 function formatVerse(verse: Verse): string {
   return `${formatBibleReference(verse.reference)}\n${verse.text}`;
 }
@@ -45,7 +43,6 @@ const verseJson = (verse: Verse) => ({
   text: verse.text,
 });
 
-// Print verses to stdout
 function printVerses(verses: readonly Verse[]): Effect.Effect<void> {
   if (verses.length === 0) {
     return Console.log('No verses found.');
@@ -54,7 +51,6 @@ function printVerses(verses: readonly Verse[]): Effect.Effect<void> {
   return Console.log(output);
 }
 
-// Print search results
 function printSearchResults(query: string, verses: readonly Verse[]): Effect.Effect<void> {
   if (verses.length === 0) {
     return Console.log(`No verses found matching "${query}".`);
@@ -124,14 +120,10 @@ export const verse = Command.make('verse', { query, json: jsonFlag, limit: limit
   }).pipe(Effect.provide(BibleCommandLive)),
 );
 
-// --- Concordance Command ---
-
-// Detect if query is a Strong's number (H/G followed by digits)
 export function isStrongsNumber(query: string): boolean {
   return /^[HhGg]\d+$/.test(query);
 }
 
-// Format a Strong's entry for output
 function formatStrongsEntry(entry: StrongsEntry): string {
   let prefix = 'Greek';
   if (entry.number.startsWith('H')) {
@@ -141,7 +133,6 @@ function formatStrongsEntry(entry: StrongsEntry): string {
   return `${entry.number} - ${entry.lemma} (${xlit}) [${prefix}]\n${entry.definition}`;
 }
 
-// Format concordance results with verse reference
 function formatConcordanceHit(result: ConcordanceHit): string {
   const bookName = getBibleBook(result.book).pipe(
     Option.map((book) => book.name),
@@ -150,7 +141,6 @@ function formatConcordanceHit(result: ConcordanceHit): string {
   return `${bookName} ${result.chapter}:${result.verse} - "${result.word}"`;
 }
 
-// Wire shape: Option fields flatten back to `string | null` for JSON consumers.
 const strongsEntryJson = (entry: StrongsEntry) => ({
   ...entry,
   transliteration: Option.getOrNull(entry.transliteration),
@@ -158,7 +148,6 @@ const strongsEntryJson = (entry: StrongsEntry) => ({
   kjvDefinition: Option.getOrNull(entry.kjvDefinition),
 });
 
-// Print the verses a Strong's number occurs in, capped at `limit`
 function printStrongsVerses(results: readonly ConcordanceHit[], limit: number) {
   return Effect.gen(function* () {
     if (results.length === 0) {
@@ -180,7 +169,6 @@ function printStrongsVerses(results: readonly ConcordanceHit[], limit: number) {
   });
 }
 
-// Look up one Strong's number and the verses it occurs in
 function lookupStrongs(queryStr: string, json: boolean, limit: number) {
   return Effect.gen(function* () {
     const db = yield* BibleDatabase;
@@ -219,7 +207,6 @@ function lookupStrongs(queryStr: string, json: boolean, limit: number) {
   });
 }
 
-// Search Strong's definitions for an English word
 function searchStrongs(queryStr: string, json: boolean, limit: number) {
   return Effect.gen(function* () {
     const db = yield* BibleDatabase;
@@ -256,7 +243,6 @@ function searchStrongs(queryStr: string, json: boolean, limit: number) {
   });
 }
 
-// Layer for concordance command
 const ConcordanceLive = BibleDbBun.Default.pipe(Layer.provideMerge(BunServices.layer));
 
 export const concordance = Command.make(

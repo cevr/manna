@@ -1,9 +1,3 @@
-// The in-memory file system the tool tests run on writes as a disk does for
-// each flag it models, and refuses a flag it does not model. One contract runs
-// every operation the tools lean on against it and against Bun's file system,
-// and their outcomes must match: a test on the double then passes only where
-// the box would.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, FileSystem, Layer, Predicate, Stream } from 'effect';
@@ -12,7 +6,6 @@ import { memoryFileSystem, text } from './testing.ts';
 
 const FILE = '/films/test/tally.tsv';
 
-/** `effect` run over a memory file system on `files`, with `/films/test` made. */
 const over = <A, E>(
   files: Map<string, Uint8Array>,
   effect: Effect.Effect<A, E, FileSystem.FileSystem>,
@@ -36,7 +29,6 @@ describe('the in-memory file system', () => {
     );
   });
 
-  // Each writer runs long enough for the scheduler to yield it mid-write.
   it.live("keeps every byte two writers append at once, 1,500 each, as a disk's 'a' does", () => {
     const files = new Map<string, Uint8Array>();
     return over(
@@ -90,26 +82,19 @@ describe('the in-memory file system', () => {
   });
 });
 
-/** An operation of the contract, on a file system whose tree sits at `at('')`. */
 type Operation = (
   fs: FileSystem.FileSystem,
   at: (relative: string) => string,
 ) => Effect.Effect<unknown, PlatformError>;
 
-/**
- * What every case starts from, under the case's own folder: a file `a.txt`,
- * a folder `sub` holding `inner.txt`, and an empty folder `empty`.
- */
 const START = { files: { 'a.txt': 'a', 'sub/inner.txt': 'i' }, folders: ['sub', 'empty'] };
 
-/** What a stream of bytes holds once read to its end, as text. */
 const streamed = (bytes: Stream.Stream<Uint8Array, PlatformError>) =>
   Effect.map(
     Stream.runCollect(bytes),
     (chunks) => `stream ${chunks.map((chunk) => new TextDecoder().decode(chunk)).join('')}`,
   );
 
-/** Each operation the tools lean on, at the edges a disk refuses. */
 const CASES: ReadonlyArray<readonly [string, Operation]> = [
   ['writes into a folder never made', (fs, at) => fs.writeFileString(at('nope/b.txt'), 'b')],
   ['writes into a file as if a folder', (fs, at) => fs.writeFileString(at('a.txt/b.txt'), 'b')],
@@ -147,7 +132,6 @@ const CASES: ReadonlyArray<readonly [string, Operation]> = [
   ['makes a folder whose parent is missing', (fs, at) => fs.makeDirectory(at('x/y'))],
   ['makes a folder already there', (fs, at) => fs.makeDirectory(at('sub'))],
   ['makes a folder where a file is', (fs, at) => fs.makeDirectory(at('a.txt'))],
-  // Node's recursive `mkdir` answers the first folder it made, past `void`.
   [
     'makes a folder already there, recursive',
     (fs, at) => Effect.asVoid(fs.makeDirectory(at('sub'), { recursive: true })),
@@ -173,8 +157,6 @@ const CASES: ReadonlyArray<readonly [string, Operation]> = [
   ['links a file over one there', (fs, at) => fs.link(at('a.txt'), at('sub/inner.txt'))],
   ['links a file not there', (fs, at) => fs.link(at('nope.txt'), at('b.txt'))],
   ['links into a folder never made', (fs, at) => fs.link(at('a.txt'), at('no/b.txt'))],
-  // A draft as journal.ts's note makes one beside the journal: empty, in the
-  // folder named, and gone, its own folder and all, with its scope.
   [
     'makes a file for a scope, in a folder',
     (fs, at) =>
@@ -191,9 +173,6 @@ const CASES: ReadonlyArray<readonly [string, Operation]> = [
     'makes a file for a scope, in a folder not there',
     (fs, at) => Effect.scoped(fs.makeTempFileScoped({ directory: at('nope'), prefix: 'p-' })),
   ],
-  // A path as the disk resolves it, told by whether it is where the plain path leads
-  // (Bun's temporary folder may itself sit behind a link). Node takes `..` as
-  // `path.resolve` does, before it walks the folders.
   [
     'resolves a path through ..',
     (fs, at) =>
@@ -221,7 +200,6 @@ const CASES: ReadonlyArray<readonly [string, Operation]> = [
   ['tells a path not there', (fs, at) => Effect.map(fs.stat(at('nope')), (info) => info.type)],
 ];
 
-/** How an operation ended: what it answered, or the kind of its refusal. */
 const outcomeOf = (operation: Effect.Effect<unknown, PlatformError>) =>
   Effect.match(operation, {
     onFailure: (error) => `refused ${error.reason._tag}`,
@@ -234,7 +212,6 @@ const outcomeOf = (operation: Effect.Effect<unknown, PlatformError>) =>
     },
   });
 
-/** The tree under `root` after a case: each folder with a trailing slash, each file with its text. */
 const treeOf = (fs: FileSystem.FileSystem, root: string) =>
   Effect.gen(function* () {
     const names = yield* fs.readDirectory(root, { recursive: true });
@@ -248,7 +225,6 @@ const treeOf = (fs: FileSystem.FileSystem, root: string) =>
     return entries.toSorted();
   });
 
-/** The start made under `root` through `fs`. */
 const started = (fs: FileSystem.FileSystem, root: string) =>
   Effect.gen(function* () {
     for (const folder of START.folders)
@@ -257,7 +233,6 @@ const started = (fs: FileSystem.FileSystem, root: string) =>
       yield* fs.writeFileString(`${root}/${name}`, body);
   });
 
-/** `operation`'s outcome and the tree it leaves, on Bun's file system in a folder of its own. */
 const onDisk = (operation: Operation) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -267,12 +242,6 @@ const onDisk = (operation: Operation) =>
     return { outcome, tree: yield* treeOf(fs, root) };
   }).pipe(Effect.scoped, Effect.provide(BunServices.layer));
 
-/**
- * The tree the in-memory file system holds under `root`, read off its map and
- * its folders as they are (a path held as both a file and a folder shows as
- * both): each folder, made or holding a file, with a trailing slash, each file
- * with its text.
- */
 const heldUnder = (root: string, files: Map<string, Uint8Array>, folders: Set<string>) => {
   const under = (path: string) => path.slice(root.length + 1);
   const inside = (path: string) => path.startsWith(`${root}/`);
@@ -290,7 +259,6 @@ const heldUnder = (root: string, files: Map<string, Uint8Array>, folders: Set<st
   ].toSorted();
 };
 
-/** `operation`'s outcome and the tree it leaves, on the in-memory file system. */
 const inMemory = (operation: Operation) =>
   Effect.gen(function* () {
     const root = '/case';

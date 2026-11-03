@@ -1,28 +1,5 @@
 /* oxlint-disable effect/noTernary, effect/noNullish -- the acceptance oracle writes the beat, bpm and tap rules out as plain branches over plain numbers, apart from the product's code, so the two cannot share a mistake; a tap that sets nothing is read as null so a failure prints flat. */
 
-/**
- * Acceptance (taptempo A1): each hymn's first tempo as the bundle carries
- * it, its beat, the bpm read-out and the tap rule.
- *
- * - The oracle: for every hymn the timing bundle carries, the decoded
- *   timeline's `tempo` is the tempo in force at `Timing.intro` (the last
- *   `tempos` change at or before it: the first played sung note, not the
- *   fast lead-in many files open with) and the hymn's `meter`.
- * - The beat over its whole domain as written (numerator 1 to 16, each
- *   denominator 1, 2, 4, 8, 16): simple meters beat the denominator's note,
- *   compound ones (numerator over 3 and a multiple of 3) the dotted note
- *   worth three of them.
- * - The read-out: the hymn's bpm at a stop, rounded, for generated bpm.
- * - The tap: four taps set the stop nearest the tapped bpm over the hymn's,
- *   held to 50 % to 150 %; fewer set nothing; a pause over 3 s or a tap at or
- *   before the last starts over; a fifth tap reads the last four. Generated
- *   bpm and intervals from a fixed seed.
- *
- * Numbers only: no hymn's words are read or printed.
- *
- * Final path: `apps/hymnal/src/player/tempo.beat.test.ts`.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 import bundled from 'virtual:hymnal-timing';
@@ -31,7 +8,6 @@ import { readPlaybackHymns } from '../../vite/chords';
 import { timelineOf } from '../follow/timeline';
 import * as Tempo from './tempo';
 
-/** A seeded generator of numbers in [0, 1) (mulberry32). */
 const seeded = (seed: number) => {
   let a = seed >>> 0;
   return () => {
@@ -49,7 +25,6 @@ const DRAWS = 500;
 const hymns = new Map(readPlaybackHymns().map((hymn) => [hymn.number, hymn]));
 const encodedOf = new Map(bundled);
 
-/** The tempo the oracle reads off the compiled hymn: the change in force at `intro`, and the meter. */
 const compiledTempoOf = (number: number) => {
   const hymn = hymns.get(number);
   const timing = hymn?.timing;
@@ -63,7 +38,6 @@ const compiledTempoOf = (number: number) => {
   };
 };
 
-/** Hymn `number`'s decoded timeline, as the follow reads it from the bundle. */
 const timelineAt = (number: number) =>
   Option.getOrThrow(Option.flatMap(Option.fromUndefinedOr(encodedOf.get(number)), timelineOf));
 
@@ -91,7 +65,6 @@ describe('the first tempo the timing bundle carries', () => {
 
   it.each([
     { number: 100, microsPerQuarter: 666666, meter: '3/4', beat: 'quarter note', bpm: 90 },
-    // Its file opens on a 250 bpm lead-in (`tempos[0]`), which is not the hymn's tempo.
     { number: 101, microsPerQuarter: 833333, meter: '3/4', beat: 'quarter note', bpm: 72 },
     { number: 33, microsPerQuarter: 740740, meter: '6/8', beat: 'dotted quarter note', bpm: 54 },
     { number: 46, microsPerQuarter: 375000, meter: '3/2', beat: 'half note', bpm: 80 },
@@ -109,7 +82,6 @@ describe('the first tempo the timing bundle carries', () => {
   });
 });
 
-/** The note names by denominator. */
 const NOTE = new Map([
   [1, 'whole note'],
   [2, 'half note'],
@@ -159,7 +131,6 @@ describe('the beat of a meter', () => {
   });
 });
 
-/** Whether `x` lies within 1e-6 of a rounding tie, where two right sums may round apart. */
 const nearTie = (x: number) => Math.abs(x - Math.floor(x) - 0.5) < 1e-6;
 
 describe('the bpm read-out', () => {
@@ -189,7 +160,6 @@ describe('the bpm read-out', () => {
   });
 });
 
-/** What each tap of `times` set, in order: a stop, or null when it set nothing. */
 const tapsAt = (times: ReadonlyArray<number>, hymnBpm: number): Array<number | null> => {
   const set: Array<number | null> = [];
   let run: Tempo.TapRun = [];
@@ -201,21 +171,17 @@ const tapsAt = (times: ReadonlyArray<number>, hymnBpm: number): Array<number | n
   return set;
 };
 
-/** Times `intervals` apart from `start`. */
 const timesFrom = (start: number, intervals: ReadonlyArray<number>): Array<number> => {
   const times = [start];
   for (const interval of intervals) times.push((times.at(-1) ?? start) + interval);
   return times;
 };
 
-/** What each tap set, written flat: a stop, or `-` for nothing. */
 const shown = (set: ReadonlyArray<number | null>) =>
   set.map((stop) => (stop === null ? '-' : String(stop))).join(' ');
 
-/** The percent a tapped bpm asks of the hymn's, before it is held to a stop. */
 const asked = (tappedBpm: number, hymnBpm: number) => (100 * tappedBpm) / hymnBpm;
 
-/** The stop nearest `percent`, held to the dial's ends. */
 const stopNear = (percent: number) => Math.min(150, Math.max(50, 5 * Math.round(percent / 5)));
 
 describe('four taps on Tap', () => {
@@ -267,7 +233,6 @@ describe('four taps on Tap', () => {
       const overPercent = asked(100, hymnBpm);
       if (nearTie(onPercent / 5) || nearTie(overPercent / 5)) continue;
       const on = tapsAt(timesFrom(start, pause(3000)), hymnBpm);
-      // After 3001 ms the run is the taps from the pause on; three more taps 600 ms apart make it four.
       const over = tapsAt(timesFrom(start, [...pause(3001), 600, 600, 600]), hymnBpm);
       const fresh = at + 1;
       const overExpected = over.map((_, n) => (n === fresh + 3 ? stopNear(overPercent) : null));

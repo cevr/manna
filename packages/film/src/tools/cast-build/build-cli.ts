@@ -1,16 +1,3 @@
-// `film concept build <film> (<member> | --cast) [--plan] [--touch <path> …]
-// [--spend okra,modal] [--keep-reader] [--json]`: build each member's stages (`stages.ts`)
-// over the cast cache (`graph.ts`), and print each stage's state, its wall
-// time and its key. A stage spends only when `--spend` names what it spends;
-// one that would spend otherwise waits (`waiting-spend`), and one that needs
-// a drawing drawn or kept waits on the owner (`waiting-owner`), as does every
-// stage below either. `--plan` runs nothing and prints what would run;
-// `--touch` plans as if that file changed. `--keep-reader` lets the train keep
-// the committed checkpoint across a reader key change once that checkpoint
-// reads every held drawing as the lock does (`trainStage`). The cache is `FILM_CAST_CACHE`,
-// else `~/.cache/bible-film/cast`. It exits non-zero when a stage fails, or
-// when the reader lock it wrote or kept fails a clip (`ClipsFailed`).
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
@@ -76,17 +63,11 @@ class BuildFailed extends Schema.TaggedError<BuildFailed>()('BuildFailed', {
   }
 }
 
-/** The app's house look: the block every concept prompt opens with, and its image. */
 interface HouseLook {
   readonly text: string;
   readonly image: string;
 }
 
-/**
- * The needs not drawn, drawn as sheet tries on the image route (each
- * member's sheet kind once, its default tries); a key's drawing is its own
- * tool's (the held keys), so it is named and left.
- */
 const drawTries = (house: HouseLook) => (needs: ReadonlyArray<OwnerNeed>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -121,7 +102,6 @@ type DrawServices = Effect.Services<ReturnType<ReturnType<typeof drawTries>>>;
 const ReportJson = Schema.fromJsonString(BuildReport);
 const SpendList = Schema.Array(Spend);
 
-/** A stage's line: its state, id, wall time and, when it waits or failed, why. */
 const stageLine = (s: StageReport) =>
   [
     s.state.padEnd(13),
@@ -241,7 +221,6 @@ export const build = <E, R>(
       }
       const failed = report.stages.filter((s) => s.state === 'failed').map((s) => s.id);
       if (failed.length > 0) return yield* BuildFailed.make({ stages: failed });
-      // the lock is written whatever its clips; a build it holds a failed clip in fails all the same
       const lock = report.stages.find((s) => s.id === 'lock');
       const lockHeld = lock?.state === 'ran' || lock?.state === 'cached';
       if (!input.plan && lockHeld && clips.length > 0) yield* checkClips(lockFile, clips);

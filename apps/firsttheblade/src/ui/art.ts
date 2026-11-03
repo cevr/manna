@@ -1,13 +1,3 @@
-/**
- * The site's pictures, by what they show. Each import is the built file's
- * URL (Vite fingerprints it under `/assets/`, which is cached for a year).
- * The field is brand round 5's repaint of round 4's field at 3072 px; the
- * night is round 4's painting with its sky moved to the brand's night
- * (`bun run kit:night`); the series marks are fine lines in the deep wheat,
- * drawn in the wheat's hand (each stroke swelling and coming to a point),
- * Health and Cure's the healing leaf of Revelation 22:2, which the owner
- * picked on ask ab7bf68d1be.
- */
 import emblemLand from '../art/emblem-land.svg';
 import emblemPath from '../art/emblem-path.svg';
 import emblemRemedies from '../art/emblem-remedies.svg';
@@ -24,28 +14,22 @@ import night1536 from '../art/night-1536.webp';
 import type { SeriesId } from '../content.ts';
 import { withLeaf } from './emblems.ts';
 
-/** A painting at the widths a page may fetch; each file is 3:2. */
 export interface Painting {
-  /** The smallest file, for a browser that reads no `srcset`. */
   readonly src: string;
   readonly srcset: string;
 }
 
 type Width = readonly [url: string, width: number];
 
-/** A painting from its files, smallest first. */
 const painting = (smallest: Width, ...larger: ReadonlyArray<Width>): Painting => ({
   src: smallest[0],
   srcset: [smallest, ...larger].map(([url, width]) => `${url} ${width}w`).join(', '),
 });
 
-/** The field at morning, blade to full corn. */
 export const FIELD = painting([field768, 768], [field1536, 1536], [field3072, 3072]);
 
-/** The same field at night, under the moon. */
 export const NIGHT = painting([night768, 768], [night1536, 1536]);
 
-/** Each series' mark as a file, for a page that shows it as a picture. */
 export const EMBLEMS: Record<SeriesId, string> = {
   path: emblemPath,
   land: emblemLand,
@@ -53,7 +37,6 @@ export const EMBLEMS: Record<SeriesId, string> = {
   remedies: emblemRemedies,
 };
 
-/** Each series' mark as its drawing's markup, laid in its row so its parts can move (`./emblems.ts`). */
 export const EMBLEM_DRAWINGS: Record<SeriesId, string> = {
   path: drawnPath,
   land: drawnLand,

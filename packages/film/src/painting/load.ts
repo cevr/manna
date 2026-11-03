@@ -1,20 +1,8 @@
-// A film's painted plates loaded before its first frame (`loadPaintings`), as
-// its puppets are (`puppet/load.ts`): every painting its drawings declare
-// (`film.paintings.declared`), each PNG read once through the
-// `PaintingImages` the host gives (a page decodes it here, never in a frame),
-// held to its spec, and stood on the film for its draws. What a read holds (a
-// page's bitmap) is the load scope's, handed to the caller's and freed when
-// it closes; the paintings stand on the film until then. One rule holds for
-// every host: a PNG of another size than its spec declares fails the load,
-// and where the host gives the bytes, so does paint (alpha above 0) on the
-// outermost row or column of an edge the spec declares open.
-
 import { Effect, Exit, Option, Scope } from 'effect';
 import type { Film } from '../canvas/film.ts';
 import type { Edge, LoadedPainting, PaintingSpec } from '../canvas/painting.ts';
 import { type PaintingImage, PaintingImages, PaintingUnloadable } from './images.ts';
 
-/** The pixel offsets (into RGBA bytes) of `edge`'s outermost row or column in a `w` × `h` picture. */
 const edgePixels = (edge: Edge, w: number, h: number): ReadonlyArray<number> => {
   switch (edge) {
     case 'top':
@@ -28,7 +16,6 @@ const edgePixels = (edge: Edge, w: number, h: number): ReadonlyArray<number> => 
   }
 };
 
-/** The edges of `open` with paint on their outermost row or column of `rgba` (a `w` × `h` picture). */
 export const paintedEdges = (
   rgba: Uint8Array,
   w: number,
@@ -37,7 +24,6 @@ export const paintedEdges = (
 ): ReadonlyArray<Edge> =>
   open.filter((edge) => edgePixels(edge, w, h).some((px) => (rgba[px * 4 + 3] ?? 0) > 0));
 
-/** `image` held to `spec`: its declared size, and its open edges clear where the bytes are given. */
 const heldTo = (spec: PaintingSpec, image: PaintingImage) => {
   const unloadable = (reason: string) => PaintingUnloadable.make({ painting: spec.key, reason });
   const [w, h] = spec.size;
@@ -56,7 +42,6 @@ const heldTo = (spec: PaintingSpec, image: PaintingImage) => {
   return Effect.succeed({ image: image.image } satisfies LoadedPainting);
 };
 
-/** One declared painting, read and held to its spec. */
 const loadPainting = Effect.fn('Painting.load')(function* (spec: PaintingSpec) {
   const images = yield* PaintingImages;
   const image = yield* images
@@ -67,13 +52,6 @@ const loadPainting = Effect.fn('Painting.load')(function* (spec: PaintingSpec) {
   return yield* heldTo(spec, image);
 });
 
-/**
- * Load every painting `film`'s drawings declare and stand them on it for its
- * draws, until the caller's scope closes: what a film's load path runs before
- * its first frame, after its puppets. The film, ready to draw. As
- * `loadPuppets`, what the load acquires is held in a scope of its own that
- * only the load closes while it runs, then handed to the caller's.
- */
 export const loadPaintings = Effect.fn('Painting.loadPaintings')(function* (
   film: Film,
 ): Effect.fn.Return<Film, PaintingUnloadable, PaintingImages | Scope.Scope> {

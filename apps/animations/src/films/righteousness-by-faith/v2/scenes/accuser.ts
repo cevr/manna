@@ -1,13 +1,3 @@
-// The accuser: Zechariah's vision in the heavenly court (Zech 3:1–2). The
-// camera comes down from the high window to Joshua, head bowed in filthy
-// clothes, with those who stand before him on either side; the Angel, Christ
-// in white and gold, stands at the bench. On "Satan" a tall shadow-grey figure
-// steps up at Joshua's right hand and points, and each stain flares. On "day"
-// the camera looks up at the window, where the sun sinks low: the great day
-// closing. On "angel" Christ raises a hand; on "silence" the pointing hand
-// drops and the accuser shrinks back. It ends on the frame `robe` opens on:
-// both draw the court's `zechCourt`.
-
 import {
   type Gesture,
   camera,
@@ -20,7 +10,6 @@ import { lerp } from '@manna/film/core';
 
 import { JOSHUA, TUNIC_STAINS, ZECH_REST as REST, courtWall, zechCourt } from '../../court.ts';
 
-/** Christ's hand raised on "angel", palm out beside his head; its reach rewritten each frame (scratch). */
 const RAISED: Posed<Gesture> = { to: [-78, -205], reach: 0, grip: 'palm' };
 
 export const accuser = drawing({
@@ -45,13 +34,10 @@ export const accuser = drawing({
     grip: { mark: 'silence', offset: 0.5, dur: 0.8 },
   },
   knobs: {
-    // Up at the high window, above everyone's heads.
     high: [1045, 280],
     highZoom: 2.3,
-    // Close on Joshua.
     josh: [760, 660],
     joshZoom: 1.9,
-    // Joshua and the accuser at his right hand.
     pair: [560, 640],
     pairZoom: 1.4,
   },
@@ -71,34 +57,26 @@ export const accuser = drawing({
       [f.at('back'), REST],
     ]);
 
-    // His hand goes out to point at the stains on Joshua's clothes, and drops on "silence".
     const point = f.at('point') * (1 - f.at('drop'));
     const raise = f.at('raise') * (1 - f.at('lower'));
     RAISED.reach = raise;
-    // Joshua bows on his name and lifts his head as the accuser is silenced.
     const bow = f.at('bow') * (1 - f.at('lift'));
-    // The stains light one after another across `flare`, and each dims in
-    // the same order across `dim`.
     const stainLit = (i: number) =>
       f.stagger('flare', i, TUNIC_STAINS.length) * (1 - f.stagger('dim', i, TUNIC_STAINS.length));
 
     courtWall(ctx, w, h);
     camera(ctx, cam, w, h, () =>
       zechCourt(ctx, hand, {
-        // The sun stands higher in the window and sinks to where `robe` finds it.
         sun: lerp(-0.6, 0, f.at('sink')),
         accuser: { enter: f.at('enter'), shrink: f.at('shrink'), point },
-        // Christ at the bench, raising a hand on "angel".
         angel: {
           lift: raise,
           tilt: -0.05 * raise,
           reach: RAISED,
         },
-        // Joshua, head bowed, the specks on his skin.
         joshua: { tilt: 0.1, nod: 7 * bow, look: [0, 3 * bow], browTilt: 0.2 + 0.2 * bow },
         specks: 1,
         cheek: { dy: 7 * bow, alpha: 1 },
-        // Those who stand before him; on "silence" they take hold of his clothes.
         tunic: { at: JOSHUA, flare: stainLit },
         helpers: { grip: f.at('grip'), dx: 0, bob: 0, up: 0 },
       }),

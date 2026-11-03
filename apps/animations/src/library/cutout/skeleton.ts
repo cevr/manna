@@ -1,54 +1,31 @@
-// A cut view's skeleton (`core/puppet.ts`), read in the kept view's pixels and
-// moved into its part sheet's frame (`frames.ts`). A standing figure's lean
-// runs from the hip to the base of the neck, the neck and head above it, and
-// each arm's shoulder, elbow and wrist on the joints the member's cut records,
-// the wrist at the cuff and its tip at the circle hand's middle. Each sleeve
-// takes its shoulder's flap of the member's body part (that part's own pixels
-// beside its cap, in a band about its pivot and outside its inner edge),
-// resting on the lean. Bone names are the shared control names; the member
-// names his parts, which bones each lies on, the flaps' part and the band
-// (`Body`). A view that does not draw an arm (a profile) names no part for
-// it: that arm has no bones and no flap, and its view gives no joints for it.
-// A view names the arms it draws as stroke limbs (`core/limb.ts`), by his own
-// side: each such sleeve is declared on its arm's shoulder, elbow and wrist,
-// its sleeve ending at the wrist pivot unless the view gives its cuff.
-
 import type { Skeleton } from '@manna/film/core';
 import { Match, Option } from 'effect';
 import type { Pt } from './rules.ts';
 
-/** A skeleton with its root: where the puppet stands. */
 export type Rooted = Skeleton & { readonly root: Pt };
 
-/** A stroke limb as a skeleton declares it (`core/limb.ts`'s `PuppetLimb`). */
 type StrokeLimb = NonNullable<Skeleton['limbs']>[number];
 
-/** His own sides, as his arms name them. */
 type Side = 'right' | 'left';
 
-/** Which way a view faces: from the front his right arm is on the viewer's left; from the back, on the viewer's right. */
 export type Facing = 'front' | 'back';
 
-/** A flap's band about its shoulder, view pixels: rows above and below the pivot, and how far past the pivot it reaches on the side away from the sheet's edge. */
 export interface FlapBand {
   readonly above: number;
   readonly below: number;
   readonly reach: number;
 }
 
-/** A member's arms' parts, by his own side; an arm a view does not draw is absent. */
 export interface Arms {
   readonly right?: string;
   readonly left?: string;
 }
 
-/** Both arms drawn: the arms of a view from the front, the back or three-quarters. */
 interface BothArms {
   readonly right: string;
   readonly left: string;
 }
 
-/** What a member's standing views share: his parts as his part sheets name them, the bones each lies on, his arms' parts, the part each sleeve's flap is taken from, and the flap band. */
 export interface Body<A extends Arms = BothArms> {
   readonly skin: Skeleton['skin'];
   readonly arms: A;
@@ -56,7 +33,6 @@ export interface Body<A extends Arms = BothArms> {
   readonly band: FlapBand;
 }
 
-/** The places a standing view's lean, neck and head are read from, view pixels, and the way the view faces. */
 interface Trunk {
   readonly facing: Facing;
   readonly hip: Pt;
@@ -65,12 +41,10 @@ interface Trunk {
   readonly crown: Pt;
 }
 
-/** The arms a view draws as stroke limbs, by his own side, of those its body names; none unless the view names them. */
 interface Limbed<A extends Arms> {
   readonly limbs?: ReadonlyArray<Extract<keyof A, Side>>;
 }
 
-/** His right arm's joints, its flap's inner edge (x: the arm on the viewer's left takes the body left of it, on the viewer's right the body right of it), its cap radius (the member's cut), and, where its sleeve does not end at the wrist pivot, where it ends on the forearm (its stroke limb's cuff). */
 interface RightArm {
   readonly shoulderRight: Pt;
   readonly elbowRight: Pt;
@@ -81,7 +55,6 @@ interface RightArm {
   readonly cuffRight?: Pt;
 }
 
-/** His left arm's joints, flap's inner edge, cap radius and cuff, as `RightArm`. */
 interface LeftArm {
   readonly shoulderLeft: Pt;
   readonly elbowLeft: Pt;
@@ -92,16 +65,13 @@ interface LeftArm {
   readonly cuffLeft?: Pt;
 }
 
-/** The places a standing view's skeleton is read from, view pixels: the trunk, the joints of each arm its body names, and the arms it draws as stroke limbs. */
 export type Standing<A extends Arms = BothArms> = Trunk &
   Limbed<A> &
   (A extends { readonly right: string } ? RightArm : Record<never, never>) &
   (A extends { readonly left: string } ? LeftArm : Record<never, never>);
 
-/** A standing view as read, each arm's joints there or not. */
 type Read = Trunk & Limbed<Arms> & Partial<RightArm> & Partial<LeftArm>;
 
-/** One arm's joints, its flap's inner edge and its cap. */
 interface Arm {
   readonly shoulder: Pt;
   readonly elbow: Pt;
@@ -111,13 +81,11 @@ interface Arm {
   readonly cap: number;
 }
 
-/** Whether a view draws an arm as a stroke limb, and the cuff it gives that arm, if any. */
 interface Stroke {
   readonly drawn: boolean;
   readonly cuff: Option.Option<Pt>;
 }
 
-/** A flap's region: the band about the shoulder, on its outer side: out to the sheet's left edge for the arm on the viewer's left, out by the band's reach for the arm on the viewer's right. */
 const flapRegion = (
   band: FlapBand,
   shoulder: Pt,
@@ -137,7 +105,6 @@ const flapRegion = (
   ];
 };
 
-/** An arm's three bones on the lean, its sleeve's flap of `body.from`, and its stroke limb where its view draws one, when its body names its part and its view gives its joints. */
 const limb = (
   side: 'Right' | 'Left',
   body: Body<Arms>,
@@ -172,7 +139,6 @@ const limb = (
     })),
   );
 
-/** A standing view's skeleton, view pixels: lean, neck and head, each drawn arm's three bones and its sleeve's flap of `body.from`, the band mirrored for a view from the back, and the stroke limbs the view names. */
 const standingOf = (body: Body<Arms>, s: Read): Rooted => {
   const stroked = Option.getOrElse(Option.fromUndefinedOr(s.limbs), (): ReadonlyArray<Side> => []);
   const limbs = [
@@ -221,11 +187,9 @@ const standingOf = (body: Body<Arms>, s: Read): Rooted => {
   };
 };
 
-/** A standing view's skeleton, view pixels: its body's arms (both, unless it names fewer) set which joints the view gives. */
 export const standing = <A extends Arms = BothArms>(body: Body<A>, s: Standing<A>): Rooted =>
   standingOf(body, s);
 
-/** A skeleton read in the kept view's pixels, moved into its part sheet's frame: every joint, tip, flap, cuff and the root by the kept corner (`keptAt`). */
 export const framed = ([dx, dy]: Pt, s: Rooted): Rooted => {
   const at = (p: Pt): Pt => [p[0] + dx, p[1] + dy];
   return {

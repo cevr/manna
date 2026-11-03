@@ -1,15 +1,3 @@
-// The studio's read model over the films as they stand: Righteousness by
-// Faith at v3 (its registered files: a script on the estimated clock, its
-// concept kept by the owner's answers) and v2 (a version folder, `v2/`, read
-// from its own files: its Board, takes, scenes, acts and score), and the
-// cold studies (no ledger, no Board, no concept). The clocks are `film read
-// clock`'s answers for them (`--folder v2` for v2), the Board is v2's
-// `board.json` with its prompts left out. Only reached stages take a lane;
-// the stage is the first not done; the Next row names the first stage ahead
-// with what starts it, and the gap it starts from; the Board lane times its
-// panels as the animatic shows them; the flags and the header count what
-// waits on the owner; the open version is the default.
-
 import { describe, expect, test } from 'bun:test';
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import { type AskBlock, AskName, type AskRecord, AskState, oneQuestion } from './ask.ts';
@@ -47,10 +35,8 @@ const cold = clockOf(coldClockJson);
 const rbfV2Board = Schema.decodeUnknownSync(BoardFile)(rbfV2BoardJson);
 const name = Schema.decodeSync(AskName);
 
-/** When each of RBF's versions opened, ms. */
 const OPENED = { 1: 1_000, 2: 2_000, 3: 3_000 } as const;
 
-/** An ask about RBF in `state`, its one page showing `blocks`. */
 const askOf = (
   id: string,
   blocks: ReadonlyArray<AskBlock>,
@@ -71,7 +57,6 @@ const askOf = (
 const ASKING = AskState.Asking({ step: name('ask'), answers: {} });
 const ANSWERED = AskState.Answered({ step: name('done'), answers: {} });
 
-/** An ask whose page shows Board panels `panels`. */
 const askOn = (
   id: string,
   panels: ReadonlyArray<string>,
@@ -79,7 +64,6 @@ const askOn = (
   more: Partial<AskRecord> = {},
 ) => askOf(id, [{ kind: 'board', film: RBF, panels }], state, more);
 
-/** The owner kept v3's script (an ask showing it) and its concept frames (an ask showing pictures alone). */
 const SCRIPT_ASK = askOf('keep-script', [{ kind: 'script', film: RBF }], ANSWERED);
 const CONCEPT_ASK = askOf(
   'keep-concept',
@@ -87,7 +71,6 @@ const CONCEPT_ASK = askOf(
   ANSWERED,
 );
 
-/** RBF's ledger: three versions, the owner's answers to the asks `keeps` filed at each of `keptAt`, and `more`. */
 const ledgerOf = (
   keptAt: ReadonlyArray<number>,
   more: ReadonlyArray<unknown> = [],
@@ -116,14 +99,12 @@ const ledgerOf = (
   });
 const LEDGER = ledgerOf([OPENED[3] + 100]);
 
-/** v2 is a version folder (`v2/`); v3 is on the registered files, and open. */
 const rbfVersions = versionsOf(Option.some(LEDGER), [2], RBF);
 const versionN = (versions: ReadonlyArray<FilmVersion>, n: number) =>
   Result.getOrThrow(pickVersion(RBF, versions, Option.some(n)));
 
 const noNotes = (film: string): NotesFile => ({ film, seq: 0, notes: [] });
 
-/** RBF's sources at version `n`: its own clock and Board; v3, the open version, has no Board yet. */
 const rbf = (n: 2 | 3, more: Partial<TimelineSources> = {}): TimelineSources => ({
   film: RBF,
   ledger: Option.some(LEDGER),
@@ -152,10 +133,8 @@ const beatOf = (clock: FilmClock, id: string) =>
 const markOf = (clock: FilmClock, beat: string, mark: string) =>
   Option.getOrThrow(Arr.findFirst(beatOf(clock, beat).marks, (m) => m.name === mark)).at;
 
-/** The timings of a film with no take yet. */
 const NO_TAKES = { voice: '', scenes: {} };
 
-/** The owner's note on `scene`, `local` seconds in. */
 const noteOn = (id: string, scene: string, local: number, status: Note['status']): Note => ({
   id,
   film: RBF,
@@ -172,7 +151,6 @@ const noteOn = (id: string, scene: string, local: number, status: Note['status']
   createdAt: '2026-10-15T00:00:00.000Z',
 });
 
-/** A main video render of `address` with stamp `key`. */
 const renderOf = (address: Render['address'], key: string): Render => ({
   address,
   variant: MAIN_VARIANT,
@@ -192,7 +170,6 @@ const renderOf = (address: Render['address'], key: string): Render => ({
   at: 1,
 });
 
-/** `board` with `panel` keeping try `n` in place of the one it kept. */
 const keeping = (board: BoardFile, panel: string, n: number): BoardFile => ({
   ...board,
   panels: board.panels.map((p) => Object.assign({ ...p }, p.id === panel && { kept: n })),
@@ -253,7 +230,6 @@ describe('RBF v3: a kept script on the estimated clock, its concept kept', () =>
     const clips = laneOf(t, 'script')?.clips ?? [];
     expect(clips.map((c) => c.beat)).toEqual(rbfV3.beats.map((b) => b.id));
     expect(new Set(clips.map((c) => c.state))).toEqual(new Set(['kept']));
-    // The title and the credits are silent: their length is declared, not estimated.
     expect(clips.filter((c) => c.clock === 'measured').map((c) => c.beat)).toEqual([
       'title',
       'end',
@@ -351,7 +327,6 @@ describe('RBF v2, read as a version folder', () => {
     const righteous = markOf(rbfV2, 'cold', 'righteous');
     const asked = markOf(rbfV2, 'cold', 'asked');
     const job = markOf(rbfV2, 'cold', 'job');
-    // Held from its mark, `righteous`, which falls after the beat starts.
     expect(righteous).toBeGreaterThan(coldBeat.start);
     expect(panelClip(t, 'cold.righteous')).toMatchObject({
       start: coldBeat.start,
@@ -365,7 +340,6 @@ describe('RBF v2, read as a version folder', () => {
     expect(panelClip(t, 'cold.asked')).toMatchObject({ start: asked, card: true });
     expect(panelClip(t, 'cold.asked').try).toBeUndefined();
     expect(panelClip(t, 'cold.job').dur).toBeCloseTo(coldBeat.start + coldBeat.dur - job, 6);
-    // Every beat's first panel sits at its beat's start.
     const firsts = Arr.dedupeWith(laneOf(t, 'board')?.clips ?? [], (a, b) => a.beat === b.beat);
     expect(firsts.map((c) => c.start)).toEqual(firsts.map((c) => beatOf(rbfV2, c.beat).start));
   });
@@ -642,7 +616,6 @@ describe('the clock a version plays on', () => {
       approvals: [],
     };
     const t = timelineOf({ ...rbf(3), clock, board });
-    // From the line's first word to {m}; the payoff marked.
     expect(panelClip(t, 'a.start')).toMatchObject({
       card: true,
       text: { _tag: 'Card', payoff: 'two' },
@@ -651,7 +624,6 @@ describe('the clock a version plays on', () => {
         { text: 'two', payoff: true },
       ],
     });
-    // A payoff the line never says sets no words: the panel keeps what the engine would set.
     expect(panelClip(t, 'a.m').text).toEqual({ _tag: 'Card', payoff: 'grace' });
     expect(panelClip(t, 'a.m').words).toBeUndefined();
   });

@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { type Body, type Standing, framed, standing } from './skeleton.ts';
 
-/** A member whose part sheets have no sash: his flaps come from a part named `body`. */
 const PARTS = ['head', 'body', 'sleeveRight', 'sleeveLeft', 'robe'] as const;
 const BODY: Body = {
   skin: {

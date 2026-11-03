@@ -1,25 +1,13 @@
-// A lease on a fake view: an interrupt that lands while the phone's pointer
-// is being set waits for it and puts the mouse back before the view is given
-// back; a view whose reset fails is discarded, never given back; and one
-// that cannot be pointed is discarded and the case dies; and a case
-// interrupted before its acquisition starts takes no view from the pool.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Deferred, Effect, Exit, Fiber } from 'effect';
 import { type Leased, type Pool, fromIdle, lease } from './lease.ts';
 import type { View } from './tab.ts';
 
-/** A fake view: the protocol calls it was sent, and whether it has touch on. */
 interface Fake extends Leased {
   readonly calls: Array<string>;
   touch: boolean;
 }
 
-/**
- * A fake view whose touch calls wait on `gate` (opened at once when none),
- * telling `sent` when one is sent; `fails` names the touch states it refuses
- * to be set to.
- */
 const fake = (
   gate: Deferred.Deferred<void>,
   sent: Deferred.Deferred<void>,
@@ -60,7 +48,6 @@ const fake = (
   return slot;
 };
 
-/** A pool of the one fake view, keeping where it went. */
 const poolOf = (slot: Fake) => {
   const went: Array<string> = [];
   const pool: Pool<Fake> = {
@@ -91,9 +78,7 @@ describe('a lease on a pooled view', () => {
           Effect.scoped(Effect.andThen(lease(pool, PHONE), Effect.never)),
         );
         yield* Deferred.await(sent);
-        // The interrupt lands while touch is being turned on, then the call answers.
         const interrupting = yield* Effect.forkChild(Fiber.interrupt(fiber));
-        // The interrupter runs and sends its interrupt before the call answers.
         yield* Effect.yieldNow;
         yield* Effect.yieldNow;
         yield* Deferred.done(gate, Exit.void);
@@ -151,7 +136,6 @@ describe('a lease on a pooled view', () => {
         const slot = fake(gate, sent);
         const idle = [slot];
         const { pool, went } = poolOf(slot);
-        // The lease is built (its take with it) while the case starts, then the case waits.
         const leasing = lease(
           { ...pool, take: fromIdle(idle, Effect.die('no view to make')) },
           PHONE,

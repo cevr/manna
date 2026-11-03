@@ -1,12 +1,3 @@
-// A member's ease rendered (`film concept ease`): one of his `EASES` (the
-// film's `rigs/cast.ts`), drawn by the real draw path in the export pages
-// (`Pages`, the ease page `<film>/cast/<member>/ease`), each frame a PNG under
-// `out/<film>/cast/<member>/ease/<n>/` with `ease.json` beside them: the
-// frames' keys, turns and held hands, where the part sheet stands on the
-// frame, and how they were drawn (the segments, each in a page of its own,
-// and the order). A frame is a function of its index alone, so any split
-// into segments and any order give the same bytes.
-
 import { Array as Arr, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import {
   CUTOUT_MARGIN,
@@ -24,7 +15,6 @@ type Pt = readonly [number, number];
 
 const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
-/** An ease that cannot be drawn: none from `from` to `to`, a length its seconds do not give, segments that do not cover it. */
 class EaseRefused extends Schema.TaggedError<EaseRefused>()('EaseRefused', {
   member: Schema.String,
   reason: Schema.String,
@@ -34,17 +24,14 @@ class EaseRefused extends Schema.TaggedError<EaseRefused>()('EaseRefused', {
   }
 }
 
-/** What an ease render asks: its poses, its length, its segments (each drawn in its own page; none, one of the whole) and its order. */
 interface EaseAsk {
   readonly from: string;
   readonly to: string;
   readonly seconds: number;
   readonly segments: ReadonlyArray<readonly [number, number]>;
-  /** A seed to draw the frames in a shuffled order (one page); none, in order. */
   readonly shuffle: Option.Option<number>;
 }
 
-/** One frame as `ease.json` gives it: its key, that key's turn, its held drawing and where that drawing's centre stands, frame px. */
 interface EaseFrameJson {
   readonly key: string;
   readonly theta: number;
@@ -52,7 +39,6 @@ interface EaseFrameJson {
   readonly hand: Pt;
 }
 
-/** `0..count-1` shuffled by `seed` (an LCG, Fisher-Yates). */
 const shuffled = (count: number, seed: number) => {
   const order = Arr.makeBy(count, (i) => i);
   let s = seed >>> 0;
@@ -66,7 +52,6 @@ const shuffled = (count: number, seed: number) => {
   return order;
 };
 
-/** The frame px of a sheet point of `ease`'s view on its page: the page stands the sheet `CUTOUT_MARGIN` in and the view's puppet origin at its `at`. */
 const onFrame = (m: CastModule, member: string, ease: CutoutEase) => {
   const view = m.CUTOUT?.[member]?.[ease.kind]?.[ease.view];
   return Option.map(Option.fromUndefinedOr(view), (v) => {
@@ -76,7 +61,6 @@ const onFrame = (m: CastModule, member: string, ease: CutoutEase) => {
   });
 };
 
-/** `member`'s ease `ask` drawn in `film`'s ease page, its frames and record written under a new numbered folder. */
 export const renderEase = Effect.fn('Cast.ease')(function* (
   film: FilmName,
   member: string,
@@ -125,7 +109,6 @@ export const renderEase = Effect.fn('Cast.ease')(function* (
   const root = path.join(paths.out, 'cast', member, 'ease');
   const { n, dir } = yield* reserveNumbered(root);
   const name = (f: number) => `f${String(f).padStart(3, '0')}.png`;
-  // each segment in a page of its own, its frames in the order asked
   const runs = Option.match(ask.shuffle, {
     onNone: () => segments.map(([a, b]) => Arr.range(a, b)),
     onSome: () => [order],

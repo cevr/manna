@@ -1,54 +1,5 @@
-// What a page draws, read back from the browser: every colour, font family,
-// size, weight, leading, tracking, radius, border and outline width and
-// spacing the studio's chrome is drawn with, and every colour in its
-// gradients, shadows, filters, strokes and stops, in the element and in its
-// `::before` and `::after` (and a shown placeholder's `::placeholder`, a list
-// item's `::marker` and a modal's `::backdrop`, the colour each draws),
-// resolves to a token of `player/tokens.css`, as the
-// page's own `:root` resolves it at its width and pointer. Only the tokens
-// that file declares count: a variable a page or a part declares for itself
-// is no token, so a value it carries is read as the literal it is. The
-// source guard (`style-tokens.slow.test.ts`) reads how a value is spelled; this
-// reads what is drawn, so a value no rule spells (a user agent's default: a
-// `<p>`'s margin, `bold`'s 700, a native field's colour) or one built where
-// no regex looks (a computed `calc`, a style set from data) is read the same
-// as a literal. An outline of style `auto` is the platform's own focus ring,
-// whatever colour it takes, and is named by that style: the lab draws one
-// ring, `--focus-ring`, and allows the browser's nowhere.
-//
-// Each kind of length is read against its own scale: a font size against
-// `--fs-*`, leading against `--lh-*`, a radius against `--r-*`, and a
-// padding, margin, gap, border or outline width or offset against `--s-*`,
-// `--gutter` and `GEOMETRY`, so a size that equals another scale's token
-// (a 44 px font, which is `--hit`) is still off its own. Computed
-// styles do not depend on where the page is scrolled, so no element is
-// skipped for lying below the fold or past the window's side.
-//
-// Allowed beside the tokens, each by name:
-// - a token negated (a gutter pulled back by `calc(-1 * var(--gutter))`);
-// - a colour a token's value holds (`--shadow-pop`'s shade);
-// - a scene's hue, `hsl(<hue> var(--scene-sat) var(--scene-light))`: any
-//   hue at the tokens' saturation and lightness, on a scene's swatch only
-//   (an element that carries `--hue`, or a `data-scene`, `.sc-hue`, `.seg`);
-// - a native part the engine colours itself: a range's and a select's own
-//   colours (text, ground, edge) and leading (`NATIVE`);
-// - a visually hidden field (1 × 1 or less), never seen;
-// - a margin set to `auto`, which pushes a part along and is no step;
-// - letter-spacing of `--track-caps` (and uppercase only with it), or none;
-// - italic from the elements that mean emphasis (`EMPHASIS`);
-// - an opacity of 1, or the ones in `OPACITY`, each by its reason;
-// - the compositions in `COMPOSED`, each tokens summed, or a share of the
-//   window, for a part's room;
-// - the geometry in `GEOMETRY`, each a size a shape needs, not a step of
-//   the scale.
-
 import { Schema } from 'effect';
 
-/**
- * Sizes a part composes of tokens or of the window, by the expression that
- * composes them: each resolved at the page's window as the tokens are, and
- * drawn as a token is.
- */
 const COMPOSED = {
   'calc(2 * var(--s-8) + var(--s-2))':
     "the lab strip's cue-name column (`--cue-names`): each name, then a step of room before its row",
@@ -56,11 +7,6 @@ const COMPOSED = {
     "a phone's open sheet (`--cmd-sheet-height`): the room the page keeps under it, so all of the page scrolls above it",
 } satisfies Readonly<Record<string, string>>;
 
-/**
- * Sizes a shape needs, by the value drawn (a negated one too): each is a
- * hairline, centres a mark on its line, or sums two tokens in a `calc`,
- * and is no step of the spacing scale.
- */
 const GEOMETRY = {
   '1px':
     "a hairline: the seam between stills, a band's scenes, a strip's frames; the playhead centred on it; a border and a picked still's outline",
@@ -77,25 +23,14 @@ const GEOMETRY = {
     "a phone's dock and a step under it (`--dock-h` + `--s-3`): the page's room below its last row",
 } satisfies Readonly<Record<string, string>>;
 
-/** The elements whose own meaning is emphasis: the user agent draws them in italic. */
 const EMPHASIS = ['EM', 'I', 'CITE', 'DFN', 'VAR', 'ADDRESS'];
 
-/**
- * The opacities a part is drawn at other than 1, by the value: a part set
- * back, not a colour.
- */
 const OPACITY = {
   '0': 'a part not shown yet (a fade in or out), which has no look to read',
   '0.55': 'a resolved note, set back from the open ones',
   '0.85': "a picked scene's still, dimmed under its outline",
 } satisfies Readonly<Record<string, string>>;
 
-/**
- * Sites that draw off the tokens today, each as the check names it, with why:
- * a part the design has not yet answered. Each is a design change (a reset of
- * a paragraph's margin), not a value to allow, so the check stays on for
- * every other part.
- */
 const SITES = {
   'marginTop 15px: rv-pending > p.rv-row':
     "a pending row's paragraph keeps the user agent's margin of 1em (15 px on a phone): a reset is a layout change to answer in the review's design",
@@ -104,20 +39,12 @@ const SITES = {
   'marginBottom 13px: rv-pending > p.rv-row': 'the same row on a laptop, below',
 } satisfies Readonly<Record<string, string>>;
 
-/** A list of strings as a script's array literal. */
 const arrayOf = Schema.encodeSync(Schema.fromJsonString(Schema.Array(Schema.String)));
 
-/** The tokens `css` (`player/tokens.css`'s text) declares, by name, each once. */
 const tokenNames = (css: string): ReadonlyArray<string> => [
   ...new Set([...css.matchAll(/(?<![\w-])(--[\w-]+)\s*:/g)].flatMap((m) => m.slice(1, 2))),
 ];
 
-/**
- * A script answering every value the page draws that resolves to no token
- * of `tokensCss` (`player/tokens.css`'s text), as `property value: element`,
- * one line per value and property (its first element named, `::before` and
- * `::after` after it); none, `[]`.
- */
 export const untokened = (tokensCss: string) => `(() => {
   const root = document.documentElement;
   const rootStyle = getComputedStyle(root);

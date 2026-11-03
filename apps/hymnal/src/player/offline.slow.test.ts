@@ -95,7 +95,6 @@ it.effect(
       yield* api.play(audioUrl(100, 2), 32000, { recording: id, ready: false, continuous: false });
       expect((yield* cache.snapshot).saved).toBe(1);
       expect(d.calls.map((c) => c.uri)).toEqual(['file:///synthetic/100_2', audioUrl(100, 2)]);
-      // A remote that also fails ends the attempt: one retry, no more.
       d.control.failRemote = true;
       expect(
         Exit.isFailure(
@@ -113,7 +112,6 @@ it.effect(
       d.control.failRemote = false;
       yield* api.play(audioUrl(100, 2), 32000, { recording: id, ready: false, continuous: false });
       expect(d.calls.at(-1)?.uri).toBe('file:///synthetic/100_2');
-      // The platform read boundary also validates media bytes, not just size.
       const bytes = f.files.get('100_2');
       if (bytes) bytes[0] = 0;
       yield* api.play(audioUrl(100, 2), 32000, { recording: id, ready: false, continuous: false });

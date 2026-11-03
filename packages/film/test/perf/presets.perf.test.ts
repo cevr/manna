@@ -1,11 +1,3 @@
-// The presets (core/synth/graph/presets.ts) render a second of sound in under
-// 20 ms: each tone at the app's settings, rain and the breeze as long as a
-// bed, and each one-shot family as a one-second one-shot. Local only
-// (`bun run test:perf`), never the gate: a stopwatch reads the machine as
-// much as the code, and a CI runner ran the film's CPU tests 17–35× slower
-// than a laptop. Each preset is timed in seven warm runs on seven seeds after
-// one to warm up; the medians are logged for the report.
-
 import { Clock, Effect, Result } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { defineLibrary } from '../../src/core/sfx.ts';
@@ -30,7 +22,6 @@ import {
 import { renderCode } from '../../src/core/synth/graph/render.ts';
 import { resolveCode } from '../../src/core/synth/resolve.ts';
 
-/** The tones as the app declares them, rain and the breeze as long as a bed, and each one-shot family at one second long. */
 const TIMED: ReadonlyArray<readonly [string, Node]> = [
   ['room', room({ secs: 8 })],
   ['chime', chime({ root: 'D5', partials: 'glass', secs: 1.5 })],
@@ -52,7 +43,6 @@ const TIMED: ReadonlyArray<readonly [string, Node]> = [
   ['sizzle', sizzle({ flash: 0.05, crackle: 120, secs: 1 })],
 ];
 
-/** The budget for a second of sound on this laptop, in milliseconds. */
 const PER_SECOND_MS = 20;
 
 const RUNS = 7;
@@ -62,7 +52,6 @@ const median = (values: ReadonlyArray<number>): number => {
   return sorted[Math.floor(sorted.length / 2)] ?? 0;
 };
 
-/** How long `render` takes, in milliseconds, on the live clock. */
 const timed = (render: () => unknown) =>
   Effect.gen(function* () {
     const start = yield* Clock.currentTimeNanos;

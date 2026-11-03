@@ -1,14 +1,5 @@
-// The bold look's inks and its few shapes. A poster's world: flat fields of
-// four inks, hard edges, no line, no shadow, no grain of its own. Every shape
-// is a filled rectangle, disc or polygon; nothing is stroked.
-
 import type { Hex } from '@manna/film/canvas';
 
-/**
- * Four flat inks and the colour script's two accents. The bone ground and the
- * slates are the cold open's cool room (saturation about 0.2); scarlet is only
- * ever on the accused's garment, gold only on the verdict and the Word.
- */
 export const INK = {
   bone: '#e7e4dc',
   face: '#f4efe4',
@@ -20,7 +11,6 @@ export const INK = {
   gold: '#e6b347',
 } as const satisfies Record<string, Hex>;
 
-/** The look's one face: a heavy grotesque, set tight. */
 export const FACE = 'Inter';
 
 export const rect = (
@@ -48,7 +38,6 @@ export const disc = (
   ctx.fill();
 };
 
-/** A half disc: the flat side along `angle`, the round side beyond it. */
 export const half = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -79,7 +68,6 @@ export const poly = (
   ctx.fill();
 };
 
-/** A bar from (x0, y0) to (x1, y1), `w` thick, square-ended: a line drawn as a filled shape. */
 export const bar = (
   ctx: CanvasRenderingContext2D,
   x0: number,
@@ -105,7 +93,6 @@ export const bar = (
   );
 };
 
-/** A rectangle's frame, `t` thick: the outer box less the inner, filled even-odd. */
 export const frame = (
   ctx: CanvasRenderingContext2D,
   x: number,

@@ -1,11 +1,3 @@
-/**
- * The tab row pinned over the home list (`PinnedTabs`), mounted in a
- * browser's document (`src/test/setup.ts`) with the real tab row, driven by
- * the list's offset alone: over generated scroll paths, from the list's top
- * to deep in it with turns at random, the pinned row is in reach exactly
- * while `revealAt` says shown, and the layer holds the tab row and no field.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { RegistryProvider } from '@effect/atom-react';
 import { Option } from 'effect';
@@ -20,11 +12,9 @@ import type { TabName } from './tabs';
 
 const names: ReadonlyArray<TabName> = ['Sections', 'Lists', 'Topics', 'Metres', 'Scripture'];
 
-/** The home list's title, 49 pt at the reader's usual text size: the row's resting place. */
 const rest = 49;
 const height = 48;
 
-/** A seeded run of numbers, so a failing path comes back the same. */
 const seeded = (start: number) => {
   let seed = start;
   return (below: number) => {
@@ -33,16 +23,13 @@ const seeded = (start: number) => {
   };
 };
 
-/** A scroll path from the list's top: runs down and up of random lengths, now and then a fling or a pull past the top. */
 const path = (next: (below: number) => number): ReadonlyArray<number> => {
   const out: Array<number> = [];
   let at = 0;
   for (let run = 0; run < 6; run += 1) {
-    // Down on even runs, up on odd ones.
     const way = 1 - 2 * (run % 2);
     const steps = 1 + next(6);
     for (let step = 0; step < steps; step += 1) {
-      // One step in ten a fling's frame of 400 to 2000 pt, else a drag's of 1 to 40.
       const fling = Number(next(10) === 0);
       const by = fling * (400 + next(1600)) + (1 - fling) * (1 + next(40));
       at = Math.min(6000, Math.max(-40, at + way * by));
@@ -52,7 +39,6 @@ const path = (next: (below: number) => number): ReadonlyArray<number> => {
   return out;
 };
 
-/** The pinned row over a list at `scroll`, the tab chosen told to `onSelect`, its reveal handed to `onReveal`. */
 function Pinned({
   scroll,
   onSelect,
@@ -71,7 +57,6 @@ function Pinned({
   );
 }
 
-/** True when `element` or a layer holding it is hidden from assistive technology. */
 const unreached = (element: Element) =>
   Option.isSome(Option.fromNullishOr(element.closest('[aria-hidden="true"]')));
 
@@ -80,7 +65,6 @@ const mount = (onSelect: (name: TabName) => void = () => {}) => {
   document.body.append(host);
   const root = createRoot(host);
   const scroll = makeMutable(0);
-  // The reveal of the last render.
   const reveals: Array<TabReveal> = [];
   const onReveal = (reveal: TabReveal) => void reveals.splice(0, reveals.length, reveal);
   act(() =>
@@ -91,7 +75,6 @@ const mount = (onSelect: (name: TabName) => void = () => {}) => {
     ),
   );
   const layer = () => Option.fromNullishOr(host.querySelector('[data-testid="shown-tabs"]'));
-  /** The elements under the layer `selector` finds, none when there is no layer. */
   const inLayer = (selector: string) =>
     Option.match(layer(), {
       onNone: () => [],
@@ -99,15 +82,12 @@ const mount = (onSelect: (name: TabName) => void = () => {}) => {
     });
   const scrollTo = (at: number) => act(() => void (scroll.value = at));
   const through = (offsets: ReadonlyArray<number>) => offsets.forEach(scrollTo);
-  /** In reach: in the tree, and not hidden from touch and assistive technology. */
   const inReach = () => Option.exists(layer(), (found) => !unreached(found));
-  /** What `TabList.show` does on a tab tap: the jump, then the shared offset set to the place. */
   const tap = (at: number) =>
     act(() => {
       reveals.forEach((reveal) => reveal.jump(at));
       scroll.value = at;
     });
-  /** The reader's drag on the list begins. */
   const touch = () => act(() => reveals.forEach((reveal) => reveal.touch()));
   const cover = () => reveals.map((reveal) => reveal.cover.value);
   const close = () => {
@@ -117,7 +97,6 @@ const mount = (onSelect: (name: TabName) => void = () => {}) => {
   return { layer, inLayer, scrollTo, through, inReach, tap, touch, cover, close };
 };
 
-/** Offsets from `from` to `to` in steps of `step` points, as a drag's frames report them. */
 const frames = (from: number, to: number, step: number) => {
   const out: Array<number> = [];
   const sign = Math.sign(to - from);
@@ -126,13 +105,6 @@ const frames = (from: number, to: number, step: number) => {
   return out;
 };
 
-/**
- * One tap from the shown pinned row: where it was shown, the new tab's kept
- * place (one in six at or above the resting place), its landing (one in four
- * held short by a short list's end, `clampedStart`, down to the resting
- * place), and the remounted list's 1 to 4 reports while it lands (its top, a
- * place at or above the rest, a place on the way), then the landing.
- */
 const tapOf = (next: (below: number) => number) => {
   const deep = rest + travel + 1 + next(40000);
   const shownAt = deep - travel - next(Math.min(deep - rest - 1 - travel, 600) + 1);
@@ -164,7 +136,6 @@ describe('the tab row pinned over the home list', () => {
       pinned.close();
     }
     expect(misses).toEqual([]);
-    // The paths reach both states, many times each.
     expect(Math.min(seen.shown, seen.hidden)).toBeGreaterThan(50);
   });
 
@@ -178,7 +149,6 @@ describe('the tab row pinned over the home list', () => {
       pinned.through([deep, shownAt]);
       pinned.tap(kept);
       pinned.through(reports);
-      // Landed past the resting place, the row is pinned and fully in; at or above it the list's own row shows.
       const settled = { reach: pinned.inReach(), full: pinned.cover().join() === `${height}` };
       const want = { reach: landing > rest, full: landing > rest };
       if (settled.reach !== want.reach || settled.full !== want.full) {
@@ -186,12 +156,10 @@ describe('the tab row pinned over the home list', () => {
           `${at}: landed reach ${settled.reach} full ${settled.full}, not reach ${want.reach} full ${want.full}`,
         );
       }
-      // The reader's drag begins; an upward scroll that stays past the rest, and a downward one short of the travel, keep it.
       pinned.touch();
       const top = landing - Math.max(0, Math.min(120, landing - rest - travel));
       pinned.through([...frames(landing, top, 30), ...frames(top, top + travel - 1, 1)]);
       if (landing > rest && !pinned.inReach()) misses.push(`${at}: hidden short of the travel`);
-      // A downward scroll of the travel sends it away.
       pinned.through(frames(top + travel - 1, top + 2 * travel, 1));
       if (pinned.inReach()) misses.push(`${at}: still shown after a downward scroll of the travel`);
       pinned.close();

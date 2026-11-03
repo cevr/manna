@@ -1,16 +1,3 @@
-/**
- * A list of hymns, each row its number and title, a link to the hymn at
- * `hrefOf(number)` (in the same tab), or saying `empty` when it has none.
- *
- * The list keeps its scroll offset in `offset` as it unmounts, and a list
- * mounted anew (on the web, Back and a tab switch mount it again) opens at
- * that offset.
- * Every row is one line of one height, scaled with the reader's text size,
- * so the list knows where each row is before it draws it (`getItemLayout`):
- * it can open at any offset, down to the last row, at once, and never moves
- * after the reader takes over.
- */
-
 import { RegistryContext } from '@effect/atom-react';
 import { Option } from 'effect';
 import type * as Atom from 'effect/reactivity/Atom';
@@ -34,11 +21,9 @@ import { dismissal } from './keyboard';
 import type { Shelf } from './lists';
 import { scrolled, told } from './scrolled';
 
-/** A row's line of text, and the space above and below it, at the reader's usual text size. */
 const line = 22;
 const padding = 11;
 
-/** A row's height at the reader's text size (`fontScale`): one line and its padding, 44 at 1. */
 const rowHeight = (fontScale: number) => Math.ceil(line * fontScale) + 2 * padding;
 
 export interface HymnListProps {
@@ -46,32 +31,19 @@ export interface HymnListProps {
   readonly hrefOf: (number: number) => Href;
   readonly offset: Atom.Writable<number>;
   readonly empty?: string;
-  /** Phones only: a row per topic over its hymns, pinned while they scroll. The web draws none. */
   readonly byTopic?: boolean;
-  /** Phones only, with `byTopic`: the reader's own lists, each above the topics under its name. The web draws none. */
   readonly shelves?: ReadonlyArray<Shelf<HymnText>>;
-  /** Phones only: the reader's favourites, each starred in its rows. The web draws no star in a row. */
   readonly favourites?: ReadonlySet<number>;
-  /** Phones only: what the list holds above its rows, and where it rests (`PullDown`). */
   readonly pullDown?: PullDown;
-  /** Phones only, a search's results: the line each hymn was found by, shown under its title. The web shows none. */
   readonly lines?: ReadonlyMap<number, string>;
 }
 
-/**
- * The home list's top on a phone: `node`, `height` points tall, above the
- * rows; the list opens scrolled by `rest` (the search field tucked under the
- * title), settles at 0 or `rest` when let go between them, and writes its
- * scroll offset to `scroll` on the UI thread, which moves the title.
- */
 export interface PullDown {
   readonly node: ReactElement;
   readonly height: number;
   readonly rest: number;
   readonly scroll: SharedValue<number>;
-  /** How many points of a layer over the list's top (the search field shown again) cover it: the pinned topic row sits under them. */
   readonly cover?: SharedValue<number>;
-  /** The reader's finger met the list: a drag on it begins. */
   readonly onTouch?: () => void;
 }
 
@@ -81,32 +53,14 @@ export function HymnList({ hymns, hrefOf, offset, empty }: HymnListProps) {
   const height = rowHeight(screen.fontScale);
   const registry = useContext(RegistryContext);
   const list = useRef<Option.Option<FlatList<HymnText>>>(Option.none());
-  // The saved offset this mount opens at, until the list has scrolled there;
-  // none for a list that opens at its top. Every list the server renders
-  // opens at its top, and so does every list the browser hydrates (a kept
-  // offset lives only in the running app), so the two render the same rows,
-  // whatever the window.
   const [opening, setOpening] = useState(() =>
     Option.liftPredicate(registry.get(offset), (y) => y > 0),
   );
-  // Whether it has scrolled to its opening offset: React may run the
-  // opening scroll again (its development StrictMode does, after a
-  // navigation's transition, once the reader may have moved the list), and
-  // the list is the reader's from its first scroll there, so it is scrolled
-  // there once.
   const scrolledThere = useRef(false);
   const landed = () => setOpening(Option.none());
-  // The row at the offset it opens at: its first frame is drawn from there.
   const first = Option.map(opening, (y) => Math.min(Math.floor(y / height), hymns.length - 1)).pipe(
     Option.filter((index) => index >= 0),
   );
-  // It scrolls there once, before its first frame is painted, so the reader
-  // never sees it elsewhere; a list too short to reach it stays at its top,
-  // and no scroll comes to say it has landed. A list that opens at its top
-  // may find its scroller moved already: the reader scrolled the server's
-  // list before the browser hydrated it, and the list is told where he is, so
-  // it draws the rows there. It keeps where he leaves it as it unmounts, its
-  // scroller still in the page.
   useLayoutEffect(() => {
     Option.map(list.current, (l) => {
       const now = () => Option.getOrElse(scrolled(l), () => 0);
@@ -134,16 +88,9 @@ export function HymnList({ hymns, hrefOf, offset, empty }: HymnListProps) {
       data={hymns}
       keyExtractor={(hymn) => String(hymn.number)}
       getItemLayout={(_, index) => ({ length: height, offset: height * index, index })}
-      // The opening props hold only until its scroll lands: react-native-web's
-      // list keeps its window where it opened while `initialScrollIndex` is set
-      // and the list is at its top, and draws no top rows under it, so a list
-      // that kept them would show blank rows once the reader reached the top.
       onScroll={() => Option.map(opening, landed)}
       initialScrollIndex={Option.getOrUndefined(first)}
-      // Where it opens: the list then leaves its own scroll to the row alone.
       contentOffset={Option.getOrUndefined(Option.map(opening, (y) => ({ x: 0, y })))}
-      // While it opens, enough rows to fill the window, past a row cut at its
-      // top; never fewer than the list's own 10.
       initialNumToRender={Option.getOrUndefined(
         Option.map(opening, () => Math.max(10, Math.ceil(screen.height / height) + 1)),
       )}
@@ -158,12 +105,6 @@ export function HymnList({ hymns, hrefOf, offset, empty }: HymnListProps) {
   );
 }
 
-/**
- * One hymn's row: a link (an anchor on the web), so Enter, a Cmd-click and
- * "Open in New Tab" work as on any link. A plain press opens the hymn
- * through the router, inside the app (`useLinkTo`'s press keeps the browser
- * from loading the page anew).
- */
 function Row({
   hymn,
   href,

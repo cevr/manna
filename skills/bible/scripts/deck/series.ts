@@ -1,31 +1,16 @@
-/**
- * Series canon for every verse-driven Keynote deck: the painting style, the
- * palette references, and the recurring characters. Change it here and every
- * deck regenerates as one visual family.
- *
- * Reference paths are relative to `packages/cli/outputs/decks/`.
- */
-
 export const STYLE =
   'LANDSCAPE 3:2 horizontal devotional fine-art oil painting, classical painterly style in warm muted earth tones, loose expressive brushwork with visible canvas texture, dramatic natural chiaroscuro light, no hard digital edges.';
 
 export const NO_TEXT = 'NO text, NO lettering, NO numbers, NO words.';
 
-/** Every figure's pose: the head turns no further than a neck allows. */
 export const POSE =
   'Every figure stands in a pose a body can take: the head turns no further than the neck allows from the shoulders, so a look back is a glance over the shoulder, never a face turned fully round over a back that faces away.';
 
 export const IMAGE_SIZE = '1536x1024';
 
-/** Every painting gets the palette ref; scene paintings add the scene ref. */
 export const PALETTE_REF = 'what-is-truth/images/day3/00-title.png';
 export const SCENE_REF = 'reading-102/images/title.png';
 
-/**
- * A recurring person. `descriptor` goes into the concept text (use
- * `describe("jesus")` when writing a beat); `ref` replaces the scene ref so
- * the model sees the canonical face.
- */
 export const CHARACTERS = {
   jesus: {
     descriptor:
@@ -43,7 +28,6 @@ export type Character = keyof typeof CHARACTERS;
 
 export const describe = (character: Character) => CHARACTERS[character].descriptor;
 
-/** Said of a beat's pose reference, sent last: the pose is taken from it, nothing else. */
 export const POSE_REF_NOTE =
   'The last reference image is a pose reference only: take from it how the head turns over the shoulder and how the shoulders and back sit, and nothing of its drawing, face, hair, dress or colour. The figure has one head.';
 

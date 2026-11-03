@@ -1,11 +1,4 @@
 /* oxlint-disable effect/noNodeBuiltinImport -- the folder test reads the meaning table's LICENSE and NOTICE text files from disk, synchronously; the app never reads them. */
-/**
- * Settings as its route renders it: the About section credits the
- * instruments the recordings are played on, as their licences ask, and
- * gives the notice the Gemma Terms of Use ask of the meaning table, and a
- * copy of the Terms themselves, shipped beside the table and shown on a
- * press.
- */
 
 import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
@@ -20,7 +13,6 @@ import { About } from './about';
 const folder = new URL('../assets/meaning/', import.meta.url);
 
 describe('Settings', () => {
-  // One render serves the first two checks.
   const html = renderToStaticMarkup(<Settings />);
 
   it('credits the piano and the strings under About', () => {

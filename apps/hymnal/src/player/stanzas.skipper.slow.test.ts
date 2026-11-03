@@ -1,15 +1,3 @@
-/**
- * The score clock's skipper (`sound.ts`) with Sound on, over a fake device on
- * the TestClock: hymn 78 with stanzas 1 and 3 chosen, so the recording has
- * two skipped spans (lines 8-15 and 24-31). Each case holds that the device
- * sounds no skipped span for more than 25 ms, through what may move the
- * skipper's wait: a seek forward or back, a status read that a seek
- * overtakes, a tempo and a tempo turn, a choice made while paused (a device
- * that tells `loading` after the resume too), a choice made while a play
- * loads or just after Start, a change of choice mid-play, and a lock-screen
- * seek. Numbers only: lines by index, stanzas by number, times in ms.
- */
-
 import {
   Array as Arr,
   Clock,
@@ -46,20 +34,16 @@ import {
 import { scoreClock, soundOn } from './sound';
 
 const book = timingBook(bundled);
-/** One poll of the player (`statusEvery`), ms. */
 const POLL = 250;
-/** How far past a skipped span's start the device may sound, ms. */
 const NEAR = 25;
 const HYMN = 78;
 const CHOSEN: ReadonlyArray<number> = [1, 3];
-/** The fake recording runs this far past the timeline's end, ms. */
 const TAIL = 1500;
 const track = { number: HYMN, title: `Hymn ${HYMN}` };
 const printed = Atom.make(still);
 const timeline = Option.getOrThrow(book.of(HYMN));
 const LENGTH = timeline.end + TAIL;
 
-/** Each sung line's stanza, from the words' sections: a refrain goes with the stanza before it. */
 const ownersOf = (number: number): ReadonlyArray<number> => {
   const sections = Arr.findFirst(hymns, (it) => it.number === number).pipe(
     Option.map((it) => it.sections),
@@ -90,7 +74,6 @@ interface Cut {
   readonly skips: ReadonlyArray<Skip>;
 }
 const lengthOf = (kept: Kept) => kept.until - kept.start;
-/** The test's own cut of hymn 78 to `stanzas`: the kept lines in sung time, and the recording's skipped spans. */
 const cutBy = (stanzas: ReadonlyArray<number>): Cut => {
   const keeps = keptFor(HYMN, stanzas);
   const kept = new Array<Kept>();
@@ -130,18 +113,12 @@ const middleOf = (cut: Cut, index: number) =>
       Option.map((it) => it.sung + lengthOf(it) / 2),
     ),
   );
-/** The recording ms the device sounded between `from` and `to`. */
 const heardOf = (heard: ReadonlyArray<readonly [number, number]>, from: number, to: number) =>
   heard.reduce((sum, [a, b]) => sum + Math.max(0, Math.min(to, b) - Math.max(from, a)), 0);
 const skipOf = (cut: Cut, index: number) => Option.getOrThrow(Arr.get(cut.skips, index));
 
-/**
- * A fake device that keeps what it was asked and what it sounded, with a rate (play's and
- * setRate's), a play held on a gate, a one-shot slow status read, and a load after a resume.
- */
 const recorded = (presses: Queue.Queue<Remote>) => {
   const asked = {
-    /** Each play the device began: its place, the host's time, its rate (NaN when it named none). */
     plays: new Array<{ readonly fromMs: number; readonly now: number; readonly rate: number }>(),
     seeks: new Array<{ readonly from: number; readonly to: number; readonly now: number }>(),
     heard: new Array<readonly [number, number]>(),
@@ -175,8 +152,6 @@ const recorded = (presses: Queue.Queue<Remote>) => {
     }
     since = now;
     if (state === 'playing' && at >= LENGTH) state = 'ended';
-    // Whole ms, as a device tells: at a rate off 1, an exact place could stand a hair short of a
-    // span's start forever under the TestClock (a zero-length sleep that never moves the clock).
     return { state, positionMs: Math.floor(at), durationMs: LENGTH };
   });
   const then = (change: () => void) =>
@@ -189,7 +164,6 @@ const recorded = (presses: Queue.Queue<Remote>) => {
       Effect.gen(function* () {
         const gate = control.gate;
         if (Option.isSome(gate)) {
-          // A device loading a recording tells `loading` (One's getPlaybackStatus), not `idle`.
           yield* then(() => {
             state = 'loading';
             at = fromMs;
@@ -250,7 +224,6 @@ const recorded = (presses: Queue.Queue<Remote>) => {
 
 const settle = Effect.forEach(Array.from({ length: 10 }), () => Effect.yieldNow, { discard: true });
 
-/** `playerOn` over `soundOn` over the fake device, Sound on, hymn 78 with `chosen`. */
 const composed = (chosen: ReadonlyArray<number>, tempoValue = 100) =>
   Effect.gen(function* () {
     const clock = yield* TestClock.testClockWith(Effect.succeed);
@@ -286,7 +259,6 @@ const composed = (chosen: ReadonlyArray<number>, tempoValue = 100) =>
     return {
       asked: fake.asked,
       control: fake.control,
-      /** The lock screen's presses, as the device's remote stream gives them. */
       presses,
       registry,
       player,
@@ -331,7 +303,6 @@ const composed = (chosen: ReadonlyArray<number>, tempoValue = 100) =>
     };
   });
 
-/** The skipper's seeks after host time `after`: those that land at `skip`'s end. */
 const skipperSeeks = (
   seeks: ReadonlyArray<{ readonly from: number; readonly to: number; readonly now: number }>,
   after: number,
@@ -462,8 +433,6 @@ describe('the skipper at a tempo', () => {
 });
 
 describe('a choice made while paused', () => {
-  // 100 ms: the device tells `loading` at the player's first poll after the resume and plays
-  // before the next, so only a seek made before the resume keeps the span silent.
   for (const loads of [0, 100])
     it.effect(`sounds none of a span it skips at the resume (the device loads ${loads} ms)`, () =>
       Effect.gen(function* () {

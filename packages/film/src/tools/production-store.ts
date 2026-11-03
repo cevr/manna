@@ -1,22 +1,3 @@
-// The productions' ledgers on disk (`core/production.ts`): one small JSON
-// file each, `<productions>/<production>.json` under `FILMS_PRODUCTIONS` (the
-// app's `productions/`, committed: the owner's word, which no render can make
-// again, kept with the code and alike in every checkout; it names sets by
-// their folder and never holds an image or a render). Each is a `ContentStore` manifest, written whole by one
-// writer at a time across processes, so the lab's Move forward and an
-// agent's `film production` in a terminal never lose each other's write.
-// A ledger that does not decode is left out of the list with a warning,
-// never rewritten: the front door still opens. A ledger decodes from, and is
-// written to, only the file named for its production: a caller addresses a
-// ledger by the production it names, so one kept in another file would be
-// read from one file and written to another.
-//
-// The store is the timeline's one write path: the lab's Move forward (the
-// `productions` HTTP group), `film production` and `film publish` in a
-// terminal, and any other caller (an MCP tool) use its verbs (`start`,
-// `forward`, `say`, `file`, `publish`), each decided on the ledger as read
-// under its lock, so every caller gets the same refusals.
-
 import {
   Array as Arr,
   Config,
@@ -50,10 +31,8 @@ import { ContentStore, type Manifest, type StoreError, writeWhole } from './cont
 
 const ProductionFileJson = repoJson(ProductionFileSchema);
 
-/** Words in one line, quoted: a newline in them would split the line. */
 const quoted = Schema.encodeSync(Schema.fromJsonString(Schema.String));
 
-/** The codec of the file named for `production`: a ledger of another production does not decode from it, nor is written to it. */
 const ledgerOf = (production: ProductionId) =>
   ProductionFileJson.check(
     Schema.makeFilter(
@@ -63,7 +42,6 @@ const ledgerOf = (production: ProductionId) =>
     ),
   );
 
-/** `start` on a production that already has a ledger. */
 class ProductionKept extends Schema.TaggedError<ProductionKept>()('ProductionKept', {
   production: Schema.String,
 }) {
@@ -72,7 +50,6 @@ class ProductionKept extends Schema.TaggedError<ProductionKept>()('ProductionKep
   }
 }
 
-/** A version the production does not have. */
 class VersionUnknown extends Schema.TaggedError<VersionUnknown>()('VersionUnknown', {
   production: Schema.String,
   version: Schema.Int,
@@ -83,7 +60,6 @@ class VersionUnknown extends Schema.TaggedError<VersionUnknown>()('VersionUnknow
   }
 }
 
-/** A set stamped onto a production that keeps no ledger: no timeline would ever list it. */
 class ProductionUnkept extends Schema.TaggedError<ProductionUnkept>()('ProductionUnkept', {
   production: Schema.String,
 }) {
@@ -92,81 +68,50 @@ class ProductionUnkept extends Schema.TaggedError<ProductionUnkept>()('Productio
   }
 }
 
-/** A production's first ledger as `start` takes it. */
 interface Start {
   readonly title: string;
   readonly film: Option.Option<string>;
   readonly blurb: Option.Option<string>;
-  /** What its first version is for. */
   readonly first: string;
   readonly at: number;
 }
 
 interface ProductionStoreService {
-  /**
-   * Every ledger there is, by name; one that does not decode, as one kept in
-   * a file not named for its production does not, is left out with a warning.
-   */
   readonly list: Effect.Effect<ReadonlyArray<ProductionFile>, StoreError>;
-  /** The production's ledger, when one is kept. */
   readonly read: (
     production: ProductionId,
   ) => Effect.Effect<Option.Option<ProductionFile>, StoreError>;
-  /**
-   * One change to the ledger, decided on it as read under its lock; a
-   * production with no ledger yet starts from one version opened at the
-   * epoch (`newProduction`).
-   */
   readonly modify: <E>(
     production: ProductionId,
     change: (current: ProductionFile) => Result.Result<ProductionFile, E>,
   ) => Effect.Effect<ProductionFile, E | StoreError>;
-  /**
-   * `modify` that answers `A` beside the ledger it leaves, both decided on
-   * the ledger as read under its lock; a change that fails writes nothing
-   * and fails the call.
-   */
   readonly attempt: <A, E>(
     production: ProductionId,
     change: (current: ProductionFile) => Result.Result<readonly [A, ProductionFile], E>,
   ) => Effect.Effect<A, E | StoreError>;
-  /** Start a production's ledger: one version, opened at `at`; refused when one is kept. */
   readonly start: (
     production: ProductionId,
     start: Start,
   ) => Effect.Effect<ProductionFile, ProductionKept | StoreError>;
-  /** Move forward: version `after + 1` opens at `at`; refused when the production is past `after`. */
   readonly forward: (
     production: ProductionId,
     move: MoveForward,
     at: number,
   ) => Effect.Effect<ProductionFile, VersionMoved | StoreError>;
-  /** Record the owner's word given outside the lab, aimed (`aimedWord`) (a question asked of them is a lab ask's, filed by it). */
   readonly say: (
     production: ProductionId,
     said: OwnerWord,
   ) => Effect.Effect<ProductionFile, WordUnaimed | StoreError>;
-  /** File a set published before sets named their production in version `version`. */
   readonly file: (
     production: ProductionId,
     set: string,
     version: number,
   ) => Effect.Effect<ProductionFile, VersionUnknown | StoreError>;
-  /**
-   * The stamp a set published onto `production` at `at` carries: refused
-   * when the production keeps no ledger, or names a version it has not
-   * opened. `publish` and the lab's `publish_set` stamp a set by it alike.
-   */
   readonly stamp: (
     production: ProductionId,
     version: Option.Option<number>,
     at: number,
   ) => Effect.Effect<Stamp, ProductionUnkept | VersionUnknown | StoreError>;
-  /**
-   * Publish the set in `folder` (absolute) onto `production`'s timeline:
-   * its `review.json` stamped (`stamp`) with the production, the version it
-   * was made for (the one open at `at` without) and `at`, written whole.
-   */
   readonly publish: (
     folder: string,
     production: ProductionId,
@@ -284,22 +229,14 @@ export class ProductionStore extends Context.Service<ProductionStore, Production
   );
 }
 
-/** A manifest as JSON, every field kept: `publish` stamps three and leaves the rest as written. */
 const ManifestJson = repoJson(Schema.JsonObject);
 
-/** What a publish writes on a set: the production it lands on, the version it names (if any), when. */
 export interface Stamp {
   readonly production: ProductionId;
   readonly version: Option.Option<number>;
   readonly published: number;
 }
 
-/**
- * A manifest's keys stamped with `stamp`, every other key as given; a
- * version stamped before and none now is dropped, so the set falls in the
- * version open when it was published. `film publish` and the lab's
- * `publish_set` stamp a set by it alike.
- */
 export const stampedManifest = <J extends Readonly<Record<string, Schema.Json>>>(
   json: J,
   stamp: Stamp,
@@ -313,11 +250,6 @@ export const stampedManifest = <J extends Readonly<Record<string, Schema.Json>>>
   };
 };
 
-/**
- * A manifest's text (`review.json` at `file`) stamped with `stamp`
- * (`stampedManifest`). Refused (FileInvalid) when the text is no manifest,
- * or the stamp would make it none.
- */
 const stampManifest = (file: string, text: string, stamp: Stamp) =>
   Effect.gen(function* () {
     const invalid = (issue: Schema.SchemaError) =>

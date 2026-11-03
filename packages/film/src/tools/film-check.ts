@@ -1,18 +1,3 @@
-// The legs of `film check`, each an Effect over the services it needs, so
-// what a leg may cost is in its type. The static leg reads the film's files
-// and the master's length and stamp (FileSystem, Media), and measures the
-// derived sounds the film places (SoundRender): the lab runs it after every
-// write. The sound leg renders the mix the film makes now (Mixer). The
-// layout leg draws frames (Checker, Looker). The draw leg draws every scene
-// in this process, into the stand-in context, at its moments (no browser).
-// The cast leg asks the cast library for each member the script's beats name.
-// The short leg checks one short (Checker). A talk is a vertical film of its
-// own: what its words tell (`talkWords`: its length against its format's,
-// its first word, its loop's silence) goes with the static leg, and the
-// layout leg probes its page for text past every platform's zone and a still
-// open. Each hands back its findings; `report` levels and addresses them as
-// one Report.
-
 import {
   Array as Arr,
   Effect,
@@ -66,7 +51,6 @@ import { Mixer, planKey, readMaster } from './mixer.ts';
 import { measuredFilm } from './sound-render.ts';
 import type { FlagRule } from './render-plan.ts';
 
-/** `film check` flags that would each run a different set of legs. */
 export const CHECK_RULES: ReadonlyArray<FlagRule> = [
   ['sound', 'excludes', 'static', '--static leaves the mix out, --sound runs it'],
   ['sound', 'excludes', 'short', 'a short has no mix of its own'],
@@ -84,19 +68,11 @@ export const CHECK_RULES: ReadonlyArray<FlagRule> = [
   ],
 ];
 
-/** The film laid out, and the part of it a check covers. */
 interface LaidOut {
   readonly placed: ReadonlyArray<Placed>;
   readonly scope: Scope;
 }
 
-/**
- * The film laid out and `address` resolved on it, or the one error that
- * stops them: a timeline that does not resolve, a line that does not parse,
- * acts or a short that do not lay out, a part the film lacks. The check
- * reports it as its finding, addressed at its scene, rather than failing
- * the run, so the lab's findings show it where it is.
- */
 export const laidOut = (
   film: LoadedFilm,
   address: Address,
@@ -111,7 +87,6 @@ export const laidOut = (
     ),
   );
 
-/** `film` as a vertical film, when it is a talk: its length held to its format's, its phrases as its captions show them. */
 const talkVertical = (
   film: LoadedFilm,
   placed: ReadonlyArray<Placed>,
@@ -121,12 +96,6 @@ const talkVertical = (
     phrases: talkPhrases(talk, cut, placed),
   }));
 
-/**
- * A vertical finding made on a talk, as the talk's: at the film's scene it is
- * at (a line of text at its second, a late first word at its start, a still
- * open or a title card at the first frame), or of the whole film (its length,
- * its loop). A talk is no short, so none is addressed as one.
- */
 const asTalk =
   (placed: ReadonlyArray<Placed>) =>
   (finding: ShortFinding): ShortFinding => {
@@ -149,26 +118,12 @@ const asTalk =
     );
   };
 
-/**
- * What a talk's words tell, from its files alone: its length against its
- * format's (`TALK_FORMATS`), its first word, its loop's silence, each the
- * talk's (`asTalk`). None for a film that is not a talk.
- */
 const talkWords = (film: LoadedFilm, placed: ReadonlyArray<Placed>): ReadonlyArray<ShortFinding> =>
   Option.match(talkVertical(film, placed), {
     onNone: () => [],
     onSome: (talk) => shortStaticFindings(talk.film, talk.phrases).map(asTalk(placed)),
   });
 
-/**
- * What the film's files tell without a mix or a frame: cues, takes, sounds,
- * the ending, and the master on disk (its length and the plan it was mixed
- * for, against the plan the film mixes to now), named by its place in the
- * film's folder with `/` whatever the platform's separator; and a talk's
- * words held to its format (`talkWords`). The derived sounds the film places
- * are measured once, for each effect's lead-in; the plan's key measures them
- * through the same renderer, whose cache answers it.
- */
 export const staticLeg = Effect.fn('check.static')(function* (
   film: LoadedFilm,
   placed: ReadonlyArray<Placed>,
@@ -186,18 +141,11 @@ export const staticLeg = Effect.fn('check.static')(function* (
   return found;
 });
 
-/** A beat as the cast leg reads it: its id and the cast members its picture draws. */
 interface CastBeat {
   readonly id: string;
   readonly cast?: ReadonlyArray<string>;
 }
 
-/**
- * Whether the board can draw each cast member the beats name: each distinct
- * member resolves through `castReference` once, and one that does not is one
- * finding naming every beat that names it. The board meets the same errors
- * only when it sends a beat.
- */
 export const castLeg = Effect.fn('check.cast')(function* (
   film: string,
   beats: ReadonlyArray<CastBeat>,
@@ -218,11 +166,6 @@ export const castLeg = Effect.fn('check.cast')(function* (
   return Arr.flatten(found);
 });
 
-/**
- * Dead air and the balance, measured on the mix the film makes now, rendered
- * in memory bus by bus as `mix` makes it (the master on disk may be stale:
- * the static leg says so). Nothing until every take is recorded.
- */
 export const soundLeg = Effect.fn('check.sound')(function* (
   film: LoadedFilm,
   placed: ReadonlyArray<Placed>,
@@ -236,15 +179,6 @@ export const soundLeg = Effect.fn('check.sound')(function* (
   return mixFindings(placed, plan, mixed);
 });
 
-/**
- * The browser legs, on one server and browser that start only when they run:
- * the layout at every sampled frame of the scenes `scope` covers, then the
- * look pass over them. Each act the scope covers whole is judged against its
- * colour script; a misnamed act fails in `resolveAddress`, before any page
- * opens. A talk's page is then probed as a vertical film (`Checker.talk`)
- * over the seconds `scope` spans: its text against every platform's zone,
- * its open for motion, each finding the talk's (`asTalk`).
- */
 export const layoutLeg = Effect.fn('check.layout')(function* (
   film: LoadedFilm,
   scope: Scope,
@@ -261,16 +195,10 @@ export const layoutLeg = Effect.fn('check.layout')(function* (
   return [...layout, ...lookFindings(looked, scope.acts), ...talk.flat().map(asTalk(placed))];
 });
 
-/** A film's `film.ts` as the draw leg reads it: the film, built from its narration. */
 const FilmFile = Schema.Struct({
   film: Schema.declare((u): u is (narrated: Narrated) => Film => Predicate.isFunction(u)),
 });
 
-/**
- * A drawn film's scenes drawn as its page builds it: its `film.ts` (with
- * `swaps`, the one those files build, `wedgedModule`), from the committed
- * timings.
- */
 const drawnFindings = Effect.fnUntraced(function* (
   film: LoadedFilm,
   scenes: ReadonlySet<string>,
@@ -298,16 +226,6 @@ const drawnFindings = Effect.fnUntraced(function* (
   );
 });
 
-/**
- * `check --draw`: the film as its page builds it (a drawn film's `film.ts`,
- * from the committed timings; a talk's page over its edit, takes and cut,
- * `createTalk`, its footage left undrawn), every moment of the scenes `scope`
- * covers drawn in this process into the stand-in context (`draw-check.ts`):
- * a scene that throws, a frame that is not pure, ink over a face, a painted
- * plate's edge in the frame. No browser.
- * With `swaps` (a wedge, `check --level`), a drawn film is the one those
- * files build, so a look the film does not play is drawn and checked.
- */
 export const drawLeg = Effect.fn('check.draw')(
   function* (film: LoadedFilm, scope: Scope, swaps: ReadonlyMap<string, string>) {
     const scenes = new Set(scope.scenes.map((p) => p.spec.id));
@@ -320,11 +238,6 @@ export const drawLeg = Effect.fn('check.draw')(
   Effect.provide(Layer.mergeAll(PuppetImagesBun, PaintingImagesBun)),
 );
 
-/**
- * `check --short`: the short resolved on the film's frames, at the rate the
- * film declares, its words (its length, its first word, its loop's silence),
- * then, unless `static`, its page's frames. `static` opens no page.
- */
 export const shortLeg = Effect.fn('check.short')(function* (
   film: LoadedFilm,
   short: Short,

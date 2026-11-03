@@ -1,27 +1,7 @@
-/**
- * The sampled instruments, each from its official repository at a pinned
- * commit, into `<cache>/instruments/<name>/` (outside git). Every file style
- * C reads is in `instruments.lock.json`: its raw URL at the commit, its size
- * and its sha256.
- *
- * - `lockInstruments` makes the lock once (`render --lock`): it reads each
- *   repository's tree at the commit from GitHub's API, picks the files (the
- *   whole of the paths below, plus each SFZ named and every sample it names),
- *   fetches what the cache lacks, and holds every file's git blob SHA-1 to
- *   the tree, so the lock is anchored to the commit, not only to bytes here.
- * - `fetchInstruments` reads only the lock: it keeps each file whose sha256
- *   matches, and downloads a missing or wrong one to a `.part` file, checks
- *   it, then renames it. It makes no GitHub API call.
- *
- * The `.ram.sfz` wrappers (`sfizz.ts`) sit beside their SFZ files and are
- * not in the lock.
- */
-
 import { Effect, FileSystem, Path, Schema } from 'effect';
 import { RenderFailed } from './proc.js';
 import { sha256Hex } from './sfizz.js';
 
-/** What the lock is made from: each instrument's repository, commit, licence and files. */
 export const SOURCES = [
   {
     name: 'salamander',
@@ -62,11 +42,9 @@ const LockJson = Schema.fromJsonString(Lock);
 
 export const LOCK_FILE = 'instruments.lock.json';
 
-/** A file's raw URL at the commit, each path segment escaped. */
 export const rawUrl = (repo: string, commit: string, file: string) =>
   `https://raw.githubusercontent.com/${repo}/${commit}/${file.split('/').map(encodeURIComponent).join('/')}`;
 
-/** Git's blob id of `bytes`: sha1 of `blob <length>\0` and the bytes. */
 export const gitBlobSha1 = (bytes: Uint8Array) => {
   const hasher = new Bun.CryptoHasher('sha1');
   hasher.update(`blob ${bytes.byteLength}\0`);
@@ -74,7 +52,6 @@ export const gitBlobSha1 = (bytes: Uint8Array) => {
   return hasher.digest('hex');
 };
 
-/** `a/b/../c` as `a/c`: a path from the repository root with its dots resolved. */
 const normal = (file: string) => {
   const out: string[] = [];
   for (const part of file.split('/')) {
@@ -84,7 +61,6 @@ const normal = (file: string) => {
   return out.join('/');
 };
 
-/** Every sample an SFZ file names, from the repository root: `default_path` joined to each `sample=`. */
 export const samplesOf = (sfzPath: string, text: string): string[] => {
   const base = sfzPath.includes('/') ? sfzPath.slice(0, sfzPath.lastIndexOf('/')) : '';
   let prefix = '';
@@ -120,7 +96,6 @@ const Tree = Schema.fromJsonString(
   Schema.Struct({ truncated: Schema.Boolean, tree: Schema.Array(TreeEntry) }),
 );
 
-/** The cached file at `dest` when it is `size` bytes long and passes `ok`; else `url`'s bytes, through a `.part` file. */
 const ensure = (dest: string, url: string, ok: (bytes: Uint8Array) => boolean) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -141,7 +116,6 @@ const ensure = (dest: string, url: string, ok: (bytes: Uint8Array) => boolean) =
     return { bytes, fetched: true };
   });
 
-/** Makes `instruments.lock.json` beside this module from the repositories' trees (see the module's doc). */
 export const lockInstruments = (cache: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -206,7 +180,6 @@ export const lockInstruments = (cache: string) =>
     return instruments.reduce((n, i) => n + i.files.length, 0);
   });
 
-/** The lock's text and its parse. */
 export const readLock = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -217,7 +190,6 @@ export const readLock = Effect.gen(function* () {
   return { text, lock };
 });
 
-/** Every locked file in the cache with its pinned sha256: answers how many were downloaded. */
 export const fetchInstruments = (cache: string, lock: Lock) =>
   Effect.gen(function* () {
     const path = yield* Path.Path;

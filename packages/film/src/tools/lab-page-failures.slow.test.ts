@@ -1,9 +1,3 @@
-// A lab page that does not build answers the bundler's words in the studio's
-// look, asks again with a pause, and serves again once fixed: by a save of
-// the fix, by its wait building again when no save comes, and when the fix
-// lands in a folder no build read. A server entry that reads a film's code
-// does not build. The app is in a temp folder (`fixtures/lab-app.ts`).
-
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Array as Arr,
@@ -38,10 +32,8 @@ describe('a page that does not build', () => {
       const broken = yield* ask('/asks/a1');
       expect(broken.status).toBe(500);
       expect(broken.text).toContain('missing.ts');
-      // In the studio's look: its tokens, no colour of its own.
       expect(broken.text).toContain('--surface-0:');
       expect(broken.text).toContain('background:var(--surface-0)');
-      // The failed build read nothing new; a fix to the file it last read is still heard.
       const built = buildOf(broken.text);
       yield* waitWriting(built, '10 seconds', 'src/p.ts', "console.log('fixed');\n");
       expect((yield* ask('/asks/a1')).status).toBe(200);
@@ -65,7 +57,6 @@ describe('a page that does not build', () => {
         yield* write('src/films/toy/scenes/one.ts', "export const one = 'scene one';\n");
         yield* write('src/films/toy/scenes/shown.ts', "export const shown = 'drawn';\n");
         yield* write('lib/scenes/two.ts', "export const two = 'scene two';\n");
-        // The browser's page draws the film: allowed.
         yield* write(
           'src/p.ts',
           "import { shown } from './films/toy/scenes/shown.ts';\nconsole.log(shown);\n",
@@ -82,7 +73,6 @@ describe('a page that does not build', () => {
         expect(failed).toContain('lib/scenes/two.ts');
         expect(failed).toContain('player/stills.ts');
         expect(failed).not.toContain('shown.ts');
-        // The server entry drawing none: the pages build, the browser's still drawing the film.
         yield* waitWriting(
           buildOf(refused.text),
           '10 seconds',
@@ -124,7 +114,6 @@ describe('a page that does not build', () => {
     'a page that failed for a file in a folder no build read: its wait alone builds again, hears the fix, and the page then serves',
     () =>
       Effect.gen(function* () {
-        // The bundler names the importer (src/p.ts), never lib/, where the fix lands.
         const { spec, write } = yield* appFolderWith({
           'src/p.ts': "import { gone } from '../lib/missing.ts';\nconsole.log(gone);\n",
         });
@@ -132,14 +121,12 @@ describe('a page that does not build', () => {
         const broken = yield* ask('/asks/a1');
         expect(broken.status).toBe(500);
         const since = buildOf(broken.text);
-        // The failed page's wait, as its own script asks it; no page is asked meanwhile.
         const waiting = yield* Effect.forkChild(
           page.wait({ since, server: Option.none(), film: Option.none() }, '5 seconds'),
         );
         yield* write('lib/missing.ts', "export const gone = 'made';\n");
         const heard = yield* Fiber.join(waiting);
         expect(heard.build).toBeGreaterThan(since);
-        // The page it reloads onto, asked once: the build the wait made, served.
         const fixed = yield* ask('/asks/a1');
         expect([fixed.status, buildOf(fixed.text)]).toEqual([200, heard.build]);
       }).pipe(Effect.scoped, Effect.provide(Platform)),
@@ -150,8 +137,6 @@ describe('a page that does not build', () => {
     () =>
       Effect.gen(function* () {
         const { spec } = yield* appFolder;
-        // The bundler fails its first two builds and builds the third, whatever the files:
-        // as Bun's resolver did, holding a folder as a failed build listed it a moment ago.
         const bundles = yield* Ref.make(0);
         const flaky = Layer.effect(
           PageBundler,
@@ -173,7 +158,6 @@ describe('a page that does not build', () => {
         const broken = yield* ask('/asks/a1');
         expect([broken.status, broken.text.includes('stale resolve 1')]).toEqual([500, true]);
         const since = buildOf(broken.text);
-        // The failed page's wait, as its own script asks it; nothing is saved, no page asked.
         const heard = yield* page.wait(
           { since, server: Option.none(), film: Option.none() },
           '5 seconds',
@@ -195,7 +179,6 @@ describe('a page that does not build', () => {
         const code = /<script>([\s\S]*)<\/script>/.exec(broken)?.[1] ?? '';
         const server = serverOf(broken);
         const build = buildOf(broken);
-        // What the page hears: a proxy's 502, no answer, its own build again, then another server's.
         const answers = [
           { ok: false, json: {} },
           'unreachable',
@@ -207,7 +190,6 @@ describe('a page that does not build', () => {
         const reloaded = Deferred.makeUnsafe<void>();
         const fakeFetch = (url: string) => {
           heard.push(`ask ${url}`);
-          // A page that asks past its last answer has missed newer code: the test ends there.
           if (asked >= answers.length) {
             Deferred.doneUnsafe(reloaded, Exit.void);
             return Effect.runPromise(Effect.never);
@@ -238,7 +220,6 @@ describe('a page that does not build', () => {
             Deferred.doneUnsafe(reloaded, Exit.void);
           },
         };
-        // The page's own script, run over a fake fetch, location and timer.
         new Function('fetch', 'location', 'setTimeout', code)(fakeFetch, location, fakeTimeout);
         yield* Deferred.await(reloaded);
         const wait = `/api/review/build?since=${build}&server=${server}&timeout=${LONGEST_WAIT}`;

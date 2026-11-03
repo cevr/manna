@@ -1,11 +1,3 @@
-// How a talk plays (`talk.ts`), over synthetic transcripts
-// (`fixtures/talk-take.ts`): a take of words each voiced over a known span,
-// its loudness every 10 ms loud where a word is voiced and silent between. A
-// seam is never inside a kept word's voiced span and always on a frame; the
-// pieces add up to the section; a pause longer than the talk's `gaps` is
-// tightened to it; a strike and its restore are inverse; a section reordered
-// plays as it did; and the derived timings lay out as a film's do.
-
 import { describe, expect, it } from 'bun:test';
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import { SYNTHETIC_SOURCE, syntheticTake } from './fixtures/talk-take.ts';
@@ -32,7 +24,6 @@ const CHARGE = Segment.make('charge');
 
 const WORDS = ['Is', 'the', 'um', 'verdict', 'a', 'cover', 'up', 'No', 'it', 'is', 'not'];
 
-/** A talk over one take, its sections as given. */
 const talkOf = (sections: Talk['sections'], extra: Partial<Talk> = {}): Talk => ({
   title: 'Is the verdict a cover-up?',
   format: 'question',
@@ -44,10 +35,8 @@ const talkOf = (sections: Talk['sections'], extra: Partial<Talk> = {}): Talk => 
 const cutOf = (talk: Talk, take: TalkTake = syntheticTake(WORDS)) =>
   Result.getOrThrow(talkCut(talk, { a: take }));
 
-/** Whether `t` falls on a frame of the talk's rate. */
 const onFrame = (t: number) => Math.abs(t * TALK_FPS - Math.round(t * TALK_FPS)) < 1e-6;
 
-/** Every piece edge of `cut` is on a frame and outside every kept word's voiced span. */
 const seamsHold = (cut: TalkCut, take: TalkTake) => {
   for (const section of cut.sections)
     for (const piece of section.pieces)
@@ -78,7 +67,6 @@ describe('a talk cut on its transcript', () => {
     );
     expect(cut.sections[0]?.pieces.length).toBeGreaterThan(1);
     seamsHold(cut, take);
-    // Every voiced span of a struck word is outside every piece.
     for (const i of [2, 8]) {
       const w = take.words[i];
       for (const piece of cut.sections[0]?.pieces ?? [])
@@ -89,7 +77,6 @@ describe('a talk cut on its transcript', () => {
   });
 
   it('plays a kept word whole when the struck one beside it is under a frame away, the seam still on a frame', () => {
-    // Words 1 and 2 are 10 ms apart, 1.11 s to 1.12 s (no frame boundary between), and 2 is struck.
     const take = syntheticTake(WORDS, [0.11, 0.1, 0.01, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]);
     const cut = cutOf(talkOf([{ id: 'claim', take: 'a', from: 0, to: 6, cut: [[2, 2]] }]), take);
     seamsHold(cut, take);
@@ -119,7 +106,6 @@ describe('a talk cut on its transcript', () => {
     );
     seamsHold(edges, take);
     expect(edges.sections[0]?.kept).toEqual([1, 4, 5, 6, 7, 8, 9]);
-    // Two adjacent strikes cut as one strike over both does.
     const joined = cutOf(
       talkOf([
         {
@@ -137,11 +123,6 @@ describe('a talk cut on its transcript', () => {
       take,
     );
     expect(joined.sections).toEqual(edges.sections);
-    // A section ending on the take's last word, which stops voicing 10 ms
-    // before the take ends (4.71 s of 4.72 s, no frame boundary between),
-    // plays that word whole: its piece ends on the first frame past its
-    // voice, under a frame past the take's end (silent there, the picture on
-    // its last frame), never inside the word.
     const short = syntheticTake(WORDS, [0.11]);
     const clipped = { ...short, envelope: short.envelope.slice(0, 472) };
     const tail = cutOf(talkOf([{ id: 'tail', take: 'a', from: last - 1, to: last }]), clipped);
@@ -162,7 +143,6 @@ describe('a talk cut on its transcript', () => {
     const placed = Result.getOrThrow(layout(cut.scenes, cut.timings, 30));
     expect(placed[0]?.dur).toBeCloseTo(total, 9);
     expect(placed[0]?.voice.recorded).toBe(true);
-    // The pieces are back to back from zero, and each seam is where the next one starts.
     for (const [k, piece] of (section?.pieces ?? []).entries())
       expect(piece.at).toBeCloseTo(
         (section?.pieces ?? []).slice(0, k).reduce((sum, p) => sum + (p.to - p.from), 0),
@@ -194,16 +174,13 @@ describe('a talk cut on its transcript', () => {
     const cut = cutOf(talkOf([{ id: 'claim', take: 'a', from: 0, to: 6 }], { gaps: 0.25 }), take);
     const words = cut.sections[0]?.voice.words ?? [];
     const pause = (i: number) => (words[i + 1]?.voiced.start ?? 0) - (words[i]?.voiced.end ?? 0);
-    // Words 3 and 4 had 1.5 s between them: no more than the gap (and a frame) now.
     expect(pause(3)).toBeLessThanOrEqual(0.25 + 1 / TALK_FPS);
-    // Words 0 and 1 had 0.1 s: kept as it was.
     expect(pause(0)).toBeCloseTo(0.1, 9);
     seamsHold(cut, take);
   });
 
   it('cuts at the quietest frame of a silence', () => {
     const take = syntheticTake(WORDS);
-    // Room noise in the silence after word 1, quiet only either side of one frame boundary.
     const after = take.words[1]?.voiced.end ?? 0;
     const quiet = Math.ceil((after + 0.04) * TALK_FPS) / TALK_FPS;
     const envelope = take.envelope.map((level, k) => {
@@ -227,7 +204,6 @@ describe('a talk cut on its transcript', () => {
     expect(ahead.sections.map((s) => s.id)).toEqual(['hook', 'claim']);
     expect(ahead.timings.scenes['claim']).toEqual(behind.timings.scenes['claim']);
     expect(ahead.timings.scenes['hook']).toEqual(behind.timings.scenes['hook']);
-    // A note 0.4 s into the claim, made with the hook ahead, shows 0.4 s into the claim after the move.
     const placedAhead = Result.getOrThrow(layout(ahead.scenes, ahead.timings, 30));
     const placedBehind = Result.getOrThrow(layout(behind.scenes, behind.timings, 30));
     const note = { scene: 'claim', T: 0, local: 0.4 };
@@ -346,7 +322,6 @@ describe('a talk cut on its transcript', () => {
   });
 
   it('is cut to one of the formats, each with its numbers as data', () => {
-    // As a talk.ts on disk could say it: text, decoded once.
     const edit =
       '{"title":"Is the verdict a cover-up?","format":"vlog","takes":{"a":"take.why"},' +
       '"sections":[{"id":"claim","take":"a","from":0,"to":5}]}';
@@ -444,7 +419,6 @@ describe("a talk's takes, from the footage library", () => {
 });
 
 describe("a talk's captions", () => {
-  /** Two sections of one take: the second plays words 7 to 10, its "No" quoted. */
   const talk = talkOf(
     [
       { id: 'claim', take: 'a', from: 0, to: 6, cut: [[2, 2]] },
@@ -491,17 +465,14 @@ describe("a talk's captions", () => {
   it("sets its words inside every platform's zone, its captions beside TikTok's buttons", () => {
     const room = safeRect(SAFE_ZONES.platforms);
     const { centre, hook, caption } = TALK_LAYOUT;
-    // The hook, above every button column, centred on the frame.
     const high = roomAcross(SAFE_ZONES.platforms, room.top + 1);
     expect(centre - hook.width / 2).toBeGreaterThanOrEqual(high.left);
     expect(centre + hook.width / 2).toBeLessThanOrEqual(high.right);
     expect(hook.y).toBeGreaterThan(room.top);
-    // The captions, down to the room's foot, beside the buttons.
     const low = roomAcross(SAFE_ZONES.platforms, room.bottom);
     expect(caption.centre - caption.width / 2).toBeGreaterThanOrEqual(low.left);
     expect(caption.centre + caption.width / 2).toBeLessThanOrEqual(low.right);
     expect(caption.y).toBeLessThan(room.bottom);
-    // The captions take the whole room beside TikTok's buttons: 120 to 780 px.
     expect(caption).toEqual({ centre: 450, y: 1128, width: 660 });
     expect(hook.width).toBe(696);
   });

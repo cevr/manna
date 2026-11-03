@@ -1,10 +1,3 @@
-/**
- * Each subscriber's address, over the database's port (`./sql.ts`), in the
- * `addresses` table: the one place an address is kept. A sign-up writes its
- * address here before the model hears of it (`./routes.ts`); a letter reads
- * it (`./postman.ts`, `./deliver.ts`); and a sign-up that ran out deletes
- * it, through the model's port (`layerBook`, `../list/AddressBook.ts`).
- */
 import { Context, Effect, Layer, Option, Schema } from 'effect';
 
 import { AddressBook, type Forget } from '../list/AddressBook.ts';
@@ -13,14 +6,12 @@ import { Address } from './address.ts';
 import { Sql, SqlError, type Statement } from './sql.ts';
 
 export interface AddressesService {
-  /** Keeps a subscriber's address, written `now`. */
   readonly keep: (
     subscriber: SubscriberId,
     address: Address,
     now: number,
   ) => Effect.Effect<void, SqlError>;
   readonly find: (subscriber: SubscriberId) => Effect.Effect<Option.Option<Address>, SqlError>;
-  /** Deletes each address kept at or before its `before`, in one transaction. */
   readonly forget: (entries: ReadonlyArray<Forget>) => Effect.Effect<void, SqlError>;
 }
 
@@ -76,10 +67,6 @@ export const layer = Layer.effect(
   }),
 );
 
-/**
- * The model's address book over these addresses. A delete that fails is a
- * defect: the platform delivers the batch again.
- */
 export const layerBook = Layer.effect(
   AddressBook,
   Effect.gen(function* () {

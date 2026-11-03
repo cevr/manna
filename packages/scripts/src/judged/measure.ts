@@ -1,29 +1,4 @@
 #!/usr/bin/env bun
-// How right a judged rule is on its labelled corpus
-// (`fixtures/<rule in kebab case>.json`), against the live model: the rule
-// as the repo's `.oxlintrc.json` defines it, every case in one request
-// (split past `--bound`), no cache. Not a test: it costs a request and the
-// model is not deterministic.
-//
-//   bun run --cwd packages/scripts judged:measure --rule historyComment
-//   bun run --cwd packages/scripts judged:measure --rule historyComment --as line  # each case's `line`, not its `text`
-//   bun run --cwd packages/scripts judged:measure --rule testOracle --bound 50     # requests of 50 at once
-//   bun run --cwd packages/scripts judged:measure --rule testOracle --repeat 3     # the corpus three times over, one request
-//   bun run --cwd packages/scripts judged:measure --rule testOracle --model <m>    # another model than the config's
-//
-// Prints one line, `<rule> model=<m> as=<field> bound=<n> requests=<n>
-// cases=<n> n=<n> conflicts=<n> sent=<n> right=<n> wrong=<n> unanswered=<n>
-// hand-right=<n>/<n> positives=<n> threshold=<t> reported=<n> true=<n>
-// precision=<p> recall=<r> wall=<ms> in=<tokens> out=<tokens>`, then the
-// precision and recall at other thresholds, then the spread (the lowest p
-// of a positive and the highest of any other case), then each wrong case. `n` is the
-// distinct texts of the `cases`, each scored once (the model answers a text
-// once); `conflicts` the texts whose cases disagree on a label; `sent` the
-// texts asked about (`n` times `--repeat`); `positives` the scored texts
-// labelled the rule's reporting label; `reported` those at or over the
-// rule's threshold, `true` how many of them are positives: precision is
-// true/reported, the share a gate would fail on rightly, and recall
-// true/positives.
 
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -44,13 +19,10 @@ const Case = Schema.Struct({
 
 const Corpus = Schema.fromJsonString(Schema.Struct({ cases: Schema.Array(Case) }));
 
-/** The other thresholds a measure prints precision and recall at. */
 const SWEEP = [0.5, 0.6, 0.7, 0.8, 0.9, 0.95];
 
-/** A rule's id as its corpus' file name: `testOracle` → `test-oracle`. */
 const kebab = (id: string) => id.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 
-/** `n / d` to two places, `-` for none. */
 const share = (n: number, d: number) => {
   if (d === 0) return '-';
   return (n / d).toFixed(2);
@@ -85,8 +57,6 @@ const measure = Effect.fn('judged.measure')(function* (
     if (as === 'line') return c.line ?? c.text;
     return c.text;
   };
-  // One case a text: the model answers a text once, so a text the corpus
-  // holds twice is scored once, and two cases of one text must agree.
   const byText = new Map<string, Array<(typeof corpus.cases)[number]>>();
   for (const c of corpus.cases) byText.set(textOf(c), [...(byText.get(textOf(c)) ?? []), c]);
   const conflicts = [...byText.values()].filter((group) =>
@@ -138,9 +108,6 @@ const measure = Effect.fn('judged.measure')(function* (
       return `${threshold}:p=${share(right, reported)},r=${share(right, positives)},n=${reported}`;
     }).join(' ')}`,
   );
-  // How far apart the labels sit: the lowest p a positive got, and the
-  // highest any other case got. A threshold between them reports every
-  // positive and nothing else; the gap is its margin.
   const ps = (positive: boolean) =>
     judged.filter((c) => (c.label === rule.reports) === positive).map((c) => c.p);
   yield* Console.log(

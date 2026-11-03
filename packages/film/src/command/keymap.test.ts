@@ -28,7 +28,6 @@ const command = (id: string, over: Partial<Omit<Command, 'touch'>> = {}): Comman
 
 const page = contextAt('ask', '/films/f/studio');
 
-/** What `p` does among `commands` in `ctx`: the command and step it runs, `owned` or `pass`. */
 const does = (p: KeyPress, commands: ReadonlyArray<Command>, ctx: Context = page) =>
   Resolved.$match(resolve(p, ctx, commands, bindingsOf(commands)), {
     Run: ({ command, how }) => `${command.id} ${how.step}`,
@@ -36,7 +35,6 @@ const does = (p: KeyPress, commands: ReadonlyArray<Command>, ctx: Context = page
     Pass: () => 'pass',
   });
 
-/** Whether `p` runs a command bound to `chord` alone: the chord the press reads as. */
 const readsAs = (p: KeyPress, chord: string): boolean =>
   does(p, [command('bound', { keys: [chord] })]) === 'bound normal';
 
@@ -93,7 +91,6 @@ describe('the keymap', () => {
     expect(does(press('ArrowRight'), [frame])).toBe('play.frame-next normal');
     expect(does(press('ArrowRight', { shift: true }), [frame])).toBe('play.frame-next coarse');
     expect(does(press('ArrowRight', { alt: true }), [frame])).toBe('play.frame-next fine');
-    // Not stepped: Shift makes another chord.
     expect(does(press('z', { meta: true, shift: true }), [undo])).toBe('pass');
   });
 
@@ -139,10 +136,8 @@ describe('the keymap', () => {
     expect(does(press('ArrowRight', { shift: true }), [frame, nudge], slider)).toBe(
       'wipe.right coarse',
     );
-    // Its own key with nothing to do is still not the page's.
     expect(does(press('End'), [idle], slider)).toBe('owned');
     expect(does(press(' '), [play, nudge], slider)).toBe('play.toggle normal');
-    // Off the slider the arrows are the page's again.
     expect(does(press('ArrowRight'), [frame, nudge])).toBe('play.frame-next normal');
   });
 

@@ -1,24 +1,12 @@
-// The lab's browser tests read the page only through these: each waits until
-// the page shows what the test expects, so a value the page is still drawing
-// (a status line mid-update, a list read again after a write) is never taken
-// as its answer. A read that times out fails naming what it wanted and what the
-// page last showed. `film/no-read-once` refuses a one-shot read (an asserted
-// `evaluate`) in a `*.dom.test.ts`.
-
 import { Predicate, Schema } from 'effect';
 import type { Tab } from './tab.ts';
 
-/** What is read at a selector: its text, its field's value, an attribute, or how many match. */
 type Read =
   | { readonly _tag: 'Text' }
   | { readonly _tag: 'Value' }
   | { readonly _tag: 'Attribute'; readonly name: string }
   | { readonly _tag: 'Count' };
 
-/**
- * What the read must be: the first match equal to a value or matching a
- * pattern, some match containing a part, or every match, in order, a list.
- */
 type Want =
   | { readonly _tag: 'Is'; readonly value: string | number }
   | { readonly _tag: 'Matches'; readonly source: string; readonly flags: string }
@@ -31,10 +19,6 @@ interface Probe {
   readonly want: Want;
 }
 
-/**
- * The page's side, as source the page runs with a probe `p` written in: what
- * the probe reads now (`now`), and whether it is what it wants (`settled`).
- */
 const LOOK = `((p) => {
   const els = Array.from(document.querySelectorAll(p.selector));
   const one = (el) =>
@@ -56,17 +40,12 @@ const json = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
 const lookIn = (probe: Probe, field: 'now' | 'settled') => `${LOOK}(${json(probe)}).${field}`;
 
-/**
- * Wait until `settled`, run in the page, is true; a timeout fails with `failure`
- * of what `now`, run in the page, answers then, written as JSON.
- */
 const waitOr = (
   page: Tab,
   check: { readonly settled: string; readonly now: string },
   failure: (now: string) => string,
 ) => page.until(check.settled, { now: check.now, say: failure });
 
-/** Wait until the page shows what `probe` wants; a timeout fails naming what it last showed. */
 const settle = (page: Tab, probe: Probe) =>
   waitOr(
     page,
@@ -81,29 +60,19 @@ const wantOf = (want: string | RegExp): Want => {
   return { _tag: 'Matches', source: want.source, flags: want.flags };
 };
 
-/** Wait until the first element at `selector` reads exactly `want`, or matches it. */
 export const textIs = (page: Tab, selector: string, want: string | RegExp) =>
   settle(page, { selector, read: TEXT, want: wantOf(want) });
 
-/** Wait until some element at `selector` has text containing `part`. */
 export const textHas = (page: Tab, selector: string, part: string) =>
   settle(page, { selector, read: TEXT, want: { _tag: 'Has', value: part } });
 
-/** Wait until `n` elements match `selector`. */
 export const countIs = (page: Tab, selector: string, n: number) =>
   settle(page, { selector, read: { _tag: 'Count' }, want: { _tag: 'Is', value: n } });
 
-/** Wait until `selector` is in the page and shown. */
 export const waitFor = (page: Tab, selector: string) => page.waitFor(selector);
 
-/** What a script run in the page can be waited on to answer. */
 type Answer = boolean | number | string | ReadonlyArray<boolean | number | string>;
 
-/**
- * Wait until `script`, an expression run in the page, answers `want`, compared
- * as JSON (a flag, a number, a string, a list); a timeout fails naming what it
- * last answered.
- */
 export const evaluates = (page: Tab, script: string, want: Answer) =>
   waitOr(
     page,
@@ -111,12 +80,6 @@ export const evaluates = (page: Tab, script: string, want: Answer) =>
     (now) => `${script} never answered ${json(want)}: last answered ${now}`,
   );
 
-/** Wait until `check`, run in the page, is true. */
 export const until = (page: Tab, check: string) => page.until(check);
 
-/**
- * An expression run in the page: how the focused element shows its focus,
- * `ring` (the studio's `--focus-ring` and no outline) or `outline` (the
- * browser's, or any other), and `none` when nothing has focus.
- */
 export const FOCUS_SHOWN = `((el) => el === null || el === document.body ? 'none' : getComputedStyle(el).outlineStyle === 'none' && getComputedStyle(el).boxShadow === ((probe) => { probe.style.boxShadow = 'var(--focus-ring)'; el.parentElement.append(probe); const ring = getComputedStyle(probe).boxShadow; probe.remove(); return ring; })(document.createElement('i')) ? 'ring' : 'outline')(document.activeElement)`;

@@ -1,43 +1,9 @@
-// Whether a page fits a phone (the design language's Mobile-first): it
-// never scrolls sideways, each of its controls (the touch-target check's
-// `TARGETS`, one list) shows inside the window's width, and its chrome (the bars that stay while the page
-// scrolls: a sticky header, a dock) holds at most a quarter of
-// the window's height. One script, so every page is asked the same way.
-//
-// A control counts where it shows: its box clipped by each ancestor that
-// clips (a strip that scrolls sideways shows a part of its row; what it
-// scrolled away is reached by scrolling it, not cut off), and nothing when
-// that leaves nothing, except that a control which a box that only clips
-// (hidden, clip) leaves nothing of is "cut off": no scrolling reaches it. The chrome is measured where it holds most: at the
-// page's top, its middle and its end, each the union of the rows its fixed
-// and stuck (sticky, with an edge set, to the window rather than to a box
-// that scrolls on its own, and held at that edge there: a section's sticky
-// head further down scrolls with the page until it reaches it) elements
-// cover in the window, each cut by the
-// window; a see-through frame (over the whole window, taking no pointer) is
-// what it holds, down through the frames in it (a sheet's overlay holds its
-// scroll container, which holds its stage, which holds its panel: a sheet
-// lowered to its peek counts as the peek that shows). A layer the page
-// has open (a scene's sheet, as an inspector is), with the frame that holds
-// it in the window, is no chrome: it is shut to go back to the page. Its
-// width and its controls are measured as the page's are.
-
 import { WAIT_MS, jsonOf } from './tab.ts';
 import type { Tab } from './tab.ts';
 import { CONTROL_WORDS, TARGETS } from './touch-targets.ts';
 
-/** The most of the window's height a page's chrome may hold. */
 const CHROME_MAX = 0.25;
 
-/**
- * A script answering how the page fits: `sideways`, the page's width past
- * the window's in px (0 when it never scrolls sideways); `outside`, the
- * controls shown past the window's sides, each as its `data-act` (else its
- * tag, class and words) and its box's sides; `chrome`, the chrome's largest share of the window's height,
- * 0 to 1; `bars`, the chrome's bars where it holds most, each as its class
- * and its rows. It scrolls the page to measure its chrome, and back to where
- * it was. `layer` (a selector) is the open layer, left out of the chrome.
- */
 export const phoneFit = (layer?: string) => `(() => {
   const root = document.documentElement;
   const LAYER = ${jsonOf(layer ?? '')};
@@ -162,20 +128,9 @@ export const phoneFit = (layer?: string) => `(() => {
   };
 })()`;
 
-/**
- * A script answering whether the page fits its window: no sideways scroll,
- * every control inside the width, chrome at most `CHROME_MAX`; `layer`, the
- * open layer, is no chrome.
- */
 export const fits = (layer?: string) =>
   `(() => { const f = ${phoneFit(layer)}; return f.sideways === 0 && f.outside.length === 0 && f.chrome <= ${CHROME_MAX}; })()`;
 
-/**
- * Wait until the page fits its window (a phone's: 390 × 844), by `fits`;
- * `layer`, the layer it has open, is no chrome. A timeout fails with what the
- * page answers then (`phoneFit`), so the bar or the control over is named.
- * `within` is the wait in ms (`Tab.until`): a negative control gives 0.
- */
 export const fitsPhone = (page: Tab, layer?: string, within = WAIT_MS) =>
   page.until(fits(layer), {
     now: phoneFit(layer),

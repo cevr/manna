@@ -1,47 +1,22 @@
-/**
- * The Worker's whole policy, over the bucket as a `Shelf` (`./worker/Site.ts`
- * binds it to R2; the tests to a map):
- *
- * - a path names a page, a version's file or `/robots.txt`, or nothing:
- *   `/` is the index, `/<film>/` a film's folder, `/<film>/<version>/` a
- *   version (`board`, `render`, `final`), `/<film>/<version>/<hash>.<ext>`
- *   one of its files; any other path is 404, and so is a page or file the
- *   bucket does not hold. The bucket is never listed;
- * - GET and HEAD only; any other method is 405;
- * - a `Range: bytes=…` request for a file answers 206 with those bytes, or
- *   416 when they lie past its end, so a phone's player can seek a video;
- * - a version's files are named by their bytes, so they are kept for a
- *   year; a page is asked for again each time, so a re-published version
- *   shows at once;
- * - every answer carries `X-Robots-Tag: noindex`, and `/robots.txt`
- *   disallows every path: unreleased drafts stay out of search, while the
- *   links work for anyone who has them.
- */
 import { Effect, Option } from 'effect';
 import { Headers, type HttpServerRequest, HttpServerResponse } from 'effect/http';
 
 import { ASSET_TYPES, PAGE_KEYS, VERSION_NAMES, type VersionName } from './manifest.ts';
 
-/** A stretch of an object's bytes: from `offset`, `length` bytes. */
 export interface Span {
   readonly offset: number;
   readonly length: number;
 }
 
-/** An object's bytes as the host holds them, handed to the response untouched. */
 export type Body = ReadableStream<Uint8Array> | Uint8Array | string;
 
-/** What the bucket says of an object: its whole size and its entity tag. */
 export interface Head {
   readonly size: number;
   readonly etag: string;
 }
 
-/** The bucket, as the policy reads it: one object at a time, by key. */
 export interface Shelf {
-  /** The object's size and tag; none when the bucket does not hold `key`. */
   readonly head: (key: string) => Effect.Effect<Option.Option<Head>>;
-  /** The object's bytes (all, or `span` of them) with its head; none when the bucket does not hold `key`. */
   readonly get: (
     key: string,
     span: Option.Option<Span>,
@@ -49,15 +24,11 @@ export interface Shelf {
 }
 
 export const CACHE = {
-  /** A version's files: named by their bytes, so never changed under a name. */
   immutable: 'public, max-age=31536000, immutable',
-  /** A page: asked for again each time, so a re-publish shows at once. */
   page: 'public, max-age=0, must-revalidate',
-  /** `/robots.txt`. */
   day: 'public, max-age=86400',
 } as const;
 
-/** The headers every answer carries. */
 export const COMMON_HEADERS = {
   'x-robots-tag': 'noindex, nofollow',
   'x-content-type-options': 'nosniff',
@@ -76,14 +47,12 @@ const NOT_FOUND_PAGE = `<!doctype html>
 <body><p>Nothing is here. <a href="/">All films</a></p></body></html>
 `;
 
-/** What a path names. */
 export type Route =
   | { readonly _tag: 'Robots' }
   | { readonly _tag: 'Object'; readonly key: string; readonly type: string; readonly cache: string }
   | { readonly _tag: 'NotFound' };
 
 const FILM = /^[a-z0-9][a-z0-9-]*$/;
-/** A version's file: sixteen hex digits of its sha256, and its extension. */
 const FILE = /^[0-9a-f]{16}\.([a-z0-9]+)$/;
 const TYPES: ReadonlyMap<string, string> = new Map(Object.entries(ASSET_TYPES));
 
@@ -94,7 +63,6 @@ const page = (key: string): Route => ({ _tag: 'Object', key, type: HTML, cache: 
 
 const NOT_FOUND: Route = { _tag: 'NotFound' };
 
-/** What `pathname` names: a page with or without its trailing slash, a version's file, or `/robots.txt`. */
 export const routeOf = (pathname: string): Route => {
   if (pathname === '/') return page(PAGE_KEYS.index);
   if (pathname === '/robots.txt') return { _tag: 'Robots' };
@@ -119,16 +87,10 @@ export const routeOf = (pathname: string): Route => {
   });
 };
 
-/** The bytes a `Range` header asks of an object: one stretch, `start` to `end` inclusive or a suffix. */
 export type Asked =
   | { readonly _tag: 'From'; readonly start: number; readonly end: Option.Option<number> }
   | { readonly _tag: 'Suffix'; readonly length: number };
 
-/**
- * The one stretch a `Range` header asks for; none for no header, another
- * unit, several stretches or a header that does not read, each of which is
- * answered with the whole object (RFC 9110 §14.2).
- */
 export const askedOf = (header: Option.Option<string>): Option.Option<Asked> =>
   Option.flatMap(header, (value) =>
     Option.flatMap(Option.fromNullishOr(/^bytes=(\d*)-(\d*)$/.exec(value.trim())), (match) => {
@@ -142,7 +104,6 @@ export const askedOf = (header: Option.Option<string>): Option.Option<Asked> =>
     }),
   );
 
-/** The stretch of an object `size` bytes long that `asked` covers, cut at its end; none when none of it lies inside. */
 export const spanOf = (asked: Asked, size: number): Option.Option<Span> => {
   if (asked._tag === 'Suffix') {
     const length = Math.min(asked.length, size);
@@ -182,14 +143,12 @@ const empty = (status: number, headers: Record<string, string>) =>
     headers: Headers.fromInput({ ...COMMON_HEADERS, ...headers }),
   });
 
-/** The not-found page as a 404; its headers alone to a HEAD. */
 const notFound = (isHead: boolean) => {
   const init = { status: 404, type: HTML, headers: { 'cache-control': CACHE.page } };
   if (isHead) return answer('', init);
   return answer(NOT_FOUND_PAGE, init);
 };
 
-/** The object `route` names, answered whole, as a stretch, or as 416. */
 const serveObject = Effect.fnUntraced(function* (
   shelf: Shelf,
   route: Extract<Route, { readonly _tag: 'Object' }>,
@@ -224,7 +183,6 @@ const serveObject = Effect.fnUntraced(function* (
   return answer(read.value.body, { status, type: route.type, headers });
 });
 
-/** The answer to `request`, over `shelf`. */
 export const respond = (shelf: Shelf, request: HttpServerRequest.HttpServerRequest) =>
   Effect.gen(function* () {
     if (request.method !== 'GET' && request.method !== 'HEAD')

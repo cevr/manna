@@ -1,8 +1,3 @@
-// The look-book is set in the film's own type: the family of its shorts'
-// fonts, read off a CSS font whatever its weight, size or line height. Its
-// sheet is one canvas, so it stays within the largest canvas Chromium backs,
-// however many stills a film has.
-
 import { describe, expect, test } from 'bun:test';
 import { Effect } from 'effect';
 import { createFilm } from '../canvas/film.ts';
@@ -24,7 +19,6 @@ describe('fontFamilyOf', () => {
 });
 
 describe('composeLookbook', () => {
-  /** A film of `n` one-line scenes: a row of stills each, the sheet growing a row a scene. */
   const filmOf = (n: number) =>
     createFilm({
       fps: 30,

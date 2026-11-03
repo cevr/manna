@@ -1,16 +1,9 @@
-/**
- * The list's database as SQLite in memory, for the tests and `bun run
- * preview`: Bun's own SQLite, with every migration in `migrations/` applied
- * in order, as Alchemy applies them to D1 on deploy. D1 is SQLite, so the
- * statements the store runs here are the ones it runs on Cloudflare.
- */
 import { Database } from 'bun:sqlite';
 
 import { Effect, FileSystem, Layer, Path } from 'effect';
 
 import { batchName, reasonOf, Sql, SqlError, type Statement, type SqlValue } from './sql.ts';
 
-/** The migrations folder beside `src/`. */
 const MIGRATIONS = new URL('../../migrations', import.meta.url).pathname;
 
 const attempt = <A>(name: string, run: () => A) =>
@@ -19,7 +12,6 @@ const attempt = <A>(name: string, run: () => A) =>
     catch: (cause) => SqlError.make({ statement: name, reason: reasonOf(cause) }),
   });
 
-/** A fresh database in memory, migrated, for as long as the layer lives. */
 export const layerSqlite = Layer.effect(
   Sql,
   Effect.gen(function* () {

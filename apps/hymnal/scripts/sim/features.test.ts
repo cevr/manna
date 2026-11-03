@@ -1,11 +1,3 @@
-/**
- * The verify-hymnal journey files: every `features/<feature>.journey.json`
- * decodes with the journey Schema and names its own feature, so a bad file
- * fails the gate rather than the verifier's first `sim journey`; no hold
- * checks that something is gone before the hold has landed; and each open
- * that expects the no-chords notice opens a hymn the compiled data gives no
- * chords.
- */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Hymn } from '@manna/hymnal/hymn';
@@ -16,13 +8,8 @@ import { decodeJourney, HOLD_SETTLE, type Journey } from './journey.ts';
 
 const SUFFIX = '.journey.json';
 
-/**
- * Seconds after `sim hold` returns by which its press has landed: SKILL.md's
- * `sim hold` line, "the press lands 5 to 9 s after it returns".
- */
 const HOLD_LANDS = 9;
 
-/** Decode each journey file in `dir`, by feature, or fail on the first file refused. */
 const decodeAll = Effect.fn('decodeAll')(function* (dir: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -39,12 +26,6 @@ const decodeAll = Effect.fn('decodeAll')(function* (dir: string) {
   return journeys;
 });
 
-/**
- * The holds that check for a target gone before the press can have landed:
- * a `hides` in the hold's own expects, or in the next step's when the hold
- * has none, after a settle shorter than `HOLD_LANDS`. A `hides` checked then
- * finds what the pending hold is about to remove.
- */
 const hidesBeforeLanding = (journey: Journey) =>
   journey.steps.flatMap((step, index) => {
     if (step.action !== 'hold' || (step.settle ?? HOLD_SETTLE) >= HOLD_LANDS) return [];
@@ -56,14 +37,8 @@ const hidesBeforeLanding = (journey: Journey) =>
 
 const toJson = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
-/** A `role=tab` term in a step's JSON: in a selector string, between spaces or quotes. */
 const ROLE_TAB = /["\s]role=tab["\s]/;
 
-/**
- * The `role=tab` selectors in an iOS journey, by step. React Native gives the
- * `tab` role no iOS trait, so the runner lists a tab as `other` and a
- * `role=tab` selector answers `TargetMissing` there (browse.md's Gotchas).
- */
 const tabRolesOnIos = (journey: Journey) => {
   if (journey.platform !== 'ios') return [];
   return journey.steps
@@ -73,19 +48,12 @@ const tabRolesOnIos = (journey: Journey) => {
 
 const FEATURES = import.meta.dir + '/../../../../.claude/skills/verify-hymnal/features';
 
-/** The compiled hymns, one `<nnn>.json` each, as `vite/words.ts` reads them. */
 const HYMNS = import.meta.dir + '/../../../../packages/hymnal/data/sdah-1985';
 
-/** What a hymn with no chords shows with chords on (`ChordNotice`). */
 const NO_CHORDS = 'label=No chords for this hymn yet.';
 
-/** The hymn an `open` of `hymns/<n>` shows. */
 const HYMN_LINK = /^hymns\/(\d+)$/;
 
-/**
- * The opens that expect the no-chords notice, by step, with the hymn each
- * opens: that hymn must have no chords, or the notice never shows.
- */
 const noticeOpens = (journey: Journey) =>
   journey.steps.flatMap((step) => {
     if (step.action !== 'open') return [];
@@ -98,7 +66,6 @@ const noticeOpens = (journey: Journey) =>
     );
   });
 
-/** Whether a compiled hymn has a guitar chord on a sung syllable: the app's `hasChords`. */
 const chorded = (hymn: Hymn) =>
   [...hymn.stanzas, ...Option.toArray(Option.fromUndefinedOr(hymn.refrain?.part))].some(
     (part) =>

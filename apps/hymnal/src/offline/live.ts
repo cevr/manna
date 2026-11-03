@@ -5,8 +5,6 @@ import { Offline, offlineLayer, empty } from './cache';
 import { mediaLayer } from './media';
 import { httpLayer } from './http';
 
-// A launch-time dev origin permits full fake-origin journeys without R2 bulk traffic.
-// Production always uses R2. This setting changes no recording identity.
 const origin = () => {
   if (import.meta.env['DEV']) return import.meta.env['VITE_HYMNAL_RECORDINGS_ORIGIN'];
 };
@@ -21,7 +19,6 @@ export type Action = Data.TaggedEnum<{
   Delete: {};
 }>;
 export const Action = Data.taggedEnum<Action>();
-/** The progress and player runtimes share this exact layer in one registry. */
 export const downloadsOn = (layer: Layer.Layer<Offline>) => {
   const runtime = Atom.runtime(layer);
   const progress = runtime

@@ -1,11 +1,3 @@
-// The render page, framework-free: an app's `index.html` (the lab's export
-// place `/films/<name>/export`, or the PreviewServer's `/?film=<name>&export`) calls
-// `mountRender(films)`: the film with no chrome (its scenes, or its Board when
-// the address says `board`, `pictureOn`), and `window.__film` for the
-// renderer and the easel. Its own module, so the encoder
-// (`encode.ts`, mediabunny) is the render page's alone: the studio's pages,
-// which mount the preview (`main.ts`), never load it.
-
 import type { Film, RenderOptions } from '../canvas/film.ts';
 import type { ProbeSink } from '../canvas/probe.ts';
 import { Footage, type FootageShown, footageAt, footageReads } from '../browser/footage.ts';
@@ -38,12 +30,6 @@ declare global {
   }
 }
 
-/**
- * Mount the render page for `films` (the film its address names): the film
- * staged with no chrome and no UI faces, drawing only the film's own faces,
- * and, once they have loaded, the handle the renderer drives on
- * `window.__film`.
- */
 export const mountRender = (films: Films): void => {
   const host = hostOf(BrowserHost.render);
   const href = addressOn(host).href();
@@ -66,11 +52,6 @@ export const mountRender = (films: Films): void => {
     });
 };
 
-/**
- * `staged` drawing `picture`: its scenes as staged (their review copy with
- * the burn-in over each frame, `scenesReview`), or its Board (`boardFilm`),
- * the board and its kept tries read and decoded first.
- */
 const onPicture = (staged: Staged, picture: Picture): Promise<Staged> =>
   Picture.$match(picture, {
     Scenes: ({ review }) =>
@@ -92,12 +73,6 @@ const onPicture = (staged: Staged, picture: Picture): Promise<Staged> =>
       ),
   });
 
-/**
- * `use` given each of `times`' footage in turn (`next`, once per time, in
- * order), decoded as one run (`Footage.run`): an export chunk's frames. The
- * run's decoders are let go when `use` settles. A film that reads none is
- * given nothing for every time, with no decoder made.
- */
 const withFootageRun = <A>(
   host: Host,
   film: Film,
@@ -116,32 +91,19 @@ const withFootageRun = <A>(
               Effect.runPromiseWith(context)(
                 Effect.map(run.next, (footage): FootageShown => ({ footage })),
               );
-            // `use`'s own failure (a frame missing, an encoder's) is the caller's, as it was thrown.
             return yield* Effect.promise(() => use(next));
           }),
         ),
       ),
   });
 
-/**
- * The handle the tools drive a staged film through (`ExportHandle`,
- * core/export-handle.ts). Every draw is timed the same way (`drawn`): the
- * frame drawn, then rastered by a one-pixel read before the clock stops, so
- * the canvas's recorded drawing is paid for in the draw and not later by
- * whatever reads the canvas next (an encoder, `toBlob`).
- */
 const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): ExportHandle => {
-  /** The page clock in ms (`monotonicMs`): what every draw and encode is timed by. */
   const nowMs = monotonicMs(host);
-  /** Frame `i`'s footage, decoded (nothing, at once, for a film that reads none). */
   const footageOf = (i: number) =>
     Effect.runPromiseWith(host)(footageAt(film, secondsAt(i, film.fps)));
-  /** Frame `i` drawn with its footage and `extra` options. */
   const drawWith = (i: number, shown: FootageShown, extra: RenderOptions = {}) =>
     film.render(ctx, secondsAt(i, film.fps), { captions: captions.on, ...shown, ...extra });
-  /** Frame `i` drawn, once its footage is decoded. */
   const draw = async (i: number) => drawWith(i, await footageOf(i));
-  /** Draw frame `i` with its decoded footage and raster it: the ms it took, the decoding not in it. */
   const drawn = (i: number, shown: FootageShown) => {
     const began = nowMs();
     drawWith(i, shown);
@@ -163,7 +125,6 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
       return canvasBase64(canvas, type);
     },
     probe: async (i) => {
-      // A film that reads footage records each frame of it drawn; a drawn film's probe is as it was.
       const sink: ProbeSink = Option.match(footageReads(film), {
         onNone: () => ({ texts: [], inks: [] }),
         onSome: () => ({ texts: [], inks: [], footage: [] }),
@@ -181,7 +142,6 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
     encode: async (from, to, scale, copies, encoder) => {
       const began = nowMs();
       let drawing = 0;
-      // The chunk's frames' footage is decoded as one run, each packet at most once.
       const times = Array.from({ length: to - from }, (_, k) => secondsAt(from + k, film.fps));
       const chunk = await withFootageRun(host, film, times, (next) =>
         encodeChunk(
@@ -197,7 +157,6 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
           encoder,
         ),
       );
-      // Each copy the page made, as base64; one it did not make is left out.
       const made = Object.fromEntries(
         (['master', 'share'] as const).flatMap((copy) => {
           const bytes = chunk[copy];
@@ -223,7 +182,6 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
       await draw(i);
       return canvasLuma(canvas, area);
     },
-    // One frame at a time, each timed alone: its footage decoded before its clock starts.
     drawTimes: (frames) =>
       frames.reduce<Promise<ReadonlyArray<number>>>(
         async (before, i) => [...(await before), drawn(i, await footageOf(i))],
@@ -240,7 +198,6 @@ const exportHandle = ({ film, canvas, ctx, captions }: Staged, host: Host): Expo
       drawWith(i, await footageOf(i), { captions: false, probe: sink });
       return figures;
     },
-    // Read from the film's own decision, drawing nothing: a film that makes none reads its seconds in every frame.
     filmTimed: (from, to) =>
       Array.from({ length: Math.max(0, to - from) }, (_, k) =>
         Option.match(Option.fromUndefinedOr(film.filmTimed), {

@@ -1,21 +1,3 @@
-/**
- * `verify:doctor`: is this instance worth driving? Read-only checks, in
- * order, failing at the first that does not hold and naming it:
- *
- * - `record`: the root's launch record reads;
- * - `port`: the port is held by the PID the record names;
- * - `head`: the checkout is at the commit the preview was launched at, and
- *   the build is newer than every source and public file;
- * - `answers`: the home and privacy pages answer 200 with the content
- *   policy, and a path that names no page answers 404;
- * - `log`: the preview's log holds no failure;
- * - `outbox`: every letter reads, with its `To:` and `Subject:`;
- * - `audio`: on macOS, no test browser holds the audio output;
- * - `load`: the load average against the core count, which only decides
- *   whether a timing measured now means anything (`timingsValid`).
- *
- * A stage (`--origin`) is checked by `answers` and `load` alone, with GET.
- */
 import { type Duration, Effect, FileSystem, Option, Path, Schema } from 'effect';
 import { Headers, HttpClient } from 'effect/http';
 
@@ -25,11 +7,9 @@ import { readOutbox } from './outbox.ts';
 
 const fail = (check: string, message: string) => Effect.fail(DoctorFailed.make({ check, message }));
 
-/** What a log line of a failure looks like: an error, a defect, a list step that failed. */
 export const FAILURE_LINE =
   /\bERROR\b|\bdefect\b|uncaught|unhandled|\[mail\] \S+\.(?:failed|unsent)/i;
 
-/** The newest change to any file under `dir`, in ms. */
 const newestUnder = Effect.fn('Verify.newestUnder')(function* (dir: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -45,10 +25,8 @@ const newestUnder = Effect.fn('Verify.newestUnder')(function* (dir: string) {
   return Math.max(0, ...times);
 });
 
-/** How long the doctor gives each request. */
 export const ANSWER_WITHIN: Duration.Input = '5 seconds';
 
-/** The pages an instance answers, each request under `within`. */
 export const answersCheck = Effect.fn('Verify.answersCheck')(function* (
   origin: string,
   within: Duration.Input = ANSWER_WITHIN,
@@ -118,7 +96,6 @@ const outboxCheck = Effect.fn('Verify.outboxCheck')(function* (record: LaunchRec
   return `${letters.length} letters, each with To: and Subject:`;
 });
 
-/** A test browser holding the audio output plays through the owner's speakers. */
 const audioCheck = Effect.fn('Verify.audioCheck')(function* () {
   const result = yield* Effect.option(run('pmset', ['-g', 'assertions']));
   if (Option.isNone(result)) return 'no pmset (not macOS): not checked';
@@ -130,7 +107,6 @@ const audioCheck = Effect.fn('Verify.audioCheck')(function* () {
   return 'no browser holds the audio output';
 });
 
-/** The one-minute load and the core count, from sysctl (macOS) or /proc (Linux). */
 const loadOf = Effect.fn('Verify.loadOf')(function* () {
   const fs = yield* FileSystem.FileSystem;
   const mac = yield* Effect.option(run('sysctl', ['-n', 'vm.loadavg', 'hw.ncpu']));
@@ -143,7 +119,6 @@ const loadOf = Effect.fn('Verify.loadOf')(function* () {
   return { load: Number(proc.split(' ')[0]), cores: Number(out.trim()) };
 });
 
-/** A check's detail as it passed, or its failure named as that check. */
 const checked = <E extends { readonly message: string }, R>(
   check: string,
   effect: Effect.Effect<string, E, R>,
@@ -169,7 +144,6 @@ const finish = Effect.fn('Verify.finish')(function* (target: string, checks: Rea
   };
 });
 
-/** The local preview a root holds, checked in order. */
 export const doctorRoot = Effect.fn('Verify.doctorRoot')(function* (root: string) {
   const record = yield* readRecord(root).pipe(
     Effect.mapError((error) => DoctorFailed.make({ check: 'record', message: error.message })),
@@ -186,7 +160,6 @@ export const doctorRoot = Effect.fn('Verify.doctorRoot')(function* (root: string
   return yield* finish(record.origin, checks);
 });
 
-/** A deployed stage, read with GET only. */
 export const doctorOrigin = Effect.fn('Verify.doctorOrigin')(function* (origin: string) {
   return yield* finish(origin, [yield* checked('answers', answersCheck(origin))]);
 });

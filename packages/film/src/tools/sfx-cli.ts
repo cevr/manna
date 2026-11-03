@@ -1,36 +1,3 @@
-// `film sfx`: the app's sound library from the command line. Every command
-// but `make` is free: `list`, `plan` and `check` read the library and
-// its lock; `describe` records each variant's onset and hit from its file;
-// `audition` and `render` write WAVs under `<FILMS_OUT>/sounds` (`--trial`,
-// a sound's code trial: its code version, heard beside its takes; `render
-// --sheet`, each WAV's sheet beside it as a PNG, read in place of
-// listening); `compare` prints a code trial's numbers beside what plays,
-// each render's and each side's median, how far apart they stand, and how
-// far each film's placement would hear the hit move; `audit` reads which
-// generated sounds code can make, from their prompts; `fit` writes a
-// recording's code trial from earshot's model of it (core/synth/fit); `ab`
-// writes a sound's clips for an ask; `keep`, `reject` and `import` curate
-// the lock; `pull` and `push` sync the private `files/` (and the films'
-// scores) with the store; `push --from` sends from an older folder store too (the move to
-// R2). `make` is the one paid command: it prints its plan and cost, and
-// spends only with `--yes`, under `--cap` counting what `--tally` already
-// records.
-//
-//   film sfx list [family] [--missing | --stale]
-//   film sfx plan [name…] [--force]
-//   film sfx make [name…] [--force] [--yes] [--cap n] [--tally file]
-//   film sfx try <name> [--prompt p] [--secs s] [--influence i] [--count n] [--yes] [--cap n] [--tally file]
-//   film sfx audition <name> [--candidates | --trial]
-//   film sfx keep <name> <n…> [--replace]
-//   film sfx unkeep <name> <n…>    film sfx reject <name> <n…>
-//   film sfx import <file> <name>
-//   film sfx render <name> [--seed n] [--trial] [--sheet]
-//   film sfx compare <name>        film sfx audit
-//   film sfx fit <name> [--size small|full] [--from model.json]
-//   film sfx ab <name> --out <dir>
-//   film sfx check [--json]      film sfx describe
-//   film sfx pull                  film sfx push [--from folder]
-
 import { Array as Arr, Console, Effect, Option, Schema } from 'effect';
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
@@ -69,10 +36,8 @@ import { CheckLineJson } from './fresh-film.ts';
 
 const encodeCheckLine = Schema.encodeSync(CheckLineJson);
 
-/** Which sounds `sfx list` prints. */
 type ListFilter = 'all' | 'missing' | 'stale';
 
-/** Where a sound's audio comes from, as `list` names it. */
 const sourceOf = (entry: LibraryEntry): string => {
   switch (entry.kind) {
     case 'generated':
@@ -87,13 +52,6 @@ const sourceOf = (entry: LibraryEntry): string => {
   }
 };
 
-/**
- * One line per sound: name, kind, use, state (current, stale, missing, or
- * derived for a code sound), variants kept (and candidates waiting),
- * level in dB relative to the voice, kept loudness and source, and `+ code
- * trial` when it has one. `family` narrows to one family (`paper`); `filter`
- * to the missing or stale.
- */
 const listLines = (
   loaded: Pick<LoadedLibrary, 'library' | 'lock' | 'trials'>,
   family: Option.Option<string>,
@@ -132,7 +90,6 @@ const listLines = (
       ];
     });
 
-/** Each job `make` would run, and the total it would spend. */
 const planLines = (jobs: ReadonlyArray<MakeJob>): ReadonlyArray<string> => [
   ...jobs.map(
     (job) =>
@@ -141,13 +98,11 @@ const planLines = (jobs: ReadonlyArray<MakeJob>): ReadonlyArray<string> => [
   `total ${jobs.reduce((sum, job) => sum + job.count, 0)} candidates, ${jobs.reduce((sum, job) => sum + job.credits, 0)} credits`,
 ];
 
-/** A number with its sign, to `digits` places: how far a figure moved. */
 const signed = (value: number, digits: number): string => {
   if (value > 0) return `+${value.toFixed(digits)}`;
   return value.toFixed(digits);
 };
 
-/** The columns a profile is printed in: each heading's width, the label's first. */
 const PROFILE_COLUMNS: ReadonlyArray<readonly [string, number]> = [
   ['', 10],
   ['secs', 6],
@@ -163,7 +118,6 @@ const PROFILE_COLUMNS: ReadonlyArray<readonly [string, number]> = [
   ['<30 Hz', 7],
 ];
 
-/** A row of `PROFILE_COLUMNS`: the label left, each figure right. */
 const profileRow = (cells: ReadonlyArray<string>): string =>
   cells
     .map((cell, i) => {
@@ -173,7 +127,6 @@ const profileRow = (cells: ReadonlyArray<string>): string =>
     })
     .join(' ');
 
-/** A profile's numbers under `PROFILE_COLUMNS`: seconds, LUFS, dBFS, Hz, a share as a percentage. */
 const profileLine = (label: string, p: Profile): string =>
   profileRow([
     label,
@@ -190,11 +143,6 @@ const profileLine = (label: string, p: Profile): string =>
     `${(p.rumble * 100).toFixed(1)} %`,
   ]);
 
-/**
- * What `compare` prints: each render of what plays and of the code trial,
- * each side's median, the bands either median hears (each band's share of
- * the power in dB, and how far the trial moved it), and the distances.
- */
 const compareLines = (name: string, compared: Comparison): ReadonlyArray<string> => {
   const plays = medianProfile(Arr.map(compared.plays, (m) => m.profile));
   const trial = medianProfile(Arr.map(compared.trial, (m) => m.profile));
@@ -219,19 +167,12 @@ const compareLines = (name: string, compared: Comparison): ReadonlyArray<string>
   ];
 };
 
-/** A film's effect that places a sound: the film, the effect and what it lands on its cue. */
 interface Placing {
   readonly film: string;
   readonly effect: string;
   readonly sync: NonNullable<SoundEffect['sync']>;
 }
 
-/**
- * The sync check `compare` prints: how far each film's placement of the
- * sound would hear the hit move if the code trial played in place of what
- * plays now, the medians' move and the worst seed's, marked where the worst
- * passes `HIT_MOVE`, or where what plays has no hit to hear (`HEARD_HIT`).
- */
 const syncLines = (
   compared: Comparison,
   placings: ReadonlyArray<Placing>,
@@ -252,7 +193,6 @@ const syncLines = (
   ];
 };
 
-/** Every film's effects that place `name`, each read from the film's `sound.ts` alone. */
 const placingsOf = Effect.fn('film.sfx.placings')(function* (name: string) {
   const repo = yield* FilmRepo;
   const films = yield* (yield* FilmFolder).names;
@@ -271,11 +211,6 @@ const placingsOf = Effect.fn('film.sfx.placings')(function* (name: string) {
   );
 });
 
-/**
- * What `audit` prints: each generated sound's verdict, the rule's reason and
- * the prompt's words that decided it, marked when it has a code trial; then
- * how many have each verdict.
- */
 const auditLines = (loaded: Pick<LoadedLibrary, 'library' | 'trials'>): ReadonlyArray<string> => {
   const audited = auditLibrary(loaded.library);
   const counts = Object.entries(VERDICT_LABEL).map(
@@ -751,7 +686,6 @@ const push = Command.make(
   ),
 );
 
-/** `film sfx`, over the app's library (`SoundLibrary`). */
 export const sfx = Command.make('sfx').pipe(
   Command.withDescription("The app's sound library: list, plan, make, curate, check and sync it"),
   Command.withSubcommands([

@@ -1,36 +1,3 @@
-/**
- * The Sections list's number rail, in its own gutter at the list's right
- * edge (`GUTTER`): a few hymn numbers, faint, from the first to the last.
- * The rows end before the gutter, so a number never lies over a row and a
- * row's controls never lie under the rail's touch.
- *
- * The gutter is the rail's touch: a gesture handler's pan on the rail's own
- * view (`useRail`), taken at once. A tap there takes the list to the hymn
- * under it, and a drag along it takes the list to the hymn under the thumb
- * (`markAt`, one equal band per hymn). A bubble beside the thumb shows that
- * hymn's number and its topic. Each topic the drag passes is a `rail-tick`
- * (`crossings`), felt only; the ticks keep the feel's floor, so a fast drag
- * is a ratchet, not a buzz. A flick that starts left of the gutter is the
- * list's.
- *
- * The rail's top follows the header's bottom while the list is pulled past
- * its top (`railShift`), so the header's own controls never lie under it.
- * Each label sits at its band's middle as a percent of the rail (`labelAt`),
- * so the labels move with the rail's top and need no draw of their own. A
- * label's box is as tall as its line at the reader's text size, its type
- * capped at `LABEL_SCALE` (`labelHeight`), so a larger text size never cuts
- * its digits and three digits still fit the gutter.
- *
- * The drag runs on the UI thread: the thumb and the bubble follow shared
- * values, and the list scrolls from the gesture's worklet (`onMark`), once
- * for each hymn the thumb comes to. React draws again only for the bubble's
- * words and the ticks, once per hymn.
- *
- * Screen readers do not see the rail: it is hidden from them, and the
- * list's own topic rows (headings) and the home's tabs and `All at once`
- * are their way through the hymns.
- */
-
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { GestureDetector, type PanGesture, usePanGesture } from 'react-native-gesture-handler';
@@ -60,21 +27,15 @@ import {
   railShift,
 } from './rail-marks';
 
-/** How many numbers the rail shows. */
 const LABELS = 6;
 
 const BUBBLE = 56;
 
-/** A rail: its gesture, for the rail's own view, and what its drawing follows. */
 export interface RailHold {
   readonly gesture: PanGesture;
-  /** The hymn under the thumb, by its place on the rail; -1 while the rail is not held. */
   readonly at: SharedValue<number>;
-  /** The thumb's height on the rail, from the rail's shifted top. */
   readonly y: SharedValue<number>;
-  /** The rail's full height, from `top` to `bottom`, as laid out. */
   readonly height: SharedValue<number>;
-  /** How far the rail's top lies below `top`: the header pulled down past its rest (`railShift`). */
   readonly shift: SharedValue<number>;
 }
 
@@ -86,16 +47,11 @@ export function useRail({
   felt,
   onMark,
 }: {
-  /** The hymns along the rail, in the list's order (`marksOf`). */
   readonly marks: ReadonlyArray<Mark>;
-  /** The list's scroll offset, and the offset at which the header rests: the rail's top follows the header. */
   readonly scroll: SharedValue<number>;
   readonly rest: number;
-  /** Held `true` while the rail is: the pin gives no `section` cue of its own then. */
   readonly quiet: SharedValue<boolean>;
-  /** The topic last felt, by its place: the rail's own, so the pin does not feel it again as the list lands. */
   readonly felt: SharedValue<number>;
-  /** The hymn the thumb has come to, a worklet on the UI thread: the list shows it. */
   readonly onMark: (mark: Mark) => void;
 }): RailHold {
   const cue = useCue();
@@ -103,7 +59,6 @@ export function useRail({
   const y = useSharedValue(0);
   const height = useSharedValue(0);
   const shift = useDerivedValue(() => railShift(rest, scroll.value));
-  // The marks live in a shared value, so the gesture's worklets carry no copy of them.
   const held = useSharedValue<ReadonlyArray<Mark>>(marks);
   useEffect(() => {
     held.value = marks;
@@ -135,7 +90,6 @@ export function useRail({
     minDistance: 0,
     maxPointers: 1,
     shouldCancelWhenOutside: false,
-    // The touch is the rail's from its first point: a tap jumps, a drag drives.
     onBegin: ({ y: touch }) => {
       'worklet';
       quiet.value = true;
@@ -154,7 +108,6 @@ export function useRail({
   return { gesture, at, y, height, shift };
 }
 
-/** The rail in its gutter, `top` to `bottom` on the list's view: its numbers, its touch, and while held its thumb and the bubble beside it. */
 export function Rail({
   hold,
   marks,
@@ -164,7 +117,6 @@ export function Rail({
 }: {
   readonly hold: RailHold;
   readonly marks: ReadonlyArray<Mark>;
-  /** Each topic's name, by its place among the topics. */
   readonly sections: ReadonlyArray<string>;
   readonly top: number;
   readonly bottom: number;
@@ -213,7 +165,6 @@ export function Rail({
   );
 }
 
-/** The bubble beside the thumb: the hymn under it, drawn again only when that hymn changes. */
 function Bubble({
   hold,
   marks,

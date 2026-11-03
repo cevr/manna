@@ -1,19 +1,3 @@
-/**
- * The voice's 13 sounds, each rendered once: a valid WAV (RIFF, PCM 16-bit
- * mono at the voice's rate), no longer than 0.4 s, peaking above 0.05 and
- * under full scale, silent (under -60 dB) in its last millisecond, the same
- * bytes when rendered again, and as long as `soundLength` says. Each key's
- * tone rings at its key's pitch, within 1 %, by a Goertzel scan.
- *
- * The voice plays the owner's pick, byte for byte the takes he heard
- * (`HEARD`). Every candidate holds the bars its kind is held to, read from
- * its rendered bytes: a thock is deep (centroid at most 600 Hz, half its
- * energy or more under 500 Hz), unpitched (no pitch class over half its
- * chroma) and at most 150 ms; a key tone is heard at its key's pitch class
- * (60 % or more of its chroma) with at most 0.5 % of its energy over
- * 2.5 kHz.
- */
-
 import { describe, expect, it } from 'bun:test';
 
 import type { SoundName } from './body';
@@ -35,7 +19,6 @@ const sounds = RECIPES.map(([name, recipe]) => voiced(name, recipe));
 
 const text = (bytes: Uint8Array, at: number) => String.fromCharCode(...bytes.slice(at, at + 4));
 
-/** A WAV's samples, from -1 to 1. */
 const samplesOf = (wav: Uint8Array) => {
   const view = new DataView(wav.buffer, wav.byteOffset, wav.byteLength);
   return Array.from(
@@ -44,7 +27,6 @@ const samplesOf = (wav: Uint8Array) => {
   );
 };
 
-/** The power at `hz` over `samples` (Goertzel). */
 const power = (samples: ReadonlyArray<number>, hz: number) => {
   const k = 2 * Math.cos((2 * Math.PI * hz) / RATE);
   let s1 = 0;
@@ -57,7 +39,6 @@ const power = (samples: ReadonlyArray<number>, hz: number) => {
   return s1 * s1 + s2 * s2 - k * s1 * s2;
 };
 
-/** The strongest pitch in `low`..`high` Hz: a 10 Hz scan, then a 0.5 Hz one around its best. */
 const strongest = (samples: ReadonlyArray<number>, low: number, high: number) => {
   const best = (from: number, to: number, by: number) => {
     let at = from;
@@ -68,7 +49,6 @@ const strongest = (samples: ReadonlyArray<number>, low: number, high: number) =>
   return best(coarse - 10, coarse + 10, 0.5);
 };
 
-/** Puts `re` and `im` in bit-reversed order, in place: the radix-2 FFT's first step. */
 const bitReverse = (re: Float64Array, im: Float64Array) => {
   const n = re.length;
   for (let i = 1, j = 0; i < n; i += 1) {
@@ -82,7 +62,6 @@ const bitReverse = (re: Float64Array, im: Float64Array) => {
   }
 };
 
-/** The power spectrum of `samples`, zero-padded to a power of two: each bin's power and frequency. */
 const spectrumOf = (samples: ReadonlyArray<number>) => {
   let n = 1;
   while (n < samples.length) n *= 2;
@@ -111,7 +90,6 @@ const spectrumOf = (samples: ReadonlyArray<number>) => {
   }));
 };
 
-/** A sound's measures: its length, its centroid, its energy under 500 Hz and over 2.5 kHz, its pitch class and that class's chroma share. */
 const measure = (name: SoundName, recipe: Recipe) => {
   const samples = samplesOf(voiced(name, recipe).wav);
   const bins = spectrumOf(samples);
@@ -215,13 +193,6 @@ describe('the voice', () => {
   });
 });
 
-/**
- * The hashes of the sounds the owner picked by ear (2026-10-25: `tactile`,
- * `tine`), each a WAV byte for byte the same as the take he heard (its
- * sha256 equal to the take's in the unit's `sounds-2/measurements.json`).
- * A change to a recipe, or to how a sound is rendered, changes what he
- * hears: it needs his ear again before this list changes.
- */
 const HEARD: ReadonlyArray<readonly [string, string]> = [
   ['key-0', '2b642262'],
   ['key-1', '178732a2'],

@@ -1,11 +1,3 @@
-// Upstream: packages/react/src/utils/popupStateMapping.ts,
-// packages/react/src/utils/CommonPopupDataAttributes.ts,
-// packages/react/src/utils/CommonTriggerDataAttributes.ts
-//
-// The `data-*` attributes every popup part shares: a
-// trigger is `data-popup-open` while its popup is open; a popup is
-// `data-open` or `data-closed`, `data-anchor-hidden` when its anchor scrolls
-// away, and carries the transition attributes.
 import type { StateAttributesMapping } from '../internals/getStateAttributesProps.ts';
 import { type TransitionStatus, transitionStatusMapping } from '../internals/transitions.ts';
 

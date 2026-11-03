@@ -5,7 +5,6 @@ import { type Puppet, puppetOf } from './puppet.ts';
 
 const [W, H] = [40, 60];
 
-/** A 40 × 60 figure: a body column and a right arm out to the left of it, each its own colour. */
 const FIGURE: Puppet = (() => {
   const paint = (inside: (x: number, y: number) => boolean, rgb: readonly number[]) => {
     const rgba = new Uint8Array(W * H * 4);
@@ -56,7 +55,6 @@ describe('sample', () => {
   test('a sample lies on its own paper, its numbers within the limits, every joint of its bones named', () => {
     const { img, truth } = sample(SPEC, 11);
     expect([img.width, img.height]).toEqual([64, 64]);
-    // the top-left corner is paper (opaque, within the jitter of its colour)
     expect(img.rgba[3]).toBe(255);
     for (const [c, v] of truth.paper.entries())
       expect(Math.abs(img.rgba[c]! - v)).toBeLessThanOrEqual(1);
@@ -73,7 +71,6 @@ describe('sample', () => {
       'hip',
       'shoulderR',
     ]);
-    // the joints of bones this puppet lacks (no neck, no wrists, no left arm)
     expect(truth.masked.toSorted()).toEqual([
       'elbowL',
       'handL',
@@ -93,7 +90,6 @@ describe('the limits of a sample', () => {
       for (const [bone, n] of Object.entries(sample(SPEC, seed).truth.numbers))
         (drawn[bone] ??= []).push(n);
     const range = (bone: string) => [Math.min(...drawn[bone]!), Math.max(...drawn[bone]!)];
-    // 200 uniform draws reach within 1 degree of each fixed bound, never past it
     const [leanLo, leanHi] = range('lean');
     expect(leanLo).toBeGreaterThanOrEqual(-8);
     expect(leanLo).toBeLessThan(-7);
@@ -104,12 +100,6 @@ describe('the limits of a sample', () => {
     expect(headLo).toBeLessThan(-14);
     expect(headHi).toBeLessThanOrEqual(15);
     expect(headHi).toBeGreaterThan(14);
-    // the fixture's arm lies left of the hip, so it takes the left arm's
-    // ranges about its rest: the shoulder [64, 214] less its rest angle
-    // (unwrapped beside the range's middle) is [-116, 34]; the elbow
-    // [-150, 10] less its bend from the upper arm (none at rest), widened to
-    // hold 20 degrees either side of the rest, is [-150, 20]; 200 uniform
-    // draws come within 2 degrees of each bound, never past it
     const arms: ReadonlyArray<readonly [string, number, number]> = [
       ['shoulderRight', -116, 34],
       ['elbowRight', -150, 20],

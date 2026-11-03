@@ -1,9 +1,3 @@
-/**
- * The list's rules as stories: given a subscriber's history, a command
- * records these events, replies this, or is refused, over the model in
- * memory, with its policies and projections running for real. The Postman's letters wait
- * until a story answers them, and a clock the story moves stamps each command.
- */
 import { Story } from '@alchemy.run/domain/Story';
 import { DateTime, Duration, Effect, Layer, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -28,7 +22,6 @@ import { Subscriber } from './Subscriber.aggregate.ts';
 import { SubscriberId } from './Subscriber.id.ts';
 import { CONFIRM_FOR, PENDING_FOR } from './timing.ts';
 
-/** The stories' clock starts here. */
 const T0 = Date.parse('2026-01-01T00:00:00.000Z');
 const after = (from: number, wait: Duration.Input) => from + Duration.toMillis(wait);
 const at = (millis: number) => DateTime.formatIso(DateTime.makeUnsafe(millis));
@@ -38,7 +31,6 @@ const ari = Subscriber.ref(SubscriberId.make('ari'));
 const FILM = 'path/01';
 const ORIGIN = 'https://firsttheblade.test';
 
-/** The model with a memory address book and roster, the Postman's letters left to the story. */
 const world = Effect.gen(function* () {
   const book = yield* AddressBook.memory;
   const roster = yield* RosterStore.memory;
@@ -50,7 +42,6 @@ const world = Effect.gen(function* () {
     layer: ListHandlers.pipe(Layer.provide(ports)),
     stub: [Postman],
   });
-  /** The same model, with a Postman whose letters never go. */
   const storyUnmailed = Story.make(List, {
     layer: ListHandlers.pipe(
       Layer.provide(ports),
@@ -66,16 +57,13 @@ const world = Effect.gen(function* () {
   return { story, storyUnmailed, forgotten: book.forgotten, roster };
 });
 
-/** A sign-up whose link `issued` went out. */
 const signedUp = (issued: number) => [
   SignedUp.make({ at: issued }),
   ConfirmLinkIssued.make({ issued, origin: ORIGIN }),
 ];
 
-/** On the list since T0. */
 const confirmed = [...signedUp(T0), Confirmed.make({ at: T0 })];
 
-/** The confirm letter the Postman was asked for, sent. */
 const mailed = (subscriber: typeof sam, issued: number) => [
   Story.call(Postman.confirmLetter, { subscriber: subscriber.id, issued, origin: ORIGIN }),
   Story.succeed(Postman.confirmLetter, {}),
@@ -153,7 +141,6 @@ describe('confirming', () => {
         Story.given(sam, ...signedUp(T0), ...signedUp(newer)),
         Story.clock(at(after(newer, '1 minute'))),
         Story.when(sam, Confirm.make({ issued: T0 })),
-        // The constructor includes YieldableError, which Story checks for rejections.
         // @effect-diagnostics-next-line newSchemaClass:off
         Story.rejected(new StaleLink({})),
         Story.when(sam, Confirm.make({ issued: newer })),
@@ -171,7 +158,6 @@ describe('confirming', () => {
         Story.given(sam, ...signedUp(T0)),
         Story.clock(at(after(T0, CONFIRM_FOR) + 1)),
         Story.when(sam, Confirm.make({ issued: T0 })),
-        // The constructor includes YieldableError, which Story checks for rejections.
         // @effect-diagnostics-next-line newSchemaClass:off
         Story.rejected(new StaleLink({})),
       );
@@ -191,7 +177,6 @@ describe('leaving', () => {
         Story.then(sam, ...signedUp(back)),
         ...mailed(sam, back),
         Story.when(sam, Confirm.make({ issued: T0 })),
-        // The constructor includes YieldableError, which Story checks for rejections.
         // @effect-diagnostics-next-line newSchemaClass:off
         Story.rejected(new StaleLink({})),
         Story.when(sam, Confirm.make({ issued: back })),
@@ -318,7 +303,6 @@ describe("a film's letter", () => {
         Story.when(sam, ClaimFilmLetter.make({ film: FILM })),
         Story.replied({ claimed: false }),
       );
-      // History reaches the projections (not the policies), so both are on the roster.
       expect(yield* roster.counts(FILM)).toEqual({
         confirmed: 2,
         sent: 1,

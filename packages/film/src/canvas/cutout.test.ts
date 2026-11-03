@@ -1,8 +1,3 @@
-// A cutout face takes its pastel pre-blended only under canvas state where one
-// fill of the blended tile lands the same pixels as the fill-then-soft-light
-// draw: opaque, source-over, unfiltered and shadowless. Any other state keeps
-// the two-pass draw, so a faded, blurred or shadowed face looks as it did.
-
 import { describe, expect, test } from 'bun:test';
 import { type FaceState, cutout, magnifies, preblends, stretchOf } from './cutout.ts';
 import { recorder, withDom } from './fixtures/stand-in.ts';
@@ -80,7 +75,6 @@ describe('a cutout on the stand-in takes the face path it takes on a canvas', ()
     [0, 120],
   ];
 
-  /** Whether a cutout drawn after `before` soft-lit its pastel over the face (the two-pass draw). */
   const layers = (before: (ctx: CanvasRenderingContext2D) => void) =>
     withDom(() => {
       let softLit = false;

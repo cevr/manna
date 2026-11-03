@@ -1,16 +1,3 @@
-// Upstream: packages/react/src/toast/root/ToastRoot.tsx,
-// packages/react/src/toast/root/ToastRootCssVars.ts,
-// packages/react/src/toast/root/ToastRootDataAttributes.ts
-//
-// One toast: a non-modal `dialog` labelled by its title. It hands its element
-// to the store once mounted (which ends its `starting` status), removes
-// itself once its exit animations finish, closes on Escape while focus is
-// inside, and can be swiped away: a drag in an allowed direction follows
-// the pointer (locked to one axis when both are allowed, damped the wrong
-// way), and releasing past 40px dismisses it; reversing course cancels.
-// Upstream's stack variables (`--toast-index`, `--toast-offset-y`,
-// `--toast-height`) and the height measurement behind them are left out: the
-// receipts are a flat column and no stylesheet reads them.
 import type { JSX } from '@solidjs/web';
 import { createEffect, createMemo, createSignal, omit, onCleanup, untrack } from 'solid-js';
 
@@ -37,41 +24,26 @@ import { ToastRootContext, type ToastRootContextValue } from './ToastRootContext
 import type { ToastObject } from './types.ts';
 
 const ToastRootCssVars = {
-  /** Indicates the horizontal swipe movement of the toast. */
   swipeMovementX: '--toast-swipe-movement-x',
-  /** Indicates the vertical swipe movement of the toast. */
   swipeMovementY: '--toast-swipe-movement-y',
 } as const;
 
 const ToastRootDataAttributes = {
-  /** Present when the toast is expanded in the viewport. */
   expanded: 'data-expanded',
-  /** Present when the toast was limited because the toast limit was exceeded. */
   limited: 'data-limited',
-  /** The type of the toast. */
   type: 'data-type',
-  /** Present when the toast is being swiped. */
   swiping: 'data-swiping',
-  /** The direction the toast was swiped. */
   swipeDirection: 'data-swipe-direction',
-  /** Present when the toast begins animating in. */
   startingStyle: 'data-starting-style',
-  /** Present when the toast is animating out. */
   endingStyle: 'data-ending-style',
 } as const;
 
 interface ToastRootState {
-  /** The transition status of the component. */
   transitionStatus: TransitionStatus;
-  /** Whether the toasts in the viewport are expanded. */
   expanded: boolean;
-  /** Whether the toast was limited because the toast limit was exceeded. */
   limited: boolean;
-  /** The type of the toast. */
   type: string | undefined;
-  /** Whether the toast is being swiped. */
   swiping: boolean;
-  /** The direction the toast is being swiped. */
   swipeDirection: SwipeDirection | undefined;
 }
 
@@ -85,12 +57,7 @@ const toastRootStateAttributesMapping: StateAttributesMapping<ToastRootState> = 
 type ToastRootToastObject<Data extends object = object> = ToastObject<Data>;
 
 interface ToastRootProps extends BaseUIComponentProps<'div', ToastRootState> {
-  /** The toast to render. */
   toast: ToastRootToastObject;
-  /**
-   * Direction(s) in which the toast can be swiped to dismiss.
-   * @default ['down', 'right']
-   */
   swipeDirection?: SwipeDirection | SwipeDirection[] | undefined;
 }
 
@@ -159,10 +126,6 @@ export function ToastRoot(props: ToastRootProps): JSX.Element {
     },
   });
 
-  // Hands the toast's element to the store and ends its `starting` status,
-  // once the browser has computed the starting style (upstream's height
-  // measurement does that). The store ignores this write while the toast is
-  // transitioning out.
   function settle() {
     if (!rootRef.current) {
       return;
@@ -179,23 +142,17 @@ export function ToastRoot(props: ToastRootProps): JSX.Element {
     setDragOffset(nextDragOffset);
   }
 
-  // Initializes the toast on mount, and again when it begins a new lifecycle:
-  // re-adding an ending toast keeps the same root (keyed by id).
   createEffect(
     () => [toastId(), toast().transitionStatus, rootElement()] as const,
     ([id, transitionStatus, element]) => {
       if (!element) {
         return;
       }
-      // `settle` clears the `starting` status itself, so bail out
-      // on the resulting re-run and on the later `ending` one.
       if (transitionStatus !== 'starting' && lastToastId === id) {
         return;
       }
 
       if (lastToastId !== undefined) {
-        // A retained root keeps swipe state from its previous lifecycle;
-        // clear it so the toast doesn't stay offset or exit the swiped way.
         setCurrentSwipeDirection(undefined);
         setInitialTransform({ x: 0, y: 0, scale: 1 });
         setResolvedDragOffset({ x: 0, y: 0 });
@@ -301,12 +258,9 @@ export function ToastRoot(props: ToastRootProps): JSX.Element {
       return;
     }
 
-    // Prevent text selection on Safari
     event.preventDefault();
 
     if (isFirstPointerMove) {
-      // Start from the first move's position, absorbing the delay between
-      // pointerdown and the first pointermove on iOS.
       dragStartPos = { x: event.clientX, y: event.clientY };
       isFirstPointerMove = false;
     }
@@ -340,8 +294,6 @@ export function ToastRoot(props: ToastRootProps): JSX.Element {
       const movementDistance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
       if (movementDistance >= MIN_DRAG_THRESHOLD) {
         isRealSwipe = true;
-        // Locking is only meaningful when both axes are swipeable; otherwise
-        // the single axis already constrains the gesture.
         if (hasHorizontal && hasVertical) {
           lockedDirection = Math.abs(deltaX) > Math.abs(deltaY) ? 'horizontal' : 'vertical';
         }
@@ -385,7 +337,6 @@ export function ToastRoot(props: ToastRootProps): JSX.Element {
         !(directions.includes('up') && directions.includes('down')) &&
         maxSwipeDisplacement - currentDisplacement >= REVERSE_CANCEL_THRESHOLD
       ) {
-        // A change of mind.
         cancelledSwipe = true;
       }
     }
@@ -429,8 +380,6 @@ export function ToastRoot(props: ToastRootProps): JSX.Element {
     onPointerUp: handleSwipeEnd,
     onPointerCancel: handleSwipeEnd,
     onKeyDown: handleKeyDown,
-    // A non-passive touchmove listener blocks native scrolling while dragging
-    // on iOS, where preventing pointermove is not enough.
     ref: listen(
       'element',
       'touchmove',
@@ -458,8 +407,6 @@ export function ToastRoot(props: ToastRootProps): JSX.Element {
         [ToastRootCssVars.swipeMovementY]: `${offset.y - initial.y}px`,
       };
       if (swiping) {
-        // While swiping, freeze the element at its current visual transform
-        // so it doesn't snap to the end position.
         style['transition'] = 'none';
         style['transform'] =
           `translateX(${offset.x}px) translateY(${offset.y}px) scale(${initial.scale})`;

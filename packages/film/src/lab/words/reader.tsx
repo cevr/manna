@@ -1,26 +1,3 @@
-// The one words reader (a series draft's page, a film's or a draft's script
-// in an ask): the beats in order, each under
-// its id and label with its staging take (▶ and its pace once ready), its
-// line at the reading size with its delivery marks (a stressed word heavier,
-// a pause's glyph in its gap), what its picture does and its sources quiet
-// under it. The staging voice is the film reader's own (`script/voice.tsx`
-// over the source's routes; `script/voiced.tsx` draws it), so the fill keeps
-// a take ready for every spoken beat and the reader never asks for one.
-//
-// At rest it is the words, their marks, a ready take and its pace: no
-// control of its own. A tap on a word selects it (shift extends; a text
-// selection across words selects them), where its page keeps a selection
-// (`Selecting`: the ask's own), and
-// opens the box under its line: Hear, Clear and the words' delivery, each a
-// tap written at once through the source (`POST …/marks`); its takes are
-// read again, the beat's new take queued first. A page that notes words
-// (`ReaderPage.noting`: the studio's) adds its note on them under their
-// delivery. What it reads and writes is
-// its source's (`ScriptSource`): a draft's routes, a film's. The page it is
-// on (`ReaderPage`) gives its host, its commands and its runtime; a page
-// with a playhead names the beat it is in (`live`), which the reader marks
-// and keeps in sight by the lab's one Follow rule (`lab/follow.ts`).
-
 import { For, type JSX, Show } from '@solidjs/web';
 import { Array as Arr, Effect, Option, Result } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';
@@ -60,12 +37,6 @@ import { lineRows } from './line.ts';
 import { usePainted, wordsReleased } from '../transcript/words.ts';
 import type { AskApi } from '../ask/api.ts';
 
-/**
- * The reader's own look, over the Script's (`SCRIPT_READ_CSS`): a head that
- * keeps its ▶'s height, a brief's code and its sources in their inks, the
- * word heard lit and the words selected painted as the Script's are, the
- * playhead's beat ruled, a brief behind its disclosure.
- */
 export const READER_CSS = `
 .rd-label { color: var(--text-2); }
 /* A head keeps the height of its ▶ before a take lands, so the page does not shift as takes arrive. */
@@ -89,20 +60,12 @@ export const READER_CSS = `
 .rd-head > .lab-follow { min-height: var(--hit); }
 `;
 
-/** A beat as the reader lays it out: its line's words (none for a beat that says nothing) and its marks. */
 interface ReadBeat {
   readonly read: DraftBeatRead;
   readonly line: Option.Option<SectionRows>;
   readonly marks: ReadonlyArray<Mark>;
 }
 
-/**
- * The beats laid out: each spoken line's words as the voice says them
- * (`parse`: its cues and marks in braces never shown), each word with its
- * offset in the one text, running on across the beats, as the Script's do,
- * and each `{mark}` kept by the word it stands before (`lineRows`): the
- * reader draws no chip for one, and the studio's code view does.
- */
 const laidOut = (beats: ReadonlyArray<DraftBeatRead>): ReadonlyArray<ReadBeat> => {
   let at = 0;
   return beats.map((read): ReadBeat => {
@@ -128,27 +91,22 @@ const laidOut = (beats: ReadonlyArray<DraftBeatRead>): ReadonlyArray<ReadBeat> =
   });
 };
 
-/** The words of `rows` from `from` to `to`, as they read. */
 const wordsText = (rows: ReadonlyArray<Row>, w: Words): string =>
   rows
     .filter((r) => r.index >= w.from && r.index <= w.to)
     .map((r) => r.text)
     .join(' ');
 
-/** The words of `rows` from `from` to `to`, as the box's head quotes them. */
 const quoted = (rows: ReadonlyArray<Row>, w: Words): string => `“${wordsText(rows, w)}”`;
 
-/** A beat's line: each word an element the page paints, a stressed one heavier, a pause's glyph in its gap. */
 const Line = (props: {
   readonly line: SectionRows;
   readonly marks: ReadonlyArray<Mark>;
   readonly released: (event: MouseEvent) => void;
 }) => {
   const voice = useVoice();
-  // As the page has them: after its own write, the marks that write left, until the line is read again.
   const marks = () => voice.marksOf(props.line.id, props.marks);
   return (
-    // A word held (or right-clicked) opens its menu: Select to here, a phone's range.
     <Target
       of={Selection.cases.Words.make({
         scene: props.line.id,
@@ -191,7 +149,6 @@ const Line = (props: {
   );
 };
 
-/** Under a beat's line while words of it are selected: what they say, Hear, Clear, and their delivery. */
 const Selected = (props: {
   readonly beat: ReadBeat;
   readonly words: Option.Option<Words>;
@@ -226,7 +183,7 @@ const Selected = (props: {
             .join(' ')}
           selected={props.words}
         />
-        {/* Keyed by the words: other words selected take a note of their own. */}
+        {}
         <Show
           when={Option.getOrUndefined(
             Option.map(props.noting, (note) => ({
@@ -251,10 +208,8 @@ const Selected = (props: {
   </Show>
 );
 
-/** The inline Markdown a brief or a source writes: `**bold**` and `` `code` ``, the rest as written. */
 const INLINE = /(\*\*[^*]+\*\*|`[^`]+`)/;
 
-/** A piece of a brief or source: its bold or code drawn as such, its markers dropped. */
 const piece = (text: string) => {
   if (text.startsWith('**') && text.endsWith('**') && text.length > 4) {
     return <strong>{text.slice(2, -2)}</strong>;
@@ -265,17 +220,10 @@ const piece = (text: string) => {
   return text;
 };
 
-/** A brief's or a source's text with its inline Markdown drawn, not shown as asterisks. */
 const Inline = (props: { readonly text: string }) => <>{props.text.split(INLINE).map(piece)}</>;
 
-/**
- * How a reader shows a beat's picture brief: in its box (three lines on a
- * phone until More), or behind a disclosure, shut until asked (the studio's
- * inspector, where the words lead).
- */
 export type BriefShown = 'boxed' | 'disclosed';
 
-/** A beat's picture brief, as the reader shows it (`BriefShown`). */
 const Brief = (props: { readonly shown: BriefShown; readonly children: JSX.Element }) => (
   <Show when={props.shown === 'disclosed'} fallback={<BriefBox>{props.children}</BriefBox>}>
     <details class="rd-brief">
@@ -285,13 +233,11 @@ const Brief = (props: { readonly shown: BriefShown; readonly children: JSX.Eleme
   </Show>
 );
 
-/** A beat: its id and label with its take, its brief, its line, the box over what is selected in it, and its sources. */
 const Beat = (props: {
   readonly beat: ReadBeat;
   readonly words: Option.Option<Words>;
   readonly released: (event: MouseEvent) => void;
   readonly clear: () => void;
-  /** Whether the page's playhead is in it. */
   readonly live: boolean;
   readonly brief: BriefShown;
   readonly noting: Noting;
@@ -334,25 +280,18 @@ const Beat = (props: {
   </section>
 );
 
-/** How a reader's status line is announced: a read under way politely, a refusal at once. */
 export const STATUS_ROLE = { true: 'alert', false: 'status' } as const;
 
-/** Words selected in one beat: its id, the first word and the last. */
 interface WordsAt extends Words {
   readonly beat: string;
 }
 
-/**
- * Where a reader's words selected are kept, and how a tap moves them: its
- * page's to own (the ask's own).
- */
 export interface Selecting {
   readonly selected: Accessor<Option.Option<WordsAt>>;
   readonly select: (beat: string, words: Words) => void;
   readonly clear: () => void;
 }
 
-/** Words selected that the page keeps as its own while it is open (an ask's), never in its URL. */
 export const useOwnSelecting = (): Selecting => {
   const [selected, setSelected] = createSignal(Option.none<WordsAt>());
   return {
@@ -362,12 +301,6 @@ export const useOwnSelecting = (): Selecting => {
   };
 };
 
-/**
- * A page's playhead, which its reader follows: the beat it is in, marked and
- * kept in sight in the box the reader scrolls in (`box`, its top `clearTop`
- * under a sticky head), by the lab's one Follow rule on the page's `clock`;
- * Hear pauses it (`pause`) and gives way once it plays.
- */
 interface Playhead {
   readonly beat: Accessor<Option.Option<string>>;
   readonly clock: FollowClock;
@@ -376,15 +309,8 @@ interface Playhead {
   readonly pause: () => void;
 }
 
-/** A page's note on words selected, drawn under their delivery: the words as a note carries them. */
 type Noting = Option.Option<(words: NoteWords) => JSX.Element>;
 
-/**
- * The page a reader is on: its host (the frames Hear lights the word heard
- * on), its commands (Select to here), its runtime (the source's reads and
- * writes), its playhead where it has one, and its note on words selected
- * where it notes them.
- */
 export interface ReaderPage {
   readonly host: Host;
   readonly hub: Hub;
@@ -393,12 +319,10 @@ export interface ReaderPage {
   readonly noting: Noting;
 }
 
-/** The beats, the word heard lit, the words selected painted, and the playhead's beat followed. */
 const Beats = (props: {
   readonly page: ReaderPage;
   readonly beats: Accessor<ReadonlyArray<ReadBeat>>;
   readonly selecting: Selecting;
-  /** Whether the reader keeps the playhead's beat in sight: until a hand scrolls it, then again on Follow or Play. */
   readonly following: Following;
   readonly brief: BriefShown;
 }) => {
@@ -413,7 +337,6 @@ const Beats = (props: {
       to: w.to,
     })),
   );
-  // A tap selects the word (shift: from the selection's first to it); a text selection across words selects them.
   const released = wordsReleased({
     sections: lines,
     selectRange: (beat, from, to) => props.selecting.select(beat, { from, to }),
@@ -429,7 +352,6 @@ const Beats = (props: {
         ),
       ),
   });
-  // A phone has no Shift: tap the first word, hold the last, Select to here.
   onCleanup(
     meta.hub.commands.register(
       ...scriptCommands({
@@ -460,18 +382,14 @@ const Beats = (props: {
       ),
     }),
   );
-  // The box over a selection is brought into sight as it opens, a link pasted with one
-  // included: its choices are on the screen with its words.
   createEffect(
     () => Option.map(selected(), (w) => `${w.section}:${w.from}-${w.to}`),
     (key) => {
-      // Moved on (another selection, or the page gone) before it lands, the scroll is not made.
       const stop = Option.map(
         Option.flatMap(
           Option.flatMap(key, () => page),
           (el) => Option.fromNullishOr(el.querySelector('.lab-script-ties')),
         ),
-        // Once laid out (its choices drawn, the page's type set): the whole box, not its top.
         (box) =>
           Effect.runCallbackWith(meta.host)(
             Effect.promise(() => document.fonts.ready).pipe(
@@ -495,7 +413,6 @@ const Beats = (props: {
       Option.flatMap(meta.playhead, (p) => p.beat()),
       () => '',
     );
-  // The playhead's beat kept in sight in the box the reader scrolls in, by the lab's one Follow rule.
   Option.map(meta.playhead, (playhead) =>
     useFollow(
       {
@@ -543,32 +460,14 @@ const Beats = (props: {
   );
 };
 
-/**
- * What a reader reads and writes through: a series draft's routes, a
- * film's. `voice` reads each spoken beat's staging take (read, never
- * voiced: the fill keeps them); `mark` writes a beat's delivery marks, its
- * answer the source's own (a draft's read as the write leaves it, a film's
- * script read again).
- */
 interface ScriptSource {
   readonly voice: Effect.Effect<ScriptVoice, LabFailure, AskApi>;
   readonly mark: (post: MarksPost) => Effect.Effect<unknown, LabFailure, AskApi>;
-  /** A take's audio, by the name its `Ready` gives it. */
   readonly takeUrl: (file: string) => string;
-  /** What a beat's head says once its marks are written. */
   readonly written: string;
-  /** Reads the script again: a line changed under the reader. */
   readonly reread: () => void;
 }
 
-/**
- * The beats `beats` read through `source` on `page`, laid out under its
- * staging voice, their words selected as `selecting` keeps them; with `cost`,
- * its head says the day's staging spend (an ask's leaves it out); `brief`
- * says how a beat's picture brief shows (boxed, the default). On a page with
- * a playhead, the beat it is in is marked and kept in sight until a hand
- * scrolls the box, and Follow in the head takes it back.
- */
 export const ScriptReader = (props: {
   readonly page: ReaderPage;
   readonly beats: Accessor<ReadonlyArray<DraftBeatRead>>;
@@ -581,7 +480,6 @@ export const ScriptReader = (props: {
   const beats = createMemo(() => laidOut(props.beats()));
   const following = createFollowing();
   const voice: VoiceSource = {
-    // The page's alone: the server's render never waits on the takes, nor queues one.
     reading: meta.runtime
       .atom(polled(props.source.voice))
       .pipe(Atom.withServerValue(() => AsyncResult.initial())),

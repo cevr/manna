@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/toast/provider/ToastProvider.tsx
-//
-// Owns the toasts of the parts inside it: a store created once, kept in
-// step with the `limit` prop, and fed by a `toastManager` created outside
-// the tree when one is given. Upstream's provider-wide `timeout` is left
-// out: a toast takes its own `timeout`, else 5000 ms.
 import type { JSX } from '@solidjs/web';
 import { createEffect, createSignal, onCleanup, untrack } from 'solid-js';
 
@@ -13,14 +7,7 @@ import { ToastContext, type ToastContextValue } from './ToastProviderContext.ts'
 
 interface ToastProviderProps {
   children?: JSX.Element;
-  /**
-   * The maximum number of toasts that can be displayed at once.
-   * When the limit is exceeded, the oldest toasts are marked as `limited` (via the `data-limited`
-   * attribute) rather than removed, so they can be hidden or animated out.
-   * @default 3
-   */
   limit?: number | undefined;
-  /** A global manager for toasts to use outside of the component tree. */
   toastManager?: ToastManager | undefined;
 }
 

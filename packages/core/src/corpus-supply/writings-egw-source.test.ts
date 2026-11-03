@@ -15,7 +15,6 @@ import { layerEgwWritingsAssetSource } from './writings-egw-source.js';
 
 type EGWApiClientService = (typeof EGWApiClient)['Service'];
 
-// Wire-shape fields the schema encodes as `null` when absent.
 const wireNull = Option.getOrNull(Option.none<never>());
 
 const book: Book = {
@@ -80,9 +79,6 @@ const api: EGWApiClientService = {
   getMirrors: Effect.succeed([]),
 };
 
-/** The supply round at its own boundary. Each test composes its own layer from
- *  that test's API double, so the provide belongs here rather than to a block
- *  nested inside the test's generator. */
 const ensureWritings = (layer: Layer.Layer<CorpusSupply, never, Digest.Digest>) =>
   Effect.flatMap(CorpusSupply, (supply) =>
     supply.ensure(
@@ -145,7 +141,6 @@ describe('direct EGW Writings asset source', () => {
       const zipped = zipSync({
         '127.10.json': strToU8(`[${row('pp-3', 3)}]`),
         '127.2.json': strToU8(`[${row('pp-1', 1)},${row('pp-2', 2)}]`),
-        // A paragraph repeated in a later file is kept once.
         '127.11.json': strToU8(`[${row('pp-2', 2)},${row('pp-4', 4)}]`),
       });
       const database = EGWParagraphDatabase.Test({

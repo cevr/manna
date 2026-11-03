@@ -1,13 +1,3 @@
-// A member's cast render page (`<film>/cast/<member>`): each kind of his
-// kept sheets a scene of its own, a canvas the sheet's size with each kept
-// view's rig drawn in its pose, laid in its kept box at the sheet's one scale
-// (`CastTable`, the film's `rigs/cast.ts`), on the film's paper, with no
-// light, vignette, grain or breath of the camera over it. It is a film like
-// any other, made by `createFilm` and drawn by `drawRig` through `f.rive`,
-// its rigs loaded as a film's are (`loadRigs`): the render is what a scene
-// draws, and `film concept render` takes a still of each scene
-// (`tools/cast-render.ts`).
-
 import { Effect, Layer, ManagedRuntime, type Scope } from 'effect';
 import { FetchHttpClient, type HttpClient } from 'effect/http';
 import { SheetKind } from '../core/cast-sheet.ts';
@@ -35,13 +25,10 @@ import { loadRigs } from '../rive/load.ts';
 import type { RiveRuntime } from '../rive/runtime.ts';
 import { RiveRuntimeBrowser } from '../rive/runtime-browser.ts';
 
-/** The rate a cast page is laid at: any, since each scene is one still. */
 const FPS = 30;
 
-/** How far past its kept box a view is drawn, sheet pixels: a line the figure lays just past the box (a crown's ink) shows on the sheet, where the crop by the box can be read against it. */
 const CLIP_MARGIN = 12;
 
-/** One view drawn on its sheet beside `views` (the sheet's every view): clipped to its box and `CLIP_MARGIN` round it less the others' boxes (`clipCast`), its rig's origin at `at`, at the sheet's scale, its props and the rigs drawn with it about that origin, in their order (`castDrawOrder`). */
 const drawView = (f: Frame, view: CastView, views: ReadonlyArray<CastView>, sheet: CastSheet) => {
   const { ctx } = f;
   ctx.save();
@@ -60,7 +47,6 @@ const drawView = (f: Frame, view: CastView, views: ReadonlyArray<CastView>, shee
   ctx.restore();
 };
 
-/** `member`'s cast render as a film: a scene a kind of his sheets, each the size of the sheet. */
 const castFilm = (film: string, member: string, m: CastModule): Film => {
   const kinds = m.CAST?.[member];
   const sheets = m.SHEETS[member];
@@ -101,13 +87,8 @@ const castFilm = (film: string, member: string, m: CastModule): Film => {
   });
 };
 
-/**
- * A cut-out still's look: the boil's tick 0, the tick an ease starts on, so
- * a still is its ease's first frame where nothing has moved.
- */
 const STILL_TICK = 0;
 
-/** One cut-out view drawn on its sheet beside `views`: clipped as a rig's view is, its puppet's origin at `at`, at the sheet's own pixels, the sheet standing `CUTOUT_MARGIN` into the page, boiling `amp` px. */
 const drawCutout = (f: Frame, view: CutoutView, views: ReadonlyArray<CutoutView>, amp: number) => {
   const { ctx } = f;
   ctx.save();
@@ -118,7 +99,6 @@ const drawCutout = (f: Frame, view: CutoutView, views: ReadonlyArray<CutoutView>
   ctx.restore();
 };
 
-/** `member`'s `kind` sheet as a cut-out page lays it: the sheet grown by `CUTOUT_MARGIN` each side. */
 const cutoutCanvas = (film: string, member: string, m: CastModule, kind: string) => {
   const sheet = m.SHEETS[member]?.[kind];
   if (sheet === undefined)
@@ -129,13 +109,6 @@ const cutoutCanvas = (film: string, member: string, m: CastModule, kind: string)
   };
 };
 
-/**
- * `member`'s cut-out render as a film: a scene each kind his `CUTOUT` views
- * are of whose sheet is the size of `only`'s (his first kind's when none),
- * on a canvas that size grown by `CUTOUT_MARGIN`, each view drawn by its
- * puppet, boiling `amp` px. A page is one canvas, so a kind of another size
- * is drawn by its own page (`only`), never on a canvas not its size.
- */
 const cutoutFilm = (
   film: string,
   member: string,
@@ -183,15 +156,8 @@ const cutoutFilm = (
   });
 };
 
-/** The rate an ease page is laid at: every ease's own, checked. */
 const EASE_FPS = 24;
 
-/**
- * `member`'s eases as a film: a scene an ease (`easeScene`), its frames the
- * ease's, each drawn from its index alone, the view it moves standing where
- * the cut-out page stands it, on the same canvas and paper, unclipped (a
- * raised arm reaches past its box).
- */
 const easeFilm = (film: string, member: string, m: CastModule): Film => {
   const eases = Object.values(m.EASES?.[member] ?? {});
   const [first] = eases;
@@ -236,18 +202,6 @@ const easeFilm = (film: string, member: string, m: CastModule): Film => {
   });
 };
 
-/**
- * The player's entries for a film's cast renders, its pages a member: his
- * rigs under `<film>/cast/<member>`, and his puppets (`CUTOUT`) under
- * `<film>/cast/<member>/cutout` (at the house boil; at none under
- * `…/cutout/boil-0`, `CUTOUT_BOILS`; each kind alone at its own sheet's
- * size under `…/<kind>`), and his eases (`EASES`) under
- * `<film>/cast/<member>/ease`. Spread them, beside the films, into the
- * pages the app mounts. A page loads its member's table (`load`, the film's
- * `rigs/cast.ts`) and the rigs or puppets it draws, through `rive` (the
- * page's Rive runtimes unless given) or the page's image decoder, into the
- * scope its load runs in.
- */
 export const castPages = (
   film: string,
   members: ReadonlyArray<string>,

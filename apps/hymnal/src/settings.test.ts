@@ -1,9 +1,3 @@
-/**
- * The settings over a store the test holds: a plain map behind Effect's
- * KeyValueStore, as One's key-value store is on a phone and the web. A
- * second set of settings over the same map is the app opened again.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { Effect, Layer } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
@@ -27,7 +21,6 @@ it('placement defaults to beat and an inherited hymn follows a later global choi
   again.registry.dispose();
 });
 
-/** A store over `map`: what the device keeps between two launches. */
 const storeOver = (map: Map<string, string>) =>
   Layer.succeed(KeyValueStore.KeyValueStore)(
     KeyValueStore.makeStringOnly({
@@ -40,7 +33,6 @@ const storeOver = (map: Map<string, string>) =>
     }),
   );
 
-/** The app opened over `map`: fresh settings, a fresh registry. */
 const launch = (map: Map<string, string>) => {
   const settings = settingsOn(storeOver(map));
   const registry = AtomRegistry.make();

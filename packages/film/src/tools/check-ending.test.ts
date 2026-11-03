@@ -1,6 +1,3 @@
-// The ending and the air (CRAFT rules 7 and 10): an ending too short for
-// YouTube's end screens, and silence in the master that no cue declares.
-
 import { describe, expect, test } from 'bun:test';
 import { Option, Result } from 'effect';
 import { layout } from '../core/layout.ts';
@@ -9,11 +6,9 @@ import { DEAD_MAX, deadAir, designedSilences, endShort, staticFindings } from '.
 import { report } from './findings.ts';
 import { holdScenes, holdTimings, testFilm } from './film-repo/testing.ts';
 
-/** No track on disk, and no plan key: what a check before any mix sees. */
 const NO_MASTER = { master: Option.none(), key: Option.none(), file: 'narration/full.wav' };
 
 const WINDOW = 0.05;
-/** `secs` of master at `db`, in `WINDOW` windows. */
 const level = (db: number, secs: number) =>
   Array.from({ length: Math.round(secs / WINDOW) }, () => db);
 

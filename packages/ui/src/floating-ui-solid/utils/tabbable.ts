@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/utils/tabbable.ts
-//
-// Which elements take focus, and which of those the Tab key reaches, in DOM
-// order through slots and open shadow roots. Base UI's own reading of the
-// HTML focus rules (inert, hidden, closed <details>, named radio groups), so
-// the `tabbable` package is not needed.
 import { getComputedStyle, getNodeName, isHTMLElement, isShadowRoot } from '@floating-ui/utils/dom';
 
 import { activeElement, contains, ownerDocument } from '../../utils/dom.ts';
@@ -50,7 +44,6 @@ function isFocusableCandidate(element: Element | null): element is FocusableElem
       (element.parentElement != null &&
         getNodeName(element.parentElement) === 'details' &&
         getDetailsSummary(element.parentElement) === element)) &&
-    // A <details> with a summary takes focus only when given a tabindex (its summary does).
     (nodeName !== 'details' ||
       getDetailsSummary(element) == null ||
       element.hasAttribute('tabindex')) &&
@@ -169,11 +162,6 @@ export function isTabbable(element: Element | null): element is FocusableElement
   return isFocusableElement(element) && getTabIndex(element) >= 0;
 }
 
-/**
- * The nearest ancestor of `element` that takes focus (a dialog's popup):
- * where the platform moves focus on a press on content that takes
- * none. `null` when there is none, and focus then leaves every control.
- */
 export function getFocusableAncestor(element: Element): FocusableElement | null {
   for (
     let candidate = element.parentElement?.closest(CANDIDATE_SELECTOR) ?? null;
@@ -225,7 +213,6 @@ export function getPreviousTabbable(referenceElement: Element | null): Focusable
   );
 }
 
-/** The tabbable element before or after `referenceElement` in the document, skipping `exclude`. */
 export function getTabbableNearElement(
   referenceElement: Element | null,
   direction: 1 | -1,
@@ -257,14 +244,12 @@ export function getTabbableNearElement(
   return list[index] ?? null;
 }
 
-/** Whether focus moved to somewhere outside `container` (the listener's element by default). */
 export function isOutsideEvent(event: FocusEvent, container?: Element | null) {
   const containerElement = container || (event.currentTarget as Element);
   const relatedTarget = event.relatedTarget as HTMLElement | null;
   return !relatedTarget || !contains(containerElement, relatedTarget);
 }
 
-/** Takes every tabbable element inside `container` out of the tab order, remembering its tabindex. */
 export function disableFocusInside(container: HTMLElement) {
   for (const element of tabbable(container)) {
     (element as HTMLElement).dataset['tabindex'] = element.getAttribute('tabindex') || '';
@@ -272,7 +257,6 @@ export function disableFocusInside(container: HTMLElement) {
   }
 }
 
-/** Restores the tabindex `disableFocusInside` remembered. */
 export function enableFocusInside(container: HTMLElement) {
   const elements: HTMLElement[] = [];
   appendMatchingElements(container, '[data-tabindex]', elements);

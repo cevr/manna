@@ -1,8 +1,3 @@
-/**
- * The command's arguments as `bun run audio:copy` passes them, parsed by the
- * command's own definition. The handler only records the mode it was given,
- * so neither job runs.
- */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Exit, Ref } from 'effect';

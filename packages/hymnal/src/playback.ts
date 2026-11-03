@@ -1,8 +1,3 @@
-/** Numeric playback metadata. Words stay in the read-only corpus; cuts are
- * offsets into its words. Timing and chords come from one fresh compilation.
- * Each sidecar carries its own MIDI/corpus digest. The build manifest owns
- * global compiler provenance.
- */
 import { Array as Arr, Effect, Result, Schema } from 'effect';
 import type { Mutable } from 'effect/Types';
 import * as Chord from './chord.js';
@@ -24,7 +19,6 @@ const CompactChange = Schema.Tuple([
   Schema.Int.check(Schema.isBetween({ minimum: -1, maximum: 11 })),
   Schema.Finite,
 ]);
-/** Part index (refrain follows stanzas), line, syllable, replacement changes. */
 export const PlacementPatch = Schema.Tuple([Count, Count, Count, Schema.Array(CompactChange)]);
 export type PlacementPatch = typeof PlacementPatch.Type;
 export const Placements = Schema.Struct({
@@ -113,7 +107,6 @@ const numericPart = (part: Part): typeof NumericPart.Type => ({
         }),
 });
 
-/** Only changed numeric guitar anchors are stored; words and timing occur once. */
 export const placementPatches = (base: Hymn, other: Hymn): readonly PlacementPatch[] => {
   const parts = (hymn: Hymn) => [
     ...hymn.stanzas,
@@ -149,7 +142,6 @@ export const placementPatches = (base: Hymn, other: Hymn): readonly PlacementPat
   );
 };
 
-/** Never serializes a hymn's text, title, or MIDI track names. */
 export const metadataOf = (hymn: Hymn, sourceHash: string) =>
   Effect.gen(function* () {
     if (hymn.timing === undefined)
@@ -234,7 +226,6 @@ const lineOf = (
     : Result.succeed(syllables);
 };
 
-/** Join decoded numeric cuts in plain loops; one typed failure boundary. */
 export const applyMetadata = (
   hymn: Hymn,
   metadata: Playback,

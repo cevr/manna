@@ -6,7 +6,6 @@ import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { gateFiles, lintIgnored } from './files.js';
 import { TEST_GIT } from '../testing.js';
 
-/** Runs `git <args>` in `cwd`, to the end. */
 const git = (cwd: string, args: ReadonlyArray<string>) =>
   Effect.scoped(
     Effect.gen(function* () {
@@ -19,7 +18,6 @@ const git = (cwd: string, args: ReadonlyArray<string>) =>
     }),
   );
 
-/** Writes `files` (each its text) under `dir`. */
 const write = (dir: string, files: Record<string, string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -32,7 +30,6 @@ const write = (dir: string, files: Record<string, string>) =>
     );
   });
 
-/** A repository that commits `committed`, then has `tree` written over it uncommitted. */
 const repo = (committed: Record<string, string>, tree: Record<string, string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

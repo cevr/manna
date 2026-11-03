@@ -1,9 +1,3 @@
-// A review record's words: what an ask keeps, read by its types along its
-// recommended way (never by an option's words), the typing an ask that shows
-// figures owes, the reviews kept one per run, the problems a keep of each
-// scene and figure meets, a crop's file in the set, a finding answered by its
-// id, and a review's places held to the one key they were taken at.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Ref, Result, Schema } from 'effect';
 import { Ask, AskBlock, oneQuestion, recommendedPath, untypedKeeps } from './ask.ts';
@@ -21,10 +15,8 @@ type Review = ReviewRecord['reviews'][number];
 
 const blocks = Schema.decodeSync(Schema.Array(AskBlock));
 
-/** The farmer of film `f`, scene `rain`, as a keep keeps him. */
 const FARMER = { film: 'f', scenes: [{ scene: 'rain', figures: ['farmer'] }] } as const;
 
-/** A finding on the farmer at `mark:rain`, saying `what`, nothing done yet. */
 const finding = (what: string) => ({
   id: findingId('f', 'rain', { at: 'mark:rain', figure: 'farmer', aspect: 'head angle', what }),
   at: 'mark:rain',
@@ -33,7 +25,6 @@ const finding = (what: string) => ({
   what,
 });
 
-/** One run over `scene` of film `f` at key `key`, its crops of `figures`. */
 const run = (
   id: string,
   scene: string,
@@ -197,7 +188,6 @@ describe('a review record', () => {
         ],
       };
       expect(evidenceProblems(record, both, now)).toEqual([]);
-      // Christ kept in the rain: no run crops him there.
       expect(
         evidenceProblems(
           record,
@@ -207,7 +197,6 @@ describe('a review record', () => {
       ).toEqual([
         'no review of christ in f rain: run film review f --set <set> --scene rain --at <place> --at <place> --figure christ',
       ]);
-      // Another film's keep: this record holds none of it.
       expect(evidenceProblems(record, { film: 'g', scenes: [{ scene: 'rain' }] }, now)).toEqual([
         'no review of g rain over every figure: run film review g --set <set> --scene rain --at <place> --at <place>',
       ]);
@@ -250,7 +239,6 @@ describe('a review record', () => {
   );
 });
 
-/** The key read the `n`th time (from 0): `keys[n]`, the last once past them. */
 const keysRead = (keys: ReadonlyArray<string>) =>
   Effect.map(Ref.make(0), (reads) =>
     Ref.getAndUpdate(reads, (n) => n + 1).pipe(

@@ -1,9 +1,3 @@
-// Rive in a page (`RiveRuntimeBrowser`): each engine's package loaded with the
-// first rig that engine draws, its wasm from the package's asset URL (the
-// page's build serves it), and a rig's `.riv` through the page's `HttpClient`.
-// A page that draws a rig with the Rive Renderer and has no WebGL 2 fails its
-// load, naming why, rather than draw nothing.
-
 import canvasWasm from '@rive-app/canvas-advanced/rive.wasm' with { type: 'file' };
 import glWasm from '@rive-app/webgl2-advanced/rive.wasm' with { type: 'file' };
 import type { RiveCanvas } from '@rive-app/webgl2-advanced';
@@ -14,20 +8,16 @@ import { RigUnloadable } from '../core/errors.ts';
 import { onceScoped } from '../core/once.ts';
 import { RiveRuntime } from './runtime.ts';
 
-/** Each engine's module, loaded with the first rig it draws. */
 const loadCanvas = () => import('@rive-app/canvas-advanced');
 const loadGl = () => import('@rive-app/webgl2-advanced');
 
-/** Why `engine`'s runtime would not start. */
 const unstarted = (engine: RiveEngine) => (cause: unknown) =>
   RigUnloadable.make({ rig: `the ${engine} runtime`, reason: String(cause) });
 
-/** Whether this page can make a WebGL 2 context, which the Rive Renderer draws with. */
 const hasWebGl2 = Effect.sync(() =>
   Option.isSome(Option.fromNullishOr(document.createElement('canvas').getContext('webgl2'))),
 );
 
-/** Each engine's runtime, started. */
 const ENGINES = {
   canvas: Effect.flatMap(
     Effect.tryPromise({ try: loadCanvas, catch: unstarted('canvas') }),

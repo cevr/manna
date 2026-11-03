@@ -1,8 +1,3 @@
-// The series lead's turnaround is traced from his part labels (`labels.ts`),
-// no seed left in any of its six views, and each table it writes is the one
-// kept beside it (`film concept trace --check`, which writes nothing); his
-// poses, still picked by seeds, trace to theirs too.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Stream } from 'effect';
@@ -11,7 +6,6 @@ import { TRACE } from './trace.ts';
 
 const APP = `${import.meta.dir}/../../../../..`;
 
-/** `film concept trace <spec> --check` from the app's folder: its exit code and its lines. */
 const check = (spec: string) =>
   Effect.scoped(
     Effect.gen(function* () {

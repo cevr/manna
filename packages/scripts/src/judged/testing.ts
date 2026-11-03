@@ -1,7 +1,3 @@
-// Test support for the judged lint: the historyComment rule, a stubbed keychain (the `security` tool
-// the key is read from), the environment as config, and a fake TypeSafe HTTP
-// client, so no test reads the real keychain or reaches the network.
-
 import {
   Clock,
   ConfigProvider,
@@ -18,7 +14,6 @@ import { ChildProcessSpawner } from 'effect/process';
 
 import type { JudgedRule } from './rule.js';
 
-/** historyComment as the repo's `.oxlintrc.json` defines it (config.test.ts holds the two equal). */
 export const historyComment: JudgedRule = {
   id: 'historyComment',
   severity: 'warn',
@@ -37,7 +32,6 @@ export const historyComment: JudgedRule = {
   charsPerToken: 3.79,
 };
 
-/** A keychain whose `security` prints `printed` and exits with `exitCode`; it counts the runs. */
 const keychain = (printed: Stream.Stream<string>, exitCode: Effect.Effect<number>) => {
   const runs = { count: 0 };
   const stdout = Stream.encodeText(printed);
@@ -65,16 +59,12 @@ const keychain = (printed: Stream.Stream<string>, exitCode: Effect.Effect<number
   return { layer, runs };
 };
 
-/** A keychain that holds `key`: `security` prints it with its newline. */
 export const holding = (key: string) => keychain(Stream.make(`${key}\n`), Effect.succeed(0));
 
-/** A keychain with no such item: `security` prints nothing and exits 44. */
 export const missing = () => keychain(Stream.empty, Effect.succeed(44));
 
-/** A keychain that never answers (a locked keychain's unlock dialog). */
 export const hangs = () => keychain(Stream.never, Effect.never);
 
-/** `vars` as the program's environment. */
 export const env = (vars: Record<string, string>) =>
   ConfigProvider.layer(ConfigProvider.fromUnknown(vars));
 
@@ -82,13 +72,6 @@ const Sent = Schema.fromJsonString(
   Schema.Struct({ questions: Schema.Record(Schema.String, Schema.Json) }),
 );
 
-/**
- * A fake TypeSafe HTTP client answering every request with `status` and
- * `body` (each of the request's question keys and how many requests came
- * before it, or a status the same for every request), and the response
- * headers `headers` gives it; it records each request's URL, authorization
- * header, keys and time on the clock.
- */
 export const typesafeHttp = (
   status: number | ((keys: ReadonlyArray<string>, sent: number) => number),
   body: (keys: ReadonlyArray<string>) => unknown,

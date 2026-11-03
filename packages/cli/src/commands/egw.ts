@@ -1,11 +1,3 @@
-/**
- * EGW CLI command graph.
- *
- * Each subcommand owns its arguments, behavior, and runtime dependencies under
- * ./egw/. This module preserves the backwards-compatible top-level lookup and
- * search routes and assembles the public command tree.
- */
-
 import { isSearchQuery, parseEGWRef } from '@manna/core/egw';
 import { Console, Effect, Option } from 'effect';
 import { Argument, Command } from 'effect/cli';

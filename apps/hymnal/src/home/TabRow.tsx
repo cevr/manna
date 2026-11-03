@@ -1,11 +1,3 @@
-/**
- * The home list's tabs under its title (`tabs.ts`): a row of tabs, each a
- * button VoiceOver reads as a tab, the tab in use selected and drawn filled.
- * A tap on another tab chooses it with a `tab` cue, a haptic alone; a tap on
- * the tab in use does nothing. A row too wide for the screen at a large text
- * size scrolls sideways.
- */
-
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
 import { useCue } from '~/feel/cue';
@@ -13,12 +5,10 @@ import { color, useAccent } from '~/color';
 
 import type { TabName } from './tabs';
 
-/** A tab's line of text, the space above and below it, and the space around the row. */
 const tabLine = 20;
 const tabPadding = 6;
 const rowMargin = 8;
 
-/** The row's height at the reader's text size (`fontScale`). */
 export const tabRowHeight = (fontScale: number) =>
   Math.ceil(tabLine * fontScale) + 2 * tabPadding + 2 * rowMargin;
 

@@ -1,8 +1,3 @@
-// What a page hears: `hear` plays one playable and pauses the one heard
-// before it, telling that one's hearer it was hushed; `hush` pauses the one
-// heard; `play` plays beside whatever is heard, as the review's synced
-// players play many at once.
-
 import { Effect } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { fakeMedia } from './fixtures/media.ts';
@@ -10,7 +5,6 @@ import { Media, Played } from './media.ts';
 
 const media = Media.layerOver(() => fakeMedia().media);
 
-/** A hearer's hushed effect, and how often it was told. */
 const hearer = () => {
   const told: Array<string> = [];
   return { told, hushed: (who: string) => Effect.sync(() => told.push(who)) };

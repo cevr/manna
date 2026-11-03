@@ -1,11 +1,3 @@
-/**
- * The render's source is the sung file: hymn 663, whose file plays one verse
- * for six stanzas, renders that verse six times through, under a source hash
- * of its own, in the printed key and in another; every other hymn renders
- * its file as it stands, under its bytes' hash, so its recordings stand.
- * Only hymn numbers, hashes' equality and seconds are reported.
- */
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Array as Arr, Effect, FileSystem, Path } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -17,7 +9,6 @@ import { STYLE } from './style.js';
 
 const test = it.scopedLive.layer(BunServices.layer);
 
-/** A hymn's MIDI file's bytes. */
 const bytesOf = (hymn: number) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -34,7 +25,6 @@ const bytesOf = (hymn: number) =>
     );
   });
 
-/** 663's verse plays 15.945102 s; sung six times it plays this long. */
 const SUNG_SECONDS = 6 * 15.945102;
 
 describe('the render source', () => {

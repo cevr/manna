@@ -1,37 +1,3 @@
-// The package's browser and test entries carry only what their users use:
-// every name an entry exports is imported by name from it somewhere, by a
-// film's code under apps/, by a test (or a test's fixture, a lint rule's
-// among them), through the package specifier (`@manna/film/canvas`) or a
-// path to the entry's file. An export nobody reads is deleted from the
-// entry, not kept "in case", and an entry names its exports (`export *`
-// publishes a module whole). The engine's own parts stay exported from their
-// files for the framework and its tests, and in a swept directory (`SWEPT`)
-// only while another file imports them: a name its own file alone reads is
-// not exported. A directory joins `SWEPT` once its unread exports are gone.
-//
-// Imports and exports are read by the parser (oxc), so a comment or a string
-// that looks like code names nothing. A namespace import, an `import()` and
-// an `export * as` take a module whole.
-//
-// The entries guarded, and who uses them:
-//   canvas    films, their kits and the framework's tests: the draw kit
-//   player    the app's film registry and faces, a film's `Narrated` type
-//   render    the app's render page (`mountRender`)
-//   stand-in  the framework's tests, and `check --draw`'s leg
-//             (tools/draw-check.ts), which draws every scene into it
-//   core      films, their kits, the app's sound library and the framework's
-//             tests: the clock, the script and sound schemas, the mix plan,
-//             a cast record and its library reference (`castLock`)
-//   style     films' scenes, sets and rigs: the house look's acting, boil,
-//             key light and creases, the parts a figure is composed of,
-//             and the figures file a film lays and the house prints
-//   style/build
-//             a film's rig build and its test (`compile`, `unbuilt`,
-//             `unlocked`, `unsaid`)
-// `tools`, `lab`, `review` and `solid-plugin` are not guarded here: the
-// tooling entries are read by the CLI, the app's build and the tests, and the
-// framework reads each core module by its path.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Effect, FileSystem, Option, Path, Schema } from 'effect';
@@ -42,14 +8,8 @@ import {
   parseSync,
 } from 'oxc-parser';
 
-/** The tools that use a guarded entry as its users do: the draw leg draws into the stand-in. */
 const TOOL_USERS: ReadonlySet<string> = new Set(['packages/film/src/tools/draw-check.ts']);
 
-/**
- * The directories whose modules export only what another file imports by
- * name (a test or a lint fixture counts, an `export * from` passes a name
- * through): an export its own file alone reads is not exported.
- */
 const SWEPT = [
   'packages/film/src/core/',
   'packages/film/src/lab/',
@@ -62,29 +22,16 @@ const SWEPT = [
   'packages/film/lint/',
 ] as const;
 
-/**
- * The modules in a swept directory whose exports have a reader the sweep
- * cannot see, and so are not swept:
- * - a `.types.ts` file is a compile-time check, and its exports keep its
- *   `@ts-expect-error` lines compiled;
- * - a fixture film's modules export what the film loader reads by name
- *   (`scenes`, `voice`, `look`, `script`);
- * - a lint fixture is a film's code a rule reads;
- * - the server-write page exports the renders `served` bundles by name.
- * A default export is its loader's (oxlint's plugin), and is not swept either.
- */
 const UNSWEPT = (file: string) =>
   file.endsWith('.types.ts') ||
   file.includes('/fixtures/films/') ||
   file.startsWith('packages/film/lint/fixtures/') ||
   file === 'packages/film/src/lab/fixtures/server-write-page.tsx';
 
-/** `packages/film/package.json`'s specifiers: `./core` → `./src/core/index.ts`. */
 const PackageExports = Schema.fromJsonString(
   Schema.Struct({ exports: Schema.Record(Schema.String, Schema.String) }),
 );
 
-/** Each guarded entry: its specifier under `@manna/film/` and its file under packages/film. */
 const ENTRIES = [
   { entry: 'canvas', file: 'src/canvas/index.ts' },
   { entry: 'player', file: 'src/player/index.ts' },
@@ -95,23 +42,17 @@ const ENTRIES = [
   { entry: 'style/build', file: 'src/style/build.ts' },
 ] as const;
 
-/** What one import or re-export takes from `from`: some of its names, or (None) the module whole. */
 interface Take {
   readonly from: string;
   readonly names: Option.Option<ReadonlyArray<string>>;
 }
 
-/** A module's imports and exports, as the parser reads them. */
 interface ModuleRecord {
-  /** The names it exports (as renamed): declarations, `export { … }` and re-exports. */
   readonly exports: ReadonlyArray<string>;
-  /** Its `import`s, `import()`s and `export … from`s. */
   readonly takes: ReadonlyArray<Take>;
-  /** Its `export * from` sources: a name taken from it is taken from them too. */
   readonly stars: ReadonlyArray<string>;
 }
 
-/** A name as an import or export entry spells it; a default is `default`. */
 const nameOf = (entry: ImportName | ExportImportName | ExportExportName): Option.Option<string> => {
   if (entry.kind === 'Default') return Option.some('default');
   return Option.fromNullishOr(entry.name);
@@ -119,7 +60,6 @@ const nameOf = (entry: ImportName | ExportImportName | ExportExportName): Option
 
 type Parsed = ReturnType<typeof parseSync>['module'];
 
-/** An `import … from`: its names, or the module whole for `import * as`. */
 const importTake = (i: Parsed['staticImports'][number]): Take => {
   if (i.entries.some((e) => e.importName.kind === 'NamespaceObject'))
     return { from: i.moduleRequest.value, names: Option.none() };
@@ -129,7 +69,6 @@ const importTake = (i: Parsed['staticImports'][number]): Take => {
   };
 };
 
-/** An `export … from` but `export *`: its one name, or the module whole for `export * as`. */
 const reexportTake = (e: Parsed['staticExports'][number]['entries'][number]): ReadonlyArray<Take> =>
   Option.toArray(
     Option.map(
@@ -144,13 +83,11 @@ const reexportTake = (e: Parsed['staticExports'][number]['entries'][number]): Re
     ),
   );
 
-/** How the parser reads `file`: JSX only in a `.tsx`. */
 const langOf = (file: string): 'ts' | 'tsx' => {
   if (file.endsWith('.tsx')) return 'tsx';
   return 'ts';
 };
 
-/** An `import('…')` with a literal specifier: the module whole. */
 const dynamicTake = (source: string, d: Parsed['dynamicImports'][number]): ReadonlyArray<Take> =>
   Option.toArray(
     Option.map(
@@ -182,31 +119,20 @@ const recordOf = (file: string, source: string): ModuleRecord => {
   };
 };
 
-/** The key a module's name is marked used under; `*` marks the module whole. */
 const WHOLE = '*';
 
-/**
- * Whether `file` is where a user of an entry lives: a film's code, or a test
- * or its fixture. An app's `out/` is output, and tests copy films into it and
- * remove them while this walks, so it is never read.
- */
 const isUser = (file: string) =>
   /\.tsx?$/.test(file) &&
   !file.includes('node_modules') &&
   !/^apps\/[^/]+\/out\//.test(file) &&
   (file.startsWith('apps/') || /\.test\.tsx?$/.test(file) || file.includes('/fixtures/'));
 
-/** The original public-entry guard's directories; the internal sweep also reads lint's tools. */
 const inEntryScope = (file: string) =>
   file.startsWith('apps/') ||
   file.startsWith('packages/film/src/') ||
   file.startsWith('packages/film/e2e/') ||
   file.startsWith('packages/film/lint/fixtures/');
 
-/**
- * The source graph both entry guards read, read once as the file loads, every
- * file at once: its cost is in no case's time limit.
- */
 // oxlint-disable-next-line effect/noAsyncFunction -- built once as the file loads, so no case's time limit holds its cost
 const graph = await Effect.runPromise(
   Effect.gen(function* () {
@@ -246,7 +172,6 @@ const graph = await Effect.runPromise(
 describe('the package entries', () => {
   it.effect('a comment or a string that looks like code hides nothing and names nothing', () =>
     Effect.sync(() => {
-      // tools/lab.ts's shape: a line comment holding `/*`, code, then a doc comment's `*/`.
       const record = recordOf(
         'm.ts',
         [
@@ -311,7 +236,6 @@ describe('the package entries', () => {
         yield* fs.readFileString(path.join(films, 'package.json')),
       );
 
-      /** The file `from` names, as `user` imports it: a relative path, or the package's specifier. */
       const resolved = (user: string, from: string): Option.Option<string> => {
         if (from.startsWith('.'))
           return Option.some(path.relative(root, path.resolve(root, path.dirname(user), from)));

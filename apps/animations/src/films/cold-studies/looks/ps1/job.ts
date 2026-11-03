@@ -1,14 +1,3 @@
-// The ps1 verse and card. Job 9:2 lies open in a low-poly Bible on the
-// court's clerk desk, its page pixel type painted into the page's texture,
-// the camera settling over it on `page` and drifting in. The phrase is
-// highlighted in the card's blue as "Job asked it" is said; the engine floods
-// that blue out over the frame from the highlight's last line, and the card
-// is the reference's: bold sans, lower case but for "God", flush left on the
-// flat blue, every word on its word, "just" three times the size in the
-// colour script's gold with a gold bar wiped under it. The card is crisp,
-// set at the frame's own resolution: the cut from the low-res world to it
-// is the reference's cut from its 3D to its cards.
-
 import {
   type Box,
   type CardStyle,
@@ -37,14 +26,12 @@ import { type Rig, keptFor, present, rigOf } from './rig.ts';
 import { ps1, rgb } from './shade.ts';
 import { PAGE, paintPage, pageCanvas } from './type.ts';
 
-/** The card's colours: the highlight's blue is its ground, so the flood is the highlight grown. */
 export const CARD = {
   ground: '#1f3570',
   ink: '#f2e9d7',
   gold: '#e6b347',
 } as const satisfies Record<string, Hex>;
 
-/** The page's type: pixel-sized, in the page's texels. */
 const PAGE_STYLE: VerseStyle = {
   type: { family: fonts.body, size: 23, weight: 600, color: '#2a2420', leading: 1.35 },
   width: 206,
@@ -52,7 +39,6 @@ const PAGE_STYLE: VerseStyle = {
   lit: CARD.ink,
 };
 
-/** The page in the world: its size, and where the book lies. */
 const LEAF = { w: 1.0, h: 1.4 } as const;
 
 interface Desk {
@@ -67,7 +53,6 @@ const build = (r: Rig): Desk => {
   const w = r.world;
   const t = r.tex;
   const scene = new Scene();
-  // The desk top, its front edge, and the book: a leather cover, two leaves open.
   const desk = ps1(w, { map: t.desk });
   put(scene, box(6, 0.12, 3.4, 0.9), desk, 0, -0.06, 0);
   const book = new Group();
@@ -90,7 +75,6 @@ const build = (r: Rig): Desk => {
   texture.generateMipmaps = false;
   const page = put(book, sheet(LEAF.w, LEAF.h, 0.35), ps1(w, { map: texture }), 0.52, 0.16, 0);
   page.rotation.set(-Math.PI / 2, 0.09, 0);
-  // A ribbon marker across the left leaf.
   put(book, box(0.05, 0.01, 1.5), ps1(w, { tint: '#6a5a8a' }), -0.25, 0.2, 0.02);
   const camera = new PerspectiveCamera(42, 16 / 9, 0.05, 30);
   return { scene, camera, page, texture, canvas };
@@ -98,7 +82,6 @@ const build = (r: Rig): Desk => {
 
 const deskSet = keptFor(build);
 
-/** A point on the page (in its texels) as the frame's own pixels: through the 3D camera, the low-res grid and `ctx`. */
 const onFrame = (f: JobFrame, d: Desk, px: number, py: number) => {
   const p = new Vector3((px / PAGE.w - 0.5) * LEAF.w, (0.5 - py / PAGE.h) * LEAF.h, 0);
   p.applyMatrix4(d.page.matrixWorld).project(d.camera);
@@ -108,7 +91,6 @@ const onFrame = (f: JobFrame, d: Desk, px: number, py: number) => {
   return { x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f };
 };
 
-/** The highlight's box on the page, as a box on the frame. */
 const boxOnFrame = (f: JobFrame, d: Desk, b: Box): Box => {
   const corners = [
     onFrame(f, d, b.x, b.y),
@@ -136,7 +118,6 @@ const stage = (f: JobFrame, r: Rig, d: Desk): Box => {
   const lit = paintPage(d.canvas, f.at('sweep'), PAGE_STYLE, f.hand('verse'));
   d.texture.needsUpdate = true;
 
-  // The camera settles over the verse on `page`, then pushes slowly in and across it.
   const settle = f.at('page');
   const drift = f.t * 0.018;
   d.camera.position.set(
@@ -152,7 +133,6 @@ const stage = (f: JobFrame, r: Rig, d: Desk): Box => {
   return boxOnFrame(f, d, lit);
 };
 
-/** Where no WebGL 2 can be had (`check --draw`): the page flat on the frame, the verse set on it. */
 const fallback = (f: JobFrame): Box => {
   const { ctx, w, h } = f;
   ctx.fillStyle = ROOM.fog;
@@ -176,7 +156,6 @@ export const job = (f: JobFrame): Box => {
   return box;
 };
 
-/** The card's face: the reference's bold sans, cream on the blue, "just" gold. */
 const CARD_STYLE: CardStyle = {
   ground: CARD.ground,
   type: {
@@ -193,7 +172,6 @@ const CARD_STYLE: CardStyle = {
   case: 'said',
   align: 'left',
   treatment: {
-    // A gold bar wiped in under the word, quick, in hard steps.
     draw: (ctx, b, since) => {
       const wipe = Math.ceil(clamp(since / 0.1) * 6) / 6;
       ctx.fillStyle = CARD.gold;
@@ -202,7 +180,6 @@ const CARD_STYLE: CardStyle = {
   },
 };
 
-/** The reference's lower case, but "God" keeps its capital. */
 const lowered = (word: CardWord): CardWord =>
   /^\W*God\b/.test(word.text) ? word : { ...word, text: word.text.toLowerCase() };
 

@@ -1,8 +1,3 @@
-// The board's routes as an ask's Board block reads them: the record read (an
-// empty board before the first panel), an image it names served and one it
-// does not refused, a version folder's image from its own Board, and the
-// panels drawn from what has changed since, each with why.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Schema } from 'effect';
 import { ServerFailed, labUrls } from '../core/api.ts';
@@ -31,7 +26,6 @@ const board: BoardFile = {
       at: BoardName.make('righteous'),
       tries: [tried(1), tried(2)],
     },
-    // A keep the board drew from a cast file that is gone now: stale under any script read.
     {
       id: 'title.start',
       beat: BoardName.make('title'),
@@ -59,7 +53,6 @@ const board: BoardFile = {
   approvals: [],
 };
 
-/** Film `f` with its board record and its first try's image. */
 const files = () =>
   new Map<string, Uint8Array>([
     ['/films/f/scenes/index.ts', text('export {};\n')],

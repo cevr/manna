@@ -1,13 +1,3 @@
-// The critique over a match's files on disk, its counsel a stub
-// (`Counsel.layerTest`): one run answers every figure at a place, the
-// packet quotes the house rules and lists each figure's crops and flagged
-// rows, the findings land beside the match's table, the same inputs are
-// answered from the kept answer without asking again, each finding is read
-// on its own (a figure named in another case kept, one that does not read
-// rejected and said), and a counsel that fails, dies or answers no json
-// block is a skip, said in the file, never a failure. A rule section its
-// file lacks fails the critic's build.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -32,7 +22,6 @@ import { memoryFileSystem, text } from './host/testing.ts';
 
 const RULES = '# Rules\n\n## The look\n\nOne silhouette outline; hair has no ink of its own.\n';
 
-/** A match of two figures written under a temp folder's `out/f/match/s/`, with a rule file beside it. */
 const written = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -412,10 +401,8 @@ describe.concurrent("a cast sheet's critique", () => {
   );
 });
 
-/** Where the jobs' match keeps its one figure's files, in memory. */
 const STEM = '/out/f/match/s/lead.t0001.00.bb.1';
 
-/** One figure, lead, matched in scene s, its crops in memory. */
 const LEAD: MatchTaken = {
   build: 'b.1',
   scene: 's',
@@ -443,24 +430,17 @@ const LEAD_ANSWER = [
   '```',
 ].join('\n');
 
-/** A staging that names `picture` alone: each picture a packet of its own. */
 const pictured = (picture: string): CritiqueStaging => ({
   panel: Option.none(),
   picture: Option.some(picture),
 });
 
-/** How a counsel's runs went: how many were asked, how many at once now and at most, and how many it was told to reach. */
 interface Runs {
   n: number;
   now: number;
   most: number;
 }
 
-/**
- * A counsel whose run waits on `gate` when `held` says so of its packet,
- * and answers `LEAD_ANSWER`; it counts its runs, and `reached` is done once
- * `want` runs have been asked.
- */
 const gatedCounsel = (
   gate: Deferred.Deferred<boolean>,
   held: (packet: string) => boolean,
@@ -488,7 +468,6 @@ const gatedCounsel = (
     }),
   );
 
-/** The critic over `LEAD`'s crops in memory, asking `counsel`; `files` holds them. */
 const jobsCritic = (
   files: Map<string, Uint8Array>,
   counsel: Layer.Layer<Counsel, never, FileSystem.FileSystem | Path.Path>,
@@ -505,7 +484,6 @@ const jobsCritic = (
     (built) => Context.get(built, Critic),
   );
 
-/** `LEAD`'s rule file and crops, in memory. */
 const leadFiles = () =>
   new Map<string, Uint8Array>([
     ['/rules.md', text(RULES)],
@@ -533,7 +511,6 @@ describe.concurrent("the critique's jobs", () => {
           ),
         );
         expect(yield* critic.start(LEAD, pictured('the held beat'))).toBe(held);
-        // Time for a second run of its packet, were one started, to reach the counsel.
         yield* Effect.repeat(Effect.yieldNow, { times: 50 });
         expect(runs.n).toBe(34);
         expect(Option.isNone((yield* critic.job(held, Duration.zero)).critique)).toBe(true);
@@ -561,7 +538,6 @@ describe.concurrent("the critique's jobs", () => {
           critic.start(LEAD, pictured(`beat ${n}`)),
         );
         yield* Deferred.await(reached);
-        // Time for the starts past 4, were they not held back, to reach the counsel.
         yield* Effect.repeat(Effect.yieldNow, { times: 50 });
         expect(runs.n).toBe(4);
         const last = yield* critic.job(handles[5] ?? '', Duration.zero);

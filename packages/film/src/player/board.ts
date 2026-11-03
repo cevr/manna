@@ -1,10 +1,3 @@
-// The Board a render page draws (`film render --board`, `boardFilm`): the
-// film's `board.json` and the try each picture panel shows, every one decoded
-// before the first frame, read from the page's server at `boardUrls` (the
-// app's server answers them, `boardFile`). A record or an image the page
-// cannot read fails the page, naming it: a Board render draws every kept try
-// or none.
-
 import { Effect, Option, Schema } from 'effect';
 import { HttpClient } from 'effect/http';
 import { type BoardFile, BoardFileJson, shownTry } from '../core/board.ts';
@@ -12,13 +5,11 @@ import { boardUrls } from '../core/board-render.ts';
 import { BoardUnreadable } from '../core/errors.ts';
 import type { BoardImage } from '../canvas/board.ts';
 
-/** A film's Board as the page draws it: the record, and each shown try's image by its file. */
 interface LoadedBoard {
   readonly board: BoardFile;
   readonly images: ReadonlyMap<string, BoardImage>;
 }
 
-/** The bytes at `url`, read through the page's client; any failure or non-2xx status is `BoardUnreadable`. */
 const bytesAt = (film: string, url: string) =>
   Effect.gen(function* () {
     const unreadable = (reason: string) => BoardUnreadable.make({ film, url, reason });
@@ -28,7 +19,6 @@ const bytesAt = (film: string, url: string) =>
     return yield* Effect.mapError(res.arrayBuffer, (e) => unreadable(e.message));
   });
 
-/** Film `id`'s Board: its record, and the image of each picture panel's shown try, decoded. */
 export const loadBoard = (
   id: string,
 ): Effect.Effect<LoadedBoard, BoardUnreadable, HttpClient.HttpClient> =>

@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/use-render/useRender.test.tsx (its cases run
-// against useRenderElement, the engine every part renders through),
-// packages/react/src/internals/useRenderElement.test.tsx
-//
-// Dropped: the React-element `render` form (Solid has no element to clone),
-// React.lazy unwrapping and the uppercase-render-name warning (both React).
 import { describe, expect, it } from 'bun:test';
 
 import { expect as see } from '@playwright/test';
@@ -98,10 +92,6 @@ describe('mergeProps', () => {
 });
 
 describe('createUnmountAfterClose', () => {
-  // Nothing measures, focuses or reads the element, and a script's open has no
-  // pointer input after which the browser updates hover state (reading the
-  // page's style), so only the transition status can make the browser see the
-  // starting style.
   it('runs the enter transition from the starting style when a script opens it', async () => {
     const page = await h.open('transition');
     await recordTransitions(page);

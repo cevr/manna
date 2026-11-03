@@ -5,7 +5,6 @@ import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { ledgerProblems, reviewRoutes } from './ledger.ts';
 
-/** An entry of a ledger, its Guard and its Kind as given, its other fields well formed. */
 const entry = (id: string, guard: string, kind = 'owner', source = 'memory x.md') =>
   [
     `### ${id}`,
@@ -20,14 +19,12 @@ const entry = (id: string, guard: string, kind = 'owner', source = 'memory x.md'
     '',
   ].join('\n');
 
-/** The lint config of the scratch repos: one rule on, one judged rule gating, one warning. */
 const CONFIG = `{
   // comments, as JSONC
   "rules": { "no-console": "error", "judged/gates": ["error", {}], "judged/warns": ["warn", {}] },
   "overrides": [{ "files": ["**/lint/**"], "rules": { "film/own-rule": ["error", {}], "eqeqeq": "warn" } }]
 }`;
 
-/** The files the scratch repos hold beside their ledger. */
 const FILES = {
   '.oxlintrc.json': CONFIG,
   'src/thing.ts': "export const held = 1;\n// unheld\ntest('refuses a thing', () => {});\n",
@@ -37,7 +34,6 @@ const FILES = {
   'judged/warns.json': '{ "rule": "warns", "cases": [] }',
 };
 
-/** A scratch repo with `ledger` as its docs/lessons.md beside `FILES`, and its root. */
 const repoWith = (ledger: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -52,7 +48,6 @@ const repoWith = (ledger: string) =>
     return root;
   });
 
-/** The problems the ledger check finds in a scratch repo whose ledger holds `entries`. */
 const problemsOf = (...entries: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const root = yield* repoWith(`# Lessons\n\n## A section\n\n${entries.join('\n')}`);
@@ -380,7 +375,6 @@ describe('the lessons ledger', () => {
   );
 });
 
-/** `bun check.ts <root>` over a scratch repo whose ledger holds `entries`: its stdout's lines and its exit code. */
 const checkRun = (...entries: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const path = yield* Path.Path;

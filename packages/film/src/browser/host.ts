@@ -1,13 +1,3 @@
-// The page's host: the browser APIs a page reaches (animation frames, the
-// footage a talk's frames decode, the pointer, the keyboard, the clipboard, text highlights, media elements, the address bar and
-// a page load) as Effect services, built once at each page's root
-// (`mountRender`, `mountFilmStudio`, `mountReview`) from `BrowserHost.layer`
-// (`host-browser.ts`) and handed to everything on the page: the player's own
-// code runs its effects with it, and the lab's and review's runtimes are
-// given it as a layer, so a test builds the same pages over test layers
-// instead of stubbing a global. Framework-free: the player,
-// which the render page loads, imports it.
-
 import { Location, UrlState } from '@manna/url-state';
 import { Clock, Effect, Layer, Option, Scope } from 'effect';
 import type { Context } from 'effect';
@@ -22,12 +12,6 @@ import type { PageLoad } from './page-load.ts';
 import type { Pointer } from './pointer.ts';
 import type { Viewport } from './viewport.ts';
 
-/**
- * Every service the host gives a page: the address bar among them
- * (`Location`, written through `UrlState` so writes in one tick make one
- * history entry, `@manna/url-state`), and the window's media queries
- * (`Viewport`). A server render's host is `host-server.ts`'s.
- */
 export type BrowserServices =
   | Clipboard
   | Footage
@@ -41,60 +25,25 @@ export type BrowserServices =
   | UrlState.UrlState
   | Viewport;
 
-/** The host's services, built: what a page's code runs its effects with. */
 export type Host = Context.Context<BrowserServices>;
 
-/**
- * The host `layer` builds (the page's, or a test's over its own layers), for
- * the life of the page: its scope is never closed, as the page is the host's
- * lifetime.
- */
 export const hostOf = <S>(layer: Layer.Layer<S>): Context.Context<S> =>
   Effect.runSync(Effect.flatMap(Scope.make(), (scope) => Layer.buildWithScope(layer, scope)));
 
-/** The host as a layer, for a runtime the page builds (the lab's, the studio's, the review's). */
 export const hostLayer = (host: Host): Layer.Layer<BrowserServices> => Layer.succeedContext(host);
 
-/**
- * The address bar of a host, for a page's own code: what it reads, and its
- * moves, each named by why it is made. Whether a move is a step Back walks
- * is the place's to say (`pageMove`, core/api.ts), never the caller's.
- */
 interface AddressBar {
-  /** The URL as the page's writes leave it (written or still to flush). */
   readonly href: () => string;
-  /**
-   * The viewer went to `href` (a pick, a view, a jump, another place): a
-   * step Back walks where the place declares one (a new path, a cited key),
-   * else the entry is rewritten.
-   */
   readonly go: (href: string) => void;
-  /**
-   * The URL follows what the page did on its own (play, a drag, a ←/→
-   * step, a correction, a note gone, an old link's redirect): the entry is
-   * rewritten in place, never a step of its own.
-   */
   readonly follow: (href: string) => void;
-  /**
-   * The viewer dismissed what an opening put on the URL (a sheet's Close,
-   * Escape, a swipe), for `to`, where the dismissal writes (none: the URL
-   * names nothing to dismiss). Back over the entry the opening pushed
-   * (`opened`) when that entry is on screen and Back lands exactly on `to`
-   * (the same path, query in any order, and hash), so a Back after it leaves
-   * the entry before, not the opening again; else the entry on screen is
-   * rewritten to `to`, keeping a time moved since the opening, which Back
-   * would rewind.
-   */
   readonly dismiss: (opened: Option.Option<Opened>, to: Option.Option<string>) => void;
 }
 
-/** An entry an opening pushed: its key, and the href of the entry it left, where Back lands. */
 export interface Opened {
   readonly key: string;
   readonly before: string;
 }
 
-/** Whether two hrefs are one place: the same path, query (in any order) and hash. */
 const samePlace = (a: string, b: string): boolean => {
   const [x, y] = [new URL(a, 'http://place'), new URL(b, 'http://place')];
   x.searchParams.sort();
@@ -102,12 +51,6 @@ const samePlace = (a: string, b: string): boolean => {
   return x.pathname === y.pathname && x.search === y.search && x.hash === y.hash;
 };
 
-/**
- * The address bar of `host`, through its `UrlState`: writes in one tick make
- * one move, from the entry on screen to where the last of them leaves the
- * URL, so a viewer's move is judged from that entry (a play write and a jump
- * in one tick are one step, from the scene the jump left).
- */
 export const addressOn = (host: Context.Context<UrlState.UrlState | Location>): AddressBar => {
   const navigate = (to: string, history: (from: string) => 'push' | 'replace') =>
     Effect.runSyncWith(host)(
@@ -140,11 +83,6 @@ export const addressOn = (host: Context.Context<UrlState.UrlState | Location>): 
   };
 };
 
-/**
- * A reader of the monotonic time of `host`'s `Clock`, in ms (the page's
- * `performance.now` live, a test's clock in a test): for a hot path, such as
- * the play loop, that reads it every frame.
- */
 export const monotonicMs = <S>(host: Context.Context<S>): (() => number) => {
   const clock = Effect.runSyncWith(host)(Clock.clockWith(Effect.succeed));
   return () => Number(clock.monotonicTimeNanosUnsafe()) / 1e6;

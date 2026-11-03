@@ -1,6 +1,3 @@
-// What a title or a label names as a command's key is the hub's binding now,
-// as the viewer's keyboard writes it, with no literal left behind.
-
 import { describe, expect, test } from 'bun:test';
 import { Effect, Layer } from 'effect';
 import { Clipboard } from '../../browser/clipboard.ts';
@@ -11,7 +8,6 @@ import { makeHub } from '../../command/hub.ts';
 import { pageHref } from '../../core/api.ts';
 import { keysAs } from './changes.ts';
 
-/** A lab page, a Mac's or a PC's, with Note this frame bound to `n`, as the notes register it. */
 const page = (mac = false) => {
   const host = hostOf(
     Layer.mergeAll(

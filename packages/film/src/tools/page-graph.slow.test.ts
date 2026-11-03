@@ -1,12 +1,3 @@
-// The render page's code is its own: the app's pages (`LAB_PAGES`) built
-// together as the lab builds them (`LabPage`, `PageBundler`), and each
-// lab page's scripts, as its HTML and their static imports load them,
-// never hold the render page's handle (`window.__film`, `mountRender`) or the
-// encoder it alone imports (`player/encode.ts`, mediabunny). A bundler splits
-// the pages' code by the modules each reaches, so a lab page that reaches
-// the render page's module (an entry that re-exports it beside what the films
-// import) downloads the encoder on every load, a phone's too.
-
 import * as BunHttpPlatform from '@effect/platform-bun/BunHttpPlatform';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -18,25 +9,20 @@ import { LabPage, PageBundler } from './lab-page.ts';
 import { PageReads } from './api-server.ts';
 import { PageRenderer } from './page-render.ts';
 
-/** A lab page at each of its places' kinds the lab serves: an ask and a page of asks. */
 const STUDIO = [pageHref.ask('a1'), pageHref.askPage('a1')];
 
-/** What only the render page's code says: its handle, set on the window. */
 const RENDER_MARK = 'window.__film=';
 
-/** The page's reads of the API as it renders: none answered, so it renders without them. */
 const NOTHING_READ = PageReads.of({
   read: () => Effect.succeed(new Response('{}', { status: 404 })),
 });
 
-/** The scripts a page's HTML loads at once: its module entries and those it preloads. */
 const headScripts = (html: string) =>
   Array.from(
     html.matchAll(/<(?:script\b[^>]*\bsrc|link\b[^>]*rel="modulepreload"[^>]*\bhref)="([^"]+)"/g),
     (m) => m[1] ?? '',
   );
 
-/** The chunks a script imports statically (`import … from "…"`, `import "…"`), never by `import()`. */
 const staticImports = (script: string) =>
   Array.from(script.matchAll(/(?:from|import)\s*"(\/[^"]+\.js)"/g), (m) => m[1] ?? '');
 
@@ -71,12 +57,10 @@ describe("the render page's code", () => {
           );
           return yield* Effect.promise(() => response.text());
         });
-      /** Every script `href` loads at once, by path: its head's and their static imports, transitively. */
       const loaded = (href: string) =>
         Effect.gen(function* () {
           const scripts = new Map<string, string>();
           const queue = headScripts(yield* ask(href));
-          // The queue grows as it is read: each script's imports join its end.
           for (const next of queue) {
             if (scripts.has(next)) continue;
             const script = yield* ask(next);
@@ -85,7 +69,6 @@ describe("the render page's code", () => {
           }
           return scripts;
         });
-      // The render page itself holds the mark: the probe reads what it means to.
       const render = yield* loaded(pageHref.export('f'));
       expect([...render.values()].some((script) => script.includes(RENDER_MARK))).toBe(true);
       const holding = yield* Effect.forEach(STUDIO, (href) =>

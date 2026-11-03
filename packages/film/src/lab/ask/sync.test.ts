@@ -1,11 +1,3 @@
-// The synced player's driver over stand-in media (seen through the live
-// adapter) and frames run by hand: the clock's time is told to the machine
-// as it moves; a video that drifts from the clock is put back on it, one
-// within the drift is left alone; a set waiting on a stalled video resumes
-// once every video can play on; a play the browser refuses sound for plays
-// muted; only the audible video is unmuted; the clock's media that cannot
-// play is told, and so is its new media after.
-
 import { describe, expect, it, test } from 'effect-bun-test';
 import { Effect, Layer, Option } from 'effect';
 import { manualFrames } from '../../browser/fixtures/frames.ts';
@@ -15,10 +7,8 @@ import { Media } from '../../browser/media.ts';
 import { SyncEvent, SyncState, UNKNOWN_END } from './sync-machine.ts';
 import { makeSync } from './sync.ts';
 
-/** Let the forked plays settle: their answers heard, and what came of them told. */
 const settle = Effect.repeat(Effect.yieldNow, { times: 10 });
 
-/** A set's clock at `t` seconds, `a` audible. */
 const clock = (t: number, seek = 0) => ({
   t,
   start: 0,
@@ -29,7 +19,6 @@ const clock = (t: number, seek = 0) => ({
   seek,
 });
 
-/** A driver over two stand-in videos, `a` (the clock) and `b`, both loaded; what it told the machine. */
 const rig = (refuse?: { readonly a?: string; readonly b?: string }) => {
   const frames = manualFrames();
   const told: Array<SyncEvent> = [];
@@ -45,7 +34,6 @@ const rig = (refuse?: { readonly a?: string; readonly b?: string }) => {
   a.el.finishLoading(10);
   b.el.finishLoading(10);
   const release = { a: driver.attach('a', a.media), b: driver.attach('b', b.media) };
-  // The clock joined measured: the machine knows its end before any test begins.
   expect(told).toEqual([SyncEvent.Measured({ end: 10 })]);
   told.length = 0;
   return { frames, told, driver, a, b, release, tags: () => told.map((e) => e._tag) };
@@ -65,7 +53,6 @@ describe('the sync driver', () => {
     a.el.currentTime = 2;
     a.asked.length = 0;
     frames.frame(32);
-    // Put back on the clock's video's time itself: a playing picture needs no quarter in.
     expect(b.asked).toEqual(['seek 2']);
     expect(told.at(-1)).toMatchObject({ _tag: 'Ticked', t: 2 });
   });
@@ -73,12 +60,10 @@ describe('the sync driver', () => {
   test('a drifter on a slow clock (1 or 1.25 frames a second) is put back once, never again as the clock plays on', () => {
     for (const fps of [1, 1.25]) {
       const { frames, driver, a, b } = rig();
-      // The clock's video just past its frame 3's start; the follower 0.3 s ahead of it.
       let at = 3 / fps + 0.01;
       let follower = at + 0.3;
       driver.apply(SyncState.Playing({ ...clock(at), fps }));
       const seeks: Array<string> = [];
-      // Ten frames of the page (a sixtieth of a second each), both playing on.
       for (let n = 1; n <= 10; n++) {
         a.el.currentTime = at;
         b.el.currentTime = follower;
@@ -105,18 +90,14 @@ describe('the sync driver', () => {
     const { driver, a } = rig();
     const at = (t: number, fps: number, seek: number) =>
       driver.apply(SyncState.Paused({ ...clock(t, seek), fps }));
-    // A step's frame start (frame 25 at 24, 62 at 30, 1 at 29.97): a quarter of a frame in.
     at(25 / 24, 24, 1);
     expect(a.asked.slice(-2)).toEqual([`seek ${25.25 / 24}`, 'pause']);
     at(62 / 30, 30, 2);
     expect(a.asked.slice(-2)).toEqual([`seek ${62.25 / 30}`, 'pause']);
     at(1001 / 30000, 30000 / 1001, 3);
     expect(a.asked.slice(-2)).toEqual([`seek ${1.25 / (30000 / 1001)}`, 'pause']);
-    // A start with float noise in it (0.1 + 0.2 is frame 9 at 30), the same.
     at(0.1 + 0.2, 30, 4);
     expect(a.asked.slice(-2)).toEqual([`seek ${9.25 / 30}`, 'pause']);
-    // A scrub's time is the frame its timecode reads (the nearest), so the
-    // picture and the timecode agree: 0.52 s at 24 reads frame 12, 0.53 s frame 13.
     at(0.52, 24, 5);
     expect(a.asked.slice(-2)).toEqual([`seek ${12.25 / 24}`, 'pause']);
     at(0.53, 24, 6);
@@ -125,24 +106,17 @@ describe('the sync driver', () => {
 
   test("each video lands in its own frame at the clock's, once its rate is told, and is put there as it is told", () => {
     const { driver, a, b } = rig();
-    // A 24 fps clock at its frame 3 (0.125 s): its own video a quarter into that frame.
     driver.apply(SyncState.Paused({ ...clock(3 / 24, 1), fps: 24 }));
     expect(a.asked.slice(-2)).toEqual([`seek ${3.25 / 24}`, 'pause']);
-    // A 30 fps follower, told its rate: a quarter into its own frame 3 (0.1 s to 0.133 s), not its 4.
     b.asked.length = 0;
     driver.timed('b', Option.some(30));
     expect(b.asked).toEqual([`seek ${3.25 / 30}`]);
-    // The same rate told again moves nothing.
     driver.timed('b', Option.some(30));
     expect(b.asked).toEqual([`seek ${3.25 / 30}`]);
-    // Its file written again with no rate it tells: by the clock's rate again, a
-    // quarter into the clock's frame 3; told none again, it moves no more.
     driver.timed('b', Option.none());
     expect(b.asked).toEqual([`seek ${3.25 / 30}`, `seek ${3.25 / 24}`]);
     driver.timed('b', Option.none());
     expect(b.asked).toEqual([`seek ${3.25 / 30}`, `seek ${3.25 / 24}`]);
-    // Every seek after lands it in its own frames: a 30 fps clock at its frame 3
-    // (0.1 s) over a 29.97 follower, whose frame 3 starts at 0.1001 s: its frame 2.
     const ntsc = 30000 / 1001;
     driver.timed('b', Option.some(ntsc));
     driver.apply(SyncState.Paused({ ...clock(3 / 30, 2), fps: 30 }));
@@ -152,11 +126,9 @@ describe('the sync driver', () => {
 
   test("the clock's rate read puts every video on its frames again, where the clock's timecode reads", () => {
     const { driver, a, b } = rig();
-    // A link's `#t=` at frame 25 of a 24 fps video, read while the rate is the film's (30).
     driver.apply(SyncState.Paused({ ...clock(1.042, 1), fps: 30 }));
     a.asked.length = 0;
     b.asked.length = 0;
-    // The video's rate is read: no seek, but each lands in frame 25 at 24 fps.
     driver.apply(SyncState.Paused({ ...clock(1.042, 1), fps: 24 }));
     expect(a.asked).toEqual([`seek ${25.25 / 24}`, 'pause']);
     expect(b.asked).toEqual([`seek ${25.25 / 24}`, 'pause']);
@@ -167,7 +139,6 @@ describe('the sync driver', () => {
     driver.apply(SyncState.Playing({ ...clock(1.042, 1), fps: 30 }));
     a.asked.length = 0;
     b.asked.length = 0;
-    // A leader of another rate takes the clock as it plays: the videos play on.
     driver.apply(SyncState.Playing({ ...clock(1.042, 1), fps: 24 }));
     expect([...a.asked, ...b.asked].filter((asked) => asked.startsWith('seek'))).toEqual([]);
   });
@@ -203,12 +174,10 @@ describe('the sync driver', () => {
         driver.apply(SyncState.Playing(clock(0)));
         yield* b.answered;
         yield* settle;
-        // The failed video can never play on: the set waits on the ones that can.
         b.el.readyState = 1;
         driver.apply(SyncState.Buffering(clock(0)));
         frames.frame(16);
         expect(tags()).toEqual(['Resumed']);
-        // Nor is it pulled to the clock, or told to play again.
         driver.apply(SyncState.Playing(clock(0)));
         b.asked.length = 0;
         a.el.currentTime = 2;
@@ -224,7 +193,6 @@ describe('the sync driver', () => {
         const { driver, a, b } = rig({ a: 'NotAllowedError' });
         driver.apply(SyncState.Playing(clock(0)));
         expect([a.el.muted, b.el.muted]).toEqual([false, true]);
-        // The refused play's answer heard, the driver plays it again, muted.
         yield* a.answered;
         yield* a.answered;
         expect(a.asked.filter((asked) => asked === 'play')).toEqual(['play', 'play']);
@@ -244,7 +212,6 @@ describe('the sync driver', () => {
       yield* Effect.yieldNow;
       const waiting = () => [a, b, c].map((v) => v.el.listening('seeked'));
       expect(waiting()).toEqual([1, 1, 1]);
-      // `a`'s card shows another video: the seek it began is no longer waited on.
       driver.attach('a', fakeMedia().media);
       yield* Effect.yieldNow;
       expect(waiting()).toEqual([0, 1, 1]);
@@ -275,7 +242,6 @@ describe('the sync driver', () => {
       yield* a.answered;
       yield* settle;
       expect(told).toEqual([SyncEvent.MediaFailed({ reason: 'NotSupportedError' })]);
-      // Failed, its videos are paused and its clock's loop stops.
       driver.apply(SyncState.Failed({ ...clock(0), reason: 'NotSupportedError' }));
       frames.frame(16);
       expect(frames.pending()).toBe(0);
@@ -293,7 +259,6 @@ describe('the sync driver', () => {
 
   test("the clock's new media, after its last failed, is told; another's, or over a clock that plays, is not", () => {
     const { driver, tags } = rig();
-    // Not measured yet, as a fresh element is: only the replacement is told.
     const media = () => fakeMedia().media;
     driver.apply(SyncState.Playing(clock(2)));
     driver.attach('a', media());
@@ -310,13 +275,11 @@ describe('the sync driver', () => {
     b.el.finishLoading(6);
     driver.follow('b');
     expect(told).toEqual([SyncEvent.ClockMoved({ end: 6 })]);
-    // The version it followed before is heard no more; this one is.
     a.el.fire('ended');
     a.el.fire('error');
     expect(tags()).toEqual(['ClockMoved']);
     b.el.fire('ended');
     expect(tags()).toEqual(['ClockMoved', 'Ended']);
-    // Following one whose media failed, or that ended already, says so; following the same, nothing.
     a.el.ended = true;
     driver.follow('a');
     expect(tags()).toEqual(['ClockMoved', 'Ended', 'ClockMoved', 'MediaFailed', 'Ended']);
@@ -348,7 +311,6 @@ describe('the sync driver', () => {
     frames.frame(16);
     b.el.fire('ended');
     expect(told.map((e) => e._tag)).toEqual([]);
-    // Led by b, b is the clock: its time, its end and its ending.
     driver.follow('b');
     b.el.currentTime = 3;
     frames.frame(16);
@@ -370,7 +332,6 @@ describe('the sync driver', () => {
       ),
     );
     const driver = makeSync('a', (event) => told.push(event), host);
-    // Its `loadedmetadata` fired before it was attached: no `measured` is heard after.
     const a = fakeMedia();
     a.el.finishLoading(8);
     const b = fakeMedia();

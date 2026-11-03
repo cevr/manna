@@ -1,9 +1,3 @@
-/**
- * The files beside the pages that tell crawlers and browsers about the site:
- * the sitemap, robots.txt, llms.txt and the web app manifest. Each is a pure
- * function of the pages and the origin, so the tests read them without a
- * build.
- */
 import { absolute, DESCRIPTION, type Page } from './pages.ts';
 import { PALETTE } from './palette.ts';
 import { CHANNEL } from './site.ts';
@@ -11,12 +5,6 @@ import { CHANNEL } from './site.ts';
 const xmlEscape = (text: string) =>
   text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
-/**
- * The day a page last changed, where the data knows it: a series page
- * changes when a film is added, so it is its newest film's day. Other pages
- * carry no date rather than a build's, which would say they change on every
- * deploy.
- */
 export const lastModified = (page: Page): ReadonlyArray<string> => {
   if (page.view._tag !== 'Series') return [];
   return page.view.series.episodes
@@ -41,7 +29,6 @@ export const sitemap = (pages: ReadonlyArray<Page>) =>
     '',
   ].join('\n');
 
-/** The site in plain Markdown for language-model crawlers (llmstxt.org): what it is and its pages. */
 export const llmsTxt = (pages: ReadonlyArray<Page>) =>
   [
     `# ${CHANNEL.name}`,
@@ -61,7 +48,6 @@ export const llmsTxt = (pages: ReadonlyArray<Page>) =>
 export const robots = () =>
   ['User-agent: *', 'Allow: /', '', `Sitemap: ${absolute('/sitemap.xml')}`, ''].join('\n');
 
-/** The painted morning sky the page opens on and the header sits on, for the browser's own chrome. */
 export const THEME_COLOR = PALETTE.sky;
 
 export const webManifest = () => ({

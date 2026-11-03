@@ -1,8 +1,3 @@
-// The title: a teal sky over a cardboard city that rises into place, the name
-// of the film settling above it, and one small grey figure on a rooftop who
-// looks up at it. The camera tilts up a little, so the two rows of buildings
-// part in depth. `word` opens on a match cut from the name (`NAME`).
-
 import {
   at,
   drawing,
@@ -19,14 +14,8 @@ import { ROOF, cityBack, cityFront } from '../../city.ts';
 import { C, F, person } from '../../kit.ts';
 import { TITLE } from '../script.ts';
 
-/** Where the film's name splits: its first word drops into `word`. */
 const FIRST = TITLE.indexOf(' ');
 
-/**
- * The film's name as it settles: its words, where it rests (the line's
- * centre and baseline, in frame px) and its type. `word` opens on a match
- * cut from it: its first word drops onto the page from exactly here.
- */
 export const NAME = {
   first: TITLE.slice(0, FIRST),
   rest: TITLE.slice(FIRST),
@@ -39,13 +28,10 @@ export const title = drawing({
   timeline: {
     rise: { at: 'start', dur: 1.2, ease: 'outCubic' },
     settle: { at: 'start', offset: 0.17, dur: 0.6, ease: 'outCubic' },
-    // The figure looks up as the rise comes to rest.
     lookUp: { after: 'rise', offset: -0.03, dur: 0.5 },
-    // A slow tilt up over the whole title.
     tilt: { at: 'start', until: { at: 'end' }, ease: 'linear' },
   },
   knobs: {
-    // Where the tilt starts, a little low and close; it rests on the unmoved frame.
     low: [960, 580],
     lowZoom: 1.04,
   },
@@ -89,7 +75,6 @@ export const title = drawing({
       },
     ]);
 
-    // The name, with the paper shadow it casts on the sky.
     const settle = f.at('settle');
     ctx.save();
     ctx.shadowColor = `${C.boardDeep}48`;

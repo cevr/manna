@@ -1,24 +1,3 @@
-// The material an ask shows, found before the ask is kept: each material
-// block (`core/ask.ts`) looked for through the read its own view makes, so
-// an ask that names a document, a script, a Board, a video or a take the lab
-// cannot show is refused when it is made, naming what is missing. A
-// document or a video is a file the review lists (`Review.index`, the set's
-// page's read), inside its root (`Review.resolve`); a film's script is its
-// beats as the Script reader reads them (`FreshFilm.script`); a draft's, as
-// its Markdown reads now (`SeriesDrafts.read`); a Board's panels are on the
-// film's board (`BoardStore.read`); a take is one of the beat's attempts
-// the studio lists (`beatAttempts`, the studio's route's own read, which
-// refuses a beat the film does not have), the one named or the one kept. A ref
-// is a ref, never a path: the review finds it among the files it lists, or
-// it is not there. An image's `src` is one of the lab's image routes, its
-// file found by the read that route makes (a set's file by `Review.resolve`,
-// a board's by `BoardStore.image`, a note's still by `NotesStore.still`, a
-// video's frame by the review's index). That read gives what each image
-// route serves as the ask is made (`served`), which the ask store holds to
-// the receipt rule (`receipted` in `ask-store.ts`): an image the lab serves
-// no file for, a path no image route takes among them, refuses the make
-// there, named.
-
 import {
   Boolean as Bool,
   Context,
@@ -58,10 +37,6 @@ import type { StudioReadings } from './studio.ts';
 import { beatAttempts } from './studio.ts';
 import type { Takes } from './takes.ts';
 
-/**
- * What an ask is aimed at, as the keep gate reads it: its production, the
- * film its ledger names (`productionFilm`), its set, and the owner's override.
- */
 interface Aimed {
   readonly production?: string;
   readonly productionFilm?: string;
@@ -70,28 +45,11 @@ interface Aimed {
 }
 
 interface AskMaterialsService {
-  /** What `ask`'s material blocks name that the lab cannot show, each as the agent fixes it; none when all is there. Its images are held where they are copied (`served`). */
   readonly problems: (ask: Ask) => Effect.Effect<ReadonlyArray<string>>;
-  /**
-   * Each image `src` of `ask` (an image block's or an option's, on every
-   * step), once each in the order shown, with what its route serves now, by
-   * the read the route makes: a file, a video's frame, or nothing.
-   */
   readonly served: (ask: Ask) => Effect.Effect<ReadonlyArray<readonly [string, Served]>>;
-  /**
-   * Why `ask`, aimed at `aimed`, may not be made as it recommends: on a
-   * production, an ask that shows scenes or figures types each option's
-   * outcome and each keep's subject (`untypedKeeps`), and a keep on its
-   * recommended way that names a scene (`keeps.scenes`) needs its set's
-   * review of each scene and figure kept (`core/review-record.ts`), from the
-   * scene as it stands now, every finding on it answered, unless the owner's
-   * own words override it. A keep of no scene (a script, a concept, a Board)
-   * is never gated. None when it may.
-   */
   readonly evidence: (aimed: Aimed, ask: Ask) => Effect.Effect<ReadonlyArray<string>>;
 }
 
-/** What an image route serves: a file, a frame drawn from a video, or nothing. */
 type Served =
   | { readonly _tag: 'File'; readonly file: string }
   | { readonly _tag: 'Frame' }
@@ -101,21 +59,16 @@ const NOT_SERVED: Served = { _tag: 'None' };
 const FRAME_SERVED: Served = { _tag: 'Frame' };
 const fileServed = (file: string): Served => ({ _tag: 'File', file });
 
-/** `problem` when `wrong` holds, else nothing. */
 const problemIf = (wrong: boolean, problem: string): ReadonlyArray<string> =>
   Bool.match(wrong, { onFalse: () => [], onTrue: () => [problem] });
 
-/** A board's image route and a note's still's, by their path's segments after the film's. */
 const FILM_IMAGE = /^\/api\/films\/([^/]+)\/(board\/files|stills)\/([^/]+)$/;
 
-/** The review's frame route: a video's frame, by its ref in the query. */
 const FRAME = labUrls.review.frame({ query: { ref: '' } }).split('?')[0];
 
-/** A path component decoded, or none when it does not decode. */
 const decoded = (component: string): Option.Option<string> =>
   Result.getSuccess(decodeComponent(component));
 
-/** The ids `named` names that `known` does not hold. */
 const unknownOf = (
   named: Option.Option<ReadonlyArray<string>>,
   known: ReadonlyArray<string>,
@@ -141,19 +94,12 @@ export class AskMaterials extends Context.Service<AskMaterials, AskMaterialsServ
       const studio = yield* Effect.context<StudioReadings | Takes | ContentStore | FilmFolder>();
       const notes = yield* NotesStore;
 
-      /** Film `name`, when the lab has one so named; else the problem. */
       const film = (where: string, name: string) =>
         filmNamed(name).pipe(
           Effect.provideContext(films),
           Effect.mapError(() => `${where}: the lab has no film ${name}`),
         );
 
-      /**
-       * What `find` finds in the review's index: as it stands, or read again
-       * once when it does not, so a set another process wrote since the
-       * index was read (a terminal's `publish_set`) is found, as the review's
-       * own `listed` finds it.
-       */
       const indexed = <A>(find: (index: ReviewIndex) => Option.Option<A>) =>
         Effect.gen(function* () {
           const had = find(yield* review.index(false));
@@ -161,13 +107,11 @@ export class AskMaterials extends Context.Service<AskMaterials, AskMaterialsServ
           return find(yield* review.index(true));
         });
 
-      /** A read's failure as the problem `what` cannot be read. */
       const unread =
         (where: string, what: string) =>
         (error: { readonly message: string }): string =>
           `${where}: ${what} cannot be read: ${error.message}`;
 
-      /** What block `block`, on step `step`, names that the lab cannot show. */
       const found = (
         step: string,
         block: Material,
@@ -235,7 +179,6 @@ export class AskMaterials extends Context.Service<AskMaterials, AskMaterialsServ
           case 'audio':
             return Effect.gen(function* () {
               yield* film(where, block.film);
-              // The studio's own read: a beat that is not one of the film's is refused before a file is read.
               const read = yield* beatAttempts({ film: block.film, beat: block.beat }).pipe(
                 Effect.provideContext(studio),
                 Effect.mapError((error) =>
@@ -251,7 +194,6 @@ export class AskMaterials extends Context.Service<AskMaterials, AskMaterialsServ
                     !read.attempts.some((a) => a.file === attempt),
                     `${where}: ${block.film} ${block.beat} has no take ${attempt}`,
                   ),
-                // The take the timings name: an attempt kept, or a staging take.
                 onNone: () =>
                   problemIf(
                     !read.attempts.some((a) => a.kept) && Predicate.isUndefined(read.staged),
@@ -262,12 +204,6 @@ export class AskMaterials extends Context.Service<AskMaterials, AskMaterialsServ
         }
       };
 
-      /**
-       * What the lab serves at `src`, by the read its route makes: the file
-       * a set's, a board's or a note's image route serves (`File`), a frame
-       * the review draws from a video it lists (`Frame`), or nothing (a path
-       * no image route takes, or one whose read finds no file).
-       */
       const servedAt = (src: string): Effect.Effect<Served> => {
         const url = new URL(src, 'http://lab.invalid');
         const filmImage = Option.flatMap(Option.fromNullishOr(FILM_IMAGE.exec(url.pathname)), (m) =>
@@ -325,7 +261,6 @@ export class AskMaterials extends Context.Service<AskMaterials, AskMaterialsServ
         });
       };
 
-      /** Each image `src` of `ask`, once each, in the order shown. */
       const srcsOf = (ask: Ask) => [
         ...new Set(
           imagesIn(ask).flatMap((image) => Option.toArray(Option.fromUndefinedOr(image.src))),
@@ -343,7 +278,6 @@ export class AskMaterials extends Context.Service<AskMaterials, AskMaterialsServ
           (each) => each.flat(),
         );
 
-      /** The set's review record, as the set lists it, decoded; or why there is none. */
       const recordOf = (set: string) =>
         Effect.gen(function* () {
           const page = yield* review
@@ -367,7 +301,6 @@ export class AskMaterials extends Context.Service<AskMaterials, AskMaterialsServ
           );
         });
 
-      /** Each scene's key in `film` as its sources stand now, or why they cannot be read. */
       const keysNow = (film: string) =>
         fresh.project([film, '--json']).pipe(
           Effect.map((project) => new Map(project.scenes.map((s) => [s.scene, s.key]))),

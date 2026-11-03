@@ -1,10 +1,3 @@
-/**
- * EGW Commentary Service
- *
- * Provides commentary lookup by Bible verse from the EGW Bible Commentary volumes (BC1-BC7).
- * Uses the indexed paragraph_bible_refs table for fast O(1) lookups.
- */
-
 import { Context, Effect, Layer, Option, Schema } from 'effect';
 
 import type { VerseReference } from '../bible/model.js';
@@ -13,22 +6,13 @@ import { nodesToText } from '../egw/ast.js';
 import type * as EGWSchemas from '../egw/schemas.js';
 import type { CommentaryEntry, CommentaryResult } from './types.js';
 
-/**
- * Error types for the commentary service
- */
 class CommentaryError extends Schema.TaggedError<CommentaryError>()('CommentaryError', {
   message: Schema.String,
   cause: Schema.optional(Schema.Unknown),
 }) {}
 
-/**
- * Union of all commentary errors
- */
 type CommentaryServiceError = CommentaryError;
 
-/**
- * Convert EGW paragraph to commentary entry
- */
 function paragraphToEntry(
   para: EGWSchemas.Paragraph,
   bookCode: string,
@@ -45,47 +29,21 @@ function paragraphToEntry(
   };
 }
 
-// ============================================================================
-// Service Interface
-// ============================================================================
-
-/**
- * EGW Commentary service interface.
- * Provides commentary lookup from EGW Bible Commentary volumes.
- */
 export interface EGWCommentaryServiceApi {
   readonly getCommentary: (
     verse: VerseReference,
   ) => Effect.Effect<CommentaryResult, CommentaryServiceError>;
 }
 
-// ============================================================================
-// Service Definition
-// ============================================================================
-
-/**
- * EGW Commentary Service
- *
- * Provides commentary lookup from EGW Bible Commentary volumes.
- */
 export class EGWCommentaryService extends Context.Service<
   EGWCommentaryService,
   EGWCommentaryServiceApi
 >()('@manna/core/egw-commentary/service/EGWCommentaryService') {
-  /**
-   * Live implementation using EGWParagraphDatabase.
-   */
   static Live: Layer.Layer<EGWCommentaryService, never, EGWParagraphDatabase> = Layer.effect(
     EGWCommentaryService,
     Effect.gen(function* () {
       const db = yield* EGWParagraphDatabase;
 
-      /**
-       * Get commentary for a specific Bible verse
-       *
-       * Uses the indexed paragraph_bible_refs table for fast O(1) lookup
-       * instead of streaming through all paragraphs.
-       */
       const getCommentary = (
         verse: VerseReference,
       ): Effect.Effect<CommentaryResult, CommentaryServiceError> =>
@@ -110,14 +68,8 @@ export class EGWCommentaryService extends Context.Service<
     }),
   );
 
-  /**
-   * Default layer - alias for Live (backwards compatibility).
-   */
   static Default = EGWCommentaryService.Live;
 
-  /**
-   * Test implementation with configurable mock data.
-   */
   static Test = (
     config: {
       entries?: readonly CommentaryEntry[];

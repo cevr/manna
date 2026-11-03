@@ -1,25 +1,3 @@
-/**
- * The email list on Cloudflare: its resources, and its services over the
- * Worker's bindings (`./Site.ts`), with the list's model hosted on Durable
- * Objects (`../mail/model.ts`): one object a subscriber, and one for each of
- * the model's policies and projections.
- *
- * - `MailDatabase`: D1, the address book and the roster. Alchemy applies
- *   `migrations/` on deploy.
- * - `MailSender`: the Email Sending binding, allowed to send only as `FROM`
- *   (`../mail/mailer.ts`).
- * - `MailQueue`: the queue a film's send is put on, delivered one batch at a
- *   time (`DELIVERY`).
- * - `SignupLimit`: the sign-up limit (`SIGNUPS`), a Rate Limiting binding.
- *
- * The bindings' clients answer only in a running Worker or Durable Object
- * (`RuntimeContext`), as does the request's `waitUntil`, which keeps a
- * sign-up's work running while its answer goes without waiting for it
- * (`../mail/background.ts`). `layerCloudflare` is built once, as the Worker
- * starts, and each call of its services finds the runtime it runs in
- * (`inRuntime`): a request's, a queue batch's, or a Durable Object's, where
- * the model's policies and projections run.
- */
 import { RuntimeContext } from 'alchemy';
 import * as Cloudflare from '@alchemy.run/cloudflare';
 import * as DomainCloudflare from '@alchemy.run/cloudflare/Domain';
@@ -50,12 +28,6 @@ export const SignupLimit = Cloudflare.RateLimit('SIGNUP_LIMIT', {
   simple: SIGNUPS,
 });
 
-/**
- * How the queue hands a film's send to the Worker: ten deliveries a batch,
- * one batch at a time, so no two deliveries run at once and the sends stay
- * under Email Sending's rate. A failed batch is tried again a minute later,
- * five times; after that, `bun run mail:send` again resumes the send.
- */
 export const DELIVERY = {
   batchSize: 10,
   maxConcurrency: 1,
@@ -66,17 +38,12 @@ export const DELIVERY = {
 
 const Coded = Schema.Struct({ code: Schema.String });
 
-/** The code an Email Sending error carries (`E_…`), or `E_UNKNOWN`. */
 const codeOf = (cause: unknown) =>
   Option.match(Schema.decodeUnknownOption(Coded)(cause), {
     onNone: () => 'E_UNKNOWN',
     onSome: ({ code }) => code,
   });
 
-/**
- * `effect` in the runtime its caller runs in. A binding called anywhere
- * else (outside a request, a batch or a Durable Object) is a defect.
- */
 const inRuntime = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.provideServiceEffect(
     effect,
@@ -90,10 +57,6 @@ const inRuntime = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     ),
   );
 
-/**
- * The list's services and its model over the Worker's bindings, built as the
- * Worker starts: the model declares the Durable Objects it is hosted on.
- */
 export const layerCloudflare = Layer.unwrap(
   Effect.gen(function* () {
     const db = yield* Cloudflare.D1.QueryDatabase(MailDatabase);
@@ -128,8 +91,6 @@ export const layerCloudflare = Layer.unwrap(
         ),
     });
 
-    // A limit that cannot be read lets the sign-up through: the honeypot
-    // and the hour between confirm letters still hold.
     const throttle = Throttle.of({
       allow: (key) =>
         inRuntime(limit.limit({ key })).pipe(
@@ -157,7 +118,6 @@ export const layerCloudflare = Layer.unwrap(
   }),
 );
 
-/** The runtime layers the list's bindings resolve through. */
 export const MailBindings = Layer.mergeAll(
   Cloudflare.D1.QueryDatabaseBinding,
   Cloudflare.Email.SendBinding,

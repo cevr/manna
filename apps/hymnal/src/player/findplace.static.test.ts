@@ -1,17 +1,6 @@
 /* oxlint-disable effect/noGlobals -- the check parses the app's package.json with JSON.parse to read its test:slow script. */
 /* oxlint-disable effect/noNodeBuiltinImport -- the check reads the app's own source files from disk, synchronously. */
 
-/**
- * Acceptance (checkbulk S1, findlook m2, m3, o4): the find bar's seam is
- * wired, read from the source.
- *
- * - The player layer reads the find bar's place from `findPlace` in `bar.ts`.
- * - The bar's height has one rule: `PlayerBar.tsx` keeps no `tall` rule of
- *   its own and defines no `heightOf`; `bar.ts` exports `heightOf`.
- * - `glide.test.ts` carries an unknown hymn number's row.
- * - The app's `test:slow` script spaces every `&&`.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

@@ -1,25 +1,7 @@
-// Every place in the lab's sources that moves the focus from script is a named
-// site (`FOCUS_SITES`), with the paths that reach it: a command's, run from ⌘K
-// by `e2e/lab/focus-follows-input.dom.test.ts`, or one of that file's cases
-// below its command walk, each by the keyboard and by the pointer. A source
-// scan fails on a place not named here, so a new focus move is never missed
-// by the e2e's property over the ring; it reads the sources only, so the gate
-// runs it. A place is a call (`.focus(`, or the lab's `focusFor`), or a kit
-// popup's `initialFocus` or `finalFocus`, which the kit focuses when the
-// popup opens or closes. A popup's `() => false` moves
-// nothing (the kit leaves the focus where it is) and is no site. A popup with
-// neither prop takes the kit's default, which focuses it on open; the scan
-// cannot see that default, so those popups are the e2e walk's alone.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem, Path } from 'effect';
 import { expect, it } from 'effect-bun-test';
 
-/**
- * Every place in the lab's sources that moves the focus from script, by its file and its
- * callee with its first argument (a file's two alike are two rows), with the paths that
- * reach it; so is a popup that hands the kit an element or `true` (its first focusable).
- */
 const FOCUS_SITES: ReadonlyArray<readonly [file: string, call: string, reached: string]> = [
   [
     'ask/parts.tsx',
@@ -28,25 +10,14 @@ const FOCUS_SITES: ReadonlyArray<readonly [file: string, call: string, reached: 
   ],
 ];
 
-/** A call that moves the focus: `.focus(`, or the lab's helper, with its first argument. */
 const FOCUS_CALL = /(\.focus|\bfocusFor)\s*\(\s*([\w.]*)/g;
 
-/**
- * A kit popup's own focus move, with the first word its function answers; `() => false`
- * moves nothing and is left out.
- */
 const POPUP_FOCUS = /\b(initialFocus|finalFocus)=\{\s*\(\)\s*=>(?!\s*false\s*\})\s*\(?\s*([\w.]*)/g;
 
-/** The file that owns the lab's focus moves: it moves the focus for every site. */
 const HELPER = 'focus.ts';
 
-/**
- * The files read at once: four read the sources as fast as 32 do, in about
- * half the CPU time, which the unit tests' workers share.
- */
 const READS = 4;
 
-/** Every place in the lab's sources (tests and fixtures aside) that moves the focus, as `file call`. */
 const focusSites = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

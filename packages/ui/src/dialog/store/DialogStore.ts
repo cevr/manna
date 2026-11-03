@@ -1,10 +1,3 @@
-// Upstream: packages/react/src/dialog/store/DialogStore.ts
-//
-// A dialog's state: the popup's (open, mounted, elements) plus whether it
-// is modal, whether outside presses dismiss it, the ids of its title and
-// description. Opening and
-// closing go through `setOpen`: `onOpenChange` first (which may cancel),
-// then the interactions hear of it, then the state changes.
 import { type Accessor, createSignal, untrack } from 'solid-js';
 
 import type { BaseUIChangeEventDetails } from '../../internals/createBaseUIEventDetails.ts';
@@ -41,7 +34,6 @@ export interface DialogStore extends PopupStore {
   setDescriptionElementId: RegisterId;
   readonly backdropRef: { current: HTMLElement | null };
   readonly internalBackdropRef: { current: HTMLElement | null };
-  /** Asks the dialog to open or close (through `onOpenChange`, which may cancel). */
   setOpen: (open: boolean, eventDetails: BaseUIChangeEventDetails) => void;
 }
 

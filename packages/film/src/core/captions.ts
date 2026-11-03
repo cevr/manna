@@ -1,7 +1,3 @@
-// Captions from the word timings: when each line shows, in one place. The
-// burned-in captions (canvas) and the WebVTT sidecar (the renderer) both read
-// `captionCues`, so the file and the picture cannot disagree. Pure.
-
 import { Array as Arr, Option } from 'effect';
 import type { Placed } from './layout.ts';
 import { type Turn, endsClause, endsSentence } from './narration.ts';
@@ -9,15 +5,9 @@ import type { TakeWord, Word } from './schema.ts';
 import { phraseCues, shortPhrases } from './phrases.ts';
 import type { ResolvedShort } from './shorts.ts';
 
-/** A line shows this long before its first word, so the eye is there first. */
 const CAPTION_LEAD = 0.05;
-/** The last line of a take holds this long after its last word. */
 const CAPTION_HOLD = 0.6;
 
-/**
- * Group words into short caption lines, breaking where a sentence or clause ends (`SENTENCE`, `CLAUSE`) and before
- * each word in `turns`, where another voice takes over.
- */
 const captionLines = (
   words: ReadonlyArray<Word>,
   turns: ReadonlySet<number> = new Set(),
@@ -40,19 +30,12 @@ const captionLines = (
   return out;
 };
 
-/** One caption line and the span it shows, in seconds. */
 export interface CaptionCue {
   readonly start: number;
   readonly end: number;
   readonly text: string;
 }
 
-/**
- * A take's caption lines, take-local. The first leads its first word; each
- * shows until the next line's first word, so no two lines overlap. In a take
- * with turns, a line never spans two voices, and each voice's first line
- * opens with a dash, as spoken dialogue is captioned.
- */
 export const captionCues = (
   words: ReadonlyArray<Word>,
   turns: ReadonlyArray<Turn> = [],
@@ -70,7 +53,6 @@ export const captionCues = (
       onNone: () => last.value.end + CAPTION_HOLD,
       onSome: (next) => next.start,
     });
-    // Only the first line leads: a later one starts where the line before it ends.
     const lead = Arr.match(lines.slice(0, i), { onEmpty: () => CAPTION_LEAD, onNonEmpty: () => 0 });
     const start = first.value.start - lead;
     const said = line.map((w) => w.text).join(' ');
@@ -79,23 +61,11 @@ export const captionCues = (
   });
 };
 
-/**
- * How the long film times its caption lines: by the aligner's word starts, as
- * it always has. A short's captions are timed by the voice (`heard`); to time
- * the film's the same way is this one line, `= heard` (`voiced.ts`). It
- * moves every line after a pause later, by up to most of a second, in the
- * burned-in frames and the sidecar alike: pixel-moving, so the owner's call.
- */
 const filmCaptionTimes = (words: ReadonlyArray<TakeWord>): ReadonlyArray<Word> => words;
 
-/** A scene's caption lines, take-local: what the film burns in and the sidecar writes. */
 export const sceneCaptions = (p: Placed): Array<CaptionCue> =>
   captionCues(filmCaptionTimes(p.voice.words), p.voice.turns);
 
-/**
- * Every caption line of a film, in the time of the range `[from, to)`: a line
- * shows only while its scene is on screen, and a range starts at zero.
- */
 export const filmCaptions = (
   placed: ReadonlyArray<Placed>,
   range: { readonly from: number; readonly to: number },
@@ -110,10 +80,6 @@ export const filmCaptions = (
     });
   });
 
-/**
- * Every caption of a short, in the time of its range `[from, to)`: the
- * phrases its page burns in (`shortPhrases`), as it shows them.
- */
 export const shortCaptions = (
   placed: ReadonlyArray<Placed>,
   short: ResolvedShort,
@@ -128,7 +94,6 @@ export const shortCaptions = (
 
 const pad = (n: number, width: number) => String(n).padStart(width, '0');
 
-/** `HH:MM:SS.mmm`, the WebVTT timestamp. */
 export const vttTime = (secs: number): string => {
   const ms = Math.max(0, Math.round(secs * 1000));
   const h = Math.floor(ms / 3_600_000);
@@ -137,7 +102,6 @@ export const vttTime = (secs: number): string => {
   return `${pad(h, 2)}:${pad(m, 2)}:${pad(s, 2)}.${pad(ms % 1000, 3)}`;
 };
 
-/** A WebVTT file of these cues. */
 export const webVtt = (cues: ReadonlyArray<CaptionCue>): string =>
   [
     'WEBVTT',

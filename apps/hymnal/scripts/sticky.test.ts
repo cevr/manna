@@ -1,10 +1,3 @@
-/**
- * The sticky check's frame classifier, held to synthetic columns: a grey
- * ground with one-pixel hairlines drawn where a frame would show them, at
- * the iPhone 18 Pro's layout (3 px per pt, list top 62 pt, topic row 36 pt).
- * No video, no ffmpeg, no simulator.
- */
-
 import { describe, expect, it } from 'bun:test';
 
 import { Option } from 'effect';
@@ -26,14 +19,12 @@ const BAND = 260;
 const GROUND = 20;
 const LINE = 60;
 
-/** A column of the band's pixel rows with a hairline at each point place (its last pixel row). */
 const column = (...lines: ReadonlyArray<number>) => {
   const rows = Array.from({ length: BAND * layout.scale }, () => GROUND);
   for (const line of lines) rows[Math.round(line * layout.scale) - 1] = LINE;
   return rows;
 };
 
-/** The verdict of a frame whose hairlines end at these points. */
 const frame = (...lines: ReadonlyArray<number>) =>
   judge(linesIn(column(...lines), layout.scale), layout);
 
@@ -94,7 +85,6 @@ describe('the sticky frame classifier', () => {
 });
 
 describe('the frames where the list shows', () => {
-  /** The right-edge column's lines: the pinned hairline, then separators every hymn row, then a topic hairline. */
   const list = [98, 101, 145, 189, 233, 277, 313, 357];
 
   it('finds the list by its rows keeping their pitch', () => {
@@ -137,7 +127,6 @@ describe('the pinned row under the search field shown over the list top', () => 
   const SOFT = 34;
   const FIELD_BAND = 140;
 
-  /** The field column: the field's box as an even band from `from` to `to` points, clipped at the list top; then any hairlines. */
   const fieldColumn = (from: number, to: number, ...lines: ReadonlyArray<number>) => {
     const rows = Array.from({ length: FIELD_BAND * layout.scale }, () => GROUND);
     for (let y = Math.round(Math.max(from, layout.top) * layout.scale); y < to * layout.scale; y++)

@@ -1,19 +1,3 @@
-// The coverage check over one package root. It holds two things, each by real
-// path: every TypeScript source listed under the root, outside `node_modules`,
-// is in its tsconfig's program; and no program file under the root, outside
-// `node_modules`, is a declaration file. A declaration file (TypeScript's rule:
-// `a.d.ts`, `style.d.css.ts`) is in the program, but `skipLibCheck` (the root
-// tsconfig) hides its own errors, so the check refuses it.
-//
-// tsc may spell a program file otherwise than the disk does (`./foo.js` finds
-// `foo.d.TS` as `foo.d.ts` on a disk that folds case; a path through a
-// symlink), and so may the listing (a symlinked source). So the check knows
-// each listed source and each program file by its real path: that decides
-// which listed file a program file is and whether it is the package's, and
-// tsc's own spelling decides the rule. Two kinds of declaration file pass with
-// their errors hidden: one whose real path is outside the package, and one
-// whose real path is inside `node_modules` (linked in, or installed).
-
 import { Console, Effect, FileSystem, Path, Runtime, Schema, Stream } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
@@ -21,7 +5,6 @@ import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { declarations, isSource, listedFiles, uncovered } from './coverage.js';
 import { tscScript } from './tsc.js';
 
-/** tsc could not list the program: its exit code and what it printed. */
 class ListFailed extends Schema.TaggedError<ListFailed>()('ListFailed', {
   code: Schema.Finite,
   output: Schema.String,
@@ -32,7 +15,6 @@ class ListFailed extends Schema.TaggedError<ListFailed>()('ListFailed', {
   override readonly [Runtime.errorReported] = false;
 }
 
-/** Files the program leaves out. */
 class Uncovered extends Schema.TaggedError<Uncovered>()('Uncovered', {
   files: Schema.Array(Schema.String),
 }) {
@@ -45,7 +27,6 @@ class Uncovered extends Schema.TaggedError<Uncovered>()('Uncovered', {
   override readonly [Runtime.errorReported] = false;
 }
 
-/** Declaration files, whose own errors `skipLibCheck` hides. */
 class Unchecked extends Schema.TaggedError<Unchecked>()('Unchecked', {
   files: Schema.Array(Schema.String),
 }) {
@@ -61,7 +42,6 @@ class Unchecked extends Schema.TaggedError<Unchecked>()('Unchecked', {
 const text = <E>(stream: Stream.Stream<Uint8Array, E>) =>
   Stream.mkString(Stream.decodeText(stream));
 
-/** The program's files, each an absolute path as tsc prints it. */
 const programOf = (tsconfig: string) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner;
@@ -81,7 +61,6 @@ const programOf = (tsconfig: string) =>
     return listedFiles(stdout);
   }).pipe(Effect.scoped);
 
-/** Checks the package at `packageRoot` against its own tsconfig.json. */
 export const check = (packageRoot: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -92,8 +71,6 @@ export const check = (packageRoot: string) =>
       [fs.readDirectory(root, { recursive: true }), programOf(path.join(root, 'tsconfig.json'))],
       { concurrency: 2 },
     );
-    // Only the sources are resolved, so an entry inside `node_modules` (a
-    // dangling link an install left, say) is never read.
     const files = yield* Effect.forEach(
       listing.map((file) => file.split(path.sep).join('/')).filter(isSource),
       (listed) =>

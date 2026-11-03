@@ -1,9 +1,3 @@
-// A lab page's watches follow what its builds read: an app named through a
-// link is watched where it lies, one save made as the watched folders change
-// is heard, and so is a file the page newly reads, saved while it builds.
-// The app is in a temp folder, where the box's watch is the question
-// (`fixtures/lab-app.ts`).
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Option, Path, Record, Ref } from 'effect';
 import { PageBundler } from './lab-page.ts';
@@ -22,7 +16,6 @@ describe("the watches, as a build's reads change", () => {
     'an app named through a link is watched where it lies, as the bundler names what it read: a first build hears no save of its own, and a later save is heard',
     () =>
       Effect.gen(function* () {
-        // Every file the build reads lies in a folder watched from the start (an entry's).
         const { spec, write } = yield* appFolderWith({
           'ask.html': html('ask', './src/lab.ts'),
           'src/ask.server.tsx': "export const rendered = () => 'served';\n",
@@ -30,7 +23,6 @@ describe("the watches, as a build's reads change", () => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const dir = path.dirname(spec.pages.ask);
-        // The same folder by another name, as macOS names its temp folder (`/var` for `/private/var`).
         const linked = `${dir}-linked`;
         yield* fs.symlink(dir, linked);
         const through = (file: string) => path.join(linked, path.relative(dir, file));
@@ -44,7 +36,6 @@ describe("the watches, as a build's reads change", () => {
           PageBundler.layer,
         );
         const built = buildOf((yield* ask('/asks/a1')).text);
-        // Past the arming check of any watch the build began: nothing was saved since.
         const held = yield* page.wait(
           { since: built, server: Option.none(), film: Option.none() },
           '1 second',
@@ -62,7 +53,6 @@ describe("the watches, as a build's reads change", () => {
     Effect.gen(function* () {
       const { ask, script, waitWriting, waitOnce, write } = yield* app;
       yield* ask('/asks/a1');
-      // The page now reads one more folder: the watches change with its next build.
       yield* write('extra/x.ts', "export const x = 'x';\n");
       const moved = yield* waitWriting(
         0,
@@ -71,7 +61,6 @@ describe("the watches, as a build's reads change", () => {
         "import { shared } from '../lib/shared.ts';\nimport { x } from '../extra/x.ts';\nconsole.log(shared, x);\n",
       );
       expect((yield* ask('/asks/a1')).status).toBe(200);
-      // One save at once, to a folder watched before and after.
       const heard = yield* waitOnce(
         moved.build,
         '5 seconds',
@@ -88,7 +77,6 @@ describe("the watches, as a build's reads change", () => {
       const { spec, write } = yield* appFolder;
       const path = yield* Path.Path;
       const dir = path.dirname(spec.pages.ask);
-      // A bundler whose reads are scripted: the entries and `graph`, and `during` once, mid-build.
       const graph = yield* Ref.make<ReadonlyArray<string>>([path.join(dir, 'src', 'p.ts')]);
       const during = yield* Ref.make<Effect.Effect<void>>(Effect.void);
       const scripted = Layer.effect(
@@ -118,13 +106,10 @@ describe("the watches, as a build's reads change", () => {
       );
       const { page, ask } = yield* served(spec, scripted);
       yield* ask('/asks/a1');
-      // The first build may count once a save it read in the last second: the build once that is heard.
       const settled = (yield* page.wait(
         { since: 0, server: Option.none(), film: Option.none() },
         '1 second',
       )).build;
-      // p.ts now imports src/new.ts, in a folder already watched; new.ts is saved as the
-      // next build reads it, and its save is judged against the build before, which did not read it.
       yield* write('src/new.ts', 'export const v = 1;\n');
       yield* Ref.set(graph, [path.join(dir, 'src', 'p.ts'), path.join(dir, 'src', 'new.ts')]);
       const imports = yield* Effect.andThen(

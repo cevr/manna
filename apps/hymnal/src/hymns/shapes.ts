@@ -1,41 +1,13 @@
-/**
- * How to play a chord on a guitar in standard tuning (E A D G B E): which
- * fret each string is held at and by which finger, as a chord box draws it.
- * A chord is fingered as the page shows it: its degrees spelled in the key
- * the chords are played in (`playedKey`, under the capo), so the fingering
- * depends on the root's pitch, its quality and its bass alone.
- *
- * The fingerings are the guitar's usual ones, by rule:
- * - an open fingering (`OPEN`) when the chord has one: C, A, G, E and D
- *   and their kin, the strings left open sounding chord tones;
- * - else the movable forms (`MOVABLE`), each the open E, A or D form moved
- *   up the neck with a barre or the nut's place taken by a finger, at the
- *   lowest fret it reaches;
- * - a slash chord is the same fingering with its bass as its lowest
- *   sounding string: a string below it held at the bass, or the strings
- *   under one already sounding the bass muted. When neither can be played,
- *   the chord is played over its root and says so (`playedAs`).
- *
- * Fingers are given by rule too, unless an open fingering names its own
- * (Em on 2 and 3): the dots in fret order, then string order, fingers 1 to
- * 4; five or more dots take a barre of finger 1 across the lowest fret.
- * A chord nothing here can finger has none, and the sheet says so; it is
- * never given a fingering of another chord.
- */
-
 import * as Chord from '@manna/hymnal/chord';
 import { Array as Arr, Match, Option } from 'effect';
 
-/** A fretting finger: 1 the index, 4 the little finger. */
 export type Finger = 1 | 2 | 3 | 4;
 
-/** One string as the chord is played on it. */
 export type Play =
   | { readonly _tag: 'Muted' }
   | { readonly _tag: 'Open' }
   | { readonly _tag: 'Fretted'; readonly fret: number; readonly finger: Finger };
 
-/** One finger laid flat across strings `from` to `to` (0 the low E) at `fret`. */
 export interface Barre {
   readonly fret: number;
   readonly finger: Finger;
@@ -44,44 +16,27 @@ export interface Barre {
 }
 
 export interface Fingering {
-  /** The six strings, the low E first. */
   readonly strings: ReadonlyArray<Play>;
   readonly barre: Option.Option<Barre>;
-  /** The fret the box starts at: 1 at the nut, else the lowest fret held. */
   readonly first: number;
-  /** The chord played instead, when a slash chord's bass cannot be: the chord over its root. */
   readonly playedAs: Option.Option<Chord.Chord>;
 }
 
-/** Each string's open pitch class, the low E first. */
 export const TUNING = [4, 9, 2, 7, 11, 4] as const;
 
-/** The strings' names, the low E first. */
 export const STRING_NAMES = ['low E', 'A', 'D', 'G', 'B', 'high E'] as const;
 
-/** The frets a box draws. */
 export const FRETS_DRAWN = 4;
 
 const mod12 = (n: number) => ((n % 12) + 12) % 12;
 
-/** A string not played. */
 const X = -1;
 
 type Frets = ReadonlyArray<number>;
 
-// ----------------------------------------------------------------------------
-// The fingerings
-// ----------------------------------------------------------------------------
-
-/** Frets as a chart writes them, the low E first: "x32010". */
 const fretsOf = (written: string): Frets =>
   [...written].map((c) => (c === 'x' && X) || Number.parseInt(c, 16));
 
-/**
- * The open fingerings: the root's name, the quality, the frets, and the
- * fingers where they are not the rule's ("-23---": a finger per string, `-`
- * for none).
- */
 const OPEN: ReadonlyArray<readonly [string, Chord.Quality, string, string?]> = [
   ['C', '', 'x32010'],
   ['A', '', 'x02220'],
@@ -145,11 +100,6 @@ const OPEN: ReadonlyArray<readonly [string, Chord.Quality, string, string?]> = [
   ['D', '7sus4', 'xx0213'],
 ];
 
-/**
- * The movable forms: the string the root is on (0 the low E, 1 the A, 2 the
- * D), the quality, and each string's fret above or below the root's
- * (`X` not played).
- */
 const MOVABLE: ReadonlyArray<readonly [number, Chord.Quality, Frets]> = [
   [0, '', [0, 2, 2, 1, 0, 0]],
   [0, 'm', [0, 2, 2, 0, 0, 0]],
@@ -193,7 +143,6 @@ const MOVABLE: ReadonlyArray<readonly [number, Chord.Quality, Frets]> = [
   [2, '7sus4', [X, X, 0, 2, 1, 3]],
 ];
 
-/** A form moved to the lowest fret, 1 or above, that puts its root at `root`. */
 const placed = (string: number, form: Frets, root: number): Frets => {
   const held = form.filter((f) => f !== X);
   const lowest = Math.min(...held);
@@ -202,7 +151,6 @@ const placed = (string: number, form: Frets, root: number): Frets => {
   return form.map((f) => (f === X && X) || f + fret);
 };
 
-/** The fingerings to try for a root (a pitch class) and a quality, in order: open, then movable by lowest fret. */
 const candidates = (
   root: number,
   quality: Chord.Quality,
@@ -219,10 +167,6 @@ const candidates = (
 
 const lowestHeld = (frets: Frets) => Math.min(...frets.filter((f) => f > 0));
 
-// ----------------------------------------------------------------------------
-// Fingers
-// ----------------------------------------------------------------------------
-
 interface Hand {
   readonly fingers: ReadonlyArray<Option.Option<Finger>>;
   readonly barre: Option.Option<Barre>;
@@ -230,13 +174,11 @@ interface Hand {
 
 const FINGERS: ReadonlyArray<Finger> = [1, 2, 3, 4];
 
-/** The strings held down, in fret order, then string order. */
 const dotsOf = (frets: Frets): ReadonlyArray<number> =>
   frets
     .flatMap((f, s) => (f > 0 && [s]) || [])
     .toSorted((a, b) => (frets[a] ?? 0) - (frets[b] ?? 0) || a - b);
 
-/** Fingers 1 up for the dots in order, when there are four or fewer. */
 const oneEach = (frets: Frets, dots: ReadonlyArray<number>): Option.Option<Hand> =>
   Option.liftPredicate(dots, (d) => d.length <= 4).pipe(
     Option.map((held) => {
@@ -248,11 +190,6 @@ const oneEach = (frets: Frets, dots: ReadonlyArray<number>): Option.Option<Hand>
     }),
   );
 
-/**
- * Finger 1 across the lowest fret, from its lowest string held there to its
- * highest, and fingers 2 up for the rest in order: when every string the
- * barre crosses is held at its fret or above and three dots or fewer are left.
- */
 const barred = (frets: Frets, dots: ReadonlyArray<number>): Option.Option<Hand> => {
   const fret = lowestHeld(frets);
   const under = dots.filter((s) => frets[s] === fret);
@@ -269,13 +206,11 @@ const barred = (frets: Frets, dots: ReadonlyArray<number>): Option.Option<Hand> 
   return Option.some({ fingers, barre: Option.some({ fret, finger: 1, from, to }) });
 };
 
-/** The fingers a chart writes ("-23---"), when they are given. */
 const writtenHand = (written: string): Hand => ({
   fingers: [...written].map((c) => Arr.findFirst(FINGERS, (finger) => String(finger) === c)),
   barre: Option.none(),
 });
 
-/** How a hand holds `frets`, by rule: none when no hand can, or it spans more than four frets. */
 const handFor = (frets: Frets): Option.Option<Hand> => {
   const held = frets.filter((f) => f > 0);
   if (held.length > 0 && Math.max(...held) - Math.min(...held) > 3) return Option.none();
@@ -283,11 +218,6 @@ const handFor = (frets: Frets): Option.Option<Hand> => {
   return Option.orElse(oneEach(frets, dots), () => barred(frets, dots));
 };
 
-// ----------------------------------------------------------------------------
-// Tones
-// ----------------------------------------------------------------------------
-
-/** Each quality's tones above its root, and those a fingering must hold: all but a perfect fifth. */
 const TONES: Record<Chord.Quality, ReadonlyArray<number>> = {
   '': [0, 4, 7],
   m: [0, 3, 7],
@@ -305,11 +235,9 @@ const TONES: Record<Chord.Quality, ReadonlyArray<number>> = {
   '7sus4': [0, 5, 7, 10],
 };
 
-/** The pitch classes `frets` sound, the lowest string first. */
 const soundOf = (frets: Frets): ReadonlyArray<number> =>
   frets.flatMap((f, s) => (f >= 0 && [mod12((TUNING[s] ?? 0) + f)]) || []);
 
-/** Whether `frets` sound the chord on `root` of `quality`: its tones alone, each but the fifth. */
 const sounds = (frets: Frets, root: number, quality: Chord.Quality, bass: number): boolean => {
   const tones = TONES[quality].map((t) => mod12(root + t));
   const heard = new Set(soundOf(frets));
@@ -321,18 +249,8 @@ const sounds = (frets: Frets, root: number, quality: Chord.Quality, bass: number
   );
 };
 
-// ----------------------------------------------------------------------------
-// Slash chords
-// ----------------------------------------------------------------------------
-
-/** The lowest string `frets` sound. */
 const lowestSounding = (frets: Frets): number => frets.findIndex((f) => f >= 0);
 
-/**
- * `frets` with the bass under them: a lower string held at the bass (within
- * reach, the strings between muted), else the strings under the lowest one
- * already sounding the bass muted. Each way is tried from the fullest chord.
- */
 const withBass = (frets: Frets, bass: number): ReadonlyArray<Frets> => {
   const low = lowestSounding(frets);
   const below = Arr.range(0, low - 1)
@@ -356,32 +274,24 @@ const withBass = (frets: Frets, bass: number): ReadonlyArray<Frets> => {
   return [...below, ...moved, ...muted];
 };
 
-/** The strings `frets` sound. */
 const soundingStrings = (frets: Frets): ReadonlyArray<number> =>
   frets.flatMap((f, s) => (f >= 0 && [s]) || []);
 
-/** String `s` held at `f` when it is string `t`, else at `g`. */
 const heldAt = (s: number, t: number, f: number, g: number): number => {
   if (s === t) return f;
   return g;
 };
 
-/** String `s` muted when it lies under string `u`, else held at `g`. */
 const mutedUnder = (s: number, u: number, g: number): number => {
   if (s < u) return X;
   return g;
 };
 
-/** String `s` with the bass held on string `t` at fret `f`: the strings under the chord's lowest, `low`, muted but `t`. */
 const bassAt = (s: number, t: number, f: number, low: number, g: number): number => {
   if (s === t) return f;
   if (s < low) return X;
   return g;
 };
-
-// ----------------------------------------------------------------------------
-// The lookup
-// ----------------------------------------------------------------------------
 
 const fingeringOfFrets = (
   frets: Frets,
@@ -405,7 +315,6 @@ const fingeringOfFrets = (
   };
 };
 
-/** The first of `tried` a hand can hold, with its hand. */
 const firstHeld = (
   tried: ReadonlyArray<readonly [Frets, Option.Option<string>]>,
   fits: (frets: Frets) => boolean,
@@ -420,10 +329,6 @@ const firstHeld = (
     ).pipe(Option.map((hand) => [frets, hand] as const)),
   );
 
-/**
- * How to play `chord` in `key`, the key the page spells it in. None for a
- * chord no fingering here can play.
- */
 export const fingeringOf = (chord: Chord.Chord, key: Chord.Key): Option.Option<Fingering> => {
   const root = mod12(Chord.pitchClass(key.tonic) + chord.root);
   const { quality } = chord;
@@ -458,10 +363,6 @@ export const fingeringOf = (chord: Chord.Chord, key: Chord.Key): Option.Option<F
 const lowestIs = (frets: Frets, pc: number): boolean =>
   Option.exists(Option.fromUndefinedOr(soundOf(frets)[0]), (low) => low === pc);
 
-// ----------------------------------------------------------------------------
-// Words
-// ----------------------------------------------------------------------------
-
 const playWords: (play: Play) => string = Match.type<Play>().pipe(
   Match.tagsExhaustive({
     Muted: () => 'muted',
@@ -470,11 +371,6 @@ const playWords: (play: Play) => string = Match.type<Play>().pipe(
   }),
 );
 
-/**
- * A fingering as a screen reader reads it: the chord's name, what it is
- * played as, each string from the low E, and the barre. The capo is the
- * capo dial's to say: the box is the shape the hand makes, the same at any fret.
- */
 export const describe = (
   fingering: Fingering,
   name: string,

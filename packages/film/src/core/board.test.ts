@@ -99,7 +99,6 @@ describe('the board record', () => {
     expect(nextTry(p)).toBe(3);
     const after = withTries(p, [{ ...tried(3), made: 'tweak', note: 'n4' }]);
     expect(after.tries.map((t) => t.n)).toEqual([1, 2, 3]);
-    // The kept try stays what it was until one is picked.
     expect(Option.map(shownTry(after), (t) => t.n)).toEqual(Option.some(1));
   });
 });

@@ -7,9 +7,6 @@ import { FootageName } from './footage.ts';
 import { Segment, isSegment } from './segment.ts';
 import { soundEntry } from './sfx.ts';
 
-// Every name that is no single segment, or that a record lookup reads off
-// `Object.prototype`: the four times one got through (a `..` footage name, a
-// take keyed `__proto__`, a mark named `__proto__`, a `.` film) and their kin.
 const NOT_SEGMENTS = ['', '.', '..', '__proto__', 'constructor', 'prototype', 'a/b', 'a\\b', '/'];
 
 describe('Segment', () => {
@@ -24,8 +21,6 @@ describe('Segment', () => {
     );
   });
 
-  // Each name schema is `Segment.check(…)`: one its own pattern lets through
-  // (`constructor` is lower-case letters) the segment refuses.
   test.each([
     ['a board name', (name: string) => boardNamed(name)],
     ['an act', (name: string) => Schema.decodeOption(ActName)(name)],

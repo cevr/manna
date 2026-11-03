@@ -1,14 +1,3 @@
-// How the man's seated view is cut into parts (`film concept parts`): which
-// part each pixel of his kept view goes to, and what lies under his arms. He
-// sits on his stool facing the viewer, his round hands on his knees. His
-// headcloth's drape hangs behind his shoulders: the shoulder's outline crosses
-// in front of it, and each wide white sleeve runs from where that outline
-// meets the drape's hem down to the hand. Each arm is its sleeve, the soft
-// brown edge of his mantle beside it (no ink line parts the two, so the
-// sleeve takes the edge and the cut runs through the walnut, where a seam
-// shows least) and its round hand (a disc), which lies in front of the
-// mantle's lower end. Pure data.
-
 import type { HiddenEntry, PartCut } from '@manna/film/tools';
 import { CUT_AWAY, shade, sides } from '../../../cutout/prompts.ts';
 import { FAR, box } from '../../../cutout/rules.ts';
@@ -18,15 +7,12 @@ import { JOINTS } from './joints.ts';
 
 export { FRAMES, JOINTS };
 
-/** His chin's row: the head is every row above it, the top of his headcloth's drape with it, as the feast mother's veil is cut; the drape below rides his torso. */
 const CHIN = 267;
 
-/** His hip's row, at his lap below his hands: the robe is every row below it that his arms leave, with his stool, his sandals and his mantle's lower ends. */
 const HIP = 545;
 
 const POSES_1: PartCut = {
   parts: [
-    // his right arm on the viewer's left: the sleeve below the drape's hem, the mantle's edge beside it, the hand on his knee
     {
       name: 'armRight',
       take: [
@@ -51,7 +37,6 @@ const POSES_1: PartCut = {
       ],
       pivot: JOINTS['poses-1'].shoulderRight,
     },
-    // his left arm on the viewer's right
     {
       name: 'armLeft',
       take: [
@@ -76,32 +61,22 @@ const POSES_1: PartCut = {
       ],
       pivot: JOINTS['poses-1'].shoulderLeft,
     },
-    // above his chin, the headcloth's top and its band with it
     { name: 'head', take: [box(-1, -1, FAR, CHIN)] },
     { name: 'robe', take: [box(-1, HIP, FAR, FAR)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
-/** His sheet's outline ink, the darkest 1 % of his kept view (median 16,4,0). */
 const INK = [16, 4, 0, 255] as const;
 
-/** Where his body's sides run under his wide sleeves: out to his shoulders and robe, not out to the sleeves' outer edges. */
 const SIDES = sides({
   pronoun: 'his',
   lower: 'robe',
   cloth: 'the walnut-brown mantle and its soft folds',
 });
 
-/** What his view keeps as it is. */
 const KEEP = `Keep every other pixel exactly as it is: the same white headcloth with its indigo band and its drape, face, mantle, robe, stool, sandals, contact shadow, size, position and framing.`;
 
-/**
- * His view's moving parts (whose areas are painted magenta and repainted
- * beneath), and the words okra repaints them by: what lies under them, in the
- * sheet's own style. As the lead's seated view's prompt, it names no grain:
- * okra reads that sentence as speckle on the lap.
- */
 const HIDDEN_ENTRIES = {
   'poses-1': {
     moving: ['armRight', 'armLeft'],

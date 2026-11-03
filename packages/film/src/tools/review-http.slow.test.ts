@@ -1,8 +1,3 @@
-// The lab's review routes as a phone calls them: the index, a file answered
-// in ranges (206, and 416 past its end), a frame, a length, a ref that leaves
-// its root refused as unknown; and the hosts the lab answers to, its
-// listener's own name beside loopback's, a write from anywhere else refused.
-
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Schedule, Schema } from 'effect';
@@ -74,7 +69,6 @@ describe('review routes', () => {
         const path = yield* Path.Path;
         const render = path.join(yield* ReviewTestRoot, 'out', 'art', 'roof.A.mp4');
         yield* fs.writeFileString(render, 'rendered again');
-        // Its mtime moved on (2100-01-01, in seconds), as a render's is.
         yield* fs.utimes(render, 4_102_444_800, 4_102_444_800);
         const again = yield* reviewTestAsk(reviewTestGet(url, { 'if-none-match': tag }));
         expect(again.status).toBe(200);
@@ -91,7 +85,6 @@ describe('review routes', () => {
         const art = path.join(yield* ReviewTestRoot, 'out', 'art');
         yield* fs.writeFileString(path.join(art, 'big.mp4'), 'abcde'.repeat(1000));
         yield* fs.writeFileString(path.join(art, 'review.json'), '{ "videos": ["big.mp4"] }');
-        // The index finds the big video and queues its phone copy; it is there once made.
         yield* reviewTestAsk(reviewTestGet('/api/review/index?fresh'));
         const url = reviewPhoneUrl('out/art/big.mp4');
         const copy = yield* reviewTestAsk(reviewTestGet(url)).pipe(
@@ -233,7 +226,6 @@ describe('review routes', () => {
           body: '{}',
         });
       expect((yield* reviewTestAsk(write(REVIEW_TEST_HOME))).status).toBe(404);
-      // A listener is plain http: an https Origin is none of its own.
       expect((yield* reviewTestAsk(write('https://100.64.0.9:8229'))).status).toBe(403);
       expect((yield* reviewTestAsk(write('https://evil.example'))).status).toBe(403);
     }).pipe(Effect.scoped, Effect.provide(reviewHttpFixture)),

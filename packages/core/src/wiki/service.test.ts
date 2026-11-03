@@ -17,13 +17,7 @@ import { WikiSectionSources } from './section-composer.js';
 import { layerBunOrAbsent } from './artifact-fixture.js';
 import { WikiService } from './service.js';
 
-/** Builds a topics artifact on disk with the §2.2 schema and whatever rows a
- *  test declares. Real SQLite rather than a stub service: the absence contract
- *  is only worth testing against the same driver the hosts use. */
 const artifact = (input: {
-  /** A string because `meta.value` is a TEXT column: a corrupt version field is
-   *  a value the artifact can really hold, and the reader's strict parse only
-   *  has something to catch if the fixture can write one. */
   readonly schemaMajor: string;
   readonly topics?: readonly {
     readonly slug: string;
@@ -76,9 +70,6 @@ const write = (
   return file;
 };
 
-/** The catalog long tail every listing now includes. Two entries, one of which
- *  (`sanctuary`) is also authored as a flagship page in several tests — the
- *  overlap is what proves a topic appears once, as its better half. */
 const CATALOG = [
   TopicDetail.make({
     id: Schema.decodeSync(TopicId)('sanctuary'),
@@ -96,11 +87,6 @@ const CATALOG = [
 
 const catalog = TopicService.Test(CATALOG);
 
-/** These tests are about the artifact reader, not about §6, so they wire the
- *  *explicit* degraded sourcing rather than four live corpora. `NotWired` is a
- *  layer a host chooses on purpose — which is the whole point of making
- *  `WikiSectionSources` a required dependency: there is no way to simply omit
- *  it and get an unexplained empty lineup. */
 const live = (file: string): Layer.Layer<WikiService> =>
   WikiService.Live.pipe(
     Layer.provide(SqliteBun.layer({ filename: file, readonly: true })),
@@ -109,8 +95,6 @@ const live = (file: string): Layer.Layer<WikiService> =>
     Layer.orDie,
   );
 
-/** {@link live}, over an artifact this same layer builds — so the whole graph is
- *  one value a test provides at its own boundary. */
 const liveArtifact = (input: {
   readonly schemaMajor: string;
   readonly topics?: readonly {
@@ -122,22 +106,14 @@ const liveArtifact = (input: {
 }): Layer.Layer<WikiService, never, FileSystem.FileSystem | Scope.Scope> =>
   Layer.unwrap(Effect.map(artifact(input), live));
 
-/** The catalog-only wiring a host gets from a path, for the tests that supply
- *  their own file rather than {@link artifact}'s. */
 const orAbsent = (file: string): Layer.Layer<WikiService, never, FileSystem.FileSystem> =>
   layerBunOrAbsent(file).pipe(Layer.provide(catalog), Layer.provide(WikiSectionSources.NotWired));
 
-/** The typed failure `list` gives for the artifact at `file`, read at that
- *  wiring's own boundary — the corrupt case and the absent case are two
- *  different graphs, so each is its own named call rather than one provide. */
 const listFailureFrom = (file: string) =>
   Effect.flatMap(WikiService, (wiki) => Effect.flip(wiki.list({}))).pipe(
     Effect.provide(orAbsent(file)),
   );
 
-/** Every corruption the version gate should report for the artifact at `file`,
- *  read at that file's own wiring — the loop below builds a fresh artifact per
- *  case, so one shared provide cannot serve them. */
 const versionFailuresFrom = (file: string) =>
   Effect.gen(function* () {
     const wiki = yield* WikiService;
@@ -148,7 +124,6 @@ const versionFailuresFrom = (file: string) =>
     };
   }).pipe(Effect.provide(live(file)));
 
-/** The availability and listing length the artifact at `file` reports. */
 const availabilityFrom = (file: string) =>
   Effect.gen(function* () {
     const wiki = yield* WikiService;
@@ -172,9 +147,6 @@ describe('WikiService', () => {
       {
         const wiki = yield* WikiService;
         const topics = yield* wiki.list({});
-        // Flagship pages first, in artifact order, then the catalog entries no
-        // flagship page already covers — `sanctuary` is authored, so it appears
-        // once, as a flagship.
         expect(topics.map((topic: WikiPageSummary) => String(topic.slug))).toEqual([
           'sanctuary',
           '2300-days',
@@ -221,16 +193,12 @@ describe('WikiService', () => {
       const page = yield* wiki.topic(topicSlug('nowhere'));
       expect(page.status).toBe('catalog');
       expect(Option.isNone(page.core)).toBe(true);
-      // Not a *reason* — the artifact is fine, this topic simply has no core.
       expect(Option.isNone(page.unavailable)).toBe(true);
     }).pipe(Effect.provide(liveArtifact({ schemaMajor: '1' }))));
 
   test('refuses an artifact whose schema major exceeds this build', () =>
     Effect.gen(function* () {
       {
-        // Present on disk, readable, and still refused — as a typed value. The
-        // authored cores drop out; the catalog long tail does not, so a refused
-        // artifact degrades exactly as an absent one does.
         const wiki = yield* WikiService;
         const topics = yield* wiki.list({});
         expect(topics.every((topic: WikiPageSummary) => topic.status === 'catalog')).toBe(true);
@@ -255,9 +223,6 @@ describe('WikiService', () => {
   it.effect('a missing artifact yields catalog entries and a typed absence', () =>
     Effect.gen(function* () {
       const wiki = yield* WikiService;
-      // The whole point of §3.5: with no artifact the wiki is catalog-only, not
-      // empty. The catalog tables ship inside the verified bible.db, so the long
-      // tail is still fully listable.
       const topics = yield* wiki.list({});
       expect(topics.map((topic: WikiPageSummary) => String(topic.slug))).toEqual([
         'sanctuary',
@@ -281,7 +246,6 @@ describe('WikiService', () => {
       const failure = yield* Effect.flip(wiki.list({}));
       expect(failure.category).toBe('open-failed');
       expect(failure.operation).toBe('open-artifact');
-      // A defect would have killed the fiber instead of arriving here.
       expect(Option.isSome(Option.fromNullishOr(failure.message))).toBe(true);
     }).pipe(
       Effect.provide(
@@ -296,20 +260,12 @@ describe('WikiService', () => {
       const directory = yield* fs
         .makeTempDirectoryScoped({ prefix: 'bible-topics-corrupt-' })
         .pipe(Effect.orDie);
-      // Bytes that are emphatically not SQLite: the file exists, so this is the
-      // corrupt state, which must stay distinguishable from absence.
       const corrupt = `${directory}/topics.db`;
       yield* fs.writeFileString(corrupt, 'not a database at all').pipe(Effect.orDie);
 
-      // SQLite opens lazily, so garbage bytes surface on the first statement
-      // rather than at open — `corrupt` either way, and the point stands: a
-      // present-but-unreadable artifact is a typed error, never a defect and
-      // never silently reported as "not installed".
       const broken = yield* listFailureFrom(corrupt);
       expect(broken.category).toBe('corrupt');
 
-      // The same call against a path with no file is the typed absence, and it
-      // still lists the catalog.
       const absent = yield* availabilityFrom(`${directory}/absent.db`);
       expect(absent.availability).toEqual(Option.some('artifact-not-installed'));
       expect(absent.listed).toBe(2);
@@ -317,10 +273,6 @@ describe('WikiService', () => {
 
   test('reports an unreadable schema_major as corrupt, not as a usable version', () =>
     Effect.gen(function* () {
-      // `Number.parseInt('1junk', 10)` is 1, so a lenient read serves this file
-      // as v1 — every row interpreted under a schema the file never claimed.
-      // The whole artifact is present and queryable, so nothing else here would
-      // notice; the version gate is the only thing that can.
       for (const schemaMajor of ['1junk', '', ' 1', '1.5', 'NaN', '-1', '9'.repeat(30)]) {
         const file = yield* artifact({
           schemaMajor,
@@ -347,9 +299,6 @@ describe('WikiService', () => {
           schemaMajor: '1',
           topics: [{ slug: 'sanctuary', title: 'The Sanctuary', thesis: THESIS, body: EMPTY }],
         });
-        // The tables are all there; only the version row is gone. Reading such a
-        // file means guessing which schema its rows speak, which is not a
-        // degradation to smooth over.
         const database = new Database(file);
         database.exec("DELETE FROM meta WHERE key = 'schema_major'");
         database.close();
@@ -364,7 +313,6 @@ describe('WikiService', () => {
       const wiki = yield* WikiService;
       const found = yield* wiki.list({ query: 'sanctu' });
       expect(found.map((topic: WikiPageSummary) => String(topic.slug))).toEqual(['sanctuary']);
-      // A wildcard-only query must not act as a filter.
       expect((yield* wiki.list({ query: '%' })).length).toBe(2);
     }).pipe(
       Effect.provide(

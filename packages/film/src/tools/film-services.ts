@@ -1,9 +1,4 @@
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
-// The film's composition root: the services every `film` command and the lab
-// run with, the lab's pages, and the lab's start, built in one place. Its
-// one consumer is the CLI (`runFilmCli`, `cli.ts`). A consumer that built
-// these layers itself would drift from the lab it means to be
-// (`film-services.slow.test.ts` names the CLI and sweeps for another).
 
 import { AskMaterials } from './ask-materials.ts';
 import { AskStore } from './ask-store.ts';
@@ -72,68 +67,27 @@ import { SeriesDrafts } from './series-drafts.ts';
 import { StagingCache } from './staging.ts';
 import { Takes } from './takes.ts';
 
-/** What the film's services are built over: the app's folders, and how it reads a film fresh. */
 interface FilmServicesSpec {
-  /** The films folder (`<film>/scenes`, `<film>/narration`, ...). */
   readonly films: string;
-  /** The app's sound library folder (`library.ts`, its lock, `files/`, `public/`). */
   readonly sounds: string;
-  /** The app's footage library folder (its lock, `transcripts/`, `files/`), shared by its talks. */
   readonly footage: string;
-  /**
-   * The app's folders for what a run makes (`FILMS_OUT`), the lab's notes
-   * (`FILMS_LAB`) and the productions' ledgers (`FILMS_PRODUCTIONS`); the
-   * environment's value wins when it names one.
-   */
   readonly folders: { readonly out: string; readonly lab: string; readonly productions: string };
-  /** The command that runs the app's CLI: the lab reads, checks and mixes a film through it, fresh (`FreshFilm`). */
   readonly self: ReadonlyArray<string>;
-  /** The roots of the renders the lab reviews when `FILM_REVIEW_ROOTS` names none. */
   readonly roots: Effect.Effect<
     ReadonlyArray<ReviewRoot>,
     never,
     FileSystem.FileSystem | Path.Path
   >;
-  /**
-   * ElevenLabs: the real one (`ElevenLabs.layer`), or a fixture's fake, which
-   * may read the film and its media.
-   */
   readonly elevenLabs: Layer.Layer<ElevenLabs, never, FilmRepo | Media | BunServices.BunServices>;
-  /**
-   * The private store the sound and footage libraries keep their originals
-   * in: none given, the one the app's `sounds/library.ts` declares (built
-   * here, `PrivateStore.layer`); a test gives a folder of its own, so it
-   * never builds the live one.
-   */
   readonly privateStore: Option.Option<
     Layer.Layer<PrivateStore, never, FileSystem.FileSystem | Path.Path>
   >;
-  /**
-   * The folder staging takes and the day's spend are kept in: none given,
-   * the one every checkout shares (`StagingCache.fromConfig`,
-   * `~/.cache/bible-film/staging`), so the daily cap holds across them; a
-   * test gives a folder of its own.
-   */
   readonly staging: Option.Option<string>;
-  /**
-   * The app's series folder (`<series>/scripts/<draft>.md`), whose drafts the
-   * lab reads and marks beside its films (`SeriesDrafts`); none given, it
-   * lists no series.
-   */
   readonly series: Option.Option<string>;
 }
 
-/**
- * The services every `film` command and the lab run with: the films and their
- * notes, a film's source (read, written, stepped, its scenes located fresh
- * for the lab and in process for a command's stamps), the paid tools and the
- * media, the sound library, the footage library and their private store, the narrator, composer and
- * mixer, the renders' catalogue and the review over the roots, the choices,
- * the takes and the studio's readings, under the app's folders.
- */
 export const filmServices = (spec: FilmServicesSpec) => {
   const Platform = Layer.merge(BunServices.layer, BunCrypto.layerMac);
-  // The app's folders under the environment's: FILMS_OUT, FILMS_LAB and FILMS_PRODUCTIONS, when set, win.
   const Folders = ConfigProvider.layerAdd(
     ConfigProvider.fromUnknown({
       FILMS_OUT: spec.folders.out,
@@ -142,8 +96,6 @@ export const filmServices = (spec: FilmServicesSpec) => {
     }),
   );
   const Store = ContentStore.layer.pipe(Layer.provide(Platform));
-  // Every derived sound's audio and measures, made once a process and shared: the mix, the
-  // check and the options measure what a film places, the library and the mixer render it.
   const Render = SoundRender.layer;
   const Repo = FilmRepo.layer(spec.films, Option.some(spec.sounds), Option.some(spec.footage)).pipe(
     Layer.provide([Store, Platform]),
@@ -152,32 +104,23 @@ export const filmServices = (spec: FilmServicesSpec) => {
     Layer.provideMerge(Media.layer),
     Layer.provide([Repo, Platform]),
   );
-  // Staging takes by what was asked for, and the day's characters against the cap.
   const Staging = Option.match(spec.staging, {
     onNone: () => StagingCache.fromConfig,
     onSome: (dir) => StagingCache.layer(dir),
   }).pipe(Layer.provide([Store, Platform]));
   const Notes = NotesStore.layer.pipe(Layer.provide([Store, Platform]));
-  // Each production's ledger, a small committed JSON file in the app's `productions/`.
   const Productions = ProductionStore.layer.pipe(Layer.provide([Store, Platform]));
-  // Each film's storyboard: its record beside the film, its images in the film's board folder.
   const Board = BoardStore.layer.pipe(Layer.provide([Store, Repo, Platform]));
-  // The lab checks each write, and the review reads a film's options, keeps its takes and
-  // makes its mixes, through the app's CLI in a fresh process.
   const Fresh = FreshFilm.layer(spec.self).pipe(Layer.provide(Platform));
-  // The lab locates a scene's drawing fresh (`film read sites`); a command's
-  // stamps locate it in the command's own process, which imports the film as it stands.
   const Source = Layer.mergeAll(
     SceneWriter.layer.pipe(Layer.provideMerge(SceneSources.layer)),
     Stamps.layer.pipe(Layer.provide(scenesLocatedHere)),
   ).pipe(Layer.provideMerge(SourceWriter.layer), Layer.provide([Repo, Store, Fresh, Platform]));
-  // Each film's project folder: its renders, and the owner's approvals and comments on them.
   const Catalogue = RenderCatalogue.layer.pipe(Layer.provide([Store, Platform]));
   const Private = Option.match(spec.privateStore, {
     onNone: () => PrivateStore.layer(spec.sounds).pipe(Layer.provide(FetchHttpClient.layer)),
     onSome: (given) => given,
   }).pipe(Layer.provide(Platform));
-  // The library fits a recording with earshot, pinned outside the repo and run in its sandbox.
   const Library = SoundLibrary.layer(spec.sounds).pipe(
     Layer.provide([
       Store,
@@ -188,35 +131,20 @@ export const filmServices = (spec: FilmServicesSpec) => {
       Platform,
     ]),
   );
-  // The footage library's originals sync with the same private store; its copies are made
-  // over the media service's coders.
   const Footage = FootageLibrary.layer(spec.footage).pipe(
     Layer.provide(FootageMedia.layer.pipe(Layer.provide([Tools, Platform]))),
     Layer.provide([Store, Tools, Private, Platform]),
   );
   const Reviewed = Review.layerConfig(spec.roots).pipe(
     Layer.provideMerge(BunHttpPlatform.layer),
-    // Its lengths, frames and phone copies are the Media service's; a say on a
-    // set is written to its folder's catalogue.
     Layer.provide([Tools, Catalogue, Platform]),
   );
-  // The series drafts the lab reads beside the films, a mark written into the draft's Markdown.
   const Drafts = SeriesDrafts.layer(spec.series).pipe(Layer.provide([Store, Platform]));
-  // The agents' asks: a decision page each, kept under the lab's folder; a board try one shows
-  // is found on its board, and the material it shows through the reads its views make.
   const Asks = AskStore.layer.pipe(Layer.provide(AskMaterials.layer));
-  // Each film's timeline as the `timeline` tool reads it: its clock read fresh, its Board,
-  // catalogue, notes, the asks and the production's ledger.
   const Timelines = FilmTimelines.layer.pipe(Layer.provide(Asks));
-  // The agents' edits of a version's script (`beat_move`, `beat_hold`, `undo`), judged on its
-  // timeline, written through the source writer the lab's other writes share, their work filed
-  // on the production's ledger.
   const Edits = BeatEdits.layer.pipe(Layer.provideMerge(Timelines));
-  // The Script reader's staging takes, over the studio's readings, the drafts and the narrator.
   return Layer.mergeAll(ScriptVoices.layer, Asks, Edits).pipe(
     Layer.provideMerge(Layer.mergeAll(Choices.layer, StudioReadings.layer, Drafts)),
-    // The review hears each option in the mix, and writes a pick through the source writer;
-    // the lab's studio reads the film's script and voice fresh.
     Layer.provideMerge(
       Layer.mergeAll(Narrator.layer, Takes.layer, Composer.layer, Mixer.layer).pipe(
         Layer.provideMerge(
@@ -245,29 +173,17 @@ export const filmServices = (spec: FilmServicesSpec) => {
   );
 };
 
-/**
- * The lab's pages, built from the app's entries and watched while the lab
- * runs (`LabPage`), and the easel's warm pages over them, in this process's
- * Chrome (`Easel`; Chrome starts only for a look).
- */
 export const labPages = (spec: LabPageSpec) =>
   Easel.layer.pipe(
     Layer.provideMerge(LabPage.layer(spec)),
     Layer.provide(Layer.mergeAll(PageBundler.layer, PageRenderer.layer, Browser.layer)),
   );
 
-/** How often the lab's change feed reads the files it watches. */
 const FEED_EVERY = Duration.seconds(2);
 
-/**
- * The lab's routes with its MCP beside `beside`: every link at the lab's own
- * `links` (local, and the phone's when it listens there), over a change feed
- * and its event subscriptions (`mcp-events.ts`), kept while the scope is open.
- */
 const mcpRoutes = Effect.fn('film.lab.mcp')(function* (links: LabLinks, beside: BesideRoutes) {
   const events = yield* Layer.build(LabEvents.layer({ links, every: FEED_EVERY }));
   const services = yield* Effect.context<LabMcpNeeds>();
-  // The subscriptions deliver over the same feed, kept in the lab's folder by its store.
   const subscriptions = yield* Layer.build(
     McpEvents.layer.pipe(Layer.provide(Layer.succeedContext(Context.merge(services, events)))),
   );
@@ -287,12 +203,6 @@ const mcpRoutes = Effect.fn('film.lab.mcp')(function* (links: LabLinks, beside: 
   );
 });
 
-/**
- * The lab's listener at the owner's phone address (`phone`, `labPhone`):
- * bound until the scope closes, with its link; none when it is not set. One
- * this machine cannot bind (the tailnet down) or not plain `http` is logged
- * (`lab.phone.unbound`), and the lab serves loopback alone.
- */
 const phoneListener = Effect.fn('film.lab.phone')(function* (phone: Option.Option<URL>) {
   if (Option.isNone(phone)) return Option.none();
   const url = phone.value;
@@ -313,15 +223,6 @@ const phoneListener = Effect.fn('film.lab.phone')(function* (phone: Option.Optio
   );
 });
 
-/**
- * The lab served at `at`, and at the owner's phone address (`phone`) when
- * one is given, until the scope closes: one handler behind the gate on
- * every listener (a fixture's own routes, `beside`, behind it too), then
- * the easel's pages, which are the lab's own, served where it is bound.
- * With `mcp`, the lab is also an MCP server at `/mcp` for agents, over a
- * change feed the lab keeps while it runs (`lab-mcp.ts`). Its links: on
- * this machine (`localhost`), and the phone's when it listens there.
- */
 export const startLab = Effect.fn('film.lab.start')(function* (
   at: LabAt,
   phone: Option.Option<URL> = Option.none(),

@@ -1,39 +1,3 @@
-/**
- * `bun run render`: the hymnal's MIDI files to MP3 recordings in style C,
- * "Warm band" (`style.ts`), each checked (`checks.ts`), into a set outside
- * git that the app's upload sends to R2.
- *
- *   bun run render --hymns 1,46          # those hymns (unpadded numbers)
- *   bun run render --all                 # every hymn, 1 to 695
- *   bun run render --hymns 663 --out DIR --work DIR
- *   bun run render --all --load 16         # wait while the 1-minute load is over 16, not 12
- *   bun run render --lock                # make instruments.lock.json from GitHub's trees
- *   bun run render --hymns 46 --transpose 2   # the set warm-1-up2: every note 2 semitones up
- *   bun run render --set warm-2 --all         # every hymn warm-2 holds (663), into sets/warm-2/
- *
- * `--set <name>` (default `warm-1`) is one of `RECORDING_SETS`
- * (`src/recordings.ts`): `--all` renders every hymn it holds, and a hymn
- * named that it does not hold is refused. `--transpose <t>` (-5 to 6)
- * renders its key set `<set>-up<t>` or
- * `<set>-down<-t>` (`keySet`): every note moved t semitones, a stem that
- * would leave its instrument's samples moved an octave as a whole
- * (`keys.ts`, named on the hymn's line), the ticks and tempo map unchanged.
- * `--skip-manifest` and `--manifest-only` are the stream's
- * (`apps/hymnal/infra/audio/stream.ts`): its parallel renders write no
- * manifest, and at a key's end it writes the manifest alone, a record whose
- * MP3 it uploaded and deleted standing on its record.
- *
- * The cache is `$HYMN_RENDER_CACHE` (default `~/.cache/manna-hymn-render`):
- * the instruments, the sampler's build, and the set
- * (`sets/<set>/`, `sets/warm-1/` for the printed key, unless `--out` names another folder). A run prints one
- * line a hymn and a last summary line, writes the set's `manifest.json`, and
- * exits non-zero when any hymn failed. A rerun renders only what failed or
- * whose sound changed, and checks the rest again from their records
- * (`run.ts`); the summary's `stale` counts records left out of the manifest
- * because they were rendered under another config. The set is rendered on this Mac only: another host's
- * sampler and FFmpeg give other bytes.
- */
-
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Config, Effect, FileSystem, Option, Path, Schema } from 'effect';
@@ -53,12 +17,10 @@ import { configOf, GUARDS, renderHymn, roomOf, writeManifest } from './run.js';
 import { sfizzBinary } from './sfizz.js';
 import { STYLE } from './style.js';
 
-/** NodeAV's package.json, by the two fields the version is read from. */
 const NodeAvPackage = Schema.fromJsonString(
   Schema.Struct({ name: Schema.Literal('node-av'), version: Schema.String }),
 );
 
-/** NodeAV's version, from its package.json beside the module Bun resolves. */
 const nodeAvVersion = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -159,7 +121,6 @@ const render = Command.make('render', {
       yield* fs.makeDirectory(out, { recursive: true });
 
       const { text: lockText, lock } = yield* readLock;
-      // The manifest renders nothing, so it reads the instruments' lock but not the instruments.
       const fetched = flags.manifestOnly ? 0 : yield* fetchInstruments(cache, lock);
       const sfizz = yield* sfizzBinary(cache);
       const nodeAv = yield* nodeAvVersion;

@@ -8,7 +8,6 @@ const hundred = { number: 100, title: 'A' };
 const other = { number: 7, title: 'B' };
 const length = Option.some(180);
 
-/** Every player state, as it holds `track`. */
 const statesOf = (track: typeof hundred) => ({
   Loading: Player.Loading({ track }),
   Playing: Player.Playing({ track, at: 12, length }),
@@ -20,7 +19,6 @@ const statesOf = (track: typeof hundred) => ({
   Failed: Player.Failed({ track, offline: true, at: Option.some(3) }),
 });
 
-/** The buttons as `[kind, label, command tag]`: what the full player's text buttons gave at base. */
 const read = (state: Player, track: typeof hundred) =>
   buttonsOf(state, track).map((b) => [
     b.kind,

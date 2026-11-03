@@ -1,7 +1,3 @@
-// ContentStore: updates finishing together all land, in one process or many,
-// one writer holding a manifest's lock at a time; a writer that dies lets it
-// go at once; and a current hash skips the work.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -33,10 +29,8 @@ const manifest: Manifest<SoundManifest> = {
   empty: {},
 };
 
-/** A generated file, keyed by its request's hash. */
 const Asset = Schema.Struct({ hash: Schema.String, file: Schema.String });
 
-/** A manifest of many keyed assets, so racing updates each add their own. */
 const Assets = Schema.Struct({ assets: Schema.Record(Schema.String, Asset) });
 const assets: Manifest<typeof Assets.Type> = {
   file: '/films/test/assets.json',
@@ -44,10 +38,6 @@ const assets: Manifest<typeof Assets.Type> = {
   empty: { assets: {} },
 };
 
-/**
- * A store over `files`, its locks `locks`: another process, as far as its
- * locks know, beside every other store over the same ones.
- */
 const storeOn = (files: Map<string, Uint8Array>, locks: ManifestLockService) =>
   Effect.map(
     Layer.build(
@@ -59,19 +49,12 @@ const storeOn = (files: Map<string, Uint8Array>, locks: ManifestLockService) =>
     Context.get(ContentStore),
   );
 
-/** A store of its own over the disk, its locks this host's: another process, as far as they know. */
 const storeOnDisk = Effect.map(Layer.build(ContentStore.layer), Context.get(ContentStore));
 
-/** An entry `key` added to the assets. */
 const withAsset = (key: string) => (m: typeof Assets.Type) => ({
   assets: { ...m.assets, [key]: { hash: key, file: `${key}.flac` } },
 });
 
-/**
- * `effect` run while the test clock passes every wait a writer makes for
- * another's lock, from once `refused` (its first refusal, when the disk is
- * between it and its first try) is done.
- */
 const waited = <A, E>(effect: Effect.Effect<A, E>, refused: Effect.Effect<unknown> = Effect.void) =>
   Effect.gen(function* () {
     const running = yield* Effect.forkChild(effect);
@@ -80,7 +63,6 @@ const waited = <A, E>(effect: Effect.Effect<A, E>, refused: Effect.Effect<unknow
     return yield* Fiber.join(running);
   });
 
-/** Bun's lock, telling `refused` when it is refused. */
 const tellingRefusal = (refused: Deferred.Deferred<boolean>): ManifestLockService => ({
   take: (file) =>
     bunManifestLock
@@ -92,7 +74,6 @@ const tellingRefusal = (refused: Deferred.Deferred<boolean>): ManifestLockServic
       ),
 });
 
-/** The timeout of a test that starts a process of its own: a cold start's time is the machine's. */
 const SPAWNS_MS = 30_000;
 
 describe('ContentStore', () => {
@@ -125,7 +106,6 @@ describe('ContentStore', () => {
           yield* fs.readFileString(shared.file),
         );
         expect(Object.keys(stored.assets).length).toBe(40);
-        // The manifest, and its lock file, which stays.
         expect((yield* fs.readDirectory(dir)).toSorted()).toEqual([
           '.assets.json.lock',
           'assets.json',
@@ -140,8 +120,6 @@ describe('ContentStore', () => {
         const fs = yield* FileSystem.FileSystem;
         const dir = yield* fs.makeTempDirectoryScoped();
         const shared = { ...assets, file: `${dir}/assets.json` };
-        // Each change counts the writers inside at once, and goes to the disk
-        // once inside, so any other writer let in meanwhile is counted.
         const inside = { now: 0, most: 0 };
         const change = (key: string) => (m: typeof Assets.Type) =>
           Effect.gen(function* () {
@@ -188,7 +166,6 @@ describe('ContentStore', () => {
           Stream.mkString,
         );
         expect(said).toContain('held');
-        // Another process holds it: this writer waits its whole wait, and is refused.
         const first = yield* Deferred.make<boolean>();
         const store = yield* storeOnDisk.pipe(
           Effect.provideService(ManifestLock, tellingRefusal(first)),
@@ -198,7 +175,6 @@ describe('ContentStore', () => {
           Deferred.await(first),
         );
         expect(refused).toMatchObject({ _tag: 'StoreLocked', file: shared.file });
-        // Killed where it stands: the next change lands at its first try, no clock passing.
         yield* holder.kill({ killSignal: 'SIGKILL' });
         yield* Effect.ignore(holder.exitCode);
         yield* store.update(shared, withAsset('x'));
@@ -208,9 +184,6 @@ describe('ContentStore', () => {
     SPAWNS_MS,
   );
 
-  // Its parent gone however it went (a timeout, a signal to the test's process
-  // group but not the holder's, a SIGKILL), the holder's stdin ends: so it
-  // lets go, and no holder outlives its test. Real time, as its exit is.
   it.live(
     'a writer whose stdin ends, as when its parent is gone, exits and lets the lock go',
     () =>
@@ -257,7 +230,6 @@ describe('ContentStore', () => {
         yield* TestClock.adjust('1 hour');
         const refused = yield* waited(Effect.flip(cli.update(assets, withAsset('x'))));
         expect(refused).toMatchObject({ _tag: 'StoreLocked', file: assets.file });
-        // Its change cut short, as a process's end cuts it: the lock is let go.
         yield* Fiber.interrupt(held);
         yield* cli.update(assets, withAsset('x'));
         expect(Object.keys((yield* cli.read(assets)).assets)).toEqual(['x']);
@@ -278,7 +250,6 @@ describe('ContentStore', () => {
         expect(Option.isSome(again)).toBe(true);
         yield* Option.getOrElse(again, () => Effect.void);
       }
-      // Bun's, held, is one empty file beside the manifest: it writes no journal.
       const held = yield* bunManifestLock.take(file);
       expect(yield* fs.readDirectory(dir)).toEqual(['.assets.json.lock']);
       yield* Option.getOrElse(held, () => Effect.void);
@@ -319,7 +290,6 @@ describe('ContentStore', () => {
         const exit = yield* Effect.exit(nested);
         expect(Exit.isFailure(exit) && Cause.pretty(exit.cause)).toContain(assets.file);
       }
-      // Another manifest's lock, taken inside, is no lock taken again.
       yield* store.holding(assets, () => store.update(manifest, (m) => m));
       expect(Object.keys((yield* store.read(assets)).assets)).toEqual([]);
     }).pipe(Effect.scoped),

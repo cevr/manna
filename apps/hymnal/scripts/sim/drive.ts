@@ -1,14 +1,3 @@
-/**
- * The drive's steps, one per `sim.ts` command: boot a simulator (or a
- * headless browser) and a dev server, install the build, open a screen,
- * tap, scroll, shoot, read the log, and shut it all down.
- *
- * Separate commands share one drive through its session file, which `boot`
- * writes and `down` files away into the drive's output directory. The dev
- * server belongs to `serve`, a process of its own that `boot` starts and
- * leaves running: `serve` owns `one dev` in a scope, so stopping it (down's
- * SIGTERM) closes the scope and kills the server.
- */
 import {
   Array as Arr,
   Clock,
@@ -39,24 +28,15 @@ import {
 import { type Platform, Session } from './result.ts';
 import { attempt, ready, succeed } from './tools.ts';
 
-/** The simulator `sim.ts` creates, boots and shuts down; never another. */
 export const SIMULATOR = 'verify-hymnal';
-/** The device type a new `verify-hymnal` simulator takes. */
 const DEVICE_TYPE = 'iPhone 18 Pro';
 const BUNDLE_ID = 'im.cvr.hymnal';
-/** The URL scheme `install` registers in the built app, so a deep link opens a route. */
 export const SCHEME = 'hymnal';
-/** The drivers' session name, for agent-device and agent-browser alike. */
 const DRIVER_SESSION = 'verify-hymnal';
 
 const short = Duration.seconds(30);
 const build = Duration.minutes(45);
 
-/**
- * Where a drive lives: the app's folder, the state folder, this script, the
- * feature files the journeys sit beside, and the warm checkouts a drive
- * refuses to run in.
- */
 export interface Place {
   readonly app: string;
   readonly state: string;
@@ -65,7 +45,6 @@ export interface Place {
   readonly warm: ReadonlyArray<string>;
 }
 
-/** What a step reports: the files it wrote and what it saw. */
 export interface Outcome {
   readonly platform: Platform;
   readonly paths: Record<string, string>;
@@ -78,14 +57,10 @@ const outcome = (
   detail: Record<string, string | number | boolean>,
 ): Outcome => ({ platform, paths, detail });
 
-// ---------------------------------------------------------------------------
-// The session.
-
 const SessionJson = Schema.fromJsonString(Session);
 
 const sessionFile = (place: Place) => `${place.state}/session.json`;
 
-/** The booted drive, or `NoSession`. */
 export const readSession = Effect.fn('Sim.readSession')(function* (place: Place) {
   const fs = yield* FileSystem.FileSystem;
   const file = sessionFile(place);
@@ -103,9 +78,6 @@ const writeSession = Effect.fn('Sim.writeSession')(function* (place: Place, sess
   );
   yield* fs.writeFileString(sessionFile(place), text);
 });
-
-// ---------------------------------------------------------------------------
-// The simulator.
 
 const Device = Schema.Struct({ name: Schema.String, udid: Schema.String, state: Schema.String });
 const DeviceList = Schema.fromJsonString(
@@ -131,7 +103,6 @@ const decodeTool = <A>(schema: Schema.Codec<A, string>, tool: string, text: stri
     ),
   );
 
-/** Every simulator device, from `simctl list`. */
 const devices = Effect.gen(function* () {
   const text = yield* succeed('xcrun', ['simctl', 'list', 'devices', '-j'], short);
   const list = yield* decodeTool(DeviceList, 'xcrun simctl list devices', text);
@@ -141,7 +112,6 @@ const devices = Effect.gen(function* () {
 const named = (name: string) =>
   Effect.map(devices, (all) => Option.fromNullishOr(all.find((device) => device.name === name)));
 
-/** The newest available iOS runtime. */
 const runtime = Effect.gen(function* () {
   const text = yield* succeed('xcrun', ['simctl', 'list', 'runtimes', '-j'], short);
   const list = yield* decodeTool(RuntimeList, 'xcrun simctl list runtimes', text);
@@ -159,7 +129,6 @@ const runtime = Effect.gen(function* () {
   return newest.value.identifier;
 });
 
-/** The `verify-hymnal` simulator's UDID, created when it is missing. */
 const simulator = Effect.gen(function* () {
   const found = yield* named(SIMULATOR);
   if (Option.isSome(found)) return found.value.udid;
@@ -168,7 +137,6 @@ const simulator = Effect.gen(function* () {
   return udid.trim();
 });
 
-/** The drive's simulator is booted, or the step fails as `SimulatorDown`. */
 const booted = Effect.fn('Sim.booted')(function* (session: Session) {
   const all = yield* devices;
   const device = all.find((entry) => entry.udid === session.udid);
@@ -183,7 +151,6 @@ const bootSimulator = Effect.fn('Sim.bootSimulator')(function* (port: number, se
   const state = all.find((entry) => entry.udid === udid)?.state ?? 'missing';
   if (state !== 'Booted') yield* succeed('xcrun', ['simctl', 'boot', udid], short);
   yield* succeed('xcrun', ['simctl', 'bootstatus', udid, '-b'], Duration.seconds(seconds));
-  // A Debug build asks this host:port for its bundle (RCTBundleURLProvider's `RCT_jsLocation`).
   yield* succeed(
     'xcrun',
     [
@@ -201,9 +168,6 @@ const bootSimulator = Effect.fn('Sim.bootSimulator')(function* (port: number, se
   return udid;
 });
 
-// ---------------------------------------------------------------------------
-// The dev server.
-
 const answers = (port: number) =>
   Effect.gen(function* () {
     const client = yield* HttpClient.HttpClient;
@@ -212,19 +176,11 @@ const answers = (port: number) =>
     return response.status;
   }).pipe(Effect.timeout('5 seconds'));
 
-/**
- * `serve`: run `one dev` on `port` until this process is stopped, its output
- * into `<out>/server.log`. The server is acquired in this scope and killed
- * when it closes, whether the server exits, the process is interrupted or
- * stopped.
- */
 export const serve = Effect.fn('Sim.serve')(function* (place: Place, port: number, out: string) {
   const fs = yield* FileSystem.FileSystem;
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
   yield* fs.makeDirectory(out, { recursive: true });
   const args = ['dev', '--port', String(port), '--host', '127.0.0.1'];
-  // vxrn's orphan check ends `one dev` once its parent's parent is launchd,
-  // as `serve`'s is: a shell between them is that parent, and `serve` its.
   const server = yield* Effect.acquireRelease(
     spawner.spawn(
       ChildProcess.make(
@@ -250,11 +206,6 @@ export const serve = Effect.fn('Sim.serve')(function* (place: Place, port: numbe
   return yield* ToolFailed.make({ tool: 'one', args, exitCode, output: `exited; see ${log}` });
 }, Effect.scoped);
 
-/**
- * Start `serve` as a process of its own, left running past this command; its
- * pid. A shell starts it in the background and exits, so `serve` outlives
- * this command's runtime, which ends the children it spawned itself.
- */
 const startServer = Effect.fn('Sim.startServer')(function* (
   place: Place,
   port: number,
@@ -272,7 +223,6 @@ const startServer = Effect.fn('Sim.startServer')(function* (
     place.state,
   ];
   const background = 'nohup "$0" "$@" >/dev/null 2>&1 & echo $!';
-  // The dev server's iOS bundles compile with the Hermes compiler `boot` found.
   const command = Option.match(hermesc, {
     onNone: () => ['bun', ...args],
     onSome: (compiler) => ['/usr/bin/env', `HERMESC_PATH=${compiler}`, 'bun', ...args],
@@ -284,14 +234,12 @@ const startServer = Effect.fn('Sim.startServer')(function* (
   return parsed;
 });
 
-/** The server process is gone, or still there after the wait. */
 const gone = (pid: number) =>
   Effect.gen(function* () {
     const alive = yield* attempt('kill', ['-0', String(pid)], short);
     if (alive.exitCode === 0) return yield* Effect.fail('running');
   });
 
-/** Stop `serve` (SIGTERM closes its scope, which kills `one dev`); SIGKILL if it outlasts the wait. */
 const stopServer = Effect.fn('Sim.stopServer')(function* (pid: number) {
   yield* attempt('kill', ['-TERM', String(pid)], short);
   yield* ready('the dev server to stop', 15, gone(pid)).pipe(
@@ -323,21 +271,12 @@ const serverUp = Effect.fn('Sim.serverUp')(function* (
   return pid;
 });
 
-// ---------------------------------------------------------------------------
-// Targets: an accessibility id or label.
-
 interface Target {
   readonly by: 'id' | 'label';
   readonly value: string;
-  /** The element's role, when a name alone matches more than one (`link`, `button`). */
   readonly role: Option.Option<string>;
 }
 
-/**
- * `id=<testID>` or `label=<accessibility label>`; a bare word is a label.
- * A leading `role=<role> ` narrows it to elements of that role, as
- * `role=link label=100, Great Is Thy Faithfulness`.
- */
 export const parseTarget = (text: string): Target => {
   const unquote = (value: string) => value.replace(/^"(.*)"$/s, '$1');
   const narrowed = /^role=(\w+) (.*)$/s.exec(text);
@@ -348,23 +287,19 @@ export const parseTarget = (text: string): Target => {
   return { by: 'label', value: rest, role };
 };
 
-/** A double-quoted selector value, its quotes and backslashes escaped. */
 const quoted = (value: string) => `"${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
 
-/** agent-device's selector for the target. */
 const iosSelector = (target: Target) =>
   [
     ...Option.toArray(Option.map(target.role, (role) => `role=${role}`)),
     `${target.by}=${quoted(target.value)}`,
   ].join(' ');
 
-/** The HTML elements whose role is implicit, by role: react-native-web renders a link as `<a>`. */
 const IMPLICIT = new Map([
   ['link', 'a'],
   ['button', 'button'],
 ]);
 
-/** The CSS selector react-native-web renders the target as. */
 const webSelector = (target: Target) => {
   const named = {
     id: `[data-testid=${quoted(target.value)}]`,
@@ -382,16 +317,9 @@ const webSelector = (target: Target) => {
 const device = (args: ReadonlyArray<string>, limit = short) =>
   succeed('agent-device', [...args, '--session', DRIVER_SESSION], limit);
 
-/** The driver's app session: the app comes forward, or launches. */
 const openApp = (udid: string, limit = short) =>
   device(['open', BUNDLE_ID, '--platform', 'ios', '--udid', udid], limit);
 
-/**
- * An app step on iOS (`scroll`, `back`). agent-device runs these only in an
- * app session an `open` started, and answers SESSION_NOT_FOUND before one
- * (a drive whose first step is not `sim open` or `sim install`); the step
- * then opens the session and runs once more.
- */
 const inApp = (udid: string, args: ReadonlyArray<string>, limit = short) =>
   device(args, limit).pipe(
     Effect.catchTag('ToolFailed', (failed) => {
@@ -400,18 +328,15 @@ const inApp = (udid: string, args: ReadonlyArray<string>, limit = short) =>
     }),
   );
 
-/** The browser's launch flags: a drive never plays sound through the host's speakers. */
 const MUTED = '--mute-audio,--disable-audio-output';
 const browser = (args: ReadonlyArray<string>, limit = short) =>
   succeed('agent-browser', ['--session', DRIVER_SESSION, ...args], limit);
 
-/** A driver's failed wait for `text`, as `TargetMissing` with what the driver said. */
 const missingFrom = (session: Session, text: string) => (failed: ToolFailed) =>
   Effect.fail(
     TargetMissing.make({ target: text, platform: session.platform, driver: failed.output }),
   );
 
-/** The target is on screen within `seconds`, or the step fails as `TargetMissing`. */
 const present = Effect.fn('Sim.present')(function* (
   session: Session,
   text: string,
@@ -430,15 +355,11 @@ const present = Effect.fn('Sim.present')(function* (
   ).pipe(Effect.catchTag('ToolFailed', missing));
 });
 
-// ---------------------------------------------------------------------------
-// The steps.
-
 export interface BootOptions {
   readonly platform: Platform;
   readonly port: number;
   readonly out: Option.Option<string>;
   readonly seconds: number;
-  /** The Hermes compiler the dev server builds iOS bundles with, as `HERMESC_PATH`. */
   readonly hermesc: Option.Option<string>;
 }
 
@@ -478,7 +399,6 @@ const bootSimulatorFor = (options: BootOptions) => {
   return bootSimulator(options.port, options.seconds);
 };
 
-/** The plist `install` edits so the app answers `hymnal://` links. */
 const plist = (place: Place) => `${place.app}/ios/Hymnal/Info.plist`;
 const PLIST_BUDDY = '/usr/libexec/PlistBuddy';
 
@@ -507,12 +427,6 @@ const registerScheme = Effect.fn('Sim.registerScheme')(function* (file: string) 
   return true;
 });
 
-/**
- * Build the checkout's Debug simulator app; its path. It prebuilds first
- * when `ios/` is missing or `prebuild` asks: `ios/build/generated` holds the
- * codegen pod install wrote, so an `ios/` whose `build/` was removed needs
- * one too.
- */
 const buildApp = Effect.fn('Sim.buildApp')(function* (
   place: Place,
   out: string,
@@ -536,7 +450,6 @@ const buildApp = Effect.fn('Sim.buildApp')(function* (
     '-derivedDataPath',
     `${ios}/build/dd`,
     'SKIP_BUNDLING=1',
-    // One architecture: a universal simulator build is twice the disk.
     'ARCHS=arm64',
     'ONLY_ACTIVE_ARCH=YES',
     'build',
@@ -553,11 +466,6 @@ const buildApp = Effect.fn('Sim.buildApp')(function* (
   return { app: `${ios}/build/dd/Build/Products/Debug-iphonesimulator/Hymnal.app`, registered };
 });
 
-/**
- * A built app given to `install`, copied into the drive's output with the
- * scheme registered and the copy signed again (ad hoc, as a simulator build
- * is): the given app is left as it is.
- */
 const copyApp = Effect.fn('Sim.copyApp')(function* (given: string, out: string) {
   const fs = yield* FileSystem.FileSystem;
   const app = `${out}/Hymnal.app`;
@@ -573,11 +481,8 @@ const copyApp = Effect.fn('Sim.copyApp')(function* (given: string, out: string) 
 });
 
 export interface InstallOptions {
-  /** A built app to install instead of building this checkout. */
   readonly app: Option.Option<string>;
-  /** Run `prebuild:native` (`one prebuild`) before the build. */
   readonly prebuild: boolean;
-  /** A target that shows once the app has drawn. */
   readonly expect: string;
   readonly seconds: number;
 }
@@ -607,23 +512,14 @@ export const install = Effect.fn('Sim.install')(function* (place: Place, options
   );
 });
 
-/** A deep link as each platform opens it: `hymnal://<path>` on iOS, the route on the web. */
 export const linkFor = (platform: Platform, port: number, link: string) => {
   const route = link.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/^\//, '');
   if (platform === 'ios') return `${SCHEME}://${route}`;
   return `http://127.0.0.1:${port}/${route}`;
 };
 
-/** The system's question before it hands a link to the app, and its answer. */
 const OPEN_PROMPT = 'label="Open in “Hymnal”?"';
 
-/**
- * iOS asks "Open in “Hymnal”?" before it gives a `hymnal://` link to the
- * app; a reader taps Open, so the drive does too. An earlier link left
- * unanswered stacks its own prompt under this one, so each prompt up to
- * three is answered; no prompt within 3 s (the app already has the link) is
- * not a failure. How many were answered.
- */
 const confirmOpen = Effect.fn('Sim.confirmOpen')(function* (session: Session) {
   let answered = 0;
   while (answered < 3) {
@@ -640,7 +536,6 @@ const confirmOpen = Effect.fn('Sim.confirmOpen')(function* (session: Session) {
   return answered;
 });
 
-/** How `open` opens: `terminate` stops the app first (iOS), so it launches afresh. */
 export interface OpenOptions {
   readonly terminate?: boolean;
 }
@@ -657,13 +552,8 @@ export const open = Effect.fn('Sim.open')(function* (
   let prompts = 0;
   if (session.platform === 'ios') {
     const udid = yield* booted(session);
-    // A retried open starts the app afresh; an app that is not running has
-    // nothing to terminate, which is no failure.
     if (options.terminate === true)
       yield* Effect.ignore(succeed('xcrun', ['simctl', 'terminate', udid, BUNDLE_ID], short));
-    // The driver's app session: `install` opens it, and a drive of an app
-    // installed before this boot opens it here (the app comes forward, or
-    // launches).
     yield* openApp(udid, Duration.seconds(seconds));
     yield* succeed('xcrun', ['simctl', 'openurl', udid, url], short);
     prompts = yield* confirmOpen(session);
@@ -686,7 +576,6 @@ export const tap = Effect.fn('Sim.tap')(function* (place: Place, text: string, s
   return outcome(session.platform, {}, { target: text });
 });
 
-/** Type `value` into a text field, replacing what it held. */
 export const fill = Effect.fn('Sim.fill')(function* (
   place: Place,
   text: string,
@@ -702,10 +591,6 @@ export const fill = Effect.fn('Sim.fill')(function* (
   return outcome(session.platform, {}, { target: text, value });
 });
 
-/**
- * Go back as a reader does: the header's back button on iOS (the app's own
- * stack), the browser's Back on the web.
- */
 export const back = Effect.fn('Sim.back')(function* (place: Place) {
   const session = yield* readSession(place);
   if (session.platform === 'ios') {
@@ -718,7 +603,6 @@ export const back = Effect.fn('Sim.back')(function* (place: Place) {
 export const DIRECTIONS = ['up', 'down', 'left', 'right'] as const;
 export type Direction = (typeof DIRECTIONS)[number];
 
-/** A step in each direction, as `scrollBy(x, y)` takes it. */
 const STEP: Record<Direction, readonly [number, number]> = {
   up: [0, -600],
   down: [0, 600],
@@ -726,11 +610,6 @@ const STEP: Record<Direction, readonly [number, number]> = {
   right: [600, 0],
 };
 
-/**
- * The page script that scrolls the screen one step: react-native-web's
- * ScrollView is a div of its own, so the window never scrolls; the tallest
- * element that can scroll is the screen's.
- */
 const scrollScript = (direction: Direction) => {
   const [x, y] = STEP[direction];
   return [
@@ -744,11 +623,6 @@ const scrollScript = (direction: Direction) => {
   ].join('\n');
 };
 
-/**
- * Scroll the screen one step in `direction` (target `screen`), or until the
- * target shows: on iOS by scrolling `direction` until it does, on the web by
- * scrolling it into view.
- */
 export const scroll = Effect.fn('Sim.scroll')(function* (
   place: Place,
   text: string,
@@ -787,7 +661,6 @@ export const shot = Effect.fn('Sim.shot')(function* (place: Place, name: Option.
   return outcome(session.platform, { shot: file }, {});
 });
 
-/** Save the screen's accessibility tree as text under `<out>/snapshots`: what a step left on screen, by role and name. */
 export const snapshot = Effect.fn('Sim.snapshot')(function* (
   place: Place,
   name: Option.Option<string>,
@@ -804,14 +677,8 @@ export const snapshot = Effect.fn('Sim.snapshot')(function* (
   return outcome(session.platform, { snapshot: file }, { lines: lines(tree) });
 });
 
-/** What `record` does: start a video, or stop and save it. */
 export const RECORD = ['start', 'stop'] as const;
 
-/**
- * Record the screen: `start` begins `<out>/video/<name>.mp4` (the
- * simulator) or `.webm` (the browser) through the driver, `stop` saves it.
- * The browser starts muted, so its video has no sound.
- */
 export const record = Effect.fn('Sim.record')(function* (
   place: Place,
   action: (typeof RECORD)[number],
@@ -833,7 +700,6 @@ export const record = Effect.fn('Sim.record')(function* (
   return outcome(session.platform, { video: file }, { action });
 });
 
-/** The app log's file name: the simulator's unified log, or the page's console. */
 const LOG_NAME: Record<Platform, string> = { ios: 'app', web: 'console' };
 
 const lines = (text: string) => text.split('\n').filter((line) => line.length > 0).length;
@@ -851,7 +717,6 @@ export const log = Effect.fn('Sim.log')(function* (place: Place) {
   );
 });
 
-/** The app's log since boot: the simulator's unified log for Hymnal, or the page's console. */
 const appLog = Effect.fn('Sim.appLog')(function* (session: Session) {
   if (session.platform === 'web') return yield* browser(['console']);
   const udid = yield* booted(session);
@@ -896,10 +761,6 @@ export const down = Effect.fn('Sim.down')(function* (place: Place) {
   );
 });
 
-// ---------------------------------------------------------------------------
-// The journey's steps: see a target, pan, hold, relaunch, and clean the build.
-
-/** What `down --clean` deletes under the app, for good: the native build, the pods, the web export. */
 export const CLEAN_PATHS: ReadonlyArray<string> = ['ios/build', 'ios/Pods', 'dist'];
 
 export interface Point {
@@ -907,7 +768,6 @@ export interface Point {
   readonly y: number;
 }
 
-/** A pan from a point, or from the centre of a target, by `dx` and `dy` points over `ms`. */
 export interface Pan {
   readonly from: Point | string;
   readonly dx: number;
@@ -915,7 +775,6 @@ export interface Pan {
   readonly ms: number;
 }
 
-/** The target shows within `seconds`, or the step fails as `TargetMissing`. */
 export const sees = Effect.fn('Sim.sees')(function* (place: Place, text: string, seconds: number) {
   const session = yield* readSession(place);
   if (session.platform === 'ios') yield* booted(session);
@@ -932,7 +791,6 @@ const isRect = Schema.is(Rect);
 const isJson = Schema.is(Schema.Json);
 const decodeJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Json));
 
-/** The first rect in a driver's JSON answer, searched depth first. */
 const rectIn = (value: Schema.Json): Option.Option<typeof Rect.Type> => {
   if (isRect(value)) return Option.some(value);
   if (!Predicate.isObject(value)) return Option.none();
@@ -943,7 +801,6 @@ const rectIn = (value: Schema.Json): Option.Option<typeof Rect.Type> => {
   return Option.none();
 };
 
-/** The centre of the target's rect on screen, in points, read from agent-device. */
 const centreOf = Effect.fn('Sim.centreOf')(function* (session: Session, text: string) {
   yield* present(session, text, 10);
   const answer = yield* device(['get', 'attrs', iosSelector(parseTarget(text)), '--json']);
@@ -958,7 +815,6 @@ const centreOf = Effect.fn('Sim.centreOf')(function* (session: Session, text: st
   return { x: Math.round(x + width / 2), y: Math.round(y + height / 2) } satisfies Point;
 });
 
-/** Pan as a finger does (iOS): from a point or a target's centre, by `dx` and `dy`. */
 export const gesture = Effect.fn('Sim.gesture')(function* (place: Place, pan: Pan) {
   const session = yield* readSession(place);
   if (session.platform !== 'ios')
@@ -975,11 +831,6 @@ export const gesture = Effect.fn('Sim.gesture')(function* (place: Place, pan: Pa
   );
 });
 
-/**
- * Pinch as two fingers do (iOS), centred on a point or a target's centre:
- * `scale` below 1 closes the fingers (a pinch in), above 1 spreads them.
- * agent-device's `gesture pinch` takes no duration.
- */
 export const pinch = Effect.fn('Sim.pinch')(function* (
   place: Place,
   at: Point | string,
@@ -995,7 +846,6 @@ export const pinch = Effect.fn('Sim.pinch')(function* (
   return outcome(session.platform, {}, { x: centre.x, y: centre.y, scale });
 });
 
-/** Press and hold the target for `ms` (iOS), then wait `settle` seconds for what it opens. */
 export const hold = Effect.fn('Sim.hold')(function* (
   place: Place,
   text: string,
@@ -1012,33 +862,23 @@ export const hold = Effect.fn('Sim.hold')(function* (
   return outcome(session.platform, {}, { target: text, ms, settle });
 });
 
-/** Start the app afresh: terminate and launch it (iOS), or reload the page (web). */
 export const relaunch = Effect.fn('Sim.relaunch')(function* (place: Place) {
   const session = yield* readSession(place);
   if (session.platform === 'ios') {
     const udid = yield* booted(session);
-    // An app that is not running has nothing to terminate, which is no failure.
     yield* Effect.ignore(succeed('xcrun', ['simctl', 'terminate', udid, BUNDLE_ID], short));
     yield* openApp(udid);
   } else yield* browser(['reload']);
   return outcome(session.platform, {}, {});
 });
 
-/** How many times, 500 ms apart, `clean` looks for the stopped server's port to come free. */
 const PORT_FREE_LOOKS = 10;
 
-/** The pids listening on `port`, as lsof lists them; empty when it is free. */
 const listenersOn = (port: number) =>
   Effect.map(attempt('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t'], short), (done) =>
     done.output.trim(),
   );
 
-/**
- * Delete the build output under the app for good (`CLEAN_PATHS`), then
- * check the stopped drive's port is free. A path whose real path is not
- * that path under the app's real path (a symlink, here or above it) is
- * refused before anything is deleted, never followed.
- */
 export const clean = Effect.fn('Sim.clean')(function* (
   place: Place,
   port: Option.Option<number>,
@@ -1075,17 +915,12 @@ export const clean = Effect.fn('Sim.clean')(function* (
   return outcome(platform, doomed, { removed: Object.keys(doomed).length });
 });
 
-// ---------------------------------------------------------------------------
-// The doctor: is this drive worth driving?
-
-/** The parent of `pid`, or none once the chain ends. */
 const parentOf = (pid: number) =>
   Effect.map(attempt('ps', ['-o', 'ppid=', '-p', String(pid)], short), (done) => {
     const parent = Number.parseInt(done.output.trim(), 10);
     return Option.liftPredicate(parent, (ppid) => done.exitCode === 0 && ppid > 1);
   });
 
-/** `pid` is `ancestor` or runs under it. */
 const descends = Effect.fn('Sim.descends')(function* (pid: number, ancestor: number) {
   let at = Option.some(pid);
   while (Option.isSome(at)) {
@@ -1095,14 +930,8 @@ const descends = Effect.fn('Sim.descends')(function* (pid: number, ancestor: num
   return false;
 });
 
-/** Lines of the dev server's log that report a failed request or build. */
 const FAILURE = /\b(error|failed|5\d\d)\b/i;
 
-/**
- * Read-only checks of the booted drive, in order; the first that fails is
- * the result (`Unhealthy` names it). Load above the core count fails
- * nothing, but `timingsHold` says no timing of this drive claims anything.
- */
 export const doctor = Effect.fn('Sim.doctor')(function* (place: Place) {
   const fs = yield* FileSystem.FileSystem;
   const session = yield* readSession(place);
@@ -1160,23 +989,16 @@ export const doctor = Effect.fn('Sim.doctor')(function* (place: Place) {
   );
 });
 
-// ---------------------------------------------------------------------------
-// The drive as a service: the commands drive through `Drive`, so a test
-// stands a fake in its place and `sim.ts` provides `DriveLive`.
-
-/** What the live drive's steps need from the host. */
 type Host =
   | ChildProcessSpawner.ChildProcessSpawner
   | FileSystem.FileSystem
   | Path.Path
   | HttpClient.HttpClient;
 
-/** A step with its host requirements already met. */
 type Hosted<F> = F extends (...args: infer A) => Effect.Effect<infer X, infer E, Host>
   ? (...args: A) => Effect.Effect<X, E>
   : never;
 
-/** The drive's steps, each taking the place first. */
 export interface DriveMembers {
   readonly readSession: Hosted<typeof readSession>;
   readonly boot: Hosted<typeof boot>;
@@ -1202,7 +1024,6 @@ export interface DriveMembers {
 
 export class Drive extends Context.Service<Drive, DriveMembers>()('@manna/hymnal-app/sim/Drive') {}
 
-/** The drive on this host: the simulator, the browser and the dev server. */
 export const DriveLive = Layer.effect(
   Drive,
   Effect.gen(function* () {

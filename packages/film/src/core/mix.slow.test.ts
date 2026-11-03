@@ -43,7 +43,6 @@ import { measuredSounds } from './testing.ts';
 
 const RATE = MIX_RATE;
 
-/** `secs` of mono `value`. */
 const mono = (secs: number, value: number): Pcm => {
   const frames = Math.round(secs * RATE);
   return { rate: RATE, frames, channels: [new Float32Array(frames).fill(value)] };
@@ -59,7 +58,6 @@ const plan = (over: Partial<MixPlan<Pcm>>): MixPlan<Pcm> => ({
   ...over,
 });
 
-/** `secs` of a mono sine at `hz`, peaking at `amp` (loudness weighting ignores a constant). */
 const tone = (secs: number, amp: number, hz: number): Pcm => {
   const frames = Math.round(secs * RATE);
   const plane = new Float32Array(frames);
@@ -67,10 +65,8 @@ const tone = (secs: number, amp: number, hz: number): Pcm => {
   return { rate: RATE, frames, channels: [plane] };
 };
 
-/** A bus's left channel at `secs`. */
 const at = (bus: Pcm, secs: number) => bus.channels[0]?.[Math.round(secs * RATE)];
 
-/** Mono at 0.5, spread to a side: −3 dB. */
 const SIDE = Math.fround(0.5 * Math.SQRT1_2);
 
 const take = (sound: Pcm, secs: number) => ({
@@ -111,7 +107,6 @@ describe('renderMix', () => {
   });
 
   test('a staging take is never lifted past the ceiling', () => {
-    // A take that peaks at 0.5 with quiet speech around it: the peak holds the lift back.
     const spiky = mono(1, 0.02);
     spiky.channels[0]?.fill(0.5, 100, 110);
     const staged = renderMix(plan({ voice: [{ ...take(spiky, 0), staged: true }] }));
@@ -128,7 +123,6 @@ describe('renderMix', () => {
   });
 
   describe('mastering', () => {
-    // A 1 kHz tone reads close to its RMS in LUFS, so each is a known loudness.
     test('a quiet track is brought up to the target loudness', () => {
       const mixed = renderMix(plan({ voice: [take(tone(2, 0.02, 1000), 1)] }));
       expect(loudness(mixed.master).integrated).toBeCloseTo(MASTER.loudness, 0);
@@ -142,7 +136,6 @@ describe('renderMix', () => {
     });
 
     test('a lift never takes a peak past the limiter: headroom caps it', () => {
-      // Quiet overall, with one peak near full scale: the peak holds the lift back.
       const quiet = tone(2, 0.01, 1000);
       quiet.channels[0]?.fill(0.8, RATE, RATE + 20);
       const mixed = renderMix(plan({ voice: [take(quiet, 1)] }));
@@ -158,7 +151,6 @@ describe('renderMix', () => {
   });
 
   test('the score fades in over its first two seconds and out over the film’s last six', () => {
-    // No voice: nothing to level against, so the score plays as it is.
     const score = { option: 'piano', sound: mono(10, 0.5), under: -18, alone: -6 };
     const music = Option.getOrThrow(
       renderMix(plan({ seconds: 10, score: Option.some(score) })).music,
@@ -172,7 +164,6 @@ describe('renderMix', () => {
   describe('the score against the voice', () => {
     const seconds = 20;
     const score = { option: 'piano', sound: tone(seconds, 0.3, 500), under: -18, alone: -6 };
-    /** `bus`'s loudness from `from` to `to` seconds. */
     const lufs = (bus: Pcm, from: number, to: number) =>
       loudness(slice(bus, Math.round(from * RATE), Math.round((to - from) * RATE))).integrated;
 
@@ -190,7 +181,6 @@ describe('renderMix', () => {
       const voice = [take(tone(4, 0.3, 1000), 0), take(tone(4, 0.3, 1000), 12)];
       const mixed = renderMix(plan({ seconds, voice, score: Option.some(partial) }));
       const music = Option.getOrThrow(mixed.music);
-      // The silent rest does not pull the level: the voice's 12 s take hears no music.
       expect(lufs(music, 2, 3.8) - loudness(mixed.voice).integrated).toBeCloseTo(-18, 0);
       const after = slice(music, 8 * RATE, (seconds - 8) * RATE);
       expect(after.channels.every((plane) => plane.every((x) => x === 0))).toBe(true);
@@ -206,7 +196,6 @@ describe('renderMix', () => {
         renderMix(plan({ seconds, voice: late, score: Option.some(score) })).music,
       );
       expect(lufs(rested, 6, 8) - lufs(rested, 2, 3.8)).toBeCloseTo(12, 0);
-      // Down again a quarter of a second before the voice speaks.
       expect(lufs(rested, 10, 12)).toBeCloseTo(lufs(rested, 2, 3.8), 0);
     });
   });
@@ -240,7 +229,6 @@ describe('renderMix', () => {
     const beds = Option.getOrThrow(renderMix(plan({ seconds: 10, beds: [bed] })).beds);
     expect(at(beds, 0.5)).toBe(0);
     expect(at(beds, 1.5)).toBeCloseTo(SIDE / 2, 4);
-    // Across each wrap the equal-power crossfade never drops a constant sound below −3 dB.
     for (const t of [3, 4.6, 5.2, 6.5, 7.5]) expect(at(beds, t)).toBeGreaterThan(SIDE * 0.7);
     expect(at(beds, 8.5)).toBeCloseTo(SIDE / 2, 4);
     expect(at(beds, 9.5)).toBe(0);
@@ -526,7 +514,6 @@ describe('mixPlan', () => {
       for (const tap of taps) {
         let measured = -26;
         if (sourceLabel(tap.sound).endsWith('/1.flac')) measured = -20;
-        // −8 under the voice, within the default jitter's ±1 dB.
         const heard = measured + 20 * Math.log10(tap.gain);
         expect(Math.abs(heard - (VOICE_LEVEL - 8))).toBeLessThanOrEqual(1 + 1e-9);
         expect(Math.abs(tap.pitch)).toBeLessThanOrEqual(0.5);
@@ -542,7 +529,6 @@ describe('mixPlan', () => {
       expect(new Set(chimes.map((c) => sourceLabel(c.sound))).size).toBe(2);
     });
 
-    /** The plan of `sounds` with `tone.tick` placed at the start of each scene. */
     const ticked = (given: MeasuredSounds) =>
       Result.getOrThrow(
         mixPlan({
@@ -643,7 +629,6 @@ describe('mixPlan', () => {
       onset.forEach((t, i) =>
         expect(t.at).toBeCloseTo((started[i]?.at ?? Number.NaN) - (onsetAt.get(t.label) ?? 0), 9),
       );
-      // Each take moves by its own onset: the second, 10 ms in, starts 10 ms early.
       expect(onset.some((t, i) => t.at !== started[i]?.at)).toBe(true);
     });
 
@@ -671,7 +656,6 @@ describe('mixPlan', () => {
       expect(renamed.effects).not.toEqual(original.effects);
       expect(mixKey(renamed)).not.toBe(mixKey(original));
 
-      // Decode the actual sound declaration so the seed must survive its owner schema.
       const inherited = Schema.decodeSync(Sound)({ ...sound, seed: input.film });
       expect(forFilm(input.film, inherited)).toEqual(original);
       const reused = forFilm('painted-version', inherited);
@@ -797,7 +781,6 @@ describe('mixKey', () => {
         pieces: new Map(),
       }),
     );
-    // The key a drawn film's plan has always had: its takes play whole, so pieces add nothing to it.
     expect(mixKey(plan)).toBe('01045f97');
   });
 });
@@ -814,7 +797,6 @@ describe("a talk's voice, played in pieces", () => {
   const cut = Result.getOrThrow(talkCut(talk, { a: take }));
   const placed = Result.getOrThrow(layout(cut.scenes, cut.timings, 30));
   const pieces = cut.sections[0]?.pieces ?? [];
-  /** The plan with the section's voice at `file`, known by `content`. */
   const planOf = (file: string, content: string) =>
     Result.getOrThrow(
       mixPlan({
@@ -832,14 +814,12 @@ describe("a talk's voice, played in pieces", () => {
     );
   const VOICE = `/out/footage/${take.source}/voice.flac`;
   const planned = planOf(VOICE, `${take.source} ${VOICE_RECIPE}`);
-  /** The take's voice: `level(i)` at its `i`th sample, with a click (1) at each second of `clicks`. */
   const voiceOf = (level: (i: number) => number, clicks: ReadonlyArray<number>): Pcm => {
     const frames = Math.round(take.envelope.length * 0.01 * RATE);
     const plane = Float32Array.from({ length: frames }, (_, i) => level(i));
     for (const t of clicks) plane[Math.round(t * RATE)] = 1;
     return { rate: RATE, frames, channels: [plane] };
   };
-  /** The voice bus with `voice` as the take's voice file. */
   const busOf = (voice: Pcm) =>
     renderMix({
       ...planned,
@@ -869,13 +849,10 @@ describe("a talk's voice, played in pieces", () => {
   });
 
   test('fades each piece in and out at its seams, so no sample steps further than the fade allows', () => {
-    // A voice that rises slowly through the take, to 0.5 at its end: each seam
-    // skips a struck word or a pause, so the two sides of it differ.
     const frames = Math.round(take.envelope.length * 0.01 * RATE);
     const bus = busOf(voiceOf((i) => (0.5 * i) / frames, [])).channels[0] ?? new Float32Array();
     const level = 0.5 * Math.SQRT1_2;
     const steepest = Math.max(...bus.slice(1).map((x, i) => Math.abs(x - (bus[i] ?? 0))));
-    // A fade's ramp steps at most the level over its length each sample, twice that for rounding.
     expect(steepest).toBeLessThanOrEqual((level / Math.round(CUT_FADE * RATE)) * 2);
     expect(steepest).toBeGreaterThan(0);
     expect(planned.voice.map((t) => t.fade)).toEqual(pieces.map(() => CUT_FADE));
@@ -895,7 +872,6 @@ describe("a talk's voice, played in pieces", () => {
   });
 
   test('keys the voice by what it is, not by its file name: another take, or its voice made another way, is mixed again', () => {
-    // Every take's voice file is `voice.flac`: two takes cut alike, and one voice remade, differ only in what they are.
     const other = `/out/footage/take.other/ffffffffffff/voice.flac`;
     const keys = [
       mixKey(planned),
@@ -903,7 +879,6 @@ describe("a talk's voice, played in pieces", () => {
       mixKey(planOf(VOICE, `${take.source} mono 48000 level-once picture-clock`)),
     ];
     expect(new Set(keys).size).toBe(keys.length);
-    // Where the box keeps it is not what it is: the same voice elsewhere keys the same.
     expect(
       mixKey(
         planOf(`/elsewhere/footage/${take.source}/voice.flac`, `${take.source} ${VOICE_RECIPE}`),

@@ -1,30 +1,5 @@
 /* oxlint-disable effect/noNodeBuiltinImport -- b5 reads the player layer's own source from disk, synchronously, as findplace.static.test.ts does. */
 
-/**
- * Acceptance (chordmode A2): the chords switch is kept on the device, and
- * while it is off the recording is asked for in the hymn's printed key.
- *
- * The settings run over a store the test holds, a plain map behind Effect's
- * KeyValueStore, as `settings.test.ts` launches them; a second set of
- * settings over the same map is the app opened again.
- *
- * - b1 Chords are off at first, and nothing but off is kept under `chords`
- *   until the reader sets it (the store may hold the default `false`, which
- *   `Atom.kvs` writes on a setting's first read).
- * - b2 Set on, `chords` is stored as `true` and a second launch reads it on;
- *   set off, a third launch reads it off.
- * - b3 Over every hymn of a sample (1, 100 and 695 among them), every move
- *   (transpose -5 to 6, capo 0 to 11) stored under `move.<n>`, and chords
- *   on and off: `heardMove(n)` is the stored move with chords on and `still`
- *   with chords off.
- * - b4 Turning chords off and on writes and removes no `move.<n>`; the
- *   stored move is heard again once chords are on, and the offset the player
- *   maps from the heard move (as its `keyFor` does) follows each change while
- *   it is watched.
- * - b5 The player layer (`src/player/LivePlayer.tsx`) hands `playerOn` the
- *   heard move, not the stored one.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { Effect, Layer } from 'effect';
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
@@ -36,7 +11,6 @@ import { join } from 'node:path';
 import { type Move, still } from './hymns/chords';
 import { settingsOn } from './settings';
 
-/** A store over `map`: what the device keeps between two launches. */
 const storeOver = (map: Map<string, string>) =>
   Layer.succeed(KeyValueStore.KeyValueStore)(
     KeyValueStore.makeStringOnly({
@@ -49,31 +23,25 @@ const storeOver = (map: Map<string, string>) =>
     }),
   );
 
-/** The app opened over `map`: fresh settings, a fresh registry. */
 const launch = (map: Map<string, string>) => {
   const settings = settingsOn(storeOver(map));
   const registry = AtomRegistry.make();
   return { settings, registry };
 };
 
-/** Every move a hymn can keep: transpose -5 to 6, capo 0 to 11. */
 const moves: ReadonlyArray<Move> = Array.from({ length: 12 }, (_, t) =>
   Array.from({ length: 12 }, (__, capo) => ({ transpose: t - 5, capo })),
 ).flat();
 
-/** Hymn numbers: the book's first and last, 100, and their neighbours. */
 const sample: ReadonlyArray<number> = [1, 2, 99, 100, 101, 373, 694, 695];
 
-/** The rule (Decided 4): the hymn's stored move while chords are on, the printed key while off. */
 const heardWith = (chords: boolean, move: Move): Move => {
   if (chords) return move;
   return still;
 };
 
-/** A move as the store keeps it under `move.<n>`. */
 const stored = (move: Move) => `{"transpose":${move.transpose},"capo":${move.capo}}`;
 
-/** The device's entries but `key`'s, in key order: what a switch under `key` must leave alone. */
 const allBut = (map: Map<string, string>, key: string) =>
   [...map.entries()].filter(([k]) => k !== key).toSorted(([a], [b]) => a.localeCompare(b));
 
@@ -83,7 +51,6 @@ describe('the chords switch', () => {
     const { settings, registry } = launch(device);
     expect(registry.get(settings.chords)).toBe(false);
     registry.dispose();
-    // `Atom.kvs` writes a setting's default on its first read, so `chords` may hold `false`.
     expect({
       chords: device.get('chords') ?? 'absent',
       others: allBut(device, 'chords'),
@@ -124,9 +91,6 @@ describe('the heard move', () => {
     }> = [];
     let checked = 0;
     const seen = new Set<string>();
-    // Launch `r` stores, for the sampled hymn at `i`, the move at `(r + 37 i) mod 144`: over
-    // the 144 launches each hymn keeps every move once. Chords come from the store (on at an
-    // even launch, unset and so off at an odd one), then the reader flips them in the app.
     for (let r = 0; r < moves.length; r++) {
       const device = new Map<string, string>(
         sample.map((number, i) => [
@@ -168,7 +132,6 @@ describe('the heard move', () => {
     ]);
     const kept = allBut(device, 'chords');
     const { settings, registry } = launch(device);
-    // The player maps a hymn's move to the offset it asks the device for, as `keyFor` does.
     const offset = Atom.map(settings.heardMove(100), (move) => move.transpose);
     const told: Array<number> = [];
     const stop = registry.subscribe(offset, (value) => told.push(value), { immediate: true });
@@ -214,7 +177,6 @@ describe('the heard move', () => {
       { chords: true, read: heardOn },
     ]);
 
-    // A key turned with chords on is heard at once, and kept through chords off.
     registry.set(settings.move(100), { transpose: -1, capo: 0 });
     const turned = read();
     registry.set(settings.chords, false);
@@ -239,7 +201,6 @@ describe('the heard move', () => {
       stored: stored({ transpose: -1, capo: 0 }),
     });
 
-    // Opened again with chords off: the moves are still there and come back with chords on.
     const again = launch(device);
     expect(again.registry.get(again.settings.heardMove(100))).toEqual(still);
     again.registry.set(again.settings.chords, true);
@@ -251,7 +212,6 @@ describe('the heard move', () => {
   });
 });
 
-/** The top-level arguments of the first `callee(…)` call in `source`, each trimmed. */
 const argumentsOf = (source: string, callee: string): ReadonlyArray<string> => {
   const start = source.indexOf(`${callee}(`);
   if (start < 0) return [];

@@ -1,15 +1,3 @@
-// How the Script reader shows the staging voice (`voice.tsx`) and a line's
-// delivery marks (`delivery.ts`): in a line, a pause's glyph in its gap
-// (`/` a breath, `//` and its seconds a hold) and a stressed word in a
-// heavier weight; in a beat's head, its take (▶, which plays it and the
-// ready beats after it, and its pace, named slow or fast outside the band;
-// else that it is voicing, or refused and why; a beat not voiced yet shows
-// nothing); the day's spend, one quiet line at the top of the page; and,
-// while words are selected, Hear them in the box's head and their delivery
-// under it: Stress and what stands in the gap before them (nothing, a breath
-// or a hold, its seconds picked from a few). Every edit is a tap on a
-// choice, written at once.
-
 import { Toggle } from '@manna/ui/toggle';
 import { ToggleGroup } from '@manna/ui/toggle-group';
 import { For, Show } from '@solidjs/web';
@@ -31,13 +19,10 @@ import {
 } from './delivery.ts';
 import { Marking, useVoice } from './voice.tsx';
 
-/** The band the delivery rules time a line at, as a pace's title says it. */
 const BAND = '150–165 wpm';
 
-/** A hold's seconds as the reader writes them: `0.6 s`. */
 const secondsOf = (seconds: number): string => `${seconds} s`;
 
-/** A take's pace as its beat's head says it: the bare number in the band, named slow or fast outside it. */
 const paceText = (pace: {
   readonly wpm: number;
   readonly band: 'slow' | 'in' | 'fast';
@@ -46,34 +31,28 @@ const paceText = (pace: {
   return `${pace.wpm} wpm ${pace.band}`;
 };
 
-/** What a press on ▶ says it does, by whether its beat is heard now. */
 const HEAR_TITLE = {
   true: 'Stop',
   false: 'Hear the staging take, and the beats ready after it',
 } as const;
-/** ▶'s name, for one who cannot see the glyph: which beat it plays. */
 const hearLabel = (hearing: boolean, beat: string): string => {
   if (hearing) return `Stop beat ${beat}`;
   return `Hear beat ${beat}`;
 };
-/** What the reader's head press says, by whether the script is heard now. */
 const HEAR_ALL = { true: '■ Stop', false: '▶ Hear it' } as const;
 
-/** What a gap's choice puts in it: a hold starts at the default seconds. */
 const GAP_OF: Readonly<Record<Gap['_tag'], Gap>> = {
   None: { _tag: 'None' },
   Breath: { _tag: 'Breath' },
   Hold: { _tag: 'Hold', seconds: HOLD_DEFAULT },
 };
 
-/** A hold's seconds, when the gap holds one. */
 const holdOf = (gap: Gap): Option.Option<number> =>
   Match.value(gap).pipe(
     Match.tag('Hold', (h) => Option.some(h.seconds)),
     Match.orElse(() => Option.none<number>()),
   );
 
-/** The pause in the gap before a word, as a glyph in the line: none for an empty gap (read in the JSX: it follows the marks). */
 export const GapGlyph = (props: { readonly gap: Gap }) => (
   <>
     {Match.value(props.gap).pipe(
@@ -94,11 +73,9 @@ export const GapGlyph = (props: { readonly gap: Gap }) => (
   </>
 );
 
-/** Whether word `at` of `marks` is stressed, as the word's attribute says it. */
 export const stressAttr = (marks: ReadonlyArray<Mark>, at: number) =>
   Option.getOrUndefined(Option.liftPredicate('true', () => stressed(marks, at)));
 
-/** A beat's take in its head: ▶ and its pace once ready (■ while it plays), else where it stands. */
 export const TakeState = (props: { readonly beat: string }) => {
   const voice = useVoice();
   const take = () => voice.take(props.beat);
@@ -137,7 +114,6 @@ export const TakeState = (props: { readonly beat: string }) => {
                 </>
               ),
               Voicing: () => <span class="lab-script-voicing">voicing…</span>,
-              // Nothing to do about a beat not voiced yet: its missing ▶ says it.
               Unvoiced: () => <></>,
               Refused: (r) => (
                 <span class="lab-script-voicing" data-refused="true" title={r.reason}>
@@ -152,13 +128,11 @@ export const TakeState = (props: { readonly beat: string }) => {
   );
 };
 
-/** The words selected in a beat, as a reader's delivery reads them: word `from` to word `to`. */
 export interface Words {
   readonly from: number;
   readonly to: number;
 }
 
-/** In the selection's box head: Hear `words` of beat `beat` (none selected: nothing), once its take is ready. */
 export const HearWords = (props: {
   readonly beat: string;
   readonly words: Option.Option<Words>;
@@ -185,22 +159,14 @@ export const HearWords = (props: {
   );
 };
 
-/** How many of `takes` stand as `tag`. */
 const counted = (takes: ReadonlyArray<StagingTake>, tag: StagingTake['_tag']) =>
   takes.filter((t) => t._tag === tag).length;
 
-/** The takes' line: their state, and what the voice cost today (none when the lab makes none). */
 interface TakesLine {
   readonly takes: string;
   readonly cost: Option.Option<string>;
 }
 
-/**
- * The takes' state, one quiet line: how many are ready of how many, what is
- * being voiced or was refused, and (`cost`, which an ask's reader leaves
- * out) what the voice has cost today against its cap; or that
- * the lab makes none (its fill off), so a beat with no ▶ is said.
- */
 const takesLine = (
   takes: ReadonlyArray<StagingTake>,
   spend: { readonly spent: number; readonly cap: number },
@@ -230,10 +196,6 @@ const takesLine = (
   };
 };
 
-/**
- * The takes' state and, with `cost`, the day's staging spend: one quiet line
- * (`takesLine`), its words one run of text.
- */
 export const Spend = (props: { readonly cost: boolean }) => {
   const voice = useVoice();
   const line = () =>
@@ -255,13 +217,6 @@ export const Spend = (props: { readonly cost: boolean }) => {
   );
 };
 
-/**
- * Hear the script from its first beat with a take ready, on through the
- * ready beats after it (■ Stop while it plays): the reader's one labelled
- * press for its sound, at its head. Nothing until a take is ready. A play
- * whose sound the browser refused says so beside it, and that a press
- * plays it (a browser lets sound start from a press).
- */
 export const HearIt = (props: { readonly beats: ReadonlyArray<string> }) => {
   const voice = useVoice();
   const first = () =>
@@ -295,7 +250,6 @@ export const HearIt = (props: { readonly beats: ReadonlyArray<string> }) => {
   );
 };
 
-/** What the reader's write of marks says while it is out or once it failed: nothing at rest. */
 const markingNote = (m: Marking, beat: string, written: string): string => {
   if (m._tag === 'Idle' || m.beat !== beat) return '';
   return Marking.$match(m, {
@@ -306,13 +260,6 @@ const markingNote = (m: Marking, beat: string, written: string): string => {
   });
 };
 
-/**
- * The delivery of `selected`, words of beat `beat` (its line `spoken`, as the
- * page read it, said with `marks`): Stress, the gap before them (none for the
- * line's first word, whose silence is the beat's lead), and a hold's seconds.
- * A write carries the line it was made on (its words and marks), so it lands on these or not at
- * all. Nothing while no word of it is selected.
- */
 export const Delivery = (props: {
   readonly beat: string;
   readonly marks: ReadonlyArray<Mark>;
@@ -320,7 +267,6 @@ export const Delivery = (props: {
   readonly selected: Option.Option<Words>;
 }) => {
   const voice = useVoice();
-  // As the page has them: after its own write, the marks that write left, until the line is read again.
   const marks = () => voice.marksOf(props.beat, props.marks);
   const words = () => props.spoken.split(' ').filter((w) => w !== '').length;
   const selected = () => props.selected;

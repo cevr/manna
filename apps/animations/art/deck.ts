@@ -1,21 +1,6 @@
-// The art-direction deck the seeder draws new looks from (`bun run
-// seed-look`, `art/seed-look.ts`; the draw is `@manna/film/tools`'
-// `drawLook`). Data, not prose: each axis is an independent choice, each
-// option says what it looks like, what it asks of the engine and its
-// implementor, whether it is drawn on the Canvas 2D kit or with WebGL, and
-// what it is never drawn with. The series' rules hold whatever is drawn
-// (`rules`), and every palette keeps the colour script.
-//
-// To add an option (the BibleProject style survey, `out/bp-styles/`), append
-// it to its axis with a new id: the seeder scores each option by its id, so
-// every seed that it does not win draws as before. Removing an option or
-// changing an id raises `version`, which a brief cites beside its seed.
-
 import type { ArtAxis, ArtDeck } from '@manna/film/tools';
 
-/** An option drawn only in 2D: the Canvas 2D kit. */
 const ONLY_2D = ['dimension/3d'];
-/** An option drawn only in 3D: three.js through `glCanvas`. */
 const ONLY_3D = ['dimension/2d'];
 
 const dimension: ArtAxis = {
@@ -45,7 +30,6 @@ const medium: ArtAxis = {
   name: 'Medium',
   weight: 3,
   options: [
-    // The existing looks' media, there to describe those looks (`existing`): never drawn.
     {
       id: 'cut-paper',
       name: 'Cut paper',
@@ -100,7 +84,6 @@ const medium: ArtAxis = {
       excludes: ONLY_2D,
       profile: true,
     },
-    // New media, 2D.
     {
       id: 'gouache',
       name: 'Gouache',
@@ -295,7 +278,6 @@ const medium: ArtAxis = {
       cost: '2d',
       excludes: ONLY_2D,
     },
-    // In either dimension.
     {
       id: 'stained-glass',
       name: 'Stained glass',
@@ -310,7 +292,6 @@ const medium: ArtAxis = {
       asks: 'Figures as continuous tube lines with a soft glow on a light wall (kept bright for the colour script); only gold glows fully; in 3D, tubes as geometry with emissive material and no per-frame flicker.',
       cost: '2d',
     },
-    // New media, 3D.
     {
       id: 'low-poly-flat',
       name: 'Low-poly flat-shaded',

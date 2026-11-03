@@ -1,15 +1,3 @@
-/**
- * The census property: `data/census.json` holds one entry for every hymn
- * 1-695, in order, each `matches`, `fixed`, `unsettled` or `nopage`, and each
- * agrees with what the census reads and its builder does not write: the page
- * inventory (`data/pages.json`) for its deciding page, the viewed rulings and
- * their crops (`data/crops/NNN/`) for its state and its row, and the base row
- * read from git at the census's base commit for every word no ruling
- * changes. The checks are `scripts/census.ts`'s. The cases below are the
- * census's mutant suite: each is a defect an earlier round shipped, held as a
- * fixed case the census must refuse, with the problem line it must print.
- */
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, Exit, FileSystem, Option, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -52,11 +40,9 @@ import {
   wordTag,
 } from '../scripts/census.js';
 
-/** The census and its sources, read once for every test file, as this file loads: no case's time limit holds the read. */
 // oxlint-disable-next-line effect/noAsyncFunction -- built once as the file loads, so no case's time limit holds its cost
 const read = Effect.succeed(await Effect.runPromise(readCensusOnce));
 
-/** The `wordTag` a census line names the words of `text` by. */
 const tag = (text: string) => wordTag(text.split(' ').filter((word) => word !== ''));
 
 const withEntry = (census: Census, n: number, change: (entry: Entry) => Entry): Census => ({
@@ -79,15 +65,9 @@ const withRulings = (sources: Sources, n: number, rulings: readonly Ruling[]): S
   rulings: new Map([...sources.rulings, [n, rulings]]),
 });
 
-/** The deciding page images of hymn `n`. */
 const imagesOf = (sources: Sources, n: number) =>
   decidingOf(sources.inventory).get(n)?.images ?? [];
 
-/**
- * Hymn `n` rewritten to sing `units`, through a fix file that keeps its base
- * row as `replaces` (as the census's own fixes do), each line read off its
- * deciding page.
- */
 const withFix = (sources: Sources, n: number, units: ReadonlyArray<readonly string[]>): Sources =>
   withFixFile(withRow(sources, n, rowOfUnits(units)), n, {
     number: n,
@@ -97,13 +77,11 @@ const withFix = (sources: Sources, n: number, units: ReadonlyArray<readonly stri
     replaces: baseOf(sources, n),
   });
 
-/** Hymn `n` with no fix file: its row as committed is its printed source. */
 const withoutFix = (sources: Sources, n: number): Sources => ({
   ...sources,
   fixes: new Map([...sources.fixes].filter(([one]) => one !== n)),
 });
 
-/** Hymn `n`'s row and base row both `row`: a row wrong since before the census, which no fix touches. */
 const withBase = (sources: Sources, n: number, row: Verses): Sources => ({
   ...withoutFix(withRow(sources, n, row), n),
   base: new Map([...sources.base, [n, row]]),
@@ -114,18 +92,12 @@ const withOutlines = (sources: Sources, n: number, outlines: readonly Outline[])
   outlines: new Map([...sources.outlines, [n, outlines]]),
 });
 
-/** The one shape reading of hymn `n`. */
 const outlineOf = (sources: Sources, n: number) =>
   Option.getOrThrowWith(
     Option.fromNullishOr(sources.outlines.get(n)?.[0]),
     () => `no shape of ${n}`,
   );
 
-/**
- * The review's row mutants (r5 findings, `ocr-mutant.ts`): the refrain
- * dropped, stanzas 2 and 3 swapped, the last stanza dropped, the last line
- * of the stanza at index k dropped.
- */
 const mutate = (truth: Verses, mode: string): Verses => {
   const stanzas = truth.filter((v) => v.id >= 0).toSorted((a, b) => a.id - b.id);
   const refrain = truth.filter((v) => v.id < 0);
@@ -152,7 +124,6 @@ const withInventory = (sources: Sources, change: (inventory: Inventory) => Inven
   inventory: change(sources.inventory),
 });
 
-/** The first entry in a state, with its number. */
 const first = (census: Census, row: Entry['row'], also: (entry: Entry) => boolean = () => true) =>
   Option.getOrThrowWith(
     Option.fromNullishOr(census.hymns.find((one) => one.row === row && also(one))),
@@ -165,11 +136,6 @@ const entryOf = (census: Census, n: number) =>
     () => `no entry ${n}`,
   );
 
-/**
- * A census that holds a `nopage` entry: its own first one, or, when every
- * page was read, its first ruled-on-nothing `matches` entry written as the
- * builder writes a hymn no reading reached (no reading, a note, the base row).
- */
 const withNopage = (census: Census) => {
   const own = census.hymns.find((one) => one.row === 'nopage');
   if (own !== undefined) return { census, entry: own };
@@ -183,11 +149,9 @@ const withNopage = (census: Census) => {
   return { census: made, entry: entryOf(made, n) };
 };
 
-/** A row's units written back as a row: each unit a stanza, no refrain. */
 const rowOfUnits = (units: ReadonlyArray<readonly string[]>): Verses =>
   units.map((unit, id) => ({ id, text: unit.join(' ') }));
 
-/** A blind reading of hymn `n` that sings `units`, each a stanza. */
 const reading = (
   n: number,
   images: readonly string[],
@@ -200,24 +164,21 @@ const reading = (
   ...more,
 });
 
-/** The problems a mutated census or source prints about hymn `n`. */
 const about = (census: Census, sources: Sources, n: number) =>
   problemsOf(census, sources).filter((p) => p.startsWith(`${n} `));
 
-/** What `about` prints for hymn `n`, read with every other entry out of the census (the rest of the book is not read again). */
 const aboutOnly = (census: Census, sources: Sources, n: number) =>
   about({ ...census, hymns: census.hymns.filter((entry) => entry.number === n) }, sources, n);
 
-/** The smallest JPEG the photo check reads: an EXIF orientation (when given) and a frame. */
 const jpeg = (width: number, height: number, orientation?: number) => {
   const exif =
     orientation === undefined
       ? []
       : [
           ...[0xff, 0xe1, 0x00, 0x22],
-          ...[0x45, 0x78, 0x69, 0x66, 0x00, 0x00], // "Exif\0\0"
-          ...[0x4d, 0x4d, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x08], // big-endian TIFF, IFD at 8
-          ...[0x00, 0x01], // one entry
+          ...[0x45, 0x78, 0x69, 0x66, 0x00, 0x00],
+          ...[0x4d, 0x4d, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x08],
+          ...[0x00, 0x01],
           ...[0x01, 0x12, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, orientation, 0x00, 0x00],
           ...[0x00, 0x00, 0x00, 0x00],
         ];
@@ -269,7 +230,6 @@ describe('census', () => {
           const { census: head, sources } = yield* read;
           const { census, entry } =
             from === 'nopage' ? withNopage(head) : { census: head, entry: first(head, from) };
-          // The state relabelled from is one the census holds without this problem.
           expect(about(census, sources, entry.number)).not.toContain(`${entry.number} ${why}`);
           const relabelled = withEntry(census, entry.number, (one) => ({
             ...one,
@@ -333,7 +293,6 @@ describe('census', () => {
             partial: [...sources.inventory.partial, { hymn: n, missing: 'its second page' }],
           }).get(n)!;
           expect(cut.source).not.toBe('photo');
-          // The photo still rules the places it shows (m1).
           expect(cut.images).toContain(photo.file);
         }),
     );
@@ -349,7 +308,6 @@ describe('census', () => {
           const own = deciding.get(lent.hymn)!;
           const lender = deciding.get(lent.from)!;
           for (const image of lender.images) expect(own.images).toContain(image);
-          // Its own page's one stanza, then the lender's later stanzas.
           const mine = reading(lent.hymn, own.images.slice(0, 1), [['own', 'stanza']]);
           const theirs = reading(lent.from, lender.images, [['first'], ['second'], ['third']]);
           expect(lentReadings(sources.inventory, deciding, [mine, theirs])).toContainEqual({
@@ -419,7 +377,6 @@ describe('census', () => {
         expect(about(onEngraving, sources, 147)).toContain(
           `147 says sdahimages 147.png, the inventory ${deciding.source} ${deciding.images.join(', ')}`,
         );
-        // With every page of it but the revised engraving taken away, no page decides it.
         const bare = withInventory(sources, (inventory) => ({
           ...inventory,
           photos: inventory.photos.filter((photo) => !photo.hymns.includes(147)),
@@ -443,7 +400,6 @@ describe('census', () => {
         );
         const n = entry.number;
         const fix = sources.fixes.get(n)!;
-        // A base word changed in what the builder writes: the fix's replaces, the row, the digest.
         const replaces = fix.replaces!.map((verse, i) =>
           i === 0 ? { ...verse, text: `changed ${verse.text}` } : verse,
         );
@@ -512,7 +468,6 @@ describe('census', () => {
       () =>
         Effect.gen(function* () {
           const { census, sources } = yield* read;
-          // A ruling whose crop prints other words than the readings found.
           const [n, ruling] = [...sources.rulings]
             .flatMap(([m, all]) => all.map((one) => [m, one] as const))
             .find(
@@ -554,7 +509,6 @@ describe('census', () => {
               p.startsWith(`${n} ruling 1 reads p999.jpg, not the deciding page`),
             ),
           ).toBe(true);
-          // O1: a crop swapped for another of the same size.
           expect(problems).toContain(`${n} ruling 1 crop ${crop!.crop} is not the crop it read`);
         }),
     );
@@ -588,7 +542,6 @@ describe('census', () => {
       () =>
         Effect.gen(function* () {
           const { census, sources } = yield* read;
-          // 30's ruling 0: 'Holy' capitalised as a name of God, which opens no poem line.
           const all = sources.rulings.get(30) ?? [];
           expect(all[0]?.kind).toBe('assumption');
           expect(about(census, sources, 30)).toEqual([]);
@@ -620,7 +573,6 @@ describe('census', () => {
           const lines = about(census, withRulings(sources, n, [...all.slice(1), broken]), n);
           expect(lines).toContain(`${n} says matches, its rulings make it unsettled`);
           expect(lines).toContain(`${n} ruling ${all.length} is disputed but settles no line`);
-          // Its words stay the base row's: the row itself is never in question.
           expect(lines.filter((line) => line.startsWith(`${n} row:`))).toEqual([]);
           const waiting = withEntry(census, n, (held) => ({
             ...held,
@@ -641,7 +593,6 @@ describe('census', () => {
           keeps,
           quote: "Let's go with your recommendation.",
         }) as const;
-      /** Hymn 58's one disputed ruling, its hymn's other rulings, and its entry relabelled `matches`. */
       const hymn58 = Effect.map(read, ({ census, sources }) => {
         const all = sources.rulings.get(58) ?? [];
         const one = all.find((ruling) => ruling.kind === 'disputed')!;
@@ -656,7 +607,6 @@ describe('census', () => {
           })),
         };
       });
-      /** The first `matches` hymn with rulings, its first ruling made a disputed one answered `page` that settles `settles`. */
       const pageAnswered = Effect.map(read, ({ census, sources }) => {
         const n = first(
           census,
@@ -740,7 +690,6 @@ describe('census', () => {
           Effect.gen(function* () {
             const { census, sources, n, all, ruled } = yield* pageAnswered;
             const units = unitsOf(sources.rows.get(n)!);
-            // Each stanza one line: the base words, divided otherwise.
             const redivided = withFix(sources, n, units);
             expect(aboutOnly(census, redivided, n)).toContain(
               `${n} has a fix file of its own but says matches`,
@@ -749,7 +698,6 @@ describe('census', () => {
             expect(aboutOnly(census, answered, n)).not.toContain(
               `${n} has a fix file of its own but says matches`,
             );
-            // The fix sings one word otherwise than its row.
             const fix = answered.fixes.get(n)!;
             const [line] = fix.stanzas[0]!;
             const changed = withFixFile(answered, n, {
@@ -764,7 +712,6 @@ describe('census', () => {
     });
 
     describe('rulings of one stretch read the page one way (M3)', () => {
-      /** A ruling of hymn `n`'s unit 1 at `at`: its row words, the words it sings, its crops those of `like`. */
       const ruling = (like: Ruling, at: number, row: string, sung: string): Ruling => ({
         ...like,
         sites: [{ unit: 1, at }],
@@ -777,7 +724,6 @@ describe('census', () => {
         judge: 'test',
       });
       const other = (one: Ruling): Ruling => ({ ...one, judge: 'another' });
-      /** Hymn 23, its base unit 1's words, and its first ruling (the crops every case reads). */
       const hymn23 = Effect.map(read, ({ census, sources }) => ({
         census,
         sources,
@@ -800,7 +746,6 @@ describe('census', () => {
           expect(problems.filter((p) => disagree.test(p))).toEqual([]);
           const agreed = applyRulings([words], [wide, inner]);
           expect(agreed.units[0]).toEqual(['x', ...words.slice(1)]);
-          // The inner ruling stands at its own word, so its crop answers for that word alone.
           expect(agreed.spans.map(({ start, length }) => [start, length])).toEqual([
             [0, 4],
             [0, 1],
@@ -973,8 +918,6 @@ describe('census', () => {
   });
 
   describe('words decided only on crops (M2)', () => {
-    // Each ruling as it stood at 9290e532e: one crop, and a `why` that read the words off the page image.
-    // 440's run lies in one system, so only its `why` gives it away.
     for (const [n, unit, at, image, systems] of [
       [232, 5, 0, '232.jpg', true],
       [440, 1, 16, 'p427.jpg', false],
@@ -1059,7 +1002,6 @@ describe('census', () => {
       () =>
         Effect.gen(function* () {
           const { census, sources } = yield* read;
-          // Every hymn with a deciding page has a shape reading now: the readings are held here with none.
           const entry = first(census, 'matches', () => true);
           const n = entry.number;
           const deciding = decidingOf(sources.inventory).get(n)!;
@@ -1071,7 +1013,6 @@ describe('census', () => {
           expect(readingProblems(entry, deciding, base, [], [varying])).toContain(
             `${n} readings print a refrain that varies by stanza, and no shape reading of its page says how`,
           );
-          // A shape reading that prints no varying rows, and no ruling of a repeat or an echo that says why.
           const outline = outlineOf(sources, 187);
           expect(
             readingProblems(entry, deciding, base, [], [varying], [{ ...outline, number: n }]),
@@ -1166,7 +1107,6 @@ describe('census', () => {
           const row = sources.rows.get(n)!;
           const order = sources.orders.get(n);
           const what = `${n} shape (${outline.reader})`;
-          // The page prints no refrain, the row writes one.
           expect(
             outlineProblems(
               n,
@@ -1178,7 +1118,6 @@ describe('census', () => {
               bookOf(sources, n),
             ),
           ).toContain(`${what}: the page prints no refrain, the printed source has one`);
-          // An unnumbered row the page prints, which the row lacks.
           const unnumbered = {
             system: 1,
             strip: 'x.jpg',
@@ -1202,7 +1141,6 @@ describe('census', () => {
           ).toContain(
             `${what}: a row "quorum vellum" (a row with no number) is in no part of the printed source`,
           );
-          // Stanza 1's first and last lines swapped.
           const swapped = row.map((v) => {
             if (v.id !== 0) return v;
             const lines = v.text.split('\n');
@@ -1213,7 +1151,6 @@ describe('census', () => {
               (p) => p.startsWith(`${what}: stanza 1 `),
             ),
           ).toBe(true);
-          // A line the page never prints, at the end of stanza 1 (before the refrain sung after it).
           const added = row.map((v) => {
             if (v.id !== 0) return v;
             const lines = v.text.split('\n');
@@ -1222,8 +1159,6 @@ describe('census', () => {
               text: [...lines, 'quorum vellum zephyr quartz'].join('\n'),
             };
           });
-          // The refrain's rows after it no longer stand where their counts put them, and
-          // stanza 1 has a line more than the metre fits: every line is about stanza 1.
           const moved = outlineProblems(
             n,
             outline,
@@ -1238,8 +1173,6 @@ describe('census', () => {
           );
           expect(moved.some((line) => line.includes('the refrain after stanza 1: '))).toBe(true);
           for (const line of moved) expect(line).toMatch(about1);
-          // A line the page never prints at the refrain's end, closing on the
-          // last words of stanza 1's last row: that row stops at its stanza's end.
           const closing = outline.stanzas[0]!.rows.at(-1)!.last;
           const tail = row.map((v) =>
             v.id < 0 ? { ...v, text: `${v.text}\nquorum vellum zephyr ${closing}` } : v,
@@ -1289,8 +1222,6 @@ describe('census', () => {
             outlines.some((outline) => outlineVaries(outline).length > 0),
           );
           expect(varying.map(([n]) => n)).toEqual(expect.arrayContaining([140, 258, 593]));
-          // Held: the fix writes varies parts, or the census prints a line for it, open or
-          // settled by a judge's ruling on crops (86 prints its stanza 4 twice).
           for (const [n] of varying) {
             const parts = (sources.fixes.get(n)?.refrain?.lines ?? []).some(
               (item) => 'varies' in item,
@@ -1313,7 +1244,6 @@ describe('census', () => {
           const outline = outlineOf(sources, n);
           expect(outlineVaries(outline)).not.toEqual([]);
           expect(fix.refrain?.lines.some((item) => 'varies' in item)).toBe(true);
-          // The row as it stands sings each stanza's own refrain, with no varies part: no fix.
           expect(about(census, withoutFix(sources, n), n)).toContain(
             `${n} shape (${outline.reader}): the page prints refrain rows for stanzas ${outlineVaries(
               outline,
@@ -1331,7 +1261,6 @@ describe('census', () => {
         const lines = fix.refrain!.lines.flatMap((item) =>
           'varies' in item ? item.varies[0]!.lines : [item],
         );
-        // Against the hymn's own unflattened lines, settled ones too.
         const outline = outlineOf(sources, 220);
         const linesOf = (fixed: typeof fix) =>
           outlineProblems(
@@ -1396,9 +1325,7 @@ describe('census', () => {
         const n = entry.number;
         const deciding = decidingOf(sources.inventory).get(n)!;
         const base = baseOf(sources, n);
-        // Two refusals: a reader that would not transcribe the page reads nothing.
         const refusals = [reading(n, deciding.images, []), reading(n, deciding.images, [])];
-        // As 9290e532e counted it: the refusals, and two proofs shown the row.
         const proofs = { ...entry, readings: { reader: 2, ocr: 0 } };
         expect(readingProblems(proofs, deciding, base, [], refusals)).toEqual([
           `${n} counts 2 reader and 0 OCR readings, the folder 0 and 0`,
@@ -1421,7 +1348,6 @@ describe('census', () => {
         const deciding = decidingOf(sources.inventory).get(584)!;
         const base = baseOf(sources, 584);
         const units = unitsOf(base);
-        // A blind reading of the page's 7 stanzas; no ruling on the 2 the row lacks.
         const seven = reading(584, deciding.images, [
           ...units,
           ['sixth', 'stanza'],
@@ -1453,7 +1379,6 @@ describe('census', () => {
           expect(readingProblems(none, deciding, base, [], [])).toEqual([
             `${entry.number} unread on scan`,
           ]);
-          // A reading of another page does not count.
           const elsewhere = reading(entry.number, ['p999.jpg'], unitsOf(base));
           expect(readingProblems(none, deciding, base, [], [elsewhere])).toEqual([
             `${entry.number} unread on scan`,
@@ -1518,7 +1443,6 @@ describe('census', () => {
   });
 
   describe("the owner's answers (rows the page contradicts)", () => {
-    /** The hymns whose committed rulings hold an answer `keeps`, or (`undefined`) an unanswered `disputed` ruling. */
     const answeredBy = (sources: Sources, keeps: 'page' | 'source' | undefined) =>
       [...sources.rulings]
         .filter(([, rulings]) =>
@@ -1540,9 +1464,7 @@ describe('census', () => {
       }),
     );
 
-    /** A compiled line: its syllables, each with its word's place in the line (0 = first). */
     const CompiledLines = Schema.Array(Schema.Array(Schema.Struct({ word: Schema.Int })));
-    /** The parts of a compiled hymn (`data/sdah-1985/NNN.json`) these cases read. */
     const decodeCompiled = Schema.decodeEffect(
       Schema.fromJsonString(
         Schema.Struct({
@@ -1553,7 +1475,6 @@ describe('census', () => {
         }),
       ),
     );
-    /** Each line's first word by its place in the part (1 = the part's first word), and the part's word count. */
     const startsOf = (lines: typeof CompiledLines.Type) => {
       const starts: number[] = [];
       let at = 1;
@@ -1563,7 +1484,6 @@ describe('census', () => {
       }
       return { starts, count: at - 1 };
     };
-    /** The places in the part of the words its shape rows print with a capital, each row offset by the words of the rows before it. */
     const capitalsOf = (
       rows: ReadonlyArray<{ readonly words: number; readonly capitals: readonly number[] }>,
     ) => {
@@ -1575,7 +1495,6 @@ describe('census', () => {
       }
       return capitals;
     };
-    /** Each part (stanzas in order, then the refrain) of each hymn answered page, as compiled and as its shape reading and fix give it. */
     const pageParts = Effect.gen(function* () {
       const { sources } = yield* read;
       const fs = yield* FileSystem.FileSystem;
@@ -1653,7 +1572,6 @@ describe('census', () => {
                   .map(({ start, k }) => `${n} ${part.name} line ${k + 1} at word ${start}`),
               );
             }
-          // 402's stanza 3 reads 22 words on the page and 21 in the row: count noise the census passes.
           expect(skipped).toEqual(['402 stanza 3']);
           expect(lowercase).toEqual([]);
         }),
@@ -1668,7 +1586,6 @@ describe('census', () => {
             .filter((word) => word !== '')
             .join(' ');
         const changed: string[] = [];
-        // 214's fix changes two words by its own rulings: the census's row check holds it.
         for (const { n, parts } of hymns.filter(({ n }) => n !== 214))
           for (const part of parts)
             if (
@@ -1686,10 +1603,8 @@ describe('census', () => {
       Effect.gen(function* () {
         const { census, sources } = yield* read;
         const runs = hymnRunsOf(sources.rows);
-        // The guard sees a run: three words of a row, printed bare, are found.
         const [first = ''] = runs;
         expect(linesQuoting([`problem 1 ${first}`], runs)).toEqual(['line 1 word 3']);
-        // A note that quotes the page (86's engraving) prints its tag.
         expect(
           linesQuoting(censusLines(census, sources, problemsOf(census, sources)), runs),
         ).toEqual([]);

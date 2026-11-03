@@ -1,12 +1,7 @@
-// Which catalogued render a screening version publishes, over a catalogue as
-// `film render` writes one: the full render among the Board renders, look
-// wedges and proofs rendered after it.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Option, Schema } from 'effect';
 import { CatalogueRender, isBoardRender, isFullRender, newestOf } from './screening-renders.ts';
 
-/** What a row's test may change, in the catalogue's JSON form. */
 interface RowChange {
   readonly kind?: string;
   readonly address?: { readonly _tag: string; readonly scene?: string };
@@ -15,7 +10,6 @@ interface RowChange {
   readonly files?: { readonly share?: string; readonly images: ReadonlyArray<string> };
 }
 
-/** A catalogue row of a whole-film video with a share copy, rendered at `at`; `extra` changes it. */
 const row = (variant: string, at: number, extra: RowChange = {}) => ({
   address: { _tag: 'Film' },
   variant,
@@ -26,7 +20,6 @@ const row = (variant: string, at: number, extra: RowChange = {}) => ({
   ...extra,
 });
 
-/** The rows as the publisher reads them from `catalogue.json`. */
 const catalogue = (rows: ReadonlyArray<ReturnType<typeof row>>) =>
   Effect.map(Schema.decodeEffect(Schema.Array(CatalogueRender))(rows), (renders) => ({
     renders,

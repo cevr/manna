@@ -2,7 +2,6 @@ import { describe, expect, test } from 'bun:test';
 
 import { coverMap, positionOf } from './cover.ts';
 
-/** Where the box's uv lands in the picture under a map. */
 const land = (map: readonly [number, number, number, number], u: number, v: number) => [
   u * map[0] + map[2],
   v * map[1] + map[3],
@@ -30,7 +29,6 @@ describe('the picture under its canvas', () => {
       { width: 300, height: 200 },
       { x: 0.38, y: 0.6 },
     );
-    // The picture is drawn 300 wide; 200 of it is cut, 38% of that on the left.
     const [left = 0, top = 0] = land(map, 0, 0);
     const [right = 0, bottom = 0] = land(map, 1, 1);
     expect(left).toBeCloseTo(76 / 300);

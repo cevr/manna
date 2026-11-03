@@ -1,22 +1,8 @@
-// The sower's skeletons, one a cut view (`core/puppet.ts`), read in view
-// pixels and moved into its part sheet's frame (`frames.ts`) by the shared
-// skeleton (`library/cutout/skeleton.ts`): his lean from his belt's middle to
-// the base of his neck, his neck and head above it, and each arm's shoulder,
-// elbow and wrist on the joints his cut records (`joints.ts`), the wrist at
-// the cuff and its tip at his circle hand's middle. His torso (with the seed
-// bag that hangs from it) leans; his robe, sandals and ground shadow stand
-// with the root; each sleeve takes its shoulder's flap of torso. His kept pose
-// scattering seed (poses-1) and his kept pose reaching into the seed bag
-// (poses-3) are cut as drawn, their skeletons written out; his kept pose
-// standing from behind (poses-2) stands as `back` does, and his kept pose
-// standing from the front (poses-4) as `front` does. Pure data.
-
 import type { Skeleton } from '@manna/film/core';
 import { type Body, framed, standing } from '../../../cutout/skeleton.ts';
 import { type FramedView, keptAt } from './frames.ts';
 import { JOINTS } from './joints.ts';
 
-/** His parts as his part sheets name them (`cut.ts`), each on its bones; his sleeves' flaps from his torso, in a band 50 px above each shoulder to 12 below, reaching 60 past it. */
 const BODY: Body = {
   skin: {
     head: ['neck', 'head'],
@@ -29,7 +15,6 @@ const BODY: Body = {
   band: { above: 50, below: 12, reach: 60 },
 };
 
-/** His body in a profile to the viewer's left, which draws his left arm only: its flap reaches 25 past the shoulder, to the sleeve's back edge, where the torso behind it begins. */
 const PROFILE_LEFT: Body<{ readonly left: string }> = {
   skin: {
     head: ['neck', 'head'],
@@ -41,7 +26,6 @@ const PROFILE_LEFT: Body<{ readonly left: string }> = {
   band: { above: 50, below: 12, reach: 25 },
 };
 
-/** His body in a profile to the viewer's right, which draws his right arm only: its flap runs from the sheet's left edge, over his back, to the sleeve's front edge. */
 const PROFILE_RIGHT: Body<{ readonly right: string }> = {
   skin: {
     head: ['neck', 'head'],
@@ -53,7 +37,6 @@ const PROFILE_RIGHT: Body<{ readonly right: string }> = {
   band: { above: 50, below: 12, reach: 60 },
 };
 
-/** Each cut view's skeleton in its part sheet's frame, by the view's name in his sheets' views. */
 export const SKELETONS = {
   front: framed(
     keptAt('front'),
@@ -74,7 +57,6 @@ export const SKELETONS = {
       capLeft: 14,
     }),
   ),
-  // turned to the viewer's left: his right arm still on the viewer's left
   threeQuarterLeft: framed(
     keptAt('threeQuarterLeft'),
     standing(BODY, {
@@ -94,7 +76,6 @@ export const SKELETONS = {
       capLeft: 8,
     }),
   ),
-  // from behind: his right arm on the viewer's right, so its flap runs out from its edge and his left arm's to the sheet's left edge
   back: framed(
     keptAt('back'),
     standing(BODY, {
@@ -114,7 +95,6 @@ export const SKELETONS = {
       capLeft: 14,
     }),
   ),
-  // in profile to the viewer's left: his left arm the near one, its flap from its front edge back to the sleeve's back edge
   profileLeft: framed(
     keptAt('profileLeft'),
     standing(PROFILE_LEFT, {
@@ -130,7 +110,6 @@ export const SKELETONS = {
       capLeft: 12,
     }),
   ),
-  // in profile to the viewer's right: his right arm the near one, its flap from the sheet's left edge to the sleeve's front edge
   profileRight: framed(
     keptAt('profileRight'),
     standing(PROFILE_RIGHT, {
@@ -146,7 +125,6 @@ export const SKELETONS = {
       capRight: 14,
     }),
   ),
-  // turned to the viewer's right: his right arm the near one, on the viewer's left; his left arm's flap reaches the sheet's right edge
   threeQuarterRight: framed(
     keptAt('threeQuarterRight'),
     standing(BODY, {
@@ -166,7 +144,6 @@ export const SKELETONS = {
       capLeft: 12,
     }),
   ),
-  // scattering seed, turned to the viewer's left: his far right arm is flung out level, outside a standing band, so his skeleton is written out; its flap is the sleeve's and hand's whole area, out to the sheet's left edge; his near left arm's flap is his body's band (50 above the shoulder to 12 below, from the sleeve's inner crease to 60 past the shoulder); his seed stands with the root
   'poses-1': framed(keptAt('poses-1'), {
     bones: [
       { name: 'lean', pivot: [262, 330], tip: [236, 196] },
@@ -230,7 +207,6 @@ export const SKELETONS = {
     ],
     root: [262, 330],
   }),
-  // standing from behind, as `back`: his right arm on the viewer's right, so its flap runs out from its inner crease, and his left arm's to the sheet's left edge
   'poses-2': framed(
     keptAt('poses-2'),
     standing(BODY, {
@@ -250,7 +226,6 @@ export const SKELETONS = {
       capLeft: 24,
     }),
   ),
-  // reaching into the seed bag, three-quarters to the viewer's left: his right arm bent across his body, outside `standing`'s band, so its flap is the sleeve's own area over the mantle and strap; his left arm's flap as `'front'` takes it
   'poses-3': framed(keptAt('poses-3'), {
     bones: [
       { name: 'lean', pivot: [160, 335], tip: [120, 192] },
@@ -320,7 +295,6 @@ export const SKELETONS = {
     ],
     root: [160, 335],
   }),
-  // standing from the front, as `front`: his right arm on the viewer's left, its flap out from its inner crease to the sheet's left edge
   'poses-4': framed(
     keptAt('poses-4'),
     standing(BODY, {

@@ -1,9 +1,3 @@
-// A tool's answer within its budget: a check's findings a page at a time,
-// errors first, each page under 8,000 characters of JSON, and a page asked of
-// a report whose findings changed since started again, saying so; a film's
-// cue lines whole, a line longer than an answer read on by its column across
-// calls; a journal's newest entries that fit, the rest counted with the file.
-
 import { describe, expect, test } from 'bun:test';
 import { Option, Schema } from 'effect';
 import type { CheckLine } from './schema.ts';
@@ -18,7 +12,6 @@ import {
   journalPage,
 } from './tool-pages.ts';
 
-/** A page asked for, from an answer's `next`. */
 type CheckAt = Parameters<typeof checkPage>[1];
 type CuesAt = Parameters<typeof cuesPage>[2];
 
@@ -26,10 +19,8 @@ const checkJson = Schema.encodeSync(Schema.fromJsonString(CheckPage));
 const cuesJson = Schema.encodeSync(Schema.fromJsonString(CuesPage));
 const journalJson = Schema.encodeSync(Schema.fromJsonString(JournalPage));
 
-/** A finding's level by its place: errors and warnings in turn. */
 const LEVELS = ['error', 'warning'] as const;
 
-/** A finding of scene `roof` at film second `index`. */
 const finding = (index: number, level: CheckLine['level'], message: string): CheckLine => ({
   level,
   tag: `Finding${index}`,
@@ -39,7 +30,6 @@ const finding = (index: number, level: CheckLine['level'], message: string): Che
 
 describe('checkPage', () => {
   test('24 long findings come a page at a time, errors first, each page under 8,000 characters', () => {
-    // Quotes, which JSON escapes: a page is measured as it is sent.
     const lines = Array.from({ length: 24 }, (_, index) =>
       finding(index, LEVELS[index % 2] ?? 'error', `"${'q"'.repeat(600)}"`),
     );
@@ -58,7 +48,6 @@ describe('checkPage', () => {
     }
     expect(tags).toHaveLength(24);
     expect(new Set(tags).size).toBe(24);
-    // Errors first, in the order the check printed them.
     expect(tags.slice(0, 3)).toEqual(['Finding0', 'Finding2', 'Finding4']);
     expect(tags.at(-1)).toBe('Finding23');
   });
@@ -75,8 +64,6 @@ describe('checkPage', () => {
     expect(first.next?.from).toBe(count);
     const next = first.next ?? { from: 0, report: '' };
 
-    // Findings 0 and 1 are fixed before the next page is asked: the old place
-    // would now skip the two findings after the page, still there.
     const after = before.slice(2);
     const second = checkPage(after, next);
     expect(second.restarted).toContain('changed');
@@ -86,7 +73,6 @@ describe('checkPage', () => {
     expect(tags).toContain(`Finding${count}`);
     expect(tags).toContain(`Finding${count + 1}`);
 
-    // A finding reworded in place changes the report too, its count the same.
     const reworded = [
       ...before.slice(0, 3),
       { ...finding(3, 'error', 'reworded') },
@@ -94,13 +80,11 @@ describe('checkPage', () => {
     ];
     expect(checkPage(reworded, next).restarted).toContain('changed');
 
-    // The same report pages on from where it stopped.
     const same = checkPage(before, next);
     expect(same.restarted).toBeUndefined();
     expect(same.from).toBe(count);
     expect(same.findings[0]?.tag).toBe(`Finding${count}`);
 
-    // A later page asked with no report could skip findings: it starts again.
     expect(checkPage(before, { from: count }).restarted).toContain('changed');
   });
 
@@ -110,7 +94,6 @@ describe('checkPage', () => {
       id(0),
       ...Array.from({ length: CHECK_MAX_SCENES - 1 }, (_, index) => id(index + 1)),
     ];
-    // Control characters, each six in JSON, in a message and a place both past the cut.
     const lines = Array.from({ length: 6 }, (_, index) => ({
       ...finding(index, 'error', '\u0001'.repeat(1_000)),
       address: { part: { _tag: 'Scenes' as const, ids: scenes } },
@@ -145,17 +128,12 @@ describe('checkPage', () => {
   });
 });
 
-/** A scene's line as `film cues` prints it: its placement, then each mark at its second into the scene. */
 const sceneLine = (id: string, marks: number) =>
   `${id.padEnd(11)} start=   0.00 dur=  9.00 speech=0.00–8.00 ${Array.from(
     { length: marks },
     (_, index) => `mark${index}@${(index / 100).toFixed(2)}`,
   ).join(' ')}`;
 
-/**
- * Every page of `lines` read on from the first, asked with `scope`, as an
- * agent reads them: joined back into lines, with each answer's `next`.
- */
 const readAll = (lines: ReadonlyArray<string>, scope: CuesAt = {}) => {
   const read: Array<string> = [];
   const rests: Array<string> = [];
@@ -166,7 +144,6 @@ const readAll = (lines: ReadonlyArray<string>, scope: CuesAt = {}) => {
     expect(cuesJson(answer).length).toBeLessThanOrEqual(8_000);
     rests.push(...Option.toArray(Option.fromUndefinedOr(answer.rest)));
     const [first = '', ...after] = answer.lines;
-    // An answer that starts inside a line goes on with that line.
     if (answer.column > 1) read.push(`${read.pop() ?? ''}${first}`, ...after);
     else read.push(first, ...after);
     const next = Option.fromUndefinedOr(answer.next);
@@ -201,7 +178,6 @@ describe('cuesPage', () => {
   });
 
   test('never cuts between the two halves of one character', () => {
-    // A face (two UTF-16 units) at every place a cut could land.
     const faces = `roof ${'🙂'.repeat(9_000)}`;
     const { read } = readAll([faces]);
     expect(read).toEqual([faces]);
@@ -235,7 +211,6 @@ describe('journalPage', () => {
     expect(answer.earlier).toBe(
       `${5 + 40 - shown} earlier entries not shown: ${file} holds them all`,
     );
-    // Few and short: every one, and nothing said of earlier ones.
     expect(journalPage(file, ['a', 'b'], 0)).toEqual({ file, lines: ['a', 'b'] });
     expect(journalPage(file, ['a', 'b'], 3).earlier).toBe(
       `3 earlier entries not shown: ${file} holds them all`,

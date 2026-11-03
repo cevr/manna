@@ -4,8 +4,6 @@ import { expect, it } from 'effect-bun-test';
 
 /* oxlint-disable effect/noGlobals -- Bundler and child-process boundary; JSON carries synthetic receipts only. */
 
-// Replace only the external model package at the bundler boundary. All cache
-// selection, lazy loading, quantization and layer composition remain production code.
 const fakeTransformers = `
 export const env = { cacheDir: 'library-default' };
 export const AutoTokenizer = { from_pretrained: async () => async () => ({}) };
@@ -47,15 +45,12 @@ it.scopedLive(
       const root = yield* fs.makeTempDirectoryScoped({ prefix: 'vector-cache-' });
       const home = path.join(root, 'empty home Ω');
       yield* fs.makeDirectory(home);
-      // Keep the entry beside the real package for normal workspace resolution;
-      // the bundler receives its bytes through a virtual module, never a repo file.
       const entry = path.join(import.meta.dir, 'cache-probe.ts');
       const bundle = path.join(root, 'probe.js');
       const result = yield* Effect.promise(() =>
         Bun.build({
           entrypoints: [entry],
           target: 'bun',
-          // Preserve source-relative workspace paths when relocating the probe bundle.
           define: {
             'import.meta.url': JSON.stringify(new URL('./paths.ts', import.meta.url).href),
           },

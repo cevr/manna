@@ -1,11 +1,3 @@
-/**
- * The hymn route's screen on the web, pushed over the home screen from its
- * list or its search: one hymn per route. The stack's header names the hymn
- * and holds its buttons (`hymnHeader`, set where the stack is laid out).
- * While the player holds no hymn the page draws the bottom bar as its own
- * (`PageBar`), under its words.
- */
-
 import { Option } from 'effect';
 import { useParams } from 'one';
 import { StyleSheet, View } from 'react-native';

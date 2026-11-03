@@ -1,6 +1,3 @@
-// The lab in memory for the tool tests (`lab.ts`): its handler over the
-// stores in memory, and the film timelines over them.
-
 import { AskMaterials } from '../ask-materials.ts';
 import { AskStore } from '../ask-store.ts';
 import type { FileSystem } from 'effect';
@@ -32,26 +29,17 @@ import {
 } from '../film-services/testing.ts';
 import { memoryFileSystem, memoryLocks } from '../host/testing.ts';
 
-/** Where a lab in memory keeps a film's notes (`FILMS_LAB`): `/lab/<film>/notes.json`. */
 export const NOTES_LAB = '/lab';
 
-/** What else a lab in memory runs with: its films' fresh runs, and the mtimes its files keep. */
 interface LabInMemory {
   readonly film?: Layer.Layer<FreshFilm>;
-  /**
-   * What an ask's material is found through beside the board and the film:
-   * the review's files, the drafts, the studio's readings and takes (over
-   * the lab's files and store, when real).
-   */
   readonly asking?: Layer.Layer<
     Review | SeriesDrafts | StudioReadings | Takes,
     never,
     ContentStore | FileSystem.FileSystem | Path.Path
   >;
   readonly mtimes?: ReadonlyMap<string, number>;
-  /** The critic the lab's `critique` tool asks: none given, one that skips every critique (`noCritic`). */
   readonly critic?: Layer.Layer<Critic, never, FileSystem.FileSystem | Path.Path>;
-  /** What writes the films' source: none, unless given (`writesInMemory`). */
   readonly writes?: Layer.Layer<
     SourceWriter,
     never,
@@ -59,15 +47,8 @@ interface LabInMemory {
   >;
 }
 
-/** A critic that skips every critique, as a counsel that cannot run does: the lab's tests that critique nothing. */
 const noCritic = Critic.skipping('no critic in this test');
 
-/**
- * The lab's services over `files` in memory, its notes under `NOTES_LAB`:
- * what its handler (`labHandler`) runs with, its pages answered by `pages`,
- * its films' fresh runs by `film` (none, unless given), and no film's
- * source, studio or review behind it.
- */
 export const labInMemory = (
   files: Map<string, Uint8Array>,
   pages = echoPages,
@@ -80,17 +61,12 @@ export const labInMemory = (
   }: LabInMemory = {},
 ) => withTimelines(labStores(files, pages, { film, mtimes, asking, critic, writes }));
 
-/**
- * `stores` with the films' timelines read over them (`FilmTimelines`) and the
- * studio's edits made on them (`BeatEdits`), as the lab's handler has them.
- */
 export const withTimelines = <A, E, R>(stores: Layer.Layer<A, E, R>) =>
   BeatEdits.layer.pipe(
     Layer.provideMerge(FilmTimelines.layer.pipe(Layer.provide(RenderCatalogue.layer))),
     Layer.provideMerge(stores),
   );
 
-/** The lab's stores in memory under `labInMemory`'s timelines. */
 const labStores = (
   files: Map<string, Uint8Array>,
   pages: typeof echoPages,

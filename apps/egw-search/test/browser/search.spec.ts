@@ -75,7 +75,6 @@ test('runs the real batched workflow with identity and URL receipts', async ({ p
 
   await page.goto('/?q=alpha&q2=beta');
   await waitForTwoResults(page);
-  // Both panes' searches started together, so they went out as one batch.
   expect(batchRequests).toHaveLength(1);
   const initialReceipts = await receipts(page);
   expect(initialReceipts.batchHttpRequests).toBe(1);
@@ -134,8 +133,6 @@ test('runs the real batched workflow with identity and URL receipts', async ({ p
   await expect(page.locator('.pane')).toHaveCount(3);
   await page.locator('.pane').nth(2).getByRole('button', { name: 'Close pane 3' }).click();
   await expect(page.locator('.pane')).toHaveCount(2);
-  // The first replace keys the entry the page loaded on (for its scroll
-  // position); the URL does not change. The second is the filter.
   expect(await historyWrites(page)).toEqual(['replace', 'replace', 'push', 'push', 'push']);
 
   await page.goBack();
@@ -157,9 +154,6 @@ test('panes that start together go out as one batch on a slow machine', async ({
   page.on('request', (request) => {
     if (new URL(request.url()).pathname === BATCH_PATH) batchRequests.push(request.url());
   });
-  // A slow machine: a render takes 30 ms between one pane's start and the
-  // next's (CI's two batches went out 10 ms apart). So a wait the page sets
-  // starts 30 ms later for each wait set before it in the same task.
   await page.addInitScript(() => {
     const set = window.setTimeout.bind(window);
     let earlier = 0;
@@ -257,7 +251,6 @@ test('a filter change and a new pane leave the viewport where the reader is', as
   await page.goto('/?q=alpha&q2=beta');
   await waitForTwoResults(page);
 
-  // The panes stack on a phone: the second pane's filters are below the fold.
   const secondPane = page.locator('.pane').nth(1);
   await secondPane.locator('.ftoggle').scrollIntoViewIfNeeded();
   await secondPane.locator('.ftoggle').click();
@@ -265,13 +258,10 @@ test('a filter change and a new pane leave the viewport where the reader is', as
   await chip.scrollIntoViewIfNeeded();
   const before = await page.evaluate(() => window.scrollY);
   expect(before).toBeGreaterThan(0);
-  // A filter replaces the URL. The page must not jump to the top.
   await chip.click();
   await expect(secondPane.locator('.text')).toHaveText('beta [egw]');
   expect(await page.evaluate(() => window.scrollY)).toBe(before);
 
-  // A new pane pushes the URL. Its search box takes focus and comes into
-  // view; the page must not jump back to the top over it.
   await page.getByRole('button', { name: '+ pane' }).click();
   const thirdInput = page.locator('.pane').nth(2).locator('input');
   await expect(thirdInput).toBeFocused();
@@ -313,9 +303,6 @@ test('Back returns to a position the search left before the page told of its scr
   const secondPane = page.locator('.pane').nth(1);
   const input = secondPane.locator('input');
   await input.fill('gamma');
-  // The scroll and the search in one task: the browser tells of a scroll at
-  // its next frame, so the search's new entry lands before the scroll event,
-  // as on a machine whose frames lag its input.
   const left = await page.evaluate(() => {
     const field = document.querySelectorAll<HTMLInputElement>('.pane input')[1];
     field?.scrollIntoView({ block: 'center' });
@@ -395,8 +382,6 @@ test('filter changes in quick succession share one request', async ({ page }) =>
   await pane.locator('.ftoggle').click();
   const before = (await receipts(page)).batchHttpRequests;
 
-  // Two changes inside the quiet period: the URL takes both at once, the
-  // server sees one request for where they end.
   await pane.evaluate((node) => {
     const button = (name: string) =>
       [...node.querySelectorAll('button')].find((candidate) => candidate.textContent === name);
@@ -407,9 +392,6 @@ test('filter changes in quick succession share one request', async ({ page }) =>
   expect([url.get('scope'), url.get('type')]).toEqual(['egw', 'book']);
   await expect(pane.locator('.text')).toHaveText('alpha [egw]');
   await expect(pane.locator('.results')).toHaveAttribute('aria-busy', 'false');
-  // The answer on screen came back from the request the changes caused: one
-  // request, carrying one search. A search the first change left running would
-  // be a second request, or a second input in the same batch window.
   const after = await receipts(page);
   expect(after.batchHttpRequests).toBe(before + 1);
   expect(after.lastBatch).toEqual(['alpha']);

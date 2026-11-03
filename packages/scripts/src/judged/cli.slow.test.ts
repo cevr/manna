@@ -1,9 +1,3 @@
-// The judged lint at its command boundary, as `bun run lint` runs it: a
-// failure of any kind is one skip line and success. The cases that need a
-// model's answer run the command in-process over a test model layer; the
-// two that run the real program as a process have no key and no `security`
-// on their PATH, so nothing they do can send a request.
-
 import { BunHttpServer } from '@effect/platform-bun';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
@@ -33,19 +27,16 @@ import { TEST_GIT } from '../testing.js';
 
 const PACKAGES = new URL('../../../', import.meta.url).pathname;
 const CLI = new URL('../lint-judged.ts', import.meta.url).pathname;
-/** The timeout of a test here that spawns oxlint: a cold start's time is the machine's. */
 const SPAWNS_MS = 30_000;
 
 const PLUGIN = new URL('../../lint/judged.ts', import.meta.url).pathname;
 const OXLINT = new URL('../../../../node_modules/.bin/oxlint', import.meta.url).pathname;
 const ROOT_PACKAGE = new URL('../../../../package.json', import.meta.url).pathname;
 
-/** A package.json, as far as its scripts. */
 const Scripts = Schema.fromJsonString(
   Schema.Struct({ scripts: Schema.Record(Schema.String, Schema.String) }),
 );
 
-/** Runs `command args` in `cwd`; answers its exit code, stdout and stderr. */
 const run = (
   cwd: string,
   command: string,
@@ -77,7 +68,6 @@ const run = (
 const git = (cwd: string, ...args: ReadonlyArray<string>) =>
   run(cwd, 'git', [...TEST_GIT, ...args]);
 
-/** The repo's own rule `id` and judged settings (`withFs` provides them), with no ignore patterns. */
 const lintConfig = (id: string) =>
   Effect.gen(function* () {
     const config = yield* JudgedLint;
@@ -95,11 +85,6 @@ const lintConfig = (id: string) =>
     });
   });
 
-/**
- * A repo linted by the repo's own rule `id` whose `main` has `file` as
- * `before`, and a branch that makes it `after`, committed; `src` is its
- * workspace, so a new file there is the repo's work.
- */
 const repoOf = (id: string, file: string, before: string, after: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -118,7 +103,6 @@ const repoOf = (id: string, file: string, before: string, after: string) =>
     return dir;
   });
 
-/** A repo whose branch adds a comment that tells history to `src/a.ts`. */
 const repo = repoOf(
   'historyComment',
   'src/a.ts',
@@ -126,10 +110,6 @@ const repo = repoOf(
   '// This used to retry; pass 6 removed that.\nconst a = 1;\n',
 );
 
-/**
- * An environment with no key and a PATH of only `git` and `bun`: no
- * `security`, so the keychain gives none either.
- */
 const keyless = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -145,7 +125,6 @@ const keyless = Effect.gen(function* () {
   };
 });
 
-/** A host on a local port that counts the requests it is sent and answers each 500. */
 const counting = Effect.gen(function* () {
   const seen = { requests: 0 };
   const http = yield* BunHttpServer.make({ hostname: '127.0.0.1', port: 0 });
@@ -158,7 +137,6 @@ const counting = Effect.gen(function* () {
   return { url: HttpServer.formatAddress(http.address), seen };
 });
 
-/** The lint's own model over a fake TypeSafe that answers every key `choice` at 0.97, `other` at 0.03. */
 const answering = (choice: string, other: string) => {
   const http = typesafeHttp(200, (keys) => ({
     model: 'jev-latest',
@@ -186,10 +164,8 @@ const answering = (choice: string, other: string) => {
   };
 };
 
-/** The model answering every key history. */
 const historyModel = () => answering('history', 'today');
 
-/** The lint's own model over a fake TypeSafe that answers every request 500. */
 const refusingModel = (model: string) =>
   judgedModel(model).pipe(
     Layer.provide(
@@ -201,13 +177,11 @@ const refusingModel = (model: string) =>
     ),
   );
 
-/** A model whose every answer is a defect. */
 const dyingModel = () =>
   Layer.effect(DecisionModel.DecisionModel)(
     DecisionModel.make({ decide: () => Effect.die('a defect in the model') }),
   );
 
-/** The command run in-process in `dir` over `model`: its exit, stdout lines and stderr lines. */
 const inProcess = <E extends { readonly _tag: string }, R>(
   dir: string,
   args: ReadonlyArray<string>,
@@ -235,7 +209,6 @@ const inProcess = <E extends { readonly _tag: string }, R>(
 const FINDING =
   "src/a.ts:1 warning judged(historyComment): the comment tells the code's history: say what it does today and why; how it got here lives in git log p=0.97";
 
-/** `effect` scoped, over Bun's services and the repo's own judged lint. */
 const withFs = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   effect.pipe(
     Effect.scoped,
@@ -263,9 +236,6 @@ describe('the judged lint fails open', () => {
         const path = yield* Path.Path;
         const host = yield* counting;
         const dir = yield* repo;
-        // The repo's own `lint:judged` line, run by `bun run` as `bun run
-        // lint` runs it, in a repo whose untracked `.env.development` names a key,
-        // a counting host as TypeSafe's, and a proxy that answers nothing.
         const root = yield* Schema.decodeEffect(Scripts)(yield* fs.readFileString(ROOT_PACKAGE));
         yield* fs.writeFileString(
           path.join(dir, 'package.json'),
@@ -311,7 +281,6 @@ describe('the judged lint fails open', () => {
           ]);
           expect(lint.err.join('\n')).toContain('[judged] answers not kept rule=historyComment');
           expect(model.requests).toHaveLength(1);
-          // The plugin reads the store for the file: an answer another checkout keeps there reports.
           const written = yield* Effect.flatMap(
             fs.readFileString(path.join(dir, 'tmp/judged/findings.json')),
             Schema.decodeEffect(Findings),

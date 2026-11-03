@@ -1,20 +1,3 @@
-/**
- * One subscriber: every rule about one address holds here, in one writer, so
- * two requests at once cannot both pass a check (two sign-ups both issuing a
- * link, two batches both sending a film).
- *
- * - `None`: never signed up, or forgotten when a sign-up ran out.
- * - `Pending`: signed up, waiting to confirm with its newest link (`link`).
- *   `leftAt` is when it last left, if it ever did: a link issued then or
- *   before never confirms.
- * - `Confirmed`: on the list.
- * - `Left`: off the list. Its letters are kept, so coming back never sends a
- *   film twice.
- *
- * `Import` brought a subscriber over from the D1 list the model replaced, as
- * it stood there; it ran once, and stays for the `Imported` events it wrote
- * (`./Import.command.ts`).
- */
 import * as Domain from '@alchemy.run/domain';
 import { Array as Arr, DateTime, Duration, Match, Option, Predicate, Schema } from 'effect';
 
@@ -40,7 +23,6 @@ import { ConfirmLinkIssued, SignedUp, SignUp } from './SignUp.command.ts';
 import { type Letter, Letters, Millis, SubscriberId } from './Subscriber.id.ts';
 import { CONFIRM_FOR, RESEND_AFTER } from './timing.ts';
 
-/** When the newest confirm link was issued, if one stands. */
 const Link = Schema.OptionFromNullOr(Millis);
 
 const NoneState = Schema.TaggedStruct('None', {});
@@ -62,7 +44,6 @@ export type SubscriberState = typeof SubscriberState.Type;
 
 const NONE: SubscriberState = { _tag: 'None' };
 
-/** Never signed up, forgotten, or off the list. */
 const isOffList = Predicate.or(Predicate.isTagged('None'), Predicate.isTagged('Left'));
 
 const lettersOf = (s: SubscriberState): Letters => {
@@ -81,7 +62,6 @@ const leftAtOf = (s: SubscriberState): Option.Option<number> => {
   return Option.none();
 };
 
-/** Whether a link may be issued `now`: none within `RESEND_AFTER` of the last, nor at or before leaving. */
 const mayIssue = (s: SubscriberState, now: number) => {
   const rested = Option.match(linkOf(s), {
     onNone: () => true,
@@ -152,7 +132,6 @@ export class Subscriber extends Domain.Aggregate('Subscriber', {
         onSome: (leftAt) => leftAt < cmd.issued,
       });
       if (s._tag !== 'Pending' || !fresh || !newest || !afterLeaving) {
-        // decide takes the rejection's class instance; `.make` answers its schema's base type.
         // @effect-diagnostics-next-line newSchemaClass:off
         return new StaleLink();
       }

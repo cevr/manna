@@ -1,15 +1,3 @@
-// The lab's writes to scene source: a cue's `offset`, `dur`, `until`,
-// `untilOffset`, `ease` or `stagger`, or a knob's value, in the `drawing({...})` literal
-// SceneSources locates. A cue write the scene's timeline cannot resolve with
-// is refused (`TimelineUnresolved`): judged in a fresh `film read cue
-// --spans --patch` (`FreshFilm`), on the clock the film's files give now, never this
-// process's first import of them; its answer is the cue where it lands.
-//
-// Each write splices the one value (`scene-source.ts`) and reads it back from
-// the formatted text, through SourceWriter: oxfmt, the compare-and-swap over
-// the text the edit was made from (`SourceChanged`), and the film's undo stack
-// are its.
-
 import { Array as Arr, Context, Effect, Layer, Option, Predicate, Result } from 'effect';
 import { CUE_PATCH_KEYS, type CuePatch, type Knob } from '../core/schema.ts';
 import {
@@ -25,11 +13,6 @@ import { cueLanded, editCue, editKnob, readKnob, readSpans } from './scene-sourc
 import { type Field, type LocateError, type SceneSite, SceneSources } from './scene-sources.ts';
 import { type RewriteError, SourceWriter, type Wrote } from './source-writer.ts';
 
-/**
- * One write to a scene file (`Wrote`: the change it made, none when the file
- * was already so), the text the file holds after it, and the name the file
- * exports the drawing under: where the written value reads back.
- */
 interface Written extends Wrote {
   readonly after: string;
   readonly exportName: string;
@@ -37,7 +20,6 @@ interface Written extends Wrote {
 
 type WriteError = LocateError | SceneNotLocated | SourceShared | TimelineUnresolved | RewriteError;
 
-/** A cue written, and where it resolves as the film's files now give it (or why it does not). */
 export interface CueWritten {
   readonly written: Written;
   readonly read: CueRead;
@@ -58,7 +40,6 @@ interface SceneWriterService {
   ) => Effect.Effect<Written, WriteError>;
 }
 
-/** Whether two numbers are the same value as the lab writes it. */
 const same = (a: number, b: number) => toMs(a) === toMs(b);
 
 const sameKnob = (a: Knob, b: Knob): boolean => {
@@ -79,11 +60,6 @@ export class SceneWriter extends Context.Service<SceneWriter, SceneWriterService
       const sources = yield* SceneSources;
       const writer = yield* SourceWriter;
 
-      /**
-       * Rewrite one value of a scene's drawing: `edit` gives the new text,
-       * `verify` reads the formatted text back, naming what did not land, and
-       * `check` refuses a text the scene cannot play.
-       */
       const write = <A>(
         film: string,
         scene: string,
@@ -106,7 +82,6 @@ export class SceneWriter extends Context.Service<SceneWriter, SceneWriterService
             target,
             edit: (source) => edit(at, source),
             verify: (after, before) => verify(at, after, before),
-            // The text judged is the text the file holds after, written or already so.
             check: (after) => Effect.map(check(at, after), (a) => [a, after] as const),
           });
           const written: Written = {
@@ -120,15 +95,6 @@ export class SceneWriter extends Context.Service<SceneWriter, SceneWriterService
           return [written, checked] as const;
         });
 
-      /**
-       * Refuse `after` when the scene's timeline, its spans read from `after`
-       * where they are literals, and `patch` applied to the cue's own span
-       * where its source computes part of it (`until: MARK`, which no literal
-       * says), does not resolve on the clock the film's files give now (a
-       * fresh `film read cue --spans --patch`); else answer where `cue` lands.
-       * A film that does not load or lay out as it stands is not this write's
-       * to judge: the check passes, saying why it could not resolve the cue.
-       */
       const resolves =
         (film: FilmName, scene: string, cue: string, patch: CuePatch, target: string) =>
         (at: SceneSite, after: string) =>

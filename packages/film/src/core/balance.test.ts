@@ -5,17 +5,14 @@ import type { Placement } from './mix.ts';
 
 const RATE = 44100;
 
-/** `secs` of a 220 Hz tone at `db` dBFS RMS, on both sides (a voice bus plays mono at −3 dB a side). */
 const tone = (secs: number, db: number, sides = 2): Pcm => {
   const frames = Math.round(secs * RATE);
-  // The tone's power splits evenly over its sides.
   const amp = 10 ** (db / 20) * Math.SQRT2 * Math.sqrt(1 / sides);
   const plane = new Float32Array(frames);
   for (let i = 0; i < frames; i++) plane[i] = amp * Math.sin((2 * Math.PI * 220 * i) / RATE);
   return { rate: RATE, frames, channels: Array.from({ length: sides }, () => plane) };
 };
 
-/** A bus `secs` long with `sound` laid in from `from` seconds. */
 const bus = (secs: number, sound: Pcm, from: number): Pcm => {
   const frames = Math.round(secs * RATE);
   const at = Math.round(from * RATE);
@@ -27,7 +24,6 @@ const bus = (secs: number, sound: Pcm, from: number): Pcm => {
   return { rate: RATE, frames, channels };
 };
 
-/** A mono effect: `quiet` dB for its length with one 50 ms burst at `burst` dB in the middle. */
 const effect = (secs: number, quiet: number, burst: number): Pcm => {
   const base = tone(secs, quiet, 1);
   const loud = tone(0.05, burst, 1);

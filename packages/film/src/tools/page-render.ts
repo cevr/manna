@@ -1,17 +1,3 @@
-// The server's render of the lab's pages. A page with a server entry
-// (`LabPageSpec.servers`) is rendered by its build's server bundle, which
-// `LabPage` builds beside the browser's from the same sources. Each build's
-// bundle runs in a worker of its own: written to a temp folder of the
-// build's, imported there and nowhere else, so the lab's own thread never
-// imports a page's code (Bun keeps a module for the life of its thread) and
-// a build's modules go when its worker does. A worker is spawned on its
-// build's first render; once a newer build renders, the older one's worker
-// is retired as soon as its last render ends (a reference count). A render's
-// reads of the lab's API come back to the lab (`PageReads`): answered by the
-// lab's own handler as the page's request would be, so they pass the one
-// gate and the same handlers. Bun is the only host: the live adapter is
-// Effect's `BunWorker` (`page-render-bun.ts`); `layerTest` renders without one.
-
 import {
   Boolean as Bool,
   Cause,
@@ -42,54 +28,34 @@ import { LONGEST_WAIT } from '../core/wait.ts';
 import { renderWorkers } from './page-render-bun.ts';
 import { FromRender, ToRender } from './page-render-protocol.ts';
 
-/** A module of a build's server bundle, at its path under the build's root. */
 interface BundledModule {
   readonly path: string;
   readonly bytes: Uint8Array;
 }
 
-/** A build's server bundle: its modules, and each server-rendered page's entry among them. */
 export interface ServerBundle {
   readonly files: ReadonlyArray<BundledModule>;
   readonly entries: ReadonlyMap<AppPage, string>;
 }
 
-/** A build as a render names it: its number among the builds, and its server bundle. */
 export interface RenderBuild {
   readonly id: number;
   readonly bundle: ServerBundle;
 }
 
-/** A page did not render: its server entry, its worker or its render failed, in their words. */
 export class RenderFailed extends Schema.TaggedError<RenderFailed>()('RenderFailed', {
   reason: Schema.String,
 }) {}
 
-/**
- * A read of the lab's API by a page's render: the GET of `path`, answered as
- * the page's own request would be (the lab's server gives it, `PageReads`).
- */
 type Read = (path: string) => Effect.Effect<Response>;
 
-/** A page as its render writes it. */
 export interface RenderedPage {
-  /** What the page's head holds beside its HTML entry's. */
   readonly head: string;
-  /** The class the page's body carries. */
   readonly bodyClass: string;
-  /** The page's markup, piece by piece; it fails, past what it wrote, when the render does. */
   readonly markup: Stream.Stream<string, RenderFailed>;
 }
 
 interface PageRendererService {
-  /**
-   * `page` of `build` rendered as `asked` (its URL, and whether the browser
-   * keys as a Mac), its reads through `read`: once its
-   * head is written (or `HEAD_WAIT` passes, a failure). Its markup fails
-   * once `END_WAIT` passes after the head. The render holds its build's
-   * worker until the scope closes; closed before its markup ends, the render
-   * is stopped.
-   */
   readonly render: (
     build: RenderBuild,
     page: AppPage,
@@ -101,19 +67,12 @@ interface PageRendererService {
 export class PageRenderer extends Context.Service<PageRenderer, PageRendererService>()(
   '@manna/film/tools/PageRenderer',
 ) {
-  /** Each build's pages rendered in a Bun worker of the build's. */
   static readonly layer: Layer.Layer<PageRenderer, never, FileSystem.FileSystem | Path.Path> =
     Layer.effect(
       PageRenderer,
       Effect.suspend(() => make),
     ).pipe(Layer.provide(renderWorkers));
 
-  /**
-   * Pages rendered with no worker, for tests of what serves them: a page's
-   * head names it, its body's class is `rendered`, and its markup is a
-   * `<main>` naming the page and the URL it was asked at (and `for a Mac`
-   * when the browser that asked keys as one).
-   */
   static readonly layerTest: Layer.Layer<PageRenderer> = Layer.succeed(
     PageRenderer,
     PageRenderer.of({
@@ -131,30 +90,16 @@ export class PageRenderer extends Context.Service<PageRenderer, PageRendererServ
   );
 }
 
-/** How long a render may take to write its head before the page is answered without it. */
 const HEAD_WAIT = Duration.seconds(10);
 
-/**
- * How long a render may go on after its head before it is cut: the longest a
- * lab request is held (`LONGEST_WAIT`), so a read the lab answers in that time
- * is rendered, and a few seconds to render its answer. The lab ends a cut
- * page marked (`PAGE_CUT_MARK`), and the browser renders that page anew (a
- * read the lab never answers would otherwise hold the page unhydrated).
- */
 export const END_WAIT = Duration.sum(Duration.seconds(LONGEST_WAIT), Duration.seconds(5));
 
-/**
- * A render under way: the worker's messages for it, its reads, and the
- * fiber answering each read by its number (interrupted when the render gives
- * the read up, and all of them when it closes).
- */
 interface Pending {
   readonly parts: Queue.Queue<FromRender>;
   readonly read: Read;
   readonly answering: FiberMap.FiberMap<number, void>;
 }
 
-/** A build's worker: its pages' renders, and whether it still runs. */
 interface BuildWorker {
   readonly render: (
     entry: string,
@@ -164,10 +109,8 @@ interface BuildWorker {
   readonly alive: Effect.Effect<boolean>;
 }
 
-/** A render's last message: its end, or its failure. */
 const isLast = Predicate.or(Predicate.isTagged('End'), Predicate.isTagged('Failed'));
 
-/** The worker's message, done with: a piece of markup, or the end; a failure fails the markup. */
 const pieceOf = (part: FromRender): Effect.Effect<string, RenderFailed> =>
   FromRender.$match(part, {
     Head: () => Effect.succeed(''),
@@ -178,11 +121,6 @@ const pieceOf = (part: FromRender): Effect.Effect<string, RenderFailed> =>
     Failed: ({ reason }) => Effect.fail(RenderFailed.make({ reason })),
   });
 
-/**
- * `build`'s worker over its server bundle, written to a temp folder of its
- * own: alive until the scope closes (its worker is then closed, its folder
- * removed).
- */
 const spawnWorker = Effect.fnUntraced(function* (build: number, bundle: ServerBundle) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -204,7 +142,6 @@ const spawnWorker = Effect.fnUntraced(function* (build: number, bundle: ServerBu
   const gone = yield* Deferred.make<string>();
   let started = 0;
 
-  /** `answer` sent back to the render; a send that fails is logged, the render ends without it. */
   const sendAnswer = (path: string, answer: ToRender) =>
     worker
       .send(answer)
@@ -214,12 +151,6 @@ const spawnWorker = Effect.fnUntraced(function* (build: number, bundle: ServerBu
         ),
       );
 
-  /**
-   * A read of the render's, answered and sent back. A read the lab cannot
-   * answer (its handler died, its body would not read) is answered a 502
-   * with the reason, so the render's fetch always settles; one given up
-   * (interrupted) is answered nothing, as the render no longer waits.
-   */
   const answer = (render: Pending, asked: FromRender & { readonly _tag: 'Read' }) =>
     Effect.gen(function* () {
       const response = yield* render.read(asked.path);
@@ -252,12 +183,6 @@ const spawnWorker = Effect.fnUntraced(function* (build: number, bundle: ServerBu
       Effect.flatMap((answered) => sendAnswer(asked.path, answered)),
     );
 
-  /**
-   * A message of the worker's, to the render it names (a render already gone
-   * hears nothing). A read is answered in a fiber of the render's, kept by
-   * the read's number: it ends when the render gives the read up (its
-   * handler interrupted, its request aborted), or when the render ends.
-   */
   const deliver = (message: FromRender): Effect.Effect<void> =>
     Option.match(Option.fromUndefinedOr(pending.get(message.id)), {
       onNone: () => Effect.void,
@@ -272,7 +197,6 @@ const spawnWorker = Effect.fnUntraced(function* (build: number, bundle: ServerBu
       },
     });
 
-  /** The worker stopped: every render under way fails, and so does each one after. */
   const stopped = (reason: string) =>
     Effect.andThen(
       Deferred.succeed(gone, reason),
@@ -335,7 +259,6 @@ const spawnWorker = Effect.fnUntraced(function* (build: number, bundle: ServerBu
           Effect.tap(pieceOf(part), () => Ref.set(ended, part._tag !== 'Chunk')),
         ),
         Stream.filter((piece) => piece.length > 0),
-        // Cut, not ended: the render is stopped (`Cancel`) as its scope closes.
         Stream.interruptWhen(
           Effect.andThen(
             Effect.sleep(END_WAIT),
@@ -352,10 +275,6 @@ const spawnWorker = Effect.fnUntraced(function* (build: number, bundle: ServerBu
   } satisfies BuildWorker;
 });
 
-/**
- * A build as its worker is kept by (`RcMap`): one worker per build number,
- * the build's bundle carried for the worker's spawn.
- */
 class WorkerOf implements Equal.Equal {
   constructor(readonly build: RenderBuild) {}
   [Equal.symbol](that: Equal.Equal): boolean {
@@ -366,7 +285,6 @@ class WorkerOf implements Equal.Equal {
   }
 }
 
-/** The renderer over the worker platform: a worker per build, the latest one kept. */
 const make = Effect.gen(function* () {
   const workers = yield* RcMap.make({
     lookup: ({ build }: WorkerOf) =>
@@ -380,7 +298,6 @@ const make = Effect.gen(function* () {
   });
   const latest = yield* Ref.make(Option.none<RenderBuild>());
 
-  /** `build` the latest to render, when it is newer: the build it follows is retired once its renders end. */
   const follow = (build: RenderBuild) =>
     Effect.flatMap(
       Ref.modify(latest, (before): [Option.Option<RenderBuild>, Option.Option<RenderBuild>] => {
@@ -391,13 +308,6 @@ const make = Effect.gen(function* () {
         Effect.forEach(Option.toArray(old), (o) => RcMap.invalidate(workers, new WorkerOf(o))),
     );
 
-  /**
-   * `build`'s worker, just acquired, retired once its renders end when a
-   * newer build has rendered: a request that named an older build, answered
-   * after a newer one rendered, ends with that build's worker. Checked after
-   * the acquisition, so whichever comes first (the newer build's render, or
-   * this one's), no older worker outlives its last render.
-   */
   const retireIfOlder = (build: RenderBuild) =>
     Effect.flatMap(Ref.get(latest), (now) =>
       Effect.when(
@@ -406,16 +316,11 @@ const make = Effect.gen(function* () {
       ),
     );
 
-  /**
-   * `build`'s worker: one that failed to spawn is not kept (RcMap keeps a
-   * failed lookup for every later ask), so the next render spawns again.
-   */
   const acquire = (build: RenderBuild) =>
     RcMap.get(workers, new WorkerOf(build)).pipe(
       Effect.tapError(() => RcMap.invalidate(workers, new WorkerOf(build))),
     );
 
-  /** `build`'s worker, running: one that stopped is spawned again. */
   const workerOf = (build: RenderBuild): Effect.Effect<BuildWorker, RenderFailed, Scope.Scope> =>
     Effect.gen(function* () {
       const worker = yield* acquire(build);

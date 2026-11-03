@@ -12,7 +12,6 @@ import { STYLE } from './style.js';
 
 const [soprano, alto, tenor, bass] = Fixture.praiseToTheLord;
 
-/** The fixture's four voices on four tracks, with a tempo change at bar 2. */
 const praise = Effect.map(
   Midi.parse(
     Fixture.write({
@@ -28,14 +27,12 @@ const praise = Effect.map(
   }),
 );
 
-/** A stem's MIDI file as the sampler reads it: its notes as [start, end, key] and its tempo map. */
 const sampled = (midi: Midi.Midi, notes: Parameters<typeof stemMidi>[1]) =>
   Effect.map(Midi.parse(stemMidi(midi, notes)), (read) => ({
     notes: read.tracks.flatMap((t) => t.notes).map((n) => [n.start, n.end, n.key]),
     tempos: read.tempos,
   }));
 
-/** A voice's notes as [start, end, key] at 384 ticks a beat, each key moved `by`. */
 const ticks = (voice: Fixture.Voice | undefined, by: number) => {
   let at = 0;
   return (voice ?? []).flatMap(([key, beats]) => {
@@ -71,7 +68,6 @@ describe('another key', () => {
         expect(melodyFile.notes).toEqual(ticks(soprano, t));
         expect(melodyFile.tempos).toEqual(midi.tempos);
         expect((yield* sampled(midi, cellos?.notes ?? [])).notes).toEqual(ticks(tenor, t));
-        // Velocities are the printed key's: the same seed draws them.
         const printed = planOf(voices(midi), STYLE, 1);
         expect(plan.map((p) => p.notes.map((n) => n.velocity))).toEqual(
           printed.map((p) => p.notes.map((n) => n.velocity)),
@@ -93,7 +89,6 @@ describe('another key', () => {
     "keeps the corpus's lowest bass and highest melody in range at -5 and +6, the part moved by a whole octave",
     () =>
       Effect.gen(function* () {
-        // Hymn 33 holds the lowest bass note (the contrabass plays it at 21), hymn 305 the highest melody (88).
         const cases = [
           { hymn: 33, t: -5, stem: 'bass', octave: 12 },
           { hymn: 33, t: 6, stem: 'bass', octave: 0 },

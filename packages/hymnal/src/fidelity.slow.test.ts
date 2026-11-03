@@ -1,23 +1,3 @@
-/**
- * Text fidelity, the class property: every hymn 1-695, compiled fresh from
- * its source-text row and its MIDI file (the source the compile script builds,
- * compiled in `fidelity-worker.ts` off this thread), sings exactly its printed text in the order the hymnal sings it, line for
- * line: nothing missing, nothing extra, nothing moved. A line is compared as
- * the golden compares a syllable: case and punctuation ignored (each word's
- * letters and digits, the words in order).
- *
- * The oracle builds the expected lines from the sources alone, never from the
- * compiler or `sung`: the row's stanzas by id and its one negative-id
- * refrain; the refrain's place from `data/fixes/refrains.json`, read off each
- * refrain hymn's page; and, for a source row rewritten from its
- * page (each hymn with a `data/fixes/NNN.json`: the census's `fixed` hymns,
- * its `matches` hymns written as the page lays them out, and the seven fixes
- * before it), that printed source in place of the row.
- * Where a refrain is sung has no default: a refrain hymn `refrains.json`
- * does not list, or a listed hymn with no refrain, fails. The mutant cases
- * below hold the property to the defects it exists to catch.
- */
-
 import { HymnId } from '@manna/core/hymnal';
 import { SourceHymnal, layerSourceText } from '../scripts/source-text.js';
 import { BunWorker } from '@effect/platform-bun';
@@ -35,11 +15,6 @@ const layer = Layer.merge(
   BunServices.layer,
 );
 
-// ----------------------------------------------------------------------------
-// The oracle: the printed text, in the order the hymnal sings it
-// ----------------------------------------------------------------------------
-
-/** Where a refrain is sung, as its page prints it. */
 const Order = Schema.Literals([
   'after-each',
   'first-and-after-each',
@@ -49,7 +24,6 @@ const Order = Schema.Literals([
 ]);
 type Order = typeof Order.Type;
 
-/** A hymn's printed text: its stanzas' lines, and its refrain's place and its lines after stanza n (0-based). */
 interface Printed {
   readonly stanzas: ReadonlyArray<ReadonlyArray<string>>;
   readonly refrain?: { readonly order: Order; readonly after: (n: number) => readonly string[] };
@@ -61,7 +35,6 @@ const linesOf = (text: string) =>
     .map((line) => line.trim())
     .filter((line) => line !== '');
 
-/** A line as compared: lower case, each word's letters and digits, the words joined by one space. */
 const words = (line: string) =>
   line
     .toLowerCase()
@@ -70,7 +43,6 @@ const words = (line: string) =>
     .filter((word) => word !== '')
     .join(' ');
 
-/** The printed lines in sung order: each stanza, with the refrain where the hymnal sings it. */
 const expected = ({ stanzas, refrain }: Printed): string[] => {
   if (refrain === undefined) return stanzas.flat();
   const last = stanzas.length - 1;
@@ -115,13 +87,6 @@ const Refrains = Schema.fromJsonString(
   Schema.Struct({ hymns: Schema.Array(Schema.Struct({ number: Schema.Int, order: Order })) }),
 );
 
-/**
- * A printed source (`data/fixes/NNN.json`): its stanzas, and its refrain as
- * printed after each stanza, a part printed once for each stanza (`varies`)
- * in place. A refrain that varies is sung after each stanza, its own part in
- * it, and the census does not list it (the row holds no refrain); one that
- * does not vary is sung where the census places it, and has no default.
- */
 const fromPrint = (text: string, order: Order | undefined) =>
   Effect.map(
     Schema.decodeEffect(PrintedRow)(text),
@@ -149,11 +114,6 @@ const fromPrint = (text: string, order: Order | undefined) =>
     },
   );
 
-/**
- * A captured source row: its stanzas by id, and its one negative-id refrain at the
- * place the census lists. A refrain the census does not place, or a place
- * listed for a hymn with no refrain, is a failure: there is no default.
- */
 const fromRow = (
   verses: ReadonlyArray<{ readonly id: number; readonly text: string }>,
   order: Order | undefined,
@@ -174,19 +134,12 @@ const fromRow = (
   return Result.succeed({ stanzas, refrain: { order, after: () => lines } });
 };
 
-// ----------------------------------------------------------------------------
-// Every hymn, compiled fresh once for this file
-// ----------------------------------------------------------------------------
-
 interface Compiled {
   readonly number: number;
-  /** The printed text in sung order, or why the oracle cannot build it. */
   readonly printed: Result.Result<Printed, string>;
-  /** The compiled hymn, or why it failed. */
   readonly hymn: Result.Result<Hymn, string>;
 }
 
-/** Where each listed refrain is sung, read by the oracle's own schema as the file loads. */
 const orders = Effect.succeed(
   // oxlint-disable-next-line effect/noAsyncFunction -- built once as the file loads, so no case's time limit holds its cost
   await Effect.runPromise(
@@ -202,12 +155,10 @@ const orders = Effect.succeed(
 
 const ALL = Arr.range(1, 695);
 
-/** One hymn compiled, or why it failed: what `fidelity-worker.ts` sends. */
 type Done =
   | { readonly number: number; readonly hymn: Hymn }
   | { readonly number: number; readonly failure: string };
 
-/** The workers that compile the hymns: a few, so the compiles share the cores. */
 const WORKERS = 4;
 
 const workers = BunWorker.layer(
@@ -215,11 +166,6 @@ const workers = BunWorker.layer(
   () => new globalThis.Worker(new URL('./fidelity-worker.ts', import.meta.url)),
 );
 
-/**
- * Worker k compiles `numbers` and settles each one's place in `waiting` as
- * it is sent, then closes; a worker that fails settles every place it has
- * left with why.
- */
 const compileIn = (
   k: number,
   numbers: readonly number[],
@@ -256,12 +202,6 @@ const compileIn = (
     ),
   );
 
-/**
- * Each hymn's compile, as a place `fidelity-worker.ts` settles. The workers
- * start as the file loads, in a runtime of their own (a test's
- * clock is not theirs); worker k takes every WORKERS-th hymn from the k-th,
- * so each chunk's hymns are done early.
- */
 const compiles = Effect.succeed(
   Effect.runSync(
     Effect.sync(() => {
@@ -283,7 +223,6 @@ const compiles = Effect.succeed(
   ),
 );
 
-/** Each hymn compiled so far: the chunks of the property fill it, the mutant cases read it. */
 const memo = new Map<number, Compiled>();
 
 const compileOne = (n: number) =>
@@ -303,14 +242,12 @@ const compileOne = (n: number) =>
     return one;
   });
 
-/** The hymns, compiled fresh (once each for this file). */
 const compiledOf = (numbers: readonly number[]) =>
   Effect.forEach(numbers, (n) => {
     const known = memo.get(n);
     return known === undefined ? compileOne(n) : Effect.succeed(known);
   });
 
-/** The hymns whose sung lines are not their printed lines in sung order, each with its first difference. */
 const unfaithful = (hymns: readonly Compiled[]): string[] =>
   hymns.flatMap(({ number, printed, hymn }) => {
     if (Result.isFailure(printed)) return [`${number}: ${printed.failure}`];
@@ -327,7 +264,6 @@ const unfaithful = (hymns: readonly Compiled[]): string[] =>
 
 const numbers = (lines: readonly string[]) => lines.map((line) => Number(line.split(':')[0]));
 
-/** Each hymn, changed by `change` where it returns a hymn; the numbers of those changed. */
 const mutate = (hymns: readonly Compiled[], change: (hymn: Hymn) => Hymn | undefined) => {
   const changed: number[] = [];
   const out = hymns.map((one) => {
@@ -340,7 +276,6 @@ const mutate = (hymns: readonly Compiled[], change: (hymn: Hymn) => Hymn | undef
   return { hymns: out, changed };
 };
 
-/** A part with line k gone, or none when it has no line k (or would have no line left). */
 const withoutLine = (part: Part, k: number): Part | undefined => {
   if (part.lines.length <= Math.max(k, 1)) return undefined;
   if (part._tag === 'Plain') {
@@ -353,7 +288,6 @@ const withoutLine = (part: Part, k: number): Part | undefined => {
 
 const lastLine = (part: Part) => part.lines.length - 1;
 
-/** A part's lines as words: a plain line as printed, a sung line's syllables joined by word. */
 const textOf = (part: Part): string[] =>
   part._tag === 'Plain'
     ? [...part.lines]
@@ -361,11 +295,9 @@ const textOf = (part: Part): string[] =>
         line.map((s, k) => `${k > 0 && line[k - 1]?.word !== s.word ? ' ' : ''}${s.text}`).join(''),
       );
 
-/** The hymns the census places a refrain for, in order: the oracle's list, never the compiler's. */
 const listed = Effect.map(orders, ({ printed }) => [...printed.keys()].toSorted((a, b) => a - b));
 
 describe('compile: text fidelity', () => {
-  // The property, a hundred hymns to a case: each case well inside the test timeout under load.
   for (const chunk of Arr.chunksOf(ALL, 100)) {
     const [first = 0] = chunk;
     const last = chunk.at(-1) ?? first;
@@ -418,7 +350,6 @@ describe('compile: text fidelity', () => {
             stanzas: [{ ...first, lines: [...first.lines, ...refrain.lines] }, ...rest],
           };
         }
-        // A sung stanza and a plain refrain (or the other way): stanza 1 becomes their words.
         const [line, ...lines] = [...textOf(first), ...textOf(refrain)];
         const plain: Part = { _tag: 'Plain', lines: [line ?? '', ...lines], why: ['notes'] };
         return { ...bare, stanzas: [plain, ...rest] };

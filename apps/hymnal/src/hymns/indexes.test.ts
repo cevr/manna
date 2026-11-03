@@ -1,9 +1,3 @@
-/**
- * The index lookups over made-up indexes: numbers, made-up topic and tune
- * names, and passages of made-up chapters. The bundled indexes are walked
- * by the findbulk acceptance rows.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { parseBibleQuery } from '@manna/core/bible';
 import { Option } from 'effect';
@@ -107,7 +101,6 @@ describe('a hymn on its own', () => {
 
 describe('onVerse', () => {
   it('gives the hymns on the verse first, then the chapter by verse distance, ties to the lower number', () => {
-    // On 1 2:5: 10 (the verse) and 12 (the chapter); then 14 (2 away: its span ends at 3), then 11 and 13 (3 away).
     expect(lookups.onVerse(1, 2, 5)).toEqual([10, 12, 14, 11, 13]);
   });
 

@@ -1,9 +1,3 @@
-/**
- * Android's position bar: Material 3's `Slider` (One's `One.Android.Slider`),
- * in the accent. Like iOS's, it tells each value as the reader drags, so a
- * drag seeks once it has rested for `rest`.
- */
-
 import { Duration, Option } from 'effect';
 import { One } from 'one';
 import { StyleSheet } from 'react-native';
@@ -25,7 +19,6 @@ export function Scrubber(props: ScrubberProps) {
       value={scrub.value}
       onValueChange={scrub.change}
       minimumValue={0}
-      // A length not yet known draws a still bar over a range of one.
       maximumValue={Option.getOrElse(
         Option.liftPredicate(scrub.max, (max) => max > 0),
         () => 1,

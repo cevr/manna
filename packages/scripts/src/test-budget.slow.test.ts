@@ -1,13 +1,3 @@
-// `bun run test:budget` over a stand-in turbo, as a shared machine runs it:
-// the run's own summary whole, missing or truncated, and other writers'
-// summaries (another budget run, a hand-run turbo) landing in the same
-// `.turbo/runs` before, during or after it, at turbo's exit 0 and 1. A run
-// never reports a time from a summary it did not write, never removes one,
-// and measures nothing when its own summary cannot be read, at any exit: it
-// fails, and names the task's exit with no time. A workspace whose tests are
-// cut into parts has each part timed by its own task's span.
-// `TEST_BUDGET_SEED=<n>` replays the generated cases of a failing seed.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, test } from 'bun:test';
 import {
@@ -26,17 +16,8 @@ import {
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
-/** What the run's own turbo leaves of its summary. */
-type Own =
-  | 'whole' // written, and its `Summary:` line printed
-  | 'no-line' // not written, no `Summary:` line (turbo 2.11.7 when the write fails, exit 0)
-  | 'line-no-file' // the `Summary:` line printed, the file gone (another writer removed it)
-  | 'truncated' // written in part, its line printed
-  | 'no-task' // whole, but without `x#test` (a `test` that never ran)
-  | 'two-lines' // whole, and its `Summary:` line printed twice
-  | 'outside'; // whole, but written outside `.turbo/runs`, and that path printed
+type Own = 'whole' | 'no-line' | 'line-no-file' | 'truncated' | 'no-task' | 'two-lines' | 'outside';
 
-/** Another writer's summary: which workspaces it names, and when it lands beside the run. */
 interface Foreign {
   readonly file: string;
   readonly names: 'same' | 'other' | 'both';
@@ -48,17 +29,13 @@ interface Case {
   readonly label: string;
   readonly own: Own;
   readonly exit: 0 | 1;
-  /** Under the 1 s budget, so the run's exit is turbo's at any host load. */
   readonly ownMs: number;
   readonly foreign: ReadonlyArray<Foreign>;
-  /** x's `test` script as turbo's dry run names it (`bun test` when none). */
   readonly command?: string;
-  /** x's tests cut into parts: its `test` has no command, and each part's run writes its own whole summary of its time. */
   readonly parts?: ReadonlyArray<{ readonly task: string; readonly ms: number }>;
 }
 
 const OWN_FILE = 'own.json';
-/** Where the `outside` case writes its summary, relative to the scratch root. */
 const OUTSIDE_DIR = 'elsewhere';
 
 const json = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
@@ -81,7 +58,6 @@ const foreignSummary = (foreign: Foreign) => summary(NAMED[foreign.names], forei
 
 const write = (file: string, body: string) => `printf '%s' '${body}' > .turbo/runs/${file}`;
 
-/** The stand-in: `turbo run test --dry=json` names x and y; a measuring run plays the case. */
 const standIn = (each: Case) => {
   const during = (when: Foreign['when']) =>
     each.foreign
@@ -134,7 +110,6 @@ const standIn = (each: Case) => {
       task('y#test', 'bun test'),
     ],
   });
-  // A measuring run is `turbo run <task> --filter=x …`: a part's run writes its own task's summary.
   const ownWrites = Arr.match(parts, {
     onEmpty: () => own[each.own],
     onNonEmpty: (given) => [
@@ -154,7 +129,6 @@ const standIn = (each: Case) => {
     ...ownWrites,
     ...during('during-after-own'),
     ...line[each.own],
-    // The test writes the "after" summaries once this lands (see `run`).
     'touch turbo.exited',
     `exit ${each.exit}`,
     '',
@@ -164,7 +138,6 @@ const standIn = (each: Case) => {
 const text = (stream: Stream.Stream<Uint8Array, unknown>) =>
   Stream.mkString(Stream.decodeText(stream));
 
-/** A run of a copy of the script in a scratch repository, measuring x over the stand-in. */
 const run = (each: Case) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -179,7 +152,6 @@ const run = (each: Case) =>
     );
     yield* fs.copy(path.join(import.meta.dir, 'test-budget'), path.join(src, 'test-budget'));
     yield* fs.copy(path.join(import.meta.dir, 'guard'), path.join(src, 'guard'));
-    // A repository with no workspace: the reach check (`test-budget/reach.ts`) finds no test file.
     yield* fs.writeFileString(path.join(root, 'package.json'), '{ "workspaces": [] }');
     yield* Effect.scoped(
       Effect.flatMap(
@@ -203,8 +175,6 @@ const run = (each: Case) =>
         path.join(root, '.turbo', 'runs', foreign.file),
         foreignSummary(foreign),
       );
-    // Another writer lands "after" from outside the run's process group (which
-    // ends with turbo): once turbo exits, while the script reads and cleans up.
     const after = each.foreign.filter((foreign) => foreign.when === 'after');
     const writer = yield* Effect.forkScoped(
       Effect.gen(function* () {
@@ -242,7 +212,6 @@ const run = (each: Case) =>
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(2)} s`;
 
-/** Every way the run breaks the rule in `each`; none when it holds. */
 const violations = (
   each: Case,
   result: {
@@ -284,7 +253,6 @@ const violations = (
   return found;
 };
 
-/** Runs each case and holds that none breaks the rule. */
 const check = (cases: Effect.Effect<ReadonlyArray<Case>>) =>
   Effect.runPromise(
     Effect.flatMap(cases, (all) =>
@@ -302,7 +270,6 @@ const check = (cases: Effect.Effect<ReadonlyArray<Case>>) =>
     ),
   );
 
-/** mulberry32: a small seeded generator, so a failing seed can be named and replayed. */
 const random = (seed: number) => {
   let state = seed >>> 0;
   return () => {
@@ -331,7 +298,6 @@ const WHENS: ReadonlyArray<Foreign['when']> = [
   'after',
 ];
 
-/** `count` cases: each own summary and exit, with zero to four foreign summaries of any kind and time. */
 const generate = (seed: number, count: number): ReadonlyArray<Case> => {
   const next = random(seed);
   const pick = <A>(items: ReadonlyArray<A>): A => items[Math.floor(next() * items.length)] as A;
@@ -370,7 +336,6 @@ const sameDuring: Foreign = {
   ms: 7_000,
 };
 
-/** The seed of the generated cases: `TEST_BUDGET_SEED` when set, else the clock. */
 const seed = Effect.gen(function* () {
   const given = yield* Config.option(Config.Int('TEST_BUDGET_SEED'));
   return yield* Option.match(given, {

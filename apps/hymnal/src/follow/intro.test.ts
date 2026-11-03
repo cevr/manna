@@ -75,7 +75,6 @@ describe('introOf', () => {
       const values = shares.map((s) => Option.getOrElse(s, () => -1));
       if (values.some((v) => v < 0 || v >= 1)) faults.push(`${number}: share out of range`);
       if (values.some((v, k) => k > 0 && v < (values[k - 1] ?? 0))) faults.push(`${number}: back`);
-      // A ms past the first line: the player tells seconds, and `first / 1000 * 1000` may fall a hair short of it, as the follower sees it too.
       if (Option.isSome(at(first + 1))) faults.push(`${number}: intro after first`);
     }
     expect(faults).toEqual([]);

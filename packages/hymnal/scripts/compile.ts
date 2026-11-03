@@ -1,24 +1,3 @@
-/**
- * Compiles every hymn of the 1985 SDA Hymnal (1–695) from its text in
- * data/source-text.json and its MIDI file into the files the app reads:
- *
- *   bun run compile [--midi <dir>] [--out <dir>] [--key <dir>]
- *
- * It writes `<out>/NNN.json` (one hymn each) and `<out>/index.json`, decodes
- * each file back through the schema, and writes the report beside the
- * folder (`<out>.report.md`): the hymns and parts by level, the reasons,
- * the inexact and count-mismatched files, the held list, the refrains by
- * order (each sung otherwise than after each stanza in its sung order), the
- * topics with their witnesses, the alignment key's comparison and the time
- * taken. It writes `<out>/topics.json`, the hymnal's sections as hymn ranges
- * (`./topics.ts`, from source text and `data/fixes/topics.json`), and decodes
- * it back. Paths default to the
- * repository's (`packages/hymnal/data/source-text.json`, `packages/hymnal/data/midi`,
- * `packages/hymnal/data/sdah-1985`, `packages/hymnal/data/key`); where a
- * refrain is sung comes from `data/fixes/refrains.json` (`./sources.ts`).
- * The same inputs give byte-identical hymn files.
- */
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { HymnId } from '@manna/core/hymnal';
 import { Data, Effect, Layer, Option, Result, Schema } from 'effect';
@@ -60,17 +39,11 @@ const midiDir = flag('--midi', 'packages/hymnal/data/midi');
 const out = flag('--out', 'packages/hymnal/data/sdah-1985');
 const keyDir = flag('--key', 'packages/hymnal/data/key');
 
-/** Where the hymnal sings each refrain, read off its page. */
 const REFRAINS = path.resolve(import.meta.dir, '../data/fixes/refrains.json');
-/** The print's corrections to hymnal.db's sections, each page foot read as its witness. */
 const TOPIC_FIXES = path.resolve(import.meta.dir, '../data/fixes/topics.json');
 
 const pad = (n: number) => String(n).padStart(3, '0');
 
-/**
- * The refrains by order, and each hymn sung otherwise than after each stanza
- * with its verses in sung order (`R` the refrain): `93: R 1 R 2 R 3 R 4 R`.
- */
 const refrainsOf = (compiled: readonly Hymn[]) => {
   const withRefrain = compiled.flatMap((hymn) =>
     hymn.refrain === undefined ? [] : [{ hymn, order: hymn.refrain.order }],
@@ -107,7 +80,6 @@ const decodeIndex = Schema.decodeUnknownEffect(Schema.fromJsonString(Index));
 const encodeTopics = Schema.encodeSync(Topics);
 const decodeTopics = Schema.decodeUnknownEffect(Schema.fromJsonString(Topics));
 
-/** Builds the topics, writes `topics.json` and decodes it back. */
 const writeTopics = (fixes: Fixes) =>
   Effect.gen(function* () {
     const topics = yield* buildTopics(yield* readRows, fixes);
@@ -116,7 +88,6 @@ const writeTopics = (fixes: Fixes) =>
     return yield* decodeTopics(yield* Effect.promise(() => Bun.file(file).text()));
   });
 
-/** Each topic with its range and the page feet that witness it, then the topics no page witnesses. */
 const topicsOf = (topics: Topics, fixes: Fixes) => {
   const witnesses = (id: number) =>
     fixes.printed.filter((p) => Option.exists(topicOf(topics, p.hymn), (topic) => topic.id === id));
@@ -131,7 +102,6 @@ const topicsOf = (topics: Topics, fixes: Fixes) => {
   ];
 };
 
-/** A key file's lines: each syllable's letters and its notes (`text_N`, `text_0`; one by default). */
 const readKey = (text: string) =>
   text
     .split('\n')
@@ -153,11 +123,9 @@ interface KeyResult {
   readonly exact: number;
   readonly cuts: number;
   readonly misses: readonly string[];
-  /** The key's lines (1-based) whose notes the compile does not match. */
   readonly inexact: readonly number[];
 }
 
-/** Compares a hymn's stanza 1 and refrain with its key: a line is exact when its syllables' notes match. */
 const compareKey = (hymn: Hymn, key: ReturnType<typeof readKey>): KeyResult => {
   const first = hymn.stanzas[0];
   const sung: ReadonlyArray<ReadonlyArray<{ readonly text: string; readonly notes: number }>> = [
@@ -198,7 +166,6 @@ const compareKey = (hymn: Hymn, key: ReturnType<typeof readKey>): KeyResult => {
 
 class Failed extends Data.TaggedError('Failed')<{ readonly why: string }> {}
 
-/** Compiles hymn n and writes its file. */
 const compileOne = (n: number, orders: ReadonlyMap<number, Order>) =>
   Effect.gen(function* () {
     const text = yield* (yield* SourceHymnal)
@@ -231,7 +198,6 @@ const compileOne = (n: number, orders: ReadonlyMap<number, Order>) =>
     return hymn;
   });
 
-/** Writes the index, then decodes every file written back through the schema: how many decoded. */
 const writeIndex = (compiled: readonly Hymn[]) =>
   Effect.gen(function* () {
     const index: Index = {
@@ -256,7 +222,6 @@ const writeIndex = (compiled: readonly Hymn[]) =>
     return decoded;
   });
 
-/** Each hymn with a key file, compared with it. */
 const readKeys = (compiled: readonly Hymn[]) =>
   Effect.gen(function* () {
     const keys: KeyResult[] = [];

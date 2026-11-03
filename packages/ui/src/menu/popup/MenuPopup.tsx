@@ -1,8 +1,3 @@
-// Upstream: packages/react/src/menu/popup/MenuPopup.tsx
-//
-// The menu's `role="menu"` container. Focus moves into it on open (the menu
-// focuses itself, or the item list navigation highlights) and back to the
-// trigger on close; a context menu traps focus.
 import { isServer, type JSX } from '@solidjs/web';
 import { omit, onCleanup, untrack } from 'solid-js';
 
@@ -42,7 +37,6 @@ export function MenuPopup(componentProps: MenuPopupProps): JSX.Element {
     },
   });
 
-  // The server set no element to let go.
   onCleanup(() => {
     if (!isServer) store.setPopupElement(null);
   });
@@ -65,7 +59,6 @@ export function MenuPopup(componentProps: MenuPopupProps): JSX.Element {
     },
   };
 
-  // A thunk, built under the providers below so its children read them.
   const element = () =>
     useRenderElement('div', componentProps, {
       state,

@@ -6,7 +6,6 @@ const test = it.effect.layer(BunServices.layer);
 
 const TRIM = 'text-box: trim-both cap alphabetic;';
 
-/** The rule a selector opens in the stylesheet, its closing brace left out; empty when no rule opens there. */
 const ruleOf = (css: string, selector: string) => {
   const open = css.indexOf(`${selector} {`);
   return css.slice(open, css.indexOf('}', open));

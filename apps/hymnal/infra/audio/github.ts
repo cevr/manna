@@ -1,23 +1,14 @@
-/**
- * The fill: the owner's `cevr/sda-hymns` repo, whose `mp3/` folder is what
- * the S3 bucket was uploaded from. It is read at one pinned commit, so a
- * fill is always the same bytes, and the job checks each against the tree's
- * git blob SHA-1 (`./job.ts`). Both calls are unauthenticated: one tree call,
- * and one raw download per hymn S3 lacks.
- */
 import { Effect, Layer, Option, Schedule, Schema } from 'effect';
 import { HttpClient, HttpClientRequest, HttpClientResponse } from 'effect/http';
 
 import type { FillEntry } from './stores.ts';
 import { Fill, StoreFailed } from './stores.ts';
 
-/** `cevr/sda-hymns` main on 2025-01-18: 695 recordings in `mp3/`. */
 const COMMIT = '4645e76cda1ed7eb8a95a6b59a1d29789406bbf8';
 const REPO = 'cevr/sda-hymns';
 
 const TREE_URL = `https://api.github.com/repos/${REPO}/git/trees/${COMMIT}?recursive=1`;
 
-/** A path's raw download at the pinned commit: each segment escaped, its slashes kept. */
 const rawUrl = (path: string) =>
   `https://raw.githubusercontent.com/${REPO}/${COMMIT}/${path.split('/').map(encodeURIComponent).join('/')}`;
 
@@ -35,7 +26,6 @@ const Tree = Schema.Struct({
 
 const failure = (reason: string) => StoreFailed.make({ store: 'github', reason });
 
-/** How long a call with its body may take, retries included. */
 const TIMEOUT = '3 minutes';
 
 const within =
@@ -46,10 +36,8 @@ const within =
       orElse: () => Effect.fail(failure(`${what}: no answer in ${TIMEOUT}`)),
     });
 
-/** A recording's hymn number: the leading digits of `mp3/NNN – Title.mp3`. */
 const RECORDING = /^mp3\/(\d+) .*\.mp3$/u;
 
-/** The tree's recordings by hymn number; a number twice is refused. */
 const recordings = (
   tree: typeof Tree.Type,
 ): Effect.Effect<ReadonlyMap<number, FillEntry>, StoreFailed> => {

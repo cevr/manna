@@ -1,9 +1,3 @@
-/**
- * The manna CLI entry point
- *
- * The Effect command graph owns the non-interactive command surface.
- */
-
 import { Command } from 'effect/cli';
 import { BunServices, BunRuntime } from '@effect/platform-bun';
 import { Effect, Layer } from 'effect';

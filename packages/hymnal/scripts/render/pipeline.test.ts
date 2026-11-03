@@ -14,7 +14,6 @@ import { readWav, writeWav } from './wav.js';
 
 const RATE = 44100;
 
-/** One channel of a 330 Hz tone at `amp`, `seconds` long. */
 const tone = (seconds: number, amp: number): Float32Array =>
   Float32Array.from(
     { length: Math.round(seconds * RATE) },

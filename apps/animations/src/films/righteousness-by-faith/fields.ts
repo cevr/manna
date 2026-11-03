@@ -1,31 +1,14 @@
-// The harvest's fields (the Board's `rain.harvest` and `rain.rain`), drawn in
-// the Board's own pixels (a panel is 1536 × 1024) as the court is: a teal sky
-// lit from the upper left, the sun's beams falling soft through it; lilac
-// hills far off, gold rolling fields under them with dark cypresses and
-// bushes on their rims; then the near field, its green rows running to a
-// point low at the right, red-brown furrows between them, and at the frame's
-// foot the near plants, tall leaves and ears, the one part lined in the ink.
-// The far planes are flat paper with no outline, paler as they stand back.
-// The grain ripens from the distance toward us (`ripe`), greens and stands
-// up under the rain (`green`), and the rain itself is flecks of silver and
-// gold falling a little to the left. Pure: the same numbers draw the same
-// field.
-
 import { type Hex, mix, unprobed } from '@manna/film/canvas';
 import { clamp, lerp, rng } from '@manna/film/core';
 import type { Pt } from '@manna/film/style';
 import { C } from './kit.ts';
 
-/** The panel's framing: the Board's 1536 wide at the film's 1920. */
 export const FIELD_REST = { x: 768, y: 512, zoom: 1.25 } as const;
 
-/** Where the near rows run to, low at the right, and the near field's far edge. */
 const VP: Pt = [1220, 512];
 
-/** How far below the frame the field runs, so a camera can travel over it. */
 const FOOT = 1180;
 
-/** The field's colours: the sky's, the far hills', the near rows' green, the ripe gold, the furrows' soil. */
 const F = {
   skyTop: '#4fb0d2',
   skyMid: '#a7d8d3',
@@ -56,7 +39,6 @@ const F = {
 
 const LINE = 3.5;
 
-/** `pts` as the current path. */
 const trace = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>) => {
   ctx.beginPath();
   pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
@@ -69,7 +51,6 @@ const fill = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>, color: stri
   ctx.fill();
 };
 
-/** A ridge from x0 to x1 at about `y`, its rise `amp`, cut down to `foot`. */
 const ridge = (y: number, amp: number, seed: number, foot: number): Pt[] => {
   const r = rng(seed);
   const pts: Pt[] = [[-700, foot]];
@@ -79,7 +60,6 @@ const ridge = (y: number, amp: number, seed: number, foot: number): Pt[] => {
   return pts;
 };
 
-/** The sky, the beams, the hills and the gold fields under them, with their trees: everything past the near field. */
 export const farField = (ctx: CanvasRenderingContext2D) => {
   const sky = ctx.createLinearGradient(0, -300, 0, 420);
   sky.addColorStop(0, F.skyTop);
@@ -87,7 +67,6 @@ export const farField = (ctx: CanvasRenderingContext2D) => {
   sky.addColorStop(1, F.skyLow);
   ctx.fillStyle = sky;
   ctx.fillRect(-700, -700, 3000, 1200);
-  // The sun's beams from the upper left, soft.
   ctx.save();
   for (const [a, w, alpha] of [
     [0.52, 0.05, 0.22],
@@ -108,11 +87,9 @@ export const farField = (ctx: CanvasRenderingContext2D) => {
   ctx.restore();
   fill(ctx, ridge(345, 30, 3, 520), F.hillFar);
   fill(ctx, ridge(372, 24, 5, 520), F.hillNear);
-  // The gold rolling fields, in three bands toward us.
   fill(ctx, ridge(405, 22, 7, 560), F.goldFar);
   fill(ctx, ridge(440, 18, 11, 560), F.goldBand);
   fill(ctx, ridge(470, 14, 13, 560), F.goldNear);
-  // Cypresses and bushes on the rims.
   for (const [x, y, h] of [
     [72, 412, 92],
     [152, 405, 120],
@@ -136,7 +113,6 @@ export const farField = (ctx: CanvasRenderingContext2D) => {
     [1010, 480, 20],
   ] as const)
     bush(ctx, x, y, rx);
-  // The haze that sets them back.
   ctx.save();
   ctx.globalAlpha = 0.18;
   ctx.fillStyle = F.skyLow;
@@ -175,26 +151,17 @@ const bush = (ctx: CanvasRenderingContext2D, x: number, y: number, rx: number) =
   fill(ctx, shape, F.bush);
 };
 
-/**
- * The near field's furrows at its foot: each one's centre, a step apart, far
- * enough to the left that their lines reach the frame's left edge near the
- * horizon (the point is at its right).
- */
 const STEP = 260;
 const FURROWS = Array.from({ length: 75 }, (_, i) => -16120 + i * STEP);
-/** The ground's span across, which every furrow and row is drawn inside. */
 const SPAN = [-700, 2300] as const;
 
-/** The near field's state: how ripe from the distance (0..1, 1 all gold), and how green and full the rain has made it. */
 export interface FieldState {
   readonly ripe: number;
   readonly green: number;
 }
 
-/** How ripe a plant at depth `d` (0 at the far edge, 1 at the frame's foot) is. */
 const ripeAt = (s: FieldState, d: number) => clamp(s.ripe * 2.2 - d * 1.4, 0, 1);
 
-/** The near field: its ground, its furrows to the point low at the right, and its rows of grain, far first. */
 export const nearField = (ctx: CanvasRenderingContext2D, s: FieldState) => {
   const ground = mix(F.green, F.greenLush, s.green);
   fill(
@@ -218,7 +185,6 @@ export const nearField = (ctx: CanvasRenderingContext2D, s: FieldState) => {
       ],
       F.soil,
     );
-    // The furrow's far wall in shade, toward the light's complement.
     fill(
       ctx,
       [
@@ -229,8 +195,6 @@ export const nearField = (ctx: CanvasRenderingContext2D, s: FieldState) => {
       F.soilShade,
     );
   }
-  // The rows of grain between the furrows, each a run of leaf tops from the
-  // far edge toward us, far ones first so the near overlap them.
   const rows = FURROWS.slice(1).map((x) => x - STEP / 2);
   const steps = 34;
   for (let k = 0; k < steps; k++) {
@@ -249,7 +213,6 @@ export const nearField = (ctx: CanvasRenderingContext2D, s: FieldState) => {
   }
 };
 
-/** A row's leaf tops at one depth: three points, the far sides in shade. */
 const tuft = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -282,7 +245,6 @@ const tuft = (
   );
 };
 
-/** The near plants along the frame's foot: each its place, its size and its lean. */
 const NEAR = [
   [-30, 1030, 1.1, -0.1],
   [150, 1050, 0.9, 0.08],
@@ -294,7 +256,6 @@ const NEAR = [
   [1520, 1030, 1.1, 0.06],
 ] as const;
 
-/** The near plants standing from `from` to short of `to` (x): tall leaves and an ear on each, lined in the ink. */
 export const nearPlants = (
   ctx: CanvasRenderingContext2D,
   s: FieldState,
@@ -323,7 +284,6 @@ const ink = (ctx: CanvasRenderingContext2D, width = LINE) => {
   unprobed(ctx, () => ctx.stroke());
 };
 
-/** One tall leaf from its base at (x, y), `h` long, leaning `turn`: its far half in shade. */
 const leaf = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -362,7 +322,6 @@ const leaf = (
   ink(ctx);
 };
 
-/** An ear of grain on its stalk, its top at (x, y): a braid of grains, green to gold. */
 const ear = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -395,7 +354,6 @@ const ear = (
   ctx.restore();
 };
 
-/** The rain's flecks: a fixed field that falls and drifts a little left. */
 const DROPS = (() => {
   const r = rng(523);
   return Array.from({ length: 260 }, (_, i) => ({
@@ -406,7 +364,6 @@ const DROPS = (() => {
   }));
 })();
 
-/** The rain at time `t`: `count` of its flecks (0..1 of them) at `alpha`. */
 export const rain = (ctx: CanvasRenderingContext2D, t: number, count: number, alpha = 1) => {
   if (count <= 0) return;
   const n = Math.round(DROPS.length * clamp(count, 0, 1));

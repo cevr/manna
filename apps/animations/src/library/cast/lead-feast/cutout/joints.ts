@@ -1,10 +1,5 @@
-// The series lead's joints on his cut views, view pixels: what his cut
-// records as each sleeve's pivot (`cut.ts`) and his skeleton turns each arm
-// about (`skeleton.ts`). Pure data.
-
 type Pt = readonly [number, number];
 
-/** Each view's joints, view pixels: a shoulder at the sleeve's middle a little below the shoulder's curve, an elbow at the sleeve's middle on its axis. */
 export const JOINTS = {
   front: {
     shoulderRight: [43, 250],
@@ -18,21 +13,12 @@ export const JOINTS = {
     shoulderLeft: [172, 250],
     elbowLeft: [178, 335],
   },
-  // his right arm raised with its elbow tucked: the upper arm hangs to the
-  // sleeve's foot, the forearm rises to the hand at his cheek
   'single-1': {
     shoulderRight: [185, 440],
     elbowRight: [110, 550],
     shoulderLeft: [470, 470],
     elbowLeft: [485, 620],
   },
-  // seated: his right arm raised as on single-1, its elbow out at the sleeve's
-  // lower corner; his left arm bent under the mantle, the hand resting on his
-  // knee. His left hand's disc is drawn over his sleeve's end: on the forearm's
-  // axis the blue ends where the disc's ink begins, 17 px short of the wrist
-  // pivot (inside the disc), so that sleeve's stroke limb ends there (cuffLeft).
-  // His right sleeve's lip ends 1.5 px past its wrist pivot, inside the 2 px
-  // feather, so it needs none.
   'single-9': {
     shoulderRight: [180, 455],
     elbowRight: [55, 545],

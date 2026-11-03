@@ -1,9 +1,3 @@
-/**
- * The parts the pages share, in the order a page meets them: the field at
- * morning (the home page's, tall, and a page's own, shorter), fading into the
- * paper; a verse; the series as rows; the dusk with Mark 4:27; the night
- * close, rising out of the dusk; and the footer.
- */
 import { For } from '@solidjs/web';
 import type { JSX } from '@solidjs/web';
 
@@ -19,7 +13,6 @@ export const seriesHref = (series: Series) => `/series/${series.slug}`;
 
 export const unitOf = (series: Series) => UNITS[series.form].many;
 
-/** How far a series has come: how many are out, or that none is out yet. */
 export const statusOf = (series: Series) => {
   const units = UNITS[series.form];
   const count = series.episodes.length;
@@ -33,14 +26,9 @@ interface FieldProps {
 }
 
 interface FieldArtProps {
-  /**
-   * How wide the painting is drawn: it covers its field, so a field narrower
-   * than the painting's 3:2 draws it wider than the screen.
-   */
   readonly sizes: string;
 }
 
-/** The field at morning, the first thing every page paints. */
 const FieldArt = (props: FieldArtProps) => (
   <img
     class="field-art"
@@ -54,20 +42,12 @@ const FieldArt = (props: FieldArtProps) => (
   />
 );
 
-/**
- * The painting and its canvas (`../motion/scene.ts` lays the canvas beside
- * the picture), held together so one mask fades both into the paper.
- */
 const FieldPaint = (props: FieldArtProps) => (
   <div class="field-paint">
     <FieldArt sizes={props.sizes} />
   </div>
 );
 
-/**
- * The home page's field: tall, with the verse in its sky, fading into the
- * paper the page's first words stand on.
- */
 export const HomeField = (props: FieldProps) => (
   <div class="field field-home">
     <FieldPaint sizes="(min-width: 77rem) 100vw, 77rem" />
@@ -75,7 +55,6 @@ export const HomeField = (props: FieldProps) => (
   </div>
 );
 
-/** A page's own field: shorter, with the page's title in its sky. */
 export const PageField = (props: FieldProps) => (
   <div class="field field-page">
     <FieldPaint sizes="(min-width: 42rem) 100vw, 42rem" />
@@ -87,7 +66,6 @@ interface QuoteProps {
   readonly verse: Verse;
 }
 
-/** A verse in italic, its reference beneath it. */
 export const Quote = (props: QuoteProps) => (
   <figure class="verse">
     <blockquote>
@@ -101,7 +79,6 @@ interface SeriesCardProps {
   readonly series: Series;
 }
 
-/** A series as a row: its mark on its tile, subject and form, name, line, and how far it has come. */
 export const SeriesCard = (props: SeriesCardProps) => {
   const s = props.series;
   return (
@@ -131,28 +108,18 @@ interface CardsProps {
   readonly series: ReadonlyArray<Series>;
 }
 
-/** The series, one row each, a hairline between them. */
 export const Cards = (props: CardsProps) => (
   <ul class="cards">
     <For each={props.series}>{(s) => <SeriesCard series={s} />}</For>
   </ul>
 );
 
-/**
- * The day turning to night between the last band and the close: from the
- * wheat through the dusk's warm stops into the night, with Mark 4:27 (the
- * sower sleeps and rises, and the seed grows) where it is still light.
- */
 export const Dusk = () => (
   <div class="dusk">
     <Quote verse={MARK_4_27} />
   </div>
 );
 
-/**
- * The close, at night, rising out of the dusk: the lockup, and the two ways
- * to hear of each new film: the YouTube channel, and the email list.
- */
 export const NightClose = () => (
   <section class="night" aria-labelledby="night-title">
     <div class="night-paint">

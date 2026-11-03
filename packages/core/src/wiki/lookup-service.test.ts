@@ -1,21 +1,3 @@
-/** Milestone 7 core acceptance (§10).
- *
- *  The milestone's acceptance list, claim by claim:
- *
- *  1. each resolver group populates independently;
- *  2. an empty group is present-and-empty, not absent;
- *  3. `context` inside a verse produces the Strong's group and omitting
- *     `context` does not;
- *  4. a lone topic hit is flagged for peek-card treatment.
- *
- *  The fixture is "the daily" against Daniel 8 — the phrase §7's own CLI example
- *  names, and the phrase the §4.5 regression pair in `phrase-fixture.ts` is
- *  built around — wired against the same four `WikiSectionSources` a topic page
- *  composes from, so the groups are resolved through the services a host really
- *  provides rather than through five stubs that could agree with each other and
- *  with nothing else.
- */
-
 import { Effect, Exit, Layer, Option, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
@@ -37,10 +19,6 @@ import { WikiService, WikiUnavailableError } from './service.js';
 
 const DANIEL = 27;
 const DAN_8_11 = Reference.verse(DANIEL, 8, 11);
-
-// ---------------------------------------------------------------------------
-// The four corpus sources
-// ---------------------------------------------------------------------------
 
 const EGW_AUTHOR = EGW_SCOPE_AUTHORS[0];
 
@@ -68,8 +46,6 @@ const paragraph = (input: {
   bookCode: input.code,
 });
 
-/** Ten paragraphs carrying the phrase, two past `LOOKUP_HIT_LIMIT`, so the cap
- *  is a real truncation rather than a number that happens to exceed the data. */
 const WRITINGS_MATCHES = LOOKUP_HIT_LIMIT + 2;
 
 const PARAGRAPHS = [
@@ -80,12 +56,9 @@ const PARAGRAPHS = [
       text: `The daily mediation of Christ, statement ${String(index + 1)}.`,
     }),
   ),
-  // A paragraph the phrase does not reach, so an unfiltered search is visible
-  // as a hit that should not be there.
   paragraph({ code: 'PP', refcode: 'PP 1.1', text: 'The creation of the world.' }),
 ];
 
-/** Daniel 8:11 and enough neighbours to push the verse group past its cap. */
 const VERSES = [
   {
     book: DANIEL,
@@ -101,7 +74,6 @@ const VERSES = [
     versionCode: 'KJV',
     text: `And the daily continued, saying ${String(index + 1)}.`,
   })),
-  // A verse with none of the phrase in it.
   {
     book: DANIEL,
     chapter: 7,
@@ -111,18 +83,10 @@ const VERSES = [
   },
 ];
 
-/** Daniel 8:11's words, as `verse_words` stores them.
- *
- *  "the daily" carries H8548 (*tamid*), which is the word the Strong's group is
- *  supposed to find under a context; "prince" carries a second number so a
- *  selection covering only one word cannot accidentally report both. */
 const WORDS: readonly VerseWord[] = [
   { text: 'the prince', strongsNumbers: ['H8269'], italic: false },
   { text: 'the daily', strongsNumbers: ['H8548'], italic: false },
   { text: 'was taken away', strongsNumbers: [], italic: false },
-  // A one-word verse word that is a *substring* of two other words in this
-  // verse and of the selections below. §4.3 matches on word boundaries, so
-  // "the prince" must never drag `he` in — a plain `includes` does.
   { text: 'he', strongsNumbers: ['H1931'], italic: false },
 ];
 
@@ -155,16 +119,10 @@ const catalogTopic = (id: string, name: string): TopicDetail =>
     sections: [],
   });
 
-/** Two catalog topics: one the phrase reaches and one it does not, so the
- *  catalog group is proved to be filtered rather than merely non-empty. */
 const CATALOG = [
   catalogTopic('the-daily', 'The Daily'),
   catalogTopic('the-creation', 'The Creation'),
 ];
-
-// ---------------------------------------------------------------------------
-// The dictionary
-// ---------------------------------------------------------------------------
 
 const entry = (display: string, slug: string): PhraseDictionaryEntry =>
   PhraseDictionaryEntry.make({
@@ -174,29 +132,16 @@ const entry = (display: string, slug: string): PhraseDictionaryEntry =>
     canonical: true,
   });
 
-/** The dictionary the topic group resolves against.
- *
- *  `the daily sacrifice` is here so the prefix half of the fuzzy rule has
- *  something to match, and `sanctuary` so a selection that names neither
- *  produces an empty topic group. */
 const DICTIONARY = PhraseDictionary.make({
   entries: [
     entry('the daily', 'the-daily'),
     entry('the daily sacrifice', 'the-daily-sacrifice'),
     entry('sanctuary', 'sanctuary'),
-    // A numeric alias, because §4.3's boundary rule is what keeps `666` out of
-    // a selection reading `1666` — the case a bare substring test cannot see.
     entry('666', 'mark-of-the-beast'),
   ],
   unavailable: Option.none(),
 });
 
-/** A `WikiService` that serves only the dictionary.
- *
- *  The topic group's whole input is `WikiService.dictionary`, and the artifact
- *  machinery that produces a real one is `service.test.ts`'s subject rather
- *  than this file's. Stubbing the one read keeps the fixture about lookup
- *  resolution instead of about SQLite. */
 const wikiLayer = (dictionary: PhraseDictionary): Layer.Layer<WikiService> =>
   Layer.succeed(
     WikiService,
@@ -233,16 +178,6 @@ const sourcesLayer = WikiSectionSources.Live.pipe(
   ),
 );
 
-/** The same four sources with nothing in any of them.
- *
- *  A second layer rather than a query the fixtures happen not to match, because
- *  `EGWParagraphDatabase.Test`'s `searchParagraphs` is deliberately query-blind
- *  — it filters by scope and publication and returns every paragraph otherwise
- *  (`book-database.ts:1454`, `testSearchMatches:170`). Against that double,
- *  "the writings group is empty because the phrase is absent" is not a claim a
- *  fixture phrase can make; an empty library is what actually makes it true.
- *  The Bible and catalog doubles *do* filter, so their emptiness here is the
- *  real thing. */
 const emptySourcesLayer = WikiSectionSources.Live.pipe(
   Layer.provide(TopicService.Test([])),
   Layer.provide(BibleDatabase.layerTest({})),
@@ -274,16 +209,11 @@ const resolve = (
     ),
   ).pipe(Effect.provide(lookupLayer(dictionary)));
 
-// ---------------------------------------------------------------------------
-// Acceptance
-// ---------------------------------------------------------------------------
-
 describe('LookupService.resolve — the five groups (§7)', () => {
   it.effect('populates every group independently for a phrase all five know', () =>
     Effect.gen(function* () {
       const result = yield* resolve({ text: 'the daily', context: DAN_8_11 });
 
-      // Group 1: the dictionary's exact hit, ranked before the fuzzy one.
       expect(result.topics.map((match) => String(match.slug))).toEqual([
         'the-daily',
         'the-daily-sacrifice',
@@ -291,32 +221,25 @@ describe('LookupService.resolve — the five groups (§7)', () => {
       expect(result.topics[0]?.kind).toBe('exact');
       expect(result.topics[1]?.kind).toBe('fuzzy');
 
-      // Group 2: the context verse's word carrying H8548.
       expect(result.strongs).toHaveLength(1);
       expect(result.strongs[0]?.word).toBe('the daily');
       expect(
         Option.map(result.strongs[0]?.entry ?? Option.none(), (found) => String(found.number)),
       ).toEqual(Option.some('H8548'));
 
-      // Group 3: the Bible FTS hits, capped.
       expect(result.verses).toHaveLength(LOOKUP_HIT_LIMIT);
       expect(result.verses.every((hit) => hit.text.toLowerCase().includes('the daily'))).toBe(true);
       expect(result.verses[0]?.label).toBe('Daniel 8:11');
 
-      // Group 4: the EGW FTS hits, capped.
       expect(result.writings).toHaveLength(LOOKUP_HIT_LIMIT);
       expect(result.writings.every((hit) => hit.bookCode === 'GC')).toBe(true);
 
-      // Group 5: the catalog index, filtered.
       expect(result.catalog.map((match) => String(match.name))).toEqual(['The Daily']);
     }),
   );
 
   it.effect('carries every group as present-and-empty when nothing matches', () =>
     Effect.gen(function* () {
-      // A phrase no source holds: not in the dictionary, not in any verse, not
-      // in any paragraph, not in the catalog, and — with no context — not a
-      // word of any verse either.
       const result = yield* resolveEmpty('zzzz nothing here', DICTIONARY);
 
       expect(result.topics).toEqual([]);
@@ -325,10 +248,6 @@ describe('LookupService.resolve — the five groups (§7)', () => {
       expect(result.writings).toEqual([]);
       expect(result.catalog).toEqual([]);
 
-      // Present, not absent. The encoded form is what a client actually
-      // receives, and an omitted key and an empty array are the same value in
-      // JavaScript but not on the wire — so the claim is asserted against the
-      // encoding rather than against the decoded object.
       const wire = yield* Schema.encodeEffect(LookupResult)(result);
       expect(Object.keys(wire)).toEqual([
         'text',
@@ -357,8 +276,6 @@ describe("LookupService.resolve — the Strong's group and its context (§7)", (
     Effect.gen(function* () {
       const result = yield* resolve({ text: 'the daily' });
       expect(result.strongs).toEqual([]);
-      // The other groups are unaffected: dropping the context removes one
-      // group's content, not the lookup.
       expect(result.topics.length).toBeGreaterThan(0);
       expect(result.verses.length).toBeGreaterThan(0);
     }),
@@ -366,8 +283,6 @@ describe("LookupService.resolve — the Strong's group and its context (§7)", (
 
   it.effect('reports no word the selection does not cover', () =>
     Effect.gen(function* () {
-      // "prince" is a word of the context verse carrying its own number, and a
-      // selection of "the daily" must not drag it in.
       const result = yield* resolve({ text: 'the daily', context: DAN_8_11 });
       expect(result.strongs.map((hit) => hit.word)).not.toContain('the prince');
     }),
@@ -379,17 +294,12 @@ describe("LookupService.resolve — the Strong's group and its context (§7)", (
         text: 'the prince of the host, and by him the daily',
         context: DAN_8_11,
       });
-      // `he` is a word of this verse too, and no token of this selection is
-      // `he` — "him" and "the" only contain the letters.
       expect(result.strongs.map((hit) => hit.word)).toEqual(['the prince', 'the daily']);
     }),
   );
 
   it.effect('covers a verse word only on whole-word boundaries (§4.3)', () =>
     Effect.gen(function* () {
-      // `he` is a word of the context verse. "the prince" *contains* the two
-      // letters, and a substring test therefore reports a lexicon entry for a
-      // word the reader never selected.
       const result = yield* resolve({ text: 'the prince', context: DAN_8_11 });
       expect(result.strongs.map((hit) => hit.word)).toEqual(['the prince']);
     }),
@@ -397,8 +307,6 @@ describe("LookupService.resolve — the Strong's group and its context (§7)", (
 
   it.effect('covers a multi-word verse word only when the selection holds all of it', () =>
     Effect.gen(function* () {
-      // "the" alone names no whole verse word: `the prince` and `the daily`
-      // each need their second token before the selection covers them.
       const result = yield* resolve({ text: 'the', context: DAN_8_11 });
       expect(result.strongs).toEqual([]);
     }),
@@ -406,8 +314,6 @@ describe("LookupService.resolve — the Strong's group and its context (§7)", (
 });
 
 describe('LookupService.resolve — the lone topic hit (§7, §5)', () => {
-  /** A dictionary of one phrase that no other source holds, so the topic group
-   *  is the only group with anything in it. */
   const loneDictionary = PhraseDictionary.make({
     entries: [entry('zzzz nothing here', 'lone-topic')],
     unavailable: Option.none(),
@@ -427,8 +333,6 @@ describe('LookupService.resolve — the lone topic hit (§7, §5)', () => {
 
   it.effect('does not flag a single topic match that arrives beside other groups', () =>
     Effect.gen(function* () {
-      // One topic hit, but the verse and writings groups answer too — §7's peek
-      // card would discard four groups of answers the reader can still use.
       const result = yield* resolve(
         { text: 'the daily' },
         PhraseDictionary.make({
@@ -455,11 +359,6 @@ describe('LookupService.resolve — the lone topic hit (§7, §5)', () => {
 describe('LookupService.resolve — the fuzzy rule', () => {
   it.effect('matches an alias the selection is a prefix of', () =>
     Effect.gen(function* () {
-      // The reader swiped short of the phrase's end. Both halves of the rule
-      // fire here and both answers are right: `the daily sacrifice` because the
-      // selection is its prefix, `the daily` because the selection contains it.
-      // The shorter alias ranks first — it is the more specific reading of what
-      // the reader's text actually holds.
       const result = yield* resolve({ text: 'the daily sacri' });
       expect(result.topics.map((match) => String(match.slug))).toEqual([
         'the-daily',
@@ -471,8 +370,6 @@ describe('LookupService.resolve — the fuzzy rule', () => {
 
   it.effect('matches an alias on a prefix that contains no other alias', () =>
     Effect.gen(function* () {
-      // The prefix half of the rule alone: "sanctu" is the opening of
-      // `sanctuary` and contains nothing else in the dictionary.
       const result = yield* resolve({ text: 'sanctu' });
       expect(result.topics.map((match) => String(match.slug))).toEqual(['sanctuary']);
       expect(result.topics[0]?.kind).toBe('fuzzy');
@@ -481,7 +378,6 @@ describe('LookupService.resolve — the fuzzy rule', () => {
 
   it.effect('matches an alias contained in a longer selection', () =>
     Effect.gen(function* () {
-      // The reader drag-selected a whole clause containing the phrase.
       const result = yield* resolve({ text: 'and by him the daily was taken away' });
       expect(result.topics.map((match) => String(match.slug))).toEqual(['the-daily']);
       expect(result.topics[0]?.kind).toBe('fuzzy');
@@ -498,12 +394,6 @@ describe('LookupService.resolve — the fuzzy rule', () => {
 
   it.effect('answers a selection that normalizes away with five empty groups', () =>
     Effect.gen(function* () {
-      // Pure separators normalize to the empty string. It is a prefix of every
-      // alias in the dictionary, an empty `LIKE` for the catalog, and an FTS
-      // phrase of nothing but punctuation for the two indexes — so a
-      // non-selection answered with the whole wiki, the whole catalog and
-      // whatever the tokenizer felt like. §4.3 makes commas and semicolons
-      // transparent; text that is *only* transparent characters names nothing.
       const result = yield* resolve({ text: ' , ; ' });
       expect(result.topics).toEqual([]);
       expect(result.strongs).toEqual([]);
@@ -516,9 +406,6 @@ describe('LookupService.resolve — the fuzzy rule', () => {
 
   it.effect('refuses a fuzzy prefix shorter than the threshold', () =>
     Effect.gen(function* () {
-      // Two characters are the opening of "the daily" and of "the daily
-      // sacrifice", and of most of an English dictionary. A fuzzy row the
-      // reader cannot explain by pointing at their selection is noise.
       const result = yield* resolve({ text: 'th' });
       expect(result.topics).toEqual([]);
     }),
@@ -526,17 +413,12 @@ describe('LookupService.resolve — the fuzzy rule', () => {
 
   it.effect('holds §4.3 word boundaries on both halves of the rule', () =>
     Effect.gen(function* () {
-      // `666` is inside `1666` by substring and is not the year the reader
-      // selected. §4.3: "matches only on word boundaries".
       const year = yield* resolve({ text: '1666' });
       expect(year.topics).toEqual([]);
 
-      // The same alias, selected as its own token, still answers.
       const number = yield* resolve({ text: 'the number 666 of the beast' });
       expect(number.topics.map((match) => String(match.slug))).toEqual(['mark-of-the-beast']);
 
-      // And a partial word is not a containment: "sanctuar" is a prefix, which
-      // the prefix half answers, while "sanctuaryx" contains no alias at all.
       const overshot = yield* resolve({ text: 'sanctuaryx' });
       expect(overshot.topics).toEqual([]);
     }),
@@ -569,10 +451,6 @@ describe('LookupService.resolve — the fuzzy rule', () => {
 describe('LookupService.resolve — the catalog group and its status', () => {
   it.effect('names a catalog topic the artifact also authors as flagship', () =>
     Effect.gen(function* () {
-      // `the-daily` is both a catalog id and a dictionary slug, so opening it
-      // shows an authored page. `status` is what the panel says opening it will
-      // show, and a row that says `catalog` about an authored page is wrong on
-      // the one question the field exists to answer.
       const result = yield* resolve({ text: 'the daily' });
       expect(result.catalog.map((match) => [String(match.slug), match.status])).toEqual([
         ['the-daily', 'flagship'],
@@ -594,8 +472,6 @@ describe('LookupService.resolve — the catalog group and its status', () => {
 });
 
 describe('LookupService.resolve — words are the §4.3 scan the matcher uses', () => {
-  /** The authored alias from `content/topics/three-angels-messages.md`, which
-   *  the corpus reaches almost exclusively as "the third angel's message". */
   const angels = PhraseDictionary.make({
     entries: [entry('third angel', 'three-angels-messages')],
     unavailable: Option.none(),
@@ -603,12 +479,6 @@ describe('LookupService.resolve — words are the §4.3 scan the matcher uses', 
 
   it.effect('matches an alias whose selection continues past an apostrophe', () =>
     Effect.gen(function* () {
-      // §4.6's boundary rule reads an apostrophe as a boundary
-      // (`normalize.ts:170` — word characters are letters, digits and marks),
-      // so the render-time matcher links `third angel` inside "the third
-      // angel's message". A resolver that split on spaces alone sees one token
-      // `angel's` and answers nothing, and the same phrase is then a link in
-      // the page and a miss in the panel.
       const result = yield* resolve({ text: "the third angel's message" }, angels);
       expect(result.topics.map((match) => String(match.slug))).toEqual(['three-angels-messages']);
       expect(result.topics[0]?.kind).toBe('fuzzy');
@@ -617,7 +487,6 @@ describe('LookupService.resolve — words are the §4.3 scan the matcher uses', 
 
   it.effect('matches an alias whose selection is broken by a hyphen', () =>
     Effect.gen(function* () {
-      // A hyphen is the same kind of boundary, and the same divergence.
       const result = yield* resolve({ text: 'the daily-sacrifice reading' });
       expect(result.topics.map((match) => String(match.slug))).toEqual([
         'the-daily',
@@ -628,8 +497,6 @@ describe('LookupService.resolve — words are the §4.3 scan the matcher uses', 
 
   it.effect('still refuses a run that crosses no boundary at all', () =>
     Effect.gen(function* () {
-      // The widening is to boundaries, not to substrings: `third angel` is not
-      // inside `thirdangel`, and `666` is still not inside `1666`.
       const glued = yield* resolve({ text: 'thirdangel message' }, angels);
       expect(glued.topics).toEqual([]);
     }),
@@ -637,9 +504,6 @@ describe('LookupService.resolve — words are the §4.3 scan the matcher uses', 
 
   it.effect('covers a verse word the selection carries in a possessive', () =>
     Effect.gen(function* () {
-      // The Strong's group asks the same question of the verse's vocabulary,
-      // so it inherits the same defect: "the daily's continuance" covers the
-      // verse word `the daily` on §4.6's boundaries.
       const result = yield* resolve({
         text: "and by him the daily's continuance",
         context: DAN_8_11,
@@ -656,8 +520,6 @@ describe('LookupService.resolve — degradation (§3.5, §6.3)', () => {
         service.resolve(LookupInput.make({ text: 'the daily', context: Option.some(DAN_8_11) })),
       );
 
-      // The dictionary is the wiki's own, so group 1 still answers; the four
-      // corpus groups are empty because this host serves no live corpus.
       expect(result.topics.length).toBeGreaterThan(0);
       expect(result.strongs).toEqual([]);
       expect(result.verses).toEqual([]);
@@ -673,11 +535,6 @@ describe('LookupService.resolve — degradation (§3.5, §6.3)', () => {
     ),
   );
 
-  // §6.3's posture, the one `section-composer.ts` gives all six of its
-  // sections: a source that cannot answer subtracts its own group and
-  // leaves the other four. A lookup that failed outright because one of
-  // five optional corpora was unreadable would be a worse answer than four
-  // groups and an empty fifth.
   const failing = WikiSectionSources.Live.pipe(
     Layer.provide(
       Layer.succeed(
@@ -715,11 +572,6 @@ describe('LookupService.resolve — degradation (§3.5, §6.3)', () => {
     ),
   );
 
-  // The degradation above is over the *error channel* — the states a source
-  // declares. A defect is not one of them: a lookup that turned a broken
-  // invariant into four groups and a silence would report a corpus as
-  // empty when it is broken, which is the failure mode §6.3's posture is
-  // not allowed to grow into.
   const dying = WikiSectionSources.Live.pipe(
     Layer.provide(
       Layer.succeed(
@@ -774,8 +626,6 @@ describe('LookupService.resolve — degradation (§3.5, §6.3)', () => {
       );
 
       expect(result.topics).toEqual([]);
-      // The four corpus groups still answer: one unreadable source is a smaller
-      // panel, not a failed lookup.
       expect(result.verses.length).toBeGreaterThan(0);
       expect(result.writings.length).toBeGreaterThan(0);
     }).pipe(

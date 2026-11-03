@@ -1,9 +1,3 @@
-// What `film check` reports: every finding it can make, how bad each is
-// (`levelOf`), where in the film it is (`addressOf`), and the one `Report`
-// every leg's findings come back as. Each finding is a value the check
-// collects, never the first failure only; the run fails with `CheckFailed`
-// once every one is reported. The legs that find them are in `film-check.ts`.
-
 import { Array as Arr, Match, Option, Schema } from 'effect';
 import type {
   CueCycle,
@@ -43,19 +37,10 @@ import type {
   SoundUnmade,
 } from './errors.ts';
 
-// ---------------------------------------------------------------------------
-// The mix: what the check hears in the mix the film makes now.
-
-/**
- * An effect whose loudest moment (`BALANCE.hotWindow`, as the mix plays it)
- * comes within `BALANCE.hot` dB under the voice around it, or over it: it
- * covers the words.
- */
 export class EffectHot extends Schema.TaggedError<EffectHot>()('EffectHot', {
   effect: Schema.String,
   scene: Schema.String,
   at: Schema.Finite,
-  /** Its loudest moment against the voice around it, in dB. */
   over: Schema.Finite,
 }) {
   override get message() {
@@ -63,7 +48,6 @@ export class EffectHot extends Schema.TaggedError<EffectHot>()('EffectHot', {
   }
 }
 
-/** The master's integrated loudness off the film's target. */
 export class MasterLoudness extends Schema.TaggedError<MasterLoudness>()('MasterLoudness', {
   loudness: Schema.Finite,
   target: Schema.Finite,
@@ -74,11 +58,6 @@ export class MasterLoudness extends Schema.TaggedError<MasterLoudness>()('Master
   }
 }
 
-/**
- * The audio master falls quiet (below `floor` dBFS) for longer than `max`
- * seconds where no cue declares a designed silence (`silence: true`). `from`
- * and `to` are film seconds.
- */
 export class DeadAir extends Schema.TaggedError<DeadAir>()('DeadAir', {
   from: Schema.Finite,
   to: Schema.Finite,
@@ -90,14 +69,6 @@ export class DeadAir extends Schema.TaggedError<DeadAir>()('DeadAir', {
   }
 }
 
-// ---------------------------------------------------------------------------
-// The script, the frames, the look and the shorts.
-
-/**
- * A word pin that lands more than one sentence past its mark: the line says
- * the word near the mark no longer (a re-take dropped or moved it), and the
- * cue has moved to a later saying without an error.
- */
 export class WordPinFar extends Schema.TaggedError<WordPinFar>()('WordPinFar', {
   scene: Schema.String,
   cue: Schema.String,
@@ -110,16 +81,8 @@ export class WordPinFar extends Schema.TaggedError<WordPinFar>()('WordPinFar', {
   }
 }
 
-/** How a finding says a word's heard edge. */
 const EDGE_HEARD = { start: 'starts to be heard', end: 'stops being heard' } as const;
 
-/**
- * A cue whose length is written by hand (`dur`, over a second) and whose
- * hand-sized edge (its end; with `ends`, its start) lands on a phrase edge of
- * its take: within `DUR_ON_WORD` of where a word is heard to start after a
- * pause or stop before one. The length was sized to this take, so a re-take
- * leaves the cue behind its word. `at` is scene-local seconds.
- */
 export class DurOnWord extends Schema.TaggedError<DurOnWord>()('DurOnWord', {
   scene: Schema.String,
   cue: Schema.String,
@@ -133,7 +96,6 @@ export class DurOnWord extends Schema.TaggedError<DurOnWord>()('DurOnWord', {
   }
 }
 
-/** A beat with no drawing yet: it plays as its storyboard card. */
 export class Storyboard extends Schema.TaggedError<Storyboard>()('Storyboard', {
   scene: Schema.String,
 }) {
@@ -142,15 +104,9 @@ export class Storyboard extends Schema.TaggedError<Storyboard>()('Storyboard', {
   }
 }
 
-/**
- * A point knob one scene writes with the value another scene's knob holds: a
- * callback that copied the framing it calls back, so a lab drag of the one
- * leaves the other behind. Read it there with `f.knobsOf(drawing)`.
- */
 export class KnobRepeated extends Schema.TaggedError<KnobRepeated>()('KnobRepeated', {
   scene: Schema.String,
   knob: Schema.String,
-  /** The earlier scene that holds the same point, and its knob. */
   of: Schema.String,
   ofKnob: Schema.String,
 }) {
@@ -159,17 +115,9 @@ export class KnobRepeated extends Schema.TaggedError<KnobRepeated>()('KnobRepeat
   }
 }
 
-/**
- * A cue declared twice for the same moment: another cue of its scene has the
- * same edges on the same anchors (a `with` it at its length is the same) and
- * the same ease, stagger and silence, so the two differ only by name, and a
- * lab drag of one leaves the other behind. Read the first one where both are
- * read.
- */
 export class CueTwin extends Schema.TaggedError<CueTwin>()('CueTwin', {
   scene: Schema.String,
   cue: Schema.String,
-  /** The earlier cue it repeats. */
   twin: Schema.String,
 }) {
   override get message() {
@@ -177,7 +125,6 @@ export class CueTwin extends Schema.TaggedError<CueTwin>()('CueTwin', {
   }
 }
 
-/** A named cue that ends after its scene does. */
 export class CueLate extends Schema.TaggedError<CueLate>()('CueLate', {
   scene: Schema.String,
   cue: Schema.String,
@@ -189,11 +136,6 @@ export class CueLate extends Schema.TaggedError<CueLate>()('CueLate', {
   }
 }
 
-/**
- * The pause between one scene's last word and the next scene's first is over
- * the default seam, and neither scene declares it (no `tail` or `min` on the
- * first, no `lead` on the second): a default stretched it, not the script.
- */
 export class SeamLong extends Schema.TaggedError<SeamLong>()('SeamLong', {
   from: Schema.String,
   to: Schema.String,
@@ -205,11 +147,6 @@ export class SeamLong extends Schema.TaggedError<SeamLong>()('SeamLong', {
   }
 }
 
-/**
- * A stretch of a drawn scene, longer than `max`, where the voice speaks and
- * nothing moves: no cue of the scene starts, ends or runs, and the probed
- * frames across it hold still. `from` and `to` are film seconds.
- */
 export class StaticHold extends Schema.TaggedError<StaticHold>()('StaticHold', {
   scene: Schema.String,
   from: Schema.Finite,
@@ -221,29 +158,15 @@ export class StaticHold extends Schema.TaggedError<StaticHold>()('StaticHold', {
   }
 }
 
-/**
- * A vertical's findings below are a short's, or a talk's (a film shot
- * vertical, checked as its own vertical, `short` its name): a talk's are the
- * film's, at the film's scene (`scene`) and second, or of the whole film
- * (`talk`); a short's have neither, and are the short's, on its own clock.
- */
 const TalkScene = Schema.optionalKey(Schema.String);
 const TalkWhole = Schema.optionalKey(Schema.Boolean);
 
-/** What a vertical's findings call it: `short "<id>"`, or `talk "<id>"`. */
 const verticalNamed = (id: string, talk: boolean) => {
   let kind = 'short';
   if (talk) kind = 'talk';
   return `${kind} "${id}"`;
 };
 
-/**
- * A line of text on a short that crosses its safe zone (`SAFE_ZONES`), first
- * at short second `at`, by `by` px (1080 × 1920) past its worst `side`. `own`
- * when it is the short's own text (its hook or captions), which the page
- * places; otherwise it is the film's, in the band. A talk's (`scene`, the
- * film's scene at `at`) is its own.
- */
 export class ShortUnsafeText extends Schema.TaggedError<ShortUnsafeText>()('ShortUnsafeText', {
   short: Schema.String,
   zone: Schema.String,
@@ -252,7 +175,6 @@ export class ShortUnsafeText extends Schema.TaggedError<ShortUnsafeText>()('Shor
   side: Schema.Literals(['top', 'bottom', 'left', 'right']),
   by: Schema.Finite,
   own: Schema.Boolean,
-  /** How many other lines cross the same side with it (the short's own lines are one finding). */
   others: Schema.Int,
   scene: TalkScene,
 }) {
@@ -267,11 +189,6 @@ export class ShortUnsafeText extends Schema.TaggedError<ShortUnsafeText>()('Shor
   }
 }
 
-/**
- * A drawn scene holds still for more than `max` of its seconds: its picture,
- * seen small (64×36 grey at 2 fps), barely changes. `from` and `to` are its
- * longest held run, in film seconds.
- */
 export class HeldShare extends Schema.TaggedError<HeldShare>()('HeldShare', {
   scene: Schema.String,
   share: Schema.Finite,
@@ -284,14 +201,12 @@ export class HeldShare extends Schema.TaggedError<HeldShare>()('HeldShare', {
   }
 }
 
-/** How each colour-script measure is written: luma 0–255, the dark share in %, saturation 0–1. */
 const shownMeasure = {
   luma: (v: number) => v.toFixed(0),
   dark: (v: number) => `${Math.round(v * 100)}%`,
   saturation: (v: number) => v.toFixed(2),
 };
 
-/** An act of the declared colour script (`look.acts`) measures outside its target. */
 export class ColourScript extends Schema.TaggedError<ColourScript>()('ColourScript', {
   act: ActName,
   measure: Schema.Literals(['luma', 'saturation', 'dark']),
@@ -305,13 +220,8 @@ export class ColourScript extends Schema.TaggedError<ColourScript>()('ColourScri
   }
 }
 
-/**
- * No face in a drawn scene reaches `min` px on screen: the scene never gives a
- * face human scale (a third of the frame's height).
- */
 export class FaceSmall extends Schema.TaggedError<FaceSmall>()('FaceSmall', {
   scene: Schema.String,
-  /** The largest face the scene showed, in px; 0 when it showed none. */
   largest: Schema.Finite,
   min: Schema.Finite,
 }) {
@@ -320,11 +230,9 @@ export class FaceSmall extends Schema.TaggedError<FaceSmall>()('FaceSmall', {
   }
 }
 
-/** A travel's way out of a `HandJump`. */
 const TRAVEL =
   "move it on a named cue with a duration, f.at('<cue>'), never on a threshold, a switch of target or a cue too short for the way it travels";
 
-/** How a `HandJump` reads, by what jumped, and the way out. */
 const JUMPED = {
   place: (by: number) => ({ jump: `jumps ${by.toFixed(2)} of its length`, fix: TRAVEL }),
   size: (by: number) => ({ jump: `changes size by ${(100 * by).toFixed(0)}%`, fix: TRAVEL }),
@@ -334,20 +242,11 @@ const JUMPED = {
   }),
 } as const;
 
-/**
- * A hand jumps: between two adjacent frames of a scene it moves farther than
- * `max` of its own length about its shoulder (`what: 'place'`), its size
- * changes by more than `max` of itself (`what: 'size'`), or, formed, more
- * than `max` of its grip's shape changes (`what: 'grip'`), so it pops from
- * one place, size or grip to another instead of travelling or changing there.
- */
 export class HandJump extends Schema.TaggedError<HandJump>()('HandJump', {
   scene: Schema.String,
   side: Schema.Literals(['far', 'near']),
-  /** Film seconds of the second of the two frames. */
   T: Schema.Finite,
   what: Schema.Literals(['place', 'size', 'grip']),
-  /** How far it jumped: hand lengths moved, or the share its size or its grip changed. */
   by: Schema.Finite,
   max: Schema.Finite,
 }) {
@@ -357,18 +256,12 @@ export class HandJump extends Schema.TaggedError<HandJump>()('HandJump', {
   }
 }
 
-/**
- * A hand works out of its figure's reach: its target lies farther from its
- * shoulder than the figure's reach, so it would float off, away from its body.
- */
 export class HandFar extends Schema.TaggedError<HandFar>()('HandFar', {
   scene: Schema.String,
   side: Schema.Literals(['far', 'near']),
   from: Schema.Finite,
   to: Schema.Finite,
-  /** The farthest target, as a multiple of the reach. */
   worst: Schema.Finite,
-  /** How many drawn frames showed it out of reach. */
   frames: Schema.Int,
 }) {
   override get message() {
@@ -376,17 +269,11 @@ export class HandFar extends Schema.TaggedError<HandFar>()('HandFar', {
   }
 }
 
-/**
- * An acting hand is lost in its own body: at work, seen, inside the
- * silhouette of the body it belongs to and drawn behind it, so the viewer
- * sees the hand go into the garment and not come out.
- */
 export class HandHidden extends Schema.TaggedError<HandHidden>()('HandHidden', {
   scene: Schema.String,
   side: Schema.Literals(['far', 'near']),
   from: Schema.Finite,
   to: Schema.Finite,
-  /** How many drawn frames showed it hidden. */
   frames: Schema.Int,
 }) {
   override get message() {
@@ -394,10 +281,6 @@ export class HandHidden extends Schema.TaggedError<HandHidden>()('HandHidden', {
   }
 }
 
-/**
- * The film's ending leaves YouTube no room: the stretch after the last word is
- * under `min` seconds (credits and music alone), or the end card is.
- */
 export class EndShort extends Schema.TaggedError<EndShort>()('EndShort', {
   part: Schema.Literals(['after the last word', 'end card']),
   secs: Schema.Finite,
@@ -408,11 +291,6 @@ export class EndShort extends Schema.TaggedError<EndShort>()('EndShort', {
   }
 }
 
-/**
- * A cast member that beats name and the board cannot draw from: no record, a
- * record that does not decode, or reference files not on disk. `reason` is
- * the library's own message (`castReference`).
- */
 export class CastUnreadable extends Schema.TaggedError<CastUnreadable>()('CastUnreadable', {
   member: Schema.String,
   beats: Schema.Array(Schema.String),
@@ -423,19 +301,12 @@ export class CastUnreadable extends Schema.TaggedError<CastUnreadable>()('CastUn
   }
 }
 
-/**
- * A short that does not hook in its first moments: its first word comes
- * late, nothing moves, or it opens on the film's title card.
- */
 export class ShortHook extends Schema.TaggedError<ShortHook>()('ShortHook', {
   short: Schema.String,
   reason: Schema.Literals(['late word', 'still open', 'title card']),
-  /** Seconds: the first word's start (`late word`), or how long the open holds still. */
   at: Schema.Finite,
   max: Schema.Finite,
-  /** The title's words, for `title card`. */
   text: Schema.optionalKey(Schema.String),
-  /** A talk's: the film's scene it is at (its first word's, or its first). */
   scene: TalkScene,
 }) {
   override get message() {
@@ -448,18 +319,11 @@ export class ShortHook extends Schema.TaggedError<ShortHook>()('ShortHook', {
   }
 }
 
-/**
- * A short that will not loop cleanly: its last frame's picture is far from
- * its first (`picture`, the mean absolute per-cell luma difference on
- * `SHORT_RULES.loopGrid`, 0–1), or the silence from its
- * last word round to its first is long (`gap`, seconds).
- */
 export class ShortLoop extends Schema.TaggedError<ShortLoop>()('ShortLoop', {
   short: Schema.String,
   reason: Schema.Literals(['picture', 'gap']),
   value: Schema.Finite,
   max: Schema.Finite,
-  /** A talk's: of the whole film. */
   talk: TalkWhole,
 }) {
   override get message() {
@@ -470,14 +334,12 @@ export class ShortLoop extends Schema.TaggedError<ShortLoop>()('ShortLoop', {
   }
 }
 
-/** A short past `max` s (an error), or outside `from`–`to` s (a warning); a talk held to its format's. */
 export class ShortLength extends Schema.TaggedError<ShortLength>()('ShortLength', {
   short: Schema.String,
   length: Schema.Finite,
   max: Schema.Finite,
   from: Schema.Finite,
   to: Schema.Finite,
-  /** A talk's: of the whole film. */
   talk: TalkWhole,
 }) {
   override get message() {
@@ -491,11 +353,9 @@ export class ShortLength extends Schema.TaggedError<ShortLength>()('ShortLength'
   }
 }
 
-/** A beat whose take is missing, or was recorded for other text or another voice. */
 export class TakeStale extends Schema.TaggedError<TakeStale>()('TakeStale', {
   scene: Schema.String,
   reason: TakeStaleReason,
-  /** The stale take was read by a person: staging does not replace it unasked. */
   recorded: Schema.Boolean,
 }) {
   override get message() {
@@ -505,7 +365,6 @@ export class TakeStale extends Schema.TaggedError<TakeStale>()('TakeStale', {
   }
 }
 
-/** A generated sound asset whose stored hash no longer matches its request. */
 export class AssetStale extends Schema.TaggedError<AssetStale>()('AssetStale', {
   asset: Schema.String,
   stored: Schema.String,
@@ -516,7 +375,6 @@ export class AssetStale extends Schema.TaggedError<AssetStale>()('AssetStale', {
   }
 }
 
-/** A sound the film declares that has never been generated, so the mix leaves it out. */
 export class AssetMissing extends Schema.TaggedError<AssetMissing>()('AssetMissing', {
   asset: Schema.String,
 }) {
@@ -525,10 +383,6 @@ export class AssetMissing extends Schema.TaggedError<AssetMissing>()('AssetMissi
   }
 }
 
-/**
- * A score option composed through a scene (`score --through`): its music ends
- * at `to`, before the film's `end`, and the mix plays none after it.
- */
 export class ScorePartial extends Schema.TaggedError<ScorePartial>()('ScorePartial', {
   asset: Schema.String,
   through: Schema.String,
@@ -540,7 +394,6 @@ export class ScorePartial extends Schema.TaggedError<ScorePartial>()('ScoreParti
   }
 }
 
-/** Where a layout sample was taken: a scene, a film time, and what the time is. */
 const sampled = {
   scene: Schema.String,
   time: Schema.Finite,
@@ -550,14 +403,11 @@ const sampled = {
 const where = (f: { readonly scene: string; readonly time: number; readonly at: string }) =>
   `scene "${f.scene}" at ${f.time.toFixed(2)}s (${f.at})`;
 
-/** Two different lines of text on screen over each other. */
 export class TextOverlap extends Schema.TaggedError<TextOverlap>()('TextOverlap', {
   ...sampled,
   a: Schema.String,
   b: Schema.String,
-  /** Overlap in square canvas pixels. */
   area: Schema.Finite,
-  /** How many sampled frames show this pair overlapping. */
   frames: Schema.Int,
 }) {
   override get message() {
@@ -565,11 +415,9 @@ export class TextOverlap extends Schema.TaggedError<TextOverlap>()('TextOverlap'
   }
 }
 
-/** A line of text reaching past the edge of the frame. */
 export class TextOffFrame extends Schema.TaggedError<TextOffFrame>()('TextOffFrame', {
   ...sampled,
   text: Schema.String,
-  /** How far past the frame's edges it reaches, in canvas pixels. */
   left: Schema.Finite,
   top: Schema.Finite,
   right: Schema.Finite,
@@ -590,15 +438,11 @@ export class TextOffFrame extends Schema.TaggedError<TextOffFrame>()('TextOffFra
   }
 }
 
-/** Brush strokes drawn across a line of text, where the check can see them. */
 export class InkOverText extends Schema.TaggedError<InkOverText>()('InkOverText', {
   ...sampled,
   text: Schema.String,
-  /** How many strokes cross it. */
   strokes: Schema.Int,
-  /** How much of their length runs visibly through the text's box, in canvas pixels. */
   length: Schema.Finite,
-  /** The box around the crossing strokes, in canvas pixels. */
   x: Schema.Finite,
   y: Schema.Finite,
   w: Schema.Finite,
@@ -611,12 +455,6 @@ export class InkOverText extends Schema.TaggedError<InkOverText>()('InkOverText'
   }
 }
 
-/**
- * A scene that throws when it draws, at a moment the draw leg samples: a
- * mark, a cue or a knob it reads that its film no longer has (a card reading
- * a mark a revised script removed), or
- * an argument a real canvas refuses.
- */
 export class DrawThrew extends Schema.TaggedError<DrawThrew>()('DrawThrew', {
   ...sampled,
   why: Schema.String,
@@ -626,11 +464,6 @@ export class DrawThrew extends Schema.TaggedError<DrawThrew>()('DrawThrew', {
   }
 }
 
-/**
- * A frame that is not a function of its time: drawn after the frame after
- * it, then after the frame before it, it leaves a different picture.
- * `why` names the first call that differs.
- */
 export class FrameImpure extends Schema.TaggedError<FrameImpure>()('FrameImpure', {
   ...sampled,
   why: Schema.String,
@@ -640,20 +473,12 @@ export class FrameImpure extends Schema.TaggedError<FrameImpure>()('FrameImpure'
   }
 }
 
-/**
- * Ink or text drawn over a face: visible strokes or lines of text drawn after
- * a visible face (its person done), running through its core. A rope across
- * a man's face, a stamp over a mouth: caught here, not by eye.
- */
 export class InkOverFace extends Schema.TaggedError<InkOverFace>()('InkOverFace', {
   ...sampled,
-  /** The face's centre and height on screen, in canvas pixels. */
   x: Schema.Finite,
   y: Schema.Finite,
   size: Schema.Finite,
-  /** How many strokes cross it. */
   strokes: Schema.Int,
-  /** The lines of text over it. */
   texts: Schema.Array(Schema.String),
   frames: Schema.Int,
 }) {
@@ -667,11 +492,9 @@ export class InkOverFace extends Schema.TaggedError<InkOverFace>()('InkOverFace'
   }
 }
 
-/** A line of text running off the plate under it (a card, a tag), past the plate's edge. */
 export class TextOffPlate extends Schema.TaggedError<TextOffPlate>()('TextOffPlate', {
   ...sampled,
   text: Schema.String,
-  /** How far the line's box reaches past each side of the plate's box, in canvas pixels. */
   left: Schema.Finite,
   top: Schema.Finite,
   right: Schema.Finite,
@@ -692,15 +515,8 @@ export class TextOffPlate extends Schema.TaggedError<TextOffPlate>()('TextOffPla
   }
 }
 
-/**
- * A painted plate's edge inside the frame (`f.painting`, `canvas/painting.ts`):
- * at a drawn moment, the camera or the plane's move carries an edge the plate
- * does not declare `open` into view, so the frame shows where the painting
- * ends. The first moment it shows, and every such edge seen in the scene.
- */
 export class PaintingEdge extends Schema.TaggedError<PaintingEdge>()('PaintingEdge', {
   ...sampled,
-  /** The painting by its spec's key. */
   painting: Schema.String,
   edges: Schema.Array(Schema.Literals(['top', 'right', 'bottom', 'left'])),
 }) {
@@ -709,10 +525,8 @@ export class PaintingEdge extends Schema.TaggedError<PaintingEdge>()('PaintingEd
   }
 }
 
-/** A plate (a cutout smaller than the frame) carrying text, cut off by the frame's edge. */
 export class PlateOffFrame extends Schema.TaggedError<PlateOffFrame>()('PlateOffFrame', {
   ...sampled,
-  /** A line of text the plate carries. */
   text: Schema.String,
   left: Schema.Finite,
   top: Schema.Finite,
@@ -734,13 +548,6 @@ export class PlateOffFrame extends Schema.TaggedError<PlateOffFrame>()('PlateOff
   }
 }
 
-// ---------------------------------------------------------------------------
-// The report
-
-/**
- * Why the film does not lay out, or the part a check names does not resolve
- * on it: the one finding a check reports when it cannot place the film.
- */
 type PlaceFinding =
   | DuplicateScene
   | DuplicateMark
@@ -753,7 +560,6 @@ type PlaceFinding =
   | UnknownShort
   | ShortSpanEmpty;
 
-/** What the static leg finds from the film's files alone: no mix, no browser. */
 export type StaticFinding =
   | PlaceFinding
   | CueLate
@@ -787,16 +593,11 @@ export type StaticFinding =
   | KnobRepeated
   | EndShort
   | CastUnreadable;
-/** What the sound leg hears in the mix the film makes now. */
 export type MixFinding = DeadAir | MasterLoudness | EffectHot;
-/** What one probed frame shows wrong. */
 export type FrameFinding = TextOverlap | TextOffFrame | InkOverText | PlateOffFrame | TextOffPlate;
 export type LayoutFinding = FrameFinding | StaticHold;
-/** What the look pass measures across the film (`look.ts`). */
 export type LookFinding = HeldShare | ColourScript | FaceSmall | HandJump | HandFar | HandHidden;
-/** What the draw leg (`check --draw`) finds, drawing each scene in-process at its moments. */
 export type DrawFinding = DrawThrew | FrameImpure | InkOverFace | PaintingEdge;
-/** What `check --short` finds on a short. */
 export type ShortFinding = ShortUnsafeText | ShortHook | ShortLoop | ShortLength;
 export type Finding =
   | StaticFinding
@@ -809,21 +610,11 @@ export type Finding =
 type Level = 'error' | 'warning';
 
 export interface CheckOptions {
-  /** Report a stale take, asset or audio master as a warning: work in progress, not a broken film. */
   readonly allowStale: boolean;
 }
 
 const matchFinding = Match.type<Finding>();
 
-/**
- * How bad a finding is. An error fails the check. A stale take, asset or
- * master is an error unless `allowStale`. A static hold and everything the
- * look pass measures ask for a look (the owner, 2026-09-27). On a short, a
- * loop is a warning, a length is an error only past the most a short may run,
- * and text past the zone is an error when the short placed it (its hook, its
- * captions) and a warning when the film did, since only a different span
- * moves the film's band.
- */
 export const levelOf = (finding: Finding, options: CheckOptions): Level => {
   const error = (): Level => 'error';
   const warning = (): Level => 'warning';
@@ -907,15 +698,6 @@ export const levelOf = (finding: Finding, options: CheckOptions): Level => {
   )(finding);
 };
 
-/**
- * Where in the film a finding is (`FindingAddress`): its part (a scene, an
- * act, a short, else the whole film), and the film second it starts at. A
- * seam is addressed at the scene it runs into; a colour script at its act; a
- * short's findings at the short, with no film second (its seconds are its
- * own); a talk's at the film's scene and second, or the film's when they
- * are of the whole talk. A finding about the whole film or a sound file is
- * the film's.
- */
 export const addressOf = (finding: Finding): FindingAddress => {
   const film: Address = { _tag: 'Film' };
   const none = (): FindingAddress => ({ part: film });
@@ -931,7 +713,6 @@ export const addressOf = (finding: Finding): FindingAddress => {
   const short = (f: { readonly short: string }): FindingAddress => ({
     part: { _tag: 'Short', id: f.short },
   });
-  /** A vertical's finding at second `time`: a talk's at its scene, a short's at the short. */
   const verticalAt = (
     f: { readonly short: string; readonly scene?: string },
     time: number,
@@ -940,7 +721,6 @@ export const addressOf = (finding: Finding): FindingAddress => {
       onNone: () => short(f),
       onSome: (s) => at(s, time),
     });
-  /** A vertical's finding of the whole of it: a talk's is the film's, a short's the short's. */
   const verticalWhole = (f: { readonly short: string; readonly talk?: boolean }) => {
     if (f.talk === true) return none();
     return short(f);
@@ -955,12 +735,10 @@ export const addressOf = (finding: Finding): FindingAddress => {
       ScorePartial: none,
       AudioMissing: none,
       AudioStale: none,
-      // The scene it names is one the film does not have.
       UnknownScene: none,
       UnknownCue: scene,
       UnknownMark: scene,
       CueInvalid: scene,
-      // A movement or an act declared out of film order: the declaration is the film's.
       PartOutOfOrder: none,
       DuplicateScene: scene,
       DuplicateMark: scene,
@@ -968,9 +746,7 @@ export const addressOf = (finding: Finding): FindingAddress => {
       DeliveryInvalid: scene,
       CueCycle: scene,
       UntilBeforeStart: scene,
-      // The scenes it names are no one stretch: no one scene is the place.
       ScenesApart: none,
-      // The act or short it names is one the film does not have.
       UnknownAct: none,
       UnknownShort: none,
       ShortSpanEmpty: short,
@@ -991,7 +767,6 @@ export const addressOf = (finding: Finding): FindingAddress => {
       Storyboard: scene,
       KnobRepeated: scene,
       EndShort: none,
-      // Several beats may name the member: no one scene is the place.
       CastUnreadable: none,
       DeadAir: (f): FindingAddress => ({ part: film, time: f.from }),
       MasterLoudness: none,
@@ -1013,7 +788,6 @@ export const addressOf = (finding: Finding): FindingAddress => {
       HandFar: span,
       HandHidden: span,
       ShortUnsafeText: (f) => verticalAt(f, f.at),
-      // A late first word is at its start; a still open or a title card at the first frame.
       ShortHook: (f) => {
         let time = 0;
         if (f.reason === 'late word') time = f.at;
@@ -1025,21 +799,18 @@ export const addressOf = (finding: Finding): FindingAddress => {
   )(finding);
 };
 
-/** One finding, how bad it is and where it is. */
 export interface Reported {
   readonly level: Level;
   readonly finding: Finding;
   readonly address: FindingAddress;
 }
 
-/** Everything one check found, in the order its legs found it, with the count of each level. */
 export interface Report {
   readonly findings: ReadonlyArray<Reported>;
   readonly errors: number;
   readonly warnings: number;
 }
 
-/** The report of `found`, each finding levelled and addressed. */
 export const report = (found: ReadonlyArray<Finding>, options: CheckOptions): Report => {
   const findings = found.map((finding): Reported => ({
     level: levelOf(finding, options),
@@ -1050,7 +821,6 @@ export const report = (found: ReadonlyArray<Finding>, options: CheckOptions): Re
   return { findings, errors, warnings: findings.length - errors };
 };
 
-/** One finding as `check --json` prints it and the lab reads it, with its address. */
 export const lineOf = ({ level, finding, address }: Reported): CheckLine => ({
   level,
   tag: finding._tag,

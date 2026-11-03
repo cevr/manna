@@ -1,15 +1,6 @@
 /* oxlint-disable effect/noNullish -- the HTTP wire shape is JSON: an absent refcode, rank or deep link is encoded as `null`, exactly as `./api.ts` declares it. */
 /* oxlint-disable effect/noTernary -- one branch on §9.6's two-case vector status, rendered into a label. */
 
-/**
- * Search preparation and result assembly.
- *
- * `GET /api/search` answers one request and `POST /api/search/batch` answers
- * several; both run the same pipeline. A batch runs the canonical
- * `SearchService.query` once per input, then shares context reads by radius
- * before assembling one response per input.
- */
-
 import { Cause, Effect, Option, Result } from 'effect';
 import type { SqlClient } from 'effect/sql';
 
@@ -30,14 +21,6 @@ const MAX_LIMIT = 100;
 const DEFAULT_CONTEXT = 1;
 const MAX_CONTEXT = 3;
 
-/** This surface never returns apparatus (`isApparatus`).
- *
- * A row like `TopIndex .Trouble, Troubles.61` is a see-also stub, and a
- * reading plan's day or a study guide's question is the same: short, made of
- * the query's own words, and about the writings rather than of them. They
- * rank *well* for exactly the queries this app is for and push the prose a
- * reader came to read off the page. Forced on rather than defaulted, because
- * it is a property of this surface. */
 const NEVER_APPARATUS = true;
 
 const clamp = (raw: number, fallback: number, max: number): number => {
@@ -74,8 +57,6 @@ const prepare = (request: SearchRequest): PreparedSearch => ({
     section: request.section,
     type: request.type,
     subtype: request.subtype,
-    // Always on for this surface (see `NEVER_APPARATUS`); the field stays
-    // on the wire so a link can still say so explicitly.
     excludeApparatus: NEVER_APPARATUS,
   },
 });
@@ -87,7 +68,6 @@ const idleResponse = (scope: SearchRequest['scope']): SearchResponse => ({
   nonSelective: false,
 });
 
-/** Run only retrieval. Context is added after all batch inputs finish. */
 const queryOne = (
   prepared: PreparedSearch,
   search: SearchService['Service'],
@@ -97,8 +77,6 @@ const queryOne = (
     const result = yield* search.query(
       SearchQuery.make({
         text: prepared.text,
-        // `'all'` is passed as `none` rather than as the literal: the service
-        // treats an absent scope as unfiltered.
         scope: prepared.scope === 'all' ? Option.none() : Option.some(prepared.scope),
         bookCode: Option.none(),
         filter: prepared.filter,
@@ -124,7 +102,6 @@ const anchorsOf = (successful: SuccessfulSearch): readonly string[] =>
     .slice(0, successful.prepared.limit)
     .flatMap((hit) => Option.match(hit.rawParaId, { onNone: () => [], onSome: (id) => [id] }));
 
-/** Fetch context once per radius, over all successful inputs at that radius. */
 const contextsFor = (
   successful: readonly SuccessfulSearch[],
   lookup: ContextLookup,
@@ -193,7 +170,6 @@ const responseFor = (
   nonSelective: result.nonSelective,
 });
 
-/** The one-request path uses the same retrieval, context, and assembly. */
 export const runSearch = (
   request: SearchRequest,
 ): Effect.Effect<SearchResponse, SearchFailed, SearchService | SqlClient.SqlClient> =>
@@ -209,13 +185,8 @@ export const runSearch = (
     return responseFor(prepared, result.value, contexts.get(prepared.radius) ?? new Map());
   });
 
-/** A batch's inputs in order, each answered by its own slot. */
 type BatchInput = ReadonlyArray<SearchRequest>;
 
-/** Answer a batch without repeating context SQL for each input.
- *
- *  Exported with its lookup as a parameter so a test can count the context
- *  statements; `runSearchBatch` below is the one the endpoint serves. */
 export const runSearchBatchWith = (
   requests: BatchInput,
   lookup: ContextLookup,
@@ -252,6 +223,5 @@ export const runSearchBatchWith = (
     });
   });
 
-/** The batch endpoint's pipeline, over the real context lookup. */
 export const runSearchBatch = (requests: BatchInput) =>
   runSearchBatchWith(requests, surroundingParagraphs);

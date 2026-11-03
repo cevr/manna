@@ -1,10 +1,3 @@
-/**
- * The pill a hand scroll shows over a followed hymn page: a press scrolls
- * back to the sung line and follows again. It floats at the page's foot on
- * the ground with a hairline, so the button reads over the hymn's words on
- * every platform (on iOS the button is its title alone, with no fill).
- */
-
 import { StyleSheet, View } from 'react-native';
 
 import { color } from '~/color';

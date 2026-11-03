@@ -1,20 +1,3 @@
-/**
- * Make the deck's `.key` match its manifest. A deck with no `.key` is built
- * fresh. An existing deck is edited in place: only what changed since the last
- * sync is touched (a painting, a verse, a reference, a note, the title), each
- * slide found by its painting's description (keynote.ts), so the owner's
- * reordering and his own edits elsewhere stay. A beat new to the manifest is inserted after the
- * beat before it; a beat gone from it is left in the deck unless `--prune`.
- * What the deck was last synced to is kept in <deckDir>/built.json.
- *
- *   bun skills/bible/scripts/deck/sync_deck.ts <deckDir> [--prune]
- *   bun skills/bible/scripts/deck/sync_deck.ts <deckDir> --baseline
- *
- * `--baseline` records the manifest as the deck's state and tags each painting
- * of the deck with its slide's description, changing nothing that shows: once,
- * for a deck built before sync existed. It matches paintings by file name in
- * deck order, so a painting reused within the deck is tagged in manifest order.
- */
 import { resolve } from 'node:path';
 import {
   TITLE_FILE,
@@ -100,7 +83,6 @@ if (!(await Bun.file(deckPath).exists())) {
 
 const app = esc(manifest.app);
 
-/** Handlers: each finds its slide by a painting's description (its tag) and returns a warning, or "". */
 const handlers = `
 on slideIndex(theDoc, tag)
   tell application "${app}"
@@ -199,7 +181,6 @@ const steps: Array<string> = [];
 const done: Array<string> = [];
 const step = (call: string) => steps.push(`set report to report & ${call}`);
 
-/** The deck opened, `steps` run on it, saved; the script returns the report. */
 const docScript = () =>
   [
     handlers,
@@ -216,8 +197,6 @@ const docScript = () =>
   ].join('\n');
 
 if (args.includes('--baseline')) {
-  // Keynote names a painting by the first file of the same bytes it took in, so
-  // a painting reused within the deck is looked for under that first name.
   const shownAs = new Map<string, string>();
   const shown = async (file: string) => {
     const bytes = await hash(file);
@@ -264,7 +243,6 @@ if (now.title.subtitle !== built.title.subtitle) {
   done.push('subtitle');
 }
 
-/** Insert a beat's two slides after the slide whose painting is tagged `anchor` (or at the end). */
 const insert = (slide: Slide, anchor: string) => {
   steps.push(
     `set k to my slideIndex(theDoc, ${q(anchor)})`,
@@ -338,8 +316,6 @@ if (steps.length === 0) {
 }
 
 const report = await run(docScript(), 'sync-deck.applescript');
-// The deck now holds the manifest, but for words the owner changed in Keynote
-// (kept, and named in the report); a beat left in the deck stays recorded until pruned.
 await record({
   title: now.title,
   slides: Object.fromEntries(

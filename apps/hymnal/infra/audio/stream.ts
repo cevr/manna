@@ -1,27 +1,3 @@
-/**
- * `bun run audio:stream --keys all`: the Warm band in every other key the
- * Key stepper reaches, rendered, checked, uploaded to R2 under
- * `audio/<set>/sdah/<n>.mp3`, read back and deleted, one hymn at a time
- * (`./stream-job.ts`).
- *
- *   bun run audio:stream --keys all                  # the 11 keys, +1, -1, +2, ... +6; hymns 1 to 695
- *   bun run audio:stream --keys 2 --hymns 1,46,100   # those hymns in warm-1-up2
- *   bun run audio:stream --set warm-2 --keys all     # every hymn warm-2 holds (663), in warm-2-up1 ... warm-2-down5
- *   bun run audio:stream --keys all --parallel 2 --load 8
- *
- * Each hymn renders in its own `render.ts` process
- * (`packages/hymnal/scripts/render/`), which waits while the 1-minute load
- * is over `--load` (default 12, render's guard) and keeps its own memory;
- * `--parallel` (default 4) of them run at once. The render cache is
- * `$HYMN_RENDER_CACHE` (default `~/.cache/manna-hymn-render`), and the run's
- * lines also go to its `stream.log`. A rerun resumes: what R2 holds with the
- * record's bytes is kept. Stop it with SIGTERM or Ctrl-C. The run exits
- * non-zero when a hymn failed. It writes with the owner's Alchemy Cloudflare
- * profile, as `./upload.ts` does. `--set` (default `warm-1`) names the set
- * whose key sets are streamed, one of `RECORDING_SETS`: `--hymns` defaults to
- * every hymn it holds, and a hymn it does not hold is refused. The printed
- * key, the set itself, is never streamed: `./upload.ts` sends it.
- */
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Config, Effect, Layer, Option, Path, Result, Schema, Stream } from 'effect';
@@ -36,7 +12,6 @@ import { SDAH_HYMNS } from './plan.ts';
 import { TargetR2Writes } from './r2.ts';
 import { hymnsOf, keysOf, Renderer, stream, StreamFailed } from './stream-job.ts';
 
-/** The run ended with a hymn failed: its line in the log says why. */
 export class StreamIncomplete extends Schema.TaggedError<StreamIncomplete>()('StreamIncomplete', {
   failed: Schema.Finite,
 }) {
@@ -45,8 +20,6 @@ export class StreamIncomplete extends Schema.TaggedError<StreamIncomplete>()('St
   }
 }
 
-/** `render.ts`, run with Bun from the hymnal package, its output's last 3000 characters kept. */
-/** The render cache, as `render.ts` reads it. */
 const renderCache = Effect.gen(function* () {
   const path = yield* Path.Path;
   const home = yield* Config.String('HOME');

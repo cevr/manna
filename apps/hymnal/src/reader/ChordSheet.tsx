@@ -1,18 +1,3 @@
-/**
- * The sheet a tap on a chord opens: how to play each chord the tapped place
- * shows, as the page shows it (in the played key), each as a chord box
- * (`ChordBox.tsx`) under its name, centred in the sheet. A chord played
- * over its root instead of its bass says so under its name; a chord with no
- * fingering says that.
- *
- * The sheet is a route, `/chord`, presented as a native form sheet with a
- * grabber (`chordSheetOptions`), of one family with the player sheet: a drag
- * down closes it, as does `Done`. Its params name the chords and the played
- * key, so the page under it does not move and the follow hears nothing. It
- * says no capo: a shape is the same at any fret, so a played chord's sheet is
- * the same at every capo.
- */
-
 import * as Chord from '@manna/hymnal/chord';
 import { Option, Schema } from 'effect';
 import { createContext, use } from 'react';
@@ -25,14 +10,12 @@ import { available } from '~/tuner/native';
 
 import { ChordBox } from './ChordBox';
 
-/** Opens the sheet on the chords a place shows. A page without a sheet opens nothing. */
 const ChordTap = createContext<(chords: ReadonlyArray<Chord.Chord>) => void>(() => {});
 
 export const ChordTapProvider = ChordTap.Provider;
 
 export const useChordTap = () => use(ChordTap);
 
-/** The chord route's params: the chords a place shows and the key they are played in, each as JSON. */
 const ChordsParam = Schema.fromJsonString(Schema.Array(Chord.Chord));
 const KeyParam = Schema.fromJsonString(Chord.Key);
 const encodeChords = Schema.encodeSync(ChordsParam);
@@ -40,11 +23,9 @@ const encodeKey = Schema.encodeSync(KeyParam);
 const decodeChords = Schema.decodeUnknownOption(ChordsParam);
 const decodeKey = Schema.decodeUnknownOption(KeyParam);
 
-/** The sheet's route for `chords` played in `key`. */
 export const chordHref = (chords: ReadonlyArray<Chord.Chord>, key: Chord.Key): Href =>
   `/chord?${String(new URLSearchParams({ chords: encodeChords(chords), key: encodeKey(key) }))}`;
 
-/** How the stack presents the chord route: a form sheet with a grabber, no header. */
 export const chordSheetOptions = {
   title: 'Chord',
   headerShown: false,
@@ -53,7 +34,6 @@ export const chordSheetOptions = {
   sheetAllowedDetents: [0.5, 1],
 } satisfies StackScreenOptions;
 
-/** The chord route's screen: the sheet for the chords its params name, or a word that they name none. */
 export function ChordScreen() {
   const params = useParams<{ readonly chords?: string; readonly key?: string }>();
   const shown = Option.all({
@@ -101,7 +81,6 @@ function ChordSheet({
   );
 }
 
-/** One chord's name over its box, or a word that it has none. */
 function Played({
   chord,
   playedKey,

@@ -1,45 +1,21 @@
-// The runner's side of the kept answers (`store.ts` holds their shape and
-// key): read whole, and written whole through a temporary file beside it,
-// removed if the write fails, under the store's lock, so two runs that keep
-// answers at once keep both and a reader sees the old store or the new one,
-// never a part. The lock is SQLite's write lock (`BEGIN IMMEDIATE`) on an
-// empty database file of its own beside the store (`.<name>.lock`), held
-// from the read to the rename: SQLite takes it with the operating system's
-// advisory file locks, which the kernel drops when the holding process ends,
-// so a run that dies leaves no lock to take, and no run ever takes one from
-// another. The file is never removed: removing a lock file another run holds
-// would let a third take a new one beside it. A missing store is an empty
-// one; a store that does not decode is an empty one, said on one line.
-// Every checkout shares the store (`store.ts`), so a write drops the answers
-// by their age alone, under the lock: an answer another checkout's tree reads
-// is kept however this tree has changed. The first answer kept for a key is
-// the store's: a run that asked about a key another run kept meanwhile keeps
-// that one, not its own, and reports by it, so two checkouts never report
-// one item two ways.
-
 import { Database } from 'bun:sqlite';
 import { Console, Effect, FileSystem, Option, Path, Result, Schedule, Schema } from 'effect';
 
 import { type Answer, MAX_AGE_DAYS, Store, type Verdict } from './store.js';
 
-/** How often, and how many times, a run tries for the lock another run holds: 2 s in all. */
 const LOCK_TRIES = { every: '25 millis', times: 80 } as const;
 
-/** Another run holds the store's lock. */
 class StoreLocked extends Schema.TaggedError<StoreLocked>()('StoreLocked', {
   lock: Schema.String,
 }) {}
 
-/** The store's lock file could not be opened or locked: its path and SQLite's words. */
 class StoreLockFailed extends Schema.TaggedError<StoreLockFailed>()('StoreLockFailed', {
   lock: Schema.String,
   cause: Schema.String,
 }) {}
 
-/** Whether SQLite refused because another connection holds the lock. */
 const isBusy = Schema.is(Schema.Struct({ code: Schema.Literal('SQLITE_BUSY') }));
 
-/** Tries once for SQLite's write lock on `lock`: the open connection that holds it. */
 const tryLock = (lock: string) =>
   Effect.gen(function* () {
     const db = yield* Effect.try({
@@ -57,7 +33,6 @@ const tryLock = (lock: string) =>
     return yield* StoreLockFailed.make({ lock, cause: String(taken.failure) });
   });
 
-/** Holds the store's lock `lock` for the scope, waiting for another run's; closing the connection lets it go. */
 const locked = (lock: string) =>
   Effect.acquireRelease(
     tryLock(lock).pipe(
@@ -70,7 +45,6 @@ const locked = (lock: string) =>
     (db) => Effect.sync(() => db.close()),
   );
 
-/** The answers kept in `file`: none when it is missing, or when it does not decode (said on one line). */
 export const readCache = Effect.fn('judged.readCache')(function* (file: string) {
   const fs = yield* FileSystem.FileSystem;
   const text = yield* fs.readFileString(file).pipe(Effect.option);
@@ -88,20 +62,12 @@ export const readCache = Effect.fn('judged.readCache')(function* (file: string) 
   return new Map(Object.entries(store.answers));
 });
 
-/** What a run keeps: its new answers, the kept keys it read, and its day (`store.ts`'s `dayOf`). */
 interface Keeping {
   readonly fresh: ReadonlyMap<string, Verdict>;
   readonly read: ReadonlySet<string>;
   readonly day: number;
 }
 
-/**
- * The answers `kept` hold once a run keeps `keeping`: each answer of `fresh`
- * whose key `kept` lacks added, each key of `read` and `fresh` marked seen on
- * `day` unless a later run marked it seen on a later day, and every answer
- * last seen more than `MAX_AGE_DAYS` before it dropped. A key `kept` holds
- * keeps its answer: the first kept is the store's.
- */
 const keptAfter = (kept: ReadonlyMap<string, Answer>, keeping: Keeping) => {
   const after = new Map(kept);
   for (const key of [...keeping.read, ...keeping.fresh.keys()])
@@ -115,11 +81,6 @@ const keptAfter = (kept: ReadonlyMap<string, Answer>, keeping: Keeping) => {
   return after;
 };
 
-/**
- * Whether keeping `keeping` changes `kept`: a fresh answer, a read answer
- * last seen before its day, or an answer past its age. A run that changes
- * nothing writes nothing.
- */
 export const changes = (kept: ReadonlyMap<string, Answer>, keeping: Keeping) =>
   keeping.fresh.size > 0 ||
   [...keeping.read].some((key) =>
@@ -127,12 +88,6 @@ export const changes = (kept: ReadonlyMap<string, Answer>, keeping: Keeping) =>
   ) ||
   [...kept.values()].some((answer) => keeping.day - answer.seen > MAX_AGE_DAYS);
 
-/**
- * Keeps `keeping` in the store at `file` (`keptAfter`), under its lock,
- * written whole through a temporary file beside it: an answer another run
- * kept meanwhile is read under the lock, and stays. Answers the store as
- * written, the answers to report by.
- */
 export const keepAnswers = Effect.fn('judged.keepAnswers')(function* (
   file: string,
   keeping: Keeping,

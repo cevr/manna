@@ -1,10 +1,3 @@
-/**
- * The Recent screen, pushed over the home screen by Recent's header there:
- * every hymn Recent keeps, the latest first, each favourite starred. A row's
- * press opens its hymn and hands the pager this whole list, so a swipe on
- * the hymn moves through Recent.
- */
-
 import { useAtomValue } from '@effect/atom-react';
 import { useMemo } from 'react';
 

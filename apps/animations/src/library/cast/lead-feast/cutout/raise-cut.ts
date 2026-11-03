@@ -1,17 +1,3 @@
-// Recuts the raise's drawn keys (`raise/record.json`, read by `raise.ts`) from
-// their okra drawings: each key whose source is an okra call is registered to
-// his kept front by the parts the raise leaves still (`fitKey`: the viewer's
-// right half and the legs), laid in his front part sheet's frame (`frames.ts`)
-// padded `PAD` px on the left, where a raised sleeve runs out past the kept
-// box, and its arm cut out on the record's joints (`cutLimb`) with its
-// silhouette inked at the house width. The cut takes the kept front's ink
-// (`inkTo`), is written to `raise/keys/<id>.png`, and its
-// place in the sheet frame goes back into the record. The cut keeps no drawn
-// hand, so each key's hand (where `raise.ts` lays the kept hand) goes back too:
-// on its forearm past the wrist as far as the rest key's hand is past its
-// wrist (`handPast`), so the hand meets the cuff in every key. Run it from the
-// repo root with `bun apps/animations/src/library/cast/lead-feast/cutout/raise-cut.ts`.
-
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { figureOf } from '@manna/film/core';
@@ -32,15 +18,11 @@ const here = import.meta.dir;
 const RAISE = `${here}/raise`;
 const FRONT = `${here}/../cast-sheet/views/front.png`;
 
-/** Canvas px left of the sheet frame, where the raised sleeve runs. */
 const PAD = 60;
-/** His sleeve's capsules round its bones, px: shoulder to elbow, elbow to wrist. */
 const R_UPPER = 26;
 const R_FORE = 24;
-/** The front's px (kept view px) the raise leaves still: right of his chest's middle, and his legs. */
 const still = (x: number, y: number) => x >= 130 || y >= 520;
 
-/** An object of the record: the fields read here, and the rest kept as it is read. */
 const Kept = <F extends Schema.Struct.Fields>(fields: F) =>
   Schema.StructWithRest(Schema.Struct(fields), [Schema.Record(Schema.String, Schema.Unknown)]);
 const Pt = Schema.Tuple([Schema.Finite, Schema.Finite]);
@@ -54,9 +36,7 @@ const Key = Kept({
   hand: Pt,
   source: Kept({ okra: Schema.optional(Schema.Finite) }),
 });
-/** What a recut writes back into a key: its place in the sheet frame and its hand. */
 type Cut = Pick<typeof Key.Type, 'place' | 'hand'>;
-/** The record's JSON text, two-space indented as it is kept. */
 const RecordJson = Schema.fromJsonString(
   Kept({
     view: Schema.Literal('front'),
@@ -66,7 +46,6 @@ const RecordJson = Schema.fromJsonString(
   { space: 2 },
 );
 
-/** The same text read as plain fields, so a write keeps every field where it stands. */
 const Fields = Schema.Record(Schema.String, Schema.Unknown);
 const RawJson = Schema.fromJsonString(Fields, { space: 2 });
 
@@ -137,7 +116,6 @@ const recut = Effect.gen(function* () {
     return out;
   });
 
-  // how far past the wrist the rest key's hand stands
   const rest = yield* present(
     Arr.findFirst(record.keys, (k) => k.id === 'rest'),
     'rest',
@@ -152,7 +130,6 @@ const recut = Effect.gen(function* () {
       onSome: (n) => recutKey(key, n),
     }),
   );
-  // the record as it was read, field order kept, with each key's place and hand the only change
   const raw = yield* Schema.decodeEffect(RawJson)(text);
   const rawKeys = yield* Schema.decodeUnknownEffect(Schema.Array(Fields))(raw['keys']);
   const keys = rawKeys.map((key, i) => ({ ...key, ...cuts[i] }));

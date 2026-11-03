@@ -31,13 +31,6 @@ type PublicationOrder = typeof PublicationOrder.Type;
 const ParagraphId = Schema.NonEmptyString.pipe(Schema.brand('Writings/ParagraphId'));
 type ParagraphId = typeof ParagraphId.Type;
 
-/** Where the library files a publication, as its own catalog says.
- *
- *  `type` and `subtype` are the library's words, kept as it spells them, so a
- *  value outside the search's vocabulary is stored rather than lost. `section`
- *  is the top-level folder the book sits under, which only the folder tree
- *  knows (`sectionsByFolder`); `None` when that folder is not one of the
- *  corpus's sections. */
 export class PublicationClassification extends Schema.Class<PublicationClassification>(
   'Writings/PublicationClassification',
 )({
@@ -53,9 +46,6 @@ export class Publication extends Schema.Class<Publication>('Writings/Publication
   title: Schema.NonEmptyString,
   author: Schema.NonEmptyString,
   paragraphCount: Schema.Option(NonNegativeInteger),
-  /** Absent for a publication whose source does not say, such as a packaged
-   *  archive written before classifications were carried. An absent key
-   *  encodes to nothing, so those archives keep their digests. */
   classification: Schema.optionalKey(PublicationClassification),
 }) {}
 
@@ -120,9 +110,6 @@ export class SearchHit extends Schema.Class<SearchHit>('Writings/SearchHit')({
   paragraph: Paragraph,
 }) {}
 
-/** A paragraph a refcode cites, with its publication. One refcode can cite
- *  paragraphs in more than one publication (a Publication Code is not an
- *  identity), so a lookup returns every match rather than choosing one. */
 export class RefcodeMatch extends Schema.Class<RefcodeMatch>('Writings/RefcodeMatch')({
   publication: Publication,
   paragraph: Paragraph,

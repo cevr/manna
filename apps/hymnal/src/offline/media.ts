@@ -1,5 +1,4 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noTryCatch, effect/noThrowStatement, eslint/no-await-in-loop -- OPFS adapter: keep writable-stream close/abort and DOMException handling at the host boundary; every public operation enters Effect.tryPromise. */
-/** Browser media lives in OPFS, apart from the HTTP cache and synchronous settings. */
 import { Effect, Layer, Schema } from 'effect';
 import {
   Entry,
@@ -29,7 +28,6 @@ export const mediaLayer = Layer.effect(Media)(
       (await root(storageFor(id.number))).getFileHandle(`${identityKey(id)}.${suffix}`, {
         create,
       });
-    // A stray (a hymn that plays from another set's storage) is never listed.
     const listIn = async (storage: string, found: Map<string, Entry>) => {
       const dir = await root(storage);
       for await (const [name, handle] of dir.entries()) {
@@ -55,7 +53,6 @@ export const mediaLayer = Layer.effect(Media)(
     );
     return Media.of({
       protect: call(async () => {
-        // A refusal is normal. Downloads keeps the browser eviction limit visible.
         if (navigator.storage.persist) await navigator.storage.persist();
       }),
       removeOld: call(async () => {

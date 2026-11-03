@@ -1,16 +1,3 @@
-/**
- * The publisher's side of the desk (`./desk.ts`): what publishing a version
- * needs of the bucket, over HTTP with the stack's secret.
- *
- * `publishTo` runs a publication (`./publish.ts`) through it: it reads every
- * film's manifest the bucket holds, plans the version, uploads each file the
- * bucket does not already hold by its bytes (a file larger than a part in
- * parts, aborted when one fails), writes the version's page, the film's
- * folder and its manifest, then the index from the manifests read again,
- * then deletes the files of the version's folder that neither the new
- * version nor the one it replaced names. `--dry-run` stops before the first
- * write.
- */
 import { Array as Arr, Effect, FileSystem, Option, Redacted, Schema, Stream } from 'effect';
 import { HttpClient, HttpClientRequest, type HttpClientResponse } from 'effect/http';
 
@@ -35,18 +22,14 @@ export class DeskFailed extends Schema.TaggedError<DeskFailed>()('DeskFailed', {
   }
 }
 
-/** Where the desk is and the secret it answers to (`SCREENING_DESK_URL`, `SCREENING_DESK_TOKEN`). */
 export interface DeskAccess {
   readonly url: string;
   readonly token: Redacted.Redacted<string>;
 }
 
-/** What one publish did, or would do (`dryRun`). */
 export interface Published {
   readonly plan: Publication;
-  /** The uploads the bucket already held, by key. */
   readonly held: ReadonlySet<string>;
-  /** The files of the version's folder deleted once the new version was written: those of the versions before the one it replaced. */
   readonly pruned: ReadonlyArray<string>;
 }
 
@@ -57,7 +40,6 @@ const encodeParts = Schema.encodeSync(
   Schema.fromJsonString(Schema.Struct({ parts: Schema.Array(UploadedPart) })),
 );
 
-/** The desk, as the publisher reaches it. */
 export const deskClient = Effect.fn('desk.client')(function* (
   access: DeskAccess,
   partBytes: number = PART_BYTES,
@@ -68,7 +50,6 @@ export const deskClient = Effect.fn('desk.client')(function* (
   const failed = (op: string, key: string) => (error: { readonly message: string }) =>
     DeskFailed.make({ op, key, reason: error.message });
 
-  /** Send `request`, signed with the secret; a status `ok` does not admit is a failure. */
   const send = (
     op: string,
     key: string,
@@ -104,7 +85,6 @@ export const deskClient = Effect.fn('desk.client')(function* (
       Effect.flatMap((text) => decodeListing(text).pipe(Effect.mapError(failed('list', prefix)))),
     );
 
-  /** Every film's manifest the bucket holds. */
   const manifests: Effect.Effect<ReadonlyArray<FilmManifest>, DeskFailed> = Effect.gen(
     function* () {
       const { folders } = yield* list('', Option.some('/'));
@@ -138,7 +118,6 @@ export const deskClient = Effect.fn('desk.client')(function* (
     },
   );
 
-  /** Whether the bucket holds `key` with the bytes `sha256` names. */
   const holds = (key: string, sha256: string) =>
     send('check', key, HttpClientRequest.head(`${base}/objects/${keyPath(key)}`), [200, 404]).pipe(
       Effect.map(
@@ -148,7 +127,6 @@ export const deskClient = Effect.fn('desk.client')(function* (
       ),
     );
 
-  /** Bytes `offset` to `offset + length` of `file`. */
   const slice = (file: string, offset: number, length: number) =>
     fs.stream(file, { offset, bytesToRead: length }).pipe(
       Stream.runCollect,
@@ -164,7 +142,6 @@ export const deskClient = Effect.fn('desk.client')(function* (
       Effect.mapError(failed('read', file)),
     );
 
-  /** Write `upload` to the bucket: whole, or in parts when it is larger than one. */
   const upload = Effect.fn('desk.upload')(function* (each: Upload) {
     const objectUrl = `${base}/objects/${keyPath(each.key)}`;
     if (each.bytes <= partBytes) {
@@ -219,7 +196,6 @@ export const deskClient = Effect.fn('desk.client')(function* (
           HttpClientRequest.bodyText(encodeParts({ parts: written }), 'application/json'),
         ),
       );
-    // A write that fails or is interrupted part way is aborted, so its parts do not stay in the bucket.
     const abort = send(
       'abort',
       each.key,
@@ -233,7 +209,6 @@ export const deskClient = Effect.fn('desk.client')(function* (
     );
   });
 
-  /** Write `text` to the bucket as `key`. */
   const write = (key: string, text: string) =>
     send(
       'write',
@@ -243,7 +218,6 @@ export const deskClient = Effect.fn('desk.client')(function* (
       ),
     ).pipe(Effect.asVoid);
 
-  /** Delete `key`. */
   const remove = (key: string) =>
     send('delete', key, HttpClientRequest.delete(`${base}/objects/${keyPath(key)}`)).pipe(
       Effect.asVoid,
@@ -254,7 +228,6 @@ export const deskClient = Effect.fn('desk.client')(function* (
 
 export type DeskClient = Effect.Success<ReturnType<typeof deskClient>>;
 
-/** Publish `material` through `desk`; with `dryRun`, plan it and write nothing. */
 export const publishTo = Effect.fn('desk.publish')(function* (
   desk: DeskClient,
   material: Material,
@@ -273,9 +246,7 @@ export const publishTo = Effect.fn('desk.publish')(function* (
   );
   for (const text of plan.texts)
     if (text.key !== PAGE_KEYS.index) yield* desk.write(text.key, text.text);
-  // Another film's publish may have written its manifest since this one read them, so the index is drawn from the manifests as they are now, this film's new one among them.
   yield* desk.write(PAGE_KEYS.index, indexPage(yield* desk.manifests));
-  // The version's folder keeps its page, the files the new version names and those of the version it replaced (a viewer may be playing it); any other is older.
   const folder = `${material.film}/${material.version}/`;
   const kept = new Set([
     ...plan.uploads.map((each) => each.key),

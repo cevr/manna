@@ -1,13 +1,3 @@
-// A take's picture and its voice stay together through the footage library's
-// copies (`footage-media.ts`): a synthetic clapper's clip (a white frame and
-// a click on one moment, `fixtures/sync-clip.ts`) made into its mezzanine
-// and its voice keeps the flash and the click within one frame, whether the
-// camera's picture starts at zero or after it, and whether its frames run at
-// a constant rate or a variable one, and from either camera a talk is shot
-// on: an iPhone's HEVC MOV, upright, or a Sony ZV-E10's H.264 MP4, landscape
-// and at 24 or 30. Each copy is constant-rate at its recipe's rate, the way up
-// its original is, its key frames no further apart than its recipe allows.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem, Layer, Option, Path, Stream } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -30,7 +20,6 @@ const Live = FootageMedia.layer.pipe(
   Layer.provideMerge(BunServices.layer),
 );
 
-/** `file`'s picture, open until the scope closes. */
 const pictureIn = (file: string) =>
   Effect.gen(function* () {
     const input = yield* Effect.acquireRelease(
@@ -41,7 +30,6 @@ const pictureIn = (file: string) =>
     return yield* Effect.fromNullishOr(track).pipe(Effect.orDie);
   });
 
-/** When `track`'s first bright frame shows: the flash. Every frame is decoded, so no decoder is left running. */
 const flashIn = (track: InputVideoTrack) =>
   Stream.fromAsyncIterable(new VideoSampleSink(track).samples(), String).pipe(
     Stream.mapEffect((sample) =>
@@ -61,7 +49,6 @@ const flashIn = (track: InputVideoTrack) =>
     Effect.orDie,
   );
 
-/** Every packet's time and length and whether it is a key frame, in decode order. */
 const packetsIn = (track: InputVideoTrack) =>
   Stream.fromAsyncIterable(new EncodedPacketSink(track).packets(), String).pipe(
     Stream.map((packet) => ({
@@ -73,7 +60,6 @@ const packetsIn = (track: InputVideoTrack) =>
     Effect.orDie,
   );
 
-/** The clip made, imported into its mezzanine and proxy and its voice; where the flash and the click fall in them. */
 const synced = (clip: SyncClip) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -101,17 +87,14 @@ const synced = (clip: SyncClip) =>
     };
   });
 
-/** The longest run between key frames, in seconds, by their times. */
 const longestGap = (packets: ReadonlyArray<{ readonly at: number; readonly key: boolean }>) => {
   const keys = packets.filter((p) => p.key).map((p) => p.at);
   const end = Math.max(...packets.map((p) => p.at));
   return Math.max(...[...keys, end].slice(1).map((at, k) => at - (keys[k] ?? 0)));
 };
 
-/** Each camera's file extension, as it names its files. */
 const CONTAINERS = { iphone: '.mov', 'zv-e10': '.mp4' } as const;
 
-/** Each camera's picture codec, as the probe names it. */
 const CODECS = { iphone: 'hevc', 'zv-e10': 'avc' } as const;
 
 const CLIPS: ReadonlyArray<readonly [string, SyncClip]> = [
@@ -149,7 +132,6 @@ describe('a take keeps its picture and its voice together', () => {
             expect(made.probe.picture.codec).toBe(CODECS[clip.camera]);
             expect(made.upright).toBe(clip.camera === 'iphone');
             expect(Math.abs(made.click - made.flash)).toBeLessThanOrEqual(1 / 30);
-            // Constant-rate at the recipe's rate.
             expect(new Set(made.mezzanine.map((p) => p.length.toFixed(5)))).toEqual(
               new Set([(1 / FOOTAGE_RECIPES.mezzanine.fps).toFixed(5)]),
             );

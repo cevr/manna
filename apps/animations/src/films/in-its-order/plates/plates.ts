@@ -1,17 +1,3 @@
-// The feast's courtyard as painted plates (`PaintingSpec`,
-// `packages/film/README.md`, "Plates at depth"), painted to the kept panel
-// `board/title.start.2.png` at the concept art's fidelity: one PNG a plane,
-// each imported beside its spec so a beat that draws it is keyed by its
-// bytes. A full plate is 1920 x 1280 and the frame shows its rows 100..1180
-// (`at: [0, -100]`), so it covers the frame under every plane's pull and the
-// drift. `distance.png` is the painter's distance plate with the gold path
-// painted out, and `path.png` is that painted path cut from it, clear around
-// the path, so a scene reveals the path along its length (`PATH_BRUSH`) and
-// the frame at the reveal's end is the painter's plate to within 62 px on the
-// hill's edge (at most 64 of 255 in one channel). `title` draws them, and
-// `cold` draws them and its two close plates (`BABY_BACK`, `WHAT`), painted
-// to their own panels on the same grid. Pure data.
-
 import type { PaintingSpec } from '@manna/film/canvas';
 import babyBackPng from './cold-baby-back.png' with { type: 'file' };
 import whatPng from './cold-what.png' with { type: 'file' };
@@ -22,13 +8,10 @@ import pathPng from './path.png' with { type: 'file' };
 import skyPng from './sky.png' with { type: 'file' };
 import tablePng from './table.png' with { type: 'file' };
 
-/** The kept panel's pixels on the frame: frame = (panel - [0, y]) x scale; the plates are painted to it. */
 export const PANEL = { scale: 1.25, y: 80 } as const;
 
-/** How far each plane stands, as a camera's divisor: a far plane moves less in a pull. */
 export const PLANES = { sky: 12, distance: 5, near: 2, guests: 1.15, table: 1 } as const;
 
-/** The sky, teal at the top to pale green at the hills, opaque over the whole plate. */
 export const SKY = {
   key: 'in-its-order/sky',
   png: skyPng,
@@ -36,7 +19,6 @@ export const SKY = {
   at: [0, -100],
 } as const satisfies PaintingSpec;
 
-/** The dawn light on the green hill, the violet ridges and the sand town, with no gold path. */
 export const DISTANCE = {
   key: 'in-its-order/distance',
   png: distancePng,
@@ -44,7 +26,6 @@ export const DISTANCE = {
   at: [0, -100],
 } as const satisfies PaintingSpec;
 
-/** The gold path, cut from the painter's distance plate at its plate px (869, 428): clear on every side. */
 export const PATH = {
   key: 'in-its-order/path',
   png: pathPng,
@@ -53,7 +34,6 @@ export const PATH = {
   open: ['top', 'right', 'bottom', 'left'],
 } as const satisfies PaintingSpec;
 
-/** The olive tree, the pale building, the pergola with its garlands and lanterns, the low wall and the floor. */
 export const NEAR = {
   key: 'in-its-order/near',
   png: nearPng,
@@ -61,7 +41,6 @@ export const NEAR = {
   at: [0, -100],
 } as const satisfies PaintingSpec;
 
-/** The long table of plant food at the front. */
 export const TABLE = {
   key: 'in-its-order/table',
   png: tablePng,
@@ -69,13 +48,6 @@ export const TABLE = {
   at: [0, -100],
 } as const satisfies PaintingSpec;
 
-/**
- * The crowd's tables, drawn small on each crowd row's plane (`CROWD_ROWS` in
- * `scenes/crowd.ts`): `table.png` cut to its plate rows 940..1184 (the props,
- * the top, the face and the legs down to the paving), the stone step at its
- * left (x < 210, rows from 1148) cleared, and its last 10 rows faded to clear,
- * so the legs end soft above the floor and no paving comes with it.
- */
 export const FAR_TABLE = {
   key: 'in-its-order/far-table',
   png: farTablePng,
@@ -84,12 +56,6 @@ export const FAR_TABLE = {
   open: ['top', 'bottom'],
 } as const satisfies PaintingSpec;
 
-/**
- * `cold`'s close on the mother, painted to `board/cold.baby.3.png` with every
- * guest, table and bench painted out: the lanterns, the cream wall with its
- * olive bushes, the town and the awning's post over the paving, which runs to
- * the plate's bottom edge. The mother is a plane of her own in front of it.
- */
 export const BABY_BACK = {
   key: 'in-its-order/cold-baby-back',
   png: babyBackPng,
@@ -97,11 +63,6 @@ export const BABY_BACK = {
   at: [0, -100],
 } as const satisfies PaintingSpec;
 
-/**
- * `cold`'s last close, painted to `board/cold.what.3.png`: a clay cup of milk
- * and a round loaf on a clay platter on the cream table top, the only props
- * lit, and beyond the table a soft plum-indigo dark. The whole picture.
- */
 export const WHAT = {
   key: 'in-its-order/cold-what',
   png: whatPng,
@@ -109,12 +70,6 @@ export const WHAT = {
   at: [0, -100],
 } as const satisfies PaintingSpec;
 
-/**
- * The brush that paints the gold path, foot to top, in the distance plate's
- * px: each point's centre and radius, measured from the painter's path (each
- * row's centre of its yellow run). Its circles, walked along it, cover every
- * pixel `path.png` paints.
- */
 export const PATH_BRUSH: ReadonlyArray<readonly [x: number, y: number, r: number]> = [
   [890, 557, 18],
   [898, 556.3, 18],

@@ -1,5 +1,4 @@
 /* oxlint-disable effect/noAsyncFunction, effect/noTryCatch, effect/noThrowStatement, effect/noGlobals, eslint/no-await-in-loop -- fetch adapter shared with One's native fetch: cancellation and bounded body consumption live inside Effect.tryPromise; release the host reader in the same operation. */
-/** Bounded range transport works even on a host whose fetch buffers its response. */
 import { Effect, Layer, Schema } from 'effect';
 import { audioUrl, HYMNS_ORIGIN } from '~/remote';
 import { CHUNK, Http, OfflineError, type Range } from './cache';

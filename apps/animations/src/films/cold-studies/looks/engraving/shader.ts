@@ -1,20 +1,4 @@
-// The burin: one shader every surface of the engraved courtroom is cut with.
-// It lights a point as a print maker would study it (a key light through the
-// hall's window, a second through the rose window behind the bench, a bounce
-// off the lit floor, the air the shafts cross) and turns the light into lines
-// only: tone is never grey, it is the width of a line. Each surface carries
-// two or three families of parallel lines laid in its own object space,
-// around a column or a robe as rings (a cylinder's cross-contours), across a
-// wall in courses, so the lines ride the forms as they move and never swim
-// in screen space. A line swells where the form darkens and thins to nothing
-// in the light; past a middle tone a second family crosses it, and in the
-// deepest shadow a third. Line density keeps a printed scale on screen: each
-// family picks its octave from how fast its coordinate runs per pixel, and a
-// finer octave's lines grow out of nothing between the coarser ones, so a
-// push in never pops a line.
-
-/** The vertex stage: object, world and normal for the burin. */
-export const VERTEX = /* glsl */ `
+export const VERTEX = `
 attribute vec2 aHatch;
 attribute float aShade;
 varying vec3 vObj;
@@ -35,8 +19,7 @@ void main() {
 }
 `;
 
-/** The fragment stage: light, then lines. */
-export const FRAGMENT = /* glsl */ `
+export const FRAGMENT = `
 precision highp float;
 varying vec3 vObj;
 varying vec3 vObjN;

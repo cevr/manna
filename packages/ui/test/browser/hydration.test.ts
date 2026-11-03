@@ -1,10 +1,3 @@
-// Hydration: a fixture rendered by Solid's server build is the page, and the
-// browser's build hydrates it (`harness(…, { hydrate: true })`). A case fails
-// on any warning the page reports, so a hydration key miss (Solid's
-// development build warns of each) or an unclaimed server node fails it.
-// Solid writes no attribute while hydrating, so the toggles' `tabindex` the
-// browser computed then is read from their log, not the DOM. The group
-// settles on a microtask after the hydration, so before `open` returns.
 import { describe, expect, it } from 'bun:test';
 
 import { expect as see, type Page } from '@playwright/test';
@@ -15,7 +8,6 @@ const h = harness('hydration.tsx', { hydrate: true });
 
 const TOGGLES = ['one', 'two', 'three'];
 
-/** Each toggle's `tabindex` in `html`, or in the page's DOM when `html` is null. */
 const tabindexes = (page: Page, html: string | null): Promise<Record<string, string | null>> =>
   page.evaluate(
     ([markup, ids]) => {
@@ -32,7 +24,6 @@ const tabindexes = (page: Page, html: string | null): Promise<Record<string, str
     [html, TOGGLES] as const,
   );
 
-/** The `tabindex` lines the toggles logged. */
 const tabindexLog = async (page: Page): Promise<Array<string>> =>
   (await logOf(page)).filter((line) => line.startsWith('tabindex '));
 
@@ -41,7 +32,6 @@ describe('hydration', () => {
     const page = await h.open('pressed');
     const served = await tabindexes(page, await servedOf(page));
     expect(served).toEqual({ one: '-1', two: '0', three: '-1' });
-    // What the browser computed at hydration, unchanged once the group settled.
     expect(await tabindexLog(page)).toEqual([
       'tabindex one -1',
       'tabindex two 0',
@@ -66,7 +56,6 @@ describe('hydration', () => {
     const page = await h.open('pressed');
     expect(await logOf(page)).toContain('setup spread');
     await see(page.locator('#spread')).toHaveAttribute('data-pressed-count', '1');
-    // The server's toggles are the ones hydrated: none was made again beside them.
     expect(await page.locator('#group > button').count()).toBe(3);
   });
 

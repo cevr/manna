@@ -4,7 +4,6 @@ import { SCORE, aloneSpans, aloneWeights, speechSpans } from './score.ts';
 
 const RATE = 1000;
 
-/** A voice bus that speaks (a loud constant) over each span, silent between. */
 const voiceOver = (seconds: number, spans: ReadonlyArray<[number, number]>): Pcm => {
   const frames = seconds * RATE;
   const plane = new Float32Array(frames);
@@ -39,11 +38,8 @@ describe('score', () => {
       20,
     );
     expect(spans).toEqual([
-      // Before the first word: alone from the film's start, down before it speaks.
       { hold: { from: 0, to: 3 - edge }, rise: false, fall: true },
-      // 4–5 is a breath: under. 6–12 rests: alone inside its ramps.
       { hold: { from: 6 + edge, to: 12 - edge }, rise: true, fall: true },
-      // After the last word: alone to the film's end.
       { hold: { from: 14 + edge, to: 20 }, rise: true, fall: false },
     ]);
   });

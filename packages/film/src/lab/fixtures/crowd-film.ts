@@ -1,10 +1,5 @@
-// A film of many short scenes with long names, as a real film's are: the
-// second film of the render page's registry and the studio's test page's
-// (`render-page.ts`, `player-page.ts`). It carries captions.
-
 import { type Film, createFilm, drawing } from '../../canvas/film.ts';
 
-/** The crowd film's name in its registry and in the player's URLs. */
 export const CROWD = 'crowd';
 
 const plain = drawing({
@@ -15,7 +10,6 @@ const plain = drawing({
   },
 });
 
-/** Its scenes' names: some long, some short, as a real film's are. */
 const NAMES = [
   'opening-question',
   'cold',
@@ -33,10 +27,6 @@ const NAMES = [
   'end',
 ];
 
-/**
- * The opening's longer line, so the short scenes after it start late. Its
- * mark is a word in.
- */
 const SAYS = new Map([
   [
     'opening-question',
@@ -44,7 +34,6 @@ const SAYS = new Map([
   ],
 ]);
 
-/** The crowd film, laid out afresh: each scene one short line, the opening a long one. */
 export const crowdFilm = (): Film =>
   createFilm({
     title: 'Crowd',

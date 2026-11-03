@@ -1,15 +1,9 @@
-// The narration route names only a film's own narration files, and reads the
-// films per request; the board route names a film's board record and the
-// images in its folder at the URLs a render page reads: on a films folder
-// made here.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path } from 'effect';
 import { boardFile, narrationFile, narrationPath } from './narration-route.ts';
 import { boardUrls } from '../core/board-render.ts';
 
-/** A films folder with one film, `f`, its narration and an attempt; and `loose`, no film. */
 const films = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -19,7 +13,6 @@ const films = Effect.gen(function* () {
   yield* fs.writeFileString(path.join(root, 'f/scenes/index.ts'), 'export {};\n');
   for (const file of ['timings.json', 'attempts/a.wav', '.hidden'])
     yield* fs.writeFileString(path.join(root, 'f/narration', file), '{}');
-  // A folder with no `scenes/index.ts` is no film, narration or not.
   yield* fs.makeDirectory(path.join(root, 'loose/narration'), { recursive: true });
   yield* fs.writeFileString(path.join(root, 'loose/narration/timings.json'), '{}');
   return root;
@@ -55,7 +48,6 @@ describe('the narration route', () => {
         expect(yield* narrationFile(root, '/films/f/narration/timings.json')).toEqual(
           Option.some(`${root}/f/narration/timings.json`),
         );
-        // A film's track before its first mix: named, to watch for, but not served.
         expect(yield* narrationPath(root, '/films/f/narration/full.wav')).toEqual(
           Option.some(`${root}/f/narration/full.wav`),
         );

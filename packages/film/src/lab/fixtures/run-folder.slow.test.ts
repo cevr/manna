@@ -1,6 +1,3 @@
-// The e2e run's folder: its release ends the processes that name a path in
-// it and waits until none runs, then removes it (`run-folder.ts`).
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Exit, FileSystem, Path, Scope, Stream } from 'effect';
@@ -8,7 +5,6 @@ import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import { namingFolder, namingProcesses, runFolder } from './run-folder.ts';
 
-/** The timeout of a test that starts a process of its own: a cold start's time is the machine's. */
 const SPAWNS_MS = 30_000;
 
 describe("an e2e run's folder", () => {
@@ -49,7 +45,6 @@ describe("an e2e run's folder", () => {
           Stream.runDrain,
         );
         yield* Scope.close(run, Exit.void);
-        // Released: no process names the folder, and the holder's last write landed before the remove.
         expect(yield* namingProcesses(folder)).toEqual([]);
         yield* holder.exitCode;
         expect(yield* fs.exists(folder)).toBe(false);

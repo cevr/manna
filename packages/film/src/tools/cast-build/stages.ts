@@ -1,36 +1,3 @@
-// The cast build's stages for one member, from his coverage manifest:
-//
-//   drawing:<id>  every entry: the drawing's bytes; waits on the owner while
-//                 it is not drawn or not kept (the kept fact is its config).
-//   parts:<id>    a puppet entry not fitted from another: `concept parts
-//                 --check`, else `--reuse`, else (spending okra) a call; its
-//                 output lists every file of its sheet folder by hash.
-//   cut:<id>      the puppet spec its sheet folder's parts are posed by
-//                 (`PUPPETS[<sheet>]` of the member's `cutout/puppets.ts`),
-//                 its PNG paths relative to his folder, with the parts'
-//                 output hash; it reads every `cutout/*.ts` of the member
-//                 and the library's `cutout/puppets.ts`.
-//   fit:<id>      every puppet entry: `concept render --figure cutout
-//                 --fit-only` of that view, its fit rows; it reads the cut
-//                 it is posed with (its `fitted` entry's, else its own) and
-//                 its drawing; a fitted entry also reads every file the
-//                 member's `cutout/poses.ts` imports (its pose JSON, held
-//                 drawings).
-//
-// Each stage also reads the source files of its kind (`sources.ts`).
-//   renders:<id>  a puppet entry cut from its own sheet: its synthetic
-//                 training renders, one shard (`renders.ts`); it reads its
-//                 cut. An entry fitted with another view's cut has none.
-//
-// A stage id reads `<stage>:<entry>@<member>` (`cut:turnaround-front@lead-feast`).
-// After every member's stages: `trainsetStage`, the sorted hashes of every
-// trainable drawing's shard after this build's stages; `trainStage`, the one reader trained on that set (spending
-// Modal), keyed by the set, its shards and the reader's source files;
-// `evalStage` per shard, that drawing's held samples read and scored by the
-// reader (`reader.ts`, on this machine); then `lock.ts`'s lock stage writes
-// the reader lock from those outputs. The owner's ask and draws are
-// `owner-ask.ts`'s.
-
 import * as Command from 'effect/cli/Command';
 import {
   DateTime,
@@ -90,7 +57,6 @@ import {
   stageSources,
 } from './sources.ts';
 
-/** Bumped when a stage's code makes other bytes from the same inputs. */
 const VERSION = {
   drawing: '1',
   parts: '2',
@@ -104,14 +70,6 @@ const VERSION = {
   chain: '2',
 } as const;
 
-/**
- * The reader's train: steps, batch, learning rate, seed, GPU, precision, its
- * backbone and the input it reads (width and height in px); a fixed step
- * count, no wall-clock stop. The train hands the backbone and input to
- * Modal, and the checkpoint keeps them for every read; these are
- * `reader/model.py`'s defaults (`BACKBONE`, `IN_W, IN_H`), held equal by
- * `reader.test.ts`.
- */
 export const TRAIN = {
   steps: 4800,
   batch: 32,
@@ -122,12 +80,10 @@ export const TRAIN = {
   backbone: 'facebook/dinov2-small',
   inputSide: { width: 448, height: 560 },
 } as const;
-/** A train's cost in USD as the build counts it: S7b's measured $0.9229; Modal's billing holds the real figure. */
 const TRAIN_USD = 0.92;
 
 const encoder = new TextEncoder();
 
-/** Every file under `dir`, by its path from `dir`, sorted; none when `dir` is missing. */
 const filesUnder = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -143,11 +99,6 @@ const filesUnder = (dir: string) =>
     return files;
   });
 
-/**
- * A parts stage's output: each file of its sheet folder by its path from the
- * folder and its bytes' hash (`name=hash`, sorted), and its record's text
- * (`record.json`, null while the sheet has none), which its bars are read from.
- */
 const PartsJson = Schema.fromJsonString(
   Schema.Struct({
     files: Schema.Array(Schema.String),
@@ -183,17 +134,10 @@ const partsOutput = (dir: string) =>
 const SpecJson = Schema.fromJsonString(Schema.Unknown);
 const ConfigJson = Schema.fromJsonString(Schema.Unknown);
 const ClipLockJson = Schema.fromJsonString(ClipLock);
-/** A renders stage's settings: how many samples of each split. */
 const RENDERS_CONFIG = Schema.encodeSync(ConfigJson)(SAMPLES);
-/** The train settings as text, as its key and its run read them. */
 const TRAIN_CONFIG = Schema.encodeSync(ConfigJson)(TRAIN);
 const PuppetsModule = Schema.Struct({ PUPPETS: Schema.Record(Schema.String, Schema.Unknown) });
 
-/**
- * The files the member's fitted poses are made from: every file his
- * `cutout/poses.ts` imports other than a module (the fitted pose JSON, a held
- * drawing), which the fit render reads through that module.
- */
 const fittedFiles = (memberDir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -207,11 +151,9 @@ const fittedFiles = (memberDir: string) =>
       .toSorted();
   });
 
-/** A command's run, its error read as the stage's failure. */
 const runParts = (film: FilmName, member: string, view: string, flags: ReadonlyArray<string>) =>
   Command.runWith(parts, { version: 'build' })([film, member, '--view', view, ...flags]);
 
-/** A member's own cutter (`Coverage.cutters`), run with bun on the sheets folder it writes; a run that fails or exits nonzero fails the stage. */
 const runCutter = (script: string, sheets: string) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
@@ -221,7 +163,6 @@ const runCutter = (script: string, sheets: string) =>
     if (code !== 0) return yield* StageFailed.make({ reason: `${script} exited ${code}` });
   });
 
-/** A file's content as the cutters' check compares it: a PNG's size and decoded RGBA, any other file's bytes. */
 const contentOf = (name: string, bytes: Uint8Array) => {
   const asBytes = `bytes:${sha256Hex(bytes)}`;
   if (!name.endsWith('.png')) return asBytes;
@@ -231,17 +172,6 @@ const contentOf = (name: string, bytes: Uint8Array) => {
   });
 };
 
-/**
- * A member's own cutters run and checked, as `concept parts --check` holds a
- * sheet to what it lays: each runs in order (`runCutter`) on a scratch sheets
- * folder, and every file they write there that his `cutout/sheets` folder
- * holds must hold the same content (`contentOf`). One that differs fails the
- * stage and nothing is written, so the build never rewrites a committed part;
- * a change meant is made by running the cutters by hand and committing what
- * they write. A committed file they no longer write (outside an `okra/`
- * folder) fails the stage too, so a part the cutters dropped is not kept
- * stale. A file his folder does not hold yet is new, and is copied in.
- */
 const checkedCutters = (memberDir: string, scripts: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -284,7 +214,6 @@ const checkedCutters = (memberDir: string, scripts: ReadonlyArray<string>) =>
     ),
   );
 
-/** `entry`'s puppet spec, as the member's `cutout/puppets.ts` declares it (`PUPPETS[<sheet>]`). */
 const puppetSpecIn = (memberDir: string, entry: Coverage['entries'][number]) =>
   Effect.gen(function* () {
     const path = yield* Path.Path;
@@ -297,7 +226,6 @@ const puppetSpecIn = (memberDir: string, entry: Coverage['entries'][number]) =>
     );
   });
 
-/** A puppets module's value read as a puppet spec: its key, size, parts and skeleton are there. */
 const isPuppetSpec = (u: unknown): u is PuppetSpec =>
   Predicate.hasProperty(u, 'key') &&
   Predicate.hasProperty(u, 'size') &&
@@ -305,7 +233,6 @@ const isPuppetSpec = (u: unknown): u is PuppetSpec =>
   Predicate.hasProperty(u, 'parts') &&
   Array.isArray(u.parts);
 
-/** What the stages run on: the files, `concept parts`, the fit render and the puppets' part PNGs. */
 export type StageServices =
   | FileSystem.FileSystem
   | Path.Path
@@ -322,39 +249,28 @@ export interface MemberStages {
   readonly facts: Readonly<Record<string, EntryFacts>>;
 }
 
-/** The code every member's stages are keyed by: each stage kind's sources, the film's cast module's and the render page's (`buildSources`). */
 interface BuildSources {
   readonly stage: Effect.Success<typeof stageSources>;
   readonly filmCast: ReadonlyArray<Input>;
-  /** The render page the fit draws in: its HTML and its scripts' closure. */
   readonly page: ReadonlyArray<Input>;
 }
 
-/**
- * The film's build sources, read once per build: each stage kind's import
- * closure, its `rigs/cast.ts`'s, and the closure of `page`, the render page
- * the fit draws in (the CLI's, the app's `RENDER_PAGE`).
- */
 export const buildSources = Effect.fn('cast.build.sources')(function* (
   film: FilmName,
   page: string,
 ) {
   const stage = yield* stageSources;
-  // the fit render loads the film's cast module by its path (`STAGE_LOADS`)
   const filmCast = yield* filmCastSources((yield* FilmFolder).paths(film).dir);
   return { stage, filmCast, page: yield* pageSources(page) } satisfies BuildSources;
 });
 
-/** One member's stages, in the order they build, keyed by the build's sources. */
 export const memberStages = Effect.fn('cast.build.memberStages')(function* (
   m: MemberStages,
   built: BuildSources,
 ) {
   const path = yield* Path.Path;
-  // the cut stage loads his puppets module by its path: it is keyed by every file that module runs
   const puppets = yield* puppetSources(m.memberDir);
   const src = built.stage;
-  /** An entry named in a stage id: `<entry>@<member>`, so `cut:<entry>` leads it and two members never share one. */
   const at = (id: string) => `${id}@${m.member}`;
   const factsOf = (id: string) => Option.fromNullishOr(m.facts[id]);
   const stages: Array<Stage<StageServices>> = [];
@@ -377,12 +293,9 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
       },
     });
   }
-  // his part sheets are made by his own cutters, with no repaint, or by `concept parts` from his
-  // cut table, which asks okra only for a view with no answer drawn
   const cutters = Option.map(Option.fromUndefinedOr(m.coverage.cutters), (scripts) =>
     scripts.map((s) => path.join(m.memberDir, s)),
   );
-  // the parts stage is keyed by its own code and by what makes his sheets
   const maker = yield* Option.match(cutters, {
     onNone: () => cutTableSources(m.memberDir),
     onSome: cutterSources,
@@ -390,10 +303,7 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
   for (const entry of m.coverage.entries) {
     if (entry.cut !== 'puppet' || Option.isSome(Option.fromUndefinedOr(entry.fitted))) continue;
     const sheet = path.join(m.memberDir, 'cutout', 'sheets', sheetOf(entry));
-    // every file of the sheet folder: its record and part PNGs (which `--check` holds to its
-    // answers), and its okra ledger and answers
     const sheetFiles = yield* filesUnder(sheet);
-    /** `concept parts` on the view: free when its answers are drawn, else okra under `--spend okra`. */
     const byParts = (ctx: StageContext) =>
       Effect.gen(function* () {
         const free = yield* runParts(m.film, m.member, entry.id, ['--check']).pipe(
@@ -437,13 +347,10 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
       run: (ctx) =>
         Effect.gen(function* () {
           const spec = yield* puppetSpecIn(m.memberDir, entry);
-          // its PNG paths named from the member's folder, so the spec reads the same in any checkout
           const text = yield* Schema.encodeEffect(SpecJson)(spec);
           return text.replaceAll(`${m.memberDir}/`, '');
         }).pipe(
           Effect.mapError((e) => StageFailed.make({ reason: `cut ${at(entry.id)}: ${String(e)}` })),
-          // the puppet is its spec and its part PNGs' bytes: a repainted part changes the cut,
-          // so its fits rerun
           Effect.flatMap((spec) =>
             Effect.map(ctx.output(`parts:${at(entry.id)}`), (parts) =>
               encoder.encode(`${spec}\n${new TextDecoder().decode(parts)}`),
@@ -466,7 +373,6 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
         ...src.fit,
         ...page,
         ...filmCast,
-        // a fitted pose is its pose JSON and held drawings too, which its cut does not hash
         ...Option.match(Option.fromUndefinedOr(entry.fitted), {
           onNone: () => [],
           onSome: () => fitted.map(fileInput),
@@ -497,8 +403,6 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
     });
   }
   for (const entry of m.coverage.entries) {
-    // a drawing cut from its own sheet, once its cut is made (in this build or before); the
-    // training set takes it only when its entry is trainable (`trainsetStage`)
     if (entry.cut !== 'puppet' || Option.isSome(Option.fromUndefinedOr(entry.fitted))) continue;
     stages.push({
       id: `renders:${at(entry.id)}`,
@@ -526,7 +430,6 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
   return stages;
 });
 
-/** The ids of an entry's stages, `<kind>:<entry>@<member>`. */
 const idsOf = (entry: string, member: string) => {
   const at = (kind: string) => `${kind}:${entry}@${member}`;
   return {
@@ -547,15 +450,6 @@ const StatusJson = Schema.fromJsonString(
   }),
 );
 
-/**
- * An entry's coverage verdicts, `coverageOf` over facts read off this
- * build's outputs: drawn and kept, its drawing stage made (it fails
- * otherwise); bars, its parts output's record; cut, its cut made; fit, its
- * fit rows pass. It says `complete` (the library's readiness) and
- * `trainable` (the training set takes it). Its inputs are those stages, so
- * a record whose bars change changes the verdicts and every key that reads
- * them.
- */
 const statusStage = (entry: string, member: string): Stage<never> => {
   const ids = idsOf(entry, member);
   return {
@@ -592,52 +486,34 @@ const statusStage = (entry: string, member: string): Stage<never> => {
   };
 };
 
-/** Whether a status stage's output says its entry is trainable. */
 const trainableIn = (bytes: Uint8Array) =>
   Schema.decodeEffect(StatusJson)(new TextDecoder().decode(bytes)).pipe(
     Effect.map((s) => s.trainable),
     Effect.orElseSucceed(() => false),
   );
 
-/**
- * A drawing that may join the training set: a puppet entry cut from its own
- * sheet, with its renders and status stages.
- */
 export interface Candidate {
-  /** `<member>/<entry>`. */
   readonly drawing: string;
   readonly renders: string;
   readonly status: string;
 }
 
-/** An entry's candidate: `<member>/<entry>` and its renders and status stage ids. */
 const candidateOf = (entry: string, member: string): Candidate => {
   const ids = idsOf(entry, member);
   return { drawing: `${member}/${entry}`, renders: ids.renders, status: ids.status };
 };
 
-/** A member's candidates for the training set, one per puppet entry cut from its own sheet. */
 export const candidatesOf = (m: MemberStages): ReadonlyArray<Candidate> =>
   m.coverage.entries
     .filter((e) => e.cut === 'puppet' && Option.isNone(Option.fromUndefinedOr(e.fitted)))
     .map((e) => candidateOf(e.id, m.member));
 
-/** Whether a fit stage's output passes: every row of every view it fit. */
 export const fitPasses = (bytes: Uint8Array) =>
   Schema.decodeEffect(FitJson)(new TextDecoder().decode(bytes)).pipe(
     Effect.map((views) => views.length > 0 && views.every((v) => v.rows.every((r) => r.pass))),
     Effect.orElseSucceed(() => false),
   );
 
-/**
- * The training set: the shard hash of every candidate whose status stage
- * says trainable (`coverage.ts`: drawn, kept, cut, fit passed; its bars do
- * not count), by its drawing, sorted. Its renders and status are optional
- * inputs, so the set is keyed by every eligibility fact through those
- * outputs; a drawing that waits (its sheet not yet cut) leaves the set
- * without holding it, and one made trainable in this build joins it. A
- * fitted entry is no candidate, so it yields no shard.
- */
 export const trainsetStage = (candidates: ReadonlyArray<Candidate>): Stage<never> => ({
   id: 'trainset',
   inputs: candidates.flatMap((c) => [optionalInput(c.renders), optionalInput(c.status)]),
@@ -654,7 +530,6 @@ export const trainsetStage = (candidates: ReadonlyArray<Candidate>): Stage<never
     }),
 });
 
-/** The drawings in a training set's output, `<member>/<entry>=<hash>` lines. */
 const drawingsIn = (trainset: Uint8Array) =>
   new TextDecoder()
     .decode(trainset)
@@ -662,16 +537,9 @@ const drawingsIn = (trainset: Uint8Array) =>
     .filter((line) => line.length > 0)
     .map((line) => line.slice(0, line.lastIndexOf('=')));
 
-/** A reader error as the stage's failure. */
 const readerFailed = (id: string) => (e: ReaderError) =>
   StageFailed.make({ reason: `${id}: ${e.message}` });
 
-/**
- * The training set read by the train stage: its bytes, its hash, the train
- * files' hashes by basename (`trainer`), and the reader's key over the set,
- * the config and those files (`trainFiles`, the reader's `train` role). The
- * key names each file by its basename, sorted, so it holds across checkouts.
- */
 export const trainKeyOf = (ctx: StageContext, trainFiles: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const set = yield* ctx.output('trainset');
@@ -695,12 +563,10 @@ export const trainKeyOf = (ctx: StageContext, trainFiles: ReadonlyArray<string>)
     };
   });
 
-/** The part of train.py's result the train notes: its steps, seconds per step and last loss. */
 const FitResult = Schema.fromJsonString(
   Schema.Struct({ steps: Schema.Finite, sec_per_step: Schema.Finite, last_loss: Schema.Finite }),
 );
 
-/** A train's fit summary, as the train stage notes it in `build.json` and the lock reads it. */
 export const FitNote = Schema.fromJsonString(
   Schema.Struct({
     trainedOn: Schema.String,
@@ -711,7 +577,6 @@ export const FitNote = Schema.fromJsonString(
   }),
 );
 
-/** The train's lines of the reader lock: its fit summary, when it noted one, and the stage's wall time. */
 export const TrainLines = Schema.Struct({
   trainedOn: Schema.optionalKey(Schema.String),
   modalApp: Schema.optionalKey(Schema.String),
@@ -722,20 +587,16 @@ export const TrainLines = Schema.Struct({
   stageSec: Schema.Finite,
 });
 
-/** The USD the build counted for the train, as the reader lock keeps it. */
 export const BuildSpend = Schema.Struct({ buildCountedUsd: Schema.Finite });
 
-/** What a train that adopted the committed checkpoint notes: the lock's train lines and spend, which the lock keeps as they are. */
 export const AdoptedNote = Schema.fromJsonString(
   Schema.Struct({
     adopted: Schema.Struct({ train: TrainLines, spend: Schema.optionalKey(BuildSpend) }),
   }),
 );
 
-/** A spread of the median and the 90th percentile. */
 export const Spread = Schema.Struct({ median: Schema.Finite, p90: Schema.Finite });
 
-/** The part of an eval's output (eval.py's JSON) the lock reads: the trained drawing's held samples, or the untrained one's; eval.py writes `null` for the side it has no samples on. */
 export const EvalJson = Schema.fromJsonString(
   Schema.Struct({
     seen: Schema.optionalKey(
@@ -754,7 +615,6 @@ export const EvalJson = Schema.fromJsonString(
   }),
 );
 
-/** A trained drawing's held line, as the lock keeps it (`held.byDrawing`). */
 export const HeldLine = Schema.Struct({
   n: Schema.Finite,
   accuracy: Schema.Finite,
@@ -762,13 +622,6 @@ export const HeldLine = Schema.Struct({
   jointPx: Spread,
 });
 
-/**
- * The part of the committed reader lock a train reads (extra keys ignored):
- * to adopt its checkpoint, its key, checkpoint, train lines and spend; to
- * name what changed, its `trainer`; to keep it across a key change
- * (`--keep-reader`), its set, config and held lines. A lock older than a
- * field has none of it.
- */
 const CommittedLock = Schema.fromJsonString(
   Schema.Struct({
     reader: Schema.String,
@@ -783,11 +636,6 @@ const CommittedLock = Schema.fromJsonString(
 );
 type Committed = typeof CommittedLock.Type;
 
-/**
- * Each field of a held line that differs between `was` (the lock's) and
- * `now` (eval.py's numbers for the same drawing), by its lock name: exact
- * equality, as eval.py rounds them; none when they are the same.
- */
 const heldDiffs = (
   was: typeof HeldLine.Type,
   now: Option.Option<NonNullable<(typeof EvalJson.Type)['seen']>>,
@@ -807,7 +655,6 @@ const heldDiffs = (
         .map(([field, a, b]) => `${field} ${a} -> ${b}`),
   });
 
-/** The fit summary of a train whose result is `result` (train.py's JSON), run in Modal app `app`, today. */
 const fitNote = (result: string, app: Option.Option<string>) =>
   Effect.gen(function* () {
     const fit = yield* Schema.decodeEffect(FitResult)(result);
@@ -820,42 +667,14 @@ const fitNote = (result: string, app: Option.Option<string>) =>
     });
   });
 
-/**
- * The one reader trained on the training set, on Modal; it spends, so it
- * waits unless `--spend modal`. It reads the set, every shard in it and
- * the reader's train files (`trainFiles`, the closure of what a train runs,
- * `CastReader.sources.train`), so a change to any of them is a new reader;
- * a read-only or eval-only file is not among them. Its output is the checkpoint, with
- * the fit's summary (`FitNote`) noted beside it in `build.json`; on
- * Modal the train writes it at `/runs/<key>/<the build's run>.pt`, and
- * `promote` copies it to `/readers/<key>.pt` (the key: the hash of those
- * inputs and the config) only while the build's mark holds the stage's key,
- * so a train fenced by another build's never overwrites the key's checkpoint.
- *
- * Before it spends, it adopts the committed checkpoint: when its reader key
- * is the committed lock's (`lock`) `reader` and the cache keeps the object
- * the lock names, its bytes hashing to that name, it returns those bytes
- * and notes the lock's train lines and spend (`AdoptedNote`), with no Modal
- * call; that checkpoint is already the key's on Modal, so its promote does
- * nothing. A stage key that moves while the reader's does not (a change in
- * how the build keys its inputs) so costs nothing.
- *
- * When the lock names another reader key, it trains (so waits on the
- * spend) and logs the train files, set or config that changed since the
- * lock. With `keepReader` (`--keep-reader`: the claim that the edit leaves
- * what a train makes as it is) it instead keeps the committed checkpoint
- * (`keep`), or fails; it never trains. The flag is in no key.
- */
 export const trainStage = (
   candidates: ReadonlyArray<Candidate>,
   trainFiles: ReadonlyArray<string>,
   lock: string,
   o: { readonly keepReader: boolean } = { keepReader: false },
 ): Stage<CastReader | FileSystem.FileSystem> => {
-  /** This process's runs that adopted rather than trained: they have nothing to promote. */
   const adopted = new Set<string>();
   const trainOn = trainOnModal(candidates, trainFiles);
-  /** The committed lock, when there is one that decodes. */
   const committedOf = (ctx: StageContext) =>
     Effect.gen(function* () {
       const text = yield* ctx.file(lock).pipe(Effect.option);
@@ -865,7 +684,6 @@ export const trainStage = (
         ),
       );
     });
-  /** The committed checkpoint `checkpoint` as this run's output: the lock's train lines and spend noted, nothing to promote. */
   const adopt = (
     ctx: StageContext,
     key: string,
@@ -886,14 +704,6 @@ export const trainStage = (
       return checkpoint;
     });
   const refused = (why: string) => StageFailed.make({ reason: `train: --keep-reader: ${why}` });
-  /**
-   * The committed checkpoint kept across a key change: only when the lock's
-   * set is this set, its config this config, its checkpoint in the cache,
-   * and every drawing of its held set, read by that checkpoint under this
-   * code (the eval stages' path, on this machine's CPU), scores exactly the
-   * lock's held line (`heldDiffs`). Anything else fails, naming why (each
-   * differing drawing and field); a failed stage is not cached.
-   */
   const keep = (
     ctx: StageContext,
     t: Effect.Success<ReturnType<typeof trainKeyOf>>,
@@ -949,7 +759,6 @@ export const trainStage = (
         ` (keep-reader: ${drawings.length} held drawings equal)`,
       );
     });
-  /** The line a rekeyed train logs: what changed since the lock (its train files by `trainer`, the set, the config) and the keep path. */
   const rekeyedLine = (t: Effect.Success<ReturnType<typeof trainKeyOf>>, c: Committed) => {
     const files = Option.match(Option.fromUndefinedOr(c.trainer), {
       onNone: () => ['the lock names no train files'],
@@ -967,11 +776,7 @@ export const trainStage = (
   };
   return {
     id: 'train',
-    inputs: [
-      // the set names each shard by its hash, so its shards are in its key
-      stageInput('trainset'),
-      ...trainFiles.map(fileInput),
-    ],
+    inputs: [stageInput('trainset'), ...trainFiles.map(fileInput)],
     version: VERSION.train,
     config: TRAIN_CONFIG,
     run: (ctx) =>
@@ -1002,7 +807,6 @@ export const trainStage = (
   };
 };
 
-/** The paid train of `candidates` on Modal, when the build allows it. */
 const trainOnModal =
   (candidates: ReadonlyArray<Candidate>, trainFiles: ReadonlyArray<string>) =>
   (ctx: StageContext) =>
@@ -1022,7 +826,6 @@ const trainOnModal =
         yield* Effect.log(`cast.build.train result=${made.result}`);
         yield* fitNote(made.result, made.app).pipe(
           Effect.flatMap(ctx.note),
-          // a paid train is kept without its summary rather than thrown away
           Effect.catch((e) =>
             Effect.logWarning(`cast.build.train fit-unread reason="${String(e)}"`),
           ),
@@ -1032,12 +835,6 @@ const trainOnModal =
       TRAIN_USD,
     );
 
-/**
- * One drawing's held samples read by the trained reader and scored, by its
- * renders stage's id. It reads the eval's TS sources (`evalSources`) and the
- * reader's eval files (`evalFiles`, `CastReader.sources.eval`: what a local
- * read and score run), so a read or eval edit re-runs it with the train cached.
- */
 export const evalStage = (
   rendersId: string,
   evalSources: ReadonlyArray<Input>,
@@ -1065,7 +862,6 @@ export const evalStage = (
   };
 };
 
-/** The puppet a reader's drawing (`<member>/<entry>`) is posed with: its entry's sheet's, its fitted entry's for a fitted pose. */
 const puppetsOf = (memberDir: string, coverage: Coverage) => (drawing: string) =>
   Effect.gen(function* () {
     const id = drawing.slice(coverage.member.length + 1);
@@ -1077,12 +873,6 @@ const puppetsOf = (memberDir: string, coverage: Coverage) => (drawing: string) =
     return yield* puppetFrom(spec);
   }).pipe(Effect.mapError((e) => ChainFailed.make({ reason: `puppet ${drawing}: ${String(e)}` })));
 
-/**
- * The folder a clip's read is kept in: `<cache>/reads/<key>`, keyed by the
- * checkpoint's and the clip's hashes, the map, the mapping's version and the
- * hashes of the reader's read files (`CastReader.sources.read`, in its sorted
- * order), so a read edit misses it and a train-only edit does not.
- */
 export const readsDirOf = Effect.fn('cast.chain.readsDir')(function* (o: {
   readonly ckpt: string;
   readonly clip: string;
@@ -1105,13 +895,6 @@ export const readsDirOf = Effect.fn('cast.chain.readsDir')(function* (o: {
   return path.join(o.cache, 'reads', key);
 });
 
-/**
- * `clip` (an mp4) laid on the canvas at `map` (`clip-eval.ts`), read by the
- * checkpoint at `ckpt` and chained (`chain.ts`) with the member's puppets;
- * with the figure numbers of its canvases. The canvases, their figure
- * numbers and the read are kept in `readsDirOf`'s folder (`canvas/`,
- * `figure.json`, `read.json`).
- */
 export const chainClip = Effect.fn('cast.chain.clip')(function* (o: {
   readonly ckpt: string;
   readonly clip: string;
@@ -1154,17 +937,6 @@ export const chainClip = Effect.fn('cast.chain.clip')(function* (o: {
   return { ...chained, figure };
 });
 
-/**
- * Each of the member's clips chained by the trained reader
- * (`eval:clip:<clip>@<member>`), on this machine; its output is the clip's
- * reader-lock entry (`clips.ts` `clipEntryOf`), pass or fail. It reads the
- * reader, the clip its clip-make stage adopted (`clip:<clip>@<member>`), the
- * provenance beside it (whose map lays it on the canvas), the training set
- * (whose shards stand for the cuts of the drawings it poses), the chain's
- * source files and the reader's read files (`readFiles`,
- * `CastReader.sources.read`), with the chain's settings and the clip's bands
- * and expected drawings as its config.
- */
 export const clipStages = (
   m: MemberStages,
   cache: string,
@@ -1186,7 +958,6 @@ export const clipStages = (
         fileInput(provenance),
         ...chainSources,
         ...readFiles.map(fileInput),
-        // the set's shards stand for the cuts of the drawings the reader was trained on
         stageInput('trainset'),
       ],
       version: VERSION.chain,

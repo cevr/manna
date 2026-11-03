@@ -1,15 +1,3 @@
-// The lab's `tweak` command (`lab-command.ts`; MCP and `film lab tweak`
-// serve it, in the lab alone): one value of a scene's `drawing({...})`
-// literal set, a cue's timing (`offset`, `dur`, `until`, `untilOffset`,
-// `ease`, `stagger`) or a knob's value, by SceneWriter. The write is the
-// lab's, so it carries the lab's proof: a cue the scene's timeline would not
-// resolve with is refused, judged fresh on the clock the film's files give
-// now; the text is formatted and read back before it lands, only over the
-// text it read; `film check --static` runs fresh after it. It lands on the
-// film's one history, so the `undo` command steps it, and the change feed
-// tells it (`source.written`). Tuning is the agents' work: no page draws
-// these controls.
-
 import { Effect, Option, Predicate, Record, Result, Schema } from 'effect';
 import * as Tool from 'effect/ai/Tool';
 import { CUE_PATCH_KEYS, CuePatchFields, Knob, LabWrite, spanEnds } from '../core/schema.ts';
@@ -20,14 +8,12 @@ import { readKnob, readSpans } from './scene-source.ts';
 import { type CueWritten, SceneWriter } from './scene-writer.ts';
 import { writeAnswer } from './write-answer.ts';
 
-/** The fields of a tweak's input it is judged by: what it names, and which cue fields it sets. */
 interface Asked {
   readonly cue?: string;
   readonly knob?: string;
   readonly value?: Knob;
 }
 
-/** A tweak names one cue or one knob, and gives what that one takes. Pure. */
 const oneLiteral = Schema.makeFilter((input: Asked) => {
   const cue = Predicate.hasProperty(input, 'cue');
   const knob = Predicate.hasProperty(input, 'knob');
@@ -70,7 +56,6 @@ const TweakTool = Tool.make('tweak', {
   failure: LabRefused,
 });
 
-/** A cue written, as the tweak answers it: the span as the file now reads it, and where it resolves (or why it does not). */
 const cueAnswer = Effect.fn('tweak.cueAnswer')(function* (
   film: FilmName,
   cue: string,
@@ -82,12 +67,10 @@ const cueAnswer = Effect.fn('tweak.cueAnswer')(function* (
     onNone: () => ({}),
     onSome: (s) => ({ span: s }),
   });
-  // Where the cue lands is the write's own check: run fresh, on the text the write made.
   const { _tag, ...where } = read;
   return yield* writeAnswer(film, written, Effect.succeed({ ...span, ...where }));
 });
 
-/** The tweak: a cue's timing or a knob's value, written and answered. */
 export const tweakCommands = [
   labCommand(TweakTool, {
     run: ({ film: name, scene, cue, knob, value, ...patch }) =>
@@ -96,7 +79,6 @@ export const tweakCommands = [
         const films = yield* Effect.context<FilmFolder>();
         const film = yield* refused(filmNamed(name).pipe(Effect.provideContext(films)));
         const knobWrite = Effect.gen(function* () {
-          // The input's check holds a knob and its value together.
           const [named, set] = yield* Effect.fromOption(
             Option.zipWith(
               Option.fromUndefinedOr(knob),

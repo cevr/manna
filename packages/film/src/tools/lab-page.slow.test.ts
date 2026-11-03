@@ -1,14 +1,3 @@
-// The lab's pages as a browser meets them: a page is built when first asked
-// and stamped with its build and its server, its script sent compressed, its
-// server entry rendered into it, an old link sent on to its place; a page
-// another lab process served hears at once that it is old; a look's build is
-// the files as they stand, and a wedge builds them with a file read as other
-// text. What wakes a waiting page has files of its own, so the runner's
-// workers take them side by side: a save (`lab-page-saves.slow.test.ts`), the
-// watches as a build's reads change (`lab-page-watches.slow.test.ts`), a mix
-// (`lab-page-mixes.slow.test.ts`) and a page that does not build
-// (`lab-page-failures.slow.test.ts`). The app they serve is `fixtures/lab-app.ts`.
-
 import * as BunHttpPlatform from '@effect/platform-bun/BunHttpPlatform';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -36,7 +25,6 @@ import { PageRenderer, RenderFailed } from './page-render.ts';
 import { memoryFileSystem, text } from './host/testing.ts';
 import { Platform, html, appFolder, served, app, buildOf, serverOf } from './fixtures/lab-app.ts';
 
-/** A Mac's Chrome, as its `User-Agent` names it. */
 const MAC_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36';
 
@@ -47,7 +35,6 @@ describe('lab pages', () => {
       Effect.gen(function* () {
         const { spec, write } = yield* appFolder;
         const path = yield* Path.Path;
-        // A page whose script is a Solid one, so the build holds Solid itself.
         const solid = path.join(import.meta.dir, '../lab/fixtures/ask-page.ts');
         yield* write('ask.html', html('ask', path.relative(path.dirname(spec.pages.ask), solid)));
         const { ask } = yield* served(spec, PageBundler.layer);
@@ -105,7 +92,6 @@ describe('lab pages', () => {
           page: page.answer,
           beside: Layer.empty,
         });
-        /** `pathname` answered over HTTP for `accept`: its coding, and its body read whole. */
         const sent = (pathname: string, accept: string) =>
           Effect.gen(function* () {
             const response = yield* Effect.promise(() =>
@@ -135,14 +121,9 @@ describe('lab pages', () => {
           'br;q=1;level=3',
           'br,',
         ];
-        // Cold: no best brotli yet, every coding the compression's (the page's own answer is never kept compressed).
         const cold = yield* Effect.forEach(headers, (accept) => codingOf('/asks/a1', accept));
         expect(cold.slice(0, 6)).toEqual(['br', 'br', 'gzip', 'br', 'br', '']);
-        // Empty list members are ignored; malformed weights and parameters refuse the header.
         expect(cold.slice(6)).toEqual(['', '', '', 'br']);
-        // Ready: the script's best brotli made (the page's own answer sends it compressed only
-        // once made, where over HTTP the compression would send br anyway), then sent for the
-        // same headers, and only those.
         yield* ask(src, 'GET', { 'accept-encoding': 'br' }).pipe(
           Effect.repeat({
             until: (asked) => asked.encoding === 'br',
@@ -168,18 +149,15 @@ describe('lab pages', () => {
         expect(page.text).toContain(
           '<body class="rendered"><main>ask at http://127.0.0.1:8229/asks/a1?still=x</main><script type="module" src="./src/p.ts"></script></body>',
         );
-        // Asked by a Mac's browser, it is rendered for a Mac (its chords labelled as a Mac labels them).
         const asMac = yield* ask('/asks/a1?still=x', 'GET', { 'user-agent': MAC_AGENT });
         expect(asMac.text).toContain(
           '<main>ask at http://127.0.0.1:8229/asks/a1?still=x for a Mac</main>',
         );
-        // The render page has no server entry here: its page is as built.
         const exported = yield* ask('/films/f/export');
         expect(exported.text).toContain(
           '<body><script type="module" src="../src/render.ts"></script>',
         );
         expect(exported.text).not.toContain('rendered');
-        // A HEAD is the page's headers: nothing is rendered for it.
         const head = yield* ask('/asks/a1', 'HEAD');
         expect([head.status, head.text.includes('<main>')]).toEqual([200, false]);
       }).pipe(Effect.scoped, Effect.provide(Platform)),
@@ -216,7 +194,6 @@ describe('lab pages', () => {
         );
         const half = (yield* (yield* served(spec, PageBundler.layerTest, cut)).ask('/asks/a1'))
           .text;
-        // Marked as cut, so the browser renders the page anew (`mountPage`).
         expect(half).toContain(
           `<body class="rv"><main>half${PAGE_CUT_MARK}<script type="module" src="./src/p.ts"></script></body></html>`,
         );
@@ -241,7 +218,6 @@ describe('lab pages', () => {
     () =>
       Effect.gen(function* () {
         const { ask, script, write } = yield* app;
-        // The ask page imports the framework's faces, as every page with chrome does.
         yield* write(
           'src/p.ts',
           `import { registerFace } from '${import.meta.dir}/../player/face.ts';\nconsole.log(registerFace);\n`,
@@ -282,12 +258,9 @@ describe('lab pages', () => {
         };
         for (const [pathname, page] of Object.entries(places))
           expect([pathname, ...(yield* titleOf(pathname))]).toEqual([pathname, 200, page]);
-        // A film's export page runs the render page's script (its handle).
         expect(yield* scriptOf('/films/f/export')).toContain('the render page');
-        // A page under a film's path finds its script: the HTML links it from the root.
         const page = (yield* ask('/films/f/export')).text;
         expect(page).toMatch(/src="\/[^"]+\.js"/);
-        // No page at a path no place declares, nor a narration file of a film that has none.
         for (const pathname of ['/films/f/narration/full.wav', '/films/f/narration', '/p', '/p/'])
           expect([pathname, (yield* ask(pathname)).status]).toEqual([pathname, 404]);
       }).pipe(Effect.scoped, Effect.provide(Platform)),
@@ -372,7 +345,6 @@ describe('lab pages', () => {
     () =>
       Effect.gen(function* () {
         const { spec } = yield* appFolder;
-        // The lab that served the page, then the lab after a restart, over the same folder.
         const before = yield* Effect.scoped(
           Effect.flatMap(served(spec, PageBundler.layerTest), ({ ask }) => ask('/asks/a1')),
         );
@@ -382,12 +354,10 @@ describe('lab pages', () => {
           server: Option.some(serverOf(before.text)),
           film: Option.none(),
         };
-        // At once: well before the 10 s a wait may hold.
         const heard = yield* after.page
           .wait(page, '10 seconds')
           .pipe(Effect.timeout('1 second'), Effect.orDie);
         expect(heard.server).not.toBe(serverOf(before.text));
-        // A page this lab served waits for a change, as before.
         const own = yield* after.page.wait(
           { since: heard.build, server: Option.some(heard.server), film: Option.none() },
           '300 millis',
@@ -402,25 +372,19 @@ describe('lab pages', () => {
       Effect.gen(function* () {
         const { ask, page, script, write } = yield* app;
         yield* ask('/asks/a1');
-        // Asked at once after the save, before any watch need have heard it.
         yield* write('src/p.ts', "console.log('saved just now');\n");
         const now = yield* page.built;
         expect(now.build.build).toBeGreaterThan(0);
         expect(Option.isNone(now.failed)).toBe(true);
-        // The build the look was answered is the one the page serves, and it holds the save:
-        // the watch hearing the save later builds nothing new.
         const served = yield* ask('/asks/a1');
         expect(buildOf(served.text)).toBe(now.build.build);
         expect(yield* script).toContain('saved just now');
-        // A page on the receipt waits on: no watch, nor the first build's check, counts the save.
         const after = yield* page.wait(
           { since: now.build.build, server: Option.some(now.build.server), film: Option.none() },
           '600 millis',
         );
         expect(after.build).toBe(now.build.build);
         expect(buildOf((yield* ask('/asks/a1')).text)).toBe(now.build.build);
-        // Asked again with nothing saved: the same build (once past a save in the build's own
-        // millisecond, which is built again rather than risked).
         const settled = (yield* page.built).build.build;
         expect((yield* page.built).build.build).toBe(settled);
       }).pipe(Effect.scoped, Effect.provide(Platform)),
@@ -436,7 +400,6 @@ describe('lab pages', () => {
         const shared = yield* fs.realPath(
           path.join(path.dirname(spec.pages.ask), 'lib', 'shared.ts'),
         );
-        // Long enough to be worth compressing, as a build's script is kept.
         const swapped = new Map([
           [shared, `export const shared = 'shared swapped${' swapped'.repeat(200)}';\n`],
         ]);
@@ -446,8 +409,6 @@ describe('lab pages', () => {
         const html = (yield* ask(`/asks/a1?wedge=${wedged.wedge}`)).text;
         expect(html).toContain(`src="/wedge/${wedged.wedge}/`);
         expect(yield* scriptOf(`/asks/a1?wedge=${wedged.wedge}`)).toContain('shared swapped');
-        // Only the easel's browser on the box asks for a wedge's files: each is sent as
-        // it is, for the server to compress per request, never squeezed at the best.
         const src = /src="\.?(\/[^"]+\.js)"/.exec(html)?.[1] ?? '';
         const squeezed = yield* ask(src, 'GET', { 'accept-encoding': 'br' }).pipe(
           Effect.repeat({
@@ -457,13 +418,10 @@ describe('lab pages', () => {
           Effect.timeoutOption('500 millis'),
         );
         expect(squeezed).toEqual(Option.none());
-        // The pages as written, and the file, are as they were.
         expect(yield* script).toContain('shared one');
         expect(yield* fs.readFileString(shared)).toContain('shared one');
-        // The same swap again is the same wedge; one never built is no page.
         expect((yield* page.wedge(swapped)).wedge).toBe(wedged.wedge);
         expect((yield* ask('/asks/a1?wedge=nope')).status).toBe(404);
-        // A swap no build reads is refused, not drawn as the source it was to replace.
         const unread = yield* page.wedge(new Map([['/nonexistent/loop-probe-x.ts', '']]));
         expect(unread.wedge).toBe('');
         expect(Option.getOrElse(unread.failed, () => '')).toContain('read none of');
@@ -471,12 +429,6 @@ describe('lab pages', () => {
   );
 });
 
-/**
- * The app's three pages in a file system in memory (no watch hears a save
- * there), each page its HTML as written (`PageBundler.layerTest`); `mtimes`
- * says each file's mtime as its stat reports it (0 unless set), and
- * `afterRead` runs once each read of a file has been answered.
- */
 const memoryApp = (
   mtimes: Map<string, number> = new Map(),
   afterRead: (file: string) => Effect.Effect<void> = () => Effect.void,
@@ -515,10 +467,6 @@ const memoryApp = (
   };
 };
 
-/**
- * The test bundler, whose first build waits once it has read its pages:
- * `reading` is done then, and the build goes on once `release` is.
- */
 const holdingFirst = (reading: Deferred.Deferred<boolean>, release: Deferred.Deferred<boolean>) =>
   Layer.effect(
     PageBundler,
@@ -538,7 +486,6 @@ const holdingFirst = (reading: Deferred.Deferred<boolean>, release: Deferred.Def
     }),
   ).pipe(Layer.provide(PageBundler.layerTest));
 
-/** The test bundler, setting `bundled` once a build has read its pages while `armed` is. */
 const noting = (armed: Ref.Ref<boolean>, bundled: Ref.Ref<boolean>) =>
   Layer.effect(
     PageBundler,
@@ -554,8 +501,6 @@ const noting = (armed: Ref.Ref<boolean>, bundled: Ref.Ref<boolean>) =>
   ).pipe(Layer.provide(PageBundler.layerTest));
 
 describe("a look's build, against saves no watch hears", () => {
-  // A save that lands once a build has read the page and printed it as read: the first read
-  // of the page after the bundler's (the build's own print of it) lands it, unheard.
   const armed = Ref.makeUnsafe(false);
   const bundled = Ref.makeUnsafe(false);
   const landing = memoryApp(new Map(), (file) =>
@@ -574,13 +519,11 @@ describe("a look's build, against saves no watch hears", () => {
         yield* page.built;
         landing.files.set('/app/ask.html', text(html('ask middle', './src/p.ts')));
         yield* Ref.set(armed, true);
-        // The look's build reads the middle save; the new one lands as soon as it has printed it.
         const receipt = yield* page.built;
         expect(yield* Ref.get(armed)).toBe(false);
         const now = yield* ask('/asks/a1');
         expect(now.text).toContain('ask new');
         expect(buildOf(now.text)).toBe(receipt.build.build);
-        // The look's page is the build it was answered, by its own number, whatever is built after.
         const pinned = `/asks/a1?build=${receipt.kept}`;
         expect((yield* ask(pinned)).text).toContain('ask new');
         landing.files.set('/app/ask.html', text(html('ask newer', './src/p.ts')));
@@ -589,7 +532,6 @@ describe("a look's build, against saves no watch hears", () => {
         expect((yield* ask('/asks/a1')).text).toContain('ask newer');
         const still = yield* ask(pinned);
         expect(still.text).toContain('ask new<');
-        // Served as made: it waits on no build, so it never reloads itself off the look's build.
         expect(still.text).not.toContain('lab-build');
         expect((yield* ask('/asks/a1?build=999')).status).toBe(404);
       }).pipe(Effect.scoped, Effect.provide(landing.layer)),
@@ -602,8 +544,6 @@ describe("a look's build, against saves no watch hears", () => {
       const release = yield* Deferred.make<boolean>();
       const { page, ask } = yield* served(app.spec, holdingFirst(reading, release));
       const first = yield* Effect.forkChild(page.built);
-      // The build has read the page; it is saved anew while the build is under way, and a
-      // look asks then.
       yield* Deferred.await(reading);
       app.files.set('/app/ask.html', text(html('ask new', './src/p.ts')));
       const second = yield* Effect.forkChild(page.built);
@@ -620,8 +560,6 @@ describe("a look's build, against saves no watch hears", () => {
   const later = memoryApp(coarse);
   it.effect("a save whose mtime reads before its build began is the look's still", () =>
     Effect.gen(function* () {
-      // The build begins half a second into a second whose files' mtimes the file system
-      // keeps to the whole second.
       yield* TestClock.setTime(1500);
       const { page, ask } = yield* served(later.spec, PageBundler.layerTest);
       const before = yield* page.built;

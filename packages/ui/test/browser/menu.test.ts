@@ -1,14 +1,3 @@
-// Upstream: packages/react/src/menu/root/MenuRoot.test.tsx,
-// packages/react/src/menu/trigger/MenuTrigger.test.tsx,
-// packages/react/src/menu/item/MenuItem.test.tsx,
-// packages/react/src/menu/group-label/MenuGroupLabel.test.tsx,
-// packages/react/src/menu/popup/MenuPopup.test.tsx
-//
-// The menu's behaviour cases, against one menu of plain items in a group,
-// and one with a radio group.
-// Upstream's cases for parts not ported (hover opening, submenus, checkbox
-// and link items, arrow, backdrop, filter, list, viewport, detached
-// triggers, menubar) and for React-only machinery are left out.
 import { describe, expect, it } from 'bun:test';
 
 import { expect as see, type Page } from '@playwright/test';
@@ -17,7 +6,6 @@ import { focused, harness, logOf, recordTransitions } from './harness.ts';
 
 const h = harness('menu.tsx');
 
-/** The positioner's CSS variables, by name. */
 const positionerVars = (page: Page) =>
   page
     .locator('#positioner')
@@ -59,8 +47,6 @@ describe('Menu.Trigger', () => {
     expect(await logOf(page)).toContain('open false trigger-press');
   });
 
-  // The second fixture is the lab's shape: every lab page wraps its menus in a
-  // context menu's page trigger, and the menu is still a plain one.
   it.each(['menu', 'in-context-menu'])(
     'a press held on the trigger, dragged to an item and released there picks it (%s)',
     async (fixture) => {
@@ -78,7 +64,6 @@ describe('Menu.Trigger', () => {
       await page.mouse.move(trigger.x, trigger.y);
       await page.mouse.down();
       await see(page.locator('#popup')).toBeVisible();
-      // Held past the trigger's 200 ms, so the release is a pick, not the press's own end.
       await page.clock.runFor(250);
       const grid = await at('#grid');
       await page.mouse.move(grid.x, grid.y, { steps: 5 });
@@ -90,7 +75,6 @@ describe('Menu.Trigger', () => {
 });
 
 describe('Menu.Root', () => {
-  // The lab runs the chosen row's command here, once the menu is gone.
   it('reports the close complete once the exit animation ends, after the item ran', async () => {
     const page = await h.open('menu', { query: { animated: 'true' } });
     await page.click('#trigger');
@@ -184,9 +168,7 @@ describe('keyboard navigation', () => {
     await see.poll(() => focused(page)).toBe('alpha');
     await page.evaluate(() => (window as unknown as { __reverse: () => void }).__reverse());
     await see(page.locator('[role="menuitem"]').first()).toHaveId('charlie');
-    // The highlight stays on alpha, the item it was on.
     await see(page.locator('[data-highlighted]')).toHaveId('alpha');
-    // alpha is last now: the next item down wraps to charlie, then bravo.
     await page.keyboard.press('ArrowDown');
     await see.poll(() => focused(page)).toBe('charlie');
     await see(page.locator('#charlie')).toHaveAttribute('data-highlighted', '');
@@ -199,7 +181,6 @@ describe('keyboard navigation', () => {
   it('typeahead wraps the search past the highlighted item', async () => {
     const page = await h.open('menu');
     await page.click('#trigger');
-    // The open popup takes focus a frame after the click; a key before that reaches the trigger.
     await see.poll(() => focused(page)).toBe('popup');
     await page.keyboard.press('End');
     await see.poll(() => focused(page)).toBe('more');
@@ -248,8 +229,6 @@ describe('Menu.Group + Menu.GroupLabel', () => {
   });
 });
 
-// Upstream: packages/react/src/menu/radio-item/MenuRadioItem.test.tsx,
-// packages/react/src/menu/radio-item-indicator/MenuRadioItemIndicator.test.tsx
 describe('Menu.RadioGroup + Menu.RadioItem', () => {
   it('a group of radio items, labelled, the owner’s value checked and its indicator shown', async () => {
     const page = await h.open('radio');
@@ -272,7 +251,6 @@ describe('Menu.RadioGroup + Menu.RadioItem', () => {
       ['false', false, true],
     ]);
     await see(page.locator('#bravo .check')).toHaveAttribute('aria-hidden', 'true');
-    // Named by its words alone: the check is hidden from assistive tech.
     await see(page.getByRole('menuitemradio', { name: 'bravo', exact: true })).toHaveCount(1);
   });
 
@@ -308,7 +286,6 @@ describe('Menu.RadioGroup + Menu.RadioItem', () => {
     await see.poll(() => focused(page)).toBe('charlie');
     await page.keyboard.press(key);
     await see(page.locator('#charlie')).toHaveAttribute('aria-checked', 'true');
-    // The action item after the group is the next stop.
     await page.keyboard.press('ArrowDown');
     await see.poll(() => focused(page)).toBe('copy');
   });
@@ -335,7 +312,6 @@ describe('Menu.Positioner', () => {
     expect(vars['--anchor-width']).toMatch(/^[\d.]+px$/);
     expect(Math.abs(parseFloat(vars['--anchor-width']!) - trigger.width)).toBeLessThanOrEqual(1);
     expect(Math.abs(parseFloat(vars['--anchor-height']!) - trigger.height)).toBeLessThanOrEqual(1);
-    // Under the trigger (4px away), down to the page's bottom less the 5px collision padding.
     const room = 600 - 5 - (trigger.y + trigger.height + 4);
     expect(vars['--available-height']).toMatch(/^[\d.]+px$/);
     expect(Math.abs(parseFloat(vars['--available-height']!) - room)).toBeLessThanOrEqual(1);
@@ -384,12 +360,10 @@ describe('dismissal', () => {
     await page.keyboard.press('Escape');
     await see.poll(() => scrollLocked(page)).toBe(false);
 
-    // A narrow menu on a phone: a swipe outside may still scroll the page.
     const phone = await h.open('menu', { touch: true });
     await phone.clock.install();
     await phone.tap('#trigger');
     await see(phone.locator('#popup')).toBeVisible();
-    // A lock lands on a 0 ms timeout set as the menu opened: run every timer due.
     await phone.clock.runFor(10);
     expect(await scrollLocked(phone)).toBe(false);
   });

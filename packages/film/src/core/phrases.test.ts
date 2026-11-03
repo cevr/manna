@@ -1,7 +1,3 @@
-// A short's captions: the words in phrases of two to four, each phrase
-// shown from its first word to the next phrase, words inside a quotation
-// flagged so the page can light them as they are read.
-
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
 import { layout } from './layout.ts';
@@ -12,7 +8,6 @@ import { resolveShort } from './shorts.ts';
 import { CLOCK_EPSILON } from './time.ts';
 import { voicedAt } from './voiced.ts';
 
-/** Words half a second apart, each 0.4 s long. */
 const said = (text: string, from = 0): Array<Word> =>
   text.split(' ').map((t, i) => ({ text: t, start: from + i * 0.5, end: from + i * 0.5 + 0.4 }));
 
@@ -46,7 +41,6 @@ describe('phrasesOf', () => {
       'But I am',
       'still guilty.',
     ]);
-    // A lone clause still joins the rest of its sentence; a turn to another voice starts a phrase.
     const turn = said('Wait, a cover-up? Fair. It just means');
     expect(texts(phrasesOf(turn, new Set([3])))).toEqual([
       'Wait, a cover-up?',
@@ -56,13 +50,11 @@ describe('phrasesOf', () => {
   });
 
   test('a lone word stands alone across a pause in the voice over 0.3 s', () => {
-    // "So," heard to 0.4 s, "back" from 1.0 s: the pause keeps them apart.
     const words: Array<Word> = [
       { text: 'So,', start: 0, end: 0.4 },
       ...said('back to the question', 1),
     ];
     expect(texts(phrasesOf(words))).toEqual(['So,', 'back to the question']);
-    // Heard 0.2 s apart, it joins.
     const close: Array<Word> = [
       { text: 'So,', start: 0, end: 0.4 },
       ...said('back to the question', 0.6),
@@ -101,7 +93,6 @@ describe('quotedWords', () => {
 
 describe('shortPhrases', () => {
   const draw = () => {};
-  /** The two beats laid at `fps`. */
   const placedAt = (fps: number) =>
     Result.getOrThrow(
       layout(
@@ -150,20 +141,15 @@ describe('shortPhrases', () => {
       false,
       false,
     ]);
-    // On the short's clock, in order, inside the short.
     expect(words[0]?.start).toBeGreaterThanOrEqual(0);
     for (let i = 1; i < words.length; i++)
       expect(words[i]?.start ?? 0).toBeGreaterThan(words[i - 1]?.start ?? 0);
-    // No phrase crosses a join: the second span's words start a phrase.
     expect(phrases.some((p) => p.words[0]?.text === 'three')).toBe(true);
-    // Each phrase ends by its span's end.
     const joinAt = short.spans[1]?.at ?? 0;
     for (const p of phrases) if (p.start < joinAt) expect(p.end).toBeLessThanOrEqual(joinAt + 1e-9);
   });
 
   test("a span's first phrase shows on its first frame, however the word's time rounds", () => {
-    // `three` sits between frames: the span starts on the frame nearest it.
-    // The film laid at 7 fps: its frames are long, so the mark falls well between two.
     const coarse = placedAt(7);
     const short = Result.getOrThrow(
       resolveShort(coarse, {
@@ -175,7 +161,6 @@ describe('shortPhrases', () => {
     const phrases = shortPhrases(coarse, short);
     expect(phrases[0]?.words[0]?.text).toBe('three');
     expect(phrases[0]?.start).toBe(0);
-    // Each phrase shows by the frame its first word falls in, and none overlaps the next.
     for (const p of phrases) expect(p.start).toBeLessThanOrEqual(p.words[0]?.start ?? 0);
     for (let i = 1; i < phrases.length; i++)
       expect(phrases[i - 1]?.end ?? 0).toBeLessThanOrEqual(phrases[i]?.start ?? 0);
@@ -187,7 +172,6 @@ describe('shortPhrases', () => {
   });
 
   test('a phrase shows when its first word is heard, and its words are timed by the voice', () => {
-    // The aligner starts "Justified?" at 0 with the pause before it; the voice comes at 0.87 s.
     const say = 'Justified? But I am still guilty.';
     const heardAt: ReadonlyArray<readonly [number, number, number, number]> = [
       [0, 2.3, 0.87, 1.9],
@@ -215,14 +199,12 @@ describe('shortPhrases', () => {
       resolveShort(film, {
         id: 'cut',
         title: 'Cut',
-        // From the scene's start, which is no word: a span opening on the voice would hide the late word.
         spans: [{ scene: 'a', from: { at: 'start' }, to: { at: 'speechEnd' } }],
       }),
     );
     const phrases = shortPhrases(film, short);
     const first = phrases[0]?.words[0];
     expect(first).toEqual({ text: 'Justified?', start: 0.87, end: 1.9, quoted: false });
-    // Shown on the frame nearest the voice, not on the short's first frame.
     expect(phrases[0]?.start).toBeCloseTo(0.87 - 0.5 / 30 - CLOCK_EPSILON, 6);
     expect(phrases.flatMap((p) => p.words).map((w) => w.start)).toEqual(
       heardAt.map(([, , on]) => on),

@@ -1,9 +1,3 @@
-// A signal drawn, then a value at every frame. The plan pass draws a signal's
-// numbers (a ramp's ends, the points, an LFO's phase) into a `Track`; the fill
-// pass writes it out frame by frame into an array the renderer owns. A pitch
-// moves in its logarithm unless its curve is linear, and is moved by
-// semitones; every other unit moves and is moved in itself.
-
 import { Match, Predicate } from 'effect';
 import { rng } from '../../random.ts';
 import { type Draws, drawValue, plain, streamSeed, uniform } from './draw.ts';
@@ -11,18 +5,15 @@ import { cosTurn, exp, exp2, log, sinTurn } from './math.ts';
 import type { Curve, Lfo, Points, Ramp, Signal, Value, Wobble } from './nodes.ts';
 import { SYNTH_RATE, framesOf } from './units.ts';
 
-/** How a field's values read as numbers, and whether they are pitches (Hz, moved in octaves). */
 export interface Unit<U> {
   readonly toNumber: (u: U) => number;
   readonly pitch: boolean;
 }
 
-/** Any field that is a plain number. */
 export const PLAIN: Unit<number> = { toNumber: plain, pitch: false };
 
 interface PointsTrack {
   readonly _tag: 'Points';
-  /** Each point's frame, none before the one before it. */
   readonly at: ReadonlyArray<number>;
   readonly values: ReadonlyArray<number>;
   readonly curve: Curve;
@@ -48,14 +39,12 @@ interface LfoTrack {
   readonly pitch: boolean;
 }
 
-/** A signal with its numbers drawn: what the fill pass writes out. */
 export type Track =
   | { readonly _tag: 'Held'; readonly value: number }
   | PointsTrack
   | WobbleTrack
   | LfoTrack;
 
-/** The smallest value an exponential curve moves from or to, as Web Audio floors it. */
 const EXP_FLOOR = 1e-4;
 
 type Moved<U> = Ramp<U> | Points<U> | Wobble<U> | Lfo<U>;
@@ -65,7 +54,6 @@ const MOVED = ['Ramp', 'Points', 'Wobble', 'Lfo'] as const;
 const isMoved = <U>(signal: Signal<U>): signal is Moved<U> =>
   MOVED.some((tag) => Predicate.isTagged(signal, tag));
 
-/** A ramp as two points: its start at frame 0, its end at `secs` (the node's length when absent). */
 const rampTrack = <U>(
   ramp: Ramp<U>,
   unit: Unit<U>,
@@ -88,7 +76,6 @@ const rampTrack = <U>(
   pitch: unit.pitch,
 });
 
-/** `[secs, value]` points drawn: each point's frame, held at the one before it if drawn earlier. */
 export const pointsTrack = <U>(
   points: ReadonlyArray<readonly [Value<number>, Value<U>]>,
   curve: Curve,
@@ -106,7 +93,6 @@ export const pointsTrack = <U>(
   return { _tag: 'Points', at, values, curve, pitch: unit.pitch };
 };
 
-/** A signal drawn for a node `frames` long: its numbers taken from the streams of `field`. */
 export const drawTrack = <U>(
   signal: Signal<U>,
   unit: Unit<U>,
@@ -139,18 +125,11 @@ export const drawTrack = <U>(
   });
 };
 
-/** The held value of a track that never moves, else undefined. */
 export const heldOf = (track: Track): number | undefined =>
   track._tag === 'Held' ? track.value : undefined;
 
-/** The raised cosine of `t` in [0, 1]: 0 at 0, 1 at 1, flat at both. */
 const smoothstep = (t: number): number => (1 - cosTurn(t / 2)) / 2;
 
-/**
- * Frames `from` to `to` (before `n`) moving from `a` to `b`: evenly, or in
- * their logarithm (an exponential curve, or a pitch that is not linear),
- * evenly or by a raised cosine.
- */
 const writeSegment = (
   out: Float64Array,
   span: { readonly from: number; readonly to: number; readonly n: number },
@@ -170,7 +149,6 @@ const writeSegment = (
   }
 };
 
-/** A points track written out: the first value before the first point, the last from the last on. */
 const writePoints = (track: PointsTrack, out: Float64Array, n: number) => {
   const last = track.values.length - 1;
   out.fill(track.values[0] ?? 0, 0, Math.min(n, track.at[0] ?? 0));
@@ -181,11 +159,9 @@ const writePoints = (track: PointsTrack, out: Float64Array, n: number) => {
   out.fill(track.values[last] ?? 0, Math.min(n, track.at[last] ?? 0), n);
 };
 
-/** `around` moved by `by` in its unit: a pitch by semitones, any other by adding. */
 const moved = (around: number, by: number, pitch: boolean): number =>
   pitch ? around * exp2(by / 12) : around + by;
 
-/** Smooth value noise in [−1, 1): knots `rate` a second, drawn in order, smoothstepped between. */
 const writeWobble = (track: WobbleTrack, out: Float64Array, n: number) => {
   const step = track.rate / SYNTH_RATE;
   const r = rng(track.seed);
@@ -201,7 +177,6 @@ const writeWobble = (track: WobbleTrack, out: Float64Array, n: number) => {
   }
 };
 
-/** A triangle in [−1, 1] of a phase in turns, rising through 0 at 0 as a sine does. */
 export const triangle = (t: number): number => {
   const u = t + 0.25;
   return 1 - 4 * Math.abs(u - Math.floor(u) - 0.5);
@@ -214,7 +189,6 @@ const writeLfo = (track: LfoTrack, out: Float64Array, n: number) => {
     out[i] = moved(track.around, track.depth * wave(track.phase + i * step), track.pitch);
 };
 
-/** A track's first `n` frames, written into `out`. */
 export const writeTrack = (track: Track, out: Float64Array, n: number): void =>
   Match.valueTags(track, {
     Held: (held) => {

@@ -1,22 +1,3 @@
-/**
- * The approval binds the bytes the owner was shown. `approve` turns the
- * record approved only on an ask he answered with the approve choice, and
- * only when every pinned still's SHA-256 is that of a file an image block
- * on a step his answers reached showed, by the lab's receipt (the hash of
- * each file as the lab made the ask); it stores the lab, his answer's label
- * and the shown files' hashes, and refuses every other case, leaving the
- * record as it was. An ask with no receipt is refused. Over a seed: random
- * pinned stills, random shown files, random answers, and a re-pin after his
- * answer to bytes no block showed, each checked against a model of the
- * record the test keeps. An earlier approval stays true of the bytes it
- * showed: a later ask need show only what changed. `pin` and `approve` save
- * the ask beside the record, and each approval the record keeps is held to
- * its saved ask (`checkKept`), so the record as committed and each approval
- * it keeps are of asks whose saved records showed every still. A past real
- * answer is checked against the stills it showed, each kept by its path
- * with the hash its saved ask holds for it, not the stills as they stand.
- * Each over a copy of the app, with a stand-in lab.
- */
 import { BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, FileSystem, Layer, Match, Option, Path, Ref, Schema } from 'effect';
@@ -56,17 +37,6 @@ const OTHER = 'f5e4d3c2b1a';
 const AT = '2026-10-22T09:00:00.000Z';
 const LAB = 'http://lab.test/';
 
-/**
- * The owner's real answers, as the lab records them (`GET /api/asks/<id>`),
- * each with the SHA-256 of every file its image blocks showed, by `src`, as
- * the lab served them, all kept as they were read (`savedAsk`). Both asks
- * were made before the lab kept receipts, so their records hold none. The
- * tests read the files and never the lab. Ask ab47076e90b showed the nine
- * stills byte for byte and prod's link cards, and the bytes it showed of
- * each still are kept by the still's path (`ask-ab47076e90b.stills/`), the
- * file it showed at `SHOWED_SET` by the same name; ask adf28c17753 showed
- * screenshots of the page, and its `ask wait` lines are kept too.
- */
 const SHOWED = 'ab47076e90b';
 const SHOWED_AT = '2026-10-22T01:56:06.332Z';
 const SHOWED_STILLS = `${import.meta.dir}/fixtures/ask-${SHOWED}.stills`;
@@ -77,7 +47,6 @@ const SCREENSHOTS_WAIT = `${import.meta.dir}/fixtures/ask-${SCREENSHOTS}.txt`;
 const Shown = Schema.fromJsonString(Schema.Record(Schema.String, Schema.String));
 const Body = Schema.fromJsonString(Schema.Unknown);
 
-/** An ask saved at `app`: the lab's record of it as it gave it, read, and the hash of each file it showed. */
 const savedAt = Effect.fn('test/savedAt')(function* (app: string, ask: string) {
   const fs = yield* FileSystem.FileSystem;
   const { record, shown } = savedAsk(ask);
@@ -89,10 +58,8 @@ const savedAt = Effect.fn('test/savedAt')(function* (app: string, ask: string) {
   };
 });
 
-/** An ask saved beside the committed record. */
 const saved = (ask: string) => savedAt(APP, ask);
 
-/** The ask saved beside the committed record, copied to `root`'s. */
 const copySaved = (root: string, ask: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -105,7 +72,6 @@ const copySaved = (root: string, ask: string) =>
 
 const RecordJson = Schema.fromJsonString(Approved, { space: 2 });
 
-/** The record at `root` written as given. */
 const recordAt = (root: string, record: Approved) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -115,7 +81,6 @@ const recordAt = (root: string, record: Approved) =>
     );
   });
 
-/** A copy of the app whose record keeps no approval: pending on `OTHER`, over the stills as they stand. */
 const freshApp = Effect.gen(function* () {
   const root = yield* scratchApp(APP);
   const stills = Object.fromEntries(yield* hashedStills(root));
@@ -123,11 +88,6 @@ const freshApp = Effect.gen(function* () {
   return root;
 });
 
-/**
- * An `ask wait` answer line (`answer <question> <kind> key=value…`, a value
- * in quotes when it has spaces) read as the question and the answer it
- * prints, decoded as the lab's answers are.
- */
 const printedAnswer = Effect.fn('test/printedAnswer')(function* (line: string) {
   const [, question = '', kind = ''] = line.split(' ');
   const fields = Array.from(line.matchAll(/(\w+)=("[^"]*"|\S+)/g), ([, key = '', given = '']) => [
@@ -152,7 +112,6 @@ const APPROVED: AskAnswers = {
   trace: { kind: 'skipped' },
 };
 
-/** The words an answer gives, as the lab keeps them on the step that answered it: a choice's option, the words, nothing when skipped. */
 const valueOf = (answer: AskAnswers[string]) =>
   Match.value(answer).pipe(
     Match.when({ kind: 'choose' }, ({ value }) => [value]),
@@ -161,17 +120,8 @@ const valueOf = (answer: AskAnswers[string]) =>
     Match.exhaustive,
   );
 
-/** The `src` the stand-in lab serves a file at. */
 const srcOf = (name: string) => `/api/review/files/test/${name}`;
 
-/**
- * An ask the lab holds, at `tag`, with `answers` (each given on its choice's
- * step at `AT`, the step before it answered too), showing an image block for
- * each `src` of `shows` over those two steps, a video, an image block with
- * no file, a block of another kind for each `src` of `others` (none a file
- * it shows as an image), its choice, and an image block for each `src` of
- * `unreached` on a step his answers do not reach. It holds no receipt.
- */
 const held = (
   answers: AskAnswers,
   shows: ReadonlyArray<string>,
@@ -211,7 +161,6 @@ const held = (
   };
 };
 
-/** The `src` of each image block of `ask`, on any step, once each. */
 const imageSrcs = (ask: LabAsk) => [
   ...new Set(
     Object.values(ask.ask.steps).flatMap(({ blocks = [] }) =>
@@ -226,7 +175,6 @@ const imageSrcs = (ask: LabAsk) => [
   ),
 ];
 
-/** `ask` with the lab's receipt: the hash `files` gives of each file its image blocks show, as the lab made it; a `src` `files` lacks has none. */
 const withReceipt = (ask: LabAsk, files: Readonly<Record<string, string>>): LabAsk => ({
   ...ask,
   shown: Object.fromEntries(Object.entries(files).filter(([src]) => imageSrcs(ask).includes(src))),
@@ -234,7 +182,6 @@ const withReceipt = (ask: LabAsk, files: Readonly<Record<string, string>>): LabA
 
 class Held extends Context.Service<Held, Ref.Ref<ReadonlyArray<AskRead>>>()('test/HeldAsks') {}
 
-/** A lab at `LAB` that holds the asks `Held` gives. */
 const layerHeld = Layer.effect(
   LabAsks,
   Effect.gen(function* () {
@@ -252,28 +199,22 @@ const layerHeld = Layer.effect(
   }),
 ).pipe(Layer.provideMerge(Layer.effect(Held, Ref.make<ReadonlyArray<AskRead>>([]))));
 
-/** The stand-in lab made to hold `asks`, each read and as it gives it. */
 const holdingReads = (asks: ReadonlyArray<AskRead>) =>
   Effect.gen(function* () {
     yield* Ref.set(yield* Held, asks);
   });
 
-/** An ask the lab gives as it reads it. */
 const asRead = (record: LabAsk): AskRead => ({ record, body: record });
 
-/** The stand-in lab made to hold `asks`, each given as it is read, with its receipt of `files`. */
 const holding = (asks: ReadonlyArray<LabAsk>, files: Readonly<Record<string, string>> = {}) =>
   holdingReads(asks.map((ask) => asRead(withReceipt(ask, files))));
 
-/** The files that show `stills` byte for byte, one per still, by `src`. */
 const showing = (stills: Approved['stills']) =>
   Object.fromEntries(Object.entries(stills).map(([still, hash]) => [srcOf(still), hash]));
 
-/** The stills of `stills` named, with their hashes. */
 const only = (stills: Approved['stills'], named: ReadonlyArray<string>) =>
   Object.fromEntries(named.map((still) => [still, stills[still] ?? '']));
 
-/** `still` at `root` written with bytes drawn from `next`. */
 const scramble = (root: string, still: string, next: () => number) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -283,21 +224,18 @@ const scramble = (root: string, still: string, next: () => number) =>
     );
   });
 
-/** `still` at `root` written with the bytes of `twin` as they stand. */
 const twinned = (root: string, still: string, twin: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     yield* fs.writeFile(`${root}/${still}`, yield* fs.readFile(`${root}/${twin}`));
   });
 
-/** The record at `root` pinned pending on `ask`, the lab holding it unanswered; the record as pinned. */
 const pinOn = (root: string, ask: string) =>
   Effect.gen(function* () {
     yield* holding([held({}, [], 'Asking', ask)]);
     return yield* pin(root, ask);
   });
 
-/** A copy of the app keeping no approval, its record pinned pending on `ask`; the stills as pinned. */
 const pinnedOn = (ask: string) =>
   Effect.gen(function* () {
     const root = yield* freshApp;
@@ -305,14 +243,12 @@ const pinnedOn = (ask: string) =>
     return { root, stills };
   });
 
-/** The pending record at `root` approved on `ask`, the lab showing `files` on the approve choice; the record as approved. */
 const approvedShowing = (root: string, ask: string, files: Readonly<Record<string, string>>) =>
   Effect.gen(function* () {
     yield* holding([held(APPROVED, Object.keys(files), 'Answered', ask)], files);
     return yield* approve(root, ask);
   });
 
-/** What `approve` gives on ask `ask` over `root`: its refusal's tag, or `approved`; and whether the record stayed as it was. */
 const approvedOn = (root: string, ask: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -324,7 +260,6 @@ const approvedOn = (root: string, ask: string) =>
     return [result, kept] as const;
   });
 
-/** A seeded draw in [0, 1). */
 const draws = (seed: number) => {
   let state = seed >>> 0;
   return () => {
@@ -333,7 +268,6 @@ const draws = (seed: number) => {
   };
 };
 
-/** `still` at `root` rewritten from `next`: half the time a byte copy of another of `all`, else fresh bytes. */
 const rewritten = (root: string, still: string, all: ReadonlyArray<string>, next: () => number) => {
   const others = all.filter((other) => other !== still);
   const twin = Option.filter(
@@ -346,22 +280,10 @@ const rewritten = (root: string, still: string, all: ReadonlyArray<string>, next
   });
 };
 
-/** The steps of a drawn ask: two his answers reach unless it is wild, and a branch. */
 const STEPS = ['look', 'approve', 'revise'];
 
-/** Each file's `src` with the step its image block sits on. */
 type Placed = ReadonlyArray<readonly [string, string]>;
 
-/**
- * An ask `id` at `state`, drawn from `next`, with an image block for each
- * file of `files` (its hash by `src`). Half are wild: each block sits on any
- * of its three steps, his answers reach any of them, and the receipt misses
- * files; the rest keep every block on `look` or `approve`, both reached, and
- * every file in the receipt, so approvals build up across asks. Either way
- * his answers may name a step the ask lacks or a step twice, in any order,
- * and the receipt may hold a still of `stills`'s hash under a `src` no block
- * shows (`extra`). Its approve step holds the values of `APPROVED`.
- */
 const drawnAsk = (
   id: string,
   state: LabAsk['state'],
@@ -420,7 +342,6 @@ const drawnAsk = (
   return { ask, placed, names, receipt, extra };
 };
 
-/** What the blocks `placed` on `steps` showed him by `receipt`: each such file's hash, by `src`, none the receipt lacks. */
 const shownOnSteps = (
   placed: Placed,
   receipt: Readonly<Record<string, string>>,
@@ -432,11 +353,6 @@ const shownOnSteps = (
       .map(([src]) => [src, receipt[src] ?? ''] as const),
   );
 
-/**
- * Why a refusal of a drawn ask was one the rule's edges decide, each a
- * name of the random test's `seen`: `fewer(files)` says whether counting
- * `files` as shown too would name fewer stills.
- */
 const refusedWhy = (
   drawn: {
     readonly placed: Placed;
@@ -467,7 +383,6 @@ const refusedWhy = (
 
 const test = it.effect.layer(Layer.mergeAll(BunServices.layer, layerHeld));
 
-/** The stills `approve` names as not shown, when it refuses with `StillsNotShown`. */
 const notShownBy = (root: string, ask: string) =>
   approve(root, ask).pipe(
     Effect.flip,
@@ -476,7 +391,6 @@ const notShownBy = (root: string, ask: string) =>
     ),
   );
 
-/** What a check gives: `ApprovalUnsound`'s ask and why, another refusal's tag, or `passes`. */
 const verdictOf = <A, E extends { readonly _tag: string }, R>(effect: Effect.Effect<A, E, R>) =>
   effect.pipe(
     Effect.match({
@@ -491,7 +405,6 @@ const verdictOf = <A, E extends { readonly _tag: string }, R>(effect: Effect.Eff
 
 const LabAskJson = Schema.fromJsonString(LabAsk, { space: 2 });
 
-/** The lab's record of `ask` saved at `root`, rewritten as `change` gives it. */
 const resave = (root: string, ask: string, change: (record: LabAsk) => LabAsk) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -500,7 +413,6 @@ const resave = (root: string, ask: string, change: (record: LabAsk) => LabAsk) =
     yield* fs.writeFileString(file, yield* Schema.encodeEffect(LabAskJson)(change(read.record)));
   });
 
-/** The record at `root`, rewritten as `change` gives it. */
 const rerecord = (root: string, change: (record: Approved) => Approved) =>
   Effect.flatMap(readRecord(root), (record) => recordAt(root, change(record)));
 
@@ -548,7 +460,6 @@ describe('kit:approve', () => {
           fs.writeFile(`${root}/${still}`, bytes),
         ),
       );
-      // The app as the ask found it: it serves no still the ask did not show.
       const since = (yield* servedStills(root)).filter((still) => !kept.includes(still));
       yield* Effect.forEach(since, (still) => fs.remove(`${root}/${still}`));
       yield* holdingReads([real.read]);
@@ -846,7 +757,6 @@ describe('kit:approve', () => {
         ),
       ];
       const files = [RECORD, ...Object.values(savedAsk(EARLY)), ...Object.values(savedAsk(ASK))];
-      /** `check`'s verdict after each change of `changes`, each undone after it. */
       const verdicts = <E extends { readonly _tag: string }, R>(
         check: Effect.Effect<unknown, E, R>,
         changes: ReadonlyArray<readonly [string, Effect.Effect<unknown, unknown, R>]>,
@@ -931,9 +841,6 @@ describe('kit:approve', () => {
         ],
         ['unanswered', ({ [STILLS_QUESTION]: _, ...answers }) => ({ _tag: 'Answered', answers })],
       ];
-      // The test's own model of the record: the approval it holds once given,
-      // and the earlier approvals it keeps, each given by an approve the test
-      // saw succeed, kept and dropped by the rule, not by the code under test.
       let given = Option.none<Given>();
       let kept: ReadonlyArray<Given> = [];
       const pinModel = (ask: string, stills: Approved['stills']) => {
@@ -944,7 +851,6 @@ describe('kit:approve', () => {
         );
         given = Option.none();
       };
-      /** The pinned stills (sorted) whose bytes no file of `files` and no kept approval showed, each named, twins too. */
       const unshownOf = (stills: Approved['stills'], files: Readonly<Record<string, string>>) => {
         const hashes = new Set([
           ...Object.values(files),
@@ -970,7 +876,6 @@ describe('kit:approve', () => {
         const ask = `c${i.toString(16).padStart(10, '0')}`;
         const { stills: before } = yield* readRecord(root);
         const scrambled = Object.keys(before).filter(() => next() < 0.3);
-        // Some become byte copies of another still, so two paths can share one hash.
         for (const still of scrambled) yield* rewritten(root, still, Object.keys(before), next);
         const { stills, earlier } = yield* pinOn(root, ask);
         pinModel(ask, stills);
@@ -983,7 +888,6 @@ describe('kit:approve', () => {
           ),
           [srcOf('decoy.png')]: sha256(Uint8Array.from([i])),
         };
-        // Half the draws approve, so earlier approvals build up across asks.
         const drawn = Option.fromUndefinedOr(
           ANSWERS[Math.max(0, Math.floor(next() * ANSWERS.length * 2) - ANSWERS.length)],
         );

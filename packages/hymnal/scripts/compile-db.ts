@@ -1,4 +1,3 @@
-/** Sole corpus SQLite writer. No generated database or installed user path is an input. */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Database } from 'bun:sqlite';
 import { Effect, FileSystem, Path, Schema } from 'effect';
@@ -29,7 +28,6 @@ import { decodeSourceText } from './source-text.js';
 export const DATA = new URL('../data/', import.meta.url).pathname;
 export const OUTPUT = new URL('../../core/data/hymnal.db', import.meta.url).pathname;
 const sha256 = (text: string) => new Bun.CryptoHasher('sha256').update(text).digest('hex');
-/** Index files fail on any key their schema does not name, as `indexes.ts` reads them. */
 const STRICT = { onExcessProperty: 'error' } as const;
 
 const decodeJson = <A, I>(schema: Schema.Codec<A, I>, text: string, operation: string) =>
@@ -127,7 +125,6 @@ export const readDatabaseSources = Effect.fn('CorpusDatabase.readSources')(funct
   return sources;
 });
 
-/** Build in a fresh sibling, validate after reopen, then publish with one atomic rename. */
 export const buildDatabase = Effect.fn('CorpusDatabase.build')(function* (
   out: string,
   sources: DatabaseSources,

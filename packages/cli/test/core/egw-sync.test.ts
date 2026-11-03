@@ -67,9 +67,6 @@ const api = (books: readonly EGWSchemas.Book[]): EGWApiClientService => ({
 });
 
 describe('EGW corpus sync', () => {
-  // The whole fixture is built here rather than inside the generator: the run
-  // is provided once, at the test's own boundary, so nothing it depends on can
-  // come into existence only partway through the run.
   const local: BookRow[] = [
     {
       book_id: 1,
@@ -142,14 +139,8 @@ describe('EGW corpus sync', () => {
           }),
         );
       },
-      // Writings sync never asks what File Corpus generation is active —
-      // it drives `ensure` per publication. A stub that answered would be
-      // inventing a fact this suite does not have; one that dies makes a
-      // reader of it fail here rather than pass against a fiction.
       installed: () => Effect.die('egw sync does not read the installed file corpus'),
       activeFile: () => Effect.die('egw sync does not read a file corpus path'),
-      // Nor does it install from a runtime manifest entry — that is §3.6's
-      // path, and writings sync predates it. Dying for the same reason.
       installFrom: () => Effect.die('egw sync does not install from a content manifest'),
     }),
   );
@@ -190,8 +181,6 @@ describe('EGW corpus sync', () => {
     }).pipe(Effect.provide(layer)),
   );
 
-  /** The parts a durable host runs as separate steps: the plan is plain data,
-   *  and a book's failure is an outcome to persist rather than an error. */
   it.effect('plans every remote book on refresh and returns a failed install as an outcome', () =>
     Effect.gen(function* () {
       const plan = yield* planEgwSync({ lang: 'en', refresh: true, recheckLimit: 0 });
@@ -210,9 +199,6 @@ describe('EGW corpus sync', () => {
     }).pipe(Effect.provide(layer)),
   );
 
-  /** A book whose recorded revision is not the catalog's is downloaded again:
-   *  a moved content hash first, then a book recorded before revisions were
-   *  hashes, up to the run's limit. */
   it.effect('rechecks installed books whose revision moved, content hashes first', () => {
     const withDownload = (bookId: number, code: string, hash: string): EGWSchemas.Book => ({
       ...book(bookId, code),
@@ -263,8 +249,6 @@ describe('EGW corpus sync', () => {
     }).pipe(Effect.provide(library));
   });
 
-  /** An installation error carries no message of its own; the database's
-   *  words are in its cause, and the outcome says them. */
   it.effect('says what the database said when an install fails', () => {
     const failing = Layer.succeed(
       CorpusSupply,

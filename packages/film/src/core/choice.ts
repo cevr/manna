@@ -1,24 +1,3 @@
-// The choice point: at an address of a film, a set of variants to compare,
-// one of them picked (a sound's takes: the kept ones), each commented on and
-// approved. One shape for every kind, so the review shows one card with the
-// same controls at every level of the film (the film, an act, a scene, a
-// layer); the kind says only where a pick lands and how a variant is heard
-// or seen:
-//
-// - render: an address's renders, a variant each (the catalogue's); seen
-//   side by side; reviewed and approved, never picked;
-// - score: the score's options (`play` in `sound.ts`); each heard as the
-//   film's mix with it playing;
-// - take: a library sound's takes (`library.lock.json`); heard alone and in
-//   place; kept (picked), unkept or rejected;
-// - voice: a beat's recorded attempts; heard alone; one kept as the take;
-// - look: a look's named levels (`looks` in `palette.ts`); one picked.
-//
-// The owner's approvals and comments are the catalogue's records
-// (`catalogue.ts`), each on one variant as it was when given (its `key`).
-// Pure: the tools' adapters (`tools/choices.ts`, `tools/review.ts`) build
-// the points, and an ask shows them.
-
 import { Array as Arr, Effect, Option, Schema, SchemaTransformation } from 'effect';
 import { Address } from './address.ts';
 import {
@@ -36,22 +15,12 @@ import { PointId, PointRef, pointIdOf } from './point.ts';
 import { Seconds, maybe } from './schema.ts';
 import { ReviewFile, ReviewVideo } from './served.ts';
 
-/** What a choice point chooses between; each kind has one adapter. */
 const ChoiceKind = Schema.Literals(['render', 'score', 'take', 'voice', 'look']);
 type ChoiceKind = typeof ChoiceKind.Type;
 
-/**
- * What may be done to a variant beside comparing, commenting and approving:
- * picked (it plays), unpicked (a kept take waits again) or rejected (a take
- * never offered again).
- */
 export const ChoiceVerb = Schema.Literals(['pick', 'unpick', 'reject']);
 export type ChoiceVerb = typeof ChoiceVerb.Type;
 
-/**
- * How a variant is met: seen (a video, compared in sync), heard (alone,
- * and in place: the film's whole mix with it playing) or neither.
- */
 const VariantMedia = Schema.Union([
   Schema.TaggedStruct('Seen', { video: ReviewVideo }),
   Schema.TaggedStruct('Heard', { alone: Schema.Boolean, inPlace: Schema.Boolean }),
@@ -59,62 +28,38 @@ const VariantMedia = Schema.Union([
 ]).pipe(Schema.toTaggedUnion('_tag'));
 type VariantMedia = typeof VariantMedia.Type;
 
-/** One variant of a choice point. */
 export const ChoiceVariant = Schema.Struct({
-  /**
-   * Its name at its point: an option's, a take's sha256, a seed's source label
-   * (`sourceLabel`), an attempt's file, a render's variant.
-   */
   id: Schema.String,
   label: Schema.String,
-  /** What it is, a line each: its styles, its length and loudness, its size and commit. */
   lines: Schema.Array(Schema.String),
   state: VariantState,
-  /** Why a stale render is stale (its sources, or only the film's sound); none for every other variant. */
   staleBy: maybe(StaleBy),
   picked: Schema.Boolean,
-  /** The verbs its state allows. */
   verbs: Schema.Array(ChoiceVerb),
-  /**
-   * Why no verb reaches it, when none can: a seed of a sound made from data,
-   * or of a code trial, is tuned by editing that data, never kept or rejected.
-   */
   fixed: maybe(Schema.String),
   media: VariantMedia,
-  /** What it is now, which the owner's say is given on (a render's stamp key, a take's sha256, a seed's label). */
   key: Schema.String,
   approval: ApprovalState,
   comments: Schema.Array(SaidComment),
-  /** A markdown file said of it (a montage's notes). */
   notes: maybe(ReviewFile),
 });
 export type ChoiceVariant = typeof ChoiceVariant.Type;
 
-/** An instant on the film's clock where the point plays: an effect's placement, a layer's start. */
 export const ChoiceMark = Schema.Struct({ t: Seconds, label: Schema.String });
 export type ChoiceMark = typeof ChoiceMark.Type;
 
-/** A choice point's fields as the wire carries them: everything but its ref, which its id writes. */
 const pointFields = {
-  /**
-   * Unique in its film: `score`, `take:paper.slide`, `look:ground`,
-   * `render:scenes:cold`; its `ref` as `point.ts` writes it.
-   */
   id: Schema.String,
   kind: ChoiceKind,
-  /** Where in the film it belongs; none for a montage's set, which no film owns. */
   address: maybe(Address),
   title: Schema.String,
   lines: Schema.Array(Schema.String),
-  /** Where its videos start, in seconds. */
   start: Seconds,
-  /** The instants a set's moments view shows, when it names them. */
   moments: maybe(Schema.Array(Seconds)),
   marks: Schema.Array(ChoiceMark),
   variants: Schema.Array(ChoiceVariant),
 };
 
-/** Each kind of point's kind: what it chooses between (a montage's set is a render set). */
 const KIND = {
   Render: 'render',
   Montage: 'render',
@@ -124,14 +69,6 @@ const KIND = {
   Look: 'look',
 } as const satisfies { readonly [Tag in PointRef['_tag']]: ChoiceKind };
 
-/**
- * A choice point: at an address, variants to compare, pick, comment on and
- * approve. Which point it is is data (`ref`): read from its id once, where
- * the point is decoded (`PointId`), and written back as the id alone, so the
- * wire carries one name for it and a verb reads the ref, never the id parsed
- * back. Its kind is the ref's too: a `kind` on the wire is a JSON reader's to
- * read, and the decoded point's is `KIND` of its ref.
- */
 export const ChoicePoint = Schema.Struct(pointFields).pipe(
   Schema.decodeTo(
     Schema.toType(Schema.Struct({ ...pointFields, ref: PointRef })),
@@ -147,7 +84,6 @@ export const ChoicePoint = Schema.Struct(pointFields).pipe(
 );
 export type ChoicePoint = typeof ChoicePoint.Type;
 
-/** A variant as its adapter describes it, before the owner's say is read. */
 export type VariantDraft = Omit<
   ChoiceVariant,
   'approval' | 'comments' | 'notes' | 'staleBy' | 'fixed'
@@ -157,14 +93,12 @@ export type VariantDraft = Omit<
   readonly fixed?: Option.Option<string>;
 };
 
-/** A point's ref, with its id and kind, both read off it. */
 export const pointHead = (ref: PointRef): Pick<ChoicePoint, 'id' | 'ref' | 'kind'> => ({
   id: pointIdOf(ref),
   ref,
   kind: KIND[ref._tag],
 });
 
-/** A point as its adapter describes it: which point it is, and its variants' say still to read. */
 export interface PointDraft extends Omit<
   ChoicePoint,
   'id' | 'kind' | 'variants' | 'moments' | 'marks' | 'start'
@@ -175,14 +109,12 @@ export interface PointDraft extends Omit<
   readonly marks?: ReadonlyArray<ChoiceMark>;
 }
 
-/** What the owner's say on `variant` of the point `ref` at `address` is about. */
 export const subjectAt = (
   ref: PointRef,
   address: Address,
   variant: { readonly id: string; readonly key: string },
 ): Subject => ({ ...topicAt(address, ref, variant.id), key: variant.key });
 
-/** Why a variant of each kind is stale when nothing more says why, and how to make one current. */
 const STALE = {
   render: 'it was drawn for an earlier version; render it again, then approve the new render',
   score: 'it was composed for an earlier plan; compose it again, then approve that',
@@ -191,7 +123,6 @@ const STALE = {
   look: 'it is no level the look offers now',
 } as const satisfies { readonly [K in ChoiceKind]: string };
 
-/** Why a render stale by `StaleBy` is, and how to make it current. */
 const STALE_BY = {
   sources: {
     why: 'its sources changed since it was made',
@@ -203,12 +134,6 @@ const STALE_BY = {
   },
 } as const satisfies { readonly [S in StaleBy]: { readonly why: string; readonly fix: string } };
 
-/**
- * Why `variant` of a point of `kind` is no approval's subject, or none when it
- * is: an approval is of a variant as it is now, so only a current one is
- * approved. The one rule for every say that approves (the project's scenes,
- * the choices); the page's disabled button is its face.
- */
 export const approvalRefused = (
   kind: ChoiceKind,
   variant: {
@@ -227,7 +152,6 @@ export const approvalRefused = (
   );
 };
 
-/** `draft` as its point, with each variant's approval and comments as `catalogue` records them. */
 export const withSay = (catalogue: Option.Option<Catalogue>, draft: PointDraft): ChoicePoint => {
   const { ref } = draft;
   return {
@@ -259,22 +183,18 @@ export const withSay = (catalogue: Option.Option<Catalogue>, draft: PointDraft):
   };
 };
 
-/** A point of `points` by its id. */
 export const pointNamed = (
   points: ReadonlyArray<ChoicePoint>,
   id: string,
 ): Option.Option<ChoicePoint> => Arr.findFirst(points, (p) => p.id === id);
 
-/** A variant of `point` by its id. */
 export const variantNamed = (point: ChoicePoint, id: string): Option.Option<ChoiceVariant> =>
   Arr.findFirst(point.variants, (v) => v.id === id);
 
-/** A variant that is seen, with its video: what a set compares side by side. */
 interface SeenVariant extends ChoiceVariant {
   readonly video: ReviewVideo;
 }
 
-/** A point's seen variants, each with its video. */
 export const seenVariants = (point: ChoicePoint): ReadonlyArray<SeenVariant> =>
   point.variants.flatMap((variant) =>
     VariantMedia.match(variant.media, {
@@ -284,33 +204,17 @@ export const seenVariants = (point: ChoicePoint): ReadonlyArray<SeenVariant> =>
     }),
   );
 
-// ---------------------------------------------------------------------------
-// What `film options` reads and writes.
-
-/** The film's choice points, and the renders they are heard against. */
 export const FilmChoices = Schema.Struct({
   film: Schema.String,
-  /**
-   * The film's whole-film renders under the review's roots, newest first, as
-   * its project folders' catalogues record them: the picture each variant's
-   * mix is heard against (its own sound muted). None until the whole film is
-   * rendered.
-   */
   pictures: Schema.Array(ReviewVideo),
   points: Schema.Array(ChoicePoint),
 });
 export type FilmChoices = typeof FilmChoices.Type;
 
-/** A verb on one variant of one point. */
 export const PickPost = Schema.Struct({
   point: Schema.String,
   variant: Schema.String,
   verb: ChoiceVerb,
-  /**
-   * A voice's attempt kept though it is heard as something else ("Accept
-   * anyway" on its refusal, `TakeMismatch`); a pick without it is refused
-   * so. Every other kind ignores it.
-   */
   acceptMismatch: Schema.optionalKey(Schema.Boolean),
 });
 export type PickPost = typeof PickPost.Type;

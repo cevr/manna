@@ -1,8 +1,3 @@
-// The drawings a build's ask shows, published by the lab's own `publish_set`
-// work (`setsReads`) over the lab in memory: each drawing lands in the set
-// `cast-keep-<film>` at `<member>/<id><ext>`, and the src the build gets back
-// for each need is the review's route to that need's own drawing.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { ConfigProvider, Effect, FileSystem, Layer } from 'effect';
 import { reviewFileUrl } from '../../core/api.ts';
@@ -25,7 +20,6 @@ const needs: ReadonlyArray<OwnerNeed> = [
   { film, member: 'wife', id: 'turnaround-front', file: WIFE_FRONT, lacks: 'kept' },
 ];
 
-/** The live drawing set over the lab in memory, its review's root `spare` at `/out`. */
 const setOver = (files: Map<string, Uint8Array>) => {
   const lab = labInMemory(files);
   const review = Layer.effect(

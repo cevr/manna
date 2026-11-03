@@ -9,18 +9,11 @@ import { repoItems } from './sources.js';
 import { historyComment } from './testing.js';
 import { TEST_GIT } from '../testing.js';
 
-/** A rule of each of `selectors`, named by it. */
 const rulesOf = (selectors: ReadonlyArray<Selector>): ReadonlyArray<JudgedRule> =>
   selectors.map((selector) => ({ ...historyComment, id: selector, selector }));
 
-/** The memo of the repo at `dir`, where the repo's config keeps it. */
 const memoOf = (dir: string) => `${dir}/tmp/judged/items.json`;
 
-/**
- * The items of `selectors` in the repo at `dir`, past `ignorePatterns`,
- * each with its rule's selector and its text as the run reads it, and the
- * tree they came from.
- */
 const treeOf = (
   dir: string,
   ignorePatterns: ReadonlyArray<string>,
@@ -44,13 +37,11 @@ const treeOf = (
     };
   });
 
-/** The comment blocks of the repo at `dir`, past the dist folders. */
 const commentsOf = (dir: string) =>
   Effect.map(treeOf(dir, ['**/dist/**'], ['comments']), ({ items }) =>
     items.map(({ file, line, text }) => ({ file, line, text })),
   );
 
-/** Runs `git <args>` in `cwd`; answers what it prints. */
 const git = (cwd: string, ...args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
@@ -66,10 +57,6 @@ const git = (cwd: string, ...args: ReadonlyArray<string>) =>
     );
   });
 
-/**
- * A repository whose `main` commits `committed` (each file's lines), then
- * `tree` written over the working tree uncommitted; answers its directory.
- */
 const repo = (
   committed: Record<string, ReadonlyArray<string>>,
   tree: Record<string, ReadonlyArray<string>>,
@@ -101,18 +88,18 @@ const withFs = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   effect.pipe(Effect.scoped, Effect.provide(BunServices.layer));
 
 const A = [
-  '// One run of line comments,', // 1
-  '// read as one block.', // 2
-  'const a = 1;', // 3
-  '', // 4
-  '/**', // 5
-  ' * A JSDoc block,', // 6
-  ' * its stars gone.', // 7
-  ' */', // 8
-  'const b = 2;', // 9
-  '', // 10
-  '// Untouched.', // 11
-  'const c = 3;', // 12
+  '// One run of line comments,',
+  '// read as one block.',
+  'const a = 1;',
+  '',
+  '/**',
+  ' * A JSDoc block,',
+  ' * its stars gone.',
+  ' */',
+  'const b = 2;',
+  '',
+  '// Untouched.',
+  'const c = 3;',
 ];
 
 describe("the repo's items", () => {
@@ -277,8 +264,6 @@ describe("the repo's items", () => {
           expect(first.items).toEqual([
             { selector: 'comments', file: 'src/a.ts', line: 1, text: 'One.' },
           ]);
-          // The memo says the item stands on line 7: a read that parsed the
-          // file again would say line 1.
           const memo = yield* fs.readFileString(memoOf(dir));
           yield* fs.writeFileString(memoOf(dir), memo.replace('"line":1', '"line":7'));
           const again = yield* treeOf(dir, [], ['comments']);
@@ -312,7 +297,6 @@ describe("the repo's items", () => {
           ]);
           const memo = yield* fs.readFileString(memoOf(dir));
           expect([memo.includes('"src/a.ts"'), memo.includes('"src/b.ts"')]).toEqual([true, false]);
-          // The memo's line, past what the file says, is read only in the form it was made.
           yield* fs.writeFileString(memoOf(dir), memo.replace('"line":1', '"line":7'));
           const reworded = rulesOf(['comments']).map((rule) => ({
             ...rule,

@@ -1,8 +1,3 @@
-// The cast build's stage graph over a fake graph in memory: a rerun with
-// nothing changed runs nothing, a stage that makes the same bytes stops the
-// rerun there, `--touch` plans one input's change, and a stage that would
-// spend, or waits on the owner, holds every stage below it.
-
 import { describe, expect, it } from 'effect-bun-test';
 import {
   Clock,
@@ -30,7 +25,6 @@ import {
   stageInput,
 } from './graph.ts';
 
-/** What a build is asked with, as `buildGraph` takes it. */
 type BuildOptions = Parameters<typeof buildGraph>[1];
 
 const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
@@ -42,12 +36,10 @@ const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
   ...over,
 });
 
-/** `build.json`'s running marks, as a test reads them. */
 const RunningMarks = Schema.fromJsonString(
   Schema.Struct({ running: Schema.Record(Schema.String, Schema.Unknown) }),
 );
 
-/** `build.json`'s stages and each running mark's build, as a test reads and writes them. */
 const Marks = Schema.fromJsonString(
   Schema.Struct({
     stages: Schema.Record(Schema.String, Schema.Unknown),
@@ -67,7 +59,6 @@ const Marks = Schema.fromJsonString(
 const servicesOver = (files: Map<string, Uint8Array>) =>
   ContentStore.layer.pipe(Layer.provideMerge([memoryFileSystem(files), Path.layer, memoryLocks]));
 
-/** `servicesOver`, its manifest locks counting each take in `takes`. */
 const countingTakes = (files: Map<string, Uint8Array>, takes: { n: number }) =>
   ContentStore.layer.pipe(
     Layer.provideMerge([
@@ -86,11 +77,6 @@ const countingTakes = (files: Map<string, Uint8Array>, takes: { n: number }) =>
     ]),
   );
 
-/**
- * drawing (reads /in/view.png) → parts (its bytes' length, so a same-length
- * change makes the same output) → cut; and a key that spends okra; each run
- * counted in `runs`. Its files lie under `checkout` (`/` by default).
- */
 const rootedGraph = (runs: Map<string, number>, checkout: string) => {
   const counted = (id: string, bytes: Effect.Effect<Uint8Array, StageFailed>) =>
     Effect.sync(() => runs.set(id, (runs.get(id) ?? 0) + 1)).pipe(Effect.andThen(bytes));
@@ -149,7 +135,6 @@ const seeded = () =>
 const statesOf = (report: { readonly stages: ReadonlyArray<{ id: string; state: string }> }) =>
   Object.fromEntries(report.stages.map((s) => [s.id, s.state]));
 
-/** The fake graph and a set of the cuts known in this build, read through optional inputs. */
 const withSet = (runs: Map<string, number>, made: Array<string>): ReadonlyArray<Stage<never>> => [
   ...fakeGraph(runs),
   {
@@ -420,7 +405,6 @@ describe('the cast build graph', () => {
         const plan = yield* buildGraph(slow.stages, options({ plan: true }));
         expect(statesOf(plan)).toEqual({ train: 'stale' });
         const second = yield* Effect.forkChild(buildGraph(slow.stages, options()));
-        // the second build finds the first's mark and waits on it
         yield* Deferred.await(busy);
         yield* Deferred.succeed(slow.release, true);
         expect(statesOf(yield* Fiber.join(first))).toEqual({ train: 'ran' });
@@ -436,7 +420,6 @@ describe('the cast build graph', () => {
       const slow = yield* slowTrain;
       const first = yield* Effect.forkChild(buildGraph(slow.stages, options()));
       yield* Deferred.await(slow.started);
-      // the first build's process reads as gone, so the second runs the stage itself
       const second = yield* Effect.forkChild(buildGraph(slow.stages, options()));
       yield* Deferred.await(slow.restarted);
       expect(slow.runs()).toBe(2);
@@ -481,8 +464,6 @@ describe('the cast build graph', () => {
         yield* TestClock.adjust('1 minute');
         takes.n = 0;
         yield* TestClock.adjust('10 minutes');
-        // each decision takes the manifest's lock once, as does each of the first build's
-        // heartbeats: 120 decisions five seconds apart and 10 beats a minute apart
         expect(takes.n).toBeGreaterThanOrEqual(128);
         expect(takes.n).toBeLessThanOrEqual(132);
         yield* Deferred.succeed(slow.release, true);
@@ -502,8 +483,6 @@ describe('the cast build graph', () => {
         const slow = yield* slowTrain;
         const first = yield* Effect.forkChild(buildGraph(slow.stages, options()).pipe(onHost('a')));
         yield* Deferred.await(slow.started);
-        // host a's build beats for an hour, then host a goes dark: its build stops (and its
-        // heartbeat with it), its mark left behind with its last beat at 61 minutes
         yield* TestClock.adjust('61 minutes');
         const left = files.get('/cache/build.json') ?? text('');
         yield* Fiber.interrupt(first);
@@ -511,7 +490,6 @@ describe('the cast build graph', () => {
         const second = yield* Effect.forkChild(
           buildGraph(slow.stages, options()).pipe(onHost('b')),
         );
-        // the lease runs from the last beat, not from the mark's start
         yield* TestClock.adjust('4 minutes');
         expect(slow.runs()).toBe(1);
         yield* TestClock.adjust('2 minutes');
@@ -541,7 +519,6 @@ describe('the cast build graph', () => {
         const waiting = yield* Effect.forkChild(
           buildGraph(slow.stages, options()).pipe(onHost('b')),
         );
-        // host b judges the mark by its beat changing, not by host a's clock against its own
         yield* TestClock.adjust('20 minutes');
         expect(slow.runs()).toBe(1);
         yield* Deferred.succeed(slow.release, true);
@@ -567,7 +544,6 @@ describe('the cast build graph', () => {
         );
         yield* Deferred.await(slow.started);
         yield* TestClock.adjust('3 minutes');
-        // host a goes dark, its mark left with a beat two hours in host b's future
         const left = files.get('/cache/build.json') ?? text('');
         yield* Fiber.interrupt(first);
         files.set('/cache/build.json', left);
@@ -591,7 +567,6 @@ describe('the cast build graph', () => {
       const slow = yield* slowTrain;
       const first = yield* Effect.forkChild(buildGraph(slow.stages, options()).pipe(onHost('a')));
       yield* Deferred.await(slow.started);
-      // another build takes the key meanwhile (as host b would past a lost lease)
       const manifest = new TextDecoder().decode(files.get('/cache/build.json'));
       const [key] = Object.keys((yield* Schema.decodeEffect(RunningMarks)(manifest)).running);
       const taken = yield* Schema.encodeEffect(Marks)({
@@ -617,7 +592,6 @@ describe('the cast build graph', () => {
 const onHost = (host: string) =>
   Effect.provideService(Processes, { host, alive: () => Effect.succeed(true) });
 
-/** Run on a host whose wall clock reads `offset` off this one's (its sleeps and monotonic time are this one's). */
 const skewed = (clock: Clock.Clock, offset: Duration.Input) => {
   const ms = Duration.toMillis(offset);
   const off: Clock.Clock = {
@@ -633,10 +607,6 @@ const skewed = (clock: Clock.Clock, offset: Duration.Input) => {
     Effect.provideService(effect, Clock.Clock, off);
 };
 
-/**
- * A train that marks `started` at its first run and `restarted` at its second,
- * and makes its output once `release` is done.
- */
 const slowTrain = Effect.gen(function* () {
   const started = yield* Deferred.make<boolean>();
   const restarted = yield* Deferred.make<boolean>();
@@ -660,7 +630,6 @@ const slowTrain = Effect.gen(function* () {
   return { stages, started, restarted, release, runs: () => count };
 });
 
-/** The logger that completes `busy` when a build logs that it waits on another build's run. */
 const busyLogged = (busy: Deferred.Deferred<boolean>) =>
   Logger.layer([
     Logger.make(({ message }) => {

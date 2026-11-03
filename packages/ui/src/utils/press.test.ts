@@ -1,11 +1,7 @@
-// Not in upstream: one owner per press (`press.ts`). The gestures that claim
-// a press (a long press, the film lab's drag) are covered in the film lab's
-// browser tests (e2e/lab/command/command.dom.test.ts).
 import { describe, expect, it } from 'bun:test';
 
 import { claimPress, liftHeldByOther, pressHeldByOther } from './press.ts';
 
-/** A pointer event with only the id the registry reads. */
 const lift = (type: 'pointerup' | 'pointercancel', pointerId: number) =>
   Object.assign(new Event(type), { pointerId });
 
@@ -33,11 +29,9 @@ describe('claimPress', () => {
     const drag = Symbol('drag');
     expect(claimPress(9, menu, page)).toBe(true);
     expect(liftHeldByOther(9, drag)).toBe(true);
-    // The lift lets the press go (heard in the capture phase); its own handlers still ask.
     page.dispatchEvent(lift('pointerup', 9));
     expect(pressHeldByOther(9, drag)).toBe(false);
     expect([liftHeldByOther(9, drag), liftHeldByOther(9, menu)]).toEqual([true, false]);
-    // The next press of that pointer, a plain tap no one claims: its lift is no one's.
     page.dispatchEvent(Object.assign(new Event('pointerdown'), { pointerId: 9 }));
     expect(liftHeldByOther(9, drag)).toBe(false);
     page.dispatchEvent(lift('pointerup', 9));
@@ -49,10 +43,8 @@ describe('claimPress', () => {
     const document = new EventTarget();
     const menu = Symbol('menu');
     const drag = Symbol('drag');
-    // A drag once claimed on the window (another pointer), so the window hears lifts too.
     expect(claimPress(30, drag, window)).toBe(true);
     window.dispatchEvent(lift('pointerup', 30));
-    // The menu claims pointer 31 on the document; its lift reaches the window first.
     expect(claimPress(31, menu, document)).toBe(true);
     window.dispatchEvent(lift('pointerup', 31));
     document.dispatchEvent(lift('pointerup', 31));

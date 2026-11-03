@@ -1,9 +1,3 @@
-/**
- * Hymnal Service
- *
- * The portable hymnal capability. Host adapters provide storage layers.
- */
-
 import {
   Context,
   Effect,
@@ -37,24 +31,15 @@ export class HymnNotFoundError extends Schema.TaggedError<HymnNotFoundError>()(
   { id: Schema.Finite },
 ) {}
 
-/**
- * The failure of every index method over a database that lacks index tables:
- * one built before them (`absent` holds every table) or one with only some.
- * `manna init` replaces such a database, so the message names it. A read or
- * decode failure of tables that are present is a `HymnalError`, never this.
- */
 export class HymnalIndexesMissing extends Schema.TaggedError<HymnalIndexesMissing>()(
   'HymnalIndexesMissing',
   {
-    /** The index tables the database lacks. */
     absent: Schema.Array(Schema.String),
-    /** Whether the database holds some index tables, so it was built part way. */
     partial: Schema.Boolean,
     message: Schema.String,
   },
 ) {}
 
-/** The tables a database holds the indexes in: the index methods read every one. */
 export const INDEX_TABLES = [
   'index_files',
   'index_topics',
@@ -70,11 +55,6 @@ export const INDEX_TABLES = [
   'index_metre_tune_hymns',
 ] as const;
 
-/**
- * The `HymnalIndexesMissing` for a database lacking `absent`, with the message a user reads.
- * `override` is the path `HYMNAL_DB_PATH` names when it is not `~/.bible/hymnal.db`:
- * `manna init` replaces only that default file, so the message names the file to replace.
- */
 export const indexesMissing = (
   absent: readonly string[] = INDEX_TABLES,
   override: Option.Option<string> = Option.none(),
@@ -92,7 +72,6 @@ export const indexesMissing = (
   return HymnalIndexesMissing.make({ absent, partial, message });
 };
 
-/** The hymns (1-695) the back-matter indexes give numbers for. */
 export const isIndexedHymn = (id: number) => Number.isInteger(id) && id >= 1 && id <= 695;
 
 const summarizeHymn = (hymn: Hymn): HymnSummary =>
@@ -113,35 +92,28 @@ interface HymnalServiceApi {
     query: string,
     limit?: number,
   ) => Effect.Effect<readonly HymnSummary[], HymnalError>;
-  /** A hymn's topics, passages, `see` hymns, tunes, metres, authors and composers. */
   readonly getHymnIndexes: (
     id: HymnId,
   ) => Effect.Effect<HymnIndexes, HymnalError | HymnalIndexesMissing | HymnNotFoundError>;
-  /** A topic's hymns in printed order; an unknown topic has none. */
   readonly getTopicHymns: (
     name: string,
   ) => Effect.Effect<readonly IndexRef[], HymnalError | HymnalIndexesMissing>;
-  /** A tune's hymns in printed order; an unknown tune has none. */
   readonly getTuneHymns: (
     name: string,
   ) => Effect.Effect<readonly IndexRef[], HymnalError | HymnalIndexesMissing>;
-  /** A metre's hymns, its tunes' hymns in printed order; an unknown metre has none. */
   readonly getMetreHymns: (
     metre: string,
   ) => Effect.Effect<readonly IndexRef[], HymnalError | HymnalIndexesMissing>;
-  /** The scriptural index's hymns that reach a chapter or a verse, in printed order. */
   readonly getPassageHymns: (
     query: PassageQuery,
   ) => Effect.Effect<readonly IndexRef[], HymnalError | HymnalIndexesMissing>;
 }
 
-/** What `HymnalService.Test` answers the index methods from, keyed by name. */
 export interface HymnalTestIndexes {
   readonly hymns?: readonly HymnIndexes[];
   readonly topics?: Readonly<Record<string, readonly IndexRef[]>>;
   readonly tunes?: Readonly<Record<string, readonly IndexRef[]>>;
   readonly metres?: Readonly<Record<string, readonly IndexRef[]>>;
-  /** The scriptural index's entries in printed order. */
   readonly passages?: readonly { readonly passage: IndexPassage; readonly ref: IndexRef }[];
 }
 
@@ -196,7 +168,6 @@ const testIndexMethods = (config: { readonly indexes?: HymnalTestIndexes }) => {
 export class HymnalService extends Context.Service<HymnalService, HymnalServiceApi>()(
   '@manna/core/hymnal/HymnalService',
 ) {
-  /** With no `indexes`, the index methods fail as over a database built without them. */
   static Test = (
     config: {
       hymns?: readonly Hymn[];

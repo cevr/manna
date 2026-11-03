@@ -1,7 +1,3 @@
-// The burin as a material: the shader (`shader.ts`) with the hall's light
-// shared by every surface and each surface's own cut: how pale its stuff
-// is, how its lines are laid on it, its masonry joints, a hand-tinted wash.
-
 import {
   DoubleSide,
   FrontSide,
@@ -13,10 +9,8 @@ import {
 } from 'three';
 import { FRAGMENT, VERTEX } from './shader.ts';
 
-/** The shadow map, set once the rig has made it. */
 const unmade = (): Texture | null => null;
 
-/** The hall's light, one set of uniforms every surface reads (rewritten each frame). */
 export const hallLight = () => ({
   uL: { value: new Vector3(0.88, -0.33, -0.36).normalize() },
   uWin: { value: new Vector4(-7, -3, 5.6, 1.1) },
@@ -37,23 +31,14 @@ export const hallLight = () => ({
 
 export type HallLight = ReturnType<typeof hallLight>;
 
-/** How a surface is cut. */
 export interface Cut {
-  /** How pale its stuff is, 0 black to 1 white, before the light. */
   readonly albedo: number;
-  /** 0 a block's faces, 2 a body turned about its y, 5 the mesh's own lines. */
   readonly mode?: 0 | 2 | 5;
-  /** The first family's turn in the surface's (u, s), radians. */
   readonly rot?: number;
-  /** The second family's turn from the first. */
   readonly cross?: number;
-  /** A turned body's radius, for its lines along it. */
   readonly radius?: number;
-  /** The coarsest spacing of its lines, metres. */
   readonly spacing?: number;
-  /** Masonry: course height, block length, strength. */
   readonly joints?: readonly [number, number, number];
-  /** A hand-tinted wash: colour (0..1), strength, where on the body and how wide. */
   readonly tint?: {
     readonly rgb: readonly [number, number, number];
     readonly amount: number;
@@ -62,13 +47,11 @@ export interface Cut {
   };
   readonly dark?: number;
   readonly rim?: number;
-  /** The windows' wall: its lights drawn as light. */
   readonly glow?: boolean;
   readonly seed?: number;
   readonly both?: boolean;
 }
 
-/** A surface's material: the shared light and its own cut. */
 export const burin = (light: HallLight, cut: Cut): ShaderMaterial =>
   new ShaderMaterial({
     vertexShader: VERTEX,

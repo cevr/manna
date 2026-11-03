@@ -1,25 +1,16 @@
-// The print the engraving is pulled on: warm cream rag paper with its fibre
-// and mottle, the plate's impression pressed into it, and the ruled border
-// round the picture. Made once for each size from a fixed seed and kept, so
-// every frame lays the same sheet.
-
 import { type Hex, mix } from '@manna/film/canvas';
 import { rng } from '@manna/film/core';
 
-/** The paper and the inks. */
 export const INK: Hex = '#1b1612';
 export const PAPER: Hex = '#efe4ca';
 export const PAPER_DEEP: Hex = '#e2d3b2';
-/** The gold of the Word: a hand-laid wash, and its ink for type. */
 export const GOLD_WASH: Hex = '#e3b04b';
 export const GOLD_INK: Hex = '#a8741a';
 
-/** The picture on the sheet: the plate's printed area, frame px. */
 export const PICTURE = { x: 70, y: 52, w: 1780, h: 976 } as const;
 
 const sheets = new Map<string, HTMLCanvasElement>();
 
-/** The paper alone at `w` × `h` px: cream, mottled, with fibres and a few foxing spots. */
 export const paper = (w: number, h: number, seed: number): HTMLCanvasElement => {
   const key = `${w}x${h}:${seed}`;
   const have = sheets.get(key);
@@ -33,9 +24,7 @@ export const paper = (w: number, h: number, seed: number): HTMLCanvasElement => 
   ctx.fillStyle = PAPER;
   ctx.fillRect(0, 0, w, h);
   const k = w / 1920;
-  // As many marks for each part of the sheet, whatever its size.
   const area = (w * h) / (1920 * 1080);
-  // Mottle: broad soft clouds a shade deeper and a shade paler.
   for (let i = 0; i < 70 * area; i++) {
     const x = r() * w;
     const y = r() * h;
@@ -47,7 +36,6 @@ export const paper = (w: number, h: number, seed: number): HTMLCanvasElement => 
     ctx.fillStyle = g;
     ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
   }
-  // Fibres: short hairlines lying every way.
   for (let i = 0; i < 2600 * area; i++) {
     const x = r() * w;
     const y = r() * h;
@@ -59,7 +47,6 @@ export const paper = (w: number, h: number, seed: number): HTMLCanvasElement => 
     ctx.fillRect(-len / 2, 0, len, Math.max(0.6, 0.9 * k));
     ctx.restore();
   }
-  // Foxing: a few small rust spots.
   for (let i = 0; i < 14 * area; i++) {
     const x = r() * w;
     const y = r() * h;
@@ -73,7 +60,6 @@ export const paper = (w: number, h: number, seed: number): HTMLCanvasElement => 
   return c;
 };
 
-/** Lay the paper over the whole frame (`w` × `h` in frame units), at the context's own resolution. */
 export const layPaper = (ctx: CanvasRenderingContext2D, w: number, h: number, seed = 7) => {
   const m = ctx.getTransform();
   const s = Math.hypot(m.a, m.b) || 1;
@@ -81,7 +67,6 @@ export const layPaper = (ctx: CanvasRenderingContext2D, w: number, h: number, se
   ctx.drawImage(sheet, 0, 0, w, h);
 };
 
-/** A ruled line as a thin filled bar (`x0, y0` to `x1, y1`, axis-aligned), `t` thick. */
 const rule = (
   ctx: CanvasRenderingContext2D,
   x0: number,
@@ -98,7 +83,6 @@ const rule = (
   );
 };
 
-/** A box's four ruled sides. */
 export const ruledBox = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -113,12 +97,6 @@ export const ruledBox = (
   rule(ctx, x + w, y, x + w, y + h, t);
 };
 
-/**
- * The plate's impression round `box`: the paper inside pressed a shade
- * deeper and smoother, its edge a bevel (a shadow on two sides, a light on
- * the others), and the picture's border ruled in ink, a heavy line within a
- * hairline.
- */
 export const plate = (
   ctx: CanvasRenderingContext2D,
   box: { x: number; y: number; w: number; h: number },

@@ -18,7 +18,6 @@ const noise = (secs: number, stream?: string): Node =>
 
 const sample = (sound: string): Node => ({ _tag: 'Sample', sound });
 
-/** A generated sound whose code trial plays `play` with two seeds. */
 const trialled = (play: Node): LibraryEntry => ({
   kind: 'generated',
   prompt: 'a whoosh',
@@ -28,11 +27,9 @@ const trialled = (play: Node): LibraryEntry => ({
   code: { sound: { play }, variants: 2 },
 });
 
-/** `library`'s code sounds resolved: its keys typed as names, as `defineLibrary` types them. */
 const resolved = <const L extends Library>(library: L) =>
   Result.map(resolveCode(library), (walk) => walk.code);
 
-/** The refusal's tag and fields, or the code sounds and the trials resolved. */
 const walked = <const L extends Library>(library: L) =>
   Result.match(resolveCode(library), {
     onSuccess: (walk) => ({ resolved: [...walk.code.keys()], trials: [...walk.trials.keys()] }),
@@ -89,7 +86,6 @@ describe('the walk of the code sounds', () => {
       sound: 'tone.a',
       sample: 'tone.none',
     });
-    // A name no record can hold reads nothing off the prototype.
     expect(walked({ 'tone.a': code({ play: sample('constructor') }) })).toMatchObject({
       _tag: 'SampleUnknown',
     });
@@ -189,7 +185,6 @@ describe('the walk of the code sounds', () => {
       measure: 'work',
       limit: 3600,
     });
-    // A sampled sound's own length counts in the sound that samples it.
     expect(
       walked({
         'tone.a': code({ play: noise(70) }),
@@ -230,7 +225,6 @@ describe('the walk of the code trials', () => {
       sound: 'paper.whoosh (trial)',
       stream: 'grain',
     });
-    // A trial is no code sound: a sound that samples its entry samples a take.
     expect(
       walked({
         'paper.whoosh': trialled(noise(0.1)),

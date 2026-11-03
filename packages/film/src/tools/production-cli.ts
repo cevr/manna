@@ -1,27 +1,3 @@
-// `film production` and `film publish`: a production's ledger kept from the
-// terminal (`core/production.ts`, `production-store.ts`), and a review set
-// published onto a production's timeline. Each line printed is one line, so
-// an agent reads it. The owner's word is filed, asked and moved forward on
-// by the lab's commands (`film lab decide|note|ask|forward`, the same as the
-// lab's MCP tools: `lab-commands.ts`).
-//
-//   film production list
-//       each ledger: its name, current version and title, words and filings
-//   film production show <production>
-//       its versions newest first, each with the owner's words and the sets filed by hand
-//   film production new <production> --title "<title>" [--film <film>] [--blurb "<line>"]
-//       [--first "<what v1 is for>"] [--at <ISO>]
-//       start a ledger: one version, opened now (or at --at)
-//   film production file <production> <set> --version <n>
-//       file a set published before sets named their production
-//   film publish <folder> --production <production> [--version <n>]
-//       stamp a set's review.json with its production, version and the time
-//       now (`ProductionStore.stamp`: refused for a production that keeps no
-//       ledger, or a version it has not opened, as the lab's `publish_set`
-//       refuses them), so it lands on that production's timeline; then say whether the
-//       running lab (FILM_LAB_URL) lists the set, as that lab answers it: the
-//       lab's own review roots decide, never this checkout's
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
@@ -52,7 +28,6 @@ import { ProductionStore } from './production-store.ts';
 import { labClient, labUrl } from './lab-client.ts';
 import { SetsTool } from './sets-mcp.ts';
 
-/** A name that is not a production's (lower case, digits and `-`). */
 class ProductionNameInvalid extends Schema.TaggedError<ProductionNameInvalid>()(
   'ProductionNameInvalid',
   { name: Schema.String },
@@ -62,7 +37,6 @@ class ProductionNameInvalid extends Schema.TaggedError<ProductionNameInvalid>()(
   }
 }
 
-/** A time that does not parse. */
 class TimeInvalid extends Schema.TaggedError<TimeInvalid>()('TimeInvalid', {
   text: Schema.String,
 }) {
@@ -84,7 +58,6 @@ const name = Argument.String('production').pipe(
 
 const iso = (at: number) => DateTime.formatIso(DateTime.makeUnsafe(at));
 
-/** `--at`, an ISO time, as ms since the epoch; now without. */
 const timeOf = (text: Option.Option<string>) =>
   Option.match(text, {
     onNone: () => Clock.currentTimeMillis,
@@ -95,27 +68,23 @@ const timeOf = (text: Option.Option<string>) =>
       }),
   });
 
-/** When it happened: now, or an earlier time an agent records late. */
 const atFlag = (what: string) =>
   Flag.String('at').pipe(
     Flag.optional,
     Flag.withDescription(`when ${what}, an ISO time (now without)`),
   );
 
-/** What a said line opens with, by its kind. */
 const saidVerb = { Decided: 'decided', Noted: 'noted', Asked: 'asked' } as const satisfies Record<
   Said['_tag'],
   string
 >;
 
-/** The current version's mark on its line. */
 const currentMark = (current: boolean): string =>
   Match.value(current).pipe(
     Match.when(true, () => ' (current)'),
     Match.orElse(() => ''),
   );
 
-/** The ledger as `show` prints it: newest version first, the owner's words and filings under each. */
 const ledgerLines = (file: ProductionFile): ReadonlyArray<string> => {
   const current = currentVersion(file);
   return [
@@ -223,7 +192,6 @@ export const production = Command.make('production').pipe(
   Command.withSubcommands([list, show, create, file]),
 );
 
-/** What the running lab says of a set's folder: listed (its ref), not listed, or nothing it could say. */
 type Listing = Data.TaggedEnum<{
   Listed: { readonly ref: string };
   Unlisted: {};
@@ -231,27 +199,14 @@ type Listing = Data.TaggedEnum<{
 }>;
 const Listing = Data.taggedEnum<Listing>();
 
-/** How long `film publish` waits on the lab's answer: the stamp has landed, so a lab that holds the call never holds the line. */
 const LAB_ANSWER_SECONDS = 5;
 
-/**
- * Whether the lab at `url` lists the set in `folder`, asked of the lab
- * itself (its `sets`, its index read fresh): the lab reads its own review
- * roots, which a command run from another checkout (a worktree) does not
- * share. A lab that does not answer within `LAB_ANSWER_SECONDS`, or answers
- * in a shape this checkout does not read, leaves it unknown: the publish has
- * landed either way. The session's end waits at most the lab client's own
- * limit more, and a listing already received stands through it.
- */
 const listedByLab = (url: string, folder: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const real = (at: string) => fs.realPath(at).pipe(Effect.orElseSucceed(() => at));
     const at = yield* real(folder);
     const client = yield* labClient(url);
-    // The limit holds the handshake and the call, inside the scope: a listing
-    // the lab gave survives a session end that stalls (the end keeps its own
-    // limit, the lab client's).
     const answered = yield* Effect.scoped(
       Effect.flatMap(client.session, (session) => client.call(session, SetsTool, {})).pipe(
         Effect.map(({ sets }) => Option.some(sets)),

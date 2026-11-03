@@ -1,18 +1,11 @@
-// A beat's line as the Board sets it, and the words a panel holds over: one
-// reading of a `say` for the Board's column (over the staged film's beats)
-// and an ask's Board (over the lab's read of the film's script), so a panel
-// says the same words in both. Pure: no view, no read.
-
 import { Option, Result } from 'effect';
 import { parse } from '../../core/narration.ts';
 
-/** A word of a beat's line as the Board sets it: the marks said before it, then the word. */
 interface LineWord {
   readonly marks: ReadonlyArray<string>;
   readonly text: string;
 }
 
-/** Beat `id`'s line, `say` as its script writes it: its words, each after the marks said before it (none when it does not parse). */
 export const lineWords = (id: string, say: string): ReadonlyArray<LineWord> =>
   Result.match(parse(id, say), {
     onFailure: () => [],
@@ -26,11 +19,6 @@ export const lineWords = (id: string, say: string): ReadonlyArray<LineWord> =>
     },
   });
 
-/**
- * The words `line` says while a panel at mark `at` holds: from its mark to
- * the mark of the panel after it (`until`), or to the line's end. A mark the
- * line lacks holds from its end, so nothing.
- */
 export const panelWords = (
   line: ReadonlyArray<LineWord>,
   at: string,

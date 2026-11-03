@@ -73,7 +73,6 @@ for (const state of ['playing', 'paused', 'ended', 'failed', 'idle'] as const)
       yield* Deferred.succeed(reply, { state, positionMs: 90_000, durationMs: 240_000 });
       yield* Deferred.await(replied);
       yield* settle;
-      // Neither identity, time, terminal state nor follow may come from hymn 100.
       const shown = registry.get(player.state);
       expect(shown._tag).toBe('Loading');
       expect(Player.$is('Loading')(shown) && shown.track.number).toBe(3);

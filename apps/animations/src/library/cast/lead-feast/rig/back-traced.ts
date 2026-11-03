@@ -1,25 +1,15 @@
-// lead-feast, his back: his curls over the whole of his head, his ears either side; the mantle over his left shoulder (screen left from behind) and down across his back; his teal left sleeve on screen left, his cream right sleeve on screen right; his heels in their sandals, traced from the kept turnaround sheet
-// (../cast-sheet/kept/turnaround.png, box 761, 194, 1018, 857) in the sheet's own pixels.
-// Written by `bun run concept trace src/library/cast/lead-feast/rig/trace.ts --view back`
-// (from apps/animations); trace it again rather than edit it. Points only: the
-// film's papers paint each part. Pure.
-
 import type { Pt } from '@manna/film/style';
 
-/** The view's box in the sheet, as its record keeps it. */
 export const BOX = [761, 194, 1018, 857] as const;
 
-/** The head's centre (its box's), its top row and its height, sheet pixels. */
 export const HEAD_AT = { at: [891, 290], top: 203, height: 174 } as const satisfies {
   readonly at: Pt;
   readonly top: number;
   readonly height: number;
 };
 
-/** The feet's middle at the soles' lowest row, sheet pixels. */
 export const FEET: Pt = [889, 857];
 
-/** An ear, flat skin cut inside his head: its ink is his head's, and the hair beside it lies round it. */
 export const EAR_NEAR: Pt[] = [
   [817.5, 308.5],
   [818, 309],
@@ -38,7 +28,6 @@ export const EAR_NEAR: Pt[] = [
   [816.5, 310.5],
 ];
 
-/** An ear, flat skin cut inside his head: its ink is his head's, and the hair beside it lies round it. */
 export const EAR_FAR: Pt[] = [
   [964.5, 307.5],
   [965.5, 309.5],
@@ -57,7 +46,6 @@ export const EAR_FAR: Pt[] = [
   [964.5, 308],
 ];
 
-/** His head's paper to the line under his chin: his face, his ears and his skull under his hair. */
 export const HEAD: Pt[] = [
   [891.5, 204],
   [902, 201.5],
@@ -145,7 +133,6 @@ export const HEAD: Pt[] = [
   [881, 206.5],
 ];
 
-/** His hair, the whole mass of curls over his head. */
 export const HAIR: Pt[] = [
   [891.5, 204],
   [907, 201],
@@ -248,7 +235,6 @@ export const HAIR: Pt[] = [
   [886, 205],
 ];
 
-/** His near arm (screen left) in its sleeve, from his shoulder to his cuff. */
 export const ARM_NEAR: Pt[] = [
   [805.5, 440.5],
   [807, 441],
@@ -282,7 +268,6 @@ export const ARM_NEAR: Pt[] = [
   [795, 464.5],
 ];
 
-/** His far arm (screen right) in its sleeve, from his shoulder to his cuff. */
 export const ARM_FAR: Pt[] = [
   [974.5, 441.5],
   [975, 442],
@@ -319,7 +304,6 @@ export const ARM_FAR: Pt[] = [
   [973.5, 442],
 ];
 
-/** His tunic and the mantle over it as one garment: its neck, its shoulders, its sides under his arms, its hem. */
 export const BODY: Pt[] = [
   [996, 595],
   [997.5, 592.5],
@@ -470,7 +454,6 @@ export const BODY: Pt[] = [
   [997, 595.5],
 ];
 
-/** His near foot in its sandal. */
 export const FOOT_NEAR: Pt[] = [
   [830.5, 809.5],
   [839, 808.5],
@@ -494,7 +477,6 @@ export const FOOT_NEAR: Pt[] = [
   [826.5, 815.5],
 ];
 
-/** His far foot in its sandal. */
 export const FOOT_FAR: Pt[] = [
   [926.5, 809.5],
   [935, 808.5],
@@ -519,13 +501,10 @@ export const FOOT_FAR: Pt[] = [
   [924.5, 814.5],
 ];
 
-/** The light on his ears, their lit rim. */
 export const EAR_LIGHT: Pt[][] = [];
 
-/** An ear turned to the light: its skin lit as his face (none unless the view reads it). */
 export const EAR_LIT: Pt[][] = [];
 
-/** An ear where it turns from the light: its skin a step deeper, toward rose. */
 export const EAR_SHADE: Pt[][] = [
   [
     [963.5, 324],
@@ -537,7 +516,6 @@ export const EAR_SHADE: Pt[][] = [
   ],
 ];
 
-/** The hollow of an ear in shade, its skin turned toward rose (a lit ear's hollow is its own paper). */
 export const EAR_HOLLOW: Pt[][] = [
   [
     [962.5, 313],
@@ -555,10 +533,8 @@ export const EAR_HOLLOW: Pt[][] = [
   ],
 ];
 
-/** The dark brown band the sheet paints round an ear as its contour (a front's), laid on his head: none where the band runs on into his hair. */
 export const EAR_BAND: Pt[][] = [];
 
-/** The light on his curls. */
 export const HAIR_LIGHT: Pt[][] = [
   [
     [901, 205.5],
@@ -667,7 +643,6 @@ export const HAIR_LIGHT: Pt[][] = [
   ],
 ];
 
-/** The dark under his curls. */
 export const HAIR_DARK: Pt[][] = [
   [
     [921.5, 364],
@@ -825,16 +800,12 @@ export const HAIR_DARK: Pt[][] = [
   ],
 ];
 
-/** The shade under his jaw, down his neck (none under a closed chin). */
 export const NECK_SHADE: Pt[][] = [];
 
-/** The line his jaw lays on his neck under his chin, in the sheet's brown: from side to side, or rising to his ear (none under a closed chin). */
 export const JAW: Pt[][] = [];
 
-/** His jaw's line where it lightens toward his ear, laid over it (none unless the view reads it). */
 export const JAW_FADE: Pt[][] = [];
 
-/** The rose shade under his jaw's line, laid on his head and his neck: up to his ear and down the far side of his neck on a turned head (none unless the view reads it). */
 export const JAW_SHADE: Pt[][] = [
   [
     [912, 370.5],
@@ -864,7 +835,6 @@ export const JAW_SHADE: Pt[][] = [
   ],
 ];
 
-/** The soft rose round the shade under his jaw, laid under it: his skin turning from the light below his ear and down his neck (none unless the view reads it). */
 export const JAW_SOFT: Pt[][] = [
   [
     [912, 370.5],
@@ -900,7 +870,6 @@ export const JAW_SOFT: Pt[][] = [
   ],
 ];
 
-/** His skin the garment's neck shows, below his chin: lit, as his face. */
 export const SKIN: Pt[][] = [
   [
     [870.5, 371.5],
@@ -927,7 +896,6 @@ export const SKIN: Pt[][] = [
   ],
 ];
 
-/** His neck under his hair, in the tunic's neck (from behind). */
 export const NECK: Pt[][] = [
   [
     [870, 371],
@@ -954,7 +922,6 @@ export const NECK: Pt[][] = [
   ],
 ];
 
-/** The teal mantle across him, laid on his tunic. */
 export const MANTLE: Pt[][] = [
   [
     [855.5, 397.5],
@@ -1077,7 +1044,6 @@ export const MANTLE: Pt[][] = [
   ],
 ];
 
-/** The mantle's far side, turned toward blue-violet. */
 export const MANTLE_SHADE: Pt[][] = [
   [
     [820.5, 470],
@@ -1196,7 +1162,6 @@ export const MANTLE_SHADE: Pt[][] = [
   ],
 ];
 
-/** The sash's rose shade round its edge. */
 export const SASH_SHADE: Pt[][] = [
   [
     [831, 543],
@@ -1220,7 +1185,6 @@ export const SASH_SHADE: Pt[][] = [
   ],
 ];
 
-/** The cream sash: its band and its ends. */
 export const SASH: Pt[][] = [
   [
     [827, 541],
@@ -1244,13 +1208,10 @@ export const SASH: Pt[][] = [
   ],
 ];
 
-/** The knot's rose shade, round it and under it to its right. */
 export const KNOT_SHADE: Pt[][] = [];
 
-/** The sash's knot, over its band. */
 export const KNOT: Pt[][] = [];
 
-/** His near sandal's strap. */
 export const STRAP_NEAR: Pt[][] = [
   [
     [819.5, 822],
@@ -1264,7 +1225,6 @@ export const STRAP_NEAR: Pt[][] = [
   ],
 ];
 
-/** His far sandal's strap. */
 export const STRAP_FAR: Pt[][] = [
   [
     [953.5, 821.5],
@@ -1278,7 +1238,6 @@ export const STRAP_FAR: Pt[][] = [
   ],
 ];
 
-/** His curls, each a disc on a lobe of his hair where its dark does not part them. */
 export const CURLS: ReadonlyArray<{ readonly at: Pt; readonly r: number }> = [
   { at: [883.5, 259.5], r: 14 },
   { at: [859.5, 272.5], r: 14 },
@@ -1325,13 +1284,11 @@ export const CURLS: ReadonlyArray<{ readonly at: Pt; readonly r: number }> = [
   { at: [856.5, 324.5], r: 5 },
 ];
 
-/** His near hand at its cuff. */
 export const HAND_NEAR = { at: [791.5, 622.5], r: 19 } as const satisfies {
   readonly at: Pt;
   readonly r: number;
 };
 
-/** His far hand at its cuff. */
 export const HAND_FAR = { at: [988.5, 622], r: 19 } as const satisfies {
   readonly at: Pt;
   readonly r: number;

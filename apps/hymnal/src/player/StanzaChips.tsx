@@ -1,13 +1,3 @@
-/**
- * A hymn's stanza choice in the player sheet: the group `Stanzas`, a chip
- * for each stanza (`Stanza <n>`, checked while Play sings it) and, once a
- * choice is made, an `All` chip that sings every stanza again. A tap tells
- * `press` and turns its stanza as `toggle` says: from all, it turns that
- * stanza off; the last chosen stanza stays. The choice is kept under the
- * hymn's `stanzas.<n>` key. A hymn of one stanza has nothing to choose, so
- * it draws no group.
- */
-
 import { useAtom } from '@effect/atom-react';
 import { Array as Arr, Option } from 'effect';
 import { memo, useMemo } from 'react';

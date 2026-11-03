@@ -1,6 +1,3 @@
-// The place the ask page's URL keeps: an ask or a page of asks read back as
-// it was written, each keeping a still open full size.
-
 import { describe, expect, test } from 'bun:test';
 import { Option } from 'effect';
 import { pageMove } from '../../core/api.ts';
@@ -24,7 +21,6 @@ describe('the place in the URL', () => {
     expect(pageMove('/asks/a0123456780', ask)).toBe('push');
     const page = Option.getOrThrow(withStill('/asks/page/a1', 'x'));
     expect(stillIn(page)).toEqual(Option.some('x'));
-    // Only a page that shows a Zoom keeps one.
     expect(withStill('/films/f/export', 'x')).toEqual(Option.none());
     expect(stillIn('/films/f/export?still=x')).toEqual(Option.none());
   });

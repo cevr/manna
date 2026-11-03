@@ -1,11 +1,3 @@
-// A cast sheet's brief from the app's own house block: the block made a
-// sheet's, a block whose phrase moved stops the brief, every brief carries
-// the sheet rules the owner set, a figure stands its own heads (the canon's
-// unless the member names its own, a smaller figure its share of the grown
-// height), the hair is spoken of only where it shows and the beard only on a member who has one, and a layout or a look
-// that floats a hand stops it: the library's and every film's records are
-// read here.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
@@ -20,7 +12,6 @@ import {
 } from '../core/cast-record.ts';
 import { castSheetBrief, headsWords, turnaroundLayout } from './cast-sheet-brief.ts';
 
-/** The house block as the app keeps it. */
 const houseBlock = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   return yield* fs.readFileString(
@@ -28,7 +19,6 @@ const houseBlock = Effect.gen(function* () {
   );
 }).pipe(Effect.provide(BunServices.layer));
 
-/** How a member is drawn across its sheet: its heads, its smaller figures, whether its hair shows and whether it has a beard. */
 interface Drawn {
   readonly heads: number;
   readonly figures: ReadonlyArray<ViewFigure>;
@@ -36,10 +26,8 @@ interface Drawn {
   readonly beard: boolean;
 }
 
-/** How a canon member with hair and a beard is drawn: the default the tests vary. */
 const CANON_MEMBER: Drawn = { heads: CANON_HEADS, figures: [], hair: true, beard: true };
 
-/** A sheet's brief over `house`, a turnaround's unless `kind` says, its figures the canon's unless `drawn` says. */
 const briefOver = (house: string, kind: SheetKind = 'turnaround', drawn: Partial<Drawn> = {}) =>
   castSheetBrief({
     kind,
@@ -72,7 +60,6 @@ describe("the house block made a sheet's", () => {
     'keeps the house hand: a circle at the end of an arm in its sleeve, never floating free',
     () =>
       Effect.gen(function* () {
-        // The owner's rule (2026-10-18, look v5): every hand ends an arm in its sleeve.
         expect(yield* houseBlock).toContain(
           'Hands are plain round paper circles at the end of each arm in its sleeve, the sleeve running from the shoulder to the hand: never a hand floating free of the body, never a bare arm',
         );
@@ -190,7 +177,6 @@ describe("a figure's height in its own heads", () => {
       expect(said('turnaround', CANON_HEADS)).toContain(
         'The person stands about three and a third heads tall.',
       );
-      // The plain lead stands about 2.6 heads (character-design 2.3).
       expect(said('turnaround', 2.6)).toContain(
         'The person stands about two and two thirds heads tall.',
       );
@@ -357,10 +343,8 @@ describe('a hand that floats', () => {
       const fs = yield* FileSystem.FileSystem;
       const house = yield* houseBlock;
       const app = new URL('../../../../apps/animations/src', import.meta.url).pathname;
-      /** The members' sheet folders under `cast`, where a `cast-sheet.json` is. */
       const sheetsIn = (cast: string) =>
         Effect.gen(function* () {
-          // A film with no cast folder (or a file beside the films) lists none.
           const members = yield* fs
             .readDirectory(cast)
             .pipe(Effect.orElseSucceed((): Array<string> => []));
@@ -380,7 +364,6 @@ describe('a hand that floats', () => {
             yield* fs.readFileString(`${folder}/cast-sheet.json`),
           );
           const look = yield* fs.readFileString(`${folder}/look.md`);
-          // A single drawing is kept by hand and never briefed (`castKindPlan` refuses it).
           const briefed = SheetKind.literals.filter((kind) => kind !== 'single');
           const kinds = briefed.flatMap((kind) =>
             Option.toArray(

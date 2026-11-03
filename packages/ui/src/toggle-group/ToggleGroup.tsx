@@ -1,18 +1,3 @@
-// Upstream: packages/react/src/toggle-group/ToggleGroup.tsx
-//
-// A set of toggles (`role="group"`), one pressed at a time. The owner holds
-// `value`: pressing a toggle offers `[its value]`, pressing the pressed one
-// offers `[]`, and the toggles show what the owner keeps. It is a composite
-// with one tab stop (the left and right arrows, wrapping at the ends; Home
-// and End), which starts on the toggle drawn pressed (`aria-pressed`; the
-// first when none is). The server's markup and the browser's first render
-// put it there too, from `value` (see Toggle); a `value` naming no toggle
-// gives none there, and the first once the browser settles. A mouse press from outside the group takes no focus:
-// focus goes where the platform sends it for a press on content that takes
-// none, the nearest focusable ancestor (a dialog's popup) or else nowhere;
-// the pressed toggle takes the tab stop either way (see Toggle).
-// Upstream's uncontrolled mode, `multiple`, `disabled`, `orientation` and
-// `loopFocus` are left out.
 import type { JSX } from '@solidjs/web';
 import { omit, untrack } from 'solid-js';
 
@@ -30,15 +15,12 @@ interface ToggleGroupProps<Value extends string = string> extends BaseUIComponen
   'div',
   ToggleGroupState
 > {
-  /** The values of the pressed toggles. */
   value: readonly Value[];
-  /** Called with the values a press offers: the pressed toggle's alone, or none. */
   onValueChange: (groupValue: Value[]) => void;
 }
 
 const STATE: ToggleGroupState = {};
 
-/** The toggle drawn pressed, among the group's first toggles (-1: none). */
 const pressedIndex = (elements: ReadonlyArray<HTMLElement | null>) =>
   elements.findIndex((el) => el?.getAttribute('aria-pressed') === 'true');
 
@@ -65,7 +47,6 @@ export function ToggleGroup<Value extends string = string>(
         ancestor.focus({ preventScroll: true });
         return;
       }
-      // An HTML control or an SVG one (the Lab's wipe grip) alike.
       const active = element.ownerDocument.activeElement;
       if (active !== null && active !== element.ownerDocument.body && 'blur' in active) {
         (active as FocusableElement).blur();

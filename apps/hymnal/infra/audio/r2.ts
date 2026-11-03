@@ -1,18 +1,3 @@
-/**
- * The target: the R2 bucket `cvr-hymns`, written through Cloudflare's REST
- * API with the credentials of the owner's Alchemy profile
- * (`Cloudflare.CloudflareApiLive()`, provided by `./copy.ts` on a real run
- * alone, so a dry run never reads the profile).
- *
- * Both calls are distilled operations, so each is encoded, decoded, classed
- * and retried by distilled's Cloudflare protocol and its default retry
- * policy. Listing is distilled's `listBucketObjects`, page by page. The
- * upload is an operation of its own, built with distilled's `API.make` on the
- * same route as its `uploadBucketObject`: that one escapes the whole key as
- * one path label (`audio%2Fsdah%2F1.mp3`), and R2 takes a key's slashes only
- * literally, so this one names the key as a greedy label (`{object_name+}`),
- * each segment escaped and the slashes kept.
- */
 import * as CloudflareErrors from '@distilled.cloud/cloudflare/Errors';
 import { CloudflareProtocol } from '@distilled.cloud/cloudflare/Protocol';
 import * as r2 from '@distilled.cloud/cloudflare/r2';
@@ -29,17 +14,9 @@ import { StoreFailed, Target } from './stores.ts';
 
 const BUCKET = 'cvr-hymns';
 
-/** How long one upload, or the whole listing, may take, retries included. */
 const PUT_TIMEOUT = '3 minutes';
 const LIST_TIMEOUT = '3 minutes';
 
-/**
- * Cloudflare's authentication and permission codes, kept with their code:
- * distilled's global map would answer them as an `Unauthorized` or a
- * `Forbidden` that carries the message alone. A matched class is tagged
- * retryable by the same message rule (`isTransientAuthBlip` in distilled's
- * protocol), so a blip retries and a denial fails, as before.
- */
 class CloudflareDenied extends T.applyErrorMatchers(
   Schema.TaggedError<CloudflareDenied>()('CloudflareDenied', {
     code: Schema.Finite,
@@ -64,7 +41,6 @@ const PutObjectRequest = Schema.Struct({
   }),
 );
 
-/** The envelope's `result`: R2 gives the size as a string. */
 const PutObjectResponse = Schema.Struct({
   etag: Schema.optional(Schema.NullOr(Schema.String)),
   size: Schema.optional(Schema.NullOr(Schema.String)),
@@ -80,13 +56,6 @@ const putObject = API.make(() => ({
 
 const failure = (reason: string) => StoreFailed.make({ store: 'r2', reason });
 
-/**
- * An answer whose body is lost after its headers fails as `StoreFailed`, and
- * that key then fails alone while the run goes on. A read that distilled runs
- * under `Effect.orDie` arrives as a defect carrying the `HttpClientError`;
- * every other defect stays a defect. A read that distilled fails typed
- * arrives as an `HttpClientError` failure, named by `failureOf`.
- */
 const bodyLost =
   (what: string) =>
   <A, E, R>(self: Effect.Effect<A, E, R>) =>
@@ -95,7 +64,6 @@ const bodyLost =
       return Effect.fail(failure(`${what}: the answer lost its body: ${defect.message}`));
     });
 
-/** A 2xx answer whose body could not be read: an `HttpClientError` whose reason is a `DecodeError`. */
 const lostBody = (error: { readonly message: string }): boolean => {
   if (!HttpClientError.isHttpClientError(error)) return false;
   const reason = error.reason;
@@ -103,7 +71,6 @@ const lostBody = (error: { readonly message: string }): boolean => {
   return reason.response.status >= 200 && reason.response.status < 300;
 };
 
-/** A failure as Cloudflare said it: its class, its code when it gave one, its message. */
 const reasonOf = (error: { readonly message: string }) => {
   const tag = Option.liftPredicate(Reflect.get(error, '_tag'), Predicate.isString);
   const code = Option.liftPredicate(Reflect.get(error, 'code'), Predicate.isNumber);
@@ -111,7 +78,6 @@ const reasonOf = (error: { readonly message: string }) => {
   return `${head}: ${error.message}`;
 };
 
-/** The key's failure: a lost body by that name, any other failure as Cloudflare said it. */
 const failureOf = (what: string, error: { readonly message: string }) => {
   if (lostBody(error)) return failure(`${what}: the answer lost its body: ${error.message}`);
   return failure(`${what}: ${reasonOf(error)}`);
@@ -184,11 +150,6 @@ export const TargetR2 = Layer.effect(
   }),
 );
 
-/**
- * R2 behind the owner's profile, built only for a real run. The empty
- * `AuthProviders` registry is the one the Cloudflare auth layer registers
- * into, as the Alchemy CLI starts it.
- */
 export const TargetR2Writes = TargetR2.pipe(
   Layer.provide(Cloudflare.CloudflareApiLive()),
   Layer.provide(Layer.succeed(AuthProviders, AuthProviders.of({}))),

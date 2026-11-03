@@ -1,34 +1,22 @@
-// Parts of a film: stretches that each begin on a scene and run until the
-// next one's. A film's acts (`look.acts`: its colour script, its lights, its
-// chapters) and its score's movements are both declared this way, as lists
-// in film order, and the first always opens the film. The one rule for which
-// scenes an act holds lives here. Pure: it reads only the scenes' order and,
-// for times, the placed scenes.
-
 import { Array as Arr, Option, Result } from 'effect';
 import { PartOutOfOrder, UnknownScene } from './errors.ts';
 import type { Placed } from './layout.ts';
 import type { Interval } from './time.ts';
 
-/** What a part declares: the scene it begins on and its name. */
 interface PartOf {
   readonly from: string;
   readonly name: string;
 }
 
-/** A part's scenes, by id, in film order. */
 interface Members<P> {
   readonly part: P;
   readonly scenes: ReadonlyArray<string>;
 }
 
-/** A part laid over the placed film: its scenes and the film seconds they span. */
 export interface Stretch<P> extends Members<P>, Interval {}
 
-/** Why parts cannot be laid over a film. */
 export type PartError = UnknownScene | PartOutOfOrder;
 
-/** Where each part's scene sits in `ids`, in declared order; fails at the first unknown or out-of-order part. */
 const indicesOf = <P extends PartOf>(
   parts: ReadonlyArray<P>,
   ids: ReadonlyArray<string>,
@@ -47,18 +35,11 @@ const indicesOf = <P extends PartOf>(
   return Result.succeed(at);
 };
 
-/**
- * Each part's scenes out of `ids` (the film's scenes, in order): from its
- * scene until the next part's. The first holds every scene before its own.
- * Fails with the first part naming no scene, or starting on or before the
- * part declared ahead of it.
- */
 export const membersOf = <P extends PartOf>(
   parts: ReadonlyArray<P>,
   ids: ReadonlyArray<string>,
 ): Result.Result<ReadonlyArray<Members<P>>, PartError> =>
   Result.map(indicesOf(parts, ids), (at) => {
-    // The first part reaches back to the film's first scene.
     const bounds = [0, ...at.slice(1), ids.length];
     return parts.map((part, i) => ({
       part,
@@ -66,7 +47,6 @@ export const membersOf = <P extends PartOf>(
     }));
   });
 
-/** Each part laid over the placed film: its scenes, from the first one's start to the last one's end. */
 export const stretchesOf = <P extends PartOf>(
   parts: ReadonlyArray<P>,
   placed: ReadonlyArray<Placed>,

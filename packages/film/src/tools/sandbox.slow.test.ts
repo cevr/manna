@@ -12,15 +12,6 @@ import {
   Sink,
   Stream,
 } from 'effect';
-// The counsel's sandbox as the counsel runs it (`Counsel.claudeAt`, a
-// recording spawner in place of the process): headless Claude on Opus at max
-// effort, from the packet's folder, under a Seatbelt profile that closes every
-// home, the temp folders and other volumes to reading, opens the packet,
-// Claude's install and keychains to read and a scratch folder of the run's
-// own (its temp files and its state) to write, and nothing else. On macOS
-// the profile is also run: a stand-in for Claude reads none of a home's
-// Claude state and writes only its own, and a program in it reads the
-// packet and nothing beside it.
 
 import { describe, expect, it } from 'effect-bun-test';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -38,14 +29,12 @@ const wordValue = (word: string | Redacted.Redacted<string>): string => {
 const home = '/Users/someone';
 const claude = `${home}/.local/share/claude/versions/2.1.300`;
 
-/** A run of the counsel's process: its argv, folder and environment. */
 interface Spawned {
   readonly argv: ReadonlyArray<string>;
   readonly cwd: string;
   readonly env: Readonly<Partial<Record<string, string>>>;
 }
 
-/** A spawner that keeps each command it is given and answers `answer` on stdout, exiting 0. */
 const answering = (answer: string, spawned: Array<Spawned>) =>
   ChildProcessSpawner.make((command) => {
     if (command._tag === 'StandardCommand')
@@ -76,12 +65,6 @@ const answering = (answer: string, spawned: Array<Spawned>) =>
     );
   });
 
-/**
- * The counsel asked, through `Counsel.claudeAt`, with `home` as its home
- * and, where Claude is installed under it, a stand-in for Claude: a shell
- * script that reads the prompt and runs `body`. Its answer, and the folder
- * the run's files are kept in.
- */
 const askingAt = (home: string, body: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -171,13 +154,11 @@ describe("the counsel's sandbox", () => {
           '(allow file-write* (subpath "/dev"))',
           '(deny file-read-data (subpath "/Users") (subpath "/Volumes") (subpath "/private/tmp") (subpath "/private/var/folders") (subpath "/private/var/tmp"))',
         ]);
-        // An allow-list: the packet, Claude's install, the keychains, and its own scratch folder.
         expect(lines[5]).toBe(
           `(allow file-read-data (subpath "${packet}") (subpath "${home}/.local/share/claude") (subpath "${home}/Library/Keychains") (subpath "${scratch}"))`,
         );
         expect(lines[6]).toBe(`(allow file-write* (subpath "${scratch}"))`);
         expect(lines).toHaveLength(7);
-        // Opened whole: no home, no Claude state of the user's, no repo, no temp folder.
         for (const whole of [
           home,
           `${home}/.claude`,
@@ -207,10 +188,6 @@ describe("the counsel's sandbox", () => {
     },
   );
 
-  // The host's route (`ANTHROPIC_BASE_URL`; unset or empty, direct), which the counsel's
-  // run is given as it is, and the route its start line names: the proxy's scheme and
-  // host alone (no login, path, query or fragment, where a token can sit), `proxy` for
-  // a value that is no `http` or `https` URL, `direct` with none.
   const routes: ReadonlyArray<readonly [string, Record<string, string>, string]> = [
     ['no proxy', {}, 'route=direct'],
     ['an empty one', { ANTHROPIC_BASE_URL: '' }, 'route=direct'],
@@ -231,7 +208,6 @@ describe("the counsel's sandbox", () => {
       ],
       ['a token after #', 'http://localhost:3456#sk-secret', 'route=http://localhost:3456'],
       ['a value that is no URL', 'http://me:se/cret@localhost:3456', 'route=proxy'],
-      // Each parses with a scheme that is no web one: its first word, a login or a token.
       ['a login with no scheme', 'me:secret@localhost:3456', 'route=proxy'],
       ['a token with no scheme', 'sk-secret:x@localhost:3456', 'route=proxy'],
       ['a host with no scheme', 'localhost:3456', 'route=proxy'],
@@ -306,7 +282,6 @@ describe("the counsel's sandbox", () => {
         yield* fs.writeFileString(path.join(packet, 'packet.md'), 'rank A and B');
         const run = path.join(yield* fs.makeTempDirectoryScoped(), 'counsel');
         const refused = yield* Effect.flip(counsel.ask(path.join(packet, 'packet.md'), run));
-        // Its install's folder would be `~/.local`, opened whole: it fails closed.
         expect(refused.message).toBe(
           `the counsel run failed (Claude's program is ${wrapper}, not a version under …/claude/versions/ (the native installer's): the sandbox opens its install's folder to reading, and this one's could hold anything)`,
         );
@@ -348,7 +323,6 @@ describe("the counsel's sandbox", () => {
           yield* fs.makeDirectory(path.dirname(path.join(home, file)), { recursive: true });
           yield* fs.writeFileString(path.join(home, file), 'an earlier run');
         }
-        // It says what it could read and write.
         const asked = yield* askingAt(home, [
           'echo "RANKING: no preference"',
           `for p in ${marked.map((file) => `"$HOME/${file}"`).join(' ')}; do`,
@@ -415,7 +389,6 @@ describe("the counsel's sandbox", () => {
         expect(failure.message).toBe(
           `the counsel run failed (claude did not finish within 0.2 s and was stopped); what it printed is under ${dir}`,
         );
-        // It printed after its trap: SIGTERM was ignored, and the kill ended it.
         expect(yield* fs.readFileString(path.join(dir, 'claude.md'))).toBe('a first thought\n');
         expect(Duration.toMillis(took)).toBeLessThan(2_500);
       }).pipe(
@@ -426,8 +399,6 @@ describe("the counsel's sandbox", () => {
               Effect.succeed({
                 plan: { reads: [folders.packet], writes: [folders.scratch] },
                 env: { PATH: '/usr/bin:/bin' },
-                // Deaf to SIGTERM (its sleeps too, which inherit the ignored signal); it
-                // would end by itself after 4 s.
                 command: [
                   '/bin/sh',
                   '-c',

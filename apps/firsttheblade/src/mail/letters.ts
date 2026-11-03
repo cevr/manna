@@ -1,20 +1,3 @@
-/**
- * The list's two letters, each as plain text and as simple HTML in the
- * site's colours: the one that asks an address to confirm, and the one a
- * film sends when it is out. The HTML is a page of text and links: no
- * image, no font or style from anywhere else, no pixel and no tracked link.
- * A film's letter carries `List-Unsubscribe` and `List-Unsubscribe-Post`
- * (RFC 2369 and RFC 8058), so a mail app can offer to leave in one press,
- * and the same link is at its foot.
- *
- * Links are built on `origin`, the site the request came to, so a copy on a
- * throwaway stage sends links to itself.
- *
- * Every letter's foot carries `POSTAL_ADDRESS` once there is one. There is
- * none yet (owner, 2026-10-20): a letter that asks for support, such as a
- * Patreon link, must carry one first, and `letters.test.ts` refuses a letter
- * that mentions Patreon while it is none.
- */
 import { Option } from 'effect';
 
 import { CHANNEL } from '../site.ts';
@@ -34,18 +17,15 @@ const escape = (text: string) =>
 
 const FONT = "Georgia, 'Times New Roman', serif";
 
-/** A paragraph of the HTML letter; its words are escaped here. */
 const para = (text: string, style = '') =>
   `<p style="margin:0 0 16px;${style}">${escape(text)}</p>`;
 
 const link = (href: string, words: string) =>
   `<a href="${escape(href)}" style="color:${PALETTE.accent};">${escape(words)}</a>`;
 
-/** A link drawn as the site's pill. */
 const button = (href: string, words: string) =>
   `<p style="margin:24px 0;"><a href="${escape(href)}" style="display:inline-block;padding:12px 24px;border-radius:999px;background:${PALETTE.ink};color:${PALETTE.paper};text-decoration:none;font-weight:600;">${escape(words)}</a></p>`;
 
-/** The page every HTML letter is laid on: the site's paper, its ink, one column. */
 const page = (title: string, body: string) =>
   [
     '<!doctype html>',
@@ -56,10 +36,8 @@ const page = (title: string, body: string) =>
     '</div></body></html>',
   ].join('');
 
-/** The channel's postal address (a P.O. box), at the foot of every letter once it is set. */
 export const POSTAL_ADDRESS: Option.Option<string> = Option.none();
 
-/** The foot's postal address in the HTML letter: a line of its own, or nothing. */
 const postalHtml = (postal: Option.Option<string>) =>
   Option.toArray(postal)
     .map((line) => `<br>${escape(line)}`)
@@ -77,7 +55,6 @@ export const confirmLink = (origin: string, token: string) =>
 export const unsubscribeLink = (origin: string, token: string) =>
   `${origin}/unsubscribe?token=${encodeURIComponent(token)}`;
 
-/** The letter that asks an address to confirm it wants the films. */
 export const confirmLetter = (
   to: Address,
   origin: string,
@@ -108,7 +85,6 @@ export const confirmLetter = (
 
 const watchUrl = (film: Film) => `https://www.youtube.com/watch?v=${film.episode.youtubeId}`;
 
-/** The letter a film sends to each subscriber when it is out. */
 export const filmLetter = (
   to: Address,
   origin: string,

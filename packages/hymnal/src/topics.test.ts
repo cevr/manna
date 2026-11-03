@@ -11,7 +11,6 @@ import { describe, expect, it } from 'effect-bun-test';
 import { buildTopics, decodeFixes, type Fixes, readRows, type Rows } from '../scripts/topics.js';
 import { type Topic, Topics, topicOf } from './hymn.js';
 
-/** The independent captured source, read as the compile script reads it. */
 const hymnal = layerSourceText.pipe(Layer.provide(BunServices.layer));
 
 const TOPICS = new URL('../data/sdah-1985/topics.json', import.meta.url).pathname;
@@ -21,7 +20,6 @@ const TopicsJson = Schema.fromJsonString(Topics);
 const encodeTopics = Schema.encodeEffect(TopicsJson);
 const decodeTopics = Schema.decodeUnknownEffect(TopicsJson);
 
-/** The db's rows, the fixes, and the committed table, decoded. */
 const inputs = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const rows = yield* readRows;
@@ -42,7 +40,6 @@ it.effect('keeps source-text bytes in the canonical writer format', () =>
   }).pipe(Effect.provide(BunServices.layer)),
 );
 
-/** The section a move files hymn n under, else the db's. */
 const expectedSection = (rows: Rows, fixes: Fixes, n: number) =>
   fixes.moves.find((m) => m.first <= n && n <= m.last)?.to ??
   rows.hymns.find((h) => h.number === n)?.categoryId;
@@ -105,7 +102,6 @@ describe('topics: evidence', () => {
         }
         for (const p of fixes.printed)
           expect([p.hymn, fold(p.heading)]).toEqual([p.hymn, fold(nameOf(p.hymn))]);
-        // A contiguity witness stands only between two printed witnesses of its heading.
         for (const p of fixes.printed.filter((w) => w.from === 'contiguity')) {
           expect([
             p.hymn,
@@ -113,7 +109,6 @@ describe('topics: evidence', () => {
             printedAs(p.hymn + 1, p.heading),
           ]).toEqual([p.hymn, true, true]);
         }
-        // A name is the db's trimmed, or the print's with a photo witness under that section.
         for (const { id, name } of fixes.names) {
           const db = rows.categories.find((c) => c.id === id)?.name;
           const topic = committed.topics.find((t) => t.id === id);
@@ -141,7 +136,6 @@ describe('topics: the builder', () => {
   );
 });
 
-/** mulberry32: a seeded PRNG giving floats in [0, 1). */
 const mulberry32 = (seed: number) => {
   let a = seed >>> 0;
   return () => {
@@ -153,7 +147,6 @@ const mulberry32 = (seed: number) => {
   };
 };
 
-/** A random partition of 1-695 into 2 to 80 ranges, ids shuffled. */
 const partition = (random: () => number): Topic[] => {
   const count = 2 + Math.floor(random() * 79);
   const cuts = new Set<number>();

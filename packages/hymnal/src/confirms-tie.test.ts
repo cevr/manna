@@ -1,16 +1,3 @@
-/**
- * Acceptance (checkbulk S3, chordbulk m5): a melody that leans on the
- * grid's strong beats no more often than on another bar's does not confirm
- * the grid (`confirms`), so a tie never moves a chord by the grid's bars.
- *
- * Seven quarter-note syllables, the line's last the one accent, at beat 6:
- * a strong beat of 4/4 (bar 1, beat 2) and of 3/4 (bar 2, beat 0) alike.
- * Chords C at syllable 0, G at 3, C at 6. Under 4/4's strong-beat rule G
- * moves to syllable 4; under 3/4's it stays on 3. With a tie, 4/4 is either
- * not confirmed, or it places the chords as 3/4 does. Synthetic notes and
- * chords only.
- */
-
 import { Effect } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 

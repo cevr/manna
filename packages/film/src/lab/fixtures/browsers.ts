@@ -1,19 +1,3 @@
-// The browser tests' Chrome: Bun's one per test process (`tools/chrome.ts`),
-// launched by the first case that opens a tab. A case's tab is lent from a
-// pool of views and goes back to it when the case ends, so a case pays for a
-// page load, not for a new renderer: a fresh view costs Chrome a renderer
-// process and a cold compile of the page's script, three to four times the
-// CPU of the load itself. Each case still gets an origin of its own
-// (`https://<n>.lab.test`, secure, so the microphone may be asked for; plain
-// `http://` when a case is the phone's link), so
-// cases running at once, or one after another in a view, share no storage
-// and no permissions; and between cases the view waits on an empty page of
-// the tests' site, its history, scripts and listeners dropped (`lend`).
-// Scripts load from one origin for every case (`asset`), so a view's
-// renderer compiles them once. The process's flags are the same for every
-// case: the renderer's software 2D canvas, media that plays without a
-// gesture, and one fake microphone every case shares (`FAKE_MIC`).
-
 import type { SourceMap } from 'node:module';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
@@ -34,18 +18,8 @@ import { type Ask, fromIdle, lease } from './lease.ts';
 import { type Logged, type Request, type Response, type Tab, type View, makeTab } from './tab.ts';
 import { tone } from './tone.ts';
 
-/**
- * The fake microphone every tab hears: a 440 Hz sine at half scale on input
- * 1 of a two-input interface, input 2 silent, four seconds looped. Chromium's
- * fake device runs at 44.1 kHz, as the file does.
- */
 const FAKE_MIC = { seconds: 4, amplitude: 0.5, rate: 44100 } as const;
 
-/**
- * The microphone's WAV in the system's temp folder: the same bytes for every
- * run and process, so it is written whole (to a file of this process's, then
- * renamed over the name) and left for the next run.
- */
 const micFile = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const temp = yield* Config.String('TMPDIR').pipe(Config.withDefault('/tmp'));
@@ -59,94 +33,58 @@ const micFile = Effect.gen(function* () {
   return wav;
 }).pipe(Effect.orDie, Effect.provide(BunServices.layer));
 
-/** Every test tab's Chrome flags, worked out once per process. */
 const flags = Effect.runSync(
   Effect.cached(
     Effect.map(micFile, (wav) => [
-      // The renderer's software 2D canvas (`tools/browser.ts`), as every test draws.
       '--disable-accelerated-2d-canvas',
-      // WebGL 2 on SwiftShader, Chrome's software GPU, so a rig the Rive Renderer
-      // draws (`src/rive`) is drawn: the tests ask for no GPU, so their Chrome keeps the
-      // `--disable-gpu` Bun spawns it with, and SwiftShader is the only WebGL it can have.
       '--enable-unsafe-swiftshader',
-      // Plays media without a gesture: the test is the reviewer, and it never clicks first.
       '--autoplay-policy=no-user-gesture-required',
       '--use-fake-device-for-media-stream',
       `--use-file-for-fake-audio-capture=${wav}`,
-      // The fake microphone's file is opened by Chrome's audio service, whose
-      // sandbox on macOS (and Windows) lets it open no file of ours: there it
-      // recorded silence. On Linux the service runs unsandboxed already.
       '--disable-features=AudioServiceSandbox',
-      // A desk's mouse: headless Chrome has no pointer, so `(pointer: none)`
-      // matched and every page took the phone's density. Fine (4) and hover
-      // (2), as Blink numbers them; touch emulation (a phone's lease) stands
-      // over them, and a view's next page has them again once it is off.
       '--blink-settings=primaryPointerType=4,availablePointerTypes=4,primaryHoverType=2,availableHoverTypes=2',
     ]),
   ),
 );
 
-/** The scope the pooled views live in: the process's, never closed (Chrome goes with the process). */
 const forever = Scope.makeUnsafe();
 
-/** The tests' site: every case's origin is under it, and the assets' origin is it. */
 const SITE = 'lab.slow.test';
 
-/** The origin every case loads its scripts from (`asset`). */
 const ASSETS = `https://${SITE}`;
 
-/** The page a view waits on between cases: empty, and it clears the tab's name. */
 const IDLE = `${ASSETS}/idle`;
 const IDLE_PAGE = `<!doctype html><title>idle</title><script>window.name = ''</script>`;
 
-/**
- * A file every case loads from the same URL (its bytes' hash in it), so a
- * view's renderer compiles a script once rather than once a case. A page
- * names it with `scriptOf`.
- */
 export interface Asset {
   readonly url: string;
   readonly response: Response;
 }
 
-/** `response` as an asset named `name`: CORS-open, so a script from it reports its errors whole. */
 export const asset = (name: string, response: Response): Asset => ({
   url: `${ASSETS}/${Bun.hash(response.body).toString(36)}/${name}`,
   response: { ...response, headers: { 'access-control-allow-origin': '*' } },
 });
 
-/** The tag that runs `script` (an asset), fetched with CORS as its headers allow. */
 export const scriptOf = (script: Asset) => `<script crossorigin src="${script.url}"></script>`;
 
-/** What a case's tab hears from the view it holds: its page's requests, throws and console. */
 interface Lease {
   readonly origin: string;
   readonly events: EventTarget;
   readonly console: (type: string, args: ReadonlyArray<unknown>) => void;
 }
 
-/**
- * A pooled view: the view, the tab's way of driving it, the case holding it,
- * if one is, and whether it is retired (`View.retire`): closed when given back.
- */
 interface Slot {
   readonly view: Bun.WebView;
   readonly lent: View;
   readonly held: { lease: Option.Option<Lease>; retired: boolean };
 }
 
-/** The views no case holds, the last one back on top. */
 const idle: Array<Slot> = [];
 let made = 0;
 
-/** How many views this process has opened for its tabs: the pool's own test reads it. */
 export const viewsMade = () => made;
 
-/**
- * The command line of the Chrome this process's tabs run in, as Chrome
- * shows it (`chrome://version`), read in a view of its own that closes after:
- * what it was spawned with, the flags `tools/chrome.ts` adds among them.
- */
 export const chromeCommandLine: Effect.Effect<string> = Effect.gen(function* () {
   const view = yield* openView(yield* flags, { width: 800, height: 600 });
   yield* Effect.promise(() => view.navigate('chrome://version'));
@@ -155,12 +93,6 @@ export const chromeCommandLine: Effect.Effect<string> = Effect.gen(function* () 
   );
 }).pipe(Effect.scoped, Effect.orDie, Effect.provide(BunServices.layer));
 
-/**
- * Calls that run one at a time, in order, however their callers fare: run
- * apart from the caller, so a caller interrupted leaves its call out and the
- * next starts once it ends (a view takes one protocol call and one script at
- * a time; Bun refuses a second while one is out).
- */
 const inTurn = () => {
   const one = Semaphore.makeUnsafe(1);
   return <A>(call: () => Promise<A>): Promise<A> =>
@@ -174,21 +106,14 @@ const inTurn = () => {
     );
 };
 
-/** A paused request, as far as the pool reads it to route it. */
 const Paused = Schema.Struct({
   requestId: Schema.String,
   request: Schema.Struct({ url: Schema.String }),
 });
 
-/** A protocol call made for no case, its failure (a view closing) of no one's concern. */
 const quietly = (call: Promise<unknown>) =>
   Effect.runFork(Effect.ignore(Effect.tryPromise(() => call)));
 
-/**
- * A request the view paused: to the holding case when it is on its origin or
- * the assets'; the idle page answered; anything else (a page of a case that
- * ended, still asking) failed.
- */
 const routeRequest = (slot: Slot) => (event: Event) => {
   const data: unknown = Reflect.get(event, 'data');
   Option.map(Schema.decodeUnknownOption(Paused)(data), (paused) => {
@@ -215,7 +140,6 @@ const routeRequest = (slot: Slot) => (event: Event) => {
   });
 };
 
-/** A new view for the pool, its session up, every request to the tests' site paused for it. */
 const makeSlot = Effect.gen(function* () {
   const held: Slot['held'] = { lease: Option.none(), retired: false };
   const view = yield* openView(yield* flags, {
@@ -258,13 +182,6 @@ const makeSlot = Effect.gen(function* () {
   return slot;
 }).pipe(Effect.provide(BunServices.layer));
 
-/**
- * A case's hold on a view, sized and pointed as `ask` says, until the scope
- * closes (`lease`). Then the view has the mouse's pointer again, waits on the
- * idle page with no history behind it, and goes back to the pool; a view
- * that cannot, or that is retired (two fingers were down on it at once), is
- * closed instead.
- */
 const lend = (held: Lease, ask: Ask) =>
   lease<Slot>(
     {
@@ -290,13 +207,6 @@ const lend = (held: Lease, ask: Ask) =>
     ask,
   );
 
-/**
- * The views the pool opens as the module loads, one for each case the test
- * script runs at once (`--max-concurrency=3`): Chrome's launch and its
- * renderers' start are the process's setup, done before any case starts, so
- * no case's timeout counts them. When the first three cases paid for them,
- * four workers on one core took 4.6 s over them, a third of a case's 15 s.
- */
 const WARM = 3;
 
 idle.push(
@@ -306,11 +216,6 @@ idle.push(
   )),
 );
 
-/**
- * How many times slower every tab's page runs (`FILM_E2E_CPU_THROTTLE`): a
- * slow phone or a loaded CI runner, on demand. Read once from the process's
- * environment, so a case that provides its own config does not hide it.
- */
 const throttle = Effect.runSync(
   Config.option(Config.Number('FILM_E2E_CPU_THROTTLE')).pipe(
     Effect.map(Option.filter((rate) => rate > 1)),
@@ -319,39 +224,21 @@ const throttle = Effect.runSync(
 );
 
 let tabs = 0;
-/** How many tabs are open in this process now: cases that run at once each hold one. */
 let open = 0;
 
-/** An object a page logged, as Chrome hands it over: its description. */
 const described = Schema.decodeUnknownOption(Schema.Struct({ description: Schema.String }));
 
-/** How a test tab opens: its viewport, whether it may use the microphone, and its server. */
 interface TabOptions {
   readonly width: number;
   readonly height: number;
-  /** Allowed the microphone, or refused it (the browser's prompt, answered no). */
   readonly microphone: boolean;
-  /** Answers every request to the tab's origin; `None` holds it unanswered. */
   readonly serve: (request: Request) => Effect.Effect<Option.Option<Response>>;
-  /** The files its pages load from the assets' origin (`asset`). */
   readonly assets: ReadonlyArray<Asset>;
-  /** Scripts run before the page's own on every load. */
   readonly init: ReadonlyArray<string>;
-  /**
-   * A phone's pointer: the browser's touch emulation, so the page matches
-   * `(pointer: coarse)` and `(hover: none)` as a phone does, and scrollbars
-   * that take no room, as a phone's overlay ones. None: the desk's mouse and
-   * scrollbars.
-   */
   readonly coarse?: boolean;
-  /**
-   * Served on plain http (`http://t<n>.lab.test`), as the phone's link is: not
-   * a secure page, so the browser gives it no microphone. None: https.
-   */
   readonly plain?: boolean;
 }
 
-/** A tab on an origin of its own, on an empty page, given back with the scope. */
 export const openTab = (options: TabOptions): Effect.Effect<Tab, never, Scope.Scope> =>
   Effect.gen(function* () {
     const logged: Array<Logged> = [];
@@ -369,7 +256,6 @@ export const openTab = (options: TabOptions): Effect.Effect<Tab, never, Scope.Sc
     });
     const origin = `${scheme}://t${tabs}.${SITE}`;
     const assets = new Map(options.assets.map((a) => [a.url, a.response]));
-    // The source map each of the case's scripts carries, read once.
     const maps = new Map<string, Option.Option<SourceMap>>();
     const mapFor = (url: string): Option.Option<SourceMap> =>
       Option.getOrElse(Option.fromUndefinedOr(maps.get(url)), () => {
@@ -386,7 +272,6 @@ export const openTab = (options: TabOptions): Effect.Effect<Tab, never, Scope.Sc
         origin,
         events,
         console: (type, args) => {
-          // A primitive as itself, an object as Chrome describes it.
           const text = args
             .map((arg) =>
               Option.match(described(arg), {
@@ -395,8 +280,6 @@ export const openTab = (options: TabOptions): Effect.Effect<Tab, never, Scope.Sc
               }),
             )
             .join(' ');
-          // A host reach is told by the page's own wrapper on the debug channel;
-          // a warning or an error in its spelling is the page's, and fails below.
           const told = Option.filter(Option.some(text), () => type === 'debug').pipe(
             Option.flatMap(toldOf),
           );
@@ -405,25 +288,17 @@ export const openTab = (options: TabOptions): Effect.Effect<Tab, never, Scope.Sc
             return;
           }
           logged.push({ type, text });
-          // A warning or an error at any time is the page doing what it does
-          // not mean: Solid's reactivity diagnostics (`[STRICT_…]`,
-          // `[NO_OWNER_CLEANUP]`) are warnings, and so is a hydration mismatch.
           if (type.startsWith('warn') || type === 'error') errors.push(`console.${type}: ${text}`);
         },
       },
       { width: options.width, height: options.height, coarse: options.coarse === true },
     );
-    // A case fails when its page threw, warned or logged an error at any time,
-    // not only where the case looks: checked as the case's scope closes,
-    // before the view goes back to the pool.
     yield* Effect.addFinalizer(() =>
       Effect.when(
         Effect.die(new Error(`the page reported ${errors.length}: ${errors.join(' | ')}`)),
         Effect.sync(() => errors.length > 0),
       ),
     );
-    // The page's main thread slowed `throttle` times (`Emulation.setCPUThrottlingRate`),
-    // and set back to full speed before the view goes back to the pool.
     if (Option.isSome(throttle)) {
       yield* Effect.promise(() =>
         slot.lent.cdp('Emulation.setCPUThrottlingRate', { rate: throttle.value }),
@@ -432,9 +307,6 @@ export const openTab = (options: TabOptions): Effect.Effect<Tab, never, Scope.Sc
         Effect.promise(() => slot.lent.cdp('Emulation.setCPUThrottlingRate', { rate: 1 })),
       );
     }
-    // Told through the view the case holds: Chrome drops what a protocol
-    // session told it when the session closes, and a pooled view's never
-    // closes while a case holds it.
     if (options.microphone)
       yield* Effect.promise(() =>
         slot.lent.cdp('Browser.setPermission', {
@@ -458,14 +330,12 @@ export const openTab = (options: TabOptions): Effect.Effect<Tab, never, Scope.Sc
     });
   });
 
-/** A response of `type` with `body`, at `status`. */
 export const respond = (body: Uint8Array | string, type: string, status = 200): Response => ({
   status,
   type,
   body,
 });
 
-/** A server that answers the paths `answers` names, and a 404 to anything else. */
 export const servePaths =
   (answers: Readonly<Record<string, Response>>) =>
   (request: Request): Effect.Effect<Option.Option<Response>> =>

@@ -1,7 +1,3 @@
-// `--accept-mismatch`: the beats whose mismatched take is kept, named, or the
-// `--only` beats when it goes bare; and the command line read so a bare flag
-// stays bare.
-
 import { describe, expect, test } from 'bun:test';
 import { Cause, Option, Result } from 'effect';
 import { acceptedBeats, atTheCommandLine, bareAcceptMismatch } from './accept.ts';

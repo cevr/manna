@@ -1,17 +1,9 @@
-// The header's view menu, `⋯` (design language §4): how the page shows
-// itself, on every page in the shell. Its rows are the page's own commands of
-// the `View` group available now (captions, quality, findings, a filter,
-// refresh, whatever the page registered), then Keyboard shortcuts
-// (`viewRows`); each with its keys, run as a command menu's rows are
-// (`command-chip.tsx` `RowsMenu`).
-
 import { Option } from 'effect';
 import type { Hub } from '../../command/hub.ts';
 import { viewRows } from '../../command/menu.ts';
 import { KEYS_SHEET_COMMAND } from './keys-sheet.tsx';
 import { RowsMenu } from './command-chip.tsx';
 
-/** The `⋯` button and its menu, for `hub`'s page. */
 export const ViewMenu = (props: { readonly hub: Hub }) => (
   <RowsMenu
     hub={props.hub}

@@ -2,17 +2,6 @@
  * Its mutable receipt state is the test server's lifecycle boundary, not an
  * application service or production endpoint. */
 
-/**
- * The browser suite's server: the app's own `SearchApi` and the built page,
- * with deterministic answers in place of the corpus.
- *
- * It serves `dist/` the way `../../server/main.ts` does, and answers the same
- * endpoints the page calls. A query of `hold` waits until the test releases
- * it, and a query of `fail` fails its slot, so the suite can watch a batch in
- * flight, its cancellation, and a typed failure. `/__fixture/*` reports what
- * the server saw.
- */
-
 import { BunHttpServer, BunRuntime, BunServices } from '@effect/platform-bun';
 import { Deferred, Effect, Exit, Layer } from 'effect';
 import {
@@ -34,7 +23,6 @@ import {
   type SearchSlot,
 } from '../../server/api.js';
 
-/** The Playwright config passes its port as `PORT`. */
 const PORT = Number(process.env['PORT'] ?? 3187);
 const STATIC_ROOT = `${import.meta.dir}/../../dist`;
 
@@ -82,8 +70,6 @@ const paragraph = (text: string) => ({
 const fixtureResponse = (request: SearchRequest): SearchResponse => {
   let text = request.q;
   if (request.scope !== 'all') text = `${request.q} [${request.scope}]`;
-  // `labels` answers with a chapter heading in its book's back matter, so the
-  // suite can see both of a row's labels.
   const labelled = request.q === 'labels';
   return {
     hits: [
@@ -115,8 +101,6 @@ const slotFor = (request: SearchRequest): SearchSlot => {
 
 const answerBatch = (requests: ReadonlyArray<SearchRequest>) =>
   Effect.gen(function* () {
-    // Keep the batch attached to the receipts that saw it start. A reset can
-    // replace the current receipts while an old batch still unwinds.
     const batchState = state;
     batchState.batchHttpRequests += 1;
     batchState.lastBatch = requests.map((request) => request.q);
@@ -213,7 +197,6 @@ const FixtureRoutes = HttpRouter.use((router) =>
   }),
 );
 
-/** The built page, served as the app serves it: unknown paths get the app. */
 const StaticLive = HttpStaticServer.layer({ root: STATIC_ROOT, spa: true, index: 'index.html' });
 
 const RouterLive = Layer.mergeAll(StaticLive, ApiLive, FixtureRoutes);

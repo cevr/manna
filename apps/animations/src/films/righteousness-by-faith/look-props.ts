@@ -1,20 +1,3 @@
-// The props and the set `look` draws, in the Board's pixels. On the page, at
-// the lead's size (`look.where`): the seed's first root, curling down over
-// his palm from the seed's foot; and the stack of merits his other hand
-// holds up toward the light, two certificates, a medal on its ribbon and
-// three coins, none of it lettered. In the desert (`look.pole`): the camp
-// under its peach sky, in planes a scene sets at their depths, the far
-// dunes, the tents on their bands of sand, the ground with its rocks and
-// shrubs; the wooden pole with the bronze serpent coiled on it; the scarlet
-// snakes slithering in the sand; and where the camp's people stand, each
-// held as a blocked mass at its kit body's size until the story crowd kit
-// (`apps/animations/docs/casting.md` §2.6) is sheeted and its people are
-// rendered to their sheets. The scenery is torn or cut paper with no ink;
-// the pole, the serpent, the snakes and the props are lined in the ink,
-// their lines drawn `unprobed` as every prop's are; each mass takes one ink
-// round its silhouette, as the house's figures do. Pure: the same pose
-// draws the same thing.
-
 import {
   type Hand,
   type Hex,
@@ -40,16 +23,8 @@ import { GOLD_GLOW, type Paper, cast, paper } from './page-set.ts';
 import { glow as shine } from './props.ts';
 import { type Torn, plane } from './spoke-props.ts';
 
-/** The ink of a prop as small as a hand: the court's small gold seed's (`props.ts` `seed`). */
 export const SMALL_LINE = 2.4;
 
-// ─── the first root ──────────────────────────────────────────────────────────
-
-/**
- * The first root's spine from the seed's foot, Board pixels: out of the
- * foot down and to the left, then curling in under it, as a root curls
- * over the palm it lies on.
- */
 const ROOT_SPINE: ReadonlyArray<Pt> = spline(
   [
     [0, 0],
@@ -63,21 +38,10 @@ const ROOT_SPINE: ReadonlyArray<Pt> = spline(
 );
 const ROOT_LENGTH = length(ROOT_SPINE);
 
-/**
- * Its width where it leaves the seed, wide enough that its white shows
- * between its ink at a prop's line; its round tip's as a share of that;
- * and its paper: the white of the root folded in the opened seed
- * (`props.ts`).
- */
 const ROOT = { w: 7, tip: 0.6, paper: paper('#f3ead8', 0.5) } as const;
 
-/** How many points a tube's round tip is cut with, between its two sides. */
 const TIP_POINTS = 5;
 
-/**
- * A tube along `spine`, `width(i)` wide at its `i`th point, ending round at
- * its last: the root, the serpent's body, a snake's.
- */
 const tube = (spine: ReadonlyArray<Pt>, width: (i: number) => number): Pt[] => {
   const n = spine.length;
   const near: Pt[] = [];
@@ -104,20 +68,17 @@ const tube = (spine: ReadonlyArray<Pt>, width: (i: number) => number): Pt[] => {
   return [...near, ...round, ...far.reverse()];
 };
 
-/** `w` narrowing to `tip` of it along a spine of `n` points. */
 const tapered =
   (w: number, tip: number, n: number) =>
   (i: number): number =>
     w * lerp(1, tip, i / Math.max(1, n - 1));
 
-/** `pts` as the current path, closed. */
 const trace = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>) => {
   ctx.beginPath();
   pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
   ctx.closePath();
 };
 
-/** `pts`, closed, stroked in the ink `line` wide. */
 const inked = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>, line: number) => {
   ctx.save();
   ctx.lineJoin = 'round';
@@ -128,11 +89,6 @@ const inked = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>, line: numb
   ctx.restore();
 };
 
-/**
- * The seed's first root from its foot at (`x`, `y`), `grow` of its length
- * out (0 not yet), lined `line`: drawn before the seed, so the seed's foot
- * covers where it leaves it.
- */
 export const firstRoot = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -152,9 +108,6 @@ export const firstRoot = (
   ctx.restore();
 };
 
-// ─── the stack of merits ─────────────────────────────────────────────────────
-
-/** The merits' papers: the certificates' cream, the far one a shade warmer, the medal's pewter, its ribbon's teal and the rosette's, the coins' dull brass, so none of it reads as the word's gold. */
 const MERIT_PAPER = {
   card: paper('#f3e9d5', 0.5),
   cardFar: paper('#e8d9bb', 0.5),
@@ -163,18 +116,12 @@ const MERIT_PAPER = {
   coin: paper('#bba37a', 0.6),
 } as const;
 
-/**
- * One piece of the stack: where its middle stands from the middle of the
- * hand that holds it (whose top is `HAND_TOP` above it) and its turn there,
- * Board pixels at the lead's size, and how it is cut about its middle.
- */
 interface Merit {
   readonly at: Pt;
   readonly rot: number;
   readonly draw: (ctx: CanvasRenderingContext2D, line: number) => void;
 }
 
-/** A certificate about its middle, `w` by `h`, its corners a little round; with a rosette near its foot on its right. */
 const certificate =
   (w: number, h: number, p: typeof MERIT_PAPER.card, rosette: boolean) =>
   (ctx: CanvasRenderingContext2D, line: number) => {
@@ -197,7 +144,6 @@ const certificate =
     cut(ctx, ellipseShape(x, y, 5, 5, 24), MERIT_PAPER.ribbon, { line: 0.8 * line });
   };
 
-/** The medal about its disc's middle: its ribbon, one band narrowing down to it from where the certificates hide its top (two tails would read as a letter), its pewter disc. */
 const medal = (ctx: CanvasRenderingContext2D, line: number) => {
   cut(
     ctx,
@@ -213,19 +159,11 @@ const medal = (ctx: CanvasRenderingContext2D, line: number) => {
   cut(ctx, ellipseShape(0, 0, 8.5, 8.5, 32), MERIT_PAPER.medal, { line });
 };
 
-/** A coin about its middle: a brass disc. */
 const coin = (ctx: CanvasRenderingContext2D, line: number) =>
   cut(ctx, ellipseShape(0, 0, 8, 8, 28), MERIT_PAPER.coin, { line });
 
-/** How far above the holding hand's middle its top stands, at the lead's hand size (the hand rig's 19 at his 1.08). */
 const HAND_TOP = 20.5;
 
-/**
- * The stack, back to front: the far certificate a little turned, the near
- * one with its rosette, the medal hanging off its right side, the coins
- * piled at the front on its left; all of it standing on the hand's top,
- * wider than the hand, so it reads as a pile held up.
- */
 const MERITS: ReadonlyArray<Merit> = [
   { at: [8, -HAND_TOP - 17], rot: 0.14, draw: certificate(44, 32, MERIT_PAPER.cardFar, false) },
   { at: [-4, -HAND_TOP - 16], rot: -0.08, draw: certificate(46, 33, MERIT_PAPER.card, true) },
@@ -235,20 +173,12 @@ const MERITS: ReadonlyArray<Merit> = [
   { at: [-13, -HAND_TOP - 20], rot: 0, draw: coin },
 ];
 
-/** How many pieces the stack has, front first in the order they slide off. */
 export const MERIT_COUNT = MERITS.length;
 
-/** How much bigger the stack stands than its pieces are cut, about the hand's top: a pile wider than the hand, so it reads at the hand's size. */
 const STACK = 1.2;
 
-/** How far each piece slides and falls as it goes, Board pixels at the lead's size, and how far it turns: off the hand to the left and down out of the frame. */
 const FALL = { x: -95, y: 260, rot: -1.4 } as const;
 
-/**
- * The stack on the hand whose middle stands at (`x`, `y`), lined `line`:
- * each piece `gone(i)` of the way slid off and fallen (`i` 0 the top coin,
- * the order they go), the back of the stack first drawn.
- */
 export const merits = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -272,12 +202,8 @@ export const merits = (
   ctx.restore();
 };
 
-// ─── the camp's ground ───────────────────────────────────────────────────────
-
-/** How far every plane of the camp runs past the panel's edges, Board pixels, so the camera can travel and push over it. */
 const CAMP = { left: -900, right: 2500, top: -900, bottom: 1900 } as const;
 
-/** A plane under the top edge `top` (smoothed), down past the frame's foot and out past its sides. */
 const below = (top: ReadonlyArray<Pt>): Pt[] => {
   const edge = spline(top, 8);
   const first = edge[0] ?? [0, 0];
@@ -291,7 +217,6 @@ const below = (top: ReadonlyArray<Pt>): Pt[] => {
   ];
 };
 
-/** The camp's sky at its heights on the panel (`look.pole`): rose overhead, peach, pale gold at the horizon behind the dunes. */
 const SKY: ReadonlyArray<readonly [number, Hex]> = [
   [-300, '#e2a49c'],
   [40, '#ecb8a8'],
@@ -303,16 +228,9 @@ const SKY_WASH = SKY.map(([y, c]): readonly [number, Hex] => [
   c,
 ]);
 
-/** The camp's sky, over the plane's whole run. */
 export const campSky = (ctx: CanvasRenderingContext2D) =>
   wash(ctx, CAMP.left, CAMP.top, CAMP.right - CAMP.left, CAMP.bottom - CAMP.top, SKY_WASH);
 
-/**
- * The dunes beyond the camp (`look.pole`), farthest first, in mauve paper,
- * each torn edge a rim cut lighter in its hue: a long rise on the left and
- * a high dune on the right, a lower line of them nearer; and the far plain
- * of sand under them.
- */
 const DUNES: ReadonlyArray<readonly [ReadonlyArray<Pt>, Torn]> = [
   [
     below([
@@ -365,11 +283,9 @@ const DUNES: ReadonlyArray<readonly [ReadonlyArray<Pt>, Torn]> = [
   ],
 ];
 
-/** The dunes and the far plain. */
 export const dunes = (ctx: CanvasRenderingContext2D, hand: Hand) =>
   DUNES.forEach(([pts, p], i) => plane(ctx, pts, p, sub(hand, i)));
 
-/** The bands of sand the camp stands on, farthest first, each a little warmer: under the far tents, under the near ones, the ground the pole stands in. */
 const SAND = {
   far: [
     below([
@@ -410,15 +326,11 @@ const SAND = {
   ],
 } as const satisfies Record<string, readonly [ReadonlyArray<Pt>, Torn]>;
 
-/** One band of sand. */
 export const sand = (ctx: CanvasRenderingContext2D, band: keyof typeof SAND, hand: Hand) => {
   const [pts, p] = SAND[band];
   plane(ctx, pts, p, hand);
 };
 
-// ─── the tents ───────────────────────────────────────────────────────────────
-
-/** A cone tent: its middle on the sand, its foot, how tall to its peak, half its width at its foot, its cloth, and whether its door shows. */
 interface Tent {
   readonly x: number;
   readonly foot: number;
@@ -428,13 +340,10 @@ interface Tent {
   readonly door?: boolean;
 }
 
-/** The tents' cloth (`look.pole`): pale goat's hair, and a sage; each creased down from its peak, its far side its shade. */
 const CLOTH = { pale: paper('#e3dacf', 0.7), sage: paper('#adb594', 0.7) } as const;
-/** The tent pole's tip above each peak, and the dark of a door, toward the violet of the shade. */
 const TENT_POLE: Hex = '#8b6b4f';
 const DOOR: Hex = '#5c4a63';
 
-/** The tents on the far band, as the panel scatters them, and on past its edges for the camera's travel. */
 const FAR_TENTS: ReadonlyArray<Tent> = [
   { x: -150, foot: 346, tall: 54, half: 32, cloth: CLOTH.pale },
   { x: 110, foot: 346, tall: 50, half: 30, cloth: CLOTH.sage },
@@ -449,7 +358,6 @@ const FAR_TENTS: ReadonlyArray<Tent> = [
   { x: 1680, foot: 344, tall: 56, half: 33, cloth: CLOTH.sage },
 ];
 
-/** The tents on the near band, back to front: the big ones at the panel's two edges, the camp's people standing before them. */
 const NEAR_TENTS: ReadonlyArray<Tent> = [
   { x: 1440, foot: 452, tall: 104, half: 56, cloth: CLOTH.sage },
   { x: 45, foot: 456, tall: 262, half: 126, cloth: CLOTH.pale, door: true },
@@ -463,11 +371,6 @@ const NEAR_TENTS: ReadonlyArray<Tent> = [
   { x: 1820, foot: 482, tall: 176, half: 88, cloth: CLOTH.sage },
 ];
 
-/**
- * One tent, cut clean: its soft shadow on the sand, the tip of its pole,
- * its cloth with its far side in shade, its door; no ink, as all the
- * scenery is.
- */
 const tent = (ctx: CanvasRenderingContext2D, t: Tent, hand: Hand) => {
   const { x, foot, tall, half } = t;
   const peak: Pt = [x, foot - tall];
@@ -511,17 +414,12 @@ const tent = (ctx: CanvasRenderingContext2D, t: Tent, hand: Hand) => {
   );
 };
 
-/** The far band's tents, or the near band's. */
 export const tents = (ctx: CanvasRenderingContext2D, band: 'far' | 'near', hand: Hand) =>
   (band === 'far' ? FAR_TENTS : NEAR_TENTS).forEach((t, i) => tent(ctx, t, sub(hand, i * 3)));
 
-// ─── the rocks and the shrubs ────────────────────────────────────────────────
-
-/** The rocks' grey-violet paper and the shrubs' sage, creased at the light. */
 const STONE = paper('#b9a69a', 0.6);
 const SHRUB = paper('#93a271', 0.6);
 
-/** A rock about (`x`, `y`), `rx` by `ry`: rounded above, flattened where it sits in the sand. */
 const stoneShape = (x: number, y: number, rx: number, ry: number): Pt[] =>
   Array.from({ length: 18 }, (_, i): Pt => {
     const t = (i / 18) * 2 * Math.PI;
@@ -529,7 +427,6 @@ const stoneShape = (x: number, y: number, rx: number, ry: number): Pt[] =>
     return [x + rx * Math.cos(t) * (1 + 0.06 * Math.sin(3 * t)), y + ry * s * (s > 0 ? 0.35 : 1)];
   });
 
-/** A rock sitting in the sand, its soft shadow under it. */
 const rock = (ctx: CanvasRenderingContext2D, x: number, y: number, rx: number, ry: number) => {
   ctx.save();
   ctx.globalAlpha *= 0.55;
@@ -538,7 +435,6 @@ const rock = (ctx: CanvasRenderingContext2D, x: number, y: number, rx: number, r
   cut(ctx, stoneShape(x, y, rx, ry), STONE, { line: 0 });
 };
 
-/** A shrub's leaves fanned up from its root, each one's turn from upright and its length against the shrub's size. */
 const FAN: ReadonlyArray<readonly [number, number]> = [
   [-1, 0.75],
   [-0.55, 1],
@@ -547,7 +443,6 @@ const FAN: ReadonlyArray<readonly [number, number]> = [
   [0.75, 0.7],
 ];
 
-/** A shrub rooted at (`x`, `y`), `size` tall: its leaves, the ones behind in its shade. */
 const shrub = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number) => {
   FAN.forEach(([turn, long], i) => {
     const l = long * size;
@@ -570,7 +465,6 @@ const shrub = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number
   });
 };
 
-/** What lies on the ground plane round the pole's foot (`look.pole`): rocks, shrubs; none where the panel stands the camp's people. */
 const GROUND_ROCKS: ReadonlyArray<readonly [number, number, number, number]> = [
   [700, 836, 24, 14],
   [846, 838, 28, 16],
@@ -584,13 +478,11 @@ const GROUND_SHRUBS: ReadonlyArray<readonly [number, number, number]> = [
   [-120, 620, 18],
 ];
 
-/** The ground plane's rocks and shrubs. */
 export const groundLitter = (ctx: CanvasRenderingContext2D) => {
   GROUND_SHRUBS.forEach(([x, y, s]) => shrub(ctx, x, y, s));
   GROUND_ROCKS.forEach(([x, y, rx, ry]) => rock(ctx, x, y, rx, ry));
 };
 
-/** What lies in the near sand, in front of everything (`look.pole`): rocks and shrubs along the frame's foot. */
 const NEAR_ROCKS: ReadonlyArray<readonly [number, number, number, number]> = [
   [95, 968, 62, 34],
   [1505, 940, 42, 22],
@@ -605,21 +497,11 @@ const NEAR_SHRUBS: ReadonlyArray<readonly [number, number, number]> = [
   [1760, 930, 34],
 ];
 
-/** The near sand's rocks and shrubs. */
 export const nearLitter = (ctx: CanvasRenderingContext2D) => {
   NEAR_SHRUBS.forEach(([x, y, s]) => shrub(ctx, x, y, s));
   NEAR_ROCKS.forEach(([x, y, rx, ry]) => rock(ctx, x, y, rx, ry));
 };
 
-// ─── the pole and the bronze serpent ─────────────────────────────────────────
-
-/**
- * The pole (`look.pole`): its middle, its foot in the mound and its top
- * above the serpent's head, its half-width at its top and at its foot; how
- * far below its foot it runs on, so that as it rises past its place it
- * never shows its end; and its ink, a little lighter than the lead's for a
- * figure this far off.
- */
 export const POLE = {
   x: 765,
   foot: 830,
@@ -630,17 +512,14 @@ export const POLE = {
   line: 4,
 } as const;
 
-/** The wood, and the mound of sand at its foot: a little darker than the ground's sand. */
 const WOOD = paper('#9b7652', 0.6);
 const MOUND: Torn = { color: '#dcbc93', rim: '#ecd3ae' };
 
-/** A post down its middle at `x`: at each height its half-width, top first. */
 interface Post {
   readonly x: number;
   readonly at: ReadonlyArray<readonly [y: number, half: number]>;
 }
 
-/** The pole standing in its place, from its top to past its foot. */
 const CAMP_POLE: Post = {
   x: POLE.x,
   at: [
@@ -649,22 +528,18 @@ const CAMP_POLE: Post = {
   ],
 };
 
-/** Where a post's lit face ends and its shaded face begins, as a share of its half-width right of its middle: a squared post, its far face to the right. */
 const POST_FACE = 0.25;
 
-/** A post's outline, down its left side and up its right; widened by `by` either side. */
 const postShape = (p: Post, by = 0): Pt[] => [
   ...p.at.map(([y, half]): Pt => [p.x - half - by, y]),
   ...[...p.at].reverse().map(([y, half]): Pt => [p.x + half + by, y]),
 ];
 
-/** A post's shaded face: from where its faces meet up its right side. */
 const postShade = (p: Post): Pt[] => [
   ...p.at.map(([y, half]): Pt => [p.x + POST_FACE * half, y]),
   ...[...p.at].reverse().map(([y, half]): Pt => [p.x + half, y]),
 ];
 
-/** A post of `wood`: its lit face and its shaded one, one line round both. */
 const post = (ctx: CanvasRenderingContext2D, p: Post, wood: Paper, line: number) => {
   const outline = postShape(p);
   ctx.save();
@@ -678,7 +553,6 @@ const post = (ctx: CanvasRenderingContext2D, p: Post, wood: Paper, line: number)
   inked(ctx, outline, line);
 };
 
-/** The mound heaped at its foot: its top from left to right, and its foot on the sand back, a little nearer at its middle. */
 const MOUND_SHAPE: ReadonlyArray<Pt> = spline(
   [
     [POLE.x - 80, POLE.foot + 6],
@@ -694,15 +568,12 @@ const MOUND_SHAPE: ReadonlyArray<Pt> = spline(
   true,
 );
 
-/** The bronze serpent's coil round the pole: the coil's foot, at its tail, and its top, how many turns, how far out from the pole's middle it swings, its body's width. */
 const COIL = { from: 388, to: 122, turns: 2.25, reach: 52, w: 21 } as const;
-/** Its neck from the top of the coil, out to the right and up, to its head. */
 const NECK: ReadonlyArray<Pt> = [
   [829, 106],
   [841, 90],
   [851, 80],
 ];
-/** Its head (`look.pole`): its middle, its half-length and half-height, its turn; its eye; its forked tongue's root, inside its snout. */
 const HEAD = {
   at: [860, 74],
   rx: 21,
@@ -711,22 +582,14 @@ const HEAD = {
   eyeAt: [867, 68],
   tongueAt: [874, 72],
 } as const;
-/** How many points the coil is cut with. */
 const COIL_POINTS = 90;
 
-/**
- * The serpent's bronze; its tongue's dark bronze (scarlet is sin's alone);
- * the pale gold its bronze turns toward as it is lit and how far, its shade
- * a little less far; and its light on the camp then, its middle, its reach
- * and how much.
- */
 const BRONZE = paper('#b38a58', 0.6);
 const BRONZE_DARK: Hex = '#6a4733';
 const BRONZE_GLOW: Hex = '#f3d79a';
 const LIT = { color: 0.45, shade: 0.3 } as const;
 const SERPENT_LIGHT = { at: [790, 220], r: 340, alpha: 0.45 } as const;
 
-/** Where the coil's `s` (0 its tail, 1 its top) winds round the pole, and whether it passes in front of it there. */
 const coilAt = (s: number) => {
   const a = Math.PI / 2 - 2 * Math.PI * COIL.turns * (1 - s);
   return {
@@ -738,7 +601,6 @@ const coilAt = (s: number) => {
   };
 };
 
-/** The serpent's spine from its neck down the coil to its tail, and which of its points pass in front of the pole. */
 const SERPENT: { readonly spine: ReadonlyArray<Pt>; readonly front: ReadonlyArray<boolean> } =
   (() => {
     const coil = Array.from({ length: COIL_POINTS + 1 }, (_, i) => coilAt(1 - i / COIL_POINTS));
@@ -748,19 +610,13 @@ const SERPENT: { readonly spine: ReadonlyArray<Pt>; readonly front: ReadonlyArra
     };
   })();
 
-/** Its width at its `i`th point from the neck: the neck a little narrower, full down the coil, tapering to its tail. */
 const serpentWidth = (i: number): number => {
   const k = i / (SERPENT.spine.length - 1);
   return COIL.w * Math.min(lerp(0.8, 1, clamp(k * 6)), lerp(1, 0.2, clamp((k - 0.75) / 0.25)));
 };
 
-/** How far from a body's spine its shade lies, away from the light, as a share of its width, and how wide the shade is: its lower right half. */
 const SHADE_SIDE = { x: 0.2, y: 0.26, w: 0.5 } as const;
 
-/**
- * A creature's body along `spine` in `p`, `width(i)` wide at its `i`th
- * point: lit, its side away from the light in its shade, one line round it.
- */
 const creature = (
   ctx: CanvasRenderingContext2D,
   spine: ReadonlyArray<Pt>,
@@ -785,7 +641,6 @@ const creature = (
   inked(ctx, body, line);
 };
 
-/** A forked tongue's outline along its length (0 its root, 1 its tips), and across it. */
 const TONGUE: ReadonlyArray<Pt> = [
   [0, -0.09],
   [0.66, -0.09],
@@ -796,7 +651,6 @@ const TONGUE: ReadonlyArray<Pt> = [
   [0, 0.09],
 ];
 
-/** A forked tongue from (`x`, `y`) the way `a` points, `long` long, in `color`: flat, drawn before the head that hides its root. */
 const tongue = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -811,14 +665,12 @@ const tongue = (
   cut(ctx, pts, { color, shade: color }, { line: 0, flat: true });
 };
 
-/** An oval head about (`x`, `y`), `rx` by `ry`, turned `a`. */
 const headShape = (x: number, y: number, rx: number, ry: number, a: number): Pt[] => {
   const c = Math.cos(a);
   const s = Math.sin(a);
   return ellipseShape(0, 0, rx, ry, 28).map(([u, v]): Pt => [x + u * c - v * s, y + u * s + v * c]);
 };
 
-/** An eye: one dot of the ink. */
 const eye = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number) => {
   ctx.fillStyle = C.outline;
   ctx.beginPath();
@@ -826,7 +678,6 @@ const eye = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number) => 
   ctx.fill();
 };
 
-/** The runs of the coil that pass in front of the pole, each a point longer at either end so its ends lie clear of the pole. */
 const FRONT_RUNS: ReadonlyArray<readonly [number, number]> = (() => {
   const runs: Array<readonly [number, number]> = [];
   let start = -1;
@@ -841,7 +692,6 @@ const FRONT_RUNS: ReadonlyArray<readonly [number, number]> = (() => {
   return runs;
 })();
 
-/** The serpent's head at its place in `p`: its forked tongue in its dark bronze under it, its eye. */
 const serpentHead = (ctx: CanvasRenderingContext2D, p: Paper, line: number) => {
   const { at, rx, ry, rot, eyeAt, tongueAt } = HEAD;
   tongue(ctx, tongueAt[0], tongueAt[1], rot, 15, BRONZE_DARK);
@@ -849,7 +699,6 @@ const serpentHead = (ctx: CanvasRenderingContext2D, p: Paper, line: number) => {
   eye(ctx, eyeAt[0], eyeAt[1], 2.6);
 };
 
-/** The serpent's bronze lit `lit` of the way (0 as cast, 1 its light swelled). */
 const bronzeLit = (lit: number): Paper => {
   const k = clamp(lit);
   return {
@@ -858,13 +707,6 @@ const bronzeLit = (lit: number): Paper => {
   };
 };
 
-/**
- * The serpent coiled on post `p`, both in the serpent's own place
- * (`look.pole`), its bronze lit `lit` of the way: its light behind it, its
- * body, the post over the coils behind it, the coils in front of it again
- * over the post (as far out as the post's ink, so no line of it crosses
- * them), its head.
- */
 const serpentOn = (ctx: CanvasRenderingContext2D, p: Post, lit: number) => {
   const [lx, ly] = SERPENT_LIGHT.at;
   shine(ctx, lx, ly, SERPENT_LIGHT.r, GOLD_GLOW, SERPENT_LIGHT.alpha * lit);
@@ -882,13 +724,6 @@ const serpentOn = (ctx: CanvasRenderingContext2D, p: Post, lit: number) => {
   serpentHead(ctx, bronze, POLE.line);
 };
 
-/**
- * The pole with the bronze serpent on it, `rise` of the way up out of the
- * ground at its foot (past 1 as it overshoots), its light `lit` (0 the
- * bronze as cast, 1 the light on it swelled): the pole's shadow thrown on
- * the sand, the pole and the serpent coming up out of the sand, and the
- * mound heaping at its foot as it rises.
- */
 export const poleAndSerpent = (
   ctx: CanvasRenderingContext2D,
   rise: number,
@@ -914,15 +749,6 @@ export const poleAndSerpent = (
   ctx.restore();
 };
 
-// ─── the camp seen from low on the ground ────────────────────────────────────
-
-/**
- * How `look.lifted` lifts the serpent and its pole above the camp, seen
- * from low on the ground: the pole's middle on the panel and how much
- * bigger than in the camp the serpent stands, and where its coil's top
- * comes; and the pole itself on the panel from its top to past the frame's
- * foot, widening toward us as it comes down (half-widths, Board pixels).
- */
 export const LIFTED = {
   x: 768,
   scale: 1.5,
@@ -934,7 +760,6 @@ export const LIFTED = {
   ],
 } as const;
 
-/** The low view's pole in the serpent's own place (`serpentOn` draws in it): the panel's pole carried back through the lift. */
 const LOW_POLE: Post = {
   x: POLE.x,
   at: LIFTED.pole.map(([y, half]): readonly [number, number] => [
@@ -943,10 +768,8 @@ const LOW_POLE: Post = {
   ]),
 };
 
-/** How far each plane of the low view runs past the panel's edges, Board pixels, for the camera's tilt. */
 const LOW = { left: -900, right: 2500, top: -700, bottom: 1500 } as const;
 
-/** A plane of the low view under the top edge `top`. */
 const belowLow = (top: ReadonlyArray<Pt>): Pt[] => {
   const edge = spline(top, 8);
   const first = edge[0] ?? [0, 0];
@@ -960,7 +783,6 @@ const belowLow = (top: ReadonlyArray<Pt>): Pt[] => {
   ];
 };
 
-/** The low view's sky at its heights on the panel (`look.lifted`): rose overhead, peach, pale gold low behind the hills. */
 const LOW_SKY: ReadonlyArray<readonly [number, Hex]> = [
   [0, '#e9aaa7'],
   [300, '#f2c3ae'],
@@ -972,11 +794,9 @@ const LOW_WASH = LOW_SKY.map(([y, c]): readonly [number, Hex] => [
   c,
 ]);
 
-/** The low view's sky. */
 export const lowSky = (ctx: CanvasRenderingContext2D) =>
   wash(ctx, LOW.left, LOW.top, LOW.right - LOW.left, LOW.bottom - LOW.top, LOW_WASH);
 
-/** The hills low behind the camp in the low view (`look.lifted`), farthest first: a mauve line, a nearer one warmer. */
 const LOW_HILLS: ReadonlyArray<readonly [ReadonlyArray<Pt>, Torn]> = [
   [
     belowLow([
@@ -1013,11 +833,9 @@ const LOW_HILLS: ReadonlyArray<readonly [ReadonlyArray<Pt>, Torn]> = [
   ],
 ];
 
-/** The low view's hills. */
 export const lowHills = (ctx: CanvasRenderingContext2D, hand: Hand) =>
   LOW_HILLS.forEach(([pts, p], i) => plane(ctx, pts, p, sub(hand, i)));
 
-/** The sand the camp stands on in the low view, from the hills' foot down past the frame's. */
 const LOW_SAND: readonly [ReadonlyArray<Pt>, Torn] = [
   belowLow([
     [-900, 790],
@@ -1030,7 +848,6 @@ const LOW_SAND: readonly [ReadonlyArray<Pt>, Torn] = [
   { color: '#ecd2b2', rim: '#f6e3c8' },
 ];
 
-/** The tents at the low view's edges (`look.lifted`), standing on its sand, back to front. */
 const LOW_TENTS: ReadonlyArray<Tent> = [
   { x: 207, foot: 800, tall: 92, half: 45, cloth: CLOTH.pale },
   { x: 1305, foot: 800, tall: 72, half: 50, cloth: CLOTH.pale },
@@ -1041,13 +858,11 @@ const LOW_TENTS: ReadonlyArray<Tent> = [
   { x: 1478, foot: 804, tall: 178, half: 100, cloth: CLOTH.pale },
 ];
 
-/** The low view's sand and its tents. */
 export const lowCamp = (ctx: CanvasRenderingContext2D, hand: Hand) => {
   plane(ctx, LOW_SAND[0], LOW_SAND[1], hand);
   LOW_TENTS.forEach((t, i) => tent(ctx, t, sub(hand, 10 + i * 3)));
 };
 
-/** The serpent lifted high on its pole in the low view, its light `lit`. */
 export const liftedSerpent = (ctx: CanvasRenderingContext2D, lit: number) => {
   ctx.save();
   ctx.translate(LIFTED.x, LIFTED.coilTop);
@@ -1057,13 +872,6 @@ export const liftedSerpent = (ctx: CanvasRenderingContext2D, lit: number) => {
   ctx.restore();
 };
 
-// ─── the scarlet snakes ──────────────────────────────────────────────────────
-
-/**
- * A scarlet snake in the sand (`look.pole`): where its head lies in the
- * panel, the way it faces (radians), how long it is, how far its body waves
- * either side and how long each wave, its width at its fullest.
- */
 export interface Snake {
   readonly at: Pt;
   readonly facing: number;
@@ -1073,28 +881,18 @@ export interface Snake {
   readonly w: number;
 }
 
-/** The three in the panel: on the left in the near sand, rearing toward us; in the middle ground right of the pole; on the right in the near sand. */
 export const SNAKES = {
   left: { at: [562, 914], facing: -0.25, long: 340, wave: 15, every: 120, w: 15 },
   middle: { at: [952, 904], facing: Math.PI + 0.08, long: 230, wave: 10, every: 95, w: 12 },
   right: { at: [1230, 972], facing: Math.PI - 0.04, long: 280, wave: 12, every: 105, w: 13 },
 } as const satisfies Record<string, Snake>;
 
-/** The snakes' scarlet (sin's), and their ink, a little lighter than the pole's for creatures this small. */
 const SNAKE = paper(C.scarlet, 0.5);
 const SNAKE_LINE = 3;
-/** How fast a snake's waves run down its body, radians a second, and how many points it is cut with. */
 const WRIGGLE = 3.2;
 const SNAKE_POINTS = 40;
-/** How a snake rears as it strikes: how far its head lifts and lunges, Board pixels, and how much of its length rears. */
 const STRIKE = { lift: 46, lunge: 34, share: 0.3 } as const;
 
-/**
- * Snake `s`, `along` Board pixels on from its place in the panel the way
- * it faces, its waves at `t` seconds, `strike` of the way into a strike
- * (0 lying, 1 its head reared up and lunged): its soft shadow, its body
- * tapering to its tail, its head with its eye and its forked tongue.
- */
 export const snake = (
   ctx: CanvasRenderingContext2D,
   s: Snake,
@@ -1116,7 +914,6 @@ export const snake = (
       hy - dy * u + dx * lat + dy * STRIKE.lunge * rear - STRIKE.lift * rear,
     ];
   });
-  // Its soft shadow on the sand under it, where it lies and under its head as it rears.
   ctx.save();
   ctx.globalAlpha *= 0.5;
   for (let i = 0; i < SNAKE_POINTS; i += 8) {
@@ -1139,7 +936,6 @@ export const snake = (
   cut(ctx, headShape(x0 + 0.25 * s.w * c, y0 + 0.25 * s.w * n, 0.95 * s.w, 0.62 * s.w, a), SNAKE, {
     line: SNAKE_LINE,
   });
-  // Its eye on the head's upper side, toward its snout.
   const side = c >= 0 ? 1 : -1;
   eye(
     ctx,
@@ -1149,14 +945,6 @@ export const snake = (
   );
 };
 
-// ─── the camp's people, held ─────────────────────────────────────────────────
-
-/**
- * A body of the story crowd kit (casting.md §2.1's five) as a mass: its
- * height to the crown, its head's height and width, half its width at the
- * shoulders and at the hem, and how far it stoops; Board pixels at the
- * size the camp's people stand in `look.pole`.
- */
 export interface Body {
   readonly tall: number;
   readonly head: number;
@@ -1166,7 +954,6 @@ export interface Body {
   readonly stoop: number;
 }
 
-/** The kit's five bodies: slight, broad, tall, a child, an elder. */
 export const BODIES = {
   slight: { tall: 366, head: 112, wide: 92, shoulder: 56, hem: 70, stoop: 0 },
   broad: { tall: 372, head: 116, wide: 100, shoulder: 78, hem: 90, stoop: 0 },
@@ -1175,7 +962,6 @@ export const BODIES = {
   elder: { tall: 362, head: 114, wide: 96, shoulder: 62, hem: 74, stoop: 0.12 },
 } as const satisfies Record<string, Body>;
 
-/** Where one of the camp's people stands in `look.pole`: its kit body, its feet, how big there, and its turn (−1 three quarters to screen left, 1 to the right). */
 interface Place {
   readonly body: keyof typeof BODIES;
   readonly at: Pt;
@@ -1183,12 +969,6 @@ interface Place {
   readonly facing: number;
 }
 
-/**
- * The camp's eight, as `look.pole` stands them, back to front by their
- * feet: left of the pole a tall man at the back, a tall man at the frame's
- * edge, the climber, a woman; right of it a broad man, an elder, a woman, a
- * child.
- */
 export const PLACES = {
   tallBack: { body: 'tall', at: [408, 770], scale: 1.02, facing: 0.45 },
   broad: { body: 'broad', at: [1000, 774], scale: 1.03, facing: -0.5 },
@@ -1200,10 +980,8 @@ export const PLACES = {
   child: { body: 'child', at: [1312, 902], scale: 1.16, facing: -0.45 },
 } as const satisfies Record<string, Place>;
 
-/** One of the camp's people, by name. */
 export type CamperName = keyof typeof PLACES;
 
-/** The camp's people back to front, the order `look.pole` draws them in. */
 export const CAMP_ORDER = [
   'tallBack',
   'broad',
@@ -1215,11 +993,6 @@ export const CAMP_ORDER = [
   'child',
 ] as const satisfies ReadonlyArray<CamperName>;
 
-/**
- * Where each stands in the low view (`look.lifted`), its feet far below the
- * frame so only its head and shoulders show along the frame's foot, how big
- * it stands there and its turn toward the pole.
- */
 export const LOW_ROW: Readonly<
   Record<CamperName, { readonly at: Pt; readonly scale: number; readonly facing: number }>
 > = {
@@ -1233,15 +1006,6 @@ export const LOW_ROW: Readonly<
   elder: { at: [1450, 1194], scale: 1.2, facing: -0.8 },
 };
 
-/**
- * How a person stands in one frame: its feet and size; its turn (−1 three
- * quarters to screen left, 0 square to us, 1 to the right); how far its
- * head tips back to look up (0 level, 1 its furthest) and its body leans
- * from its feet (radians, + to the right); its breath's phase; its hands,
- * left and right, from its feet in its own units; how far each foot is
- * lifted, left and right; its ink against the house's figure line (1);
- * whether it stands on the sand, its shadow thrown.
- */
 export interface CamperPose {
   readonly x: number;
   readonly y: number;
@@ -1256,7 +1020,6 @@ export interface CamperPose {
   readonly ground: boolean;
 }
 
-/** Where a body's hands hang at rest, from its feet: just out from its sides, at its hips. */
 const restHands = (b: Body): readonly [Pt, Pt] => {
   const x = b.shoulder + 0.16 * b.wide;
   const y = -0.4 * b.tall;
@@ -1266,7 +1029,6 @@ const restHands = (b: Body): readonly [Pt, Pt] => {
   ];
 };
 
-/** Person `who` at rest where `look.pole` stands it: level, its hands at its sides. */
 export const stand = (who: CamperName): CamperPose => {
   const c: Place = PLACES[who];
   return {
@@ -1284,27 +1046,20 @@ export const stand = (who: CamperName): CamperPose => {
   };
 };
 
-/** Person `who`'s body, by name. */
 export const bodyOf = (who: CamperName): Body => BODIES[PLACES[who].body];
 
-/** `pt` turned `a` about `o`. */
 const turned = ([x, y]: Pt, [ox, oy]: Pt, a: number): Pt => {
   const c = Math.cos(a);
   const s = Math.sin(a);
   return [ox + (x - ox) * c - (y - oy) * s, oy + (x - ox) * s + (y - oy) * c];
 };
 
-/** How far a head tipped all the way back turns, radians, at a full three-quarter turn. */
 const TIP = 0.42;
 
-/** The paper a held person is blocked in: one muted warm under the house's key light, its shade turned toward the light's complement, never greyed. */
 const MASS = ramp('#a58a7c', keyLight, shading);
-/** Where a mass turns at the light: soft, a little past its middle. */
 const MASS_TURN: Crease = { at: 0.62, soft: 0.05 };
-/** A mass's ink round its silhouette, Board pixels at a person's size, all of it outside the paper: the house figures' line. */
 const MASS_LINE = 5;
 
-/** `pts`, closed, filled with the mass's paper, creased at the light. */
 const massCut = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>) => {
   const { start, end, at } = creaseOf(boxOf(pts), MASS_TURN);
   const soft = MASS_TURN.soft ?? 0;
@@ -1318,15 +1073,6 @@ const massCut = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>) => {
   ctx.fill();
 };
 
-/**
- * Person `who` held as a blocked mass in pose `p`, in the Board's pixels,
- * until the crowd kit is sheeted and its people rendered: its shadow on the
- * sand; its body from the shoulders to the hem and its head, set a little
- * toward its turn and tipped back as it looks up, under one line of ink
- * round the two; its hands, free circles each lined round; no face and no
- * cloth. The head is declared to the check as the face's place
- * (`probeFace`), so no ink crosses where the face will be.
- */
 export const campMass = (ctx: CanvasRenderingContext2D, who: CamperName, p: CamperPose) => {
   const b = bodyOf(who);
   const W = b.wide;

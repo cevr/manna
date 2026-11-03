@@ -1,7 +1,3 @@
-// The lab's source splices, on scene text: a value is replaced where it is a
-// literal, a missing timing field is added after the span's anchor, and
-// anything the parser cannot prove is a literal is refused with the reason.
-
 import { describe, expect, test as it } from 'bun:test';
 import { Option, Result } from 'effect';
 import type { CuePatch } from '../core/schema.ts';
@@ -50,7 +46,6 @@ export { hand_ as hand };
 
 const ok = <A, E>(r: Result.Result<A, E>): A => Result.getOrThrow(r);
 
-/** The source outside `[from, to)` of `before` must be the same bytes in `after`. */
 const untouchedOutside = (before: string, after: string, changed: string) => {
   const at = before.indexOf(changed);
   expect(at).toBeGreaterThan(-1);
@@ -143,11 +138,9 @@ describe('scene source', () => {
       until: 'earns',
       ease: 'outBack',
     });
-    // A dur keeps it landing.
     expect(ok(editCue(FILE, landing, 'hand', 'shine', { dur: 0.5 }))).toBe(
       landing.replace('dur: 0.3', 'dur: 0.5'),
     );
-    // An ends its source computes is not the lab's to take away.
     const computed = landing.replace('ends: true', 'ends: LANDS');
     expect(
       Result.match(editCue(FILE, computed, 'hand', 'shine', { until: 'earns' }), {
@@ -165,13 +158,11 @@ describe('scene source', () => {
     const until = { until: 'earns' } as const;
     const landed = (before: string, after: string, cue: string, patch: CuePatch) =>
       ok(cueLanded(FILE, before, after, 'hand', cue, patch));
-    // The until beside the ends it should have taken away: no span decodes there.
     const both = landing.replace('dur: 0.3, ends: true', "until: 'earns', ends: true");
     expect(landed(landing, both, 'shine', until)).toEqual(['cue shine is not a span as written']);
     expect(
       landed(landing, ok(editCue(FILE, landing, 'hand', 'shine', until)), 'shine', until),
     ).toEqual([]);
-    // A value other than the patch's, or a field it never set, did not land.
     const moved = { offset: 0.4 } as const;
     const other = scene.replace('offset: 0.1, dur: 1.8 }', 'offset: 0.5, dur: 1.8 }');
     expect(landed(scene, other, 'topple', moved)).toHaveLength(1);
@@ -183,7 +174,6 @@ describe('scene source', () => {
     expect(
       landed(scene, ok(editCue(FILE, scene, 'hand', 'topple', moved)), 'topple', moved),
     ).toEqual([]);
-    // A span its source computes in part is judged with its code as it stood.
     const sized = ok(editCue(FILE, scene, 'hand', 'late', { dur: 1 }));
     expect(sized).toContain("late: { after: 'topple', offset: GAP * 2, dur: 1 }");
     expect(landed(scene, sized, 'late', { dur: 1 })).toEqual([]);
@@ -221,17 +211,14 @@ describe('scene source', () => {
     expect(ok(editCue(FILE, off, 'hand', 'bare', { untilOffset: -0.25 }))).toBe(
       marked.replace("until: 'gift',", "until: 'gift', untilOffset: -0.25,"),
     );
-    // Back on the point: the key goes, and the span is the plain until it was.
     expect(ok(editCue(FILE, off, 'hand', 'bare', { untilOffset: 0 }))).toBe(marked);
     expect(ok(editCue(FILE, marked, 'hand', 'bare', { untilOffset: 0 }))).toBe(marked);
-    // A dur, or another point, ends it another way: the offset goes with the until.
     expect(ok(editCue(FILE, off, 'hand', 'bare', { dur: 3 }))).toBe(
       marked.replace("until: 'gift'", 'dur: 3'),
     );
     expect(ok(editCue(FILE, off, 'hand', 'bare', { until: 'earns' }))).toBe(
       marked.replace("until: 'gift'", "until: 'earns'"),
     );
-    // The last key of a span, and the first, go cleanly too.
     const last = scene.replace(
       "bare: { at: 'speech' }",
       "bare: { at: 'speech', until: 'gift', untilOffset: 0.1 }",
@@ -249,9 +236,7 @@ describe('scene source', () => {
   });
 
   it('takes an offset away with the comma that joins it, and keeps every comment around it', () => {
-    // Each case: the span with the offset, and the span once it is taken away.
     const cases: ReadonlyArray<readonly [string, string]> = [
-      // One line, a comment before the offset and after it, the offset last and not.
       [
         "{ at: 'speech', until: 'gift', /* why */ untilOffset: 0.1 }",
         "{ at: 'speech', until: 'gift' /* why */ }",
@@ -272,7 +257,6 @@ describe('scene source', () => {
         "{ at: 'speech', untilOffset: 0.1 /* why */, until: 'gift' }",
         "{ at: 'speech', /* why */ until: 'gift' }",
       ],
-      // Several lines: the neighbour's comment after it, the offset's line goes whole.
       [
         "{\n      at: 'speech',\n      until: 'gift', // rationale\n      untilOffset: 0.1,\n      ease: 'linear',\n    }",
         "{\n      at: 'speech',\n      until: 'gift', // rationale\n      ease: 'linear',\n    }",
@@ -281,7 +265,6 @@ describe('scene source', () => {
         "{\n      at: 'speech',\n      until: 'gift', // rationale\n      untilOffset: 0.1\n    }",
         "{\n      at: 'speech',\n      until: 'gift' // rationale\n    }",
       ],
-      // A comment on a line of its own before the offset, and one after it on its line.
       [
         "{\n      at: 'speech',\n      until: 'gift',\n      // nudged past the word\n      untilOffset: 0.1,\n      ease: 'linear',\n    }",
         "{\n      at: 'speech',\n      until: 'gift',\n      // nudged past the word\n      ease: 'linear',\n    }",
@@ -335,7 +318,6 @@ describe('scene source', () => {
           `untilOffset: ${untilOffset}, ease: 'linear'`,
         ),
       );
-      // A write that took it away has not landed as asked.
       const dropped = before.replace(`, untilOffset: ${untilOffset}`, ', offset: 0.3');
       expect(ok(cueLanded(FILE, before, dropped, 'hand', 'bare', { offset: 0.3 }))).toEqual([
         'cue bare untilOffset',
@@ -347,7 +329,6 @@ describe('scene source', () => {
       "bare: { at: 'speech' }",
       "bare: { at: 'speech', until: { cue: 'topple' } }",
     );
-    // The offset landed as 0.5, not the 0.3 asked; the end is as it was.
     const after = before.replace("at: 'speech',", "at: 'speech', offset: 0.5,");
     expect(ok(cueLanded(FILE, before, after, 'hand', 'bare', { offset: 0.3 }))).toEqual([
       'cue bare offset',
@@ -474,7 +455,6 @@ export const hand = drawing({
   });
 });
 
-/** What `unlocatable` reports on `source`: the text of each range. */
 const unlocated = (source: string) =>
   unlocatable(source, ok(parseModule(FILE, source))).map((u) => source.slice(u.start, u.end));
 

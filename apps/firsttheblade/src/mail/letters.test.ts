@@ -11,7 +11,6 @@ const ORIGIN = 'https://firsttheblade.test';
 const TO = Address.make('ann@example.com');
 const PO_BOX = 'P.O. Box 1, Testtown';
 
-/** A film like the ones the site will list, beside every film it lists now. */
 const FIXTURE: Film = {
   ref: 'path/01',
   series: Option.getOrThrow(Option.fromNullishOr(SERIES.find((series) => series.id === 'path'))),
@@ -31,24 +30,17 @@ const FILMS: ReadonlyArray<Film> = [
   ),
 ];
 
-/** Every letter the list sends, with the postal address given: the confirm letter, and each film's. */
 const lettersWith = (postal: Option.Option<string>): ReadonlyArray<Letter> => [
   confirmLetter(TO, ORIGIN, 'c.1.token', postal),
   ...FILMS.map((film) => filmLetter(TO, ORIGIN, film, 'u.1.token', postal)),
 ];
 
-/**
- * The subjects of the letters that mention Patreon while no postal address
- * is set: a letter that asks for support is commercial email, which must
- * carry one.
- */
 const missingPostal = (letters: ReadonlyArray<Letter>, postal: Option.Option<string>) =>
   letters
     .filter((letter) => /patreon/i.test(`${letter.subject}\n${letter.text}\n${letter.html}`))
     .filter(() => Option.isNone(postal))
     .map((letter) => letter.subject);
 
-/** Every letter the list sends, as it sends them. */
 const SENT: ReadonlyArray<Letter> = [
   confirmLetter(TO, ORIGIN, 'c.1.token'),
   ...FILMS.map((film) => filmLetter(TO, ORIGIN, film, 'u.1.token')),

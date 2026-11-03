@@ -1,10 +1,3 @@
-// The cast sheet's measure on pose, heads and headgear sheets drawn with known
-// faults (`fixtures/figure.ts`): each sleeve, arm, beard, size and paper
-// drawn wrong is the flag it was drawn for, and what a sheet cannot show is
-// said, never flagged. A member of its own design is held to its own heads,
-// and a smaller figure (a child) to its share of the grown one. The
-// turnarounds are read in `cast-sheet.slow.test.ts`.
-
 import { describe, expect, test } from 'bun:test';
 import { Option, Result } from 'effect';
 import { measureSheet, type SheetMeasure, type SheetOptions, sheetTable } from './cast-sheet.ts';
@@ -109,7 +102,6 @@ describe('a figure under headgear', () => {
 });
 
 describe('a heads sheet of level, bowed and lifted heads', () => {
-  // Busts with no hands; a turned head is narrower than a front one, a bowed head shorter on the page with its eyes lower, a lifted one's higher.
   const bust = (extra: Partial<FigureSpec>) =>
     at({ handless: true, feet: false, robeDepth: 120, longHair: true, ...extra });
   const turned = { eyeShift: -14, rx: 52 };
@@ -146,7 +138,6 @@ describe('a heads sheet of level, bowed and lifted heads', () => {
   });
 
   test("holds a head whose box a lock of hair widens by its eyes, and flags a head drawn bigger than its turn's first", () => {
-    // A lock beside the face widens the head's box and leaves the face as it is; a head drawn bigger spaces its eyes wider too.
     expect(flagsOf(sheet({ rx: 68 }))).toEqual([]);
     const big = sheet({ rx: 68, eyeGap: 56 });
     expect(flagsOf(big)).toEqual(['head:6,4']);
@@ -155,7 +146,6 @@ describe('a heads sheet of level, bowed and lifted heads', () => {
 });
 
 describe('a beard read under the mouth', () => {
-  // No beard over a dark robe; a beard run into the locks under a hair line inked across them.
   const m = read(
     [
       at({ longHair: true, robe: [104, 70, 46], robeShade: [88, 62, 84] }),
@@ -192,7 +182,6 @@ describe('a figure under a headcloth', () => {
 });
 
 describe('a beard under a dark headcloth', () => {
-  // The cloth's dark band meets the beard at the cheeks: no hair shows, so no parting is read.
   const dark = { headcloth: [112, 74, 50] as const, beard: { parted: false } };
   const m = read([at(dark), at(dark)], {
     kind: 'poses',
@@ -212,7 +201,6 @@ describe('a beard under a dark headcloth', () => {
   });
 });
 
-/** The lowest row of `r` that is not paper: the figure's soles. */
 const soleOf = (r: Raster): number => {
   for (let y = r.height - 1; y >= 0; y--)
     for (let x = 0; x < r.width; x++) {
@@ -223,7 +211,6 @@ const soleOf = (r: Raster): number => {
   return r.height - 1;
 };
 
-/** `r` drawn `share` of its size on paper of its own size, centred, its soles on `r`'s ground line. */
 const smaller = (r: Raster, share: number): Raster => {
   const small = scaleRaster(r, share);
   const rgba = new Uint8Array(r.width * r.height * 4);
@@ -239,11 +226,9 @@ const smaller = (r: Raster, share: number): Raster => {
 };
 
 describe('a member of its own design', () => {
-  // A short robe: the figure stands about 2.7 of its heads, as the plain lead's 2.6.
   const short = at({ robeDepth: 220 });
   const standing: SheetOptions = { kind: 'poses', count: 2, anchor: 1, standing: [1, 2] };
 
-  // Held to the canon, this anchor flags `squash` (its trace would stretch it past 10 %).
   test('is held to its own heads, never the canon', () => {
     const own = read([short, short], { ...standing, heads: 2.7 });
     expect(flagsOf(own)).toEqual([]);
@@ -253,9 +238,6 @@ describe('a member of its own design', () => {
 });
 
 describe('a pose sheet that draws a smaller figure beside the grown one', () => {
-  // The grown one stands about 2.66 of its heads (386 px, its head 145), the
-  // child about 2.2 of its own (320 px): drawn at 0.75 of the grown height,
-  // its head is a larger share of it than the grown one's.
   const grown = at({ robeDepth: 220 });
   const child = at({ robeDepth: 154 });
   const options: SheetOptions = {
@@ -273,8 +255,6 @@ describe('a pose sheet that draws a smaller figure beside the grown one', () => 
     expect(flagged([grown, smaller(child, (0.75 * 386) / 320)])).toEqual([]);
   });
 
-  // Each drawn wrong once: the child as tall as the grown one, and a child of
-  // the grown one's proportions, its head the grown share and not its own.
   test('flags a smaller figure drawn at the grown height, or with the grown head', () => {
     expect(flagged([smaller(grown, 320 / 386), child])).toEqual(['height:2,1', 'head:2,1']);
     expect(flagged([grown, smaller(grown, 0.75)])).toEqual(['head:2,1']);

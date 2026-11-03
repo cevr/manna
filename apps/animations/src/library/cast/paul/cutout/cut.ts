@@ -1,18 +1,3 @@
-// Paul's kept heads views cut into parts (`cutParts`, @manna/film's part
-// sheet): each part his own pixels, front to back, so that his head can turn
-// while every pixel at rest stays the sheet's. Each view is a bust of two
-// parts, his head over the rest: his head (bald crown, the dark hair at its
-// sides and back, face, ears and long beard) above a line that follows the
-// foot of his beard's ink, and below it the skin of his neck, his cream tunic
-// and blue-violet mantle. The lines are polygons read off 3x class maps of each
-// view. Each view names the parts a pose moves, and the words okra repaints
-// what they hide by (`HIDDEN`, read by `film concept parts`, which writes
-// `sheets/<view>/`). The lines are read in the kept view's pixels; the shared
-// cut table (`library/cutout/table.ts`) lays them in each view's part sheet
-// frame, its kept box padded (`frames.ts`), and reads each bust's figure with
-// the foot of the view closed. Data: the rules and the table are the shared
-// module's.
-
 import { bustCut, bustHidden } from '../../../cutout/bust.ts';
 import { FAR, box } from '../../../cutout/rules.ts';
 import { cutTable } from '../../../cutout/table.ts';
@@ -20,20 +5,9 @@ import { FRAMES } from './frames.ts';
 
 export { FRAMES };
 
-/** A view of his, by its name in his sheet's views. */
 type CutView = keyof typeof FRAMES;
 
-// The heads views stand close on his sheet, so a box, kept or padded, reaches
-// into its neighbour's: the edge of heads-2's head lies at heads-1's right
-// side, mostly inside heads-1's kept box (sheet x 275-281) and the rest in its
-// pad; heads-2's left pad holds heads-1's shoulder and its right pad the edge
-// of heads-3's head, and heads-3's left pad heads-2's shoulder. The cutter refuses a figure pixel
-// no part takes, so a first, still part takes those pixels; the puppet leaves
-// it out of its parts, so the render draws no figure but his own.
-
-/** His bust three-quarters to the viewer's left (heads-1), the line at the foot of his beard. */
 const HEADS_1 = bustCut({
-  // the edge of heads-2's head at this box's right side, inside the kept box (sheet x 275-281) and its pad: never drawn
   neighbour: [box(236, 40, FAR, 170)],
   line: [
     [FAR, 210],
@@ -57,9 +31,7 @@ const HEADS_1 = bustCut({
   pivot: [118, 240],
 });
 
-/** His bust with his head bowed down to the viewer's left (heads-2). */
 const HEADS_2 = bustCut({
-  // heads-1's shoulder in this box's left pad and the edge of heads-3's head in its right pad: never drawn
   neighbour: [box(-1, 265, 8, FAR), box(230, 40, FAR, 120)],
   line: [
     [FAR, 204],
@@ -86,9 +58,7 @@ const HEADS_2 = bustCut({
   pivot: [124, 244],
 });
 
-/** His bust three-quarters to the viewer's left (heads-3). */
 const HEADS_3 = bustCut({
-  // heads-2's shoulder in this box's left pad: never drawn
   neighbour: [box(-1, 285, 6, FAR)],
   line: [
     [FAR, 208],
@@ -112,7 +82,6 @@ const HEADS_3 = bustCut({
   pivot: [112, 244],
 });
 
-/** His bust facing the viewer (heads-4), his beard's foot a rounded point. */
 const HEADS_4 = bustCut({
   line: [
     [FAR, 223],
@@ -137,7 +106,6 @@ const HEADS_4 = bustCut({
   pivot: [117, 240],
 });
 
-/** His bust facing the viewer (heads-5). */
 const HEADS_5 = bustCut({
   line: [
     [FAR, 222],
@@ -162,7 +130,6 @@ const HEADS_5 = bustCut({
   pivot: [121, 242],
 });
 
-/** His bust facing the viewer, his mouth open (heads-6). */
 const HEADS_6 = bustCut({
   line: [
     [FAR, 222],
@@ -183,14 +150,8 @@ const HEADS_6 = bustCut({
   pivot: [123, 240],
 });
 
-/** His sheet's ink, for the row that closes a bust's foot. */
 const INK = [42, 21, 7, 255] as const;
 
-/**
- * His words for what lies behind his head once it is cut away, and how he is
- * turned in each view. The shared bust moves only his head, so okra repaints
- * only what it hid, in the sheet's own style.
- */
 const HIDDEN_ENTRIES = bustHidden(
   {
     head: 'his bald crown, the dark hair at its sides and back, his face, ears and long beard',
@@ -207,7 +168,6 @@ const HIDDEN_ENTRIES = bustHidden(
   } satisfies Readonly<Record<CutView, string>>,
 );
 
-/** His cut table: each view's cut and how its figure is read. */
 export const { CUTS, cutOptionsFor, HIDDEN, paperOf } = cutTable({
   frames: FRAMES,
   views: {

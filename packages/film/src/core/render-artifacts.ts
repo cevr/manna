@@ -1,41 +1,9 @@
-// A figure's render artifacts, read from its head's pixels (`film lab match`):
-// the marks a drawn figure shows that no part of it draws, each a thin line
-// of a third colour, at 1:1 only (owner, 2026-10-17, his local day, on the RBF v3 cast:
-// "theres some artifacts in the render"). Pure: RGBA and the head's masks
-// in, marks out.
-//
-// A thin line of a third colour is a pixel whose colour lies off the blend
-// of the two pixels two or three pixels either side of it, across it: an
-// antialiased edge between two fills is their blend and reads as nothing,
-// and the paper's grain steps too little. The house rim, a band of the fill
-// lifted inside the outline, is no sliver (`RIM_MOST`). Each such pixel is classed
-// by what lies either side of it:
-//
-// - `seam`: two fills of the head either side (the light line where two
-//   pieces meet with skin or paper showing between);
-// - `sliver`: the head's ink on one side and a fill on the other (a fill
-//   cut short of the outline, the colour under it showing in the gap);
-// - `weather`: one fill both sides, over the face (rain or a stroke laid
-//   across it).
-//
-// Only the head's own pixels, inside its outline, are read: past the outline
-// lies the set (a wall, a dado, a chair) and its edges, which no figure
-// draws. A light point at a crown reads where it lies, inside the outline,
-// as a sliver.
-//
-// The pixels of one class join into marks (8-connected); a mark shorter than
-// `MARK_SHORTEST` lines is grain or an antialiasing step and is dropped. A
-// mark's length is its long axis (from its pixels' second moments), so a
-// diagonal streak counts its own length, not its box's.
-
 import { Schema } from 'effect';
 import type { Raster } from './raster.ts';
 
-/** What a thin line of a third colour is, by what lies either side of it. */
 export const ARTIFACT_KINDS = ['seam', 'sliver', 'weather'] as const;
 export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];
 
-/** One artifact: its kind, its box in the crop's pixels, and its length in pixels. */
 export const ArtifactMark = Schema.Struct({
   kind: Schema.Literals(ARTIFACT_KINDS),
   box: Schema.Tuple([Schema.Finite, Schema.Finite, Schema.Finite, Schema.Finite]),
@@ -43,12 +11,9 @@ export const ArtifactMark = Schema.Struct({
 });
 export type ArtifactMark = typeof ArtifactMark.Type;
 
-/** What the read needs of a head: its crop, the ink (lines, marks and masses), its outline's mask in a box of the crop, and its line's width. */
 interface HeadPixels {
   readonly raster: Raster;
-  /** 1 where the ink's own colour lies: the outline, a mark, or a mass as dark as the ink; a dark fill of another colour (brown hair, a beard) is a fill. */
   readonly ink: Uint8Array;
-  /** The head inside its outline's outer edge, 1 inside, in the box at (`x0`, `y0`), `bw` × `bh`. */
   readonly head: {
     readonly x0: number;
     readonly y0: number;
@@ -56,39 +21,23 @@ interface HeadPixels {
     readonly bh: number;
     readonly mask: Uint8Array;
   };
-  /** The face's box in the crop, from the eyes to the chin: weather counts over it only. */
   readonly face: {
     readonly x0: number;
     readonly y0: number;
     readonly x1: number;
     readonly y1: number;
   };
-  /** The outline's width in pixels. */
   readonly line: number;
 }
 
-/** A pixel off the blend of its two neighbours by more than this (RGB distance) is a third colour. */
 const OFF_BLEND = 30;
 
-/**
- * A pixel beside the ink is a sliver only when its luma is this far from
- * the fill's on its other side: the house rim is the fill lifted, a fill
- * showing in a gap far more. Tuned on RBF's papers (`righteousness-by-faith/
- * papers.ts`): their rimmed head papers lift 13 to 31 luma over their colour,
- * read on its lead, prosecutor and judge as 20 to 35, and the rim fades
- * out before the shade's crease (`style/rig/parts.ts` `rimOf`), so it never
- * lies over a shade. A film whose rim lifts more than 45 over its paper
- * reads its own rim as a sliver: measure its papers against this first.
- */
 const RIM_MOST = 45;
 
-/** Two neighbours nearer than this (RGB distance) are one fill. */
 const ONE_FILL = 20;
 
-/** How far either side a pixel's neighbours are read, in pixels: a line up to five pixels wide. */
 const ACROSS = [2, 3] as const;
 
-/** The directions a line is read across: along a row, a column and both diagonals. */
 const WAYS: ReadonlyArray<readonly [number, number]> = [
   [1, 0],
   [0, 1],
@@ -96,7 +45,6 @@ const WAYS: ReadonlyArray<readonly [number, number]> = [
   [1, -1],
 ];
 
-/** A mark shorter than this many lines' widths is grain or an antialiasing step. */
 const MARK_SHORTEST = 2;
 
 type Rgb = readonly [number, number, number];
@@ -111,7 +59,6 @@ const rgbAt = (r: Raster, i: number): Rgb => [
 
 const dist = (a: Rgb, b: Rgb) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 
-/** How far `p` lies from the blends of `a` and `b` (the segment between them in RGB). */
 const offBlend = (p: Rgb, a: Rgb, b: Rgb): number => {
   const ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]] as const;
   const ap = [p[0] - a[0], p[1] - a[1], p[2] - a[2]] as const;
@@ -123,21 +70,18 @@ const offBlend = (p: Rgb, a: Rgb, b: Rgb): number => {
   return Math.hypot(ap[0] - t * ab[0], ap[1] - t * ab[1], ap[2] - t * ab[2]);
 };
 
-/** Each pixel's class: 0 none, else 1 + its kind's index. */
 const KIND_CODE: Readonly<Record<ArtifactKind, number>> = {
   seam: 1,
   sliver: 2,
   weather: 3,
 };
 
-/** Whether the crop's pixel (`x`, `y`) lies inside the head's outline. */
 const inHead = (head: HeadPixels['head'], x: number, y: number): boolean => {
   const hx = x - head.x0;
   const hy = y - head.y0;
   return hx >= 0 && hy >= 0 && hx < head.bw && hy < head.bh && head.mask[hy * head.bw + hx] === 1;
 };
 
-/** The squared RGB distance of the raster's pixels `i` and `j`. */
 const distSq = (rgba: Uint8Array, i: number, j: number): number => {
   const dr = rgba[i * 4]! - rgba[j * 4]!;
   const dg = rgba[i * 4 + 1]! - rgba[j * 4 + 1]!;
@@ -145,7 +89,6 @@ const distSq = (rgba: Uint8Array, i: number, j: number): number => {
   return dr * dr + dg * dg + db * db;
 };
 
-/** A pixel read across one pair of its neighbours: how far off their blend it is, and its class there (0 none). */
 interface Across {
   readonly off: number;
   readonly code: number;
@@ -153,12 +96,6 @@ interface Across {
 
 const NOTHING: Across = { off: 0, code: 0 };
 
-/**
- * The pixel `i` read across its neighbours `i1` and `i2`: a sliver where one
- * is ink and the pixel is no rim's lift of the fill, weather where both are
- * one fill, else a seam; nothing where both are ink or the pixel is near
- * either (a blend lies no farther from it than either end).
- */
 const across = (px: HeadPixels, i: number, i1: number, i2: number): Across => {
   const { raster: r, ink } = px;
   const inks = ink[i1]! + ink[i2]!;
@@ -176,7 +113,6 @@ const across = (px: HeadPixels, i: number, i1: number, i2: number): Across => {
   return { off, code: dist(a, b) < ONE_FILL ? KIND_CODE.weather : KIND_CODE.seam };
 };
 
-/** The pixel (`x`, `y`)'s class: by the way across it that it is most off its neighbours' blend, past `OFF_BLEND`. */
 const classAt = (px: HeadPixels, x: number, y: number): number => {
   const { width: w, height: h } = px.raster;
   let best: Across = { off: OFF_BLEND, code: 0 };
@@ -195,7 +131,6 @@ const classAt = (px: HeadPixels, x: number, y: number): number => {
   return best.code;
 };
 
-/** Each pixel of a head classed (`KIND_CODE`): each pixel inside its outline that is not ink, by `classAt`. */
 const classify = (px: HeadPixels): Uint8Array => {
   const { width: w, height: h } = px.raster;
   const kinds = new Uint8Array(w * h);
@@ -205,7 +140,6 @@ const classify = (px: HeadPixels): Uint8Array => {
   return kinds;
 };
 
-/** A mark's pixels gathered: their count, sums for their moments, and their box. */
 interface Gathered {
   readonly code: number;
   n: number;
@@ -220,7 +154,6 @@ interface Gathered {
   y1: number;
 }
 
-/** The long axis of a mark's pixels: a line `L` long has a variance of `L² / 12` along it. */
 const lengthOf = (g: Gathered): number => {
   const [mx, my] = [g.sx / g.n, g.sy / g.n];
   const vxx = g.sxx / g.n - mx * mx + 1 / 12;
@@ -230,7 +163,6 @@ const lengthOf = (g: Gathered): number => {
   return Math.sqrt(12 * major);
 };
 
-/** A mark begun: no pixels yet, its box empty. */
 const begun = (code: number, w: number, h: number): Gathered => ({
   code,
   n: 0,
@@ -245,7 +177,6 @@ const begun = (code: number, w: number, h: number): Gathered => ({
   y1: -1,
 });
 
-/** The pixel (`x`, `y`) added to the mark `g`: its count, moments and box. */
 const add = (g: Gathered, x: number, y: number): void => {
   g.n++;
   g.sx += x;
@@ -259,7 +190,6 @@ const add = (g: Gathered, x: number, y: number): void => {
   g.y1 = Math.max(g.y1, y);
 };
 
-/** The mark of `kinds`' class at `start`: its 8-connected run, each pixel marked `seen`. */
 const grow = (
   kinds: Uint8Array,
   w: number,
@@ -288,7 +218,6 @@ const grow = (
   return g;
 };
 
-/** The marks of each class: 8-connected runs of one class's pixels. */
 const gather = (px: HeadPixels, kinds: Uint8Array): ReadonlyArray<Gathered> => {
   const { width: w, height: h } = px.raster;
   const seen = new Uint8Array(w * h);
@@ -301,11 +230,6 @@ const gather = (px: HeadPixels, kinds: Uint8Array): ReadonlyArray<Gathered> => {
 
 const KINDS_BY_CODE: ReadonlyArray<ArtifactKind> = ['seam', 'seam', 'sliver', 'weather'];
 
-/**
- * The head's artifacts: each thin line of a third colour inside its outline,
- * `MARK_SHORTEST` lines long or longer, weather only over the face (rain
- * across a headcloth or a robe is the weather's own).
- */
 export const headArtifacts = (px: HeadPixels): ReadonlyArray<ArtifactMark> =>
   gather(px, classify(px)).flatMap((g): ReadonlyArray<ArtifactMark> => {
     const kind = KINDS_BY_CODE[g.code]!;

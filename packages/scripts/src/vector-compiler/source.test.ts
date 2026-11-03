@@ -1,21 +1,5 @@
 /* oxlint-disable effect/noNodeBuiltinImport -- build tooling, not portable runtime core: this suite creates real SQLite files in a temp directory to drive `bun:sqlite`'s own failures, which is the whole point of it. */
 
-/** The vector compiler's source read, at its failure edges (round-2 F15).
- *
- *  `readVectorSource` had no test at all. Its two deliberate design decisions —
- *  failures land on a typed error channel rather than collapsing into an empty
- *  corpus, and the database handle is an `acquireUseRelease` resource so it
- *  closes on *every* exit — are both invisible on the happy path. A regression
- *  in either one produces a build that either debugs in the wrong place ("your
- *  database is empty" when the fault is the query) or leaks a read handle and a
- *  WAL on a 4.5 GB file.
- *
- *  Real SQLite databases in a temp directory rather than a driver double: what
- *  is under test is how this code behaves against `bun:sqlite`'s actual errors —
- *  an unopenable path, a missing table, a renamed column — and a double would
- *  only assert that the test can imitate them.
- */
-
 import { EGW_SCOPE_AUTHORS } from '@manna/core/writings';
 import { Database } from 'bun:sqlite';
 import { describe, expect, it } from 'bun:test';
@@ -26,10 +10,6 @@ import path from 'node:path';
 
 import { readVectorSource, VectorSourceError } from './source.js';
 
-/** Runs `body` in a temp directory of its own, removed on every exit — the
- *  body's failed expectation too — so a run leaves nothing under
- *  `os.tmpdir()`. A resource of the test rather than an `afterAll`: each test
- *  owns its databases, and no hook outlives one. */
 const inWorkspace = <A>(body: (workspace: string) => A): A =>
   Effect.runSync(
     Effect.acquireUseRelease(
@@ -41,17 +21,12 @@ const inWorkspace = <A>(body: (workspace: string) => A): A =>
 
 const AUTHOR = EGW_SCOPE_AUTHORS[0] ?? 'Ellen Gould White';
 
-/** A corpus-shaped database in `workspace`. `paraIdType` lets one test declare
- *  a column type the decoder rejects, so the *decoder* — rather than the
- *  query — is what fails. */
 const makeDatabase = (
   workspace: string,
   input: {
     readonly name: string;
     readonly rows?: readonly {
       readonly bookCode: string;
-      /** `None` writes SQL NULL — the corpus's own "no identity" state, which is
-       *  one of the rows §9.2 must drop. */
       readonly paraId: Option.Option<string>;
       readonly refcodeShort: Option.Option<string>;
       readonly text: string;
@@ -98,18 +73,12 @@ const makeDatabase = (
   return filename;
 };
 
-/** `Result` rather than `Exit`: `readVectorSource` declares exactly one error
- *  type, so the failure side *is* a `VectorSourceError` and the test can read
- *  its message directly rather than picking through a cause. */
 const run = (filename: string, limit = Option.none<number>()) =>
   Effect.runSync(Effect.result(readVectorSource({ filename, limit })));
 
 describe('readVectorSource — failures reach the error channel (F15)', () => {
   it('fails rather than reporting an empty corpus when the file cannot be opened', () =>
     inWorkspace((workspace) => {
-      // The distinction the tagged error exists for: "no such file" and "no
-      // EGW-scope paragraphs in this file" are different problems, and the
-      // previous shape reported both as the second one.
       const outcome = run(path.join(workspace, 'does-not-exist.db'));
 
       expect(outcome._tag).toBe('Failure');
@@ -120,9 +89,6 @@ describe('readVectorSource — failures reach the error channel (F15)', () => {
 
   it('fails when the query cannot run against the schema', () =>
     inWorkspace((workspace) => {
-      // A database that opens fine and has no `paragraphs` table at all: the
-      // failure is in the query, and an empty array would point the operator at
-      // the corpus instead.
       const filename = path.join(workspace, 'no-tables.db');
       new Database(filename).close();
 
@@ -136,10 +102,6 @@ describe('readVectorSource — failures reach the error channel (F15)', () => {
 
   it('fails when a column holds a type the decoder rejects', () =>
     inWorkspace((workspace) => {
-      // The schema-break case, which is the one §9.2 most needs to stop a build
-      // for: the query succeeds, the rows come back, and `para_id` is a number
-      // where the decoder requires a string-or-null. Writing an index from this
-      // would key vectors by a value the fusion cannot join back.
       const filename = makeDatabase(workspace, {
         name: 'bad-schema.db',
         paraIdType: 'INTEGER',
@@ -169,28 +131,6 @@ describe('readVectorSource — failures reach the error channel (F15)', () => {
 });
 
 describe('readVectorSource — the handle is released on every exit (F15)', () => {
-  /** Counts `close()` on every database this module opens.
-   *
-   *  Observing the call rather than a filesystem side effect, because there is
-   *  no side effect to observe: SQLite lets a second connection create and drop
-   *  tables while a `readonly` handle is still open, so a probe that tried to
-   *  write would report "released" for a leaked handle and could never fail.
-   *  What `acquireUseRelease` promises is precisely that `close()` runs on every
-   *  exit, so that is what is counted.
-   *
-   *  `Database.prototype` is patched for the duration and restored after, so the
-   *  instrumentation cannot outlive the assertion. */
-  /** Runs `readVectorSource` with `Database.prototype.close` counted.
-   *
-   *  Observing the call rather than a filesystem side effect, because there is
-   *  no side effect to observe: SQLite lets a second connection create and drop
-   *  tables while a `readonly` handle is still open, so a probe that tried to
-   *  write would report "released" for a leaked handle and could never fail.
-   *  What `acquireUseRelease` promises is exactly that `close()` runs on every
-   *  exit, so that is what is counted.
-   *
-   *  `Effect.acquireUseRelease` restores the prototype, so the instrumentation
-   *  cannot outlive the assertion even if the read dies. */
   const countingCloses = (filename: string) =>
     Effect.runSync(
       Effect.acquireUseRelease(
@@ -236,9 +176,6 @@ describe('readVectorSource — the handle is released on every exit (F15)', () =
 
   it('releases the database when the decode fails', () =>
     inWorkspace((workspace) => {
-      // The path the previous shape leaked: the handle was closed on the success
-      // branch only, so a decode failure left it open. This is the assertion that
-      // distinguishes `acquireUseRelease` from a trailing `close()`.
       const filename = makeDatabase(workspace, {
         name: 'release-on-failure.db',
         paraIdType: 'INTEGER',
@@ -275,10 +212,6 @@ describe('readVectorSource — the handle is released on every exit (F15)', () =
 describe('readVectorSource — which rows become vectors (F15)', () => {
   it('drops rows with no identity and no text, and keeps the rest', () =>
     inWorkspace((workspace) => {
-      // Three exclusions §9.2 depends on, none of which is an error: a row with
-      // no `para_id` cannot be joined back, a row with no refcode cannot be
-      // displayed, and a structural row with no text would put a meaningless
-      // vector into the scan.
       const filename = makeDatabase(workspace, {
         name: 'filtering.db',
         rows: [
@@ -313,10 +246,7 @@ describe('readVectorSource — which rows become vectors (F15)', () => {
 
       expect(outcome._tag).toBe('Success');
       if (outcome._tag !== 'Success') return;
-      // Ordered by `(book_code, puborder)` — which is what makes a rebuild over
-      // unchanged input produce an identical digest — so `DA` precedes `GC`.
       expect(outcome.success.map((row) => row.paraId)).toEqual(['2.1', '1.1']);
-      // The refcode falls back to `ref_code` when `refcode_short` is absent.
       expect(outcome.success[0]?.refcode).toBe('DA 3');
     }));
 

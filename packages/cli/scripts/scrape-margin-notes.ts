@@ -1,20 +1,3 @@
-/**
- * Scrape KJV 1611 Margin Notes with phrase-level anchoring.
- *
- * Source: https://en.literaturabautista.com/exhaustive-listing-marginal-notes-1611-edition-king-james-bible
- *
- * This source provides phrase-level data showing which text each margin note applies to.
- * Format: "Genesis 1:6 firmament: Heb. expansion"
- *   - Reference: Genesis 1:6
- *   - Phrase: "firmament"
- *   - Note: "Heb. expansion"
- *
- * Output: assets/margin-notes.json with structure:
- * {
- *   "1.1.6": [{ "type": "hebrew", "phrase": "firmament", "text": "Heb. expansion" }]
- * }
- */
-
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import * as BunHttpClient from '@effect/platform-bun/BunHttpClient';
 import { Effect, FileSystem, Layer, Option, Path, Schema, SchemaGetter } from 'effect';
@@ -30,7 +13,6 @@ const JsonString = Schema.Unknown.pipe(
 );
 const encodeJson = Schema.encodeUnknownEffect(JsonString);
 
-// Book name to number mapping
 const BOOK_MAP: ReadonlyMap<string, number> = new Map(
   Object.entries({
     Genesis: 1,
@@ -103,7 +85,6 @@ const BOOK_MAP: ReadonlyMap<string, number> = new Map(
   }),
 );
 
-// Build regex for book names
 const bookNames = Object.keys(BOOK_MAP)
   .sort((a, b) => b.length - a.length)
   .join('|');
@@ -126,12 +107,12 @@ function classifyNote(text: string): MarginNote['type'] {
 
 function cleanText(text: string): string {
   return text
-    .replace(/<[^>]+>/g, '') // Remove HTML tags
-    .replace(/&#8211;/g, '-') // En-dash
-    .replace(/&#8212;/g, '-') // Em-dash
-    .replace(/&#8217;/g, "'") // Apostrophe
-    .replace(/&#8220;/g, '"') // Left quote
-    .replace(/&#8221;/g, '"') // Right quote
+    .replace(/<[^>]+>/g, '')
+    .replace(/&#8211;/g, '-')
+    .replace(/&#8212;/g, '-')
+    .replace(/&#8217;/g, "'")
+    .replace(/&#8220;/g, '"')
+    .replace(/&#8221;/g, '"')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
@@ -154,10 +135,9 @@ const main = Effect.gen(function* () {
 
   yield* Effect.log(`Downloaded ${html.length} bytes\n`);
 
-  // Extract all margin note entries
   const notesMap: Record<string, MarginNote[]> = {};
   let count = 0;
-  const seen = new Set<string>(); // Dedupe
+  const seen = new Set<string>();
 
   for (const match of html.matchAll(ENTRY_REGEX)) {
     const bookName = Option.fromNullishOr(match[1]);
@@ -184,10 +164,8 @@ const main = Effect.gen(function* () {
     const phrase = cleanText(phraseRaw.value);
     const noteText = cleanText(noteTextRaw.value);
 
-    // Skip if phrase starts with dash (artifact)
     if (phrase.startsWith('-')) continue;
 
-    // Dedupe key
     const dedupeKey = `${bookNum.value}.${chapter.value}.${verse.value}:${phrase}:${noteText}`;
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
@@ -206,7 +184,6 @@ const main = Effect.gen(function* () {
     count++;
   }
 
-  // Stats
   const byType = { hebrew: 0, greek: 0, alternate: 0, name: 0, other: 0 };
   for (const notes of Object.values(notesMap)) {
     for (const note of notes) {
@@ -224,12 +201,10 @@ const main = Effect.gen(function* () {
   yield* Effect.log(`  Name meanings: ${byType.name}`);
   yield* Effect.log(`  Other: ${byType.other}`);
 
-  // Write output
   const outputPath = path.join(assets, 'margin-notes.json');
   yield* fs.writeFileString(outputPath, yield* encodeJson(notesMap));
   yield* Effect.log(`\nWrote ${outputPath}\n`);
 
-  // Sample output
   yield* Effect.log('Sample entries:');
   const samples = Object.entries(notesMap).slice(0, 5);
   for (const [key, notes] of samples) {

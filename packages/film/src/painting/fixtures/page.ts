@@ -1,30 +1,15 @@
-// A page that draws one painted plate, for its slow test: the plate a module
-// declares (`module`'s export `name`, its PNG imported `with { type: 'file' }`)
-// stood on two one-scene films as a film's are (`loadPaintings` over the
-// page's decoder, `PaintingImagesBrowser`), and each film's frame rendered in
-// the render path's own Chrome (`openView(launchArgs)`). Both scenes move the
-// ctx off the identity by `move` before the plate would draw; one paints it
-// with `f.painting`, the other draws nothing more, so the two frames differ
-// only by the plate. The page is built with Bun's bundler into a folder under
-// the package's `node_modules/.cache` (so `effect` resolves from the package)
-// and served on loopback for the scope.
-
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 import type { Raster } from '../../core/raster.ts';
 import { launchArgs } from '../../tools/browser.ts';
 import { openView } from '../../tools/chrome.ts';
 
-/** Where the plate is declared, and how the scene moves the ctx before it paints. */
 export interface PlateAt {
   readonly module: string;
   readonly name: string;
-  /** The scene's own transform before `f.painting`: translate(x, y), then scale(s). */
   readonly move: { readonly x: number; readonly y: number; readonly s: number };
-  /** The film second rendered. */
   readonly T: number;
 }
 
-/** What the page drew: the frame with the plate, the same frame without, and the ctx's transform `f.painting` drew under. */
 export interface PlateFrames {
   readonly painted: Raster;
   readonly bare: Raster;
@@ -33,7 +18,6 @@ export interface PlateFrames {
 
 const FILM = new URL('../..', import.meta.url).pathname;
 
-/** `v` as a JavaScript literal in the page's source. */
 const literal = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
 const entry = (at: PlateAt) => `
@@ -103,14 +87,11 @@ try {
 }
 `;
 
-/** The page's one HTML file: the built entry. */
 const INDEX =
   '<!doctype html><html><head><meta charset="utf-8"></head><body><script type="module" src="/entry.js"></script></body></html>';
 
-/** Waits in the page for its load: `ready`, or why not. */
 const LOADED = `new Promise((done) => { const t0 = Date.now(); const look = () => window.ready ? done('ready') : window.loadError ? done('error: ' + window.loadError) : Date.now() - t0 > 60000 ? done('timeout') : setTimeout(look, 20); look(); })`;
 
-/** The built page's files on loopback: a file asked for that is not there answers 404. */
 const served = (out: string, path: Path.Path) =>
   Effect.acquireRelease(
     Effect.sync(() =>
@@ -147,7 +128,6 @@ const rasterOf = (d: Drawn): Raster => ({
   rgba: Uint8Array.from(Buffer.from(d.rgba, 'base64')),
 });
 
-/** The two frames of the plate `at` declares, drawn once in a page open for the scope. */
 export const plateFrames = Effect.fn('test.plateFrames')(function* (at: PlateAt) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

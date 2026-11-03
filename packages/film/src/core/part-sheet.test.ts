@@ -19,7 +19,6 @@ const PAPER: Rgba = [244, 232, 212, 255];
 const INK: Rgba = [24, 20, 18, 255];
 const CREAM: Rgba = [250, 210, 150, 255];
 
-/** A `w` × `h` view of paper with each pixel `paint` gives painted, and its figure (1 where painted). */
 const viewOf = (w: number, h: number, paint: (x: number, y: number) => Option.Option<Rgba>) => {
   const rgba = new Uint8Array(w * h * 4);
   const figure = new Uint8Array(w * h);
@@ -35,7 +34,6 @@ const viewOf = (w: number, h: number, paint: (x: number, y: number) => Option.Op
   return { view: { width: w, height: h, rgba } satisfies Raster, figure };
 };
 
-/** A 32 × 32 figure: a red disc (the head) over a blue box (the body), each pixel its own colour so a moved byte shows. */
 const { view: FIGURE, figure: FIGURE_MASK } = viewOf(32, 32, (x, y) =>
   Option.firstSomeOf([
     Option.liftPredicate(
@@ -73,7 +71,6 @@ const sheetOf = (cut: PartCut = CUT) =>
 
 const ownerAt = (s: ReturnType<typeof sheetOf>, x: number, y: number) => s.owner[y * s.width + x];
 
-/** Why a result was refused, or `accepted`. */
 const reasonOf = (r: Result.Result<unknown, { readonly reason: string }>) =>
   Result.match(r, { onSuccess: () => 'accepted', onFailure: (e) => e.reason });
 
@@ -95,7 +92,6 @@ describe('part sheet', () => {
   });
 
   test('a pixel two parts take belongs to the one in front', () => {
-    // the disc reaches below the head into the body's top rows: the head, listed first, owns them
     expect(ownerAt(sheetOf(), 16, 13)).toBe(1);
     const flipped = sheetOf({ parts: [CUT.parts[1]!, CUT.parts[0]!] });
     expect(ownerAt(flipped, 16, 13)).toBe(1);
@@ -156,7 +152,6 @@ describe('part sheet', () => {
     expect(painted.parts[1]?.painted).toBe(under.filter((m) => m === 1).length);
     expect(recompose(painted, FIGURE).rgba).toEqual(FIGURE.rgba);
     expect(painted.parts[0]).toBe(sheet.parts[0]!);
-    // under the front-most part nothing lies in front; on the body's own pixel or the ground, paint would show
     for (const [part, x, y] of [
       ['head', 16, 8],
       ['body', 16, 20],
@@ -172,7 +167,6 @@ describe('part sheet', () => {
   });
 
   test('hidden paint is refused under a front pixel that is not opaque, which would let it show', () => {
-    // an ink box with one clear texel inside it, read by the default figure reader
     const { view } = viewOf(32, 32, (x, y) =>
       Option.liftPredicate(INK, () => x >= 8 && x < 24 && y >= 8 && y < 24),
     );
@@ -203,7 +197,6 @@ describe('part sheet', () => {
     expect(reasonOf(paintHidden(sheet, 'body', red, clear))).toBe(
       'paint at (16, 16) would show at rest: cloak, in front of body, is not opaque there',
     );
-    // under an opaque pixel of the same part, the paint is hidden
     const opaque = new Uint8Array(32 * 32);
     opaque[12 * 32 + 12] = 1;
     const painted = Result.getOrThrow(paintHidden(sheet, 'body', red, opaque));
@@ -217,7 +210,6 @@ describe('part sheet', () => {
   });
 
   describe('the paper the ink encloses', () => {
-    // an inked ring round 12 × 12 px of paper (x and y 14 to 25), a cream band and an outer ring round it
     const ring = [Option.none<Rgba>(), Option.some(INK), Option.some(CREAM), Option.some(INK)];
     const { view } = viewOf(40, 40, (x, y) => {
       const d = Math.max(Math.abs(x - 19.5), Math.abs(y - 19.5));
@@ -251,7 +243,6 @@ describe('part sheet', () => {
 
     test('a gap point off every paper piece changes nothing', () => {
       const held = cutFigureOf(view);
-      // on the open ground, on the cream band, and off the view
       for (const at of [
         [0, 0],
         [11, 20],
@@ -275,7 +266,6 @@ describe('part sheet', () => {
             [20, 20],
             [14, 25],
           ],
-          // the 12 x 12 square at (14, 14), row by row
           pixels: Array.from(
             { length: 144 },
             (_, k) => (14 + Math.floor(k / 12)) * view.width + 14 + (k % 12),
@@ -288,7 +278,6 @@ describe('part sheet', () => {
 });
 
 describe('a key inked as the kept view', () => {
-  // a drawn key's arm: a cream sleeve inside an off-colour (purple) outline, a soft antialiased step between them, clear past it
   const OFF: Rgba = [62, 18, 70, 255];
   const shade = (t: number): Rgba =>
     [0, 1, 2]
@@ -297,7 +286,6 @@ describe('a key inked as the kept view', () => {
   const KEY: Raster = (() => {
     const [w, h] = [24, 16];
     const rgba = new Uint8Array(w * h * 4);
-    // rows 0-1 clear; 2-3 ink (with a darker vein); 4 and 5 the edge, 45 % and 75 % of the way to cream; 6-9 cream
     const colourAt = (x: number, d: number): Option.Option<Rgba> => {
       if (d > 5.5) return Option.none();
       if (d > 3.5 && x % 5 === 0) return Option.some([40, 10, 46, 255]);
@@ -329,7 +317,6 @@ describe('a key inked as the kept view', () => {
   });
 
   test('the ink is as wide as it was, read bilinear at every 0.05 px across the stroke', () => {
-    // L* between pixel centres, as the cast checks read a stroke's width (pixel (x, y) centred at x + 0.5, y + 0.5)
     const lAt = (r: Raster, x: number, y: number) => {
       const [u, v] = [
         Math.min(r.width - 1.001, Math.max(0, x - 0.5)),
@@ -342,12 +329,10 @@ describe('a key inked as the kept view', () => {
         (at(x0, y0 + 1) * (1 - tx) + at(x0 + 1, y0 + 1) * tx) * ty
       );
     };
-    // down five columns between and on pixel centres, where the read is ink (L* under 40), every 0.05 px
     const inkEdges = (r: Raster) =>
       [2.3, 5.5, 7.85, 10.1, 15.6].map((x) =>
         Array.from({ length: 321 }, (_, k) => Number(lAt(r, x, k * 0.05) < 40)).join(''),
       );
-    // a kept ink well lighter than the key's, so that the move is one a shifted lightness would show
     const out = inkTo(KEY, labOf([80, 60, 52]));
     expect(labOf(rgbAt(out, 2 * KEY.width + 1))[0]).toBeGreaterThan(
       labOf(rgbAt(KEY, 2 * KEY.width + 1))[0] + 8,
@@ -371,7 +356,7 @@ describe('a key inked as the kept view', () => {
   test('the ink side of the edge moves the way the ink moves, by less', () => {
     const out = inkTo(KEY, KEPT);
     const own = Option.getOrThrow(inkOf(KEY, opaque(KEY)));
-    const edge = 4 * KEY.width + 3; // row 4: 45 % of the way to cream, the ink side of the edge
+    const edge = 4 * KEY.width + 3;
     const [before, after] = [labOf(rgbAt(KEY, edge)), labOf(rgbAt(out, edge))];
     expect(before[0]).toBeGreaterThanOrEqual(40);
     for (const c of [1, 2]) {

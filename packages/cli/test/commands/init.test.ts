@@ -11,7 +11,6 @@ import { INDEX_TABLES } from '@manna/core/hymnal';
 import { layerNativeTopicsArtifacts } from '@manna/core/corpus-supply/bun';
 import { withSqliteRefresh } from '../../src/lib/sqlite-refresh.js';
 
-/** The bytes of a SQLite database with the given tables, each empty. */
 const sqliteWith = (tables: readonly string[]) => {
   const db = new Database(':memory:');
   db.exec(tables.map((table) => `CREATE TABLE ${table}(x)`).join(';'));
@@ -20,7 +19,6 @@ const sqliteWith = (tables: readonly string[]) => {
   return bytes;
 };
 
-/** A download body `manna init` installs: `hymns` and every index table. */
 const indexedHymnal = sqliteWith(['hymns', ...INDEX_TABLES]);
 
 const stageWithOutgoingWal = (

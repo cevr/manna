@@ -1,11 +1,3 @@
-// The clip rules (`clips.ts`): a clip passes when its figure keeps its height
-// and its feet line, every band's chain IoU reaches its bar and every band
-// that expects drawings names them on enough of its frames; the holds are
-// the longest start and end runs over the hold bar; a fal call is allowed
-// while the member's and the week's spend stay within their limits; and a
-// committed clip is adopted only when its provenance is the request's and its
-// mp4 is the one the provenance names, else it is missing, with the request.
-
 import { describe, expect, test as it } from 'bun:test';
 import { DateTime, Option, Schema } from 'effect';
 import {
@@ -28,7 +20,6 @@ const NOW = Date.parse('2026-11-01T12:00:00Z');
 const iso = (ms: number) => DateTime.formatIso(DateTime.makeUnsafe(ms));
 const decodeJson = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Unknown));
 
-/** Clip B as the base lock reads it: its height and feet range, its two bands and the whole clip. */
 const CLIP_B: ClipNumbers = {
   heightRatio: [0.991, 1.0015],
   feetPx: [0, 1],
@@ -57,7 +48,6 @@ const CLIP_B: ClipNumbers = {
   ],
 };
 
-/** reader8-base on clip B: front named on all 124 frames, the end band's IoU 0.8851. */
 const READER8_BASE: ClipNumbers = {
   ...CLIP_B,
   bands: [
@@ -67,7 +57,6 @@ const READER8_BASE: ClipNumbers = {
   ],
 };
 
-/** The bar each failure names: its first word. */
 const barsOf = (fails: ReadonlyArray<string>) =>
   [...new Set(fails.map((f) => f.split(/[:\s]/)[0]))].toSorted();
 
@@ -152,10 +141,8 @@ describe('clip holds', () => {
 describe("a clip's lock entry", () => {
   type Entry = Parameters<typeof clipEntryOf>[0];
   const N = 124;
-  /** Each `[count, value]` run laid end to end. */
   const runsOf = (...runs: ReadonlyArray<readonly [number, number]>) =>
     runs.flatMap(([count, value]) => Array.from({ length: count }, () => value));
-  /** Clip B's figure: still 12 frames, then moving, then still its last 83. */
   const figure: Entry['figure'] = {
     heightRatio: runsOf([50, 1], [1, 0.991], [39, 1], [1, 1.0015], [33, 1]),
     feetPx: runsOf([61, 0], [63, 1]),

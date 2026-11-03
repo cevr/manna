@@ -1,9 +1,3 @@
-// The cast sheet's read of the skin below the neck and of what joins a hand
-// to the body, on pose sheets drawn with known faults (`fixtures/figure.ts`):
-// a raised hand is read at any height, a sleeve is followed into a hand
-// from any angle, bare skin on the robe never passes as a neck or a hand,
-// and what the read cannot tell is said as not measured.
-
 import { describe, expect, test } from 'bun:test';
 import { Option, Result } from 'effect';
 import { measureSheet, type SheetMeasure } from './cast-sheet.ts';
@@ -19,7 +13,6 @@ const flagsOf = (m: SheetMeasure) => m.flags.map((f) => `${f.check}:${f.views.jo
 const unmeasuredOf = (m: SheetMeasure, view: number) =>
   m.unmeasured.filter((u) => u.view === view && u.check !== 'hairBeard').map((u) => u.check);
 
-/** A hand raised beside the head (its middle 56 px above the chin), on nothing, a sleeve or a bare forearm from the shoulder. */
 const raised = (kind: 'free' | 'sleeve' | 'bare') =>
   at({ limb: { hand: [318, 160], from: [[250, 262]], kind } });
 
@@ -37,7 +30,6 @@ describe('a raised hand', () => {
 });
 
 describe('a sleeve into a hand held out, from flat to straight down', () => {
-  // The hand floats out from the robe's side; the sleeve leaves the shoulder, bends at an elbow and comes into the hand at `deg` below the horizontal.
   const hand = [366, 420] as const;
   const sleeve = (deg: number, cuff: boolean) => {
     const rad = (deg * Math.PI) / 180;
@@ -83,7 +75,6 @@ describe('bare skin on the robe', () => {
 });
 
 describe('a hand the read cannot follow', () => {
-  // A hand at rest against the robe, its ring on the robe's ink: a sleeve with its own ink would meet it the same way.
   const m = poses([at(), at({ limb: { hand: [326, 414], kind: 'free' } }), at({ handless: true })]);
 
   test('says a hand at rest against the body and a view with no hand are not measured for a sleeve', () => {
@@ -95,7 +86,6 @@ describe('a hand the read cannot follow', () => {
 });
 
 describe("a bare hand whose ring touches a straight robe's side", () => {
-  // The robe as wide at the hem as under the chin, no sleeve: the hand's ring lies on the robe's line, so the circle round the hand crosses the robe, and its middle stands 0.07 of its diameter past a touch.
   const straight: Partial<FigureSpec> = { robeTop: 160, robeHem: 160 };
   const m = poses([at(straight), at({ ...straight, limb: { hand: [316, 414], kind: 'free' } })]);
 
@@ -108,7 +98,6 @@ describe("a bare hand whose ring touches a straight robe's side", () => {
 });
 
 describe('a hand held low beside the hem', () => {
-  // Its middle under the robe's widest rows: too few of the body's side lie under it to tell held out from at rest, and it is not raised.
   const low = [370, 510] as const;
   const m = poses([
     at(),
@@ -124,7 +113,6 @@ describe('a hand held low beside the hem', () => {
   });
 });
 
-/** A colour, painted on top of a drawn figure wherever `inside` holds (the robe and the head too). */
 type Rgb = readonly [number, number, number];
 const INK: Rgb = [58, 38, 28];
 const SKIN: Rgb = [226, 178, 146];
@@ -143,13 +131,11 @@ const band =
     const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / (dx * dx + dy * dy)));
     return Math.hypot(x - (a[0] + t * dx), y - (a[1] + t * dy)) <= w;
   };
-/** A hand at `hand` painted on top of the figure, alone. */
 const alone = (hand: readonly [number, number]) => {
   const r = at();
   paint(r, disc(hand[0], hand[1], 28), INK);
   return paint(r, disc(hand[0], hand[1], 22), SKIN);
 };
-/** A hand at `hand` painted on top of the figure, on a limb from `from` of `fill`: its ink, then its fill. */
 const onLimb = (hand: readonly [number, number], from: readonly [number, number], fill: Rgb) => {
   const r = at();
   paint(r, band(from, hand, 22), INK);
@@ -186,7 +172,6 @@ describe('a hand held before the chest, just under the chin', () => {
 });
 
 describe("a hand raised over the head's edge", () => {
-  // Its middle 62 px right of the head's, so its round runs past the head's box, which the face's parts are read inside.
   const m = poses([at(), onLimb([262, 170], [250, 262], [60, 78, 150])]);
 
   test('on a sleeve, is said as not measured, never passed as a part of the face', () => {
@@ -196,7 +181,6 @@ describe("a hand raised over the head's edge", () => {
 });
 
 describe('a hand held at the chin on a sleeve, its ring over the chin line', () => {
-  // Its middle 18 px under the chin, its ring starting 10 px above it: the skin reads as one region from above the chin, in the neck's window.
   const m = poses([at(), onLimb([200, 234], [207, 372], [92, 128, 170])]);
 
   test('is said as not measured, never dropped as the neck', () => {

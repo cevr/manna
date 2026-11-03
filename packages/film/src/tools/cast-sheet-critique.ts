@@ -1,15 +1,3 @@
-// A cast sheet try's critique (`film concept critique`): each view the
-// record holds to a kept concept, cut from the try at 1:1 beside the
-// concept's crop, shown to a fresh model with the measure's flags on that
-// view (`Critic.critiqueSheet`). The owner's rule (2026-10-18): a figure is
-// critiqued before it is put to him, and every finding is fixed or answered.
-// A view no concept faces is said, never critiqued against another's. Each
-// view goes with what the layout asks of it (its numbered clause, after the
-// words its group shares), so the critic holds its angle and gesture to the
-// layout, not the concept. The crops and each view's findings land in
-// `out/<film>/cast/<member>/critique/<kind>-<n>/`, its answers kept by their
-// hash in `critique/` beside it.
-
 import { Array as Arr, Effect, FileSystem, Option, Path, Result, Schema } from 'effect';
 import { castKindPlan, CastSheetJson } from '../core/cast-record.ts';
 import { measureSheet, type SheetKind, type SheetMeasure } from '../core/cast-sheet.ts';
@@ -21,7 +9,6 @@ import { Critic, type CritiqueTaken } from './critique.ts';
 import { FileInvalid } from './errors.ts';
 import { decodePng, encodePng } from './png.ts';
 
-/** A try the record does not hold, or whose image does not read as its sheet. */
 class CastTryUnknown extends Schema.TaggedError<CastTryUnknown>()('CastTryUnknown', {
   member: Schema.String,
   kind: Schema.String,
@@ -33,16 +20,13 @@ class CastTryUnknown extends Schema.TaggedError<CastTryUnknown>()('CastTryUnknow
   }
 }
 
-/** A layout's numbered clauses ("…: one, …; two, …"), by the view they name. */
 const ORDINALS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'] as const;
 
-/** A sentence's head that names a group of views ("One to three are turned …"), whose words each of its clauses shares. */
 const GROUP = new RegExp(
   `^(?:${ORDINALS.join('|')})\\s+(?:to|and)\\s+(?:${ORDINALS.join('|')})\\b`,
   'i',
 );
 
-/** The words a clause at `at` shares with its group: the head of its sentence, up to the colon, when that head names a group of views; else none. */
 const groupOf = (layout: string, at: number): string => {
   const head =
     layout
@@ -52,7 +36,6 @@ const groupOf = (layout: string, at: number): string => {
   return (GROUP.test(head) && `${head}: `) || '';
 };
 
-/** What `layout` asks of `view`: its numbered clause after the words its group shares, or the whole layout when it numbers none for it. */
 export const askedOf = (layout: string, view: number): string =>
   Option.getOrElse(
     Option.flatMap(Arr.get(ORDINALS, view - 1), (word) =>
@@ -70,19 +53,16 @@ export const askedOf = (layout: string, view: number): string =>
     () => `the sheet's whole layout, which numbers no clause for it: ${layout}`,
   );
 
-/** The measure's flags on one view, as its lines say them. */
 const flaggedOn = (m: SheetMeasure, view: number): ReadonlyArray<string> =>
   m.flags
     .filter((f) => f.views.includes(view))
     .map((f) => `${f.check} (views ${f.views.join(', ')}): ${f.note}`);
 
-/** What a critique of a try answers: its taken findings, and each view no concept faces. */
 interface CastCritique {
   readonly taken: CritiqueTaken;
   readonly unpaired: ReadonlyArray<number>;
 }
 
-/** Critique try `n` of the member's `kind` sheet: each view a kept concept faces, against that concept. */
 export const critiqueCastTry = Effect.fn('Cast.critique')(function* (
   place: { readonly folder: string; readonly out: string },
   kind: SheetKind,
@@ -110,7 +90,6 @@ export const critiqueCastTry = Effect.fn('Cast.critique')(function* (
     Result.mapError(measureSheet(sheet, options), (e) => unknown(e.message)),
   );
   const layout = Option.getOrElse(plan.layout, () => turnaroundLayout(record.who));
-  // Each view is cut on white, as the measure reads the sheet: one painted with no paper is transparent round the figures.
   const opaque = opaqueOf(sheet);
   const dir = path.join(place.out, 'critique', `${kind}-${n}`);
   yield* fs.makeDirectory(dir, { recursive: true });

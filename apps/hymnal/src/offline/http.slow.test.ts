@@ -25,9 +25,6 @@ it.effect('offline multi-range requests obey the deployed bucket CORS headers', 
           port: 0,
           fetch(request) {
             requests++;
-            // Bun is not a browser: enforce the browser's preflight check. Every
-            // request header must be one the agent sets itself, CORS-safelisted,
-            // or in the deployed allow list.
             for (const name of request.headers.keys())
               if (!agent.includes(name) && !safelisted.includes(name) && !allowed.includes(name))
                 rejected.push(name);

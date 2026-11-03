@@ -1,17 +1,3 @@
-// The painterly look's people: stylised and exaggerated, the way a painter
-// caricatures a type. Heavy heads on long faces, a jaw and a nose that carry
-// the character, deep-set eyes under a hard brow, and big hands that do the
-// acting. Both are seen in profile, as a stage would show them: the accused
-// facing right toward the bench, the judge facing left down at them. Every
-// form is painted with the brush (`brush.ts`) and modelled by its light: a
-// face's planes are bumps of light and hollows of shade in its tone, lit warm
-// from the lamps in front, rimmed cool from the windows behind. Ink is kept
-// for features (brows, lids, nostrils, mouths, knuckles); the oil pass adds
-// the rest.
-//
-// A head is drawn facing right in its own units, its origin where the neck
-// meets the skull; `flip` turns it to face left.
-
 import { type Hand, stroke, sub } from '@manna/film/canvas';
 import { clamp, lerp } from '@manna/film/core';
 import {
@@ -30,10 +16,8 @@ import { P, R, type Ramp } from './palette.ts';
 type Pt = readonly [number, number];
 type Pts = ReadonlyArray<Pt>;
 
-/** A rise of light (or, below zero, a hollow of shade) on a form: where, how wide, how much. */
 type Bump = readonly [x: number, y: number, r: number, amount: number];
 
-/** A face's drawing: its silhouette and hair, its planes, and where its features sit. */
 interface Head {
   readonly sil: Pts;
   readonly hair: Pts;
@@ -43,16 +27,13 @@ interface Head {
   readonly nostril: Pts;
   readonly mouth: Pts;
   readonly folds: ReadonlyArray<Pts>;
-  /** The planes: brow, cheekbone and nose ridge catching the light; socket and cheek in shade. */
   readonly bumps: ReadonlyArray<Bump>;
   readonly skin: Ramp;
   readonly hairRamp: Ramp;
-  /** Stubble along the jaw: the jaw's outline, painted thin in the hair's colour. */
   readonly stubble?: Pts;
   readonly seed: number;
 }
 
-/** The accused: gaunt and long-faced, a big nose, a heavy chin, lank dark hair falling over the brow. */
 const ACCUSED_HEAD: Head = {
   sil: [
     [0, -188],
@@ -159,7 +140,6 @@ const ACCUSED_HEAD: Head = {
   seed: 300,
 };
 
-/** The judge: older and heavier, a hooked nose, jowls, a high bald brow with grey hair swept back. */
 const JUDGE_HEAD: Head = {
   sil: [
     [0, -198],
@@ -262,7 +242,6 @@ const JUDGE_HEAD: Head = {
   seed: 400,
 };
 
-/** How a face is acting: its eyes shut (0 open), where it looks (-1 down, 1 up), and the gold light on it. */
 interface Mood {
   readonly shut: number;
   readonly look: number;
@@ -274,7 +253,6 @@ const smooth01 = (v: number) => {
   return k * k * (3 - 2 * k);
 };
 
-/** The light the bumps add at (x, y). */
 const bumped = (bumps: ReadonlyArray<Bump>, x: number, y: number) => {
   let sum = 0;
   for (const [bx, by, r, a] of bumps) {
@@ -284,7 +262,6 @@ const bumped = (bumps: ReadonlyArray<Bump>, x: number, y: number) => {
   return sum;
 };
 
-/** Three points as a smooth line of `n` steps (a quadratic through the middle one). */
 const bend = (pts: Pts, n = 8): Array<[number, number]> => {
   const [a = [0, 0], b = a, c = b] = pts;
   if (pts.length === 2)
@@ -293,7 +270,6 @@ const bend = (pts: Pts, n = 8): Array<[number, number]> => {
       [b[0], b[1]],
     ];
   const out: Array<[number, number]> = [];
-  // Through b at t = 0.5: the control point pulled out to meet it.
   const cx = 2 * b[0] - (a[0] + c[0]) / 2;
   const cy = 2 * b[1] - (a[1] + c[1]) / 2;
   for (let i = 0; i <= n; i++) {
@@ -306,7 +282,6 @@ const bend = (pts: Pts, n = 8): Array<[number, number]> => {
   return out;
 };
 
-/** A line of ink: a feature, tapered, still (no boil: the painting holds). */
 const ink = (ctx: CanvasRenderingContext2D, pts: Pts, width: number, hand: Hand, alpha = 1) =>
   stroke(
     ctx,
@@ -315,11 +290,9 @@ const ink = (ctx: CanvasRenderingContext2D, pts: Pts, width: number, hand: Hand,
     hand,
   );
 
-/** A head, painted in its own units: skin modelled by its planes and the light in front, the features in ink, the hair. */
 const head = (e: Easel, d: Head, m: Mood, hand: Hand) => {
   const { ctx } = e;
   const silBox = boxOf(d.sil, 4);
-  // Warm light on the front plane, the side plane falling into teal shade, a cool rim behind.
   const light = (x: number, y: number) =>
     0.06 +
     0.56 * smooth01((x + 10) / 110) -
@@ -335,7 +308,6 @@ const head = (e: Easel, d: Head, m: Mood, hand: Hand) => {
     size: 9,
     ratio: 0.32,
     jitter: 0.06,
-    // A cool green broken into the flesh, as a painter cools a half-tone: sparingly, or it reads as grime.
     accent: { color: '#9aa894', share: 0.03 },
     tone: light,
   });
@@ -353,7 +325,6 @@ const head = (e: Easel, d: Head, m: Mood, hand: Hand) => {
     ctx.fillRect(silBox.x, silBox.y, silBox.w, silBox.h);
     ctx.restore();
   }
-  // The ear.
   const [ex, ey] = d.ear;
   paint(e, oval(ex, ey, 14, 25, 0.15), {
     ramp: d.skin,
@@ -374,7 +345,6 @@ const head = (e: Easel, d: Head, m: Mood, hand: Hand) => {
     sub(hand, 1),
     0.8,
   );
-  // The eye: its white dull in the socket's shade, the iris looking, the lid closing over it.
   const [eyx, eyy] = d.eye;
   ctx.save();
   ctx.beginPath();
@@ -411,13 +381,11 @@ const head = (e: Easel, d: Head, m: Mood, hand: Hand) => {
     sub(hand, 3),
     0.45,
   );
-  // Brow, nostril, mouth and the lines of the face.
   const [b0 = [0, 0], b1 = b0, b2 = b1] = d.brow;
   ink(ctx, [b0, [b1[0], b1[1] + 4 * m.shut], b2], 8, sub(hand, 4));
   ink(ctx, d.nostril, 3, sub(hand, 5));
   ink(ctx, d.mouth, 3.6, sub(hand, 6));
   for (const [i, fold] of d.folds.entries()) ink(ctx, fold, 1.8, sub(hand, 10 + i), 0.45);
-  // The hair, laid in long strokes swept back, its ends breaking the silhouette.
   paint(e, curve(d.hair, 0.55), {
     ramp: d.hairRamp,
     box: boxOf(d.hair, 4),
@@ -436,7 +404,6 @@ const head = (e: Easel, d: Head, m: Mood, hand: Hand) => {
   });
 };
 
-/** A limb's outline: a sleeve along `pts`, `w0` wide at its start and `w1` at its end. */
 const limb = (pts: Pts, w0: number, w1: number): Shape => {
   const left: Array<[number, number]> = [];
   const right: Array<[number, number]> = [];
@@ -453,7 +420,6 @@ const limb = (pts: Pts, w0: number, w1: number): Shape => {
   return curve([...left, ...right.reverse()], 0.7);
 };
 
-/** A sleeve painted along shoulder, elbow and wrist, lit on its forward side. */
 const sleeve = (
   e: Easel,
   pts: Pts,
@@ -476,7 +442,6 @@ const sleeve = (
     tone: (x) => 0.1 + lit * smooth01((x - (pts[0]?.[0] ?? 0) + 10) / 110),
   });
 
-/** A big fist round a bar running along x (a rail, a handle), seen from its side, knuckles forward. */
 const fist = (e: Easel, skin: Ramp, seed: number, hand: Hand, lit: number) => {
   const { ctx } = e;
   const f: Pts = [
@@ -542,7 +507,6 @@ const fist = (e: Easel, skin: Ramp, seed: number, hand: Hand, lit: number) => {
   );
 };
 
-/** A broad hand laid flat on the bench, fingers forward, seen from the side. */
 const flat = (e: Easel, skin: Ramp, seed: number, hand: Hand, lit: number) => {
   const { ctx } = e;
   const f: Pts = [
@@ -576,7 +540,6 @@ const flat = (e: Easel, skin: Ramp, seed: number, hand: Hand, lit: number) => {
     );
 };
 
-/** The accused's pose: head bowed (0 up, 1 down), lifted at the verdict, the gold of it on the face, their breath. */
 export interface AccusedPose {
   readonly bow: number;
   readonly lift: number;
@@ -584,10 +547,8 @@ export interface AccusedPose {
   readonly breath: number;
 }
 
-/** Where the accused's neck meets the skull, in the world, and the figure's scale. */
 export const ACCUSED = { x: 540, y: 500, scale: 0.88 } as const;
 
-/** The accused's arms, in the figure's own units: shoulder, elbow, wrist, the near arm and the far. */
 const ARM_NEAR: Pts = [
   [-34, 66],
   [-14, 192],
@@ -599,7 +560,6 @@ const ARM_FAR: Pts = [
   [150, 250],
 ];
 
-/** The accused, standing in the dock facing the bench: body and head (the hands are `accusedHands`, over the dock). */
 export const accused = (e: Easel, p: AccusedPose, hand: Hand) => {
   const slump = 0.06 * p.bow * (1 - p.lift);
   within(e, { x: ACCUSED.x, y: ACCUSED.y, scale: ACCUSED.scale }, (b) => {
@@ -629,14 +589,12 @@ export const accused = (e: Easel, p: AccusedPose, hand: Hand) => {
         size: 15,
         jitter: 0.1,
         accent: { color: '#5b4e36', share: 0.06 },
-        // Dark against the window behind, lamplight on the chest, a cool rim down the back.
         tone: (x, y) =>
           0.04 +
           0.34 * smooth01((x + 10) / 120) +
           0.5 * smooth01((-x - 118) / 18) -
           0.08 * clamp((y - 200) / 150),
       });
-      // The coat's folds: shade down from the shoulder blade and under the arm.
       shade(
         t.ctx,
         curve(
@@ -652,7 +610,6 @@ export const accused = (e: Easel, p: AccusedPose, hand: Hand) => {
         P.gloom,
         0.35,
       );
-      // The shirt at the open coat, the stain spread on it.
       const shirt: Pts = [
         [22, 12],
         [56, 28],
@@ -686,7 +643,6 @@ export const accused = (e: Easel, p: AccusedPose, hand: Hand) => {
         size: 7,
         tone: (x) => 0.25 + 0.4 * smooth01((x - 40) / 30),
       });
-      // The coat's lapel, folded back over the shirt.
       const lapel: Pts = [
         [18, 10],
         [48, 30],
@@ -702,7 +658,6 @@ export const accused = (e: Easel, p: AccusedPose, hand: Hand) => {
         size: 10,
         tone: (x) => 0.2 + 0.4 * smooth01((x - 20) / 40),
       });
-      // The coat's collar, turned up behind the neck.
       const collar: Pts = [
         [-44, 8],
         [-32, -16],
@@ -718,7 +673,6 @@ export const accused = (e: Easel, p: AccusedPose, hand: Hand) => {
         size: 10,
         tone: (x) => 0.14 + 0.3 * smooth01((x + 30) / 50) + 0.3 * smooth01((-x - 40) / 8),
       });
-      // The neck, and the head on it.
       const neck: Pts = [
         [-26, -24],
         [12, -14],
@@ -747,27 +701,22 @@ export const accused = (e: Easel, p: AccusedPose, hand: Hand) => {
   });
 };
 
-/** The accused's big hands round the dock's rail, drawn over the dock. */
 export const accusedHands = (e: Easel, hand: Hand) =>
   within(e, { x: ACCUSED.x, y: ACCUSED.y, scale: ACCUSED.scale }, (b) => {
     within(b, { x: 172, y: 270, scale: 1.25 }, (h) => fist(h, R.skin, 370, sub(hand, 40), 0.45));
     within(b, { x: 104, y: 274, scale: 1.3 }, (h) => fist(h, R.skin, 380, sub(hand, 60), 0.6));
   });
 
-/** The judge's pose: leaning in (0 upright, 1 over the bench), the gavel raised (0 resting, 1 up). */
 export interface JudgePose {
   readonly lean: number;
   readonly raise: number;
   readonly breath: number;
 }
 
-/** Where the judge's neck meets the skull, in the world; the judge faces left, so his own +x is the world's -x. */
 export const JUDGE = { x: 1500, y: 372, scale: 0.94 } as const;
 
-/** The judge's waist, in his own units: he leans about it. */
 const WAIST: Pt = [0, 270];
 
-/** A point of the judge's upper body, as his lean carries it. */
 const leaned = ([x, y]: Pt, lean: number): [number, number] => {
   const a = 0.16 * lean;
   const dx = x - WAIST[0];
@@ -778,22 +727,18 @@ const leaned = ([x, y]: Pt, lean: number): [number, number] => {
   ];
 };
 
-/** The gavel hand's grip and the gavel's turn, resting (by the block) and raised. */
 const GRIP_REST: Pt = [62, 150];
 const GRIP_UP: Pt = [330, -60];
 
-/** Where the judge's gavel hand is and how the gavel is turned, as the pose has it. */
 const grip = (p: JudgePose) => ({
   x: lerp(GRIP_REST[0], GRIP_UP[0], p.raise) + 16 * p.lean * (1 - p.raise),
   y: lerp(GRIP_REST[1], GRIP_UP[1], p.raise),
   rot: lerp(0.05, -1.05, p.raise),
 });
 
-/** The judge behind the bench: robe, collar, arms and head (his hands and the gavel are `judgeHands`, over the bench). */
 export const judge = (e: Easel, p: JudgePose, hand: Hand) => {
   within(e, { x: JUDGE.x, y: JUDGE.y, scale: JUDGE.scale, flip: true }, (b) => {
     const g = grip(p);
-    // The far arm, its hand laid on the bench.
     sleeve(b, [leaned([-60, 60], p.lean), [-110, 140], [-44, 168]], 74, 52, R.robe, 410, 0.3);
     within(b, { x: WAIST[0], y: WAIST[1], rot: 0.16 * p.lean }, (t) => {
       t.ctx.translate(-WAIST[0], -WAIST[1] - 3 * p.breath);
@@ -816,7 +761,6 @@ export const judge = (e: Easel, p: JudgePose, hand: Hand) => {
         dir: -1.35,
         spread: 0.3,
         size: 16,
-        // Lamplight on his front, a cool sheen on the shoulder, the rest lost in shade.
         jitter: 0.08,
         accent: { color: '#3a4a48', share: 0.08 },
         tone: (x, y) =>
@@ -825,7 +769,6 @@ export const judge = (e: Easel, p: JudgePose, hand: Hand) => {
           0.16 * Math.exp(-(((x + 90) / 70) ** 2) - ((y - 40) / 40) ** 2) +
           0.42 * smooth01((-x - 160) / 26),
       });
-      // His bands: two strips of dull linen at the throat.
       const bands: Pts = [
         [24, 6],
         [52, 14],
@@ -841,7 +784,6 @@ export const judge = (e: Easel, p: JudgePose, hand: Hand) => {
         size: 8,
         tone: (x) => 0.25 + 0.5 * smooth01((x - 20) / 36),
       });
-      // The high stiff collar, flaring behind the head.
       const collar: Pts = [
         [-64, -80],
         [-36, -48],
@@ -877,9 +819,7 @@ export const judge = (e: Easel, p: JudgePose, hand: Hand) => {
         head(h, JUDGE_HEAD, { shut: 0.3 - 0.2 * p.lean, look: -0.4 - 0.6 * p.lean, gold: 0 }, hand),
       );
     });
-    // The gavel arm, from the leaning shoulder to the grip.
     const shoulder = leaned([74, 56], p.lean);
-    // Its elbow out behind the hand at rest, below the reach when the gavel is up.
     const elbow: Pt = [
       lerp(g.x + 48, (shoulder[0] + g.x) / 2 + 10, p.raise),
       lerp((g.y + shoulder[1]) / 2 + 34, (g.y + shoulder[1]) / 2 + 64, p.raise),
@@ -888,12 +828,10 @@ export const judge = (e: Easel, p: JudgePose, hand: Hand) => {
   });
 };
 
-/** The judge's hands, the gavel and its block, drawn over the bench's cornice. */
 export const judgeHands = (e: Easel, p: JudgePose, hand: Hand) =>
   within(e, { x: JUDGE.x, y: JUDGE.y, scale: JUDGE.scale, flip: true }, (b) => {
     const { ctx } = b;
     within(b, { x: -44, y: 168 }, (h) => flat(h, JUDGE_HEAD.skin, 470, sub(hand, 80), 0.5));
-    // The block, on the cornice before him.
     const block: Pts = [
       [100, 160],
       [158, 160],
@@ -910,7 +848,6 @@ export const judgeHands = (e: Easel, p: JudgePose, hand: Hand) =>
     });
     const g = grip(p);
     within(b, { x: g.x, y: g.y, rot: g.rot }, (h) => {
-      // The handle, and the head at its end, striking down.
       const handle: Pts = [
         [-30, -5],
         [74, -6],

@@ -1,9 +1,3 @@
-/**
- * `sim.ts`'s commands: each parses its arguments, runs its step of the
- * drive (the `Drive` service, `drive.ts`) and prints one JSON result
- * (`result.ts`). A step that fails prints its tagged error and fails the
- * command, so the process exits non-zero.
- */
 import {
   Clock,
   Config,
@@ -42,10 +36,6 @@ import {
 } from './journey.ts';
 import { encodeFailure, Platform, Success } from './result.ts';
 
-/**
- * The warm checkouts: the clean sources worktrees are made from, on the
- * laptop and on the workbox. No command builds, installs or writes in one.
- */
 export const WARM_CHECKOUTS: ReadonlyArray<string> = [
   '/Users/cvr/Developer/personal/manna',
   '/workspaces/bible-tools',
@@ -53,7 +43,6 @@ export const WARM_CHECKOUTS: ReadonlyArray<string> = [
 
 const encodeSuccess = Schema.encodeSync(Schema.fromJsonString(Success));
 
-/** Run `step`; on its error, print the error as one JSON line and fail. */
 const refused = <A, R>(command: string, step: Effect.Effect<A, SimError | PlatformError, R>) =>
   step.pipe(
     Effect.catchTag('PlatformError', (error) =>
@@ -64,7 +53,6 @@ const refused = <A, R>(command: string, step: Effect.Effect<A, SimError | Platfo
     ),
   );
 
-/** Run `step`, print its result as one JSON line, and fail on its error. */
 export const report = <R>(
   command: string,
   step: Effect.Effect<Outcome, SimError | PlatformError, R>,
@@ -91,13 +79,10 @@ export const report = <R>(
     );
   });
 
-/** The x, in points, an edge pan starts at: inside the screen's left edge. */
 const EDGE_X = 3;
 
-/** The widest spread a pinch asks: past it the fingers leave a phone's screen. */
 const PINCH_MOST = 4;
 
-/** A whole-number flag above 0, `fallback` when not given. */
 const positive = (name: string, fallback: number, description: string) =>
   Flag.Int(name).pipe(
     Flag.withDefault(fallback),
@@ -108,10 +93,6 @@ const positive = (name: string, fallback: number, description: string) =>
     Flag.withDescription(description),
   );
 
-/**
- * `down --clean`: stop the drive if one is booted (none is no failure),
- * then delete the build output and check the stopped drive's port is free.
- */
 const downClean = (d: DriveMembers, place: Place) =>
   Effect.gen(function* () {
     const stopped = yield* d.down(place).pipe(
@@ -134,31 +115,23 @@ const downClean = (d: DriveMembers, place: Place) =>
     } satisfies Outcome;
   });
 
-/** `down`, and with `--clean` the clean after it. */
 const downStep = (d: DriveMembers, place: Place, clean: boolean) =>
   Effect.gen(function* () {
     if (clean) return yield* downClean(d, place);
     return yield* d.down(place);
   });
 
-/** Run a step of the `Drive` service. */
 const drive = <A, E>(step: (drive: DriveMembers) => Effect.Effect<A, E>) =>
   Effect.gen(function* () {
     return yield* step(yield* Drive);
   });
 
-/** The hermesc binary under the `hermes-compiler` package `from` resolves. */
 const compilerFrom = (path: Path.Path, from: string) =>
   Effect.try({
     try: () => Bun.resolveSync('hermes-compiler/package.json', from),
     catch: () => ToolMissing.make({ tool: 'hermesc' }),
   }).pipe(Effect.map((pkg) => path.join(path.dirname(pkg), 'hermesc', 'osx-bin', 'hermesc')));
 
-/**
- * The Hermes compiler the dev server builds with: `HERMESC_PATH` when it
- * names a file by an absolute path, else the one react-native depends on.
- * The environment is read on each call, so a changed `HERMESC_PATH` counts.
- */
 export const hermesCompiler = Effect.fn('Sim.hermesCompiler')(function* (place: Place) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -197,7 +170,6 @@ const expectFlag = Flag.String('expect').pipe(
   Flag.withDescription('a target to wait for once the step is done'),
 );
 
-/** The commands, over the drive's place (the app's folder, the state folder, this script). */
 export const simCommand = (place: Place) => {
   const state = Flag.String('state').pipe(
     Flag.withDefault(place.state),
@@ -597,14 +569,9 @@ export const simCommand = (place: Place) => {
   );
 };
 
-/** A parse failure (`ShowHelp` with the parser's errors), as opposed to a `--help` request. */
 const badArguments = (error: unknown): error is CliError.ShowHelp =>
   CliError.isCliError(error) && error._tag === 'ShowHelp' && error.errors.length > 0;
 
-/**
- * The warm checkout this checkout is, if it is one: the repository root
- * above the app, matched against each warm checkout with symlinks resolved.
- */
 const warmCheckout = Effect.fn('Sim.warmCheckout')(function* (place: Place) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -616,14 +583,6 @@ const warmCheckout = Effect.fn('Sim.warmCheckout')(function* (place: Place) {
   return Option.none<string>();
 });
 
-/**
- * Run `sim <args>` so stdout holds one JSON result and nothing else. A
- * checkout that is warm is refused before the arguments are read. The
- * parser prints its help as it fails, so the run's console lines are held
- * until it ends: arguments that do not parse send the help to stderr and
- * print a `BadArguments` result; any other run prints its lines (a result,
- * or the help `--help` asked for) to stdout.
- */
 export const runSim = (place: Place, args: ReadonlyArray<string>) =>
   Console.consoleWith((console) =>
     Effect.gen(function* () {

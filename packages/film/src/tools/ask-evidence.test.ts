@@ -1,15 +1,3 @@
-// Keep needs evidence: an ask on a production is read by its types, never
-// its words. One that shows scenes or figures types each option's outcome
-// and each keep's subject, or it is refused naming what to add; a keep on
-// its recommended way that names a scene or a figure needs its set's review
-// of it (`core/review-record.ts`, written by `film review`) from the scene
-// as it stands now, every finding on it answered, or the owner's own words
-// override it. A keep of no scene (a script), a revise, a keep off the
-// recommended way and an ask off a production are not gated. The owner,
-// 2026-10-17 (his local day), after a keep recommended on figures nobody had
-// looked at 1:1: "theres some artifacts in the render, and the farmer looks
-// nothing like the concept, face proportions and angles are off".
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Boolean as Bool, Effect, Layer, Option, Schema } from 'effect';
 import { type Ask, AskBlock, oneQuestion } from '../core/ask.ts';
@@ -31,7 +19,6 @@ const FINDING = findingId('f', 'a', {
   what: HEAD_ANGLE,
 });
 
-/** A review of film `f`'s scene `a` at the key it has now (`REVIEW_PROJECT`), its one finding done. */
 const RECORD: ReviewRecord = {
   reviews: [
     {
@@ -65,10 +52,8 @@ const RECORD: ReviewRecord = {
   ],
 };
 
-/** The still of the farmer the asks show, a file of the set. */
 const FARMER = 'p5/rbf/farmer.png';
 
-/** The lab over set `p5/rbf`, its review record `record` beside its page (none: the set lists no record). */
 const run = <A, E>(
   self: Effect.Effect<A, E, AskStore | ProductionStore>,
   record: ReviewRecord | 'none',
@@ -76,7 +61,6 @@ const run = <A, E>(
   const listed = record !== 'none';
   const files = new Map<string, Uint8Array>([
     ['/films/f/scenes/index.ts', text('export {};\n')],
-    // The farmer's still, which the ask copies as it is made (the receipt rule).
     [`/out/${FARMER}`, text('the farmer as drawn')],
   ]);
   if (record !== 'none') {
@@ -107,13 +91,10 @@ const run = <A, E>(
   );
 };
 
-/** The farmer of `film`'s scene `a`, as a keep keeps him. */
 const farmerOf = (film: string) => ({ film, scenes: [{ scene: 'a', figures: ['farmer'] }] });
 
-/** The forms of ask the gate meets: the farmer shown and approved or refined, typed or not; a script kept. */
 type Form = 'approve' | 'refine' | 'untyped' | 'script' | 'other-film';
 
-/** One page of form `form`: what it shows and what it recommends. */
 const askOfForm = (form: Form): Ask =>
   oneQuestion(
     Schema.decodeSync(Schema.Array(AskBlock))(
@@ -168,11 +149,6 @@ const askOfForm = (form: Form): Ask =>
 
 const aimed = { production: 'rbf', set: 'p5/rbf' } as const;
 
-/**
- * Why an ask aimed at `aim` of form `form` is refused, as the store says
- * it (its problems, one a line), or `kept` with the override it keeps;
- * production `rbf` (the film `f`) started first.
- */
 const asked = (aim: Partial<AskDraftAim>, form: Form) =>
   Effect.gen(function* () {
     const productions = yield* ProductionStore;

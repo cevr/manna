@@ -1,14 +1,3 @@
-/**
- * Init CLI Command
- *
- * `manna init` - Initialize all databases in ~/.bible/
- *
- * Downloads pre-built databases from GitHub:
- * - bible.db: KJV text, Strong's concordance, cross-references
- * - hymnal.db: 695 SDA hymns and 225 liturgical readings
- * - egw-paragraphs.db: too large to host — prints sync instructions
- */
-
 import {
   BIBLE_ARTIFACT_RELEASE,
   CorpusSupply,
@@ -73,8 +62,6 @@ const downloadFile = (url: string, dest: string, label: string) =>
           yield* file.writeAll(new Uint8Array(bytes));
         }),
       );
-      // A 200 whose body is not an indexed hymnal (a captive portal page, an old
-      // build) is removed with the staged file, and the database in place is kept.
       if (!(yield* hymnalIsIndexed(building))) {
         yield* Console.error(
           `✗ the downloaded ${label} is not an indexed hymnal database; kept the one in place`,
@@ -93,15 +80,12 @@ const downloadFile = (url: string, dest: string, label: string) =>
     );
   });
 
-/** Hymnal acquisition is separate from other corpora so callers can supply an isolated destination. */
 const ensureHymnal = Effect.fn('Init.ensureHymnal')(function* (
   destination: string,
   refresh: boolean,
 ) {
   const fs = yield* FileSystem.FileSystem;
   const db = DBS.hymnal;
-  // A kept hymnal.db that holds hymns but lacks an index table is replaced:
-  // `hymns get` names this command for it. A file that does not open as one is kept.
   const kept = !refresh && (yield* fs.exists(destination));
   const stale = kept && (yield* hymnalNeedsIndexes(destination));
   if (kept && !stale) {
@@ -118,33 +102,19 @@ const artifactStatus = (receipt: CorpusSupplyReceipt): string => {
   return 'ready';
 };
 
-/** Build the native Bible/Topics supply used by an isolated artifact operation. */
 const artifactSupply = (bibleDir: string, path: Path.Path) => {
   const bibleArtifacts = layerNativeBibleArtifacts({
     destination: path.join(bibleDir, 'bible.db'),
     sources: [{ kind: 'release', ...BIBLE_ARTIFACT_RELEASE }],
   });
-  // Topics has no published release yet, so its sources are the local slots,
-  // in the same precedence every host uses: the copy shipped inside the CLI
-  // install, the workspace build `bun run build:topics` writes, and any copy
-  // already installed under ~/.bible.
   const topicsArtifacts = layerNativeTopicsArtifacts({
     destination: path.join(bibleDir, 'topics.db'),
     sources: [
-      // Resolved from the executable's own location first, so a binary copied
-      // off the build machine still finds the artifact it ships with; the
-      // build-time root is only the dev-mode fallback. Every candidate is
-      // offered as its own source rather than one path being chosen here —
-      // the supply pipeline already tries sources in order and skips the ones
-      // that are absent, so there is no reason to duplicate that logic.
       ...packagedDataCandidates('topics.db').map((candidate): NativeFileArtifactSource => ({
         kind: 'packaged',
         path: candidate,
         label: 'packaged',
       })),
-      // Only reachable when the CLI runs from the repo root; an installed
-      // binary is invoked from arbitrary directories, which is why the
-      // packaged slot above — not this one — is the install-owned source.
       {
         kind: 'workspace',
         path: path.resolve(process.cwd(), 'packages', 'core', 'data', 'topics.db'),
@@ -183,7 +153,6 @@ export const init = Command.make('init', { force }, (args) =>
     const path = yield* Path.Path;
     const home = yield* Config.String('HOME');
     const bibleDir = path.join(home, '.bible');
-    // Ensure ~/.bible/ exists
     if (!(yield* fs.exists(bibleDir))) {
       yield* fs.makeDirectory(bibleDir, { recursive: true });
       yield* Console.log(`Created ${bibleDir}`);
@@ -202,8 +171,6 @@ export const init = Command.make('init', { force }, (args) =>
       Effect.flatMap((status) => Console.log(`✓ bible.db (${status})`)),
       Effect.catchTag('SqliteRefreshRefused', reportRefusal),
     );
-    // Topics remains optional for unavailable/rejected sources, but a WAL
-    // refusal is an unsafe requested refresh and must fail the final command.
     const topicsLines = yield* ensureArtifact(bibleDir, path, 'topics', args.force).pipe(
       Effect.map((status) => [`✓ topics.db (${status})`]),
       Effect.catchTag('SqliteRefreshRefused', (error) => reportRefusal(error).pipe(Effect.as([]))),
@@ -219,13 +186,11 @@ export const init = Command.make('init', { force }, (args) =>
 
     yield* Effect.forEach(topicsLines, (line) => Console.log(line), { discard: true });
 
-    // Download each database
     const hymnal = path.join(bibleDir, DBS.hymnal.name);
     yield* withSqliteRefresh(hymnal, args.force, ensureHymnal(hymnal, args.force)).pipe(
       Effect.catchTag('SqliteRefreshRefused', reportRefusal),
     );
 
-    // EGW database status
     const egwDbPath = path.join(bibleDir, 'egw-paragraphs.db');
     if (yield* fs.exists(egwDbPath)) {
       yield* Console.log(`✓ egw-paragraphs.db (EGW writings)`);

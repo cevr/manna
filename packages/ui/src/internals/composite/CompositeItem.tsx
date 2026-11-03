@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/internals/composite/item/CompositeItem.tsx
-//
-// Renders an item of a composite widget (`useCompositeItem`) with a part's
-// tag, state and props: the roving `tabindex` first, the part's props after.
-// It passes on `useCompositeItem`'s `guess` and `initialTabStop`, which
-// upstream lacks.
 import type { JSX } from '@solidjs/web';
 import { untrack } from 'solid-js';
 
@@ -16,10 +10,8 @@ interface CompositeItemProps<State extends object> extends UseCompositeItemParam
   class?: ClassProp<State> | undefined;
   style?: StyleProp<State> | undefined;
   render?: ComponentRenderFn<HTMLProps, State> | undefined;
-  /** The element's props (children included), merged after the item's own. */
   props?: ReadonlyArray<PropsInput> | undefined;
   state?: State | undefined;
-  /** @default 'div' */
   tag?: IntrinsicTagName | undefined;
 }
 

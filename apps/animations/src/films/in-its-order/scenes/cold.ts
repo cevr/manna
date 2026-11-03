@@ -1,33 +1,3 @@
-// The cold open, drawn to its kept panels (`cold.baby.3`, `cold.letter.4`,
-// `cold.what.3`), one shot to each of the script's marks. `baby`: close on
-// the mother with her baby at the cup, on the close plate painted to
-// `cold.baby.3` (`BABY_BACK`), the feast's crowd soft at a far table between
-// them (`BABY_CROWD`), with the feast's table in front of her (`FRONT`), the
-// camera pushing in on the baby's face.
-// `grown` cuts to the feast's courtyard plates on the mother at the long
-// table, her baby at the cup, behind the guests, and trucks down it to the
-// lead, who sits between two guests (a man picture-left and a woman
-// picture-right; `seatTable`, the table the title ends on), the bottle on his lap, and on
-// `bottle` raises it (`raise`, his seated raise's keys in place of his arm, on
-// twos); at the word "bottle" the guests turn to him and stare (`turn`).
-// `smile` pulls back to the three at the table, and the guests smile at him.
-// On `letter` they stare again (`SWAPS`), a rolled scroll drops onto the
-// table in front of the lead and unrolls over its edge (`SCROLL`). On `ouch`
-// he winces (`WINCE`), his wince's head riding his head's bones. From `grown`
-// on he, the guests and the mother move in their idles (`numbersOf`,
-// `manNumbersOf`, `womanNumbersOf`, `motherNumbers`), and he acts on the cues; the guests nod
-// toward him as they turn and as they stare again (`NODS`). The mother blinks all through and bows to her
-// baby (`motherLook`, `motherNumbers`), and he blinks from `grown` to `ouch`
-// (`eyesOf`). Behind the guests the feast's crowd sits in two rows, each at a
-// table on a plane of its own, each bust in its own idle (`drawCrowdRow`).
-// `what` cuts to the last close plate (`WHAT`), the cup of milk and the
-// bread, and the camera lifts to them.
-//
-// A shot's camera is a centre and a zoom on its plates' frame px, each plane
-// moved by its share (`PLANES`), so a far plane drifts and grows less than a
-// near one. Each courtyard move runs from where the last one left it
-// (`MOVES`).
-
 import { drawing, type PuppetLook } from '@manna/film/canvas';
 import { lerp } from '@manna/film/core';
 import { Option } from 'effect';
@@ -67,29 +37,16 @@ import {
   seatedLead,
 } from './table.ts';
 
-/** A camera on a shot's plates, frame px: the point at the frame's centre and the zoom. */
 type Camera = { readonly x: number; readonly y: number; readonly k: number };
 
-/** The frame's centre, frame px. */
 const CENTRE = [960, 540] as const;
 
-/** The camera at zoom `k` that holds plane-1 point `p` at frame point `at`. */
 const holding = (p: readonly [number, number], at: readonly [number, number], k: number) => ({
   x: p[0] - (at[0] - CENTRE[0]) / k,
   y: p[1] - (at[1] - CENTRE[1]) / k,
   k,
 });
 
-/**
- * The close on the mother at the cup (`cold.baby.3`), on `BABY_BACK`'s frame
- * px. The camera pushes in to `k` holding the baby's eyes where the panel
- * has them (`eyes`, the panel's (632, 478) on the frame), and she is sized
- * so that at the push's end she is the panel's size (`scale`, frame px a
- * sheet px: the baby's eyes are 65 panel px apart, 40 on her sheet). `on`
- * is the baby's eyes on her poses-1 part sheet, sheet px, where her root is
- * `MOTHER_SEAT.root`. The plate stands `back` behind her, as a camera's
- * divisor.
- */
 const BABY = {
   eyes: [790, 497],
   scale: 2,
@@ -98,50 +55,16 @@ const BABY = {
   back: 3,
 } as const;
 
-/**
- * The feast's table in front of her in the baby close, as `cold.baby.3` has
- * it: the courtyard's table plate (`TABLE`) drawn `s` times its size on a
- * plane `z` in front of her, its point `on` (the back edge of its top, under
- * the empty bowl between the two bowls of figs, on the courtyard's frame px)
- * at `at`, so at the push's end its top runs across the frame at y 970, the
- * panel's table edge under the baby's swaddle, and she sits at the table.
- */
 const FRONT = { on: [1450, 965], at: [960, 908], s: 2.75, z: 0.8 } as const;
 
-/**
- * The guests' key from each cue's start on, the cues in time order, neutral
- * before the first: turned to the lead and staring at the word "bottle",
- * smiling at him on `smile`, and staring again, mouths open, at the letter
- * on `read`, as `cold.letter.4` has them. Each swap is a cut, and each key
- * holds seconds, far past the record's two frames.
- */
 const SWAPS = [
   ['turn', 'turn'],
   ['smile', 'smile'],
   ['read', 'turn'],
 ] as const satisfies ReadonlyArray<readonly [string, GuestKey]>;
 
-/** The cues the guests nod toward the lead on: as they turn to him and stare, and as they stare again at the letter. */
 const NODS = ['turn', 'read'] as const;
 
-/**
- * The courtyard's framings, on the frame px the title ends on: from `grown`
- * the camera starts close on the mother at the table (`START`), trucks down
- * the table to the lead, pushes in on his bottle, pulls back to the three
- * waist up (`smile`), pushes in chest up on him and the letter as it
- * falls (`read`, the panel's `cold.letter.4`), tilts down to the letter's
- * gold seal under his face (`quote`) and up to his face as he winces
- * (`ouch`), each a cue and where it leaves the camera. The last two keep him
- * centred (his head lies at x 949 on the guests' plane) and wide enough that
- * the guest either side and the mother's veil stay whole in frame.
- *
- * The plates cover frame x 0..1920 and y -100..1180, and the table, the
- * nearest plane, binds: every framing keeps 960/k <= x <= 1920 - 960/k and
- * 540/k - 100 <= y <= 1180 - 540/k, so no plate's edge shows. A move is a
- * straight line in (x, y, k) and each bound curves away from that line, so a
- * move whose two ends keep the bounds keeps them all the way. The close
- * plates are painted on the same grid, so the same bounds hold on them.
- */
 const START: Camera = { x: 1188, y: 846, k: 2.6 };
 const MOVES = [
   ['truck', { x: 956, y: 846, k: 2.6 }],
@@ -152,27 +75,14 @@ const MOVES = [
   ['ouch', { x: 947, y: 820, k: 2.82 }],
 ] as const satisfies ReadonlyArray<readonly [string, Camera]>;
 
-/** The film's frames a second, its `film.ts`'s `fps` (the film imports this scene, so the scene names the rate it swaps the raise's keys on). */
 const FPS = 30;
 
-/** His bottle arm's bones while a raise key shows in place of his arm: at 0, so the key stays where it was drawn (`raising`). */
 const ARM_STILL = { shoulderRight: 0, elbowRight: 0, wristRight: 0 } as const;
 
-/** His head bone's middle, sheet px: the pivot his drawn heads ride his head part's bones at. */
 const HEAD_MIDDLE = headMiddle(TABLE_PUPPETS.lead.skeleton);
 
-/** His look as his eyes read (`eyesOf`): open, or his single-9 head drawn eyes shut in place of his own. */
 const leadEyes = eyesLook(HEAD_MIDDLE);
 
-/**
- * The lead's wince (`ouch`): his kept wince's head (single-5) laid in place
- * of his single-9 head, drawing px to his sheet px, sized so the two heads'
- * hair is as wide (350 sheet px to 253) with its crown and centre on his,
- * the boil off as on every other frame he holds. This is its place with every
- * bone at 0. It rides his head part's bones at his head bone's middle, so it
- * turns with his lean as his own head does; his neck and head stay at 0
- * under it, and his idle's breath, sway and drift run on.
- */
 const WINCE: PuppetLook = {
   boil: 0,
   amp: 0,
@@ -186,18 +96,6 @@ const WINCE: PuppetLook = {
   ],
 };
 
-/**
- * The letter (`cold.letter.4`), on the table's plane px: the rolled scroll
- * falls from above the frame (its foot at `from`) onto the table in front of
- * the lead (its foot's centre at `x`, `land`), hops `hop` px once, and
- * unrolls toward us flat on the table, its top roller held where the rolled
- * scroll's lay and its lower roller riding down the open scroll's rows
- * `roll[0]` to `roll[1]`, where `SCROLL_ROLLER` lies on it. `s` is plane px
- * a scroll px, large enough that the open scroll and its gold seal read whole
- * in front of him, over the plate's garland and fruit, as the panel's do; the
- * open scroll lies back on the table, so its rows are drawn `lie` as tall as
- * they are wide.
- */
 const SCROLL = {
   x: 960,
   from: 280,
@@ -208,10 +106,8 @@ const SCROLL = {
   roll: [114, 280],
 } as const;
 
-/** The last close (`cold.what.3`), on `WHAT`'s frame px: the camera lifts to the cup and the bread and pushes in a little. */
 const LIFT = { from: { x: 960, y: 640, k: 1 }, to: { x: 960, y: 552, k: 1.03 } } as const;
 
-/** A camera's share on a plane `z` back: the plane's zoom and the plane point at the frame's centre, frame px. */
 const onPlane = (camera: Camera, z: number): Camera => ({
   k: 1 + (camera.k - 1) / z,
   x: CENTRE[0] + (camera.x - CENTRE[0]) / z,
@@ -256,7 +152,6 @@ export const cold = drawing({
   },
   draw: (f) => {
     const { ctx, w } = f;
-    // One plane of a shot, frame px: its share of the camera's zoom and of its move off the centre.
     const plane = (camera: Camera, z: number, draw: () => void) => {
       const { k, x, y } = onPlane(camera, z);
       ctx.save();
@@ -267,7 +162,6 @@ export const cold = drawing({
       draw();
       ctx.restore();
     };
-    // Inside a courtyard plane, the kept panel's px.
     const panel = (draw: () => void) => {
       ctx.save();
       ctx.scale(PANEL.scale, PANEL.scale);
@@ -275,17 +169,6 @@ export const cold = drawing({
       draw();
       ctx.restore();
     };
-    // The lead on his seat (`seatedLead`): his single-9 cut-out at his bone
-    // numbers (`numbersOf`), blinking (`eyesOf`, his head drawn eyes shut in
-    // place of his own). His joints cannot reach the bottle on his lap: until
-    // his raise lands on k6, his single-9 view, which holds it at his cheek,
-    // his raise's key shows in place of his arm (`raising`: rest, then on
-    // twos from `raise`), his arm's bones at 0 (`ARM_STILL`), his lean, neck,
-    // head and blinks running on. From `ouch` he has the wince's head in
-    // place of his own (`WINCE`), his neck and head at 0, no blink under it.
-    // The raise's key is its linear cue's share of its film frames, rounded:
-    // `bottle` lies on the frame grid, where a floor would drop a frame to
-    // float noise.
     const lead = () => {
       const raise = f.cue('raise').start;
       const cues: Cues = {
@@ -306,17 +189,12 @@ export const cold = drawing({
         onSome: (key) => seatedLead(f, { ...numbers, ...ARM_STILL }, raising(eyes, key)),
       });
     };
-    // The guests' key: the key of the last cue started (`SWAPS`), neutral before the first.
     const key = SWAPS.reduce<GuestKey>(
       (at, [cue, to]) => (f.t >= f.cue(cue).start ? to : at),
       'neutral',
     );
-    // The guests' nods toward the lead: each of `NODS`'s starts.
     const nods = NODS.map((cue) => f.cue(cue).start);
 
-    // The letter on the table's plane: the rolled scroll falling and hopping,
-    // then fading off the open scroll laid under it, which unrolls top down
-    // toward us: its rows above the lower roller, the roller on them.
     const scroll = () => {
       const hop = f.at('hop');
       const foot = lerp(SCROLL.from, SCROLL.land, f.at('drop')) - SCROLL.hop * 4 * hop * (1 - hop);
@@ -353,7 +231,6 @@ export const cold = drawing({
       const camera = holding(BABY.eyes, BABY.eyes, lerp(1, BABY.k, f.at('baby')));
       const scale = BABY.scale / BABY.k;
       plane(camera, BABY.back, () => f.painting('back'));
-      // The feast's crowd at a far table behind her, soft through its blur and haze.
       plane(camera, BABY_CROWD.z, () => {
         ctx.filter = `blur(${(BABY_CROWD.blur * w) / 1920}px) ${BABY_CROWD.haze}`;
         panel(() => {
@@ -396,9 +273,6 @@ export const cold = drawing({
     plane(camera, PLANES.sky, () => f.painting('sky'));
     plane(camera, PLANES.distance, () => f.painting('distance'));
     plane(camera, PLANES.near, () => f.painting('near'));
-    // The feast's crowd, back row then front row, each at its table on its
-    // own plane through its row's blur and haze: a bust is drawn only when
-    // its span meets the frame (`shown`, screen px at 1920).
     for (const name of ['back', 'front'] as const) {
       const row = CROWD_ROWS[name];
       const on = onPlane(camera, row.z);

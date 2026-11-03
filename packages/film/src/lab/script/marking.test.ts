@@ -1,7 +1,3 @@
-// A reader's write of marks, with no page: sent once through the reader's
-// send; one asked while another is on its way is not sent; a refused one
-// carries the lab's words, and the next write asked is sent.
-
 import { Deferred, Effect, Exit } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { type MarkWrite, MarkingEvent, MarkingState, spawnMarking } from './marking.ts';

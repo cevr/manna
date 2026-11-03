@@ -1,14 +1,3 @@
-/** The one thing this URI builder has to get right: the path SQLite opens is
- *  the path the caller named.
- *
- *  `?` and `#` are the whole test. Both are legal in a POSIX filename and both
- *  are URI delimiters, so an encoder that preserves delimiters — `encodeURI`,
- *  which the two copies of this helper used to call — hands SQLite a URI whose
- *  path ends early and whose query string is whatever the directory name
- *  happened to contain. The stat check and the open then disagree about which
- *  file they mean, which is the failure mode this file falsifies.
- */
-
 import * as SqliteBun from '@effect/sql-sqlite-bun/SqliteClient';
 import { Database } from 'bun:sqlite';
 import { Effect, FileSystem, type Scope } from 'effect';
@@ -19,14 +8,8 @@ import { BunFileSystem } from '@effect/platform-bun';
 
 import { immutableFileUri } from './immutable-uri.js';
 
-/** A directory whose name carries both delimiters, plus a space and a percent
- *  sign for good measure — every character that has to survive the round trip
- *  in one name. */
 const HOSTILE = 'weird?dir#1 100%';
 
-/** The read half of the strong assertion, at its own boundary: the SQLite
- *  client layer is built from the file this helper is handed, so the provide
- *  belongs to this effect rather than to a block nested inside the test. */
 const readMarkerValues = (file: string): Effect.Effect<readonly string[], never, Scope.Scope> =>
   Effect.gen(function* () {
     const sql = yield* SqlClient.SqlClient;
@@ -60,10 +43,6 @@ describe('immutableFileUri', () => {
   it.effect('encodes the delimiters that would otherwise truncate the path', () =>
     Effect.sync(() => {
       const uri = immutableFileUri('/tmp/weird?dir#1/topics.db');
-      // The delimiters are gone from the path half; `?immutable=1` is the only
-      // query string. Under `encodeURI` this read
-      // `file:/tmp/weird?dir#1/topics.db?immutable=1`, whose path was
-      // `/tmp/weird`.
       expect(uri).toBe('file:/tmp/weird%3Fdir%231/topics.db?immutable=1');
       expect(uri.indexOf('?')).toBe(uri.lastIndexOf('?'));
       expect(uri).not.toContain('#');
@@ -90,11 +69,6 @@ describe('immutableFileUri', () => {
         database.close();
       });
 
-      // The strong form of the assertion: a real read-only, no-create open
-      // through the real driver. With `encodeURI` the URI's path was the
-      // truncated `…/weird`, `create: false` refused to conjure it, and the
-      // open died — the artifact was on disk and unreadable for no reason but
-      // its parent directory's name.
       const values = yield* readMarkerValues(file);
 
       expect(values).toEqual(['present']);

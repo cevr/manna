@@ -1,21 +1,3 @@
-// The word, drawn to its Board (`word.all`, `word.short`, `word.fig`, try 4
-// each): a page turns over `title`'s court from the right, as `cold` turns
-// Job's page, and on it the accused stands alone in the warm peach light,
-// the gold wax seal still pressed over his stain, its R and ribbon tail
-// showing; on the act's question his brows go up. On `right` a straight gold
-// line draws itself along the page under his feet; on `measure` it rises and
-// folds into two small stone tablets, standing upright, and on `all` their
-// ten lines light gold one by one as he leans in, his face at a third of the
-// frame. On `short` the tablets grow as tall as a doorway and he, beside
-// them, comes up short, his head well under their top. On `cover` they
-// settle back and he presses a hand over the stain; on `fig` fig leaves drift
-// down and he pins them over it one by one, a patchwork round the gold seal,
-// the blot's edge showing between them. On `going` the leaves curl and drop
-// off, and he gives us a look. The narration is on no card here and in no
-// letter of the picture (CRAFT rule 1): the one letter on the page is the R in
-// the seal's wax; title's name, on its wall, goes under the page in the
-// turn's first half second.
-
 import {
   type Hand,
   type Hex,
@@ -65,16 +47,12 @@ import { LEAD, LEAD_ARMS, LEAD_HAND_SIZE, LEAD_KNOBS, reachHands } from '../rigs
 import { TITLE } from '../script.ts';
 import { title } from './title.ts';
 
-// ─── title's last frame, under the turning page ──────────────────────────────
-
-/** How far each group stands off its `cold` place in title's wide, Board pixels. */
 interface Spread {
   readonly lead: Pt;
   readonly prosecutor: Pt;
   readonly judge: Pt;
 }
 
-/** The cast in title's wide: where the Board's pixels sit on its floor, at what size, spread how. */
 interface Wide {
   readonly x: number;
   readonly y: number;
@@ -82,7 +60,6 @@ interface Wide {
   readonly spread: Spread;
 }
 
-/** The film's name on its strip: the strip's centre and size, frame px, and its type. */
 interface Strip {
   readonly x: number;
   readonly y: number;
@@ -91,9 +68,6 @@ interface Strip {
   readonly style: TextStyle;
 }
 
-// title's last frame, as title.ts stages it: its `CAST`, `NAME` and `POSE`,
-// which it keeps to itself, so these are its numbers. The page turns over
-// this frame, so the cut from `title` is not seen.
 const TITLE_CAST: Wide = {
   x: 425,
   y: 315,
@@ -126,14 +100,8 @@ const TITLE_POSE: CourtPose = (() => {
   Object.assign(p.judge.numbers, { browY: 1.6, browTilt: -0.3, mouth: -1 });
   return p;
 })();
-/** title's light: the court's, with a little of the film's vignette. */
 const TITLE_LIGHT: Light = { ...LIGHT.room, vignette: 0.1 };
 
-/**
- * title's court as its last frame draws it, in the frame's pixels: pulled
- * back to its panel's framing, the film's name settled on its strip, the
- * strip torn as title tore it (`hands`, title's own).
- */
 const titleCourt = (f: CourtFrame, w: number, h: number, hands: (key: string) => Hand) => {
   const { ctx } = f;
   const n = TITLE_NAME;
@@ -158,63 +126,36 @@ const titleCourt = (f: CourtFrame, w: number, h: number, hands: (key: string) =>
   ctx.restore();
 };
 
-// ─── the page ────────────────────────────────────────────────────────────────
-
-/** A sheet's size, frame px. */
 interface Sheet {
   readonly w: number;
   readonly h: number;
 }
-/** The page that turns over the court: the whole frame and a margin, as cold's page for Job's verse. */
 const SHEET: Sheet = { w: 2000, h: 1160 };
 
-/** A light of `color` falling to `edge` at the corners, both raised by the ground's lift, as light.ts's `lit` raises the acts' lights. */
 const raisedLight = (color: Hex, edge: Hex): Light => {
   const raised = mix(color, '#ffffff', LIFT / 2);
   return { color: raised, edge: mix(edge, raised, LIFT) };
 };
 
-/**
- * The page's own light, not its act's: the kept panels (word.all,
- * word.short, word.fig) lay a warm peach afternoon on the page, the sun at
- * the upper left, where the seed act's hazed noon (`LIGHT.haze`) is a cool
- * blue-grey that would grey the Board's peach. The peach is the page's paper
- * (`PAGE`); the light over it is a warm white, so the lead keeps his lilac
- * as the panels keep it, its corners falling to a faint rose, with a little
- * of the film's vignette.
- */
 const PEACH: Light = { ...raisedLight('#fffaf4', '#f9ecec'), vignette: 0.1 };
 
-// ─── the lead on the page ────────────────────────────────────────────────────
-
-/** Where he stands on the page, his feet, in the Board's pixels at his own size (word.all's, scaled to him). */
 const LEAD_AT: Pt = [500, 820];
 
-/** His hands' size against the hand rig's: his sheet's. */
 const HAND_SCALE = LEAD_HAND_SIZE;
 
-/** A pair of places on him, from his feet: on his far side (the page's left) and his near side. */
 interface Sides {
   readonly far: Pt;
   readonly near: Pt;
 }
-/** Where his hands hang at rest at his sleeves' ends, and the shoulders they swing from (his rig's). */
 const HAND_REST: Sides = { far: LEAD_ARMS.left.rest, near: LEAD_ARMS.right.rest };
 const SHOULDER: Sides = { far: LEAD_ARMS.left.shoulder, near: LEAD_ARMS.right.shoulder };
 
-/** Where he looks, from his feet. */
 interface Gazes {
-  /** At us. */
   readonly us: Pt;
-  /** Up and away, wondering. */
   readonly aside: Pt;
-  /** At the floor by his feet, where the line draws itself. */
   readonly floor: Pt;
-  /** At the tablets beside him. */
   readonly tablets: Pt;
-  /** Up at their top, on `short`. */
   readonly top: Pt;
-  /** Down at his chest, at the stain. */
   readonly chest: Pt;
 }
 const GAZE: Gazes = {
@@ -226,13 +167,9 @@ const GAZE: Gazes = {
   chest: [-10, -150],
 };
 
-/** "So is God's verdict a cover-up?": the brows go up, asking. */
 const ASKING: Expression = { ...EASE, browY: -2.4, browTilt: 0.18, eyes: 1.1, mouth: -0.2 };
-/** "What does the word mean?": puzzled, wondering. */
 const WONDERING: Expression = { ...EASE, browY: -1.2, browTilt: 0.3, eyes: 1.05, mouth: -0.3 };
-/** Watching the line draw itself: intent. */
 const INTENT: Expression = { ...EASE, browY: -0.8, browTilt: 0.16, eyes: 1.12, mouth: 0 };
-/** The lines lit: wonder, the start of hope. */
 const LIT_UP: Expression = {
   ...EASE,
   browY: -2.2,
@@ -241,30 +178,18 @@ const LIT_UP: Expression = {
   eyeW: 1.05,
   mouth: 0.5,
 };
-/** "So how do we measure up?": sober, looking at himself. */
 const SOBER: Expression = { ...EASE, browY: -0.6, browTilt: 0.3, eyes: 0.95, mouth: -0.6 };
-/** "We all come up short.": worried, looking up at them. */
 const DWARFED: Expression = { ...EASE, browY: -1.8, browTilt: 0.38, eyes: 1.12, mouth: -1.1 };
-/** "And we do what Adam and Eve did": caught, a glance at us. */
 const CAUGHT: Expression = { ...EASE, browY: 0.6, browTilt: 0.28, eyes: 0.85, mouth: -0.8 };
-/** Covering up: busy, a little sheepish. */
 const BUSY: Expression = { ...EASE, browY: -0.4, browTilt: 0.26, eyes: 0.95, mouth: -0.5 };
-/** "And how is that going?": a level look at us, the lids heavy. */
 const LEVEL: Expression = { ...EASE, browY: 1.4, browTilt: 0.02, eyes: 0.7, mouth: -0.2 };
 
-/** His numbers (scratch: every one he moves is rewritten each frame). */
 const LN: Record<keyof typeof LEAD_KNOBS, number> = { ...LEAD_KNOBS };
-/** The seal pressed over his stain, as `cold` left it (scratch: its place rewritten each frame). */
 const SEAL: SealPose = { x: 0, y: 0, rot: 0, scale: 1, shown: 1, glint: 0 };
 
-// ─── the law beside him ──────────────────────────────────────────────────────
-
-/** Where the tablets stand: the left one's bottom-left corner, on the floor beside him (word.all). */
 const TABLETS_AT: Pt = [671, 820];
-/** How tall the tablets stand on `short`: as tall as a doorway, 685 against his 373 (word.short). */
 const DOORWAY = 2.43;
 
-/** The gold line's run: along the floor, how thick it is, and how high it rises before it folds. */
 interface LineRun {
   readonly from: number;
   readonly to: number;
@@ -272,7 +197,6 @@ interface LineRun {
   readonly width: number;
   readonly rise: number;
 }
-/** Under his feet from behind his heels out to where the tablets' far side will stand. */
 const LINE: LineRun = {
   from: LEAD_AT[0] - 150,
   to: TABLETS_AT[0] + 2 * TABLET.w + TABLET.gap,
@@ -280,44 +204,30 @@ const LINE: LineRun = {
   width: 10,
   rise: 22,
 };
-/** How many points each half of the line folds with. */
 const FOLD_POINTS = 64;
 
-/** The tablets (scratch: their size, stone and lines rewritten each frame). */
 const TABS: TabletsPose = tabletsAt(TABLETS_AT[0], TABLETS_AT[1]);
 
-/** A point on the page as units from his feet, upright, and back. */
 export const fromLead = (p: Pt): Pt => [p[0] - LEAD_AT[0], p[1] - LEAD_AT[1]];
 export const onLead = (p: Pt): Pt => [LEAD_AT[0] + p[0], LEAD_AT[1] + p[1]];
 
-/** `p`, from his feet, turned with him as he leans `lean`: where it is on the page. */
 export const onHim = (p: Pt, lean: number): Pt => {
   const c = Math.cos(lean);
   const s = Math.sin(lean);
   return [LEAD_AT[0] + p[0] * c - p[1] * s, LEAD_AT[1] + p[0] * s + p[1] * c];
 };
 
-// ─── the fig leaves ──────────────────────────────────────────────────────────
-
-/** A pinned leaf's cues: its fall, his hand's reach to its pin, his hand's press on it. */
 interface LeafCues {
   readonly fall: 'fall1' | 'fall2' | 'fall3' | 'fall4';
   readonly pin: 'pin1' | 'pin2' | 'pin3' | 'pin4';
   readonly push: 'push1' | 'push2' | 'push3' | 'push4';
 }
 
-/** Where a leaf's veins meet, and its turn (0: its tip up). */
 interface Place {
   readonly at: Pt;
   readonly rot: number;
 }
 
-/**
- * A leaf coming down: where it starts on the page, the point its path bends
- * toward (so it comes down beside him and in from the side, never across his
- * face), how far it sways, how many half sways it makes, its turn at the
- * start.
- */
 interface Drift {
   readonly from: Pt;
   readonly bend: Pt;
@@ -326,11 +236,9 @@ interface Drift {
   readonly spin: number;
 }
 
-/** The point `t` along the curve from `a` bent toward `b` to `c`, one axis. */
 const bent = (a: number, b: number, c: number, t: number) =>
   (1 - t) * (1 - t) * a + 2 * t * (1 - t) * b + t * t * c;
 
-/** A leaf he pins: its cues, its drift down, its pin (from the stain's middle), where it lies once it drops (from his feet). */
 interface Pinned {
   readonly cues: LeafCues;
   readonly drift: Drift;
@@ -338,12 +246,6 @@ interface Pinned {
   readonly fallen: Place;
 }
 
-/**
- * The four leaves he pins, one on each of "leaves", "excuses", "coat" and
- * "stain", as word.fig lays them: a patchwork round the seal, upper left,
- * upper right, lower left, lower right, each tip out from it, the blot's edge
- * showing between them. Each starts above the frame.
- */
 const PINNED: ReadonlyArray<Pinned> = [
   {
     cues: { fall: 'fall1', pin: 'pin1', push: 'push1' },
@@ -371,14 +273,12 @@ const PINNED: ReadonlyArray<Pinned> = [
   },
 ];
 
-/** A leaf that drifts past him to the floor: its drift, where it lies on the page, and the shares of `stray` it falls through. */
 interface Stray {
   readonly drift: Drift;
   readonly lies: Place;
   readonly from: number;
   readonly to: number;
 }
-/** The two word.fig drifts past him: one by his far side, one between him and the tablets. */
 const STRAYS: ReadonlyArray<Stray> = [
   {
     drift: { from: [330, 225], bend: [300, 560], sway: 30, sways: 5, spin: 0.6 },
@@ -394,7 +294,6 @@ const STRAYS: ReadonlyArray<Stray> = [
   },
 ];
 
-/** Where each leaf lies once it has dropped, on the page: the four he pinned, at his feet, then the two that drifted past him. */
 const FALLEN: ReadonlyArray<Place> = [
   ...PINNED.map((p): Place => ({
     at: [LEAD_AT[0] + p.fallen.at[0], LEAD_AT[1] + p.fallen.at[1]],
@@ -403,12 +302,6 @@ const FALLEN: ReadonlyArray<Place> = [
   ...STRAYS.map((s) => s.lies),
 ];
 
-/**
- * The page as this scene's last frame leaves it, where `seed` opens: the
- * sheet and its light; where he stands, his hands' rests and their
- * size; his last look (`LEVEL`, his eyes on us); where the tablets
- * stand; and where each leaf lies, dry and flat.
- */
 export const LAST_FRAME = {
   sheet: SHEET,
   light: PEACH,
@@ -420,35 +313,24 @@ export const LAST_FRAME = {
   leaves: FALLEN,
 } as const;
 
-/** How far out from a leaf's hub his hand presses it on: the middle of its blade. */
 const PRESS_ON = 10;
-/** A press of his hand: in, and off again. */
 const PRESS: ReadonlyArray<Key> = [
   [0, 0],
   [0.4, 1],
   [1, 0],
 ];
-/** How much his hand gives as it presses: a share of its size. */
 const SQUASH = 0.08;
 
 export const word = drawing({
   timeline: {
-    // The page turns over title's court from the right, its peach light coming with it.
     turn: { at: 'start', dur: 0.55, ease: 'outCubic', track: 'page' },
-    // The camera creeps in on him through the act's question.
     creep: { after: 'turn', until: 'right', ease: 'linear', track: 'camera' },
-    // "So is God's verdict a cover-up?": his brows go up.
     ask: { at: 'speech', offset: 0.5, dur: 0.6, track: 'lead' },
-    // "What does the word mean?": he wonders, his eyes away.
     wonder: { mark: 'right', offset: -0.5, dur: 1.4, ends: true, track: 'lead' },
-    // "Righteousness is right doing.": a straight gold line draws itself along the page under
-    // his feet; he looks down at it, and the camera follows it.
     line: { mark: 'right', dur: 1.5, ease: 'inOutSine', track: 'law' },
     down: { mark: 'right', offset: 0.1, dur: 0.6, track: 'lead' },
     follow: { mark: 'right', dur: 1.6, ease: 'inOutSine', track: 'camera' },
     onLine: { after: 'follow', until: 'measure', ease: 'linear', track: 'camera' },
-    // "Right by whose measure?": it rises, sliding out from under him to where the tablets will
-    // stand, and folds into two small stone tablets, upright, their stone coming in as it closes.
     rise: { mark: 'measure', dur: 0.45, ease: 'outCubic', track: 'law' },
     fold: {
       mark: 'measure',
@@ -462,8 +344,6 @@ export const word = drawing({
     watch: { mark: 'measure', offset: 0.2, dur: 0.6, track: 'lead' },
     toLaw: { mark: 'measure', dur: 1.6, ease: 'inOutSine', track: 'camera' },
     onLaw: { after: 'toLaw', until: 'all', ease: 'linear', track: 'camera' },
-    // "The psalm says, 'All thy commandments are righteousness.'": he leans in, the camera close
-    // on his face, and their ten lines light gold one by one, the last as he says "righteousness".
     lean: { mark: 'all', dur: 1, track: 'lead' },
     toNear: { mark: 'all', dur: 1.4, ease: 'inOutSine', track: 'camera' },
     quoted: { mark: 'all', word: 'righteousness', dur: 0, track: 'law' },
@@ -476,28 +356,20 @@ export const word = drawing({
       track: 'law',
     },
     awe: { mark: 'all', word: 'all', dur: 0.6, track: 'lead' },
-    // "His law is a picture of His character.": the lines swell on "character".
     pulse: { mark: 'all', word: 'character', dur: 0.9, track: 'law' },
     hold: { after: 'toNear', until: 'short', ease: 'linear', track: 'camera' },
-    // "So how do we measure up?": he straightens and looks down at himself.
     straighten: { mark: 'all', word: 'measure', dur: 0.6, track: 'lead' },
-    // "We all come up short.": the tablets grow as tall as a doorway, the camera falls back,
-    // and he looks up at them, worried, a hand drawn in.
     tower: { mark: 'short', dur: 1, ease: 'outBack', track: 'law' },
     toShort: { mark: 'short', offset: -0.1, dur: 1, ease: 'inOutSine', track: 'camera' },
     onShort: { after: 'toShort', until: 'cover', ease: 'linear', track: 'camera' },
     lookUp: { mark: 'short', offset: 0.15, dur: 0.6, track: 'lead' },
     shrink: { mark: 'short', word: 'short', dur: 0.4, track: 'lead' },
-    // "And we do what Adam and Eve did:": they settle back, and he glances at us.
     settle: { mark: 'cover', dur: 1.1, ease: 'inOutSine', track: 'law' },
     toFig: { mark: 'cover', dur: 1.2, ease: 'inOutSine', track: 'camera' },
     onFig: { after: 'toFig', until: 'going', ease: 'linear', track: 'camera' },
     glance: { mark: 'cover', offset: 0.5, dur: 0.5, track: 'lead' },
-    // "we cover up.": he presses a hand over the stain, busy at it, his eyes on it.
     reach: { mark: 'cover', word: 'cover', dur: 0.5, ends: true, track: 'hand' },
     press: { mark: 'cover', word: 'cover', dur: 0.35, track: 'hand' },
-    // "Fig leaves, excuses, a nicer coat over the stain.": fig leaves drift down, and he pins
-    // one round the seal on each of its words.
     fall1: { mark: 'fig', word: 'leaves', dur: 1.4, ends: true, track: 'leaves' },
     fall2: { mark: 'fig', word: 'excuses', dur: 1.5, ends: true, track: 'leaves' },
     fall3: { mark: 'fig', word: 'coat', dur: 2, ends: true, track: 'leaves' },
@@ -511,9 +383,7 @@ export const word = drawing({
     push3: { mark: 'fig', word: 'coat', dur: 0.3, track: 'hand' },
     push4: { mark: 'fig', word: 'stain', dur: 0.3, track: 'hand' },
     home: { after: 'push4', dur: 0.5, track: 'hand' },
-    // Two more drift past him to the floor.
     stray: { mark: 'fig', offset: -1, dur: 4, ease: 'linear', track: 'leaves' },
-    // "And how is that going?": the leaves curl and drop off, and he gives us a look.
     curl: { mark: 'going', dur: 0.5, stagger: 0.5, track: 'leaves' },
     drop: {
       mark: 'going',
@@ -527,33 +397,23 @@ export const word = drawing({
     toLook: { mark: 'going', until: { at: 'speechEnd' }, ease: 'inOutSine', track: 'camera' },
   },
   knobs: {
-    // Where the page opens: all of him on it, his head clear under where title's name was.
     open: [642, 578],
     openZoom: 1.9,
-    // How much closer the camera creeps while a framing holds.
     creep: 1.05,
-    // The line drawn under his feet, out to where the tablets will stand.
     line: [690, 640],
     lineZoom: 1.75,
-    // The tablets beside him, as word.all frames them.
     law: [680, 616],
     lawZoom: 1.7,
-    // In on him leaning to them, his face at a third of the frame, room over his head.
     near: [718, 612],
     nearZoom: 2.55,
-    // Back as the tablets tower over him, as word.short frames them.
     short: [950, 510],
     shortZoom: 1.15,
-    // On him covering up, as word.fig frames them.
     fig: [721, 610],
     figZoom: 1.65,
-    // His look at us: his face at a third of the frame, the floor and the fallen leaves in it.
     look: [540, 636],
     lookZoom: 2.55,
   },
-  // The court's rigs: title's court under the turning page, and him and his hands on it.
   rigs: COURT_RIGS,
-  // title's light under its court, turning to the page's own as the page comes over.
   light: (f) => {
     const k = f.at('turn');
     return {
@@ -566,10 +426,8 @@ export const word = drawing({
     const { ctx, w, h } = f;
     const turn = f.at('turn');
 
-    // ── title's court, until the page has turned over it
     if (turn < 1) titleCourt(f, w, h, f.handsOf(title));
 
-    // ── the lead: his face and his eyes on each beat, his lean, his bow
     acted(LN, EASE, [
       [ASKING, f.at('ask')],
       [WONDERING, f.at('wonder')],
@@ -598,8 +456,6 @@ export const word = drawing({
     const up = f.at('lookUp') * (1 - f.at('glance'));
     const looking = f.at('down') * (1 - f.at('watch'));
     const busy = f.at('reach') * (1 - f.at('look'));
-    // Leaning in to the tablets as word.all leans him, his head turned to them; drawn back a
-    // little as he looks up at them grown.
     const lean = 0.17 * leaning - 0.04 * up;
     LN.lean = lean;
     LN.nod = 7 * looking + 4 * leaning - 6 * up + 3 * busy;
@@ -611,12 +467,10 @@ export const word = drawing({
       0.05 * f.at('look') +
       0.012 * Math.sin(f.t * 0.7);
 
-    // The seal stays pressed over the stain, turned with him as he leans.
     const [sx, sy] = onHim([LEAD.stain.x, LEAD.stain.y], lean);
     SEAL.x = sx;
     SEAL.y = sy;
 
-    // His hands at rest at his sides, turned with him; they breathe with his sleeves.
     const restOf = (side: Pt): Pt => onHim(side, lean);
     let far = reachAbout(
       onHim(SHOULDER.far, lean),
@@ -624,8 +478,6 @@ export const word = drawing({
       onHim([-40, -150], lean),
       0.5 * f.at('shrink') * (1 - f.at('settle')),
     );
-    // His near hand: over the stain on "cover", pressing; then to each leaf as it comes down,
-    // pressing it on round the seal; home after the last.
     const nearShoulder = onHim(SHOULDER.near, lean);
     const pinOf = (p: Pinned): Pt =>
       onHim([LEAD.stain.x + p.pin.at[0], LEAD.stain.y + p.pin.at[1]], lean);
@@ -637,7 +489,6 @@ export const word = drawing({
       near = reachAbout(nearShoulder, near, middle, f.at(p.cues.pin));
     }
     near = reachAbout(nearShoulder, near, restOf(HAND_REST.near), f.at('home'));
-    // His arms reach for them, each hand at its sleeve's end.
     const reached = reachHands(LN, fromLead(far), fromLead(near));
     far = onLead(reached.left);
     near = onLead(reached.right);
@@ -653,9 +504,6 @@ export const word = drawing({
         }),
       );
 
-    // ── the fig leaves: each drifting down to its pin as his hand comes to meet it, pinned round
-    // the seal and turned with him. Two more drift past him to the floor. On `going` every one
-    // curls and dries, and the pinned ones drop at his feet.
     const leaves = () => {
       PINNED.forEach((p, i) => {
         const fall = f.at(p.cues.fall);
@@ -684,7 +532,6 @@ export const word = drawing({
         ]);
         if (!(k > 0)) return;
         const sway = Math.sin(k * Math.PI * s.drift.sways) * (1 - k);
-        // Laid flat on the floor as it lands.
         const lying = f.keys('stray', [
           [s.to - 0.1, 1],
           [s.to, 0.5],
@@ -701,8 +548,6 @@ export const word = drawing({
       });
     };
 
-    // ── the law: the stone coming in as the line closes round it, the ten lines lit one by one,
-    // their swell on "character"; grown as tall as a doorway on `short`, settled back on `cover`
     TABS.stone = f.at('stone');
     TABS.scale = lerp(lerp(1, DOORWAY, f.at('tower')), 1, f.at('settle'));
     for (let i = 0; i < TABS.lit.length; i++) TABS.lit[i] = f.stagger('lit', i, TABS.lit.length);
@@ -713,10 +558,6 @@ export const word = drawing({
     ]);
     const law = () => {
       standingTablets(ctx, TABS);
-      // The gold line: drawn along the floor; risen, its near end sliding out from under him to
-      // the tablets' near side; then parted where the tablets will meet, each piece lifted by
-      // its middle into a tablet's top, its ends folding down the sides and in along the foot
-      // after; it gives way to their ink as their stone comes in.
       const drawn = f.at('line');
       if (drawn <= 0 || TABS.stone >= 1) return;
       const risen = f.at('rise');
@@ -742,7 +583,6 @@ export const word = drawing({
         const pts: Pt[] = [];
         for (let j = 0; j <= FOLD_POINTS; j++) {
           const u = j / FOLD_POINTS;
-          // The near tablet first, then the far: each piece's middle, then its ends.
           const k = f.staggerAt('fold', (t + Math.abs(2 * u - 1)) / 2);
           const [ox, oy] = tabletEdgeAt(x0, TABLETS_AT[1], 1, u);
           pts.push([lerp(lerp(from, to, u), ox, k), lerp(LINE.y - lift, oy, k)]);
@@ -751,7 +591,6 @@ export const word = drawing({
       }
     };
 
-    // ── the camera: each framing on its beat, a slow creep while one holds
     const creep = f.knob('creep');
     const open = knobCamera(f.knob('open'), f.knob('openZoom'));
     const lineShot = knobCamera(f.knob('line'), f.knob('lineZoom'));
@@ -774,7 +613,6 @@ export const word = drawing({
       [f.at('toLook'), knobCamera(f.knob('look'), f.knob('lookZoom')), pushInto],
     ]);
 
-    // ── the page: it turns in from the right over the court, everything on it riding with it
     at(ctx, { x: lerp(SHEET.w + 40, 0, turn), y: 0, rot: lerp(0.05, 0, turn) }, () => {
       piece(ctx, rounded(w / 2, h / 2, SHEET.w, SHEET.h, 0), PAGE, f.hand('page'), {
         role: 'scenery',
@@ -784,7 +622,6 @@ export const word = drawing({
       });
       shafts(ctx, w, h);
       if (turn < 1) {
-        // Nothing on the page shows past its edge while it turns.
         ctx.beginPath();
         ctx.rect(w / 2 - SHEET.w / 2 + 10, h / 2 - SHEET.h / 2 + 10, SHEET.w - 20, SHEET.h - 20);
         ctx.clip();

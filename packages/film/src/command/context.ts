@@ -1,38 +1,17 @@
-// The input every command's `when` reads: a typed record of where the page
-// is and what it holds, built from the page's URL (its `Places` place and
-// the selection the URL names, `selection.ts`) and from the page's shell
-// (what is selected that the URL does not hold, where the keyboard's focus
-// is, whether the film plays). VS Code's context keys,
-// reshaped: one record the typecheck sees, read by plain predicates, not a
-// string language. Pure.
-
 import { Match, Option } from 'effect';
 import type { PageName } from '../core/api.ts';
 import type { Selection, SelectionTag } from './selection.ts';
 
-/**
- * Where the keyboard's focus is: on the page; in a control that takes its
- * own keys (a field, a media element's controls, an open menu or dialog);
- * in the studio, which takes its own keys and passes the rest on; on a
- * slider (a wipe's grip), which takes its arrows, Home and End and passes
- * the rest on; or on a control (a button, a link), which hears the page's
- * keys but keeps Tab moving focus.
- */
 export type Focus = 'page' | 'field' | 'studio' | 'slider' | 'control';
 
-/** What a command's `when` reads. */
 export interface Context {
-  /** The page: its review, its lab, its player. */
   readonly page: PageName;
-  /** The page's URL: its place, decoded through `Places` by what needs more. */
   readonly href: string;
-  /** What is selected, first the one the URL cites; a multi-select is the whole list. */
   readonly selection: ReadonlyArray<Selection>;
   readonly focus: Focus;
   readonly playing: boolean;
 }
 
-/** A context with nothing selected, at `href` of `page`. */
 export const contextAt = (page: PageName, href: string): Context => ({
   page,
   href,
@@ -41,7 +20,6 @@ export const contextAt = (page: PageName, href: string): Context => ({
   playing: false,
 });
 
-/** The first thing selected, if it is a `tag`: what a command about one thing acts on. */
 export const selected = <T extends SelectionTag>(
   ctx: Context,
   tag: T,
@@ -51,25 +29,17 @@ export const selected = <T extends SelectionTag>(
     (s): s is Extract<Selection, { readonly _tag: T }> => s._tag === tag,
   );
 
-/** `ctx` with `selection` selected instead: what a context menu opened on a thing reads. */
 export const withSelection = (ctx: Context, selection: ReadonlyArray<Selection>): Context => ({
   ...ctx,
   selection,
 });
 
-/**
- * `ctx` with the thing the keyboard's focus is in (`focused`: a version's
- * card, a variant's row) selected first, unless the selection already holds
- * a thing of its kind: the URL's cue wins over a focused cue, but a focused
- * version joins the set the URL names. What a key press reads.
- */
 export const withFocused = (ctx: Context, focused: Option.Option<Selection>): Context =>
   Option.match(
     Option.filter(focused, (f) => !ctx.selection.some((s) => s._tag === f._tag)),
     { onNone: () => ctx, onSome: (f) => withSelection(ctx, [f, ...ctx.selection]) },
   );
 
-/** The element-like a press's target is: its tag, its editability, its nearest ancestor. */
 interface Focusable {
   readonly tagName: string;
   readonly isContentEditable?: boolean;
@@ -79,51 +49,26 @@ interface Focusable {
 const focusable = (target: EventTarget): target is EventTarget & Focusable =>
   'tagName' in target && 'closest' in target;
 
-/** The elements that take their own keys: what is typed into, and media's own controls. */
 const FIELDS = new Set(['INPUT', 'TEXTAREA', 'SELECT', 'AUDIO', 'VIDEO']);
 
-/**
- * Open menus and dialogs: their own keys move through them and close them.
- * One closing (@manna/ui marks its exit `data-ending-style`, then
- * `data-closed`) holds no keys: the focus it still has goes back to the page
- * as it leaves, so a key pressed then is the page's.
- */
 const OVERLAYS =
   ':is([role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]):not([data-ending-style], [data-closed])';
 
-/**
- * The recorder's section: it takes its own keys while focus is in it
- * (`lab/studio/section.tsx`), the dialog it stands in over the studio too.
- */
 const STUDIO = '[data-role="studio"]';
 
-/** A slider that is no field (a wipe's grip): it takes its own arrows, Home and End while focused. */
 const SLIDER = '[role="slider"]';
 
-/** The controls focus stops on that take no typing: the page's keys reach them, but not Tab. */
 const CONTROLS = new Set(['BUTTON', 'A', 'SUMMARY']);
 
 const within = (el: Focusable, selector: string): boolean =>
   Option.isSome(Option.fromNullishOr(el.closest(selector)));
 
-/** Whether `el` is what is typed into, or a media element's own controls. */
 const typedInto = (el: Focusable): boolean =>
   FIELDS.has(el.tagName) || el.isContentEditable === true;
 
-/**
- * Whether a press aimed at `target` lands on a field: what is typed into, or
- * media's own controls, which keep the browser's own menu (paste, spelling).
- * A row inside an open menu or a sheet is no field: it is the thing's.
- */
 export const isField = (target: Option.Option<EventTarget>): boolean =>
   Option.exists(Option.filter(target, focusable), typedInto);
 
-/**
- * Where a press aimed at `target` puts the keyboard: in a field (one typed
- * into, or an open menu or dialog, whose own keys move through it and close
- * it), in the recorder's section (in its dialog too), on a slider, on a
- * control, or on the page.
- */
 export const focusOf = (target: Option.Option<EventTarget>): Focus =>
   Option.match(Option.filter(target, focusable), {
     onNone: (): Focus => 'page',

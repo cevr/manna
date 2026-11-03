@@ -1,5 +1,3 @@
-/** Administrative import capability for the canonical unified Bible schema. */
-
 import { Context, Effect, Layer, Option, Schema } from 'effect';
 import * as SqlClient from 'effect/sql/SqlClient';
 import type { SqlError } from 'effect/sql/SqlError';

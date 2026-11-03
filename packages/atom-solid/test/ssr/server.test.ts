@@ -25,8 +25,6 @@ describe('server rendering a place', () => {
     expect(html).toMatch(/<p [^>]*id="film"[^>]*>f<\/p>/);
     expect(html).toMatch(/<p [^>]*id="cue"[^>]*>c<\/p>/);
     expect(html).toMatch(/<i [^>]*id="t"[^>]*>0<\/i>/);
-    // A server render is pure: a hook seeds its value without writing a
-    // signal, which Solid reports as SERVER_WRITE.
     expect(codes).toEqual(Option.some([]));
   });
 

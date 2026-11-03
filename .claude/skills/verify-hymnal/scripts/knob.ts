@@ -1,15 +1,5 @@
 /* oxlint-disable effect/noGlobals, effect/noNullish, effect/noAsyncFunction -- a frame reader at Bun's boundary, as the probes are: it spawns ffmpeg, reads its raw frames in a loop and prints one line per frame on stdout. */
 
-/**
- * The seeker knob's centre in every frame of a screen recording of
- * `verify-hymnal` (an iPhone 17 Pro, 3x, 1206 by 2622 pixels) while the bar
- * stands tall: the knob is a 14 pt accent disc on the seek row (808 to 840
- * pt down). Per frame it prints `time x width` in points, or `time -` where
- * no knob shows. It reads no words: only the dark columns of the seek row.
- *
- *   bun .claude/skills/verify-hymnal/scripts/knob.ts <video.mp4> [fromSec] [toSec]
- */
-
 const [path = '', fromArg = '0', toArg = '1000000'] = Bun.argv.slice(2);
 const from = Number(fromArg);
 const to = Number(toArg);
@@ -18,10 +8,8 @@ const W = 1206;
 const Y0 = 808 * 3;
 const H = 32 * 3;
 const frameBytes = W * H;
-/** A column of the knob holds this many dark pixels or more; the played line holds about 9. */
 const KNOB_COLUMN = 30;
 
-/** The knob in one frame: its centre and width in points, if it shows. */
 const knobOf = (frame: Uint8Array): { readonly x: number; readonly width: number } | undefined => {
   const dark = Array.from({ length: W }, (_, x) => {
     let c = 0;

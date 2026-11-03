@@ -1,35 +1,3 @@
-/**
- * The find bar (`find-bar`), drawn by the player layer on every screen where
- * the bar's `#` stands (`findAt`), the home list and a hymn page alike, so
- * it shares the `#`'s place, the room the lists leave for it (`findRoom`)
- * and the drums' backdrop.
- *
- * Folded, it is a capsule at the bottom right with two ways to find:
- * `Search` and the `#`. The capsule is glass (`glass`: `soft` at 85 %, with
- * no hairline round it, over whatever scrolls under the bar), its marks and
- * typed words the ink (`onGlass`), its placeholder `onGlassMuted`, and one
- * chosen mark, a disk in `glassChosen`, lies behind the chosen control
- * (`chosenOf`), whose mark takes `onGlassChosen`: the `#` while folded,
- * Search while search is open.
- * A press on `Search` opens search on the screen at the bar's `path`
- * (`searchOpen`, keyed by the path): the capsule grows leftward across the
- * screen into a focused search box, the chosen mark slides with it to the
- * box's magnifier at the leading end, the `#` keeps the capsule's trailing
- * end, and `Cancel` stands at the bar's right. The results show over the
- * screen (`StackBottom.tsx`). `Cancel` folds it back, and the mark slides
- * home to the `#`. With Reduce Motion on the growth is a cross-fade alone
- * and the mark jumps. While the keyboard is up the bar rides 8 points over
- * its top.
- * The whole bar glides between its two places (`glideOf`), over the bar on a
- * hymn page and docked on the home list, as a hymn opens or closes; over the
- * bar it rides the bar's own spring as the bar rises or falls; a hymn page put
- * in another's place moves it not at all. With Reduce Motion it is set in its
- * new place under a 150 ms fade.
- * While the drums are open only the `#` takes a touch (`inReach`): every
- * other view of the bar, the capsule's own background too, lets a touch
- * through to the backdrop beneath it, which closes the drums.
- */
-
 import { useAtom, useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import {
@@ -81,21 +49,14 @@ import {
 import { Magnifier } from './Magnifier';
 import { searchLabel } from './Results';
 
-/** A control while the drums are open: a touch passes through it to the backdrop beneath the bar, and assistive technology does not see it. */
 const outOfReach = { pointerEvents: 'none', 'aria-hidden': true } as const;
-/** The capsule while the drums are open: a touch on its own background passes through to the backdrop; its `#` still takes one. */
 const passThrough = { pointerEvents: 'box-none' } as const;
 
-/** The folded capsule's width: its two buttons side by side. */
 const FOLDED = 2 * HASH;
-/** The space between the open capsule and `Cancel`. */
 const CANCEL_GAP = 12;
-/** The capsule's growth and the chosen mark's slide: one spring, so the mark keeps pace with the end it rides to. */
 const GROWTH = { duration: 300, dampingRatio: 1 } as const;
-/** The whole bar's glide between its two places: a little longer than the growth, as it crosses more of the screen, and as calm. */
 const GLIDE = { duration: 350, dampingRatio: 1 } as const;
 
-/** Cancel's work, for the bar's `Cancel` and Android's Back: the query cleared, the keyboard lowered, search off. */
 export const useCancelSearch = () => {
   const setQuery = useAtomSet(searchQuery);
   const setMode = useAtomSet(searchOpen);
@@ -106,11 +67,9 @@ export const useCancelSearch = () => {
   };
 };
 
-/** The keyboard's height over the window's bottom edge, in points, on the UI thread as it rises and falls. */
 const useKeyboardHeight = () => {
   const height = useSharedValue(0);
   useEffect(() => {
-    // iOS tells the keyboard's move as it starts; Android only once it is done.
     const [rises, falls] = Platform.select({
       ios: ['keyboardWillShow', 'keyboardWillHide'] as const,
       default: ['keyboardDidShow', 'keyboardDidHide'] as const,
@@ -129,7 +88,6 @@ const useKeyboardHeight = () => {
   return height;
 };
 
-/** Moves VoiceOver's focus to the view `held` holds, on a phone. */
 const focusOn = (held: RefObject<Option.Option<HostInstance>>) => {
   if (Platform.OS === 'web') return;
   Option.match(held.current, {
@@ -138,7 +96,6 @@ const focusOn = (held: RefObject<Option.Option<HostInstance>>) => {
   });
 };
 
-/** A ref that keeps the view it is handed, while one is mounted. */
 const useHeld = <Host extends HostInstance>() => {
   const held = useRef(Option.none<HostInstance>());
   const keep: RefCallback<Host> = useCallback((view) => {
@@ -147,16 +104,6 @@ const useHeld = <Host extends HostInstance>() => {
   return [held, keep] as const;
 };
 
-/**
- * The bar of the screen at `path`, its bottom `bottom` points over the
- * window's at its place `at` (`findAt`), with the drums (`drums`) over it
- * while they are open (`drumsOpen`). A new `bottom` is reached as `glideOf`
- * says from the place the bar stood at; a bar told no place is set there at
- * once. `hash` draws the `#` in the look the bar gives it (`HashLook`): alone
- * on its own disk in the tiles' row, else in the capsule, over the chosen
- * mark or beside it. The tiles of `All at once` belong to the home list
- * (`/`): on any other screen the bar reads them hidden.
- */
 export function FindBar({
   path,
   at = FindAt.Nowhere(),
@@ -180,8 +127,6 @@ export function FindBar({
   const cue = useCue();
   const accent = useAccent();
   const reduced = useReduceMotion();
-  // The search this bar's `Search` opened, until its box first opens: only then does the box take focus. A search
-  // opened some other way, a later one, and the same one shown again on the way back from a result leave the keyboard down.
   const [asked, setAsked] = useState(Option.none<Searching>());
   const focusBox =
     row === 'open' &&
@@ -194,7 +139,6 @@ export function FindBar({
   const [width, setWidth] = useState(0);
   const [cancelWidth, setCancelWidth] = useState(0);
   const chosen = chosenOf(row, drumsOpen);
-  // Which end the chosen mark stands at: 0 behind the `#` at the trailing end, 1 behind Search at the leading end.
   const side = useSharedValue(Number(chosen === 'search'));
   const wasChosen = useRef(chosen);
   useEffect(() => {
@@ -222,9 +166,7 @@ export function FindBar({
     if (row === 'open') setAsked(Option.none());
     if (before === 'open' && row === 'folded') focusOn(searchButton);
   }, [row, reduced, focusBox, progress, fade]);
-  // Where the bar stands, its bottom over the window's: `bottom`, reached as `glideOf` says from where it stood.
   const stand = useSharedValue(bottom);
-  // The whole bar's opacity: 1, but for the fade that stands in for a glide under Reduce Motion.
   const seen = useSharedValue(1);
   const stood = useRef({ at, bottom });
   useEffect(() => {
@@ -239,33 +181,27 @@ export function FindBar({
     seen.value = 0;
     seen.value = withTiming(1, { duration: 150 });
   }, [bottom, reduced, stand, seen]);
-  // The keyboard lift composes over the place: while the keyboard is up the bar rides 8 points over its top.
   const placed = useAnimatedStyle(() => {
     const lift = (keyboard.value > 0 && Math.max(0, keyboard.value + HASH_GAP - stand.value)) || 0;
     return { bottom: stand.value, opacity: seen.value, transform: [{ translateY: -lift }] };
   });
   const open = Math.max(FOLDED, width - cancelWidth - CANCEL_GAP);
-  // Unmeasured, the open capsule fills the row by flex (`styles.grow`).
   const grown = useAnimatedStyle(() => {
     if (width === 0) return {};
     return { width: FOLDED + (open - FOLDED) * progress.value };
   });
-  // The chosen mark rides from the trailing end across the capsule as it is now, less its own width: a new
-  // row width moves its place at once, and only a change of side slides it.
   const slid = useAnimatedStyle(() => {
     if (width === 0) return { transform: [{ translateX: 0 }] };
     const across = FOLDED + (open - FOLDED) * progress.value - HASH;
     return { transform: [{ translateX: -across * side.value }] };
   });
   const faded = useAnimatedStyle(() => ({ opacity: fade.value }));
-  // Search's magnifier: on the chosen mark while Search is chosen, else on the glass. The `#` takes its ink from its look.
   const searchInk = (chosen === 'search' && color.onGlassChosen) || color.onGlass;
   const reach = (control: Control) => !inReach(control, drumsOpen) && outOfReach;
   const startSearch = () => {
     cue(plain('tab'));
     const opened = searchAt(path, 'field');
     setAsked(opened);
-    // One search at a time: opened here, it leaves any other screen, and starts with an empty box.
     setQuery('');
     setSearching(opened);
   };
@@ -285,7 +221,7 @@ export function FindBar({
             {...(drumsOpen && passThrough)}
             style={[styles.capsule, row === 'open' && width === 0 && styles.grow, grown]}
           >
-            {/* Drawn first, so it lies behind the controls; it takes no touch and VoiceOver passes it by. */}
+            {}
             <Animated.View
               testID="find-chosen"
               aria-hidden

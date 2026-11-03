@@ -1,24 +1,3 @@
-// Daily: sanctification is the daily choice to keep receiving the gifts, and
-// the Sabbath is rest in His works, not ours. First the parchment: the robed
-// figure from `robe`, heart glowing, asks "am I done?"; on "joy" the
-// camera pans to a gold city gate with light and small music notes drifting
-// out; on "joy" a small grey figure stands beside it in the cold open's
-// scarlet stains, the film's picture of sin, hands over ears, the notes
-// jangling for them (a light moment; never robed: a robe over the stains
-// would be a cloak for sin). On "keep" back to
-// the robed figure asking again. On "will" the camera pushes through their
-// glowing heart into STORY: a cardboard room at dawn, the same figure at the
-// window, face at a third of the frame. On "choose" the open hand from `look`
-// rises palm up and the three small icons are laid in it. From "matter" six
-// suns arc over the window, the six working days: each dusk the hand's fingers curl, each
-// dawn it opens again, and a flower springs up on the path outside each day
-// (the path from `within`). On "sab" the sixth sun sets gold, and as it sets
-// the Sabbath begins: the shot dissolves on that sunset to the Sabbath field
-// (garden.ts `restingField`), the seventh day the rest itself: tools set down,
-// the robed figure resting against the tree, heart still glowing, face calm
-// on "rest", held through "rest in his", the scene's last words. Nothing
-// here is earned: the hand only receives.
-
 import {
   type Frame,
   type Pt,
@@ -48,18 +27,12 @@ import {
   piece,
 } from '../../kit.ts';
 
-// ─── A: the parchment ────────────────────────────────────────────────────────
-
-/** The robed figure's scale on the page (where they stand is the `fig` knob). */
 const FIG_SCALE = 2.3;
-/** The small grey figure in their stains beside the gate, and their scale. */
 const OTHER_DX = 380;
 const OTHER_SCALE = 1.5;
 
-/** How far the push through the heart zooms in. */
 const THROUGH_ZOOM = 9;
 
-/** The gate's pieces, its sill at (0, 0). */
 const PILLAR = rounded(0, -260, 96, 520, 10);
 const PILLAR_X = [-200, 200] as const;
 const ARCH = spline(
@@ -79,7 +52,6 @@ const OPENING = rounded(0, -240, 300, 480, 12);
 const WALL_L = rounded(-420, -200, 340, 400, 6);
 const WALL_R = rounded(420, -200, 340, 400, 6);
 
-/** The music drifting out of the gate. */
 const NOTES = 8;
 const NOTE_HEAD = ellipseShape(0, 0, 15, 11, 20);
 const NOTE_STEM: Pt[] = [
@@ -91,7 +63,6 @@ const NOTE_FLAG: Pt[] = [
   [30, -40],
   [26, -24],
 ];
-/** How fast each note drifts out, in drifts per second. */
 const NOTE_RATE = 0.22;
 
 const PAPER_SKY = [
@@ -99,12 +70,8 @@ const PAPER_SKY = [
   [1, C.paper],
 ] as const;
 
-// ─── B: the room at the window ───────────────────────────────────────────────
-
-/** The window's opening, half its width and height. */
 const WIN_HW = 320;
 const WIN_HH = 300;
-/** The frame around the opening: top, bottom, left and right. */
 const WIN_FRAME = [
   rounded(0, -WIN_HH - 20, WIN_HW * 2 + 80, 44, 6),
   rounded(0, WIN_HH + 20, WIN_HW * 2 + 80, 44, 6),
@@ -114,12 +81,9 @@ const WIN_FRAME = [
 const WIN_BAR_V = rounded(0, 0, 22, WIN_HH * 2, 4);
 const WIN_BAR_H = rounded(0, 0, WIN_HW * 2, 22, 4);
 const SILL = rounded(0, WIN_HH + 40, WIN_HW * 2 + 120, 30, 6);
-/** Where the sun rises and sets in the window, and how high it arcs. */
 const HORIZON = 150;
 const SUN_ARC = 300;
-/** The view's scale: `within`'s hill and path, seen through the window. */
 const VIEW_SCALE = 0.75;
-/** How far below the window's centre the view's origin sits, so the hill fills the sill. */
 const VIEW_DROP = 110;
 const FLOWER_STEM: Pt[] = [
   [0, 0],
@@ -127,34 +91,23 @@ const FLOWER_STEM: Pt[] = [
 ];
 const FLOWER_HEAD = ellipseShape(0, -34, 14, 14, 16);
 
-/** The robed figure at the window: feet below the frame, face a third of it. */
 const AT_WINDOW: Pt = [1420, 1250];
 const WINDOW_SCALE = 4.7;
-/** The robed figure's hand at the window, open low toward it, palm up (in their units). */
 const OPEN_AT: Pt = [-70, -118];
-/** Their palm-up hand come forward in the room, close up: its palm's middle, and its scale. */
 const HAND_AT: Pt = [880, 860];
 const HAND_SCALE = 1.3;
-/** Their hand at the window coming forward to us as the close-up, and back. */
 const FORWARD: HandPush = {
   from: [AT_WINDOW[0] + OPEN_AT[0] * WINDOW_SCALE, AT_WINDOW[1] + OPEN_AT[1] * WINDOW_SCALE],
   figureScale: WINDOW_SCALE,
   to: HAND_AT,
   scale: HAND_SCALE,
 };
-/** The icons in the palm's middle: their scale. */
 const ICONS_IN_HAND = 0.24;
 
-/** The working days, each a sun's arc; the Sabbath begins as the last one sets. */
 const DAYS = 6;
 
-/** The robe, as `robe` gives it. */
 const ROBED: Person = { body: C.robe, shade: C.robe, garment: 'robe' };
 
-/**
- * The gate and the window; where the robed figure stands on the page; and the
- * page's cameras, on the robed figure and on the gate.
- */
 const knobs = {
   gate: [1420, 930],
   window: [620, 440],
@@ -175,12 +128,8 @@ const timeline = {
   toFig: { mark: 'keep', offset: -0.4, dur: 0.9, ease: 'inOutCubic' },
   askAgain: { mark: 'keep', dur: 0.4 },
   through: { mark: 'will', offset: -0.35, dur: 0.6, ease: 'inCubic' },
-  // The room comes through the glow over the push's last stretch.
   roomIn: { after: 'through', dur: 0.16, ends: true, ease: 'linear' },
   dawn: { mark: 'will', until: 'matter', ease: 'outQuad' },
-  // At the window they open their hand and turn it palm up, and on "choose"
-  // it comes forward to us, close up; on "sab" it goes back to them, the
-  // gifts in it.
   reach: { mark: 'choose', offset: -0.7, dur: 0.6 },
   palmUp: { mark: 'choose', offset: -0.4, dur: 0.3, ease: 'inOutSine' },
   handUp: { mark: 'choose', dur: 0.7, ease: 'inOutCubic' },
@@ -208,12 +157,10 @@ export const daily = drawing({
   },
 });
 
-// Scratch the draw reuses every frame, so no pose or tuple is made per frame.
 const LOOK: [number, number] = [0, 0];
 const AT: [number, number] = [0, 0];
 const OTHER_LOOK: [number, number] = [0, 0];
 const ASKING: Person = { ...ROBED, look: LOOK };
-/** The other's hands over their ears, up on `ears`. */
 const OVER_EAR_L: GestureAt = { to: [-40, -160], reach: 0, grip: 'open' };
 const OVER_EAR_R: GestureAt = { to: [40, -160], reach: 0, grip: 'open' };
 const OTHER: Person = {
@@ -222,7 +169,6 @@ const OTHER: Person = {
   near: OVER_EAR_R,
   stains: FIGURE_STAINS,
 };
-/** The robed figure's hand at the window, open toward it, then turned palm up (`palmUp`). */
 const OPENED: GestureAt = {
   to: [OPEN_AT[0], OPEN_AT[1]],
   reach: 0,
@@ -230,7 +176,6 @@ const OPENED: GestureAt = {
   turn: 0,
   lent: 0,
 };
-/** At the window, face to the light. */
 const AT_THE_WINDOW: Person = {
   ...ROBED,
   far: OPENED,
@@ -247,7 +192,6 @@ const SKY_TOP: [number, Hex] = [0, C.tealTop];
 const SKY_LOW: [number, Hex] = [1, C.tealLow];
 const WINDOW_SKY = [SKY_TOP, SKY_LOW] as const;
 
-/** A: the page, the robed figure, the gate and the one at it. */
 const page = (f: DailyFrame, through: number) => {
   const { ctx, w, h } = f;
   sky(ctx, w, h, PAPER_SKY);
@@ -270,7 +214,6 @@ const page = (f: DailyFrame, through: number) => {
   ctx.restore();
 };
 
-/** The gold city gate, light and music drifting out of it. */
 const gate = (f: DailyFrame) => {
   const { ctx, t } = f;
   const { hand } = f;
@@ -299,7 +242,6 @@ const gate = (f: DailyFrame) => {
   }
   piece(ctx, ARCH, C.gold, hand('arch'), { role: 'scenery', kind: 'cut', line: 4 });
   const notes = f.at('notes');
-  // The notes going right, toward the one at the gate, jangle when their ears are covered.
   const jangle = f.at('ears') * (1 - f.at('toFig'));
   if (notes > 0)
     for (let i = 0; i < NOTES; i++) {
@@ -326,7 +268,6 @@ const gate = (f: DailyFrame) => {
   ctx.restore();
 };
 
-/** The small grey figure in the scarlet stains beside the gate, hands over their ears. */
 const other = (f: DailyFrame) => {
   const { ctx } = f;
   const pop = f.at('other');
@@ -337,7 +278,6 @@ const other = (f: DailyFrame) => {
   ctx.save();
   ctx.translate(x, gy);
   ctx.scale(OTHER_SCALE * pop, OTHER_SCALE * pop);
-  // Their hands go up from their sides to the ears.
   OVER_EAR_L.reach = ears;
   OVER_EAR_R.reach = ears;
   OTHER_LOOK[0] = lerp(-3, 0, ears);
@@ -352,7 +292,6 @@ const other = (f: DailyFrame) => {
   ctx.restore();
 };
 
-/** The robed figure on the page, heart glowing: asking, looking to the gate, asking again. */
 const robedOnPage = (f: DailyFrame, toGate: number) => {
   const { ctx } = f;
   const ask = f.at('ask') * (1 - f.at('lead')) + f.at('askAgain');
@@ -374,14 +313,9 @@ const robedOnPage = (f: DailyFrame, toGate: number) => {
   ctx.restore();
 };
 
-/** Working day `i`'s sun, 0..1 across its arc: the first five over `days`, the sixth on "sab". */
 const dayArc = (f: DailyFrame, i: number): number =>
   i < DAYS - 1 ? f.stagger('days', i, DAYS - 1) : f.at('sixth');
 
-/**
- * Where the sun is in its arc 0..1 over the window: the first morning risen
- * a little by "choose", then each working day's arc, the sixth setting gold.
- */
 const sunArc = (f: DailyFrame): number => {
   for (let i = DAYS - 1; i >= 0; i--) {
     const d = dayArc(f, i);
@@ -391,7 +325,6 @@ const sunArc = (f: DailyFrame): number => {
   return 0.15 * f.at('dawn');
 };
 
-/** B: the room at dawn, the robed figure at the window, the open hand and its icons. */
 const room = (f: DailyFrame, alpha: number) => {
   const { ctx, w, h } = f;
   const { hand } = f;
@@ -401,12 +334,10 @@ const room = (f: DailyFrame, alpha: number) => {
   const gold = f.at('sixth');
   ctx.save();
   ctx.globalAlpha *= alpha;
-  // The chipboard wall, lit from the window.
   ctx.fillStyle = C.board;
   ctx.fillRect(0, 0, w, h);
   glow(ctx, wx + 200, wy + 200, 900, mix(C.peachLow, C.glow, day), 0.55);
 
-  // The view: sky, the sun on its arc, the hill and the path with a flower a day.
   ctx.save();
   ctx.beginPath();
   ctx.rect(wx - WIN_HW, wy - WIN_HH, WIN_HW * 2, WIN_HH * 2);
@@ -419,7 +350,6 @@ const room = (f: DailyFrame, alpha: number) => {
   const sx = wx + lerp(-WIN_HW + 60, WIN_HW - 60, arc);
   const sy = wy + HORIZON - SUN_ARC * day;
   glow(ctx, sx, sy, 200, C.glow, 0.9);
-  // Built where it stands: the ink reads a shape's own points, so a moved copy draws other pixels.
   piece(ctx, ellipseShape(sx, sy, 44, 44, 24), C.gold, hand('sun'), { role: 'scenery', line: 0 });
   ctx.save();
   ctx.translate(wx, wy + VIEW_DROP);
@@ -435,7 +365,6 @@ const room = (f: DailyFrame, alpha: number) => {
   ctx.restore();
   ctx.restore();
 
-  // The frame, its bars and sill.
   ctx.save();
   ctx.translate(wx, wy);
   for (let i = 0; i < WIN_FRAME.length; i++)
@@ -454,7 +383,6 @@ const room = (f: DailyFrame, alpha: number) => {
   ctx.restore();
 };
 
-/** One flower on the path for each working day done. */
 const flowers = (f: DailyFrame) => {
   const { ctx } = f;
   const { hand } = f;
@@ -482,11 +410,8 @@ const flowers = (f: DailyFrame) => {
   }
 };
 
-/** The robed figure at the window, face to the light, heart glowing. */
 const robedAtWindow = (f: DailyFrame, day: number) => {
   const { ctx } = f;
-  // Their hand opens toward the window and stays there, palm up; it gives
-  // way to the close-up as that comes forward, and takes it back as it returns.
   OPENED.reach = f.at('reach');
   OPENED.turn = f.at('palmUp');
   OPENED.lent = f.at('handUp') * (1 - f.at('handBack'));
@@ -499,13 +424,8 @@ const robedAtWindow = (f: DailyFrame, day: number) => {
   ctx.restore();
 };
 
-/**
- * The open hand rising palm up on "choose", the three icons laid in it; each
- * working day its fingers curl toward dusk and open again at dawn.
- */
 const inHand = (f: DailyFrame, arc: number) => {
   const { ctx } = f;
-  // 0 their hand at the window, 1 come forward to us.
   const up = f.at('handUp') * (1 - f.at('handBack'));
   if (up <= 0) return;
   const working = f.at('days') > 0;
@@ -517,8 +437,6 @@ const inHand = (f: DailyFrame, arc: number) => {
   LIT[0] = LAID[0] * open;
   LIT[1] = LAID[1] * open;
   LIT[2] = LAID[2] * open;
-  // Their palm-up hand at the window comes forward as the close-up, the same
-  // shape growing, and goes back into their hand the same way.
   pushedHand(ctx, f.hand, FORWARD, up, open, 'far', {
     under: () => glow(ctx, 0, 0, 260, C.glow, 0.5 * open),
     over: () => {
@@ -530,7 +448,6 @@ const inHand = (f: DailyFrame, arc: number) => {
   });
 };
 
-/** C: the Sabbath field, the robed figure at rest against the tree, heart glowing. */
 const sabbath = (f: DailyFrame, alpha: number) => {
   const { ctx, w, h } = f;
   ctx.save();

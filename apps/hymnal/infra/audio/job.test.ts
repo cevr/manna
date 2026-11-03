@@ -1,11 +1,3 @@
-/**
- * The copy job against fake stores: S3, the GitHub fill and R2 are each a
- * service over plain maps and a `Ref`, so a run is a few milliseconds and no
- * network. The hashes are the real Bun ones.
- *
- * The fixture is the hymnal as measured: S3 has every hymn but 388, and the
- * GitHub tree has all 695. Each recording is a few bytes of its own.
- */
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Console, Effect, Layer, Option, Ref, Result } from 'effect';
 
@@ -22,16 +14,13 @@ const recording = (hymn: number) => bytesOf(`recording of hymn ${hymn}`);
 
 interface S3Object {
   readonly bytes: Uint8Array;
-  /** What HEAD answers: the MD5 in quotes, unless a case says otherwise. */
   readonly etag: string;
   readonly size: number;
 }
 
 interface Fixture {
   readonly s3: Map<number, S3Object>;
-  /** The tree's entries, and the bytes a download of each answers. */
   readonly fill: Map<number, { readonly entry: FillEntry; readonly bytes: Uint8Array }>;
-  /** Hymns whose HEAD gets no answer (a 5xx after its retries). */
   readonly unanswered: ReadonlySet<number>;
 }
 
@@ -88,7 +77,6 @@ const fillOf = (fx: Fixture) =>
     }),
   );
 
-/** R2 as a map: an upload's ETag is the MD5 of the bytes it got, as R2's is. */
 interface Bucket {
   readonly objects: Ref.Ref<ReadonlyMap<string, TargetObject>>;
   readonly puts: Ref.Ref<ReadonlyArray<string>>;
@@ -102,9 +90,7 @@ const bucket = Effect.gen(function* () {
 });
 
 interface TargetFaults {
-  /** Keys whose put fails. */
   readonly failing: ReadonlySet<string>;
-  /** Keys whose put stores the bytes but answers another ETag. */
   readonly lying: ReadonlySet<string>;
 }
 
@@ -138,7 +124,6 @@ const targetOf = (state: Bucket, faults: TargetFaults) =>
     }),
   );
 
-/** R2 a dry run must never reach: any call is a defect. */
 const unreachable = Layer.succeed(
   Target,
   Target.of({
@@ -147,7 +132,6 @@ const unreachable = Layer.succeed(
   }),
 );
 
-/** Run the job, keeping what it printed and how it ended. */
 const exec = <E>(
   program: Effect.Effect<void, E, Source | Fill | Hash | Target>,
   layer: Layer.Layer<Source | Fill | Target, never, Hash>,
@@ -167,7 +151,6 @@ const stores = (fx: Fixture, state: Bucket, faults: TargetFaults = healthy) =>
 
 const key = sourcedKey;
 
-/** The summary of a run over the default fixture. */
 const sums = (fx: Fixture) => {
   const s3 = [...fx.s3.values()].reduce((total, object) => total + object.size, 0);
   const github = Option.match(Option.fromUndefinedOr(fx.fill.get(388)), {

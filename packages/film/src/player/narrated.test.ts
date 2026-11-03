@@ -1,12 +1,3 @@
-// A film's page reads its narration where the tools write it, by the film's
-// id, through the page's HTTP client; a film with no timings yet is laid out
-// on estimates, as the tools lay it out, and a timings file the page cannot
-// fetch or read fails, naming it. A film is given only once the faces it
-// draws in have been asked for (`pictureFaces`, which waits for none of them:
-// what draws the film waits, `face.test.ts`), with its Rive rigs loaded into
-// its caller's scope: closing it frees them, and a load that fails frees what
-// it had acquired at once.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Deferred, Effect, Exit, Fiber, Layer, Scope } from 'effect';
 import { HttpClient, HttpClientError, HttpClientRequest, HttpClientResponse } from 'effect/http';
@@ -19,18 +10,12 @@ import { NO_TAKES, type Narrated, loadNarrated, narratedFilms, narrationUrls } f
 
 const TIMINGS = '{"voice":"v","scenes":{}}';
 
-/**
- * A client on a stand-in page: bun has no `location`, so a page-relative URL
- * is resolved against an origin here, as the browser resolves it against the
- * page's.
- */
 const onPage = (client: HttpClient.HttpClient) =>
   Layer.succeed(
     HttpClient.HttpClient,
     HttpClient.mapRequest(client, HttpClientRequest.prependUrl('http://lab.slow.test')),
   );
 
-/** A client that answers every URL with `status` and `body`, and notes the paths it was asked. */
 const answering = (status: number, body = '') => {
   const asked: Array<string> = [];
   const client = HttpClient.make((request, url) => {
@@ -40,7 +25,6 @@ const answering = (status: number, body = '') => {
   return { layer: onPage(client), asked };
 };
 
-/** A client whose every request fails on its way (the page offline). */
 const offline = onPage(
   HttpClient.make((request) =>
     Effect.fail(
@@ -118,7 +102,6 @@ describe('narratedFilms', () => {
         Effect.tap(() => Effect.sync(() => happened.push('film given'))),
       );
       const loading = yield* Effect.forkChild(given);
-      // The film's module and its narration are in; its faces are not yet asked for.
       yield* Deferred.await(moduleAsked);
       yield* Effect.yieldNow;
       expect(happened).toEqual([]);
@@ -134,13 +117,11 @@ describe('narratedFilms', () => {
       const scenes = [{ id: 'one', say: 'A line.', draw: () => undefined }];
       const films = narratedFilms(
         {
-          // Handed its rate with its narration, as a film's `film.ts` spreads it.
           told: () =>
             Promise.resolve({
               fps: 24,
               film: (n: Narrated) => createFilm({ ...n, ...toy, scenes }),
             }),
-          // A page made at a rate of its own.
           own: () =>
             Promise.resolve({
               fps: 24,
@@ -160,7 +141,6 @@ describe('narratedFilms', () => {
     }),
   );
 
-  /** A registry of the arm's film (its one rig loaded by `rive`) and a film whose second rig cannot load. */
   const armFilms = (rive: ReturnType<typeof countedRive>['layer']) =>
     narratedFilms(
       {
@@ -187,7 +167,6 @@ describe('narratedFilms', () => {
     Effect.gen(function* () {
       const { counts, layer } = countedRive();
       const films = armFilms(layer);
-      // Five mounts, each loading the film into a scope of its own and closing it as it goes.
       for (let mount = 0; mount < 5; mount++) {
         const scope = yield* Scope.make();
         const film = yield* Scope.provide(films.arm, scope);
@@ -209,7 +188,6 @@ describe('narratedFilms', () => {
         const scope = yield* Scope.make();
         const failed = yield* Effect.flip(Scope.provide(films.broken, scope));
         expect(failed).toMatchObject({ _tag: 'RigNameMissing', kind: 'artboard', name: 'Leg' });
-        // The arm's file and the leg's were both loaded, and both are freed already.
         expect(counts.files).toBe(2);
         expect(counts.unrefs).toBe(2);
         expect(counts.deletes).toBe(counts.artboards);
@@ -246,10 +224,8 @@ describe('narratedFilms', () => {
       yield* standInDom();
       const scope = yield* Scope.make();
       const film = yield* Scope.provide(films.block, scope);
-      // Its one part was read as the film loaded, through the page's images, and a frame draws it.
       expect(read).toEqual(['block/body.png']);
       film.render(recorder().ctx, 1);
-      // Closing the scope it was loaded into lets it go: a frame drawn after names it unloaded.
       yield* Scope.close(scope, Exit.void);
       expect(() => film.render(recorder().ctx, 1)).toThrow(
         'puppet "block" (fixtures/block) is not loaded',

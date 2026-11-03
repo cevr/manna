@@ -1,4 +1,3 @@
-/** Independent corpus source. SQLite is only an explicit, read-only capture input. */
 import { Database } from 'bun:sqlite';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
@@ -47,14 +46,12 @@ export const SourceText = Schema.Struct({
 );
 export type SourceText = typeof SourceText.Type;
 
-/** Stable source bytes are also a database input fingerprint. */
 export const serializeSourceText = (source: SourceText) => `${JSON.stringify(source, null, 2)}\n`;
 
 export class SourceTextError extends Schema.TaggedError<SourceTextError>()('SourceTextError', {
   operation: Schema.String,
 }) {}
 
-/** Schema diagnostics may contain source strings. Only the operation leaves this boundary. */
 export const decodeSourceText = (text: string) =>
   Schema.decodeEffect(Schema.fromJsonString(SourceText))(text).pipe(
     Effect.mapError(() => SourceTextError.make({ operation: 'decode' })),
@@ -68,7 +65,6 @@ export const readSourceText = Effect.fn('SourceText.read')(function* (file = SOU
   return yield* decodeSourceText(text);
 });
 
-/** The source compiler needs lookups and categories, not runtime search. */
 export class SourceHymnal extends Context.Service<
   SourceHymnal,
   {
@@ -77,7 +73,6 @@ export class SourceHymnal extends Context.Service<
   }
 >()('@manna/hymnal/SourceHymnal') {}
 
-/** Reuses the public text types at build time; never reads a generated database. */
 export const layerSourceText = Layer.effect(
   SourceHymnal,
   Effect.gen(function* () {

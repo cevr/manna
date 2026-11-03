@@ -1,8 +1,3 @@
-// The easel's words: a place in a scene read and resolved to its frame (held
-// inside the scene, a mark or cue it lacks named with the ones it has, seconds
-// past its end refused), a crop read and held to the frame, a view's size and
-// mode, the format a look takes unless told, and a still's file name.
-
 import { describe, expect, test } from 'bun:test';
 import { Option, Result } from 'effect';
 import { MAIN_VARIANT, RenderVariantName } from './catalogue.ts';
@@ -18,7 +13,6 @@ import {
   wedgeVariant,
 } from './easel.ts';
 
-/** A scene 10 s long from film second 4.01, a mark at 2 s, a cue from 1 to 3 s. */
 const scene: SceneTimes = {
   id: 'roof',
   start: 4.01,

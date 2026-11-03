@@ -19,7 +19,6 @@ import { recorder, withDom } from './fixtures/stand-in.ts';
 import { type ProbeSink, probing } from './probe.ts';
 
 const SHOULDER: Pt = [17, -111];
-/** A near hand floating at rest beside the hip, the figure's breath held. */
 const NEAR: HandRoot = { shoulder: SHOULDER, rest: [42, -50], away: 1, breath: 0 };
 const FAR: HandRoot = { shoulder: [-17, -111], rest: [-42, -50], away: -1, breath: 0 };
 const STYLE: HandStyle = {
@@ -32,15 +31,12 @@ const STYLE: HandStyle = {
 
 const dist = (a: Pt, b: Pt) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
-/** The furthest any point moved between two point lists, point for point. */
 const moved = (a: ReadonlyArray<Pt>, b: ReadonlyArray<Pt>) =>
   Math.max(...a.map((p, i) => Math.hypot(p[0] - (b[i]?.[0] ?? 0), p[1] - (b[i]?.[1] ?? 0))));
 
-/** The hand's path from its rest to `to`, `n` steps of reach. */
 const path = (root: HandRoot, to: Pt, n = 400, grip?: Gesture['grip']): Pt[] =>
   Array.from({ length: n + 1 }, (_, k) => handAt(root, { to, reach: k / n, grip }, STYLE));
 
-/** Targets a figure's hands work at: out, up, over the head, across the chest, down across the belly, far out. */
 const TARGETS: ReadonlyArray<Pt> = [
   [90, -60],
   [60, -190],
@@ -58,10 +54,8 @@ describe('a floating hand', () => {
     for (const breath of [-1, 1]) {
       const [x, y] = handAt({ ...NEAR, breath }, undefined, STYLE);
       expect(x).toBeCloseTo(NEAR.rest[0], 9);
-      // A small bob, up and down with the breath, never a drift away.
       expect(Math.sign(y - NEAR.rest[1])).toBe(breath);
       expect(Math.abs(y - NEAR.rest[1])).toBeLessThan(0.1 * STYLE.mitten);
-      // At work it holds still on what it works at.
       const at = handAt({ ...NEAR, breath }, { to: [90, -60], reach: 1 }, STYLE);
       expect(at[0]).toBeCloseTo(90, 9);
       expect(at[1]).toBeCloseTo(-60, 9);
@@ -94,7 +88,6 @@ describe('a floating hand', () => {
     const half = handAt(NEAR, { to, reach: 0.5 }, STYLE);
     const straight: Pt = [(NEAR.rest[0] + to[0]) / 2, (NEAR.rest[1] + to[1]) / 2];
     expect(dist(half, straight)).toBeGreaterThan(10);
-    // Swung out round the shoulder, away from the body, not in across it.
     expect(half[0]).toBeGreaterThan(straight[0]);
   });
 
@@ -133,9 +126,6 @@ describe('a floating hand', () => {
   });
 
   test('never flips: a target swept round the shoulder moves the hand on its way a little at a time', () => {
-    // Round the shoulder at arm's length, all but where the head is (up and
-    // in, where no hand reaches): a small step of the target moves the hand
-    // half way there by about as much, never by a jump.
     const STEPS = 720;
     for (const root of [NEAR, FAR]) {
       const head = root.away === 1 ? (-3 * Math.PI) / 4 : -Math.PI / 4;
@@ -154,13 +144,11 @@ describe('a floating hand', () => {
   });
 });
 
-/** A copy of a mitten's palm outline: `handShape` writes into a buffer it reuses. */
 const shapeOf = (g: Gesture | undefined, s: number): Pt[] =>
   handShape(g, s).map(([x, y]): Pt => [x, y]);
 
 describe("a hand's grip", () => {
   const TO: Pt = [90, -60];
-  /** In unit shape: a step moving any point more than this is a frame that swaps a grip. */
   const STEP = 0.02;
 
   test('forms from the open rest as it arrives, as before, when it names no grip it was', () => {
@@ -190,8 +178,6 @@ describe("a hand's grip", () => {
   });
 
   test('stays smooth whichever way the hand goes: arriving, changing, and going home changed', () => {
-    // Out to its work holding, the grip changes to open, then back home: the
-    // travel and the change each move the mitten a little a frame.
     const N = 100;
     const frames: Array<[number, number]> = [
       ...Array.from({ length: N + 1 }, (_, k): [number, number] => [k / N, 0]),
@@ -208,10 +194,8 @@ describe("a hand's grip", () => {
   });
 });
 
-/** A copy of an outline: `closeShape` writes into buffers it reuses. */
 const copy = (pts: ReadonlyArray<Pt>): Pt[] => pts.map(([x, y]): Pt => [x, y]);
 
-/** The nearest distance from `p` to the closed outline `poly`. */
 const toOutline = (p: Pt, poly: ReadonlyArray<Pt>) => {
   let best = Number.POSITIVE_INFINITY;
   for (let i = 0; i < poly.length; i++) {
@@ -227,11 +211,9 @@ const toOutline = (p: Pt, poly: ReadonlyArray<Pt>) => {
   return best;
 };
 
-/** How far apart two closed outlines are as shapes (however their points are numbered): the farther of the two one-way distances. */
 const apart = (a: ReadonlyArray<Pt>, b: ReadonlyArray<Pt>) =>
   Math.max(...a.map((p) => toOutline(p, b)), ...b.map((p) => toOutline(p, a)));
 
-/** Whether `p` lies inside the closed outline `poly`. */
 const inside = (p: Pt, poly: ReadonlyArray<Pt>) => {
   let hit = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -246,10 +228,9 @@ const inside = (p: Pt, poly: ReadonlyArray<Pt>) => {
   return hit;
 };
 
-/** The largest turn (radians) between two neighbouring edges of a closed outline: its sharpest corner. */
 const sharpest = (poly: ReadonlyArray<Pt>) => {
   let worst = 0;
-  const n = poly.length - 1; // the last point closes onto the first
+  const n = poly.length - 1;
   for (let i = 0; i < n; i++) {
     const a = poly[(i + n - 1) % n] ?? [0, 0];
     const b = poly[i] ?? [0, 0];
@@ -257,7 +238,6 @@ const sharpest = (poly: ReadonlyArray<Pt>) => {
     const u = Math.atan2(b[1] - a[1], b[0] - a[0]);
     const v = Math.atan2(c[1] - b[1], c[0] - b[0]);
     const turn = Math.abs(((v - u + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
-    // A straight run between two balls has no corner at its ends.
     if (Math.hypot(b[0] - a[0], b[1] - a[1]) > 1e-6 && Math.hypot(c[0] - b[0], c[1] - b[1]) > 1e-6)
       worst = Math.max(worst, turn);
   }
@@ -277,15 +257,12 @@ const take = (s: CloseShape): Taken => ({
   scalars: [s.curl, s.over, s.creaseInk],
 });
 
-/** The palm's middle, where a light or the gifts are laid. */
 const PALM_MIDDLE: Pt = [0, 0];
 const top = (pts: ReadonlyArray<Pt>) => Math.min(...pts.map((p) => p[1]));
 const bottom = (pts: ReadonlyArray<Pt>) => Math.max(...pts.map((p) => p[1]));
 
 describe('closeShape', () => {
   test('the curl is continuous: from open to closed no frame pops', () => {
-    // A hand closing over two seconds at 60 fps moves 1/120 of the range a
-    // frame; step ten times finer and nothing may move more than a few units.
     const STEPS = 1200;
     let before = take(closeShape(1));
     for (let i = 1; i <= STEPS; i++) {
@@ -294,7 +271,6 @@ describe('closeShape', () => {
       expect(apart(before.thumb, now.thumb)).toBeLessThan(4);
       for (const [k, c] of now.creases.entries())
         expect(moved(before.creases[k] ?? c, c)).toBeLessThan(4);
-      // The ink and paper that come in as the fingers come over the palm come in gradually.
       for (const [k, v] of now.scalars.entries())
         expect(Math.abs(v - (before.scalars[k] ?? v))).toBeLessThan(0.03);
       before = now;
@@ -305,14 +281,11 @@ describe('closeShape', () => {
     const open = take(closeShape(1));
     const shut = take(closeShape(0));
     const reach = (pts: ReadonlyArray<Pt>) => Math.max(...pts.map((p) => p[0]));
-    // Open: the fingers run on up past the knuckles, no ink over the palm, the joints showing.
     expect(top(open.fingers)).toBeLessThan(top(copy(closeShape(1).palm)) - 150);
     expect(open.scalars).toEqual([0, 0, 1]);
-    // Closed: their round tip lies back down over the palm, its edge inked, the joints turned away.
     expect(bottom(shut.fingers)).toBeGreaterThan(0);
     expect(top(shut.fingers)).toBeGreaterThan(top(open.fingers) + 100);
     expect(shut.scalars).toEqual([1, 1, 0]);
-    // The thumb comes in toward the fingers.
     expect(reach(shut.thumb)).toBeGreaterThan(reach(open.thumb));
   });
 
@@ -351,7 +324,6 @@ describe('the palm-up turn', () => {
       const now = { ...turning(i / STEPS) };
       expect(Math.abs(now.along - before.along)).toBeLessThan(0.01);
       if (now.cup !== before.cup) {
-        // The grip gives way to the palm-up shape only where the hand is edge on.
         expect(now.along).toBeLessThan(0.21);
         edge = Math.min(edge, now.along);
       }
@@ -370,23 +342,17 @@ describe('the palm-up turn', () => {
     ];
     for (const away of [1, -1] as const) {
       const m = [...palmUpFrame(to, -Math.PI / 2, STYLE.mitten, away)];
-      // The palm's middle on the target.
       const middle = apply(m, [0, 0]);
       expect(middle[0]).toBeCloseTo(to[0], 9);
       expect(middle[1]).toBeCloseTo(to[1], 9);
-      // Heel to fingertips is the mitten's length, straight up.
       const tip = apply(m, [0, -CLOSE_SPAN]);
       expect(tip[0]).toBeCloseTo(to[0], 9);
       expect(tip[1]).toBeCloseTo(to[1] - STYLE.mitten, 9);
-      // The thumb (−x in the close-up) lies on the side away from the arm, as
-      // the close-up's does when its forearm comes in from that arm's side.
       expect(Math.sign(apply(m, [-CLOSE_SPAN, 0])[0] - to[0])).toBe(-away);
     }
-    // Still facing along the arm, the same shape: a rotation and a uniform scale.
     const m = palmUpFrame(to, 0.4, STYLE.mitten, 1);
     expect(Math.hypot(m[0], m[1])).toBeCloseTo(Math.hypot(m[2], m[3]), 9);
     expect(m[0] * m[2] + m[1] * m[3]).toBeCloseTo(0, 9);
-    // Turned, the hand is still on its target: what it holds rides the palm's middle.
     const turned = handAt(NEAR, { to, reach: 1, turn: 1 }, STYLE);
     expect(turned[0]).toBeCloseTo(to[0], 9);
     expect(turned[1]).toBeCloseTo(to[1], 9);
@@ -394,7 +360,6 @@ describe('the palm-up turn', () => {
 });
 
 describe('floatingHand declares itself', () => {
-  /** The hands a check probing hands collects from one `floatingHand` draw. */
   const declared = (g: Gesture | undefined, seen?: Parameters<typeof floatingHand>[5], alpha = 1) =>
     withDom(() => {
       const { ctx } = recorder();

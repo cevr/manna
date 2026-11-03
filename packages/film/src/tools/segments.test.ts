@@ -1,7 +1,3 @@
-// A render's segments: its frames cut at its beats, each keyed by what its
-// frames read, so the key changes when, and only when, a frame of the
-// segment would.
-
 import { describe, expect, test } from 'bun:test';
 import { Option, Result, Schema } from 'effect';
 import { boardFilm } from '../canvas/board.ts';
@@ -15,7 +11,6 @@ import { secondsAt } from '../core/time.ts';
 import { Segment as FileName } from '../core/segment.ts';
 import { type RenderRead, type Segment, beatSegments } from './segments.ts';
 
-/** Three beats, 5, 5 and 10 seconds: at 30 fps frames 0–149, 150–299 and 300–599. */
 const placed = Result.getOrThrow(
   layout(
     [
@@ -46,7 +41,6 @@ const beats = new Map([
   ['c', 'key-c'],
 ]);
 
-/** Beat `beat`'s one picture panel, held from its start, showing try 1. */
 const panel = (beat: string): Panel => ({
   id: `${beat}.start`,
   beat: BoardName.make(beat),
@@ -66,14 +60,12 @@ const panel = (beat: string): Panel => ({
 
 const board: BoardFile = { ...emptyBoard('f'), panels: [panel('a'), panel('b'), panel('c')] };
 
-/** Each image's bytes as hashed from disk. */
 const images = new Map([
   ['a.png', 'sha-a'],
   ['b.png', 'sha-b'],
   ['c.png', 'sha-c'],
 ]);
 
-/** The whole 20 s film's segments, its Board drawn with `over` in place of each image's hash. */
 const boardSegments = (
   over: Readonly<Record<string, string>> = {},
   more: Partial<RenderRead> = {},
@@ -101,7 +93,6 @@ describe("a render's segments", () => {
       [150, 300],
       [300, 600],
     ]);
-    // A stretch cuts at the beats inside it only.
     const stretch = beatSegments({
       placed,
       start: 100,
@@ -141,7 +132,6 @@ describe("a render's segments", () => {
   });
 
   test("leave a segment's key alone when a panel it never shows changes", () => {
-    // c's shot is seen from 9.75 s (its dissolve in): never in a's frames, 0 to 5 s.
     const was = keys(boardSegments());
     const now = keys(boardSegments({ 'c.png': 'sha-c2' }));
     expect(now[0]).toBe(was[0]);
@@ -149,7 +139,6 @@ describe("a render's segments", () => {
   });
 
   test("change a segment's key when its neighbour across a dissolve at its edge changes", () => {
-    // b dissolves in over a's last quarter second, 4.75 to 5 s: a's frames draw it.
     const was = keys(boardSegments());
     const now = keys(boardSegments({ 'b.png': 'sha-b2' }));
     expect([now[0] === was[0], now[1] === was[1], now[2] === was[2]]).toEqual([
@@ -157,13 +146,11 @@ describe("a render's segments", () => {
       false,
       false,
     ]);
-    // c dissolves in over b's last quarter second, so b's segment draws it too.
     const later = keys(boardSegments({ 'c.png': 'sha-c2' }));
     expect(later[1]).not.toBe(was[1]);
   });
 
   test("change a segment's key only where a card whose words change shows", () => {
-    /** The film's segments with c's panel a verse card of `text`. */
     const carded = (text: string) => {
       const card: Panel = {
         id: 'c.start',
@@ -187,12 +174,10 @@ describe("a render's segments", () => {
     };
     const was = carded('How should man be just with God?');
     const now = carded('How then can man be just with God?');
-    // c's card is seen from 9.75 s, its dissolve in over b's last quarter second.
     expect([now[0] === was[0], now[1] === was[1], now[2] === was[2]]).toEqual([true, false, false]);
   });
 
   test('are keyed at 30000/1001 fps, where a dissolve is an odd number of ticks', () => {
-    // Half a second at 29.97 fps is 14,985,015 ticks: each half of a dissolve is a whole tick under half.
     const ntsc = 30000 / 1001;
     const laid = Result.getOrThrow(
       layout(
@@ -245,10 +230,6 @@ describe("a render's segments", () => {
   });
 });
 
-/**
- * The film's whole Board with `a` lasting `seconds` (its key `aKey`), b and c
- * after it as before, each frame reading the film's seconds where `timed`.
- */
 const laid = (seconds: number, timed: (i: number) => boolean, aKey = 'key-a') => {
   const film = Result.getOrThrow(
     layout(
@@ -272,7 +253,6 @@ const laid = (seconds: number, timed: (i: number) => boolean, aKey = 'key-a') =>
   });
 };
 
-/** A card style whose payoff is underlined once heard. */
 const CARD: CardStyle = {
   ground: '#0e1010',
   type: { family: 'x', size: 60, color: '#f2e9d7' },
@@ -283,7 +263,6 @@ const CARD: CardStyle = {
   },
 };
 
-/** c's one panel a card whose payoff is its line's `Hi`; a and b have none. */
 const carded: BoardFile = {
   ...emptyBoard('f'),
   panels: [
@@ -297,14 +276,11 @@ const carded: BoardFile = {
   ],
 };
 
-/** Frames that read only their beats' and shots' times: a Board's panels. */
 const panels = () => false;
-/** Frames that read the film's seconds: every frame the film draws. */
 const drawn = () => true;
 
 describe('a segment moved by an earlier beat', () => {
   test('is found again when its frames read only their beats, moved by whole frames', () => {
-    // a lasts half a second longer: 15 frames at 30 fps, so b and c start 15 frames later.
     const was = laid(5, panels);
     const now = laid(5.5, panels, 'key-a2');
     expect(now.map(({ from, to }) => [from, to])).toEqual([
@@ -312,8 +288,6 @@ describe('a segment moved by an earlier beat', () => {
       [165, 315],
       [315, 615],
     ]);
-    // a changed; b's first quarter second dissolves in from a's shot, whose motion spans a's
-    // whole hold; c reads only b's shot and its own, each where it was from c's first frame.
     expect(keys(now).map((k, i) => k === keys(was)[i])).toEqual([false, false, true]);
     expect(now.map((s) => s.pinned)).toEqual([false, false, false]);
   });
@@ -349,9 +323,6 @@ describe('a segment moved by an earlier beat', () => {
   ])(
     'paints each frame of a moved card as its key says at %p fps: the same key, the same calls',
     (fps, moved) => {
-      // a lasts 3 s, then 3.5 s: c starts `moved` frames later (at 30000/1001, 14.985 frames
-      // of exact time, snapped to whole frames), and its card falls where its words are heard
-      // at seconds that differ in their last bits when worked out as a film second less a start.
       const filmOf = (aSeconds: number) => {
         const placed = Result.getOrThrow(
           layout(
@@ -387,7 +358,6 @@ describe('a segment moved by an earlier beat', () => {
         });
         return { placed, board, card: segments.filter((s) => !s.pinned) };
       };
-      /** Every call frame `i` of `board` makes on its canvas, in order. */
       const callsAt = (board: Film, i: number) => {
         const calls: Array<readonly [PropertyKey, ReadonlyArray<unknown>]> = [];
         const r = recorder(1920, 1080, {
@@ -415,7 +385,6 @@ describe('a segment moved by an earlier beat', () => {
 
   test('reads the beat of a shot it shows: a change to that beat alone draws it again', () => {
     const was = laid(5, panels);
-    // b's shot dissolves into c's first quarter second: c's frames read b's beat (its line sets a card).
     const now = beatSegments({
       placed,
       start: 0,

@@ -1,11 +1,3 @@
-/**
- * The phones' hymn rows (`rowsOf`): for each maximal run of consecutive
- * hymns with one topic, one topic row, then that run's hymn rows. Seeded
- * lists of 0 to 800 hymns, topics from pools of 1 to 70 names that come back
- * after other topics, a single run, a run per hymn, and names with spaces
- * and punctuation; then the real 695.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { Match, Option } from 'effect';
 
@@ -13,7 +5,6 @@ import { hymns } from '~/hymns/hymns';
 
 import { groupRowsOf, type Row, plainRowsOf, resultRowsOf, rowsOf, STRONG } from './rows';
 
-/** A seeded generator in [0, 1) (mulberry32), as the player's world draws. */
 const rng = (seed: number) => () => {
   seed = (seed + 0x6d2b79f5) | 0;
   let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
@@ -23,7 +14,6 @@ const rng = (seed: number) => () => {
 
 // oxlint-disable-next-line effect/noGlobals -- the run's seed comes from its shell, outside any Effect.
 const seed = Number(process.env['HYMNAL_ROWS_SEED'] ?? Date.now() % 1_000_000);
-// The test's name prints the seed: `HYMNAL_ROWS_SEED=<seed>` runs those cases again.
 const cases = 300;
 
 const names = [
@@ -39,18 +29,15 @@ interface Fixture {
   readonly topic: string;
 }
 
-/** How long a drawn list is: empty, the longest, or any length up to it. */
 const lengthOf = (r: () => number, k: number) => {
   if (k === 0) return 0;
   if (k === 1) return 800;
   return Math.floor(r() * 801);
 };
 
-/** One drawn list: its length, its pool and how its runs are cut, from the whole domain. */
 const draw = (r: () => number, k: number): ReadonlyArray<Fixture> => {
   const length = lengthOf(r, k);
   const pool = 1 + Math.floor(r() * 70);
-  // 0: one run; 1: a new draw for every hymn; otherwise runs of random length.
   const cut = k % 4;
   const drawTopic = () => {
     const n = Math.floor(r() * pool);
@@ -65,7 +52,6 @@ const draw = (r: () => number, k: number): ReadonlyArray<Fixture> => {
   return out;
 };
 
-/** The runs the rule names: maximal stretches of equal neighbouring topics. */
 const runsOf = (list: ReadonlyArray<Fixture>) =>
   list.reduce<Array<{ readonly topic: string; readonly numbers: Array<number> }>>(
     (runs, hymn, i) => {
@@ -76,7 +62,6 @@ const runsOf = (list: ReadonlyArray<Fixture>) =>
     [],
   );
 
-/** A row as the rule names it: a topic or a shelf by its name (a shelf by where it opens too), a hymn by its number. */
 type Seen =
   | { readonly kind: 'topic'; readonly name: string }
   | { readonly kind: 'shelf'; readonly name: string; readonly href: string }
@@ -102,7 +87,6 @@ describe('the hymn rows', () => {
       expect({ seed, k, seen }).toEqual({ seed, k, seen: expected });
       expect(sticky).toEqual(rows.flatMap((row, i) => [i].filter(() => row.kind === 'topic')));
       expect(new Set(rows.map((row) => row.key)).size).toBe(rows.length);
-      // No topic row is empty or followed by another topic row.
       for (const i of sticky) expect(rows[i + 1]?.kind).toBe('hymn');
     }
   });
@@ -156,7 +140,6 @@ describe('the reader’s shelves above the topics', () => {
       { kind: 'hymn', number: 3 },
     ]);
     expect(sticky).toEqual([6, 9]);
-    // A hymn on a shelf and under its topic is two rows, each keyed apart.
     expect(new Set(rows.map((row) => row.key)).size).toBe(rows.length);
   });
 
@@ -307,7 +290,6 @@ describe('a home tab’s group rows', () => {
 describe('a search’s result rows with the hymns about it', () => {
   const hymn = (number: number) => ({ number, topic: 'A' });
   type Rows = ReadonlyArray<Row<{ readonly number: number }>>;
-  /** Each row as its hymn's number, `about:` before one in the about section, or a section's name. */
   const seen = (rows: Rows) =>
     rows.map((row) =>
       Match.value(row).pipe(
@@ -344,7 +326,6 @@ describe('a search’s result rows with the hymns about it', () => {
   });
 
   it('show each hymn once, a match the section holds under it alone, and page through the rows in their order', () => {
-    // 9 and 7 are both matches past the strongest and hymns about the query.
     const { rows } = resultRowsOf([1, 2, 3, 4, 5, 7, 6, 9].map(hymn), [9, 8, 7].map(hymn));
     const hymnRows = hymnRowsOf(rows);
     const shown = hymnRows.map((row) => row.hymn.number);

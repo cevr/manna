@@ -1,12 +1,4 @@
 import { Redacted, Effect, Layer, Option, Schema, Sink, Stream } from 'effect';
-// A fresh run's answers as the review and the lab read them. `film check
-// --json` prints one Schema-encoded CheckLine per line of stdout (logs go to
-// stderr): a line that does not decode is the check and its reader
-// disagreeing about the format, so it fails the run by name instead of being
-// skipped, and a check that fails to run is itself one error finding. A keep
-// is asked of `film options keep-voice`, which refuses a take that says
-// something else unless it is passed `--accept-mismatch`. A seed heard alone
-// is asked of `film options sound`, which writes it where it is told.
 
 import { test } from 'bun:test';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -45,7 +37,6 @@ const error = {
 
 const encode = Schema.encodeSync(CheckLineJson);
 
-/** The timeout of a test here that runs the read in a fresh process: a cold start's time is the machine's. */
 const SPAWNS_MS = 30_000;
 
 describe('check lines', () => {
@@ -95,11 +86,6 @@ const mismatch = TakeMismatch.make({
   wer: 0.5,
 });
 
-/**
- * The film CLI answering each run with the line `answer` gives its
- * arguments, and exit 0 unless `answer` says otherwise. Each run's arguments
- * are pushed to `runs`.
- */
 const cliAnswering = (
   runs: Array<ReadonlyArray<string>>,
   answer: (args: ReadonlyArray<string>) => { readonly line: string; readonly exit?: number },
@@ -130,12 +116,6 @@ const cliAnswering = (
     }),
   );
 
-/**
- * The film CLI as `film options keep-voice` answers: the take kept when it is
- * passed `--accept-mismatch`, else refused for saying something else. Each
- * run's arguments are pushed to `runs`. `answer` is the line it answers
- * with when it keeps the take.
- */
 const keepVoiceCli = (
   runs: Array<ReadonlyArray<string>>,
   answer = Schema.encodeSync(Schema.fromJsonString(OptionsKept))(kept),
@@ -268,10 +248,6 @@ describe("the easel tools' runs", () => {
   );
 });
 
-// `film read script` run fresh, as the lab runs it, over a synthetic film on
-// disk (`fixtures/films/sample`): each beat's line arrives as the script says
-// it, marks in braces, since the Script reader and an ask's script mark its
-// words by that line and refuse a mark once it says other words.
 const SAMPLE = Schema.decodeSync(FilmName)('sample');
 
 describe('film read script, run fresh', () => {
@@ -301,11 +277,6 @@ describe('film read script, run fresh', () => {
   );
 });
 
-// `film read clock` run fresh over the same film: the registered scenes on
-// the film's takes (none: every voiced beat is estimated) and its declared
-// acts; a version folder with its own scenes (`sample/v3/`), read wholly from
-// that folder (its take, drawn scenes, acts and score); and a version folder
-// with a script alone (`sample/v2/script.ts`), on the holds it declares.
 describe('film read clock, run fresh', () => {
   it.effect.layer(
     FreshFilm.layer([
@@ -340,16 +311,12 @@ describe('film read clock, run fresh', () => {
           ['open', 'estimated', false],
           ['end', 'silent', false],
         ]);
-        // Every clock is laid at the film's declared 24 fps, a version folder's too.
         expect([film.fps, folder.fps, own.fps]).toEqual([24, 24, 24]);
-        // Its tail of 2 s in place of the default 0.1 s, to within one of those frames; its end held 4 s by `min`.
         expect(
           Math.abs((folder.beats[0]?.dur ?? 0) - (film.beats[0]?.dur ?? 0) - 1.9),
         ).toBeLessThanOrEqual(1 / 24);
         expect(folder.beats[1]?.dur).toBe(4);
         expect([folder.acts, folder.movements]).toEqual([[], []]);
-        // v3's own take (staging, its mark on its own words), its own drawn
-        // scenes, its own act and its own score's movement.
         expect(own.beats.map((b) => [b.id, b.voice, b.drawn])).toEqual([
           ['seed', 'staging', true],
           ['end', 'silent', false],

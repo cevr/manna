@@ -1,7 +1,3 @@
-// The draw leg (`film check --draw`): a scene that throws, a frame that reads
-// the frame drawn before it, and ink drawn over a face, each found by drawing
-// the film in this process into the stand-in context.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option } from 'effect';
 import { type SceneSpec, createFilm } from '../canvas/film.ts';
@@ -13,7 +9,6 @@ import { standInDom } from '../canvas/fixtures/stand-in.ts';
 import { HANGING_FACE, armFilm, armPose, armRig, armScene } from '../canvas/fixtures/arm.ts';
 import { drawFindings, impureAt, momentCounts } from './draw-check.ts';
 
-/** A film of the given scenes, four seconds each. */
 const filmOf = (...scenes: ReadonlyArray<readonly [string, SceneSpec['draw']]>) =>
   createFilm({
     fps: 30,
@@ -24,10 +19,8 @@ const filmOf = (...scenes: ReadonlyArray<readonly [string, SceneSpec['draw']]>) 
     captions: { font: '38px x', color: '#000000', plate: '#ffffff' },
   });
 
-/** The images the leg loads through: the block puppet's part and the fixture plates, from memory. */
 const images = () => Layer.mergeAll(blockImages().layer, paintingImages().layer);
 
-/** A film of scenes that each paint one plate, four seconds each. */
 const paintedFilm = (...scenes: ReadonlyArray<Pick<SceneSpec, 'id' | 'paintings' | 'draw'>>) =>
   createFilm({
     fps: 30,
@@ -37,7 +30,6 @@ const paintedFilm = (...scenes: ReadonlyArray<Pick<SceneSpec, 'id' | 'paintings'
     scenes: scenes.map((s) => ({ ...s, min: 4 })),
   });
 
-/** A face declared at (960, 540), 200 px tall, and a rope drawn across it after. */
 const roped: SceneSpec['draw'] = (f) => {
   probeFace(f.ctx, 960, 540, 200);
   stroke(
@@ -55,7 +47,6 @@ describe('the draw leg', () => {
   it.effect('a frame that reads the frame drawn before it is caught', () =>
     Effect.gen(function* () {
       yield* standInDom({ record: false });
-      // The last frame drawn kept in a module `let`, as a scene that eases from it would.
       let last = 0;
       const impure = filmOf([
         'one',
@@ -65,7 +56,6 @@ describe('the draw leg', () => {
         },
       ]);
       expect(Option.isSome(impureAt(impure, 30))).toBe(true);
-      // The same square placed by its own time is pure.
       const pure = filmOf(['one', (f) => f.ctx.fillRect(f.t, 0, 10, 10)]);
       expect(impureAt(pure, 30)).toEqual(Option.none());
     }).pipe(Effect.scoped),
@@ -77,11 +67,7 @@ describe('the draw leg', () => {
       const found = yield* drawFindings(() =>
         filmOf(
           ['still', (f) => f.ctx.fillRect(f.t, 0, 10, 10)],
-          [
-            'broken',
-            // A negative radius, which a real canvas refuses.
-            (f) => f.ctx.arc(960, 540, -1, 0, Math.PI),
-          ],
+          ['broken', (f) => f.ctx.arc(960, 540, -1, 0, Math.PI)],
           [
             'eased',
             (f) => {
@@ -103,7 +89,6 @@ describe('the draw leg', () => {
 
   it.effect('lists ink over faces in film order, a mid-cue finding in its own place', () =>
     Effect.gen(function* () {
-      // `knot` is over before the scene's 60% point: its rope is seen only mid-cue.
       const knotted: SceneSpec = {
         id: 'knotted',
         min: 4,
@@ -142,7 +127,6 @@ describe('the draw leg', () => {
 
   it.effect('poses a declared Rive rig through Bun, its face at its face node', () =>
     Effect.gen(function* () {
-      // The arm hangs (its reach off), its face at the lower bone's tip; a rope is drawn across it after.
       const struck: SceneSpec = {
         id: 'struck',
         min: 4,
@@ -165,7 +149,6 @@ describe('the draw leg', () => {
         },
       };
       const found = yield* drawFindings(() => armFilm([armScene('reaching', 'webgl2'), struck]));
-      // The reaching arm, posed for real at every moment, is pure and has nothing over its face.
       expect(found.filter((f) => f.scene === 'reaching')).toEqual([]);
       const faces = found.filter((f) => f._tag === 'InkOverFace');
       expect(faces.map((f) => f.scene)).toEqual(['struck']);
@@ -205,7 +188,6 @@ describe('the draw leg', () => {
           },
         ]),
       );
-      // Its one part was read once, as the film loaded, and every moment drew it without a throw.
       expect(read).toEqual(['block/body.png']);
       expect(found).toEqual([]);
     }).pipe(Effect.scoped, Effect.provide(Layer.mergeAll(layer, paintingImages().layer)));
@@ -215,9 +197,7 @@ describe('the draw leg', () => {
     Effect.gen(function* () {
       const found = yield* drawFindings(() =>
         paintedFilm(
-          // The sky covers the frame with 100 px to spare above and below: no edge shows.
           { id: 'covered', paintings: { sky: SKY }, draw: (f) => f.painting('sky') },
-          // Moved 24 px right, its left edge shows at every moment.
           {
             id: 'moved',
             paintings: { sky: SKY },
@@ -228,7 +208,6 @@ describe('the draw leg', () => {
               f.ctx.restore();
             },
           },
-          // The near plate's top shows, but it is declared open; its bottom sits 300 px below the frame.
           { id: 'open', paintings: { near: NEAR }, draw: (f) => f.painting('near') },
         ),
       );
@@ -245,7 +224,6 @@ describe('the draw leg', () => {
 
   it.effect('draws a painting scene at its breath peak, and no other scene there', () =>
     Effect.gen(function* () {
-      // The times `scene` is drawn at, recorded as the leg draws it.
       const watched = (scene: Pick<SceneSpec, 'paintings' | 'draw'>) => {
         const seen: Array<number> = [];
         const draw: SceneSpec['draw'] = (f) => {
@@ -271,7 +249,6 @@ describe('the draw leg', () => {
         paintedFilm({
           id: 'stray',
           paintings: { sky: SKY },
-          // A scene typed loosely (a film's own `SceneSpec`) can still name a painting it lacks.
           draw: (f) => f.painting('nope'),
         }),
       );

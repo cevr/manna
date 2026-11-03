@@ -7,11 +7,6 @@ import type { Box, Word } from '~/hymns/chords';
 
 import { SyllableLine } from './SyllableWords';
 
-/**
- * iOS's paragraph uses its explicit label, else the complete attributed
- * string: even an aria-hidden inline span contributes its characters.
- * The web stand-in exposes both inputs; this is not the DOM accessible name.
- */
 const paragraphLabel = (paragraph: Element): string =>
   paragraph.getAttribute('aria-label') ?? paragraph.textContent ?? '';
 
@@ -65,8 +60,6 @@ describe('boxed syllable paragraph labels', () => {
       expect(paragraph.textContent).toBe(example.visible);
       expect(paragraphLabel(paragraph)).toBe(example.spoken[2]);
 
-      // Chords remain separate, between the runs they precede, rather than
-      // disappearing into a label on the containing line or word.
       const reading = [...host.querySelectorAll('[role="button"], [data-testid^="syllable-"]')]
         .filter((node) => !node.parentElement?.closest('[data-testid^="syllable-"]'))
         .map(paragraphLabel);

@@ -1,14 +1,3 @@
-/**
- * The chords over every compiled hymn, as the page shows them: each section
- * of the words (`virtual:hymnal`) against the hymn's chords as the bundle
- * carries them (`vite/chords.ts`, decoded as the page decodes them), and
- * against the compiled hymn itself. The domain is finite, so it is walked
- * whole: every hymn, every section, every syllable, every transpose from -12
- * to 12 and every capo fret. What is shown depends on a move only through the
- * key the chords are spelled in, so each hymn's symbols are spelled once per
- * key it reaches.
- */
-
 import { describe, expect, it } from 'bun:test';
 import * as Chord from '@manna/hymnal/chord';
 import type { Hymn, Part } from '@manna/hymnal/hymn';
@@ -56,7 +45,6 @@ const partOf = (hymn: Hymn, section: Section): Part => {
   return Option.getOrThrow(Option.fromUndefinedOr(hymn.stanzas[section.n - 1]));
 };
 
-/** A syllable's guitar chords in `at` order, spelled in `key`. */
 const guitarOf = (
   syllable: {
     readonly guitar?: ReadonlyArray<{ readonly chord: Chord.Chord; readonly at: number }>;
@@ -67,7 +55,6 @@ const guitarOf = (
     .toSorted((a, b) => a.at - b.at)
     .map((placed) => Chord.format(placed.chord, key));
 
-/** Every chord a section shows, in order. */
 const chordsIn: (section: SectionChords) => ReadonlyArray<Chord.Chord> =
   Match.type<SectionChords>().pipe(
     Match.tagsExhaustive({
@@ -76,7 +63,6 @@ const chordsIn: (section: SectionChords) => ReadonlyArray<Chord.Chord> =
     }),
   );
 
-/** Every chord the page shows, in page order, spelled in `key`. */
 const shownIn = (sections: ReadonlyArray<SectionChords>, key: Chord.Key): ReadonlyArray<string> =>
   sections.flatMap(chordsIn).map((c) => Chord.format(c, key));
 
@@ -86,7 +72,6 @@ const range = (from: number, to: number) =>
 const pc = (name: string) => Chord.pitchClass(name);
 const mod12 = (n: number) => ((n % 12) + 12) % 12;
 
-/** `make()` once per `id`, kept in `cache`. */
 const memo = <A>(cache: Map<string, A>, id: string, make: () => A): A =>
   Option.getOrElse(Option.fromUndefinedOr(cache.get(id)), () => {
     const made = make();
@@ -94,7 +79,6 @@ const memo = <A>(cache: Map<string, A>, id: string, make: () => A): A =>
     return made;
   });
 
-/** A key and its name. */
 interface Named {
   readonly key: Chord.Key;
   readonly name: string;
@@ -103,11 +87,6 @@ interface Named {
 const TRANSPOSES = range(-12, 24);
 const CAPOS = range(0, 11);
 
-/**
- * The played key at every move a property reads (transpose -12 to 24, every
- * capo fret) from one printed key. A move's key depends on the printed key
- * alone, so the table is made once per key the set prints in.
- */
 const playedTables = new Map<string, ReadonlyArray<ReadonlyArray<Named>>>();
 const playedFrom = (key: Chord.Key) =>
   memo(playedTables, keyName(key), () =>
@@ -119,11 +98,6 @@ const playedFrom = (key: Chord.Key) =>
     ),
   );
 
-/**
- * The symbols shown at each move of one hymn, `at(T, C)`. A move changes only
- * the key the chords are spelled in, so each distinct chord is spelled once
- * per key and the page's sequence is read through its indices.
- */
 const movesOf = (sections: ReadonlyArray<SectionChords>, key: Chord.Key) => {
   const table = playedFrom(key);
   const index = new Map<string, number>();
@@ -141,10 +115,6 @@ const movesOf = (sections: ReadonlyArray<SectionChords>, key: Chord.Key) => {
   };
 };
 
-/**
- * Every key a move reaches from `key`, printed as `printed`, and each move
- * whose sounding or played key is wrong; made once per pair of keys.
- */
 const reachTables = new Map<
   string,
   { readonly faults: ReadonlyArray<string>; readonly reached: ReadonlyArray<Chord.Key> }
@@ -168,7 +138,6 @@ const keysOf = (printed: Chord.Key, key: Chord.Key) =>
     return { faults, reached: [...reached.values()] };
   });
 
-/** A shown symbol whose root or bass is not the chord's degree above `key`. */
 const symbolFault = (chord: Chord.Chord, key: Chord.Key): Option.Option<string> => {
   const symbol = Chord.format(chord, key);
   const [root = '', bass = ''] = symbol.split('/');
@@ -183,14 +152,9 @@ const symbolFault = (chord: Chord.Chord, key: Chord.Key): Option.Option<string> 
   return Option.none();
 };
 
-/**
- * A chord is its degrees, the same in every hymn: its symbol in C names it,
- * and each chord is checked once in each key, whichever hymns show it.
- */
 const C_MAJOR: Chord.Key = { tonic: 'C', minor: false };
 const symbolFaults = new Map<string, Option.Option<string>>();
 
-/** Each distinct shown chord, spelled in every key a move reaches. */
 const spellingFaults = (
   hymn: Hymn,
   keys: ReadonlyArray<Chord.Key>,
@@ -353,11 +317,6 @@ describe('the chords over every compiled hymn', () => {
   });
 });
 
-// ----------------------------------------------------------------------------
-// Simple chords (`simple.ts`) over the same hymns
-// ----------------------------------------------------------------------------
-
-/** Each hymn's Simple chords beside its Advanced ones, from the reads above. */
 const simpleCases = cases.map((c) => {
   const chords = simple(c.chords);
   return { ...c, advanced: c.chords, chords, sections: sectionsOf(c.text, chords) };
@@ -369,7 +328,6 @@ const partsOf = (chords: HymnChords): Parts => [
   ...Option.toArray(chords.refrain),
 ];
 
-/** Each sung line of a hymn, Advanced and Simple side by side, with a name for its faults. */
 const linesOf = (c: (typeof simpleCases)[number]) => {
   const advanced = partsOf(c.advanced);
   return partsOf(c.chords).flatMap((part, p) => {
@@ -383,7 +341,6 @@ const linesOf = (c: (typeof simpleCases)[number]) => {
   });
 };
 
-/** Decided 2's plain form, a sus read alone: the semitones the root moves and the quality kept. */
 const PLAIN: Record<Chord.Quality, readonly [number, Chord.Quality]> = {
   '': [0, ''],
   m: [0, 'm'],
@@ -406,11 +363,6 @@ const plainOf = (chord: Chord.Chord): string => {
   return Chord.format({ root: mod12(chord.root + by), quality }, C_MAJOR);
 };
 
-/**
- * The plain form of the chord at `k` of a line's chords, `none` when there
- * is none: a sus takes the quality of the next non-sus chord when it is on
- * the same root.
- */
 const plainAt = (chords: ReadonlyArray<Chord.Chord>, k: number): string =>
   Option.match(Option.fromUndefinedOr(chords[k]), {
     onNone: () => 'none',
@@ -429,7 +381,6 @@ const plainResolved = (chords: ReadonlyArray<Chord.Chord>, k: number, chord: Cho
   );
 };
 
-/** Each box's Advanced chord sounding as its syllable starts, as an index into the line's chords. */
 const soundingAt = (boxes: ReadonlyArray<{ readonly chords: ReadonlyArray<unknown> }>) => {
   let seen = 0;
   return boxes.map((box) => {

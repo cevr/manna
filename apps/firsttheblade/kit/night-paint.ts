@@ -1,34 +1,13 @@
-/**
- * The night's repaint, pixel by pixel (`./night.ts` reads and writes the
- * files). Round 4 painted the night's sky in palette 09's violet blue; the
- * brand's night is `#12354e`. The repaint turns the sky's hue to the night's
- * and moves nothing else:
- *
- * - `skyHue`: the sky's hue, the OKLab mean of its open part (the top
- *   `SKY_DEPTH` of the rows, the left `SKY_WIDTH` of the columns, so the
- *   moon is left out).
- * - `withNightSky`: every pixel of the sky's hue (within `HUE_HELD`, fading
- *   to nothing at `HUE_REACH`) above the near field (`FIELD_FROM`, fading
- *   over `FIELD_FEATHER`) turned about the OKLab lightness axis by the angle
- *   from the sky's hue to the night's. A turn keeps each pixel's lightness
- *   and chroma, so the stars, the moon and the land, and every edge, stay
- *   where they are; the green field, the moon and the lit window, far from
- *   the sky's hue, are not turned at all.
- */
 import { PALETTE } from '../src/palette.ts';
 import type { Pixels } from './field-paint.ts';
 
-/** The rows and columns the sky's hue is read from, as shares of the height and the width. */
 export const SKY_DEPTH = 0.3;
 export const SKY_WIDTH = 0.7;
-/** A pixel this near the sky's hue, in degrees, is turned whole; one past `HUE_REACH` is not turned. */
 export const HUE_HELD = 40;
 export const HUE_REACH = 70;
-/** The near field starts here, as a share of the height, after a fade of `FIELD_FEATHER`. */
 export const FIELD_FROM = 0.7;
 export const FIELD_FEATHER = 0.08;
 
-/** The WebP quality the night ships at, the field's (`./field-paint.ts` `QUALITY`). */
 export const QUALITY = 86;
 
 interface Lab {
@@ -47,7 +26,6 @@ const encoded = (c: number) => {
   return 1.055 * c ** (1 / 2.4) - 0.055;
 };
 
-/** A colour's OKLab, from its sRGB bytes. */
 export const oklab = (r8: number, g8: number, b8: number): Lab => {
   const [r, g, b] = [linear(r8 / 255), linear(g8 / 255), linear(b8 / 255)];
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
@@ -60,7 +38,6 @@ export const oklab = (r8: number, g8: number, b8: number): Lab => {
   };
 };
 
-/** A colour's sRGB bytes, from its OKLab, clamped to the gamut. */
 export const srgb = ({ L, a, b }: Lab): readonly [number, number, number] => {
   const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
   const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
@@ -73,13 +50,10 @@ export const srgb = ({ L, a, b }: Lab): readonly [number, number, number] => {
   ];
 };
 
-/** A hue in degrees, 0 to 360. */
 export const hueOf = ({ a, b }: Lab) => ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360;
 
-/** The signed turn from one hue to another, the short way round, in degrees. */
 export const turnBetween = (from: number, to: number) => ((to - from + 540) % 360) - 180;
 
-/** The night's hue: the brand's `night`. */
 export const NIGHT_HUE = hueOf(
   oklab(
     parseInt(PALETTE.night.slice(1, 3), 16),
@@ -88,7 +62,6 @@ export const NIGHT_HUE = hueOf(
   ),
 );
 
-/** The sky's hue: the OKLab mean of its open part. */
 export const skyHue = (image: Pixels) => {
   const rows = Math.round(image.height * SKY_DEPTH);
   const columns = Math.round(image.width * SKY_WIDTH);
@@ -104,7 +77,6 @@ export const skyHue = (image: Pixels) => {
   return hueOf({ L: 0, a, b });
 };
 
-/** How much of the turn a pixel takes: 1 at the sky's hue above the field, falling to 0 away from either. */
 const share = (hue: number, sky: number, row: number) => {
   const apart = Math.abs(turnBetween(hue, sky));
   const byHue = Math.min(1, Math.max(0, (HUE_REACH - apart) / (HUE_REACH - HUE_HELD)));
@@ -112,7 +84,6 @@ const share = (hue: number, sky: number, row: number) => {
   return byHue * byRow;
 };
 
-/** The image with its sky turned to the night's hue; every other pixel as it was. */
 export const withNightSky = (image: Pixels): Pixels => {
   const sky = skyHue(image);
   const turn = (turnBetween(sky, NIGHT_HUE) * Math.PI) / 180;

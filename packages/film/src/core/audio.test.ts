@@ -106,10 +106,8 @@ describe('splice', () => {
         4,
       ).channels[0] ?? []),
     ];
-    // Untouched away from the join, and at both ends.
     expect(out.slice(0, 6)).toEqual([1, 1, 1, 1, 1, 1]);
     expect(out.slice(14)).toEqual([1, 1, 1, 1, 1, 1]);
-    // Down to silence into the join, and up out of it.
     expect(out.slice(6, 10).every((x, i, all) => x < 1 && (i === 0 || x < (all[i - 1] ?? 1)))).toBe(
       true,
     );

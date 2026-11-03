@@ -1,24 +1,3 @@
-/** §3.6's two operator commands.
- *
- * `manna topics status [--json]` reports what is installed, what the manifest
- * offers, and the decision — with **no mutation of any kind**. That is the
- * whole contract: an operator asking what state a machine is in must not change
- * the state by asking. `ContentUpdate.status` reads the installer's activated
- * generation rather than running the install pipeline, which is what makes the
- * guarantee structural rather than a promise in this docstring.
- *
- * `manna topics update [--json]` runs the same decision and, only on an offer,
- * installs through the File Corpus lifecycle. A digest or size mismatch leaves
- * the installed generation active and is reported as an update that activated
- * nothing — not as an error the caller has to catch to learn that its working
- * content is still working.
- *
- * The `--json` payloads are produced by **the core schemas themselves**
- * (`ContentStatusJson`, `ContentUpdateJson`), not by a hand-written projection,
- * so a field added to the model reaches the JSON at once instead of silently
- * missing from it.
- */
-
 import {
   ContentStatusJson,
   ContentUpdate,
@@ -31,9 +10,6 @@ import { Command, Flag } from 'effect/cli';
 
 import { contentService } from './topics-layer.js';
 
-/** The two core encoders. Nothing below names a field of a status: the schema
- *  is the wire contract, so the CLI's job is to run it, which is what
- *  `test/commands/topics.test.ts` checks by comparing bytes. */
 const encodeStatus = Schema.encodeEffect(Schema.fromJsonString(ContentStatusJson, { space: 2 }));
 const encodeUpdate = Schema.encodeEffect(Schema.fromJsonString(ContentUpdateJson, { space: 2 }));
 
@@ -42,11 +18,6 @@ const json = Flag.Boolean('json').pipe(
   Flag.withDefault(false),
 );
 
-/** One human-readable line per decision, exhaustive over the union.
- *
- *  `Match.tagsExhaustive` over `_tag` rather than a lookup keyed by string:
- *  adding a decision to §3.6 is then a compile error here until the operator
- *  has been told what to do about it. */
 const describeDecision = (decision: ContentDecision): string =>
   Match.value(decision).pipe(
     Match.tagsExhaustive({
@@ -91,15 +62,6 @@ export const topicsStatus = Command.make('status', { json }, (args) =>
   }),
 );
 
-/** What "activated nothing" means, which depends on whether anything is
- *  installed.
- *
- *  On a host that already holds a generation this is §3.6's mismatch posture —
- *  "leaves the installed version active", and nothing failed. On a host whose
- *  *first* install just failed, nothing is active at all, and reporting that
- *  the installed generation still serves is a claim about a generation that
- *  does not exist (round-4 B3). `status` is the post-run one, so its
- *  `installed` is the answer. */
 const activatedNothing = (status: ContentStatus): string => {
   if (Option.isNone(status.installed)) {
     return 'activated  (nothing — no content is installed; this update did not complete)';

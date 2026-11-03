@@ -1,13 +1,3 @@
-/**
- * Which of a hymn's MIDI tracks hold the harmony, and which notes are its
- * tune. The sound's render reads these (`voices.ts`), so they stand apart
- * from the score's verse reading, which the sound does not depend on.
- *
- * The harmony is a keyboard part (program 5, else 4) on one track per voice
- * or one per pair of voices; a unison setting puts the melody on its own
- * track first.
- */
-
 import type { Midi, Note, Track } from './midi.js';
 
 const KEYBOARDS = [5, 4];
@@ -21,12 +11,6 @@ export const harmonyTracks = (midi: Midi): readonly Track[] => {
   return sounding.slice(0, 4);
 };
 
-/**
- * The highest voice of a track: a note counts when it starts at or above
- * every note sounding then. Notes struck within `slack` ticks of each other
- * are one onset, as a unison part doubles each note a tick or two apart;
- * of two equal keys there, the shorter is the tune's (the other voice holds).
- */
 export const topVoice = (notes: readonly Note[], slack: number): Note[] => {
   const onsets: number[][] = [];
   for (const tick of [...new Set(notes.map((note) => note.start))].sort((a, b) => a - b)) {
@@ -52,10 +36,6 @@ export const topVoice = (notes: readonly Note[], slack: number): Note[] => {
 export const melodyOf = (midi: Midi, harmony: readonly Track[]): Note[] => {
   const first = midi.tracks.find((track) => track.notes.length > 0);
   const slack = midi.ticksPerBeat / 16;
-  // A dedicated tune has one voice. An earlier polyphonic accompaniment
-  // (388, for example) cannot displace the keyboard's soprano.
-  // Legato overlaps do not make a dedicated tune an accompaniment. Look
-  // for multiple pitches struck together, within the file's onset slack.
   const single = !first?.notes.some((note, i, notes) =>
     notes.some(
       (other, j) => j < i && Math.abs(note.start - other.start) <= slack && note.key !== other.key,

@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/utils/event.ts,
-// packages/react/src/floating-ui-react/utils/createEventEmitter.ts,
-// packages/react/src/floating-ui-react/utils/enqueueFocus.ts
-//
-// Event predicates (a click from a screen reader or keyboard has no pointer),
-// the per-popup event emitter, and focus moved on the next frame.
 import { NOOP } from '../../utils/dom.ts';
 import { platform } from '../../utils/platform.ts';
 import type { FocusableElement } from './tabbable.ts';
@@ -13,7 +7,6 @@ export function stopEvent(event: Event) {
   event.stopPropagation();
 }
 
-/** A click with no pointer behind it: a screen reader's, or Enter/Space on a button. */
 export function isVirtualClick(event: MouseEvent | PointerEvent): boolean {
   if ((event as PointerEvent).pointerType === '' && event.isTrusted) {
     return true;
@@ -57,7 +50,6 @@ export function isClickLikeEvent(event: Event) {
 
 export interface FloatingEvents {
   emit(event: string, data?: unknown): void;
-  /** A listener names the data type its event carries (`openchange`: the open change details). */
   on<T>(event: string, handler: (data: T) => void): void;
   off<T>(event: string, handler: (data: T) => void): void;
 }
@@ -92,7 +84,6 @@ interface EnqueueFocusOptions {
 
 let rafId = 0;
 
-/** Focuses `el` on the next frame (or now with `sync`); a later call cancels an earlier one. */
 export function enqueueFocus(
   el: FocusableElement | null | undefined,
   options: EnqueueFocusOptions = {},

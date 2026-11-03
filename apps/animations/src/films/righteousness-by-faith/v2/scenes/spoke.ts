@@ -1,15 +1,3 @@
-// The spoken word. It opens on the section head's row, where `woman` left it,
-// all three lit. On "gift" the gold word-bubble (faith) pops forward on a gold
-// rim and the other two fade back; on "where" the grey figure beside the row looks at it, curious and
-// palms up. On "from" the camera pushes through the word-bubble into its
-// gold, and an open book comes up out of it; on "back" its pages turn to the
-// beginning, a dark page. The camera pushes through that page into the dark
-// (the dip to black): an empty world. On "then" a gold word of light arcs
-// across the dark and bursts into a sun; the sky floods dawn to teal and land
-// and water tear in and rise (the word did it). Last, a word of light comes
-// down from the sun to hang in the air, and a tree grows up under it, drawn
-// out of the word.
-
 import {
   type Camera,
   type Pt,
@@ -42,21 +30,16 @@ import {
 } from '../../kit.ts';
 import { SUN, TREE, arc, dawn, flight, toward, wordLight } from '../../spoken.ts';
 
-/** The book that comes up out of the gold, at the frame's middle. */
 const BOOK: Pt = [960, 560];
 
-/** Through the word-bubble: on its disc, close enough that its gold is past the frame's corners. */
 const FAITH: Camera = {
   x: ICON_ROW.x + ICON_X[0] * ICON_ROW.scale,
   y: ICON_ROW.y + 10 * ICON_ROW.scale,
   zoom: 11,
 };
-/** The asker's two hands at the question, palms up by the shoulders (their reach written each frame). */
 const SHRUG_FAR: GestureAt = { to: [-78, -112], reach: 0, grip: 'palm' };
 const SHRUG_NEAR: GestureAt = { to: [78, -112], reach: 0, grip: 'palm' };
-/** The row's glow and which icon leads, rewritten every frame. */
 const { lit: LIT, lead: LEAD, count: COUNT } = iconScratch([1, 1, 1]);
-/** The gold that falls from the hung word to the tree: the word's light, clear at the ground. */
 const BEAM = [
   [0, C.glow],
   [1, clearOf(C.glow)],
@@ -64,28 +47,21 @@ const BEAM = [
 
 export const spoke = drawing({
   timeline: {
-    // Faith pops forward in gold, the other two fade back: the section's gift.
     lead: { mark: 'gift', offset: 0.1, dur: 0.6, ease: 'outBack' },
     dim: { mark: 'gift', offset: 0.1, dur: 0.6 },
     curious: { mark: 'where', offset: -0.2, dur: 0.5 },
     shrug: { mark: 'where', offset: 0.1, dur: 0.5 },
     unshrug: { mark: 'from', offset: -0.2, dur: 0.4 },
     into: { mark: 'from', offset: -0.1, dur: 1.1, ease: 'inCubic' },
-    // The bubble's gold fills the frame as the push goes through it.
     gold: { after: 'into', dur: 0.1, ends: true, ease: 'linear' },
     bookIn: { after: 'into', offset: -0.1, dur: 0.6, ease: 'outBack' },
-    // The book opens in two halves: the clasp fades as the cover starts to
-    // widen, then the pages spread as it widens the rest of the way.
     unclasp: { mark: 'back', offset: 0.1, dur: 0.3, ease: 'inCubic' },
     pages: { after: 'unclasp', dur: 0.3, ease: 'outCubic' },
     plunge: { mark: 'dark', offset: -1, dur: 1.1, ease: 'inCubic' },
-    // The dark page fills the frame as the camera goes through it.
     night: { after: 'plunge', dur: 0.12, ends: true, ease: 'linear' },
-    // In the dark, the camera drifts slowly back while the world is made.
     drift: { after: 'plunge', dur: 10.4, ease: 'linear' },
     flight: { mark: 'then', offset: 0.1, dur: 1.3, ease: 'inOutSine' },
     burst: { after: 'flight', dur: 0.6, ease: 'outCubic' },
-    // The flying word is gone into the sun just after the burst begins.
     becomesSun: { with: 'burst', offset: 0.124, dur: 0 },
     flood: { mark: 'spake', offset: -0.5, dur: 1.4 },
     day: { after: 'flood', dur: 1.4 },
@@ -94,14 +70,11 @@ export const spoke = drawing({
     grow: { mark: 'itself', offset: -0.5, dur: 1.6, ease: 'linear' },
   },
   knobs: {
-    // Through the book's dark page: where the plunge ends, and how close.
     page: [1110, 560],
     pageZoom: 9,
     hangAt: [1330, 420],
     from: [-120, 760],
-    // The grey figure beside the row, lower left.
     figure: [190, 1010],
-    // In the dark: the camera drifts from close and low back to the made world.
     dark: [960, 560],
     darkZoom: 1.06,
     made: [960, 530],
@@ -111,7 +84,6 @@ export const spoke = drawing({
     const { ctx, w, h, t } = f;
     const hand = (k: string) => f.hand(k);
 
-    // ── The row: faith singled out, and the push through it ─────────────────
     const into = f.at('into');
     if (into < 1) {
       sky(ctx, w, h, ICON_SKY);
@@ -147,7 +119,6 @@ export const spoke = drawing({
           ),
         );
       });
-      // The bubble's gold, filling the frame as the push goes through it.
       const gold = f.at('gold');
       if (gold > 0) {
         ctx.save();
@@ -159,7 +130,6 @@ export const spoke = drawing({
       return;
     }
 
-    // ── The book of beginnings, up out of the gold ──────────────────────────
     const plunge = f.at('plunge');
     if (plunge < 1) {
       ctx.fillStyle = C.gold;
@@ -177,8 +147,6 @@ export const spoke = drawing({
           ctx,
           { x: BOOK[0], y: BOOK[1] + (1 - inAt) * 260, rot: -0.04, scale: 1.45 * inAt },
           () => {
-            // A cover, open once both halves of the opening are; then two
-            // pages, the right one the dark of the beginning.
             piece(
               ctx,
               rounded(0, 0, lerp(230, 460, (unclasp + k) / 2), 300, 12),
@@ -225,7 +193,6 @@ export const spoke = drawing({
           },
         );
       });
-      // The dark page fills the frame as the camera goes through it.
       const night = f.at('night');
       if (night > 0) {
         ctx.save();
@@ -237,7 +204,6 @@ export const spoke = drawing({
       return;
     }
 
-    // ── The dark, and the word that makes the world ─────────────────────────
     const drift = shotPath(knobCamera(f.knob('dark'), f.knob('darkZoom')), [
       [f.at('drift'), knobCamera(f.knob('made'), f.knob('madeZoom'))],
     ]);
@@ -250,17 +216,14 @@ export const spoke = drawing({
         tree: f.at('grow'),
       });
 
-      // The word flies in and becomes the sun.
       const fly = f.at('flight');
       if (f.at('becomesSun') <= 0)
         flight(ctx, arc(f.knob('from'), SUN, 260), fly, hand('word'), 0.7);
 
-      // A word comes down from the sun and hangs; the tree rises to meet it.
       const hang = f.at('hang');
       if (hang > 0) {
         const [hx, hy] = toward(SUN, f.knob('hangAt'), hang);
         const grow = f.at('grow');
-        // Gold falls from the word to where the tree will stand.
         if (grow > 0) {
           ctx.save();
           ctx.globalAlpha *= 0.35 * Math.sin(Math.PI * clamp(grow));

@@ -1,8 +1,3 @@
-/**
- * The pager's arithmetic: the pages a hymn opens among, and the hymn a
- * settled offset shows.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 

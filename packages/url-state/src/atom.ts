@@ -1,29 +1,3 @@
-/**
- * `@manna/url-state` as Effect atoms.
- *
- * A thin binding: every atom reads and writes through the core's services,
- * and holds no URL state of its own.
- *
- * - `layer`: the `Location` layer, one per registry. It has no default: seed
- *   it through the registry's initial values: the browser's `layerBrowser(…)`
- *   at an app's root, `layerServer(requestUrl)` per server render,
- *   a memory layer in a test, or a host's built `Location` and `UrlState`
- *   (the atoms then write through that `UrlState`, the host's own).
- * - `href`: the URL as the program's writes leave it.
- * - `entry`: the history entry on screen (its key and how it arrived), for
- *   per-entry memory such as a scroll position.
- * - `place(place)`: the place's value, `None` off the place. Writing a value
- *   navigates to it (`UrlState.set`): writes in one tick make one entry. Every
- *   place atom derives from `href`, so all of them agree within a tick. Make
- *   one atom per place, at module level.
- *
- * **Server rendering.** A browser never sends the hash, so a place with hash
- * keys carries a server value (`Atom.withServerValue`): the place decoded
- * from the href without its hash, where every hash key is its default. A
- * binding that honours server values (`@manna/atom-solid`) renders it on the
- * server and on the client's hydration pass, then the real hash.
- */
-
 import { Context, Effect, Exit, Layer, Option, Scheduler, Scope, Stream } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';
 
@@ -32,25 +6,12 @@ import * as Place from './place.js';
 import { printHref, readHref } from './url-parts.js';
 import * as UrlState from './url-state.js';
 
-/**
- * The `Location` layer for this registry. A registry is seeded with one: a
- * default would build a `Location` and `UrlState` of its own beside the
- * host's, a second owner of the history, so reading the URL from an unseeded
- * registry is a defect that names the seed.
- */
 export const layer: Atom.Writable<Layer.Layer<Location>> = Atom.keepAlive(
   Atom.make<Layer.Layer<Location>>(
     Layer.effect(Location, Effect.die('seed UrlAtom.layer through the registry’s initial values')),
   ),
 );
 
-/**
- * `Location` and `UrlState`, built from `layer` in the atom's scope and kept
- * alive with the registry, the one thing every atom reads through. A layer
- * that carries a `UrlState` of its own (a host that writes through one)
- * gives that one, so the page has a single `UrlState`; any other layer gets
- * one built over its `Location`.
- */
 const services: Atom.Atom<Services> = Atom.keepAlive(
   Atom.make((get) => {
     const scope = Scope.makeUnsafe();
@@ -71,11 +32,6 @@ const services: Atom.Atom<Services> = Atom.keepAlive(
   }),
 );
 
-/**
- * An atom's read of a value the services hold: read synchronously, then kept
- * current by the stream of its changes. The stream runs on a microtask
- * scheduler, so a change lands in the turn it was made, before a paint.
- */
 const follow =
   <A>(
     read: (context: Services) => Effect.Effect<A>,
@@ -97,12 +53,6 @@ type Services = Context.Context<Location | UrlState.UrlState>;
 
 const currentHref = (context: Services) => Context.get(context, UrlState.UrlState).href;
 
-/**
- * The href, writable here so a place's write shows in the same tick. The
- * stream of changes usually lands synchronously too (a parked fiber resumes
- * in the caller's turn), but a fiber past its operation budget yields to the
- * next microtask; the write sets the href itself, so it never waits on that.
- */
 const hrefState = Atom.keepAlive(
   Atom.writable(
     follow(currentHref, (context) => Context.get(context, UrlState.UrlState).changes),
@@ -110,10 +60,8 @@ const hrefState = Atom.keepAlive(
   ),
 );
 
-/** The URL as the program's writes leave it. */
 export const href: Atom.Atom<string> = hrefState;
 
-/** The history entry on screen. */
 export const entry: Atom.Atom<Entry> = Atom.keepAlive(
   Atom.make(
     follow(
@@ -123,10 +71,8 @@ export const entry: Atom.Atom<Entry> = Atom.keepAlive(
   ),
 );
 
-/** An href with its hash left off: what a server is asked for. */
 const withoutHash = (url: string): string => printHref({ ...readHref(url), hash: {} });
 
-/** The place's value, `None` off the place; writing a value navigates to it. */
 export const place = <A>(at: Place.Place<A>): Atom.Writable<Option.Option<A>, A> => {
   const atom = Atom.writable(
     (get) => Place.decode(at, get(href)),

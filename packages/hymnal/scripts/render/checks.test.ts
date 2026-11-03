@@ -15,7 +15,6 @@ import type { Measured } from './checks.js';
 
 const RATE = 44100;
 
-/** Stereo silence of `seconds` with a 440 Hz tone at `amp` from `from` to `to` seconds. */
 const tone = (seconds: number, from: number, to: number, amp: number): Pcm => {
   const frames = Math.round(seconds * RATE);
   const plane = new Float32Array(frames);

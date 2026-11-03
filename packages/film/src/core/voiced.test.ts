@@ -1,7 +1,3 @@
-// When a word is heard, measured from its take: the aligner's start holds the
-// pause before the word, so the voice's own onset and offset are read from
-// the audio inside the word's span, through a −40 dBFS gate over 10 ms windows.
-
 import { describe, expect, test } from 'bun:test';
 import type { Pcm } from './audio.ts';
 import type { HeardWord, TakeWord, Voiced } from './schema.ts';
@@ -9,7 +5,6 @@ import { heard, unmeasured, voicedAt, voicedSpan, voicedWords } from './voiced.t
 
 const RATE = 8000;
 
-/** `seconds` of take, a 0.3-amplitude tone where `loud` says and silence elsewhere. */
 const take = (seconds: number, loud: ReadonlyArray<readonly [number, number]>): Pcm => {
   const frames = Math.round(seconds * RATE);
   const plane = new Float32Array(frames);
@@ -21,7 +16,6 @@ const take = (seconds: number, loud: ReadonlyArray<readonly [number, number]>): 
 
 describe('voicedSpan', () => {
   test('the pause the aligner put inside a word is not its voice', () => {
-    // "Justified?" aligned 0–2.3 s, heard from 0.87 s to 1.9 s.
     const pcm = take(2.5, [[0.87, 1.9]]);
     expect(voicedSpan(pcm, 0, 2.3)).toEqual(voicedAt(0.87, 1.9));
   });
@@ -35,15 +29,12 @@ describe('voicedSpan', () => {
   });
 
   test('a word no window of which passes the gate is heard no sooner than its span ends', () => {
-    // The mirror take: "How" aligned 9.48–10.08 s over silence, its voice from 10.1 s,
-    // inside the next word's span. It cannot be heard before 10.08.
     const pcm = take(1.5, [[1.1, 1.4]]);
     expect(voicedSpan(pcm, 0.48, 1.08)).toEqual(voicedAt(1.08, 1.08));
     expect(voicedSpan(take(1, []), 0.2, 0.6)).toEqual(voicedAt(0.6, 0.6));
   });
 
   test('a voice under −40 dBFS is silence', () => {
-    // A 0.008 hum is −42 dBFS: under the gate.
     const quiet: Pcm = {
       rate: RATE,
       frames: RATE,

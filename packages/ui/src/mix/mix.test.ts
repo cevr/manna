@@ -88,9 +88,7 @@ describe('mix', () => {
 
   it('types the props by the element (checked by `bun run typecheck`)', () => {
     const typed: Array<Mixin<HTMLElement> | Mixin<HTMLButtonElement>> = [
-      // A `data-*` key in an object literal, a `style` string.
       { 'data-state': 'open', style: 'color: red' },
-      // A button's own attributes on a button's mixin.
       mix<HTMLButtonElement>({ type: 'button' }, { ref: (el) => void el.form }),
       // @ts-expect-error a callback for an input cannot ref a div
       mix<HTMLDivElement>({ ref: (el: HTMLInputElement) => el.select() }),

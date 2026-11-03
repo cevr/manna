@@ -1,18 +1,5 @@
 /* oxlint-disable effect/noGlobals -- the follow's host adapter: the follower's clock and timers are the platform's. */
 
-/**
- * The follow on a hymn page, in React: the page's `useFollow` runs a
- * `Follower` over the player's state while the player is on the page's
- * hymn, and hands its lines the marks through `FollowProvider`. A line reads
- * its own mark (`useLineMark`) and gives its view to the follow
- * (`useLineView`), which measures it when it scrolls to it.
- *
- * Lines are measured against the scroll's content when the follow scrolls,
- * not kept from `onLayout`: a line's `onLayout` gives its place in its
- * section, and the content's size changes (chords, text size, a turn) are
- * met by scrolling the shown line back into place.
- */
-
 import { RegistryContext, useAtomValue } from '@effect/atom-react';
 import { Effect, Option } from 'effect';
 import * as Atom from 'effect/reactivity/Atom';
@@ -53,13 +40,7 @@ import { placeAt } from './timeline';
 
 interface Follow {
   readonly marks: Marks;
-  /** Keeps line `index`'s view for measuring; the returned function lets it go. */
   readonly keep: (index: number, view: HostInstance) => () => void;
-  /**
-   * The page's hymn and its first sung line's start, ms, when it has a timeline: its intro
-   * (`IntroLine.tsx`). `line` is the line the follow holds there, the first line the stanza
-   * choice keeps (line 0 when not given): the count-in is drawn over it (`CountIn.tsx`).
-   */
   readonly intro: Option.Option<{
     readonly number: number;
     readonly first: number;
@@ -67,7 +48,6 @@ interface Follow {
   }>;
 }
 
-/** A page no player follows: no line is ever marked. */
 const still: Follow = { marks: marksOf(), keep: () => () => {}, intro: Option.none() };
 
 const FollowContext = createContext<Follow>(still);
@@ -82,7 +62,6 @@ export function FollowProvider({
   return <FollowContext value={value}>{children}</FollowContext>;
 }
 
-/** Line `index`'s mark: `OFF`, `WHOLE`, or its sung syllable (`-1` during a timed rest). */
 const useLineMark = (index: number): number => {
   const { marks } = use(FollowContext);
   const subscribe = useCallback(
@@ -90,22 +69,9 @@ const useLineMark = (index: number): number => {
     [marks, index],
   );
   const read = () => marks.markOf(index);
-  // A page rendered on the server is not followed: its lines read their mark as the client does.
   return useSyncExternalStore(subscribe, read, read);
 };
 
-/**
- * Line `index` in the follow: whether it is the sung line, a ref for its
- * view (kept for the follow's scroll), and each syllable's colour, by its
- * place in the line from 0. The sung line's syllables are muted and its
- * sung syllable is the accent; a line not sung keeps its own colour. The
- * timed line has no tint: in the light theme the ink is the accent, so the
- * sung syllable shows only against muted ones. Without syllable times, the
- * whole line takes the accent on a soft tint, visible in either theme.
- * While the player counts in (`CountIn.tsx`), the marked line (the first
- * line the stanza choice keeps) stays marked with nothing in it lit:
- * nothing is sung until the count ends.
- */
 export const useLineFollow = (index: number) => {
   const { keep } = use(FollowContext);
   const mark = useLineMark(index);
@@ -130,27 +96,16 @@ export const useLineFollow = (index: number) => {
   return { marked, ref, syllableStyle, wordsStyle };
 };
 
-/**
- * A line without individual times is highlighted whole, with no layout
- * change; during a count-in it keeps only the tint.
- */
 const wordsStyleOf = (marked: boolean, counting: boolean, accent: ColorValue): TextStyle => {
   if (!marked) return {};
   if (counting) return { backgroundColor: color.soft };
   return { color: accent, backgroundColor: color.soft };
 };
 
-/** The player's state when no player is provided. */
 const idle = Atom.make<Player>(Player.Idle());
 
 const away: Report = { _tag: 'Away' };
 
-/**
- * The follower's report of `state` on hymn `number`, its place moving at
- * `rate` (the player's `rate`). A count-in holds the place at the first
- * sung line, so while `counting` a playing state is reported paused there:
- * that line is marked and the follow's clock does not run on.
- */
 const reportOf = (number: number, state: Player, rate: number, counting: boolean): Report => {
   const here = (
     track: { readonly number: number },
@@ -177,30 +132,19 @@ const reportOf = (number: number, state: Player, rate: number, counting: boolean
 
 const dev = typeof __DEV__ !== 'undefined' && __DEV__;
 
-/** The player's state, or Idle when no player is provided. */
 const usePlayerState = () =>
   useAtomValue(Option.match(usePlayer(), { onNone: () => idle, onSome: (player) => player.state }));
 
-/** The count-in when no player is provided: it never counts. */
 const uncounted = Atom.make<Option.Option<Beat>>(Option.none());
 
 const countInOf = (player: Option.Option<HymnPlayer>) =>
   Option.match(player, { onNone: () => uncounted, onSome: (it) => it.countIn });
 
-/** Whether the player is counting in (`player.countIn`); a draw only when that turns. */
 const useCounting = () => useAtomValue(countInOf(usePlayer()), Option.isSome);
 
-/** Whether `state` holds hymn `number`, in any state but Idle. */
 const holds = (state: Player, number: number) =>
   Option.exists(trackOf(state), (track) => track.number === number);
 
-/**
- * The page's count-in (`CountIn.tsx`): `beat`, the beat the player gives
- * while it plays this page's hymn, held at its first sung line; and
- * `onBeat`, which hands `listen` each new beat the player gives on this
- * hymn from the subscription on (a beat after a beat of another index, or
- * beat 0 after none), never one it gave before, and returns its end.
- */
 export const useCountIn = () => {
   const { intro } = use(FollowContext);
   const player = usePlayer();
@@ -231,13 +175,11 @@ export const useCountIn = () => {
   return { beat, onBeat };
 };
 
-/** The line the count-in is drawn over: the line the follow holds at the first sung line's start. */
 export const useCountLine = (): number => {
   const { intro } = use(FollowContext);
   return Option.match(intro, { onNone: () => 0, onSome: (it) => it.line ?? 0 });
 };
 
-/** The page's intro as the player stands (`intro.ts`), and whether it runs on (Playing). */
 export const useIntro = () => {
   const { intro } = use(FollowContext);
   const state = usePlayerState();
@@ -247,12 +189,6 @@ export const useIntro = () => {
   };
 };
 
-/**
- * Hymn `number`'s timeline as Play sings it: cut to the hymn's chosen
- * stanzas (`player/stanzas.ts`), in the sung time the player's place is
- * read in. Every stanza, or words that disagree with the timing, give the
- * timeline itself.
- */
 const useSung = (number: number) => {
   const choice = useAtomValue(settings.stanzas(number));
   return useMemo(
@@ -267,19 +203,16 @@ const useSung = (number: number) => {
   );
 };
 
-/** The page's follow: its marks for the lines and the scroll's handlers. */
 export const useFollow = (number: number) => {
   const state = usePlayerState();
   const player = usePlayer();
   const registry = use(RegistryContext);
-  /** The page's scroll, once drawn: React hands a ref over as nothing until then. */
   const scroll = useRef<Option.Option<ScrollViewInstance>>(Option.none());
   const scrollRef = useCallback<RefCallback<ScrollViewInstance>>((node) => {
     scroll.current = Option.fromNullishOr(node);
   }, []);
   const height = useRef(0);
   const views = useRef(new Map<number, HostInstance>());
-  /** A line event names the clock the follow keeps: the recording with sound on, else the score. */
   const withClock = (event: string) => {
     if (!event.startsWith('line ')) return event;
     if (registry.get(settings.sound)) return `${event} clock=recording`;
@@ -320,9 +253,6 @@ export const useFollow = (number: number) => {
     [sung, registry],
   );
 
-  // The rate is read as each state is reported, not reported on its own change: a report at an
-  // old place would set the clock back. The score clock's next read carries the new rate's place.
-  // A count-in that starts on this hymn shows the line it holds, wherever the page was.
   const counting = useCounting();
   const counted = useRef(false);
   useEffect(() => {
@@ -339,8 +269,6 @@ export const useFollow = (number: number) => {
     () => () => Option.match(follower, { onNone: () => {}, onSome: (f) => f.stop() }),
     [follower],
   );
-  // Each seek the player asks, of any size, ends a hand pause (`seeks.ts`). The count is read
-  // first: the read starts the atom on its ref, and a seek is a count past the one read.
   useEffect(
     () =>
       Option.match(follower, {
@@ -396,13 +324,9 @@ export const useFollow = (number: number) => {
 
   return {
     follow,
-    /** The page's scroll's ref. */
     scroll: scrollRef,
-    /** Whether a hand scroll holds the follow: the page shows `Resume follow`. */
     held,
-    /** The `Resume follow` pill's press. */
     resume: () => Option.map(follower, (f) => f.resume()),
-    /** The scroll's handlers that tell the follow a hand scroll began (`hand.ts`). */
     hand: handOf(() => Option.map(follower, (f) => f.drag())),
     onLayout: (event: LayoutChangeEvent) => {
       height.current = event.nativeEvent.layout.height;

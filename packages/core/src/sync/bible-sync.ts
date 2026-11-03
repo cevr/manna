@@ -1,5 +1,3 @@
-/** Builds the canonical unified Bible database from bundled source catalogs. */
-
 import * as SqliteBun from '@effect/sql-sqlite-bun/SqliteClient';
 import { Console, DateTime, Effect, FileSystem, Layer, Path, Schema } from 'effect';
 
@@ -54,11 +52,6 @@ const corpusLayer = (filename: string) =>
     ),
   );
 
-/**
- * Install the decoded archive into a fresh corpus database. The corpus layer is
- * provided here, at this operation's own boundary, rather than inside the
- * caller's generator.
- */
 const installCorpus = (archive: BibleCorpusArchive, filename: string, installedAt: string) =>
   Effect.gen(function* () {
     const corpus = yield* BibleCorpus;

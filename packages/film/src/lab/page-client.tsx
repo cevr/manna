@@ -1,14 +1,3 @@
-// A page's mount in the browser, for its browser entry: hydrated over the
-// markup the lab rendered it with on the server (`page-server.tsx`: its root
-// marked `PAGE_ROOT`, its styles in the head), or, served as built (no
-// server entry, a render that failed or was cut, a kept build), rendered
-// anew with its styles added and its root made. Either way the same
-// components run. A film page whose film does not start, or whose faces do
-// not load, fails (`PageEnd`): its tree disposed and its keys unheard before
-// it says why in its place.
-// Every lab page with a shell mounts in the one sequence `mountStudio` runs
-// (the ask page).
-
 import { Location } from '@manna/url-state';
 import { type JSX, hydrate, render } from '@solidjs/web';
 import { Deferred, Effect, Fiber, Option } from 'effect';
@@ -19,7 +8,6 @@ import { PAGE_CUT, PAGE_MOUNTED, PAGE_ROOT, PAGE_STYLE } from '../core/page-rend
 import { showFailure } from '../player/dom.ts';
 import { registerFace } from '../player/face.ts';
 
-/** A page as its browser entry mounts it: the same parts its server entry renders (`pageRender`). */
 interface MountedPage {
   readonly bodyClass: string;
   readonly rootClass: string;
@@ -27,22 +15,13 @@ interface MountedPage {
   readonly app: () => JSX.Element;
 }
 
-/** How a page was mounted: over the server's markup, or anew. */
 type Mounted = 'hydrated' | 'rendered';
 
-/** A page as mounted: how, and what disposes its tree (its reads, feeds and atoms with it). */
 interface MountedAs {
   readonly how: Mounted;
   readonly dispose: () => void;
 }
 
-/**
- * Mount `page`: hydrated over the server's markup when the page came with
- * it whole, else rendered. A page whose render the lab cut short (it ends
- * with `PAGE_CUT_MARK`) has its server markup and the mark dropped first: a
- * hydration would wait on parts of it that never came. The body says how
- * once it is (`PAGE_MOUNTED`).
- */
 const mountPage = (page: MountedPage): MountedAs => {
   document.body.classList.add(page.bodyClass);
   const served = Option.fromNullishOr(document.querySelector(`[${PAGE_ROOT}]`));
@@ -57,7 +36,6 @@ const mountPage = (page: MountedPage): MountedAs => {
   return mounted;
 };
 
-/** `page` rendered anew: its styles added unless the page has them, its root made. */
 const rendered = (page: MountedPage): (() => void) => {
   if (Option.isNone(Option.fromNullishOr(document.querySelector(`[${PAGE_STYLE}]`)))) {
     const style = document.createElement('style');
@@ -71,22 +49,11 @@ const rendered = (page: MountedPage): (() => void) => {
   return render(page.app, root);
 };
 
-/**
- * A film page's end, made before the page is mounted (its body, loaded
- * later, may end it) and settled once it is (`mounted`). Failing it disposes
- * its tree and stops its key listener, then says why in its place, so a film
- * that does not start (or whose faces do not load) leaves no part of the
- * page running behind the words: no feed asking its server again, no key
- * heard. It is the one way a studio page says it failed.
- */
 interface PageEnd {
-  /** End the page (once it is mounted, at once if it already is), then show `why` in its place. */
   readonly fail: (why: string) => Effect.Effect<void>;
-  /** The page mounted as `page`, hearing its keys on `listening`: what ending it stops. */
   readonly mounted: (page: MountedAs, listening: Fiber.Fiber<unknown>) => Effect.Effect<void>;
 }
 
-/** A page's end, to settle once the page is mounted. */
 const makePageEnd: Effect.Effect<PageEnd> = Effect.map(
   Deferred.make<Effect.Effect<void>>(),
   (stop): PageEnd => ({
@@ -105,16 +72,9 @@ const makePageEnd: Effect.Effect<PageEnd> = Effect.map(
   }),
 );
 
-/** A studio page as its browser entry mounts it. */
 interface StudioPage {
-  /** Its body's and root's classes and its styles (`pageRender`'s too). */
   readonly page: Omit<MountedPage, 'app'>;
-  /** The event its mount logs, with where it is and how it mounted (`lab.shell`). */
   readonly event: string;
-  /**
-   * Its commands' hub and its app over `host`, given what fails the page: a
-   * film page's body, loaded later, fails it when its film does not start.
-   */
   readonly on: (
     host: Host,
     fail: (why: string) => Effect.Effect<void>,
@@ -125,12 +85,6 @@ interface StudioPage {
   >;
 }
 
-/**
- * Mount `studio` into the page over the browser's host: the UI faces are
- * registered first, so the fonts a film waits on include them;
- * then its commands and their one key listener, and the page mounted
- * (`mountPage`), its end settled on it.
- */
 export const mountStudio = (studio: StudioPage): void => {
   const host = hostOf(BrowserHost.layer);
   Effect.runSyncWith(host)(

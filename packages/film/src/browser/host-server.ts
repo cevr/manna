@@ -1,15 +1,3 @@
-// The host of a page the lab renders on the server (`host.ts`): the
-// request's URL as its address bar (`@manna/url-state`'s `layerServer`, read
-// only, with no hash: a browser never sends it), frames on the server's own
-// clock (`Frames.layerClock`, which no render waits on), and every other
-// service a page's code may reach while it renders, inert. A server render
-// answers one request and runs no handler and no effect, so nothing here is
-// pressed, played, dragged or loaded: a call that would act is ignored and
-// logged at Debug, as `layerServer` logs a write, and one that would answer
-// something answers as the studio is designed for first, a phone held upright
-// (`Viewport.layerPhone`). The client takes over each service from its live
-// adapter (`host-browser.ts`) once the page is hydrated.
-
 import { UrlState, layerServer } from '@manna/url-state';
 import { Effect, Layer } from 'effect';
 import { Clipboard, ClipboardRefused } from './clipboard.ts';
@@ -23,7 +11,6 @@ import { PageLoad } from './page-load.ts';
 import { Pointer } from './pointer.ts';
 import { Viewport } from './viewport.ts';
 
-/** Media a server render made: never measured, never ready; a play is refused, as no browser would play it. */
 const unplayable: Playable = {
   time: () => 0,
   duration: () => Number.NaN,
@@ -40,7 +27,6 @@ const unplayable: Playable = {
   on: () => {},
 };
 
-/** The clipboard a server render has: none, so a copy is refused in those words. */
 const noClipboard: Layer.Layer<Clipboard> = Layer.succeed(
   Clipboard,
   Clipboard.of({
@@ -51,7 +37,6 @@ const noClipboard: Layer.Layer<Clipboard> = Layer.succeed(
   }),
 );
 
-/** Loads a server render cannot make: each ignored, and logged. */
 const noLoads: Layer.Layer<PageLoad> = Layer.succeed(
   PageLoad,
   PageLoad.of({
@@ -60,11 +45,6 @@ const noLoads: Layer.Layer<PageLoad> = Layer.succeed(
   }),
 );
 
-/**
- * The host of a page rendered on the server for a request to `href`, from a
- * browser that keys as a Mac or not (`mac`): its chords labelled as that
- * browser labels them, so the hydrated page reads as the first paint did.
- */
 export const ServerHost = {
   layer: (href: string, mac: boolean): Layer.Layer<BrowserServices> =>
     Layer.mergeAll(

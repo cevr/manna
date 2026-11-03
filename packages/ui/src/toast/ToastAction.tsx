@@ -1,8 +1,3 @@
-// Upstream: packages/react/src/toast/action/ToastAction.tsx
-//
-// Performs an action when clicked. Its props merge with the toast's
-// `actionProps` (whose `children` is the label, ahead of the part's own);
-// with no label it renders nothing. Renders a `<button>` element.
 import type { JSX } from '@solidjs/web';
 import { children, createMemo, omit, Show } from 'solid-js';
 
@@ -13,7 +8,6 @@ import { useToastRootContext } from './ToastRootContext.ts';
 import { isRenderableNode } from './utils.ts';
 
 interface ToastActionState {
-  /** The type of the toast. */
   type: string | undefined;
 }
 

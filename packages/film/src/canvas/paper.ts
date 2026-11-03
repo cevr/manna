@@ -1,25 +1,17 @@
-// The paper under everything, and the grain over everything. Both are built
-// once from a seed; grain cycles through a few tiles on the boil tick, each
-// shifted by the tick, so the surface feels alive without flickering at the
-// full frame rate. A frame's grain is a function of its tick alone.
-
 import type { Vec2 } from 'math';
 import { fbm, hash2, rng } from '../core/random.ts';
 
 export interface PaperStyle {
   base: string;
-  /** Colour of the fibres and mottling. */
   tone: string;
   seed: number;
 }
 
-/** A canvas off the page and its 2D context. */
 export interface Offscreen {
   readonly c: HTMLCanvasElement;
   readonly ctx: CanvasRenderingContext2D;
 }
 
-/** A `w` × `h` canvas off the page, for a tile, a sheet or a transition's layer. */
 export const offscreen = (w: number, h: number): Offscreen => {
   const c = document.createElement('canvas');
   c.width = w;
@@ -29,17 +21,11 @@ export const offscreen = (w: number, h: number): Offscreen => {
   return { c, ctx };
 };
 
-/** One repeating pattern per context and tile, made once. */
 const patterns = new WeakMap<
   CanvasRenderingContext2D,
   WeakMap<HTMLCanvasElement, CanvasPattern | null>
 >();
 
-/**
- * `ctx`'s repeating pattern of `tile`, made the first time it is asked for
- * and kept while both live. A draw that places the pattern sets its transform
- * before every fill, so a pattern kept across draws lands where a new one would.
- */
 export const patternOf = (
   ctx: CanvasRenderingContext2D,
   tile: HTMLCanvasElement,
@@ -56,11 +42,6 @@ export const patternOf = (
   return made;
 };
 
-/**
- * Keep `value` under `key` in `kept`, letting go of the oldest entry once
- * `most` are kept, and hand it back: a sheet, tile or gradient the draw
- * makes on a miss and reads on every hit after.
- */
 export const keepAtMost = <K, V>(kept: Map<K, V>, key: K, value: V, most: number): V => {
   if (kept.size >= most) {
     const oldest = kept.keys().next();
@@ -70,20 +51,10 @@ export const keepAtMost = <K, V>(kept: Map<K, V>, key: K, value: V, most: number
   return value;
 };
 
-/**
- * The noise pixels the paper's mottling and the grain's tiles are made of, by
- * what they are computed from. They are a pure function of a seed and a
- * size, about a million hashes a film, so every film with the same paper and
- * grain (a short beside its film, a film made again on an edit) copies them
- * rather than computing them again. Callers copy out of a kept array and
- * never write into it.
- */
 const noiseKept = new Map<string, Uint8ClampedArray>();
 
-/** The most noise arrays kept: a film's mottling and its six grain tiles, twice over (about 4 MB). */
 const NOISE_KEPT = 14;
 
-/** The `length` noise bytes under `key`, written by `fill` on the first ask. */
 const noisePixels = (
   key: string,
   length: number,
@@ -96,13 +67,11 @@ const noisePixels = (
   return keepAtMost(noiseKept, key, data, NOISE_KEPT);
 };
 
-/** A full-frame sheet: base colour, soft mottling, fibres, and flecks. */
 export const makePaper = (w: number, h: number, style: PaperStyle): HTMLCanvasElement => {
   const { c, ctx } = offscreen(w, h);
   ctx.fillStyle = style.base;
   ctx.fillRect(0, 0, w, h);
 
-  // Mottling: low-resolution fractal noise, upscaled smoothly.
   const lw = Math.ceil(w / 8);
   const lh = Math.ceil(h / 8);
   const low = offscreen(lw, lh);
@@ -130,7 +99,6 @@ export const makePaper = (w: number, h: number, style: PaperStyle): HTMLCanvasEl
   ctx.drawImage(low.c, 0, 0, w, h);
   ctx.restore();
 
-  // Fibres: short, faint, gently curved hairs.
   const r = rng(style.seed + 1);
   ctx.save();
   ctx.strokeStyle = style.tone;
@@ -154,7 +122,6 @@ export const makePaper = (w: number, h: number, style: PaperStyle): HTMLCanvasEl
     );
     ctx.stroke();
   }
-  // Flecks: tiny dark and light specks.
   const flecks = Math.round((w * h) / 9000);
   for (let i = 0; i < flecks; i++) {
     ctx.globalAlpha = 0.05 + r() * 0.12;
@@ -166,19 +133,11 @@ export const makePaper = (w: number, h: number, style: PaperStyle): HTMLCanvasEl
   return c;
 };
 
-/**
- * Film grain for a `w` × `h` frame: tileable-enough noise tiles, each already
- * repeated across the frame plus one tile each way (a sheet), so a tick's
- * shifted grain is a plain copy out of its sheet rather than a pattern fill.
- */
 export interface Grain {
-  /** A tile's side in px: the tick's shift wraps at it. */
   readonly size: number;
-  /** One sheet per tile, `w + size` × `h + size`; the film cycles them on the boil tick. */
   readonly sheets: ReadonlyArray<HTMLCanvasElement>;
 }
 
-/** One noise tile, `size` × `size`, opaque grey. */
 const grainTile = (size: number, seed: number): HTMLCanvasElement => {
   const { c, ctx } = offscreen(size, size);
   const img = ctx.createImageData(size, size);
@@ -197,7 +156,6 @@ const grainTile = (size: number, seed: number): HTMLCanvasElement => {
   return c;
 };
 
-/** `count` grain tiles of `size` px, each laid out as a sheet over a `w` × `h` frame. */
 export const makeGrain = (
   size: number,
   count: number,
@@ -209,7 +167,6 @@ export const makeGrain = (
   sheets: Array.from({ length: count }, (_, k) => {
     const tile = grainTile(size, seed + k * 977);
     const { c, ctx } = offscreen(w + size, h + size);
-    // An unshifted repeat onto a clear sheet copies the opaque tile exactly.
     const pattern = ctx.createPattern(tile, 'repeat');
     if (pattern !== null) {
       ctx.fillStyle = pattern;
@@ -219,21 +176,14 @@ export const makeGrain = (
   }),
 });
 
-/**
- * Where tick `boil` reads its grain sheet, written into `out`: the tile
- * shifted by (137, 71) px a tick, so repeated tiles never line up. Frame
- * pixel (x, y) shows tile pixel ((x + out[0]) mod size, (y + out[1]) mod size).
- */
 export const grainShift = (out: Vec2, boil: number, size: number): Vec2 => {
   out[0] = (size - ((boil * 137) % size)) % size;
   out[1] = (size - ((boil * 71) % size)) % size;
   return out;
 };
 
-/** Scratch for a tick's sheet offset, written and read within one call. */
 const shift: Vec2 = [0, 0];
 
-/** Overlay grain across the frame; `strength` is the overlay alpha. */
 export const grain = (
   ctx: CanvasRenderingContext2D,
   film: Grain,
@@ -243,14 +193,6 @@ export const grain = (
   strength = 0.07,
 ) => grainRect(ctx, film, boil, 0, 0, w, h, strength);
 
-/**
- * Overlay grain over the frame's `w` × `h` rectangle at (`x`, `y`) only: each
- * pixel the grain `grain` lays there, and none elsewhere (a short's page
- * grains its paper round the film's frame, which carries its own). The tile
- * repeats, so the sheet is read from row `sy` (default `y`); any row that
- * matches `y` modulo the tile lays the same grain, and a sheet a tile taller
- * than the rectangle serves it wherever it sits.
- */
 export const grainRect = (
   ctx: CanvasRenderingContext2D,
   film: Grain,
@@ -272,7 +214,6 @@ export const grainRect = (
   ctx.restore();
 };
 
-/** Darken the edges toward `color`: a radial gradient multiplied over the frame at `strength`. */
 const vignette = (
   ctx: CanvasRenderingContext2D,
   w: number,
@@ -298,11 +239,6 @@ const vignette = (
   ctx.restore();
 };
 
-/**
- * The vignette drawn once, as a `w` × `h` sheet: `vignette` laid over white,
- * so each pixel holds the factor it scales a frame by. Multiplying a frame by
- * the sheet (`shadeBy`) darkens it as `vignette` does.
- */
 export const makeVignette = (
   w: number,
   h: number,
@@ -316,12 +252,6 @@ export const makeVignette = (
   return c;
 };
 
-/**
- * A scene's light drawn once, as a `w` × `h` sheet to multiply a frame by:
- * `color` over the middle of the frame (a circle a quarter of its short side
- * across), falling to `edge` at its corners. The same colour twice is an even
- * light.
- */
 export const makeLight = (w: number, h: number, color: string, edge: string): HTMLCanvasElement => {
   const { c, ctx } = offscreen(w, h);
   const g = ctx.createRadialGradient(
@@ -339,12 +269,6 @@ export const makeLight = (w: number, h: number, color: string, edge: string): HT
   return c;
 };
 
-/**
- * One `w` × `h` sheet that multiplies a frame as `first` at `amount` and
- * then `second` do (`shadeBy` each in turn), in one pass: both multiplied
- * over white. Each channel rounds once more to 8 bits, so a frame shaded by
- * it can differ from the two passes by 1/255.
- */
 export const makeProduct = (
   w: number,
   h: number,
@@ -360,7 +284,6 @@ export const makeProduct = (
   return c;
 };
 
-/** Multiply the frame by a sheet from `makeVignette`, from `makeLight` at `amount`, or from `makeProduct`. */
 export const shadeBy = (ctx: CanvasRenderingContext2D, sheet: HTMLCanvasElement, amount = 1) => {
   ctx.save();
   ctx.globalAlpha = amount;

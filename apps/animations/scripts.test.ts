@@ -1,6 +1,3 @@
-// Every series script lists its cast (series README, "Every script lists its
-// cast"): the concept stage draws its cast sheets from that list.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { BunServices } from '@effect/platform-bun';
 import { Effect, FileSystem, Option } from 'effect';
@@ -30,40 +27,20 @@ describe('the series scripts', () => {
   );
 });
 
-// Every episode a series plan builds on or points to has its entry block in
-// that plan: a line that opens `**NN · Title**`, NN two digits and a letter
-// for an episode put in between (02b). The numbers read are each "Builds on"
-// line's, from its label to the next bold label, and each arrow's (→ 51,
-// → **52, 57**). In a "Builds on" line a code span, a date and a number after
-// a word with a capital (a book or a refcode: Gen 2:7, Ex 34, PP 60.3) are set
-// aside first, so a number written straight after such a word is never read
-// as an episode. A range (14–18) is read at its two ends: a number inside one
-// may stand empty until the list is renumbered. A plan is checked when it
-// holds entry blocks and names at least one number; the theology plan must be
-// among those checked, so a reader that finds nothing fails. The references
-// known to be stale are named here as `<plan>: <number>`; the list only
-// shrinks, so a reference made good must leave it.
 const KNOWN_STALE: ReadonlyArray<string> = [];
 
-/** An entry block's number, where its line opens: `**11b · …`. */
 const ENTRY = /(?<=^\*\*)\d{2}[a-z]?(?= · )/gmu;
-/** A "Builds on" line's words, from its label to the next bold label or the line's end. */
 const BUILDS_ON = /(?<=\*\*Builds on:\*\*)[^\n]*?(?=\*\*|$)/gmu;
-/** The numbers an arrow points to: `→ 51`, `→ **52, 57**`. */
 const ARROW = /(?<=→ ?(?:\*\*)?)\d{2}[a-z]?(?:, \d{2}[a-z]?)*/gu;
-/** In a "Builds on" line, what is no episode number: a code span, a date, a number after a word with a capital. */
 const NOT_AN_EPISODE =
   /`[^`\n]*`|\b\d{4}-\d{2}-\d{2}\b|(?:\b[1-3] )?\b[A-Z][A-Za-z]*\.? \d+(?:[:.]\d+)*(?:[–-]\d+(?:[:.]\d+)*)?/gu;
-/** An episode number: two digits and maybe a letter, with no digit, letter, verse or decimal joined to it. */
 const EPISODE = /(?<![\w.:])\d{2}[a-z]?(?![\w:]|\.\d)/gu;
 
-/** A number a plan builds on or points to, and the line it stands on. */
 interface Reference {
   readonly line: number;
   readonly episode: string;
 }
 
-/** A reference with no entry block: as KNOWN_STALE names it, and where it stands. */
 interface Dangling {
   readonly listed: string;
   readonly where: string;
@@ -72,7 +49,6 @@ interface Dangling {
 const matchesIn = (text: string, pattern: RegExp): ReadonlyArray<string> =>
   Array.from(text.matchAll(pattern), (found) => found[0]);
 
-/** The episode numbers each line of a plan builds on or points to, once a line. */
 const referencesIn = (plan: string): ReadonlyArray<Reference> =>
   plan.split('\n').flatMap((text, index) => {
     const read = [
@@ -118,25 +94,11 @@ describe('the series plans', () => {
   );
 });
 
-// A script's place in its series is true. Where a series plan holds entry
-// blocks (`**NN · Title**`), each of its scripts opens on its own entry's
-// heading (`# NN · Title`, the same number and the same title), and its
-// `Series:` line states its place as one segment `N of M` (`· 3 of 44 ·`):
-// N its entry's place in the plan, counted from 1, and M the plan's entry
-// blocks. The plan's own entries run 01 to M, in order, with no letter and
-// no empty slot. A plan with no entry blocks (the talk series list theirs in
-// tables) holds no script to it.
-
-/** An entry block's number and title, where its line opens: `**03 · As It Reads**`. */
 const ENTRY_TITLE = /^\*\*(\d{2}[a-z]?) · (.+?)\*\*/gmu;
-/** A script's own heading, two digits and no letter: `# 03 · As It Reads`. */
 const HEADING = /^# (\d{2}) · (.+)$/mu;
-/** A script's header line that names its series and its place. */
 const SERIES_LINE = /^Series: (.+)$/mu;
-/** A place in a series: `3 of 44`. */
 const PLACE = /^(\d+) of (\d+)$/u;
 
-/** What is untrue in `plan`'s numbering: its entries run 01 to their count, in order, no letter. */
 const planFaults = (
   plan: string,
   entries: ReadonlyArray<readonly [string, string]>,
@@ -148,7 +110,6 @@ const planFaults = (
   );
 };
 
-/** What is untrue in `script`'s heading or place against its plan's `entries`. */
 const placeFaults = (
   path: string,
   script: string,

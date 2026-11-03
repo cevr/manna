@@ -1,8 +1,3 @@
-// A build's render worker as the lab speaks to it (`page-render-protocol.ts`),
-// the real worker over entries written to a folder of its own: a render the
-// lab cancels while its server entry is still loading never starts, so once
-// the entry has loaded it sends no head and makes no read.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Deferred, Effect, Exit, FileSystem, Layer, Path, Queue, Random } from 'effect';
@@ -14,11 +9,6 @@ const Services = renderWorkers.pipe(Layer.provideMerge(BunServices.layer));
 
 const URL_ASKED = 'http://127.0.0.1:8229/films/toy/choices';
 
-/**
- * A server entry that loads only once `gate` opens: it says `loading` on the
- * gate's channel and waits for `open`. Its page heads with whether its signal
- * is aborted, and reads the lab's API.
- */
 const gatedEntry = (gate: string) => `
 const channel = new BroadcastChannel('${gate}');
 await new Promise((open) => {
@@ -38,7 +28,6 @@ export default {
 };
 `;
 
-/** A server entry whose page heads and ends at once. */
 const FAST_ENTRY = `
 export default {
   bodyClass: 'fast',
@@ -82,7 +71,6 @@ describe("a build's render worker", () => {
             return Queue.offer(coming, message);
           })
           .pipe(Effect.forkScoped);
-        /** Waits for render `id`'s message tagged `tag`. */
         const heardFrom = (id: number, tag: FromRender['_tag']) =>
           Effect.gen(function* () {
             while (true) {
@@ -94,14 +82,10 @@ describe("a build's render worker", () => {
         yield* worker.send(ToRender.Render({ id: 1, module: gated, url: URL_ASKED, mac: false }));
         yield* Deferred.await(loading);
         yield* worker.send(ToRender.Cancel({ id: 1 }));
-        // The worker takes its messages in order: once a later render has
-        // ended, the cancel was taken.
         yield* worker.send(ToRender.Render({ id: 3, module: fast, url: URL_ASKED, mac: false }));
         yield* heardFrom(3, 'End');
 
         channel.postMessage('open');
-        // The same entry, rendered again: its load is the one the cancelled
-        // render waited on, so its head comes after anything that render did.
         yield* worker.send(ToRender.Render({ id: 2, module: gated, url: URL_ASKED, mac: false }));
         const head = yield* heardFrom(2, 'Head');
         expect(head).toEqual(expect.objectContaining({ html: 'aborted=false' }));

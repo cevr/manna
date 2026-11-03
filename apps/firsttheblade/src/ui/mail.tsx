@@ -1,10 +1,3 @@
-/**
- * The email list on the page: the sign-up form in the night close, the
- * notices its routes send people to, and the confirm and leave pages, one
- * button each (the privacy page is with the other pages, in
- * `../views.tsx`). Every form posts to this site with no script
- * (`../mail/routes.ts`), and no page says whether an address is on the list.
- */
 import { For } from '@solidjs/web';
 import type { JSX } from '@solidjs/web';
 
@@ -13,12 +6,10 @@ import { PROMISE } from '../mail/promise.ts';
 import { NOTICE_TITLES, type NoticeId, PRIVACY_PATH } from '../pages.ts';
 import { Wheat } from './brand.tsx';
 
-/** Where the sign-up form sits on every page that closes at night. */
 export const SIGNUP_ID = 'signup';
 
 const SIGNUP_HREF = `/#${SIGNUP_ID}`;
 
-/** The sign-up form, by night: one field, one button, and what joining means. */
 export const SignUp = () => (
   <form class="signup" id={SIGNUP_ID} method="post" action={MAIL_ROUTES.subscribe}>
     <label class="signup-label" for="signup-email">
@@ -40,7 +31,7 @@ export const SignUp = () => (
         <span class="button-label">Email me new films</span>
       </button>
     </div>
-    {/* No one sees this field; a bot that fills every field fills it. */}
+    {}
     <div class="signup-trap" aria-hidden="true">
       <label for="signup-website">Leave this empty</label>
       <input
@@ -70,7 +61,6 @@ interface NoticeWords {
 const HOME: Action = { href: '/', label: 'Go to the home page' };
 const AGAIN: Action = { href: SIGNUP_HREF, label: 'Sign up again' };
 
-/** What each notice says under its title, and where it leads. */
 const NOTICES: Readonly<Record<NoticeId, NoticeWords>> = {
   check: {
     words: [
@@ -120,7 +110,6 @@ interface LostProps {
   readonly children: JSX.Element;
 }
 
-/** A short page of one message, laid out as the not-found page is. */
 const Lost = (props: LostProps) => (
   <section class="section-band">
     <div class="wrap lost">
@@ -147,16 +136,6 @@ export const Notice = (props: NoticeProps) => {
   );
 };
 
-/**
- * The confirm page. Opening the link in the confirm letter confirms no one,
- * since mail scanners open links: the confirm is the form's post. In a browser
- * with script the page opens on a quiet skeleton of the notice to come while
- * its script posts the form (`../confirm.ts`), and the answer's words arrive
- * in its place. With no script the skeleton is hidden and the button is there
- * to press (`.confirm-pending`, `.confirm-press`, by `@media (scripting)`).
- * Its form names no action, so it posts back to the page's own address, the
- * token with it.
- */
 export const Confirm = () => (
   <>
     <section class="section-band confirm-pending">
@@ -188,10 +167,6 @@ export const Confirm = () => (
   </>
 );
 
-/**
- * The leave page. Its form names no action, so it posts back to the page's
- * own address, the token with it.
- */
 export const Leave = () => (
   <Lost title="Leave the list?">
     <p>Press the button and we will stop emailing you.</p>

@@ -8,7 +8,6 @@ import type { Timings, Word } from './schema.ts';
 
 const word = (text: string, start: number, end: number): Word => ({ text, start, end });
 
-/** Two lines: the first ends at the comma. */
 const words = [word('Grace,', 0.2, 0.6), word('freely', 0.8, 1.2), word('given.', 1.3, 1.9)];
 
 describe('captionCues', () => {
@@ -92,9 +91,7 @@ describe('filmCaptions', () => {
   test('places each line in film time and clips it to its scene', () => {
     const cues = filmCaptions(placed, { from: 0, to: 10 });
     expect(cues.map((c) => c.text)).toEqual(['Grace,', 'freely given.', 'Amen.']);
-    // Scene a is 1 + 2 + 0.1 long; its last line's hold would run past it.
     expect(cues[1]?.end).toBeCloseTo(3.1);
-    // Scene b's first line leads its word, after the scene's own lead.
     expect(cues[2]?.start).toBeCloseTo(3.1 + 0.5 - 0.05);
   });
 

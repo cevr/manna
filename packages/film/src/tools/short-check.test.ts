@@ -1,7 +1,3 @@
-// What `film check --short` holds a short to: text inside the safe zone, a
-// hook in the first moments, a clean loop and a length that holds. Pure over
-// the short, its phrases and what its probed frames report.
-
 import { describe, expect, test } from 'bun:test';
 import { Option, Result } from 'effect';
 import { layout } from '../core/layout.ts';
@@ -25,7 +21,6 @@ import {
 import { type ShortFinding, levelOf } from './findings.ts';
 import { voicedAt } from '../core/voiced.ts';
 
-/** How bad a short's finding is; `--allow-stale` does not touch any. */
 const level = (finding: ShortFinding) => levelOf(finding, { allowStale: false });
 
 const resolved = (duration: number): ResolvedShort => ({
@@ -47,7 +42,6 @@ const phrase = (start: number, end: number, text = 'one two'): Phrase => ({
   })),
 });
 
-/** A line of text at page px `[x, y]`, `w` × `h`, as the probe reports it. */
 const box = (text: string, x: number, y: number, w: number, h: number): TextBox => ({
   text,
   scene: 'a',
@@ -66,7 +60,6 @@ const box = (text: string, x: number, y: number, w: number, h: number): TextBox 
   scale: 1,
 });
 
-/** The short's own line (its hook or a caption), as the page tags it. */
 const own = (t: TextBox): TextBox => ({ ...t, caption: true });
 
 const frame = (...texts: ReadonlyArray<TextBox>): Probed => ({ texts, inks: [] });
@@ -102,8 +95,6 @@ describe('hookWord', () => {
 });
 
 describe('the hook and the loop read when words are heard', () => {
-  // "The evidence is overwhelming.": the aligner starts "The" at 0 with the
-  // 0.4 s pause before it, and ends "overwhelming." 0.5 s after its voice.
   const say = 'The evidence is overwhelming.';
   const aligned: ReadonlyArray<readonly [number, number, number, number]> = [
     [0, 0.6, 0.4, 0.6],
@@ -136,7 +127,6 @@ describe('the hook and the loop read when words are heard', () => {
     resolveShort(film, {
       id: 'cut',
       title: 'Cut',
-      // From the scene's start, which is no word: a span opening on the voice would hide the late word.
       spans: [{ scene: 'a', from: { at: 'start' }, to: { at: 'speechEnd' } }],
     }),
   );
@@ -148,7 +138,6 @@ describe('the hook and the loop read when words are heard', () => {
   });
 
   test("the loop's silence runs from the last word's voice to the first's", () => {
-    // 0.5 s after "overwhelming." is heard, and 0.4 s before "The": 0.9 s.
     const gap = Option.getOrThrow(loopGap(short, phrases));
     expect(gap.value).toBeCloseTo(0.9);
   });
@@ -156,7 +145,6 @@ describe('the hook and the loop read when words are heard', () => {
 
 describe('loopGap', () => {
   test('the silence from the last word round to the first is counted across the loop', () => {
-    // 0.2 s before the first word, 0.3 s after the last: 0.5 s, inside 0.6 s.
     expect(Option.isNone(loopGap(resolved(10), [phrase(0.2, 5), phrase(5, 9.7)]))).toBe(true);
     const gap = Option.getOrThrow(loopGap(resolved(10), [phrase(0.2, 5), phrase(5, 9)]));
     expect(gap.reason).toBe('gap');
@@ -176,13 +164,11 @@ describe('lumaDiff and loopPicture', () => {
     const cut = Option.getOrThrow(loopPicture('probe', [0, 0], [255, 0]));
     expect(cut.reason).toBe('picture');
     expect(level(cut)).toBe('warning');
-    // It says what it measured: cell by cell, not two frames' means.
     expect(cut.message).toContain('mean absolute per-cell luma difference on a 64×36 grid');
   });
 });
 
 describe('unsafeTexts', () => {
-  // Page px at twice 1080 × 1920: k = 2.
   const k = 2;
 
   test('text inside the zone is safe', () => {
@@ -192,7 +178,6 @@ describe('unsafeTexts', () => {
   });
 
   test('text past an edge names the side it crosses most, in 1080 × 1920 px', () => {
-    // Right edge at 1080 - 140 = 940 px, 1880 page px; the box ends at 1980 page px.
     const [found] = unsafeTexts(
       'probe',
       'default',
@@ -213,7 +198,6 @@ describe('unsafeTexts', () => {
       frame(own(box('caption', 400, 2600, 800, 100))),
       k,
     );
-    // ads: the bottom 35% (672 px) is covered, so text must end by 1248 px.
     expect(mine?.side).toBe('bottom');
     expect(mine?.own).toBe(true);
     expect(level(mine!)).toBe('error');
@@ -298,7 +282,6 @@ describe('a talk, checked as a vertical film', () => {
     expect(Option.isSome(shortLength(talk(70, 'question')))).toBe(true);
   });
 
-  /** A frame of the take's footage at source second `at`, with the same line of text. */
   const shot = (at: number): Probed => ({
     texts: [box('word', 100, 100, 100, 40)],
     inks: [],
@@ -313,14 +296,12 @@ describe('a talk, checked as a vertical film', () => {
   });
 
   test("its text is held to every platform's zone, naming the platforms a line runs under", () => {
-    // Inside the feed's zone (it ends at 1400 px), past the platforms' bottom (1248 px).
     const low = frame(own(box('one two', 300, 1300, 400, 80)));
     expect(unsafeTexts('why-the-law', 'default', 1, low, 1)).toEqual([]);
     const [under] = unsafeTexts('why-the-law', 'platforms', 1, low, 1);
     expect(under?.side).toBe('bottom');
     expect(under?.by).toBeCloseTo(1380 - 1248);
     expect(under?.zone).toBe('platforms (YouTube Shorts, Instagram Reels, TikTok)');
-    // Past YouTube's right (888 px) alone.
     const [right] = unsafeTexts(
       'why-the-law',
       'platforms',
@@ -330,7 +311,6 @@ describe('a talk, checked as a vertical film', () => {
     );
     expect(right?.side).toBe('right');
     expect(right?.message).toContain('the platforms (YouTube Shorts) safe zone');
-    // Below 840 px, TikTok's buttons take 300 px on the right: a caption reaching 888 px runs under them.
     const [buttons] = unsafeTexts(
       'why-the-law',
       'platforms',
@@ -341,7 +321,6 @@ describe('a talk, checked as a vertical film', () => {
     expect(buttons?.side).toBe('right');
     expect(buttons?.by).toBeCloseTo(888 - 780);
     expect(buttons?.zone).toBe('platforms (TikTok)');
-    // A box reaching down into the column from above it is under it too; one ending above it is not.
     expect(
       unsafeTexts('why-the-law', 'platforms', 1, frame(own(box('high', 800, 800, 50, 60))), 1).map(
         (f) => [f.side, f.zone],

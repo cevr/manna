@@ -1,10 +1,3 @@
-/**
- * The desk on Cloudflare: a second Worker, the publisher's way into the
- * bucket (`../desk.ts`), over a read-write binding of the bucket the site
- * reads (`./bucket.ts`). It answers only to the stack's secret (`DeskToken`,
- * bound as `DESK_TOKEN`), and lives on its `workers.dev` host alone on every
- * stage: no custom domain, so films.cvr.im only ever reads.
- */
 import { RuntimeContext } from 'alchemy';
 import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Stage } from 'alchemy/Stage';
@@ -15,7 +8,6 @@ import { respondDesk, type Store } from '../desk.ts';
 import { DESK_NAME } from '../site.ts';
 import { DeskToken, Shelf } from './bucket.ts';
 
-/** The props, by stage: the secret is bound at deploy, where there is a stage; the running Worker needs only the base. */
 const props = Effect.gen(function* () {
   const stage = yield* Effect.serviceOption(Stage);
   const base = { main: import.meta.url, workersDev: true };
@@ -112,7 +104,6 @@ export default class Desk extends Cloudflare.Worker<Desk>()(
     return {
       fetch: Effect.gen(function* () {
         const request = yield* HttpServerRequest.HttpServerRequest;
-        // The binding is read per request: the environment fills in when the Worker runs.
         const secret = Option.getOrElse(readSecret(env['DESK_TOKEN']), () => '');
         return yield* respondDesk(store, secret, request);
       }),

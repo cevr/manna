@@ -1,25 +1,3 @@
-/** `manna egw daemon` — the warm search process.
- *
- *  A cold `manna egw search` pays the whole §9 stack per invocation: open the
- *  writings database, load the ~1.2 GB embedding model, parse the 264 MB
- *  vector index — ~10 seconds before the first answer. The daemon pays that
- *  once and then answers `search.query` over a unix socket in the time the
- *  query itself costs (~150 ms scan + embed).
- *
- *  **Lifecycle.** One daemon per user, keyed by the socket path. On start it
- *  probes its own socket: a live daemon there means this one is redundant and
- *  exits zero; a dead socket file is removed and the bind proceeds. Two
- *  racing starts are settled by the bind itself — the loser's listen fails
- *  and it exits. The daemon retires itself after `--idle-minutes` without a
- *  request, or immediately on `daemon.shutdown` (`manna egw daemon --stop`).
- *  Either way the socket file is removed on the way out.
- *
- *  **Warmth.** The expensive layers load lazily on first use, so binding the
- *  socket is instant and a warmup query is fired concurrently — the daemon is
- *  reachable immediately and hot within seconds. A query that arrives during
- *  warmup simply waits on the same in-flight loads.
- */
-
 import { SearchQuery, SearchService } from '@manna/core/search';
 import { BunServices, BunSocketServer } from '@effect/platform-bun';
 import {
@@ -50,8 +28,6 @@ import {
 } from './search-daemon-protocol.js';
 import { installedSearchLayer } from './search-layer.js';
 
-/** A wordy query so the router draws the vector leg: it forces the embedder
- *  (model load) and the index (parse + first scan) while the daemon idles. */
 const WARMUP_QUERY = SearchQuery.make({
   text: 'why does God permit trials to come upon his people',
   scope: Option.none(),
@@ -59,16 +35,11 @@ const WARMUP_QUERY = SearchQuery.make({
   limit: Option.some(1),
 });
 
-/** How often the idle watcher looks at the clock, capped so short test
- *  timeouts are honored promptly. */
 const idleCheckInterval = (idleMillis: number): Duration.Duration =>
   Duration.millis(Math.min(Math.max(idleMillis, 50), 60_000));
 
 type SearchDaemonOutcome = 'already-running' | 'idle' | 'retired';
 
-/** The daemon's whole life, as one effect: preflight, bind, warm, serve,
- *  retire. Parameterised on nothing it can take from context — `SearchService`
- *  arrives from the caller so tests serve a stub through the real socket. */
 export const runSearchDaemon = (options: {
   readonly socketPath: string;
   readonly idleMillis: number;
@@ -77,8 +48,6 @@ export const runSearchDaemon = (options: {
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
 
-    // Preflight: a live daemon on this socket makes this one redundant; a
-    // socket file nothing answers on is a previous daemon's crash residue.
     const occupied = yield* fs.exists(options.socketPath).pipe(Effect.orElseSucceed(() => false));
     if (occupied) {
       const resident = yield* probeSearchDaemon(options.socketPath);
@@ -94,9 +63,6 @@ export const runSearchDaemon = (options: {
       Effect.gen(function* () {
         const search = yield* SearchService;
         return {
-          // Forwarded, not decided here: the daemon is a transport for the
-          // same service the CLI calls in-process, so it answers the query it
-          // was sent, unchanged.
           'search.query': (query) => touch.pipe(Effect.andThen(search.query(query))),
           'daemon.status': () =>
             touch.pipe(
@@ -104,9 +70,6 @@ export const runSearchDaemon = (options: {
                 SearchDaemonStatus.make({ pid: options.pid, fingerprint: CLIENT_FINGERPRINT }),
               ),
             ),
-          // Acknowledge first, retire a beat later: succeeding the deferred
-          // interrupts the server, and an immediate interrupt can cut the
-          // socket before the response flushes.
           'daemon.shutdown': () =>
             Deferred.succeed(retire, 'retired').pipe(
               Effect.delay(Duration.millis(150)),
@@ -145,8 +108,6 @@ export const runSearchDaemon = (options: {
       );
     }).pipe(Effect.orDie, Effect.scoped);
 
-    // Node does not unlink a unix socket on close; the next daemon's
-    // preflight would find residue where this exit can leave none.
     yield* fs.remove(options.socketPath).pipe(Effect.ignore);
     return outcome;
   });
@@ -161,9 +122,6 @@ const idleMinutes = Flag.Int('idle-minutes').pipe(
   Flag.withDescription('Exit after this long without a request (default: 15)'),
 );
 
-/** The serve operation, with the search stack provided at its own boundary —
- *  the `remoteSearch` pattern in `search.ts`. `CliProcess` stays a requirement
- *  and arrives from the root command's provision. */
 const serveDaemon = (input: { readonly socketPath: string; readonly idleMillis: number }) =>
   Effect.gen(function* () {
     const cliProcess = yield* CliProcess;

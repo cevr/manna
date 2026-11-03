@@ -1,10 +1,3 @@
-// Upstream: packages/react/src/menu/trigger/MenuTrigger.tsx
-//
-// The button that opens the menu: on press (mousedown, so pressing, dragging
-// onto an item and releasing picks it, as native menus do) or with the arrow
-// keys. Upstream's hover opening is left out. While the menu it opened is
-// open, invisible focus guards sit on either side of it so Tab leaves the
-// menu in page order.
 import type { JSX } from '@solidjs/web';
 import { createEffect, createSignal, createUniqueId, omit, Show, untrack } from 'solid-js';
 
@@ -24,7 +17,6 @@ import { useMenuRootContext } from '../root/MenuRootContext.ts';
 import { findRootOwnerId } from '../utils/isKeyboardOpen.ts';
 
 interface MenuTriggerState {
-  /** Whether the menu is open and was opened by this trigger. */
   open: boolean;
 }
 
@@ -48,7 +40,6 @@ export function MenuTrigger(componentProps: MenuTriggerProps): JSX.Element {
 
   const allowMouseUpTriggerTimeout = useTimeout();
 
-  // A press that drags off the trigger and releases outside the menu cancels the open.
   const handleDocumentMouseUp = (mouseEvent: MouseEvent) => {
     const trigger = untrack(triggerElement);
     if (!trigger) {
@@ -107,7 +98,6 @@ export function MenuTrigger(componentProps: MenuTriggerProps): JSX.Element {
           if (untrack(store.open)) {
             return;
           }
-          // A release on an item within 200ms of the press is the same click, not a pick.
           allowMouseUpTriggerTimeout.start(200, () => {
             store.allowMouseUpTriggerRef.current = true;
           });

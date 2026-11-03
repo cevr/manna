@@ -1,7 +1,3 @@
-// Compile-time checks of a seen visit (`tsc -p tsconfig.test.json` runs them; nothing imports
-// this module): a press at once always carries its label and its try, and a later press has
-// neither.
-
 import type { Seen } from './list.slow.test';
 
 export const aPressAtOnceIsLabelled = (v: Seen) => {

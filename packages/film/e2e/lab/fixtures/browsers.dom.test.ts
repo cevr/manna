@@ -1,15 +1,3 @@
-// The pool lends a case's view to the next case with nothing of the first
-// left in it. One case dirties every kind of state a page or a tab keeps:
-// its storage, cookie, tab name, history and hash, a script for new pages,
-// a request still held, the mouse button held down, the viewport, and a
-// page that throws and logs as it goes. The view it gave back is lent again
-// (no new view opened): the next page on it sees none of that, its own
-// server answers, and nothing the first page did reaches its errors or log.
-// A view two fingers were down on at once is closed rather than lent again:
-// Chrome hears no touch on it after, and the next case's finger lands on a
-// view of its own. And the Chrome the tabs run in is silent, as its own
-// command line shows (`tools/chrome.ts` adds the flags to every launch).
-
 import { Deferred, Effect, Exit, Option, Schedule } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -23,10 +11,6 @@ import {
 import { evaluates } from '../../../src/lab/fixtures/settled.ts';
 import { type Request, type Tab, jsonOf } from '../../../src/lab/fixtures/tab.ts';
 
-/**
- * A page whose script answers `window.served` from its server's `/probe`; its server holds
- * `/hold` unanswered, and `held` is done once it has.
- */
 const page = (word: string) => {
   const script = asset(
     'probe.js',
@@ -53,7 +37,6 @@ const page = (word: string) => {
   };
 };
 
-/** The page's state, as one JSON value a wait can compare. */
 const STATE = `JSON.stringify({
   init: globalThis.dirty ?? 'none',
   local: localStorage.length,
@@ -83,8 +66,6 @@ const dirty = (tab: Tab, held: Deferred.Deferred<void>) =>
         throw new Error('leaked throw');
       });
       true`);
-    // The request is held once the server has it, not once the page asked: the view is
-    // given back with it in flight.
     yield* Deferred.await(held);
     yield* tab.mouse.move(20, 20);
     yield* tab.mouse.down;
@@ -123,7 +104,6 @@ describe('the pool of views', () => {
             assets: [second.script],
             serve: second.serve(asked),
           });
-          // The view the first case gave back, not a new one.
           expect(viewsMade()).toBe(made);
           yield* tab.goto('/');
           yield* evaluates(
@@ -136,13 +116,11 @@ describe('the pool of views', () => {
               cookie: '',
               name: '',
               hash: '',
-              // The idle page the view waited on, and this one.
               history: 2,
               width: 900,
               served: 'two',
             }),
           );
-          // The button the first case held is up: a click is a whole click.
           yield* tab.evaluate(`
             window.seen = [];
             for (const type of ['mousedown', 'mouseup', 'click'])
@@ -150,7 +128,6 @@ describe('the pool of views', () => {
             true`);
           yield* tab.mouse.click(40, 40);
           yield* evaluates(tab, 'window.seen', ['mousedown:1', 'mouseup:0', 'click:0']);
-          // Its own requests only: the first page's held one never reaches it.
           expect(asked.filter((path) => path !== '/favicon.ico')).toEqual(['/', '/probe']);
           expect(tab.errors).toEqual([]);
           expect(tab.logged.map((m) => m.text)).not.toContain('leaked log');
@@ -160,8 +137,6 @@ describe('the pool of views', () => {
     }),
   );
 
-  // The positive control of "a warning at any time fails the case": the case
-  // never looks at its errors, and its scope still closes in failure.
   for (const [name, script] of [
     ['a Solid diagnostic', "console.warn('[NO_OWNER_CLEANUP] a cleanup with no owner')"],
     ['a console error', "console.error('boom')"],
@@ -192,7 +167,6 @@ describe('the pool of views', () => {
               yield* tab.goto('/');
               yield* evaluates(tab, "globalThis.served ?? 'none'", 'one');
               yield* tab.evaluate(`${script}; true`);
-              // The page's report is an event: wait until the tab has heard it.
               yield* Effect.repeat(
                 Effect.sync(() => tab.errors.length),
                 {
@@ -207,7 +181,6 @@ describe('the pool of views', () => {
       }),
     );
 
-  // Serial: a finger's touches (`film/touches-serial`).
   it.live.serial(
     'dies on a finger put down while another tab is open: a touch runs alone, whatever its spelling',
     () =>
@@ -233,7 +206,6 @@ describe('the pool of views', () => {
         );
         expect(exit._tag).toBe('Failure');
         expect(String(exit)).toContain('a finger went down while another tab was open');
-        // Alone again, the same finger lands.
         yield* Effect.scoped(
           Effect.gen(function* () {
             const tab = yield* openTab(phone);
@@ -245,7 +217,6 @@ describe('the pool of views', () => {
       }),
   );
 
-  // Serial: a finger's touches (`film/touches-serial`).
   it.live.serial(
     "closes a view two fingers were down on at once, and the next case's touch lands",
     () =>
@@ -269,7 +240,6 @@ describe('the pool of views', () => {
             yield* tab.finger.up;
           }),
         );
-        // The view last given back is the next lent: the one two fingers were down on, unless closed.
         yield* Effect.scoped(
           Effect.gen(function* () {
             const tab = yield* openTab(phone);

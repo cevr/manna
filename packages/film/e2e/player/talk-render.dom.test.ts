@@ -1,13 +1,3 @@
-// A talk renders frame-exact (`canvas/talk.ts`): each frame of its page shows
-// the frame of the take its cut names, through every seam, however the
-// frame is reached, with its captions as the probe reads them. The take is a
-// numbered clip (`numbered-clip.ts`, made here by mediabunny and x264), 9:16
-// so the page's crop is all of it and its bars run across the page; the talk
-// (`talk-film.ts`) is cut with a seam inside each of its two sections. Read
-// through the render page's export handle, as `film render` reads it: an
-// export chunk (a run decoded in order) over every seam, a frame drawn alone
-// (a still or a seek, back and forth), and the probe.
-
 import { Effect, Exit, Option, Result, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { ExportAnswers } from '../../src/core/export-handle.ts';
@@ -28,14 +18,8 @@ import {
 const cut = Result.getOrThrow(talkCut(TALK_EDIT, { a: TALK_TAKE }));
 const placed = Result.getOrThrow(layout(cut.scenes, cut.timings, 30));
 
-/** Seconds as the talk's frames. */
 const frameOf = (s: number) => Math.round(s * TALK_FPS);
 
-/**
- * The take's frame each of the talk's frames shows, by the cut alone: each
- * section's pieces back to back, each piece the take's frames from its
- * in-point to its out-point.
- */
 const SHOWN = cut.sections.flatMap((section) =>
   section.pieces.flatMap((piece) =>
     Array.from(
@@ -45,18 +29,12 @@ const SHOWN = cut.sections.flatMap((section) =>
   ),
 );
 
-/** Where the talk jumps in the take: the frame each piece after the first starts on. */
 const SEAMS = cut.sections.flatMap((section, k) =>
   section.pieces.slice(1).map((piece) => frameOf((placed[k]?.start ?? 0) + piece.at)),
 );
 
-/** The take's clip: every frame the cut reads, and a second past them. */
 const CLIP_FRAMES = Math.max(...SHOWN) + TALK_FPS;
 
-/**
- * The render page on the talk, its clip served as the mezzanine the render
- * reads, and the footage library's lock and transcript the page cuts on.
- */
 const opened = Effect.gen(function* () {
   const clip = yield* numberedClip({
     frames: CLIP_FRAMES,
@@ -70,7 +48,6 @@ const opened = Effect.gen(function* () {
   });
 });
 
-/** One sample per bar across the page's middle row, where the take's bars run and no word is set. */
 const BARS = { x: 0, y: 1920 / 2 - 4, w: 1080, h: 8, cols: BITS, rows: 1 };
 
 describe('a talk renders frame-exact', () => {
@@ -163,7 +140,6 @@ describe('a talk renders frame-exact', () => {
     () =>
       Effect.scoped(
         Effect.gen(function* () {
-          // The page with its library and no mezzanine served: every read of the take is a 404.
           const page = yield* openRender(TALK, yield* TALK_LIBRARY);
           const choice = yield* page.call('encoder', 1, 'master', [
             { _tag: 'Hardware' },
@@ -172,7 +148,6 @@ describe('a talk renders frame-exact', () => {
           if (choice._tag === 'Missing') return yield* Effect.die(choice.reason);
           const exit = yield* Effect.exit(page.call('encode', 0, 10, 1, 'master', choice));
           expect(Exit.isFailure(exit)).toBe(true);
-          // FootageFrameMissing, as the page throws it: the source and the time it has no frame at.
           expect(String(Exit.isFailure(exit) && exit.cause)).toContain(
             `footage ${TALK_TAKE.source} has no frame at`,
           );

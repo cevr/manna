@@ -1,14 +1,3 @@
-/**
- * The find drums over the screens, as the app's player layer draws them
- * (`LivePlayer`), mounted in a browser's document over a stand-in home
- * screen (`src/test/setup.ts`): a tap outside the drums closes them and
- * reaches nothing behind, and the drums draw their digits and no names.
- *
- * React Native's hit test lets a later sibling lie over an earlier one, so
- * the layer that takes the outside tap is drawn after the screens and before
- * the drums' panel and the `#`.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { RegistryProvider } from '@effect/atom-react';
 import { Option } from 'effect';
@@ -20,10 +9,8 @@ import { pathname, routed } from '../test/one';
 
 import { LivePlayer } from './LivePlayer';
 
-/** What the reader pressed behind the drums, oldest first. */
 const behind: Array<string> = [];
 
-/** A stand-in home screen: a hymn row and a button of the bar. */
 function Screen() {
   return (
     <View testID="screen">
@@ -35,7 +22,6 @@ function Screen() {
   );
 }
 
-/** The player layer over the stand-in screen, mounted in the document; it unmounts when the test's `using` ends. */
 const mount = () => {
   pathname.current = '/';
   behind.splice(0);
@@ -67,7 +53,6 @@ const get = (host: HTMLElement, id: string) => Option.getOrThrow(byId(host, id))
 const click = (element: HTMLElement) => act(() => element.click());
 const open = (host: HTMLElement) => Option.isSome(byId(host, 'find-drums'));
 
-/** Where `element` is drawn among the window's elements: a later one lies over an earlier one. */
 const order = (host: HTMLElement, element: Element) =>
   [...host.querySelectorAll('*')].indexOf(element);
 
@@ -97,7 +82,6 @@ describe('a tap outside the find drums', () => {
       routed: [],
       behind: [],
     });
-    // Closed, the screen behind takes its presses again.
     click(get(host, 'behind-row'));
     expect(behind).toEqual(['row']);
   });

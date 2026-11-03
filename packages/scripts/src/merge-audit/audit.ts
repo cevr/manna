@@ -1,18 +1,5 @@
-// How a merge resolved each file it did not take from git's own merge: the
-// lines one side added that the resolution dropped, and the lines one side
-// removed that it brought back. A conflict resolved by taking one side's file
-// whole drops every edit the other side made to it (pass 7's p7-films merge
-// undid three batches' edits to the film skill that way); each such line is
-// named here, so the resolution is read, not assumed.
-//
-// Statements are compared as a multiset, trimmed, so a moved one is neither
-// added nor removed; a statement is a line, or a sentence of a prose line (a
-// skill's paragraph is one line of many claims). One under 8 characters (a
-// brace, a fence, a rule) is too common to say anything and is left out.
-
 import { Option } from 'effect';
 
-/** One file's text in the merge base, in each parent, and in the merge. */
 interface Versions {
   readonly base: string;
   readonly first: string;
@@ -20,20 +7,15 @@ interface Versions {
   readonly merged: string;
 }
 
-/** What the resolution did to one parent's edits of a file. */
 interface Lost {
-  /** Lines the parent added over the base that the merge does not have. */
   readonly dropped: ReadonlyArray<string>;
-  /** Lines the parent removed from the base (and the other parent did not add) that the merge has. */
   readonly restored: ReadonlyArray<string>;
 }
 
 const MIN_LENGTH = 8;
 
-/** A sentence ends at `.` or `;` before a space: a prose line is several statements. */
 const SENTENCE_END = /(?<=[.;])\s+/;
 
-/** A text's statements: each line, a prose line split at its sentences, trimmed. */
 const linesOf = (text: string): ReadonlyArray<string> =>
   text
     .split('\n')
@@ -47,7 +29,6 @@ const counts = (lines: ReadonlyArray<string>): Map<string, number> => {
   return out;
 };
 
-/** The lines of `to` beyond those of `from`, as a multiset: each extra copy once. */
 const beyond = (to: string, from: string): ReadonlyArray<string> => {
   const had = counts(linesOf(from));
   const out: Array<string> = [];
@@ -59,7 +40,6 @@ const beyond = (to: string, from: string): ReadonlyArray<string> => {
   return out;
 };
 
-/** What the merge did to `side`'s edits of the base, given the `other` parent. */
 const lostOf = (base: string, side: string, other: string, merged: string): Lost => {
   const kept = new Set(linesOf(merged));
   const otherAdded = new Set(beyond(other, base));
@@ -69,13 +49,11 @@ const lostOf = (base: string, side: string, other: string, merged: string): Lost
   };
 };
 
-/** What a merge did to each parent's edits of one file. */
 interface LostEdits {
   readonly first: Lost;
   readonly second: Lost;
 }
 
-/** What the merge did to each parent's edits of one file. */
 export const lostEdits = (v: Versions): LostEdits => ({
   first: lostOf(v.base, v.first, v.second, v.merged),
   second: lostOf(v.base, v.second, v.first, v.merged),
@@ -86,11 +64,6 @@ const quoted = (line: string) => {
   return `"${line.slice(0, 117)}…"`;
 };
 
-/**
- * The audit's lines for one file: `merge-audit <file> dropped ^1: "<line>"` and
- * `merge-audit <file> restored ^2: "<line>"`, one per line lost, or one line
- * saying the file keeps both parents' edits.
- */
 export const fileLines = (file: string, lost: LostEdits): ReadonlyArray<string> => {
   const each = (parent: '^1' | '^2', l: Lost) => [
     ...l.dropped.map((line) => `merge-audit ${file} dropped ${parent}: ${quoted(line)}`),
@@ -101,11 +74,6 @@ export const fileLines = (file: string, lost: LostEdits): ReadonlyArray<string> 
   return out;
 };
 
-/**
- * A merge's first line: the merge, the files git left conflicted, and those the
- * resolution changed. A merge of main made inside the merged branch names
- * the outer merge it is `inside`.
- */
 export const headLine = (
   merge: string,
   conflicted: ReadonlyArray<string>,
@@ -118,7 +86,6 @@ export const headLine = (
     `conflicted=${conflicted.length} resolved-by-hand=${changed.length}`,
   ].join(' ');
 
-/** The paths `git merge-tree --write-tree` lists as conflicted: `<mode> <oid> <stage>\t<path>` lines. */
 export const conflictedPaths = (mergeTreeOut: string): ReadonlyArray<string> => {
   const paths = new Set<string>();
   for (const line of mergeTreeOut.split('\n').slice(1)) {

@@ -1,16 +1,3 @@
-/**
- * Delivering a batch of a film's send (`./queue.ts`): each subscriber still
- * confirmed and still waiting for the film is sent its letter, with a leave
- * link of its own. The letter is claimed in the model before it goes and its
- * outcome kept after (`../list/FilmLetter.command.ts`), so a batch tried
- * again, or a film asked twice, reaches no one twice; a subscriber gone from
- * the list since the send was asked is passed over. A letter the sender
- * refuses for good is kept as refused. One it cannot take now gives its claim
- * back and fails the batch, which the queue tries again later from where it
- * stopped. A send that stops after its claim and before its outcome stays
- * claimed: its letter may have gone, so it is never sent again
- * (`FilmCounts.unsure`, `./roster.ts`).
- */
 import type { Key } from '@alchemy.run/domain/Aggregate';
 import { Effect, Layer, Option } from 'effect';
 
@@ -49,8 +36,6 @@ export const deliver = Effect.fn('Mail.deliver')(function* (deliveries: Readonly
       yield* warnMail('film.unaddressed', { film: ref, subscriber: delivery.subscriber });
       continue;
     }
-    // The letter is made before the claim, so nothing but the send itself
-    // stands between a claim and the letter going.
     const token = yield* tokens.sign({ _tag: 'Unsubscribe', subscriber: delivery.subscriber });
     const letter = filmLetter(to.value, delivery.origin, film.value, token);
     const claim = yield* subscribers.send(delivery.subscriber, ClaimFilmLetter.make({ film: ref }));
@@ -85,10 +70,6 @@ export const deliver = Effect.fn('Mail.deliver')(function* (deliveries: Readonly
   yield* logMail('film.delivered', { batch: deliveries.length, ...tally });
 });
 
-/**
- * A queue that delivers what it is given at once, in the same request, for
- * `bun run preview`, where there is no Cloudflare Queue.
- */
 export const layerInlineQueue = Layer.effect(
   FilmQueue,
   Effect.gen(function* () {

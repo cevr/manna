@@ -1,7 +1,3 @@
-// Frames a unit test runs by hand (`Frames.layerOver` on asks it keeps):
-// `frame(at)` runs every callback asked for, at `at` ms; `pending` counts the
-// asks waiting.
-
 import { type Ask, Frames } from '../frames.ts';
 
 export const manualFrames = () => {

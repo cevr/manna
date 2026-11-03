@@ -14,7 +14,6 @@ import {
 import { splitMarkdownIntoSections } from '~/src/lib/split-markdown';
 import { formatProblem, Quotations } from '~/src/services/quotations';
 
-/** A document that misquotes its sources is never exported; see `manna check`. */
 class ExportRefusedError extends Schema.TaggedError<ExportRefusedError>()('ExportRefusedError', {
   problems: Schema.Finite,
 }) {
@@ -38,22 +37,15 @@ const split = Flag.Boolean('split').pipe(
   ),
 );
 
-/** Frontmatter shape that tracks per-section note ids for --split re-exports. */
 interface SplitFrontmatter extends MessageFrontmatter {
-  /** slug -> apple note id, written back after a --split export. */
   apple_note_split?: Record<string, string>;
 }
 
-/**
- * Promote a block's leading "## Heading" to "# Heading" so Apple Notes uses it
- * as the note's sidebar title (Apple Notes titles from the H1).
- */
 const promoteHeading = (markdown: string, title: string): string => {
   const withoutHeading = markdown.replace(/^##\s+.*(\r?\n)?/, '');
   return `# ${title}\n\n${withoutHeading.trim()}`.trim();
 };
 
-/** Check every document before exporting any, so a refusal leaves Notes untouched. */
 const refuseMisquoted = Effect.fn('refuseMisquoted')(function* (
   documents: ReadonlyArray<{ readonly filePath: string; readonly rawContent: string }>,
 ) {
@@ -160,11 +152,6 @@ export const exportOutput = Command.make(
     }),
 );
 
-/**
- * Export one file as many notes — one per top-level section — into a folder
- * named after the document title. Per-section note ids are tracked in the
- * file's `apple_note_split` frontmatter map so re-exports update in place.
- */
 const SplitIdMap = Schema.Record(Schema.String, Schema.String);
 const decodeSplitIdMap = Schema.decodeUnknownOption(SplitIdMap);
 
@@ -179,9 +166,7 @@ const exportSplit = Effect.fn('exportSplit')(function* (
   const { frontmatter, content } = parseFrontmatter<SplitFrontmatter>(rawContent);
   const { folderTitle, blocks } = splitMarkdownIntoSections(content);
 
-  // The document title is the folder, unless --folder overrides it.
   const noteFolder = Option.getOrElse(folderOverride, () => folderTitle);
-  // Existing slug -> note id map (for update-in-place on re-export).
   let existingIds: Readonly<Record<string, string>> = {};
   const decodedIds = decodeSplitIdMap(frontmatter.apple_note_split);
   if (!forceCreate && Option.isSome(decodedIds)) {

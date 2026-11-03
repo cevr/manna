@@ -1,14 +1,3 @@
-// How the woman's seated view is cut into parts (`film concept parts`): which
-// part each pixel of her kept view goes to, and what lies under her arms. She
-// sits on her stool facing the viewer, her round hands on her knees. Her olive
-// mantle is drawn over her head as a veil, and its drape hangs behind her
-// shoulders to a tip beside each arm: the shoulder's outline crosses in front
-// of it, and each arm runs from that outline down to the hand. Each arm is the
-// mantle over it, the dark crease where the mantle folds in at its front (the
-// cut runs down the crease's inner edge, so the crease's ink stays whole on the
-// arm), its cream cuff and its round hand (a disc), which lies in front of the
-// cuff and her knee. Pure data.
-
 import type { HiddenEntry, PartCut, SheetClean } from '@manna/film/tools';
 import { CUT_AWAY, shade, sides } from '../../../cutout/prompts.ts';
 import { FAR, box } from '../../../cutout/rules.ts';
@@ -19,19 +8,15 @@ import { JOINTS } from './joints.ts';
 
 export { FRAMES, JOINTS };
 
-/** Her chin's row: the head is every row above it, the top of her veil with it, as the feast mother's veil is cut; the veil's drape below rides her torso. */
 const CHIN = 260;
 
-/** Her hip's row, at her lap just above her stool's planks: the robe is every row below it that her arms leave, with her stool, her sandals and the lap's fold line. */
 const HIP = 521;
 
-/** Her round hands on her knees, the discs her arms end in (seated view pixels). */
 const HAND_RIGHT = { c: [100, 529], r: 44 } as const;
 const HAND_LEFT = { c: [282, 529], r: 44 } as const;
 
 const POSES_1: PartCut = {
   parts: [
-    // her right arm on the viewer's left: from the veil drape's tip along the shoulder's outline, down the mantle's crease and the cuff's inner ink to the hand on her knee, back up the cuff's outer outline
     {
       name: 'armRight',
       take: [
@@ -78,7 +63,6 @@ const POSES_1: PartCut = {
       ],
       pivot: JOINTS['poses-1'].shoulderRight,
     },
-    // her left arm on the viewer's right
     {
       name: 'armLeft',
       take: [
@@ -124,32 +108,22 @@ const POSES_1: PartCut = {
       ],
       pivot: JOINTS['poses-1'].shoulderLeft,
     },
-    // above her chin, her veil's top with it
     { name: 'head', take: [box(-1, -1, FAR, CHIN)] },
     { name: 'robe', take: [box(-1, HIP, FAR, FAR)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
-/** Her sheet's outline ink, the darkest 1 % of her kept view (median 24,7,1). */
 const INK = [24, 7, 1, 255] as const;
 
-/** Where her body's sides run under her arms: out to her shoulders and robe, not out to the mantle's outer edges over her arms. */
 const SIDES = sides({
   pronoun: 'her',
   lower: 'robe',
   cloth: 'the olive mantle and its soft folds',
 });
 
-/** What her view keeps as it is. */
 const KEEP = `Keep every other pixel exactly as it is: the same olive veil and its drape, face, mantle, cream robe, sash, stool, sandals, contact shadow, size, position and framing.`;
 
-/**
- * Her view's moving parts (whose areas are painted magenta and repainted
- * beneath), and the words okra repaints them by: what lies under them, in the
- * sheet's own style. As the man's seated view's prompt, it names no grain:
- * okra reads that sentence as speckle on the lap.
- */
 const HIDDEN_ENTRIES = {
   'poses-1': {
     moving: ['armRight', 'armLeft'],
@@ -181,13 +155,11 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   ink: INK,
 });
 
-/** A hand disc of hers in her part sheet's pixels: the seated view's disc moved by the kept box's corner in the padded frame. */
 const onSheet = (hand: typeof HAND_RIGHT | typeof HAND_LEFT) => {
   const [dx, dy] = keptAt('poses-1');
   return { c: [hand.c[0] + dx, hand.c[1] + dy] as const, r: hand.r };
 };
 
-/** Her poses-1 rule under a reading of cuff ink: the library's `CUFF`, or one near it her sheet holds against (`reproduce.slow.test.ts`). */
 export const cleanPoses1With = (cuff: CuffInk) =>
   cuffsToArms({
     arms: [
@@ -199,7 +171,6 @@ export const cleanPoses1With = (cuff: CuffInk) =>
     cuff,
   });
 
-/** What each view's laid part sheet runs before it is written (`film concept parts`): her arms take the cuff ink her hand discs leave on her torso and robe, and the two pieces of her torso stranded off her outer cuffs, so no specks stay behind when an arm turns. */
 export const CLEAN = { 'poses-1': cleanPoses1With(CUFF) } satisfies Partial<
   Record<keyof typeof CUTS, SheetClean>
 >;

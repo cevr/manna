@@ -1,8 +1,3 @@
-/**
- * The list and the hymn page, rendered to HTML as the web build renders
- * them, over the real compiled hymnal (`src/test/setup.ts`).
- */
-
 import { describe, expect, it } from 'bun:test';
 import { type Hymn, sung } from '@manna/hymnal/hymn';
 import { RegistryProvider, useAtomSet } from '@effect/atom-react';
@@ -27,13 +22,11 @@ import { hymnsOffset } from './place';
 import { readHymns } from '../../vite/words';
 
 let hymnsRead: ReadonlyArray<Hymn> = [];
-/** The compiled hymns, read once. */
 const compiled = () => {
   if (hymnsRead.length === 0) hymnsRead = readHymns();
   return hymnsRead;
 };
 
-/** The page's text, tags dropped, one space between pieces. */
 const textOf = (html: string) =>
   html
     .replace(/<[^>]+>/g, ' ')
@@ -43,7 +36,6 @@ const textOf = (html: string) =>
     .replace(/\s+/g, ' ')
     .trim();
 
-/** The page's text as it is read: each line as its accessible name, the words its syllables make. */
 const readOf = (html: string) => {
   const host = document.createElement('div');
   host.innerHTML = html;
@@ -52,7 +44,6 @@ const readOf = (html: string) => {
   return textOf(host.innerHTML);
 };
 
-/** Each section's accessible name, in page order. */
 const sectionsOf = (html: string) =>
   [...html.matchAll(/<div [^>]*role="group"[^>]*>/g)].map(
     ([tag]) => /aria-label="([^"]+)"/.exec(tag)?.[1],
@@ -62,7 +53,6 @@ const hymn = (n: number) => Option.getOrThrow(hymnAt(String(n)));
 
 const rowSheet = StyleSheet.create({ row: { flexDirection: 'row' } });
 
-/** The class react-native-web draws a row (`flexDirection: 'row'`) with. */
 const rowClass = Option.getOrThrow(
   Option.fromNullishOr(
     /r-flexDirection-\w+/.exec(renderToStaticMarkup(<View style={rowSheet.row} />))?.[0],
@@ -104,7 +94,6 @@ describe('a hymn page', () => {
     const html = page(1);
     expect(sectionsOf(html)).toEqual(['Stanza 1', 'Stanza 2', 'Stanza 3']);
     const text = readOf(html);
-    // Each stanza's first and last line, as the 1985 hymnal prints them.
     const expected = [
       '1 Praise to the Lord',
       '1 Praise to the Lord, the Almighty, the King of creation!',
@@ -131,9 +120,6 @@ describe('a hymn page', () => {
     const aboutAt = head.lastIndexOf('<', head.indexOf('data-testid="hymn-about"'));
     const topicAt = head.lastIndexOf('<', head.indexOf('data-testid="hymn-topic"'));
     const nameAt = head.lastIndexOf('<', head.indexOf('data-testid="hymn-name"'));
-    // The topic is its own line above the row, apart from the heading: the
-    // button `About this hymn`, its topic, its first passage with how many
-    // more follow, and a chevron.
     expect(passages.length).toBeGreaterThan(1);
     expect(textOf(head.slice(0, topicAt))).toBe('');
     expect(textOf(head.slice(topicAt, nameAt))).toBe(
@@ -142,7 +128,6 @@ describe('a hymn page', () => {
     const button = head.slice(aboutAt, head.indexOf('>', aboutAt));
     expect(button).toContain('role="button"');
     expect(button).toContain('aria-label="About this hymn"');
-    // The row lays its pieces side by side (the class a row View draws with): the number, then the title.
     const row = head.slice(nameAt);
     expect(row.slice(0, row.indexOf('>'))).toContain(rowClass);
     expect(textOf(row).startsWith(`${number} ${title}`)).toBe(true);
@@ -175,7 +160,6 @@ describe('a hymn page', () => {
   });
 });
 
-/** `node` mounted in the document, as a phone or the web shows it; it unmounts when the `using` ends. */
 const mount = (node: ReactNode) => {
   const host = document.createElement('div');
   document.body.append(host);
@@ -198,18 +182,15 @@ const press = (host: HTMLElement, label: string) =>
     target.click();
   });
 
-/** The text of the box with test id `id`, or none where the page has no such box. */
 const chordAt = (host: HTMLElement, id: string) =>
   Option.map(
     Option.fromNullishOr(host.querySelector(`[data-testid="${id}"]`)),
     (box) => box.textContent,
   );
 
-/** Each section's text, in page order. */
 const sectionTexts = (host: HTMLElement) =>
   [...host.querySelectorAll('[role="group"]')].map((group) => textOf(group.innerHTML));
 
-/** A reader who has turned chords on. */
 const chordsOn = () => new Map([['chords', 'true']]);
 
 describe('a hymn page with chords off', () => {
@@ -233,12 +214,10 @@ describe('a hymn page with chords off', () => {
     expect(lines.map((line) => line.label)).toEqual(words);
     expect(count(html, 'data-testid="syllable-')).toBe(syllableCount(100));
     expect(syllableCount(100)).toBeGreaterThan(24);
-    // The hyphens sit inside the words and are not read.
     for (const line of lines) expect(line.hyphens).toBe(line.hidden);
   });
 });
 
-/** Every `line` element's accessible name, its hyphens and its hidden hyphens. */
 const linesOf = (html: string) =>
   html
     .split(/(?=<div [^>]*data-testid="line")/)
@@ -246,13 +225,11 @@ const linesOf = (html: string) =>
     .map((piece) => ({
       label: textOf(/aria-label="([^"]*)"/.exec(piece)?.[1] ?? ''),
       hyphens: count(piece, '>-</'),
-      // A hyphen is a span of its word's text, hidden from reading.
       hidden: [...piece.matchAll(/aria-hidden="true"[^>]*>-</g)].length,
     }));
 
 const count = (html: string, needle: string) => html.split(needle).length - 1;
 
-/** Hymn `n`'s sung syllables, page order, as compiled: its Sung parts' syllables each time sung. */
 const syllableCount = (n: number) =>
   sung(Option.getOrThrow(Option.fromUndefinedOr(compiled().find((h) => h.number === n)))).reduce(
     (sum, line) => {
@@ -276,7 +253,6 @@ describe('a hymn page with chords on and a line-level part', () => {
   });
 });
 
-/** The first of hymns 11, 14 and 25 with a line-level part. */
 const lineLevelHymn = () =>
   Option.getOrThrow(
     Option.fromUndefinedOr(
@@ -288,7 +264,6 @@ const lineLevelHymn = () =>
     ),
   );
 
-/** The bar's key button and, while open, its dials, for `n`'s page, as the bar draws them. */
 function KeyAt({ n }: { readonly n: number }) {
   const thumb = useThumb(n);
   return (
@@ -305,7 +280,6 @@ function KeyAt({ n }: { readonly n: number }) {
   );
 }
 
-/** The bar's key button over `n`'s page, both over `reader`. */
 const withKey = (n: number, reader: ReturnType<typeof readerOn>) => (
   <ChordReaderContext value={reader}>
     <KeyAt n={n} />
@@ -316,7 +290,6 @@ const withKey = (n: number, reader: ReturnType<typeof readerOn>) => (
 const found = (host: HTMLElement, selector: string) =>
   Option.getOrThrow(Option.fromNullishOr(host.querySelector(selector)));
 
-/** The key button: its value, and whether it draws the guitar's head. */
 const keyButton = (host: HTMLElement) =>
   Option.map(
     Option.fromNullishOr(host.querySelector('[role="button"][aria-label="Key"]')),
@@ -328,14 +301,11 @@ const keyButton = (host: HTMLElement) =>
     }),
   );
 
-/** A hold of the key button, as VoiceOver's action makes it. */
 const hold = (host: HTMLElement) => perform(found(host, '[aria-label="Key"]'), 'chords');
 
-/** The dial named `label`, once open. */
 const dial = (host: HTMLElement, label: string) =>
   found(host, `[role="slider"][aria-label="${label}"]`);
 
-/** The dial named `label` turned one detent, up or down, as VoiceOver turns it. */
 const turn = (host: HTMLElement, label: string, way: 'increment' | 'decrement' = 'increment') =>
   perform(dial(host, label), way);
 
@@ -439,7 +409,6 @@ describe('a hymn page with chords on', () => {
   });
 });
 
-/** The page head's `Favourite` button: a button in the number's row, and whether it is selected. */
 const favouriteButton = (host: HTMLElement) =>
   Option.map(
     Option.fromNullishOr(host.querySelector('[data-testid="hymn-name"] [aria-label="Favourite"]')),
@@ -478,7 +447,6 @@ describe('the page head’s Favourite button', () => {
   });
 });
 
-/** Two buttons that set the chord style, as the Settings sheet does. */
 function StylePicker({ style }: { readonly style: Atom.Writable<ChordStyle> }) {
   const set = useAtomSet(style);
   return (
@@ -489,7 +457,6 @@ function StylePicker({ style }: { readonly style: Atom.Writable<ChordStyle> }) {
   );
 }
 
-/** Hymn 3's first line's chords over its 1st and 5th syllables, and whether its 6th has any. */
 const lineOne = (host: HTMLElement) => ({
   first: chordAt(host, 'chord-1-1-1'),
   fifth: chordAt(host, 'chord-1-1-5'),

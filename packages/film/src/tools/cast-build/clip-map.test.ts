@@ -1,16 +1,8 @@
-// A clip's frames on the reader's canvas (`clip-map.ts`): a canvas pixel is
-// the mean of the video area the map gives it, area-weighted, rounded half to
-// even, and the border's median where the area leaves the video (read.py's
-// mapping of clip B, pixel for pixel); the map is found by laying frame 0's
-// figure box on the given first frame's; and each frame's figure height, feet
-// line and IoU with the first and last frames are measured on the canvas.
-
 import { describe, expect, test as it } from 'bun:test';
 import { Option } from 'effect';
 import type { Raster } from '../../core/raster.ts';
 import { MAP_IOU, borderPaperOf, canvasOf, figureNumbersOf, registerClip } from './clip-map.ts';
 
-/** A `w` × `h` raster, each pixel's grey from `at`. */
 const grey = (w: number, h: number, at: (x: number, y: number) => number): Raster => {
   const rgba = new Uint8Array(w * h * 4);
   for (let y = 0; y < h; y++)
@@ -18,7 +10,6 @@ const grey = (w: number, h: number, at: (x: number, y: number) => number): Raste
   return { width: w, height: h, rgba };
 };
 
-/** A `w` × `h` paper raster with each box `[left, top, right, bottom)` inked. */
 const boxes = (
   w: number,
   h: number,
@@ -33,15 +24,12 @@ const at = (r: Raster, x: number, y: number) => r.rgba[(y * r.width + x) * 4]!;
 
 describe('clip frames on the canvas', () => {
   it('are each 2 x 2 block mean at an integer map, rounded half to even', () => {
-    // columns 0..7 hold 0, 1, 1, 2, 2, 3, 3, 4: block means 0.5, 1.5, 2.5, 3.5
     const video = grey(8, 2, (x) => [0, 1, 1, 2, 2, 3, 3, 4][x]!);
     const canvas = canvasOf(video, { x0: 0, y0: 0, scale: 2 }, [4, 1]);
     expect([0, 1, 2, 3].map((x) => at(canvas, x, 0))).toEqual([0, 2, 2, 4]);
   });
 
   it("fill what lies outside the video with the border's median, the corners counted twice as numpy does", () => {
-    // 13 x 13, the four 4 x 4 corners at 200 and the rest of the border at 10: 64 corner pixels
-    // against 80 make 10 the median of the pixels, but counted twice the corners make it 200
     const video = grey(13, 13, (x, y) => {
       if ((x < 4 || x > 8) && (y < 4 || y > 8)) return 200;
       return 10;
@@ -59,7 +47,6 @@ describe('clip frames on the canvas', () => {
 });
 
 describe('clip map', () => {
-  // the first frame on the canvas: a body and an arm; frame 0 the same figure at 1.5x, (-20, 10) off
   const first = boxes(200, 300, [100, 60, 140, 260], [80, 100, 100, 110]);
   const frame0 = boxes(300, 480, [130, 100, 190, 400], [100, 160, 130, 175]);
 

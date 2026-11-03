@@ -56,7 +56,6 @@ const VerseLine = Schema.Struct({
 const normalizedSelect = `SELECT h.id, h.title, t.id AS category_id, t.name AS category
  FROM hymns h JOIN hymn_topics ht ON ht.hymn_id=h.id JOIN topics t ON t.id=ht.topic_id`;
 
-/** Assemble ordered verses from source lines. Shared refrains keep their negative legacy IDs. */
 const normalizedRow = (db: Database, id: number): Option.Option<HymnRow> => {
   const value = db.query(`${normalizedSelect} WHERE h.id=? ORDER BY t.id LIMIT 1`).get(id);
   if (Predicate.isNull(value)) return Option.none();
@@ -88,7 +87,6 @@ const normalizedRow = (db: Database, id: number): Option.Option<HymnRow> => {
 };
 
 const literalFts = (query: string) => `"${query.replaceAll('"', '""')}"`;
-/** Operators stay literal; single-letter tokens would broaden through Unicode folding. */
 const canUseFts = (query: string) => {
   if (/[^\p{L}\p{M}\p{N}\s'’]/u.test(query)) return false;
   const tokens =
@@ -106,7 +104,6 @@ const boundedLimit = (limit: number) => {
   return Math.min(920, Math.max(0, Math.floor(limit)));
 };
 
-/** Each format owns its queries; the layer selects one reader before serving requests. */
 const legacyReader = (db: Database) => ({
   readRow: (id: number) => {
     const value = db.query('SELECT * FROM hymns WHERE id=?').get(id);
@@ -176,7 +173,6 @@ const passageFields = {
   book: Schema.Int,
   chapter: Schema.Int,
 };
-/** A passage row: a chapter holds no verse columns, a span holds all three. */
 const PassageRow = Schema.Union([
   Schema.Struct({ ...passageFields, kind: Schema.Literal('chapter') }),
   Schema.Struct({
@@ -199,7 +195,6 @@ const SeeRow = Schema.Struct({ see: Schema.Int });
 const decodeRows = <S extends Schema.Decoder<unknown>>(schema: S) =>
   Schema.decodeUnknownSync(Schema.Array(schema));
 
-/** A row's optional column as an optional key: present when the column holds a value. */
 const present = <K extends string>(
   key: K,
   value: Option.Option<string>,
@@ -215,7 +210,6 @@ const toRef = (row: typeof IndexRefRow.Type): IndexRef => ({
   ...present('stanza', row.stanza),
 });
 
-/** The index tables' queries, each in the printed order its index gives. */
 const indexReader = (db: Database) => {
   const piecesSql =
     'SELECT from_verse, to_verse FROM index_passage_verses WHERE source=? AND ordinal=? ORDER BY piece';
@@ -315,13 +309,8 @@ const hasTable = (db: Database, name: string) =>
     db.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name),
   );
 
-/** The index tables `db` lacks, in `INDEX_TABLES` order. */
 const absentIndexTables = (db: Database) => INDEX_TABLES.filter((name) => !hasTable(db, name));
 
-/**
- * Whether the hymnal database at `path` holds hymns but lacks an index table,
- * so `manna init` replaces it. A file that does not open as one is kept: false.
- */
 export const hymnalNeedsIndexes = (path: string): Effect.Effect<boolean> =>
   Effect.acquireUseRelease(
     Effect.try(() => new Database(path, { readonly: true })),
@@ -329,10 +318,6 @@ export const hymnalNeedsIndexes = (path: string): Effect.Effect<boolean> =>
     (db) => Effect.sync(() => db.close(false)),
   ).pipe(Effect.orElseSucceed(() => false));
 
-/**
- * Whether the file at `path` is an indexed hymnal database: it opens as SQLite and holds
- * `hymns` and every index table. `manna init` installs a download only when it is one.
- */
 export const hymnalIsIndexed = (path: string): Effect.Effect<boolean> =>
   Effect.acquireUseRelease(
     Effect.try(() => new Database(path, { readonly: true })),
@@ -445,7 +430,6 @@ export const layerHymnalBun: Layer.Layer<
       Effect.try({
         try: () => {
           const maximum = boundedLimit(limit);
-          // SQLite text/FTS treats NUL as a terminator; no corpus entry contains it.
           if (query.includes('\0')) return [];
           return reader.searchRows(query, maximum).map(summary);
         },

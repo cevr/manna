@@ -1,33 +1,3 @@
-// The judged rules' selectors: the items of one source a rule judges, each
-// with its first line, its last line, its offset, its text and its key. The runner
-// (`sources.ts`) reads every item of the repo and asks the model of those
-// the store does not answer; the oxlint plugin
-// (`packages/scripts/lint/judged.ts`) takes every item of a file it lints
-// and reports the answers kept for them. Both read a source through `parse`
-// (oxc-parser), so an item's text, and with it its cache key, is the same in
-// both. An item's key is what a formatter does not change: code by its
-// parsed form (`parsedOf`: each node's type and fields, not where it stands
-// or how a literal is spelled) and its comments by their words, and a
-// comment or prose by its words with each run of whitespace one space; so two
-// items that parse or read differently never share a key. This module runs in Node (oxlint's plugin host) and in Bun, so it
-// imports nothing of either.
-//
-//   comments       each comment block (a block comment, or a run of line
-//                  comments on lines one after another, each first on its
-//                  line; a line comment after code is a block of its own)
-//   commentedCode  each comment block first on its line with the code it sits
-//                  on: the outermost node that starts the next line
-//   testCases      each test case (`it`/`test`, a name and a function,
-//                  layered or `.each` too) of a test file, with the file's
-//                  imports
-//   functions      each named function of a source that is not a test, with
-//                  the comment it sits under; one longer than FUNCTION_LINES
-//                  is no item, and the named functions inside it are
-//   scriptBeats    each beat's `say` and `picture` of a film's `script.ts`,
-//                  and of a series script's Markdown, in its tables' rows or
-//                  its `**say:**` and `**picture:**` paragraphs
-//                  (`markdownBeats`)
-
 import { Option, Predicate } from 'effect';
 import { type Comment, type Node, type Program, parseSync, visitorKeys } from 'oxc-parser';
 
@@ -41,11 +11,6 @@ export const SELECTORS = [
 
 export type Selector = (typeof SELECTORS)[number];
 
-/**
- * One item a judged rule reads: its first and last lines (1-based), its
- * offset, its words, and its key: what of its words a formatter does not
- * change.
- */
 export interface Item {
   readonly line: number;
   readonly end: number;
@@ -54,7 +19,6 @@ export interface Item {
   readonly key: string;
 }
 
-/** A source as the selectors read it. */
 interface Source {
   readonly file: string;
   readonly text: string;
@@ -62,16 +26,13 @@ interface Source {
   readonly comments: ReadonlyArray<Comment>;
 }
 
-/** `text` parsed as the file `file`. */
 export const parse = (file: string, text: string): Source => {
   const { program, comments } = parseSync(file, text);
   return { file, text, program, comments };
 };
 
-/** The most lines of code an item shows; past it the rest is named, not shown. */
 const CODE_LINES = 80;
 
-/** The longest function `functions` takes whole. */
 const FUNCTION_LINES = 120;
 
 const TEST = /\.(?:test|spec)\.[cm]?tsx?$/;
@@ -79,7 +40,6 @@ const NOT_SOURCE = /(?:^|\/)(?:fixtures|e2e|testing)(?:\/|\.ts$)/;
 const FILM_SCRIPT = /(?:^|\/)apps\/animations\/src\/films\/.+\/script\.ts$/;
 const SERIES_SCRIPT = /(?:^|\/)apps\/animations\/series\/.+\/scripts\/[^/]+\.md$/;
 
-/** Whether `selector` reads the file `file` (a path from the repo's root). */
 export const selects = (selector: Selector, file: string): boolean => {
   switch (selector) {
     case 'comments':
@@ -94,13 +54,8 @@ export const selects = (selector: Selector, file: string): boolean => {
   }
 };
 
-/**
- * Whether oxlint lints `file`, and so the plugin reports its findings: every
- * file the runner reads but a Markdown series script.
- */
 export const readByOxlint = (file: string) => !file.endsWith('.md');
 
-/** The 1-based line of each offset in `text`, by its line starts. */
 const lineReader = (text: string) => {
   const starts = [0];
   for (let i = 0; i < text.length; i++) if (text[i] === '\n') starts.push(i + 1);
@@ -119,7 +74,6 @@ const lineReader = (text: string) => {
   };
 };
 
-/** A comment's words: its markers, a JSDoc line's leading `*` and the edges' blank lines gone. */
 const wordsOf = (type: Comment['type'], value: string) => {
   if (type === 'Line') return value.replace(/^ /, '').trimEnd();
   return value
@@ -129,7 +83,6 @@ const wordsOf = (type: Comment['type'], value: string) => {
     .trim();
 };
 
-/** A comment block: its lines, its offsets, its words, and whether it stands first on its line. */
 interface Block {
   readonly line: number;
   readonly end: number;
@@ -139,7 +92,6 @@ interface Block {
   readonly alone: boolean;
 }
 
-/** Each comment block of `source`, in order. */
 const commentBlocks = (source: Source): ReadonlyArray<Block> => {
   const { lineOf, startOf } = lineReader(source.text);
   const blocks: Array<{
@@ -178,11 +130,9 @@ const commentBlocks = (source: Source): ReadonlyArray<Block> => {
     .filter((b) => b.text !== '');
 };
 
-/** Whether a value read off a node is a node: an object with a string `type`. */
 const isNode = (value: unknown): value is Node =>
   Predicate.hasProperty(value, 'type') && Predicate.isString(value.type);
 
-/** The child nodes of `node`, in source order, by the parser's own visitor keys. */
 const childrenOf = (node: Node): ReadonlyArray<Node> =>
   (visitorKeys[node.type] ?? []).flatMap((key) => {
     const value: unknown = Reflect.get(node, key);
@@ -190,40 +140,22 @@ const childrenOf = (node: Node): ReadonlyArray<Node> =>
     return Option.toArray(Option.liftPredicate(value, isNode));
   });
 
-/**
- * Walks `node` and its descendants, outer first: `visit` answers whether to
- * go inside the node it is given.
- */
 const walk = (node: Node, visit: (node: Node) => boolean) => {
   if (!visit(node)) return;
   for (const child of childrenOf(node)) walk(child, visit);
 };
 
-/** Prose as its key reads it: each run of whitespace one space, none at the edges. */
 const foldProse = (text: string) => text.replace(/\s+/g, ' ').trim();
 
-/** A string as a parsed form writes it: quoted, its quotes and backslashes escaped. */
 const quoted = (text: string) => `"${text.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
 
-/** What a node's parsed form leaves out: where it stands. */
 const PLACE = new Set(['type', 'start', 'end', 'range', 'loc', 'parent']);
 
-/**
- * Whether a field of a node of `type` is left out of its parsed form: where
- * it stands, or a `Literal`'s spelling (`raw`; its value stays). A template's
- * `raw` stays, as `String.raw` reads it.
- */
 const leftOut = (type: string, key: string) =>
   PLACE.has(key) || (type === 'Literal' && key === 'raw');
 
 const PARSED = new WeakMap<object, string>();
 
-/**
- * A parsed value's form: a node's type and every field the parser gives it
- * but where it stands and a literal's spelling, its children's forms in
- * order. Two programs whose forms match parse the same, so they differ in
- * whitespace, quote marks or a number's spelling alone.
- */
 // oxlint-disable-next-line effect/noUnknownParameters -- a parser's fields, whatever their kind, walked whole
 const parsedOf = (value: unknown): string => {
   if (Array.isArray(value)) return `[${value.map(parsedOf).join(',')}]`;
@@ -240,14 +172,6 @@ const parsedOf = (value: unknown): string => {
   return parsed;
 };
 
-/**
- * The key of `node`, read from `from` (the comment above it, when an item
- * shows one): the words of each comment from `from` to the node's end (their
- * markers and a JSDoc line's `*` gone, as prose), then the node's parsed
- * form. So
- * re-indenting, re-wrapping or re-spacing it changes no key, and any edit a
- * parser sees changes it.
- */
 const keyOfNode = (source: Source, node: Node, from = node.start) =>
   [
     ...source.comments
@@ -256,7 +180,6 @@ const keyOfNode = (source: Source, node: Node, from = node.start) =>
     parsedOf(node),
   ].join('\n');
 
-/** `node`'s source, cut to its first `CODE_LINES` lines with the rest counted, and its key (of the node whole). */
 const capped = (source: Source, node: Node) => {
   const text = source.text.slice(node.start, node.end);
   const lines = text.split('\n');
@@ -268,7 +191,6 @@ const capped = (source: Source, node: Node) => {
   };
 };
 
-/** The outermost node that starts at `offset`, if any. */
 const nodeAt = (program: Program, offset: number): Option.Option<Node> => {
   let found = Option.none<Node>();
   walk(program, (node) => {
@@ -282,7 +204,6 @@ const nodeAt = (program: Program, offset: number): Option.Option<Node> => {
   return found;
 };
 
-/** Each comment block first on its line, with the node that starts the line under it. */
 const commentedCode = (source: Source): ReadonlyArray<Item> => {
   const { lineOf, startOf } = lineReader(source.text);
   return commentBlocks(source)
@@ -307,10 +228,6 @@ const commentedCode = (source: Source): ReadonlyArray<Item> => {
     });
 };
 
-/**
- * The name a callee is called by at its root: `it` in `it.effect.skip`, in
- * `it.effect.layer(x)` and in `test.each(rows)`.
- */
 const rootName = (node: Node): Option.Option<string> => {
   if (node.type === 'Identifier') return Option.some(node.name);
   if (node.type === 'MemberExpression') return rootName(node.object);
@@ -320,7 +237,6 @@ const rootName = (node: Node): Option.Option<string> => {
 
 const FUNCTIONS = new Set(['ArrowFunctionExpression', 'FunctionExpression']);
 
-/** Whether `node` is a test case: `it` or `test` (or a member of either) called with a name and a function. */
 const isCase = (node: Node) =>
   node.type === 'CallExpression' &&
   Option.exists(rootName(node.callee), (name) => name === 'it' || name === 'test') &&
@@ -329,7 +245,6 @@ const isCase = (node: Node) =>
   ) &&
   node.arguments.some((argument) => FUNCTIONS.has(argument.type));
 
-/** Each test case of a test file, with the file's imports. */
 const testCases = (source: Source): ReadonlyArray<Item> => {
   const { lineOf } = lineReader(source.text);
   const statements = source.program.body.filter(
@@ -355,14 +270,12 @@ const testCases = (source: Source): ReadonlyArray<Item> => {
   return items;
 };
 
-/** Whether `node` makes a function: one written out, or a call handed one (`Effect.fn('f')(function* …)`). */
 const makesFunction = (node: Node): boolean =>
   FUNCTIONS.has(node.type) ||
   (node.type === 'CallExpression' &&
     (node.arguments.some((argument) => FUNCTIONS.has(argument.type)) ||
       makesFunction(node.callee)));
 
-/** Whether `node` is a named function: a declaration, a binding, a method or an object's function. */
 const isNamedFunction = (node: Node) => {
   switch (node.type) {
     case 'FunctionDeclaration':
@@ -381,7 +294,6 @@ const isNamedFunction = (node: Node) => {
   }
 };
 
-/** Each named function of a source, with the comment block that ends on the line above it. */
 const functions = (source: Source): ReadonlyArray<Item> => {
   const { lineOf, startOf } = lineReader(source.text);
   const above = new Map(
@@ -409,14 +321,12 @@ const functions = (source: Source): ReadonlyArray<Item> => {
   return items;
 };
 
-/** A property's key as a name: `say` in `say: …` or `'say': …`. */
 const keyOf = (node: Node): Option.Option<string> => {
   if (node.type === 'Identifier') return Option.some(node.name);
   if (node.type === 'Literal' && Predicate.isString(node.value)) return Option.some(node.value);
   return Option.none();
 };
 
-/** The words of a string a beat writes: a literal's value, or a template's source between its backticks. */
 const wordsOfString = (source: Source, node: Node): Option.Option<string> => {
   if (node.type === 'Literal' && Predicate.isString(node.value)) return Option.some(node.value);
   if (node.type === 'TemplateLiteral')
@@ -426,7 +336,6 @@ const wordsOfString = (source: Source, node: Node): Option.Option<string> => {
 
 const BEAT_KEYS = new Set(['say', 'picture']);
 
-/** Each `say` and `picture` string of a film's script. */
 const scriptBeats = (source: Source): ReadonlyArray<Item> => {
   const { lineOf } = lineReader(source.text);
   const items: Array<Item> = [];
@@ -448,7 +357,6 @@ const scriptBeats = (source: Source): ReadonlyArray<Item> => {
   return items;
 };
 
-/** The items `selector` reads in `source`. */
 export const itemsOf = (selector: Selector, source: Source): ReadonlyArray<Item> => {
   switch (selector) {
     case 'comments':
@@ -470,7 +378,6 @@ export const itemsOf = (selector: Selector, source: Source): ReadonlyArray<Item>
   }
 };
 
-/** A table row's cells, its edge pipes gone. */
 const cellsOf = (row: string) =>
   row
     .trim()
@@ -478,28 +385,16 @@ const cellsOf = (row: string) =>
     .split('|')
     .map((cell) => cell.trim());
 
-/** The column whose header starts with one of `names`. */
 const columnOf = (header: ReadonlyArray<string>, names: ReadonlyArray<string>) =>
   Option.liftPredicate(
     header.findIndex((cell) => names.some((name) => cell.startsWith(name))),
     (at) => at >= 0,
   );
 
-/** A beat's paragraph in a series script: `**say:** …` or `**picture:** …` (never `**cite:**`). */
 const PARAGRAPH = /^\*\*(say|picture):\*\*\s*(.*)$/i;
 
-/** A line that ends a beat's paragraph: a blank line, another bold label, a table row or a heading. */
 const ENDS_PARAGRAPH = /^\s*$|^\*\*|^\s*\||^#/;
 
-/**
- * Each beat's `say` and `picture` of a series script, in either form the
- * series write them: a beat table's rows (the column headed `Say` or
- * `Spoken`, and the one headed `Picture` or `On screen`), or a beat's
- * `**say:**` and `**picture:**` paragraphs, each to the next blank line,
- * bold label, table row or heading. A `**cite:**` paragraph names its
- * sources by design, and is not read. Oxlint reads no Markdown, so only the
- * runner reads these.
- */
 export const markdownBeats = (text: string): ReadonlyArray<Item> => {
   const items: Array<Item> = [];
   let columns = Option.none<{ readonly say: number; readonly picture: number }>();

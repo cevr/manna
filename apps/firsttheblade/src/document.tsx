@@ -1,8 +1,3 @@
-/**
- * A page's whole document: its head (title, description, canonical URL, the
- * link card, the structured data, icons, the stylesheet and the fonts the first screen sets) and
- * its body. The phone menu's script is the only script.
- */
 import { For, Show } from '@solidjs/web';
 import type { JSX } from '@solidjs/web';
 
@@ -11,11 +6,9 @@ import { absolute, type Page } from './pages.ts';
 import { CHANNEL } from './site.ts';
 import { graphOf, jsonLd } from './structured.ts';
 
-/** What the browser build produced, as the prerender read it from Vite's manifest. */
 export interface Build {
   readonly script: string;
   readonly styles: ReadonlyArray<string>;
-  /** The fonts the first screen sets, preloaded so the wordmark does not reflow. */
   readonly fonts: ReadonlyArray<string>;
 }
 

@@ -1,7 +1,3 @@
-// The judged selectors over sources written out: which items each reads,
-// with which lines, which words and which key. The runner and the plugin
-// both read through these, so an item's key here is its cache key's in both.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Glob } from 'bun';
 import { Effect, FileSystem } from 'effect';
@@ -9,7 +5,6 @@ import { describe, expect, it } from 'effect-bun-test';
 
 import { itemsOf, markdownBeats, parse, selects } from './items.ts';
 
-/** `selector`'s items of `lines` as the file `file`: each item's first line, last line and text. */
 const read = (
   selector: Parameters<typeof itemsOf>[0],
   file: string,
@@ -17,7 +12,6 @@ const read = (
 ) =>
   itemsOf(selector, parse(file, lines.join('\n'))).map((item) => [item.line, item.end, item.text]);
 
-/** `selector`'s keys of `lines` as the file `file`. */
 const keys = (
   selector: Parameters<typeof itemsOf>[0],
   file: string,
@@ -97,13 +91,13 @@ describe('the judged selectors', () => {
     Effect.sync(() => {
       expect(
         read('commentedCode', 'src/a.ts', [
-          '// The header, apart.', // 1
-          '', // 2
-          '/** Doubles `n`. */', // 3
-          'export const double = (n: number) =>', // 4
-          '  n * 2;', // 5
-          'const c = 1; // after code', // 6
-          '// The last line.', // 7
+          '// The header, apart.',
+          '',
+          '/** Doubles `n`. */',
+          'export const double = (n: number) =>',
+          '  n * 2;',
+          'const c = 1; // after code',
+          '// The last line.',
         ]),
       ).toEqual([
         [
@@ -118,12 +112,12 @@ describe('the judged selectors', () => {
   it.effect('testCases takes each case with a name and a function, with the imports', () =>
     Effect.sync(() => {
       const lines = [
-        "import { expect, it } from 'effect-bun-test';", // 1
-        "import { double } from './double.ts';", // 2
-        "describe('double', () => {", // 3
-        "  it.effect('doubles', () => Effect.sync(() => expect(double(2)).toBe(4)));", // 4
-        '  it(name, () => {});', // 5
-        '});', // 6
+        "import { expect, it } from 'effect-bun-test';",
+        "import { double } from './double.ts';",
+        "describe('double', () => {",
+        "  it.effect('doubles', () => Effect.sync(() => expect(double(2)).toBe(4)));",
+        '  it(name, () => {});',
+        '});',
       ];
       expect(read('testCases', 'src/double.test.ts', lines)).toEqual([
         [
@@ -142,14 +136,14 @@ describe('the judged selectors', () => {
         const long = Array.from({ length: 120 }, (_, i) => `  const v${i} = ${i};`);
         expect(
           read('functions', 'src/f.ts', [
-            '/** One. */', // 1
-            'export function one() {', // 2
-            '  const inner = () => 1;', // 3
-            '  return inner();', // 4
-            '}', // 5
-            "const two = Effect.fn('two')(function* () {});", // 6
-            'function long() {', // 7
-            '  const inside = () => 2;', // 8
+            '/** One. */',
+            'export function one() {',
+            '  const inner = () => 1;',
+            '  return inner();',
+            '}',
+            "const two = Effect.fn('two')(function* () {});",
+            'function long() {',
+            '  const inside = () => 2;',
             ...long,
             '}',
           ]),
@@ -169,9 +163,9 @@ describe('the judged selectors', () => {
     Effect.sync(() => {
       expect(
         read('scriptBeats', 'apps/animations/src/films/f/script.ts', [
-          'export const beats = [', // 1
-          "  { id: 'cold', say: 'In the beginning.', picture: `A page. ${CARDS}`, mark: 'x' },", // 2
-          '];', // 3
+          'export const beats = [',
+          "  { id: 'cold', say: 'In the beginning.', picture: `A page. ${CARDS}`, mark: 'x' },",
+          '];',
         ]),
       ).toEqual([
         [2, 2, 'say: In the beginning.'],
@@ -183,10 +177,10 @@ describe('the judged selectors', () => {
   it.effect('testCases takes a layered case and an each case by their root name', () =>
     Effect.sync(() => {
       const lines = [
-        "import { it, test } from 'effect-bun-test';", // 1
-        "it.effect.layer(Live)('reads the layer', () => Effect.void);", // 2
-        "test.each([1, 2])('takes %d', (n) => expect(n).toBeGreaterThan(0));", // 3
-        "describe.each([1])('a group %d', () => {});", // 4
+        "import { it, test } from 'effect-bun-test';",
+        "it.effect.layer(Live)('reads the layer', () => Effect.void);",
+        "test.each([1, 2])('takes %d', (n) => expect(n).toBeGreaterThan(0));",
+        "describe.each([1])('a group %d', () => {});",
       ];
       expect(read('testCases', 'src/a.test.ts', lines).map(([line]) => line)).toEqual([2, 3]);
     }),
@@ -196,14 +190,14 @@ describe('the judged selectors', () => {
     Effect.sync(() => {
       const items = markdownBeats(
         [
-          '## Beat 1 · hook', // 1
-          '', // 2
-          '**say:** {a}A baby drinks milk. {/} {b}And nobody minds.', // 3
-          '**cite:** Hebrews 5:12; E. G. White, Education, 13', // 4
-          '**picture:** STORY: a courtyard,', // 5
-          'lanterns strung.', // 6
-          '', // 7
-          '**Say:** Second.', // 8
+          '## Beat 1 · hook',
+          '',
+          '**say:** {a}A baby drinks milk. {/} {b}And nobody minds.',
+          '**cite:** Hebrews 5:12; E. G. White, Education, 13',
+          '**picture:** STORY: a courtyard,',
+          'lanterns strung.',
+          '',
+          '**Say:** Second.',
         ].join('\n'),
       );
       expect(items.map((item) => [item.line, item.end, item.text])).toEqual([
@@ -235,11 +229,11 @@ describe('the judged selectors', () => {
     Effect.sync(() => {
       const items = markdownBeats(
         [
-          '# A talk', // 1
-          '| # | Spoken (owner, to lens) | On screen / B-roll | Source note |', // 2
-          '| - | - | - | - |', // 3
-          '| 1 · Hook | He said, "Rest." | A lakeshore | DA 360.2 |', // 4
-          '| 2 | A breath. |  | Mark 6 |', // 5
+          '# A talk',
+          '| # | Spoken (owner, to lens) | On screen / B-roll | Source note |',
+          '| - | - | - | - |',
+          '| 1 · Hook | He said, "Rest." | A lakeshore | DA 360.2 |',
+          '| 2 | A breath. |  | Mark 6 |',
         ].join('\n'),
       );
       expect(items.map((item) => [item.line, item.text])).toEqual([

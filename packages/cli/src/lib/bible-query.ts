@@ -8,7 +8,6 @@ const chapterVerses = (book: number, chapter: number) =>
     return (yield* bible.chapter(Reference.chapter(book, chapter))).verses;
   });
 
-/** Resolve a parsed reference query through the canonical Bible service. */
 export function versesForBibleQuery(
   query: ParsedBibleQuery,
 ): Effect.Effect<readonly Verse[], BibleError, BibleService> {

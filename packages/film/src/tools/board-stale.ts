@@ -1,21 +1,3 @@
-// A picture panel drawn from what has changed since: stale. A try is judged
-// on two things. Its picture's words: a try records the words of the panel's
-// own picture its prompt carried (`BoardTry.words`, `pictureWords`), so words
-// that differ now changed; a try from before that record is judged on its
-// prompt, which changed when it no longer carries every one of them
-// verbatim. Its cast: a try records what each cast reference held
-// (`BoardTry.cast`, its sha256), so a reference whose bytes differ now, or
-// that is gone, changed; a try from before that record is read against the
-// member's record, whose `replaced` history says which kept sheet was
-// replaced when (`replacedSince`); and a file a run would send now that the
-// try did not carry (a member first kept a sheet since) changed its member's
-// references too. Words and the files sent are held only against tries the
-// board drew itself (`drawnByBoard`): an imported keep is never stale on
-// them. A kept panel is stale when its kept try changed; a panel
-// with tries and no keep, when none of its generated tries is fresh. A run
-// draws a stale panel again and its keep stays recorded until the owner
-// keeps a new try; the board read and the lab's Board name it.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -34,11 +16,6 @@ import { type BoardBeat, pictureWords } from './board-prompt.ts';
 import { castReference } from './cast-library.ts';
 import { sha256Hex } from './digest.ts';
 
-/**
- * A stale panel: its kept try (none when it keeps none), the members whose
- * sheet it was drawn from has changed, the members a run sends now whose
- * library sheet it was drawn before, whether its picture's words changed.
- */
 interface StalePanel {
   readonly panel: string;
   readonly kept: Option.Option<number>;
@@ -47,33 +24,24 @@ interface StalePanel {
   readonly words: boolean;
 }
 
-/** A stale panel and how many of its tries the board drew from the words and the cast as they stand. */
 export interface Staleness extends StalePanel {
   readonly fresh: number;
 }
 
-/** A reference into a member's sheet folder: the folder, and the file within it (`kept/turnaround.png`). */
 const SHEET_FILE = /^(.*\/cast-sheet)\/((?:kept|views)\/[^/]+\.png)$/;
 
-/** A file a run would send now for a member, as the board folder reaches it. */
 interface CastFile {
   readonly member: string;
   readonly file: string;
 }
 
-/** What a run would draw a panel from now, and what the cast files hold. */
 interface DrawnNow {
-  /** Each beat as the script has it, by id. */
   readonly beats: ReadonlyMap<string, BoardBeat>;
-  /** Each beat's cast files a run would send, by beat id. */
   readonly cast: ReadonlyMap<string, ReadonlyArray<CastFile>>;
-  /** Each recorded cast file's sha256 now, none when it cannot be read. */
   readonly sha: ReadonlyMap<string, Option.Option<string>>;
-  /** Each sheet folder's record, none when it cannot be read. */
   readonly records: ReadonlyMap<string, Option.Option<CastSheetRecord>>;
 }
 
-/** How a try differs from what a run would draw it from now. */
 interface Changed {
   readonly members: ReadonlyArray<string>;
   readonly added: ReadonlyArray<string>;
@@ -82,19 +50,8 @@ interface Changed {
 
 const unchanged = (c: Changed) => c.members.length === 0 && c.added.length === 0 && !c.words;
 
-/**
- * Whether the board drew `t` itself (`generate`, `tweak`): only such a try is
- * held against what a run would send now (its words, its cast's files). An
- * import was made elsewhere, from a prompt and references of its own, and the
- * owner picked it as it is.
- */
 const drawnByBoard = (t: BoardTry): boolean => t.made === 'generate' || t.made === 'tweak';
 
-/**
- * Whether `t`'s words differ from `now`: by its record when it has one, else
- * by its prompt; a try with neither is not judged, nor is one the board did
- * not draw itself (`drawnByBoard`). Pure.
- */
 const wordsChanged = (t: BoardTry, now: ReadonlyArray<string>): boolean =>
   drawnByBoard(t) &&
   Option.match(Option.fromUndefinedOr(t.words), {
@@ -106,7 +63,6 @@ const wordsChanged = (t: BoardTry, now: ReadonlyArray<string>): boolean =>
       }),
   });
 
-/** How try `t` of panel `p` differs from what a run would draw it from now. Pure. */
 const changedIn = (
   p: Panel,
   t: BoardTry,
@@ -151,13 +107,11 @@ const changedIn = (
   };
 };
 
-/** The picture panels a run judges: each with a try kept, or with tries and none kept. */
 const judgedPanels = (board: BoardFile): ReadonlyArray<Panel> =>
   board.panels.filter((p) => Predicate.isUndefined(p.text) && p.tries.length > 0);
 
 const decodeRecord = Schema.decodeResult(CastSheetJson);
 
-/** Each member's library reference as a run would send it now: a member with none sends nothing. */
 const locksOf = Effect.fn('Board.locksNow')(function* (
   film: string,
   beats: ReadonlyArray<BoardBeat>,
@@ -175,13 +129,6 @@ const locksOf = Effect.fn('Board.locksNow')(function* (
   return new Map(locks);
 });
 
-/**
- * Each stale picture panel of `film`'s `board` (its images in `folder`),
- * judged against `beats` as the script has them now and the cast a run
- * would send: a kept panel whose kept try changed, or a panel that keeps
- * none whose generated tries all changed; with how many of its tries the
- * board drew (`generate`) from the words and the cast as they stand.
- */
 export const stalenessOf = Effect.fn('Board.staleness')(function* (
   film: string,
   folder: string,
@@ -284,7 +231,6 @@ export const stalenessOf = Effect.fn('Board.staleness')(function* (
   });
 });
 
-/** What changed under a stale panel, in words: its picture's words, a member's cast sheet, or both; none when neither did. */
 const changedWhat = (stale: StalePanel): Option.Option<string> =>
   Arr.match(
     [
@@ -294,7 +240,6 @@ const changedWhat = (stale: StalePanel): Option.Option<string> =>
     { onEmpty: () => Option.none(), onNonEmpty: (what) => Option.some(what.join(' and ')) },
   );
 
-/** The library sheets a run sends now that a stale panel was drawn before, in words; none when there are none. */
 const addedWhat = (stale: StalePanel): Option.Option<string> =>
   Arr.match(stale.added, {
     onEmpty: () => Option.none(),
@@ -302,7 +247,6 @@ const addedWhat = (stale: StalePanel): Option.Option<string> =>
       Option.some(`${members.map((m) => `${m}'s library sheet`).join(' and ')} was sent`),
   });
 
-/** Why a stale panel is drawn again, in a sentence. */
 export const staleWhy = (film: string, stale: StalePanel): string =>
   Option.match(stale.kept, {
     onSome: (n) =>

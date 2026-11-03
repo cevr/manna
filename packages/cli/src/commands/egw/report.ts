@@ -1,11 +1,3 @@
-/**
- * `manna egw report`: the weekly corpus sync's report, read in the terminal.
- *
- * The sync on Cloudflare keeps each run's report as Markdown and serves it at
- * `egw.cvr.im/sync/<name>` (apps/egw-search). This fetches the `.md` and
- * renders it with Bun's Markdown renderer; `--web` opens the page instead.
- */
-
 import { Console, Effect, Schema } from 'effect';
 import { Argument, Command, Flag } from 'effect/cli';
 import { HttpClient, HttpClientResponse } from 'effect/http';

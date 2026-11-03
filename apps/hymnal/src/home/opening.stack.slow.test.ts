@@ -1,36 +1,11 @@
 /* oxlint-disable effect/noGlobals, effect/noAsyncFunction, effect/noNullish, effect/noUnknownParameters, effect/noUnsafeDictionaryType -- One's and React Navigation's router modules load from their installed files by path, take their own loose arguments and keep their state in plain objects with optional fields. */
 
-/**
- * What One does with the step a hymn page sends, on the phone. The `#`
- * drums' `Open` (`router.replace`) and a search's result (`useLinkTo({
- * replace: true })`) both reach One's `linkTo` as `REPLACE`, a pushing one
- * as `PUSH` (`numreplace.slow.test.tsx` reads those steps from the screens).
- * Here each step runs through One's own native route resolution, as its
- * `linkTo` runs it (`one/src/router/router.ts`): the route tree One builds
- * from the app's own route files (`getRoutes`), the target state its linking
- * config reads from the href (`getLinkingConfig`), the action it dispatches
- * (`getNativeStackReplaceAction` for `REPLACE`, `getNavigateAction` for
- * `PUSH`), and, where that action is null, `navigationRef.resetRoot` to the
- * target state alone. React Navigation's own `StackRouter` builds the
- * stack's state and applies the action to it, and Back is its `GO_BACK`.
- *
- * The router is given no screen ids: One's (`createGetIdForRoute`) load with
- * React Native's own files, which Bun cannot parse, and `StackRouter` reads
- * them only to reuse a retained screen (`REPLACE`) or to reach a screen of
- * the same hymn (`NAVIGATE`); no stack here holds either.
- *
- * The modules are One's native build (`dist/esm/**.native.js`), the files
- * Metro bundles for iOS, so the repo's patch of One (`patches/one@2.11.1.patch`)
- * is what runs here. Numbers only: no hymn's words are read.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { Array as Arr, Match, Option } from 'effect';
 
 import { hymnHref } from './Browse';
 import { type Opening, openingAt } from './opening';
 
-/** A screen in a navigator's state, as React Navigation keeps it. */
 interface Route {
   readonly key: string;
   readonly name: string;
@@ -38,7 +13,6 @@ interface Route {
   readonly state?: Navigator;
 }
 
-/** A navigator's state: its screens, oldest first, and the one shown. */
 interface Navigator {
   readonly type: string;
   readonly key: string;
@@ -47,7 +21,6 @@ interface Navigator {
   readonly routes: ReadonlyArray<Route>;
 }
 
-/** The partial state One's linking config reads from an href. */
 interface Target {
   readonly index?: number;
   readonly routes: ReadonlyArray<{
@@ -58,13 +31,11 @@ interface Target {
   }>;
 }
 
-/** A node of One's route tree. */
 interface RouteNode {
   readonly route: string;
   readonly children: ReadonlyArray<RouteNode>;
 }
 
-/** An action One dispatches: the navigator's key it targets, and what it does. */
 interface Action {
   readonly type: string;
   readonly target?: string;
@@ -72,14 +43,12 @@ interface Action {
   readonly payload?: unknown;
 }
 
-/** What `StackRouter` is told of the stack's screens. */
 interface Config {
   readonly routeNames: ReadonlyArray<string>;
   readonly routeParamList: Record<string, unknown>;
   readonly routeGetIdList: Record<string, unknown>;
 }
 
-/** The part of React Navigation's `StackRouter` the stack runs on. */
 interface StackRouterOf {
   readonly getRehydratedState: (partial: Target, config: Config) => Navigator;
   readonly getStateForAction: (
@@ -89,7 +58,6 @@ interface StackRouterOf {
   ) => Navigator | null;
 }
 
-/** A module loaded by its specifier, its exports read as the declarations below them give. */
 const load = (specifier: string) => import(specifier);
 const one = Bun.resolveSync('one/package.json', import.meta.dir).replace(/\/package\.json$/, '');
 const native = (path: string) => load(`${one}/dist/esm/${path}.native.js`);
@@ -113,7 +81,6 @@ const getNativeStackReplaceAction: (target: Target, state: Navigator) => Action 
 const stackRouter: StackRouterOf = navigation.StackRouter({});
 const goBack: () => Action = navigation.CommonActions.goBack;
 
-/** The app's route files, as Metro's route context lists them for One. */
 const files = [...new Bun.Glob('**/*.tsx').scanSync({ cwd: `${import.meta.dir}/../../app` })].map(
   (file) => `./${file}`,
 );
@@ -130,7 +97,6 @@ const root = getRoutes(context, {
 const linking = getLinkingConfig(root);
 const targetOf = (href: string) => linking.getStateFromPath(href, linking.config);
 
-/** The app's one stack, `(hymnal)`, as One's `Stack` declares its screens. */
 const hymnal = Option.getOrThrow(Arr.findFirst(root.children, (node) => node.route === '(hymnal)'));
 const config: Config = {
   routeNames: hymnal.children.map((node) => node.route),
@@ -138,7 +104,6 @@ const config: Config = {
   routeGetIdList: {},
 };
 
-/** The root state, its one screen `(hymnal)` holding `stack`. */
 const phone = (stack: Navigator): Navigator => ({
   type: 'stack',
   key: 'root',
@@ -147,11 +112,9 @@ const phone = (stack: Navigator): Navigator => ({
   routes: [{ key: 'hymnal', name: '(hymnal)', state: stack }],
 });
 
-/** The `(hymnal)` stack holding `screens`, the last shown, as `StackRouter` builds it. */
 const stackHolding = (screens: Target['routes']) =>
   phone(stackRouter.getRehydratedState({ routes: screens }, config));
 
-/** The stack a reader built by pushes: the screen One's linking config gives each path, keyed `k<at>`. */
 const stackOf = (paths: ReadonlyArray<string>) =>
   stackHolding(
     paths.map((path, at) => {
@@ -160,14 +123,11 @@ const stackOf = (paths: ReadonlyArray<string>) =>
     }),
   );
 
-/** The `(hymnal)` stack's state in `state`. */
 const stackIn = (state: Navigator): Navigator =>
   state.routes[0]?.state ?? { ...state, routes: [], index: -1 };
 
-/** The screen `state`'s stack shows. */
 const shownIn = (state: Navigator) => Arr.last(stackIn(state).routes);
 
-/** A screen named by its key, its route and its hymn number. */
 const label = (route: Option.Option<Route>) =>
   Option.match(route, {
     onNone: () => 'nothing',
@@ -175,7 +135,6 @@ const label = (route: Option.Option<Route>) =>
       [screen.key, screen.name, screen.params?.['number']].filter(Boolean).join(' '),
   });
 
-/** The shown screen's path, as `usePathname` gives it there. */
 const pathOf = (route: Option.Option<Route>) =>
   Option.match(route, {
     onNone: () => '/',
@@ -186,7 +145,6 @@ const pathOf = (route: Option.Option<Route>) =>
       ),
   });
 
-/** `action` handled by the navigator it targets, as React Navigation's container hands it on. */
 const dispatch = (state: Navigator, action: Action): Navigator => {
   const stack = stackIn(state);
   return Option.liftPredicate(action, (sent) => sent.target === stack.key).pipe(
@@ -198,12 +156,6 @@ const dispatch = (state: Navigator, action: Action): Navigator => {
   );
 };
 
-/**
- * The state after One's `linkTo` runs `event` for `href` over `state`
- * (`router.ts`): the action it builds, or, where that is null,
- * `navigationRef.resetRoot` to the target state, whose stack holds the
- * target's screen alone.
- */
 const linkTo = (state: Navigator, event: 'PUSH' | 'REPLACE', href: string): Navigator => {
   const target = targetOf(href);
   return Match.value(event).pipe(
@@ -217,20 +169,17 @@ const linkTo = (state: Navigator, event: 'PUSH' | 'REPLACE', href: string): Navi
   );
 };
 
-/** A step the app sends: the hymn's href, pushed or put in the shown page's place. */
 interface Step {
   readonly how: Exclude<Opening, 'stay'>;
   readonly href: string;
 }
 
-/** The step the app sends for hymn `n` chosen on the shown screen; a `stay` sends none. */
 const stepFor = (state: Navigator, n: number): Option.Option<Step> =>
   Option.liftPredicate(
     openingAt(pathOf(shownIn(state)), n),
     (how): how is Step['how'] => how !== 'stay',
   ).pipe(Option.map((how) => ({ how, href: String(hymnHref(n)) })));
 
-/** `state` after `step`, as One's `linkTo` takes it. */
 const take = (state: Navigator, step: Step): Navigator =>
   linkTo(
     state,
@@ -242,7 +191,6 @@ const take = (state: Navigator, step: Step): Navigator =>
     step.href,
   );
 
-/** Each hymn of `chosen` opened in turn on the shown screen: the steps sent, as the `one` stand-in records them, and the state after. */
 const choose = (paths: ReadonlyArray<string>, chosen: ReadonlyArray<number>) =>
   chosen.reduce<{ readonly steps: ReadonlyArray<string>; readonly state: Navigator }>(
     ({ steps, state }, n) =>
@@ -256,7 +204,6 @@ const choose = (paths: ReadonlyArray<string>, chosen: ReadonlyArray<number>) =>
     { steps: [], state: stackOf(paths) },
   );
 
-/** What a reader meets: the screens under the shown one, the shown one, and Back's screen. */
 const read = (state: Navigator) => {
   const stack = stackIn(state);
   const back = Option.fromNullishOr(

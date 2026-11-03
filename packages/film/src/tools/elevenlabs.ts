@@ -1,10 +1,3 @@
-// ElevenLabs through its CLI: speech and dialogue with timestamps,
-// speech-to-text, music and sound effects. Every request body is encoded and
-// every response decoded with Schema. Calls authenticate with an API key, from
-// ELEVENLABS_API_KEY or the Keychain entry of that name, when there is one,
-// and fall back to the CLI's OAuth login, which covers everything but sound
-// effects.
-
 import {
   Config,
   Context,
@@ -25,8 +18,6 @@ import { ApiKeyMissing } from './errors.ts';
 import { type Finished, collect, isNotFound } from './process.ts';
 
 const OUTPUT_FORMAT = 'mp3_44100_192';
-
-// Request bodies. Field order is what the CLI has always been sent.
 
 const OutputParams = Schema.fromJsonString(Schema.Struct({ output_format: Schema.String }));
 
@@ -66,16 +57,12 @@ const SoundEffectBody = Schema.fromJsonString(
   }),
 );
 
-// Responses.
-
-/** `auth status`: each credential scheme and whether it is logged in. */
 const AuthStatus = Schema.fromJsonString(
   Schema.Struct({
     schemes: Schema.Array(Schema.Struct({ scheme: Schema.String, logged_in: Schema.Boolean })),
   }),
 );
 
-/** `text-to-speech convert_with_timestamps`: the audio, and when each character is spoken. */
 const TtsResponse = Schema.Struct({
   audio_base64: Schema.String,
   alignment: Schema.Struct({
@@ -86,10 +73,6 @@ const TtsResponse = Schema.Struct({
 });
 type TtsResponse = typeof TtsResponse.Type;
 
-/**
- * `text-to-dialogue convert_with_timestamps`: as for speech, over the lines
- * joined with nothing between them, and where each voice's stretch starts.
- */
 const DialogueResponse = Schema.Struct({
   ...TtsResponse.fields,
   voice_segments: Schema.Array(
@@ -98,7 +81,6 @@ const DialogueResponse = Schema.Struct({
 });
 type DialogueResponse = typeof DialogueResponse.Type;
 
-/** One stretch of a transcript: a word, the spacing after it, or a sound (`(breath)`). */
 const SttWord = Schema.Struct({
   text: Schema.String,
   start: Schema.Finite,
@@ -106,23 +88,12 @@ const SttWord = Schema.Struct({
   type: Schema.String,
 });
 
-/**
- * `speech-to-text convert`: what a take actually says, and when each word of
- * it was heard (a person's take is timed by these).
- */
 export const SttResponse = Schema.Struct({
   text: Schema.String,
-  /** Absent when the reply carries no timestamps: `heardWords` refuses that for a take. */
   words: Schema.optionalKey(Schema.Array(SttWord)),
 });
 export type SttResponse = typeof SttResponse.Type;
 
-/**
- * The words a transcript heard, in order, with their times: spacing and sound
- * events left out. A reply whose text has words but whose timestamps time
- * none of them fails `SttUntimed`: a take timed by nothing would place every
- * script word in one guessed gap. A reply that heard nothing has no words.
- */
 export const heardWords = (
   reply: SttResponse,
   file: string,
@@ -141,13 +112,11 @@ export const heardWords = (
 export interface TtsRequest {
   readonly text: string;
   readonly voice: Reader;
-  /** The neighbouring lines, so a take continues the read (models before v3 only). */
   readonly previousText: string;
   readonly nextText: string;
 }
 
 export interface DialogueRequest {
-  /** The take's lines in order, each with its voice. */
   readonly lines: ReadonlyArray<Line>;
   readonly cast: Cast;
 }
@@ -155,12 +124,9 @@ export interface DialogueRequest {
 export interface SoundEffectRequest {
   readonly prompt: string;
   readonly secs: number;
-  /** `prompt_influence`, 0–1. */
   readonly influence: number;
-  /** Made to loop seamlessly. */
   readonly loop: boolean;
   readonly model: string;
-  /** The API's `output_format`: `pcm_44100` is raw 16-bit little-endian mono. */
   readonly format: string;
 }
 
@@ -170,15 +136,12 @@ interface ElevenLabsService {
     request: DialogueRequest,
   ) => Effect.Effect<DialogueResponse, ElevenLabsFailed>;
   readonly stt: (file: string) => Effect.Effect<SttResponse, ElevenLabsFailed>;
-  /** Compose the score from its plan into `out`. */
   readonly composeMusic: (
     plan: Plan,
     model: typeof MusicModel.Type,
     out: string,
   ) => Effect.Effect<void, ElevenLabsFailed>;
-  /** Preflight: the CLI is installed and logged in (free: reads the local credential store). */
   readonly ready: Effect.Effect<void, ElevenLabsFailed>;
-  /** The key sound effects need; resolved once. */
   readonly apiKey: Effect.Effect<Redacted.Redacted<string>, ApiKeyMissing>;
   readonly soundEffect: (
     request: SoundEffectRequest,
@@ -186,11 +149,6 @@ interface ElevenLabsService {
   ) => Effect.Effect<void, ElevenLabsFailed | ApiKeyMissing>;
 }
 
-/**
- * Whether a model is sent the neighbouring lines: v3 and v4 read each line
- * alone (v4 stays out of the neighbouring text until a take shows the
- * stitching works on it); earlier models take it as context.
- */
 export const sendsNeighbours = (model: string): boolean =>
   model !== 'eleven_v3' && model !== 'eleven_v4';
 
@@ -210,7 +168,6 @@ const failed = (op: string) => (error: Schema.SchemaError | PlatformError) =>
 export class ElevenLabs extends Context.Service<ElevenLabs, ElevenLabsService>()(
   '@manna/film/tools/ElevenLabs',
 ) {
-  /** Through the `elevenlabs` CLI. */
   static readonly layer = Layer.effect(
     ElevenLabs,
     Effect.gen(function* () {
@@ -228,7 +185,6 @@ export class ElevenLabs extends Context.Service<ElevenLabs, ElevenLabsService>()
           }),
         );
 
-      /** The environment first, then the Keychain; an empty value counts as none. */
       const lookupKey = Effect.gen(function* () {
         const env = yield* Config.option(Config.Redacted('ELEVENLABS_API_KEY')).pipe(
           Effect.orElseSucceed(() => Option.none<Redacted.Redacted<string>>()),
@@ -251,13 +207,6 @@ export class ElevenLabs extends Context.Service<ElevenLabs, ElevenLabsService>()
       });
       const apiKey = yield* Effect.cached(lookupKey);
 
-      /**
-       * `elevenlabs <args>`, authenticated by the API key when there is one. The
-       * CLI's OAuth login refreshes its token on use, and concurrent calls race
-       * that refresh: the losers present a spent refresh token and the login is
-       * revoked mid-run. A key has no refresh, so calls with one run in
-       * parallel; calls on the login run one at a time.
-       */
       const oauth = yield* Semaphore.make(1);
       const elevenlabs = (op: string, args: ReadonlyArray<string>) =>
         Effect.gen(function* () {

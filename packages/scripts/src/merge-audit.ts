@@ -1,34 +1,4 @@
 #!/usr/bin/env bun
-// How a merge resolved its conflicts: redoes git's own merge of the two
-// parents (`git merge-tree --write-tree`), and for each file the merge commit
-// differs from it in, prints the lines one parent added that the resolution
-// dropped and the lines one parent removed that it brought back. A conflict
-// resolved by taking one side's file whole shows up here as the other side's
-// edits, line by line.
-//
-//   bun run merge-audit           # the checkout's HEAD, a merge
-//   bun run merge-audit <merge>   # another merge commit
-//
-// Prints `merge-audit <sha> conflicted=<n> resolved-by-hand=<n>`, then per
-// file either `… keeps both parents' edits` or one `dropped ^1|^2: "<line>"` /
-// `restored ^1|^2: "<line>"` line per edit lost (^1 is the branch merged into,
-// ^2 the one merged). Then each merge the merged branch made itself (a batch's
-// merge of main, where its conflicts were resolved), oldest first, the same
-// way under `merge-audit <sha> inside <merge> conflicted=<n> …`. The loop
-// pastes the output onto the batch's ledger row, each lost line with why.
-// Exits non-zero only when the commit is not a merge or git fails; a commit
-// that is not a merge prints its refusal alone.
-//
-//   bun run merge-audit --review <file> [--review <file>…]
-//
-// The unit's reviews against the lessons ledger (`lessons/ledger.ts`): prints
-// `merge-audit review <unit>/<file> F<n> routed <entry>` for each finding an
-// entry of `docs/lessons.md` cites, `… declined` for one its review classes
-// `none` and no entry cites (a finding with no guard needs no entry), `…
-// unrouted` for any other one no entry cites, `… no guard class` or `… no
-// cheapest guard` for one that leaves its line out, and `merge-audit ledger
-// <problem>` for an entry whose guard its file does not hold. It exits
-// non-zero on any of them but `declined`.
 
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -50,30 +20,22 @@ class NotAMerge extends Schema.TaggedError<NotAMerge>()('NotAMerge', {
   override readonly [Runtime.errorReported] = false;
 }
 
-/**
- * A git command's stdout, whatever its exit code: `merge-tree` exits 1 on a
- * conflict, and its tree is still the answer. `--review` reads the root
- * through `gitChecked`, which fails on a non-zero exit.
- */
 const git = (args: ReadonlyArray<string>) =>
   Effect.flatMap(ChildProcessSpawner, (spawner) =>
     spawner.string(ChildProcess.make('git', args, { forceKillAfter: '5 seconds' })),
   );
 
-/** A commit's full sha, or none when `ref` names no commit. */
 const shaOf = (ref: string) =>
   git(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]).pipe(
     Effect.map((out) => Option.liftPredicate(out.trim(), (sha) => sha !== '')),
     Effect.orElseSucceed(() => Option.none<string>()),
   );
 
-/** A file's text at a commit or tree; empty where it does not exist. */
 const textAt = (tree: string, file: string) =>
   git(['show', `${tree}:${file}`]).pipe(Effect.orElseSucceed(() => ''));
 
 const lines = (out: string) => out.split('\n').filter((line) => line !== '');
 
-/** Print one merge's audit: its head line, then each file its resolution changed. */
 const auditOne = (merge: string, second: string, inside: Option.Option<string>) =>
   Effect.gen(function* () {
     const first = `${merge}^1`;
@@ -94,7 +56,6 @@ const auditOne = (merge: string, second: string, inside: Option.Option<string>) 
     );
   });
 
-/** A merge's second parent, or NotAMerge naming `ref`. */
 const secondOf = (merge: string, ref: string) =>
   Effect.flatMap(shaOf(`${merge}^2`), (sha) =>
     Effect.fromOption(sha).pipe(Effect.mapError(() => NotAMerge.make({ commit: ref }))),
@@ -106,15 +67,12 @@ const audit = Effect.fn('mergeAudit')(function* (ref: string) {
   );
   const second = yield* secondOf(merge, ref);
   yield* auditOne(merge, second, Option.none());
-  // The merged branch's own merges (of main, mostly), oldest first: a conflict
-  // resolved there reaches this merge already resolved.
   const inner = lines(yield* git(['rev-list', '--merges', '--reverse', `${merge}^1..${second}`]));
   yield* Effect.forEach(inner, (sha) =>
     Effect.flatMap(secondOf(sha, sha), (two) => auditOne(sha, two, Option.some(merge))),
   );
 });
 
-/** A git step `--review` reads (the root): it exited non-zero. */
 class GitFailed extends Schema.TaggedError<GitFailed>()('GitFailed', {
   command: Schema.String,
   output: Schema.String,
@@ -125,7 +83,6 @@ class GitFailed extends Schema.TaggedError<GitFailed>()('GitFailed', {
   override readonly [Runtime.errorReported] = false;
 }
 
-/** A git command's stdout, or GitFailed with what it printed when it exits non-zero. */
 const gitChecked = (args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner;
@@ -147,7 +104,6 @@ const gitChecked = (args: ReadonlyArray<string>) =>
     });
   }).pipe(Effect.scoped);
 
-/** A review whose findings are not all routed to the ledger, or a ledger whose guards do not hold. */
 class Unrouted extends Schema.TaggedError<Unrouted>()('Unrouted', {
   problems: Schema.Finite,
 }) {
@@ -157,11 +113,6 @@ class Unrouted extends Schema.TaggedError<Unrouted>()('Unrouted', {
   override readonly [Runtime.errorReported] = false;
 }
 
-/**
- * `--review <file>…`: each finding of the reviews routed to the ledger entry
- * that cites it, each finding's guard lines read, and the ledger held to its
- * guards, at the checkout's root.
- */
 const review = Effect.fn('mergeAudit.review')(function* (files: ReadonlyArray<string>) {
   const root = (yield* gitChecked(['rev-parse', '--show-toplevel'])).trim();
   const routes = yield* reviewRoutes(root, files);

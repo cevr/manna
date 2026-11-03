@@ -1,22 +1,3 @@
-// A cast member's sheet record (`cast-sheet.json`): what its sheets are
-// painted from and every try made of them. The author writes the member's
-// pronoun, its scope (the library's, for a person every film shares, or one
-// film's own role), the reference images and what each is for, and per kind
-// the anchor view and, for poses and heads, the layout and each view's slot;
-// the look paragraph is `look.md` beside it. `film concept cast` adds each
-// try as it lands: its file, the prompt and references it was drawn from,
-// whether the underlay rode along, and what the measure flagged. It holds no
-// height: a sheet never sets a member's height (the cast band does). It
-// holds the member's proportion, how many of its own heads the grown member
-// stands (the cast's canon, 3.36, unless its design names its own: the plain
-// lead's 2.6), and, on a sheet that draws a smaller figure beside the grown
-// one (a child, a baby), that figure's share of the grown height as the
-// band gives it and its own heads; the brief, the underlay and the measure
-// read each figure's size from there. It says too whether the member's hair
-// shows, so a brief speaks of the hair only on a member whose hair is seen,
-// and whether it has a beard, so a brief tells of a beard only on one who has it.
-// Pure.
-
 import { Array as Arr, Boolean as Bool, Option, Predicate, Result, Schema } from 'effect';
 import {
   keptFile,
@@ -31,36 +12,26 @@ import { PixelBox } from './figure.ts';
 import { repoJson } from './schema.ts';
 import { Segment } from './segment.ts';
 
-/** Where a member's sheet lives: the library (a person every film shares) or one film (its own role). */
 const CastScope = Schema.Literals(['library', 'film']);
 
-/** A reference image, by its file in the sheet's folder, and what it is for. */
 const CastRef = Schema.Struct({ file: Schema.String, why: Schema.String });
 
-/** A flag as the record keeps it: the check and the views. */
 const CastFlag = Schema.Struct({ check: SheetCheck, views: Schema.Array(Schema.Int) });
 
-/** One try of a sheet: its number, its file under the film's `out/`, how it was drawn and what the measure flagged. */
 const CastTry = Schema.Struct({
   n: Schema.Int,
   file: Schema.String,
   prompt: Schema.String,
-  /** The references it was drawn from, each as the sheet's folder reaches it. */
   refs: Schema.Array(Schema.String),
-  /** Whether the underlay rode along as the last reference. */
   underlay: Schema.Boolean,
-  /** The try this one draws again, its drift named in the prompt. */
   retryOf: Schema.optionalKey(Schema.Int),
   flags: Schema.Array(CastFlag),
-  /** Why the measure could not read the try, when it could not: no flags then means nothing was read. */
   unread: Schema.optionalKey(Schema.String),
-  /** The anchor's squash to the canon, in percent, where it reads. */
   squash: Schema.optionalKey(Schema.Finite),
   at: Schema.String,
 });
 export type CastTry = typeof CastTry.Type;
 
-/** A kept concept a sheet's views are held to: a reference image, the member's box in it, and the views (1-based) that face as it does. */
 const CastConcept = Schema.Struct({
   file: Schema.String,
   box: PixelBox,
@@ -68,36 +39,26 @@ const CastConcept = Schema.Struct({
 });
 type CastConcept = typeof CastConcept.Type;
 
-/** A figure's height in its own heads: more than one head, and no taller than a standing figure is drawn. */
 const Heads = Schema.Finite.check(Schema.isBetween({ minimum: 1.5, maximum: 8 }));
 
-/** A smaller figure a sheet draws (a child, a baby): its view, its share of the grown member's height, its own heads. */
 const CastFigure = Schema.Struct({
   view: Schema.Int,
   height: Schema.Finite.check(Schema.isBetween({ minimum: 0.2, maximum: 1 })),
   heads: Heads,
 });
 
-/** One kind of sheet of the member: its anchor view, and for poses and heads the layout and the slots. */
 const CastSheetOf = Schema.Struct({
-  /** The view the rest are held to, 1-based: the one that faces as the kept concept does. */
   anchor: Schema.Int,
-  /** The poses or heads, left to right, in words (a turnaround's are the house's six). */
   layout: Schema.optionalKey(Schema.String),
   slots: Schema.optionalKey(Schema.Array(Slot)),
-  /** The views whose height is held to the anchor's (a turnaround: all of them). */
   standing: Schema.optionalKey(Schema.Array(Schema.Int)),
-  /** The views whose head is level, neither bowed nor lifted: the hair's fall, and on a heads sheet the head's height, are held on these (all of them when left out). */
   level: Schema.optionalKey(Schema.Array(Schema.Int)),
-  /** The kept concepts the views are critiqued against: a reference's file, the member's box in it, and the views that face as it does. */
   concepts: Schema.optionalKey(Schema.Array(CastConcept)),
-  /** The smaller figures the sheet draws beside the grown member, each its own size; every other view is the grown member. */
   figures: Schema.optionalKey(Schema.Array(CastFigure)),
   tries: Schema.Array(CastTry),
 });
 type CastSheetOf = typeof CastSheetOf.Type;
 
-/** A turnaround's views by name, left to right: the names a kept view's crop is filed by (`views/<name>.png`), the trace's sources. */
 const TURNAROUND_VIEWS = [
   'front',
   'threeQuarterLeft',
@@ -107,10 +68,8 @@ const TURNAROUND_VIEWS = [
   'threeQuarterRight',
 ] as const;
 
-/** A view kept: its number on the sheet, its name and its box in the kept try. */
 const CastKeptView = Schema.Struct({ view: Schema.Int, name: Schema.String, box: PixelBox });
 
-/** A kind kept: the try, the owner's why (and the ask it was answered on), and each view's crop. */
 const CastKept = Schema.Struct({
   try: Schema.Int,
   why: Schema.String,
@@ -119,13 +78,10 @@ const CastKept = Schema.Struct({
 });
 export type CastKept = typeof CastKept.Type;
 
-/** A kept kind replaced on the owner's answer: the keep as it stood, the try kept in its place, where its files went, the ask, his why and when. */
 const CastReplaced = Schema.Struct({
   kind: SheetKind,
   kept: CastKept,
-  /** The try kept in its place. */
   by: Schema.Int,
-  /** The folder its kept sheet and views were moved to, as the sheet's folder reaches it. */
   folder: Schema.String,
   ask: Schema.String,
   why: Schema.String,
@@ -135,43 +91,32 @@ const CastReplaced = Schema.Struct({
 export const CastSheetRecord = Schema.Struct({
   member: Segment,
   scope: CastScope,
-  /** How the brief names the member: "Him", "her". */
   who: Schema.String,
-  /** A headcloth or a veil: the head is read as its face opening. */
   headgear: Schema.optionalKey(Schema.Boolean),
-  /** Whether the member's hair shows: `covered` under a headcloth, `none` on a figure drawn with no hair; shown when left out. */
   hair: Schema.optionalKey(Schema.Literals(['shown', 'covered', 'none'])),
-  /** Whether the member has a beard: `shown` on a figure whose look draws one; none when left out, so a brief tells of a beard only where the record names it. */
   beard: Schema.optionalKey(Schema.Literals(['shown', 'none'])),
-  /** How many of its own heads the grown member stands: the cast's canon (3.36) when left out. */
   heads: Schema.optionalKey(Heads),
   refs: Schema.Array(CastRef),
   sheets: Schema.Struct({
     turnaround: Schema.optionalKey(CastSheetOf),
     poses: Schema.optionalKey(CastSheetOf),
     heads: Schema.optionalKey(CastSheetOf),
-    /** Single drawings, one figure each: each try is one drawing. */
     single: Schema.optionalKey(CastSheetOf),
   }),
-  /** Each kind the owner kept: never drawn again (an added view is drawn beside it), and replaced only on his answer to an ask. */
   kept: Schema.optionalKey(
     Schema.Struct({
       turnaround: Schema.optionalKey(CastKept),
       poses: Schema.optionalKey(CastKept),
       heads: Schema.optionalKey(CastKept),
-      /** Each single drawing kept, one view each (`single-<n>`), each its own file (`kept/single-<n>.png`). */
       single: Schema.optionalKey(Schema.Array(CastKept)),
     }),
   ),
-  /** Each keep the owner replaced, oldest first. */
   replaced: Schema.optionalKey(Schema.Array(CastReplaced)),
 });
 export type CastSheetRecord = typeof CastSheetRecord.Type;
 
-/** The record as `cast-sheet.json` holds it. */
 export const CastSheetJson = repoJson(CastSheetRecord);
 
-/** A kind the record does not set up as asked: no entry, or poses and heads with no layout or slots, or an anchor off the sheet; or a single drawing, which is kept by hand and never drawn. */
 class CastKindUnset extends Schema.TaggedError<CastKindUnset>()('CastKindUnset', {
   member: Schema.String,
   kind: SheetKind,
@@ -182,14 +127,12 @@ class CastKindUnset extends Schema.TaggedError<CastKindUnset>()('CastKindUnset',
   }
 }
 
-/** What one kind of the member's sheet is drawn and measured by: its layout in words, the measure's options and the kept concepts its views are held to. */
 export interface CastKindPlan {
   readonly layout: Option.Option<string>;
   readonly options: SheetOptions;
   readonly concepts: ReadonlyArray<CastConcept>;
 }
 
-/** The kind's plan: a turnaround's six house slots, or a poses or heads sheet's own. A single drawing has none: the owner keeps it by hand, so no tool draws or measures a try of one. */
 export const castKindPlan = (
   record: CastSheetRecord,
   kind: SheetKind,
@@ -206,7 +149,6 @@ export const castKindPlan = (
     onFalse: () => sheetPlan(record, kind),
   });
 
-/** A sheet kind's plan, as `castKindPlan` reads it. */
 const sheetPlan = (
   record: CastSheetRecord,
   kind: SheetKind,
@@ -262,20 +204,16 @@ const sheetPlan = (
   });
 };
 
-/** Whether the member's hair shows: a brief speaks of the hair and its parting from the beard only then. */
 export const hairShows = (record: CastSheetRecord): boolean => (record.hair ?? 'shown') === 'shown';
 
-/** Whether the member has a beard: a brief parts the beard from the hair only then (and only where the hair shows). */
 export const beardShows = (record: CastSheetRecord): boolean => record.beard === 'shown';
 
-/** The number the kind's next try takes. */
 export const nextCastTry = (record: CastSheetRecord, kind: SheetKind): number =>
   Option.match(Option.fromUndefinedOr(record.sheets[kind]), {
     onNone: () => 1,
     onSome: (sheet) => Arr.reduce(sheet.tries, 0, (n, t) => Math.max(n, t.n)) + 1,
   });
 
-/** The record with `tried` added to the kind's tries. */
 export const withCastTry = (
   record: CastSheetRecord,
   kind: SheetKind,
@@ -289,14 +227,12 @@ export const withCastTry = (
     }),
   });
 
-/** A view's name as its crop is filed: a turnaround's by the house's names, a poses or heads sheet's by its kind and number. */
 export const viewName = (kind: SheetKind, view: number): string =>
   Option.getOrElse(
     Option.filter(Arr.get(TURNAROUND_VIEWS, view - 1), () => kind === 'turnaround'),
     () => `${kind}-${view}`,
   );
 
-/** The kind's keeps: a sheet kind's one keep, or each single drawing kept; none when the kind is not kept. */
 export const keptOf = (record: CastSheetRecord, kind: SheetKind): ReadonlyArray<CastKept> => {
   if (kind === 'single') return record.kept?.single ?? [];
   return Option.match(Option.fromUndefinedOr(record.kept?.[kind]), {
@@ -305,7 +241,6 @@ export const keptOf = (record: CastSheetRecord, kind: SheetKind): ReadonlyArray<
   });
 };
 
-/** The record with the kind kept as `kept`: a single drawing is added beside the others, or replaces the keep of the same view. */
 export const withCastKept = (
   record: CastSheetRecord,
   kind: SheetKind,
@@ -322,7 +257,6 @@ export const withCastKept = (
   return { ...record, kept: { ...record.kept, single } };
 };
 
-/** The record with `replaced.kind` kept as `kept` and the keep it replaced added to the history. */
 export const withCastReplaced = (
   record: CastSheetRecord,
   kept: CastKept,
@@ -332,12 +266,6 @@ export const withCastReplaced = (
   replaced: [...(record.replaced ?? []), replaced],
 });
 
-/**
- * Whether a file of the member's kept sheets (`kept/<kind>.png`, or a view
- * cut from one, `views/<name>.png`) held something else at `at` (ISO): a
- * keep of its kind, or one that kept that view, was replaced after it. A
- * file of no kept sheet never changes so.
- */
 export const replacedSince = (record: CastSheetRecord, file: string, at: string): boolean => {
   const since = (record.replaced ?? []).filter((r) => r.at > at);
   const [folder, name] = file.split('/');

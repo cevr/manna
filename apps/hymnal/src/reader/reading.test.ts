@@ -1,7 +1,3 @@
-/**
- * The reading settings' schema and the page's text style they give.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { Schema } from 'effect';
 
@@ -59,7 +55,6 @@ describe('the reading settings', () => {
   });
 
   it("widen the hanging indent with the system's text size", () => {
-    // Each indent is rounded to whole points, so twice the size lands within a point of twice the indent.
     const twice =
       readingStyle(defaultReading, 2).indent - 2 * readingStyle(defaultReading, 1).indent;
     expect(Math.abs(twice)).toBeLessThanOrEqual(1);

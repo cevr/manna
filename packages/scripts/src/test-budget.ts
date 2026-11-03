@@ -1,44 +1,4 @@
 #!/usr/bin/env bun
-// `bun run test:budget [<workspace>…]`: the tests' time budget. Each
-// unit-test task (`test-budget/units.ts`: a workspace's `test`, or each part
-// of a workspace whose tests are cut into parts) finishes in under 1 second
-// wall on the owner's laptop, measured alone (owner, 2026-10-22: "our unit
-// test should be under a second for sure"); there is no budget on the sum
-// (owner, 2026-10-18: "should not ahve their tests and budgets entangled").
-// This runs each unit-test task by itself, one after another, as `turbo run
-// <task> --filter=<workspace> --force` (`--force` runs the cached task again
-// rather than replay it; its dependencies' `transit` tasks do nothing), reads
-// that task's span (`<ws>#<task>`) from turbo's run summary, and fails when
-// any one reaches its workspace's budget. Named workspaces have each of their
-// unit-test tasks measured and the rest are left out; with none named, every
-// unit-test task of every workspace that `bun run test` runs is measured.
-//
-// A run reads only the summary its own turbo names on its `Summary:` line,
-// and removes only that file: another run's summary in the same
-// `.turbo/runs` is never read or removed. When turbo names no summary, more
-// than one, one outside `.turbo/runs`, or one that does not decode or names no
-// `<ws>#<task>`, the task has no time, at any exit code: nothing is measured
-// or removed, its line names its exit code and no time, and the run fails.
-//
-// Local only, like `test:perf`: CI's runners are smaller and shared, so a
-// wall-clock budget there would fail on the runner, not on the code. In CI
-// the guard is each test's timeout: bun's 5 s, which no unit-test task's
-// script raises (`test-budget/strength.ts`, held over every one by its test)
-// and no test raises but a spawn budget (`film/tests-keep-their-strength`). A
-// workspace with a unit-test task whose script weakens its tests is not
-// measured: the run names each flag and fails. Neither is one with a test
-// file no script of it runs, or one two of its unit-test tasks run
-// (`test-budget/reach.ts`): the run names each file and fails.
-//
-// The 1- and 5-minute load averages before the first task runs and the core
-// count are printed beside the times: read once, since each task's run lifts
-// the averages the next would read. A machine busier than its cores by either
-// average measures nothing (the 5-minute one keeps a lull of a minute in a
-// busy period from admitting the run): the run prints "not measured (load
-// average N over 1 min and M over 5 min, on C cores)" as its last line, and
-// nothing measures it again. At or below the core count, a task at or over
-// its workspace's budget fails. The verdict and its exit code are the judge's
-// (`test-budget/budget.ts`, its header).
 
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
@@ -62,7 +22,6 @@ import { reachesIn, repoTests } from './test-budget/reach.js';
 import { weakeningFlags } from './test-budget/strength.js';
 import { type UnitTest, testDryRun, unitTests } from './test-budget/units.js';
 
-/** What this reads of turbo's run summary (`--summarize`): each task's span. */
 const RunSummary = Schema.Struct({
   tasks: Schema.Array(
     Schema.Struct({
@@ -72,40 +31,28 @@ const RunSummary = Schema.Struct({
   ),
 });
 
-/** A name given that no workspace's unit-test task answers to. */
 class UnknownWorkspace extends Schema.TaggedError<UnknownWorkspace>()('UnknownWorkspace', {
   message: Schema.String,
 }) {}
 
-/** A workspace with a unit-test task whose script weakens its tests: its time would not be its tests' at full strength. */
 class WeakenedTests extends Schema.TaggedError<WeakenedTests>()('WeakenedTests', {
   message: Schema.String,
 }) {}
 
-/** A workspace with a test file no script of it runs: its time would leave that file out. */
 class UnreachedTests extends Schema.TaggedError<UnreachedTests>()('UnreachedTests', {
   message: Schema.String,
 }) {}
 
-/** A workspace with a test file two of its unit-test tasks run: the gate runs it twice. */
 class DoubledTests extends Schema.TaggedError<DoubledTests>()('DoubledTests', {
   message: Schema.String,
 }) {}
 
-/** A run whose own turbo left no summary this can read: no path printed, or a file that does not decode or names no `<ws>#<task>`. */
 class SummaryUnreadable extends Schema.TaggedError<SummaryUnreadable>()('SummaryUnreadable', {
   message: Schema.String,
 }) {}
 
-/** turbo's line naming the summary it wrote: `Summary:    <root>/.turbo/runs/<id>.json`. */
 const SUMMARY_LINE = /^Summary:\s+(\S.*\.json)\s*$/;
 
-/**
- * This run's own summary, by the path its own turbo printed: the file, and the
- * span of `taskId` in it. Nothing else in `.turbo/runs` is read, so a summary
- * another writer left there (a second budget run, a hand-run turbo) is never
- * taken for this one.
- */
 const ownSummary = (runs: string, taskId: string, printed: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -134,15 +81,12 @@ const ownSummary = (runs: string, taskId: string, printed: ReadonlyArray<string>
     return { file, ms: task.value.execution.endTime - task.value.execution.startTime };
   });
 
-/** Runs one unit-test task alone and answers its time and its exit code. */
 const measure = (root: string, unit: UnitTest) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const spawner = yield* ChildProcessSpawner;
     yield* Console.log(`\ntest:budget: ${unit.taskId} alone`);
-    // turbo's output is passed on line by line, and its `Summary:` line kept:
-    // the path of the one summary this run wrote.
     const [exitCode, printed] = yield* Effect.scoped(
       Effect.flatMap(
         spawner.spawn(
@@ -185,9 +129,7 @@ const measure = (root: string, unit: UnitTest) =>
     const own = yield* Effect.result(
       ownSummary(path.join(root, '.turbo', 'runs'), unit.taskId, printed),
     );
-    // Only the summary this run read is removed; `force` lets one another hand removed first pass.
     if (Result.isSuccess(own)) yield* fs.remove(own.success.file, { force: true });
-    // At any exit, a task whose own summary did not read has no time: the judge names its exit and fails the run.
     if (Result.isFailure(own)) yield* Console.error(own.failure.message);
     return {
       workspace: unit.workspace,
@@ -200,7 +142,6 @@ const measure = (root: string, unit: UnitTest) =>
     };
   });
 
-/** A refusal: its words on stderr, and the run fails. */
 const refuse = (message: string) =>
   Effect.andThen(
     Console.error(message),
@@ -222,7 +163,6 @@ const command = Command.make(
   ({ names }) =>
     Effect.gen(function* () {
       const path = yield* Path.Path;
-      // packages/scripts/src → the repo root.
       const root = path.resolve(import.meta.dir, '..', '..', '..');
       const units = unitTests(yield* testDryRun(root, 'turbo'));
       const known = Arr.dedupe(units.map((unit) => unit.workspace));
@@ -236,7 +176,6 @@ const command = Command.make(
         onNonEmpty: (given) => Arr.dedupe(given),
       });
       const measured = chosen.flatMap((name) => units.filter((unit) => unit.workspace === name));
-      // A weakened suite fits the budget by running less, so none is measured.
       const weakened = measured.flatMap((unit) =>
         weakeningFlags(unit.command).map((why) => `${unit.taskId}: ${why}`),
       );
@@ -244,8 +183,6 @@ const command = Command.make(
         return yield* WeakenedTests.make({
           message: `test:budget: nothing is measured; a unit-test task's script weakens its tests:\n${weakened.join('\n')}`,
         });
-      // A suite that leaves a test file out fits the budget by running less, and
-      // one that runs a file twice is a part list that drifted, so neither is measured.
       const dirs = Arr.dedupe(measured.map((unit) => unit.directory));
       const { workspaces: all, tests: sources } = yield* repoTests(root, units);
       const reached = reachesIn(all, sources).filter(({ file }) =>
@@ -263,7 +200,6 @@ const command = Command.make(
         return yield* DoubledTests.make({
           message: `test:budget: nothing is measured; two unit-test tasks of its workspace run these test files:\n${doubled.join('\n')}`,
         });
-      // The machine's load before the run: what else was running, not the run's own.
       const [one = 0, five = 0] = loadavg();
       const tasks = yield* Effect.forEach(measured, (unit) => measure(root, unit));
       const judged = judge({ tasks, load: { one, five }, cores: availableParallelism() });

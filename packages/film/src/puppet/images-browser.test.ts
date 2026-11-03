@@ -1,19 +1,11 @@
-// A page's part PNG decoded into a bitmap holds memory outside the heap until
-// it is closed: the page's reader closes it whether the read goes on to
-// succeed or fails after the decode. Bun has no decoder and no DOM, so the
-// page's `createImageBitmap` and `document` are stood in for the test's scope
-// and put back after.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Exit, Layer, Option } from 'effect';
 import { HttpClient, HttpClientResponse } from 'effect/http';
 import { PuppetImagesBrowser } from './images-browser.ts';
 import { PuppetImages } from './images.ts';
 
-/** The page's globals the test stands in for. */
 const GLOBALS = ['createImageBitmap', 'document'] as const;
 
-/** A page whose decoder hands back 2 × 2 bitmaps it counts the closes of, and whose canvases have no 2D context. */
 const pageWithNo2d = Effect.acquireRelease(
   Effect.sync(() => {
     const saved = GLOBALS.map(
@@ -23,7 +15,6 @@ const pageWithNo2d = Effect.acquireRelease(
     Reflect.set(globalThis, 'createImageBitmap', () =>
       Effect.runPromise(Effect.succeed({ width: 2, height: 2, close: () => void counts.closed++ })),
     );
-    // A canvas whose `getContext` answers nothing, as a page with no 2D context does.
     Reflect.set(globalThis, 'document', {
       createElement: () => ({
         width: 0,
@@ -41,7 +32,6 @@ const pageWithNo2d = Effect.acquireRelease(
     }),
 );
 
-/** A client that answers every URL with a PNG's first bytes. */
 const pngBytes = Layer.succeed(
   HttpClient.HttpClient,
   HttpClient.make((request) =>

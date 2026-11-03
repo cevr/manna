@@ -1,24 +1,3 @@
-// Floating hands, the canvas kit's look from before 2026-10-18 (DIRECTION,
-// "Hands"), when no arm was drawn: the house hand is now a circle at the end
-// of an arm in its sleeve (CRAFT rule 12), drawn by the Rive rigs. Here a
-// figure's hand is the one mitten, floating free near its body. At rest it floats at its
-// spot beside the body, bobbing a little with the figure's breath. When it
-// has work to do it travels there on a named cue along a soft arc round its
-// shoulder, as a hand on an unseen arm would, swings a little past its reach
-// and settles; when the work is done it travels back the same way. It never
-// goes farther from its shoulder than the figure's reach (`HandStyle.radius`:
-// `film check` flags a target past it, `HandFar`). Its grip forms as it
-// arrives. Where it is and how it is turned are pure functions of its
-// shoulder, its rest, its gesture and the breath, written into buffers this
-// module keeps (no allocation a frame), so a frame draws the same hand
-// however it was reached, and nothing flips.
-//
-// The close-up (`closeHand`) is the same hand, big, palm up, with the ink a
-// hand is allowed at that size: two finger-joint lines and a lifeline. A
-// figure's own hand turns palm up into the close-up's shape
-// (`Gesture.turn`) before a push into it, so the small hand and the big one
-// are one shape at two scales.
-
 import { BOIL_FPS, type Hand, type Pt, spline, stroke, sub } from './ink.ts';
 import { cutout } from './cutout.ts';
 import { PAPER_EDGES, piece } from './piece.ts';
@@ -26,30 +5,10 @@ import { probeHand, probesHands } from './probe.ts';
 import { clamp, lerp } from '../core/time.ts';
 import { hash } from '../core/random.ts';
 
-/**
- * What a hand does with its mitten: `open` flat and reaching (receiving,
- * giving, touching), `hold` closed round something, `point` its forefinger
- * out, `palm` spread wide, the palm shown (stop; only speak the word).
- */
 export type Grip = 'open' | 'hold' | 'point' | 'palm';
 
 export const GRIPS: ReadonlyArray<Grip> = ['open', 'hold', 'point', 'palm'];
 
-/**
- * One hand at work: where it goes (`to`, the mitten's centre), how far it
- * has travelled there from its rest (0 at rest, 1 there: a named cue's
- * `f.at`), and its grip (`open` unless given), which forms as it arrives.
- * `turn` (0 unless given, a named cue's `f.at`) turns the hand palm up to
- * receive, into the close-up's shape at the mitten's size, its palm's middle
- * on `to` and its fingers up: a push into the hand (`closeHand`) starts
- * from it.
- *
- * A hand at work that changes its grip mid-act (a finger writing, then the
- * hand opening to send) names the grip it held as `was` and how far it has
- * changed as `change` (a named cue's `f.at`): it arrives forming `was`, then
- * morphs from `was` into `grip`, point for point, as `change` goes 0 to 1. It
- * never swaps one grip for another in a frame.
- */
 export interface Gesture {
   readonly to: Pt;
   readonly reach: number;
@@ -59,30 +18,14 @@ export interface Gesture {
   readonly change?: number;
 }
 
-/** How a figure's hands are cut and how far they float, in the figure's own units. */
 export interface HandStyle {
-  /** The mitten's paper and the ink round it. */
   readonly skin: string;
   readonly outline: string;
-  /** The mitten's length, wrist to fingertips. */
   readonly mitten: number;
-  /** The outline's width, in px. */
   readonly line: number;
-  /**
-   * The figure's reach: the farthest its hand works from its shoulder. A
-   * target past it is a staging error `film check` flags (`HandFar`); the
-   * hand is never stretched out to it.
-   */
   readonly radius: number;
 }
 
-/**
- * Where a hand belongs on its figure: the shoulder it moves round (and its
- * reach is measured from), where it floats at rest, the side of the body it
- * is on (`away`: −1 the far side, −x; 1 the near, +x; its thumb and its arc
- * keep to that side), and the figure's breath now, −1..1 (`breathOf`), which
- * it bobs with at rest.
- */
 export interface HandRoot {
   readonly shoulder: Pt;
   readonly rest: Pt;
@@ -90,58 +33,31 @@ export interface HandRoot {
   readonly breath: number;
 }
 
-/** How long a figure's breath takes, in seconds. */
 const BREATH_PERIOD = 3.6;
-/** How far a hand at rest bobs with the breath, as a share of its mitten's length. */
 const BOB = 0.08;
-/** How far a hand swings past its reach before it settles, at most, as a share of its mitten's length. */
 const SETTLE = 0.35;
-/** The settle's shape, `sin(πs)·s³`, peaks at about this: dividing by it makes `SETTLE` its peak. */
 const SETTLE_PEAK = 0.3;
-/**
- * Where the arc round a shoulder is cut, radians from +x: up and in, toward
- * the head, on each side. A hand's arc never crosses it, so it goes round
- * the outside or under, never over its own head, and a target that moves
- * never flips the arc, short of one reached through the head.
- */
 const CUT = { far: -Math.PI / 4, near: (-3 * Math.PI) / 4 } as const;
 
 const buffer = (n: number): [number, number][] =>
   Array.from({ length: n }, (): [number, number] => [0, 0]);
 
-/**
- * A figure's breath at this frame, −1..1: a slow swell on the boil clock,
- * its phase the figure's own (`hand`, the person's), so a crowd does not
- * breathe as one. Both of a figure's hands take the same breath.
- */
 export const breathOf = (hand: Hand): number =>
   Math.sin((2 * Math.PI * hand.boil) / (BOIL_FPS * BREATH_PERIOD) + 2 * Math.PI * hash(hand.seed));
 
-/** `a` turned into the turn [cut, cut + 2π). */
 const wrap = (a: number, cut: number) => {
   const turn = 2 * Math.PI;
   return cut + ((((a - cut) % turn) + turn) % turn);
 };
 
-/** Where a hand is and how it is turned (scratch, rewritten by every `place`). */
 interface Placed {
   x: number;
   y: number;
-  /** Radians: the way the hand points, away from its shoulder. */
   angle: number;
-  /** How far it has travelled, 0..1. */
   s: number;
 }
 const PLACED: Placed = { x: 0, y: 0, angle: 0, s: 0 };
 
-/**
- * Where the hand of `root` is doing `g` (at rest with none): along an arc
- * round the shoulder from its rest to `g.to`, its angle and its distance
- * from the shoulder going over together as `g.reach` does, the way a hand on
- * an unseen arm swings; swung a little past its reach just before it arrives
- * and settled there; bobbing with the breath while it is at rest, still
- * once at work. Its angle is the way from the shoulder to it.
- */
 const place = (root: HandRoot, g: Gesture | undefined, mitten: number): Placed => {
   const [sx, sy] = root.shoulder;
   const cut = root.away === 1 ? CUT.near : CUT.far;
@@ -173,18 +89,11 @@ const place = (root: HandRoot, g: Gesture | undefined, mitten: number): Placed =
   return PLACED;
 };
 
-/** Where the hand of `root` is, doing `g` (at rest with none): its mitten's centre. Something it holds rides here. */
 export const handAt = (root: HandRoot, g: Gesture | undefined, style: HandStyle): Pt => {
   const p = place(root, g, style.mitten);
   return [p.x, p.y];
 };
 
-// ─── the mitten ──────────────────────────────────────────────────────────────
-// One hand design at every scale: palm and fingers one piece, and a thumb.
-// Each grip is a unit shape pointing +x from its centre, the thumb on the −y
-// side, placed by a point, an angle and a size into its own buffer.
-
-/** A capsule from `a` to `b`, `r` round: a thumb or a forefinger. */
 const capsule = (a: Pt, b: Pt, r: number): Pt[] => {
   const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
   const out: Pt[] = [];
@@ -199,20 +108,14 @@ const capsule = (a: Pt, b: Pt, r: number): Pt[] => {
   return out;
 };
 
-/** A unit shape and the buffer it is placed into. */
 interface Part {
   readonly unit: ReadonlyArray<Pt>;
   readonly at: [number, number][];
 }
 const part = (unit: ReadonlyArray<Pt>): Part => ({ unit, at: buffer(unit.length) });
 
-/** Points round every grip's palm: the same count, so one grip turns into another point for point. */
 const PALM_POINTS = 40;
 
-/**
- * `poly`, round the origin inside it, resampled at `n` even angles from +x:
- * where each ray from the origin leaves it.
- */
 const radial = (poly: ReadonlyArray<Pt>, n: number): Pt[] =>
   Array.from({ length: n }, (_, k): Pt => {
     const t = (2 * Math.PI * k) / n;
@@ -234,18 +137,13 @@ const radial = (poly: ReadonlyArray<Pt>, n: number): Pt[] =>
     return [far * dx, far * dy];
   });
 
-/** One grip's unit shapes, each the same count of points as every other grip's. */
 interface Form {
-  /** Palm and fingers, one piece. */
   readonly palm: ReadonlyArray<Pt>;
   readonly thumb: ReadonlyArray<Pt>;
-  /** The forefinger: a capsule for `point`, drawn in to a dot where it roots for the others. */
   readonly finger: ReadonlyArray<Pt>;
-  /** Closed, the thumb lies over the palm; open, it stands behind it. */
   readonly thumbOver: boolean;
 }
 
-/** Where a pointing forefinger roots on the fist, and where it reaches. */
 const FINGER_ROOT: Pt = [0.12, -0.14];
 const FINGER_TIP: Pt = [0.8, -0.16];
 const NO_FINGER = (): Pt[] => capsule(FINGER_ROOT, FINGER_ROOT, 0);
@@ -263,7 +161,6 @@ const FIST: Pt[] = spline(
   5,
   true,
 );
-/** The spread palm: the `palm` grip, and the close-up. */
 const SPREAD: Pt[] = spline(
   [
     [-0.5, -0.3],
@@ -325,12 +222,9 @@ const FORMS = {
   },
 } satisfies Record<Grip, Form>;
 
-/** A hand at rest holds its mitten open, and forms its grip from it as it arrives. */
 const REST_GRIP: Grip = 'open';
-/** Over which share of its travel a hand forms its grip: none by the first, all by the second. */
 const FORMING: readonly [number, number] = [0.4, 0.9];
 
-/** The mitten between two grips (scratch): its parts' unit shapes, rewritten by `formed`, and where they are laid. */
 const MORPH_UNIT = {
   palm: buffer(PALM_POINTS),
   thumb: buffer(FORMS.open.thumb.length),
@@ -342,7 +236,6 @@ const MORPH = {
   finger: part(MORPH_UNIT.finger),
 };
 
-/** `a` to `b` at `t`, point for point, into the unit shape `out`. */
 const blend = (out: [number, number][], a: ReadonlyArray<Pt>, b: ReadonlyArray<Pt>, t: number) => {
   for (let i = 0; i < out.length; i++) {
     const p = a[i];
@@ -354,7 +247,6 @@ const blend = (out: [number, number][], a: ReadonlyArray<Pt>, b: ReadonlyArray<P
   }
 };
 
-/** The mitten `form` of the way from grip `from` to grip `to`, into `MORPH`. */
 const formed = (from: Grip, to: Grip, form: number) => {
   const a: Form = FORMS[from];
   const b: Form = FORMS[to];
@@ -364,17 +256,10 @@ const formed = (from: Grip, to: Grip, form: number) => {
   return form < 0.5 ? a.thumbOver : b.thumbOver;
 };
 
-/** How far a hand doing `g` has changed from `was` into `grip`: all the way when it names no `was`. */
 const changeOf = (g: Gesture | undefined) => (g?.was === undefined ? 1 : clamp(g.change ?? 0));
 
-/** How far a hand `s` of the way to its target has formed its grip from the open rest (over `FORMING`). */
 const arrivedAt = (s: number) => clamp((s - FORMING[0]) / (FORMING[1] - FORMING[0]));
 
-/**
- * The grip a hand doing `g` works with, as shares of each grip: `grip`, or
- * `was` changing into it. For a check probing hands (`HandJump`), so it is
- * made only then.
- */
 const gripShares = (g: Gesture | undefined): Record<Grip, number> => {
   const grip = g?.grip ?? REST_GRIP;
   const change = changeOf(g);
@@ -384,21 +269,12 @@ const gripShares = (g: Gesture | undefined): Record<Grip, number> => {
   return shares;
 };
 
-/** How a hand's mitten is formed this frame (scratch, rewritten by `shaped`). */
 interface Shaped {
   thumbOver: boolean;
-  /** How much of a forefinger shows, 0..1. */
   pointing: number;
 }
 const SHAPED: Shaped = { thumbOver: false, pointing: 0 };
 
-/**
- * The mitten of a hand doing `g`, `s` of the way to its target, into
- * `MORPH_UNIT`: the grip it works with (`grip`, or, while it changes, `was`
- * morphing into `grip` as `change` goes 0 to 1), formed from the open rest
- * as it arrives (over `FORMING`). Every input moves every point smoothly, so
- * no grip ever swaps in a frame, whichever way the hand is going.
- */
 const shaped = (g: Gesture | undefined, s: number): Shaped => {
   const grip = g?.grip ?? REST_GRIP;
   const was = g?.was ?? grip;
@@ -415,22 +291,11 @@ const shaped = (g: Gesture | undefined, s: number): Shaped => {
   return SHAPED;
 };
 
-/**
- * The outline of the palm and fingers of a hand doing `g`, `s` of the way to
- * its target, in its unit shape (pointing +x from its centre, `PALM_POINTS`
- * points): the tests read it to know a grip changes smoothly. The buffer is
- * rewritten by the next call.
- */
 export const handShape = (g: Gesture | undefined, s: number): ReadonlyArray<Pt> => {
   shaped(g, s);
   return MORPH_UNIT.palm;
 };
 
-/**
- * `p.unit` laid at (x, y), turned `angle`, `size` long, its −y side
- * mirrored to `flip` (so each hand keeps its thumb on one side and it never
- * jumps), written into `p.at`.
- */
 const lay = (
   p: Part,
   x: number,
@@ -454,11 +319,6 @@ const lay = (
   return p.at;
 };
 
-/**
- * The mitten of a hand doing `g`, `s` of the way there (see `shaped`), its
- * centre at (x, y), pointing along `angle`, `size` long (times `along` along
- * the fingers, as it turns), its thumb on the `flip` side (its root's `away`).
- */
 const mitten = (
   ctx: CanvasRenderingContext2D,
   g: Gesture | undefined,
@@ -485,43 +345,28 @@ const mitten = (
   if (thumbOver) piece(ctx, lay(MORPH.thumb, x, y, angle, size, flip, along), look, sub(hand, 1));
 };
 
-/**
- * How far a turning hand has turned (`turn` 0 its grip, 1 palm up), as a
- * card turns: its length along the fingers narrows to `TURN_EDGE` at the
- * half, where the grip gives way to the palm-up shape, and widens again.
- * Written into one record every call reuses.
- */
 export const turning = (turn: number): Turned => {
   const t = clamp(turn);
   TURNED.cup = t >= 0.5;
   TURNED.along = TURN_EDGE + (1 - TURN_EDGE) * Math.abs(Math.cos(Math.PI * t));
   return TURNED;
 };
-/** A turning hand: whether the palm-up shape shows (`cup`), and its length along the fingers as a share (`along`). */
 interface Turned {
   readonly cup: boolean;
   readonly along: number;
 }
-/** A turning hand's length along its fingers at the half, as a share of its length. */
 const TURN_EDGE = 0.2;
-/** The record `turning` writes (scratch, so a frame allocates none). */
 interface TurnedAt {
   cup: boolean;
   along: number;
 }
 const TURNED: TurnedAt = { cup: false, along: 1 };
 
-/** The angle from `a` to `b` the short way round, radians. */
 const toward = (a: number, b: number) => {
   const d = (((b - a) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI);
   return d - Math.PI;
 };
 
-/**
- * The hand at an arm's end, grown to `size`: its grip, or, turning palm up
- * (`turn`), the close-up's shape at the mitten's size, its palm's middle on
- * the arm's end and its fingers up, the thumb on the side away from `flip`.
- */
 const handEnd = (
   ctx: CanvasRenderingContext2D,
   g: Gesture | undefined,
@@ -550,19 +395,9 @@ const handEnd = (
   cupped(ctx, CUP_OPEN, style, (style.line * CLOSE_SPAN) / size, 0, hand);
   ctx.restore();
 };
-/** A figure's hand turned palm up is held flat open. */
 const CUP_OPEN = 1;
-/** The palm-up hand's frame (scratch): a canvas `transform`'s six numbers. */
 const FRAME: [number, number, number, number, number, number] = [0, 0, 0, 0, 0, 0];
 
-/**
- * Where a hand turned palm up is drawn: the canvas transform (`a b c d e f`,
- * written into one buffer every call reuses) from the close-up's units (its
- * palm's middle on the origin, fingers up −y, thumb to −x) into the arm's,
- * the palm's middle on `end`, the fingers along `facing`, `size` long heel to
- * fingertips (times `along` along the fingers, as it turns), the thumb on
- * the side away from `flip` as a mitten's is.
- */
 export const palmUpFrame = (
   end: Pt,
   facing: number,
@@ -575,7 +410,6 @@ export const palmUpFrame = (
   const sy = k * flip;
   const c = Math.cos(facing);
   const s = Math.sin(facing);
-  // Turned a quarter so the fingers run along +x, scaled, then turned to `facing`.
   FRAME[0] = -s * sy;
   FRAME[1] = c * sy;
   FRAME[2] = -c * sx;
@@ -585,32 +419,13 @@ export const palmUpFrame = (
   return FRAME;
 };
 
-/** Where a hand is drawn (scratch). */
 const AT: [number, number] = [0, 0];
 
-/**
- * What a check probing hands needs of a floating hand beyond what the hand
- * knows itself: whether it is drawn over its own figure's body (after it),
- * and that body's silhouette, one shape or several, in the hand's space.
- */
 export interface HandBody {
   readonly over: boolean;
   readonly body: () => ReadonlyArray<ReadonlyArray<Pt>>;
 }
 
-/**
- * The hand of `root`, floating free: at rest with no gesture, doing `g`
- * with one (see `place`), the one mitten in `style` with no arm. Its grip
- * forms from the open rest as it arrives; `g.turn` turns it palm up.
- *
- * Given its figure's `body`, it declares itself to a check probing hands
- * (`probeHand`: its side from `root.away`, its shoulder, where it is, where
- * it works, its size and reach, the grip it works with and how far that is
- * formed), so `film check` follows it frame to frame
- * (`HandJump`), flags one sent past the reach (`HandFar`) and sees one lost
- * behind its body (`HandHidden`), whichever film draws it. It declares
- * itself even when the context's alpha hides it, and then draws nothing.
- */
 export const floatingHand = (
   ctx: CanvasRenderingContext2D,
   root: HandRoot,
@@ -642,40 +457,15 @@ export const floatingHand = (
   handEnd(ctx, g, p.s, AT, p.angle, style.mitten, root.away, style, sub(hand, 3));
 };
 
-// ─── the close-up ────────────────────────────────────────────────────────────
-// The hand close up is an open hand held out palm up to receive, seen from
-// above and a little behind the wrist, as one sees one's own hand held out:
-// the viewer looks into the palm. The palm is the biggest shape, its middle
-// on the origin, where a light or the gifts are laid; the fingers are one
-// mitten block running on from the knuckles away and up the frame to one
-// soft round tip; the thumb lies low along the side, off the palm's heel, at
-// about 40° to the fingers. Palm, fingers and thumb are cut as one piece: one
-// outline round the three, no seam where they join. It closes the way a hand
-// does: the finger block bends up out of the palm about the knuckles, toward
-// the eye, foreshortening, until its round tip comes back over the palm,
-// which stays showing under it as a cup, while the thumb comes in. The block
-// is the hull of a few balls, so every edge it shows, bent or not, is round.
-// It floats in frame with no arm, as every hand does. Every shape is a pure
-// function of `open`, written into buffers this module keeps.
-
-/** How a close-up hand is cut. */
 interface CloseStyle {
   readonly skin: string;
-  /** The lifeline's and the joints' ink, softer than the outline. */
   readonly crease: string;
   readonly outline: string;
 }
 
-/** The close-up's outline, in its units. */
 export const CLOSE_LINE = 4;
-/**
- * The view: how far the eye leans from straight down into the palm back
- * toward the wrist, radians. A finger bent this far up out of the palm is
- * seen at its full length; bent a right angle past it, end on.
- */
 const VIEW = (25 * Math.PI) / 180;
 
-/** The palm seen from above: the knuckles along the top, the thumb's mound low on the left, the heel at the bottom. */
 const PALM: Pt[] = spline(
   [
     [-122, -126],
@@ -697,14 +487,7 @@ const PALM: Pt[] = spline(
   true,
 );
 
-/** The knuckle line's height, about which the fingers bend. */
 const KNUCKLES = -118;
-/**
- * The finger block, one mitten piece: balls along its middle, each `[along
- * the fingers from the knuckles, across, radius]`. Their hull, seen, is the
- * block: two at the knuckles, and three round its tip, the middle one a
- * little farther, so the tip is one soft edge.
- */
 const FINGER_BALLS: ReadonlyArray<readonly [number, number, number]> = [
   [0, -76, 40],
   [0, 76, 40],
@@ -712,34 +495,19 @@ const FINGER_BALLS: ReadonlyArray<readonly [number, number, number]> = [
   [90, 42, 72],
   [102, 0, 76],
 ];
-/** Where each ball shows at the current bend (scratch). */
 const BALLS_AT = buffer(FINGER_BALLS.length);
-/**
- * The block's outline, sampled at this many fixed directions, from straight
- * down (so its seam lies on the knuckles, under the palm) round to straight
- * down again: a closed outline ends on its start.
- */
 const HULL_POINTS = 48;
 const HULL_N: ReadonlyArray<Pt> = Array.from({ length: HULL_POINTS + 1 }, (_, k): Pt => {
   const a = Math.PI / 2 + (2 * Math.PI * k) / HULL_POINTS;
   return [Math.cos(a), Math.sin(a)];
 });
 const FINGERS_AT = buffer(HULL_POINTS + 1);
-/**
- * How far the fingers have bent up out of the palm, open (a relaxed hand's
- * tips lift a little) and closed (turned back over the palm), radians.
- */
 const BEND: readonly [number, number] = [(10 * Math.PI) / 180, (170 * Math.PI) / 180];
-/** How the curl eases: a little curl already reads, a fist takes the whole range. */
 const CURL_EASE = 0.8;
-/** The bends over which the tip comes back over the palm and its edge is inked there. */
 const OVER: readonly [number, number] = [(125 * Math.PI) / 180, (145 * Math.PI) / 180];
-/** The bends over which the joints go out of sight as the palm side of the fingers turns from the eye. */
 const CREASES_HIDE: readonly [number, number] = [(85 * Math.PI) / 180, (110 * Math.PI) / 180];
-/** How far up the frame from the knuckles a point `along` the fingers shows, bent `bend`. */
 const rise = (along: number, bend: number) => along * Math.cos(bend - VIEW);
 
-/** Two soft joint lines across the fingers, `[along, across]`, the second shorter: where the block bends. */
 const JOINTS: ReadonlyArray<ReadonlyArray<readonly [number, number]>> = [
   [
     [38, -70],
@@ -758,7 +526,6 @@ const JOINTS: ReadonlyArray<ReadonlyArray<readonly [number, number]>> = [
 ];
 const JOINTS_AT = JOINTS.map((j) => buffer(j.length));
 
-/** The thumb, off the palm's mound: its root, length and angle (on screen, radians) open and closed. */
 const THUMB = {
   root: [
     [-128, 30],
@@ -769,10 +536,8 @@ const THUMB = {
   radius: 42,
 } as const;
 const THUMB_POINTS = 18;
-/** The thumb's outline, closed: its last point is its first again. */
 const THUMB_AT = buffer(THUMB_POINTS + 1);
 
-/** The lifeline, round the thumb's mound from between thumb and fingers toward the wrist, clear of the palm's middle. */
 const LIFELINE: Pt[] = spline([
   [-140, -70],
   [-96, -24],
@@ -780,27 +545,17 @@ const LIFELINE: Pt[] = spline([
   [-70, 118],
 ]);
 
-/**
- * The close-up's length open, heel to fingertips, in its units: a hand at a
- * figure's mitten size is drawn at the mitten's length over this.
- */
 export const CLOSE_SPAN =
   Math.max(...PALM.map((p) => p[1])) -
   (KNUCKLES - Math.max(...FINGER_BALLS.map(([a, , r]) => rise(a, BEND[0]) + r)));
 
-/** The close-up's shape at one `open`: every array is a buffer the next call rewrites. */
 export interface CloseShape {
   readonly palm: ReadonlyArray<Pt>;
-  /** The finger block's outline, round everywhere. */
   readonly fingers: ReadonlyArray<Pt>;
-  /** The two joint lines across the fingers. */
   readonly creases: ReadonlyArray<ReadonlyArray<Pt>>;
-  /** 1 while the palm side of the fingers faces the eye, going to 0 as they turn away: the joints' ink. */
   readonly creaseInk: number;
   readonly thumb: ReadonlyArray<Pt>;
-  /** 0 open to 1 closed: how far the fingers have bent. */
   readonly curl: number;
-  /** 0 until the tip comes back over the palm, then 1: its edge's ink there. */
   readonly over: number;
 }
 
@@ -814,7 +569,6 @@ const SHAPE = {
   over: 0,
 } satisfies CloseShape;
 
-/** A capsule from `a` to `b`, `r` round, into `out` (`THUMB_POINTS` long). */
 const capsuleInto = (out: [number, number][], a: Pt, b: Pt, r: number) => {
   const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
   const half = THUMB_POINTS / 2;
@@ -836,12 +590,6 @@ const capsuleInto = (out: [number, number][], a: Pt, b: Pt, r: number) => {
   }
 };
 
-/**
- * The hull of the finger balls at `bend`, into `FINGERS_AT`: for each fixed
- * direction, the farthest ball's edge that way. Where the farthest ball
- * changes, both lie on the one straight edge between them, so the outline
- * moves smoothly as the balls do and has no corner anywhere.
- */
 const fingers = (bend: number) => {
   for (let i = 0; i < FINGER_BALLS.length; i++) {
     const b = FINGER_BALLS[i];
@@ -868,13 +616,6 @@ const fingers = (bend: number) => {
   }
 };
 
-/**
- * The close-up's shape at `open` (1 held out flat, 0 a loose fist), in its
- * units: the finger block bent up out of the palm about the knuckles, seen
- * shorter as it stands toward the eye and lying back over the palm past it,
- * the thumb swung in. Continuous in `open`: nothing appears or jumps as the
- * hand closes.
- */
 export const closeShape = (open: number): CloseShape => {
   const curl = clamp(1 - open) ** CURL_EASE;
   const bend = lerp(BEND[0], BEND[1], curl);
@@ -907,20 +648,12 @@ export const closeShape = (open: number): CloseShape => {
   return SHAPE;
 };
 
-/** The paper and ink a hand turned palm up is cut from. */
 interface CupStyle {
   readonly skin: string;
   readonly outline: string;
   readonly crease?: string;
 }
 
-/**
- * The palm-up hand at `open`, its palm's middle on the origin, in the
- * close-up's units: one piece of `style.skin` with a `line`-wide outline,
- * and, as `detail` goes to 1, the ink a hand has close up (the lifeline and
- * the joints). A figure's hand turned palm up and the close-up both draw
- * this, so they are one shape at two sizes.
- */
 const cupped = (
   ctx: CanvasRenderingContext2D,
   open: number,
@@ -946,8 +679,6 @@ const cupped = (
     grain: 0.5,
     boil: 'crawl',
   } as const;
-  // One piece: each part's outline twice as wide, then every part's paper
-  // over them, so only the outer half of the ink round the whole shows.
   stroke(ctx, s.thumb, ink, sub(hand, 7));
   stroke(ctx, s.palm, ink, sub(hand, 8));
   stroke(ctx, s.fingers, ink, sub(hand, 9));
@@ -961,9 +692,7 @@ const cupped = (
       { color: crease, width: line, jitter: 0.4, taper: 0.5, alpha: detail, boil: 'crawl' },
       sub(hand, 4),
     );
-  // The fingers' paper over the palm's top; as they bend up it casts on the palm.
   cutout(ctx, s.fingers, { ...paper, shadow: 0.35 * s.over }, sub(hand, 5));
-  // Back over the palm, the tip's edge is inked there too; the knuckles' side never is.
   if (s.over > 0) {
     ctx.save();
     ctx.beginPath();
@@ -986,30 +715,12 @@ const cupped = (
     }
 };
 
-/** How a close-up is drawn beyond its shape: whose hand it is, its line, and how much of its ink shows. */
 interface CloseDraw {
-  /**
-   * Which of its figure's hands it is, as a `HandRoot`'s `away` (the near,
-   * 1, unless given): the far hand's close-up is mirrored, so its thumb lies
-   * where that hand's own thumb lies turned palm up (`palmUpFrame`).
-   */
   readonly away?: -1 | 1;
-  /** The outline's width in the hand's units (a push from a figure's hand starts at the figure's line). */
   readonly line?: number;
-  /** 0..1, how much of the lifeline and the joints show (1 close up). */
   readonly detail?: number;
 }
 
-/**
- * The hand close up: an open hand held out palm up to receive, faith, the
- * hand that takes. Seen from above, the palm's middle on the origin where a
- * light or the gifts are laid, `CLOSE_SPAN` units heel to fingertips, the
- * fingers up the frame. `open` 1 holds it flat; toward 0 the fingers bend up
- * and come back over the palm, which stays showing as a cup: a loose fist,
- * never a lid. Close up it keeps the ink a hand is allowed: a lifeline round
- * the thumb's mound and two soft joint lines across the fingers, clear of
- * the palm's middle.
- */
 export const closeHand = (
   ctx: CanvasRenderingContext2D,
   open: number,

@@ -9,15 +9,6 @@ import * as Statement from 'effect/sql/Statement';
 const DB_PATH = `${import.meta.dir}/../../../core/data/bible.db`;
 const BibleServicesLayer = Layer.mergeAll(BibleDbBun.layerBun(DB_PATH), BunServices.layer);
 
-/**
- * A budget guards the query plan (an index against a scan is orders of
- * magnitude), so the test reads the plan rather than a stopwatch: every
- * statement a call runs is captured as it is compiled and handed to SQLite's
- * `EXPLAIN QUERY PLAN`, and each step that reads a table must `SEARCH` it (by
- * an index or the rowid). A count of full scans does not move when the
- * machine is busy, where a wall-clock budget failed a fast query on a loaded
- * box.
- */
 const planned = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.gen(function* () {
     const statements: Array<readonly [string, ReadonlyArray<unknown>]> = [];
@@ -43,11 +34,9 @@ const planned = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     return { value, steps } as const;
   });
 
-/** A statement's parameters as SQLite binds them: the queries here bind strings and numbers. */
 const Bindings = Schema.Array(Schema.Union([Schema.String, Schema.Finite]));
 const bindings = Schema.decodeUnknownSync(Bindings);
 
-/** The plan steps that read a whole table rather than searching it. */
 const scans = (steps: ReadonlyArray<{ readonly details: ReadonlyArray<string> }>) =>
   steps.flatMap((s) => s.details.filter((d) => d.startsWith('SCAN ')));
 
@@ -126,8 +115,6 @@ describe('Bible Database Performance', () => {
           `perf.searchStrongs statements=${steps.length} entries=${results.length}`,
         );
         expect(results.length).toBeGreaterThan(0);
-        // A word search reads every lemma (a LIKE has no index to use): one
-        // pass over the lexicon, one statement, and no other table.
         expect(steps.length).toBe(1);
         expect(steps.flatMap((s) => s.details)).toHaveLength(1);
         expect(scans(steps).every((d) => d.startsWith('SCAN strongs'))).toBe(true);

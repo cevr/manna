@@ -17,11 +17,6 @@ import { emitArtifact } from './emit.js';
 import { openCatalogLookup, openParagraphLookup } from './lookups.js';
 import { parseTopicSource } from './source.js';
 
-/** Defaults resolve against the repo root, not the caller's cwd: the root
- *  `build:topics` script runs this from `packages/scripts`, and a default that
- *  silently meant a different directory depending on who invoked it would be a
- *  trap. `import.meta.dir` is this file, three levels below the package root
- *  and five below the repo root. */
 const repoRoot = new URL('../../../../', import.meta.url).pathname.replace(/\/$/u, '');
 
 const content = Flag.String('content').pipe(
@@ -34,8 +29,6 @@ const out = Flag.String('out').pipe(
   Flag.withDescription('Destination path for the compiled topics.db'),
 );
 
-/** Empty means "derive from HOME inside the handler": a default read at module
- *  load would bake one machine's home directory into the flag's help text. */
 const bibleDb = Flag.String('bible-db').pipe(
   Flag.withDefault(''),
   Flag.withDescription('bible.db to resolve catalog overlay keys against (default ~/.bible)'),
@@ -145,11 +138,6 @@ const buildTopics = Command.make(
       yield* Console.log(`  edges      ${String(manifest.edges)}`);
       yield* Console.log(`  overlays   ${String(manifest.catalogKeys)}`);
 
-      // The compiler's job is to emit what the content set says; refusing an
-      // empty artifact is the installer's (§3.5 semantic verifier, which
-      // requires a positive page and alias count). So an all-draft content set
-      // compiles cleanly and then cannot install — a confusing pair of facts
-      // unless the build says so out loud.
       if (manifest.approved === 0 || manifest.aliases === 0) {
         yield* Console.error(``);
         yield* Console.error(`⚠ This artifact is EMPTY and will be REFUSED at install time.`);

@@ -1,7 +1,3 @@
-// The page the SSR proof renders: path, query and hash read from one place
-// atom through `useAtomValue`. The hash shows in a different element at its
-// default than off it, so a client whose hydration pass read the real hash
-// would not match the server's markup.
 import { Codec, Field, Place } from '@manna/url-state';
 import * as UrlAtom from '@manna/url-state/atom';
 import { Show } from '@solidjs/web';
@@ -18,7 +14,6 @@ export const Lab = Place.make({
 
 const lab = UrlAtom.place(Lab);
 
-/** The playhead as the URL writes it. */
 const timeOf = Schema.encodeSync(Codec.Finite);
 
 export const App = () => {

@@ -1,14 +1,4 @@
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
-// A talk through the tools, with no media: a footage library whose lock
-// lists a take heard (its transcript written here, a synthetic take's words
-// and loudness) and a `talk.ts` cut on it, in a films folder. The tools read
-// it as a film: `FilmRepo.load` lays its sections out as scenes, `film talk
-// words` prints its words as the edit plays them, the cue report lists its
-// sections, the mix plays the take's voice in the pieces the cut keeps, known
-// by what it is, and what needs a narrator refuses it. The page, reading the
-// same files through the footage route, cuts the same pieces: each frame of
-// it shows the moment of the take the mix plays under it. The mix on real
-// media is `e2e/tools/talk.test.ts`'s.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -59,21 +49,17 @@ import { emptyLedger, fakeRenderHost, textBox } from './browser/testing.ts';
 import { emptyCalls, fakeElevenLabs } from './elevenlabs/testing.ts';
 import { privateFolder } from './host/testing.ts';
 
-/** A vertical finding at a second of the talk: a line of text, or its hook. */
 const atASecond = Predicate.or(
   Predicate.isTagged('ShortUnsafeText'),
   Predicate.isTagged('ShortHook'),
 );
 
-/** What the speaker says. */
 const WORDS = 'The law was given to show us our need of a Saviour'.split(' ');
 
-/** The take's original's hash, whose head names its source. */
 const SHA = `0123456789ab${'d'.repeat(52)}`;
 const SOURCE = 'why-the-law/0123456789ab';
 const TRANSCRIPT = 'why-the-law.0123456789ab.json';
 
-/** The take as heard: a word every 0.4 s, but a long pause before word 8 ("need"). */
 const TAKE = syntheticTake(
   WORDS,
   WORDS.map((_, i) => [0.1, 0.9][Number(i === 8)] ?? 0.1),
@@ -81,7 +67,6 @@ const TAKE = syntheticTake(
   { width: 1920, height: 1080 },
 );
 
-/** The edit: the first section strikes "was", the second plays through the late "need". */
 const TALK: Talk = {
   title: 'Why the law?',
   format: 'question',
@@ -92,19 +77,12 @@ const TALK: Talk = {
   ],
 };
 
-/** Where the world's folders are: the films, the footage library and the outputs. */
 interface Folders {
   readonly films: string;
   readonly footage: string;
   readonly out: string;
 }
 
-/**
- * The film services over a temp folder holding the library (its lock, the
- * take's transcript) and the talk; nothing that costs anything is reached:
- * the speech-to-text is a fake that is never asked, the private store a
- * folder.
- */
 const worldOf = (made: (folders: Folders) => void) =>
   Layer.unwrap(
     Effect.gen(function* () {
@@ -180,7 +158,6 @@ const worldOf = (made: (folders: Folders) => void) =>
     }),
   ).pipe(Layer.provideMerge(Layer.merge(BunServices.layer, BunCrypto.layerMac)));
 
-/** The console a run prints to: each line it logs, offered to `lines`. */
 const printingTo = (lines: Queue.Queue<string>): Console.Console => ({
   ...globalThis.console,
   log: (...args: ReadonlyArray<unknown>) => {
@@ -188,7 +165,6 @@ const printingTo = (lines: Queue.Queue<string>): Console.Console => ({
   },
 });
 
-/** `command …args` run to its end: its exit, and the lines it printed. */
 const run = <N extends string, I, C, E, R>(
   command: Command.Command<N, I, C, E, R>,
   args: ReadonlyArray<string>,
@@ -203,7 +179,6 @@ const run = <N extends string, I, C, E, R>(
     return { exit, lines: yield* Queue.clear(lines) };
   });
 
-/** A page's HTTP client answered by the footage route over the world's library, as the player serves it. */
 const routeClient = (folders: Folders) =>
   Layer.succeed(
     HttpClient.HttpClient,
@@ -238,7 +213,6 @@ describe('a talk through the tools', () => {
           [0, 1, 3, 4, 5],
           [6, 7, 8, 9, 10, 11],
         ]);
-        // The strike makes a seam in the first; the long pause before "need" a seam in the second.
         expect(cut.sections.map((s) => s.pieces.length)).toEqual([2, 2]);
         expect(Option.isNone(loaded.voice)).toBe(true);
 
@@ -256,7 +230,6 @@ describe('a talk through the tools', () => {
         expect(cues.lines.filter((l) => /\blaw\b|\bneed\b/.test(l)).length).toBeGreaterThan(1);
         expect(cues.late).toBe(0);
 
-        // The voice is the take's own file under the copies, known by its source and recipe.
         const mixing = Result.getOrThrow(
           planOf(yield* measuredFilm(loaded), placed, {
             score: Option.none(),
@@ -278,7 +251,6 @@ describe('a talk through the tools', () => {
           }),
         );
 
-        // `film check` holds it to its format: its five seconds are short of a question's 45.
         const checked = yield* staticLeg(loaded, placed);
         expect(checked.filter((f) => f._tag === 'ShortLength')).toEqual([
           ShortLength.make({
@@ -320,17 +292,14 @@ describe('a talk through the tools', () => {
             inPlace: Option.none(),
           }),
         );
-        // As the app's films index registers a talk: its module, imported when the page asks.
         const talkModule = () => import(`${folders.films}/why/talk.ts`);
         const page = yield* Effect.promise(() =>
           talkFilms({ why: talkModule }, routeClient(folders)).why(),
         );
         const film = page.film({ audio: '' });
-        // The page lays the talk out as the tools do, scene by scene, word by word.
         const laid = (ps: typeof placed) =>
           ps.map((p) => [p.spec.id, p.start, p.dur, p.speechStart, p.voice]);
         expect(laid(film.placed)).toEqual(laid(placed));
-        // Each frame mid-way through a piece of the mix reads the take where the piece plays it.
         const reads = mixing.voice.flatMap((piece) => {
           const frames = Math.round(Option.getOrThrow(piece.dur) * TALK_FPS);
           return Arr.makeBy(frames, (k) => {
@@ -346,7 +315,6 @@ describe('a talk through the tools', () => {
       }).pipe(Effect.provide(world)),
   );
 
-  /** The browser leg's pages: the talk's, drawn 1080 px wide, a caption reaching x 888 below y 840 (under TikTok's buttons). */
   const pages = Layer.mergeAll(Checker.layer, Looker.layer).pipe(
     Layer.provide(
       fakeRenderHost(emptyLedger(), {
@@ -375,7 +343,6 @@ describe('a talk through the tools', () => {
             zone: 'platforms (TikTok)',
           }),
         );
-        // Each is the talk's, at the film's scene and second: the talk is no short.
         const placed = yield* placeFilm(loaded);
         const vertical = found.filter(atASecond);
         expect(vertical.length).toBeGreaterThan(0);
@@ -386,7 +353,6 @@ describe('a talk through the tools', () => {
           expect(part).toEqual(sceneAddress(scene));
           expect(f.message).toStartWith('talk "why"');
         }
-        // Its open holds still on the page here, said at the film's first frame.
         expect(found.filter((f) => f._tag === 'ShortHook').map((f) => addressOf(f))).toEqual([
           { part: sceneAddress('law'), time: 0 },
         ]);

@@ -1,40 +1,5 @@
-/**
- * The follow check's judge: what a run of accessibility snapshots, taken
- * while one hymn plays on the score clock, shows of the sung line.
- *
- * Each snapshot becomes a `Sample` (`sampleOf`): its time since the Play
- * tap, each line's selected state and frame in the order the page lays
- * them (the nodes with identifier `line`; line i is the timeline's line i),
- * the frame of the page's scroll (`hymn-scroll`), and whether the player
- * has ended (its button reads `Play hymn <n> again`). No words are kept.
- *
- * `judge` holds the samples to the hymn's timeline:
- *
- * - `backwards`: the times the selected line comes before the last one seen;
- * - `missed`: the lines longer than `LONG` ms never seen selected;
- * - `last`: whether the last sung line, the last with a length, was seen
- *   selected: a timeline cut to a choice of stanzas (`--stanzas`) lays the
- *   lines it skips with no length;
- * - `skipped`: the samples whose selected line has no length, a line the
- *   cut skips (or one the timeline never sings);
- * - `outside`: the samples whose selected line is not inside the scroll's
- *   frame, or whose next line's top is not;
- * - `doubled`: the samples with more than one line selected;
- * - `mismatched`: the samples whose count of lines is not the timeline's;
- * - `adrift`: the samples whose selected line is not sung at the sample's
- *   time on the score clock (`placeOf`), which holds at the first sung line
- *   through the count-in after the tap and then runs from it
- *   (`first + at - countIn`), give or take `TIMING`: a clock that runs fast
- *   or slow;
- * - `early`: whether the player was seen to end before the timeline's end
- *   on that clock, less `TIMING`.
- *
- * A run holds when each of those is 0, false or true as it should be, the
- * player was seen to end, and the check touched the screen once (`touches`).
- */
 import { Array as Arr, Option } from 'effect';
 
-/** A frame on the screen, in points. */
 export interface Rect {
   readonly x: number;
   readonly y: number;
@@ -42,64 +7,38 @@ export interface Rect {
   readonly height: number;
 }
 
-/** The part of a snapshot node the judge reads. */
 export interface Node {
-  /** The node's place in the snapshot, and its parent's: the tree the page's lines hang in. */
   readonly index?: number;
   readonly parentIndex?: number;
   readonly identifier?: string;
   readonly label?: string;
-  /** What the element says of its state; iOS gives a checked control's state here. */
   readonly value?: string;
   readonly selected?: boolean;
   readonly rect?: Rect;
 }
 
-/**
- * Whether the snapshot shows sound off: the player bar's `Sound` button
- * unchecked. On iOS the button is one element labelled `Sound`, its text
- * (`Sound off`) not a node of its own, and React Native says its checked
- * state in the element's value.
- */
 export const soundOff = (nodes: ReadonlyArray<Node>): boolean =>
   nodes.some(
     (node) =>
       node.label === 'Sound' && (node.value ?? '').split(', ').some((word) => word === 'unchecked'),
   );
 
-/** One sung line as a sample shows it. */
 export interface Shown {
   readonly selected: boolean;
   readonly rect: Rect;
 }
 
-/** One snapshot, reduced to what the judge reads. */
 export interface Sample {
-  /** Milliseconds since the Play tap. */
   readonly at: number;
   readonly lines: ReadonlyArray<Shown>;
-  /** The scroll's frame; none when the page's scroll is not in the snapshot. */
   readonly scroll: Rect | false;
   readonly ended: boolean;
 }
 
-/** A line at least this long, in ms, must be seen selected: the samples come about every 500 ms. */
 export const LONG = 1000;
 
-/**
- * How far, in ms, a sample's time may sit from the score clock's place and
- * still count as on time. A sample's time is read once its snapshot is
- * done, and a snapshot of the whole tree takes up to about a second; the
- * clock starts some hundreds of ms after the tap. A clock 1 % fast is out
- * by this much 150 s into a hymn.
- */
 export const TIMING = 1500;
 
-/**
- * The part of a hymn's timeline the judge reads, in ms: each line's span,
- * the first sung line, the end, and the count-in: how long the score clock
- * holds at the first sung line after the tap (0 when Play does not count in).
- */
 export interface Timed {
   readonly first: number;
   readonly countIn: number;
@@ -107,12 +46,10 @@ export interface Timed {
   readonly lines: ReadonlyArray<{ readonly start: number; readonly until: number }>;
 }
 
-/** How far, in points, a frame may stand past the scroll's edge and still count as inside. */
 export const SLACK = 1;
 
 const NO_RECT: Rect = { x: 0, y: 0, width: 0, height: 0 };
 
-/** The frame `a` and `b` both cover; none when they do not meet. */
 const meet = (a: Rect, b: Rect): Option.Option<Rect> => {
   const x = Math.max(a.x, b.x);
   const y = Math.max(a.y, b.y);
@@ -121,7 +58,6 @@ const meet = (a: Rect, b: Rect): Option.Option<Rect> => {
   return Option.liftPredicate({ x, y, width, height }, () => width > 0 && height > 0);
 };
 
-/** `node` and each of its ancestors, nearest first, by `parentIndex`; at most `depth` of them. */
 const lineage = (byIndex: ReadonlyMap<number, Node>, node: Node, depth = 100): Array<Node> => {
   const chain = [node];
   for (let at = node; chain.length < depth;) {
@@ -133,20 +69,12 @@ const lineage = (byIndex: ReadonlyMap<number, Node>, node: Node, depth = 100): A
   return chain;
 };
 
-/** The part of `node`'s frame the screen shows: its frame cut to each ancestor's (a pager's page, a window). */
 const shownFrame = (byIndex: ReadonlyMap<number, Node>, node: Node): Option.Option<Rect> =>
   lineage(byIndex, node).reduce(
     (frame, at) => Option.flatMap(frame, (rect) => meet(rect, at.rect ?? rect)),
     Option.fromNullishOr(node.rect),
   );
 
-/**
- * The sample a snapshot's nodes give, `at` ms after the tap, for hymn
- * `hymn`. The pager keeps the pages beside the open one in the tree, each
- * with its own scroll and lines; the page's scroll is the one the screen
- * shows, its frame as shown (a scroll's own frame is as tall as its
- * content), and its lines are those inside it.
- */
 export const sampleOf = (nodes: ReadonlyArray<Node>, hymn: number, at: number): Sample => {
   const byIndex = new Map(
     nodes.flatMap((node) =>
@@ -174,15 +102,12 @@ export const sampleOf = (nodes: ReadonlyArray<Node>, hymn: number, at: number): 
   };
 };
 
-/** Whether `y` lies within the scroll's frame, top to bottom. */
 const within = (y: number, scroll: Rect) =>
   y >= scroll.y - SLACK && y <= scroll.y + scroll.height + SLACK;
 
-/** Whether `rect` lies inside the scroll's frame, top to bottom. */
 const inside = (rect: Rect, scroll: Rect) =>
   within(rect.y, scroll) && within(rect.y + rect.height, scroll);
 
-/** The verdict on one hymn's run. */
 export interface Verdict {
   readonly hymn: number;
   readonly samples: number;
@@ -202,14 +127,11 @@ export interface Verdict {
   readonly holds: boolean;
 }
 
-/** The score clock's place, ms, `at` ms after the tap: held at the first sung line through the count-in. */
 const placeOf = (timed: Timed, at: number) => timed.first + Math.max(0, at - timed.countIn);
 
-/** Whether line `span` is sung, give or take `TIMING`, at `place` ms on the score clock. */
 const onTime = (span: Timed['lines'][number], place: number) =>
   span.start - TIMING <= place && place < span.until + TIMING;
 
-/** The verdict on `samples`, for the hymn whose timeline is `timed`, after `touches` touches. */
 export const judge = (
   hymn: number,
   timed: Timed,
@@ -287,7 +209,6 @@ export const judge = (
   return { ...counts, holds: holdsOf(counts) };
 };
 
-/** Whether a run's counts hold: each is 0, false or true as it should be, after one touch. */
 const holdsOf = (counts: Omit<Verdict, 'holds'>): boolean =>
   counts.samples > 0 &&
   counts.missed.length === 0 &&

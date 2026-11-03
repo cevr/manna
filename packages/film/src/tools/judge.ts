@@ -1,27 +1,3 @@
-// The judge (`film judge`): a blind second opinion on one picture choice at
-// one scene (`core/judge.ts` holds its words). A version is what an ask's
-// picture choice picks between:
-//
-// - a look's levels (`look:<name>`, `palette.ts`'s `looks`): each drawn
-//   through the easel as a wedge (`film lab look --levels`), the level in place of
-//   the one the film plays, the pick unwritten;
-// - a render set's variants (`render:<address>`, the catalogue's videos at an
-//   address that holds the scene): each one's frames, cut from its video.
-//
-// Every version is shown at the same moments (the scene's marks and its cues'
-// middles), labelled in an order drawn at random. The counsel
-// (`tools/counsel.ts`) is asked from a folder of its own under the system's
-// temp folder that holds the packet and the stills and nothing else (each
-// still copied there under its label; the lab's own look files stay the
-// lab's, for any other judge asking them), and reads it in a sandbox that
-// shows it that folder and nothing else of the machine's files: no earlier
-// run, no look file, no repo. The packet names no place: each still by its
-// path beside it, each rule's file by its name. The key stays in memory
-// until the counsel has answered. It ranks the versions against the app's
-// rules that bear on the beat, and the answer is unblinded into
-// `verdict.md`, beside the stills, the packet and `key.json`, under
-// `out/<film>/judge/<scene>-<stamp>-<draw>/`. The judge writes no choice.
-
 import {
   Array as Arr,
   Clock,
@@ -70,41 +46,31 @@ import { Counsel } from './counsel.ts';
 import { FilmRepo, type FilmName, placeFilm } from './film-repo.ts';
 import { Media } from './media.ts';
 
-/** One version of the choice: its name, whether it is the owner's pick, and how its stills are made. */
 interface Version<E, R> {
   readonly name: string;
   readonly picked: boolean;
   readonly detail: string;
-  /** Write the still of each of `moments` to the file at the same place in `files`. */
   readonly draw: (
     moments: Arr.NonEmptyReadonlyArray<JudgeMoment>,
     files: ReadonlyArray<string>,
   ) => Effect.Effect<void, E, R>;
 }
 
-/** A choice the judge can judge here: its point id and its versions. */
 interface Choice<E, R> {
   readonly point: string;
-  /** What the versions differ in, naming none of them: `look ground`. */
   readonly title: string;
   readonly versions: ReadonlyArray<Version<E, R>>;
 }
 
-/** What a judge is asked. */
 interface JudgeAsk<TE, TR> {
   readonly film: FilmName;
   readonly scene: string;
-  /** The choice point to judge (`look:ground`, `render:scenes:roof`); none to find the scene's one. */
   readonly point: Option.Option<string>;
-  /** Draw the captions into every still. */
   readonly captions: boolean;
-  /** The app's rules the packet quotes from (`FilmApp.judge`). */
   readonly rules: ReadonlyArray<JudgeRule>;
-  /** The lab's look route as the caller reaches it (`takeLook`): a look's levels are drawn through it. */
   readonly take: (post: LookPost) => Effect.Effect<LookTaken, TE, TR>;
 }
 
-/** What a judge made: its folder, its files, the key and the ranking. */
 interface Judged {
   readonly dir: string;
   readonly verdict: string;
@@ -114,22 +80,15 @@ interface Judged {
   readonly ranking: Ranking;
 }
 
-/** The judge's folder's stamp for now: `20261004T151200Z`. */
 const stampOf = (now: DateTime.Utc) =>
   DateTime.formatIso(now)
     .replace(/\.\d+Z$/, 'Z')
     .replace(/[-:]/g, '');
 
-/** The most draws a judge makes for a folder of its own before it gives up. */
 const FOLDER_TRIES = 8;
 
 const isAlreadyExists = (error: PlatformError) => error.reason._tag === 'AlreadyExists';
 
-/**
- * A folder of this run's own under `under`: `<scene>-<stamp>-<draw>`, made
- * by this run alone (a folder made only if there is none), drawn again on
- * the rare clash, so two judges in one second never share one.
- */
 const runFolder = Effect.fnUntraced(function* (under: string, scene: string, now: DateTime.Utc) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -144,10 +103,8 @@ const runFolder = Effect.fnUntraced(function* (under: string, scene: string, now
 
 const encodeKey = Schema.encodeSync(JudgeKeyJson);
 
-/** A still's place in the judge's folder: `stills/B-03.jpg`. */
 const stillName = (label: string, i: number) => `${label}-${String(i + 1).padStart(2, '0')}.jpg`;
 
-/** The scene's render set's videos at `address`, newest variant order aside: main first, then by name. */
 const videosAt = (catalogue: Catalogue, address: Address) =>
   catalogue.renders
     .filter((r) => r.kind === 'video' && addressKey(r.address) === addressKey(address))
@@ -157,14 +114,8 @@ const videosAt = (catalogue: Catalogue, address: Address) =>
         a.variant.localeCompare(b.variant),
     );
 
-/** A point id read, or why it names no point. */
 const decodePoint = Schema.decodeUnknownOption(PointId);
 
-/**
- * Judge one picture choice at one scene: draw each version's stills at the
- * same moments, shuffle them under labels, send the packet to the counsel and
- * write its unblinded verdict. Writes only under `out/<film>/judge/`.
- */
 export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>) {
   const started = yield* Clock.currentTimeMillis;
   const fs = yield* FileSystem.FileSystem;
@@ -192,7 +143,6 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
     size: JUDGE_SIZE,
   } as const;
 
-  /** Each level of the look `name`, drawn through the easel as a wedge. */
   const lookChoice = (name: string, look: Looks[string]): Choice<TE | PlatformError, TR> => ({
     point: pointIdOf({ _tag: 'Look', name }),
     title: `look \`${name}\` (its level)`,
@@ -208,8 +158,6 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
             view,
             levels: { [name]: level },
           });
-          // Each still copied to its label's name in this run's own folder. The lab's
-          // file is the lab's: another judge asking the same look is answered it too.
           yield* Effect.forEach(Arr.zip(taken.looks, files), ([one, file]) =>
             fs.copyFile(one.file, file),
           );
@@ -217,7 +165,6 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
     })),
   });
 
-  /** Each video of the render set at `address`, its frames cut at the scene's moments. */
   const renderChoice = (address: Address): Choice<JudgePointUnjudged | MediaFailed, never> => {
     const point = pointIdOf({ _tag: 'Render', address });
     return {
@@ -271,7 +218,6 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
 
   type AnyChoice = Choice<TE | PlatformError | JudgePointUnjudged | MediaFailed, TR>;
 
-  /** The choice `ref` names, when it is one the judge sees at this scene. */
   const choiceOf = (id: string, ref: PointRef): Result.Result<AnyChoice, JudgePointUnjudged> => {
     if (ref._tag === 'Look')
       return Option.match(Option.fromUndefinedOr(loaded.looks[ref.name]), {
@@ -293,7 +239,6 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
     );
   };
 
-  // The choice: the one named, else the scene's one picture choice with two versions or more.
   const own: ReadonlyArray<AnyChoice> = [
     ...Object.entries(loaded.looks).map(([name, look]) => lookChoice(name, look)),
     renderChoice(sceneAddress(scene.id)),
@@ -338,7 +283,6 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
       reason: `${choice.versions.length} versions, more than the ${LABELS.length} a judge shows`,
     });
 
-  // The beat: its words, its picture's brief and register, its act.
   const beat = Option.flatMap(yield* repo.script(ask.film), (beats) =>
     Arr.findFirst(beats, (b) => b.id === scene.id),
   );
@@ -371,7 +315,6 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
     ),
   );
 
-  // The rules that bear on the beat, quoted from the app's files.
   const texts = new Map<string, string>();
   const rules: ReadonlyArray<QuotedRule> = yield* Effect.forEach(
     rulesFor(ask.rules, registers),
@@ -394,7 +337,6 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
         const section = yield* Effect.fromOption(sectionOf(text, rule.heading)).pipe(
           Effect.mapError(() => JudgeRuleMissing.make({ file: rule.file, heading: rule.heading })),
         );
-        // Named by the file's name alone: the packet says nothing of where anything lives.
         return {
           file: path.basename(rule.file),
           heading: rule.heading,
@@ -417,7 +359,6 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
     label: Option.getOrElse(Arr.get(LABELS, i), () => '?'),
     version,
   }));
-  // The key, kept in memory until the counsel has answered.
   const key: JudgeKey = {
     film: ask.film,
     scene: scene.id,
@@ -433,11 +374,6 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
 
   return yield* Effect.scoped(
     Effect.gen(function* () {
-      // The packet and the stills, drawn straight to their labels' names in a folder of
-      // their own (`blind`, under the system's temp folder, its name a draw) that holds
-      // nothing else, and gone once the run is done: the counsel's sandbox shows it this
-      // folder and nothing of the asker's besides. The packet names each still by its path
-      // beside it, so it reads the same wherever the folder is shown, and is kept as it was.
       const blind = yield* fs.makeTempDirectoryScoped();
       const stills = path.join(blind, 'stills');
       yield* fs.makeDirectory(stills);
@@ -468,7 +404,6 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
         }),
       );
 
-      // The run's folder holds only the counsel's own files while it answers.
       const dir = yield* runFolder(path.join(loaded.paths.out, 'judge'), scene.id, now);
       const answer = yield* counsel.ask(asked, path.join(dir, 'counsel'));
       const ranking = yield* Effect.fromResult(
@@ -481,8 +416,6 @@ export const judge = Effect.fn('judge')(function* <TE, TR>(ask: JudgeAsk<TE, TR>
         ),
       );
 
-      // Unblinded: the stills and the packet copied to the run's folder, the answer's paths
-      // moved there, the key and the verdict beside them.
       const moved = (text: string) => text.replaceAll(blind, dir);
       yield* fs.copy(stills, path.join(dir, 'stills'));
       const packet = path.join(dir, 'packet.md');

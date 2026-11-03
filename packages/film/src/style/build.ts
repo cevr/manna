@@ -1,16 +1,3 @@
-// Compile a figure project with the Rive CLI, offline and unsigned
-// (`rive --once`: no account, no scripts): write the generated project, run
-// the CLI on it, and answer the built file with what the build warned of, its
-// problems and its stamp (what it was built from). A film's rig build
-// (`righteousness-by-faith/rigs/build.ts`) copies the file and its stamp
-// beside its rigs, and holds the committed file to its rigs through the stamp
-// (`unbuilt`), as the film's test does on a host with no CLI. Both hold
-// first each override its figures carry to the owner's decisions on his
-// production's ledger, his words or his pick on that figure (`unsaid`,
-// `override.ts`), then each locked figure's print to its lock, and the lock
-// to the decision it names (`unlocked`, `lock.ts`). The CLI is `rive` on the
-// PATH, or the one `RIVE` names.
-
 import { Config, Effect, FileSystem, Schema, Stream } from 'effect';
 import { Digest } from 'effect/crypto';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
@@ -20,10 +7,8 @@ import { type Lock, heldTo } from './lock.ts';
 import { type Laid, unbacked } from './override.ts';
 import { RULES } from './rules.ts';
 
-/** What the CLI reports as wrong with a project: kept as it prints it. */
 const Problems = Schema.Array(Schema.Unknown);
 
-/** What `rive --once --format=json` prints: the built file, what the build warned of, and its problems. */
 const Built = Schema.fromJsonString(
   Schema.Struct({
     data: Schema.Struct({ riv: Schema.String, bytes: Schema.Finite }),
@@ -32,7 +17,6 @@ const Built = Schema.fromJsonString(
   }),
 );
 
-/** The Rive CLI exited non-zero: what it printed. */
 class RiveFailed extends Schema.TaggedError<RiveFailed>()('RiveFailed', {
   step: Schema.String,
   output: Schema.String,
@@ -42,7 +26,6 @@ class RiveFailed extends Schema.TaggedError<RiveFailed>()('RiveFailed', {
   }
 }
 
-/** Run the Rive CLI with `args`: its stdout, or `RiveFailed` with all it printed. */
 const rive = (step: string, args: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const bin = yield* Config.String('RIVE').pipe(Config.withDefault('rive'));
@@ -62,21 +45,18 @@ const rive = (step: string, args: ReadonlyArray<string>) =>
     return stdout;
   }).pipe(Effect.scoped);
 
-/** The project `rml` prints, `main` its main artboard: each file the CLI reads, by name. */
 const projectOf = (rml: string, main: string) =>
   [
     ['rive.yaml', `name: figures\nmain: ${main}\n`],
     ['figures.rml', rml],
   ] as const;
 
-/** `bytes`' sha256, as lowercase hex. */
 const sha256 = Effect.fn('sha256')(function* (bytes: Uint8Array) {
   const crypto = yield* Digest.Digest;
   const digest = yield* crypto.digest(Digest.sha256, bytes);
   return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
 });
 
-/** The digest of the project `rml` and `main` print: each file's name and text, closed by a NUL. */
 const projectDigest = (rml: string, main: string) =>
   sha256(
     new TextEncoder().encode(
@@ -86,21 +66,10 @@ const projectDigest = (rml: string, main: string) =>
     ),
   );
 
-/**
- * What a committed `.riv` was built from, written beside it by its build
- * alone: the digest of the project its rigs printed, the built file's, and
- * the CLI that compiled the one into the other (`rive --version`).
- */
 const StampJson = repoJson(
   Schema.Struct({ project: Schema.String, riv: Schema.String, cli: Schema.String }),
 );
 
-/**
- * Write `rml` as the project in `dir` (`rive.yaml` and `figures.rml`), its
- * main artboard `main`, and compile it offline and unsigned (`rive --once`):
- * the built file, its size, what the build warned of, its problems, and its
- * stamp as the repo keeps it (`stamp`, written beside the committed file).
- */
 export const compile = Effect.fn('compile')(function* (dir: string, rml: string, main: string) {
   const fs = yield* FileSystem.FileSystem;
   yield* fs.makeDirectory(dir, { recursive: true });
@@ -117,12 +86,6 @@ export const compile = Effect.fn('compile')(function* (dir: string, rml: string,
   return { ...report.data, warnings: report.warnings, problems: report.problems ?? [], stamp };
 });
 
-/**
- * Why the committed `riv` is not the build of the project `rml` and `main`
- * print, read through the stamp its build wrote beside it (`stamp`): none
- * when the project prints as it was built and the file is the one that build
- * wrote. It runs no CLI.
- */
 export const unbuilt = Effect.fn('unbuilt')(function* (committed: {
   readonly riv: string;
   readonly stamp: string;
@@ -145,26 +108,13 @@ export const unbuilt = Effect.fn('unbuilt')(function* (committed: {
     .map((check) => check.why);
 });
 
-/** A production's ledger, as the repo keeps it (`core/production.ts`). */
 const LedgerJson = repoJson(ProductionFile);
 
-/** The owner's decisions on the ledger `ledger`, the file committed with the film. */
 const decisionsAt = Effect.fn('decisionsAt')(function* (ledger: string) {
   const fs = yield* FileSystem.FileSystem;
   return decisionsOf(yield* Schema.decodeEffect(LedgerJson)(yield* fs.readFileString(ledger)));
 });
 
-/**
- * Which locked figures are not as the owner kept them, and which an
- * override frees: each figure's print (as its film draws it alone) hashed
- * and held to its lock (`heldTo`), each named by the item it is laid as in
- * its film, read against his decisions on his production's ledger, the file
- * `ledger`: a lock that names no decision there is broken, and an override
- * frees a print only on a decision of his on that figure filed after the
- * lock. A broken one answers why, and its print's sha256, the one an
- * override would name to free it. While no figure is locked it reads no
- * ledger.
- */
 export const unlocked = Effect.fn('unlocked')(function* (
   ledger: string,
   locked: ReadonlyArray<{ readonly item: string; readonly lock: Lock; readonly print: string }>,
@@ -195,15 +145,6 @@ export const unlocked = Effect.fn('unlocked')(function* (
   };
 });
 
-/**
- * Which overrides laid on a film's figures (`overridesIn`) the owner's
- * decisions do not allow (`unbacked`): each that no decision on his
- * production's ledger, the file `ledger`, filed at the point of the figure
- * it is laid on (and after the lock it frees, for a lock's), says in its
- * quote's words or answered with the pick it cites. The ledger is the one
- * committed with the film, as the override is: the word it cites is held to
- * those filed beside it. While no override is laid it reads none.
- */
 export const unsaid = Effect.fn('unsaid')(function* (ledger: string, laid: ReadonlyArray<Laid>) {
   if (laid.length === 0) return [];
   return unbacked(laid, yield* decisionsAt(ledger));

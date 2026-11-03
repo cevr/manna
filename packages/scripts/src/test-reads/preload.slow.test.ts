@@ -6,7 +6,6 @@ import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
 import { readsEnv } from './env.ts';
 
-/** A test that reads a file, imports a module and loads a native library. */
 const FIXTURE = `import { expect, test } from 'bun:test';
 
 import { value } from './module.ts';
@@ -77,8 +76,6 @@ describe('the read recorder test:reads preloads', () => {
         const exit = yield* spawner.exitCode(
           ChildProcess.make('bun', [path.join(dir, 'child.js')], {
             cwd: dir,
-            // Bun caches under XDG_CACHE_HOME when it is set, so it points inside
-            // the scratch HOME: a host's own setting cannot carry a write out of it.
             env: {
               ...readsEnv(path.join(import.meta.dir, 'preload.ts'), log),
               HOME: home,

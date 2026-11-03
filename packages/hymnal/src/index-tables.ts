@@ -1,14 +1,3 @@
-/**
- * The back-matter indexes (`indexes.ts`) as `index_*` tables of the corpus
- * database: `writeIndexTables` stores the 11 decoded files and the rulings,
- * `readIndexTables` rebuilds them, and `diffIndexTables` names each one that
- * comes back different, so a build that loses or adds an entry fails.
- *
- * Every row holds numbers, flags, names, printed headings, legends and
- * Scripture coordinates; `ordinal` is the printed order, from 0. A topic,
- * person, tune and metre is keyed by its ordinal. No table refers to
- * `hymns`: the readings 696-920 have no hymn row.
- */
 import type { Database } from 'bun:sqlite';
 import { Schema } from 'effect';
 
@@ -82,13 +71,11 @@ CREATE TABLE index_rulings (
   why TEXT NOT NULL) STRICT;
 `;
 
-/** The 11 files and the rulings, as `compile-db.ts` reads them from `data/indexes/`. */
 export interface IndexSources {
   readonly indexes: Indexes;
   readonly rulings: Rulings;
 }
 
-/** Every index, each optional: an index with no `index_files` row is absent. */
 export const IndexesSchema = Schema.Struct({
   topical: Schema.optionalKey(IndexFile.topical),
   'worship-aids': Schema.optionalKey(IndexFile['worship-aids']),
@@ -236,7 +223,6 @@ const writeRulings = (db: Database, rulings: Rulings) => {
   );
 };
 
-/** Create the `index_*` tables and store every index; the caller holds the transaction. */
 export const writeIndexTables = (db: Database, { indexes, rulings }: IndexSources) => {
   db.exec(INDEX_TABLES);
   for (const index of Object.values(indexes)) writeHeader(db, index);
@@ -276,7 +262,6 @@ export const writeIndexTables = (db: Database, { indexes, rulings }: IndexSource
   writeRulings(db, rulings);
 };
 
-/** Rows grouped by a key, each group in the query's order. */
 const groupBy = <R, K>(rows: readonly R[], key: (row: R) => K) => {
   const groups = new Map<K, R[]>();
   for (const row of rows) {
@@ -290,7 +275,6 @@ const groupBy = <R, K>(rows: readonly R[], key: (row: R) => K) => {
 const all = <R>(db: Database, sql: string, ...params: Binding[]) =>
   db.query<R, Binding[]>(sql).all(...params);
 
-/** `{ [key]: value }`, or nothing where the column is NULL: an absent optional key. */
 const present = <V>(key: string, value: V | null) =>
   value === null ? [] : [[key, value] as const];
 const optional = <V>(key: string, value: V | null): object =>
@@ -460,7 +444,6 @@ const readMetres = (db: Database) => {
   }));
 };
 
-/** Each index's entries, in its stored (encoded) form, read from its tables. */
 const BODIES = {
   topical: (db) => ({ topics: readTopics(db) }),
   'worship-aids': (db) => ({
@@ -501,11 +484,6 @@ const BODIES = {
 
 const isIndexName = Schema.is(IndexName);
 
-/**
- * Rebuild the decoded files and the rulings from the `index_*` tables. The
- * rows are decoded by the files' own schemas, so a row no file could hold
- * fails here.
- */
 export const readIndexTables = (db: Database): IndexSources => {
   const pages = groupBy(
     all<{ name: string; page: number; entries: number }>(
@@ -563,10 +541,6 @@ const encodeIndexes = Schema.encodeSync(IndexesSchema);
 const encodeRulings = Schema.encodeSync(Schema.fromJsonString(Rulings));
 const encodeJson = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
-/**
- * The name of each index (and `rulings`) whose stored form differs between
- * the two, compared as each schema encodes it: every entry, field and order.
- */
 export const diffIndexTables = (expected: IndexSources, actual: IndexSources): string[] => {
   const want = encodeIndexes(expected.indexes);
   const got = encodeIndexes(actual.indexes);

@@ -1,13 +1,3 @@
-// What `milk` draws, as painted plates (`PaintingSpec`): the empty parchment
-// page, painted to the kept panel `board/milk.newborn.5.png` with its figure,
-// book and ribbon painted out, on the courtyard's grid (1920 x 1280, the frame
-// showing its rows 100..1180); the book, the white ribbon and the ink dropper,
-// keyed out of the kept prop sheet (`prop-sheet/tries/props-3.png`) on its
-// flat paper; and the five drinkers of the kept drinking row
-// (`drink-sheet/tries/drink-2.png`), each keyed whole with its soft floor
-// shadow as a see-through tint. Each PNG is imported beside its spec, and
-// every one but the page is clear on all four sides. Pure data.
-
 import type { PaintingSpec } from '@manna/film/canvas';
 import babyPng from './milk-baby.png' with { type: 'file' };
 import bookOpenPng from './milk-book-open.png' with { type: 'file' };
@@ -22,7 +12,6 @@ import villagerPng from './milk-villager.png' with { type: 'file' };
 
 const CLEAR = ['top', 'right', 'bottom', 'left'] as const;
 
-/** The parchment page, peach-cream with gold rays from the top left, opaque over the whole plate. */
 export const PAGE = {
   key: 'in-its-order/milk-page',
   png: pagePng,
@@ -30,7 +19,6 @@ export const PAGE = {
   at: [0, -100],
 } as const satisfies PaintingSpec;
 
-/** The open book, its pages up; its centre at the origin. */
 export const BOOK_OPEN = {
   key: 'in-its-order/milk-book-open',
   png: bookOpenPng,
@@ -39,7 +27,6 @@ export const BOOK_OPEN = {
   open: CLEAR,
 } as const satisfies PaintingSpec;
 
-/** The shut book standing, its spine on the left; its centre at the origin. */
 export const BOOK_SHUT = {
   key: 'in-its-order/milk-book-shut',
   png: bookShutPng,
@@ -48,7 +35,6 @@ export const BOOK_SHUT = {
   open: CLEAR,
 } as const satisfies PaintingSpec;
 
-/** The white ribbon, twisting down from its top end; its own px, the top-left at the origin. */
 export const RIBBON = {
   key: 'in-its-order/milk-ribbon',
   png: ribbonPng,
@@ -57,12 +43,6 @@ export const RIBBON = {
   open: CLEAR,
 } as const satisfies PaintingSpec;
 
-/**
- * The ribbon's rows, its own px, every 5 down from its top end to its foot:
- * the row and where the ribbon's opaque pixels start and end on it. It runs
- * down one row at a time, so a clip of its rows from one to another reveals it
- * along its length.
- */
 export const RIBBON_ROWS: ReadonlyArray<readonly [y: number, x0: number, x1: number]> = [
   [5, 44, 68],
   [10, 36, 80],
@@ -128,7 +108,6 @@ export const RIBBON_ROWS: ReadonlyArray<readonly [y: number, x0: number, x1: num
   [310, 92, 101],
 ];
 
-/** The ink dropper, leaning, a drop of ink under its tip; its tip at the origin. */
 export const DROPPER = {
   key: 'in-its-order/milk-dropper',
   png: dropperPng,
@@ -137,11 +116,6 @@ export const DROPPER = {
   open: CLEAR,
 } as const satisfies PaintingSpec;
 
-/**
- * The drinking row's five, left to right, each its feet's centre at the
- * origin. `sheet` is where the keyed figure's top-left lay on the kept row
- * (`drink-2.png`, 1536 x 1024), so a scene lays the row as the sheet does.
- */
 export const DRINKERS = [
   {
     key: 'in-its-order/milk-baby',

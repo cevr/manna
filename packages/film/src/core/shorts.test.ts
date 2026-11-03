@@ -20,7 +20,6 @@ import {
 import { voicedAt } from './voiced.ts';
 
 const draw = () => {};
-/** No recorded takes: every scene is estimated. */
 const noTakes: Timings = { voice: '', scenes: {} };
 const placed = Result.getOrThrow(
   layout(
@@ -41,20 +40,16 @@ const a = Option.getOrThrow(Arr.get(placed, 0));
 const b = Option.getOrThrow(Arr.get(placed, 1));
 const fps = 30;
 
-/** A mark's film time. */
 const markAt = (p: Placed, name: string) =>
   p.start + p.speechStart + Option.getOrThrow(Option.fromNullishOr(p.voice.marks.get(name)));
-/** A named cue, scene-local. */
 const cueOf = (p: Placed, name: string) =>
   Option.getOrThrow(Option.fromNullishOr(p.cues.get(name)));
-/** The `i`th span of a resolved short. */
 const spanOf = (cut: ResolvedShort, i: number) => Option.getOrThrow(Arr.get(cut.spans, i));
 const lengthOf = (span: { readonly from: number; readonly to: number }) => span.to - span.from;
 
 const short = (spans: Short['spans']): Short => ({ id: 'cut', title: 'A cut', spans });
 const resolved = (spans: Short['spans']) => Result.getOrThrow(resolveShort(placed, short(spans)));
 
-/** The failure's tag, or `ok`. */
 const outcome = <A, E extends { readonly _tag: string }>(r: Result.Result<A, E>) =>
   Result.match(r, { onSuccess: () => 'ok', onFailure: (e) => e._tag });
 
@@ -69,19 +64,15 @@ describe('shorts', () => {
     const first = spanOf(cut, 0);
     const second = spanOf(cut, 1);
     expect(first.from).toBe(onFrame(markAt(a, 'three')));
-    // A cue as the end of a span is the cue's end.
     expect(first.to).toBe(onFrame(a.start + cueOf(a, 'lift').end));
     expect(first.at).toBe(0);
     expect(second.from).toBe(onFrame(b.start + b.speechStart));
-    // Back to back: the second starts where the first ends, in short time.
     expect(second.at).toBeCloseTo(lengthOf(first), 9);
     expect(cut.duration).toBeCloseTo(lengthOf(first) + lengthOf(second), 9);
-    // Every span is a whole number of frames, so picture and sound cut alike.
     for (const s of cut.spans) expect(Math.abs((lengthOf(s) * fps) % 1)).toBeLessThan(1e-6);
   });
 
   test('a span that opens on a word opens SHORT_PREROLL before it is heard, not on the pause the aligner gave it', () => {
-    // "So," aligned 0–0.9, heard from 0.6; "back" (the mark) aligned 0.9–2.3, heard from 1.9.
     const say = 'So, {back}back to it.';
     const heardAt: ReadonlyArray<readonly [number, number, number, number]> = [
       [0, 0.9, 0.6, 0.9],
@@ -109,13 +100,10 @@ describe('shorts', () => {
     const p = Option.getOrThrow(Arr.get(film, 0));
     const at = (spans: Short['spans']) => Result.getOrThrow(resolveShort(film, short(spans)));
     const voice = p.start + p.speechStart;
-    // From the mark: the word's voice less the preroll, not its aligned 0.9.
     const marked = spanOf(at([{ scene: 'a', from: { mark: 'back' }, to: { at: 'speechEnd' } }]), 0);
     expect(marked.from).toBe(onFrame(voice + 1.9 - SHORT_PREROLL));
-    // From the speech: the first word's voice less the preroll.
     const spoken = at([{ scene: 'a', from: { at: 'speech' }, to: { mark: 'back' } }]);
     expect(spanOf(spoken, 0).from).toBe(onFrame(voice + 0.6 - SHORT_PREROLL));
-    // A span's end stays where it is marked; the scene's start is not a word.
     expect(spanOf(spoken, 0).to).toBe(onFrame(voice + 0.9));
     const whole = at([{ scene: 'a', from: { at: 'start' }, to: { at: 'end' } }]);
     expect(spanOf(whole, 0).from).toBe(onFrame(p.start));
@@ -199,21 +187,17 @@ describe('shorts', () => {
       bottom: Math.max(...zones.map((z) => z.bottom)),
       left: Math.max(...zones.map((z) => z.left)),
       right: Math.max(...zones.map((z) => z.right)),
-      // TikTok's button column, as its safe-zone file gives it: 300 px from 840 px down.
       columns: [{ right: 300, from: 840 }],
     });
     expect(PLATFORM_ZONES.tiktok.zone.columns).toEqual([{ right: 300, from: 840 }]);
-    // The room a line has beside the column: the whole width above it, short of it below.
     expect(roomAcross(SAFE_ZONES.platforms, 600)).toEqual({ left: 120, right: 888 });
     expect(roomAcross(SAFE_ZONES.platforms, 840)).toEqual({ left: 120, right: 888 });
     expect(roomAcross(SAFE_ZONES.platforms, 900)).toEqual({ left: 120, right: 780 });
     expect(roomAcross(SAFE_ZONES.platforms, 1100)).toEqual({ left: 120, right: 780 });
-    // No platform's own zone reaches past it, and each edge is some platform's.
     for (const side of ['top', 'bottom', 'left', 'right'] as const) {
       for (const z of zones) expect(z[side]).toBeLessThanOrEqual(SAFE_ZONES.platforms[side]);
       expect(zones.map((z) => z[side])).toContain(SAFE_ZONES.platforms[side]);
     }
-    // The feed's zones are as they were.
     expect([SAFE_ZONES.default, SAFE_ZONES.ads]).toEqual([
       { top: 270, bottom: 520, left: 65, right: 140, columns: [] },
       { top: 270, bottom: 672, left: 65, right: 140, columns: [] },
@@ -234,7 +218,6 @@ describe('shorts', () => {
         { id: 'one', title: 'Again', spans: [span] },
       ]),
     ).toBe(false);
-    // A point names one anchor.
     expect(
       ok([{ id: 'one', title: 'One', spans: [{ ...span, from: { mark: 'x', cue: 'y' } }] }]),
     ).toBe(false);

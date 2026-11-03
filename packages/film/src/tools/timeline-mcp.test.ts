@@ -1,11 +1,3 @@
-// The timeline's tools through the lab's MCP, as an agent calls them: a film's
-// timeline at its production's open version (the registered files, read
-// fresh), at a version asked (a version folder's clock, read fresh with its
-// folder, and its own Board on its lane), a version it has not refused by
-// name, and only the lanes asked; the header waits on the open version's
-// Board whichever version is read; a clock is read once per stamp of the
-// film's sources.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option, Result, Schema } from 'effect';
 import { type BoardFile, BoardFileJson, BoardName } from '../core/board.ts';
@@ -18,7 +10,6 @@ import { text } from './host/testing.ts';
 import { labInMemory } from './lab/testing.ts';
 import { labWithMcp, mcpSession } from './lab-mcp/testing.ts';
 
-/** Film `f`'s v1, kept in its folder (`v1/`): a voiced beat with a mark, its take staged, and a silent one. */
 const older: FilmClock = {
   fps: 30,
   beats: [
@@ -46,7 +37,6 @@ const older: FilmClock = {
   movements: [],
 };
 
-/** Its registered files' clock (v2, open): the script rewritten, no take yet. */
 const registered: FilmClock = {
   fps: 30,
   beats: [
@@ -65,7 +55,6 @@ const registered: FilmClock = {
   movements: [],
 };
 
-/** A Board of one panel, its one try kept. */
 const boardOf = (beat: string, at: string): BoardFile => ({
   film: 'f',
   panels: [
@@ -89,7 +78,6 @@ const boardOf = (beat: string, at: string): BoardFile => ({
   approvals: [],
 });
 
-/** Film `f` with its Board, and its v1 folder with its own script and Board. */
 const files = () =>
   new Map<string, Uint8Array>([
     ['/films/f/scenes/index.ts', text('export {};\n')],
@@ -98,7 +86,6 @@ const files = () =>
     ['/films/f/v1/board.json', text(Schema.encodeSync(BoardFileJson)(boardOf('cold', 'judge')))],
   ]);
 
-/** The folders the fresh clock was asked for, in order. */
 const asked: Array<Option.Option<string>> = [];
 
 const provided = <A, E, R>(
@@ -125,7 +112,6 @@ const provided = <A, E, R>(
     ),
   );
 
-/** Film `f`'s production: v1 kept in its folder, v2 open on the registered files. */
 const twoVersions = Effect.gen(function* () {
   const productions = yield* ProductionStore;
   yield* productions.start('f', {
@@ -146,7 +132,6 @@ const twoVersions = Effect.gen(function* () {
   );
 });
 
-/** What the open version's Board holds ready: its one beat waits on the owner's approval. */
 const SEED_WAITS = {
   count: 1,
   items: [{ kind: 'approve', beat: 'seed', href: '/' }],
@@ -187,7 +172,6 @@ describe('timeline', () => {
             'voice',
             'scenes',
           ]);
-          // Its own Board (`v1/board.json`): the beat's one panel shows from the beat's start.
           expect(v1.lanes[1].clips).toEqual([
             {
               start: 0,
@@ -203,7 +187,6 @@ describe('timeline', () => {
               card: false,
             },
           ]);
-          // The header still waits on the open version's Board, not v1's.
           expect(v1.header.waits).toEqual(SEED_WAITS);
           expect(v1.bands.map((b: { name: string }) => b.name)).toEqual(['open']);
           const only = yield* tool('timeline', { film: 'f', version: 1, tracks: ['voice'] });

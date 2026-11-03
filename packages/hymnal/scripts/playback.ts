@@ -1,4 +1,3 @@
-/** Generate numeric sidecars without writing lyric-bearing compiled hymns. */
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Effect, Result, Schema } from 'effect';
@@ -80,7 +79,6 @@ const ownSource = (sources: ReturnType<typeof fingerprints>, number: number) => 
   return source === undefined ? mismatch('source', number) : source;
 };
 
-/** Both native and web build derivations use the same checked numeric join. */
 export const readPlayback = (hymns: readonly Hymn[]): readonly Hymn[] => {
   const decodedManifest = Result.try(() =>
     decodeManifest(readFileSync(join(folder, 'manifest.json'), 'utf8')),
@@ -89,8 +87,6 @@ export const readPlayback = (hymns: readonly Hymn[]): readonly Hymn[] => {
   const manifest = decodedManifest.success;
   const overrides = new Set(manifest.overrides);
   return hymns.map((hymn) => {
-    // The corpus check proves every other sidecar equals the existing numeric
-    // projection. Its own digest is checked by the fast package storage guard.
     if (!overrides.has(hymn.number)) return hymn;
     const raw = Result.try(() => ({
       sourceHash: corpusHash(hymn.number),
@@ -122,7 +118,6 @@ const validPlacementTargets = (hymn: Hymn, placements: Placements) => {
   return true;
 };
 
-/** Numeric placement alternatives for the shared native/web chord bundle. */
 export const readPlacementPatches = (hymns: readonly Hymn[]): ReadonlyMap<number, Placements> => {
   const decodedManifest = Result.try(() =>
     decodeManifest(readFileSync(join(folder, 'manifest.json'), 'utf8')),
@@ -147,7 +142,6 @@ export const readPlacementPatches = (hymns: readonly Hymn[]): ReadonlyMap<number
   return rows;
 };
 
-/** Fresh compilation is in memory. No source text enters generated files. */
 const countsOf = (hymn: Hymn) => {
   const parts = [...hymn.stanzas, ...(hymn.refrain === undefined ? [] : [hymn.refrain.part])];
   const sungParts = parts.filter((part) => part._tag === 'Sung');
@@ -169,7 +163,6 @@ const countsOf = (hymn: Hymn) => {
 };
 
 export const generatePlayback = async (out = folder) => {
-  // Build reads do not evaluate the compiler or pronunciation dictionary modules.
   const [{ compilePlacements }, { decodeOrders, sourceOf }, { decodeSourceText }] =
     await Promise.all([loadCompiler(), loadSources(), loadSourceText()]);
   const source = textBytes(),

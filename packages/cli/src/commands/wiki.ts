@@ -1,22 +1,3 @@
-/**
- * Wiki CLI command graph.
- *
- * `manna wiki topics [--query <q>] [--json]` lists the authored flagship pages
- * the installed topics artifact carries. With no artifact the command still
- * succeeds and reports the typed absence — §3.5's degradation posture is a
- * domain value, not an error path.
- *
- * `manna wiki topic <slug> [--json]` prints the composed page: the authored
- * core plus the §6.1 section lineup. It calls `WikiService` directly — the same
- * composer, the same caps, the same result identities, with no second
- * rendering path.
- *
- * The `--json` payloads are produced by **the core schemas themselves**
- * (`WikiPageJson`, `WikiPageSummaryJson`), not by a hand-written projection, so
- * a field added to the model reaches the JSON at once instead of silently
- * missing from it.
- */
-
 import { parseBibleQuery, type VerseReference } from '@manna/core/bible';
 import {
   lookupInputOf,
@@ -61,27 +42,8 @@ const JsonString = Schema.Unknown.pipe(
 
 const encodeJson = Schema.encodeUnknownEffect(JsonString);
 
-/** The two core encoders. Nothing below names a field of a page or a section:
- *  the schema is the wire contract, so the CLI's job is to run it. */
 const encodePage = Schema.encodeEffect(WikiPageJson);
 
-/** The listing envelope, as a schema rather than as an object literal built at
- *  the call site: `count` and `unavailable` are wire fields like any other, and
- *  declaring them here means the encoded shape has one definition and one
- *  `Encoded` type instead of a hand-written annotation that can drift from what
- *  the encoder actually emits.
- *
- *  `unavailable` is absent-or-a-reason, and the wire form is the reason string
- *  when the artifact is missing. This is *listing* metadata rather than page
- *  data — `wiki.availability` is a property of the artifact, not of any page —
- *  which is why it lives here and not inside `WikiPageJson`.
- *
- *  The reason is the **closed** `TopicsUnavailableReason`, not `Schema.String`.
- *  `WikiPage.unavailable` already declares the closed union, and widening the
- *  listing's copy to any string means the CLI and the page model disagree about
- *  what a client may receive: a consumer that switches on the reason would have
- *  to carry a default branch for the listing that its page handling does not
- *  need, and a typo introduced here would encode instead of failing. */
 export const WikiTopicsJson = Schema.Struct({
   topics: WikiPageSummaryJson,
   count: Schema.Int,
@@ -100,15 +62,6 @@ const query = Flag.String('query').pipe(
   Flag.withDescription('Filter pages by title or slug'),
 );
 
-/** Resolves the installed artifact into a `WikiService`. A missing file is the
- *  expected steady state until the first content release, and `layerBunOrAbsent`
- *  turns it into the typed-absence service rather than a failure — the
- *  command's whole contract is that both paths return data.
- *
- *  The catalog half comes from `bible.db` through `TopicService`, so the
- *  missing-artifact case still lists every catalog topic (§2, M2), and the §6
- *  section sources come from `bible.db` plus the EGW writings library. All
- *  three databases live in `~/.bible`. */
 const installedWikiLayer = Layer.unwrap(
   Effect.gen(function* () {
     const path = yield* Path.Path;
@@ -121,29 +74,14 @@ const installedWikiLayer = Layer.unwrap(
   }).pipe(Effect.provide(BunServices.layer), Effect.orDie),
 ).pipe(Layer.provide(BunServices.layer));
 
-/** Which `WikiService` the two commands resolve, as an overridable default.
- *
- *  A `Context.Reference` rather than a plain constant, and rather than adding
- *  `WikiService` to the CLI's top-level requirements. The default is the
- *  installed-corpora layer, so production wiring is unchanged and no other
- *  command pays to open three SQLite files it does not use. What the reference
- *  buys is that a test can point the commands at a fixture artifact **and still
- *  run the real command** — argument parsing, encoder, `Console.log` and all —
- *  instead of calling the exported `topicJson` helper and proving only that the
- *  helper works. The seam a helper-level test leaves open is precisely the one
- *  where a hand-mapped rename could reappear between the page and stdout. */
 export class WikiLayer extends Context.Reference<Layer.Layer<WikiService>>(
   '@manna/cli/wiki/WikiLayer',
   { defaultValue: () => installedWikiLayer },
 ) {}
 
-/** The `WikiService` this run should use, resolved once per command body. */
 const wikiService = <A, E>(use: Effect.Effect<A, E, WikiService>): Effect.Effect<A, E> =>
   Effect.flatMap(WikiLayer, (layer) => use.pipe(Effect.provide(layer)));
 
-/** The `--json` payload for a listing, as a pure function of what the service
- *  returned — so the acceptance check asserts the wire shape directly rather
- *  than by scraping stdout. */
 export const topicsJson = (result: {
   readonly topics: readonly WikiPageSummary[];
   readonly unavailable: Option.Option<TopicsUnavailableReason>;
@@ -188,15 +126,11 @@ const wikiTopics = Command.make('topics', { query, json }, (args) =>
   }).pipe(Effect.provide(BunServices.layer)),
 );
 
-/** The human-readable rendering of §6.1's default-open flag. */
 const openMarker = (defaultOpen: boolean): string => {
   if (defaultOpen) return '  (open)';
   return '';
 };
 
-/** How many uninstalled cited books a section carries (§6.3). Only sections 2
- *  and 4 can have any; the value lives beside the ranked hits rather than among
- *  them, so the human summary reports it as its own number. */
 const missingBookCount = (section: WikiSection): number => {
   if (section._tag !== 'egw-statements' && section._tag !== 'pioneer-witnesses') return 0;
   return section.missingBooks.length;
@@ -208,8 +142,6 @@ const missingMarker = (section: WikiSection): string => {
   return `  +${String(missing)} to get`;
 };
 
-/** The `--json` payload for one page: the core schema's own encoding rather
- *  than a parallel projection of it. */
 export const topicJson = (page: WikiPage): Effect.Effect<WikiPageJson, Schema.SchemaError> =>
   encodePage(page);
 
@@ -229,8 +161,6 @@ const wikiTopic = Command.make('topic', { slug, json }, (args) =>
       return;
     }
     yield* Console.log(`${page.title}  [${page.status}]`);
-    // A host that wired no §6 sources says so, rather than printing six empty
-    // sections a reader would take for "the corpora had nothing to say".
     yield* Option.match(page.sectionsUnavailable, {
       onNone: () => Effect.void,
       onSome: (reason) => Console.log(`sections unavailable: ${reason}`),
@@ -246,30 +176,11 @@ const wikiTopic = Command.make('topic', { slug, json }, (args) =>
   }).pipe(Effect.provide(BunServices.layer)),
 );
 
-// ---------------------------------------------------------------------------
-// manna wiki matches
-// ---------------------------------------------------------------------------
-
-/** The `--json` payload for one matched run: `PhraseSpansJson`, the same codec
- *  a renderer would decode. Nothing here names `start`, `end`, `slug`, or
- *  `alias` — the schema is the wire contract for spans exactly as
- *  `WikiPageJson` is for pages. */
 const matchesJson = (
   spans: readonly PhraseSpan[],
 ): Effect.Effect<PhraseSpansJson, Schema.SchemaError> =>
   Schema.encodeEffect(PhraseSpansJson)(spans);
 
-/** Matches one text run against the installed dictionary and reports the spans.
- *
- *  The whole command is `dictionary → automaton → match`, which is *exactly*
- *  what a client does at render time (§4.1): the same core function over the
- *  same dictionary, which is what the parity test asserts.
- *
- *  The supplied text is treated as **one run and one section**: the caller
- *  passed a single string, so there is no segment structure to respect and no
- *  second run for §4.5's per-phrase state to carry into. Piping a whole verse
- *  in, as the acceptance workflow does, is therefore the raw-text half of the
- *  fixture — the rendered half runs through `matchSegments` in core. */
 const text = Argument.String('text').pipe(
   Argument.withDescription('The text to match against the phrase dictionary'),
 );
@@ -299,14 +210,6 @@ const wikiMatches = Command.make('matches', { text, json }, (args) =>
   }).pipe(Effect.provide(BunServices.layer)),
 );
 
-// ---------------------------------------------------------------------------
-// manna wiki lookup (§7)
-// ---------------------------------------------------------------------------
-
-/** The three corpora select-to-lookup reads, resolved as one `LookupService`.
- *
- *  The same `~/.bible` files every other command uses, composed by
- *  `layerBunLookup` so the CLI opens each one once. */
 const installedLookupLayer = Layer.unwrap(
   Effect.gen(function* () {
     const path = yield* Path.Path;
@@ -319,10 +222,6 @@ const installedLookupLayer = Layer.unwrap(
   }).pipe(Effect.provide(BunServices.layer), Effect.orDie),
 ).pipe(Layer.provide(BunServices.layer));
 
-/** Which `LookupService` the command resolves, as an overridable default — the
- *  same `Context.Reference` seam `WikiLayer` and `StudyLayer` use, and for the
- *  same reason: a test points the command at fixtures and still runs the real
- *  command, argument parsing and encoder and `Console.log` and all. */
 export class LookupLayer extends Context.Reference<Layer.Layer<LookupService>>(
   '@manna/cli/wiki/LookupLayer',
   { defaultValue: () => installedLookupLayer },
@@ -331,9 +230,6 @@ export class LookupLayer extends Context.Reference<Layer.Layer<LookupService>>(
 const lookupService = <A, E>(use: Effect.Effect<A, E, LookupService>): Effect.Effect<A, E> =>
   Effect.flatMap(LookupLayer, (layer) => use.pipe(Effect.provide(layer)));
 
-/** The `--json` payload for one lookup: the core schema's own encoding rather
- *  than a parallel projection of it — the same `…Json` alias discipline the
- *  page and the study bundle follow. */
 const lookupJson = (result: LookupResult): Effect.Effect<LookupResultJson, Schema.SchemaError> =>
   Schema.encodeEffect(LookupResultJson)(result);
 
@@ -341,7 +237,6 @@ const lookupText = Argument.String('text').pipe(
   Argument.withDescription('The selected text to look up'),
 );
 
-/** The reference argument named something other than one verse. */
 class NotOneVerseContextError extends Schema.TaggedError<NotOneVerseContextError>()(
   'NotOneVerseContextError',
   { reference: Schema.String },
@@ -351,14 +246,6 @@ class NotOneVerseContextError extends Schema.TaggedError<NotOneVerseContextError
   }
 }
 
-/** `--context "Dan 8:13"`, parsed by the same `parseBibleQuery` the study
- *  command uses.
- *
- *  Only a single verse is accepted, for the reason `manna study verse` accepts
- *  only one: §7's context exists to locate the selection *inside a verse*, and
- *  `getVerseWords` takes three numbers. A chapter or a range would silently
- *  resolve against its first verse and report Strong's entries for words the
- *  caller never named. */
 const contextFlag = Flag.String('context').pipe(
   Flag.optional,
   Flag.withDescription('The verse the selection came from, e.g. "Dan 8:13"'),
@@ -378,7 +265,6 @@ const lookupContext = (
     },
   });
 
-/** An argument that is nothing but whitespace. */
 class EmptySelectionError extends Schema.TaggedError<EmptySelectionError>()('EmptySelectionError', {
   text: Schema.String,
 }) {
@@ -387,15 +273,6 @@ class EmptySelectionError extends Schema.TaggedError<EmptySelectionError>()('Emp
   }
 }
 
-/** The portable lookup input (§7), built from this command's arguments.
- *
- *  Exported because it is the CLI's half of Milestone 7's adapter check: it
- *  asserts against the shared `LOOKUP_ADAPTER_INPUT` fixture in core — the same
- *  way Milestone 4's span parity is held.
- *
- *  The *text* rule is `lookupInputOf`, in core. The argument that collapses to
- *  nothing is `None` there and a refusal here, because on this surface it was a
- *  request rather than a stray click. */
 export const lookupInput = (args: {
   readonly text: string;
   readonly context: Option.Option<string>;
@@ -422,14 +299,9 @@ const wikiLookup = Command.make(
       }
 
       yield* Console.log(result.text);
-      // §7's peek-card case, reported rather than rendered differently: the CLI
-      // has no card, and the flag is still a fact about this result that a
-      // caller comparing seams needs to see.
       if (result.lonePeek) yield* Console.log('(lone topic hit — peek card)');
       yield* Console.log(``);
 
-      // The five groups, in §7's order and always all five — the same shape the
-      // panel draws, so an empty group prints its heading rather than vanishing.
       yield* Console.log(`## topics  ${String(result.topics.length)}`);
       for (const match of result.topics) {
         yield* Console.log(`  ${match.slug}  ${match.display}  [${match.kind}]`);

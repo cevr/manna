@@ -8,8 +8,6 @@ type Alias = Data.TaggedEnum<{
 export const KjvAlias = Data.taggedEnum<Alias>();
 const { Lemma, Override, NoEntry } = KjvAlias;
 
-/** Audited lexical targets and explicit stops. Exact entries win except for
- * closest, whose KJV verb meaning overrides the dictionary's adjective. */
 const aliases: ReadonlyMap<string, Alias> = new Map<string, Alias>([
   ['abodest', Lemma({ key: 'abide' })],
   ['aijeleth', NoEntry()],
@@ -32,7 +30,6 @@ const aliases: ReadonlyMap<string, Alias> = new Map<string, Alias>([
   ['carrieth', Lemma({ key: 'carry' })],
   ['cheth', NoEntry()],
   ['chinnereth', NoEntry()],
-  // Jeremiah 22:15 uses the verb CLOSE; the exact CLOSEST row is an adjective.
   ['closest', Override({ key: 'close' })],
   ['couldest', Lemma({ key: 'can' })],
   ['criest', Lemma({ key: 'cry' })],

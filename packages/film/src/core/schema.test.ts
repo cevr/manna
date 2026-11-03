@@ -17,7 +17,6 @@ import {
 } from './schema.ts';
 import { voicedAt } from './voiced.ts';
 
-/** The app's folder, whose tool-written records the formatter has already passed over. */
 const APP = new URL('../../../../apps/animations/', import.meta.url).pathname;
 
 const JsonFile = repoJson(Schema.Json);
@@ -37,7 +36,6 @@ const take: VoiceTiming = {
 const decodes = (a: VoiceTiming) =>
   Result.isSuccess(Schema.decodeResult(Timings)({ voice: 'v', scenes: { a } }));
 
-/** `take` with word `i` changed. */
 const withWord = (i: number, word: Partial<TakeWord>): VoiceTiming => ({
   ...take,
   words: take.words.map((w, k) => {
@@ -100,13 +98,11 @@ describe('Timings', () => {
 
   test('refuses a word that ends after the take', () => {
     expect(decodes(withWord(2, { start: 99, end: 99.5 }))).toBe(false);
-    // Within the tolerance the take's measured length is allowed to differ by.
     expect(decodes(withWord(2, { end: 2.01 }))).toBe(true);
   });
 });
 
 describe('Timed', () => {
-  /** A scene as JSON text, decoded as the tools decode a scene module. */
   const decodes = (json: string) =>
     Result.isSuccess(Schema.decodeResult(Schema.fromJsonString(Timed))(json));
 
@@ -152,7 +148,6 @@ describe('Timed', () => {
     expect(decodes('{"id":"a","timeline":{"slam":{"mark":"m","dur":-0.2}}}')).toBe(false);
     for (const kind of ['fade', 'pan', 'ink'])
       expect(decodes(`{"id":"a","enter":{"kind":"${kind}","dur":-1}}`)).toBe(false);
-    // An offset moves a cue either way from its anchor.
     expect(decodes('{"id":"a","timeline":{"slam":{"mark":"m","offset":-0.4}}}')).toBe(true);
   });
 
@@ -185,7 +180,6 @@ describe('Timed', () => {
     ];
     expect(spans).toHaveLength(3);
     const timeline = (span: string) => decodes(`{"id":"a","timeline":{"walk":${span}}}`);
-    // Without the key, every span decodes as it did.
     expect(timeline('{"mark":"m","until":"n"}')).toBe(true);
     expect(timeline('{"mark":"m","until":"n","untilOffset":0.1}')).toBe(true);
     expect(timeline('{"at":"start","until":{"at":"end"},"untilOffset":-0.4}')).toBe(true);
@@ -315,7 +309,6 @@ describe('repoJson', () => {
   });
 
   test("breaks a filled line before a number its comma would carry past the line, and drops an exponent's plus", () => {
-    // oxfmt's own print of this value: the line of thirteen ends at 93, the fourteenth's comma at 101.
     expect(printed({ box: Arr.makeBy(20, (i) => 10000 + i), big: [1e30, 1.5e21] })).toBe(
       [
         '{',
@@ -331,7 +324,6 @@ describe('repoJson', () => {
   });
 
   test('breaks every array around a matrix, though it would fit a line', () => {
-    // oxfmt's own print of each: a break inside an item breaks the arrays that hold it.
     expect(
       printed([
         ['a', true],
@@ -387,7 +379,6 @@ describe('repoJson', () => {
         )),
         ...(yield* under('src/films', (name) => name.endsWith('/cast-sheet/cast-sheet.json'))),
         ...(yield* under('productions', (name) => !name.includes('/') && name.endsWith('.json'))),
-        // The figure goldens: thousands of filled number lines, written by `figure-golden-fixture.ts`.
         new URL('./fixtures/figure/golden.json', import.meta.url).pathname,
       ];
       expect(files.length).toBeGreaterThan(3);

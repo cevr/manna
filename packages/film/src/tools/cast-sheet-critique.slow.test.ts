@@ -1,7 +1,3 @@
-// A cast sheet try's critique: each view a kept concept faces is cut from
-// the try and shown beside the concept's crop with the measure's flags on
-// it, in one counsel run; a view no concept faces is said, never critiqued.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Path, Schema } from 'effect';
@@ -22,7 +18,6 @@ const ANSWER = [
   '```',
 ].join('\n');
 
-/** `sheet` as the route can answer it with its paper left out: every paper pixel transparent, its colour a dark grey no eye sees. */
 const bare = (sheet: Raster): Raster => {
   const rgba = Uint8Array.from(sheet.rgba);
   for (let i = 0; i < rgba.length; i += 4)
@@ -30,10 +25,8 @@ const bare = (sheet: Raster): Raster => {
   return { ...sheet, rgba };
 };
 
-/** Every packet the counsel was asked. */
 const asked: Array<string> = [];
 
-/** The critic over a rule file of its own, its counsel a stub answering `ANSWER`. */
 const critic = Layer.unwrap(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -45,7 +38,6 @@ const critic = Layer.unwrap(
   }),
 );
 
-/** The try `poses-1.png` (a front view and one more, painted with no paper), critiqued with `layout`: the critique, the packets asked and the first view's crop. */
 const critiqued = (layout: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -58,7 +50,6 @@ const critiqued = (layout: string) =>
     yield* fs.writeFile(path.join(folder, 'concept.png'), encodePng(front));
     yield* fs.writeFile(
       path.join(out, 'poses-1.png'),
-      // Painted with no paper: the critic is still shown each view on white.
       encodePng(bare(drawSheet([front, drawFigure({ ...base, eyeShift: 0, cy: 120 })]))),
     );
     const record: CastSheetRecord = {

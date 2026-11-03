@@ -1,13 +1,3 @@
-// The feast mother's puppets, one a cut view (`canvas/puppet.ts`): each
-// view's part sheet (`sheets/<view>/`, made by `film concept parts`), its
-// parts front to back as the sheet's record lists them, each PNG imported by
-// its module so a scene that draws her is keyed by its bytes
-// (`tools/stamp.ts`), on the view's skeleton (`skeleton.ts`), with her origin
-// at the kept box's top-left corner in the padded part sheet (`frames.ts`):
-// her pixels are the sheet's, drawn at its one scale. She is a film's member,
-// so her folder is In Its Order's (`films/in-its-order/cast/feast-mother/`).
-// Pure data.
-
 import backArmLeft from './sheets/back/armLeft.png' with { type: 'file' };
 import backArmRight from './sheets/back/armRight.png' with { type: 'file' };
 import backHead from './sheets/back/head.png' with { type: 'file' };
@@ -62,51 +52,15 @@ import { FRAMES } from './frames.ts';
 import { POSES_PAPERS, type PoseView, TURNAROUND_PAPERS, type TurnaroundView } from './papers.ts';
 import { SKELETONS } from './skeleton.ts';
 
-/**
- * Her sheet's line, which a look draws again near what moved: the median run
- * of ink (r+g+b < 200) across her outer outline, every 10th row of her front,
- * threeQuarterLeft and back, is 9 px (quartiles 9 and 9), laid half a pixel
- * wider as the sower's and the lead's are; her ink is the turnaround's darkest
- * 1 % (11,2,0 to 13,3,1).
- */
 const TURNAROUND_LINE = { width: 9.5, ink: [12, 2, 0] } as const;
 
-/**
- * Her cream cloth, kept whole by the un-matte (`core/unmatte.ts`, `keep`):
- * the median of the veil's lining in poses-2, 254,247,230. The lining, the
- * swaddle and the cream under the stool are lighter than her paper (RGB
- * 11 to 25 from it), so with no cloth named they solve to no alpha and the
- * un-matte clears them (7678 px of poses-2, 386 of threeQuarterLeft and 191
- * of back show the film's paper through her). Named, they stay hers.
- *
- * The second colour, 255,249,211, is the yellower cream of her veil's edge in
- * the turnarounds (the cleared px there lie +2,+4,-5 RGB from the paper; this
- * is twice that step), so its half-way line to the paper keeps the farther
- * half of them and no paper pocket's px. A colour nearer the paper (the
- * cleared median itself) keeps them all but fills 8 to 88 px of real paper
- * pockets in five views, so the px nearer the paper than either colour
- * remain cleared.
- */
 const CLOTH = [
   [254, 247, 230],
   [255, 249, 211],
 ] as const;
 
-/**
- * Her paper's grain, luma (`core/unmatte.ts`, `grain`): the 95th percentile of
- * how far her kept ground runs darker than its paper, sampled on two views,
- * poses-1 (2.043) and turnaround-front (0.886). Other views differ
- * (profileRight 2.516); the larger of the two sampled is one calibration that
- * both her puppet members, turnaround and poses, share. A rim pixel
- * of hers darker than the paper by more than this is no paper, so the
- * un-matte keeps it whole: the grey-cream cloth of her veil, swaddle and the
- * bench leg in the poses, which the line to her ink barely reaches and would
- * otherwise solve to a few alpha, leaving holes the film's paper shows
- * through.
- */
 const GRAIN = 2.04;
 
-/** Her turnaround's puppets, by the view's name in her sheets' views (`library/cutout/puppets.ts`). */
 const TURNAROUND = puppetsOf<TurnaroundView>({
   cast: 'feast-mother',
   cuts: CUTS,
@@ -160,15 +114,8 @@ const TURNAROUND = puppetsOf<TurnaroundView>({
   },
 });
 
-/**
- * Her poses sheet's line: the median run of ink (r+g+b < 200) across her
- * outer outline, every 10th row of each pose, is 12 px (quartiles 12 and
- * 12-15), laid half a pixel wider as the turnaround's is; its ink is the
- * poses' darkest 1 % (19,4,0 to 21,5,0).
- */
 const POSES_LINE = { width: 12.5, ink: [20, 4, 0] } as const;
 
-/** Her poses' puppets: the baby, the cup and the stool are parts of their own behind her hands. */
 const POSES = puppetsOf<PoseView>({
   cast: 'feast-mother',
   cuts: CUTS,
@@ -177,7 +124,6 @@ const POSES = puppetsOf<PoseView>({
   papers: POSES_PAPERS,
   line: POSES_LINE,
   keep: CLOTH,
-  // her head turns and bows over her still veil and torso at the chin: the torso reaches 12 px under it
   underlap: { head: 12 },
   grain: GRAIN,
   parts: {
@@ -210,5 +156,4 @@ const POSES = puppetsOf<PoseView>({
   },
 });
 
-/** Each cut view's puppet, by the view's name in her sheets' views: its parts front to back, its part sheet the kept box padded (`frames.ts`), her origin at the kept box's top-left corner, held to the kept box. */
 export const PUPPETS = { ...TURNAROUND, ...POSES };

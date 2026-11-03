@@ -1,8 +1,3 @@
-// The most a code sound can be, at the most its draws allow: its length in
-// seconds and its work (the seconds of frames its nodes write, repetitions
-// counted). The library load refuses a sound past `MAX_CODE_SECS` or
-// `MAX_CODE_WORK` before anything renders, so a typo cannot render hours.
-
 import { Match, Predicate } from 'effect';
 import { MODES } from './kernels.ts';
 import { exp2 } from './math.ts';
@@ -18,31 +13,26 @@ import {
 } from './nodes.ts';
 import { poissonCap } from './units.ts';
 
-/** A sound's or a node's most: its length and its work, in seconds. */
 export interface Bound {
   readonly secs: number;
   readonly work: number;
 }
 
-/** The largest a value can draw. */
 const most = (value: Value<number>): number => {
   if (isPick(value)) return Math.max(...value.of);
   if (isVary(value)) return Math.max(value.min, value.max);
   return value;
 };
 
-/** The smallest a value can draw. */
 const least = (value: Value<number>): number => {
   if (isPick(value)) return Math.min(...value.of);
   if (isVary(value)) return Math.min(value.min, value.max);
   return value;
 };
 
-/** How many modes a strike sums: each is a pass over its frames. */
 const modesOf = (node: Partials): number =>
   Predicate.isString(node.set) ? MODES[node.set].length : node.set.length;
 
-/** A repeat at its most: how many onsets, and the latest, in seconds. */
 interface Repeats {
   readonly ticks: number;
   readonly last: number;
@@ -58,7 +48,6 @@ const repeats = (timing: Repeat['timing']): Repeats =>
     Poisson: (t) => ({ ticks: poissonCap(most(t.rate), most(t.secs)), last: most(t.secs) }),
   });
 
-/** A node that changes its one child: as long as it (plus `more`), its child's work and its own. */
 const over = (child: Bound, more = 0): Bound => ({
   secs: child.secs + more,
   work: child.work + child.secs + more,
@@ -66,7 +55,6 @@ const over = (child: Bound, more = 0): Bound => ({
 
 type Of = (node: Node) => Bound;
 
-/** A layer's most: its own length when it names one (its children are made whole, then cut), else its latest child's end. */
 const layerBound = (node: Layer, of: Of): Bound => {
   const mixed = node.of.reduce<Bound>(
     (sum, layered) => {
@@ -98,7 +86,6 @@ const repeatBound = (node: Repeat, of: Of): Bound => {
   return { secs: last + child.secs, work: ticks * (child.work + child.secs) };
 };
 
-/** `node`'s most, a sampled sound's taken from `sampled`. */
 export const boundOf = (node: Node, sampled: (name: string) => Bound): Bound => {
   const of: Of = (child) => boundOf(child, sampled);
   switch (node._tag) {
@@ -118,7 +105,6 @@ export const boundOf = (node: Node, sampled: (name: string) => Bound): Bound => 
     case 'Loop':
       return over(of(node.of));
     case 'Resample': {
-      // Slowest at its lowest semitones: its length scales by 2^(−semitones/12).
       const child = of(node.of);
       return over(child, child.secs * (exp2(-least(node.semitones) / 12) - 1));
     }

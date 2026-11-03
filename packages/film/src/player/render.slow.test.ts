@@ -1,6 +1,3 @@
-// The render page loads no Solid: its module graph, bundled for the browser
-// as the renderer loads it, reaches neither `solid-js` nor `@solidjs/*`.
-
 import { expect, test } from 'bun:test';
 
 test('the render page loads no Solid', async () => {

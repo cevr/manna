@@ -1,15 +1,3 @@
-/** The CLI's `--json` is `SearchResultJson` over the service's own result.
- *
- *  `--json` is a contract with every script that pipes it, so it must be the
- *  one wire codec over the value `SearchService` returned — not a hand-written
- *  projection that could drift from `SearchResult` without anything failing.
- *
- *  So these tests run the real command — argument parsing, the layer seam, the
- *  encoder, `Console.log` — and compare its captured stdout to the bytes the
- *  same query produces when asked of the service directly, over the same
- *  fixture corpus.
- */
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option, Ref, Schema } from 'effect';
 import {
@@ -37,9 +25,6 @@ import { SearchLayer, verifiedVectorIndex } from '../../src/commands/egw/search-
 import { WikiLayer } from '../../src/commands/wiki.js';
 import { runCli } from '../lib/run-cli.js';
 
-/** The fixture embedder core's parity test uses, so both sides of the
- *  comparison are looking at the same vectors rather than at two plausible
- *  ones. */
 const embedder = Layer.succeed(
   QueryEmbedder,
   QueryEmbedder.of({
@@ -49,59 +34,32 @@ const embedder = Layer.succeed(
   }),
 );
 
-/** One service instance for both seams: a difference in service construction
- *  must not be able to hide behind a difference the test was not looking for. */
 const fixtureSearch = goldenSearchLayer({
   index: Option.some(goldenVectorIndexBytes()),
   embedder,
 });
 
-/** A query §9.3 considers wordy, so it routes to the hybrid path and the vector
- *  leg is actually attempted. */
 const WORDY_QUERY = 'what happens at the close of probation';
 
-/** A fixture host with no vector index and no embedder — the ordinary machine,
- *  and the one §9.6's typed absence exists for. */
 const lexicalOnlySearch = goldenSearchLayer();
 
-/** A wiki that will not open, which is the one failure the topic fetch has to
- *  absorb: the group is a garnish on an answer that is already complete, so a
- *  refusing artifact must cost the caller the group and nothing else. */
 const brokenWiki = WikiService.Broken({
   operation: 'list',
   message: 'topics.db is not readable',
 });
 
-/** The command's own `--json`, captured from real stdout. */
 const cliJson = (args: readonly string[], layer = fixtureSearch) =>
   runCli(egwSearch, [...args, '--json'], {}).pipe(Effect.provideService(SearchLayer, layer));
 
-/** The same query asked of the service directly, encoded the way the CLI
- *  encodes it.
- *
- *  The codec is restated here rather than imported from the command, because
- *  what is under test is that the command produces *these* bytes. Importing the
- *  command's own helper would make the assertion true by construction. */
 const serviceJson = (query: SearchQuery, layer = fixtureSearch) =>
   Effect.flatMap(SearchService, (service) => service.query(query)).pipe(
     Effect.flatMap(Schema.encodeEffect(Schema.fromJsonString(SearchResultJson, { space: 2 }))),
     Effect.provide(layer),
   );
 
-/** The result the command produced, read as a value rather than as text.
- *
- *  The command's stdout is compared byte-for-byte in the parity tests above; the
- *  behavioral assertions below need the *value*, and `SearchResultJson` does not
- *  round-trip through its own encoder — `Schema.Option` encodes to Effect's
- *  tagged `{_id:"Option"}` form, which its decoder does not read back. Rather
- *  than assert on a hand-parsed shape, these run the same query through the
- *  service the command ran it through: byte parity already proves the command
- *  emitted exactly this value. */
 const resultOf = (query: SearchQuery, layer = fixtureSearch) =>
   Effect.flatMap(SearchService, (service) => service.query(query)).pipe(Effect.provide(layer));
 
-/** The command's argument list for a golden query. The CLI defaults `--limit`
- *  to 20, so a query that does not pin one is asked with 20 on both sides. */
 const argsFor = (query: SearchQuery): readonly string[] => {
   const args: string[] = [query.text];
   if (Option.isSome(query.scope)) args.push('--scope', query.scope.value);
@@ -109,10 +67,6 @@ const argsFor = (query: SearchQuery): readonly string[] => {
   return args;
 };
 
-/** The same query, asked with the limit the CLI's flag default supplies.
- *
- *  Rebuilt through `SearchQuery.make` rather than spread-and-patched, so the
- *  service is asked a value the schema has actually constructed. */
 const withCliLimit = (query: SearchQuery): SearchQuery =>
   SearchQuery.make({
     text: query.text,
@@ -128,9 +82,6 @@ describe('manna egw search — §9.7 golden query set', () => {
         const cli = yield* cliJson(argsFor(golden.query));
         const wire = yield* serviceJson(withCliLimit(golden.query));
         expect(cli.success).toBe(true);
-        // Byte-identical, not merely equivalent: `--json` is a contract with
-        // the scripts that pipe it, and two encoders that agree on values but
-        // differ in key order or spacing are two wire formats.
         expect(cli.stdout).toBe(wire);
       }),
     );
@@ -138,9 +89,6 @@ describe('manna egw search — §9.7 golden query set', () => {
 
   it.scopedLive('answers the topic-shaped query out of the corpus alone', () =>
     Effect.gen(function* () {
-      // The query the wiki catalog is named for, asked of a search service that
-      // has no wiki: §9 ranks the writings, so this is an ordinary corpus query
-      // and the topic group is not on the result at all.
       const query = SearchQuery.make({
         text: GOLDEN_TOPIC_QUERY,
         scope: Option.none(),
@@ -150,25 +98,12 @@ describe('manna egw search — §9.7 golden query set', () => {
       const parsed = yield* resultOf(query);
 
       expect(parsed.paragraphs.length).toBeGreaterThan(0);
-      // Nothing from a catalog leaked into the ranking: a topic slug is not a
-      // paragraph identity.
       expect(parsed.paragraphs.some((hit) => String(hit.paragraphId) === GOLDEN_TOPIC_SLUG)).toBe(
         false,
       );
     }),
   );
 
-  /** Round-2 B5: the printed topic link is the route the app decodes.
-   *
-   *  The formatter printed `/<slug>`, and `route/codec.ts` has no such route —
-   *  a topic page is `/wiki/<slug>`, so every link the CLI printed 404'd. The
-   *  assertion is the exact line rather than a substring, because the whole
-   *  defect was one missing path segment and a `toContain(slug)` passes on the
-   *  broken output.
-   *
-   *  It now also covers the fetch: the group comes from `WikiLayer` beside the
-   *  search rather than off the result, so a command that stopped asking would
-   *  print no bullet at all and fail here. */
   it.scopedLive('prints the topic group as the /wiki route the app decodes', () =>
     Effect.gen(function* () {
       const cli = yield* runCli(egwSearch, [GOLDEN_TOPIC_QUERY], {}).pipe(
@@ -178,15 +113,10 @@ describe('manna egw search — §9.7 golden query set', () => {
       expect(cli.success).toBe(true);
       const lines = cli.stdout.split('\n');
       const bullets = lines.filter((line) => line.startsWith('  • '));
-      // The fixture carries exactly one topic for this query. Asserting the
-      // count first means a fixture drift fails as "no topic" rather than as a
-      // confusing formatter mismatch below.
       expect(bullets.length).toBe(1);
       expect(bullets).toEqual([
         `  • What happens at the close of probation [catalog] — /wiki/${GOLDEN_TOPIC_SLUG}`,
       ]);
-      // And the pre-fix spelling is gone, not merely joined by the right one:
-      // `/<slug>` with no `/wiki` prefix is a path the app's router rejects.
       expect(
         lines.some((line) => line.includes(`— /${GOLDEN_TOPIC_SLUG}`) && !line.includes('/wiki/')),
       ).toBe(false);
@@ -195,10 +125,6 @@ describe('manna egw search — §9.7 golden query set', () => {
 
   it.scopedLive('prints the ranking with no topic group when no wiki is installed', () =>
     Effect.gen(function* () {
-      // The ordinary machine: `~/.bible/topics.db` is absent, and the group it
-      // would have filled is simply not printed. The search still answers,
-      // which is the degradation posture the fetch must preserve — a failing
-      // wiki cannot fail a search.
       const cli = yield* runCli(egwSearch, [GOLDEN_TOPIC_QUERY], {}).pipe(
         Effect.provideService(SearchLayer, fixtureSearch),
         Effect.provideService(WikiLayer, brokenWiki),
@@ -225,12 +151,7 @@ describe('manna egw search — §9.7 golden query set', () => {
 describe('manna egw search — §9.6 typed absence', () => {
   it.scopedLive('reports lexical-only rather than pretending the vector leg ran', () =>
     Effect.gen(function* () {
-      // A *wordy* query, so §9.3 routes it to the vector leg and the absence
-      // reported is the index's rather than the router's. A single word like
-      // "sanctuary" never reaches the index at all — it reports `route`, which
-      // would make this test pass without the index ever being consulted.
       const cli = yield* cliJson([WORDY_QUERY], lexicalOnlySearch);
-      // The absence is on the wire the command actually wrote.
       expect(cli.stdout).toContain('"_tag": "unavailable"');
 
       const parsed = yield* resultOf(
@@ -242,12 +163,9 @@ describe('manna egw search — §9.6 typed absence', () => {
         }),
         lexicalOnlySearch,
       );
-      // The value is on the result, not implied by its absence: a client can
-      // tell "no index installed" from "the vector leg found nothing".
       expect(parsed.vector._tag).toBe('unavailable');
       if (parsed.vector._tag !== 'unavailable') return;
       expect(parsed.vector.reason).toBe('absent');
-      // Not vacuous: the lexical leg still answered.
       expect(parsed.paragraphs.length).toBeGreaterThan(0);
     }),
   );
@@ -258,8 +176,6 @@ describe('manna egw search — §9.6 typed absence', () => {
         Effect.provideService(SearchLayer, lexicalOnlySearch),
       );
       expect(cli.success).toBe(true);
-      // A reader who never passes `--json` still learns that half the search
-      // did not run, and what to do about it.
       expect(cli.stdout).toContain('lexical only');
     }),
   );
@@ -278,7 +194,6 @@ describe('manna egw search — narrowings reach the service', () => {
   it.scopedLive('passes --scope through to the corpus scope', () =>
     Effect.gen(function* () {
       const cli = yield* cliJson(['the king of the north', '--scope', 'pioneer']);
-      // The flag reaches the query the service ran, and shows up on the wire.
       expect(cli.stdout).toContain('"scope": "pioneer"');
     }),
   );
@@ -286,29 +201,12 @@ describe('manna egw search — narrowings reach the service', () => {
   it.effect('rejects a scope the schema would refuse, at parse time', () =>
     Effect.gen(function* () {
       const cli = yield* cliJson(['sanctuary', '--scope', 'nonsense']);
-      // `Flag.choice` is what makes this a parser error rather than a decode
-      // failure deep inside the service.
       expect(cli.success).toBe(false);
     }),
   );
 });
 
-/** Round-2 F8: the CLI reads the vector artifact exactly once at startup.
- *
- *  §9.2's index is ~246 MB. The CLI has to parse it to decide whether it is one
- *  this build may scan, and the earlier shape then handed the *byte source* to
- *  `SearchService.Live`, which read and parsed the whole file again — two full
- *  reads and two copies of the vector region on every `manna egw search`
- *  invocation, for one decision. No result assertion can see that: both shapes
- *  return identical rows. Counting the reads is the only observable, and
- *  `core/src/search/vector-artifact.test.ts` already counts the per-query case,
- *  which this pair of startup reads slipped past.
- */
 describe('manna egw search — the index is read once at startup (F8)', () => {
-  // The counter the assertion reads, and the composition that increments it,
-  // both live beside the test rather than inside it: the layer is provided once
-  // at the test's own boundary, so it cannot be built from a value that only
-  // exists partway through the run.
   const intactReads = Ref.makeUnsafe(0);
   const intactBytes = goldenVectorIndexBytes();
   const countingIntact = Layer.succeed(
@@ -318,8 +216,6 @@ describe('manna egw search — the index is read once at startup (F8)', () => {
     }),
   );
 
-  // The CLI's real composition, with only the byte source substituted: the
-  // gate and the service are the shipped ones.
   const intactLayer = SearchService.Live.pipe(
     Layer.provide(goldenSearchSources),
     Layer.provide(verifiedVectorIndex('/fixture/vectors.bvi', countingIntact)),
@@ -329,7 +225,6 @@ describe('manna egw search — the index is read once at startup (F8)', () => {
   it.scopedLive('parses the artifact once across the gate and the service', () =>
     Effect.gen(function* () {
       const service = yield* SearchService;
-      // Several queries, so a per-query read would climb past any fixed count.
       yield* service.query(
         SearchQuery.make({
           text: WORDY_QUERY,
@@ -340,14 +235,11 @@ describe('manna egw search — the index is read once at startup (F8)', () => {
       );
       for (const golden of GOLDEN_QUERIES) yield* service.query(golden.query);
 
-      // One: the gate's parse. The service takes the resolved index rather than
-      // re-reading. Against the pre-fix shape this is 2.
       expect(yield* Ref.get(intactReads)).toBe(1);
     }).pipe(Effect.provide(intactLayer)),
   );
 
   const foreignReads = Ref.makeUnsafe(0);
-  // A foreign fingerprint: intact bytes this build must not scan.
   const foreignBytes = goldenVectorIndexBytes('some-other-model/512d');
   const countingForeign = Layer.succeed(
     VectorIndexBytes,

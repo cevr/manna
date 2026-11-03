@@ -1,8 +1,3 @@
-// The series lead's kept front and three-quarter views cut by his cut table
-// (`cut.ts`): every part he names holds pixels, the parts recompose each view
-// byte for byte, the paper between his sandals is no part's, and each joint
-// lies on its own arm.
-
 import { cutParts, recompose } from '@manna/film/tools';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -12,7 +7,6 @@ import { FRAMES, type FramedView, boxOf, keptAt } from './frames.ts';
 
 const KEPT = `${import.meta.dir}/../cast-sheet/kept`;
 
-/** A kept view's RGBA bytes in its part sheet's frame (`frames.ts`): his kept sheet cut at the kept box padded. */
 const viewOf = (name: FramedView) => {
   const [x0, y0, x1, y1] = boxOf(name);
   return Effect.promise(() =>
@@ -30,7 +24,6 @@ const viewOf = (name: FramedView) => {
   );
 };
 
-/** sRGB as CIE Lab (D65). */
 const labOf = (r: number, g: number, b: number) => {
   const lin = (v: number) =>
     [((v / 255 + 0.055) / 1.055) ** 2.4, v / 255 / 12.92][Number(v / 255 <= 0.04045)] ?? 0;
@@ -43,7 +36,6 @@ const labOf = (r: number, g: number, b: number) => {
   return [116 * y - 16, 500 * (x - y), 200 * (y - z)] as const;
 };
 
-/** The four-way piece of `near` from `s`, marked in `seen`, and whether it reaches the border. */
 const pieceFrom = (near: Uint8Array, seen: Uint8Array, w: number, s: number) => {
   const piece = [s];
   let border = false;
@@ -67,7 +59,6 @@ const pieceFrom = (near: Uint8Array, seen: Uint8Array, w: number, s: number) => 
   return { piece, border };
 };
 
-/** The paper his ink closes round: pixels within ΔE76 3 of the border's median paper, in pieces of 24 px or more, 8 px across both ways, that never reach the border (between his sandals). */
 const enclosedPaper = (v: { width: number; height: number; rgba: Uint8Array }) => {
   const { width: w, height: h, rgba } = v;
   const labs = Array.from({ length: w * h }, (_, i) =>

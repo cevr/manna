@@ -14,7 +14,6 @@ const [INK, TEAL, RUST] = [
   [200, 120, 70, 255],
 ];
 
-/** A 40 × 32 sleeve about row 16 (x 2..38), 8 px thick: a dark outline, its upper half teal and its forearm rust, as one part. */
 const SLEEVE: PuppetSheet = (() => {
   const rgba = new Uint8Array(W * H * 4);
   for (let y = 12; y < 20; y++)
@@ -36,7 +35,6 @@ const PUPPET = Result.getOrThrow(
   }),
 );
 
-/** `r` laid over the paper, opaque. */
 const overPaper = (r: Raster): Raster => {
   const rgba = new Uint8Array(r.rgba.length);
   for (let i = 0; i < r.rgba.length; i += 4) {

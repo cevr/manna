@@ -1,7 +1,3 @@
-// Staging takes with fakes: what a marked line is sent as, that a take is
-// made once and kept, the day's cap, and that holds are set in the take. No
-// network, no media files.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { test } from 'bun:test';
 import { DateTime, Effect, Exit, Layer, Option, Path } from 'effect';
@@ -78,7 +74,6 @@ describe('stagingRequest', () => {
     expect(key(base)).not.toBe(
       key({ ...base, beat: beat('Not by works. By grace.', marked.delivery) }),
     );
-    // A cast's voice reaches the key through each line's voice (`linesOf`).
     const otherVoice: ReadBeat = {
       ...marked,
       lines: marked.lines.map((l) => ({ ...l, voiceId: 'other' })),
@@ -115,7 +110,6 @@ describe('stagingRequest', () => {
   });
 });
 
-/** The cache over memory alone, its days capped at `cap`. */
 const cacheOnly = (cap: number) => {
   const files = new Map<string, Uint8Array>();
   return StagingCache.layer('/staging', cap).pipe(
@@ -148,7 +142,6 @@ describe('the day’s spend', () => {
   );
 });
 
-/** Narrator's staging over memory, its cache capped at `cap`; every take decodes to 3 s of silence. */
 const staging = (cap: number) => {
   const files = new Map<string, Uint8Array>();
   const calls: ElevenLabsCalls = emptyCalls();

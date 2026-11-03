@@ -1,12 +1,3 @@
-// The look of the lab's pages, read only through the studio's tokens
-// (`player/tokens.css`, design language §3 and §5): panels on `--surface-1`
-// with no radius, the kit's buttons and segmented controls (the shell's
-// sheet) placed in them, chips in their state's colour, one accent for the playhead, selection, focus and
-// the one primary verb, and every grid folding to one column on a phone
-// (the transport, one row in the shell's dock, stays in reach while the page
-// scrolls: on the shell's floor on a phone, under the header on a laptop). Put
-// in the page by its mount, so the page needs no stylesheet of its own.
-
 import { PHONE, WIDE } from '../viewport.ts';
 
 export const PAGE_CSS = `

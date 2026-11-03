@@ -1,7 +1,3 @@
-// A film is an ordered list of scenes. Each scene owns its narration and its
-// drawing; the film lays them end to end, sizes each to its voice, and draws
-// any instant T — the same function serves the preview player and the export.
-
 import { Predicate, Result, Schema } from 'effect';
 import { type Hand, boilTick } from './ink.ts';
 import type { Hex } from './colour.ts';
@@ -83,37 +79,18 @@ import {
 import { seedOf } from '../core/random.ts';
 import { CLOCK_EPSILON, type Key, clamp, ease, heardAtOrAfter, justBefore } from '../core/time.ts';
 
-/** What `f.knob` returns for a knob declared as `V`: a number stays a number, a point a point. */
 type KnobValue<V extends Knob> = V extends number ? number : Point;
 
-/**
- * A drawing's Rive rigs, by the names its draw poses them by (`f.rive`): what
- * the film loads before its first frame (`Film.rigs`). A name may stand for no
- * rig (a look that draws its figure some other way declares none for it).
- */
 type Rigs = Readonly<Record<string, RivePropSpec | undefined>>;
 
-/** No rigs: every `f.rive` name is a compile error. */
 type NoRigs = Record<never, RivePropSpec>;
 
-/**
- * A drawing's puppets (cut-out figures, `canvas/puppet.ts`), by the names its
- * draw poses them by (`f.puppet`): what the film loads before its first frame
- * (`Film.puppets`), beside its rigs.
- */
 type Puppets = Readonly<Record<string, PuppetSpec | undefined>>;
 
-/** No puppets: every `f.puppet` name is a compile error. */
 type NoPuppets = Record<never, PuppetSpec>;
 
-/** No paintings: every `f.painting` name is a compile error. */
 type NoPaintings = Record<never, PaintingSpec>;
 
-/**
- * One instant of one scene. `C` names the scene's cues, `K` its knobs, `R`
- * its rigs, `P` its puppets and `Pa` its paintings, when its drawing declares
- * them.
- */
 export interface Frame<
   C extends string = string,
   K extends Knobs = Knobs,
@@ -124,106 +101,33 @@ export interface Frame<
   readonly ctx: CanvasRenderingContext2D;
   readonly w: number;
   readonly h: number;
-  /** Seconds since the scene began (keeps running past `dur` during an exit). */
   readonly t: number;
   readonly dur: number;
-  /** Film seconds. */
   readonly T: number;
-  /** 12 fps tick for line boil. */
   readonly boil: number;
-  /** When the narration starts and ends, scene-local. */
   readonly speech: { readonly start: number; readonly end: number };
-  /** Local start time of a `{mark}` in this scene's narration. */
   mark(name: string): number;
-  /** A named cue from the scene's `timeline`, scene-local. */
   cue(name: C): ResolvedCue;
-  /**
-   * 0→1 across a named cue, eased by the cue's declared `ease` (default
-   * `DEFAULT_EASE`, `inOutCubic`): `progress(t, cue.start, cue.dur, ease[cue.ease])`. The ease
-   * is data on the span, so the lab can change it; the draw never passes one.
-   */
   at(name: C): number;
-  /**
-   * Keyframes across a named cue (`cueKeys`): each key's time is a fraction of
-   * the cue, 0 its start and 1 its end, and its ease a name; a key that names
-   * none takes the cue's `ease`. So a change of the cue's `dur` or `ease`
-   * reshapes the motion: `f.keys('gavel', [[0, 0.35], [0.4, -0.2], [1, 1.5, 'outQuad']])`.
-   */
   keys(name: C, frames: ReadonlyArray<Key>): number;
-  /**
-   * 0→1 for item `i` of `n` across a named cue (`staggerProgress`), eased by
-   * the cue's `ease`: the items' starts spread over the span's `stagger` share
-   * and each lasts the rest, so a `dur` edit scales every item.
-   */
   stagger(name: C, i: number, n: number): number;
-  /**
-   * 0→1 for the item at `at` (0 the first, 1 the last) across a named cue
-   * (`staggerAt`): `f.stagger` for a set spread by place rather than count,
-   * `f.staggerAt('green', field.reach)`.
-   */
   staggerAt(name: C, at: number): number;
-  /** A knob the drawing declares (`knobs: { handY: 800 }`): a number or a point. */
   knob<N extends keyof K & string>(name: N): KnobValue<K[N]>;
-  /**
-   * Draw a rig the drawing declares (`rigs: { accused: … }`) at the origin
-   * under the canvas's transform, posed from rest as `pose` says (its
-   * timelines at their times, its view-model numbers): the frame's own, never
-   * the frame before's. Throws, naming it, for a rig the film has not loaded,
-   * or a pose that names what the rig lacks.
-   */
   rive<N extends keyof R & string>(name: N, pose: PoseOf<R[N]>): void;
-  /**
-   * Draw a puppet the drawing declares (`puppets: { lead: … }`) at the origin
-   * under the canvas's transform, its bones at `pose`'s numbers: the frame's
-   * own pose, nothing kept from the frame before; with `look`, a drawn key
-   * laid in place of a part, its line drawn again near what moved, a held
-   * hand laid over it and its boil at the look's tick; with `dress`, its named
-   * parts hidden and its named parts dyed to a cloth's ramp (`PuppetDress`).
-   * Throws, naming it, for a puppet the film has not loaded, or a dress it
-   * cannot wear.
-   */
   puppet<N extends keyof P & string>(
     name: N,
     pose: PuppetPose,
     look?: PuppetLook,
     dress?: PuppetDress,
   ): void;
-  /**
-   * Paint a plate the drawing declares (`paintings: { sky: … }`) as one plane
-   * under the canvas's transform: its top-left at the spec's `at`, each plate
-   * pixel `scale` scene px (`canvas/painting.ts`). The parallax is the scene's:
-   * call it inside a `multiplane` plane or a plane function of its own.
-   * Throws, naming it, for a painting the film has not loaded.
-   */
   painting<N extends keyof Pa & string>(name: N): void;
-  /** The spoken words, scene-local. */
   readonly words: ReadonlyArray<Word>;
-  /**
-   * 0→1 as the narration speaks from `from` to `to` (marks; `to` defaults to
-   * the end of speech) — for text that reveals in step with the voice.
-   */
   spoken(from: string, to?: string): number;
-  /** Line-wobble state for a named or numbered drawing. */
   hand(key: string | number): Hand;
-  /**
-   * Another scene's hands, as its own `f.hand` gives them there, boiling on
-   * this frame's tick: a callback or a shot carried over a cut draws that
-   * scene's paper torn as it was, not a new sheet. The scene is found by its
-   * drawing, as `f.knobsOf` finds it (`f.handsOf(thesis)`), so a mistyped
-   * scene fails to compile. Throws, naming it, for a drawing no scene of the
-   * film draws, or that more than one does.
-   */
   handsOf(of: KnobsOwner<Knobs>): (key: string | number) => Hand;
-  /**
-   * Another scene's knobs, as that scene reads them on this frame, found by
-   * its drawing: a callback that frames what another scene framed reads it
-   * there, so a change of that knob moves both: `f.knobsOf(thesis)('city')`. Throws, naming it, for a drawing no
-   * scene of the film draws, or that more than one does.
-   */
   knobsOf<K extends Knobs>(drawing: KnobsOwner<K>): KnobReader<K>;
 }
 
-/** A scene's knobs, read by name as its drawing declares them; a name it lacks throws. */
 function knobReader<K extends Knobs>(
   knobs: ReadonlyMap<string, Knob>,
   scene: string,
@@ -236,85 +140,37 @@ function knobReader(knobs: ReadonlyMap<string, Knob>, scene: string) {
   };
 }
 
-/** A drawing, as `f.knobsOf` finds its scene: by its `draw`, typed by its knobs. */
 interface KnobsOwner<K extends Knobs> {
   readonly draw: (f: never) => void;
   readonly knobs?: K;
 }
 
-/** Reads a scene's knobs by name, typed as that drawing declares them. */
 type KnobReader<K extends Knobs> = <N extends keyof K & string>(name: N) => KnobValue<K[N]>;
 
-/** The hand scene `scene` gives `key` on boil tick `boil`: what `f.hand` and `f.handsOf` both give. */
 const sceneHand = (scene: string, key: string | number, boil: number): Hand => ({
   boil,
   seed: Predicate.isNumber(key) ? key : seedOf(`${scene}:${key}`),
 });
 
 export interface SceneSpec extends Timed {
-  /**
-   * The scene's picture at `f.t`. A scene with a card that floods in from a
-   * highlight returns the highlight's box (`verse` gives it), which the flood
-   * grows from on the same frame (`CardSpec.flood`); any other returns nothing.
-   */
   readonly draw: (f: Frame) => Box | void;
-  /** The Rive rigs its draw poses by name (`f.rive`): the film loads each before its first frame. */
   readonly rigs?: Rigs;
-  /** The puppets its draw poses by name (`f.puppet`): the film loads each before its first frame. */
   readonly puppets?: Puppets;
-  /** The painted plates its draw paints by name (`f.painting`): the film loads each before its first frame. */
   readonly paintings?: Paintings;
-  /**
-   * How this scene breathes (`Drift`), in place of the film's `DRIFT`: `0`
-   * holds it still (an end card), a `Drift` sets its own size. `DRIFT` when
-   * it names none.
-   */
   readonly drift?: Drift | 0;
-  /**
-   * The light the scene is lit by (CRAFT rule 11, the colour script): its
-   * page and all drawn on it multiplied by the light's colours, under the
-   * film's vignette and grain. A function reads it each frame, so a light can
-   * come up or go down on a cue. Unlit when it names none.
-   */
   readonly light?: Light | ((f: Frame) => Light);
-  /**
-   * The scene's full-screen cards (`canvas/card.ts`, CRAFT rule 1), each over
-   * its own cue: there the card is the frame, drawn on the film's paper in
-   * place of the scene (no light or vignette on it, the film's finish over
-   * it, no caption: the card is the words); over its flood's cue it grows
-   * from the box the scene's draw returns, over the lit scene. Two cards whose
-   * cues hold at one instant stop the film (`CardsOverlap`). A card held to
-   * the scene's end leaves as the card into a transition; a flood inside one
-   * stops the film.
-   */
   readonly cards?: ReadonlyArray<CardSpec<string, Frame>>;
 }
 
-/**
- * A scene's light: `color` over the middle of the frame, falling to `edge`
- * (`color` when it names none) at the corners, at `amount` (0 unlit, 1 fully
- * lit; 1 when it names none). White is no light at all. A light is drawn
- * once per `color` and `edge` and kept (the last `SHEETS_KEPT`), so a draw
- * that returns one of a few lights, its `amount` rewritten, allocates
- * nothing; a light whose colour moves every frame draws a sheet a frame but
- * never holds more than a few.
- */
 export interface Light {
   readonly color: Hex;
   readonly edge?: Hex;
   readonly amount?: number;
-  /**
-   * How much of the film's vignette the scene's frame takes: 1 all of it (when
-   * it names none), 0 none (a look whose medium has none: a print), or between.
-   * A transition eases from the outgoing scene's share to the incoming one's.
-   */
   readonly vignette?: number;
 }
 
-/** The share of the film's vignette a scene lit by `light` takes (`Light.vignette`). */
 const vignetteOf = (light: Light | undefined) => clamp(light?.vignette ?? 1);
 
-/** A span whose `after` or `with` names one of the cues `K`. */
 type SpanOf<K extends string> = Span extends infer S
   ? S extends { readonly after: string }
     ? Omit<S, 'after'> & { readonly after: K }
@@ -323,19 +179,10 @@ type SpanOf<K extends string> = Span extends infer S
       : S
   : never;
 
-/** A timeline whose cues refer only to each other. */
 type Closed<T extends Timeline> = { readonly [N in keyof T]: SpanOf<keyof T & string> };
 
-/** No knobs: every `f.knob` name is a compile error. */
 type NoKnobs = Record<never, Knob>;
 
-/**
- * Declare a drawing with a timeline, knobs and rigs, so `after` and `with` in
- * the timeline, `f.cue` and `f.at` in `draw` accept only the cue names it
- * declares, `f.knob` only its knob names, typed as declared, `f.rive` only
- * its rig names, posed as each rig declares, and `f.puppet` only its puppet
- * names. An identity: the result is an ordinary scene drawing.
- */
 export const drawing = <
   const T extends Timeline,
   const K extends Knobs = NoKnobs,
@@ -369,63 +216,32 @@ export const drawing = <
   },
 ) => d;
 
-/** An opacity or strength the canvas draws: 0..1. */
 const Unit = Schema.Finite.check(Schema.isBetween({ minimum: 0, maximum: 1 }));
-/** A length in px the canvas draws: finite, not negative. */
 const Length = Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0));
-/** A count or a tile side: a whole number, at least 1. */
 const Count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(1));
 
-/**
- * The captions' look. The plate fields are checked where the film is made
- * (`createFilm`), so a plate the canvas cannot draw never reaches a frame.
- */
 export const CaptionStyle = Schema.Struct({
   font: Schema.String,
   color: Schema.String,
-  /** The plate's colour. */
   plate: Schema.String,
-  /** How opaque the plate shows, 0..1. Defaults to 0.82. */
   plateOpacity: Schema.optionalKey(Unit),
-  /** The plate's height in px. Defaults to 60. */
   plateHeight: Schema.optionalKey(Length),
-  /** Space either side of the line inside the plate, in px. Defaults to 26. */
   platePadding: Schema.optionalKey(Length),
-  /** The plate's corner radius in px. Defaults to 12. */
   plateRadius: Schema.optionalKey(Length),
-  /** How far above the frame's bottom edge the line's centre sits, in px. Defaults to 86. */
   bottom: Schema.optionalKey(Schema.Finite),
 });
 export type CaptionStyle = typeof CaptionStyle.Type;
 
-/**
- * The finish laid over every frame, after the scenes: a vignette and film
- * grain. Checked where the film is made (`createFilm`).
- */
 export const FinishStyle = Schema.Struct({
-  /** How strongly the vignette darkens the edges toward `shade`, 0..1. Defaults to 0.28. */
   vignette: Schema.optionalKey(Unit),
-  /**
-   * How strongly the film grain overlays the frame, 0..1: a faint film layer,
-   * since the paper carries its own grain on its planes (`fibre.ts`). Defaults to 0.03.
-   */
   grain: Schema.optionalKey(Unit),
-  /** A grain tile's side in whole px, at least 1. Defaults to 256. */
   grainSize: Schema.optionalKey(Count),
-  /** How many grain tiles cycle on the boil tick, at least 1. Defaults to 6. */
   grainTiles: Schema.optionalKey(Count),
-  /** The brightest light spilling soft into the air about it (`grade.ts`). None by default. */
   bloom: Schema.optionalKey(BloomStyle),
-  /** Contrast, saturation and a split tone over the whole frame (`grade.ts`). None by default. */
   grade: Schema.optionalKey(GradeStyle),
 });
 export type FinishStyle = typeof FinishStyle.Type;
 
-/**
- * A scene's own breath (`Drift`): a push a share of the shot's zoom, over −1
- * (so the shot never turns inside out), and a slide in frame px; or `0`,
- * none. Checked where the film is made (`createFilm`).
- */
 const SceneDrift = Schema.Union([
   Schema.Literal(0),
   Schema.Struct({
@@ -434,15 +250,8 @@ const SceneDrift = Schema.Union([
   }),
 ]);
 
-/** A CSS font the canvas sets (`600 60px "Fraunces"`): its size in a short's 1080 × 1920 px. */
 const Font = Schema.NonEmptyString;
 
-/**
- * How a film's shorts set their words (`canvas/short.ts`): the hook line
- * above the picture, and the captions below it, whose words inside a
- * quotation take the `highlight` as they are read. Checked where the film is
- * made (`createFilm`); each value it leaves out takes its default.
- */
 const ShortStyle = Schema.Struct({
   hook: Schema.optionalKey(Schema.Struct({ font: Font, color: Schema.String })),
   caption: Schema.optionalKey(
@@ -455,7 +264,6 @@ const ShortStyle = Schema.Struct({
 });
 type ShortStyle = typeof ShortStyle.Type;
 
-/** A short style with every value it leaves out at its default. */
 export interface ShortLook {
   readonly hook: { readonly font: string; readonly color: string };
   readonly caption: { readonly font: string; readonly color: string; readonly highlight: string };
@@ -465,87 +273,39 @@ export interface FilmSpec {
   readonly title: string;
   readonly width?: number;
   readonly height?: number;
-  /**
-   * The frames a second it is laid and drawn at: the film's declared rate (its
-   * `film.ts`'s `fps`, handed in with its narration, `Narrated`), the one the
-   * tools lay it at too. No default: a page and its tools at two rates would
-   * place a beat on two frames.
-   */
   readonly fps: number;
   readonly paper: PaperStyle;
-  /** The vignette's colour, and an ink transition's when it names none. */
   readonly shade: string;
-  /** The vignette and grain over every frame. */
   readonly finish?: FinishStyle;
   readonly scenes: ReadonlyArray<SceneSpec>;
   readonly timings?: Timings;
   readonly captions?: CaptionStyle;
-  /** Film-wide narration track, when every scene is recorded. */
   readonly audio?: string;
-  /** The film's music and effects (`sound.ts`): the player marks them on its timeline. */
   readonly sound?: Sound;
-  /** The film's named colours (`palette.ts`): the look-book shows them as swatches. */
   readonly palette?: Readonly<Record<string, string>>;
-  /** How its shorts set the hook and the captions. */
   readonly short?: ShortStyle;
-  /**
-   * How the film sets a full-screen card and a verse on its page, outside a
-   * scene: the storyboard's card and verse panels are set in these (a scene
-   * sets its own card with its look's `fullCard`, usually the same style).
-   */
   readonly card?: { readonly style: CardStyle; readonly verse?: VerseStyle };
 }
 
-/** A knob as a frame read it (`RenderOptions.knobs`), and where on the frame its value lands. */
 interface KnobRead {
   readonly scene: string;
   readonly name: string;
   readonly value: Knob;
-  /**
-   * The canvas transform when the scene read it, straight onto the frame: a
-   * point knob drawn at its value in that space lands at `transform · value`
-   * in frame pixels. None when read into a transition's layer, which is
-   * composited moving or fading: there the frame cannot say where it lands.
-   */
   readonly transform: Affine | undefined;
-  /**
-   * For a knob read outside every camera, the transform inside the first
-   * camera its scene applied after the read: a point read before `camera(…)`
-   * (or `multiplane`, its focal plane) and drawn inside it lands at
-   * `framed · value`. None when no camera followed, or read inside one.
-   */
   readonly framed?: Affine;
-  /**
-   * Beside `framed`, the same camera as authored, before its drift: where a
-   * knob camera keeps its target centred while the shot breathes around it.
-   */
   readonly aimed?: Affine;
 }
 
-/** Where a frame records the knobs it read (`RenderOptions.knobs`). */
 interface Reads {
   readonly list: KnobRead[];
-  /** Read straight onto the frame, not into a transition's layer. */
   readonly direct: boolean;
 }
 
-/**
- * Where a frame records the names it read off each scene's clock
- * (`RenderOptions.clock`), by scene id: what the studio's code view fires a
- * read of the clock by (`Player.hearClock`), so a branch the frame did not
- * take stays dark and records nothing. A name is recorded once however often the frame reads
- * it, by the scene's draw, its light or its card alike; the engine's own
- * reads (a card's flood) and a draw it lets go (`sheet`'s first guess)
- * record none.
- */
 interface ClockReads {
-  /** Each cue read by name: `f.cue`, and `f.at`, `f.keys`, `f.stagger` and `f.staggerAt` through it. */
   readonly cues: Map<string, Set<string>>;
-  /** Each mark read by name: `f.mark`, and both ends of `f.spoken` through it. */
   readonly marks: Map<string, Set<string>>;
 }
 
-/** Scene `id`'s sets in `clock`, made the first time a frame draws the scene. */
 const hearsOf = (clock: ClockReads, id: string) => {
   const of = (by: Map<string, Set<string>>) => {
     const had = by.get(id);
@@ -557,20 +317,13 @@ const hearsOf = (clock: ClockReads, id: string) => {
   return { cues: of(clock.cues), marks: of(clock.marks) };
 };
 
-/** `set` cut back to the first `size` names it took: a set keeps the order its names came in. */
 const trimTo = (set: Set<string>, size: number) => {
   let kept = 0;
   for (const name of set) if (kept++ >= size) set.delete(name);
 };
 
-/** Letting go of what a frame heard with no clock to hear it: nothing, made once for every draw. */
 const HEARD_NOTHING = (): void => {};
 
-/**
- * Scene `id`'s clock reads in `clock` as they stand now, and how to let go of
- * every name heard after: a frame drawn again keeps only the draw it shows.
- * With no clock (no code view hears) a draw makes nothing.
- */
 const heardSince = (clock: ClockReads | undefined, id: string): (() => void) => {
   if (clock === undefined) return HEARD_NOTHING;
   const { cues, marks } = hearsOf(clock, id);
@@ -581,44 +334,20 @@ const heardSince = (clock: ClockReads | undefined, id: string): (() => void) => 
   };
 };
 
-/**
- * One frame of footage a frame of a film reads (`Film.footageAt`): a derived
- * file of the footage library by its content (`source`, `<name>/<sha12>`,
- * the same in the proxy the lab plays and the mezzanine the render reads),
- * at `at` seconds of the source's own clock.
- */
 export interface FootageRead {
   readonly source: string;
   readonly at: number;
 }
 
-/**
- * The footage frames the host decoded for one frame (`RenderOptions.footage`):
- * each read the frame named (`Film.footageAt`), as a picture to draw, or none
- * when the host has not decoded it. The host fills it before the frame is
- * drawn (`browser/footage.ts` `Footage`), so a film's draw stays synchronous
- * and keeps nothing between frames.
- */
 export interface FootageFrames {
   readonly frame: (read: FootageRead) => CanvasImageSource | undefined;
 }
 
 export interface RenderOptions {
   readonly captions?: boolean;
-  /**
-   * The footage frames this frame reads (`Film.footageAt`), decoded by the
-   * host. A film that reads none (a drawn film) is never given any.
-   */
   readonly footage?: FootageFrames;
-  /** Collect every knob the frame reads into this array. The pixels are the same either way. */
   readonly knobs?: KnobRead[];
-  /** Collect the names each scene's frame reads off its clock into these sets. The pixels are the same either way. */
   readonly clock?: ClockReads;
-  /**
-   * Collect every line of text and every mark of ink the frame draws into
-   * this sink (the probe `film check` reads). Leave it out for an ordinary
-   * frame; the pixels are the same either way.
-   */
   readonly probe?: ProbeSink;
 }
 
@@ -631,102 +360,49 @@ export interface Film {
   readonly placed: ReadonlyArray<Placed<SceneSpec>>;
   readonly audio: string | undefined;
   readonly sound: Sound | undefined;
-  /** Named colours, as declared (none when the film declares none). */
   readonly palette: Readonly<Record<string, string>>;
   readonly allRecorded: boolean;
-  /** The sheet it is drawn on, as made: what a page cut from it (a short) is drawn on too. */
   readonly look: FilmLook;
   sceneAt(T: number): Placed<SceneSpec>;
-  /**
-   * Whether a full-screen card its scenes declare (`SceneSpec.cards`) is the
-   * frame at `T`: what a Board render (`boardFilm`) sets through the film's
-   * own card code over its panels. A page cut from the film (a short) has
-   * none of its own.
-   */
   readonly cardAt?: (T: number) => boolean;
-  /**
-   * The footage frame `T` reads, a pure function of the film (a talk's
-   * camera take at the source second its edit puts at `T`): what the host
-   * decodes before it draws `T` (`RenderOptions.footage`). A drawn film reads
-   * none and has no `footageAt`, so it is drawn as it always was.
-   */
   readonly footageAt?: (T: number) => ReadonlyArray<FootageRead>;
-  /**
-   * Whether frame `T` reads the film's own seconds, not only the times of the
-   * beats and shots it draws: every frame the film draws does (its boil tick,
-   * `boilTick(T)`, wobbles its lines and moves its grain), and a page that
-   * draws over the film (a talk's hook, a review copy's burn-in) does. Absent,
-   * every frame does. A frame that does not draws the same wherever its beat
-   * sits in the film, so a kept segment of such frames is found again after
-   * an earlier beat changes length (tools/segments.ts); a Board's panels are
-   * such frames (`boardFilm`).
-   */
   readonly filmTimed?: (T: number) => boolean;
   render(ctx: CanvasRenderingContext2D, T: number, opts?: RenderOptions): void;
-  /** The Rive rigs its scenes' drawings declare, and the loaded ones it draws with. */
   readonly rigs: FilmRigs;
-  /** The puppets its scenes' drawings declare, and the loaded ones it draws with. */
   readonly puppets: FilmPuppets;
-  /** The paintings its scenes' drawings declare, and the loaded ones it draws with. */
   readonly paintings: FilmPaintings;
 }
 
-/**
- * A film's puppets, as its rigs: every one its drawings declare
- * (`drawing({ puppets })`), each once; and where the loader (`loadPuppets`,
- * src/puppet) stands the loaded ones for its draws.
- */
 interface FilmPuppets {
   readonly declared: ReadonlyArray<PuppetSpec>;
-  /** Draw with `loaded` from now on; what it returns stands them down again (the load's scope closing). */
   readonly stand: (loaded: ReadonlyMap<PuppetSpec, LoadedPuppet>) => () => void;
 }
 
-/**
- * A film's paintings, as its puppets: every one its drawings declare
- * (`drawing({ paintings })`), each once; and where the loader
- * (`loadPaintings`, src/painting) stands the loaded ones for its draws.
- */
 interface FilmPaintings {
   readonly declared: ReadonlyArray<PaintingSpec>;
-  /** Draw with `loaded` from now on; what it returns stands them down again (the load's scope closing). */
   readonly stand: (loaded: ReadonlyMap<PaintingSpec, LoadedPainting>) => () => void;
 }
 
-/**
- * A film's rigs: every one its drawings declare (`drawing({ rigs })`), each
- * once, never listed a second time; and where the loader (`loadRigs`,
- * src/rive) stands the loaded ones for its draws. They belong to this film
- * value: another film, a page's second one among them, loads its own.
- */
 interface FilmRigs {
   readonly declared: ReadonlyArray<RivePropSpec>;
-  /** Draw with `loaded` from now on; what it returns stands them down again (the load's scope closing). */
   readonly stand: (loaded: ReadonlyMap<RivePropSpec, LoadedRig>) => () => void;
 }
 
-/** The finish's vignette and grain, each at its default where the film declares none. */
 type Finish = Required<Omit<FinishStyle, 'bloom' | 'grade'>> & {
   readonly bloom: BloomStyle | undefined;
   readonly grade: GradeStyle | undefined;
 };
 
-/** A film's paper, shade and finish, every finish value at its default where it declares none. */
 interface FilmLook {
   readonly paper: PaperStyle;
   readonly shade: string;
   readonly finish: Finish;
   readonly short: ShortLook;
-  /** Its card and verse styles (`FilmSpec.card`), none when it declares none. */
   readonly card: FilmSpec['card'];
 }
 
 const affineOf = (m: DOMMatrix): Affine => [m.a, m.b, m.c, m.d, m.e, m.f];
 
-/**
- * A film's finish, checked (a `SchemaError` naming the field when the canvas
- * could not draw it), each value it leaves out at its default.
- */
 const finishOf = (declared: FinishStyle = {}): Finish => {
   const f = Schema.decodeSync(FinishStyle)(declared);
   return {
@@ -739,10 +415,6 @@ const finishOf = (declared: FinishStyle = {}): Finish => {
   };
 };
 
-/**
- * A film's caption style, checked (a `SchemaError` naming the field when the
- * canvas could not draw it), each plate value it leaves out at its default.
- */
 const captionOf = (declared: CaptionStyle): Required<CaptionStyle> => {
   const c = Schema.decodeSync(CaptionStyle)(declared);
   return {
@@ -757,14 +429,8 @@ const captionOf = (declared: CaptionStyle): Required<CaptionStyle> => {
   };
 };
 
-/** The gold a quotation's words take in a short's captions when the film names none. */
 const QUOTE_GOLD = '#e6b347';
 
-/**
- * A film's short style, checked (a `SchemaError` naming the field when the
- * canvas could not set it), each value it leaves out at its default: the
- * film's `shade` for the words, serif for the hook and sans for the captions.
- */
 const shortOf = (declared: ShortStyle = {}, shade: string): ShortLook => {
   const s = Schema.decodeSync(ShortStyle)(declared);
   return {
@@ -777,13 +443,10 @@ const shortOf = (declared: ShortStyle = {}, shade: string): ShortLook => {
   };
 };
 
-/** The most full-frame light sheets a film keeps of each kind (8 MB each at 1080p). */
 export const SHEETS_KEPT = 4;
 
-/** How much a probe's sink held before a scene drew into it (scratch, one draw at a time). */
 const SINK_MARK = { texts: 0, inks: 0, faces: 0, hands: 0, paintings: 0 };
 
-/** Mark how much `sink` holds now, so a draw made again can let the first go. */
 const markSink = (sink: ProbeSink | undefined) => {
   SINK_MARK.texts = sink?.texts.length ?? 0;
   SINK_MARK.inks = sink?.inks.length ?? 0;
@@ -792,7 +455,6 @@ const markSink = (sink: ProbeSink | undefined) => {
   SINK_MARK.paintings = sink?.paintings?.length ?? 0;
 };
 
-/** Let go of everything `sink` took since `markSink`. */
 const rewindSink = (sink: ProbeSink | undefined) => {
   if (sink === undefined) return;
   sink.texts.length = SINK_MARK.texts;
@@ -802,13 +464,11 @@ const rewindSink = (sink: ProbeSink | undefined) => {
   if (sink.paintings !== undefined) sink.paintings.length = SINK_MARK.paintings;
 };
 
-/** A scene's card as the film sets it: as its drawing declares it, and the words it sets. */
 interface SetCard {
   readonly spec: CardSpec<string, Frame>;
   readonly words: ReadonlyArray<CardWord>;
 }
 
-/** The breath a scene draw is given (`SceneBreath`), rewritten for each draw. */
 interface BreathNow {
   through: number;
   drift: Drift | 0;
@@ -817,15 +477,6 @@ interface BreathNow {
   readonly height: number;
 }
 
-/**
- * Scene `p`'s cues (`cues`) unless a card's flood
- * would fall inside a transition: a flood is drawn over its scene's own frame
- * alone, never over a transition's two layers, so one that starts inside the
- * scene's way in (`enter`, not a cut) or runs past its end (`endsLate`, the
- * one judgement of a late end) into the next scene's way in is refused, where
- * the film is made, rather than silently not drawn. A
- * flood naming a cue the scene lacks is the frame's to refuse (`holds`).
- */
 const floodInTransition = (
   p: Placed<SceneSpec>,
   next: Placed<SceneSpec> | undefined,
@@ -854,14 +505,6 @@ const floodInTransition = (
   return Result.succeed(cues);
 };
 
-/**
- * Scene `p`'s cues (`cues`) unless two of its cards
- * would hold the frame at one instant: a frame shows one card, so cues that
- * overlap by more than float noise (`CLOCK_EPSILON`) are refused, where the
- * film is made, rather than one card silently hiding
- * the other. A card naming a cue the scene lacks is the frame's to refuse
- * (`holds`).
- */
 const cardsOverlap = (
   p: Placed<SceneSpec>,
   cues: ReadonlyMap<string, ResolvedCue>,
@@ -888,7 +531,6 @@ const cardsOverlap = (
   return Result.succeed(cues);
 };
 
-/** Scene `p`'s cues (`cues`) unless its cards' cues break a rule a frame keeps. */
 const cardsHold = (
   p: Placed<SceneSpec>,
   next: Placed<SceneSpec> | undefined,
@@ -904,7 +546,6 @@ export const createFilm = (spec: FilmSpec): Film => {
   const duration = filmEnd(placed);
   const allRecorded = everyTakeRecorded(placed);
   const finish = finishOf(spec.finish);
-  /** Each scene's breath: its own `drift` where it sets one, `DRIFT` where it does not. */
   const drifts = new Map<string, Drift | 0>(
     placed.map((p) => [
       p.spec.id,
@@ -913,13 +554,6 @@ export const createFilm = (spec: FilmSpec): Film => {
   );
   const captions = spec.captions === undefined ? undefined : captionOf(spec.captions);
   const short = shortOf(spec.short, spec.shade);
-  /**
-   * Each scene's cards, in the order its drawing declares them, each with its
-   * words set once from the scene's take (`cardWords`): a card that names a
-   * mark its line lacks, or a payoff it never says, stops the film here, as
-   * a timeline that does not resolve does; so do two cards that would hold
-   * the frame at once, and a flood inside a transition (`cardsHold`).
-   */
   const cards = new Map<string, ReadonlyArray<SetCard>>();
   for (const p of placed) {
     const declared = p.spec.cards ?? [];
@@ -934,7 +568,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     if (Result.isFailure(held)) throw new Error(held.failure.message);
   }
 
-  // Built lazily: the film must lay out where there is no DOM (tools, tests).
   let assets:
     | {
         paper: HTMLCanvasElement;
@@ -954,10 +587,8 @@ export const createFilm = (spec: FilmSpec): Film => {
       b: offscreen(width, height),
       bloom: finish.bloom === undefined ? undefined : makeBloom(width, height),
     });
-  /** The grade's tables, built once (none for a film with no grade). */
   const graded = finish.grade === undefined ? undefined : gradeTables(finish.grade);
 
-  /** Each light's sheet, by `color` and `edge` (`makeLight`), the fewest kept (`SHEETS_KEPT`). */
   const lights = new Map<string, HTMLCanvasElement>();
   const lightSheet = (light: Light) => {
     const edge = light.edge ?? light.color;
@@ -966,16 +597,10 @@ export const createFilm = (spec: FilmSpec): Film => {
     if (have !== undefined) return have;
     return keepAtMost(lights, key, makeLight(width, height, light.color, edge), SHEETS_KEPT);
   };
-  /** Multiply the frame by `light` at its amount. */
   const lightUp = (ctx: CanvasRenderingContext2D, light: Light) => {
     const amount = clamp(light.amount ?? 1);
     if (amount > 0) shadeBy(ctx, lightSheet(light), amount);
   };
-  /**
-   * A fixed light at its amount and the vignette, multiplied into one sheet
-   * by `color`, `edge` and amount, the fewest kept (`SHEETS_KEPT`): a frame
-   * lit by one takes one multiply for both.
-   */
   const litVignettes = new Map<string, HTMLCanvasElement>();
   const litVignette = (light: Light, amount: number) => {
     const key = `${light.color} ${light.edge ?? light.color} ${amount}`;
@@ -984,13 +609,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     const made = makeProduct(width, height, lightSheet(light), amount, getAssets().vignette);
     return keepAtMost(litVignettes, key, made, SHEETS_KEPT);
   };
-  /**
-   * The light and the vignette over a whole frame: one multiply by their
-   * product for a fixed light, the two in turn for a light read per frame
-   * (its amount moves, so a product would be a new sheet each frame). The
-   * vignette at the light's share of it (`Light.vignette`): the product only
-   * for the whole of it.
-   */
   const lightAndVignette = (
     ctx: CanvasRenderingContext2D,
     light: Light | undefined,
@@ -1006,18 +624,10 @@ export const createFilm = (spec: FilmSpec): Film => {
     }
   };
 
-  /** The film's vignette over `ctx` at `share` of it; none at none. */
   const vignetteAt = (ctx: CanvasRenderingContext2D, share: number) => {
     if (share > 0) shadeBy(ctx, getAssets().vignette, share);
   };
 
-  /**
-   * The vignette over a transition's composite: the outgoing side's share
-   * (`from`; none for a card) to the incoming side's (`to`). One share, as
-   * ever, when they are the same; across a pan each side's share over the
-   * part of the frame it holds (`out` from `outX`, the incoming from `inX`),
-   * and otherwise eased between them by the transition's progress `p`.
-   */
   const transitionVignette = (
     ctx: CanvasRenderingContext2D,
     pan: boolean,
@@ -1042,14 +652,12 @@ export const createFilm = (spec: FilmSpec): Film => {
     }
   };
 
-  /** The scene playing at `T`, as the layout attributes it (`sceneIndexAt`): no allocation, for every frame. */
   const sceneAt = (T: number): Placed<SceneSpec> => {
     const p = placed[sceneIndexAt(placed, T)];
     if (p === undefined) throw new Error('film has no scenes');
     return p;
   };
 
-  /** The scenes each drawing draws, gathered once: what `f.knobsOf` and `f.handsOf` look a drawing up in. */
   const drawnScenes = new Map<(f: never) => void, Array<Placed<SceneSpec>>>();
   for (const q of placed) {
     const same = drawnScenes.get(q.spec.draw);
@@ -1057,7 +665,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     else same.push(q);
   }
 
-  /** The one scene `draw` draws, for `f.knobsOf` and `f.handsOf`; `by` names the scene that asked. */
   const drawnBy = (draw: (f: never) => void, by: string) => {
     const found = drawnScenes.get(draw) ?? [];
     const one = found[0];
@@ -1068,7 +675,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     return one;
   };
 
-  /** Every rig the scenes declare, each once, in film order. */
   const declaredRigs = [
     ...new Set(
       placed.flatMap((q) =>
@@ -1076,12 +682,6 @@ export const createFilm = (spec: FilmSpec): Film => {
       ),
     ),
   ];
-  /**
-   * The loaded rigs the film draws with: the latest of its loads still
-   * standing (`FilmRigs.stand`), none until one is. A load stood down leaves
-   * the others as they were, in whatever order their scopes close, so a draw
-   * never finds rigs whose scope has closed.
-   */
   const none: ReadonlyMap<RivePropSpec, LoadedRig> = new Map();
   let stands: ReadonlyArray<ReadonlyMap<RivePropSpec, LoadedRig>> = [];
   let standing = none;
@@ -1097,7 +697,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     },
   };
 
-  /** The puppets, as the rigs: every one the scenes declare, and the latest load still standing. */
   const declaredPuppets = [
     ...new Set(
       placed.flatMap((q) =>
@@ -1120,7 +719,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     },
   };
 
-  /** The paintings, as the puppets: every one the scenes declare, and the latest load still standing. */
   const declaredPaintings = [
     ...new Set(placed.flatMap((q) => Object.values(q.spec.paintings ?? {}))),
   ];
@@ -1139,10 +737,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     },
   };
 
-  /**
-   * Each scene's captions, built once from its words when the film has a
-   * caption style: a captioned frame only finds its line.
-   */
   const captionsOf =
     captions === undefined ? undefined : new Map(placed.map((p) => [p, sceneCaptions(p)]));
 
@@ -1157,15 +751,8 @@ export const createFilm = (spec: FilmSpec): Film => {
     ]),
   );
 
-  /** Where the frame being rendered records the names it reads off each scene's clock: every render sets it (`RenderOptions.clock`). */
   let hearing: ClockReads | undefined;
 
-  /**
-   * Scene `p`'s frame at film time `T`, drawn on `ctx`: its clock, cues,
-   * knobs and words. A knob read outside every camera is noted in `unframed`
-   * (its place in `reads`), for the next camera to frame; a cue or mark read
-   * by name, in `hearing`.
-   */
   const frameOf = (
     ctx: CanvasRenderingContext2D,
     p: Placed<SceneSpec>,
@@ -1253,14 +840,12 @@ export const createFilm = (spec: FilmSpec): Film => {
       },
       knobsOf: <K extends Knobs>(of: KnobsOwner<K>) => {
         const q = drawnBy(of.draw, p.spec.id);
-        // The scene is the one `of` draws, so each name holds the kind `of` declares.
         return knobReader<K>(q.knobs, q.spec.id);
       },
       words,
       spoken: (from, to) => {
         const a = frame.mark(from);
         const b = to === undefined ? p.speechStart + p.voice.duration : frame.mark(to);
-        // Progress by words heard, so the text keeps pace with the voice.
         const inside = words.filter((w) => heardAtOrAfter(w, a) && w.start < justBefore(b));
         if (inside.length === 0) return t >= b ? 1 : 0;
         let heard = 0;
@@ -1278,7 +863,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     boil: number,
     reads: Reads | undefined,
   ) => {
-    // The reads made outside every camera and not yet framed by one: the next camera frames them.
     const unframed: number[] = [];
     const frameReads = (list: KnobRead[], inside: DOMMatrix, aimed: DOMMatrix) => {
       for (const i of unframed) {
@@ -1306,46 +890,31 @@ export const createFilm = (spec: FilmSpec): Film => {
     return shot;
   };
 
-  /** The light the last scene drawn is lit by, read on its own frame (`SceneSpec.light`). */
   let drawnLight: Light | undefined;
-  /** Whether that light is fixed, not read per frame. */
   let drawnFixed = true;
-  /** The frame the last scene drawn was drawn on: what a card's flood reads. */
   let drawnFrame: Frame | undefined;
-  /** The box that draw returned, reset before each draw: where a card's flood grows from on the same frame. */
   let drawnBox: Box | void;
 
-  /** The breath each scene draw is given: one, rewritten per draw, never made per frame. */
   const breath: BreathNow = { through: 0, drift: DRIFT, outer: false, width, height };
-  /** No breath: a card holds still. */
   const still: BreathNow = { through: 0, drift: 0, outer: false, width, height };
 
-  /**
-   * Cue `name` of scene `p`, read by the engine itself (a
-   * card's cue and its flood's): no frame's read, so the clock heard
-   * (`RenderOptions.clock`) holds only what the scene's own code reads.
-   */
   const cueOf = (p: Placed<SceneSpec>, name: string) => {
     const c = p.cues.get(name);
     if (c === undefined) throw new Error(`scene ${p.spec.id} has no cue "${name}"`);
     return c;
   };
 
-  /** Whether cue `name` of scene `p` holds at film time `T`: from its start, up to its end. */
   const holds = (p: Placed<SceneSpec>, name: string, T: number) => {
     const c = cueOf(p, name);
     const t = beatTime(p, T);
     return t >= c.start && t < c.end;
   };
 
-  /** Scene `p`'s cards as the film sets them, in the order its drawing declares them. */
   const cardsOf = (p: Placed<SceneSpec>): ReadonlyArray<SetCard> => cards.get(p.spec.id) ?? [];
 
-  /** The card of scene `p` that is the frame at `T`: the one whose cue holds (at most one does, `cardsOverlap`). */
   const carded = (p: Placed<SceneSpec>, T: number): SetCard | undefined =>
     cardsOf(p).find((card) => holds(p, card.spec.cue, T));
 
-  /** A scene's `card` on `ctx` as frame `f` draws it, probed as the scene's own text. */
   const drawCard = (
     ctx: CanvasRenderingContext2D,
     card: SetCard,
@@ -1359,13 +928,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     ctx.restore();
   };
 
-  /**
-   * Scene `p`'s `card` in place of its picture at `T`: on the film's paper
-   * alone, opaque, so the frame is the same whatever was drawn on the canvas
-   * before it (a look's card may paint a ground with alpha, or none); the
-   * scene's picture, light and vignette are left off, so nothing dims or
-   * tints it.
-   */
   const cardFrame = (
     ctx: CanvasRenderingContext2D,
     p: Placed<SceneSpec>,
@@ -1379,12 +941,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     drawCard(ctx, card, frameOf(ctx, p, T, boil, reads, []), probe);
   };
 
-  /**
-   * The card of scene `p` that holds to its scene's end,
-   * none when the last card to end ends before it: that card is then what the
-   * scene leaves on screen, so a transition out of it carries the card, never
-   * the picture under it.
-   */
   const cardToEnd = (p: Placed<SceneSpec>): SetCard | undefined => {
     const ending = cardsOf(p).flatMap((card) => {
       const c = p.cues.get(card.spec.cue);
@@ -1397,7 +953,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     return last !== undefined && p.dur - last.end <= CLOCK_EPSILON ? last.card : undefined;
   };
 
-  /** Scene `p`'s `card` at `T` into a layer, on the film's paper: the outgoing side of a transition out of a card. */
   const cardLayer = (
     target: Offscreen,
     p: Placed<SceneSpec>,
@@ -1414,11 +969,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     return target.c;
   };
 
-  /**
-   * Scene `p`'s card flooding in over its lit frame at `T`, when a card's
-   * flood cue holds (the first such card the drawing declares): grown from
-   * the highlight's box toward the whole frame.
-   */
   const floodOver = (
     ctx: CanvasRenderingContext2D,
     p: Placed<SceneSpec>,
@@ -1439,15 +989,11 @@ export const createFilm = (spec: FilmSpec): Film => {
       throw new Error(
         `scene ${p.spec.id}: its card floods in over "${flood.cue}", but its draw returned no box to flood from`,
       );
-    // The box is in the canvas's own pixels (`verse` gives it so, through the
-    // transform it drew under), so the clip is laid with none, whatever scale
-    // the frame is drawn at, and the card drawn under the frame's.
     const frame = ctx.getTransform();
     const at = cueProgress(cueOf(p, flood.cue), beatTime(p, T));
     const box = floodBox(from, ctx.canvas.width, ctx.canvas.height, at);
     const mask = flood.mask;
     if (mask !== undefined) {
-      // The look's own edge: the card on a layer of its own, kept where the look paints.
       const { b } = getAssets();
       b.ctx.setTransform(1, 0, 0, 1, 0, 0);
       b.ctx.globalAlpha = 1;
@@ -1475,22 +1021,8 @@ export const createFilm = (spec: FilmSpec): Film => {
     ctx.restore();
   };
 
-  /**
-   * Scenes whose last frame framed no shot of their own: the first guess for
-   * their next. It only saves a draw, never decides a pixel (`sheet`).
-   */
   const unshot = new Set<string>();
 
-  /**
-   * Paper, then one scene over it, breathing once (`SceneBreath`): through its
-   * outermost shot when it frames one, around its whole draw when it frames
-   * none. Which it is shows only once it has drawn, so the frame is drawn on
-   * the scene's last answer and, where that was wrong (a scene that frames a
-   * shot in one part and none in another, or a first frame), drawn again from
-   * the paper the other way, the knobs, clock reads and probe of the first
-   * draw let go. The pixels, and what the frame says it read, are the right
-   * draw's alone, whatever was drawn before.
-   */
   const sheet = (
     ctx: CanvasRenderingContext2D,
     p: Placed<SceneSpec>,
@@ -1514,7 +1046,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     probing(ctx, probe, () => {
       shot = drawScene(ctx, p, T, boil, reads);
     });
-    // Guessed whole but it framed a shot, or guessed a shot and it framed none: draw it the other way.
     if (moving && shot === breath.outer) {
       rewindSink(sink);
       if (reads !== undefined) reads.list.length = read;
@@ -1527,7 +1058,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     else if (moving) unshot.add(id);
   };
 
-  /** Paper plus one scene, lit by its light, into a layer (light is no ink: outside the probe). */
   const layer = (
     target: Offscreen,
     p: Placed<SceneSpec>,
@@ -1544,7 +1074,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     return target.c;
   };
 
-  /** The finish over a drawn frame: the light spilling (bloom), then the grade, under the grain. */
   const finishFrame = (ctx: CanvasRenderingContext2D, boil: number) => {
     const sheets = getAssets().bloom;
     if (finish.bloom !== undefined && sheets !== undefined)
@@ -1553,7 +1082,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     grain(ctx, getAssets().grain, boil, width, height, finish.grain);
   };
 
-  /** Scene `cur`'s caption at scene time `local`, when the film captions, probed as a caption. */
   const captionOver = (
     ctx: CanvasRenderingContext2D,
     cur: Placed<SceneSpec>,
@@ -1567,11 +1095,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     );
   };
 
-  /**
-   * A transition's two layers onto `ctx` at progress `p`: the incoming one
-   * fading in over, panning in beside (`dx` across, `dir` its way), or wiped
-   * in over the outgoing one.
-   */
   const composite = (
     ctx: CanvasRenderingContext2D,
     enter: Exclude<Transition, { readonly kind: 'cut' }>,
@@ -1609,10 +1132,8 @@ export const createFilm = (spec: FilmSpec): Film => {
     const sink = opts.probe;
     const knobs = opts.knobs;
     hearing = opts.clock;
-    /** Knob reads straight onto the frame, or from a transition's layer. */
     const reads = (direct: boolean): Reads | undefined =>
       knobs === undefined ? undefined : { list: knobs, direct };
-    /** A probe for what one scene draws, landing `dx` across and composited at `alpha`. */
     const probe = (p: Placed<SceneSpec>, dx: number, alpha: number): Probe | undefined =>
       sink === undefined ? undefined : { sink, scene: p.spec.id, dx, alpha };
     ctx.save();
@@ -1620,27 +1141,22 @@ export const createFilm = (spec: FilmSpec): Film => {
 
     const shown = carded(cur, T);
     if (shown !== undefined) {
-      // A full-screen card: the frame is the card alone, cut to and from.
       cardFrame(ctx, cur, shown, T, boil, probe(cur, 0, 1), reads(true));
     } else if (prev === undefined || enter === undefined || enter.kind === 'cut' || local >= tr) {
       sheet(ctx, cur, T, boil, probe(cur, 0, 1), reads(true));
-      // The scene's light over its page and all on it, with the vignette.
       lightAndVignette(ctx, drawnLight, drawnFixed);
       floodOver(ctx, cur, T, boil, probe(cur, 0, 1), reads(true));
     } else {
       const p = ease.inOutCubic(clamp(local / tr));
-      // The incoming sheet covers the outgoing one as it arrives.
       const dir = enter.kind === 'pan' ? (enter.dir ?? 1) : 1;
       const dx = enter.kind === 'pan' ? -dir * p * width : 0;
       const fading = enter.kind === 'pan' ? 0 : 1;
-      // A card held to its scene's end leaves as the card, not the picture under it.
       const leaving = cardToEnd(prev);
       const outProbe = probe(prev, dx, 1 - fading * p);
       const out =
         leaving === undefined
           ? layer(a, prev, T, boil, outProbe, reads(false))
           : cardLayer(a, prev, leaving, T, boil, outProbe, reads(false));
-      // A card takes no vignette; a scene its light's share of it (read as its layer is drawn).
       const from = leaving === undefined ? vignetteOf(drawnLight) : 0;
       const inn = layer(
         b,
@@ -1656,8 +1172,6 @@ export const createFilm = (spec: FilmSpec): Film => {
     }
 
     finishFrame(ctx, boil);
-    // No caption over a card: the card is the words (CRAFT rule 1), set as they are
-    // said; the caption track (`.vtt`) keeps the line.
     if (opts.captions === true && shown === undefined)
       captionOver(ctx, cur, local, probe(cur, 0, 1));
     ctx.restore();
@@ -1684,10 +1198,6 @@ export const createFilm = (spec: FilmSpec): Film => {
   };
 };
 
-/**
- * The incoming layer, revealed behind a ragged diagonal brush edge, with a
- * band of wet ink riding the edge.
- */
 const inkWipe = (
   ctx: CanvasRenderingContext2D,
   layer: HTMLCanvasElement,
@@ -1709,7 +1219,6 @@ const inkWipe = (
   ctx.clip();
   ctx.drawImage(layer, 0, 0);
   ctx.restore();
-  // The brush band itself.
   ctx.save();
   ctx.fillStyle = color;
   ctx.globalAlpha = 0.9 * Math.sin(Math.PI * p);
@@ -1721,7 +1230,6 @@ const inkWipe = (
   ctx.restore();
 };
 
-/** The caption of `cues` spoken at `t` (speech-relative) on its plate, if one is. */
 const caption = (
   ctx: CanvasRenderingContext2D,
   cues: ReadonlyArray<CaptionCue>,
@@ -1750,7 +1258,6 @@ const caption = (
   ctx.globalAlpha = 1;
   ctx.fillStyle = style.color;
   ctx.fillText(text, w / 2, y + 1);
-  // The plate hides whatever is under it, so the check measures the plate.
   const probe = probeOf(ctx);
   if (probe !== undefined) {
     recordPlate(ctx, probe, left, top, pw, style.plateHeight, style.plateOpacity);

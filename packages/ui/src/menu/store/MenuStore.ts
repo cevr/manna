@@ -1,8 +1,3 @@
-// Upstream: packages/react/src/menu/store/MenuStore.ts
-//
-// A menu's state: the popup's (open, mounted, active trigger, elements) plus
-// the highlighted item and how the menu opened. A context menu
-// shares its root id and mouse-up gesture flag with the context menu around it.
 import { type Accessor, createSignal, untrack } from 'solid-js';
 
 import type { ContextMenuRootContext } from '../../context-menu/root/ContextMenuRootContext.ts';
@@ -42,22 +37,14 @@ interface MenuStoreOptions {
 export interface MenuStore extends PopupStore {
   readonly parent: MenuParent;
   openMethod: Accessor<InteractionType | null>;
-  /** The id the menu's popup carries as `data-rootownerid`. */
   rootId: Accessor<string>;
-  /** The highlighted item's index (`null` for none). */
   activeIndex: Accessor<number | null>;
   setActiveIndex: (index: number | null) => void;
-  /**
-   * Keeps the highlight on its item when the items' indexes change (items
-   * moved in the DOM while the menu is open): the item list's `onMapChange`.
-   */
   followActiveItem: (map: CompositeIndexMap) => void;
   isActive: (index: number) => boolean;
   instantType: Accessor<MenuInstantType>;
   lastOpenChangeReason: Accessor<MenuChangeEventReason | null>;
-  /** Asks the menu to open or close (through `onOpenChange`, which may cancel). */
   setOpen: (open: boolean, details: BaseUIChangeEventDetails) => void;
-  /** Applies an accepted open change with the menu's own state. */
   applyMenuOpenState: (
     open: boolean,
     details: BaseUIChangeEventDetails,
@@ -66,7 +53,6 @@ export interface MenuStore extends PopupStore {
   readonly itemDomElements: { current: Array<HTMLElement | null> };
   readonly itemLabels: { current: Array<string | null> };
   readonly typingRef: { current: boolean };
-  /** Whether a mouseup on an item activates it (a press on the trigger dragged onto it). */
   allowMouseUpTriggerRef: { current: boolean };
 }
 
@@ -79,7 +65,6 @@ export function createMenuStore(options: MenuStoreOptions): MenuStore {
 
   const owned = { ownedWrite: true } as const;
   const [activeIndex, setActiveIndex] = createSignal<number | null>(null, owned);
-  // The highlighted item's element, so the highlight follows it when the items move.
   let activeItem: Element | null = null;
   const [instantType, setInstantType] = createSignal<MenuInstantType>(undefined, owned);
   const [lastOpenChangeReason, setLastOpenChangeReason] =

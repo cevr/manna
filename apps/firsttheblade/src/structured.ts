@@ -1,11 +1,3 @@
-/**
- * A page's structured data, as schema.org JSON-LD: who publishes the site and
- * where else it is found (the YouTube channel), the site, the page, the trail
- * back to the home page, and on a series page the series and each of its
- * films. Search engines read it to name the channel and to draw a film's
- * result with its picture and date. A pure function of the page, so the tests
- * read it without a build; the not-found page carries none.
- */
 import { Match, Schema } from 'effect';
 
 import type { Episode, Series } from './content.ts';
@@ -99,7 +91,6 @@ const webPage = <Extra extends object>(page: Page, type: string, extra: Extra) =
   ...extra,
 });
 
-/** Every node a page's JSON-LD graph holds, in the order it prints them. */
 export const graphOf = (page: Page) =>
   Match.value(page.view).pipe(
     Match.tagsExhaustive({
@@ -155,10 +146,6 @@ export const graphOf = (page: Page) =>
 
 const encodeJson = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
-/**
- * The graph as the text of a `<script type="application/ld+json">`. A `<`
- * is written `<`, so no string in it can close the script element.
- */
 export const jsonLd = (page: Page) =>
   encodeJson({ '@context': 'https://schema.org', '@graph': graphOf(page) }).replaceAll(
     '<',

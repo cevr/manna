@@ -1,4 +1,3 @@
-/** Recording selection below the score clock: every hand-over gets the same fallback policy. */
 import { Clock, Effect, Layer, Option } from 'effect';
 
 import { audioUrl } from '~/remote';
@@ -107,8 +106,6 @@ export const recordingsOver = (device: PlaybackApi): PlaybackApi => {
           ),
         );
       }),
-    // A failure status may precede play's rejection. Keep the reader
-    // observing until this owner and its one fallback have answered.
     status: Effect.map(device.status, (status) =>
       selected(
         Option.match(preparing, {

@@ -5,7 +5,6 @@ import { SETTINGS, chooseEncoder, config, qualities } from './encode.ts';
 const hardware: Encoder = { _tag: 'Hardware' };
 const software: Encoder = { _tag: 'Software' };
 
-/** A browser that encodes with `have`, recording each encoder it was asked about. */
 const browser = (have: ReadonlyArray<Encoder['_tag']>) => {
   const asked: Array<Encoder['_tag']> = [];
   const can = (encoder: Encoder) => {

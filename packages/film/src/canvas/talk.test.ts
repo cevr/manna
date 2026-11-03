@@ -1,9 +1,3 @@
-// A talk's page (`talk.ts`): 9:16 at the talk's rate, each frame the take's
-// footage frame its cut names, cropped by the section's `frame` and `zoom`
-// knobs, its hook and captions set inside every platform's zone. The footage
-// is the host's: the film only says what each frame reads (`footageAt`), and
-// draws what it is given, so a frame's draw is the same in any order.
-
 import { Array as Arr, Effect, Result } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { syntheticTake } from '../core/fixtures/talk-take.ts';
@@ -31,7 +25,6 @@ const WORDS = [
   'grace.',
 ];
 
-/** The take, its picture `width` × `height`: one long pause, before word 8. */
 const takeOf = (width: number, height: number) =>
   syntheticTake(
     WORDS,
@@ -57,18 +50,11 @@ const TALK: Talk = {
 
 const TAKE = takeOf(1080, 1920);
 
-/** The talk's page over `take`, made afresh (the page reads its takes and cuts on them: `player/talks.ts`). */
 const talkOf = (take = TAKE, talk: Talk = TALK): Effect.Effect<Film> =>
   Effect.sync(() => createTalk(talk, { a: take }, Result.getOrThrow(talkCut(talk, { a: take }))));
 
-/** A font's box, as a canvas measures it: the stand-in measures widths alone. */
 const FONT_BOX = { fontBoundingBoxAscent: 48, fontBoundingBoxDescent: 14 };
 
-/**
- * A stand-in page, every call it is asked to make logged with its arguments,
- * its host decoding each read as a picture of `decoded` px (the take's own
- * size, as the mezzanine is, unless a proxy's is given).
- */
 const page = (decoded: { readonly width: number; readonly height: number } = TAKE) => {
   const log: Array<string> = [];
   const images = new Map<unknown, string>();
@@ -85,7 +71,6 @@ const page = (decoded: { readonly width: number; readonly height: number } = TAK
     },
     set: (target, key, value) => Reflect.set(target, key, value),
   });
-  /** A picture for each read, named by it, as the host would decode it. */
   const frame = (read: FootageRead) => {
     const name = `${read.source}@${read.at.toFixed(4)}`;
     const image =
@@ -123,11 +108,9 @@ describe('a talk', () => {
         const film = yield* talkOf();
         const at = (T: number) => film.footageAt?.(T) ?? [];
         expect(at(0).map((r) => r.source)).toEqual([SOURCE]);
-        // Frame `i`'s read, as a source frame number: reads sit mid-frame.
         const sourceFrame = (i: number) =>
           Math.round((at(i / TALK_FPS)[0]?.at ?? -1) * TALK_FPS - 0.5);
         const cut = Result.getOrThrow(talkCut(TALK, { a: TAKE }));
-        // law: a strike (word 2), one seam inside it; need: the long pause tightened, one more.
         expect(cut.sections.map((s) => s.pieces.length)).toEqual([2, 2]);
         const frameOf = (s: number) => Math.round(s * TALK_FPS);
         for (const [section, p] of Arr.zip(cut.sections, film.placed)) {
@@ -154,16 +137,13 @@ describe('a talk', () => {
           film.render(ctx, T, { footage, captions: false });
           return log.filter((l) => l.startsWith('drawImage('));
         };
-        // law: no knobs, the largest 9:16 crop about the picture's middle (607.5 × 1080).
         expect(drawn(wide, 0.05)[0]).toMatch(
           new RegExp(
             `^drawImage\\(take\\.why/0123456789ab@[\\d.]+,${(1920 - 607.5) / 2},0,607.5,1080,0,0,1080,1920\\)$`,
           ),
         );
-        // need: about (600, 540), two times in.
         const need = wide.placed[1]?.start ?? 0;
         expect(drawn(wide, need + 0.05)[0]).toMatch(/,448\.125,270,303\.75,540,0,0,1080,1920\)$/);
-        // A frame past the picture's edge is held inside it.
         const edge = yield* talkOf(takeOf(1920, 1080), {
           ...TALK,
           sections: [{ ...TALK.sections[0], knobs: { frame: [10, 10], zoom: 1.5 } }],
@@ -183,7 +163,6 @@ describe('a talk', () => {
           wide.render(ctx, T, { footage, captions: false });
           return log.filter((l) => l.startsWith('drawImage('));
         };
-        // The knobs are in the take's px; the proxy's rectangle is the same part of its picture.
         expect(drawn(0.05, { width: 960, height: 540 })[0]).toMatch(
           new RegExp(`,${(1920 - 607.5) / 4},0,303.75,540,0,0,1080,1920\\)$`),
         );
@@ -222,12 +201,10 @@ describe('a talk', () => {
         const phrase = talkPhrases(TALK, cut, film.placed).find((p) => p.start <= T && T < p.end);
         const said = phrase?.words.map((w) => w.text) ?? [];
         expect(captions.map((t) => t.text).join(' ')).toBe(said.join(' '));
-        // Heard as "hour", fixed to "our".
         expect(said).toContain('our');
         expect(said).not.toContain('hour');
         const room = safeRect(SAFE_ZONES.platforms);
         for (const t of captions) {
-          // Beside any platform's buttons the line runs down into.
           const across = roomAcross(SAFE_ZONES.platforms, t.y + t.h);
           expect(t.x).toBeGreaterThanOrEqual(across.left);
           expect(t.x + t.w).toBeLessThanOrEqual(across.right);
@@ -261,7 +238,6 @@ describe('a talk', () => {
       );
       const shuffled = frames.toSorted((a, b) => ((a * 7919) % 101) - ((b * 7919) % 101));
       expect(shuffled).not.toEqual(frames);
-      /** Each frame's calls, drawn in `order` on a fresh page of a fresh talk, its words set first. */
       const logsIn = (film: Film, order: ReadonlyArray<number>) => {
         const { ctx, log, footage } = page();
         const firstWord = (film.placed[0]?.voice.words[0]?.voiced.start ?? 0) + 0.05;

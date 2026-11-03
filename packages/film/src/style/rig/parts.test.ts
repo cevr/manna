@@ -3,8 +3,6 @@ import { DIRECTION, LIGHT } from '../house.ts';
 import { type Pt, creaseOf, ellipse, figure, piece, reachAbout, silhouette } from './parts.ts';
 import { type Element, argb, ids } from './rml.ts';
 
-// The parts every figure is built from, in the house's line (`DIRECTION`).
-
 const all = (e: Element): Element[] => [e, ...e.children.flatMap(all)];
 const called = (e: Element, name: string) =>
   all(e).filter((c) => c.attrs.some(([k, v]) => k === 'name' && v === name));
@@ -24,7 +22,6 @@ describe('the figure parts', () => {
 
   test('a chain of cubics draws its corners with handles of their own, and boils its anchors alone', () => {
     const fig = figure(ids(), 'Test', 7, 0, DIRECTION);
-    // A square's chain: each side one straight cubic, its handles a third of the way along it.
     const corners: Pt[] = [
       [0, 0],
       [30, 0],
@@ -44,7 +41,6 @@ describe('the figure parts', () => {
     expect(vertices).toHaveLength(4);
     const attr = (e: Element, k: string) => Number(e.attrs.find(([n]) => n === k)?.[1]);
     const first = vertices[0] as Element;
-    // At [0, 0] the line arrives from [0, 30] (its in handle points down) and leaves for [30, 0].
     expect(attr(first, 'inRotation')).toBeCloseTo(Math.PI / 2, 3);
     expect(attr(first, 'outRotation')).toBeCloseTo(0, 3);
     expect(attr(first, 'outDistance')).toBeCloseTo(10, 3);
@@ -59,7 +55,6 @@ describe('the figure parts', () => {
     const whole = figure(ids(), 'Test', 7, 0, DIRECTION);
     whole.boilWhole('curl', disc, 0.9);
     const tracks = whole.boilTracks();
-    // Each tick, every vertex lies off where it was cut by the one offset.
     const offsets = (t: typeof tracks, tick: number) =>
       disc.map((p, i) => {
         const at = t[`curl.${i}`] ?? {};
@@ -72,7 +67,6 @@ describe('the figure parts', () => {
         expect(o[1] ?? 0).toBeCloseTo(first?.[1] ?? 0, 9);
       }
     }
-    // A piece that crawls by its vertices moves each its own way.
     const [a, b] = offsets(own, 13);
     expect(a).not.toEqual(b);
   });
@@ -105,7 +99,6 @@ describe('reachAbout', () => {
   test('travels round the shoulder, bowed away from the straight line between', () => {
     const [x, y] = reachAbout(shoulder, rest, to, 0.5);
     expect(Math.hypot(x, y)).toBeCloseTo(100);
-    // The chord's midpoint is (50, 50), about 70.7 from the shoulder.
     expect(Math.hypot(x, y)).toBeGreaterThan(Math.hypot(50, 50));
   });
 

@@ -1,33 +1,3 @@
-// `film concept parts <film> <member> --view <kind>-<view> [--dry-run]
-// [--reuse] [--check]`: a kept view's part sheet, its hidden areas painted.
-// The view is cut by the member's cut table (`<member>/cutout/cut.ts`:
-// `CUTS`, `cutOptionsFor`, `HIDDEN`; `core/part-sheet.ts`). Every moving
-// part's area is painted flat magenta on the whole view, padded to the image
-// route's portrait, and okra repaints the magenta alone on its Codex route
-// (the subscription; never `--model`, the paid API). Each answer is laid
-// and measured (`part-sheet-lay.ts`), and the best is kept: the part PNGs,
-// the sheet laid out and its tint of the painted pixels, and `record.json`,
-// under `<member>/cutout/sheets/<view>/`; each call's input (named by its
-// bytes' hash), the prompt and the answers under its `okra/`.
-//
-// A view takes three calls in all, and more only by an allowance its cut
-// table records (`HIDDEN[view].allowance`: how many, who granted them, when
-// and why). Every call is written to the view's ledger (`okra/calls.json`)
-// before the route is asked, so a call whose answer then fails to arrive,
-// decode or lay still counts; an answer file the ledger lacks counts too.
-// An answer drawn from another input (the cut has moved since) is stale:
-// kept in the record, never laid, and still counted. `--reuse` lays the
-// answers already drawn; `--check` lays them, writes nothing and fails
-// where a file differs; `--dry-run` writes the magenta input under
-// `out/<film>/cast/<member>/parts/<view>/` and lists each piece of enclosed
-// paper the cut holds and each gap the view names (the table's `paperOf`).
-// None of the three calls okra.
-//
-// A view the table names in `CLEAN` (`core/part-sheet.ts` `SheetClean`) has
-// that rule run on its laid sheet before anything is written, so a fix the
-// view's art needs is made by the cut every time, and the part PNGs, the
-// strips and the record's counts all follow the cleaned sheet.
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
@@ -76,7 +46,6 @@ import {
 } from './part-sheet-lay.ts';
 import { decodePng, encodePng } from './png.ts';
 
-/** A part sheet that cannot be made: the member's cut table, the view, the cut, the paint or the calls. */
 class PartsUnmade extends Schema.TaggedError<PartsUnmade>()('PartsUnmade', {
   view: Schema.String,
   reason: Schema.String,
@@ -86,16 +55,12 @@ class PartsUnmade extends Schema.TaggedError<PartsUnmade>()('PartsUnmade', {
   }
 }
 
-/** The okra calls a view takes in all, beside any allowance its cut table records. */
 const MOST_CALLS = 3;
 
-/** The view's ledger of calls, under its sheet's folder. */
 const LEDGER = 'okra/calls.json';
 
-/** An answer file the route writes, under `okra/`. */
 const ANSWER_FILE = /^answer-(\d+)\.png$/;
 
-/** More calls a view's cut table grants it: how many, who granted them, on which day and why. */
 const Allowance = Schema.Struct({
   calls: Schema.Int,
   by: Schema.String,
@@ -103,7 +68,6 @@ const Allowance = Schema.Struct({
   why: Schema.String,
 });
 
-/** A part's grain miss accepted by name: the part, who accepted it, when and why. */
 const NamedMiss = Schema.Struct({
   bar: Schema.Literal('grain'),
   part: Schema.String,
@@ -112,7 +76,6 @@ const NamedMiss = Schema.Struct({
   why: Schema.String,
 });
 
-/** A view's entry in its member's `HIDDEN`: its moving parts, okra's words, any allowance of calls, and any miss accepted by name. */
 export interface HiddenEntry {
   readonly moving: ReadonlyArray<string>;
   readonly prompt: string;
@@ -120,7 +83,6 @@ export interface HiddenEntry {
   readonly named?: ReadonlyArray<typeof NamedMiss.Type>;
 }
 
-/** The named misses the kept answer holds, each with its part's grain both sides: a named part read within its bar holds no miss. */
 const namedOf = (hidden: HiddenEntry, measures: HiddenMeasures) =>
   (hidden.named ?? []).flatMap((miss) =>
     measures.grain
@@ -128,26 +90,20 @@ const namedOf = (hidden: HiddenEntry, measures: HiddenMeasures) =>
       .map((g) => ({ ...miss, grain: g })),
   );
 
-/** What a member's cut table exports: its cuts, each view's options, each view's hidden entry, its paper reader, and, if it has them, its frames. */
 interface CutModule {
   readonly CUTS: Readonly<Record<string, PartCut>>;
   readonly cutOptionsFor: (view: string, raster: Raster) => PartCutOptions;
   readonly HIDDEN: Readonly<Record<string, HiddenEntry>>;
-  /** Each view's frame on its kept sheet, where its part sheet is cut from the kept box padded: the sheet, the kept box and the pad (left, top, right, bottom). A view with none is cut from its kept view (`views/<view>.png`). */
   readonly FRAMES?: Readonly<Record<string, ViewFrame>>;
-  /** A view's enclosed paper in the kept view's pixels: the pieces its cut holds as cloth, the pieces it leaves open as the gaps the view names, and the named gaps gone stale. The dry run lists the first two, for the eye to check each held piece against the kept sheet; every run refuses a stale gap. */
   readonly paperOf: (view: string, raster: Raster) => EnclosedPaper;
-  /** Each view's rule on its laid part sheet, by view (`SheetClean`): a fix the member's art needs that the cut and the paint cannot make, kept here so laying the answer again makes the same part PNGs. A view with none is written as laid. */
   readonly CLEAN?: Readonly<Record<string, SheetClean>>;
 }
 
-/** A piece of enclosed paper: its box in the kept view's pixels (the far edges exclusive) and its pixels. */
 interface PaperPiece {
   readonly box: readonly [number, number, number, number];
   readonly area: number;
 }
 
-/** A view's enclosed paper, held or open, as its cut table reads it, and each named gap whose point opens no piece, or no piece with the box it names. */
 interface EnclosedPaper {
   readonly held: ReadonlyArray<PaperPiece>;
   readonly open: ReadonlyArray<PaperPiece & { readonly why: string }>;
@@ -158,7 +114,6 @@ interface EnclosedPaper {
   }>;
 }
 
-/** A view's frame on its kept sheet (`kept/<sheet>.png`): its kept box and the pixels its part sheet pads it by. */
 interface ViewFrame {
   readonly sheet: string;
   readonly kept: readonly [number, number, number, number];
@@ -176,7 +131,6 @@ const isCutModule = (u: unknown): u is CutModule =>
 
 const Similarity = Schema.Struct({ s: Schema.Finite, dx: Schema.Finite, dy: Schema.Finite });
 
-/** One call of a view, as its ledger keeps it: its number, its command line and its input and answer (paths from the sheet's folder; the input named by its bytes' hash). */
 const CallEntry = Schema.Struct({
   n: Schema.Int,
   command: Schema.Array(Schema.String),
@@ -189,7 +143,6 @@ const LedgerJson = Schema.fromJsonString(Schema.Struct({ calls: Schema.Array(Cal
   space: 2,
 });
 
-/** A call as the record keeps it after a lay: laid (its fit and measures with it), stale (drawn from another input), or failed (its answer did not arrive, decode or lay; why). */
 const CallLaid = Schema.Struct({
   ...CallEntry.fields,
   state: Schema.Literals(['laid', 'stale', 'failed']),
@@ -200,12 +153,10 @@ const CallLaid = Schema.Struct({
 });
 type CallLaid = typeof CallLaid.Type;
 
-/** A view's part sheet record: its parts, its moving parts, its okra calls, budget and the answer kept, its measures and bars. */
 const PartSheetRecord = Schema.Struct({
   view: Schema.String,
   kind: Schema.String,
   size: Schema.Array(Schema.Int),
-  /** The part sheet's frame on the kept sheet, sheet px (`[x0, y0, x1, y1]`): its kept box padded, where the cut table pads it. */
   box: Schema.optional(Schema.Array(Schema.Int)),
   command: Schema.String,
   parts: Schema.Array(
@@ -213,7 +164,6 @@ const PartSheetRecord = Schema.Struct({
   ),
   moving: Schema.Array(Schema.String),
   hiddenPx: Schema.Int,
-  /** Areas painted by the sheet's own rows carried under, not okra: none. */
   carried: Schema.Array(Schema.String),
   okra: Schema.Struct({
     route: Schema.String,
@@ -246,12 +196,10 @@ const PartSheetRecord = Schema.Struct({
     leastCellPx: Schema.Int,
   }),
   missed: Schema.Array(Schema.String),
-  /** The misses its cut table accepts by name, each with its numbers. */
   named: Schema.Array(Schema.Struct({ ...NamedMiss.fields, grain: PartGrain })),
 });
 const PartSheetRecordJson = Schema.fromJsonString(PartSheetRecord, { space: 2 });
 
-/** `<kind>-<view>` read: the kind, and the view's name in the member's views. */
 const viewOf = (asked: string) =>
   Arr.findFirst(SheetKind.literals, (k) => asked.startsWith(`${k}-`)).pipe(
     Result.fromOption(() =>
@@ -263,7 +211,6 @@ const viewOf = (asked: string) =>
     Result.map((kind) => ({ kind, name: asked.slice(kind.length + 1) })),
   );
 
-/** A PNG read, or why not. */
 const pngAt = (file: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -271,7 +218,6 @@ const pngAt = (file: string) =>
     return yield* Effect.fromResult(Result.mapError(decodePng(bytes), (e) => e.message));
   });
 
-/** The member's cut table, its view's cut and its hidden entry, or why not. */
 const cutTableOf = (file: string, name: string, refuse: (reason: string) => PartsUnmade) =>
   Effect.gen(function* () {
     const loaded: unknown = yield* Effect.tryPromise({
@@ -298,7 +244,6 @@ const cutTableOf = (file: string, name: string, refuse: (reason: string) => Part
     });
   });
 
-/** The magenta input a view's sheet asks okra to repaint, padded to `portrait`, and what laying an answer back reads. */
 const inputOf = (
   view: Raster,
   sheet: Sheet,
@@ -311,7 +256,6 @@ const inputOf = (
   return { hidden, ground, pad, bytes: encodePng(pad.picture) };
 };
 
-/** One run of a view's part sheet: what it is called, the view cut, its hidden entry, its folder, and whether it calls okra, lays again or checks. */
 export interface PartsJob {
   readonly label: string;
   readonly command: string;
@@ -323,15 +267,7 @@ export interface PartsJob {
   readonly dir: string;
   readonly mode: 'call' | 'reuse' | 'check';
   readonly portrait: { readonly width: number; readonly height: number };
-  /** The view's rule on its laid sheet (`CLEAN` of the cut table), run before anything is written or checked. */
   readonly clean: Option.Option<SheetClean>;
-  /**
-   * Where the kept box lies in a padded view (its left and top, and its
-   * size), and the padded frame's box on the kept sheet: okra is asked, and
-   * its answer laid, on the kept box alone, so an answer drawn for the kept
-   * view lays on its padded part sheet, and the paint is laid into the
-   * padded sheet there.
-   */
   readonly frame: Option.Option<{
     readonly at: readonly [number, number];
     readonly size: readonly [number, number];
@@ -339,7 +275,6 @@ export interface PartsJob {
   }>;
 }
 
-/** `sheet` cut to the box at `at` of `size`: each part's pixels and the owners there. */
 const cropSheet = (
   sheet: Sheet,
   at: readonly [number, number],
@@ -360,11 +295,6 @@ const cropSheet = (
   };
 };
 
-/**
- * An answer's fit as the record keeps it: answer px to the part sheet's px.
- * It is laid on the kept box alone, so a padded sheet's fit is moved by
- * where the kept box lies in it.
- */
 const inSheet = <F extends { readonly dx: number; readonly dy: number }>(
   fit: F,
   frame: PartsJob['frame'],
@@ -374,7 +304,6 @@ const inSheet = <F extends { readonly dx: number; readonly dy: number }>(
     onSome: (f) => ({ ...fit, dx: fit.dx + f.at[0], dy: fit.dy + f.at[1] }),
   });
 
-/** What okra is asked on, and its answer laid on: a padded view's kept box alone, else the whole view. */
 const askedOf = (view: Raster, sheet: Sheet, frame: PartsJob['frame']) =>
   Option.match(frame, {
     onNone: () => ({ view, sheet }),
@@ -384,7 +313,6 @@ const askedOf = (view: Raster, sheet: Sheet, frame: PartsJob['frame']) =>
     }),
   });
 
-/** `whole`'s parts with `inner`'s (a sheet cut from it at `at`, its paint laid, its parts in the same order) laid back at `at`, and each part's painted pixels counted again. */
 const laidInto = (whole: Sheet, inner: Sheet, at: readonly [number, number]): Sheet => ({
   ...whole,
   parts: Arr.zipWith(whole.parts, inner.parts, (p, q) => {
@@ -403,7 +331,6 @@ const laidInto = (whole: Sheet, inner: Sheet, at: readonly [number, number]): Sh
   }),
 });
 
-/** The view's ledger of calls (none before its first); how many it has used: each ledger entry, and each answer file under `okra/` the ledger lacks; and the next unused call number. */
 const ledgerOf = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -422,7 +349,6 @@ const ledgerOf = (dir: string) =>
       onTrue: () => fs.readDirectory(okra),
       onFalse: () => Effect.succeed<ReadonlyArray<string>>([]),
     });
-    // an answer file the ledger does not list is an attempt it lost: it counts on its own
     const listed = new Set(calls.map((c) => path.basename(c.out)));
     const orphans = answers.filter((f) => ANSWER_FILE.test(f) && !listed.has(f));
     return {
@@ -432,10 +358,8 @@ const ledgerOf = (dir: string) =>
     };
   });
 
-/** An answer file's call number. */
 const numberOf = (file: string) => Number(ANSWER_FILE.exec(file)?.[1] ?? 0);
 
-/** A laid call's line: its measures, or its state and why. */
 const callLine = (label: string, c: CallLaid) =>
   Option.match(Option.fromUndefinedOr(c.measures), {
     onNone: () =>
@@ -448,12 +372,6 @@ const callLine = (label: string, c: CallLaid) =>
       }`,
   });
 
-/**
- * A view's part sheet made, laid again or checked. With `call`, one more
- * okra call is written to the ledger and then asked, refused once the view
- * has used its budget. Every call on the present input is laid; the best
- * (`rankOrder`) is kept.
- */
 export const runParts = Effect.fn('film.concept.parts.run')(function* (job: PartsJob) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -461,7 +379,6 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
   const { dir, label } = job;
   const { view, sheet } = askedOf(job.view, job.sheet, job.frame);
   const made = inputOf(view, sheet, job.hidden.moving, job.portrait);
-  // the input named by its bytes, so an answer is laid only on the cut it was drawn for
   const inputName = `okra/input-${sha256Hex(made.bytes).slice(0, 12)}.png`;
   const allowance = Option.fromUndefinedOr(job.hidden.allowance);
   const budget = MOST_CALLS + Option.match(allowance, { onNone: () => 0, onSome: (a) => a.calls });
@@ -488,7 +405,6 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
       out: relative(out),
     });
     used += 1;
-    // the call is in the ledger before the route is asked: it counts whatever follows
     const ledger = yield* Schema.encodeEffect(LedgerJson)({ calls });
     yield* fs.writeFileString(path.join(dir, LEDGER), `${ledger}\n`);
     yield* Console.log(`parts ${label} okra call ${n}: ${calls.at(-1)?.command.join(' ')}`);
@@ -538,7 +454,6 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
     Result.match(at, { onFailure: () => [], onSuccess: (l) => [{ call, ...l }] }),
   );
   const byRank = Order.mapInput(rankOrder, (t: (typeof tried)[number]) => t.measures);
-  // the best answer by rank, the first drawn on a tie
   const found = Arr.reduce(tried, Option.none<(typeof tried)[number]>(), (best, t) =>
     Option.match(best, {
       onNone: () => Option.some(t),
@@ -550,8 +465,6 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
       `no okra answer on its present input lays (${calls.length} calls, ${budget - used} left of ${budget}); run it without --reuse`,
     );
   const best = found.value;
-  // the paint laid on the kept box, laid back into the padded sheet, then the view's rule, so
-  // its part PNGs, strips and counts are made again from the answer each time
   const laidWhole = Option.match(job.frame, {
     onNone: () => best.made,
     onSome: (f) => laidInto(job.sheet, best.made, f.at),
@@ -603,7 +516,6 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
     ['okra/prompt.txt', new TextEncoder().encode(`${job.hidden.prompt}\n`)],
     ['record.json', new TextEncoder().encode(`${recordText}\n`)],
   ];
-  // the record is held as its formatter leaves it, so it is read and written again before it is compared
   const held = (file: string): Effect.Effect<Uint8Array, unknown> =>
     Bool.match(file === 'record.json', {
       onTrue: () =>
@@ -614,7 +526,6 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
         ),
       onFalse: () => fs.readFile(path.join(dir, file)),
     });
-  // each file whose bytes on disk differ from what it lays, or that is not on disk yet
   const differs = yield* Effect.filter(files, ([file, bytes]) =>
     held(file).pipe(
       Effect.map((h) => h.length !== bytes.length || h.some((b, i) => b !== bytes[i])),
@@ -631,7 +542,6 @@ export const runParts = Effect.fn('film.concept.parts.run')(function* (job: Part
   }
   yield* fs.makeDirectory(path.join(dir, 'okra'), { recursive: true });
   for (const [file, bytes] of files) yield* fs.writeFile(path.join(dir, file), bytes);
-  // a lay again (`--reuse`) names each file it changed, so a committed hand fix it lays over shows in the log
   yield* Console.log(
     `parts ${label} kept answer ${best.call.n} missed=${record.missed.join(',') || 'none'} parts=${best.made.parts.length} dir=${dir} okra=${used - prior.used} rewrote=${differs.map(([f]) => f).join(',') || 'none'}`,
   );
@@ -708,12 +618,6 @@ export const parts = Command.make(
   Command.provide(ImageRoute.layer),
 );
 
-/**
- * A kept view of the member whose sheet folder is `folder`, cut by his cut
- * table as `concept parts` cuts it: `asked` is `<kind>-<view>`; a framed view
- * is its kept sheet cut at the kept box padded, else the kept view; a named
- * gap the sheet or the paper read moved from refuses the view.
- */
 export const viewCutOf = Effect.fn('film.concept.parts.viewCut')(function* (
   folder: string,
   member: string,
@@ -724,7 +628,6 @@ export const viewCutOf = Effect.fn('film.concept.parts.viewCut')(function* (
   const refuse = (reason: string) => PartsUnmade.make({ view: asked, reason });
   const memberDir = path.dirname(folder);
   const table = yield* cutTableOf(path.join(memberDir, 'cutout', 'cut.ts'), name, refuse);
-  // a framed view is its kept sheet cut at the kept box padded; else the kept view
   const frame = Option.map(table.frame, (f) => {
     const box = [
       f.kept[0] - f.pad[0],
@@ -752,7 +655,6 @@ export const viewCutOf = Effect.fn('film.concept.parts.viewCut')(function* (
         ),
       ).pipe(Effect.map((sheet) => cropRaster(sheet, f.box))),
   }).pipe(Effect.mapError(refuse));
-  // a named gap the sheet or the paper read moved from would hold the ground it names open
   const paper = table.paperOf(name, view);
   const stale = paper.stale.map(
     (g) =>
@@ -791,7 +693,6 @@ export const viewCutOf = Effect.fn('film.concept.parts.viewCut')(function* (
   };
 });
 
-/** A view's cut (`viewCutOf`) as the job `concept parts` runs on it in `mode`, its rule the cut table's. */
 export const jobOf = (
   cut: Effect.Success<ReturnType<typeof viewCutOf>>,
   film: string,

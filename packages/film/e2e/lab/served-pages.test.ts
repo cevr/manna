@@ -1,13 +1,3 @@
-// Every place of the lab rendered on the server once, by its page's own
-// server entry (`LAB_SERVERS`) bundled as the lab bundles it and held pure
-// (`servedFile`, `bundles.ts`): a render that writes state (Solid's
-// `SERVER_WRITE`, which the owner's lab logged at its start) or throws fails
-// here, naming the place. Each place is opened over the studio film
-// (`studio-film.ts`), its reads answered as `openServed` answers them
-// (`servedReads`). A read the fixture film does not answer fails the place
-// too, so each place renders past its fallback, with a film's data, as the
-// owner's lab renders a real film.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Option, Result, Struct } from 'effect';
 import { LAB_SERVERS } from '../../../../apps/animations/server.ts';
@@ -18,25 +8,18 @@ import { type Asked, type ServedName, servedReads } from '../../src/lab/fixtures
 import type { PLACE_HREFS } from '../../src/lab/fixtures/places.ts';
 import { STUDIO_ASK, STUDIO_PAGE, studioRoutes } from '../../src/lab/fixtures/studio-film.ts';
 
-/** Every place (`PLACE_HREFS`), at a link of a fixture film's. */
 const FILM_HREFS = {
   ask: pageHref.ask(STUDIO_ASK),
   askPage: pageHref.askPage(STUDIO_PAGE),
 } satisfies Record<keyof typeof PLACE_HREFS, string>;
 
-/** Whether a page is one the server renders: the export page is drawn in the browser alone. */
 const isServed = (page: AppPage): page is ServedName => page !== 'render';
 
-/** A read a render made and the status it was answered with. */
 interface Answered {
   readonly path: string;
   readonly status: number;
 }
 
-/**
- * The fetch of a render of page `name`: its reads answered by the fixture
- * film, each kept in `answered` with its status.
- */
 const readsOf = (name: ServedName, answered: Array<Answered>) => {
   const read: Array<Asked> = [];
   const reads = servedReads(name, studioRoutes, read);
@@ -53,7 +36,6 @@ const readsOf = (name: ServedName, answered: Array<Answered>) => {
     );
 };
 
-/** `render` of the page at `href` to its end: its markup, or the reason it failed (a throw is one). */
 const rendered = (
   render: PageRender,
   href: string,
@@ -83,7 +65,6 @@ const rendered = (
     if (Result.isFailure(threw)) sink.fail(`the render threw: ${String(threw.failure)}`);
   });
 
-/** Long enough to bundle the three server entries as the lab bundles them, and render each place. */
 const BUNDLING = 60_000;
 
 describe("every place's server render", () => {
@@ -110,7 +91,6 @@ describe("every place's server render", () => {
             onSome: ([page, r]) => {
               const answered: Array<Answered> = [];
               return rendered(r, href, readsOf(page, answered)).pipe(
-                // Read once the render has ended: every read it made is in.
                 Effect.map(() =>
                   answered
                     .filter((a) => a.status >= 400)

@@ -1,13 +1,3 @@
-// The credits, over the landing's last shot: the camera goes on easing back
-// from where `thesis` leaves the city, the two of them still sitting together
-// on the rooftop, while the film's name, its sources and its sound roll up a
-// torn paper strip at the left at one pace (`PACE`), so a longer roll runs
-// longer. The sources are each beat's `cite`, by author and work, and the
-// Sound head gives the line each CC BY recording the film places owes
-// (`credits.ts`). Then the strip goes and the city holds, clear, for the end
-// screens. It does not breathe: the film has stopped breathing by its last
-// card, and the pull back is its only move.
-
 import {
   type Camera,
   drawing,
@@ -29,53 +19,36 @@ const STYLES = {
   head: { family: F.display, size: 30, weight: 700, color: C.ink, align: 'center' },
   item: { family: F.body, size: 26, color: C.inkSoft, align: 'center' },
 } as const;
-/** Each line's height by its type. */
 const LEADING = { name: 72, head: 46, item: 38 } as const;
 
-/** Each line's baseline down the roll from its top. */
 const BASELINES = CREDITS.reduce<number[]>((ys, c, i) => {
   ys.push((i === 0 ? 0 : (ys[i - 1] ?? 0)) + c.gap + LEADING[c.kind]);
   return ys;
 }, []);
-/** Each line's hand key, made once. */
 const KEYS = CREDITS.map((_, i) => `credit${i}`);
 
-/** The torn paper strip the credits roll up, at the frame's left, clear of the rooftop. */
 const STRIP = { x: 90, y: 70, w: 700, h: 940 } as const;
 const STRIP_SHAPE = rectShape(STRIP.x, STRIP.y, STRIP.w, STRIP.h);
-/** How far inside the strip's top and bottom a line fades out, and the margin it never crosses. */
 const FADE = 90;
 const MARGIN = 24;
 
-/**
- * Where the roll's top stands as it starts and as it ends. It starts with the
- * film's name just risen through the bottom fade, whole, as the strip arrives,
- * and ends with the last line whole just under the top fade, as the strip
- * goes: never a moment of empty plate.
- */
 const LAST = CREDITS.length - 1;
 const TOP_FROM = STRIP.y + STRIP.h - MARGIN - FADE - (BASELINES[0] ?? 0);
 const TOP_TO =
   STRIP.y + MARGIN + FADE + STYLES[CREDITS[LAST]?.kind ?? 'item'].size - (BASELINES[LAST] ?? 0);
-/** How fast the roll climbs, in pixels a second: one reading pace for a roll of any length. */
 const PACE = 128;
-/** The roll's seconds: its travel at `PACE`. */
 const ROLL = (TOP_FROM - TOP_TO) / PACE;
-/** How long the pull back goes on settling after the roll ends. */
 const SETTLE = 2;
 
 export const end = drawing({
   drift: 0,
   timeline: {
-    // The strip comes in, the credits roll up it, and it goes: the rest is clear for the end screens.
     stripIn: { at: 'start', dur: 0.8 },
     roll: { at: 'start', dur: ROLL, ease: 'linear' },
     stripOut: { after: 'roll', dur: 0.8 },
-    // The pull back, from where `thesis` leaves the city, settling as the strip goes.
     back: { with: 'roll', dur: ROLL + SETTLE, ease: 'inOutSine' },
   },
   knobs: {
-    // The wider city the card ends on.
     wide: [1060, 560],
     wideZoom: 1,
   },
@@ -83,12 +56,10 @@ export const end = drawing({
     const { ctx, w, h } = f;
     landingSky(ctx, w, h);
     glow(ctx, 960, 380, 750, C.glow, 0.55);
-    // It starts where `thesis` leaves the city: that scene's `city` framing, read there.
     const city = f.knobsOf(thesis);
     const cam: Camera = shotPath(knobCamera(city('city'), city('cityZoom')), [
       [f.at('back'), knobCamera(f.knob('wide'), f.knob('wideZoom'))],
     ]);
-    // `thesis`'s rooftop, its paper cut as it was, the two turned to each other.
     rooftop(ctx, w, h, f.handsOf(thesis), cam, 1);
 
     const shown = f.at('stripIn') * (1 - f.at('stripOut'));
@@ -102,9 +73,6 @@ export const end = drawing({
       torn: 3,
       shadow: 0.5,
     });
-    // The roll rises from its first line at the bottom to its last at the
-    // top; a line shows only while it is wholly on the strip, fading at its
-    // top and bottom.
     const top = TOP_FROM + f.at('roll') * (TOP_TO - TOP_FROM);
     const cx = STRIP.x + STRIP.w / 2;
     probePlate(ctx, STRIP_SHAPE, () =>

@@ -1,60 +1,31 @@
-/**
- * The field's repaint, pixel by pixel (`./field.ts` reads and writes the
- * files). From the painted field it makes the hero's still and the map its
- * wind reads:
- *
- * - `skyMask`: the sky, every pixel the ground cannot reach from the bottom
- *   edge without crossing sky-coloured paint.
- * - `withoutRays`: the left of the sky painted again from the middle of the
- *   same rows, which no ray crosses, so the rays that came from the top left
- *   are gone.
- * - `withoutHillStreaks`: the old rays' edges on the far hills left of the
- *   sun taken out, each edge's colour step spread away to nothing on both sides.
- * - `withSunLight`: the sun's light (`../src/motion/sun.ts`) laid on the sky
- *   as a screen of warm white.
- * - `windMap`: how far each pixel sways, 0 on the ground and at a plant's
- *   foot and rising toward its tip (red), and the sky (green).
- *
- * Every length is in the field's pixels at 3072 wide, scaled to the image.
- */
 import { LIGHT, sunLight } from '../src/motion/sun.ts';
 
-/** An image's pixels, four bytes (red, green, blue, alpha) to a pixel. */
 export interface Pixels {
   readonly width: number;
   readonly height: number;
   readonly data: Uint8ClampedArray;
 }
 
-/** The columns of the sky no ray crosses, as shares of the width. */
 const CLEAR_FROM = 0.42;
 const CLEAR_TO = 0.62;
-/** The last row the clear sky is sky in, as a share of the height. */
 const HORIZON = 0.466;
-/** The sky is painted again up to this share of the width, then blended over `FEATHER`. */
 export const REPAINT_TO = 0.4;
 const FEATHER = 48;
-/** How far a pixel may stray from the row's sky, toward the light, and still be sky. */
 const SKY_TOLERANCE = 0.06;
 
-/** The WebP quality the stills ship at (`./field.ts`). */
 export const QUALITY = 0.86;
 
-/** The near plants' band, as shares of the height, and their ink. */
 const BAND_TOP = 0.5;
 const BAND_BOTTOM = 0.82;
 const INK = 0.22;
-/** A plant at its tallest, as a share of the height, from its foot. */
 const TALLEST = 0.27;
 
 const scaled = (image: Pixels, px: number) => Math.max(1, Math.round((px * image.width) / 3072));
 
-/** A value of an array, 0 past its end. */
 export const at = (values: ArrayLike<number>, i: number) => values[i] ?? 0;
 
 const channel = (image: Pixels, i: number, k: number) => at(image.data, i * 4 + k) / 255;
 
-/** The row's sky colour: the median of the clear columns, held below the horizon. */
 const rowSky = (image: Pixels) => {
   const { width, height } = image;
   const from = Math.round(CLEAR_FROM * width);
@@ -74,11 +45,6 @@ const rowSky = (image: Pixels) => {
   return sky;
 };
 
-/**
- * Whether a pixel is its row's sky, brightened toward the light by any
- * amount: `skyLike(image, sky)(i)`, each row's sky and its line to the light
- * worked out once.
- */
 const skyLike = (image: Pixels, sky: Float32Array) => {
   const toLight = Float64Array.from(sky, (b, j) => at(LIGHT, j % 3) - b);
   const along = Float64Array.from({ length: image.height }, (_, y) => {
@@ -96,7 +62,6 @@ const skyLike = (image: Pixels, sky: Float32Array) => {
   };
 };
 
-/** The pixels a flood reaches from its seeds through the pixels `open` lets it into. */
 const flood = (
   width: number,
   height: number,
@@ -123,12 +88,6 @@ const flood = (
   return reached;
 };
 
-/**
- * The sky: 1 where the painting is sky, 0 on the land. The land is what a
- * flood from the bottom edge reaches through paint that is not sky; the sky
- * is the rest that a flood from the top edge reaches, so a sky-coloured
- * highlight inside a plant stays land.
- */
 export const skyMask = (image: Pixels) => {
   const { width, height } = image;
   const isSky = skyLike(image, rowSky(image));
@@ -138,7 +97,6 @@ export const skyMask = (image: Pixels) => {
   return flood(width, height, top, (i) => ground[i] === 0);
 };
 
-/** The painting with the left of its sky painted again from the clear middle of the same rows. */
 export const withoutRays = (image: Pixels, sky: Uint8Array) => {
   const { width, height } = image;
   const out = new Uint8ClampedArray(image.data);
@@ -148,7 +106,6 @@ export const withoutRays = (image: Pixels, sky: Uint8Array) => {
   const to = Math.round(REPAINT_TO * width);
   const feather = scaled(image, FEATHER);
   for (let y = 0; y < height; y++) {
-    // Below the horizon the clear columns are hills, so the row is read from as far above it.
     const row = Math.max(0, y - 2 * Math.max(0, y - last));
     for (let x = 0; x < to + feather; x++) {
       const i = y * width + x;
@@ -164,38 +121,22 @@ export const withoutRays = (image: Pixels, sky: Uint8Array) => {
   return { width, height, data: out };
 };
 
-/** One old ray's edge on a far hill, in the field's pixels at 3072 wide. */
 interface HillStreak {
-  /** The edge from its top end to its bottom end: x, y, x, y. */
   readonly line: readonly [number, number, number, number];
-  /** Red, green and blue on the edge's upper-right side minus its lower-left side. */
   readonly step: readonly [number, number, number];
-  /** The hill's colour at the edge: the mean of its two sides. */
   readonly hill: readonly [number, number, number];
 }
 
-/**
- * The old rays' edges on the far hills left of the sun, measured off
- * `kit/art/field.webp`: each line set where the step across it is largest and
- * then on the middle of its rise, each step the trimmed mean of the colour
- * differences 3 to 9 px either side along the line, each hill colour the
- * medians 6 to 30 px either side. The edges of one ray are not one line: the
- * ray was painted a hill at a time.
- */
 export const HILL_STREAKS: ReadonlyArray<HillStreak> = [
   { line: [439.5, 980.6, 522.7, 1087.2], step: [17, 9.5, -4.1], hill: [182.5, 213, 225.5] },
   { line: [960.6, 1005.6, 1046.3, 1076.9], step: [-10.5, -6.6, 3.6], hill: [176, 209.5, 229] },
   { line: [1038, 1070.9, 1091.6, 1127.3], step: [-7.6, -5.9, 2.5], hill: [144.5, 189.5, 220.5] },
   { line: [1288.1, 1068.3, 1350.3, 1133.3], step: [0.6, 1.2, 3.4], hill: [176, 210, 232] },
 ];
-/** How far to each side an edge's step is spread, fading to nothing: far wider than the eye reads a step. */
 const STREAK_FADE = 150;
-/** How far past each end of an edge its lift fades out. */
 const STREAK_TAPER = 24;
-/** The edge's hill: pixels within this many levels of its colour in every channel, fading out over `STREAK_HILL_SOFT` more. */
 const STREAK_HILL = 20;
 const STREAK_HILL_SOFT = 16;
-/** The rise's shape is read in bins this wide (px at 3072), `STREAK_REACH` each way. */
 const STREAK_BIN = 0.25;
 const STREAK_REACH = 8;
 
@@ -204,13 +145,11 @@ const smoothstep = (t: number) => {
   return u * u * (3 - 2 * u);
 };
 
-/** A pixel's share of an edge's hill: 1 near its colour, 0 off it. */
 const onHill = (image: Pixels, i: number, hill: HillStreak['hill']) => {
   const off = Math.max(...hill.map((h, k) => Math.abs(at(image.data, i * 4 + k) - h)));
   return 1 - smoothstep((off - STREAK_HILL) / STREAK_HILL_SOFT);
 };
 
-/** An edge's geometry in an image: its ends, length, along and across (up and right) in image pixels. */
 const streakLine = (image: Pixels, streak: HillStreak) => {
   const s = image.width / 3072;
   const [x0, y0, x1, y1] = [
@@ -225,13 +164,6 @@ const streakLine = (image: Pixels, streak: HillStreak) => {
   return { s, x0, y0, x1, y1, length, dx, dy, nx: dy, ny: -dx };
 };
 
-/**
- * How an edge rises across, per channel, from -0.5 on its lower-left side to
- * 0.5 on its upper-right, read off the image's own pixels on its hill: the
- * median of each bin, smoothed, then made to rise only (the mean of a running
- * maximum from the left and a running minimum from the right, which leans
- * neither way).
- */
 const riseOf = (image: Pixels, streak: HillStreak) => {
   const { width, height } = image;
   const g = streakLine(image, streak);
@@ -271,7 +203,6 @@ const riseOf = (image: Pixels, streak: HillStreak) => {
     const low = ends(0);
     const high = ends(count - 9);
     const step = at(streak.step, k);
-    // A channel that barely steps has no rise to read: a straight ramp 2 px each way.
     const shares = smooth.map((v, b) => {
       const d = -STREAK_REACH + b * STREAK_BIN;
       if (Math.abs(high - low) < 2 || Math.abs(step) < 2)
@@ -286,14 +217,12 @@ const riseOf = (image: Pixels, streak: HillStreak) => {
   });
 };
 
-/** A channel's share of an edge's step at `d` px across it (in the master's pixels), read off its rise. */
 const riseAt = (rise: ReadonlyArray<number>, d: number) => {
   const f = Math.min(1, Math.max(0, (d + STREAK_REACH) / (2 * STREAK_REACH))) * (rise.length - 1);
   const b = Math.floor(f);
   return at(rise, b) + (f - b) * (at(rise, Math.min(rise.length - 1, b + 1)) - at(rise, b));
 };
 
-/** Adds one edge's lift to `delta` (three channels a pixel): its step times its rise, faded off. */
 const liftStreak = (image: Pixels, sky: Uint8Array, streak: HillStreak, delta: Float32Array) => {
   const { width, height } = image;
   const g = streakLine(image, streak);
@@ -322,14 +251,6 @@ const liftStreak = (image: Pixels, sky: Uint8Array, streak: HillStreak, delta: F
     }
 };
 
-/**
- * The painting with the old rays' edges on its far hills taken out: each
- * edge's step, half taken off its lighter side and half given to its darker
- * side, following the edge's own rise across and fading to nothing
- * `STREAK_FADE` px away and `STREAK_TAPER` px past its ends, so no edge is
- * left and no band is made. Only the edge's own hill moves; the sky, the
- * trees and the other hills keep every pixel.
- */
 export const withoutHillStreaks = (image: Pixels, sky: Uint8Array) => {
   const { width, height } = image;
   const delta = new Float32Array(width * height * 3);
@@ -341,7 +262,6 @@ export const withoutHillStreaks = (image: Pixels, sky: Uint8Array) => {
   return { width, height, data: out };
 };
 
-/** The painting with the sun's light screened over its sky. */
 export const withSunLight = (image: Pixels, sky: Uint8Array) => {
   const { width, height } = image;
   const out = new Uint8ClampedArray(image.data);
@@ -358,7 +278,6 @@ export const withSunLight = (image: Pixels, sky: Uint8Array) => {
   return { width, height, data: out };
 };
 
-/** A square grown around every set pixel, `r` pixels each way. */
 export const grown = (width: number, height: number, mask: Uint8Array, r: number) => {
   const across = new Uint8Array(width * height);
   const out = new Uint8Array(width * height);
@@ -389,7 +308,6 @@ export const grown = (width: number, height: number, mask: Uint8Array, r: number
   return out;
 };
 
-/** The mask with its gaps narrower than `2r` closed. */
 const closed = (width: number, height: number, mask: Uint8Array, r: number) =>
   grown(
     width,
@@ -398,7 +316,6 @@ const closed = (width: number, height: number, mask: Uint8Array, r: number) =>
     r,
   ).map((m) => 1 - m);
 
-/** A box blur, three times over, which is near enough a Gaussian. */
 export const blurred = (width: number, height: number, field: Float32Array, r: number) => {
   let f = field;
   const pass = (
@@ -425,7 +342,6 @@ export const blurred = (width: number, height: number, field: Float32Array, r: n
   return f;
 };
 
-/** The near plants: their ink, and all the ink closes off from the land around them. */
 export const plantMask = (image: Pixels) => {
   const { width, height } = image;
   const top = Math.round(BAND_TOP * height);
@@ -452,7 +368,6 @@ export const plantMask = (image: Pixels) => {
   return closed(width, height, plants, scaled(image, 20));
 };
 
-/** Each column's foot: the lowest plant pixel near it, or -1 where no plant stands. */
 const feet = (width: number, height: number, plants: Uint8Array, reach: number) => {
   const lowest = Array.from({ length: width }, (_, x) => {
     for (let y = height - 1; y >= 0; y--) if (plants[y * width + x]) return y;
@@ -463,11 +378,6 @@ const feet = (width: number, height: number, plants: Uint8Array, reach: number) 
   );
 };
 
-/**
- * The wind's map, as pixels: red, how far a pixel sways (0 at a plant's foot,
- * rising to 1 at the tallest plant's tip, and carried a little past each
- * plant's edge so the paint around it moves with it); green, the sky.
- */
 export const windMap = (image: Pixels, sky: Uint8Array) => {
   const { width, height } = image;
   const plants = plantMask(image);

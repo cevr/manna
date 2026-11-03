@@ -27,18 +27,12 @@ export const egwDownload = Command.make(
       const client = yield* EGWApiClient;
       const supply = yield* CorpusSupply;
 
-      // Resolve the target Book (from API). Prefer --id, else search by code.
       let book: Option.Option<EGWSchemas.Book> = Option.none();
 
       if (args.id._tag === 'Some') {
         book = Option.some(yield* client.getBook(args.id.value));
       } else if (args.code._tag === 'Some') {
         const code = args.code.value;
-        // The remote /content/books?search= endpoint matches against TITLE,
-        // not against the book code, so single-token codes like "DAR" don't
-        // round-trip. We pull title-search candidates and pick exact code
-        // matches. If that fails, the user should use --id (look up via
-        // `manna egw catalog --search <title>`).
         const candidates = yield* client
           .getBooks({ lang: args.lang, search: code, limit: 50 })
           .pipe(Stream.take(50), Stream.runCollect);

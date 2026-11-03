@@ -1,12 +1,6 @@
-/**
- * 32-bit float WAV, the format the patched sampler writes and the master
- * reads: planar samples in, planar samples out. Pure.
- */
-
 import type { Pcm } from '@manna/film/measure';
 import { Schema } from 'effect';
 
-/** A file that is not a 32-bit float WAV, and why. */
 export class WavUnreadable extends Schema.TaggedError<WavUnreadable>()('WavUnreadable', {
   reason: Schema.String,
 }) {}
@@ -23,7 +17,6 @@ interface Format {
   readonly code: number;
 }
 
-/** The `fmt ` chunk whose body starts at `body`; an extensible one by its sub-format. */
 const formatAt = (view: DataView, body: number): Format => {
   const code = view.getUint16(body, true);
   return {
@@ -34,7 +27,6 @@ const formatAt = (view: DataView, body: number): Format => {
   };
 };
 
-/** The `data` chunk's `length` bytes from `body`, de-interleaved by `format`. */
 const planesAt = (
   view: DataView,
   body: number,
@@ -52,7 +44,6 @@ const planesAt = (
   return { rate: format.rate, frames, channels };
 };
 
-/** A float WAV's samples, one plane per channel. */
 export const readWav = (bytes: Uint8Array): Pcm => {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const tag = (at: number) => String.fromCharCode(...bytes.subarray(at, at + 4));
@@ -69,7 +60,6 @@ export const readWav = (bytes: Uint8Array): Pcm => {
   throw unreadable('no data chunk');
 };
 
-/** `pcm` as a 32-bit float WAV, its channels interleaved. */
 export const writeWav = (pcm: Pcm): Uint8Array => {
   const channels = pcm.channels.length;
   const data = pcm.frames * channels * 4;

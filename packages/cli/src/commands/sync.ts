@@ -1,10 +1,3 @@
-/**
- * Sync CLI Commands
- *
- * `manna sync` - Sync Bible database from JSON assets
- * `manna sync --force` - Recreate database even if it exists
- */
-
 import { defaultBibleSyncPaths, syncBible } from '@manna/core/sync';
 import { Flag, Command } from 'effect/cli';
 import { Effect, Schema } from 'effect';

@@ -1,14 +1,8 @@
-// The cloth dye's promises, held over generated cloths and pixels: alpha is
-// kept, a pixel at or under the ink cut is kept, the drawn shade, base and
-// light land on the cloth's ramp within 1/255, and lightness keeps its
-// order. Each draw is seeded, so a failure names the seed that gave it.
-
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
 import { type Hex, type Ramp, type Shading, channelsOf, ramp } from './colour.ts';
 import { type Dye, INK_CUT, dyeKnots, dyePixel, dyedRaster, dyedRgb, lightnessOf } from './dye.ts';
 
-/** The house's key light and knobs (`style/house.ts`, which the engine may not import): a cloth's ramp as the look's `shaded()` gives it. */
 const KEY: Hex = '#f3e9c8';
 const SHADING: Shading = {
   turn: 20,
@@ -21,7 +15,6 @@ const SHADING: Shading = {
 };
 const clothRamp = (base: Hex): Ramp => ramp(base, KEY, SHADING);
 
-/** A seeded generator of 0..1 (mulberry32). */
 const seeded = (seed: number) => {
   let a = seed >>> 0;
   return () => {
@@ -40,7 +33,6 @@ const byte = (rng: Rng) => Math.floor(rng() * 256);
 const hexOf = (rng: Rng): Hex =>
   `#${[byte(rng), byte(rng), byte(rng)].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 
-/** Pair `seed`: a part drawn in one random cloth's ramp, worn in another's. */
 const pairOf = (seed: number) => {
   const rng = seeded(seed);
   const drawn = clothRamp(hexOf(rng));
@@ -48,7 +40,6 @@ const pairOf = (seed: number) => {
   return { drawn, cloth, made: dyeKnots(drawn, cloth) };
 };
 
-/** The dyes of the first `count` pairs, each with its seed; the pairs the dye refuses left out. */
 const dyes = (count: number): ReadonlyArray<{ readonly seed: number; readonly dye: Dye }> =>
   Array.from({ length: count }, (_, seed) =>
     Result.match(pairOf(seed).made, {
@@ -110,7 +101,6 @@ describe('a cloth dye', () => {
   });
 
   test('keeps lightness in order: a lighter pixel never dyes darker', () => {
-    // the 8-bit rounding and the gamut's clamp moved a dyed pixel's L* by at most 0.3 over 2000 pairs of 200 pixels each, measured once (2026-11-02); this case runs the 48 pixels of each pair here, held to 0.5
     for (const { seed, dye } of DYES) {
       const rng = seeded(seed + 3000);
       const pixels = Array.from({ length: 48 }, (): Rgb => [byte(rng), byte(rng), byte(rng)]);

@@ -1,14 +1,3 @@
-// Headless Chrome, as a service: a player page in a tab of the process's
-// Chrome (`tools/chrome.ts`, Bun.WebView), and the one typed path every call
-// on an export page takes (`framePage`). Each page lives in the scope that
-// opened it; Chrome lives as long as the process. A call names one of the
-// handle's calls (`ExportCalls`, core/export-handle.ts), its answer is
-// decoded by that call's schema, and its failure is that call's own error
-// (`CALLS`). The tab and the test fake (tools/browser/testing.ts) are the two ways a
-// call reaches a page (`Invoke`). Everything the film does wrong in a page
-// arrives as a typed failure: an uncaught error (`Runtime.exceptionThrown`)
-// is `PageError`, a dead renderer process is `PageCrashed`.
-
 import {
   Context,
   Deferred,
@@ -46,15 +35,10 @@ import {
   PageLoadFailed,
 } from './errors.ts';
 
-/**
- * A call the page did not answer, and why: how an adapter reports it, before
- * `framePage` names it as the call's own error.
- */
 export class CallRefused extends Schema.TaggedError<CallRefused>()('CallRefused', {
   reason: Schema.String,
 }) {}
 
-/** The error each call fails with, beside the page's own (`PageError`, `PageCrashed`). */
 export interface CallErrors {
   readonly frame: FrameFailed;
   readonly probe: FrameFailed;
@@ -71,26 +55,20 @@ export interface CallErrors {
   readonly filmTimed: FrameFailed;
 }
 
-/** How long a call may take, and the error its failure is, from its arguments and the reason. */
 interface CallPolicy<K extends ExportCall> {
   readonly timeout: Duration.Duration;
   readonly fail: (args: CallArgs[K], reason: string) => CallErrors[K];
 }
 
-/** A frame that takes longer than this has hung. */
 const FRAME_TIMEOUT = Duration.minutes(2);
-/** The look-book, the contact sheet and a batch of frames draw many frames in one call. */
 const SHEET_TIMEOUT = Duration.minutes(5);
-/** A chunk draws and encodes a few hundred frames in one call. */
 const ENCODE_TIMEOUT = Duration.minutes(5);
 
-/** A failed batch of frames names its first. */
 const batchFailed = (
   [frames]: readonly [ReadonlyArray<number>, ...ReadonlyArray<unknown>],
   reason: string,
 ) => FrameFailed.make({ frame: frames[0] ?? 0, reason });
 
-/** Every call's policy, call by call. */
 type CallPolicies = { readonly [K in ExportCall]: CallPolicy<K> };
 
 const CALLS: CallPolicies = {
@@ -112,48 +90,32 @@ const CALLS: CallPolicies = {
     timeout: FRAME_TIMEOUT,
     fail: ([frame], reason) => FrameFailed.make({ frame, reason }),
   },
-  // It draws nothing: the page answers from its film's own decision, frame by frame.
   filmTimed: {
     timeout: FRAME_TIMEOUT,
     fail: ([frame], reason) => FrameFailed.make({ frame, reason }),
   },
 };
 
-/**
- * How an adapter reaches a page's handle: call `name` with `args` and hand
- * back its answer as it crossed (undecoded), within `timeout`; a call the
- * page did not answer is `CallRefused`.
- */
 export type Invoke = <K extends ExportCall>(
   name: K,
   args: CallArgs[K],
   timeout: Duration.Duration,
 ) => Effect.Effect<unknown, PageError | PageCrashed | CallRefused>;
 
-/** One player page in export mode. */
 export interface FramePage {
   readonly info: ExportInfo;
-  /** The page's title: the film's (or the short's) title, as the player sets it. */
   readonly title: string;
-  /** Call the export handle's `name` with `args`: its answer decoded, or the call's own error. */
   readonly call: <K extends ExportCall>(
     name: K,
     ...args: CallArgs[K]
   ) => Effect.Effect<CallAnswers[K], PageError | PageCrashed | CallErrors[K]>;
 }
 
-/** `name`'s answer schema, typed as its call's (`CallAnswers[K]`). */
 const answerOf = <K extends ExportCall>(
   answers: { readonly [P in K]: Schema.Codec<CallAnswers[P], WireAnswers[P]> },
   name: K,
 ): Schema.Codec<CallAnswers[K], WireAnswers[K]> => answers[name];
 
-/**
- * A page reached through `invoke`: every answer decoded by its call's schema
- * (`ExportCalls`), every failure the call's own error (`CALLS`), saying why.
- * An answer that does not decode (the handle is gone, or answered something
- * else) fails the call too.
- */
 export const framePage = (info: ExportInfo, title: string, invoke: Invoke): FramePage => ({
   info,
   title,
@@ -172,11 +134,6 @@ export const framePage = (info: ExportInfo, title: string, invoke: Invoke): Fram
   },
 });
 
-/**
- * A frame's luma as a page hands it back: one value per cell of `area`'s
- * grid. An empty read (the page had no canvas to sample on) or a short one is
- * refused, so a loop is never compared on nothing and called clean.
- */
 export const lumaGrid = (area: LumaArea) =>
   Schema.Array(Schema.Finite).check(
     Schema.makeFilter(
@@ -186,7 +143,6 @@ export const lumaGrid = (area: LumaArea) =>
     ),
   );
 
-/** Frame `i`'s luma over `area` on `page` (`luma`), one value per cell of its grid (`lumaGrid`). */
 export const lumaOf = (page: FramePage, i: number, area: LumaArea) =>
   page
     .call('luma', i, area)
@@ -206,27 +162,12 @@ export type PageOpenError =
   | BrowserMissing;
 
 interface BrowserService {
-  /** Open the player at `url` and wait for its export handle; the page closes with the scope. */
   readonly open: (url: string) => Effect.Effect<FramePage, PageOpenError, Scope.Scope>;
 }
 
-/** How long the player may take to load its fonts and film. */
 const LOAD_TIMEOUT = Duration.minutes(1);
-/** A failed call waits this long for the crash or page error that explains it. */
 const SETTLE = Duration.seconds(1);
 
-/**
- * Chrome's flags for a render. Films render on the owner's Macs only
- * (owner, 2026-10-25), so Chrome draws on the Mac's GPU: the GPU process runs (`GPU_FLAG`: `tools/chrome.ts` spawns
- * Chrome through the GPU launcher, `tools/chrome-gpu.ts`, which drops the
- * `--disable-gpu` Bun spawns every Chrome with), WebGL runs on Metal
- * (`--use-angle=metal`) and the 2D canvas is accelerated. It holds the
- * hardware H.264 encoder too. Measured on RBF's `cold` and `title` (M4 Pro,
- * 2026-10-25): 101 fps at 4 pages against 84 fps drawn in software, the draw
- * 34 ms a frame to 8; the pixels move by under 1 level on average, most on
- * the anti-aliased edges of ink and text, and the owner judged the stills
- * the same ("I mean it looks the same. Yeah V2 looks okay").
- */
 export const launchArgs: ReadonlyArray<string> = [
   '--disable-gpu-vsync',
   '--disable-frame-rate-limit',
@@ -234,28 +175,23 @@ export const launchArgs: ReadonlyArray<string> = [
   '--use-angle=metal',
 ];
 
-/** A tab of this process's Chrome, with the renderer's flags, 1920 × 1080 CSS pixels at one device pixel each; closed with the scope. */
 const frameView = openView(launchArgs, { width: 1920, height: 1080 });
 
-/** A script the page runs, `answer` once it is there: the export handle, waited for on the page's own timers. */
 const HANDLE = `new Promise((done) => {
   const look = () => (window.__film ? done(true) : setTimeout(look, 50));
   look();
 })`;
 
-/** Any value as JSON text, to write into a script the page runs. */
 const jsonOf = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
 const openPage = (view: Bun.WebView, url: string) =>
   Effect.gen(function* () {
     const broken = yield* Deferred.make<never, PageError | PageCrashed>();
     const loadFailed = (cause: unknown) => PageLoadFailed.make({ url, reason: String(cause) });
-    // A view takes one script at a time.
     const one = yield* Semaphore.make(1);
     const evaluate = <A>(script: string) =>
       one.withPermits(1)(Effect.tryPromise(() => view.evaluate<A>(script)));
 
-    // The protocol answers once the view has navigated.
     yield* Effect.tryPromise({ try: () => view.navigate('about:blank'), catch: loadFailed });
     view.addEventListener('Runtime.exceptionThrown', (event: Event) => {
       Option.map(thrownBy(event), (reason) =>
@@ -271,7 +207,6 @@ const openPage = (view: Bun.WebView, url: string) =>
     for (const domain of ['Runtime', 'Inspector'])
       yield* Effect.tryPromise({ try: () => view.cdp(`${domain}.enable`), catch: loadFailed });
 
-    /** Fail as soon as the page breaks; a failed call first waits briefly for the break that caused it. */
     const guarded = <A, E>(call: Effect.Effect<A, E>) =>
       Effect.raceFirst(
         call.pipe(
@@ -285,7 +220,6 @@ const openPage = (view: Bun.WebView, url: string) =>
         Deferred.await(broken),
       );
 
-    /** A step of the load: the page's own, within the load's time. */
     const loading = <A>(step: Effect.Effect<A, unknown>) =>
       guarded(
         step.pipe(
@@ -299,14 +233,12 @@ const openPage = (view: Bun.WebView, url: string) =>
 
     yield* loading(Effect.tryPromise(() => view.navigate(url)));
     yield* loading(evaluate(HANDLE));
-    // The player names the page after the film it mounted.
     const title = yield* loading(evaluate<string>('document.title'));
     const reported = yield* loading(evaluate('window.__film.info'));
     const info = yield* Schema.decodeUnknownEffect(ExportInfo)(reported).pipe(
       Effect.mapError((error) => PageLoadFailed.make({ url, reason: error.message })),
     );
 
-    /** A call into the page: the arguments cross in as JSON, the answer back. */
     const invoke: Invoke = (name, args, timeout) =>
       guarded(
         evaluate(`window.__film[${jsonOf(name)}](...${jsonOf(args)})`).pipe(
@@ -321,7 +253,6 @@ const openPage = (view: Bun.WebView, url: string) =>
     return framePage(info, title, invoke);
   });
 
-/** Preflight: Chrome opens a page (and closes it again); `BrowserMissing` says how to get one. */
 export const browserReady: Effect.Effect<
   void,
   BrowserMissing | BrowserFailed,
@@ -331,18 +262,12 @@ export const browserReady: Effect.Effect<
 export class Browser extends Context.Service<Browser, BrowserService>()(
   '@manna/film/tools/Browser',
 ) {
-  /**
-   * Pages in this process's Chrome (`tools/chrome.ts`), spawned when the first
-   * page opens: a command that draws nothing (a `project render` of current
-   * scenes, a refused flag) never starts it, and never needs it there.
-   */
   static readonly layer = Layer.effect(
     Browser,
     Effect.suspend(() => makeBrowser),
   );
 }
 
-/** Pages in this process's Chrome, each a tab closed with the scope that opened it. */
 export const makeBrowser: Effect.Effect<BrowserService, never, FileSystem.FileSystem | Path.Path> =
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

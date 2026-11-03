@@ -1,13 +1,6 @@
-// How the film sets a full-screen card and a verse on its page (CRAFT rule
-// 1): cream on the night ground, flush left, cased as said, the payoff in the
-// colour script's gold for the word, underlined; the verse on a cream page,
-// its phrase highlighted in the card's own ground. The film declares them
-// (`film.ts`), so the storyboard sets its card and verse panels in them.
-
 import type { CardStyle, VerseStyle } from '@manna/film/canvas';
 import { fonts, palette } from './palette.ts';
 
-/** The card's ground: the highlight's colour too. */
 export const CARD_GROUND = palette.night;
 
 export const VERSE_STYLE: VerseStyle = {
@@ -23,7 +16,6 @@ export const CARD_STYLE: CardStyle = {
   payoffScale: 2.6,
   payoffColor: palette.gold,
   payoffType: { weight: 700 },
-  // As said: "LORD" and "Christ" keep their capitals.
   case: 'said',
   treatment: {
     draw: (ctx, box) => {

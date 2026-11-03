@@ -1,23 +1,6 @@
 /* oxlint-disable effect/noGlobals -- react-native-web keeps a view's `onLayout` on its node, where the test calls it as the platform would. */
 /* oxlint-disable effect/noTestLifecycleHooks, effect/noUnknownParameters, effect/noNewPromise, effect/noAsyncFunction, effect/noNullish, effect/noTernary -- a React screen test: the role sheet is in the document for the file and animations land after each case; the layout handler takes the platform's untyped event; Reduce Motion stands in as the platform's promise; `act` and a source file's text are awaited; `closest` answers null for no match; a case's name prints the OverBar state only when there is one. */
 
-/**
- * The find bar and the key panel's chips, as the owner asked (2026-11-01,
- * plan `packages/hymnal/plans/hymnapp-run.md`, unit findlook): the Tuner
- * chip and Reset are one height, the Tuner's mark small and upright; the
- * find bar's capsule is glass (`glass`), its marks the
- * glass's ink, and one chosen mark, a disk in the `glassChosen` colour behind
- * the chosen control, slides to the side tapped: the `#` while the bar is
- * folded or the drums are open, Search while search is open. With Reduce
- * Motion the mark jumps. Between a hymn page and the home list the whole
- * bar glides (`glideOf`); the bar's own rise rides the bar's spring.
- *
- * Mounted in a browser's document (`src/test/setup.ts`), where an animation
- * waits between `holdAnimations` and `landAnimations` as one under way on a
- * device. A view's layout is told as the platform tells it, through its
- * `onLayout`. Hymn numbers only: no hymn's words are read or printed.
- */
-
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'bun:test';
 import type * as Chord from '@manna/hymnal/chord';
 import { RegistryProvider } from '@effect/atom-react';
@@ -38,11 +21,6 @@ import * as themes from '~/theme';
 const PAGE = '/hymns/8';
 const HASH = 44;
 
-/**
- * The theme's roles as the web reads them (`var(--<role>)`, `color.ts`),
- * each set here to a colour of its own, so a computed colour names the role
- * it came from. Set for this file's tests alone.
- */
 const ROLES = [
   'ground',
   'ink',
@@ -74,14 +52,12 @@ roleSheet.textContent = `:root { ${ROLES.map((name) => `--${name}: ${role(name)}
 beforeAll(() => document.head.append(roleSheet));
 afterAll(() => roleSheet.remove());
 
-/** The `#` the player layer hands the bar: one pressable, on a disk or not. */
 const hash = () => (
   <Pressable testID="find-number" role="button" aria-label="Find a hymn by number">
     <Text>#</Text>
   </Pressable>
 );
 
-/** A mounted tree in the document; disposed, it unmounts. */
 const mounted = (tree: React.ReactNode) => {
   const host = document.createElement('div');
   document.body.append(host);
@@ -91,7 +67,6 @@ const mounted = (tree: React.ReactNode) => {
   return {
     host,
     one,
-    /** The element at `selector`, which must be there. */
     get: (selector: string): HTMLElement => {
       const found = one(selector);
       expect({ [selector]: Option.isSome(found) }).toEqual({ [selector]: true });
@@ -104,7 +79,6 @@ const mounted = (tree: React.ReactNode) => {
   };
 };
 
-/** The find bar on a hymn page with search `open` or not and the drums open or shut. */
 const findBar = (open: Option.Option<Searching>, drumsOpen: boolean) =>
   mounted(
     <RegistryProvider initialValues={[[searchOpen, open]]}>
@@ -115,11 +89,9 @@ type Bar = ReturnType<typeof findBar>;
 
 const style = (element: Element) => getComputedStyle(element);
 
-/** Whether a computed fill draws nothing: none set, or a colour with no alpha. */
 const clear = (fill: string) =>
   fill === '' || fill === 'transparent' || /^rgba\(.*,\s*0(\.0+)?\)$/.test(fill);
 
-/** The capsule: the nearest view over `control`, inside the find bar, with a fill of its own. */
 const capsuleOf = (control: HTMLElement): Option.Option<HTMLElement> => {
   const filled = (view: HTMLElement): Option.Option<HTMLElement> => {
     if (view.dataset['testid'] === 'find-bar') return Option.none();
@@ -130,7 +102,6 @@ const capsuleOf = (control: HTMLElement): Option.Option<HTMLElement> => {
   return Option.flatMap(Option.fromNullishOr(control.parentElement), filled);
 };
 
-/** The capsule over the bar's leading control, Search folded or the box open. */
 const capsule = (found: Bar) => {
   const control = Option.orElse(found.one('[data-testid="find-search"]'), () =>
     found.one('[data-testid="find-box"]'),
@@ -140,14 +111,12 @@ const capsule = (found: Bar) => {
   return Option.getOrThrow(view);
 };
 
-/** The sideways move a view's transform draws, 0 when it draws none. */
 const translateX = (element: Element) => {
   const drawn = style(element).transform;
   const moved = /translateX\((-?[\d.]+)px\)/.exec(drawn);
   return Number(moved?.[1] ?? 0);
 };
 
-/** The find bar's row laid out `width` points wide, as the platform tells it once drawn. */
 const layOut = (found: Bar, width: number) => {
   const row = found.get('[data-testid="find-bar"]') as HTMLElement & {
     __reactLayoutHandler?: (event: unknown) => void;
@@ -160,10 +129,8 @@ const layOut = (found: Bar, width: number) => {
   );
 };
 
-/** Where the chosen mark rests over the capsule's leading end: its full width less one control, leftward. */
 const leading = (found: Bar) => -(Number.parseFloat(style(capsule(found)).width) - HASH);
 
-/** Reduce Motion on, as the system tells it, for the bar mounted after. */
 const reduceMotion = () => {
   const was = AccessibilityInfo.isReduceMotionEnabled;
   AccessibilityInfo.isReduceMotionEnabled = () => Promise.resolve(true);
@@ -178,7 +145,6 @@ afterEach(() => landAnimations());
 
 describe('the key panel’s chips', () => {
   const key: Chord.Key = { tonic: 'C', minor: false };
-  /** The panel open on a hymn moved from its printed key, so Reset shows beside the Tuner. */
   const dials = () =>
     mounted(
       <Dials
@@ -247,7 +213,6 @@ describe('the find bar’s colours', () => {
   });
 
   it('the magnifier is the glass’s ink folded, and the chosen ink open, where the chosen mark lies behind it', () => {
-    /** The fills the magnifier's parts draw with: its views hidden from VoiceOver in the capsule, the chosen mark and the `#` left out. */
     const inkOf = (found: Bar) => {
       const marks = [
         ...capsule(found).querySelectorAll<HTMLElement>('[aria-hidden="true"]'),
@@ -363,9 +328,7 @@ describe('the bar’s glide between its places', () => {
     bar.FindAt.Yielded(),
     ...states.map((state) => bar.FindAt.OverBar({ state })),
   ];
-  /** The bar's height over the home indicator while it shows `state`. */
   const heightOver = (state: Player) => (bar.sounding(state) && bar.SOUNDING) || bar.REST;
-  /** The rule as the spec writes it. */
   const want = (before: bar.FindAt, after: bar.FindAt) => {
     const tags = `${before._tag}>${after._tag}`;
     if (tags === 'OverBar>Docked' || tags === 'Docked>OverBar') return 'glide';
@@ -404,7 +367,6 @@ describe('the theme’s find bar roles', () => {
     '%s: the capsule is soft glass, the chosen disk the accent with its ink on it (4.5:1), and the placeholder quieter than the words',
     (scheme) => {
       const roles = themes.theme[scheme];
-      // Each role laid over the page under the glass is held in `findglass.test.tsx`.
       expect({
         glass: roles.glass,
         words: roles.onGlass,

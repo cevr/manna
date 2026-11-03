@@ -1,7 +1,3 @@
-// Upstream: packages/utils/src/visuallyHidden.ts
-//
-// Styles that hide an element visually while keeping it in the accessibility
-// tree, pinned to the viewport's corner.
 import type { JSX } from '@solidjs/web';
 
 export const visuallyHidden: JSX.CSSProperties = {

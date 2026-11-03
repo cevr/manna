@@ -1,6 +1,3 @@
-// Upstream: packages/react/src/menu/index.parts.ts
-//
-// The parts of a menu, used as `Menu.Root`, `Menu.Trigger` and so on.
 export { MenuGroup as Group, MenuGroupLabel as GroupLabel } from './group/MenuGroup.tsx';
 export { MenuItem as Item } from './item/MenuItem.tsx';
 export { MenuPopup as Popup } from './popup/MenuPopup.tsx';

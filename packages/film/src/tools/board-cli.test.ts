@@ -1,7 +1,3 @@
-// `film board import` over memory: images made elsewhere come in as tries of
-// a panel, and a `--keep` that names none of them is refused before the board
-// is touched (no panel, no try, no image left behind).
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Cause, ConfigProvider, Effect, Exit, Layer, Option, Path, Schema } from 'effect';
@@ -17,7 +13,6 @@ import { memoryFileSystem, memoryLocks, text } from './host/testing.ts';
 
 const film = FilmName.make('f');
 
-/** The board's services over `files` (the terminal and stdio are Bun's): the film `f` under `/films`, one beat `cold`; no process runs. */
 const over = (files: Map<string, Uint8Array>) => {
   files.set('/films/f/scenes/index.ts', text('export default []'));
   files.set('/in/a.png', text('image a'));
@@ -55,7 +50,6 @@ const run = (args: ReadonlyArray<string>) =>
     Effect.exit,
   );
 
-/** Why a run was refused, if it was. */
 const refused = (exit: Exit.Exit<unknown, unknown>) =>
   Exit.match(exit, {
     onSuccess: () => Option.none<string>(),

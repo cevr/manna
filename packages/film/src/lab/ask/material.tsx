@@ -1,17 +1,3 @@
-// The material an ask's section shows, in place, each through the part its
-// own view draws it with, over the same reads: a set's document as the set's
-// page reads it (`Markdown`, a long one clamped with Read all, so the
-// question stays near it), a script in the Script reader (a film's or a
-// series draft's, named as its page names it, its staging takes played and
-// its delivery marks written as on the Script and draft pages), the Board's
-// panels as the Board shows them (`PanelFigure`: each thumb, the words it
-// holds over and its mark; a still opens large), a video in the review's
-// player (`PlayedAlone`), a take as the studio plays it. Each part says
-// where its material stands while it is not shown: read under way, could
-// not be read (and why), or no longer there. Each part carries its own look
-// (`PlaceStyle`), so it rides only on a page that shows it. Nothing here is
-// a copy of a view: a fix to the view is a fix here.
-
 import { useAtomValue } from '@manna/atom-solid';
 import { Dialog } from '@manna/ui/dialog';
 import * as UrlAtom from '@manna/url-state/atom';
@@ -55,12 +41,6 @@ import { READER_CSS, type Selecting, useOwnSelecting } from '../words/reader.tsx
 
 type BlockOf<K extends AskBlock['kind']> = Extract<AskBlock, { readonly kind: K }>;
 
-/**
- * The material's own look: a box the width of its section (its one column
- * never wider, so a video's own size cannot widen the page), its caption
- * under it; a long document clamped in its panel, whose edge stays sharp
- * while only the words fade, its toggle inside it.
- */
 const MATERIAL_CSS = `
 .ak-mat{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-2);min-width:0;margin:0}
 .ak-mat-cap{margin:0;color:var(--text-2);font-size:var(--fs-2);line-height:var(--lh-2)}
@@ -76,7 +56,6 @@ const MATERIAL_CSS = `
 .ak-read-all{justify-self:start;min-height:var(--hit);margin-inline:var(--s-4)}
 `;
 
-/** The Board's panels in an ask: a beat's panels in a row under its id, at the film's aspect; two to a row at least 240 px wide on a laptop. */
 const BOARD_MAT_CSS = `
 .ak-board{display:grid;gap:var(--s-3)}
 .ak-board-beat{display:grid;gap:var(--s-1)}
@@ -88,13 +67,11 @@ const BOARD_MAT_CSS = `
 @media ${WIDE}{.ak-board-panels{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}}
 `;
 
-/** The take's player: the width of the section, its words under it. */
 const AUDIO_CSS = `
 .ak-audio{display:block;width:100%;min-height:var(--hit)}
 .ak-heard{margin:0;color:var(--text-1)}
 `;
 
-/** A material part's frame: its look, the part, and its caption when it has one. */
 const Framed = (props: {
   readonly kind: AskBlock['kind'];
   readonly css: string;
@@ -114,7 +91,6 @@ const Framed = (props: {
   </figure>
 );
 
-/** Why the material is not shown: its read under way, failed (and why), or the material gone from it. */
 const Missing = (props: {
   readonly read: AsyncResult.AsyncResult<unknown, LabFailure>;
   readonly what: string;
@@ -129,22 +105,11 @@ const Missing = (props: {
   </p>
 );
 
-/**
- * `children` clamped to about twelve lines, with Read all, once they run
- * longer: the question under a long document stays a short scroll away. The
- * box is held at the clamp until Read all opens it, so its words are
- * measured against the clamp itself (a box opened while it measures would
- * always fit its words); it watches their height (a document's text arrives
- * after it is drawn), and fades and offers Read all only once there is more
- * to read. Read all is a toggle (Show less once open, `aria-expanded`) in
- * the panel, under the words: it keeps the focus either way.
- */
 const Clamped = (props: ParentProps) => {
   const [open, setOpen] = createSignal(false, { ownedWrite: true });
   const [long, setLong] = createSignal(false, { ownedWrite: true });
   let outer = Option.none<HTMLElement>();
   let words = Option.none<HTMLElement>();
-  // Once laid out, and as the words grow (a document's text arrives after it is drawn).
   createEffect(
     () => true,
     () =>
@@ -164,8 +129,6 @@ const Clamped = (props: ParentProps) => {
   };
   const id = createUniqueId();
   let panel = Option.none<HTMLElement>();
-  // Show less folds the words back under the button, which keeps the focus; the
-  // document's top comes back into view when it had scrolled past.
   const toggle = () => {
     const shutting = untrack(open);
     setOpen(!shutting);
@@ -213,7 +176,6 @@ const Clamped = (props: ParentProps) => {
   );
 };
 
-/** A set's Markdown, as the set's page reads it, clamped while it is long. */
 export const DocumentPart = (props: { readonly block: BlockOf<'document'> }) => {
   const { state } = useAskRoot();
   const file = createMemo(() =>
@@ -242,7 +204,6 @@ export const DocumentPart = (props: { readonly block: BlockOf<'document'> }) => 
   );
 };
 
-/** A series draft in the reader, named as its page names it: its series, then its title. */
 const DraftScript = (props: {
   readonly series: string;
   readonly draft: string;
@@ -266,12 +227,6 @@ const DraftScript = (props: {
   );
 };
 
-/**
- * A script in the Script reader: a film's, or a series draft's, every beat
- * or those named. A block never changes once the ask is read, so its source
- * is read once, as plain names: a reader keyed on a condition's value would
- * read it untracked in its own effects.
- */
 export const ScriptPart = (props: { readonly block: BlockOf<'script'> }) => {
   const { meta } = useAskRoot();
   const selecting = useOwnSelecting();
@@ -316,24 +271,16 @@ export const ScriptPart = (props: { readonly block: BlockOf<'script'> }) => {
   );
 };
 
-/** A panel of an ask's Board, and the words its beat's line says while it holds. */
 interface PanelShown {
   readonly panel: Panel;
   readonly words: string;
 }
 
-/** A beat of an ask's Board: its id, and its panels the ask names. */
 interface BeatShown {
   readonly beat: string;
   readonly panels: ReadonlyArray<PanelShown>;
 }
 
-/**
- * The panels `block` names of `board`, by beat in the board's order (every
- * panel, when it names none), each with the words its beat's line says
- * while it holds (from its mark to the next panel's of its beat, named or
- * not), its line as `script` reads it (none until it is read).
- */
 const panelsShown = (
   board: BoardFile,
   block: BlockOf<'board'>,
@@ -372,7 +319,6 @@ const panelsShown = (
   });
 };
 
-/** A panel's thumb in an ask: its still opens large (`?still=`); a card's words, and a panel with no try, stand as they are. */
 const AskPanelThumb = (props: { readonly film: string; readonly panel: Panel }) => {
   const src = () => Option.map(shownTry(props.panel), (t) => boardFileUrl(props.film, t.file));
   const still = () => Option.filter(src(), () => !props.panel.text);
@@ -393,11 +339,9 @@ const AskPanelThumb = (props: { readonly film: string; readonly panel: Panel }) 
   );
 };
 
-/** A film's Board: the panels named, each as the Board shows it, by beat. */
 export const BoardPart = (props: { readonly block: BlockOf<'board'> }) => {
   const { meta } = useAskRoot();
   const read = useAtomValue(() => meta.board(props.block.film));
-  // The words each panel holds over are the script's: read as every reader of the film reads it.
   const script = useAtomValue(() => meta.script(props.block.film));
   const beats = createMemo(() =>
     Option.map(AsyncResult.value(read()), (board) =>
@@ -461,7 +405,6 @@ export const BoardPart = (props: { readonly block: BlockOf<'board'> }) => {
   );
 };
 
-/** A video the review serves, in the review's player, from `at`. */
 export const VideoPart = (props: { readonly block: BlockOf<'video'> }) => {
   const { state } = useAskRoot();
   const video = createMemo(() =>
@@ -501,11 +444,6 @@ export const VideoPart = (props: { readonly block: BlockOf<'video'> }) => {
   );
 };
 
-/**
- * A take of a film's beat, as the studio plays it (`takeHeard`): the attempt
- * named, else the take its timings name (an attempt kept, or the staging
- * voice's), and what was heard of an attempt.
- */
 export const AudioPart = (props: { readonly block: BlockOf<'audio'> }) => {
   const { meta } = useAskRoot();
   const attempts = meta.runtime
@@ -542,10 +480,6 @@ export const AudioPart = (props: { readonly block: BlockOf<'audio'> }) => {
   );
 };
 
-/**
- * A markdown file's text, shown as HTML (every character of it escaped
- * first): the file as the index names it, so a file written again is read again.
- */
 const Markdown = (props: { readonly file: ReviewFile }) => {
   const { meta } = useAskRoot();
   const read = useAtomValue(() => meta.text(props.file));
@@ -562,22 +496,11 @@ const Markdown = (props: { readonly file: ReviewFile }) => {
   );
 };
 
-/** An image the lightbox shows: its source, and the caption under it (what its card no longer says). */
 interface Shown {
   readonly src: string;
   readonly caption: string;
 }
 
-/**
- * A still that opens full size in the lightbox, with its caption (`shown`):
- * a button, so a tap, a click, Enter and Space all open it, and its name
- * says what opens. The URL keeps it open (`?still=` its `name`), so a link
- * opens it, and Back closes it as every sheet's opening is. The lightbox is
- * the kit's dialog over every other layer of the page (the header and the
- * dock too), titled by its caption: focus moves into it and back to the
- * still, and Escape or a tap anywhere closes it, by the sheets' one rule
- * (`useSheetDismissal`), adding no entry.
- */
 const Zoom = (props: {
   readonly still: string;
   readonly alt: string;
@@ -630,36 +553,21 @@ const Zoom = (props: {
   );
 };
 
-/** What a video with no phone copy to play says across its picture: on its way, or failed. */
 const COPY_SAID = {
   pending: 'Phone copy on its way',
   ready: 'Phone copy on its way',
   failed: 'The phone copy could not be made',
 } as const;
 
-/** What a video with no phone copy to play says across its picture, as its copy stands (`copy`). */
 const CopySaid = (props: { readonly copy: PhoneCopy }) => (
   <span class="rv-pending-hint" data-copy={props.copy}>
     {COPY_SAID[props.copy]}
   </span>
 );
 
-/**
- * In a video's place while it has no phone copy to play, on Proxy: its
- * still with what is happening across its foot (so the box says so before
- * the still has come), on its way or failed, and the way to play the
- * Original instead. The original is never streamed in its place unasked.
- * While the index has the copy on its way the page asks after it every few
- * seconds (`CopyAwaited`) and says what it hears; once the copy is made or
- * has failed, the page reads the index again, and the video plays in its
- * place, or says it failed (on a Set, Choices and an ask alike).
- */
 const ProxyPending = (props: { readonly video: ReviewVideo }) => {
   const { actions } = useAskRoot();
   const failed = () => props.video.phone === 'failed';
-  // Its still, while it can be drawn: one that cannot (a video no frame is read from) leaves the
-  // box empty at its 16:9, never a broken image. Kept by the still's address, so another video's
-  // is drawn afresh.
   const still = () => reviewFrameUrl(props.video.ref, Option.none(), POSTER_W);
   const [undrawn, setUndrawn] = createSignal(Option.none<string>(), { ownedWrite: true });
   const drawn = () => !Option.contains(undrawn(), still());
@@ -688,14 +596,8 @@ const ProxyPending = (props: { readonly video: ReviewVideo }) => {
   );
 };
 
-/** A video's `data-proxy`, by whether its phone copy failed. */
 const STATE_PROXY = { true: 'failed', false: 'pending' } as const;
 
-/**
- * Asks after video `video`'s phone copy while it is on its way, and says
- * what it hears; once the copy is made or has failed, the index is read
- * again (it says so too, or the video plays).
- */
 const CopyAwaited = (props: { readonly video: ReviewVideo }) => {
   const { actions, meta } = useAskRoot();
   const asked = useAtomValue(() => meta.phoneCopy(props.video.ref));

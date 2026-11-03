@@ -1,10 +1,3 @@
-// A bare button's reset weighs nothing: a rule that gives every button of a
-// part the page's font (`font: inherit`) by its type is written in
-// `:where(…)`, so any rule of the part's own sets over it, whatever its
-// weight. A reset that weighs (0,1,1) outranks a chip's one class and sets
-// a mark's chip that seeks in the page's face, not the code's
-// (`docs/lessons.md`, `code-chip-font-under-button-reset`).
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem } from 'effect';
@@ -12,7 +5,6 @@ import { COMMAND_CSS } from './command/style.ts';
 import { SHELL_CSS } from './page-shell-style.ts';
 import { PAGE_CSS } from './ask/style.ts';
 
-/** `selector` with every `:where(…)` taken out, its parentheses balanced. */
 const outsideWhere = (selector: string): string => {
   let out = '';
   for (let i = 0; i < selector.length;) {
@@ -28,7 +20,6 @@ const outsideWhere = (selector: string): string => {
   return out;
 };
 
-/** `list` split at its top-level commas: each complex selector of a selector list. */
 const complexSelectors = (list: string): ReadonlyArray<string> => {
   const out: Array<string> = [];
   let depth = 0;
@@ -44,10 +35,8 @@ const complexSelectors = (list: string): ReadonlyArray<string> => {
   return [...out, list.slice(start)].map((selector) => selector.trim());
 };
 
-/** Whether `selector` weighs anything: some simple selector stands outside `:where`. */
 const weighs = (selector: string): boolean => outsideWhere(selector).replace(/[\s>+~]/g, '') !== '';
 
-/** Each selector of `css` that resets a button by its type (`font: inherit`), and weighs something. */
 const weighedResets = (css: string): ReadonlyArray<string> =>
   [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
     .filter(([, , body]) => /(^|[\s;])font\s*:\s*inherit\b/.test(body ?? ''))

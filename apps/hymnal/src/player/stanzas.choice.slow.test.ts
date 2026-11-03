@@ -1,40 +1,5 @@
 /* oxlint-disable effect/noTernary, effect/noNullish -- the acceptance oracle writes the refrain binding, the cut and the toggle out as plain branches over plain numbers, apart from the product's code, so the two cannot share a mistake. */
 
-/**
- * Acceptance (stanzas A1): the stanza choice over every compiled hymn and
- * every subset of its stanzas.
- *
- * - The binding: each sung line belongs to a stanza, or to none (0, the
- *   hymn's own refrain, always kept), by the oracle's own table from the
- *   hymn's refrain order, never from the words' sections: after-each, the
- *   stanza before; first-and-after-each, the opening refrain 0 and each other
- *   the stanza before; before-each, the stanza after; first-and-last, both 0;
- *   after-last, 0. The table is held to `sung` over the chosen stanzas alone.
- * - `keptOf(sections, choice)`: a line is kept when its stanza is chosen or it
- *   belongs to none; the empty choice keeps every line; a number outside
- *   1..N changes nothing.
- * - `cutOf(timeline, kept)`: the same lines, `first` and tempo; kept lines
- *   keep their lengths and syllable offsets and run on one after another
- *   from `first`; a skipped line has no length and no syllables and sits at
- *   the next kept line's start (or the cut's end); the end is `first` plus
- *   the kept lengths. `recordingAt` takes a sung (cut) time to the
- *   recording's, `sungAt` the reverse: the lead before `first` and the tail
- *   past the end are kept as they are, and a recording time inside a skipped
- *   line is the next kept start. `placeAt` on the cut finds each kept line
- *   and syllable where the full timeline did, and never a skipped line.
- * - `toggle(choice, stanza, count)` over every stored choice of N = 2..7
- *   stanzas: from all, a tap turns that stanza off; the last chosen stanza
- *   cannot be turned off; a choice of every stanza is stored as `[]`.
- *
- * Numbers only: no hymn's words are read into a message or printed. Lines
- * are named by index, stanzas by number.
- *
- * Slow: about 0.3 s over 9,475 cuts, past what the app's unit-test task
- * may add, so it runs in `test:slow`.
- *
- * Final path: `apps/hymnal/src/player/stanzas.choice.slow.test.ts`.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { type Hymn, sung } from '@manna/hymnal/hymn';
 import { Array as Arr, Option } from 'effect';
@@ -45,25 +10,20 @@ import { placeAt, type TimedLine, type Timeline, timelineOf } from '../follow/ti
 import { hymns as words } from '../hymns/hymns';
 import * as Stanzas from './stanzas';
 
-/** How many wrong cases a failure lists. */
 const SHOWN = 12;
 
 const playback = new Map(readPlaybackHymns().map((hymn) => [hymn.number, hymn]));
 const sectionsOf = new Map(words.map((hymn) => [hymn.number, hymn.sections]));
 const encodedOf = new Map(bundled);
 
-/** Hymn `number`'s decoded timeline, as the follow reads it from the bundle. */
 const timelineAt = (number: number): Timeline =>
   Option.getOrThrow(Option.flatMap(Option.fromUndefinedOr(encodedOf.get(number)), timelineOf));
 
-/** One sung line in the oracle's table: the stanza it belongs to (0 for none) and its part and place there. */
 interface Owned {
   readonly owner: number;
-  /** `<stanza>:<line>` for a stanza's line, `R:<line>` for the refrain's. */
   readonly key: string;
 }
 
-/** The oracle's table: each sung line of `hymn`, in sung order, with the stanza it belongs to. */
 const tableOf = (hymn: Hymn): ReadonlyArray<Owned> => {
   const stanza = (n: number): Array<Owned> =>
     (hymn.stanzas[n - 1]?.lines ?? []).map((_, line) => ({ owner: n, key: `${n}:${line}` }));
@@ -80,7 +40,6 @@ const tableOf = (hymn: Hymn): ReadonlyArray<Owned> => {
   return [...numbers.flatMap(stanza), ...refrain(0)];
 };
 
-/** The keys of `sung` over `chosen`'s stanzas alone, each stanza named by its number in the whole hymn. */
 const sungKeysOver = (hymn: Hymn, chosen: ReadonlyArray<number>): ReadonlyArray<string> => {
   const parts = chosen.flatMap((n) => Option.toArray(Option.fromUndefinedOr(hymn.stanzas[n - 1])));
   if (!Arr.isReadonlyArrayNonEmpty(parts)) return [];
@@ -89,7 +48,6 @@ const sungKeysOver = (hymn: Hymn, chosen: ReadonlyArray<number>): ReadonlyArray<
   );
 };
 
-/** Every non-empty subset of 1..count, each ascending. */
 const subsetsOf = (count: number): ReadonlyArray<ReadonlyArray<number>> => {
   const all: Array<Array<number>> = [];
   for (let mask = 1; mask < 2 ** count; mask++) {
@@ -100,14 +58,12 @@ const subsetsOf = (count: number): ReadonlyArray<ReadonlyArray<number>> => {
   return all;
 };
 
-/** The oracle's kept flags: a line is kept when it belongs to none or to a chosen stanza. */
 const keptByTable = (
   table: ReadonlyArray<Owned>,
   chosen: ReadonlyArray<number>,
 ): ReadonlyArray<boolean> =>
   table.map(({ owner }) => owner === 0 || chosen.length === 0 || chosen.includes(owner));
 
-/** The oracle's cut: each line's start on the cut and the cut's end. */
 const cutStartsOf = (timeline: Timeline, kept: ReadonlyArray<boolean>) => {
   const starts: Array<number> = [];
   let at = timeline.first;
@@ -116,7 +72,6 @@ const cutStartsOf = (timeline: Timeline, kept: ReadonlyArray<boolean>) => {
     if (kept[index] === true) at += line.until - line.start;
   }
   const end = at;
-  // A skipped line sits at the next kept line's start: walk back from the end.
   let next = end;
   for (let index = timeline.lines.length - 1; index >= 0; index--) {
     if (kept[index] === true) next = starts[index] ?? next;
@@ -125,13 +80,11 @@ const cutStartsOf = (timeline: Timeline, kept: ReadonlyArray<boolean>) => {
   return { starts, end };
 };
 
-/** A hymn read once: its table, its sections, its timeline and where `placeAt` puts each kept syllable on it. */
 interface Read {
   readonly number: number;
   readonly hymn: Hymn;
   readonly table: ReadonlyArray<Owned>;
   readonly timeline: Timeline;
-  /** Per line, each syllable time whose place on the full timeline is that line, with that place. */
   readonly syllablePlaces: ReadonlyArray<
     ReadonlyArray<{ readonly at: number; readonly place: ReturnType<typeof placeAt> }>
   >;
@@ -155,7 +108,6 @@ const reads: ReadonlyArray<Read> = [...playback.values()].map((hymn) => {
 const sectionsAt = (number: number) =>
   Option.getOrThrow(Option.fromUndefinedOr(sectionsOf.get(number)));
 
-/** One cut under check: the product's, and the oracle's starts and end beside it. */
 interface Case {
   readonly read: Read;
   readonly kept: ReadonlyArray<boolean>;
@@ -165,7 +117,6 @@ interface Case {
   readonly cut: ReturnType<typeof Stanzas.cutOf>;
 }
 
-/** The cut's line count, first line, end and tempo. */
 const outlineWrongs = ({ read, label, end, cut }: Case): Array<string> => {
   const { timeline } = read;
   const wrong: Array<string> = [];
@@ -178,7 +129,6 @@ const outlineWrongs = ({ read, label, end, cut }: Case): Array<string> => {
   return wrong;
 };
 
-/** Kept line `index`: its start on the cut, its length, its syllables' offsets and its flags. */
 const keptLineWrong = (line: TimedLine, got: TimedLine, start: number): boolean => {
   const shift = start - line.start;
   return (
@@ -191,11 +141,9 @@ const keptLineWrong = (line: TimedLine, got: TimedLine, start: number): boolean 
   );
 };
 
-/** A skipped line: no length and no syllables, at the next kept start. */
 const skippedLineWrong = (got: TimedLine, start: number): boolean =>
   got.start !== start || got.until !== start || got.syllables.length > 0 || got.words.length > 0;
 
-/** Each line of the cut against the oracle's. */
 const lineWrongs = ({ read, kept, label, starts, cut }: Case): Array<string> =>
   read.timeline.lines.flatMap((line, index) => {
     const got = cut.timeline.lines[index];
@@ -207,7 +155,6 @@ const lineWrongs = ({ read, kept, label, starts, cut }: Case): Array<string> =>
     return [`${label}: line ${index} at ${got.start}..${got.until}, not ${start}`];
   });
 
-/** The lead before `first` and the tail past the end map as they are. */
 const edgeWrongs = ({ read, label, end, cut }: Case): Array<string> => {
   const { timeline } = read;
   const wrong: Array<string> = [];
@@ -224,13 +171,11 @@ const edgeWrongs = ({ read, label, end, cut }: Case): Array<string> => {
   return wrong;
 };
 
-/** A line's first, middle and last ms, as offsets from its start. */
 const offsetsOf = (line: TimedLine): ReadonlyArray<number> => {
   const length = line.until - line.start;
   return [0, Math.floor(length / 2), length - 1];
 };
 
-/** Kept line `index`: both maps and their round trip at its first, middle and last ms. */
 const keptMapWrongs = (c: Case, index: number, line: TimedLine, start: number): Array<string> =>
   offsetsOf(line).flatMap((offset) => {
     const sungTime = start + offset;
@@ -245,7 +190,6 @@ const keptMapWrongs = (c: Case, index: number, line: TimedLine, start: number): 
     return wrong;
   });
 
-/** Kept line `index`: `placeAt` finds it at its first and last ms, and each syllable where the full timeline did. */
 const keptPlaceWrongs = (c: Case, index: number, line: TimedLine, start: number): Array<string> => {
   const wrong: Array<string> = [];
   const atStart = placeAt(c.cut.timeline, start).line;
@@ -266,7 +210,6 @@ const keptPlaceWrongs = (c: Case, index: number, line: TimedLine, start: number)
   return wrong;
 };
 
-/** Skipped line `index`: a recording time inside it is the next kept start, and `placeAt` there is no skipped line. */
 const skippedMapWrongs = (
   c: Case,
   index: number,
@@ -282,7 +225,6 @@ const skippedMapWrongs = (
   return wrong;
 };
 
-/** Every line's times on both clocks and its place. */
 const mapWrongs = (c: Case): Array<string> =>
   c.read.timeline.lines.flatMap((line, index) => {
     const start = c.starts[index] ?? NaN;
@@ -291,7 +233,6 @@ const mapWrongs = (c: Case): Array<string> =>
     return skippedMapWrongs(c, index, line, start);
   });
 
-/** What is wrong with the product's cut of `read` keeping `kept`, as numbers only. */
 const cutWrongs = (read: Read, kept: ReadonlyArray<boolean>, label: string): Array<string> => {
   const { starts, end } = cutStartsOf(read.timeline, kept);
   const c: Case = { read, kept, label, starts, end, cut: Stanzas.cutOf(read.timeline, kept) };
@@ -411,7 +352,6 @@ describe('the cut timeline', () => {
   });
 });
 
-/** The oracle's toggle over a stored choice of `count` stanzas. */
 const toggled = (
   choice: ReadonlyArray<number>,
   stanza: number,

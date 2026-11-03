@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/utils/element.ts,
-// packages/react/src/floating-ui-react/utils/constants.ts,
-// packages/react/src/floating-ui-react/utils/createAttribute.ts
-//
-// Element predicates the interactions share: typeable fields, `:focus-visible`,
-// and the element inside a popup that takes focus.
 import { isHTMLElement } from '@floating-ui/utils/dom';
 
 export const FOCUSABLE_ATTRIBUTE = 'data-base-ui-focusable';
@@ -38,11 +32,6 @@ export function isTypeableElement(element: unknown): boolean {
   return isHTMLElement(element) && element.matches(TYPEABLE_SELECTOR);
 }
 
-/**
- * A field the user types into (a text input, a textarea, an editable region): the browser
- * shows the ring on one whatever focused it, a click too. A range, a checkbox or any other
- * input pressed rather than typed in is not one.
- */
 const TEXT_FIELD_SELECTOR =
   'input:not([type=button],[type=checkbox],[type=radio],[type=range],[type=submit],[type=reset],[type=color],[type=file],[type=image],[type=hidden]),' +
   "textarea,[contenteditable]:not([contenteditable='false'])";
@@ -62,7 +51,6 @@ export function matchesFocusVisible(element: Element | null) {
   }
 }
 
-/** The element inside a popup that takes focus: the one marked focusable, else the popup. */
 export function getFloatingFocusElement(
   floatingElement: HTMLElement | null | undefined,
 ): HTMLElement | null {

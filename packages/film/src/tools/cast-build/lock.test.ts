@@ -1,10 +1,3 @@
-// The lock stage over a fake trained graph, with the reader's test layer:
-// the lock's fields come from its inputs' outputs and the train's note; a
-// changed eval output changes the lock; a trained drawing with no held eval
-// fails it; every clip's entry is the lock's, a clip that fails its bars or
-// has no eval is written and counted unpassed; a rerun with nothing changed
-// writes nothing, and a lock edited by hand is written again.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, type FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { sha256Hex } from '../digest.ts';
@@ -16,9 +9,7 @@ import { CastReader } from './reader.ts';
 import { TRAIN, evalStage, trainStage } from './stages.ts';
 
 const LOCK = '/library/reader.lock.json';
-/** The reader's train files, out of basename order: the key sorts them by basename. */
 const TRAIN_FILES = ['/reader/train.py', '/reader/model.py'];
-/** `front` is trained on; `side` is a candidate the set leaves out. */
 const CANDIDATES = ['front', 'side'].map((v) => ({
   drawing: `m/${v}`,
   renders: `renders:${v}@m`,
@@ -33,7 +24,6 @@ const EVAL = {
   },
   unseen: { n: 40, angle_deg: { median: 12.3, p90: 63 }, joint_px: { median: 17, p90: 62.7 } },
 };
-/** `modal run`'s stdout: the fit's JSON, then the app's URL last. */
 const STDOUT = [
   '✓ Initialized.',
   '{"steps": 4800, "first_loss": 0.9, "last_loss": 0.00862, "sec_per_step": 0.5236, "classes": 40}',
@@ -43,7 +33,6 @@ const STDOUT = [
 const decoder = new TextDecoder();
 const read = (disk: Map<string, Uint8Array>, file: string) => decoder.decode(disk.get(file));
 
-/** Each view's renders (a shard file's bytes), the set (front only), the train, each eval, the clip's chain (read off disk) and the lock. */
 const graph: ReadonlyArray<Stage<CastReader | FileSystem.FileSystem>> = [
   ...CANDIDATES.map((c): Stage<never> => ({
     id: c.renders,
@@ -78,7 +67,6 @@ const lock = lockStage({
   clips: CLIPS,
 });
 
-/** An eval:clip stage's output: the clip's lock entry, its end band at `iou`, failing for each of `fails`. */
 const entryOf = (clip: string, iou: number, fails: ReadonlyArray<string> = []) => ({
   member: 'm',
   clip,
@@ -96,7 +84,6 @@ const entryOf = (clip: string, iou: number, fails: ReadonlyArray<string> = []) =
 const chain = (iou: number, clip = 'clip-b', fails: ReadonlyArray<string> = []) =>
   text(jsonOf(entryOf(clip, iou, fails)));
 
-/** A disk that records every path written to it. */
 class Disk extends Map<string, Uint8Array> {
   readonly written: Array<string> = [];
   override set(key: string, value: Uint8Array) {
@@ -115,7 +102,6 @@ const files = () =>
     ['/reader/train.py', text('train')],
   ]);
 
-/** `graph` with the trained drawing's eval failing. */
 const frontEvalFails = graph.map((stage): Stage<CastReader | FileSystem.FileSystem> => {
   if (stage.id !== 'eval:front@m') return stage;
   return {
@@ -124,7 +110,6 @@ const frontEvalFails = graph.map((stage): Stage<CastReader | FileSystem.FileSyst
   };
 });
 
-/** `evaluate` is eval.py's JSON text, the same for every drawing. */
 const build = (
   disk: Disk,
   stdout = STDOUT,
@@ -173,7 +158,6 @@ describe('cast build: the reader lock', () => {
       const l = lockOf(disk);
       const train = report.stages.find((s) => s.id === 'train');
       expect(l['stageKey']).toBe(Option.getOrUndefined(train?.key ?? Option.none()));
-      // the reader key: the set, the config and each train file by basename, sorted
       const trainer = {
         'model.py': sha256Hex(text('model')),
         'train.py': sha256Hex(text('train')),
@@ -248,7 +232,6 @@ describe('cast build: the reader lock', () => {
         const disk = files();
         yield* build(disk);
         const first = lockOf(disk);
-        // the committed lock as an earlier train left it; every stage key new (`build.json` dropped, objects kept)
         disk.set(
           LOCK,
           text(jsonOf({ ...first, train: { stageSec: 4361 }, spend: { buildCountedUsd: 3.5 } })),

@@ -1,7 +1,3 @@
-// A scene's key follows what its frames are drawn from: its own module and
-// what that imports, the film's frame, and the scene it enters from; an edit
-// to another scene's module leaves it alone.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { expect as expectPlain, test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
@@ -19,10 +15,8 @@ import { type Keyed, Stamps, importsOf, stampOf } from './stamp.ts';
 import { sceneFixture } from './scene-sources/testing.ts';
 import { resolveAddress } from '../core/address.ts';
 
-/** The fixture film's folder: a fresh one per test. */
 class Films extends Context.Service<Films, string>()('test/Films') {}
 
-/** The fixture film's Stamps, asking `git` for the commit through `spawner`. */
 const fixtureOver = <E, R>(spawner: Layer.Layer<never, E, R>) =>
   Layer.unwrap(
     Effect.gen(function* () {
@@ -38,10 +32,6 @@ const fixtureOver = <E, R>(spawner: Layer.Layer<never, E, R>) =>
     }),
   ).pipe(Layer.provideMerge(BunServices.layer));
 
-/**
- * `git` as it answers outside a checkout (exit 128, no commit), with no
- * process: the keys' cases read the keys, and the commit case asks real git.
- */
 const outsideACheckout = Layer.succeed(
   ChildProcessSpawner.ChildProcessSpawner,
   ChildProcessSpawner.make(() =>
@@ -64,10 +54,8 @@ const outsideACheckout = Layer.succeed(
 );
 
 const fixture = fixtureOver(outsideACheckout);
-/** The fixture's Stamps over the real `git`, run in the fixture's folder. */
 const gitFixture = fixtureOver(Layer.empty);
 
-// The registry's scenes in order; `plain` enters on a transition from `built`, `beta` on a cut.
 const placed = Result.getOrThrow(
   layout(
     [
@@ -86,7 +74,6 @@ const film = (films: string, path: Path.Path): Keyed => ({
   timings: { voice: '', scenes: {} },
 });
 
-/** Every scene's key now. */
 const keysNow = Effect.gen(function* () {
   const films = yield* Films;
   const path = yield* Path.Path;
@@ -94,7 +81,6 @@ const keysNow = Effect.gen(function* () {
   return Object.fromEntries(keys);
 });
 
-/** Append a line to a file of the fixture's scenes folder. */
 const touch = (name: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -103,7 +89,6 @@ const touch = (name: string) =>
     yield* fs.writeFileString(file, `${yield* fs.readFileString(file)}// edited\n`);
   });
 
-/** The scenes whose key changed from `before` to `after`. */
 const changed = (before: Record<string, string>, after: Record<string, string>) =>
   Object.keys(before).filter((id) => before[id] !== after[id]);
 
@@ -114,7 +99,6 @@ describe.concurrent('scene keys', () => {
       expect(Object.keys(before)).toEqual(['hand', 'beta', 'built', 'plain']);
       yield* touch('hand.ts');
       expect(changed(before, yield* keysNow)).toEqual(['hand']);
-      // Unchanged sources, the same keys.
       const again = yield* keysNow;
       expect(changed(again, yield* keysNow)).toEqual([]);
     }).pipe(Effect.provide(fixture)),
@@ -138,7 +122,6 @@ describe.concurrent('scene keys', () => {
 
   it.effect("a scene entering on a transition draws the previous scene's modules", () =>
     Effect.gen(function* () {
-      // `built` has no module of its own; `beta` (declared in a.ts) enters on a cut from `hand`.
       const before = yield* keysNow;
       yield* touch('a.ts');
       expect(changed(before, yield* keysNow)).toEqual(['beta']);
@@ -176,13 +159,10 @@ describe.concurrent('scene keys', () => {
       );
       const stamp = stampOf(keys, scope);
       expect(stamp.key).toMatch(/^[0-9a-f]{64}$/);
-      // Another address over the same scene is another stamp.
       const whole = Result.getOrThrow(
         resolveAddress({ name: 'f', placed, look: Option.none(), shorts: [] }, { _tag: 'Film' }),
       );
       expect(stampOf(keys, whole).key).not.toEqual(stamp.key);
-      // A wedge (`render --level`) is another stamp, its levels in any order the same;
-      // no levels is the stamp as written.
       expect(stampOf(keys, scope, {}).key).toEqual(stamp.key);
       const wedged = stampOf(keys, scope, { style: 'ps1', ground: 'light' }).key;
       expect(wedged).not.toEqual(stamp.key);
@@ -191,10 +171,8 @@ describe.concurrent('scene keys', () => {
   );
 });
 
-/** How many times the stamp read each file. */
 class Reads extends Context.Service<Reads, Map<string, number>>()('test/Reads') {}
 
-/** The fixture's Stamps, over a file system that counts what it reads. */
 const counting = Layer.unwrap(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -237,10 +215,6 @@ describe.concurrent('the stamp’s reads', () => {
   );
 });
 
-/**
- * Film `f` in memory: its frame, a registry that reads the script, and the
- * script with `hand`'s tail `tail`. No scene has a module of its own.
- */
 const inMemory = (tail: number) => {
   const files = new Map([
     [
@@ -265,7 +239,6 @@ const inMemory = (tail: number) => {
   return { files, layer };
 };
 
-/** The script of film `f` in memory, with `hand`'s tail `tail`. */
 const scriptOf = (tail: number) =>
   text(`export const script = [
   { id: 'hand', say: 'Hi.', tail: ${tail} },
@@ -294,7 +267,6 @@ describe.concurrent('beat keys in memory', () => {
 
   it.effect('stamp keys two byte-distinct files apart', () => {
     const { files, layer } = inMemory(0);
-    // two bytes that are not UTF-8, which a decode reads alike (U+FFFD)
     const withByte = (b: number) => Uint8Array.from([...scriptOf(0), ...text('// '), b, 10]);
     return Effect.gen(function* () {
       const stamps = yield* Stamps;
@@ -309,11 +281,6 @@ describe.concurrent('beat keys in memory', () => {
     }).pipe(Effect.provide(layer));
   });
 
-  /**
-   * At each rate: each beat's first frame after takes of 3.6 s and 3.2 s,
-   * then 4.1 s and 2.7 s (3.6 + 3.2 is 6.800000000000001 and 4.1 + 2.7 is
-   * 6.8), and how many frames into `built` its half second falls.
-   */
   const RATES = [
     { fps: 24, was: [0, 86, 163], now: [0, 98, 163], half: 12 },
     { fps: 30, was: [0, 108, 204], now: [0, 123, 204], half: 15 },
@@ -331,7 +298,6 @@ describe.concurrent('beat keys in memory', () => {
           { id: 'built', min: 10 },
         ];
         for (const at of RATES) {
-          /** Each beat's first frame, `built`'s key, and the time it hands its painter on its frames around its half second. */
           const laidWith = (durations: readonly [number, number]) =>
             Effect.gen(function* () {
               const timings = {
@@ -357,7 +323,6 @@ describe.concurrent('beat keys in memory', () => {
           expect([was.frames, now.frames]).toEqual([at.was, at.now]);
           expect(now.key).toEqual(was.key);
           expect(now.clock).toEqual(was.clock);
-          // The frame at its half second reads half a second in, the one before it less.
           expect(was.clock[1]).toBeLessThan(0.5);
           expect(was.clock[2]).toBeGreaterThanOrEqual(0.5);
         }

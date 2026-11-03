@@ -15,7 +15,6 @@ const stylesheet = Effect.gen(function* () {
   return { root: css.slice(open, close), rest: css.slice(close) };
 });
 
-/** `--color-night-ink` as the palette names its role: `nightInk`. */
 const roleOf = (token: string) =>
   token.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
 

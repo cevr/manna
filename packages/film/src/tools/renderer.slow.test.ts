@@ -1,6 +1,3 @@
-// Renderer with fakes: a failure in one page, an interrupt, or a crash closes
-// or recovers every resource the render opened. No Chromium, no encoder.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Deferred, Effect, Exit, Fiber, Layer, Option, Path, Result, Schema } from 'effect';
 import { MAIN_VARIANT, RenderVariantName } from '../core/catalogue.ts';
@@ -29,14 +26,11 @@ import { memoryFileSystem, text } from './host/testing.ts';
 
 const film = testFilm([{ id: 'a', min: 20 }], { voice: '', scenes: {} });
 
-/** The film's own plan: no score option or take in place of its own. */
 const NOW = { score: Option.none<string>(), inPlace: Option.none() };
 
-/** The film's track as `mix` leaves it: the WAV, and its stamp for the plan the film plays now. */
 const mixed = (files: Map<string, Uint8Array>, rendered: MeasuredFilm = film) =>
   Effect.gen(function* () {
     files.set(masterFile(rendered.paths), text('pcm'));
-    // A test film plays no file that could be missing: its plan is the one `mix` played.
     const plan = planOf(rendered, yield* placeFilm(rendered), NOW);
     const stamp = yield* Schema.encodeEffect(MasterStampJson)({
       key: mixKey(Result.getOrThrow(plan)),
@@ -46,7 +40,6 @@ const mixed = (files: Map<string, Uint8Array>, rendered: MeasuredFilm = film) =>
 
 const G = RenderVariantName.make('g');
 
-/** The whole 20 s test film on four pages: 600 frames in 16 chunks. */
 const video = RenderJob.Video({
   address: { _tag: 'Film' },
   variant: MAIN_VARIANT,
@@ -79,10 +72,6 @@ const setup = (
       SoundRender.layer,
     ]),
   );
-  /**
-   * `job` rendered on `platform` with `cores`: a 16-core Mac unless a test
-   * says otherwise, never the cores of the machine the tests run on.
-   */
   const render = (job: RenderJob, platform = 'darwin', cores = 16) =>
     Effect.gen(function* () {
       return yield* (yield* Renderer).render(rendered, job);
@@ -91,10 +80,6 @@ const setup = (
       Effect.provideService(Cores, cores),
       Effect.provide(layer),
     );
-  /**
-   * `videos`' sounds cut again from the master now, in one run, as `project
-   * render` re-muxes them: with media and the disk alone, no browser to open.
-   */
   const remuxAll = (videos: ReadonlyArray<Remuxed>) =>
     Effect.gen(function* () {
       const remux = yield* remuxer(rendered);
@@ -107,9 +92,7 @@ const setup = (
         SoundRender.layer,
       ]),
     );
-  /** `video`'s sound cut again, alone in its run. */
   const remux = (video: Remuxed) => Effect.map(remuxAll([video]), ([sound]) => sound);
-  /** `jobs` rendered one after another in one session, as `project render` draws its scenes. */
   const session = (jobs: ReadonlyArray<RenderJob>) =>
     Effect.gen(function* () {
       const run = yield* (yield* Renderer).session;
@@ -123,7 +106,6 @@ const setup = (
   return { ledger, files, folders, render, remux, remuxAll, session };
 };
 
-/** A render whose joins keep, by file, the bytes each segment held when it was joined. */
 const joinedBytes = () => {
   const files = new Map<string, Uint8Array>();
   const joined = new Map<string, Uint8Array>();
@@ -142,7 +124,6 @@ const joinedBytes = () => {
   return { ...run, joined };
 };
 
-/** Every resource the render opened was closed, and every chunk's encode ended. */
 const expectAllClosed = (ledger: RenderLedger) => {
   expect(ledger.server).toEqual({ started: 1, stopped: 1 });
   expect(ledger.browser).toEqual({ launched: 1, closed: 1 });
@@ -160,13 +141,10 @@ describe.concurrent('Renderer', () => {
         Array.from({ length: 600 }, (_, i) => i),
       );
       expect(ledger.encoders).toEqual({ spawned: 16, finished: 16, killed: 0 });
-      // The page that chose the encoder, then the four the chunks are drawn on.
       expect(ledger.pages.opened).toBe(5);
       const [join] = ledger.joins;
       expect(join?.out).toBe('/out/test/film/main.mp4');
       expect(join?.frames).toBe(600);
-      // Sixteen chunks of 37 or 38 frames (too few for a halving tail), each
-      // placed where its first frame plays.
       expect(join?.segments.map((s) => s.at)).toEqual(
         Array.from({ length: 16 }, (_, k) => Math.floor((k * 600) / 16) / 30),
       );
@@ -211,7 +189,6 @@ describe.concurrent('Renderer', () => {
       expect(Exit.isFailure(exit)).toBe(true);
       expect(left(failed)).toEqual([]);
 
-      // Interrupted once a page is drawing a frame: its segments are being written.
       const drawing = yield* Deferred.make<void>();
       const cut = setup({ frame: () => Deferred.done(drawing, Exit.void) });
       const fiber = yield* Effect.forkChild(cut.render(video));
@@ -232,19 +209,16 @@ describe.concurrent('Renderer', () => {
           variant: RenderVariantName.make('trial'),
           copies: 'master+share',
         });
-        // The joins land the clip and its share copy; the renderer writes the captions itself.
         expect(bare.ledger.joins.map((j) => j.out)).toEqual([
           '/out/test/film/trial.mp4',
           '/out/test/film/trial.share.mp4',
         ]);
-        // Beside its address only the captions; the film's cache holds the render's record of it.
         const under = (p: string) =>
           p.startsWith('/out/test/') && !p.startsWith('/out/test/cache/');
         expect([...bare.files.keys()].filter(under)).toEqual(['/out/test/film/trial.vtt']);
         expect([...bare.files.keys()].filter((p) => p.startsWith('/out/test/cache/'))).toEqual([
           expect.stringMatching(/^\/out\/test\/cache\/renders\/[0-9a-f]{16}\.json$/),
         ]);
-        // Its own segments folder goes, once joined.
         expect([...bare.folders].filter((f) => f.startsWith('/tmp/film-segments-'))).toEqual([]);
         expect(output).toEqual({
           kind: 'video',
@@ -284,7 +258,6 @@ describe.concurrent('Renderer', () => {
         from: Option.some(from),
         to: Option.some(from + 2),
       }));
-      // Each render alone opens its own: the probe's page and four to draw on, three times.
       const alone = setup();
       yield* Effect.forEach(scenes, (job) => alone.render(job));
       expect(alone.ledger.pages.opened).toBe(15);
@@ -296,7 +269,6 @@ describe.concurrent('Renderer', () => {
         '/out/test/scenes/a/v4.mp4',
       ]);
       expect(ledger.frames.length).toBe(180);
-      // In one session: the page that chose the encoder, then the four every scene is drawn on.
       expect(ledger.pages.opened).toBe(5);
       expectAllClosed(ledger);
     }),
@@ -305,7 +277,6 @@ describe.concurrent('Renderer', () => {
   it.live('a video needing more encoders than its encoder runs fails before the pool opens', () =>
     Effect.gen(function* () {
       const { ledger, render } = setup();
-      // Eight pages with a share copy are sixteen encoders: the hardware encoder hangs at sixteen.
       const exit = yield* Effect.exit(
         render({ ...video, workers: Option.some(8), copies: 'master+share' }, 'darwin', 64),
       );
@@ -314,7 +285,6 @@ describe.concurrent('Renderer', () => {
           '8 pages with a share copy need 16 encoders at once, over the 14 hardware encoders a render may run; use --workers 7 or fewer, or --no-share',
         ),
       );
-      // Only the page that chose the encoder opened, and nothing was drawn.
       expect(ledger.pages.opened).toBe(1);
       expect(ledger.frames).toEqual([]);
       expectAllClosed(ledger);
@@ -370,11 +340,9 @@ describe.concurrent('Renderer', () => {
         expect(ledger.pages.opened).toBe(1 + SOFTWARE_WORKERS);
         expect(ledger.encodedBy.length).toBe(ledger.encoders.spawned);
         expect(new Set(ledger.encodedBy)).toEqual(new Set(['Software']));
-        // One join, the master's.
         expect(ledger.joins.map((j) => j.out)).toEqual(['/out/test/film/main.mp4']);
         expectAllClosed(ledger);
 
-        // One encoder a page, one a core: seventeen pages are too many for 16 cores.
         const over = setup({ encoders: ['Software'] });
         const error = yield* Effect.flip(
           over.render({ ...video, workers: Option.some(17), copies: 'master', encoder: software }),
@@ -413,7 +381,6 @@ describe.concurrent('Renderer', () => {
         expect(Exit.findErrorOption(exit).pipe(Option.map((e) => e._tag))).toEqual(
           Option.some('PageError'),
         );
-        // Sibling chunks were mid-encode: they were cut off, not left running.
         expect(ledger.encoders.killed).toBeGreaterThan(1);
         expect(ledger.frames).not.toContain(599);
         expect(ledger.joins).toEqual([]);
@@ -423,7 +390,6 @@ describe.concurrent('Renderer', () => {
 
   it.live('an interrupt closes every page, encoder, the browser and the server', () =>
     Effect.gen(function* () {
-      // Interrupted once a page is drawing a frame: the render is under way.
       const drawing = yield* Deferred.make<void>();
       const { ledger, render } = setup({ frame: () => Deferred.done(drawing, Exit.void) });
       const fiber = yield* Effect.forkChild(render(video));
@@ -438,7 +404,6 @@ describe.concurrent('Renderer', () => {
     Effect.gen(function* () {
       const crashed = new Set<number>();
       const { ledger, render } = setup({
-        // The page drawing frame 200 crashes, once; the retried chunk gets a new page.
         frame: (i, page) =>
           Effect.when(
             Effect.fail(PageCrashed.make({ reason: 'oom' })),
@@ -514,7 +479,6 @@ describe.concurrent('Renderer', () => {
           cut: Cut.Whole(),
         }),
       );
-      // One page tiles every fifth second's frame into the sheet.
       expect(files.has('/out/test/film/g/contact.jpg')).toBe(true);
       expect(ledger.contacts).toEqual([[0, 150, 300, 450]]);
     }),
@@ -539,7 +503,6 @@ describe.concurrent('Renderer', () => {
         );
       const early = yield* sheet(-5, 2);
       const late = yield* sheet(18, 25);
-      // Each records the stretch it drew, not the film's whole.
       expect([early.span, late.span]).toEqual([
         Option.some({ from: 0, to: 2 }),
         Option.some({ from: 18, to: 20 }),
@@ -548,7 +511,6 @@ describe.concurrent('Renderer', () => {
         [0, 30],
         [540, 570],
       ]);
-      // Wholly past the film: nothing to show, as with a video.
       const error = yield* Effect.flip(sheet(25, 30));
       expect(error._tag).toBe('RangeEmpty');
     }),
@@ -619,7 +581,6 @@ describe.concurrent('Renderer', () => {
         expect(sound).toEqual({ mix: Option.some(plan), pieces: [{ start: 2, duration: 3 }] });
         expect(ledger.pages.opened).toBe(0);
         expect(ledger.frames).toEqual([]);
-        // One track, encoded once, under the clip and its share copy.
         expect(ledger.aac).toEqual([3 * 44100]);
         expect(ledger.remuxes).toEqual([clip, '/out/test/scenes/a/main.share.mp4']);
       }),
@@ -686,7 +647,6 @@ describe.concurrent('Renderer', () => {
         const { ledger, files, render } = setup({
           info,
           aac: Effect.fail(MediaFailed.make({ op: 'encode', file: 'the track', reason: 'no' })),
-          // Every frame after the first never finishes: only the failed track can end the render.
           frame: (i) =>
             Effect.asVoid(
               Effect.when(
@@ -716,7 +676,6 @@ describe.concurrent('Renderer', () => {
 
     it.live('a master shorter than the film fails before a frame is drawn', () =>
       Effect.gen(function* () {
-        // An interrupted mix left 12 s of a 20 s film.
         const { ledger, files, render } = setup({ info, master: 12 });
         yield* mixed(files);
         const exit = yield* Effect.exit(render(video));
@@ -730,7 +689,6 @@ describe.concurrent('Renderer', () => {
       'a master as long as the film but mixed for another plan fails before a frame is drawn',
       () =>
         Effect.gen(function* () {
-          // Mixed before a score pick, a re-take of the same length or a moved effect.
           const { ledger, files, render } = setup({ info });
           yield* mixed(files);
           files.set(stampFile(film.paths), text('{\n  "key": "another plan"\n}\n'));
@@ -751,7 +709,6 @@ describe.concurrent('Renderer', () => {
   });
 
   describe('a short', () => {
-    /** A 15 s film of three silent scenes; the short plays c, then a: 10 s. */
     const three = testFilm(
       [
         { id: 'a', min: 4 },
@@ -770,7 +727,6 @@ describe.concurrent('Renderer', () => {
         ],
       },
     });
-    /** The short's page: 9:16 at the film's density, 10 s. */
     const page: ExportInfo = { width: 1920, height: 3414, fps: 30, duration: 10, frames: 300 };
 
     it.live(
@@ -785,7 +741,6 @@ describe.concurrent('Renderer', () => {
           const [join] = ledger.joins;
           expect(join?.out).toBe('/out/test/shorts/cut/main.mp4');
           expect(join?.frames).toBe(300);
-          // The track is the film's c then a: 6 s and 4 s, cut from the 15 s master.
           expect(ledger.aac).toEqual([10 * 44100]);
           expect(files.has('/out/test/shorts/cut/main.vtt')).toBe(true);
           expectAllClosed(ledger);
@@ -879,7 +834,6 @@ describe.concurrent('Renderer', () => {
         sounds: measuredSounds(library, lock, '/lib'),
       };
       const whole: ExportInfo = { ...testExportInfo, duration: 15, frames: 450 };
-      /** The film mixed, its recording on disk, as a render finds them. */
       const ready = (files: Map<string, Uint8Array>) =>
         Effect.gen(function* () {
           files.set('/lib/public/amb.hall/0.flac', text('flac'));

@@ -1,24 +1,3 @@
-// The places `within` calls back to, in the Board's pixels, as their beats'
-// kept panels lay them out, and the page's hold on the accused's feet. The
-// temple court of `woman` (woman.court, woman.told) in its early peach light:
-// the sky rose overhead and pale gold low down, its clouds, the far city's
-// white houses and the cypresses over the balustrade, the steps up to it, the
-// columns, the pale floor with the columns' violet shadows across it, and the
-// stones dropped in the dust. The house in Capernaum of `roof` (roof.saw,
-// within.bed, roof.went) in the light through its roof: the back wall with its
-// doorways and window, the beaten floor, the ceiling's boards and beams round
-// the torn hole and the sky in it, the shafts falling through, the ropes, the
-// bed, and the bed rolled up. The strip of the page over his feet (`we`), and
-// its two halves tearing off them (`arose`).
-// Every person in them but Christ is held as a blocked mass (look-props'
-// `campMass`, `lyingMass` for the man on his bed) at the cast band's height
-// against His, until the cast's kept renders are sheeted and drawn: the woman
-// of John 8, the man of Capernaum, the four at the hole, the crowd in the
-// house; his bed is held with him, its silhouette alone. The scenery and the
-// strip are torn or cut paper with no ink; the stones are props, and the bed a
-// held mass, lined in the ink, their lines drawn `unprobed` as every prop's
-// are. Pure: the same pose draws the same thing.
-
 import {
   type Hand,
   type Hex,
@@ -39,16 +18,8 @@ import { type CamperName, type CamperPose, bodyOf, stand } from './look-props.ts
 import { type Paper, paper, shafts } from './page-set.ts';
 import { type Torn, plane } from './spoke-props.ts';
 
-// ─── the cast's band ─────────────────────────────────────────────────────────
-
-/** Christ's height, His hair to His soles, at scale 1 (`rigs/christ-rig.ts`): the top of the cast's one band. */
 export const CHRIST_TALL = 468;
 
-/**
- * Each held person's height to the crown against Christ's, within the cast's
- * one band (character-design.md, "One height band for the cast"): Christ at
- * its top, the rest a little under Him, varied as people are.
- */
 export const BAND = {
   woman: 0.93,
   man: 0.97,
@@ -58,11 +29,9 @@ export const BAND = {
   child: 0.64,
 } as const;
 
-/** The scale a held body of `who`'s kit stands at to be `band` of Christ's height when He stands at `scale`. */
 export const heldScale = (who: CamperName, band: number, scale: number) =>
   (band * CHRIST_TALL * scale) / bodyOf(who).tall;
 
-/** Each of the kit's people's place in the band: the tall men at its top, the women lower, the child well under it. */
 const BAND_OF: Readonly<Record<CamperName, number>> = {
   tallBack: BAND.tall,
   tallLeft: BAND.tall,
@@ -74,12 +43,6 @@ const BAND_OF: Readonly<Record<CamperName, number>> = {
   child: BAND.child,
 };
 
-/**
- * One of a place's people, held where its panel stands it: its kit body, its
- * feet, its size against the band's where Christ stands (less, farther back),
- * its turn; how far its head tips back to look up (less than 0, down) and
- * its body leans; its hands, Board pixels, where it holds something.
- */
 export interface Held {
   readonly who: CamperName;
   readonly at: Pt;
@@ -90,7 +53,6 @@ export interface Held {
   readonly hands?: readonly [Pt, Pt];
 }
 
-/** Board pixel `p` in the units of `h` standing `s` big, leaning: where its hand goes to be there. */
 const unitsOf = (h: Held, s: number, p: Pt): Pt => {
   const x = (p[0] - h.at[0]) / s;
   const y = (p[1] - h.at[1]) / s;
@@ -98,11 +60,9 @@ const unitsOf = (h: Held, s: number, p: Pt): Pt => {
   return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
 };
 
-/** `h`'s size where Christ stands at `scale`. */
 export const heldSize = (h: Held, scale: number) =>
   heldScale(h.who, BAND_OF[h.who], scale) * h.depth;
 
-/** `h`'s pose where Christ stands at `scale`, breathing at `breath`'s phase. */
 export const heldPose = (h: Held, scale: number, breath: number): CamperPose => {
   const s = heldSize(h, scale);
   const home = stand(h.who);
@@ -120,15 +80,10 @@ export const heldPose = (h: Held, scale: number, breath: number): CamperPose => 
   };
 };
 
-// ─── a place's planes ────────────────────────────────────────────────────────
-
-/** The Board's panel, Board pixels: what the sun's shafts fan over. */
 export const PANEL = { w: 1536, h: 1024 } as const;
 
-/** How far every plane runs past the panel's edges, Board pixels, so the camera can travel and push over it. */
 const RUN = { left: -900, right: 2500, top: -900, bottom: 1900 } as const;
 
-/** A sky's heights on the panel, Board pixels, washed over the plane's whole run. */
 const skyWash = (ctx: CanvasRenderingContext2D, stops: ReadonlyArray<readonly [number, Hex]>) =>
   wash(
     ctx,
@@ -139,7 +94,6 @@ const skyWash = (ctx: CanvasRenderingContext2D, stops: ReadonlyArray<readonly [n
     stops.map(([y, c]): readonly [number, Hex] => [(y - RUN.top) / (RUN.bottom - RUN.top), c]),
   );
 
-/** A low cloud about (`x`, `y`) its flat foot, `w` wide and `h` high at its crown: three soft heads over a flat base. */
 const cloudShape = (x: number, y: number, w: number, h: number): Pt[] => {
   const n = 36;
   const top: Pt[] = [];
@@ -151,7 +105,6 @@ const cloudShape = (x: number, y: number, w: number, h: number): Pt[] => {
   return [...top, [x + w / 2, y], [x - w / 2, y]];
 };
 
-/** A cypress standing at (`x`, `foot`), `tall` and `wide`: a narrow flame of dark green, round at its foot, its tip a point. */
 const cypressShape = (x: number, foot: number, tall: number, wide: number): Pt[] =>
   spline(
     [
@@ -166,9 +119,6 @@ const cypressShape = (x: number, foot: number, tall: number, wide: number): Pt[]
     6,
   );
 
-// ─── the temple court (woman.court, woman.told) ──────────────────────────────
-
-/** The court's sky at its heights on the panel: rose overhead, peach, pale gold low behind the city. */
 const TEMPLE_SKY: ReadonlyArray<readonly [number, Hex]> = [
   [-300, '#dca6a8'],
   [60, '#ebb9a9'],
@@ -176,7 +126,6 @@ const TEMPLE_SKY: ReadonlyArray<readonly [number, Hex]> = [
   [320, '#f8e2c4'],
 ];
 
-/** Its clouds, each its foot's middle, its width and its height: long and low, cream lit from below. */
 const CLOUDS: ReadonlyArray<readonly [number, number, number, number]> = [
   [-200, 60, 360, 40],
   [330, 120, 380, 46],
@@ -186,10 +135,8 @@ const CLOUDS: ReadonlyArray<readonly [number, number, number, number]> = [
 ];
 const CLOUD: Torn = { color: '#f6d9c8', rim: '#fcebdf' };
 
-/** Where the court's far ground meets the balustrade: the houses' and the cypresses' feet. */
 const SKYLINE = 334;
 
-/** The far city's houses, left to right: each its left edge, its roof's height and its width; the white cubes the panels draw over the balustrade. */
 const HOUSES: ReadonlyArray<readonly [number, number, number]> = [
   [-200, 250, 120],
   [40, 236, 90],
@@ -208,11 +155,9 @@ const HOUSES: ReadonlyArray<readonly [number, number, number]> = [
   [1530, 230, 90],
   [1640, 250, 100],
 ];
-/** A house's lit face and its shaded side, and its windows: dark slots softened by the haze. */
 const HOUSE = paper('#eed7c4', 0.6);
 const WINDOW: Hex = '#c9aeab';
 
-/** The cypresses over the balustrade, as the panels place them: each its foot's middle, its height and its width. */
 const CYPRESSES: ReadonlyArray<readonly [number, number, number]> = [
   [-240, 150, 30],
   [95, 150, 30],
@@ -228,7 +173,6 @@ const CYPRESSES: ReadonlyArray<readonly [number, number, number]> = [
 ];
 const CYPRESS = paper('#7f9c8c', 0.6);
 
-/** The far plane: the sky, its clouds, the city's houses and the cypresses over them. */
 export const templeFar = (ctx: CanvasRenderingContext2D, hand: Hand) => {
   skyWash(ctx, TEMPLE_SKY);
   CLOUDS.forEach(([x, y, w, h], i) => plane(ctx, cloudShape(x, y, w, h), CLOUD, sub(hand, i)));
@@ -260,7 +204,6 @@ export const templeFar = (ctx: CanvasRenderingContext2D, hand: Hand) => {
   for (const [x, tall, wide] of CYPRESSES) {
     const pts = cypressShape(x, SKYLINE + 4, tall, wide);
     cut(ctx, pts, { color: CYPRESS.color, shade: CYPRESS.color }, { line: 0, flat: true });
-    // Its far side in shade: the half away from the light.
     ctx.save();
     ctx.beginPath();
     ctx.rect(x + 0.06 * wide, SKYLINE - tall - 10, wide, tall + 20);
@@ -270,42 +213,35 @@ export const templeFar = (ctx: CanvasRenderingContext2D, hand: Hand) => {
   }
 };
 
-/** The balustrade across the court: its rail's top, its foot, its posts' spacing and width. */
 const RAIL = { top: 312, under: 334, foot: 438, base: 462, every: 175, post: 30 } as const;
 const STONE_PALE = paper('#f1dfcc', 0.5);
 const STONE_POST = paper('#ead3c0', 0.5);
 const STONE_RECESS: Hex = '#e2c8ba';
 
-/** The three steps down from the balustrade's foot to the floor: each its riser's top, the riser's height and the tread's. */
 const STEPS: ReadonlyArray<readonly [number, number, number]> = [
   [462, 16, 14],
   [492, 16, 14],
   [522, 16, 14],
 ];
-/** Where the floor starts, below the last tread. */
 export const TEMPLE_FLOOR = 552;
 const TREAD = paper('#f3e2d1', 0.4);
 const RISER = paper('#e3cabb', 0.5);
 
-/** A column: its middle, its foot, its shaft's width; its plinth two blocks under it, each wider. */
 interface Column {
   readonly x: number;
   readonly foot: number;
   readonly wide: number;
 }
-/** The columns standing on the balustrade's platform, between the near ones (woman.court, woman.told). */
 const FAR_COLUMNS: ReadonlyArray<Column> = [
   { x: 255, foot: 468, wide: 112 },
   { x: 1300, foot: 468, wide: 112 },
 ];
-/** The near columns at the frame's two edges, standing on the floor. */
 const NEAR_COLUMNS: ReadonlyArray<Column> = [
   { x: 30, foot: 650, wide: 156 },
   { x: 1506, foot: 650, wide: 156 },
 ];
 const COLUMN = paper('#efdcc7', 0.6);
 
-/** One column: its shaft from above the frame down to its plinth, lit on the light's side and shaded on the far one, the plinth's two blocks. */
 const column = (ctx: CanvasRenderingContext2D, c: Column) => {
   const { x, foot, wide } = c;
   const low = 0.18 * wide;
@@ -338,12 +274,10 @@ const column = (ctx: CanvasRenderingContext2D, c: Column) => {
   }
 };
 
-/** The wall's plane: the balustrade, the columns on its platform, the steps down from it, the sun's shafts over them. */
 export const templeWall = (ctx: CanvasRenderingContext2D) => {
   const flat = (p: Paper, pts: ReadonlyArray<Pt>, which: 'color' | 'shade' = 'color') =>
     cut(ctx, pts, { color: p[which], shade: p[which] }, { line: 0, flat: true });
   const width = RUN.right - RUN.left;
-  // The balustrade: its recessed panels, its posts, its rail with the shade under its lip, its base.
   flat(STONE_POST, box(RUN.left, RAIL.under, width, RAIL.foot - RAIL.under));
   ctx.save();
   ctx.fillStyle = STONE_RECESS;
@@ -367,7 +301,6 @@ export const templeWall = (ctx: CanvasRenderingContext2D) => {
   flat(STONE_PALE, box(RUN.left, RAIL.under - 5, width, 5), 'shade');
   flat(STONE_PALE, box(RUN.left, RAIL.foot, width, RAIL.base - RAIL.foot));
   for (const c of FAR_COLUMNS) column(ctx, c);
-  // The steps down to the floor, each riser in a little shade under its lit tread.
   for (const [top, riser, tread] of STEPS) {
     flat(RISER, box(RUN.left, top, width, riser));
     flat(TREAD, box(RUN.left, top + riser, width, tread));
@@ -375,15 +308,12 @@ export const templeWall = (ctx: CanvasRenderingContext2D) => {
   shafts(ctx, PANEL.w, PANEL.h);
 };
 
-/** The floor's pale stone, a little warmer far off. */
 const FLOOR_WASH: ReadonlyArray<readonly [number, Hex]> = [
   [0, '#edd6c4'],
   [0.25, '#f2dfcd'],
   [1, '#f5e6d7'],
 ];
-/** The violet the columns' shadows lay on the floor (the court's, `court-set.ts`): at the back, and faded at the front. */
 const COLUMN_SHADOW = { color: '#b7a3dc', back: 0.3, front: 0.1 } as const;
-/** The columns' shadows across the floor: each where it leaves the floor's back edge, its width there and at the frame's foot; thrown down and to the right, away from the sun. */
 const SHADOW_BANDS: ReadonlyArray<readonly [number, number, number]> = [
   [-420, 70, 150],
   [60, 60, 130],
@@ -391,10 +321,8 @@ const SHADOW_BANDS: ReadonlyArray<readonly [number, number, number]> = [
   [1040, 60, 130],
   [1480, 70, 150],
 ];
-/** How far right a shadow runs for each pixel it comes down the floor toward us. */
 const THROW = 1.4;
 
-/** The stones they dropped, as woman.told leaves them in the dust between the two: each its middle, its half-width and half-height. */
 const STONES: ReadonlyArray<readonly [number, number, number, number]> = [
   [700, 868, 22, 15],
   [770, 905, 18, 13],
@@ -404,10 +332,8 @@ const STONES: ReadonlyArray<readonly [number, number, number, number]> = [
   [395, 955, 19, 13],
 ];
 const STONE = paper('#9d8d88', 0.6);
-/** The stones' ink: the set's small line. */
 const STONE_LINE = 3.5;
 
-/** A stone about (`x`, `y`), `rx` by `ry`: rounded over its top, flattened where it sits in the dust. */
 const stoneShape = (x: number, y: number, rx: number, ry: number): Pt[] =>
   Array.from({ length: 18 }, (_, i): Pt => {
     const t = (i / 18) * 2 * Math.PI;
@@ -418,7 +344,6 @@ const stoneShape = (x: number, y: number, rx: number, ry: number): Pt[] =>
     ];
   });
 
-/** The floor's plane: the pale stone from the steps' foot, the columns' shadows across it, the stones in the dust. */
 export const templeFloor = (ctx: CanvasRenderingContext2D) => {
   const y0 = TEMPLE_FLOOR;
   wash(ctx, RUN.left, y0, RUN.right - RUN.left, RUN.bottom - y0, FLOOR_WASH);
@@ -451,57 +376,43 @@ export const templeFloor = (ctx: CanvasRenderingContext2D) => {
   }
 };
 
-/** The near plane: the two columns at the frame's edges, standing on the floor. */
 export const templeNear = (ctx: CanvasRenderingContext2D) => {
   for (const c of NEAR_COLUMNS) column(ctx, c);
 };
 
-// ─── the house in Capernaum (roof.saw, within.bed, roof.went) ────────────────
-
-/** Where the room's floor meets its back wall. */
 export const ROOM_FLOOR = 770;
-/** Where its ceiling meets the back wall: the back beam's top and foot. */
 const CEILING = { beam: 296, foot: 332 } as const;
 
-/** The back wall's plaster, paler high up where the light from the hole falls on it. */
 const ROOM_WALL: ReadonlyArray<readonly [number, Hex]> = [
   [CEILING.foot, '#ebcea8'],
   [560, '#e3c29a'],
   [ROOM_FLOOR, '#d8b38b'],
 ];
-/** The floor's beaten earth: darker at the wall, paler toward us under the light. */
 const ROOM_GROUND: ReadonlyArray<readonly [number, Hex]> = [
   [0, '#d9b996'],
   [0.3, '#e6caa8'],
   [1, '#efd9bd'],
 ];
-/** The ceiling's boards between the beams, in the shade of the roof. */
 const ROOM_CEILING: Hex = '#d4ae88';
-/** The beams: the room's violet, a lit face and its shaded side. */
 const BEAM = paper('#9d7fa6', 0.6);
 
-/** An opening in the room: its left, its top, its width and height. */
 interface Opening {
   readonly x: number;
   readonly y: number;
   readonly w: number;
   readonly h: number;
 }
-/** The doorway at the back right, the town beyond it; the small window beside it; the dark doorway at the back left. */
 const DOOR: Opening = { x: 868, y: 402, w: 144, h: ROOM_FLOOR - 402 };
 const WINDOW_RIGHT: Opening = { x: 1282, y: 424, w: 64, h: 82 };
 const DOOR_LEFT: Opening = { x: 172, y: 390, w: 78, h: 186 };
-/** The day beyond the doorway: its sky, the town's pale houses, a cypress; and the dark of the inner room. */
 const OUTSIDE: ReadonlyArray<readonly [number, Hex]> = [
   [0, '#f5d6bd'],
   [1, '#fae9d4'],
 ];
 const TOWN = paper('#e8d0c1', 0.5);
 const INNER: Hex = '#b9958a';
-/** An opening's frame: its posts' and lintel's width, in the wall's shade. */
 const FRAME = { wide: 14, color: '#c8a283' } as const;
 
-/** The beams across the ceiling, each a quad: the back beam over the wall and the four that run back to it from the frame's corners. */
 const BEAMS: ReadonlyArray<ReadonlyArray<Pt>> = [
   [
     [RUN.left, CEILING.beam],
@@ -535,16 +446,13 @@ const BEAMS: ReadonlyArray<ReadonlyArray<Pt>> = [
   ],
 ];
 
-/** The hole they opened in the roof: its middle, its half-width and half-height, and how ragged its torn edge is. */
 const HOLE = { x: 735, y: 116, rx: 456, ry: 132 } as const;
-/** The hole's torn edge, all the way round. */
 export const HOLE_EDGE: ReadonlyArray<Pt> = Array.from({ length: 96 }, (_, i): Pt => {
   const a = (i / 96) * 2 * Math.PI;
   const r =
     1 + 0.035 * Math.sin(5 * a + 1) + 0.022 * Math.sin(11 * a + 2) + 0.012 * Math.sin(23 * a);
   return [HOLE.x + HOLE.rx * r * Math.cos(a), HOLE.y + HOLE.ry * r * Math.sin(a)];
 });
-/** The sky in the hole: lavender high, rose, pale peach down at the roof's edge; its two clouds. */
 const HOLE_SKY: ReadonlyArray<readonly [number, Hex]> = [
   [-40, '#cdaac8'],
   [110, '#efbdb1'],
@@ -554,22 +462,18 @@ const HOLE_CLOUDS: ReadonlyArray<readonly [number, number, number, number]> = [
   [560, 92, 260, 36],
   [1010, 150, 220, 30],
 ];
-/** The roof's torn edge round the hole: its broken paper lit from the sky, and how wide. */
 const RIM = { color: '#f6e2c6', wide: 9 } as const;
 
-/** `pts` as the current path, closed. */
 const tracePts = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>) => {
   pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
   ctx.closePath();
 };
 
-/** The hole's edge as the current path. */
 export const traceHole = (ctx: CanvasRenderingContext2D) => {
   ctx.beginPath();
   tracePts(ctx, HOLE_EDGE);
 };
 
-/** One opening in the back wall: what lies beyond it, then its frame. */
 const opening = (ctx: CanvasRenderingContext2D, o: Opening, beyond: () => void) => {
   ctx.save();
   ctx.beginPath();
@@ -586,7 +490,6 @@ const opening = (ctx: CanvasRenderingContext2D, o: Opening, beyond: () => void) 
   ctx.restore();
 };
 
-/** The back wall's plane: the plaster, the doorway with the town beyond it, the window, the dark doorway to the inner room. */
 export const roomWall = (ctx: CanvasRenderingContext2D) => {
   wash(
     ctx,
@@ -625,11 +528,9 @@ export const roomWall = (ctx: CanvasRenderingContext2D) => {
   });
 };
 
-/** The floor's plane: the beaten earth from the wall's foot toward us. */
 export const roomFloor = (ctx: CanvasRenderingContext2D) =>
   wash(ctx, RUN.left, ROOM_FLOOR, RUN.right - RUN.left, RUN.bottom - ROOM_FLOOR, ROOM_GROUND);
 
-/** The sky in the hole and its clouds: what the four are seen against. */
 export const holeSky = (ctx: CanvasRenderingContext2D, hand: Hand) => {
   ctx.save();
   traceHole(ctx);
@@ -639,7 +540,6 @@ export const holeSky = (ctx: CanvasRenderingContext2D, hand: Hand) => {
   ctx.restore();
 };
 
-/** The ceiling round the hole: its boards and its beams everywhere but the hole, then the hole's torn edge lit from the sky. */
 export const roomCeiling = (ctx: CanvasRenderingContext2D) => {
   ctx.save();
   ctx.beginPath();
@@ -650,7 +550,6 @@ export const roomCeiling = (ctx: CanvasRenderingContext2D) => {
   ctx.fillRect(RUN.left, RUN.top, RUN.right - RUN.left, CEILING.beam - RUN.top);
   for (const quad of BEAMS)
     cut(ctx, quad, { color: BEAM.color, shade: BEAM.color }, { line: 0, flat: true });
-  // Each beam's underside in shade: a strip along its lower edge.
   for (const quad of BEAMS) {
     const [, , c, d] = quad;
     if (c === undefined || d === undefined) continue;
@@ -674,16 +573,13 @@ export const roomCeiling = (ctx: CanvasRenderingContext2D) => {
   ctx.restore();
 };
 
-/** The light falling through the hole onto the floor: each shaft's foot on the floor, its width there, and its light. */
 const HOLE_SHAFTS: ReadonlyArray<readonly [number, number, number]> = [
   [520, 170, 0.16],
   [760, 210, 0.2],
   [1010, 150, 0.14],
 ];
-/** The shafts' warm white. */
 const SHAFT: Hex = '#fff4e2';
 
-/** The light from the hole: soft shafts from its lower edge down to the floor, strongest at the hole. */
 export const holeShafts = (ctx: CanvasRenderingContext2D) => {
   for (const [x, w, a] of HOLE_SHAFTS) {
     const top = HOLE.y + 0.8 * HOLE.ry;
@@ -704,10 +600,8 @@ export const holeShafts = (ctx: CanvasRenderingContext2D) => {
   }
 };
 
-/** The ropes they let the bed down by: their rope colour and its ink, widths, Board pixels. */
 const ROPE = { color: '#d8b98f', ink: 6, wide: 3.5 } as const;
 
-/** A rope from `a` to `b`, slack by `sag` at its middle: a plain cord, lined. */
 export const rope = (ctx: CanvasRenderingContext2D, a: Pt, b: Pt, sag: number, ink: Hex) => {
   const mid: Pt = [(a[0] + b[0]) / 2 + 0.3 * sag, (a[1] + b[1]) / 2 + sag];
   ctx.save();
@@ -726,11 +620,6 @@ export const rope = (ctx: CanvasRenderingContext2D, a: Pt, b: Pt, sag: number, i
   ctx.restore();
 };
 
-/**
- * The man's bed, held with him (a blocked mass: its silhouette, no cloth):
- * its two ends, the pallet's top, the frame's depth under it and its legs';
- * the pillow at its head, where it starts, how wide, how high it rises.
- */
 export const BED = {
   left: 420,
   right: 1000,
@@ -740,10 +629,8 @@ export const BED = {
   pillow: { x: 436, w: 236, rise: 40 },
 } as const;
 const BED_PAPER = paper('#cdb39a', 0.6);
-/** The held bed's ink, as wide as a held person's. */
 const BED_LINE = 5;
 
-/** The frame, its legs and the pallet with the raised head: one blocked silhouette. */
 export const bedMass = (ctx: CanvasRenderingContext2D) => {
   const { left, right, top, frame, leg, pillow } = BED;
   const base = top + frame;
@@ -773,7 +660,6 @@ export const bedMass = (ctx: CanvasRenderingContext2D) => {
   cut(ctx, pts, BED_PAPER, { line: BED_LINE });
 };
 
-/** The four ropes' ties on the bed, where each comes down: two at its head, two at its foot. */
 export const TIES: readonly [Pt, Pt, Pt, Pt] = [
   [438, 792],
   [466, 787],
@@ -781,14 +667,6 @@ export const TIES: readonly [Pt, Pt, Pt, Pt] = [
   [982, 792],
 ];
 
-// ─── the house's people, held ────────────────────────────────────────────────
-
-/**
- * The four who carry him, at the hole in the roof (within.bed, roof.saw):
- * their heads and shoulders over its edge, looking down, their hands on the
- * torn edge where they hold the ropes; left to right, each turned and leaning
- * in toward the bed below.
- */
 export const BEARERS: ReadonlyArray<Held> = [
   {
     who: 'tallBack',
@@ -840,7 +718,6 @@ export const BEARERS: ReadonlyArray<Held> = [
   },
 ];
 
-/** The ropes, each from the bearer's hand that holds it to its tie: the outer two men's at the bed's head and foot, the inner two's beside them. */
 export const ROPES: ReadonlyArray<readonly [Pt, Pt]> = [
   [[380, 199], TIES[0]],
   [[540, 236], TIES[1]],
@@ -848,11 +725,6 @@ export const ROPES: ReadonlyArray<readonly [Pt, Pt]> = [
   [[1052, 224], TIES[3]],
 ];
 
-/**
- * The crowd that fills the house behind the bed (within.bed), farthest row
- * first: a row under the back wall, smaller, and a nearer one; their heads
- * between the hole's light and the bed, their feet hidden behind it.
- */
 export const CROWD: ReadonlyArray<Held> = [
   { who: 'tallBack', at: [372, 774], depth: 0.52, facing: 0.3 },
   { who: 'womanLeft', at: [458, 778], depth: 0.52, facing: 0.2 },
@@ -872,7 +744,6 @@ export const CROWD: ReadonlyArray<Held> = [
   { who: 'child', at: [868, 798], depth: 0.62, facing: -0.2 },
 ];
 
-/** Those who stand at the room's two sides, nearer, round the bed and Him: beside the bed's head on the left, and behind Him on the right. */
 export const SIDES: ReadonlyArray<Held> = [
   { who: 'tallLeft', at: [150, 866], depth: 0.86, facing: 0.5 },
   { who: 'womanLeft', at: [282, 884], depth: 0.86, facing: 0.4 },
@@ -881,19 +752,16 @@ export const SIDES: ReadonlyArray<Held> = [
   { who: 'womanRight', at: [1340, 862], depth: 0.82, facing: -0.45 },
 ];
 
-/** The heads nearest us, at the frame's two edges, cut by it: the room seen past the backs of the crowd. */
 export const NEAR: ReadonlyArray<Held> = [
   { who: 'broad', at: [70, 1640], depth: 1.8, facing: 0.6 },
   { who: 'elder', at: [1530, 1330], depth: 1.6, facing: -0.7 },
   { who: 'womanRight', at: [1390, 1660], depth: 1.8, facing: -0.6 },
 ];
 
-/** The paper a held person is blocked in, its crease and its ink, as look-props' `campMass` blocks the camp's (one muted warm, its shade turned toward the light's complement). */
 const MASS = ramp('#a58a7c', keyLight, shading);
 const MASS_TURN: Crease = { at: 0.62, soft: 0.05 };
 const MASS_LINE = 5;
 
-/** `pts`, closed, filled with the mass's paper, creased at the light (`campMass`'s). */
 const massCut = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>) => {
   const { start, end, at } = creaseOf(boxOf(pts), MASS_TURN);
   const soft = MASS_TURN.soft ?? 0;
@@ -908,16 +776,6 @@ const massCut = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>) => {
   ctx.fill();
 };
 
-/**
- * The man lying on his bed, held as a blocked mass (within.bed): his kit
- * body (the broad one); his trunk's length from his hip to his shoulders and
- * its depth at his chest and his hips; his legs' length from his hip, lying
- * along the pallet, and how high their top stands over it along them (shares
- * of his hips' depth, from his hip to past his feet: his thighs, his knees,
- * his shins, his toes standing up, his heels); how far his head sits forward
- * of his trunk's line and out from his shoulders against its own height;
- * his kit units.
- */
 const LYING = {
   body: 'climber',
   trunk: 72,
@@ -937,12 +795,6 @@ const LYING = {
   neck: 0.32,
 } as const;
 
-/**
- * How the man lies: his hip on the pallet (where his trunk turns as it rises)
- * and his size; how far his trunk is raised from lying flat and his head
- * above his trunk (radians); his hands on the bed, Board pixels; his ink
- * against the house figure line.
- */
 export interface LyingPose {
   readonly hip: Pt;
   readonly scale: number;
@@ -952,17 +804,8 @@ export interface LyingPose {
   readonly line: number;
 }
 
-/** Where the man's hip lies at `x` for his size `scale`: as high over the pallet as half his hips' depth. */
 export const hipOn = (x: number, scale: number): Pt => [x, BED.top - 0.5 * LYING.hips * scale];
 
-/**
- * The man as a blocked mass lying on his back on the pallet, his trunk raised
- * from his hip: his legs along the pallet, his trunk and his head under one
- * ink round the three, sunk into the pallet where they lie on it (cut at its
- * top, so the bed's own line runs under him); his hands free circles each
- * lined round, pressing at the bed; no face, no cloth. The head is declared
- * to the check as the face's place.
- */
 export const lyingMass = (ctx: CanvasRenderingContext2D, p: LyingPose) => {
   const b = bodyOf(LYING.body);
   const { trunk, chest, hips, legs } = LYING;
@@ -1013,7 +856,6 @@ export const lyingMass = (ctx: CanvasRenderingContext2D, p: LyingPose) => {
   ctx.lineJoin = 'round';
   ctx.strokeStyle = C.outline;
   ctx.lineWidth = 2 * MASS_LINE * p.line;
-  // Sunk into the pallet: all of him above its top, a little short of its line.
   ctx.save();
   ctx.beginPath();
   ctx.rect(-4 * legs, -4 * legs, 8 * legs, 4 * legs + pallet - 2 / p.scale);
@@ -1035,7 +877,6 @@ export const lyingMass = (ctx: CanvasRenderingContext2D, p: LyingPose) => {
   ctx.restore();
 };
 
-/** Where the man's head is as he lies in `p`, Board pixels: what eyes on him rest on. */
 export const lyingHead = (p: LyingPose): Pt => {
   const b = bodyOf(LYING.body);
   const lift = p.rise + p.head;
@@ -1046,7 +887,6 @@ export const lyingHead = (p: LyingPose): Pt => {
   return [p.hip[0] + p.scale * x, p.hip[1] + p.scale * y];
 };
 
-/** The held bed's shadow on the floor, under its frame, `amount` of it. */
 export const bedShadow = (ctx: CanvasRenderingContext2D, ink: Hex, amount = 1) => {
   if (amount <= 0) return;
   const { left, right, top, frame, leg } = BED;
@@ -1067,19 +907,12 @@ export const bedShadow = (ctx: CanvasRenderingContext2D, ink: Hex, amount = 1) =
   ctx.restore();
 };
 
-/** The bed's middle, Board pixels: what it gathers in about as he takes it up. */
 const BED_MIDDLE: Pt = [
   (BED.left + BED.right) / 2,
   BED.top + (BED.frame + BED.leg - BED.pillow.rise) / 2,
 ];
-/** The bed's length and height, its pillow to its feet. */
 const BED_SIZE: Pt = [BED.right - BED.left, BED.pillow.rise + BED.frame + BED.leg];
 
-/**
- * The held bed `k` of the way gathered up (roof.went): drawn in about its
- * middle toward `to`, down to `size` (the roll it becomes); gone once
- * gathered, the roll in his arms in its place.
- */
 export const bedGathered = (ctx: CanvasRenderingContext2D, k: number, to: Pt, size: Pt) => {
   if (k >= 1) return;
   ctx.save();
@@ -1090,7 +923,6 @@ export const bedGathered = (ctx: CanvasRenderingContext2D, k: number, to: Pt, si
   ctx.restore();
 };
 
-/** The bed rolled up, held with him (a blocked mass: its silhouette): about `c`, `long` and `thick`, turned `tilt`. */
 export const rollMass = (
   ctx: CanvasRenderingContext2D,
   c: Pt,
@@ -1114,7 +946,6 @@ export const rollMass = (
   cut(ctx, pts, BED_PAPER, { line: BED_LINE });
 };
 
-/** Where each rope's end hangs once the bed is down and its ties are loosed (roof.went): drawn up short, swinging under the hand that holds it, in the order of `ROPES`. */
 export const SLACK: readonly [Pt, Pt, Pt, Pt] = [
   [372, 318],
   [552, 340],
@@ -1122,14 +953,6 @@ export const SLACK: readonly [Pt, Pt, Pt, Pt] = [
   [1062, 326],
 ];
 
-// ─── the page holding his feet (`we`, `arose`) ───────────────────────────────
-
-/**
- * The page holding his feet (`we`): a strip of it torn up and laid across
- * both his feet, deep enough to cover their soles' ink, pinning them to it, from his feet's middle, Board pixels:
- * whole, and as the two halves it tears into between his feet as they come
- * free (the far one first), each about its own middle.
- */
 const HOLD: ReadonlyArray<Pt> = [
   [-78, -22],
   [-40, -28],
@@ -1167,11 +990,6 @@ const HOLD_HALVES: readonly [ReadonlyArray<Pt>, ReadonlyArray<Pt>] = [
 ];
 const HALF_MIDDLE: Pt = [40, -4];
 
-/**
- * How the halves fly as the strip tears: how far out, how high they lift,
- * how far they fall back, how far they turn; when they have gone (shares of
- * the tear); the shadow the strip lays on the page, lifted off it.
- */
 const TEAR_OFF = {
   out: 46,
   lift: 40,
@@ -1180,14 +998,8 @@ const TEAR_OFF = {
   gone: [0.45, 1],
   shadow: 0.85,
 } as const;
-/** The strip's paper: the page's own, turned up to the light, so paler than the sheet it lies on. */
 const HOLD_PAPER: Hex = mix(C.cream, C.peachTop, 0.1);
 
-/**
- * The page over his feet, his feet's middle at `feet`: a strip of it laid
- * across both, holding them fast; `tear` of the way torn, split between his
- * feet and its halves flown off to the sides and fallen, gone.
- */
 export const hold = (ctx: CanvasRenderingContext2D, feet: Pt, tear: number, hand: Hand) => {
   const strip = (pts: ReadonlyArray<Pt>, h: Hand, alpha: number) =>
     piece(ctx, pts, HOLD_PAPER, h, {
@@ -1227,10 +1039,8 @@ export const hold = (ctx: CanvasRenderingContext2D, feet: Pt, tear: number, hand
   });
 };
 
-/** A stroke of the current path, not recorded as ink over a face (a prop's own line). */
 const unprobedStroke = (ctx: CanvasRenderingContext2D) => unprobed(ctx, () => ctx.stroke());
 
-/** `a` (0..1) as two hex digits, for a colour's alpha. */
 const alphaHex = (a: number) =>
   Math.round(Math.min(1, Math.max(0, a)) * 255)
     .toString(16)

@@ -1,11 +1,7 @@
-// The film's cardboard city under the teal sky: the title's, and the
-// landing's (`rain`, `thesis`), one layout from the same rows and seeds.
-
 import { type Camera, type Pt, at, multiplane, rectShape, sky } from '@manna/film/canvas';
 import { lerp, rng } from '@manna/film/core';
 import { C, type Hands, christ, person, piece } from './kit.ts';
 
-/** The landing sky: teal at the top warming to yellow at the horizon. */
 export const landingSky = (ctx: CanvasRenderingContext2D, w: number, h: number) =>
   sky(ctx, w, h, [
     [0, C.tealTop],
@@ -37,7 +33,6 @@ const CITY_BACK = row(1888, [110, 210], [300, 520], [-20, -4]);
 export const CITY_FRONT = row(1889, [150, 260], [170, 340], [-10, 18]).map((b, i, all) =>
   all.findIndex((c) => c.x > 1300) === i ? { ...b, top: 830 } : b,
 );
-/** The rooftop the title's figure stood on. */
 export const ROOF = CITY_FRONT.find((b) => b.x > 1300) ?? { x: 1400, w: 200, top: 830 };
 
 const WINDOWS = CITY_FRONT.flatMap((b, i) => {
@@ -49,7 +44,6 @@ const WINDOWS = CITY_FRONT.flatMap((b, i) => {
   return out;
 });
 
-/** The back row; `up` holds it that far below its place, for the title's rise. */
 export const cityBack = (ctx: CanvasRenderingContext2D, hand: Hands, up = 0) =>
   CITY_BACK.forEach((b, i) =>
     piece(
@@ -67,7 +61,6 @@ export const cityBack = (ctx: CanvasRenderingContext2D, hand: Hands, up = 0) =>
     ),
   );
 
-/** The front row, its windows and the ground; `up` as for `cityBack` (the ground stays). */
 export const cityFront = (ctx: CanvasRenderingContext2D, hand: Hands, up = 0) => {
   CITY_FRONT.forEach((b, i) =>
     piece(
@@ -100,12 +93,6 @@ export const cityFront = (ctx: CanvasRenderingContext2D, hand: Hands, up = 0) =>
   });
 };
 
-/**
- * The landing's rooftop (`thesis`, and `end` under the credits): the city
- * through `cam`, the figure in the robe and Christ sitting on the roof's edge
- * the title's figure stood on, their legs over it, turned `turn` (0..1) to
- * each other.
- */
 export const rooftop = (
   ctx: CanvasRenderingContext2D,
   w: number,
@@ -121,7 +108,6 @@ export const rooftop = (
       lift: 1.4,
       draw: () => {
         cityFront(ctx, hand);
-        // Sitting on the roof's edge, their legs over it.
         at(ctx, { x: ROOF.x + 34, y: ROOF.top, scale: 0.68 }, () =>
           christ(
             ctx,

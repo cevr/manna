@@ -1,11 +1,3 @@
-// Every cast member's named gaps (`<member>/cutout/cut.ts` `GAPS`, through
-// `cutTable`) against his kept sheets: each gap's point lies in a piece of
-// paper the view's ink encloses, read on the kept crop as a framed view's
-// figure is, and that piece's box is the box the gap names. A gap whose piece
-// moves or vanishes (the sheet redrawn, the frame moved, the paper reading
-// changed) fails here, where its view would otherwise hold the ground its
-// kept sheet shows open.
-
 import { enclosedPaperOf } from '@manna/film/core';
 import { Glob } from 'bun';
 import { Effect, Option, Record as Records } from 'effect';
@@ -15,7 +7,6 @@ import type { CutFrame, CutGap } from './table.ts';
 
 const SRC = `${import.meta.dir}/../..`;
 
-/** A member's cut table as this test reads it; a member who names no gap may export no `GAPS`. */
 interface CutModule {
   readonly FRAMES: Readonly<Record<string, CutFrame>>;
   readonly GAPS?: Readonly<Record<string, ReadonlyArray<CutGap>>>;
@@ -26,7 +17,6 @@ const MEMBERS = [
   ...new Glob('films/*/cast/*/cutout/cut.ts').scanSync(SRC),
 ].toSorted();
 
-/** A view's kept crop: its kept sheet's pixels in its kept box. */
 const keptOf = (file: string, view: string, frame: CutFrame) => {
   const [x0, y0, x1, y1] = frame.kept;
   const sheet = Option.match(
@@ -51,7 +41,6 @@ const keptOf = (file: string, view: string, frame: CutFrame) => {
   );
 };
 
-/** Each of a member's named gaps: where it is, and the boxes of the enclosed paper pieces its point opens on its kept crop. */
 const gapsOf = (file: string) =>
   Effect.gen(function* () {
     const cut = yield* Effect.promise((): Promise<CutModule> => import(`${SRC}/${file}`));
@@ -59,7 +48,6 @@ const gapsOf = (file: string) =>
     return yield* Effect.forEach(views, ([view, gaps]) =>
       Effect.gen(function* () {
         const frame = cut.FRAMES[view];
-        // a bust's figure is read on its padded view closed by an ink row, not on its kept crop
         expect({ file, view, sheet: frame?.sheet }).not.toEqual({ file, view, sheet: 'heads' });
         const kept = yield* Option.match(Option.fromUndefinedOr(frame), {
           onNone: () => Effect.die(`${file}: ${view} names gaps and has no frame`),
@@ -84,7 +72,6 @@ describe('every named gap', () => {
       const read = (yield* Effect.forEach(MEMBERS, gapsOf)).flat(2);
       for (const { opened, box, ...gap } of read)
         expect({ ...gap, opened }).toEqual({ ...gap, opened: [box] });
-      // the 13 gaps the kept sheets show, found at 1:1 over every enclosed paper piece
       expect(read.length).toBe(13);
     }),
   );

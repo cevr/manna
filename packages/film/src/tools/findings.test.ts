@@ -1,7 +1,3 @@
-// One report for every leg: each finding levelled by `levelOf` and addressed
-// by `addressOf` (its part of the film and film second), as `check --json`
-// prints it.
-
 import { describe, expect, test } from 'bun:test';
 import { type Address, sceneAddress as scene } from '../core/address.ts';
 import { ActName } from '../core/address-schema.ts';

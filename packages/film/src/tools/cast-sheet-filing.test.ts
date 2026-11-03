@@ -1,13 +1,3 @@
-// A cast keep filed, its try cut by a stand-in that reads the try's file:
-// a kept sheet is replaced only on the owner's answer (a keep of a kind kept
-// already that does not ask to replace it, a replace that names no ask and a
-// replace of a kind not kept are each refused before the try is read); a
-// replace whose try is missing or does not cut leaves every file as it was;
-// a replace stopped at any write leaves the record's files in place and a
-// retry finishes it; a member that keeps some views of its sheet keeps the
-// same views; and replaces on one day each set the old keep aside in a
-// folder of its own.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { ConfigProvider, Effect, Exit, FileSystem, Layer, Option, Path, Schema } from 'effect';
 import { type CastKept, CastSheetJson, type CastSheetRecord } from '../core/cast-record.ts';
@@ -51,7 +41,6 @@ const recordKeeping = (kept: CastKept): CastSheetRecord => ({
 });
 const record = recordKeeping(keptOf(1, [1, 2]));
 
-/** The folder as the record keeps try 1: its sheet and both views on disk, and tries 1, 2 and a bad 4 drawn (3 never landed). */
 const folderOf = (held: CastSheetRecord) =>
   new Map<string, Uint8Array>([
     [RECORD, text(Schema.encodeSync(CastSheetJson)(held))],
@@ -79,7 +68,6 @@ const read = (files: Map<string, Uint8Array>, file: string) =>
 const recordIn = (files: Map<string, Uint8Array>) =>
   Schema.decodeSync(CastSheetJson)(read(files, RECORD));
 
-/** The try's file read and cut into both slots, each view's crop its sheet's words and its number; a try that reads `bad` does not cut. */
 const keep = (n: number, replace = true, ask: Option.Option<string> = Option.some(`b${n}`)) =>
   fileCastKeep(
     { folder: FOLDER },
@@ -102,15 +90,12 @@ const keep = (n: number, replace = true, ask: Option.Option<string> = Option.som
       }),
   );
 
-/** Try 2 replacing the keep over the file system `fs`. */
 const replaceOver = <E, R>(fs: Layer.Layer<FileSystem.FileSystem, E, R>) =>
   keep(2).pipe(Effect.provide(storeOver(fs)));
 
-/** The keep's failure as its message reads, or the empty string when it kept. */
 const refusal = <A, E, R>(self: Effect.Effect<A, E, R>) =>
   Effect.map(Effect.exit(self), (exit) => (Exit.isFailure(exit) && String(exit.cause)) || '');
 
-/** The old keep's files where the record's history says it went. */
 const historyOf = (files: Map<string, Uint8Array>, k: number) => {
   const folder = `${FOLDER}/${recordIn(files).replaced?.[k]?.folder}`;
   return [

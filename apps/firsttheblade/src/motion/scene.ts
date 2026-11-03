@@ -1,31 +1,15 @@
-/**
- * The stills set moving: the field's wind and light, and the night's stars
- * (`./shaders.ts`), each a WebGL2 canvas laid over its picture. Loaded only
- * when the reader has not asked for less motion (`../client.tsx`).
- *
- * The canvas shows once its first frame is drawn, and its first frame is the
- * still itself, so the picture never jumps. It draws only while it is on the
- * screen and the tab is shown; its time stands still between. When the
- * reader asks for less motion, every canvas is taken away and the stills
- * stay. A browser with no WebGL2, or a shader it cannot build, keeps the
- * still.
- */
 import { Data, Effect } from 'effect';
 
 import fieldWind from '../art/field-wind.png';
 import { coverMap, positionOf } from './cover.ts';
 import { FIELD_FRAGMENT, NIGHT_FRAGMENT, VERTEX } from './shaders.ts';
 
-/** How long the motion takes to grow in from the still, in seconds. */
 const RAMP = 2.5;
-/** The most pixels a canvas draws per CSS pixel. */
 const MOST_DENSITY = 2;
-/** The longest step one frame advances the time by, in seconds, so a stalled frame does not jump. */
 const LONGEST_STEP = 0.05;
 
 class Unmoved extends Data.TaggedError('Unmoved')<{ readonly reason: string }> {}
 
-/** A still and how it moves: its shader, the maps the shader reads beside the still (`u_wind`), and whether the still is read at smaller sizes too. */
 interface Kind {
   readonly selector: string;
   readonly fragment: string;
@@ -84,7 +68,6 @@ const program = Effect.fn('Motion.program')(function* (
   return made;
 });
 
-/** A texture on its own unit, bound there for the context's life: `upload` puts a picture in it, the same texture each time. */
 const texture = (gl: WebGL2RenderingContext, unit: number, mipmaps: boolean) => {
   gl.activeTexture(gl.TEXTURE0 + unit);
   gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
@@ -102,7 +85,6 @@ const texture = (gl: WebGL2RenderingContext, unit: number, mipmaps: boolean) => 
   };
 };
 
-/** The canvas's WebGL2 context, given back to the browser when the scene ends rather than left for the collector. */
 const context = (canvas: HTMLCanvasElement) =>
   Effect.acquireRelease(
     Effect.fromNullishOr(
@@ -111,7 +93,6 @@ const context = (canvas: HTMLCanvasElement) =>
     (gl) => Effect.sync(() => gl.getExtension('WEBGL_lose_context')?.loseContext()),
   );
 
-/** The canvas, laid over its picture as the picture's next sibling, and taken away when the scene ends. */
 const overlay = (picture: HTMLImageElement) =>
   Effect.acquireRelease(
     Effect.sync(() => {
@@ -124,14 +105,12 @@ const overlay = (picture: HTMLImageElement) =>
     (canvas) => Effect.sync(() => canvas.remove()),
   );
 
-/** A listener added for the scene's life. */
 const listening = <T extends EventTarget>(target: T, type: string, listener: () => void) =>
   Effect.acquireRelease(
     Effect.sync(() => target.addEventListener(type, listener)),
     () => Effect.sync(() => target.removeEventListener(type, listener)),
   );
 
-/** The frame loop's state: whether it may draw, how far its time has come, and the last frame's time (the frame clock's, or -1 when it has just started or resumed). */
 interface Clock {
   seen: boolean;
   time: number;
@@ -139,7 +118,6 @@ interface Clock {
   frame: number;
 }
 
-/** One still, moving until the scene's scope closes or its context is lost; its rays turn only when `turning`. */
 const scene = Effect.fn('Motion.scene')(function* (
   picture: HTMLImageElement,
   kind: Kind,
@@ -160,7 +138,6 @@ const scene = Effect.fn('Motion.scene')(function* (
   const uMap = gl.getUniformLocation(made, 'u_map');
   const uTime = gl.getUniformLocation(made, 'u_time');
   const uRamp = gl.getUniformLocation(made, 'u_ramp');
-  // Set once, so the rays never jump from a swing back to rest mid-scene; a shader without the uniform ignores it.
   gl.uniform1f(gl.getUniformLocation(made, 'u_turning'), Number(turning));
 
   const fit = () => {
@@ -222,18 +199,15 @@ const scene = Effect.fn('Motion.scene')(function* (
     (observers) => Effect.sync(() => observers.forEach((observer) => observer.disconnect())),
   );
   yield* listening(document, 'visibilitychange', update);
-  // A wider box can have the picture fetch a larger file: the canvas reads it too, into the same texture.
   yield* listening(picture, 'load', () => {
     still.upload(picture);
     draw();
   });
-  // A lost context ends the scene: the canvas is taken away and the still shows.
   yield* Effect.callback<void>((resume) => {
     canvas.addEventListener('webglcontextlost', () => resume(Effect.void), { once: true });
   });
 });
 
-/** Waits until the reader asks for less motion (the query `../client.tsx` matched). */
 const lessMotion = (query: MediaQueryList) =>
   Effect.callback<void>((resume) => {
     const changed = () => {
@@ -243,11 +217,6 @@ const lessMotion = (query: MediaQueryList) =>
     return Effect.sync(() => query.removeEventListener('change', changed));
   });
 
-/**
- * Every still on the page set moving, until the reader asks for less motion:
- * `less` is the query for it, and `turning` whether the hero's rays turn
- * (`raysTurn`), both matched by the caller (`./query.ts`).
- */
 export const moveTheStills = (less: MediaQueryList, turning: boolean) =>
   Effect.suspend(() => {
     if (less.matches) return Effect.void;

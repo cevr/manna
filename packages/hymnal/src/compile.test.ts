@@ -12,7 +12,6 @@ import * as Fixture from './midi-fixture.js';
 
 type Voices = readonly [Fixture.Voice, Fixture.Voice, Fixture.Voice, Fixture.Voice];
 
-/** The voices' first `beats` beats: an intro, as the hymnal's files open. */
 const opening = (voice: Fixture.Voice, beats: number): Fixture.Voice => {
   const out: Array<readonly [number, number]> = [];
   let beat = 0;
@@ -24,7 +23,6 @@ const opening = (voice: Fixture.Voice, beats: number): Fixture.Voice => {
   return out;
 };
 
-/** A file laid out as the hymnal's are: an intro of the tune's opening, then `verses` verses in full. */
 const file = (
   voices: Voices,
   options: { verses: number; intro: number; meter: readonly [number, number]; fifths: number },
@@ -60,17 +58,14 @@ const source = (
   ],
   midi,
   held: extra.held,
-  // A case's refrain is sung after each stanza unless the case names its order.
   order: extra.order ?? (extra.refrain === undefined ? undefined : 'after-each'),
 });
 
-/** The part as sung, failing the test when it is plain. */
 const sung = (part: Part | undefined): Sung => {
   expect(part?._tag).toBe('Sung');
   return part as Sung;
 };
 
-/** Each line's syllables' chords at a level: `at: 0` first, then `~` and each later one; `.` for none. */
 const chordLines = (hymn: Hymn, part: Sung, level: 'full' | 'guitar') =>
   part.lines.map((line) =>
     line
@@ -83,7 +78,6 @@ const chordLines = (hymn: Hymn, part: Sung, level: 'full' | 'guitar') =>
       .join(' '),
   );
 
-/** Each line's syllables joined by `-` within a word and spaces between words. */
 const cuts = (part: Sung, joint = '-') =>
   part.lines.map((line) =>
     line
@@ -91,11 +85,6 @@ const cuts = (part: Sung, joint = '-') =>
       .join(''),
   );
 
-// ----------------------------------------------------------------------------
-// Hymn 1, "Praise to the Lord" (LOBE DEN HERREN), as the hymnal prints it
-// ----------------------------------------------------------------------------
-
-/** Bars 13 to 21, the third and fourth lines: soprano, alto, tenor, bass. */
 const praiseLines3and4: Voices = [
   [
     [72, 1],
@@ -190,7 +179,6 @@ const praiseLines3and4: Voices = [
   ],
 ];
 
-/** The whole tune: bars 1 to 6, the same again for the second line, then bars 13 to 21. */
 const praise = Fixture.praiseToTheLord.map((voice, i) => [
   ...voice,
   ...voice,
@@ -266,17 +254,6 @@ describe('compile: hymn 1', () => {
   );
 });
 
-// ----------------------------------------------------------------------------
-// The placement rules, on an invented tune in C, 4/4
-// ----------------------------------------------------------------------------
-
-/**
- * Two lines of four bars' time. Line 1 (beats 0-8): C, then G and a quarter
- * of G7 under a held note, C, then Am with an eighth of Fmaj7 under a held
- * note, Dm. A beat's rest (8-9) where the voices below play G7, held on into
- * line 2 (beats 9-16): G7, C, two eighths over G then C, a note over C and a
- * beat's rest over F, C.
- */
 const tune: Voices = [
   [
     [72, 1],
@@ -336,15 +313,8 @@ const tune: Voices = [
 
 const tuneFile = (verses: number) => file(tune, { verses, intro: 4, meter: [4, 4], fifths: 0 });
 
-/** Twelve ticks: less than the few ticks the files strike a chord's notes off the tune's. */
 const early = 1 / 32;
 
-/**
- * Two lines of a note a syllable (beats 0-8 and 8-16), a chord each two
- * beats: C F G C, F C G C. The voices below change to F `early` before the
- * tune's third note, over a C the tune holds that F contains. The tune ends
- * a beat early, and the voices below play G in that last rest.
- */
 const steps: Voices = [
   [
     [60, 1],
@@ -401,7 +371,6 @@ const steps: Voices = [
 
 const stepsFile = (verses: number) => file(steps, { verses, intro: 4, meter: [4, 4], fifths: 0 });
 
-/** Each syllable as `text/notes/beats:` and its full chords, each `chord@at`. */
 const placed = (hymn: Hymn, part: Sung) =>
   part.lines.map((line) =>
     line
@@ -422,11 +391,7 @@ describe('compile: where a chord goes', () => {
         const stanza = sung(hymn.stanzas[0]);
         expect(stanza.level).toBe('syllable');
         expect(placed(hymn, stanza)).toEqual([
-          // "we": G7 a quarter in stays at beat 1; "to": the eighth of Fmaj7 folds into Am.
           'Sing/1/1:C@0 we/1/2:G@0,G7@1 now/1/1:C@0 to/1/2:Am@0 God,/1/2:Dm@0',
-          // The G7 in the rest before line 2 is not God's; Lord carries it, sounding when it starts.
-          // "all": the change on the melisma's second note, at the first note's length.
-          // "light": the F in the rest after it, at its length (no change at its start: C still sounds).
           'Lord/1/1:G7@0 of/1/1:C@0 all/2/1:G@0,C@0.5 light/1/1:F@1 now/1/2:C@0',
         ]);
       }),
@@ -434,8 +399,6 @@ describe('compile: where a chord goes', () => {
 
   it.effect('shows no neighbour chord over a held bass between two equal chords', () =>
     Effect.gen(function* () {
-      // Over a held G: C/G, then F/G for a beat (no chord names G A C F; the notes above G are F), then C/G.
-      // A line over C first: a verse holds eight notes at least.
       const pedal: Voices = [
         [
           [60, 1],
@@ -518,8 +481,6 @@ describe('compile: where a chord goes', () => {
 });
 
 describe('compile: where a guitarist strikes', () => {
-  // The tune is in 3/4, and its intro is two of its bars: a file that says 4/4 counts its bars from
-  // the intro's first tick, so its strong beats fall where the tune does not lean.
   const misread = compile(
     source(file(praise, { verses: 2, intro: 6, meter: [4, 4], fifths: -1 }), praiseText),
   );
@@ -538,17 +499,9 @@ describe('compile: where a guitarist strikes', () => {
       }),
   );
 
-  /**
-   * Two lines of 4/4 a melody leans on, a half note a syllable on each
-   * strong beat. Line 1 closes on C, then G on beat 1 of bar 4, held through
-   * a rest on beat 2 that the next strong beat falls in. Line 2 opens on a C
-   * pickup on beat 3, a chord other than line 1's last but the same as its
-   * first.
-   */
   const C = [64, 55, 48] as const;
   const F = [65, 60, 41] as const;
   const G = [62, 59, 43] as const;
-  /** [beats, chord below, melody key (0 a rest)] for each note of the verse. */
   const verse: ReadonlyArray<readonly [number, readonly [number, number, number], number]> = [
     [2, C, 72],
     [2, C, 67],
@@ -648,7 +601,6 @@ describe('compile: trust', () => {
       const words = 'Sing we now to God,\nLord of all light now';
       const file = yield* compile(source(tuneFile(2), [words, words]));
       const hymn = yield* compile(source(tuneFile(2), [words, words, words]));
-      // The file's own count stays, so the loop shows as fewer verses than stanzas.
       expect(hymn.verses).toEqual({ text: 3, midi: 2, exact: true });
       const parts = hymn.stanzas.map(sung);
       expect(parts.map((part) => [part.level, part.why])).toEqual([
@@ -657,8 +609,6 @@ describe('compile: trust', () => {
         ['syllable', []],
       ]);
       expect(parts[2]?.lines).toEqual(parts[1]?.lines);
-      // Every line is played: stanza 3 on a pass of the last verse, from its start to the
-      // file's end, after the file's end.
       const timing = hymn.timing;
       const lines = timing?.lines ?? [];
       expect(lines.map((line) => line.played)).toEqual([true, true, true, true, true, true]);
@@ -745,7 +695,6 @@ describe('compile: trust', () => {
           source(stepsFile(2), [stanzas[1] ?? '', stanzas[1] ?? ''], refrain),
         );
         expect(ends.refrain?.order).toBe('first-and-last');
-        // Stanza 1 is laid without the refrain, as the file plays it; the refrain is laid after stanza 2.
         expect(ends.stanzas[0]).toEqual(alone.stanzas[0]);
         expect(ends.stanzas[0]).not.toEqual(each.stanzas[0]);
         expect(ends.stanzas[1]).toEqual(each.stanzas[1]);
@@ -756,8 +705,6 @@ describe('compile: trust', () => {
         expect(placed(ends, sung(ends.refrain?.part))).not.toEqual(
           placed(each, sung(each.refrain?.part)),
         );
-        // Sung after the last stanza alone (1 2 R): laid as first and last; before each: as after each.
-        // The timing follows the sung order, so it alone differs.
         const last = yield* compile(
           source(stepsFile(2), stanzas, { ...refrain, order: 'after-last' }),
         );
@@ -780,10 +727,8 @@ describe('compile: trust', () => {
   );
 });
 
-/** The independent captured source, read as the compile script reads it. */
 const hymnal = layerSourceText.pipe(Layer.provide(BunServices.layer));
 
-/** A part's first line as sung or printed. */
 const firstLine = (part: Part | undefined) =>
   part?._tag === 'Sung' ? cuts(part, '')[0] : part?.lines[0];
 
@@ -899,7 +844,6 @@ describe('compile: verse layout', () => {
   );
 });
 
-/** A part's lines as words: a sung line's syllables joined by word, its spaces collapsed. */
 const wordsOf = (part: Part): string[] =>
   (part._tag === 'Sung' ? cuts(part, '') : [...part.lines]).map((line) =>
     line.trim().replace(/\s+/g, ' '),

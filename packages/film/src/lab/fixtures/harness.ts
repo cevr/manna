@@ -1,12 +1,3 @@
-// The lab's browser tests: the ask page (`openAsk`, the real `mountAsk` in
-// `fixtures/ask-page.ts`) bundled with Solid's compiler, served to a tab of
-// the test process's Chrome (`browsers.ts`) at its own origin, with the lab
-// API answered by routes the test gives (then the defaults below). Every
-// request the page makes is kept, so a test can read what the lab wrote. The
-// render page (`openRender`) is served the same way, and a page rendered on
-// the server and hydrated (`openServed`) too; the ask's videos are real
-// media (`TONE`) unless a test says not.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
   Array as Arr,
@@ -36,29 +27,18 @@ import { type Request, type Response, type Tab } from './tab.ts';
 
 const API = `/api/films/${PROBE}`;
 
-/**
- * The film seconds the page's URL names, as a page-side expression: its
- * `#t=`. The one reader of the time in the URL the browser tests poll.
- */
 export const URL_T = `Number(new URLSearchParams(location.hash.slice(1)).get('t'))`;
 
-/** A JSON value, as the fake server answers and the page posts. */
 export type Json = Schema.Json;
 
 const JsonText = Schema.fromJsonString(Schema.Json);
 
-/** A request the page made to the lab API. */
 export interface Asked {
   readonly method: string;
   readonly path: string;
   readonly body: Option.Option<Json>;
 }
 
-/**
- * How a fake route answers: JSON with a status, a refusal as the server
- * answers it, text, or what an effect makes (the lab's own handler, run in
- * the test).
- */
 type Answer =
   | { readonly _tag: 'Json'; readonly status: number; readonly json: Json }
   | { readonly _tag: 'Refused'; readonly refusal: Refusal }
@@ -75,47 +55,27 @@ export const json = (value: Json, status = 200): Answer => ({
   status,
   json: value,
 });
-/** A refusal as the server answers it: its JSON, at the status the contract gives it. */
 export const refused = (refusal: Refusal): Answer => ({ _tag: 'Refused', refusal });
 export const text = (value: string, status: number): Answer => ({
   _tag: 'Text',
   status,
   text: value,
 });
-/** Never answered: a long-poll that is still waiting. */
 export const hold: Answer = { _tag: 'Hold' };
-/** Answered `then` once `gate` is done: a request the test lets land after others. */
 export const later = (gate: Deferred.Deferred<void>, then: Answer): Answer => ({
   _tag: 'Later',
   gate,
   then,
 });
-/** A file on disk, its type read from its name (a fixture video). */
 export const file = (path: string): Answer => ({ _tag: 'File', path });
-/** What `made` answers once it has run: a route the lab's own handler answers, in the test. */
 export const madeBy = (made: Effect.Effect<Answer>): Answer => ({ _tag: 'Made', made });
-/** `found` once made: what its `madeBy` effects make, run in turn; any other answer as it is. */
 const madeOf = (found: Answer): Effect.Effect<Answer> => {
   if (found._tag === 'Made') return Effect.flatMap(found.made, madeOf);
   return Effect.succeed(found);
 };
-/**
- * `then`, with `tell` run once it is made: a route that tells the case it was
- * asked (`Deferred.done(asked, Exit.void)`). Completing a `Deferred` runs the
- * case waiting on it at once, inside the call, so a case told before the
- * answer is made could change what the answer says. `then` is made first: a
- * `madeBy` once its effect has run, a `later` before its gate (its answer is
- * made already, and the gate is the case's to open). Every tell in a fake
- * route goes through here (`film/told-after-answer`).
- */
 export const told = (tell: Effect.Effect<unknown>, then: Answer): Answer =>
   madeBy(Effect.tap(madeOf(then), () => tell));
-/**
- * Ten seconds of tone (`tone.ts`): the real media every fixture player plays
- * (its videos, its mixes), its time moving on the media's own clock.
- */
 export const TONE: Answer = { _tag: 'Wav', bytes: tone(10, 0.1) };
-/** A 16 × 9 paper-coloured PNG: the picture a fake Board try answers with. */
 export const PANEL_PNG: Answer = {
   _tag: 'Png',
   bytes: Result.getOrThrow(
@@ -125,11 +85,6 @@ export const PANEL_PNG: Answer = {
   ),
 };
 
-/**
- * A fake lab route: the method, the path under `/api/films/probe` it
- * matches, its answer, and how long the answer takes (none by default; a
- * read the real lab makes in a fresh process takes about a second).
- */
 export interface FakeRoute {
   readonly method: 'GET' | 'POST';
   readonly path: RegExp;
@@ -144,7 +99,6 @@ export const route = (
   after: Duration.Input = Duration.zero,
 ): FakeRoute => ({ method, path, answer, after: Duration.fromInputUnsafe(after) });
 
-/** A try of the probe film's board, made at one time. */
 const probeTry = (beat: string, at: string, n: number): Json => ({
   n,
   file: `${beat}.${at}.${n}.png`,
@@ -154,13 +108,6 @@ const probeTry = (beat: string, at: string, n: number): Json => ({
   at: '2026-10-14T00:00:00.000Z',
 });
 
-/**
- * The probe film's board as the lab reads it (`GET …/board`): beat one held
- * from its start (two tries, the first kept), a card from `rise` and a
- * picture from `fall` (two tries, none kept); beat two with no panel (the
- * animatic's storyboard card); beat three a verse from `near`. Its images
- * are never served: a thumb shows the try's place.
- */
 const probeBoard: Json = {
   film: PROBE,
   panels: [
@@ -201,37 +148,23 @@ const probeBoard: Json = {
   approvals: [],
 };
 
-/** Where the probe film's face is asked for (`PROBE_FACE`): the review's files route. */
 export const PROBE_FACE_PATH = /^\/api\/review\/files\/probe-face\.woff2$/;
 
-/** The probe film's face's file: a subset of the words face's own, under another family. */
 export const PROBE_FACE_FILE = Bun.resolveSync(
   '@fontsource-variable/geist/files/geist-latin-ext-wght-normal.woff2',
   import.meta.dir,
 );
 
-/** What the render page reads of the probe film when no case says otherwise: its board (a Board picture's), its face. */
 const defaults: ReadonlyArray<FakeRoute> = [
   route('GET', /^\/board$/, () => json(probeBoard)),
   route('GET', PROBE_FACE_PATH, () => file(PROBE_FACE_FILE)),
 ];
 
-/**
- * A page's script (`entry`, beside this file), bundled for the browser with
- * Solid's compiler: read from the suite's fresh bundles, or built once when
- * running its test file directly, however many cases open the page.
- */
 export const bundleOf = (entry: string) => Effect.runSync(Effect.cached(bundled(entry)));
 
-/** A page's script (`entry`) as the asset `name` (`browsers.ts`). */
 const scriptAsset = (entry: string, name: string): Effect.Effect<Asset> =>
   Effect.map(bundled(entry), (js) => asset(name, respond(js, 'text/javascript')));
 
-/**
- * The ask page's script, the tokens and the player's styles: read as the
- * module loads, once per process, so no case's timeout counts
- * them (on a loaded runner the first cases spent 1-2 s waiting on them).
- */
 // oxlint-disable-next-line effect/noAsyncFunction -- the module's own load waits for its setup, so no case's timeout counts it
 const [askScript, tokens, playerCss] = await Effect.runPromise(
   Effect.all(
@@ -248,13 +181,10 @@ const [askScript, tokens, playerCss] = await Effect.runPromise(
   ),
 );
 
-/** The studio's tokens (`player/tokens.css`), as every page served here links them. */
 export const tokensCss: string = tokens;
 
-/** The styles `play.html` and `index.html` link: the tokens, then the player's. */
 const css = `${tokens}${playerCss}`;
 
-/** The `<meta>`s a page served at `build` carries (`lab-build`, `lab-server`); none unstamped. */
 const stampOf = (build: Option.Option<PageBuild>) =>
   Option.match(build, {
     onNone: () => '',
@@ -262,13 +192,11 @@ const stampOf = (build: Option.Option<PageBuild>) =>
       `<meta name="lab-build" content="${b.build}"><meta name="lab-server" content="${b.server}">`,
   });
 
-/** The page's JSON body, when it sent one. */
 const bodyOf = (request: Request): Option.Option<Json> =>
   Schema.decodeOption(JsonText)(request.body);
 
 const encodeRefusal = Schema.encodeSync(Schema.fromJsonString(Refusal));
 
-/** A file the fake server answers, its type read from its name. */
 const fileAnswer = (path: string) =>
   FileSystem.FileSystem.use((fs) => fs.readFile(path)).pipe(
     Effect.map((bytes) => respond(bytes, typeOfFile(path))),
@@ -276,7 +204,6 @@ const fileAnswer = (path: string) =>
     Effect.provide(BunServices.layer),
   );
 
-/** The media types of the files the tests answer with (a tone, as a fixture video's sound; a face; a real video; a still). */
 const TYPES = new Map([
   ['.wav', 'audio/wav'],
   ['.woff2', 'font/woff2'],
@@ -290,10 +217,6 @@ const typeOfFile = (path: string) =>
     () => 'application/octet-stream',
   );
 
-/**
- * `found` as the tab's server answers it: never, for a hold; after its gate,
- * for a later one; as what its effect makes, for a made one.
- */
 const answer = (found: Answer): Effect.Effect<Option.Option<Response>> => {
   if (found._tag === 'Hold') return Effect.succeedNone;
   if (found._tag === 'Later') return Effect.andThen(Deferred.await(found.gate), answer(found.then));
@@ -312,15 +235,8 @@ const answer = (found: Answer): Effect.Effect<Option.Option<Response>> => {
   );
 };
 
-/** A page of asks' path: `/api/asks/<ask>/page`. */
 const ASK_PAGE = /^\/api\/asks\/(a[0-9a-f]{10})\/page$/;
 
-/**
- * The page of asks a test's fakes do not answer: the ask's own route's
- * record as a page of one, as the lab keeps an ask that opened its page
- * and was joined by none, so a fake of one ask needs no page fake beside
- * it. Its refusals and failures are the page's.
- */
 const pageOfOne = (
   routes: ReadonlyArray<FakeRoute>,
   method: string,
@@ -347,25 +263,16 @@ const pageOfOne = (
       ),
   );
 
-/** Whether the lab's API declares a route a request reaches (`declares`, `core/api.ts`). */
 const declared = declares(LabHttpApi);
 
-/** The method a fake route answers a request by: a HEAD's is its GET's. */
 const asGet = (method: string): string => {
   if (method === 'HEAD') return 'GET';
   return method;
 };
 
-/**
- * A request to the API: kept in `asked` (its path past `prefix`) and
- * answered by the first of `routes` that matches it, or a 404. A fake that
- * matches a path `LabHttpApi` does not declare answers a 500 naming it: the
- * test would otherwise pass over a route the real server never serves.
- */
 const apiAnswer =
   (prefix: string, routes: ReadonlyArray<FakeRoute>, asked: Array<Asked>) =>
   (request: Request): Effect.Effect<Option.Option<Response>> => {
-    // Past `prefix` when under it (`/notes/wait`), else whole (`/api/review/build`).
     const under = Option.liftPredicate(request.url.pathname, (p) => p.startsWith(`${prefix}/`));
     const made: Asked = {
       method: request.method,
@@ -376,7 +283,6 @@ const apiAnswer =
       body: bodyOf(request),
     };
     asked.push(made);
-    // A HEAD is its GET's answer, as the lab's server answers it (the browser drops the body).
     const method = asGet(request.method);
     const found = Option.orElse(
       Option.fromUndefinedOr(routes.find((f) => f.method === method && f.path.test(made.path))),
@@ -398,19 +304,8 @@ const apiAnswer =
     });
   };
 
-/**
- * A UI face file as a fixture page asks for it, and its package: from the
- * pages' root, as the lab's build names it and its asset route answers it
- * (`bundles.ts`); a `geist-mono-` file is Geist Mono's, any other `geist-`
- * file Geist's.
- */
 const FACE_FILE = /^\/((geist-mono|geist)-[a-z0-9-]+\.woff2)$/;
 
-/**
- * The UI faces' files, as the lab's asset route answers them: fontsource's
- * file of the name asked, once `held` (when given) is done, so a test reads
- * the page while the faces have not landed.
- */
 const faceFiles =
   (held: Option.Option<Deferred.Deferred<void>>) =>
   (request: Request): Option.Option<Effect.Effect<Response>> =>
@@ -421,11 +316,6 @@ const faceFiles =
       ),
     );
 
-/**
- * A page's fake server: the page a path serves (its HTML and its script),
- * the UI faces' files (`faceFiles`, held by `faceHeld` when given), then the
- * API (`apiAnswer`).
- */
 const fakeServer =
   (
     pageFor: (request: Request) => Option.Option<Effect.Effect<Response>>,
@@ -440,7 +330,6 @@ const fakeServer =
       onNone: () => apiAnswer(prefix, routes, asked)(request),
     });
 
-/** What `answer` makes of each request for `name`, on every path the real server serves it on (`pageAt`, `core/api.ts`). */
 const servedBy =
   (name: AppPage, answer: (request: Request) => Effect.Effect<Response>) =>
   (request: Request): Option.Option<Effect.Effect<Response>> =>
@@ -449,41 +338,24 @@ const servedBy =
       answer(request),
     );
 
-/** `html` on every path the real server serves `name` on. */
 const servedAs = (name: AppPage, html: Response) => servedBy(name, () => Effect.succeed(html));
 
-/**
- * A page open in a tab of its own: the tab, what it asked of its server, and any
- * page errors: what it threw and every console warning or error (Solid's
- * reactivity diagnostics are warnings), which also fail the case as it ends.
- */
 interface OpenPage {
   readonly page: Tab;
   readonly asked: ReadonlyArray<Asked>;
   readonly errors: ReadonlyArray<string>;
 }
 
-/**
- * A page's window: its size, and with `coarse` a phone's pointer (touch
- * emulation, so `(pointer: coarse)` matches); none, a mouse.
- */
 export interface Viewport {
   readonly width: number;
   readonly height: number;
   readonly coarse?: boolean;
 }
 
-/** A desk's window, as the studio is checked on a laptop: 1440 × 900, with a mouse. */
 export const DESK: Viewport = { width: 1440, height: 900 };
 
-/** A phone's window, as the studio is designed for first: 390 × 844, with a finger. */
 export const PHONE: Viewport = { width: 390, height: 844, coarse: true };
 
-/**
- * The player's page as the app's `index.html` has it, with its styles inline,
- * stamped with the build it was served at when the test gives one: then the
- * studio waits for a newer one.
- */
 const playerPage = (
   style: string,
   script: Asset,
@@ -491,15 +363,8 @@ const playerPage = (
 ) =>
   `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${style}</style>${stampOf(build)}</head><body>${scriptOf(script)}</body></html>`;
 
-/** The render page's script over the probe and crowd films: built the first time a case asks for it. */
 const renderScript = Effect.runSync(Effect.cached(scriptAsset('render-page.ts', 'render.js')));
 
-/**
- * Open a film's export page (`fixtures/render-page.ts`, the real
- * `mountRender`) at `href`, served on the place the lab serves the render
- * page on and nowhere else, as the easel's own Chrome opens it (its window,
- * 1920 × 1080), and wait until its handle is on `window.__film`.
- */
 export const openRender = Effect.fn('lab.fixture.render')(function* (href: string) {
   const script = yield* renderScript;
   const asked: Array<Asked> = [];
@@ -525,54 +390,23 @@ export const openRender = Effect.fn('lab.fixture.render')(function* (href: strin
   return open;
 });
 
-/** The ask page, stamped with the build it was served at when the test gives one. */
 const askHtml = (script: Asset, build: Option.Option<PageBuild>) =>
   `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${tokens}</style>${stampOf(build)}</head><body>${scriptOf(script)}</body></html>`;
 
-/** Where the ask page opens, and how wide its window is (a phone's, or a desk's). */
 interface AskAt {
-  /** The link opened (`pageHref`, `core/api.ts`): the probe's page of asks when none. */
   readonly href?: string;
   readonly viewport?: Viewport;
-  /** The build the page was served at, as the lab stamps it; none: unstamped (it hears no mixes). */
   readonly build?: PageBuild;
-  /**
-   * A served page's render, cut this long after it began if it has not ended
-   * (`rendered`), as the lab cuts one; none: each render ends.
-   */
   readonly cut?: Duration.Input;
-  /**
-   * A served page's open waits for it to have mounted, not loaded: a test
-   * that holds a file the page's load waits for (a face it asks for) reads
-   * the page meanwhile. None: it has loaded too.
-   */
   readonly mountedOnly?: boolean;
-  /**
-   * The UI faces' files held until this is done: the page laid out and read
-   * in the face's fallback, then the face landing. None: answered at once.
-   */
   readonly faceHeld?: Deferred.Deferred<void>;
-  /**
-   * The page's clock stopped before its first script runs: its timers wait
-   * until the test runs the clock on (`clock.release`), so a case reads the
-   * page before a timer the page set at its load (a cap) has fired.
-   */
   readonly clockStopped?: boolean;
 }
 
-/** What the ask page's material reads when no case says otherwise: a video's bytes, its tone. */
 const askDefaults: ReadonlyArray<FakeRoute> = [
   route('GET', /^\/api\/review\/(files|phone)\/[^?]*\.mp4/, () => TONE),
 ];
 
-/**
- * Open the ask page (`fixtures/ask-page.ts`, the real `mountAsk`) at `href`
- * (an ask's, or a page of asks'), served on every ask place as the lab
- * serves it, with `routes` answering its requests by their whole path
- * (`/api/asks/<id>/page`, `/api/review/files/…`): what none answers is a
- * 404. The browser plays media without a gesture, its clock is the test's,
- * and the tab goes back to the pool with the scope.
- */
 export const openAsk = Effect.fn('lab.fixture.ask')(function* (
   routes: ReadonlyArray<FakeRoute>,
   at: AskAt & { readonly href: string },
@@ -596,21 +430,11 @@ export const openAsk = Effect.fn('lab.fixture.ask')(function* (
   const open: OpenPage = { page, asked, errors: page.errors };
   return open;
 });
-/** A page the tests serve rendered on the server. */
 export type ServedName = 'ask';
 
-/**
- * A page as the tests serve it rendered: its server entry, bundled as the
- * lab bundles it, and its script with Solid's development build (it warns of
- * a hydration mismatch), each once, when a test first asks; its HTML entry
- * as the app has it; the API its reads and requests go to (by their path
- * past `prefix`, then the lab's `defaults` after the test's own routes); and
- * the link it opens at.
- */
 interface ServedPage {
   readonly render: Effect.Effect<PageRender>;
   readonly script: Effect.Effect<Asset>;
-  /** The page's HTML, stamped with the build it was served at when the test gives one. */
   readonly html: (script: Asset, build: Option.Option<PageBuild>) => string;
   readonly prefix: string;
   readonly defaults: ReadonlyArray<FakeRoute>;
@@ -628,16 +452,13 @@ const SERVED: Readonly<Record<ServedName, ServedPage>> = {
   },
 };
 
-/** A page's render, whole: its head, its body's class and its markup. */
 interface Rendered {
   readonly head: string;
   readonly bodyClass: string;
   readonly body: string;
-  /** The markup as the render wrote it, piece by piece: what a browser could paint first is the first. */
   readonly pieces: ReadonlyArray<string>;
 }
 
-/** The fake server's answer as the render's fetch resolves it. */
 const fetched = (response: Response): globalThis.Response =>
   new globalThis.Response(
     new Blob([
@@ -652,15 +473,6 @@ const fetched = (response: Response): globalThis.Response =>
     },
   );
 
-/**
- * `render` of the page at `url` for a browser that keys as a Mac or not
- * (`mac`, as the lab reads it from the request), whole, its reads answered by `read` (a
- * GET of the path, as the lab answers a render's reads); a held read holds
- * it, and a failed render fails the test. Given `cut`, a render still under
- * way that long after it began is cut as the lab cuts one (`END_WAIT`,
- * `tools/page-render.ts`): stopped, its markup what it wrote and the mark
- * of a cut (`PAGE_CUT_MARK`).
- */
 const rendered = (
   render: PageRender,
   url: URL,
@@ -689,7 +501,6 @@ const rendered = (
     });
   });
 
-/** The `User-Agent` a request was sent with, by its name in any case; empty when it has none. */
 const agentOf = (request: Request): string =>
   Option.getOrElse(
     Option.fromUndefinedOr(
@@ -698,17 +509,11 @@ const agentOf = (request: Request): string =>
     () => '',
   );
 
-/** What a render has written so far: its head, and each piece of its markup in order. */
 interface Written {
   head: string;
   readonly body: Array<string>;
 }
 
-/**
- * A render's fetch over `read`: a GET of the URL asked, as the lab answers a
- * render's reads (the render's client asks at the page's origin, so every
- * read's URL is whole); a held read never resolves.
- */
 const readsOf =
   (read: (request: Request) => Effect.Effect<Option.Option<Response>>) =>
   (input: RequestInfo | URL) =>
@@ -719,12 +524,6 @@ const readsOf =
       ),
     );
 
-/**
- * The fetch a server render of page `name` reads its film with, answered as
- * `openServed` answers it: by `routes`, then the page's defaults, each read
- * kept in `read` (its path past the page's API prefix); a read no route
- * answers is a 404.
- */
 export const servedReads = (
   name: ServedName,
   routes: ReadonlyArray<FakeRoute>,
@@ -732,10 +531,6 @@ export const servedReads = (
 ): ((input: RequestInfo | URL) => Promise<globalThis.Response>) =>
   readsOf(apiAnswer(SERVED[name].prefix, [...routes, ...SERVED[name].defaults], read));
 
-/**
- * `render` of the page at `url` for a browser that keys as a Mac or not
- * (`mac`), to its end, what it writes kept in `written` as it is written.
- */
 const rendering = (
   render: PageRender,
   url: URL,
@@ -764,54 +559,24 @@ const rendering = (
     );
   });
 
-/** A page the server rendered: the link it was asked at, the document it answered, and its markup's pieces in order. */
 interface Document {
   readonly path: string;
   readonly html: string;
   readonly pieces: ReadonlyArray<string>;
 }
 
-/** A page served as the lab serves a page it renders: what the server read and answered too. */
 interface OpenServed extends OpenPage {
-  /** The reads the server's renders made, apart from the page's own requests (`asked`). */
   readonly read: ReadonlyArray<Asked>;
-  /** Each document the server answered, in order. */
   readonly documents: ReadonlyArray<Document>;
-  /**
-   * Land on `href` as a pasted link does: a new document the server
-   * renders, which the browser hydrates (what the viewer kept in this
-   * browser stays). Done once the page says it is mounted, as the open is.
-   * An `href` that differs from the page's URL only in its hash is no new
-   * document (the browser only moves to the hash): `reload` lands there.
-   */
   readonly land: (href: string) => Effect.Effect<void>;
-  /** Reload the page: a new document of the same URL, served and hydrated as `land`'s is. */
   readonly reload: Effect.Effect<void>;
 }
 
-/**
- * The title a served document gives its tab before it hydrates: `html`
- * loaded in a frame of `page` without the page's script (the one it loads
- * by `src`); its inline ones run, as the browser runs them while it parses.
- */
 export const servedTitle = (page: Tab, html: string) =>
   page.evaluate<string>(
     `new Promise((done) => { const frame = document.createElement('iframe'); frame.onload = () => { done(frame.contentDocument.title); frame.remove(); }; frame.srcdoc = ${Schema.encodeSync(JsonText)(html.replace(/<script\b[^>]*\bsrc=[^>]*>[\s\S]*?<\/script>/g, ''))}; document.body.append(frame); })`,
   );
 
-/**
- * Open page `name` (the ask page) at
- * `href` as the lab serves it once it renders the page on the server: each
- * document is the page's server entry (`ask/server.tsx`) rendered at the link asked, its reads answered by
- * `routes` (and kept in `read`), spliced into the page's HTML as the lab
- * splices it (`splice`, `tools/lab-page.ts`); the browser's script (the
- * real entry, with Solid's development build) hydrates it. The page's own
- * requests are kept in `asked`. Done once the page says it is hydrated (a
- * page served cut, its render past `at.cut`: rendered anew); a
- * render that fails on the way (one that writes state among them, `served`)
- * is answered as an error and fails the open at once, in its words, where
- * the page would wait for a document that never comes.
- */
 export const openServed = Effect.fn('lab.fixture.served')(function* (
   name: ServedName,
   routes: ReadonlyArray<FakeRoute>,
@@ -868,8 +633,6 @@ export const openServed = Effect.fn('lab.fixture.served')(function* (
       Option.fromUndefinedOr(at.faceHeld),
     ),
   });
-  // A page served cut (its document carries the mark) is rendered anew; any other,
-  // a render that ended before `at.cut` among them, hydrates the server's markup.
   const mounted = Effect.suspend(() => {
     const servedCut = Option.exists(Arr.last(documents), (served) =>
       served.html.includes(PAGE_CUT_MARK),

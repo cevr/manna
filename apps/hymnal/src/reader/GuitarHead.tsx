@@ -1,16 +1,7 @@
-/**
- * The chords button's mark, the same on every platform: an acoustic guitar's
- * head, a headstock with three tuning pegs on each side over the top of the
- * neck. The headstock is filled while chords are on, drawn in the pill's ink
- * (`onPill`) on the key button's lit pill, and outlined in the accent while
- * they are off.
- */
-
 import { StyleSheet, View } from 'react-native';
 
 import { color, useAccent } from '~/color';
 
-/** Each peg pair's distance from the mark's top, in points. */
 const pegs = [4, 9, 14] as const;
 
 export function GuitarHead({ on }: { readonly on: boolean }) {

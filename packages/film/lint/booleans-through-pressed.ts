@@ -1,45 +1,3 @@
-// `film/booleans-through-pressed`: a boolean a control shows is written by
-// `pressed(on)` (`packages/film/src/lab/pressed.ts`), which types it
-// `'true' | 'false'`, never as a string by hand. A template or `String(…)` over
-// a boolean is a second spelling of it, and the one that was fixed by hand twice
-// (Scenes, then the sheet and the page shell) came back at six more controls.
-//
-// A value is written by hand when it is `String(x)`, `x.toString()` (no
-// radix), `JSON.stringify(x)` (`String` and `JSON` the globals, by their
-// binding) or a template that is one value and nothing else (`` `${x}` ``).
-// Refused, as a JSX attribute's value:
-// - on `aria-pressed`, `aria-selected`, `aria-checked`, `aria-expanded` and
-//   `aria-busy`, any such value: their tokens are `true` and `false` (and a
-//   `mixed`, written as itself), so the attribute is the proof the value is a
-//   boolean;
-// - on `aria-current` (whose tokens are also words: `page`, `step`) and on any
-//   `data-*`, such a value whose whole expression the source proves a boolean:
-//   a comparison (`a === b`), a negation (`!a`), a boolean literal,
-//   `Boolean(…)`, a logical or a conditional whose every branch is one, a cast
-//   to `boolean`, or a name whose binding in the file says so (typed
-//   `boolean`, `() => boolean` or solid's `Accessor<boolean>`, a const of a
-//   proven boolean, solid's `createSignal(false)`, a `createMemo` of one, a
-//   function returning `boolean`, or a member of a binding typed in the file:
-//   `props.staged()` for `props: { staged: Accessor<boolean> }`).
-// A name proves nothing by how it is spelled: `isLive()` is a boolean when its
-// binding says so, and a string when its binding says that. Every name is read
-// by its binding where it is written (a type parameter, a parameter or a local
-// of solid's names is its own binding), and a type's members are a literal's,
-// an interface's or an alias's, with the file's own generics given their
-// arguments, and those of solid's `ParentProps`, `VoidProps` and `FlowProps`
-// and of `Readonly`, whose meaning keeps their argument's members. Any other
-// generic proves nothing of its argument (`AsStrings<{ live: boolean }>` may
-// make `live` a string), nor does an optional member (`live?: boolean` may be
-// `undefined`).
-// A number (`String(rate())`), a value beside a flag (`String(on() &&
-// rate())`), text around a value (`` `${on()} item` ``) and a name proven
-// nothing (`loaded()`) pass. The config turns it on over the lab's components
-// and off in the tests and the fixtures.
-// Out of its reach: the player. It may not import the lab, so `pressed` is
-// not its to call, and it writes its one toggle's state as a DOM property
-// (`captionsBtn.ariaPressed = String(captions.on)`, `player/main.ts`), not a
-// JSX attribute.
-
 import { Effect, Option, Predicate } from 'effect';
 import { Diagnostic, type ESTree, Rule, RuleContext } from 'oxlint-plugin-effect/rule-bindings';
 import {
@@ -55,7 +13,6 @@ import {
 const MESSAGE =
   "a boolean written as a string by hand: pressed(on) (packages/film/src/lab/pressed.ts) types it 'true' | 'false'.";
 
-/** The ARIA states whose tokens are `true` and `false` (and a literal `mixed`): the attribute proves the value. */
 const BOOLEAN_STATES: ReadonlyArray<string> = [
   'aria-pressed',
   'aria-selected',
@@ -64,7 +21,6 @@ const BOOLEAN_STATES: ReadonlyArray<string> = [
   'aria-busy',
 ];
 
-/** The comparisons, each a boolean. */
 const COMPARISONS: ReadonlyArray<string> = [
   '===',
   '!==',
@@ -80,38 +36,26 @@ const COMPARISONS: ReadonlyArray<string> = [
 
 const SOLID = 'solid-js';
 
-/** Solid's prop wrappers, each its first argument's members and `children`. */
 const SOLID_WRAPPERS: ReadonlyArray<string> = ['ParentProps', 'VoidProps', 'FlowProps'];
 
-/** How a name is used: its value read (`on`), or called (`on()`). */
 type Use = 'read' | 'called';
 
-/** The names already followed on the way to a binding: a name bound through itself proves nothing. */
 type Seen = ReadonlySet<ESTree.Node>;
 
-/** An answer read from the scope tree. */
 type Reads<A = boolean> = Effect.Effect<A, never, RuleContext>;
 
 const yes: Reads = Effect.succeed(true);
 const no: Reads = Effect.succeed(false);
 
-/** Whether any answer is yes. */
 const some = (answers: ReadonlyArray<Reads>): Reads =>
   Effect.map(Effect.all(answers), (all) => all.some((a) => a));
 
-/** Whether every answer is yes. */
 const every = (answers: ReadonlyArray<Reads>): Reads =>
   Effect.map(Effect.all(answers), (all) => all.every((a) => a));
 
-/** Whether `node` is a name bound to solid's import of `name`. */
 const isSolid = (node: ESTree.Node, name: string): Reads =>
   importsAs(node, (from) => from === SOLID, name);
 
-/**
- * The value a call writes as a string by hand: `x` of the global `String(x)`
- * or `JSON.stringify(x)`, or of `x.toString()` (with no radix: a radix is a
- * number's).
- */
 const stringified = (call: ESTree.CallExpression): Reads<Option.Option<ESTree.Node>> => {
   const callee = call.callee;
   const first = Option.fromUndefinedOr(call.arguments[0]);
@@ -123,7 +67,6 @@ const stringified = (call: ESTree.CallExpression): Reads<Option.Option<ESTree.No
   return Effect.map(isGlobal(callee.object, 'JSON'), (json) => Option.filter(first, () => json));
 };
 
-/** The value a JSX attribute writes by hand: `String(x)`, `x.toString()`, `JSON.stringify(x)`, or the one value of `` `${x}` ``. */
 const writtenByHand = (attr: ESTree.JSXAttribute): Reads<Option.Option<ESTree.Node>> => {
   if (attr.value?.type !== 'JSXExpressionContainer') return Effect.succeedNone;
   const value = attr.value.expression;
@@ -137,9 +80,6 @@ const writtenByHand = (attr: ESTree.JSXAttribute): Reads<Option.Option<ESTree.No
   return Effect.succeedNone;
 };
 
-// The types the file writes.
-
-/** A type is `boolean`: the keyword, `true` or `false`, a predicate (`x is T`), or a union of them. */
 const isBooleanType = (t: ESTree.Node): boolean => {
   if (t.type === 'TSBooleanKeyword') return true;
   if (t.type === 'TSLiteralType')
@@ -150,7 +90,6 @@ const isBooleanType = (t: ESTree.Node): boolean => {
   return false;
 };
 
-/** A type is a reader of a boolean: `() => boolean`, solid's `Accessor<boolean>`. */
 const isBooleanReader = (t: ESTree.Node): Reads => {
   if (t.type === 'TSFunctionType')
     return Effect.succeed(isBooleanType(t.returnType.typeAnnotation));
@@ -160,19 +99,15 @@ const isBooleanReader = (t: ESTree.Node): Reads => {
   return isSolid(t.typeName, 'Accessor');
 };
 
-/** Whether a type, used as `use`, gives a boolean. */
 const typeGives = (t: ESTree.Node, use: Use): Reads => {
   if (use === 'read') return Effect.succeed(isBooleanType(t));
   return isBooleanReader(t);
 };
 
-/** The deepest a type is followed through aliases and wrappers. */
 const TYPE_DEPTH = 6;
 
-/** The arguments the file's generics are given on the way to a type: each type parameter's declaration to its argument. */
 type Arguments = ReadonlyMap<ESTree.Node, ESTree.Node>;
 
-/** A generic's parameters given the arguments a reference writes. */
 const given = (
   declaration: ESTree.Node,
   reference: ESTree.TSTypeReference,
@@ -190,12 +125,6 @@ const given = (
   return out;
 };
 
-/**
- * The members a type declares: a literal's, an interface's or an alias's (the
- * file's generics given their arguments), an intersection's, and the first
- * argument's of a wrapper that keeps it (`ParentProps<{ … }>`, `Readonly<…>`).
- * Any other type declares none this rule can know.
- */
 const membersOf = (
   t: ESTree.Node,
   depth: number,
@@ -241,7 +170,6 @@ const membersOf = (
   });
 };
 
-/** Whether the member `name` of the type `t`, used as `use`, gives a boolean (`on: boolean`, `on: () => boolean`, `on(): boolean`); an optional member never does. */
 const memberGives = (t: ESTree.Node, name: string, use: Use): Reads =>
   Effect.flatMap(membersOf(t, 0, new Map()), (members) =>
     some(
@@ -269,15 +197,11 @@ const memberGives = (t: ESTree.Node, name: string, use: Use): Reads =>
     ),
   );
 
-// The bindings the file makes.
-
-/** The type a binding's name is annotated with: `const on: () => boolean`, `(props: { … })`. */
 const annotated = (name: ESTree.Node): Option.Option<ESTree.Node> => {
   if (name.type !== 'Identifier') return Option.none();
   return Option.map(Option.fromNullishOr(name.typeAnnotation), (a) => a.typeAnnotation);
 };
 
-/** A function whose result is a proven boolean: annotated `boolean`, or an arrow whose body is one. */
 const returnsBoolean = (fn: ESTree.Node, seen: Seen): Reads => {
   if (
     fn.type !== 'ArrowFunctionExpression' &&
@@ -290,7 +214,6 @@ const returnsBoolean = (fn: ESTree.Node, seen: Seen): Reads => {
   return no;
 };
 
-/** Solid's `createSignal(false)`, `createSignal<boolean>(…)`, `createMemo(() => a === b)`: a reader of a boolean. */
 const readerMade = (init: ESTree.Node, seen: Seen): Reads => {
   if (init.type !== 'CallExpression') return no;
   const callee = init.callee;
@@ -311,13 +234,11 @@ const readerMade = (init: ESTree.Node, seen: Seen): Reads => {
   );
 };
 
-/** What a `const`'s value proves, used as `use`. */
 const constGives = (init: ESTree.Node, use: Use, seen: Seen): Reads => {
   if (use === 'read') return isBoolean(init, seen);
   return some([returnsBoolean(init, seen), readerMade(init, seen)]);
 };
 
-/** Whether the binding of `id`, used as `use`, proves a boolean. */
 const bindingGives = (id: Named, use: Use, seen: Seen): Reads =>
   Effect.flatMap(definitionOf(id), (found) => {
     if (Option.isNone(found) || seen.has(found.value.node)) return no;
@@ -331,7 +252,6 @@ const bindingGives = (id: Named, use: Use, seen: Seen): Reads =>
     }
     if (node.type !== 'VariableDeclarator' || !node.init) return no;
     if (node.parent.type !== 'VariableDeclaration' || node.parent.kind !== 'const') return no;
-    // `const [on] = createSignal(false)`: the pattern's first name reads the signal.
     if (node.id.type === 'ArrayPattern') {
       if (use === 'read' || node.id.elements[0] !== name) return no;
       return readerMade(node.init, next);
@@ -340,7 +260,6 @@ const bindingGives = (id: Named, use: Use, seen: Seen): Reads =>
     return constGives(node.init, use, next);
   });
 
-/** Whether `object.name`, used as `use`, gives a boolean by the type `object`'s binding is annotated with. */
 const memberGivesBoolean = (member: ESTree.MemberExpression, use: Use): Reads => {
   const object = unwrapped(member.object);
   if (object.type !== 'Identifier') return no;
@@ -355,7 +274,6 @@ const memberGivesBoolean = (member: ESTree.MemberExpression, use: Use): Reads =>
   );
 };
 
-/** Whether a call gives a proven boolean: the global `Boolean(x)`, or a reader the file types or binds. */
 const calledBoolean = (call: ESTree.CallExpression, seen: Seen): Reads => {
   const { callee } = call;
   if (callee.type === 'Identifier')
@@ -367,7 +285,6 @@ const calledBoolean = (call: ESTree.CallExpression, seen: Seen): Reads => {
   return memberGivesBoolean(callee, 'called');
 };
 
-/** Whether the source proves `node`'s whole value a boolean. */
 const isBoolean = (node: ESTree.Node, seen: Seen): Reads => {
   switch (node.type) {
     case 'ParenthesizedExpression':
@@ -399,7 +316,6 @@ const isBoolean = (node: ESTree.Node, seen: Seen): Reads => {
   }
 };
 
-/** Whether a JSX attribute writes a boolean as a string by hand. */
 const writesBoolean = (attr: ESTree.JSXAttribute): Reads => {
   if (attr.name.type !== 'JSXIdentifier') return no;
   const name = attr.name.name;

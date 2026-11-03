@@ -7,17 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { reachesIn, repoTests } from './reach.ts';
 import { testDryRun, unitTests } from './units.ts';
 
-/** A test file's text: one that imports its runner. */
 const RUNNER = "import { test } from 'bun:test';\n";
 
-/**
- * How `scripts` (a workspace at `w`, `/repo/w`, its playwright configs
- * `configs`, its `.gitignore` texts by folder `gitignores`, its bunfig's
- * text `bunfig`, its wrappers of `bun test` `wrappers`) reach each of
- * `files` (paths from `w`, each its text in `texts` or a test's), its
- * unit-test tasks `units` (`test` when not given), as `<file>: <script>`, or
- * `none`.
- */
 const reaches = (
   scripts: Record<string, string>,
   files: ReadonlyArray<string>,
@@ -95,7 +86,6 @@ describe("a workspace's test files", () => {
               of('w/o.spec.js', 'export default {'),
               of('w/nested/f.test.ts', RUNNER),
               of('loose/g.test.ts', RUNNER),
-              // A link: playwright's walk takes none, and the reader follows none.
               of('w/p.test.ts', RUNNER, true),
             ],
           ).map(({ file, by }) => `${file}: ${Option.getOrElse(by, () => 'none')}`),
@@ -144,8 +134,6 @@ describe("a workspace's test files", () => {
 
   it.effect('are taken by a bun test that names no filter, a path, or a part of one', () =>
     Effect.sync(() => {
-      // Bun's scan, measured on 1.4.3: no folder whose name starts with `.`, a file that
-      // does is taken; its extensions are js, jsx, ts, tsx and their m and c kin, no `.mtsx`.
       expect(
         reaches({ test: 'bun test' }, [
           'src/.hidden/a.test.ts',
@@ -167,7 +155,6 @@ describe("a workspace's test files", () => {
         'src/f.test.mjsx: none',
         'src/g.test.cjsx: none',
       ]);
-      // A path names its file wherever it is; a part of one is the scan's.
       expect(
         reaches({ test: 'bun test ./src/.hidden/a.test.ts' }, ['src/.hidden/a.test.ts']),
       ).toEqual(['src/.hidden/a.test.ts: test']);
@@ -185,7 +172,6 @@ describe("a workspace's test files", () => {
         'lint/b.test.ts: test',
         'other/c.test.ts: none',
       ]);
-      // A part of a path takes a test file anywhere it stands; a path, only under it.
       expect(reaches({ test: 'bun test ./src/' }, ['src/a.test.ts', 'x/src/e.test.ts'])).toEqual([
         'src/a.test.ts: test',
         'x/src/e.test.ts: none',
@@ -193,18 +179,13 @@ describe("a workspace's test files", () => {
       expect(reaches({ test: 'bun test src' }, ['x/src/e.test.ts'])).toEqual([
         'x/src/e.test.ts: test',
       ]);
-      // `./` is the workspace: every file named as a test in it.
       expect(reaches({ test: 'bun test ./' }, ['a.test.ts', 'src/b.test.ts', 'src/c.ts'])).toEqual([
         'a.test.ts: test',
         'src/b.test.ts: test',
       ]);
-      // A file named by its path from the workspace.
       expect(
         reaches({ test: 'bun test ./lessons.test.ts' }, ['lessons.test.ts', 'src/lessons.test.ts']),
       ).toEqual(['lessons.test.ts: test', 'src/lessons.test.ts: none']);
-      // Once one filter is a path, bun reads each as one (measured on 1.4.3: `./a.test.ts
-      // parts` runs no parts.test.ts, `/guard` and `..` run none): such a run reaches none,
-      // and filters that are all `./` paths, or all parts, are read.
       const guard = ['src/guard/parts.test.ts', 'src/a.test.ts'];
       for (const test of [
         'bun test --pass-with-no-tests ./missing parts',
@@ -248,9 +229,6 @@ describe("a workspace's test files", () => {
             `src/guard/parts.test.ts: ${guard}`,
             `src/a.test.ts: ${a}`,
           ]);
-        // A plain pattern skips the file it names and each file under a folder it names
-        // (measured on bun 1.4.3: `src/guard` skips src/guard, a bare `guard` skips nothing);
-        // the reader skips more than bun (`./src/guard`, `src/guard/`), never less.
         takes('bun test --path-ignore-patterns=src/a.test.ts src', 'test', 'none');
         takes(
           'bun test --pass-with-no-tests --path-ignore-patterns=src/guard src/guard/parts.test.ts',
@@ -262,9 +240,6 @@ describe("a workspace's test files", () => {
         takes('bun test --path-ignore-patterns=src src', 'none', 'none');
         takes('bun test --path-ignore-patterns=./ src', 'none', 'none');
         takes('bun test --path-ignore-patterns=guard src', 'test', 'test');
-        // A glob by name (`**/*<run>*`) skips each file whose name holds the run, at any
-        // depth (measured on bun 1.4.3: `**/*.slow.test.*` skips a.slow.test.ts at the
-        // root and in src/guard), with no regard to case.
         expect(
           reaches({ test: "bun test --path-ignore-patterns='**/*.slow.test.*'" }, [
             'src/guard/parts.slow.test.ts',
@@ -278,9 +253,6 @@ describe("a workspace's test files", () => {
           'src/a.test.ts: test',
           'src/slow.test.ts: test',
         ]);
-        // Bun's scan matches a folder by a glob or an escape in a way the reader does not
-        // reproduce (measured: `**/guard/` and `src\/guard` skip src/guard, `src/**/` every
-        // file), and a `..` or empty segment it may resolve: such a pattern reaches none.
         for (const test of [
           "bun test --path-ignore-patterns='**/guard/' src",
           "bun test --path-ignore-patterns='**/gu*/' src",
@@ -375,7 +347,6 @@ describe("a workspace's test files", () => {
     Effect.sync(() => {
       const files = ['src/a.test.ts'];
       for (const test of [
-        // A text loader reads a test file as a string: it registers no case.
         'bun test --loader=.ts:text --pass-with-no-tests src',
         'bun test -l .ts:text src',
         'bun --loader .ts:text test src',
@@ -385,7 +356,6 @@ describe("a workspace's test files", () => {
         'bun --env-file .env.test test src',
       ])
         expect([test, ...reaches({ test }, files)]).toEqual([test, 'src/a.test.ts: none']);
-      // Conditions and a preload change what a file imports or loads before it, not the file.
       for (const test of ['bun --conditions=browser test src', 'bun test --preload ./setup.ts src'])
         expect([test, ...reaches({ test }, files)]).toEqual([test, 'src/a.test.ts: test']);
     }),
@@ -402,7 +372,6 @@ describe("a workspace's test files", () => {
           '[test]\nsomethingNew = 1\n',
           'test = 1\n',
           '[test\n',
-          // A text loader reads a test file as a string: it registers no case.
           '[loader]\n".ts" = "text"\n',
           'define = { "describe" = "undefined" }\n',
           '[test]\npreload = ["./setup.ts"]\n[somethingNew]\nx = 1\n',
@@ -440,13 +409,10 @@ describe("a workspace's test files", () => {
           'playwright test --list',
           'playwright test --ui',
           'playwright test --project=chromium',
-          // A filter that ends in a line runs only the cases there.
           "playwright test --pass-with-no-tests '.*|:999999'",
           'playwright test b.spec.ts:2',
           'playwright test b.spec.ts:2:5',
-          // Another tsconfig may map the config's imports to other modules.
           'playwright test --tsconfig other.json',
-          // A snapshot flag takes a mode or none, so the word after it may be no filter.
           'playwright test --update-snapshots all b --pass-with-no-tests',
           'playwright test -u all b --pass-with-no-tests',
           'playwright test --update-snapshots',
@@ -519,13 +485,11 @@ describe("a workspace's test files", () => {
     Effect.sync(() => {
       const files = ['src/guard/a.test.ts', 'src/guard/b.test.ts', 'other/report.log.test.ts'];
       for (const test of [
-        // The glob hands bun two files: the first is the condition's value, not a filter.
         'bun test --conditions ./src/guard/*.test.ts',
         'bun test ./src/guard/?.test.ts',
         'bun test ./src/guard/[ab].test.ts',
         'bun test ./src/{guard,other}',
         'bun test ~/src',
-        // A redirection takes its words from the command: bun is handed `src` alone.
         'bun test src > report.log',
         'bun test src >> report.log',
         'bun test src 2>report.log',
@@ -537,7 +501,6 @@ describe("a workspace's test files", () => {
           'src/guard/b.test.ts: none',
           'other/report.log.test.ts: none',
         ]);
-      // Quoted, the same characters are the word's.
       expect(reaches({ test: "bun test --reporter-outfile 'out/*.xml' src" }, files)).toEqual([
         'src/guard/a.test.ts: test',
         'src/guard/b.test.ts: test',
@@ -552,9 +515,7 @@ describe("a workspace's test files", () => {
       Effect.sync(() => {
         const files = ['src/a.test.ts', 'lint/b.test.ts'];
         for (const test of [
-          // The shell joins the lines, then reads `#` as a comment's start: it runs `true` alone.
           'true \\\n# comment && bun test',
-          // None of these splits words for the shell: bun is handed one filter, `src<char>lint`.
           'bun test --pass-with-no-tests src\u00a0lint',
           'bun test src\rlint',
           'bun test src\vlint',
@@ -607,7 +568,6 @@ describe("a workspace's test files", () => {
           'export BUN_OPTIONS=-ttie && bun test',
           'source ./env.sh && bun test',
           'alias bun=true && bun test',
-          // A reserved word opens the shell's grammar, not a program: each of these passes.
           '! exit 0 && bun test',
           '! exec true && bun test',
           'time exit 0 && bun test',
@@ -644,7 +604,6 @@ describe("a workspace's test files", () => {
     "are each taken by one of a workspace's unit-test parts, and a file two parts take is named with both",
     () =>
       Effect.sync(() => {
-        // A workspace whose tests are cut into parts: its `test` has no script, each part is one.
         const scripts = {
           'test:lab': 'bun test ./src/lab ./src/tools/lab-gate.test.ts',
           'test:tools': 'bun test ./src/tools --path-ignore-patterns=src/tools/lab-gate.test.ts',
@@ -685,11 +644,9 @@ describe("a workspace's test files", () => {
           'src/tools/lab-gate.test.ts: test:lab [test:lab]',
           'src/tools/cast.test.ts: test:tools [test:tools]',
           'src/core/b.test.ts: test:engine [test:engine]',
-          // A hand-run script credits the file and is no unit-test task.
           'e2e/c.test.ts: test:e2e []',
           'other/d.test.ts: none []',
         ]);
-        // The lab list drifted: the tools part no longer ignores a lab tool, so the gate runs it twice.
         expect(
           taken({ ...scripts, 'test:tools': 'bun test ./src/tools' }).filter((line) =>
             line.includes(','),
@@ -726,7 +683,6 @@ describe("a workspace's test files", () => {
           'lib/d.test.ts: none',
           'docs.test.ts: test:docs',
         ]);
-        // A `bun <file>` the repo names no wrapper runs nothing this credits.
         expect(reaches(scripts, ['e2e/b.test.ts'], configs)).toEqual(['e2e/b.test.ts: none']);
       }),
   );
@@ -760,7 +716,6 @@ describe("a workspace's test files", () => {
         const scripts = { 'test:browser': 'playwright test --config=test/browser/pw.config.ts' };
         const files = ['test/browser/a.spec.ts', 'test/browser/b.test.ts', 'test/c.spec.ts'];
         const config = (text: string) => ({ 'test/browser/pw.config.ts': text });
-        // `test` is playwright's command, not a folder: a file outside the config's folder is not taken.
         expect(
           reaches(
             scripts,
@@ -772,13 +727,11 @@ describe("a workspace's test files", () => {
           'test/browser/b.test.ts: none',
           'test/c.spec.ts: none',
         ]);
-        // No testMatch: playwright's own, a `.spec` or `.test` file.
         expect(reaches(scripts, files, config('export default {};'))).toEqual([
           'test/browser/a.spec.ts: test:browser',
           'test/browser/b.test.ts: test:browser',
           'test/c.spec.ts: none',
         ]);
-        // A filter takes only the files whose path it matches.
         expect(
           reaches(
             { 'test:browser': 'bunx playwright test -c test/browser/pw.config.ts b\\.test' },
@@ -790,16 +743,12 @@ describe("a workspace's test files", () => {
           'test/browser/b.test.ts: test:browser',
           'test/c.spec.ts: none',
         ]);
-        // A filter is a regex with no regard to case (playwright's forceRegExp), or one
-        // written as /<pattern>/<flags> with the flags it gives.
         for (const [filter, a, b] of [
           ['B\\.TEST', 'none', 'test:browser'],
-          // No `A` in a path: case-sensitive, a.spec.ts would pass; playwright reads `a` too.
           ["'^(?!.*A).*'", 'none', 'test:browser'],
           ["'/b\\.test/'", 'none', 'test:browser'],
           ["'/B\\.TEST/'", 'none', 'none'],
           ["'/B\\.TEST/i'", 'none', 'test:browser'],
-          // Flags other than g and i make no regex form: the whole is a pattern.
           ["'/B\\.TEST/m'", 'none', 'none'],
           ["'/B\\.TEST/gi'", 'none', 'test:browser'],
         ])
@@ -816,8 +765,6 @@ describe("a workspace's test files", () => {
             `test/browser/b.test.ts: ${b}`,
             'test/c.spec.ts: none',
           ]);
-        // A filter takes a `.js` file by the sources its source map names, which the reader
-        // does not read: one with a source map is not taken by a filter, and is with none.
         const mapped = `${RUNNER}//# sourceMappingURL=data:application/json;base64,eyJzb3VyY2VzIjpbIm9yaWdpbmFsLnRzIl19`;
         for (const [filter, a] of [
           ['a.spec.js', 'none'],
@@ -834,9 +781,6 @@ describe("a workspace's test files", () => {
               { 'test/browser/a.spec.js': mapped },
             ),
           ).toEqual([`test/browser/a.spec.js: ${a}`]);
-        // A file its testIgnore names is not taken, by a glob (read as playwright reads one:
-        // any folder before it, any case, minimatch's extglobs) or a regex, its key bare or quoted.
-        // A regex is of the absolute path, as playwright tests it.
         for (const ignore of [
           "testIgnore: '**/a.spec.ts'",
           "testIgnore: 'A.spec.ts'",
@@ -848,10 +792,8 @@ describe("a workspace's test files", () => {
         ])
           for (const text of [
             `export default { ${ignore} };`,
-            // A setting in a comment, or of another object, sets nothing.
             `import { defineConfig } from '@playwright/test';\n// testIgnore: '**/b.test.ts'\nconst other = { testIgnore: '**/b.test.ts' };\nexport default defineConfig({ ${ignore} });`,
             `import { devices, defineConfig } from 'playwright/test';\nexport default defineConfig({ ${ignore} });`,
-            // A config that reads only what it binds, the language's plain values and process.env.
             `import { defineConfig, devices } from '@playwright/test';\nconst port = Number(process.env['P'] ?? 3187);\nexport default defineConfig({ ${ignore}, use: { ...devices['Desktop Chrome'], url: \`http://x:\${String(port)}\` } });`,
           ])
             expect(reaches(scripts, files, config(text))).toEqual([
@@ -859,7 +801,6 @@ describe("a workspace's test files", () => {
               'test/browser/b.test.ts: test:browser',
               'test/c.spec.ts: none',
             ]);
-        // A regex anchored at a path from the workspace matches no absolute path, in playwright too.
         expect(
           reaches(scripts, files, config('export default { testMatch: /^test\\/browser\\// };')),
         ).toEqual([
@@ -867,7 +808,6 @@ describe("a workspace's test files", () => {
           'test/browser/b.test.ts: none',
           'test/c.spec.ts: none',
         ]);
-        // A config it cannot read, or none, takes nothing.
         for (const configs of [
           config('export default { testDir: here };'),
           config("export default { testIgnore: ['**/a.spec.ts'] };"),
@@ -878,7 +818,6 @@ describe("a workspace's test files", () => {
           config("const key = 'testDir';\nexport default { [key]: 'elsewhere' };"),
           config("const config = { testDir: '.' };\nexport default config;"),
           config("export default defineConfig(base, { testDir: '.' });"),
-          // A defineConfig that may not be playwright's may set anything.
           config("export default defineConfig({ testDir: '.' });"),
           config(
             "function defineConfig(c) { return { ...c, testIgnore: '**/b.test.ts' }; }\nexport default defineConfig({ testDir: '.' });",
@@ -896,7 +835,6 @@ describe("a workspace's test files", () => {
             "import { defineConfig } from '@playwright/test';\nconst { wrap: defineConfig2 } = helpers;\nexport default defineConfig({ testDir: '.' });",
           ),
           config('export default { testDir: '),
-          // A config that can change what it exports, or run code the reader does not follow.
           config("export default { testDir: '.' };\nmodule.exports = { testDir: 'narrow' };"),
           config("const set = (module.exports = { testDir: 'narrow' });\nexport default {};"),
           config("const set = (exports.default = { testDir: 'narrow' });\nexport default {};"),
@@ -912,16 +850,13 @@ describe("a workspace's test files", () => {
           config('if (true) {}\nexport default {};'),
           config("export default { testDir: '.', use: { get x() { return 1; } } };"),
           config("export default { testDir: '.', use: { x: delete process.env.A } };"),
-          // A call it does not name may run anything: here, end the run before it starts.
           config("const stopped = Number.constructor('process.exit(0)')();\nexport default {};"),
-          // A name of the language the config binds is any value: here, a call of it ends the run.
           config(
             "import { defineConfig } from '@playwright/test';\nconst Number = defineConfig.constructor;\nconst String = Number('process.exit(0)');\nconst stopped = String();\nexport default defineConfig({});",
           ),
           config("import { devices as Number } from '@playwright/test';\nexport default {};"),
           config('const undefined = 1;\nexport default {};'),
           config('const process = { env: {} };\nexport default {};'),
-          // An absolute testDir is outside the workspace's paths.
           config("export default { testDir: '/elsewhere' };"),
           config("export default { testDir: '/repo/w/test/browser' };"),
           config('const convert = Number;\nexport default {};'),
@@ -940,9 +875,6 @@ describe("a workspace's test files", () => {
             true,
             true,
           ]);
-        // Where playwright respects git's ignore rules (the config says so, or sets neither
-        // respectGitIgnore nor testDir), it reads each .gitignore from its testDir down, by
-        // minimatch: a file one ignores is not taken.
         const walk = (text: string, gitignores: Record<string, string>) =>
           reaches(scripts, files, config(text), gitignores);
         const spec = (a: string, b: string) => [
@@ -955,24 +887,19 @@ describe("a workspace's test files", () => {
         expect(
           walk('export default { testMatch: /\\.ts$/ };', { 'test/browser': 'a.spec.ts' }),
         ).toEqual(spec('none', 'test:browser'));
-        // An extglob git reads as a name, playwright as minimatch does.
         expect(walk(on, { 'test/browser': '*.@(spec|xyz).ts' })).toEqual(
           spec('none', 'test:browser'),
         );
-        // An empty testDir is none: the config's folder, git's rules on by default.
         expect(walk("export default { testDir: '' };", { 'test/browser': 'a.spec.ts' })).toEqual(
           spec('none', 'test:browser'),
         );
-        // A later negation takes a file back; a comment and a blank line set nothing.
         expect(walk(on, { 'test/browser': '# all\n\n*.ts\n!b.test.ts' })).toEqual(
           spec('none', 'test:browser'),
         );
-        // A .gitignore above the testDir is not read; one in a folder above the file is.
         expect(walk(on, { '': 'a.spec.ts' })).toEqual(spec('test:browser', 'test:browser'));
         expect(
           walk("export default { testDir: '..', respectGitIgnore: true };", { test: 'browser/' }),
         ).toEqual(spec('none', 'none'));
-        // With the rules off, nothing a .gitignore says counts.
         for (const text of [
           "export default { testDir: '.' };",
           'export default { respectGitIgnore: false };',
@@ -983,11 +910,9 @@ describe("a workspace's test files", () => {
         expect(walk('export default { respectGitIgnore: flag };', {})).toEqual(
           spec('none', 'none'),
         );
-        // Playwright enters no node_modules folder.
         expect(reaches(scripts, ['test/browser/node_modules/x/a.spec.ts'], config(on))).toEqual([
           'test/browser/node_modules/x/a.spec.ts: none',
         ]);
-        // With no --config, playwright's own name in the workspace's folder.
         expect(
           reaches({ 'test:browser': 'playwright test' }, ['e2e/x.spec.ts'], {
             'playwright.config.ts': "export default { testDir: './e2e' };",
@@ -1032,7 +957,6 @@ describe("a workspace's test files", () => {
           yield* write('w/e2e/b.spec.ts', RUNNER);
           yield* write('w/e2e/c.ts', RUNNER);
           yield* fs.symlink('c.ts', path.join(root, 'w/e2e/d.spec.ts'));
-          // A .gitignore git ignores and does not track: playwright reads it all the same.
           yield* write('w/e2e/.gitignore', 'a.spec.ts\n');
           const git = (...args: ReadonlyArray<string>) =>
             Effect.flatMap(ChildProcessSpawner, (spawner) =>
@@ -1044,14 +968,11 @@ describe("a workspace's test files", () => {
           yield* write('.git/info/exclude', 'w/e2e/.gitignore\n');
           yield* git('add', '-f', 'package.json', 'w');
           yield* git('rm', '-q', '--cached', 'w/e2e/.gitignore');
-          // A tracked folder made a link to another: git still lists its file, and
-          // playwright's walk does not enter it.
           yield* write('w/real/e.spec.ts', RUNNER);
           yield* write('w/linked/e.spec.ts', RUNNER);
           yield* git('add', 'w/real', 'w/linked');
           yield* fs.remove(path.join(root, 'w/linked'), { recursive: true });
           yield* fs.symlink('real', path.join(root, 'w/linked'));
-          // `w` has no `test`: turbo's dry run names no unit-test task of it.
           const { workspaces, tests } = yield* repoTests(root, []);
           expect(
             reachesIn(workspaces, tests).map(
@@ -1082,7 +1003,6 @@ describe("a workspace's test files", () => {
         const reached = reachesIn(workspaces, tests);
         expect(reached.length).toBeGreaterThan(400);
         expect(reached.filter(({ by }) => Option.isNone(by)).map(({ file }) => file)).toEqual([]);
-        // No file runs twice in the gate: no two unit-test tasks take one.
         expect(
           reached
             .filter(({ units: by }) => by.length > 1)

@@ -1,26 +1,3 @@
-// The repo's `judged` oxlint plugin: each judged rule (`src/judged/rule.ts`) is
-// `judged/<id>` in `.oxlintrc.json`, its options its whole definition, and
-// this reports the answers the runner (`bun run lint:judged`) has kept for it
-// at their lines, at the rule's severity. It asks no model: oxlint's rules
-// are synchronous and run where there is no key (CI).
-//
-// A file the checkout's last run read as it stands is reported from that
-// run's findings (`src/judged/findings.ts`), by the file's hash and the
-// rule's signature, when the run's item code is this code's and the run is
-// no older than the store keeps answers, with no parse. Any other file is read item by item:
-// the store is keyed by content (`src/judged/store.ts`), so each item of the
-// file is hashed and its answer read by its text, wherever the text now
-// lives, and a moved or copied breach reports at its new place. An item no
-// answer is kept for says nothing, and so does a checkout with no kept
-// answers: the rule fails open.
-//
-// oxlint runs its plugins in Node, so this reads both files with node's file
-// system: the findings from the checkout (`settings.judged.checkout`, from
-// the root oxlint runs in), the store from the git common dir
-// (`settings.judged.store`), which every checkout shares. Each rule's id is
-// named here once; the config test (`src/judged/config.test.ts`) holds the
-// names to the config's `judged/*` entries.
-
 import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
 import { Clock, Effect, Option, Schema } from 'effect';
@@ -44,10 +21,8 @@ import {
   storeFileOf,
 } from '../src/judged/store.ts';
 
-/** A file parsed, as the selectors read it. */
 type Source = ReturnType<typeof parse>;
 
-/** The judged rules this plugin defines, by id: each needs its entry in `.oxlintrc.json`. */
 export const RULE_IDS = [
   'historyComment',
   'commentClaimsCode',
@@ -58,17 +33,13 @@ export const RULE_IDS = [
 
 const SharedSettings = Schema.Struct({ judged: Settings });
 
-/** The kept answers as the plugin reads them: by key. */
 type Kept = ReadonlyMap<string, Answer>;
 
-/** The store at each path, read once a process: oxlint's run is one look at the files. */
 const stores = new Map<string, Option.Option<Kept>>();
 
-/** The store at `file`, none when it is missing or does not read. */
 const storeAt = (file: string): Option.Option<Kept> =>
   Option.getOrElse(Option.fromUndefinedOr(stores.get(file)), () => readStore(file));
 
-/** Reads the store at `file` and remembers it. */
 const readStore = (file: string): Option.Option<Kept> => {
   const read = Effect.runSync(
     Effect.try(() => readFileSync(file, 'utf8')).pipe(
@@ -84,7 +55,6 @@ const readStore = (file: string): Option.Option<Kept> => {
   return kept;
 };
 
-/** The last source parsed: each rule of a file reads it, so it is parsed once. */
 let parsed = Option.none<Source>();
 
 const sourceOf = (file: string, text: string): Source => {
@@ -95,7 +65,6 @@ const sourceOf = (file: string, text: string): Source => {
   return source;
 };
 
-/** The options' JSON schema: oxlint refuses options on a rule without one. */
 const OPTIONS_SCHEMA = [
   {
     type: 'object',
@@ -122,10 +91,8 @@ const OPTIONS_SCHEMA = [
   },
 ];
 
-/** The findings file at each path, read once a process. */
 const findingsFiles = new Map<string, Option.Option<Findings>>();
 
-/** The findings file at `file`, none when it is missing or does not read. */
 const findingsAt = (file: string): Option.Option<Findings> =>
   Option.getOrElse(Option.fromUndefinedOr(findingsFiles.get(file)), () => {
     const read = Effect.runSync(
@@ -138,7 +105,6 @@ const findingsAt = (file: string): Option.Option<Findings> =>
     return read;
   });
 
-/** The last file hashed: each rule of a file reads its hash, so it is hashed once. */
 let hashed = Option.none<{ readonly file: string; readonly text: string; readonly hash: string }>();
 
 const hashOf = (file: string, text: string) => {
@@ -149,21 +115,11 @@ const hashOf = (file: string, text: string) => {
   return hash;
 };
 
-/** A finding to report: where its item starts, and its probability. */
 interface Reported {
   readonly start: number;
   readonly p: number;
 }
 
-/**
- * The findings of rule `id` (its options `options`) in `file`, whose text is
- * `text`, as the last run of the checkout at `cwd` wrote them: none when the
- * file's text, or the rule's words, selector, label, threshold or model, are
- * not what the run read, the run could not judge the rule there, the code
- * that makes the items is not the run's, the settings name another store
- * than the run read, or the run is more than `MAX_AGE_DAYS` old (the store
- * may have dropped its answers).
- */
 const lastRunOf = (
   cwd: string,
   settings: Settings,
@@ -187,7 +143,6 @@ const lastRunOf = (
     Option.flatMap((entry) => Option.fromUndefinedOr(entry.rules[id])),
   );
 
-/** The findings of a rule (its options `options`) in a file, read from its items and the store's kept answers. */
 const keptOf = (
   cwd: string,
   settings: Settings,
@@ -217,11 +172,6 @@ const keptOf = (
     },
   });
 
-/**
- * The rule `judged/<id>`: each item of a file it reads whose kept answer is
- * at or over its threshold, from the checkout's last run when it read the
- * file as it stands, else from the file's items and the store.
- */
 const judgedRule = (id: string) =>
   Rule.define({
     name: id,

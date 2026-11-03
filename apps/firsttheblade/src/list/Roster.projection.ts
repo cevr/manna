@@ -1,4 +1,3 @@
-/** Keeps the roster (`./RosterStore.ts`) as the subscribers' events say. */
 import * as Domain from '@alchemy.run/domain';
 import { Effect, Match, Record } from 'effect';
 
@@ -29,7 +28,6 @@ export class Roster extends Domain.Projection('Roster', {
   ],
 }) {}
 
-/** An imported subscriber's row: on the list or not, and its letters. */
 const importedRow = (subscriber: SubscriberId, imported: Imported): Array<RosterChange> => {
   const letters = Record.toEntries(imported.letters).map(([film, letter]): RosterChange => ({
     _tag: 'Letter',

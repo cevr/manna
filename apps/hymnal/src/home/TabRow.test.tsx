@@ -1,8 +1,3 @@
-/**
- * The home list's tab row, rendered to HTML as the web build renders it:
- * every tab a `tab` VoiceOver can read, the tab in use the one selected.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { RegistryProvider } from '@effect/atom-react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -16,7 +11,6 @@ const html = () =>
     </RegistryProvider>,
   );
 
-/** Each tab's label and whether it is selected, in page order. */
 const tabsOf = (page: string) =>
   [
     ...page.matchAll(

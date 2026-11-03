@@ -1,13 +1,3 @@
-// What holds an override to the owner's word: every override a figure
-// carries, wherever it is laid (`overridesIn`); the word it cites, his words
-// verbatim or his pick on an ask, one and never both (`overrideOf`, as a lock
-// reads its override); each that no decision of his on its figure allows,
-// broken itself (`unbacked`): a decision filed at the point `item:<item>`,
-// after the lock when the override frees one, whose words are the quote's,
-// verbatim, or which answered the ask with the pick it cites; and the ledger
-// a film's build reads for them (`unsaid`), whose questions and notes decide
-// nothing.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { test } from 'bun:test';
@@ -18,16 +8,13 @@ import { unsaid } from './build.ts';
 import { decodeLock } from './lock.ts';
 import { type Laid, overrideOf, overridesIn, unbacked } from './override.ts';
 
-/** The ask the owner kept and locked the court figures in, and the time the ledger filed his decision there. */
 const LOCK_ASK = 'a92f276635e';
 const LOCK_AT = 1792281444576;
 
-/** An ask about the lead's ear, answered; one about the judge's; and one asked, then withdrawn. */
 const EAR_ASK = 'a1111111111';
 const JUDGE_ASK = 'a2222222222';
 const ARM_ASK = 'a0590057595';
 
-/** An override of the lead's lock, in words the owner said on him after the lock. */
 const SAID = {
   rule: 'FigureLock' as const,
   place: 'lead',
@@ -36,7 +23,6 @@ const SAID = {
   frees: 'b'.repeat(64),
 };
 
-/** An override of the lead's lock, citing the owner's pick on an ask about him after the lock. */
 const PICKED = {
   rule: 'FigureLock' as const,
   place: 'lead',
@@ -45,13 +31,6 @@ const PICKED = {
   frees: 'b'.repeat(64),
 };
 
-/**
- * A ledger round the lead's lock: before it, a decision on him and one on no
- * figure; the decision the lock names, on him; after it, his note on the
- * lead, a decision on no figure, his decision on the lead, one on the judge,
- * a question on the lead and its answer's picks, a pick on the judge, and an
- * ask on the lead asked, then withdrawn.
- */
 const LEDGER = `{
   "production": "righteousness-by-faith",
   "title": "Righteousness by Faith",
@@ -73,10 +52,8 @@ const LEDGER = `{
   ]
 }`;
 
-/** The owner's decisions on that ledger. */
 const DECISIONS = decisionsOf(Schema.decodeSync(repoJson(ProductionFile))(LEDGER));
 
-/** The lead's lock as his file keeps it. */
 const LOCK_FILE = {
   item: 'lead',
   version: 1,
@@ -86,21 +63,16 @@ const LOCK_FILE = {
   seen: { set: 'concepts', file: 'images/lead.png' },
 };
 
-/** The lead's lock's override, laid as its film lays it: after the lock. */
 const onLock = (override: Laid['override']): Laid => ({ item: 'lead', override, since: LOCK_AT });
 
-/** The lead's lock's override, citing `value` for `question` on ask `ask`. */
 const answering = (ask: string, question: string, value: string) =>
   onLock({ ...PICKED, answer: { ask, question, value } });
 
-/** When the ledger filed the lead's lock, as a broken override names it. */
 const AFTER = 'filed after his lock (2026-10-17T23:57:24.576Z)';
 
-/** Why the lead's lock's override, quoting `quote`, is broken. */
 const unsaidWhy = (quote: string) =>
   `lead's override of FigureLock at lead is broken: no decision on his production's ledger at the point item:lead, ${AFTER} says "${quote}": file his words as a decision there (\`film production decide\` with \`--quote\`, \`--set\` and \`--point item:lead\`), then quote them verbatim`;
 
-/** Why the lead's lock's override, citing `value` for `question` on ask `ask`, is broken. */
 const unpickedWhy = (ask: string, question: string, value: string) =>
   `lead's override of FigureLock at lead is broken: no decision on his production's ledger at the point item:lead, ${AFTER} answers ask ${ask} with "${value}" for ${question}: ask him with the point item:lead (the lab's \`ask\`, with its \`production\`, \`set\` and \`point\`), then cite the pick his answer files`;
 
@@ -130,7 +102,6 @@ describe('an override', () => {
     const both = () =>
       decodeLock({ ...LOCK_FILE, override: { ...PICKED, quote: SAID.quote } }, 'lock');
     expect(both).toThrow(/^lock refused by FigureLock, /);
-    // Neither form takes the other's citation.
     expect(both).toThrow(
       '): Expected no excess property\n  at ["override"]["answer"]\nExpected no excess property\n  at ["override"]["quote"]',
     );
@@ -151,14 +122,10 @@ describe('an override', () => {
   test('in words he never said, or his words on another figure, on none, or before its lock, or in a note, is broken', () => {
     const quotes = [
       'move his ear back, the owner wants it',
-      // On the judge.
       "the judge's ear too",
-      // On no figure: before the lock, and after it.
       'lets lock in that style',
       'lock in a rig and a style',
-      // On the lead, before the lock.
       'his ear as the concept cuts it',
-      // A question's words.
       'Move his ear back?',
     ];
     expect(
@@ -167,7 +134,6 @@ describe('an override', () => {
         DECISIONS,
       ),
     ).toEqual(quotes.map((quote) => ({ ...onLock({ ...SAID, quote }), why: unsaidWhy(quote) })));
-    // His note on the lead after the lock says the very words, and decides nothing.
     const noted = DECISIONS.filter((d) => d.at !== LOCK_AT + 3);
     expect(unbacked([onLock(SAID)], noted)).toEqual([
       { ...onLock(SAID), why: unsaidWhy(SAID.quote) },
@@ -183,13 +149,9 @@ describe('an override', () => {
     const cases = [
       ['a0000000000', 'ear', 'back'],
       [EAR_ASK, 'ear', 'front'],
-      // The value he picked for another question there is not his pick for this one.
       [EAR_ASK, 'notes', 'back'],
-      // A pick on the judge.
       [JUDGE_ASK, 'ear', 'back'],
-      // The pick the lock's own decision filed on him: at the lock, not after it.
       [LOCK_ASK, 'keep', 'lock'],
-      // Asked, then withdrawn: what the question and the withdrawal carry is no pick of his.
       [ARM_ASK, 'arm', 'arm'],
     ] as const;
     const laid = cases.map(([ask, question, value]) => ({

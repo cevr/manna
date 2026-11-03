@@ -1,9 +1,3 @@
-// The most things each view shows at rest, on the first screen and (for a
-// long view) over its whole length, on each device: its controls, pictures
-// and text leaves, as the UI-reduction sweep counts them (`firstScreenItems`).
-// The count is the settled page's, and a thing that lands after the view is
-// ready, or a long view's rows below the fold, is counted.
-
 import { Effect, Exit, Option } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { type Tab, WAIT_MS } from '../../src/lab/fixtures/tab.ts';
@@ -21,22 +15,10 @@ import {
   STATES,
 } from './studio-states.ts';
 
-/**
- * How far the page's clock runs on before a view is counted: what a view
- * brings in after its ready selector (a timer, a later still, a legend read)
- * is on the page by then, so the count is the settled page's, not the first
- * moment it is within its budget.
- */
 const SETTLE_MS = 5_000;
 
-/** What a count's reach is called in a failure. */
 const WHERE = { screen: 'first screen', page: 'page' } as const;
 
-/**
- * The settled view shows at most `budget` things on its first screen, or over
- * its whole length when `reach` is the `page` (`firstScreenItems`); else each
- * one is named, `C` a control, `T` text.
- */
 const withinBudget = (
   page: Tab,
   budget: number,
@@ -55,26 +37,17 @@ const withinBudget = (
     });
   });
 
-/**
- * The script that puts one more `tag` than an ask's whole phone budget,
- * each saying "planted", fixed on the first screen over the page: past the
- * budget whatever the page shows under it.
- */
 const PLANT = (tag: 'button' | 'p') =>
   `for (let i = 0; i <= ${ASK_AT_REST.phone}; i++) { const el = document.createElement('${tag}'); el.textContent = 'planted ' + i; Object.assign(el.style, { position: 'fixed', top: (120 + (i % 20) * 24) + 'px', left: (16 + Math.floor(i / 20) * 120) + 'px', zIndex: '999' }); document.body.append(el); }`;
 
-/** Put the planted `tag`s on the first screen, over the page. */
 const plant = (page: Tab, tag: 'button' | 'p') =>
   page.evaluate(`(() => { ${PLANT(tag)} return true; })()`);
 
-/** Put the planted `tag`s on the page 2 s from now, on the page's own clock: things that land after the view is ready. */
 const plantLater = (page: Tab, tag: 'button' | 'p') =>
   page.evaluate(`(() => { setTimeout(() => { ${PLANT(tag)} }, 2000); return true; })()`);
 
-/** More things than an ask's whole length shows: a whole-length budget it passes but for what is planted. */
 const CEILING = 200;
 
-/** An ask at rest. */
 const ask = asked(pageHref.ask(STUDIO_ASK), ASK_READY);
 
 for (const device of DEVICES) {
@@ -92,7 +65,6 @@ for (const device of DEVICES) {
         SLOW,
       );
     }
-    // A long view's whole length: what comes back on the rows below the fold is counted too.
     for (const [state, page] of byPlace(STATES).flatMap(([, s]) =>
       Option.toArray(Option.map(Option.fromUndefinedOr(s.page), (b) => [s, b] as const)),
     )) {
@@ -156,8 +128,6 @@ describe('the at-rest budget (UR2-17)', () => {
       Effect.gen(function* () {
         const page = yield* ask(PHONE.viewport);
         yield* withinBudget(page, ASK_AT_REST.phone, 'an ask');
-        // More lines than any ask shows (`CEILING`), far below the fold: the first screen counts
-        // none of them, the page counts each.
         const ceiling = CEILING;
         yield* page.evaluate(
           `(() => { const box = document.createElement('div'); box.style.marginTop = '5000px'; for (let i = 0; i <= ${ceiling}; i++) { const el = document.createElement('p'); el.textContent = 'planted ' + i; box.append(el); } document.body.append(box); return true; })()`,

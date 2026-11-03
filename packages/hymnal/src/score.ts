@@ -1,45 +1,30 @@
-/**
- * A hymn's MIDI file read as music: which tracks hold the harmony, the
- * melody, the meter and key, and where the intro ends and each verse begins.
- *
- * The hymnal's files play an intro (some bars of the tune) and then every
- * verse in full. The tracks and the tune come from `melody.ts`.
- */
-
 import * as Chord from './chord.js';
 import { harmonyTracks, melodyOf } from './melody.js';
 import type { Midi, Note, TimeSignature } from './midi.js';
 
 export { harmonyTracks, melodyOf, topVoice } from './melody.js';
 
-/** Where one verse is played, in ticks: from its first note to the next verse's first note. */
 export interface Span {
   readonly start: number;
   readonly end: number;
 }
 
 export interface Verses {
-  /** Each verse's span; the intro is everything before the first. */
   readonly spans: readonly Span[];
-  /** True when every verse's melody repeats the first exactly. */
   readonly exact: boolean;
 }
 
 export interface Score {
   readonly ticksPerBeat: number;
-  /** Quarter-note beats in a bar: 3 for 3/4, 3 for 6/8. */
   readonly beatsPerBar: number;
   readonly meter: { readonly numerator: number; readonly denominator: number };
-  /** Every meter from the tick it starts, the opening one at tick 0; bars count from each. */
   readonly meters: readonly TimeSignature[];
   readonly key: Chord.Key;
   readonly harmony: readonly Note[];
-  /** The tune's notes, one per sung note, start to end of the file. */
   readonly melody: readonly Note[];
   readonly verses: Verses;
 }
 
-/** The key the closing chord's bass names, for files with no key signature. */
 const closingKey = (harmony: readonly Note[]): Chord.Key => {
   const end = Math.max(...harmony.map((note) => note.end));
   const last = harmony.filter((note) => note.end === end);
@@ -48,30 +33,9 @@ const closingKey = (harmony: readonly Note[]): Chord.Key => {
   return Chord.keyOnPitch(bass, minor);
 };
 
-/**
- * Splits the melody into an intro and verses. Where the tune repeats note
- * for note, the verses are equal: `expected` (the text's verse count) is
- * tried first, then the most verses that repeat exactly. A verse sung in its
- * own rhythm, a note split or joined for its words, breaks the repeat: when
- * fewer verses repeat exactly than the text has, the missing ones are found
- * beside them (`fewer`). With no exact repeat, the expected count's closest
- * equal split only places each verse near its start. Verse 1 starts on note
- * 0 or at least two bars (`bar`, in ticks) in: where a note nearby follows
- * the tune's last keys, the intro ends there, else after the longest pause.
- * Each later verse starts on the note nearby that most follows the tune's
- * last keys and opens as verse 1 does, ties to the longest pause (the end of
- * a phrase), then to the nearest. When some later start found so neither
- * follows the tune's last keys nor opens as verse 1 does, in full, the
- * verses differ by more than a note
- * near their starts, but they still play equal bars: the first verse 1 whose
- * equal split in ticks puts every later verse after the tune's last keys and
- * on verse 1's opening keys, in full, gives the read.
- */
 export const findVerses = (melody: readonly Note[], expected: number, bar: number): Verses => {
   const keys = melody.map((note) => note.key);
   const end = melody.at(-1)?.end ?? 0;
-  // The time from the note before to this one: a long note or a rest ends a phrase. The first
-  // note follows no pause.
   const pause = (i: number) => {
     const [before, note] = [melody[i - 1], melody[i]];
     if (note === undefined) return Number.NEGATIVE_INFINITY;
@@ -104,9 +68,7 @@ export const findVerses = (melody: readonly Note[], expected: number, bar: numbe
     spans(Array.from({ length: count }, (_, k) => intro + k * length));
   const REACH = 4;
   const OPENING = 8;
-  /** The run of the tune's last keys that marks an intro's end. */
   const ENDING = 4;
-  /** The notes within `REACH` of `center`, after note `after` and before note `before`. */
   const nearby = (center: number, after: number, before = keys.length) =>
     Array.from({ length: 2 * REACH + 1 }, (_, d) => center - REACH + d).filter(
       (i) => i > after && i < before,
@@ -117,18 +79,6 @@ export const findVerses = (melody: readonly Note[], expected: number, bar: numbe
       return sb > sa || (sb === sa && Math.abs(b - center) < Math.abs(a - center)) ? b : a;
     }, candidates[0] ?? center);
 
-  /**
-   * `count` verses of `length` notes repeat exactly after `intro` notes, fewer than the text's
-   * stanzas: the missing stanzas are sung in their own rhythm, or the file plays fewer verses.
-   * Each verse found here starts on the note nearby that opens on the exact verses' first key,
-   * after the longest pause.
-   * - When the intro has room for the missing verses, they come first, each about a verse
-   *   before the next. The first exact verse may itself be the one in its own rhythm, its
-   *   opening key sung once more, so the keys repeat from a note late: it starts nearby too.
-   * - Else, when the text's count is a multiple of `count`, each exact span holds that many
-   *   stanzas, the alternate ones in a second rhythm.
-   * - Else the file plays `count` verses.
-   */
   const fewer = (count: number, intro: number, length: number): Verses => {
     const exact = Array.from({ length: count }, (_, k) => intro + k * length);
     const missing = expected - count;
@@ -168,7 +118,6 @@ export const findVerses = (melody: readonly Note[], expected: number, bar: numbe
   }
   if (wanted === undefined) return { spans: [{ start: 0, end }], exact: false };
 
-  /** The candidate whose ranks, compared in order, are highest; ties to the nearest `center`. */
   const top = (
     candidates: readonly number[],
     ranks: (i: number) => readonly number[],
@@ -181,22 +130,16 @@ export const findVerses = (melody: readonly Note[], expected: number, bar: numbe
       return d >= 0 && (rb[d] ?? 0) > (ra[d] ?? 0) ? b : a;
     }, candidates[0] ?? center);
   };
-  // How many keys right before note `i` are the melody's last keys, in a row: a verse starts
-  // where the one before it ended as the tune ends.
   const ends = (i: number) => {
     let k = 0;
     while (k < OPENING && i - 1 - k >= 0 && keys[i - 1 - k] === keys[keys.length - 1 - k]) k++;
     return k;
   };
-  // An intro is none or at least two bars: verse 1 starts on note 0 or two bars in.
   const firsts = [...new Set([0, ...nearby(wanted.intro, -1)])].filter(
     (i) => i === 0 || (melody[i]?.start ?? 0) >= 2 * bar,
   );
-  // Where a note nearby ends as the tune ends, the intro ends there; else after the longest pause.
   const ended = Math.max(...firsts.map(ends)) >= ENDING;
   const first = top(firsts, (i) => (ended ? [ends(i), pause(i)] : [pause(i)]), wanted.intro);
-  // How many of verse 1's opening keys (verse 1 starting on note `from`) note `i` begins with,
-  // in a row.
   const opens = (i: number, from = first) => {
     let k = 0;
     while (k < OPENING && keys[i + k] !== undefined && keys[i + k] === keys[from + k]) k++;
@@ -208,14 +151,8 @@ export const findVerses = (melody: readonly Note[], expected: number, bar: numbe
     const center = after + wanted.length;
     starts.push(top(nearby(center, after), (i) => [ends(i) + opens(i), pause(i)], center));
   }
-  // The read stands where each later verse starts after the tune's last keys, or on verse 1's
-  // opening keys, in full.
   const placed = (i: number) => ends(i) >= OPENING || opens(i) >= OPENING;
   if (starts.slice(1).every(placed)) return { spans: spans(starts), exact: false };
-  // Else verses that differ by more than a note near each start still play equal bars: the first
-  // verse 1 (note 0 or two bars in, an intro of at most half) whose equal split in ticks of the
-  // rest of the file puts each later verse on the nearest note to that tick, after the tune's
-  // last keys and on verse 1's opening keys in full.
   const nearest = (tick: number) => {
     const next = melody.findIndex((note) => note.start >= tick);
     if (next === -1) return melody.length - 1;
@@ -242,7 +179,6 @@ export const findVerses = (melody: readonly Note[], expected: number, bar: numbe
   return { spans: spans(starts), exact: false };
 };
 
-/** Reads a hymn's file; `expectedVerses` is the number of verses its text has. */
 export const fromMidi = (midi: Midi, expectedVerses: number): Score => {
   const tracks = harmonyTracks(midi);
   const harmony = tracks.flatMap((track) => track.notes).sort((a, b) => a.start - b.start);

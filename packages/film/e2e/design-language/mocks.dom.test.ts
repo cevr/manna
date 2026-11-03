@@ -1,9 +1,3 @@
-// Every design-language mock sets its lengths on the scales, read in the
-// browser as the page it is (`mock-lengths.ts`): each mock is one case, read
-// at each width its queries name, on the phone's pointer and the desk's; one
-// more case reads every mock for the selectors of the sheets they share. A
-// planted page of each shape a length can take shows the check catches it.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -22,7 +16,6 @@ const TYPES = new Map([
 
 const typeOf = (path: string) => TYPES.get(path.split('.').pop() ?? '') ?? 'text/plain';
 
-/** The pages of the repo the mocks load, by their paths from the root: each mock, its sheets, the player's tokens; `pages` beside them. */
 const serve = (pages: Readonly<Record<string, string>>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -39,14 +32,12 @@ const serve = (pages: Readonly<Record<string, string>>) =>
     return servePaths(Object.fromEntries([...repo, ...planted]));
   }).pipe(Effect.provide(BunServices.layer));
 
-/** A page to read: its name in the findings, its path, and the planted pages served beside the repo's. */
 interface Page {
   readonly file: string;
   readonly path: string;
   readonly pages: Readonly<Record<string, string>>;
 }
 
-/** The page read on one pointer, at each width its queries name, then `then` on the tab. */
 const visit = <A, E, R>(
   page: Page,
   coarse: boolean,
@@ -72,32 +63,20 @@ const visit = <A, E, R>(
     return yield* then(tab, script);
   }).pipe(Effect.scoped);
 
-/** What one pointer found, read once the passes are done (each pass is synchronous, so nothing is left to settle). */
 const rawOf = (page: Page, coarse: boolean) =>
   visit(page, coarse, (tab, script) => tab.evaluate<Raw>(script.raw));
 
-/**
- * What the check finds on a page, read on the phone's pointer and then the
- * desk's: every red either finds, and each of the page's own selectors that
- * reaches no element on either: `want`.
- */
 const read = (page: Page, want: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const phone = yield* rawOf(page, true);
     yield* visit(page, false, (tab, script) => evaluates(tab, script.found(phone), want));
   });
 
-/** A page's read for the sheets it shares: the selectors it reaches on neither pointer, by their place, and the sheets it wears. */
 interface Wearer {
   readonly unreached: ReadonlyMap<string, Unreached>;
   readonly wears: ReadonlyArray<string>;
 }
 
-/**
- * The selectors of the shared sheets that no page wearing their sheet
- * reaches on either pointer (a selector of lab.css is judged on the pages
- * that link lab.css), each named once.
- */
 const sharedUnreached = (pages: ReadonlyArray<Page>) =>
   Effect.gen(function* () {
     const wearers = yield* Effect.forEach(
@@ -114,7 +93,6 @@ const sharedUnreached = (pages: ReadonlyArray<Page>) =>
             wears: desk.wears,
           }),
         ),
-      // Four pages at once: each read is its own pooled tab, as the file's cases are.
       { concurrency: 4 },
     );
     const candidates = new Map(wearers.flatMap((w) => [...w.unreached]));
@@ -125,11 +103,9 @@ const sharedUnreached = (pages: ReadonlyArray<Page>) =>
 
 const wears = `<link rel="stylesheet" href="${TOKENS}"><link rel="stylesheet" href="${MOCKS}/kit.css">`;
 
-/** A planted page's html: `head` (the tokens and the kit), its own `css` over `body`. */
 const pageOf = (css: string, body: string, head = wears) =>
   `<!doctype html><html><head>${head}<style>${css}</style></head><body>${body}</body></html>`;
 
-/** A planted mock, `case.html` (or `file`): wearing the tokens and the kit (or `head`), its own `css` over `body`. */
 const planted = (
   css: string,
   body: string,
@@ -140,7 +116,6 @@ const planted = (
 
 const SLOW = 30_000;
 
-/** The mocks, one case each: named here, as a case is named before any runs; the first case holds the list to the folder. */
 const MOCK_PAGES = [
   'choices.html',
   'films.html',
@@ -263,16 +238,12 @@ describe('the mock length check, on planted pages', () => {
         [
           'case.html: padding 6px is no space step (.six)',
           'case.html: line-height 3px is no line height step (.sum)',
-          // A function with a percentage or a viewport's length computes no length of its own:
-          // the px written in it are read, once (`calc(50vw - 8px)`'s 8px, a step at every width).
           'case.html: gap 7px is no space step (.pc)',
           'case.html: padding-left 7px is no space step (.pc)',
           'case.html: margin-bottom 7px is no space step (.vw)',
           'case.html: padding 6px is no space step (@keyframes slide 0%)',
           'case.html: gap 7px is no space step (body[style])',
           'case.html: padding var(--pad) is 6px, no space step (.loc6)',
-          // So is a sum that computes with a token, a composition (a hit area centred, a bar
-          // cleared): the lengths written in it are read, never the sum.
           'case.html: padding var(--half) is 2px, no space step (.half)',
         ],
       ),
@@ -311,7 +282,6 @@ describe('the mock length check, on planted pages', () => {
          <div class="c1"><i class="e1">.</i></div><div class="c2"><i class="e1">.</i></div><p class="memo">.</p><p class="wide2">.</p>
          <div class="k"><p class="l">.</p></div><p class="m">.</p><p class="n">.</p>`,
         [
-          // At 1440 px wide.
           'case.html: padding var(--pad) is 6px, no space step (& .n1b)',
           'case.html: padding var(--pad) is 6px, no space step (& .n4b)',
           'case.html: padding var(--pad) is 6px, no space step (.is1)',
@@ -328,11 +298,9 @@ describe('the mock length check, on planted pages', () => {
           'case.html: padding var(--y) is 6px, no space step (.memo)',
           'case.html: padding var(--p2) is 6px, no space step (.l)',
           'case.html: padding var(--q) is 6px, no space step (.m)',
-          // The queries' own, 600 px wide and under.
           'case.html: padding var(--pad) is 6px, no space step (& .n2b)',
           'case.html: padding var(--pad) is 6px, no space step (& .n3b)',
           'case.html: padding var(--pad) is 6px, no space step (.q1)',
-          // 1600 px wide and over.
           'case.html: padding var(--pad) is 6px, no space step (.wide2)',
         ],
       ),
@@ -384,7 +352,6 @@ describe('the mock length check, on planted pages', () => {
         `<p class="d1">.</p><p class="d2">.</p><p class="d3">.</p><p class="d5">.</p><p class="d4">.</p>
          <p class="h1">.</p><p class="d6">.</p><p class="d7">.</p><p class="d8">.</p><p class="h2">.</p><p class="t3">.</p>`,
         [
-          // The dock is 45 px on the desk's density (900 px wide and over), 61 px on the phone's.
           'case.html: gap var(--dock-h) is 45px, no space step (.d6)',
           'case.html: margin-bottom var(--dock-h) is 45px, no space step (.d7)',
           'case.html: border-radius var(--dock-h) is 45px, no radius step (.d8)',
@@ -440,14 +407,11 @@ describe('the mock length check, on planted pages', () => {
          <div class="p9box"><p class="p9">.</p></div><div class="p10box"><p class="p10">.</p></div>
          <p class="both">.</p><p class="gx">.</p><p class="gshown">.</p>`,
         [
-          // The desk's, then the phone's, each in the order of the widths read.
           'case.html: padding var(--pad) is 6px, no space step (.p9)',
           'case.html: padding var(--pad) is 6px, no space step (.r3)',
           'case.html: padding var(--pad) is 6px, no space step (.r2)',
           'case.html: padding var(--pad) is 6px, no space step (.r1)',
           'case.html: padding var(--pad) is 6px, no space step (.p7)',
-          // A selector no element matches on either pointer, at any width: a member of a list
-          // alone, a nested query's too. `.both`'s two blocks are each reached on their own pointer.
           'case.html: --pad is given on no element the mock shows (.p1:hover)',
           'case.html: --pad is given on no element the mock shows (.p10)',
           'case.html: --pad is given on no element the mock shows (.gx:hover)',
@@ -468,7 +432,6 @@ describe('the mock length check, on planted pages', () => {
           [shared]: sheet,
           '/a.html': pageOf('', '<p class="only-a">.</p>', head),
           '/b.html': pageOf('', '<p class="only-b">.</p>', head),
-          // A page that wears no shared.css (as a mock that is no Lab's wears no lab.css) judges none of it.
           '/c.html': pageOf('', '<p class="nowhere">.</p>'),
         };
         const unreached = yield* sharedUnreached([

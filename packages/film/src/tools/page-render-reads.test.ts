@@ -1,9 +1,3 @@
-// A render's reads of the lab, in its worker: a GET sent as a `Read` and
-// resolved by its answer; a read held when its render is over (ended,
-// failed or cancelled) is aborted and dropped, as is one whose fetch's own
-// signal aborts; an answer to a dropped read is no one's; any other method is
-// refused.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect } from 'effect';
 import { type FromRender, ToRender } from './page-render-protocol.ts';
@@ -11,17 +5,14 @@ import { renderReads } from './page-render-reads.ts';
 
 const LAB = 'http://127.0.0.1:8229';
 
-/** The bridge, and every message it sent. */
 const bridge = () => {
   const sent: Array<FromRender> = [];
   return { sent, reads: renderReads((message) => sent.push(message)) };
 };
 
-/** The answer to read `read`: `text`, a 200. */
 const answerOf = (read: number, text: string) =>
   ToRender.Answer({ read, status: 200, headers: [], body: new TextEncoder().encode(text) });
 
-/** How a fetch settled: its body's text, or its error as a string. */
 const settled = (fetched: Promise<Response>) =>
   Effect.promise(() =>
     fetched.then(
@@ -68,7 +59,6 @@ describe("a render's reads", () => {
       giving.abort();
       expect(yield* settled(held)).toContain('AbortError');
       expect(reads.held(1)).toBe(0);
-      // The lab hears it, and stops answering it.
       expect(sent).toEqual([
         expect.objectContaining({ _tag: 'Read', id: 1, read: 1 }),
         expect.objectContaining({ _tag: 'ReadCancelled', id: 1, read: 1 }),

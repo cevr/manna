@@ -1,25 +1,13 @@
-// Paper fibre (DIRECTION, "Grain"): grain is fixed to the paper it belongs to
-// and moves with it, never with the screen: a 1–2 px fibre and a 50–150 px
-// mottle at ±3–6 %. One tile holds both, built once from a seed and tiling
-// without a seam. The backdrop of a multiplane shot carries it in its plane's
-// space (`planeFibre`), so a pan slides the grain with the paper. A cutout
-// face keeps its own pastel grain in its own space (`cutout.ts`): its
-// pre-blended fill must match the two-pass look to rounding, and the fibre's
-// broad soft blots drift it past that (5–9/255), so faces do not take them.
-
 import { rng } from '../core/random.ts';
 import type { Camera } from './camera.ts';
 import { keepAtMost, offscreen, patternOf } from './paper.ts';
 
-/** The tile's side in px. */
 export const FIBRE_SIZE = 320;
 
-/** How strongly the backdrop's fibre is soft-lit over it, 0..1. */
 export const PLANE_FIBRE = 1;
 
 let tile: HTMLCanvasElement | undefined;
 
-/** Draw `paint` at every offset a tile's edge wraps to, so what crosses one edge comes in at the other. */
 const wrapped = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -37,17 +25,10 @@ const wrapped = (
     }
 };
 
-/**
- * The fibre tile: transparent, with soft light and dark blots (the mottle,
- * 50–150 px across) and short light and dark strands 1–2 px wide (the
- * fibre), for soft light over a plane: the mottle moves a mid-tone 3–6 %.
- * Built once.
- */
 const fibreTile = (): HTMLCanvasElement => {
   if (tile !== undefined) return tile;
   const { c, ctx } = offscreen(FIBRE_SIZE, FIBRE_SIZE);
   const r = rng(7331);
-  // The mottle: soft blots, each fading from its heart to nothing.
   for (let i = 0; i < 26; i++) {
     const x = r() * FIBRE_SIZE;
     const y = r() * FIBRE_SIZE;
@@ -62,7 +43,6 @@ const fibreTile = (): HTMLCanvasElement => {
       ctx.fillRect(px - radius, py - radius, radius * 2, radius * 2);
     });
   }
-  // The fibre: short strands, any direction.
   ctx.lineCap = 'round';
   for (let i = 0; i < 3200; i++) {
     const x = r() * FIBRE_SIZE;
@@ -85,10 +65,8 @@ const fibreTile = (): HTMLCanvasElement => {
   return c;
 };
 
-/** The most tile scales kept at once; a push passes through a few, one per px of period. */
 const SCALES_KEPT = 12;
 
-/** The tile drawn at `period` px a side, wrapping still without a seam, by period. */
 const scaled = new Map<number, HTMLCanvasElement>();
 
 const scaledTile = (period: number): HTMLCanvasElement => {
@@ -97,30 +75,13 @@ const scaledTile = (period: number): HTMLCanvasElement => {
   if (period === FIBRE_SIZE) return fibreTile();
   const { c, ctx } = offscreen(period, period);
   ctx.imageSmoothingQuality = 'high';
-  // Drawn at the tile's wrap offsets too, so the resampled edges wrap.
   for (const dx of [-period, 0, period])
     for (const dy of [-period, 0, period]) ctx.drawImage(fibreTile(), dx, dy, period, period);
   return keepAtMost(scaled, period, c, SCALES_KEPT);
 };
 
-/** `n` wrapped into [0, period). */
 const wrap = (n: number, period: number) => ((n % period) + period) % period;
 
-/**
- * Soft-light the fibre over the whole `w` × `h` frame as the plane seen
- * through `view` carries it, so it is anchored to the plane's world and
- * slides, turns and scales with it. `strength` 0..1 is its alpha. Soft light
- * is the look: it fades toward white and black, so light paper takes the
- * grain as lightly as the eye expects (a plain fill stains it).
- *
- * Unturned, the tile is pre-scaled to the plane's period in device px and
- * laid at a whole-pixel offset, so the software canvas never resamples it:
- * 6–8 ms a 1080p frame against about 20 ms through the plane's transform.
- * The period rounds to a whole px, so the grain sits within half a px a tile
- * of the plane's own scale, counted from the tile corner nearest the
- * camera's point: at most about 2 px at the frame's edge at any zoom. A
- * turned camera lays it through the plane's transform, sampled nearest.
- */
 export const planeFibre = (
   ctx: CanvasRenderingContext2D,
   view: Camera,
@@ -140,10 +101,6 @@ export const planeFibre = (
     const period = Math.max(8, Math.round(FIBRE_SIZE * zoom * m.a));
     const pattern = patternOf(ctx, scaledTile(period));
     if (pattern !== null) {
-      // Where the tile corner nearest the camera's point lands, in device px:
-      // the rounded period's error grows from there, so it stays small across
-      // the frame wherever the camera looks, and a new period moves the grain
-      // least where the eye is.
       const cx = Math.round(view.x / FIBRE_SIZE) * FIBRE_SIZE;
       const cy = Math.round(view.y / FIBRE_SIZE) * FIBRE_SIZE;
       const ox = Math.round(wrap(m.a * (w / 2 + zoom * (cx - view.x)) + m.e, period));
@@ -157,8 +114,6 @@ export const planeFibre = (
   }
   const pattern = patternOf(ctx, fibreTile());
   if (pattern !== null) {
-    // The frame's corners in the plane's world lie within this half-extent
-    // of the camera's point, however it is turned.
     const spread = (Math.abs(Math.cos(rot)) + Math.abs(Math.sin(rot))) / zoom;
     const hw = (w / 2) * spread + 2;
     const hh = (h / 2) * spread + 2;

@@ -1,7 +1,3 @@
-// The figure measure on figures drawn with known numbers (`fixtures/figure.ts`),
-// each ratio against the geometry it was drawn with. The real crops are read
-// in `tools/figure-crops.slow.test.ts`, which decodes their PNGs.
-
 import { describe, expect, test } from 'bun:test';
 import { Option, Result } from 'effect';
 import {
@@ -20,10 +16,8 @@ const measured = (spec: FigureSpec): FigureMeasure =>
 
 type Paper = readonly [number, number, number];
 
-/** A robe shaded toward grey, the case the rim test draws. */
 const RIM_ROBE = { ...PLAIN, robeShade: [104, 118, 135] as const };
 
-/** How much of the paper a rim pixel carries, by its distance to the ink: the nearer, the more. */
 const RIM_BLEND: ReadonlyArray<readonly [number, number]> = [
   [1.5, 0.4],
   [2.5, 0.25],
@@ -33,7 +27,6 @@ const RIM_BLEND: ReadonlyArray<readonly [number, number]> = [
 const sameRgb = (rgba: Uint8Array, i: number, c: ReadonlyArray<number>) =>
   rgba[i * 4] === c[0] && rgba[i * 4 + 1] === c[1] && rgba[i * 4 + 2] === c[2];
 
-/** The distance from (x, y) to the nearest ink pixel within 3 px, Infinity when none is. */
 const inkDistance = (r: Raster, x: number, y: number) => {
   let near = Infinity;
   for (let dy = -3; dy <= 3; dy++)
@@ -46,7 +39,6 @@ const inkDistance = (r: Raster, x: number, y: number) => {
   return near;
 };
 
-/** Each robe pixel near the ink, with the share of the paper it carries. */
 const rimBlends = (r: Raster, robeShade: ReadonlyArray<number>) => {
   const blends: Array<readonly [number, number]> = [];
   for (let y = 0; y < r.height; y++)
@@ -60,10 +52,6 @@ const rimBlends = (r: Raster, robeShade: ReadonlyArray<number>) => {
   return blends;
 };
 
-/**
- * `spec` drawn on `paper`, its robe's rim blended toward the paper as an
- * anti-aliased cut-out edge laid on a page is.
- */
 const rimOnPaper = (spec: typeof RIM_ROBE, paper: Paper): Raster => {
   const r = drawFigure(spec);
   const blends = rimBlends(r, spec.robeShade);
@@ -75,7 +63,6 @@ const rimOnPaper = (spec: typeof RIM_ROBE, paper: Paper): Raster => {
   return r;
 };
 
-/** The ratio's value; NaN when it is missing, so the test's numbers fail on it. */
 const valueOf = (m: FigureMeasure, ratio: Ratio): number =>
   Option.match(Option.fromUndefinedOr(m.ratios.find((r) => r.ratio === ratio)), {
     onNone: () => Number.NaN,
@@ -92,17 +79,13 @@ describe('a drawn figure', () => {
   test('reads each proportion it was drawn with, as a share of the head width', () => {
     const near = (ratio: Ratio, drawn: number, within = 0.02) =>
       expect(Math.abs(valueOf(plain, ratio) - drawn)).toBeLessThan(within);
-    // The head: its fill and its line, the hair cap inside it.
     near('headHeight', (2 * (PLAIN.ry + PLAIN.line)) / W);
     near('outline', PLAIN.line / W, 0.01);
     near('eyeSpacing', PLAIN.eyeGap / W, 0.01);
-    // The eyes against their spacing: a pixel of an eye is a 48th of it.
     near('eyeWidth', PLAIN.eyeW / PLAIN.eyeGap, 0.035);
     near('eyeHeight', PLAIN.eyeH / PLAIN.eyeGap, 0.035);
-    // The robe at its hem, and the figure from the hair's top to the feet's bottom.
     near('hem', (PLAIN.robeHem + 2 * PLAIN.line) / W);
     near('hand', (44 + 2 * PLAIN.line) / W);
-    // The feet: two shoes 48 wide inside their line, 40 either side of the middle.
     near('feetWidth', (80 + 2 * (24 + PLAIN.line)) / W);
   });
 
@@ -113,7 +96,6 @@ describe('a drawn figure', () => {
 
   test('reads its outline: the head round, the body widening to its hem, the feet under it', () => {
     expect(plain.silhouette.head).toHaveLength(HEAD_RADII);
-    // A head drawn round reads within a twentieth of a head of round at every angle.
     for (const r of plain.silhouette.head) expect(Math.abs(r - 0.5)).toBeLessThan(0.06);
     const [top, bottom] = [plain.silhouette.body[0]!, plain.silhouette.body.at(-1)!];
     expect(bottom.right - bottom.left).toBeGreaterThan(top.right - top.left);
@@ -166,7 +148,6 @@ describe('a drawn figure', () => {
 
   test('a hair line with its own ink reads as interior ink; one without, none', () => {
     expect(valueOf(plain, 'interiorInk')).toBe(0);
-    // The ink band runs the head's width at the hair line: most of a head long.
     expect(valueOf(measured({ ...PLAIN, hairInk: true }), 'interiorInk')).toBeGreaterThan(0.5);
   });
 
@@ -183,13 +164,10 @@ describe('a drawn figure', () => {
   });
 
   test('a robe shaded toward grey, its saturation halved and its hue kept, reads as grey', () => {
-    // Near enough the robe's colour to be one fill with it (`STEP`), as a shade is.
     expect(measured({ ...PLAIN, robeShade: [104, 118, 135] }).bodyShading?.kind).toBe('grey');
   });
 
   test('a robe whose rim blends with the paper keeps its shade reading when the paper changes', () => {
-    // A cut-out's rim: the robe's pixels within 3 px of its line carry some of
-    // the paper behind it (as an anti-aliased edge re-blended on a page does).
     const shadeOn = (paper: Paper) =>
       Result.getOrThrow(measureFigure(rimOnPaper(RIM_ROBE, paper))).bodyShading;
     const sheet = shadeOn([255, 242, 218]);
@@ -207,7 +185,6 @@ describe('a drawn figure', () => {
   test("reads the face's marks against the eye spacing: a line half as heavy again moves none of them", () => {
     const face = { ...PLAIN, mouth: { open: false, width: 30 } };
     const [light, heavy] = [measured(face), measured({ ...face, line: 10 })];
-    // The outer width holds the line: 4 px more of it each side widens the head 6%.
     for (const ratio of ['eyeWidth', 'eyeHeight', 'mouthWidth'] as const)
       expect({ ratio, off: Math.abs(valueOf(heavy, ratio) / valueOf(light, ratio) - 1) }).toEqual({
         ratio,
@@ -216,7 +193,6 @@ describe('a drawn figure', () => {
   });
 
   test("under a headcloth its face's fill runs on into with no line, shades the skin alone", () => {
-    // The RBF farmer's cream cloth, 61 from his skin: near enough to pass for a shade of it.
     const cloth = measured({ ...PLAIN, headcloth: [230, 220, 190] });
     expect(plain.headShading).toBeUndefined();
     expect(cloth.headShading).toBeUndefined();

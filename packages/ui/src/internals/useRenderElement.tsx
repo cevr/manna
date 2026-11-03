@@ -1,13 +1,3 @@
-// Upstream: packages/react/src/internals/useRenderElement.tsx
-//
-// Renders a part's element: its state as `data-*` attributes, its internal
-// props merged under the user's, `class` and `style` resolved against the
-// state, and either the default tag or the user's `render` function.
-//
-// `params` may hold getters: `state` and `props` are read inside
-// a reactive scope, so a part passes live values without rebuilding the
-// element. `render` is called once per change of the `render` prop, with the
-// merged props and the state (both live views: spread or read them in a reactive scope).
 import { type JSX, dynamic } from '@solidjs/web';
 import { createMemo, untrack } from 'solid-js';
 
@@ -30,13 +20,9 @@ export interface UseRenderElementComponentProps<State> {
 }
 
 interface UseRenderElementParameters<State> {
-  /** The state the `data-*` attributes, `class`, `style` and `render` read. */
   state?: State | undefined;
-  /** Refs the rendered element is passed to, besides any in `props`. */
   ref?: unknown;
-  /** The element's props: one set, or several merged left to right. */
   props?: PropsInput | ReadonlyArray<PropsInput> | undefined;
-  /** Replaces the default `data-*` attribute of a state key. */
   stateAttributesMapping?: StateAttributesMapping<State> | undefined;
 }
 
@@ -50,7 +36,6 @@ function resolveStyle<State>(value: StyleProp<State> | undefined, state: State) 
   return typeof value === 'function' ? value(state) : value;
 }
 
-/** A live props view over a computed record, its keys free to change. */
 export function propsFromAccessor(read: () => HTMLProps): HTMLProps {
   return new Proxy<HTMLProps>(
     {},
@@ -68,7 +53,6 @@ export function propsFromAccessor(read: () => HTMLProps): HTMLProps {
   );
 }
 
-/** The merged props a part's element receives (without rendering it). */
 function useRenderElementProps<State extends object>(
   componentProps: UseRenderElementComponentProps<State>,
   params: UseRenderElementParameters<State>,
@@ -93,7 +77,6 @@ function useRenderElementProps<State extends object>(
   return mergePropsN([propsFromAccessor(stateAttributes), resolved, own]);
 }
 
-/** Renders a part's element, or the user's `render` in its place. */
 export function useRenderElement<State extends object>(
   element: IntrinsicTagName | undefined,
   componentProps: UseRenderElementComponentProps<State>,

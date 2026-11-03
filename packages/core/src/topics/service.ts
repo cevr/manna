@@ -39,15 +39,6 @@ interface TopicReferenceRow {
   readonly osis: string;
 }
 
-/** Catalog rows are untrusted input crossing a boundary, so they are decoded
- *  into the error channel rather than with a `*Sync` decoder.
- *
- *  A `*Sync` decoder throws, and a throw inside these handlers becomes a defect
- *  that walks straight past the `mapError` below — so a `bible.db` whose
- *  `alternative_names` column holds something other than a JSON string array
- *  would kill the fiber instead of reporting a corrupt catalog. The column type
- *  is `TEXT NOT NULL`, so the *type* is known; what is untrusted is the value,
- *  which is exactly what the schema establishes. */
 const StringArrayJson = Schema.fromJsonString(Schema.Array(Schema.NonEmptyString));
 
 const decodeCatalog = <A>(
@@ -169,8 +160,6 @@ export class TopicService extends Context.Service<TopicService, TopicServiceApi>
           });
         }).pipe(
           Effect.mapError((cause) => {
-            // A row that failed to decode already carries its own operation;
-            // relabelling it as `topic` would hide which column was corrupt.
             if (Schema.is(TopicNotFoundError)(cause)) return cause;
             if (Schema.is(TopicUnavailableError)(cause)) return cause;
             return unavailable('topic')(cause);

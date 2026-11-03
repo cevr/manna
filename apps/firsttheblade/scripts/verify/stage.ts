@@ -1,12 +1,3 @@
-/**
- * `verify:stage`: a throwaway copy of the site on Cloudflare, on its own
- * `workers.dev` host (`../../alchemy.run.ts`; README, Commands). `up`
- * deploys the build as it stands (`bun run build` first), `down` destroys
- * the stage. Only a stage named `agent-<name>` is taken, so no run deploys
- * or destroys `prod` or the owner's own stages. The deploy reads the app's
- * `.env` (the list's two secrets), as `bun run deploy` does; its output
- * goes to `<root>/stage-<stage>.log`, never to stdout.
- */
 import { Effect, FileSystem, Option, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
@@ -15,7 +6,6 @@ import { CommandFailed, NotBuilt, Refused } from './model.ts';
 
 const AGENT_STAGE = /^agent-[a-z0-9][a-z0-9-]{0,30}$/;
 
-/** The stage's name, refused unless it is a throwaway one. */
 export const agentStage = (stage: string) => {
   if (AGENT_STAGE.test(stage)) return Effect.succeed(stage);
   return Effect.fail(
@@ -25,7 +15,6 @@ export const agentStage = (stage: string) => {
   );
 };
 
-/** The first `workers.dev` address an Alchemy run printed. */
 export const workersDevUrl = (log: string) =>
   Option.fromNullOr(/https:\/\/[a-z0-9.-]+\.workers\.dev/.exec(log)).pipe(Option.map((m) => m[0]));
 

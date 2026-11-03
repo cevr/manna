@@ -1,7 +1,3 @@
-// The law and its measure: the two tables of stone (which become the mirror
-// in `mirror` and the heart's tablets in `within`), the gold ring as big as
-// the universe, and the cross that meets the tablets in `message`.
-
 import {
   type Hand,
   type Pt,
@@ -15,7 +11,6 @@ import {
 } from '@manna/film/canvas';
 import { C, piece, type Hands } from './kit.ts';
 
-/** A tablet with an arched top, centred on (0, 0), `w` by `h`. */
 export const tabletShape = (w: number, h: number): Pt[] => {
   const r = w / 2;
   const top = -h / 2 + r;
@@ -26,10 +21,6 @@ export const tabletShape = (w: number, h: number): Pt[] => {
   return [...arch, [r, h / 2], [-r, h / 2]];
 };
 
-/**
- * The two tablets of the law side by side, centred on (0, 0) at about 250 by
- * 180: five lines on each. `lit` 0..10 turns the lines gold one by one.
- */
 export const tablets = (ctx: CanvasRenderingContext2D, hand: Hands, lit = 0) => {
   for (const side of [-1, 1] as const) {
     const x = side * 62;
@@ -56,7 +47,6 @@ export const tablets = (ctx: CanvasRenderingContext2D, hand: Hands, lit = 0) => 
   }
 };
 
-/** A gold ring, the law's measure, about (x, y) of radius `r`. */
 export const ring = (
   ctx: CanvasRenderingContext2D,
   hand: Hand,
@@ -76,7 +66,6 @@ export const ring = (
   );
 };
 
-/** A small planet: a disc with a band, at (x, y) of radius r. */
 export const planet = (
   ctx: CanvasRenderingContext2D,
   hand: Hand,
@@ -94,7 +83,6 @@ export const planet = (
   );
 };
 
-/** A four-point star at (x, y) of radius r. */
 export const star = (ctx: CanvasRenderingContext2D, hand: Hand, x: number, y: number, r: number) =>
   piece(
     ctx,
@@ -108,7 +96,6 @@ export const star = (ctx: CanvasRenderingContext2D, hand: Hand, x: number, y: nu
     { role: 'scenery', kind: 'cut', line: 2, shadow: 0.15 },
   );
 
-/** A cross of `s` scale, centred on (0, 0): about 120 by 190 at 1. */
 export const crossShape = (s: number): Pt[] => {
   const a = 18 * s;
   const arm = 60 * s;

@@ -1,10 +1,3 @@
-/**
- * The site end to end, in one process: a publish runs as the publisher runs
- * it (`publishTo` over the desk client), its requests answered by the desk's
- * policy (`respondDesk`) over a bucket in memory, and the site's policy
- * (`respond`) answers a reader's requests over the same bucket. A version's
- * files are real files in a temporary folder.
- */
 import { BunServices } from '@effect/platform-bun';
 import { describe, expect, it, test } from 'effect-bun-test';
 import { Effect, Exit, FileSystem, Option, Path, Redacted, Schema, type Scope } from 'effect';
@@ -27,17 +20,14 @@ const SECRET = 'the-desk-secret';
 
 const sha256Of = (bytes: Uint8Array) => new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
 
-/** A web request as the desk's Worker would see it, from the client's request. */
 const toWeb = (request: HttpClientRequest.HttpClientRequest, url: URL) => {
   const init: RequestInit = { method: request.method, headers: request.headers };
   if (request.body._tag === 'Uint8Array') init.body = new Uint8Array(request.body.body);
   return new Request(url, init);
 };
 
-/** A bucket, the desk over it reached in process (its store as `storeOf` makes it), and publishing through it. */
 const world = (partBytes = 1024 * 1024, storeOf: (store: Store) => Store = (store) => store) =>
   Effect.gen(function* () {
-    // A request body may be twice a part, so a page goes whole and a larger video only in parts.
     const bucket = memoryBucket(2 * partBytes);
     const store = storeOf(bucket.store);
     const fs = yield* FileSystem.FileSystem;
@@ -125,13 +115,11 @@ const ask = (
     };
   });
 
-/** The links a page lists that match `pattern`, in its order. */
 const links = (html: string, pattern: RegExp): ReadonlyArray<string> =>
   [...html.matchAll(/href="([^"]+)"/g)]
     .map((match) => match[1] ?? '')
     .filter((href) => pattern.test(href));
 
-/** A test over the platform, its temporary folder gone when it ends. */
 const local = <A, E>(
   name: string,
   body: () => Effect.Effect<A, E, FileSystem.FileSystem | Path.Path | Scope.Scope>,
@@ -143,7 +131,6 @@ describe('the index', () => {
       const { bucket, material, publish } = yield* world();
       yield* publish(yield* material('older', 'board', '2026-10-20T10:00:00.000Z', 'a'));
       yield* publish(yield* material('newer', 'render', '2026-10-24T10:00:00.000Z', 'a'));
-      // A manifest with nothing published in it lists nothing.
       const empty = yield* Schema.encodeEffect(FilmManifestJson)({
         film: 'empty',
         title: 'Title of empty',
@@ -167,7 +154,6 @@ describe('the index', () => {
       const { bucket, desk, material } = yield* world();
       const one = yield* material('one', 'board', '2026-10-20T10:00:00.000Z', 'a');
       const two = yield* material('two', 'board', '2026-10-21T10:00:00.000Z', 'a');
-      // The other film is published once this publish has read the manifests to plan.
       let reads = 0;
       const overlapped = {
         ...desk,

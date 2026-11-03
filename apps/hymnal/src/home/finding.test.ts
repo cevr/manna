@@ -19,7 +19,6 @@ import {
   tilesAt,
 } from './finding';
 
-/** A seeded run of numbers, so a failing sequence comes back the same. */
 const seeded = (start: number) => {
   let seed = start;
   return (below: number) => {
@@ -80,7 +79,6 @@ describe('All at once, shown by the home screen', () => {
     const next = seeded(0x7a11e5);
     for (let run = 0; run < 40; run++) {
       let state: Tiles = Tiles.Hidden();
-      // The place the current zoom took, once it shows.
       let took = Option.none<Stood>();
       for (let step = 0; step < 12; step++) {
         const pick = next(2);

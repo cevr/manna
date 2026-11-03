@@ -1,8 +1,3 @@
-/**
- * The upload against a set held in memory and a fake R2: the set's folder is
- * a map behind Effect's FileSystem, R2 a `Ref` of objects, so a run is a few
- * milliseconds and no network. The hashes are the real Bun ones.
- */
 import { describe, expect, it } from 'effect-bun-test';
 import { Console, Effect, FileSystem, Layer, Option, Path, Ref, Result, Schema } from 'effect';
 import * as PlatformError from 'effect/PlatformError';
@@ -26,7 +21,6 @@ const sha256Hex = (bytes: Uint8Array) => {
   return hasher.digest('hex');
 };
 
-/** A set as the render leaves it: every hymn's MP3 and the manifest over them. */
 const setOf = Effect.gen(function* () {
   const hash = yield* Hash;
   const files = new Map<string, Uint8Array>();
@@ -66,7 +60,6 @@ const notFound = (method: string, path: string) =>
     pathOrDescriptor: path,
   });
 
-/** The set's folder: the manifest as `manifest` encodes, and the MP3s in `files`. */
 const folderOf = (files: ReadonlyMap<string, Uint8Array>, manifest: RecordingManifest) =>
   Effect.gen(function* () {
     const text = yield* Schema.encodeEffect(ManifestJson)(manifest).pipe(Effect.orDie);
@@ -95,7 +88,6 @@ const bucket = Effect.gen(function* () {
   };
 });
 
-/** R2 as a map: an upload's ETag is the MD5 of the bytes it got; `failing` keys refuse their put. */
 const targetOf = (state: Bucket, failing: ReadonlySet<string> = new Set()) =>
   Layer.effect(
     Target,
@@ -121,7 +113,6 @@ const targetOf = (state: Bucket, failing: ReadonlySet<string> = new Set()) =>
     }),
   );
 
-/** R2 a dry run must never reach: any call is a defect. */
 const unreachable = Layer.succeed(
   Target,
   Target.of({
@@ -130,7 +121,6 @@ const unreachable = Layer.succeed(
   }),
 );
 
-/** Run the job over `folder` and `target`, keeping what it printed and how it ended. */
 const exec = <E>(
   program: Effect.Effect<void, E, FileSystem.FileSystem | Path.Path | Hash | Target>,
   folder: Layer.Layer<FileSystem.FileSystem>,

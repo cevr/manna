@@ -1,29 +1,10 @@
-// Christ's head turned to us, as court.you's kept try draws it (try 2),
-// traced by hand inside its ink in the panel's own pixels (1536 × 1024): His
-// hair parted a little right of the middle and falling past both ears to His
-// shoulders, both ears showing, a full beard round His chin with His mouth
-// open in a smile, His eyes and brows a little tipped with His head. Each
-// outline is a closed smooth path's points; the face's paper is the whole
-// head, the hair, ears and beard laid over it, the beard over the hair.
-// `christ-rig.ts` takes them to the cast's canon (`FRONT_PANEL`). Pure.
-
 import type { Pt } from '@manna/film/style';
 
-/**
- * The panel's pixels to the cast's canon: 0.35 units a pixel, which makes
- * the head as tall as court-12's (hair to the beard's foot, 137 units), about
- * the head's middle inside its ink.
- */
 export const FRONT_PANEL = { scale: 0.35, head: [892, 296] } as const satisfies {
   readonly scale: number;
   readonly head: Pt;
 };
 
-/**
- * The head on court.you's ink's inner edge (the rig lays its ink outside the
- * paper): the hair's crown, its locks down both sides to the shoulders, the
- * beard's foot between them, the foot on the ink's top where the beard meets it.
- */
 export const FRONT_REGION: Pt[] = [
   [880, 92],
   [905, 91],
@@ -103,22 +84,12 @@ export const FRONT_REGION: Pt[] = [
   [856, 102],
 ];
 
-/**
- * The region a little larger about the head's middle (2%, 3 to 4 pixels at
- * the silhouette): the hair runs out past the face's paper to it, so no edge
- * of the face shows under the ink round it.
- */
 const OVER: Pt[] = FRONT_REGION.map(([x, y]): Pt => [
   +(FRONT_PANEL.head[0] + (x - FRONT_PANEL.head[0]) * 1.02).toFixed(1),
   +(FRONT_PANEL.head[1] + (y - FRONT_PANEL.head[1]) * 1.02).toFixed(1),
 ]);
 const at = (x: number, y: number) => FRONT_REGION.findIndex((p) => p[0] === x && p[1] === y);
 
-/**
- * His hair: the region's crown and locks, its inner edge round His face (the
- * parting's peak at 946,150), and under the beard from cheek to cheek, where
- * the beard covers it.
- */
 export const FRONT_HAIR: Pt[] = [
   ...OVER.slice(0, at(988, 448) + 1),
   [998, 425],
@@ -171,10 +142,6 @@ export const FRONT_HAIR: Pt[] = [
   ...OVER.slice(at(810, 466)),
 ];
 
-/**
- * His beard: up each cheek to the hair, the moustache over His mouth, round
- * under His chin on the region's own foot, so its ink's top is court.you's.
- */
 export const FRONT_BEARD: Pt[] = [
   [776, 362],
   [788, 360],
@@ -214,7 +181,6 @@ export const FRONT_BEARD: Pt[] = [
   [778, 375],
 ];
 
-/** His lower lip under the open smile, in the beard. */
 export const FRONT_LIP: Pt[] = [
   [877.0, 399],
   [885.0, 394],
@@ -231,7 +197,6 @@ export const FRONT_LIP: Pt[] = [
   [879.0, 409],
 ];
 
-/** His ears in the hair: the near one (screen left) by His cheek, the far one at the hair's edge. */
 export const FRONT_EARS = {
   near: [
     [757, 326],
@@ -261,10 +226,6 @@ export const FRONT_EARS = {
   ],
 } satisfies Record<'near' | 'far', Pt[]>;
 
-/**
- * The light on the hair toward the window (screen left), soft: the crown's
- * left and down the outer edge of the near lock, about a tenth of the hair.
- */
 export const FRONT_SHEEN: Pt[] = [
   [758, 160],
   [784, 136],
@@ -286,13 +247,6 @@ export const FRONT_SHEEN: Pt[] = [
   [750, 180],
 ];
 
-/**
- * The hair's lit chestnut, cut: the band court.you paints just inside the
- * ink on the crown's left and down the near side to the ear's top
- * (878,100 to 727,280), 35 pixels wide on the crown and 10 down the side,
- * #d08445 at its peak (0.82 in value); FRONT_SHEEN's soft light falls off
- * inside it. Clipped to the hair.
- */
 export const FRONT_LIT: Pt[] = [
   [860, 94],
   [838, 103],
@@ -330,13 +284,6 @@ export const FRONT_LIT: Pt[] = [
   [882, 94],
 ];
 
-/**
- * The shade the beard lays on the locks beside it: court.you's dark band
- * between the beard's edge and each lock (0.13 to 0.17 in value, about 12
- * pixels wide), near from 798,404 down to the jaw's ink and far from 1017,378
- * down to it, both starting clear of the ears and the cheeks' skin. Each band's inner edge runs under the
- * beard, which covers it; clipped to the hair.
- */
 export const FRONT_BEARD_SHADOW = {
   near: [
     [798, 404],
@@ -377,13 +324,6 @@ export const FRONT_BEARD_SHADOW = {
   ],
 } satisfies Record<'near' | 'far', Pt[]>;
 
-/**
- * The locks beside the beard, a darker brown than the hair, the beard's shade
- * band (FRONT_BEARD_SHADOW) between each and the beard, so the beard reads as
- * a U inside them by value (hair has no ink of its own): each runs
- * from the silhouette to the beard's edge; the beard, laid over the hair,
- * covers what lies past its edge.
- */
 export const FRONT_LOCKS = {
   near: [
     [736, 352],
@@ -413,7 +353,6 @@ export const FRONT_LOCKS = {
   ],
 } satisfies Record<'near' | 'far', Pt[]>;
 
-/** The beard's lit third toward the window (screen left), soft. */
 export const FRONT_BEARD_LIT: Pt[] = [
   [760, 340],
   [826, 352],
@@ -422,11 +361,6 @@ export const FRONT_BEARD_LIT: Pt[] = [
   [760, 500],
 ];
 
-/**
- * His skin in the robe's V under the beard, as court.you draws it: 131
- * pixels across 4 under the beard's foot, narrowing to its point at
- * (928, 556); its top runs up under the beard.
- */
 export const FRONT_NECK: Pt[] = [
   [833, 468],
   [1023, 468],
@@ -445,13 +379,6 @@ export const FRONT_NECK: Pt[] = [
   [862.5, 500],
 ];
 
-/**
- * The robe's sides under His locks, as court.you draws them on its ink's
- * inner edge (the rig lays its ink outside the paper): the far shoulder
- * (screen right) from under the far lock down to where His far hand covers
- * it, and the near shoulder from where His held-out hand covers it up under
- * the near lock.
- */
 export const FRONT_ROBE_SIDES = {
   far: [
     [1070, 480],
@@ -481,12 +408,6 @@ export const FRONT_ROBE_SIDES = {
   ],
 } satisfies Record<'far' | 'near', Pt[]>;
 
-/**
- * The gold sash's edges as court.you draws them, from the far shoulder
- * across the chest toward the near hip: the right edge on the robe's own
- * edge to 530, then away from it; the left edge until the held-out hand
- * covers it; each again under the dock's rail, between its balusters.
- */
 export const FRONT_SASH = {
   right: [
     [1118, 480],
@@ -525,7 +446,6 @@ export const FRONT_SASH = {
   ],
 } satisfies Record<'right' | 'left', Pt[]>;
 
-/** The neck's top in the beard's shadow. */
 export const FRONT_NECK_SHADE: Pt[] = [
   [833, 468],
   [1023, 468],
@@ -533,7 +453,6 @@ export const FRONT_NECK_SHADE: Pt[] = [
   [867, 506],
 ];
 
-/** His face's marks, panel pixels: each eye's centre and size, each brow's ends and stroke, the mouth's ends and stroke. */
 export const FRONT_MARKS = {
   eyes: [
     [845, 315],

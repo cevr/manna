@@ -35,7 +35,6 @@ const FILM = [
   '',
 ].join('\n');
 
-/** The lines as a page reads them, their words and their marks: the line a mark write is made on. */
 const DANIEL = Option.some<LineRead>({
   spoken: 'Daniel was taken. He was young.',
   marks: [
@@ -82,7 +81,6 @@ describe('reading a draft', () => {
     expect(hook!.brief).toEqual(Option.some('A bowl.'));
     expect(hook!.cite).toEqual(['Dan 1:1']);
     expect(title!.say).toEqual(Option.none());
-    // An escaped pipe is a pipe in the line.
     expect(Option.map(turn!.say, (s) => s.text)).toEqual(
       Option.some('A pipe | in a cell, and {//1.5} a {*}turn.'),
     );
@@ -204,7 +202,6 @@ describe('draftMarked', () => {
   });
 
   test('refuses marks made on words the line no longer says', () => {
-    // The page read beat 1 before "taken" became "carried away": word 2 is another word now.
     const reworded = TALK.replace('Daniel was {*}taken.', 'Daniel was {*}carried away.');
     const stale = draftMarked(reworded, '1', [{ _tag: 'Stress', word: 2 }], DANIEL);
     expect(unreadText(Result.getOrThrow(Result.flip(stale)))).toBe(
@@ -213,7 +210,6 @@ describe('draftMarked', () => {
   });
 
   test('refuses marks made on a line marked since, and a page older than the lab', () => {
-    // Marked elsewhere since the page read it: "young" is no longer stressed.
     const remarked = TALK.replace('He was {*}young.', 'He was young.');
     const stale = draftMarked(remarked, '1', [{ _tag: 'Stress', word: 0 }], DANIEL);
     expect(unreadText(Result.getOrThrow(Result.flip(stale)))).toBe(

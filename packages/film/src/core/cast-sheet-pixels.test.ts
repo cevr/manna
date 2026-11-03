@@ -1,7 +1,3 @@
-// A paper's colour in the words a retry's prompt says it in, beside its hex:
-// the house's papers by their plain names, a light red as pink, a dark warm
-// as brown.
-
 import { describe, expect, test } from 'bun:test';
 import { colourWords, hexOf, type Rgb } from './cast-sheet-pixels.ts';
 

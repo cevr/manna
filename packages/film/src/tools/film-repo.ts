@@ -1,11 +1,3 @@
-// Where films live and how a tool reads one: the film's modules (scenes,
-// voice, sound) through one named loader, each decoded with Schema, and its
-// generated data (timings, sound manifest) through the content store. The
-// films directory is the one the app passes in, the folder its player page
-// imports, so the tools and the page never read two different films; stems
-// and other outputs go under `FILMS_OUT`: the app's `out/` under `runFilmCli`
-// (`FilmApp.folders`), `<cwd>/out` where nothing sets it.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -78,73 +70,39 @@ import { FilmModuleInvalid, TalkUnvoiced } from './errors.ts';
 import { Credit } from '../canvas/credits.ts';
 import { type PrivateFile, type Scores, scoreKey } from './media-store.ts';
 
-/** Every path a tool touches for one film. */
 export interface FilmPaths {
   readonly name: string;
   readonly dir: string;
   readonly narration: string;
   readonly sound: string;
-  /** Per-film outputs: stems, renders. */
   readonly out: string;
   readonly timings: Manifest<Timings>;
   readonly manifest: Manifest<SoundManifest>;
 }
 
-/** The film's mixed track (16-bit WAV): the player streams it, the renderer encodes from it. */
 export const masterFile = (paths: FilmPaths): string => `${paths.narration}/full.wav`;
 
-/** A film as the tools see it: the clock's part of each scene, its voice, sound and data. */
 export interface LoadedFilm {
   readonly paths: FilmPaths;
-  /**
-   * The frames a second it is laid and drawn at: its `film.ts`'s `fps` (a
-   * version folder's too: it keeps no `film.ts`), the rate its page is made
-   * at (`Narrated.fps`); a talk's `TALK_FPS`. Every tool lays it at this rate
-   * (`placeFilm`), so the mix, the checks, the lab's clock and the segment
-   * keys place each beat on the frame its page draws it on.
-   */
   readonly fps: number;
   readonly scenes: ReadonlyArray<Timed>;
-  /** Who reads it (`voice.ts`); none for a talk, which its speaker recorded on camera. */
   readonly voice: Option.Option<Voice>;
   readonly sound: Option.Option<Sound>;
-  /** The vertical shorts its `shorts.ts` declares; empty when it has none. */
   readonly shorts: Shorts;
-  /** Empty (no takes, no voice) until the first take is recorded. */
   readonly timings: Timings;
   readonly manifest: SoundManifest;
-  /** How speech-to-text writes the script's names (`script.ts`'s `heardAs`); none when it lists none. */
   readonly heardAs: HeardAs;
-  /** The film's declared colour script and acts (`film.ts`'s `look`); none when it declares none. */
   readonly look: Option.Option<Look>;
-  /** The looks it chooses between at named levels (`palette.ts`'s `looks`); empty when it has none. */
   readonly looks: Looks;
-  /**
-   * The app's sound library its effects and beds name, resolved and not
-   * measured; none when the app has none. What reads how they play measures
-   * them (`MeasuredFilm`).
-   */
   readonly sounds: Sounds;
-  /** A talk's edit and how it plays (`core/talk.ts`); none for a drawn film. */
   readonly talk: Option.Option<LoadedTalk>;
-  /** The credit roll its `credits.ts` sets (`CREDITS`); none when it keeps none. */
   readonly credits: Option.Option<ReadonlyArray<Credit>>;
 }
 
-/**
- * A film with each seed of every derived sound its `sound.ts` places
- * measured (`measuredFilm`): what a mix plan, the check's lead-in and a
- * seed's line in the options read.
- */
 export interface MeasuredFilm extends LoadedFilm {
   readonly sounds: MeasuredSounds;
 }
 
-/**
- * A talk as the tools read it: its edit, its takes (by the talk's take keys,
- * `talkTakes`), its cut, and the folder of copies its takes' voices are in
- * (`<FILMS_OUT>/footage`).
- */
 export interface LoadedTalk {
   readonly talk: Talk;
   readonly takes: Readonly<Record<string, TalkTake>>;
@@ -152,15 +110,9 @@ export interface LoadedTalk {
   readonly copies: string;
 }
 
-/** Who reads `film` (`voice.ts`), or `TalkUnvoiced` for a talk, which is recorded on camera. */
 export const readerOf = (film: LoadedFilm): Result.Result<Voice, TalkUnvoiced> =>
   Result.fromOption(film.voice, () => TalkUnvoiced.make({ film: film.paths.name }));
 
-/**
- * The voice each of a talk's sections plays, in pieces of its take's
- * (`mixPlan`), known by its take's source and the recipe its voice is made
- * by; none for a drawn film.
- */
 export const voicePiecesOf = (film: LoadedFilm): ReadonlyMap<string, VoicePieces> =>
   new Map(
     Option.match(film.talk, {
@@ -183,84 +135,36 @@ export const voicePiecesOf = (film: LoadedFilm): ReadonlyMap<string, VoicePieces
 
 type LoadError = FilmUnknown | FilmModuleInvalid | StoreError | CodeError;
 
-/**
- * A film's name as a request gives it, checked against the films folder: one
- * of its films (`FilmRepo.named`), never a path. A route that takes a film
- * takes this, so `../` or an absolute path reaches no module.
- */
 export const FilmName = Segment.pipe(Schema.brand('FilmName'));
 export type FilmName = typeof FilmName.Type;
 
-/**
- * Where a film lives, and which films there are: paths and a folder listing,
- * never a module import. A process that runs for days (the review) holds this
- * and not `FilmRepo`: its imports of a film stay as they were at the first
- * one (Bun keeps a module as it first evaluated it), so it reads a film only
- * through a fresh process (`FreshFilm`).
- */
 interface FilmFolderService {
-  /**
-   * Every path a tool touches for `film`; with `folder`, for its version
-   * folder (`<film>/<folder>/`, an earlier version kept beside the film):
-   * its scenes, takes, timings and score under it. Its outputs stay the
-   * film's.
-   */
   readonly paths: (film: string, folder?: Segment) => FilmPaths;
-  /** The films in the folder, by name (each a folder with `scenes/index.ts`), sorted. */
   readonly names: Effect.Effect<ReadonlyArray<string>>;
-  /** The app's sound library folder (`library.ts`, its lock, `files/`), when it has one. */
   readonly sounds: Option.Option<string>;
-  /** The app's footage library folder (its lock, `transcripts/`, `files/`), when it has one. */
   readonly footage: Option.Option<string>;
-  /**
-   * What the film is made from as it stands: the newest mtime of any file
-   * under its folder (its scenes, script, takes, score and `sound.ts`) and of
-   * the library's module (`library.ts`) and lock, and of the footage library's lock and
-   * transcripts (a talk is cut on them). A process that keeps what it read of a film fresh
-   * keys it by this, and reads again when it moves.
-   */
   readonly stamp: (film: string) => Effect.Effect<number, PlatformError>;
 }
 
 interface FilmRepoService {
-  /**
-   * The film as its registered files stand; with `folder`, its version
-   * folder (`<film>/<folder>/`): that folder's scenes, takes, score, shorts,
-   * script and acts, and the film's own voice and palette where the folder
-   * keeps none.
-   */
   readonly load: (film: string, folder?: Segment) => Effect.Effect<LoadedFilm, LoadError>;
-  /**
-   * The film's screenplay (`script.ts`): each beat's line, sources and hold.
-   * None when it keeps none. `folder` reads a version folder's instead
-   * (`<film>/<folder>/script.ts`).
-   */
   readonly script: (
     film: string,
     folder?: Segment,
   ) => Effect.Effect<Option.Option<ScriptModule['script']>, LoadError>;
-  /**
-   * The film's beds and effects (`sound.ts`) alone, nothing else of it
-   * imported: what reads where a sound is placed. None when it keeps none.
-   */
   readonly sound: (film: string) => Effect.Effect<Option.Option<Sound>, LoadError>;
-  /** Every film's composed score options, as the private store keeps them. */
   readonly scores: Effect.Effect<Scores, StoreError>;
 }
 
 const ScenesModule = Schema.Struct({ scenes: Schema.Array(Timed) });
-/** The part of `script.ts` the tools read: each beat's line, its sources, its picture's brief and its hold. */
 const ScriptModule = Schema.Struct({
   script: Schema.Array(
     Schema.Struct({
       id: Schema.String,
       say: Schema.optionalKey(Schema.String),
-      /** The beat's hold, as a scene's (`Timed`): what lays a version's script out on its clock. */
       ...Struct.pick(Timed.fields, ['lead', 'tail', 'min', 'enter']),
       cite: Schema.Array(Schema.String).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),
-      /** What the picture does (the judge quotes it, `tools/judge.ts`). */
       picture: Schema.optionalKey(Schema.String),
-      /** The cast members the picture draws (`Beat`'s `cast`): the board's library references. */
       cast: Beat.fields.cast,
     }),
   ),
@@ -269,38 +173,17 @@ const ScriptModule = Schema.Struct({
 type ScriptModule = typeof ScriptModule.Type;
 const VoiceModule = Schema.Struct({ voice: Voice });
 const SoundModule = Schema.Struct({ sound: Sound });
-/**
- * The part of `film.ts` the tools read: its declared look, when it declares
- * one. A version folder keeps no `film.ts` (it is no film the player
- * registers): its `acts.ts` declares the look, as the film's `film.ts`
- * re-exports its own.
- */
 const FilmModule = Schema.Struct({ look: Schema.optionalKey(Look) });
-/**
- * The film's frame rate, its `film.ts`'s `fps`: required, the one place a
- * film's rate is declared. Its page is made at it (`narratedFilms`) and the
- * tools lay it at it.
- */
 const FilmRate = Schema.Struct({ fps: Schema.Finite.check(Schema.isGreaterThan(0)) });
 const ShortsModule = Schema.Struct({ shorts: Shorts });
-/** A talk's `talk.ts`: its edit. */
 const TalkModule = Schema.Struct({ talk: Talk });
-/** The part of `palette.ts` the tools read: the looks it chooses between, when it has any. */
 const PaletteModule = Schema.Struct({ looks: Schema.optionalKey(Looks) });
-/** The part of `credits.ts` the tools read: the roll its end scene draws. */
 const CreditsModule = Schema.Struct({ CREDITS: Schema.Array(Credit) });
 
-/**
- * The one place a film module is imported by path. The process keeps the
- * module it first loaded: a tool that must see a file as it is now parses it
- * (`scene-source.ts`) instead.
- */
 export const importFilmModule = (file: string) => import(file);
 
-/** What an app's `sounds/library.ts` exports: its sounds, and where their private files are kept. */
 const LibraryModule = Schema.Struct({ library: Library, store: StoreConfig });
 
-/** An app's `sounds/library.ts`, decoded. */
 export const libraryModule = (file: string) =>
   Effect.tryPromise({
     try: () => importFilmModule(file),
@@ -316,21 +199,14 @@ export const libraryModule = (file: string) =>
     ),
   );
 
-/** The library's lock (`library.lock.json`) in `dir`, as the content store reads and writes it. */
 export const lockManifest = (dir: string): Manifest<Lock> => ({
   file: `${dir}/library.lock.json`,
   codec: LockJson,
   empty: {},
 });
 
-/** A recording's fit in the library `dir` (`sfx fit`): `fits/<name>.json`. */
 export const fitFile = (dir: string, name: string): string => `${dir}/fits/${name}.json`;
 
-/**
- * The fits in the library `dir`, each by the sound it fits (its file's name):
- * none when it keeps no `fits/`. A file that is not a fit is refused
- * (`FitUnreadable`), never skipped.
- */
 export const fitsIn = Effect.fn('Library.fits')(function* (dir: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -352,16 +228,13 @@ export const fitsIn = Effect.fn('Library.fits')(function* (dir: string) {
   return new Map<string, SoundFit>(fits);
 });
 
-/** Why a film does not lay out: each authoring error names its scene (`LayoutError`). */
 export type PlaceError = LayoutError;
 
-/** Lay the film out; an authoring error fails as itself, naming its scene and cue. */
 export const placeFilm = (film: LoadedFilm): Effect.Effect<ReadonlyArray<Placed>, PlaceError> =>
   Effect.fromResult(layout(film.scenes, film.timings, film.fps));
 
 const asFilmName = Schema.decodeSync(FilmName);
 
-/** `name` as one of the films in the folder, or `FilmUnknown` naming the films there are. */
 export const filmNamed = Effect.fn('FilmFolder.named')(function* (name: string) {
   const known = yield* (yield* FilmFolder).names;
   return yield* Effect.fromOption(
@@ -373,36 +246,24 @@ export const filmNamed = Effect.fn('FilmFolder.named')(function* (name: string) 
   );
 });
 
-/** A film's sources at one stamp (`FilmFolder.stamp`): the key what was read of them is kept under. */
 export class Stamped extends Data.Class<{ readonly film: FilmName; readonly stamp: number }> {}
 
-/** How long a cache keeps what it read under its key: for good once it is read, a failed read not at all. */
 export const keptWhenMade = <A, E>(exit: Exit.Exit<A, E>): Duration.Duration =>
   Exit.match(exit, { onFailure: () => Duration.zero, onSuccess: () => Duration.infinity });
 
-/** What is under a film's folder that it is not made from: renders, installs, history. */
 const NOT_SOURCE: ReadonlyArray<string> = ['out', 'node_modules', '.git'];
 
-/**
- * The files either of which makes `name` under `films` a film: a drawn
- * film's scene registry, `<films>/<name>/scenes/index.ts`, or a talk's edit,
- * `<films>/<name>/talk.ts`. None for a name no folder of `films` has (`.`,
- * `..`, a path). `FilmFolder.names` and the narration route
- * (`narration-route.ts`) both ask it.
- */
 export const filmMarks = (films: string, name: string): ReadonlyArray<string> => {
   if (!isSegment(name)) return [];
   return [`${films}/${name}/scenes/index.ts`, `${films}/${name}/talk.ts`];
 };
 
-/** The footage library's lock (`library.lock.json`) in `dir`, as the content store reads and writes it. */
 export const footageLockManifest = (dir: string): Manifest<FootageLock> => ({
   file: `${dir}/library.lock.json`,
   codec: FootageLockJson,
   empty: EMPTY_FOOTAGE_LOCK,
 });
 
-/** The folder outputs go under: `FILMS_OUT` (the app's `out/` under `runFilmCli`), else `<cwd>/out`. */
 export const filmsOut = Effect.gen(function* () {
   const path = yield* Path.Path;
   return yield* Config.String('FILMS_OUT').pipe(Config.withDefault(path.resolve('out')));
@@ -411,11 +272,6 @@ export const filmsOut = Effect.gen(function* () {
 export class FilmFolder extends Context.Service<FilmFolder, FilmFolderService>()(
   '@manna/film/tools/FilmFolder',
 ) {
-  /**
-   * The films in `films`: the app's films folder, which its player imports;
-   * `sounds`, the app's sound library folder, and `footage`, its footage
-   * library's, when it has them.
-   */
   static readonly layer = (
     films: string,
     sounds: Option.Option<string> = Option.none(),
@@ -453,7 +309,6 @@ export class FilmFolder extends Context.Service<FilmFolder, FilmFolderService>()
 
         const names = fs.readDirectory(films).pipe(
           Effect.flatMap((entries) =>
-            // A file beside the films (the registry's `index.ts`) is no film: its lookup fails, not errs.
             Effect.filter(entries, (name) =>
               Effect.map(
                 Effect.forEach(filmMarks(films, name), (mark) =>
@@ -471,12 +326,10 @@ export class FilmFolder extends Context.Service<FilmFolder, FilmFolderService>()
           const dir = paths(film).dir;
           const files = yield* fs.readDirectory(dir, { recursive: true });
           const made = files.filter((f) => !NOT_SOURCE.includes(f.split('/')[0] ?? ''));
-          // The library's module and its lock: its levels, prompts and kept takes enter the mix.
           const library = Option.match(sounds, {
             onNone: () => [],
             onSome: (at) => [path.join(at, 'library.ts'), lockManifest(at).file],
           });
-          // The footage library's lock and transcripts: a talk is cut on them.
           const heard = yield* Option.match(footage, {
             onNone: () => Effect.succeed<ReadonlyArray<string>>([]),
             onSome: (at) =>
@@ -510,11 +363,6 @@ export class FilmFolder extends Context.Service<FilmFolder, FilmFolderService>()
 export class FilmRepo extends Context.Service<FilmRepo, FilmRepoService>()(
   '@manna/film/tools/FilmRepo',
 ) {
-  /**
-   * The repo over the films in `films` (`FilmFolder.layer`, which it
-   * provides beside itself): each film's modules imported, its data read; a
-   * talk cut on its takes' transcripts in the footage library (`footage`).
-   */
   static readonly layer = (
     films: string,
     sounds: Option.Option<string> = Option.none(),
@@ -529,7 +377,6 @@ export class FilmRepo extends Context.Service<FilmRepo, FilmRepoService>()(
         const { paths, names, sounds, footage: footageDir } = yield* FilmFolder;
         const outputs = yield* filmsOut;
 
-        /** A film not in the folder: `FilmUnknown`, naming the films there are (never a path). */
         const unknown = (film: string) =>
           Effect.flatMap(names, (known) => Effect.fail(FilmUnknown.make({ film, known })));
 
@@ -550,12 +397,6 @@ export class FilmRepo extends Context.Service<FilmRepo, FilmRepoService>()(
             }),
           );
 
-        /**
-         * A talk: its edit, its takes as the footage library keeps them
-         * (`talkTakes`, over the lock and the transcripts it names, as the
-         * page reads them through the footage route), cut, and laid out as a
-         * film's scenes are.
-         */
         const loadTalk = (name: string, at: FilmPaths) =>
           Effect.gen(function* () {
             const invalid = (reason: string) =>
@@ -586,7 +427,6 @@ export class FilmRepo extends Context.Service<FilmRepo, FilmRepoService>()(
             return loaded;
           });
 
-        /** `name`'s `sound.ts` read, from its folder `at`; none when it keeps none. */
         const soundIn = (name: string, at: FilmPaths) =>
           Effect.gen(function* () {
             const file = path.join(at.dir, 'sound.ts');
@@ -594,7 +434,6 @@ export class FilmRepo extends Context.Service<FilmRepo, FilmRepoService>()(
             return Option.some((yield* loadModule(name, file, SoundModule)).sound);
           });
 
-        /** `name`'s credit roll (`credits.ts`), from its folder `at`; none when it keeps none. */
         const creditsIn = (name: string, at: FilmPaths) =>
           Effect.gen(function* () {
             const file = path.join(at.dir, 'credits.ts');
@@ -605,7 +444,6 @@ export class FilmRepo extends Context.Service<FilmRepo, FilmRepoService>()(
         const load = Effect.fn('FilmRepo.load')(function* (name: string, folder?: Segment) {
           if (!(yield* fs.exists(paths(name).dir))) return yield* unknown(name);
           const at = paths(name, folder);
-          /** A module the version folder keeps, else the film's own (its voice, its palette). */
           const ownOrFilm = (file: string) =>
             Effect.map(fs.exists(path.join(at.dir, file)), (own) =>
               path.join(
@@ -689,10 +527,6 @@ export class FilmRepo extends Context.Service<FilmRepo, FilmRepoService>()(
           return loaded;
         });
 
-        /**
-         * The app's library, its lock and its code sounds resolved, nothing
-         * rendered or measured; none when the app keeps no `sounds/library.ts`.
-         */
         const loadSounds = Effect.gen(function* () {
           const dir = Option.getOrElse(sounds, () => '');
           const file = path.join(dir, 'library.ts');

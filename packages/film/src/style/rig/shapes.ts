@@ -1,25 +1,9 @@
-// The outlines a figure is cut from, in the figure's units: a polygon with
-// its corners rounded, a garment's (a tunic cut from its neck and hem, a
-// robe from its corners or as traced), a shoe, and a blot (a head is traced
-// from its concept); whether a point lies inside an outline (`inside`) and
-// how far from its edge (`fromEdge`); and how one paper tucks under the
-// papers laid over it (`tucked`, and a paper rimmed all round deeper, under
-// their seams, `tuckedRimmed`). Each outline is a list of points the
-// generator's `piece` runs a smooth path through, dense enough along a
-// straight edge that the edge stays straight. Pure.
-
 import { rng } from '../../core/random.ts';
 import type { Garment, Tunic } from '../parts/body.ts';
 import type { Pt } from './parts.ts';
 
-/** How far apart points lie along a straight edge, units, so a smooth path keeps it straight. */
 const STEP = 40;
 
-/**
- * `corners` (clockwise) with each corner rounded by `r` (no more than a
- * third of either edge), and points along each edge every `STEP` units.
- * `r` is one radius for every corner, or each corner's own, in order.
- */
 export const roundedPolygon = (
   corners: ReadonlyArray<Pt>,
   r: number | ReadonlyArray<number>,
@@ -40,7 +24,6 @@ export const roundedPolygon = (
     const a = toward(prev, radius(i));
     const b = toward(next, radius(i));
     out.push(a, [(a[0] + b[0] + 2 * c[0]) / 4, (a[1] + b[1] + 2 * c[1]) / 4], b);
-    // The straight run to the next corner's rounding.
     const end = ((): Pt => {
       const after = corners[(i + 2) % n] ?? next;
       const len = Math.hypot(after[0] - next[0], after[1] - next[1]);
@@ -56,7 +39,6 @@ export const roundedPolygon = (
   return out;
 };
 
-/** A tunic's outline, in its figure's units: its corners rounded, its sides bowed out between neck and hem. */
 const tunicOutline = (t: Tunic): Pt[] =>
   roundedPolygon(
     [
@@ -71,7 +53,6 @@ const tunicOutline = (t: Tunic): Pt[] =>
     return k > 0 && k < 1 ? [x + Math.sign(x) * t.bow * Math.sin(Math.PI * k), y] : [x, y];
   });
 
-/** A garment's outline: a tunic cut from its neck and hem, a cut robe from its corners, a traced robe as traced. */
 export const garmentOutline = (g: Garment): ReadonlyArray<Pt> => {
   switch (g._tag) {
     case 'Tunic':
@@ -83,13 +64,6 @@ export const garmentOutline = (g: Garment): ReadonlyArray<Pt> => {
   }
 };
 
-/**
- * A shoe as cold-34 cuts it, in shares of its half-width and height: a
- * dome whose widest run is just over the sole, its outer side curving up
- * and in from a rounded toe, its inner side steeper, its crown nearer the
- * inner side (the hem hides it), a flat sole. Clockwise, the toe toward
- * screen left. Traced from cold-34's prosecutor, its ink taken off.
- */
 const SHOE: ReadonlyArray<Pt> = [
   [-0.9, 0],
   [-1, -0.06],
@@ -111,30 +85,15 @@ const SHOE: ReadonlyArray<Pt> = [
   [0, 0],
 ];
 
-/** How many points a shoe's outline has: its light runs between two of them (`shoeLight`). */
 export const SHOE_POINTS = SHOE.length;
 
-/**
- * A shoe `w` units across and `h` high (`SHOE`), its sole at y 0 and its
- * middle at x 0, its toe toward screen left (`toe` -1) or right (1).
- */
 export const shoeOutline = (w: number, h: number, toe: -1 | 1): Pt[] => {
   const pts = SHOE.map(([x, y]): Pt => [-toe * x * (w / 2), y * h]);
   return toe < 0 ? pts : pts.reverse();
 };
 
-/** How much of a lit edge's run, from its far end, narrows to nothing, as the concept's light fades toward the crease. */
 const FADE = 0.4;
 
-/**
- * The light down a shoe's lit edge (`shoeOutline`, the same `w`, `h` and
- * `toe`), as cold-34 lays it: a band `width` units deep inside the outline
- * along `SHOE`'s points `from` to `to`, whole for most of the run and
- * narrowing to nothing over its last `FADE`. It starts at the sole's
- * corner and runs up, never along the sole, so the sole stays dark. The
- * band reaches 2 units out past the outline, so its piece's clip, not its
- * own edge, draws its outer side.
- */
 export const shoeLight = (
   w: number,
   h: number,
@@ -169,11 +128,9 @@ export const shoeLight = (
   return [...outer, ...inner.reverse()];
 };
 
-/** `pts` moved by (`dx`, `dy`). */
 export const shifted = (pts: ReadonlyArray<Pt>, dx: number, dy: number): Pt[] =>
   pts.map(([x, y]): Pt => [x + dx, y + dy]);
 
-/** A blot of half-width `rx` and half-height `ry` about the origin, its outline wandering by `wander` of its radius (seeded). */
 export const blotOutline = (rx: number, ry: number, wander: number, seed: number): Pt[] => {
   const r = rng(seed);
   const n = 14;
@@ -184,7 +141,6 @@ export const blotOutline = (rx: number, ry: number, wander: number, seed: number
   });
 };
 
-/** Whether `p` lies inside the closed outline `poly`. */
 export const inside = (p: Pt, poly: ReadonlyArray<Pt>) => {
   let c = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -195,18 +151,12 @@ export const inside = (p: Pt, poly: ReadonlyArray<Pt>) => {
   return c;
 };
 
-/** A point on an outline, its distance from the point it is nearest, and the inward normal of its edge. */
 interface Nearest {
   readonly at: Pt;
   readonly d: number;
   readonly n: Pt;
 }
 
-/**
- * The point of the closed outline `poly` nearest `p`, and the unit normal of
- * the edge it lies on, pointing into `poly`; only the edges `only` keeps
- * (by index, the edge from point i to point i + 1) when given.
- */
 const nearestEdge = (p: Pt, poly: ReadonlyArray<Pt>, only?: ReadonlyArray<boolean>) => {
   let best: Nearest = { at: p, d: Infinity, n: [0, 0] };
   poly.forEach((a, i) => {
@@ -227,18 +177,13 @@ const nearestEdge = (p: Pt, poly: ReadonlyArray<Pt>, only?: ReadonlyArray<boolea
   return best;
 };
 
-/** How far `p` lies from the edge of the closed outline `poly`, inside it or out. */
 export const fromEdge = (p: Pt, poly: ReadonlyArray<Pt>) => nearestEdge(p, poly).d;
 
-// ─── tucking one paper under another ─────────────────────────────────────────
-
-/** A point walked along an outline, and whether it was one of the outline's own. */
 interface Walked {
   readonly p: Pt;
   readonly cut: boolean;
 }
 
-/** `pts` (closed) with points added along each edge so none is longer than `step`; each says whether it was one of `pts`. */
 const resampled = (pts: ReadonlyArray<Pt>, step: number) =>
   pts.flatMap((a, i) => {
     const b = pts[(i + 1) % pts.length] ?? a;
@@ -249,19 +194,8 @@ const resampled = (pts: ReadonlyArray<Pt>, step: number) =>
     }));
   });
 
-/**
- * How a paper tucks under the papers laid over it: `depth` units under
- * their edge, for the points of its outline that come within `reach` of
- * that edge (outside it, or inside by less than `depth`), easing out over
- * the last half of `reach`; the outline is walked every `step` units, and
- * a walked point stays only where it moved. Each piece's outline crawls on
- * the boil on its own, and the smooth path bows between points: two papers
- * whose edges meet show the one behind in a sliver, so the paper behind
- * lies well under the one in front wherever they meet.
- */
 const TUCK = { depth: 3.5, reach: 5, step: 3 } as const;
 
-/** One walked point of a paper, tucked under `fronts` (`tucked`): kept, moved, or dropped. */
 const tuckOne = ({ p, cut }: Walked, fronts: ReadonlyArray<ReadonlyArray<Pt>>): Pt[] => {
   let best: { readonly to: Pt; readonly w: number } | undefined;
   for (const front of fronts) {
@@ -279,22 +213,11 @@ const tuckOne = ({ p, cut }: Walked, fronts: ReadonlyArray<ReadonlyArray<Pt>>): 
   return [[+(p[0] + (to[0] - p[0]) * w).toFixed(2), +(p[1] + (to[1] - p[1]) * w).toFixed(2)]];
 };
 
-/**
- * `back` tucked under `fronts`: each point near a front paper's edge moved
- * `TUCK.depth` under it, so no sliver of `back` shows between them or round
- * the silhouette they share (see `TUCK`).
- */
 export const tucked = (back: ReadonlyArray<Pt>, fronts: ReadonlyArray<ReadonlyArray<Pt>>): Pt[] =>
   resampled(back, TUCK.step).flatMap((w) => tuckOne(w, fronts));
 
-/** How far inside `back` a front's edge lies to be a seam over it rather than its silhouette, units. */
 const SEAM = 1.5;
 
-/**
- * Which edges of `front` are seams over `back`: those whose middle lies
- * inside `back`, more than `SEAM` from its outline. The rest lie on the
- * silhouette the two share, or past it.
- */
 const seamsOf = (front: ReadonlyArray<Pt>, back: ReadonlyArray<Pt>) =>
   front.map((a, i) => {
     const b = front[(i + 1) % front.length] ?? a;
@@ -302,15 +225,6 @@ const seamsOf = (front: ReadonlyArray<Pt>, back: ReadonlyArray<Pt>) =>
     return inside(mid, back) && nearestEdge(mid, back).d > SEAM;
   });
 
-/**
- * A paper that draws a rim along its whole outline, tucked under `fronts`:
- * where it lies under a front, `deep` under that front's seams over it (its
- * rim's width and more), so its rim shows only on the silhouette, never at
- * a seam. A point under a front too narrow to hold it `deep` from a seam (a
- * lock's tip) stays where it is, on the silhouette under the front's outer
- * edge, so the rim there tapers out under the tip. A point outside every
- * front tucks as `tucked` tucks it.
- */
 export const tuckedRimmed = (
   back: ReadonlyArray<Pt>,
   fronts: ReadonlyArray<ReadonlyArray<Pt>>,

@@ -21,12 +21,6 @@ import { LONGEST_WAIT, WaitTimeout } from './wait.ts';
 
 type PlaceName = Exclude<keyof typeof Places, 'home'>;
 
-/**
- * Links to every page as the app writes them, each with the place it opens,
- * the page that serves it, and the href the place writes back for it: a
- * canonical link comes back byte for byte; the rest normalise (defaults left
- * out, keys a place does not declare dropped).
- */
 const LINKS: ReadonlyArray<
   readonly [href: string, place: PlaceName, page: AppPage, written: string]
 > = [
@@ -67,7 +61,6 @@ describe('page places', () => {
   });
 
   test.each([
-    // Home is no page: the lab sends it on to the newest ask still asking (`tools/lab.ts`).
     '/',
     '/films',
     '/films/rbf',
@@ -75,7 +68,6 @@ describe('page places', () => {
     '/api/films',
     '/chunk-abc123.js',
     '/films/%2E%2E/export',
-    // The pages that are gone: the studio, the review's sets and folders, a production, a draft.
     '/films/rbf/studio',
     '/sets/f/p',
     '/sets/f',

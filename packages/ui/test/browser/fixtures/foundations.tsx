@@ -1,7 +1,3 @@
-// Fixtures for the foundations: `useRenderElement` (state attributes, the
-// render prop, refs, live params), a late `children` key, and the transition
-// status (`transition`: a bare element nothing measures or focuses, fading in
-// from its `data-starting-style` and out to its `data-ending-style`).
 import type { JSX } from '@solidjs/web';
 import { createSignal, createStore, omit, Show } from 'solid-js';
 
@@ -55,7 +51,6 @@ interface PartProps {
   children?: JSX.Element;
 }
 
-/** A part as the ported ones are built: internal props under the user's. */
 function Part(props: PartProps) {
   const [on, setOn] = createSignal(false);
   const state = {
@@ -136,7 +131,6 @@ function Refs() {
   );
 }
 
-/** `params.props` and `params.state` as getters returning a fresh record each time. */
 function LiveParams() {
   const [count, setCount] = createSignal(0);
   const params = (id: string) => ({
@@ -147,7 +141,6 @@ function LiveParams() {
       return { id, disabled: count() > 0 };
     },
   });
-  // Built once, outside the JSX, so only the views can bring the new values.
   const plain = useRenderElement('button', {}, params('getter-props'));
   const rendered = useRenderElement(
     'button',
@@ -169,10 +162,8 @@ function LiveParams() {
   );
 }
 
-/** A merged store whose `children` key is absent until the button adds it. */
 function LateChildren() {
   const [store, setStore] = createStore<{ children?: string }>({});
-  // The spread alone, as a part spreads its merged props.
   const merged = mergeProps({ id: 'late' }, store);
   return (
     <>

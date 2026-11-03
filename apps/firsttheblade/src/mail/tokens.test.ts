@@ -12,7 +12,6 @@ const SUBSCRIBER = SubscriberId.make('AAAAAAAAAAAAAAAAAAAAAA');
 const CONFIRM: Token = { _tag: 'Confirm', subscriber: SUBSCRIBER, issued: 1_760_000_000_000 };
 const LEAVE: Token = { _tag: 'Unsubscribe', subscriber: SUBSCRIBER };
 
-/** Tokens signed under another key. */
 class OtherTokens extends Context.Service<OtherTokens, TokensService>()('test/OtherTokens') {}
 
 const layerOther = Layer.effect(
@@ -24,7 +23,6 @@ const layerOther = Layer.effect(
 
 const test = it.effect.layer(Layer.merge(layer(KEY), layerOther));
 
-/** `text` with the character at `index` changed (its lowest bit flipped). */
 const changedAt = (text: string, index: number) =>
   `${text.slice(0, index)}${String.fromCharCode(text.charCodeAt(index) ^ 1)}${text.slice(index + 1)}`;
 

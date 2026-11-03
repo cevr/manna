@@ -1,9 +1,3 @@
-// The fit rows' `slivers` over the strip's domain (`core/fit-rows.ts`): a
-// strip of paper 2 px thick or less and 6 px long or more is a sliver,
-// against the figure's line or cut loose of it, upright or across; a thicker
-// or a shorter one is not (off the figure, the ground's grain). Synthetic
-// figures (`fixtures/fit/figure.ts`), too many for the unit budget.
-
 import { describe, expect, test } from 'bun:test';
 import { Boolean as Bool } from 'effect';
 import { fitRows } from './fit-rows.ts';
@@ -11,7 +5,6 @@ import { type Box, RENDER_GROUND, SHEET_GROUND, paint } from './fixtures/fit/fig
 
 const SHEET = paint({ ground: SHEET_GROUND });
 
-/** Where a strip `thick` across and `long` along lies: against the body's right line or 5 px off it (upright), against its foot's line or 5 px under it (across). */
 const PLACES = {
   'upright, against the line': (t: number, l: number): Box => [47, 47 + t, 40, 40 + l],
   'upright, cut loose': (t: number, l: number): Box => [52, 52 + t, 40, 40 + l],

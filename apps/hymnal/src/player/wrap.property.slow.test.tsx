@@ -1,28 +1,3 @@
-/**
- * The key dial's wrap, frame by frame: on every frame of a drag and of the
- * glide after it, at any fling speed and length and over chained flings,
- * every slot of the dial's window shows its key, the keys side by side in
- * order; the detents it cues step one at a time; and once still, the key at
- * the notch is the last one cued and told.
- *
- * It mounts the real `DialView` as the key dial (twelve stops, wrapping)
- * under the app's stand-ins (`src/test/setup.ts`): the pan's own callbacks
- * are played as the gesture handler calls them, and each glide is stepped a
- * 16 ms frame at a time along its own duration and curve
- * (`stepAnimations`), the dial read after each frame. The next touch comes
- * at a frame of the glide the case picks, or once it has landed.
- *
- * A slot is read where the row draws it: a key's left edge in the window is
- * the sum of the `left` and `translateX` of its stop and of the row the stop
- * lies in; the window is the row's parent, laid out by its own `onLayout`.
- *
- * Generated over 40 seeded cases (each printed on failure), in groups of
- * five: a window of 200 to 1000 points (and 320, 390, 430), the key at the
- * notch at the start, and 1 to 8 flings, each a drag of up to 1.4 window
- * widths either way read every 5 to 40 points, let go at up to 5000 points a
- * second either way (a third at the fling cap or past it).
- */
-
 import { describe, expect, test } from 'bun:test';
 import { Array as Arr, Option, Predicate } from 'effect';
 import { act, useState } from 'react';
@@ -38,7 +13,6 @@ import { DialView } from './DialView';
 
 const KEYS = Array.from({ length: 12 }, (_, n) => n);
 
-/** A seeded generator of numbers in [0, 1) (mulberry32). */
 const seeded = (seed: number) => {
   let a = seed >>> 0;
   return () => {
@@ -52,10 +26,8 @@ const seeded = (seed: number) => {
 
 interface Fling {
   readonly drag: number;
-  /** Points between two reads of the drag. */
   readonly every: number;
   readonly speed: number;
-  /** The glide's frame the next touch comes at, or `lands`: it lands first. */
   readonly stopAt: number | 'lands';
 }
 
@@ -64,10 +36,6 @@ interface Case {
   readonly width: number;
   readonly first: number;
   readonly flings: ReadonlyArray<Fling>;
-  /**
-   * Whether the dial's owner takes each turn the dial tells late, in order, as a busy
-   * JavaScript thread does on a device: the turns wait, and some are taken at the reads.
-   */
   readonly lag: boolean;
 }
 
@@ -99,7 +67,6 @@ const caseText = (c: Case) =>
     .map((f) => `${f.drag} pt (every ${f.every}) at ${f.speed} pt/s, touched at ${f.stopAt}`)
     .join('; ')}`;
 
-/** A view's layout, as React Native hands it to `onLayout`. */
 interface Laid {
   readonly nativeEvent: { readonly layout: Record<'x' | 'y' | 'width' | 'height', number> };
 }
@@ -110,9 +77,7 @@ interface Fiber {
   readonly return?: Fiber;
 }
 
-/** The `onLayout` the view drawn as `element` was handed: react-native-web keeps it off the DOM. */
 const layoutOf = (element: Element): Option.Option<(event: Laid) => void> => {
-  // React keeps an element's fiber under a key it names at run time.
   const own = Option.fromNullishOr(
     Object.entries(element).find(([name]) => name.startsWith('__reactFiber$')),
   ).pipe(Option.map(([, fiber]): Fiber => fiber));
@@ -131,11 +96,9 @@ const shiftOf = (element: HTMLElement) =>
     Number.parseFloat(element.style.left) || 0,
   );
 
-/** The key dial of case `c`, mounted and laid out; it unmounts when the `using` ends. */
 const mounted = (c: Case) => {
   const told: Array<number> = [];
   const cued: Array<number> = [];
-  // The turns told and not yet taken, on a case with late turns.
   const waiting: Array<number> = [];
   const owner = { take: (_n: number) => {} };
   const tell = (cue: Cue) => {
@@ -179,7 +142,6 @@ const mounted = (c: Case) => {
     cued,
     waiting,
     windowEl,
-    /** The owner takes the next late turn, as its value. */
     takeOne: () => Arr.head(waiting.splice(0, 1)).pipe(Option.map((n) => act(() => owner.take(n)))),
     [Symbol.dispose]: () => {
       act(() => landAnimations());
@@ -189,7 +151,6 @@ const mounted = (c: Case) => {
   };
 };
 
-/** The keys' slots in the window, left to right: each key and its left edge. */
 const slotsOf = (c: Case, dial: ReturnType<typeof mounted>) =>
   [...dial.windowEl.querySelectorAll<HTMLElement>('[data-testid^="k-"]')]
     .map((key) => {
@@ -205,7 +166,6 @@ const slotsOf = (c: Case, dial: ReturnType<typeof mounted>) =>
     .filter((s) => s.x + DETENT > 0.5 && s.x < c.width - 0.5)
     .sort((a, b) => a.x - b.x);
 
-/** The problems at one read of the dial: its window not covered, its keys out of order, or, still, the notch off its value. */
 const readOf = (c: Case, dial: ReturnType<typeof mounted>, still: boolean) => {
   const slots = slotsOf(c, dial);
   const from = Arr.head(slots).pipe(Option.match({ onNone: () => c.width, onSome: (s) => s.x }));
@@ -230,7 +190,6 @@ const readOf = (c: Case, dial: ReturnType<typeof mounted>, still: boolean) => {
   return [`the notch shows ${notch.join(',')}, told ${value}, cued ${cued}`];
 };
 
-/** Each problem case `c` finds, at the first read that finds one, with the case and the moment. */
 const run = (c: Case): ReadonlyArray<string> => {
   using dial = mounted(c);
   const problems: Array<string> = [];
@@ -239,10 +198,6 @@ const run = (c: Case): ReadonlyArray<string> => {
     slotsOf(c, dial)
       .map((s) => `${s.n}@${s.x.toFixed(1)}`)
       .join(' ');
-  /**
-   * The owner takes every late turn, one at a time, with the row still: each is the dial's own
-   * turn come back, and leaves the row where it stands once every animation it starts has run.
-   */
   const takeAll = (where: string) => {
     for (const _ of [...dial.waiting]) {
       const before = rowText();
@@ -257,7 +212,6 @@ const run = (c: Case): ReadonlyArray<string> => {
   const read = (where: string, still: boolean) => {
     if (problems.length > 0) return;
     if (still) takeAll(where);
-    // A busy owner takes a turn or two at a moment of its own.
     else if (late() < 0.2)
       for (const _ of [0, 1].slice(0, 1 + Math.floor(late() * 2))) dial.takeOne();
     for (const p of readOf(c, dial, still)) problems.push(`${caseText(c)}: ${where}: ${p}`);
@@ -289,7 +243,6 @@ const run = (c: Case): ReadonlyArray<string> => {
     while (stepAnimations(FRAME));
   });
   read('the end, still', true);
-  // Each detent cued is a step of one from the detent before it, from the key at the start.
   const jumps = dial.cued.filter(
     (at, k) =>
       ![1, 11].includes(

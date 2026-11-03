@@ -1,82 +1,18 @@
-// How a design-language mock's lengths are read: in the browser, as the page
-// it is. Each space, type size, leading and radius the mock's sheets (its
-// `<style>` elements, and the sheets it shares with the other mocks, kit.css
-// and lab.css) and its elements' `style` attributes set is read against its
-// scale, the steps of the player's sheet (`player/tokens.css`):
-//
-// - a length written in the declaration (`padding: 6px`) is read as written:
-//   a px on a step, never a rem or an em; a function whose every length is
-//   in px (`calc(2px * 2)`) is read as the one length it computes;
-// - a function that computes with a variable, a percentage or another unit
-//   (`calc(var(--dot) / -2)`, a dot's margin of half its size;
-//   `calc(100% - 7px)`) writes no length of its own: only the px written in
-//   it are read, never the variable's value (a dot's size, a dock's
-//   height, a composition's part, is no length of the scale);
-// - a variable a value names whole (`padding: var(--pad)`) is read on each
-//   element and pseudo-element the declaration applies to, at each viewport
-//   width the page's queries name, as the browser resolves it there: which
-//   rule gives the variable, a nesting, an `:is()`, a compound, a query, a
-//   container query, an alias, a pseudo-element's own value and a
-//   declaration that always loses are the browser's cascade, never this
-//   file's. Each local the mock gives has a shadow (`--film-shadow--pad`),
-//   given in the same declaration block with the tokens it names written as
-//   their names (`token--s-2`), so the shadow resolves through the same
-//   cascade to the token whole, lengths the mock gives (read as written), or
-//   a sum that computes with tokens (its written px read); the page's own
-//   properties are untouched, so its layout, and the container queries that
-//   read it, are the page's. A token whole is read as its px on the page: a
-//   step of the property's scale, or a token the scale takes whole
-//   (`--hairline`, a gap's or a margin's; `--dock-h`, a padding's). A token
-//   that is no length (a weight), and the geometry the mocks name once
-//   (`GEOMETRY`), set nothing on a scale. A keyframe's locals are not read.
-//
-// A block that gives or reads a local is read where it applies, each
-// selector of its list on its own (a nested query's declarations by the list
-// of the rule they sit in, under the same query), so a selector for a state
-// the mock never shows (a hover, a class no element carries) is named as
-// reaching no element, never passed unread. The page is read on a phone's
-// pointer and a desk's: a red found on either is a red, and a selector is
-// unreached only when the same selector of the same block reaches no element
-// on both. A selector of a shared sheet (kit.css, lab.css) is unreached only
-// when no mock that wears the sheet reaches it (`raw`'s `shared` and `wears`,
-// which the test joins across the mocks). The widths read are 390, 1440, and
-// each width from 200 to 4000 px a media query names (px, em or rem; `min-`,
-// `max-` or a range), with one px either side; a `media` attribute is not
-// read. Other media features (reduced motion, colour scheme) are not varied:
-// a selector only they reach is named as unreached.
-// The page's scripts run before the read, so a length a script sets is read
-// in the `style` it set; one set only on an event is not.
-
 import { Schema } from 'effect';
 
-/** A scale of the player's sheet: the properties it sets, the tokens its steps are, and the tokens it takes whole. */
 interface Scale {
   readonly what: string;
-  /** A property's name it sets, as a pattern's source. */
   readonly property: string;
-  /** Its steps: each token whose name starts with this, at its px. */
   readonly steps: string;
-  /** The tokens its properties take whole, off its steps. */
   readonly named: ReadonlyArray<string>;
 }
 
-/** The token a gap or a margin takes whole to draw a line between two things (§3): no step, and no padding's. */
 const HAIRLINE = '--hairline';
 
-/**
- * The transport docked on the shell's floor, its height a sum the sheet computes
- * (`calc(var(--hit) + 2 * var(--s-2) + 1px)`): a page's padding clears it
- * (player.css's `padding-bottom`), and nothing else takes it as a length.
- */
 const DOCK = '--dock-h';
 
 const SIDES = '(?:-(?:top|right|bottom|left|inline|block)(?:-(?:start|end))?)?';
 
-/**
- * The space, type and radius scales, each over every property that sets it:
- * a side's or a logical side's padding and margin (a padding's the dock too;
- * a margin's and a gap's the hairline), a gap, a corner's radius.
- */
 const SCALES: ReadonlyArray<Scale> = [
   { what: 'space', property: `^padding${SIDES}$`, steps: '--s-', named: [DOCK] },
   {
@@ -95,30 +31,16 @@ const SCALES: ReadonlyArray<Scale> = [
   },
 ];
 
-/**
- * A mock's geometry that is not spacing, named once where it lives (lab.css):
- * the cue lanes' label column, which the strip's padding clears.
- */
 const GEOMETRY: ReadonlyArray<string> = ['--cue-names'];
 
 const json = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
-/**
- * A selector that reaches no element: which one (its block's place in its
- * sheet, and its place in the block's list, the same on every page that
- * wears the sheet), the sheet, and the lines that name it.
- */
 export interface Unreached {
   readonly id: string;
   readonly sheet: string;
   readonly lines: ReadonlyArray<string>;
 }
 
-/**
- * What one pointer's read of a page found: its reds, its own selectors
- * unreached, its shared sheets' selectors unreached, and the shared sheets it
- * wears.
- */
 export interface Raw {
   readonly reds: ReadonlyArray<string>;
   readonly unreached: ReadonlyArray<Unreached>;
@@ -126,15 +48,6 @@ export interface Raw {
   readonly wears: ReadonlyArray<string>;
 }
 
-/**
- * The scripts that read the page `file` is. `pass`, run once a viewport, reads
- * it there (keeping what it finds on the page) and answers the widths the
- * page's queries name. `raw` answers what this pointer found (`Raw`).
- * `found(other)`, given the other pointer's `raw`, answers every finding,
- * one line each: a sheet it does not wear, a token it writes, a length off
- * its scale (on either pointer), and a selector of the page's own that
- * reaches no element on either (the same selector of the same block).
- */
 export const mockLengths = (file: string) => {
   const input = json({ file, scales: SCALES, geometry: GEOMETRY });
   return {
@@ -144,7 +57,6 @@ export const mockLengths = (file: string) => {
   };
 };
 
-/** The page's side. */
 const PAGE = `(input, step, other) => {
   const KEY = Symbol.for('film.mockLengths');
   const state = window[KEY] ?? (window[KEY] = setup());

@@ -1,66 +1,37 @@
-// A cast member's library reference: the images a picture of the member is
-// drawn to, and the line a prompt says them with. The library's record is the
-// member's one truth (the owner, 2026-10-20: the library, not a concept, where
-// the concept is wrong), so these images win over any other reference that
-// draws the member otherwise, on the person; the brief dresses the member for
-// its scene. A member with a kept sheet is sent its kept sheets, or its own
-// views of a sheet that draws other members too; one not kept yet is sent the
-// references its record names. Pure.
-
 import { Array as Arr, Boolean as Bool, Option } from 'effect';
 import type { CastSheetRecord } from './cast-record.ts';
 import { type SheetKind, TURNAROUND_SLOTS } from './cast-sheet.ts';
 
-/** A kind sent in the lock: a sheet. A single drawing is one pose the owner kept, not sent as a reference until he decides it is. */
 type LockKind = Exclude<SheetKind, 'single'>;
 
-/** The kinds a kept member's sheets are sent in: the whole figure first, then the face, then the acting. */
 const LOCK_ORDER: ReadonlyArray<LockKind> = ['turnaround', 'heads', 'poses'];
 
-/** A member's library reference: its images, each as its folder joins it, and what they are. */
 export interface CastLock {
   readonly member: string;
-  /** How a brief names the member: "Him", "her". */
   readonly who: string;
-  /** Whose record it is: the library's (a person every film shares) or one film's own role. */
   readonly scope: CastSheetRecord['scope'];
-  /** The kinds kept, in `LOCK_ORDER`: none when the files are the record's own references. */
   readonly kept: ReadonlyArray<SheetKind>;
-  /** The kept kinds sent as the member's own views, their sheet drawing other members too. */
   readonly cut: ReadonlyArray<SheetKind>;
   readonly files: ReadonlyArray<string>;
 }
 
-/** `file` in `folder`, as a path joins them (`folder` empty: the file alone). */
 const joined = (folder: string, file: string): string =>
   Bool.match(folder === '', {
     onTrue: () => file,
     onFalse: () => `${folder.replace(/\/+$/, '')}/${file}`,
   });
 
-/** How many views a kind's sheet draws: a turnaround its six, a poses or heads sheet its slots. */
 const viewsOn = (record: CastSheetRecord, kind: SheetKind): number =>
   Bool.match(kind === 'turnaround', {
     onTrue: () => TURNAROUND_SLOTS.length,
     onFalse: () => record.sheets[kind]?.slots?.length ?? 0,
   });
 
-/**
- * Whether the member keeps only some of the views a kind's sheet draws: a
- * sheet of several members (the villagers' six figures), of which the member
- * is the views its record keeps.
- */
 const cutFrom = (record: CastSheetRecord, kind: LockKind): boolean => {
   const views = record.kept?.[kind]?.views ?? [];
   return views.length > 0 && views.length < viewsOn(record, kind);
 };
 
-/**
- * The member's library reference: each kept sheet (`kept/<kind>.png`) when
- * any is kept, or the member's own views of it (`views/<name>.png`) when the
- * sheet draws other members too; else the record's refs. A kept single
- * drawing is not sent.
- */
 export const castLock = (record: CastSheetRecord, folder: string): CastLock => {
   const kept = LOCK_ORDER.filter((kind) =>
     Option.isSome(Option.fromUndefinedOr(record.kept?.[kind])),
@@ -85,24 +56,14 @@ export const castLock = (record: CastSheetRecord, folder: string): CastLock => {
   };
 };
 
-/** How a prompt names the member: its id with spaces for hyphens, capitalised (`christ` is Christ). */
 const nameOf = (member: string): string => {
   const words = member.replaceAll('-', ' ');
   return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
 };
 
-/** The name's possessive: `Christ's`, `Idea villagers'`. */
 const possessive = (name: string): string =>
   Bool.match(name.endsWith('s'), { onTrue: () => `${name}'`, onFalse: () => `${name}'s` });
 
-/**
- * The prompt's line for `lock`, its images numbered from `first` (1-based,
- * among every reference the call sends): they are the member's record, drawn
- * exactly, and they win over every other image on the person as far as its
- * kept kinds show it (a sheet of heads, the face and hair alone). What the
- * member wears and does is the brief's: a beat dresses the member for its
- * own scene (Christ's linen coat on earth, His white robe as Priest).
- */
 export const castLockNote = (lock: CastLock, first: number): string => {
   const name = nameOf(lock.member);
   const last = first + lock.files.length - 1;

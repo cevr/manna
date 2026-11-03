@@ -1,17 +1,3 @@
-// Upstream: packages/react/src/internals/useAnchorPositioning.ts,
-// packages/react/src/floating-ui-react/hooks/useFloating.ts,
-// packages/react/src/floating-ui-react/middleware/arrow.ts (the centre the origin reads)
-//
-// Positions a menu's popup under its anchor (the trigger, or a context menu's
-// point) with Floating UI: an alignment with offsets, the dropdown's
-// collision avoidance (flip to the top, or to the other alignment, and shift
-// along the edge; never to a left or right side). It sets upstream's CSS
-// variables on the positioner: `--available-width` and `--available-height`
-// (the room between the anchor and the boundary), `--anchor-width` and
-// `--anchor-height`, and `--transform-origin` (the point the popup grows
-// from). It re-positions while the anchor scrolls or resizes. Until the first
-// position is computed the popup is invisible and fixed at 0,0, so focusing
-// into it cannot scroll the page.
 import {
   autoUpdate,
   computePosition,
@@ -33,40 +19,27 @@ import type { FloatingRootContext } from '../floating-ui-solid/FloatingRootConte
 import { arrow, hide } from '../floating-ui-solid/middleware.ts';
 import { ownerDocument, ownerWindow } from '../utils/dom.ts';
 
-/** The side the popup renders on: under its anchor, or over it after a flip. */
 export type Side = 'top' | 'bottom';
 export type Align = 'start' | 'center' | 'end';
 
-/** The space kept between the popup and the edges it must stay inside. */
 const COLLISION_PADDING = 5;
 
-/** The positioner's CSS variables (upstream's `MenuPositionerCssVars`). */
 const PositionerCssVars = {
-  /** The available width between the anchor and the edge of the boundary. */
   availableWidth: '--available-width',
-  /** The available height between the anchor and the edge of the boundary. */
   availableHeight: '--available-height',
-  /** The anchor's width. */
   anchorWidth: '--anchor-width',
-  /** The anchor's height. */
   anchorHeight: '--anchor-height',
-  /** The coordinates the popup is anchored to, for its animations and transitions. */
   transformOrigin: '--transform-origin',
 } as const;
 
 interface UseAnchorPositioningParameters {
   floatingRootContext: FloatingRootContext;
   mounted: boolean;
-  /** What the popup is positioned against in place of the trigger. */
   anchor: VirtualElement | undefined;
   positionMethod: 'absolute' | 'fixed';
   sideOffset: number;
   align: Align;
   alignOffset: number;
-  /**
-   * Whether a shift may move the popup over its anchor, within the viewport,
-   * rather than flipping it (a context menu kept on screen at the pointer).
-   */
   shiftCrossAxis: boolean;
 }
 
@@ -122,9 +95,6 @@ export function useAnchorPositioning(
     const alignOffset = params.alignOffset;
     const common = { boundary: 'clippingAncestors', padding: COLLISION_PADDING } as const;
 
-    // One pixel more than the collision padding, and one more on top as a bias to
-    // the bottom: on iOS a centered input with the keyboard open would otherwise
-    // flip to the top.
     const flipPadding = COLLISION_PADDING + 1;
     const flipMiddleware = flip({
       ...common,
@@ -141,7 +111,6 @@ export function useAnchorPositioning(
       limiter: shiftCrossAxis ? undefined : limitShift(),
     });
 
-    // https://floating-ui.com/docs/flip#combining-with-shift
     const avoidance =
       untrack(() => params.align) === 'center'
         ? [shiftMiddleware, flipMiddleware]
@@ -160,7 +129,6 @@ export function useAnchorPositioning(
           floatingStyle.setProperty(PositionerCssVars.availableWidth, `${availableWidth}px`);
           floatingStyle.setProperty(PositionerCssVars.availableHeight, `${availableHeight}px`);
 
-          // Snapped to device pixels, so a popup sized to its anchor matches it on screen.
           const dpr = ownerWindow(floating).devicePixelRatio || 1;
           const { x, y, width, height } = rects.reference;
           const anchorWidth = (Math.round((x + width) * dpr) - Math.round(x * dpr)) / dpr;
@@ -169,9 +137,6 @@ export function useAnchorPositioning(
           floatingStyle.setProperty(PositionerCssVars.anchorHeight, `${anchorHeight}px`);
         },
       }),
-      // The `--transform-origin` below reads where the anchor's centre falls along the popup.
-      // With no arrow part, a detached stand-in (no padding: it would displace aligned popups
-      // on narrow anchors).
       arrow((state) => ({ element: ownerDocument(state.elements.floating).createElement('div') })),
       {
         name: 'transformOrigin',
@@ -188,14 +153,11 @@ export function useAnchorPositioning(
           const renderedAlign = getAlignment(rendered);
           const isVertical = getSideAxis(renderedSide) === 'y';
 
-          // An aligned popup grows from its aligned edge, until a shift (beyond subpixel)
-          // breaks its alignment with the anchor; otherwise from the anchor's centre.
           let crossOrigin: string;
           if (
             renderedAlign &&
             Math.abs(isVertical ? middlewareData.shift?.x || 0 : middlewareData.shift?.y || 0) <= 1
           ) {
-            // The platform's direction: it must match what Floating UI placed with.
             crossOrigin =
               (renderedAlign === 'start') === (isVertical && platform.isRTL?.(floating) === true)
                 ? '100%'
@@ -207,7 +169,6 @@ export function useAnchorPositioning(
             crossOrigin = `${arrowOffset}px`;
           }
 
-          // Side axis: the anchor-facing edge, or the anchor's centre when the popup overlaps it.
           let sideOrigin =
             renderedSide === 'top' || renderedSide === 'left'
               ? `calc(100% + ${sideOffset}px)`
@@ -252,7 +213,6 @@ export function useAnchorPositioning(
     });
   };
 
-  // The anchor, when given, replaces the trigger as what the popup is positioned against.
   createEffect(
     () => (params.mounted ? params.anchor : undefined),
     (anchor) => {
@@ -262,7 +222,6 @@ export function useAnchorPositioning(
     },
   );
 
-  // Positions while mounted, re-running as the anchor moves or resizes.
   createEffect(
     () => [params.mounted, rootContext.referenceElement(), rootContext.floatingElement()] as const,
     ([mounted, reference, floating]) => {
@@ -273,7 +232,6 @@ export function useAnchorPositioning(
     },
   );
 
-  // A changed option re-positions.
   createEffect(
     () => [placement(), params.positionMethod, params.sideOffset, params.alignOffset],
     () => update(),
@@ -281,14 +239,10 @@ export function useAnchorPositioning(
 
   const positionerStyles = createMemo<JSX.CSSProperties>(() => {
     const positioned = isPositioned();
-    // Fixed until positioned, so focusing into the popup cannot scroll the page.
     const base: Record<string, string | number | undefined> = {
       position: positioned ? strategy() : 'fixed',
       top: '0px',
       left: '0px',
-      // Seeded so a `max-height: min(x, var(--available-height))` rule resolves on the first
-      // positioning pass, before `size()` writes the real values. Constant, so the style diff
-      // never rewrites them over `size()`'s.
       [PositionerCssVars.availableWidth]: '100vw',
       [PositionerCssVars.availableHeight]: '100vh',
     };

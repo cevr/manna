@@ -1,9 +1,3 @@
-// The Bun manifest lock refuses, as a failure, what is not another writer
-// holding it: a lock file that is no database or is a link, or a lock path
-// that cannot be opened. A folder reached through a link holds its lock as
-// any other. Only a held lock is "not taken yet" (`Option.none`, tried again;
-// `content-store.slow.test.ts` covers taking, contention and retaking).
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option } from 'effect';
@@ -59,7 +53,6 @@ describe('the Bun manifest lock', () => {
       const fs = yield* FileSystem.FileSystem;
       const dir = yield* fs.makeTempDirectoryScoped();
       const file = `${dir}/manifest.json`;
-      // A folder stands where the lock file would be.
       yield* fs.makeDirectory(lockFile(file));
       const refused = (yield* Effect.flip(bunManifestLock.take(file))).reason;
       expect([refused._tag, refused.module, refused.method]).toEqual([

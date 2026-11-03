@@ -1,15 +1,5 @@
 /* oxlint-disable effect/noTernary -- each case's expected opening, read in one line beside the one got. */
 
-/**
- * How a hymn chosen with the `#` drums or from a search opens, by the path
- * of the screen it was chosen on (`openingAt`): on a hymn page (`/hymns/<m>`)
- * it replaces the page, or stays when it is the hymn the page shows; on any
- * other screen it is pushed. The domain is finite, so it is walked whole:
- * every screen the app's stack shows (the home list, Recent, each sheet,
- * every hymn's page and a hymn route that names no hymn) against every hymn
- * in the book. Numbers only.
- */
-
 import { describe, expect, it } from 'bun:test';
 
 import { hymns } from '~/hymns/hymns';

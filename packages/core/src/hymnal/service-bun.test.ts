@@ -1,11 +1,3 @@
-/**
- * The Bun hymnal adapter against a real SQLite file.
- *
- * The hymnal stores refrains as verses with negative ids (-1, -2, …) ahead of
- * stanza 0. Decoding them is the adapter's job, so it is tested here rather
- * than through `HymnalService.Test`, which never decodes anything.
- */
-
 import { BunServices } from '@effect/platform-bun';
 import { Database } from 'bun:sqlite';
 import { describe, expect, it } from 'effect-bun-test';
@@ -21,7 +13,6 @@ import {
 } from './service.js';
 import { layerHymnalBun } from './service-bun.js';
 
-/** The operation a call failed in, `false` for another error, or `succeeded`. */
 const failedOperation = <A>(
   call: Effect.Effect<A, HymnalError | HymnalIndexesMissing | HymnNotFoundError>,
 ) =>
@@ -62,7 +53,6 @@ const writeHymnalWithRefrain = (dbPath: string) => {
   db.close();
 };
 
-/** The real adapter over a fresh hymnal file holding one hymn with a refrain. */
 const HymnalWithRefrain = Layer.unwrap(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -98,10 +88,6 @@ describe('layerHymnalBun', () => {
   );
 });
 
-/**
- * Made-up index tables, the columns the reader reads. Two topics, two tunes
- * and two metres share a name, so the first-by-name and all-by-name rules show.
- */
 const writeIndexes = (file: string) => {
   const db = new Database(file);
   db.exec(`CREATE TABLE index_files(name TEXT PRIMARY KEY,title TEXT,note TEXT);
@@ -143,7 +129,6 @@ const writeIndexes = (file: string) => {
   db.close();
 };
 
-/** Independent synthetic schema fixtures avoid reading either corpus or owner state in fast tests. */
 const writeSynthetic = (
   file: string,
   mode:
@@ -219,10 +204,6 @@ const writeSynthetic = (
   db.close();
 };
 
-/**
- * The service over a synthetic database: at a path `HYMNAL_DB_PATH` names (`override`),
- * or at the default `~/.bible/hymnal.db` with no `HYMNAL_DB_PATH` set (`home`).
- */
 const syntheticLayer = (
   mode: Parameters<typeof writeSynthetic>[1],
   at: 'override' | 'home' = 'override',

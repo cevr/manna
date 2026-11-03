@@ -1,14 +1,3 @@
-// The cold open: a parchment courtroom in three sheets of paper. The accused
-// stands nearest (a grey figure in a stained garment, the evidence stacking
-// up beside them), the bench and the judge on the sheet behind, a faint wall
-// behind that. The gavel falls on "righteous" and the verdict stamps across
-// the bench; on "wait" the camera pushes in to the accused's face, curious
-// rather than cross. On "oldest" the verdict drains to a hollow gold outline
-// and hangs there, a verdict with nothing behind it (`declared` fills it,
-// `name` lands it solid); the camera pulls back wide, and on "job" the hollow
-// verdict gives way as Job's question writes itself above the bench, the only
-// words on screen.
-
 import {
   type Pt,
   at,
@@ -49,7 +38,6 @@ const SHEETS = (() => {
   }));
 })();
 
-/** The gavel's fall across its cue: raised, down hard, a bounce, at rest on the block. */
 const SWING: ReadonlyArray<Key> = [
   [0, GAVEL_REST],
   [0.373, -0.3],
@@ -57,14 +45,12 @@ const SWING: ReadonlyArray<Key> = [
   [0.797, 1.4, 'outQuad'],
   [1, 1.58],
 ];
-/** The verdict, rewritten each frame (scratch, so the draw allocates none). */
 const VERDICT = { fill: 1, shown: 0 } satisfies Stamp;
 
 export const cold = drawing({
   timeline: {
     drop: { mark: 'evidence', dur: 1.4, ease: 'inCubic', stagger: 0.857 },
     bow: { mark: 'did', dur: 0.35 },
-    // The judge leans in, his hand going to the gavel; he lets it go as it comes to rest.
     lean: { mark: 'judge', dur: 0.4 },
     gavel: { mark: 'righteous', offset: -0.37, dur: 0.59 },
     stamp: { mark: 'righteous', offset: -0.03, dur: 0.2, ease: 'outBack' },
@@ -77,11 +63,9 @@ export const cold = drawing({
     rest: { mark: 'oldest', dur: 0.57 },
     drain: { mark: 'oldest', dur: 1.1, ease: 'inOutSine' },
     hollowOut: { mark: 'job', dur: 0.5, ends: true },
-    // Wide once the verdict has drained.
     wide: { after: 'drain', offset: 0.1, dur: 1.6 },
     lookUp: { mark: 'job', dur: 0.6 },
   },
-  // Close on the accused's face (the court's REST and WIDE are in court.ts): the front sheet's parallax is folded in.
   knobs: { face: [669, 682], faceZoom: 4, faceRot: 0.06 },
   draw: (f) => {
     const { ctx, w, h } = f;
@@ -94,8 +78,6 @@ export const cold = drawing({
       [f.at('wide'), WIDE],
     ]);
 
-    // The accused's face: head down on "you did it", up at the verdict,
-    // puzzled on "wait", looking up at the question on "job".
     const bow = f.at('bow') * (1 - f.at('lift'));
     const puzzle = f.at('puzzle') * (1 - back);
     const up = f.at('lookUp');
@@ -111,8 +93,6 @@ export const cold = drawing({
       stains: FIGURE_STAINS,
     };
 
-    // The verdict: stamped, away while the camera is on the face, back, then
-    // drained hollow on "oldest" until the question takes the screen.
     const verdict = VERDICT;
     verdict.fill = 1 - f.at('drain');
     verdict.shown = Math.min(
@@ -130,7 +110,6 @@ export const cold = drawing({
       h,
       [
         {
-          // The wall: tall sheets of toned paper, and the floor's edge.
           z: 1.35,
           draw: () => {
             for (const [x, k] of [
@@ -153,7 +132,6 @@ export const cold = drawing({
           },
         },
         {
-          // The bench, and the judge behind it.
           z: 1,
           draw: () => {
             ground(ctx, 1180, 860, 820);
@@ -214,16 +192,13 @@ export const cold = drawing({
               line: 2,
             });
             judgeGavel(ctx, f.hand, swing, lean, 10 * lean);
-            // The verdict, stamped on a torn label across the bench.
             benchStamp(ctx, f.hand, verdict, popScale);
           },
         },
         {
-          // The accused and the evidence against them.
           z: 0.9,
           lift: 1.3,
           draw: () => {
-            // The sheets fall one after another across `drop`, each eased by its ease.
             const landed = SHEETS.filter((_, i) => f.stagger('drop', i, SHEETS.length) > 0).length;
             if (landed > 0) ground(ctx, 765, 864, 150 + 10 * landed);
             SHEETS.forEach((s, i) => {
@@ -246,7 +221,6 @@ export const cold = drawing({
       { rest: [REST.x, REST.y], haze: C.paper, thickness: 0.6 },
     );
 
-    // Job's question, the only words on screen.
     question(ctx, f.hand('question'), { progress: f.spoken('job'), reveal: 'write' });
   },
 });

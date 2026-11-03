@@ -1,14 +1,3 @@
-/**
- * The hymnal's topics, built one way for the compile script and for the test
- * that holds the committed file to it: source-text.json's sections (`categories`)
- * and each hymn's section (`categoryId`), with the print's corrections
- * from `data/fixes/topics.json` applied (a range the print files under
- * another section, a name the print gives otherwise). The result must be a
- * partition of 1–695, one range per section: a section split in two, a
- * move over hymns not filed where it says, or a name Topics refuses (one left untrimmed) is
- * refused, never repaired.
- */
-
 import { HymnId } from '@manna/core/hymnal';
 import { Effect, Schema } from 'effect';
 
@@ -18,7 +7,6 @@ import { type Topic, Topics } from '../src/hymn.js';
 const FIRST = 1;
 const LAST = 695;
 
-/** A captured-source range under section `from` that the print puts under `to`. */
 const Move = Schema.Struct({
   first: Schema.Int,
   last: Schema.Int,
@@ -26,7 +14,6 @@ const Move = Schema.Struct({
   to: Schema.Int,
 });
 
-/** A page foot read: the hymn it stands under, its heading in capitals, and the photo, scan page or `contiguity`. */
 export const Printed = Schema.Struct({
   hymn: Schema.Int,
   heading: Schema.String,
@@ -42,17 +29,14 @@ export const Fixes = Schema.Struct({
 });
 export type Fixes = typeof Fixes.Type;
 
-/** The fixes from the text of `data/fixes/topics.json`. */
 export const decodeFixes = (text: string) =>
   Schema.decodeEffect(Schema.fromJsonString(Fixes))(text);
 
-/** Captured source rows: each section's id and name, and each hymn's section. */
 export interface Rows {
   readonly categories: ReadonlyArray<{ readonly id: number; readonly name: string }>;
   readonly hymns: ReadonlyArray<{ readonly number: number; readonly categoryId: number }>;
 }
 
-/** Why the rows and fixes do not make a table. */
 export class TopicsError extends Schema.TaggedError<TopicsError>()('TopicsError', {
   reason: Schema.Literals([
     'a hymn with no row',
@@ -67,7 +51,6 @@ export class TopicsError extends Schema.TaggedError<TopicsError>()('TopicsError'
 const fail = (reason: TopicsError['reason'], detail: string) =>
   Effect.fail(TopicsError.make({ reason, detail }));
 
-/** The topics of hymns 1–695: captured sections with the print's moves and names applied. */
 export const buildTopics = (rows: Rows, fixes: Fixes): Effect.Effect<Topics, TopicsError> =>
   Effect.gen(function* () {
     const section = new Map(rows.hymns.map((h) => [h.number, h.categoryId]));
@@ -113,7 +96,6 @@ export const buildTopics = (rows: Rows, fixes: Fixes): Effect.Effect<Topics, Top
     );
   });
 
-/** Source rows 1–695 and sections, through the independent source-text layer. */
 export const readRows = Effect.gen(function* () {
   const hymnal = yield* SourceHymnal;
   const categories = yield* hymnal.getCategories;

@@ -1,8 +1,3 @@
-// A code sound in one line: each node by its kind and the fields that say
-// what it is, its child in brackets, its children in square ones
-// (`Envelope(Filter bandpass 400 Hz→2200 Hz(Noise pink 0.8–1 s))`). For a
-// list and a review's line; the graph itself stays in the source.
-
 import { Match, Predicate } from 'effect';
 import {
   type Node,
@@ -14,7 +9,6 @@ import {
   isVary,
 } from './nodes.ts';
 
-/** A number in at most three significant figures. */
 const figure = (x: number): string => String(Number(x.toPrecision(3)));
 
 const pitchText = (pitch: Pitch): string => {
@@ -48,7 +42,6 @@ const timingText = (timing: Repeat['timing']): string =>
     Poisson: (t) => `${valueText(t.rate, figure)}/s for ${secsText(t.secs)}`,
   });
 
-/** What one node is, before its child. */
 const headOf = (node: Node): string => {
   switch (node._tag) {
     case 'Osc':
@@ -83,7 +76,6 @@ const headOf = (node: Node): string => {
   }
 };
 
-/** A code sound's graph in one line. */
 export const describeGraph = (node: Node): string => {
   switch (node._tag) {
     case 'Osc':

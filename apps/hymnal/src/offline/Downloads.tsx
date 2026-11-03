@@ -10,7 +10,6 @@ import { empty } from './cache';
 import { estimateMegabytes } from './estimate';
 import { Action, progress, send } from './live';
 
-// Decoded once, on the first Settings open, not at app start.
 let estimated = Option.none<number>();
 const estimateTotal = () =>
   Option.getOrElse(estimated, () => {
@@ -19,7 +18,6 @@ const estimateTotal = () =>
     return value;
   });
 
-/** Progress redraws only this leaf, never Settings or the hymn pager. */
 export function Downloads() {
   const state = AsyncResult.getOrElse(useAtomValue(progress), () => empty);
   const result = useAtomValue(send);

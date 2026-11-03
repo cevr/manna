@@ -1,7 +1,3 @@
-// `normalizeAlias` is imported from core, where it is defined, rather than
-// through a re-export the compiler kept only for this file. The claim these
-// assertions make is that the compiler's keys and the matcher's keys come from
-// one function, and importing the one function is how the test says so.
 import { normalizeAlias, type Block, type Inline } from '@manna/core/wiki';
 import { Cause, Effect, Exit, Option, Schema, SchemaGetter } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
@@ -9,10 +5,6 @@ import { describe, expect, it } from 'effect-bun-test';
 import { compileTopics, type CatalogLookup, type ParagraphLookup } from './compile.js';
 import { parseTopicSource, type TopicSource } from './source.js';
 
-/** A writings database holding exactly the paragraphs a test declares. The
- *  compiler's citation pass is the whole point of these fixtures, so the
- *  approved pages here carry synthetic refcodes rather than depending on a
- *  developer having any particular EGW book installed. */
 const paragraphs = (entries: Readonly<Record<string, readonly string[]>>): ParagraphLookup => ({
   paragraphsFor: (refcode) =>
     Effect.succeed(
@@ -31,12 +23,6 @@ const catalog = (entries: Readonly<Record<string, readonly string[]>>): CatalogL
     ),
 });
 
-/** Renders a failed exit's tagged error — tag and fields both — so a test can
- *  assert which error the compiler raised and on which value, without
- *  pattern-matching every error shape by hand. `Cause.pretty` shows only the
- *  tag, and the field is exactly what these assertions are about. A successful
- *  exit renders empty, which fails the assertion the same way a wrong error
- *  would. */
 const FailureText = Schema.encodeUnknownSync(
   Schema.Unknown.pipe(
     Schema.encodeTo(Schema.String, {
@@ -85,9 +71,6 @@ const page = (input: {
 }) => {
   const lines = ['---', `slug: ${input.slug}`, `title: ${input.title}`];
   lines.push(`status: ${Option.getOrElse(Option.fromNullishOr(input.status), () => 'approved')}`);
-  // An empty list is written as `[]`, not as a key with no entries: the latter
-  // is YAML null, which the frontmatter schema rightly rejects. A test asserting
-  // that an *emptied* list still moves the digest needs to be able to say so.
   const aliases = Option.fromNullishOr(input.aliases);
   if (Option.isSome(aliases)) {
     if (aliases.value.length === 0) lines.push('aliases: []');
@@ -129,8 +112,6 @@ describe('topics compiler', () => {
 
   it.effect('lets a draft carry an alias an approved page also claims', () =>
     Effect.gen(function* () {
-      // Proves the draft is dropped *before* the duplicate-alias rule runs, which
-      // is what makes drafts genuinely inert rather than merely unpublished.
       const compiled = yield* compile({
         files: [
           ['a.md', page({ slug: 'sanctuary', title: 'Sanctuary', aliases: ['holy place'] })],
@@ -162,7 +143,6 @@ describe('topics compiler', () => {
       expect(Exit.isFailure(exit)).toBe(true);
       const failure = renderFailure(exit);
       expect(failure).toContain('DuplicateAliasError');
-      // Normalization is what makes the two spellings collide.
       expect(failure).toContain('cleansing of the sanctuary');
     }),
   );
@@ -207,8 +187,6 @@ describe('topics compiler', () => {
 
   it.effect('accepts a citation whose quote appears with different punctuation', () =>
     Effect.gen(function* () {
-      // Authors retype quotes; EGW source text uses typographic punctuation. The
-      // pass must catch fabrication without failing honest transcription.
       const compiled = yield* compile({
         files: [
           [
@@ -363,8 +341,6 @@ describe('topics compiler', () => {
 
   it.effect('produces a valid empty result for a draft-only content set', () =>
     Effect.gen(function* () {
-      // This is exactly the shipped v1 state: forty drafts, nothing approved. The
-      // compile must succeed and the artifact must be honestly empty.
       const compiled = yield* compile({
         files: [
           ['a.md', page({ slug: 'one', title: 'One', status: 'draft' })],
@@ -429,23 +405,15 @@ describe('alias normalization', () => {
 
   it.effect('normalizes exactly the §4.3 set and nothing more', () =>
     Effect.sync(() => {
-      // §4.3 allows case, whitespace, and soft punctuation (commas and
-      // semicolons) only. Stripping an apostrophe would fold two genuinely
-      // different phrases onto one dictionary key.
       expect(normalizeAlias("the Lord's Day")).toBe("the lord's day");
       expect(normalizeAlias('The 2300 Days: A Study')).toBe('the 2300 days: a study');
       expect(normalizeAlias('Faith, Hope; Love')).toBe('faith hope love');
-      // A soft mark between words must not weld them together.
       expect(normalizeAlias('sanctuary,cleansing')).toBe('sanctuary cleansing');
     }),
   );
 });
 
 describe('content revision digest', () => {
-  /** Every authored frontmatter field, and the body, must move the digest:
-   *  `content_revision` is derived from it, and an unchanged revision tells the
-   *  supply pipeline the installed artifact is already current — so a field the
-   *  digest ignores is a field an edit to which never reaches a host. */
   interface Page {
     readonly slug: string;
     readonly title: string;
@@ -469,7 +437,6 @@ describe('content revision digest', () => {
     compile({
       files: [
         ['a.md', page({ ...base, ...overrides })],
-        // Companion pages so every `related` entry names a real approved slug.
         ['b.md', page({ slug: 'other', title: 'Other' })],
         ['c.md', page({ slug: 'third', title: 'Third' })],
       ],
@@ -496,8 +463,6 @@ describe('content revision digest', () => {
 
   it.effect('changes when status changes', () =>
     Effect.gen(function* () {
-      // Dropping the page to draft removes it from the artifact entirely, which
-      // must be a different content set than one carrying it.
       const before = yield* digestOf({});
       const after = yield* digestOf({ status: 'draft' });
       expect(after).not.toBe(before);
@@ -512,8 +477,6 @@ describe('content revision digest', () => {
 
   it.effect('distinguishes one joined alias from two split aliases', () =>
     Effect.gen(function* () {
-      // Length-prefixing is what keeps ['ab'] and ['a','b'] apart; plain
-      // concatenation would hash both to the same bytes.
       const joined = yield* digestOf({ aliases: ['ab'] });
       const split = yield* digestOf({ aliases: ['a', 'b'] });
       expect(joined).not.toBe(split);
@@ -522,15 +485,6 @@ describe('content revision digest', () => {
 
   it.effect('distinguishes a value in `aliases` from the same value in `related`', () =>
     Effect.gen(function* () {
-      // Flattening the two lists into one run of values let a value migrate
-      // between fields for free: the digest saw the values `x` then `target`
-      // either way. That is a real edit — it moves a phrase out of the
-      // dictionary and turns it into an edge — reaching no host, because the
-      // unchanged revision reads as "already current".
-      //
-      // Compiled without the shared companions: `target` must be a real slug for
-      // the `related` half and must not also be some other page's canonical
-      // alias, or the compile fails on a duplicate alias before the digest.
       const digest = (source: {
         readonly aliases: readonly string[];
         readonly related: readonly string[];
@@ -550,8 +504,6 @@ describe('content revision digest', () => {
 
   it.effect('distinguishes an empty list from an absent one across fields', () =>
     Effect.gen(function* () {
-      // The counts are hashed per field, so moving every entry out of `related`
-      // is visible even though the surviving values are unchanged.
       const both = yield* digestOf({ aliases: ['a'], related: ['other'] });
       const onlyAliases = yield* digestOf({ aliases: ['a'], related: [] });
       expect(onlyAliases).not.toBe(both);
@@ -570,8 +522,6 @@ describe('content revision digest', () => {
 describe('citation text', () => {
   it.effect('rejects a citation with a blank quote', () =>
     Effect.gen(function* () {
-      // An empty quote is a substring of every paragraph, so it would verify
-      // against any refcode at all — the exact guarantee §3.4 step 6 makes.
       const exit = yield* Effect.exit(
         compile({
           files: [['a.md', page({ slug: 'one', title: 'One', body: 'Bad {{GC 425.1|}} here.' })]],
@@ -592,10 +542,6 @@ describe('citation text', () => {
           files: [
             ['a.md', page({ slug: 'one', title: 'One', body: 'Bad {{GC 425.1|  ...  }} here.' })],
           ],
-          // The paragraph *does* contain the ellipsis, so a naive substring
-          // check finds it and the citation "verifies". That is the whole
-          // defect: the rule must reject the quote for carrying no text, not
-          // pass by the accident of the paragraph lacking the punctuation.
           paragraphs: paragraphs({ 'GC 425.1': ['Any paragraph ... at all.'] }),
         }),
       );
@@ -609,8 +555,6 @@ describe('citation text', () => {
 
   it.effect('rejects a punctuation-only quote against a paragraph of pure punctuation', () =>
     Effect.gen(function* () {
-      // The extreme case of the same defect: every character of the quote is in
-      // the paragraph, so substring verification is a tautology.
       const exit = yield* Effect.exit(
         compile({
           files: [['a.md', page({ slug: 'two', title: 'Two', body: 'Bad {{GC 1.1|—}} here.' })]],
@@ -626,8 +570,6 @@ describe('citation text', () => {
 
   it.effect('accepts a quote that carries a digit but no letter', () =>
     Effect.gen(function* () {
-      // The rule is "asserts something", not "contains prose": a year or a verse
-      // count is a real claim about what the paragraph says.
       const compiled = yield* compile({
         files: [['a.md', page({ slug: 'one', title: 'One', body: '{{GC 425.1|1844}}' })]],
         paragraphs: paragraphs({ 'GC 425.1': ['The year 1844 closed the prophecy.'] }),
@@ -637,13 +579,7 @@ describe('citation text', () => {
   );
 });
 
-/** The pre-pass runs before CommonMark, so it has to honour the two places
- *  CommonMark keeps text literal — code, and backslash escapes. Without that it
- *  rewrites the very text an author marked as "show this, do not use it". */
 describe('protected markdown', () => {
-  /** Counts the inline nodes of one tag across a compiled page's thesis. Reads
-   *  the typed tree rather than a rendered string, so a test says exactly which
-   *  node kind it means. */
   const tagCount = (blocks: readonly Block[], tag: Inline['_tag']): number => {
     let found = 0;
     const walk = (content: readonly Inline[]): void => {
@@ -686,8 +622,6 @@ describe('protected markdown', () => {
 
   it.effect('leaves a citation inside inline code literal', () =>
     Effect.gen(function* () {
-      // Unprotected, this became a real citation and the compile then failed on
-      // a refcode with no paragraph — a build broken by prose about syntax.
       expect(yield* countIn('Write `{{GC 425.1|quote}}`.', 'citation')).toBe(0);
     }),
   );
@@ -700,8 +634,6 @@ describe('protected markdown', () => {
 
   it.effect('converts a reference after an unclosed backtick', () =>
     Effect.gen(function* () {
-      // An unclosed backtick opens no code span in CommonMark, so it protects
-      // nothing and the reference is live.
       expect(yield* scriptureCount('A ` stray tick and [[Dan 8:14]] after it.')).toBe(1);
     }),
   );

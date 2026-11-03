@@ -1,12 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/hooks/useClick.ts
-//
-// Opens and closes a popup by pressing its trigger, in Menu's mode: a
-// pointer opens on mousedown (so a press-drag-release on an item works, as
-// native menus do), a keyboard click on click, and a second press closes.
-// A press on a second trigger while open moves the popup to it instead of
-// closing. Upstream's click-only mode, `ignoreMouse`, `touchOpenDelay`,
-// `reason` and `stickIfOpen` are left out: MenuTrigger, the one caller,
-// uses none of them.
 import { untrack } from 'solid-js';
 
 import { createChangeEventDetails } from '../../internals/createBaseUIEventDetails.ts';
@@ -28,8 +19,6 @@ export function useClick(context: FloatingRootContext): { reference: HTMLProps }
     context.setOpen(nextOpen, createChangeEventDetails(REASONS.triggerPress, nativeEvent, target));
   };
 
-  // A press opens a closed popup, or moves an open one to this trigger; a
-  // press on the trigger that holds it closes it.
   const getNextOpen = (open: boolean, currentTarget: EventTarget | null) =>
     !open || untrack(context.domReferenceElement) !== currentTarget;
 
@@ -51,12 +40,10 @@ export function useClick(context: FloatingRootContext): { reference: HTMLProps }
         setOpen(nextOpen, event, (isTypeable ? target : event.currentTarget) as HTMLElement);
         return;
       }
-      // Wait a frame so the mousedown's focus lands on the trigger before the popup takes it.
       const currentTarget = event.currentTarget as HTMLElement;
       frame.request(() => setOpen(nextOpen, event, currentTarget));
     },
     onClick(event: MouseEvent) {
-      // A pointer press already acted on mousedown; only a keyboard click acts here.
       if (pointerType) {
         pointerType = undefined;
         return;

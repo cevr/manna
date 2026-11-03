@@ -1,48 +1,3 @@
-// A Rive rig drawn in our frame: a figure built in Rive (bones, skinned
-// paths, constraints, a view model) that a drawing declares (`drawing({ rigs
-// })`) and poses by name each frame (`f.rive(name, pose)`), drawn under the
-// frame's own transform, as `glCanvas` lets a look draw in 3D. This is the
-// draw path: plain synchronous code, no Effect and no Promise. The film loads
-// its rigs before its first frame (`src/rive`, `loadRigs`): each rig's file,
-// parsed once, belongs to that load's scope.
-//
-// Rive never owns the clock, and a frame is a function of its pose alone,
-// whatever was drawn before it, by construction: every frame poses an
-// artboard instance of its own, made from the loaded file and deleted when
-// the frame is drawn, bound to a view-model instance of its own (the model's
-// defaults, then the pose's numbers), with the pose's timelines applied in
-// order and the artboard advanced by no time. A rig that follows the shot
-// (`ink`) has its ink set from the frame's scale before the pose's numbers,
-// read before the pose's `size` scales it. Nothing a frame does to an
-// instance outlives it: no path a shape keeps from an earlier frame's
-// rounding (`PathComposer` remakes a shape's paths only when their geometry
-// or their transform moves past a tolerance), no constraint solved from the
-// last frame's bones, no value a bind wrote back. The file's timelines are
-// the file's own (every instance shares them), so a frame makes only the
-// instances it poses: the artboard, the view model's instance, one instance
-// of each timeline it names.
-//
-// Two engines draw it:
-//
-// - `canvas` (`@rive-app/canvas-advanced`): Rive's Canvas 2D renderer, on our
-//   own context, so our camera, alpha and plane haze reach it as they reach
-//   any piece; its draws are queued and flushed (`resolveAnimationFrame`)
-//   while our transform is still on the context.
-// - `webgl2` (`@rive-app/webgl2-advanced`): the Rive Renderer (feathers drawn
-//   analytically) on a WebGL 2 canvas off the page, its box on screen
-//   composited with `drawImage`. Its canvas is a 512 px tile where the rig's
-//   box fits, else the frame's size: a size the frame chooses, never one grown
-//   from the frames before, and each is first drawn once with the rig at rest
-//   before any real frame (the Rive Renderer sizes its buffers from the first
-//   frame it draws). Where WebGL has no pixel local storage (SwiftShader, so
-//   every render on Linux) it falls back to 4× MSAA and draws a feather only
-//   on a `clockwise` fill.
-//
-// Where nothing is drawn (Bun, which has no canvas: `check --draw`) the rig is
-// still posed and its face still declared. Probes cannot see inside an
-// artboard: `face` names a node whose place is declared (`probeFace`), and the
-// artboard's bounds are declared as the figure's box (`probeFigure`).
-
 import type {
   Artboard,
   File,
@@ -59,111 +14,56 @@ import { probeFace, probeFigure, probesFaces, probesFigures } from './probe.ts';
 
 export { type CastProp, type CastView, castTable } from './cast.ts';
 
-/** Which of Rive's renderers draws a rig. */
 export type RiveEngine = 'canvas' | 'webgl2';
 
-/**
- * A rig's built file (its URL in a page, its path in Bun: the module's own
- * `import riv from './x.riv' with { type: 'file' }`), the artboard drawn, the
- * timelines a pose may name and the view model's numbers it may set.
- */
 interface RiveSource<Tl extends string = string, N extends string = string> {
   readonly riv: string;
   readonly artboard: string;
   readonly timelines: ReadonlyArray<Tl>;
-  /** The numbers a pose may set, checked against the file at load; any of its numbers when it names none. */
   readonly numbers?: ReadonlyArray<N>;
 }
 
-/**
- * The view-model number a rig's ink binds its widths to, as the house prints
- * every figure's and hand's: 1 draws the line as it was cut.
- */
 export const INK_NUMBER = 'ink';
 
-/**
- * The shot's scale under `ctx`'s transform: frame heights per unit of the
- * current space (`sqrt(|det|)` over the canvas's height), the same at any
- * size the frame is drawn at.
- */
 const shotScale = (ctx: CanvasRenderingContext2D) => {
   const m = ctx.getTransform();
   return Math.sqrt(Math.abs(m.a * m.d - m.b * m.c)) / ctx.canvas.height;
 };
 
-/**
- * A rig as a drawing declares it (`drawing({ rigs: { accused: … } })`): its
- * source, the engine that draws it, its name in errors (`key`), which
- * artboard point stands at our (0, 0), and the node whose place is its face.
- */
 export interface RivePropSpec<Tl extends string = string, N extends string = string> {
   readonly source: RiveSource<Tl, N>;
   readonly engine: RiveEngine;
   readonly key: string;
   readonly origin: readonly [number, number];
-  /** A node whose place is the face, and the face's height in artboard units, for `check`'s face probe. */
   readonly face?: { readonly node: string; readonly height: number };
-  /**
-   * The figure's concept: the image it was painted in and its box there
-   * (`film lab match` holds the rig as drawn against it). A rig with a face and
-   * a concept is a figure `match` reads; a hand has neither.
-   */
   readonly concept?: ConceptRef;
-  /**
-   * The rig's ink as the shot draws it: the number `ink` (`INK_NUMBER`) at
-   * the shot's scale where the rig stands (`shotScale`, read before the
-   * pose's `size`), set each frame
-   * before the pose's numbers, so a pose that names `ink` sets it itself
-   * (`inkAt`, `@manna/film/style`). Left out, the ink stays at the model's
-   * default. A rig whose view model has no number `ink` is refused at load.
-   */
   readonly ink?: (scale: number) => number;
 }
 
-/**
- * One frame's pose: each timeline at its time in seconds, applied in this
- * order with its mix (1 by default; 0 leaves it out), then the view model's
- * numbers by name (one left out at the model's default), and the rig's
- * `size`: how many times the space it stands in it is drawn (1 when left
- * out), its shot read in that space before it is sized, so a figure's hand
- * drawn larger than the hand rig follows its figure's shot.
- */
 interface RivePose<Tl extends string = string, N extends string = string> {
   readonly timelines: ReadonlyArray<readonly [name: Tl, seconds: number, mix?: number]>;
   readonly numbers?: Readonly<Partial<Record<N, number>>>;
   readonly size?: number;
 }
 
-/** The pose a declared rig takes: its own timelines and numbers. */
 export type PoseOf<S> = S extends RivePropSpec<infer Tl, infer N> ? RivePose<Tl, N> : never;
 
-/** A WebGL 2 canvas off the page, its context, and the Rive Renderer on it. */
 interface GlTarget {
   readonly canvas: HTMLCanvasElement;
   readonly gl: WebGL2RenderingContext;
   readonly renderer: WrappedRenderer;
-  /** Whether its first drawing at rest is done: one left unprimed (that drawing threw) is made anew. */
   primed: boolean;
 }
 
-/** A Rive object a frame makes for itself and deletes. */
 interface Made {
   delete(): void;
 }
 
-/**
- * What a rig's frame has made and not yet deleted. The frame deletes all of
- * it, last made first, as it ends; a frame that throws leaves it here, and the
- * next frame deletes it as it starts, or the rig's scope as it closes
- * (`free`). The draw path runs no Effect and no try/finally, so this slot is
- * how a throw mid-frame leaks nothing.
- */
 interface InFlight {
   readonly hold: <A extends Made>(made: A) => A;
   readonly free: () => void;
 }
 
-/** An empty in-flight slot for a rig's frames (`loadRigs` owns it, and frees it as its scope closes). */
 export const inFlight = (): InFlight => {
   const held: Array<Made> = [];
   return {
@@ -177,56 +77,29 @@ export const inFlight = (): InFlight => {
   };
 };
 
-/**
- * What a rig draws on: a renderer on each frame canvas (`canvas`) and a target
- * at each size (`webgl2`, none where no WebGL 2 context can be made), made on
- * first use and freed with the rig (`free`).
- */
 interface RigSurfaces {
   readonly renderer: (canvas: HTMLCanvasElement) => WrappedRenderer;
   readonly target: (w: number, h: number) => GlTarget | undefined;
   readonly free: () => void;
 }
 
-/**
- * A rig loaded for drawing (`loadRigs`, src/rive): its parsed file, which
- * every frame's own instance is made from, and what its load's scope owns.
- */
 export interface LoadedRig {
   readonly runtime: RiveCanvas;
-  /** False where the rig is posed and probed but never drawn (Bun, which has no canvas). */
   readonly paints: boolean;
   readonly file: File;
-  /** The declared timelines, by name: the file's own, shared by every instance of the artboard. */
   readonly timelines: ReadonlyMap<string, LinearAnimation>;
-  /** The view model each frame's own instance is made from; none where the artboard has none. */
   readonly model: ViewModel | undefined;
-  /** The numbers a pose may set. */
   readonly numbers: ReadonlySet<string>;
-  /** Scratch for a frame's transform: nothing is kept in it between calls. */
   readonly scratch: Mat2D;
   readonly surfaces: RigSurfaces;
-  /** The instances the frame being drawn has made, deleted as it ends (or after it, if it threw). */
   readonly frame: InFlight;
 }
 
-/** A prop's box on screen fits this square at any camera the court uses: a small target to clear and read back. */
 const TILE = 512;
 
-/** Whether `v` is a WebGL 2 context: a canvas whose context could not be made has none. */
 const isGl2 = (v: unknown): v is WebGL2RenderingContext =>
   v !== null && v !== undefined && Reflect.has(Object(v), 'isContextLost');
 
-/**
- * The surfaces of a rig drawn by `runtime`. A target is first drawn once with
- * `rest()` (a new artboard, unposed, drawn as large as the target holds, held
- * in the frame's slot, `frame`, which deletes it), so the buffers it sizes
- * hold any frame that fits it. Its context is held in the page's budget of
- * live WebGL contexts (`holdGl`, with `glCanvas`'s), each use as the most
- * recent; one the budget or the browser has let go, or whose first drawing
- * threw, is made anew, primed again, before it draws, so a target never draws
- * blank; and each is let go with the rig (`dropGl`).
- */
 export const rigSurfaces = (
   runtime: RiveCanvas,
   rest: () => Artboard,
@@ -257,11 +130,9 @@ export const rigSurfaces = (
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;
-    // The Rive Renderer makes the canvas's context (its own attributes); this is that context.
     const renderer = runtime.makeRenderer(canvas, false);
     const gl: unknown = canvas.getContext('webgl2');
     if (!isGl2(gl)) return undefined;
-    // Kept from the start, so the rig frees it even if its first drawing throws.
     const made: GlTarget = { canvas, gl, renderer, primed: false };
     targets.set(at, made);
     holdGl(canvas, gl);
@@ -297,13 +168,10 @@ export const rigSurfaces = (
   return { renderer, target, free };
 };
 
-/** The names a rig has of a kind, for an error. */
 const listed = (names: Iterable<string>) => [...names].join(', ');
 
-/** No numbers: a pose that sets none. */
 const NO_NUMBERS: Readonly<Record<string, number>> = {};
 
-/** Why `pose` cannot be posed on `rig`: a timeline or a number it names that the rig lacks. */
 const unposable = (spec: RivePropSpec, rig: LoadedRig, pose: RivePose): string | undefined => {
   for (const name in pose.numbers ?? NO_NUMBERS)
     if (!rig.numbers.has(name))
@@ -316,14 +184,6 @@ const unposable = (spec: RivePropSpec, rig: LoadedRig, pose: RivePose): string |
   return undefined;
 };
 
-/**
- * `artboard`, a frame's own, set to `pose`: its view-model instance (`vm`,
- * the frame's own too) bound and given its `ink` (none when undefined), then
- * the pose's numbers, the pose's timelines applied in order, each on an
- * instance made for it (held in the
- * frame's slot, deleted with the frame), then the artboard advanced by no
- * time, which applies the binds.
- */
 const posed = (
   rig: LoadedRig,
   artboard: Artboard,
@@ -353,7 +213,6 @@ const posed = (
   artboard.advance(0);
 };
 
-/** Draw the posed `artboard` with Rive's Canvas 2D renderer on `ctx`, under its transform. */
 const paintCanvas = (
   ctx: CanvasRenderingContext2D,
   spec: RivePropSpec,
@@ -361,7 +220,6 @@ const paintCanvas = (
   artboard: Artboard,
 ) => {
   const [ox, oy] = spec.origin;
-  // Made on the frame's own canvas: its 2D context is `ctx`, the one Rive draws into.
   const renderer = rig.surfaces.renderer(ctx.canvas);
   ctx.save();
   ctx.translate(-ox, -oy);
@@ -369,19 +227,10 @@ const paintCanvas = (
   renderer.save();
   artboard.draw(renderer);
   renderer.restore();
-  // The canvas renderer queues its draws; flush them under our transform (and before the
-  // frame's artboard is deleted, which a queued draw would skip).
   rig.runtime.resolveAnimationFrame();
   ctx.restore();
 };
 
-/**
- * Draw the posed `artboard` with the Rive Renderer on its target, and its box
- * on screen onto `ctx`: the box drawn at the tile's corner (whole pixels, so
- * its pixels are the frame's), or the frame at its own size. Reads the
- * context's transform once (`getTransform`) and allocates nothing else. Why
- * not, where no WebGL 2 context can be made for its target.
- */
 const paintGl = (
   ctx: CanvasRenderingContext2D,
   spec: RivePropSpec,
@@ -390,7 +239,6 @@ const paintGl = (
 ): string | undefined => {
   const [ox, oy] = spec.origin;
   const m = ctx.getTransform();
-  // The context's transform with the origin moved to (ox, oy), folded in by hand.
   const e = m.e - (m.a * ox + m.c * oy);
   const f = m.f - (m.b * ox + m.d * oy);
   const b = artboard.bounds;
@@ -424,8 +272,6 @@ const paintGl = (
   if (target === undefined)
     return `rig ${spec.key}: no WebGL 2 context could be made to draw it on`;
   const { renderer } = target;
-  // The WebGL 2 runtime (2.43.1) has no `beginFrame`, though the types it shares say so: its
-  // `clear` is the frame's start (resize to the canvas, clear, register for the flush).
   renderer.clear();
   renderer.save();
   rig.scratch.xx = m.a;
@@ -446,7 +292,6 @@ const paintGl = (
   return undefined;
 };
 
-/** Declare the rig's face where the posed `artboard`'s face node stands, for the probe. */
 const declareFace = (
   ctx: CanvasRenderingContext2D,
   spec: RivePropSpec,
@@ -455,7 +300,6 @@ const declareFace = (
 ) => {
   if (spec.face === undefined || !probesFaces(ctx)) return;
   const [ox, oy] = spec.origin;
-  // Its place: the node's own offset through its parent's world transform (checked at load).
   const face = artboard.node(spec.face.node);
   face.parentWorldTransform(rig.scratch);
   const p = rig.scratch;
@@ -468,10 +312,6 @@ const declareFace = (
   );
 };
 
-/**
- * Declare the rig's box (the posed `artboard`'s bounds, in the space it was
- * drawn in, our origin at the spec's `origin`) for the match's probe.
- */
 const declareFigure = (ctx: CanvasRenderingContext2D, spec: RivePropSpec, artboard: Artboard) => {
   if (!probesFigures(ctx)) return;
   const [ox, oy] = spec.origin;
@@ -487,19 +327,6 @@ const declareFigure = (ctx: CanvasRenderingContext2D, spec: RivePropSpec, artboa
   });
 };
 
-/**
- * Pose a new instance of `rig` (as `spec` declares it) to `pose`, its ink
- * at the shot's scale when it follows the shot (`spec.ink`), and draw it
- * at our origin under the context's transform (sized by the pose's `size`
- * once the shot is read), declaring its face, then
- * delete it: nothing once drawn, else why it cannot be (the pose names what
- * the rig lacks, or no WebGL 2 context can be made for a `webgl2` rig's
- * target), which the film throws (`f.rive`). The pose's names are
- * checked before an instance is made. Every instance the frame makes is held
- * in the rig's slot (`rig.frame`) and deleted as the frame ends; a throw from
- * the runtime itself fails the frame, and what it had made is deleted by the
- * rig's next frame as it starts, or by the rig's scope as it closes.
- */
 export const drawRig = (
   ctx: CanvasRenderingContext2D,
   spec: RivePropSpec,
@@ -508,7 +335,6 @@ export const drawRig = (
 ): string | undefined => {
   const why = unposable(spec, rig, pose);
   if (why !== undefined) return why;
-  // What a frame that threw left behind.
   rig.frame.free();
   const artboard = rig.frame.hold(rig.file.artboardByName(spec.source.artboard));
   const vm = rig.model === undefined ? undefined : rig.frame.hold(rig.model.defaultInstance());
@@ -525,7 +351,6 @@ export const drawRig = (
   return painted;
 };
 
-/** `draw` under the context's transform scaled `size` times about our origin; as it stands when no size is given. */
 const sized = <A>(ctx: CanvasRenderingContext2D, size: number | undefined, draw: () => A): A => {
   if (size === undefined) return draw();
   ctx.save();

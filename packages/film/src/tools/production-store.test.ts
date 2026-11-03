@@ -1,14 +1,3 @@
-// ProductionStore and `film publish`'s stamp: a ledger starts on its first
-// change and lists by name; two moves forward from the same version, at
-// once, land one and refuse the other with the version now; a ledger that
-// does not decode is left out of the list and never rewritten, and so is one
-// kept in a file not named for its production: a read or a change by that
-// file's name fails, as a change that names another production does; the
-// verbs refuse a second start and a filing in a version the ledger lacks; a
-// set's review.json is stamped with its production, version and time, every
-// other field as written, and a stamp that would make it no manifest is
-// refused.
-
 import { describe, expect, it } from 'effect-bun-test';
 import {
   ConfigProvider,
@@ -33,7 +22,6 @@ const HOUR = 3_600_000;
 
 const JsonText = Schema.fromJsonString(Schema.JsonObject);
 
-/** A store over files kept in `files`, the ledgers under `/productions`. */
 const storeOver = (files: Map<string, Uint8Array>) =>
   ProductionStore.layer.pipe(
     Layer.provide(ContentStore.layer),
@@ -120,8 +108,6 @@ describe('ProductionStore', () => {
         const kept = yield* fs.readFileString('/productions/old-name.json');
         yield* store.modify('look', forward(1, 'K1'));
         expect((yield* store.list).map((p) => p.production)).toEqual(['look']);
-        // By its file's name, a read and a change that would land are refused as a ledger
-        // that does not decode is.
         const read = yield* Effect.flip(store.read('old-name'));
         const changed = yield* Effect.flip(store.modify('old-name', forward(2, 'K2')));
         for (const refused of [read, changed]) {
@@ -235,7 +221,6 @@ describe('film publish: the stamp', () => {
 
   const opened = (n: number) => ({ at: n * HOUR, title: `v${n}`, because: Option.none() });
 
-  /** Publish `/out/styles` holding `text` as its review.json onto `look`, which has opened three versions; the review.json after. */
   const published = (text: string, version: Option.Option<number>) => {
     const files = new Map<string, Uint8Array>();
     return Effect.gen(function* () {

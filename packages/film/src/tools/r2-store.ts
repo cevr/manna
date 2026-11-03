@@ -1,17 +1,4 @@
 import type { Mac } from 'effect/crypto';
-// The private store as a Cloudflare R2 bucket, over R2's S3 API: each request
-// signed with SigV4 (`sigv4.ts`) and sent through Effect's HttpClient, so no
-// SDK. The bucket is private (no r2.dev URL, no public domain): every read is
-// signed with the bucket-scoped key the `film-store` stack mints
-// (`apps/animations/infra/`).
-//
-// A `put` is one PutObject: R2 replaces an object whole, so a reader never
-// sees half of it. Its payload hash is signed, so R2 refuses bytes that are
-// not the ones hashed, and the same sha256 rides along as the object's
-// metadata (`x-amz-meta-sha256`), so `hashOf` is a HEAD, never a download.
-// A `get` checks the bytes it fetched against that hash before it renames
-// them into place. A file is streamed both ways, hashed as it passes: a
-// render of hundreds of megabytes is never held whole.
 
 import {
   DateTime,
@@ -42,13 +29,11 @@ import {
 import { EMPTY_SHA256, type S3Credentials, encodeKey, signS3, uriEncode } from './sigv4.ts';
 import { hashed, hashing, sha256OfFile } from './digest.ts';
 
-/** What reaches the bucket: the account it is in and a key scoped to it (from the environment). */
 export interface R2Access {
   readonly accountId: Redacted.Redacted<string>;
   readonly credentials: S3Credentials;
 }
 
-/** What the R2 store runs on. */
 interface R2Platform {
   readonly fs: FileSystem.FileSystem;
   readonly path: Path.Path;
@@ -56,13 +41,10 @@ interface R2Platform {
   readonly http: HttpClient.HttpClient;
 }
 
-/** R2 signs every request for the region `auto`. */
 const REGION = 'auto';
 
-/** The S3 endpoint's host for the account (its default jurisdiction, where the stack makes the bucket). */
 const r2Host = (accountId: string): string => `${accountId}.r2.cloudflarestorage.com`;
 
-/** The metadata header that carries an object's sha256. */
 const HASH_HEADER = 'x-amz-meta-sha256';
 
 const TYPES = new Map([
@@ -80,7 +62,6 @@ const TYPES = new Map([
   ['txt', 'text/plain'],
 ]);
 
-/** A file's media type by its extension, else bytes. */
 const contentTypeOf = (key: string): string =>
   TYPES.get(key.split('.').at(-1)?.toLowerCase() ?? '') ?? 'application/octet-stream';
 
@@ -92,7 +73,6 @@ const XML_ENTITIES = new Map([
   ['&apos;', "'"],
 ]);
 
-/** The text of the first `<tag>` in `xml`, entities decoded. */
 const xmlText = (xml: string, tag: string): Option.Option<string> =>
   Option.map(
     Option.fromNullishOr(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`).exec(xml)?.[1]),
@@ -100,13 +80,11 @@ const xmlText = (xml: string, tag: string): Option.Option<string> =>
       text.replaceAll(/&(amp|lt|gt|quot|apos);/g, (entity) => XML_ENTITIES.get(entity) ?? entity),
   );
 
-/** One page of a ListObjectsV2 answer: its objects, and the token for the next page when it was cut. */
 interface ListPage {
   readonly objects: ReadonlyArray<StoredObject>;
   readonly next: Option.Option<string>;
 }
 
-/** The page a ListObjectsV2 answer holds. */
 const listPage = (xml: string): ListPage => {
   const objects = Array.from(xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g), (match) => {
     const block = match[1] ?? '';
@@ -122,7 +100,6 @@ const listPage = (xml: string): ListPage => {
   return { objects, next };
 };
 
-/** `bytes 0-9/100` → start, end and the object's whole size. */
 const contentRange = (header: string): Option.Option<StoredReadSpan> =>
   Option.map(Option.fromNullishOr(/^bytes (\d+)-(\d+)\/(\d+)$/.exec(header.trim())), (match) => ({
     start: Number(match[1]),
@@ -132,16 +109,13 @@ const contentRange = (header: string): Option.Option<StoredReadSpan> =>
 
 type StoredReadSpan = Pick<StoredRead, 'start' | 'end' | 'size'>;
 
-/** One request to the bucket, before it is signed. */
 interface Call {
   readonly op: string;
   readonly key: string;
   readonly method: 'GET' | 'HEAD' | 'PUT';
-  /** The object's key, or none for the bucket itself (a list). */
   readonly object: Option.Option<string>;
   readonly query: ReadonlyArray<readonly [string, string]>;
   readonly headers: Readonly<Record<string, string>>;
-  /** A PUT's body: the file streamed from disk, its length and its sha256 (hashed before, signed with it). */
   readonly body: Option.Option<{
     readonly file: string;
     readonly size: number;
@@ -149,7 +123,6 @@ interface Call {
   }>;
 }
 
-/** A private R2 bucket as the store. */
 export const r2Store = (
   platform: R2Platform,
   config: R2StoreConfig,
@@ -158,8 +131,6 @@ export const r2Store = (
   const { fs, crypto } = platform;
   const host = r2Host(Redacted.value(access.accountId));
   const where = `r2://${config.bucket}`;
-  // Every request is idempotent (a PUT sends the same whole object again), so
-  // transient failures are retried, a few times, backing off.
   const http = platform.http.pipe(
     Client.retryTransient({
       times: 3,
@@ -204,7 +175,6 @@ export const r2Store = (
       .pipe(Effect.mapError((error) => failed(call.op, call.key, error.message)));
   });
 
-  /** An answer that is not one of `ok`: its status and S3 error code, as a failure. */
   const refused = Effect.fnUntraced(function* (
     call: Pick<Call, 'op' | 'key'>,
     response: HttpClientResponse.HttpClientResponse,
@@ -250,9 +220,6 @@ export const r2Store = (
     const call = object('get', key, 'GET');
     const response = yield* send(call);
     if (response.status !== 200) return yield* refused(call, response);
-    // Written whole (`writeWhole`), hashed as it lands; renamed into place
-    // only when the hash holds. A fetch cut off, or bytes that are not what
-    // was stored, leave nothing behind.
     const into = hashing();
     yield* fs.makeDirectory(platform.path.dirname(to), { recursive: true }).pipe(
       Effect.andThen(
@@ -321,7 +288,6 @@ export const r2Store = (
     if (response.status === 404) return Option.none<StoredRead>();
     if (response.status === 416) return yield* failed('read', key, 'the range starts past its end');
     if (response.status !== 200 && response.status !== 206) return yield* refused(call, response);
-    // A range answers with its span and the whole size; a whole read with its length.
     const length = Number(response.headers['content-length'] ?? '0');
     const span = Option.match(Option.fromUndefinedOr(response.headers['content-range']), {
       onSome: contentRange,

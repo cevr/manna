@@ -1,19 +1,8 @@
-// The series lead's skeletons, one a cut view (`core/puppet.ts`), read in
-// view pixels and moved into its part sheet's frame (`frames.ts`) by the
-// shared skeleton (`library/cutout/skeleton.ts`): his lean from his sash's
-// knot to the base of his neck, his neck and head above it, and each arm's
-// shoulder, elbow and wrist on the joints his cut records (`joints.ts`), the
-// wrist at the cuff and its tip at his circle hand's middle. His torso and
-// sash lean; his robe, sandals and ground shadow stand with the root; each
-// sleeve takes its shoulder's flap of torso. His bust (heads-4) is a lean and
-// a head. Pure data.
-
 import type { Skeleton } from '@manna/film/core';
 import { type Body, framed, standing } from '../../../cutout/skeleton.ts';
 import { type FramedView, keptAt } from './frames.ts';
 import { JOINTS } from './joints.ts';
 
-/** His parts as his part sheets name them, each on its bones; his sleeves' flaps from his torso, in a band 50 px above each shoulder to 12 below, reaching 60 past it. */
 const BODY: Body = {
   skin: {
     head: ['neck', 'head'],
@@ -27,7 +16,6 @@ const BODY: Body = {
   band: { above: 50, below: 12, reach: 60 },
 };
 
-/** Each cut view's skeleton in its part sheet's frame, by the view's name in his sheets' views. */
 export const SKELETONS = {
   front: framed(
     keptAt('front'),
@@ -86,8 +74,6 @@ export const SKELETONS = {
       capLeft: 13,
     }),
   ),
-  // seated on his stool, the bottle raised: his lap, stool and sandals stand
-  // with the root; both his arms are stroke limbs, his left ending at its cuff
   'single-9': framed(
     keptAt('single-9'),
     standing(BODY, {
@@ -116,7 +102,6 @@ export const SKELETONS = {
     skin: { head: ['head'], torso: ['lean'] },
     root: [120, 336],
   }),
-  // his wince, a bust as heads-4: a lean and a head
   'single-5': framed(keptAt('single-5'), {
     bones: [
       { name: 'lean', pivot: [152, 417], tip: [152, 286] },

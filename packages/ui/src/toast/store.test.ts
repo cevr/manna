@@ -1,5 +1,3 @@
-// Upstream: packages/react/src/toast/store.test.ts,
-// packages/react/src/toast/utils/isRenderableNode.test.ts
 import { afterEach, describe, expect, it, jest, mock } from 'bun:test';
 
 import { selectors, ToastStore } from './store.ts';
@@ -8,7 +6,6 @@ import { isRenderableNode } from './utils.ts';
 
 function createStore(toasts: ToastObject[]) {
   return new ToastStore({
-    // Mirrors `addToast`, which always stamps an `updateKey` on the way in.
     toasts: toasts.map((toast) => ({ updateKey: 0, ...toast })),
     limit: 3,
     hovering: false,
@@ -78,8 +75,6 @@ describe('ToastStore', () => {
     store.closeToast('a');
     expect(statusOf(store, 'a')).toBe('ending');
 
-    // The write the root makes once mounted always includes
-    // `transitionStatus: undefined`; the ending toast must stay ending.
     store.updateToastInternal('a', { title: 'late', transitionStatus: undefined });
 
     const toast = selectors.toast(store.state, 'a');
@@ -148,7 +143,6 @@ describe('ToastStore', () => {
 
   describe('limit', () => {
     it('recomputes limited flags when the limit changes', () => {
-      // Ordered newest-first, matching how `addToast` prepends.
       const store = createStore([{ id: 'c' }, { id: 'b' }, { id: 'a' }]);
 
       store.setLimit(1);
@@ -204,8 +198,6 @@ describe('ToastStore', () => {
       store.addToast({ title: 'a', timeout: 100 });
       store.pauseTimers();
 
-      // Closing the last toast clears the paused flag, else the next toast's
-      // timer could never be paused again.
       store.closeToast(store.state.toasts[0]?.id ?? '');
 
       store.addToast({ title: 'b', timeout: 100 });
@@ -261,7 +253,6 @@ describe('ToastStore', () => {
       store.set('hovering', true);
       store.pauseTimers();
 
-      // Re-adding reschedules the timer; it must not run while expanded.
       store.addToast({ id: 'a', timeout: 100 });
 
       jest.advanceTimersByTime(200);
@@ -287,7 +278,6 @@ describe('ToastStore', () => {
         store.resumeTimers();
       }
 
-      // 2000ms of the 5000ms timeout has been consumed, so 3000ms remain.
       jest.advanceTimersByTime(2999);
       expect(statusOf(store, 'a')).not.toBe('ending');
 
@@ -301,8 +291,6 @@ describe('ToastStore', () => {
 
       store.addToast({ id: 'a', title: 'a', timeout: 5000 });
 
-      // A throttled background tab: wall-clock time passes without the
-      // scheduled timeout running.
       jest.setSystemTime(Date.now() + 60_000);
       store.pauseTimers();
       store.resumeTimers();
@@ -364,7 +352,6 @@ describe('ToastStore', () => {
     });
 
     it('schedules a timer when an untimed toast is re-added with a timeout', () => {
-      // A busy receipt held until its outcome replaces it.
       jest.useFakeTimers();
       const store = createStore([]);
       store.addToast({ id: 'a', type: 'busy', timeout: 0 });

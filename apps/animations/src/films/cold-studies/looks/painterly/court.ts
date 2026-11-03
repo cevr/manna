@@ -1,21 +1,3 @@
-// The painterly courtroom, cut like film: four shots of one painted stage,
-// each cut on a cue's first frame (so on its word).
-//
-// 1. "Imagine standing in a courtroom. The evidence is overwhelming." The
-//    wide: the whole room side on, the accused in the dock against the tall
-//    window, the judge high at the bench in his lamps' light, the evidence
-//    thrown down on the table between them (`drop`). A slow push in.
-// 2. "You did it." (`bow`) Close on the accused: the long face, head going
-//    down, eyes shut, the stain on the shirt, the hands on the rail.
-// 3. "And the judge looks at you and says," (`lean`) Close on the judge: he
-//    leans in over the bench and looks down, and raises the gavel (`gavel`).
-// 4. "righteous." (`stamp`) The two-shot: the gavel comes down, the verdict
-//    is struck on the writ in gold leaf, and its light lifts the accused's
-//    face (`lift`).
-//
-// The camera frames the stage in world units (the wide's 1920 × 1080); the
-// oil pass paints the frame over once it is drawn (`oil.ts`).
-
 import { type Key, clamp, lerp } from '@manna/film/core';
 import type { CourtFrame } from '../../scenes/court.ts';
 import { BRUSH_PX, type Easel } from './brush.ts';
@@ -36,21 +18,18 @@ import {
   writ,
 } from './room.ts';
 
-/** A camera: where it looks in the world, and how near. */
 interface Cam {
   readonly x: number;
   readonly y: number;
   readonly zoom: number;
 }
 
-/** The camera at `k` of the way from `a` to `b`. */
 const toward = (a: Cam, b: Cam, k: number): Cam => ({
   x: lerp(a.x, b.x, k),
   y: lerp(a.y, b.y, k),
   zoom: lerp(a.zoom, b.zoom, k),
 });
 
-/** Each shot's camera where it starts and where it has pushed to by its cut. */
 const SHOTS = {
   wide: [
     { x: 950, y: 500, zoom: 1.1 },
@@ -70,7 +49,6 @@ const SHOTS = {
   ],
 } as const satisfies Record<string, readonly [Cam, Cam]>;
 
-/** The gavel across its cue: up, a beat held, down hard on the block, a small bounce, at rest. */
 const RAISE: ReadonlyArray<Key> = [
   [0, 0],
   [0.373, 1],
@@ -79,7 +57,6 @@ const RAISE: ReadonlyArray<Key> = [
   [1, 0],
 ];
 
-/** The camera `cam` over the frame, and the easel it paints on. */
 const shoot = (f: CourtFrame, cam: Cam, draw: (e: Easel) => void) => {
   const { ctx, w, h } = f;
   ctx.save();
@@ -96,7 +73,6 @@ const shoot = (f: CourtFrame, cam: Cam, draw: (e: Easel) => void) => {
   ctx.restore();
 };
 
-/** The shot in play and how far its push has gone, from the cues: each cut falls on a cue's first frame. */
 const shot = (f: CourtFrame): Cam => {
   const span = (from: number, to: number) => clamp((f.t - from) / Math.max(0.01, to - from));
   const bow = f.cue('bow').start;
@@ -114,7 +90,6 @@ export const court = (f: CourtFrame) => {
   const lift = f.at('lift');
   const bow = f.at('bow');
   const stamp = f.at('stamp');
-  // A breath: the drift a held figure never loses.
   const breath = Math.sin(t * 1.7);
   shoot(
     f,

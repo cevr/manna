@@ -1,23 +1,12 @@
-// A raster as a PNG file's bytes, and back: written 8-bit RGBA, not
-// interlaced, each row filtered by whichever of PNG's five filters leaves it
-// smallest by the standard's heuristic (the least sum of absolute bytes),
-// then deflated as one zlib stream; read from any 8-bit PNG that is not
-// interlaced and holds no palette (grey, grey and alpha, RGB, RGBA), as an
-// image model, a page or this writer saves one. Bun's `node:zlib` holds the
-// deflate, the inflate and the chunk CRC, so a sound's sheet and a figure's
-// concept need no image library (`sfx render --sheet`, `film lab match`).
-
 import { crc32, deflateSync, inflateSync } from 'node:zlib';
 import { Option, Result, Schema } from 'effect';
 import type { Raster } from '../core/raster.ts';
 
 const SIGNATURE = Uint8Array.of(137, 80, 78, 71, 13, 10, 26, 10);
-/** IHDR's bit depth and colour type: 8 bits a channel, RGBA. */
 const DEPTH = 8;
 const RGBA = 6;
 const CHANNELS = 4;
 
-/** A chunk: its length, its type, its data and the CRC of its type and data. */
 const chunk = (type: string, data: Uint8Array): Uint8Array => {
   const named = new TextEncoder().encode(type);
   const out = new Uint8Array(12 + data.length);
@@ -29,7 +18,6 @@ const chunk = (type: string, data: Uint8Array): Uint8Array => {
   return out;
 };
 
-/** The header: the raster's size, 8-bit RGBA, deflate, adaptive filters, no interlace. */
 const header = (raster: Raster): Uint8Array => {
   const data = new Uint8Array(13);
   const view = new DataView(data.buffer);
@@ -39,7 +27,6 @@ const header = (raster: Raster): Uint8Array => {
   return data;
 };
 
-/** Paeth's predictor: whichever of left, up and up-left is nearest left + up − up-left. */
 const paeth = (left: number, up: number, upLeft: number): number => {
   const guess = left + up - upLeft;
   const toLeft = Math.abs(guess - left);
@@ -50,12 +37,8 @@ const paeth = (left: number, up: number, upLeft: number): number => {
   return upLeft;
 };
 
-/** A row filtered against `above` (zeros for the first row) into `out`. */
 type RowFilter = (row: Uint8Array, above: Uint8Array, out: Uint8Array) => void;
 
-// Each filter's loop: each byte less what the filter predicts from its
-// neighbours. The first pixel has nothing to its left: its left and up-left
-// read as zero, as the standard reads them.
 const none: RowFilter = (row, _above, out) => out.set(row);
 const sub: RowFilter = (row, _above, out) => {
   for (let i = 0; i < CHANNELS; i++) out[i] = row[i] ?? 0;
@@ -78,10 +61,8 @@ const paethRow: RowFilter = (row, above, out) => {
       0xff;
 };
 
-/** The filters by their byte: 0 none, 1 sub, 2 up, 3 average, 4 Paeth. */
 const FILTERS: ReadonlyArray<RowFilter> = [none, sub, up, average, paethRow];
 
-/** A filtered row's cost: its bytes read as signed, summed by size (the standard's heuristic). */
 const costOf = (filtered: Uint8Array): number => {
   let sum = 0;
   for (let i = 0; i < filtered.length; i++)
@@ -89,7 +70,6 @@ const costOf = (filtered: Uint8Array): number => {
   return sum;
 };
 
-/** Every row behind its filter byte, each with the filter that costs it least. */
 const filtered = (raster: Raster): Uint8Array => {
   const stride = raster.width * CHANNELS;
   const out = new Uint8Array(raster.height * (stride + 1));
@@ -113,7 +93,6 @@ const filtered = (raster: Raster): Uint8Array => {
   return out;
 };
 
-/** `raster` as the bytes of a PNG file. */
 export const encodePng = (raster: Raster): Uint8Array => {
   const parts = [
     SIGNATURE,
@@ -130,7 +109,6 @@ export const encodePng = (raster: Raster): Uint8Array => {
   return out;
 };
 
-/** A PNG this reader does not read, and why. */
 class PngUnreadable extends Schema.TaggedError<PngUnreadable>()('PngUnreadable', {
   reason: Schema.String,
 }) {
@@ -139,12 +117,6 @@ class PngUnreadable extends Schema.TaggedError<PngUnreadable>()('PngUnreadable',
   }
 }
 
-/**
- * How a colour type lays out a pixel: its channels, where its red, green and
- * blue are (grey's one channel stands for all three), and where its alpha is
- * (past the pixel's last channel when it has none, so it reads opaque).
- * Type 3, a palette, is not read.
- */
 interface Layout {
   readonly channels: number;
   readonly rgb: readonly [number, number, number];
@@ -160,7 +132,6 @@ const LAYOUTS = new Map<number, Layout>([
 
 const refused = (reason: string) => Result.fail(PngUnreadable.make({ reason }));
 
-/** The PNG's header chunk and its pixel data's chunks joined, in order up to IEND. */
 const chunksOf = (bytes: Uint8Array) => {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const idat: Array<Uint8Array> = [];
@@ -183,7 +154,6 @@ const chunksOf = (bytes: Uint8Array) => {
   return { head, joined };
 };
 
-/** The header's size and layout, or why this reader does not read it. */
 const headerOf = (head: Option.Option<Uint8Array>) => {
   if (Option.isNone(head) || head.value.length < 13) return refused('no IHDR');
   const bytes = head.value;
@@ -197,7 +167,6 @@ const headerOf = (head: Option.Option<Uint8Array>) => {
   return Result.succeed({ width, height, layout: layout.value });
 };
 
-/** What filter `kind` (0 none, 1 sub, 2 up, 3 average, 4 Paeth) predicts a byte is, from its neighbours. */
 const predicted = (kind: number, left: number, up: number, upLeft: number): number => {
   switch (kind) {
     case 1:
@@ -213,11 +182,6 @@ const predicted = (kind: number, left: number, up: number, upLeft: number): numb
   }
 };
 
-/**
- * The rows unfiltered, `channels` bytes a pixel. Each row is unfiltered
- * behind `channels` zero bytes, so the pixel left of a row's first reads 0
- * as the standard says.
- */
 const unfilter = (raw: Uint8Array, width: number, height: number, channels: number) => {
   const stride = width * channels;
   const rows = new Uint8Array(height * stride);
@@ -236,7 +200,6 @@ const unfilter = (raw: Uint8Array, width: number, height: number, channels: numb
   return rows;
 };
 
-/** `bytes` read as a PNG: its pixels as RGBA, or why they cannot be. */
 export const decodePng = (bytes: Uint8Array): Result.Result<Raster, PngUnreadable> => {
   if (bytes.length < 8 || SIGNATURE.some((byte, i) => bytes[i] !== byte))
     return refused('no PNG signature');

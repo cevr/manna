@@ -1,7 +1,3 @@
-// The doc lines a review reads (`docLines`): each line writing an anchor
-// that names a changed file, read from the doc's bases (a link from its own
-// folder), and no line whose anchors name only unchanged files.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect } from 'effect';
@@ -46,7 +42,6 @@ describe('doc lines', () => {
         expect(lines[0]?.text).toBe(
           'A review is read by `tools/review.ts` `Review.read`, and the lab',
         );
-        // Nothing changed that the doc names: no line.
         expect(yield* docLines([readme], new Set(['packages/film/src/core/api.ts']))).toEqual([]);
       }),
   );

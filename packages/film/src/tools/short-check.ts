@@ -1,13 +1,3 @@
-// What `film check --short` looks for, as pure functions over a vertical
-// film (a resolved short, or a talk), its phrases (`shortPhrases`) and what
-// its probed frames report: text past the safe zone (`SAFE_ZONES`; a talk's
-// is `platforms`, inside every platform's own), an open that does not hook
-// (a late first word, nothing moving, its footage included, the film's title
-// card), a loop that shows its seam (a last frame far from the first, or a
-// long silence round the loop), and a length outside what holds. The
-// numbers are `SHORT_RULES`, and a talk's length its format's
-// (`TALK_FORMATS`). Every finding is collected; none stops the others.
-
 import { Array as Arr, Match, Option, Order } from 'effect';
 import type { Phrase } from '../core/phrases.ts';
 import type { Probed, TextBox } from '../core/export-handle.ts';
@@ -32,17 +22,12 @@ import {
   ShortUnsafeText,
 } from './findings.ts';
 
-/**
- * A vertical film the checks read: a short cut from a film (`ResolvedShort`),
- * or a talk, which names the format it is cut to (`TALK_FORMATS`).
- */
 interface Vertical {
   readonly id: string;
   readonly duration: number;
   readonly format?: keyof typeof TALK_FORMATS;
 }
 
-/** The lengths `film` is held to: a talk's format's, else a short's (`SHORT_RULES`). */
 const lengthsOf = (film: Vertical) =>
   Option.match(Option.fromUndefinedOr(film.format), {
     onNone: () => SHORT_RULES.length,
@@ -52,7 +37,6 @@ const lengthsOf = (film: Vertical) =>
     },
   });
 
-/** A vertical film over the most it may run, or outside the lengths that hold best. */
 export const shortLength = (film: Vertical): Option.Option<ShortLength> => {
   const { max, from, to } = lengthsOf(film);
   return Option.liftPredicate(
@@ -61,10 +45,8 @@ export const shortLength = (film: Vertical): Option.Option<ShortLength> => {
   );
 };
 
-/** Every word of the phrases, in order. */
 const wordsOf = (phrases: ReadonlyArray<Phrase>) => phrases.flatMap((p) => p.words);
 
-/** A first word later than the rule, or none at all. */
 export const hookWord = (
   short: Vertical,
   phrases: ReadonlyArray<Phrase>,
@@ -79,7 +61,6 @@ export const hookWord = (
   );
 };
 
-/** The silence from the last word to the end, and from the start to the first word, over the rule. */
 export const loopGap = (
   short: Vertical,
   phrases: ReadonlyArray<Phrase>,
@@ -95,7 +76,6 @@ export const loopGap = (
   );
 };
 
-/** What the short's words alone tell: its length, its first word, its loop's silence. */
 export const shortStaticFindings = (
   short: Vertical,
   phrases: ReadonlyArray<Phrase>,
@@ -105,13 +85,11 @@ export const shortStaticFindings = (
   ...Option.toArray(loopGap(short, phrases)),
 ];
 
-/** A talk as the vertical checks read it: the film, held to its format, and the phrases its captions show. */
 export interface TalkVertical {
   readonly film: Vertical;
   readonly phrases: ReadonlyArray<Phrase>;
 }
 
-/** The mean absolute per-cell difference of two luma grids of one size, 0 to 1. */
 export const lumaDiff = (a: ReadonlyArray<number>, b: ReadonlyArray<number>): number => {
   const n = Math.min(a.length, b.length);
   if (n === 0) return 0;
@@ -120,7 +98,6 @@ export const lumaDiff = (a: ReadonlyArray<number>, b: ReadonlyArray<number>): nu
   return sum / n / 255;
 };
 
-/** The last frame's picture far from the first's: the loop shows a cut. */
 export const loopPicture = (
   short: string,
   first: ReadonlyArray<number>,
@@ -133,7 +110,6 @@ export const loopPicture = (
   );
 };
 
-/** The box a line of text covers, from its corners, in page px. */
 const boxOf = (t: TextBox) => {
   const xs = t.corners.map(([x]) => x);
   const ys = t.corners.map(([, y]) => y);
@@ -145,16 +121,10 @@ const boxOf = (t: TextBox) => {
   };
 };
 
-/** Below this a line is faded out: not read, so not covered. */
 const SEEN = 0.05;
 
 const byReach = Order.mapInput(Order.Number, (f: ShortUnsafeText) => f.by);
 
-/**
- * How far the page box `b` runs past each side of `zone`, in 1080 × 1920 px
- * (`k` page px per px), its right short of any button column it runs down
- * into (`roomAcross`); only the sides it crosses.
- */
 const pastSides = (zone: SafeZone, b: ReturnType<typeof boxOf>, k: number) => {
   const safe = safeRect(zone);
   const across = roomAcross(zone, b.bottom / k);
@@ -166,11 +136,6 @@ const pastSides = (zone: SafeZone, b: ReturnType<typeof boxOf>, k: number) => {
   ].filter((p) => p.by > 0.5);
 };
 
-/**
- * The zone a finding names: the zone, and for `platforms` the platforms
- * whose own zone (`PLATFORM_ZONES`) the box runs past on `side`, so the
- * finding says whose buttons cover it.
- */
 const zoneLabel = (
   zone: SafeZoneName,
   side: 'top' | 'bottom' | 'left' | 'right',
@@ -184,10 +149,6 @@ const zoneLabel = (
   return `${zone} (${under.join(', ')})`;
 };
 
-/**
- * The lines of a probed frame at short second `at` that cross `zone`, each
- * past its worst side, in 1080 × 1920 px; `k` is page px per such px.
- */
 export const unsafeTexts = (
   short: string,
   zone: SafeZoneName,
@@ -217,11 +178,6 @@ export const unsafeTexts = (
       });
     });
 
-/**
- * One finding per line of the film's and side, and one per side for all the
- * short's own lines (they share one place, so one fix): the first time it
- * crosses, its furthest reach, and how many other lines crossed with it.
- */
 export const mergeUnsafe = (
   found: ReadonlyArray<ShortUnsafeText>,
 ): ReadonlyArray<ShortUnsafeText> => {
@@ -249,13 +205,11 @@ export const mergeUnsafe = (
   );
 };
 
-/** The frames probed for motion at the open: every other one from the first to `motionBy`. */
 export const openFrames = (fps: number): ReadonlyArray<number> => {
   const last = Math.round(SHORT_RULES.motionBy * fps);
   return Arr.dedupe([...Arr.makeBy(Math.floor(last / 2) + 1, (i) => i * 2), last]);
 };
 
-/** The open's frames all hold still (the hook and captions left out): nothing moves by the rule. */
 export const stillOpen = (
   short: string,
   frames: ReadonlyArray<Probed>,
@@ -266,17 +220,12 @@ export const stillOpen = (
     () => frames.length > 1 && heldStill(frames),
   );
 
-/** Words, case and punctuation aside. */
 const plain = (text: string) =>
   text
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim();
 
-/**
- * The first frame shows the film's title in its picture (not the short's own
- * hook): it opens on the title card. A logo drawn as ink is not told apart.
- */
 export const titleOpen = (
   short: string,
   first: Probed,
@@ -292,11 +241,6 @@ export const titleOpen = (
   );
 };
 
-/**
- * The frames the zone check probes: every half second, and each phrase's
- * first frame, so every line the film sets (a short's, a talk's) and every
- * moment of its picture is seen at least once.
- */
 export const zoneFrames = (
   short: Pick<ResolvedShort, 'duration' | 'fps'>,
   phrases: ReadonlyArray<Phrase>,

@@ -33,9 +33,6 @@ describe('SignedFromStrings', () => {
       expect(decodeSubtype(['-devotional'])).toEqual({ include: [], exclude: ['devotional'] });
     }));
 
-  /** A search link is pasted, truncated and hand-edited. The useful answer to
-   *  a value nobody recognises is the reader's results with one filter
-   *  missing, not a failed request. */
   test('drops unrecognised values rather than failing', () =>
     Effect.sync(() => {
       expect(decodeSubtype(['devotionl', 'commentary', '-nonsense'])).toEqual({
@@ -54,7 +51,6 @@ describe('SignedFromStrings', () => {
       expect(decodeSubtype([])).toEqual(NO_SELECTION);
     }));
 
-  /** The property that makes a produced link a readable link. */
   test('round-trips: decode ∘ encode is identity on a signed selection', () =>
     Effect.sync(() => {
       const selection = { include: ['commentary'], exclude: ['devotional'] } as const;
@@ -90,9 +86,6 @@ describe('isUnfiltered', () => {
       expect(isUnfiltered(NO_FILTER)).toBe(true);
     }));
 
-  /** The regression this guards: an exclusion is a filter. An `isUnfiltered`
-   *  that only looked at the include lists would report "nothing to narrow"
-   *  for "no devotionals" and skip the join that implements it. */
   test('is false when an axis carries only an exclusion', () =>
     Effect.sync(() => {
       expect(
@@ -116,8 +109,6 @@ describe('isUnfiltered', () => {
 describe('SELECTABLE_SUBTYPES', () => {
   const test = it.effect;
 
-  /** `ModernEnglish` is a corpus-level rule, not a choice — a chip offering it
-   *  would let a reader switch the paraphrase back on. See `EXCLUDED_SUBTYPES`. */
   test('offers every subtype except the excluded ones', () =>
     Effect.sync(() => {
       for (const excluded of EXCLUDED_SUBTYPES) {

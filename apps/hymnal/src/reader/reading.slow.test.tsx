@@ -1,9 +1,3 @@
-/**
- * The reading settings as a reader meets them: in the player sheet (no
- * button in the hymn page's header), the page set as they say, the screen kept on while a page is shown, and each printed line
- * hanging under its first word when it wraps.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { RegistryProvider } from '@effect/atom-react';
 import { Option } from 'effect';
@@ -23,7 +17,6 @@ import { DEFAULT_SIZE, pointsAt, SIZES } from './reading';
 
 const hymn = (n: number) => Option.getOrThrow(hymnAt(String(n)));
 
-/** `node` mounted in the document; it unmounts when the `using` ends. */
 const mount = (node: ReactNode) => {
   const host = document.createElement('div');
   document.body.append(host);
@@ -50,11 +43,9 @@ const checked = (app: ReturnType<typeof mount>, group: string) =>
     .filter((radio) => radio.getAttribute('aria-checked') === 'true')
     .map((radio) => radio.getAttribute('aria-label'));
 
-/** The text-size dial, and its value as VoiceOver reads it. */
 const sizeDial = (app: ReturnType<typeof mount>) =>
   app.get('[role="slider"][aria-label="Text size"]');
 const share = (app: ReturnType<typeof mount>) => sizeDial(app).getAttribute('aria-valuetext');
-/** The text-size dial turned one step, as VoiceOver turns it. */
 const step = (app: ReturnType<typeof mount>, way: 'increment' | 'decrement') =>
   perform(sizeDial(app), way);
 
@@ -116,13 +107,11 @@ describe('the reading settings', () => {
   });
 });
 
-/** A text's size, line height and family as drawn. */
 const drawn = (text: HTMLElement) => {
   const style = getComputedStyle(text);
   return { size: style.fontSize, height: style.lineHeight, family: style.fontFamily };
 };
 
-/** The words' style on a page of words alone, and the chords' on the page under chords, over `device`'s reading. */
 const pageStyle = (reading: ReadonlyArray<readonly [string, string]>) => {
   using words = mount(<HymnPage hymn={hymn(3)} reader={readerOn(new Map(reading))} />);
   using chords = mount(
@@ -130,7 +119,6 @@ const pageStyle = (reading: ReadonlyArray<readonly [string, string]>) => {
   );
   return {
     words: drawn(words.get('[data-testid="line"] [data-testid^="syllable-"]')),
-    // A chord with a chord to show is a button over its text; the text is what is drawn.
     chords: drawn(chords.get('[data-testid^="chord-"][role="button"] > *')),
   };
 };
@@ -185,7 +173,6 @@ describe('keeping the screen on', () => {
   });
 });
 
-/** Each printed line's indent: its container's left padding and its first item's pull back. */
 const indents = (host: HTMLElement) =>
   [...host.querySelectorAll<HTMLElement>('[data-testid="line"]')].map((line) => ({
     padding: getComputedStyle(line).paddingLeft,
@@ -213,7 +200,6 @@ describe('a printed line', () => {
     const lines = [...app.host.querySelectorAll<HTMLElement>('[data-testid="line"]')];
     const sung = hymn(3).sections.flatMap((section) => section.lines);
     expect(lines.map((line) => line.getAttribute('aria-label'))).toEqual(sung);
-    // The drawn text adds a hyphen between a word's syllables: without hyphens it is the line.
     const bare = (text: string) => text.replaceAll('-', '');
     expect(lines.map((line) => bare(line.textContent ?? '').replaceAll(' ', ' '))).toEqual(
       sung.map(bare),

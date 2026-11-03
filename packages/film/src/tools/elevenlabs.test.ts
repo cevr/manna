@@ -4,7 +4,6 @@ import { SttResponse, heardWords } from './elevenlabs.ts';
 
 const decode = Schema.decodeUnknownSync(Schema.fromJsonString(SttResponse));
 
-/** The reply as the API sends it, extra fields and all. */
 const REPLY = `{
   "language_code": "eng",
   "text": "Hello world.",

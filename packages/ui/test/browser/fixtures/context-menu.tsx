@@ -1,10 +1,3 @@
-// Fixtures for the context menu: a 300×200 area that opens a menu with
-// items, and a field in the area whose open the root declines;
-// and the lab's shape, one root whose page trigger wraps target triggers (`nested`).
-// URL param: `under=true` moves the popup 20px up and left, over the point the
-// menu opens at, its first item under it (as a menu kept on a phone's screen
-// lands under the finger). `padded=true` pads the popup: a stretch of the
-// positioner that is no item.
 import type { JSX } from '@solidjs/web';
 
 import { ContextMenu } from '../../../src/context-menu/index.ts';
@@ -16,7 +9,6 @@ function AreaMenu(): JSX.Element {
   return (
     <ContextMenu.Root
       onOpenChange={(open, details) => {
-        // The field inside the area keeps its own menu: the open on it is declined.
         if (open && (details.event.target as Element | null)?.id === 'field') {
           details.cancel();
           log('open declined');
@@ -54,12 +46,6 @@ function AreaMenu(): JSX.Element {
   );
 }
 
-/**
- * The lab's shape: one root, the page's own trigger (`display: contents`)
- * wrapping two target triggers and a blank stretch. Each open logs the
- * target its event landed on (`page` for none). The items' text leads with
- * a key chord, so only their `label` starts with the name.
- */
 function NestedTargets(): JSX.Element {
   const targetOf = (event: Event) =>
     (event.target as Element | null)?.closest('[data-target]')?.getAttribute('data-target') ??

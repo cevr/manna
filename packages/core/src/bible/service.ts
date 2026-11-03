@@ -41,12 +41,6 @@ interface BibleServiceApi {
   readonly books: Effect.Effect<readonly Book[]>;
   readonly book: (reference: BookReference) => Effect.Effect<Book, BibleBookNotFoundError>;
   readonly chapter: (reference: ChapterReference) => Effect.Effect<Chapter, BibleError>;
-  /** Every margin anchor in one chapter, by verse (§10 M6's margin layer).
-   *
-   *  Per chapter and not per verse, because the reader draws anchors for the
-   *  whole screenful and `StudyService` already owns the per-verse read for the
-   *  pane. One query per chapter against `chapterMarginNotes`, which the
-   *  database has always exposed and nothing has called. */
   readonly chapterMarginAnchors: (
     reference: ChapterReference,
   ) => Effect.Effect<ChapterMarginAnchors, BibleError>;
@@ -206,9 +200,6 @@ export class BibleService extends Context.Service<BibleService, BibleServiceApi>
     readonly books: readonly Book[];
     readonly chapters?: ReadonlyMap<string, Chapter>;
     readonly searchHits?: readonly SearchHit[];
-    /** Margin anchors per chapter, keyed `"<book>:<chapter>"` as `chapters` is.
-     *  Absent means the chapter has none, which is what most of the canon
-     *  actually has. */
     readonly marginAnchors?: ReadonlyMap<string, ChapterMarginAnchors>;
   }): Layer.Layer<BibleService> => {
     const booksByNumber = new Map(config.books.map((book) => [book.number, book]));

@@ -15,74 +15,25 @@ import {
   type Inline,
 } from '@manna/core/wiki';
 
-/** The authored subset of markdown the wiki compiles. Deliberately small: the
- *  §2.2 node union is the contract clients render, and every construct
- *  admitted here is one every client must be able to draw. Anything outside the
- *  subset stays literal text rather than becoming a silently dropped node.
- *
- *  Block and inline structure come from `Bun.markdown`, the CommonMark parser
- *  the repo already renders its static site with — not from hand-rolled
- *  regexes, which got emphasis, nesting, and escaping subtly wrong and had to
- *  re-derive rules CommonMark already specifies.
- *
- *  `Bun.markdown.render` is string-in / string-out: each callback receives its
- *  children *already rendered as a string*. To recover a typed tree rather than
- *  HTML, every callback emits its node as JSON wrapped in delimiters that
- *  cannot occur in authored markdown (U+0001 / U+0002 are control characters,
- *  and `parseBody` strips them — along with the placeholder mark — out of the
- *  source before parsing, so a body carrying one cannot forge a node). Parents
- *  then decode their children back out of that string. The encoding is an
- *  implementation detail confined to this module.
- */
-
 const OPEN = '\u0001';
 const CLOSE = '\u0002';
 
-/** The two wiki constructs CommonMark knows nothing about. Both are resolved by
- *  a pre-pass rather than by scanning text nodes afterwards, because the parser
- *  splits runs of text at its own boundaries: `[[Dan 8:14]]` arrives as three
- *  separate text nodes (`[`, `[`, `Dan 8:14]]`), so a post-hoc scan would have
- *  to reassemble what the parser took apart. Substituting an opaque
- *  single-token placeholder first keeps each construct atomic through parsing —
- *  verified to survive inside emphasis, list items, and blockquotes.
- *
- *  The pre-pass runs *before* CommonMark, so it must reproduce the two places
- *  CommonMark holds text literal — code, and backslash escapes — or it rewrites
- *  text the author asked to be left alone. `protectedSpans` below does exactly
- *  that, and substitution is applied only outside what it finds. */
 const CITATION = /\{\{([^|{}]+)\|([^{}]*)\}\}/gu;
 const SCRIPTURE = /\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/gu;
-/** The placeholder delimiter. Scanned for by hand rather than with a regex:
- *  a pattern over a control character reads poorly and is needlessly general
- *  for a token whose shape is fixed at `MARK digits MARK`. */
 const MARK = '\u001f';
 const HTML_COMMENT = /<!--[\s\S]*?-->/gu;
 
-/** A `{{REFCODE|...}}` whose quoted text carries no letter and no digit —
- *  blank, or punctuation only.
- *
- *  It does not become a `CitationInline`: such a quote matches any paragraph
- *  holding the same punctuation, so it would verify against a refcode without
- *  the source having said anything. It is reported rather than dropped:
- *  silently discarding it would turn an authoring mistake into a page that
- *  cites nothing, so the compiler fails the build on it (§3.4 step 6). */
 interface BlankCitation {
   readonly refcode: string;
   readonly quote: string;
 }
 
-/** What the pre-pass produces: the rewritten source, the nodes its placeholders
- *  stand for, and any malformed citation the compiler must reject. */
 interface Substituted {
   readonly text: string;
   readonly nodes: readonly Inline[];
   readonly blank: readonly BlankCitation[];
 }
 
-/** Whether the character at `position` is backslash-escaped. Counts the run of
- *  backslashes before it: an odd run escapes, an even run is escaped
- *  backslashes and leaves the character live — the same rule CommonMark §2.4
- *  applies. */
 const isEscaped = (text: string, position: number): boolean => {
   let backslashes = 0;
   let index = position - 1;
@@ -93,46 +44,29 @@ const isEscaped = (text: string, position: number): boolean => {
   return backslashes % 2 === 1;
 };
 
-/** Whether a quote asserts anything at all. A quote with no letter and no digit
- *  — blank, or `...`, or a lone dash — is a substring of any paragraph carrying
- *  the same punctuation, so it would verify against a refcode without the
- *  source having said anything. The compiler applies the same predicate to the
- *  normalized quote (§3.4 step 6); this is the parse-time half of one rule. */
 const QUOTES_TEXT = /[\p{L}\p{N}]/u;
 
 const quotesText = (quote: string): boolean => QUOTES_TEXT.test(quote);
 
-/** A half-open `[start, end)` region of the source the pre-pass must not
- *  rewrite. */
 interface Span {
   readonly start: number;
   readonly end: number;
 }
 
-/** A fence opener: three or more backticks or tildes at the start of a line,
- *  with up to three leading spaces (CommonMark §4.5). The info string is
- *  whatever follows on that line. */
 const FENCE = /^ {0,3}(`{3,}|~{3,})[^\n]*$/u;
-/** An indented code block line: four leading spaces or a tab (CommonMark §4.4).
- *  A blank line does not close one, so runs of them stay inside. */
 const INDENTED = /^(?: {4}|\t)/u;
 const BLANK_LINE = /^[ \t]*$/u;
 
-/** A fence the block scan is inside: its opener's run of backticks or tildes,
- *  and the offset of the line that opened it. */
 interface OpenFence {
   readonly marker: string;
   readonly start: number;
 }
 
-/** The fence marker a line opens, if it opens one. */
 const fenceOpener = (line: string): Option.Option<string> =>
   Option.fromNullishOr(FENCE.exec(line)).pipe(
     Option.flatMap((match) => Option.fromNullishOr(match[1])),
   );
 
-/** Whether a line closes a fence: a run of the opener's character, at least as
- *  long, alone on its line. */
 const closesFence = (line: string, marker: string): boolean => {
   const closer = line.trim();
   return (
@@ -140,8 +74,6 @@ const closesFence = (line: string, marker: string): boolean => {
   );
 };
 
-/** Fenced and indented code blocks, scanned line by line. An unclosed fence
- *  runs to the end of the document (CommonMark §4.5). */
 const blockCodeSpans = (body: string): Span[] => {
   const spans: Span[] = [];
   let fence = Option.none<OpenFence>();
@@ -180,15 +112,12 @@ const blockCodeSpans = (body: string): Span[] => {
   return spans;
 };
 
-/** The offset just past the run of backticks starting at `from`. */
 const backtickRunEnd = (body: string, from: number, end: number): number => {
   let run = from;
   while (run < end && body[run] === '`') run += 1;
   return run;
 };
 
-/** The end of the first backtick run of exactly `length` at or after `from` —
- *  the only closer CommonMark §6.1 pairs with an opener of that length. */
 const findCloser = (
   body: string,
   from: number,
@@ -208,13 +137,11 @@ const findCloser = (
   return Option.none();
 };
 
-/** Inline code spans within one open region. */
 const inlineCodeSpans = (body: string, region: Span): readonly Span[] => {
   const spans: Span[] = [];
   let index = region.start;
   while (index < region.end) {
     if (body[index] === '\\') {
-      // An escaped backtick opens nothing.
       index += 2;
       continue;
     }
@@ -225,8 +152,6 @@ const inlineCodeSpans = (body: string, region: Span): readonly Span[] => {
     const run = backtickRunEnd(body, index, region.end);
     const closed = findCloser(body, run, region.end, run - index);
     if (Option.isNone(closed)) {
-      // Unclosed: the backticks are literal, and the text after them is still
-      // open to substitution.
       index = run;
       continue;
     }
@@ -236,7 +161,6 @@ const inlineCodeSpans = (body: string, region: Span): readonly Span[] => {
   return spans;
 };
 
-/** The complement of a sorted span list: the regions substitution may rewrite. */
 const openSpans = (body: string, guarded: readonly Span[]): readonly Span[] => {
   const open: Span[] = [];
   let cursor = 0;
@@ -250,32 +174,14 @@ const openSpans = (body: string, guarded: readonly Span[]): readonly Span[] => {
 
 const byStart = (a: Span, b: Span): number => a.start - b.start;
 
-/** Every region CommonMark would render literally: fenced code, indented code,
- *  and inline code spans.
- *
- *  Scanned line by line for the block forms, then character by character for
- *  backtick runs, matching a run only against a closer of equal length as
- *  CommonMark §6.1 requires. An unclosed opener protects nothing — CommonMark
- *  treats its backticks as literal text, so the pre-pass does too. */
 const protectedSpans = (body: string): readonly Span[] => {
   const blockSpans = blockCodeSpans(body);
-  // Inline code spans are only meaningful outside the block forms found above,
-  // so the remaining open regions are scanned rather than the whole body.
   const inlineSpans = openSpans(body, [...blockSpans].sort(byStart)).flatMap((region) =>
     inlineCodeSpans(body, region),
   );
   return [...blockSpans, ...inlineSpans].sort(byStart);
 };
 
-/** Substitutes every citation and scripture reference with a placeholder token,
- *  outside code and outside a backslash escape.
- *
- *  Code is skipped because CommonMark renders it literally: an author writing
- *  `` `[[Dan 8:14]]` `` is showing the syntax, not using it, and rewriting it
- *  would make the two indistinguishable in the compiled page. A backslash
- *  before the opener is the escape CommonMark already defines for exactly this
- *  purpose, and it is consumed so the rendered text reads `[[Dan 8:14]]`
- *  without its backslash. */
 const substitute = (body: string): Substituted => {
   const nodes: Inline[] = [];
   const blank: BlankCitation[] = [];
@@ -290,20 +196,12 @@ const substitute = (body: string): Substituted => {
         const trimmed = quoted.trim();
         if (!quotesText(trimmed)) {
           blank.push({ refcode: refcode.trim(), quote: quoted });
-          // Left in place as literal text so the authored source stays visible
-          // in the failure the compiler raises.
           return match;
         }
         return placeholder(CitationInline.make({ refcode: refcode.trim(), text: trimmed }));
       })
-      // `String.replace` hands an unmatched optional group over as `undefined`;
-      // it is converted to `Option` here, at the one boundary where the regex
-      // engine is spoken to, so the label is a presence-or-absence value
-      // everywhere after.
       .replace(SCRIPTURE, (...args: readonly unknown[]) => {
         const match = String(args[0]);
-        // `String.replace` puts the offset after the capture groups; this
-        // pattern has two, so it is argument three.
         const position = Number(args[3]);
         if (isEscaped(region, position)) return match;
         const reference = String(args[1]).trim();
@@ -332,9 +230,6 @@ const substitute = (body: string): Substituted => {
   return { text: parts.join(''), nodes, blank } satisfies Substituted;
 };
 
-/** The encoded node forms the callbacks emit. Decoding them back into the §2.2
- *  union is a Schema boundary like any other: the payload is a string this
- *  module produced, but it is still parsed rather than trusted. */
 const EncodedText = Schema.Struct({ kind: Schema.Literal('text'), value: Schema.String });
 const EncodedInline = Schema.Struct({
   kind: Schema.Literals(['emphasis', 'strong']),
@@ -380,17 +275,12 @@ const Encoded = Schema.Union([
 ]);
 type Encoded = typeof Encoded.Type;
 
-/** One codec for both directions, so the string a callback emits and the value
- *  `children` reads back can never drift apart. */
 const EncodedJson = Schema.fromJsonString(Encoded);
 const decodeNode = Schema.decodeUnknownOption(EncodedJson);
 const encodeNode = Schema.encodeSync(EncodedJson);
 
 const encode = (node: Encoded): string => `${OPEN}${encodeNode(node)}${CLOSE}`;
 
-/** Splits a rendered children string into the encoded nodes it holds. Anything
- *  outside a delimited span is literal text the parser emitted without a
- *  callback — kept rather than dropped, so no authored character disappears. */
 const children = (rendered: string): readonly Encoded[] => {
   const found: Encoded[] = [];
   let rest = rendered;
@@ -409,8 +299,6 @@ const children = (rendered: string): readonly Encoded[] => {
   return found;
 };
 
-/** Restores the placeholders a text run carries, splitting it into literal text
- *  and the citation or scripture nodes the pre-pass set aside. */
 const restore = (text: string, nodes: readonly Inline[], into: Inline[]): void => {
   let rest = text;
   for (;;) {
@@ -418,8 +306,6 @@ const restore = (text: string, nodes: readonly Inline[], into: Inline[]): void =
     if (start === -1) break;
     const end = rest.indexOf(MARK, start + 1);
     if (end === -1) break;
-    // A mark with anything but digits between the pair is not a placeholder the
-    // pre-pass wrote, so it stays literal text.
     const digits = rest.slice(start + 1, end);
     const index = Option.liftPredicate(
       digits,
@@ -428,7 +314,6 @@ const restore = (text: string, nodes: readonly Inline[], into: Inline[]): void =
     ).pipe(Option.map(Number));
     const node = Option.flatMap(index, (value) => Option.fromNullishOr(nodes[value]));
     if (Option.isNone(node)) {
-      // Keep the mark itself out of the output but preserve everything else.
       const literal = rest.slice(0, start) + digits;
       if (literal.length > 0) into.push(TextInline.make({ text: literal }));
       rest = rest.slice(end + 1);
@@ -442,10 +327,6 @@ const restore = (text: string, nodes: readonly Inline[], into: Inline[]): void =
   if (rest.length > 0) into.push(TextInline.make({ text: rest }));
 };
 
-/** Flattens an encoded run into inline nodes. Emphasis, strong, and link carry
- *  plain text in the §2.2 union, so their children collapse to a text
- *  projection — but a citation or scripture inside them survives as its own
- *  node rather than being flattened away. */
 const inlines = (rendered: string, nodes: readonly Inline[]): readonly Inline[] => {
   const found: Inline[] = [];
   for (const node of children(rendered)) {
@@ -457,9 +338,6 @@ const inlines = (rendered: string, nodes: readonly Inline[]): readonly Inline[] 
       case 'strong': {
         const inner = inlines(node.children, nodes);
         const text = inner.map((child) => child.text).join('');
-        // A wrapper holding only text becomes the styled node; one holding a
-        // citation cannot, so its children are emitted in place — losing the
-        // emphasis rather than losing the verified citation.
         if (inner.every((child) => child._tag === 'text')) {
           if (text.length > 0) {
             found.push(
@@ -485,8 +363,6 @@ const inlines = (rendered: string, nodes: readonly Inline[]): readonly Inline[] 
         if (text.length > 0) found.push(TextInline.make({ text }));
         break;
       }
-      // A block nested where an inline was expected (a list inside a list item)
-      // contributes its text; the §2.2 union has no nested-block node.
       case 'paragraph':
       case 'heading':
       case 'blockquote':
@@ -499,10 +375,6 @@ const inlines = (rendered: string, nodes: readonly Inline[]): readonly Inline[] 
   return merge(found);
 };
 
-/** Bun emits punctuation as its own text node (`snake`, `_`, `case`), so
- *  adjacent text is merged back into one run. Without this, ordinary prose
- *  would compile to a different node count than the same prose written without
- *  punctuation, and `blocksToText` would insert phantom gaps. */
 const merge = (nodes: readonly Inline[]): readonly Inline[] => {
   const merged: Inline[] = [];
   for (const node of nodes) {
@@ -516,8 +388,6 @@ const merge = (nodes: readonly Inline[]): readonly Inline[] => {
   return merged;
 };
 
-/** §2.2 caps heading level at 4; anything deeper renders as the deepest level
- *  the union admits rather than failing the compile over a `#####`. */
 const headingLevel = (level: number): 2 | 3 | 4 => {
   if (level <= 2) return 2;
   if (level === 3) return 3;
@@ -542,8 +412,6 @@ const blocks = (rendered: string, nodes: readonly Inline[]): readonly Block[] =>
         );
         break;
       case 'blockquote': {
-        // §2.2 blockquotes hold inline content, so a multi-paragraph quote
-        // flattens into one run rather than nesting blocks.
         const content = inlines(node.children, nodes);
         if (content.length > 0) found.push(BlockquoteBlock.make({ content }));
         break;
@@ -555,8 +423,6 @@ const blocks = (rendered: string, nodes: readonly Inline[]): readonly Block[] =>
         if (items.length > 0) found.push(ListBlock.make({ ordered: node.ordered, items }));
         break;
       }
-      // A stray inline at block level (text between blocks) is not a block; its
-      // content already belongs to a paragraph the parser emitted.
       case 'text':
       case 'emphasis':
       case 'strong':
@@ -568,10 +434,6 @@ const blocks = (rendered: string, nodes: readonly Inline[]): readonly Block[] =>
   return found;
 };
 
-/** Renders markdown into the delimited encoding `blocks` reads. Only the
- *  constructs §2.2 admits get a callback; everything else falls through to its
- *  children, which is what keeps an unsupported construct as literal text
- *  instead of a dropped node. */
 const render = (source: string): string =>
   Bun.markdown.render(source, {
     text: (value: string) => encode({ kind: 'text', value }),
@@ -586,29 +448,18 @@ const render = (source: string): string =>
     list: (kids: string, meta: { readonly ordered: boolean }) =>
       encode({ kind: 'list', ordered: meta.ordered, children: kids }),
     listItem: (kids: string) => encode({ kind: 'listItem', children: kids }),
-    // Inline code and images have no §2.2 node; their text is kept, their
-    // markup is not.
     codespan: (kids: string) => kids,
     code: (kids: string) => encode({ kind: 'paragraph', children: kids }),
     image: () => '',
   });
 
-/** The authored body split at its first `##`: everything before is the thesis,
- *  everything from the first heading on is the authored section body (§3.1). */
 export interface ParsedBody {
   readonly thesis: readonly Block[];
   readonly body: readonly Block[];
-  /** Malformed citations the compiler must reject. Carried on the parse result
-   *  rather than thrown: the parser's job is to report what the source says,
-   *  and the compiler owns which authoring mistakes fail the build. */
   readonly blankCitations: readonly BlankCitation[];
 }
 
 export const parseBody = (body: string): ParsedBody => {
-  // Authoring notes live in HTML comments (every current stub carries one) and
-  // are not content — strip them before the body is read. The delimiters the
-  // encoding relies on are stripped too: they cannot appear in authored prose,
-  // and letting one through would let a source forge a node.
   const cleaned = body
     .replace(HTML_COMMENT, '')
     .replaceAll(OPEN, '')
@@ -625,8 +476,6 @@ export const parseBody = (body: string): ParsedBody => {
   };
 };
 
-/** Every citation in a compiled page, in document order. §3.4 step 6 walks
- *  this list and asserts each quote against its refcode's paragraph. */
 export const collectCitations = (blocks: readonly Block[]): readonly CitationInline[] => {
   const found: CitationInline[] = [];
   const walk = (content: readonly Inline[]): void => {
@@ -644,8 +493,6 @@ export const collectCitations = (blocks: readonly Block[]): readonly CitationInl
   return found;
 };
 
-/** The plain-text projection of a block list — what the compiler scans when it
- *  derives flagship→flagship backlinks. */
 export const blocksToText = (blocks: readonly Block[]): string => {
   const parts: string[] = [];
   const walk = (content: readonly Inline[]): void => {

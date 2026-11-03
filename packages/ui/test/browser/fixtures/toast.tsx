@@ -1,7 +1,3 @@
-// Fixtures for Toast: receipts raised through a manager created outside the
-// component tree (the Undo action in its action slot), and listed through
-// `useToastManager`. URL params: `timeout` (each receipt's), `limit`, and
-// `enter=fade` for roots that fade in from their `data-starting-style`.
 import type { JSX } from '@solidjs/web';
 import { For } from 'solid-js';
 
@@ -13,7 +9,6 @@ interface Receipt {
   tone: 'neutral' | 'danger';
 }
 
-// Created at module scope: commands raise receipts without a component.
 const receipts = Toast.createToastManager<Receipt>();
 let receiptCount = 0;
 

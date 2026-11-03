@@ -1,10 +1,3 @@
-// The feast mother's skeletons, one per cut view, read in the kept view's
-// pixels and moved into its part sheet's frame (`framed`). Each turnaround view
-// stands: lean from the hip, neck, head, and each arm's shoulder, elbow and
-// wrist, built by the library's `standing`. Her veil and robe ride the lean (the
-// torso and the root); each sleeve's flap of the torso bends round its
-// shoulder. Data.
-
 import type { Skeleton } from '@manna/film/core';
 import { type Body, framed, standing } from '../../../../../library/cutout/skeleton.ts';
 import { type FramedView, keptAt } from './frames.ts';
@@ -22,7 +15,6 @@ const BODY: Body = {
   band: { above: 50, below: 12, reach: 60 },
 };
 
-/** Her body in a profile to the viewer's left, which draws her left arm only. */
 const PROFILE_LEFT: Body<{ readonly left: string }> = {
   skin: {
     head: ['neck', 'head'],
@@ -34,7 +26,6 @@ const PROFILE_LEFT: Body<{ readonly left: string }> = {
   band: { above: 50, below: 12, reach: 25 },
 };
 
-/** Her body in a profile to the viewer's right, which draws her right arm only: its flap runs from the sheet's left edge, over her back, to the sleeve's front edge. */
 const PROFILE_RIGHT: Body<{ readonly right: string }> = {
   skin: {
     head: ['neck', 'head'],
@@ -46,7 +37,6 @@ const PROFILE_RIGHT: Body<{ readonly right: string }> = {
   band: { above: 50, below: 12, reach: 60 },
 };
 
-/** Her body in a pose holding the baby: he rides her lean, and the stool (poses-2) rides the root as her robe does. */
 const HOLDING: Body = {
   skin: { ...BODY.skin, baby: ['lean'] },
   arms: BODY.arms,
@@ -54,7 +44,6 @@ const HOLDING: Body = {
   band: BODY.band,
 };
 
-/** Her body in poses-1, the baby's cup on her lean with him. */
 const HOLDING_CUP: Body = {
   skin: { ...HOLDING.skin, cup: ['lean'] },
   arms: BODY.arms,
@@ -62,7 +51,6 @@ const HOLDING_CUP: Body = {
   band: BODY.band,
 };
 
-/** Each cut view's skeleton in its part sheet's frame, by the view's name in her sheets' views. */
 export const SKELETONS = {
   front: framed(
     keptAt('front'),
@@ -83,7 +71,6 @@ export const SKELETONS = {
       capLeft: 8,
     }),
   ),
-  // turned to the viewer's left: her right arm still on the viewer's left
   threeQuarterLeft: framed(
     keptAt('threeQuarterLeft'),
     standing(BODY, {
@@ -103,7 +90,6 @@ export const SKELETONS = {
       capLeft: 8,
     }),
   ),
-  // from behind: her right arm on the viewer's right, so its flap runs out from its edge
   back: framed(
     keptAt('back'),
     standing(BODY, {
@@ -123,7 +109,6 @@ export const SKELETONS = {
       capLeft: 8,
     }),
   ),
-  // facing the viewer's left: her left arm only, its flap from the sleeve's front edge
   profileLeft: framed(
     keptAt('profileLeft'),
     standing(PROFILE_LEFT, {
@@ -139,7 +124,6 @@ export const SKELETONS = {
       capLeft: 10,
     }),
   ),
-  // facing the viewer's right: her right arm only, its flap from the sleeve's front edge
   profileRight: framed(
     keptAt('profileRight'),
     standing(PROFILE_RIGHT, {
@@ -155,7 +139,6 @@ export const SKELETONS = {
       capRight: 10,
     }),
   ),
-  // turned to the viewer's right: her near right arm on the viewer's left
   threeQuarterRight: framed(
     keptAt('threeQuarterRight'),
     standing(BODY, {
@@ -175,7 +158,6 @@ export const SKELETONS = {
       capLeft: 8,
     }),
   ),
-  // the baby on her right arm, her left hand holding his cup at his mouth
   'poses-1': framed(
     keptAt('poses-1'),
     standing(HOLDING_CUP, {
@@ -195,7 +177,6 @@ export const SKELETONS = {
       capLeft: 8,
     }),
   ),
-  // seated, the baby on her lap and both hands under him
   'poses-2': framed(
     keptAt('poses-2'),
     standing(HOLDING, {
@@ -215,7 +196,6 @@ export const SKELETONS = {
       capLeft: 8,
     }),
   ),
-  // standing, the baby on her left arm and her right hand under him
   'poses-3': framed(
     keptAt('poses-3'),
     standing(HOLDING, {

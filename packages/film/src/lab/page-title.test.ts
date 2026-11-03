@@ -1,6 +1,3 @@
-// The tab's title, pure: what the page has selected and its depth, then
-// Lab and its film, the film said once.
-
 import { Option } from 'effect';
 import { describe, expect, test } from 'effect-bun-test';
 import { pageTitle } from './page-title.ts';

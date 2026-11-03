@@ -1,134 +1,36 @@
-/** §9.2's flat vector index: format, parse, and scan.
- *
- *  One vector per paragraph, 256 dimensions, `Int8Array`, out of SQLite. A flat
- *  buffer scanned with dot products is the same performance class as sqlite-vec
- *  (itself brute-force KNN today), runs byte-identically on every host, and
- *  needs zero native or WASM SQLite work — which
- *  is the whole reason §9.1 re-implements qmd's design rather than using it.
- *
- *  **Everything here is pure.** The parser takes an `ArrayBuffer` and the scanner
- *  takes a parsed index; neither reads a file. How bytes arrive is a host
- *  concern and nothing about the format is, so the format lives in portable
- *  core and the byte delivery lives in adapters.
- *
- *  ## Layout
- *
- *  ```
- *  magic        4 bytes   "BVI1"
- *  formatMajor  u16       the layout below; a mismatch is unreadable
- *  dimensions   u16       256, checked against DIMENSIONS
- *  count        u32       how many vectors follow
- *  fingerprintLen u16     byte length of the UTF-8 fingerprint
- *  manifestLen  u32       byte length of the UTF-8 JSON manifest
- *  fingerprint  bytes     the model fingerprint (§9.5)
- *  manifest     bytes     JSON: per-book ranges plus the paragraph id table
- *  vectors      count × dimensions int8, contiguous, row-major
- *  ```
- *
- *  The header is fixed-width and little-endian so a host can read `count` and
- *  the fingerprint without parsing the manifest — the fingerprint check (§9.6's
- *  `fingerprint` absence) has to be answerable before committing to reading a
- *  246 MB file.
- */
-
 import { Array as Arr, Option, Schema } from 'effect';
 
-/** §9.5's one pinned fingerprint, as one constant.
- *
- *  **EmbeddingGemma-300M, 256-d MRL, int8.** Matryoshka training is what makes
- *  the 256-d truncation a supported operation rather than a lossy hack, so the
- *  `mrl` component is part of the identity: a 256-d truncation of a
- *  non-Matryoshka model would produce vectors of the same shape and the wrong
- *  geometry, and a fingerprint that did not say `mrl` could not tell them apart.
- *
- *  Every producer and every consumer compares against this exact string. An
- *  index built under any other value is refused with §9.6's `fingerprint`
- *  absence rather than searched — §10 is explicit that a mismatch "invalidates
- *  the vector leg rather than returning wrong neighbors".
- *
- *  **Every component names something that changes the geometry**, which is what
- *  makes the string a fingerprint rather than a label. It was widened from
- *  `EmbeddingGemma-300M/256d-mrl/int8` when three parts of the embedding
- *  contract were corrected, each of which silently produces vectors of the same
- *  shape and a different meaning:
- *
- *  - `sentence-embedding` — the model's trained `sentence_embedding` output,
- *    not a mean pool over `last_hidden_state`. Measured locally against the
- *    real weights, the two agree at cosine **0.0081**: they are all but
- *    orthogonal, so an index built one way and queried the other returns noise.
- *  - `retrieval` — the model card's retrieval prefixes, `task: search result |
- *    query: ` on the query side and `title: none | text: ` on the document
- *    side. EmbeddingGemma is asymmetric, and a document embedded through the
- *    query prefix lands in the wrong region.
- *  - `int8-fixed` — one fixed quantization scale rather than a per-vector
- *    maximum. A per-row scale makes the pairwise multiplier vary by candidate,
- *    which reverses cosine order (see `quantize`).
- *
- *  Any index built before this change is refused, which is the correct outcome:
- *  it holds mean-pooled, unprefixed, per-row-scaled vectors that this build
- *  cannot rank against.
- */
 export const MODEL_FINGERPRINT =
   'EmbeddingGemma-300M/sentence-embedding/retrieval/256d-mrl/int8-fixed';
 
-/** The truncation §9.5 pins. Not a parameter: a 256-d index and a 768-d query
- *  produce a dot product that is silently meaningless, and the only defense that
- *  costs nothing is having exactly one number. */
 export const DIMENSIONS = 256;
 
-/** The layout above. Bumped only by a change that makes old bytes unreadable —
- *  which the fingerprint does not cover, because a format break and a model
- *  break are different invalidations with different fixes. */
 const FORMAT_MAJOR = 1;
 
 const MAGIC = 'BVI1';
 const MAGIC_BYTES = 4;
 const HEADER_BYTES = MAGIC_BYTES + 2 + 2 + 4 + 2 + 4;
 
-/** Where one book's vectors sit in the flat buffer (§9.2's per-book manifest).
- *
- *  The manifest exists so scope can grow incrementally — adding the pioneers
- *  later appends books and their vectors without a format break — and so a
- *  scoped search can skip whole ranges rather than scoring vectors it will
- *  discard.
- */
 export class VectorBookRange extends Schema.Class<VectorBookRange>('Search/VectorBookRange')({
   bookCode: Schema.NonEmptyString,
-  /** Index of this book's first vector, 0-based. */
   offset: Schema.Finite.pipe(Schema.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0))),
   count: Schema.Finite.pipe(Schema.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0))),
 }) {}
 
-/** What the manifest carries beside the vectors.
- *
- *  `paragraphIds` is positional: the id at index *i* owns vector *i*. A parallel
- *  array rather than an id inside each row, because the vectors are a flat
- *  numeric buffer with no room for a string — and the join back to `paragraphs`
- *  is by this id, which §9.2 makes the index's only tie to the corpus.
- */
 export class VectorManifest extends Schema.Class<VectorManifest>('Search/VectorManifest')({
   books: Schema.Array(VectorBookRange),
   paragraphIds: Schema.Array(Schema.NonEmptyString),
 }) {}
 
-/** Why a candidate buffer is not a usable index.
- *
- *  A closed union rather than a message, because the caller maps it onto §9.6's
- *  `VectorAbsenceReason` and the two cases map differently: a fingerprint
- *  mismatch is `fingerprint`, and everything else is `absent` — a file that will
- *  not parse is, for the reader, an index that is not there.
- */
 type VectorIndexFault =
   | { readonly _tag: 'malformed'; readonly detail: string }
   | { readonly _tag: 'fingerprint'; readonly found: string };
 
-/** A parsed, usable index. */
 export interface VectorIndex {
   readonly fingerprint: string;
   readonly dimensions: number;
   readonly count: number;
   readonly manifest: VectorManifest;
-  /** `count × dimensions` int8 values, row-major. */
   readonly vectors: Int8Array;
 }
 
@@ -140,51 +42,8 @@ const malformed = (detail: string): VectorIndexFault => ({ _tag: 'malformed', de
 const decodeManifest = Schema.decodeUnknownOption(Schema.fromJsonString(VectorManifest));
 const encodeManifest = Schema.encodeSync(Schema.fromJsonString(VectorManifest));
 
-/** Reads the header and manifest, and refuses anything this build cannot
- *  interpret (§9.6).
- *
- *  Every refusal here is a *typed fault*, never a throw and never a defect: an
- *  optional artifact that is truncated, foreign, or built by a future writer is
- *  a state the reader degrades from, exactly as an absent one is. The one thing
- *  it will not do is proceed on a fingerprint it does not recognize — that is
- *  the case §10 singles out, because the failure mode is silent wrong answers
- *  rather than missing ones.
- */
-/** Quotes a diagnostic string through the JSON codec.
- *
- *  The magic bytes are read from an untrusted buffer, so a fault message that
- *  interpolated them raw could carry control characters into a log line. The
- *  Schema codec is the same escaping `JSON.stringify` did, spelled as the
- *  project's one JSON seam.
- */
 const quoted = Schema.encodeSync(Schema.fromJsonString(Schema.String));
 
-/** Every structural claim the manifest makes, checked (§9.6).
- *
- *  The scan reads `paragraphIds[row]` for each row a book range covers, and
- *  reads the vector buffer at `row * dimensions`. Four things have to hold for
- *  that to be meaningful, and none of them is implied by the manifest decoding:
- *
- *  1. **One id per vector.** `paragraphIds.length === count`, or the positional
- *     correspondence between ids and buffer rows is off by however many are
- *     missing — and every id from that point on names the wrong vector.
- *  2. **Unique ids.** Two rows sharing an id make the fusion score one
- *     paragraph twice and make the batch lookup ambiguous. A duplicate cannot
- *     be repaired at read time, so it is refused at parse time.
- *  3. **Ranges inside the buffer.** A range reaching past `count` sends the
- *     scan off the end, where `Arr.get` yields `None` and the row is silently
- *     dropped — a scan that quietly returns fewer neighbors than it should.
- *  4. **Non-overlapping, complete ranges.** Sorted, they must tile `[0, count)`
- *     exactly. An overlap scores a vector twice under two book codes; a gap
- *     makes a paragraph unreachable through a book-scoped query while it stays
- *     reachable through an unscoped one, which is a scope filter that changes
- *     the answer rather than narrowing it.
- *
- *  Returned as an `Option` of a fault rather than a boolean: the caller maps the
- *  fault onto §9.6's absence, and a boolean would lose which invariant broke at
- *  exactly the place an operator needs to read it.
- */
-/** Whether a book starting off-cursor leaves vectors unclaimed or double-claimed. */
 const relationAt = (offset: number, cursor: number): string => {
   if (offset > cursor) return 'gap';
   return 'overlap';
@@ -209,8 +68,6 @@ const validateManifest = (
   let cursor = 0;
   for (const book of sorted) {
     if (book.offset !== cursor) {
-      // Which way the tiling broke: a book starting past the cursor leaves
-      // vectors no book claims, one starting before it claims vectors twice.
       const relation = relationAt(book.offset, cursor);
       return Option.some(
         malformed(
@@ -254,17 +111,11 @@ export const parseVectorIndex = (
   const vectorsAt = manifestAt + manifestLen;
   const vectorBytes = count * dimensions;
   const expected = vectorsAt + vectorBytes;
-  // **Exact**, not "at least". A buffer longer than the layout describes is a
-  // buffer this build cannot account for — a truncated download that resumed
-  // into the wrong offset, a concatenation, a writer from another format — and
-  // reading the prefix of it would be reading an index nobody wrote.
   if (buffer.byteLength !== expected) {
     return malformed(`length ${buffer.byteLength} bytes, ${expected} expected`);
   }
 
   const fingerprint = decoder.decode(new Uint8Array(buffer, fingerprintAt, fingerprintLen));
-  // Before the manifest, because §10 requires a mismatch to invalidate rather
-  // than mislead, and a foreign index's manifest is not worth parsing.
   if (fingerprint !== MODEL_FINGERPRINT) return { _tag: 'fingerprint', found: fingerprint };
 
   const manifest = decodeManifest(decoder.decode(new Uint8Array(buffer, manifestAt, manifestLen)));
@@ -284,11 +135,6 @@ export const parseVectorIndex = (
   };
 };
 
-/** Writes the layout above. Beside the parser on purpose: a format whose reader
- *  and writer live in two packages is a format that gets read one way and
- *  written another, and §10's builder verification ("verify the writer with
- *  synthetic vectors in a test") is only meaningful if the writer under test is
- *  the writer that ships. */
 export const encodeVectorIndex = (input: {
   readonly fingerprint: string;
   readonly manifest: VectorManifest;
@@ -320,70 +166,25 @@ export const encodeVectorIndex = (input: {
   return buffer;
 };
 
-/** One neighbor from a scan: the paragraph id and its dot product. */
 interface VectorNeighbor {
   readonly paragraphId: string;
   readonly similarity: number;
 }
 
-/** What one scan did: the neighbors it kept, and how many rows it looked at.
- *
- *  `scanned` is returned rather than re-derived by the caller because it is the
- *  only place the number is *known*. `VectorLegRan.scanned` documents itself as
- *  "how many paragraphs the scan considered", and the service used to report
- *  `index.count` for it — the whole index — which is a different number
- *  whenever `allow` narrows the scan to a book's range. A reader shown "961,761
- *  vectors scanned" for a single-book query is being told something untrue
- *  about the search that answered them, and no assertion over the returned
- *  neighbors could have caught it. Counting inside the loop that does the work
- *  is what makes the field un-fakeable.
- */
 interface VectorScan {
   readonly neighbors: readonly VectorNeighbor[];
-  /** How many index rows this scan computed a dot product for. */
   readonly scanned: number;
 }
 
-/** §9.2's scan: dot products, in a pure portable function.
- *
- *  The query arrives already int8-quantized under the same scheme the index was
- *  built with, so the dot product is integer arithmetic and the result is a
- *  monotone function of cosine similarity — which is all a ranking needs.
- *  Normalizing to a true cosine would divide every term by the same two norms
- *  and change no order, at the cost of a square root per vector.
- *
- *  `allow` restricts the scan to a book set (§9.2's per-book manifest), so a
- *  scope- or book-narrowed query scores only the ranges it can return rather
- *  than scoring the corpus and discarding most of it.
- *
- *  A bounded insertion into a `topK`-sized array rather than sorting `count`
- *  scores: at 961,761 paragraphs the sort is the expensive half, and `topK` is
- *  30.
- *
- *  Returns the scanned row count alongside the neighbors — see `VectorScan`.
- */
 export const scanVectorIndex = (
   index: VectorIndex,
   query: Int8Array,
   options: {
     readonly topK: number;
     readonly allow?: ReadonlySet<string>;
-    /** An optional SIMD dot product — see `vector-accel.ts`.
-     *
-     *  Scores only; every ranking decision below stays here, so the accelerated
-     *  and pure paths cannot disagree about order. The arithmetic is integer
-     *  end to end, so they cannot disagree about scores either. Absent on any
-     *  host that has no built artifact, which is the supported case rather than
-     *  a degraded one. */
     readonly scoreRange?: ScoreRange;
   },
 ): VectorScan => {
-  // A query of any other length cannot be dotted against this index. The old
-  // code read `query[axis] ?? 0` and treated a short query as one padded with
-  // zeros, which produces a full ranking over a truncated query — the worst
-  // shape of wrong, because nothing downstream can tell. An empty result is the
-  // honest answer, and the caller reports it as a vector leg that found
-  // nothing.
   if (query.length !== index.dimensions) return { neighbors: [], scanned: 0 };
   const ranges = rangesFor(index, Option.fromNullishOr(options.allow));
   const selection: Selection = {
@@ -393,14 +194,6 @@ export const scanVectorIndex = (
     scanned: 0,
   };
 
-  // The accelerated path, when a host built one.
-  //
-  // It replaces the arithmetic and nothing else: the selection is the same
-  // `admit` reading the same scores, so ranking is decided in exactly one
-  // place regardless of which tier computed the dot products. Scores are
-  // integers throughout — int8 inputs, int16 products, int32 sums — so the
-  // tiers agree exactly rather than approximately, which is what lets the
-  // tests assert equality instead of a tolerance.
   const accelerate = Option.fromNullishOr(options.scoreRange);
   if (Option.isSome(accelerate)) {
     scanAccelerated(index, query, ranges, accelerate.value, selection);
@@ -411,20 +204,13 @@ export const scanVectorIndex = (
   return { neighbors: selection.best, scanned: selection.scanned };
 };
 
-/** A stretch of rows the scan touches. */
 interface ScanRange {
   readonly offset: number;
   readonly count: number;
 }
 
-/** The SIMD scorer `scanVectorIndex` may be handed — see `vector-accel.ts`. */
 type ScoreRange = (query: Int8Array, offset: number, count: number, out: Int32Array) => number;
 
-/** The running top-K of one scan, shared by both tiers.
- *
- *  One object per scan, never touched per row: each tier copies `floor` and
- *  `scanned` into locals for its loops and writes them back once at the end, so
- *  the per-row work is exactly what it was when the loops lived inline. */
 interface Selection {
   readonly best: VectorNeighbor[];
   readonly topK: number;
@@ -432,12 +218,6 @@ interface Selection {
   scanned: number;
 }
 
-/** Admits a row whose score cleared the floor (or arrived while `best` was
- *  still short of `topK`), and returns the floor after it.
- *
- *  Only reached on the rare row that can enter the top-K, so it sits outside
- *  the per-row cost; the floor test that rejects almost every row stays inline
- *  in the loops. */
 const admit = (
   best: VectorNeighbor[],
   ids: readonly string[],
@@ -456,9 +236,6 @@ const admit = (
   });
 };
 
-/** Ranks the accelerator's scores. Leaves `selection.scanned` at 0 when the
- *  accelerator miscounted its first range, which is the caller's cue to fall
- *  back to the pure loop. */
 const scanAccelerated = (
   index: VectorIndex,
   query: Int8Array,
@@ -470,15 +247,10 @@ const scanAccelerated = (
   const { best, topK } = selection;
   let floor = selection.floor;
   let scanned = selection.scanned;
-  // One buffer for the largest range, reused across ranges.
   const widest = ranges.reduce((most, range) => Math.max(most, range.count), 0);
   const scores = new Int32Array(widest);
   for (const range of ranges) {
     const wrote = scoreRange(query, range.offset, range.count, scores);
-    // An accelerator that scored a different number of rows than it was
-    // asked for has a bug, and ranking its buffer would silently mis-align
-    // scores against ids. Falling through to the pure loop is the safe
-    // answer, and it is the same answer as having no accelerator at all.
     if (wrote !== range.count) break;
     for (let offset = 0; offset < range.count; offset += 1) {
       scanned += 1;
@@ -491,7 +263,6 @@ const scanAccelerated = (
   selection.scanned = scanned;
 };
 
-/** The portable dot-product loop over every row of `ranges`. */
 const scanPure = (
   index: VectorIndex,
   query: Int8Array,
@@ -501,8 +272,6 @@ const scanPure = (
   for (const range of ranges) scanPureRange(index, query, range, selection);
 };
 
-/** The portable dot-product loop over one range's rows. Called once per range,
- *  never per row, so the row loop below is the whole per-row cost. */
 const scanPureRange = (
   index: VectorIndex,
   query: Int8Array,
@@ -519,59 +288,10 @@ const scanPureRange = (
   for (let row = range.offset; row < end; row += 1) {
     scanned += 1;
     const base = row * dimensions;
-    // Four accumulators, unrolled by four.
-    //
-    // This loop is the whole cost of a semantic query: 961,253 vectors ×
-    // 256 dimensions is ~246 million multiply-adds, and it ran at ~170 ms in
-    // production. One serial `sum` makes every iteration wait for the
-    // previous add, so the pipeline stalls on the dependency chain rather
-    // than on the arithmetic; four independent accumulators let four
-    // multiply-adds be in flight at once. Measured over 300,000 vectors and
-    // scaled to the deployed index: 133 ms serial, 83 ms unrolled, a 38%
-    // cut for the same values in the same order.
-    //
-    // Four, not more: 8× measured 83 ms and an Int32 copy of the query
-    // 81 ms, both inside the noise of 4×. The gain is from breaking the
-    // dependency chain, and four accumulators already break it.
-    //
-    // **It does not help the deployment, and it was kept anyway.** On the
-    // Railway container `scanMs` stayed at 121–128 ms across this change,
-    // the same as the serial loop, while `bodiesMs` from the same deploy
-    // dropped to 2 ms — so the build is live and this loop simply does not
-    // get faster there. Both hosts are arm64, so it is not an instruction
-    // set difference, and it is not DRAM bandwidth either: streaming one
-    // byte per cache line over the whole 246 MB costs 2.7 ms, so the memory
-    // system delivers the data easily. What costs is touching every element
-    // — reading all 246 MB and only *adding* the values, no multiply, is
-    // 56 ms of the 85 ms. The dot product is therefore ~2/3 per-element
-    // load-and-widen overhead and ~1/3 arithmetic, which is exactly the
-    // shape that unrolling cannot fix beyond the dependency chain it
-    // already broke, and which a slower or shared core has less headroom to
-    // hide.
-    //
-    // Kept because it is a 40% win on the developer machine, costs nothing
-    // where it does not help, and returns bit-identical scores either way.
-    //
-    // The consequence for anyone optimizing further: the floor is *elements
-    // touched*, not instructions issued. The next real win reads fewer of
-    // them — an ANN index that scores a fraction of the 961,253 vectors, or
-    // fewer dimensions per vector — not faster arithmetic over the same
-    // 246 MB. A SIMD path (WASM or native) would attack the same
-    // load-and-widen cost and is the one arithmetic-side option left, but
-    // it is a portability decision this file's header deliberately made
-    // once already.
-    //
-    // The parser guarantees `count * dimensions` int8 values and ranges
-    // inside `count`, so every read below is in bounds; the `?? 0` is
-    // TypeScript satisfying `noUncheckedIndexedAccess`, not a shape check.
     let sum0 = 0;
     let sum1 = 0;
     let sum2 = 0;
     let sum3 = 0;
-    // `dimensions` is 256 for every index this format describes, so the
-    // unrolled loop consumes all of it; the remainder loop below is for a
-    // future dimension count that is not a multiple of four, and costs one
-    // predictable branch per row when it has nothing to do.
     const unrolled = dimensions - (dimensions % 4);
     for (let axis = 0; axis < unrolled; axis += 4) {
       sum0 += (vectors[base + axis] ?? 0) * (query[axis] ?? 0);
@@ -590,12 +310,6 @@ const scanPureRange = (
   selection.scanned = scanned;
 };
 
-/** Which stretches of the buffer the scan touches.
- *
- *  With no `allow` set this is one range covering everything rather than the
- *  manifest's book list, because the books need not tile the buffer
- *  contiguously and a whole-index scan should not depend on whether they do.
- */
 const rangesFor = (
   index: VectorIndex,
   allow: Option.Option<ReadonlySet<string>>,
@@ -605,7 +319,6 @@ const rangesFor = (
     onSome: (codes) => index.manifest.books.filter((book) => codes.has(book.bookCode)),
   });
 
-/** Keeps `best` sorted descending and no longer than `topK`. */
 const insert = (best: VectorNeighbor[], candidate: VectorNeighbor, topK: number): void => {
   let at = best.length;
   while (at > 0 && (best[at - 1]?.similarity ?? 0) < candidate.similarity) at -= 1;
@@ -613,41 +326,8 @@ const insert = (best: VectorNeighbor[], candidate: VectorNeighbor, topK: number)
   if (best.length > topK) best.length = topK;
 };
 
-/** The one fixed quantization scale (§9.5).
- *
- *  Not derived per vector. Every vector this format stores — query and document
- *  alike — is unit-normalized after the 256-d MRL truncation, so every component
- *  lies in [-1, 1] and a single global scale of 127 maps the whole range with no
- *  clipping and no per-row state.
- */
 export const QUANTIZATION_SCALE = 127;
 
-/** Quantizes a **unit-normalized** float embedding to the int8 scheme the index
- *  stores (§9.5).
- *
- *  **One fixed global scale, not a per-vector maximum.** The per-vector scheme
- *  the earlier version used is the standard one for *storage*, and it is wrong
- *  here, because the dot product is the ranking. Under per-vector scaling the
- *  stored vector is `127/max_d · d`, so scoring a query `q` against documents
- *  `d₁, d₂` compares `(127/max₁)·q·d₁` against `(127/max₂)·q·d₂` — two different
- *  positive multipliers, one per candidate. A positive constant preserves order
- *  only when it is the *same* constant, and it is not: `max_d` varies per row.
- *  A document whose components happen to be small gets scaled up and outranks a
- *  document that is genuinely closer to the query. The regression test in
- *  `vector-index.test.ts` exhibits exactly that reversal.
- *
- *  With one fixed scale the stored value is `127·d` for every row, the pairwise
- *  multiplier is the single constant `127²`, and the int8 dot product is a
- *  monotone function of the float cosine — which is all a ranking needs.
- *
- *  Beside the format rather than in each adapter, because the query side and the
- *  document side must quantize identically and there are four producers of the
- *  query side.
- *
- *  Components are clamped to ±127 rather than assumed in range: the caller
- *  normalizes, but a vector arriving unnormalized should saturate rather than
- *  wrap through `Int8Array`'s modular assignment.
- */
 export const quantize = (values: readonly number[] | Float32Array): Int8Array => {
   const out = new Int8Array(values.length);
   for (let axis = 0; axis < values.length; axis += 1) {

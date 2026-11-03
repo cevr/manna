@@ -1,11 +1,3 @@
-// Upstream: packages/react/src/toast/viewport/ToastViewport.tsx
-//
-// The region the toasts live in. Hovering it or moving keyboard focus into
-// it expands the stack and pauses the auto-dismiss timers; leaving resumes
-// them (a mouse leave waits for exiting toasts and touch gestures to
-// finish). F6 anywhere moves focus to the viewport, and Shift+Tab from it
-// returns focus where it was. Focus guards around it send Tab to the first
-// toast, or back out.
 import type { JSX } from '@solidjs/web';
 import { createEffect, createMemo, omit, Show } from 'solid-js';
 
@@ -27,7 +19,6 @@ import { useToastProviderContext, useToastSelector } from './ToastProviderContex
 import { isFocusVisible } from './utils.ts';
 
 interface ToastViewportState {
-  /** Whether toasts are expanded in the viewport. */
   expanded: boolean;
 }
 
@@ -54,7 +45,6 @@ export function ToastViewport(props: ToastViewportProps): JSX.Element {
   createEffect(
     () => [viewportElement(), isEmpty()] as const,
     ([viewport, empty]) => {
-      // Listen once toasts exist and the viewport element is attached.
       if (!viewport || empty) {
         return undefined;
       }
@@ -62,7 +52,6 @@ export function ToastViewport(props: ToastViewportProps): JSX.Element {
       const win = ownerWindow(viewport);
       const doc = ownerDocument(viewport);
 
-      // F6 anywhere force-focuses the viewport.
       function handleGlobalKeyDown(event: KeyboardEvent) {
         if (event.key === 'F6' && getTarget(event) !== viewport) {
           event.preventDefault();
@@ -97,7 +86,6 @@ export function ToastViewport(props: ToastViewportProps): JSX.Element {
           store.resumeTimers();
         }
 
-        // Wait for the viewport's own focus handler to run.
         windowFocusTimeout.start(0, () => store.set('isWindowFocused', true));
       }
 
@@ -113,8 +101,6 @@ export function ToastViewport(props: ToastViewportProps): JSX.Element {
   function handleFocusGuard(event: FocusEvent) {
     handlingFocusGuard = true;
 
-    // Coming off the container, move to the first toast that can hold focus,
-    // skipping toasts that are animating out or inert because they're limited.
     const firstFocusableToast =
       event.relatedTarget === store.state.viewport
         ? store.state.toasts.find((toast) => toast.transitionStatus !== 'ending' && !toast.limited)
@@ -130,8 +116,6 @@ export function ToastViewport(props: ToastViewportProps): JSX.Element {
   function handleKeyDown(event: KeyboardEvent) {
     if (event.key === 'Tab' && event.shiftKey && getTarget(event) === store.state.viewport) {
       event.preventDefault();
-      // Restoring focus blurs the viewport, and the focusout handler resumes
-      // the timers (unless focus lands inside the viewport again).
       store.restoreFocusToPrevElement();
     }
   }
@@ -143,7 +127,6 @@ export function ToastViewport(props: ToastViewportProps): JSX.Element {
       return;
     }
 
-    // Apply a mouseleave that was deferred until transitions finished.
     store.set('hovering', false);
     if (!selectors.expandedOrOutOfFocus(store.state)) {
       store.resumeTimers();
@@ -162,8 +145,6 @@ export function ToastViewport(props: ToastViewportProps): JSX.Element {
   }
 
   function handleMouseLeave() {
-    // While toasts are transitioning out or a touch gesture is active this
-    // records the intent and collapses later; otherwise it collapses now.
     markedReadyForMouseLeave = true;
     flushMouseLeave();
   }
@@ -193,8 +174,6 @@ export function ToastViewport(props: ToastViewportProps): JSX.Element {
       return;
     }
 
-    // Only a focus-visible element expands the viewport, so a click inside
-    // without keyboard navigation does not keep it expanded.
     if (isFocusVisible(activeElement(ownerDocument(store.state.viewport)))) {
       store.set('focused', true);
       store.pauseTimers();

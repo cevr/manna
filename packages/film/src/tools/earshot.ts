@@ -1,37 +1,11 @@
-// earshot (github.com/Leonxlnx/earshot, MIT): the fitter `sfx fit` runs on a
-// recording to get its model, a parametric account of the sound (struck
-// modes, partial tracks, bands of noise) that core/synth/fit writes as code.
-// It is downloaded code, so it runs as an external tool and is trusted with
-// nothing:
-//
-// - pinned at one commit (`EARSHOT_PIN`), its clone and its virtualenv kept
-//   outside the repo (`EARSHOT_HOME`, else ~/.cache/bible-film/earshot); a
-//   clone at another commit, or with any change in it, is refused;
-// - its packages installed from wheels only (no build or install scripts),
-//   and none of the CLAP describer's (no torch or transformers): the fit
-//   asks for no description;
-// - run as `python -I -B` (no user site, no current folder, no bytecode
-//   written), with an environment of its own (Hugging Face offline, its
-//   caches in the run's scratch folder), under macOS's sandbox with no
-//   network, reading only its clone, its virtualenv, the interpreter's
-//   install and the recording's folder, and writing only the run's scratch
-//   folder, where it leaves the model JSON and nothing else is kept;
-// - never in CI or the gate: only `sfx fit` runs it, on the owner's machine.
-//
-// The driver decodes the recording itself (soundfile, resampled to 48 kHz
-// with scipy) because earshot's own loader shells out to ffmpeg. A run past
-// `EARSHOT_LIMIT` is stopped.
-
 import { Config, Context, Duration, Effect, FileSystem, Layer, Path } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import { EarshotFailed, EarshotMissing } from './errors.ts';
 import { collect, collectWithin } from './process.ts';
 import { sandboxArgs } from './sandbox.ts';
 
-/** The earshot commit every fit is made with: v0.2.0. */
 const EARSHOT_PIN = '972132643583fc0b9a60c6c50983ed7dc1aa55bf';
 const EARSHOT_REPO = 'https://github.com/Leonxlnx/earshot';
-/** The packages the fit imports, pinned, each a wheel. */
 const WHEELS = [
   'numpy==2.5.4',
   'scipy==1.18.1',
@@ -40,10 +14,8 @@ const WHEELS = [
   'matplotlib==3.11.2',
   'threadpoolctl==3.7.0',
 ];
-/** How long one fit may run: a 22 s bed takes about two minutes. */
 const EARSHOT_LIMIT = Duration.minutes(10);
 
-/** The lines that install earshot at its pin into `home`. */
 const installOf = (home: string) =>
   [
     `git clone ${EARSHOT_REPO} ${home}/earshot && git -C ${home}/earshot checkout --detach ${EARSHOT_PIN}`,
@@ -51,13 +23,6 @@ const installOf = (home: string) =>
     `uv pip install --python ${home}/venv/bin/python --only-binary :all: ${WHEELS.join(' ')}`,
   ].join('\n');
 
-/**
- * The driver, run as `python -I -B -c`: its clone, the recording and where
- * the model goes are its arguments. It fits with no description (`clap`
- * off) and saves the model; it prints its kind. Each candidate is scored on
- * seed 0, named here: earshot draws nothing else, so a refit of one
- * recording writes the same model, `fit_engine`'s timings aside.
- */
 const DRIVER = `
 import json, math, sys
 clone, source, out = sys.argv[1:4]
@@ -77,23 +42,18 @@ auto.save(model, out)
 print(json.dumps({'kind': auto.kind_of(model)}))
 `;
 
-/** The last lines a run printed, for its refusal. */
 const tailOf = (text: string) => text.trim().split('\n').slice(-6).join('\n');
 
 interface EarshotService {
-  /** The commit every fit is made with. */
   readonly commit: string;
-  /** `source` (an audio file) fitted by earshot: the model JSON it wrote. */
   readonly fit: (source: string) => Effect.Effect<string, EarshotMissing | EarshotFailed>;
 }
 
 export class Earshot extends Context.Service<Earshot, EarshotService>()(
   '@manna/film/tools/Earshot',
 ) {
-  /** The earshot commit every fit is made with. */
   static readonly pin = EARSHOT_PIN;
 
-  /** earshot at its pin in `EARSHOT_HOME` (else ~/.cache/bible-film/earshot), run in its sandbox. */
   static readonly layer = Layer.effect(
     Earshot,
     Effect.gen(function* () {
@@ -109,7 +69,6 @@ export class Earshot extends Context.Service<Earshot, EarshotService>()(
       const missing = (reason: string) =>
         EarshotMissing.make({ home, reason, install: installOf(home) });
 
-      /** The clone checked: at the pin, with nothing changed or added. */
       const pinned = Effect.gen(function* () {
         if (process.platform !== 'darwin')
           return yield* missing(
@@ -150,7 +109,6 @@ export class Earshot extends Context.Service<Earshot, EarshotService>()(
               venv: fs.realPath(path.join(home, 'venv')),
               python: fs.realPath(python),
             });
-            // The interpreter's install: its binary's folder's parent (uv's cpython-<version>-<platform>).
             const install = path.dirname(path.dirname(real.python));
             const command = sandboxArgs(
               {
@@ -199,7 +157,6 @@ export class Earshot extends Context.Service<Earshot, EarshotService>()(
     }),
   );
 
-  /** An earshot that answers `model(source)` for every fit, never running anything. */
   static readonly layerTest = (model: (source: string) => string, asked: Array<string> = []) =>
     Layer.succeed(
       Earshot,

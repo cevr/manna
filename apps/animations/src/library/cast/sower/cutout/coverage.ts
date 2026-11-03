@@ -1,10 +1,6 @@
-// Every drawing the cast pipeline needs of the sower (`film concept
-// coverage`): his six turnaround views and his four poses, each cut. Pure data.
-
 import type { CoverageManifest } from '@manna/film/tools';
 
 const FOR = [{ script: 'in-its-order', beats: ['grain'] }];
-/** The house prompt's opening and close, as clip B's (`lead-feast` `raise/clip-b`). */
 const PAPER = 'Flat 2D cut-paper cartoon animation on a static paper background.';
 const CAMERA =
   'Locked camera, no zoom, no pan, same flat colours and thick dark outline throughout.';
@@ -43,7 +39,6 @@ export const COVERAGE: CoverageManifest = {
     { id: 'poses-poses-3', cut: 'puppet', file: 'cast-sheet/views/poses-3.png', for: FOR },
     { id: 'poses-poses-4', cut: 'puppet', file: 'cast-sheet/views/poses-4.png', for: FOR },
   ],
-  // fal motion references between his kept poses; each band is the clip's still start, then its still end
   clips: [
     {
       id: 'sow/clip-a',
@@ -64,8 +59,6 @@ export const COVERAGE: CoverageManifest = {
         [0, 23],
         [34, 123],
       ],
-      // the clip keeps the three-quarter body and moves only the arm into the bag: poses-3's body
-      // turns further left, which this clip never reaches, so its end is threeQuarterLeft's own
       expect: [['turnaround-threeQuarterLeft'], ['turnaround-threeQuarterLeft']],
       given: { first: 'turnaround-threeQuarterLeft' },
       prompt: `${PAPER} The sower stands still and slowly reaches his right hand (on the left side of the picture) across his body into the seed bag at his left hip, then holds the pose with the hand in the bag. Only the arm moves; body, feet and head stay in place. ${CAMERA}`,

@@ -1,26 +1,3 @@
-// The clip chain (`film concept reader chain`, the `eval:clip:<clip>`
-// stage): a clip read by the cast reader, posed frame by frame with the
-// member's puppets, and scored against the clip's own figure.
-//
-// - **Cut.** Each frame names the member's drawing the classifier finds most
-//   likely; a run is a stretch of frames naming one drawing.
-// - **World.** Each run's bone angles, read against its drawing's rest, are
-//   gated (while a bone's end joint has confidence under 0.1, its last good
-//   angle holds), then smoothed by a causal One Euro filter (0.1 Hz, beta
-//   0.3) on unwrapped degrees.
-// - **Seed.** A frame's pose: each bone's number from the world angles, top
-//   down; the root and scale by least squares of the puppet's joints on the
-//   read's (confidence over 0.5).
-// - **Route A.** On every 16th frame of a run and its last, `fitPose`
-//   (`core/pose-fit.ts`) fits every bone, the root and the scale to the
-//   frame, from the seed of the run's raw read; each fit runs in its own
-//   process (`chain-fit.ts`) and is cached by the hash of what it reads.
-//   The correction (fit less seed) is carried linearly between a run's keys.
-// - **Score.** The IoU of the posed puppet's alpha (over 127) with the
-//   clip's figure: on the mapped canvas frame, the paper is the mean of the
-//   four corners, and a pixel is figure where its RGB distance (L1) to the
-//   paper is over 24.
-
 import { availableParallelism } from 'node:os';
 import { serialize } from 'node:v8';
 import { Clock, Duration, Effect, FileSystem, Path, Result, Schema } from 'effect';
@@ -52,7 +29,6 @@ import {
   wrap,
 } from './chain-steps.ts';
 
-/** Each frame's world angles: its run's drawing's, gated, then One Euro over the run. */
 const worldsOf = (read: ClipRead, runs: ReadonlyArray<Run>) => {
   const out: Array<Record<string, number>> = read.frames.map(() => ({}));
   for (const { from, to, drawing } of runs) {
@@ -67,12 +43,6 @@ const worldsOf = (read: ClipRead, runs: ReadonlyArray<Run>) => {
   return out;
 };
 
-/**
- * The seed pose of `p` from world angles and the read's joints: each bone's
- * number its world angle less its parent's (0 for a bone the read lacks);
- * root and scale by least squares of the puppet's joints at that pose on
- * the read's joints with confidence over `confidence`.
- */
 const seedOf = (
   p: Puppet,
   world: Readonly<Record<string, number>>,
@@ -111,7 +81,6 @@ const correctionOf = (seed: PuppetPose, fit: PuppetPose): Correction => ({
   scale: fit.scale - seed.scale,
 });
 
-/** `seed` moved by `c`. */
 const corrected = (seed: PuppetPose, c: Correction): PuppetPose => ({
   numbers: Object.fromEntries(
     Object.entries(seed.numbers).map(([k, v]) => [k, v + (c.numbers[k] ?? 0)]),
@@ -120,9 +89,6 @@ const corrected = (seed: PuppetPose, c: Correction): PuppetPose => ({
   scale: seed.scale + c.scale,
 });
 
-// ---------- the run: fits in parallel processes, cached; then every frame posed and scored
-
-/** One route A fit, as `chain-fit.ts` reads it: the puppet, the frame, the start, the bones and the paper. */
 export interface FitJob {
   readonly puppet: Puppet;
   readonly target: Raster;
@@ -142,7 +108,6 @@ const FitResult = Schema.Struct({
 interface FitResult extends Schema.Schema.Type<typeof FitResult> {}
 export const FitResultJson = Schema.fromJsonString(FitResult);
 
-/** The files a fit's output is made by: the fit's own process and the puppet's raster. */
 const FIT_SOURCES = [
   'chain-fit.ts',
   '../../core/pose-fit.ts',
@@ -160,7 +125,6 @@ export class ChainFailed extends Schema.TaggedError<ChainFailed>()('ChainFailed'
   }
 }
 
-/** A mapped canvas PNG read. */
 const canvasAt = Effect.fn('cast.chain.canvas')(function* (file: string) {
   const fs = yield* FileSystem.FileSystem;
   const decoded = decodePng(yield* fs.readFile(file));
@@ -169,7 +133,6 @@ const canvasAt = Effect.fn('cast.chain.canvas')(function* (file: string) {
   return decoded.success;
 });
 
-/** What a chain reads: the clip's read, its mapped canvas frames, each drawing's puppet, the fit cache and the bands to report. */
 interface ChainInput<R = never> {
   readonly read: ClipRead;
   readonly canvas: string;
@@ -179,11 +142,6 @@ interface ChainInput<R = never> {
   readonly bands: ReadonlyArray<Band>;
 }
 
-/**
- * Route A on each job, each in its own `bun chain-fit.ts` process, as many
- * at once as the host has cores; a fit whose key (the hash of its job and
- * of the files that make it) is in `<cache>/fits/` is read, not run.
- */
 const fitAll = Effect.fn('cast.chain.fitAll')(function* (
   jobs: ReadonlyArray<FitJob>,
   cache: string,
@@ -239,7 +197,6 @@ const fitAll = Effect.fn('cast.chain.fitAll')(function* (
   );
 });
 
-/** The chain on a read clip: its runs and keys, each frame's drawing and IoU, each band's mean and counts. */
 export const chainOf = Effect.fn('cast.chain.of')(function* <R>(input: ChainInput<R>) {
   const path = yield* Path.Path;
   const t0 = yield* Clock.currentTimeMillis;

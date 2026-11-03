@@ -1,39 +1,3 @@
-// What a render drew, as a key: each scene's sources as they stand on disk,
-// so a render is known stale once its scene changes, and a scene that did
-// not change is not rendered again.
-//
-// A scene's key hashes the files its frames are drawn from and the data its
-// frames read:
-//
-// - its own module (`SceneSources` locates the drawing by identity) and
-//   every module it imports, followed through relative and workspace
-//   imports (a package from the registry is not followed);
-// - the film's frame: `film.ts`, the scene registry and all they import
-//   (the lights, the script, the kit, the engine), the player
-//   (`@manna/film/player`) and the export page's engine (`@manna/film/render`),
-//   with the registry's imports of the
-//   other scenes' modules cut, so an edit to one scene leaves the others'
-//   keys alone;
-// - its beat as laid out: its declaration (`say`, `enter`, timeline,
-//   knobs), its take's timing, its start and length;
-// - for a scene that enters on a transition, the previous scene's own
-//   modules, which that transition draws.
-//
-// Each beat has a second key, kept beside it (`SceneKeys.beats`), for a
-// kept segment of frames that read only their beats' times: the same but
-// its start, so it holds wherever the beat sits, and with the previous beat
-// as laid out (its declaration, timing and length) where a transition into
-// the beat draws it. It hashes the film's files whole, the script with its
-// beats' lengths included: any module may derive a value a frame draws from
-// a `lead`, `tail` or `min`, so only a re-voiced take moves later beats
-// without re-keying them.
-//
-// Files are hashed by content and named relative to the films folder, so two
-// checkouts of the same sources agree when the films folder sits at the same
-// depth in each (a worktree or a rift of the repo does): a workspace module
-// such as `@manna/film/player` is named by its path from there. Anything else a frame reads at run
-// time (a font or image fetched by URL) is not in the key.
-
 import { createRequire } from 'node:module';
 import {
   Array as Arr,
@@ -60,21 +24,12 @@ import type { FilmPaths } from './film-repo.ts';
 import { collectWithin } from './process.ts';
 import { type LocateError, SceneSources } from './scene-sources.ts';
 
-/** The key of each of a film's scenes now, and the commit its checkout is at. */
 export interface SceneKeys {
   readonly commit: Option.Option<string>;
-  /** By scene id, every scene of the film. */
   readonly keys: ReadonlyMap<string, string>;
-  /**
-   * By scene id, each beat's key wherever it sits in the film (`BeatKeyInput`):
-   * what its key hashes but its start, and the beat a transition into it
-   * draws as laid out. A kept segment of frames that read only their beats'
-   * times is keyed by it (tools/segments.ts).
-   */
   readonly beats: ReadonlyMap<string, string>;
 }
 
-/** A film as its keys are read: where it lives, its layout and its takes' timings. */
 export interface Keyed {
   readonly paths: Pick<FilmPaths, 'name' | 'dir'>;
   readonly timings: Timings;
@@ -85,14 +40,11 @@ type StampError = LocateError | PlatformError | Schema.SchemaError;
 const SOURCE = ['.ts', '.tsx', '.js', '.mjs'];
 const GIT_LIMIT = Duration.seconds(10);
 
-/** Files by their path relative to the films folder, each with its content's hash. */
 const Files = Schema.Array(Schema.Tuple([Schema.String, Schema.String]));
 
-/** What a scene's key is the hash of, as JSON. */
 const SceneKeyInput = Schema.fromJsonString(
   Schema.Struct({
     files: Files,
-    /** The previous scene's own modules, which a transition into this one draws. */
     entered: Files,
     beat: Timed,
     timing: Schema.OptionFromOptionalKey(VoiceTiming),
@@ -102,19 +54,12 @@ const SceneKeyInput = Schema.fromJsonString(
   }),
 );
 
-/** A beat as its frames read it wherever it sits: its declaration, its take's timing and its length. */
 const BeatRead = Schema.Struct({
   beat: Timed,
   timing: Schema.OptionFromOptionalKey(VoiceTiming),
   dur: Schema.Finite,
 });
 
-/**
- * What a beat's placeless key is the hash of, as JSON: its scene key's
- * inputs but its start, and, for a beat that enters on a transition, the
- * beat before it as laid out, which the transition draws on the beat's own
- * clock (its time there is the beat's plus that beat's length).
- */
 const BeatKeyInput = Schema.fromJsonString(
   Schema.Struct({
     files: Files,
@@ -127,26 +72,21 @@ const BeatKeyInput = Schema.fromJsonString(
   }),
 );
 
-/** What an address's key is the hash of, as JSON. */
 const AddressKeyInput = Schema.fromJsonString(
   Schema.Struct({
     address: Schema.String,
     short: Schema.OptionFromOptionalKey(Short),
     scenes: Schema.Array(Schema.String),
-    // A wedge's levels (`--level`), by look: absent for the levels the film plays,
-    // so a render of the sources as written keeps the key it always had.
     levels: Schema.OptionFromOptionalKey(
       Schema.Array(Schema.Tuple([Schema.String, Schema.String])),
     ),
   }),
 );
 
-/** `spec` as the node resolver finds it from `from`, when it does. */
 const resolveFrom = Option.liftThrowable((spec: string, from: string) =>
   createRequire(from).resolve(spec),
 );
 
-/** The modules `source` imports or re-exports from, as written. */
 export const importsOf = (file: string, source: string): ReadonlyArray<string> => {
   const { module } = parseSync(file, source, { lang: 'ts', sourceType: 'module' });
   return Arr.dedupe([
@@ -159,12 +99,6 @@ export const importsOf = (file: string, source: string): ReadonlyArray<string> =
   ]);
 };
 
-/**
- * `stamp` for the part of the film `scope` covers: one key over its scenes'
- * keys (and its short, which cuts them), and the wedge's `levels` when it
- * draws a look at another level than the film plays (`render --level`), at
- * the commit the keys were read at.
- */
 export const stampOf = (
   keys: SceneKeys,
   scope: Pick<Scope, 'address' | 'short' | 'scenes'>,
@@ -186,7 +120,6 @@ export const stampOf = (
   ),
 });
 
-/** Each scene's own stamp (its address `--scene <id>`), in film order: what the project lists. */
 export const sceneStamps = (
   keys: SceneKeys,
   placed: ReadonlyArray<Placed>,
@@ -197,14 +130,12 @@ export const sceneStamps = (
   }));
 
 interface StampsService {
-  /** Every scene's key, its sources read as they stand now. */
   readonly scenes: (
     film: Keyed,
     placed: ReadonlyArray<Placed>,
   ) => Effect.Effect<SceneKeys, StampError>;
 }
 
-/** A file as the stamp read it: its content hash and the files its imports name. */
 interface Read {
   readonly hash: string;
   readonly imports: ReadonlyArray<string>;
@@ -225,14 +156,12 @@ export class Stamps extends Context.Service<Stamps, StampsService>()('@manna/fil
           Effect.orElseSucceed(() => false),
         );
 
-      /** A relative import as the file it names: as written, or with a source extension or an index. */
       const relative = Effect.fn('Stamps.relative')(function* (spec: string, from: string) {
         const at = path.resolve(path.dirname(from), spec);
         const candidates = [at, ...SOURCE.map((ext) => `${at}${ext}`), path.join(at, 'index.ts')];
         return yield* Effect.findFirst(candidates, isFile);
       });
 
-      /** A package import as its file, when it is a workspace's (not under node_modules). */
       const workspace = (spec: string, from: string) =>
         Option.match(resolveFrom(spec, from), {
           onNone: () => Effect.succeedNone,
@@ -250,7 +179,6 @@ export class Stamps extends Context.Service<Stamps, StampsService>()('@manna/fil
         return workspace(spec, from);
       };
 
-      /** `file`'s bytes hashed, and its imports resolved to the files they name (none for a non-source file, which is never decoded). */
       const readOnce = Effect.fn('Stamps.read')(function* (file: string) {
         const bytes = yield* fs.readFile(file);
         const imports: Array<string> = [];
@@ -262,12 +190,6 @@ export class Stamps extends Context.Service<Stamps, StampsService>()('@manna/fil
         return { hash: sha256Hex(bytes), imports } satisfies Read;
       });
 
-      /**
-       * Every file reached from `roots` through their imports, except where
-       * `cut(from, to)` says an import is not followed. `reads` keeps each
-       * file's hash and resolved imports for the whole call, so a file many
-       * scenes import is read, parsed and resolved once.
-       */
       const closure = Effect.fn('Stamps.closure')(function* (
         roots: ReadonlyArray<string>,
         cut: (from: string, to: string) => boolean,
@@ -329,7 +251,6 @@ export class Stamps extends Context.Service<Stamps, StampsService>()('@manna/fil
           (from, to) => from === registry && sceneFiles.has(to),
           reads,
         );
-        /** A scene's own modules: its drawing's file and all it imports. */
         const own = (id: string) =>
           Option.match(Option.fromUndefinedOr(located.sites.get(id)), {
             onNone: () => Effect.succeed<ReadonlyArray<string>>([]),

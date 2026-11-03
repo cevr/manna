@@ -1,11 +1,3 @@
-// The IDEA villagers' cut views, each its kept box on its sheet and the pad
-// round it that makes the view's part sheet frame: on their poses sheet the
-// grown villager hopping (poses-3) and standing (poses-6), and the baby sitting
-// (poses-4); on their single sheet the grown villager raising a small clay cup
-// in his right hand (single-15), its pad 17 px below to take in his contact
-// shadow. They are a film-scope member (In Its Order's `cast/idea-villagers`),
-// and the builder is the library's (`library/cutout/frames.ts`). Data.
-
 import { framesOf } from '../../../../../library/cutout/frames.ts';
 import type { CutFrame } from '../../../../../library/cutout/table.ts';
 
@@ -16,7 +8,6 @@ export const FRAMES = {
   'single-15': { sheet: 'single', kept: [291, 274, 742, 1403], pad: [3, 3, 3, 17] },
 } as const satisfies Readonly<Record<string, CutFrame>>;
 
-/** A view of theirs that is framed, by its name in their sheet's views. */
 export type FramedView = keyof typeof FRAMES;
 
 export const { boxOf, keptAt } = framesOf(FRAMES);

@@ -1,7 +1,3 @@
-// The footage route names only a copy the footage library's lock lists, made
-// and on disk, and answers it by range; and the lock, and a transcript it
-// names, for a talk's page: on a library and outputs folder made here.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
@@ -36,14 +32,8 @@ const ENTRY: FootageEntry = {
   },
 };
 
-/** The copy's bytes, so a range of them is known. */
 const BYTES = 'abcdefghijklmnopqrstuvwxyz';
 
-/**
- * A library listing `take.why` (its mezzanine made, its proxy not) and an
- * outputs folder holding a copy no lock lists (`stray`), and a file beside
- * the library.
- */
 const library = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -73,7 +63,6 @@ describe('the footage route', () => {
       Effect.gen(function* () {
         const root = yield* library;
         const sha12 = SHA.slice(0, 12);
-        /** Whether the route served `url` from `at`, and with its copy's bytes. */
         const servedFrom = (at: FootageRoot) => (url: string) =>
           Effect.gen(function* () {
             const response = yield* Effect.promise(() =>
@@ -94,13 +83,11 @@ describe('the footage route', () => {
           `/footage/%2e%2e/${sha12}/mezzanine.mp4`,
           `/footage/.take/${sha12}/mezzanine.mp4`,
           `/footage/take.why/${sha12}/mezzanine.mp4/`,
-          // A footage name every object answers to, which the lock does not list.
           `/footage/constructor/${sha12}/mezzanine.mp4`,
         ];
         expect(yield* Effect.forEach(urls, served)).toEqual(urls.map((url, i) => [url, i === 0]));
         expect(urls.map(isFootageUrl)).toEqual(urls.map(() => true));
         expect(isFootageUrl('/films/f/narration/full.wav')).toBe(false);
-        // Each answered, as a page asks: every URL not served is a 404, never a failure of the route's.
         const handler = footageHandler(root);
         const statuses = yield* Effect.forEach(urls, (url) =>
           Effect.map(
@@ -117,7 +104,6 @@ describe('the footage route', () => {
             },
           );
         expect(statuses).toEqual(urls.map((url, i) => [url, status(i)] as const));
-        // A library with no lock yet serves nothing.
         const copy = `/footage/take.why/${sha12}/mezzanine.mp4`;
         const unlisted = servedFrom({ ...root, dir: `${root.dir}/none` });
         expect(yield* unlisted(copy)).toEqual([copy, false]);
@@ -162,7 +148,6 @@ describe('the footage route', () => {
           '/footage/transcripts/',
         ])
           expect([url, (yield* answer(url))[0]]).toEqual([url, 404]);
-        // A library with no lock yet answers none.
         const bare = footageHandler({ ...root, dir: `${root.dir}/none` });
         const none = yield* Effect.promise(() =>
           bare(new Request(`http://player${FOOTAGE_LOCK_HREF}`)),

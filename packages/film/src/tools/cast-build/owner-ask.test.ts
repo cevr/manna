@@ -1,9 +1,3 @@
-// The build's asks of the owner, over the lab's ask store in memory: the kept
-// needs go on one ask, each keep choice showing its drawing (published as a
-// set, copied as the ask is made); a rerun with the same needs publishes and
-// asks nothing; a changed drawing asks again and closes the earlier ask, so
-// one stays open; and the drawn needs are drawn only under --spend okra.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Boolean as Bool, Effect, Layer, Option } from 'effect';
 import { type AskRecord, askStatus, askedIn } from '../../core/ask.ts';
@@ -19,7 +13,6 @@ import { Review } from '../review.ts';
 import { buildGraph } from './graph.ts';
 import { DrawingSet, type OwnerNeed, askStage, drawStage, ownerNeeds } from './owner-ask.ts';
 
-/** What a build is asked with, as `buildGraph` takes it. */
 type BuildOptions = Parameters<typeof buildGraph>[1];
 
 const options = (over: Partial<BuildOptions> = {}): BuildOptions => ({
@@ -35,7 +28,6 @@ const film = 'in-its-order' as FilmName;
 
 type Member = Parameters<typeof ownerNeeds>[0][number];
 
-/** lead-feast: front drawn and kept, side and back drawn and not kept, k2 not drawn. */
 const member = {
   film,
   member: 'lead-feast',
@@ -56,7 +48,6 @@ const member = {
   },
 } as unknown as Member;
 
-/** wife: her front drawn and not kept. */
 const wife = {
   film,
   member: 'wife',
@@ -74,7 +65,6 @@ const WIFE_FRONT = '/m/wife/views/front.png';
 const SIDE = '/m/lead-feast/views/side.png';
 const BACK = '/m/lead-feast/views/back.png';
 
-/** The film's folder, and the two drawings not kept. */
 const filesOf = () =>
   new Map<string, Uint8Array>([
     [`/films/${film}/scenes/index.ts`, text('export {};\n')],
@@ -83,14 +73,8 @@ const filesOf = () =>
     [WIFE_FRONT, text('wife front v1')],
   ]);
 
-/** Where the set below puts a need's drawing, as the review names it. */
 const refOf = (need: OwnerNeed) => `cast-keep/${need.member}/${need.id}.png`;
 
-/**
- * The lab in memory over `files`, its review serving what the set below
- * published under `/out`, and a set that copies each drawing there and
- * answers its review route, each publish recorded in `published`.
- */
 const labOver = (files: Map<string, Uint8Array>, published: Array<ReadonlyArray<string>>) => {
   const review = Layer.effect(
     Review,
@@ -125,7 +109,6 @@ const labOver = (files: Map<string, Uint8Array>, published: Array<ReadonlyArray<
   );
 };
 
-/** An ask store whose lab is down: every call fails as locked, and is named in `called`. */
 const labDown = (called: Array<string>) => {
   const down = (what: string) =>
     Effect.suspend(() => {
@@ -145,7 +128,6 @@ const labDown = (called: Array<string>) => {
   });
 };
 
-/** The build's asks about the film that still ask; the lab shows their asker as `concept build`. */
 const openAsks = Effect.map(
   Effect.flatMap(Effect.service(AskStore), (asks) => asks.list),
   (all) =>
@@ -154,7 +136,6 @@ const openAsks = Effect.map(
     ),
 );
 
-/** Each keep choice of `record`: its label, and its keep option's image. */
 const keepChoices = (record: AskRecord) =>
   Object.values(record.ask.steps)
     .flatMap(askedIn)
@@ -164,7 +145,6 @@ const keepChoices = (record: AskRecord) =>
       image: b.options.find((o) => o.value === 'keep')?.image,
     }));
 
-/** The bytes ask `id` shows at `src` (its copy's route), as the lab serves them. */
 const shownBytes = (id: string, src: string) =>
   Effect.flatMap(Effect.service(AskStore), (asks) =>
     Effect.map(asks.shownFile(id, decodeURIComponent(src.split('/').pop() ?? '')), (shown) =>
@@ -172,7 +152,6 @@ const shownBytes = (id: string, src: string) =>
     ),
   );
 
-/** The one ask of `asks`; a defect when there is none. */
 const only = (asks: ReadonlyArray<AskRecord>) =>
   Effect.fromOption(Option.fromUndefinedOr(asks[0])).pipe(Effect.orDie);
 
@@ -210,7 +189,6 @@ describe('the build asks the owner once', () => {
         ['lead-feast/turnaround-side: keep this drawing?', SIDE],
         ['lead-feast/turnaround-back: keep this drawing?', BACK],
       ]);
-      // Each shows its own drawing, copied as the ask was made.
       const shown = yield* Effect.forEach(choices, (c) =>
         shownBytes(ask.id, c.image?.src ?? '/nonexistent/loop-probe-x'),
       );
@@ -244,7 +222,6 @@ describe('the build asks the owner once', () => {
         asks.read(earlier.id),
       );
       expect(closed.state).toMatchObject({ _tag: 'Closed', why: `superseded by ${current.id}` });
-      // The earlier ask still shows the drawing it asked about.
       const before = keepChoices(earlier)[0]?.image?.src ?? '/nonexistent/loop-probe-x';
       expect(yield* shownBytes(earlier.id, before)).toBe('side v1');
     }).pipe(Effect.provide(labOver(files, [])));
@@ -270,7 +247,6 @@ describe('the build asks the owner once', () => {
         expect([first.id, second.id]).not.toContain(current.id);
         const side = keepChoices(current)[0]?.image?.src ?? '/nonexistent/loop-probe-x';
         expect(yield* shownBytes(current.id, side)).toBe('side v1');
-        // A rerun keeps the ask it made.
         expect(statesOf(yield* buildGraph(stages, options()))).toEqual({ ask: 'cached' });
         expect((yield* openAsks).map((r) => r.id)).toEqual([current.id]);
       }).pipe(Effect.provide(labOver(files, [])));
@@ -283,7 +259,6 @@ describe('the build asks the owner once', () => {
       const files = filesOf();
       const lead = [askStage(film, ['lead-feast'], ownerNeeds([member]))];
       const her = [askStage(film, ['wife'], ownerNeeds([wife]))];
-      /** The open asks with a keep choice about `who`. */
       const openAbout = (who: string) =>
         Effect.map(openAsks, (open) =>
           open.filter((r) => keepChoices(r).some((c) => c.label.startsWith(`${who}/`))),
@@ -296,7 +271,6 @@ describe('the build asks the owner once', () => {
         expect(yield* openAbout('lead-feast')).toHaveLength(1);
         expect(yield* openAbout('wife')).toHaveLength(1);
         expect(yield* openAsks).toHaveLength(2);
-        // A build of both asks about both, and closes each one's earlier ask.
         yield* buildGraph(
           [askStage(film, ['lead-feast', 'wife'], ownerNeeds([member, wife]))],
           options(),

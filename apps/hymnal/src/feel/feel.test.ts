@@ -1,12 +1,3 @@
-/**
- * The Feel over fake ports: each cue's body, over every cue the app tells
- * (each key, fret, size and topic place written out), with `Sounds and
- * haptics` on and off; the silent switch as iOS has it (a fake OS that
- * drops system sounds while silent); the player's device never reached;
- * the ticks' 30 ms floor over generated timed sequences; and the sounds'
- * gap, where no sound starts before the last one's file has ended.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { Option, Predicate } from 'effect';
 
@@ -19,7 +10,6 @@ import type { Cue, DialName, PlainCue } from './cue';
 import { feelOver } from './feel';
 import { RECIPES, soundLength } from './voice';
 
-/** A body as the ports were told it. */
 type Call = readonly ['haptic', Haptic] | readonly ['sound', SoundName];
 
 const selection: Haptic = { _tag: 'selection' };
@@ -28,7 +18,6 @@ const impact = (style: 'light' | 'medium' | 'soft' | 'rigid'): Haptic => ({
   style,
 });
 
-/** Each plain cue's row of the table: its haptic. No plain cue is heard. */
 const plainRows: ReadonlyArray<readonly [PlainCue, Haptic]> = [
   ['wall', impact('rigid')],
   ['reset', impact('medium')],
@@ -59,7 +48,6 @@ const PLACES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18
 const heardAs = (sound: SoundName) => Option.some(sound);
 const unheard = Option.none<SoundName>();
 
-/** Every cue of the table and the one body it is given. */
 const table: ReadonlyArray<readonly [Cue, Haptic, Option.Option<SoundName>]> = [
   ...plainRows.map(([name, haptic]) => [{ _tag: name }, haptic, unheard] as const),
   ...KEYS.map(
@@ -79,7 +67,6 @@ const table: ReadonlyArray<readonly [Cue, Haptic, Option.Option<SoundName>]> = [
   [{ _tag: 'beat', accent: false }, impact('light'), heardAs('thock')],
 ];
 
-/** A Feel over recording ports; the clock moves a whole second each read, so no tick or sound is held back. */
 const recorded = (on: () => boolean, silent = () => false) => {
   const felt: Array<Call> = [];
   const heard: Array<Call> = [];
@@ -88,7 +75,6 @@ const recorded = (on: () => boolean, silent = () => false) => {
   const tell = feelOver({
     haptics: { play: (haptic) => void felt.push(['haptic', haptic]) },
     sound: {
-      // The fake OS: a system sound asked for while silent is not heard.
       play: (sound) => {
         asked.push(['sound', sound]);
         if (!silent()) heard.push(['sound', sound]);
@@ -170,7 +156,6 @@ describe('the silent switch, as iOS has it', () => {
   });
 });
 
-/** Numbers in [0, 1), seeded (mulberry32), so a failing sequence comes back. */
 const seeded = (seed: number) => {
   let a = seed >>> 0;
   return () => {
@@ -261,7 +246,6 @@ describe('the sounds’ gap', () => {
   it('starts a sound only once the last one has ended, and always once it has, over generated flings', () => {
     for (let seed = 1; seed <= 200; seed += 1) {
       const random = seeded(seed);
-      // Lengths the port gives, so the rule is read apart from the voice's own.
       const lengths = new Map(
         RECIPES.map(([name]) => [name, 20 + Math.floor(random() * 300)] as const),
       );

@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/dialog/title/DialogTitle.tsx,
-// packages/react/src/dialog/description/DialogDescription.tsx
-//
-// The heading that labels the dialog and the paragraph that describes it:
-// each registers its id with the dialog, which names it in the popup's
-// `aria-labelledby` or `aria-describedby` while it is rendered.
 import type { JSX } from '@solidjs/web';
 import { omit } from 'solid-js';
 
@@ -20,10 +14,6 @@ interface DialogDescriptionState {}
 
 interface DialogDescriptionProps extends BaseUIComponentProps<'p', DialogDescriptionState> {}
 
-/**
- * A heading that labels the dialog.
- * Renders an `<h2>` element.
- */
 export function DialogTitle(componentProps: DialogTitleProps): JSX.Element {
   const { store } = useDialogRootContext();
   const elementProps = omit(componentProps, 'class', 'style', 'render', 'id');
@@ -40,10 +30,6 @@ export function DialogTitle(componentProps: DialogTitleProps): JSX.Element {
   });
 }
 
-/**
- * A paragraph with additional information about the dialog.
- * Renders a `<p>` element.
- */
 export function DialogDescription(componentProps: DialogDescriptionProps): JSX.Element {
   const { store } = useDialogRootContext();
   const elementProps = omit(componentProps, 'class', 'style', 'render', 'id');

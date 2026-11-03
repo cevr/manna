@@ -1,13 +1,3 @@
-/**
- * Settings → About: who made the sounds the recordings are played on, as
- * their licences ask (`RECORDING_CREDITS`). The Salamander piano is CC BY 3.0,
- * so its credit names the work, the author and the licence with its address;
- * a licence with an address opens it when pressed. The meaning table is
- * made from EmbeddingGemma, so it carries the notice the Gemma Terms of Use
- * ask for (`GemmaNotice`) and the Terms themselves, shown on a press
- * (`GemmaTerms`).
- */
-
 import { RECORDING_CREDITS, type CreditLine } from '@manna/hymnal/recordings';
 import { Option } from 'effect';
 import { useState } from 'react';
@@ -36,12 +26,6 @@ function Credit({ line, accent }: { readonly line: CreditLine; readonly accent: 
 const GEMMA_TERMS = 'https://ai.google.dev/gemma/terms';
 const GEMMA_POLICY = 'https://ai.google.dev/gemma/prohibited_use_policy';
 
-/**
- * The notice the Gemma Terms of Use ask of a work made from a Gemma model
- * (section 3.1): that the meaning table is made from EmbeddingGemma and
- * modified, that Gemma is provided under the Terms (with their address),
- * and that its use is restricted by the Prohibited Use Policy.
- */
 function GemmaNotice({ accent }: { readonly accent: ColorValue }) {
   const link = (url: string, words: string) => (
     <Text role="link" style={{ color: accent }} onPress={() => void Linking.openURL(url)}>
@@ -60,11 +44,6 @@ function GemmaNotice({ accent }: { readonly accent: ColorValue }) {
   );
 }
 
-/**
- * The Gemma Terms of Use, word for word, the copy section 3.1 asks to be
- * given with the meaning table: a button that shows them in place, and
- * hides them again.
- */
 function GemmaTerms({ accent }: { readonly accent: ColorValue }) {
   const [open, setOpen] = useState(false);
   return (

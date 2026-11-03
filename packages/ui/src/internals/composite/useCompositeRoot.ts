@@ -1,16 +1,3 @@
-// Upstream: packages/react/src/internals/composite/root/useCompositeRoot.ts
-//
-// The roving tab stop of a composite widget. One item (the highlighted one)
-// has `tabindex="0"`, the rest `-1`; the left and right arrows, and Home and
-// End, move it and focus the new item, and the keydown stops there.
-// Disabled items (by the DOM) are skipped, and a key held with a modifier is
-// left alone. The tab stop starts on the item `initialIndex` names, else on
-// the first enabled one, once the items' elements have registered; the list
-// is `settled` from then on. Until then (the server's render, which
-// registers none, and the browser's first) the items say which holds the tab
-// stop without the DOM (see `useCompositeItem`). When the items change, the
-// tab stop follows its item, or falls back to an enabled one when its item
-// is gone. Upstream has no `settled`: its server markup has no tab stop.
 import { createSignal, untrack } from 'solid-js';
 
 import {
@@ -29,20 +16,15 @@ import {
 } from './composite.ts';
 
 interface UseCompositeRootReturnValue {
-  /** The root element's props: its ref and keydown handling. */
   props: HTMLProps;
   highlightedIndex: () => number;
-  /** Whether the tab stop's first index has been set from the registered items. */
   settled: () => boolean;
   onHighlightedIndexChange: (index: number, shouldScrollIntoView?: boolean) => void;
-  /** The items' elements by index, kept by the `CompositeList` the root renders. */
   elementsRef: { current: Array<HTMLElement | null> };
-  /** Pass to the `CompositeList`'s `onMapChange`. */
   onMapChange: (map: CompositeIndexMap) => void;
 }
 
 interface UseCompositeRootParameters {
-  /** Where the tab stop starts, among the first items (-1: the first enabled). */
   initialIndex?: ((elements: ReadonlyArray<HTMLElement | null>) => number) | undefined;
 }
 
@@ -51,7 +33,6 @@ export function useCompositeRoot(
 ): UseCompositeRootReturnValue {
   const [highlightedIndex, setHighlightedIndex] = createSignal(0, { ownedWrite: true });
   const elementsRef: { current: Array<HTMLElement | null> } = { current: [] };
-  // `settled` for the items to read; the flag for the flushes that follow, before Solid's own.
   const [settled, setSettled] = createSignal(false, { ownedWrite: true });
   let hasSetDefaultIndex = false;
   let rootElement: HTMLElement | null = null;
@@ -74,11 +55,8 @@ export function useCompositeRoot(
 
       if (hasSetDefaultIndex) {
         const elements = elementsRef.current;
-        // Items added or removed around the highlighted one shift its index;
-        // the tab stop follows its element.
         const nextIndex = highlightedElement ? elements.indexOf(highlightedElement) : -1;
         if (nextIndex === -1) {
-          // A replacement at the same index keeps the tab stop, unless it cannot take focus.
           const replacement = elements[current];
           if (!replacement || isListIndexDisabled(elements, current)) {
             onHighlightedIndexChange(getFallbackIndex(elements));
@@ -104,7 +82,6 @@ export function useCompositeRoot(
       }
       highlightedElement = elementsRef.current[current] ?? null;
       if (isListIndexDisabled(sortedElements, current)) {
-        // A disabled item should not be the composite's entry point.
         const firstEnabledIndex = findNonDisabledListIndex(sortedElements);
         if (!isIndexOutOfListBounds(sortedElements, firstEnabledIndex)) {
           onHighlightedIndexChange(firstEnabledIndex);
@@ -134,7 +111,6 @@ export function useCompositeRoot(
         event.preventDefault();
       }
       onHighlightedIndexChange(nextIndex, true);
-      // After any focus manager's own focus return.
       queueMicrotask(() => {
         elementsRef.current[nextIndex]?.focus();
       });

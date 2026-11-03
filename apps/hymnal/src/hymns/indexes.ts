@@ -1,14 +1,3 @@
-/**
- * The hymnal's back-matter indexes as the app reads them: a hymn's topics,
- * Scripture references, tune and the hymns of its metre, and the hymns on a
- * verse, and a passage's text and its search query. The indexes are bundled
- * with the app (`virtual:hymnal-indexes`, made by `vite/indexes.ts`) as
- * numbers and names only.
- *
- * `lookupsOf` answers over any `HymnIndexes`; the module's own functions
- * answer over the bundled ones, whose tables are built on the first call.
- */
-
 import { getBibleBook } from '@manna/core/bible';
 import type { Passage } from '@manna/hymnal/indexes';
 import { fold } from '@manna/hymnal/fold';
@@ -17,47 +6,31 @@ import bundled from 'virtual:hymnal-indexes';
 
 export type { Passage } from '@manna/hymnal/indexes';
 
-/** The indexes the app carries (`vite/indexes.ts`). */
 export interface HymnIndexes {
-  /** The Topical index's topics in printed order, a subtopic naming its heading. */
   readonly topics: ReadonlyArray<{
     readonly name: string;
     readonly parent?: string;
     readonly hymns: ReadonlyArray<number>;
   }>;
-  /** The Scriptural index: each reference and the hymn that alludes to it, in printed order. */
   readonly references: ReadonlyArray<{ readonly hymn: number; readonly passage: Passage }>;
-  /** The Metrical index: each metre heading and its tunes' hymns. */
   readonly metres: ReadonlyArray<{
     readonly metre: string;
     readonly tunes: ReadonlyArray<{ readonly name: string; readonly hymns: ReadonlyArray<number> }>;
   }>;
-  /** The Index of Tunes, each tune by its own name (no alias). */
   readonly tunes: ReadonlyArray<{ readonly name: string; readonly hymns: ReadonlyArray<number> }>;
 }
 
-/** A topic a hymn is listed under. */
 export interface Topic {
   readonly name: string;
   readonly parent: Option.Option<string>;
 }
 
 export interface Lookups {
-  /** The other hymns listed under any metre heading `hymn` is listed under, ascending. */
   readonly sameMetre: (hymn: number) => ReadonlyArray<number>;
-  /** The topics `hymn` is listed under, in printed order. */
   readonly topicsOf: (hymn: number) => ReadonlyArray<Topic>;
-  /** The passages `hymn` alludes to, in printed order. */
   readonly referencesOf: (hymn: number) => ReadonlyArray<Passage>;
-  /** The name of the tune `hymn` is sung to. */
   readonly tuneOf: (hymn: number) => Option.Option<string>;
-  /**
-   * The hymns on a verse, then the rest of its chapter's hymns by their
-   * nearest verse's distance from it; a tie goes to the lower number. A
-   * reference to the whole chapter is on every verse of it.
-   */
   readonly onVerse: (book: number, chapter: number, verse: number) => ReadonlyArray<number>;
-  /** The hymns of every topic whose name folds to `name`'s fold, in printed order, each once. */
   readonly topicHymns: (name: string) => ReadonlyArray<number>;
 }
 
@@ -65,7 +38,6 @@ const FIRST = 1;
 const LAST = 695;
 const isHymn = (n: number) => Number.isInteger(n) && n >= FIRST && n <= LAST;
 
-/** The verses of `chapter` a passage covers, as ranges; none when it is not in the chapter. */
 const rangesIn = (
   passage: Passage,
   chapter: number,
@@ -77,8 +49,6 @@ const rangesIn = (
   }
   const { from, to } = passage;
   if (chapter < from.chapter || chapter > to.chapter) return [];
-  // A span's first chapter starts at its verse, any later one at verse 1;
-  // its last ends at its verse, any earlier one at the chapter's end.
   let start = 1;
   if (chapter === from.chapter) start = from.verse;
   let end = Infinity;
@@ -88,14 +58,12 @@ const rangesIn = (
 
 const WHOLE = [{ from: 1, to: Infinity }];
 
-/** The chapters a passage touches. */
 const chaptersOf = (passage: Passage): ReadonlyArray<number> => {
   if (passage._tag === 'Chapter') return [passage.chapter];
   const { from, to } = passage;
   return Array.from({ length: to.chapter - from.chapter + 1 }, (_, i) => from.chapter + i);
 };
 
-/** How many verses the nearest range lies from `verse`: 0 inside one. */
 const distance = (
   ranges: ReadonlyArray<{ readonly from: number; readonly to: number }>,
   verse: number,
@@ -113,11 +81,6 @@ type Reference = HymnIndexes['references'][number];
 
 const isIrregular = (metre: string): boolean => fold(metre).startsWith('irregular');
 
-/**
- * Per hymn, the other hymns of its metre headings, ascending. A heading that
- * begins with `Irregular` names no metre (its hymns share no line pattern),
- * so it groups no hymns.
- */
 const metreTable = (metres: HymnIndexes['metres']): ReadonlyMap<number, ReadonlyArray<number>> => {
   const groups = new Map<number, Set<number>>();
   for (const metre of metres) {
@@ -133,7 +96,6 @@ const metreTable = (metres: HymnIndexes['metres']): ReadonlyMap<number, Readonly
   return new Map([...groups].map(([hymn, group]) => [hymn, [...group].toSorted((a, b) => a - b)]));
 };
 
-/** Per hymn its topics, and per folded topic name its hymns, each once. */
 const topicTables = (topics: HymnIndexes['topics']) => {
   const ofHymn = new Map<number, Array<Topic>>();
   const byName = new Map<string, Set<number>>();
@@ -146,7 +108,6 @@ const topicTables = (topics: HymnIndexes['topics']) => {
   return { ofHymn, byName: new Map([...byName].map(([name, set]) => [name, [...set]])) };
 };
 
-/** Per hymn its passages, and per `book:chapter` the references that touch it. */
 const referenceTables = (references: HymnIndexes['references']) => {
   const ofHymn = new Map<number, Array<Passage>>();
   const byChapter = new Map<string, Array<Reference>>();
@@ -158,7 +119,6 @@ const referenceTables = (references: HymnIndexes['references']) => {
   return { ofHymn, byChapter };
 };
 
-/** The hymns of a chapter's references, nearest `verse` first, a tie to the lower number. */
 const byDistance = (references: ReadonlyArray<Reference>, chapter: number, verse: number) => {
   const nearest = new Map<number, number>();
   for (const { hymn, passage } of references) {
@@ -168,7 +128,6 @@ const byDistance = (references: ReadonlyArray<Reference>, chapter: number, verse
   return [...nearest].toSorted(([a, da], [b, db]) => da - db || a - b).map(([hymn]) => hymn);
 };
 
-/** Per hymn the first tune that lists it. */
 const tuneTable = (tunes: HymnIndexes['tunes']) => {
   const table = new Map<number, string>();
   for (const tune of tunes)
@@ -194,7 +153,6 @@ export const lookupsOf = (indexes: HymnIndexes): Lookups => {
 
 let built = Option.none<Lookups>();
 
-/** The lookups over the bundled indexes, built on the first call. */
 export const lookups = (): Lookups =>
   Option.getOrElse(built, () => {
     const made = lookupsOf(bundled);
@@ -202,21 +160,14 @@ export const lookups = (): Lookups =>
     return made;
   });
 
-/** A book's name by its canonical number, or its number when the canon has none. */
 const bookName = (book: number) =>
   Option.match(getBibleBook(book), { onNone: () => `Book ${book}`, onSome: (b) => b.name });
 
-/** A verse piece as printed: one verse, or the first and last with a dash between. */
 const piece = ({ from, to }: { readonly from: number; readonly to: number }, dash: string) => {
   if (from === to) return `${from}`;
   return `${from}${dash}${to}`;
 };
 
-/**
- * A passage as the reader sees it: the book's name, the chapter and its
- * verse pieces (`Psalms 98:4, 6`; the whole chapter is `Psalms 23`), or a
- * span from a place to a place (`Genesis 1:1–2:3`).
- */
 export const passageText = (passage: Passage): string => {
   const book = bookName(passage.book);
   if (passage._tag === 'Span')
@@ -225,13 +176,6 @@ export const passageText = (passage: Passage): string => {
   return `${book} ${passage.chapter}:${passage.verses.map((v) => piece(v, '–')).join(', ')}`;
 };
 
-/**
- * The search query that finds a passage's hymns, as the search parses one
- * (`search.ts`): the chapter, its first verse piece, or a span's first verse.
- * The search reads one verse, one range or one chapter, never a list of
- * pieces or a span across chapters, so the query names where the passage
- * begins.
- */
 export const passageQuery = (passage: Passage): string => {
   const book = bookName(passage.book);
   if (passage._tag === 'Span') return `${book} ${passage.from.chapter}:${passage.from.verse}`;

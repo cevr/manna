@@ -1,11 +1,3 @@
-// The lab's set commands (`lab-command.ts`; MCP and `film lab` serve them): the sets under the review
-// roots as the review walks them (`sets`), one montage's `review.json`
-// (`set`), a project folder's catalogue (`catalogue`), and the writes into
-// them, each through the store the page and the CLI write through
-// (`ContentStore`, `RenderCatalogue`): a set published (`publish_set`) and a
-// render recorded (`record_render`). Each write drops the review's index, so
-// its next read sees what was written.
-
 import { Clock, Effect, FileSystem, Option, Path, Result, Schema, Struct } from 'effect';
 import * as Tool from 'effect/ai/Tool';
 import { reviewFileUrl } from '../core/api.ts';
@@ -32,15 +24,10 @@ import {
 } from './review.ts';
 import { widenRecord } from './segment-cache.ts';
 
-// ---------------------------------------------------------------------------
-// What the tools answer
-
 export const SetRead = Schema.Struct({
-  /** Its ref: what `set` and `catalogue` name it by. */
   set: Schema.String,
   kind: Schema.Literals(['montage', 'project']),
   title: Schema.optionalKey(Schema.String),
-  /** Where it is on this machine. */
   dir: Schema.String,
 });
 
@@ -49,12 +36,9 @@ const CatalogueRead = Schema.Struct({
   catalogue: Catalogue,
 });
 
-/** A file a set shows, by the names an asker gives it: its ref (a `video` or `document` block's), its lab path (an image's `src`) and its links. */
 const SetFileRead = Schema.Struct({
-  /** Its path in the set's folder, as `review.json` names it. */
   file: Schema.String,
   ref: Schema.String,
-  /** Where the lab serves it: the `src` an ask's image takes. */
   src: Schema.String,
   links: LabLinks,
 });
@@ -63,11 +47,9 @@ const SetManifestRead = Schema.Struct({
   set: Schema.String,
   dir: Schema.String,
   manifest: ReviewManifest,
-  /** Each file the manifest names that is in the folder, where the lab serves it. */
   files: Schema.Array(SetFileRead),
 });
 
-/** A file put into a set: from a path on this machine to a path in the set's folder. */
 const SetFile = Schema.Struct({
   from: Schema.String.annotate({ description: 'An absolute path on this machine.' }),
   to: Schema.String.annotate({
@@ -76,12 +58,6 @@ const SetFile = Schema.Struct({
   }).pipe(Schema.optionalKey),
 });
 
-/**
- * What a publish says of the manifest, as `review.json` writes it: each key
- * given replaces the one there; one left out is kept, a key this lab does
- * not know too. The whole is checked as the review reads it. The production
- * and its version stamp the set as `film publish` does (`stampedManifest`).
- */
 const ManifestPatch = Schema.Struct({
   production: Schema.optionalKey(
     ProductionId.annotate({
@@ -109,24 +85,17 @@ const ManifestPatch = Schema.Struct({
   ),
 });
 
-/** `review.json` as the publish reads and writes it: its keys as they are, as the repo's formatter prints them. */
 const ManifestJson = repoJson(Schema.Record(Schema.String, Schema.Json));
 
-/** A set's folder name: one segment, as the dated sets are (`storyboard-2026-10-14`). */
 const SetName = Segment.check(
   Schema.isPattern(/^[a-z0-9][a-z0-9._-]*$/, {
     message: 'a folder name of lower case, digits, `.`, `_` and `-`',
   }),
 );
 
-/** The files a set may carry: what the review shows (images, videos, docs, captions) or offers to download. */
 const SET_FILE = /\.(png|jpe?g|webp|gif|svg|mp4|webm|mov|m4a|mp3|wav|vtt|md|txt|json|pdf|zip)$/i;
 
-/** A `review.json` with nothing in it, as the review reads one. */
 const emptyManifest = Schema.decodeSync(ReviewManifestJson)('{}');
-
-// ---------------------------------------------------------------------------
-// The tools
 
 const CatalogueTool = Tool.make('catalogue', {
   description:
@@ -177,10 +146,6 @@ const RecordRender = Tool.make('record_render', {
   failure: LabRefused,
 });
 
-// ---------------------------------------------------------------------------
-// The reads and writes, over the review's roots
-
-/** The sets as the tools, the overview and the asks read and write them. */
 export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
   const fs = yield* FileSystem.FileSystem;
   const links = yield* LabAddress;
@@ -197,12 +162,6 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
   const linksOf = (at: string) => linksAt(links, at);
   const named = (film: string) => refused(filmNamed(film).pipe(Effect.provideContext(films)));
 
-  /**
-   * The sets the review lists (its index, read fresh: a folder with
-   * something to review), each by the kind and folder its walk finds it as
-   * (`recordsUnder`: a folder with a catalogue a project, one with a manifest
-   * alone a montage).
-   */
   const sets = Effect.gen(function* () {
     const index = yield* review.index(true);
     const walked = yield* recordsUnder(review.roots).pipe(Effect.provideContext(platform));
@@ -219,7 +178,6 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
     );
   });
 
-  /** A set's ref and folder: by its ref, or a film's own project folder. */
   const folderOf = Effect.fn('LabMcp.folderOf')(function* (
     film: Option.Option<string>,
     set: Option.Option<string>,
@@ -250,14 +208,12 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
     return { set: at.ref, catalogue };
   });
 
-  /** A montage's manifest file, as the publish writes it. */
   const manifestAt = (dir: string): Manifest<{ readonly [k: string]: Schema.Json }> => ({
     file: path.join(dir, 'review.json'),
     codec: ManifestJson,
     empty: {},
   });
 
-  /** Each file `manifest` names that is in the set's folder `dir`, where the lab serves it. */
   const filesOf = (ref: string, dir: string, manifest: ReviewManifest) =>
     Effect.map(
       Effect.filter(namesInMontage(manifest), (name) =>
@@ -292,7 +248,6 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
     };
   });
 
-  /** The stamp a publish naming a production puts on its set, as the store stamps one (`ProductionStore.stamp`, which `film publish` stamps by too). */
   const stampOf = (patch: typeof ManifestPatch.Type) =>
     Effect.gen(function* () {
       const version = Option.fromUndefinedOr(patch.version);
@@ -307,7 +262,6 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
       return Option.some(yield* refused(productions.stamp(named.value, version, at)));
     });
 
-  // A write drops the review's index (`written`), refused or not, so its next read sees the folder as it is.
   const publishSet = Effect.fn('LabMcp.publishSet')(function* (
     name: string,
     files: ReadonlyArray<typeof SetFile.Type>,
@@ -317,7 +271,6 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
     const ref = yield* Effect.fromOption(refOf(review.roots, dir, path), () =>
       LabRefused.make({ reason: `the lab's out/ (${out}) is under none of its review roots` }),
     );
-    // A project folder is a film's renders: the review reads it by its catalogue, never as a montage.
     const elsewhere =
       'publish the set under another name, and record a render there with `record_render`';
     if ((yield* folder.names).includes(name))
@@ -328,7 +281,6 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
       return yield* LabRefused.make({
         reason: `${name} is a project folder (its ${CATALOGUE_FILE}): ${elsewhere}`,
       });
-    // Every copy checked before anything is written.
     const copies = yield* Effect.forEach(files, (f) =>
       Effect.gen(function* () {
         if (!path.isAbsolute(f.from))
@@ -349,9 +301,7 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
         return { from: f.from, to };
       }),
     );
-    // The production named, and its version, judged before anything is written: a set stamped onto no timeline is lost to it.
     const stamp = yield* stampOf(patch);
-    // The manifest and every name in it judged before a file is copied: a refused publish writes nothing.
     const written = yield* refused(
       store.transact(manifestAt(dir), (current) =>
         Effect.gen(function* () {
@@ -363,7 +313,6 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
           const manifest = yield* Schema.decodeUnknownEffect(ReviewManifest)(next).pipe(
             Effect.mapError((e) => LabRefused.make({ reason: `review.json: ${e.message}` })),
           );
-          // Every file it names as the review finds it once the copies land (a variant with no `file`, by either copy).
           const there = (name: string) =>
             Option.match(inside(path, dir, name), {
               onNone: () => Effect.succeed(false),
@@ -379,7 +328,6 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
             });
           for (const copy of copies) {
             yield* fs.makeDirectory(path.dirname(copy.to), { recursive: true });
-            // Copied whole: the review never lists half a video.
             yield* writeWholeWith(
               fs,
               copy.to,
@@ -400,7 +348,6 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
     };
   }, Effect.ensuring(review.written));
 
-  // As for a set: the catalogue written, the review's index is dropped.
   const recordRender = Effect.fn('LabMcp.recordRender')(function* (
     name: string,
     given: Omit<Render, 'at'>,
@@ -426,9 +373,6 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
         reason: `the render names files its project folder ${at.dir} lacks: ${missing.join(', ')}`,
       });
     const render: Render = { ...given, at: yield* Clock.currentTimeMillis };
-    // A video made another way used none of the film's cache: its lead file
-    // (its master, else its share copy) keeps the render record it has, or
-    // gets an empty one, so `--days 0` is not refused for want of one.
     const lead = Option.filter(
       Option.orElse(render.files.clip, () => render.files.share),
       () => render.kind === 'video',
@@ -447,7 +391,6 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
     return { set: at.ref };
   }, Effect.ensuring(review.written));
 
-  /** The folder a timeline names the set `given` by (`setNamed`): by its ref or by its folder, held by one root. */
   const folderNamed = Effect.fn('LabMcp.folderNamed')(function* (given: string) {
     const named = setNamed(
       (yield* sets).map((listed) => listed.set),
@@ -468,16 +411,13 @@ export const setsReads = Effect.fn('LabMcp.setsReads')(function* () {
     });
   });
 
-  /** A set ref as the lab writes it (`canonicalOf`): one under an alias label, under its root's label. */
   const setRef = (given: string) => canonicalOf(review.roots, given);
 
   return { sets, setOf, catalogueOf, publishSet, recordRender, folderNamed, setRef };
 });
 
-/** The work of the sets' commands. */
 const lab = setsReads();
 
-/** The sets' commands. */
 export const setsCommands = [
   labCommand(CatalogueTool, {
     run: ({ film, set }) =>

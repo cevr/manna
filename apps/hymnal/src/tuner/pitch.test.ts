@@ -1,12 +1,3 @@
-/**
- * The pitch of a frame and its reading, on fixed cases: each string's sine,
- * a plucked string, the plucks whose half period can read an octave up, the
- * high plucks whose keys must be read between samples, the frames with no
- * pitch (resonant noise among them), a DC offset, the low strings at 96 kHz, and the
- * reading's note, string and in-tune window. The generated sweeps are in
- * `pitch.property.slow.test.ts` and the unit's acceptance file.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
@@ -18,16 +9,11 @@ const FRAME = 2048;
 interface Voice {
   readonly hz: number;
   readonly rate: number;
-  /** Amplitude of partial k+1, the fundamental first. */
   readonly partials: ReadonlyArray<number>;
   readonly phase: number;
-  /** Decay time constant in seconds; Infinity holds the level. */
   readonly decay: number;
-  /** Seconds since the pluck at the frame's first sample. */
   readonly start: number;
-  /** Inharmonicity B: partial n sits at n·hz·√((1 + B n²)/(1 + B)). */
   readonly stiffness: number;
-  /** The frame's RMS. */
   readonly rms: number;
 }
 
@@ -65,7 +51,6 @@ const frameOf = (v: Voice) => {
   return Float32Array.from(out, (x) => (x / rms) * v.rms);
 };
 
-/** Cents from `hz` to what `detect` found in `v`'s frame; NaN when it found none. */
 const centsOff = (v: Voice) =>
   Option.match(detect(frameOf(v), v.rate), {
     onNone: () => Number.NaN,
@@ -74,7 +59,6 @@ const centsOff = (v: Voice) =>
 
 const cents = (hz: number, by: number) => hz * 2 ** (by / 1200);
 
-/** A plucked steel string: falling partials, B = 1e-4, a decay. */
 const PLUCK = [1, 0.7, 0.45, 0.3, 0.2, 0.12, 0.08, 0.05];
 
 describe('detect', () => {
@@ -102,8 +86,6 @@ describe('detect', () => {
     expect(reading(v.hz).string).toBe(id);
   });
 
-  // Strong even partials over a weak fundamental lift the half-period peak
-  // past `PEAK_SHARE` of the highest; the period's own peak stands higher.
   it.each([
     [
       '200.76 Hz',
@@ -125,9 +107,6 @@ describe('detect', () => {
     expect(Math.abs(centsOff(v))).toBeLessThan(3);
   });
 
-  // A short period's peak is sharp: the sample nearest it falls well under
-  // it, so each key's height is the parabola's, not its sample's, or the
-  // period's own key looks no higher than its half's.
   it.each([
     [
       '662.95 Hz',
@@ -162,9 +141,6 @@ describe('detect', () => {
     expect(Option.isNone(detect(noise, 44_100))).toBe(true);
   });
 
-  // White noise rung through a two-pole resonance near 120 Hz (r 0.99) has a
-  // period-like NSDF peak. This draw's clearest peak lies between 0.55 and
-  // 0.65 (measured), so it reads only under a weakened `CLARITY`.
   it('finds no pitch in noise rung through a resonance near 120 Hz', () => {
     const rate = 44_100;
     const theta = (2 * Math.PI * 120) / rate;
@@ -189,8 +165,6 @@ describe('detect', () => {
     ).toBe(true);
   });
 
-  // The NSDF of an offset frame is the offset's, near 1 at every lag, unless
-  // the mean is removed first.
   it('reads a pluck riding on a DC offset of 0.5 within 2 cents', () => {
     const v = voice(110, 44_100, PLUCK, { phase: 1.1, decay: 1.2, start: 0.15, stiffness: 1e-4 });
     const found = detect(
@@ -200,7 +174,6 @@ describe('detect', () => {
     expect(Math.abs(1200 * Math.log2(found / v.hz))).toBeLessThan(2);
   });
 
-  // At 96 kHz a 2048-sample frame holds under two periods of the low E.
   it.each([
     ['E2', 82.407, 0],
     ['E2', 82.407, -25],

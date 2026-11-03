@@ -29,7 +29,6 @@ interface BuildRecord {
   file: string;
 }
 
-/** Resolve one beat's image against the beat-sheet directory and check it exists. */
 const beatRecord = (dir: string, b: typeof Beat.Type) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -52,7 +51,6 @@ const beatRecord = (dir: string, b: typeof Beat.Type) =>
     return record;
   });
 
-/** The AppleScript that builds, saves and (unless --open) closes the deck. */
 const keynoteBuildScript = (
   records: ReadonlyArray<BuildRecord>,
   outPath: string,
@@ -65,9 +63,6 @@ const keynoteBuildScript = (
     )
     .join(', ¬\n\t\t');
 
-  // When !open, close the just-saved deck by basename after the build so we
-  // don't leave it open. (The Untitled sweep can't catch it — Keynote renames
-  // the doc in place on save-as.)
   let closeNamed = `\tclose (every document whose name is ${asText(basename(outPath))}) saving no\n`;
   if (args.open) closeNamed = '';
 

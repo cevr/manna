@@ -1,9 +1,3 @@
-/**
- * Copy reused paintings into the deck and center-crop two copies of each:
- * <id>-full.png (16:9, full-bleed slide) and <id>-panel.png (750:903, split).
- *
- *   bun skills/bible/scripts/deck/prepare_images.ts <deckDir>
- */
 import { copyFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { readManifest } from './manifest.ts';
@@ -29,7 +23,6 @@ const dimensions = (file: string) => {
   return { width, height };
 };
 
-/** Largest centered crop of `source` with aspect ratio w:h. */
 const cropTo = (source: string, output: string, w: number, h: number) => {
   const { width, height } = dimensions(source);
   const fitWidth = Math.floor((height * w) / h);

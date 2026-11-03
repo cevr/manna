@@ -15,9 +15,6 @@ const verses = [
 
 const TestLayer = BibleService.Live.pipe(Layer.provide(BibleDatabase.layerTest({ verses })));
 
-/** The same canon with one KJV marginal note, so §10 M6's margin layer has real
- *  data to draw. Genesis 1:1's `beginning` carries a Hebrew note in the shipped
- *  corpus, which is the row this fixture mirrors. */
 const MarginLayer = BibleService.Live.pipe(
   Layer.provide(
     BibleDatabase.layerTest({
@@ -74,8 +71,6 @@ describe('BibleService', () => {
       const bible = yield* BibleService;
       const anchors = yield* bible.chapterMarginAnchors(Reference.chapter(1, 1));
 
-      // Only what the *reader* draws: which anchor, and the phrase it follows.
-      // The note's own text belongs to the study pane's per-verse read.
       expect(anchors.verses).toEqual([
         {
           verse: verseNumber(1),

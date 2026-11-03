@@ -1,21 +1,5 @@
 /* oxlint-disable effect/noGlobals -- Bun's loader takes each stand-in module as source text, so paths and words are written into it as JSON literals. */
 
-/**
- * The app's tests run its screens under Bun, rendered to HTML as the web
- * build renders them, or mounted in a browser's document (happy-dom) where a
- * test presses and types. Five boundaries stand in, as the bundler and the
- * router would provide them:
- * - `react-native` is react-native-web, as on the web;
- * - `virtual:hymnal` is the same words the bundler plugin derives (`vite/words.ts`),
- *   `virtual:hymnal-chords` the same chords (`vite/chords.ts`),
- *   `virtual:hymnal-timing` the same timing (`vite/timing.ts`), and
- *   `virtual:hymnal-indexes` the same indexes (`vite/indexes.ts`);
- * - `one` is `src/test/one.tsx`: a link opens its href in the app, a screen's options are dropped;
- * - `react-native-gesture-handler` is `src/test/gesture.tsx`: a test plays a gesture's touch;
- * - `react-native-reanimated` and `react-native-worklets` are `src/test/reanimated.tsx`:
- *   an animation lands at once, and a worklet runs on the JavaScript thread.
- */
-
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { plugin } from 'bun';
 
@@ -26,7 +10,6 @@ import { readWords } from '../../vite/words';
 
 GlobalRegistrator.register({
   url: 'http://localhost/',
-  // A link the app does not handle must stay unfollowed, as a test reads it.
   settings: { navigation: { disableMainFrameNavigation: true } },
 });
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });

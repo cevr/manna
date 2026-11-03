@@ -1,12 +1,6 @@
-// A small film for the lab's browser tests: three scenes, the first with two
-// cues on its narration's marks and a point and a number knob, drawn so a
-// handle can be read off the frame; the third a camera pushed in on a knob,
-// with a cue that runs `until` a mark.
-
 import { camera } from '../../canvas/camera.ts';
 import { type Film, type FilmSpec, createFilm, drawing } from '../../canvas/film.ts';
 
-/** The probe film's name in its registry and in the lab's URLs. */
 export const PROBE = 'probe';
 
 const ball = drawing({
@@ -14,8 +8,6 @@ const ball = drawing({
     rise: { mark: 'rise', dur: 0.6 },
     fall: { mark: 'fall', dur: 0.4 },
   },
-  // `tilt` is 0, as a knob at rest often is: it still gets its row. `lean`
-  // is a literal finer than a field prints it (to the thousandth), drawn by nothing.
   knobs: { spot: [320, 200], size: 24, tilt: 0, lean: 0.1234 },
   draw: (f) => {
     const [x, y] = f.knob('spot');
@@ -41,13 +33,7 @@ const rest = drawing({
   },
 });
 
-/**
- * A shot pushed in 2× on `face`: `pole` is read before the camera and drawn
- * inside it, as a film reads a camera's knobs at the top of its draw. The
- * pole lands at (120, 280) on the frame, and `face` at its centre.
- */
 const shot = drawing({
-  // A cue that ends on a mark, as a push in that lands on a word does: its end is the mark's.
   timeline: { push: { mark: 'near', until: 'held' } },
   knobs: { face: [400, 200], faceZoom: 2, pole: [300, 250] },
   draw: (f) => {
@@ -63,10 +49,6 @@ const shot = drawing({
   },
 });
 
-/**
- * The probe film, laid out afresh. Every scene held still (`drift: 0`): the
- * knob tests measure where the scenes and the camera put things.
- */
 export const probeFilm = (): Film => createFilm(probeSpec());
 
 const probeSpec = (): FilmSpec => ({

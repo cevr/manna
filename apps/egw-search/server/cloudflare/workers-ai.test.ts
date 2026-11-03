@@ -12,7 +12,6 @@ import {
 
 import { EMBEDDING_BATCH, workersAiDocuments, workersAiEmbedder } from './workers-ai.ts';
 
-/** A 768-d answer whose first 256 components are not already unit length. */
 const full = Array.from({ length: 768 }, (_, i) => Math.sin(i + 1));
 
 describe('workersAiEmbedder', () => {

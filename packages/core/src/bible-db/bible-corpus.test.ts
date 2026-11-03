@@ -154,9 +154,6 @@ describe('BibleCorpus + BibleDatabase', () => {
       Effect.gen(function* () {
         const corpus = yield* BibleCorpus;
         const database = yield* BibleDatabase;
-        // Eight OpenBible targets in an order no sort would reproduce: not
-        // ascending by book, chapter or verse. §6.1 row 5 calls section 5
-        // "source order", and source order is the order the asset lists them.
         const targets = [
           { book: 43, chapter: 1, verse: 1 },
           { book: 19, chapter: 104, verse: 24 },
@@ -184,12 +181,7 @@ describe('BibleCorpus + BibleDatabase', () => {
           rows.map((row) => `${String(row.book)}:${String(row.chapter)}`),
         );
 
-        // The asset's order, unsorted and unreordered. Without `ORDER BY rowid`
-        // SQLite makes no promise at all here — the sequence is whatever the
-        // scan happens to produce.
         expect(yield* read).toEqual(expected);
-        // Stable across repeated queries, which is the property a client caching
-        // a page and a client re-fetching it both depend on.
         expect(yield* read).toEqual(yield* read);
         expect(yield* read).toEqual(expected);
       }),

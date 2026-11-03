@@ -1,7 +1,3 @@
-// A multiplane shot is judged by where each plane lands and how much haze
-// lies over it, so the stand-in context tracks the transform and records
-// every veil; bun has no canvas.
-
 import { describe, expect, test } from 'bun:test';
 import { type Affine, IDENTITY } from '../core/affine.ts';
 import {
@@ -27,7 +23,6 @@ import { heightOf } from './cutout.ts';
 import { FIBRE_SIZE, PLANE_FIBRE } from './fibre.ts';
 import { type Recorder, applyAffine, isPattern, recorder, withDom } from './fixtures/stand-in.ts';
 
-/** One plane of a `multiplane` shot. */
 type Plane = Parameters<typeof multiplane>[4][number];
 
 describe('knobCamera', () => {
@@ -48,7 +43,6 @@ describe('shotPath', () => {
   });
 
   test('a later stop takes over from wherever the earlier ones left the camera', () => {
-    // Pushed half way in, then half way back out to WIDE.
     const nested = lerpCamera(
       { x: 0, y: 0 },
       lerpCamera({ x: 0, y: 0 }, REST, FACE, 0.5),
@@ -65,9 +59,6 @@ describe('shotPath', () => {
   });
 
   test('a leg that names pushInto pushes deep with its target in frame all the way', () => {
-    // From the page into `roof`'s faith icon: 1 → 14. A straight blend
-    // (`lerpCamera`, every leg's default) throws the icon 720 px below the
-    // frame half way in.
     const PAGE: Camera = { x: 960, y: 540, zoom: 1 };
     const ICON: Camera = { x: 696, y: 875, zoom: 14 };
     let last = Number.POSITIVE_INFINITY;
@@ -77,14 +68,11 @@ describe('shotPath', () => {
       const sx = 960 + (ICON.x - cam.x) * z;
       const sy = 540 + (ICON.y - cam.y) * z;
       expect([i, sx >= 0 && sx <= 1920 && sy >= 0 && sy <= 1080]).toEqual([i, true]);
-      // Sliding straight to the centre, never back out.
       const off = Math.hypot(sx - 960, sy - 540);
       expect(off).toBeLessThanOrEqual(last + 1e-9);
       last = off;
     }
-    // Its zoom grows by a constant ratio: half way is the geometric mean.
     expect(shotPath(PAGE, [[0.5, ICON, pushInto]]).zoom).toBeCloseTo(Math.sqrt(14));
-    // The straight blend is still every other leg's.
     const straight = shotPath(PAGE, [[0.45, ICON]]);
     expect(960 + (ICON.x - straight.x) * (straight.zoom ?? 1)).toBeLessThan(0);
   });
@@ -99,16 +87,13 @@ describe('shotPath', () => {
       [pushInto({ x: 0, y: 0 }, B, A, 1), [960, 540, 1, 0]],
     ] as const)
       for (const [i, v] of at(got).entries()) expect(v).toBeCloseTo(want[i] ?? Number.NaN);
-    // A pull out is the push in run backward.
     expect(at(pushInto({ x: 0, y: 0 }, B, A, 0.3)).map((v) => v.toFixed(6))).toEqual(
       at(pushInto({ x: 0, y: 0 }, A, B, 0.7)).map((v) => v.toFixed(6)),
     );
-    // No change of zoom: a pan, blended straight.
     const PAN: Camera = { x: 100, y: 100, zoom: 1 };
     expect(pushInto({ x: 0, y: 0 }, A, PAN, 0.25)).toEqual(
       lerpCamera({ x: 0, y: 0 }, A, PAN, 0.25),
     );
-    // It may write into the camera it starts from.
     const out: Camera = { ...A };
     expect(at(pushInto(out, out, B, 1)).map((v) => v.toFixed(6))).toEqual(
       [300, 900, 6, 0.2].map((v) => v.toFixed(6)),
@@ -123,13 +108,10 @@ describe('shotPath', () => {
   });
 });
 
-/** The alpha of each full-frame veil, in order: every fill but the fibre's. */
 const veilsOf = (r: Recorder) => r.fills.filter((f) => !isPattern(f.style)).map((f) => f.alpha);
 
-/** Each pattern fill (the paper's fibre): its alpha, the transform it was laid under, its rect and its tile. */
 const fibresOf = (r: Recorder) => r.fills.filter((f) => isPattern(f.style));
 
-/** Where each plane maps the world point `p`, by plane name. */
 const shoot = (
   r: Recorder,
   cam: { x: number; y: number; zoom?: number; rot?: number },
@@ -169,7 +151,6 @@ describe('planeView', () => {
     const near = planeView({ x: 0, y: 0 }, SHOT, 0.5, REST);
     expect(near.x).toBeCloseTo(1360);
     expect(near.zoom).toBeCloseTo(1.44 ** 2);
-    // The sky at the horizon all but holds still.
     const sky = planeView({ x: 0, y: 0 }, SHOT, 1e6, REST);
     expect(sky.x).toBeCloseTo(960);
     expect(sky.zoom).toBeCloseTo(1);
@@ -181,7 +162,6 @@ describe('planeView', () => {
     const b = planeView({ x: 9, y: 9, zoom: 9 }, SHOT, 3, REST);
     expect(a).toEqual(b);
     expect(SHOT).toEqual(before);
-    // It may write into the shot it reads.
     const same: Camera = { ...SHOT };
     expect(planeView(same, same, 3, REST)).toEqual(a);
   });
@@ -252,7 +232,6 @@ describe('multiplane', () => {
       haze: '#fff',
       thickness: 0.5,
     });
-    // Behind a, the veils over it compose to e^-(0.5 * 2): the air from z 3 to 1.
     const through = veilsOf(r).reduce((t, v) => t * (1 - v), 1);
     expect(through).toBeCloseTo(Math.exp(-1));
     expect(veilsOf(r)).toHaveLength(2);
@@ -261,8 +240,6 @@ describe('multiplane', () => {
   test('hazes the nearest plane too when it stands beyond the focal plane', () => {
     const r = recorder();
     shoot(r, { x: 960, y: 540 }, { a: 3, b: 2 }, [0, 0], { haze: '#fff', thickness: 0.5 });
-    // Nothing stands at z 1, yet the air from z 3 to 1 still lies over a,
-    // and the air from z 2 to 1 over b: one unit past the focal plane shows 1 - e^-0.5.
     const through = veilsOf(r).reduce((t, v) => t * (1 - v), 1);
     expect(through).toBeCloseTo(Math.exp(-1));
     expect(veilsOf(r).at(-1)).toBeCloseTo(1 - Math.exp(-0.5));
@@ -303,7 +280,6 @@ describe('multiplane', () => {
     expect(heights.get('far')).toBeCloseTo(0.5);
     expect(heights.get('near')).toBeCloseTo(1.25);
     expect(heights.get('named')).toBeCloseTo(1.5);
-    // A shadow never shrinks to a crisp hairline nor floods the frame.
     expect(heights.get('horizon')).toBeCloseTo(PLANE_LIFT_MIN);
     expect(heights.get('lens')).toBeCloseTo(PLANE_LIFT_MAX);
     expect(heightOf(r.ctx)).toBe(1);
@@ -316,12 +292,9 @@ describe('multiplane', () => {
     expect(fibresOf(r)).toHaveLength(1);
     const fibre = fibresOf(r)[0];
     expect(fibre?.alpha).toBeCloseTo(PLANE_FIBRE);
-    // One blit at a whole-pixel offset over the whole frame.
     const [, , , , ox = 0, oy = 0] = fibre?.m ?? IDENTITY;
     expect(fibre?.m).toEqual([1, 0, 0, 1, Math.round(ox), Math.round(oy)]);
     expect(fibre?.rect).toEqual([0 - ox, 0 - oy, 1920, 1080]);
-    // Laid in the backdrop's world: where the backdrop drew the point, the
-    // tile holds that point's own place in it, to the rounded pixel.
     const [sx, sy] = seen.get('far') ?? [0, 0];
     const wrap = (n: number) => ((n % FIBRE_SIZE) + FIBRE_SIZE) % FIBRE_SIZE;
     expect(Math.abs(wrap(sx - ox) - wrap(1000))).toBeLessThanOrEqual(0.5);
@@ -334,15 +307,11 @@ describe('multiplane', () => {
     const r = recorder();
     const at = shoot(r, cam, planes, [1000, 500]).seen.get('far') ?? [0, 0];
     const past = shoot(recorder(), cam, planes, [1100, 500]).seen.get('far') ?? [0, 0];
-    // How many frame px one world px of the backdrop spans, pushed in.
     const k = (past[0] - at[0]) / 100;
     expect(k).toBeGreaterThan(1);
-    // The tile spans the backdrop's own FIBRE_SIZE world px, to the rounded pixel.
     const fibre = fibresOf(r)[0];
     const period = fibre !== undefined && isPattern(fibre.style) ? fibre.style.tile.width : 0;
     expect(Math.abs(period - FIBRE_SIZE * k)).toBeLessThanOrEqual(0.5);
-    // And shows the point's own place in the tile under it, scaled with it,
-    // within the rounded period's drift (`fibre.test.ts` bounds it frame-wide).
     const [, , , , ox = 0, oy = 0] = fibre?.m ?? IDENTITY;
     const wrap = (n: number, p: number) => ((n % p) + p) % p;
     const own = (n: number) => (wrap(n, FIBRE_SIZE) / FIBRE_SIZE) * period;
@@ -378,7 +347,6 @@ describe('multiplane', () => {
   });
 });
 
-/** A scene's breath `through` it, in a film that drifts `drift`, drawn whole (`outer`) or through its shots. */
 const breathOf = (through: number, drift: Drift | 0 = DRIFT, outer = false): SceneBreath => ({
   through,
   drift,
@@ -387,15 +355,7 @@ const breathOf = (through: number, drift: Drift | 0 = DRIFT, outer = false): Sce
   height: 1080,
 });
 
-// Always breathing (DIRECTION, pillar 3): the outermost camera of a scene
-// drifts over it, pure in the scene's time: from the shot as framed at its
-// start, pushed in and slid at its middle, back to the shot as framed at its
-// end, so every cut and callback lands where it was drawn.
 describe('drift', () => {
-  /**
-   * The transform inside `camera(cam)` drawn `through` a scene (0..1) of a
-   * film that drifts `film`, the shot taking `share` of it when named.
-   */
   const inside = (through: number, cam: Camera, share?: number, film: Drift | 0 = DRIFT) => {
     const r = recorder();
     let m: Affine = IDENTITY;
@@ -424,7 +384,6 @@ describe('drift', () => {
   test('at the middle of its scene it has pushed in and slid', () => {
     const m = inside(0.5, CAM);
     expect(m[0]).toBeCloseTo(1 + DRIFT.zoom);
-    // The frame's centre now looks at a point slid right by DRIFT.x frame px.
     const [x, y] = applyAffine(m, [CAM.x + DRIFT.x / (1 + DRIFT.zoom), CAM.y]);
     expect(x).toBeCloseTo(960);
     expect(y).toBeCloseTo(540);
@@ -485,7 +444,6 @@ describe('drift', () => {
     });
     expect(shot).toBe(false);
     expect(m[0]).toBeCloseTo(1 + DRIFT.zoom);
-    // The frame's centre lands slid left by DRIFT.x, as a camera on it would put it.
     const [x, y] = applyAffine(m, [960, 540]);
     expect(x).toBeCloseTo(960 - DRIFT.x);
     expect(y).toBeCloseTo(540);
@@ -497,7 +455,6 @@ describe('drift', () => {
     const shot = hearingCameras(r.ctx, undefined, breathOf(0.5, DRIFT, true), () =>
       camera(r.ctx, { x: 960, y: 540 }, 1920, 1080, () => seen.push(r.now())),
     );
-    // The camera tells the frame it framed a shot, so the frame is drawn through it instead.
     expect(shot).toBe(true);
     expect(seen[0]?.[0]).toBeCloseTo(1 + DRIFT.zoom);
     const through = inside(0.5, { x: 960, y: 540 });
@@ -522,11 +479,8 @@ describe('drift', () => {
       outer = r.now();
       inset(r.ctx, () => camera(r.ctx, { x: 960, y: 540 }, 1920, 1080, () => seen.push(r.now())));
     });
-    // Not the scene's shot: the frame stays breathed whole, and is not drawn again through it.
     expect(shot).toBe(false);
-    // The inset's own camera, on the frame as it is, adds no second breath.
     for (const [i, v] of (seen[0] ?? []).entries()) expect(v).toBeCloseTo(outer[i] ?? Number.NaN);
-    // And a camera after the inset is the scene's shot again.
     expect(
       hearingCameras(r.ctx, undefined, breathOf(0.5), () => {
         inset(r.ctx, () => undefined);
@@ -542,8 +496,6 @@ describe('drift', () => {
   });
 });
 
-// The lab places a knob read before a camera where the camera draws it: a
-// frame hearing its cameras is told the transform inside each outermost one.
 describe('the cameras a frame applies', () => {
   const inside = (m: { a: number; b: number; c: number; d: number; e: number; f: number }) =>
     applyAffine([m.a, m.b, m.c, m.d, m.e, m.f], [1000, 500]);

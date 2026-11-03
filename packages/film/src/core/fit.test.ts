@@ -5,7 +5,6 @@ type Pt = readonly [number, number];
 
 const OPTS = { tolerance: 1, reach: 6, corner: (40 * Math.PI) / 180 };
 
-/** A closed line through `corners`, a point every pixel along each side. */
 const walked = (corners: ReadonlyArray<Pt>): Pt[] =>
   corners.flatMap((a, i) => {
     const b = corners[(i + 1) % corners.length] ?? a;
@@ -16,13 +15,11 @@ const walked = (corners: ReadonlyArray<Pt>): Pt[] =>
     ]);
   });
 
-/** The farthest any of `pts` lies from the line `line` (its nearest point). */
 const farthestFrom = (pts: ReadonlyArray<Pt>, line: ReadonlyArray<Pt>) =>
   Math.max(...pts.map((p) => Math.min(...line.map((q) => Math.hypot(q[0] - p[0], q[1] - p[1])))));
 
 describe('a fitted curve', () => {
   test('keeps a shape’s corners as anchors, its sides straight between them', () => {
-    // A box with one corner cut at 45°: five corners, each a turn of 45° or 90°.
     const corners: Pt[] = [
       [10, 10],
       [90, 10],
@@ -34,7 +31,6 @@ describe('a fitted curve', () => {
     const anchors = anchorsOf(chain);
     expect(anchors.length).toBe(5);
     for (const c of corners) expect(farthestFrom([c], anchors)).toBeLessThanOrEqual(1);
-    // Each anchor a corner: its handles point their own ways.
     for (const t of anchorTurns(chain)) expect(t).toBeGreaterThan((40 * Math.PI) / 180);
     expect(farthestFrom(flattened(chain, 1), walked(corners))).toBeLessThanOrEqual(1.5);
   });
@@ -60,7 +56,6 @@ describe('a fitted curve', () => {
     ];
     const chain = chainThrough(pts);
     expect(anchorsOf(chain)).toEqual(pts);
-    // The handle out of [40, 0]: a sixth of the way from [0, 0] to [40, 30].
     expect(chain[4]).toEqual([40 + 40 / 6, 30 / 6]);
   });
 });

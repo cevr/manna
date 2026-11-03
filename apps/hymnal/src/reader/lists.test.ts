@@ -1,9 +1,3 @@
-/**
- * The reader's lists as plain values: Favourites toggled, Recent visited,
- * and Recent read against the hymns there are, as the home list's shelf
- * (its latest few) and as the Recent screen's list (all it keeps).
- */
-
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
@@ -29,7 +23,6 @@ describe('visited', () => {
   });
 });
 
-/** Hymns 1 to 695, each as its number. */
 const hymnOf = (n: number) => Option.liftPredicate(n, (m) => m >= 1 && m <= 695);
 
 describe('shelvesOf', () => {

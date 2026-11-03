@@ -1,10 +1,3 @@
-// A fake microphone's input for the browser tests: a 16-bit WAV of a 440 Hz
-// sine at `amplitude` of full scale, the file Chromium's fake capture device
-// plays (`--use-file-for-fake-audio-capture`, written by `browsers.ts`). Mono by
-// default; `left-only` is a two-input interface with the voice on input 1 and
-// silence on input 2.
-
-/** How the tone is laid out: its rate, and its channels. */
 interface ToneLayout {
   readonly rate: number;
   readonly channels: 'mono' | 'left-only';
@@ -14,7 +7,6 @@ const MONO_48K: ToneLayout = { rate: 48000, channels: 'mono' };
 
 const CHANNELS = { mono: 1, 'left-only': 2 } as const;
 
-/** `seconds` of a 440 Hz sine at `amplitude`, as a 16-bit WAV of `layout`. */
 export const tone = (
   seconds: number,
   amplitude: number,
@@ -43,7 +35,6 @@ export const tone = (
   ascii(36, 'data');
   v.setUint32(40, n * frame, true);
   for (let i = 0; i < n; i++)
-    // Input 1 carries the tone; input 2 (when there is one) stays silent.
     v.setInt16(
       44 + i * frame,
       Math.round(amplitude * 32767 * Math.sin((2 * Math.PI * 440 * i) / rate)),

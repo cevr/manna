@@ -1,10 +1,3 @@
-// The Choices service at its own boundary, over fakes: a film in memory, its
-// takes made by the real Takes (fake media and transcriber), its writes and
-// their Undo by the real SourceWriter (oxfmt leaves a text as it is), the
-// review's cache made once per name (as `Review.derive` makes it), and the
-// fresh process answered in this one, as `film options` would over the same
-// files. No network, no ffmpeg, no film CLI.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Deferred, Effect, Fiber, Layer, Option, Path, Schema } from 'effect';
 import { withSay } from '../core/choice.ts';
@@ -36,7 +29,6 @@ import { fakeMedia } from './media/testing.ts';
 
 const scenes: ReadonlyArray<Timed> = [{ id: 'a', say: 'Hello {wave} world.' }];
 
-/** `a` staged by ElevenLabs. */
 const staged: Timings = {
   voice: voiceKey(testVoice),
   scenes: {
@@ -56,14 +48,12 @@ const NARRATION = film.paths.narration;
 const TIMINGS = film.paths.timings.file;
 const MASTER = masterFile(film.paths);
 
-/** The film's `sound.ts`: a score of two options, `piano` playing, under the voice at -18 dB. */
 const SOUND_FILE = `${film.paths.dir}/sound.ts`;
 const SOUND = `export const sound = {
   score: { play: 'piano', under: -18, options: { piano: {}, strings: {} } },
 };
 `;
 
-/** A score option as `film options list` offers it. */
 const scoreOption = (id: string, picked: boolean) => ({
   id,
   label: id,
@@ -75,7 +65,6 @@ const scoreOption = (id: string, picked: boolean) => ({
   key: id,
 });
 
-/** The film's points as `film options list` reads `SOUND`: its score, `piano` playing. */
 const scorePoints = () =>
   Effect.succeed([
     withSay(Option.none(), {
@@ -87,10 +76,8 @@ const scorePoints = () =>
     }),
   ]);
 
-/** The app's sound library folder: its lock holds one take of `tone.tick` from before it was code. */
 const LIBRARY = '/lib';
 
-/** The take the lock holds. */
 const EARLIER: Variant = {
   request: 'a request from before',
   file: 'files/tone.tick/earlier.flac',
@@ -104,7 +91,6 @@ const EARLIER: Variant = {
   credits: 40,
 };
 
-/** A `film options sound` the fresh process ran: where it was asked to write the seed. */
 interface Sounded {
   readonly film: string;
   readonly point: string;
@@ -113,20 +99,15 @@ interface Sounded {
 }
 
 const setup = (
-  /** What `film mix` does: a test that watches a remake holds it. */
   remixing: Effect.Effect<void> = Effect.void,
-  /** What `film options list` answers; the voice points read from the files when not given. */
   points: Option.Option<FreshFilmService['choices']> = Option.none(),
-  /** What the transcriber hears a reading of the line as; the line itself when none. */
   heardAs: Option.Option<string> = Option.none(),
-  /** What `film options sound` does before it writes the seed: a test that watches a render holds it. */
   sounding: Effect.Effect<void> = Effect.void,
 ) => {
   const files = new Map<string, Uint8Array>([
     [TIMINGS, text(Schema.encodeSync(TimingsJson)(staged))],
     [SOUND_FILE, text(SOUND)],
     [`${NARRATION}/a.mp3`, text('Hello world.')],
-    // Two readings of the line: other audio, the same words heard.
     ['/rec/a1.wav', text('Hello world.')],
     ['/rec/a2.wav', text('Hello world, again.')],
     [
@@ -139,7 +120,6 @@ const setup = (
     ],
   ]);
   const sounded: Array<Sounded> = [];
-  // Each mix lands the track anew: its mtime is the number of mixes made.
   const mtimes = new Map<string, number>();
   const landTrack = Effect.sync(() => {
     files.set(MASTER, text('mixed'));
@@ -177,7 +157,6 @@ const setup = (
       stamp: () => Effect.succeed(1),
     }),
   );
-  // The fresh process, run here over the same files: `film options list`, `keep-voice` and `sound`.
   const fresh = Layer.unwrap(
     Effect.map(Effect.context<FilmRepo | Takes>(), (context) =>
       freshFilm({
@@ -195,7 +174,6 @@ const setup = (
       }),
     ),
   );
-  // The review's cache: a file there already, or made into a partial and renamed into place.
   const cache = Layer.effect(
     Review,
     Effect.gen(function* () {
@@ -226,10 +204,8 @@ const setup = (
   return { files, layer, sounded };
 };
 
-/** The film's timings as they are stored now. */
 const timings = ContentStore.use((store) => store.read(film.paths.timings));
 
-/** `file` imported as beat `a`'s take, outside the lab (as `takes import` would, `--accept-mismatch` when `accepted`): its take's file. */
 const imported = (file: string, accepted = false) =>
   Effect.gen(function* () {
     const loaded = yield* (yield* FilmRepo).load(F);
@@ -254,19 +230,16 @@ describe('Choices: a voice picked', () => {
       expect(secondBytes).not.toEqual(firstBytes);
       expect((yield* timings).scenes['a']?.file).toBe(second);
       const before = files.get(TIMINGS);
-      // The first reading picked again (`film options`).
       const point = pointIdOf({ _tag: 'Voice', beat: 'a' });
       const picked = yield* (yield* Choices).pick(F, { point, variant: first, verb: 'pick' });
       expect(Option.isSome(picked.change)).toBe(true);
       expect((yield* timings).scenes['a']?.file).toBe(first);
       expect(takesIn(files)).toEqual([first]);
       const writer = yield* SourceWriter;
-      // Undo: the timings name the second reading again, and its file is there to play.
       yield* writer.undo(F);
       expect((yield* timings).scenes['a']?.file).toBe(second);
       expect(files.get(`${NARRATION}/${second}`)).toEqual(secondBytes);
       expect(files.get(TIMINGS)).toEqual(before);
-      // narration/ holds just the take the timings name, as git had it; the other stays an attempt.
       expect(takesIn(files)).toEqual([second]);
       expect(files.has(`${NARRATION}/attempts/a/${first}`)).toBe(true);
     }).pipe(Effect.provide(layer));
@@ -282,7 +255,6 @@ describe('Choices: a voice picked', () => {
         const secondBytes = files.get(`${NARRATION}/attempts/a/${second}`);
         const point = pointIdOf({ _tag: 'Voice', beat: 'a' });
         yield* (yield* Choices).pick(F, { point, variant: first, verb: 'pick' });
-        // Outside the lab, the second reading is made the take again, timed otherwise.
         const elsewhere: Timings = {
           ...(yield* timings),
           scenes: {
@@ -301,7 +273,6 @@ describe('Choices: a voice picked', () => {
         const live = files.get(TIMINGS);
         const refused = yield* Effect.flip((yield* SourceWriter).undo(F));
         expect(refused._tag).toBe('UndoUnavailable');
-        // The take the live timings name stays in narration, byte for byte.
         expect(files.get(TIMINGS)).toEqual(live);
         expect(files.get(`${NARRATION}/${second}`)).toEqual(secondBytes);
       }).pipe(Effect.provide(layer));
@@ -311,7 +282,6 @@ describe('Choices: a voice picked', () => {
   it.effect(
     "an Undo's history names it once its file lands, while the track is still being mixed again",
     () => {
-      // The Undo's mix (the pick's is the fresh keep's own) is held until the test lets it go.
       const [mixing, mixed] = [Deferred.makeUnsafe<boolean>(), Deferred.makeUnsafe<boolean>()];
       const { layer } = setup(
         Effect.andThen(Deferred.succeed(mixing, true), Deferred.await(mixed)),
@@ -324,7 +294,6 @@ describe('Choices: a voice picked', () => {
         const writer = yield* SourceWriter;
         const undoing = yield* Effect.forkChild(writer.undo(F));
         yield* Deferred.await(mixing);
-        // The lab's check, asked now, says the Undo landed.
         const latest = Option.map((yield* writer.history(F)).latest, (c) => c.target);
         yield* Deferred.succeed(mixed, true);
         yield* Fiber.join(undoing);
@@ -367,7 +336,6 @@ describe('Choices: a voice picked', () => {
       const point = pointIdOf({ _tag: 'Voice', beat: 'a' });
       yield* (yield* Choices).pick(F, { point, variant: first, verb: 'pick' });
       const after = files.get(TIMINGS);
-      // The second reading's attempt is gone from this machine (a cleared folder).
       files.delete(`${NARRATION}/attempts/a/${second}`);
       const refused = yield* Effect.flip((yield* SourceWriter).undo(F));
       expect(refused._tag).toBe('UndoUnavailable');
@@ -391,11 +359,8 @@ describe('Choices: a score picked', () => {
         const point = pointIdOf({ _tag: 'Score' });
         const picked = yield* (yield* Choices).pick(F, { point, variant: 'strings', verb: 'pick' });
         expect(Option.isSome(picked.change)).toBe(true);
-        // The track is mixed from the text that plays strings, once it has landed.
         expect(mixes.map((m) => m.includes("play: 'strings'"))).toEqual([true]);
-        // The track's mtime as that mix landed it: the first mix.
         expect(picked.mixed).toEqual(Option.some(1));
-        // A pick of what already plays writes nothing, and mixes nothing.
         const again = yield* (yield* Choices).pick(F, { point, variant: 'strings', verb: 'pick' });
         expect(again.mixed).toEqual(Option.none());
         const writer = yield* SourceWriter;
@@ -407,7 +372,6 @@ describe('Choices: a score picked', () => {
   );
 });
 
-/** The take files in `narration/` itself (not its attempts), by name. */
 const takesIn = (files: ReadonlyMap<string, Uint8Array>) =>
   [...files.keys()]
     .filter((f) => f.startsWith(`${NARRATION}/a.`))
@@ -417,7 +381,6 @@ describe('Choices: a seed of a sound made from data', () => {
   const POINT = pointIdOf({ _tag: 'Take', sound: 'tone.tick' });
   const SEED = 'code:render:graph/1';
   const heard = { _tag: 'Heard' as const, alone: true, inPlace: true };
-  /** `tone.tick`'s point as `film options list` offers a code sound's: its seed, and the take its lock holds. */
   const seedPoints = () =>
     Effect.succeed([
       withSay(Option.none(), {
@@ -484,7 +447,6 @@ describe('Choices: a seed of a sound made from data', () => {
         yield* Deferred.succeed(release, true);
         const [one, two] = yield* Effect.all([Fiber.join(first), Fiber.join(second)]);
         expect(two).toBe(one);
-        // Named by the label alone: it names the data and the renderer, so the file never goes stale.
         expect(one).toMatch(/^\/cache\/sound\/[0-9a-f]{20}\.wav$/);
         expect(sounded).toEqual([
           { film: 'test', point: POINT, variant: SEED, to: `${one}.partial` },

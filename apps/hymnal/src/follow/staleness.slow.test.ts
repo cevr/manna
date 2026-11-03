@@ -14,8 +14,6 @@ import { Context, Effect, Exit, Layer, Option, Scope } from 'effect';
 
 const root = resolve(import.meta.dir, '../../../..');
 const anchor = `${root}/packages/hymnal/scripts/playback.ts`;
-// Freeze the generation fingerprint's inputs (scripts/playback.ts inputsHash).
-// Removing a production input must not shrink the build-availability guard.
 const inputs = [
   'packages/hymnal/data/source-text.json',
   'packages/hymnal/data/fixes/refrains.json',
@@ -126,8 +124,6 @@ class Scratch extends Context.Service<
   }
 >()('hymnal/staleness/Scratch') {}
 
-/** Clone only this build's inputs. Native build output and unrelated corpora
- * are outside its fixture. Mutated installed modules are private copies too. */
 const cloneInputs = (checkout: string) => {
   const copy = (relative: string) => {
     const to = resolve(checkout, relative);
@@ -192,25 +188,16 @@ const scratchLayer = Layer.effect(Scratch)(
     const baseline = yield* Effect.promise(() => witness(checkout));
     expect(baseline.code).toBe(0);
     expect(baseline.hashes).toBeDefined();
-    // The clean run is the reference each row matches: green, with at least one
-    // pass, whatever number of cases the witness files hold.
     expect(baseline.counts).toMatch(/^[1-9]\d*-pass,0-fail$/);
     return { checkout, baseline };
   }),
 );
 
-/** A spawning case's budget: a child's time is the machine's (`effect/requireSpawnBudget`, at least 20 s). */
 const SPAWNS_MS = 30_000;
 
-// This test file runs in its own host process. One scope holds the scratch
-// clone across the serial cases, and the suite's close releases it, in full
-// and filtered runs and after failed cases alike. Bun has no shared-layer
-// suite adapter.
 const scope = Scope.makeUnsafe();
 // oxlint-disable-next-line effect/noTestLifecycleHooks -- host adapter only: close the scratch scope after the last case, including filtered runs.
 afterAll(() => Effect.runPromise(Scope.close(scope, Exit.void)));
-// The clone and its baseline child build as the file loads, outside every
-// case's time limit: each case's limit holds only its own child.
 const { checkout, baseline } = await Effect.runPromise(
   Layer.buildWithScope(scratchLayer, scope).pipe(
     Effect.map((context) => Context.get(context, Scratch)),

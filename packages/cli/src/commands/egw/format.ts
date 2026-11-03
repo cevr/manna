@@ -28,19 +28,8 @@ export const publicationJson = (publication: Publication) => ({
   paragraphCount: Option.getOrNull(publication.paragraphCount),
 });
 
-/** How much of a hit's paragraph the printer shows.
- *
- *  The corpus already carries the whole paragraph on every hit — `snippet` is
- *  `nodesToText(nodes)`, not a windowed extract — so the 200-character cut is
- *  presentation, and the full text costs nothing extra to print. A reader
- *  checking a quotation needs the sentence the ellipsis was hiding, and the
- *  only way to get it was a second `lookup` call per hit. `--full` is that
- *  second call, removed. */
 export const SNIPPET_LIMIT = 200;
 
-/** One hit's text, cut to {@link SNIPPET_LIMIT} unless the reader asked for all
- *  of it. Shared by both printers so the flag cannot mean one thing in a local
- *  search and another in a hybrid one. */
 const snippetOf = (text: string, full: boolean): string => {
   if (text.length === 0) return '(no content)';
   if (full || text.length <= SNIPPET_LIMIT) return text;
@@ -82,16 +71,6 @@ export const formatRemoteHit = (hit: EGWSchemas.SearchHit, index: number): strin
   return `  ${index + 1}. ${ref}${title}${gated}\n     ${snippet}`;
 };
 
-// ---------------------------------------------------------------------------
-// §9 hybrid search
-// ---------------------------------------------------------------------------
-
-/** Why the vector leg did not run, in the terms a reader can act on.
- *
- *  §9.6 makes vector absence a *typed value on every result* rather than a
- *  silent degradation, and the point of that decision is lost if the CLI prints
- *  the same output whether or not half the search ran. Each reason maps to a
- *  different remedy, so each gets its own sentence. */
 const formatVectorAbsence = (reason: VectorAbsenceReason): string => {
   if (reason === 'absent') {
     return 'lexical only — no vector index installed (build one with `bun run build:vectors`)';
@@ -120,16 +99,7 @@ const formatSearchHit = (hit: SearchParagraphHit, index: number, full: boolean):
     provenance = `  [${legs.join(', ')}]`;
   }
   const snippet = snippetOf(hit.snippet, full);
-  // The book code stands in for a paragraph the corpus stores without a
-  // citation, exactly as `paragraphRefcode` above falls back to the publication
-  // code: the line still has to name where the text came from.
   const refcode = Option.getOrElse(hit.refcode, () => hit.bookCode);
-  // Says what the row is when it is not prose. A chapter title and a sentence
-  // print identically otherwise — a refcode and a line of text — and BM25
-  // normalizes by length, so a short title containing the whole query outranks
-  // the paragraphs that discuss it. Headings are 17.7% of the corpus and can be
-  // most of a result page: 32 of the top 40 for `latter rain`. The ranking
-  // puts both kinds after prose; the label says why a row is down there.
   let kind = '';
   if (hit.isHeading) {
     kind = ' [chapter]';
@@ -140,19 +110,6 @@ const formatSearchHit = (hit: SearchParagraphHit, index: number, full: boolean):
   return `  ${String(index + 1)}. ${refcode}${kind} (${hit.bookTitle} — ${hit.author})${provenance}\n     ${snippet}`;
 };
 
-/** The whole §9 result as lines, topics first.
- *
- *  §9.4 ranks topic hits as a group *above* the paragraph results rather than
- *  interleaving them, because a topic page and a paragraph answer different
- *  questions and a fused ordering would bury the page that summarizes what the
- *  paragraphs each say once. The printer keeps that structure visible.
- *
- *  **The topics come from the caller, not from the result.** Searching the
- *  writings does not read a topics artifact — a host with no wiki would
- *  otherwise pay a lookup inside the hot path on every query — so the command
- *  fetches the group beside its search and hands it here. Defaulted to empty
- *  because the group is genuinely optional on this surface: a caller with no
- *  wiki prints the ranking and nothing above it. */
 export const formatSearchResult = (
   result: SearchResult,
   full = false,
@@ -169,8 +126,6 @@ export const formatSearchResult = (
   if (topics.length > 0) {
     lines.push(`Topics (${String(topics.length)}):`);
     for (const topic of topics) {
-      // `/wiki/<slug>`, which is the route `route/codec.ts` decodes. A bare
-      // `/<slug>` is not a route this app has, so the printed link 404s.
       lines.push(`  • ${topic.title} [${topic.status}] — /wiki/${topic.slug}`);
     }
     lines.push('');

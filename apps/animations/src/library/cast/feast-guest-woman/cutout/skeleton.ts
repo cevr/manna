@@ -1,10 +1,3 @@
-// The woman's skeleton for her cut view, read in the kept view's pixels and
-// moved into its part sheet's frame (`framed`). She sits: lean from the hip at
-// her lap, neck, head, and each arm's shoulder, elbow and wrist, built by the
-// library's `standing`. Her veil's drape below her chin rides the lean with
-// her torso, as the feast mother's veil does; her robe, stool and sandals ride
-// the root; each arm's flap of the torso bends round its shoulder. Data.
-
 import type { Skeleton } from '@manna/film/core';
 import { type Body, framed, standing } from '../../../cutout/skeleton.ts';
 import { type FramedView, keptAt } from './frames.ts';
@@ -22,9 +15,7 @@ const BODY: Body = {
   band: { above: 50, below: 12, reach: 60 },
 };
 
-/** Her cut view's skeleton in its part sheet's frame, by the view's name in her sheet's views. */
 export const SKELETONS = {
-  // seated facing the viewer, each hand on its knee
   'poses-1': framed(
     keptAt('poses-1'),
     standing(BODY, {

@@ -29,9 +29,6 @@ const book = (
   ...classification,
 });
 
-/** `bookMatchesFilter` is what the vector leg resolves its `allow` set with, so
- *  these are the cases that decide which ranges of the index get scanned at
- *  all — not just which rows survive afterwards. */
 describe('bookMatchesFilter', () => {
   const test = it.effect;
 
@@ -40,8 +37,6 @@ describe('bookMatchesFilter', () => {
       expect(bookMatchesFilter(book('DA', { book_type: 'book' }), NO_FILTER)).toBe(true);
     }));
 
-  /** The corpus-level rule, which holds even with no filter: a paraphrase must
-   *  never be quotable as Ellen White's own sentence. */
   test('refuses a ModernEnglish paraphrase under every filter', () =>
     Effect.sync(() => {
       const paraphrase = book('BOE', { book_type: 'book', book_subtype: 'ModernEnglish' });
@@ -49,8 +44,6 @@ describe('bookMatchesFilter', () => {
       expect(bookMatchesFilter(paraphrase, undefined)).toBe(false);
     }));
 
-  /** The apparatus toggle is what the search app forces on, and it is the bulk
-   *  of the dead weight the vector scan used to pay for. */
   test('refuses the lookup apparatus when the toggle is set', () =>
     Effect.sync(() => {
       const filter = { ...NO_FILTER, excludeApparatus: true };
@@ -60,8 +53,6 @@ describe('bookMatchesFilter', () => {
       expect(bookMatchesFilter(book('DA', { book_type: 'book' }), filter)).toBe(true);
     }));
 
-  /** The White Estate's reading plans and study guides are typed `book`, so
-   *  only their author marks them. */
   test('refuses a study aid by its author when the toggle is set', () =>
     Effect.sync(() => {
       const plan = book('365N', { book_type: 'book', book_author: 'Ellen G. White Estate' });
@@ -69,9 +60,6 @@ describe('bookMatchesFilter', () => {
       expect(bookMatchesFilter(plan, NO_FILTER)).toBe(true);
     }));
 
-  /** An unclassified book is not *known* to be the thing the reader removed, so
-   *  an exclusion lets it through — the asymmetry the SQL side spells with its
-   *  `IS NULL` disjunctions. */
   test('lets an unclassified book through an exclusion but not an inclusion', () =>
     Effect.sync(() => {
       const unclassified = book('???');

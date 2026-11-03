@@ -1,11 +1,3 @@
-// The one place a derived sound's audio is made and measured: a code sound's
-// seed rendered (core/sfx.ts `renderSource`, pure), kept by its source, so a
-// sound measured for a check and then mixed, or placed many times, renders
-// once while it stays among the newest kept. A sound made here
-// is shared by everything that asks for it: its readers never write into it.
-// The film loader resolves a film's sounds and measures none; what reads how
-// they play measures the ones the film places here (`measuredFilm`).
-
 import { Cache, Context, Effect, Layer, Option } from 'effect';
 import type { Pcm } from '../core/audio.ts';
 import {
@@ -23,24 +15,18 @@ import {
 } from '../core/sfx.ts';
 import type { LoadedFilm, MeasuredFilm } from './film-repo.ts';
 
-/** The made sounds kept: the newest this many (a 30 s bed is about 5 MB). */
 const SOUNDS_KEPT = 64;
-/** The measures kept: one for each seed of each sound, a few numbers each. */
 const MEASURES_KEPT = 1024;
 
 interface SoundRenderService {
-  /** `source`'s audio: rendered once while it stays among the newest kept, and shared. */
   readonly pcm: (source: DerivedSource) => Effect.Effect<Pcm>;
-  /** `source` measured as the lock measures a made variant: its loudness, onset and hit. */
   readonly measure: (source: DerivedSource) => Effect.Effect<Measure>;
-  /** `sounds` with every seed of each derived sound among `names` measured, and no other. */
   readonly measured: (sounds: Sounds, names: Iterable<string>) => Effect.Effect<MeasuredSounds>;
 }
 
 export class SoundRender extends Context.Service<SoundRender, SoundRenderService>()(
   '@manna/film/tools/SoundRender',
 ) {
-  /** Its caches, one for the process: provided once, in `filmServices`. */
   static readonly layer = Layer.effect(
     SoundRender,
     Effect.gen(function* () {
@@ -83,12 +69,6 @@ export class SoundRender extends Context.Service<SoundRender, SoundRenderService
   );
 }
 
-/**
- * `film` with each seed of every derived sound its `sound.ts` places
- * measured, through the process's one renderer: what reads how a film's
- * sounds play (a mix plan, the check's lead-in, a seed's line) measures
- * here, where it reads. A seed already measured comes from the cache.
- */
 export const measuredFilm = Effect.fn('SoundRender.film')(function* (film: LoadedFilm) {
   const sounds = yield* (yield* SoundRender).measured(
     film.sounds,

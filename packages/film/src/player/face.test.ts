@@ -1,14 +1,7 @@
-// What waits for a film's picture faces (`pictureFacesWait`): nothing once
-// every one asked for has loaded, or none was asked for, so a page whose
-// faces are in draws at once; else each one still loading, failing when one
-// will not load. The UI faces (Geist and Geist Mono) are the chrome's, and
-// nothing waits for them.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Deferred, Effect, Exit, Fiber, Option } from 'effect';
 import { pictureFacesWait } from './face.ts';
 
-/** A face in a page's fonts: how it is shown, and its load, which the test settles. */
 const face = (
   display: FontDisplay,
   status: FontFaceLoadStatus,
@@ -21,10 +14,8 @@ const face = (
   family,
 });
 
-/** A page's fonts holding `faces`. */
 const fontsOf = (faces: ReadonlyArray<ReturnType<typeof face>>) => faces as unknown as FontFaceSet;
 
-/** A load the test settles. */
 const pending = () => {
   let settle = (_: boolean) => {};
   const loaded = new Promise<void>((resolve, reject) => {

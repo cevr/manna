@@ -1,12 +1,3 @@
-// The judged lint's command (`lint-judged.ts` runs it): its flag, the run
-// of every judged rule of the lint config over the repo's items, the
-// run's findings written by file for the plugin (`findings.ts`; one that
-// cannot be written is said on one line), the findings oxlint cannot report
-// printed, and the boundary that turns every failure but a gating finding and an interrupt
-// into one `reason=error` skip line and success. It takes its model as a
-// layer for the config's model name, so a test runs the whole command
-// in-process over a model of its own.
-
 import {
   Cause,
   Console,
@@ -30,7 +21,6 @@ import { LIMITS, detailOf, findingLine, judge, runLine } from './run.js';
 import { repoItems } from './sources.js';
 import { storeFileOf } from './store.js';
 
-/** Findings that fail the run: a rule at `error`, or any finding under `--strict`. */
 class GatingFindings extends Schema.TaggedError<GatingFindings>()('GatingFindings', {
   findings: Schema.Finite,
 }) {
@@ -39,16 +29,8 @@ class GatingFindings extends Schema.TaggedError<GatingFindings>()('GatingFinding
 
 const isGatingFindings = Schema.is(GatingFindings);
 
-/** A model layer for a model's name. */
 type ModelOf<E, R> = (model: string) => Layer.Layer<DecisionModel.DecisionModel, E, R>;
 
-/**
- * The findings file of a run that marked its answers seen on `day` (so it
- * expires no later than they do), from the store `store` names: each file the run read, by its hash,
- * with the findings of each rule whose every item there has an answer the
- * store keeps, for the plugin to report; a Markdown file oxlint never reads
- * holds none.
- */
 const findingsOf = (
   day: number,
   store: string,
@@ -84,7 +66,6 @@ const findingsOf = (
   ),
 });
 
-/** Writes `findings` to `file` whole, through a temporary file renamed over it; one that cannot be written is said on one line. */
 const writeFindings = (file: string, findings: Findings) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -97,7 +78,6 @@ const writeFindings = (file: string, findings: Findings) =>
     Effect.catch((error) => Console.error(`[judged] findings not kept detail=${error._tag}`)),
   );
 
-/** Lints the repo's items; `read` holds how many items the selectors found. */
 const lint = Effect.fn('lintJudged')(function* (strict: boolean, read: Ref.Ref<number>) {
   const config = yield* JudgedLint;
   const path = yield* Path.Path;
@@ -120,9 +100,6 @@ const lint = Effect.fn('lintJudged')(function* (strict: boolean, read: Ref.Ref<n
     findingsFileOf(root, config.settings.checkout),
     findingsOf(day, config.settings.store, model, outcomes, tree.files),
   );
-  // oxlint reports, at the rule's severity, every finding the plugin can
-  // read; the runner prints and gates on the rest (a series script, an
-  // answer the store could not keep), or on every one under --strict.
   const own = outcomes.map((outcome) => ({
     rule: outcome.rule,
     findings: outcome.findings.filter(
@@ -154,12 +131,6 @@ const commandOf = (read: Ref.Ref<number>) =>
     ({ strict }) => lint(strict, read),
   ).pipe(Command.withDescription("Run the judged lint rules over the repo's items"));
 
-/**
- * `program` with every failure but `GatingFindings` and an interrupt turned
- * into the run's `reason=error` skip line (`rule=*`: the failure is the
- * run's, before or across its rules; `detail=` the failure's tag, or
- * `defect`), the failure's first line on stderr, and success.
- */
 const failOpen =
   (read: Ref.Ref<number>) =>
   <A, E extends { readonly _tag: string }, R>(program: Effect.Effect<A, E, R>) =>
@@ -176,11 +147,6 @@ const failOpen =
       });
     });
 
-/**
- * The judged lint run with `args` in the repo at `cwd`, over `modelOf` the
- * config's model: the config and the model layer are built inside the
- * boundary, so their failure fails open too.
- */
 export const lintJudged = <E extends { readonly _tag: string }, R>(
   args: ReadonlyArray<string>,
   cwd: string,

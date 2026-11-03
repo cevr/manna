@@ -1,21 +1,3 @@
-/**
- * The follow on a whole hymn page (A7), drawn by react-native-web under
- * happy-dom: the sung line and word, how many lines draw again when a
- * syllable moves, a hand scroll's pause and its pill, and a seek.
- *
- * The page hears the player through its state alone, so a writable atom
- * stands in for the player's state. Reports step 200 ms at a time, inside
- * the clock's slack, as the player's polls do; a jump past the slack is a
- * seek. happy-dom lays nothing out, so each line measures itself at
- * `TOP + STEP * index` (at once, where the web measures on the next turn of
- * the loop) and the scroll's `scroll` is a spy: a scroll to `y` is a scroll
- * to line `(y - TOP) / STEP` (the page's height reads 0, so the line sits at
- * the top).
- *
- * `SyllableLine` is wrapped in a counter of its draws by line; the wrapper
- * draws the real line.
- */
-
 import { describe, expect, it, mock } from 'bun:test';
 import { RegistryContext } from '@effect/atom-react';
 import { Array as Arr, Duration, Effect, Match, Option, SubscriptionRef } from 'effect';
@@ -38,7 +20,6 @@ import { book } from './book';
 import { seeks } from './seeks';
 import type { Timeline } from './timeline';
 
-/** Draws of `SyllableLine` by its line index. */
 const draws = new Map<number, number>();
 const drawn = Syllables.SyllableLine;
 // oxlint-disable-next-line effect/noModuleMocks -- a line's draws are counted on the real page, so its line is wrapped; the wrapper draws the real line, and no other test file shares this file's process (test:slow runs it alone).
@@ -58,18 +39,15 @@ const timelineOf = (number: number): Timeline => Option.getOrThrow(book.of(numbe
 
 const lineOf = (timeline: Timeline, k: number) => Option.getOrThrow(Arr.get(timeline.lines, k));
 
-/** The first played line with syllable times whose sung word changes inside it. */
 const wordLineOf = (timeline: Timeline) => {
   const k = timeline.lines.findIndex(
     (line) => line.played && !line.even && new Set(line.words).size >= 2,
   );
   const line = lineOf(timeline, k);
-  /** The first syllable of the line's second word. */
   const second = line.words.findIndex((word) => word !== line.words[0]);
   return { k, line, second, at: Option.getOrThrow(Arr.get(line.syllables, second)) };
 };
 
-/** The first hymn with a played line that has no syllable times (a Plain part's or one held to even shares), and that line. */
 const wholeLineOf = () =>
   Option.getOrThrow(
     Arr.findFirst(Arr.range(1, 695), (number) =>
@@ -87,10 +65,6 @@ const wholeLineOf = () =>
     ),
   );
 
-/**
- * Hymn `number`'s page over a player whose state the test sets, with `stanzas` chosen (every
- * one by default); it unmounts, and the choice goes back to every stanza, when the `using` ends.
- */
 const mount = (number: number, chords: boolean = false, stanzas: Choice = ALL) => {
   const hymn = Option.getOrThrow(hymnAt(String(number)));
   const track = { number, title: hymn.title };
@@ -126,7 +100,6 @@ const mount = (number: number, chords: boolean = false, stanzas: Choice = ALL) =
   Object.assign(scroll, {
     scroll: (to: ScrollToOptions) => scrolled.push(((to.top ?? 0) - TOP) / STEP),
   });
-  /** The player is at `ms` into the hymn: playing, or paused. */
   const at = (ms: number, kind: 'Playing' | 'Paused' = 'Paused') => {
     const told = { track, at: ms / 1000, length: Option.none<number>() };
     const player = Match.value(kind).pipe(
@@ -139,10 +112,6 @@ const mount = (number: number, chords: boolean = false, stanzas: Choice = ALL) =
     lines().flatMap((line, k) =>
       Arr.filter([k], () => line.getAttribute('aria-selected') === 'true'),
     );
-  /**
-   * In line `k`, the colour of each syllable (where the chord names above
-   * them keep their own colour), or of each word in a Plain line.
-   */
   const colours = (k: number) =>
     Option.match(Arr.get(lines(), k), {
       onNone: () => [],
@@ -154,7 +123,6 @@ const mount = (number: number, chords: boolean = false, stanzas: Choice = ALL) =
     });
   const pill = () =>
     Option.fromNullishOr(host.querySelector<HTMLElement>('[aria-label="Resume follow"]'));
-  /** A hand scroll as the web sees it: a wheel on the page (`hand.ts`). */
   const drag = () =>
     act(() => {
       scroll.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }));
@@ -181,7 +149,6 @@ const mount = (number: number, chords: boolean = false, stanzas: Choice = ALL) =
 describe('the follow on a hymn page', () => {
   it('marks only the sung line, and in it only the sung syllable in the accent, with chords off and on (F1c)', () => {
     const { k, line, second, at } = wordLineOf(timelineOf(100));
-    // The second word's first syllable, then the one after it inside a word when there is one.
     const inWord = line.words.findIndex((word, s) => s > 0 && word === line.words[s - 1]);
     const steps = [{ s: second, ms: at }];
     if (inWord > 0)
@@ -192,7 +159,6 @@ describe('the follow on a hymn page', () => {
       for (const { s, ms } of steps) {
         page.at(ms);
         expect(page.selected()).toEqual([k]);
-        // One element per syllable in both views: the sung one lit, the rest of the line muted.
         expect(page.colours(k)).toEqual(
           line.syllables.map((_, x) =>
             Match.value(x === s).pipe(
@@ -225,7 +191,6 @@ describe('the follow on a hymn page', () => {
     expect(bar.getAttribute('aria-valuenow')).toBe('26');
     expect(bar.getAttribute('aria-valuetext')).toBe('14 seconds to the first line');
     expect(page.selected()).toEqual([]);
-    // Drawn absolutely after line 0, in a box that holds line 0 either way: nothing moves.
     expect(getComputedStyle(bar).position).toBe('absolute');
     expect(bar.parentElement).toBe(parent);
     expect(parent?.firstElementChild).toBe(lineZero());
@@ -285,13 +250,11 @@ describe('the follow on a hymn page', () => {
   });
 
   it('follows only the chosen stanzas, in the sung time the player reads, and marks no skipped line', () => {
-    // Hymn 78 with stanzas 1 and 3: lines 0-7 and 16-23 sung, 8-15 and 24-31 skipped.
     const timeline = timelineOf(78);
     const sections = Option.getOrThrow(hymnAt('78')).sections;
     const cut = cutOf(timeline, keptOf(sections, [1, 3])).timeline;
     using page = mount(78, false, [1, 3]);
     expect(page.lines().length).toBe(timeline.lines.length);
-    // Line 16 starts in sung time where line 8 starts in the recording's.
     expect(lineOf(cut, 16).start).toBe(lineOf(timeline, 8).start);
     for (const k of [0, 7, 16, 23]) {
       page.at(lineOf(cut, k).start + 1, 'Playing');
@@ -323,9 +286,6 @@ describe('the follow on a hymn page', () => {
         page.at(start, 'Playing');
         page.drag();
         const before = page.scrolled.length;
-        // The player asks its playback for a place 100 ms on (`seeks.ts` counts it); the
-        // count's atom hears the change on its own fiber, so the page is let run until the pill
-        // goes, a turn at a time, for at most 100 turns.
         yield* SubscriptionRef.update(seeks, (n) => n + 1);
         const turn = Effect.promise(() => act(() => Effect.runPromise(Effect.yieldNow)));
         yield* Effect.repeat(turn, { until: () => Option.isNone(page.pill()), times: 100 });

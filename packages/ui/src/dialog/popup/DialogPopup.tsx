@@ -1,10 +1,3 @@
-// Upstream: packages/react/src/dialog/popup/DialogPopup.tsx
-//
-// The dialog's `role="dialog"` container, labelled by its title and
-// described by its description. Focus moves into it on open (the first
-// tabbable element) and, on close, back to what had it before the owner
-// opened the dialog; a modal dialog keeps Tab inside. Arrow, Home and End
-// keys stop here, so a composite widget around the dialog does not move.
 import type { JSX } from '@solidjs/web';
 import { omit, untrack } from 'solid-js';
 
@@ -27,7 +20,6 @@ interface DialogPopupState {
 
 interface DialogPopupProps extends BaseUIComponentProps<'div', DialogPopupState> {}
 
-/** Stops the composite navigation keys from reaching a widget around the popup. */
 function stopCompositeKeys(event: KeyboardEvent) {
   if (COMPOSITE_KEYS.has(event.key)) {
     event.stopPropagation();
@@ -39,13 +31,11 @@ interface DialogPopupFocusProps {
   children: JSX.Element;
 }
 
-/** The focus manager the popup renders in. */
 function DialogPopupFocus(props: DialogPopupFocusProps): JSX.Element {
   const store = props.store;
   return (
     <FloatingFocusManager
       context={store.floatingRootContext}
-      // The owner's `open` opens it: a programmatic open, so focus returns to what had it.
       openInteractionType={null}
       disabled={!store.mounted()}
       closeOnFocusOut={!store.disablePointerDismissal()}
@@ -57,7 +47,6 @@ function DialogPopupFocus(props: DialogPopupFocusProps): JSX.Element {
   );
 }
 
-/** The popup's element props: its id, labels, role and keys. */
 function dialogPopupProps(store: DialogStore, componentProps: Pick<DialogPopupProps, 'id'>) {
   return {
     get id() {
@@ -75,7 +64,6 @@ function dialogPopupProps(store: DialogStore, componentProps: Pick<DialogPopupPr
   };
 }
 
-/** Calls the root's `onOpenChangeComplete(true)` once the popup's enter animations finish. */
 function useDialogOpenChangeComplete(store: DialogStore) {
   useOpenChangeComplete({
     open: store.open,
@@ -88,10 +76,6 @@ function useDialogOpenChangeComplete(store: DialogStore) {
   });
 }
 
-/**
- * A container for the dialog contents.
- * Renders a `<div>` element.
- */
 export function DialogPopup(componentProps: DialogPopupProps): JSX.Element {
   const { store, popupProps } = useDialogRootContext();
   useDialogPortalContext();

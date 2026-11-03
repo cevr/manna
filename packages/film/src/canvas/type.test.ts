@@ -1,13 +1,8 @@
-// `measure` answers in one measurement how wide `write` sets a line glyph by
-// glyph, so a plate or a wrap sized by it fits the lettering exactly: kerned,
-// tracked, and with combining marks kept on their letter.
-
 import { describe, expect, test } from 'bun:test';
 import { recorder } from './fixtures/stand-in.ts';
 import { type Probe, probing } from './probe.ts';
 import { measure, write } from './type.ts';
 
-/** Kerned advances: every glyph 0.55 em, and "AV" pulls together by 0.08 em. */
 const kerned = (font: string, text: string) => {
   const size = Number(/(\d+)px/.exec(font)?.[1] ?? 10);
   const letters = text.normalize('NFC').replace(/\p{M}/gu, '');
@@ -17,7 +12,6 @@ const kerned = (font: string, text: string) => {
   return width;
 };
 
-/** The stand-in, measuring with `kerned` in its current font. */
 const context = (): CanvasRenderingContext2D => recorder(1920, 1080, { measure: kerned }).ctx;
 
 const hand = { boil: 0, seed: 1 };
@@ -37,10 +31,6 @@ describe('measure', () => {
   });
 });
 
-/**
- * The stand-in, measuring with `kerned`, counting the glyphs filled and
- * outlined and the clips set (`onCall`), and keeping each outline's width.
- */
 const counting = () => {
   const drawn = { fill: 0, outline: 0, clips: 0 };
   const widths: number[] = [];

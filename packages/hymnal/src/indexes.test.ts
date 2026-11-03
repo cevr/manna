@@ -1,11 +1,3 @@
-/**
- * The back-matter index checks (`scripts/indexes.ts`) on a small made-up
- * book of 12 hymns: every index file once, consistent, so the checks find
- * nothing; then each mutation the checks must catch, applied at every entry
- * it applies to, through the same decode and checks the CLI runs. No real
- * entry, name or hymn text: the topics, tunes, people and books are invented.
- */
-
 import { describe, expect, it } from 'bun:test';
 
 import {
@@ -28,19 +20,15 @@ import {
 } from '../scripts/indexes.js';
 import type { IndexName } from './indexes.js';
 
-/** A made-up file as plain JSON, mutated in place before it is written out as the text the CLI reads. */
 // oxlint-disable-next-line effect/noUnsafeDictionaryType -- a fixture the cases mutate key by key; the decode under test parses it
 type Json = Record<string, unknown>;
 
-/** The file's text, as the CLI reads it from disk. */
 // oxlint-disable-next-line effect/noGlobals -- the fixture's own encoder: the text is the decode's input under test
 const text = (file: Json) => JSON.stringify(file);
 
-/** n as three letters, in number order: titles that sort as their numbers do. */
 const word = (n: number) =>
   String.fromCharCode(97 + Math.floor(n / 676), 97 + (Math.floor(n / 26) % 26), 97 + (n % 26));
 
-/** Two made-up books: book 1 of two chapters (10 and 5 verses), book 2 of one (8). */
 const CHAPTERS = new Map([
   ['1:1', 10],
   ['1:2', 5],
@@ -81,7 +69,6 @@ const across = () => ({
   to: { chapter: 2, verse: 2 },
 });
 
-/** The made-up book's indexes, consistent with `ctx`. */
 const book = (): Record<IndexName, Json> => ({
   topical: {
     ...head('topical', 'MADE-UP TOPICS', [
@@ -196,7 +183,6 @@ const book = (): Record<IndexName, Json> => ({
   },
 });
 
-/** Each file decoded once per distinct content: a mutant decodes only the file it changed. */
 const decodedFiles = new Map<string, ReturnType<typeof decodeIndexes>>();
 const decodeOne = (name: IndexName, file: string) => {
   const key = `${name} ${file}`;
@@ -207,7 +193,6 @@ const decodeOne = (name: IndexName, file: string) => {
   return decoded;
 };
 
-/** The CLI's decode and checks over the files given. */
 const problemsOf = (files: Partial<Record<IndexName, Json>>): ReadonlyArray<Problem> => {
   const each = (Object.keys(files) as Array<IndexName>).map((name) =>
     decodeOne(name, text(files[name] ?? {})),
@@ -220,7 +205,6 @@ const problemsOf = (files: Partial<Record<IndexName, Json>>): ReadonlyArray<Prob
 
 const arr = (o: Json | undefined, key: string) => (o?.[key] ?? []) as Array<Json>;
 
-/** Every numbered entry of an index's JSON as [object, key], in the order the checks place them. */
 const numberSlots = (name: IndexName, file: Json): Array<[Json, string]> => {
   const each = (rows: Array<Json>, key: string) => rows.map((r): [Json, string] => [r, key]);
   switch (name) {
@@ -253,7 +237,6 @@ const numberSlots = (name: IndexName, file: Json): Array<[Json, string]> => {
 
 const NAMES = Object.keys(book()) as ReadonlyArray<IndexName>;
 
-/** Runs `mutate` on a fresh copy at each place `places` gives; each must leave a problem of `check`. */
 const everyMutant = (
   places: (b: ReturnType<typeof book>) => number,
   mutate: (b: ReturnType<typeof book>, i: number) => void,
@@ -423,7 +406,6 @@ describe('each mutation is caught, at every entry it applies to', () => {
         rows[i + 1] = a;
       }
     };
-    /** Swapping must keep each row's page, so only the order changes. */
     const swapKeepPages = (rows: Array<Json>, i: number) => {
       const pages = rows.map((r) => r['page']);
       swap(rows, i);
@@ -467,7 +449,6 @@ describe('each mutation is caught, at every entry it applies to', () => {
       );
       expect({ label, missed: result.missed }).toEqual({ label, missed: [] });
     }
-    // metrical: a metre's tunes out of order
     const b = book();
     const metre = arr(b.metrical, 'metres')[0] as Json;
     metre['tunes'] = [{ name: 'Zinnia', hymns: refs(21, [1]) }, ...(metre['tunes'] as Array<Json>)];
@@ -488,7 +469,6 @@ describe('each mutation is caught, at every entry it applies to', () => {
       'sections',
     );
     expect(dropTopic.missed).toEqual([]);
-    // an alias's pair is another name of a hymn the main names list: no check reaches its loss
     const mainLists = (b: ReturnType<typeof book>, name: 'tunes' | 'metrical') =>
       name === 'tunes'
         ? arr(b.tunes, 'tunes').filter((t) => t['alias'] === undefined)
@@ -509,7 +489,6 @@ describe('each mutation is caught, at every entry it applies to', () => {
   });
 
   it('a section the index prints under another topic name is held to that topic’s hymns', () => {
-    // `Love of God` is a section of SECTION_TOPICS: the topic `GOD THE FATHER: Love` holds it
     const sectionsOf = (b: ReturnType<typeof book>) => {
       const decoded = decodeOne('topical', text(b.topical));
       const named: Context = {
@@ -539,7 +518,7 @@ describe('each mutation is caught, at every entry it applies to', () => {
         (b) => numberSlots(name, b[name]).length,
         (b, i) => {
           const [obj] = numberSlots(name, b[name])[i] ?? [{} as Json];
-          obj['page'] = 999; // it names no page of the index now: its page's count is short
+          obj['page'] = 999;
         },
         'pages',
       );
@@ -569,7 +548,6 @@ describe('each mutation is caught, at every entry it applies to', () => {
   it('a tune that bears its hymn’s title may stay out of the alphabetical index', () => {
     const b = book();
     const alpha = arr(b.tunes, 'tunes');
-    // the alphabetical index names hymn 3's tune Alder (alias Elm), the metres by its title
     const [first] = arr(b.metrical, 'metres') as Array<Json>;
     (first as Json)['tunes'] = [
       { name: 'Alder', hymns: refs(21, [1, 2, 4, 5, 6]) },
@@ -622,7 +600,6 @@ describe('each mutation is caught, at every entry it applies to', () => {
 });
 
 describe('a Scripture direction and its twin in the other index', () => {
-  /** Each direction problem as [index, its hymn and stanza]. */
   const unmatched = (b: ReturnType<typeof book>) =>
     problemsOf(b)
       .filter((p) => p.check === 'directions')
@@ -644,7 +621,6 @@ describe('a Scripture direction and its twin in the other index', () => {
   });
 
   it('differ when the book, the stanza or the verses differ', () => {
-    // each: the mutation, then the reference entry left with no twin
     const cases: ReadonlyArray<[string, (b: ReturnType<typeof book>) => void, string]> = [
       ['another book', (b) => (byHymn(b, 2)['passage'] = at(2, 1, [1, 1])), '2a'],
       ['another stanza', (b) => (byHymn(b, 3)['stanza'] = 'a'), '3r'],

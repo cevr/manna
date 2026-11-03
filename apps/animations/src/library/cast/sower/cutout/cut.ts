@@ -1,23 +1,3 @@
-// The sower's kept views cut into parts (`cutParts`, @manna/film's part sheet):
-// each part his own pixels, front to back, so that a part can move while every
-// pixel at rest stays the sheet's. Parts are named from his own side:
-// `armRight` is his right arm, on the viewer's left from in front. He has no
-// rig, so no part labels: each round hand is a disc round its whole ink ring,
-// so no piece of it stays behind when the arm moves. The cuts the sheet does
-// not ink (each sleeve's inner edge, a soft crease; the hem; each sandal) are
-// polygons read off crops of the view. A sleeve takes its cap (a disc round
-// its shoulder) above its shoulder, the rest of the shoulder the torso's. His
-// head is the rows above his chin. Below the hem the sandals, each its top on
-// the hem's lowest row and its foot at its sole's ink, and the ground shadow
-// behind them is a part of its own. The robe is everything below his belt but
-// the seed bag, which hangs from his body and leans with the torso. Each view
-// names the parts a pose moves, and the words okra repaints what they hide by
-// (`HIDDEN`, read by `film concept parts`, which writes `sheets/<view>/`). The
-// lines are read in the kept view's pixels; the shared cut table
-// (`library/cutout/table.ts`) lays them in each view's part sheet frame, its
-// kept box padded (`frames.ts`). Data: the rules and the table are the shared
-// module's.
-
 import type { HiddenEntry, PartCut, PartRule, SheetClean } from '@manna/film/tools';
 import { Record as Records } from 'effect';
 import { type PaperRim, clearPaperRim } from '../../../cutout/clean.ts';
@@ -39,13 +19,10 @@ import { POSES_PAPERS, TURNAROUND_PAPERS } from './papers.ts';
 
 export { FRAMES, JOINTS };
 
-/** A view of his, by its name in his sheets' views. */
 type CutView = keyof typeof FRAMES;
 
-/** From in front: the hem's line, lowest between his feet. */
 const FRONT_HEM: Hem = [518, 126, 6, 90];
 const FRONT_RIGHT: Sleeve = {
-  // his right sleeve (the viewer's left): its inner edge, a linen-to-olive crease the sheet paints without ink
   inner: [
     [56, 186],
     [56, 250],
@@ -59,7 +36,6 @@ const FRONT_RIGHT: Sleeve = {
   side: 'left',
 };
 const FRONT_LEFT: Sleeve = {
-  // his left sleeve (the viewer's right): its inner edge
   inner: [
     [199, 186],
     [199, 210],
@@ -115,10 +91,8 @@ const FRONT: PartCut = {
       unless: frontLeft.unless,
       pivot: JOINTS.front.shoulderLeft,
     },
-    // above the chin
     { name: 'head', take: [box(-1, -1, FAR, 186)] },
     {
-      // its top under the hem's lowest row, column by column
       name: 'footRight',
       take: [
         {
@@ -162,19 +136,11 @@ const FRONT: PartCut = {
       unless: [underSole(FRONT_SOLES.left)],
     },
     { name: 'shadow', role: 'shadow', take: [belowHem(...FRONT_HEM)] },
-    // below the belt, but the seed bag
     { name: 'robe', take: [box(-1, 331, FAR, FAR)], unless: [box(157, 309, 206, 413)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
-/**
- * From three-quarters, turned to the viewer's left: his right arm is the near
- * one, his left (the far one) holds the seed bag. The hem's line, column by
- * column from the sheet's left edge: the tunic's side, the hem over his right
- * sandal, the hem between his feet, over his left sandal, the tunic's side.
- * His sandals take what lies under it in their columns, the shadow the rest.
- */
 const TQL_HEM = {
   right: [
     [28, 509],
@@ -195,7 +161,6 @@ const TQL_HEM = {
   ],
 } as const;
 const TQL_RIGHT: Sleeve = {
-  // his right sleeve (the viewer's left, the near one): its inner edge, the linen-to-olive crease
   inner: [
     [49, 190],
     [48.5, 200],
@@ -217,7 +182,6 @@ const TQL_RIGHT: Sleeve = {
   side: 'left',
 };
 const TQL_LEFT: Sleeve = {
-  // his left sleeve (the viewer's right, the far one): its inner edge, an olive-to-linen crease; the seed bag's right ink lies on it below his belt
   inner: [
     [172.5, 181],
     [169.5, 190],
@@ -236,7 +200,6 @@ const TQL_LEFT: Sleeve = {
     [176, 346],
   ],
   shoulder: JOINTS.threeQuarterLeft.shoulderLeft,
-  // 8, not the near sleeve's 12: a wider cap borders the headcloth's tail, so the paint under it would fall to the head, which lies in front of this arm
   cap: 8,
   side: 'right',
 };
@@ -274,11 +237,9 @@ const THREE_QUARTER_LEFT: PartCut = {
       unless: tqlRight.unless,
       pivot: JOINTS.threeQuarterLeft.shoulderRight,
     },
-    // above the chin, and the headcloth's tail that hangs over his left sleeve's top
     { name: 'head', take: [box(-1, -1, FAR, 169), box(187, 150, 213, 205)] },
     {
       name: 'armLeft',
-      // the disc stops at the seed bag's walnut edge, left of the hand and under it
       take: [...tqlLeft.take, { disc: { c: [199.5, 369.5], r: 23.5 } }],
       unless: tqlLeft.unless,
       pivot: JOINTS.threeQuarterLeft.shoulderLeft,
@@ -309,20 +270,11 @@ const THREE_QUARTER_LEFT: PartCut = {
         },
       ],
     },
-    // below the belt, but the seed bag
     { name: 'robe', take: [box(-1, 330, FAR, FAR)], unless: [box(132, 304, 202, 418)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
-/**
- * The back view, the parts named from his own side: from behind, his right
- * arm hangs on the viewer's right and his left on the viewer's left, its hand
- * over the seed bag. The headcloth hangs over his neck and both sleeves' tops;
- * the olive mantle covers his back. The hem's line, column by column from the
- * sheet's left edge: the tunic's side, the hem over his left sandal, between
- * his feet, over his right sandal, the tunic's side.
- */
 const BACK_HEM = {
   left: [
     [40, 510],
@@ -346,7 +298,6 @@ const BACK_HEM = {
   ],
 } as const;
 const BACK_RIGHT: Sleeve = {
-  // his right sleeve (the viewer's right): its inner edge, the olive-to-linen crease, to the cuff
   inner: [
     [200, 200],
     [200, 210],
@@ -370,7 +321,6 @@ const BACK_RIGHT: Sleeve = {
   side: 'right',
 };
 const BACK_LEFT: Sleeve = {
-  // his left sleeve (the viewer's left): its inner edge, the linen-to-olive crease; the seed bag's left ink lies beside it below y 318
   inner: [
     [56, 200],
     [56, 210],
@@ -415,7 +365,6 @@ const BACK_SOLES = {
 
 const BACK: PartCut = {
   parts: [
-    // the headcloth, above its bottom ink, which lies over both sleeves' tops and the strap's
     {
       name: 'head',
       take: [
@@ -447,7 +396,6 @@ const BACK: PartCut = {
     },
     {
       name: 'armLeft',
-      // the disc reaches the ring's right ink, which it shares with the seed bag's left edge
       take: [...backLeft.take, { disc: { c: [29, 370], r: 24 } }],
       unless: backLeft.unless,
       pivot: JOINTS.back.shoulderLeft,
@@ -478,21 +426,11 @@ const BACK: PartCut = {
         },
       ],
     },
-    // below his hip's row, as in the front, but the seed bag
     { name: 'robe', take: [box(-1, 331, FAR, FAR)], unless: [box(32, 316, 112, 427)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
-/**
- * In profile to the viewer's left: only his left arm shows, the near one,
- * over his body's side, with the body on both sides of it (the mantle's front
- * panel before its front edge, the mantle's edge band and his back behind its
- * back edge). The hem's line, column by column from the sheet's left edge:
- * the tunic's front side, the hem over his leading sandal, the hem between
- * his feet, over his trailing sandal, the tunic's back side. Which sandal is
- * his left is read from the turn: the near, leading one.
- */
 const PL_HEM = {
   left: [
     [10, 510],
@@ -514,7 +452,6 @@ const PL_HEM = {
   ],
 } as const;
 const PL_LEFT: Sleeve = {
-  // his left sleeve's back edge: the ink it shares with the headcloth's tail, then a linen-to-walnut crease, then thin ink down to the cuff's slant
   inner: [
     [124, 182],
     [130, 190],
@@ -532,7 +469,6 @@ const PL_LEFT: Sleeve = {
   side: 'left',
 };
 const plLeft = sleeve(PL_LEFT);
-/** Before the sleeve's front edge: the mantle's front panel, his belt and his body's front, down past the cuff. */
 const PL_FRONT = {
   polygon: [
     [-1, 170],
@@ -571,12 +507,10 @@ const PROFILE_LEFT: PartCut = {
   parts: [
     {
       name: 'armLeft',
-      // the hand's disc stops at its right ink, which lies on the seed bag
       take: [...plLeft.take, { disc: { c: [92.5, 369], r: 26 } }],
       unless: [...plLeft.unless, PL_FRONT],
       pivot: JOINTS.profileLeft.shoulderLeft,
     },
-    // above the chin, and the headcloth's tail that hangs behind his left sleeve's top
     { name: 'head', take: [box(-1, -1, FAR, 169), box(112, 150, 175, 228)] },
     {
       name: 'footLeft',
@@ -597,21 +531,11 @@ const PROFILE_LEFT: PartCut = {
         },
       ],
     },
-    // below the belt, but the seed bag
     { name: 'robe', take: [box(-1, 330, FAR, FAR)], unless: [box(78, 328, 165, 428)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
-/**
- * In profile to the viewer's right: only his right arm shows, the near one,
- * over his body's side, with the body on both sides of it (his back and the
- * headcloth's tail behind its back edge, the mantle's front panel and the
- * strap before its front edge). The hem's line, column by column from the
- * sheet's left edge: the tunic's back side, the hem over his trailing sandal,
- * between his feet, over his leading sandal, the tunic's front side. Which
- * sandal is his right is read from the turn: the near, leading one.
- */
 const PR_HEM = {
   back: [
     [13, 509],
@@ -638,7 +562,6 @@ const PR_HEM = {
   ],
 } as const;
 const PR_RIGHT: Sleeve = {
-  // his right sleeve's back edge, at its ink's outer side: from the shoulder's curve down the ink beside the headcloth's tail, then where it meets his back's outline, in to the cuff and down round its ink, whose lower corner runs to y356
   inner: [
     [46, 180],
     [38, 190],
@@ -661,7 +584,6 @@ const PR_RIGHT: Sleeve = {
   side: 'right',
 };
 const prRight = sleeve(PR_RIGHT);
-/** Past the sleeve's front edge (its shoulder ink, then the crease, then the cuff's ink): the strap, the mantle's front panel, his belt and his body's front, down past the cuff. */
 const PR_FRONT = {
   polygon: [
     [FAR, 170],
@@ -696,12 +618,10 @@ const PROFILE_RIGHT: PartCut = {
   parts: [
     {
       name: 'armRight',
-      // the hand's disc takes its whole ink ring (x47-102, y345-394)
       take: [...prRight.take, { disc: { c: [74.5, 369], r: 28 } }],
       unless: [...prRight.unless, PR_FRONT],
       pivot: JOINTS.profileRight.shoulderRight,
     },
-    // above the chin, and the headcloth's tail that hangs behind his right sleeve's top
     { name: 'head', take: [box(-1, -1, FAR, 169), box(-1, 150, 40, 233)] },
     {
       name: 'footRight',
@@ -710,7 +630,6 @@ const PROFILE_RIGHT: PartCut = {
     },
     {
       name: 'footLeft',
-      // the tunic's back side (x13-26) has no sandal under it
       take: [{ polygon: [[27, 517], ...PR_HEM.left, [102, 532], [102, 575], [27, 575]] }],
       unless: [underSole(PR_SOLES.left)],
     },
@@ -731,20 +650,11 @@ const PROFILE_RIGHT: PartCut = {
         },
       ],
     },
-    // below the belt; the seed bag hangs on his far hip and does not show
     { name: 'robe', take: [box(-1, 331, FAR, FAR)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
-/**
- * From three-quarters, turned to the viewer's right: his right arm is the near
- * one, on the viewer's left, with the headcloth's tail over its shoulder; his
- * left arm, the far one, hangs on the viewer's right with the seed bag mostly
- * behind it. The hem's line, column by column from the sheet's left edge: the
- * tunic's side, the hem over his right sandal, between his feet, over his left
- * sandal, the tunic's side.
- */
 const TQR_HEM = {
   right: [
     [29, 511],
@@ -765,7 +675,6 @@ const TQR_HEM = {
   ],
 } as const;
 const TQR_RIGHT: Sleeve = {
-  // his right sleeve (the viewer's left, the near one): its inner edge, the linen-to-dark-olive crease, then the cuff's ink
   inner: [
     [67.5, 200],
     [68.5, 210],
@@ -790,7 +699,6 @@ const TQR_RIGHT: Sleeve = {
   side: 'left',
 };
 const TQR_LEFT: Sleeve = {
-  // his left sleeve (the viewer's right, the far one): its inner edge, a dark-olive-to-linen crease, then the cuff's ink
   inner: [
     [180.5, 200],
     [181.5, 210],
@@ -842,7 +750,6 @@ const TQR_SOLES = {
 
 const THREE_QUARTER_RIGHT: PartCut = {
   parts: [
-    // above the chin (the face's lower edge, then the beard's at its front), and the headcloth's tail that hangs over his right sleeve's top, down to its bottom ink
     {
       name: 'head',
       take: [
@@ -854,7 +761,6 @@ const THREE_QUARTER_RIGHT: PartCut = {
     },
     {
       name: 'armRight',
-      // the hand's disc takes its whole ink ring (x7-61, y345-393)
       take: [...tqrRight.take, { disc: { c: [34, 369], r: 26.5 } }],
       unless: tqrRight.unless,
       pivot: JOINTS.threeQuarterRight.shoulderRight,
@@ -891,28 +797,11 @@ const THREE_QUARTER_RIGHT: PartCut = {
         },
       ],
     },
-    // below the belt, but the seed bag on his far hip
     { name: 'robe', take: [box(-1, 330, FAR, FAR)], unless: [box(160, 322, 200, 420)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
-/**
- * His kept pose scattering seed (poses-1, on his kept poses sheet), turned
- * three-quarters to the viewer's left, cut as drawn. His right arm (the far
- * one, on the viewer's left) is flung out level: its sleeve, cuff and round
- * hand fill the band from above its top ink to below its lower ink, out to
- * the sheet's left edge, its root on his body's front outline. His left arm
- * (the near one) hangs, its hand over the seed bag; its inner edge is the
- * sleeve's inner ink, a crease above it. The ten seeds falling from his far
- * hand stand free on the paper, one part. The hem's line, column by column:
- * the robe's front lifting over his leading foot, the hem over it, between
- * his feet, over his trailing foot, the robe's back. His leading foot (the
- * viewer's left) is taken as his right, the trailing one as his left. This
- * sheet's outline ink is [48, 30, 15] (measured); a framed view's cut reads
- * none, so `INK` below stays the turnaround's. The view is 398 px wide, so its right edges
- * run to twice `FAR`, past its pad.
- */
 const P1_HEM = {
   right: [
     [153, 571],
@@ -933,7 +822,6 @@ const P1_HEM = {
   ],
 } as const;
 const P1_LEFT: Sleeve = {
-  // his left sleeve (the viewer's right, the near one): a crease above its inner ink, then the ink's left edge down to the cuff
   inner: [
     [300, 190],
     [300.5, 235],
@@ -964,7 +852,6 @@ const P1_SOLES = {
     [340, 360, 582],
   ],
 } as const satisfies Readonly<Record<string, SoleRuns>>;
-/** The ten seeds' boxes (measured), each padded 2 px. */
 const P1_SEEDS = [
   box(17, 288, 31, 311),
   box(47, 308, 62, 330),
@@ -980,7 +867,6 @@ const P1_SEEDS = [
 
 const POSES_1: PartCut = {
   parts: [
-    // above the far sleeve's top ink, but for a 10 px band over it and an 8 px column of the beard's left edge beside its root that torso takes, so the paint laid under the sleeve's root has a part behind it (torso), never head; the face and beard over its root, down to the beard's lower ink; the headcloth's tail over his left sleeve's top
     {
       name: 'head',
       take: [
@@ -992,7 +878,6 @@ const POSES_1: PartCut = {
     },
     {
       name: 'armLeft',
-      // the hand's disc takes its whole ink ring (x329-392, y337-392)
       take: [...p1Left.take, { disc: { c: [360.5, 361], r: 32 } }],
       unless: p1Left.unless,
       pivot: JOINTS['poses-1'].shoulderLeft,
@@ -1000,7 +885,6 @@ const POSES_1: PartCut = {
     { name: 'seed', take: P1_SEEDS },
     {
       name: 'armRight',
-      // above its top ink, along its lower ink (3 px under the knots, past the ink) out past the cuff, its root on his body's front outline; the hand ring (x0-63, y184-247) lies inside
       take: [
         {
           polygon: [
@@ -1038,20 +922,11 @@ const POSES_1: PartCut = {
         },
       ],
     },
-    // below the belt, but the seed bag on his near hip
     { name: 'robe', take: [box(-1, 330, FAR, FAR)], unless: [box(249, 330, 374, 453)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
-/**
- * Standing from behind, on his kept poses sheet: as the back view, his left
- * arm hangs on the viewer's left, its hand over the seed bag, and his right on
- * the viewer's right. The headcloth hangs as a cape over both sleeves' tops to
- * a point under which the strap runs; the olive mantle covers his back. The
- * hem's line, column by column, is the hem ink's lowest row: over his left
- * sandal, between his feet at column 147, over his right sandal.
- */
 const P2_HEM = {
   left: [
     [48, 540],
@@ -1073,7 +948,6 @@ const P2_HEM = {
   ],
 } as const;
 const P2_RIGHT: Sleeve = {
-  // his right sleeve (the viewer's right): its inner ink's inner side, a crease with no ink above row 270, to the cuff
   inner: [
     [222, 200],
     [222, 270],
@@ -1086,7 +960,6 @@ const P2_RIGHT: Sleeve = {
   side: 'right',
 };
 const P2_LEFT: Sleeve = {
-  // his left sleeve (the viewer's left): its inner ink's inner side, a crease with no ink above row 270, to the cuff over the seed bag's top
   inner: [
     [77, 200],
     [77, 270],
@@ -1103,7 +976,6 @@ const P2_LEFT: Sleeve = {
 };
 const p2Right = sleeve(P2_RIGHT);
 const p2Left = sleeve(P2_LEFT);
-// the cape's lower corners, where its side ink meets each sleeve's outer ink: the sleeve's, as okra closes the cape's side over the body when the arm is cut away
 const P2_CORNERS = {
   left: {
     polygon: [
@@ -1124,7 +996,6 @@ const P2_CORNERS = {
     ],
   },
 } as const satisfies Readonly<Record<string, PartRule>>;
-// a band about 5 px out from each of the headcloth's side edges, down to below its lower corner, that no sleeve takes: torso, so torso parts head from each sleeve's cap and corner, and every pixel cut away from a sleeve lies nearer torso than head
 const P2_BANDS = {
   left: {
     polygon: [
@@ -1190,7 +1061,6 @@ const P2_SOLES = {
 
 const POSES_2: PartCut = {
   parts: [
-    // the headcloth, a row or two below its lower edges' ink, which lies over both sleeves' tops and the strap's; where each edge meets its sleeve's outer ink, the cape's corner from row 176 down is the sleeve's (`P2_CORNERS`), so okra may close the cape's side there; a band between each side edge and its sleeve (`P2_BANDS`) is torso's, so torso, not head, is the still part nearest okra's paint
     {
       name: 'head',
       take: [
@@ -1222,7 +1092,6 @@ const POSES_2: PartCut = {
     },
     {
       name: 'armLeft',
-      // the disc lies over the seed bag's left edge, as the hand does
       take: [...p2Left.take, { disc: { c: [31, 378], r: 31 } }, P2_CORNERS.left],
       unless: [...p2Left.unless, P2_BANDS.left],
       pivot: JOINTS['poses-2'].shoulderLeft,
@@ -1252,30 +1121,11 @@ const POSES_2: PartCut = {
         },
       ],
     },
-    // below his hip's row, as in the back view, but the seed bag
     { name: 'robe', take: [box(-1, 345, FAR, FAR)], unless: [box(32, 331, 135, 456)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
-/**
- * His kept pose reaching into the seed bag (poses-3, on his kept poses sheet),
- * turned three-quarters to the viewer's left, cut as drawn. His right arm (the
- * far one, on the viewer's left) is bent across his body: its sleeve runs
- * from under the headcloth down his front outline to the elbow, then its
- * forearm back across the mantle and strap to the round hand in the bag's
- * mouth. Its edge with the mantle above the forearm has no ink; the forearm's
- * top ink and the hand's ring bound it there. The fingers stay with the arm:
- * its take runs to row 353 under the hand, so the bag's top lip (row 350) is
- * the arm's where the hand lies over it. His left arm (the near one) hangs
- * beside the bag; its inner edge is the sleeve's inner ink, a crease above it.
- * The headcloth's tail lies over its top. The hem's line, column by column:
- * the robe's front lifting over his leading foot, the hem over it, between
- * his feet, over his trailing foot. His leading foot (the viewer's left) is
- * taken as his right, the trailing one as his left. This sheet's outline ink
- * is [48, 30, 15] (measured); a framed view's cut reads none, so `INK` below
- * stays the turnaround's.
- */
 const P3_HEM = {
   right: [
     [10, 500],
@@ -1298,7 +1148,6 @@ const P3_HEM = {
   ],
 } as const;
 const P3_LEFT: Sleeve = {
-  // his left sleeve (the viewer's right, the near one): a crease above its inner ink, then the ink's left edge down to the cuff
   inner: [
     [205, 200],
     [204.5, 250],
@@ -1314,7 +1163,6 @@ const P3_LEFT: Sleeve = {
   side: 'right',
 };
 const p3Left = sleeve(P3_LEFT);
-// a band from the headcloth tail's lower edge to row 202 that his left sleeve does not take: torso, so torso parts head from the sleeve's top and every pixel cut away from it lies nearer torso than head
 const P3_BAND: PartRule = {
   polygon: [
     [180, 184],
@@ -1340,7 +1188,6 @@ const P3_SOLES = {
 
 const POSES_3: PartCut = {
   parts: [
-    // above row 166 on the viewer's left, so torso keeps an 8 px band over the far sleeve's top; the face and beard down to the beard's lower ink; the headcloth's tail down to row 184, its lower edge torso's (`P3_BAND`)
     {
       name: 'head',
       take: [
@@ -1364,14 +1211,12 @@ const POSES_3: PartCut = {
     },
     {
       name: 'armLeft',
-      // the cuff under the sleeve's last inner ink, and the hand's disc over its whole ink ring (x210-271, y352-407)
       take: [...p3Left.take, box(212, 345, FAR, 358), { disc: { c: [241, 380], r: 32 } }],
       unless: [...p3Left.unless, P3_BAND],
       pivot: JOINTS['poses-3'].shoulderLeft,
     },
     {
       name: 'armRight',
-      // from row 174 down his front outline; along the sleeve's edge with the mantle, the forearm's top ink (3 px past it) and the hand's ring to row 353 under the hand; back along the forearm's lower ink (3 px under it) to the sleeve's corner on his front outline
       take: [
         {
           polygon: [
@@ -1434,14 +1279,12 @@ const POSES_3: PartCut = {
         },
       ],
     },
-    // below the belt, but the seed bag at his front
     { name: 'robe', take: [box(-1, 335, FAR, FAR)], unless: [box(110, 340, 232, 456)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
 const P4_RIGHT: Sleeve = {
-  // his right sleeve (the viewer's left): a crease with no ink above row 310, then its inner ink's inner side down the cuff and round the hand's ring
   inner: [
     [73, 185],
     [73, 310],
@@ -1459,7 +1302,6 @@ const P4_RIGHT: Sleeve = {
   side: 'left',
 };
 const P4_LEFT: Sleeve = {
-  // his left sleeve (the viewer's right): a crease with no ink above row 270, then its inner ink's inner side down to the cuff, which meets the seed bag's top, and round the hand's ring in front of the bag
   inner: [
     [232.5, 185],
     [232.5, 270],
@@ -1482,7 +1324,6 @@ const P4_LEFT: Sleeve = {
 };
 const p4Right = sleeve(P4_RIGHT);
 const p4Left = sleeve(P4_LEFT);
-// a band about 4 px below each headcloth tail's lower edge, over each shoulder, that no sleeve takes: torso, so the tails stay on his body and torso parts head from each sleeve's cap
 const P4_BANDS = {
   right: {
     polygon: [
@@ -1514,7 +1355,6 @@ const P4_BANDS = {
     ],
   },
 } as const satisfies Readonly<Record<string, PartRule>>;
-// the robe's hem over each foot (measured at x64-96, x105-112, x189-202 and x218-228) and between the feet (rows 559-560), with the robe's sides above them
 const P4_HEM = {
   right: [
     [62, 535],
@@ -1535,7 +1375,6 @@ const P4_HEM = {
     [247, 535],
   ],
 } as const;
-// each sole's lowest rows, column runs [first, last, row] (rows 580-586, lowest 586 at x68-87 and x224-241, measured; the runs between are inferred)
 const P4_SOLES = {
   right: [
     [47, 50, 580],
@@ -1560,22 +1399,11 @@ const P4_SOLES = {
   ],
 } as const satisfies Readonly<Record<string, SoleRuns>>;
 
-/**
- * His kept pose standing from the front (poses-4, on his kept poses sheet),
- * cut as drawn. His right arm (the viewer's left) hangs at his side, its hand
- * at the view's left edge; his left (the viewer's right) hangs beside the seed
- * bag on his left hip, its hand over the bag's top right, at the view's right
- * edge. The headcloth's tails over his shoulders are torso's below row 170, as
- * his beard's foot is head's. His sheet's ink is [48, 30, 15] (measured); a
- * framed cut reads none.
- */
 const POSES_4: PartCut = {
   parts: [
-    // above the headcloth's lower edges, and his beard to its foot
     { name: 'head', take: [box(-1, -1, FAR, 170), box(118, 170, 194, 184)] },
     {
       name: 'armLeft',
-      // the disc lies over the seed bag's top right, as the hand does
       take: [...p4Left.take, { disc: { c: [278, 381], r: 29 } }],
       unless: [...p4Left.unless, P4_BANDS.left],
       pivot: JOINTS['poses-4'].shoulderLeft,
@@ -1605,30 +1433,17 @@ const POSES_4: PartCut = {
         },
       ],
     },
-    // below the belt, but the seed bag at his left hip
     { name: 'robe', take: [box(-1, 335, FAR, FAR)], unless: [box(168, 335, 276, 458)] },
     { name: 'torso', take: [box(-1, -1, FAR, FAR)] },
   ],
 };
 
-/**
- * His outline's ink: the median of his views' dark pixels (measured on the
- * three-quarter and back views). His kept poses sheet's is [48, 30, 15]
- * (measured), but a framed cut reads no ink, so his poses take none.
- */
 const INK = [34, 16, 8, 255] as const;
 
-/** Where his body's sides run under his arms: out to his shoulders and robe, not in at the sleeves' inner edges. */
 const SIDES = sides({ pronoun: 'his', lower: 'robe', cloth: 'the linen tunic and olive mantle' });
 
-/** The paper grain his sheet shows on his body, carried into the paint under his arms. */
 const GRAIN = grain('the linen tunic and olive mantle of his body');
 
-/**
- * Each view's moving parts (what a pose moves, whose areas are painted
- * magenta and repainted beneath), and the words okra repaints them by: what
- * lies under them, in the sheet's own style.
- */
 const HIDDEN_ENTRIES = {
   front: {
     moving: ['armRight', 'armLeft'],
@@ -1678,10 +1493,8 @@ const HIDDEN_ENTRIES = {
   },
 } as const satisfies Readonly<Record<CutView, HiddenEntry>>;
 
-/** What his kept sheets show through each of his named gaps. */
 const FEET = 'the ground between his feet';
 
-/** His cut table: each view's cut, how its figure is read, and its gaps. */
 export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   frames: FRAMES,
   views: {
@@ -1720,19 +1533,15 @@ export const { CUTS, cutOptionsFor, HIDDEN, GAPS, paperOf } = cutTable({
   ink: INK,
 });
 
-/** How far the clear ground's flood reaches through paper-coloured pixels, 8-steps: his band runs 1 to 4 px wide outside his ink, and through the fading edge of his ground shadow under his feet up to 54 (threeQuarterLeft), so one pass clears it all; his ink is closed on every view, so the flood reaches no cloth at that depth. */
 const RIM_BAND = 64;
 
-/** A pixel is paper-coloured within this ΔE76 of the view's paper: his band lies 4 to 8 from it at the median, his ink's blend farther. */
 const RIM_NEAR = 12;
 
-/** Each view's paper rim, as his part sheets clear it. */
 export const PAPER_RIMS = Records.map(
   { ...TURNAROUND_PAPERS, ...POSES_PAPERS },
   (paper): PaperRim => ({ paper, band: RIM_BAND, near: RIM_NEAR }),
 );
 
-/** What each view's laid part sheet runs before it is written (`film concept parts`): every view clears the pale paper band his paint keeps just outside his ink (251,243,228 at the median on the front, against its paper 250,237,217), which his un-matte would read as his cream linen and draw as a white torn rim. */
 export const CLEAN = Records.map(PAPER_RIMS, clearPaperRim) satisfies Partial<
   Record<keyof typeof CUTS, SheetClean>
 >;

@@ -1,28 +1,5 @@
-// LOCKED: the lead, the prosecutor and the judge. The owner locked them on
-// 2026-10-17 (ask `a92f276635e`, commit `b27a9471b`), with one touch-up he
-// named: the prosecutor's shoe light runs up the lit edge and leaves the sole
-// dark. Their shapes, proportions, papers and faces (here, their three
-// compositions, `papers.ts`, and how the house cuts and draws their parts,
-// `style/rig/draw.ts` and `style/rig/shapes.ts`) change only on his word,
-// asked for first: each one's lock (`lead.lock.json`, `judge.lock.json`,
-// `prosecutor.lock.json`) holds his print as he kept it, and the build and
-// the test refuse a print that differs unless an override citing his
-// decision on that figure, filed after the lock, frees it (FigureLock,
-// `build.slow.test.ts`).
-
-// The heads of RBF's court as the kept concept (`cold-34`) cuts them, traced
-// from it: each the inner edge of its ink (the head's paper, hair and ear
-// together, the outline `silhouette` inks round), and the hair inside it (the
-// region that is not skin), in its rig's skull frame and units; the head's
-// paper is drawn 2 px in under the hair along the outline, so the hair
-// covers its edge and its rim there. Traced by flooding the region inside the
-// ink from the face, filling the marks, and taking the boundary at 0.6 px; the concept's pixels are scaled to the rig by
-// the head's height and laid by its top and middle, the frame turned back by
-// the skull's cant. Pure.
-
 import type { Pt } from '@manna/film/style';
 
-/** The prosecutor's head: a tall rounded block turned three-quarters to screen left, its jaw one curve into a broad chin, the tuft over his brow, his ear behind. */
 export const PROSECUTOR_HEAD: ReadonlyArray<Pt> = [
   [-20.6, -77.5],
   [-7.7, -80.8],
@@ -78,7 +55,6 @@ export const PROSECUTOR_HEAD: ReadonlyArray<Pt> = [
   [-33.8, -71.2],
 ];
 
-/** His short black hair: a peaked tuft over the brow at the front, the hairline sloping across, full over the back of his head and down behind his ear. */
 export const PROSECUTOR_HAIR: ReadonlyArray<Pt> = [
   [-21.0, -79.5],
   [-8.1, -82.7],
@@ -127,7 +103,6 @@ export const PROSECUTOR_HAIR: ReadonlyArray<Pt> = [
   [-34.2, -73.1],
 ];
 
-/** The judge's head: an egg-shaped face narrowing to the chin under curly hair in lumps, his ear behind. */
 export const JUDGE_HEAD: ReadonlyArray<Pt> = [
   [-7.7, -87.7],
   [3.3, -88.7],
@@ -183,7 +158,6 @@ export const JUDGE_HEAD: ReadonlyArray<Pt> = [
   [-14.3, -86.0],
 ];
 
-/** His curly grey hair: lumps along the crown and puffs over the sides, its hairline uneven and arched. */
 export const JUDGE_HAIR: ReadonlyArray<Pt> = [
   [-8.0, -89.7],
   [3.0, -90.8],

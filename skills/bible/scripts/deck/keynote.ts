@@ -1,12 +1,3 @@
-/**
- * The AppleScript that draws a deck's slides, shared by a fresh build and an
- * in-place sync: the title slide, and per beat a full-bleed slide and a split
- * slide (panel + verse + reference), presenter note on both. A slide is found
- * again by its painting's description (`deck:<id> full`, `deck:<id> panel`,
- * `deck:title`), so a sync still finds it after the owner reorders the deck;
- * never by its file name, since Keynote keeps one file name for paintings of
- * the same bytes (a painting reused within a deck).
- */
 import type { Manifest, Slide } from './manifest.ts';
 
 export const esc = (value: string) =>
@@ -43,7 +34,6 @@ const textItem = (
 const image = (file: string, tag: string, box: string) =>
   `      make new image with properties {file:(POSIX file (rootPath & "/images/${file}")), description:"${esc(tag)}", ${box}}`;
 
-/** The title slide's contents, inside `tell <slide>`. */
 export const titleContents = (manifest: Manifest) => [
   image(TITLE_FILE, TITLE_TAG, 'position:{0, 0}, width:1920, height:1080'),
   ...textItem(
@@ -64,7 +54,6 @@ export const titleContents = (manifest: Manifest) => [
   ),
 ];
 
-/** A beat's full-bleed slide's contents, inside `tell <slide>`. */
 export const fullContents = (slide: Slide) => [
   image(fullFile(slide.id), fullTag(slide.id), 'position:{0, 0}, width:1920, height:1080'),
   `      set presenter notes to "${esc(slide.note)}"`,
@@ -72,7 +61,6 @@ export const fullContents = (slide: Slide) => [
 
 const textX = (slide: Slide) => (slide.side === 'right' ? 131 : 984);
 
-/** A beat's split slide's contents, inside `tell <slide>`. */
 export const splitContents = (slide: Slide) => {
   const x = textX(slide);
   return [
@@ -97,8 +85,6 @@ export const splitContents = (slide: Slide) => {
       30,
       GRAY,
     ),
-    // Keynote sizes the verse box to its wrapped text: measure it, then center
-    // the verse + reference block instead of estimating line counts.
     `      set verseHeight to height of verseItem`,
     `      set verseY to (1080 - verseHeight - 95) div 2`,
     `      set position of verseItem to {${x}, verseY}`,
@@ -107,7 +93,6 @@ export const splitContents = (slide: Slide) => {
   ];
 };
 
-/** The whole script of a fresh build: a new document, every slide, saved at `savePath`. */
 export const buildScript = (manifest: Manifest, deckDir: string, savePath: string) => {
   const lines = [
     `set rootPath to "${esc(deckDir)}"`,
@@ -115,9 +100,6 @@ export const buildScript = (manifest: Manifest, deckDir: string, savePath: strin
     `tell application "${esc(manifest.app)}"`,
     `  activate`,
     `  set theDoc to make new document with properties {document theme:theme "Basic Black", width:1920, height:1080}`,
-    // Saved at its path before any slide is drawn: a new document left unsaved
-    // is autosaved by Keynote Creator Studio into iCloud under its suggested
-    // name, a stray copy each build.
     `  save theDoc in POSIX file savePath`,
     `  tell theDoc`,
     `    set base slide of slide 1 to master slide "Blank"`,

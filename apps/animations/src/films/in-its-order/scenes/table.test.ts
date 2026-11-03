@@ -9,10 +9,8 @@ import {
   womanNumbersOf,
 } from './table.ts';
 
-/** In Its Order's cold cues the guests nod on, scene s: `turn` and `read`. */
 const NODS = [8.1, 11.38];
 
-/** Every 1/120 s over the cold open's 30.4 s. */
 const TIMES = Array.from({ length: Math.ceil(30.4 * 120) }, (_, i) => i / 120);
 
 type Numbers = { lean: number; neck: number; head: number };

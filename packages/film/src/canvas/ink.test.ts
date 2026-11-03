@@ -1,9 +1,3 @@
-// How a line boils (DIRECTION, "Boil"): ink re-jitters on every boil tick;
-// a figure's line only crawls, each point moving at most about 0.3 px a tick;
-// scenery holds its line still. The wobble stays: a held line is still drawn
-// by hand, it just does not move. And how a path is spaced before it is
-// inked (`resample`): evenly, ending once on its last point.
-
 import { describe, expect, test } from 'bun:test';
 import { Schema } from 'effect';
 import {
@@ -17,7 +11,6 @@ import {
   stroke,
 } from './ink.ts';
 
-/** A stand-in context that records every point the stroke's outline passes through. */
 const outline = (boil: Boil | undefined, tick: number): Pt[] => {
   const pts: Pt[] = [];
   const at = (x: number, y: number) => pts.push([x, y]);
@@ -43,7 +36,6 @@ const outline = (boil: Boil | undefined, tick: number): Pt[] => {
   return pts;
 };
 
-/** The farthest any point of the outline moved from tick `a` to tick `b`. */
 const moved = (boil: Boil | undefined, a: number, b: number) => {
   const from = outline(boil, a);
   const to = outline(boil, b);
@@ -73,7 +65,6 @@ describe('boil', () => {
     for (let t = 0; t < 48; t++) step = Math.max(step, moved('crawl', t, t + 1));
     expect(step).toBeGreaterThan(0);
     expect(step).toBeLessThanOrEqual(CRAWL_MAX + 1e-9);
-    // Over two seconds it has wandered well past one tick's step.
     expect(moved('crawl', 0, 24)).toBeGreaterThan(step * 3);
   });
 
@@ -99,7 +90,6 @@ describe('boil', () => {
         { color: '#000', width: 6, jitter: 0.7, taper: 0, pressure: 0.15, closed },
         { boil: 4, seed: 11 },
       );
-      // moveTo the first left point, then the left edge, then the right edge back.
       const n = (pts.length - 1) / 2;
       const left = pts.slice(1, n + 1);
       const right = pts.slice(n + 1).reverse();

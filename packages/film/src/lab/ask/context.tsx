@@ -1,15 +1,3 @@
-// An ask's provider: its page machine (one actor per ask on a page of asks,
-// on the review's runtime), and what the page's parts read and do through it. The
-// parts (`parts.tsx`) never see the machine: they read the record, the
-// sections its page shows, the draft and what the last send said, and they
-// set an answer or send the page. The provider is the one place that knows how.
-//
-// The tab keeps the draft unsent (`sessionStorage`, through `TabStore`, which
-// keeps nothing past the page when the tab's storage cannot be used): read
-// once the page has settled (a server render has no tab), taken back by the
-// page once it is open, then written as it changes. A landed send leaves the
-// draft only what the lab still asks, so a page sent to its end keeps none.
-
 import { useAtomSet, useAtomValue } from '@manna/atom-solid';
 import { Effect, Match, Option, Record } from 'effect';
 import * as ActorAtom from 'effect-machine/atom';
@@ -38,36 +26,24 @@ import {
   spawnAskPage,
 } from './machine.ts';
 
-/** Where the tab keeps ask `ask`'s draft, unsent. */
 const keptDraftKey = (ask: string) => `film-review.ask-draft:${ask}`;
 
-/** Where the page is: reading the ask, open on it, sending its answers, or unable to read it. */
 type AskPhase = AskPageState['_tag'];
 
 interface AskStateValue {
-  /** The ask's id: what its part on the page is found by (`data-ask`). */
   readonly id: string;
   readonly phase: Accessor<AskPhase>;
-  /** The ask as last read. */
   readonly record: Accessor<Option.Option<AskRecord>>;
-  /** The page's sections, from where the run is as far as the draft reaches; none once it is not asking. */
   readonly sections: Accessor<ReadonlyArray<Section>>;
-  /** The owner's answer `id` as drafted ('' when not). */
   readonly drafted: (id: string) => string;
-  /** The questions the page waits on, in page order, and whether each is answered. */
   readonly questions: Accessor<ReadonlyArray<Question>>;
-  /** What the last send or read said: why it was refused, or why the ask cannot be read. */
   readonly said: Accessor<string>;
-  /** The question the last Send was refused for: the first left open ('' when none). */
   readonly missing: Accessor<string>;
 }
 
 interface AskActions {
-  /** Set the owner's answer `id` to `value`. */
   readonly set: (id: string, value: string) => void;
-  /** Send the page's answers. */
   readonly submit: () => void;
-  /** Read the ask again, once it could not be read. */
   readonly retry: () => void;
 }
 
@@ -78,10 +54,8 @@ interface AskContextValue {
 
 const AskContext = createContext<AskContextValue>();
 
-/** The ask's context: only inside `<Ask.Provider>`. */
 export const useAsk = (): AskContextValue => useContext(AskContext);
 
-/** The page, once the ask is read: every state past the first read holds it. */
 const pageOf = (s: AskPageState): Option.Option<Page> =>
   Match.value(s).pipe(
     Match.tag('Open', 'Sending', 'Rereading', 'Gone', (o) => Option.some(o.page)),
@@ -98,11 +72,6 @@ const saidOf = (s: AskPageState): string =>
     Match.orElse(() => ''),
   );
 
-/**
- * The tab's kept draft of ask `ask`, for the page in `page`: once the page has
- * settled it is read and sent as `Restored` the first time the page is open,
- * and from then on each draft the page holds is written.
- */
 const keepDraft = (
   ask: string,
   page: Accessor<AskPageState>,
@@ -125,10 +94,6 @@ const keepDraft = (
   );
 };
 
-/**
- * Where `record`'s run stands, in a word that changes with each answer the
- * lab keeps and its close: what tells the page an answer landed.
- */
 const runOf = (record: Option.Option<AskRecord>): string =>
   Option.match(record, {
     onNone: () => '',
@@ -147,7 +112,6 @@ const Body = (
   const send = useAtomSet(() => stateAtom);
   keepDraft(props.ask, page, send);
   const record = createMemo(() => Option.map(pageOf(page()), (p) => p.record));
-  // The run as first read; each move past it (an answer landed, or read again where another device left it) is said.
   let run = Option.none<string>();
   createEffect(
     () => runOf(record()),
@@ -187,12 +151,6 @@ const Body = (
   return <AskContext value={value}>{props.children}</AskContext>;
 };
 
-/**
- * Ask `ask`'s state and actions, for its part's parts. It opens on `first`,
- * the ask as its page's read had it (`askPage`), the one the shell names the
- * page by; `moved` hears each move of its run past it, so the page reads its
- * asks again.
- */
 export const Provider = (
   props: ParentProps<{
     readonly ask: string;
@@ -201,7 +159,6 @@ export const Provider = (
   }>,
 ) => {
   const { meta } = useAskRoot();
-  // The ask as the page's read had it, taken once as the actor starts: later reads are the machine's own.
   return (
     <Actor
       runtime={meta.runtime}

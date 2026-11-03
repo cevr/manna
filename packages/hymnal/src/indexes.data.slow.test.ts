@@ -1,13 +1,4 @@
 /* oxlint-disable effect/noNodeBuiltinImport, effect/noGlobals -- reads the committed index files once, mutates their JSON key by key and prints counts. */
-/**
- * The back-matter index checks (`scripts/indexes.ts`) on the committed
- * indexes: the data as committed, with its rulings, prints no problem; then
- * each mutation class is applied at every place it applies to, in batches,
- * through the same decode, checks and rulings the CLI runs, and every mutant
- * must print a problem at its own place. Each class prints its counts per
- * index (numbers only). The look-alike digit reach is a measurement, not a
- * check: `bun run indexes --reach`.
- */
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -31,11 +22,9 @@ import {
 } from '../scripts/indexes.js';
 import type { IndexName, Indexes, Passage } from './indexes.js';
 
-/** A file's parsed JSON, mutated in place before it is written back out as the text the CLI reads. */
 interface Json extends Fields {
   [key: string]: Value;
 }
-/** The keys this file reads of a row by name; a key held in a variable is read as `row[key]`. */
 type Fields = {
   [
     K in
@@ -66,7 +55,6 @@ type Fields = {
       | 'verses'
   ]?: Value;
 };
-/** One JSON value as the files hold it. */
 type Value = string | number | boolean | null | undefined | Json | Array<Value>;
 
 const NAMES: ReadonlyArray<IndexName> = [
@@ -83,7 +71,6 @@ const NAMES: ReadonlyArray<IndexName> = [
   'metrical',
 ];
 
-/** The indexes a check reads beside the one mutated: the two tune indexes, the two Scripture ones. */
 const PARTNERS: Partial<Record<IndexName, ReadonlyArray<IndexName>>> = {
   tunes: ['metrical'],
   metrical: ['tunes'],
@@ -101,7 +88,6 @@ const decoded = decodeIndexes(texts);
 const rulings = decodeRulings(rulingsText);
 
 const keyOf = (p: Problem) => `${p.index}|${p.page}|${p.at}|${p.check}|${p.value}`;
-/** What the CLI prints of `problems` once the rulings settle them; a ruling a subset leaves stale is not the mutant's. */
 const openOf = (problems: ReadonlyArray<Problem>) =>
   settle(problems, rulings.rulings).open.filter((p) => p.check !== 'rulings');
 
@@ -109,7 +95,6 @@ const list = (x: Value) => (Array.isArray(x) ? x : []) as Array<Json>;
 const num = (x: Value) => x as number;
 const str = (x: Value) => x as string;
 
-/** One number an index prints, in `itemsOf` order: the row holding it, its key, and the list the row sits in. */
 interface Slot {
   readonly row: Json;
   readonly key: string;
@@ -142,13 +127,11 @@ const SLOTS: Record<IndexName, (f: Json) => Array<Slot>> = {
     list(f.metres).flatMap((m) => list(m.tunes).flatMap((t) => each(t.hymns, 'number', 'hymn'))),
 };
 
-/** Each index's items as committed: slot `i` prints at `places[name][i]`. */
 const places = Object.fromEntries(NAMES.map((n) => [n, itemsOf(decoded.indexes, n)])) as Record<
   IndexName,
   ReturnType<typeof itemsOf>
 >;
 
-/** The index decoded from `text`, checked beside its committed partners: the problems the CLI prints. */
 const checked = (name: IndexName, text: string): Array<Problem> => {
   const d = decodeIndexes({ [name]: text });
   const ix: Indexes = {
@@ -164,11 +147,9 @@ const baseline: ReadonlyMap<IndexName, ReadonlySet<string>> = new Map(
 
 const fresh = (name: IndexName) => JSON.parse(texts[name]) as Json;
 
-/** The problems a mutated file prints that the committed one does not. */
 const after = (name: IndexName, file: Json) =>
   checked(name, JSON.stringify(file)).filter((p) => !baseline.get(name)?.has(keyOf(p)));
 
-/** Whether slot `i` of `name` has one of `found` printed at its place. */
 const caughtAt = (name: IndexName, found: ReadonlyArray<Problem>) => {
   const where = new Set(found.map((p) => `${p.page}|${p.at}`));
   return (i: number) => {
@@ -198,10 +179,6 @@ const report = (rows: ReadonlyArray<Count>) => {
   expect(rows.filter((r) => r.caught + (r.blind ?? 0) !== r.applied)).toEqual([]);
 };
 
-/**
- * Sets each mutation's `value` at every slot its `pick` takes, all in one batch (the picks take
- * disjoint slots); each must print a range problem at its place. A mutation no slot takes is left out.
- */
 const rangeBatch = (
   name: IndexName,
   mutations: ReadonlyArray<{
@@ -229,8 +206,6 @@ const rangeBatch = (
   });
 };
 
-// ---------------------------------------------------------------- Scripture
-
 const SCRIPTURE: ReadonlyArray<IndexName> = ['scriptural', 'scriptural-by-hymn', 'worship-aids'];
 
 const lastChapters = new Map<number, number>();
@@ -253,7 +228,6 @@ const order2 = (a: ReadonlyArray<number>, b: ReadonlyArray<number>) => {
   return 0;
 };
 
-/** Applies `mutate` to every entry's passage of a Scripture index; each it changes must print a scripture problem at its place. */
 const passageBatch = (name: IndexName, mutation: string, mutate: (p: Json) => boolean) => {
   const file = fresh(name);
   const hit = list(file.entries).flatMap((e, i) => (mutate(e.passage as Json) ? [i] : []));
@@ -304,9 +278,6 @@ const backwards = (p: Json): boolean => {
   return true;
 };
 
-// ---------------------------------------------------------------- stanzas
-
-/** The letter one past hymn `n`'s stanzas, when the hymn is compiled and that letter is not `r` (the refrain) or past `z`. */
 const pastLast = (n: number): string | undefined => {
   const h = ctx.hymn(n);
   if (h === undefined || h.stanzas >= 26 || h.stanzas + 1 === 18) return undefined;
@@ -319,9 +290,6 @@ const stanzaBatch = (name: IndexName) => {
     name === 'sentences'
       ? list(file.groups).flatMap((g) => list(g.hymns))
       : list(file.entries).map((e) => e);
-  // A place whose letters already hold the one past the last is skipped: the
-  // book prints it there, a ruling settles that exact value, and setting it
-  // again adds no past-last letter (scriptural 39, by-hymn 31, sentences 2).
   const hit = rows.flatMap((r, i) => {
     const letter = pastLast(num(name === 'sentences' ? r.number : r.hymn));
     if (letter === undefined) return [];
@@ -345,9 +313,6 @@ const stanzaBatch = (name: IndexName) => {
   };
 };
 
-// ---------------------------------------------------------------- order
-
-/** Neighbouring pairs `before` holds strictly ordered, none within two rows of the last one taken. */
 const strictPairs = <R>(rows: ReadonlyArray<R>, before: (a: R, b: R) => boolean) => {
   const out: Array<number> = [];
   for (let i = 0; i + 1 < rows.length; i++) {
@@ -359,7 +324,6 @@ const strictPairs = <R>(rows: ReadonlyArray<R>, before: (a: R, b: R) => boolean)
   return out;
 };
 
-/** Swaps two entries' content and keeps each row's page, so every printed place stays put. */
 const swapContent = (a: Json, b: Json) => {
   for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
     if (k === 'page') continue;
@@ -392,7 +356,6 @@ const orderBatch = (name: IndexName, mutate: (file: Json) => ReadonlyArray<Probl
 const scriptureSwap = (name: 'scriptural' | 'worship-aids') => (file: Json) => {
   const n = name === 'scriptural' ? 'hymn' : 'reading';
   const entries = list(file.entries);
-  // The stored JSON carries no `_tag`; decoding adds it from the shape, as here.
   const passageOf = (e: Json) => {
     const p = e.passage as Json;
     return { ...p, _tag: 'verses' in p ? 'Chapter' : 'Span' } as Passage;
@@ -424,7 +387,6 @@ const byHymnSwap = (file: Json) => {
   });
 };
 
-/** Swaps whole named rows (a tune, a person) of one list, both main names, so each pair prints reversed. */
 const nameSwap = (rows: Array<Json>) =>
   strictPairs(
     rows,
@@ -442,27 +404,18 @@ const topicalSwap = (file: Json) =>
     const path = t.parent === undefined ? str(t.name) : `${str(t.parent)}: ${str(t.name)}`;
     const hymns = list(t.hymns);
     const title = (h: Json) => ctx.hymn(num(h.number))?.title;
-    return (
-      strictPairs(hymns, (a, b) => {
-        const [x, y] = [title(a), title(b)];
-        return x !== undefined && y !== undefined && sortKey(x) < sortKey(y);
-      })
-        // A topic the book lists one hymn twice in (NEW YEAR, p785) can hold the pair's second
-        // hymn just before its first. The swap then repeats that hymn before the first, so the
-        // check prints the same step at the same place as the page does, which a ruling settles:
-        // the swap makes no new order error.
-        .filter((i) => hymns[i - 1]?.number !== hymns[i + 1]?.number)
-        .map((i) => {
-          const [a, b] = [hymns[i] as Json, hymns[i + 1] as Json];
-          [a.number, b.number] = [b.number, a.number];
-          return `topic ${path} ${num(b.number)}|${num(a.number)} > ${num(b.number)}`;
-        })
-    );
+    return strictPairs(hymns, (a, b) => {
+      const [x, y] = [title(a), title(b)];
+      return x !== undefined && y !== undefined && sortKey(x) < sortKey(y);
+    })
+      .filter((i) => hymns[i - 1]?.number !== hymns[i + 1]?.number)
+      .map((i) => {
+        const [a, b] = [hymns[i] as Json, hymns[i + 1] as Json];
+        [a.number, b.number] = [b.number, a.number];
+        return `topic ${path} ${num(b.number)}|${num(a.number)} > ${num(b.number)}`;
+      });
   });
 
-// ---------------------------------------------------------------- sections
-
-/** The topics a section is listed under, as the sections check finds them. */
 const sectionTopics = (topics: ReadonlyArray<Json>, section: { readonly name: string }) => {
   const find = (parent: string | undefined, name: string) =>
     topics.filter(
@@ -486,9 +439,6 @@ const sectionTopics = (topics: ReadonlyArray<Json>, section: { readonly name: st
   );
 };
 
-// ---------------------------------------------------------------- tunes
-
-/** Splits `pairs` into batches that hold each hymn number `n` once, in order. */
 const oneHymnEach = <P extends { readonly n: number }>(pairs: ReadonlyArray<P>) => {
   const batches: Array<Array<P>> = [];
   for (const p of pairs) {
@@ -499,7 +449,6 @@ const oneHymnEach = <P extends { readonly n: number }>(pairs: ReadonlyArray<P>) 
   return batches;
 };
 
-/** Drops each (tune, hymn) pair of a tune index, in batches that hold each hymn number once; a row left with no hymn goes too. */
 const tuneDrops = (name: 'tunes' | 'metrical') => {
   const tunesOf = (f: Json) =>
     name === 'tunes' ? list(f.tunes) : list(f.metres).flatMap((m) => list(m.tunes));
@@ -542,8 +491,6 @@ const tuneDrops = (name: 'tunes' | 'metrical') => {
   );
   return { mutation: 'tune-pair-drop', index: name, applied: pairs.length, caught: printed };
 };
-
-// ---------------------------------------------------------------- the cases
 
 describe('the committed indexes', () => {
   it('print no problem once decoded, checked and settled by their rulings, as the CLI runs them', () => {
@@ -620,8 +567,6 @@ describe('the committed indexes', () => {
   it('print a sections problem for one hymn dropped from each section a topic holds', () => {
     const file = fresh('topical');
     const topics = list(file.topics);
-    // A section no topic holds is one C6 prints `no topic lists section` for: each must be
-    // a ruled one, so that no section leaves C6 unseen.
     const held = ctx.sections.filter((s) => sectionTopics(topics, s).length > 0);
     const unheld = ctx.sections.filter((s) => !held.includes(s));
     for (const s of unheld)

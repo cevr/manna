@@ -1,16 +1,3 @@
-// A film's script in the words reader (`reader.tsx`), as an ask and the
-// studio's inspector show it: its beats as the film's `script.ts` reads now (`GET
-// …/script`, read fresh by the lab, each beat's line, picture and
-// sources), its staging takes (`GET …/script/voice`: read, never voiced
-// here), and its delivery marks written into `script.ts` (`POST
-// …/script/marks`). The script is the page's one read of the film's
-// (`script`, its atom), read again on a Refresh and once a
-// write answers, landed or refused: a write carries the words it was made on,
-// so one refused because the line changed shows the line as it is now. The
-// words come from the lab's read, never the film's player: an ask's page
-// loads no film code, and the studio reads the version kept in the film's
-// files.
-
 import { useAtomRefresh, useAtomValue } from '@manna/atom-solid';
 import { Show } from '@solidjs/web';
 import { Effect, Option } from 'effect';
@@ -27,7 +14,6 @@ import {
   type Selecting,
 } from './reader.tsx';
 
-/** A film's beat as the reader reads one: its id, its line, its picture as the brief, its sources. */
 const beatRead = (beat: ScriptBeats['beats'][number]): DraftBeatRead => ({
   id: beat.id,
   label: '',
@@ -42,11 +28,6 @@ const beatRead = (beat: ScriptBeats['beats'][number]): DraftBeatRead => ({
   cite: beat.cite,
 });
 
-/**
- * Film `film`'s script, as `script` reads it on `page`, in the reader: its
- * beats (only those `only` names, when it names some), or why it cannot be
- * read; `brief` as the reader shows it.
- */
 export const FilmScriptReader = (props: {
   readonly page: ReaderPage;
   readonly script: Atom.Atom<AsyncResult.AsyncResult<ScriptBeats, LabFailure>>;
@@ -84,12 +65,10 @@ export const FilmScriptReader = (props: {
         page={props.page}
         beats={beats}
         selecting={props.selecting}
-        // An ask and the studio leave the day's spend out.
         cost={false}
         brief={props.brief ?? 'boxed'}
         source={{
           voice: AskApi.use((api) => api.filmVoice(props.film)),
-          // Landed in `script.ts` or refused: the script is read again, its words and marks as they are.
           mark: (post) =>
             AskApi.use((api) => api.filmMarks(props.film, post)).pipe(
               Effect.ensuring(Effect.sync(again)),

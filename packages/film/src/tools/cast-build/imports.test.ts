@@ -1,7 +1,3 @@
-// The import scanner over a tiny tree in memory: static imports, re-exports
-// and literal dynamic imports followed to files, transitively, with or
-// without an extension; packages and type-only imports not followed.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Path } from 'effect';
 import { memoryFileSystem, text } from '../host/testing.ts';
@@ -30,7 +26,6 @@ const tree = () =>
     ['/src/unused.ts', text('export const u = 1;')],
   ]);
 
-/** The tree, with `b.ts` loading a module by a variable path. */
 const loader = () =>
   new Map([...tree(), ['/src/b.ts', text('export const load = (f: string) => import(f);')]]);
 
@@ -38,7 +33,6 @@ describe('import closure', () => {
   it.effect(
     'reads static, re-export, side-effect and literal dynamic specifiers, not type-only ones',
     () =>
-      // Each name the scanner must not read names no file, and a relative import of no file fails the closure.
       Effect.gen(function* () {
         expect(yield* declaredClosure(['/k/main.ts'], [])).toEqual(
           ['a', 'e', 'l', 'main', 's'].map((f) => `/k/${f}.ts`),
@@ -175,14 +169,12 @@ describe('import closure', () => {
       expect(yield* undeclared('const t = import(`./x.ts`);')).toEqual(
         UndeclaredImport.make({ file: '/v/a.ts', argument: '`./x.ts`' }),
       );
-      // only one plain string literal is static: a concatenation or a cast names no file
       expect(yield* undeclared("const p = import('./parts/' + name + '.ts');")).toEqual(
         UndeclaredImport.make({ file: '/v/a.ts', argument: "'./parts/' + name + '.ts'" }),
       );
       expect(yield* undeclared("const b = import('./b.ts' as string);")).toEqual(
         UndeclaredImport.make({ file: '/v/a.ts', argument: "'./b.ts' as string" }),
       );
-      // A method named import is no import.
       expect(yield* Effect.flip(undeclared("const l = import('./l');\nthis.import(y);"))).toEqual([
         '/v/a.ts',
         '/v/l.ts',

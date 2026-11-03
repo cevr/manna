@@ -1,25 +1,5 @@
 /* oxlint-disable effect/noTernary -- the mount wraps the dial in the tap clock only for the cases that tap, and one plain branch says so. */
 
-/**
- * Acceptance (taptempo A2): the Tempo dial's bpm read-out and its `Tap`
- * button, mounted in a browser's document (`src/test/setup.ts`) over a fresh
- * registry, every cue told to the test, the taps' times read from a
- * TestClock the test moves: no real time passes, and nothing sounds.
- *
- * - The read-out says the hymn's beat and its bpm at the dial's tempo, as
- *   one label (`quarter note = 90`), its text `= <bpm>`.
- * - Four presses 600 ms apart set the dial to the stop nearest the tapped
- *   bpm over the hymn's; three set nothing, and a pause over 3 s starts the
- *   count over.
- * - Each press tells one `press` cue; the dial moved by the taps tells no
- *   detent.
- *
- * Each case sets the hymn's tempo to 100 first and back after. Hymn numbers
- * only: no hymn's words are read or printed.
- *
- * Final path: `apps/hymnal/src/player/TempoDial.tap.test.tsx`.
- */
-
 import { RegistryContext } from '@effect/atom-react';
 import { describe, expect, it } from 'effect-bun-test';
 import { Duration, Effect, Option } from 'effect';
@@ -33,14 +13,9 @@ import { settings } from '~/store';
 
 import * as Dial from './TempoDial';
 
-/**
- * Hymn `number`'s Tempo dial at 100 %, mounted; under the tap clock when
- * `tapping`. It sets the tempo back to 100 and unmounts when the `using` ends.
- */
 const mount = (number: number, tapping: boolean) => {
   const registry = AtomRegistry.make();
   registry.set(settings.tempo(number), 100);
-  // The taps' times are read from this clock, which the test moves.
   const clock = Effect.runSync(Effect.scoped(TestClock.make()));
   const cues: Array<Cue> = [];
   const host = document.createElement('div');
@@ -60,31 +35,24 @@ const mount = (number: number, tapping: boolean) => {
   );
   const get = (selector: string) =>
     Option.getOrThrow(Option.fromNullishOr(host.querySelector(selector)));
-  /** One press on `Tap`, as a finger's tap reaches it on the web. */
   const tap = () =>
     act(() => {
       get('[aria-label="Tap"]').dispatchEvent(
         new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }),
       );
     });
-  /** The tap clock moved on `ms`, with React told of what was set as it moved. */
   const wait = (ms: number) =>
     Effect.promise(() => act(() => Effect.runPromise(clock.adjust(Duration.millis(ms)))));
   return {
     cues,
-    /** The kept tempo of the hymn. */
     tempo: () => registry.get(settings.tempo(number)),
-    /** The hymn's tempo written as the dial or another screen writes it. */
     setTempo: (tempo: number) => act(() => registry.set(settings.tempo(number), tempo)),
-    /** The read-out's one label, and its drawn text. */
     readOut: () => {
       const element = get('[data-testid="tempo-bpm"]');
       return { label: element.getAttribute('aria-label'), text: element.textContent ?? '' };
     },
-    /** What the dial says of its tempo. */
     said: () => get('[data-testid="dial-tempo"]').getAttribute('aria-valuetext'),
     wait,
-    /** `count` presses on `Tap`, `apart` ms between each, the first at once. */
     taps: (count: number, apart: number) =>
       Effect.gen(function* () {
         for (let n = 0; n < count; n++) {

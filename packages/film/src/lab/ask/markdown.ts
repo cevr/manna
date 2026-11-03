@@ -1,12 +1,5 @@
-// A variant's notes and a folder's blurb and docs, markdown read as the
-// review shows it: headings, paragraphs, nested and numbered lists, tables,
-// fenced and indented code, quotes, **bold**, *italic* and `code`. Every
-// character of the text is escaped before any tag is added, so a doc can
-// never put its own HTML (or a script) into the page; links stay text.
-
 import { Option } from 'effect';
 
-/** `text` safe to put in HTML, attributes included. */
 export const escapeHtml = (text: string): string =>
   text
     .replaceAll('&', '&amp;')
@@ -15,7 +8,6 @@ export const escapeHtml = (text: string): string =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 
-/** One line's inline marks, on its escaped text. */
 const inline = (text: string): string =>
   escapeHtml(text)
     .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
@@ -26,11 +18,8 @@ const TABLE_ROW = /^\s*\|/;
 const TABLE_RULE = /^\s*\|[\s:|-]+\|\s*$/;
 const LIST_ITEM = /^(\s*)([-*]|\d+\.) (.*)$/;
 const HEADING = /^(#{1,4}) (.*)$/;
-/** A fence's opening: three or more backticks or tildes, at most three spaces in. */
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
-/** A line of indented code: four spaces or a tab in, the rest its code. */
 const INDENTED = /^(?: {4}|\t)(.*)$/;
-/** A quote's line: its marker (at most three spaces in, a space after it dropped), the rest its words. */
 const QUOTE = /^ {0,3}> ?(.*)$/;
 
 const tableRow = (line: string): string =>
@@ -43,35 +32,25 @@ const tableRow = (line: string): string =>
 
 type List = 'ul' | 'ol';
 
-/** A list item's list: a number's is numbered. */
 const listOf = (marker: string): List => {
   if (/^\d/.test(marker)) return 'ol';
   return 'ul';
 };
 
-/** A list's opening tag: a numbered one that does not start at 1 says where it does. */
 const opening = (list: List, marker: string): string => {
   const from = Number.parseInt(marker, 10);
   if (list === 'ol' && from !== 1) return `<ol start="${from}">`;
   return `<${list}>`;
 };
 
-/** Code as it stands, every line kept. */
 const pre = (lines: ReadonlyArray<string>): string =>
   `<pre><code>${escapeHtml(lines.join('\n'))}</code></pre>`;
 
-/** Whether `line` starts a block of its own, so it cannot go on in a quote's last paragraph. */
 const startsBlock = (line: string): boolean =>
   [TABLE_ROW, LIST_ITEM, HEADING, FENCE, QUOTE].some((starts) => starts.test(line));
 
-/** How far `line` is indented: its leading spaces. */
 const indentOf = (line: string): number => line.length - line.trimStart().length;
 
-/** The HTML being written: the lists and the table open, and the paragraph
- *  or list item still taking lines, its words gathered. Each list open has
- *  its last item open too, so a list under it is written inside it, and
- *  the column its item's words start at, so a paragraph after a rest goes
- *  in the deepest item its indent reaches (CommonMark's continuation). */
 const writer = () => {
   const out: Array<string> = [];
   const lists: Array<List> = [];
@@ -79,7 +58,6 @@ const writer = () => {
   let table = false;
   let tag: 'p' | 'li' | 'none' = 'none';
   let words: Array<string> = [];
-  // A rest inside a list: the next line says whether the list goes on.
   let rested = false;
   const flush = () => {
     if (tag === 'p') out.push(`<p>${inline(words.join(' '))}</p>`);
@@ -95,7 +73,6 @@ const writer = () => {
     if (table) out.push('</table>');
     table = false;
   };
-  /** Ends every block open: the paragraph or item, the lists and the table. */
   const end = () => {
     flush();
     closeLists(0);
@@ -104,7 +81,6 @@ const writer = () => {
   };
   return {
     end,
-    /** Whether an indented line here is code: nothing open for it to go on in. */
     codeMay: () => tag === 'none' && lists.length === 0 && table === false,
     row: (line: string) => {
       flush();
@@ -119,7 +95,6 @@ const writer = () => {
       flush();
       rested = false;
       const list = listOf(marker);
-      // An item nests one list deeper at most than the one open.
       const want = Math.min(Math.floor(indent.length / 2) + 1, lists.length + 1);
       closeLists(want);
       if (lists.length === want && lists[want - 1] !== list) closeLists(want - 1);
@@ -136,17 +111,11 @@ const writer = () => {
       end();
       out.push(`<h${level}>${inline(text)}</h${level}>`);
     },
-    /** A rest: it ends the paragraph, and a list only once a line too shallow for it follows. */
     blank: () => {
       if (lists.length === 0) return end();
       flush();
       rested = true;
     },
-    /**
-     * A line of words: it goes on in the paragraph or item open, else opens
-     * one. After a rest in a list, it opens a paragraph in the deepest item
-     * whose words its indent reaches, or ends the lists when it reaches none.
-     */
     words: (line: string) => {
       closeTable();
       if (rested) {
@@ -156,7 +125,6 @@ const writer = () => {
       if (tag === 'none') tag = 'p';
       words.push(line.trim());
     },
-    /** A block written whole (code, a quote): it ends what is open first. */
     block: (html: string) => {
       end();
       out.push(html);
@@ -170,7 +138,6 @@ const writer = () => {
 
 type Writer = ReturnType<typeof writer>;
 
-/** What runs on over the lines to come: a fence's code, indented code, or a quote's lines. */
 type Held =
   | { readonly _tag: 'None' }
   | { readonly _tag: 'Fence'; readonly marker: string; readonly lines: Array<string> }
@@ -179,7 +146,6 @@ type Held =
 
 const NONE: Held = { _tag: 'None' };
 
-/** Whether `line` closes the fence opened by `marker`: its character, as many or more, and nothing else. */
 const closes = (marker: string, line: string): boolean => {
   const fence = Option.fromNullishOr(FENCE.exec(line));
   return Option.exists(
@@ -188,7 +154,6 @@ const closes = (marker: string, line: string): boolean => {
   );
 };
 
-/** A line of words or a list item, a heading, a table row or a rest, in the flow. */
 const flowLine = (html: Writer, line: string) => {
   if (TABLE_ROW.test(line)) {
     if (!TABLE_RULE.test(line)) html.row(line);
@@ -204,7 +169,6 @@ const flowLine = (html: Writer, line: string) => {
   else html.words(line);
 };
 
-/** The lines read in turn: a fence, indented code and a quote held until they end. */
 const reader = (html: Writer) => {
   let held: Held = NONE;
   const release = () => {
@@ -214,12 +178,10 @@ const reader = (html: Writer) => {
       html.block(`<blockquote>${markdownHtml(held.lines.join('\n'))}</blockquote>`);
     held = NONE;
   };
-  /** A line in a fence: its code, or its close. */
   const fenced = (fence: Extract<Held, { _tag: 'Fence' }>, line: string) => {
     if (closes(fence.marker, line)) release();
     else fence.lines.push(line);
   };
-  /** A line after indented code: more of it (rests in it kept once code follows), or its end. */
   const coded = (code: Extract<Held, { _tag: 'Code' }>, line: string): boolean => {
     const more = Option.fromNullishOr(INDENTED.exec(line));
     if (Option.isSome(more)) {
@@ -234,7 +196,6 @@ const reader = (html: Writer) => {
     release();
     return false;
   };
-  /** A line after a quote's: more of it (its marker, or words going on in its last paragraph), or its end. */
   const quoted = (quote: Extract<Held, { _tag: 'Quote' }>, line: string): boolean => {
     const more = Option.fromNullishOr(QUOTE.exec(line));
     const last = quote.lines.at(-1) ?? '';
@@ -246,7 +207,6 @@ const reader = (html: Writer) => {
     }
     return true;
   };
-  /** A line nothing holds: it may open a fence, a quote or code, else it is the flow's. */
   const opens = (line: string) => {
     const fence = Option.fromNullishOr(FENCE.exec(line));
     const quote = Option.fromNullishOr(QUOTE.exec(line));
@@ -276,15 +236,6 @@ const reader = (html: Writer) => {
   };
 };
 
-/** Markdown as HTML (escaped throughout). Lines that follow one another make
- *  one paragraph, and a line under a list item (indented or not) goes on in
- *  that item, as Markdown reads them: a blank line, a heading, a list item, a
- *  table row, a fence or a quote ends either. A blank line ends no list: the
- *  words after it, indented as far as an item's words, are a paragraph in
- *  that item (CommonMark's continuation), items a blank line apart are one
- *  list, and words less indented end the list. A fence's lines (to its close,
- *  or the doc's end) and lines indented four after a rest are code, kept as
- *  they are; a quote's lines are a quote, read as Markdown of their own. */
 export const markdownHtml = (text: string): string => {
   const lines = reader(writer());
   for (const line of text.split('\n')) lines.read(line);

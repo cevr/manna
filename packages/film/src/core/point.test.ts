@@ -4,10 +4,8 @@ import { ActName } from './address-schema.ts';
 import { CatalogueJson } from './catalogue.ts';
 import { PointId, PointRef, pointIdOf } from './point.ts';
 
-/** The point an id names, when it names one: the id read as `PointId` decodes it. */
 const pointRefOf = Schema.decodeOption(PointId);
 
-/** Every kind of point, and the string it has always been written as. */
 const written: ReadonlyArray<readonly [PointRef, string]> = [
   [{ _tag: 'Score' }, 'score'],
   [{ _tag: 'Take', sound: 'paper.slide' }, 'take:paper.slide'],
@@ -61,19 +59,12 @@ describe('the choice point id', () => {
   });
 
   test('a string that names no point does not decode', () => {
-    // A sound layer's level is no point: the agents set it in `sound.ts`.
     for (const id of ['', 'take:', 'nothing:x', 'level:bed:3:amb.hall', 'level:const:PAPER'])
       expect(Result.isFailure(Schema.decodeResult(PointId)(id))).toBe(true);
   });
 
   test('an id no point is written as does not decode', () => {
-    for (const id of [
-      'render:scenes:a,',
-      'render:scenes:,a',
-      // A beat is a scene: its id is a `PartId`.
-      'voice:Cold Open',
-      'voice:-all',
-    ]) {
+    for (const id of ['render:scenes:a,', 'render:scenes:,a', 'voice:Cold Open', 'voice:-all']) {
       expect(pointRefOf(id)).toEqual(Option.none());
       expect(Result.isFailure(Schema.decodeResult(PointId)(id))).toBe(true);
     }
@@ -101,7 +92,6 @@ describe('the choice point id', () => {
   });
 
   test('a catalogue with a say on each kind of point keeps its bytes', () => {
-    // As the catalogue writes a say: the render's with no point, every other with its id.
     const said = (point: Option.Option<string>, i: number) =>
       `{"address":{"_tag":"Scenes","ids":["cold"]},${Option.match(point, {
         onNone: () => '',

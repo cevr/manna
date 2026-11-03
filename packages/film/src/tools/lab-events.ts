@@ -1,23 +1,3 @@
-// The lab's change feed: what changed in the files the lab keeps (each
-// film's notes and board, each project folder's catalogue, each set's
-// `review.json`, each agent's ask, each production's ledger), read off the
-// files themselves every few seconds, numbered in the order the lab saw it,
-// and kept (the newest `KEPT`) for a reader to ask past a cursor or to wait
-// on, by the catalogue's names (`LAB_EVENTS`) and a film. The files are the
-// record, so a change the page makes, one a terminal's `film lab` makes, and
-// one an agent makes through the lab's MCP are all seen alike, and nothing
-// writes twice: the feed only reads. A change to a film's source is read off
-// the lab's writer, which tells each one that landed in order (the newest
-// 200: a read every few seconds finds them all). A set or a render it sees
-// drops the review's index (`Review.written`) before its event is told, so
-// the page and an ask read what another process wrote. What a change is, said from
-// two reads of a file, is `core/lab-events.ts`.
-//
-// The first read is the baseline: the feed tells only what changed after
-// the lab started. A cursor is `<epoch>.<seq>`; the epoch is this run's, so
-// a cursor from an earlier run is answered from the start of this one, said
-// as a `reset`.
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -71,31 +51,21 @@ import { ProductionStore } from './production-store.ts';
 import { Review, recordsUnder } from './review.ts';
 import { SourceWriter } from './source-writer.ts';
 
-/** What a reader is answered: the changes past its cursor, in order, and the cursor to ask past next. */
 export const LabChanges = Schema.Struct({
   cursor: Schema.String,
   changes: Schema.Array(LabChange),
-  /**
-   * The cursor was not this run's (the lab restarted) or older than the
-   * oldest change kept: the changes are every one kept, and some may be lost.
-   */
   reset: Schema.Boolean,
 });
 export type LabChanges = typeof LabChanges.Type;
 
-/** A board as its file holds it. */
 const boardText = Schema.encodeSync(BoardFileJson);
 
-/** How many changes the feed keeps. */
 const KEPT = 1000;
 
-/** A set's manifest file in its folder. */
 const MANIFEST_FILE = 'review.json';
 
-/** A file's stamp: its mtime and size, when the file system says its mtime; none reads it every time. */
 type Stamp = Option.Option<string>;
 
-/** What the feed last read of each file it watches. */
 interface Seen {
   readonly notes: Map<
     string,
@@ -106,22 +76,17 @@ interface Seen {
   sets: ReadonlyMap<string, SetSeen>;
   readonly asks: Map<string, { readonly stamp: Stamp; readonly record: AskRecord }>;
   readonly productions: Map<string, ProductionFile>;
-  /** The number of the writer's last landing read: 0 before the first. */
   landed: number;
 }
 
 interface Journal {
-  /** The last change's number: 0 before the first. */
   readonly seq: number;
   readonly kept: ReadonlyArray<LabChange>;
 }
 
 interface LabEventsService {
-  /** Read every watched file once and add what changed since the last read to the feed. */
   readonly look: Effect.Effect<void>;
-  /** The changes past `cursor` that `of` keeps (none: no changes, the cursor now). */
   readonly since: (cursor: Option.Option<string>, of?: Of) => Effect.Effect<LabChanges>;
-  /** `since`, as soon as there is a change past `cursor` that `of` keeps, or none once `timeout` passes. */
   readonly wait: (
     cursor: Option.Option<string>,
     timeout: Duration.Input,
@@ -129,31 +94,23 @@ interface LabEventsService {
   ) => Effect.Effect<LabChanges>;
 }
 
-/** Which changes a reader asks for: their names (globs over the catalogue's, `ask.*`; none is every one) and their film. */
 interface Of {
   readonly names?: ReadonlyArray<string>;
   readonly film?: string;
 }
 
-/** Whether `change` is one `of` asks for. Pure. */
 const kept = (of: Of = {}) => changeAsked(of.names ?? [], Option.fromUndefinedOr(of.film));
 
-/** What the feed needs: where its links point (the lab's own links, local and the phone's). */
 interface FeedOptions {
   readonly links: LabLinks;
 }
 
-/** `cursor` read: its epoch and number, when it is one. */
 const cursorOf = (cursor: string): Option.Option<{ epoch: string; seq: number }> =>
   Option.map(Option.fromNullishOr(/^([0-9a-z]+)\.(\d+)$/.exec(cursor)), ([, epoch = '', seq]) => ({
     epoch,
     seq: Number(seq),
   }));
 
-/**
- * The cursor right after `change`, in the run `cursor` (an answer's) is
- * from: where a reader that has heard it, and nothing past it, reads on. Pure.
- */
 export const cursorAfter = (cursor: string, change: { readonly seq: number }): string =>
   Option.match(cursorOf(cursor), {
     onNone: () => cursor,
@@ -163,7 +120,6 @@ export const cursorAfter = (cursor: string, change: { readonly seq: number }): s
 export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
   '@manna/film/tools/LabEvents',
 ) {
-  /** The feed over the lab's stores, its baseline not yet read: `look` reads it. */
   static readonly make = Effect.fn('LabEvents.make')(function* (options: FeedOptions) {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
@@ -178,7 +134,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
     const films = yield* Effect.context<FilmFolder>();
     const platform = yield* Effect.context<FileSystem.FileSystem | Path.Path>();
     const epoch = (yield* Random.nextIntBetween(0, 2 ** 31)).toString(36);
-    // A wait wakes on each change of it (`wait`), never on a timer.
     const journal = yield* SubscriptionRef.make<Journal>({ seq: 0, kept: [] });
     const seen: Seen = {
       notes: new Map(),
@@ -189,11 +144,9 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
       productions: new Map(),
       landed: 0,
     };
-    /** Whether the next read is the first: the baseline, which tells nothing. */
     const first = yield* Ref.make(true);
     const one = yield* Semaphore.make(1);
 
-    /** A file's stamp, or none when it is not there (`absent`). */
     const stampOf = (file: string) =>
       fs.stat(file).pipe(
         Effect.map((info) => ({
@@ -203,11 +156,9 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
         Effect.orElseSucceed(() => ({ there: false, stamp: Option.none<string>() })),
       );
 
-    /** Whether a read of a file stamped `now` would tell nothing new after one stamped `was`. */
     const same = (was: Stamp, now: Stamp) =>
       Option.isSome(was) && Option.isSome(now) && was.value === now.value;
 
-    /** Warn of a file that could not be read; the feed keeps what it last read of it. */
     const unread = (file: string) => (error: { readonly message: string }) =>
       Effect.as(
         Effect.logWarning(`lab.events.unread file=${file} reason="${error.message}"`),
@@ -223,7 +174,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
         if (Option.exists(was, (w) => same(w.stamp, stamp))) return [];
         const log = yield* notes.read(film);
         seen.notes.set(name, { stamp, seq: log.seq, notes: log.notes });
-        // A film first seen after the baseline (made since) tells its whole log; the baseline tells nothing.
         return Option.match(was, {
           onNone: () =>
             noteChanges(
@@ -243,7 +193,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
         if (Option.exists(was, (w) => same(w.stamp, stamp))) return [];
         const board = yield* boards.read(film);
         seen.boards.set(name, { stamp, board });
-        // The read's name, the same in every lab that reads this file: its stamp, else its bytes' digest.
         const read = Option.getOrElse(stamp, () => sha256Hex(boardText(board)));
         return Option.match(was, {
           onNone: () =>
@@ -278,7 +227,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
         });
       }).pipe(Effect.catch(unread(path.join(dir, CATALOGUE_FILE))));
 
-    /** Every ask's record, each read again only when its file changed. */
     const lookAsks = (baseline: boolean) =>
       Effect.gen(function* () {
         const names = yield* fs.readDirectory(asks.dir).pipe(Effect.orElseSucceed(() => []));
@@ -305,7 +253,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
         return Arr.flatten(told);
       });
 
-    /** Every production's ledger, read whole each look (a ledger is small): each word filed and version opened since. */
     const lookProductions = (baseline: boolean) =>
       Effect.gen(function* () {
         const ledgers = yield* productions.list;
@@ -317,7 +264,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
         });
       }).pipe(Effect.catch(unread('productions')));
 
-    /** Each change to a film's source that landed since the last read. */
     const lookSource = (baseline: boolean) =>
       Effect.map(writer.landings, (landings) => {
         const fresh = landings.filter((l) => l.n > seen.landed);
@@ -329,7 +275,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
         return sourceChanges(fresh);
       });
 
-    /** The set a folder's manifest makes, when it has one: its title and its bytes' digest. */
     const setAt = (dir: string) =>
       Effect.gen(function* () {
         const file = path.join(dir, MANIFEST_FILE);
@@ -352,7 +297,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
           ),
         { concurrency: 4 },
       );
-      // The folders the review walks, every level: a project's catalogue, a montage's manifest.
       const listed = yield* recordsUnder(review.roots).pipe(Effect.provideContext(platform));
       const catalogued = yield* Effect.forEach(
         listed.filter((f) => f.kind === 'project'),
@@ -392,9 +336,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
       Effect.gen(function* () {
         const drafts = yield* read;
         if (drafts.length === 0) return;
-        // A set or a render another process wrote: the review's index drops
-        // what it read before, so a reader that hears the event and reads
-        // the review (an ask about the set, the page) finds it.
         if (drafts.some((d) => d.kind.startsWith('set.') || d.kind.startsWith('render.')))
           yield* review.written;
         const at = DateTime.formatIso(yield* DateTime.now);
@@ -406,7 +347,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
       }),
     );
 
-    /** What a reader past `cursor` is answered from journal `j`. Pure. */
     const answerOf =
       (cursor: Option.Option<string>, of?: Of) =>
       (j: Journal): LabChanges => {
@@ -433,7 +373,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
     const since = (cursor: Option.Option<string>, of?: Of) =>
       Effect.map(SubscriptionRef.get(journal), answerOf(cursor, of));
 
-    // The journal as it stands, then each change to it: the first answer with news ends the wait.
     const wait = (cursor: Option.Option<string>, timeout: Duration.Input, of?: Of) =>
       SubscriptionRef.changes(journal).pipe(
         Stream.map(answerOf(cursor, of)),
@@ -453,10 +392,6 @@ export class LabEvents extends Context.Service<LabEvents, LabEventsService>()(
     return LabEvents.of({ look, since, wait });
   });
 
-  /**
-   * The feed, its baseline read when it is made, then a read every `every`
-   * for as long as the scope is open.
-   */
   static readonly layer = (options: FeedOptions & { readonly every: Duration.Input }) =>
     Layer.effect(
       LabEvents,

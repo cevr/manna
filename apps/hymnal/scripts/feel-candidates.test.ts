@@ -1,11 +1,3 @@
-/**
- * The sound candidates' files, rendered in memory: every candidate of each
- * kind, three takes each, every one a 16-bit mono WAV at the
- * voice's rate; the one detent sounds once and the slow turn every detent;
- * the fling holds only the sounds the Feel lets start, none over the one
- * before; and the README names every file and marks the picked candidates.
- */
-
 import { describe, expect, it } from 'bun:test';
 
 import { keyPitch, PICKED, RATE, RECIPES, THOCKS, TONES } from '../src/feel/voice';

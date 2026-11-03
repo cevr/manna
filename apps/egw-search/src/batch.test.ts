@@ -123,7 +123,6 @@ describe('makeBatcher', () => {
   test('a batch goes out a window after its latest input, so a pane still changing sends only its last', () =>
     run(
       Effect.gen(function* () {
-        // Each batch and when it went out, in ms on the test's clock since the start.
         const batches: { readonly at: number; readonly inputs: string[] }[] = [];
         const start = yield* Clock.currentTimeMillis;
         const batcher = makeBatcher<string, string, never>({
@@ -137,7 +136,6 @@ describe('makeBatcher', () => {
         });
         const submit = (input: string) =>
           Effect.forkChild(batcher.submit(input), { startImmediately: true });
-        // Two panes start together; the second changes at 90 ms and again at 140 ms.
         const a = yield* submit('a');
         let b = yield* submit('b');
         for (const [after, next] of [
@@ -153,7 +151,6 @@ describe('makeBatcher', () => {
         yield* TestClock.adjust('1 millis');
         expect(yield* Fiber.join(a)).toBe('a');
         expect(yield* Fiber.join(b)).toBe('b-final');
-        // One batch, a window after b-final joined at 140 ms, on the clock the test moves.
         expect(batches).toEqual([{ at: 240, inputs: ['a', 'b-final'] }]);
       }).pipe(Effect.provide(TestClock.layer())),
     ));

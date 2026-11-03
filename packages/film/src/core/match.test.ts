@@ -1,10 +1,3 @@
-// The match's hair/beard rule on measures made by hand, each side's edge and
-// value step taken from a measured crop of RBF's (`PARTED` in match.ts): the
-// rule flags a scene that runs together what its concept parts, never the
-// other way, parts by the edge or by the step alone, and says a side with no
-// beard without flagging it. A cast member's concept image names a file its
-// record keeps: a sheet by its kind, a single drawing by its view.
-
 import { describe, expect, test } from 'bun:test';
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import type { SheetKind } from './cast-sheet.ts';
@@ -43,7 +36,6 @@ describe("a cast member's concept image", () => {
   });
 });
 
-/** A figure measured with nothing to compare: no ratio, outline, artifact or beard. */
 const BARE: FigureMeasure = {
   head: [0, 0, 100, 100],
   ink: [0, 0, 0],
@@ -54,7 +46,6 @@ const BARE: FigureMeasure = {
   missing: [],
 };
 
-/** A figure measured with nothing but where its hair meets its beard: hair at value `hair`, beard at `beard`. */
 const bearded = (hair: number, beard: number, edge: number): FigureMeasure => ({
   ...BARE,
   hairBeard: {
@@ -64,13 +55,9 @@ const bearded = (hair: number, beard: number, edge: number): FigureMeasure => ({
   } satisfies HairBeard,
 });
 
-/** Christ's concept (court.12): parted by a dark band, edge 0.146, step 0.020. */
 const CHRIST_CONCEPT = bearded(0.4, 0.38, 0.146);
-/** Christ at court 16.51 s: the beard run into the hair, edge 0.063, step 0.004. */
 const CHRIST_MERGED = bearded(0.4, 0.396, 0.063);
-/** The farmer's concept (rain.rain): edge 0.257, step 0.200. */
 const FARMER_CONCEPT = bearded(0.6, 0.4, 0.257);
-/** The farmer at rain 14.19 s: no band (edge 0.019), a cream headcloth over a dark beard (step 0.494). */
 const FARMER_GREY = bearded(0.2, 0.694, 0.019);
 
 const ruleOf = (concept: FigureMeasure, scene: FigureMeasure) =>

@@ -1,28 +1,13 @@
-// A film's credits from its sources: each beat's `cite`, by author, each work
-// once with every place the film cites in it merged into one locator ("Steps
-// to Christ, 17, 18, 47, 70"; "Letter 57, 1895 (TM 91–92)"; one periodical's
-// issues on one entry), set in lines of at most `CREDIT_MEASURE` characters that
-// never leave a locator on a line of its own. A cite that names none of the
-// film's authors is scripture. After the sources, a "Sound" head gives each
-// CC BY recording the film places its line (core/sfx.ts `soundCredits`).
-
 import { Schema } from 'effect';
 import { type SoundCredit, creditLine } from '../core/sfx.ts';
 
-/**
- * An author the credits group sources under: a cite starting `<name>, ` is
- * theirs, or one starting `citedAs` when the script cites them by another
- * name (the 1889 statement as "Fundamental Principles (1889), XVIII").
- */
 export interface Author {
   readonly name: string;
   readonly citedAs?: string;
 }
 
-/** The widest line on the strip, in characters of the body type. */
 const CREDIT_MEASURE = 38;
 
-/** One line of the roll: its text, its type, and the space above it (the tools read a film's roll by it). */
 export const Credit = Schema.Struct({
   text: Schema.String,
   kind: Schema.Literals(['name', 'head', 'item']),
@@ -30,13 +15,11 @@ export const Credit = Schema.Struct({
 });
 export type Credit = typeof Credit.Type;
 
-/** A cite's author (none for scripture) and the work it names. */
 interface Source {
   readonly author: string | undefined;
   readonly work: string;
 }
 
-/** An author's name, and how the script cites the author's works when not by that name. */
 const citedAsOf = (author: Author) => author.citedAs ?? author.name;
 
 const authorOf = (cite: string, authors: ReadonlyArray<Author>): Source => {
@@ -49,13 +32,6 @@ const authorOf = (cite: string, authors: ReadonlyArray<Author>): Source => {
   return { author: undefined, work: cite };
 };
 
-/**
- * A work as cited: its title, and where in it, in one of three shapes. A page
- * list (`47, 70`, `468–472`) merges with the work's other pages; an entry
- * (`vol. 5, 468–472`, a periodical's `May 9, 1895, 290`) stands whole; a
- * letter's or manuscript's reprint (`Letter 57, 1895 (TM 92)`) merges its pages
- * inside the brackets.
- */
 interface Cited {
   readonly title: string;
   readonly pages: ReadonlyArray<string>;
@@ -63,11 +39,8 @@ interface Cited {
   readonly reprint: { readonly in: string; readonly pages: ReadonlyArray<string> } | undefined;
 }
 
-/** A letter or manuscript, whose year is part of its name. */
 const DATED = /^(Letter|Ms) \d+, \d{4}/;
-/** A page list: numbers and ranges, comma separated. */
 const PAGES = /^\d+(–\d+)?(, \d+(–\d+)?)*$/;
-/** A reprint in brackets after the name: `(TM 91–92)`. */
 const REPRINT = /^(.*) \((\S+) ([^)]+)\)$/;
 
 const citedOf = (work: string): Cited => {
@@ -87,7 +60,6 @@ const citedOf = (work: string): Cited => {
     : { title, pages: [], entry: rest, reprint: undefined };
 };
 
-/** Page tokens (`17`, `91–92`) as one sorted list, a page or range inside another dropped. */
 const mergePages = (tokens: ReadonlyArray<string>): string[] => {
   const spans = tokens
     .map((t) => {
@@ -105,14 +77,8 @@ const mergePages = (tokens: ReadonlyArray<string>): string[] => {
   return out.map(([a, b]) => (a === b ? `${a}` : `${a}–${b}`));
 };
 
-/** An entry's date, for ordering a periodical's issues (the page after it left off). */
 const dateOf = (entry: string) => Date.parse(entry.replace(/, \d+$/, ''));
 
-/**
- * A work's lines. A periodical's issues (dated entries) each stay whole, after
- * its whole title, or on its line when the first fits there. Any other locator
- * is glued to the title's last word, so no page number stands alone.
- */
 const workLines = (title: string, cited: ReadonlyArray<Cited>): string[] => {
   const pages = mergePages(cited.flatMap((c) => c.pages));
   const entries = [...new Set(cited.flatMap((c) => c.entry ?? []))].toSorted(
@@ -143,7 +109,6 @@ const workLines = (title: string, cited: ReadonlyArray<Cited>): string[] => {
   return wrap([...words, locator], ' ');
 };
 
-/** `parts` joined by `sep` into lines no longer than `CREDIT_MEASURE` characters, never breaking a part. */
 const wrap = (parts: ReadonlyArray<string>, sep: string): string[] => {
   const lines: string[] = [];
   let line = '';
@@ -158,19 +123,10 @@ const wrap = (parts: ReadonlyArray<string>, sep: string): string[] => {
   return lines;
 };
 
-/** The head the sound credits stand under. */
 const SOUND_HEAD = 'Sound';
 
-/** A sound credit's lines on the roll: its line (`creditLine`), wrapped at the measure. */
 const soundItems = (credit: SoundCredit): string[] => wrap(creditLine(credit).split(' '), ' ');
 
-/**
- * The roll from `cites` (each beat's, in the order the film gives them): the
- * film's name, then scripture, then each of `authors`' works, in the order
- * given, each work in the order the film first cites it, one entry a work;
- * then, when the film places any CC BY recording, a "Sound" head and each
- * one's line (`sounds`: `soundCredits` of the film's sound).
- */
 export const creditRoll = (
   title: string,
   cites: ReadonlyArray<string>,
@@ -190,7 +146,6 @@ export const creditRoll = (
   return [...out, ...soundSection(sounds)];
 };
 
-/** An author's head and works on the roll, each work once; none when the film cites none of theirs. */
 const authorCredits = (author: string, sources: ReadonlyArray<Source>): ReadonlyArray<Credit> => {
   const works = new Map<string, Cited[]>();
   for (const s of sources) {
@@ -207,7 +162,6 @@ const authorCredits = (author: string, sources: ReadonlyArray<Source>): Readonly
   return out;
 };
 
-/** The "Sound" head and each credit's lines; none when the film owes none. */
 const soundSection = (sounds: ReadonlyArray<SoundCredit>): ReadonlyArray<Credit> => {
   if (sounds.length === 0) return [];
   return [
@@ -218,10 +172,6 @@ const soundSection = (sounds: ReadonlyArray<SoundCredit>): ReadonlyArray<Credit>
   ];
 };
 
-/**
- * The credits of `sounds` that `roll` does not give under its "Sound" head,
- * each line as `creditRoll` sets it: what `film check` fails a film for.
- */
 export const missingSoundCredits = (
   roll: ReadonlyArray<Credit>,
   sounds: ReadonlyArray<SoundCredit>,

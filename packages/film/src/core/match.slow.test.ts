@@ -1,9 +1,3 @@
-// The match's table and pictures on drawn figures (`fixtures/figure.ts`): a
-// figure against itself flags nothing, and each owner rule (no ink of the
-// hair's own, no light rim inside an inner part, the concept's head and
-// feet) is flagged where the scene breaks it. The crop round a figure joins
-// its own hands; the side-by-side sets the concept's outline over the scene.
-
 import { describe, expect, test } from 'bun:test';
 import { Array as Arr, Option, Result } from 'effect';
 import { type FigureMeasure, measureFigure } from './figure.ts';
@@ -18,7 +12,6 @@ import {
   sideBySide,
 } from './match.ts';
 
-/** The side-by-side's head height, and the magenta its concept's outline is stroked in. */
 const SIDE_HEAD = 200;
 const OUTLINE_COLOUR = [232, 0, 140] as const;
 
@@ -30,12 +23,10 @@ const figure = (spec: FigureSpec) => {
 const row = (rows: ReturnType<typeof compareFigures>, name: string) =>
   Option.getOrThrow(Arr.findFirst(rows, (r) => r.name.startsWith(name)));
 
-// Each figure the tests hold, drawn and measured once.
 const plain = figure(PLAIN);
 const inked = figure({ ...PLAIN, hairInk: true });
 const wide = figure({ ...PLAIN, rx: 70 });
 const EAR = { ...PLAIN, eyeGap: 30 };
-// Long locks wide enough that a beard row walks through the beard to the lock past it.
 const BEARDED = { ...EAR, longHair: true, lockWidth: 24 };
 const [beardParted, beardMerged] = [
   figure({ ...BEARDED, beard: { parted: true } }),
@@ -63,7 +54,6 @@ describe('compareFigures', () => {
     const rim = row(compareFigures(bare.measure, rimmed.measure), 'light rim');
     expect(rim.flagged).toBe(true);
     expect(rim.note).toContain('the concept does not paint');
-    // The concept's rim is the scene's to keep: the same rim on both sides is no difference.
     expect(row(compareFigures(rimmed.measure, rimmed.measure), 'light rim').flagged).toBe(false);
   });
 
@@ -174,7 +164,6 @@ describe('sceneBoxOf', () => {
   test("joins the figure's own hands, not another's, with a twentieth of room", () => {
     const own = mark('f/hand', [210, 250, 240, 280], false);
     const theirs = mark('f/hand', [560, 250, 590, 280], false);
-    // The box 100..240 × 100..400 is 300 tall: 15 of room.
     expect(sceneBoxOf(lead, [lead, judge, own, theirs], 1920, 1080)).toEqual([85, 85, 255, 415]);
   });
 
@@ -215,7 +204,6 @@ describe('the side-by-side', () => {
     ];
     const gap = Math.round(SIDE_HEAD / 8);
     expect(side.width).toBe(gap * 4 + a + 2 * b);
-    // The outline is stroked over the third picture alone.
     expect(magenta(0, gap * 3 + a + b)).toBe(0);
     expect(magenta(gap * 3 + a + b, side.width)).toBeGreaterThan(SIDE_HEAD * 4);
   });

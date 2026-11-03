@@ -12,7 +12,6 @@ const websterMetadata = (db: Database): ReadonlyMap<string, string> =>
       .map((row) => [row.key, row.value]),
   );
 
-/** Cheap reader check. Full census and integrity run before installation. */
 export const checkWebsterSchema = Effect.fn('Webster.checkSchema')(function* (db: Database) {
   const meta = yield* Effect.try({
     try: () => {

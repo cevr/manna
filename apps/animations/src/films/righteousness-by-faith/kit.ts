@@ -1,7 +1,3 @@
-// The film's recurring pieces, so every scene draws one world: BibleProject's
-// grey paper people (a brow line and eye strokes for a face), the skies, the
-// glows, the stains. Scenes place them; nothing here reads the clock.
-
 import {
   type Gesture,
   type Grip,
@@ -40,7 +36,6 @@ import { fonts, palette } from './palette.ts';
 export const C = palette;
 export const F = fonts;
 
-/** The icon's word-bubble, centred on (0, 0): 160 units wide. The word of light is this bubble, lit. */
 const BUBBLE: Pt[] = [
   [-80, -48],
   [80, -48],
@@ -51,15 +46,8 @@ const BUBBLE: Pt[] = [
   [-80, 40],
 ];
 
-// ─── paper pieces ────────────────────────────────────────────────────────────
-
-/** How one piece of this film's paper is made: its role, and whatever it names over the role's. */
 type PieceOpts = Omit<PieceStyle, 'color' | 'outline'> & { readonly outline?: string };
 
-/**
- * One piece of the film's paper in `color` (the engine's `piece`): a figure's
- * piece is cut and outlined in the film's ink, scenery is torn with no ink.
- */
 export const piece = (
   ctx: CanvasRenderingContext2D,
   shape: ReadonlyArray<Pt>,
@@ -68,16 +56,10 @@ export const piece = (
   opts: PieceOpts,
 ) => paperPiece(ctx, shape, { ...opts, color, outline: opts.outline ?? C.outline }, hand);
 
-/** The bubble's three lines of writing, centred like it. */
 const BUBBLE_LINES = [0, 1, 2].map((i) =>
   rounded(-6 + (i % 2) * 8, -12 + i * 14, 90 - (i % 2) * 20, 5, 2),
 );
 
-/**
- * The word-bubble in `fill` with its three lines of writing in `ink`,
- * centred on (0, 0): the icon (`icons`), the word of light (`spoken`), the
- * heavy word (`declared`). `lines(i)` seeds each line.
- */
 export const bubble = (
   ctx: CanvasRenderingContext2D,
   hand: Hand,
@@ -90,7 +72,6 @@ export const bubble = (
   );
 };
 
-/** The icon's heart, centred on (0, 0), about 190 units wide (`within` shows a callback inside it). */
 export const HEART: ReadonlyArray<Pt> = [
   [0, -54],
   [40, -94],
@@ -102,10 +83,6 @@ export const HEART: ReadonlyArray<Pt> = [
   [-40, -94],
 ];
 
-/**
- * The heart in `fill` with the two tablets of the law on it (`icons`,
- * `within`); `law` writes their lines, so they stay legible close up.
- */
 export const heart = (
   ctx: CanvasRenderingContext2D,
   hand: (k: string) => Hand,
@@ -130,95 +107,34 @@ export const heart = (
   }
 };
 
-// ─── people ──────────────────────────────────────────────────────────────────
-
-/**
- * What a person's hand does: the engine's `Gesture`, and how far it has gone
- * into its own close-up (`lent`, a `pushedHand`'s `into`) where the figure
- * stays in frame while its hand comes forward to us (`daily`): the figure's
- * hand gives way as the close-up takes its place, and comes back as the
- * close-up shrinks onto it, so the one hand is never shown twice.
- */
 interface PersonGesture extends Gesture {
   readonly lent?: number;
 }
 
-/**
- * A grey paper person, feet at the origin, about 200 units tall: a round
- * garment, two short legs, a big head with eyes and a brow line. Everything
- * that makes a face read is a number, so scenes animate it like any other.
- */
 export interface Person {
-  /** Garment and head colours. */
   body?: Hex;
   shade?: Hex;
   skin?: Hex;
-  /** `round` is a tunic; `robe` falls to the feet. */
   garment?: 'round' | 'robe';
-  /** Head turn about the neck, radians (+ tips right). */
   tilt?: number;
-  /** Head drop, in units (+ down). */
   nod?: number;
-  /** Where the pupils look, in units. */
   look?: Pt;
-  /** Each brow's rise in units (+ up) and its tilt (+ raises the inner end: curious, worried). */
   browL?: number;
   browR?: number;
   browTilt?: number;
-  /** 0 closed, 1 a small round "oh". */
   mouth?: number;
-  /** The mouth's curve, −1 a frown to 1 a smile (held there); nothing near 0. An "oh" opens under it. */
   smile?: number;
-  /** 1 open to 0 shut; below 0.3 each eye is an arc, a happy crescent when smiling past 0.5. */
   eyes?: number;
-  /**
-   * What sits on the head (a turban, a helmet, hair, spectacles): drawn in
-   * head space, turned with it, over the eyes and under the brows. `c` is the
-   * head's centre and `r` its radii, in the person's units. A module-level
-   * function, so no closure is made per frame: what it needs beyond the
-   * person's hand comes through `headHands`.
-   */
   onHead?: HeadPiece;
-  /** Keyed hands `onHead` draws with, so its pieces keep the scene's own seeds. */
   headHands?: Hands;
-  /**
-   * The body's width and height as multiples (garment, legs, shoulders), each
-   * held in 0.6..1.5; the head keeps the size that reads.
-   */
   build?: readonly [number, number];
-  /** A moustache, 0 none to 1 a full handlebar (held there), in `hair` (the outline ink unless given). */
   moustache?: number;
   hair?: string;
-  /**
-   * What each floating hand does, on the far side (−x: behind the body, or
-   * over it when it works in front of the body) and on the near side (+x,
-   * over it): its target in the person's units, how far it has travelled
-   * there from its rest (a named cue's `f.at`) and its grip. No gesture, or
-   * one at `reach` 0, and the hand floats at rest beside the body, bobbing
-   * with the breath. No arm is drawn: the canvas kit's look from before
-   * 2026-10-18 (DIRECTION, Figures → Hands); the house hand is now at the
-   * end of an arm in its sleeve (CRAFT rule 12).
-   */
   far?: PersonGesture;
   near?: PersonGesture;
-  /** Stains on the garment: blob outlines in the person's units. */
   stains?: ReadonlyArray<ReadonlyArray<Pt>>;
-  /**
-   * How far each stain is washed out, in `stains`' order: 0 scarlet, toward 1
-   * the garment's own colour, and at 1 gone. None given, every stain is scarlet.
-   */
   washed?: ReadonlyArray<number>;
-  /**
-   * 0 stands, 1 sits: the origin becomes the seat's front edge, the body
-   * drops onto it by the legs' height, the lap comes forward over the edge
-   * with its two knees, and the shins hang down its face.
-   */
   sit?: number;
-  /**
-   * How much ground is under the feet, 0..1: a standing person casts the
-   * engine's contact shadow there (`ground`), fading as they sit. 0 for a
-   * figure with nothing under it: flying, on the cross, lying down. Default 1.
-   */
   ground?: number;
 }
 
@@ -227,12 +143,9 @@ const HEAD: Pt = [0, -165];
 const HEAD_RX = 35;
 const HEAD_RY = 38;
 const HEAD_R: Pt = [HEAD_RX, HEAD_RY];
-/** What a hand moves round and measures its reach from, inside the garment's top: the near shoulder (the far one is its mirror). */
 const SHOULDER: Pt = [17, -111];
-/** How far the body drops onto its seat when sitting: the legs' height. */
 const SEAT = 22;
 
-/** The turban's dome, over a head centred on (0, 0) of radii rx, ry: high enough to leave the brows showing. */
 const turbanShape = (rx: number, ry: number): Pt[] =>
   spline(
     [
@@ -248,24 +161,18 @@ const turbanShape = (rx: number, ry: number): Pt[] =>
     true,
   );
 
-/** Each turban wrap: its height on the head and half its width, in head radii. */
 const TURBAN_WRAPS = [
   [-0.82, 0.92],
   [-1.02, 0.8],
   [-1.22, 0.5],
 ] as const;
 
-/** `pts` moved by (dx, dy), without a per-point closure. */
 export const shifted = (pts: ReadonlyArray<Pt>, dx: number, dy: number): Pt[] => {
   const out: Pt[] = [];
   for (const [x, y] of pts) out.push([dx + x, dy + y]);
   return out;
 };
 
-/**
- * What sits on a head, drawn in head space: `c` the head's centre, `r` its
- * radii, `hand` the person's, `hands` the person's `headHands` when given.
- */
 export type HeadPiece = (
   ctx: CanvasRenderingContext2D,
   c: Pt,
@@ -274,7 +181,6 @@ export type HeadPiece = (
   hands: Hands | undefined,
 ) => void;
 
-/** A priest's wrapped linen turban, as a person's `onHead`. */
 export const turban: HeadPiece = (ctx, [cx, cy], [rx, ry], hand) => {
   piece(ctx, shifted(turbanShape(rx, ry), cx, cy), C.paper, sub(hand, 5), { role: 'figure' });
   for (const [y, w] of TURBAN_WRAPS)
@@ -290,10 +196,6 @@ export const turban: HeadPiece = (ctx, [cx, cy], [rx, ry], hand) => {
     );
 };
 
-/**
- * One side of a moustache over a mouth at (x, y), `side` −1 left or 1 right:
- * `m` 0..1 grows it from a trim line to a full handlebar with its tips out.
- */
 const moustacheSide = (x: number, y: number, side: -1 | 1, m: number): Pt[] => {
   const s = 0.5 + 0.5 * m;
   return spline(
@@ -311,16 +213,10 @@ const moustacheSide = (x: number, y: number, side: -1 | 1, m: number): Pt[] => {
   );
 };
 
-/** Each eye's, leg's and moustache side's offset or side: fixed, so a frame allocates none. */
 const EYE_DX = [-12, 13] as const;
 const LEG_X = [-13, 13] as const;
 const SIDES = [-1, 1] as const;
 
-/**
- * The two eyes about (x, y), the midpoint between them: filled ovals that
- * narrow as `open` falls, and below 0.3 an arc each, bowed down when shut,
- * bowed up in a happy crescent when `smile` is past 0.5.
- */
 const eyePair = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -347,11 +243,6 @@ const eyePair = (
   }
 };
 
-/**
- * The mouth under a head centred on (x, y): the `smile` curve, and `open` as
- * a small round "oh" that becomes an open grin under the curve as the smile
- * grows.
- */
 const mouthOf = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -386,27 +277,15 @@ const mouthOf = (
   }
 };
 
-/**
- * Opens a frame dropped `dy` and scaled (sx, sy) about the origin, skipping
- * the identity; the caller restores it. The person's layers use it in place
- * of a closure per layer.
- */
 const frameOf = (ctx: CanvasRenderingContext2D, dy: number, sx = 1, sy = 1) => {
   ctx.save();
   if (dy !== 0) ctx.translate(0, dy);
   if (sx !== 1 || sy !== 1) ctx.scale(sx, sy);
 };
 
-/** A seated shin's length, from under the knee to the heel: long enough to hang down a wall and read. */
 const SHIN = 46;
-/** Where a seated shin starts: under the lap's knees. */
 const KNEE_Y = 6;
 
-/**
- * The two legs: under the body standing; as `sit` goes to 1 each becomes a
- * shin hanging from under its knee down the seat's face, a foot turned out
- * toward us at its end.
- */
 const legs = (ctx: CanvasRenderingContext2D, sit: number, shade: string, hand: Hand) => {
   for (const x of LEG_X) {
     const k = sub(hand, 1 + x);
@@ -444,16 +323,9 @@ const ROBE_SHAPE = spline(
   true,
 );
 const TUNIC_SHAPE = rounded(0, -72, 66, 112, 22);
-/** Each garment's top and hem, standing. */
 const ROBE_SPAN = [-126, -2] as const;
 const TUNIC_SPAN = [-128, -16] as const;
-/** Where the hem rests once seated: under the lap, just over the seat's edge. */
 const SEAT_HEM = 3;
-/**
- * The seated lap, about the seat: the thighs come toward us over the seat's
- * edge, so the silhouette widens there; its top is the fold at the hips, its
- * bottom the two knees with the cloth dipping between them.
- */
 const LAP = spline(
   [
     [-46, -14],
@@ -470,7 +342,6 @@ const LAP = spline(
   6,
   true,
 );
-/** The shadowed crease between the knees, and its soft line. */
 const LAP_CREASE: Pt[] = [
   [1, -4],
   [0, 7],
@@ -484,41 +355,22 @@ const LAP_FOLD: StrokeStyle = {
   boil: 'crawl',
 };
 const UNBUILT = [1, 1] as const;
-/** How far a build may stretch or squash the body: a person still, never flat or inside out. */
 const BUILD_MIN = 0.6;
 const BUILD_MAX = 1.5;
 
-/** The person's build, each factor held in [BUILD_MIN, BUILD_MAX]. */
 const buildOf = (p: Person): readonly [number, number] =>
   p.build === undefined
     ? UNBUILT
     : [clamp(p.build[0], BUILD_MIN, BUILD_MAX), clamp(p.build[1], BUILD_MIN, BUILD_MAX)];
-/** Pupils looking straight ahead. */
 const HEAD_STILL: Pt = [0, 0];
 const NO_STAINS: ReadonlyArray<ReadonlyArray<Pt>> = [];
 
-/**
- * The garment and its stains: standing as it is; seated, its top dropped
- * onto the seat and its length folded into the lap, the hem at the seat's
- * edge.
- */
-/**
- * The seated garment's fold for `sit` > 0: its top dropped onto the seat,
- * its length folded so the hem rests at the seat's edge under the lap, and
- * its width drawn in, since the cloth falls straight to the lap rather than
- * belling to the feet. As a drop `dy` and a scale (sx, sy) about the feet.
- */
 const foldOf = (robe: boolean, sit: number): readonly [dy: number, sx: number, sy: number] => {
   const [top, hem] = robe ? ROBE_SPAN : TUNIC_SPAN;
   const k = (lerp(hem, SEAT_HEM, sit) - top - SEAT * sit) / (hem - top);
   return [top + SEAT * sit - top * k, 1 - 0.18 * sit, k];
 };
 
-/**
- * Where the point `y` units up this person's standing garment is drawn, for
- * their build and sit, and the garment's width there as a multiple: so
- * something worn on it (Christ's sash) stays on it.
- */
 const onGarment = (p: Person, y: number): readonly [sx: number, y: number] => {
   const [bw, bh] = buildOf(p);
   const sit = clamp(p.sit ?? 0);
@@ -527,7 +379,6 @@ const onGarment = (p: Person, y: number): readonly [sx: number, y: number] => {
   return [bw * sx, bh * (dy + sy * y)];
 };
 
-/** Folds the frame onto the seat for `sit` > 0 (see `foldOf`); nothing standing. */
 const toFold = (ctx: CanvasRenderingContext2D, robe: boolean, sit: number) => {
   if (sit <= 0) return;
   const [dy, sx, sy] = foldOf(robe, sit);
@@ -535,7 +386,6 @@ const toFold = (ctx: CanvasRenderingContext2D, robe: boolean, sit: number) => {
   ctx.scale(sx, sy);
 };
 
-/** Adds `pts` to the current path as one closed subpath. */
 export const tracePath = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>) => {
   let first = true;
   for (const [x, y] of pts) {
@@ -546,12 +396,6 @@ export const tracePath = (ctx: CanvasRenderingContext2D, pts: ReadonlyArray<Pt>)
   ctx.closePath();
 };
 
-/**
- * Clips to this person's garment as `person` draws it, build, seated fold
- * and lap included, in the frame `person` was drawn in: so something spread
- * through the cloth (declared's gold) stays on it. The caller saves before
- * and restores after; the transform is left as it was.
- */
 export const clipToGarment = (ctx: CanvasRenderingContext2D, p: Person) => {
   const m = ctx.getTransform();
   const [bw, bh] = buildOf(p);
@@ -560,7 +404,6 @@ export const clipToGarment = (ctx: CanvasRenderingContext2D, p: Person) => {
   if (bw !== 1 || bh !== 1) ctx.scale(bw, bh);
   ctx.beginPath();
   if (sit > 0) {
-    // The lap's subpath first, in the build's frame, before the fold.
     const lap = ctx.getTransform();
     ctx.scale(robe ? 1 : 0.8, sit);
     tracePath(ctx, LAP);
@@ -597,8 +440,6 @@ const garment = (ctx: CanvasRenderingContext2D, p: Person, sit: number, body: He
   }
   ctx.restore();
   if (sit <= 0) return;
-  // The lap: the thighs come toward us over the seat's edge, the cloth
-  // draped across them and broken by the two knees; it grows in with `sit`.
   ctx.save();
   ctx.scale(robe ? 1 : 0.8, sit);
   piece(ctx, LAP, body, sub(hand, 6), { role: 'figure', shadow: 0.25 });
@@ -606,14 +447,7 @@ const garment = (ctx: CanvasRenderingContext2D, p: Person, sit: number, body: He
   ctx.restore();
 };
 
-/**
- * A person's hands: the 22-unit mitten, and their reach, how far from its
- * shoulder a hand may work (`film check` flags a target past it, `HandFar`).
- * The reach is a short arm's and a hand's length: about the shoulder to the
- * hip, or a hand's width above the head.
- */
 const PERSON_HAND = { mitten: 22, line: 2.5, radius: 120 } as const;
-/** A `HandStyle` rewritten in place, frame to frame. */
 interface ScratchStyle {
   skin: string;
   outline: string;
@@ -621,7 +455,6 @@ interface ScratchStyle {
   line: number;
   radius: number;
 }
-/** The hand style a person draws with, its paper and reach rewritten per person (scratch, so the draw allocates none). */
 const HAND_STYLE: ScratchStyle = {
   skin: C.figure,
   outline: C.outline,
@@ -629,32 +462,13 @@ const HAND_STYLE: ScratchStyle = {
   line: PERSON_HAND.line,
   radius: PERSON_HAND.radius,
 };
-/**
- * Where the near hand floats at rest, standing, by garment (the far one is
- * its mirror): beside the hip, just off the garment's edge, so it reads as a
- * hand of its own and never as a patch on the cloth.
- */
 const REST = { round: [42, -50], robe: [54, -50] } as const satisfies Record<string, Pt>;
-/**
- * Seated, where the near hand rests on the lap instead, over the seat (in
- * the standing frame: the drop onto the seat is added), and how far out,
- * as a share of the lap's half width.
- */
 const LAP_REST = { x: 0.62, y: -4 } as const;
-/** The lap's half width, as `LAP` is drawn. */
 const LAP_HALF = 46;
-/** Which way each side lies, as a `HandRoot`'s `away`. */
 const AWAY = { far: -1, near: 1 } as const;
 
-/**
- * Where a person's hand on `side` belongs (scratch, rewritten every call):
- * its shoulder and its rest for the build, the rest moving onto the lap as
- * the person sits, both in the frame dropped onto the seat; and the breath
- * it bobs with, the person's own (`hand`).
- */
 const ROOT_SHOULDER: [number, number] = [0, 0];
 const ROOT_REST: [number, number] = [0, 0];
-/** A `HandRoot` rewritten in place, call to call. */
 interface ScratchRoot {
   readonly shoulder: Pt;
   readonly rest: Pt;
@@ -678,31 +492,14 @@ const rootOf = (p: Person, side: 'far' | 'near', hand: Hand): HandRoot => {
   return ROOT;
 };
 
-/** The reach, for a build: a bigger body reaches farther. */
 const reachOf = ([bw, bh]: readonly [number, number]) => PERSON_HAND.radius * Math.max(bw, bh);
 
-/**
- * Whether a hand's target lies in front of the body's middle: across the
- * garment below the shoulders, where a far hand at work must be drawn over
- * the body or be lost behind it (declared's doubt at the chest).
- */
 const inFront = ([x, y]: Pt, [bw, bh]: readonly [number, number]) =>
   Math.abs(x) < 26 * bw && y > -126 * bh && y < -8 * bh;
 
-/**
- * Whether the far hand is drawn over the body: only on its way to work in
- * front of it, and there. At rest it tucks behind, beside the hip, where
- * nothing of the body covers it.
- */
 const farOver = (g: Gesture | undefined, build: readonly [number, number]) =>
   g !== undefined && g.reach > 0 && inFront(g.to, build);
 
-/**
- * The floating hand on `side` of a person of build `build`, doing what `p`
- * gives it, drawn `over` the body or behind it, in the frame dropped `drop`
- * onto a seat of `sit`. While a check probes hands it also hands the hand
- * the body's silhouette, so the hand declares itself (`floatingHand`).
- */
 const personHand = (
   ctx: CanvasRenderingContext2D,
   p: Person,
@@ -732,23 +529,15 @@ const personHand = (
   ctx.restore();
 };
 
-/** How much of a hand the figure keeps while its close-up is out (`PersonGesture.lent`): all of it, unless lent. */
 const keptOf = (g: PersonGesture | undefined) => 1 - clamp(PUSH_TAKES * (g?.lent ?? 0));
 
-/**
- * Where a person's hand on `side` is, in their units: its mitten's centre,
- * at rest or at work or on its way (something held in it rides there). The
- * breath it bobs with at rest is the person's, `hand` as `person` draws it.
- */
 export const handOf = (p: Person, side: 'far' | 'near', hand: Hand): Pt => {
   const [, bh] = buildOf(p);
   const [x, y] = handAt(rootOf(p, side, hand), p[side], HAND_STYLE);
   return [x, y + SEAT * clamp(p.sit ?? 0) * bh];
 };
 
-/** How wide the contact shadow under a standing person spreads, by garment: past the robe's hem, or the tunic and feet. */
 const FOOT_SHADOW_W = { robe: 150, round: 100 } as const;
-/** Where it lies: just under the soles. */
 const FOOT_SHADOW_Y = 2;
 
 export const person = (ctx: CanvasRenderingContext2D, p: Person, hand: Hand) => {
@@ -756,10 +545,8 @@ export const person = (ctx: CanvasRenderingContext2D, p: Person, hand: Hand) => 
   const build = buildOf(p);
   const [bw, bh] = build;
   const sit = clamp(p.sit ?? 0);
-  // Seated, everything but the legs drops onto the seat.
   const drop = sit > 0 ? SEAT * sit * bh : 0;
 
-  // The contact shadow under the feet, under everything else, as wide as the hem.
   const standing = clamp(p.ground ?? 1) * (1 - sit);
   if (standing > 0) {
     ctx.save();
@@ -768,7 +555,6 @@ export const person = (ctx: CanvasRenderingContext2D, p: Person, hand: Hand) => 
     ctx.restore();
   }
 
-  // The far hand behind the body (or over it, working in front of it), the near one over it.
   HAND_STYLE.skin = colours[1];
   const farFront = farOver(p.far, build);
   if (!farFront) {
@@ -776,7 +562,6 @@ export const person = (ctx: CanvasRenderingContext2D, p: Person, hand: Hand) => 
     personHand(ctx, p, 'far', build, hand, false, sit, drop);
     ctx.restore();
   }
-  // A build stretches the body from the feet; the head rides its neck.
   frameOf(ctx, 0, bw, bh);
   legs(ctx, sit, p.shade ?? C.figureShade, hand);
   ctx.restore();
@@ -787,7 +572,6 @@ export const person = (ctx: CanvasRenderingContext2D, p: Person, hand: Hand) => 
   if (farFront) personHand(ctx, p, 'far', build, hand, true, sit, drop);
   head(ctx, p, colours[1], hand, NECK[1] * (bh - 1));
   personHand(ctx, p, 'near', build, hand, true, sit, drop);
-  // The face, declared once the person is drawn: what is drawn after it lies over it.
   if (probesFaces(ctx)) {
     headFrame(ctx, p, NECK[1] * (bh - 1));
     probeFace(ctx, HEAD[0], HEAD[1], 2 * HEAD_RY);
@@ -796,12 +580,6 @@ export const person = (ctx: CanvasRenderingContext2D, p: Person, hand: Hand) => 
   ctx.restore();
 };
 
-/**
- * A person's silhouette in the frame their hands float in (dropped `drop`
- * onto a seat of `sit`): the garment as built and folded, and the head. What
- * a check probing hands tests a hand against for `HandHidden`; built only
- * while one probes.
- */
 const bodyOf = (p: Person, sit: number, drop: number): ReadonlyArray<ReadonlyArray<Pt>> => {
   const [bw, bh] = buildOf(p);
   const robe = p.garment === 'robe';
@@ -814,11 +592,6 @@ const bodyOf = (p: Person, sit: number, drop: number): ReadonlyArray<ReadonlyArr
   return [garment, ellipseShape(HEAD[0], HEAD[1] + lift, HEAD_RX, HEAD_RY)];
 };
 
-/**
- * One brow over the eye on `side` of a head centred on (cx, cy), raised
- * `rise`; a `tilt` past 0 lifts the end nearer the nose: the left brow's
- * inner end is its right one, and the other way round.
- */
 const browOf = (
   ctx: CanvasRenderingContext2D,
   [cx, cy]: Pt,
@@ -840,7 +613,6 @@ const browOf = (
   );
 };
 
-/** Save `ctx` and enter the head's space: turned about the neck, nodded, and raised `lift` with a build. */
 const headFrame = (ctx: CanvasRenderingContext2D, p: Person, lift: number) => {
   ctx.save();
   ctx.translate(NECK[0], NECK[1] + (p.nod ?? 0) + lift);
@@ -848,10 +620,6 @@ const headFrame = (ctx: CanvasRenderingContext2D, p: Person, lift: number) => {
   ctx.translate(-NECK[0], -NECK[1]);
 };
 
-/**
- * The head, turned about the neck and raised `lift` with a build, with its
- * face, whatever sits on it and any moustache.
- */
 const head = (ctx: CanvasRenderingContext2D, p: Person, skin: string, hand: Hand, lift: number) => {
   headFrame(ctx, p, lift);
   const [cx, cy] = HEAD;
@@ -881,13 +649,6 @@ const head = (ctx: CanvasRenderingContext2D, p: Person, skin: string, hand: Hand
   ctx.restore();
 };
 
-// ─── recurring figures and the icon row ──────────────────────────────────────
-// Figures and the icon row more than one scene draws, so a callback lands in
-// the same layout (CRAFT rule 8). Each takes a `hand` for its keys, so boil
-// seeds stay the scene's own. Sets live in their own modules: court.ts,
-// heaven.ts, city.ts, law.ts, garden.ts, spoken.ts, gospel.ts.
-
-/** A hand's gesture whose target and reach a scene rewrites in place every frame (scratch, so the draw allocates none). */
 export interface GestureAt extends PersonGesture {
   readonly to: [number, number];
   reach: number;
@@ -896,17 +657,11 @@ export interface GestureAt extends PersonGesture {
   lent?: number;
 }
 
-/** A scene's hands: its own `f.hand`, or another scene's from `f.handsOf(drawing)`. */
 export type Hands = (k: string) => Hand;
 
-/**
- * Christ, feet at the origin, as a `person` in the white robe with a gold
- * sash: the pose is the caller's (look, brows, hands), the robe is not.
- */
 export const christ = (ctx: CanvasRenderingContext2D, pose: Person, hand: Hands) => {
   const robed: Person = { ...pose, body: C.robe, shade: C.robe, garment: 'robe' };
   person(ctx, robed, hand('christ'));
-  // The sash rides the robe, 90 units up it, through any build or sit.
   const [sx, y] = onGarment(robed, -90);
   ctx.save();
   ctx.translate(0, y);
@@ -917,7 +672,6 @@ export const christ = (ctx: CanvasRenderingContext2D, pose: Person, hand: Hands)
 };
 const SASH = rounded(0, 0, 92, 12, 3);
 
-/** The shape of a robe, centred on (0, 0) at size 1: the loom's cloth and the icon. */
 export const ROBE: Pt[] = [
   [-120, -330],
   [120, -330],
@@ -931,60 +685,32 @@ export const ROBE: Pt[] = [
   [-330, -210],
 ];
 
-/** The heart's place on a person's chest, in their units (`within`, `daily`, the Sabbath field). */
 export const CHEST: Pt = [0, -80];
 
-/** The three icons' centres, relative to the row's centre. */
 export const ICON_X = [-440, 0, 440] as const;
 
-/** Each of the three icons' value: word, robe, heart. */
 export type Three = readonly [number, number, number];
 const EVERY: Three = [1, 1, 1];
 
-/**
- * Where the eye goes on the row: the one language every count and every
- * section head lights a gift in. `lead` is each icon's lead 0..1 (an
- * `outBack` cue overshoots it, so the icon pops): a leading icon grows by
- * `ICON_LEAD`, sits on a gold rim with gold light behind it, and is drawn
- * over its neighbours. `dim` 0..1 is how far every icon neither leading nor
- * lit (its glow under `ICON_KEPT`) fades back into the page, by up to
- * `ICON_DIM`.
- */
 export interface IconCount {
   readonly lead: Three;
   readonly dim: number;
 }
-/** How much bigger the leading icon grows. */
 export const ICON_LEAD = 0.55;
-/** How far an unlit icon fades while the row counts. */
 const ICON_DIM = 0.62;
 const NO_COUNT: IconCount = { lead: [0, 0, 0], dim: 0 };
 
-/** A scene's scratch for the row, rewritten every frame: each icon's glow, each one's lead, and the count over that lead. */
 interface IconScratch {
   readonly lit: [number, number, number];
   readonly lead: [number, number, number];
   readonly count: Posed<IconCount>;
 }
 
-/**
- * A scene's icon-row scratch, made once at module scope: its glow from `lit`
- * (none lit by default), and the count it opens on (`from`: none leads and
- * none fades by default), as the row stands when the scene takes it over.
- */
 export const iconScratch = (lit: Three = [0, 0, 0], from: IconCount = NO_COUNT): IconScratch => {
   const lead: [number, number, number] = [from.lead[0], from.lead[1], from.lead[2]];
   return { lit: [lit[0], lit[1], lit[2]], lead, count: { lead, dim: from.dim } };
 };
 
-/**
- * The film's three icons in a row centred on the origin, the answer's shape
- * (`message`): a gold word-bubble (God declares), a white robe (clothes) and
- * a heart with two tablets (changes). `lit` is each icon's glow alpha 0..1
- * (0 draws none): the turn the film is on. `shown` scales each icon about its
- * centre as it pops in (0 draws none). `count` says which icon leads and how
- * far the unlit fade (`IconCount`); by default none leads and none fades.
- */
 export const icons = (
   ctx: CanvasRenderingContext2D,
   hand: Hands,
@@ -1019,7 +745,6 @@ export const icons = (
     });
     ctx.restore();
   };
-  // The leading icons last, over their neighbours as they grow.
   for (const i of ORDER) if (count.lead[i] <= 0) disc(i);
   for (const i of ORDER) if (count.lead[i] > 0) disc(i);
 };
@@ -1040,45 +765,21 @@ const INNER: ReadonlyArray<(ctx: CanvasRenderingContext2D, hand: Hands) => void>
   (ctx, hand) => heart(ctx, hand, C.cutLight, false),
 ];
 
-/**
- * The icon row at the head of every section (CRAFT rule 8): one layout, so
- * every pull-back is a true callback. Centred, full size, on the glow sky
- * (`ICON_SKY`). `woman` lifts the row out of `message`'s open hand into it on
- * "order"; `spoke`, `declared` and `within` open on it, lighting their gift;
- * `centurion`, `look` and `robe` pull back to it. `close` is the row's scale
- * where a push through one icon starts or ends, the icon filling the frame.
- */
 export const ICON_ROW = { x: 960, y: 540, scale: 1, close: 2.3 } as const;
 export const ICON_SKY = [
   [0, C.glow],
   [1, C.peachLow],
 ] as const;
-/** A gift lit earlier in the film, still glowing under the one the section lights. */
 export const ICON_KEPT = 0.7;
 
-/** The close-up hand's paper, lifeline and ink: the figures' own. */
 const CLOSE_UP = { skin: C.figure, crease: C.figureShade, outline: C.outline } as const;
-/** A `CloseDraw` rewritten in place, draw to draw. */
 interface ScratchCloseDraw {
   away: -1 | 1;
   line?: number;
   detail?: number;
 }
-/** A close-up's draw options (scratch, so a frame allocates none). */
 const CLOSE_DRAW: ScratchCloseDraw = { away: 1 };
 
-/**
- * A figure's hand close up (the engine's `closeHand`: an open hand held out
- * palm up, seen from above, with its lifeline and joint lines), the palm's
- * middle on the origin, `CLOSE_SPAN` units heel to fingertips, floating in
- * frame with no arm: faith, the hand that takes (`look` lays the gold light
- * in its palm, `message` and `daily` the icons). `open` 1 holds it flat;
- * toward 0 the fingers bend up and back over the palm, which stays showing
- * as a cup. `side` is which of the figure's hands it is: the far one's is
- * mirrored, its thumb where that hand's own thumb lies. A close-up is only
- * ever of a figure the viewer has just seen (CRAFT rule 12): `pushedHand`
- * pushes into it from that figure's hand.
- */
 export const handCloseUp = (
   ctx: CanvasRenderingContext2D,
   hand: Hands,
@@ -1092,38 +793,17 @@ export const handCloseUp = (
   closeHand(ctx, open, CLOSE_UP, hand('closeHand'), CLOSE_DRAW);
 };
 
-/**
- * A close-up drawn at a figure's own hand: its scale on screen when the
- * figure stands at `figureScale`, the size of the figure's mitten.
- */
 const atMitten = (figureScale: number) => (figureScale * PERSON_HAND.mitten) / CLOSE_SPAN;
 
-/**
- * How far a push magnifies a figure drawn at `figureScale` for its hand,
- * turned palm up (`GestureAt.turn`), to become the close-up at `scale`.
- */
 export const pushZoom = (figureScale: number, scale: number) => scale / atMitten(figureScale);
 
-/** A push from a figure's palm-up hand into its close-up, and back. */
 export interface HandPush {
-  /** The figure's hand on screen (its palm's middle, its gesture's target) before the push. */
   readonly from: Pt;
-  /** The figure's scale on screen before the push. */
   readonly figureScale: number;
-  /** Where the close-up's palm's middle sits once pushed in, and its scale there. */
   readonly to: Pt;
   readonly scale: number;
 }
 
-/**
- * The close-up `into` a push from a figure's hand (0 on the figure's own
- * hand, turned palm up, 1 at `push.to`): the same shape all the way, grown
- * as the push grows the figure (by `pushZoom`) and slid onto its place, its
- * line going from the figure's to its own and its lifeline and joints coming
- * in, so it takes the figure's hand's place with no change of shape; back
- * out, the same in reverse. `holds` draws in the hand's units (the palm's
- * middle on the origin), `under` the hand and `over` it: what it holds.
- */
 export const pushedHand = (
   ctx: CanvasRenderingContext2D,
   hand: Hands,
@@ -1138,7 +818,6 @@ export const pushedHand = (
   const scale = start * (push.scale / start) ** into;
   const px = lerp(PERSON_HAND.line * push.figureScale, CLOSE_LINE * push.scale, into);
   ctx.save();
-  // Over the figure's own hand at once: the two are one shape there.
   ctx.globalAlpha *= clamp(PUSH_TAKES * into);
   at(
     ctx,
@@ -1155,5 +834,4 @@ export const pushedHand = (
   );
   ctx.restore();
 };
-/** How soon into a push the close-up covers the figure's hand whole. */
 const PUSH_TAKES = 4;

@@ -14,10 +14,8 @@ import {
   scoreOptions,
 } from './sound.ts';
 
-/** No recorded takes: every scene is estimated. */
 const noTakes: Timings = { voice: '', scenes: {} };
 
-/** The failure's tag, or `ok`. */
 const outcome = <A, E extends { readonly _tag: string }>(r: Result.Result<A, E>) =>
   Result.match(r, { onSuccess: () => 'ok', onFailure: (e) => e._tag });
 
@@ -111,8 +109,6 @@ describe('sound', () => {
   test('movements cover the whole film, split at their scenes, and the last runs past its end', () => {
     const plan = Result.getOrThrow(musicPlan(music, placed));
     const ms = plan.chunks.map((c) => c.duration_ms);
-    // The composed ending lands after the cut, so the mix's fade-out, not the
-    // music's own decay, is what the film's last seconds hear.
     expect(ms.reduce((x, y) => x + y, 0)).toBe(Math.round((filmEnd(placed) + MUSIC_TAIL) * 1000));
     expect(ms[0]).toBe(Math.round((placed[2]?.start ?? 0) * 1000));
   });
@@ -142,7 +138,6 @@ describe('sound', () => {
     expect(
       spans.map((r) => Result.match(r, { onSuccess: (a) => a.ms, onFailure: (e) => e._tag })),
     ).toEqual([
-      // Scene a's take runs under the API's shortest chunk.
       'MovementTooShort',
       Math.round((placed[2]?.start ?? 0) * 1000) - Math.round((placed[1]?.start ?? 0) * 1000),
       Math.round((filmEnd(placed) + MUSIC_TAIL) * 1000) -
@@ -193,12 +188,10 @@ describe('sound', () => {
     const [, b, c] = placed;
     const end = (b?.start ?? 0) + (b?.dur ?? 0);
     const bounded = Result.getOrThrow(musicPlan(music, placed, Option.some('b')));
-    // Close starts where b ends, at c: past the bound, so it is not composed.
     expect(end).toBe(c?.start ?? -1);
     expect(bounded.chunks.map((chunk) => [chunk.text, chunk.duration_ms])).toEqual([
       ['[Open]', Math.round((end + MUSIC_TAIL) * 1000)],
     ]);
-    // Through the last scene is the whole film.
     expect(musicPlan(music, placed, Option.some('c'))).toEqual(musicPlan(music, placed));
     expect(outcome(musicPlan(music, placed, Option.some('gone')))).toBe('UnknownScene');
   });

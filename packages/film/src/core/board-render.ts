@@ -1,14 +1,3 @@
-// What a Board render shows at a film second (`film render --board`): the
-// animatic's shot there (`shotsOf`, the one rule for when a panel shows),
-// dissolved into the next across its cut, each picture panel moving slowly
-// over its hold, and the line a review copy burns in (a Board's `burnIn`, a
-// scenes render's `scenesBurnIn`). A picture panel's
-// motion is a pure function of its id, so the same panel moves the same way
-// on every render; a card (a text panel, a beat with no panel) holds still.
-// Its times are whole ticks of the Board's clock (`BoardClock`), so a frame
-// moved by whole frames with its shots works out the same numbers.
-// Pure:the page paints what this decides (`canvas/board.ts`, `boardFilm`).
-
 import { Array as Arr, Boolean as Bool, Data, Option, Order, Predicate } from 'effect';
 import { type BoardFile, shownTry } from './board.ts';
 import { RenderVariantName } from './catalogue.ts';
@@ -17,38 +6,29 @@ import { Shot, shotsOf } from './animatic.ts';
 import { clockBeat, timedBeat } from './film-timeline.ts';
 import { CLOCK_EPSILON, TICKS_PER_FRAME, frameAtOrBefore, ticksAt } from './time.ts';
 
-/** What a render's frames picture: the film's scenes or its Board, each with the burn-in when `review`. */
 export type Picture = Data.TaggedEnum<{
   Scenes: { readonly review: boolean };
   Board: { readonly review: boolean };
 }>;
 export const Picture = Data.taggedEnum<Picture>();
 
-/** The export page's query words for `picture`: `board` for the Board, and `review` for a review copy of either. */
 export const pictureParams = (picture: Picture): ReadonlyArray<string> =>
   Picture.$match(picture, {
     Scenes: ({ review }) => Arr.filter(['review'], () => review),
     Board: ({ review }) => ['board', ...Arr.filter(['review'], () => review)],
   });
 
-/** The picture an export page's query asks for (`pictureParams`, read back). */
 export const pictureOn = (params: URLSearchParams): Picture =>
   Bool.match(params.has('board'), {
     onTrue: () => Picture.Board({ review: params.has('review') }),
     onFalse: () => Picture.Scenes({ review: params.has('review') }),
   });
 
-/** A Board render's catalogue variant when `--variant` names none: `board`, its review copy `board-review`. */
 export const boardVariant = (review: boolean): RenderVariantName =>
   RenderVariantName.make(
     Bool.match(review, { onTrue: () => 'board-review', onFalse: () => 'board' }),
   );
 
-/**
- * A render's catalogue variant when `--variant` names none, by its picture:
- * a Board's (`boardVariant`), a scenes review copy `review`, and none for the
- * scenes' own frames (`main`, or a wedge's name: `wedgeVariant`).
- */
 export const pictureVariant = (picture: Picture): Option.Option<RenderVariantName> =>
   Picture.$match(picture, {
     Scenes: ({ review }) =>
@@ -59,48 +39,32 @@ export const pictureVariant = (picture: Picture): Option.Option<RenderVariantNam
     Board: ({ review }) => Option.some(boardVariant(review)),
   });
 
-/** Where a render page reads film `id`'s Board on its server (`tools/narration-route.ts`, `boardFile`). */
 export const boardUrls = (id: string) => ({
   record: `/films/${encodeURIComponent(id)}/board.json`,
   image: (file: string) => `/films/${encodeURIComponent(id)}/board/${encodeURIComponent(file)}`,
 });
 
-/** How a shot moves across its hold. */
 type Motion = Data.TaggedEnum<{
-  /** A card: no motion. */
   Still: {};
-  /** A slow push in, from the frame to `PUSH` larger. */
   PushIn: {};
-  /** A gentle pan, `PAN` of the frame's width, rightward (`dir` 1) or leftward (-1). */
   Pan: { readonly dir: 1 | -1 };
 }>;
 const Motion = Data.taggedEnum<Motion>();
 
-/** How much larger a push in ends than it starts. */
 const PUSH = 0.06;
-/** How far a pan travels, as a share of the frame's width. */
 const PAN = 0.04;
-/**
- * How much larger a pan holds its image: more than the `PAN` its travel
- * needs, so at either end of it the image still runs past the frame's edge
- * and no edge pixel, smoothed half clear, shows.
- */
 const PAN_HOLD = 0.042;
-/** How long a dissolve between two shots takes, centred on their cut (less for a short hold). */
 const DISSOLVE_S = 0.5;
 
-/** `id`'s FNV-1a hash: the same id, the same number, on every render. */
 const hashOf = (id: string): number =>
   [...id].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0, 2166136261);
 
-/** The picture panel motions, one picked by a panel id's hash. */
 const MOVES: ReadonlyArray<Motion> = [
   Motion.PushIn(),
   Motion.Pan({ dir: 1 }),
   Motion.Pan({ dir: -1 }),
 ];
 
-/** How `shot` moves: a picture panel by its id's hash, a card (a text panel, a beat with no panel) not at all. */
 const motionOf = (shot: Shot): Motion =>
   Shot.$match(shot, {
     Unboarded: () => Motion.Still(),
@@ -112,13 +76,11 @@ const motionOf = (shot: Shot): Motion =>
       }),
   });
 
-/** A shot's framing: its scale over the cover-fit frame, and its offset as a share of the frame's width. */
 export interface Framing {
   readonly scale: number;
   readonly dx: number;
 }
 
-/** `motion`'s framing `p` (0 to 1) through its hold. A pan holds `PAN_HOLD` larger so its travel never shows an edge. */
 const framingAt = (motion: Motion, p: number): Framing => {
   const k = Math.max(0, Math.min(1, p));
   return Motion.$match(motion, {
@@ -128,7 +90,6 @@ const framingAt = (motion: Motion, p: number): Framing => {
   });
 };
 
-/** One shot as a frame draws it: how opaque, how it moves and where that has it now, and the tick its mark is said at. */
 export interface Layer {
   readonly shot: Shot;
   readonly alpha: number;
@@ -137,37 +98,19 @@ export interface Layer {
   readonly mark: number;
 }
 
-/** A Board render's frame: the shot held there (`shown`), and its layers bottom first (two inside a dissolve). */
 interface BoardFrame {
   readonly shown: Shot;
   readonly layers: ReadonlyArray<Layer>;
 }
 
-/**
- * A Board's shots (in play order) on its clock (`ticksAt`, core/time.ts) at
- * `fps`: the tick each starts at and its mark is said at, and the tick the
- * film ends at. Each is its beat's first frame in ticks plus its time into
- * the beat (`tickIn`), so a shot moved with its beat by whole frames moves by
- * exactly those frames' ticks. Every time a Board frame paints from is worked
- * out here in whole ticks, so a moved frame reads the very numbers it read
- * before, and paints what a segment key over those numbers (`shotsSeen`)
- * says it paints.
- */
 interface BoardClock {
   readonly fps: number;
   readonly shots: ReadonlyArray<Shot>;
-  /** Each shot's start, by index, in ticks. */
   readonly from: ReadonlyArray<number>;
-  /** Each shot's mark (a beat's card, its start), by index, in ticks. */
   readonly mark: ReadonlyArray<number>;
-  /** The film's end, in ticks. */
   readonly end: number;
 }
 
-/**
- * `shots` (in play order) of the beats `placed` (laid at `fps`), a film
- * `duration` seconds long, on a Board's clock.
- */
 export const boardClock = (
   shots: ReadonlyArray<Shot>,
   placed: ReadonlyArray<Placed>,
@@ -175,7 +118,6 @@ export const boardClock = (
   fps: number,
 ): BoardClock => {
   const beats = new Map(placed.map((p) => [p.spec.id, p]));
-  /** Film second `t` of beat `p` in ticks: its first frame's, plus its time into the beat. */
   const tickIn = (p: Option.Option<Placed>, t: number): number =>
     Option.match(p, {
       onNone: () => ticksAt(t, fps),
@@ -195,15 +137,9 @@ export const boardClock = (
   };
 };
 
-/** Where shot `i` starts, in ticks: the film's end after the last. */
 const fromOf = (clock: BoardClock, i: number): number =>
   Option.getOrElse(Arr.get(clock.from, i), () => clock.end);
 
-/**
- * Half the dissolve at the cut into shot `i`, in whole ticks: at most half of
- * either hold beside it (an odd hold's half a tick under), none before the
- * first.
- */
 const halfAt = (clock: BoardClock, i: number): number =>
   Bool.match(i <= 0 || i >= clock.shots.length, {
     onTrue: () => 0,
@@ -215,7 +151,6 @@ const halfAt = (clock: BoardClock, i: number): number =>
     },
   });
 
-/** Shot `i` as a layer at tick `tick`: its motion through the span it is seen, its dissolves in and out within it. */
 const layerOf = (clock: BoardClock, i: number, tick: number, alpha: number): ReadonlyArray<Layer> =>
   Option.match(Arr.get(clock.shots, i), {
     onNone: () => [],
@@ -232,11 +167,6 @@ const layerOf = (clock: BoardClock, i: number, tick: number, alpha: number): Rea
     },
   });
 
-/**
- * The frame at tick `tick` of `clock`: the shot held there, alone, or
- * dissolving across the cut nearest it (the outgoing one under, the incoming
- * over it at the share of the dissolve passed). None for a film with no shot.
- */
 export const boardFrameAt = (clock: BoardClock, tick: number): Option.Option<BoardFrame> => {
   const i = Option.getOrElse(
     Arr.findLastIndex(clock.from, (from) => from <= tick),
@@ -267,12 +197,6 @@ export const boardFrameAt = (clock: BoardClock, tick: number): Option.Option<Boa
   });
 };
 
-/**
- * A shot as the frames of a span read it, in ticks: the shot, where it is
- * held from, where it is seen from and gone by (its dissolves in and out
- * included), which time its motion and its alpha across each dissolve, and
- * the motion itself.
- */
 export interface ShotSeen {
   readonly shot: Shot;
   readonly shown: number;
@@ -282,13 +206,6 @@ export interface ShotSeen {
   readonly motion: Motion;
 }
 
-/**
- * The shots of `clock` a Board frame between ticks `from` and `to` draws:
- * each whose seen span meets `[from, to)`, the first held from the film's
- * start. What a frame there paints of the Board (`boardFrameAt`) is a
- * function of these and its tick alone, so a key over them changes when such
- * a frame would.
- */
 export const shotsSeen = (clock: BoardClock, from: number, to: number): ReadonlyArray<ShotSeen> =>
   clock.shots.flatMap((shot, i) => {
     const seen = fromOf(clock, i) - halfAt(clock, i);
@@ -309,14 +226,12 @@ export const shotsSeen = (clock: BoardClock, from: number, to: number): Readonly
     );
   });
 
-/** `board`'s shots on `placed`'s clock: the animatic's rule (`shotsOf`) over the beats as the studio's Board lane times them (`clockBeat`, `timedBeat`). */
 export const boardShots = (placed: ReadonlyArray<Placed>, board: BoardFile): ReadonlyArray<Shot> =>
   shotsOf(
     placed.map((p) => timedBeat(clockBeat(p, false))),
     board,
   );
 
-/** Film seconds as the burn-in says them: `m:ss.f`, the tenth cut down, never rounded up into the next second. */
 const tenths = (T: number): string => {
   const t = frameAtOrBefore(Math.max(0, T), 10);
   const m = Math.floor(t / 600);
@@ -324,7 +239,6 @@ const tenths = (T: number): string => {
   return `${m}:${s.toFixed(1).padStart(4, '0')}`;
 };
 
-/** What `shot` is named by in the burn-in: a panel and the try it shows, a card panel, or the beat's card. */
 const shotName = (shot: Shot): string =>
   Shot.$match(shot, {
     Boarded: ({ panel }) =>
@@ -339,12 +253,6 @@ const shotName = (shot: Shot): string =>
     Unboarded: () => 'card',
   });
 
-/**
- * The review copy's burn-in at `T` for `shot`, the one held there: the film
- * time, the beat, and the panel with its try (`0:41.3 · name · name.sets ·
- * try 5`), so a frame of a screen capture names where it is. `card` names a
- * full-screen card the film's scenes set over the shot.
- */
 export const burnIn = (T: number, shot: Shot, card: boolean): string =>
   [
     tenths(T),
@@ -352,7 +260,6 @@ export const burnIn = (T: number, shot: Shot, card: boolean): string =>
     Bool.match(card, { onTrue: () => 'card', onFalse: () => shotName(shot) }),
   ].join(' · ');
 
-/** The mark of beat `p` said last by `t` seconds into it (scene-local, as `Frame.mark` places one), or `start` before its first. */
 const markPassed = (p: Placed, t: number): string =>
   Option.match(
     Arr.last(
@@ -365,12 +272,6 @@ const markPassed = (p: Placed, t: number): string =>
     { onNone: () => 'start', onSome: ([name]) => name },
   );
 
-/**
- * A scenes render's review copy's burn-in at `T`, in beat `p` (the one
- * playing there): the film time, the beat, and the last mark said in it
- * (`0:31.4 · title · start`), so a frame of a screen capture names where it
- * is. `card` names a full-screen card the film's scenes set there.
- */
 export const scenesBurnIn = (T: number, p: Placed, card: boolean): string =>
   [
     tenths(T),

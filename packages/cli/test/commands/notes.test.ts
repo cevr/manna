@@ -8,7 +8,6 @@ describe('notes commands', () => {
   describe('list command', () => {
     it.effect('should list notes from Apple Notes', () =>
       Effect.gen(function* () {
-        // Mock response format: ID|Name|Created|Modified\n
         const mockNotesResponse = [
           'note-id-1|Test Note 1|January 1, 2026|January 2, 2026',
           'note-id-2|Test Note 2|January 3, 2026|January 4, 2026',
@@ -169,8 +168,6 @@ describe('notes commands', () => {
           },
         });
 
-        // The command should still complete but may fail due to AppleScript error
-        // The exact behavior depends on error handling in the implementation
         expectContains(result.calls, [
           { _tag: 'FileSystem.readFile' },
           { _tag: 'AppleScript.exec' },

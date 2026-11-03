@@ -29,7 +29,6 @@ try {
   );
   console.log(`P3 witness hashes=${hashes.join(',')}`);
 } catch {
-  // These objects can carry words. Keep failures numeric and never print the caught value.
   console.log('P3 witness refused');
   process.exitCode = 1;
 }

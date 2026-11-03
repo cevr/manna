@@ -1,12 +1,6 @@
-// The command surfaces' stylesheet: a rule that places a thing by another's
-// edge (`anchor()`, `anchor-size()`) stands inside `@supports (anchor-name: …)`,
-// so a browser without anchor positioning drops the whole rule and keeps the
-// thing where the unanchored rules put it, not at `bottom: auto`.
-
 import { describe, expect, test } from 'bun:test';
 import { COMMAND_CSS } from './style.ts';
 
-/** The declarations that call `anchor(` or `anchor-size(` outside every `@supports` block. */
 const unguarded = (source: string): ReadonlyArray<string> => {
   const css = source.replace(/\/\*[\s\S]*?\*\//g, '');
   const found: Array<string> = [];

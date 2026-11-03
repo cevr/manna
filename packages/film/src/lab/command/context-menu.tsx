@@ -1,22 +1,3 @@
-// The page's context menu: a right-click, or a touch held still for half a
-// second (a drag moves past @manna/ui's threshold first, so a scrub never
-// opens it), on a thing the page marks as a `Target` opens the commands
-// about that thing (`contextRows`): Copy link and the command menu on every
-// one, and each thing's own verbs. The thing is read from where the press
-// landed (`targetAt`: the nearest `data-target`), so one menu serves every
-// target on the page, a nested one winning over its container. The page
-// itself is the outermost target: its children sit in one trigger that lays
-// out as they do (`display: contents`), so a press on no thing opens the
-// commands about the page (`Page`: Undo, Redo, Show only…, the transport's
-// steps, a stepped one also at ×10: `contextRows`), and a field
-// anywhere keeps the browser's own menu. The commands run once the menu has
-// closed and focus is back on the page, as ⌘K's do.
-// Its groups and rows are keyed by name and command (`rowKey`): made again
-// each frame a film plays, a row keeps its element under the pointer, and a
-// press and its release are one click. Built on @manna/ui's ContextMenu: `TargetMenu` is the studio frame's one
-// root (`StudioFrame`, every page in the shell), `Target` a thing's trigger, rendered as
-// the thing's own element (a `div` unless `render` names another).
-
 import { For, Show } from '@solidjs/web';
 import { ContextMenu } from '@manna/ui/context-menu';
 import { Option } from 'effect';
@@ -28,11 +9,6 @@ import type { Selection } from '../../command/selection.ts';
 import { targetAt, targetAttr } from '../../command/target.ts';
 import { deferredRun, hubChanges, hubKeys } from './changes.ts';
 
-/**
- * The page's one context menu, over `children`: every `Target` inside opens
- * it, and so does a press on no thing (the page's own commands). Its one
- * element, the page's trigger, lays out as its children do.
- */
 export const TargetMenu = (props: ParentProps<{ readonly hub: Hub }>) => {
   const hub = props.hub;
   const run = deferredRun(hub, 'menu');
@@ -56,8 +32,6 @@ export const TargetMenu = (props: ParentProps<{ readonly hub: Hub }>) => {
       onOpenChange={(open, details) => {
         if (!open) return;
         const at = Option.fromNullishOr(details.event.target);
-        // A field keeps its own menu (paste, spelling): the thing's menu is for the thing, in a
-        // sheet as anywhere (a sheet's dialog holds the keys, not the press: `isField`).
         if (isField(at)) {
           details.cancel();
           return;
@@ -68,7 +42,7 @@ export const TargetMenu = (props: ParentProps<{ readonly hub: Hub }>) => {
         if (!isOpen) run.closed();
       }}
     >
-      {/* The page itself is a target: a press on no thing opens the page's commands (`Page`). */}
+      {}
       <ContextMenu.Trigger class="lab-page-target" style={{ display: 'contents' }}>
         {props.children}
       </ContextMenu.Trigger>
@@ -108,7 +82,6 @@ export const TargetMenu = (props: ParentProps<{ readonly hub: Hub }>) => {
   );
 };
 
-/** A thing the page's context menu opens on (a right-click or a long press on it): `of` is the thing. */
 export const Target = (
   props: ComponentProps<typeof ContextMenu.Trigger> & { readonly of: Selection },
 ) => {

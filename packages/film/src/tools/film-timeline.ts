@@ -1,11 +1,3 @@
-// A film's timeline as the lab reads it (`core/film-timeline.ts` is the
-// model): the version's clock read fresh (`film read clock`, kept under the
-// film's source stamp, so a script or a take changed while the lab is open
-// is read once after the change) and its Board, each from the version's own
-// files (its folder, `<film>/v<n>/`, or the film's registered files); the
-// open version's Board; and the film's catalogue, notes, the lab's asks, the
-// production's ledger. The `timeline` tool answers it.
-
 import {
   Array as Arr,
   Cache,
@@ -31,7 +23,6 @@ import { type FreshError, FreshFilm } from './fresh-film.ts';
 import { NotesStore } from './notes-store.ts';
 import { ProductionStore } from './production-store.ts';
 
-/** Why a timeline does not read: the film or the version is not there, or a source does not read. */
 export type TimelineError =
   | FilmUnknown
   | FilmVersionUnknown
@@ -42,28 +33,22 @@ export type TimelineError =
   | PlatformError;
 
 interface FilmTimelinesService {
-  /** `film`'s timeline at version `version`, else at its production's open version. */
   readonly timeline: (
     film: string,
     version: Option.Option<number>,
   ) => Effect.Effect<FilmTimeline, TimelineError>;
 }
 
-/** A version's clock at one stamp of the film's sources: the key a fresh read is kept under. */
 class Clocked extends Data.Class<{
   readonly film: FilmName;
   readonly stamp: number;
-  /** The version folder (`v2`); none for the film's registered files. */
   readonly folder: Option.Option<string>;
 }> {}
 
-/** How many versions' clocks the lab keeps read at once. */
 const CLOCKS_KEPT = 16;
 
-/** A version folder's name: `v<n>`. */
 const folderOf = (n: number) => Segment.make(`v${n}`);
 
-/** The folder a version's files are in: its own for a folder version, none for the film's registered files. */
 const filesOf = (version: { readonly n: number; readonly files: string }) =>
   Option.as(
     Option.liftPredicate(version, (v) => v.files === 'folder'),
@@ -98,7 +83,6 @@ export class FilmTimelines extends Context.Service<FilmTimelines, FilmTimelinesS
         const film = yield* filmNamed(name).pipe(Effect.provideContext(films));
         const at = folder.paths(film);
         const ledger = Arr.findFirst(yield* productions.list, (p) => Option.contains(p.film, film));
-        // A version whose folder holds a script is read from it (`<film>/v<n>/script.ts`).
         const numbers = Option.match(ledger, {
           onNone: () => [],
           onSome: (l) => l.versions.map((_, i) => i + 1),

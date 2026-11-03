@@ -1,39 +1,3 @@
-/**
- * `bun run promise`: the email list's promise, read in what a reader gets
- * (`docs/lessons.md` `email-cadence-limits`). The script builds the app
- * fresh first; the gate runs the check alone on turbo's build, and the check
- * refuses a `dist/` that is not the build of the sources as they stand
- * (`stale:`, from the build's stamp, `./built.ts`).
- *
- * The rule is about what a reader is told, so the check reads the built
- * output, not the sources: every file of `dist/` (each page parsed as a
- * browser parses it), every letter the list sends (its sender, subject, text
- * and HTML, built as the Worker builds them), and the channel kit
- * (`kit/channel.md`, and the words drawn on each picture a viewer sees,
- * `kit/draw.ts` `seen`).
- *
- * The check fails closed: every source of words a reader can see or hear is
- * one it reads whole, or the run fails naming it (`unread:`). A page's
- * elements, attributes and meta tags are closed lists, a stylesheet string
- * with a letter in it and any generated content (`content:`) are held word
- * for word, a letter's headers are a closed list, and a character outside
- * plain text (`SEEN_CHARACTERS`) fails, after each string is folded (NFKC,
- * format characters dropped), so a word the reader sees whole is matched
- * whole.
- *
- * In all of it, every sentence that holds a word of mail, of the list or of
- * how often (`NET`) is a promise sentence (`PROMISE_SENTENCES`, each built
- * from `PROMISE`, pinned here) or a sentence held word for word on its
- * artefact (`HELD`). Where a stylesheet can lay two runs of words side by
- * side (each edge between two boxes), the sentence they make joined is held
- * too (`A|B`). Each artefact states the promise as often as `STATED` pins,
- * and every held sentence is still said where it is held.
- * `promise-census.ts` holds the check to every way the promise was lost
- * before, and to every source it refuses, each injected into the sources and
- * built.
- *
- *   bun scripts/promise.ts    # the check alone, on the dist/ there; prints `promise <problem>` per problem, exits 1 on any
- */
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { Console, Data, Effect, FileSystem, Match, Option, Path, Schema } from 'effect';
 import { parse, type DefaultTreeAdapterTypes } from 'parse5';
@@ -46,10 +10,8 @@ import { confirmLetter, filmLetter } from '../src/mail/letters.ts';
 import { FROM } from '../src/mail/mailer.ts';
 import { builtFiles, readStamp, sourcesHash, STAMP } from './built.ts';
 
-/** The promise, pinned: how often we email, with both its limits. */
 const PROMISE = 'one email when each new film is out, and nothing else';
 
-/** The sentences that state the promise, each built from `PROMISE` word for word. */
 const PROMISE_SENTENCES: ReadonlyArray<string> = [
   `We send you ${PROMISE}.`,
   `We will send you ${PROMISE}.`,
@@ -58,65 +20,40 @@ const PROMISE_SENTENCES: ReadonlyArray<string> = [
   `You get this because you joined the First the Blade list, which sends ${PROMISE}.`,
 ];
 
-/**
- * A word of mail, of the list, of what we send, or of how often: a sentence
- * with one of them may say how often or what we email, so it is a promise
- * sentence or held.
- * A word of time is found inside a longer word too (biweekly, semimonthly,
- * tonight, weekends, seasonal). The net is wide on purpose: a sentence it
- * takes by mistake costs a line of `HELD`, and a sentence it misses is not
- * checked at all. A cadence with none of these words is the residual
- * `email-promise-no-net-word`, which a skill line guards.
- */
 const NET = new RegExp(
   String.raw`\b(?:${[
-    // mail
     String.raw`e-?mail\w*|mail\w*|inbox\w*|newsletters?|letters?|notes?|messages?|digest\w*`,
     String.raw`roundups?|recaps?|bulletins?|dispatch\w*|editions?|issues?`,
     String.raw`send\w*|sent|writ(?:e|es|ing|ten)|wrote|hear(?:s|d|ing)?|touch|notif\w*|updates?|reach(?:es)? you`,
-    // what we send, beside the films
     String.raw`news\w*|offers?|promo\w*|announce\w*|deals?|coupons?|discount\w*|sales?|specials?|extras?`,
     String.raw`bonus\w*|freebies?|gifts?|alerts?|reminders?|invit\w*|tips?|surveys?|podcasts?|products?|merch\w*|recipes?`,
-    // the list
     String.raw`lists?|join\w*|subscri\w*|sign(?:ed|s|ing)?[- ]?ups?|members?\w*`,
-    // a word of time, inside any word
     String.raw`\w*(?:week|daily|dailies|day|month|year|night|quarter|fortnight|annual|season|hour|minute)\w*`,
     String.raw`\w*(?:morning|evening|noon|tomorrow|morrow|summer|winter|autumn|time|period|frequen|occasion|regular|schedul|routine|cadence)\w*`,
-    // how often
     String.raw`every\w*|each|per|often\w*|again|once|twice|thrice|whenever|now and then`,
     String.raw`seldom|rarely|always|never|soon\w*|later|christmas|easter`,
   ].join('|')})\b`,
   'i',
 );
 
-/** The runs a join is named by: a `|` at each break where a stylesheet can lay two runs side by side. */
 const joined = (...runs: ReadonlyArray<string>) => runs.join('|');
-/** The joins a drawing parts with a space (the wheat, between the runs either side of it): a ` | ` at each. */
 const spaced = (...joins: ReadonlyArray<string>) => joins.join(' | ');
 
-/** The skip link and the header's links, between a page's title and its first words; the lockup's wheat parts the skip link from the name. */
 const HEADER = [
   spaced('Skip to content', 'First the Blade'),
   ...['Main', 'Series', 'About', 'Subscribe on YouTube', 'Menu'],
 ];
-/** A page's title (its tab's words), run on through its header into its first words. */
 const opening = (tab: string, ...runs: ReadonlyArray<string>) => joined(tab, ...HEADER, ...runs);
-/** A page's tab's words, from its title. */
 const titled = (title: string) => `${title} · First the Blade`;
-/** A notice's title run on through the header, past the wheat it shows, into its first words. */
 const noticeOpening = (title: string, ...runs: ReadonlyArray<string>) =>
   spaced(joined(titled(title), ...HEADER), joined(title, ...runs));
-/** The dusk's verse, on every page, which the net takes ("night and day"). */
 const NIGHT_VERSE =
   '“And should sleep, and rise night and day, and the seed should spring and grow up, he knoweth not how.”';
 
-/** The header's link, on every page. */
 const PAGE: ReadonlyArray<string> = ['Subscribe on YouTube'];
 
-/** A notice's action, run on into the dusk's verse. */
 const intoDusk = (action: string) => joined(action, NIGHT_VERSE);
 
-/** The sign-up form in the night close, on every page that carries it, after the dusk's verse and the stacked lockup. */
 const SIGNUP: ReadonlyArray<string> = [
   'Email me new films',
   'Or get them by email',
@@ -132,13 +69,6 @@ const SIGNUP: ReadonlyArray<string> = [
   ),
 ];
 
-/**
- * Every other sentence the net takes, word for word, by the artefact it is
- * held on (its kind, as `STATED` names it). None of them says how often we
- * email: a sentence that does is a promise sentence. A sentence changed,
- * added, moved or removed here is a change to what the site tells a reader
- * about its email, and a review reads it as one.
- */
 const HELD = new Map<string, ReadonlyArray<string>>(
   Object.entries({
     'dist/404.html': [
@@ -408,11 +338,6 @@ const HELD = new Map<string, ReadonlyArray<string>>(
   }),
 );
 
-/**
- * How many promise sentences each artefact holds, by its kind (a page's
- * file in `dist/`, a letter's kind, a kit file): an artefact not named holds
- * none.
- */
 const STATED = new Map(
   Object.entries({
     'dist/index.html': 1,
@@ -421,7 +346,6 @@ const STATED = new Map(
     'dist/series/dwell-in-the-land.html': 1,
     'dist/series/taught-of-the-lord.html': 1,
     'dist/series/health-and-cure.html': 1,
-    // The form's fine print, and the "Why" of the privacy page.
     'dist/privacy.html': 2,
     'dist/subscribe/confirm.html': 1,
     'dist/subscribe/confirmed.html': 1,
@@ -432,24 +356,11 @@ const STATED = new Map(
   }),
 );
 
-/**
- * A string as the net reads it: NFKC (a full-width or ligature letter is its
- * plain letter), with every format character and default-ignorable code point
- * taken out (a soft hyphen, a zero-width space or joiner), so a word the
- * reader sees whole is one word here.
- */
 const fold = (text: string) =>
   text.normalize('NFKC').replace(/[\p{Cf}\p{Default_Ignorable_Code_Point}]/gu, '');
 
-/**
- * The characters beyond printable ASCII a reader may be shown: typographic
- * marks only, no letter. Any other character (a letter of another script that
- * looks like a Latin one, a mark, a private glyph) fails the run, since the
- * net reads Latin letters.
- */
 const SEEN_CHARACTERS = new Set(['“', '”', '‘', '’', '—', '–', '·', '•', '©', '\u00a0']);
 
-/** Each character of a sentence the net cannot read, once per character. */
 const characterProblems = (sentence: string): ReadonlyArray<string> =>
   [
     ...new Set(
@@ -460,20 +371,17 @@ const characterProblems = (sentence: string): ReadonlyArray<string> =>
       `unread: character U+${(char.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')} in "${sentence}"`,
   );
 
-/** Two runs of words a stylesheet can lay side by side: how the check names them (`A|B`), and the sentence they make. */
 interface Join {
   readonly shown: string;
   readonly sentence: string;
 }
 
-/** The words a file holds: its runs of words, the sentences its runs make joined, and what in it the check cannot read whole. */
 interface Words {
   readonly blocks: ReadonlyArray<string>;
   readonly joins: ReadonlyArray<Join>;
   readonly problems: ReadonlyArray<string>;
 }
 
-/** A thing a reader gets, by its kind: its sentences, its joined sentences, and what in it the check cannot read whole. */
 interface Artefact {
   readonly name: string;
   readonly kind: string;
@@ -482,48 +390,25 @@ interface Artefact {
   readonly problems: ReadonlyArray<string>;
 }
 
-/** A string of a JSON document, as its text spells it. */
 const JSON_STRING = /"(?:[^"\\]|\\.)*"/g;
 const decodeJsonString = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.String));
 
-/** The strings of a JSON document, keys and values, each its own run of words. */
 const jsonWords = (json: string): Words => ({
   blocks: [...json.matchAll(JSON_STRING)].flatMap((m) => Option.toArray(decodeJsonString(m[0]))),
   joins: [],
   problems: [],
 });
 
-/**
- * The tokens of a stylesheet that matter here: a comment and a `url()` read
- * as nothing, a string (any of them can be drawn as text: `content`, a
- * custom property, `quotes`) reads as its words, an `attr()` draws an
- * attribute's words, which the check does not follow, and an `@import` or
- * `@counter-style` brings words the check does not read.
- */
 const CSS_TOKENS =
   /\/\*[\s\S]*?\*\/|\burl\(\s*(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|[^)]*)\s*\)|"((?:[^"\\]|\\[\s\S])*)"|'((?:[^'\\]|\\[\s\S])*)'|\battr\(\s*([\w-]+)|(@import|@counter-style)\b/gi;
 
-/** Each `content:` declaration of a stylesheet, its comments taken out: the value it draws. */
 const CSS_CONTENT =
   /(?<=(?:^|[{;])\s*)content\s*:\s*((?:"(?:[^"\\]|\\[\s\S])*"|'(?:[^'\\]|\\[\s\S])*'|[^;}"'])*)/gi;
 
-/**
- * The stylesheet strings with a letter in them that draw no words: the font
- * names and font words the site's and the letters' stylesheets name. Any other
- * string with a letter fails the run (`unread: CSS string`), since a custom
- * property or `quotes` can draw it.
- */
 const CSS_STRINGS = new Set(['Newsreader', 'Times New Roman', 'opsz', 'woff2']);
 
-/**
- * The generated content the site draws, held word for word: a `content:`
- * value with anything but strings with no letter, `none` or `normal` in it
- * fails the run (`unread: content:`) unless it is here, since the check does
- * not resolve which element its selector draws it beside.
- */
 const GENERATED = new Set<string>([]);
 
-/** A stylesheet string's characters, its escapes (`\\201C `, `\\'`, a backslash and a line) spelled out. */
 const cssUnescape = (text: string) =>
   text.replace(/\\([\da-f]{1,6}\s?|[\s\S])/gi, (_all, escaped: string) =>
     Match.value(escaped).pipe(
@@ -536,7 +421,6 @@ const cssUnescape = (text: string) =>
     ),
   );
 
-/** Whether a `content:` value draws no letter: strings with no letter, `none` or `normal`. */
 const drawsNoLetter = (value: string) =>
   [...value.matchAll(/"((?:[^"\\]|\\[\s\S])*)"|'((?:[^'\\]|\\[\s\S])*)'/g)].every(
     (m) => !/\p{L}/u.test(fold(cssUnescape(m[1] ?? m[2] ?? ''))),
@@ -548,13 +432,11 @@ const drawsNoLetter = (value: string) =>
       .trim(),
   );
 
-/** The strings of a stylesheet, each its own run of words, and what in it draws words the check does not read. */
 const cssWords = (css: string): Words => {
   const tokens = [...css.matchAll(CSS_TOKENS)];
   const strings = tokens.flatMap((m) =>
     Option.toArray(Option.map(Option.fromNullishOr(m[1] ?? m[2]), (s) => fold(cssUnescape(s)))),
   );
-  // Outside a comment, a `url()` and a string, an escape can spell a property or a function the rules here match by name.
   const escaped = /\\/.test(css.replace(CSS_TOKENS, ''));
   const content = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(CSS_CONTENT)].map((m) =>
     (m[1] ?? '').trim(),
@@ -582,15 +464,9 @@ const cssWords = (css: string): Words => {
   };
 };
 
-/** A line's end, a break between two runs, as the joined reading marks it: with no space, and with one. */
 const BREAK = '\ue000';
 const SPACED_BREAK = '\ue001';
 
-/**
- * The sentences runs of words make joined: the text, its breaks marked, cut
- * at each sentence's end (a stop and a space or a break). A sentence that
- * spans a break is a join, named with a `|` at each break.
- */
 const joinsOf = (marked: string): ReadonlyArray<Join> =>
   marked
     .split(/(?<=[.?!]["”’')\]]*)[\s\ue000\ue001]+/)
@@ -600,18 +476,12 @@ const joinsOf = (marked: string): ReadonlyArray<Join> =>
       sentence: tidy(sentence.replaceAll(SPACED_BREAK, ' ').replaceAll(BREAK, '')),
     }));
 
-/** A sentence's whitespace collapsed, and no space before its stops. */
 const tidy = (sentence: string) =>
   sentence
     .replace(/\s+/g, ' ')
     .replace(/ ([.,;:?!])/g, '$1')
     .trim();
 
-/**
- * The runs of words of a Markdown or plain text file: each line, its marks
- * taken off. Plain text has no stylesheet, so its lines are never joined:
- * each is read where it stands, as a reader reads it.
- */
 const textWords = (text: string): Words => ({
   blocks: text.split('\n').map((line) =>
     line
@@ -624,12 +494,6 @@ const textWords = (text: string): Words => ({
   problems: [],
 });
 
-/**
- * The HTML elements a browser lays out as a box of their own (the HTML
- * standard's rendering section, display other than inline): their edges end
- * a run of words. Every other element joins the words beside it, as an
- * inline element does.
- */
 const BLOCKS = new Set([
   ...['html', 'head', 'title', 'body', 'address', 'blockquote', 'center', 'dialog', 'div'],
   ...['figure', 'figcaption', 'footer', 'form', 'header', 'hr', 'legend', 'listing', 'main'],
@@ -639,12 +503,6 @@ const BLOCKS = new Set([
   ...['td', 'th', 'fieldset', 'details', 'summary', 'optgroup', 'option', 'br', 'video'],
 ]);
 
-/**
- * The HTML elements whose words the check reads whole: their text, and the
- * attributes it reads. Any other element (an `iframe`, an `object`, a
- * `canvas`, a `video` and its tracks, a custom element) draws words from
- * somewhere the check does not read, so it fails the run.
- */
 const HTML_ELEMENTS = new Set([
   ...[...BLOCKS].filter((tag) => tag !== 'video'),
   ...['meta', 'link', 'style', 'script', 'noscript', 'template', 'base'],
@@ -653,67 +511,49 @@ const HTML_ELEMENTS = new Set([
   ...['del', 'ins', 'ruby', 'rt', 'rp', 'picture', 'source', 'img', 'button', 'datalist'],
   ...['input', 'label', 'meter', 'output', 'progress', 'select', 'textarea'],
 ]);
-/** The SVG elements whose words the check reads: shapes draw none, and text, a title or a description is text. */
 const SVG_ELEMENTS = new Set([
   ...['svg', 'g', 'defs', 'clippath', 'mask', 'path', 'circle', 'ellipse', 'line', 'rect'],
   ...['polygon', 'polyline', 'lineargradient', 'radialgradient', 'stop', 'symbol'],
   ...['title', 'desc', 'text', 'tspan', 'textpath', 'a'],
 ]);
-/** The sitemap's elements, which a search engine reads, not a person. */
 const XML_ELEMENTS = new Set(['html', 'head', 'body', 'urlset', 'url', 'loc', 'lastmod']);
-/** The SVG elements that join the words beside them; every other SVG or MathML element ends a run. */
 const SVG_INLINE = new Set(['tspan', 'textpath', 'a']);
 const HTML_NS = 'http://www.w3.org/1999/xhtml';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-/** The attributes whose words a reader sees or hears. */
 const SEEN_ATTRIBUTES = new Set([
   ...['alt', 'title', 'placeholder', 'value', 'label', 'abbr', 'download'],
   ...['aria-label', 'aria-description', 'aria-roledescription', 'aria-placeholder'],
   ...['aria-valuetext', 'aria-braillelabel', 'aria-brailleroledescription'],
 ]);
-/**
- * The attributes no reader sees or hears as words: names, links, layout,
- * state, and the ids that point a label at words read where they are. Any
- * attribute in neither list fails the run.
- */
 const UNSEEN_ATTRIBUTES = new Set([
   ...['action', 'as', 'autocomplete', 'charset', 'class', 'crossorigin', 'fetchpriority', 'for'],
   ...['height', 'href', 'id', 'inputmode', 'lang', 'loading', 'maxlength', 'method', 'name'],
   ...['rel', 'required', 'role', 'sizes', 'src', 'srcset', 'tabindex', 'type', 'width', 'xmlns'],
   ...['aria-busy', 'aria-current', 'aria-hidden', 'aria-labelledby', 'aria-describedby'],
   ...['data-count', 'data-logo', 'style'],
-  // SVG drawing
   ...['viewbox', 'd', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'],
   ...['clip-path', 'opacity', 'fill-rule', 'cx', 'cy', 'r'],
-  // the series marks' strokes, each laid in passes along its path
   ...['pathlength', 'stroke-dasharray', 'stroke-dashoffset'],
 ]);
 
-/** The meta tags a page's link card, tab or search result shows, by their name or property: their words are read. */
 const SEEN_META = new Set([
   ...['description', 'og:site_name', 'og:title', 'og:description', 'og:image:alt'],
   ...['twitter:title', 'twitter:description', 'twitter:image:alt'],
 ]);
-/** The meta tags whose content no reader sees as words. Any meta tag in neither list fails the run. */
 const UNSEEN_META = new Set([
   ...['viewport', 'robots', 'theme-color', 'og:type', 'og:url', 'og:image', 'og:image:width'],
   ...['og:image:height', 'og:locale', 'twitter:card', 'twitter:image'],
 ]);
 
-/** The meta tags that name the picture a link card draws, with no policy of the site's in the way. */
 const LINK_CARD_PICTURES = new Set(['og:image', 'twitter:image']);
-/** Where the site serves its link cards: each one the kit draws from words it reads (`WORDLESS`). */
 const LINK_CARD = /^https:\/\/firsttheblade\.com\/(og\/[\w-]+\.jpg)$/;
-/** Whether a link card's picture is one the kit drew: a picture from elsewhere can hold any words. */
 const isDrawnLinkCard = (url: string) =>
   Option.exists(Option.fromNullishOr(LINK_CARD.exec(url)?.[1]), (file) =>
     WORDLESS.has(`dist/${file}`),
   );
 
-/** A text node, or an element's edge: whether it ends a run of words, and whether it opens or closes. */
 type Piece = { readonly text: string } | { readonly breaks: boolean; readonly opens: boolean };
-/** Where two runs of text meet inside one box, in the text read. */
 interface Gap {
   readonly at: number;
 }
@@ -724,17 +564,9 @@ const isTemplate = (
   node: DefaultTreeAdapterTypes.Element,
 ): node is DefaultTreeAdapterTypes.Template => node.nodeName === 'template' && 'content' in node;
 
-/** Where a sentence ends: a line, or a stop and the space after it. */
 const SENTENCE_EDGE = /\n|(?<=[.?!])\s+/;
-/** How far either way of a gap its sentence is read. */
 const REACH = 600;
 
-/**
- * Each place inside a box where two runs meet with no space between and a
- * stylesheet showing one of them as a box would split a word the net takes
- * whole into words it does not take (`list<span>en</span>` read apart is
- * "list" and "en"). A split at a break is read by its join (`joinsOf`).
- */
 const layoutProblems = (text: string, gaps: ReadonlyArray<Gap>): ReadonlyArray<string> =>
   gaps.flatMap(({ at }) => {
     const before =
@@ -748,24 +580,17 @@ const layoutProblems = (text: string, gaps: ReadonlyArray<Gap>): ReadonlyArray<s
     return [`layout: ${before.trim()}|${after.trim()}`].filter(() => missed);
   });
 
-/** Where the next run of words meets the last: whether a box's edge breaks them, and whether a space stands between. */
 interface Edge {
   readonly breaks: boolean;
   readonly spaced: boolean;
 }
 
-/**
- * How a document's pieces read: `text`, a line at each break; `marked`, the
- * same with each break marked for the joined reading; and the gaps inside a
- * box where two runs meet with no space.
- */
 interface Reading {
   text: string;
   marked: string;
   readonly gaps: Array<Gap>;
 }
 
-/** One run of words added to a reading, after the edge before it. */
 const addRun = (reading: Reading, edge: Edge, words: string) => {
   const space = edge.spaced || /\s$/.test(reading.text) || /^\s/.test(words);
   if (edge.breaks) {
@@ -779,14 +604,12 @@ const addRun = (reading: Reading, edge: Edge, words: string) => {
   reading.marked += `${join.join('')}${words}`;
 };
 
-/** A document's pieces as a reader reads them, its edges between runs breaking or joining them. */
 const readingOf = (pieces: ReadonlyArray<Piece>): Reading => {
   const reading: Reading = { text: '', marked: '', gaps: [] };
   let edge: Option.Option<Edge> = Option.none();
   let closed = false;
   pieces.forEach((piece) => {
     if ('breaks' in piece) {
-      // Two elements side by side, with no text between (`</a><a>`), are two items: a break.
       const sideBySide = closed && piece.opens;
       closed = !piece.opens;
       const before = Option.getOrElse(edge, () => ({ breaks: false, spaced: false }));
@@ -814,21 +637,11 @@ const readingOf = (pieces: ReadonlyArray<Piece>): Reading => {
   return reading;
 };
 
-/** Which elements a reading of markup reads, and whether every element's edge ends a run (XML). */
 interface Markup {
   readonly elements: ReadonlySet<string>;
   readonly breakAll: boolean;
 }
 
-/**
- * An HTML page, an SVG or an XML file, parsed as a browser parses it, read as
- * a reader gets it: the text of the document, a run ending at each box's edge,
- * the words of every seen attribute as a run of its own where its element
- * stands, the words of every seen meta tag, the strings of its structured
- * data and of its stylesheets. Comments read as nothing. An element, an
- * attribute or a meta tag the check does not know, an inline script, a
- * stylesheet from elsewhere and a mail link that fills in words fail the run.
- */
 const markupWords =
   ({ elements, breakAll }: Markup) =>
   (html: string): Words => {
@@ -884,7 +697,6 @@ const markupWords =
           problems.push(`unread: attribute ${lower} on ${tag}`);
         }
         if (lower === 'style') take(cssWords(value));
-        // A mail or text link's query fills in words the reader's app shows (`?subject=`, `?body=`).
         if (lower === 'href' && /^(?:mailto|sms):[^?]*\?/i.test(value)) {
           problems.push(`unread: link words ${value}`);
         }
@@ -931,7 +743,6 @@ const markupWords =
 
 const htmlWords = markupWords({ elements: HTML_ELEMENTS, breakAll: false });
 
-/** The sentences of runs of words, whitespace collapsed. */
 const sentencesOf = (blocks: ReadonlyArray<string>): ReadonlyArray<string> =>
   blocks
     .flatMap((block) => fold(block).split('\n'))
@@ -940,7 +751,6 @@ const sentencesOf = (blocks: ReadonlyArray<string>): ReadonlyArray<string> =>
     .map((sentence) => sentence.trim())
     .filter((sentence) => sentence.length > 0);
 
-/** An artefact of its words; a character the net cannot read is a problem of it. */
 const artefactOf = (name: string, kind: string, words: Words): Artefact => {
   const sentences = sentencesOf(words.blocks);
   return {
@@ -952,10 +762,8 @@ const artefactOf = (name: string, kind: string, words: Words): Artefact => {
   };
 };
 
-/** How a file's text is read into words. */
 type Reader = (text: string) => Words;
 
-/** How each kind of file in `dist/` is read, by its extension: a file whose extension is not here fails the run. */
 const DIST_READERS = new Map<string, Reader>([
   ['.html', htmlWords],
   ['.svg', htmlWords],
@@ -965,42 +773,26 @@ const DIST_READERS = new Map<string, Reader>([
   ['.webmanifest', jsonWords],
 ]);
 
-/**
- * The built files the check does not read, each by its kind, with why no
- * reader reads words in them the check does not read elsewhere. Any other
- * picture, font or script fails the run (`unread:`) until it is read or
- * listed here, and a review reads the reason.
- */
 const WORDLESS = new Set([
-  // The kit draws these from HTML whose words it reads (`kit/draw.ts` `seen`).
   ...['dist/og/home.jpg', 'dist/og/land.jpg', 'dist/og/path.jpg', 'dist/og/remedies.jpg'],
   ...['dist/og/taught.jpg', 'dist/apple-touch-icon.png', 'dist/favicon.ico'],
   ...['dist/icon-192.png', 'dist/icon-512.png'],
-  // Paintings, with no words in them (`email-promise-painted-words`).
   ...['dist/assets/field-768.webp', 'dist/assets/field-1536.webp', 'dist/assets/field-3072.webp'],
   ...['dist/assets/night-768.webp', 'dist/assets/night-1536.webp'],
-  // The field's wind, a map of how far each pixel sways, read by the motion's shader (`kit/field.ts`).
   'dist/assets/field-wind.png',
-  // The font's glyphs.
   ...['dist/assets/Newsreader-normal-latin.woff2', 'dist/assets/Newsreader-normal-latin-ext.woff2'],
   ...['dist/assets/Newsreader-italic-latin.woff2', 'dist/assets/Newsreader-italic-latin-ext.woff2'],
-  // The browser's scripts: the phone menu, whose links the served pages print, the confirm
-  // page's button, the stills' motion, which adds no words (`src/motion/scene.ts`), and the
-  // library and a piece of it two scripts share (`email-promise-browser-script`).
   ...['dist/assets/client.js', 'dist/assets/confirm.js', 'dist/assets/scene.js'],
   ...['dist/assets/Effect.js', 'dist/assets/Data.js'],
 ]);
 
-/** A built file's kind: its path, the build's content hash taken off, so a kind outlives a change of its bytes. */
 const distKind = (file: string) => file.replace(/^(dist\/assets\/.*)-[\w-]{8}(?=\.\w+$)/, '$1');
 
-/** What was read: the artefacts, and the files no reader is set for. */
 interface Read {
   readonly artefacts: ReadonlyArray<Artefact>;
   readonly unread: ReadonlyArray<string>;
 }
 
-/** Every file of `dist/`, read by its kind. */
 const distArtefacts = Effect.fn('Promise.dist')(function* (dist: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -1029,10 +821,6 @@ const distArtefacts = Effect.fn('Promise.dist')(function* (dist: string) {
 const ORIGIN = 'https://firsttheblade.com';
 const TO = Address.make('reader@example.com');
 
-/**
- * A film to come in each series, beside every film the site lists, so each
- * series' film letter is read before its first film is out.
- */
 const FIXTURE_FILMS: ReadonlyArray<Film> = SERIES.map((series) => ({
   ref: `${series.id}/00`,
   series,
@@ -1045,17 +833,8 @@ const FIXTURE_FILMS: ReadonlyArray<Film> = SERIES.map((series) => ({
   },
 }));
 
-/**
- * The headers a letter carries beyond the sender's own, which no reader reads
- * as words (a mail app draws its own unsubscribe button from them). Any
- * other header fails the run.
- */
 const LETTER_HEADERS = new Set(['List-Unsubscribe', 'List-Unsubscribe-Post']);
 
-/**
- * Every letter the list sends, as the Worker builds them: who it is from
- * (`FROM`, which every inbox shows), the confirm letter, and each film's.
- */
 const letterArtefacts = (): ReadonlyArray<Artefact> => {
   const films: ReadonlyArray<Film> = [
     ...FIXTURE_FILMS,
@@ -1098,10 +877,8 @@ const letterArtefacts = (): ReadonlyArray<Artefact> => {
   ];
 };
 
-/** The section of `kit/channel.md` whose words are pasted where viewers read them. */
 const PASTED = /^## The text to paste\n([\s\S]*?)(?=^## )/m;
 
-/** The channel kit: what is pasted (`kit/channel.md`), and the words on each picture a viewer sees. */
 const kitArtefacts = Effect.fn('Promise.kit')(function* (app: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -1122,7 +899,6 @@ const kitArtefacts = Effect.fn('Promise.kit')(function* (app: string) {
   }) satisfies Read;
 });
 
-/** A sentence the check refuses: where it is said, and its words as `HELD` holds them (a join's with a `|` at each break). */
 interface Refused {
   readonly name: string;
   readonly kind: string;
@@ -1130,7 +906,6 @@ interface Refused {
   readonly shown: string;
 }
 
-/** An artefact's sentences and joins that the net takes. */
 const nettedOf = (artefacts: ReadonlyArray<Artefact>) =>
   artefacts.map((artefact) => ({
     ...artefact,
@@ -1144,7 +919,6 @@ const nettedOf = (artefacts: ReadonlyArray<Artefact>) =>
     ],
   }));
 
-/** Every netted sentence and join that is neither a promise sentence nor held on its kind. */
 const refusedOf = (artefacts: ReadonlyArray<Artefact>): ReadonlyArray<Refused> => {
   const netted = nettedOf(artefacts);
   return [
@@ -1167,14 +941,8 @@ const refusedOf = (artefacts: ReadonlyArray<Artefact>): ReadonlyArray<Refused> =
   ];
 };
 
-/** The characters a printed entry spells as they are: printable ASCII, and the typographic marks a reader sees (`SEEN_CHARACTERS` but the no-break space). */
 const SPELLED = /[\x20-\x7e“”‘’—–·•©]/;
 
-/**
- * A string as this file writes it, as the repo's formatter writes it: in
- * single quotes unless it holds more of them than double quotes, with a
- * backslash, its quote and every character not `SPELLED` escaped.
- */
 const literalOf = (text: string) => {
   const quote = Match.value(text.split("'").length > text.split('"').length).pipe(
     Match.when(true, () => '"'),
@@ -1204,18 +972,9 @@ const literalOf = (text: string) => {
   return `${quote}${body}${quote}`;
 };
 
-/** This file, as a printed entry names it. */
 const SELF = 'apps/firsttheblade/scripts/promise.ts';
-/** The repo's formatter's line width, which a printed entry for a new kind keeps to. */
 const WIDTH = 100;
 
-/**
- * For each kind with a refused sentence, the entry that holds them, ready to
- * paste into `HELD` as printed: an instruction line (the kind's list, or
- * `HELD` itself for a kind it does not name), then the lines to paste, with
- * their indents. A review reads each pasted line as a change to what the site
- * tells a reader about its email.
- */
 const entriesOf = (refused: ReadonlyArray<Refused>): ReadonlyArray<string> =>
   [...new Set(refused.map(({ kind }) => kind))].flatMap((kind) => {
     const held = [
@@ -1248,7 +1007,6 @@ const entriesOf = (refused: ReadonlyArray<Refused>): ReadonlyArray<string> =>
     ];
   });
 
-/** What breaks the promise in what a reader gets. */
 const problemsOf = ({ artefacts, unread }: Read): ReadonlyArray<string> => {
   const netted = nettedOf(artefacts);
   const saidOn = (kind: string) =>
@@ -1287,13 +1045,6 @@ const problemsOf = ({ artefacts, unread }: Read): ReadonlyArray<string> => {
   ];
 };
 
-/**
- * A `dist/` that is not the build of the sources as they stand: no stamp, a
- * stamp of other sources, a file the build did not write (one another build
- * left), one changed since, or one gone (`./built.ts`). The gate reads
- * turbo's build, cached or not, so this is what keeps it from reading a
- * stale one.
- */
 const staleProblems = Effect.fn('Promise.stale')(function* (app: string) {
   const stamp = yield* readStamp(app);
   if (Option.isNone(stamp)) return [`stale: ${STAMP} is missing; run bun run build`];

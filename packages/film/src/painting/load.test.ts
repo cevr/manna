@@ -1,8 +1,3 @@
-// A film's painted plates loaded before its first frame (`loadPaintings`):
-// each declared PNG read once, held to its size and, where the host gives the
-// bytes, to its clear open edges; stood on the film until the caller's scope
-// closes, and what each read holds released with it.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Exit, Option, Scope } from 'effect';
 import { type SceneSpec, createFilm } from '../canvas/film.ts';
@@ -11,7 +6,6 @@ import { recorder, standInDom } from '../canvas/fixtures/stand-in.ts';
 import { NEAR, SKY, paintingImages } from './fixtures/sky.ts';
 import { loadPaintings, paintedEdges } from './load.ts';
 
-/** A film of `scenes`, four seconds each. */
 const filmOf = (scenes: ReadonlyArray<Pick<SceneSpec, 'id' | 'paintings' | 'draw'>>) =>
   createFilm({
     fps: 30,
@@ -21,14 +15,12 @@ const filmOf = (scenes: ReadonlyArray<Pick<SceneSpec, 'id' | 'paintings' | 'draw
     scenes: scenes.map((s) => ({ ...s, min: 4 })),
   });
 
-/** Two scenes sharing the sky, one with the near plate too. */
 const twoScenes = () =>
   filmOf([
     { id: 'one', paintings: { sky: SKY, near: NEAR }, draw: (f) => f.painting('sky') },
     { id: 'two', paintings: { sky: SKY }, draw: (f) => f.painting('sky') },
   ]);
 
-/** A 4 x 3 RGBA picture, opaque but where `clear` says. */
 const tiny = (clear: (x: number, y: number) => boolean) => {
   const rgba = new Uint8Array(4 * 3 * 4);
   for (let y = 0; y < 3; y++)
@@ -36,11 +28,9 @@ const tiny = (clear: (x: number, y: number) => boolean) => {
   return rgba;
 };
 
-/** The tiny plate read with `rgba` as its bytes. */
 const tinyImages = (clear: (x: number, y: number) => boolean) =>
   paintingImages([TINY], () => ({ image: Option.none(), rgba: Option.some(tiny(clear)) })).layer;
 
-/** A film whose one scene paints the tiny plate. */
 const tinyFilm = () => filmOf([{ id: 't', paintings: { t: TINY }, draw: (f) => f.painting('t') }]);
 
 const TINY: PaintingSpec = {
@@ -83,12 +73,10 @@ describe('loadPaintings', () => {
 
   it.effect('fails naming an open edge with paint on it, and only that edge', () =>
     Effect.gen(function* () {
-      // The top row is clear; the left column has paint at its foot.
       const error = yield* Effect.flip(loadPaintings(tinyFilm()));
       expect(error.painting).toBe('fixtures/tiny');
       expect(error.reason).toContain('left');
       expect(error.reason).not.toContain('top');
-      // An edge not declared open may hold paint.
       expect(
         paintedEdges(
           tiny(() => false),

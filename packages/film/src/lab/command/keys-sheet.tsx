@@ -1,10 +1,3 @@
-// The `?` sheet: every command the page has registered, by group, with the
-// keys bound to it now and how a phone reaches it, generated from the
-// registry and the keymap (nothing here is written twice). It lists; it
-// changes no key: every viewer has the keys each command declares. Escape
-// closes it. Every command a key is bound to is listed (`sheetRows`). Hosted
-// in @manna/ui's Dialog.
-
 import { Dialog } from '@manna/ui/dialog';
 import { For, Show } from '@solidjs/web';
 import { createMemo, createSignal, onCleanup } from 'solid-js';
@@ -13,7 +6,6 @@ import type { Hub } from '../../command/hub.ts';
 import { sheetRows } from '../../command/menu.ts';
 import { hubChanges, hubKeys } from './changes.ts';
 
-/** The command that opens and closes the sheet. */
 export const KEYS_SHEET_COMMAND = 'app.keys';
 
 interface KeysSheetProps {

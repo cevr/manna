@@ -56,12 +56,10 @@ const exportNote = Command.make('export', { file, noteId: optionalNoteId, folder
     const markdownContent = new TextDecoder().decode(content);
 
     if (args.noteId._tag === 'Some') {
-      // Update existing note
       yield* Effect.log(`Updating existing note: ${args.noteId.value}`);
       const title = yield* updateAppleNoteFromMarkdown(args.noteId.value, markdownContent);
       yield* Console.log(`Updated note: "${title}"`);
     } else {
-      // Create new note
       let folderDescription = '';
       if (Option.isSome(args.folder)) folderDescription = ` in folder "${args.folder.value}"`;
       yield* Effect.log(`Creating new note${folderDescription}...`);
@@ -118,7 +116,6 @@ const organize = Command.make('organize', { files, folder: requiredFolder }, (ar
   }),
 );
 
-// Main notes command
 export const notes = Command.make('notes').pipe(
   Command.withSubcommands([list, exportNote, organize]),
 );

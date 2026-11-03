@@ -1,72 +1,40 @@
-// The one stand-in 2D context, because bun has no canvas (`@manna/film/stand-in`,
-// for the framework's tests and a film's). It holds the drawing state a canvas
-// holds, starting from a canvas's defaults and saved and restored whole: the
-// transform (`setTransform` takes six numbers, a matrix or nothing), an alpha
-// it keeps only within 0..1, and every property a draw sets (shadow, font,
-// line width among them). It records what is filled and drawn under that
-// state, and a pixel read answers the colour of the last hex fill over it, so
-// a draw that reads its canvas back (a face's opacity) takes the branch it
-// takes on a canvas. Every other call answers `nothing`. It refuses what a real canvas
-// refuses (a negative arc, ellipse or gradient radius, a colour stop off
-// 0..1, a stop colour made of NaN or undefined, a non-finite gradient
-// coordinate), raising the defect the real one's IndexSizeError, SyntaxError
-// or TypeError would be. `withDom`
-// and `standInDom` put up a document whose canvases draw into stand-ins of
-// their own, for the paper, the light sheets and the fibre tile a film makes
-// off the page.
-
 import { Effect, Predicate, Schema, type Scope } from 'effect';
 import { type Affine, IDENTITY } from '../../core/affine.ts';
 import type { Point } from '../../core/schema.ts';
 
-/** Where `p` lands under `m`, as the canvas maps it: where a test reads a draw landed. */
 export const applyAffine = (m: Affine, p: Point): Point => [
   m[0] * p[0] + m[2] * p[1] + m[4],
   m[1] * p[0] + m[3] * p[1] + m[5],
 ];
 
-/** What a stand-in's `createPattern` hands back: the tile it repeats. */
 interface StandInPattern {
   readonly _tag: 'Pattern';
   readonly tile: StandInCanvas;
-  /** Where the tile starts: taken and dropped. */
   readonly setTransform: (m?: DOMMatrix2DInit) => void;
 }
 
-/** What a stand-in's `createRadialGradient` hands back: its circles and its stops, as added. */
 export interface StandInGradient {
   readonly _tag: 'Radial';
-  /** `x0, y0, r0, x1, y1, r1`. */
   readonly circles: readonly [number, number, number, number, number, number];
   readonly stops: Array<readonly [offset: number, color: string]>;
 }
 
-/** What a stand-in's `createLinearGradient` hands back: its line and its stops, as added. */
 interface StandInLinear {
   readonly _tag: 'Linear';
-  /** `x0, y0, x1, y1`. */
   readonly line: readonly [number, number, number, number];
   readonly stops: Array<readonly [offset: number, color: string]>;
 }
 
-/** A canvas off the page, drawn into its own stand-in. */
 interface StandInCanvas {
   width: number;
   height: number;
-  /**
-   * Its 2D stand-in; any other kind (`webgl2`, `webgl`) is none, as a canvas
-   * that cannot make one answers, so a look drawn in 3D (`glCanvas`) falls
-   * back rather than drive a 2D recorder as a GL context.
-   */
   readonly getContext: (kind?: string) => CanvasRenderingContext2D | null;
   readonly drawn: Recorder;
-  /** Its number, in the order stand-in canvases are made: a log of calls tells canvases apart by it. */
   readonly made: number;
 }
 
 export type Style = string | StandInPattern | StandInGradient | StandInLinear;
 
-/** One `fillRect`: the style, alpha, composite and transform it was filled under. */
 interface Fill {
   readonly _tag: 'Fill';
   readonly style: Style;
@@ -76,7 +44,6 @@ interface Fill {
   readonly rect: readonly [number, number, number, number];
 }
 
-/** One `drawImage`: the image (a canvas off the page) and the state it was drawn under. */
 export interface Drawn {
   readonly _tag: 'Image';
   readonly image: StandInCanvas;
@@ -87,39 +54,17 @@ export interface Drawn {
 
 export interface Recorder {
   readonly ctx: CanvasRenderingContext2D;
-  /** The transform in force now. */
   readonly now: () => Affine;
-  /** Every fill, in order. */
   readonly fills: Fill[];
-  /** Every image drawn, in order. */
   readonly images: Drawn[];
-  /** Every fill and image, in the order drawn. */
   readonly ops: Array<Fill | Drawn>;
-  /** Named things a test's own draws push, in order, beside `fibre` for each pattern fill. */
   readonly events: string[];
-  /** The filter in force where a test's draw read it, by the test's own name. */
   readonly filters: Map<string, string>;
 }
 
-/** How a stand-in keeps what is drawn into it, and measures. */
 interface StandInOptions {
-  /**
-   * How wide `text` sets in `font` (the context's font when measured): a
-   * test of layout gives its own advances, kerning included. Without it,
-   * every character is 10 wide in any font.
-   */
   readonly measure?: (font: string, text: string) => number;
-  /**
-   * Whether it records its fills and images (the default). A test that only
-   * asks whether a draw runs (every scene of a film, frame after frame) keeps
-   * nothing, so its canvases do not grow.
-   */
   readonly record?: boolean;
-  /**
-   * Told of every call on the context (a factory and a query too) and every
-   * property set (as a call with the one value), before it runs: a test's log
-   * of what a frame asks the canvas to do.
-   */
   readonly onCall?: (key: PropertyKey, args: ReadonlyArray<unknown>) => void;
 }
 
@@ -129,20 +74,16 @@ export const isPattern = (style: Style): style is StandInPattern =>
 export const isRadial = (style: Style): style is StandInGradient =>
   Predicate.isTagged(style, 'Radial');
 
-/** The stand-in's drawing state, saved and restored whole. */
 interface Pen {
   m: Affine;
   alpha: number;
   filter: string;
   comp: string;
   style: Style;
-  /** Every other property, as set or as a canvas starts it; shared with the saved pen until first set. */
   props: Map<PropertyKey, unknown>;
-  /** Whether `props` is this pen's own to write, or still the saved pen's. */
   owns: boolean;
 }
 
-/** What a canvas answers for a property no draw has set. */
 const DEFAULTS: ReadonlyArray<readonly [PropertyKey, unknown]> = [
   ['shadowBlur', 0],
   ['shadowOffsetX', 0],
@@ -161,7 +102,6 @@ const DEFAULTS: ReadonlyArray<readonly [PropertyKey, unknown]> = [
   ['imageSmoothingQuality', 'low'],
 ];
 
-/** The last fill, in device px, and the colour it laid (`undefined` where the stand-in cannot read its style). */
 interface Painted {
   readonly x0: number;
   readonly y0: number;
@@ -172,7 +112,6 @@ interface Painted {
 
 const HEX = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
-/** A `#rgb`, `#rgba`, `#rrggbb` or `#rrggbbaa` style laid at `alpha`, as its four bytes; `undefined` for any other style. */
 const rgbaOf = (style: Style, alpha: number): Painted['rgba'] => {
   if (!Predicate.isString(style) || !HEX.test(style)) return undefined;
   const short = style.length <= 5;
@@ -182,7 +121,6 @@ const rgbaOf = (style: Style, alpha: number): Painted['rgba'] => {
   return [byte(0), byte(1), byte(2), Math.round((has ? byte(3) : 255) * alpha)];
 };
 
-/** The device-px box a rect covers under `m`. */
 const boxOf = (m: Affine, x: number, y: number, w: number, h: number): Omit<Painted, 'rgba'> => {
   const [a, b, c, d, e, f] = m;
   const xs = [a * x + c * y, a * (x + w) + c * y, a * x + c * (y + h), a * (x + w) + c * (y + h)];
@@ -195,7 +133,6 @@ const boxOf = (m: Affine, x: number, y: number, w: number, h: number): Omit<Pain
   };
 };
 
-/** `m` then `n`, as the canvas composes a transform onto the current one. */
 const times = (
   m: Affine,
   a: number,
@@ -213,7 +150,6 @@ const times = (
   m[1] * e + m[3] * f + m[5],
 ];
 
-/** Anything a context could answer: callable (answering itself), every property itself, 0 in arithmetic, an empty list spread. */
 function none(): void {}
 const nothing: typeof none = new Proxy(none, {
   get: (_target, key) => {
@@ -227,28 +163,17 @@ const nothing: typeof none = new Proxy(none, {
   set: () => true,
 });
 
-/** A call that does nothing and answers nothing, as a path call on a real canvas answers. */
 const quiet = (): void => {};
 
-/**
- * What a real canvas does with an argument it refuses: throws an
- * IndexSizeError out of the draw. Here the same defect, raised synchronously.
- */
 const refuseWhen = (bad: boolean, what: string, error = 'IndexSizeError') => {
   if (bad) Effect.runSync(Effect.die(new RangeError(`${error}: ${what}`)));
 };
 
-/** Gradient coordinates, refused when one is not finite, as a canvas's restricted doubles are. */
 const refuseUnfinite = (what: string, ...at: ReadonlyArray<number>) =>
   refuseWhen(!at.every(Number.isFinite), `${what} ${at.join(', ')}`, 'TypeError');
 
-/** A colour no canvas parses: what a NaN or a missing channel writes into one. */
 const UNPARSED = /NaN|undefined/;
 
-/**
- * A colour stop, refused off 0..1 and for a colour made of NaN or undefined,
- * as a real gradient refuses them (IndexSizeError, SyntaxError).
- */
 const stopOf = (stops: Array<readonly [number, string]>) => (offset: number, color: string) => {
   refuseWhen(!(offset >= 0 && offset <= 1), `addColorStop offset ${offset}`);
   refuseWhen(UNPARSED.test(color), `addColorStop colour "${color}"`, 'SyntaxError');
@@ -258,7 +183,6 @@ const stopOf = (stops: Array<readonly [number, string]>) => (offset: number, col
 export const recorder = (width = 1920, height = 1080, options: StandInOptions = {}): Recorder => {
   const keeps = options.record !== false;
   const measure = options.measure ?? ((_font: string, text: string) => text.length * 10);
-  /** The font set on the context, else a canvas's own default. */
   const fontOf = () => {
     const font = state.props.get('font');
     return Predicate.isString(font) ? font : '10px sans-serif';
@@ -273,7 +197,6 @@ export const recorder = (width = 1920, height = 1080, options: StandInOptions = 
     owns: true,
   };
   const stack: Pen[] = [];
-  /** The last fill, which a pixel read answers from (not a composite of every fill under it). */
   let painted: Painted | undefined;
   const fills: Fill[] = [];
   const images: Drawn[] = [];
@@ -339,9 +262,6 @@ export const recorder = (width = 1920, height = 1080, options: StandInOptions = 
       images.push(drawn);
       ops.push(drawn);
     },
-    // The calls a frame makes most, which answer nothing on a real canvas
-    // too: plain functions, so each is one call rather than a trip through
-    // `nothing`.
     beginPath: quiet,
     closePath: quiet,
     moveTo: quiet,
@@ -438,12 +358,10 @@ export const recorder = (width = 1920, height = 1080, options: StandInOptions = 
       state.filter = v;
     },
   };
-  /** Any other property holds what is set on it (in the pen); any other call answers `nothing`. */
   const valueOf = (key: PropertyKey): unknown => {
     if (Reflect.has(fake, key)) return Reflect.get(fake, key);
     return state.props.has(key) ? state.props.get(key) : nothing;
   };
-  /** The pen's properties to write into: its own copy of the saved pen's, taken the first time. */
   const ownProps = () => {
     if (!state.owns) {
       state.props = new Map(state.props);
@@ -452,8 +370,6 @@ export const recorder = (width = 1920, height = 1080, options: StandInOptions = 
     return state.props;
   };
   const onCall = options.onCall;
-  // With `onCall`, each call name's function is wrapped once, the first time
-  // it is asked for: a frame asks for `save` or `lineTo` thousands of times.
   const told = new Map<PropertyKey, (...args: ReadonlyArray<unknown>) => unknown>();
   const tellingOf = (key: PropertyKey, tell: NonNullable<StandInOptions['onCall']>) => {
     let wrapper = told.get(key);
@@ -492,14 +408,11 @@ export const recorder = (width = 1920, height = 1080, options: StandInOptions = 
   };
 };
 
-/** How many stand-in canvases have been made: the last one's `made`. */
 let canvasesMade = 0;
 
-/** Whether `v` is a stand-in canvas (a pattern's tile, an image drawn). */
 export const isStandInCanvas = (v: unknown): v is StandInCanvas =>
   Predicate.hasProperty(v, 'made') && Predicate.hasProperty(v, 'getContext');
 
-/** A canvas off the page whose context is a stand-in, sized as it is made. */
 const standInCanvas = (options: StandInOptions = {}): StandInCanvas => {
   let drawn: Recorder | undefined;
   canvasesMade += 1;
@@ -516,9 +429,7 @@ const standInCanvas = (options: StandInOptions = {}): StandInCanvas => {
   return canvas;
 };
 
-/** The global the stand-in DOM replaces, as it was. */
 interface Globals {
-  /** Whether there was one: where there was none (Bun), none is left behind. */
   readonly had: boolean;
   readonly document: unknown;
 }
@@ -529,7 +440,6 @@ const putUp = (options: StandInOptions) =>
       had: Reflect.has(globalThis, 'document'),
       document: Reflect.get(globalThis, 'document'),
     };
-    // Its fonts hold none a film asked for: what draws waits for nothing (`pictureFacesWait`).
     Reflect.set(globalThis, 'document', {
       createElement: () => standInCanvas(options),
       fonts: [],
@@ -543,13 +453,8 @@ const takeDown = (before: Globals) =>
     else Reflect.deleteProperty(globalThis, 'document');
   });
 
-/**
- * A document whose canvases are stand-ins, for everything a film makes off
- * the page, put back when the scope closes.
- */
 export const standInDom = (options: StandInOptions = {}): Effect.Effect<void, never, Scope.Scope> =>
   Effect.asVoid(Effect.acquireRelease(putUp(options), takeDown));
 
-/** Run `draw` under `standInDom`; the DOM is put back after, even when `draw` throws. */
 export const withDom = <A>(draw: () => A, options: StandInOptions = {}): A =>
   Effect.runSync(Effect.acquireUseRelease(putUp(options), () => Effect.sync(draw), takeDown));

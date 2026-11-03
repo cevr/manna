@@ -1,41 +1,20 @@
-/**
- * A chord box: a guitar's neck seen from the front, the low E at the left,
- * drawn in Views. Six strings down, four frets across, the nut thick at the
- * top when the box starts at the first fret, else the first fret's number
- * at its left ("5fr"). Over each string, `x` where it is muted and `o` where
- * it rings open; on it, a dot where a finger holds it, its finger's number
- * (1 the index to 4 the little finger) in the dot, and a barre as one bar
- * across the strings it holds.
- *
- * The box is one image to a screen reader, read as its words (`describe`
- * in `shapes.ts`); its parts are not read on their own.
- */
-
 import { Option } from 'effect';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { color, useAccent, useOnAccent } from '~/color';
 import { type Fingering, FRETS_DRAWN, type Play } from '~/hymns/shapes';
 
-/** The space between two strings, and between two frets, in points. */
 const STRING_GAP = 22;
 const FRET_GAP = 28;
 const DOT = 18;
-/**
- * The space over the nut the open and muted marks take, and left of the
- * neck the first fret's number takes. The same space lies right of the neck,
- * so the neck is the box's middle.
- */
 const MARKS = 20;
 const LABEL = 30;
 
 const WIDTH = LABEL + STRING_GAP * 5 + DOT + LABEL;
 const HEIGHT = MARKS + FRET_GAP * FRETS_DRAWN + 4;
 
-/** A string's left edge in the box, the low E at 0. */
 const xOf = (string: number) => LABEL + DOT / 2 + string * STRING_GAP;
 
-/** The middle of fret `fret` counted from the box's first fret, from 1. */
 const yOf = (fret: number) => MARKS + (fret - 0.5) * FRET_GAP;
 
 export function ChordBox({
@@ -44,7 +23,6 @@ export function ChordBox({
   testID,
 }: {
   readonly fingering: Fingering;
-  /** What a screen reader reads for the box. */
   readonly label: string;
   readonly testID: string;
 }) {
@@ -113,7 +91,6 @@ export function ChordBox({
   );
 }
 
-/** Over a string: `x` muted, `o` open, nothing where it is held. */
 function Mark({ play, string }: { readonly play: Play; readonly string: number }) {
   if (play._tag === 'Fretted') return [];
   return (

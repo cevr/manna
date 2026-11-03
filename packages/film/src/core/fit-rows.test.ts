@@ -29,14 +29,12 @@ const within = (r: FitRow) =>
     onSome: (max) => r.value <= max,
   });
 
-/** The figure's papers and a hand's skin, each painted on the render as on the sheet. */
 const CLASSES = {
   cream: { sheet: ['#fde1bc'], paper: ['#fde1bc'] },
   teal: { sheet: ['#61898d'], paper: ['#61898d'] },
   skin: { sheet: ['#fdaf70'], paper: ['#fdaf70'] },
 } as const;
 
-/** The row named `name` of `rows`. */
 const rowNamed = (rows: ReadonlyArray<FitRow>, name: string) => rows.find((r) => r.name === name);
 
 describe('fitRows', () => {
@@ -73,7 +71,6 @@ describe('fitRows', () => {
   });
 
   test("a thin strip of paper off the figure is a sliver, not the ground's grain; a thick or a short one is grain", () => {
-    // 2 × 10 px, 5 px off the body's right line: a sliver; 3 × 6 px under it and 2 × 5 px left of the body's foot: the ground's grain.
     const strips = [
       [52, 54, 40, 50],
       [52, 55, 60, 66],
@@ -264,7 +261,6 @@ describe('fitRows', () => {
 
 type Rgba = readonly [number, number, number, number];
 
-/** A cut-out's crop and a kept sheet's: 48 px square, a box figure `[6, 42)²` (moved `dx` right) inside a 3 px line of ink, its inside `cloth`, `at` painted over it, `outside` round it. */
 const S = 48;
 type At = (x: number, y: number) => Option.Option<Rgba>;
 const inside = (v: number, lo: number, hi: number) => v >= lo && v < hi;
@@ -284,7 +280,6 @@ const crop = (outside: Rgba, cloth: Rgb, at: At = () => Option.none(), dx = 0): 
   return { width: S, height: S, rgba };
 };
 
-/** `at` for the box `[x0, x1) × [y0, y1)`: `px` inside it. */
 const boxOf =
   ([x0, x1, y0, y1]: readonly [number, number, number, number], px: Rgba): At =>
   (x, y) =>
@@ -297,13 +292,10 @@ const either =
 
 const CLEAR: Rgba = [0, 0, 0, 0];
 const SHEET_PAPER: Rgba = [...SHEET_GROUND, 255];
-/** A 2 px speck of the sheet's paper (ΔE 5.2 off its ground) in the ground: grain the flood steps round. */
 const GRAIN = boxOf([2, 4, 20, 22], [...PAPER, 255]);
 
-/** A posed crop read as the cut-out path reads it: over its own measuring ground. */
 const overOwn = (posed: Raster) => overGround(posed, measuringGround([posed]));
 
-/** The least ΔE76 from `c` to every opaque pixel of `r`. */
 const leastDeltaE = (c: Rgb, r: Raster) => {
   let least = Infinity;
   for (let i = 0; i < S * S; i++)
@@ -452,11 +444,9 @@ describe('fitRows over a cut-out crop', () => {
   test("a 12 px hole through a light cloth's grain clumps, within `near` of the sheet's ground, is counted", () => {
     const cloth: Rgb = [236, 232, 226];
     const clumpColour: Rgb = [247, 235, 216];
-    // Above the paper core's ΔE 2, so no clump is a pocket, and within the kept crop's `near` (ΔE 3), so each is a kept hole.
     const clumpDe = deltaE(labOf(clumpColour), labOf(SHEET_GROUND));
     expect(clumpDe).toBeGreaterThan(2);
     expect(clumpDe).toBeLessThanOrEqual(3);
-    // Nine clumps, 4 to 8 px square at a 10 px pitch: 36 of their px lie under the block.
     const clumps = Array.from({ length: 9 }, (_, k): At => {
       const [x0, y0, s] = [
         10 + (k % 3) * 10,
@@ -487,7 +477,6 @@ describe('fitRows over a cut-out crop', () => {
   ])(
     "a kept hole with %i px of the sheet's paper excuses a 12 px hole 2 px off it only from 9 px up: holes %i",
     (paper, holes) => {
-      // The first `paper` px, row by row, of a 3 x 3 kept hole 2 px right of the hole; its other px stay cloth.
       const pocket =
         (px: Rgba): At =>
         (x, y) =>
@@ -530,7 +519,6 @@ describe('fitRows over a cut-out crop', () => {
   });
 
   test('a neighbour still a box reads 1 px past its width gives no mask', () => {
-    // 4 x 2 still: art only in its last column, so a wrapped read would find it.
     const rgba = Uint8Array.from(
       { length: 4 * 2 * 4 },
       (_, i) => Number(i % 4 === 3 && Math.floor(i / 4) % 4 === 3) * 255,

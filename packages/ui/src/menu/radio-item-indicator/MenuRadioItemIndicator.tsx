@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/menu/radio-item-indicator/MenuRadioItemIndicator.tsx
-//
-// What shows a radio item checked (a check mark, a dot): rendered only
-// while its item is checked, unless `keepMounted`; hidden from assistive
-// tech, which reads the item's `aria-checked`. Upstream's exit transition
-// is left out.
 import { type JSX, Show } from '@solidjs/web';
 import { omit } from 'solid-js';
 
@@ -20,7 +14,6 @@ interface MenuRadioItemIndicatorProps extends BaseUIComponentProps<
   'span',
   MenuRadioItemIndicatorState
 > {
-  /** Whether the indicator stays in the DOM while its item is unchecked. @default false */
   keepMounted?: boolean | undefined;
 }
 

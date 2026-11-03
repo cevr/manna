@@ -1,10 +1,3 @@
-// Upstream: packages/react/src/context-menu/root/ContextMenuRootContext.ts
-//
-// What a context menu shares with the menu it opens: the point the menu is
-// anchored at (the pointer, or the long-press touch), the trigger that opened
-// it, the backdrop whose own right-click must not reach the browser, and the
-// gesture bookkeeping that keeps the releasing mouseup of the opening press
-// from activating an item.
 import { type Accessor, createContext, useContext } from 'solid-js';
 
 export interface ContextMenuAnchor {
@@ -14,10 +7,6 @@ export interface ContextMenuAnchor {
 export interface ContextMenuRootContext {
   anchor: Accessor<ContextMenuAnchor>;
   setAnchor: (anchor: ContextMenuAnchor) => void;
-  /**
-   * The trigger whose press opened the menu last (each trigger's own symbol):
-   * one root may serve many triggers, and only this one says the menu is open.
-   */
   opener: Accessor<symbol | null>;
   setOpener: (trigger: symbol) => void;
   internalBackdropRef: { current: HTMLElement | null };
@@ -32,7 +21,6 @@ export function useContextMenuRootContext(): ContextMenuRootContext | null {
   return useContext(ContextMenuRootContext);
 }
 
-/** The context menu around a part that only works inside one; throws outside. */
 export function useContextMenuRootContextStrict(): ContextMenuRootContext {
   const context = useContext(ContextMenuRootContext);
   if (context === null) {

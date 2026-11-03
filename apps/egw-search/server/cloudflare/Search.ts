@@ -1,31 +1,3 @@
-/**
- * EGW search on a Cloudflare Worker.
- *
- * The same `SearchApi` the Bun server answers (`../search-api.ts`), over the
- * same canonical `SearchService`, with each host capability swapped for its
- * Cloudflare equivalent:
- *
- * | Bun server (`../main.ts`)       | Worker                                  |
- * | ------------------------------- | --------------------------------------- |
- * | `egw-paragraphs.db` on a volume | D1 (`Corpus`), read through `D1Client`  |
- * | `vectors.bvi` scanned in memory | Vectorize (`./vectorize.ts`)            |
- * | ONNX EmbeddingGemma in process  | Workers AI (`./workers-ai.ts`)          |
- * | `HttpStaticServer` over `dist/` | the Worker's static assets              |
- *
- * Only `/api/*`, `/health` and the sync's reports under `/sync`
- * (`./sync-pages.ts`) reach the Worker; every other path is an asset,
- * and an unknown one is the single-page app's `index.html`, as `spa: true`
- * makes it on the Bun server.
- *
- * The vector leg is ready from the first request: nothing is read into
- * memory, so `/health` always says `ready`. What is cold after an idle spell
- * is D1 and Vectorize themselves, so the Worker runs one of the page's
- * example searches every minute (`./warm.ts`).
- *
- * Where `prod` is served from follows `SERVED_FROM` (`./site.ts`). Any other
- * stage is a throwaway copy on a generated `workers.dev` name over the same
- * shared corpus (`./resources.ts`).
- */
 import { RuntimeContext } from 'alchemy';
 import * as Cloudflare from '@alchemy.run/cloudflare';
 import { Stage } from 'alchemy/Stage';
@@ -57,13 +29,11 @@ const ASSETS = {
   runWorkerFirst: ['/api/*', '/health', '/sync', '/sync/*'],
 } satisfies Cloudflare.AssetsProps;
 
-/** What `prod` claims, by where the search is served from. */
 const PRODUCTION: Record<ServedFrom, Cloudflare.WorkerProps> = {
   'workers.dev': { name: WORKER_NAME, workersDev: true },
   'custom-domain': { name: WORKER_NAME, workersDev: false, domain: { name: DOMAIN } },
 };
 
-/** The props, by stage. The running Worker reads them without one. */
 const props = Effect.gen(function* () {
   const stage = yield* Effect.serviceOption(Stage);
   const base = { main: import.meta.url, assets: ASSETS };
@@ -71,16 +41,12 @@ const props = Effect.gen(function* () {
   return { ...base, ...PRODUCTION[SERVED_FROM] };
 });
 
-/** The handles the search reads, as the running Worker holds them. */
 interface Bindings {
   readonly corpus: D1Client.D1ClientConfig['db'];
   readonly vectors: VectorizeQuery;
   readonly ai: Cloudflare.Workers.AIClient;
 }
 
-/** An R2 object as the report pages send it: its own stream when the
- *  platform offers one, so the bytes go to the response untouched; else its
- *  text, read once. */
 const storedFile = (object: Cloudflare.R2.ObjectBody) =>
   Option.match(Option.fromNullishOr(object.readable), {
     onSome: (readable) =>
@@ -93,7 +59,6 @@ const storedFile = (object: Cloudflare.R2.ObjectBody) =>
         ),
   });
 
-/** The search's services over the Worker's bindings. */
 const searchLayer = (bindings: Bindings) => {
   const sql = D1Client.layer({ db: bindings.corpus });
   const sources = Layer.effect(
@@ -118,7 +83,6 @@ const searchLayer = (bindings: Bindings) => {
   const search = SearchService.layer.pipe(
     Layer.provide(Layer.mergeAll(sources, neighbors, embedder)),
   );
-  // Nothing loads into memory: the vector leg can run from the first request.
   const ready = Layer.succeed(
     VectorIndexLoad,
     VectorIndexLoad.of({ readiness: Effect.succeed('ready' as const) }),
@@ -134,8 +98,6 @@ export default class Search extends Cloudflare.Worker<Search>()(
     const vectors = yield* Cloudflare.Vectorize.SearchIndex(yield* Vectors);
     const ai = yield* Cloudflare.Workers.AI();
     const reports = yield* Cloudflare.R2.ReadBucket(yield* SyncReports);
-    /** The sync's reports, as its pages read them. A bucket that cannot be
-     *  read is a failure of the request, so it answers an error. */
     const reportsPage = (cursor: Option.Option<string>) =>
       reports
         .list({ prefix: 'reports/', cursor: Option.getOrUndefined(cursor) })
@@ -163,11 +125,6 @@ export default class Search extends Cloudflare.Worker<Search>()(
           Effect.orDie,
         ),
     };
-    // The constructor also runs at deploy time, to collect the bindings, and
-    // the handles are empty then. So the search is built on the first request
-    // or warm-up, once per isolate, in a scope that lives as long as the
-    // isolate does; the requests and the warm-ups share it. The handles are
-    // read in that first fiber; the layers are built `isolated` from it.
     const scope = yield* Scope.make();
     const services = yield* Effect.cached(
       Effect.gen(function* () {

@@ -1,13 +1,3 @@
-// The IDEA villagers' puppets, one a cut view (`canvas/puppet.ts`): each
-// view's part sheet (`sheets/<view>/`, made by `film concept parts`), its
-// parts front to back as the sheet's record lists them, each PNG imported by
-// its module so a scene that draws them is keyed by its bytes
-// (`tools/stamp.ts`), on the view's skeleton (`skeleton.ts`), with the origin
-// at the kept box's top-left corner in the padded part sheet (`frames.ts`):
-// their pixels are the sheet's, drawn at its one scale. They are a film's
-// member, so their folder is In Its Order's
-// (`films/in-its-order/cast/idea-villagers/`). Pure data.
-
 import p3ArmLeft from './sheets/poses-3/armLeft.png' with { type: 'file' };
 import p3ArmRight from './sheets/poses-3/armRight.png' with { type: 'file' };
 import p3Head from './sheets/poses-3/head.png' with { type: 'file' };
@@ -33,47 +23,12 @@ import { FRAMES } from './frames.ts';
 import { PAPERS } from './papers.ts';
 import { SKELETONS } from './skeleton.ts';
 
-/**
- * The hopping man's line: the median run of ink across his outer outline is
- * 10 px (quartiles 9 and 13), laid half a pixel wider as the feast mother's
- * is; his ink is his view's darkest 1 % (6,2,0).
- */
 const HOPPING_LINE = { width: 10.5, ink: [6, 2, 0] } as const;
 
-/**
- * The baby's and the standing man's line: the median run of ink across their
- * outer outlines is 8 px (quartiles 7 and 11 on the baby, 7 and 9 on the man),
- * laid half a pixel wider; their ink is each view's darkest 1 % (6,1,0 and
- * 5,1,0).
- */
 const LINE = { width: 8.5, ink: [6, 1, 0] } as const;
 
-/**
- * The cup-raising man's line (single-15, drawn about 2.2 times the poses
- * sheet's scale): the median run of ink across his outer outline (L* < 40) is
- * 18 px (quartiles 17 and 21), laid half a pixel wider; his ink is his view's
- * darkest 1 % (1,0,0). Read the same way, the standing man's is 8 px (8 and 9).
- */
 const SINGLE_LINE = { width: 18.5, ink: [1, 0, 0] } as const;
 
-/**
- * Their paper's grain, luma (`core/unmatte.ts`, `grain`): the 95th percentile
- * of how far each kept view's ground (flooded from the border, within 30 of
- * its paper) runs darker than its paper is 2.516 (poses-3), 2.484 (poses-4),
- * 2.744 (poses-6) and 2.456 (single-15); the largest, 2.75, is the one
- * calibration all four share. A rim pixel of theirs darker than the paper by more than this is no
- * paper, so the un-matte keeps it whole: at rest it keeps 2740 (poses-3),
- * 1535 (poses-4), 2598 (poses-6) and 7186 (single-15) rim px whole that it
- * would otherwise solve toward the paper.
- *
- * They name no `keep` colour. Their light linen sits nearer their paper than
- * the pockets' own ground does: each linen colour tried (the headcloth's
- * 252,247,225 and 253,247,231, the sleeve's 251,245,224, and the lighter
- * 255,254,246) keeps whole 20 (poses-3), 3 (poses-6) and 15 (single-15) px the
- * un-matte otherwise clears to paper, so the film's paper would show a
- * cut-out patch there; the wrap's 252,226,188 changes no px. The linen nearer
- * their paper than the grain's line stays un-matted.
- */
 const GRAIN = 2.75;
 
 const SHARED = {
@@ -85,12 +40,6 @@ const SHARED = {
   grain: GRAIN,
 } as const;
 
-/**
- * The hopping man's puppet. His sheet's `neighbour` part is left out: it holds
- * the baby's head (poses-4), which reaches into his kept box, so that no
- * figure pixel of the box is left in no part (`cut.ts`). It is the baby's,
- * drawn by the baby's own puppet, never his.
- */
 const HOPPING = puppetsOf<'poses-3'>({
   ...SHARED,
   line: HOPPING_LINE,
@@ -105,7 +54,6 @@ const HOPPING = puppetsOf<'poses-3'>({
   },
 });
 
-/** The baby's and the standing man's puppets. */
 const POSES = puppetsOf<'poses-4' | 'poses-6'>({
   ...SHARED,
   line: LINE,
@@ -126,7 +74,6 @@ const POSES = puppetsOf<'poses-4' | 'poses-6'>({
   },
 });
 
-/** The cup-raising man's puppet (single-15), drawn larger than the poses sheet's figures. */
 const SINGLE = puppetsOf<'single-15'>({
   ...SHARED,
   line: SINGLE_LINE,
@@ -141,5 +88,4 @@ const SINGLE = puppetsOf<'single-15'>({
   },
 });
 
-/** Each cut view's puppet, by the view's name in their sheet's views: its parts front to back, its part sheet the kept box padded (`frames.ts`), the origin at the kept box's top-left corner, held to the kept box. */
 export const PUPPETS = { ...HOPPING, ...POSES, ...SINGLE };

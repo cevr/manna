@@ -14,12 +14,6 @@ import {
   Sink,
   Stream,
 } from 'effect';
-// The storyboard's tools: the board store keeps its record and images and
-// knows a missing or changed one; a run draws each planned panel twice with
-// the style's reference (and the beat's first panel as the second), records
-// every try as it lands and skips what is drawn; a beat boarded by hand keeps
-// its own panels; a tweak adds to a panel's history from its note; the image
-// route never sends `--model` and refuses a prompt naming anything private.
 
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
@@ -38,9 +32,7 @@ import { FilmFolder, FilmName } from './film-repo.ts';
 import { ImageRoute } from './image-route.ts';
 import { memoryFileSystem, memoryLocks, text } from './host/testing.ts';
 
-/** One image asked of the route. */
 type ImageRequest = Parameters<(typeof ImageRoute)['Service']['draw']>[0];
-/** A line a run prints. */
 type MakeLine = Parameters<typeof makeLine>[0];
 
 const wordValue = (word: string | Redacted.Redacted<string>): string => {
@@ -76,10 +68,6 @@ const style = {
   world: 'A parchment world.',
 };
 
-/**
- * A board over memory: the film `f` under `/films`, its record and images there; every call the route took, each
- * cast file the run copied to send (under the board's `.drawing`) named by what it held (`sent: kept turnaround`).
- */
 const boardOver = (files: Map<string, Uint8Array>, calls: Array<ImageRequest>) => {
   files.set('/films/f/scenes/index.ts', text('export default []'));
   const route = ImageRoute.fake((request) => {
@@ -106,7 +94,6 @@ const boardOver = (files: Map<string, Uint8Array>, calls: Array<ImageRequest>) =
   );
 };
 
-/** The board as `f` has it, with a style set. */
 const styled = Effect.gen(function* () {
   const store = yield* BoardStore;
   const sha256 = yield* store.put(film, 'style.9005.png', text('style'));
@@ -133,8 +120,6 @@ describe('a run of the board', () => {
           ['cold.righteous', [1, 2]],
           ['title.start', [1, 2]],
         ]);
-        // The beat's second panel (its tries the run's third and fourth calls) carries its first panel's shown try
-        // as the second reference.
         const second = calls[2];
         expect(second?.refs).toEqual([
           '/films/f/board/style.9005.png',
@@ -142,7 +127,6 @@ describe('a run of the board', () => {
         ]);
         expect(board.panels[1]?.tries[0]?.refs).toEqual(['style.9005.png', 'cold.room.1.png']);
         expect(lines.filter((l) => l._tag === 'Made')).toHaveLength(6);
-        // A second run draws nothing: every planned panel has its tries.
         yield* makeBoard(
           film,
           beats,
@@ -251,13 +235,10 @@ describe('a run of the board', () => {
   });
 });
 
-/** A cast record as `cast-sheet.json` holds it. */
 const recordJson = Schema.encodeSync(CastSheetJson);
 
-/** The library's folder for `member`, as the board of `f` (under `/films`) finds it. */
 const libraryOf = (member: string) => `/library/cast/${member}/cast-sheet`;
 
-/** A cast record of `member` in the library, nothing kept unless `kept` names kinds, its every file on disk. */
 const castIn = (
   files: Map<string, Uint8Array>,
   member: string,
@@ -278,7 +259,6 @@ const castIn = (
   for (const k of kept) files.set(`${folder}/kept/${k}.png`, text(`kept ${k}`));
 };
 
-/** A beat that draws `cast`. */
 const drawing = (cast: ReadonlyArray<string>): BoardBeat => ({
   id: BoardName.make('supper'),
   say: Option.none(),
@@ -286,7 +266,6 @@ const drawing = (cast: ReadonlyArray<string>): BoardBeat => ({
   cast,
 });
 
-/** The library reference `castIn` writes, as `castLock` reads it. */
 const lockOf = (member: string, files: ReadonlyArray<string>, kept: ReadonlyArray<SheetKind>) => ({
   member,
   who: 'Him',
@@ -506,7 +485,6 @@ describe("a locked cast member's library reference", () => {
 });
 
 describe("a beat's panels to draw", () => {
-  /** What a run of beat `cold`, `tries` tries a panel, draws over `panels`: the files of the tries it adds. */
   const drawnOver = (panels: BoardFile['panels'], tries = 1) =>
     Effect.gen(function* () {
       yield* styled;
@@ -591,7 +569,6 @@ describe('two runs at once', () => {
     const files = new Map<string, Uint8Array>();
     return Effect.gen(function* () {
       yield* styled;
-      // Each draw waits until both have started, so both runs read the panel before either records a try.
       const both = yield* Deferred.make<void>();
       const started = yield* Ref.make(0);
       const route = ImageRoute.of({
@@ -640,7 +617,6 @@ describe('the scene prompt', () => {
     expect(prompt).toContain("THE FILM'S WORLD: A parchment world.");
     expect(prompt).toContain('THE ACT: "cold open": a bright, high-key frame');
   });
-  /** The prompt for `beat`'s first panel, in an act of the given measures. */
   const promptOf = (beat: BoardBeat, act: Act) =>
     panelPrompt({
       style,
@@ -695,10 +671,6 @@ describe('the scene prompt', () => {
 });
 
 describe('the image route', () => {
-  /**
-   * `okra image` as the route runs it, over memory: each command it was given (program and arguments), each
-   * exiting 0 having drawn the output `/o.png`.
-   */
   const okraOver = (commands: Array<ReadonlyArray<string>>) => {
     const files = new Map<string, Uint8Array>([['/o.png', text('drawn')]]);
     const spawner = ChildProcessSpawner.make((command) => {

@@ -1,14 +1,3 @@
-// The filler bases' puppets, one a cut view (`canvas/puppet.ts`): each view's
-// part sheet (`sheets/<view>/`, its head and torso written by their cutter,
-// `sheets-cut.ts`, its house parts and a headwear view's covered head by
-// `parts-cut.ts`), its parts front to
-// back, the house parts before the head, each PNG imported by its module
-// so a scene that draws a base is keyed by its bytes (`tools/stamp.ts`), on
-// the view's skeleton (`skeleton.ts`), with the origin at the kept box's
-// top-left corner in the padded part sheet (`frames.ts`): the pixels are the
-// sheet's, drawn at its one scale, which a crowd's draw scale shrinks. Each
-// declares the kept view it is held to (`concept`). Pure data.
-
 import p1Band from './sheets/poses-1/band.png' with { type: 'file' };
 import p1Beard from './sheets/poses-1/beard.png' with { type: 'file' };
 import p1Head from './sheets/poses-1/head.png' with { type: 'file' };
@@ -36,20 +25,8 @@ import { FRAMES } from './frames.ts';
 import { RAMPS } from './sheets/ramps.ts';
 import { SKELETONS } from './skeleton.ts';
 
-/**
- * Their sheet's line, which a look draws again near what moved: about 11 px
- * across their outer outline, as the feast's guest man's, laid half a pixel
- * wider, in the sheet's outline ink (about 16,4,0, `cut.ts`).
- */
 export const LINE = { width: 11.5, ink: [16, 4, 0] } as const;
 
-/**
- * Each cut view's paper, the sheet's ground (about 249,232,208 in every
- * view), which its rim is un-matted from (`core/unmatte.ts`). The grown
- * pair's cream robe is painted in nearly that colour, but each robe lies
- * inside its ink, where the un-matte's paper does not reach, and their cutter
- * dyes it linen.
- */
 export const PAPERS = {
   'poses-1': [249, 232, 208],
   'poses-2': [249, 232, 208],
@@ -57,19 +34,12 @@ export const PAPERS = {
   'poses-4': [249, 232, 208],
 } as const satisfies Readonly<Record<keyof typeof SKELETONS, readonly [number, number, number]>>;
 
-/**
- * Each cut view's bust, by the view's name in their sheet's views: its parts
- * front to back, its house parts (`parts-cut.ts`) before its head and torso,
- * its part sheet the kept box padded (`frames.ts`), the origin at the kept
- * box's top-left corner, held to the kept box (`library/cutout/puppets.ts`).
- */
 const BUSTS = puppetsOf({
   cast: 'filler-bases',
   cuts: CUTS,
   frames: FRAMES,
   skeletons: SKELETONS,
   papers: PAPERS,
-  // each head turns over its still torso at the face's lower edge: the torso's chin shadow and neck reach 12 px under it
   underlap: { head: 12 },
   line: LINE,
   parts: {
@@ -101,7 +71,6 @@ const BUSTS = puppetsOf({
   },
 });
 
-/** A view's bust with each part a dress dyes declaring the ramp it is drawn in (`sheets/ramps.ts`). */
 const ramped = (puppet: CutPuppet, ramps: Readonly<Record<string, Ramp>>): CutPuppet => ({
   ...puppet,
   parts: puppet.parts.map((part) =>
@@ -112,31 +81,19 @@ const ramped = (puppet: CutPuppet, ramps: Readonly<Record<string, Ramp>>): CutPu
   ),
 });
 
-/** The drawing a crowd lays in place of a view's head when the figure wears its headwear (`crowd.ts`). */
 export const HEAD_COVERED = 'head-covered';
 
-/**
- * Each headwear view's covered head (`parts-cut.ts`): its head with the hair
- * the headwear hides read from the dressed view, on the head's own canvas,
- * un-matted as the head is.
- */
 const COVERED: Partial<Record<keyof typeof BUSTS, string>> = {
   'poses-1': p1HeadCovered,
   'poses-3': p3HeadCovered,
 };
 
-/** A view's bust with its covered head among its drawings, when it has one. */
 const covered = (puppet: CutPuppet, png: Option.Option<string>): CutPuppet =>
   Option.match(png, {
     onNone: () => puppet,
     onSome: (p) => ({ ...puppet, drawings: [{ name: HEAD_COVERED, png: p, part: 'head' }] }),
   });
 
-/**
- * Each cut view's puppet, by the view's name in their sheet's views: its
- * bust, its dyed parts (`mantle`, `band`) declaring their drawn ramps, and
- * a headwear view's covered head as a drawing.
- */
 export const PUPPETS = Records.map(BUSTS, (puppet, view) =>
   covered(ramped(puppet, RAMPS[view]), Option.fromUndefinedOr(COVERED[view])),
 );

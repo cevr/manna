@@ -1,40 +1,3 @@
-// The easel's commands (`lab-command.ts`; MCP and `film lab` serve them):
-// what an agent paints a scene with, in any client that reaches the lab
-// (Claude Code, Codex, gent), or from a terminal:
-//
-// - `look`: stills of a scene as its files stand, drawn on the lab's warm
-//   export page (`Easel`, in the lab alone), each answered on MCP as an
-//   image after its line (`lookLine`), so the model reads the picture
-//   itself; in a terminal, its lines.
-// - `match`: a scene's figures at one place held against their concepts
-//   (`Easel.match`): per figure its table and its side-by-side.
-// - `critique`: the same match, then each figure's two crops shown at 1:1 to
-//   a fresh model (`Critic`): per figure its findings, a skip said and never
-//   a refusal. The counsel takes minutes and an MCP client cuts a call at
-//   60 s, so it runs as the critic's job: a call answers by
-//   `CRITIQUE_DEADLINE` from its start, with the job's handle when it is not
-//   done by then, and a call with the handle waits on it again (`film lab critique wait <handle>` until it is done).
-// - `cues`: each scene's placement, marks and named cues (`film read cues`).
-// - `check`: scenes checked as drawn (`film check --draw`).
-// - `journal`, `journal_note`: the film's journal read, and an observation
-//   noted (`journal.ts`), a named scene first found among the film's
-//   (`film read scenes`, which resolves no timeline: a scene that does not
-//   lay out never keeps a painter from its journal).
-//
-// The lab imports no film module (`lab.slow.test.ts`), so whatever reads a film's
-// modules (its clock, its check, its scene ids) runs the film CLI fresh
-// (`FreshFilm`), as the lab's own after-write check does. Every tool takes
-// `films`, the asker's films folder, absolute and with no `..`: a lab that
-// serves another checkout refuses (`LabElsewhere`, the folders compared as
-// the file system resolves them) rather than answer with that checkout's
-// files, and a relative folder, or one with a `..`, is refused
-// (`plainAbsolute`): the lab would resolve the one in its own checkout, and
-// Node's `realpath` takes the other before the links it follows. Each answer
-// fits a client's result whole (`core/tool-pages.ts`): one that stops early
-// answers `next`, which repeats what was asked of the film (`scenes`,
-// `scene`), so asking again with it reads on in the same answer; a refusal
-// is a tool error in the film's own words, its tag first (`FilmRefused`).
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -72,40 +35,20 @@ import { FreshFilm } from './fresh-film.ts';
 import { JOURNAL_LAST, note, read } from './journal.ts';
 import { labCommand } from './lab-command.ts';
 
-/** The most stills one look takes: each is an image the model reads, and a request keeps 20 at full size. */
 const LOOK_MAX_PLACES = 8;
 
-/**
- * The longest side a still may be asked at: the Claude API holds every image
- * of a request that carries more than 20 to 2,000 pixels a side, and a
- * painter's session carries many.
- */
 const LOOK_MAX_SIZE = 2_000;
 
-/** The most bytes one still may be: 5 MB once in base64, the most one image of a model's request may be. */
 const STILL_MAX_BYTES = 3_750_000;
 
-/** The most bytes one look's stills may be together: the request that carries them carries the rest of the session too. */
 const LOOK_MAX_BYTES = 15_000_000;
 
-/** The most characters of a refusal's words an answer keeps (a page that does not build says a lot). */
 const REFUSAL_CHARS = 4_000;
 
-/**
- * The longest a `critique` call takes from its start before it answers the
- * job's handle: Claude Code's MCP client cuts a tool call at 60 s. The match
- * and the staging read come first (the lab's logs: a match at most 7.7 s, a
- * fresh read at most 1.7 s), and the job is waited on only for what is left,
- * so a slow read shortens the wait. A match and read that themselves run past
- * the deadline answer the handle as they end, and past 60 s the client has cut
- * the call before any job starts. The 10 s left over carry the answer back.
- */
 const CRITIQUE_DEADLINE = Duration.seconds(50);
 
-/** How many entries `journal` reads at most. */
 const JOURNAL_MAX_LAST = 200;
 
-/** A film tool's refusal: the film's own failure (`UnknownScene`, `PagesBroken`, `LabElsewhere`, …) and its words. */
 class FilmRefused extends Schema.TaggedError<FilmRefused>()('FilmRefused', {
   tag: Schema.String,
   text: Schema.String,
@@ -115,14 +58,12 @@ class FilmRefused extends Schema.TaggedError<FilmRefused>()('FilmRefused', {
   }
 }
 
-/** A critique asked of no scene and no running job. */
 class CritiqueUnplaced extends Schema.TaggedError<CritiqueUnplaced>()('CritiqueUnplaced', {}) {
   override get message() {
     return 'critique a scene (film, scene and at), or read a critique already started (handle)';
   }
 }
 
-/** A look whose stills are too large for a model's request: each one too large, and the limit it passed. */
 class LookTooLarge extends Schema.TaggedError<LookTooLarge>()('LookTooLarge', {
   stills: Schema.Array(Schema.Struct({ file: Schema.String, bytes: Schema.Int })),
   limit: Schema.Int,
@@ -133,7 +74,6 @@ class LookTooLarge extends Schema.TaggedError<LookTooLarge>()('LookTooLarge', {
   }
 }
 
-/** A failure the lab names: its tag and its words. */
 interface Named {
   readonly _tag: string;
   readonly message: string;
@@ -141,11 +81,6 @@ interface Named {
 
 const isServerFailed = Schema.is(ServerFailed);
 
-/**
- * `error` as the tool answers it: the film's tag and words (a fresh run's
- * failure by the tag it carries), cut to a refusal's length; a lab that
- * serves another checkout says how to reach one that serves the asker's.
- */
 const refusedAs = (error: Named): FilmRefused => {
   if (isServerFailed(error))
     return FilmRefused.make({ tag: error.tag, text: clip(error.reason, REFUSAL_CHARS) });
@@ -156,9 +91,6 @@ const refusedAs = (error: Named): FilmRefused => {
     });
   return FilmRefused.make({ tag: error._tag, text: clip(error.message, REFUSAL_CHARS) });
 };
-
-// ---------------------------------------------------------------------------
-// What the tools take
 
 const Films = Schema.String.check(
   Schema.makeFilter(
@@ -240,10 +172,8 @@ const MatchParams = Schema.Struct({
 });
 type MatchParams = typeof MatchParams.Type;
 
-/** The `critique` tool as the lab lists it: its answer is each figure's findings, as text. */
 const CRITIQUE_DESCRIPTION = `Match a scene's figures at one place (as \`match\` does), then show each figure's concept crop and scene crop at 1:1 to a fresh Opus (headless Claude at max effort, sandboxed, Read its one tool) beside the match's flagged rows, the app's figure rules (the K1 look, the grammar every figure shares, figures and faces, the look) and the place's staging (its Board panel and the script's picture: design is held to the concept, what a figure wears, holds and does to the staging): it names each difference in head angle and turn, face shape and features, pose, proportion (never height in heads: that is the cast's band), palette and artifacts. One counsel run answers every figure at the place, and takes minutes: the critique runs as a job in the lab, and a call answers within ${Duration.format(CRITIQUE_DEADLINE)} of its start when its match and staging read end inside it (they take seconds). Not done by then, it answers the job's \`handle\` and no \`critique\`: keep painting, and call \`critique\` again with \`films\` and \`handle\` alone for its answer (each call waits up to ${Duration.format(CRITIQUE_DEADLINE)} more); a start of the same figures over the same crops while one runs answers that job. The answer is kept by the hash of the prompt and the crops, so the same prompt over the same crops is never asked twice. Answers per figure its findings, written beside the match's table (<stem>.critique.md under out/<film>/match/<scene>/), and each finding rejected (one that does not read, or names no figure asked about). It fails open: a counsel that fails or dies, or answers no json block, is a skip, said and logged, never a refusal. Before a figure is called done, and before an owner look, critique it; a finding is fixed or said why not (\`film review\`).`;
 
-/** A critique's answer: its job's handle, the match it critiques, and the critique once the counsel has answered. */
 const Critiqued = Schema.Struct({
   handle: Schema.String,
   match: MatchTaken,
@@ -253,7 +183,6 @@ type Critiqued = typeof Critiqued.Type;
 
 const readCritiqued = Schema.decodeUnknownOption(Critiqued);
 
-/** Whether a critique's JSON answer holds the critique, not only its handle. Pure. */
 export const critiqueDone = (json: Schema.Json): boolean =>
   Option.exists(readCritiqued(json), (taken) =>
     Option.isSome(Option.fromUndefinedOr(taken.critique)),
@@ -276,14 +205,9 @@ type CritiqueParams = typeof CritiqueParams.Type;
 
 const JournalNoted = Schema.Struct({
   file: Schema.String,
-  /** When it was noted: ISO 8601, to the second, UTC. */
   at: Schema.String,
-  /** Its scene, or `film` for the whole film. */
   scene: Schema.String,
 });
-
-// ---------------------------------------------------------------------------
-// The tools
 
 const CheckTool = Tool.make('check', {
   description:
@@ -364,10 +288,8 @@ const JournalNoteTool = Tool.make('journal_note', {
   failure: FilmRefused,
 });
 
-/** The `look` tool as the lab lists it. */
 const LOOK_DESCRIPTION = `Look at a scene as its files stand now: stills drawn on the lab's warm export page in about a second (no render), each answered as an image after its line (its file, scene, place, time in the scene, frame, size and the lab's build). Look at the moments the beat is about: its marks and the middle of each cue that moves something (mark:<m>, cue:<c>@0.5). \`mode\` value checks the light and dark, squint where the eye lands first; \`crop\` reads a face, a hand or lettering at 1:1 (a PNG; a whole frame is a JPEG). The stills stay under out/<film>/look/<scene>/. A look never shows stale code: a page that does not build is PagesBroken, with the bundler's words.`;
 
-/** The `match` tool as the lab lists it. */
 const MATCH_DESCRIPTION = `Hold a scene's figures against their concepts at one place, as the files stand now (the look's warm page, its build and stale-code guarantees): each rig with a concept (its RivePropSpec's \`concept\`: an image and the figure's box in it) is cropped from the frame by the box the engine draws it in and measured as its concept is: head height, jaw, the body under the chin, at 0.35 and 0.7 and at the hem, height in heads, hand, eyes, brows, mouth, outline width, feet width and height (each a share of the head's width), ink on the hair/skin edge (the rule is none), a light rim inside an inner part such as an ear (flagged where the concept paints none), the head's and the body's shading (value drop, hue turn, saturation kept, the edge's angle, colour not grey), the head's facing (its turn: the eyes in the face; its roll: the eye line's slope; a concept's angle is design, so a turn past 0.1 or a roll past 6° and the eyes' grain is flagged), the render's artifacts on the head at 1:1 (a seam: a light line between two fills; a sliver: a fill short of the outline; weather over the face; the rule is none), and the outline: the head's shape, the body's sides and the feet shown or not, against the concept's. Answers per figure its table (concept, scene, difference; a ratio flagged past 5%, the head's outline past a mean gap of 0.03 of a head, the body's past 0.05) and one side-by-side image at one head height: the concept, the scene with each artifact ringed (a seam red, a sliver blue, weather green), and the scene under the concept's outline in magenta; both stay under out/<film>/match/<scene>/. Guidance, not a gate: a concept is painted. After a passage that touches a figure, match it.`;
 
 const LookTool = Tool.make('look', {
@@ -391,10 +313,6 @@ const CritiqueTool = Tool.make('critique', {
   failure: FilmRefused,
 }).annotate(Tool.Readonly, true);
 
-// ---------------------------------------------------------------------------
-// The work, over the lab's easel, its fresh runs and its films
-
-/** `film` as one the lab serves from the asker's films folder `from`: another checkout's is `LabElsewhere`. */
 const served = Effect.fn('EaselMcp.served')(function* (from: string, film: string) {
   const folder = yield* FilmFolder;
   const fs = yield* FileSystem.FileSystem;
@@ -404,10 +322,6 @@ const served = Effect.fn('EaselMcp.served')(function* (from: string, film: strin
   return yield* filmNamed(film);
 });
 
-/**
- * `scene` as one of `film`'s, when it names one, as the journal finds it (no
- * timeline resolved): `UnknownScene`, naming the film's, when not.
- */
 const sceneOf = Effect.fn('EaselMcp.sceneOf')(function* (
   film: FilmName,
   scene: Option.Option<string>,
@@ -417,7 +331,6 @@ const sceneOf = Effect.fn('EaselMcp.sceneOf')(function* (
   if (!known.includes(scene.value)) return yield* UnknownScene.make({ scene: scene.value, known });
 });
 
-/** A still as MCP shows it: its file read back, refused when it is past what a model's request takes. */
 const imagesOf = Effect.fn('EaselMcp.images')(function* (
   files: ReadonlyArray<string>,
   together: number,
@@ -465,7 +378,6 @@ const look = Effect.fn('EaselMcp.look')(function* (params: LookParams) {
   });
 });
 
-/** A look's answer as MCP shows it: each still's line, then the still. */
 const lookContent = (taken: LookTaken) =>
   Effect.map(
     imagesOf(
@@ -498,14 +410,12 @@ const matched = Effect.fn('EaselMcp.match')(function* (params: MatchParams) {
   });
 });
 
-/** A match's first line. Pure. */
 const matchHead = (taken: MatchTaken): string =>
   `match scene=${taken.scene} at=${taken.at} t=${taken.time.toFixed(2)} frame=${taken.frame} build=${taken.build}`;
 
 const unmatchedLines = (taken: MatchTaken): ReadonlyArray<string> =>
   taken.unmatched.map((one) => `${one.figure}: unmatched (${one.reason})`);
 
-/** A match's answer as MCP shows it: its head, then per figure its table and its side-by-side. */
 const matchContent = Effect.fn('EaselMcp.matchContent')(function* (taken: MatchTaken) {
   const fs = yield* FileSystem.FileSystem;
   const sides = yield* imagesOf(
@@ -523,7 +433,6 @@ const matchContent = Effect.fn('EaselMcp.matchContent')(function* (taken: MatchT
   ] satisfies ReadonlyArray<McpSchema.ContentBlock>;
 });
 
-/** The critique's job started over the match `params` place: its handle. */
 const started = Effect.fn('EaselMcp.critiqueStart')(function* (params: CritiqueParams) {
   const place = Option.all({
     film: Option.fromUndefinedOr(params.film),
@@ -544,7 +453,6 @@ const critiqued = Effect.fn('EaselMcp.critique')(function* (params: CritiquePara
     onNone: () => started(params),
   });
   const now = yield* Clock.currentTimeMillis;
-  // What is left of the deadline once the job has its handle: none past it.
   const left = Duration.max(
     Duration.subtract(CRITIQUE_DEADLINE, Duration.millis(now - from)),
     Duration.zero,
@@ -557,7 +465,6 @@ const critiqued = Effect.fn('EaselMcp.critique')(function* (params: CritiquePara
   } satisfies Critiqued;
 });
 
-/** A critique's first line: the critique's, or the job's while it runs. Pure. */
 const critiqueHead = ({ handle, match, critique }: Critiqued): string => {
   const place = `scene=${match.scene} at=${match.at} t=${match.time.toFixed(2)} build=${match.build}`;
   return Option.match(Option.fromUndefinedOr(critique), {
@@ -568,7 +475,6 @@ const critiqueHead = ({ handle, match, critique }: Critiqued): string => {
   });
 };
 
-/** A critique's answer as MCP shows it: its head, then each figure's findings as its file says them. */
 const critiqueContent = Effect.fn('EaselMcp.critiqueContent')(function* (taken: Critiqued) {
   const fs = yield* FileSystem.FileSystem;
   const read = yield* Effect.forEach(taken.critique?.figures ?? [], (one) =>
@@ -618,10 +524,6 @@ const journalNote = Effect.fn('EaselMcp.journalNote')(function* (
   return { file: noted.file, at: noted.entry.at, scene: noted.entry.scene };
 });
 
-// ---------------------------------------------------------------------------
-// The commands
-
-/** The film's own tools: they read and write the film's files and run its CLI fresh, so any process runs them. */
 export const easelCommands = [
   labCommand(CheckTool, { run: (params) => Effect.mapError(check(params), refusedAs) }),
   labCommand(CuesTool, { run: (params) => Effect.mapError(cues(params), refusedAs) }),
@@ -631,11 +533,6 @@ export const easelCommands = [
   }),
 ];
 
-/**
- * The easel's pictures, drawn in the lab alone (its warm page, and the
- * critic beside it): each answered on MCP as its lines and its images beside
- * its structured answer, in a terminal as its lines.
- */
 export const easelInLab = [
   labCommand(LookTool, {
     run: (params) => Effect.mapError(look(params), refusedAs),
@@ -666,6 +563,5 @@ export const easelInLab = [
   }),
 ];
 
-/** What the lab's MCP says of the easel's tools, beside its own instructions. */
 export const EASEL_INSTRUCTIONS =
   "Paint and review a film's scenes with the easel's tools: `look` (stills of a scene as its files stand, as images), `match` (a scene's figures held against their concepts: a table and a side-by-side each), `critique` (the same figures shown at 1:1 to a fresh model: its findings on head angle, face, pose, palette and artifacts), `cues` (each scene's marks and named cues), `check` (scenes checked as drawn), `journal` and `journal_note` (the film's observations, read and noted). Each takes `films`, your checkout's films folder: a lab that serves another checkout's refuses (`LabElsewhere`). How a scene is painted with them, a passage at a time: .claude/skills/film/reference/scene-painter.md in the repository.";

@@ -9,7 +9,6 @@ export const WEBSTER_PROJECTION_VERSION = '1-scan-references';
 
 export const normalizeHeadword = (value: string): string => value.trim().toLowerCase();
 
-/** Source markup is retained separately. Only decoded text reaches readers. */
 const definitionText = (html: string): string => {
   const parts: string[] = [];
   let hidden = 0;

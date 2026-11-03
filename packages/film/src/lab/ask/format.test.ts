@@ -1,5 +1,3 @@
-// What the ask page says of a video's file, and which copy of a video it plays.
-
 import { Option } from 'effect';
 import { describe, expect, test } from 'bun:test';
 import type { ReviewVideo } from '../../core/review.ts';

@@ -1,14 +1,4 @@
-/**
- * The settings as the app keeps them: One's key-value store (SQLite on a
- * phone, local storage on the web) under Effect's KeyValueStore. A store
- * that fails is logged, since a sync `Atom.kvs` drops a failed read and keeps
- * a failed write for the session only; where the store cannot open at all,
- * the settings live in memory.
- */
-
 import { Effect, Layer, Option } from 'effect';
-// The module itself: the `effect/persistence` barrel brings in a SQL
-// migrator whose dynamic import() Hermes cannot compile.
 import * as KeyValueStore from 'effect/persistence/KeyValueStore';
 import { One } from 'one';
 
@@ -16,10 +6,6 @@ import { settingsOn } from './settings';
 
 type Database = ReturnType<typeof One.Database.openKeyValue>;
 
-/**
- * One store call, its failure typed and logged with the method and the key
- * it read or wrote (none for a call on the whole store).
- */
 const call = <A>(method: string, key: Option.Option<string>, run: () => A) =>
   Effect.try({
     try: run,

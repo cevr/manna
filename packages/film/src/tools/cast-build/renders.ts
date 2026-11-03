@@ -1,33 +1,20 @@
-// A drawing's synthetic training renders as one shard (`shardOf`): its
-// puppet posed at random (`core/pose-sample.ts`), `train` and `held`
-// samples, each a PNG and its truth as JSON, in a ustar archive with every
-// mtime 0, so the same drawing makes the same bytes on every host. Each
-// sample's seed comes from the SHA-256 of `<member>/<id>` (`seedOf`), never
-// from the drawing's place in a list, so a drawing keeps its samples when
-// the cast grows. The training set is the sorted list of its shards' hashes
-// (`trainsetOf`).
-
 import { Schema } from 'effect';
 import { type PoseSpec, SAMPLE_SIZE, sample } from '../../core/pose-sample.ts';
 import { sha256Hex } from '../digest.ts';
 import { encodePng } from '../png.ts';
 
-/** How many samples a drawing's shard holds: 400 to train on, 40 held out. */
 export const SAMPLES = { train: 400, held: 40 } as const;
 
 type Split = keyof typeof SAMPLES;
 
-/** Each split's seeds start this far past the drawing's own, so no two splits share one. */
 const SPLIT_OFFSET: Readonly<Record<Split, number>> = { train: 0, held: 1_000_000 };
 
-/** Sample `i` of `split`'s seed for `<member>/<id>`: the first four bytes of the SHA-256 of `<member>/<id>`, plus the split's offset and `i`. */
 const seedOf = (member: string, id: string, split: Split, i: number): number =>
   (Number.parseInt(sha256Hex(`${member}/${id}`).slice(0, 8), 16) + SPLIT_OFFSET[split] + i) >>> 0;
 
 const encoder = new TextEncoder();
 const encodeJson = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
 
-/** A ustar header block for a file of `size` bytes at `name` (under 100 bytes), mode 644, mtime 0. */
 const header = (name: string, size: number) => {
   const block = new Uint8Array(512);
   const put = (at: number, text: string) => block.set(encoder.encode(text), at);
@@ -46,7 +33,6 @@ const header = (name: string, size: number) => {
   return block;
 };
 
-/** `files` as one ustar archive, in their order. */
 const tarOf = (files: ReadonlyArray<readonly [name: string, bytes: Uint8Array]>) => {
   const blocks = files.flatMap(([name, bytes]) => [
     header(name, bytes.length),
@@ -63,7 +49,6 @@ const tarOf = (files: ReadonlyArray<readonly [name: string, bytes: Uint8Array]>)
   return out;
 };
 
-/** `<member>/<id>`'s shard: `<split>/<member>__<id>__<i>.png` and `.json` for each sample, `/` in the id read as `-`. */
 export const shardOf = (
   spec: PoseSpec,
   member: string,
@@ -91,7 +76,6 @@ export const shardOf = (
   return tarOf(files);
 };
 
-/** The training set: `<member>/<id>=<shard hash>` for each shard, sorted, so its order of arrival is not in it. */
 export const trainsetOf = (shards: Readonly<Record<string, string>>): Uint8Array =>
   encoder.encode(
     Object.entries(shards)

@@ -1,9 +1,3 @@
-// The ps1 world's textures, every one made here from seeded noise, as small
-// as the console's video memory kept them (16 to 64 texels a side) and read
-// nearest-neighbour, so each texel shows as a hard square on screen: wood
-// grain, cut stone, floor planks, cloth, the accused's stained tunic, paper
-// and card. Made once per WebGL context (`rig.ts`); nothing here reads time.
-
 import { hash2, lerp } from '@manna/film/core';
 import { DataTexture, NearestFilter, RepeatWrapping, RGBAFormat, UnsignedByteType } from 'three';
 
@@ -20,7 +14,6 @@ const mixRgb = (a: Rgb, b: Rgb, t: number): Rgb => [
   lerp(a[2], b[2], t),
 ];
 
-/** Value noise that tiles every `period` cells: hard-edged enough for a 32-texel texture. */
 const tiled = (x: number, y: number, period: number, seed: number): number => {
   const xi = Math.floor(x);
   const yi = Math.floor(y);
@@ -35,7 +28,6 @@ const tiled = (x: number, y: number, period: number, seed: number): number => {
   return lerp(top, bottom, sy);
 };
 
-/** A `size`-texel square texture, each texel `paint(x, y)` (rgb, alpha 255 unless given). */
 const texture = (
   size: number,
   paint: (x: number, y: number) => Rgb | readonly [number, number, number, number],
@@ -60,11 +52,9 @@ const texture = (
   return t;
 };
 
-/** Four steps between `dark` and `light`: the few tones a hand-made texture kept. */
 const posterise = (dark: Rgb, light: Rgb, v: number): Rgb =>
   mixRgb(dark, light, Math.round(Math.min(Math.max(v, 0), 1) * 3) / 3);
 
-/** Planks laid along x, `rows` to the tile, each its own tone, with grain and a dark seam. */
 const planks = (size: number, rows: number, dark: string, light: string, seed: number) => {
   const [d, l] = [hex(dark), hex(light)];
   const tall = size / rows;
@@ -74,7 +64,6 @@ const planks = (size: number, rows: number, dark: string, light: string, seed: n
     if (inRow === 0) return mixRgb(d, [0, 0, 0], 0.35);
     const shift = Math.floor(hash2(row, seed) * size);
     const xx = (x + shift) % size;
-    // A butt joint once along each plank.
     if (xx === Math.floor(size * 0.5)) return mixRgb(d, [0, 0, 0], 0.2);
     const tone = 0.25 + 0.4 * hash2(row + 7, seed);
     const grain = Math.sin((inRow + 2.2 * tiled(xx / 6, row, size / 6, seed)) * 1.9);
@@ -86,7 +75,6 @@ const planks = (size: number, rows: number, dark: string, light: string, seed: n
   });
 };
 
-/** Cut stone in courses, each block its own tone, a speckle, mortar lines. */
 const stone = (size: number, dark: string, light: string, seed: number) => {
   const [d, l] = [hex(dark), hex(light)];
   const bh = size / 4;
@@ -103,7 +91,6 @@ const stone = (size: number, dark: string, light: string, seed: number) => {
   });
 };
 
-/** A twill weave: diagonal ribs a texel apart, and a little slub. */
 const weave = (size: number, dark: string, light: string, seed: number) => {
   const [d, l] = [hex(dark), hex(light)];
   return texture(size, (x, y) => {
@@ -112,17 +99,8 @@ const weave = (size: number, dark: string, light: string, seed: number) => {
   });
 };
 
-/** The tunic's cloth: the pale weave its stain is dyed into, and the sleeves' plain cloth. */
 const TUNIC: readonly [string, string] = ['#8f8a7c', '#e2dccb'];
 
-/**
- * The accused's tunic: pale cloth with one broad scarlet panel dyed into it,
- * collar to hem (scarlet is sin, on the one who carries it). The panel is
- * flat colour with straight edges and a one-texel hem a shade deeper, the
- * weave's ribs faint across it: cloth dyed through, never a spatter. The
- * body's drum wraps the texture twice with its front at u = 0, so the panel
- * hangs down the front and, the same, down the back, like a tabard.
- */
 const tunic = (size: number, seed: number) => {
   const [d, l] = [hex(TUNIC[0]), hex(TUNIC[1])];
   const scarlet = hex('#ce0914');
@@ -142,7 +120,6 @@ const tunic = (size: number, seed: number) => {
   });
 };
 
-/** A sheet of evidence: paper with grey lines of writing, too small to read. */
 const paper = (size: number, seed: number) => {
   const [white, line] = [hex('#e8e6dc'), hex('#7c7f88')];
   return texture(size, (x, y) => {
@@ -154,7 +131,6 @@ const paper = (size: number, seed: number) => {
   });
 };
 
-/** A file box: card, a pale label, a dark hand-hole. */
 const cardboard = (size: number, seed: number) => {
   const [d, l] = [hex('#7a5a36'), hex('#b48a58')];
   const label = hex('#ddd6c0');
@@ -175,7 +151,6 @@ export interface Textures {
   readonly carpet: DataTexture;
   readonly robe: DataTexture;
   readonly tunic: DataTexture;
-  /** The tunic's cloth without its stain: the accused's sleeves. */
   readonly linen: DataTexture;
   readonly coat: DataTexture;
   readonly paper: DataTexture;
@@ -183,7 +158,6 @@ export interface Textures {
   readonly desk: DataTexture;
 }
 
-/** Every texture the world wears, made fresh for one context. */
 export const textures = (): Textures => ({
   bench: planks(32, 4, '#3e2a1c', '#7a5636', 11),
   pew: planks(32, 4, '#4a3524', '#8a6644', 12),

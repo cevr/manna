@@ -1,11 +1,3 @@
-// A page's reach of the host is failed by the harness, whatever the spelling:
-// a script whose source map names a file of the film's own source outside its
-// adapters (`src/browser/`) and that moves the history, hears the window's
-// keys, ends a press or takes a pointer fails its case, though the case never
-// looked. The same call from an adapter, a library or a script with no source
-// map is told and let through. Each script here is a page's script with its
-// inline source map naming the file that "wrote" it.
-
 import { Effect } from 'effect';
 import { Base64 } from 'effect/encoding';
 import { describe, expect, it } from 'effect-bun-test';
@@ -18,17 +10,14 @@ import {
 } from '../../../src/lab/fixtures/browsers.ts';
 import { evaluates } from '../../../src/lab/fixtures/settled.ts';
 
-/** `js` (one line) with a source map that reads all of it back to `source`, relative to the film package. */
 const writtenBy = (js: string, source: string) => {
   const map = `{"version":3,"sources":["${source}"],"names":[],"mappings":"AAAA"}`;
   return `${js};window.ran=true\n//# sourceMappingURL=data:application/json;base64,${Base64.encode(map)}`;
 };
 
-/** The lab's own file that must not reach the host, and the adapter that may. */
 const FILM_FILE = 'src/lab/shell.tsx';
 const ADAPTER = 'src/browser/keys-browser.ts';
 
-/** A page that runs `js` once it loads, and says so (`window.ran`). */
 const pageRunning = (js: string) => {
   const script = asset('reach.js', respond(js, 'text/javascript'));
   return {
@@ -42,7 +31,6 @@ const pageRunning = (js: string) => {
   };
 };
 
-/** Whether the case that loaded `js` failed, and how. */
 const outcome = (js: string) =>
   Effect.gen(function* () {
     const control = pageRunning(js);
@@ -59,7 +47,6 @@ const outcome = (js: string) =>
           });
           yield* tab.goto('/');
           yield* evaluates(tab, 'window.ran === true', true);
-          // The page's report is an event: one more round trip, and it has been heard.
           yield* tab.evaluate('true');
         }),
       ),

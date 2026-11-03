@@ -1,13 +1,3 @@
-/**
- * The fidelity test's compiler, run off the test's thread so the 695 fresh
- * compiles share the machine's cores (Effect's `BunWorkerRunner`; the test
- * spawns it through `BunWorker`). Given hymn numbers, it compiles each from
- * its source-text row and its MIDI file, through `sourceOf` and `compile` as
- * the compile script does, and sends each hymn back as soon as it is done:
- * the hymn, or why it failed. The oracle stays in the test: this file builds
- * no expected line.
- */
-
 import { HymnId } from '@manna/core/hymnal';
 import { SourceHymnal, layerSourceText } from '../scripts/source-text.js';
 import { BunWorkerRunner } from '@effect/platform-bun';
@@ -19,7 +9,6 @@ import { decodeOrders, sourceOf } from '../scripts/sources.js';
 import { compile } from './compile.js';
 import type { Hymn } from './hymn.js';
 
-/** One hymn compiled, or why it failed (the test reads the same shape). */
 type Done =
   | { readonly number: number; readonly hymn: Hymn }
   | { readonly number: number; readonly failure: string };
@@ -31,11 +20,6 @@ const layer = Layer.merge(
   BunServices.layer,
 );
 
-/**
- * Each of `numbers` compiled in turn, each sent as it is done. Every hymn
- * is answered: one whose row, file or refrains.json cannot be read is sent
- * as a failure that says why.
- */
 const compileAll = (numbers: readonly number[], send: (done: Done) => Effect.Effect<void>) =>
   Effect.gen(function* () {
     const orders = yield* Effect.cached(

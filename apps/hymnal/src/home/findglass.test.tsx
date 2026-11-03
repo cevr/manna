@@ -1,28 +1,5 @@
 /* oxlint-disable effect/noTestLifecycleHooks -- a React screen test: the role sheet is in the document for the file, and animations land after each case. */
 
-/**
- * Acceptance (tidyup A3): the find bar's capsule is glass, as the owner asked
- * (2026-11-02): "Let's make the search not have white. Let's make it glass
- * colour, like a glass background."
- *
- * The theme (`src/theme.ts`), in light and dark:
- * - `glass` is the search field's own role, `soft`, at 85 % (`#rrggbbd9`).
- * - Over every role a screen draws under the bar (every role but the glass
- *   ones), the glass laid on it keeps the typed words (`onGlass`, the ink)
- *   and the placeholder (`onGlassMuted`) at WCAG AA (4.5:1), and the chosen
- *   disk (`glassChosen`, the accent) at 3:1; the chosen disk's mark
- *   (`onGlassChosen`) keeps AA on it.
- * - The placeholder is the ink moved toward `soft`, in hundredths, as far as
- *   AA holds over every one of those roles.
- *
- * The bar (`FindBar`), mounted in a browser's document (`src/test/setup.ts`)
- * with each role set to a colour of its own: the capsule is `glass`, folded
- * and open; the typed words `onGlass`, the placeholder `onGlassMuted`; the
- * chosen disk `glassChosen`.
- *
- * Final path: `apps/hymnal/src/home/findglass.test.tsx`.
- */
-
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'bun:test';
 import { RegistryProvider } from '@effect/atom-react';
 import { Option } from 'effect';
@@ -48,7 +25,6 @@ const hex = (channels: ReadonlyArray<number>) =>
         .padStart(2, '0'),
     )
     .join('')}`;
-/** `a` mixed `t` of the way toward `b`, per sRGB channel, rounded as the theme rounds. */
 const mix = (a: string, b: string, t: number) => {
   const [x, y] = [rgb(a), rgb(b)];
   return hex(x.map((v, k) => v + ((y[k] ?? v) - v) * t));
@@ -62,12 +38,10 @@ const luminance = (color: string) => {
   const [r, g, b] = rgb(color);
   return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
 };
-/** WCAG 2's contrast ratio. */
 const contrast = (a: string, b: string) => {
   const [la, lb] = [luminance(a), luminance(b)];
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 };
-/** A `#rrggbbaa` colour laid over an opaque `under`, as the screen draws it. */
 const over = (glass: string, under: string) =>
   mix(under, glass.slice(0, 7), channel(glass, 7) / 255);
 
@@ -126,11 +100,6 @@ describe('the theme’s glass', () => {
   }
 });
 
-/**
- * The theme's roles as the web reads them (`var(--<role>)`, `color.ts`),
- * each set here to a colour of its own, so a computed colour names the role
- * it came from. Set for this file's tests alone.
- */
 const ROLES = [
   'ground',
   'ink',
@@ -164,14 +133,12 @@ beforeAll(() => document.head.append(roleSheet));
 afterAll(() => roleSheet.remove());
 afterEach(() => landAnimations());
 
-/** The `#` the player layer hands the bar. */
 const hash = () => (
   <Pressable testID="find-number" role="button" aria-label="Find a hymn by number">
     <Text>#</Text>
   </Pressable>
 );
 
-/** The find bar on a hymn page with search `open` or not, mounted; disposed, it unmounts. */
 const findBar = (open: Option.Option<Searching>) => {
   const host = document.createElement('div');
   document.body.append(host);
@@ -196,11 +163,9 @@ const findBar = (open: Option.Option<Searching>) => {
 
 const style = (element: Element) => getComputedStyle(element);
 
-/** Whether a computed fill draws nothing. */
 const clear = (fill: string) =>
   fill === '' || fill === 'transparent' || /^rgba\(.*,\s*0(\.0+)?\)$/.test(fill);
 
-/** The nearest fill over `control` inside the find bar: the capsule's. */
 const capsuleFill = (control: HTMLElement): string => {
   const filled = (view: HTMLElement): string => {
     if (view.dataset['testid'] === 'find-bar') return 'none';

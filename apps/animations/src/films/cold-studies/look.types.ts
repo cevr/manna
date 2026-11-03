@@ -1,8 +1,3 @@
-// Compile-time checks of the court's rig names (`tsc` runs them; nothing
-// imports this module): a look's `f.rive(name, …)` poses only that rig's own
-// timelines and numbers (`Look.rigs`), and the court declares no rig beyond
-// the accused, the judge and his hand.
-
 import type { CourtFrame } from './scenes/court.ts';
 
 export const accusedPoses = (f: CourtFrame) => {

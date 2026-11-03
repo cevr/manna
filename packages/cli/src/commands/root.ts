@@ -51,7 +51,6 @@ Commands:
 
 Run 'manna <command> --help' for command-specific help.`;
 
-/** The single production graph for non-interactive CLI commands. */
 export const rootCommand = Command.make('manna', cliOptions, () => Console.log(rootHelp)).pipe(
   Command.withSubcommands([
     concordance,

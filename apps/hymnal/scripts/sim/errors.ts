@@ -1,10 +1,5 @@
-/**
- * The ways a `sim.ts` command fails, each a tagged error the command prints
- * as its JSON result (`result.ts`) before it exits non-zero.
- */
 import { Schema } from 'effect';
 
-/** No `boot` ran, or `down` closed the drive: there is nothing to drive. */
 export class NoSession extends Schema.TaggedError<NoSession>()('NoSession', {
   file: Schema.String,
 }) {
@@ -13,7 +8,6 @@ export class NoSession extends Schema.TaggedError<NoSession>()('NoSession', {
   }
 }
 
-/** The drive's simulator is not booted, or no longer exists. */
 export class SimulatorDown extends Schema.TaggedError<SimulatorDown>()('SimulatorDown', {
   name: Schema.String,
   state: Schema.String,
@@ -23,7 +17,6 @@ export class SimulatorDown extends Schema.TaggedError<SimulatorDown>()('Simulato
   }
 }
 
-/** A wait for something to become ready ran out. */
 export class ReadinessTimedOut extends Schema.TaggedError<ReadinessTimedOut>()(
   'ReadinessTimedOut',
   { what: Schema.String, seconds: Schema.Finite },
@@ -33,11 +26,9 @@ export class ReadinessTimedOut extends Schema.TaggedError<ReadinessTimedOut>()(
   }
 }
 
-/** No element on screen answers the target. */
 export class TargetMissing extends Schema.TaggedError<TargetMissing>()('TargetMissing', {
   target: Schema.String,
   platform: Schema.String,
-  /** What the driver said when its wait or scroll ran out. */
   driver: Schema.String,
 }) {
   override get message() {
@@ -45,7 +36,6 @@ export class TargetMissing extends Schema.TaggedError<TargetMissing>()('TargetMi
   }
 }
 
-/** A tool the command runs is not installed. */
 export class ToolMissing extends Schema.TaggedError<ToolMissing>()('ToolMissing', {
   tool: Schema.String,
 }) {
@@ -54,7 +44,6 @@ export class ToolMissing extends Schema.TaggedError<ToolMissing>()('ToolMissing'
   }
 }
 
-/** A tool ran and exited non-zero, or did not finish in its time. */
 export class ToolFailed extends Schema.TaggedError<ToolFailed>()('ToolFailed', {
   tool: Schema.String,
   args: Schema.Array(Schema.String),
@@ -66,7 +55,6 @@ export class ToolFailed extends Schema.TaggedError<ToolFailed>()('ToolFailed', {
   }
 }
 
-/** The command does not apply to the drive's platform. */
 export class NotOnPlatform extends Schema.TaggedError<NotOnPlatform>()('NotOnPlatform', {
   command: Schema.String,
   platform: Schema.String,
@@ -76,7 +64,6 @@ export class NotOnPlatform extends Schema.TaggedError<NotOnPlatform>()('NotOnPla
   }
 }
 
-/** A file the drive reads or writes failed on the host (`PlatformError`). */
 export class HostFailed extends Schema.TaggedError<HostFailed>()('HostFailed', {
   reason: Schema.String,
 }) {
@@ -85,11 +72,8 @@ export class HostFailed extends Schema.TaggedError<HostFailed>()('HostFailed', {
   }
 }
 
-/** The arguments did not parse: an unknown command or flag, a bad or missing value. */
 export class BadArguments extends Schema.TaggedError<BadArguments>()('BadArguments', {
-  /** The command path the parser reached, as `sim tap`. */
   command: Schema.String,
-  /** Each problem the parser found, in its words. */
   problems: Schema.Array(Schema.String),
 }) {
   override get message() {
@@ -97,7 +81,6 @@ export class BadArguments extends Schema.TaggedError<BadArguments>()('BadArgumen
   }
 }
 
-/** A read-only check of the booted drive failed (`sim doctor`): which, and why. */
 export class Unhealthy extends Schema.TaggedError<Unhealthy>()('Unhealthy', {
   check: Schema.String,
   reason: Schema.String,
@@ -107,7 +90,6 @@ export class Unhealthy extends Schema.TaggedError<Unhealthy>()('Unhealthy', {
   }
 }
 
-/** The helper ran in a warm checkout, the clean source worktrees are made from. */
 export class WarmCheckout extends Schema.TaggedError<WarmCheckout>()('WarmCheckout', {
   checkout: Schema.String,
 }) {
@@ -116,7 +98,6 @@ export class WarmCheckout extends Schema.TaggedError<WarmCheckout>()('WarmChecko
   }
 }
 
-/** A journey file that cannot run: missing, not a journey, or for another feature. */
 export class BadJourney extends Schema.TaggedError<BadJourney>()('BadJourney', {
   file: Schema.String,
   issue: Schema.String,
@@ -126,7 +107,6 @@ export class BadJourney extends Schema.TaggedError<BadJourney>()('BadJourney', {
   }
 }
 
-/** A target a journey expected gone still shows. */
 export class TargetShown extends Schema.TaggedError<TargetShown>()('TargetShown', {
   target: Schema.String,
 }) {
@@ -135,7 +115,6 @@ export class TargetShown extends Schema.TaggedError<TargetShown>()('TargetShown'
   }
 }
 
-/** Any failure a command reports. */
 export const SimError = Schema.Union([
   WarmCheckout,
   BadJourney,

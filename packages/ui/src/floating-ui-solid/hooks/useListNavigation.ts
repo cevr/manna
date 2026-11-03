@@ -1,14 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/hooks/useListNavigation.ts
-//
-// Arrow-key navigation over a menu's vertical list of items: ArrowUp and
-// ArrowDown move the highlight (skipping hidden and `:disabled` items,
-// wrapping at the ends), Home/End jump to the ends, an arrow on the closed
-// trigger opens the popup and highlights the first or last item, ArrowLeft
-// closes a nested list (a context menu is one, as upstream marks it), and
-// the pointer highlights the item under it. The highlighted item takes
-// focus. Upstream's virtual focus (`aria-activedescendant`), selected index,
-// horizontal lists, combobox, escape-to-none and grid modes are left out:
-// Menu, the one caller, uses none of them.
 import { isHTMLElement } from '@floating-ui/utils/dom';
 import { type Accessor, createEffect, untrack } from 'solid-js';
 
@@ -38,24 +27,18 @@ function isStationaryWebKitPointer(event: MouseEvent | PointerEvent) {
   return platform.engine.webkit && event.movementX === 0 && event.movementY === 0;
 }
 
-/** Whether `key` moves along the list. */
 function isListKey(key: string) {
   return key === ARROW_UP || key === ARROW_DOWN;
 }
 
-/** Whether `key` moves toward the list's end (or, opening it, starts at the first item). */
 function isToEndKey(key: string) {
   return key === ARROW_DOWN || key === 'Enter' || key === ' ' || key === '';
 }
 
 interface UseListNavigationProps {
-  /** The items in DOM order; the list owner keeps it current. */
   listRef: { current: Array<HTMLElement | null> };
-  /** The highlighted index (`null` for none). Read live. */
   activeIndex: number | null;
-  /** Called when navigation moves the highlight. */
   onNavigate?: ((activeIndex: number | null, event: Event | undefined) => void) | undefined;
-  /** Whether the list is nested (upstream's submenu; here a context menu, as upstream marks it). */
   nested?: boolean | undefined;
 }
 
@@ -70,8 +53,6 @@ export function useListNavigation(
   const floatingFocusElement: Accessor<HTMLElement | null> = () =>
     getFloatingFocusElement(untrack(context.floatingElement));
 
-  // Whether opening highlights an item: `auto` does for a keyboard open (a
-  // key is pending), `true` for a virtual (screen reader) click or pointer.
   let focusItemOnOpen: boolean | 'auto' = 'auto';
   let index = -1;
   let key: string | null = null;
@@ -167,7 +148,6 @@ export function useListNavigation(
           let runs = 0;
           const waitForListPopulated = () => {
             if (listRef.current[0] == null) {
-              // The items may register a frame after the popup mounts.
               if (runs < 2) {
                 const scheduler = runs
                   ? (callback: () => void) => waitForListPopulatedFrame.request(callback)
@@ -224,7 +204,6 @@ export function useListNavigation(
     isPointerModality = false;
     forceSyncFocus = true;
 
-    // An IME composition's keys are not navigation.
     if (event.isComposing || event.keyCode === 229) {
       return;
     }
@@ -234,7 +213,6 @@ export function useListNavigation(
     }
 
     if (untrack(nested) && event.key === ARROW_LEFT) {
-      // No list sits in a parent list, so the arrow is left to the page.
       context.setOpen(false, createChangeEventDetails(REASONS.listNavigation, event));
       returnFocusToTrigger();
       return;
@@ -275,7 +253,6 @@ export function useListNavigation(
         return;
       }
 
-      // Past either end the highlight wraps to the other.
       const decrement = event.key === ARROW_UP;
       const wraps = decrement ? currentIndex <= minIndex : currentIndex >= maxIndex;
       if (wraps) {

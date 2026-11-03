@@ -1,50 +1,3 @@
-/**
- * Compiles one hymn: its text laid on its MIDI file's tune, stanza by
- * stanza, each syllable with the chords that change while it is sung, and
- * each part judged for how far its placement can be trusted.
- *
- * Stanza n is laid, with the refrain's lines after it where the file plays
- * them, on verse n of the sung file (`sung.ts`: the hymn's file, its last
- * verse sung again for each stanza past the verses it plays). The
- * files play each verse as its stanza and the refrain after it, a refrain
- * printed first or before each stanza included (its first singing is in the
- * intro). The refrain is stored once, with where the page sings it
- * (`order`, required: a refrain has no default place), from stanza 1's
- * placement; a refrain sung after the last stanza alone (`first-and-last`,
- * `after-last`) is laid after the last stanza only, where the file plays it,
- * and stored from there.
- *
- * Where a chord goes, at both levels:
- * - A change belongs to the syllable sung when it comes: a syllable owns the
- *   time from its first note's start to the next syllable's start, so a
- *   change under a held note, on a later note of a melisma or in a rest
- *   after it sits on it, `at` quarter-note beats after it starts.
- * - A change after a syllable's start that lasts less than a quarter note is
- *   a passing chord: it folds into the chord before it. A change at a
- *   syllable's start is never folded.
- * - Each line's first syllable carries the chord sounding when it starts;
- *   changes in the rest before a line are dropped. Any other syllable
- *   carries the chord sounding at its start when it differs from the last
- *   one shown (a short chord folded away that runs on into it).
- * - A syllable sharing the note before it carries none.
- * - A guitar change then moves to where a guitarist strikes it, the next
- *   strong beat (`strike`); the full harmony stays where the file plays it.
- *   A line's opening guitar chord can so move later: the reader then shows
- *   the chord held over from the line before over its first syllables. The
- *   strong beats are the file's bars counted from its first tick, so the
- *   chords move only when the hymn's melody confirms those bars
- *   (`Placement.confirms`, judged on stanza 1 and the refrain after it): a
- *   file whose first tick is not the printed downbeat, or whose meter is not
- *   the printed one, keeps every guitar chord where it plays it.
- *
- * Each hymn carries its timing (`timing.ts`): the sung file's tempo map and
- * when each sung line and syllable starts, from the notes each stanza was
- * laid on. `verses.midi` stays the verses the file itself plays, so a hymn
- * whose file is looped has fewer there than `verses.text`.
- *
- * Pure: no file, Bun or Node access.
- */
-
 import { Array as Arr, Effect, Schema } from 'effect';
 import type { Mutable } from 'effect/Types';
 
@@ -71,26 +24,17 @@ interface Source {
   readonly book: 'sdah-1985';
   readonly number: number;
   readonly title: string;
-  /** Independent source-text verses: a negative id is a refrain. SQLite is generated downstream. */
   readonly verses: ReadonlyArray<{ readonly id: number; readonly text: string }>;
   readonly midi: Uint8Array;
-  /** Why the hymn is held back: every part is then plain text. */
   readonly held?: string | undefined;
-  /** Where the page sings the refrain: given for a hymn with a refrain, and only then. */
   readonly order?: Order | undefined;
 }
 
-/**
- * The bounds of trust, on the notes per syllable (`r`) and the cost per
- * syllable (`c`) of a part's placement. Words alone below the first set,
- * chords per line below the second.
- */
 const TRUST = {
   text: { fewNotes: 0.8, manyNotes: 1.75, cost: 0.5, sharedAcross: 1 },
   line: { melismas: 1.3, cost: 0.25 },
 } as const;
 
-/** The reasons the compiler gives, in the order it states them. */
 const REASONS: readonly Reason[] = ['held', 'notes', 'shared', 'cost', 'melismas', 'inexact'];
 
 const ordered = (reasons: readonly Reason[]): Reason[] =>
@@ -106,7 +50,6 @@ const linesOf = (text: string): string[] =>
 
 type Placed = NonNullable<Syllable['full']>[number];
 
-/** Places one level's chords on a verse's syllables, laid out as `align` gives them. */
 const place = (
   score: Score.Score,
   span: Score.Span,
@@ -115,7 +58,6 @@ const place = (
   level: Harmony.Level,
 ): Array<Array<Placed[]>> => {
   const tpb = score.ticksPerBeat;
-  // The files strike a chord's notes up to a few ticks from the tune's.
   const slack = tpb / 16;
   const spans = Harmony.chords(score, span.start, span.end, level);
   const sung = alignment.lines.flatMap((line, l) =>
@@ -133,7 +75,6 @@ const place = (
   sung.forEach(({ syllable, line: l, k, start, end: noteEnd }, i) => {
     if (syllable.notes === 0) return;
     const next = sung.slice(i + 1).find((s) => s.syllable.notes > 0);
-    // A line's last syllable owns no rest after it, unless it ends the verse.
     const end =
       next === undefined ? span.end : next.line !== l ? Math.min(noteEnd, next.start) : next.start;
     const placed: Placed[] = [];
@@ -165,15 +106,6 @@ const place = (
   return out;
 };
 
-/**
- * Moves each guitar change to where a guitarist strikes it (`placement.ts`,
- * by the supplied rule): later within the line, never onto or past the next
- * change nor past the end of the line's last note. A line's opening chord moves
- * only when a different chord ends the laying's line before it, so a
- * stanza's first line never moves. Syllables sharing the note before them
- * carry none. The compiler selects the strong-beat readings only when the
- * melody confirms the file's bars; otherwise it uses the original anchors.
- */
 const strike = (
   score: Score.Score,
   alignment: Align.Alignment,
@@ -229,19 +161,13 @@ interface Laid {
   readonly level: 'syllable' | 'line' | 'text';
   readonly why: Reason[];
   readonly fit: Fit | undefined;
-  /** Each line of syllables, the stanza's and then the refrain's, the guitar chords where the file plays them. */
   readonly lines: Syllable[][];
-  /** The same lines with each guitar chord where a guitarist strikes it (`strike`). */
   readonly struck: Syllable[][];
-  /** Strong-beat anchors with brief changes folded and redundant returns removed. */
   readonly simpler: Syllable[][];
-  /** Original anchors with brief changes folded, for an unconfirmed grid. */
   readonly folded: Syllable[][];
-  /** Each line's syllable starts in ticks, as `lines`; absent when laid as words alone. */
   readonly starts: number[][] | undefined;
 }
 
-/** Judges a placement: words alone, chords per line, or chords on syllables. */
 const judge = (fit: Fit | undefined, inexact: boolean): Pick<Laid, 'level' | 'why'> => {
   const notes: Reason[] = inexact ? ['inexact'] : [];
   if (fit === undefined) return { level: 'text', why: ordered(['notes', ...notes]) };
@@ -262,7 +188,6 @@ const judge = (fit: Fit | undefined, inexact: boolean): Pick<Laid, 'level' | 'wh
   return { level: 'syllable', why: ordered(notes) };
 };
 
-/** Lays stanza n with the refrain after it on its verse of the sung file. */
 const lay = (score: Score.Score, n: number, lines: readonly string[]): Laid => {
   const span = score.verses.spans[n] ?? { start: 0, end: 0 };
   const alignment = Align.align(score, n, lines);
@@ -309,7 +234,6 @@ const lay = (score: Score.Score, n: number, lines: readonly string[]): Laid => {
   };
 };
 
-/** A part from a placement's lines in [from, to), or the text's own lines when it is plain. */
 const partOf = (laid: Laid, text: readonly string[], from: number, to: number): Part => {
   const plain: [string, ...string[]] = [text[0] ?? '', ...text.slice(1)];
   const why: [Reason, ...Reason[]] = [laid.why[0] ?? 'notes', ...laid.why.slice(1)];
@@ -328,7 +252,6 @@ const held = (lines: readonly string[]): Part => ({
   why: ['held'],
 });
 
-/** Why a text's verses cannot be read in printed order. */
 const VerseLayoutReason = Schema.Literals([
   'no stanza',
   'stanza ids are not 0, 1, … n - 1',
@@ -339,19 +262,11 @@ const VerseLayoutReason = Schema.Literals([
 ]);
 type VerseLayoutReason = typeof VerseLayoutReason.Type;
 
-/** A text whose verses the compiler cannot read in printed order. */
 class VerseLayoutError extends Schema.TaggedError<VerseLayoutError>()('VerseLayoutError', {
   ids: Schema.Array(Schema.Int),
   reason: VerseLayoutReason,
 }) {}
 
-/**
- * The text's stanzas in printed order and its refrain. The order is known
- * only when the stanzas' ids are 0, 1, … n - 1 and at most one verse, the
- * refrain, has a negative id, and every verse has a letter; a refrain comes
- * with the order its page sings it in, and an order only with a refrain: any
- * other layout is refused.
- */
 const versesOf = (source: Source) => {
   const ids = source.verses.map((verse) => verse.id);
   const stanzas = source.verses.filter((verse) => verse.id >= 0).toSorted((a, b) => a.id - b.id);
@@ -375,7 +290,6 @@ const versesOf = (source: Source) => {
   });
 };
 
-/** Compiles three placement readings from one melody and alignment per stanza. */
 export const compilePlacements = (
   source: Source,
 ): Effect.Effect<Record<Placement.Placement, Hymn>, Midi.MidiParseError | VerseLayoutError> =>
@@ -383,13 +297,11 @@ export const compilePlacements = (
     const { stanzas, refrain } = yield* versesOf(source);
     const sung = Sung.of(yield* Midi.parse(source.midi), stanzas.length);
     const { midi, score } = sung;
-    // The stanza the refrain is laid after and stored from: the last alone when it is sung after the last only.
     const lastOnly = refrain?.order === 'first-and-last' || refrain?.order === 'after-last';
     const from = lastOnly ? stanzas.length - 1 : 0;
     const tail = (n: number) =>
       refrain === undefined || (lastOnly && n !== from) ? [] : refrain.lines;
     const spans = score.verses.spans;
-    /** The hymn with its timing: each stanza on its verse of the sung file. */
     const timed = (hymn: Mutable<Hymn>, starts: (n: number) => number[][] | undefined): Hymn => {
       const layings = stanzas.map((lines, n): Timing.Laying => ({
         span: spans[n] ?? { start: 0, end: midi.lastTick },
@@ -421,7 +333,6 @@ export const compilePlacements = (
       return { beat: hymn, simpler: hymn, file: hymn };
     }
     const laid = Arr.map(stanzas, (lines, n) => lay(score, n, [...lines, ...tail(n)]));
-    /** The hymn with each laying's lines `pick` chooses. */
     const built = (pick: (one: Laid) => Syllable[][]): Hymn => {
       const chosen = Arr.map(laid, (one): Laid => ({ ...one, lines: pick(one) }));
       const parts = Arr.map(chosen, (one, n) => {
@@ -437,7 +348,6 @@ export const compilePlacements = (
       }
       return timed(hymn, (n) => laid[n]?.starts);
     };
-    // The guitar chords are struck on the file's strong beats only when the melody confirms its bars.
     const asPlayed = built((one) => one.lines);
     const grid: Placement.Grid = {
       ticksPerBeat: PER_BEAT,
@@ -455,7 +365,6 @@ export const compilePlacements = (
     };
   });
 
-/** The default guitar reading, derived from the same alignment as the other placements. */
 export const compile = (
   source: Source,
 ): Effect.Effect<Hymn, Midi.MidiParseError | VerseLayoutError> =>

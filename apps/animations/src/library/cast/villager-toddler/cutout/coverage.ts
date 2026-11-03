@@ -1,6 +1,3 @@
-// Every drawing the cast pipeline needs of the villager toddler (`film
-// concept coverage`): her two kept poses, each cut. Pure data.
-
 import type { CoverageManifest } from '@manna/film/tools';
 
 const FOR = [{ script: 'in-its-order', beats: ['milk', 'rush'] }];

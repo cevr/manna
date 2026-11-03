@@ -1,5 +1,3 @@
-/** The Favourite button's mark on iOS: the SF Symbol `star`, filled while the hymn is a favourite, in the accent. */
-
 import { Match } from 'effect';
 import { One } from 'one';
 import { StyleSheet } from 'react-native';

@@ -1,4 +1,3 @@
-/** One scoped queue owns durable recording publication. Media bytes never enter settings. */
 import {
   Cause,
   Context,
@@ -15,25 +14,11 @@ import * as Semaphore from 'effect/Semaphore';
 import { soundingOffset } from '~/remote';
 import { setOf } from '@manna/hymnal/recordings';
 
-/**
- * Each recording set keeps its saved files in a storage of its own, and a
- * hymn's files live in the storage of the set it plays from (`setOf`). A set
- * added later moves only its own hymns (`warm-2` moved hymn 663): every other
- * hymn's saved recording stays where it was saved and is still found. A
- * moved hymn's file left in its old set's storage is a stray: never listed,
- * so never played as the new recording, and freed at Delete (`removeOld`).
- */
 export const storageOf = (set: string) => `hymnal-recordings-${set}-v1`;
-/** The storage hymn `number`'s saved files live in. */
 export const storageFor = (number: number) => storageOf(setOf(number));
-/**
- * The storages some hymn plays from. Any other recording storage belongs to
- * an old set that no hymn reads, and Delete frees it whole.
- */
 export const readStorages: ReadonlyArray<string> = [
   ...new Set(Array.from({ length: 695 }, (_, i) => storageFor(i + 1))),
 ];
-/** Whether file `name` in `storage` belongs to a hymn that plays from another storage. */
 export const stray = (storage: string, name: string) =>
   /^\d+_/.test(name) && storageFor(Number(name.split('_')[0])) !== storage;
 export const recordingStorage = (name: string) => /^hymnal-recordings-[a-z0-9-]+-v\d+$/.test(name);
@@ -57,7 +42,6 @@ export class OfflineError extends Schema.TaggedError<OfflineError>()('OfflineErr
 export const identityKey = (id: Identity) => `${id.number}_${soundingOffset(id.offset)}`;
 export const CHUNK = 2 * 1024 * 1024;
 
-/** Platform media storage: append at an exact offset; save commits metadata atomically. */
 export class Media extends Context.Service<
   Media,
   {
@@ -70,7 +54,6 @@ export class Media extends Context.Service<
     ) => Effect.Effect<void, OfflineError>;
     readonly save: (entry: Entry) => Effect.Effect<void, OfflineError>;
     readonly remove: (id: Identity) => Effect.Effect<void, OfflineError>;
-    /** Frees every storage no hymn reads, and every stray file in the ones read. */
     readonly removeOld: Effect.Effect<void, OfflineError>;
     readonly protect: Effect.Effect<void, OfflineError>;
     readonly local: (entry: Entry) => Effect.Effect<string, OfflineError>;
@@ -174,7 +157,6 @@ export const offlineLayer = Layer.effect(Offline)(
       });
     });
     const owns = (job: Job) => job.epoch === epoch && jobs.get(identityKey(job.id)) === job;
-    // Cancellation cannot cut a platform write in half and race a later delete.
     const locked = <A, E>(work: Effect.Effect<A, E>) =>
       mutex.withPermit(work).pipe(Effect.uninterruptible);
     const cancelOwned = Effect.gen(function* () {
@@ -190,8 +172,6 @@ export const offlineLayer = Layer.effect(Offline)(
     });
     const cancel = locked(cancelOwned);
     const indexed = yield* Deferred.make<boolean>();
-    // Index discovery never holds playback or the mutation lock. A key touched
-    // since startup belongs to the current session, not this older disk view.
     yield* Effect.gen(function* () {
       const rows = yield* media.list;
       for (const row of rows) {
@@ -258,10 +238,7 @@ export const offlineLayer = Layer.effect(Offline)(
         complete = yield* locked(
           Effect.gen(function* () {
             if (!owns(job)) return true;
-            // Invalidation may remove a partial while this range is in flight.
-            // Restart instead of appending past a now-missing prefix.
             if (entries.get(key) !== previous) return false;
-            // A changed entity never receives bytes from its former version.
             if (
               previous &&
               (response.etag !== previous.etag ||
@@ -428,7 +405,6 @@ export const offlineLayer = Layer.effect(Offline)(
         Effect.andThen(
           locked(
             Effect.gen(function* () {
-              // Include failed writes and orphaned bytes discovered by platform listing.
               const disk = yield* media.list;
               for (const row of new Map(
                 [...entries.values(), ...disk].map((row) => [identityKey(row), row]),

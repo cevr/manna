@@ -1,10 +1,3 @@
-/**
- * Fetch a pinned source's files into the cache, each checked against its
- * SHA-256: a cached file that matches is kept, one that does not is fetched
- * again, and a fetched file that does not match fails the build (it is left
- * aside as `.part`, never used).
- */
-
 import { mkdirSync, renameSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
@@ -21,10 +14,8 @@ const matches = async (path: string, file: Pinned): Promise<boolean> =>
   Bun.file(path).size === file.size &&
   (await sha256Of(path)) === file.sha256;
 
-/** The folder a source's files lie in under `cache`: `<cache>/<repo>`, as transformers.js reads a local model. */
 export const folderOf = (cache: string, source: Source): string => join(cache, source.repo);
 
-/** Every file of `source` in `<cache>/<repo>/<path>`, checked; the folder. */
 export const fetchSource = async (cache: string, source: Source): Promise<string> => {
   const folder = folderOf(cache, source);
   for (const file of source.files) {

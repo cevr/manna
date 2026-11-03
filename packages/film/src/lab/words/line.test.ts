@@ -3,10 +3,8 @@ import { Result } from 'effect';
 import { parse } from '../../core/narration.ts';
 import { lineRows } from './line.ts';
 
-/** `say` as `parse` reads it for beat `one`. */
 const parsed = (say: string) => Result.getOrThrow(parse('one', say));
 
-/** `say` read and laid out as beat `one` from offset `at`. */
 const laid = (say: string, at = 0) => lineRows('one', parsed(say), at);
 
 describe('a line laid out', () => {

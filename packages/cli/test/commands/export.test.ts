@@ -60,7 +60,6 @@ describe('export command', () => {
         });
 
         expect(result.success).toBe(true);
-        // No file operations should happen
         expectNoCalls(result.calls, 'FileSystem.readFile');
         expectNoCalls(result.calls, 'AppleScript.exec');
       }),

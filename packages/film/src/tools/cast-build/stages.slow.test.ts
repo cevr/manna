@@ -1,7 +1,4 @@
 import { Redacted, Effect, FileSystem, Layer, Option, Path, Sink, Stream } from 'effect';
-// A fake member's stages, in a scratch folder: what each stage reads (its
-// source files, a fitted pose's files) and which drawings get renders.
-// Slow: `stages.ts` imports the parts command and the fit render.
 
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
@@ -20,7 +17,6 @@ import { RENDER_PAGE } from '../../../../../apps/animations/server.ts';
 import { stageSources } from './sources.ts';
 import { buildSources, clipStages, memberStages } from './stages.ts';
 
-/** A stage kind's source files, as `stageSources` makes them its inputs. */
 const wordValue = (word: string | Redacted.Redacted<string>): string => {
   if (Redacted.isRedacted(word)) return Redacted.value(word);
   return word;
@@ -54,14 +50,12 @@ const COVERAGE: Coverage = {
   ],
 };
 
-/** A 2×1 picture of one colour. */
 const pixels = (rgba: readonly [number, number, number, number]) => ({
   width: 2,
   height: 1,
   rgba: Uint8Array.from([...rgba, ...rgba]),
 });
 
-/** `png` with a text chunk after its header: other bytes, the same pixels. */
 const withText = (png: Uint8Array) => {
   const data = new TextEncoder().encode('Comment\0held');
   const typed = Uint8Array.from([...new TextEncoder().encode('tEXt'), ...data]);
@@ -70,13 +64,11 @@ const withText = (png: Uint8Array) => {
   view.setUint32(0, data.length);
   chunk.set(typed, 4);
   view.setUint32(8 + data.length, crc32(typed));
-  // the signature (8 bytes) and the header chunk (25) lead every PNG
   return Uint8Array.from([...png.subarray(0, 33), ...chunk, ...png.subarray(33)]);
 };
 
 const complete: EntryFacts = { drawn: true, kept: true, cut: true, bars: true, fit: true };
 
-/** A member folder: his poses module and the files it imports, and a recorded sheet for each view in `recorded`. */
 const memberIn = (recorded: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -99,7 +91,6 @@ const memberIn = (recorded: ReadonlyArray<string>) =>
     yield* write('cutout/raise/held/poses-1.png', 'png');
     yield* write('cutout/puppets.ts', 'export const PUPPETS = {};');
     for (const view of recorded) yield* write(`cutout/sheets/${view}/record.json`, '{}');
-    // the film's cast module, which the fit render loads by its path, and a file it imports
     yield* write(
       'films/in-its-order/rigs/cast.ts',
       "import { TABLE } from './table.ts';\nexport const CAST = TABLE;",
@@ -122,7 +113,6 @@ const stagesOf = (dir: string, facts: Record<string, EntryFacts> = {}) =>
     ),
   ).pipe(Effect.provide(FilmFolder.layer(`${dir}/films`)));
 
-/** Each file from the packages folder: `film/src/...`. */
 const ends = (files: ReadonlyArray<string>) => files.map((f) => f.split('/packages/').at(-1));
 
 const filesOf = (stages: ReadonlyArray<Stage<unknown>>, id: string) =>
@@ -134,10 +124,8 @@ const filesOf = (stages: ReadonlyArray<Stage<unknown>>, id: string) =>
 
 const allComplete = Object.fromEntries(COVERAGE.entries.map((e) => [e.id, complete]));
 
-/** The series lead, whose front's part sheet is kept with its okra answers. */
 const LEAD_FEAST = `${import.meta.dir}/../../../../../apps/animations/src/library/cast/lead-feast`;
 
-/** The front's kept okra answer: what the fake `okra image` below draws. */
 const ANSWER = `${LEAD_FEAST}/cutout/sheets/front/okra/answer-1.png`;
 
 const FRONT: Coverage['entries'][number] = {
@@ -148,11 +136,6 @@ const FRONT: Coverage['entries'][number] = {
 };
 const PARTS = 'parts:turnaround-front@lead-feast';
 
-/**
- * The lead as the film's own cast member, in a scratch films folder: his
- * sheet and cutout code linked to the library's, his front's part sheet a
- * copy the parts command may write.
- */
 const leadFeastIn = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -162,7 +145,6 @@ const leadFeastIn = Effect.gen(function* () {
   const sheet = path.join(member, 'cutout', 'sheets', 'front');
   yield* fs.makeDirectory(path.join(films, 'in-its-order', 'scenes'), { recursive: true });
   yield* fs.writeFileString(path.join(films, 'in-its-order', 'scenes', 'index.ts'), 'export {};\n');
-  // the film's cast module, which the fit stage's key reads; a stand-in, as no fit runs here
   yield* fs.makeDirectory(path.join(films, 'in-its-order', 'rigs'));
   yield* fs.writeFileString(path.join(films, 'in-its-order', 'rigs', 'cast.ts'), 'export {};\n');
   yield* fs.makeDirectory(path.join(member, 'cutout', 'sheets'), { recursive: true });
@@ -175,11 +157,6 @@ const leadFeastIn = Effect.gen(function* () {
   return { films, member, sheet, cache: path.join(root, 'cache') };
 });
 
-/**
- * `okra image` answering from the kept answer: each process asked for is
- * recorded (program and arguments); okra's copies the answer to its `-o`
- * path and exits 0, any other dies.
- */
 const okraAnswering = (fs: FileSystem.FileSystem, spawned: Array<ReadonlyArray<string>>) =>
   ChildProcessSpawner.make((command) => {
     if (command._tag !== 'StandardCommand') return Effect.die('no piped process in this test');
@@ -209,7 +186,6 @@ const okraAnswering = (fs: FileSystem.FileSystem, spawned: Array<ReadonlyArray<s
 
 type Scratch = Effect.Success<typeof leadFeastIn>;
 
-/** What the parts stage builds on beside its films folder and processes: no page and no critique. */
 const partsLayer = Layer.mergeAll(
   ContentStore.layer.pipe(Layer.provide(memoryLocks)),
   PuppetImagesBun,
@@ -225,23 +201,14 @@ const partsLayer = Layer.mergeAll(
   ),
 ).pipe(Layer.provideMerge(BunServices.layer));
 
-/** The timeout of a parts case: laying a part sheet again took 5.6 s at a load of 43, past bun's 5 s. */
 const PARTS_MS = 20_000;
 
-/** A time no build writes a part at: 2000-01-01, in seconds as `utimes` reads a number. */
 const LONG_AGO = 946_684_800;
 
 const CUT = 'cut:turnaround-front@lead-feast';
 
-/** The stages a case builds past the drawing, each named in its answer by its kind. */
 const BUILT = { parts: [PARTS], cut: [PARTS, CUT] } as const;
 
-/**
- * `body` over the lead in a scratch films folder: `run` builds his front's
- * drawing and parts (and his cut, `upTo` 'cut') under a spend setting and
- * answers each built stage's state by its kind and the okra calls the build
- * counted; `spawned` holds every process asked for.
- */
 const partsOver = <E>(
   body: (over: {
     readonly at: Scratch;
@@ -277,7 +244,6 @@ const partsOver = <E>(
           [`drawing:${FRONT.id}@lead-feast`, ...BUILT[upTo]].some((id) => id === s.id),
         );
         const report = yield* buildGraph(stages, {
-          // the member lies in a scratch folder and the stage sources in the repo
           root: '/',
           cache: at.cache,
           plan: false,
@@ -297,18 +263,12 @@ const partsOver = <E>(
     yield* body({ at, run, spawned });
   }).pipe(Effect.scoped, Effect.provide(partsLayer));
 
-/** Why a stage of a report failed; empty when it did not, or is not there. */
 const reasonOf = (stage: Option.Option<{ readonly reason: Option.Option<string> }>) =>
   Option.getOrElse(
     Option.flatMap(stage, (p) => p.reason),
     () => '',
   );
 
-/**
- * A fake member cut by his own cutter, which copies his kept PNG to his
- * front's head, and his front's drawing and parts stages built: each process
- * the build starts, recorded, and only `bun` run.
- */
 const ownCutterMember = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const real = yield* ChildProcessSpawner.ChildProcessSpawner;
@@ -386,7 +346,6 @@ describe('memberStages', () => {
       expect(filesOf(stages, 'renders:turnaround-front@fake')).toEqual(
         expect.arrayContaining(yield* sourceFiles('renders')),
       );
-      // the fit runs the render, the page it draws in and the film's cast module, loaded by its path
       expect(ends(filesOf(stages, 'fit:poses-poses-1@fake'))).toEqual(
         expect.arrayContaining([
           'film/src/tools/cast-render.ts',
@@ -436,18 +395,14 @@ describe('memberStages', () => {
             ...(yield* sourceFiles('parts')),
           ]),
         );
-        // no head was committed: the one the cutter writes is new
         expect(parts?.state).toBe('ran');
         expect(report.okraCalls).toBe(0);
-        // run on a scratch sheets folder, never his own
         expect(spawned.map((c) => c.slice(0, 2))).toEqual([['bun', cutter]]);
         expect(spawned[0]?.[2]).not.toContain(dir);
         expect(yield* fs.readFile(head)).toEqual(kept);
-        // a committed head of the same pixels in other bytes holds
         yield* fs.writeFile(head, withText(kept));
         expect((yield* built([cutter])).parts?.state).toBe('ran');
         expect(yield* fs.readFile(head)).toEqual(withText(kept));
-        // a committed head of other pixels fails the stage, and writes nothing
         const committed = encodePng(pixels([40, 40, 200, 255]));
         yield* fs.writeFile(head, committed);
         const changed = (yield* built([cutter])).parts;
@@ -519,7 +474,6 @@ describe('memberStages', () => {
       () =>
         partsOver(({ at, run, spawned }) =>
           Effect.gen(function* () {
-            // `--check` writes nothing; `--reuse` lays every part again: the parts keep the time set here only under `--check`.
             const fs = yield* FileSystem.FileSystem;
             const parts = (yield* fs.readDirectory(at.sheet)).filter((f) => f.endsWith('.png'));
             expect(parts).toContain('head.png');
@@ -657,10 +611,8 @@ describe('memberStages', () => {
         );
         const inputs = clips.flatMap((c) => c.inputs);
         expect(inputs).toContainEqual({ _tag: 'Stage', id: 'train' });
-        // the reader's read files, beside the train: a read edit re-runs it with the train cached
         expect(inputs).toContainEqual({ _tag: 'File', path: '/reader/read.py' });
         expect(inputs).toContainEqual({ _tag: 'Stage', id: 'trainset' });
-        // the mp4 is the clip-make stage's output; its map is the provenance beside it
         expect(inputs).toContainEqual({ _tag: 'Stage', id: 'clip:b@fake' });
         expect(inputs).toContainEqual({ _tag: 'File', path: `${dir}/cutout/raise/clip/b.json` });
         expect(inputs).not.toContainEqual({ _tag: 'File', path: `${dir}/cutout/raise/clip/b.mp4` });
@@ -668,7 +620,6 @@ describe('memberStages', () => {
         expect(filesOf(clips, 'eval:clip:b@fake')).toEqual(
           expect.arrayContaining(yield* sourceFiles('chain')),
         );
-        // the decode and the map are the chain's code too
         expect(yield* sourceFiles('chain')).toContainEqual(
           expect.stringMatching(/\/cast-build\/clip-eval\.ts$/),
         );

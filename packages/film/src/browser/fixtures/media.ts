@@ -1,16 +1,6 @@
-// A stand-in media element for the unit tests (bun has none), seen through
-// the pages' own `playableOf` (`media.ts`), so a test drives the same `Playable` the
-// pages do: it records what it was asked, plays at once or rejects each play
-// with the error named `refuse` (a `NotAllowedError` only while it is not
-// muted, as a browser refuses sound nobody asked for), and says `seeked` a
-// turn after a seek, as an element does (unless it `holdsSeeks`). It counts
-// the listeners on it (`listening`). `answered` is done once every play's
-// answer is in.
-
 import { Effect, Option } from 'effect';
 import { type MediaElement, type Playable, playableOf } from '../media.ts';
 
-/** `HAVE_ENOUGH_DATA`. */
 const LOADED = 4;
 
 class FakeElement extends EventTarget implements MediaElement {
@@ -47,16 +37,13 @@ class FakeElement extends EventTarget implements MediaElement {
     );
   }
 
-  /** Its seeks never finish: no `seeked` comes, so each seek stays pending. */
   holdsSeeks = false;
   readonly #listening = new Map<string, number>();
 
-  /** How many listeners of `type` are on it now; one whose signal aborted is gone. */
   listening(type: string): number {
     return this.#listening.get(type) ?? 0;
   }
 
-  /** The adapter listens to it only until a signal aborts. */
   override addEventListener(
     type: string,
     listener: EventListener,
@@ -74,7 +61,6 @@ class FakeElement extends EventTarget implements MediaElement {
 
   play() {
     this.asked.push('play');
-    // The browser refuses sound nobody asked for, not a muted play.
     const refused = Option.filter(this.refuse, (name) => name !== 'NotAllowedError' || !this.muted);
     if (Option.isNone(refused)) this.paused = false;
     const play = Option.match(refused, {
@@ -92,7 +78,6 @@ class FakeElement extends EventTarget implements MediaElement {
     this.paused = true;
   }
 
-  /** It has loaded `seconds` of media and can play: `loadedmetadata` and `canplay`. */
   finishLoading(seconds: number) {
     this.duration = seconds;
     this.readyState = LOADED;
@@ -100,7 +85,6 @@ class FakeElement extends EventTarget implements MediaElement {
     this.fire('canplay');
   }
 
-  /** It was asked to load its media again. */
   load() {
     this.asked.push('load');
   }
@@ -110,7 +94,6 @@ class FakeElement extends EventTarget implements MediaElement {
   }
 }
 
-/** A stand-in element (refusing each play with the error named `refuse`, when given), and its `Playable`. */
 export const fakeMedia = (refuse?: string) => {
   const el = new FakeElement(Option.fromUndefinedOr(refuse));
   const media: Playable = playableOf(el);

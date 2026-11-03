@@ -1,23 +1,7 @@
-/**
- * EGW Reference Code Parser
- *
- * Parses EGW reference codes like:
- * - "PP 351.1" → book="PP", page=351, para=1
- * - "PP 351.1-5" → book="PP", page=351, paraStart=1, paraEnd=5
- * - "PP 351" → book="PP", page=351 (all paragraphs on that page)
- * - "PP 351-355" → book="PP", pageStart=351, pageEnd=355
- * - "1BC 1111.2" → book="1BC", page=1111, para=2
- *
- * This parser is renderer-agnostic and shared by application and command-line hosts.
- */
-
 import { Match, Option, Schema } from 'effect';
 
 import type * as Schemas from './schemas.js';
 
-/**
- * Parsed EGW Reference - single paragraph
- */
 export const EGWParagraphRef = Schema.TaggedStruct('paragraph', {
   bookCode: Schema.String,
   page: Schema.Finite,
@@ -26,9 +10,6 @@ export const EGWParagraphRef = Schema.TaggedStruct('paragraph', {
 
 export type EGWParagraphRef = Schema.Schema.Type<typeof EGWParagraphRef>;
 
-/**
- * Parsed EGW Reference - paragraph range on same page
- */
 export const EGWParagraphRangeRef = Schema.TaggedStruct('paragraph-range', {
   bookCode: Schema.String,
   page: Schema.Finite,
@@ -38,9 +19,6 @@ export const EGWParagraphRangeRef = Schema.TaggedStruct('paragraph-range', {
 
 export type EGWParagraphRangeRef = Schema.Schema.Type<typeof EGWParagraphRangeRef>;
 
-/**
- * Parsed EGW Reference - single page (all paragraphs)
- */
 export const EGWPageRef = Schema.TaggedStruct('page', {
   bookCode: Schema.String,
   page: Schema.Finite,
@@ -48,9 +26,6 @@ export const EGWPageRef = Schema.TaggedStruct('page', {
 
 export type EGWPageRef = Schema.Schema.Type<typeof EGWPageRef>;
 
-/**
- * Parsed EGW Reference - page range
- */
 export const EGWPageRangeRef = Schema.TaggedStruct('page-range', {
   bookCode: Schema.String,
   pageStart: Schema.Finite,
@@ -59,27 +34,18 @@ export const EGWPageRangeRef = Schema.TaggedStruct('page-range', {
 
 export type EGWPageRangeRef = Schema.Schema.Type<typeof EGWPageRangeRef>;
 
-/**
- * Parsed EGW Reference - book only (whole book)
- */
 export const EGWBookRef = Schema.TaggedStruct('book', {
   bookCode: Schema.String,
 });
 
 export type EGWBookRef = Schema.Schema.Type<typeof EGWBookRef>;
 
-/**
- * Search query (not a reference)
- */
 export const EGWSearchQuery = Schema.TaggedStruct('search', {
   query: Schema.String,
 });
 
 export type EGWSearchQuery = Schema.Schema.Type<typeof EGWSearchQuery>;
 
-/**
- * Union of all parsed reference types
- */
 export type EGWParsedRef =
   | EGWParagraphRef
   | EGWParagraphRangeRef
@@ -88,38 +54,19 @@ export type EGWParsedRef =
   | EGWBookRef
   | EGWSearchQuery;
 
-/**
- * Reference patterns
- *
- * Book codes are typically 1-4 uppercase letters, sometimes with a leading number.
- * Examples: PP, DA, GC, 1BC, 2BC, 3SG, EW, SC, MB, COL, AA, PK, MH, Ed, CT, etc.
- */
-
-// Pattern: "PP 351.1" or "1BC 1111.2" (book code + page + paragraph)
 const PARAGRAPH_PATTERN = /^([A-Z0-9]+)\s+(\d+)\.(\d+)$/i;
 
-// Pattern: "PP 351.1-5" (book code + page + paragraph range)
 const PARAGRAPH_RANGE_PATTERN = /^([A-Z0-9]+)\s+(\d+)\.(\d+)-(\d+)$/i;
 
-// Pattern: "PP 351" (book code + page)
 const PAGE_PATTERN = /^([A-Z0-9]+)\s+(\d+)$/i;
 
-// Pattern: "PP 351-355" (book code + page range)
 const PAGE_RANGE_PATTERN = /^([A-Z0-9]+)\s+(\d+)-(\d+)$/i;
 
-// Pattern: "PP" (book code only)
 const BOOK_PATTERN = /^([A-Z0-9]+)$/i;
 
-/**
- * Parse an EGW reference string
- *
- * @param input - The reference string to parse (e.g., "PP 351.1")
- * @returns Parsed reference or search query
- */
 export function parseEGWRef(input: string): EGWParsedRef {
   const trimmed = input.trim();
 
-  // Try paragraph reference: "PP 351.1"
   const paragraphMatch = trimmed.match(PARAGRAPH_PATTERN);
   if (paragraphMatch && paragraphMatch[1] && paragraphMatch[2] && paragraphMatch[3]) {
     return {
@@ -130,7 +77,6 @@ export function parseEGWRef(input: string): EGWParsedRef {
     };
   }
 
-  // Try paragraph range: "PP 351.1-5"
   const paragraphRangeMatch = trimmed.match(PARAGRAPH_RANGE_PATTERN);
   if (
     paragraphRangeMatch &&
@@ -148,7 +94,6 @@ export function parseEGWRef(input: string): EGWParsedRef {
     };
   }
 
-  // Try page range: "PP 351-355"
   const pageRangeMatch = trimmed.match(PAGE_RANGE_PATTERN);
   if (pageRangeMatch && pageRangeMatch[1] && pageRangeMatch[2] && pageRangeMatch[3]) {
     return {
@@ -159,7 +104,6 @@ export function parseEGWRef(input: string): EGWParsedRef {
     };
   }
 
-  // Try single page: "PP 351"
   const pageMatch = trimmed.match(PAGE_PATTERN);
   if (pageMatch && pageMatch[1] && pageMatch[2]) {
     return {
@@ -169,7 +113,6 @@ export function parseEGWRef(input: string): EGWParsedRef {
     };
   }
 
-  // Try book only: "PP"
   const bookMatch = trimmed.match(BOOK_PATTERN);
   if (bookMatch && bookMatch[1]) {
     return {
@@ -178,16 +121,12 @@ export function parseEGWRef(input: string): EGWParsedRef {
     };
   }
 
-  // Fall back to search query
   return {
     _tag: 'search',
     query: trimmed,
   };
 }
 
-/**
- * Format a parsed reference back to string
- */
 export function formatEGWRef(ref: EGWParsedRef): string {
   return Match.value(ref).pipe(
     Match.tagsExhaustive({
@@ -201,21 +140,10 @@ export function formatEGWRef(ref: EGWParsedRef): string {
   );
 }
 
-/**
- * Check if parsed result is a search query
- */
 export function isSearchQuery(ref: EGWParsedRef): ref is EGWSearchQuery {
   return ref._tag === 'search';
 }
 
-// ---------------------------------------------------------------------------
-// Element type utilities (renderer-agnostic)
-// ---------------------------------------------------------------------------
-
-/**
- * Check if element type is a chapter heading.
- * The EGW API returns HTML element names: h1, h2, h3, etc. for headings.
- */
 export function isChapterHeading(elementType: Option.Option<string>): boolean {
   if (Option.isNone(elementType) || elementType.value.length === 0) return false;
   const type = elementType.value.toLowerCase();
@@ -223,12 +151,6 @@ export function isChapterHeading(elementType: Option.Option<string>): boolean {
   return ['chapter', 'heading', 'title'].includes(type);
 }
 
-/** The element subtypes that frame a text rather than say anything: a
- *  letter's or manuscript's date, place, addressee, salutation and signature,
- *  a periodical's byline and publication line, a picture's caption, a section
- *  break, and the scripture or quotation set at the head of a reading. Each is
- *  short and often made of the query's own words, so BM25 ranks it above the
- *  prose it frames. */
 const FURNITURE_SUBTYPES: ReadonlySet<string> = new Set([
   'addressee',
   'bibletext',
@@ -261,15 +183,10 @@ const FURNITURE_SUBTYPES: ReadonlySet<string> = new Set([
   'thoughtbreak',
 ]);
 
-/** Whether a paragraph is furniture (`FURNITURE_SUBTYPES`) by its element
- *  subtype. */
 export function isFurniture(elementSubtype: Option.Option<string>): boolean {
   return Option.exists(elementSubtype, (subtype) => FURNITURE_SUBTYPES.has(subtype.toLowerCase()));
 }
 
-/**
- * Extract heading level (1–6) from element type, or 0 if not a heading.
- */
 export function headingLevel(elementType: Option.Option<string>): number {
   if (Option.isNone(elementType)) return 0;
   const match = elementType.value.toLowerCase().match(/^h(\d)$/);
@@ -277,15 +194,6 @@ export function headingLevel(elementType: Option.Option<string>): number {
   return 0;
 }
 
-/**
- * Extract the integer chapter id that `getChapterContent` expects, from a TOC
- * item's `para_id`. EGW `para_id` values look like `"84.155"` — the chapter
- * endpoint only wants `"155"` (the part after the dot). Falls back to
- * `puborder` when `para_id` is missing or malformed.
- *
- * Passing the full `para_id` to the chapter endpoint returns wrong data
- * without erroring, so every caller MUST go through this helper.
- */
 export function chapterIdFromTocItem(toc: Schemas.TocItem): string {
   if (Option.isSome(toc.para_id)) {
     const match = toc.para_id.value.match(/\.(\d+)$/);

@@ -1,9 +1,3 @@
-// The clip-make stage over a fake checkout in memory: a clip not yet made
-// fails the build with its fal request as JSON (ClipMissing), a committed
-// clip whose provenance is that request is adopted and then cached, a cached
-// clip is adopted again when its committed files change, and the stage's key
-// is the request's content, the same in every checkout.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Layer, Option, Path, Schema } from 'effect';
 import { sha256Hex } from '../digest.ts';
@@ -34,7 +28,6 @@ const clip = (over: { readonly seed?: number; readonly last?: string } = {}) => 
   seed: over.seed ?? 7,
 });
 
-/** A checkout at `root` holding member `m` at `<root>/cast/m`, its clip's first frame, and `extra` from the root. */
 const checkout = (root: string, extra: Record<string, Uint8Array> = {}) =>
   new Map<string, Uint8Array>([
     [`${root}/cast/m/cutout/raise/clip/clip-b.first.png`, FIRST],

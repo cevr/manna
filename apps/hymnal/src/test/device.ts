@@ -1,37 +1,17 @@
-/**
- * A device's playback the test holds: One's `Audio` session as a phone has
- * it, with no sound. A recording loads when played; the test moves it on
- * (`device.now`), turns the connection off and on (`device.online`), and
- * presses the lock screen's buttons (`device.press`), holds a seek's answer
- * back until it moves the playback onto the place itself (`device.lagging`;
- * One answers a seek at its completion), and has the device
- * say `loading` for a few reads (`device.waiting`). What the player
- * asked is kept: each URL played, each place sought and each announcement.
- */
-
 import { Effect, Layer, Match, Option, Queue, Stream, SubscriptionRef } from 'effect';
 
 import { type Announcement, Playback, PlaybackError, Remote, type Status } from '../player/player';
 
-/** How far a device set to play sounds before its place, ms: past the 2 ms a place keeps. */
 const sounds = 3;
 
 export const fakeDevice = () => {
   const remote = Effect.runSync(Queue.unbounded<Remote>());
   const connection = Effect.runSync(SubscriptionRef.make(true));
-  /** One item for each status read the player makes. */
   const reads = Effect.runSync(Queue.unbounded<true>());
   let now: Status = { state: 'idle', positionMs: 0 };
-  /** Whether the next read is the first since the device turned to `playing` at a place. */
   let fresh = false;
-  /** Each lagging seek's place and its answer, given once the test moves the playback there. */
   let landings = new Array<{ readonly to: number; readonly answer: (status: Status) => void }>();
   const device = {
-    /**
-     * The playback now. A device set to play sounds into its place: the first
-     * read after says it is loading 3 ms short, so the read after it closes a
-     * sound pair at the place.
-     */
     get now(): Status {
       return now;
     },
@@ -42,7 +22,6 @@ export const fakeDevice = () => {
       landings = landings.filter((it) => !landed.includes(it));
       for (const it of landed) it.answer(said(next));
     },
-    /** The connection: setting it tells the player the change. */
     get online() {
       return Effect.runSync(SubscriptionRef.get(connection));
     },
@@ -50,29 +29,17 @@ export const fakeDevice = () => {
       Effect.runSync(SubscriptionRef.set(connection, online));
     },
     played: new Array<string>(),
-    /** Each place sought, in milliseconds. */
     sought: new Array<number>(),
-    /** While true, `seek` adds its place to `sought`, leaves `now` as it is, and answers once the test sets `now` onto the place. */
     lagging: false,
-    /**
-     * While above 0, the device says `loading` in place of its state: a
-     * resume or a pause says it, and each status read says it and counts one
-     * down (AVPlayer waits a few ms to play after a resume; the web loads a
-     * paused place it does not hold).
-     */
     waiting: 0,
-    /** While true, a playing device moves 3 ms per status read, so a UI story keeps hearing sound. */
     advancing: false,
     announced: new Array<Announcement>(),
-    /** Wait until the player has read the status `n` more times. */
     reads: (n: number) =>
       Queue.clear(reads).pipe(
         Effect.andThen(Effect.forEach(Array.from({ length: n }), () => Queue.take(reads))),
         Effect.asVoid,
       ),
-    /** How many times the player let the recording go (`stop`). */
     stopped: 0,
-    /** The lock screen's play or pause: the session moves to `next`, then tells the app. */
     press: (kind: 'play' | 'pause', next: Status) => {
       device.now = next;
       Queue.offerUnsafe(
@@ -84,7 +51,6 @@ export const fakeDevice = () => {
       );
     },
   };
-  /** What the device says of `status`: `loading` while it waits. */
   const said = (status: Status): Status =>
     Option.match(
       Option.liftPredicate(status, () => device.waiting > 0),
@@ -112,7 +78,6 @@ export const fakeDevice = () => {
           return at({ state: 'loading', positionMs: fromMs });
         }),
       pause: Effect.suspend(() => at({ ...device.now, state: 'paused' })),
-      // A recording played to its end plays again from its start.
       resume: Effect.suspend(() =>
         at({
           ...device.now,

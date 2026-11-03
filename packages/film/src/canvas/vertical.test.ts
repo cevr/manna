@@ -1,8 +1,3 @@
-// A vertical film's hook (`vertical.ts`), which a short and a talk both draw:
-// the line set once in its font, wrapped to the layout's width and centred on
-// it, shown at once, held and faded out (`hookAlpha`), and recorded as the
-// caption's when probed, in page px at `k` page px per px.
-
 import { describe, expect, test } from 'bun:test';
 import { SHORT_LAYOUT, hookAlpha } from '../core/shorts.ts';
 import { recorder } from './fixtures/stand-in.ts';
@@ -12,10 +7,8 @@ import { verticalHook } from './vertical.ts';
 const STYLE = { font: '600 60px serif', color: '#2a2520' };
 const TEXT = 'Why was the law given at all, if no one could keep it?';
 
-/** A font's box, as a canvas measures it: the stand-in measures widths alone. */
 const FONT_BOX = { fontBoundingBoxAscent: 48, fontBoundingBoxDescent: 14 };
 
-/** A stand-in page 1080 wide at `k`, logging each call it is asked to make. */
 const page = (k: number) => {
   const calls: Array<string> = [];
   const r = recorder(1080 * k, 1920 * k, {
@@ -32,7 +25,6 @@ const page = (k: number) => {
   return { ctx, calls };
 };
 
-/** The hook drawn at `T`, probed: what it recorded. */
 const probedAt = (T: number, k = 1) => {
   const { ctx, calls } = page(k);
   const sink: ProbeSink = { texts: [], inks: [] };
@@ -57,7 +49,6 @@ describe('verticalHook', () => {
       expect(t.caption).toBe(true);
       expect(t.alpha).toBe(1);
     }
-    // The block is centred on the hook's height.
     const top = Math.min(...sink.texts.map((t) => t.y));
     const bottom = Math.max(...sink.texts.map((t) => t.y + t.h));
     expect((top + bottom) / 2).toBeCloseTo(SHORT_LAYOUT.hook.y, 6);

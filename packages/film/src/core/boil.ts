@@ -1,29 +1,15 @@
-// The boil of a figure drawn from pixels (a puppet, `canvas/puppet-gl.ts`):
-// the house figure boil (twelve ticks a second, a 48-tick loop, three
-// harmonics, `SMALL_BOIL`'s 0.6 px, as a vector rig's line crawls,
-// `style/rig/parts.ts`) as one smooth displacement field. Each node of a
-// lattice every `BOIL_CELL` px wanders round where it stands, its phases its
-// own; a pixel is moved by the nodes about it, blended by a smoothstep each
-// way, and the figure resampled bilinearly there. The field is a function of
-// the tick alone, and loops at 48. Pure.
-
-/** The lattice's spacing, px: the field bends over about a head's width, so a line crawls without kinking. */
 export const BOIL_CELL = 24;
 
-/** How far a node wanders, px: the rig's small boil (`style/rig/draw.ts`, `SMALL_BOIL`). */
 export const BOIL_AMP = 0.6;
 
-/** The boil's loop, ticks (four seconds at twelve a second). */
 const BOIL_TICKS = 48;
 
-/** Its harmonics: cycles a loop and share of the wander, so a node moves at most about 0.21 of `BOIL_AMP` a tick. */
 const CRAWL = [
   [1, 0.58],
   [2, 0.25],
   [3, 0.17],
 ] as const;
 
-/** A node's phase for one harmonic of one axis, in turns: an integer hash of where it stands, so every node wanders its own way. */
 const phaseOf = (i: number, j: number, k: number) => {
   let h =
     Math.imul(i + 4099, 0x9e3779b1) ^
@@ -35,13 +21,6 @@ const phaseOf = (i: number, j: number, k: number) => {
   return (h >>> 0) / 4294967296;
 };
 
-/**
- * The field at boil tick `tick` over a lattice `cols` × `rows` whose first
- * node is node (`i0`, `j0`), each node wandering at most `amp` px (the house
- * `BOIL_AMP` unless given; 0 holds every node still): each node's (dx, dy),
- * px, row by row. A function of the tick (taken round the loop), the nodes
- * and the amplitude alone.
- */
 export const boilField = (
   tick: number,
   i0: number,

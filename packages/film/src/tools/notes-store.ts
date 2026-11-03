@@ -1,11 +1,3 @@
-// The lab's notes, on disk: `lab/<film>/notes.json` and the stills in
-// `lab/<film>/stills/`. The file is the source of truth; the lab server and
-// `film lab` both read and write it through this store, so either works
-// without the other. Every change is one `ContentStore.transact`: written
-// whole, one writer at a time across processes (the manifest's lock,
-// `ManifestLock`), its still written under the same lock, so a note saved
-// in the lab and a reply sent from the CLI at the same moment both land.
-
 import {
   Array as Arr,
   Config,
@@ -40,14 +32,12 @@ import { ContentStore, type Manifest, type StoreError } from './content-store.ts
 import { NoteNotFound } from '../core/refusals.ts';
 import type { FilmName } from './film-repo.ts';
 
-/** Where one film's notes live. A film is named by `filmNamed`, so no unchecked name reaches a path. */
 interface NotesPaths {
   readonly dir: string;
   readonly stills: string;
   readonly notes: Manifest<NotesFile>;
 }
 
-/** A reply as a writer hands it in: its still, when it has one, as PNG bytes. */
 interface ReplyInput {
   readonly by: NoteAuthor;
   readonly text: string;
@@ -58,9 +48,7 @@ type NotesError = StoreError;
 
 interface NotesStoreService {
   readonly paths: (film: FilmName) => NotesPaths;
-  /** Every note of the film; an empty log before the first. */
   readonly read: (film: FilmName) => Effect.Effect<NotesFile, StoreError>;
-  /** Save a new note and the still of its frame. */
   readonly add: (
     film: FilmName,
     draft: NoteDraft,
@@ -72,34 +60,24 @@ interface NotesStoreService {
     reply: ReplyInput,
   ) => Effect.Effect<Note, NotesError | NoteNotFound>;
   readonly resolve: (film: FilmName, id: string) => Effect.Effect<Note, NotesError | NoteNotFound>;
-  /**
-   * The changes after `since`, as soon as there is one, or none once `timeout`
-   * passes. A file reset below `since` (trashed or restored, even to an empty
-   * log) answers at once at its own cursor. Reads the file, so it sees every
-   * writer's changes.
-   */
   readonly wait: (
     film: FilmName,
     since: number,
     timeout: Duration.Input,
   ) => Effect.Effect<NotesWait, StoreError>;
-  /** A still's file, when `name` is one of this film's stills. */
   readonly still: (
     film: FilmName,
     name: string,
   ) => Effect.Effect<Option.Option<string>, StoreError>;
 }
 
-/** How often a wait reads the file for changes. */
 const POLL = Duration.millis(200);
 
-/** A still is a PNG named by the store (`n3.png`, `n3.r5.png`): never a path. */
 const STILL_NAME = /^n\d+(\.r\d+)?\.png$/;
 
 export class NotesStore extends Context.Service<NotesStore, NotesStoreService>()(
   '@manna/film/tools/NotesStore',
 ) {
-  /** Notes under `FILMS_LAB` (the app's `lab/` under `runFilmCli`, else `<cwd>/lab`), one folder per film. */
   static readonly layer = Layer.effect(
     NotesStore,
     Effect.gen(function* () {
@@ -125,13 +103,11 @@ export class NotesStore extends Context.Service<NotesStore, NotesStoreService>()
 
       const now = Effect.map(DateTime.now, DateTime.formatIso);
 
-      /** The note `id` in `file`, or `NoteNotFound` listing the ones there are. */
       const find = (film: FilmName, file: NotesFile, id: string) =>
         Effect.fromOption(noteById(file, id), () =>
           NoteNotFound.make({ film, id, known: file.notes.map((n) => n.id) }),
         );
 
-      /** The note `id` as a change left it. */
       const after = (film: FilmName, file: NotesFile, id: string) =>
         find(film, file, id).pipe(Effect.orDie);
 
@@ -145,7 +121,6 @@ export class NotesStore extends Context.Service<NotesStore, NotesStoreService>()
           Effect.gen(function* () {
             const next = addNote(current, draft, yield* now);
             const made = yield* Effect.fromOption(Arr.last(next.notes)).pipe(Effect.orDie);
-            // The still first: a note never names a frame that is not on disk.
             yield* store.writeFile(path.join(at.stills, made.still), still);
             return [made, next] as const;
           }),
@@ -163,7 +138,6 @@ export class NotesStore extends Context.Service<NotesStore, NotesStoreService>()
         const note = yield* store.transact(at.notes, (current) =>
           Effect.gen(function* () {
             yield* find(film, current, id);
-            // The reply's number is the next change: its still is named for it.
             const name = replyStill(id, current.seq + 1);
             yield* Effect.forEach(Option.toArray(input.still), (bytes) =>
               store.writeFile(path.join(at.stills, name), bytes),

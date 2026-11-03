@@ -1,15 +1,8 @@
-// A Chrome's profile folder is its process's own. That every Chrome is
-// spawned by chrome.ts alone (`openView`), which silences it, is lint
-// (packages/film/lint/webview-through-chrome.ts); that a running Chrome
-// carries the flags is read from its own command line by the browser tests
-// (`e2e/lab/fixtures/browsers.dom.test.ts`).
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem } from 'effect';
 import { profileFolder } from './chrome-profile.ts';
 
-/** A process id past every system's limit: no process runs as it. */
 const STOPPED = 2 ** 30;
 
 describe("a Chrome's profile folder", () => {

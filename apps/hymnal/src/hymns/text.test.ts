@@ -1,10 +1,3 @@
-/**
- * Each hymn's topic as the app carries it (`virtual:hymnal`): every one of
- * the 695 has the printed name of the compiled topic that holds it. Each
- * refrain section names the stanza it is sung with, by the hymn's refrain
- * order (numbers only, no words).
- */
-
 import { describe, expect, it } from 'bun:test';
 import { topicOf } from '@manna/hymnal/hymn';
 import { Option } from 'effect';
@@ -30,7 +23,6 @@ describe("the hymns' topics", () => {
   });
 });
 
-/** A hymn's sections as numbers alone: `S<n>` for stanza n, `R<s>` for a refrain sung with stanza s (0 for the hymn's own). */
 const laidOut = (number: number): string =>
   Option.match(hymnAt(String(number)), {
     onNone: () => 'none',

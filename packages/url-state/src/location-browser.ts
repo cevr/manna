@@ -1,42 +1,22 @@
 /* oxlint-disable effect/noNullish -- `history.pushState` takes a title argument the platform ignores; `''` is its documented value, and `history.state` is `any`. */
 
-/**
- * The tab's history as a `Location`.
- *
- * Each entry this layer makes carries `{ key }` in `history.state`. The entry
- * the page loaded on has none yet, so building the layer gives it one with a
- * `replaceState` that leaves the URL as it is. Back and Forward (the
- * program's own `back` too) arrive as `popstate` and are published as
- * `traverse` entries; an entry made before
- * this layer existed gets a fresh key, without a write.
- *
- * Nothing here runs at import: `window` is touched only when the layer is
- * built, so a server can import the module, and the `popstate` listener comes
- * off when the layer's scope closes.
- */
-
 import { Effect, Layer, Option, Schema, SubscriptionRef } from 'effect';
 
 import { makeEntryKeys } from './entry-key.js';
 import { Location, parseHref, relativeHref, type Entry } from './location.js';
 
 interface BrowserOptions {
-  /** `'manual'` when the app restores scroll positions itself; left as the
-   *  browser has it when absent. */
   readonly scrollRestoration?: ScrollRestoration;
 }
 
-/** What this layer keeps in `history.state`. */
 const EntryState = Schema.Struct({ key: Schema.String });
 const decodeEntryState = Schema.decodeUnknownOption(EntryState);
 
 const here = (): string => relativeHref(parseHref(window.location.href));
 
-/** The key an entry was given, else a fresh one: the entry predates this layer. */
 const keyOf = (state: Option.Option<typeof EntryState.Type>, nextKey: Effect.Effect<string>) =>
   Option.match(state, { onNone: () => nextKey, onSome: (entry) => Effect.succeed(entry.key) });
 
-/** `Location` over `window.history`. */
 export const layerBrowser = (options: BrowserOptions = {}): Layer.Layer<Location> =>
   Layer.effect(
     Location,
@@ -88,7 +68,6 @@ export const layerBrowser = (options: BrowserOptions = {}): Layer.Layer<Location
             navigation: 'replace',
           });
         }),
-        // The entry it lands on arrives as `popstate`, a traversal, as the button's does.
         back: Effect.sync(() => window.history.back()),
       });
     }),

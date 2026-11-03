@@ -1,19 +1,5 @@
 /* oxlint-disable effect/noGlobals, effect/noUnsafeDictionaryType -- Bun's loader takes each stand-in module as source text, which reaches the script's device through the global object; the stand-in scroll view records its props as React Native hands them over. */
 
-/**
- * A phone, as a script that mounts the phones' screens under happy-dom sees
- * it: `react-native` is react-native-web with iOS's rules (`Platform.select`
- * takes `ios`, a dynamic colour is its light value, the colour scheme and
- * the text size are the device's, which the script sets), a screen 390 by
- * 800 points that every element measures as, `one` is `src/test/one.tsx`,
- * `react-native-gesture-handler` is `src/test/gesture.tsx`
- * and `~/color` is the phones' colour module. Each scroll view tells the
- * script the props it was last drawn with (`scrolls`), as the platform
- * would call its handlers. With `nativeList`, LegendList is its phones'
- * build, which hands a scroll view the handlers iOS calls, and a screen's
- * `~/reader/HymnList` is the phones' list, as Metro resolves it.
- */
-
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { plugin } from 'bun';
 
@@ -22,7 +8,6 @@ import { readIndexes } from '../../vite/indexes';
 import { readTiming } from '../../vite/timing';
 import { readWords } from '../../vite/words';
 
-/** A scroll view's last props, by whether it scrolls sideways. */
 export interface Scrolls {
   readonly sideways: Array<Record<string, unknown>>;
   readonly upright: Array<Record<string, unknown>>;
@@ -31,7 +16,6 @@ export interface Scrolls {
 export const phone = ({ nativeList = false }: { readonly nativeList?: boolean } = {}) => {
   GlobalRegistrator.register({ url: 'http://localhost/' });
 
-  /** The phone's settings the stand-in reads, each told to the screens using it when set. */
   const device = {
     scheme: 'light' as 'light' | 'dark',
     fontScale: 1,
@@ -49,7 +33,6 @@ export const phone = ({ nativeList = false }: { readonly nativeList?: boolean } 
     phoneScrolls: scrolls,
   });
 
-  /** A phone's screen, 390 by 800 points: every element measures so, and says so once observed. */
   HTMLElement.prototype.getBoundingClientRect = () => DOMRect.fromRect({ width: 390, height: 800 });
   class Observer {
     constructor(private readonly told: (entries: ReadonlyArray<{ target: Element }>) => void) {}
@@ -60,8 +43,6 @@ export const phone = ({ nativeList = false }: { readonly nativeList?: boolean } 
     disconnect() {}
   }
   Object.assign(window, { ResizeObserver: Observer });
-  // react-native-web measures a view for its `onLayout` by its offset box,
-  // which LegendList's phone build waits on before it draws an item.
   if (nativeList)
     Object.defineProperties(HTMLElement.prototype, {
       offsetWidth: { get: () => 390, configurable: true },

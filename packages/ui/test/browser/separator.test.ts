@@ -1,7 +1,3 @@
-// Upstream: packages/react/src/separator/Separator.test.tsx
-//
-// The separator: a `role="separator"` that says its orientation to
-// assistive tech (`aria-orientation`) and to a stylesheet (`data-orientation`).
 import { describe, it } from 'bun:test';
 
 import { expect as see } from '@playwright/test';

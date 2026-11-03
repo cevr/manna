@@ -1,18 +1,11 @@
-// The lab's `/`: no page of its own. It sends the owner on to the newest ask
-// that still asks (302), and with none says so on one line. A store that
-// cannot be read answers 500 with that failure: a failed read is no proof that
-// nothing waits.
-
 import { Array as Arr, Effect, Option } from 'effect';
 import { HttpServerResponse } from 'effect/http';
 import { pageHref } from '../core/api.ts';
 import { type AskRecord, askStatus } from '../core/ask.ts';
 import { AskStore } from './ask-store.ts';
 
-/** What `/` says when no ask waits on the owner. */
 const NOTHING_WAITS = 'Nothing waits on you';
 
-/** A one-line page of `/`. */
 const line = (words: string, status: number) =>
   HttpServerResponse.setStatus(
     HttpServerResponse.html(
@@ -21,7 +14,6 @@ const line = (words: string, status: number) =>
     status,
   );
 
-/** `/` for the asks as the store lists them (the newest first). */
 const homeAnswer = (
   asks: ReadonlyArray<Pick<AskRecord, 'id' | 'state'>>,
 ): HttpServerResponse.HttpServerResponse =>
@@ -33,7 +25,6 @@ const homeAnswer = (
     },
   );
 
-/** `/`, read from the store now. */
 export const home = Effect.gen(function* () {
   const asks = yield* AskStore;
   return yield* asks.list.pipe(

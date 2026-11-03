@@ -1,24 +1,8 @@
-// A wedge's film module, for the one leg that draws in this process (`check
-// --draw --level`): the film's module built with the palette swapped
-// (`paletteSwaps`, `wedge.ts`) and imported, so the look it does not play is
-// the one drawn. Apart from `wedge.ts` because it imports a film: the lab
-// reads `wedge.ts`, and the lab imports no film (`lab.slow.test.ts`).
-
 import { Array as Arr, Effect, FileSystem, Option, Path } from 'effect';
 import { PagesBroken } from '../core/easel.ts';
 import { importFilmModule } from './film-repo.ts';
 import { bunModule } from './lab-page.ts';
 
-/**
- * The module `file` as this process imports it for `swaps`: as written, for
- * none; for a wedge, built with each of `swaps` read as its text and its
- * packages pinned to the files the film resolves them to (`bunModule`), so
- * it runs this process's engine wherever it is written: into a temporary
- * directory (the files it imports by path named there, absolute, as the
- * module as written names them), imported, and the directory removed when the
- * scope closes. A build that fails, or reads none of `swaps`, is
- * `PagesBroken`.
- */
 export const wedgedModule = Effect.fn('wedge.module')(function* (
   file: string,
   swaps: ReadonlyMap<string, string>,

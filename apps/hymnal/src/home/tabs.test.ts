@@ -1,9 +1,3 @@
-/**
- * The home list's tabs (`tabsOf`), as numbers and names only: each tab's
- * groups from a small hymnal and small indexes, and the index tabs left out
- * when their index is empty.
- */
-
 import { describe, expect, it } from 'bun:test';
 
 import { Option } from 'effect';

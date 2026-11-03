@@ -1,13 +1,3 @@
-/** The page schema's shape constraints (§6.1, §5).
- *
- *  Every assertion here is about a page that a client could not render but that
- *  a looser schema would happily decode: a lineup missing a section, a lineup in
- *  the wrong order, or a section that arrives open when §5 says it arrives
- *  collapsed. Modelling the lineup as an unrestricted `Schema.Array(WikiSection)`
- *  with a boolean `defaultOpen` permits all three, which is why the tuple and
- *  the literals exist.
- */
-
 import { Effect, Option, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
@@ -57,10 +47,6 @@ const page = (sections: readonly unknown[]) => ({
 
 const decode = Schema.decodeUnknownEffect(WikiPage);
 
-/** The candidate is always a `page(...)` fixture — a page-shaped record whose
- *  `sections` field is the thing under test. Typing the parameter as that
- *  fixture rather than as `unknown` keeps the contract at the call site: these
- *  are pages the schema must refuse, not arbitrary values. */
 type PageCandidate = ReturnType<typeof page>;
 
 const rejects = (input: PageCandidate): Effect.Effect<boolean> =>
@@ -81,18 +67,12 @@ describe('WikiPage schema', () => {
         'cross-references',
         'related-topics',
       ]);
-      // Positional typing, not a runtime search: the tuple means position 0 *is*
-      // the key-verses section, so `.items` here is `WikiPassageRef[]` with no
-      // narrowing.
       expect(decoded.sections[0]._tag).toBe('key-verses');
     }),
   );
 
   it.effect('rejects a lineup with a section missing', () =>
     Effect.gen(function* () {
-      // Five sections. Under `Schema.Array(WikiSection)` this decodes fine, and
-      // every client that indexes position 4 for cross-references silently
-      // renders related-topics there instead.
       expect(yield* rejects(page([KEY_VERSES, EGW, COMMENTARY, PIONEER, CROSS_REFS]))).toBe(true);
     }),
   );
@@ -105,16 +85,12 @@ describe('WikiPage schema', () => {
       expect(
         yield* rejects(page([KEY_VERSES, KEY_VERSES, COMMENTARY, PIONEER, CROSS_REFS, RELATED])),
       ).toBe(true);
-      // Seven sections is as wrong as five.
       expect(yield* rejects(page([...LINEUP, RELATED]))).toBe(true);
     }),
   );
 
   it.effect('rejects a page that arrives with the wrong section open', () =>
     Effect.gen(function* () {
-      // §5: key verses arrive open, the rest collapsed. A boolean lets a host
-      // ship either, and the three of them then disagree about the page's
-      // arrival posture while all passing the schema.
       expect(
         yield* rejects(page([{ ...KEY_VERSES, defaultOpen: false }, ...LINEUP.slice(1)])),
       ).toBe(true);
@@ -149,16 +125,12 @@ describe('WikiPage schema', () => {
     Effect.gen(function* () {
       const decoded = yield* decode(page(LINEUP));
       const encoded = yield* Schema.encodeEffect(WikiPage)(decoded);
-      // The CLI's `--json` and the RPC payload are both this value, which is the
-      // point of naming it `WikiPageJson`: two seams, one codec.
       expect(yield* decode(encoded)).toEqual(decoded);
     }),
   );
 
   it.effect('constructs the same lineup the decoder accepts', () =>
     Effect.gen(function* () {
-      // `make` and `decode` agreeing is what lets the composer build the lineup
-      // in memory and the wire carry it unchanged.
       const built = WikiPage.make({
         slug: topicSlug('sanctuary'),
         title: 'The Sanctuary',

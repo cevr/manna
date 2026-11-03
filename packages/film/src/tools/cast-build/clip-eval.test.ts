@@ -1,9 +1,3 @@
-// A clip's frames as the clip eval lays them on the reader's canvas
-// (`clip-eval.ts`): a decoded frame's padded RGB rows read as a raster, each
-// frame mapped at the clip's map and written as `f%03d.png` in order, and the
-// figure numbers measured on the canvases written. Small synthetic frames on
-// an in-memory disk; the real clip's decode is `clip-eval.slow.test.ts`.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Layer, Path, Result, Stream } from 'effect';
@@ -12,7 +6,6 @@ import { memoryFileSystem } from '../host/testing.ts';
 import { decodePng } from '../png.ts';
 import { CANVAS, declaredBands, rasterOfRgb24, writeCanvases } from './clip-eval.ts';
 
-/** A `w` × `h` raster, each pixel's grey from `at`. */
 const grey = (w: number, h: number, at: (x: number, y: number) => number): Raster => {
   const rgba = new Uint8Array(w * h * 4);
   for (let y = 0; y < h; y++)
@@ -20,7 +13,6 @@ const grey = (w: number, h: number, at: (x: number, y: number) => number): Raste
   return { width: w, height: h, rgba };
 };
 
-/** A 12 × 12 paper frame with the box `[left, top, right, bottom)` inked. */
 const inked = (l: number, t: number, r: number, b: number) =>
   grey(12, 12, (x, y) => 235 - 205 * Number(x >= l && x < r && y >= t && y < b));
 
@@ -81,7 +73,6 @@ describe('a clip on the canvas', () => {
     () => {
       const { files, layer } = disk();
       return Effect.gen(function* () {
-        // columns 10, 20, 30, 40: the blocks' means 15 and 35; the border's median (20 + 30) / 2
         const frame = grey(4, 2, (x) => [10, 20, 30, 40][x]!);
         yield* writeCanvases(
           Stream.make(frame, frame),
@@ -100,7 +91,6 @@ describe('a clip on the canvas', () => {
   it.effect('measures the figure on the canvases it wrote, frame by frame in order', () => {
     const { files, layer } = disk();
     return Effect.gen(function* () {
-      // at scale 2 the boxes land at canvas rows 2-3 (height 2), then row 3 alone, feet unmoved
       const figure = yield* writeCanvases(
         Stream.make(inked(4, 4, 8, 8), inked(4, 6, 8, 8)),
         { x0: 0, y0: 0, scale: 2 },

@@ -1,26 +1,6 @@
-// A cast sheet's brief (`film concept brief`): the prompt one try of a cast
-// member's sheet is painted from on the image route. It is the house block
-// made a sheet's, a note on what each reference image is for, the member's
-// look, the sheet's layout, and the rules of its kind. The house block is the
-// one every concept and Board prompt opens with
-// (`apps/animations/docs/ref/house-look.txt`); four of its phrases are swapped
-// so it asks for a model sheet with no place behind, no beams and no walls. A
-// swap whose phrase the block no longer says is `HouseBlockMoved`, so a
-// changed house text stops the brief before a try is spent rather than
-// painting a scene. A layout or a look whose clause says a hand floats is
-// `HandFloats`: the brief's own rule puts every hand at the end of an arm in
-// its sleeve, and a prompt that asks both ways spends a try on a hand
-// `sleeveReach` then flags. How tall a figure stands, in its own heads, is
-// the member's (`statureOf`: the cast's canon unless its record names its
-// own), and a smaller figure a pose sheet draws (a child) is said with its
-// share of the grown height; the hair's paragraph is said only of a member
-// whose hair shows, and the beard's parting from it only of one who has a beard
-// too.
-
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import type { SheetKind, ViewFigure } from '../core/cast-sheet.ts';
 
-/** The house block no longer says a phrase the sheet's swaps replace. */
 class HouseBlockMoved extends Schema.TaggedError<HouseBlockMoved>()('HouseBlockMoved', {
   phrase: Schema.String,
 }) {
@@ -29,7 +9,6 @@ class HouseBlockMoved extends Schema.TaggedError<HouseBlockMoved>()('HouseBlockM
   }
 }
 
-/** A clause of the member's layout or look says a hand floats, against the rule that every hand is at the end of a sleeved arm. */
 class HandFloats extends Schema.TaggedError<HandFloats>()('HandFloats', {
   part: Schema.Literals(['layout', 'look']),
   clause: Schema.String,
@@ -39,14 +18,12 @@ class HandFloats extends Schema.TaggedError<HandFloats>()('HandFloats', {
   }
 }
 
-/** The first clause (a sentence or a part between semicolons) of `text` that names a hand and says it floats. */
 const floatingHand = (text: string): Option.Option<string> =>
   Arr.findFirst(
     text.split(/[.;]/).map((clause) => clause.trim()),
     (clause) => /\bhands?\b/i.test(clause) && /\bfloat/i.test(clause),
   );
 
-/** The layout and the look, each refused when a clause of it floats a hand. */
 const sleevedHands = (brief: SheetBrief): Result.Result<SheetBrief, HandFloats> =>
   Option.match(
     Option.orElse(
@@ -59,7 +36,6 @@ const sleevedHands = (brief: SheetBrief): Result.Result<SheetBrief, HandFloats> 
     { onNone: () => Result.succeed(brief), onSome: (refused) => Result.fail(refused) },
   );
 
-/** The house block's phrases a sheet swaps: the key frame becomes a model sheet, and the place behind the figures, its beams and its walls go. */
 const SWAPS: ReadonlyArray<readonly [string, string]> = [
   [
     'A 2D key frame from a narrated animated film',
@@ -79,7 +55,6 @@ const SWAPS: ReadonlyArray<readonly [string, string]> = [
   ],
 ];
 
-/** The house block made a sheet's, each swap guarded. */
 const sheetHouseBlock = (house: string): Result.Result<string, HouseBlockMoved> =>
   SWAPS.reduce<Result.Result<string, HouseBlockMoved>>(
     (block, [from, to]) =>
@@ -93,10 +68,8 @@ const sheetHouseBlock = (house: string): Result.Result<string, HouseBlockMoved> 
     Result.succeed(house.trim()),
   );
 
-/** The whole numbers a figure's height is said in. */
 const WHOLE = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
 
-/** The fractions a share or a height is said in, nearest first. */
 const FRACTIONS: ReadonlyArray<readonly [number, string]> = [
   [0, ''],
   [1 / 4, 'a quarter'],
@@ -107,11 +80,9 @@ const FRACTIONS: ReadonlyArray<readonly [number, string]> = [
   [1, ''],
 ];
 
-/** The fraction nearest `x` (0 to 1), as its value and its words. */
 const nearestFraction = (x: number): readonly [number, string] =>
   FRACTIONS.reduce((best, f) => (Math.abs(f[0] - x) < Math.abs(best[0] - x) && f) || best);
 
-/** A figure's height in heads in words, to the nearest quarter or third: 3.36 is "three and a third", 2.6 "two and two thirds". */
 export const headsWords = (heads: number): string => {
   const [part, words] = nearestFraction(heads - Math.floor(heads));
   const n = Math.floor(heads) + Number(part === 1);
@@ -119,17 +90,14 @@ export const headsWords = (heads: number): string => {
   return (words === '' && whole) || `${whole} and ${words}`;
 };
 
-/** A share of the grown figure's height in words: 0.67 is "two thirds of", 0.5 "half of". */
 const shareWords = (share: number): string => {
   const [part, words] = nearestFraction(share);
   return (part === 1 && 'nearly') || (words === 'a half' && 'half of') || `${words} of`;
 };
 
-/** The views of `figures` that share one size, in words: "Figures 1 and 2", "Figure 5". */
 const figuresNamed = (views: ReadonlyArray<number>): string =>
   `${(views.length > 1 && 'Figures') || 'Figure'} ${[views.slice(0, -1).join(', '), ...views.slice(-1)].filter((x) => x !== '').join(' and ')}`;
 
-/** The sizes a pose sheet's smaller figures stand at, one sentence a size. */
 const smallerFigures = (figures: ReadonlyArray<ViewFigure>): ReadonlyArray<string> => {
   const sizeOf = (f: ViewFigure) => `${f.height}:${f.heads}`;
   const firsts = figures.filter((f, k) => figures.findIndex((g) => sizeOf(g) === sizeOf(f)) === k);
@@ -138,21 +106,6 @@ const smallerFigures = (figures: ReadonlyArray<ViewFigure>): ReadonlyArray<strin
     return `${figuresNamed(same.map((f) => f.view))} ${(same.length > 1 && 'are') || 'is'} the same figure smaller: ${shareWords(height)} a grown figure's height and about ${headsWords(heads)} of its own heads tall, its head a larger share of it.`;
   });
 };
-
-// What a sheet says, by its kind. The arm in its sleeve is the owner's
-// (2026-10-18, the look's v5: "I actually like the style when they have
-// sleeves and like arms, kind of like we have with Jesus and a lot of the
-// characters so far in the cast. Let's make that kind of a standing role for
-// the concept"; on the farmer: "He lifts his hand up, but it just looks weird
-// without the sleeves. So let's add the sleeves.");
-// the hair and the beard answer his note on Christ's render ("Jesus's render
-// confuses parts of his hair with his beard"), as the kept concepts part them
-// (court.you and court-12: one brown, a dark band of its deep shade, about
-// 0.13 to 0.18 in value, between the beard and each lock); the skin below the
-// neck answers a try that read "no sleeve" as bare shoulders. A turnaround
-// holds every view to one height on one ground line; a pose sheet holds the
-// head and the hands, never the height (a pose sits, kneels or lies); a heads
-// sheet draws no hands and no soles.
 
 const PAPER_GROUND =
   'This is a model sheet for the animators, not a scene: a plain warm cream paper ground with a soft paper grain and no place behind';
@@ -172,7 +125,6 @@ const HANDS =
 const NO_LETTERING =
   'No lettering anywhere: no labels, no names, no numbers, no arrows, no text, no grid, no boxes or frames round the figures.';
 
-/** How the member is drawn across its sheet: its grown height in its own heads, the smaller figures a pose sheet draws, whether its hair shows, and whether it has a beard. */
 interface SheetFigures {
   readonly heads: number;
   readonly figures: ReadonlyArray<ViewFigure>;
@@ -180,12 +132,10 @@ interface SheetFigures {
   readonly beard: boolean;
 }
 
-/** Each kind's rules, in the order the brief says them. */
 const sheetRules = (
   kind: SheetKind,
   { heads, figures, hair, beard }: SheetFigures,
 ): ReadonlyArray<string> => {
-  // The parting of the beard from the hair is said only of a member who has both.
   const hairBeard = (hair && beard && [HAIR_BEARD]) || [];
   const tall = headsWords(heads);
   const smaller = figures.length > 0;
@@ -230,23 +180,17 @@ const sheetRules = (
   }[kind];
 };
 
-/** A turnaround's layout: six views in one row, as `TURNAROUND_SLOTS` reads them, `who` the member's pronoun ("Him", "her"). */
 export const turnaroundLayout = (who: string): string =>
   `Draw ${who} six times in one row, evenly spaced across the sheet, standing at rest with both arms hanging in their sleeves at the sides, each hand at its sleeve's end, left to right: one, facing the viewer straight on; two, turned three-quarters toward the viewer's left; three, in full profile facing the viewer's left; four, seen from directly behind; five, in full profile facing the viewer's right; six, turned three-quarters toward the viewer's right. In profile one eye shows; from behind no face shows, only the back of the hair or headcloth and the garment's back.`;
 
-/** What a sheet's brief is made of: its kind, the house block as the app keeps it, the member's own paragraphs, and how its figures are drawn. */
 interface SheetBrief extends SheetFigures {
   readonly kind: SheetKind;
   readonly house: string;
-  /** What each reference image is for, in their order. */
   readonly references: string;
-  /** The member's look: face, hair, beard, skin, garments, as the kept concepts draw them. */
   readonly look: string;
-  /** The views or poses, left to right (`turnaroundLayout` for a turnaround). */
   readonly layout: string;
 }
 
-/** The brief: the sheet's house block, the references' note, the look, the layout, then its kind's rules. */
 export const castSheetBrief = (
   brief: SheetBrief,
 ): Result.Result<string, HouseBlockMoved | HandFloats> =>

@@ -1,12 +1,3 @@
-// How the villager child is cut into parts, one table per cut view, in view
-// pixels (x right, y down, the kept box's origin): his kept pose writing on a
-// board (poses-5), three-quarters to the viewer's right, his near right arm
-// hanging on the viewer's left and his far left arm raised to the viewer's
-// right, the chalk in its round hand. Neither sleeve has ink between it and
-// the tunic, so each root is cut along its shade crease. Two strips of torso
-// part the head from each sleeve's corner, so the paint laid under a sleeve
-// beside the head falls in torso, never head. Pure data.
-
 import type { HiddenEntry, PartCut } from '@manna/film/tools';
 import { CUT_AWAY, grain, shade, sides } from '../../../cutout/prompts.ts';
 import { FAR, box } from '../../../cutout/rules.ts';
@@ -20,7 +11,6 @@ const POSES_5: PartCut = {
   parts: [
     {
       name: 'armRight',
-      // the shoulder's top ink (x63-84, y148), 3 px outside the outer knots down to the cuff (x21-63, y252), the inner side on the shade crease (x68-76, y200-250); the hand ring (x22-70, y252-300) in its disc
       take: [
         {
           polygon: [
@@ -51,7 +41,6 @@ const POSES_5: PartCut = {
     },
     {
       name: 'head',
-      // hair, face and chin down to the chin's ink (y140), the hair beside the near shoulder to y152; about 10 px short of the raised sleeve's upper ink, the strip torso's
       take: [
         {
           polygon: [
@@ -74,7 +63,6 @@ const POSES_5: PartCut = {
     },
     {
       name: 'armLeft',
-      // 3 px outside the sleeve's upper ink (y88-120) and lower ink (y120-192), round the hand ring with its chalk and fingertip (x174-226, y52-116), the root on the S crease (x137-150, y160-184) up to the face outline
       take: [
         {
           polygon: [
@@ -116,20 +104,12 @@ const POSES_5: PartCut = {
   ],
 };
 
-/** His ink line (r+g+b < 120, median, measured). */
 const INK = [29, 14, 5, 255] as const;
 
-/** How okra closes his body's sides where his arms lay. */
 const SIDES = sides({ pronoun: 'his', lower: 'tunic', cloth: 'the linen tunic' });
 
-/** The paper grain his sheet shows on his body, carried into the paint under his arms. */
 const GRAIN = grain('the linen tunic of his body');
 
-/**
- * Each view's moving parts (what a pose moves, whose areas are painted
- * magenta and repainted beneath), and the words okra repaints them by: what
- * lies under them, in the sheet's own style.
- */
 const HIDDEN_ENTRIES = {
   'poses-5': {
     moving: ['armRight', 'armLeft'],

@@ -1,8 +1,3 @@
-/**
- * The adapters through their layers, over a recording `HttpClient`: each test
- * scripts the answers, and reads back the requests the adapter sent. No call
- * leaves the process. Retries run on the test clock.
- */
 import * as CloudflareCredentials from '@distilled.cloud/cloudflare/Credentials';
 import * as Cloudflare from '@alchemy.run/cloudflare';
 import { describe, expect, it } from 'effect-bun-test';
@@ -28,7 +23,6 @@ interface Sent {
   readonly body: Option.Option<Uint8Array>;
 }
 
-/** An answer to the n-th request (0 first): a response, or none at all. */
 type Script = (request: Sent, n: number) => Option.Option<Response>;
 
 const bodyOf = (request: HttpClientRequest.HttpClientRequest): Option.Option<Uint8Array> => {
@@ -38,7 +32,6 @@ const bodyOf = (request: HttpClientRequest.HttpClientRequest): Option.Option<Uin
 
 type Answer = () => Option.Option<Response>;
 
-/** The answers in turn, the last one again for every request after it. */
 const inTurn =
   (...answers: ReadonlyArray<Answer>): Script =>
   (_, n) =>
@@ -46,7 +39,6 @@ const inTurn =
       Option.flatMap((answer) => answer()),
     );
 
-/** A client that keeps what it is sent and answers from the script. */
 const recording = (script: Script) => {
   const sent: Array<Sent> = [];
   const client = HttpClient.make((request, url) => {
@@ -66,16 +58,13 @@ const recording = (script: Script) => {
   return { sent, layer: Layer.succeed(HttpClient.HttpClient, client) };
 };
 
-/** A JSON body as the wire carries it. */
 type Wire = string | number | boolean | ReadonlyArray<Wire> | { readonly [key: string]: Wire };
 
 const json = (status: number, body: Wire) => Option.some(Response.json(body, { status }));
 
-/** A status with no body (a HEAD's answer). */
 const bare = (status: number, headers: Readonly<Record<string, string>> = {}) =>
   Option.some(new Response('', { status, headers }));
 
-/** A 200 whose body breaks after its headers, as a connection reset does. */
 const lostBody = () =>
   Option.some(
     new Response(
@@ -125,12 +114,10 @@ const r2Over = (script: Script) => {
   return { sent, layer: TargetR2.pipe(Layer.provide(Layer.merge(credentials, layer))) };
 };
 
-/** Bytes no text encoding keeps: a body sent through text would change them. */
 const bytes = Uint8Array.from([0x00, 0x80, 0xff]);
 const metadata = { contentType: 'audio/mpeg', cacheControl: 'public, max-age=604800' };
 const stored = () => envelope({ etag: '"5289df737df57326fcdd22597afb1fac"', size: '3' });
 
-/** Runs an effect while the test clock passes `duration`, and answers its result. */
 const across = <A, E, R>(effect: Effect.Effect<A, E, R>, duration: Duration.Input) =>
   Effect.gen(function* () {
     const fiber = yield* Effect.forkChild(Effect.result(effect));
@@ -226,7 +213,6 @@ describe('R2 in a run', () => {
     const console = { ...globalThis.console, log: (line: string) => void lines.push(line) };
     const recordingOf = (hymn: number) => Uint8Array.from([hymn & 0xff, hymn >> 8, 0x80, 0xff]);
 
-    /** S3 holds every hymn; R2 stores each upload but loses hymn 7's answer. */
     const stores = Layer.unwrap(
       Effect.gen(function* () {
         const hash = yield* Hash;

@@ -1,11 +1,3 @@
-/**
- * Generate the title painting and every beat that carries a `concept`.
- *
- *   bun skills/bible/scripts/deck/gen_images.ts <deckDir> [id ...]
- *
- * Idempotent: an existing images/<id>.png is skipped, so rerun to sweep
- * stragglers; delete a png to re-roll it. Four workers, one retry each.
- */
 import { dirname, resolve } from 'node:path';
 import { readManifest } from './manifest.ts';
 import { CHARACTERS, IMAGE_SIZE, PALETTE_REF, POSE_REF_NOTE, SCENE_REF, prompt } from './series.ts';

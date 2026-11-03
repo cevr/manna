@@ -1,9 +1,3 @@
-// A painted plate drawn as a plane (`f.painting`, `drawPainting`): the image
-// lands under the current transform, then translate(at) and scale(scale);
-// the probe's quad comes from that same matrix, whether the image is drawn
-// (a page) or not (Bun); an edge shows only strictly inside the frame; and a
-// name the drawing does not declare fails to compile.
-
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 import { createFilm, drawing } from './film.ts';
@@ -19,7 +13,6 @@ const SPEC: PaintingSpec = {
   scale: 1.5,
 };
 
-/** A probe whose sink collects paintings. */
 const probeFor = (marks: PaintingMark[]): Probe => ({
   sink: { texts: [], inks: [], paintings: marks },
   scene: 'plate',
@@ -40,7 +33,6 @@ describe('a painted plate', () => {
       drawPainting(ctx, SPEC, { image: Option.some(image) }, probeOf(ctx)),
     );
     const [drawn] = rec.images;
-    // The image's own (0, 0) and (w, h) land where at + scale · (u, v) lands under the entry transform.
     const entry = rec.now();
     const expectAt = (u: number, v: number) => applyAffine(entry, [30 + 1.5 * u, -20 + 1.5 * v]);
     expect(drawn).toBeDefined();
@@ -54,7 +46,6 @@ describe('a painted plate', () => {
       expect(got[0]).toBeCloseTo(expectAt(u, v)[0], 9);
       expect(got[1]).toBeCloseTo(expectAt(u, v)[1], 9);
     }
-    // The state is put back, and the probe's quad is the drawn rectangle's corners.
     expect(rec.now()).toEqual(entry);
     expect(marks).toHaveLength(1);
     expect(marks[0]?.key).toBe('test/plate');
@@ -90,13 +81,9 @@ describe('a painted plate', () => {
         { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 },
         { key: 'q', png: 'q.png', size: [w, h], at: [x, y] },
       );
-    // Covering the frame with edges exactly on its border: none shows.
     expect(shownEdges(frame(0, 0, 1920, 1080), 1920, 1080)).toEqual([]);
-    // Wider on every side: none shows.
     expect(shownEdges(frame(-50, -50, 2020, 1180), 1920, 1080)).toEqual([]);
-    // Moved 24 px right: its left edge shows.
     expect(shownEdges(frame(24, -50, 2020, 1180), 1920, 1080)).toEqual(['left']);
-    // Small and inside: all four show.
     expect(shownEdges(frame(100, 100, 50, 50), 1920, 1080)).toEqual([
       'top',
       'right',
@@ -133,14 +120,10 @@ describe('a painted plate', () => {
         { id: 'c', min: 4, ...bare },
       ],
     });
-    // Declared once across the scenes that share it.
     expect(film.paintings.declared).toEqual([SPEC]);
   });
 
   it('leaves one probe mark per draw when the sheet draws a scene again', () => {
-    // A scene with no shot breathes, so the sheet's first framing guess is
-    // wrong at a moving time and it draws the scene again; the first draw's
-    // mark goes with its probe.
     const plate = drawing({
       timeline: {},
       paintings: { sky: SPEC },

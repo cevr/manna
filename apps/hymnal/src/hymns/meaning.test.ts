@@ -1,9 +1,3 @@
-/**
- * Meaning search over the shipped table: what it returns, never how well
- * (the acceptance's theme queries measure that). Queries are plain English
- * made here; each check compares hymn numbers or counts.
- */
-
 import { fold } from '@manna/hymnal/fold';
 import { describe, expect, it } from 'bun:test';
 import { Effect, Fiber, Option } from 'effect';
@@ -34,7 +28,6 @@ describe('the shipped table', () => {
   });
 
   it('holds its words as search folds them, so a query folded by search finds them', () => {
-    // The build folds with search's fold (`@manna/hymnal/fold`): a table built before a change to it holds words the fold now changes.
     const { words } = meaning();
     expect(fold(words) === words).toBe(true);
   });
@@ -85,7 +78,6 @@ describe('search mode’s hymns about a query', () => {
         const typed = yield* Effect.forkChild(afterPause('pea'));
         yield* TestClock.adjust(PAUSE - 1);
         const early = Option.isSome(Option.fromUndefinedOr(typed.pollUnsafe()));
-        // The next keystroke interrupts the pause before it ends; its own pause runs from there.
         yield* Fiber.interrupt(typed);
         const next = yield* Effect.forkChild(afterPause('peace'));
         yield* TestClock.adjust(PAUSE - 1);
@@ -110,7 +102,6 @@ describe('search mode’s hymns about a query', () => {
 });
 
 describe('the ranking', () => {
-  /** The file decoded with Node's base64, apart from the module's own decoder. */
   const file = meaning();
   const bytes = (text: string) => new Uint8Array(Buffer.from(text, 'base64'));
   const words = file.words.split(' ');
@@ -118,9 +109,7 @@ describe('the ranking', () => {
   const vectors = new Int8Array(bytes(file.vectors).buffer);
   const order = file.hymns.split(' ').map(Number);
   const D = file.dims;
-  /** Each value of word `w`'s row, times its weight. */
   const rowOf = (w: number) => {
-    // A row is its own run of base64, `D * 2 / 3` characters.
     const row = bytes(file.table.slice((w * D * 2) / 3, ((w + 1) * D * 2) / 3));
     return Array.from({ length: D }, (_, c) => {
       const byte = row[c >> 1] ?? 0;

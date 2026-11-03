@@ -1,8 +1,3 @@
-// `film concept ease <film> <member> --from <pose> --to <pose> --seconds <s>
-// [--segment <a>-<b> ...] [--shuffle <seed>]`: one of the member's eases
-// (`EASES`, the film's `rigs/cast.ts`) drawn frame by frame in the ease page
-// by the real draw path (`ease.ts`), under out/<film>/cast/<member>/ease/<n>/.
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
@@ -11,10 +6,8 @@ import { renderEase } from './ease.ts';
 import { filmNamed } from './film-repo.ts';
 import type { Pages } from './pages.ts';
 
-/** A segment flag, `<a>-<b>` (frames, both drawn). */
 const Segment = Schema.TemplateLiteralParser([Schema.Int, '-', Schema.Int]);
 
-/** `film concept ease`, drawing on `pages` (the app's export pages). */
 export const ease = <E, R>(pages: Layer.Layer<Pages, E, R>) =>
   Command.make(
     'ease',

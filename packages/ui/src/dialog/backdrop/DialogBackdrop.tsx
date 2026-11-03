@@ -1,7 +1,3 @@
-// Upstream: packages/react/src/dialog/backdrop/DialogBackdrop.tsx
-//
-// An overlay under the dialog's popup. A press on it is an outside press of
-// its own dialog only.
 import type { JSX } from '@solidjs/web';
 import { omit, onCleanup } from 'solid-js';
 
@@ -18,10 +14,6 @@ interface DialogBackdropState {
 
 interface DialogBackdropProps extends BaseUIComponentProps<'div', DialogBackdropState> {}
 
-/**
- * An overlay displayed beneath the popup.
- * Renders a `<div>` element.
- */
 export function DialogBackdrop(componentProps: DialogBackdropProps): JSX.Element {
   const { store } = useDialogRootContext();
   const elementProps = omit(componentProps, 'class', 'style', 'render');

@@ -4,7 +4,6 @@ import { loudness } from './loudness.ts';
 
 const RATE = 44100;
 
-/** `secs` of a `hz` sine at linear `amp`, on each of `channels` channels. */
 const sine = (hz: number, amp: number, secs: number, channels = 1): Pcm => {
   const frames = Math.round(secs * RATE);
   const plane = new Float32Array(frames);
@@ -42,9 +41,6 @@ describe('loudness (ITU-R BS.1770-4)', () => {
     plane.set(burst.channels[0] ?? new Float32Array(), RATE * 3);
     const measured = loudness({ rate: RATE, frames, channels: [plane] });
     expect(measured.momentaryMax).toBeCloseTo(-9.03, 0);
-    // The 13 blocks the burst reaches (7 whole, 6 in part) pass both gates; the
-    // block after it holds the K-weighting's tail alone (-51.7 LUFS), which
-    // passes the absolute gate and not the relative one.
     expect(measured.integrated).toBeCloseTo(-10.17, 1);
   });
 

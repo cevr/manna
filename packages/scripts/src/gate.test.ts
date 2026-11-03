@@ -1,10 +1,3 @@
-// The gate and the slow suite as the root manifest, turbo's config, `gate.sh`
-// and `test-slow.sh` lay them. The gate is the lint's deterministic rules and
-// the lessons ledger's check beside every workspace's unit tests, each cached
-// on its inputs, under no lock; the pre-commit checks the ledger too. Everything else (typecheck, builds, slow tests, browser checks, the
-// full lint) is the slow suite, run one task at a time under the host's test
-// lock, by hand and before each deploy.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { JSONC, YAML } from 'bun';
 import { describe, expect, it } from 'effect-bun-test';
@@ -29,7 +22,6 @@ const Turbo = Schema.Struct({
   ),
 });
 
-/** The root manifest's scripts, turbo's tasks, the two shell scripts' lines and each workspace's manifest. */
 const laid = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -66,19 +58,9 @@ const laid = Effect.gen(function* () {
 const Lefthook = Schema.Struct({ 'pre-commit': Schema.Record(Schema.String, Schema.Unknown) });
 const Jobs = Schema.Array(Schema.Record(Schema.String, Schema.Unknown));
 
-/**
- * The keys of lefthook's schema (`node_modules/lefthook/schema.json`) that
- * narrow the commits or files a job runs on, or let it be skipped: a job's
- * `tags` are what an `exclude_tags` or `LEFTHOOK_EXCLUDE` names to skip it.
- */
 const JOB_NARROWS = ['glob', 'files', 'file_types', 'exclude', 'only', 'skip', 'tags'];
-/** The keys on the hook that narrow every job of it, or skip the jobs its `exclude_tags` names. */
 const HOOK_NARROWS = ['files', 'exclude', 'only', 'skip', 'exclude_tags'];
 
-/**
- * The pre-commit's `lessons` jobs in `lefthook.yml`'s text: what each runs,
- * and each key, on the job in any position or on its hook, that narrows it.
- */
 const lessonsJob = (text: string) =>
   Effect.gen(function* () {
     const { 'pre-commit': hook } = yield* Schema.decodeUnknownEffect(Lefthook)(YAML.parse(text));
@@ -94,20 +76,11 @@ const lessonsJob = (text: string) =>
     };
   });
 
-/** The `turbo run` lines of a shell script, each as its words. */
 const turboRuns = (lines: ReadonlyArray<string>) =>
   lines
     .filter((line) => line.startsWith('node_modules/.bin/turbo run '))
     .map((line) => ['turbo', ...line.split(/\s+/).slice(1)]);
 
-/**
- * Whether the deploy script `script` of workspace `name` runs its test:slow
- * before alchemy starts: its commands are joined by `&&` alone, so each runs
- * only when the one before it passed, and the first command with an
- * `alchemy` word (`alchemy`, `bunx alchemy`, `node_modules/.bin/alchemy`,
- * `alchemy@<version>`, alchemy's own `alchemy/bin/` file) comes after the
- * slow suite.
- */
 const slowBeforeAlchemy = (name: string, script: string) => {
   const commands = commandsOf(script);
   const slow = commands.findIndex(
@@ -119,7 +92,6 @@ const slowBeforeAlchemy = (name: string, script: string) => {
   return andChained(script) && slow > -1 && alchemy > slow;
 };
 
-/** Whether a line takes a lock (`flock`, `lockf`). */
 const locks = (line: string) => /\b(flock|lockf)\b/.test(line) && !line.startsWith('#');
 
 describe('the gate', () => {

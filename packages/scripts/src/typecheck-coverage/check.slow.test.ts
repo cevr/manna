@@ -25,19 +25,12 @@ const encodeTsconfig = Schema.encodeEffect(
   ),
 );
 
-/** A package in a temp dir, and what lies beside it. */
 interface Fixture {
-  /** The package's directory name in the temp dir. */
   readonly root?: string;
-  /** The package's files, relative to it. */
   readonly files: Record<string, string>;
-  /** Its tsconfig's `files` entry; its wildcard reads `**\/*.ts` either way. */
   readonly listed?: ReadonlyArray<string>;
-  /** Files beside the package, relative to the temp dir. */
   readonly elsewhere?: Record<string, string>;
-  /** Symlinks, each a path to its target, both relative to the temp dir. */
   readonly links?: Record<string, string>;
-  /** Its tsconfig's `preserveSymlinks`. */
   readonly preserveSymlinks?: boolean;
 }
 
@@ -101,10 +94,6 @@ const verdict = (files: Record<string, string>) =>
 const text = <E>(stream: Stream.Stream<Uint8Array, E>) =>
   Stream.mkString(Stream.decodeText(stream));
 
-/**
- * `tsc --noEmit` over the package at `root`: whether it exits non-zero, and
- * each line of its errors, at a place in a file or not.
- */
 const tscOver = (root: string) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner;
@@ -122,7 +111,6 @@ const tscOver = (root: string) =>
     return { refused: Number(code) !== 0, errors };
   }).pipe(Effect.scoped);
 
-/** Each error tsc reports at a place in a file, as `<file> <code>`, the file as tsc spells it. */
 const located = (errors: ReadonlyArray<string>) =>
   errors.flatMap((line) =>
     Option.toArray(
@@ -133,7 +121,6 @@ const located = (errors: ReadonlyArray<string>) =>
     ),
   );
 
-/** The check's verdict, said in a line. */
 const said = (outcome: Option.Option<Effect.Error<ReturnType<typeof check>>>) =>
   Option.match(outcome, {
     onNone: () => 'pass',
@@ -146,7 +133,6 @@ const said = (outcome: Option.Option<Effect.Error<ReturnType<typeof check>>>) =>
     }),
   });
 
-/** The package's typecheck over one fixture: tsc's answer, and the check's verdict. */
 const typecheck = (setup: Fixture) =>
   Effect.gen(function* () {
     const root = yield* fixture(setup);
@@ -157,12 +143,10 @@ const typecheck = (setup: Fixture) =>
     return { tsc, check: said(outcome) };
   }).pipe(Effect.scoped);
 
-/** A way a disk can find a name under another spelling. */
 type Fold = 'case' | 'long s' | 'normalization';
 
 const folds: ReadonlyArray<Fold> = ['case', 'long s', 'normalization'];
 
-/** Which folds the temp dir's file system makes: it finds `found` as `asked`. */
 const foldsOfTempDir = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const dir = yield* fs.makeTempDirectoryScoped();
@@ -185,7 +169,6 @@ const declaration = 'export declare const broken: NotAType;\n';
 describe('the coverage check over a package', () => {
   it("names a nested file that tsc's wildcard skips", () =>
     Effect.gen(function* () {
-      // tsc's `**` skips dot-directories, so only a walk of every level finds it.
       const error = yield* verdict({
         'src/a.ts': 'export const a = 1;\n',
         'src/.hidden/x.ts': 'export const x = 1;\n',
@@ -245,63 +228,35 @@ describe('the coverage check over a package', () => {
     }).pipe(Effect.provide(BunServices.layer), Effect.runPromise));
 });
 
-/*
- * The census. A program file is the package's when its real path is under the
- * root and outside `node_modules`: the rule has two edges. tsc can spell a
- * package file across either edge, and fold a part of its name, so the census
- * is generated. A cell is an edge (or none), a way tsc crosses it, and a
- * spelling: the disk's own, or one part of the name (the head, a directory,
- * the base name, the extension) folded by case, the long s or normalization.
- * It runs with each loader its way allows (an import, a reference, a `files`
- * entry), and a folded extension with each form of the rule. A cell loads a
- * declaration file whose own error `skipLibCheck` hides, from a dot-directory
- * (`src/.c`) that tsc's wildcard skips, so the cell's route is the one way the
- * file enters the program; the cells share one program. Where the host's disk
- * makes a cell's fold, the check must name the file by its disk spelling;
- * where it does not, tsc must refuse it. A cell no host can express is named,
- * with why.
- */
-
-/** The package's directory name, and the directory and base name of each cell's file. Each holds a capital, a long s and a composed é, so one name answers every fold. */
 const packageName = 'Pſé';
 const directoryName = 'Dſé';
 const baseName = 'Bſé';
 
-/** A link beside the package; one in a `node_modules` above it; one in its own `node_modules`. */
 const outsideLink = 'Oſé';
 const aboveLink = 'Uſé';
 const installedLink = 'Iſé';
 
-/** The links the ways cross by, each to the cells' directory, relative to the temp dir. */
 const censusLinks = {
   [outsideLink]: `${packageName}/src/.c`,
   [`node_modules/${aboveLink}`]: `${packageName}/src/.c`,
   [`${packageName}/node_modules/${installedLink}`]: `${packageName}/src/.c`,
 };
 
-/** Why no host can express a cell. */
 const climbsNoLink =
   'tsc drops each `..` from its spelling, so a path keeps no `node_modules` part it climbs out of; only a link leaves one';
 const rootUnspelled =
   "tsc spells the root as the tsconfig's own path, so only a path that leaves the package spells it";
 const extensionUndecomposed = 'no TypeScript extension holds a letter that decomposes';
 
-/** How a package leads tsc to a file. */
 type Loader = 'import' | 'reference' | 'files entry';
 
-/** Where the cells' directory, `src/.c`, is found from one way. */
 interface Cells {
-  /** The root, or the link, that tsc's spelling passes through, as the disk stores it. */
   readonly head: string;
-  /** The cells' directory as the package names it, given the head as spelled: a path relative to the root, or a bare name. */
   readonly path: (head: string) => string;
-  /** The loaders that can name it. */
   readonly loaders: ReadonlyArray<Loader>;
-  /** The name an importer in `src` gives for a name the package gives. */
   readonly fromSource: (name: string) => string;
 }
 
-/** A path relative to the root: any loader names it; an importer in `src` climbs to the root first. */
 const byPath = (head: string, path: (head: string) => string): Cells => ({
   head,
   path,
@@ -309,7 +264,6 @@ const byPath = (head: string, path: (head: string) => string): Cells => ({
   fromSource: (name) => `../${name}`,
 });
 
-/** A bare name: only an import names it. */
 const byBareName = (head: string): Cells => ({
   head,
   path: (spelled) => spelled,
@@ -317,7 +271,6 @@ const byBareName = (head: string): Cells => ({
   fromSource: (name) => name,
 });
 
-/** One way tsc reaches the cells' directory across one edge, or why no way can. */
 interface Way {
   readonly edge: 'no edge' | 'the root' | 'node_modules';
   readonly crossing:
@@ -326,7 +279,6 @@ interface Way {
     | 'a link by path'
     | 'a link by bare name';
   readonly cells: Option.Option<Cells>;
-  /** Why no host can express the way, when it has no cells. */
   readonly why: string;
 }
 
@@ -375,12 +327,10 @@ const ways: ReadonlyArray<Way> = [
   },
 ];
 
-/** The part of tsc's spelling a fold changes: the head is the root, or the link tsc passes through. */
 type Part = 'head' | 'directory' | 'base name' | 'extension';
 
 const parts: ReadonlyArray<Part> = ['head', 'directory', 'base name', 'extension'];
 
-/** How tsc spells a stored name under one fold. */
 const refold = (stored: string, fold: Fold) =>
   Match.value(fold).pipe(
     Match.when('case', () => stored.toLowerCase()),
@@ -389,7 +339,6 @@ const refold = (stored: string, fold: Fold) =>
     Match.exhaustive,
   );
 
-/** The forms of TypeScript's rule, each with the extension an import names it by. */
 const forms = [
   { form: '.d.ts', imported: '.js' },
   { form: '.d.mts', imported: '.mjs' },
@@ -397,13 +346,8 @@ const forms = [
   { form: '.d.css.ts', imported: '.d.css.js' },
 ];
 
-/** A `.d.ts` file the disk stores as tsc spells it. */
 const plain = { form: '.d.ts', imported: '.js', stored: '.d.ts' };
 
-/**
- * What a disk may store for a form that tsc asks for in lower case, under one
- * fold: each run of letters capitalised in turn; the last `s` long.
- */
 const storedExtensions = (form: string, fold: Fold): ReadonlyArray<string> =>
   Match.value(fold).pipe(
     Match.when('case', () => {
@@ -420,7 +364,6 @@ const storedExtensions = (form: string, fold: Fold): ReadonlyArray<string> =>
     Match.exhaustive,
   );
 
-/** A spelling: the disk's own, or one part folded. */
 type Spelling = Option.Option<{ readonly part: Part; readonly fold: Fold }>;
 
 const spellings: ReadonlyArray<Spelling> = [
@@ -434,7 +377,6 @@ const spellingName = (spelling: Spelling) =>
     onSome: ({ part, fold }) => `${part} by ${fold}`,
   });
 
-/** Why no host can express a cell, or none: the cell runs. */
 const unexpressed = (way: Way, spelling: Spelling) =>
   Option.match(way.cells, {
     onNone: () => Option.some(way.why),
@@ -450,20 +392,15 @@ const unexpressed = (way: Way, spelling: Spelling) =>
       ),
   });
 
-/** One run of a cell: a loader, a form and what the disk stores. */
 interface Case {
   readonly name: string;
   readonly id: string;
-  /** The folds a disk must make for tsc to find the file. */
   readonly folds: ReadonlyArray<Fold>;
-  /** The declaration file as the disk stores it, relative to the root. */
   readonly disk: string;
-  /** The package's files for this case, relative to the root. */
   readonly files: Record<string, string>;
   readonly listed: ReadonlyArray<string>;
 }
 
-/** One cell of the census: an edge, a way tsc crosses it, a spelling. */
 interface Cell {
   readonly way: Way;
   readonly spelling: Spelling;
@@ -472,7 +409,6 @@ interface Cell {
 const cellName = ({ way, spelling }: Cell) =>
   `${way.edge}, ${way.crossing}, ${spellingName(spelling)}`;
 
-/** A stored name as the cell's spelling spells it. */
 const spelledIn = (spelling: Spelling, part: Part, stored: string) =>
   Option.match(
     Option.filter(spelling, (folded) => folded.part === part),
@@ -482,7 +418,6 @@ const spelledIn = (spelling: Spelling, part: Part, stored: string) =>
     },
   );
 
-/** The extensions a cell's declaration file has: each form's stored ones when the cell folds the extension. */
 const extensionsOf = (spelling: Spelling) =>
   Option.match(
     Option.filter(spelling, ({ part }) => part === 'extension'),
@@ -495,7 +430,6 @@ const extensionsOf = (spelling: Spelling) =>
     },
   );
 
-/** How a loader leads tsc to the name the package gives: the files it adds, and its `files` entries. */
 const lead = (loader: Loader, id: string, cells: Cells, name: string, imported: string) =>
   Match.value(loader).pipe(
     Match.when('import', () => ({
@@ -512,7 +446,6 @@ const lead = (loader: Loader, id: string, cells: Cells, name: string, imported: 
     Match.exhaustive,
   );
 
-/** The cases of one cell: each loader its way allows, with each extension its spelling stores. */
 const casesOf = (cell: Cell, cells: Cells, at: number): ReadonlyArray<Case> =>
   cells.loaders
     .flatMap((loader) => extensionsOf(cell.spelling).map((extension) => ({ loader, ...extension })))
@@ -535,12 +468,10 @@ const casesOf = (cell: Cell, cells: Cells, at: number): ReadonlyArray<Case> =>
       };
     });
 
-/** Every cell of edge × crossing × spelling. */
 const cells: ReadonlyArray<Cell> = ways.flatMap((way) =>
   spellings.map((spelling) => ({ way, spelling })),
 );
 
-/** The cases the census runs, and the cells no host can express, each with why. */
 const census = {
   cases: cells.flatMap((cell, at) =>
     Option.match(
@@ -555,7 +486,6 @@ const census = {
   ),
 };
 
-/** The census's package over some of its cases. */
 const censusPackage = (cases: ReadonlyArray<Case>) =>
   fixture({
     root: packageName,
@@ -565,7 +495,6 @@ const censusPackage = (cases: ReadonlyArray<Case>) =>
     preserveSymlinks: true,
   });
 
-/** What the check's verdict says of one file: it names the file, or it does not. */
 const checkSays = (
   outcome: Option.Option<Effect.Error<ReturnType<typeof check>>>,
   disk: string,
@@ -575,7 +504,6 @@ const checkSays = (
   return `check: ${String(verdict)}, not naming it`;
 };
 
-/** The declaration files the check names, when it names any. */
 const unchecked = (outcome: Option.Option<Effect.Error<ReturnType<typeof check>>>) =>
   Option.match(outcome, {
     onNone: (): ReadonlyArray<string> => [],
@@ -588,7 +516,6 @@ const unchecked = (outcome: Option.Option<Effect.Error<ReturnType<typeof check>>
     }),
   });
 
-/** Whether tsc refuses a case: it exits non-zero, with an error at the case's importer or naming a path through its directory. */
 const tscSays = (
   tsc: { readonly refused: boolean; readonly errors: ReadonlyArray<string> },
   each: Case,
@@ -607,8 +534,6 @@ describe("the package's typecheck over a file tsc spells its own way", () => {
       const found = (each: Case) => each.folds.every((fold) => folded[fold]);
       const checked = census.cases.filter(found);
       const lost = census.cases.filter((each) => !found(each));
-      // A `files` entry tsc cannot find stops it before it reports any other
-      // error, so the lost cases led by one go in a package apart.
       const lostApart = [
         lost.filter((each) => each.listed.length === 0),
         lost.filter((each) => each.listed.length > 0),

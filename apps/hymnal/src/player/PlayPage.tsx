@@ -5,7 +5,6 @@ import { plain, useCue } from '~/feel/cue';
 
 import { Command, type Track } from './player';
 
-/** Start the page's hymn in place of the hymn the player holds. */
 export function PlayPage({
   track,
   send,

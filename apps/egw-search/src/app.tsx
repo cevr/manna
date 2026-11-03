@@ -1,23 +1,6 @@
 /* oxlint-disable effect/noNullish -- the wire shape is JSON (see ../server/api.ts); `null` is what an absent refcode or link arrives as. */
 /* oxlint-disable effect/noTernary -- these are JSX render branches, not domain matches; `Match.value` in an attribute position reads worse and builds a matcher per render. */
 
-/**
- * EGW searcher — Solid 2 + Effect 4.
- *
- * **The URL is the state.** Each pane holds exactly one signal of its own —
- * the uncommitted text in its box — and reads everything else from the
- * workspace atom, which reads the address bar. Submitting a query or toggling
- * a filter writes the workspace, not a `setState`, so every view the app can
- * show has a link, and the back button works without any code that knows what
- * "back" means. See `./url-state.ts` and `./scroll.ts`.
- *
- * **The async states are the framework's, not hand-rolled.** Solid 2 ships
- * `isPending` (a request is in flight) and `latest` (the previous settled
- * value while a new one resolves). Together they are stale-while-revalidate:
- * the first search renders skeletons because there is no previous value, and a
- * re-search keeps the old results on screen, dimmed, because there is.
- */
-
 import { useAtomValue, useRegistry } from '@manna/atom-solid';
 import { parseHref } from '@manna/url-state';
 import * as UrlAtom from '@manna/url-state/atom';
@@ -64,28 +47,12 @@ import {
   Workspace as WorkspacePlace,
 } from './url-state.js';
 
-// ---------------------------------------------------------------------------
-// The workspace, as the URL holds it
-// ---------------------------------------------------------------------------
-
 const workspace = UrlAtom.place(WorkspacePlace);
 
 type Panes = Arr.NonEmptyReadonlyArray<SearchParams>;
 
 interface WorkspaceState {
-  /** Every pane, in order, as the URL names them; `None` off the app's one
-   *  address, which is the not-found page. */
   readonly panes: Accessor<Option.Option<Panes>>;
-  /**
-   * Change the workspace.
-   *
-   * Functional: `update` receives the panes as the URL holds them *now* —
-   * writes made earlier in this tick included — not as some pane last read
-   * them, so two changes in one moment compose rather than the second
-   * overwriting the first, and they enter history as one entry. Whether that
-   * entry is pushed or replaced is the workspace's declaration
-   * (`./url-state.ts`): a new query pushes, a filter replaces.
-   */
   readonly update: (update: (panes: Panes) => Panes) => void;
 }
 
@@ -102,13 +69,7 @@ const useWorkspace = (): WorkspaceState => {
   };
 };
 
-/** Paragraphs shown on each side before the reader asks for more; the page
- *  fetches `PAGE_CONTEXT`. */
 const CONTEXT_SHOWN = 1;
-
-// ---------------------------------------------------------------------------
-// The filter vocabulary, as the UI labels it
-// ---------------------------------------------------------------------------
 
 const SECTIONS: readonly { readonly value: CorpusSection; readonly label: string }[] = [
   { value: 'egw-writings', label: 'EGW Writings' },
@@ -140,12 +101,6 @@ const SUBTYPE_LABELS = {
   ModernEnglish: 'Modern English',
 } satisfies Record<BookSubtype, string>;
 
-// ---------------------------------------------------------------------------
-// One pane's state
-// ---------------------------------------------------------------------------
-
-/** What a pane's request has come to. `Idle` is the client's own case — no
- *  query yet — rather than anything the server returns. */
 type Outcome =
   | { readonly _tag: 'Idle' }
   | { readonly _tag: 'Ready'; readonly response: SearchResponse }
@@ -156,33 +111,17 @@ const IDLE: Outcome = { _tag: 'Idle' };
 const hitsOf = (outcome: Outcome): readonly Hit[] =>
   outcome._tag === 'Ready' ? outcome.response.hits : [];
 
-/** What every part of a pane can read. The provider below is the only thing
- *  that knows *how* any of it is produced. */
 interface SearchStore {
-  /** The text in the box, uncommitted — the only state not in the URL, because
-   *  a half-typed query is not a place anyone wants to link to. */
   readonly draft: () => string;
   readonly setDraft: (value: string) => void;
-  /** This pane's committed search state, parsed from the address bar. */
   readonly params: () => SearchParams;
-  /** The last settled outcome. While a request is in flight this is the
-   *  previous one, which is what keeps a re-search's rows on screen. */
   readonly settled: () => Outcome;
-  /** Whether a request is owed or in flight for the current URL. */
   readonly pending: () => boolean;
-  /** Commit a query — used by the form and by the example chips alike. */
   readonly search: (value: string) => void;
-  /** Change the filters, keeping the query. The URL replaces its entry rather
-   *  than pushing one, so the back button returns to the previous *search*
-   *  rather than walking back through each toggle the reader tried. */
   readonly refine: (update: (current: SearchParams) => SearchParams) => void;
-  /** Ask again after a failure. */
   readonly retry: () => void;
 }
 
-/** Default-less on purpose: `useContext` throws `ContextNotFoundError` outside
- *  a provider, so a missing provider is a loud bug rather than a silent
- *  `undefined` every consumer would have to guard. */
 const SearchContext = createContext<SearchStore>();
 
 const useSearch = (): SearchStore => useContext(SearchContext);
@@ -190,61 +129,32 @@ const useSearch = (): SearchStore => useContext(SearchContext);
 const SearchProvider = (props: { readonly pane: number; readonly children: Element }) => {
   const workspace = useWorkspace();
 
-  /** This pane's slice of the workspace. Every read below goes through it, so
-   *  a pane never sees another pane's query. */
   const params = (): SearchParams =>
     Option.getOrElse(
       Option.flatMap(workspace.panes(), (panes) => Arr.get(panes, props.pane)),
       () => EMPTY_PARAMS,
     );
 
-  /** Replace this pane against the workspace as the URL holds it now, leaving
-   *  the others exactly as they are. */
   const put = (update: (current: SearchParams) => SearchParams): void => {
     workspace.update((panes) =>
       Arr.map(panes, (existing, index) => (index === props.pane ? update(existing) : existing)),
     );
   };
 
-  /** What the box shows: the committed query, until the reader types — then
-   *  what they typed, until this pane's query changes.
-   *
-   *  `None` means "nothing typed since this pane's query last changed", which
-   *  is what makes the box follow the back button. It is keyed on this pane's
-   *  own query rather than on every navigation: another pane's filter is a
-   *  navigation too, and it must not discard this pane's unsent text. */
   const [typed, setTyped] = createSignal(Option.none<string>());
   const committed = createMemo(() => params().q);
-  // Solid 2's `createEffect` takes *two* functions: `compute` is the tracked
-  // read, `effect` the untracked reaction to its result.
   createEffect(committed, () => {
     setTyped(Option.none());
   });
 
   const draft = (): string => Option.getOrElse(typed(), () => params().q);
 
-  /** This pane's request, as a string.
-   *
-   *  The workspace re-reads the URL on every navigation and hands back
-   *  fresh objects, so a memo that depends on `params()` would re-run whenever
-   *  *any* pane changes: adding a fourth pane re-fetched the other three.
-   *  Comparing the serialised request instead makes the dependency the request
-   *  itself. `toWorkspaceString` is exhaustive over `SearchParams`, so an axis
-   *  added later cannot silently drop out of the key. */
   const requestKey = createMemo((): string => {
     const current = params();
     if (current.q.trim() === '') return '';
     return toWorkspaceString([current]);
   });
 
-  /** Whether the first commit has happened.
-   *
-   *  `render()` builds the tree and then *schedules* the first DOM insertion,
-   *  which produces nothing while a memo it depends on is still unsettled — so
-   *  a first load with a query in the URL painted no masthead and no search
-   *  box until the query came back. Seeding `false` gives the first pass a
-   *  *settled* value to commit, so the shell paints; the effect then flips it
-   *  and the query starts. */
   const [mounted, setMounted] = createSignal(false);
   createEffect(
     () => undefined,
@@ -253,17 +163,8 @@ const SearchProvider = (props: { readonly pane: number; readonly children: Eleme
     },
   );
 
-  /** Bumped by a retry: a new input, so the retry reads as pending. */
   const [attempt, setAttempt] = createSignal(0);
 
-  /** The request. An async memo is Solid 2's resource: it re-runs when this
-   *  pane's own request changes — by a submit, a filter toggle or the back
-   *  button — and a superseded or disposed run aborts its read, which leaves
-   *  the batch it was in (see `./batch.ts`). The read joins its batch here,
-   *  as the memo runs, and waits there for the quiet period (`./search.ts`).
-   *
-   *  An answer this page has already seen is drawn at once, without the
-   *  quiet period; that is what lets Back and Forward land on their rows. */
   const outcome = createMemo((): Outcome | Promise<Outcome> => {
     const ready = mounted();
     const key = requestKey();
@@ -290,8 +191,6 @@ const SearchProvider = (props: { readonly pane: number; readonly children: Eleme
     },
     params,
     settled: () => latest(outcome),
-    // `!mounted()` covers the frame before the query is released; `isPending`
-    // covers it once in flight. Either way the reader is waiting.
     pending: () => (!mounted() && requestKey() !== '') || isPending(() => outcome()),
     search: (value) => {
       put((current) => ({ ...current, q: value.trim() }));
@@ -300,15 +199,9 @@ const SearchProvider = (props: { readonly pane: number; readonly children: Eleme
     retry: () => setAttempt((count) => count + 1),
   };
 
-  // Solid 2: the context object *is* its own provider component.
   return <SearchContext value={store}>{props.children}</SearchContext>;
 };
 
-// ---------------------------------------------------------------------------
-// View
-// ---------------------------------------------------------------------------
-
-/** The page: the workspace on `/`, the not-found view anywhere else. */
 export const App = () => {
   useScrollMemory();
   const workspace = useWorkspace();
@@ -319,8 +212,6 @@ export const App = () => {
   );
 };
 
-/** The server answers every unknown path with the app, so the app is what
- *  says a path is nothing. */
 const NotFound = () => {
   const href = useAtomValue(() => UrlAtom.href);
   const path = () => parseHref(href()).pathname;
@@ -338,42 +229,22 @@ const NotFound = () => {
   );
 };
 
-/**
- * The workspace: one or more independent searches, side by side.
- *
- * Each pane is a whole `SearchProvider`, so a pane has its own query, its own
- * filters and its own request, and nothing is shared but the URL they all
- * live in.
- *
- * `keyed={false}`, Solid 2's spelling of Solid 1's `<Index>`: the row is keyed
- * by *position* rather than by item identity. The workspace reads the URL
- * afresh on every navigation, so every pane object is new on every filter
- * click; keyed by identity, all of them re-mounted and threw away each pane's
- * local UI state. A pane *is* its position.
- */
 const Workspace = () => {
   const workspace = useWorkspace();
   const panes = (): readonly SearchParams[] =>
     Option.getOrElse(workspace.panes(), () => [EMPTY_PARAMS]);
 
-  /** The pane whose search box takes the caret when it mounts: the one the
-   *  reader just added, and no other — not the panes of a link, and not the
-   *  panes Back restores. */
   let claim: number | undefined;
 
   const addPane = (): void => {
     workspace.update((current) => {
       if (current.length >= MAX_PANES) return current;
-      // The new pane inherits the previous pane's filters but none of its
-      // query: a second pane is almost always the same corpus asked a
-      // different question.
       claim = current.length;
       return Arr.append(current, { ...Arr.lastNonEmpty(current), q: '' });
     });
   };
 
   const closePane = (index: number): void => {
-    // The last pane stays: a workspace is never empty.
     workspace.update((current) =>
       Arr.match(Arr.remove(current, index), {
         onEmpty: () => current,
@@ -382,8 +253,6 @@ const Workspace = () => {
     );
   };
 
-  /** A new pane's box takes the caret and comes into view — once it is in
-   *  the document, which is the frame after it is made. */
   const takeCaret =
     (pane: number) =>
     (input: HTMLInputElement): void => {
@@ -461,9 +330,6 @@ const SearchBar = (props: { readonly ref: (input: HTMLInputElement) => void }) =
   );
 };
 
-/** One toggle. A `button` with `aria-pressed` rather than a checkbox: these are
- *  filters that take effect immediately, not a form to submit, and the pressed
- *  state is what a screen reader should hear. */
 const Chip = (props: {
   readonly label: string;
   readonly active: boolean;
@@ -479,13 +345,6 @@ const Chip = (props: {
   </button>
 );
 
-/**
- * A chip over one value of a signed axis: off → include → exclude → off.
- *
- * `aria-pressed` cannot say "excluded" — it is a two-state attribute — so the
- * sign is carried in the accessible name instead (`"Devotionals, excluded"`),
- * and `aria-pressed` reports whether the chip is doing anything at all.
- */
 const SignedChip = (props: {
   readonly label: string;
   readonly sign: Sign;
@@ -521,13 +380,6 @@ const FilterRow = (props: { readonly label: string; readonly children: Element }
   </div>
 );
 
-/**
- * The filter panel.
- *
- * Collapsed by default behind a summary, because on a first visit the filters
- * are noise. Once something is set, the summary says what, so a narrowed
- * search never looks like an empty one.
- */
 const Filters = () => {
   const search = useSearch();
   const [open, setOpen] = createSignal(false);
@@ -623,19 +475,6 @@ const Filters = () => {
   );
 };
 
-/**
- * The results region.
- *
- * `settled()` is the whole loading strategy: during a request it yields the
- * previous outcome rather than suspending, so a re-search keeps its rows and
- * only dims. On the *first* search there are no previous rows, and `pending()`
- * picks that case up to render skeletons.
- *
- * The `<Loading>` boundary is a backstop, not the loading strategy: `latest`
- * and `isPending` deliberately do not throw, so on the normal path it catches
- * nothing. It is here for any pending read not routed through them, so that
- * such a read suspends this region rather than the tree.
- */
 const Results = () => {
   const search = useSearch();
   const rows = (): readonly Hit[] => hitsOf(search.settled());
@@ -656,8 +495,7 @@ const Results = () => {
                 class={search.pending() ? 'results stale' : 'results'}
                 aria-busy={search.pending() ? 'true' : 'false'}
               >
-                {/* Keyed by position: a new answer updates the rows in place
-                    rather than rebuilding the list. */}
+                {}
                 <For each={rows()} keyed={false}>
                   {(hit) => <HitRow hit={hit()} />}
                 </For>
@@ -685,10 +523,6 @@ const pluralResults = (count: number): string =>
 const Status = () => {
   const search = useSearch();
 
-  /** What the status line says, as a guard chain rather than nested
-   *  ternaries. The non-selective case must precede the count: it *has* no
-   *  count, and "0 results" for a word in half the corpus states the opposite
-   *  of what happened. */
   const label = (): string => {
     const query = search.params().q;
     if (query === '') return 'awaiting query';
@@ -711,9 +545,6 @@ const Status = () => {
   );
 };
 
-/** Nothing to show: no query yet, a query that matched nothing, or a query too
- *  common to rank. Offers the examples in every case, since all three want the
- *  same next step — a different query. */
 const Empty = () => {
   const search = useSearch();
   const narrowed = (): boolean => search.params().q !== '' && hasFilters(search.params());
@@ -724,10 +555,7 @@ const Empty = () => {
 
   return (
     <div class="empty">
-      {/* Three states, not two. A query the corpus does not contain and a
-          query the corpus contains half a million times both arrive here with
-          no hits, and telling a reader who searched "the" that there are "no
-          matches" would be a plain falsehood. */}
+      {}
       <Show when={!nonSelective()} fallback={<div>too common to rank</div>}>
         <div>{search.params().q === '' ? 'no query yet' : 'no matches'}</div>
       </Show>
@@ -737,9 +565,7 @@ const Empty = () => {
           surface anything in particular. Add a word or two to narrow it.
         </div>
       </Show>
-      {/* A filtered empty result is the one case where the fix is not a
-          different query: say so, and offer the undo rather than the
-          examples. */}
+      {}
       <Show
         when={narrowed()}
         fallback={
@@ -767,9 +593,6 @@ const Empty = () => {
   );
 };
 
-/** First search only: rows in the shape of the answer, so the page does not
- *  jump when results land. Line widths are uneven so it reads as prose rather
- *  than as a progress bar. */
 const SKELETON_ROWS: readonly (readonly string[])[] = [
   ['92%', '88%', '64%'],
   ['85%', '94%', '71%'],
@@ -795,23 +618,12 @@ const Skeleton = () => (
   </ul>
 );
 
-/**
- * One hit, with its context disclosed on demand.
- *
- * The row shows {@link CONTEXT_SHOWN} neighbour on each side and a "Show more"
- * control for the rest. The row is a position in the list, so it outlives
- * the hit it shows; the expansion is held against the hit itself, so a fresh
- * answer starts collapsed while a neighbouring pane's search — which leaves
- * this pane's hits as they are — leaves the expansion alone.
- */
 const HitRow = (props: { readonly hit: Hit }) => {
   const [expandedHit, setExpandedHit] = createSignal<Hit | undefined>(undefined);
   const expanded = (): boolean => expandedHit() === props.hit;
   const expand = (): void => {
     setExpandedHit(props.hit);
   };
-  // `before` is in reading order and the nearest neighbour is the *last* entry,
-  // so it is reversed to walk outward, trimmed, then reversed back for display.
   const before = () => {
     const outward = [...props.hit.before].reverse();
     const side = contextSide(outward, expanded(), CONTEXT_SHOWN);
@@ -823,13 +635,11 @@ const HitRow = (props: { readonly hit: Hit }) => {
       <div class="meta">
         <Reference class="refcode" refcode={props.hit.refcode} url={props.hit.url} />
         <span class="book">{props.hit.bookTitle}</span>
-        {/* Says what the row *is*, next to where it came from. A chapter title
-            and a sentence are otherwise the same shape — a refcode and a line
-            of text. */}
+        {}
         <Show when={props.hit.isHeading}>
           <span class="kind">Chapter</span>
         </Show>
-        {/* The server orders back matter last; this says why it is there. */}
+        {}
         <Show when={props.hit.backMatter}>
           <span class="kind">Back matter</span>
         </Show>
@@ -841,9 +651,7 @@ const HitRow = (props: { readonly hit: Hit }) => {
           </button>
         </Show>
         <For each={before().shown}>{(para) => <Context para={para} />}</For>
-        {/* The match carries the accent bar; the neighbours carry nothing. The
-            decoration marks *what you searched for*, so the eye lands on it
-            before it reads anything around it. */}
+        {}
         <div class={props.hit.isHeading ? 'match heading' : 'match'}>
           <p class="text">{props.hit.text}</p>
         </div>
@@ -858,10 +666,6 @@ const HitRow = (props: { readonly hit: Hit }) => {
   );
 };
 
-/** A reference, linked when the corpus has a link for it. Rows the corpus
- *  stores without a citation (signatures, datelines, "this chapter is based
- *  on..." notes) show nothing here, so the book title moves up and the row
- *  does not look like a broken link. */
 const Reference = (props: {
   readonly class: string;
   readonly refcode: string | null;
@@ -880,13 +684,7 @@ const Reference = (props: {
   </Show>
 );
 
-/** A neighbouring paragraph: smaller and dimmer than the match, but addressable
- *  in its own right — its reference links into egwwritings exactly as the
- *  match's does. The reference trails the text rather than leading it, so the
- *  three paragraphs of a hit all begin on prose. */
 const Context = (props: { readonly para: ContextParagraph }) => (
-  // A neighbouring heading is the chapter the hit opens under, so it reads as a
-  // label rather than as another sentence of prose.
   <p class={props.para.isHeading ? 'context heading' : 'context'}>
     {props.para.text}
     <Reference class="cref" refcode={props.para.refcode} url={props.para.url} />

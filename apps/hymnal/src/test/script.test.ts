@@ -4,20 +4,12 @@ import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-/**
- * Every file `test:slow` runs spawns a `bun` script only through `runScript`
- * (`./script.ts`), which ends it at a limit. A bare synchronous spawn blocks
- * the event loop, so no case's timeout ends a script that hangs, and the run
- * waits on it for good. An asynchronous `Bun.spawn` stays under its case's
- * timeout, so it is not read here.
- */
 const app = join(import.meta.dir, '../..');
 const scripts: Record<string, string> = JSON.parse(
   readFileSync(join(app, 'package.json'), 'utf8'),
 ).scripts;
 const listed =
   `${scripts['test:slow']} ${scripts['test:offline']}`.match(/\.\/[\w./-]+\.tsx?\b/g) ?? [];
-// test:browser runs a directory: every file in it.
 const browser = [...new Bun.Glob('test/browser/**/*.{ts,tsx}').scanSync({ cwd: app })].map(
   (file) => `./${file}`,
 );

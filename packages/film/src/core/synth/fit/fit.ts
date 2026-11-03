@@ -1,37 +1,3 @@
-// A recording's earshot fit (model.ts) written as one of our code sounds, so
-// the library plays it from its seeds as it plays any code sound: the fit's
-// code trial (`sfx fit`). Pure.
-//
-// Each kind of model is first read as the same parts: strikes of struck modes
-// (a modal strike, its contact, a sines transient), partial tracks (a sines
-// partial, a gliding sine), ridges (a bed's tonal lines) and bands of noise,
-// each a power envelope in dB. The post EQ is folded into the levels (a
-// mode's at its frequency, a band's at its centre).
-//
-// Then the parts are written within a size budget:
-//
-// - small: each strike's overlapping modes merged (their phasors summed, so
-//   two close modes of opposite phase become the quiet one they sum to), the
-//   loudest modes and tracks by energy kept, neighbouring bands merged about
-//   an octave to one (a noise colour each, by its slope), each envelope cut
-//   to a few points and moved to keep its energy;
-// - full: every mode, track, band and breakpoint.
-//
-// Either way, modes are `Partials` that keep their phases (a fit leans on
-// close modes cancelling), each node as long as its modes ring above 80 dB
-// under the loudest part; each band is noise through biquads levelled by
-// their noise bandwidth to the power earshot wrote; and a sound whose source
-// has little rumble is high-passed under 30 Hz after its envelopes (a fast
-// attack spreads power toward 0 Hz). A bed loops: its whole level is tilted
-// so its last seconds meet its first, as `sfx check` hears the seam, the
-// tilt read off the parts' power. When a size's graph would take more work
-// than a render may, its bands are merged wider and its modes kept fewer
-// until it fits.
-//
-// Left out, and named in the summary: earshot's sub wave (a stored waveform
-// under 20 Hz), its stereo side, the attack clamp of its post stage, and a
-// bed's texture (grains, AM).
-
 import { Array as Arr, Predicate, Result } from 'effect';
 import { CodeTooLong } from '../../errors.ts';
 import type { SoundUse } from '../../sfx.ts';
@@ -41,52 +7,37 @@ import type { CodeSound, Node } from '../graph/nodes.ts';
 import { MAX_CODE_SECS, MAX_CODE_WORK, SYNTH_RATE } from '../graph/units.ts';
 import type { EarshotModel, Modal, Point, Sines, Spectral } from './model.ts';
 
-/** How much of a fit is written: a graph a person could read, or every part. */
 export type FitSize = 'small' | 'full';
 
 interface FitOptions {
   readonly size: FitSize;
   readonly use: SoundUse;
-  /** The source's share of its power below 30 Hz (`profileOf`'s `rumble`). */
   readonly rumble: number;
 }
 
-/** What a fit wrote, and what it left out. */
 export interface Fitted {
   readonly sound: CodeSound;
   readonly kind: EarshotModel['kind'];
   readonly modes: number;
   readonly tracks: number;
   readonly bands: number;
-  /** The breakpoints of every band's envelope. */
   readonly points: number;
-  /** The widest a group of merged bands may span, its top over its bottom; none when unmerged. */
   readonly merged: number | undefined;
   readonly highpass: boolean;
-  /** The bound's work, in seconds of frames (`MAX_CODE_WORK` at most). */
   readonly work: number;
   readonly left: ReadonlyArray<string>;
 }
 
 const NYQ = SYNTH_RATE / 2;
-/** The ratio a `Partials` node may span over its lowest mode: a ratio is at most 100. */
 const RATIO_SPAN = 99;
-/** An exponential envelope's floor (track.ts): −80 dB. */
 const FLOOR = 1e-4;
-/** A band or mode this far under the loudest is left out. */
 const DROP_DB = 80;
-/** Below this the source's share is rumble (compare.ts `RUMBLE_HZ`). */
 const RUMBLE_HZ = 30;
-/** A source whose share under 30 Hz is at most this (−20 dB) has little rumble: its fit is high-passed. */
 const QUIET_RUMBLE = 0.01;
-/** A bed's loop crossfade, its last seconds into its head. */
 const BED_CROSSFADE = 0.5;
-/** The seconds either side of a bed's join whose levels must meet (seam.ts reads 3 s). */
 const SEAM_SECS = 3;
-/** A merged band's envelope is held this far under its loudest: a long line across a deep valley would fill it. */
 const VALLEY_DB = 50;
 
-/** The size budgets: the most modes and tracks kept, and how bands merge. */
 const BUDGETS: Record<FitSize, Budget> = {
   small: { modes: 16, tracks: 8, merge: 2.2, tol: 2 },
   full: { modes: Infinity, tracks: Infinity, merge: undefined, tol: 0 },
@@ -95,16 +46,10 @@ const BUDGETS: Record<FitSize, Budget> = {
 interface Budget {
   readonly modes: number;
   readonly tracks: number;
-  /** The widest a merged group of bands may span; none: every band kept as it is. */
   readonly merge: number | undefined;
-  /** A merged band's envelope tolerance, dB. */
   readonly tol: number;
 }
 
-// ---------------------------------------------------------------------------
-// The parts
-
-/** A damped sine from its strike: a·exp(−t/tau)·cos(2πf·t + ph), `a` above 0. */
 interface Mode {
   readonly f: number;
   readonly tau: number;
@@ -112,14 +57,12 @@ interface Mode {
   readonly ph: number;
 }
 
-/** Struck modes from `t`, faded in over `ramp` seconds. */
 interface Strike {
   readonly t: number;
   readonly ramp: number;
   readonly modes: ReadonlyArray<Mode>;
 }
 
-/** A partial track: its rise, hold and release, its frequency and level (dB) through points. */
 interface Track {
   readonly t0: number;
   readonly rise: number;
@@ -130,7 +73,6 @@ interface Track {
   readonly amp: ReadonlyArray<Point>;
 }
 
-/** A band of noise from `lo` to `hi` Hz (0: from DC; the Nyquist: to the top), its power in dB through points. */
 interface Band {
   readonly lo: number;
   readonly hi: number;
@@ -140,7 +82,6 @@ interface Band {
 
 type Color = 'white' | 'pink' | 'brown';
 
-/** A tonal line of a bed: its times, frequencies and levels in dB. */
 interface Ridge {
   readonly t: ReadonlyArray<number>;
   readonly f: ReadonlyArray<number>;
@@ -153,21 +94,15 @@ interface Parts {
   readonly tracks: ReadonlyArray<Track>;
   readonly ridges: ReadonlyArray<Ridge>;
   readonly bands: ReadonlyArray<Band>;
-  /** A modal fit's fade over its last seconds. */
   readonly fadeOut: number;
-  /** How many envelope points a merged band keeps: a few per strike. */
   readonly most: number;
   readonly left: ReadonlyArray<string>;
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
 
 const round = (x: number, d: number) => Math.round(x * 10 ** d) / 10 ** d;
 const db20 = (a: number) => 20 * Math.log10(Math.max(a, 1e-30));
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 
-/** Linear interpolation of points at `t`, held past the ends. */
 const interp = (pts: ReadonlyArray<Point>, t: number): number => {
   const first = pts[0];
   if (first === undefined) return 0;
@@ -182,7 +117,6 @@ const interp = (pts: ReadonlyArray<Point>, t: number): number => {
   return (pts[pts.length - 1] ?? first)[1];
 };
 
-/** The energy of a dB envelope (linear in dB between its points, held past them) from `from` to `to`: ∫ 10^(v/10) dt. */
 const energyOf = (pts: ReadonlyArray<Point>, from: number, to: number): number => {
   const all: Array<Point> = [
     [from, interp(pts, from)],
@@ -201,7 +135,6 @@ const energyOf = (pts: ReadonlyArray<Point>, from: number, to: number): number =
   return e;
 };
 
-/** Ramer–Douglas–Peucker at `tol`: the indices kept, the first and last always. */
 const rdp = (pts: ReadonlyArray<Point>, tol: number): ReadonlyArray<number> => {
   const n = pts.length;
   if (n <= 2) return pts.map((_, i) => i);
@@ -233,10 +166,6 @@ const rdp = (pts: ReadonlyArray<Point>, tol: number): ReadonlyArray<number> => {
   return pts.flatMap((_, i) => (keep[i] === 1 ? [i] : []));
 };
 
-/**
- * `pts` cut to at most `most` points (the tolerance raised until they fit)
- * and moved in dB so its energy over `from`..`to` is the original's.
- */
 const simplify = (
   pts: ReadonlyArray<Point>,
   tol: number,
@@ -253,11 +182,9 @@ const simplify = (
   return kept.map(([t, v]): Point => [t, v + by]);
 };
 
-/** How far `to` must move, in dB, to hold the energy `from` holds: none over no time. */
 const dbApart = (from: number, to: number): number =>
   from > 0 && to > 0 ? 10 * Math.log10(from / to) : 0;
 
-/** earshot's post EQ at `hz`: its gains at the third octaves 1000·2^(k/3), k from −15, flat past the ends. */
 const eqOf = (gains: ReadonlyArray<number>) => {
   const at: ReadonlyArray<Point> = gains.map((g, i): Point => [Math.log2(1000) + (i - 15) / 3, g]);
   return (hz: number): number => (at.length === 0 ? 0 : interp(at, Math.log2(Math.max(hz, 1))));
@@ -265,7 +192,6 @@ const eqOf = (gains: ReadonlyArray<number>) => {
 
 const eqIn = (model: EarshotModel) => eqOf(model.post?.eq_db ?? []);
 
-/** A damped sine as earshot writes it, its amplitude made positive (half a turn of phase) and the EQ folded in. */
 const modeOf =
   (eq: (hz: number) => number) =>
   ([f, tau, a, ph]: readonly [number, number, number, number]): Mode => ({
@@ -275,12 +201,8 @@ const modeOf =
     ph: a < 0 ? ph + Math.PI : ph,
   });
 
-// ---------------------------------------------------------------------------
-// Reading each kind as parts
-
 const stereoOf = (m: { readonly channels?: number }) => (m.channels === 2 ? 'its stereo side' : '');
 
-/** What a model holds that its code sound leaves out, by name. */
 const leftOut = (model: EarshotModel, named: ReadonlyArray<string>): ReadonlyArray<string> =>
   [...named, model.post?.pre == null ? '' : 'the attack clamp of its post stage'].filter(
     (s) => s !== '',
@@ -334,7 +256,6 @@ const sinesParts = (m: Sines): Parts => {
     ramp: 0,
     modes: tr.atoms.map(modeOf(eq)),
   }));
-  // Third-octave bands: each from the geometric middle below its centre to the one above.
   const { bands: centres, times } = m.residual;
   const bands = m.residual.db.map((row, b): Band => {
     const c = centres[b] ?? 1000;
@@ -357,12 +278,10 @@ const sinesParts = (m: Sines): Parts => {
   };
 };
 
-/** earshot's spectral axis: log(1 + f/80), on which its bands are evenly spaced. */
 const WARP = 80;
 const warp = (f: number) => Math.log1p(f / WARP);
 const unwarp = (e: number) => Math.expm1(e) * WARP;
 
-/** The raised-cosine weight of band `b` of the centres `ec` (on the warped axis) at warped `e`. */
 const weightOf = (e: number, ec: ReadonlyArray<number>, b: number): number => {
   const at = (i: number) => ec[i] ?? 0;
   const lo = b === 0 ? at(0) - (at(1) - at(0)) : at(b - 1);
@@ -373,7 +292,6 @@ const weightOf = (e: number, ec: ReadonlyArray<number>, b: number): number => {
   return 0;
 };
 
-/** The rate earshot renders at: its density is per Hz of its half rate. */
 const EARSHOT_HALF = 24000;
 
 const spectralParts = (m: Spectral): Parts => {
@@ -382,7 +300,6 @@ const spectralParts = (m: Spectral): Parts => {
   const e0 = warp(m.bands.f_lo);
   const e1 = warp(m.bands.f_hi);
   const ec = Array.from({ length: n }, (_, i) => e0 + ((e1 - e0) * i) / (n - 1));
-  // Each band's ∫w² df over earshot's half rate: its density in dB times this is its power.
   const steps = 24000;
   const sq = ec.map((_, b) => {
     let s = 0;
@@ -430,14 +347,6 @@ const partsOf = (model: EarshotModel): Parts => {
   }
 };
 
-// ---------------------------------------------------------------------------
-// Reducing them to a budget
-
-/**
- * Modes merged where they overlap (closer than their bandwidth, 1/(π·tau), or
- * 0.5 %): their phasors summed at the strike, frequency and decay weighted by
- * energy.
- */
 const mergeModes = (modes: ReadonlyArray<Mode>): ReadonlyArray<Mode> => {
   const sorted = [...modes].sort((x, y) => x.f - y.f);
   const out: Array<Mode> = [];
@@ -473,27 +382,18 @@ const mergeModes = (modes: ReadonlyArray<Mode>): ReadonlyArray<Mode> => {
 
 const energy = (m: Mode) => m.a ** 2 * m.tau;
 
-/** The loudness meter's momentary block, in seconds: how long the ear sums a sound into one loudness. */
 const HEARD_SECS = 0.4;
 
-/** How loud a mode is heard: its energy within one momentary block from its strike. */
 const heard = (m: Mode) => energy(m) * (1 - Math.exp((-2 * HEARD_SECS) / m.tau));
 
-/** A mode at its place in the sound: from its strike's time. */
 interface Placed {
   readonly t: number;
   readonly mode: Mode;
 }
 
-/**
- * The energy of two damped sines struck together, over the `secs` after their
- * strike (∫₀^secs of their product): a mode with itself rings a²·tau/4 in
- * all, and two near in pitch add or cancel by their phases, as they sound.
- */
 const crossEnergy = (x: Mode, y: Mode, secs: number): number => {
   const alpha = 1 / x.tau + 1 / y.tau;
   const fade = Math.exp(-alpha * secs);
-  // Re(e^{i·ph}·(1 − e^{−(alpha − i·w)·secs}) / (alpha − i·w)).
   const part = (w: number, ph: number) => {
     const re = Math.cos(ph) - fade * Math.cos(ph + w * secs);
     const im = Math.sin(ph) - fade * Math.sin(ph + w * secs);
@@ -505,17 +405,12 @@ const crossEnergy = (x: Mode, y: Mode, secs: number): number => {
   );
 };
 
-/** A mode struck at `t`, as it stands at `at` (later): decayed, its phase turned on. */
 const carried = ({ t, mode }: Placed, at: number): Mode => ({
   ...mode,
   a: mode.a * Math.exp(-(at - t) / mode.tau),
   ph: mode.ph + 2 * Math.PI * mode.f * (at - t),
 });
 
-/**
- * The energy struck modes sound until `end`, every pair's sum and
- * cancellation counted, the earlier carried to the later's strike.
- */
 const placedEnergy = (modes: ReadonlyArray<Placed>, end: number): number =>
   Math.max(
     0,
@@ -530,7 +425,6 @@ const placedEnergy = (modes: ReadonlyArray<Placed>, end: number): number =>
     ),
   );
 
-/** Energy a reduction left out, heard as noise in band `band` from `t`, falling with `tau`, until the end. */
 interface Residue {
   readonly band: number;
   readonly t: number;
@@ -538,28 +432,13 @@ interface Residue {
   readonly tau: number;
 }
 
-/** A strike's modes reduced: those kept, and the energy left out. */
 interface Reduced {
   readonly strikes: ReadonlyArray<Strike>;
   readonly residue: ReadonlyArray<Residue>;
 }
 
-/** A mode's third of an octave: as finely as the ear weighs a balance. */
 const thirdOf = (mode: Mode) => Math.round(3 * Math.log2(Math.max(mode.f, 1) / 1000));
 
-/**
- * Each strike's modes merged, then the `most` heard loudest (`heard`) kept
- * across every strike, and the energy of each third of an octave kept as the modes
- * sound it, sums and cancellations counted:
- *
- * - where a strike's kept modes sound more than all its modes did (a loud
- *   mode kept, the quieter ones that cancelled it left out), they are scaled
- *   down to it, that strike alone, so its attack stands where it stood;
- * - where the kept modes of every strike sound less than all the modes of
- *   every strike did (a strike's ringing cut short by a later one counted),
- *   the rest is a residue the band carries as noise, from each strike in the
- *   share of the energy it lost.
- */
 const reduceStrikes = (
   strikes: ReadonlyArray<Strike>,
   most: number,
@@ -586,12 +465,6 @@ const reduceStrikes = (
 const placed = (ss: ReadonlyArray<Strike>): ReadonlyArray<Placed> =>
   ss.flatMap((s) => s.modes.map((mode) => ({ t: s.t, mode })));
 
-/**
- * The scale of each kept mode whose strike's kept modes sound more in its
- * third than all that strike's modes did there: down to it. A strike's modes
- * and its contact's are struck at one time, so they sound, and cancel,
- * together.
- */
 const cancelledScales = (
   strikes: ReadonlyArray<Strike>,
   merged: ReadonlyArray<Strike>,
@@ -611,11 +484,6 @@ const cancelledScales = (
   return scale;
 };
 
-/**
- * What every strike's modes sounded in each third, less what the kept ones
- * sound: a residue from each strike that lost modes there, in the share of the
- * energy it lost, in the band its lost modes sounded in.
- */
 const residueOf = (
   strikes: ReadonlyArray<Strike>,
   reduced: ReadonlyArray<Strike>,
@@ -644,15 +512,8 @@ const residueOf = (
   });
 };
 
-/** Where a residue's decay is read, in its decays from its strike: its power falls 8.7 dB a decay. */
 const DECAYS = [0, 0.5, 1, 2, 3.5, 7];
 
-/**
- * The energy a reduction left out, added to its band's power from its strike
- * until `secs` (falling with its decay, its energy over that span the
- * residue's), so a reduced fit keeps its loudness and balance: what rang as a
- * tone sounds as noise.
- */
 const foldResidue = (
   bands: ReadonlyArray<Band>,
   residue: ReadonlyArray<Residue>,
@@ -683,7 +544,6 @@ const foldResidue = (
 
 const trackEnergy = (t: Track) => energyOf(t.amp, t.t0, t.end);
 
-/** The `most` loudest tracks, each cut to a few points: its level to 8 within 3 dB, its pitch to 6 within 20 cents. */
 const reduceTracks = (tracks: ReadonlyArray<Track>, most: number): ReadonlyArray<Track> => {
   if (!Number.isFinite(most)) return tracks;
   return [...tracks]
@@ -702,20 +562,12 @@ const reduceTracks = (tracks: ReadonlyArray<Track>, most: number): ReadonlyArray
     }));
 };
 
-/** Each band's power per octave over the sound, in dB: its slope across a group picks the group's colour. */
 const perOctave = (band: Band, secs: number) =>
   10 *
   Math.log10(
     energyOf(band.pts, 0, secs) / Math.log2(Math.min(band.hi, 20000) / Math.max(band.lo, 20)),
   );
 
-/**
- * Neighbouring bands merged to groups at most `width` wide (a band down to DC
- * stays alone, so its rumble stays its own): their power summed at every time
- * any holds, held `VALLEY_DB` under the loudest, cut to `most` points at `tol`
- * dB with the energy kept, and coloured by the group's slope (each octave's
- * power): white rises 3 dB an octave, pink holds, brown falls 3.
- */
 const mergeBands = (
   bands: ReadonlyArray<Band>,
   secs: number,
@@ -766,12 +618,9 @@ const mergeBands = (
   });
 };
 
-/** The step of the power timeline a bed's seam is levelled on, in seconds. */
 const SEAM_STEP = 0.02;
-/** Modes closer than this (Hz) beat slower than the timeline averages: their sum is read with its phases. */
 const COHERENT_HZ = 2;
 
-/** A placed mode's amplitude and phase (radians) at `t`, or none before its strike. */
 const phasorAt = ({ t: from, mode }: Placed, t: number) =>
   t < from
     ? undefined
@@ -780,12 +629,6 @@ const phasorAt = ({ t: from, mode }: Placed, t: number) =>
         ph: 2 * Math.PI * mode.f * (t - from) + mode.ph,
       };
 
-/**
- * The parts' power at `t`: each band's power, each track's and ridge's
- * level, and the modes' a²/2, a pair close enough to beat slowly (the same
- * mode struck again, most often) summed with its phases, so a strike that
- * damps the one before it is heard doing so.
- */
 const powerOf = (parts: Parts) => {
   const placed = parts.strikes
     .flatMap((s) => s.modes.map((mode): Placed => ({ t: s.t, mode })))
@@ -821,12 +664,6 @@ const powerOf = (parts: Parts) => {
   };
 };
 
-/**
- * The tilt, in dB a second, that levels a bed's seam: its whole sound ramped
- * by it, the loop's last `SEAM_SECS` meet its first (the head as the loop
- * plays it, the tail crossfaded in under it), the jump `sfx check` hears at
- * the join. Read off the parts' power, never a render.
- */
 const seamTilt = (parts: Parts): number => {
   const end = parts.secs - BED_CROSSFADE;
   const window = Math.min(SEAM_SECS, end / 2);
@@ -846,7 +683,6 @@ const seamTilt = (parts: Parts): number => {
     for (const [t, p] of tail) e += p * g(t);
     return 10 * Math.log10(e / h);
   };
-  // The gap closes about (end − window) dB for each dB a second: a few secant steps settle it.
   let k0 = 0;
   let f0 = apart(k0);
   let k1 = -f0 / Math.max(1, end - window);
@@ -859,16 +695,12 @@ const seamTilt = (parts: Parts): number => {
   return k0;
 };
 
-// ---------------------------------------------------------------------------
-// Writing the parts as nodes
-
 interface Layered {
   readonly node: Node;
   readonly at?: number;
   readonly db?: number;
 }
 
-/** A band's filters: two lowpasses from DC, two highpasses to the top, two of each for a wide band, two bandpasses for a narrow one. */
 const stagesOf = (band: Band) => {
   const butter = Math.SQRT1_2;
   if (band.lo <= 0)
@@ -888,7 +720,6 @@ const stagesOf = (band: Band) => {
       { type: 'lowpass', hz: band.hi, q: butter },
       { type: 'lowpass', hz: band.hi, q: butter },
     ] as const;
-  // Two equal bandpasses at the centre: the pair's −3 dB width is 0.644 of one's.
   const centre = Math.sqrt(band.lo * band.hi);
   const q = (0.644 * centre) / (band.hi - band.lo);
   return [
@@ -897,10 +728,8 @@ const stagesOf = (band: Band) => {
   ] as const;
 };
 
-/** Where the noise bandwidth is read: log-spaced from 0.5 Hz to the Nyquist. */
 const GRID = Array.from({ length: 4000 }, (_, i) => 0.5 * (NYQ / 0.5) ** (i / 3999));
 
-/** The power of `color`'s noise through `stages`: its density through their responses, over 0 to the Nyquist. */
 const powerThrough = (color: Color, stages: ReturnType<typeof stagesOf>): number => {
   const responses = stages.map((s) => filterResponse(s.type, s.hz, s.q, 0));
   let sum = 0;
@@ -936,21 +765,13 @@ const bandLayer = (band: Band, secs: number): Layered => {
   };
 };
 
-/** earshot's a·cos(2πft + ph) as our sine's start, in turns: a·sin at ph + π/2. */
 const turnsOf = (ph: number) => round(((((ph + Math.PI / 2) / (2 * Math.PI)) % 1) + 1) % 1, 5);
 
-/**
- * A strike's modes as `Partials` that keep their phases: grouped by how long
- * each rings (to `quiet`, an amplitude), so a node lasts as long as its
- * longest, and each node spanning at most `RATIO_SPAN` over its lowest. A
- * mode never louder than `quiet` is left out.
- */
 const strikeLayers = (strike: Strike, secs: number, quiet: number): ReadonlyArray<Layered> => {
   const most = Math.max(0.001, secs - strike.t);
   const rung = strike.modes
     .filter((m) => m.f > 0 && m.f < NYQ && m.a > quiet)
     .map((m) => ({ m, len: Math.min(most, m.tau * Math.log(m.a / quiet)) }));
-  // By the octave of their length, each octave's modes low to high.
   const octaves = new Map<number, Array<(typeof rung)[number]>>();
   for (const one of rung) {
     const key = Math.floor(Math.log2(Math.max(one.len, 0.001)));
@@ -991,7 +812,6 @@ const strikeLayers = (strike: Strike, secs: number, quiet: number): ReadonlyArra
   return out;
 };
 
-/** A track: a sine at its own phase through its pitch points, under its level points, risen, held and released. */
 const trackLayer = (track: Track): Layered => {
   const len = Math.max(0.001, track.end - track.t0);
   const shifted = (pts: ReadonlyArray<Point>): ReadonlyArray<Point> => [
@@ -1038,7 +858,6 @@ const trackLayer = (track: Track): Layered => {
   };
 };
 
-/** A ridge: a sine gliding through its points under its level, faded at its ends. */
 const ridgeLayer = (ridge: Ridge): Layered => {
   const t0 = ridge.t[0] ?? 0;
   const len = Math.max(0.01, (ridge.t[ridge.t.length - 1] ?? t0) - t0);
@@ -1081,7 +900,6 @@ const layerOf = (of: ReadonlyArray<Layered>, secs: number): Node => {
   return { _tag: 'Layer', secs: round(secs, 4), of: [first, ...rest] };
 };
 
-/** Two highpasses at 30 Hz, 24 dB an octave under it. */
 const highpassed = (node: Node): Node => {
   const once = (of: Node): Node => ({
     _tag: 'Filter',
@@ -1104,14 +922,12 @@ interface Written {
 const written = (parts: Parts, options: FitOptions): Written => {
   const { secs } = parts;
   const loudest = Math.max(...parts.bands.map((b) => Math.max(...b.pts.map(([, v]) => v))));
-  // The loudest amplitude anything reaches: a mode's, or a band's peak (√2 its RMS).
   const peak = Math.max(
     ...parts.strikes.flatMap((s) => s.modes.map((m) => m.a)),
     Math.sqrt(2 * 10 ** (loudest / 10)),
   );
   const quiet = peak * 10 ** (-DROP_DB / 20);
   const modes = parts.strikes.flatMap((s) => strikeLayers(s, secs, quiet));
-  // A source with little rumble had its lowest band's power over 30 Hz, where the high-pass keeps it.
   const quietLow = options.rumble <= QUIET_RUMBLE;
   const bands = parts.bands
     .filter((b) => Math.max(...b.pts.map(([, v]) => v)) > loudest - DROP_DB)
@@ -1132,7 +948,6 @@ const written = (parts: Parts, options: FitOptions): Written => {
     secs,
   );
   if (options.use === 'bed') {
-    // Its level ramped the same dB a second over the whole, its louder end at unity (an envelope only cuts).
     const tilt = seamTilt(parts);
     const gain = (t: number) => round(10 ** ((tilt * t - Math.max(0, tilt * secs)) / 20), 6);
     play = {
@@ -1160,20 +975,13 @@ const written = (parts: Parts, options: FitOptions): Written => {
   };
 };
 
-/** One step of the ladder a fit climbs until its work fits: how wide its bands merge, how many modes it keeps. */
 interface Rung {
   readonly merge: number | undefined;
   readonly modes: number;
 }
 
-/** The widths bands merge to, each twice the last; the last merges every band above DC to one. */
 const WIDTHS = [2.2, 4.4, 8.8, 17.6, 35.2, 1e9];
 
-/**
- * The budget's own rung, then its bands merged wider to an octave and a
- * half, then its modes halved to 16, then its bands merged wider still,
- * then its modes halved to none: the cheapest losses first.
- */
 const rungsOf = (budget: Budget): ReadonlyArray<Rung> => {
   const wider = (than: number | undefined) => WIDTHS.filter((w) => w > (than ?? 0));
   const first = wider(budget.merge).filter((w) => w <= 8.8);
@@ -1194,11 +1002,6 @@ const rungsOf = (budget: Budget): ReadonlyArray<Rung> => {
   ];
 };
 
-/**
- * `model` as a code sound within `options.size`'s budget, or `CodeTooLong`
- * when no merge of its bands brings its work within `MAX_CODE_WORK` (or it
- * is longer than a code sound may be).
- */
 export const fitSound = (
   name: string,
   model: EarshotModel,

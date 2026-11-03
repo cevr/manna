@@ -1,19 +1,3 @@
-// `film concept render <film> <member> [--kind turnaround|poses|heads ...]
-// [--view <kind>-<view> ...] [--figure rig|cutout] [--boil <px>] [--no-critique] [--fit-only]`: the member's cast
-// render (`cast-render.ts`), each kept view asked (every view of every kind
-// kept when none) drawn by its rig from the film's `rigs/cast.ts` (or, with
-// `--figure cutout`, or by default for a member the film has no rig of, each
-// view its `CUTOUT` table has, by its puppet, its boil
-// `--boil` px: the house 0.6 or 0, written in the record), laid
-// beside its kept view, held to its fit rows and critiqued once every row
-// passes; a line a view, its flagged rows, its fit and findings under it.
-// `--fit-only` prints each view's fit rows and writes nothing: the fast loop.
-//
-// `film concept render <film> <member> --render <n> --finding
-// <kind>-<view>/<id> --stands "<why>"`: answer a finding of render n, that it
-// stands and why, in its `render.json` and `render.md`. A finding fixed is
-// fixed by a new render, never answered on the old one.
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
@@ -29,14 +13,12 @@ import { Critic } from './critique.ts';
 import { filmNamed } from './film-repo.ts';
 import type { Pages } from './pages.ts';
 
-/** An answer asked with only some of `--render`, `--finding` and `--stands`. */
 class AnswerIncomplete extends Schema.TaggedError<AnswerIncomplete>()('AnswerIncomplete', {}) {
   override get message() {
     return 'an answer names all three: --render <n> --finding <kind>-<view>/<id> --stands "<why>"';
   }
 }
 
-/** `film concept render`, drawing on `pages` (the app's export pages), critiqued over the app's figure rules. */
 export const render = <E, R>(pages: Layer.Layer<Pages, E, R>, rules: ReadonlyArray<CritiqueRule>) =>
   Command.make(
     'render',

@@ -1,9 +1,3 @@
-// The GPU launcher passes on every argument Bun gives Chrome but
-// `--disable-gpu`, in order, to the Chrome it names, run here as a stand-in
-// that prints them, and execs it: the stand-in is the launcher's own process,
-// so Bun's kill reaches Chrome. Only macOS's renderer flags ask for it. No
-// Chromium.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Path } from 'effect';
@@ -12,7 +6,6 @@ import { launchArgs } from './browser.ts';
 import { gpuLauncher, throughGpuLauncher } from './chrome-gpu.ts';
 import { collect } from './process.ts';
 
-/** A stand-in Chrome: it prints its parent's pid, then each argument it was given, a line each. */
 const PRINTER = '#!/bin/sh\nprintf \'%s\\n\' "$PPID"\nfor arg do printf \'%s\\n\' "$arg"; done\n';
 
 describe('the GPU launcher', () => {
@@ -25,7 +18,6 @@ describe('the GPU launcher', () => {
           const path = yield* Path.Path;
           const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
           const root = yield* fs.makeTempDirectoryScoped();
-          // A Chrome's path, as macOS's has, with a space and a quote in it.
           const chrome = path.join(root, "Google Chrome's.app");
           const launcher = path.join(root, 'launcher');
           yield* fs.writeFileString(chrome, PRINTER, { mode: 0o755 });
@@ -44,7 +36,6 @@ describe('the GPU launcher', () => {
             ChildProcess.make(launcher, bun, { forceKillAfter: '5 seconds' }),
           );
           expect(run.exitCode).toBe(0);
-          // Exec'd, the stand-in's parent is this process, which spawned the launcher; else the launcher's shell.
           expect(run.stdout.split('\n').slice(0, -1)).toEqual([
             String(process.pid),
             '--user-data-dir=/tmp/a profile',

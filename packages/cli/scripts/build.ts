@@ -38,11 +38,6 @@ const loadEnvDefines = Effect.fn('loadEnvDefines')(function* (rootDir: string) {
   return defines;
 });
 
-/** Assets the compiled binary reads from disk rather than embedding. Each is
- *  copied out of the workspace into the CLI package's `data/` slot and again
- *  beside the binary, because `packagedDataPath` resolves from the executable's
- *  own directory first — that is the only location that travels when the binary
- *  is copied off this machine. */
 const DATA_ASSETS = [
   {
     source: 'packages/core/data/webster.db',
@@ -71,12 +66,6 @@ const DATA_ASSETS = [
   },
 ] satisfies readonly { readonly source: string; readonly name: string; readonly label: string }[];
 
-/** Copies each built data asset into `<cli>/data/` and `<cli>/bin/data/`.
- *
- *  A missing asset is skipped rather than failing the build: `topics.db` is
- *  produced by `bun run build:topics`, which is a separate command and is not a
- *  prerequisite for compiling the CLI. Skipping is logged so a build that
- *  silently shipped no artifact is not mistaken for one that shipped it. */
 const stageDataAssets = Effect.fn('stageDataAssets')(function* (input: {
   readonly fs: FileSystem.FileSystem;
   readonly path: Path.Path;
@@ -100,26 +89,12 @@ const stageDataAssets = Effect.fn('stageDataAssets')(function* (input: {
   }
 });
 
-/** Stages onnxruntime's native dylib beside the binary.
- *
- *  The compiled binary embeds `onnxruntime_binding.node` and Bun extracts it
- *  into the OS temp dir at load time — but the binding links
- *  `@rpath/libonnxruntime.<version>.dylib`, which Bun does not embed, so
- *  dlopen fails and the vector leg reads as `embedder` absence. The dylib is
- *  shipped in `data/onnxruntime/` and `ensureOnnxDylibs` copies it into the
- *  temp dir before the model loads. Resolved from the installed
- *  `onnxruntime-node` so the staged version is exactly the one the embedded
- *  binding was built against. */
 const stageOnnxDylibs = Effect.fn('stageOnnxDylibs')(function* (input: {
   readonly fs: FileSystem.FileSystem;
   readonly path: Path.Path;
   readonly rootDir: string;
   readonly binDir: string;
 }) {
-  // Resolved through the dependency chain the bundle actually follows:
-  // transformers is core's dependency and onnxruntime-node is transformers',
-  // so under Bun's isolated linker neither is visible from the CLI package
-  // directly.
   const transformers = Bun.resolveSync(
     '@huggingface/transformers/package.json',
     input.path.resolve(input.rootDir, '..', 'core'),
@@ -186,8 +161,6 @@ const program = Effect.gen(function* () {
           autoloadBunfig: false,
         },
         plugins: [
-          // See scripts/sharp-stub.ts: transformers' image dependency cannot
-          // load inside a compiled binary, and the text pipeline never uses it.
           {
             name: 'stub-sharp',
             setup(builder) {

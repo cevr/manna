@@ -1,7 +1,3 @@
-// `film cues --short <id>`: each span's film time and its time in the short,
-// then the short's length, on whole frames at the rate its page declares; and
-// `film cues`: each cue's times, with an `until` cue's offset off its point.
-
 import { describe, expect, test } from 'bun:test';
 import { Option, Result } from 'effect';
 import { layout } from '../core/layout.ts';
@@ -10,7 +6,6 @@ import { resolveShort } from '../core/shorts.ts';
 import { sceneReport, shortReport } from './cues.ts';
 
 const draw = () => {};
-/** The two beats laid at `fps`. */
 const placedAt = (fps: number) =>
   Result.getOrThrow(
     layout(

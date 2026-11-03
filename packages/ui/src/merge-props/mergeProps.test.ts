@@ -1,7 +1,3 @@
-// Upstream: packages/react/src/merge-props/mergeProps.test.ts
-//
-// Ported without the React-only cases (synthetic events, `className`): the
-// events here are DOM events and the class prop is Solid's `class`.
 import { describe, expect, it, mock } from 'bun:test';
 import { createSignal, flush } from 'solid-js';
 

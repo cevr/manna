@@ -1,15 +1,5 @@
 /* oxlint-disable effect/noNodeBuiltinImport, effect/noTryCatch, effect/noThrowStatement, effect/noNewError, effect/noGlobals -- a build-time host script: the bundler plugin and the test preload call it synchronously, so it reads the printed indexes from disk, fails the build naming the file that does not decode, and writes its JSON to standard output. */
 
-/**
- * The back-matter indexes the app reads (`HymnIndexes`), as numbers and
- * names only: the topics and their hymns, each Scripture reference and the
- * hymn that alludes to it, the metres with their tunes' hymns, and the tunes'
- * names. Read from `packages/hymnal/data/indexes/` by the
- * `virtual:hymnal-indexes` plugin (`hymnal.ts`, which runs this file under
- * Bun and reads its standard output) and by the app's tests. Pages, stanza
- * letters, legends and the other indexes stay out of the bundle.
- */
-
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
@@ -18,13 +8,11 @@ import { Schema } from 'effect';
 
 import type { HymnIndexes } from '../src/hymns/indexes';
 
-/** The indexes' folder, found through the package so no path climbs the repo. */
 const folder = join(
   dirname(Bun.resolveSync('@manna/hymnal/indexes', import.meta.dir)),
   '../data/indexes',
 );
 
-/** The decoded file `name`; the build fails naming a file that does not decode. */
 const read = <A>(name: string, decode: (text: string) => A): A => {
   const file = join(folder, `${name}.json`);
   try {

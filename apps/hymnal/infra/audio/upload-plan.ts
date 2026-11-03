@@ -1,13 +1,3 @@
-/**
- * What the upload (`./upload.ts`) does with each hymn of a rendered set,
- * decided from the set's manifest and R2's listing and nothing else: no
- * store is called here.
- *
- * A set is immutable once uploaded: a key R2 holds with the manifest's size
- * and MD5 is kept, a key R2 lacks is uploaded, and a key R2 holds with any
- * other bytes is a conflict, never replaced. That is what makes the
- * `immutable` cache header true: changed recordings are a new set.
- */
 import { Array as Arr, Data, Option } from 'effect';
 import { RECORDING_SETS, isRecordingSet, recordingKey, setHolds } from '@manna/hymnal/recordings';
 import type { ManifestHymn, RecordingManifest } from '@manna/hymnal/recording-manifest';
@@ -15,32 +5,19 @@ import type { ManifestHymn, RecordingManifest } from '@manna/hymnal/recording-ma
 import { SDAH_HYMNS, holds } from './plan.ts';
 import type { TargetObject } from './stores.ts';
 
-/** Each recording is never replaced under its key, so the edge keeps it a year. */
 export const SET_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
-/** The bucket key of a hymn of `set`. */
 export const setKey = (set: string, hymn: number) => `audio/${set}/${recordingKey(hymn)}`;
 
-/** Where a set's recordings are in R2. */
 export const setPrefix = (set: string) => `audio/${set}/sdah/`;
 
 export type UploadItem = Data.TaggedEnum<{
-  /** R2 holds the key with the manifest's size and MD5. */
   Keep: { readonly hymn: ManifestHymn; readonly key: string };
-  /** R2 lacks the key. */
   Upload: { readonly hymn: ManifestHymn; readonly key: string };
-  /** R2 holds the key with other bytes: refused, the set must be bumped. */
   Conflict: { readonly hymn: ManifestHymn; readonly key: string; readonly held: TargetObject };
 }>;
 export const UploadItem = Data.taggedEnum<UploadItem>();
 
-/**
- * Why a manifest cannot be uploaded, each reason a line: it is not a set the
- * app plays (`RECORDING_SETS`), it does not hold exactly that set's hymns
- * (every hymn 1 to 695 for the first, `warm-1`; a later set its own hymns
- * alone, `warm-2` hymn 663) once each with its own key, or a hymn did not
- * pass its checks. Empty when it can.
- */
 export const manifestRefusals = (manifest: RecordingManifest): ReadonlyArray<string> => {
   const known = isRecordingSet(manifest.set);
   const held = SDAH_HYMNS.filter((n) => setHolds(manifest.set, n));
@@ -75,7 +52,6 @@ export const manifestRefusals = (manifest: RecordingManifest): ReadonlyArray<str
   return checks.filter(([refused]) => refused).map(([, reason]) => reason());
 };
 
-/** Each hymn's item, in number order, against R2's listing of the set's prefix. */
 export const planUpload = (
   manifest: RecordingManifest,
   listing: ReadonlyMap<string, TargetObject>,

@@ -1,12 +1,3 @@
-// The film's cast build keys each stage on the files its code runs, read by
-// its own scanner (`@manna/film`'s `cast-build/imports.ts`, which needs no
-// Bun API); the gate's lint keys its plugins by this one, over Bun's
-// transpiler and resolver. Both are one view of a closure: for each stage
-// kind, and for a film's `rigs/cast.ts` (which the fit render loads by its
-// path), they name the same repository files: the lint gate's closure of the
-// film scanner's files is those files, so the film's scanner missed no
-// import. Slow: it reads each closure off the disk.
-
 import { describe, expect, it } from 'effect-bun-test';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, FileSystem, Path } from 'effect';
@@ -38,7 +29,6 @@ describe("the cast build's stage closures", () => {
           const gate = yield* importClosure(root, files);
           expect({ kind, scanned }).toEqual({ kind, scanned: gate });
         }
-        // the film's cast closure runs past its own folder (the rigs it builds on)
         expect(closures['in-its-order rigs/cast.ts'].length).toBeGreaterThan(1);
       }),
   );

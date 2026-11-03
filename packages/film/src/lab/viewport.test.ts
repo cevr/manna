@@ -1,8 +1,3 @@
-// The studio's one breakpoint: every width a stylesheet asks of the window
-// is a phone's (`PHONE`) or wider than one (`WIDE`). The styles written in
-// TypeScript say it through the two (`film/one-breakpoint` refuses a width
-// written out there); the stylesheets that cannot are held to it here.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem } from 'effect';
@@ -11,11 +6,9 @@ import { SHELL_CSS } from './page-shell-style.ts';
 import { PAGE_CSS } from './ask/style.ts';
 import { PHONE, WIDE } from './viewport.ts';
 
-/** Every `(max-width: …px)` and `(min-width: …px)` in `css`. */
 const widthsIn = (css: string): ReadonlyArray<string> =>
   [...css.matchAll(/\((?:max|min)-width:\s*\d+px\)/g)].map((m) => m[0]);
 
-/** The widths in `css` that are neither `PHONE` nor `WIDE`. */
 const offWidths = (css: string) => widthsIn(css).filter((w) => w !== PHONE && w !== WIDE);
 
 describe("the studio's breakpoint", () => {
@@ -42,7 +35,6 @@ describe("the studio's breakpoint", () => {
       expect(Object.entries(sheets).map(([name, css]) => ({ name, off: offWidths(css) }))).toEqual(
         Object.keys(sheets).map((name) => ({ name, off: [] })),
       );
-      // The TypeScript styles ask it too, through `PHONE` and `WIDE`.
       for (const css of [SHELL_CSS, PAGE_CSS, COMMAND_CSS])
         expect(widthsIn(css).length).toBeGreaterThan(0);
     }),

@@ -1,15 +1,3 @@
-/**
- * A tap on a chord, as a reader taps it: chords on, Simple, the hymn under
- * a capo. The tap pushes the chord route, a native form sheet with a
- * grabber, and the route draws how to play the chord the page shows: read
- * as its name and each string, its dots carrying their fingers, its neck in
- * the sheet's middle, and no capo, so the same played chord draws the same
- * sheet at every capo. Advanced shows the Advanced chord. The tap is no hand
- * scroll: the page does not move and the follow hears nothing. The chord's
- * target is 44 points tall by its hit slop alone, so its row keeps its
- * height.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { RegistryProvider, useAtomSet } from '@effect/atom-react';
 import { Option } from 'effect';
@@ -57,7 +45,6 @@ function StylePicker({ style }: { readonly style: Atom.Writable<ChordStyle> }) {
   return <Pressable aria-label="Pick Advanced" onPress={() => set('advanced')} />;
 }
 
-/** The router as a test starts it: no step taken, no params. */
 const freshRouter = () => {
   routed.splice(0);
   for (const key of Object.keys(params)) delete params[key];
@@ -65,7 +52,6 @@ const freshRouter = () => {
 
 const STRINGS = ['low E', 'A', 'D', 'G', 'B', 'high E'];
 
-/** Each chord box the sheet shows: its label and the numbers its dots and barre carry. */
 const boxes = () =>
   [...document.querySelectorAll<HTMLElement>('[data-testid^="chord-box-"][role="img"]')].map(
     (box) => ({
@@ -76,13 +62,11 @@ const boxes = () =>
     }),
   );
 
-/** The chords the open sheet names, in order, as their boxes are read. */
 const namesShown = () =>
   boxes()
     .map((box) => box.label.split('.')[0])
     .join(' ');
 
-/** The first chord on the page a reader can tap, by its id and its text. */
 const firstChord = (host: HTMLElement) => {
   const chord = Option.getOrThrow(
     Option.fromNullishOr(host.querySelector<HTMLElement>('[data-testid^="chord-"][role="button"]')),
@@ -90,11 +74,9 @@ const firstChord = (host: HTMLElement) => {
   return { id: chord.dataset['testid'] ?? '', text: chord.textContent };
 };
 
-/** The chord routes the page pushed, oldest first. */
 const pushed = () =>
   routed.flatMap((step) => (step.startsWith('push /chord?') && [step.slice('push '.length)]) || []);
 
-/** The chord route at `href`, drawn as the router draws it: its query as the route's params. */
 const sheetAt = (href: string) => {
   for (const key of Object.keys(params)) delete params[key];
   for (const [key, value] of new URLSearchParams(href.slice(href.indexOf('?') + 1)))
@@ -102,7 +84,6 @@ const sheetAt = (href: string) => {
   return mount(<ChordScreen />);
 };
 
-/** A reader with chords on and hymn `n` moved: the sounding key turned and the capo set, as the dials keep them. */
 const moved = (n: number, transpose: number, capo: number) =>
   readerOn(
     new Map([
@@ -111,7 +92,6 @@ const moved = (n: number, transpose: number, capo: number) =>
     ]),
   );
 
-/** Every word the sheet shows or a screen reader reads in it. */
 const sheetWords = () => {
   const sheet = Option.getOrThrow(find('[data-testid="chord-sheet"]'));
   return [
@@ -120,10 +100,8 @@ const sheetWords = () => {
   ].join(' ');
 };
 
-/** A pixel length read from a computed style. */
 const px = (length: string) => Number.parseFloat(length) || 0;
 
-/** The page's first chord tapped on hymn 3 at `transpose` and `capo`: the route it pushed. */
 const tapHymn3 = (transpose: number, capo: number) => {
   freshRouter();
   using app = mount(
@@ -145,11 +123,9 @@ describe('a tap on a chord', () => {
     const before = scroll.scrollTop;
 
     const simple = firstChord(app.host);
-    // The sounding A-flat under capo 1 is played in G: the stanza's first chord, I, is a G.
     expect(simple).toEqual({ id: 'chord-1-1-1', text: 'G' });
     press(`[data-testid="${simple.id}"]`);
     expect(pushed().length).toBe(1);
-    // The sheet is a route the stack presents, not a modal drawn over the page.
     expect(Option.isSome(find('[aria-modal]'))).toBe(false);
     expect(chordSheetOptions.presentation).toBe('formSheet');
     expect(chordSheetOptions.sheetGrabberVisible).toBe(true);
@@ -187,7 +163,6 @@ describe('a tap on a chord', () => {
       return px(style.left) + px(style.width) / 2;
     };
     const [low, high] = [middleOf(strings[0] ?? box), middleOf(strings[5] ?? box)];
-    // Five gaps of 22 points lie between the low E and the high E.
     expect(high - low).toBe(110);
     const neck = (low + high) / 2;
     expect(Math.abs(neck - px(getComputedStyle(box).width) / 2)).toBeLessThanOrEqual(1);
@@ -301,7 +276,6 @@ describe('the chord’s tap target', () => {
     const chord = firstChord(app.host);
     expect(chord.id).toBe('chord-1-1-1');
     const syllable = Option.getOrThrow(find('[data-testid="syllable-1-1-1"]'));
-    // The syllable's box holds the chord over its syllable; nothing between the box and the syllable takes a touch.
     const box = Option.getOrThrow(
       Option.fromNullishOr(
         app.host.querySelector<HTMLElement>(`[data-testid="${chord.id}"]`)?.parentElement,
@@ -313,8 +287,6 @@ describe('the chord’s tap target', () => {
     expect(between.some((element) => getComputedStyle(element).pointerEvents === 'none')).toBe(
       true,
     );
-    // The chord's target reaches 12 points under its 20-point row at the default size: a press there, over
-    // the syllable, lands on the chord and opens its sheet.
     expect(chordSlop(20).bottom).toBe(12);
     press(`[data-testid="${chord.id}"]`);
     expect(pushed()).toHaveLength(1);

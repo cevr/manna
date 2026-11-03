@@ -1,36 +1,10 @@
-// A sound's sheet: one picture an agent reads in place of listening (`sfx
-// render --sheet`), and the picture of the clips the owner hears in an ask
-// (`sfx ab`). Three panels share one clock, left to right over the sound:
-//
-// - the spectrogram (400 rows): each column the Hann frame of 2048 samples,
-//   on a 256-sample hop, whose middle lies nearest the column's (silence
-//   outside the sound, so a click at its very start shows as brightly as
-//   one in its middle; a sound longer than the columns' hops skips the
-//   frames between), each row a slice of 30 Hz
-//   to 16 kHz on a log scale coloured by its loudest bin, from -90 dB
-//   (black) to 0 dB (a full-scale sine: pale yellow), the power averaged
-//   over the channels;
-// - the waveform (160 rows): each column's least and greatest sample over
-//   every channel, full scale at the panel's edges;
-// - the momentary loudness (72 rows): BS.1770's 400 ms blocks, each at its
-//   middle, from -70 LUFS at the bottom to 0 at the top, faint lines every
-//   20 LU.
-//
-// Lines cross all three at each second (faint) and at the marks the caller
-// names: a one-shot's onset (green) and hit (red), and where a bed begins to
-// cross into its head as the mix loops it (cyan). The picture holds no text:
-// its numbers print beside it. Pure: RGBA bytes, which tools/png.ts writes
-// as a PNG.
-
 import type { Pcm } from '../audio.ts';
 import type { Raster } from '../raster.ts';
 import { frameSpectrum } from './analyse.ts';
 import { momentaryBlocks } from './loudness.ts';
 
-/** What a mark is: a one-shot's onset or hit, or where a bed's loop crosses into its head. */
 type MarkKind = 'onset' | 'hit' | 'loop';
 
-/** A line across the sheet at `at` seconds into the sound. */
 export interface Mark {
   readonly kind: MarkKind;
   readonly at: number;
@@ -38,7 +12,6 @@ export interface Mark {
 
 const WIDTH = 1200;
 const HEIGHT = 640;
-/** Each panel's first row and how many rows it has; the rows between are black. */
 const SPECTRUM = { top: 0, rows: 400 };
 const WAVE = { top: 404, rows: 160 };
 const LOUDNESS = { top: 568, rows: 72 };
@@ -48,12 +21,9 @@ const HOP = 256;
 const LOW_HZ = 30;
 const HIGH_HZ = 16000;
 const FLOOR_DB = -90;
-/** A full-scale sine's bin under the Hann window (its gain a half): what reads 0 dB. */
 const FULL_SCALE = (FRAME / 4) ** 2;
-/** The loudness panel's bottom, in LUFS (its top is 0), and its faint lines. */
 const LOUDNESS_FLOOR = -70;
 const LOUDNESS_LINES = [-20, -40, -60];
-/** How much of a second's line shows over what it crosses. */
 const SECOND_ALPHA = 0.3;
 
 type Rgb = readonly [number, number, number];
@@ -69,7 +39,6 @@ const MARK_COLOUR: Record<MarkKind, Rgb> = {
   hit: [255, 84, 84],
   loop: [84, 206, 255],
 };
-/** The spectrogram's colours from quiet to loud: inferno's, at five even stops. */
 const HEAT: ReadonlyArray<Rgb> = [
   [0, 0, 4],
   [87, 16, 110],
@@ -80,7 +49,6 @@ const HEAT: ReadonlyArray<Rgb> = [
 
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 
-/** The heat colour `t` of the way from quiet (0) to loud (1). */
 const heat = (t: number): Rgb => {
   const at = clamp(t, 0, 1) * (HEAT.length - 1);
   const i = Math.min(HEAT.length - 2, Math.floor(at));
@@ -90,7 +58,6 @@ const heat = (t: number): Rgb => {
   return [lerp(0), lerp(1), lerp(2)];
 };
 
-/** A raster being painted: its pixels set or blended in place. */
 interface Canvas {
   readonly rgba: Uint8Array;
   readonly put: (x: number, y: number, colour: Rgb) => void;
@@ -116,7 +83,6 @@ const canvas = (): Canvas => {
   };
 };
 
-/** Each panel's rows in its own colour, and the rows between them black. */
 const ground = (paint: Canvas): void => {
   for (let y = 0; y < HEIGHT; y++) {
     const inPanel = [SPECTRUM, WAVE, LOUDNESS].some(
@@ -126,7 +92,6 @@ const ground = (paint: Canvas): void => {
   }
 };
 
-/** Each spectrogram row's bins, `[from, to)`: its slice of 30 Hz to 16 kHz, at least one bin. */
 const rowBins = (rate: number): ReadonlyArray<{ readonly from: number; readonly to: number }> => {
   const bins = FRAME / 2;
   const hzAt = (share: number) => LOW_HZ * (HIGH_HZ / LOW_HZ) ** share;
@@ -143,7 +108,6 @@ const rowBins = (rate: number): ReadonlyArray<{ readonly from: number; readonly 
 const spectrogram = (paint: Canvas, pcm: Pcm): void => {
   const rows = rowBins(pcm.rate);
   const frames = new Map<number, Float64Array>();
-  /** The power of the frame `k` hops in, averaged over the channels. */
   const frameAt = (k: number): Float64Array => {
     const had = frames.get(k);
     if (had !== undefined) return had;
@@ -214,10 +178,8 @@ const loudnessCurve = (paint: Canvas, pcm: Pcm): void => {
   }
 };
 
-/** The column `at` seconds falls in, of a sound `secs` long. */
 const columnOf = (at: number, secs: number) => clamp(Math.floor((at / secs) * WIDTH), 0, WIDTH - 1);
 
-/** A line down every row at column `x`: blended, or `colour` itself at full strength. */
 const line = (paint: Canvas, x: number, colour: Rgb, alpha: number): void => {
   for (let y = 0; y < HEIGHT; y++) {
     if (alpha >= 1) paint.put(x, y, colour);
@@ -225,7 +187,6 @@ const line = (paint: Canvas, x: number, colour: Rgb, alpha: number): void => {
   }
 };
 
-/** `pcm`'s sheet, its `marks` drawn in their order over each second's line. */
 export const sheetOf = (pcm: Pcm, marks: ReadonlyArray<Mark>): Raster => {
   const paint = canvas();
   ground(paint);

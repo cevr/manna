@@ -1,43 +1,3 @@
-// A film's choices: its choice points (`core/choice.ts`, listed by
-// `choice-points.ts`), each variant heard in place, and each verb landed
-// where the film declares the pick:
-//
-// - score: `play` in `sound.ts`, and look: `play` of a look in `palette.ts`,
-//   each the one string spliced by the parser (`choice-source.ts`) through
-//   the SourceWriter (a score's pick mixes the track again once it lands,
-//   and on its Undo);
-// - take: kept, unkept or rejected by its sha256 through the library's own
-//   operations (`SoundLibrary.keep`/`unkeep`/`reject`) by the film CLI in a
-//   fresh process (the library's prompts are its sources too), recorded
-//   around the lock's rewrite by the SourceWriter, so it is undone the same
-//   way. A seed of a sound made from data (a code sound's or a code trial's)
-//   takes no verb: it is tuned by editing that data (its `fixed` says so).
-//   It is heard alone as the film CLI renders it in a fresh process
-//   (`film options sound`), once into the review's cache under its label,
-//   which names the data and the renderer;
-// - voice: an attempt kept as its beat's take by `keepVoice`, the one way an
-//   attempt becomes a take, which the studio's keep and its posted take call
-//   too: by the film CLI in a fresh process (it reads the script, and
-//   remixes), recorded around the timings' rewrite with the takes they name,
-//   so it runs under the writer's lock and Undo brings back the take it
-//   replaced;
-// - a say (approve, withdraw, comment): the catalogue's records
-//   (`RenderCatalogue`), on the variant as it is now; the points last read
-//   are said of again from the catalogue it leaves, in this process.
-//
-// The review runs for days and its own imports of a film stay as they were at
-// start, so the film's points are read, and its takes and mixes made, in a
-// fresh process (`FreshFilm`, `fresh-film.ts`): every answer is the film as it
-// stands on disk. This service needs no module loader (`ChoicesNeeds`), so a
-// read of the film in this process does not compile.
-//
-// The film's sources as they stand are stamped by the newest mtime under its
-// folder and the library's lock. A verb is checked against the points last
-// read at the same stamp (read again when the stamp moved), and every mix is
-// derived once into the review's cache under it, so a change to the film
-// reads and makes them again. A write answers the points and the static
-// check of the sources it leaves, from one fresh run.
-
 import {
   Array as Arr,
   Cache,
@@ -101,49 +61,36 @@ import {
 } from './source-writer.ts';
 import { Takes } from './takes.ts';
 
-/** What a verb did: the change it made (none when it was already so), and the mix it made. */
 interface Picked {
-  /** The file it rewrote. */
   readonly file: string;
   readonly target: string;
   readonly change: Option.Option<Change>;
-  /** When the track it mixed again landed; none when it mixed none. */
   readonly mixed: Remade;
 }
 
 type ChoicesError = FreshError | SourceRefused | StoreError | PlatformError;
 
-/** The choices after a write, and the static check of the sources it left. */
 interface Checked {
   readonly choices: FilmChoices;
   readonly findings: ReadonlyArray<CheckLine>;
 }
 
 interface ChoicesService {
-  /** The film's choice points as they stand, and the renders they are heard against. */
   readonly list: (film: FilmName) => Effect.Effect<FilmChoices, ChoicesError>;
-  /** `list` and the film's static check, from one fresh run: what a write answers. */
   readonly checked: (film: FilmName) => Effect.Effect<Checked, ChoicesError>;
-  /** A verb on one variant, landed where the film declares its pick. */
   readonly pick: (
     film: FilmName,
     pick: PickPost,
   ) => Effect.Effect<Picked, ChoicesError | RewriteError | FormatFailed>;
-  /**
-   * One variant approved, its approvals withdrawn, or commented on, as it is
-   * now; the choices after it (the points last read, said of again).
-   */
   readonly say: (
     film: FilmName,
     asked: SayPost,
   ) => Effect.Effect<FilmChoices, ChoicesError | CatalogueError>;
-  /** A variant's own file: a take's, an attempt's, or a seed's, rendered once into the review's cache. */
   readonly alone: (
     film: FilmName,
     point: string,
     variant: string,
   ) => Effect.Effect<string, ChoicesError | ReviewToolFailed>;
-  /** The film's whole mix with the variant in place, as an m4a in the review's cache. */
   readonly inPlace: (
     film: FilmName,
     point: string,
@@ -151,13 +98,6 @@ interface ChoicesService {
   ) => Effect.Effect<string, ChoicesError | ReviewToolFailed>;
 }
 
-/**
- * What the choices run with in the review, which runs for days: paths, files
- * (when a mixed track landed), the review's cache, the source writer and
- * fresh runs of the film CLI. No service here imports a film module or the
- * sound library, so a read of a film in this process does not compile; it
- * goes through `FreshFilm`.
- */
 export type ChoicesNeeds =
   | FileSystem.FileSystem
   | Path.Path
@@ -169,13 +109,11 @@ export type ChoicesNeeds =
   | RenderCatalogue
   | Takes;
 
-/** `point`'s say read again from `catalogue`. */
 const sayAgain =
   (catalogue: Catalogue) =>
   (point: ChoicePoint): ChoicePoint =>
     withSay(Option.some(catalogue), point);
 
-/** The point `id` among `points`, or `ChoiceUnknown` naming the ones there are. */
 const offeredPoint = (
   film: string,
   points: ReadonlyArray<ChoicePoint>,
@@ -185,7 +123,6 @@ const offeredPoint = (
     ChoiceUnknown.make({ film, point: id, known: points.map((p) => p.id) }),
   );
 
-/** The variant `id` of `point`, or `VariantUnknown` naming the ones it has. */
 const offeredVariant = (
   film: string,
   point: ChoicePoint,
@@ -200,7 +137,6 @@ const offeredVariant = (
     }),
   );
 
-/** The point and variant a request names, among `points`. */
 export const offered = (
   film: string,
   points: ReadonlyArray<ChoicePoint>,
@@ -214,7 +150,6 @@ export const offered = (
     Result.map(offeredVariant(film, p, variant), (v) => ({ point: p, variant: v })),
   );
 
-/** Whether `verb` applies to `variant` as it stands, or why not. */
 export const verbFits = (
   point: ChoicePoint,
   variant: ChoiceVariant,
@@ -236,28 +171,15 @@ export const verbFits = (
   return Result.fail(VerbRefused.make({ point: point.id, variant: variant.id, verb, reason }));
 };
 
-/** How a verb reads in a change's target: `keep`, `unkeep`, `reject`, `play`. */
 const TAKE_ACT = { pick: 'keep', unpick: 'unkeep', reject: 'reject' } as const;
 
-/** The films whose points are kept at a time: the review's films, with room. */
 const POINTS_KEPT = 16;
 
-/** A voice kept: the change Undo walks back, and the take as the fresh run kept it. */
 interface VoiceKept {
   readonly picked: Picked;
   readonly kept: OptionsKept;
 }
 
-/**
- * The one way an attempt becomes its beat's take, from a voice pick through
- * the choices routes and the studio's keep and posted take alike: kept by the film CLI in
- * a fresh process (`film options keep-voice`: the script as it stands, the
- * word error checked again, a mismatch kept only when `acceptMismatch`
- * says so, and the track remixed), recorded around the timings' rewrite by
- * the SourceWriter with the takes the timings name (`Takes.named`) and the
- * track mixed from them (`film mix`). So every keep runs under the writer's
- * lock, one at a time with every other write, and Undo walks it back, the replaced take with it and the track remixed to play it.
- */
 const keepVoice = Effect.fn('keepVoice')(function* (
   film: FilmName,
   beat: string,
@@ -269,13 +191,11 @@ const keepVoice = Effect.fn('keepVoice')(function* (
   const timings = paths.timings.file;
   const target = `voice ${beat} keep ${file}`;
   const track = yield* trackOf(film);
-  // The keep remixes the track itself: when it landed is read in the act, under the lock.
   const [[kept, mixed], change] = yield* (yield* SourceWriter).around(
     film,
     timings,
     target,
     Effect.flatMap(fresh.keepVoice(film, beat, file, options), (done) => {
-      // A keep whose mix failed landed no track.
       if (!done.mixed) return Effect.succeed([done, Option.none<number>()] as const);
       return Effect.map(track.landed, (at) => [done, at] as const);
     }),
@@ -286,19 +206,11 @@ const keepVoice = Effect.fn('keepVoice')(function* (
   return voiced;
 });
 
-/** A film's track, as the writes that mix it read it; each looks at the file each time it runs, never when it is made. */
 interface Track {
-  /**
-   * When the track landed (`Remade`): its mtime, asked under the writer's
-   * lock right after the mix that renamed it into place, so it names that
-   * mix and no later one; none when it is not there.
-   */
   readonly landed: Effect.Effect<Remade>;
-  /** What follows `sound.ts` and the timings: the track mixed again (`film mix`, fresh), answering when it landed. */
   readonly remake: Effect.Effect<Remade, FreshProcessFailed>;
 }
 
-/** `film`'s track (`Track`). */
 const trackOf = Effect.fn('trackOf')(function* (film: FilmName) {
   const fs = yield* FileSystem.FileSystem;
   const fresh = yield* FreshFilm;
@@ -328,33 +240,27 @@ export class Choices extends Context.Service<Choices, ChoicesService>()(
       const fresh = yield* FreshFilm;
       const catalogues = yield* RenderCatalogue;
       const takes = yield* Takes;
-      /** The seeds being rendered alone, by file, in the service's scope (as `mixing`). */
       const sounding = yield* FiberMap.make<string, string, FreshError | ReviewToolFailed>();
-      /** What `keepVoice` runs with. */
       const keeping = yield* Effect.context<
         FileSystem.FileSystem | FilmFolder | SourceWriter | FreshFilm | Takes
       >();
 
       const fileIn = (film: FilmName, name: string) => path.join(folder.paths(film).dir, name);
 
-      /** The app's library lock, or a refusal naming the verb when the app keeps no library. */
       const lockOf = (refused: () => VerbRefused) =>
         Effect.fromOption(Option.map(folder.sounds, lockManifest), refused);
 
       const stamp = folder.stamp;
 
-      /** The points read at each stamp; a failed read is not kept. */
       const read = yield* Cache.makeWith((at: Stamped) => fresh.choices(at.film), {
         capacity: POINTS_KEPT,
         timeToLive: keptWhenMade,
       });
 
-      /** The film's points as its sources stand now: read again only when its stamp moved. */
       const points = Effect.fn('Choices.points')(function* (film: FilmName) {
         return yield* Cache.get(read, new Stamped({ film, stamp: yield* stamp(film) }));
       });
 
-      /** `answer` read fresh, its points kept under the stamp the sources had before the read. */
       const kept = <A extends { readonly points: ReadonlyArray<ChoicePoint> }>(
         film: FilmName,
         answer: Effect.Effect<A, FreshError>,
@@ -371,7 +277,6 @@ export class Choices extends Context.Service<Choices, ChoicesService>()(
           film,
           Effect.map(fresh.choices(film), (p) => ({ points: p })),
         );
-        // The film's whole-film renders, by its catalogues: a scene or a short is never its picture.
         const result: FilmChoices = {
           film,
           pictures: yield* review.pictures(film),
@@ -389,12 +294,6 @@ export class Choices extends Context.Service<Choices, ChoicesService>()(
         return result;
       });
 
-      /**
-       * What follows `sound.ts`: the track mixed from it (`film mix`), mixed
-       * again once a write of it lands, and on its Undo, each
-       * answering when it landed (`Track.remake`). It names no file to bring
-       * back or put away.
-       */
       const mixedFrom = (film: FilmName) =>
         Effect.map(trackOf(film), (track): Follows => ({
           bring: () => Effect.void,
@@ -402,11 +301,6 @@ export class Choices extends Context.Service<Choices, ChoicesService>()(
           remake: Option.some(track.remake),
         })).pipe(Effect.provideContext(keeping));
 
-      /**
-       * `option` played at `site` in the film's file `name` (`sound.ts`), which
-       * a refusal names as is, through the writer; what follows the file
-       * (`follows`) made again once it lands.
-       */
       const writePick = (
         film: FilmName,
         name: string,
@@ -438,7 +332,6 @@ export class Choices extends Context.Service<Choices, ChoicesService>()(
         );
       };
 
-      /** A take kept, unkept or rejected by its sha256 in a fresh process, recorded around the lock's rewrite. */
       const actOnTake = Effect.fn('Choices.actOnTake')(function* (
         film: FilmName,
         point: ChoicePoint,
@@ -461,15 +354,10 @@ export class Choices extends Context.Service<Choices, ChoicesService>()(
           target,
           fresh.take(film, point.id, take, verb),
         );
-        // The lock changes what the library offers, not the track: nothing is mixed.
         const picked: Picked = { file, target, change, mixed: Option.none() };
         return picked;
       });
 
-      /**
-       * A voice picked: its attempt kept (`keepVoice`), one heard as something
-       * else only when the pick accepts it anyway (`PickPost.acceptMismatch`).
-       */
       const voicePicked = (film: FilmName, beat: string, file: string, acceptMismatch: boolean) =>
         keepVoice(film, beat, file, { acceptMismatch }).pipe(
           Effect.map((voiced) => voiced.picked),
@@ -502,11 +390,6 @@ export class Choices extends Context.Service<Choices, ChoicesService>()(
         });
       });
 
-      /**
-       * Record what the owner says of one variant in the film's catalogue. The
-       * answer is the points last read, their say read again from the
-       * catalogue the say left: no fresh run, since a say changes no source.
-       */
       const say = Effect.fn('Choices.say')(function* (film: FilmName, asked: SayPost) {
         const known = yield* points(film);
         const { point, variant } = yield* Effect.fromResult(
@@ -567,15 +450,12 @@ export class Choices extends Context.Service<Choices, ChoicesService>()(
         }
         if (ref._tag !== 'Take') return yield* unheard();
         const name = ref.sound;
-        // A take's file is the lock's record of it: data, read as it stands.
         const manifest = yield* lockOf(unheard);
         const lock = yield* store.read(manifest);
         const take = Option.flatMap(Option.fromUndefinedOr(lock[name]), (entry) =>
           Arr.findFirst([...entry.variants, ...entry.candidates], (v) => v.sha256 === variant),
         );
         if (Option.isSome(take)) return path.join(path.dirname(manifest.file), take.value.file);
-        // Any other variant of a take point is a seed. Its label names its
-        // data and the renderer, so the file made for it never goes stale.
         const file = `sound/${cacheKey([variant])}.wav`;
         return yield* once(
           sounding,
@@ -584,7 +464,6 @@ export class Choices extends Context.Service<Choices, ChoicesService>()(
         );
       });
 
-      /** The mix `name` made in a fresh process: the film's with `variant` of `point` in place. */
       const derived = (name: string, film: FilmName, point: string, variant: string) =>
         review.derive(name, (temporary) =>
           fresh
@@ -592,21 +471,9 @@ export class Choices extends Context.Service<Choices, ChoicesService>()(
             .pipe(Effect.tap(() => Effect.log(`review.mix film=${film} name=${name}`))),
         );
 
-      /**
-       * The mixes being made, by name, in the service's scope, not the
-       * request's: a page that stops waiting (a dropped connection, the next
-       * 🔊) leaves one running, and the next ask joins it or finds it made.
-       * One mix at a time: each renders the whole film.
-       */
       const mixing = yield* FiberMap.make<string, string, FreshError | ReviewToolFailed>();
       const oneMix = yield* Semaphore.make(1);
 
-      /**
-       * The film's mix with `variant` of `point` in place, derived once into
-       * the cache as an m4a. The fresh process checks the point and variant
-       * are the film's: a name it lacks is answered as unknown, and nothing is
-       * cached.
-       */
       const inPlace = Effect.fn('Choices.inPlace')(function* (
         film: FilmName,
         point: string,

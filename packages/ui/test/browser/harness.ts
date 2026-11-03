@@ -1,23 +1,3 @@
-// The browser tests' page: the fixture file a test file names, compiled once
-// per test file by Solid's compiler (the DOM build, Solid's development runtime
-// so its diagnostics show), served by a Bun server on a free port, and opened
-// in Playwright's Chromium. A case opens a fixture by name; the page mounts
-// it into `#root` and records what the fixture logs in `window.__log`.
-//
-// A test file opened with `hydrate` serves each page as its fixture's server
-// render instead (`server.ts`: Solid's server build, run in the test's
-// process per page, with the script hydration needs), and the page
-// hydrates the browser's build over it; both builds are hydratable.
-//
-// Real Chromium, not a fake DOM: focus, pointer and touch events, layout and
-// `:focus-visible` are what the parts are about, and a fake DOM gets them
-// wrong. Run with `bun run test:browser` (it needs Playwright's Chromium:
-// `bunx playwright install chromium`).
-//
-// The whole browser in Chrome's headless mode, not Playwright's default
-// headless shell: the shell is a separate, slimmer build, and on macOS its
-// view never takes the pointer lock (`requestPointerLock` rejects with
-// WrongDocumentError), so a scrub's lock was never tested there.
 import { afterAll, afterEach, beforeAll } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -28,11 +8,6 @@ import type { BunPlugin } from 'bun';
 
 import type * as ServerEntry from './server.ts';
 
-/**
- * How many times slower each page's main thread runs (`UI_BROWSER_CPU_THROTTLE`):
- * 1, full speed, when unset. A value that is not a number of 1 or more stops
- * the run as it loads, naming it.
- */
 const THROTTLE = ((written: string): number => {
   const rate = Number(written);
   if (!Number.isFinite(rate) || rate < 1)
@@ -40,11 +15,6 @@ const THROTTLE = ((written: string): number => {
   return rate;
 })(process.env['UI_BROWSER_CPU_THROTTLE'] ?? '1');
 
-/**
- * The flags every Chromium here launches with, as the film's `chromeArgs`:
- * `--mute-audio` mutes its pages and `--disable-audio-output` plays to a fake
- * device, so a test never opens the host's speakers.
- */
 const SILENT = [
   '--mute-audio',
   '--disable-audio-output',
@@ -53,15 +23,11 @@ const SILENT = [
 ];
 
 interface SolidOptions {
-  /** `dom` for the browser, `ssr` for the server's render. */
   readonly generate: 'dom' | 'ssr';
-  /** Whether the output hydrates (`dom`) or renders markup to hydrate (`ssr`). */
   readonly hydratable: boolean;
-  /** The fixture file `fixtures/index.ts` resolves to, if any. */
   readonly fixtureFile?: string | undefined;
 }
 
-/** Solid's compiler, with `fixtures/index.ts` resolved to the fixture file. */
 const solid = (options: SolidOptions): BunPlugin => ({
   name: `solid-${options.generate}`,
   setup(build) {
@@ -82,7 +48,6 @@ const solid = (options: SolidOptions): BunPlugin => ({
   },
 });
 
-/** The page script serving one fixture file's fixtures, built in memory (nothing is written to disk). */
 const bundle = async (fixtureFile: string, hydratable: boolean): Promise<string> => {
   const output = await Bun.build({
     entrypoints: [`${import.meta.dir}/client.tsx`],
@@ -97,18 +62,11 @@ const bundle = async (fixtureFile: string, hydratable: boolean): Promise<string>
   return script.text();
 };
 
-/** A server build of `entry` (Solid's `ssr` output, hydratable), loaded in this process. */
 export interface ServerBuild<Module> {
   readonly module: Module;
-  /** Removes the build's files. */
   readonly dispose: () => Promise<void>;
 }
 
-/**
- * Builds `entry` for the server, with `fixtures/index.ts` resolved to
- * `fixtureFile` when given, and imports it. The bundle holds its own copy of
- * Solid's server runtime, so whatever renders must be in `entry`.
- */
 export const buildServer = async <Module>(
   entry: string,
   fixtureFile?: string,
@@ -130,7 +88,6 @@ export const buildServer = async <Module>(
   return { module, dispose };
 };
 
-/** The page: `head` in its head, and `#root` empty or holding the server's markup to hydrate. */
 const page = (head: string, served: string | undefined): string => `<!doctype html>
 <html><head><meta charset="utf-8"><title>ui</title>
 <style>
@@ -143,64 +100,28 @@ const page = (head: string, served: string | undefined): string => `<!doctype ht
 <body>${served === undefined ? '<div id="root"></div>' : `<div id="root" data-served>${served}</div>`}<script type="module" src="/client.js"></script></body></html>`;
 
 export interface HarnessOptions {
-  /**
-   * Each page is its fixture's server render, which the browser hydrates
-   * (`hydrate()`), instead of an empty root the browser renders into.
-   */
   readonly hydrate?: boolean;
 }
 
 export interface Harness {
-  /** Opens `fixture` in a fresh page; `query` reaches the fixture as URL params. */
   open(fixture: string, options?: OpenOptions): Promise<Page>;
 }
 
 export interface OpenOptions {
   readonly query?: Record<string, string>;
-  /** A touch device: `hasTouch` and `isMobile`, as a phone's browser reports. */
   readonly touch?: boolean;
   readonly viewport?: { width: number; height: number };
-  /**
-   * Scrollbars that take room, as on Windows and Linux: the page opens in a
-   * Chromium launched without `--hide-scrollbars` (headless hides them).
-   */
   readonly scrollbars?: boolean;
-  /**
-   * The `navigator.platform` the page reports (`MacIntel`, `Linux x86_64`):
-   * the parts read their OS from it as they load, so a case can hold each
-   * OS's rule on any host.
-   */
   readonly platform?: string;
-  /**
-   * The engine the page reads itself as: `webkit` answers `CSS.supports` for the
-   * `-webkit-backdrop-filter` WebKit alone has, as the parts read it, so a case can hold a
-   * WebKit rule in Chromium.
-   */
   readonly engine?: 'webkit';
-  /**
-   * The page's `<meta name="viewport" content="width=device-width">`, as the lab's pages have:
-   * a touch page lays out at its window's width, not a desktop page's 980 px.
-   */
   readonly deviceWidth?: boolean;
 }
 
-/**
- * The browser for one test file, serving the fixtures `fixtureFile` (a file
- * under `fixtures/`) exports as `fixtures`. Call it at the top of the test
- * file: it registers the file's hooks. The server and Chromium start before
- * the first case and stop after the last.
- *
- * A case fails when any page it opened reported an uncaught error, a console
- * error or a console warning (Solid's development diagnostics are warnings)
- * at any time, during mount or after. Each case's pages close when it ends,
- * so nothing a page does later lands on the next case.
- */
 export const harness = (fixtureFile: string, options: HarnessOptions = {}): Harness => {
   const hydrate = options.hydrate ?? false;
   let server: ReturnType<typeof Bun.serve> | undefined;
   let serverBuild: ServerBuild<typeof ServerEntry> | undefined;
   let browser: Browser | undefined;
-  // Launched for the first page that asks for scrollbars that take room.
   let scrollbarBrowser: Promise<Browser> | undefined;
   let contexts: Array<BrowserContext> = [];
   let problems: Array<string> = [];
@@ -289,8 +210,6 @@ export const harness = (fixtureFile: string, options: HarnessOptions = {}): Harn
       }
       const page = await context.newPage();
       page.setDefaultTimeout(5000);
-      // The page's main thread slowed `UI_BROWSER_CPU_THROTTLE` times: a slow phone or a loaded
-      // runner, on demand, as the film's e2e does (`FILM_E2E_CPU_THROTTLE`).
       if (THROTTLE > 1) {
         const cdp = await context.newCDPSession(page);
         await cdp.send('Emulation.setCPUThrottlingRate', { rate: THROTTLE });
@@ -317,15 +236,12 @@ export const harness = (fixtureFile: string, options: HarnessOptions = {}): Harn
   };
 };
 
-/** What the fixture logged (`log(...)` in the page), in order. */
 export const logOf = (page: Page): Promise<Array<string>> =>
   page.evaluate(() => (window as unknown as { __log: Array<string> }).__log);
 
-/** The markup the server rendered into `#root`, as the page received it (a hydrating harness's page). */
 export const servedOf = (page: Page): Promise<string> =>
   page.evaluate(() => (window as unknown as { __served: string }).__served);
 
-/** The `id` of the focused element, or the tag name when it has none. */
 export const focused = (page: Page): Promise<string> =>
   page.evaluate(() => {
     const el = document.activeElement;
@@ -335,12 +251,6 @@ export const focused = (page: Page): Promise<string> =>
     return el.id || el.getAttribute('data-testid') || el.tagName.toLowerCase();
   });
 
-/**
- * Logs each CSS transition the page creates from here on, as
- * `transition <id> <property>` (the element's `id`, or its `data-testid`).
- * `transitionrun` fires when the browser creates a transition, so a popup
- * whose starting style the browser never computed logs none.
- */
 export const recordTransitions = (page: Page): Promise<void> =>
   page.evaluate(() => {
     document.addEventListener(
@@ -356,11 +266,6 @@ export const recordTransitions = (page: Page): Promise<void> =>
     );
   });
 
-/**
- * Clicks `selector` from a script a task later, as a page's own code opens a
- * popup (a timer, a response): no pointer input, so the browser does not
- * update hover state after it, which reads the page's style.
- */
 export const scriptClick = (page: Page, selector: string): Promise<void> =>
   page.evaluate((target) => {
     setTimeout(() => (document.querySelector(target) as HTMLElement).click());

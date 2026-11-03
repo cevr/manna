@@ -1,13 +1,3 @@
-// The engraved courtroom, built once: a stone judgment hall in the manner of
-// an old illustrated Bible. A tall arched window high in the left wall
-// throws a shaft across the dark hall onto the floor between the accused and
-// the bench; a rose window in the back wall, behind and above the judge, is
-// the verdict's light. Massive turned columns stand in two rows; the judge
-// sits enthroned on a dais behind his bench, bearded and turbaned, a gavel
-// in his hand; the accused stands below on the flags, wrists bound, the
-// stain on his robe the print's one hand-tinted colour, the evidence piling
-// on a stone table at his side. Metres; +z toward the eye, y up.
-
 import {
   Group,
   Mesh,
@@ -29,26 +19,20 @@ import {
   turned,
 } from './shapes.ts';
 
-/** The colour script's scarlet, as a watercolour wash on the print. */
 const SCARLET: readonly [number, number, number] = [0.72, 0.13, 0.1];
 
-/** Where the people stand. */
 export const ACCUSED_AT = [-2.4, 0, -0.6] as const;
 export const JUDGE_AT = [2.5, 0.75, -7.0] as const;
-/** The judgment seat's height over the dais, and the bench's. */
 const SEAT = 0.6;
 const BENCH = 0.95;
-/** The evidence table's top. */
 export const EVIDENCE_AT = [-3.55, 0.5, -1.2] as const;
 
-/** The accused, posed each frame through these. */
 export interface Accused {
   readonly root: Group;
   readonly torso: Group;
   readonly head: Group;
 }
 
-/** The judge, posed each frame through these. */
 export interface Judge {
   readonly root: Group;
   readonly torso: Group;
@@ -56,7 +40,6 @@ export interface Judge {
   readonly arm: Group;
 }
 
-/** One item of evidence and where it comes to rest. */
 export interface Exhibit {
   readonly mesh: Mesh;
   readonly rest: readonly [number, number, number];
@@ -66,7 +49,6 @@ export interface Exhibit {
 
 export interface World {
   readonly scene: Group;
-  /** What casts the window's shadow (the walls and ceiling do not). */
   readonly casters: ReadonlyArray<Object3D>;
   readonly blind: ReadonlyArray<Object3D>;
   readonly accused: Accused;
@@ -80,7 +62,6 @@ const mesh = (g: BufferGeometry, m: Material, x = 0, y = 0, z = 0): Mesh => {
   return o;
 };
 
-/** A column: base, shaft with its swell, capital. */
 const COLUMN: Profile = [
   [0, 0],
   [0.78, 0],
@@ -99,7 +80,6 @@ const COLUMN: Profile = [
   [0, 9.0],
 ];
 
-/** A head, egg-shaped, chin at 0. */
 const HEAD: Profile = [
   [0, 0],
   [0.04, 0.008],
@@ -186,7 +166,6 @@ const accused = (light: HallLight, seed: number): Accused => {
       cloth,
     ),
   );
-  // A rope girdle at the waist.
   const girdle = new Mesh(new TorusGeometry(0.205, 0.016, 8, 40), rope);
   girdle.position.set(0, 0.95, 0);
   girdle.rotation.set(Math.PI / 2, 0, 0);
@@ -216,7 +195,6 @@ const accused = (light: HallLight, seed: number): Accused => {
       upper,
     ),
   );
-  // A short cape over his shoulders, falling in folds.
   torso.add(
     mesh(
       turned(
@@ -235,7 +213,6 @@ const accused = (light: HallLight, seed: number): Accused => {
       cape,
     ),
   );
-  // The arms, the wrists bound before him.
   for (const side of [-1, 1]) {
     const arm = swept(
       path(
@@ -297,7 +274,6 @@ const accused = (light: HallLight, seed: number): Accused => {
       hair,
     ),
   );
-  // A short beard along the jaw.
   head.add(
     mesh(
       turned(
@@ -317,7 +293,6 @@ const accused = (light: HallLight, seed: number): Accused => {
       0.012,
     ),
   );
-  // The hood: round the head and falling to the shoulders, open at the face.
   head.add(
     mesh(
       turned(
@@ -427,7 +402,6 @@ const judge = (light: HallLight, seed: number): Judge => {
       robe,
     ),
   );
-  // The mantle over his shoulders, open at the front.
   torso.add(
     mesh(
       turned(
@@ -453,7 +427,6 @@ const judge = (light: HallLight, seed: number): Judge => {
   torso.add(head);
   const s = 1.12;
   head.add(mesh(sculpted(s), skin));
-  // The beard, falling on his chest.
   head.add(
     mesh(
       swept(
@@ -476,7 +449,6 @@ const judge = (light: HallLight, seed: number): Judge => {
       beard,
     ),
   );
-  // The turban.
   head.add(
     mesh(
       turned(
@@ -496,7 +468,6 @@ const judge = (light: HallLight, seed: number): Judge => {
       turban,
     ),
   );
-  // The left arm laid along the bench.
   torso.add(
     mesh(
       swept(
@@ -515,7 +486,6 @@ const judge = (light: HallLight, seed: number): Judge => {
       sleeve,
     ),
   );
-  // The gavel arm, turned at the shoulder.
   const arm = new Group();
   arm.position.set(0.3, 0.74, 0);
   torso.add(arm);
@@ -549,7 +519,6 @@ const judge = (light: HallLight, seed: number): Judge => {
   );
   fist.rotation.set(1.4, 0, 0);
   arm.add(fist);
-  // The gavel held out ahead of the fist, its head across the handle's end.
   const handle = mesh(
     turned(
       [
@@ -592,7 +561,6 @@ const judge = (light: HallLight, seed: number): Judge => {
   return { root, torso, head, arm };
 };
 
-/** Nine exhibits: scrolls and tablets, each its own place on the pile. */
 const exhibits = (light: HallLight, seed: number): Exhibit[] => {
   const r = rng(seed);
   const parchment = burin(light, { albedo: 0.88, mode: 2, radius: 0.06, spacing: 0.012, rim: 0.5 });
@@ -679,7 +647,6 @@ export const world = (light: HallLight): World => {
     cross: 1.4,
   });
 
-  // The room's six sides, each overlapping its neighbours so no seam lets the paper through.
   const floor = mesh(block(15, 0.4, 21), floorCut, 0, -0.4, 0);
   const back = mesh(block(15, 12, 0.4), backCut, 0, -0.5, -9.7);
   const left = mesh(block(0.4, 12, 21), sideCut, -7.2, -0.5, 0);
@@ -695,7 +662,6 @@ export const world = (light: HallLight): World => {
       scene.add(c);
       casters.push(c);
     }
-  // The dais: three steps up to the judgment seat.
   [
     [6.2, 0.25, 4.4, -6.3],
     [5.6, 0.5, 3.8, -6.6],
@@ -705,7 +671,6 @@ export const world = (light: HallLight): World => {
     scene.add(s);
     casters.push(s);
   });
-  // The throne's high back, its crest and its finials.
   const throneBack = mesh(
     block(1.7, 3.6, 0.3),
     woodCut,
@@ -745,7 +710,6 @@ export const world = (light: HallLight): World => {
     scene.add(post);
     casters.push(post);
   }
-  // The bench before him, panelled, the gavel's block on it.
   const bench = mesh(block(3.0, BENCH, 0.8), woodCut, JUDGE_AT[0], JUDGE_AT[1], JUDGE_AT[2] + 1.0);
   const top = mesh(
     block(3.2, 0.08, 1.0),
@@ -774,7 +738,6 @@ export const world = (light: HallLight): World => {
     JUDGE_AT[2] + 0.7,
   );
   scene.add(strike);
-  // The evidence table.
   const table = mesh(block(1.0, 0.5, 0.7), stepCut, EVIDENCE_AT[0], 0, EVIDENCE_AT[2]);
   scene.add(table);
   casters.push(table);

@@ -1,12 +1,3 @@
-// A short's page: a vertical cut of a film (`shorts.ts`), drawn as a film of
-// its own so the player, the export and the workers serve it unchanged. Each
-// frame is the film's own frame at the film time under it, drawn full size
-// into a band and copied onto the 9:16 page pixel for pixel, so a band crop is
-// the film's still at that time. Round the band the page is the film's paper,
-// vignette and grain made at the page's own size, with the hook line above
-// the band (`SHORT_LAYOUT`). The page is made at the film's density and
-// encoded down to 1080 × 1920 (`shortPage`).
-
 import { Effect, Result, Schema, type Scope } from 'effect';
 import { type Placed, sceneOf } from '../core/layout.ts';
 import { movedFrames, secondsAt } from '../core/time.ts';
@@ -38,11 +29,6 @@ import {
 import type { Probe, ProbeSink } from './probe.ts';
 import { verticalHook } from './vertical.ts';
 
-/**
- * A scene of the film on the short's clock: its first frame moved back by the
- * whole frames its span lies later in the film (`shift`, `resolveShort`), so
- * its own clock reads the same.
- */
 const retimed = (film: Film, short: ResolvedShort): ReadonlyArray<Placed<SceneSpec>> =>
   short.spans.map((span, index) => {
     const p = Result.getOrThrow(sceneOf(film.placed, span.scene));
@@ -50,7 +36,6 @@ const retimed = (film: Film, short: ResolvedShort): ReadonlyArray<Placed<SceneSp
     return { ...p, index, frame, start: secondsAt(frame, p.fps) };
   });
 
-/** Records the band's probe took, moved `dy` down onto the page, into `sink`. */
 const onPage = (from: ProbeSink, sink: ProbeSink, dy: number) => {
   for (const t of from.texts)
     sink.texts.push({
@@ -73,11 +58,6 @@ const onPage = (from: ProbeSink, sink: ProbeSink, dy: number) => {
     });
 };
 
-/**
- * The page of `short` cut from `film`: the spans back to back, each frame the
- * film's own at the film time under it. Its spans are checked against the
- * film here: a scene, mark or cue the film lacks fails at load, naming it.
- */
 export const createShort = (film: Film, declared: Short): Film => {
   const decoded = Schema.decodeSync(Short)(declared);
   const short = Result.getOrThrow(resolveShort(film.placed, decoded));
@@ -86,14 +66,11 @@ export const createShort = (film: Film, declared: Short): Film => {
   const k = pageScale(film.width);
   const placed = retimed(film, short);
   const { finish, short: style } = film.look;
-  /** The paper round the band: above it, and below it to the page's foot. */
   const below = band.top + band.height;
   const strip = Math.max(band.top, page.height - below);
 
-  // Built lazily: the page must be made where there is no DOM (tools, tests).
   let assets:
     | {
-        /** Paper under the page's own vignette: nothing on it moves, so it is made once. */
         sheet: HTMLCanvasElement;
         grain: Grain;
         band: Offscreen;
@@ -104,7 +81,6 @@ export const createShort = (film: Film, declared: Short): Film => {
     const base = offscreen(page.width, page.height);
     base.ctx.drawImage(makePaper(page.width, page.height, film.look.paper), 0, 0);
     shadeBy(base.ctx, makeVignette(page.width, page.height, film.look.shade, finish.vignette));
-    // Grain is a tile that repeats: a sheet a strip tall (and a tile more) serves both strips.
     const grain = makeGrain(
       finish.grainSize,
       finish.grainTiles,
@@ -116,16 +92,10 @@ export const createShort = (film: Film, declared: Short): Film => {
     return assets;
   };
 
-  /** The words below the band, phrase by phrase (`--no-captions` leaves them out). */
   const captions = burnedCaptions(shortPhrases(film.placed, short), style.caption, k);
 
-  /** The hook line, above the band, while it shows; recorded as the caption's when probed. */
   const hook = verticalHook(decoded.hook, style.hook, k, SHORT_LAYOUT);
 
-  /**
-   * The band's render options, rewritten each frame so the draw allocates
-   * nothing. The film's captions are the long film's; the short sets its own.
-   */
   const bandOptions: { captions: false } & {
     -readonly [K in keyof RenderOptions]: RenderOptions[K];
   } = {
@@ -139,10 +109,8 @@ export const createShort = (film: Film, declared: Short): Film => {
     const { sheet, grain, band: frame } = getAssets();
     const index = shortSpanAt(short, T);
     const span = short.spans[index] ?? short.spans[0];
-    // A frame of the short is the frame of the film `shift` frames on, at the time `secondsAt` writes for it.
     const at = movedFrames(T, span.shift, film.fps);
     const sink = opts.probe;
-    // A probed frame (a check, never the export's draw) collects the band's records apart.
     const probed: ProbeSink | undefined = sink === undefined ? undefined : { texts: [], inks: [] };
     bandOptions.knobs = opts.knobs;
     bandOptions.probe = probed;
@@ -152,7 +120,6 @@ export const createShort = (film: Film, declared: Short): Film => {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
-    // The paper above and below the band, then the film's frame between, untouched.
     ctx.drawImage(sheet, 0, 0, page.width, band.top, 0, 0, page.width, band.top);
     ctx.drawImage(
       sheet,
@@ -200,7 +167,6 @@ export const createShort = (film: Film, declared: Short): Film => {
     fps: film.fps,
     duration: short.duration,
     placed,
-    // The renderer cuts the film's track to the spans; the page has no track of its own.
     audio: undefined,
     sound: undefined,
     palette: film.palette,
@@ -208,19 +174,12 @@ export const createShort = (film: Film, declared: Short): Film => {
     look: film.look,
     sceneAt,
     render,
-    // The film's own rigs, puppets and paintings: the page draws the film's frames, so it draws with what the film loaded.
     rigs: film.rigs,
     puppets: film.puppets,
     paintings: film.paintings,
   };
 };
 
-/**
- * The player's entries for a film's shorts, one page each under
- * `<film>/shorts/<id>`: spread them, beside the films, into the pages the app
- * mounts. A short's page runs its film's load in the page's scope, as the
- * film's own page does, so what the film holds goes with that scope.
- */
 export const shortPages = <E>(
   name: string,
   load: Effect.Effect<Film, E, Scope.Scope>,

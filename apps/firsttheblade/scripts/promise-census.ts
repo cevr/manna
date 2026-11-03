@@ -1,31 +1,8 @@
-/**
- * `bun run promise:census`: holds the promise check (`./promise.ts`) to every
- * way the email list's promise was lost before (`docs/lessons.md`
- * `email-cadence-limits`, `email-promise-found-by-phrase`,
- * `email-promise-read-in-sources`, `email-promise-net-whole-words`,
- * `email-promise-tags-split-words`, `email-promise-unread-attributes`,
- * `email-promise-held-anywhere`, and the rewrite's round 2 findings, from
- * `email-promise-invisible-characters` on), and to every source of words it
- * refuses (`email-promise-fails-closed`). Each case injects one into a copy of the
- * app's sources, builds the copy as the gate builds the app, runs the check
- * there, and passes only when the check fails and says each line of the case
- * (a `*` in a line stands for a build's content hash, a `…` for any words).
- * A case whose words the sources no longer hold fails too, so no case goes
- * stale unseen. The gate runs it after the check.
- *
- *   bun run promise:census    # prints `promise-census <case> red` per case; exits 1 when one is not
- */
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { Array as Arr, Console, Data, Effect, FileSystem, Option, Path, Stream } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 
-/**
- * One way the promise was lost, or one source of words the check refuses:
- * the words put in a file of the app (after the build when `after`, so
- * `dist/` is no longer the build of what the app holds; a new file of those
- * words when `find` is empty), and what the check must say of it.
- */
 interface Case {
   readonly name: string;
   readonly file: string;
@@ -33,7 +10,6 @@ interface Case {
   readonly put: string;
   readonly said: ReadonlyArray<string>;
   readonly after?: boolean;
-  /** The check's printed entries, pasted into the copy's `HELD` as printed, turn it green. */
   readonly held?: boolean;
 }
 
@@ -49,7 +25,6 @@ const THEME_META = '<meta name="theme-color" content={THEME_COLOR} />';
 const PAGE_BODY = '`<body style="margin:0;padding:0;background:${PALETTE.paper};">`,';
 const ONE_CLICK = "'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',";
 
-/** A case that says one more sentence after the promise, on the confirmed page. */
 const confirmedSays = (name: string, sentence: string): Case => ({
   name,
   file: 'src/ui/mail.tsx',
@@ -58,7 +33,6 @@ const confirmedSays = (name: string, sentence: string): Case => ({
   said: [`dist/subscribe/confirmed.html: unheld: ${sentence}`],
 });
 
-/** A case whose markup every notice page prints as it is, after its words; the lines are the confirmed page's. */
 const noticePrints = (name: string, html: string, said: ReadonlyArray<string>): Case => ({
   name,
   file: 'src/ui/mail.tsx',
@@ -67,7 +41,6 @@ const noticePrints = (name: string, html: string, said: ReadonlyArray<string>): 
   said: said.map((line) => `dist/subscribe/confirmed.html: ${line}`),
 });
 
-/** The census: every trigger of the promise's findings (rounds 2 to 4 of `ftb-copy`, rounds 1 and 2 of its rewrite), and every source the check refuses. */
 const CASES: ReadonlyArray<Case> = [
   {
     name: 'r2-M1 the confirmed page drops "and nothing else"',
@@ -179,7 +152,6 @@ const CASES: ReadonlyArray<Case> = [
     put: "const PROMISE = 'news from us now and then';",
     said: ['dist/privacy.html: unheld: We use it to send you news from us now and then.'],
   },
-  // rw-r1 F1: a word of time inside a longer word.
   confirmedSays('rw-r1-F1 "biweekly"', 'Expect a new film from us biweekly.'),
   confirmedSays('rw-r1-F1 "on weekends"', 'A new film lands in your box on weekends.'),
   confirmedSays('rw-r1-F1 "quarterly"', 'Look for us quarterly.'),
@@ -193,12 +165,10 @@ const CASES: ReadonlyArray<Case> = [
     'Expect a roundup from us at Easter and Christmas.',
   ),
   confirmedSays('rw-r1-F1 "seasonal"', 'And our seasonal roundup.'),
-  // rw-r1 F4: a sentence held on one page, said on another.
   confirmedSays(
     'rw-r1-F4 "for an hour" said on the confirmed page',
     'We will not send another one for an hour.',
   ),
-  // rw-r1 F2: a word split by an inline element.
   {
     name: 'rw-r1-F2 the sign-up label splits "weekly" with <u>',
     file: 'src/ui/mail.tsx',
@@ -215,7 +185,6 @@ const CASES: ReadonlyArray<Case> = [
   noticePrints('rw-r1-F2 <s></s>every Friday', '<p>Find us here <s></s>every Friday.</p>', [
     'unheld: Find us here every Friday.',
   ]),
-  // The layout check: a word the net takes in one layout and not in the other.
   noticePrints('rw-r1-F2 a word split across two boxes', '<p>Find us here wee</p><p>kly.</p>', [
     'layout: Find us here wee|kly.',
   ]),
@@ -224,7 +193,6 @@ const CASES: ReadonlyArray<Case> = [
     '<p>Our list<span>ening</span> room.</p>',
     ['layout: Our list|ening room.'],
   ),
-  // rw-r1 F3: words a reader sees in attributes and stylesheets.
   {
     name: 'rw-r1-F3 the sign-up button as <input type=submit value>',
     file: 'src/ui/mail.tsx',
@@ -258,7 +226,6 @@ const CASES: ReadonlyArray<Case> = [
     put: `.signup-label::after {\n  content: 'Weekly emails';\n}\n${LABEL_CSS}`,
     said: ['dist/assets/client-*.css: unheld: Weekly emails'],
   },
-  // rw-r2 F1: a character a reader does not see, or sees as a plain letter, inside a word.
   noticePrints('rw-r2-F1 a soft hyphen inside "weekly"', '<p>Expect us wee&shy;kly.</p>', [
     'unheld: Expect us weekly.',
   ]),
@@ -276,7 +243,6 @@ const CASES: ReadonlyArray<Case> = [
   noticePrints('rw-r2-F1 a Cyrillic letter in "weekly"', '<p>Expect us w&#x435;&#x435;kly.</p>', [
     'unread: character U+0435 in "Expect us w\u0435\u0435kly."',
   ]),
-  // rw-r2 F2: generated content drawn beside an element's words.
   {
     name: 'rw-r2-F2 generated content after the sign-up button',
     file: 'src/styles.css',
@@ -294,7 +260,6 @@ const CASES: ReadonlyArray<Case> = [
     "<style>.w::after{content:'wee' 'kly.'}</style>",
     ["unread: content: 'wee' 'kly.'"],
   ),
-  // rw-r2 F3: a box shown inline beside a held sentence.
   {
     name: 'rw-r2-F3 an inline <div> after the sign-up label',
     file: 'src/ui/mail.tsx',
@@ -307,7 +272,6 @@ const CASES: ReadonlyArray<Case> = [
     '<p>Get them by email</p><p> and our garden too.</p>',
     ['layout: Get them by email | and our garden too.'],
   ),
-  // rw-r2 F4: the letters' sender, which every inbox shows.
   {
     name: 'rw-r2-F4 the letters are from "First the Blade Weekly"',
     file: 'src/mail/mailer.ts',
@@ -322,7 +286,6 @@ const CASES: ReadonlyArray<Case> = [
     put: "email: 'weekly@firsttheblade.com'",
     said: ['letter sender: unheld: weekly@firsttheblade.com'],
   },
-  // rw-r2 F5: a meta tag the check does not know.
   {
     name: 'rw-r2-F5 <meta name="application-name">',
     file: 'src/document.tsx',
@@ -330,9 +293,7 @@ const CASES: ReadonlyArray<Case> = [
     put: `${THEME_META}\n        <meta name="application-name" content="First the Blade Weekly" />`,
     said: ['dist/index.html: unread: meta application-name'],
   },
-  // rw-r2 F6: what we send beside the films.
   confirmedSays('rw-r2-F6 "our news and offers"', 'Plus our news and offers.'),
-  // rw-r2 F7: the gate reads turbo's build, so a build older than its sources fails.
   {
     name: 'rw-r2-F7 a source changed after the build',
     file: 'src/ui/mail.tsx',
@@ -349,13 +310,11 @@ const CASES: ReadonlyArray<Case> = [
     after: true,
     said: ['stale: dist/llms.txt changed after its build'],
   },
-  // rw-r2 F8: a file name the browser shows.
   noticePrints(
     'rw-r2-F8 a download file name',
     '<a href="/x.pdf" download="weekly-digest.pdf">Get it</a>',
     ['unheld: weekly-digest.pdf'],
   ),
-  // The letters: their subjects, a hidden preheader and their headers.
   {
     name: 'letters a cadence in a subject',
     file: 'src/mail/letters.ts',
@@ -380,7 +339,6 @@ const CASES: ReadonlyArray<Case> = [
     put: `${ONE_CLICK}\n      'X-Note': 'One film a week',`,
     said: ['letter film path/00 text: unread: letter header X-Note'],
   },
-  // Each source of words the check does not read fails the run.
   noticePrints(
     'fail-closed an element the check does not read',
     '<iframe src="/x.html"></iframe>',
@@ -444,7 +402,6 @@ const CASES: ReadonlyArray<Case> = [
   ),
 ];
 
-/** What a copy of the app needs to build and to run the check. */
 const COPIED = [
   'src',
   'public',
@@ -456,13 +413,10 @@ const COPIED = [
   'vite.config.ts',
 ];
 
-/** The repo's formatter, from a copy of the app (two levels down, as the app is). */
 const OXFMT = '../../node_modules/.bin/oxfmt';
 
-/** Cases run at once, each building its own copy. */
 const CONCURRENCY = 6;
 
-/** A case's line as the check prints it, a `*` standing for a build's content hash. */
 const saying = (line: string) =>
   new RegExp(
     `^promise ${line
@@ -482,7 +436,6 @@ class CensusMissed extends Data.TaggedError('CensusMissed')<{ readonly missed: n
 const text = <E>(stream: Stream.Stream<Uint8Array, E>) =>
   Stream.mkString(Stream.decodeText(stream));
 
-/** A command's output, stdout then stderr, and its exit code. */
 const exec = (command: string, args: ReadonlyArray<string>, cwd: string) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner;
@@ -496,22 +449,15 @@ const exec = (command: string, args: ReadonlyArray<string>, cwd: string) =>
     return { output: `${stdout}${stderr}`, code: Number(code) };
   }).pipe(Effect.scoped);
 
-/** A printed entry's instruction: the `HELD` list it goes in (its key as the source writes it), or `HELD` itself for a key it does not name. */
 const ENTRY =
   /^promise to hold (?:it|them), paste into HELD(?: under (.+))? in apps\/firsttheblade\/scripts\/promise\.ts:$/;
 
-/** Where a printed entry goes in the check's source: after its list's key, or after `HELD`'s opening. */
 const anchorOf = (key: Option.Option<string>) =>
   Option.match(key, {
     onNone: () => 'const HELD = new Map<string, ReadonlyArray<string>>(\n  Object.entries({\n',
     onSome: (list) => `\n    ${list}: [\n`,
   });
 
-/**
- * Pastes each entry the check printed into the copy's `scripts/promise.ts`
- * exactly as printed, then holds the copy to what the entry promises: the
- * check passes, and the pasted file is formatted as the repo formats it.
- */
 const holdAsPrinted = (copy: string, output: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -561,7 +507,6 @@ const holdAsPrinted = (copy: string, output: string) =>
     }
   });
 
-/** One case, in its own copy of the app under the repo's `tmp/` (two levels down, as the app is, so its tsconfig's `extends` holds). */
 const runCase = (app: string, scratch: string, found: Case) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

@@ -1,74 +1,15 @@
-// What a finger or a pointer reaches on a page: every shown interactive
-// element whose usable hit area holds no square of the touch target
-// (`--hit`: 44 px on the phone, 28 px on the laptop; the design language's
-// "every touch target ≥ --hit through padding").
-//
-// The usable area is measured as a tap meets it, not as the element's box:
-// a grid of points every `STEP` px over the target's box and a margin of half
-// a target round it, each asked `document.elementFromPoint`; the points that
-// land on the target or a label of it, with no other control nearer (a link
-// inside a label is the link's), are its area. So padding and a
-// pseudo-element hit-slop (`::before` past the box) count, and a part another
-// element covers does not. The target passes when a square of `hit` px fits
-// in that area (the square in the middle of its largest box is asked first:
-// whole, it passes on that alone). Sampled every 2 px, a region under `hit - 2` px always fails
-// and one of `hit` px always passes. A visually hidden field (a 1 px
-// checkbox) is reached through its labels, which are then its target.
-//
-// Not a target at all: a backing input, out of the accessibility tree and
-// the tab order (`aria-hidden`, `tabindex="-1"`) and physically hidden
-// (clipped away, 1 × 1, or transparent with no pointer events), such as the
-// form input a number field keeps beside its visible one; the visible one is
-// measured. A popup's focus guard (in the tab order only to send the focus
-// on, and as hidden) is none either. Anything shown that a pointer can land
-// on is measured.
-//
-// A hit-slop stays off its neighbours: where a target's slop (a positioned
-// `::before` or `::after` drawn past its padding box) lies over another
-// control's box, one that neither holds nor is held by it, a tap on that
-// control's edge is the target's, though both still hold a square. The
-// slop's rectangle is worked out exactly from its own offsets and size,
-// and every whole pixel where it meets the neighbour's box (the part its
-// scrolling ancestors leave shown: a control scrolled out of its pane is
-// none there) is asked who a
-// tap there reaches; the target fails, as `… reaches over …`, on any one
-// that is its. A slop that cannot be placed exactly (its target is not its
-// containing block, or it, its target or an ancestor beyond a move is
-// transformed) fails as `… hit-slop is not anchored to its target`. The
-// studio's hit areas are a target's own box (its padding and minimum
-// size), and `::before` slops (a name's, the note scope's ×, the findings
-// chip's); a child element or padding never reaches past the target's box,
-// so neither is in this check's scope.
-//
-// Exceptions are WCAG 2.5.8's (target size, minimum), never by page:
-// - Inline: a link in running text, with words before or after it on its
-//   own line, so the line of text sets its size. Words a control holds (a
-//   button's label) are no running text; words in a box focusable only to
-//   be scrolled (a reader's) are.
-// - Spacing: a target whose usable area holds a square of `SPACED_MIN`
-//   (24 px), and whose `hit`-wide circle, on the middle of that area, lands
-//   on no other target's usable area (hit-slops included), so a finger aimed
-//   at it cannot land on a neighbour. A target that encloses it is its
-//   container, not its neighbour.
-
 import { jsonOf } from './tab.ts';
 
-/** The phone's touch target, in CSS pixels (`--hit` under a coarse pointer). */
 export const PHONE_HIT = 44;
 
-/** The laptop's target, in CSS pixels (`--hit` with a fine pointer on a wide screen). */
 export const DESK_HIT = 28;
 
-/** The smallest target the spacing exception keeps (WCAG 2.5.8's 24 px). */
 const SPACED_MIN = 24;
 
-/** The sampling grid's pitch, in CSS pixels. */
 const STEP = 2;
 
-/** A box focusable of its own (a reader that scrolls by the keyboard): a target, but no control's words. */
 const FOCUSABLE_BOX = '[tabindex]:not([tabindex="-1"])';
 
-/** The controls whose words are their own (a button's label, a link's text): every target but a focusable box. */
 const CONTROLS = [
   'button',
   'a[href]',
@@ -91,25 +32,10 @@ const CONTROLS = [
   ].map((role) => `[role=${role}]`),
 ];
 
-/**
- * What a finger can operate: the elements, and the roles, a page's touch
- * targets are, as one selector. The touch-target check and the phone-fit
- * check ask the same one.
- */
 export const TARGETS = [...CONTROLS, FOCUSABLE_BOX].join(', ');
 
-/**
- * What holds words as its own, so they are no running text around a link:
- * a control. The words in a box focusable only to be scrolled (a reader's)
- * are the page's text.
- */
 const HOLDERS = CONTROLS.join(', ');
 
-/**
- * The page-side words every measure of the controls shares: `boxOf`;
- * `backing`, a backing input (out of the tree and the tab order, and nothing
- * of it to see or press); `named`, how a failure names a control.
- */
 export const CONTROL_WORDS = `
   const boxOf = (el) => el.getBoundingClientRect();
   const backing = (el) => {
@@ -127,7 +53,6 @@ export const CONTROL_WORDS = `
     return el.tagName.toLowerCase() + kind + cls + ' "' + text + '"';
   };`;
 
-/** `CONTROL_WORDS`, and `shown`: a target the page shows. */
 const SHOWN = `${CONTROL_WORDS}
   const shown = (el) => {
     if (backing(el)) return false;
@@ -135,12 +60,6 @@ const SHOWN = `${CONTROL_WORDS}
     return r.width > 0 && r.height > 0 && el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true });
   };`;
 
-/**
- * The controls that hold their own words and pictures: a button's label, a
- * link's text, the image inside either is that one control, never a second
- * thing seen. A focusable container (`[tabindex]`) and a slider are counted,
- * but what they hold is counted on its own.
- */
 const OWNERS = [
   'button',
   'a[href]',
@@ -152,21 +71,8 @@ const OWNERS = [
   ),
 ].join(', ');
 
-/** What a view shows that the eye counts as one thing: every target, and every picture and player. */
 const SEEN = `${TARGETS}, video, audio, canvas, img`;
 
-/**
- * An expression run in the page: everything the view shows on its first
- * screen, the clutter the at-rest budget holds, as the UI-reduction
- * sweep's `count.js` counts it: each control (a target, a picture, a player
- * or a canvas: `C tag.class "text"`) and each text leaf (an element with
- * words of its own, not inside a control: `T …`). A disabled control is
- * still seen, so it counts. Something below the fold, or scrolled out of an
- * inner scroller's box, is not on the first screen and does not count; a
- * visually hidden one (1 px, clipped to nothing) and a backing input never
- * count. Over the `page` (a long view's whole length) the fold and the
- * scrollers' boxes do not exclude: what a visit scrolls to counts too.
- */
 export const firstScreenItems = (reach: 'screen' | 'page' = 'screen'): string => `(() => {
   const SEEN = ${jsonOf(SEEN)}, OWNERS = ${jsonOf(OWNERS)}, ONLY_ON_SCREEN = ${reach === 'screen'};
   ${SHOWN}
@@ -204,17 +110,6 @@ export const firstScreenItems = (reach: 'screen' | 'page' = 'screen'): string =>
   return items;
 })()`;
 
-/**
- * An expression run in the page: each shown target in `within` (a selector;
- * the whole page when none) whose usable area holds no `hit`-px square and
- * no exception keeps, as `tag.class "text" W×H □S` (the area's width and
- * height, and the side of the largest square in it), and each whose hit-slop
- * lies over a neighbour's box, as `… reaches over <the neighbour>`; none, `[]`. It scrolls
- * each target into view to reach it (a sheet stays where it rests), and leaves the page scrolled to the top;
- * one that scrolling leaves wholly out of the window is `… out of the window`.
- * A layer (a sheet, a menu, a dialog) is measured `within` itself: what lies
- * under it is measured with it closed.
- */
 export const undersizedTargets = (hit: number, within = ':root'): string => `(() => {
   const HIT = ${hit}, SPACED_MIN = ${SPACED_MIN}, STEP = ${STEP}, MARGIN = ${Math.ceil(hit / 2)};
   const TARGETS = ${jsonOf(TARGETS)}, HOLDERS = ${jsonOf(HOLDERS)}, WITHIN = ${jsonOf(within)};
@@ -418,7 +313,6 @@ export const undersizedTargets = (hit: number, within = ':root'): string => `(()
   return out;
 })()`;
 
-/** A target's attributes that do not name it: its hydration key, and those its state changes. */
 const UNNAMING = [
   '_hk',
   'class',
@@ -442,20 +336,8 @@ const UNNAMING = [
   'data-popup-open',
 ];
 
-/** How `targetBoxes` writes a box (`box`, its four numbers), by its unit. */
 const BOX_AS = { whole: "box.map(Math.round).join(',')", exact: 'box' } as const;
 
-/**
- * An expression run in the page: each shown target (the elements and roles
- * `undersizedTargets` measures) and its box on the page, `left,top,width,height`
- * from the page's top-left, keyed by what names it (its tag and its
- * attributes but `UNNAMING`, a link's `href` without its hash: the page
- * bar's tabs carry the playhead's `#t=` once the film is staged) and its
- * place among the targets named the same: `{ key: box }`. `whole` (the
- * default): each box a string of whole CSS pixels, compared as it is;
- * `exact`: each box the four numbers as the layout has them, so a check
- * that allows a sub-pixel difference measures it before any rounding.
- */
 export const targetBoxes = (unit: keyof typeof BOX_AS = 'whole'): string => `(() => {
   const TARGETS = ${jsonOf(TARGETS)}, UNNAMING = ${jsonOf(UNNAMING)};
   const counted = new Map();

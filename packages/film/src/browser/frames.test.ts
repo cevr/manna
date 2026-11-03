@@ -1,8 +1,3 @@
-// Frames: a loop steps once a frame until its step says stop, and asks for no
-// frame once interrupted, even from inside its own step; a coalesced paint
-// runs once a frame however often it is asked for, and not after its scope
-// closes; on a test's clock, a frame comes every 16 ms.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Exit, Fiber, Scope } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -10,7 +5,6 @@ import { manualFrames } from './fixtures/frames.ts';
 import { Frames } from './frames.ts';
 import { hostOf } from './host.ts';
 
-/** Frames run by hand, on a host of their own. */
 const manual = () => {
   const frames = manualFrames();
   return { ...frames, host: hostOf(frames.layer) };

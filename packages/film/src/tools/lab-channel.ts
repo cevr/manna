@@ -1,22 +1,3 @@
-// `film channel`: the lab's change feed pushed into a Claude Code session as
-// channel events. Claude Code reads a server's push only from a stdio server
-// it spawned, that declares `experimental['claude/channel']`, through the
-// method `notifications/claude/channel`; the lab is an HTTP server many
-// sessions share, and Effect's stdio server sends neither that capability nor
-// that method. So the bridge is its own small JSON-RPC loop over stdin and
-// stdout: it answers Claude Code's handshake, then asks the lab's MCP at
-// `FILM_LAB_URL` (through `lab-client.ts`, the one client of it) for
-// `changes`, waiting up to `WAIT_S` each time, and sends each change on as
-// one channel event: its summary and links as the text, what it is about as
-// attributes.
-// The lab stays the one record and the one feed; the bridge reads the lab's
-// event stream (`lab-stream.ts`, the one `film lab events --follow` prints),
-// whose cursor outlives a session: a lab that stops answering is asked again
-// with backoff and read on from it.
-//
-//   claude mcp add lab-events -s user -- bun <app>/cli.ts channel
-//   claude --dangerously-load-development-channels server:lab-events
-
 import {
   Array as Arr,
   Boolean as Bool,
@@ -33,16 +14,12 @@ import type { HeardChange } from '../core/lab-events.ts';
 import { isLostLab, labClient, labUrl } from './lab-client.ts';
 import { type Heard, STREAM_PACE, followLab, labFeed } from './lab-stream.ts';
 
-/** The capability Claude Code reads a channel by. */
 const CHANNEL = 'claude/channel';
 
-/** The method a channel event is sent with. */
 const CHANNEL_EVENT = 'notifications/claude/channel';
 
-/** The most changes one reconnect sends on: the rest are said in one line. */
 const CATCH_UP = 20;
 
-/** The protocol versions the bridge speaks, newest first: the client's when it asks one of them. */
 const VERSIONS: ReadonlyArray<string> = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 
 const INSTRUCTIONS = [
@@ -50,7 +27,6 @@ const INSTRUCTIONS = [
   "Act on one with the lab's MCP tools (server `lab`): read it in full (`notes`, `board`, `catalogue`), do the work, then `reply` on its note saying what changed and where to look, and `resolve` it once made. The event's link opens the place in the lab.",
 ].join('\n\n');
 
-/** A JSON-RPC message as the bridge reads one: a request (with an id) or a notification. */
 const Incoming = Schema.Struct({
   id: Schema.optionalKey(Schema.Union([Schema.String, Schema.Finite])),
   method: Schema.optionalKey(Schema.String),
@@ -62,7 +38,6 @@ const JsonText = Schema.fromJsonString(Schema.Json);
 const readIncoming = Schema.decodeUnknownOption(Schema.fromJsonString(Incoming));
 const writeJson = Schema.encodeSync(JsonText);
 
-/** The protocol version a client asked for, when it is one the bridge speaks; else the bridge's own. */
 const versionFor = (params: Option.Option<Schema.Json>): string =>
   Option.getOrElse(
     Option.filter(
@@ -77,18 +52,12 @@ const versionFor = (params: Option.Option<Schema.Json>): string =>
     () => '2025-06-18',
   );
 
-/** A JSON-RPC answer to request `id`. */
 const result = (id: string | number, value: Schema.Json): Schema.Json => ({
   jsonrpc: '2.0',
   id,
   result: value,
 });
 
-/**
- * What the bridge answers `message` with, if anything: the handshake (the
- * channel capability, no tools), a ping, and an empty tool list; any other
- * request is a method it lacks; a notification is answered by nothing.
- */
 const answerTo = (message: Incoming): Option.Option<Schema.Json> =>
   Option.map(Option.fromUndefinedOr(message.id), (id) => {
     switch (message.method) {
@@ -115,7 +84,6 @@ const answerTo = (message: Incoming): Option.Option<Schema.Json> =>
     }
   });
 
-/** The attributes of a change's event: what it is about, each a string, by an identifier key. */
 const metaOf = (change: HeardChange): Record<string, string> => {
   const about: ReadonlyArray<readonly [string, Option.Option<string | number>]> = [
     ['film', Option.fromUndefinedOr(change.film)],
@@ -140,7 +108,6 @@ const metaOf = (change: HeardChange): Record<string, string> => {
   ]);
 };
 
-/** One change as the channel event Claude Code reads: its summary, its words in full, its links (local, then the phone's). */
 const channelEvent = (change: HeardChange): Schema.Json => ({
   jsonrpc: '2.0',
   method: CHANNEL_EVENT,
@@ -160,7 +127,6 @@ const channelEvent = (change: HeardChange): Schema.Json => ({
   },
 });
 
-/** The changes a reconnect sends on: the newest `CATCH_UP`, and a line for the rest. */
 const caughtUp = (changes: ReadonlyArray<HeardChange>): ReadonlyArray<Schema.Json> => {
   const dropped = changes.length - CATCH_UP;
   const told = changes.slice(-CATCH_UP).map(channelEvent);
@@ -180,21 +146,14 @@ const caughtUp = (changes: ReadonlyArray<HeardChange>): ReadonlyArray<Schema.Jso
   });
 };
 
-/**
- * The bridge: Claude Code's handshake answered from stdin, then the lab's
- * changes sent as channel events on stdout, one JSON message a line, until
- * stdin ends (Claude Code stopped it).
- */
 const runChannel = (url: string) =>
   Effect.gen(function* () {
     const stdio = yield* Stdio.Stdio;
     const outgoing = yield* Queue.unbounded<string>();
     const send = (message: Schema.Json) => Queue.offer(outgoing, `${writeJson(message)}\n`);
     const client = yield* labClient(url);
-    /** The lab's feed: a session (ended with its connection), then `changes` past a cursor (none: the cursor now). */
     const feed = labFeed(client);
 
-    /** The lab's changes, relayed for as long as the bridge runs: a lost session is started again. */
     const relay = followLab(
       feed,
       { since: Option.none(), pace: STREAM_PACE, isLost: isLostLab, goneAfter: Option.none() },
@@ -240,10 +199,6 @@ const runChannel = (url: string) =>
     yield* answering;
   }).pipe(Effect.scoped);
 
-/**
- * `film channel`: the bridge, for Claude Code to spawn (`claude mcp add
- * lab-events -- … channel`), over the HTTP client its root gives it.
- */
 export const channel = Command.make('channel', {}, () =>
   Effect.gen(function* () {
     const url = yield* labUrl;

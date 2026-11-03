@@ -1,13 +1,3 @@
-/**
- * The bar's key model over its whole domain: chords on or off, every move
- * (transpose -5 to 6, capo 0 to 11) and the dials closed or open, 576
- * states, against every event: a tap, a hold, a tap on the page, the key
- * dial turned to each of the twelve sounding keys, the capo dial turned to
- * each fret and one past each end, reset, the end of a reset’s wait, and a tap on the
- * dials’ Tuner; the dials with the Tuner and without. Three printed keys: hymn 100’s
- * D-flat, a sharp key, and a minor one.
- */
-
 import * as Chord from '@manna/hymnal/chord';
 import { describe, expect, it } from 'bun:test';
 import { Match, Option } from 'effect';

@@ -1,24 +1,8 @@
-// The villager toddler's skeletons, one a cut view (`core/puppet.ts`), read in
-// view pixels and moved into its part sheet's frame (`frames.ts`) by the
-// shared skeleton (`library/cutout/skeleton.ts`): their lean from their hip's
-// middle to the base of their neck, their neck and head above it, and their
-// left arm's shoulder, elbow and wrist on the joints their cut records
-// (`joints.ts`), the wrist at the cuff and its tip at the round hand's middle.
-// Their kept pose running (poses-1) shows only the near left arm, out behind
-// them; the right arm is not drawn, so the skeleton has no bones for it. Their
-// torso leans; their sandals and ground shadow stand with the root. The ground
-// is the lead foot's sole (view y285); the back foot's heel is up, its sole
-// 3 px above it (y282). The sleeve takes its shoulder's flap of torso. Their
-// kept pose sitting (poses-2) faces the viewer, both arms hanging, and stands
-// as `front` does; its root is their seat, the ground their heels, legs and
-// seat. Pure data.
-
 import type { Skeleton } from '@manna/film/core';
 import { type Body, framed, standing } from '../../../cutout/skeleton.ts';
 import { type FramedView, keptAt } from './frames.ts';
 import { JOINTS } from './joints.ts';
 
-/** Their parts as their part sheets name them (`cut.ts`), each on its bones; their sleeves' flaps from their torso, in a band 20 px above each shoulder to 12 below, reaching 40 past it. */
 const BODY: Body = {
   skin: {
     head: ['neck', 'head'],
@@ -31,7 +15,6 @@ const BODY: Body = {
   band: { above: 20, below: 12, reach: 40 },
 };
 
-/** Each cut view's skeleton, in its part sheet's frame. */
 export const SKELETONS = {
   'poses-1': framed(keptAt('poses-1'), {
     bones: [
@@ -74,7 +57,6 @@ export const SKELETONS = {
     ],
     root: [115, 220],
   }),
-  // sitting, facing the viewer, as `front`: their right arm on the viewer's left, its flap out from the sleeve's guessed inner edge to the sheet's left edge
   'poses-2': framed(
     keptAt('poses-2'),
     standing(BODY, {

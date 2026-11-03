@@ -1,10 +1,3 @@
-/**
- * The find bar's place in the render a hymn page is pushed, before the page
- * says it shows (`findPlace`): over the resting bar on a page the book holds,
- * so the bar never leaves on its way up and glides from where it stood; and
- * nowhere on a number the book does not hold, whose route draws no bar.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
@@ -15,9 +8,7 @@ import { Player } from './player';
 
 const track = { number: 8, title: 'Stand-in' };
 const playing = Player.Playing({ track, at: 1, length: Option.some(100) });
-/** The book's hymns as the hymn route reads a number: 1 to 695, written without leading zeros. */
 const holds = (segment: string) => /^[1-9]\d*$/.test(segment) && Number(segment) <= 695;
-/** Where the `#` stands on `path`, with no page yet saying it shows and no control raised. */
 const placeOn = (path: string, state: Player) =>
   findPlace({ path, holds, shown: Option.none(), state, raised: false });
 

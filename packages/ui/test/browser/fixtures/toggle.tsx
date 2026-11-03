@@ -1,13 +1,3 @@
-// Fixtures for ToggleGroup and its toggles, owned as the lab owns them: the
-// owner holds `value` and takes every offer, unless `owner=keep-one` (the
-// lab's mode trays: one value always pressed, an offered `[]` ignored) or
-// `owner=decline` (it takes none). `value` seeds the owner's value; the
-// `set-value` button sets it to `three`. Every offer is logged as
-// `value [<values>]`; the field after the group logs `field blur`; `#grip`
-// after it is an SVG control that takes focus (the Lab's wipe grip).
-// `in-dialog` puts all of it in a popup that takes focus (`tabindex="-1"`),
-// as the lab's sheets are; `in-details` in an open `<details>` given a
-// `tabindex`; `later` mounts it when `#show` is pressed.
 import type { JSX } from '@solidjs/web';
 import { createSignal, Show } from 'solid-js';
 

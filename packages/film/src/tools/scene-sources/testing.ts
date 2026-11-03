@@ -1,21 +1,5 @@
-// A films folder on disk for the scene tests (`scene-sources.ts`): one film's
-// scene sources, with the formatter they are written through.
-
 import { Effect, FileSystem, Path } from 'effect';
 
-/**
- * A film folder on disk for the lab's source tools: `f/scenes/` with a hand
- * scene (a literal timeline and knobs, one computed offset), a drawing the
- * registry renames (`alpha` registered as `beta`) beside a decoy file that
- * exports a `beta` of its own, a scene whose timeline the registry builds in
- * code, and one with nothing to edit. Every file is as oxfmt leaves it, under
- * the repo's `.oxfmtrc.json`, copied to the root, and the root's
- * `node_modules/.bin/oxfmt` is the repo's: the source writer's `bunx oxfmt`
- * runs it, as it does in the repo, never fetching one from the registry
- * (which, in a folder with none, it did on every write, parallel workers
- * racing on its one install). `f/voice.ts` and `f/film.ts` (its rate) let
- * FilmRepo load it. Returns the films folder.
- */
 export const sceneFixture = Effect.fn('test.sceneFixture')(function* (root: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

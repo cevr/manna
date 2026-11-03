@@ -1,12 +1,3 @@
-/**
- * Moving between screens on the web: a row opens its hymn inside the app,
- * never by loading the page anew, and coming back to the search finds it as
- * the reader left it. The screens are mounted in a browser's document
- * (`src/test/setup.ts`), with `one` as the web build has it
- * (`src/test/one.tsx`). On the web a screen is mounted anew when the reader
- * comes back to it, so the test unmounts the search and mounts it again.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { RegistryProvider } from '@effect/atom-react';
 import { Option } from 'effect';
@@ -23,10 +14,6 @@ import { HymnList } from './HymnList';
 import { HymnPage } from './HymnPage';
 import { hymnsOffset } from './place';
 
-/**
- * The app mounted in the document with `node` on screen, nothing opened
- * yet; it unmounts when the test's `using` ends.
- */
 const mount = (node: ReactNode) => {
   opened.splice(0);
   const host = document.createElement('div');
@@ -43,7 +30,6 @@ const mount = (node: ReactNode) => {
   };
 };
 
-/** A left click on `element`; true when the page handled it (the browser follows nothing). */
 const click = (element: Element, keys: { readonly metaKey?: boolean } = {}) => {
   const event = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, ...keys });
   act(() => void element.dispatchEvent(event));
@@ -56,11 +42,6 @@ const row = (host: HTMLElement, label: string) =>
 const rows = (host: HTMLElement) =>
   [...host.querySelectorAll('[role="link"][aria-label]')].map((r) => r.getAttribute('aria-label'));
 
-/**
- * Types `text` into the search field as a reader does: the field's value,
- * set as the browser sets it (past React's own record of it), then its
- * input event.
- */
 const type = (host: HTMLElement, text: string) => {
   const field = Option.getOrThrow(Option.fromNullishOr(host.querySelector('input')));
   const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
@@ -105,7 +86,6 @@ describe('moving between screens on the web', () => {
     const left = rows(host);
     expect(left[0]).toBe('55, Jesus Tender Shepherd Hear Me');
 
-    // The hymn shows in the search's place, then Back shows the search again.
     act(() =>
       root.render(inApp(<HymnPage hymn={Option.getOrThrow(hymnAt('545'))} reader={readerOn()} />)),
     );

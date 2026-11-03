@@ -7,7 +7,6 @@ import { rowsOf } from './rows';
 
 const hymn = (number: number, topic: string) => ({ number, topic });
 
-// Two topics of two hymns, then one of one: topic rows 36 tall, hymn rows 44, under a 100 pt header.
 const { rows } = rowsOf([hymn(1, 'a'), hymn(2, 'a'), hymn(3, 'b'), hymn(4, 'b'), hymn(5, 'c')]);
 const size = (kind: 'topic' | 'shelf' | 'hymn') => ({ topic: 36, shelf: 36, hymn: 44 })[kind];
 const starts = topicStarts(rows, 100, size);
@@ -29,9 +28,7 @@ describe('the pinned topic row', () => {
   });
 
   it('lets the next topic push the pinned row up by as much as it overlaps', () => {
-    // The next topic's top is 10 pt below the list top: the pinned row sits 26 pt up.
     expect(pinnedAt(starts, 214, 36)).toEqual({ index: 0, y: -26 });
-    // Exactly one row below the top: no push yet.
     expect(pinnedAt(starts, 188, 36)).toEqual({ index: 0, y: 0 });
   });
 
@@ -51,20 +48,16 @@ describe('the pinned topic row', () => {
 });
 
 describe('the pinned topic row under a layer over the list’s top', () => {
-  // A 52 pt field over the list's top: the pin's line is 52 pt down.
   const cover = 52;
 
   it('pins the topic whose row has reached the layer’s bottom, not the list’s top', () => {
-    // The second topic's row (at 224) is 52 pt below the top at 172: it takes the pin there.
     expect(pinnedAt(starts, 171.5, 36, cover).index).toBe(0);
     expect(pinnedAt(starts, 172, 36, cover)).toEqual({ index: 1, y: 0 });
-    // The first topic pins once its row meets the layer, 52 pt before it meets the top.
     expect(pinnedAt(starts, 47.5, 36, cover).index).toBe(-1);
     expect(pinnedAt(starts, 48, 36, cover)).toEqual({ index: 0, y: 0 });
   });
 
   it('lets the next topic push the pinned row up from the layer’s bottom', () => {
-    // The next topic's top is 10 pt below the pin's line: the row sits 26 pt up.
     expect(pinnedAt(starts, 162, 36, cover)).toEqual({ index: 0, y: -26 });
   });
 
@@ -74,16 +67,12 @@ describe('the pinned topic row under a layer over the list’s top', () => {
   });
 
   it('holds still through a frame where the cover moves as the list does: the next row meets it at the same place', () => {
-    // A field sliding in by 6 pt as the list scrolls up 6 pt: the pin's line
-    // stays on the same content point, so the topic and its push are unchanged.
-    // At the push, 4 pt above the next topic's row: the row sits 32 pt up both times.
     expect(pinnedAt(starts, 200, 36, 20)).toEqual({ index: 0, y: -32 });
     expect(pinnedAt(starts, 194, 36, 26)).toEqual({ index: 0, y: -32 });
   });
 });
 
 describe('the offset a list opens at', () => {
-  // The content ends at 100 + 3 * 36 + 5 * 44 = 428, then 40 of end space.
   const open = (start: number, viewport: number) =>
     clampedStart(start, rows, 100, size, 40, viewport, 50);
 

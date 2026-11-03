@@ -1,39 +1,19 @@
-// The painterly look's colours: a muted oil palette of teal, slate and ochre.
-// Shadow runs cool (deep teal, slate), light runs warm (ochre, lamp cream),
-// and every material is a ramp of five paints from its shadow to its light,
-// which the brush picks from by the light that falls on it (`brush.ts`).
-// Three colours keep the colour script's meanings: the scarlet stain on the
-// accused's shirt (sin, on the cloth that carries it), and gold leaf, the
-// Word, for the verdict and the card's payoff. Gold is painted in one exact
-// paint (`GOLD`), which the oil pass finds and lays as leaf (`oil.ts`); no
-// other paint comes near it.
-
 import type { Hex } from '@manna/film/canvas';
 
-/** Five paints from a material's deepest shadow to its full light. */
 export type Ramp = readonly [Hex, Hex, Hex, Hex, Hex];
 
 export const P = {
-  /** The ink of edges and features: a teal near-black, never pure black. */
   ink: '#121a1b',
-  /** Shadow's own colour, the gloom the room recedes into. */
   gloom: '#17242a',
-  /** The card's ground and the highlight on the page: deep teal. */
   teal: '#173634',
-  /** The card's letters and the highlighted words: cream. */
   cream: '#efe4c8',
-  /** Gold leaf: the Word. The one paint the oil pass gilds. */
   gold: '#c8961e',
-  /** The stain on the accused's shirt. */
   scarlet: '#9a1d16',
-  /** A lamp's flame, and the pool of warm light round it. */
   flame: '#fff1cf',
   lamp: '#f0b860',
-  /** Window light: cool and pale. */
   sky: '#dfe8dc',
 } as const satisfies Record<string, Hex>;
 
-/** Every material's ramp, shadow to light. */
 export const R = {
   wall: ['#18252a', '#22343a', '#33494c', '#4f6764', '#7d928a'],
   panel: ['#140f0d', '#21170f', '#352315', '#55361d', '#8a5d30'],
@@ -51,5 +31,4 @@ export const R = {
   desk: ['#0f0c0a', '#1b130e', '#2b1d13', '#46301c', '#7a5530'],
 } as const satisfies Record<string, Ramp>;
 
-/** The faces the look sets its type in: a classic book serif. */
 export const SERIF = 'EB Garamond';

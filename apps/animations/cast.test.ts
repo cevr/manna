@@ -1,27 +1,12 @@
-// Every file a film's board can send as a cast member's library reference
-// travels with the repository: a board run reads it in any checkout, so none
-// may be left untracked, as `.gitignore` would keep it (a fresh checkout's
-// `film board` would refuse with `CastReferenceMissing`). A record that keeps
-// a sheet sends its kept sheets or its own views of them (`kept/`, `views/`);
-// a record that keeps none sends its own references (`castLock`). Every record
-// is held, the library's and each film's own roles, whether a beat names the
-// member yet or not.
-
 import { BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
 import { Boolean as Bool, Effect, FileSystem, Layer, Path, Schema, Stream } from 'effect';
 import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
-/** A kept sheet's views, by name. */
 const KeptSheet = Schema.Struct({
   views: Schema.optional(Schema.Array(Schema.Struct({ name: Schema.String }))),
 });
 
-/**
- * What of a `cast-sheet.json` names the files it can send: each kind keeps one
- * sheet (`kept/<kind>.png`), or, for single drawings, a list of them, each
- * kept under its one view's name (`kept/<name>.png`).
- */
 const SentBy = Schema.fromJsonString(
   Schema.Struct({
     refs: Schema.Array(Schema.Struct({ file: Schema.String })),
@@ -31,7 +16,6 @@ const SentBy = Schema.fromJsonString(
   }),
 );
 
-/** The files one kind's kept entry names, relative to its folder. */
 const keptFiles = (
   kind: string,
   kept: typeof KeptSheet.Type | ReadonlyArray<typeof KeptSheet.Type>,
@@ -42,7 +26,6 @@ const keptFiles = (
   return [`kept/${kind}.png`, ...views(kept).map((name) => `views/${name}.png`)];
 };
 
-/** The files git reports for `args`, after git's own exit code is checked. */
 const git = (args: ReadonlyArray<string>) =>
   Effect.scoped(
     Effect.gen(function* () {
@@ -56,11 +39,9 @@ const git = (args: ReadonlyArray<string>) =>
     }),
   );
 
-/** Whether `file` is on disk (a path under a file is not). */
 const there = (file: string) =>
   FileSystem.FileSystem.use((fs) => fs.exists(file).pipe(Effect.orElseSucceed(() => false)));
 
-/** Every cast-sheet folder: the library's members and each film's own roles. */
 const sheetFolders = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const under = (root: string) =>
@@ -73,12 +54,6 @@ const sheetFolders = Effect.gen(function* () {
   return yield* Effect.filter(folders, (folder) => there(`${folder}/cast-sheet.json`));
 });
 
-/**
- * The files `folder`'s record names, whether on disk or not: each kept sheet
- * (`kept/<kind>.png`) and each view it keeps (`views/<name>.png`), or its refs
- * when it keeps none. A lock sends some of them, whichever it sends. Each is
- * normalised as git prints it: a ref may climb out of its folder (`../`).
- */
 const named = (folder: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;

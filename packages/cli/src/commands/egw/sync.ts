@@ -84,10 +84,6 @@ export const egwSync = Command.make(
         }
       }
 
-      // `missing` excludes the books the library withholds, so a run whose only
-      // failures are the known-unavailable ones now exits 0. Before that
-      // exclusion this command could never succeed, which made the exit code
-      // useless to a scheduler.
       if (report.missing.length > 0) {
         const cliProcess = yield* CliProcess;
         return yield* cliProcess.exitFailure;

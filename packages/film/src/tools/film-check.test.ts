@@ -1,9 +1,3 @@
-// The static leg is the lab's check after every write: it reads the film's
-// files and the master's length and stamp, and never mixes. Its type says so
-// (FileSystem, Media and the sound renderer that measures the code sounds the
-// film places, no Mixer), and the master it reads is judged by the stamp `mix`
-// left beside it.
-
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import * as BunPath from '@effect/platform-bun/BunPath';
@@ -50,7 +44,6 @@ const film = testFilm(scenes, recorded);
 const placed = Result.getOrThrow(layout(scenes, recorded, 30));
 const NOW = { score: Option.none<string>(), inPlace: Option.none() };
 
-/** The same film in a folder on Windows. */
 const onWindows: LoadedFilm = {
   ...film,
   paths: {
@@ -61,7 +54,6 @@ const onWindows: LoadedFilm = {
   },
 };
 
-/** The static leg over `files`, its paths `paths`: what it needs is all it is given. */
 const run = (
   files: Map<string, Uint8Array>,
   of: LoadedFilm = film,
@@ -79,7 +71,6 @@ const run = (
   );
 };
 
-/** The master's findings: missing, or stale. */
 const isMaster = Predicate.or(Predicate.isTagged('AudioMissing'), Predicate.isTagged('AudioStale'));
 const masterTags = (found: ReadonlyArray<StaticFinding | ShortFinding>) =>
   found.filter(isMaster).map((f) => f._tag);
@@ -114,7 +105,6 @@ describe('the static leg', () => {
       const stamped = (stamp: string) =>
         Effect.gen(function* () {
           const files = new Map<string, Uint8Array>();
-          // A track exactly the film's length, as `mix` trims it.
           files.set(
             masterFile(film.paths),
             text(`flac ${Math.round(filmEnd(placed) * 1000)}/1000`),
@@ -130,9 +120,6 @@ describe('the static leg', () => {
     }),
   );
 
-  // A code sound whose ping starts 0.2 s in, placed from its first sample: the
-  // film comes as its loader gives it, the library resolved and no seed
-  // measured, so the leg measures what it places to hear the late start.
   it.effect("hears a placed code sound's late start, from the film as its loader gives it", () =>
     Effect.gen(function* () {
       const ping = { _tag: 'Partials', pitch: 'E5', set: 'glass', secs: 0.1 } as const;
@@ -157,10 +144,6 @@ describe('the static leg', () => {
     }),
   );
 
-  // A code sound 0.5 s long whose ping starts somewhere from 0.3 to 0.7 s in:
-  // on seeds 1 and 2 it starts past the end and nothing of it is heard (each
-  // measures under BS.1770's -70 LUFS gate), so where it plays the mix plays
-  // nothing. The leg refuses it, naming each silent seed.
   it.effect('refuses a placed code sound that renders silent on a seed, naming each one', () =>
     Effect.gen(function* () {
       const ping = { _tag: 'Partials', pitch: 'E5', set: 'glass', secs: 0.1 } as const;
@@ -230,7 +213,6 @@ describe('a film that does not lay out', () => {
 describe('the cast leg', () => {
   const recordJson = Schema.encodeSync(CastSheetJson);
 
-  /** A library record of `member` whose one reference file is on disk unless `missing`. */
   const castIn = (files: Map<string, Uint8Array>, member: string, missing = false) => {
     const folder = `/library/cast/${member}/cast-sheet`;
     const record: CastSheetRecord = {
@@ -251,7 +233,6 @@ describe('the cast leg', () => {
     { id: 'dawn' },
   ];
 
-  /** The leg over `files`: the film `f` under `/films`, the library beside it. */
   const castFindings = (files: Map<string, Uint8Array>) =>
     castLeg('f', beats).pipe(
       Effect.provide(

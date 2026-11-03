@@ -1,23 +1,3 @@
-// `film board`: a film's storyboard, made and kept from the terminal (`bun
-// run board …` in the app). The board starts the film's flow: script, then
-// board, then voice and scenes built to it. Each line it prints is one line,
-// so an agent reads them; `board <film>` prints one line per try as it lands.
-//
-//   film board <film> [--beat id,id] [--tries 2] [--lanes 3] [--dry-run]
-//       draw every panel the board lacks (the marks each beat's picture
-//       names, at most three a beat; one at its start when it names none),
-//       two tries each, on `okra image`'s Codex route; --dry-run prints the
-//       prompts and draws nothing
-//   film board style <film> --id 9005 --name "…" --block-file f --ref img [--world-file f]
-//   film board import <film> --panel <beat>.<at> <file…> [--keep n --why "…"] [--from "…"] [--prompt-file f]
-//   film board card <film> --panel <beat>.<at> --payoff word [--to mark]
-//   film board verse <film> --panel <beat>.<at> --ref "Job 9:2" --text "…" --phrase "…"
-//   film board tweak <film> <note> [--tries 2]
-//
-// A try kept, a beat approved or withdrawn, and the board read are the
-// lab's commands (`film lab keep_try|approve_beat|withdraw_beat|board`, the
-// same as the lab's MCP tools: `lab-commands.ts`).
-
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
 import * as Flag from 'effect/cli/Flag';
@@ -65,7 +45,6 @@ const panelFlag = Flag.String('panel').pipe(
   Flag.withDescription('the panel, <beat>.<at>: its beat and the mark it is held from (or start)'),
 );
 
-/** The film's beats as the board reads them, from its script. */
 const beatsOf = Effect.fn('Board.beats')(function* (name: FilmName) {
   const script = yield* (yield* FilmRepo).script(name);
   return yield* Option.match(script, {
@@ -85,7 +64,6 @@ const beatsOf = Effect.fn('Board.beats')(function* (name: FilmName) {
   });
 });
 
-/** The film's acts (its declared look), none when it declares none. */
 const actsOf = Effect.fn('Board.acts')(function* (name: FilmName) {
   const loaded = yield* (yield* FilmRepo).load(name);
   return Option.match(loaded.look, { onNone: () => [], onSome: (look) => look.acts });
@@ -93,7 +71,6 @@ const actsOf = Effect.fn('Board.acts')(function* (name: FilmName) {
 
 const tryExtNamed = Schema.decodeUnknownOption(TryExt);
 
-/** The extension of an image brought in as a try (`png` when it has none), or the refusal naming the file. */
 const tryExtOf = (film: FilmName, source: string) =>
   Effect.gen(function* () {
     const path = yield* Path.Path;
@@ -108,7 +85,6 @@ const tryExtOf = (film: FilmName, source: string) =>
     );
   });
 
-/** `<beat>.<at>` read against the script: a beat it has, and a mark of its line (or `start`). */
 const panelIn = (name: FilmName, beats: ReadonlyArray<BoardBeat>, id: string) =>
   Effect.gen(function* () {
     const dot = id.indexOf('.');
@@ -130,7 +106,6 @@ const panelIn = (name: FilmName, beats: ReadonlyArray<BoardBeat>, id: string) =>
         film: name,
         reason: `beat ${beat} has no mark {${at}} (it has start, ${marks.join(', ')})`,
       });
-    // Both name the panel's files and link: decoded, never written as they came.
     const names = Option.all({ beatId: boardNamed(found.value.id), mark: boardNamed(at) });
     if (Option.isNone(names))
       return yield* BoardRefused.make({
@@ -140,13 +115,11 @@ const panelIn = (name: FilmName, beats: ReadonlyArray<BoardBeat>, id: string) =>
     return { beat: found.value, beatId: names.value.beatId, at: names.value.mark };
   });
 
-/** Where `board` places panels: the film's order, every panel it holds and `id`. */
 const orderWith = (beats: ReadonlyArray<BoardBeat>, board: BoardFile, id: string) =>
   filmOrder(beats, [...board.panels.map((p) => p.id), id]);
 
 const emit = (line: Parameters<typeof makeLine>[0]) => Console.log(makeLine(line));
 
-/** `board style`: the film's board look, its reference image copied into the board folder. */
 const style = Command.make(
   'style',
   {
@@ -198,7 +171,6 @@ const style = Command.make(
   Command.withDescription("Set the film's board look: its style block, reference image and world"),
 );
 
-/** `board import`: images made elsewhere, as tries of a panel. */
 const importTries = Command.make(
   'import',
   {
@@ -246,7 +218,6 @@ const importTries = Command.make(
         at: stamp,
       })),
     );
-    // `--keep` names one of the images given, checked before the board is touched.
     const keep = yield* Option.match(input.keep, {
       onNone: () => Effect.succeedNone,
       onSome: (k) =>
@@ -279,7 +250,6 @@ const importTries = Command.make(
   }),
 ).pipe(Command.withDescription('Bring images made elsewhere into the board as tries of a panel'));
 
-/** A text panel set: a card or a verse page, in place of a picture. */
 const setText = (
   input: { film: string; panel: string },
   text: (beat: BoardBeat, at: BoardName) => Effect.Effect<PanelText, BoardRefused>,
@@ -412,7 +382,6 @@ const tweak = Command.make(
   ),
 );
 
-/** `film board`, with its subcommands; the image route is `okra image` (Codex route). */
 export const board = Command.make(
   'board',
   {

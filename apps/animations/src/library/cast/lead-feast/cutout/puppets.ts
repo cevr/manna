@@ -1,13 +1,3 @@
-// The series lead's puppets, one a cut view (`canvas/puppet.ts`): each
-// view's part sheet (`sheets/<view>/`, made by `film concept parts`), its
-// parts front to back as the sheet's record lists them, each PNG imported
-// by its module so a scene that draws him is keyed by its bytes
-// (`tools/stamp.ts`), on the view's skeleton (`skeleton.ts`), with his origin
-// at the kept box's top-left corner in the padded part sheet (`frames.ts`):
-// his pixels are the sheet's, drawn at its
-// one scale. Each declares the kept view it is held to (`concept`); a view's
-// drawn keys, each in place of one of its parts, are its `DRAWINGS`. Pure.
-
 import type { PuppetSpec } from '@manna/film/canvas';
 import raiseSeatedK2 from './raise-seated/keys/k2.png' with { type: 'file' };
 import raiseSeatedK3 from './raise-seated/keys/k3.png' with { type: 'file' };
@@ -53,16 +43,8 @@ import { CUTS } from './cut.ts';
 import { FRAMES } from './frames.ts';
 import { SKELETONS } from './skeleton.ts';
 
-/**
- * His sheet's line, which a look draws again near what moved (L3): the
- * kept front's arm read across its outline (the median run of ink, L* < 40,
- * acceptance leg 4.6) is 7.75 px; the line is laid at 8.5 so the run read
- * across it, its soft edge and the boil's resample taken, is that, in the
- * sheet's ink.
- */
 export const LINE = { width: 8.5, ink: [31, 17, 9] } as const;
 
-/** Each cut view's paper, the median of its kept view's border ground (its rim is un-matted from it, `core/unmatte.ts`). */
 export const PAPERS = {
   front: [253, 241, 218],
   threeQuarterLeft: [253, 242, 220],
@@ -72,7 +54,6 @@ export const PAPERS = {
   'single-5': [254, 243, 220],
 } as const satisfies Readonly<Record<keyof typeof SKELETONS, readonly [number, number, number]>>;
 
-/** Each cut view's puppet, by the view's name in his sheets' views: its parts front to back, its part sheet the kept box padded (`frames.ts`), his origin at the kept box's top-left corner, held to the kept box (`library/cutout/puppets.ts`). */
 export const PUPPETS = puppetsOf({
   cast: 'lead-feast',
   frames: FRAMES,
@@ -130,15 +111,6 @@ export const PUPPETS = puppetsOf({
   },
 });
 
-/**
- * Each cut view's drawn keys, by the view's name. single-9's are his seated
- * raise's arm (`raise-seated/keys/`), each cut by hand from its frame
- * (`raise-seated/frames/`, frame px less 2 on both axes) onto single-9's
- * part sheet's canvas at its size, in place of his armRight: `raise-rest`
- * the bottle on his lap to `raise-k5` the bottle near his mouth; the kept
- * single-9 view is the raise's last key. Each names its part, so it loads
- * un-matted from his paper as armRight does (`unmattedKey`).
- */
 export const DRAWINGS = {
   'single-9': [
     { name: 'raise-rest', png: raiseSeatedRest, part: 'armRight' },

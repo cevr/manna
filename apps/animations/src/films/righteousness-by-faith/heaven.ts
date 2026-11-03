@@ -1,7 +1,3 @@
-// Heaven: the sanctuary in two apartments where Christ ministers (`exchange`,
-// `rain`), Christ as high priest, and the angel of Rev 14 with the third
-// angel's banner (`message`, `rain`).
-
 import {
   type Pt,
   at,
@@ -20,7 +16,6 @@ import {
 import { lerp } from '@manna/film/core';
 import { type GestureAt, C, F, type Person, christ, person, piece, type Hands } from './kit.ts';
 
-/** Christ as high priest: the white robe and sash, and the breastplate over them. */
 const highPriest = (ctx: CanvasRenderingContext2D, pose: Person, hand: Hands, plate = 1) => {
   christ(ctx, pose, hand);
   if (plate <= 0) return;
@@ -42,25 +37,12 @@ const highPriest = (ctx: CanvasRenderingContext2D, pose: Person, hand: Hands, pl
     }
 };
 
-// ─── the heavenly sanctuary ──────────────────────────────────────────────────
-// Two apartments, never one (Heb 8:1–2; 9:2–3): the holy place with the
-// lampstand, the table and the altar of incense, and past the veil the most
-// holy place with the ark. Floor centre at the origin, about 1120 × 560.
-
-/** Where Christ stands in each apartment, in the sanctuary's units. */
 export const HOLY_PLACE: Pt = [-90, 0];
 const MOST_HOLY: Pt = [230, 0];
-/** The sanctuary's scale for a figure standing in it. */
 export const IN_SANCTUARY = 1.55;
 
 const VEIL_X = 120;
 
-/**
- * The gold sanctuary in heaven, cut away to show both rooms. `veil` 0..1
- * draws the veil up into its folds; `light` 0..1 brightens its glory.
- * `inside` draws what stands in the rooms (a figure), over the floor and
- * behind the altar of incense.
- */
 export const sanctuary = (
   ctx: CanvasRenderingContext2D,
   hand: Hands,
@@ -69,7 +51,6 @@ export const sanctuary = (
   inside: () => void = () => {},
 ) => {
   glow(ctx, 0, -280, 900, C.glow, 0.55 + 0.45 * light);
-  // The walls and roof, and the rooms' warm insides.
   piece(ctx, rounded(0, -300, 1160, 600, 24), C.gold, hand('walls'), {
     role: 'scenery',
     kind: 'cut',
@@ -93,10 +74,8 @@ export const sanctuary = (
     line: 4,
     shadow: 0,
   });
-  // The glory between the cherubim.
   glow(ctx, 400, -250, 260, C.robe, 0.5 + 0.5 * light);
 
-  // The holy place: the lampstand, the table with its bread.
   at(ctx, { x: -420, y: 0 }, () => {
     piece(ctx, rounded(0, -130, 12, 260, 4), C.gold, hand('stem'), {
       role: 'scenery',
@@ -160,7 +139,6 @@ export const sanctuary = (
 
   inside();
 
-  // The altar of incense, before the veil, and its smoke.
   at(ctx, { x: 40, y: 0 }, () => {
     piece(ctx, rounded(0, -60, 64, 120, 6), C.gold, hand('altar'), {
       role: 'scenery',
@@ -180,7 +158,6 @@ export const sanctuary = (
     );
   });
 
-  // The ark, and the two cherubim over it.
   at(ctx, { x: 420, y: 0 }, () => {
     piece(ctx, rounded(0, -45, 150, 90, 8), C.gold, hand('ark'), {
       role: 'scenery',
@@ -206,7 +183,6 @@ export const sanctuary = (
       );
   });
 
-  // The veil: a hanging of fine linen, drawn up into its folds as it opens.
   const drop = 510 * (1 - 0.88 * veil);
   const top = -520;
   piece(ctx, rounded(VEIL_X, top + drop / 2, 46, drop, 6), C.robe, hand('veil'), {
@@ -228,16 +204,9 @@ export const sanctuary = (
   });
 };
 
-/** The high priest's hands, lifted in pleading: their scratch, written each frame. */
 const PLEA_FAR: GestureAt = { to: [0, 0], reach: 0, grip: 'palm' };
 const PLEA_NEAR: GestureAt = { to: [0, 0], reach: 0, grip: 'palm' };
 
-/**
- * Christ as high priest standing at `spot` in the sanctuary's units: his
- * hands go up as `plead` goes 0..1 on the caller's cue, lifted as high as
- * `lift` 0..1 (a little at the altar of incense, fully before the ark);
- * `plate` 0..1 shows the breastplate.
- */
 export const priestAt = (
   ctx: CanvasRenderingContext2D,
   hand: Hands,
@@ -269,13 +238,6 @@ export const priestAt = (
   );
 };
 
-/**
- * The ministry now: the sanctuary with the veil drawn up and Christ pleading
- * before the ark in the most holy place, where `exchange` leaves him and
- * `rain` looks up to him. `light` 0..1 brightens its glory; `plead` 0..1
- * lifts his hands in pleading, on the caller's cue (`exchange` raises
- * them after its cut; `rain` finds them raised).
- */
 export const ministry = (
   ctx: CanvasRenderingContext2D,
   hand: Hands,
@@ -283,26 +245,10 @@ export const ministry = (
   plead: number,
 ) => sanctuary(ctx, hand, 1, light, () => priestAt(ctx, hand, MOST_HOLY, plead, 1, 1));
 
-// ─── the angel of Rev 14 ─────────────────────────────────────────────────────
-
-/** Where `herald` hangs the banner's middle, left of the angel. */
 const BANNER_X = -800;
-/**
- * Where the angel's far hand takes the banner's leading pole, in the angel's
- * own units (`herald` hangs the banner at (`BANNER_X`, -150) and draws the
- * angel at 1.1, turned 0.06): the pole's near edge, the farthest back the
- * hand reaches.
- */
 const POLE: Pt = [-135, -125];
-/** The far hand on the pole: its scratch, its reach written each frame. */
 const ON_POLE: GestureAt = { to: [POLE[0], POLE[1]], reach: 0, grip: 'hold' };
 
-/**
- * The angel of Rev 14, feet at the origin, flying (+x): a person in white
- * with two cut-paper wings on its back. `flap` 0..1 raises the wings;
- * `hold` 0..1 sends its far hand back to the banner's pole (`herald` passes
- * its caller's cue; 0 leaves it at rest).
- */
 export const angel = (ctx: CanvasRenderingContext2D, hand: Hands, flap: number, hold: number) => {
   const wing = (side: -1 | 1) =>
     at(ctx, { x: -18, y: -110, rot: side * (0.5 + 0.35 * flap) - 0.4 }, () =>
@@ -326,8 +272,6 @@ export const angel = (ctx: CanvasRenderingContext2D, hand: Hands, flap: number, 
         { role: 'figure', line: 3.5 },
       ),
     );
-  // Both wings behind the body, so the hand that holds the banner reaches
-  // back over them to its pole.
   wing(-1);
   wing(1);
   ON_POLE.reach = hold;
@@ -337,7 +281,6 @@ export const angel = (ctx: CanvasRenderingContext2D, hand: Hands, flap: number, 
       body: C.robe,
       shade: C.robe,
       garment: 'robe',
-      // Flying: no ground under the feet.
       ground: 0,
       tilt: 0.08,
       look: [4, -1],
@@ -348,15 +291,8 @@ export const angel = (ctx: CanvasRenderingContext2D, hand: Hands, flap: number, 
   );
 };
 
-/** The third angel's message, as Rev 14:12 words it. */
 const BANNER = 'the commandments of God, and the faith of Jesus';
 
-/**
- * The angel of Rev 14 flying in with the third angel's banner trailing to its
- * left, the angel's feet at the origin. `t` (seconds) sways the banner and
- * beats the wings; `written` 0..1 writes the banner's words (0 draws none);
- * `hold` 0..1 sends the angel's hand to the banner's pole, on the caller's cue.
- */
 export const herald = (
   ctx: CanvasRenderingContext2D,
   hand: Hands,

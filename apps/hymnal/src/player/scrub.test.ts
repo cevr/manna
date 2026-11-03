@@ -1,5 +1,3 @@
-/** Where a touch on iOS's position bar lands, where a screen reader's swipe moves it, and a drag that follows a step. */
-
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 import { act, createElement, Fragment } from 'react';
@@ -19,7 +17,6 @@ describe('placeAt', () => {
   });
 });
 
-/** `useScrub` over a recording 2:00 long at 0:30, mounted; each seek it sends is kept. */
 const mount = () => {
   const sought: Array<number> = [];
   let held = Option.none<ReturnType<typeof useScrub>>();
@@ -42,7 +39,6 @@ const mount = () => {
 describe('useScrub', () => {
   it('starts a drag from a step sent before the bar draws again', () => {
     using bar = mount();
-    // A key's step, then a tap on the stepped place, in one batch: the tap's drag starts there, so nothing more is sent.
     act(() => {
       const scrub = bar.scrub();
       scrub.step(40);

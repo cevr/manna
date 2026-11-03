@@ -1,6 +1,3 @@
-// A placeholder for a beat that has words but no drawing yet: the beat's id
-// and its picture brief, pinned to the page like a storyboard card.
-
 import type { SceneSpec } from './film.ts';
 import { rectShape } from './ink.ts';
 import { cutout } from './cutout.ts';
@@ -8,22 +5,15 @@ import { probePlate } from './probe.ts';
 import { type TextStyle, block, wrap, write } from './type.ts';
 import { progress } from '../core/time.ts';
 
-/** The card, pinned to the page. */
 const CARD = rectShape(360, 250, 1200, 520);
 const BRIEF_WIDTH = 1080;
-/** From the first baseline to the card's lower margin. */
 const BRIEF_HEIGHT = 340;
 
-/** The card's type: the families its brief and its label are set in (the film's own). */
 export interface CardType {
   readonly brief: string;
   readonly label: string;
 }
 
-/**
- * The brief's type, a size small enough that the whole brief fits on the
- * card: a long brief never runs off it into the captions.
- */
 const briefStyle = (ctx: CanvasRenderingContext2D, picture: string, family: string): TextStyle => {
   const at = (size: number): TextStyle => ({
     family,
@@ -37,7 +27,6 @@ const briefStyle = (ctx: CanvasRenderingContext2D, picture: string, family: stri
   return at(size);
 };
 
-/** Beat `id`'s card: its id and its picture brief, set in `type`. */
 export const storyboard = (
   id: string,
   picture: string,
@@ -55,7 +44,6 @@ export const storyboard = (
       { color: '#fbf6ea', torn: 3, rim: 0, shadow: 0.6, grain: 0.3 },
       f.hand('card'),
     );
-    // The id and the brief sit on the card: `film check` finds a line that runs off it.
     probePlate(ctx, CARD, () => {
       write(
         ctx,

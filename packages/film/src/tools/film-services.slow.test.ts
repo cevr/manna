@@ -1,19 +1,3 @@
-// The film's composition root is built once (`film-services.ts`): the
-// services every `film` command and the lab run with, the lab's pages, and
-// the lab's start. Its deletion test: delete it, and each of its consumers
-// would build the graph again, as two once did, and drifted (one's pages
-// lacked the assets, the other's source had stamps the first's had not). So
-// no module but the root builds these layers, and its one consumer is named:
-// the CLI (`runFilmCli`). A test's own graph (`testing.ts`, `fixtures/`, a
-// `*.test.ts`) is a fake's, not the app's, and is not swept.
-//
-// The guard reads bindings, not spellings (oxc-parser, as `lab.slow.test.ts`'s
-// `loadersReached` does): a name is followed through its import (aliased,
-// a namespace's member, a re-export, a package's entry) or a top-level
-// `const` alias to the module that declares it, so a layer built under
-// another name is a build, and a same-named thing of a module's own is not.
-// A name shadowed in an inner scope is read as the module's own binding.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Effect, FileSystem, Option, Path, Predicate, Schema } from 'effect';
@@ -26,17 +10,14 @@ import {
   parseSync,
 } from 'oxc-parser';
 
-/** The framework's source, recursively; the app's entries, its own top-level modules. */
 const SWEPT = [
   { dir: 'packages/film/src', recursive: true },
   { dir: 'apps/animations', recursive: false },
 ] as const;
 
-/** What a test builds its own graph in: a fake's, not the app's. */
 const TESTS = /(^|\/)(node_modules|fixtures)\/|\.test\.tsx?$|(^|\/)testing\.ts$/;
 const SOURCE = /\.tsx?$/;
 
-/** The layers the root builds and no other module may: each service, by the member read off it to build one. */
 const GUARDED: ReadonlyArray<readonly [service: string, member: string]> = [
   ...[
     'FilmRepo',
@@ -61,16 +42,13 @@ const GUARDED: ReadonlyArray<readonly [service: string, member: string]> = [
   ['Review', 'layerConfig'],
 ];
 
-/** The root's services, as it declares them. */
 const SERVICES = 'filmServices';
 
-/** Where the guard reads modules: their sources by path, and the workspace's package entries. */
 interface World {
   readonly read: (file: string) => Effect.Effect<Option.Option<string>>;
   readonly packages: ReadonlyMap<string, string>;
 }
 
-/** A module as the guard reads it: its source, its tree, its records, its top-level `const A = B` aliases. */
 interface Module {
   readonly source: string;
   readonly program: Program;
@@ -78,13 +56,11 @@ interface Module {
   readonly aliases: ReadonlyMap<string, string>;
 }
 
-/** How the parser reads `file`: JSX only in a `.tsx`. */
 const langOf = (file: string): 'ts' | 'tsx' => {
   if (file.endsWith('.tsx')) return 'tsx';
   return 'ts';
 };
 
-/** Each top-level `const A = B` (B a name), exported or not: A → B. */
 const aliasesOf = (program: Program): ReadonlyMap<string, string> =>
   new Map(
     program.body
@@ -105,7 +81,6 @@ const aliasesOf = (program: Program): ReadonlyMap<string, string> =>
       }),
   );
 
-/** The member `m` reads by name (`a.b`, `a['b']`); none for one computed otherwise. */
 const memberName = (m: MemberExpression): Option.Option<string> => {
   if (m.type !== 'MemberExpression' || !('property' in m)) return Option.none();
   if (!m.computed && m.property.type === 'Identifier') return Option.some(m.property.name);
@@ -114,15 +89,8 @@ const memberName = (m: MemberExpression): Option.Option<string> => {
   return Option.none();
 };
 
-/** The line of `source` that offset `at` falls on, from 1. */
 const lineOf = (source: string, at: number) => source.slice(0, at).split('\n').length;
 
-/**
- * The guard over `world`: each binding's origin, `file#name` of the module
- * that declares it (`file#*` for a namespace), followed through imports,
- * re-exports and `const` aliases; none for one outside the world (a
- * package of no workspace's).
- */
 const bindings = (world: World, path: Path.Path) => {
   const parsed = new Map<string, Option.Option<Module>>();
   const parse = (file: string): Effect.Effect<Option.Option<Module>> =>
@@ -148,7 +116,6 @@ const bindings = (world: World, path: Path.Path) => {
     return Option.fromUndefinedOr(world.packages.get(specifier));
   };
 
-  /** Where `name`, as `file` exports it, is declared. */
   const exported = (
     file: string,
     name: string,
@@ -181,7 +148,6 @@ const bindings = (world: World, path: Path.Path) => {
           at,
         );
       }
-      // `export * from …`: the name is the first such module's that has it.
       for (const star of entries.filter((e) => e.importName.kind === 'AllButDefault')) {
         const target = Option.flatMap(Option.fromNullishOr(star.moduleRequest), (r) =>
           resolve(file, r.value),
@@ -195,7 +161,6 @@ const bindings = (world: World, path: Path.Path) => {
       return Option.none();
     });
 
-  /** What `name` names at the top of `file`: an import's origin, an alias's, else the module's own. */
   const local = (
     file: string,
     name: string,
@@ -228,7 +193,6 @@ const bindings = (world: World, path: Path.Path) => {
       );
     });
 
-  /** The origin of what `expression` names in `file`: a name, or a namespace's member (`ns.Name`). */
   const originOf = (file: string, expression: Expression): Effect.Effect<Option.Option<string>> => {
     if (expression.type === 'Identifier') return local(file, expression.name, new Set());
     if (expression.type !== 'MemberExpression' || expression.object.type !== 'Identifier')
@@ -241,7 +205,6 @@ const bindings = (world: World, path: Path.Path) => {
     });
   };
 
-  /** Each member read and call in `file`'s code (a type's `typeof X.y` is neither). */
   const sitesOf = (file: string) =>
     Effect.map(parse(file), (module) =>
       Option.map(module, (m) => {
@@ -262,7 +225,6 @@ const bindings = (world: World, path: Path.Path) => {
   return { local, originOf, sitesOf };
 };
 
-/** The sites among `files` (`path:line`) that build a layer the root builds, in order. */
 const builtIn = (world: World, root: string, files: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const { local, originOf, sitesOf } = bindings(world, yield* Path.Path);
@@ -298,7 +260,6 @@ const builtIn = (world: World, root: string, files: ReadonlyArray<string>) =>
     return found.flat();
   });
 
-/** The files among `files` that call the root's services, in order. */
 const consumersIn = (world: World, root: string, files: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const { local, originOf, sitesOf } = bindings(world, yield* Path.Path);
@@ -323,17 +284,10 @@ const consumersIn = (world: World, root: string, files: ReadonlyArray<string>) =
     return files.filter((_, i) => calling[i]).toSorted();
   });
 
-/** The film package's entries as its `package.json` declares them. */
 const PackageExports = Schema.fromJsonString(
   Schema.Struct({ exports: Schema.Record(Schema.String, Schema.String) }),
 );
 
-/**
- * The repo's own modules, the film package's entries, and the root, read as
- * the file loads: every swept module's source at once, so a case's time is
- * its own traversal. A module outside the sweep (a file a swept one imports
- * from elsewhere) is read when the guard follows it there.
- */
 // oxlint-disable-next-line effect/noAsyncFunction -- built once as the file loads, so no case's time limit holds its cost
 const disk = await Effect.runPromise(
   Effect.gen(function* () {
@@ -376,7 +330,6 @@ const disk = await Effect.runPromise(
   }).pipe(Effect.provide(BunServices.layer)),
 );
 
-/** A world of `modules` alone, under `/w/`, beside a root of the same shape as the real one. */
 const made = (modules: Readonly<Record<string, string>>) => {
   const all = {
     'film-repo.ts': 'export class FilmRepo { static layer = 1 }',
@@ -398,7 +351,6 @@ const made = (modules: Readonly<Record<string, string>>) => {
   return { world, files: Object.keys(modules).map((name) => `/w/${name}`) };
 };
 
-/** What the guard finds in `modules`: the layers built, and who asks for the services. */
 const findings = (modules: Readonly<Record<string, string>>) =>
   Effect.gen(function* () {
     const { world, files } = made(modules);
@@ -413,7 +365,6 @@ describe("the film's composition root", () => {
     Effect.gen(function* () {
       const { world, files, root } = disk;
       const built = yield* builtIn(world, root, files);
-      // The root's own builds are found: the guard reads it as it reads the rest.
       expect(built.filter((line) => line.startsWith(`${root}:`)).length).toBeGreaterThan(0);
       expect(built.filter((line) => !line.startsWith(`${root}:`))).toEqual([]);
     }).pipe(Effect.provide(BunServices.layer)),

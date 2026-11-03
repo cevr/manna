@@ -1,10 +1,3 @@
-/**
- * `sim journey <feature>`: a feature's journey file
- * (`features/<feature>.journey.json`), its steps and the expects each must
- * meet, run in one call over the `Drive` service. Each step prints one JSON
- * line (also appended to `<out>/results.jsonl`) and takes its receipts; the
- * first step that fails stops the journey, and the summary names it.
- */
 import { Clock, Console, Effect, FileSystem, Option, Path, Result, Schema } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
 
@@ -26,23 +19,16 @@ import {
 } from './errors.ts';
 import { encodeFailure, type Session } from './result.ts';
 
-/** How long a pan takes, in milliseconds, when no `ms` is given. */
 export const PAN_MS = 900;
-/** How long a hold presses, in milliseconds, when no `ms` is given. */
 export const HOLD_MS = 900;
-/** Seconds a hold waits after its press for what it opens, when no `settle` is given. */
 export const HOLD_SETTLE = 10;
-/** Seconds an open waits for its target, and every other step for its own. */
 const OPEN_SECONDS = 30;
 const STEP_SECONDS = 10;
-/** Seconds a `hides` expect looks for its target: one it does not find is gone. */
 const HIDES_SECONDS = 2;
 
-/** Text of digits, dots, commas and minus signs is meant as a point. */
 const POINTLIKE = /^[\d.,-]+$/;
 const POINT = /^(\d+(?:\.\d+)?),(\d+(?:\.\d+)?)$/;
 
-/** Where a pan starts: `x,y` in points, or any other text as a target; a malformed point is none. */
 export const panStart = (text: string): Option.Option<Point | string> => {
   if (text === '') return Option.none();
   if (!POINTLIKE.test(text)) return Option.some(text);
@@ -65,18 +51,14 @@ const From = Schema.String.check(
   ),
 );
 
-/** What a step expects once its action is done: a target that shows, or one that is gone. */
 const Expect = Schema.Union([Schema.Struct({ shows: Target }), Schema.Struct({ hides: Target })]);
 
-/** The files a step keeps once its expects are checked. */
 const Receipt = Schema.Literals(['both', 'snapshot', 'shot', 'none']);
 
 const common = {
-  /** A slug; where the step proves a sub-feature, its id. */
   name: Slug,
   expect: Schema.Array(Expect).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),
   receipt: Receipt.pipe(Schema.withDecodingDefaultKey(Effect.succeed('both' as const))),
-  /** Seconds the step waits for its targets. */
   timeout: Schema.optionalKey(Positive),
 };
 
@@ -129,7 +111,6 @@ const namesOnce = (steps: ReadonlyArray<Step>) => {
   return `step names repeat: ${repeated.map((step) => step.name).join(', ')}`;
 };
 
-/** A feature's journey: iOS only, one step or more, each step named once. */
 export const Journey = Schema.Struct({
   feature: Slug,
   platform: Schema.Literal('ios'),
@@ -139,13 +120,11 @@ export type Journey = typeof Journey.Type;
 
 const decodeText = Schema.decodeUnknownEffect(Schema.fromJsonString(Journey));
 
-/** Decode a journey file's text; any key the schema does not name is refused. */
 export const decodeJourney = (file: string, text: string) =>
   decodeText(text, { onExcessProperty: 'error' }).pipe(
     Effect.mapError((error) => BadJourney.make({ file, issue: error.message })),
   );
 
-/** A failure of the host itself, reported as one. */
 const hostFailed = <A, R>(
   step: Effect.Effect<A, SimError | PlatformError, R>,
 ): Effect.Effect<A, SimError, R> =>
@@ -155,11 +134,6 @@ const hostFailed = <A, R>(
     ),
   );
 
-/**
- * Open `link`. On iOS a first open whose target does not show is tried once
- * more after the app is terminated, which clears a launch that hung on the
- * splash; the result says whether it was retried.
- */
 export const openOnce = (
   place: Place,
   link: string,
@@ -181,7 +155,6 @@ export const openOnce = (
     );
   });
 
-/** A journey ready to run: its file decoded, for the booted iOS drive. */
 export const loadJourney = Effect.fn('Sim.loadJourney')(function* (place: Place, feature: string) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -208,16 +181,11 @@ export const loadJourney = Effect.fn('Sim.loadJourney')(function* (place: Place,
 
 type Expectation = Step['expect'][number];
 
-/** The target an expect waits to show, if it is a `shows`. */
 const showsOf = (expect: Expectation): Option.Option<string> => {
   if ('shows' in expect) return Option.some(expect.shows);
   return Option.none();
 };
 
-/**
- * Run a step's action; the index of the expect the action checked itself, if
- * any: an open waits for its first `shows`, wherever it sits among the expects.
- */
 const act = (d: DriveMembers, place: Place, step: Step) => {
   const seconds = step.timeout ?? STEP_SECONDS;
   const none = Option.none<number>();
@@ -238,7 +206,6 @@ const act = (d: DriveMembers, place: Place, step: Step) => {
     case 'scroll':
       return Effect.as(d.scroll(place, step.target, step.direction, seconds), none);
     case 'gesture': {
-      // The decoder refused every `from` that is neither a point nor a target.
       const from = Option.getOrElse(panStart(step.from), () => step.from);
       return Effect.as(
         d.gesture(place, { from, dx: step.dx, dy: step.dy, ms: step.ms ?? PAN_MS }),
@@ -246,7 +213,6 @@ const act = (d: DriveMembers, place: Place, step: Step) => {
       );
     }
     case 'pinch': {
-      // The decoder refused every `at` that is neither a point nor a target.
       const at = Option.getOrElse(panStart(step.at), () => step.at);
       return Effect.as(d.pinch(place, at, step.scale), none);
     }
@@ -260,7 +226,6 @@ const act = (d: DriveMembers, place: Place, step: Step) => {
   }
 };
 
-/** Check one expect: a `shows` target waits the step's time; a `hides` target must not show within 2 s. */
 const meet = (d: DriveMembers, place: Place, expect: Expectation, seconds: number) => {
   if ('shows' in expect) return d.sees(place, expect.shows, seconds);
   return d.sees(place, expect.hides, HIDES_SECONDS).pipe(
@@ -269,7 +234,6 @@ const meet = (d: DriveMembers, place: Place, expect: Expectation, seconds: numbe
   );
 };
 
-/** Take a step's receipts, named `<feature>-<nn>-<step>`: the files they wrote. */
 const receipts = (d: DriveMembers, place: Place, name: string, receipt: Step['receipt']) =>
   Effect.gen(function* () {
     let paths: Outcome['paths'] = {};
@@ -282,7 +246,6 @@ const receipts = (d: DriveMembers, place: Place, name: string, receipt: Step['re
     return paths;
   });
 
-/** One step's line: what it did, its receipts, and on failure its tagged error. */
 const StepLine = Schema.Struct({
   ok: Schema.Boolean,
   command: Schema.Literal('journey'),
@@ -296,7 +259,6 @@ const StepLine = Schema.Struct({
   ms: Schema.Finite,
 });
 
-/** The journey's last line: how many steps ran, and the one that failed. */
 const Summary = Schema.Struct({
   ok: Schema.Boolean,
   command: Schema.Literal('journey'),
@@ -307,13 +269,11 @@ const Summary = Schema.Struct({
   ms: Schema.Finite,
 });
 
-/** Any line `sim journey` prints. */
 export const JourneyLine = Schema.Union([StepLine, Summary]);
 
 const encodeStep = Schema.encodeSync(Schema.fromJsonString(StepLine));
 const encodeSummary = Schema.encodeSync(Schema.fromJsonString(Summary));
 
-/** Run step `index`: its action, its expects, then its receipts, failed or not. */
 const runStep = (d: DriveMembers, place: Place, journey: Journey, step: Step, index: number) =>
   Effect.gen(function* () {
     const started = yield* Clock.currentTimeMillis;
@@ -331,7 +291,6 @@ const runStep = (d: DriveMembers, place: Place, journey: Journey, step: Step, in
     const name = `${journey.feature}-${String(index + 1).padStart(2, '0')}-${step.name}`;
     const taken = yield* Effect.result(hostFailed(receipts(d, place, name, step.receipt)));
     const ms = (yield* Clock.currentTimeMillis) - started;
-    // The action's or an expect's error first; a receipt's only when the step itself passed.
     const failure = Option.orElse(Result.getFailure(done), () => Result.getFailure(taken));
     const line = encodeStep({
       ok: Option.isNone(failure),
@@ -350,12 +309,6 @@ const runStep = (d: DriveMembers, place: Place, journey: Journey, step: Step, in
     return { line, failure };
   });
 
-/**
- * Run `journey` on the booted drive: a video from start to end (unless
- * `video` is false; it is stopped whatever happens), each step in order
- * until one fails, then the summary. A failed step fails the run with its
- * error.
- */
 export const runJourney = (place: Place, journey: Journey, session: Session, video: boolean) =>
   hostFailed(
     Effect.gen(function* () {

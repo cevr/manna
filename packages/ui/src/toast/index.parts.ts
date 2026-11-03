@@ -1,4 +1,3 @@
-// Upstream: packages/react/src/toast/index.parts.ts
 export { ToastProvider as Provider } from './ToastProvider.tsx';
 export { ToastViewport as Viewport } from './ToastViewport.tsx';
 export { ToastRoot as Root } from './ToastRoot.tsx';

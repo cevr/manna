@@ -1,9 +1,3 @@
-// `film concept render` over a member of two kept views drawn by a page
-// double: a view whose fit rows fail is never shown to the critic, and its
-// critique is recorded skipped with the rows that failed; a view whose rows
-// pass is shown. Over a real folder, since the film's `rigs/cast.ts` is
-// imported as a module.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { ConfigProvider, Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
@@ -23,14 +17,12 @@ type Rgb = readonly [number, number, number];
 const W = 64;
 const H = 96;
 
-/** A head over a body inside a 3 px line, `dx` to the right. */
 const inside = (x: number, y: number, dx: number) =>
   (x - dx - 32) ** 2 + (y - 18) ** 2 <= 100 || (x - dx >= 18 && x - dx <= 46 && y >= 26 && y <= 84);
 
 const CREAM: Rgb = [253, 225, 188];
 const INK: Rgb = [43, 29, 22];
 
-/** A pixel of a view: the ground outside its figure, its line within 3 px of its edge, its cream inside. */
 const colourAt = (ground: Rgb, x: number, y: number, dx: number): Rgb => {
   if (!inside(x, y, dx)) return ground;
   const near = [-3, 0, 3].flatMap((ox) => [-3, 0, 3].map((oy) => inside(x + ox, y + oy, dx)));
@@ -38,7 +30,6 @@ const colourAt = (ground: Rgb, x: number, y: number, dx: number): Rgb => {
   return INK;
 };
 
-/** Two views side by side on `ground`, each figure moved by its `dx`. */
 const sheet = (ground: Rgb, dxs: readonly [number, number]): Uint8Array => {
   const rgba = new Uint8Array(2 * W * H * 4);
   for (let y = 0; y < H; y++)
@@ -74,7 +65,6 @@ const view = (box) => ({ box, at: [0, 0], rig: {}, pose: {} });
 export const CAST = { m: { turnaround: { front: view([0, 0, ${W}, ${H}]), back: view([${W}, 0, ${2 * W}, ${H}]) } } };
 `;
 
-/** A page double: its one scene, and the still it draws (each view's figure moved by its `dx`). */
 const pages = (dxs: readonly [number, number]) =>
   Layer.succeed(
     Pages,
@@ -96,7 +86,6 @@ const pages = (dxs: readonly [number, number]) =>
     }),
   );
 
-/** A critic double that writes down the figures each run is shown. */
 const critic = (shown: Array<ReadonlyArray<string>>) =>
   Layer.succeed(
     Critic,
@@ -112,11 +101,6 @@ const critic = (shown: Array<ReadonlyArray<string>>) =>
     }),
   );
 
-/**
- * Film f in a fresh folder with member m, his record, his kept sheet and the
- * film's table; its page draws each view's figure moved by its `dx`, and the
- * critic writes down what it is shown into `shown`.
- */
 const world = (dxs: readonly [number, number], shown: Array<ReadonlyArray<string>>) =>
   Layer.unwrap(
     Effect.gen(function* () {
@@ -147,7 +131,6 @@ const world = (dxs: readonly [number, number], shown: Array<ReadonlyArray<string
     }),
   ).pipe(Layer.provideMerge(BunServices.layer));
 
-/** Member m rendered, critique asked: the record, and the back view's critique file. */
 const rendered = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

@@ -1,10 +1,6 @@
-// A picture's crop, scale, placing side by side and strokes, on small
-// pictures whose every pixel is known.
-
 import { describe, expect, test } from 'bun:test';
 import { besideRaster, cropRaster, type Raster, scaleRaster, strokeRaster } from './raster.ts';
 
-/** A `width` × `height` picture, each pixel's red its column and green its row. */
 const ramp = (width: number, height: number): Raster => {
   const rgba = new Uint8Array(width * height * 4);
   for (let y = 0; y < height; y++)
@@ -35,7 +31,6 @@ describe('raster', () => {
   test('a scale blends between pixels', () => {
     const s = scaleRaster(ramp(4, 4), 2);
     expect([s.width, s.height]).toEqual([8, 8]);
-    // Pixel 3 of 8 falls a quarter of the way past pixel 1 of 4.
     expect(pixel(s, 3, 0)[0]).toBe(1);
     expect(pixel(s, 4, 0)[0]).toBe(2);
   });
@@ -50,7 +45,6 @@ describe('raster', () => {
       1,
     );
     expect([both.width, both.height]).toEqual([1 + 4 + 1 + 3 + 1, 1 + 6 + 1]);
-    // b's top row at 1 + (2 − 2) = 1; a's at 1 + round(2 − 0.6) = 2, every row whole.
     expect(pixel(both, 6, 1)).toEqual([0, 0, 0, 255]);
     expect(pixel(both, 1, 2)).toEqual([0, 0, 0, 255]);
     expect(pixel(both, 4, 5)).toEqual([3, 3, 0, 255]);
@@ -76,7 +70,6 @@ describe('raster', () => {
       2,
     );
     expect(pixel(square, 5, 2)).toEqual([200, 0, 100, 255]);
-    // Closed: the last side, from (2, 8) back to (2, 2).
     expect(pixel(square, 2, 5)).toEqual([200, 0, 100, 255]);
     expect(pixel(square, 5, 5)).toEqual([255, 255, 255, 255]);
     expect(pixel(blank, 5, 2)).toEqual([255, 255, 255, 255]);

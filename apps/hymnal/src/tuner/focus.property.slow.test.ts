@@ -1,39 +1,11 @@
-/**
- * The tuner's focus over the whole signal domains, generated: which frames
- * of a guitar's sound, a talker's voice and a room's noise `hear` shows.
- * P1 talk alone and P2 room noise alone show no frame; P3 a clean pluck
- * shows within 250 ms, stays shown and reads true; P4 and P5 a pluck under
- * talk at 20 and 12 dB shows soon and near the plucked pitch; P6 a peg
- * turned while the string rings stays shown; P7 a change of string over
- * every pair shows the new string and nothing between; P8 a held string
- * rides out one or two dark frames on its last reading and lets go on the
- * third, and the frame that lets go leaves the focus as the start state
- * would after that frame. P9 a pluck under room noise (white, pink, brown,
- * fan) at 15 dB shows soon, then on every frame of its ring near the plucked
- * pitch. The fixed-seed cases are in `focus.test.ts`.
- *
- * Every case draws from its own seed, which each failure prints with its
- * parameters. Each property fits bun's 5 s test limit alone.
- *
- * Every signal is generated here, in memory, from a seed (xorshift32): a
- * talker (`talk`: glottal pulses through three vowel formants, gliding
- * syllables, fricatives and bursts, pauses), a plucked string (`pluck`:
- * partials from the plucking point, each decaying, a pick noise, a sharp
- * attack), room noise (`room`: white, pink, brown, fan, mains hum), and a
- * pluck under talk at a named SNR (`mix` with talk at `under(PLUCK_LEVEL,
- * db)`). Frames are 2048 samples, one after another, as the ear gives them.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
 import { type Focus, hear, unfocused } from './focus';
 
 const FRAME = 2048;
-/** A pluck's RMS over its first 0.5 s. */
 const PLUCK_LEVEL = 0.1;
 
-/** xorshift32 in [0, 1). */
 type Draw = () => number;
 
 const draw = (seed: number): Draw => {
@@ -50,14 +22,11 @@ const draw = (seed: number): Draw => {
 
 const between = (next: Draw, low: number, high: number) => low + (high - low) * next();
 
-/** A standard normal draw (Box-Muller). */
 const gauss = (next: Draw) =>
   Math.sqrt(-2 * Math.log(Math.max(1e-12, next()))) * Math.cos(2 * Math.PI * next());
 
-/** A uniform draw of mean 0 and variance 1, cheaper than `gauss`: breath noise, the pitch's wander and room noise. */
 const spread = (next: Draw) => (2 * next() - 1) * Math.sqrt(3);
 
-/** -1 or 1, even odds. */
 const sign = (next: Draw) => {
   if (next() < 0.5) return -1;
   return 1;
@@ -67,7 +36,6 @@ const cents = (hz: number, ref: number) => 1200 * Math.log2(hz / ref);
 
 const bySemitones = (semitones: number) => 440 * 2 ** (semitones / 12);
 
-/** Standard tuning, low to high, from A4 = 440 Hz. */
 const STRINGS = [
   { id: 'E2', hz: bySemitones(-29) },
   { id: 'A2', hz: bySemitones(-24) },
@@ -77,13 +45,11 @@ const STRINGS = [
   { id: 'E4', hz: bySemitones(-5) },
 ] as const;
 
-/** 44.1 kHz for even `index`, 48 kHz for odd. */
 const rateOf = (index: number) => {
   if (index % 2 === 0) return 44_100;
   return 48_000;
 };
 
-/** RMS-normalise `signal` in place to `level` over the samples `counted` marks with 1. */
 const normalise = (signal: Float64Array, level: number, counted: Uint8Array) => {
   let sum = 0;
   let count = 0;
@@ -97,7 +63,6 @@ const normalise = (signal: Float64Array, level: number, counted: Uint8Array) => 
   return signal;
 };
 
-/** A two-pole resonator in place, centred each sample at `centre[i]` Hz. */
 const resonate = (signal: Float64Array, rate: number, centre: Float64Array, bandwidth: number) => {
   const r = Math.exp((-Math.PI * bandwidth) / rate);
   let y1 = 0;
@@ -118,7 +83,6 @@ const resonate = (signal: Float64Array, rate: number, centre: Float64Array, band
   return signal;
 };
 
-/** Peterson and Barney's (1952) ten vowels, adult men: F1, F2, F3 in Hz. */
 const VOWELS = [
   [270, 2290, 3010],
   [390, 1990, 2550],
@@ -133,12 +97,9 @@ const VOWELS = [
 ] as const;
 
 interface Talker {
-  /** The voice's mean fundamental, Hz (85 to 255). */
   readonly f0: number;
-  /** The least and most a syllable's pitch glides across its nucleus, semitones (0.5 to 8). */
   readonly minGlide: number;
   readonly maxGlide: number;
-  /** Each glottal cycle's period and amplitude vary by these shares (standard deviations). */
   readonly jitter: number;
   readonly shimmer: number;
 }
@@ -151,7 +112,6 @@ const talker = (f0: number): Talker => ({
   shimmer: 0.04,
 });
 
-/** A talk signal being written: the glottal source, the consonants' noise, the voiced samples and the three formants' centres. */
 interface Tract {
   readonly rate: number;
   readonly n: number;
@@ -164,7 +124,6 @@ interface Tract {
   readonly f3: Float64Array;
 }
 
-/** The glottis between syllables: where in its cycle, this cycle's period and amplitude shares, the vowel last voiced. */
 interface Glottis {
   phase: number;
   period: number;
@@ -172,7 +131,6 @@ interface Glottis {
   vowel: ReadonlyArray<number>;
 }
 
-/** A fricative (30 to 110 ms of noise), a burst (8 to 20 ms and a gap), or nothing, from sample `i`; the sample after it. */
 const consonant = (next: Draw, tract: Tract, i: number) => {
   const kind = next();
   if (kind < 0.45) {
@@ -192,18 +150,12 @@ const consonant = (next: Draw, tract: Tract, i: number) => {
   return i;
 };
 
-/** A Rosenberg glottal flow derivative at `phase` in [0, 1), open quotient 0.6. */
 const pulse = (phase: number) => {
   if (phase < 0.4) return 0.5 * Math.sin((Math.PI * phase) / 0.4);
   if (phase < 0.6) return -Math.sin((Math.PI * (phase - 0.4)) / 0.2);
   return 0;
 };
 
-/**
- * A vowel nucleus of 80 to 280 ms from sample `i`, its pitch starting `start`
- * semitones from the voice's mean and gliding up or down across it, with a slow
- * wander, cycle jitter and shimmer; the sample after it.
- */
 const nucleus = (
   next: Draw,
   tract: Tract,
@@ -242,11 +194,6 @@ const nucleus = (
   return i + length;
 };
 
-/**
- * A phrase of 3 to 11 syllables from sample `i`, falling 0.5 to 3 semitones over
- * it, each syllable accented -2 to +4 semitones, then a pause of 150 to 600 ms;
- * the sample after the pause.
- */
 const phrase = (next: Draw, tract: Tract, voice: Talker, glottis: Glottis, i: number) => {
   const syllables = 3 + Math.floor(next() * 9);
   const declination = between(next, -3, -0.5);
@@ -259,18 +206,11 @@ const phrase = (next: Draw, tract: Tract, voice: Talker, glottis: Glottis, i: nu
   return at + Math.floor(between(next, 0.15, 0.6) * tract.rate);
 };
 
-/** The formants' scale: ×1.17 for a voice above 160 Hz (women's and children's vocal tracts are shorter). */
 const formantScale = (f0: number) => {
   if (f0 > 160) return 1.17;
   return 1;
 };
 
-/**
- * `seconds` of one talker at `rate`, starting 0 to 300 ms in: phrases of
- * syllables, each nucleus a glottal pulse through three formant resonators at a
- * vowel (×1.17 above 160 Hz) with breath noise, and its consonant's noise rung
- * near 3.5 to 6.5 kHz. RMS `level` over the voiced samples.
- */
 const talk = (next: Draw, rate: number, seconds: number, voice: Talker, level: number) => {
   const n = Math.floor(rate * seconds);
   const scale = formantScale(voice.f0);
@@ -300,28 +240,20 @@ const talk = (next: Draw, rate: number, seconds: number, voice: Talker, level: n
 };
 
 interface Pluck {
-  /** The string's pitch, Hz. */
   readonly hz: number;
-  /** The fundamental's decay time constant, seconds (0.8 to 3); partial k+1 decays 1 + 0.25k times faster. */
   readonly decay: number;
-  /** Inharmonicity B (0, or up to 1e-4): partial n sits at n·hz·√((1 + B n²)/(1 + B)). */
   readonly stiffness: number;
-  /** The plucking point along the string (0.08 to 0.3). */
   readonly position: number;
-  /** Cents sharp at the attack (0 to 8), settling with τ 0.1 s. */
   readonly attack: number;
-  /** A peg turn, cents a second (0 for none), from `turnFrom` seconds after the onset. */
   readonly turn: number;
   readonly turnFrom: number;
 }
 
-/** B up to 1e-4 when stiff, else 0. */
 const stiffnessOf = (next: Draw, stiff: boolean) => {
   if (stiff) return between(next, 0, 1e-4);
   return 0;
 };
 
-/** A pluck at `hz`, harmonic or stiff, its other parameters drawn from their domains. */
 const pluckOf = (next: Draw, hz: number, stiff: boolean): Pluck => ({
   hz,
   decay: between(next, 0.8, 3),
@@ -332,15 +264,8 @@ const pluckOf = (next: Draw, hz: number, stiff: boolean): Pluck => ({
   turnFrom: 0,
 });
 
-/** Samples a partial's turn is held for; the attack and a peg turn move it well under a hundredth of a cent in that time. */
 const BLOCK = 16;
 
-/**
- * `n` samples at `rate` of a string plucked at sample `at`, silence before it:
- * partials up to 5 kHz (at most 14), each from the plucking point, a 4 ms pick
- * noise. RMS `level` over its first 0.5 s. Each partial is a phasor turned and
- * decayed each sample.
- */
 const pluck = (next: Draw, rate: number, n: number, at: number, p: Pluck, level = PLUCK_LEVEL) => {
   const count = Math.max(1, Math.min(14, Math.floor(5000 / p.hz)));
   const partials = Array.from({ length: count }, (_, k) => {
@@ -383,7 +308,6 @@ const pluck = (next: Draw, rate: number, n: number, at: number, p: Pluck, level 
 
 type RoomKind = 'white' | 'pink' | 'brown' | 'fan' | 'hum50' | 'hum60';
 
-/** Pink noise (Paul Kellet's filter over white). */
 const pinkNoise = (next: Draw, n: number) => {
   const out = new Float64Array(n);
   let b0 = 0;
@@ -399,7 +323,6 @@ const pinkNoise = (next: Draw, n: number) => {
   return out;
 };
 
-/** Mains hum at `mains` Hz with its 2nd and 3rd harmonics, over a little white noise. */
 const hum = (next: Draw, rate: number, n: number, mains: number) =>
   Float64Array.from({ length: n }, (_, i) => {
     const t = i / rate;
@@ -432,24 +355,19 @@ const ROOMS: Record<RoomKind, (next: Draw, rate: number, n: number) => Float64Ar
   hum60: (next, rate, n) => hum(next, rate, n, 60),
 };
 
-/** `n` samples at `rate` of room noise at RMS `level`: fan is pink noise with tones at 120 and 240 Hz. */
 const room = (next: Draw, rate: number, n: number, kind: RoomKind, level: number) =>
   normalise(ROOMS[kind](next, rate, n), level, new Uint8Array(n).fill(1));
 
-/** The level `db` under `level`: talk under a pluck at an SNR of `db`. */
 const under = (level: number, db: number) => level / 10 ** (db / 20);
 
-/** `signal` with `other` added sample by sample, `signal`'s length. */
 const mix = (signal: Float64Array, other: Float64Array) =>
   signal.map((sample, i) => sample + (other[i] ?? 0));
 
-/** The frames the ear gives: 2048 samples, one after another. */
 const framesOf = (signal: Float64Array) =>
   Array.from({ length: Math.floor(signal.length / FRAME) }, (_, k) =>
     Float32Array.from(signal.subarray(k * FRAME, (k + 1) * FRAME)),
   );
 
-/** Each frame's shown pitch (NaN when none) through `hear` from `from`, and the state each frame met. */
 const listen = (frames: ReadonlyArray<Float32Array>, rate: number, from: Focus = unfocused) => {
   const shown: Array<number> = [];
   const states: Array<Focus> = [];
@@ -463,10 +381,8 @@ const listen = (frames: ReadonlyArray<Float32Array>, rate: number, from: Focus =
   return { shown, states };
 };
 
-/** Milliseconds from the sample `at` to the end of frame `k`. */
 const endMs = (k: number, at: number, rate: number) => (((k + 1) * FRAME - at) / rate) * 1000;
 
-/** Milliseconds from `at` to the end of the first frame after it that `shows`; Infinity when none does. */
 const firstMs = (
   shown: ReadonlyArray<number>,
   at: number,
@@ -478,30 +394,21 @@ const firstMs = (
   return endMs(k, at, rate);
 };
 
-/** The frames shown, each as its index and pitch. */
 const shownFrames = (shown: ReadonlyArray<number>) =>
   shown.flatMap((hz, frame) => {
     if (Number.isNaN(hz)) return [];
     return [{ frame, hz }];
   });
 
-/** `[item]` when `holds`, else none: a failure to report. */
 const when = <A>(holds: boolean, item: A): ReadonlyArray<A> => {
   if (holds) return [item];
   return [];
 };
 
-/** `hz` within 25 cents of the pluck `p`. */
 const near = (hz: number, p: Pluck) => !Number.isNaN(hz) && Math.abs(cents(hz, p.hz)) <= 25;
 
-/** The properties' base seed. */
 const SEED = 20_261_102;
 
-/**
- * Case `i` of property `n` draws from `SEED + 10 000 n + i` mixed through
- * murmur3's finaliser: xorshift32's first draws from nearby seeds lie close
- * together (118 of 120 talkers' voices fell within 10 Hz unmixed).
- */
 const seedOf = (property: number, i: number) => {
   let x = (SEED + 10_000 * property + i) >>> 0;
   x ^= x >>> 16;
@@ -512,20 +419,13 @@ const seedOf = (property: number, i: number) => {
   return x >>> 0;
 };
 
-/** Talkers in P1, and plucks in P3, P4, P5 and P8. */
 const TALKERS = 120;
 const PLUCKS = 300;
 
-/** The pitches a pluck is drawn about: a low E down a whole tone, then the six strings. */
 const CENTRES = [{ id: 'D2', hz: bySemitones(-31) }, ...STRINGS] as const;
 
-/** A draw between `low` and `high`, even in log: a level over its range in dB. */
 const logBetween = (next: Draw, low: number, high: number) => low * (high / low) ** next();
 
-/**
- * A pluck drawn over its domain about centre `index % 7`: 100 cents under to
- * 100 over it, at 44.1 or 48 kHz, harmonic or stiff.
- */
 const drawPluck = (next: Draw, index: number) => {
   const centre = CENTRES[index % CENTRES.length] ?? CENTRES[0];
   const by = between(next, -100, 100);
@@ -534,16 +434,13 @@ const drawPluck = (next: Draw, index: number) => {
   return { centre: centre.id, by, rate, p };
 };
 
-/** A pluck's onset: anywhere within the second frame. */
 const onsetOf = (next: Draw) => FRAME + Math.floor(next() * FRAME);
 
-/** A settled reading's bar, as `pitch.property.slow.test.ts` holds `detect`: 3 cents harmonic, 5 stiff. */
 const barOf = (p: Pluck) => {
   if (p.stiffness === 0) return 3;
   return 5;
 };
 
-/** The bar for a reading `ms` after the onset: its settled bar from 300 ms, 10 cents before. */
 const barAt = (p: Pluck, ms: number) => {
   if (ms > 300) return barOf(p);
   return 10;
@@ -551,7 +448,6 @@ const barAt = (p: Pluck, ms: number) => {
 
 const sum = (values: ReadonlyArray<number>) => values.reduce((total, value) => total + value, 0);
 
-/** The frames that show nothing whose end lies after `from` and at or before `to` ms from the sample `at`. */
 const darkFrames = (
   shown: ReadonlyArray<number>,
   at: number,
@@ -565,7 +461,6 @@ const darkFrames = (
     return [{ frame, ms }];
   });
 
-/** Each shown frame, its end in ms from `at`, and its distance from the pluck `p` in cents. */
 const offsOf = (shown: ReadonlyArray<number>, p: Pluck, at: number, rate: number) =>
   shownFrames(shown).map(({ frame, hz }) => ({
     frame,
@@ -573,20 +468,14 @@ const offsOf = (shown: ReadonlyArray<number>, p: Pluck, at: number, rate: number
     centsOff: cents(hz, p.hz),
   }));
 
-/** The same frames shown with the same pitches. */
 const sameShown = (
   a: ReadonlyArray<{ readonly frame: number; readonly hz: number }>,
   b: ReadonlyArray<{ readonly frame: number; readonly hz: number }>,
 ) =>
   a.length === b.length && a.every((item, i) => item.frame === b[i]?.frame && item.hz === b[i]?.hz);
 
-/** Frames run after a frame that lets go, from the state it left and from the start state. */
 const AFTER = 12;
 
-/**
- * Frame `k` let go (R3): what `hear` shows on the frames after it from the
- * state frame `k` left, and from the start state heard on frame `k` alone.
- */
 const letGo = (
   frames: ReadonlyArray<Float32Array>,
   rate: number,
@@ -602,11 +491,6 @@ const letGo = (
   };
 };
 
-/**
- * Every frame that lets go of a shown pitch (shown on the frame before, none
- * on it) whose two runs after it differ: R3 makes the frame that lets go
- * leave the state the start state leaves on that frame.
- */
 const unlikeStart = (
   frames: ReadonlyArray<Float32Array>,
   rate: number,
@@ -621,7 +505,6 @@ const unlikeStart = (
     })
     .filter((one) => !sameShown(one.fromLetGo, one.fromStart));
 
-/** Two frames in a row both shown more than 100 cents apart: a pitch replaced with no dark frame between. */
 const jumps = (shown: ReadonlyArray<number>) =>
   shown.flatMap((hz, k) => {
     const before = shown[k - 1] ?? Number.NaN;
@@ -629,7 +512,6 @@ const jumps = (shown: ReadonlyArray<number>) =>
     return [{ frame: k, before, hz }];
   });
 
-/** Room kinds and their levels in RMS: the low, middle and top of each range. */
 const ROOM_KINDS: ReadonlyArray<RoomKind> = ['white', 'pink', 'brown', 'fan', 'hum50', 'hum60'];
 
 const ROOM_LEVELS: Record<RoomKind, ReadonlyArray<number>> = {
@@ -641,7 +523,6 @@ const ROOM_LEVELS: Record<RoomKind, ReadonlyArray<number>> = {
   hum60: [0.002, 0.011, 0.02],
 };
 
-/** P3: a clean pluck's failures. */
 const cleanPluck = (i: number) => {
   const seed = seedOf(3, i);
   const next = draw(seed);
@@ -659,7 +540,6 @@ const cleanPluck = (i: number) => {
   ];
 };
 
-/** P4 and P5: a pluck under talk `db` under it, `seconds` from its onset, which is 0.5 s into the talk. */
 const underTalk = (property: number, db: number, i: number, seconds: number) => {
   const seed = seedOf(property, i);
   const next = draw(seed);
@@ -676,7 +556,6 @@ const underTalk = (property: number, db: number, i: number, seconds: number) => 
   return { what, first: firstMs(shown, at, rate), offs: offsOf(shown, p, at, rate) };
 };
 
-/** An under-talk case: what was drawn, its first shown frame in ms, and its shown frames. */
 interface UnderTalk<W> {
   readonly what: W;
   readonly first: number;
@@ -687,28 +566,20 @@ interface UnderTalk<W> {
   }>;
 }
 
-/** Under-talk cases' shown frames, each with its case, past `limit` cents from the pluck. */
 const pastCents = <W extends object>(cases: ReadonlyArray<UnderTalk<W>>, limit: number) =>
   cases.flatMap(({ what, offs }) =>
     offs.filter(({ centsOff }) => Math.abs(centsOff) > limit).map((off) => ({ ...what, off })),
   );
 
-/** Cases first shown later than `ms` (Infinity when never), each with its case. */
 const laterThan = <W extends object>(cases: ReadonlyArray<UnderTalk<W>>, ms: number) =>
   cases.filter(({ first }) => first > ms).map(({ what, first }) => ({ ...what, firstMs: first }));
 
-/**
- * A peg turn of up to `most` cents a second, either way, from a pluck at
- * `hz`; one that would carry it under 65 Hz by 1.5 s (out of `detect`'s
- * reach, which starts at 60 Hz) turns up instead.
- */
 const turnOf = (next: Draw, hz: number, most: number) => {
   const turn = between(next, 0, most) * sign(next);
   if (hz * 2 ** ((turn * 1.5) / 1200) < 65) return -turn;
   return turn;
 };
 
-/** P6: a pluck whose peg turns up to `most` cents a second from `turnFrom` s after the onset, to 1.5 s. */
 const turnedPeg = (i: number, most: number, turnFrom: number) => {
   const seed = seedOf(6, i + 1000 * turnFrom);
   const next = draw(seed);
@@ -727,25 +598,18 @@ const turnedPeg = (i: number, most: number, turnFrom: number) => {
   };
 };
 
-/** Every ordered pair of two strings. */
 const PAIRS = STRINGS.flatMap((_, from) =>
   STRINGS.flatMap((__, to) => when(from !== to, { from, to })),
 );
 
-/** P7 cases: each pair four times, two at each rate. */
 const CHANGES = 4 * PAIRS.length;
 
-/** String `index`, drawn 100 cents under to 100 over its pitch, harmonic or stiff. */
 const stringPluck = (next: Draw, index: number) => {
   const string = STRINGS[index] ?? STRINGS[0];
   const by = between(next, -100, 100);
   return { id: string.id, p: pluckOf(next, string.hz * 2 ** (by / 1200), next() < 0.5) };
 };
 
-/**
- * `signal` from sample `from` damped by `db`, reached over 20 ms: a hand
- * laid on a string, which still rings under it.
- */
 const damp = (signal: Float64Array, rate: number, from: number, db: number) => {
   const floor = 10 ** (-db / 20);
   const ramp = 0.02 * rate;
@@ -755,12 +619,6 @@ const damp = (signal: Float64Array, rate: number, from: number, db: number) => {
   });
 };
 
-/**
- * P7: one string, then another plucked 0.8 to 1.2 s later, to 0.6 s after;
- * at the second's onset the first is damped 20 to 30 dB and rings on under
- * it (left undamped, `detect` reads the mix of two strings as the first, or
- * as neither, on most frames: no focus could show the second).
- */
 const stringChange = (i: number) => {
   const seed = seedOf(7, i);
   const next = draw(seed);
@@ -790,12 +648,10 @@ const stringChange = (i: number) => {
   ];
 };
 
-/** The dark frames P8 makes: silence, white noise (no pitch), or the string 30 to 100 cents off. */
 type Drop = 'silent' | 'noise' | 'far';
 
 const DROPS: ReadonlyArray<Drop> = ['silent', 'noise', 'far'];
 
-/** P8's dark frame `j` of the run: silence, white noise at `level`, or frame `k` of `far`. */
 const dropFrame = (
   kind: Drop,
   k: number,
@@ -807,16 +663,13 @@ const dropFrame = (
   return far[k] ?? new Float32Array(FRAME);
 };
 
-/** The same reading: equal pitches, or none on both. */
 const sameReading = (a: number, b: number) => a === b || (Number.isNaN(a) && Number.isNaN(b));
 
-/** What P8 expects of the run's dark frame `j` (from 0): the reading before it for the first two, none after. */
 const heldOn = (j: number, before: number) => {
   if (j < 2) return before;
   return Number.NaN;
 };
 
-/** P8's checks on the dark frames and the four frames of the string after them. */
 const dropChecks = (shown: ReadonlyArray<number>, start: number, count: number, p: Pluck) => {
   const before = shown[start - 1] ?? Number.NaN;
   const dark = Array.from({ length: count }, (_, j) => ({
@@ -834,10 +687,6 @@ const dropChecks = (shown: ReadonlyArray<number>, start: number, count: number, 
   return [...when(Number.isNaN(before), { notShownBefore: start - 1 }), ...dark, ...after];
 };
 
-/**
- * P8: a clean pluck, locked, with `count` (1 to 5) dark frames of one kind
- * made from a frame starting 0.35 to 0.7 s after the onset.
- */
 const dropout = (i: number) => {
   const seed = seedOf(8, i);
   const next = draw(seed);
@@ -868,25 +717,12 @@ const dropout = (i: number) => {
   ];
 };
 
-/** P9's room kinds: the broad noises; P2 holds the mains hums. */
 const NOISES: ReadonlyArray<RoomKind> = ['white', 'pink', 'brown', 'fan'];
 
-/** Plucks in P9 for each room kind: 10 about each centre. */
 const NOISY_PLUCKS = 70;
 
-/**
- * P9's ring: to 750 ms after the onset. Past it the room still sounds while
- * the pluck fades: on P9's seeds the first dark frame falls at 793 ms (a B3
- * beside the fan's 240 Hz tone) and the first frame past 25 cents at 938 ms
- * (a D2 at 71 Hz under pink noise).
- */
 const RING_MS = 750;
 
-/**
- * P9: a pluck under room noise of `kind` 15 dB under it, 1.05 s from its
- * onset: when it first shows, and each frame of its ring that is dark after
- * that or more than 25 cents off the pluck.
- */
 const underRoom = (kind: RoomKind, k: number, i: number) => {
   const seed = seedOf(9, 1000 * k + i);
   const next = draw(seed);

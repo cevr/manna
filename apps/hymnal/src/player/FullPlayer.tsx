@@ -1,27 +1,3 @@
-/**
- * The full player, a sheet over the stack that the bottom bar opens on its
- * hymn (`/player?hymn=<n>`, plus `page=<m>` when another hymn sounds over
- * the reader). It keeps that held hymn and offers Play for the route's page;
- * once the player holds that page's hymn, the sheet keeps it on Pause too.
- * With no hymn in the route it shows the held hymn (`barFor`). The route
- * carries the page context on every platform: the web keeps no
- * page mounted under it, a phone does. Its number and title, a button that
- * goes to the hymn's page (`title.ts`), what the player is
- * doing, its button, and a bar to drag to any place in the recording with
- * the time gone and the whole length. The bar shows in every state, still
- * while the length is not known. A recording that cannot play says why and
- * offers Retry. Under the player: the held hymn's `Tempo` dial (`TempoDial`),
- * which the recording follows too while Sound is on, and its stanza choice
- * (`StanzaChips`, none for a hymn of one stanza), and the `Start` group
- * (`StartSwitches`: `Intro` and `Click`); then `Chord settings`
- * (`ChordSection`): a `Chords` switch (the bar's hold, with no long press)
- * whenever the sheet holds a hymn, and, only while chords are on, the key and
- * capo dials with reset (`Dials`, over the hymn's own page) and the placement
- * dial, which belongs to the sheet's named hymn even when no reader is
- * mounted; then the reader's settings, the text size dial, the font, the line
- * spacing and the screen kept on.
- */
-
 import { useAtomSet, useAtomValue } from '@effect/atom-react';
 import { Option } from 'effect';
 import { useNavigation, useParams, useRouter } from 'one';
@@ -67,7 +43,6 @@ export function FullPlayer() {
   });
 }
 
-/** What the player is doing, in a line under its hymn. */
 const caption: (player: Player) => string = Player.$match({
   Idle: () => 'Recording',
   Loading: () => 'Loading the recording…',
@@ -83,7 +58,6 @@ const caption: (player: Player) => string = Player.$match({
     }),
 });
 
-/** The bar's hymn and, when different, the reader page it opened over. */
 const useRoute = () => {
   const { hymn, page } = useParams<{ hymn: string; page: string }>();
   return {
@@ -95,8 +69,6 @@ const useRoute = () => {
 function Sheet({ player }: { readonly player: HymnPlayer }) {
   const current = useAtomValue(player.state);
   const route = useRoute();
-  // Once the page's Play takes ownership, it remains the sheet's hymn on
-  // Pause too. Before that press the sheet keeps the hymn the bar opened.
   const owner = Option.orElse(
     Option.filter(route.page, (page) =>
       Option.exists(trackOf(current), (held) => held.number === page.number),
@@ -138,7 +110,6 @@ function Held({
     at: 0,
     length: Option.none<number>(),
   }));
-  /** A press of the sheet's Play or Pause: its cue, then its command. */
   const pressed = (command: Command) => {
     cue(plain((Command.$is('Pause')(command) && 'pause') || 'play'));
     send(command);
@@ -184,11 +155,6 @@ function Held({
   );
 }
 
-/**
- * The hymn's number and title: a button that goes to its page, closing the
- * sheet (`titleGoes`, from the stack as it is at the press). The player is
- * not told, so the track plays on.
- */
 function Title({ track, accent }: { readonly track: Track; readonly accent: ColorValue }) {
   const navigation = useNavigation();
   const router = useRouter();
@@ -218,7 +184,6 @@ function Title({ track, accent }: { readonly track: Track; readonly accent: Colo
   );
 }
 
-/** The sheet opened with no hymn to play: a link that names none, with nothing held. */
 function Nothing() {
   return (
     <ScrollView contentContainerStyle={styles.page}>
@@ -233,13 +198,6 @@ function Nothing() {
   );
 }
 
-/**
- * `Chord settings` for the sheet's hymn: the `Chords` switch, on every hymn
- * the sheet holds, over its page or not; then, while chords are on, the key
- * and capo dials with reset (over the hymn's own page, if it has chords: the
- * same dials as over the bar) and the placement dial (none for a hymn with
- * no chords). Turned off, the switch hides them all again.
- */
 const ChordSection = memo(function ChordSection({ track }: { readonly track: Track }) {
   const thumb = useThumb(track.number);
   const ownPage = Option.exists(useShownPage(), (shown) => shown.number === track.number);
@@ -250,7 +208,7 @@ const ChordSection = memo(function ChordSection({ track }: { readonly track: Tra
         <Text style={styles.switchLabel} dynamicTypeRamp="body" aria-hidden>
           Chords
         </Text>
-        {/* The bar's hold, as a switch: no long press needed. React Native's Switch reads `accessibilityLabel` on every platform. */}
+        {}
         <Switch
           accessibilityLabel="Chords"
           value={thumb.state.chords}
@@ -270,7 +228,6 @@ const ChordSection = memo(function ChordSection({ track }: { readonly track: Tra
   );
 });
 
-/** The reader's settings: the text size, the font, the line spacing, the screen kept on. */
 const Reading = memo(function Reading() {
   return (
     <View style={styles.section}>

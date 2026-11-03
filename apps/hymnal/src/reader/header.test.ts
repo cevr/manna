@@ -1,10 +1,3 @@
-/**
- * The hymn route's header comes from the stack's options, which the stack
- * reads as it lays the screen out, before the screen renders or any effect
- * of its runs: so each way into a hymn shows its header on the push's first
- * frame, and none shows the route's name or a header off the ground.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 
@@ -14,10 +7,8 @@ import { type StackRoute, stackOptions } from '~/stack';
 
 import { stackHeaders } from './screen';
 
-/** The stack's options for `route`, as the stack asks for them. */
 const optionsOf = (route: StackRoute) => stackOptions('accent', stackHeaders)({ route });
 
-/** The stack's options for the hymn route at `params`. */
 const optionsAt = (params: StackRoute['params']) => optionsOf({ name: 'hymns/[number]', params });
 
 const titleOf = (n: string) => Option.getOrThrow(hymnAt(n)).title;

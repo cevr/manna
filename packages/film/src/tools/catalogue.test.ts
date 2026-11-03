@@ -1,7 +1,3 @@
-// RenderCatalogue on disk: the review, a `film project` child per request and
-// a terminal's `project render` each write one film's catalogue from their own
-// process, and every write lands.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
@@ -20,13 +16,11 @@ import {
 import { RenderCatalogue } from './catalogue.ts';
 import { ContentStore } from './content-store.ts';
 
-/** A withdraw: of every approval, or `given` an approve's op, of the approvals it gave alone. */
 const withdrawSay = (given: Option.Option<OpId> = Option.none()): Say => ({
   _tag: 'Withdraw',
   given,
 });
 
-/** A catalogue of its own, as another process holds one: nothing in memory is shared. */
 const ownCatalogue = Effect.map(
   Layer.build(RenderCatalogue.layer.pipe(Layer.provide(ContentStore.layer))),
   Context.get(RenderCatalogue),
@@ -50,7 +44,6 @@ describe('RenderCatalogue', () => {
       const catalogue = yield* (yield* ownCatalogue).read(project);
       expect(catalogue.comments.length).toBe(30);
       expect(new Set(catalogue.comments.map((c) => c.id)).size).toBe(30);
-      // The catalogue, and its lock file, which stays; no partial.
       expect((yield* fs.readDirectory(out)).toSorted()).toEqual([
         '.catalogue.json.lock',
         'catalogue.json',
@@ -105,7 +98,6 @@ describe('said', () => {
   test("a withdraw given an approve's op takes only the approval it gave: another's stays", () => {
     const now = partSubject(sceneAddress('open'), 'main', 'k2');
     const earlier = { ...now, key: 'k1' };
-    // Both approvals given at the same moment, by two runs.
     const op2 = OpId.make('op-2');
     const approved = approve(
       approve(emptyCatalogue('f'), earlier, 2, Option.some(OpId.make('op-1'))),
@@ -117,7 +109,6 @@ describe('said', () => {
     const undone = said(approved, now, withdrawSay(Option.some(op2)), 3);
     expect(approvalState(undone, now)).toBe('stale');
     expect(approvalState(undone, earlier)).toBe('approved');
-    // A say's approve carries no op: no Undo's withdraw takes it.
     const plain = said(emptyCatalogue('f'), now, { _tag: 'Approve' }, 4);
     expect(said(plain, now, withdrawSay(Option.some(op2)), 5)).toEqual(plain);
   });

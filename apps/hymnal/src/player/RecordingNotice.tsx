@@ -7,7 +7,6 @@ import { color } from '~/color';
 import { usePlayer } from './context';
 import type { HymnPlayer } from './player';
 
-/** Fallback belongs to the held recording, independently of the page's dial. */
 export function RecordingNotice({ number }: { readonly number: number }) {
   return Option.match(usePlayer(), {
     onNone: () => <></>,

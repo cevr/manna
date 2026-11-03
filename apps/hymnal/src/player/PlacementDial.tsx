@@ -13,7 +13,6 @@ import { DialView, MOST_SCALE } from './DialView';
 
 const marks = placements.map((choice) => choice.mark);
 
-/** One hymn's anchors; an explicit clear resumes the global choice. No player subscription. */
 export const PlacementDial = memo(function PlacementDial({ number }: { readonly number: number }) {
   const reader = use(ChordReaderContext);
   const global = useAtomValue(reader.placement);
@@ -27,8 +26,6 @@ export const PlacementDial = memo(function PlacementDial({ number }: { readonly 
   const [resets, reset] = useState(0);
   const epoch = generation.current;
   const inherit = () => {
-    // Retire the gesture owner before writing. A queued detent from the old
-    // dial cannot replace the clear, even before React mounts the new dial.
     generation.current += 1;
     reset(generation.current);
     setOwn('inherit');

@@ -10,7 +10,6 @@ const named = (keys: number[], key: Chord.Key) => {
   return chord === undefined ? undefined : Chord.format(chord, key);
 };
 
-/** Each quality's notes: semitones above the root, and the letters above the root's letter. */
 const MEMBERS: Record<Chord.Quality, ReadonlyArray<readonly [number, number]>> = {
   '': [
     [0, 0],
@@ -94,13 +93,8 @@ const MEMBERS: Record<Chord.Quality, ReadonlyArray<readonly [number, number]>> =
 const LETTERS = 'CDEFGAB';
 const NATURALS = [0, 2, 4, 5, 7, 9, 11];
 
-/**
- * The letter each degree is written on, as steps above the tonic's letter,
- * in major and minor keys alike: b2, 2, b3, 3, 4, #4, 5, b6, 6, b7, 7.
- */
 const DEGREE_LETTERS = [0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6];
 
-/** How each quality is written after its root. */
 const SUFFIXES: Record<Chord.Quality, string> = {
   '': '',
   m: 'm',
@@ -118,7 +112,6 @@ const SUFFIXES: Record<Chord.Quality, string> = {
   '7sus4': '7sus4',
 };
 
-/** A spelled note's pitch class, read here rather than through the module. */
 const pitchOf = (name: string) =>
   ([...name.slice(1)].reduce(
     (pc, c) => pc + (c === '#' ? 1 : -1),
@@ -127,7 +120,6 @@ const pitchOf = (name: string) =>
     12) %
   12;
 
-/** The note on a letter (steps from C, any octave) at a pitch class; undefined past two accidentals. */
 const onLetter = (letter: number, pc: number): string | undefined => {
   const at = ((letter % 7) + 7) % 7;
   const offset = (pc - (NATURALS[at] ?? 0) + 12) % 12;
@@ -148,7 +140,6 @@ const onLetter = (letter: number, pc: number): string | undefined => {
   return accidental === undefined ? undefined : `${LETTERS[at]}${accidental}`;
 };
 
-/** Every key the schema admits, from every tonic a signature could be written with, in both modes. */
 const KEYS = [...LETTERS]
   .flatMap((letter) => [letter, `${letter}#`, `${letter}b`])
   .flatMap((tonic) => [
@@ -157,16 +148,9 @@ const KEYS = [...LETTERS]
   ])
   .filter(Schema.is(Chord.Key));
 
-/** A diminished chord on #1, #2 or #5 of a major key: the leading tone of ii, iii or vi. */
 const leadsUp = (key: Chord.Key, chord: Chord.Chord) =>
   !key.minor && ['dim', 'dim7', 'm7b5'].includes(chord.quality) && [1, 3, 8].includes(chord.root);
 
-/**
- * The symbol a score writes, by letter arithmetic alone: the root on its
- * degree's letter (a raised diminished root on the letter below), a member
- * bass on the letter its interval gives unless that takes three accidentals,
- * any other bass on its degree's letter.
- */
 const expected = (key: Chord.Key, chord: Chord.Chord): string => {
   const tonicLetter = LETTERS.indexOf(key.tonic[0] ?? 'C');
   const tonic = pitchOf(key.tonic);
@@ -183,7 +167,6 @@ const expected = (key: Chord.Key, chord: Chord.Chord): string => {
   return `${symbol}/${asMember ?? onLetter(degreeLetter(chord.bass), pc) ?? '?'}`;
 };
 
-/** What is wrong with a chord's symbol in a key: none when it is the one a score writes. */
 const misspelled = (key: Chord.Key, chord: Chord.Chord): string[] => {
   const symbol = Chord.format(chord, key);
   const want = expected(key, chord);
@@ -200,9 +183,7 @@ describe('Chord.fromPitches', () => {
       expect(named([65, 60, 57, 53], F)).toBe('F');
       expect(named([64, 60, 55, 52], F)).toBe('C/E');
       expect(named([64, 58, 55, 43], F)).toBe('Edim/G');
-      // Alone, these notes are B-flat with an added sixth; harmony.ts reads them on.
       expect(named([67, 62, 53, 46], F)).toBe('Bb6');
-      // G-flat with an added sixth, not E-flat minor seventh over its third.
       expect(named([63, 61, 58, 54], Db)).toBe('Gb6');
       expect(named([70, 64, 61, 55], Db)).toBe('Gdim7');
       expect(named([65, 61, 57, 49], Db)).toBe('Db+');
@@ -226,9 +207,7 @@ describe('Chord.overBass and Chord.withoutOne', () => {
 
   it.effect('names the chord above a bass it leaves out (hymn 100, bar 23)', () =>
     Effect.sync(() => {
-      // Eb3 Ab3 F4 Db5: D-flat over E-flat.
       expect(over([51, 56, 65, 73], Db)).toBe('Db/Eb');
-      // The bass doubled above, or two notes above it: no chord over a foreign bass.
       expect(over([51, 63, 65, 73], Db)).toBeUndefined();
       expect(over([51, 65, 73], Db)).toBeUndefined();
     }),
@@ -236,9 +215,7 @@ describe('Chord.overBass and Chord.withoutOne', () => {
 
   it.effect('names the one chord a set makes with one note left out (hymn 100, bar 10)', () =>
     Effect.sync(() => {
-      // Db3 C4 Gb4 Bb4: G-flat over D-flat with a passing C.
       expect(without([49, 60, 66, 70], Db)).toBe('Gb/Db');
-      // Db3 Bb3 Ab4 C5: only B-flat minor seventh with its fifth left out, which names nothing.
       expect(without([49, 58, 68, 72], Db)).toBeUndefined();
     }),
   );
@@ -246,10 +223,8 @@ describe('Chord.overBass and Chord.withoutOne', () => {
   it.effect('leaves two one-note-out readings unnamed, unless one is already sounding', () =>
     Effect.sync(() => {
       const C = { tonic: 'C', minor: false } as const;
-      // C3 G3 Eb4 E4: C with E-flat out, or C minor with E out.
       expect(without([48, 55, 63, 64], C)).toBeUndefined();
       expect(without([48, 55, 63, 64], C, { root: 0, quality: 'm' })).toBe('Cm');
-      // Gb3 Ab3 Db4 C5 (hymn 100, bar 5): a suspension is no reading, so G-flat keeps sounding.
       expect(without([54, 56, 61, 72], Db)).toBeUndefined();
     }),
   );
@@ -291,7 +266,6 @@ describe('Chord.format', () => {
       expect(Chord.format({ root: 1, quality: 'dim', bass: 4 }, major('F'))).toBe('F#dim/A');
       expect(Chord.format({ root: 8, quality: 'dim7' }, major('Ab'))).toBe('Edim7');
       expect(Chord.format({ root: 1, quality: 'dim', bass: 4 }, major('G'))).toBe('G#dim/B');
-      // A bass outside the chord keeps the key's spelling.
       expect(Chord.format({ root: 0, quality: '', bass: 8 }, major('Ab'))).toBe('Ab/Fb');
     }),
   );
@@ -310,7 +284,6 @@ describe('Chord.format', () => {
           ),
         );
         expect(wrong.slice(0, 10)).toEqual([]);
-        // The 15 major and 15 minor keys a signature writes, and no other.
         expect(KEYS.length).toBe(30);
       }),
   );

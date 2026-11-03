@@ -1,23 +1,3 @@
-/**
- * The intro over a hymn's first sung line: while the recording plays before
- * the first line (`intro.ts`), a thin accent line over a hairline fills
- * from the share played to full at the first line, linearly, and holds
- * while paused or waiting. It is gone from the first line on, when line 0 is
- * marked.
- *
- * It is drawn absolutely just above line 0, as the element after it in a
- * box the two share, so the page never moves when it comes or goes. It is
- * beside the line, not in it (an accessible line hides the elements inside
- * it on iOS), and its parent box has the line's height: under a box of no
- * height, iOS leaves it out of the accessibility tree. It is an accessible
- * element of its own and reads as a progress bar named `Introduction`:
- * whole percent played, and whole seconds to the first line.
- *
- * The count-in's pulse (`CountIn.tsx`) is drawn the same way, after the
- * intro, in the box of the line the follow holds at the first sung line:
- * line 0's with every stanza, the first kept line's under a stanza choice.
- */
-
 import { Option } from 'effect';
 import { type ReactNode, useEffect, useRef } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
@@ -28,13 +8,6 @@ import { CountIn } from './CountIn';
 import { useCountLine, useIntro } from './follow';
 import { type Intro as Shown, readingOf } from './intro';
 
-/**
- * Line `index` of the page, with the intro over it when it is line 0 and the
- * count-in over it when it is the line the follow holds at the first sung
- * line (`useCountLine`; line 0 with every stanza): each shares a box of its
- * own with the line, so the section's gap between its rows is the same
- * whether they show or not.
- */
 export function WithIntro({
   index,
   children,
@@ -53,7 +26,6 @@ export function WithIntro({
   );
 }
 
-/** `node` when `shown`, else nothing. */
 const when = (shown: boolean, node: ReactNode): ReactNode => {
   if (shown) return node;
   return <></>;

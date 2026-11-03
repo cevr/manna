@@ -18,7 +18,6 @@ import {
   type HymnNotFoundError,
 } from './service.js';
 
-/** The operation a call failed in, `false` for another error, or `succeeded`. */
 const failedOperation = <A>(
   call: Effect.Effect<A, HymnalError | HymnalIndexesMissing | HymnNotFoundError>,
 ) =>

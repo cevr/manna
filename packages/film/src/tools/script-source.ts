@@ -1,24 +1,3 @@
-// A film's script (`script.ts`, or a version folder's) as the lab rewrites
-// it: the `export const script = defineScript([…])` literal, parsed with
-// oxc-parser and never imported (the lab runs for days and never loads a
-// film's module). Each edit is a splice of the one place it changes, read
-// back from the formatted text before it lands:
-//
-// - a mark edit, of one beat's `say` string literal and nothing else: its
-//   words, cues and turns stay as they read, and only its delivery marks
-//   (`core/delivery.ts`) are written as the reader asked (`withDelivery`);
-//   it reads back only when the beat's line parses from the new text with
-//   the same words and exactly the marks asked for (`sayMissed`), so a mark
-//   never lands on another word;
-// - a move, of the beats array's elements: each beat's text, with the
-//   comments and blank lines above it, put in its new place
-//   (`editOrder`); it reads back only when the beats read in exactly the
-//   order asked, each one's text as it was (`orderMissed`);
-// - a hold, of one beat's `lead` or `tail`: its number replaced, the field
-//   added after the beat's last field, or taken away for a default
-//   (`editHold`); it reads back only when the beat holds exactly that
-//   (`holdMissed`).
-
 import { Array as Arr, Option, Predicate, Result } from 'effect';
 import type {
   ArrayExpression,
@@ -45,13 +24,10 @@ import {
   valueOf,
 } from './scene-source.ts';
 
-/** A film's script, in its folder. */
 export const SCRIPT_FILE = 'script.ts';
 
-/** What a mark write is, as an answer names it. */
 export const marksTarget = (beat: string) => `marks:${beat}`;
 
-/** The array of beats `defineScript([…])` (or a bare array) holds. */
 const beatsArray = (e: Expression): Option.Option<ArrayExpression> => {
   if (e.type === 'ArrayExpression') return Option.some(e);
   if (e.type === 'TSAsExpression' || e.type === 'TSSatisfiesExpression')
@@ -64,7 +40,6 @@ const beatsArray = (e: Expression): Option.Option<ArrayExpression> => {
   return Option.none();
 };
 
-/** The array of beats `source` exports as `script`. */
 const scriptArray = (source: string): Result.Result<ArrayExpression, SourceRefused> =>
   Result.flatMap(parseModule(SCRIPT_FILE, source), (program) => {
     const found = program.body.flatMap((s) => {
@@ -87,7 +62,6 @@ const scriptArray = (source: string): Result.Result<ArrayExpression, SourceRefus
     });
   });
 
-/** The beats `source` exports as `script`, each an object literal. */
 const scriptBeats = (
   source: string,
 ): Result.Result<ReadonlyArray<ObjectExpression>, SourceRefused> =>
@@ -98,7 +72,6 @@ const scriptBeats = (
     }),
   );
 
-/** A beat's id, when it is an object literal whose `id` is a plain string. */
 const idOf = (b: ObjectExpression): Option.Option<string> =>
   Result.match(propertyOf(SCRIPT_FILE, 'the script', b, 'id'), {
     onFailure: () => Option.none<string>(),
@@ -110,7 +83,6 @@ const idOf = (b: ObjectExpression): Option.Option<string> =>
       ),
   });
 
-/** The one beat of `beats` whose id is `beat`; refused when the script names it never or twice. */
 const beatObject = (
   beats: ReadonlyArray<ObjectExpression>,
   beat: string,
@@ -131,7 +103,6 @@ const beatObject = (
   );
 };
 
-/** A beat's `say`, when the beat is an object literal whose `say` is a plain string. */
 const sayLiteral = (
   beats: ReadonlyArray<ObjectExpression>,
   beat: string,
@@ -153,19 +124,12 @@ const sayLiteral = (
     ),
   );
 
-/** Beat `beat`'s line as `source` writes it. */
 const sayIn = (source: string, beat: string, target: string) =>
   Result.map(
     Result.flatMap(scriptBeats(source), (beats) => sayLiteral(beats, beat, target)),
     (literal) => ({ literal, text: literal.value }),
   );
 
-/**
- * `source` with beat `beat`'s line marked `marks` and nothing else changed:
- * refused when the line does not parse, it is no longer `read` (the words
- * and marks the new marks were made on; none from a page older than the
- * lab), or a mark does not fit its words (`marksRefusal`).
- */
 export const editMarks = (
   source: string,
   beat: string,
@@ -194,11 +158,6 @@ export const editMarks = (
   );
 };
 
-/**
- * What a mark write that meant `marks` on beat `beat` missed, read back from
- * the formatted text: none when the line parses with the words it had and
- * exactly those marks.
- */
 export const sayMissed = (
   after: string,
   before: string,
@@ -214,7 +173,6 @@ export const sayMissed = (
     );
   return Result.flatMap(lineOf(before), (was) =>
     Result.map(lineOf(after), (now) => {
-      // The marks compared where they stand: each written into the words.
       const asked = withDelivery(was.spoken, marks);
       const read = withDelivery(was.spoken, now.delivery);
       return [
@@ -228,29 +186,18 @@ export const sayMissed = (
   );
 };
 
-// ---------------------------------------------------------------------------
-// Moves
-
-/** What a move writes, as an answer and the history name it. */
 export const moveTarget = (beat: string, before: MovedBefore) =>
   Option.match(before, {
     onNone: () => `move ${beat} to the end`,
     onSome: (b) => `move ${beat} before ${b}`,
   });
 
-/** One element of the beats array: its id (none for one written as no object literal) and its text with what leads it. */
 interface Element {
   readonly id: Option.Option<string>;
-  /** The blanks and comments between the comma before it (or the array's `[`) and it. */
   readonly lead: string;
   readonly text: string;
 }
 
-/**
- * The beats array of `source` as elements, and the text after the last one
- * (a trailing comma, blanks and comments, up to the `]`): refused when an
- * element is a hole or a spread, or a comma does not stand between two.
- */
 const elementsOf = (source: string, target: string) =>
   Result.flatMap(scriptArray(source), (array) => {
     const elements: Array<Element> = [];
@@ -271,7 +218,6 @@ const elementsOf = (source: string, target: string) =>
         lead: source.slice(from, e.start),
         text: source.slice(e.start, e.end),
       });
-      // The next element is led from just after the comma that ends this one.
       const next = Option.match(Arr.get(array.elements, elements.length), {
         onNone: () => array.end - 1,
         onSome: (n) =>
@@ -295,14 +241,6 @@ const elementsOf = (source: string, target: string) =>
     return Result.succeed({ array, elements, tail: source.slice(from, array.end - 1) });
   });
 
-/**
- * `source` with beat `beat` moved before beat `before` (to the end when
- * none): each element's text, with the comments and blanks that lead it,
- * put in its new place, and nothing else changed. Refused when the script
- * names either beat more than once, or when `movedOrder`
- * refuses the move on the order `source` holds, `parts` (the acts, the
- * score's movements) kept: judged on the text the writer's lock holds.
- */
 export const editOrder = (
   source: string,
   beat: string,
@@ -341,11 +279,6 @@ export const editOrder = (
   });
 };
 
-/**
- * What a move of `beat` before `before` missed, read back from the formatted
- * text `after` against `was`, the text it was made from: none when the
- * beats read in exactly the order asked and each one's text is as it was.
- */
 export const orderMissed = (
   after: string,
   was: string,
@@ -384,13 +317,8 @@ export const orderMissed = (
   );
 };
 
-// ---------------------------------------------------------------------------
-// Holds
-
-/** What a hold writes, as an answer and the history name it. */
 export const holdTarget = (beat: string, edge: HoldEdge) => `hold ${beat} ${edge}`;
 
-/** The hold beat `beat` declares at `edge` in `source`: none when it declares none, refused when it is no number. */
 const declaredHold = (
   source: string,
   beat: string,
@@ -418,12 +346,6 @@ const declaredHold = (
   );
 };
 
-/**
- * `source` with beat `beat`'s `edge` written as `value` (none: taken away,
- * the beat on its default): the number replaced where it is one, added after
- * the beat's last field where it is not there. Refused over a hold the
- * script computes, which the lab cannot prove it replaced.
- */
 export const editHold = (
   source: string,
   beat: string,
@@ -468,11 +390,6 @@ export const editHold = (
   );
 };
 
-/**
- * What a hold write that meant `value` at `edge` of beat `beat` missed, read
- * back from the formatted text: none when the beat holds exactly that (none:
- * declares none).
- */
 export const holdMissed = (
   after: string,
   beat: string,

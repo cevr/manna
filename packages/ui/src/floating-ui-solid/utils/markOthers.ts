@@ -1,11 +1,3 @@
-// Upstream: packages/react/src/floating-ui-react/utils/markOthers.ts
-//
-// While a modal popup is open, everything outside it is hidden from
-// assistive tech (`aria-hidden`, or `inert`, which also keeps a script's
-// focus and find in page out) and marked
-// `data-base-ui-inert` so outside presses can be told apart. Counted per
-// element and per attribute, so stacked popups undo in any order and an
-// element hidden by the page stays hidden.
 import { getNodeName, isShadowRoot } from '@floating-ui/utils/dom';
 
 import { ownerDocument } from '../../utils/dom.ts';
@@ -14,7 +6,6 @@ type Undo = () => void;
 
 interface MarkOthersOptions {
   ariaHidden?: boolean | undefined;
-  /** Hide them with `inert` in place of `aria-hidden`. */
   inert?: boolean | undefined;
   mark?: boolean | undefined;
 }
@@ -37,7 +28,6 @@ let uncontrolledElements = newUncontrolled();
 let markerCounterMap = new WeakMap<Element, number>();
 let lockCount = 0;
 
-/** Whether `node` is hidden by `attribute` already (the page's own, or another popup's). */
 const hiddenBy = (node: Element, attribute: ControlAttribute) => {
   const value = node.getAttribute(attribute);
   return attribute === 'inert' ? value !== null : value !== null && value !== 'false';
@@ -156,7 +146,6 @@ function applyAttributeToOthers(
 
   return () => {
     if (controlAttribute) {
-      // Read again: the last undo of all may have started the counts afresh.
       const liveCounters = controlCounters[controlAttribute];
       const liveUncontrolled = uncontrolledElements[controlAttribute];
       for (const element of hiddenElements) {
@@ -188,10 +177,6 @@ function applyAttributeToOthers(
   };
 }
 
-/**
- * Marks (and with `ariaHidden` or `inert`, hides) every element outside
- * `avoidElements`; returns the undo.
- */
 export function markOthers(avoidElements: Element[], options: MarkOthersOptions = {}): Undo {
   const { ariaHidden = false, inert = false, mark = true } = options;
   const body = ownerDocument(avoidElements[0]).body;

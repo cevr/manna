@@ -1,16 +1,3 @@
-/**
- * Chord charts in the ChordPro dialect the hand charts write: words split by
- * spaces and a word's syllables by `-`; `[X]` before a syllable is a chord at
- * its start; ` ~[X]` after a syllable is a change under or after it; a
- * syllable that follows such changes inside its word is written ` -` and the
- * syllable. Sections are `{start_of_verse: Verse <n> …}` and
- * `{start_of_chorus: Refrain …}`; a label with `(guitar)` holds the guitar
- * level, any other the full harmony.
- *
- * A syllable's own `\`, `-`, `~`, `[`, `]` and spaces are written escaped
- * with `\`. Reading fails on a token it cannot read: it never drops one.
- */
-
 import { Effect, Schema } from 'effect';
 
 import * as Chord from './chord.js';
@@ -30,23 +17,18 @@ class Unreadable {
 
 export interface Syllable {
   readonly text: string;
-  /** The word's place in its line. */
   readonly word: number;
-  /** The chord at its start, when one is written there. */
   readonly start: string | undefined;
-  /** The changes after its start, in order. */
   readonly later: readonly string[];
 }
 
 export interface Section {
   readonly label: string;
-  /** Stanza n, or the refrain. */
   readonly part: number | 'refrain';
   readonly level: 'full' | 'guitar';
   readonly lines: ReadonlyArray<ReadonlyArray<Syllable>>;
 }
 
-/** A syllable's chords as one string: `Gm7/Bb~C~C7`, `~C` with no chord at its start, `-` for none. */
 export const chords = (syllable: Pick<Syllable, 'start' | 'later'>): string =>
   syllable.start === undefined && syllable.later.length === 0
     ? '-'
@@ -54,7 +36,6 @@ export const chords = (syllable: Pick<Syllable, 'start' | 'later'>): string =>
 
 const escape = (text: string) => text.replace(/[\\\-~[\]\s]/g, (c) => `\\${c}`);
 
-/** A compiled syllable's chords at a level, spelled in a key, as a chart writes them. */
 export const chartChords = (
   syllable: Sung['lines'][number][number],
   level: 'full' | 'guitar',
@@ -69,7 +50,6 @@ export const chartChords = (
   };
 };
 
-/** One level of a sung part as a chart section's lines. */
 export const render = (part: Sung, key: Chord.Key, level: 'full' | 'guitar'): string =>
   part.lines
     .map((line) => {
@@ -90,7 +70,6 @@ export const render = (part: Sung, key: Chord.Key, level: 'full' | 'guitar'): st
 
 type Fail = (reason: string) => never;
 
-/** Splits a line into tokens at unescaped spaces; an escape with nothing after it is unreadable. */
 const tokens = (line: string, fail: Fail): string[] => {
   const out: string[] = [];
   let token = '';
@@ -109,7 +88,6 @@ const tokens = (line: string, fail: Fail): string[] => {
   return out;
 };
 
-/** Reads a `[X]` at `i`: the chord and where the syllable's text starts. */
 const chordAt = (token: string, i: number, fail: Fail): [string | undefined, number] => {
   if (token[i] !== '[') return [undefined, i];
   const close = token.indexOf(']', i);
@@ -119,7 +97,6 @@ const chordAt = (token: string, i: number, fail: Fail): [string | undefined, num
   return [chord, close + 1];
 };
 
-/** Reads a syllable's text from `i` to the next unescaped `-`: the text and where it ends. */
 const textAt = (token: string, from: number, fail: Fail): [string, number] => {
   let text = '';
   let i = from;
@@ -134,7 +111,6 @@ const textAt = (token: string, from: number, fail: Fail): [string, number] => {
   return [text, i];
 };
 
-/** Reads `[X]text-[Y]text…`: each syllable's chord at its start and its text. */
 const syllablesOf = (token: string, fail: Fail) => {
   const out: Array<{ start: string | undefined; text: string }> = [];
   let i = 0;
@@ -147,7 +123,6 @@ const syllablesOf = (token: string, fail: Fail) => {
   return out;
 };
 
-/** Reads one line of a section: its words' syllables and their chords. */
 const lineOf = (line: string, fail: Fail): Syllable[] => {
   const out: Syllable[] = [];
   let word = -1;
@@ -181,7 +156,6 @@ const sectionOf = (label: string, lines: Syllable[][], fail: Fail): Section => {
   };
 };
 
-/** The directives a chart may give outside a section; they say nothing the golden reads. */
 const METADATA: ReadonlySet<string> = new Set(['title', 'subtitle', 'key', 'time', 'comment']);
 const SECTIONS: ReadonlySet<string> = new Set([
   'start_of_verse',
@@ -221,7 +195,6 @@ const read = (chart: string): readonly Section[] => {
   return sections;
 };
 
-/** Reads a chart's sections, failing on the first token or line it cannot read. */
 export const parse = (chart: string): Effect.Effect<readonly Section[], ChartError> =>
   Effect.try({
     try: () => read(chart),

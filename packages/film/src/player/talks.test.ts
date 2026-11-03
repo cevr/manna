@@ -1,9 +1,3 @@
-// A talk's page reads its edit and, through the footage route, the footage
-// library's lock and the transcript it names, and cuts on them with the
-// derivation the tools use (`talkTakes`): the same pieces as a talk built on
-// the take directly. A file it cannot fetch or read, or a take not ready,
-// fails, naming it.
-
 import { describe, expect, it } from 'effect-bun-test';
 import { Array as Arr, Effect, Layer, Option, Result, Schema } from 'effect';
 import { HttpClient, HttpClientRequest, HttpClientResponse } from 'effect/http';
@@ -55,7 +49,6 @@ const ENTRY = {
   },
 };
 
-/** The library's files as the footage route serves them, its lock as `lock`. */
 const libraryOf = (lock: FootageLock) =>
   Effect.gen(function* () {
     const transcript = yield* Schema.encodeEffect(FootageTranscriptJson)({
@@ -72,11 +65,6 @@ const libraryOf = (lock: FootageLock) =>
 
 const HEARD: FootageLock = { version: 1, footage: { 'take.why': { ...ENTRY, transcript: FILE } } };
 
-/**
- * A client on a stand-in page answering each path from `files`, a 404 for
- * any other, noting the paths it was asked: bun has no `location`, so a
- * page-relative URL is resolved against an origin here.
- */
 const serving = (files: ReadonlyMap<string, string>) => {
   const asked: Array<string> = [];
   const client = HttpClient.make((request, url) => {
@@ -96,10 +84,6 @@ const serving = (files: ReadonlyMap<string, string>) => {
 
 const isUnreadable = Schema.is(TalkUnreadable);
 
-/**
- * Talk `why`'s module as the page loads it, its edit `talk.ts` exporting
- * `module`, over `files`; the page's refusal, if it is `TalkUnreadable`.
- */
 const pageOf = (files: ReadonlyMap<string, string>, module: unknown = { talk: TALK }) => {
   const { layer, asked } = serving(files);
   const loaded = Effect.tryPromise({

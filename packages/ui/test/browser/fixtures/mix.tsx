@@ -1,13 +1,3 @@
-// Fixtures for the behaviour mixins (`src/mix/mix.ts`). `#toggle` mounts and
-// unmounts the element under test.
-// - `on-element`: a `<div>` spread with a prop mixin's attributes, a dynamic
-//   `title` and an `onElement` ref factory, which logs what its setup sees
-//   and its cleanup.
-// - `state`: a counter mixin built in the body, spread with a title the
-//   `#relabel` button changes; a press on `#counter` counts.
-// - `listen`: a `<div>` with `listen` ref factories on the document (keydown)
-//   and on itself (a non-passive wheel listener that prevents the scroll).
-// - `parity`: the server-render parity markup (`mix-parity.tsx`).
 import type { JSX } from '@solidjs/web';
 import { createSignal, Show } from 'solid-js';
 
@@ -31,7 +21,6 @@ function Mounted(props: { children: JSX.Element }) {
 function OnElement() {
   const [title] = createSignal('dynamic');
   const behaviour = mix<HTMLDivElement>({ 'data-mixed': 'yes', class: 'mixed' });
-  // Made in the body: the element has a spread, whose `ref` the server never evaluates.
   const setup = onElement<HTMLDivElement>((el) => {
     log(
       `setup connected=${el.isConnected} mixed=${el.getAttribute('data-mixed')} title=${el.title}`,
@@ -41,7 +30,6 @@ function OnElement() {
   return <div id="probe" {...behaviour} title={title()} ref={setup} />;
 }
 
-/** Counts presses in a signal of its own, shown as `data-count`. */
 function counter(): Mixin<HTMLButtonElement> {
   const [count, setCount] = createSignal(0);
   return {

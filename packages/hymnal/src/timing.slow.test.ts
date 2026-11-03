@@ -1,8 +1,4 @@
 /* oxlint-disable effect/noNodeBuiltinImport -- read-only corpus and MIDI test boundary. */
-/**
- * Playback sidecars carry corrected timing; the corpus is a frozen text input.
- * Each hymn is timed on its sung file (`sung.ts`), so its tempo map is read there.
- */
 import { readFileSync } from 'node:fs';
 import { Console, Effect, Schema } from 'effect';
 import { expect, it } from 'effect-bun-test';

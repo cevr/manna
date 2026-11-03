@@ -1,31 +1,3 @@
-// `film lab events`: the lab's events (the catalogue, `core/lab-events.ts`)
-// on a terminal, read from the running lab at `FILM_LAB_URL` through its
-// change feed (`changes`, `lab-client.ts`). With `--follow` it keeps
-// running and prints one line per event as the lab sees it, so a Claude Code
-// Monitor wakes on each without polling; without it, it prints the events
-// past `--since` and the cursor to read on from.
-//
-//   film lab events [--follow] [--name <glob>…] [--film <f>] [--since <cursor>] [--json] [--gone-after <dur>]
-//
-// A line is the event's name first, then its cursor (the one to read on from
-// after it), when the lab saw it, its id (made from its record: the same
-// from every lab that tells it, so a reader told it twice knows it), what it
-// is about, its summary, the command that reads its whole record, and its
-// lab link:
-//
-//   ask.answered cursor=k3x.12 at=… id=3f0c… film=f ask=a1 summary="…" read="bun cli.ts lab ask_read --ask a1" link=http://…
-//
-// `--json` prints `{"cursor":…,"event":…}` a line instead, the event as the
-// catalogue's payload schema encodes it. An event of a kind this checkout
-// does not know (a newer lab's) is printed from the fields every event has,
-// and said once on stderr. What is not an event goes to stderr: the stream
-// following, the lab lost and asked again, the stream reconnected and
-// reading on from its cursor (`lab-stream.ts`), a cursor the lab no longer
-// knows. A lab silent past `--gone-after`, a refusal of the lab's (a
-// `--name` no event matches, a film it does not have), or an answer this
-// checkout cannot read ends it with a non-zero exit, said as `{"_tag",
-// "message"}` on stdout too with `--json`.
-
 import {
   Boolean as Bool,
   Console,
@@ -55,7 +27,6 @@ import {
   labFeed,
 } from './lab-stream.ts';
 
-/** Words in one line, quoted: a newline in them would split the line. */
 const quoted = Schema.encodeSync(Schema.fromJsonString(Schema.String));
 
 const eventJson = Schema.encodeSync(
@@ -65,10 +36,8 @@ const cursorJson = Schema.encodeSync(
   Schema.fromJsonString(Schema.Struct({ cursor: Schema.String })),
 );
 
-/** The fields a line names when the event has them, in this order. */
 const ABOUT = ['film', 'set', 'note', 'panel', 'address', 'ask', 'step', 'production'] as const;
 
-/** One event as a line: its name, the cursor after it, what it is about, its summary, its read and its link. Pure. */
 const eventLine = (cursor: string, change: HeardChange): string =>
   [
     change.kind,
@@ -85,17 +54,10 @@ const eventLine = (cursor: string, change: HeardChange): string =>
     `link=${change.links.local}`,
   ].join(' ');
 
-/** How events are printed: a line each, or JSON. */
 interface Printing {
   readonly json: boolean;
 }
 
-/**
- * Each event of `answer` printed, a line each, with the cursor after it;
- * the first of each kind this checkout does not read (kept in `foreign`)
- * said on stderr: a kind it does not know, or one it knows in another
- * shape (an older lab's, with no `id`).
- */
 const printed = (answer: HeardChanges, printing: Printing, foreign: Ref.Ref<ReadonlySet<string>>) =>
   Effect.forEach(
     answer.changes,
@@ -125,7 +87,6 @@ const printed = (answer: HeardChanges, printing: Printing, foreign: Ref.Ref<Read
     { discard: true },
   );
 
-/** A cursor the lab no longer knows, said: what follows is all it kept. */
 const resetSaid = (answer: HeardChanges) =>
   Effect.when(
     Console.error(
@@ -134,7 +95,6 @@ const resetSaid = (answer: HeardChanges) =>
     Effect.succeed(answer.reset),
   );
 
-/** What `film lab events` reads: its flags. */
 interface EventsInput {
   readonly follow: boolean;
   readonly name: ReadonlyArray<string>;
@@ -144,7 +104,6 @@ interface EventsInput {
   readonly goneAfter: Option.Option<Duration.Duration>;
 }
 
-/** What `film lab events` does with its flags: the events past a cursor, or followed. */
 const events = Effect.fn('film.lab.events')(function* (input: EventsInput, pace: StreamPace) {
   const url = yield* labUrl;
   const client = yield* labClient(url);
@@ -205,7 +164,6 @@ const events = Effect.fn('film.lab.events')(function* (input: EventsInput, pace:
   );
 });
 
-/** `film lab events`, its stream read at `pace` (`STREAM_PACE` on a terminal). */
 const labEventsAt = (pace: StreamPace) =>
   Command.make(
     'events',
@@ -257,7 +215,6 @@ const labEventsAt = (pace: StreamPace) =>
     Command.provide(FetchHttpClient.layer),
   );
 
-/** Every `film lab` subcommand over the films in `films`: each lab command (`lab-cli.ts`), and `film lab events` at a terminal's pace. */
 export const labSubcommands = (films: string) => [
   ...labCliCommands(
     { here: hereCommands, inLab: inLabCommands },

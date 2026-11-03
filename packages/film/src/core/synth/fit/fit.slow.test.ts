@@ -14,7 +14,6 @@ const fitted = (model: EarshotModel, options: Partial<Parameters<typeof fitSound
     fitSound('probe', model, { size: 'full', use: 'one-shot', rumble: 1, ...options }),
   );
 
-/** A sound as the library reads it: written as JSON, decoded back. */
 const CodeSoundJson = Schema.fromJsonString(CodeSound);
 
 const render = (sound: CodeSound, seed = 1) =>
@@ -29,7 +28,6 @@ const render = (sound: CodeSound, seed = 1) =>
     seed,
   ).channels[0] ?? new Float32Array();
 
-/** The mean square of `plane` from `from` to `to` seconds, in dB. */
 const powerDb = (plane: Float32Array, from: number, to: number) => {
   let sum = 0;
   const a = Math.round(from * SYNTH_RATE);
@@ -38,7 +36,6 @@ const powerDb = (plane: Float32Array, from: number, to: number) => {
   return 10 * Math.log10(sum / (b - a));
 };
 
-/** Every node under `node`, itself first. */
 const nodesOf = (node: Node): ReadonlyArray<Node> => {
   switch (node._tag) {
     case 'Layer':
@@ -68,7 +65,6 @@ const partialsOf = (node: Node) =>
     return n.set;
   });
 
-/** A modal model: `strikes` over one band of noise from 1 to 2 kHz at `noiseDb` from 0 to `noiseTo` seconds. */
 const modal = (
   strikes: ReadonlyArray<{
     t: number;
@@ -139,13 +135,11 @@ describe('a fit, from an earshot model', () => {
     );
     const set = partialsOf(made.sound.play);
     expect(set).toHaveLength(2);
-    // The 440 Hz pair sums to 0.2 at phase 0; the 1500 Hz mode stands at 0.1, half the pair's.
     expect(set.map((m) => m.level).sort()).toEqual([0.5, 1]);
     expect(set.find((m) => m.level === 1)?.phase).toBeCloseTo(0.25, 4);
   });
 
   test('a mode small leaves out keeps its power, as noise in its band', () => {
-    // −30 dB of noise until 0.5 s; then 32 modes of one power from 0.6 s, of which small keeps 16.
     const modes = Array.from({ length: 32 }, (_, i) => [2500 + i * 300, 100, 0.01, 0] as const);
     const rise = (size: 'small' | 'full') => {
       const plane = render(
@@ -157,8 +151,6 @@ describe('a fit, from an earshot model', () => {
   });
 
   test('small keeps the modes heard loudest: a sharp contact before a long faint hum', () => {
-    // 16 faint modes ringing 10 s hold more energy than a contact gone in 2 ms, which is louder
-    // within the moment the ear hears as one.
     const hum = Array.from({ length: 16 }, (_, i) => [200 + i * 50, 10, 0.01, 0] as const);
     const made = fitted(modal([{ t: 0, modes: [...hum, [3000, 0.002, 0.5, 0]] }]), {
       size: 'small',
@@ -167,8 +159,6 @@ describe('a fit, from an earshot model', () => {
   });
 
   test('a mode small keeps alone is no louder than it sounded with the quieter ones that cancelled it', () => {
-    // At 0.1 s, a mode between two quieter ones half a turn from it, near enough to cancel it as
-    // they ring; at 1 s, 15 modes louder than those two, so small keeps the one and leaves them out.
     const cluster = [
       [100, 0.1, 0.5, Math.PI],
       [103.5, 0.1, 1, 0],
@@ -191,7 +181,6 @@ describe('a fit, from an earshot model', () => {
   });
 
   test('a band of noise is levelled to the power earshot wrote, against a mode at its own', () => {
-    // −30 dB of noise until 0.5 s; then a sine of amplitude 0.0447 (−30 dB of power) from 0.6 s.
     const a = Math.sqrt(2 * 10 ** (-30 / 10));
     const made = fitted(
       modal([{ t: 0.6, modes: [[440, 100, a, 0]] }], { noiseDb: -30, noiseTo: 0.5 }),
@@ -201,7 +190,6 @@ describe('a fit, from an earshot model', () => {
   });
 
   test('a bed is looped and tilted so its seam is unheard', () => {
-    // A level rising 8 dB over the sound would jump at every loop.
     const made = fitted(
       {
         kind: 'spectral_noise',
@@ -230,7 +218,6 @@ describe('a fit, from an earshot model', () => {
 
   test('a source with little rumble is high-passed under 30 Hz; one with its own is not', () => {
     const json = modal([{ t: 0, modes: [[440, 0.5, 0.5, 0]] }]);
-    // The outermost filters: what every part of the sound passes through.
     const highpasses = (rumble: number) => {
       let n = 0;
       for (
@@ -246,7 +233,6 @@ describe('a fit, from an earshot model', () => {
   });
 
   test('a high-passed fit keeps its lowest band over 30 Hz, where the source had it', () => {
-    // All of the sound is a band from DC to 50 Hz: a source with little rumble had it from 30 Hz.
     const made = fitted(
       {
         kind: 'modal',
@@ -272,7 +258,6 @@ describe('a fit, from an earshot model', () => {
   });
 
   test('merged bands are coloured by their slope: falling 2.5 dB an octave is brown', () => {
-    // Two bands from 1 to 2 kHz, merged by small; each octave of them 2.5 dB under the one below.
     const made = fitted(
       {
         kind: 'modal',
@@ -301,7 +286,6 @@ describe('a fit, from an earshot model', () => {
   });
 
   test('a fit over the work a render may do merges its bands and keeps fewer modes until it fits', () => {
-    // 60 s of 400 long modes over 28 bands: every one kept would write far past the budget.
     const modes = Array.from({ length: 400 }, (_, i) => [60 + i * 37, 30, 0.01, 0] as const);
     const edges = Array.from({ length: 27 }, (_, i) => 40 * 1.3 ** i);
     const made = fitted({

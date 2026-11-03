@@ -1,10 +1,3 @@
-// Upstream: packages/react/src/context-menu/trigger/ContextMenuTrigger.test.tsx,
-// packages/react/src/context-menu/root/ContextMenuRoot.test.tsx
-//
-// The context menu's behaviour cases: right click at the pointer, the
-// mouseup grace after a right click, the native menu suppression, and the
-// touch long press with its move threshold. Timers run on `page.clock`;
-// touches are dispatched as real TouchEvents in a touch context.
 import { describe, expect, it } from 'bun:test';
 
 import { expect as see, type Page } from '@playwright/test';
@@ -13,7 +6,6 @@ import { focused, harness, logOf } from './harness.ts';
 
 const h = harness('context-menu.tsx');
 
-/** The centre of the trigger area. */
 const areaCentre = async (page: Page): Promise<{ x: number; y: number }> => {
   const box = await page.locator('#area').boundingBox();
   if (!box) {
@@ -22,7 +14,6 @@ const areaCentre = async (page: Page): Promise<{ x: number; y: number }> => {
   return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
 };
 
-/** Dispatches a TouchEvent of `type` at (x, y) with `count` fingers on the element there. */
 const touch = (
   page: Page,
   type: 'touchstart' | 'touchmove' | 'touchend',
@@ -52,11 +43,6 @@ const touch = (
     [type, x, y, count] as const,
   );
 
-/**
- * A finger as the browser's own touch input (CDP `Input.dispatchTouchEvent`):
- * its touches, and the gestures and clicks the browser makes of them, are
- * the browser's, at real time.
- */
 const finger = async (page: Page) => {
   const cdp = await page.context().newCDPSession(page);
   return {
@@ -66,14 +52,12 @@ const finger = async (page: Page) => {
   };
 };
 
-/** The `id` of what is at (x, y), or of its nearest ancestor with one. */
 const idAt = (page: Page, x: number, y: number): Promise<string> =>
   page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest('[id]')?.id ?? '', [
     x,
     y,
   ] as const);
 
-/** The centre of `selector`'s box. */
 const centreOf = async (page: Page, selector: string): Promise<{ x: number; y: number }> => {
   const box = await page.locator(selector).boundingBox();
   if (!box) {
@@ -82,7 +66,6 @@ const centreOf = async (page: Page, selector: string): Promise<{ x: number; y: n
   return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
 };
 
-/** Whether a `contextmenu` event dispatched on `selector` had its default prevented. */
 const nativeMenuBlocked = (page: Page, selector: string): Promise<boolean> =>
   page.evaluate((selector) => {
     const el = document.querySelector(selector);
@@ -94,7 +77,6 @@ const nativeMenuBlocked = (page: Page, selector: string): Promise<boolean> =>
     return event.defaultPrevented;
   }, selector);
 
-/** Whether the page's scroll is locked (the scroller's `overflow` is hidden). */
 const scrollLocked = (page: Page): Promise<boolean> =>
   page.evaluate(() =>
     [document.documentElement, document.body].some(
@@ -112,7 +94,6 @@ describe('ContextMenu.Trigger: right click', () => {
     await see(page.locator('#area')).toHaveAttribute('data-pressed', '');
     await see(page.locator('#positioner')).not.toHaveCSS('opacity', '0');
     const box = await page.locator('#positioner').boundingBox();
-    // bottom/start at the point, nudged by the root context menu's -5 side and 2 align offsets.
     expect(Math.round(box?.y ?? 0)).toBe(y - 5);
     expect(Math.round(box?.x ?? 0)).toBe(x + 2);
     await see(page.locator('#positioner')).toHaveCSS('position', 'fixed');
@@ -126,9 +107,7 @@ describe('ContextMenu.Trigger: right click', () => {
     if (!area) {
       throw new Error('no #area');
     }
-    // Too narrow a window for the 200px menu at either alignment: it shifts 27px left.
     const x = Math.round(area.x + 2);
-    // Below the area's field, whose own menu the root declines.
     const y = Math.round(area.y + 100);
     const width = x + 200 - 20;
     await page.setViewportSize({ width, height: 600 });
@@ -155,7 +134,6 @@ describe('ContextMenu.Trigger: right click', () => {
     const { x, y } = await areaCentre(page);
     await page.mouse.click(x, y, { button: 'right' });
     await see(page.locator('#popup')).toBeVisible();
-    // The open popup takes focus a frame after it is in the page; a key before that reaches the body.
     await see.poll(() => focused(page)).toBe('popup');
     await page.keyboard.press('ArrowDown');
     await see.poll(() => focused(page)).toBe('copy');
@@ -234,9 +212,6 @@ describe('ContextMenu.Trigger: the mouseup after a right click', () => {
     expect(await logOf(page)).toContain('open false cancel-open');
   });
 
-  // On the positioner, off its items: a right release over an item picks it on
-  // macOS (`MenuItem`, as a Mac's own menus do) and nowhere else, which is the
-  // item's rule, not this one.
   it('a release inside the positioner after 500ms keeps the menu open', async () => {
     const page = await h.open('area', { query: { padded: 'true' } });
     await page.clock.install();
@@ -255,9 +230,6 @@ describe('ContextMenu.Trigger: the mouseup after a right click', () => {
     expect(await logOf(page)).not.toContain('open false cancel-open');
   });
 
-  // The item's rule (`MenuItem`), each OS as its page reports itself: on macOS
-  // a right press dragged onto an item and released there picks it, as a Mac's
-  // own menus do; elsewhere that release only ends the right click.
   for (const [os, platform, log] of [
     ['macOS', 'MacIntel', ['open true trigger-press', 'click copy', 'open false item-press']],
     ['Linux', 'Linux x86_64', ['open true trigger-press']],
@@ -284,7 +256,6 @@ describe('ContextMenu.Trigger: touch long press', () => {
   it('opens after a 500ms press held still', async () => {
     const page = await h.open('area', { touch: true });
     await page.clock.install();
-    // Paused, so only runFor moves time and the 499ms check is exact.
     await page.clock.pauseAt(Date.now() + 10_000);
     const { x, y } = await areaCentre(page);
     await touch(page, 'touchstart', x, y);
@@ -329,20 +300,14 @@ describe('ContextMenu.Trigger: touch long press', () => {
   });
 
   it('the finger that opened the menu over itself lifts choosing nothing; a later tap chooses the item it lands on', async () => {
-    // The browser's own touches at real time (no page clock): the browser
-    // makes of the lift what it would of a finger's, a click under it included.
     const page = await h.open('area', { touch: true, query: { under: 'true' } });
     const f = await finger(page);
     const { x, y } = await areaCentre(page);
     await f.down(x, y);
     await see(page.locator('#popup')).toBeVisible();
-    // The menu opened over the finger: its first item is under it.
     expect(await idAt(page, x, y)).toBe('copy');
     const paste = await centreOf(page, '#paste');
     await f.up();
-    // A later tap, on the next item: the browser handles it after the lift,
-    // so once it has chosen, whatever the lift did is done. The lift chose
-    // nothing (no Copy), and the menu was still open for the tap to choose Paste.
     await f.down(paste.x, paste.y);
     await f.up();
     await see
@@ -376,7 +341,6 @@ describe('ContextMenu.Root: outside press after a long press', () => {
     await see(page.locator('#popup')).toBeVisible();
     await page.clock.runFor(500);
     await page.mouse.click(5, 5);
-    // The unmount after close waits on a frame, which the paused clock holds.
     await page.clock.runFor(100);
     await see(page.locator('#popup')).toHaveCount(0);
     expect(await logOf(page)).toContain('open false outside-press');
@@ -394,7 +358,6 @@ describe('ContextMenu.Root: one root, a page trigger around target triggers', ()
     expect(Math.round(box.y)).toBe(y - 5);
     expect(Math.round(box.x)).toBe(x + 2);
     expect(await logOf(page)).toEqual(['open true a']);
-    // Only the trigger that opened the menu says it is open: not its sibling, nor the page around it.
     await see(page.locator('#target-a')).toHaveAttribute('data-popup-open', '');
     await see(page.locator('#target-b')).not.toHaveAttribute('data-popup-open');
     await see(page.locator('#page')).not.toHaveAttribute('data-popup-open');
@@ -410,7 +373,6 @@ describe('ContextMenu.Root: one root, a page trigger around target triggers', ()
     await see
       .poll(async () => Math.round((await page.locator('#positioner').boundingBox())?.y ?? 0))
       .toBe(b.y - 5);
-    // The open state moves with the menu: the trigger that opened it last is the one open.
     await see(page.locator('#target-b')).toHaveAttribute('data-popup-open', '');
     await see(page.locator('#target-a')).not.toHaveAttribute('data-popup-open');
     const blank = await centreOf(page, '#blank');
@@ -443,8 +405,6 @@ describe('ContextMenu.Root: one root, a page trigger around target triggers', ()
 });
 
 describe('ContextMenu.Root: the page scroll', () => {
-  // As upstream: only a trigger's click records a touch open (Menu.Trigger's), so a
-  // long press is not one and its menu locks the page as a right click's does.
   it('locks the page scroll while open, from a right click or a long press', async () => {
     const page = await h.open('area');
     const { x, y } = await areaCentre(page);

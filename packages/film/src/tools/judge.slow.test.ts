@@ -1,11 +1,3 @@
-// The judge over a synthetic film on disk, its counsel a stub (`Counsel.layerTest`)
-// and its look route a fake that writes each still as its level's name: a
-// look's levels are drawn as wedges at the same moments, shuffled under
-// labels the key alone resolves, the packet names none of them and quotes
-// only the rules that bear on the beat, and the stub's answer comes back as
-// a verdict in real names. A render set's variants are cut from their videos.
-// A sound choice, two choices unnamed, or one version alone, is refused.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -38,24 +30,17 @@ import { reviewMedia } from './media/testing.ts';
 
 const film = 'sample' as FilmName;
 
-/** Where the test's film lives: its temp folder, its films, its rule file and its out folder. */
 class Here extends Context.Service<
   Here,
   { readonly root: string; readonly rules: string; readonly out: string }
 >()('test/judge/Here') {}
 
-/**
- * What the counsel could read as it was asked: the prompt's folder, every
- * file in it by name (`names`, below the folder) and the words of each that
- * is no image (`texts`).
- */
 interface Seen {
   readonly folder: string;
   readonly names: ReadonlyArray<string>;
   readonly texts: ReadonlyArray<string>;
 }
 
-/** `inner`, but noting first what the counsel could read (`Seen`) in `seen`, the film's folder at `root`. */
 const reading = (root: string, seen: Array<Seen>) =>
   Layer.effect(
     Counsel,
@@ -79,12 +64,6 @@ const reading = (root: string, seen: Array<Seen>) =>
     }),
   );
 
-/**
- * The sample film copied to a temp folder, with a palette whose look has
- * `options`, and a rule file; the judge's services over it, its counsel
- * answering `answer`, every prompt in `asked`, every media call in `calls`,
- * what the counsel could read in `seen`; or `counsel`, when given, in its place.
- */
 const judging = (
   options: string,
   answer: (prompt: string) => string,
@@ -129,7 +108,6 @@ const judging = (
     }),
   ).pipe(Layer.provideMerge(BunServices.layer));
 
-/** A look route that writes each still as its level's name, under `root`. */
 const fakeTake = (root: string) => (post: LookPost) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -145,7 +123,6 @@ const fakeTake = (root: string) => (post: LookPost) =>
     return { build: 'b', looks } satisfies LookTaken;
   }).pipe(Effect.orDie);
 
-/** A counsel that ranks the labels in reverse, with a section each. */
 const reversed = (prompt: string) => {
   const labels = [...prompt.matchAll(/^### ([A-H])$/gm)].map((m) => m[1] ?? '');
   return [
@@ -161,13 +138,6 @@ const reversed = (prompt: string) => {
 
 const decodeKey = Schema.decodeSync(JudgeKeyJson);
 
-/**
- * A counsel's run, in the sandbox, from the packet's folder, that answers no
- * preference on stdout with what it could read: whether it read the packet
- * (its prompt on stdin, and the file), each still it found beside it, and
- * each of the paths it is given, `SEEN` (a folder listed, a file's first
- * byte read) or `ABSENT`.
- */
 const PROBE = [
   'echo "RANKING: no preference"',
   'echo',
@@ -179,7 +149,6 @@ const PROBE = [
   'done',
 ].join('\n');
 
-/** The probe, run in the counsel's sandbox, given each of `paths` to try. */
 const probing = (paths: Ref.Ref<ReadonlyArray<string>>) =>
   Counsel.sandboxed((folders) =>
     Effect.map(Ref.get(paths), (tried): SandboxedRun => ({
@@ -189,7 +158,6 @@ const probing = (paths: Ref.Ref<ReadonlyArray<string>>) =>
     })),
   );
 
-/** Whether sandbox-exec can make a sandbox here: macOS's, so on macOS alone. */
 const sandboxHere = Effect.scoped(
   Effect.gen(function* () {
     if (process.platform !== 'darwin') return false;
@@ -201,7 +169,6 @@ const sandboxHere = Effect.scoped(
   }),
 ).pipe(Effect.orElseSucceed(() => false));
 
-/** The judge of scene `open` at `point`, quoting `rules` (the look's alone, unless given). */
 const judgeOpen = (point: Option.Option<string>, rules?: (file: string) => Array<JudgeRule>) =>
   Effect.gen(function* () {
     const here = yield* Here;
@@ -218,7 +185,6 @@ const judgeOpen = (point: Option.Option<string>, rules?: (file: string) => Array
     });
   });
 
-/** The key a judge wrote. */
 const keyOf = (dir: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -245,15 +211,11 @@ describe('film judge', () => {
         expect(key.point).toBe('look:ground');
         expect(key.versions.map((v) => v.version).toSorted()).toEqual(['dusk', 'noon']);
         expect(key.versions.find((v) => v.picked)?.version).toBe('dusk');
-        // Each label's stills are its version's, as the key says.
         for (const v of key.versions)
           expect(
             yield* fs.readFileString(path.join(judged.dir, 'stills', `${v.label}-01.jpg`)),
           ).toBe(v.version);
 
-        // The packet: the beat and the one rule that bears on an IDEA beat; no version named.
-        // Kept as the counsel read it. It says nothing of where anything lives: each still by
-        // its path beside the packet, each rule's file by its name alone.
         const packet = yield* fs.readFileString(judged.packet);
         expect(asked).toEqual([packet]);
         expect(packet).toContain('| stills/A-01.jpg |');
@@ -268,7 +230,6 @@ describe('film judge', () => {
         for (const word of ['dusk', 'noon', 'key.json', path.dirname(rules), out, '/tmp/'])
           expect(packet).not.toContain(word);
 
-        // The stub ranked the labels in reverse: the verdict says so in names.
         const [first, second] = key.versions;
         expect(judged.ranking).toEqual({
           _tag: 'Ranked',
@@ -298,18 +259,15 @@ describe('film judge', () => {
           'stills/A-01.jpg',
           'stills/B-01.jpg',
         ]);
-        // Its own folder, away from the film's and the judge's earlier runs.
         expect(asked.folder.startsWith(root)).toBe(false);
         for (const name of asked.names)
           for (const word of ['key', 'dusk', 'noon'])
             expect([name, word, name.includes(word)]).toEqual([name, word, false]);
         for (const text of asked.texts)
           for (const word of ['dusk', 'noon']) expect(text).not.toContain(word);
-        // The key is written once the counsel has answered, beside the verdict, with the stills.
         expect((yield* keyOf(judged.dir)).versions).toHaveLength(2);
         expect(yield* fs.readDirectory(path.join(judged.dir, 'stills'))).toHaveLength(2);
         expect(judged.dir.startsWith(path.join(out, 'sample', 'judge'))).toBe(true);
-        // The folder the counsel read is gone.
         expect(yield* fs.exists(asked.folder)).toBe(false);
       }).pipe(
         Effect.scoped,
@@ -362,7 +320,6 @@ describe('film judge', () => {
           ).toBe(v.version);
         expect(calls.length).toBeGreaterThan(0);
         expect(calls.every((call) => call.startsWith('still '))).toBe(true);
-        // The look's two levels and the render set's two variants: unnamed, it names both.
         expect(yield* Effect.flip(judgeOpen(Option.none()))).toMatchObject({
           _tag: 'JudgePointAmbiguous',
           points: ['look:ground', 'render:scenes:open'],
@@ -377,7 +334,6 @@ describe('film judge', () => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      // The test clock stands still: both runs share their stamp to the second.
       const one = yield* judgeOpen(Option.some('look:ground'));
       const two = yield* judgeOpen(Option.some('look:ground'));
       expect(two.dir).not.toBe(one.dir);
@@ -410,8 +366,6 @@ describe('film judge', () => {
             rules: [{ file: here.rules, heading: '## The look', registers: [] }],
             take,
           });
-        // The second judge's look is written, and answered once the first judge is done: the
-        // lab answers the same request with the same file to both.
         const late = yield* Effect.forkChild(
           judgeWith((post) =>
             Effect.gen(function* () {
@@ -427,7 +381,6 @@ describe('film judge', () => {
         yield* Deferred.succeed(release, true);
         const second = yield* Fiber.join(late);
         for (const run of [first, second]) expect((yield* keyOf(run.dir)).versions).toHaveLength(2);
-        // The lab's own stills stay where the lab wrote them.
         expect(
           (yield* fs.readDirectory(here.root))
             .filter((name) => name.startsWith('look-'))
@@ -442,7 +395,6 @@ describe('film judge', () => {
         Effect.map(Effect.flip(judgeOpen(point)), (error) => error._tag);
       expect(yield* tagOf(Option.some('score'))).toBe('JudgePointUnjudged');
       expect(yield* tagOf(Option.some('look:sky'))).toBe('JudgePointUnjudged');
-      // A look of one level and no renders: nothing to compare.
       expect(yield* tagOf(Option.none())).toBe('JudgeNothingToCompare');
       expect(yield* tagOf(Option.some('look:ground'))).toBe('JudgeNothingToCompare');
       expect(yield* tagOf(Option.some('render:scenes:open'))).toBe('JudgeNothingToCompare');
@@ -490,7 +442,6 @@ describe('film judge', () => {
         ]);
         expect(reached.filter((line) => line.startsWith('SEEN '))).toEqual([]);
         expect(reached.filter((line) => line.startsWith('ABSENT '))).toHaveLength(hidden.length);
-        // Its answer, its stdout, is written into the run's folder and read as a verdict.
         expect(judged.counsel.startsWith(path.join(judged.dir, 'counsel'))).toBe(true);
         expect(judged.ranking).toEqual({ _tag: 'NoPreference' });
       }).pipe(

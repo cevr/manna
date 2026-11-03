@@ -1,8 +1,3 @@
-// Upstream: packages/react/src/utils/getPseudoElementBounds.ts
-//
-// An element's box grown to cover its `::before`/`::after` (a larger hit
-// area), and whether a mouse event landed in it with a few pixels of slack,
-// so a press that drifts while releasing still counts as on the element.
 import { ownerWindow } from './dom.ts';
 
 interface ElementBounds {
@@ -12,7 +7,6 @@ interface ElementBounds {
   bottom: number;
 }
 
-// About the drag threshold of browsers and operating systems.
 const BOUNDARY_OFFSET = 5;
 
 export function isMouseWithinBounds(event: MouseEvent, element: HTMLElement): boolean {

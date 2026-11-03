@@ -1,12 +1,3 @@
-/**
- * `runSim` over a stand-in `Drive`: a warm checkout is refused before any
- * step runs, `boot` on iOS hands the dev server a Hermes compiler (the one
- * `HERMESC_PATH` names, else the one react-native depends on), and `open`
- * retries once, terminating the app, when its target is missing on iOS.
- * The journey's verbs read their arguments here: `gesture pan`,
- * `gesture edge-pan` and `gesture pinch`, `hold` with its press and settle, `relaunch`, and
- * `down --clean`, which cleans whether or not a drive was booted.
- */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Console, Effect, Exit, FileSystem, Option, Path, Schema } from 'effect';
@@ -25,10 +16,8 @@ const decodeResult = Schema.decodeUnknownSync(Schema.fromJsonString(Result));
 
 const done = (platform: Outcome['platform']): Outcome => ({ platform, paths: {}, detail: {} });
 
-/** How the stand-in's `open` answers each call in turn; past the end, it succeeds. */
 type OpenAnswer = 'ok' | 'missing-ios' | 'missing-web' | 'tool-failed';
 
-/** How the stand-in's `down` answers: it stops a drive, or finds none booted. */
 type DownAnswer = 'ok' | 'no-session';
 
 const standIn = (
@@ -45,7 +34,6 @@ const standIn = (
       });
   let opened = 0;
   return {
-    // No drive is booted for the stand-in: a command that reads the session gets none.
     readSession: () =>
       Effect.fail(NoSession.make({ file: '/nonexistent/loop-probe-x/session.json' })),
     boot: step('boot'),
@@ -89,7 +77,6 @@ const standIn = (
   };
 };
 
-/** Run `sim <args>` at `place` over the stand-in: what it printed, its exit and the steps it called. */
 const sim = (
   place: Place,
   args: ReadonlyArray<string>,
@@ -113,7 +100,6 @@ const sim = (
     return { exit, calls, printed: printed.map((line) => decodeResult(line)) };
   });
 
-/** A cold checkout: this worktree's app, with the warm list naming only a path that is no checkout. */
 const coldPlace = Effect.gen(function* () {
   const path = yield* Path.Path;
   const app = path.resolve(import.meta.dir, '..', '..');
@@ -133,7 +119,6 @@ const setHermesc = (value: Option.Option<string>) =>
     onSome: (given) => void (process.env['HERMESC_PATH'] = given),
   });
 
-/** Run `body` with HERMESC_PATH set to `value` (unset on none), then put it back. */
 const withHermesc = <A, E, R>(value: Option.Option<string>, body: Effect.Effect<A, E, R>) =>
   Effect.acquireUseRelease(
     Effect.sync(() => {
@@ -285,7 +270,6 @@ describe('sim commands over the Drive service', () => {
     }).pipe(Effect.provide(BunServices.layer)),
   );
 
-  /** The arguments each step was called with, past the place. */
   const driven = (calls: ReadonlyArray<Call>) =>
     calls.map((call) => ({ op: call.op, args: call.args.slice(1) }));
 

@@ -1,7 +1,3 @@
-// The look pass's measures, on thumbs made by hand: how much of a scene holds
-// still, the light of each act against its target, the largest face, and the
-// chapters the acts name.
-
 import { describe, expect, test } from 'bun:test';
 import { Result } from 'effect';
 import { stretchesOf } from '../core/acts.ts';
@@ -54,11 +50,8 @@ const face = (scene: string, size: number, alpha = 1): FaceMark => ({
   order: 0,
 });
 
-// Three spoken scenes: `held` never changes, `brief` flips black and white
-// each sample, `ambient` is the paper's grey. Each declares one face.
 const placed = Result.getOrThrow(layout(holdScenes, holdTimings, 30));
 
-/** A declared look's acts laid over `film`. */
 const actsIn = (look: Look, film: ReadonlyArray<Placed>) => stretchesOf(look.acts, film);
 const samples = lookSamples(placed, FPS, 1_000_000);
 const drawn = samples.map((s, k): Drawn => {
@@ -140,8 +133,6 @@ describe('FaceSmall', () => {
   });
 
   test('a face whose centre is off the frame is not seen, however large', () => {
-    // `held` again, its big face pushed past each edge in turn; `brief` keeps
-    // its small one inside. A face centred on the frame's very edge still counts.
     const off = [
       [-1, 400],
       [WIDTH + 1, 400],
@@ -317,9 +308,6 @@ describe('chapters', () => {
   });
 });
 
-// Hands, as a kit's person declares them: one hand 44 px long, its shoulder
-// fixed on screen unless moved, floating 60 px to the side of it at rest, a
-// reach of 240 px, a formed hold.
 const REST = { x: 1020, y: 520 } as const;
 const HOLD = { open: 0, hold: 1, point: 0, palm: 0 } as const;
 const PALM = { open: 0, hold: 0, point: 0, palm: 1 } as const;
@@ -342,7 +330,6 @@ const handAt = (reach: number, over: Partial<HandMark> = {}): HandMark => ({
   alpha: 1,
   ...over,
 });
-/** A hand `reach` of the way along an arc round its shoulder from its rest (0°) to straight up (−90°), 150 px out. */
 const onArc = (reach: number, over: Partial<HandMark> = {}): HandMark => {
   const a = (-Math.PI / 2) * reach;
   const r = 60 + 90 * reach;
@@ -354,17 +341,13 @@ const onArc = (reach: number, over: Partial<HandMark> = {}): HandMark => {
     ...over,
   });
 };
-/** Frames `from`, `from + 1`… of `scene`, one per entry of `hands`, at 30 fps. */
 const run = (scene: string, from: number, hands: ReadonlyArray<ReadonlyArray<HandMark>>) =>
   hands.map((h, k): HandFrame => ({ scene, frame: from + k, T: (from + k) / FPS, hands: h }));
-// A hand that goes from its rest to its work in one frame, at frame 11.
 const popping = run('held', 10, [[onArc(0)], [onArc(1)], [onArc(1)]]);
-// A hand at work on a target 1.4 times its figure's reach from its shoulder.
 const outOfReach = run('held', 10, [
   [handAt(1, { x: 960 + 336, tx: 960 + 336 })],
   [handAt(1, { x: 960 + 336, tx: 960 + 336 })],
 ]);
-// A far hand at work inside the garment and drawn behind it.
 const behind = run('held', 10, [
   [handAt(1, { side: 'far', inside: true, over: false })],
   [handAt(1, { side: 'far', inside: true, over: false })],
@@ -375,7 +358,6 @@ describe('HandJump', () => {
     const [jump, ...rest] = handJumps(popping);
     expect(rest).toEqual([]);
     expect(jump).toMatchObject({ scene: 'held', side: 'near', what: 'place', max: HAND_JUMP });
-    // From 60 px out at 0° to 150 px out at −90°: 174 px, about 4 of its lengths.
     expect(jump?.by).toBeCloseTo(Math.hypot(60, 150) / 44, 6);
     expect(jump?.T).toBeCloseTo(11 / FPS, 9);
   });
@@ -388,7 +370,6 @@ describe('HandJump', () => {
   });
 
   test('a hand eased over a cue never jumps, however fast its middle', () => {
-    // Its whole way in half a second, eased in and out.
     const eased = Array.from({ length: 16 }, (_, k) => [
       onArc(0.5 - 0.5 * Math.cos((k / 15) * Math.PI)),
     ]);
@@ -404,8 +385,6 @@ describe('HandJump', () => {
   });
 
   test('a zoom, or the whole figure popping in, scales the hand with its shoulder and reach: no jump', () => {
-    // Everything doubled about a point under the shoulder, in one frame: the
-    // hand 105 px out goes 210 px out, more than its length's 1.5 on screen.
     const k = 2;
     const about = (h: HandMark): HandMark => ({
       ...h,
@@ -419,7 +398,6 @@ describe('HandJump', () => {
       radius: h.radius * k,
     });
     expect(handJumps(run('held', 0, [[onArc(0.5)], [about(onArc(0.5))]]))).toEqual([]);
-    // The hand alone grown as much is a jump.
     const grown = run('held', 0, [[onArc(0.5)], [onArc(0.5, { size: 44 * 1.4 })]]);
     expect(handJumps(grown).map((j) => j.what)).toEqual(['size']);
   });
@@ -451,7 +429,6 @@ describe('HandJump', () => {
   });
 
   test('a formed hand that swaps its grip in one frame jumps', () => {
-    // A needle hand at work, its grip written `raised < 0.5 ? 'hold' : 'palm'`.
     const [jump, ...rest] = handJumps(run('held', 10, [[onArc(1)], [onArc(1, { grip: PALM })]]));
     expect(rest).toEqual([]);
     expect(jump).toMatchObject({ scene: 'held', side: 'near', what: 'grip', max: GRIP_JUMP });
@@ -460,7 +437,6 @@ describe('HandJump', () => {
   });
 
   test('a grip changed over a cue, or swapped by a hand not yet formed, never jumps', () => {
-    // `was: 'hold'` into `grip: 'palm'` as `change` goes, eased over 0.3 s.
     const changing = Array.from({ length: 10 }, (_, k) => {
       const change = 0.5 - 0.5 * Math.cos((k / 9) * Math.PI);
       return [onArc(1, { grip: { ...HOLD, hold: 1 - change, palm: change } })];
@@ -543,7 +519,6 @@ describe('handSpans', () => {
       { scene: 'held', frame: 45, T: 1.5, hands: [handAt(0, { y: REST.y + 2 })] },
       { scene: 'brief', frame: 60, T: 2, hands: [handAt(0, { scene: 'brief' })] },
     ];
-    // Only its way back to rest, between frames 15 and 30, is drawn.
     expect(handSpans(still, FPS).map((s) => s.frame)).toEqual(
       Array.from({ length: 16 }, (_, k) => 15 + k),
     );

@@ -1,9 +1,3 @@
-// `film script <film> --sheet`: the reading sheet (core/sheet.ts) written to
-// `out/<film>/script-sheet.md` and a page to print beside it. The beats come
-// from the film's script when it has one (`script.ts`, with its sources) and
-// from its scenes when not; quotations are attributed from the film's
-// `quotes.jsonl`, each line decoded, when it has one.
-
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
 import type { PlatformError } from 'effect/PlatformError';
 import {
@@ -17,12 +11,10 @@ import { FileInvalid } from './errors.ts';
 import type { LoadedFilm } from './film-repo.ts';
 import type { LineError } from '../core/errors.ts';
 
-/** One line of `quotes.jsonl`: the fields the sheet reads. */
 const QuoteLine = Schema.fromJsonString(
   Schema.Struct({ ref: Schema.String, author: Schema.String, text: Schema.String }),
 );
 
-/** The film's verified quotations, none when it keeps no `quotes.jsonl`. */
 export const quotesOf = Effect.fn('ScriptSheet.quotes')(function* (film: LoadedFilm) {
   const fs = yield* FileSystem.FileSystem;
   const file = (yield* Path.Path).join(film.paths.dir, 'quotes.jsonl');
@@ -37,14 +29,12 @@ export const quotesOf = Effect.fn('ScriptSheet.quotes')(function* (film: LoadedF
   );
 });
 
-/** Where the sheet was written, and how many beats it has. */
 interface SheetWritten {
   readonly markdown: string;
   readonly html: string;
   readonly beats: number;
 }
 
-/** Write the film's reading sheet: from `script` when the film has one, else its scenes. */
 export const writeSheet = Effect.fn('ScriptSheet.write')(function* (
   film: LoadedFilm,
   script: Option.Option<ReadonlyArray<ScriptLine>>,

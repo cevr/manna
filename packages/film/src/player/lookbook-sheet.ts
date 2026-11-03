@@ -1,17 +1,3 @@
-// The look-book's sheet: one canvas that shows a whole film's look before (or
-// while) its scenes are built. Each scene is a row of stills at every named
-// cue's start and end and at its 60% point (`sceneMoments`, the moments
-// `film check` probes, less the marks), each labelled with its timecode, under
-// the film's palette as swatches. Its stills come from the one source of
-// stills (`stills.ts`, the Scenes tape's too), and `film lookbook` asks an
-// export page for the sheet (`ExportHandle.lookbook`) and writes it to
-// `out/<film>/film/<variant>/lookbook.jpg`.
-// It is a picture of the film, not the studio's chrome: drawn on its own
-// dark page in the film's own type, its shorts' hook face for the title and
-// their caption face for the rest (`film.look.short`), so the engine names no
-// family and the sheet keeps its own colours (the token guard leaves this
-// file alone).
-
 import { Effect } from 'effect';
 import type { Context } from 'effect';
 import type { Film } from '../canvas/film.ts';
@@ -21,7 +7,6 @@ import { type SceneMoment, sceneMoments } from '../core/moments.ts';
 import { timecode } from '../core/time.ts';
 import { makeStills } from './stills.ts';
 
-/** Stills across a row. */
 const COLS = 6;
 const TILE_W = 320;
 const TILE_H = 180;
@@ -34,14 +19,12 @@ const SWATCH_W = 132;
 const SWATCH_H = SWATCH + 44;
 const HEADER_H = 64;
 
-/** Chromium's largest canvas side: a canvas past it is never backed and encodes to nothing. */
 const CANVAS_SIDE = 32_767;
 
 const INK = '#efe6d4';
 const MUTED = '#9d927f';
 const PAGE = '#16130f';
 
-/** A still on the sheet: where it sits and the frame it shows. */
 interface Tile {
   readonly x: number;
   readonly y: number;
@@ -50,13 +33,11 @@ interface Tile {
   readonly moment: SceneMoment;
 }
 
-/** A composed look-book: the sheet and where each still sits on it, in the sheet's px. */
 interface Lookbook {
   readonly canvas: HTMLCanvasElement;
   readonly tiles: ReadonlyArray<Tile>;
 }
 
-/** Cut `text` with an ellipsis to fit `width` in the context's font. */
 const fit = (ctx: CanvasRenderingContext2D, text: string, width: number) => {
   if (ctx.measureText(text).width <= width) return text;
   let cut = text;
@@ -64,36 +45,24 @@ const fit = (ctx: CanvasRenderingContext2D, text: string, width: number) => {
   return `${cut}…`;
 };
 
-/** The family of a CSS font (`600 64px "Fraunces"` → `"Fraunces"`): what follows its size. */
 export const fontFamilyOf = (font: string): string =>
   /\d(?:px|pt|em|rem|%)(?:\/\S+)?\s+(.+)$/.exec(font)?.[1] ?? 'sans-serif';
 
-/** `cue topple start` reads as `topple ▸`, `cue topple end` as `topple ◂`. */
 const labelOf = (at: string) =>
   at
     .split(', ')
     .map((part) => part.replace(/^cue (.+) start$/, '$1 ▸').replace(/^cue (.+) end$/, '$1 ◂'))
     .join(' · ');
 
-/** A scene's head on the sheet: its number, id and span in timecode. */
 export const sceneHead = (p: Placed, fps: number) =>
   `${p.index + 1}. ${p.spec.id} · ${timecode(p.start, fps)}–${timecode(p.start + p.dur, fps)}`;
 
-/** How wide a still's timecode is set, in the sheet's px: what its cue label leaves room for. */
 const TIME_W = 104;
 
-/**
- * Compose the look-book of `film`. Its stills are drawn by the one source of
- * stills (`makeStills`), a still's width, one at a time with a turn for the
- * page between them; `onProgress` hears each still as it lands. A sheet laid
- * out taller or wider than `CANVAS_SIDE` is drawn scaled down to fit it, so a
- * long film's sheet is smaller rather than blank.
- */
 export const composeLookbook = async (
   film: Film,
   options: {
     readonly captions: boolean;
-    /** The page's footage: what decodes the frames a talk's stills read. */
     readonly footage: Context.Context<Footage>;
     readonly onProgress?: (done: number, of: number) => void;
   },
@@ -105,7 +74,6 @@ export const composeLookbook = async (
   const swatchRows = Math.ceil(swatches.length / perRow);
   const top = PAD + HEADER_H + swatchRows * SWATCH_H + (swatchRows > 0 ? GAP : 0);
 
-  // Where each scene's row starts, and each still in it.
   const tiles: Tile[] = [];
   const heads: Array<{ readonly y: number; readonly text: string }> = [];
   let y = top;
@@ -140,7 +108,6 @@ export const composeLookbook = async (
   const display = fontFamilyOf(film.look.short.hook.font);
   const body = fontFamilyOf(film.look.short.caption.font);
 
-  // The title, and what the sheet shows.
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = INK;
   ctx.font = `700 34px ${display}`;
@@ -153,7 +120,6 @@ export const composeLookbook = async (
     PAD + 58,
   );
 
-  // The palette.
   swatches.forEach(([name, color], k) => {
     const sx = PAD + (k % perRow) * SWATCH_W;
     const sy = PAD + HEADER_H + Math.floor(k / perRow) * SWATCH_H;
@@ -175,12 +141,10 @@ export const composeLookbook = async (
     ctx.fillText(head.text, PAD, head.y + 26);
   }
 
-  // The stills, from the one source, each set on its tile under its label.
   const stills = makeStills(film, {
     width: TILE_W,
     captions: options.captions,
     turn: () => Effect.runPromise(Effect.yieldNow),
-    // The sheet is not timed: its stills' cost is the page's to read.
     now: () => 0,
     footage: options.footage,
   });

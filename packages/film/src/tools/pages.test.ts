@@ -1,8 +1,3 @@
-// The export page pool, on the fake browser: it opens its pages on the
-// film's export URL and reads the film's info once, a page that crashed is
-// dropped for a fresh one, and every page closes when the scope does, done or
-// interrupted. No Chromium.
-
 import { test } from 'bun:test';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, Exit, Fiber, Latch, Layer, Option } from 'effect';
@@ -14,7 +9,6 @@ import { Picture } from '../core/board-render.ts';
 const setup = (host: FakeRenderHost = {}) => {
   const ledger = emptyLedger();
   const layer = Pages.layer.pipe(Layer.provide(fakeRenderHost(ledger, host)));
-  /** `use` run on the pool `open` makes, in a scope of its own that closes after it. */
   const withPool = <A, E>(
     film: string,
     options: PagesOptions,
@@ -66,7 +60,6 @@ describe('Pages', () => {
   it.live('drops a page that crashed, and the next call runs on a fresh one', () =>
     Effect.gen(function* () {
       const { ledger, withPool } = setup({
-        // The first page opened dies on frame 5.
         frame: (i, page) =>
           Effect.asVoid(
             Effect.when(
@@ -91,7 +84,6 @@ describe('Pages', () => {
 
   it.live('closes every page when interrupted mid-call', () =>
     Effect.gen(function* () {
-      // Each page's call hangs; the fourth call to start opens the latch.
       const allStarted = yield* Latch.make();
       let started = 0;
       const { ledger, withPool } = setup({

@@ -1,7 +1,3 @@
-// Upstream: packages/utils/src/useTimeout.ts, packages/utils/src/useAnimationFrame.ts
-//
-// A restartable timeout and animation frame: starting one clears the pending
-// one. The `use*` forms clear themselves when the owning component unmounts.
 import { onCleanup } from 'solid-js';
 
 export class Timeout {
@@ -31,7 +27,6 @@ export class Timeout {
   };
 }
 
-/** A `Timeout` cleared when the current owner is disposed. */
 export function useTimeout(): Timeout {
   const timeout = new Timeout();
   onCleanup(timeout.clear);
@@ -57,7 +52,6 @@ export class AnimationFrame {
   };
 }
 
-/** An `AnimationFrame` cancelled when the current owner is disposed. */
 export function useAnimationFrame(): AnimationFrame {
   const frame = new AnimationFrame();
   onCleanup(frame.cancel);

@@ -1,13 +1,3 @@
-/** The CLI side of the search daemon: probe, retire, spawn, and the
- *  `SearchService` facade that forwards queries over the socket.
- *
- *  Everything here degrades to "no daemon": the probe answers `None` for a
- *  missing socket, a dead one, a wedged one (bounded by a timeout), and a
- *  daemon compiled against a different embedding model. The caller's fallback
- *  is always the in-process search it would have run anyway, so no failure in
- *  this file may surface as an error — only as the slower path.
- */
-
 import { SearchService, type SearchQuery } from '@manna/core/search';
 import { BunSocket } from '@effect/platform-bun';
 import type { Option } from 'effect';
@@ -22,23 +12,14 @@ import {
   type SearchDaemonStatus,
 } from './search-daemon-protocol.js';
 
-/** Client protocol stack for one socket path. Fresh per use — a probe and the
- *  long-lived facade must not share a connection, because the probe's scope
- *  closes when the probe answers. */
 const clientProtocol = (socketPath: string) =>
   RpcClient.layerProtocolSocket().pipe(
     Layer.provide(BunSocket.layerNet({ path: socketPath })),
     Layer.provide(RpcSerialization.layerNdjson),
   );
 
-/** How long the probe waits before declaring the daemon absent. Generous for
- *  a unix-socket round trip, tiny beside the ~10s in-process cold start it
- *  gates. */
 const PROBE_TIMEOUT_MILLIS = 1500;
 
-/** Asks a possibly-running daemon who it is. `None` means "behave as if no
- *  daemon exists": nothing listens on the socket, nothing answered in time,
- *  or the answer failed to decode. */
 export const probeSearchDaemon = (
   socketPath: string,
 ): Effect.Effect<Option.Option<SearchDaemonStatus>> =>
@@ -52,8 +33,6 @@ export const probeSearchDaemon = (
     Effect.option,
   );
 
-/** Asks a running daemon to exit. `true` when the daemon acknowledged;
- *  `false` when nothing (responsive) listens there. */
 export const shutdownSearchDaemon = (socketPath: string): Effect.Effect<boolean> =>
   Effect.gen(function* () {
     const client = yield* RpcClient.make(SearchDaemonGroup);
@@ -66,14 +45,6 @@ export const shutdownSearchDaemon = (socketPath: string): Effect.Effect<boolean>
     Effect.orElseSucceed(() => false),
   );
 
-/** The daemon-backed `SearchService`: §9's `query`, answered over the socket.
- *
- *  The connection lives as long as the surrounding scope — for the CLI that
- *  is the one command invocation, so "connect once, query, disconnect" is the
- *  shape this produces. Errors after a successful probe are defects rather
- *  than a silent re-degrade: the contract `SearchService.query` carries is
- *  "never fails", and a daemon that died between probe and query is a broken
- *  invariant worth seeing, not a state to paper over. */
 export const searchDaemonClientLayer = (socketPath: string): Layer.Layer<SearchService> =>
   Layer.effect(
     SearchService,
@@ -83,25 +54,13 @@ export const searchDaemonClientLayer = (socketPath: string): Layer.Layer<SearchS
         query: (query: SearchQuery) => client['search.query'](query).pipe(Effect.orDie),
       });
     }),
-  ).pipe(
-    Layer.provide(clientProtocol(socketPath)),
-    // The probe just answered on this socket; a connection that fails in the
-    // instant between probe and use is a broken invariant, not a state.
-    Layer.orDie,
-  );
+  ).pipe(Layer.provide(clientProtocol(socketPath)), Layer.orDie);
 
 class SearchDaemonSpawnError extends Schema.TaggedError<SearchDaemonSpawnError>()(
   'SearchDaemonSpawnError',
   { message: Schema.String },
 ) {}
 
-/** Starts a daemon and lets go of it.
- *
- *  `detached` puts the child in its own process group and `unref` is what
- *  makes the spawner's scoped release *skip* the kill — an unrefed handle is
- *  released as-is, so the daemon outlives this CLI invocation. Stdio is
- *  discarded: the daemon's channel back to users is its socket, not a pipe
- *  into a parent that exits milliseconds later. */
 export const spawnSearchDaemon: Effect.Effect<
   void,
   SearchDaemonSpawnError,
@@ -126,6 +85,4 @@ export const spawnSearchDaemon: Effect.Effect<
   ),
 );
 
-/** Re-exported so the one fingerprint the client gates on is visibly the one
- *  the daemon reports. */
 export const CLIENT_FINGERPRINT = DAEMON_FINGERPRINT;

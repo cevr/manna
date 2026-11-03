@@ -10,7 +10,6 @@ import {
 } from '../canvas/cast.ts';
 import { castPages } from './cast.ts';
 
-/** A film whose one member, the sower, has a cut-out (`CUTOUT`) and no rig (`CAST`). */
 const cutOnly: CastModule = {
   SHEETS: { sower: { turnaround: { width: 40, height: 60, scale: 1 } } },
   PAPER: { base: '#fff', tone: '#eee', seed: 1 },
@@ -84,7 +83,6 @@ describe("a cut-out member's cast pages", () => {
   });
 });
 
-/** The sower again, with a portrait single drawing beside his landscape turnaround. */
 const portrait: CastModule = {
   ...cutOnly,
   SHEETS: { sower: { ...cutOnly.SHEETS['sower'], single: { width: 30, height: 70, scale: 1 } } },

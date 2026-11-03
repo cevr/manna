@@ -1,43 +1,3 @@
-// A puppet's meshes drawn with WebGL 2 (`canvas/puppet.ts`): each part's
-// triangles, placed where the frame's pose puts them, their pixels the
-// part's texture inverse-mapped through them, sampled bilinear on
-// premultiplied texels in the shader (`texelFetch`, as `core/puppet.ts`'s
-// `rasterOf` samples them), laid back to front with premultiplied `over`.
-// It draws on the page's one puppet canvas (`glCanvas`, held in the page's
-// context budget, `canvas/gl.ts`), the frame's size. A draw's dress leaves
-// the parts it hides undrawn and dyes each texel of the parts it dyes before
-// they are sampled (`canvas/dye.ts`), on whichever pass draws the parts.
-//
-// With a look, the figure is drawn into a target of its own, a drawn key in
-// place of the part it stands for, and passes follow, each a function of
-// that frame alone:
-// - **L3.** A jump flood finds, for each pixel of the box, the nearest
-//   pixel outside the figure, the nearest of what moved (each moving part's
-//   coverage now and at rest), and the nearest pixel of the figure that did
-//   not move. Within 16 px of what moved, the silhouette's line is drawn
-//   again from the union's distance at the sheet's width, and the figure's
-//   rim there takes the ink at its coverage; everywhere else every pixel is
-//   the figure's own. Where a skinned part lies over another, its edge is
-//   inked at 0.8 of the width, but not about its moving bone's pivot (the
-//   shoulder's flap). A drawn key carries its own line, and the body's ink
-//   within the line's width of it takes its nearest pixel's colour, the
-//   line's anti-aliased rim with it, so its
-//   cut end hides the body's outline under it (`core/key-join.ts`, the same
-//   rule on the CPU). Near a held hand the line is left as the drawings draw it.
-// - **The held hand** is laid over the figure.
-// - **The boil.** The figure is resampled bilinearly through the boil's
-//   displacement field at the frame's tick (`core/boil.ts`), its lattice
-//   standing at the puppet's origin.
-//
-// What a context holds for a puppet (its program, each part's and drawing's
-// texture, its texture coordinates and its triangles) is made the first time
-// the puppet is drawn on that context, and made anew on a context the budget
-// let go; the passes' programs and targets are the context's, made at the
-// canvas's size. The positions are the frame's own: each buffer is written
-// whole every draw, every target is cleared or written whole in the box
-// before it is read, and no pass reads outside the box, so no pixel of an
-// earlier frame reaches this one. Synchronous: no Promise.
-
 import { Result } from 'effect';
 import { BOIL_CELL, boilField } from '../core/boil.ts';
 import { KEY_JOIN_INK } from '../core/key-join.ts';
@@ -48,16 +8,12 @@ import { glCanvas } from './gl.ts';
 
 type Pt = readonly [number, number];
 
-/** The page's puppet canvas: one for every puppet, the frame's size. */
 const KEY = 'film/puppet';
 
-/** How far from what moved the line is drawn again, sheet px (L3). */
 const REACH = 16;
 
-/** The interior line's width, a share of the sheet's. */
 const INTERIOR = 0.8;
 
-/** How far about a moving bone's pivot no interior line is drawn, sheet px: the shoulder's flap (`core/puppet.ts`, 34) and 6 more. */
 const FLAP_QUIET = 40;
 
 const HEAD =
@@ -70,7 +26,6 @@ void main() {
   gl_Position = vec4(pos.x / size.x * 2.0 - 1.0, 1.0 - pos.y / size.y * 2.0, 0.0, 1.0);
 }`;
 
-/** A texture's premultiplied bilinear sample at `uv` (texel px), as `rasterOf` takes it, each texel dyed first when `dye` is 1 (a dress's dye, `canvas/dye.ts`, as `dyedRaster` dyes the part's pixels); `mask` writes its coverage in place of its colour, in the channels it names. */
 const FRAGMENT = `${HEAD}
 in vec2 uv; uniform sampler2D tex; uniform int mode; uniform vec3 mask; uniform int dye; out vec4 o;
 ${DYE_GLSL}
@@ -90,13 +45,11 @@ void main() {
   o = mode == 1 ? vec4(mask * acc.a, 0.0) : acc;
 }`;
 
-/** A full-screen triangle: each pass reads and writes pixel for pixel. */
 const QUAD = `${HEAD}const vec2 P[3] = vec2[3](vec2(-1,-1), vec2(3,-1), vec2(-1,3));
 void main() { gl_Position = vec4(P[gl_VertexID], 0, 1); }`;
 
 const NONE = -32768;
 
-/** The flood's seeds: the outside (coverage under a half), what moved (now or at rest), the figure that did not move, and the drawn key (coverage a half or more). */
 const SEED = `${HEAD}
 uniform sampler2D fig; uniform sampler2D moved; uniform ivec4 box; layout(location = 0) out ivec4 j0; layout(location = 1) out ivec4 j1;
 void main() {
@@ -108,7 +61,6 @@ void main() {
   j1 = ivec4((inside && m.r < 0.5) ? o : none, m.b >= 0.5 ? o : none);
 }`;
 
-/** One jump of the flood: each seed the nearest of its own and its neighbours' `step` away, read only inside the box. */
 const FLOOD = `${HEAD}
 uniform isampler2D j0; uniform isampler2D j1; uniform int step; uniform ivec4 box;
 layout(location = 0) out ivec4 o0; layout(location = 1) out ivec4 o1;
@@ -133,7 +85,6 @@ void main() {
   o0 = ivec4(s0, s1); o1 = ivec4(s2, s3);
 }`;
 
-/** L3: the body's ink under a drawn key's reach given the key's colour (`core/key-join.ts`); the union's line near what moved, the rim there inked at its coverage, a skinned part's edge over another; else the figure's own pixel. */
 const INK = `${HEAD}
 uniform sampler2D fig; uniform sampler2D moved; uniform isampler2D j0; uniform isampler2D j1;
 uniform float L; uniform float IL; uniform float reach; uniform vec3 ink; uniform int interior;
@@ -175,7 +126,6 @@ void main() {
   o = vec4(mix(c.rgb, ink3 * c.a, k), c.a);
 }`;
 
-/** The boil: the figure resampled bilinearly (premultiplied) through the field's displacement, the lattice's nodes blended by a smoothstep each way; nothing read outside the box. */
 const BOIL = `${HEAD}
 uniform sampler2D fig; uniform sampler2D field; uniform ivec4 box; uniform vec2 origin; uniform float cell; uniform ivec2 node0; uniform float height;
 out vec4 o;
@@ -193,12 +143,9 @@ void main() {
   o = mix(mix(texel(b0), texel(b0 + ivec2(1, 0)), t.x), mix(texel(b0 + ivec2(0, 1)), texel(b0 + ivec2(1, 1)), t.x), t.y);
 }`;
 
-/** One part (or drawing) on one context: its texture, its vertex array, its buffers and its index count. */
 interface PartGl {
   readonly texture: WebGLTexture;
-  /** By each part in front of it, what this part shows once that part moves away (`PuppetPart.revealed`); a drawing has none. */
   readonly revealed: ReadonlyArray<WebGLTexture | undefined>;
-  /** By each part in front of it of another skin, the seal laid over this part while neither moves (`PuppetPart.seals`, `sealsShown`); a drawing has none. */
   readonly seals: ReadonlyArray<WebGLTexture | undefined>;
   readonly vao: WebGLVertexArrayObject;
   readonly pos: WebGLBuffer;
@@ -206,13 +153,11 @@ interface PartGl {
   readonly count: number;
 }
 
-/** A part's rest place on one context: a vertex array on its texture coordinates and triangles, its own positions. */
 interface RestGl {
   readonly vao: WebGLVertexArrayObject;
   readonly pos: WebGLBuffer;
 }
 
-/** A puppet on one context: its program, its uniforms, its parts, their rest places, and its drawings. */
 interface PuppetOnGl {
   readonly program: WebGLProgram;
   readonly size: WebGLUniformLocation | null;
@@ -226,63 +171,40 @@ interface PuppetOnGl {
   readonly drawings: ReadonlyMap<string, PartGl>;
 }
 
-/** What a loaded puppet holds on each context it has been drawn on, freed with its load (`free`). */
 export interface PuppetGl {
   readonly on: Map<WebGL2RenderingContext, PuppetOnGl>;
-  /** The positions a draw writes, canvas px, one array a part: written whole each draw. */
   readonly positions: ReadonlyArray<Float32Array>;
-  /** Each part's rest place, canvas px, where a look's line pass reads what moved: written whole each draw that moves the part. */
   readonly restPositions: ReadonlyArray<Float32Array>;
-  /** The drawn keys' quads, one a part (the key laid in its place), canvas px: written whole each draw that lays them. */
   readonly swapPositions: ReadonlyArray<Float32Array>;
   readonly heldPositions: Float32Array;
 }
 
-/** What a look asks of the passes, canvas px: the parts that moved, the parts drawings stand in for (each with its drawing), the held hand, the boil's tick and lattice origin, and the line. */
 export interface PuppetPass {
   readonly moving: ReadonlyArray<number>;
   readonly swaps: ReadonlyArray<{ readonly part: number; readonly drawing: string }>;
   readonly held: { readonly drawing: string; readonly at: Pt; readonly quiet: number } | undefined;
   readonly boil: number;
-  /** How far the boil moves a node, px: 0 draws the figure unmoved. */
   readonly amp: number;
   readonly origin: Pt;
   readonly line:
     | { readonly width: number; readonly ink: readonly [number, number, number] }
     | undefined;
-  /** Canvas px a sheet px: the frame's scale, which the line's reach and the flap's quiet take. */
   readonly scale: number;
-  /** The pivots of the bones that turned, canvas px: no interior line is drawn about them. */
   readonly joints: ReadonlyArray<Pt>;
 }
 
-/** What a draw's dress asks of the passes (`PuppetDress`, `canvas/puppet.ts`), by part index: the parts left undrawn, and each dyed part's dye. */
 export interface PuppetDressGl {
   readonly hidden: ReadonlyArray<number>;
   readonly dyes: ReadonlyMap<number, Dye>;
 }
 
-/** No dress: every part drawn, each in its own paint. */
 export const UNDRESSED: PuppetDressGl = { hidden: [], dyes: new Map() };
 
-/**
- * Whether part `n` counts as moving for the parts behind it: it moves, or
- * the dress hides it, so each part behind shows what `n`'s rim hid
- * (`revealedShown`) and no seal along the line it shared with `n`
- * (`sealsShown`), as when `n` moves away.
- */
 const movesOf =
   (moving: ReadonlyArray<number>, dress: PuppetDressGl) =>
   (n: number): boolean =>
     moving.includes(n) || dress.hidden.includes(n);
 
-/**
- * The program's dye set for what it draws next under `dress`: on, with its
- * knots, for `dye`; off for none. A dress that dyes nothing sets nothing, so
- * an undressed draw makes no GL call more: the uniform links as 0 (off), and
- * every draw whose dress dyes a part turns it off again once its parts are
- * drawn.
- */
 const dyeOn = (
   gl: WebGL2RenderingContext,
   on: PuppetOnGl,
@@ -297,7 +219,6 @@ const dyeOn = (
   gl.uniform3fv(on.dyeTo, to);
 };
 
-/** A loaded puppet's GL state, with nothing made yet. */
 export const puppetGl = (puppet: Puppet): PuppetGl => ({
   on: new Map(),
   positions: puppet.parts.map((p) => new Float32Array(p.mesh.vertices.length)),
@@ -306,7 +227,6 @@ export const puppetGl = (puppet: Puppet): PuppetGl => ({
   heldPositions: new Float32Array(8),
 });
 
-/** A program linked on `gl` from its two shaders, or why not (a lost context makes no program). The shaders are freed once linked, and the program too when it fails. */
 const link = (
   gl: WebGL2RenderingContext,
   vertex: string,
@@ -340,7 +260,6 @@ const link = (
   return freed(Result.succeed(program));
 };
 
-/** A texture of `pixels` (RGBA bytes, rows top down), sampled by `texelFetch`. */
 const textureOf = (gl: WebGL2RenderingContext, pixels: Raster) => {
   const texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -365,7 +284,6 @@ const textureOf = (gl: WebGL2RenderingContext, pixels: Raster) => {
   return texture;
 };
 
-/** A vertex array of `count` positions written per draw (attribute 0) over static texture coordinates (1) and triangles. */
 const meshOn = (
   gl: WebGL2RenderingContext,
   bytes: number,
@@ -391,10 +309,8 @@ const meshOn = (
   return { vao, pos, buffers: [pos, uv, index] };
 };
 
-/** A drawing's quad: its four corners' texture coordinates and its two triangles. */
 const QUAD_TRIANGLES = Uint32Array.from([0, 1, 2, 0, 2, 3]);
 
-/** `loaded`'s program, textures and static buffers made on `gl`, or why not. */
 const madeOn = (
   gl: WebGL2RenderingContext,
   loaded: { readonly puppet: Puppet; readonly drawings: ReadonlyMap<string, Raster> },
@@ -442,7 +358,6 @@ const madeOn = (
   });
 };
 
-/** Free one part's or drawing's textures, vertex array and buffers on `gl`. */
 const freePartGl = (gl: WebGL2RenderingContext, p: PartGl) => {
   gl.deleteTexture(p.texture);
   for (const t of [...p.revealed, ...p.seals]) if (t !== undefined) gl.deleteTexture(t);
@@ -450,7 +365,6 @@ const freePartGl = (gl: WebGL2RenderingContext, p: PartGl) => {
   for (const b of p.buffers) gl.deleteBuffer(b);
 };
 
-/** Free what `state` holds on every context still live. */
 export const freePuppetGl = (state: PuppetGl) => {
   for (const [gl, on] of state.on) {
     if (gl.isContextLost()) continue;
@@ -461,7 +375,6 @@ export const freePuppetGl = (state: PuppetGl) => {
   state.on.clear();
 };
 
-/** A pass's targets and programs on one context, at one canvas size. */
 interface Passes {
   readonly width: number;
   readonly height: number;
@@ -481,10 +394,8 @@ interface Passes {
   readonly vao: WebGLVertexArrayObject;
 }
 
-/** Each context's passes, made at its canvas's size and made again at another. */
 const PASSES = new WeakMap<WebGL2RenderingContext, Passes>();
 
-/** A target texture of `internal` format the canvas's size. */
 const targetOf = (
   gl: WebGL2RenderingContext,
   w: number,
@@ -503,7 +414,6 @@ const targetOf = (
   return t;
 };
 
-/** A framebuffer drawing into `textures`, in order. */
 const framebufferOf = (gl: WebGL2RenderingContext, ...textures: ReadonlyArray<WebGLTexture>) => {
   const fb = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
@@ -514,7 +424,6 @@ const framebufferOf = (gl: WebGL2RenderingContext, ...textures: ReadonlyArray<We
   return fb;
 };
 
-/** Free the passes `p` holds on `gl`: made again at another size, the old ones go. */
 const freePasses = (gl: WebGL2RenderingContext, p: Passes) => {
   for (const t of [p.fig, p.moved, p.inked, p.field, ...p.jumps.flat()]) gl.deleteTexture(t);
   for (const fb of [p.fbFig, p.fbMoved, p.fbInked, ...p.fbJumps]) gl.deleteFramebuffer(fb);
@@ -522,7 +431,6 @@ const freePasses = (gl: WebGL2RenderingContext, p: Passes) => {
   gl.deleteVertexArray(p.vao);
 };
 
-/** The passes on `gl` at `w` × `h`, made or made again, or why not. */
 const passesOn = (
   gl: WebGL2RenderingContext,
   w: number,
@@ -572,7 +480,6 @@ const passesOn = (
   return Result.succeed(made);
 };
 
-/** Draw `p` (a part's or a drawing's vertex array, its positions `positions`) with its texture. */
 const drawMesh = (
   gl: WebGL2RenderingContext,
   vao: WebGLVertexArrayObject,
@@ -588,7 +495,6 @@ const drawMesh = (
   gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_INT, 0);
 };
 
-/** Bind texture `t` to unit `unit` as `program`'s sampler `name`. */
 const bindTex = (
   gl: WebGL2RenderingContext,
   program: WebGLProgram,
@@ -601,17 +507,10 @@ const bindTex = (
   gl.uniform1i(gl.getUniformLocation(program, name), unit);
 };
 
-/** The flood's jumps: from 32 px down to 1, and 1 again. */
 const JUMPS = [32, 16, 8, 4, 2, 1, 1];
 
-/** A box in GL px: `[x0, y0, x1, y1)`, rows bottom up. */
 type GlBox = readonly [number, number, number, number];
 
-/**
- * Each of `textures` laid in turn on part `p`'s own mesh at `positions`. The
- * passes hand it the part's texture, then the seals (`sealsShown`) and the
- * revealed paint (`revealedShown`) it shows, the layers `rasterOf` lays.
- */
 const drawLayers = (
   gl: WebGL2RenderingContext,
   p: PartGl,
@@ -621,10 +520,8 @@ const drawLayers = (
   for (const tex of textures) drawMesh(gl, p.vao, p.pos, positions, tex, p.count);
 };
 
-/** Whether a drawn key stands in for part `k` this pass. */
 const swappedIn = (pass: PuppetPass, k: number) => pass.swaps.some((s) => s.part === k);
 
-/** Draw part `k` of the figure, dyed as the dress dyes it, nothing where the dress hides it: the drawn key where one stands in for the part, else the part's mesh, its seals and its revealed paint. */
 const drawPart = (
   gl: WebGL2RenderingContext,
   on: PuppetOnGl,
@@ -652,7 +549,6 @@ const drawPart = (
     drawMesh(gl, key.vao, key.pos, state.swapPositions[k]!, key.texture, key.count);
 };
 
-/** The figure into its target, back to front, and what moved into its own: each moving part's coverage now (red) and at rest (green). */
 const passFigure = (
   gl: WebGL2RenderingContext,
   on: PuppetOnGl,
@@ -680,7 +576,6 @@ const passFigure = (
     const r = on.rests[k]!;
     gl.uniform3f(on.mask, 0, 1, 0);
     drawMesh(gl, r.vao, r.pos, state.restPositions[k]!, p.texture, p.count);
-    // a drawn key's coverage now in blue too, the seed of the body's ink it hides
     gl.uniform3f(on.mask, 1, 0, Number(swappedIn(pass, k)));
     drawPart(gl, on, state, pass, dress, k);
   }
@@ -689,7 +584,6 @@ const passFigure = (
   dyeOn(gl, on, dress, undefined);
 };
 
-/** The flood: seeded from the figure and what moved, then jumped; the pair of targets that holds its answer. */
 const passFlood = (gl: WebGL2RenderingContext, passes: Passes, glBox: GlBox) => {
   gl.bindVertexArray(passes.vao);
   gl.useProgram(passes.seed);
@@ -711,7 +605,6 @@ const passFlood = (gl: WebGL2RenderingContext, passes: Passes, glBox: GlBox) => 
   return passes.jumps[from]!;
 };
 
-/** The pivots' quiet discs as the ink pass reads them (x, y in GL px, radius), four at most, the rest naught. */
 const jointDiscs = (pass: PuppetPass, height: number) =>
   Float32Array.from(
     Array.from({ length: 4 }, (_, i) => pass.joints[i]).flatMap((j) =>
@@ -719,7 +612,6 @@ const jointDiscs = (pass: PuppetPass, height: number) =>
     ),
   );
 
-/** L3 into the inked target: the line near what moved, from the flood's answer `jumps`. With no line, nothing is near enough to be drawn again. */
 const passInk = (
   gl: WebGL2RenderingContext,
   pass: PuppetPass,
@@ -749,7 +641,6 @@ const passInk = (
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 };
 
-/** The held hand over the inked figure. */
 const passHeld = (
   gl: WebGL2RenderingContext,
   on: PuppetOnGl,
@@ -769,7 +660,6 @@ const passHeld = (
   gl.disable(gl.BLEND);
 };
 
-/** The boil onto the canvas: the field's lattice over `box` (canvas px), from the puppet's origin, the inked figure resampled through it. */
 const passBoil = (
   gl: WebGL2RenderingContext,
   pass: PuppetPass,
@@ -813,12 +703,6 @@ const passBoil = (
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 };
 
-/**
- * The look's passes: the figure (and its drawn key) into its target and
- * what moved into another, the flood, the line, the held hand, and the boil
- * onto the canvas, every target cleared or written whole in `box` (canvas
- * px), nothing read outside it.
- */
 const passLook = (
   gl: WebGL2RenderingContext,
   on: PuppetOnGl,
@@ -842,13 +726,6 @@ const passLook = (
   gl.disable(gl.SCISSOR_TEST);
 };
 
-/**
- * With no look: the box cleared on the puppet canvas and the parts drawn onto
- * it back to front, each with the seals and revealed paint it shows while
- * the parts `moving` move, but for the parts the dress hides (each counted
- * as moving away for the parts behind it, `movesOf`), each dyed part's
- * layers dyed.
- */
 const passPlain = (
   gl: WebGL2RenderingContext,
   on: PuppetOnGl,
@@ -889,15 +766,6 @@ const passPlain = (
   gl.disable(gl.BLEND);
 };
 
-/**
- * Draw `loaded`'s puppet, its parts' vertices placed at its positions
- * (canvas px of `ctx`), within the box `[x0, y0, x1, y1)`, onto `ctx` there:
- * the box cleared on the puppet canvas, the parts drawn back to front, each
- * with the seals and revealed paint it shows while the parts `moving` move,
- * as `dress` hides and dyes them (and, with a look's `pass`, its key, line,
- * held hand and boil), then copied over the frame (whole pixels, under
- * `ctx`'s clip and alpha). Why not, where no WebGL 2 context can be made.
- */
 export const paintPuppetGl = (
   ctx: CanvasRenderingContext2D,
   loaded: {

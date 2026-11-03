@@ -1,22 +1,3 @@
-// The library's walk of its code sounds, before anything renders: each graph
-// checked, and each sound it samples resolved first and put in place. Pure:
-// the library load lifts a refusal into its error channel.
-//
-// A sound is refused when it samples a name the library lacks, a sound that
-// is not code, or itself through others; when it plays a degree with no key;
-// when two of its nodes name one stream (they would draw the same numbers);
-// and when, at the most its draws allow, it is longer or writes more than a
-// render may. A sampled sound renders on its own seed, so its stream names
-// are its own: they are checked with it, never with the sounds that sample it.
-//
-// Each entry's code trial (core/sfx.ts `codeTrialOf`: a generated sound's
-// `code`, a recording's fit) is walked the same way, under its entry's name
-// and "(trial)", and resolved beside the code sounds. It is no code sound
-// itself, so nothing can sample it. A fit for a name the library does not
-// declare as a recording, or as code kept from one (`keptFit`, its entry
-// naming the recording's licence), is refused (`FitUnmatched`); a kept fit is
-// that entry's code, so it is no trial.
-
 import { Option, Predicate, Result, Schema } from 'effect';
 import {
   type CodeError,
@@ -44,12 +25,10 @@ import { isDegree } from './graph/pitch.ts';
 import type { ResolvedSound } from './graph/plan.ts';
 import { MAX_CODE_SECS, MAX_CODE_WORK } from './graph/units.ts';
 
-/** The key a sound with no degree names: C major stands in, never heard. */
 const NO_KEY: Key = { tonic: 'C', scale: 'major' };
 
 const CodeJson = Schema.fromJsonString(CodeSound);
 
-/** A node's children, in order. */
 const childrenOf = (node: Node): ReadonlyArray<Node> => {
   switch (node._tag) {
     case 'Osc':
@@ -66,10 +45,8 @@ const childrenOf = (node: Node): ReadonlyArray<Node> => {
   }
 };
 
-/** Every node of a graph, its root first, each before its children. */
 const nodesOf = (root: Node): ReadonlyArray<Node> => [root, ...childrenOf(root).flatMap(nodesOf)];
 
-/** The values a signal moves between: a value held, a ramp's ends, each point's, the centre of a wobble or an LFO. */
 const signalValues = <U>(signal: Signal<U>): ReadonlyArray<Value<U>> => {
   if (Predicate.isTagged(signal, 'Ramp')) return [signal.from, signal.to];
   if (Predicate.isTagged(signal, 'Points')) return signal.points.map(([, value]) => value);
@@ -78,7 +55,6 @@ const signalValues = <U>(signal: Signal<U>): ReadonlyArray<Value<U>> => {
   return [signal];
 };
 
-/** The pitches a node can play. */
 const pitchesOf = (node: Node): ReadonlyArray<Pitch> => {
   switch (node._tag) {
     case 'Osc':
@@ -92,7 +68,6 @@ const pitchesOf = (node: Node): ReadonlyArray<Pitch> => {
   }
 };
 
-/** The first stream name two of `nodes` share. */
 const sharedStream = (nodes: ReadonlyArray<Node>): Option.Option<string> => {
   const seen = new Set<string>();
   for (const node of nodes) {
@@ -103,19 +78,16 @@ const sharedStream = (nodes: ReadonlyArray<Node>): Option.Option<string> => {
   return Option.none();
 };
 
-/** A sound resolved, and its most: what a sound that samples it adds. */
 interface Walked {
   readonly sound: ResolvedSound;
   readonly bound: Bound;
 }
 
-/** One walk of a library: the sounds resolved so far, each once however often it is sampled. */
 interface Walk {
   readonly library: Library;
   readonly done: Map<string, Result.Result<Walked, CodeError>>;
 }
 
-/** `name`, sampled by the last of `stack`: resolved once, refused when it is not a code sound or closes a ring. */
 const sampled = (
   walk: Walk,
   stack: ReadonlyArray<string>,
@@ -138,7 +110,6 @@ const sampled = (
   return walked;
 };
 
-/** `sound`, under `name`, checked and resolved: what it samples first. */
 const walkSound = (
   walk: Walk,
   stack: ReadonlyArray<string>,
@@ -167,7 +138,6 @@ const walkSound = (
     return Result.fail(
       CodeTooLong.make({ sound: name, measure: 'work', secs: bound.work, limit: MAX_CODE_WORK }),
     );
-  // The hash is the graph's and every sampled sound's, so an edit to a sampled sound moves it too.
   const sampledHashes = [...samples]
     .map(([sample, walked]) => `${sample}=${walked.sound.hash}`)
     .toSorted();
@@ -184,23 +154,16 @@ const walkSound = (
   });
 };
 
-/** A code trial resolved: its graph ready to render, and how many seeds it plays. */
 export interface ResolvedTrial {
   readonly sound: ResolvedSound;
   readonly variants: number;
 }
 
-/** A library's code resolved: its code sounds, and its entries' code trials, each by its entry's name. */
 interface ResolvedCode {
   readonly code: ReadonlyMap<string, ResolvedSound>;
   readonly trials: ReadonlyMap<string, ResolvedTrial>;
 }
 
-/**
- * Every code sound and code trial of `library` resolved, its recordings'
- * trials from `fits` (by name), or the first refusal: a fit no recording
- * takes first, then in the library's order.
- */
 export const resolveCode = (
   library: Library,
   fits: ReadonlyMap<string, CodeTrial> = new Map(),
@@ -209,7 +172,6 @@ export const resolveCode = (
     const entry = soundEntry(library, name);
     if (Option.isNone(entry))
       return Result.fail(FitUnmatched.make({ sound: name, kind: 'undeclared' }));
-    // A fit is a recording's trial, or the code kept from one.
     const { kind } = entry.value;
     if (kind === 'recorded' || isKeptFit(entry.value)) continue;
     return Result.fail(FitUnmatched.make({ sound: name, kind }));

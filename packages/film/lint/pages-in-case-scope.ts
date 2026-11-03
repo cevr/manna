@@ -1,17 +1,3 @@
-// `film/pages-in-case-scope`: a browser test opens its pages in the case's
-// scope, or in a child of it (`Scope.fork`), never in a scope it makes by
-// hand (`Scope.make`). A page goes back to its process only when its scope
-// closes (`lab/fixtures/browsers.ts`, `lease.ts`), and the case's scope is
-// the one its runner closes whatever the case did: a scope made by hand is
-// closed only where the case says so, so a step that fails before then keeps
-// the page open. The next case in the process that sends touches then dies
-// on "another tab was open" (`lab/fixtures/tab.ts`), blaming itself; under
-// `--no-isolate` that is the next file's too.
-//
-// `Scope.make` is effect's, read off `Scope` imported from `effect` (or an
-// alias), or `effect/Scope` imported whole. The config turns it on over
-// `packages/film/e2e`.
-
 import { Effect, Option } from 'effect';
 import {
   Diagnostic,
@@ -28,11 +14,9 @@ const MESSAGE =
 const isEffect: Module = (from) => from === 'effect';
 const isScope: Module = (from) => from === 'effect/Scope';
 
-/** Whether `node` is effect's `Scope` module. */
 const isScopeModule = (b: Bindings, node: ESTree.Node) =>
   b.readsImport(node, isEffect, 'Scope') || b.importsAs(node, isScope, '*');
 
-/** Whether a call makes a scope with no parent: `Scope.make(…)`. */
 const makesScope = (b: Bindings, call: ESTree.CallExpression): boolean => {
   const callee = call.callee;
   return (

@@ -1,12 +1,7 @@
-// A note as `film lab notes` prints it: one line of `key=value` fields, each
-// one the note has (where in its scene, the stretch it is about, the line of
-// code or the words it cites), its still's path and its words last. Pure.
-
 import { describe, expect, test } from 'bun:test';
 import type { Note } from '../core/schema.ts';
 import { noteLine } from './notes-lines.ts';
 
-/** A note on the turn scene, its still under `/lab/tiny/stills`, with `more` of its fields. */
 const note = (more: Partial<Note>): Note & { readonly stillFile: string } => ({
   id: 'n1',
   film: 'tiny',

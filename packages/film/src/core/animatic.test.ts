@@ -1,7 +1,3 @@
-// The animatic times each panel from its mark: a beat's first panel opens
-// the beat, a later one takes over where its mark is said, a beat with no
-// panel shows its card, and a mark the line lacks holds from the beat's start.
-
 import { describe, expect, test } from 'bun:test';
 import { Option } from 'effect';
 import { type BoardFile, BoardName, type Panel, emptyBoard } from './board.ts';

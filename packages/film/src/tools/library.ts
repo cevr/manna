@@ -1,21 +1,3 @@
-// The sound library as the tools see it: an app's `sounds/` folder, shared by
-// all its films. `library.ts` declares every sound by name (committed);
-// `library.lock.json` records what was made for each, written only here
-// (committed); `files/` holds the generated audio (git-ignored, synced with a
-// private store by `pull`/`push`); `public/` holds recordings under a licence
-// that may be public (committed). Code sounds are rendered from their data
-// whenever they are needed (`SoundRender`), so nothing of theirs is stored.
-//
-// `make` is the only paid call: generated sounds are made as candidates, each
-// measured and hashed into the lock, and curated by `keep` and `reject`. A
-// sound whose request is current is never generated again; a missing file is
-// a `pull`, not a remake.
-//
-// A sound is judged without listening by its renders' numbers (`compare`)
-// and pictures (`render --sheet`: core/synth/sheet.ts), and heard by the
-// owner in an ask's clips (`ab`): what plays now and its code trial, each
-// lined up as the mix levels it, under its sheet.
-
 import {
   Array as Arr,
   Config,
@@ -131,31 +113,23 @@ import { PrivateStore, type StoreUnavailable } from './private-store.ts';
 import type { FlagRule } from './render-plan.ts';
 import { SoundRender } from './sound-render.ts';
 
-/** Every path the library touches. */
 interface SoundsPaths {
   readonly dir: string;
-  /** `library.ts`: the declarations and the store. */
   readonly module: string;
   readonly lock: Manifest<Lock>;
-  /** Generated audio: private, git-ignored. */
   readonly files: string;
-  /** Recordings that may be public: committed. */
   readonly public: string;
-  /** Auditions and renders: `<FILMS_OUT>/sounds`. */
   readonly out: string;
 }
 
-/** The library as declared, what was made, and its code sounds and code trials resolved. */
 export interface LoadedLibrary {
   readonly paths: SoundsPaths;
   readonly library: Library;
   readonly lock: Lock;
   readonly code: ReadonlyMap<string, ResolvedSound>;
-  /** Each entry's code trial, by its entry's name: heard beside it, never placed. */
   readonly trials: ReadonlyMap<string, ResolvedTrial>;
 }
 
-/** What a mix reads of a loaded library, before any derived sound is measured. */
 const soundsOf = (loaded: LoadedLibrary): Sounds => ({
   library: loaded.library,
   lock: loaded.lock,
@@ -164,19 +138,11 @@ const soundsOf = (loaded: LoadedLibrary): Sounds => ({
   trials: loaded.trials,
 });
 
-/**
- * How many interleaved channels `samples` 16-bit samples hold for a sound of
- * `secs` at `rate`: raw PCM carries no header, so the length says it. The
- * sound model answers `pcm_44100` in stereo, so a request for 22 s sends
- * 44 s worth of mono samples. None when neither mono nor stereo fits within
- * a tenth.
- */
 export const channelsFor = (samples: number, rate: number, secs: number): Option.Option<number> => {
   const ratio = samples / (rate * secs);
   return Option.fromUndefinedOr([1, 2].find((n) => Math.abs(ratio / n - 1) <= 0.1));
 };
 
-/** `pcm_44100` as the API sends it: raw 16-bit little-endian, `channels` interleaved. */
 export const pcmFromS16 = (bytes: Uint8Array, rate: number, channels: number): Pcm => {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const frames = Math.floor(bytes.byteLength / 2 / channels);
@@ -187,7 +153,6 @@ export const pcmFromS16 = (bytes: Uint8Array, rate: number, channels: number): P
   return { rate, frames, channels: planes };
 };
 
-/** A recording's quiet ends cut away: from `pad` seconds before the first sample over `floor` dBFS to `pad` after the last. */
 const trimQuiet = (pcm: Pcm, floor: number, pad: number): Pcm => {
   const threshold = 10 ** (floor / 20);
   const loud = (i: number) => pcm.channels.some((plane) => Math.abs(plane[i] ?? 0) > threshold);
@@ -201,34 +166,22 @@ const trimQuiet = (pcm: Pcm, floor: number, pad: number): Pcm => {
   return slice(pcm, from, to - from);
 };
 
-/** A recording is trimmed at this level, in dBFS, keeping this much air, in seconds. */
 const TRIM_FLOOR = -60;
 const TRIM_PAD = 0.01;
 
-/** Seconds of a recording `sfx import` takes: from `from` to `to` in its source. */
 interface SourceCut {
   readonly from: number;
   readonly to: number;
 }
 
-/** `film sfx import` flags: a cut (`importFile`'s) names both its ends. */
 export const IMPORT_RULES: ReadonlyArray<FlagRule> = [
   ['from', 'needs', 'to', 'a cut names both its ends'],
   ['to', 'needs', 'from', 'a cut names both its ends'],
 ];
 
-/** How far before its loudest moment a one-shot's automatic cut starts, as a share of its length. */
 const CUT_LEAD = 0.2;
-/** A bed's automatic cut is tried at every this many seconds into the source. */
 const CUT_STEP = 2;
 
-/**
- * The cut `sfx import` takes of a recording of `secs` when it is given none:
- * a one-shot's `secs` from `CUT_LEAD` of it before its loudest moment, a
- * bed's `secs` at the `CUT_STEP` offset whose loop seam is smallest (past
- * the first step, a recording's handling, when the source is long enough to
- * spare it). None when the source is no longer than `secs`: it is taken whole.
- */
 const autoCut = (pcm: Pcm, use: SoundUse, secs: number): Option.Option<SourceCut> => {
   const length = pcm.frames / pcm.rate;
   if (length <= secs) return Option.none();
@@ -256,10 +209,6 @@ const autoCut = (pcm: Pcm, use: SoundUse, secs: number): Option.Option<SourceCut
   );
 };
 
-/**
- * `cut` clipped to `pcm`'s frames, in seconds on them: what `cutOf` takes of
- * it. None when it holds no frame of `pcm`.
- */
 const clipCut = (pcm: Pcm, cut: SourceCut): Option.Option<SourceCut> => {
   const from = Math.min(pcm.frames, Math.max(0, Math.round(cut.from * pcm.rate)));
   const to = Math.min(pcm.frames, Math.round(cut.to * pcm.rate));
@@ -267,55 +216,39 @@ const clipCut = (pcm: Pcm, cut: SourceCut): Option.Option<SourceCut> => {
   return Option.some({ from: from / pcm.rate, to: to / pcm.rate });
 };
 
-/** `cut`'s stretch of `pcm`, clipped to it. */
 const cutOf = (pcm: Pcm, cut: SourceCut): Pcm => {
   const from = Math.min(pcm.frames, Math.max(0, Math.round(cut.from * pcm.rate)));
   const to = Math.min(pcm.frames, Math.max(from, Math.round(cut.to * pcm.rate)));
   return slice(pcm, from, to - from);
 };
 
-/** A recording as `sfx import` keeps it, and the gain it was given, in dB. */
 interface Levelled {
   readonly pcm: Pcm;
   readonly gain: number;
 }
 
-/**
- * `pcm` scaled down so its peak sits at `TAKE_LEVEL.ceiling` when it peaks
- * over it (an MP3's decode overshoots 0 dBFS between its samples), and the
- * gain in dB; one that peaks under it is left as it is (0 dB). The mix
- * levels every variant by its measure, so the gain costs nothing heard.
- */
 const levelOvers = (pcm: Pcm): Levelled => {
   const over = loudness(pcm).peak - TAKE_LEVEL.ceiling;
   if (!(over > 0)) return { pcm, gain: 0 };
   return { pcm: gain(pcm, -over), gain: -over };
 };
 
-/** What `sfx import` kept: the variant, its cut, the gain that took its overs off, and its share of power under 30 Hz. */
 interface Imported {
   readonly variant: Variant;
   readonly cut: Option.Option<SourceCut>;
-  /** dB: 0 when it peaked under `TAKE_LEVEL.ceiling`. */
   readonly gain: number;
-  /** Its share of power below 30 Hz (`profileOf`'s rumble, as `sfx compare` gives it): reported only; no filter is applied. */
   readonly rumble: number;
 }
 
-/** Between two variants in an audition, in seconds. */
 const AUDITION_GAP = 0.5;
 
-/** Between what plays now and its code trial, in a clip that plays both, in seconds. */
 const AB_BETWEEN = 1;
 
-/** How much of each bed an ask's clip plays, in seconds, and the fade where it is cut. */
 const CLIP_BED_SECS = 8;
 const CLIP_BED_FADE = 0.25;
 
-/** The audio rate every library sound is made, kept and played at. */
 const LIBRARY_RATE = 44100;
 
-/** The credits a tally file (name, variant, seconds, credits; a header first) records as spent. */
 export const talliedCredits = (text: string): number =>
   text
     .split('\n')
@@ -327,47 +260,38 @@ export const talliedCredits = (text: string): number =>
 export const TALLY_HEADER = 'name\tvariant\tseconds\tcredits\n';
 
 interface MakeOptions extends SpendOptions {
-  /** Just these sounds; every declared one otherwise. */
   readonly names: Option.Option<ReadonlySet<string>>;
-  /** A full set of candidates again, even for a current sound. */
   readonly force: boolean;
 }
 
-/** One render measured: what it is (a kept take by its place, or a seed) and its profile. */
 interface Measured {
   readonly label: string;
   readonly profile: Profile;
 }
 
-/** A sound's code trial beside what plays, each render of each side measured. */
 export interface Comparison {
   readonly plays: Arr.NonEmptyReadonlyArray<Measured>;
   readonly trial: Arr.NonEmptyReadonlyArray<Measured>;
 }
 
-/** What a playable is, as a comparison names it: a kept take by its place, or a seed. */
 const playableLabel = (p: Playable, index: number): string => {
   if (p.source._tag === 'File') return `take ${index + 1}`;
   return `seed ${p.source.seed}`;
 };
 
-/** What `render` plays: its seeds or one, of the sound or of its code trial, and whether each gets its sheet. */
 interface RenderWhich {
   readonly seed: Option.Option<number>;
   readonly trial: boolean;
   readonly sheet: boolean;
 }
 
-/** What an audition lines up: what plays, the candidates waiting, or the code trial's seeds. */
 export type AuditionOf = 'plays' | 'candidates' | 'trial';
 
-/** A render as a line-up places it: its sound, and the lines its sheet draws, in seconds into it. */
 interface Block {
   readonly pcm: Pcm;
   readonly marks: ReadonlyArray<Mark>;
 }
 
-/** `blocks` one after another, each followed by its gap in seconds, as one mono sound, each block's marks where it falls. */
 const lineUpOf = (blocks: ReadonlyArray<{ readonly block: Block; readonly gap: number }>) => {
   const parts: Array<Pcm> = [];
   const marks: Array<Mark> = [];
@@ -382,14 +306,12 @@ const lineUpOf = (blocks: ReadonlyArray<{ readonly block: Block; readonly gap: n
   return { pcm: concat(LIBRARY_RATE, 1, parts), marks };
 };
 
-/** `blocks` each followed by the audition's gap, the last by `last` seconds. */
 const spaced = (blocks: ReadonlyArray<Block>, last: number) =>
   blocks.map((block, i) => {
     if (i === blocks.length - 1) return { block, gap: last };
     return { block, gap: AUDITION_GAP };
   });
 
-/** A bed's render cut to `CLIP_BED_SECS` for an ask's clip, faded out where it is cut; a one-shot whole. */
 const clipped = (entry: LibraryEntry, pcm: Pcm): Pcm => {
   const frames = Math.round(CLIP_BED_SECS * pcm.rate);
   if (entry.use !== 'bed' || pcm.frames <= frames) return pcm;
@@ -405,23 +327,16 @@ const clipped = (entry: LibraryEntry, pcm: Pcm): Pcm => {
   };
 };
 
-/** A one-shot's marks: where its sound begins and its loudest moment. */
 const momentMarks = (at: { readonly onset: number; readonly hit: number }): ReadonlyArray<Mark> => [
   { kind: 'onset', at: at.onset },
   { kind: 'hit', at: at.hit },
 ];
 
-/** A whole render's marks: a one-shot's onset and hit, a bed's loop where the mix begins to cross into its head. */
 const renderMarks = (entry: LibraryEntry, pcm: Pcm): ReadonlyArray<Mark> => {
   if (entry.use === 'bed') return [{ kind: 'loop', at: bedWrapAt(pcm.frames / pcm.rate) }];
   return momentMarks(describeSound(pcm));
 };
 
-/**
- * A clip's block's marks: a one-shot's onset and hit where the mix lands
- * them (the variant's own, else as `pcm` measures); none for a bed, which a
- * clip cuts before it loops.
- */
 const clipMarks = (entry: LibraryEntry, p: Playable, pcm: Pcm): ReadonlyArray<Mark> => {
   if (entry.use === 'bed') return [];
   return momentMarks(
@@ -429,17 +344,12 @@ const clipMarks = (entry: LibraryEntry, p: Playable, pcm: Pcm): ReadonlyArray<Ma
   );
 };
 
-/** How a paid run may spend: confirmed, under a cap, tallied. */
 interface SpendOptions {
-  /** Spend: without it, `make` prints the plan and refuses a paid run. */
   readonly yes: boolean;
-  /** The most credits spent in all, counting what the tally already records. */
   readonly cap: Option.Option<number>;
-  /** A TSV each paid generation is appended to: name, variant, seconds, credits. */
   readonly tally: Option.Option<string>;
 }
 
-/** Where a library finding stands. */
 type LibraryFinding =
   | SoundUnmade
   | SoundStale
@@ -473,54 +383,40 @@ type MakeError =
   | MediaFailed
   | PlatformError;
 
-/** How `fit` fits: the size it writes to, and a model to translate in place of running earshot. */
 interface FitRequest {
   readonly size: FitSize;
   readonly from: Option.Option<string>;
 }
 
-/** What `fit` wrote: the fit's file, the model it was written from, and what the translation made of it. */
 interface Fit {
   readonly file: string;
   readonly model: string;
   readonly fitted: Fitted;
 }
 
-/** How many seeds a fit plays: its noise drawn three ways, as the library's code beds are heard. */
 const FIT_SEEDS = 3;
 
-/** What `push` did: the files it copied, those the store already held, those it had nowhere, and the lock's total. */
 interface PushReport {
   readonly sent: ReadonlyArray<string>;
   readonly had: number;
-  /** Lock files neither here with their bytes nor in the store: lost unless a copy exists elsewhere. */
   readonly missing: ReadonlyArray<string>;
   readonly total: number;
 }
 
-/** What `pull` did: how many files it fetched, how many were here, and those the store lacks. */
 interface PullReport {
   readonly fetched: number;
   readonly had: number;
-  /** Lock files the store does not hold with their bytes, and not here either. */
   readonly missing: ReadonlyArray<string>;
 }
 
 interface SoundLibraryService {
   readonly paths: SoundsPaths;
   readonly load: Effect.Effect<LoadedLibrary, LibraryError>;
-  /** What `make` would generate now, and its cost. Free. */
   readonly plan: (
     names: Option.Option<ReadonlySet<string>>,
     force: boolean,
   ) => Effect.Effect<ReadonlyArray<MakeJob>, LibraryError>;
-  /** Generate the planned candidates (paid), each measured, hashed and recorded as it lands. */
   readonly make: (options: MakeOptions) => Effect.Effect<ReadonlyArray<Variant>, MakeError>;
-  /**
-   * `count` candidates of a generated sound made with a trial's settings over
-   * its declaration's (paid, as `make`). They wait under their own request:
-   * keepable once the declaration says the same.
-   */
   readonly trial: (
     name: string,
     trial: Trial,
@@ -530,11 +426,6 @@ interface SoundLibraryService {
     ReadonlyArray<Variant>,
     MakeError | UnknownSound | SoundKindMismatch | TrialInvalid
   >;
-  /**
-   * The takes (sha256s) the 1-based `picks` name among the sound's candidates
-   * for its current request, or among its kept variants in the order they
-   * play: how the command line's numbers become takes, before any verb runs.
-   */
   readonly takesAt: (
     name: string,
     picks: ReadonlyArray<number>,
@@ -543,39 +434,19 @@ interface SoundLibraryService {
     ReadonlyArray<string>,
     LibraryError | UnknownSound | SoundKindMismatch | CandidateMissing | VariantMissing
   >;
-  /**
-   * Move candidates (by sha256, among those for the current request) into the
-   * variants that play: beside the kept ones, or with `replace` in their place
-   * (the variants they replace wait again as candidates). Each take is found
-   * in the lock under its write lock, so a curation landing first cannot move
-   * another take into its place. A code sound has no takes to curate
-   * (`SoundKindMismatch`): its seeds play as its data says.
-   */
   readonly keep: (
     name: string,
     takes: ReadonlyArray<string>,
     replace?: boolean,
   ) => Effect.Effect<LockEntry, LibraryError | UnknownSound | SoundKindMismatch | TakeUnknown>;
-  /** Move kept variants (by sha256) back to the candidates waiting. */
   readonly unkeep: (
     name: string,
     takes: ReadonlyArray<string>,
   ) => Effect.Effect<LockEntry, LibraryError | UnknownSound | SoundKindMismatch | TakeUnknown>;
-  /** Drop candidates (by sha256), never to be offered again. */
   readonly reject: (
     name: string,
     takes: ReadonlyArray<string>,
   ) => Effect.Effect<LockEntry, LibraryError | UnknownSound | SoundKindMismatch | TakeUnknown>;
-  /**
-   * A recording into a declared `recorded` sound, kept as the variant that
-   * plays under `public/`: folded to one channel at 44.1 kHz, cut (`cut`
-   * clipped to the recording, else the sound's `secs` cut automatically,
-   * else whole), a one-shot's quiet ends trimmed, its overs levelled to
-   * `TAKE_LEVEL.ceiling`. The lock records the cut as clipped; a `cut` that
-   * holds none of the recording is refused (`CutEmpty`). Kept
-   * variants made for another request (a generated sound's takes) wait on
-   * as candidates: its history, never offered again.
-   */
   readonly importFile: (
     file: string,
     name: string,
@@ -584,10 +455,6 @@ interface SoundLibraryService {
     Imported,
     LibraryError | UnknownSound | SoundKindMismatch | CutEmpty | MediaFailed | PlatformError
   >;
-  /**
-   * A sound's variants that play (or its candidates, or its code trial's
-   * seeds), levelled as it would play, `AUDITION_GAP` apart, as one WAV.
-   */
   readonly audition: (
     name: string,
     of: AuditionOf,
@@ -595,11 +462,6 @@ interface SoundLibraryService {
     string,
     LibraryError | UnknownSound | CodeTrialMissing | MediaFailed | PlatformError
   >;
-  /**
-   * A code sound's seeds (or one) as WAVs, `<name>-<seed>.wav`;
-   * with `trial`, its code trial's, `<name>-trial-<seed>.wav`. With `sheet`,
-   * each WAV's sheet beside it as a PNG of the same name.
-   */
   readonly render: (
     name: string,
     which: RenderWhich,
@@ -607,28 +469,12 @@ interface SoundLibraryService {
     ReadonlyArray<string>,
     LibraryError | UnknownSound | SoundKindMismatch | CodeTrialMissing | MediaFailed | PlatformError
   >;
-  /**
-   * A sound's code trial beside what plays (free): the profile of each kept
-   * take, or each seed, and of each of the trial's seeds. Refused for a sound
-   * with no trial, and for one with nothing kept to play.
-   */
   readonly compare: (
     name: string,
   ) => Effect.Effect<
     Comparison,
     LibraryError | UnknownSound | CodeTrialMissing | SoundUnmade | MediaFailed
   >;
-  /**
-   * A sound's clips for an ask, written into `out` (free): what plays now
-   * (its kept takes, or its seeds) and its code trial's seeds, each lined up
-   * as the mix levels it under the line-up's sheet (`<name>.now.mp4`,
-   * `<name>.code.mp4`), and both in one, `AB_BETWEEN` apart
-   * (`<name>.now-then-code.mp4`), each beside its sheet as a PNG. A bed
-   * plays `CLIP_BED_SECS` of each render. A sound with no code trial (a
-   * code sound, a recording not fitted) has only its `now` clip. The files
-   * written.
-   * Refused for a sound with nothing kept to play.
-   */
   readonly ab: (
     name: string,
     out: string,
@@ -636,15 +482,6 @@ interface SoundLibraryService {
     ReadonlyArray<string>,
     LibraryError | UnknownSound | SoundUnmade | MediaFailed | PlatformError
   >;
-  /**
-   * A recording's code trial, fitted from its kept variant (free): earshot's
-   * model of it (`Earshot`, or the model file `from` names) written as code
-   * within `size` (core/synth/fit), high-passed under 30 Hz when the
-   * recording has little rumble, kept as `fits/<name>.json`, which the
-   * library then plays as the sound's trial. The model earshot wrote is kept
-   * under `<FILMS_OUT>/sounds/fits/`. Refused for a sound that is not
-   * recorded (`FitRefused`): a generated take stays private.
-   */
   readonly fit: (
     name: string,
     request: FitRequest,
@@ -661,36 +498,14 @@ interface SoundLibraryService {
     | MediaFailed
     | PlatformError
   >;
-  /**
-   * Each variant's onset and hit, measured from its file where the lock lacks
-   * them and written in (free: no generation). How many it wrote.
-   */
   readonly describe: Effect.Effect<number, LibraryError | MediaFailed | PlatformError>;
-  /**
-   * Every library finding: unmade, stale, missing or corrupt files of the
-   * takes that play, licences, loop seams (a code trial's too, named
-   * `<name> (trial)`), lead-ins.
-   */
   readonly check: Effect.Effect<
     ReadonlyArray<LibraryFinding>,
     LibraryError | MediaFailed | PlatformError
   >;
-  /**
-   * Bring every private file missing here (or not its hash) back from the
-   * store: the lock's under `files/`, and the films' `scores`; name those it lacks.
-   */
   readonly pull: (
     scores: Scores,
   ) => Effect.Effect<PullReport, LibraryError | PlatformError | StoreFailed | StoreUnavailable>;
-  /**
-   * Copy every private file the store lacks (or holds with other bytes) into
-   * it, each read back by hash: the lock's under `files/`, and the films'
-   * `scores`. A file is sent from here, or else from the folder `from` (an
-   * older folder store, at the same key), when either holds its bytes; it is
-   * never deleted from either. `sent` names the files copied, `had` counts
-   * those the store already held, `missing` names those found nowhere,
-   * `total` all of them.
-   */
   readonly push: (
     scores: Scores,
     from: Option.Option<string>,
@@ -700,8 +515,6 @@ interface SoundLibraryService {
   >;
 }
 
-/** Every variant and candidate of every sound, with its name. */
-/** A variant's onset and hit, when the lock records both. */
 const timingOf = (v: Variant) =>
   Option.all({ onset: Option.fromUndefinedOr(v.onset), hit: Option.fromUndefinedOr(v.hit) });
 
@@ -710,7 +523,6 @@ const everyVariant = (lock: Lock) =>
     [...entry.variants, ...entry.candidates].map((variant) => ({ name, variant })),
   );
 
-/** The `picks` (1-based) of `offered`, or the first pick out of range, as `missing` names it. */
 const picked = <E>(
   offered: ReadonlyArray<Variant>,
   picks: ReadonlyArray<number>,
@@ -726,7 +538,6 @@ const picked = <E>(
     ),
   );
 
-/** The variants of `offered` whose sha256 each of `takes` names, or `TakeUnknown` for the first it lacks. */
 const byHash = (
   name: string,
   offered: ReadonlyArray<Variant>,
@@ -746,7 +557,6 @@ const emptyEntry: LockEntry = { variants: [], candidates: [], rejected: [] };
 export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryService>()(
   '@manna/film/tools/SoundLibrary',
 ) {
-  /** The library in `dir` (an app's `sounds/`). */
   static readonly layer = (dir: string) =>
     Layer.effect(
       SoundLibrary,
@@ -799,7 +609,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
 
         const now = Effect.map(DateTime.now, DateTime.formatIso);
 
-        /** One candidate of `entry`: generated, kept as FLAC under `files/<name>/`, measured, recorded. */
         const generate = (
           name: string,
           entry: Generated,
@@ -809,7 +618,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           Effect.gen(function* () {
             const folder = path.join(paths.files, name);
             yield* fs.makeDirectory(folder, { recursive: true });
-            // Scoped: the temporary file and the folder made for it go, even when interrupted.
             const raw = yield* fs.makeTempFileScoped({ directory: folder, prefix: '.candidate-' });
             yield* elevenLabs.soundEffect(
               {
@@ -859,7 +667,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
             return variant;
           }).pipe(Effect.scoped);
 
-        /** `pcm` kept as a 24-bit FLAC named by its hash under `<under>/<name>/`, and its lock record. */
         const keepFile = (
           name: string,
           pcm: Pcm,
@@ -915,7 +722,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           return yield* spend([{ name, entry, count, credits: count * creditsOf(entry) }], options);
         });
 
-        /** Generate `jobs` (paid): refused without `yes` or over the cap the tally counts, each tallied as it lands. */
         const spend = Effect.fn('SoundLibrary.spend')(function* (
           jobs: ReadonlyArray<MakeJob>,
           options: SpendOptions,
@@ -955,7 +761,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           );
         });
 
-        /** `entry` when its takes are curated; a code sound's seeds play as its data says. */
         const curatable = (name: string, entry: LibraryEntry) => {
           if (isDerived(entry))
             return Effect.fail(
@@ -964,7 +769,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           return Effect.succeed(entry);
         };
 
-        /** `name`'s candidates for its current request, or its kept variants, as `lock` holds them. */
         const offeredIn = (
           entry: LibraryEntry,
           record: Option.Option<LockEntry>,
@@ -994,11 +798,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           return chosen.map((v) => v.sha256);
         });
 
-        /**
-         * Rewrite `name`'s lock record: the takes named by `takes` found among
-         * its candidates or kept variants and handed to `change`, all under
-         * the lock's write lock.
-         */
         const curate = (
           name: string,
           takes: ReadonlyArray<string>,
@@ -1028,7 +827,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           replace = false,
         ) {
           return yield* curate(name, takes, 'candidates', (had, chosen, request) => {
-            // Variants for an older request play only until new ones are kept.
             const current = had.variants.filter((v) => v.request === request);
             if (!replace)
               return {
@@ -1076,7 +874,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           if (entry.kind !== 'recorded')
             return yield* SoundKindMismatch.make({ name, kind: entry.kind, wanted: 'recorded' });
           const source = yield* media.load(file, LIBRARY_RATE);
-          // A given cut is clipped to the source and recorded as clipped: what was taken.
           const cut = yield* Option.match(given, {
             onNone: () =>
               Effect.succeed(
@@ -1102,7 +899,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
             onNone: () => source,
             onSome: (c) => cutOf(source, c),
           });
-          // A bed's ends are its loop: only a one-shot loses its quiet ends.
           let trimmed = taken;
           if (entry.use === 'one-shot') trimmed = trimQuiet(taken, TRIM_FLOOR, TRIM_PAD);
           const level = levelOvers(trimmed);
@@ -1147,7 +943,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           return made.pcm(source);
         };
 
-        /** `p` decoded and levelled as `entry` plays it, folded to one channel. */
         const levelled = (entry: LibraryEntry, p: Playable) =>
           Effect.map(decoded(p.source), (pcm): Pcm => {
             const gain = gainFor(levelOf(entry, Option.none()), p.loudness, entry.use);
@@ -1158,16 +953,11 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
             return { rate: pcm.rate, frames: pcm.frames, channels: [plane] };
           });
 
-        /**
-         * A sound's code trial's seeds as they would play, each measured as a
-         * derived variant is: none for a sound with no trial.
-         */
         const trialRenders = (loaded: LoadedLibrary, name: string) =>
           Effect.forEach(trialSources(soundsOf(loaded), name), (source) =>
             Effect.map(made.measure(source), (measured) => derivedPlayable(source, measured)),
           );
 
-        /** A sound's code trial's seeds, measured; refused (`CodeTrialMissing`) for a sound with no trial. */
         const trialPlayables = (loaded: LoadedLibrary, name: string, entry: LibraryEntry) =>
           Effect.gen(function* () {
             if (!loaded.trials.has(name))
@@ -1309,7 +1099,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
         ) {
           const loaded = yield* load;
           const entry = yield* entryOf(loaded, name);
-          // Any seed renders, past the variants that play: each seed is one draw of the sound.
           const seedsOf = (variants: number) =>
             Option.match(which.seed, {
               onNone: () => Array.from({ length: variants }, (_, i) => i + 1),
@@ -1383,7 +1172,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           return compared;
         });
 
-        /** Whether the file at `file` holds the bytes the lock kept. */
         const fileFinding = (name: string, variant: Variant) =>
           Effect.gen(function* () {
             const at = path.join(dir, variant.file);
@@ -1398,7 +1186,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
             );
           });
 
-        /** Files under `public/` the lock does not name as public, and public variants whose licence is private. */
         const licenceFindings = (lock: Lock) =>
           Effect.gen(function* () {
             const publicly = new Map(
@@ -1422,11 +1209,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
             });
           });
 
-        /**
-         * A one-shot's kept takes whose timing is unrecorded. (A take that
-         * starts late is heard late only where a film places its first
-         * sample on a cue: the film's check says so, `LeadIn`.)
-         */
         const timingFindings = (
           name: string,
           entry: LibraryEntry,
@@ -1441,12 +1223,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           );
         };
 
-        /**
-         * A CC BY recording that says `changed: false` while a kept file was
-         * changed on import: cut, or (a one-shot's, always) trimmed. A bed
-         * taken whole at 0 dB is the recording as it was; the lock does not
-         * record a gain, and an import gains a file only past -1 dBFS.
-         */
         const changeFindings = (
           name: string,
           entry: LibraryEntry,
@@ -1459,7 +1235,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           return [];
         };
 
-        /** A bed's loop seams that are heard, past the files already reported missing or corrupt. */
         const seamFindings = (
           name: string,
           entry: LibraryEntry,
@@ -1470,7 +1245,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
             const findings: Array<LibraryFinding> = [];
             if (entry.use !== 'bed') return findings;
             for (const [i, p] of playablesOf(sounds, name, entry).entries()) {
-              // A missing or corrupt file is reported above; its seam cannot be heard.
               if (p.source._tag === 'File' && broken.has(p.source.file)) continue;
               const seam = loopSeam(yield* decoded(p.source));
               let of: LoopSeam['of'] = 'seed';
@@ -1483,7 +1257,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
             return findings;
           });
 
-        /** A code trial bed's seams that are heard, each named as the trial's: `<name> (trial)`. */
         const trialSeamFindings = (name: string, entry: LibraryEntry, sounds: Sounds) =>
           Effect.gen(function* () {
             const findings: Array<LibraryFinding> = [];
@@ -1504,11 +1277,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
             return findings;
           });
 
-        /**
-         * Each variant and candidate whose onset and hit the lock lacks,
-         * measured from its file (`describeSound`) and written in: free. A
-         * file not here is left for `sfx pull`. The written variants.
-         */
         const describeLibrary = Effect.fn('SoundLibrary.describe')(function* () {
           const loaded = yield* load;
           const measured = new Map<string, VariantTiming>();
@@ -1538,7 +1306,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           const loaded = yield* load;
           const findings: Array<LibraryFinding> = [];
           const entries = Object.entries(loaded.library).sort(([a], [b]) => a.localeCompare(b));
-          // A bed's seams are heard in its audio: each derived bed is rendered and measured once.
           const beds = entries.filter(([, entry]) => entry.use === 'bed').map(([name]) => name);
           const sounds = yield* made.measured(soundsOf(loaded), beds);
           for (const [name, entry] of entries) {
@@ -1547,8 +1314,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
             if (state._tag === 'Missing')
               findings.push(SoundUnmade.make({ name, candidates: state.candidates }));
             if (state._tag === 'Stale') findings.push(SoundStale.make({ name }));
-            // A code sound plays its seeds. The takes its record keeps play
-            // again only when it is generated once more, and are checked then.
             const kept = Option.match(
               Option.filter(record, () => !isDerived(entry)),
               { onNone: (): ReadonlyArray<Variant> => [], onSome: (r) => r.variants },
@@ -1569,10 +1334,6 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
         });
         const check = checkLibrary();
 
-        /**
-         * Every private file the store keeps: each lock file under `files/`
-         * (its key is that path), then each film's score.
-         */
         const privateFiles = (lock: Lock, scores: Scores): ReadonlyArray<PrivateFile> => [
           ...everyVariant(lock)
             .filter(({ variant }) => variant.file.startsWith('files/'))
@@ -1610,21 +1371,17 @@ export class SoundLibrary extends Context.Service<SoundLibrary, SoundLibraryServ
           return report;
         });
 
-        /** Whether the file at `at` is there with the bytes hashed `sha`. */
         const holdsAt = (at: string, sha: string) =>
           Effect.gen(function* () {
             if (!(yield* fs.exists(at))) return false;
             return (yield* sha256OfFile(fs, at)) === sha;
           });
 
-        /** Whether the file is here with its bytes. */
         const holdsHere = (file: PrivateFile) => holdsAt(file.file, file.sha256);
 
-        /** Whether the store holds the file's bytes. */
         const holdsIn = (remote: MediaStoreService, file: PrivateFile) =>
           Effect.map(remote.hashOf(file.key), (h) => Option.contains(h, file.sha256));
 
-        /** Where the file's bytes can be sent from: here, else the folder `from` at its key. */
         const sourceOf = (file: PrivateFile, from: Option.Option<string>) =>
           Effect.gen(function* () {
             if (yield* holdsHere(file)) return Option.some(file.file);

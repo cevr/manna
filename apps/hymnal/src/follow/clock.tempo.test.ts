@@ -1,19 +1,8 @@
-/**
- * The follow clock at a tempo (unit `tempo`, acceptance A1): between the
- * player's reports the clock runs on at the rate it was set at, for every
- * tempo the Tempo dial offers (50 % to 150 % in 5 % steps), and a report
- * carries the rate on.
- *
- * Final path: `apps/hymnal/src/follow/clock.tempo.test.ts`.
- */
-
 import { describe, expect, it } from 'bun:test';
 
 import { clockAt, observe, placeOf, SLACK } from './clock';
 
-/** Every detent of the Tempo dial, in percent. */
 const TEMPI = Array.from({ length: 21 }, (_, i) => 50 + 5 * i);
-/** Elapsed times, ms: none, under a poll, a poll, a second, a minute, ten minutes. */
 const ELAPSED = [0, 1, 120, 250, 1000, 60_000, 600_000];
 
 describe('the follow clock at a tempo', () => {
@@ -50,7 +39,6 @@ describe('the follow clock at a tempo', () => {
     for (const tempo of TEMPI) {
       const rate = tempo / 100;
       const clock = clockAt(10_000, true, 0, rate);
-      // The player's next poll, 250 ms on, reports the place the score clock holds at this rate.
       const next = observe(
         clock,
         { at: 10_000 + rate * 250, playing: true, seek: false, rate },

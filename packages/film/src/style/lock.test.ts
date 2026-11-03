@@ -1,10 +1,3 @@
-// What a locked figure's print answers its lock (`heldTo`), read against the
-// owner's decisions on his production's ledger, and the hold a film's build
-// and test run over its locked figures (`unlocked`): each print hashed with
-// sha256, held to its lock, the lock held to the decision it names, and each
-// broken one named with the rule's words and the hash an override would name
-// to free it.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { describe, expect, it } from 'effect-bun-test';
@@ -15,24 +8,16 @@ import { repoJson } from '../core/schema.ts';
 import { unlocked } from './build.ts';
 import { decodeLock, heldTo } from './lock.ts';
 
-/** The sha256 of `abc` (FIPS 180-2's first example): the print the lock holds. */
 const KEPT = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
 
-/** The sha256 of an empty text: a print changed from it. */
 const CHANGED = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
-/** The ask the owner kept and locked the lead in, the time the ledger filed his decision there, and that time as a broken lock names it. */
 const ASK = 'a92f276635e';
 const AT = 1792281444576;
 const FILED = '2026-10-17T23:57:24.576Z';
 
-/** What the lock answers the changed print with no override. */
 const NOT_KEPT = `its print ${CHANGED} is not its lock's ${KEPT} (version 1, kept in ask ${ASK}): only an override citing a decision of the owner's on lead, filed after the lock, frees it, naming the print it frees`;
 
-/**
- * A ledger with the question the lock was kept in, the decision that kept
- * it, and a decision of the owner's on the lead after it, in his words.
- */
 const LEDGER = `{
   "production": "righteousness-by-faith",
   "title": "Righteousness by Faith",
@@ -44,10 +29,8 @@ const LEDGER = `{
   ]
 }`;
 
-/** The owner's decisions on that ledger. */
 const DECISIONS = decisionsOf(Schema.decodeSync(repoJson(ProductionFile))(LEDGER));
 
-/** The lead's lock as his file keeps it, holding the print `abc`. */
 const LOCK = decodeLock(
   {
     item: 'lead',
@@ -60,7 +43,6 @@ const LOCK = decodeLock(
   'lock',
 );
 
-/** An override of the lead's lock that frees the print `frees`, quoting `quote`: by default, his decision on the lead after the lock. */
 const overrideFreeing = (frees: string, quote = 'move his ear back a unit') => ({
   rule: 'FigureLock' as const,
   place: 'lead',
@@ -69,7 +51,6 @@ const overrideFreeing = (frees: string, quote = 'move his ear back a unit') => (
   quote,
 });
 
-/** The lead's lock with that override. */
 const freeing = (frees: string, quote?: string) =>
   decodeLock({ ...LOCK, override: overrideFreeing(frees, quote) }, 'lock');
 
@@ -103,7 +84,6 @@ describe("a locked figure's print against its lock", () => {
       _tag: 'Broken',
       why: `its override frees ${CHANGED}, not its print ${other}`,
     });
-    // The print is the lock's, so the override would free a later change unasked.
     expect(heldTo('lead', freeing(CHANGED), KEPT, DECISIONS)).toEqual({
       _tag: 'Broken',
       why: "its print is its lock's, so its override frees nothing: drop it, or it frees a later change unasked",
@@ -119,10 +99,8 @@ describe("a locked figure's print against its lock", () => {
 
   test('is broken, its print the lock holds or not, while the lock names a decision the ledger does not hold', () => {
     const lost = `its lock names a decision his production's ledger does not hold: none filed at ${FILED} answers ask ${ASK}`;
-    // A ledger with no decision: the question the lock was kept in is no answer to it.
     for (const decisions of [[], DECISIONS.filter((d) => d.at !== AT)])
       expect(heldTo('lead', LOCK, KEPT, decisions)).toEqual({ _tag: 'Broken', why: lost });
-    // A lock filed at another time, or naming another ask.
     expect(heldTo('lead', { ...LOCK, at: AT + 1 }, KEPT, DECISIONS)._tag).toEqual('Broken');
     expect(heldTo('lead', { ...LOCK, ask: 'a0000000000' }, KEPT, DECISIONS)._tag).toEqual('Broken');
   });

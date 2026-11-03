@@ -1,8 +1,3 @@
-// A film's finish and caption plate are data a film declares; a value the
-// canvas cannot draw (a zero-sized grain tile, no tiles, an opacity past 1)
-// fails where the film is made, naming the field, never at the first frame
-// or silently in it. Laying out a film needs no DOM, so bun can make one.
-
 import { describe, expect, test } from 'bun:test';
 import { type Drift, camera } from './camera.ts';
 import { type CaptionStyle, type FilmSpec, type FinishStyle, createFilm, drawing } from './film.ts';
@@ -70,7 +65,6 @@ describe('createFilm finish and caption plate', () => {
 });
 
 describe('a frame hears the names it reads off its clock', () => {
-  /** A film whose one scene reads cue `go` every frame, the voice from `{word}` to `{end}` in its first second, and cue `later` after it. */
   const branching = () =>
     createFilm({
       ...spec(),
@@ -97,7 +91,6 @@ describe('a frame hears the names it reads off its clock', () => {
   test('draws the same frame whether it is heard or not', () => {
     const film = branching();
     const [plain, heard] = withDom(() => {
-      // Once first, so neither compared frame is a scene's first guess at its breath.
       film.render(recorder().ctx, 0.5);
       const a = recorder();
       film.render(a.ctx, 0.5);
@@ -140,8 +133,6 @@ describe('a frame hears the names it reads off its clock', () => {
   });
 
   test('a frame drawn again the other way hears only the draw it keeps', () => {
-    // Past its second second the scene frames a shot of its own; before, none, and its draw reads `whole` under the
-    // breath drawn round it whole, `framed` without it: the two draws of one frame read apart.
     const film = createFilm({
       ...spec(),
       scenes: [
@@ -161,10 +152,8 @@ describe('a frame hears the names it reads off its clock', () => {
     const again = clock();
     withDom(
       () => {
-        // A shot framed, so the next frame's first guess is a shot's: at 1 s it frames none, and is drawn again whole.
         film.render(recorder().ctx, 3);
         film.render(recorder().ctx, 1, { clock: after });
-        // Guessed whole this time: drawn once.
         film.render(recorder().ctx, 1, { clock: again });
       },
       { record: false },
@@ -174,7 +163,6 @@ describe('a frame hears the names it reads off its clock', () => {
   });
 
   test("hears the scene's own reads of its card's flood, not the engine's", () => {
-    // The card floods in over `flood` in the scene's first second; the draw reads `flood` only past its third.
     const film = createFilm({
       ...spec(),
       scenes: [
@@ -208,7 +196,6 @@ describe('a frame hears the names it reads off its clock', () => {
 describe('a scene with more than one card', () => {
   const LINE =
     'He is {righteous}righteous, they said. And Job asked: {job}How should man be just with God?';
-  /** A film of one scene with a card over `one` and another over `two` (`timeline`), logging which draws ran. */
   const twoCards = (timeline: {
     readonly one: { readonly mark: string; readonly dur: number };
     readonly two: { readonly mark: string; readonly until: { readonly at: 'end' } };
@@ -252,7 +239,6 @@ describe('a scene with more than one card', () => {
     const at = (t: number) => {
       ran.length = 0;
       withDom(() => film.render(recorder().ctx, (p?.start ?? 0) + t), { record: false });
-      // A scene's first frame may draw twice (its breath guessed, then known): once is what shows.
       return [...new Set(ran)];
     };
     expect(at(one.start - 0.05)).toEqual(['scene']);
@@ -272,7 +258,6 @@ describe('a scene with more than one card', () => {
 
 describe("a callback reads another scene's knobs", () => {
   const city = drawing({ timeline: {}, knobs: { at: [1200, 640], zoom: 1.3 }, draw: () => {} });
-  /** A film whose second scene reads the first's framing, logging what it saw. */
   const calling = () => {
     const seen: Array<readonly [readonly [number, number], number]> = [];
     const back = drawing({

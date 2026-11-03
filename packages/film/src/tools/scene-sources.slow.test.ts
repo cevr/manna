@@ -1,9 +1,3 @@
-// Locating a scene's drawing by the identity of the objects it reads: a
-// registry that renames a drawing still finds the file that declares it (and
-// not a decoy file that exports the registry's name), a timeline the registry
-// builds in code is not located, and a scene with nothing to edit is skipped.
-// The lab locates in a fresh process, so a scene added while it runs is found.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, FileSystem, Layer, Path } from 'effect';
@@ -14,10 +8,8 @@ import { scenesLocatedHere } from './read-cli.ts';
 import { SceneSources } from './scene-sources.ts';
 import { sceneFixture } from './scene-sources/testing.ts';
 
-/** The fixture film's folder: a fresh one per test. */
 class Films extends Context.Service<Films, string>()('test/Films') {}
 
-/** A fresh fixture film on disk, and the locator over its films folder. */
 const fixture = Layer.unwrap(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -30,13 +22,8 @@ const fixture = Layer.unwrap(
   }),
 ).pipe(Layer.provideMerge(BunServices.layer));
 
-/** The timeout of a test here that runs the read in a fresh process: a cold start's time is the machine's. */
 const SPAWNS_MS = 30_000;
 
-/**
- * A fresh fixture film on disk, and the lab's locator over its films folder:
- * each read runs `film read` in a fresh process (`fixtures/read-cli.ts`).
- */
 const lab = Layer.unwrap(
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
@@ -51,13 +38,11 @@ const lab = Layer.unwrap(
   }),
 ).pipe(Layer.provideMerge(BunServices.layer));
 
-/** A drawing of its own, for a scene added while the lab runs. */
 const GAMMA = `import { drawing } from './drawing.ts';
 
 export const gamma = drawing({ timeline: { go: { at: 'start', dur: 1 } }, draw: () => {} });
 `;
 
-/** Both fields writable: each scene reads its drawing's own literals, and no other scene does. */
 const open = { timeline: { _tag: 'Writable' }, knobs: { _tag: 'Writable' } } as const;
 
 describe('scene sources', () => {
@@ -76,7 +61,6 @@ describe('scene sources', () => {
           exportName: 'hand_',
           access: open,
         },
-        // Registered as `beta`: declared as `alpha` in a.ts, never decoy.ts's `beta`.
         {
           scene: 'beta',
           file: path.join(scenes, 'a.ts'),
@@ -93,7 +77,6 @@ describe('scene sources', () => {
       ]);
       const error = yield* Effect.flip(sources.site('f', 'plain'));
       expect(error.message).toContain('scene "plain" has no editable drawing');
-      // The code view: the file's text now, and each cue's literal as a range of it.
       const code = yield* sources.code('f', 'hand');
       expect(code.site.shown).toBe('scenes/hand.ts');
       expect(code.cues.map((c) => [c.name, code.text.slice(...c.at).split(':')[0]])).toEqual([
@@ -113,7 +96,6 @@ describe('scene sources', () => {
         const sources = yield* SceneSources;
         const scenes = path.join(films, 'f', 'scenes');
         expect([...(yield* sources.locate('f')).sites.keys()]).toEqual(['hand', 'beta']);
-        // The owner adds a scene while the lab runs: its drawing, and its line in the registry.
         yield* fs.writeFileString(path.join(scenes, 'gamma.ts'), GAMMA);
         const registry = path.join(scenes, 'index.ts');
         const index = yield* fs.readFileString(registry);

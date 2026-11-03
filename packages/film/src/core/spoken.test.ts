@@ -45,7 +45,6 @@ describe('lineError: a correct reading is not a mismatch', () => {
     const heardAs = { Ellet: ['Elliot', 'Elliott'], Waggoner: ['Wagner'] };
     expect(lineError('Ellet Waggoner preached.', 'Elliot Wagner preached', heardAs)).toBe(0);
     expect(lineError('Ellet Waggoner preached.', 'Elliott Waggoner preached', heardAs)).toBe(0);
-    // Without it, the name is a misheard word.
     expect(lineError('Ellet Waggoner preached.', 'Elliot Waggoner preached', none)).toBeCloseTo(
       1 / 3,
     );
@@ -57,7 +56,6 @@ describe('lineError: a wrong reading still is', () => {
     expect(lineError('The law and the gospel.', 'the law and the prophets', none)).toBeCloseTo(0.2);
     expect(lineError('The 144,000 stood.', 'the 140,000 stood', none)).toBeGreaterThan(0);
     expect(lineError('Read Zechariah 3:1-4.', 'read Zechariah 3:1-5', none)).toBeGreaterThan(0);
-    // An alias is the script's word only: it does not excuse the word elsewhere.
     expect(lineError('Waggoner preached.', 'Elliot preached', { Ellet: ['Elliot'] })).toBe(0.5);
   });
 });

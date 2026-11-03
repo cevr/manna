@@ -1,41 +1,8 @@
-/**
- * The meaning table's file, made from the model's vectors with no model in
- * the loop: pure functions, so a test holds each rule and two builds from
- * the same vectors write the same bytes.
- *
- * The app reads it (`apps/hymnal/src/hymns/meaning.ts`):
- * - `words`: every word the table knows, folded as search folds them, sorted
- *   by code unit and joined by spaces;
- * - `table`: per word, its vector (the model run on the word alone) at 4
- *   bits a value, two values a byte, the high half first, each value plus 8
- *   (1–15), `dims / 2` bytes a word, in base64 (a word's row is
- *   `dims * 2 / 3` characters, so each row decodes alone);
- * - `weights`: per word, a 32-bit float, little-endian, in base64: its
- *   weight in a query (SIF: rare words count more) times its row's scale;
- *   0 for a word so common in the hymnal that it says nothing (`FLOOR`);
- * - `hymns`: the hymn numbers, joined by spaces, in the vectors' order;
- * - `vectors`: per hymn, its vector (the model run on its title and words)
- *   at 8 bits a value, `dims` bytes a hymn, in base64;
- * - `lengths`: per hymn, one over the length of its 8-bit vector, a 32-bit
- *   float, little-endian, in base64, so the app reads a cosine with no pass
- *   over the vectors of its own.
- *
- * A query's vector is the weighted sum of its words' rows; the hymns about
- * it are the hymns whose vectors lie nearest by cosine, which no hymn's
- * scale changes, so the file keeps none.
- *
- * The file is a Model Derivative of EmbeddingGemma under the Gemma Terms
- * of Use, so its text opens with the exported notice that it is modified
- * from the model (`NOTICE`); `apps/hymnal/assets/meaning/LICENSE` says the rest.
- */
-
 import { fold } from '../../src/fold.js';
 
-/** A text's words, folded as the app's search folds them. */
 export const wordsOf = (text: string): ReadonlyArray<string> =>
   fold(text).split(' ').filter(Boolean);
 
-/** The words of the table: the word list's whole words of 2 letters or more, and every word the hymns hold, once, sorted by code unit. */
 export const vocabularyOf = (
   list: ReadonlyArray<string>,
   hymnWords: Iterable<string>,
@@ -44,20 +11,10 @@ export const vocabularyOf = (
     (a, b) => (a < b ? -1 : Number(a > b)),
   );
 
-/** SIF's smoothing: a word as common as one in a thousand of the hymnal's counts half. */
 export const SIF = 1e-3;
 
-/**
- * The weight under which a word counts nothing in a query: the hymnal's
- * fifteen commonest words (`the`, `and`, `of` and the like), each more than
- * about one in a hundred of its words. A query of them alone finds no hymn.
- */
 export const FLOOR = 0.1;
 
-/**
- * Each word's weight in a query: `SIF / (SIF + its share of the hymnal's
- * words)`, or 0 under `FLOOR`; a word the hymns lack weighs 1.
- */
 export const weightsOf = (
   vocabulary: ReadonlyArray<string>,
   counts: ReadonlyMap<string, number>,
@@ -69,10 +26,8 @@ export const weightsOf = (
   });
 };
 
-/** Where a word row's 4-bit values are clipped: three times the row's root mean square. */
 export const CLIP = 3;
 
-/** A word's row at 4 bits a value (-7 to 7, stored plus 8, two a byte, high half first), and the scale that multiplies them back. */
 export const int4Row = (row: Float32Array) => {
   let most = 0;
   let squares = 0;
@@ -90,7 +45,6 @@ export const int4Row = (row: Float32Array) => {
   return { bytes, scale };
 };
 
-/** A hymn's row at 8 bits a value (-127 to 127), and the scale that multiplies them back. */
 export const int8Row = (row: Float32Array) => {
   let most = 0;
   for (const x of row) most = Math.max(most, Math.abs(x));
@@ -112,11 +66,6 @@ export interface MeaningFile {
 const base64 = (bytes: ArrayBufferView) =>
   Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString('base64');
 
-/**
- * The file from the model's vectors: `wordRows` (one row of `dims` per word
- * of `vocabulary`) and `hymnRows` (one per hymn of `numbers`), each row the
- * model's output, unit length.
- */
 export const meaningFileOf = ({
   source,
   dims,
@@ -160,11 +109,6 @@ export const meaningFileOf = ({
   };
 };
 
-/**
- * The notice the file carries: it is modified from EmbeddingGemma, and
- * under the Gemma Terms of Use with their use restrictions (section 3.1
- * asks a modified file to say so).
- */
 export const NOTICE =
   'The meaning table, made by `packages/hymnal/scripts/meaning/build.ts` (its format: `table.ts` there). Do not edit. ' +
   'Modified from EmbeddingGemma (google/embeddinggemma-300m), a Gemma model by Google: the model ' +
@@ -173,20 +117,12 @@ export const NOTICE =
   '(a copy: `gemma-terms.js` beside this file). This file is under those Terms, not the ' +
   "repository's licence, and its use is subject to their section 3.2 use restrictions (`LICENSE`).";
 
-/** The file's opening lines: its exported `notice`, as the formatter writes it. */
 export const NOTICE_LINES: ReadonlyArray<string> = [
   'export const notice =',
   `  ${JSON.stringify(NOTICE)};`,
 ];
 
-/**
- * The file's text: a module whose one export makes the table when called,
- * so the app reads its strings on the first meaning search, never at start;
- * written as the formatter leaves it. Its strings hold no quote and no
- * backslash, so each is written as it is.
- */
 export const textOf = (file: MeaningFile): string => {
-  /** A field as the formatter writes it: on its key's line when it fits in 100 columns, else on the next. */
   const field = (key: string, value: string) => {
     const line = `  ${key}: ${value},`;
     return line.length <= 100 ? line : `  ${key}:\n    ${value},`;

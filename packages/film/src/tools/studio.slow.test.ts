@@ -1,8 +1,3 @@
-// The lab's `studio` routes as an ask's take block calls them, over fakes: a
-// beat's attempts listed, each kept or not and in its line or not, and one
-// played back by its name; a beat or a file the film lacks refused. No
-// network, no ffmpeg.
-
 import { AskMaterials } from './ask-materials.ts';
 import { AskStore } from './ask-store.ts';
 import { describe, expect, it } from 'effect-bun-test';
@@ -65,12 +60,9 @@ const film = testFilm(scenes, staged);
 
 const setup = (
   recorded: ReadonlyMap<string, string>,
-  /** What `film mix` does beside being counted: a test that times the mixes slows it. */
   remixing: Effect.Effect<void> = Effect.void,
-  /** What stands around each fresh keep of `beat`: a test that times the keeps marks them. */
   keeping: <A, E>(beat: string, keep: Effect.Effect<A, E>) => Effect.Effect<A, E> = (_, keep) =>
     keep,
-  /** What `keep-voice` answers of what it kept: a test of an older film CLI says less. */
   answering: (kept: OptionsKept) => OptionsKept = (kept) => kept,
 ) => {
   const files = new Map<string, Uint8Array>([
@@ -82,11 +74,8 @@ const setup = (
     ],
   ]);
   const mixes: Array<string> = [];
-  /** How many fresh reads of the script and voice the studio asked for. */
   const reads: Array<string> = [];
-  /** The film's sources' stamp: a test moves it when it changes a source. */
   const stamp = { now: 1 };
-  /** The film's lines as its files say them now: a test edits one while the lab runs. */
   const source = { scenes: film.scenes };
   const repo = Layer.effect(
     FilmRepo,
@@ -105,8 +94,6 @@ const setup = (
       });
     }),
   );
-  // The fresh process, over the film as it is stored now: `film read voice`, `film options
-  // list` (its voices) and `keep-voice`, whose mix is counted, and `keeping` stands around.
   const fresh = Layer.unwrap(
     Effect.map(
       Effect.context<FilmRepo | Takes | ContentStore | FileSystem.FileSystem | Path.Path>(),
@@ -145,7 +132,6 @@ const setup = (
     fakeMedia(files),
     formatAsIs,
   );
-  // The lab's handler serves the studio: its notes, source and review services only have to exist.
   const folder = Layer.succeed(
     FilmFolder,
     FilmFolder.of({
@@ -156,8 +142,6 @@ const setup = (
       stamp: () => Effect.sync(() => stamp.now),
     }),
   );
-  // The lab's handler serves the studio: its notes, scenes and renders only have to exist; its
-  // writes and the choices routes' are real.
   const layer = Layer.mergeAll(
     NotesStore.layer,
     ProductionStore.layer,
@@ -171,7 +155,6 @@ const setup = (
     echoPages,
     Choices.layer,
   ).pipe(
-    // An ask's take is read as the studio reads it: the asks need the readings too.
     Layer.provideMerge(StudioReadings.layer),
     Layer.provideMerge(Layer.mergeAll(SourceWriter.layer, RenderCatalogue.layer, noRenders)),
     Layer.provideMerge(Layer.mergeAll(folder, fresh)),
@@ -202,13 +185,11 @@ const call = (request: Request) =>
     const res = yield* Effect.promise(() => studio(request, bound));
     const type = res.headers.get('content-type');
     const raw = yield* Effect.promise(() => res.text());
-    // Audio answers stay text; JSON answers are parsed to decode against their Schema.
     if (!String(type).includes('json')) return { status: res.status, type, body: raw as unknown };
     const body = yield* Schema.decodeEffect(Json)(raw);
     return { status: res.status, type, body };
   });
 
-/** Beat `a`'s attempt `file`, heard as `heard`, its take's text hashed as `hash`, recorded at `at`. */
 const attemptOf = (file: string, heard: string, hash: string, at: number): Attempt => ({
   beat: 'a',
   file,
@@ -218,7 +199,6 @@ const attemptOf = (file: string, heard: string, hash: string, at: number): Attem
   at,
 });
 
-/** Beat `a`'s attempts on disk: the take its timings name, and an older line's. */
 const seeded = (files: Map<string, Uint8Array>) => {
   const attempts = [
     attemptOf('a.old.flac', 'Hello there world.', 'h-old', 1),

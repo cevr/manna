@@ -1,22 +1,3 @@
-// Drawing a cast member's sheet (`film concept cast`): tries of one kind of
-// sheet on the image route, each measured as it lands and recorded in the
-// member's `cast-sheet.json`, its image and its measure under the film's
-// `out/`. The brief is `castSheetBrief`'s: the house block made a sheet's,
-// the references' note, the member's look (`look.md` beside the record), the
-// kind's layout and the sheet rules. Tries run side by side in lanes (three
-// at most: the route's own limit).
-//
-// The retry gate: a try the measure flags is drawn once more, each drift
-// named in its prompt in words, and a try flagged on facing or on the canon
-// rides with the underlay (`core/cast-underlay.ts`) as its last reference,
-// since words alone turned 3 of 9 prototype sheets the right way. The
-// underlay stands each view's figure at its own size (`statureOf`: the
-// member's heads, and a smaller figure's share of the grown height), so a
-// sheet of a child beside the grown member gets a child in the child's
-// column. A retry
-// that still drifts is recorded with its flags, never dropped: the ask shows
-// it after the clean ones.
-
 import type { PlatformError } from 'effect/PlatformError';
 import {
   Array as Arr,
@@ -69,30 +50,22 @@ import { FileInvalid } from './errors.ts';
 import { ImageRoute, PANEL_SIZE } from './image-route.ts';
 import { decodePng, encodePng } from './png.ts';
 
-/** The most tries drawn at once: the image route's own limit. */
 export const CAST_LANES = 3;
 
-/** Where one member's sheet is kept and where its tries land. */
 interface CastPlace {
-  /** The `cast-sheet/` folder: `cast-sheet.json`, `look.md` and the reference images. */
   readonly folder: string;
-  /** The film's output folder for the member: tries, measures, the underlay. */
   readonly out: string;
 }
 
-/** A run of one kind of sheet. */
 interface CastRun {
   readonly kind: SheetKind;
   readonly tries: number;
   readonly lanes: number;
-  /** Print each prompt and draw nothing. */
   readonly dryRun: boolean;
-  /** The house block every concept prompt opens with, and its reference image. */
   readonly house: string;
   readonly houseImage: string;
 }
 
-/** A line a run prints: a try made (with its flags), one that drew nothing, or (dry) the prompt it would send. */
 type CastLine =
   | {
       readonly _tag: 'Made';
@@ -115,7 +88,6 @@ type CastLine =
       readonly refs: ReadonlyArray<string>;
     };
 
-/** One line of a run's output. */
 export const castLine: (line: CastLine) => string = Match.type<CastLine>().pipe(
   Match.tagsExhaustive({
     Made: (l) =>
@@ -128,10 +100,8 @@ export const castLine: (line: CastLine) => string = Match.type<CastLine>().pipe(
   }),
 );
 
-/** The checks a retry answers with the underlay as well as words: facing and the canon. */
 const UNDERLAID: ReadonlySet<SheetCheck> = new Set(['facing', 'sameWay', 'roll', 'squash']);
 
-/** How a slot reads in a prompt. */
 const facingWords = (slot: Option.Option<Slot>): string =>
   Match.value(Option.getOrElse(slot, () => 'free' as const)).pipe(
     Match.when('front', () => 'the viewer straight on'),
@@ -141,23 +111,16 @@ const facingWords = (slot: Option.Option<Slot>): string =>
     Match.orElse(() => 'as its pose says'),
   );
 
-/** What a retry's drifts are said against: the sheet's slots, and the anchor view of the try it redraws as measured. */
 interface Drifting {
   readonly slots: ReadonlyArray<Slot>;
   readonly anchor: Option.Option<SheetMeasure['views'][number]>;
-  /** Every view as the try measured it. */
   readonly views: ReadonlyArray<SheetMeasure['views'][number]>;
-  /** A heads sheet: a head is held by its width to its turn's first head, not by its height to the anchor. */
   readonly heads: boolean;
-  /** The anchor view, by its number on the sheet. */
   readonly anchorView: number;
-  /** Each view's stature (`statureOf`): its share of the grown height and its own heads. */
   readonly stature: (view: number) => Stature;
-  /** Whether the sheet draws a smaller figure beside the grown member. */
   readonly smaller: boolean;
 }
 
-/** A view's size against the anchor's: its share of the anchor's height, and its head's share of the anchor's head. */
 const besideAnchor = (held: Drifting, view: number) => {
   const own = held.stature(view);
   const anchor = held.stature(held.anchorView);
@@ -167,20 +130,13 @@ const besideAnchor = (held: Drifting, view: number) => {
   };
 };
 
-/** Whether a view is drawn at the anchor's own size. */
 const atAnchorSize = (held: Drifting, view: number): boolean => {
   const { height, head } = besideAnchor(held, view);
   return Math.abs(height - 1) < 0.005 && Math.abs(head - 1) < 0.005;
 };
 
-/** A percentage in words: "67 %". */
 const percent = (x: number): string => `${Math.round(100 * x)} %`;
 
-/**
- * A drift said for each view at its own size: the views at the anchor's
- * size in one sentence (`grown`), each smaller figure in its own (`own`), so
- * a retry never asks a child to stand as tall as the grown member.
- */
 const bySize = (
   held: Drifting,
   views: ReadonlyArray<number>,
@@ -196,7 +152,6 @@ const bySize = (
   ].join(' ');
 };
 
-/** A share in words, for a prompt beside its number: "about a third of". */
 const shareWords = (x: number): string =>
   (x < 0.22 && 'under a quarter of') ||
   (x < 0.29 && 'about a quarter of') ||
@@ -205,11 +160,9 @@ const shareWords = (x: number): string =>
   (x < 0.55 && 'about half of') ||
   'more than half of';
 
-/** A list in words: "a, b and c". */
 const listed = (xs: ReadonlyArray<string>): string =>
   [xs.slice(0, -1).join(', '), ...xs.slice(-1)].filter((x) => x !== '').join(' and ');
 
-/** The anchor's head and hands, its papers, in words and numbers: what a head, hand or papers drift is held to. */
 const anchorSizes = (held: Drifting, views: ReadonlyArray<number>) =>
   Option.map(held.anchor, (a) => {
     const drifted = views.filter((v) => v !== a.view);
@@ -238,7 +191,6 @@ const anchorSizes = (held: Drifting, views: ReadonlyArray<number>) =>
     };
   });
 
-/** A drift said against the anchor's own number when the try measured one, else in words alone. */
 const heldTo = (
   held: Drifting,
   views: ReadonlyArray<number>,
@@ -253,7 +205,6 @@ const heldTo = (
     () => plain,
   );
 
-/** A heads sheet's head drift: the head held by its eyes' spacing, which no lock of hair widens, to the head its flag names, its turn's first. */
 const headsDrift = (held: Drifting, views: ReadonlyArray<number>): string => {
   const [drifted, to] = [Arr.get(views, 0), Arr.get(views, 1)];
   const eyes = Option.flatMap(to, (n) =>
@@ -272,7 +223,6 @@ const headsDrift = (held: Drifting, views: ReadonlyArray<number>): string => {
   );
 };
 
-/** One flag as the sentence a retry's prompt adds. */
 const driftOf = (check: SheetCheck, views: ReadonlyArray<number>, held: Drifting): string => {
   const v = views.join(' and ');
   const slots = held.slots;
@@ -382,13 +332,11 @@ const driftOf = (check: SheetCheck, views: ReadonlyArray<number>, held: Drifting
   );
 };
 
-/** How the underlay sizes its figures, in words: one height in heads, or each at its own size. */
 const underlaySizes = (options: SheetOptions): string =>
   ((options.figures ?? []).length > 0 &&
     `each at its figure's size: a grown one about ${headsWords(grownHeadsOf(options))} of its own heads tall, a smaller one shorter with its head a larger share of it`) ||
   `each about ${headsWords(grownHeadsOf(options))} of its own heads tall`;
 
-/** The references' note: what each image is for, in the order they are sent. */
 const referencesNote = (
   record: CastSheetRecord,
   options: SheetOptions,
@@ -403,7 +351,6 @@ const referencesNote = (
       []),
   ].join(' ');
 
-/** Everything one try needs. */
 interface TryContext {
   readonly place: CastPlace;
   readonly run: CastRun;
@@ -411,18 +358,14 @@ interface TryContext {
   readonly look: string;
   readonly layout: string;
   readonly plan: CastKindPlan;
-  /** The measure's options: the plan's, each kept concept measured and held to its views. */
   readonly options: SheetOptions;
-  /** The underlay's file, and its drawing, run by each retry that sends it. */
   readonly underlay: {
     readonly file: string;
     readonly drawn: Effect.Effect<void, PlatformError>;
-    /** Whether it draws any mannequin: a heads sheet's, or a pose sheet's with no standing view, draws none and is never sent. */
     readonly shown: boolean;
   };
 }
 
-/** A try's prompt and references: the brief, with each drift of the try it redraws named after it. */
 const requestOf = (ctx: TryContext, drifts: ReadonlyArray<string>, underlay: boolean) =>
   Effect.gen(function* () {
     const path = yield* Path.Path;
@@ -452,10 +395,8 @@ const requestOf = (ctx: TryContext, drifts: ReadonlyArray<string>, underlay: boo
     return { prompt, refs };
   });
 
-/** The measure's flags as the record keeps them. */
 const flagsOf = (m: SheetMeasure) => m.flags.map((f) => ({ check: f.check, views: f.views }));
 
-/** A try's image drawn: its bytes, read back from a scratch file the route writes. */
 const drawBytes = Effect.fn('Cast.drawBytes')(function* (
   place: CastPlace,
   request: { readonly prompt: string; readonly refs: ReadonlyArray<string> },
@@ -475,7 +416,6 @@ const drawBytes = Effect.fn('Cast.drawBytes')(function* (
     );
 });
 
-/** A try's measure written beside its image (`<stem>.measure.md`, `.overlay.png` and `.preview.png`, the views as the trace will make them), and its lines and flags. */
 const keepMeasure = Effect.fn('Cast.keepMeasure')(function* (
   stem: string,
   sheet: Raster,
@@ -503,11 +443,6 @@ const keepMeasure = Effect.fn('Cast.keepMeasure')(function* (
   return { lines: sheetLines(name, m), flags: flagsOf(m), squash, unread: {} };
 });
 
-/**
- * One try drawn, measured and recorded: its number is taken under the
- * record's lock, so lanes drawing at once never share one. Its image and its
- * measure land in the place's `out/` as `<kind>-<n>.*`.
- */
 const drawTry = Effect.fn('Cast.drawTry')(function* (
   ctx: TryContext,
   drifts: ReadonlyArray<string>,
@@ -539,7 +474,6 @@ const drawTry = Effect.fn('Cast.drawTry')(function* (
         n,
         file: path.relative(ctx.place.out, `${stem}.png`),
         prompt: request.prompt,
-        // Each reference as the sheet's folder reaches it: the record names no machine's paths.
         refs: request.refs.map((ref) => path.relative(ctx.place.folder, ref)),
         underlay,
         ...Option.match(retryOf, { onNone: () => ({}), onSome: (r) => ({ retryOf: r }) }),
@@ -555,10 +489,8 @@ const drawTry = Effect.fn('Cast.drawTry')(function* (
   return { tried, measure: Result.getSuccess(measured) };
 });
 
-/** A try that drew nothing: no tries made. */
 const NONE_MADE: ReadonlyArray<CastTry> = [];
 
-/** A kept concept whose crop shows no figure the measure reads. */
 class CastConceptUnread extends Schema.TaggedError<CastConceptUnread>()('CastConceptUnread', {
   file: Schema.String,
   reason: Schema.String,
@@ -568,7 +500,6 @@ class CastConceptUnread extends Schema.TaggedError<CastConceptUnread>()('CastCon
   }
 }
 
-/** Each kept concept the plan names, cropped to its box and measured, held to each of its views. */
 export const conceptsOf = Effect.fn('Cast.concepts')(function* (
   place: CastPlace,
   plan: CastKindPlan,
@@ -591,7 +522,6 @@ export const conceptsOf = Effect.fn('Cast.concepts')(function* (
   return held.flat();
 });
 
-/** One try and, when the measure flags it, its one retry: each drift in words, the underlay on facing or the canon. */
 const gatedTry = (ctx: TryContext, emit: (line: CastLine) => Effect.Effect<void>) =>
   drawTry(ctx, [], false, Option.none(), emit).pipe(
     Effect.flatMap(({ tried: first, measure }) => {
@@ -621,13 +551,6 @@ const gatedTry = (ctx: TryContext, emit: (line: CastLine) => Effect.Effect<void>
     ),
   );
 
-/**
- * The member's record, look and plan for one kind of its sheet: the layout in
- * words (a turnaround's from the record's pronoun) and the measure's options,
- * each kept concept measured and held to its views. Every try is drawn and
- * measured from these, and `film concept brief` and `measure` read a record
- * through them.
- */
 export const castPlanOf = Effect.fn('Cast.plan')(function* (place: CastPlace, kind: SheetKind) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -641,11 +564,6 @@ export const castPlanOf = Effect.fn('Cast.plan')(function* (place: CastPlace, ki
   return { record, look, plan, layout, options };
 });
 
-/**
- * Draw `run.tries` tries of the member's `run.kind` sheet, `run.lanes` at
- * once, each gated by the measure; every try lands in the record. A dry run
- * prints the first try's prompt and references and draws nothing.
- */
 export const makeCastSheet = Effect.fn('Cast.make')(function* (
   place: CastPlace,
   run: CastRun,
@@ -664,18 +582,15 @@ export const makeCastSheet = Effect.fn('Cast.make')(function* (
   return made.flat();
 });
 
-/** The prompt and references the first try of a run is drawn from, built as the run builds them: `film concept brief` prints its prompt. */
 export const castRequest = (place: CastPlace, run: CastRun) =>
   Effect.map(tryPlan(place, run), ({ first }) => first);
 
-/** Everything a run's tries are drawn from, and its first try's request. */
 const tryPlan = Effect.fn('Cast.tryPlan')(function* (place: CastPlace, run: CastRun) {
   const path = yield* Path.Path;
   const store = yield* ContentStore;
   const { record, look, plan, layout, options } = yield* castPlanOf(place, run.kind);
   const file = path.join(place.out, `underlay-${run.kind}.png`);
   const slots = plan.options.slots ?? [];
-  // The mannequins stand: a heads sheet draws none, and a pose sheet only its standing views.
   const shown =
     (run.kind !== 'heads' &&
       standingOf(
@@ -684,7 +599,6 @@ const tryPlan = Effect.fn('Cast.tryPlan')(function* (place: CastPlace, run: Cast
       )) ||
     [];
   const profiles = (run.kind === 'turnaround' && [3, 5]) || [];
-  // Drawn afresh by each retry that sends it (the slots may have changed since the last run), whole: a lane never reads half of one.
   const statures = slots.map((_, k) => statureOf(plan.options, k + 1));
   const drawn = Effect.sync(() =>
     encodePng(mannequinUnderlay({ slots, profiles, shown, statures })),
@@ -699,7 +613,6 @@ const tryPlan = Effect.fn('Cast.tryPlan')(function* (place: CastPlace, run: Cast
     options,
     underlay: { file, drawn, shown: shown.length > 0 },
   };
-  // The brief is built once before any draw: a house block that moved stops the run, not each try.
   return { ctx, first: yield* requestOf(ctx, [], false) };
 });
 

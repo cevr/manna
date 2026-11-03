@@ -8,7 +8,6 @@ import {
 } from 'ai';
 import { Effect, Layer, Option, Schema, Context } from 'effect';
 
-// Tagged error for AI operations
 export class AIError extends Schema.TaggedError<AIError>()('AIError', {
   operation: Schema.String,
   cause: Schema.Unknown,
@@ -49,10 +48,6 @@ export interface AIService {
   ) => Effect.Effect<{ object: A }, AIError>;
 }
 
-/**
- * Convert an Effect Schema to an AI SDK schema.
- * Uses JSONSchema.make for the JSON schema and Schema.decodeUnknownSync for validation.
- */
 function toAISchema<A>(schema: Schema.Decoder<A>) {
   const doc = Schema.toJsonSchemaDocument(schema);
   const js = { ...doc.schema };
@@ -75,10 +70,6 @@ function toAISchema<A>(schema: Schema.Decoder<A>) {
 }
 
 export class AI extends Context.Service<AI, AIService>()('@manna/cli/services/ai') {
-  /**
-   * Create AI layer from models, deferring to existing AI if present.
-   * This allows tests to provide mock AI that takes precedence.
-   */
   static fromModel(models: ModelService): Layer.Layer<AI> {
     return Layer.effect(
       AI,
@@ -133,7 +124,6 @@ export class AI extends Context.Service<AI, AIService>()('@manna/cli/services/ai
             }),
         }).pipe(
           Effect.map((result) => {
-            // result.text is empty when the final step is a tool call, not a text response
             const text = result.text || [...result.steps].reverse().find((s) => s.text)?.text || '';
             return { text };
           }),

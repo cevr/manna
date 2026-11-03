@@ -1,21 +1,15 @@
-// Sound as numbers: planar PCM, one Float32Array per channel. The mixer makes
-// it and the Media service reads and writes it. Pure and DOM-free.
-
-/** Planar audio: `channels` arrays of `frames` samples each, at `rate` Hz. */
 export interface Pcm {
   readonly rate: number;
   readonly frames: number;
   readonly channels: ReadonlyArray<Float32Array>;
 }
 
-/** Silence: `channels` × `frames` zeros. */
 export const silence = (rate: number, frames: number, channels: number): Pcm => ({
   rate,
   frames,
   channels: Array.from({ length: channels }, () => new Float32Array(frames)),
 });
 
-/** Blocks of one sound (each `channels` wide), joined end to end. */
 export const concat = (rate: number, channels: number, blocks: ReadonlyArray<Pcm>): Pcm => {
   const frames = blocks.reduce((sum, block) => sum + block.frames, 0);
   const out = Array.from({ length: channels }, () => new Float32Array(frames));
@@ -28,7 +22,6 @@ export const concat = (rate: number, channels: number, blocks: ReadonlyArray<Pcm
   return { rate, frames, channels: out };
 };
 
-/** `frames` frames of `pcm` from frame `from`; any past its end are silence. */
 export const slice = (pcm: Pcm, from: number, frames: number): Pcm => ({
   rate: pcm.rate,
   frames,
@@ -39,18 +32,11 @@ export const slice = (pcm: Pcm, from: number, frames: number): Pcm => ({
   }),
 });
 
-/** A stretch of a sound: `frames` frames from frame `from`. */
 interface Piece {
   readonly from: number;
   readonly frames: number;
 }
 
-/**
- * `pieces` of `pcm`, joined end to end in order (a short's spans), each join
- * crossed by a fade: the last `fade` frames before it ramp down to silence and
- * the first `fade` after it ramp up, so a cut between two takes never clicks.
- * The outer edges are left as they are; one piece is a plain slice.
- */
 export const splice = (pcm: Pcm, pieces: ReadonlyArray<Piece>, fade: number): Pcm => {
   const out = concat(
     pcm.rate,
@@ -74,11 +60,6 @@ export const splice = (pcm: Pcm, pieces: ReadonlyArray<Piece>, fade: number): Pc
   return out;
 };
 
-/**
- * `pcm` fading in from silence over its first `seconds` and out to silence
- * over its last (linear, sample by sample: the first and last samples are 0),
- * every sample between as it was. A copy; `pcm` is left alone.
- */
 export const fadeEdges = (pcm: Pcm, seconds: number): Pcm => {
   const n = Math.min(Math.round(seconds * pcm.rate), Math.floor(pcm.frames / 2));
   return {
@@ -95,11 +76,6 @@ export const fadeEdges = (pcm: Pcm, seconds: number): Pcm => {
   };
 };
 
-/**
- * Two channels. Mono spreads to both sides at −3 dB, as libswresample's
- * rematrix does (rematrix.c, `center_mix_level`), which the mix was balanced
- * with; stereo passes through; more channels keep their first two.
- */
 export const toStereo = (pcm: Pcm): Pcm => {
   const [first, second] = pcm.channels;
   if (first === undefined) return silence(pcm.rate, pcm.frames, 2);
@@ -108,7 +84,6 @@ export const toStereo = (pcm: Pcm): Pcm => {
   return { ...pcm, channels: [side, side.slice()] };
 };
 
-/** C's `lrint` in the default rounding mode: to nearest, ties to even. */
 const lrint = (v: number): number => {
   const floor = Math.floor(v);
   const frac = v - floor;
@@ -117,10 +92,6 @@ const lrint = (v: number): number => {
   return floor % 2 === 0 ? floor : floor + 1;
 };
 
-/**
- * Interleaved 16-bit samples, converted as libswresample does
- * (audioconvert.c: `av_clip_int16(lrint(x * (1 << 15)))`).
- */
 export const toInt16 = (pcm: Pcm): Int16Array => {
   const n = pcm.channels.length;
   const out = new Int16Array(pcm.frames * n);
@@ -130,13 +101,11 @@ export const toInt16 = (pcm: Pcm): Int16Array => {
   return out;
 };
 
-/** How loud a sound is, in dBFS: its mean power and its peak (what libavfilter's volumedetect reports). */
 interface Levels {
   readonly mean: number;
   readonly peak: number;
 }
 
-/** `pcm`'s levels over every sample of every channel; silence is −Infinity. */
 export const levels = (pcm: Pcm): Levels => {
   let power = 0;
   let peak = 0;
@@ -152,7 +121,6 @@ export const levels = (pcm: Pcm): Levels => {
   };
 };
 
-/** One channel: the mean of `pcm`'s channels, sample by sample. */
 export const toMono = (pcm: Pcm): Pcm => {
   const out = new Float32Array(pcm.frames);
   const n = Math.max(1, pcm.channels.length);
@@ -161,19 +129,8 @@ export const toMono = (pcm: Pcm): Pcm => {
   return { rate: pcm.rate, frames: pcm.frames, channels: [out] };
 };
 
-/**
- * A window quieter than this, in dBFS (`windowPowers`), holds no speech: the
- * score rises over it, and the balance does not count it as the voice.
- */
 export const SPEECH_GATE = -50;
 
-/**
- * The level in dBFS of each `window` frames of `pcm` from frame `from` to
- * `to`, in order, read as a listener hears it: its sides' power summed (as
- * BS.1770 sums them), so a take played mono at −3 dB a side reads as the take
- * itself. The last window may be short; it is measured over its own length.
- * Silence is −Infinity.
- */
 export const windowPowers = (
   pcm: Pcm,
   window: number,
@@ -194,7 +151,6 @@ export const windowPowers = (
   return out;
 };
 
-/** `pcm` made `db` decibels louder (quieter when negative). */
 export const gain = (pcm: Pcm, db: number): Pcm => {
   const k = 10 ** (db / 20);
   return { ...pcm, channels: pcm.channels.map((channel) => channel.map((x) => x * k)) };

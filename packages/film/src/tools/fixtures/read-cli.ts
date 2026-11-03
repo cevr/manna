@@ -1,8 +1,3 @@
-// `film read` over the films folder its first argument names: the fresh
-// process a test's `FreshFilm` runs (`['bun', <this file>, <films>]`), so a
-// test reads a film the way the lab does, in a process that imports the
-// film's files as they stand.
-
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { Effect, Layer, Stdio } from 'effect';
@@ -11,7 +6,6 @@ import { ContentStore } from '../content-store.ts';
 import { FilmRepo } from '../film-repo.ts';
 import { read } from '../read-cli.ts';
 
-/** The film CLI with `read` alone: `film read …`. */
 const film = Command.make('film').pipe(Command.withSubcommands([read]));
 
 Stdio.Stdio.use(({ args }) =>

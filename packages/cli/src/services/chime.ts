@@ -4,21 +4,12 @@ import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 
 import { getCliRoot } from '~/src/lib/paths';
 
-/**
- * Service for playing audio chimes/notifications.
- */
 export interface ChimeService {
-  /**
-   * Play the done/notification chime.
-   */
   readonly play: Effect.Effect<void, PlatformError.PlatformError>;
 }
 
 export class Chime extends Context.Service<Chime, ChimeService>()('@manna/cli/services/chime') {}
 
-/**
- * Live implementation using the Effect child-process service.
- */
 export const ChimeLive = Layer.effect(
   Chime,
   Effect.gen(function* () {

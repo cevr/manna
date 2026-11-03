@@ -11,7 +11,6 @@ import { LaunchRecord } from './model.ts';
 
 const services = Layer.mergeAll(BunServices.layer, FetchHttpClient.layer);
 
-/** A server that takes every connection and never answers, held for the scope. */
 const silentOrigin = Effect.acquireRelease(
   Effect.sync(() =>
     // oxlint-disable-next-line effect/noGlobals -- a raw socket that never answers, which no Effect service offers.
@@ -20,7 +19,6 @@ const silentOrigin = Effect.acquireRelease(
   (server) => Effect.sync(() => server.stop(true)),
 ).pipe(Effect.map((server) => `http://127.0.0.1:${server.port}`));
 
-/** A server that takes its first connection and never answers it, then answers 200. */
 const stallsOnceOrigin = Effect.acquireRelease(
   Effect.sync(() => {
     let seen = 0;
@@ -42,7 +40,6 @@ const stallsOnceOrigin = Effect.acquireRelease(
   (server) => Effect.sync(() => server.stop(true)),
 ).pipe(Effect.map((server) => `http://127.0.0.1:${server.port}`));
 
-/** A scratch root made for the test, by its real path (as `lsof` names it). */
 const scratchRoot = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   return yield* fs.realPath(yield* fs.makeTempDirectoryScoped({ prefix: 'verify-root-' }));
@@ -137,7 +134,6 @@ describe('the verify instance', () => {
       const fs = yield* FileSystem.FileSystem;
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
       const root = yield* scratchRoot;
-      // A process that is a preview running in the root, as `stop` tells one.
       yield* fs.makeDirectory(`${root}/src/worker`, { recursive: true });
       yield* fs.writeFileString(`${root}/src/worker/preview.ts`, 'setInterval(() => {}, 1000);\n');
       const env = { PATH: yield* Config.String('PATH') };

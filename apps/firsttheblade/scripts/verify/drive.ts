@@ -1,24 +1,3 @@
-/**
- * `verify:drive`: the email list's confirm journeys, driven as a person
- * does in a muted Chrome, on a preview launched for the drive alone and
- * stopped when it ends (`./instance.ts` `launch`). What `agent-browser`
- * cannot do here is why this exists: a context with script off, the confirm
- * page's skeleton caught in the 600 ms it holds, the page's own POST and its
- * loads counted, and a video of each journey.
- *
- * - `confirm`: sign up in the night close, read the letter from the outbox,
- *   open its link; the skeleton shows, then the confirmed notice is drawn in
- *   its place with no second load, the address bar reads
- *   `/subscribe/confirmed`, and a reload shows that page and posts nothing.
- * - `confirm-noscript`: the same with script off; the link opens on the
- *   button, its press answers the confirmed page.
- *
- * Each then signs up again with the confirmed address, the second view of
- * the write: the list says `subscribe.quiet` in the log and no second letter
- * comes. Each step keeps its action, the URL after it, a screenshot and an
- * ARIA snapshot under `<evidence>/<journey>/`, and the journey's video is
- * `<journey>.webm` there.
- */
 import { chromium, type Browser, type Locator, type Page } from '@playwright/test';
 import { Cause, Clock, Effect, Exit, FileSystem, Option, Ref, Schedule, Schema } from 'effect';
 
@@ -33,27 +12,18 @@ import { awaitLetter, readOutbox, redactTokens } from './outbox.ts';
 export const JOURNEYS = ['confirm', 'confirm-noscript'] as const;
 export type JourneyName = (typeof JOURNEYS)[number];
 
-/** Chrome with no sound, as every browser a drive starts. */
 const MUTED = ['--mute-audio', '--disable-audio-output'];
 
 const VIEWPORT = { width: 1280, height: 800 };
 
-/** How long a step waits for what it expects to show. */
 const SHOW_WITHIN = 5000;
 
-/** The least time `src/confirm.ts` holds the skeleton (`HOLD`), less a frame or two of slack. */
 const LEAST_HOLD_MS = 550;
 
 const SIGNUP_LABEL = 'Or have each one sent to you by email';
 
-/** Where `markHold` keeps its marks on the page's window. */
 const HOLD_MARKS = '__verifyHold';
 
-/**
- * Run in the page before its own script: marks, on the page's clock, when
- * the skeleton (a busy status) first shows and when it stops being busy, so
- * the hold is read apart from the drive's own screenshots and waits.
- */
 const markHold = (key: string) => {
   const marks = { shown: -1, answered: -1 };
   Reflect.set(window, key, marks);
@@ -70,7 +40,6 @@ const markHold = (key: string) => {
 
 const HoldMarks = Schema.Struct({ shown: Schema.Finite, answered: Schema.Finite });
 
-/** The skeleton's hold as the page saw it: from its first busy frame to its answer, in ms. */
 const heldOn = Effect.fn('Verify.heldOn')(function* (drive: Drive) {
   const kept = yield* browser(drive, 'confirmed', () =>
     drive.page.evaluate((key): unknown => Reflect.get(window, key), HOLD_MARKS),
@@ -97,12 +66,10 @@ interface Drive {
   readonly email: string;
   readonly startedAt: number;
   readonly steps: Ref.Ref<ReadonlyArray<Step>>;
-  /** The page's loads (a new document), and its POSTs to the confirm route, as they happen. */
   readonly loads: Array<string>;
   readonly posts: Array<string>;
 }
 
-/** A step's failure, its message naming the journey, the step and where its evidence is. */
 export const failed = (drive: Pick<Drive, 'journey' | 'dir'>, step: string, message: string) =>
   JourneyFailed.make({
     journey: drive.journey,
@@ -111,11 +78,9 @@ export const failed = (drive: Pick<Drive, 'journey' | 'dir'>, step: string, mess
     evidence: drive.dir,
   });
 
-/** The first line of a journey's failure, as its failed step keeps it. */
 export const failureLine = (cause: Cause.Cause<unknown>) =>
   redactTokens(Cause.pretty(cause).split('\n')[0] ?? '');
 
-/** A browser call, failed as the step it belongs to. */
 const browser = <A>(drive: Drive, step: string, call: () => PromiseLike<A>) =>
   Effect.tryPromise({ try: call, catch: (cause) => failed(drive, step, String(cause)) });
 
@@ -135,7 +100,6 @@ const pathOf = (page: Page) => new URL(page.url()).pathname;
 
 const StepsJson = Schema.fromJsonString(Steps);
 
-/** The step as it stands now: the URL, a screenshot and an ARIA snapshot, kept beside the others. */
 const record = Effect.fn('Verify.record')(function* (
   drive: Drive,
   step: string,
@@ -164,7 +128,6 @@ const record = Effect.fn('Verify.record')(function* (
   );
 });
 
-/** The letter kept beside the steps, its link's token shown as `<token>`. */
 const keepLetter = Effect.fn('Verify.keepLetter')(function* (
   drive: Drive,
   letter: Letter,
@@ -191,7 +154,6 @@ const keepLetter = Effect.fn('Verify.keepLetter')(function* (
   );
 });
 
-/** The night close's form, filled and sent as a person does: the check page follows. */
 const signUp = Effect.fn('Verify.signUp')(function* (drive: Drive, step: string) {
   const { page } = drive;
   yield* browser(drive, step, () => page.goto(`${drive.origin}/`));
@@ -216,7 +178,6 @@ const signUp = Effect.fn('Verify.signUp')(function* (drive: Drive, step: string)
   );
 });
 
-/** The confirm letter to the journey's address, read from the outbox. */
 const confirmLink = Effect.fn('Verify.confirmLink')(function* (drive: Drive) {
   const letter = yield* awaitLetter(drive.outbox, drive.email).pipe(
     Effect.mapError((error) => failed(drive, 'letter', error.message)),
@@ -234,7 +195,6 @@ const confirmLink = Effect.fn('Verify.confirmLink')(function* (drive: Drive) {
   return link;
 });
 
-/** The confirmed notice, as both journeys end on it. */
 const confirmedShows = Effect.fn('Verify.confirmedShows')(function* (drive: Drive, step: string) {
   const { page } = drive;
   yield* shows(
@@ -278,7 +238,6 @@ const quietLines = Effect.fn('Verify.quietLines')(function* (log: string) {
   return text.split('\n').filter((line) => line.includes('[mail] subscribe.quiet')).length;
 });
 
-/** The second view of the write: a confirmed address signs up again, and the list sends nothing. */
 const signsUpAgain = Effect.fn('Verify.signsUpAgain')(function* (drive: Drive) {
   const before = yield* quietLines(drive.log);
   yield* signUp(drive, 'again');
@@ -302,7 +261,6 @@ const signsUpAgain = Effect.fn('Verify.signsUpAgain')(function* (drive: Drive) {
   ]);
 });
 
-/** Script on: the skeleton, then the answer drawn in place. */
 const confirmInPlace = Effect.fn('Verify.confirmInPlace')(function* (drive: Drive) {
   const { page } = drive;
   yield* signUp(drive, 'sign-up');
@@ -369,7 +327,6 @@ const confirmInPlace = Effect.fn('Verify.confirmInPlace')(function* (drive: Driv
   yield* signsUpAgain(drive);
 });
 
-/** Script off: the button, pressed. */
 const confirmByButton = Effect.fn('Verify.confirmByButton')(function* (drive: Drive) {
   const { page } = drive;
   yield* signUp(drive, 'sign-up');
@@ -411,7 +368,6 @@ const JOURNEY_STEPS: Readonly<
   'confirm-noscript': { javaScript: false, run: confirmByButton },
 };
 
-/** The video's length, from its container or, when Chrome left none, its last frame. */
 const secondsOf = Effect.fn('Verify.secondsOf')(function* (file: string) {
   const { out } = yield* run('ffprobe', [
     '-v',
@@ -497,7 +453,6 @@ const journey = Effect.fn('Verify.journey')(function* (name: JourneyName, option
       drive.posts.push(request.url());
   });
   const ran = yield* Effect.exit(spec.run(drive));
-  // A failed step keeps the page as it stood, beside the steps that passed.
   if (Exit.isFailure(ran))
     yield* record(drive, 'failed', 'the journey stopped here', failureLine(ran.cause)).pipe(
       Effect.ignore,
@@ -525,11 +480,6 @@ const journey = Effect.fn('Verify.journey')(function* (name: JourneyName, option
   return report;
 });
 
-/**
- * The journeys named, each in its own context of one muted Chrome, on a
- * preview launched in `root` on `port` for this drive and stopped when it
- * ends. The doctor runs before the first journey.
- */
 export const drive = Effect.fn('Verify.drive')(function* (input: {
   readonly journeys: ReadonlyArray<JourneyName>;
   readonly root: string;

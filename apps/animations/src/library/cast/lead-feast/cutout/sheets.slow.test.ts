@@ -1,10 +1,3 @@
-// The series lead's committed part sheets (`sheets/<view>/`, made by `film
-// concept parts`): each part holds its view's own bytes where his cut gives
-// it the pixel, the parts recompose the view byte for byte, every other
-// pixel a part holds is paint that an opaque part in front hides at rest,
-// each moving part hides some, and the command lays the same files again
-// from the committed okra answers (`--check`).
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { cutParts } from '@manna/film/tools';
 import { Effect, FileSystem, Result, Schema, Stream } from 'effect';
@@ -23,7 +16,6 @@ interface Rgba {
   readonly rgba: Uint8Array;
 }
 
-/** A PNG's RGBA bytes. */
 const rgbaOf = (file: string) =>
   Effect.promise(() => sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true })).pipe(
     Effect.map(({ data, info }) => ({
@@ -33,7 +25,6 @@ const rgbaOf = (file: string) =>
     })),
   );
 
-/** His kept sheet cut at a view's part sheet frame (`frames.ts`): the kept box padded. */
 const framedOf = (view: FramedView) => {
   const [x0, y0, x1, y1] = boxOf(view);
   return Effect.promise(() =>
@@ -51,7 +42,6 @@ const framedOf = (view: FramedView) => {
   );
 };
 
-/** The part names and painted counts a sheet's record holds. */
 const RecordJson = Schema.fromJsonString(
   Schema.Struct({
     parts: Schema.Array(Schema.Struct({ name: Schema.String, painted: Schema.Int })),
@@ -64,12 +54,6 @@ const VIEWS = [
   ['heads-4', 'heads-heads-4'],
 ] as const;
 
-/**
- * The parts read back over the view: the pixels a part holds that are not
- * its view's own where it owns them, the painted pixels no opaque part in
- * front hides, each part's painted count, the parts whose paint is hidden
- * and the view the parts recompose.
- */
 const readBack = (
   view: Rgba,
   owner: Uint8Array,
@@ -98,7 +82,6 @@ const readBack = (
   return { notOwn, visible, painted, hidden: [...hidden].sort(), recomposed };
 };
 
-/** `film concept parts in-its-order lead-feast --view <asked> --check` from the app's folder: its exit code and last line. */
 const check = (asked: string) =>
   Effect.scoped(
     Effect.gen(function* () {

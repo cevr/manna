@@ -1,31 +1,3 @@
-/**
- * `bun scripts/follow.ts --udid <udid> --hymn <n> --out <dir> [--every 500] [--session verify-hymnal] [--no-video] [--stanzas 1,3] [--no-count-in]`:
- * one Play tap on a hymn page, and the sung line followed to the end.
- *
- * `--stanzas` names the stanzas the app's player sheet has chosen for the
- * hymn: the run is judged against the timeline cut to them
- * (`src/player/stanzas.ts`), as the app plays it, and a sample that selects
- * a skipped line fails it (`skipped`).
- *
- * The app's `Intro` switch is on by default, so Play from the start counts
- * one bar of the hymn's meter in before the score clock leaves the first
- * sung line (`src/player/countin.ts`, at 100 %): the judge allows for it
- * (`countInMsOf`). `--no-count-in` judges a run with `Intro` off, whose
- * clock runs from the tap; a run that counted in is then adrift.
- *
- * Run from `apps/hymnal`, on a booted simulator whose app shows hymn `<n>`'s
- * page with sound off (`sim open hymns/<n>`, then `sim tap label=Sound`
- * until the `Sound` button's value reads `unchecked`): it refuses to press
- * Play with sound on. It presses `Play hymn <n>` once and touches nothing else. It records
- * the screen (`<out>/follow-<n>.mp4`; `--no-video` records nothing, for a
- * run whose rules allow no capture of the screen) and reads the accessibility tree
- * (`agent-device snapshot --json`) about every `--every` ms until the
- * player ends, or until the hymn's timeline has run a minute over. Each
- * snapshot is reduced to the lines' selected states and frames and the
- * scroll's frame (`follow/samples.ts`): no words are kept. It writes them
- * with the verdict to `<out>/follow-<n>.json`, prints the verdict as one
- * JSON line, and exits 0 only when it holds.
- */
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
@@ -58,7 +30,6 @@ const RectSchema = Schema.Struct({
   height: Schema.Finite,
 });
 
-/** The part of `agent-device snapshot --json` the check reads. */
 const Snapshot = Schema.Struct({
   data: Schema.Struct({
     nodes: Schema.Array(
@@ -77,7 +48,6 @@ const Snapshot = Schema.Struct({
 
 const decodeSnapshot = Schema.decodeUnknownEffect(Schema.fromJsonString(Snapshot));
 
-/** The printed verdict. */
 const Verdict = Schema.Struct({
   hymn: Schema.Int,
   samples: Schema.Int,
@@ -97,7 +67,6 @@ const Verdict = Schema.Struct({
   holds: Schema.Boolean,
 });
 
-/** The run's record: the verdict and every sample. */
 const Record = Schema.Struct({
   verdict: Verdict,
   samples: Schema.Array(
@@ -113,7 +82,6 @@ const Record = Schema.Struct({
 const encodeVerdict = Schema.encodeSync(Schema.fromJsonString(Verdict));
 const encodeRecord = Schema.encodeSync(Schema.fromJsonString(Record));
 
-/** The run did not hold, or could not start. */
 class FollowFailed extends Schema.TaggedError<FollowFailed>()('FollowFailed', {
   reason: Schema.String,
 }) {
@@ -124,17 +92,10 @@ class FollowFailed extends Schema.TaggedError<FollowFailed>()('FollowFailed', {
 
 const short = Duration.seconds(30);
 
-/** How long past the timeline's end the check waits for the player to end. */
 const OVER = Duration.minutes(1);
 
 const quoted = (value: string) => `"${value.replaceAll('"', '\\"')}"`;
 
-/**
- * The nodes of one snapshot, read without activating the app. `--raw` keeps
- * the lines scrolled out of view, which the presented tree drops
- * (`visibility.reasons` names `scroll-hidden-below`): the judge indexes the
- * lines by their order, so it needs every one.
- */
 const nodesNow = Effect.fn('Follow.nodesNow')(function* (session: string) {
   const output = yield* succeed(
     'agent-device',
@@ -147,7 +108,6 @@ const nodesNow = Effect.fn('Follow.nodesNow')(function* (session: string) {
   return snapshot.data.nodes;
 });
 
-/** Record the simulator's screen into `video` while `drive` runs; the recorder stops on SIGINT. */
 const recording = <A, E, R>(udid: string, video: string, drive: Effect.Effect<A, E, R>) =>
   Effect.scoped(
     Effect.gen(function* () {
@@ -167,11 +127,9 @@ const recording = <A, E, R>(udid: string, video: string, drive: Effect.Effect<A,
     }),
   );
 
-/** Where the run's video goes: `<out>/follow-<n>.mp4`, or nowhere with `--no-video`. */
 export const videoOf = (out: string, hymn: number, noVideo: boolean): Option.Option<string> =>
   Option.liftPredicate(`${out.replace(/\/+$/, '')}/follow-${hymn}.mp4`, () => !noVideo);
 
-/** `--stanzas`' list as a choice: `1,3` is `[1, 3]`, and nothing is every stanza (`[]`). */
 export const choiceOf = (list: string) => {
   const numbers = list
     .split(',')
@@ -181,23 +139,12 @@ export const choiceOf = (list: string) => {
   return Schema.decodeOption(Choice)(Arr.sort(Arr.dedupe(numbers), Order.Number));
 };
 
-/**
- * How long, in ms, the app's score clock holds at the first sung line after
- * the Play tap: one bar of `timeline`'s first tempo in its meter's beat, at
- * 100 %, when Play `counts` in; else 0.
- */
 export const countInMsOf = (timeline: Timeline, counts: boolean): number => {
   if (!counts) return 0;
   const { beats, beatMs } = countInOf(timeline.tempo);
   return beats * beatMs;
 };
 
-/**
- * Hymn `hymn`'s `timeline` as the app's Play sings it with the stanzas
- * `list` names: cut by `keptOf` and `cutOf` over the hymn's words
- * (`readWords`), the time the follow and the player read. No list gives the
- * timeline itself.
- */
 export const sungOf = Effect.fn('Follow.sungOf')(function* (
   hymn: number,
   timeline: Timeline,
@@ -221,7 +168,6 @@ export const sungOf = Effect.fn('Follow.sungOf')(function* (
   return cutOf(timeline, kept).timeline;
 });
 
-/** Press Play once, then sample until the player ends or `limit` ms pass. */
 const play = Effect.fn('Follow.play')(function* (
   session: string,
   hymn: number,

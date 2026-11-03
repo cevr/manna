@@ -1,13 +1,3 @@
-// Upstream: packages/react/src/menu/root/MenuRoot.tsx
-//
-// Groups a menu's parts and owns its state. Opening and closing go through
-// one pipeline: `onOpenChange` (which may cancel), then the interactions
-// hear of it, then the menu records why it changed and whether its
-// transition is skipped. The root wires the interactions the parts share:
-// Escape and outside presses, arrow-key navigation, typeahead, and how it
-// was opened. A menu is vertical, modal, wraps its arrow keys and opens
-// only from its trigger. Upstream's hover opening and submenus are left
-// out: each menu, a context menu included, is the only menu of its tree.
 import type { JSX } from '@solidjs/web';
 import { createEffect, createUniqueId, untrack } from 'solid-js';
 
@@ -34,15 +24,10 @@ import { MenuRootContext, useMenuRootContextOptional } from './MenuRootContext.t
 
 export interface MenuRootProps {
   onOpenChange?: ((open: boolean, eventDetails: MenuChangeEventDetails) => void) | undefined;
-  /** Called after the open or close transition finishes. */
   onOpenChangeComplete?: ((open: boolean) => void) | undefined;
   children?: JSX.Element;
 }
 
-/**
- * Groups all parts of the menu.
- * Doesn't render its own HTML element.
- */
 export function MenuRoot(props: MenuRootProps): JSX.Element {
   const contextMenuContext = useContextMenuRootContext();
   const enclosingStore = useMenuRootContextOptional()?.store;
@@ -88,7 +73,6 @@ export function MenuRoot(props: MenuRootProps): JSX.Element {
       allowOutsidePressDismissal = false;
       return;
     }
-    // A long press or a right-click's own mousedown must not close the menu it just opened.
     allowOutsidePressDismissalTimeout.start(500, () => {
       allowOutsidePressDismissal = true;
     });
@@ -97,7 +81,6 @@ export function MenuRoot(props: MenuRootProps): JSX.Element {
   function setOpen(nextOpen: boolean, eventDetails: BaseUIChangeEventDetails) {
     const reason = eventDetails.reason as MenuChangeEventReason;
     const isOpen = untrack(store.open);
-    // A trigger's cancel-open can ask a closed menu to close.
     if (!nextOpen && !isOpen) {
       return;
     }
@@ -110,7 +93,6 @@ export function MenuRoot(props: MenuRootProps): JSX.Element {
       return;
     }
     const details = eventDetails as MenuChangeEventDetails;
-    // The trigger stays active while closing, so the exit animates from it and focus returns to it.
     if (!nextOpen && eventDetails.trigger == null) {
       eventDetails.trigger = activeTriggerElement ?? undefined;
     }

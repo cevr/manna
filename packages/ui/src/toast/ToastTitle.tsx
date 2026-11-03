@@ -1,9 +1,3 @@
-// Upstream: packages/react/src/toast/title/ToastTitle.tsx,
-// packages/react/src/toast/utils/useToastLabelPart.ts
-//
-// A title that labels the toast: its children, else the toast's `title`.
-// Renders an `<h2>` element, and nothing when there is no content; while it
-// renders, its id is the root's `aria-labelledby`.
 import type { JSX } from '@solidjs/web';
 import { children, createEffect, createMemo, createUniqueId, omit, Show } from 'solid-js';
 
@@ -13,7 +7,6 @@ import { useToastRootContext } from './ToastRootContext.ts';
 import { isRenderableNode } from './utils.ts';
 
 interface ToastTitleState {
-  /** The type of the toast. */
   type: string | undefined;
 }
 

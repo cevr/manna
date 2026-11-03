@@ -1,13 +1,3 @@
-// The lab's routes as the page calls them: a note posted with its still is
-// listed and served, a wait hands back the change, a user reply reopens the
-// thread, and a bad body or an unknown note answers with its status. A page
-// is sent compressed, a streamed one chunk by chunk. A client that leaves
-// mid-build or mid-render, on the real server, leaves the watches whole and
-// stops the render's reads; one that leaves mid-ask of a film's track
-// leaves its next mix heard. The words reader's read of a film's script is
-// run fresh once a stamp, and refused for a film the app has not. And the lab
-// never imports a film: no module its handler runs reaches a loader.
-
 import { describe, expect, it } from 'effect-bun-test';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import {
@@ -67,14 +57,9 @@ import { labInMemory } from './lab/testing.ts';
 import { labWithMcp } from './lab-mcp/testing.ts';
 import { MCP_PATH } from './lab-mcp.ts';
 
-/** The films folder with one film, `f`: a folder with its scenes' index. */
 const files = () =>
   new Map<string, Uint8Array>([['/films/f/scenes/index.ts', text('export {};\n')]]);
 
-/**
- * Pages that read film `f`'s notes as a render does (`PageReads`) and are
- * answered what they read: its status and its body.
- */
 const readingPages = Layer.effect(
   LabPage,
   Effect.map(LabPage, (echo) =>
@@ -90,11 +75,6 @@ const readingPages = Layer.effect(
   ),
 ).pipe(Layer.provideMerge(echoPages));
 
-/**
- * Pages as a test asks them: one asked `?read=<path>` reads that path as a
- * render does and is answered its status and body; one asked `?vary=<v>` is
- * answered with that Vary, as a page that varies by more than its coding.
- */
 const askedPages = Layer.effect(
   LabPage,
   Effect.map(LabPage, (echo) =>
@@ -105,7 +85,6 @@ const askedPages = Layer.effect(
           .searchParams;
         const vary = Option.fromNullishOr(query.get('vary'));
         if (Option.isSome(vary))
-          // Long enough to be compressed (a body under 1 KB is sent as it is).
           return HttpServerResponse.text('a page '.repeat(300), { headers: { vary: vary.value } });
         const { read } = yield* PageReads;
         const response = yield* read(query.get('read') ?? '');
@@ -116,13 +95,8 @@ const askedPages = Layer.effect(
   ),
 ).pipe(Layer.provideMerge(echoPages));
 
-/**
- * A path beside the API's routes that answers nothing: held until its
- * request is gone. Under the API's prefix, as a render reads nothing else.
- */
 const HELD = '/api/held';
 
-/** The held path's route: `asked` is done once it is asked, `ended` once its request is stopped. */
 const heldRoute = (ended: Deferred.Deferred<void>, asked?: Deferred.Deferred<void>) =>
   HttpRouter.add(
     'GET',
@@ -135,10 +109,6 @@ const heldRoute = (ended: Deferred.Deferred<void>, asked?: Deferred.Deferred<voi
     ).pipe(Effect.onInterrupt(() => Deferred.done(ended, Exit.void))),
   );
 
-/**
- * Pages whose render reads the held path and gives the read up after a
- * moment, as a render whose request is gone does: answered `gave up`.
- */
 const givingUpPages = Layer.effect(
   LabPage,
   Effect.map(LabPage, (echo) =>
@@ -155,13 +125,10 @@ const givingUpPages = Layer.effect(
   ),
 ).pipe(Layer.provideMerge(echoPages));
 
-/** A server-rendered page's shell, sent at once. */
 const SHELL = '<!doctype html><html><head></head><body><main>the shell</main>';
 
-/** The rest of the page, sent once its render ends. */
 const REST = '<p>the rest</p></body></html>';
 
-/** Pages streamed as a server render streams them: the shell, then the rest once `ended` is done. */
 const streamingPages = (ended: Deferred.Deferred<void>) =>
   Layer.effect(
     LabPage,
@@ -183,7 +150,6 @@ const streamingPages = (ended: Deferred.Deferred<void>) =>
     ),
   ).pipe(Layer.provideMerge(echoPages));
 
-/** A reader of a gzipped response's body as text, as it arrives. */
 const gunzipped = (response: Response) =>
   Option.match(Option.fromNullishOr(response.body), {
     onNone: () => new ReadableStream<string>().getReader(),
@@ -194,7 +160,6 @@ const gunzipped = (response: Response) =>
         .getReader(),
   });
 
-/** What `reader` gives until it has `length` characters or ends. */
 const readTo = (
   reader: ReadableStreamDefaultReader<string>,
   length: number,
@@ -210,12 +175,10 @@ const readTo = (
   );
 };
 
-/** Where the lab server listens: the only host the routes answer to. */
 const bound = { hostname: '127.0.0.1', port: 4401 } as const;
 
 const at = (path: string) => `http://127.0.0.1:4401${path}`;
 
-/** A write as the lab's page sends it: a JSON body, and any headers of the test's own. */
 const post = (path: string, body: string, headers: Record<string, string> = {}) =>
   new Request(at(path), {
     method: 'POST',
@@ -223,17 +186,11 @@ const post = (path: string, body: string, headers: Record<string, string> = {}) 
     body,
   });
 
-/** What a console was written: each line, by the stream it went to. */
 interface Written {
   readonly stderr: Array<string>;
   readonly stdout: Array<string>;
 }
 
-/**
- * The lab's logging as the CLI gives it, at the root around everything it
- * runs (logs to stderr, through the default logger), onto a console that
- * keeps each line in `written` by its stream, and prints none.
- */
 const loggingInto = (written: Written) => {
   const line = (args: ReadonlyArray<unknown>) => args.map(String).join(' ');
   return Layer.mergeAll(
@@ -250,7 +207,6 @@ const loggingInto = (written: Written) => {
   );
 };
 
-/** The lines of `lines` that log `event`, from the event's name on, the logger's prefix gone. */
 const eventLines = (lines: ReadonlyArray<string>, event: string) =>
   lines.flatMap((line) => {
     const at = line.indexOf(`${event} `);
@@ -258,42 +214,26 @@ const eventLines = (lines: ReadonlyArray<string>, event: string) =>
     return [line.slice(at)];
   });
 
-/** A GET with the test's headers. */
 const get = (path: string, headers: Record<string, string> = {}) =>
   new Request(at(path), { method: 'GET', headers });
 
-/** The names that import a film's modules, or the app's sound library, in the process that calls them. */
 const LOADERS: ReadonlySet<string> = new Set(['importFilmModule', 'libraryModule']);
 
-/**
- * Where the loaders are declared, beside the services that call them
- * (`FilmRepo`): `lab-context.types.ts` holds those services out of the lab.
- */
 const DECLARER = 'film-repo.ts';
 
-/** How the parser reads `file`: JSX only in a `.tsx`. */
 const langOf = (file: string): 'ts' | 'tsx' => {
   if (file.endsWith('.tsx')) return 'tsx';
   return 'ts';
 };
 
-/** An `import(…)`'s specifier when it is a string literal (a module of the framework's own), else none. */
 const literalOf = (source: string, request: { readonly start: number; readonly end: number }) =>
   Option.fromNullishOr(/^['"]([^'"]*)['"]$/.exec(source.slice(request.start, request.end))?.[1]);
 
-/**
- * Each module `labHandler` runs, followed from `lab.ts` through its relative
- * value imports, re-exports and literal `import('./…')`s (an `import type` is
- * gone at run time), with the loaders it imports and each `import()` of a
- * path it computes (what a loader is). A loader reached through a function
- * is in this list, where the typed guard sees only services.
- */
 const loadersReached = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const reached = new Map<string, ReadonlyArray<string>>();
   const next = [path.join(import.meta.dir, 'lab.ts')];
-  // A for-of over an array visits what is pushed onto it while it runs.
   for (const file of next) {
     if (reached.has(file)) continue;
     const source = yield* fs.readFileString(file);
@@ -330,21 +270,14 @@ const loadersReached = Effect.gen(function* () {
   );
 });
 
-/** The folder a build stops reading, then reads again (`drivenPages`). */
 const DROPPED = '/app/b';
 
-/** The sources a driven build reads beside its entries, one in each of two folders. */
 const SOURCES = ['/app/a/x.ts', `${DROPPED}/y.ts`] as const;
 
-/** What a test drives the app's pages by (`drivenPages`). */
 interface DrivenService {
-  /** `file` saved as `source`, and its folder's watch told. */
   readonly save: (file: string, source: string) => Effect.Effect<void>;
-  /** The sources a build reads beside its entries. */
   readonly reads: Ref.Ref<ReadonlyArray<string>>;
-  /** The folders whose watch runs now, sorted, once each watch. */
   readonly watched: Effect.Effect<ReadonlyArray<string>>;
-  /** While true, the watch of `DROPPED` is done on `dropping` as it is let go and ends once `release` is. */
   readonly held: Ref.Ref<boolean>;
   readonly dropping: Deferred.Deferred<void>;
   readonly release: Deferred.Deferred<void>;
@@ -354,13 +287,6 @@ class Driven extends Context.Service<Driven, DrivenService>()(
   '@manna/film/tools/lab.test/Driven',
 ) {}
 
-/**
- * The app's pages (`LabPage`, beside `echoPages`' easel) over files in
- * memory, built by the test bundler with the sources `Driven.reads` names
- * beside their entries (a server entry, `server`, for the ask page when
- * given), rendered by `renderer`, and watched by watches the test drives
- * (`Driven`).
- */
 const drivenPages = (
   renderer: Layer.Layer<PageRenderer>,
   server: Option.Option<string> = Option.none(),
@@ -461,18 +387,10 @@ const drivenPages = (
     }),
   ).pipe(Layer.provide(Path.layer));
 
-/** Film `f`'s mixed track on disk (`trackPages`). */
 const TRACK = '/app/films/f/narration/full.wav';
 
-/** When `TRACK` was first mixed (ms). */
 const MIXED_AT = 1_900_000_000_000;
 
-/**
- * The app's pages over film `f` and its track (`TRACK`, first mixed at
- * `MIXED_AT`) in `files`, each file's mtime as `mtimes` keeps it, and no
- * watch that ever hears a save: the first look for the track's folder (as
- * its watch is made) is done on `arming` and held until `armed` is.
- */
 const trackPages = (
   files: Map<string, Uint8Array>,
   mtimes: Map<string, number>,
@@ -517,12 +435,10 @@ const trackPages = (
   );
 };
 
-/** The pages' build now, as a page another server served hears it at once. */
 const buildNow = Effect.flatMap(LabPage, (page) =>
   page.wait({ since: 0, server: Option.some('another'), film: Option.none() }, 0),
 );
 
-/** A wait past the build now, once `change` is made: the build that heard it. */
 const heardOf = <E, R>(change: Effect.Effect<void, E, R>) =>
   Effect.gen(function* () {
     const since = (yield* buildNow).build;
@@ -532,13 +448,9 @@ const heardOf = <E, R>(change: Effect.Effect<void, E, R>) =>
       .build;
   });
 
-/** A beat's delivery marks as a page writes them (`MarksPost`): none, on beat `hand`. */
 const marks = '{"beat":"hand","marks":[]}';
 
 describe('the lab loads no film', () => {
-  // The lab runs for days and Bun keeps a module as it first imported it: a
-  // module the lab runs that imports a film reads it as it was at the lab's
-  // start. Each read of a film's modules runs fresh (`FreshFilm`).
   it.effect('no module the lab runs imports a loader or a computed import()', () =>
     Effect.gen(function* () {
       const reached = yield* loadersReached;
@@ -575,7 +487,6 @@ describe('lab routes', () => {
           const page = yield* Effect.promise(() => lab(get(asked), bound).then((r) => r.text()));
           expect([path, page]).toEqual([path, `404 {"_tag":"RouteUnknown","path":"${path}"}`]);
         }
-        // An API path is read as ever.
         const notes = labUrls.board.read({ params: { film: 'f' } });
         const read = `/asks/a1?read=${encodeURIComponent(notes)}`;
         expect(yield* Effect.promise(() => lab(get(read), bound).then((r) => r.text()))).toMatch(
@@ -631,8 +542,6 @@ describe('lab routes', () => {
         Effect.map(LabPage, (echo) =>
           LabPage.of({
             ...echo,
-            // The service needs nothing, as the real one does; the finalizer
-            // lands on the Scope in the fiber's context, the handler's.
             wait: () =>
               Effect.withFiber((fiber) =>
                 Option.match(Context.getOption(fiber.context, Scope.Scope), {
@@ -682,7 +591,6 @@ describe('lab routes', () => {
         new TextEncoder().encode(body).length,
       );
       expect(yield* Effect.promise(() => head.text())).toBe('');
-      // A route that takes no GET takes no HEAD either.
       const added = labUrls.script.marks({ params: { film: 'f' } });
       const refused = yield* Effect.promise(() =>
         lab(new Request(at(added), { method: 'HEAD' }), bound),
@@ -742,8 +650,6 @@ describe('lab routes', () => {
       page: Effect.succeed(HttpServerResponse.text('page')),
       beside: Layer.empty,
     });
-    // The handler's own type names the service its global middleware needs
-    // (a type error here when it does not).
     const names: Label extends Effect.Services<typeof served> ? true : false = true;
     expect(names).toBe(true);
     return Effect.gen(function* () {
@@ -775,7 +681,6 @@ describe('lab routes', () => {
           'Accept-Encoding',
         ]);
         const reader = gunzipped(zipped);
-        // The render has not ended: its shell is read all the same.
         const shell = yield* readTo(reader, SHELL.length).pipe(Effect.timeoutOption('2 seconds'));
         expect(shell).toEqual(Option.some(SHELL));
         yield* Deferred.done(ended, Exit.void);
@@ -810,7 +715,6 @@ describe('lab routes', () => {
           _tag: 'LookFailed',
           reason: 'no easel in this test',
         });
-        // The one shape a tool decodes, as `film lab look --json` prints it too.
         expect(yield* Schema.decodeEffect(Schema.fromJsonString(ToolFailure))(body)).toMatchObject({
           _tag: 'LookFailed',
         });
@@ -829,7 +733,6 @@ describe('lab routes', () => {
             const res = yield* Effect.promise(() => lab(req, bound));
             return { status: res.status, body: yield* Effect.promise(() => res.text()) };
           });
-        // A page for film g, which the app does not have.
         const other = yield* answer(post(labUrls.script.marks({ params: { film: 'g' } }), marks));
         expect(other.status).toBe(404);
         expect(
@@ -845,13 +748,11 @@ describe('lab routes', () => {
         expect((yield* answer(get(labUrls.board.stale({ params: { film: 'g' } })))).status).toBe(
           404,
         );
-        // A page from before the film was on the wire: no route takes it, and the answer says so.
         const unrouted = yield* answer(get('/api/films/f/nope'));
         expect(unrouted.status).toBe(404);
         expect(
           yield* Schema.decodeEffect(Schema.fromJsonString(Refusal))(unrouted.body),
         ).toMatchObject({ _tag: 'RouteUnknown', path: '/api/films/f/nope' });
-        // Nothing was written; the app's film still answers.
         const listed = yield* Effect.promise(() =>
           lab(get(labUrls.board.read({ params: { film: 'f' } })), bound).then((r) => r.json()),
         );
@@ -872,9 +773,7 @@ describe('lab routes', () => {
             const tag = /"_tag":"(\w+)"/.exec(body)?.[1] ?? '';
             return [res.status, tag] as const;
           });
-        /** Each refusal a row got, as the gate's log line names it (`api.request.refused`). */
         const refusals: Array<string> = [];
-        /** `request`'s row: what it asks, and the status and refusal it gets. */
         const row = (request: Request) => {
           const url = new URL(request.url);
           return Effect.map(answer(request), ([status, tag]) => {
@@ -899,16 +798,9 @@ describe('lab routes', () => {
           if (method === 'GET') return new Request(at(path), init);
           return new Request(at(path), { ...init, body: '{}' });
         };
-        /** A write with a body and no Content-Type, as a no-cors fetch of a typeless Blob sends. */
         const untyped = (path: string) =>
           new Request(at(path), { method: 'POST', body: new Blob([new Uint8Array([123, 125])]) });
         expect(untyped('/').headers.get('content-type')).toBeNull();
-        /**
-         * The writes the gate refuses on any path, before a route is matched: a
-         * body that is not JSON (a form's three, or no type at all) and an Origin
-         * that is not the lab's (another site's, a sandboxed frame's `null`, the
-         * lab's own host over https).
-         */
         const refusedWrites = (path: string) =>
           Effect.gen(function* () {
             for (const type of [
@@ -929,9 +821,6 @@ describe('lab routes', () => {
                 'RequestRefused',
               ]);
           });
-        // Every route: a foreign Host (or the bound host without its port), a
-        // cross-site or same-site request (a link opened on another site included:
-        // a navigation reaches pages only), and every refused write.
         for (const route of routes) {
           const path = routePath(route, 'f');
           const refused = [`${route.method} ${path}`, 403, 'RequestRefused'] as const;
@@ -944,7 +833,6 @@ describe('lab routes', () => {
           expect(yield* row(json(path, route.method, navigation))).toEqual(refused);
           yield* refusedWrites(path);
         }
-        // The MCP, under each method a client sends it: the same refusals as a route.
         for (const method of ['POST', 'GET', 'DELETE', 'OPTIONS']) {
           const refused = [`${method} ${MCP_PATH}`, 403, 'RequestRefused'] as const;
           expect(yield* row(json(MCP_PATH, method, foreign))).toEqual(refused);
@@ -955,8 +843,6 @@ describe('lab routes', () => {
           );
           expect(yield* row(json(MCP_PATH, method, navigation))).toEqual(refused);
         }
-        // A DELETE or OPTIONS with no body meets the Host, Sec-Fetch-Site and Origin
-        // checks as one with a body does: the body-less pass comes after them.
         const bodiless = (method: string, headers: Record<string, string>) =>
           new Request(at(MCP_PATH), { method, headers });
         for (const method of ['DELETE', 'OPTIONS']) {
@@ -974,9 +860,6 @@ describe('lab routes', () => {
             expect(yield* row(bodiless(method, headers))).toEqual(refused);
         }
         yield* refusedWrites(MCP_PATH);
-        // A DELETE or OPTIONS that carries a body is judged as any write; one with none
-        // (a client ending its session) reaches the MCP: no session named (400), a
-        // method it does not take (405).
         for (const method of ['DELETE', 'OPTIONS'])
           expect(
             yield* row(
@@ -993,10 +876,6 @@ describe('lab routes', () => {
           );
         expect(yield* bare('DELETE')).toBe(400);
         expect(yield* bare('OPTIONS')).toBe(405);
-        // The pages: a foreign Host never; a link opened on another site, yes (GET or
-        // HEAD), but none of a page's files; a page is read, never written.
-        // Every place's path (its film `f`, each other part `x`), and the home
-        // with an old link's query.
         const pages = [
           ...Object.values(Places).map((place) =>
             place.pattern.replace(':film', 'f').replaceAll(/:\w+/g, 'x'),
@@ -1012,7 +891,6 @@ describe('lab routes', () => {
         ];
         for (const path of [...pages, ...files]) {
           expect(yield* row(get(path, foreign))).toEqual([`GET ${path}`, 403, 'RequestRefused']);
-          // A HEAD's answer has no body to name its refusal: the log names it.
           expect(yield* row(new Request(at(path), { method: 'HEAD', headers: foreign }))).toEqual([
             `HEAD ${path}`,
             403,
@@ -1024,7 +902,6 @@ describe('lab routes', () => {
           expect(
             yield* row(get(path, { 'sec-fetch-site': 'cross-site', 'sec-fetch-dest': 'script' })),
           ).toEqual([`GET ${path}`, 403, 'RequestRefused']);
-          // A page framed from another site is no link opened there.
           expect(yield* row(get(path, { ...navigation, 'sec-fetch-dest': 'iframe' }))).toEqual([
             `GET ${path}`,
             403,
@@ -1038,7 +915,6 @@ describe('lab routes', () => {
           expect(
             yield* row(new Request(at(path), { method: 'HEAD', headers: navigation })),
           ).toEqual([`HEAD ${path}`, 200, '']);
-          // A form another site submits to a page is a navigation too, but no link opened.
           expect(
             yield* row(
               new Request(at(path), {
@@ -1051,24 +927,19 @@ describe('lab routes', () => {
         }
         for (const path of files)
           expect(yield* row(get(path, navigation))).toEqual([`GET ${path}`, 403, 'RequestRefused']);
-        // A write past the body limit is refused as it streams.
         expect(
           yield* row(
             post(labUrls.script.marks({ params: { film: 'f' } }), 'x'.repeat(STUDIO_MAX_BODY + 1)),
           ),
         ).toEqual([`POST ${labUrls.script.marks({ params: { film: 'f' } })}`, 413, 'BodyTooLarge']);
-        // DNS rebinding: the page's own origin, but a Host that is not the bound host:port.
         const rebound = { host: 'evil.example:4401', origin: 'http://evil.example:4401' };
         expect(
           (yield* row(post(labUrls.script.marks({ params: { film: 'f' } }), marks, rebound)))[1],
         ).toBe(403);
-        // Nothing was written.
         const listed = yield* Effect.promise(() =>
           lab(get(labUrls.board.read({ params: { film: 'f' } })), bound).then((r) => r.json()),
         );
         expect(listed).toEqual({ film: 'f', panels: [], approvals: [] });
-        // The lab's own page, by either name for the loopback host, is let in to
-        // write: the route answers it (film `f` has no script to mark), never the gate.
         for (const origin of ['http://127.0.0.1:4401', 'http://localhost:4401'])
           expect(
             (yield* row(
@@ -1083,8 +954,6 @@ describe('lab routes', () => {
             }),
           ))[1],
         ).toBe(200);
-        // Every refusal is one line of the gate's log on stderr, naming what was refused;
-        // stdout carries none.
         const lines = eventLines(written.stderr, 'api.request.refused').map(
           (line) => line.split(' reason=')[0] ?? '',
         );
@@ -1137,7 +1006,6 @@ describe('lab routes', () => {
         expect([path, yield* status(path, { host: 'evil.example' })]).toEqual([path, 403]);
       expect(yield* status('/', {})).toBe(200);
       expect(yield* status(labUrls.board.read({ params: { film: 'f' } }), {})).toBe(200);
-      // A take's import answers inside the studio's wait, which the server's idle limit outlasts.
     }).pipe(Effect.scoped, Effect.provide([labInMemory(files()), FetchHttpClient.layer])),
   );
 
@@ -1173,11 +1041,9 @@ describe('lab routes', () => {
             (response) =>
               Effect.map(Effect.orDie(response.text), (text) => [response.status, text] as const),
           );
-        // Under Bun's limit the gate counts the body, refuses it and logs it (`api.request.refused`).
         const [gateStatus, gateText] = yield* sent(STUDIO_MAX_BODY + 1);
         expect(gateStatus).toBe(413);
         expect(gateText).toContain('BodyTooLarge');
-        // Past it Bun answers 413 itself: its handler is never called, so no line can say so.
         const [bunStatus, bunText] = yield* sent(MAX_REQUEST_BODY + 1);
         expect(bunStatus).toBe(413);
         expect(bunText).not.toContain('BodyTooLarge');
@@ -1204,8 +1070,6 @@ describe('lab routes', () => {
         expect(links.local).toMatch(/^http:\/\/localhost:\d+\/$/);
         const phone = links.phone ?? '';
         expect(phone).toMatch(/^http:\/\/\[::1\]:\d+\/$/);
-        // As a browser gets it: its bytes as sent, not decompressed for the test. The
-        // test's page echoes its path, so a long one is past the floor compression keeps.
         const page = new URL(`/${'p'.repeat(2048)}`, phone);
         const asSent: BunFetchRequestInit = { decompress: false };
         const client = yield* HttpClient.HttpClient;
@@ -1214,9 +1078,7 @@ describe('lab routes', () => {
             response.status,
             response.headers['content-encoding'] ?? 'plain',
           ]).pipe(Effect.provideService(FetchHttpClient.RequestInit, asSent));
-        // A name the phone's listener is not is refused, as on loopback.
         expect(yield* answer({ host: 'evil.example' })).toEqual([403, 'plain']);
-        // Its own name is the lab, compressed for a client that takes it.
         expect(yield* answer({ 'accept-encoding': 'br' })).toEqual([200, 'br']);
       }).pipe(
         Effect.scoped,
@@ -1225,17 +1087,12 @@ describe('lab routes', () => {
       ),
   );
 
-  /**
-   * A port on loopback another lab holds while the scope is open, as a lab
-   * a restart did not stop holds 8229 and 8230.
-   */
   const held = Layer.build(labServer({ hostname: '127.0.0.1', port: 0 })).pipe(
     Effect.flatMap((server) => boundUrl.pipe(Effect.provideContext(server))),
     Effect.map((url) => new URL(url)),
     Effect.orDie,
   );
   const unservable: ReadonlyArray<readonly [string, Effect.Effect<URL, never, Scope.Scope>]> = [
-    // TEST-NET-1: on no interface of any machine, as the tailnet's address is when it is down.
     ['an address on no interface of this machine', Effect.succeed(new URL('http://192.0.2.1:0/'))],
     ['a port another server holds', held],
     ['an https address (the lab serves plain http)', Effect.succeed(new URL('https://[::1]:0/'))],
@@ -1284,16 +1141,7 @@ describe('lab routes', () => {
   );
 });
 
-// A browser that leaves (a closed tab, a reload) aborts its request, and Bun
-// interrupts the request's fiber wherever it is: the lab's real server on a
-// free port, a real client, and a step of the page's answer under way.
 describe('a client that goes away', () => {
-  /**
-   * The lab's real server on a free port, `beside` routes of the test's own:
-   * its URL, and `gone`, done once the server hears a client leave before
-   * its answer (the request's signal aborted, which interrupts the request's
-   * fiber; Bun aborts it after an answer too).
-   */
   const served = (beside: BesideRoutes = Layer.empty) =>
     Effect.gen(function* () {
       const lab = yield* labHandler(beside);
@@ -1301,7 +1149,6 @@ describe('a client that goes away', () => {
       const server = yield* Layer.build(labServer({ hostname: '127.0.0.1', port: 0 }));
       const url = yield* serveLab((request, bound) => {
         const answered = Deferred.makeUnsafe<void>();
-        // Heard after the lab's own listener, which interrupts the request's fiber.
         const answer = lab(request, bound);
         request.signal.addEventListener(
           'abort',
@@ -1315,10 +1162,8 @@ describe('a client that goes away', () => {
       return { url, gone };
     });
 
-  /** The app's pages with a server render and its reads in a real worker. */
   const rendering = drivenPages(
     PageRenderer.layer.pipe(Layer.provide(BunServices.layer)),
-    // The review's server render: its shell at once, then a read the lab holds.
     Option.some(
       `export default { bodyClass: 'held', render: ({ url, fetch }, sink) => { sink.head(''); sink.write('<main>shell</main>'); fetch(new URL('${HELD}', url)).finally(() => sink.end()); } };\n`,
     ),
@@ -1335,7 +1180,6 @@ describe('a client that goes away', () => {
         const client = yield* HttpClient.HttpClient;
         const ask = Effect.orDie(client.get(new URL('/asks/a1', url)));
         const all = ['/app', '/app/a', DROPPED, '/app/sub'];
-        /** The folders watched once the watches just started run. */
         const watchedSettled = (want: ReadonlyArray<string>) =>
           Effect.andThen(
             driven.watched.pipe(
@@ -1349,8 +1193,6 @@ describe('a client that goes away', () => {
           );
         expect((yield* ask).status).toBe(200);
         expect(yield* watchedSettled(all)).toEqual(all);
-        // The page stops reading DROPPED: the next build lets its watch go, and the
-        // client leaves while it does.
         yield* Ref.set(driven.reads, [SOURCES[0]]);
         yield* heardOf(driven.save(SOURCES[0], 'export const a = 2;\n'));
         yield* Ref.set(driven.held, true);
@@ -1360,7 +1202,6 @@ describe('a client that goes away', () => {
         yield* Deferred.await(gone);
         yield* Ref.set(driven.held, false);
         yield* Deferred.done(driven.release, Exit.void);
-        // The page reads DROPPED again: its next build watches it anew.
         yield* Ref.set(driven.reads, SOURCES);
         yield* heardOf(driven.save(SOURCES[0], 'export const a = 3;\n'));
         expect((yield* ask).status).toBe(200);
@@ -1383,7 +1224,6 @@ describe('a client that goes away', () => {
         const { url } = yield* served(heldRoute(ended, asked));
         const client = yield* HttpClient.HttpClient;
         const shell = yield* Deferred.make<string>();
-        // A browser's GET of the page, br accepted: it reads the shell and stays, until it leaves.
         const reading = yield* Effect.forkChild(
           Effect.flatMap(
             Effect.orDie(
@@ -1423,12 +1263,10 @@ describe('a client that goes away', () => {
           .build;
         const { url, gone } = yield* served();
         const client = yield* HttpClient.HttpClient;
-        // A page asks for the track, and leaves while the track's watch is made.
         const leaving = yield* Effect.forkChild(
           Effect.orDie(client.get(new URL('/films/f/narration/full.wav', url))),
         );
         yield* Deferred.await(arming);
-        // The mix lands before that watch is armed, so no watch hears it.
         yield* Effect.sync(() => {
           disk.set(TRACK, text('mix two'));
           mtimes.set(TRACK, MIXED_AT + 10_000);
@@ -1453,7 +1291,6 @@ describe("the words reader's read", () => {
   ];
   const SCENES = '/films/f/scenes/index.ts';
 
-  /** The lab over film `f` (its files' mtimes `mtimes`), its `film read script` answering `BEATS`, each run pushed to `runs`. */
   const scriptLab = (mtimes: ReadonlyMap<string, number>, runs: Array<string>) =>
     labInMemory(files(), echoPages, {
       film: freshFilm({ script: (film) => Effect.sync(() => (runs.push(film), BEATS)) }),
@@ -1480,7 +1317,6 @@ describe("the words reader's read", () => {
         mtimes.set(SCENES, 2_000);
         yield* read('f');
         expect(runs).toEqual(['f', 'f']);
-        // A film the app has not is refused before anything is read.
         expect((yield* read('nope')).status).toBe(404);
         expect(runs).toEqual(['f', 'f']);
       }).pipe(Effect.scoped, Effect.provide(scriptLab(mtimes, runs)));

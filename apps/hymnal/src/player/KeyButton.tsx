@@ -1,23 +1,3 @@
-/**
- * The bar's key button, at its left end, for the page's hymn. With chords
- * on it shows the guitar's head and the key: a small "KEY" over the
- * sounding key, or "CAPO n" over the key the chords are played in. A tap
- * opens the key and capo dials above the bar, and closes them; a hold
- * (450 ms) turns chords on or off, and no tap follows it. With chords off
- * it is the guitar's head alone, dim: the chords switch, on every hymn's
- * page, and a tap turns chords on and opens nothing. Its hint says what the
- * next tap does (`hintOf`): turns chords on, opens the dials or closes them.
- * VoiceOver turns chords on or off by the button's action.
- *
- * The button presses in under a finger, as a mechanical switch does: it
- * shrinks steadily to 0.90 of its size over the hold, as card J does, and
- * at the toggle it springs back out past its size and settles (a spring
- * of 0.35 s and bounce 0.3, started at the speed a released spring has). A
- * tap lets it back out in 200 ms with no overshoot. With Reduce Motion on
- * the spring-out has no overshoot either. The scale is the press: the
- * button's frame and fill are the same with the dials open or closed.
- */
-
 import type * as Chord from '@manna/hymnal/chord';
 import { Match, Option } from 'effect';
 import { useRef } from 'react';
@@ -46,20 +26,12 @@ import type { BoundThumb } from './Dials';
 import { useReduceMotion } from './motion';
 import { type Face, faceOf, hintOf, saidOf, ThumbEvent } from './thumb';
 
-/** How long a press is held before it turns chords on or off. */
 export const HOLD = 450;
 
-/** How far the button presses in by the end of a hold: card J's. */
 export const PRESSED_IN = 0.9;
 
-/**
- * The spring-out at the toggle: 0.35 s, bounce 0.3 (stiffness `(2π/0.35)²`,
- * damping `4π·0.7/0.35`), from the press's depth at 3.5 a second, so it
- * overshoots its size by about 3% within 150 ms and rests by 300 ms.
- */
 const SPRING_OUT = { stiffness: 322, damping: 25.1, mass: 1, velocity: 3.5 };
 
-/** A tap's release, and Reduce Motion's spring-out: 200 ms on the strong ease-out. */
 const LET_GO = { duration: 200, easing: Easing.bezier(0.23, 1, 0.32, 1) };
 
 export function KeyButton({
@@ -67,13 +39,11 @@ export function KeyButton({
   onLayout,
 }: {
   readonly thumb: BoundThumb;
-  /** The button laid out in the bar: the dials open out of its centre. */
   readonly onLayout?: (event: LayoutChangeEvent) => void;
 }) {
   const { printed, state, send } = thumb;
   const reduced = useReduceMotion();
   const scale = useSharedValue(1);
-  // Whether the press under way turned chords on or off: its release then lets nothing go.
   const held = useRef(false);
   const face = Option.map(printed, (key: Chord.Key) => faceOf(key, state));
   const said = Option.match(printed, {
@@ -95,8 +65,6 @@ export function KeyButton({
   const toggle = () => {
     held.current = true;
     send(ThumbEvent.Hold());
-    // A spring set over a running timing takes no speed from it (Reanimated adds the two speeds, and a
-    // timing has none): the press, or a release told first, stops where it is, and the spring leaves from there.
     cancelAnimation(scale);
     scale.value = Match.value(reduced).pipe(
       Match.when(true, () => withTiming(1, { ...LET_GO, reduceMotion: ReduceMotion.Never })),
@@ -150,7 +118,6 @@ export function KeyButton({
   );
 }
 
-/** The small word over the key; nothing with chords off. */
 function Words({ face }: { readonly face: Face }) {
   if (face._tag === 'Off') return [];
   return (

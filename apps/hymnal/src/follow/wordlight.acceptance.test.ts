@@ -1,33 +1,3 @@
-/**
- * wordlight acceptance (unit): the follow lights the syllable sung now on
- * every line whose note times may light it, a line-level part's lines
- * included, on a fake clock, with Sound on (the recording's place) and Sound
- * off (the score clock). Any other line (a Plain part, a line held to even
- * shares, a line the recording does not play, a line whose times do not fit
- * it, a line-level line another singing lays elsewhere) is marked whole.
- *
- * The oracle reads the compiled timing (`hymn.timing`) through the tempo
- * map, as `vite/timing.ts` does, never the bundled encoding. A line's note
- * times may light it when it is played, not even, in a Sung part, and its
- * times fit it (one per syllable of its part's line, none before the one
- * before, inside `[start, until)` in ms); at `line` level they must also
- * agree with every other such line of its place in the music (stanza or
- * refrain, line index) whose verse of the sung file plays the same keys at
- * the same steps: a refrain line has each syllable on the same note of its
- * verse, a stanza line opens within one note; a line or such a singing whose
- * times start no notes of one verse agrees with nothing. The verses' notes
- * come from `versesOf`, the encoder's read of the sung file, as the hymns
- * come from `readPlaybackHymns`: the data is shared, the rule is restated
- * here. At a time `t`
- * the sung line is the last whose start is at or before `t`, while `t` is
- * before its `until`; its mark is the last syllable whose time is at or
- * before `t` (`-1` before the first), or `WHOLE` when its times may not
- * light it.
- *
- * Run from `apps/hymnal` with `--preload ./src/test/setup.ts`, the file
- * placed at `src/follow/wordlight.acceptance.test.ts`.
- */
-
 import { sung } from '@manna/hymnal/hymn';
 import * as Timing from '@manna/hymnal/timing';
 import { Array as Arr, Clock, Effect, Match, Option, Stream, SubscriptionRef } from 'effect';
@@ -44,25 +14,21 @@ import { book } from './book';
 import { followerOf, type Host } from './follower';
 import { OFF, WHOLE } from './marks';
 
-/** One poll of the player, ms: the follow hears the player this often. */
 const POLL = 250;
 
 const hymns = readPlaybackHymns();
 
-/** One sung line as the score lays it: its span, and its syllables' times when it has note times. */
 interface Laid {
   readonly start: number;
   readonly until: number;
   readonly times: Option.Option<ReadonlyArray<number>>;
 }
 
-/** A line's syllables in the sung file: its verse's tune (each note's step from the first, and key) and each syllable's note there. */
 interface OnNotes {
   readonly tune: string;
   readonly notes: ReadonlyArray<number>;
 }
 
-/** Where `times` (the timing's units) start notes of one verse, none when any starts none of the first one's verse. */
 const onNotes = (verses: Verses, times: ReadonlyArray<number>): Option.Option<OnNotes> =>
   Option.flatMap(
     Arr.findFirst(verses, (verse) => Arr.some(verse, (note) => note.at === times[0])),
@@ -76,14 +42,12 @@ const onNotes = (verses: Verses, times: ReadonlyArray<number>): Option.Option<On
       ),
   );
 
-/** Hymn `number`'s sung lines from its compiled timing, in ms. */
 const laidOf = (number: number): ReadonlyArray<Laid> => {
   const hymn = Option.getOrThrow(Arr.findFirst(hymns, (one) => one.number === number));
   const timing = Option.getOrThrow(Option.fromUndefinedOr(hymn.timing));
   const seconds = Timing.secondsAt(timing);
   const ms = (time: number) => Math.round(seconds(time) * 1000);
   const parts = sung(hymn);
-  // Each line with times that fit it, its place in the music and its part's level.
   const fit = timing.lines.map((line, i) =>
     Option.flatMap(Arr.get(parts, i), (at) =>
       Match.value(at.part).pipe(
@@ -150,7 +114,6 @@ const laidOf = (number: number): ReadonlyArray<Laid> => {
   }));
 };
 
-/** The line sung at `t`, `-1` for none. */
 const lineAt = (laid: ReadonlyArray<Laid>, t: number): number => {
   const k = Arr.findLastIndex(laid, (line) => line.start <= t);
   return Option.match(k, {
@@ -163,7 +126,6 @@ const lineAt = (laid: ReadonlyArray<Laid>, t: number): number => {
   });
 };
 
-/** Line `i`'s mark at `t` by the rule: `OFF`, `WHOLE`, or its sung syllable (`-1` before the first). */
 const markAt = (laid: ReadonlyArray<Laid>, i: number, t: number): number => {
   if (lineAt(laid, t) !== i) return OFF;
   return Option.match(
@@ -179,7 +141,6 @@ const markAt = (laid: ReadonlyArray<Laid>, i: number, t: number): number => {
   );
 };
 
-/** A follower over hymn `number`'s bundled timeline on a host clock the test sets. */
 const followed = (number: number) => {
   const timeline = Option.getOrThrow(book.of(number));
   let now = 0;
@@ -192,7 +153,6 @@ const followed = (number: number) => {
   const follower = followerOf(timeline, host);
   return {
     lines: timeline.lines.length,
-    /** The player reports `at` ms of the hymn at host time `when`. */
     tell: (when: number, at: number, state: 'playing' | 'paused') => {
       now = when;
       follower.report({ _tag: 'Here', at, state });
@@ -203,7 +163,6 @@ const followed = (number: number) => {
   };
 };
 
-/** A device holding a recording `length` ms long that moves with the clock. */
 const recording = (length: number): PlaybackApi => {
   let state: Status['state'] = 'idle';
   let at = 0;
@@ -247,11 +206,6 @@ const recording = (length: number): PlaybackApi => {
   };
 };
 
-/**
- * Plays hymn `number` from 0 with the Sound switch at `on`, polls the player every `POLL` ms of
- * the fake clock until its place passes `to`, and tells the follower each poll: each poll's place
- * and the follower's marks then, beside the rule's marks at that place.
- */
 const played = (number: number, on: boolean, to: number) =>
   Effect.scoped(
     Effect.gen(function* () {
@@ -284,7 +238,6 @@ describe('wordlight: hymn 11, the owner’s place (stanza 1, line index 1, at 0:
   it.effect('with Sound on, line 1 lights the syllable sung at 27 000 ms, not the whole line', () =>
     Effect.gen(function* () {
       const laid = laidOf(11);
-      // The owner's place is line 1, which the score gives note times.
       expect(lineAt(laid, 27_000)).toBe(1);
       expect(Option.isSome(Option.flatMap(Arr.get(laid, 1), (line) => line.times))).toBe(true);
       const polls = yield* played(11, true, 30_000);
@@ -309,7 +262,6 @@ describe('wordlight: hymn 11, the owner’s place (stanza 1, line index 1, at 0:
             ),
           );
           expect(faults).toEqual([]);
-          // Inside line 1 the light steps through more than one syllable, in order, never back.
           const lit = polls.map(({ got }) => got[1] ?? OFF).filter((mark) => mark >= 0);
           expect(new Set(lit).size).toBeGreaterThan(1);
           expect(lit.every((mark, k) => k === 0 || mark >= (lit[k - 1] ?? 0))).toBe(true);
@@ -317,7 +269,6 @@ describe('wordlight: hymn 11, the owner’s place (stanza 1, line index 1, at 0:
     );
 });
 
-/** A seeded generator of fractions in [0, 1): the same times every run. */
 const fractions = (seed: number) => {
   let state = seed >>> 0;
   return () => {
@@ -342,8 +293,6 @@ describe('wordlight: the rule over every hymn', () => {
             faults.push(`${hymn.number}: ${follow.lines} lines, the score lays ${laid.length}`);
             continue;
           }
-          // The probes of one hymn, in time order: the follow's clock never steps back inside its
-          // slack, so a later report at an earlier place would read the earlier one's.
           const probes: Array<{ readonly i: number; readonly t: number }> = [];
           laid.forEach((line, i) => {
             if (line.until <= line.start) return;
@@ -382,7 +331,6 @@ describe('wordlight: the rule over every hymn', () => {
           }
         }
         expect(faults.slice(0, 20)).toEqual([]);
-        // 14 150 lines lit at syllable level before this unit, 935 line-level lines after it.
         expect(lit).toBeGreaterThanOrEqual(15_085);
         expect(whole).toBeGreaterThan(0);
       }),

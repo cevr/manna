@@ -30,7 +30,6 @@ const Scene = Place.make({
 });
 const scene = UrlAtom.place(Scene);
 
-/** A registry over a `Location` layer built here, so a test can drive it. */
 const registryOver = <R>(location: Layer.Layer<R>) => {
   const context = Effect.runSync(Layer.buildWithScope(location, Scope.makeUnsafe()));
   const registry = AtomRegistry.make({
@@ -47,7 +46,6 @@ const memoryRegistry = (href: string) => {
   return { registry, stack, location: Context.get(context, Location) };
 };
 
-/** Waits until the atom's value holds `predicate`, and returns it. */
 const until = <A>(
   registry: AtomRegistry.AtomRegistry,
   atom: Atom.Atom<A>,
@@ -143,8 +141,6 @@ describe('UrlAtom', () => {
 
   test("a place's server value is its hash at the defaults, on the client too", () => {
     const { registry } = memoryRegistry('/films/f/lab/s?cue=c#t=2');
-    // The value a hydration-aware binding renders until hydration ends, so
-    // the client's first pass matches the server's markup.
     const hashOf = (value: Option.Option<Place.Type<typeof Lab>>) =>
       Option.map(value, (place) => place.hash.t);
     expect(hashOf(Atom.getServerValue(lab, registry))).toEqual(Option.some(0));
@@ -154,8 +150,6 @@ describe('UrlAtom', () => {
 
   it.effect("a host's own UrlState, seeded with the layer, is the registry's: no second one", () =>
     Effect.gen(function* () {
-      // Each UrlState follows its Location's entries for as long as it lives,
-      // so the subscriptions to `changes` count the UrlStates built over it.
       let followers = 0;
       const counted = Layer.effect(
         Location,
@@ -174,7 +168,6 @@ describe('UrlAtom', () => {
       yield* Effect.yieldNow;
       expect(followers).toBe(1);
 
-      // Seeded as the film's pages seed it: the layer, with the host built.
       const registry = AtomRegistry.make({
         initialValues: [[UrlAtom.layer, Layer.succeedContext(host)]],
       });

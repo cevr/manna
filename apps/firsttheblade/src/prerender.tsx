@@ -1,13 +1,3 @@
-/**
- * The prerender: draws every page (`./pages.ts`) to a whole HTML file in
- * `dist/`, beside the browser build, and writes the sitemap, robots.txt, llms.txt and
- * the web app manifest. The package's `build` script builds this module
- * with Vite (`--ssr`, so the pages compile to Solid's server output and the
- * art they import is emitted) and then runs it with Bun.
- *
- * The pages are served as they are written: nothing hydrates. The phone
- * menu mounts itself from the browser build's script (`./client.tsx`).
- */
 import { BunRuntime, BunServices } from '@effect/platform-bun';
 import { NoHydration, renderToString } from '@solidjs/web';
 import { Effect, FileSystem, Option, Path, Schema } from 'effect';
@@ -17,13 +7,10 @@ import { llmsTxt, robots, sitemap, webManifest } from './meta.ts';
 import { PAGES, type Page } from './pages.ts';
 import { View } from './views.tsx';
 
-/** The browser build's entry, as Vite's manifest names it. */
 const ENTRY = 'src/client.tsx';
 
-/** The faces the first screen sets (the wordmark, the nav, the verse in italic), preloaded. */
 const FIRST_SCREEN_FONTS = ['Newsreader-normal-latin', 'Newsreader-italic-latin'];
 
-/** A built font's face, its name without Vite's eight-character fingerprint. */
 const faceOf = (file: string) => file.replace(/-[\w-]{8}\.woff2$/, '');
 
 const ManifestChunk = Schema.Struct({
@@ -92,8 +79,6 @@ const prerender = Effect.gen(function* () {
   const build = yield* readBuild(dist);
   yield* Effect.forEach(PAGES, (page) => writePage(dist, page, build), { concurrency: 4 });
 
-  // The art the pages import, emitted by the server build under the same
-  // fingerprinted names the pages print.
   yield* fs.copy(path.resolve('.prerender', 'assets'), path.join(dist, 'assets'), {
     overwrite: true,
   });
@@ -104,7 +89,6 @@ const prerender = Effect.gen(function* () {
   yield* fs.writeFileString(path.join(dist, 'llms.txt'), llmsTxt(PAGES));
   yield* fs.writeFileString(path.join(dist, 'site.webmanifest'), `${manifest}\n`);
 
-  // Vite's manifest has been read; the site does not serve it.
   yield* fs.remove(path.join(dist, '.vite'), { recursive: true });
   yield* Effect.logInfo('prerender.done').pipe(Effect.annotateLogs({ pages: PAGES.length }));
 });

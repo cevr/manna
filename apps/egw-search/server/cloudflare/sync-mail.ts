@@ -1,16 +1,3 @@
-/**
- * The mail a corpus sync sends its owner when it ends.
- *
- * A Workflow's report lives in the dashboard, where nobody looks on a Sunday.
- * So the run mails what it did: the books it added, the books the library
- * updated and the first of the paragraphs that changed with them (edits word
- * by word), and what failed. The subject alone says whether anything needs a
- * look, so a quiet week can stay unread. Everything past the mail's caps is
- * in the full report it links to (`./sync-report.ts`).
- *
- * This module only words the mail; `Sync.ts` sends it.
- */
-
 import { Array as Arr, Data, Option } from 'effect';
 
 import { type EgwSyncBook, isKnownUnavailable } from '@manna/core/corpus-supply';
@@ -25,15 +12,11 @@ import {
 } from './sync-report.ts';
 import { type DiffSegment, wordDiff } from './word-diff.ts';
 
-/** The most books and changes a mail lists; the report has the rest. */
 export const MAIL_LIMIT = 20;
 
-/** Words of unchanged text kept on each side of an edit. */
 const CONTEXT_WORDS = 12;
 
-/** How a run ended. */
 export type SyncOutcome = Data.TaggedEnum<{
-  /** A plan-only run: what a sync would do, with nothing written. */
   Planned: {
     readonly remote: number;
     readonly installedBefore: number;
@@ -42,17 +25,12 @@ export type SyncOutcome = Data.TaggedEnum<{
     readonly verify: number;
     readonly recheckLeft: number;
   };
-  /** A sync that ran to its report. */
   Synced: {
     readonly run: SyncRun;
-    /** The first changes the library's updates made, at most `MAIL_LIMIT`. */
     readonly excerpt: readonly BookChange[];
-    /** How many changes the updates made in all. */
     readonly updateChanges: number;
-    /** Where the full report is, when this stage publishes one. */
     readonly report: Option.Option<string>;
   };
-  /** A run that stopped before its report. */
   Stopped: { readonly reason: string };
 }>;
 export const SyncOutcome = Data.taggedEnum<SyncOutcome>();
@@ -66,18 +44,15 @@ const PREFIX = 'EGW sync';
 
 const bookLine = (book: EgwSyncBook) => `- ${book.code}: ${book.title}`;
 
-/** A titled list, or nothing when the list is empty. */
 const section = (title: string, lines: readonly string[]): readonly string[] =>
   Arr.match(lines, { onEmpty: () => [], onNonEmpty: (some) => ['', title, ...some] });
 
-/** At most `MAIL_LIMIT` lines, and a line saying where the rest are. */
 const capped = (lines: readonly string[]): readonly string[] => {
   const rest = lines.length - MAIL_LIMIT;
   if (rest <= 0) return lines;
   return [...lines.slice(0, MAIL_LIMIT), `- and ${String(rest)} more in the full report`];
 };
 
-/** Unchanged text cut to the words next to an edit. */
 const context = (text: string, at: 'start' | 'middle' | 'end'): string => {
   const words = text.split(' ');
   if (words.length <= CONTEXT_WORDS * 2) return text;
@@ -88,7 +63,6 @@ const context = (text: string, at: 'start' | 'middle' | 'end'): string => {
   return `${head} … ${tail}`;
 };
 
-/** An edit as git's word diff writes it: `[-removed-]{+added+}`. */
 const editLine = (segments: readonly DiffSegment[]): string =>
   segments
     .map((segment, index) => {
@@ -203,11 +177,8 @@ const planned = (plan: {
   ].join('\n'),
 });
 
-/** The mail for a run's outcome. */
 export const syncMail: (outcome: SyncOutcome) => SyncMail = SyncOutcome.$match({
   Planned: ({ remote, installedBefore, pending, changed, verify, recheckLeft }) => {
-    // The library lists some books it never serves; a sync tries them again
-    // and they fail as expected, so they are not books to add.
     const withheld = pending.filter((book) => isKnownUnavailable(book.id));
     const toAdd = pending.filter((book) => !isKnownUnavailable(book.id));
     return planned({ remote, installedBefore, toAdd, withheld, changed, verify, recheckLeft });

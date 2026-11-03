@@ -1,11 +1,3 @@
-// Jeremiah's puppets, one a cut view (`canvas/puppet.ts`): each view's part
-// sheet (`sheets/<view>/`, made by `film concept parts`), its parts front to
-// back as the sheet's record lists them, each PNG imported by its module so a
-// scene that draws him is keyed by its bytes (`tools/stamp.ts`), on the view's
-// skeleton (`skeleton.ts`), with his origin at the kept box's top-left corner
-// in the padded part sheet (`frames.ts`): his pixels are the sheet's, drawn at
-// its one scale. Each declares the kept view it is held to (`concept`). Pure.
-
 import heads1Head from './sheets/heads-1/head.png' with { type: 'file' };
 import heads1Torso from './sheets/heads-1/torso.png' with { type: 'file' };
 import heads2Head from './sheets/heads-2/head.png' with { type: 'file' };
@@ -24,48 +16,12 @@ import { FRAMES } from './frames.ts';
 import { PAPERS } from './papers.ts';
 import { SKELETONS } from './skeleton.ts';
 
-/**
- * His sheet's line, which a look draws again near what moved (L3): the
- * median run of ink (luma < 90) across his outer outline at his shoulders and
- * robe is 10 px on heads-1 to heads-3 and 9 px on heads-4 to heads-6
- * (quartiles 9 and 10 in every view), the larger laid half a pixel wider as
- * the other members' are, in his cut's ink (`cut.ts`, 25,9,2).
- */
 export const LINE = { width: 10.5, ink: [25, 9, 2] } as const;
 
-/**
- * His paper's grain, luma (`core/unmatte.ts`, `grain`): the least quarter
- * luma step over the largest, across his kept views, of the 95th percentile
- * of how far a view's border ground runs darker than its median paper. So
- * the sheet's own ground reads as paper and each view's halo (paper kept
- * round his outline) stays in its bound, while a rim px darker than that is
- * his cloth, kept whole; a larger grain keeps fewer of his light cloth px
- * whole.
- */
 const GRAIN = 2.25;
 
-/**
- * His linen's lightest fold, kept as his where it lies nearer it than the
- * paper (`core/unmatte.ts`, `keep`): the un-matte asks it only of a px no
- * ink reaches, and on his part sheets, their paper rim cleared (`cut.ts`,
- * `CLEAN`), it changes no px in any view (heads-1 to heads-6), nor does a
- * lighter fold (252,240,213, 250,237,210 or 255,250,240). His grain keeps
- * 1186 to 1228 rim px whole a view.
- */
 const LINEN = [[248, 234, 206]] as const satisfies ReadonlyArray<readonly [number, number, number]>;
 
-/**
- * Each cut view's puppet, by the view's name in his sheet's views: its parts
- * front to back, its part sheet the kept box padded (`frames.ts`), his origin
- * at the kept box's top-left corner, held to the kept box
- * (`library/cutout/puppets.ts`).
- *
- * heads-2 and heads-3 leave their sheet's `neighbour` part out: it holds the
- * pad beside the other view's outline, the two sheet columns their pads share
- * and, in heads-3, one more column of its own pad's paper (`cut.ts`). The
- * other view's puppet draws the shared columns; neither draws that one more
- * column.
- */
 export const PUPPETS = puppetsOf({
   cast: 'jeremiah',
   cuts: CUTS,

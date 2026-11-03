@@ -1,8 +1,3 @@
-/**
- * The seek count the page's follow hears (`seeks.ts`), under the app's
- * player over a device the test holds: a seek of any size counts once.
- */
-
 import { Duration, Effect, Option, Stream, SubscriptionRef } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import * as AtomRegistry from 'effect/reactivity/AtomRegistry';
@@ -13,7 +8,6 @@ import { counted } from './seeks';
 
 const morning = { number: 100, title: 'Hymn 100' };
 
-/** The app's player over a fresh device with its seeks counted; its registry ends with the test's `using`. */
 const open = () => {
   const count = Effect.runSync(SubscriptionRef.make(0));
   const { device, layer } = fakeDevice();
@@ -25,7 +19,6 @@ const open = () => {
     device,
     count: SubscriptionRef.get(count),
     send: (command: Command) => registry.set(player.send, command),
-    /** The player's state once `holds` is true of it. */
     until: (holds: (player: Player) => boolean) =>
       AtomRegistry.toStream(registry, player.state).pipe(
         Stream.filter(holds),

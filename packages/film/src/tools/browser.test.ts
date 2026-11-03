@@ -1,10 +1,3 @@
-// The one path a call on an export page takes: its answer decoded by the
-// call's schema, a refusal or an answer that does not decode reported as the
-// call's own error. What a page hands back for a frame's luma: one value per
-// cell of the grid asked for. An empty read (no canvas to sample on) or a
-// short one fails, so a loop is never compared on nothing and called clean.
-// And Chromium's flags per platform. No Chromium.
-
 import { describe, expect, test } from 'bun:test';
 import { Effect, Result, Schema } from 'effect';
 import type { LumaArea } from '../core/export-handle.ts';
@@ -12,7 +5,6 @@ import { CallRefused, type Invoke, framePage, launchArgs, lumaGrid } from './bro
 import { EncodeFailed, FrameFailed } from './errors.ts';
 import { testExportInfo } from './browser/testing.ts';
 
-/** A page whose every call hands back `answer`, or is refused with `refused`. */
 const pageAnswering = (answer: Effect.Effect<unknown, CallRefused>) => {
   const invoke: Invoke = () => answer;
   return framePage(testExportInfo, 'Test film', invoke);

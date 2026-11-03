@@ -1,17 +1,3 @@
-/**
- * The build walk reads an image by its bytes, whatever its name: each
- * format's first bytes are read as that format, a gzipped one by what it
- * unzips to, an SVG by its root element after any prolog; the site's other
- * files are no image. An SVG is drawn in each encoding XML allows a browser
- * to draw. Over a `dist/` fixture made from a seed, every image of every
- * format under any name, extension (none, a wrong one, another image's) and
- * folder is refused, and each file named as an image whose bytes no
- * signature reads is refused as `unknown`; the approved stills and the
- * images outside the rule, under any name, pass. The build inlines no
- * imported asset. An image inside another file (a data URL) is no file the
- * walk reads: the content policy has the browser refuse it
- * (`../src/worker/respond.test.ts`, `../scripts/computed.ts`).
- */
 import { BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, Order, Path, Schema } from 'effect';
@@ -23,12 +9,6 @@ import { OUTSIDE } from './served.ts';
 
 const APP = `${import.meta.dir}/..`;
 
-/**
- * A scratch app holding the record, its stills hashed as they stand, and the
- * images outside the rule: the walk is tested against a record that holds the
- * stills on disk, so a still the owner has yet to approve does not turn it
- * red (`./field-still.slow.test.ts` holds the stills to his approval).
- */
 const appAsItStands = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -50,7 +30,6 @@ const appAsItStands = Effect.gen(function* () {
   return app;
 });
 
-/** A seeded draw in [0, 1). */
 const draws = (seed: number) => {
   let state = seed >>> 0;
   return () => {
@@ -77,7 +56,6 @@ const le32 = (value: number) => [
 const joined = (...parts: ReadonlyArray<ReadonlyArray<number> | Uint8Array>) =>
   Uint8Array.from(parts.flatMap((part) => Array.from(part)));
 
-/** An SVG's text: a prolog drawn from the forms XML allows, then the root element. */
 const svgText = (next: Draw) => {
   const prolog = [
     '﻿',
@@ -92,11 +70,9 @@ const svgText = (next: Draw) => {
   return `${prolog.join('')}${root}xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><path d="M0 0h8v8z"/></svg>\n`;
 };
 
-/** The encodings XML allows an SVG in, each a browser draws. */
 const ENCODINGS = ['utf-8', 'utf-16le', 'utf-16be', 'iso-8859-1'] as const;
 type Encoding = (typeof ENCODINGS)[number];
 
-/** The code units of `text`, each as two bytes, its low byte first (little end) or last. */
 const utf16 = (text: string, end: 'little' | 'big') =>
   Uint8Array.from(
     Array.from({ length: text.length }, (_, i) => text.charCodeAt(i)).flatMap(
@@ -104,7 +80,6 @@ const utf16 = (text: string, end: 'little' | 'big') =>
     ),
   );
 
-/** An SVG's text in `encoding`, its byte order mark drawn for UTF-8 and UTF-16, and a declaration and an `é` for ISO-8859-1. */
 const svgIn = (encoding: Encoding, next: Draw): Uint8Array => {
   const text = svgText(next).replace(/^\ufeff/, '');
   const marked = `${'\ufeff'.repeat(Math.floor(next() * 2))}${text}`;
@@ -125,7 +100,6 @@ const svgIn = (encoding: Encoding, next: Draw): Uint8Array => {
   }
 };
 
-/** A file of `format`: its first bytes, then a body drawn from `next`. */
 const imageOf = (format: Format, next: Draw): Uint8Array => {
   const body = randomBytes(next, 16 + Math.floor(next() * 200));
   switch (format) {
@@ -206,7 +180,6 @@ const FORMATS: readonly [Format, ...ReadonlyArray<Format>] = [
   'svg',
 ];
 
-/** The extensions of a file named as an image, in any case. */
 const IMAGE_EXTENSIONS: readonly [string, ...ReadonlyArray<string>] = [
   '.webp',
   '.png',
@@ -226,7 +199,6 @@ const IMAGE_EXTENSIONS: readonly [string, ...ReadonlyArray<string>] = [
   '.jp2',
 ];
 
-/** Extensions a file may carry: none, wrong ones, every image's, in any case. */
 const EXTENSIONS: readonly [string, ...ReadonlyArray<string>] = [
   '',
   '.js',
@@ -253,7 +225,6 @@ const EXTENSIONS: readonly [string, ...ReadonlyArray<string>] = [
   '.Webp',
 ];
 
-/** The extensions of the site's files that are no image. */
 const PLAIN_EXTENSIONS: readonly [string, ...ReadonlyArray<string>] = [
   '',
   '.js',
@@ -265,7 +236,6 @@ const PLAIN_EXTENSIONS: readonly [string, ...ReadonlyArray<string>] = [
   '.bin',
 ];
 
-/** A path under `dist/` drawn from `next`: up to three folders, a name, an extension from `extensions`. */
 const pathOf = (
   next: Draw,
   index: number,
@@ -279,7 +249,6 @@ const pathOf = (
 
 const utf8 = (text: string) => new TextEncoder().encode(text);
 
-/** The files of the built site that are no image, as the build writes them. */
 const NOT_IMAGES: ReadonlyArray<readonly [string, Uint8Array]> = [
   ['a script', utf8('import{a as b}from"./x.js";const svg=`<svg viewBox="0 0 1 1"></svg>`;')],
   ['a stylesheet', utf8('.a{background:url(/og/home.jpg)}')],

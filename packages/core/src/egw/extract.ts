@@ -1,22 +1,3 @@
-/**
- * Extract Bible scripture references from EGW paragraphs.
- *
- * EGW paragraphs may contain inline `ScriptureRef` AST nodes (rendered as
- * `<span class="egwlink_bible" title="Genesis 3:1" data-link="1965.119">`).
- * The `paragraph_bible_refs` table joins those refs back to paragraphs, so
- * the renderer can ask "show me EGW commentary on Genesis 3:1" without an
- * FTS scan.
- *
- * The indexer is the natural call site: it already has the decoded paragraphs
- * in hand and writes them to `paragraphs`; this extractor produces the rows
- * that need to be written to `paragraph_bible_refs` in the same transaction.
- *
- * Title parsing uses `parseBibleQuery`, which is canonical for the rest of the
- * codebase (search bar, reference lookup). If a title fails to parse (e.g.,
- * a non-English title we don't yet handle), we skip — better to drop a single
- * reference than to fail the whole index pass.
- */
-
 import { Option, Predicate } from 'effect';
 
 import { parseBibleQuery } from '../bible/parse.js';
@@ -28,11 +9,9 @@ interface ExtractedBibleRef {
   readonly refCode: string;
   readonly bibleBook: number;
   readonly bibleChapter: number;
-  /** Absent when the reference targets a whole chapter (e.g. "Genesis 3"). */
   readonly bibleVerse: Option.Option<number>;
 }
 
-/** Canonical non-empty refcode for paragraph storage and Bible-reference joins. */
 export const paragraphRefcode = (paragraph: Paragraph, bookId: number): string => {
   const short = Option.getOrUndefined(paragraph.refcode_short);
   if (Predicate.isNotUndefined(short)) return short;
@@ -44,7 +23,6 @@ export const paragraphRefcode = (paragraph: Paragraph, bookId: number): string =
   );
 };
 
-/** The `Node` variants that carry inline `children`. */
 type ContainerNode = Extract<Node, { readonly children: readonly Node[] }>;
 
 const CONTAINER_TAGS: readonly ContainerNode['_tag'][] = [
@@ -63,8 +41,6 @@ const walkScriptureRefs = (nodes: readonly Node[], out: { readonly title: string
   for (const node of nodes) {
     if (node._tag === 'ScriptureRef') {
       out.push({ title: node.title });
-      // ScriptureRefs in this corpus don't nest other ScriptureRefs, but the
-      // recursion below covers it defensively without measurable cost.
     }
     if (isContainerNode(node)) {
       walkScriptureRefs(node.children, out);
@@ -72,24 +48,6 @@ const walkScriptureRefs = (nodes: readonly Node[], out: { readonly title: string
   }
 };
 
-/**
- * Walk all ScriptureRef nodes in `paragraphs`, parse each `title` via
- * `parseBibleQuery`, and yield the rows expected by
- * `EGWParagraphDatabase.storeBibleRefsBatch`.
- *
- * Behavior:
- * - `single` / `verseRange` → emits one row per concrete verse (rangeStart..rangeEnd)
- *   so a query like "Genesis 3:1-5" hydrates all five verse-anchored lookups.
- * - `chapter` → one row with an absent `bibleVerse` (commentary on the whole chapter).
- * - `fullBook`, `chapterRange`, `search` → skipped (too coarse to anchor to a verse
- *   row meaningfully; the chapter renderer wouldn't surface those either way).
- * - Parse failures → silently skipped. The catalog of EGW titles is large and
- *   imperfect; per-ref failures shouldn't abort a chapter index pass.
- *
- * Duplicates are removed (a paragraph that mentions "Genesis 3:1" twice should
- * still produce a single (book,chapter,verse) row — the PK on the destination
- * table would dedupe anyway, but skipping here saves transaction work).
- */
 export const extractScriptureRefs = (
   paragraphs: readonly Paragraph[],
   bookId: number,

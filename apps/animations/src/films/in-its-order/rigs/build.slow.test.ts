@@ -1,14 +1,3 @@
-// The committed `figures.riv` is the build of these rigs: the project the
-// house prints from IIO's figures file (`FIGURES`) is the one its stamp
-// (`figures.stamp.json`) says it was built from, and the file is the one
-// that build wrote (`unbuilt`). A rig edited without a rebuild
-// (`bun src/films/in-its-order/rigs/build.ts`) fails here, on a host with no
-// Rive CLI too. No figure of IIO is locked yet (a lock follows the owner's
-// keep of its cast render), so none is held to a lock and no override frees
-// one; any override cites the owner's word on IIO's ledger (`unsaid`). How a
-// lock and an override are held are the house's
-// (`packages/film/src/style/lock.test.ts`, `override.test.ts`).
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import * as BunCrypto from '@effect/platform-bun/BunCrypto';
 import { describe, expect, it } from 'effect-bun-test';

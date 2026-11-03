@@ -1,8 +1,3 @@
-// `film media push` into a folder store under a temp folder: two renders with
-// one name in two film folders are kept apart, each under its path below
-// FILMS_OUT, and a key the store holds with other bytes is refused, not
-// replaced. Synthetic files only; nothing leaves the machine.
-
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
 import {
@@ -22,7 +17,6 @@ import { media } from './media-cli.ts';
 import { folderStore } from './media-store.ts';
 import { PrivateStore } from './private-store.ts';
 
-/** The private store, a folder at `store`, and renders under `out`. */
 const storeAt = (out: string, store: string) =>
   Layer.merge(
     Layer.effect(
@@ -36,14 +30,12 @@ const storeAt = (out: string, store: string) =>
     ConfigProvider.layer(ConfigProvider.fromUnknown({ FILMS_OUT: out })),
   );
 
-/** `film media …args` with renders under `out` and the store in `store`: how it ended. */
 const run = (out: string, store: string, args: ReadonlyArray<string>) =>
   Command.runWith(media, { version: '0' })(args).pipe(
     Effect.provide(storeAt(out, store)),
     Effect.exit,
   );
 
-/** Whether a run ended refusing a key the store holds with other bytes. */
 const keyTaken = (exit: Exit.Exit<unknown, unknown>) =>
   Exit.match(exit, {
     onSuccess: () => false,
@@ -71,7 +63,6 @@ describe('film media push', () => {
         expect(yield* held('a/contact.jpg')).toBe('the contact sheet of a');
         expect(yield* held('b/contact.jpg')).toBe('the contact sheet of b');
 
-        // Both named into one folder: the second would replace the first, so it is refused.
         yield* run(out, store, ['push', '--under', 'kept', sheet('a')]);
         const taken = yield* run(out, store, ['push', '--under', 'kept', sheet('b')]);
         expect(keyTaken(taken)).toBe(true);

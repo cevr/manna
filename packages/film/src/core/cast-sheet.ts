@@ -1,41 +1,3 @@
-// A cast sheet measured (`film concept measure`): a member painted in the
-// house look in several views on one image, its figures found by their ink
-// and held, before any judge or pick, to the rules a rig traced from it must
-// keep (the concept stage's cast sheets: the film skill's Concept step).
-//
-// - Facing first: each view's head turns as its slot says (a turnaround's
-//   slots are front, three-quarter and profile to the viewer's left, back,
-//   profile and three-quarter to the right). Two partner views that match
-//   better unflipped than flipped were drawn facing one way; a profile, which
-//   reads no face, is held to the three-quarter on its side the same way; a
-//   turnaround head tipped past 5° is a redraw.
-// - The canon: the anchor view's height in heads, and the squash a trace to
-//   the member's own heads would apply with the head held: the cast's canon
-//   (3.36 heads) unless the member's design names its own (the plain lead's
-//   2.6), and a smaller figure its own (a child's head is a larger share of
-//   it). A sheet never sets a height; the cast band does.
-// - Held to the anchor (the view that passes the concept's match): height
-//   on standing views and the head, each a smaller figure's by its share of
-//   the grown one, the hand, the hair's fall under the chin on
-//   level heads, the papers; the partners' body widths, the hands cut out;
-//   one ground line. A heads sheet holds the head's height on its level
-//   heads and its width within each turn, and reads no hands.
-// - The look's rules: a lit side on the left (the key light is upper left;
-//   a view lit on its right was flipped), no grey shade, a partner never a
-//   mirror of the other, a beard parted from the hair as the kept concept
-//   parts it (owner, 2026-10-18: "Jesus's render confuses parts of his hair
-//   with his beard, look more closely to the concept"), and no skin below the
-//   neck but the hands, and every hand at the end of an arm in its sleeve,
-//   never floating free of the body (owner, 2026-10-18: "I actually like the
-//   style when they have sleeves and like arms, kind of like we have with
-//   Jesus and a lot of the characters so far in the cast"). The face is
-//   found by its own read (the skin round the eyes), never as the skin above
-//   the chin.
-//
-// A sheet is painted: what a view does not show is listed as not measured,
-// never guessed, and the measure guides the retry and the ask; it does not
-// keep a view.
-
 import { Array as Arr, Option, Result, Schema } from 'effect';
 import {
   arcOf,
@@ -75,14 +37,9 @@ import {
 import { compareFigures } from './match.ts';
 import { cropRaster, type Raster, type RasterPath, strokeRaster } from './raster.ts';
 
-// ---------------------------------------------------------------------------
-// What a sheet is asked to hold
-
-/** Where a view faces: front, three-quarter or profile toward the viewer's left or right, the back, or free (a pose sheet's view whose facing is not held). */
 export const Slot = Schema.Literals(['front', 'left', 'right', 'back', 'free']);
 export type Slot = typeof Slot.Type;
 
-/** A turnaround's six views, left to right. */
 export const TURNAROUND_SLOTS: ReadonlyArray<Slot> = [
   'front',
   'left',
@@ -95,35 +52,25 @@ export const TURNAROUND_SLOTS: ReadonlyArray<Slot> = [
 export const SheetKind = Schema.Literals(['turnaround', 'poses', 'heads', 'single']);
 export type SheetKind = typeof SheetKind.Type;
 
-/** The kept file a view is cut from, as the member's folder reaches it: a single drawing's own (`kept/single-<n>.png`), else its kind's sheet (`kept/<kind>.png`). */
 export const keptFile = (kind: SheetKind, view: string): string =>
   (kind === 'single' && `kept/${view}.png`) || `kept/${kind}.png`;
 
-/** The cast's canon: Christ's 3.36 heads, the owner's one height for the whole cast (character-design, the height band). */
 export const CANON_HEADS = 3.36;
 
-/**
- * A smaller figure a sheet draws beside the grown member (a child, a baby):
- * its view, its height as a share of the grown figure's (the cast band's
- * child is about 0.64 to 0.7), and its height in its own heads.
- */
 export interface ViewFigure {
   readonly view: number;
   readonly height: number;
   readonly heads: number;
 }
 
-/** How tall a view's figure stands: its share of the grown member's height, and its height in its own heads. */
 export interface Stature {
   readonly height: number;
   readonly heads: number;
 }
 
-/** How many of its own heads the grown member stands: its own, else the canon's. */
 export const grownHeadsOf = (options: Pick<SheetOptions, 'heads'>): number =>
   options.heads ?? CANON_HEADS;
 
-/** The figure in `view` as the options stand it: a smaller figure's own, else the grown member's. */
 export const statureOf = (
   options: Pick<SheetOptions, 'heads' | 'figures'>,
   view: number,
@@ -133,81 +80,43 @@ export const statureOf = (
     () => ({ height: 1, heads: grownHeadsOf(options) }),
   );
 
-/** How a sheet is read: its kind, how many figures it draws, the anchor view (1-based), each view's slot, the views that stand, and whether the member wears headgear. */
 export interface SheetOptions {
   readonly kind: SheetKind;
   readonly count: number;
   readonly anchor: number;
   readonly slots?: ReadonlyArray<Slot>;
-  /** The views whose height is held to the anchor's: a turnaround's are all of them. */
   readonly standing?: ReadonlyArray<number>;
-  /** The views whose head is level, neither bowed nor lifted: the hair's fall is held on these alone (every view when left out). */
   readonly level?: ReadonlyArray<number>;
-  /** A headcloth or a veil: the head is read as its face opening, and the canon is not measured. */
   readonly headgear?: boolean;
-  /** How many of its own heads the grown member stands: the canon's (`CANON_HEADS`) when left out. */
   readonly heads?: number;
-  /** The smaller figures the sheet draws beside the grown member, each its own size. */
   readonly figures?: ReadonlyArray<ViewFigure>;
-  /** Kept concepts, each held to the sheet's view that faces as it does. */
   readonly concepts?: ReadonlyArray<SheetConcept>;
 }
 
-/** A kept concept's figure, measured, and the sheet's view it is held to. */
 export interface SheetConcept {
   readonly name: string;
   readonly measure: FigureMeasure;
   readonly view: number;
 }
 
-// ---------------------------------------------------------------------------
-// Its tolerances
-
-/** A view's height, head and hand against the anchor's, and partners' widths, in percent (the concepttool measure). */
 const TOLERANCE = 5;
-/** The squash to the canon past which a sheet is redrawn, in percent (a guess; calibrated on the first kept sheet). */
 const SQUASH_MAX = 10;
-/** A head's turn inside which it faces the viewer, and past which it faces a side (`figure.ts`'s facing). */
 const FRONT_TURN = 0.06;
 const SIDE_TURN = 0.04;
-/** A turnaround head tipped past this, in degrees, is a redraw. */
 const ROLL_MAX = 5;
-/** A pair's mean difference flipped under this is a mirror. */
 const MIRROR_FLOOR = 6;
-/** A pair whose unflipped difference is under this share of its flipped one faces one way. */
 const SAME_WAY = 0.8;
-/** A paper's distance from the anchor's (ΔE76) past which it is another cloth. */
 const PAPER_DE = 12;
-/** A view's sole off the anchor's by more than this share of the anchor's height stands off the ground line. */
 const GROUND = 0.02;
-/** The hair's fall under the chin, in head heights, past which it differs from the anchor's. */
 const HAIR_FALL = 0.1;
-/** A join crossing the circle just round a hand along less than this share of its radius is a touch, never a sleeve: the hand floats free. */
 const LINK = 0.5;
-/** A joined hand held out by a gap under this share of its diameter from the body's side touches it, at rest: a sleeve to it is not told from a touch. */
 const REACH = 0.1;
-/** A fill's distance from the face's skin (ΔE76) inside which it may be skin. */
 const SKIN_DE = 14;
-/**
- * How many degrees of Lab hue a fill may lie yellower than the face's skin
- * and still be it: the house shade turns skin toward violet, never toward
- * yellow, so a gold sash as near the skin as its shade is told from it.
- */
 const SKIN_YELLOWER = 8;
-/**
- * A fill's distance from the face's lit skin (ΔE76) inside which it is the
- * skin's own paper: bare skin and the hands are cut from it, while a cloth
- * of a skin-like tan (a farmer's tunic, 8.5 from his face) is not.
- */
 const SKIN_PAPER = 6;
-/** The oval inside a head's box, as a share of its width and height, that only the head's own fills reach into. */
 const HEAD_CORE = 0.95;
-/** A dark fill (hair, a beard): darker than this luma, and farther than `PARTING_INK` from the ink. */
 const DARK_LUMA = 115;
 const PARTING_INK = 44;
-
-// ---------------------------------------------------------------------------
-// What the measure answers
 
 export const SheetCheck = Schema.Literals([
   'facing',
@@ -231,7 +140,6 @@ export const SheetCheck = Schema.Literals([
 ]);
 export type SheetCheck = typeof SheetCheck.Type;
 
-/** A check a sheet fails: the views it names, the value read, the limit, and what it means. */
 const SheetFlag = Schema.Struct({
   check: SheetCheck,
   views: Schema.Array(Schema.Int),
@@ -241,7 +149,6 @@ const SheetFlag = Schema.Struct({
 });
 type SheetFlag = typeof SheetFlag.Type;
 
-/** A check a view does not show, and why (view 0: the sheet). */
 const SheetUnmeasured = Schema.Struct({
   check: SheetCheck,
   view: Schema.Int,
@@ -252,28 +159,21 @@ type SheetUnmeasured = typeof SheetUnmeasured.Type;
 const LitSide = Schema.Literals(['left', 'right', 'even']);
 type LitSide = typeof LitSide.Type;
 
-/** A view read: its place, its size, its head and hands, its hair, its papers and its lit side. */
 const SheetView = Schema.Struct({
   view: Schema.Int,
   slot: Slot,
   box: PixelBox,
   height: Schema.Finite,
   widthToHeight: Schema.Finite,
-  /** The head's height in pixels; under headgear, the face opening's. */
   head: Schema.optionalKey(Schema.Finite),
-  /** The head's width in pixels: its box, which a lock of hair beside the face widens. */
   headWidth: Schema.optionalKey(Schema.Finite),
-  /** The eyes' spacing in pixels, which neither a nod nor the hair changes: what a heads sheet holds the heads of one turn by. */
   eyes: Schema.optionalKey(Schema.Finite),
   headsTall: Schema.optionalKey(Schema.Finite),
   turn: Schema.optionalKey(Schema.Finite),
   roll: Schema.optionalKey(Schema.Finite),
-  /** The hand's diameter in head heights (`figure.ts`'s `hand`, a share of the head's width, over the head's height). */
   hand: Schema.optionalKey(Schema.Finite),
-  /** The hair's lowest point under the chin, in head heights. */
   hairFall: Schema.optionalKey(Schema.Finite),
   hairBeard: Schema.optionalKey(Schema.Literals(['parted', 'merged'])),
-  /** Whether a line closes the chin, or the face runs on into the neck as one fill (`figure.ts`'s `chin`): read where a face reads. */
   chin: Schema.optionalKey(Schema.Literals(['closed', 'open'])),
   lit: LitSide,
   papers: Schema.Array(
@@ -282,16 +182,12 @@ const SheetView = Schema.Struct({
       share: Schema.Finite,
     }),
   ),
-  /** How far a sleeve or an arm reaches out to a hand held out or raised, joined to it, in hand diameters. */
   reach: Schema.optionalKey(Schema.Finite),
-  /** The hands read that float free: no sleeve or arm joins them to the body. */
   free: Schema.optionalKey(Schema.Int),
-  /** Skin regions below the neck that are not round hands. */
   bare: Schema.Int,
 });
 type SheetView = typeof SheetView.Type;
 
-/** Two partner views: their mean difference flipped and not, and their widths' difference in percent. */
 const SheetPair = Schema.Struct({
   views: Schema.Tuple([Schema.Int, Schema.Int]),
   flipped: Schema.Finite,
@@ -299,7 +195,6 @@ const SheetPair = Schema.Struct({
   widths: Schema.Finite,
 });
 
-/** A kept concept against its view: how many rows `compareFigures` reads, and the flagged ones. */
 const SheetConceptRows = Schema.Struct({
   name: Schema.String,
   view: Schema.Int,
@@ -307,7 +202,6 @@ const SheetConceptRows = Schema.Struct({
   flagged: Schema.Array(Schema.String),
 });
 
-/** A profile against the three-quarter on its own side: their mean difference flipped and not. */
 const SheetSide = Schema.Struct({
   views: Schema.Tuple([Schema.Int, Schema.Int]),
   flipped: Schema.Finite,
@@ -317,12 +211,10 @@ const SheetSide = Schema.Struct({
 export const SheetMeasure = Schema.Struct({
   kind: SheetKind,
   anchor: Schema.Int,
-  /** How many figures the sheet draws: more than the views when it draws more than it names. */
   found: Schema.Int,
   views: Schema.Array(SheetView),
   pairs: Schema.Array(SheetPair),
   sides: Schema.Array(SheetSide),
-  /** The anchor's height in heads, the heads it is held to, and the squash to them (percent; negative, a stretch). */
   canon: Schema.Struct({
     heads: Schema.optionalKey(Schema.Finite),
     against: Schema.optionalKey(Schema.Finite),
@@ -334,7 +226,6 @@ export const SheetMeasure = Schema.Struct({
 });
 export type SheetMeasure = typeof SheetMeasure.Type;
 
-/** A sheet that cannot be read as asked: fewer figures than it names, or an anchor or slots that do not fit. */
 class SheetUnread extends Schema.TaggedError<SheetUnread>()('SheetUnread', {
   reason: Schema.String,
 }) {
@@ -343,21 +234,14 @@ class SheetUnread extends Schema.TaggedError<SheetUnread>()('SheetUnread', {
   }
 }
 
-// ---------------------------------------------------------------------------
-// One view read
-
-/** A view as read, with what the checks need beside its record: its crop, its figure's measure, its hands and the unmeasured. */
 interface ViewRead {
   readonly record: SheetView;
   readonly crop: Raster;
-  /** Its figure read: in full where a concept is held to it, lean elsewhere. */
   readonly measure: Option.Option<FigureRead>;
-  /** Its figure's full measure, where a concept is held to it. */
   readonly full: Option.Option<FigureMeasure>;
   readonly unmeasured: ReadonlyArray<SheetUnmeasured>;
 }
 
-/** The room left round a view's crop. */
 const PAD = 12;
 
 const ratioOf = (m: FigureRead, ratio: FigureRead['ratios'][number]['ratio']) =>
@@ -366,10 +250,8 @@ const ratioOf = (m: FigureRead, ratio: FigureRead['ratios'][number]['ratio']) =>
     (r) => r.value,
   );
 
-/** The parts of a view's head the reads below lean on, in its crop's pixels. */
 interface HeadFrame {
   readonly W: number;
-  /** The head's height, which turning does not change as it changes the width: what a hand and the hair's fall are shares of. */
   readonly H: number;
   readonly cx: number;
   readonly left: number;
@@ -378,7 +260,6 @@ interface HeadFrame {
   readonly chin: number;
   readonly eyeY: number;
   readonly faceX: number;
-  /** The mouth's row, or a little under the eyes where no mouth reads. */
   readonly mouthY: number;
 }
 
@@ -405,12 +286,6 @@ const headFrameOf = (m: FigureRead): HeadFrame => {
   };
 };
 
-/**
- * The head's frame under a headcloth, held to its face opening (`box`): the
- * cloth's box runs down to the shoulders or the hem, so the chin is the
- * opening's foot, and the head is as wide as the figure's silhouette across the eyes' row
- * through the face (the cloth over the head, with its line), never wider than the cloth's box.
- */
 const clothedFrame = (f: HeadFrame, box: Box, closed: Uint8Array, width: number): HeadFrame => {
   const y = Math.round(f.eyeY);
   const x = Math.round(f.faceX);
@@ -423,7 +298,6 @@ const clothedFrame = (f: HeadFrame, box: Box, closed: Uint8Array, width: number)
   return { ...f, W: right - left, H: chin - f.top, cx: (left + right) / 2, left, right, chin };
 };
 
-/** The face's skin: the median of the light fills on the band under the eyes. */
 const skinOf = (crop: Raster, inside: Uint8Array, f: HeadFrame): Option.Option<Rgb> => {
   const at: Array<number> = [];
   for (let y = Math.round(f.eyeY); y < f.eyeY + 0.12 * f.W; y++)
@@ -449,7 +323,6 @@ const skinOf = (crop: Raster, inside: Uint8Array, f: HeadFrame): Option.Option<R
 
 const hueOf = (lab: Rgb) => (Math.atan2(lab[2], lab[1]) * 180) / Math.PI;
 
-/** Whether a colour is the face's skin `skin` (in Lab), lit or shaded. */
 const skinTest = (skin: Rgb) => {
   const hue = hueOf(skin);
   return (c: Rgb) => {
@@ -458,7 +331,6 @@ const skinTest = (skin: Rgb) => {
   };
 };
 
-/** How near a colour lies to the line from `a` to `b` in RGB: a soft edge between two fills lies on it. */
 const offLine = (c: Rgb, a: Rgb, b: Rgb) => {
   const [dr, dg, db] = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
   const t = Math.max(
@@ -472,25 +344,14 @@ const offLine = (c: Rgb, a: Rgb, b: Rgb) => {
   return Math.hypot(c[0] - a[0] - t * dr, c[1] - a[1] - t * dg, c[2] - a[2] - t * db);
 };
 
-/** A soft edge between the skin and the ink, or the skin and its light inner edge, lies within this of the line between them (RGB). */
 const SOFT_EDGE = 24;
-/** The light the house's thin inner edge turns a paper toward. */
 const LIGHT_EDGE: Rgb = [255, 248, 230];
 
-/** A skin region below the neck: a round hand (with the share of its ring that is a garment's fill), or bare skin (an arm, a shoulder). */
 type SkinPart =
   | { readonly kind: 'hand'; readonly region: Region; readonly cloth: number }
   | { readonly kind: 'bare'; readonly region: Region }
-  /** A hand's round before the head or the neck: read as neither, and said. */
   | { readonly kind: 'masked'; readonly region: Region };
 
-/**
- * The skin's regions, by colour: the fills inside the figure within
- * `SKIN_PAPER` of the face's lit skin, joined where they touch. The house
- * look draws no ink inside the silhouette, so a bare arm meets the robe and
- * a face its headcloth with no line between them; read by what the ink
- * closes, each pair would be one region.
- */
 const skinRegionsOf = (crop: Raster, inside: Uint8Array, skin: Rgb): ReadonlyArray<Region> => {
   const lab = labOf(skin);
   const labAt = labsOf(crop);
@@ -500,32 +361,20 @@ const skinRegionsOf = (crop: Raster, inside: Uint8Array, skin: Rgb): ReadonlyArr
   return regionsOf(crop, mask, 30);
 };
 
-/** The neck is no wider than this share of the head's width; bare skin from shoulder to shoulder is wider. */
 const NECK_WIDTH = 0.6;
-/** Nor taller than this share of it: a painted neck with the V of the robe's throat under it stands up to 0.41 of the head's width, a forearm joined to a raised hand 0.83, so a forearm is never the neck; a hand alone (0.33 drawn, 0.45 painted) is round, and said when its middle lies under the chin or it runs past the head's box. */
 const NECK_TALL = 0.5;
-/** A hand's box, wide over tall, and how much of the box's ellipse it fills: a disc fills 1, a square 1.27. */
 const HAND_ASPECT: readonly [number, number] = [0.75, 1.33];
 const HAND_FILL: readonly [number, number] = [0.8, 1.1];
-/** A hand's longest side against the hand the figure's measure reads (its ink in): a hand held, clipped or round, is no smaller and no bigger. */
 const HAND_SIZE: readonly [number, number] = [0.4, 1.3];
-/** A hand clipped behind the body meets the body's ink; bare skin on the robe meets its fill on more than this share of its ring. */
 const CLIPPED_CLOTH = 0.35;
 
 const within = (v: number, [lo, hi]: readonly [number, number]) => v >= lo && v <= hi;
 
-/** Whether a region's box holds the eyes' middle. */
 const holdsEyes = (region: Region, f: HeadFrame) => {
   const [x0, y0, x1, y1] = region.box;
   return x0 <= f.faceX && x1 >= f.faceX && y0 <= f.eyeY && y1 >= f.eyeY;
 };
 
-/**
- * The face or a part of it (an ear, a lit cheek): a region that holds the
- * eyes, or whose middle lies on the head: its box a tenth of its width
- * wider each side, down to a third of a head under the mouth, since the
- * measure's head can end where a beard starts.
- */
 const facePart = (region: Region, f: HeadFrame) => {
   const [x0, y0, x1, y1] = region.box;
   const [mx, my] = [(x0 + x1) / 2, (y0 + y1) / 2];
@@ -537,7 +386,6 @@ const facePart = (region: Region, f: HeadFrame) => {
   return holdsEyes(region, f) || onHead;
 };
 
-/** What a view's skin parts are read against: its soles and height, the hand the measure reads, whether its sheet draws hands, and how much of a region's ring is a garment's fill. */
 interface SkinFrame {
   readonly sole: number;
   readonly height: number;
@@ -546,7 +394,6 @@ interface SkinFrame {
   readonly cloth: (region: Region) => number;
 }
 
-/** Whether a region is the neck, or a V at the robe's throat: it starts under the chin, or under a beard that hangs below it, narrow and short. */
 const isNeck = (region: Region, f: HeadFrame) => {
   const [x0, y0, x1, y1] = region.box;
   return (
@@ -557,7 +404,6 @@ const isNeck = (region: Region, f: HeadFrame) => {
   );
 };
 
-/** Whether a region is a hand's size, and whether it is round as a hand is (a disc's box and fill). */
 const roundOf = (region: Region, frame: SkinFrame) => {
   const [x0, y0, x1, y1] = region.box;
   const [bw, bh] = [x1 - x0, y1 - y0];
@@ -572,27 +418,15 @@ const roundOf = (region: Region, frame: SkinFrame) => {
   return { sized, round };
 };
 
-/** A hand's round read as the neck under the chin, or as a part of the face that runs past the head's box, may be a hand held there: said, never passed. */
 const maskedBy = (region: Region, f: HeadFrame, neck: boolean) => {
   const [x0, y0, x1, y1] = region.box;
   const pastHead = x0 < f.left || x1 > f.right || y1 > f.chin;
-  // A hand on the neck has its middle under the chin, though its ring may start above it.
   return (
     !holdsEyes(region, f) &&
     ((neck && (y0 + y1) / 2 >= f.chin) || (facePart(region, f) && pastHead))
   );
 };
 
-/**
- * The skin regions below the neck, at any height, each a hand or bare skin.
- * The face is the region that holds the eyes (and its parts in the head's
- * box), the neck the narrow region just under the chin, never skin above
- * the chin as such, so a raised hand is read where it is. A hand is round
- * (a disc's box and fill) and a hand's size, or clipped behind the body
- * (a hand's size, its cut edge on the body's ink, not its fill); any other
- * region big enough is bare skin, and on a heads sheet, which draws no
- * hands, every one is.
- */
 const skinPartsOf = (
   regions: ReadonlyArray<Region>,
   f: HeadFrame,
@@ -613,12 +447,6 @@ const skinPartsOf = (
     return ((round || clipped) && [{ kind: 'hand', region, cloth }]) || bare;
   });
 
-/**
- * A beard: the first dark fill under the mouth before the head's outline
- * (a dark robe under the chin lies past that line), and whether it runs up
- * past the eyes into the hair. The measure's head may end where a beard
- * starts, so the walk runs on to a third of a head under its chin.
- */
 const beardOf = (
   labels: Int32Array,
   ink: Uint8Array,
@@ -644,18 +472,6 @@ const beardOf = (
       ),
   );
 
-/**
- * The dark fills of the head (hair, a beard) apart from the ink, each joined
- * where it touches: the crown, the beard under the mouth and whether it runs
- * into any lock of the hair, and the lowest the hair falls. A fill is the
- * head's when it reaches into the oval well inside the head's box (`HEAD_CORE`
- * of its half width and height), so a dark robe showing beside the jaw is
- * never a beard or a lock, even with a line drawn across the hair; a fill smaller than a
- * hundredth of the head's width squared is the soft edge between the ink and
- * the paper, never hair. The hair's fall is the lowest of the head's fills,
- * the beard left out, so a lock split from the crown by a lighter streak
- * still counts.
- */
 const hairOf = (
   crop: Raster,
   m: FigureRead,
@@ -700,14 +516,12 @@ const hairOf = (
   return Option.some({ crown, beard, lowest: Math.max(f.top, ...onHead.map((c) => c.box[3])) });
 };
 
-/** A body row: its left and right edge. */
 interface SideRow {
   readonly y: number;
   readonly left: number;
   readonly right: number;
 }
 
-/** A hand's disc: its middle, its radius, and the radius its ink and soft edge take it to. */
 interface HandDisc {
   readonly x: number;
   readonly y: number;
@@ -715,12 +529,6 @@ interface HandDisc {
   readonly clear: number;
 }
 
-/**
- * Each hand's disc. A hand read on its lit paper alone leaves its shaded
- * crescent out, so its radius is the larger of its region's and the one the
- * figure's measure reads (`hand`, its ink in) inside the ink; it is cleared
- * with its ink and a soft edge.
- */
 const discsOf = (
   hands: ReadonlyArray<Region>,
   line: number,
@@ -738,18 +546,11 @@ const discsOf = (
     return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, r, clear: r + 1.5 * line };
   });
 
-/** The columns of a view's crop its body's own ink ring spans on each row (`SheetFigure.body`), its last exclusive: a neighbour painted close beside it, inside the crop's pad or its box, and a hand floating free lie past them. */
 interface BodyColumns {
   readonly from: Int32Array;
   readonly to: Int32Array;
 }
 
-/**
- * Each row's span of the view's body ring: the ink component the sheet's
- * figures were found by (`body`, its box in the crop), read on its own
- * pixels, so a neighbour whose box overlaps it stays out. A row the ring
- * does not cross (a gap in its line) is read across the ring's box.
- */
 const bodyColumnsOf = (crop: Raster, body: PixelBox): BodyColumns => {
   const { width: w, height: h } = crop;
   const { components, labels } = componentsOf(inkByLuma(crop), w, h, true);
@@ -767,7 +568,6 @@ const bodyColumnsOf = (crop: Raster, body: PixelBox): BodyColumns => {
   return { from, to };
 };
 
-/** A view's body rows: each row's left and right edge of what the ink closes inside its body ring's span on that row, its hands' discs cleared. */
 const sideRowsOf = (
   crop: Raster,
   closed: Uint8Array,
@@ -791,10 +591,8 @@ const sideRowsOf = (
   return out;
 };
 
-/** The side of a row toward `toward` (+1 the right). */
 const sideOf = (row: SideRow, toward: number) => (toward > 0 && row.right) || row.left;
 
-/** What a reach is read from: the body as the ink closes it with the hands cut out, labelled, its body rows, the hands, its middle and the head. */
 interface ReachFrame {
   readonly labels: Int32Array;
   readonly body: number;
@@ -806,31 +604,15 @@ interface ReachFrame {
   readonly head: HeadFrame;
 }
 
-/** One hand's reach: read (joined, and the gap its sleeve or arm closes in hand diameters, or free), or not read and why. */
 type HandReach =
   | { readonly read: true; readonly joined: true; readonly reach: number }
   | { readonly read: true; readonly joined: false }
   | { readonly read: false; readonly why: string };
 
-/** Whether something joins a hand to the body: it crosses the circle just round the hand along more than a touch. */
 const linked = (frame: ReachFrame, d: HandDisc) =>
   arcOf(frame.labels, frame.width, { x: d.x, y: d.y, radius: d.clear + 1 }, frame.body) >=
   LINK * d.r;
 
-/**
- * Whether a sleeve or an arm joins one hand to the body, and how far it
- * reaches. The house hand is a circle at the end of an arm in its sleeve. A
- * hand is joined when, its disc cut out, the body still crosses the circle
- * round it past a touch: a sleeve or an arm from any angle, met as flat
- * colour or across the hand's own ring; a hand with paper all round it, or
- * one that only touches the body, floats free. A joined hand whose middle
- * lies more than its radius past the body's side just under it is held out,
- * and one above the shoulders raised, held out from the head's side: its
- * reach is the gap its sleeve closes. A joined hand at rest against the
- * body (or held out from it by under `REACH` of its diameter: a bare hand
- * whose ring touches the body's line meets it as a sleeve would), or in
- * front of the head, cannot tell a sleeve from a touch, and is said.
- */
 const handReachOf = (frame: ReachFrame, d: HandDisc): HandReach => {
   if (!linked(frame, d)) return { read: true, joined: false };
   const toward = Math.sign(d.x - frame.middle) || 1;
@@ -855,7 +637,6 @@ const handReachOf = (frame: ReachFrame, d: HandDisc): HandReach => {
   return { read: true, joined: true, reach: gap / (2 * d.r) };
 };
 
-/** A garment's rows: its fills (not skin, not hair) from 0.55 to 0.85 of the figure down. */
 const garmentRowsOf = (
   crop: Raster,
   inside: Uint8Array,
@@ -891,7 +672,6 @@ const litOf = (votes: { readonly left: number; readonly right: number }): LitSid
   return 'even';
 };
 
-/** A view's crop as the ink closes it: inside the figure (not outside, not ink), and closed (not outside). */
 interface Closed {
   readonly inside: Uint8Array;
   readonly closed: Uint8Array;
@@ -908,7 +688,6 @@ const closedOf = (crop: Raster): Closed => {
   return { inside, closed };
 };
 
-/** A view's reach: each hand's, cut out of the body as the ink closes it, read where it can be and said where it cannot. */
 const reachesOf = (
   crop: Raster,
   closed: Uint8Array,
@@ -927,7 +706,6 @@ const reachesOf = (
   return frame.discs.map((d) => handReachOf(full, d));
 };
 
-/** The parts of a view read off its figure's measure: its head, hands, hair, skin, reaches and what it cannot read. */
 const readMeasured = (
   crop: Raster,
   m: FigureRead,
@@ -950,7 +728,6 @@ const readMeasured = (
     onNone: () => [],
     onSome: (s) => skinRegionsOf(crop, inside, s),
   });
-  // The face opening under a headcloth: the skin's own paper round the eyes, inside the head's box (a tan tunic joins no face).
   const faceOpening = Arr.findFirst(
     regions,
     (r) =>
@@ -960,7 +737,6 @@ const readMeasured = (
       r.box[3] > f.eyeY &&
       r.box[3] <= m.head[3] + 0.1 * f.H,
   );
-  // Under a headcloth the head's box runs down the cloth: the face, the neck and the shoulders are read on the face opening's frame instead.
   const at = Option.getOrElse(
     Option.filter(
       Option.map(faceOpening, (r) => clothedFrame(f, r.box, closed, crop.width)),
@@ -1016,7 +792,6 @@ const readMeasured = (
   const head =
     (ctx.headgear && Option.map(faceOpening, (r) => r.box[3] - r.box[1])) ||
     Option.some(m.head[3] - m.head[1]);
-  // Under a headcloth no hair shows: the dark the beard meets is the cloth's.
   const hair = Option.filter(hairOf(crop, m, f), () => !ctx.headgear);
   if (ctx.headgear)
     unmeasured.push({
@@ -1028,7 +803,6 @@ const readMeasured = (
     unmeasured.push({ check: 'hairBeard', view: ctx.view, why: 'no dark hair reads at the crown' });
   if (Option.exists(hair, (h) => Option.isNone(h.beard)))
     unmeasured.push({ check: 'hairBeard', view: ctx.view, why: 'no beard reads under the mouth' });
-  // The side's rows start under the hair, which falls over the shoulders outside the garment's line.
   const fallen = Option.getOrElse(
     Option.map(hair, (h) => h.lowest + line),
     () => at.chin,
@@ -1076,10 +850,8 @@ const readMeasured = (
   };
 };
 
-/** What a view whose face does not read (a back, a bowed head) cannot be checked for. */
 const FACELESS: ReadonlyArray<SheetCheck> = ['facing', 'hairBeard', 'sleeveReach', 'bareArm'];
 
-/** The body's width as a share of the figure's height: the median of the rows from `BODY_BAND` of it down, under the hands, its hands cleared, so hands that touch the robe never widen it. */
 const BODY_BAND: readonly [number, number] = [0.76, 0.9];
 
 const bodyWidthOf = (
@@ -1112,13 +884,11 @@ const readView = (
   const [ox, oy] = [Math.max(0, x0 - PAD), Math.max(0, y0 - PAD)];
   const crop = cropRaster(sheet, [x0 - PAD, y0 - PAD, x1 + PAD, y1 + PAD]);
   const height = y1 - y0;
-  // The full measure only where a concept is held to the view: its rims, shading and artifacts are read for the concept's compare alone.
   const heldToConcept = (options.concepts || []).some((c) => c.view === view);
   const full = Option.flatMap(
     Option.liftPredicate(crop, () => heldToConcept),
     (c) => Result.getSuccess(measureFigure(c)),
   );
-  // The lean read where no concept is held, or the full one failed: its failure says why no face reads.
   const lean = Option.match(full, {
     onNone: () => readFigure(crop),
     onSome: (m) => Result.succeed<FigureRead>(m),
@@ -1186,15 +956,8 @@ const facingFields = (m: FigureRead) => ({
   eyes: m.facing.eyes,
 });
 
-/** A beard and the hair: one fill, or parted by a line. */
 const partingOf = (merged: boolean): 'parted' | 'merged' => (merged && 'merged') || 'parted';
 
-/**
- * The fields read off a view's measure. The hand and the hair's fall are
- * shares of the head's height (under headgear, the face opening's), which a
- * turn changes less than the width; under headgear the hair is not read. A
- * heads sheet draws no hands, so it reads none.
- */
 const measuredFields = (
   r: ReturnType<typeof readMeasured>,
   height: number,
@@ -1232,9 +995,6 @@ const measuredFields = (
   return { ...head, ...hand, ...hair, ...reach, ...free, chin };
 };
 
-// ---------------------------------------------------------------------------
-// The checks
-
 const pct = (a: number, b: number) => (100 * (a - b)) / b;
 
 const flag = (
@@ -1251,7 +1011,6 @@ const flag = (
   note,
 });
 
-/** Each view's turn against its slot: a front within ±0.06, a side past 0.04 its own way, no face on a back. */
 const facingFlags = (views: ReadonlyArray<SheetView>): ReadonlyArray<SheetFlag> =>
   views.flatMap((v) =>
     Option.match(Option.fromUndefinedOr(v.turn), {
@@ -1307,19 +1066,8 @@ const rollFlags = (views: ReadonlyArray<SheetView>, kind: SheetKind): ReadonlyAr
     ),
   );
 
-/**
- * Under this many heads tall, a standing view's head read is over half its
- * figure: no standing figure the house draws (the canon is 3.36), so the read
- * is not its head (a face whose fill runs on into a body of its own colour
- * reads so), and nothing is held to it. The views read so are those the
- * sheet's options stand, or every view when they name none; a low pose
- * (crouching, seated, lying) the options do not stand can be under two heads
- * with its head read right, so it keeps its head. A heads sheet draws busts,
- * so it is never asked.
- */
 const HEADS_LEAST = 2;
 
-/** A view with its head's reads left out: the head, its width, the height in heads, and the hand and the hair's fall, both in head heights. */
 const headless = (v: SheetView): SheetView => {
   const {
     head: _head,
@@ -1332,14 +1080,12 @@ const headless = (v: SheetView): SheetView => {
   return rest;
 };
 
-/** What the canon reads: the anchor's height in heads, the heads its figure stands, and the squash between. */
 interface Canon {
   readonly heads?: number;
   readonly against?: number;
   readonly squash?: number;
 }
 
-/** The heads the anchor's figure stands (`against`), and where its head reads, its height in heads and the squash a trace to `against` applies with the head held; under headgear, nothing (the canon is read on the lock). */
 const canonOf = (anchor: SheetView, headgear: boolean, against: number): Canon =>
   (headgear && {}) ||
   Option.match(Option.fromUndefinedOr(anchor.headsTall), {
@@ -1367,7 +1113,6 @@ const squashFlags = (canon: Canon, anchor: number): ReadonlyArray<SheetFlag> =>
     },
   );
 
-/** A number each view and the anchor both read, held within a limit. */
 const heldTo = (
   views: ReadonlyArray<SheetView>,
   anchor: SheetView,
@@ -1398,14 +1143,6 @@ const percentOff =
     );
   };
 
-/**
- * The heads on a heads sheet: a turn changes a head's width and a nod its
- * height, so the height is held on the level heads alone, and the size
- * among the heads of one turn, each to that turn's first level head (the
- * anchor on its own turn), by the eyes' spacing: a lock of hair falling
- * beside the face widens the head's box, never the eyes. A bowed or lifted
- * head is held to its own turn, never read as drift for its nod.
- */
 const headsFlags = (
   views: ReadonlyArray<SheetView>,
   anchor: SheetView,
@@ -1445,13 +1182,6 @@ const headsFlags = (
   }),
 ];
 
-/**
- * Each view held to the anchor: the height on standing views, the head (on
- * a heads sheet, as `headsFlags` holds it), the hand, the hair's fall on
- * level heads, and the soles. A smaller figure's height and head are read
- * as the grown figure's would be: its height over its share, its head over
- * its share of the grown head (its height share over its heads).
- */
 const anchorFlags = (
   views: ReadonlyArray<SheetView>,
   anchor: SheetView,
@@ -1522,7 +1252,6 @@ const anchorFlags = (
   }),
 ];
 
-/** Each view's papers against the anchor's three biggest: the farthest of them from its nearest. */
 const paperFlags = (views: ReadonlyArray<SheetView>, anchor: SheetView): ReadonlyArray<SheetFlag> =>
   views.flatMap((v) => {
     const greys = v.papers.filter((p) => {
@@ -1559,7 +1288,6 @@ const paperFlags = (views: ReadonlyArray<SheetView>, anchor: SheetView): Readonl
     ];
   });
 
-/** A view's sleeves: a hand that floats free, no sleeve or arm joining it to the body. */
 const reachFlags = (v: SheetView): ReadonlyArray<SheetFlag> =>
   Option.match(
     Option.filter(Option.fromUndefinedOr(v.free), (n) => n > 0),
@@ -1612,7 +1340,6 @@ const lookFlags = (views: ReadonlyArray<SheetView>): ReadonlyArray<SheetFlag> =>
       []),
   ]);
 
-/** A turnaround's partners: front and back, the two three-quarters, the two profiles. */
 const PARTNERS: ReadonlyArray<readonly [number, number]> = [
   [1, 4],
   [2, 6],
@@ -1635,20 +1362,16 @@ const pairsOf = (reads: ReadonlyArray<ViewRead>, kind: SheetKind) =>
     )) ||
   [];
 
-/** A turnaround's profiles, each beside the three-quarter on its own side, whose facing the measure reads. */
 const SIDES: ReadonlyArray<readonly [number, number]> = [
   [2, 3],
   [6, 5],
 ];
 
-/** The top of a view a profile is held to its three-quarter on: the head and the shoulders, where the way it faces shows (the hair's mass behind, the face and beard in front); the body under them turns little between the two. */
 const HEAD_BAND = 0.3;
 
-/** A view's head band: the top `HEAD_BAND` of its figure. */
 const headBandOf = (r: ViewRead) =>
   cropRaster(r.crop, [0, 0, r.crop.width, PAD + HEAD_BAND * (r.crop.height - 2 * PAD)]);
 
-/** Each profile against its side's three-quarter, on their head bands: a profile reads no face, so it is held to the way the three-quarter faces. */
 const sidesOf = (reads: ReadonlyArray<ViewRead>, kind: SheetKind) =>
   (kind === 'turnaround' &&
     SIDES.flatMap(([a, b]) =>
@@ -1667,10 +1390,8 @@ const sidesOf = (reads: ReadonlyArray<ViewRead>, kind: SheetKind) =>
     )) ||
   [];
 
-/** A profile whose head matches its side's three-quarter's better flipped than not faces the other way (on the prototypes, a sheet drawn right reads 1.06 and up, one with a side facing two ways 0.96 and under). */
 const PROFILE_WAY = 1;
 
-/** A profile that matches its side's three-quarter better flipped than not faces the other way. */
 const sideFlags = (sides: ReadonlyArray<typeof SheetSide.Type>): ReadonlyArray<SheetFlag> =>
   sides.flatMap(
     (p) =>
@@ -1739,7 +1460,6 @@ const conceptRows = (reads: ReadonlyArray<ViewRead>, concepts: ReadonlyArray<She
     ),
   );
 
-/** Measure a cast sheet: its figures found, each view read, and every check run. */
 export const measureSheet = (
   given: Raster,
   options: SheetOptions,
@@ -1773,7 +1493,6 @@ export const measureSheet = (
   });
 };
 
-/** The views whose height is held to the anchor's: those the options name, else a turnaround's all. */
 export const standingOf = (
   options: SheetOptions,
   views: ReadonlyArray<{ readonly view: number }>,
@@ -1788,7 +1507,6 @@ const checked = (
 ): SheetMeasure => {
   const headgear = options.headgear === true;
   const heads = options.kind === 'heads';
-  // A standing view (each the options name, else every view) whose head reads over half its figure is read with no head: its head's reads are said, never a squash or a drift that sends a retry. A low pose the options do not stand keeps its head.
   const stands = (v: SheetView) =>
     Option.match(Option.fromUndefinedOr(options.standing), {
       onNone: () => true,
@@ -1878,10 +1596,6 @@ const checked = (
   };
 };
 
-// ---------------------------------------------------------------------------
-// What a reader sees
-
-/** An optional number as a table writes it: to `places`, or a dash. */
 const fixed = (v: Option.Option<number>, places: number) =>
   Option.getOrElse(
     Option.map(v, (n) => n.toFixed(places)),
@@ -1889,19 +1603,12 @@ const fixed = (v: Option.Option<number>, places: number) =>
   );
 const some = Option.fromUndefinedOr;
 
-/**
- * The views whose face runs into the neck with no line at the chin: said,
- * never a flag. The owner's B2 lead draws its chin so, the face meeting the
- * neck by a shade step (the coordinator's zoom of his pick, 2026-10-19), so a
- * flag would redraw every try of his pick against his own design.
- */
 const openChins = (m: SheetMeasure): ReadonlyArray<number> =>
   m.views.filter((v) => v.chin === 'open').map((v) => v.view);
 
 const OPEN_CHIN =
   'the face runs into the neck with no line at the chin: read down to where the neck narrows, said, never a fault';
 
-/** The sheet's measure as Markdown: the canon, a row per view, the partners, the flags, what was not measured and the concepts. */
 export const sheetTable = (name: string, m: SheetMeasure): string => {
   const canon = Option.match(some(m.canon.heads), {
     onNone: () => `Canon: not measured (view ${m.anchor} is the anchor).`,
@@ -1953,7 +1660,6 @@ export const sheetTable = (name: string, m: SheetMeasure): string => {
   ].join('\n');
 };
 
-/** The sheet's measure as the CLI prints it: a line for the sheet, one per flag, then what is said (an open chin). */
 export const sheetLines = (name: string, m: SheetMeasure): ReadonlyArray<string> => [
   `sheet ${name} kind=${m.kind} views=${m.views.length}${(m.found > m.views.length && ` found=${m.found}`) || ''} anchor=${m.anchor} flags=${m.flags.length} heads=${fixed(some(m.canon.heads), 2)} squash=${fixed(some(m.canon.squash), 0)}`,
   ...m.flags.map(
@@ -1968,7 +1674,6 @@ const MAGENTA = [232, 0, 140] as const;
 const BLUE = [0, 150, 200] as const;
 const GREEN = [0, 170, 90] as const;
 
-/** The sheet with each view's box (blue), the anchor's top and sole across it (magenta), and where its own heads put the top of a figure with the anchor's head (green). */
 export const sheetOverlay = (sheet: Raster, m: SheetMeasure): Raster => {
   const across = (y: number): RasterPath => ({
     points: [

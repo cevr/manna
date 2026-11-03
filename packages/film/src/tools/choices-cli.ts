@@ -1,29 +1,3 @@
-// `film options`: a film's choice points read, a mix of one variant made, a
-// seed rendered alone, a library take kept, unkept or rejected, and a beat's
-// attempt kept, in this process, as the film's sources stand on disk. The review runs these in a
-// fresh process (`FreshFilm`, `fresh-film.ts`) because its own imports of the
-// film and the app's sound library are as they were at its start. Each prints
-// one line of JSON (`FreshLine`) on stdout: its answer, or the failure it
-// ended with (`answering`: a refusal as itself, any other as ServerFailed);
-// logs go to stderr.
-//
-//   film options list <film> [--check]
-//       the film's choice points (`choice-points.ts`): score, looks, takes,
-//       voices, levels, each with the owner's approvals and comments; with
-//       --check, the static check of the same sources beside them
-//   film options mix <film> --point <id> --variant <id> --to <file.m4a>
-//       the film's whole mix with that variant in place (a score option; a
-//       take, or a seed by its source's label, at every placement of its
-//       sound), written as an m4a
-//   film options sound <film> --point take:<sound> --variant <label> --to <file.wav>
-//       a seed of a sound made from data (a code sound's or a code trial's),
-//       by its source's label, rendered alone and written as a WAV
-//   film options take <film> --point take:<sound> --variant <sha256> --verb pick|unpick|reject
-//       the take kept, unkept or rejected through the library, as it stands
-//   film options keep-voice <film> <beat> <file> [--accept-mismatch]
-//       the beat's attempt `file` kept as its take (one that says something
-//       else only with --accept-mismatch), and the track remixed
-
 import { Effect, Match, Option, Result } from 'effect';
 import * as Argument from 'effect/cli/Argument';
 import * as Command from 'effect/cli/Command';
@@ -60,7 +34,6 @@ const film = Argument.String('film').pipe(
   Argument.withDescription('the film, a folder under src/films'),
 );
 
-/** Each beat's attempts, and the hash of its line as it reads now; a talk has none (its takes are camera footage). */
 const beatAttempts = Effect.fn('film.options.beats')(function* (loaded: LoadedFilm) {
   const takes = yield* Takes;
   if (Option.isSome(loaded.talk)) return [];
@@ -74,11 +47,6 @@ const beatAttempts = Effect.fn('film.options.beats')(function* (loaded: LoadedFi
   );
 });
 
-/**
- * The film's choice points as its sources stand, with the catalogue's say on
- * each variant: the derived sounds it places measured here, for each seed's
- * line and where each effect plays.
- */
 const pointsOf = Effect.fn('film.options.points')(function* (loaded: LoadedFilm) {
   return filmPoints({
     loaded: yield* measuredFilm(loaded),
@@ -88,7 +56,6 @@ const pointsOf = Effect.fn('film.options.points')(function* (loaded: LoadedFilm)
   });
 });
 
-/** `film check --static --allow-stale` of the loaded film, as the lab and review show it. */
 const staticLines = Effect.fn('film.options.static')(function* (loaded: LoadedFilm) {
   const found = yield* staticLeg(loaded, yield* placeFilm(loaded));
   return report(found, { allowStale: true }).findings.map(lineOf);
@@ -129,7 +96,6 @@ const take = Command.make(
   },
   Effect.fn('film.options.take')(function* (input) {
     const loaded = yield* (yield* FilmRepo).load(input.film);
-    // The take and the verb are checked against the film and its library as they stand.
     const found = Result.flatMap(
       offered(input.film, yield* pointsOf(loaded), input.point, input.variant),
       (at) => Result.map(verbFits(at.point, at.variant, input.verb), () => at),
@@ -167,7 +133,6 @@ const mix = Command.make(
   },
   Effect.fn('film.options.mix')(function* (input) {
     const loaded = yield* (yield* FilmRepo).load(input.film);
-    // The point and variant are checked against the film as it stands before a mix is rendered.
     const found = offered(input.film, yield* pointsOf(loaded), input.point, input.variant);
     if (Result.isFailure(found)) return yield* found.failure;
     const { point, variant } = found.success;
@@ -204,7 +169,6 @@ const sound = Command.make(
   },
   Effect.fn('film.options.sound')(function* (input) {
     const loaded = yield* (yield* FilmRepo).load(input.film);
-    // The point and the seed are checked against the film and its library as they stand.
     const found = offered(input.film, yield* pointsOf(loaded), input.point, input.variant);
     if (Result.isFailure(found)) return yield* found.failure;
     const { point, variant } = found.success;
@@ -246,7 +210,6 @@ const keepVoice = Command.make(
     const kept = yield* (yield* Takes).keepAttempt(voiced, input.beat, input.file, {
       acceptMismatch: input.acceptMismatch,
     });
-    // The track is remixed with the take; a failed mix leaves the take kept and says why.
     const mixed = yield* (yield* Mixer)
       .mix(input.film, { stems: false, score: Option.none() })
       .pipe(

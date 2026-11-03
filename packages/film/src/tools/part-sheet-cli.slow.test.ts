@@ -1,10 +1,3 @@
-// `film concept parts`, run over memory on a small figure (a torso over a
-// robe, an arm in front of both): its budget of calls holds across a moved
-// cut, a call counts once it is in the ledger whatever follows it, an
-// all-paper answer misses its drift and grain on the domain the sheet
-// fixes and is never kept over one that paints, and each painted part's
-// grain is read on its own.
-
 import { Effect, Layer, Option, Path, Result, Schema } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 import { type SheetClean, SheetCleanRefused, cutParts } from '../core/part-sheet.ts';
@@ -16,20 +9,13 @@ import { decodePng, encodePng } from './png.ts';
 
 type Rgba = readonly [number, number, number, number];
 
-// 64 × 96, so each part's grain reads: a part's grain is read on the 3 × 3
-// windows wholly inside its cloth off the cloth's edge ring, 90 of them or
-// more painted and kept each (LEAST_GRAIN_WINDOWS), and the kept cloth
-// beside the arm is a strip; at 32 × 48 those strips hold too few windows
-// and every part reads `unverified`.
 const [W, H] = [64, 96];
 const PAPER: Rgba = [244, 232, 212, 255];
 const INK: Rgba = [30, 24, 20, 255];
 const TEAL: Rgba = [90, 150, 150, 255];
 
-/** A pixel's grain: a fixed spread of G about its paint, the same for every run. */
 const grain = (x: number, y: number) => (((x * 7 + y * 13 + x * y * 3) % 7) - 3) * 1.5;
 
-/** His body's paint at (x, y), with its grain: the torso above row 48, the robe below; `flat` paints the parts it names without grain. */
 const bodyAt = (x: number, y: number, flat: ReadonlyArray<string>): Rgba => {
   const torso = y < 48;
   const g = grain(x, y) * Number(!flat.includes(['robe', 'torso'][Number(torso)] ?? ''));
@@ -43,7 +29,6 @@ const bodyAt = (x: number, y: number, flat: ReadonlyArray<string>): Rgba => {
 const inBox = (x: number, y: number, x0: number, y0: number, x1: number, y1: number) =>
   x >= x0 && x <= x1 && y >= y0 && y <= y1;
 
-/** The figure: his body (x 8-55, y 8-91, inked round), and with `arm`, an inked arm in front (x 20-43, y 16-81). */
 const figureAt = (x: number, y: number, arm: boolean, flat: ReadonlyArray<string>): Rgba => {
   const layers: ReadonlyArray<readonly [boolean, Rgba]> = [
     [arm && inBox(x, y, 21, 17, 42, 80), TEAL],
@@ -80,7 +65,6 @@ const CUT = {
   ],
 };
 
-/** A figure whose arm reaches past his body's side onto the paper (x 36-61): its hidden area meets the ground. */
 const reachAt = (x: number, y: number): Rgba => {
   const layers: ReadonlyArray<readonly [boolean, Rgba]> = [
     [inBox(x, y, 37, 17, 60, 80), TEAL],
@@ -103,10 +87,8 @@ const REACH = {
   },
 };
 
-/** The portrait the route is asked at: the view twice over, so a drawn answer lays back pixel for pixel. */
 const PORTRAIT = { width: 2 * W, height: 2 * H };
 
-/** An answer as the route would draw it: `picture` at the portrait, each pixel twice over each way. */
 const answerOf = (picture: Raster) =>
   encodePng(
     rasterOf(PORTRAIT.width, PORTRAIT.height, (u, v) => {
@@ -120,7 +102,6 @@ const answerOf = (picture: Raster) =>
     }),
   );
 
-/** The body under the arm, painted as the view paints it beside it; `flat` paints the parts it names without grain under the arm. */
 const UNDER = (flat: ReadonlyArray<string>) =>
   answerOf(
     rasterOf(W, H, (x, y) =>
@@ -136,7 +117,6 @@ const NOT_A_PNG = text('not a png');
 const DIR = '/sheets/front';
 const HIDDEN: HiddenEntry = { moving: ['arm'], prompt: 'Repaint the magenta.' };
 
-/** One run over `files`, the route answering each call with the next of `answers`; the record, or the refusal's message. */
 const run = (
   files: Map<string, Uint8Array>,
   answers: Array<Uint8Array>,
@@ -178,7 +158,6 @@ const Ledger = Schema.fromJsonString(
   Schema.Struct({ calls: Schema.Array(Schema.Struct({ n: Schema.Int })) }),
 );
 
-/** The numbers of the calls the view's ledger holds. */
 const ledgerOf = (files: Map<string, Uint8Array>) =>
   Schema.decodeSync(Ledger)(
     new TextDecoder().decode(files.get(`${DIR}/okra/calls.json`)),
@@ -218,7 +197,6 @@ describe('film concept parts', () => {
     'misses an all-paper answer whose paper the ground reaches: its arm hides no paint, its seam is unread',
     () =>
       Effect.gen(function* () {
-        // the arm reaches onto the paper, so the ground's flood takes the whole paper answer: no pixel is painted
         const record = Result.getOrThrow(
           yield* run(new Map(), [answerOf(rasterOf(W, H, () => PAPER))], {
             view: REACH.view,
@@ -284,7 +262,6 @@ describe('film concept parts', () => {
         const files = new Map<string, Uint8Array>();
         const first = Result.getOrThrow(yield* run(files, [UNDER([])]));
         for (let k = 0; k < 2; k++) Result.getOrThrow(yield* run(files, [UNDER([])]));
-        // one robe pixel the magenta leaves showing, repainted: another input, another hash
         const moved = { ...VIEW, rgba: Uint8Array.from(VIEW.rgba) };
         moved.rgba.set([121, 158, 201, 255], (60 * W + 14) * 4);
         const elsewhere = Result.getOrThrow(yield* run(new Map(), [UNDER([])], { view: moved }));
@@ -315,7 +292,6 @@ describe('film concept parts', () => {
           [`${DIR}/okra/answer-1.png`, UNDER([])],
           [`${DIR}/okra/answer-2.png`, UNDER([])],
         ]);
-        // a prompt naming an address: the route refuses it, after the call is in the ledger
         const failed = yield* run(files, [UNDER([])], {
           hidden: { ...HIDDEN, prompt: 'Repaint the magenta for a@b.co.' },
         });
@@ -347,7 +323,6 @@ describe('film concept parts', () => {
     () =>
       Effect.gen(function* () {
         const at = 40 * W + 30;
-        // the rule clears one pixel the arm owns: the ground's now
         const clean: SheetClean = (sheet) =>
           Result.succeed({
             ...sheet,
@@ -395,6 +370,5 @@ describe('film concept parts', () => {
   );
 });
 
-/** Whether two files hold the same bytes. */
 const equalBytes = (a: Uint8Array, b: Uint8Array) =>
   a.length === b.length && a.every((v, i) => v === b[i]);

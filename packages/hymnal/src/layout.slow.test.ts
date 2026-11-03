@@ -1,19 +1,3 @@
-/**
- * The layout property: every row is held to its 1985 page in its layout, not
- * only its words. A row can sing the right words in the wrong shape (a line
- * dropped, two lines swapped, a stanza moved, the refrain left out), and the
- * census's shape check (`outlineEntryProblems`, which `problemsOf` runs for
- * every entry) must print a `<n> shape (` line for each that the hymn as
- * committed does not print.
- *
- * The fixtures are `data/layout-mutants.json`: recipes and generated names,
- * never text. A recipe is applied in memory to the hymn's committed printed
- * source; a generated name is found among the mutants of the hymn's printed
- * text, whose fingerprint the fixture holds. Either is written back as the
- * hymn's row and base row with its fix dropped (a row wrong since before the
- * census, which no fix touches).
- */
-
 import { Console, Effect, Predicate, Result } from 'effect';
 import { describe, expect, it } from 'effect-bun-test';
 
@@ -54,12 +38,9 @@ const escapes = fixtures.filter((one) => one.from === 'census2 r1 F1');
 
 // oxlint-disable-next-line effect/noAsyncFunction -- built once as the file loads, so no case's time limit holds its cost
 const { census, sources } = await Effect.runPromise(readCensusOnce);
-// The generated property over the book, built once: its cases read it.
 const domain = domainOf(sources);
-// Every run of 3 words of every row: a census line prints none of them.
 const runs = hymnRunsOf(sources.rows);
 
-/** Hymn `n`'s row and base row both `row`, its fix dropped. */
 const withBase = (base: Sources, n: number, row: Verses): Sources => ({
   ...base,
   rows: new Map([...base.rows, [n, row]]),
@@ -67,7 +48,6 @@ const withBase = (base: Sources, n: number, row: Verses): Sources => ({
   fixes: new Map([...base.fixes].filter(([one]) => one !== n)),
 });
 
-/** The layout lines the census's per-hymn shape check prints for hymn `n`. */
 const layoutLines = (one: Sources, n: number, of: Census = census) => {
   const entry = of.hymns.find((hymn) => hymn.number === n);
   if (entry === undefined) return [`${n} has no entry`];
@@ -76,36 +56,30 @@ const layoutLines = (one: Sources, n: number, of: Census = census) => {
   );
 };
 
-/** The lines of `after` that `before` does not print. */
 const newLines = (before: readonly string[], after: readonly string[]) => {
   const seen = new Set(before);
   return after.filter((line) => !seen.has(line));
 };
 
-/** Hymn `n`'s printed source as committed, and the recipe's mutant of it (or why it does not apply). */
 const mutantOf = (n: number, mode: string) => {
   const source = printedSourceOf(sources.rows.get(n) ?? [], sources.fixes.get(n));
   return { source, mutant: applyRecipe(source, mode) };
 };
 
-/** Hymn `n`'s printed text as committed. */
 const textOf = (n: number) =>
   printedTextOf(sources.rows.get(n) ?? [], sources.fixes.get(n), sources.orders.get(n));
 
-/** A printed text written back as a row: its stanzas, and the refrain lines every stanza sings. */
 const rowOfText = (text: PrintedText): Verses =>
   rowOfSource({
     stanzas: text.stanzas,
     refrain: (text.refrain ?? []).flatMap((item) => (Predicate.isString(item) ? [item] : [])),
   });
 
-/** Hymn `n`'s mutants, by name. */
 const mutantsByName = (n: number, text: PrintedText) =>
   new Map<string, LayoutMutant>(
     [...mutantsOf(text, outlinesOf(sources, n).outlines)].map((one) => [one.name, one]),
   );
 
-/** The names the committed reach rulings of hymn `n` list. */
 const listedOf = (n: number) =>
   new Set(
     (sources.rulings.get(n) ?? []).flatMap((ruling) => [
@@ -114,7 +88,6 @@ const listedOf = (n: number) =>
     ]),
   );
 
-/** A shape reading of one stanza of rows (count, first, middle and last words each), as a test writes one. */
 const outlineWith = (
   rows: ReadonlyArray<{ words: number; first: string; mid: string; last: string }>,
 ): Outline => ({
@@ -134,7 +107,6 @@ const outlineWith = (
   odd: '',
 });
 
-/** A text of stanzas, no refrain. */
 const plain = (stanzas: ReadonlyArray<readonly string[]>): PrintedText => ({
   stanzas,
   refrain: undefined,
@@ -171,15 +143,12 @@ describe('layout', () => {
       it.effect(`${n} ${mode}: the shape check prints a layout line`, () =>
         Effect.sync(() => {
           const { source, mutant } = mutantOf(n, mode);
-          // The recipe applies to the source as committed: a changed source fails here.
           expect(Result.isFailure(mutant) ? mutant.failure : 'applies').toBe('applies');
           if (Result.isFailure(mutant)) return;
-          // Caught: the mutant prints a layout line the hymn as committed does not.
           const lines = layoutLines(withBase(sources, n, rowOfSource(mutant.success)), n);
           expect(
             newLines(layoutLines(withBase(sources, n, rowOfSource(source)), n), lines),
           ).not.toEqual([]);
-          // As the census prints them, by places and word tags: no line prints a hymn's text.
           expect(linesQuoting(lines.map(wordlessLine), runs)).toEqual([]);
         }),
       );
@@ -191,7 +160,6 @@ describe('layout', () => {
           for (const { mode } of recipes.filter((one) => one.number === n)) {
             const { mutant } = mutantOf(n, mode);
             if (Result.isFailure(mutant)) return expect(mutant.failure).toBe('applies');
-            // A recipe's name is the generated one's with its line count (`/<n>`) added.
             const one = generated.get(mode.replace(/\/\d+$/u, ''));
             expect(one === undefined ? `${n} ${mode}: not generated` : 'generated').toBe(
               'generated',
@@ -241,7 +209,6 @@ describe('layout', () => {
           const text = textOf(n);
           const generated = mutantsByName(n, text);
           for (const one of escapes.filter((escape) => escape.number === n)) {
-            // A changed text fails here: its positions name other mutations.
             expect(`${n} ${one.layout}`).toBe(`${n} ${fingerprintOf(text)}`);
             expect(generated.has(one.mode) ? 'generated' : `${n} ${one.mode}: not generated`).toBe(
               'generated',
@@ -264,10 +231,6 @@ describe('layout', () => {
       }),
     );
 
-    // A sample of each kind, the first three of it no ruling lists: the per-hymn
-    // shape check, with the committed rows' lexicon (`withBase`), prints a layout
-    // line for each that its control does not. Through the census's own entry
-    // point, with the lexicon of the mutated rows, some escape (r2 M1, a follow-up).
     const sample = ['join', 'movedown', 'moveup'].flatMap((kind) =>
       escapes
         .filter((one) => one.mode.startsWith(`${kind}:`) && !listedOf(one.number).has(one.mode))
@@ -301,7 +264,6 @@ describe('layout', () => {
         const inserts = [...mutantsOf(text, [])].filter((one) =>
           one.name.startsWith('insertline:'),
         );
-        // 3 stanzas, 3 places each (before line 1, before line 2, at the end), 4 donor lines.
         expect(inserts).toHaveLength(36);
         expect(new Set(inserts.map((one) => one.name)).size).toBe(36);
         const one = inserts.find((m) => m.name === 'insertline:1.3/3.2');
@@ -360,7 +322,6 @@ describe('layout', () => {
         const rulings = sources.rulings.get(n) ?? [];
         const text = textOf(n);
         expect(staleRulings(n, text, rulings)).toEqual([]);
-        // Its first stanza's last line dropped, in memory: the lists name mutants of a text that is gone.
         const first = text.stanzas[0] ?? [];
         const changed = withBase(
           sources,
@@ -415,11 +376,8 @@ describe('layout', () => {
           );
           expect(domain.hymns).toBe(691);
           expect(domain.unread).toEqual([]);
-          // A mutant no layout line reaches is on a committed list, with its ruling on crops.
           expect(domain.unlisted).toEqual([]);
-          // A mutant a list names is one the census cannot reach, on one list only.
           expect(domain.reached).toEqual([]);
-          // Every list was ruled on the hymn's text as it stands.
           expect(domain.stale).toEqual([]);
           for (const one of domain.properties.values()) expect(one.mutants).toBeGreaterThan(0);
         }),

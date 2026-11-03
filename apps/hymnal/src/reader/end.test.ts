@@ -12,7 +12,6 @@ describe('the list end space', () => {
   });
 
   it('clears the bar’s `#` where it stands higher than the inset', () => {
-    // The idle `#` docked on the home list, over a 34 pt inset: 34 + 6 + 44.
     expect(listEndSpace(34, 84)).toBe(endSpace(84));
     expect(listEndSpace(34, 0)).toBe(endSpace(34));
     expect(listEndSpace(0, 52)).toBe(endSpace(52));

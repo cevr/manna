@@ -1,23 +1,3 @@
-/**
- * A tap on a seek bar jumps there, on every seek bar the reader sees on
- * iOS: the docked bar's `Seek` (`Seeker.tsx`) and the full player's
- * `Position` (`Scrubber.ios.tsx`). A tap is played as iOS's recognizers
- * report a still touch (`src/test/gesture.tsx`): each pan on the bar begins
- * and then fails, never activated, and the tap gesture (`seek-tap`,
- * `position-tap`) begins and activates. UIKit gives no order between the
- * pans' failure and the tap's activation, nor says whether the bar draws
- * between them, so each case picks the order and whether the two ends come
- * in one batch.
- *
- * The property, over generated widths, lengths, playing places and tap
- * points (inside the bar and past either end): a tap at `x` sends exactly
- * the seeks a drag whose finger lifts at `x` sends (the place under the
- * finger, once; nothing when it is the second the bar showed), the bar then
- * tells that place to VoiceOver, and the docked bar gives one `seek-release`
- * cue and no grab or tick. Plus: a tap past the left end lands at 0, past
- * the right end at the length; a still bar (length unknown) takes no tap.
- */
-
 import { describe, expect, it } from 'bun:test';
 import { Option } from 'effect';
 import { act, type ComponentType } from 'react';
@@ -38,7 +18,6 @@ interface BarKind {
   readonly selector: string;
   readonly pan: string;
   readonly tap: string;
-  /** What VoiceOver is told of the bar's value. */
   readonly said: (element: Element) => string;
   readonly cues: boolean;
 }
@@ -65,12 +44,10 @@ const BARS: ReadonlyArray<BarKind> = [
   },
 ];
 
-/** A view's `onLayout` event, as the bar reads it. */
 interface LayoutEvent {
   readonly nativeEvent: { readonly layout: Record<string, number> };
 }
 
-/** Bar `kind` over a recording `length` seconds long, playing at `at`, laid out `width` points wide. */
 const mount = (kind: BarKind, at: number, length: Option.Option<number>, width: number) => {
   gestures.splice(0);
   const sought: Array<number> = [];
@@ -103,10 +80,8 @@ const mount = (kind: BarKind, at: number, length: Option.Option<number>, width: 
   };
 };
 
-/** Whether the pans' failure and the tap's activation come in one batch, or the bar draws between them. */
 type Batch = 'together' | 'apart';
 
-/** A still tap at `x`: the finger lands and the bar draws, then the pans fail and the tap activates in `order`. */
 const tapAt = (kind: BarKind, x: number, order: TapOrder, batch: Batch) => {
   const touch = { x, y: 16 };
   act(() => touchDown(kind.tap, touch));
@@ -114,7 +89,6 @@ const tapAt = (kind: BarKind, x: number, order: TapOrder, batch: Batch) => {
     act(() => touchUp(kind.tap, touch, order));
     return;
   }
-  // Each end in its own batch, each gesture read as its detector last drew it.
   const fail = () => act(() => gestureOf(kind.pan).onFinalize?.({ ...touch, canceled: true }));
   const land = () => {
     act(() => gestureOf(kind.tap).onActivate?.(touch));
@@ -130,17 +104,14 @@ const tapAt = (kind: BarKind, x: number, order: TapOrder, batch: Batch) => {
   }
 };
 
-/** The seeks a drag on a fresh bar sends when its finger lifts at `x`. */
 const draggedTo = (kind: BarKind, at: number, length: number, width: number, x: number) => {
   using bar = mount(kind, at, Option.some(length), width);
-  // The drag starts 30 points inside the bar from `x`'s nearer end.
   let start = x - 30;
   if (x < width / 2) start = x + 30;
   act(() => void drag(kind.pan, { x: start, y: 16, dx: x - start, dy: 0 }));
   return bar.sought;
 };
 
-/** mulberry32: the cases are the same on every run of one seed. */
 const random = (seed: number) => {
   let state = seed >>> 0;
   return () => {
@@ -198,7 +169,6 @@ describe.each(BARS.map((kind) => [kind.name, kind] as const))('a tap on %s', (_,
       if (kind.cues) expect({ where, cues: bar.cues }).toEqual({ where, cues: ['seek-release'] });
       sent += expected.length;
     }
-    // Most generated taps land on another second than the one playing: the property is not vacuous.
     expect(sent).toBeGreaterThan(CASES / 2);
   });
 });

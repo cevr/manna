@@ -1,10 +1,3 @@
-// The man's skeleton for his cut view, read in the kept view's pixels and
-// moved into its part sheet's frame (`framed`). He sits: lean from the hip at
-// his lap, neck, head, and each arm's shoulder, elbow and wrist, built by the
-// library's `standing`. His headcloth's drape below his chin rides the lean
-// with his torso; his robe, stool and sandals ride the root; each sleeve's
-// flap of the torso bends round its shoulder. Data.
-
 import type { Skeleton } from '@manna/film/core';
 import { type Body, framed, standing } from '../../../cutout/skeleton.ts';
 import { type FramedView, keptAt } from './frames.ts';
@@ -22,9 +15,7 @@ const BODY: Body = {
   band: { above: 50, below: 12, reach: 60 },
 };
 
-/** His cut view's skeleton in its part sheet's frame, by the view's name in his sheet's views. */
 export const SKELETONS = {
-  // seated facing the viewer, each hand on its knee
   'poses-1': framed(
     keptAt('poses-1'),
     standing(BODY, {

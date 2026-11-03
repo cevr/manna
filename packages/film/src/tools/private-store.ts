@@ -1,10 +1,4 @@
 import { Mac } from 'effect/crypto';
-// The app's private store, as its `sounds/library.ts` declares it (`store`):
-// a folder, or a private R2 bucket. The declaration is public; what reaches
-// the bucket is not: its account and its bucket-scoped S3 key come from the
-// environment (or the app's git-ignored `.env`), read as `Redacted` and never
-// logged. The store is resolved on first use, once, so a command that never
-// touches it never needs its credentials.
 
 import { Config, Context, Effect, FileSystem, Layer, Option, Path, Redacted } from 'effect';
 import { HttpClient } from 'effect/http';
@@ -14,32 +8,26 @@ import { libraryModule } from './film-repo.ts';
 import { type MediaStoreService, expandHome, folderStore } from './media-store.ts';
 import { type R2Access, r2Store } from './r2-store.ts';
 
-/** The environment variables that reach an R2 store. */
 export const R2_ENV = {
   accountId: 'FILM_STORE_ACCOUNT_ID',
   accessKeyId: 'FILM_STORE_ACCESS_KEY_ID',
   secretAccessKey: 'FILM_STORE_SECRET_ACCESS_KEY',
 } as const;
 
-/** Why the store cannot be reached: its declaration does not decode, or the bucket's credentials are not set. */
 export type StoreUnavailable = FilmModuleInvalid | StoreCredentialsMissing;
 
 interface PrivateStoreService {
-  /** The declared store, resolved (and its credentials read) on first use. */
   readonly store: Effect.Effect<MediaStoreService, StoreUnavailable>;
 }
 
-/** What the environment holds of an R2 store's variables, each `Redacted` (read once, with the layer). */
 interface R2Env {
   readonly accountId: Option.Option<Redacted.Redacted<string>>;
   readonly accessKeyId: Option.Option<Redacted.Redacted<string>>;
   readonly secretAccessKey: Option.Option<Redacted.Redacted<string>>;
 }
 
-// A variable that is set but unreadable is a broken environment, not a missing one.
 const readEnv = (name: string) => Config.option(Config.Redacted(name)).pipe(Effect.orDie);
 
-/** The bucket's access from the environment, or the names of the variables missing. */
 const r2Access = (
   config: R2StoreConfig,
   env: R2Env,
@@ -64,7 +52,6 @@ const r2Access = (
 export class PrivateStore extends Context.Service<PrivateStore, PrivateStoreService>()(
   '@manna/film/tools/PrivateStore',
 ) {
-  /** The store `sounds/library.ts` in `dir` declares. */
   static readonly layer = (dir: string) =>
     Layer.effect(
       PrivateStore,
