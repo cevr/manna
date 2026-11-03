@@ -184,6 +184,9 @@ export const SKELETONS = {
       neck: [190, 255],
       chin: [190, 238],
       crown: [195, 0],
+      painted: {
+        left: '72-pose sweep: exposed 100 > 8 at elbow/wrist 25/120; unprotected 67 > 0 at elbow/wrist 40/120; ghost 806 > 0 at elbow/wrist 100/-60',
+      },
       ...JOINTS['poses-1'],
       wristRight: [80, 400],
       handRight: [112, 391],
@@ -204,6 +207,10 @@ export const SKELETONS = {
       neck: [200, 260],
       chin: [200, 240],
       crown: [200, 0],
+      painted: {
+        right:
+          '72-pose sweep: exposed 21 > 8 at elbow/wrist 85/-90; ghost 542 > 0 at elbow/wrist 25/-120',
+      },
       ...JOINTS['poses-2'],
       wristRight: [150, 432],
       handRight: [181, 437],
@@ -224,6 +231,10 @@ export const SKELETONS = {
       neck: [165, 250],
       chin: [165, 232],
       crown: [160, 0],
+      painted: {
+        right:
+          '72-pose sweep: exposed 41 > 8 at elbow/wrist 85/-120; ghost 1001 > 0 at elbow/wrist 25/-120',
+      },
       ...JOINTS['poses-3'],
       wristRight: [130, 440],
       handRight: [165, 435],

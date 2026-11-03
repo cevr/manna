@@ -33,6 +33,10 @@ export const SKELETONS = {
       neck: [206, 300],
       chin: [206, 267],
       crown: [204, 0],
+      painted: {
+        right:
+          '72-pose sweep: exposed 17 > 8 at elbow/wrist 120/-120; unprotected 10 > 0 at elbow/wrist 100/-120; ghost 139 > 0 at elbow/wrist 40/-60',
+      },
       ...JOINTS['poses-1'],
       wristRight: [70, 505],
       handRight: [92, 534],
