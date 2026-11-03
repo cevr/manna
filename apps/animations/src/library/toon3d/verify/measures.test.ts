@@ -304,6 +304,34 @@ describe('flatness', () => {
     expect(ragged).toBeGreaterThan(straight * 1.5);
   });
 
+  test("a four-paint foot's three sandal-shade patches on the sandal's base are three blobs, each read against its own pair", () => {
+    const SANDAL = rgbOf('#9d6847');
+    const SANDAL_SHADE = rgbOf('#8b4e30');
+    const inDisc = (x: number, y: number) => Math.hypot(x + 0.5 - 30, y + 0.5 - 30) <= 20;
+    const ids = idsOf(60, 60, (x, y) => Number(inDisc(x, y)) * 5);
+    const foot = (seam: Rgb) =>
+      paint(60, 60, (x, y) => {
+        if (!inDisc(x, y)) return PAPER;
+        if (y === 23) return seam;
+        if (!inRect(x, y, 10, 24, 50, 36)) return BASE;
+        if ([16, 28, 40].some((x0) => inRect(x, y, x0, 28, x0 + 3, 31))) return SANDAL_SHADE;
+        return SANDAL;
+      });
+    const paints = new Map([[5, [BASE, SHADE, SANDAL, SANDAL_SHADE]]]);
+    const f = read(Option.fromUndefinedOr(flatness(foot(BASE), ids, paints)[0]));
+    expect(f.share).toBe(1);
+    expect(f.blobs).toBe(3);
+    expect(read(Option.fromUndefinedOr(flatness(foot(SHADE), ids, paints)[0])).blobs).toBe(3);
+  });
+
+  test('a speck or a line one or two pixels thick is no blob: a blob has a pixel whose eight neighbours are its paint', () => {
+    const lines = disc((x, y) => (y === 20 || y === 30 || y === 31) && x >= 18 && x <= 42);
+    expect(lines.blobs).toBe(0);
+    expect(disc((x, y) => inRect(x, y, 20, 20, 21, 21) || inRect(x, y, 30, 30, 32, 32)).blobs).toBe(
+      1,
+    );
+  });
+
   test('a ramp from base to shade is mostly not flat', () => {
     const ramp = paint(60, 60, (x) => {
       const t = x / 59;

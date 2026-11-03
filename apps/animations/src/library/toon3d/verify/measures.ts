@@ -465,13 +465,14 @@ export interface Flatness {
   readonly raggedness: number;
 }
 
-/** A shade blob smaller than this many pixels is downsample speckle, not a painted shape. */
-export const MIN_BLOB = 4;
-
 /**
- * The shade blobs among `inner`: each pixel is lit (kind 1) or shade (kind
- * 2) by whichever of `labs`' first two (base, shade) it lies nearer, and the
- * blobs are the 4-connected shade pixels of `MIN_BLOB` px or more.
+ * The shade blobs among `inner`: each pixel takes the nearest of `labs`, the
+ * part's (base, shade) pairs in turn, so an even index is lit and an odd one
+ * shade; the blobs are each shade paint's 4-connected pixels, so a sandal's
+ * shade patches on the sandal's base read apart. A blob holds a core pixel,
+ * one whose eight neighbours all take its paint: a speck, or the one or two
+ * soft pixels the downsample leaves where two paints meet, is not a painted
+ * shape.
  */
 const shadeBlobsOf = (
   plane: Float32Array,
@@ -480,15 +481,21 @@ const shadeBlobsOf = (
   inner: ReadonlyArray<number>,
   labs: ReadonlyArray<Rgb>,
 ) => {
-  const base = labs[0] ?? [0, 0, 0];
-  const shade = labs[1] ?? base;
-  const kind = new Uint8Array(w * h);
-  for (const i of inner) {
-    const c = labAt(plane, i);
-    kind[i] = 1 + Number(deltaLab(c, shade) < deltaLab(c, base));
-  }
-  const blobs = components(w, h, (i) => kind[i] === 2).filter((c) => c.length >= MIN_BLOB);
-  return { kind, blobs };
+  const paint = new Int16Array(w * h).fill(-1);
+  for (const i of inner) paint[i] = nearestOf(labs, labAt(plane, i));
+  const lit = paint.map((p) => Number(p >= 0 && p % 2 === 0));
+  const core = (i: number): boolean => {
+    const x = i % w;
+    const y = Math.floor(i / w);
+    if (x === 0 || y === 0 || x === w - 1 || y === h - 1) return false;
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) if (paint[i + dy * w + dx] !== paint[i]) return false;
+    return true;
+  };
+  const blobs = labs
+    .flatMap((_, k) => Option.toArray(Option.liftPredicate(k, (n) => n % 2 === 1)))
+    .flatMap((k) => components(w, h, (i) => paint[i] === k).filter((c) => c.some(core)));
+  return { lit, blobs };
 };
 
 /** How far (px, either axis) a kept pixel may lie from a part's pixels in the render's ids pass and still be read as that part: past a 10 px misplacement, short of the next part over. */
@@ -528,8 +535,7 @@ export const dilate = (mask: Uint8Array, w: number, h: number, r: number): Uint8
 /**
  * Each part's flatness in a colour frame against its ids pass: the share of
  * interior pixels within ΔE 3 of one of the part's paints; the shade blobs
- * (4-connected interior pixels nearer the shade than the base, `MIN_BLOB`
- * px or more); and the shade edge's raggedness, the shade pixels touching
+ * (`shadeBlobsOf`); and the shade edge's raggedness, the shade pixels touching
  * the part's lit pixels over the square root of the shade's area (a straight
  * edge across a disc of radius r gives about 2r / √(πr²/2) ≈ 1.6).
  */
@@ -545,9 +551,9 @@ export const flatness = (
     if (inner.length === 0) return [];
     const labs = rgbs.map(lab);
     const flat = inner.filter((i) => labs.some((p) => deltaLab(labAt(plane, i), p) <= 3)).length;
-    const { kind, blobs } = shadeBlobsOf(plane, w, h, inner, labs);
+    const { lit, blobs } = shadeBlobsOf(plane, w, h, inner, labs);
     const shadeArea = blobs.reduce((s, c) => s + c.length, 0);
-    const edge = blobs.flat().filter((i) => around(i, w, h).some((j) => kind[j] === 1)).length;
+    const edge = blobs.flat().filter((i) => around(i, w, h).some((j) => lit[j] === 1)).length;
     return [
       {
         part,
