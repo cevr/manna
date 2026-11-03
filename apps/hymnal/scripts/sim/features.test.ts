@@ -1,12 +1,15 @@
 /**
  * The verify-hymnal journey files: every `features/<feature>.journey.json`
  * decodes with the journey Schema and names its own feature, so a bad file
- * fails the gate rather than the verifier's first `sim journey`; and no hold
- * checks that something is gone before the hold has landed.
+ * fails the gate rather than the verifier's first `sim journey`; no hold
+ * checks that something is gone before the hold has landed; and each open
+ * that expects the no-chords notice opens a hymn the compiled data gives no
+ * chords.
  */
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, Exit, FileSystem, Path, Schema } from 'effect';
+import { Hymn } from '@manna/hymnal/hymn';
+import { Effect, Exit, FileSystem, Option, Path, Schema } from 'effect';
 
 import { BadJourney } from './errors.ts';
 import { decodeJourney, HOLD_SETTLE, type Journey } from './journey.ts';
@@ -70,6 +73,41 @@ const tabRolesOnIos = (journey: Journey) => {
 
 const FEATURES = import.meta.dir + '/../../../../.claude/skills/verify-hymnal/features';
 
+/** The compiled hymns, one `<nnn>.json` each, as `vite/words.ts` reads them. */
+const HYMNS = import.meta.dir + '/../../../../packages/hymnal/data/sdah-1985';
+
+/** What a hymn with no chords shows with chords on (`ChordNotice`). */
+const NO_CHORDS = 'label=No chords for this hymn yet.';
+
+/** The hymn an `open` of `hymns/<n>` shows. */
+const HYMN_LINK = /^hymns\/(\d+)$/;
+
+/**
+ * The opens that expect the no-chords notice, by step, with the hymn each
+ * opens: that hymn must have no chords, or the notice never shows.
+ */
+const noticeOpens = (journey: Journey) =>
+  journey.steps.flatMap((step) => {
+    if (step.action !== 'open') return [];
+    if (!step.expect.some((expect) => 'shows' in expect && expect.shows === NO_CHORDS)) return [];
+    return Option.toArray(
+      Option.map(Option.fromNullishOr(HYMN_LINK.exec(step.link)?.[1]), (number) => ({
+        step: `${journey.feature}/${step.name}`,
+        number: Number(number),
+      })),
+    );
+  });
+
+/** Whether a compiled hymn has a guitar chord on a sung syllable: the app's `hasChords`. */
+const chorded = (hymn: Hymn) =>
+  [...hymn.stanzas, ...Option.toArray(Option.fromUndefinedOr(hymn.refrain?.part))].some(
+    (part) =>
+      part._tag === 'Sung' &&
+      part.lines.some((line) => line.some((syllable) => 'guitar' in syllable)),
+  );
+
+const decodeHymn = Schema.decodeUnknownEffect(Schema.fromJsonString(Hymn));
+
 describe('verify-hymnal journey files', () => {
   it.effect('every journey file decodes and names its own feature', () =>
     Effect.gen(function* () {
@@ -101,6 +139,43 @@ describe('verify-hymnal journey files', () => {
       const journeys = yield* decodeAll(FEATURES);
       expect(journeys.flatMap(tabRolesOnIos)).toEqual([]);
     }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.effect('every open that expects the no-chords notice opens a hymn with no chords', () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const journeys = yield* decodeAll(FEATURES);
+      const chordedOpens: Array<string> = [];
+      for (const open of journeys.flatMap(noticeOpens)) {
+        const file = `${HYMNS}/${String(open.number).padStart(3, '0')}.json`;
+        if (chorded(yield* decodeHymn(yield* fs.readFileString(file))))
+          chordedOpens.push(`${open.step} (hymn ${open.number})`);
+      }
+      expect(chordedOpens).toEqual([]);
+    }).pipe(Effect.provide(BunServices.layer)),
+  );
+
+  it.effect(
+    'an open of a hymn that expects the no-chords notice is named; another open is not',
+    () =>
+      Effect.gen(function* () {
+        const text = toJson({
+          feature: 'chords-and-capo',
+          platform: 'ios',
+          steps: [
+            { name: 'notice', action: 'open', link: 'hymns/181', expect: [{ shows: NO_CHORDS }] },
+            {
+              name: 'chords',
+              action: 'open',
+              link: 'hymns/100',
+              expect: [{ shows: 'id=key-face' }],
+            },
+            { name: 'home', action: 'open', link: 'hymns', expect: [{ shows: NO_CHORDS }] },
+          ],
+        });
+        const journey = yield* decodeJourney('chords-and-capo.journey.json', text);
+        expect(noticeOpens(journey)).toEqual([{ step: 'chords-and-capo/notice', number: 181 }]);
+      }),
   );
 
   it.effect('a role=tab selector in an iOS journey is named; role=other is not', () =>
