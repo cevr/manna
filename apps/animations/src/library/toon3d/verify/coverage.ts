@@ -5,7 +5,6 @@ import {
   dilate,
   INK_LIGHTNESS,
   labPlane,
-  median,
   pixel,
   PROBE_FLAT,
   type Box,
@@ -29,6 +28,9 @@ export const WITNESS_STRIDE = 2;
 /** A witness is covered by a probe of its region whose kept median lies within this ΔE of the witness's: the colour bar. */
 export const COVER = 3;
 
+/** A cluster is repainted only to a colour more than this ΔE from its seed: a colour within it shares with the seed a probe colour within the bar of both, so the bar need not see the repaint. */
+export const REPAINT_APART = 2 * COVER;
+
 /** A flat box of a kept view: its box, its median Lab and its region. */
 export interface Witness {
   readonly box: Box;
@@ -36,12 +38,13 @@ export interface Witness {
   readonly region: number;
 }
 
-/** A kept view read for coverage: each pixel's Lab and region (-1 off every region), each region's first pixel, and every flat witness. */
+/** A kept view read for coverage: each pixel's Lab and region (-1 off every region), each region's pixels and first pixel, and every flat witness. */
 export interface KeptPaint {
   readonly width: number;
   readonly height: number;
   readonly plane: Float32Array;
   readonly region: Int32Array;
+  readonly members: ReadonlyArray<ReadonlyArray<number>>;
   readonly firsts: ReadonlyArray<number>;
   readonly witnesses: ReadonlyArray<Witness>;
 }
@@ -53,6 +56,14 @@ const labOf = (plane: Float32Array, i: number): Rgb => [
   plane[i * 3 + 2] ?? 0,
 ];
 
+/** The square of ΔE76 between pixel `i` of a plane and the Lab `c`. */
+const offAt = (plane: Float32Array, i: number, c: Rgb): number => {
+  const dl = (plane[i * 3] ?? 0) - c[0];
+  const da = (plane[i * 3 + 1] ?? 0) - c[1];
+  const db = (plane[i * 3 + 2] ?? 0) - c[2];
+  return dl * dl + da * da + db * db;
+};
+
 /** The pixel indices of `box` in a `w`-wide picture, row by row. */
 const indicesIn = (box: Box, w: number): ReadonlyArray<number> => {
   const out: Array<number> = [];
@@ -60,16 +71,37 @@ const indicesIn = (box: Box, w: number): ReadonlyArray<number> => {
   return out;
 };
 
-/** The per-channel median Lab of the pixels `at`, and whether every one lies within `PROBE_FLAT` of it (the probes' flatness rule). */
-const flatOf = (plane: Float32Array, at: ReadonlyArray<number>): Option.Option<Rgb> => {
-  const labs = at.map((i) => labOf(plane, i));
+/** Whether every pixel of `box` is set in `mask`, and its L* spans at most twice `PROBE_FLAT`: a wider span leaves some pixel more than `PROBE_FLAT` from any median, so the box cannot be flat. */
+const allClear = (mask: Uint8Array, plane: Float32Array, box: Box, w: number): boolean => {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (let y = box.y0; y <= box.y1; y++)
+    for (let x = box.x0; x <= box.x1; x++) {
+      const i = y * w + x;
+      if (mask[i] !== 1) return false;
+      lo = Math.min(lo, plane[i * 3] ?? 0);
+      hi = Math.max(hi, plane[i * 3] ?? 0);
+    }
+  return hi - lo <= 2 * PROBE_FLAT;
+};
+
+/** The per-channel median Lab of the pixels `at` (the upper middle, as `median`), when every one lies within `PROBE_FLAT` of it (the probes' flatness rule); none otherwise. `sorting` holds at least `at.length` values, sorted in place for each channel. */
+const flatOf = (
+  plane: Float32Array,
+  at: ReadonlyArray<number>,
+  sorting: Float64Array = new Float64Array(at.length),
+): Option.Option<Rgb> => {
+  const channel = (k: number): number => {
+    const sorted = sorting.subarray(0, at.length);
+    at.forEach((i, n) => {
+      sorted[n] = plane[i * 3 + k] ?? 0;
+    });
+    sorted.sort();
+    return sorted[at.length >> 1] ?? 0;
+  };
   return Option.filter(
-    Option.all([
-      median(labs.map((c) => c[0])),
-      median(labs.map((c) => c[1])),
-      median(labs.map((c) => c[2])),
-    ]),
-    (m) => labs.every((c) => deltaLab(c, m) <= PROBE_FLAT),
+    Option.some<Rgb>([channel(0), channel(1), channel(2)]),
+    (m) => at.length > 0 && at.every((i) => offAt(plane, i, m) <= PROBE_FLAT * PROBE_FLAT),
   );
 };
 
@@ -109,21 +141,23 @@ export const keptPaint = (kept: Raster): KeptPaint => {
   parts.forEach((pixels, k) => {
     for (const i of pixels) region[i] = k;
   });
+  const clear = new Uint8Array(w * h).map((_, i) => Number(figure[i] === 1 && nearInk[i] === 0));
+  const sorting = new Float64Array(WITNESS_SIDE * WITNESS_SIDE);
   const witnesses: Array<Witness> = [];
   for (let y0 = 0; y0 + WITNESS_SIDE <= h; y0 += WITNESS_STRIDE)
     for (let x0 = 0; x0 + WITNESS_SIDE <= w; x0 += WITNESS_STRIDE) {
       const box = { x0, y0, x1: x0 + WITNESS_SIDE - 1, y1: y0 + WITNESS_SIDE - 1 };
-      const at = indicesIn(box, w);
-      if (!at.every((i) => figure[i] === 1 && nearInk[i] === 0)) continue;
-      const flat = flatOf(plane, at);
+      if (!allClear(clear, plane, box, w)) continue;
+      const flat = flatOf(plane, indicesIn(box, w), sorting);
       if (Option.isSome(flat))
-        witnesses.push({ box, lab: flat.value, region: region[at[0] ?? 0] ?? -1 });
+        witnesses.push({ box, lab: flat.value, region: region[y0 * w + x0] ?? -1 });
     }
   return {
     width: w,
     height: h,
     plane,
     region,
+    members: parts,
     firsts: parts.map((pixels) => pixels[0] ?? 0),
     witnesses,
   };
@@ -136,7 +170,7 @@ export const regionName = (paint: KeptPaint, region: number): string => {
 };
 
 /** What a probe reads in the kept view for coverage: the regions its box lies in and its median Lab; none when it leaves the picture or is not flat. */
-const probeReach = (
+export const probeReach = (
   paint: KeptPaint,
   probe: ColourProbe,
 ): Option.Option<{ readonly regions: ReadonlySet<number>; readonly lab: Rgb }> => {
@@ -203,24 +237,93 @@ const seedRgb = (kept: Raster, paint: KeptPaint, c: Cluster): Rgb => {
   return pixel(kept, at[0] ?? 0);
 };
 
+/** Each cluster that shares its region with another whose seed lies more than `apart` from its own, paired with the nearest such in colour: the paint a repaint of it lays. */
+export const repaintPairs = (
+  clusters: ReadonlyArray<Cluster>,
+  apart: number,
+): ReadonlyArray<{ readonly from: Cluster; readonly to: Cluster }> =>
+  clusters.flatMap((from) =>
+    clusters
+      .filter((to) => to.region === from.region)
+      .map((to) => ({ to, d: deltaLab(to.seed.lab, from.seed.lab) }))
+      .filter(({ d }) => d > apart)
+      .toSorted((a, b) => a.d - b.d)
+      .slice(0, 1)
+      .map(({ to }) => ({ from, to })),
+  );
+
 /**
- * The kept view with `from`'s colour painted `to`'s: every pixel of their
- * region within `PROBE_FLAT` of `from`'s seed and nearer it than `to`'s seed
- * takes the colour of `to`'s seed. Ink and the other regions stay.
+ * A kept view's cluster repaint: the view with `from`'s colour painted `to`'s.
+ * Every pixel of their region within `PROBE_FLAT` of `from`'s seed and nearer
+ * it than `to`'s seed takes the colour of `to`'s seed; ink and the other
+ * regions stay. Each region's pixels are bucketed by whole L* once, so a
+ * repaint reads only the buckets within `PROBE_FLAT` of the seed's L*. The
+ * repaints share one buffer, each undoing the last: a repaint's raster holds
+ * until the next repaint.
  */
-export const repaintCluster = (
+export const repainter = (
   kept: Raster,
   paint: KeptPaint,
+): ((from: Cluster, to: Cluster) => Raster) => {
+  const buckets = paint.members.map((pixels) => byLightness(paint.plane, pixels));
+  const rgba = kept.rgba.slice();
+  let last: ReadonlyArray<number> = [];
+  return (from, to) => {
+    for (const i of last) for (let k = i * 4; k < i * 4 + 4; k++) rgba[k] = kept.rgba[k] ?? 0;
+    last = Option.match(Option.fromUndefinedOr(buckets[from.region]), {
+      onNone: () => [],
+      onSome: (bucketed) => repaintCluster(rgba, kept, paint, bucketed, from, to),
+    });
+    return { width: kept.width, height: kept.height, rgba };
+  };
+};
+
+/** A region's pixels in buckets of whole L* (0 to 100): bucket `l` is `pixels[starts[l]]` up to `pixels[starts[l + 1]]`. */
+interface Bucketed {
+  readonly pixels: Int32Array;
+  readonly starts: Int32Array;
+}
+
+/** Whole L* of pixel `i`, within 0 to 100. */
+const bucketOf = (plane: Float32Array, i: number): number =>
+  Math.min(100, Math.max(0, Math.floor(plane[i * 3] ?? 0)));
+
+/** `pixels` bucketed by whole L*, by a counting sort. */
+const byLightness = (plane: Float32Array, pixels: ReadonlyArray<number>): Bucketed => {
+  const starts = new Int32Array(102);
+  for (const i of pixels)
+    starts[bucketOf(plane, i) + 1] = (starts[bucketOf(plane, i) + 1] ?? 0) + 1;
+  for (let l = 1; l < 102; l++) starts[l] = (starts[l] ?? 0) + (starts[l - 1] ?? 0);
+  const next = starts.slice();
+  const out = new Int32Array(pixels.length);
+  for (const i of pixels) {
+    const l = bucketOf(plane, i);
+    out[next[l] ?? 0] = i;
+    next[l] = (next[l] ?? 0) + 1;
+  }
+  return { pixels: out, starts };
+};
+
+/** `repainter`'s repaint into `rgba` over the region's bucketed pixels; the pixels it painted. */
+const repaintCluster = (
+  rgba: Uint8Array,
+  kept: Raster,
+  paint: KeptPaint,
+  { pixels, starts }: Bucketed,
   from: Cluster,
   to: Cluster,
-): Raster => {
-  const rgba = kept.rgba.slice();
-  const colour = seedRgb(kept, paint, to);
-  for (let i = 0; i < paint.width * paint.height; i++) {
-    if (paint.region[i] !== from.region) continue;
-    const c = labOf(paint.plane, i);
-    const d = deltaLab(c, from.seed.lab);
-    if (d <= PROBE_FLAT && d < deltaLab(c, to.seed.lab)) rgba.set([...colour, 255], i * 4);
+): ReadonlyArray<number> => {
+  const colour = [...seedRgb(kept, paint, to), 255];
+  const lo = Math.max(0, Math.floor(from.seed.lab[0] - PROBE_FLAT));
+  const hi = Math.min(100, Math.floor(from.seed.lab[0] + PROBE_FLAT));
+  const painted: Array<number> = [];
+  for (let k = starts[lo] ?? 0; k < (starts[hi + 1] ?? 0); k++) {
+    const i = pixels[k] ?? 0;
+    const d = offAt(paint.plane, i, from.seed.lab);
+    if (d <= PROBE_FLAT * PROBE_FLAT && d < offAt(paint.plane, i, to.seed.lab)) {
+      rgba.set(colour, i * 4);
+      painted.push(i);
+    }
   }
-  return { width: kept.width, height: kept.height, rgba };
+  return painted;
 };

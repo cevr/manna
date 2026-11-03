@@ -3,41 +3,56 @@ import { describe, expect } from 'bun:test';
 import { Effect, FileSystem, Option, Schema } from 'effect';
 import { it } from 'effect-bun-test';
 import type { ViewName } from '../render.ts';
-import { keptPaint, uncovered, witnessText, type KeptPaint } from './coverage.ts';
+import {
+  COVER,
+  keptPaint,
+  probeReach,
+  uncovered,
+  witnessText,
+  type KeptPaint,
+  type Witness,
+} from './coverage.ts';
+import { deltaLab } from './measures.ts';
 import { decode, VIEWS } from './pipeline.ts';
 import {
   ColourCoverageJson,
   ColourProbesJson,
-  type ColourProbes,
   type ColourCoverage,
+  type ColourProbe,
+  type ColourProbes,
 } from './probes.ts';
 import { probesFile } from './run.ts';
 
 /** How many flat colours the lead's coverage lets go with no probe, each with its reason. */
 const LEAD_EXEMPTIONS = 0;
 
-/** The lead's probes, coverage and each kept view read for coverage. */
-const lead = Effect.gen(function* () {
-  const fs = yield* FileSystem.FileSystem;
-  const probes = yield* Schema.decodeEffect(ColourProbesJson)(
-    yield* fs.readFileString(probesFile('lead-feast')),
-  );
-  const coverage = yield* Schema.decodeEffect(ColourCoverageJson)(
-    yield* fs.readFileString(
-      `${import.meta.dir}/../../cast/lead-feast/cast-sheet/colour-coverage.json`,
-    ),
-  );
-  const kept = yield* Effect.forEach(VIEWS, (view) =>
-    Effect.map(
-      Effect.flatMap(
-        fs.readFile(`${import.meta.dir}/../../cast/lead-feast/cast-sheet/views/${view}.png`),
-        decode,
-      ),
-      (raster) => [view, keptPaint(raster)] as const,
-    ),
-  );
-  return { probes, coverage, kept: new Map<ViewName, KeptPaint>(kept) };
-}).pipe(Effect.provide(BunServices.layer));
+/** The lead's probes, coverage and each kept view read for coverage, read as the file loads for every case. */
+const lead = Effect.succeed(
+  // oxlint-disable-next-line effect/noAsyncFunction -- read once as the file loads, so no case pays for it inside its time limit
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const probes = yield* Schema.decodeEffect(ColourProbesJson)(
+        yield* fs.readFileString(probesFile('lead-feast')),
+      );
+      const coverage = yield* Schema.decodeEffect(ColourCoverageJson)(
+        yield* fs.readFileString(
+          `${import.meta.dir}/../../cast/lead-feast/cast-sheet/colour-coverage.json`,
+        ),
+      );
+      const kept = yield* Effect.forEach(VIEWS, (view) =>
+        Effect.map(
+          Effect.flatMap(
+            fs.readFile(`${import.meta.dir}/../../cast/lead-feast/cast-sheet/views/${view}.png`),
+            decode,
+          ),
+          (raster) => [view, keptPaint(raster)] as const,
+        ),
+      );
+      return { probes, coverage, kept: new Map<ViewName, KeptPaint>(kept) };
+    }).pipe(Effect.provide(BunServices.layer)),
+  ),
+);
 
 /** Every uncovered witness of every view, named `<view> region <x,y> [x, y, w, h] Lab L a b`. */
 const gaps = (
@@ -55,9 +70,26 @@ const gaps = (
     }),
   );
 
+/** Each probe of a view that alone covers some witness, with those witnesses: no other probe of their region lies within the colour bar of them. */
+const soleCovers = (
+  paint: KeptPaint,
+  list: ReadonlyArray<ColourProbe>,
+): ReadonlyArray<{ readonly probe: ColourProbe; readonly witnesses: ReadonlyArray<Witness> }> => {
+  const reach = list.flatMap((probe) =>
+    Option.toArray(Option.map(probeReach(paint, probe), (p) => ({ probe, ...p }))),
+  );
+  const sole = new Map<ColourProbe, Array<Witness>>();
+  for (const w of paint.witnesses) {
+    const by = reach.filter((p) => p.regions.has(w.region) && deltaLab(p.lab, w.lab) <= COVER);
+    for (const p of by.filter(() => by.length === 1))
+      sole.set(p.probe, [...(sole.get(p.probe) ?? []), w]);
+  }
+  return [...sole].map(([probe, witnesses]) => ({ probe, witnesses }));
+};
+
 describe("the lead's colour coverage of the kept views' flat paints", () => {
   it.effect(
-    'every flat witness of every kept view has a probe in its region within the colour bar of it, or an exemption with its reason',
+    'every flat witness of every kept view has a probe in its region within the colour bar of it, or an exemption with its reason; deleting any probe that alone covers a witness leaves that witness uncovered',
     () =>
       Effect.gen(function* () {
         const { probes, coverage, kept } = yield* lead;
@@ -66,6 +98,54 @@ describe("the lead's colour coverage of the kept views' flat paints", () => {
           uncovered: [],
           exemptions: LEAD_EXEMPTIONS,
         });
+        const sole = VIEWS.map((view) =>
+          Option.match(Option.fromUndefinedOr(kept.get(view)), {
+            onNone: () => ({ view, probes: 0, kept: [`${view} not read`] }),
+            onSome: (paint) => {
+              const list = probes.views[view];
+              const covers = soleCovers(paint, list);
+              const stayed = covers.flatMap(({ probe, witnesses }) => {
+                const only = { ...paint, witnesses };
+                const left = uncovered(
+                  only,
+                  list.filter((p) => p !== probe),
+                  coverage.exempt[view],
+                );
+                return [`${view} ${probe.id}`].filter(() => left.length !== witnesses.length);
+              });
+              return { view, probes: covers.length, kept: stayed };
+            },
+          }),
+        );
+        expect(sole.flatMap((s) => s.kept)).toEqual([]);
+        expect(Math.min(...sole.map((s) => s.probes))).toBeGreaterThan(20);
+      }),
+  );
+
+  it.effect(
+    "an exemption lets go the witnesses of its region within the colour bar of its colour, and no other region's",
+    () =>
+      Effect.gen(function* () {
+        const { probes, kept } = yield* lead;
+        const paint = Option.getOrThrow(Option.fromUndefinedOr(kept.get('front')));
+        const list = probes.views.front;
+        const [first] = soleCovers(paint, list);
+        const { probe, witnesses } = Option.getOrThrow(Option.fromUndefinedOr(first));
+        const w = Option.getOrThrow(Option.fromUndefinedOr(witnesses[0]));
+        const left = list.filter((p) => p !== probe);
+        const at = [w.box.x0, w.box.y0] as const;
+        const exempt = (lab: readonly [number, number, number]) => [
+          { at, lab, reason: 'a test exemption' },
+        ];
+        expect(uncovered(paint, left, exempt(w.lab))).not.toContainEqual(w);
+        expect(uncovered(paint, left, exempt([w.lab[0] + 4, w.lab[1], w.lab[2]]))).toContainEqual(
+          w,
+        );
+        const elsewhere = paint.witnesses.find((v) => v.region !== w.region);
+        const away = Option.getOrThrow(Option.fromUndefinedOr(elsewhere));
+        expect(
+          uncovered(paint, left, [{ at: [away.box.x0, away.box.y0], lab: w.lab, reason: 'away' }]),
+        ).toContainEqual(w);
       }),
   );
 });
