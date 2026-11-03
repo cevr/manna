@@ -10,6 +10,7 @@
 
 import * as Chord from '@manna/hymnal/chord';
 import { describe, expect, it } from 'bun:test';
+import { Match, Option } from 'effect';
 
 import { plain } from '~/feel/cue';
 import { type Move, soundingKey, still } from '~/hymns/chords';
@@ -18,6 +19,7 @@ import {
   capoStops,
   chipsOf,
   faceOf,
+  hintOf,
   isStill,
   keyStops,
   type Shown,
@@ -127,6 +129,24 @@ describe('the key model', () => {
           state: { ...state, open: false },
           cues: [],
         });
+    }));
+
+  it('hints what a tap does: turns chords on, opens the dials, or closes them; on a hymn with no chords, with chords on, nothing', () =>
+    each((printed, state, event) => {
+      if (event._tag !== 'Tap') return;
+      const next = step(printed, state, event).state;
+      const done = Match.value({ on: !state.chords && next.chords, open: next.open }).pipe(
+        Match.when({ on: true }, () => 'Turns chords on'),
+        Match.when({ open: true }, () => 'Opens the key and capo dials'),
+        Match.orElse(() => 'Closes the key and capo dials'),
+      );
+      expect({
+        printed: hintOf(Option.some(printed), state),
+        none: hintOf(Option.none(), state),
+      }).toEqual({
+        printed: Option.some(done),
+        none: (state.chords && Option.none()) || Option.some('Turns chords on'),
+      });
     }));
 
   it('sets the capo held to 0 to 11, leaves the transpose, and cues a wall once past an end', () =>

@@ -16,13 +16,19 @@
  * once, with no cue. A tap on the dials' Tuner closes them, with no cue, as
  * the tuner opens over the page.
  *
- * Each step gives the next state and the cues it makes (`~/feel/cue`). A
- * step gives nothing else: no player command has a place in it, so no
- * dial, reset or hold reaches the sound.
+ * Each step gives the next state and the cues it makes (`~/feel/cue`), and
+ * nothing else: no step commands the player. The sound follows the stored
+ * state instead: the player hears the hymn's stored move while chords are
+ * on and the printed key while they are off (`heardMove` in `~/settings`),
+ * so on a moved hymn a key turn, a reset, or a hold that turns chords on or
+ * off changes the key heard. The capo never reaches the recording.
+ *
+ * The key button's hint (`hintOf`) says what its next tap does: turns chords
+ * on, opens the dials, or closes them.
  */
 
 import * as Chord from '@manna/hymnal/chord';
-import { Data } from 'effect';
+import { Data, Option } from 'effect';
 
 import { type Cue, plain } from '~/feel/cue';
 import { keyName, type Move, playedKey, soundingKey, still } from '~/hymns/chords';
@@ -162,6 +168,18 @@ export const saidOf = (printed: Chord.Key, state: Thumb): string => {
   if (face._tag === 'Off') return 'Chords off';
   if (state.move.capo === 0) return face.key;
   return `${keyName(soundingKey(printed, state.move))}, capo ${state.move.capo}, ${face.key} shapes`;
+};
+
+/**
+ * What VoiceOver reads for the key button's hint: what a tap does now. With
+ * chords off it turns them on, on every hymn. With chords on it opens the
+ * dials, or closes them while they are open, on a hymn with a printed key;
+ * on a hymn with no chords (`printed` none) a tap opens nothing, so no hint.
+ */
+export const hintOf = (printed: Option.Option<Chord.Key>, state: Thumb): Option.Option<string> => {
+  if (!state.chords) return Option.some('Turns chords on');
+  if (state.open) return Option.as(printed, 'Closes the key and capo dials');
+  return Option.as(printed, 'Opens the key and capo dials');
 };
 
 /** One detent of the key dial: a sounding key, on its pitch class. */
