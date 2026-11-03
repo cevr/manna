@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'effect-bun-test';
 import { Effect, FileSystem, Option, SchemaAST } from 'effect';
 import * as BunServices from '@effect/platform-bun/BunServices';
-import { AskRecord, RECEIPT_RULE } from '../core/ask.ts';
+import { AskRecord } from '../core/ask.ts';
 
 /** The repo's root, from this file. */
 const ROOT = `${import.meta.dir}/../../../..`;
@@ -27,25 +27,29 @@ const prose = (text: string) =>
 const read = (place: string) =>
   Effect.flatMap(FileSystem.FileSystem, (fs) => fs.readFileString(`${ROOT}/${place}`));
 
+/** The rule as the description of an ask record's receipt gives it: its words after "by the receipt rule: ", up to where the description turns to the copies' folder. */
+const RULE = Option.flatMap(
+  Option.fromNullishOr(SchemaAST.resolveDescription(AskRecord.fields.shown.ast)),
+  (d) =>
+    Option.fromNullishOr(
+      /by the receipt rule: (An image whose src .+?) Each copy is kept in the asks' folder/s.exec(
+        d,
+      )?.[1],
+    ),
+);
+
 describe('the receipt rule', () => {
   it.effect("is the rule the description of an ask record's receipt gives", () =>
-    Effect.sync(() => {
-      const description = Option.fromNullishOr(
-        SchemaAST.resolveDescription(AskRecord.fields.shown.ast),
-      );
-      const rule = Option.flatMap(description, (d) =>
-        Option.map(Option.fromNullishOr(/by the receipt rule: (.*)$/s.exec(d)?.[1]), (after) =>
-          after.slice(0, RECEIPT_RULE.length),
-        ),
-      );
-      expect(rule).toEqual(Option.some(RECEIPT_RULE));
-    }),
+    Effect.sync(() =>
+      expect(Option.map(RULE, (rule) => rule.split('. ').length)).toEqual(Option.some(3)),
+    ),
   );
 
   it.effect('is stated word for word in each doc that states it', () =>
     Effect.gen(function* () {
+      const rule = yield* Effect.fromOption(RULE);
       const missing = yield* Effect.filter(PLACES, (place) =>
-        Effect.map(read(place), (text) => !prose(text).includes(prose(RECEIPT_RULE))),
+        Effect.map(read(place), (text) => !prose(text).includes(prose(rule))),
       );
       expect(missing).toEqual([]);
     }).pipe(Effect.provide(BunServices.layer)),

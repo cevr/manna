@@ -1121,7 +1121,7 @@ const AskStepAnswer = Schema.Struct({
   at: Schema.String,
 });
 
-export const RECEIPT_RULE =
+const RECEIPT_RULE =
   "An image whose src the receipt names is served only as its copy. Each file-served image of an image block or an option is copied as the ask is made, or the make is refused (`AskRefused`, naming the src). A board block's panels and a video's poster or frame show live and bind nothing.";
 
 /**
