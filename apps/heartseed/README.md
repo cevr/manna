@@ -28,10 +28,10 @@ will call `Voice.read`.
   logged and never fails the service.
 - `src/voice/source.ios.ts` is the source on iOS: the Swift package
   `native/voice` over AVSpeechSynthesizer, which One's prebuild makes the
-  local pod `OneSwiftPackages/voice`. Its voices and its events cross as JSON
-  text, decoded in `src/voice/wire.ts`, so the module's committed
-  declaration (`native/voice/Voice.d.swift.ts`) holds plain types only and
-  the formatter leaves it as One writes it. `src/voice/source.ts` is every
+  local pod `OneSwiftPackages/voice`. Its voices and its events cross as the
+  Codable structs `VoiceInfo` and `VoiceEvent`; the module's declaration
+  (`native/voice/Voice.d.swift.ts`) is committed as One writes it, which
+  neither the formatter nor the lint touches. `src/voice/source.ts` is every
   other platform's: no voices, and a speak that fails, so a reading ends
   `failed`.
 - The module emits events only for the utterance it holds; one that JS

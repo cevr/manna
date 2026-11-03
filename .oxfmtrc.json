@@ -17,6 +17,7 @@
     "apps/animations/series/*/scripts/*.md",
     "packages/hymnal/data/sdah-1985/*.json",
     "packages/hymnal/data/playback/*.json",
-    "packages/hymnal/data/source-text.json"
+    "packages/hymnal/data/source-text.json",
+    "**/*.d.swift.ts"
   ]
 }

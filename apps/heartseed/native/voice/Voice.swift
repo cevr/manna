@@ -3,9 +3,7 @@ import Foundation
 
 /// A voice the device offers: its identifier, BCP 47 language, name,
 /// quality (1 default, 2 enhanced, 3 premium) and whether it is a novelty
-/// or a personal voice. It crosses to JS as JSON text, which the source
-/// decodes, so the module's declaration names only plain types and the
-/// formatter leaves the committed declaration as One writes it.
+/// or a personal voice.
 struct VoiceInfo: Codable {
   let id: String
   let language: String
@@ -25,8 +23,7 @@ enum VoiceEventKind: String, Codable {
 }
 
 /// One event of the utterance the module holds, by its JS id; a range is
-/// the UTF-16 span of the text spoken next. It crosses to JS as JSON text,
-/// as `VoiceInfo` does.
+/// the UTF-16 span of the text spoken next.
 struct VoiceEvent: Codable {
   let utterance: Int
   let kind: VoiceEventKind
@@ -55,7 +52,7 @@ struct VoiceEvent: Codable {
 @MainActor final class Voice: PeachModule {
   private let synthesizer = AVSpeechSynthesizer()
   private let relay = Relay()
-  private var listener: ((String) -> Void)?
+  private var listener: ((VoiceEvent) -> Void)?
   private var held: AVSpeechUtterance?
   private var heldId = 0
   private var observer: NSObjectProtocol?
@@ -77,9 +74,9 @@ struct VoiceEvent: Codable {
     }
   }
 
-  /// The voices the device offers, as a JSON array of `VoiceInfo`.
-  func voices() -> String {
-    let list = AVSpeechSynthesisVoice.speechVoices().map { voice in
+  /// The voices the device offers.
+  func voices() -> [VoiceInfo] {
+    AVSpeechSynthesisVoice.speechVoices().map { voice in
       VoiceInfo(
         id: voice.identifier,
         language: voice.language,
@@ -89,8 +86,6 @@ struct VoiceEvent: Codable {
         personal: voice.voiceTraits.contains(.isPersonalVoice)
       )
     }
-    guard let data = try? JSONEncoder().encode(list) else { return "[]" }
-    return String(decoding: data, as: UTF8.self)
   }
 
   /// Reads `text` as utterance `utterance` in the voice whose identifier is
@@ -156,8 +151,8 @@ struct VoiceEvent: Codable {
   }
 
   /// Sends each event of the held utterance to `listener`, the last one
-  /// subscribed, as the JSON text of its `VoiceEvent`.
-  func onEvent(_ listener: @escaping (String) -> Void) {
+  /// subscribed.
+  func onEvent(_ listener: @escaping (VoiceEvent) -> Void) {
     self.listener = listener
   }
 
@@ -189,10 +184,8 @@ struct VoiceEvent: Codable {
         pacer = nil
       #endif
     }
-    let event = VoiceEvent(
-      utterance: heldId, kind: kind, location: range.location, length: range.length)
-    guard let data = try? JSONEncoder().encode(event) else { return }
-    listener?(String(decoding: data, as: UTF8.self))
+    listener?(
+      VoiceEvent(utterance: heldId, kind: kind, location: range.location, length: range.length))
   }
 }
 
