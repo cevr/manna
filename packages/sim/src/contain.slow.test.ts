@@ -21,23 +21,34 @@ describe('the contained host over every host call', () => {
   );
 
   for (const name of commandNames)
-    it.live(`${name}: every call, tool argument and tree stays inside its roots`, () =>
-      Effect.gen(function* () {
-        const found = yield* Effect.promise(() =>
-          runDomain({
-            kinds: KINDS,
-            commands: (each) => each === name,
-            liveness: () => true,
-            plants: () => true,
-          }),
-        );
-        for (const trigger of found.triggers) reached.add(trigger);
-        expect(found.violations.slice(0, 12)).toEqual([]);
-        expect(found.untyped.slice(0, 12)).toEqual([]);
-        expect(found.liveness).toEqual([]);
-        expect(found.livenessCases).toBe(5);
-      }),
-    );
+    for (const kind of KINDS) {
+      const first = kind === KINDS[0];
+      let title = `${name}, ${kind} links`;
+      let layouts = 1;
+      if (first) {
+        title = `${title}, the run-made links and the liveness layouts`;
+        layouts = 5;
+      }
+      it.live(`${title}: every call, tool argument and tree stays inside its roots`, () =>
+        Effect.gen(function* () {
+          const found = yield* Effect.promise(() =>
+            runDomain({
+              kinds: [kind],
+              commands: (each) => each === name,
+              liveness: () => first,
+              plants: (_, plant) =>
+                plant.kind === kind ||
+                (first && (plant.kind === 'prebuild' || plant.kind === 'build')),
+            }),
+          );
+          for (const trigger of found.triggers) reached.add(trigger);
+          expect(found.violations.slice(0, 12)).toEqual([]);
+          expect(found.untyped.slice(0, 12)).toEqual([]);
+          expect(found.liveness).toEqual([]);
+          expect(found.livenessCases).toBe(layouts);
+        }),
+      );
+    }
 
   it.effect('reaches the four census triggers', () =>
     Effect.sync(() =>
