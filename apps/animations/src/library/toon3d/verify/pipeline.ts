@@ -1,10 +1,17 @@
 import { compareFigures, measureFigure } from '@manna/film/core';
-import { Effect, Option, Result, Schema } from 'effect';
+import { Duration, Effect, Option, Result, Schema, type Scope } from 'effect';
 import sharp from 'sharp';
 import type { Vector3 } from 'three';
 import { armChain, PART } from '../figure.ts';
 import type { RenderRequest } from '../page.ts';
-import { HEAD_PX, toon3dPage, YAWS, type RenderPng, type ViewName } from '../render.ts';
+import {
+  HEAD_PX,
+  toon3dPage,
+  YAWS,
+  type RenderPng,
+  type Toon3dFailed,
+  type ViewName,
+} from '../render.ts';
 import { REST, REST_ARM, type MemberSpec, type PaintName, type Pose } from '../spec.ts';
 import {
   boxOf,
@@ -46,6 +53,25 @@ export class VerifyFailed extends Schema.TaggedError<VerifyFailed>()('VerifyFail
 }) {}
 
 const failed = (cause: unknown) => VerifyFailed.make({ reason: String(cause) });
+
+/** The figure's page gave no answer within the launch's bound: to its opening or to one render, named by `job`. */
+export class RenderHung extends Schema.TaggedError<RenderHung>()('RenderHung', {
+  job: Schema.String,
+  bound: Schema.String,
+}) {
+  override get message() {
+    return `${this.job} hung: no answer within ${this.bound}`;
+  }
+}
+
+/** `self`, failed as `RenderHung` naming `job` when it has not ended within `bound`. */
+const within =
+  (job: string, bound: Duration.Duration) =>
+  <A, E, R>(self: Effect.Effect<A, E, R>): Effect.Effect<A, E | RenderHung, R> =>
+    Effect.timeoutOrElse(self, {
+      duration: bound,
+      orElse: () => Effect.fail(RenderHung.make({ job, bound: Duration.format(bound) })),
+    });
 
 /** How much a run renders: which kept views, and how many bend and turn frames. */
 export interface Plan {
@@ -171,7 +197,7 @@ const viewRequest = (
  * pixel onto the kept's.
  */
 export const placeView = Effect.fn('Toon3dVerify.placeView')(function* (
-  render: RenderPng,
+  render: JobRender,
   view: ViewName,
   kept: Raster,
 ) {
@@ -183,7 +209,9 @@ export const placeView = Effect.fn('Toon3dVerify.placeView')(function* (
     oy: kept.height - 8,
   };
   for (let k = 0; k < 2; k++) {
-    const shot = yield* decode(yield* render(viewRequest(view, place, 'colour')));
+    const shot = yield* decode(
+      yield* render(`place ${view} ${k + 1}`, viewRequest(view, place, 'colour')),
+    );
     const b = boxOrWhole(figureMask(shot), shot);
     place = {
       ...place,
@@ -228,13 +256,42 @@ export const jobsOf = (
 /** The page's size: a render sets its own canvas size, so this only bounds the window. */
 const PAGE_SIZE = { width: 400, height: 700 };
 
+/** How a run opens the figure's page, and how long the page's opening or one render may take before the run fails as hung. */
+export interface Launch {
+  readonly open: Effect.Effect<RenderPng, Toon3dFailed, Scope.Scope>;
+  readonly bound: Duration.Duration;
+}
+
+/** Renders one request, named by `job` for a failure's report. */
+type JobRender = (
+  job: string,
+  req: RenderRequest,
+) => Effect.Effect<Uint8Array, Toon3dFailed | RenderHung>;
+
+/** The launch's page, opened within its bound, and its renders each bound and named `<name>: <job>`. */
+const opened = (launch: Launch, name: string) =>
+  launch.open.pipe(
+    within(`${name}: page`, launch.bound),
+    Effect.map(
+      (render): JobRender =>
+        (job, req) =>
+          render(req).pipe(within(`${name}: ${job}`, launch.bound)),
+    ),
+  );
+
+/** The page a real run opens: the member's figure in a software-GL Chrome page. */
+export const pageLaunch = (spec: MemberSpec): Launch => ({
+  open: toon3dPage(PAGE_SIZE, spec),
+  bound: Duration.seconds(120),
+});
+
 /** The run's first launch: each view placed over its kept picture, then every job rendered. */
 export const firstLaunch = Effect.fn('Toon3dVerify.firstLaunch')(function* (
-  spec: MemberSpec,
+  launch: Launch,
   plan: Plan,
   kept: ReadonlyMap<ViewName, Raster>,
 ) {
-  const render = yield* toon3dPage(PAGE_SIZE, spec);
+  const render = yield* opened(launch, 'first launch');
   const places = new Map<ViewName, Placement>();
   for (const view of plan.views) {
     const keptView = kept.get(view);
@@ -242,17 +299,17 @@ export const firstLaunch = Effect.fn('Toon3dVerify.firstLaunch')(function* (
     places.set(view, yield* placeView(render, view, keptView));
   }
   const jobs = jobsOf(plan, places);
-  const pngs = yield* Effect.forEach(jobs, (job) => render(job.request));
+  const pngs = yield* Effect.forEach(jobs, (job) => render(job.name, job.request));
   return { jobs, pngs };
 }, Effect.scoped);
 
 /** A second, separate launch of the page rendering the same jobs, for the determinism check. */
 export const secondLaunch = Effect.fn('Toon3dVerify.secondLaunch')(function* (
-  spec: MemberSpec,
+  launch: Launch,
   jobs: ReadonlyArray<RenderJob>,
 ) {
-  const render = yield* toon3dPage(PAGE_SIZE, spec);
-  return yield* Effect.forEach(jobs, (job) => render(job.request));
+  const render = yield* opened(launch, 'second launch');
+  return yield* Effect.forEach(jobs, (job) => render(job.name, job.request));
 }, Effect.scoped);
 
 /** Each figure part's paints, for the flatness and colour measures: base, shade, and the sandal's on a foot. */

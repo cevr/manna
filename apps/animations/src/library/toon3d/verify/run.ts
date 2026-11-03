@@ -17,6 +17,7 @@ import {
   firstLaunch,
   FULL_PLAN,
   measureRun,
+  pageLaunch,
   QUICK_PLAN,
   secondLaunch,
   VerifyFailed,
@@ -274,8 +275,8 @@ export const verifyMember = Effect.fn('Toon3dVerify.verifyMember')(function* (
   const spec = yield* specOf(source);
   const { kept, bytes: keptBytes } = yield* readKept(member, plan);
   const probes = yield* readColourProbes(member);
-  const first = yield* firstLaunch(spec, plan, kept);
-  const second = yield* secondLaunch(spec, first.jobs);
+  const first = yield* firstLaunch(pageLaunch(spec), plan, kept);
+  const second = yield* secondLaunch(pageLaunch(spec), first.jobs);
   const { renders, hashes, differing } = rendersOf(first.jobs, first.pngs, second);
   const measured = yield* measureRun(
     spec,
