@@ -36,6 +36,7 @@ bun run typecheck              # Type check all packages
 bun run fmt                    # Format code with oxfmt
 bun run gate                   # The feedback cycle: oxlint (deterministic rules) + every workspace's unit tests, turbo-cached
 bun run test:slow              # Typecheck, builds, slow tests, browser and built-page checks, full lint, e2e; by hand and before deploys
+bun run lint:review            # The full lint for a reviewer: oxlint plus the judged rules by stored answers alone; no key, no model call, no write
 bun run test:perf              # The CLI's performance budgets (local only; reads packages/core/data/bible.db)
 bun run test:budget [<ws>…]    # Each unit-test task alone under 1 s (each @manna/film part 1.1 s), no total (local only)
 bun run test:reads             # Each file, module and native library a unit-test task's bun processes open is one that cached task hashes (in test:slow)
