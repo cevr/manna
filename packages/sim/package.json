@@ -1,0 +1,28 @@
+{
+  "name": "@manna/sim",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./app": "./src/app.ts",
+    "./command": "./src/command.ts",
+    "./drive": "./src/drive.ts",
+    "./errors": "./src/errors.ts",
+    "./result": "./src/result.ts",
+    "./tools": "./src/tools.ts",
+    "./journey": "./src/journey.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/typecheck.tsbuildinfo",
+    "test": "bun test --parallel=3 --path-ignore-patterns='**/*.slow.test.*'",
+    "test:slow": "bun test .slow.test."
+  },
+  "dependencies": {
+    "@effect/platform-bun": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "effect-bun-test": "catalog:"
+  }
+}

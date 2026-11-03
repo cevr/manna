@@ -291,6 +291,16 @@
         "effect-bun-test": "catalog:",
       },
     },
+    "packages/sim": {
+      "name": "@manna/sim",
+      "dependencies": {
+        "@effect/platform-bun": "catalog:",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "effect-bun-test": "catalog:",
+      },
+    },
     "packages/ui": {
       "name": "@manna/ui",
       "dependencies": {
@@ -767,6 +777,8 @@
     "@manna/scripts": ["@manna/scripts@workspace:packages/scripts"],
 
     "@manna/selah": ["@manna/selah@workspace:apps/selah"],
+
+    "@manna/sim": ["@manna/sim@workspace:packages/sim"],
 
     "@manna/ui": ["@manna/ui@workspace:packages/ui"],
 
