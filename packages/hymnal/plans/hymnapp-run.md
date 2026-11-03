@@ -8,13 +8,14 @@ Workspaces: git worktrees under `~/Developer/personal/.rifts/bible-tools/<unit>`
 | Unit      | Depends on | Workspace          | Agents                                                                       | Result                                                        |
 | --------- | ---------- | ------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | topicsdb  | initfresh  |                    |                                                                              | parked (owner: topics follow the films)                       |
-| selahone  | oneup      |                    |                                                                              |                                                               |
 | keyfollow | worship    |                    | owner note: the playing recording follows a key change made in the hymn view | blocked: not reproduced, waits on the owner (Owner questions) |
 | selah     | reader     | .rifts/manna/selah |                                                                              |                                                               |
 
 Later, not yet planned: `ch1941` (1941 Church Hymnal chords from page scans), `inexact` (the 7 MIDI files whose verses do not split: 126 225 262 292 403 453 580), `decks` (syllable splits into feat/hymn-decks, last by the owner's word), `selah` (planned: after reader, see Decisions; macOS stays SwiftUI until react-native-gpui ships a real package).
 
 ## Decisions
+
+- Orchestrator, 2026-11-03, selahone decide: r3's review ended `stuck` only because the reviewer's host never got quiet for the 1 s budget; no Blocker or Major. The orchestrator measured it at the head on a quiet host: `@manna/heartseed#test` 0.40 s (loads 4.4 and 11.9 on 12 cores, `selahone/budget-orchestrator.log`). Its two test-strength notes (T1: the A5 scan skips two helper files, dotfiles and .cts/.mts/.cjs; T2: TypeScript wrappers such as `import('…' as string)`) are deliberate spellings, not a defect in the app, so they become one follow-up instead of a fourth round. A7's live drive stands from r1's reviewer: no app source changed after it. Merged 104d79714. (selahone)
 
 - Orchestrator, 2026-11-03: the hymnal queue is done, so `selahone` planning ran (owner, 2026-10-26: "lets do selah after we're done current queue"). Its planner proved the iOS lane for a new One app (`one prebuild` needs `android.applicationId` even for iOS; Debug build 397 s; agent-device read Today, Isaiah 41:10 and its KJV text) and split Heartseed into 29 units, core loop first: selahone (the pilot), simkit, hsmatch, hsdictate, hssayit, hsgrow, then the rest of the first TestFlight build to hsship; Pro, texts, sync, Mac, site and Android after. The list, Done lines and decisions: `tmp/orchestrate/hymnapp/selahone/units.md`. The pilot `selahone` (apps/heartseed, `@manna/heartseed`, bundle id `app.heartseed`) runs first. (selahone)
 
@@ -126,6 +127,7 @@ Older decisions, answered owner questions and closed follow-ups: [hymnapp-run-ar
 
 ## Follow-ups
 
+- selahone follow-ups (merged 104d79714; `tmp/orchestrate/hymnapp/selahone/`): (1) the A5 core-import guard: T1 (skipped sources) and T2 (TypeScript wrappers) from `round-3-findings.md`; first try oxlint's `no-restricted-imports` scoped to `apps/heartseed` as the house guard before growing the oxc-parser scanner. (2) `packages/scripts/src/typecheck-coverage.ts` checks only packages/scripts (r1 On base). (3) For simkit: isolate the child HOME, scope teardown to recorded pids, and schedule the budget leg in a quiet-host slot. (4) On main, not this unit: `bun run dead-exports` reports new=106 and `bun run fmt:check` fails on `.claude/skills/argent-metro-debugger/references/source-maps.md` (`merge-selahone.log`). Next Heartseed units: simkit and hsmatch (`units.md`).
 - ftbdigest follow-ups (merged 83464560f; `tmp/orchestrate/hymnapp/ftbdigest/`): one round, accepted. The Codex implementor latched past 10 minutes and the round ran on Opus. Left on `Bun.CryptoHasher` by nohashes' rulings: film `tools/digest.ts` (a film unit's seam), animations `screening.ts`, the hymnal build scripts and test fixtures.
 
 - safelint follow-ups (merged 80beac501; `tmp/orchestrate/hymnapp/safelint/`): two rounds (r1 M1: a stale checkout findings file hid a stored error from `lint:review`; review mode `JUDGED_REVIEW=1` now reports from the store, guarded by a parity test). Reviewer briefs now run `bun run lint:review` instead of skipping the full lint. The r2 reviewer's extra probes (missing, empty and malformed store; an unused suppression) could join the CLI fixture table.
