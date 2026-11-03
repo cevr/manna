@@ -18,7 +18,17 @@ import {
   type Rgb,
 } from './measures.ts';
 import { decode, readProbes, VIEWS } from './pipeline.ts';
-import { ColourProbesJson, probeAt, probeBox, type ColourProbe } from './probes.ts';
+import {
+  ColourCoverageJson,
+  ColourProbesJson,
+  probeAt,
+  probeBox,
+  ProbePaint,
+  ProbePart,
+  type ColourProbe,
+  type ProbedPaint,
+  type ShownPaint,
+} from './probes.ts';
 import { probesFile } from './run.ts';
 import { verdictOf, type CheckVerdict, type Measured } from './verdict.ts';
 
@@ -243,9 +253,9 @@ describe('readProbes', () => {
       return SHADE;
     });
     const probes: ReadonlyArray<ColourProbe> = [
-      { part: 'mantle', paint: 'base', box: [8, 10, 8, 8] },
-      { part: 'body', paint: 'shade', box: [24, 10, 8, 8] },
-      { part: 'body', paint: 'base', box: [10, 24, 8, 8] },
+      { id: 'a', part: 'mantle', paint: 'base', box: [8, 10, 8, 8] },
+      { id: 'b', part: 'body', paint: 'shade', box: [24, 10, 8, 8] },
+      { id: 'c', part: 'body', paint: 'base', box: [10, 24, 8, 8] },
     ];
     const read = readProbes('back', probes, kept, scene, ids).map((p) => ({
       at: p.at,
@@ -452,5 +462,115 @@ describe("the lead's authored colour probes", () => {
         );
         expect(bad.flat()).toEqual([]);
       }).pipe(Effect.provide(BunServices.layer)),
+  );
+});
+
+/** A view's shown paints that name probes. */
+const probedOf = (shown: ReadonlyArray<ShownPaint>): ReadonlyArray<ProbedPaint> =>
+  shown.filter((entry): entry is ProbedPaint => 'probes' in entry);
+
+/** Each way a view's coverage and its probes disagree: a probe id used twice, a (part, paint) listed twice, a probed paint naming a probe the view lacks or one of another part or paint, or a probe no shown paint names. */
+const coverageGaps = (
+  view: ViewName,
+  shown: ReadonlyArray<ShownPaint>,
+  probes: ReadonlyArray<ColourProbe>,
+): ReadonlyArray<string> => {
+  const byId = new Map(probes.map((probe) => [probe.id, probe] as const));
+  const ids = probes.map((probe) => probe.id);
+  const keys = shown.map((entry) => `${entry.part} ${entry.paint}`);
+  const named = new Set(probedOf(shown).flatMap((entry) => entry.probes));
+  return [
+    ...ids.filter((id, k) => ids.indexOf(id) !== k).map((id) => `${view} probe ${id} used twice`),
+    ...keys.filter((key, k) => keys.indexOf(key) !== k).map((key) => `${view} ${key} listed twice`),
+    ...probedOf(shown).flatMap((entry) =>
+      entry.probes.flatMap((id) =>
+        Option.match(Option.fromUndefinedOr(byId.get(id)), {
+          onNone: () => [`${view} ${entry.part} ${entry.paint} names missing probe ${id}`],
+          onSome: (probe) =>
+            [
+              `${view} ${entry.part} ${entry.paint} names ${id}, a ${probe.part} ${probe.paint} probe`,
+            ].filter(() => probe.part !== entry.part || probe.paint !== entry.paint),
+        }),
+      ),
+    ),
+    ...ids.filter((id) => !named.has(id)).map((id) => `${view} probe ${id} is in no shown paint`),
+  ];
+};
+
+/** Every (part, paint) a view's coverage must decide, probed or unavailable. */
+const GRID = ProbePart.literals
+  .flatMap((part) => ProbePaint.literals.map((paint) => `${part} ${paint}`))
+  .toSorted();
+
+/** The lead's authored probes and reviewed coverage, decoded. */
+const leadData = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem;
+  const probes = yield* Schema.decodeEffect(ColourProbesJson)(
+    yield* fs.readFileString(probesFile('lead-feast')),
+  );
+  const coverage = yield* Schema.decodeEffect(ColourCoverageJson)(
+    yield* fs.readFileString(
+      `${import.meta.dir}/../../cast/lead-feast/cast-sheet/colour-coverage.json`,
+    ),
+  );
+  return { probes, coverage };
+}).pipe(Effect.provide(BunServices.layer));
+
+describe("the lead's colour coverage", () => {
+  it.effect(
+    'decides every (part, paint) of every view once, and each probed paint names probes of that part and paint that the view has, and every probe is named',
+    () =>
+      Effect.gen(function* () {
+        const { probes, coverage } = yield* leadData;
+        for (const view of VIEWS) {
+          const shown = coverage.views[view];
+          expect(shown.map((entry) => `${entry.part} ${entry.paint}`).toSorted()).toEqual(GRID);
+          expect(coverageGaps(view, shown, probes.views[view])).toEqual([]);
+        }
+      }),
+  );
+
+  it.effect("deleting a paint's last probe, in any view, leaves a gap naming that paint", () =>
+    Effect.gen(function* () {
+      const { probes, coverage } = yield* leadData;
+      const missed = VIEWS.flatMap((view) =>
+        probedOf(coverage.views[view]).flatMap((entry) => {
+          const left = probes.views[view].filter((probe) => !entry.probes.includes(probe.id));
+          const gaps = coverageGaps(view, coverage.views[view], left);
+          const named = gaps.some((gap) =>
+            gap.startsWith(`${view} ${entry.part} ${entry.paint} names missing probe`),
+          );
+          return [`${view} ${entry.part} ${entry.paint}`].filter(() => !named);
+        }),
+      );
+      expect(missed).toEqual([]);
+      const front = probes.views.front.filter((probe) => probe.id !== 'mantle.shade.0');
+      expect(coverageGaps('front', coverage.views.front, front)).toEqual([
+        'front mantle shade names missing probe mantle.shade.0',
+      ]);
+    }),
+  );
+
+  it.effect(
+    'a probe no shown paint names, or a shown paint naming a probe of another paint, is a gap',
+    () =>
+      Effect.gen(function* () {
+        const { probes, coverage } = yield* leadData;
+        const extra: ColourProbe = {
+          id: 'hair.shade.9',
+          part: 'hair',
+          paint: 'shade',
+          box: [185, 80, 8, 8],
+        };
+        expect(coverageGaps('front', coverage.views.front, [...probes.views.front, extra])).toEqual(
+          ['front probe hair.shade.9 is in no shown paint'],
+        );
+        const relabelled = probes.views.front.map((probe) =>
+          Object.assign({}, probe, { paint: 'base' as const }),
+        );
+        expect(coverageGaps('front', coverage.views.front, relabelled)).toContain(
+          'front hair shade names hair.shade.0, a hair base probe',
+        );
+      }),
   );
 });
