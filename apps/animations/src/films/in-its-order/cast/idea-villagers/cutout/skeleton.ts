@@ -43,8 +43,11 @@ export const SKELETONS = {
       chin: [170, 168],
       crown: [170, 0],
       painted: {
-        right:
-          '72-pose sweep: exposed 71 > 8 at elbow/wrist 85/60; unprotected 20 > 0 at elbow/wrist 120/-30; ghost 101 > 0 at elbow/wrist 40/120',
+        right: [
+          { measure: 'exposed', elbow: 85, wrist: 60, bound: 8 },
+          { measure: 'unprotected', elbow: 120, wrist: -30, bound: 0 },
+          { measure: 'ghost', elbow: 40, wrist: 120, bound: 0 },
+        ],
       },
       ...JOINTS['poses-3'],
       wristRight: [28, 215],
@@ -67,9 +70,16 @@ export const SKELETONS = {
       chin: [86, 128],
       crown: [90, 0],
       painted: {
-        right:
-          '72-pose sweep: exposed 95 > 8 at elbow/wrist 115/-120; unprotected 56 > 0 at elbow/wrist 115/-120; ghost 104 > 0 at elbow/wrist 25/-120',
-        left: '72-pose sweep: exposed 148 > 8 at elbow/wrist 100/60; unprotected 101 > 0 at elbow/wrist 100/120; ghost 188 > 0 at elbow/wrist 25/60',
+        right: [
+          { measure: 'exposed', elbow: 115, wrist: -120, bound: 8 },
+          { measure: 'unprotected', elbow: 115, wrist: -120, bound: 0 },
+          { measure: 'ghost', elbow: 25, wrist: -120, bound: 0 },
+        ],
+        left: [
+          { measure: 'exposed', elbow: 100, wrist: 60, bound: 8 },
+          { measure: 'unprotected', elbow: 100, wrist: 120, bound: 0 },
+          { measure: 'ghost', elbow: 25, wrist: 60, bound: 0 },
+        ],
       },
       ...JOINTS['poses-4'],
       wristRight: [65, 168],
@@ -116,8 +126,11 @@ export const SKELETONS = {
       chin: [221, 341],
       crown: [221, 0],
       painted: {
-        right:
-          '72-pose sweep: exposed 141 > 8 at elbow/wrist 70/120; unprotected 118 > 0 at elbow/wrist 70/120; ghost 4228 > 0 at elbow/wrist 25/30',
+        right: [
+          { measure: 'exposed', elbow: 70, wrist: 120, bound: 8 },
+          { measure: 'unprotected', elbow: 70, wrist: 120, bound: 0 },
+          { measure: 'ghost', elbow: 25, wrist: 30, bound: 0 },
+        ],
       },
       ...JOINTS['single-15'],
       wristRight: [110, 498],

@@ -20,10 +20,30 @@ import { Match, Option } from 'effect';
 import type { Pt } from './rules.ts';
 
 /** An arm a view keeps painted rather than drawn as a stroke limb: its part, and why. */
+export const LIMB_LIMITS = { whole: 12, exposed: 8, unprotected: 0, ghost: 0 } as const;
+
+/** A measured condition that keeps an arm painted. Its current value is
+ * computed by the sweep; only the measure, pose and bound are recorded. */
+export type ArmFailure = {
+  [M in keyof typeof LIMB_LIMITS]: {
+    readonly measure: M;
+    readonly elbow: number;
+    readonly wrist: number;
+    readonly bound: (typeof LIMB_LIMITS)[M];
+  };
+}[keyof typeof LIMB_LIMITS];
+
 export interface PaintedArm {
   readonly part: string;
-  readonly reason: string;
+  readonly reason: readonly [ArmFailure, ...ReadonlyArray<ArmFailure>];
+  readonly limb: StrokeLimb;
 }
+
+/** A printable opt-out condition, derived from its typed measure and pose. */
+export const paintedReason = (arm: PaintedArm) =>
+  arm.reason
+    .map((r) => `${r.measure} > ${r.bound} at elbow/wrist ${r.elbow}/${r.wrist}`)
+    .join('; ');
 
 /** A skeleton with its root (where the puppet stands), and the arms its view keeps painted. */
 export type Rooted = Skeleton & {
@@ -78,7 +98,7 @@ interface Trunk {
 
 /** The arms a view keeps painted, by his own side, of those its body names, each with why its stroke limb is not drawn; every other arm it draws is a stroke limb. */
 interface Limbed<A extends Arms> {
-  readonly painted?: Partial<Readonly<Record<Extract<keyof A, Side>, string>>>;
+  readonly painted?: Partial<Readonly<Record<Extract<keyof A, Side>, PaintedArm['reason']>>>;
 }
 
 /** His right arm's joints, its flap's inner edge (x: the arm on the viewer's left takes the body left of it, on the viewer's right the body right of it), its cap radius (the member's cut), and, where its sleeve does not end at the wrist pivot, where it ends on the forearm (its stroke limb's cuff). */
@@ -124,7 +144,7 @@ interface Arm {
 
 /** Why a view keeps an arm painted, if it does, and the cuff it gives that arm, if any. */
 interface Stroke {
-  readonly painted: Option.Option<string>;
+  readonly painted: Option.Option<PaintedArm['reason']>;
   readonly cuff: Option.Option<Pt>;
 }
 
@@ -198,13 +218,17 @@ const limb = (
         onNone: (): Option.Option<StrokeLimb> => Option.some(strokeLimb(side, name, stroke.cuff)),
         onSome: () => Option.none(),
       }),
-      painted: Option.map(stroke.painted, (reason): PaintedArm => ({ part: name, reason })),
+      painted: Option.map(stroke.painted, (reason): PaintedArm => ({
+        part: name,
+        reason,
+        limb: strokeLimb(side, name, stroke.cuff),
+      })),
     })),
   );
 
 /** A standing view's skeleton, view pixels: lean, neck and head, each drawn arm's three bones and its sleeve's flap of `body.from`, the band mirrored for a view from the back, each drawn arm's stroke limb, and the arms the view keeps painted with why. */
 const standingOf = (body: Body<Arms>, s: Read): Rooted => {
-  const painted: Partial<Readonly<Record<Side, string>>> = Option.getOrElse(
+  const painted: Partial<Readonly<Record<Side, PaintedArm['reason']>>> = Option.getOrElse(
     Option.fromUndefinedOr(s.painted),
     () => ({}),
   );
@@ -282,7 +306,16 @@ export const framed = ([dx, dy]: Pt, s: Rooted): Rooted => {
         onSome: (cuff) => ({ cuff: at(cuff) }),
       }),
     })),
-    painted: Option.getOrElse(Option.fromUndefinedOr(s.painted), () => []),
+    painted: Option.getOrElse(Option.fromUndefinedOr(s.painted), () => []).map((p) => ({
+      ...p,
+      limb: {
+        ...p.limb,
+        ...Option.match(Option.fromUndefinedOr(p.limb.cuff), {
+          onNone: () => ({}),
+          onSome: (cuff) => ({ cuff: at(cuff) }),
+        }),
+      },
+    })),
     root: at(s.root),
   };
 };

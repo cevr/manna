@@ -131,14 +131,22 @@ describe('a standing skeleton', () => {
       standing(BODY, {
         ...at('front'),
         cuffRight: [17, 140],
-        painted: { right: 'its cuff is hidden in the robe' },
+        painted: { right: [{ measure: 'unprotected', elbow: 40, wrist: -120, bound: 0 }] },
       }),
     );
     expect(made.limbs).toEqual([
       { part: 'sleeveLeft', bones: ['shoulderLeft', 'elbowLeft', 'wristLeft'] },
     ]);
     expect(made.painted).toEqual([
-      { part: 'sleeveRight', reason: 'its cuff is hidden in the robe' },
+      {
+        part: 'sleeveRight',
+        reason: [{ measure: 'unprotected', elbow: 40, wrist: -120, bound: 0 }],
+        limb: {
+          part: 'sleeveRight',
+          bones: ['shoulderRight', 'elbowRight', 'wristRight'],
+          cuff: [22, 147],
+        },
+      },
     ]);
   });
 });

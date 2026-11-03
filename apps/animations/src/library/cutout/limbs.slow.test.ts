@@ -1,11 +1,11 @@
 // The stroke limbs' census: every arm of every cast member's cut view is a
 // stroke limb, or says why it is not. Each view (`views.ts`) is loaded as the
-// film loads it (`puppetFrom`), and each part its skeleton skins on an arm's
-// chain (`shoulder<Side>`, `elbow<Side>`, `wrist<Side>`) is read: a stroke
+// film loads it (`puppetFrom`). Skin chains, declarations, painted arms and
+// refusals share one inventory, so a broken skin cannot erase an arm: a stroke
 // limb where its part carries one, else refused by `puppetOf` with the
 // refusal's reason (`Puppet.refused`), else kept painted by its view with
 // why (`painted`, `skeleton.ts`). An arm with none of the three fails here,
-// as does one whose reason is empty. The last case prints the whole table
+// as does an empty reason, orphan refusal or declaration error. The last case prints the whole table
 // (member, view, side, and what the arm is) with its counts. Each case
 // decodes a view's sheets and measures its limbs, so they run in the slow
 // suite.
@@ -13,7 +13,8 @@
 import * as BunServices from '@effect/platform-bun/BunServices';
 import type { PuppetSpec } from '@manna/film/canvas';
 import { PuppetImagesBun, puppetFrom } from '@manna/film/tools';
-import { Console, Effect, Layer, Option, Predicate } from 'effect';
+import { Console, Effect, Layer } from 'effect';
+import { censusOf, refusalErrors } from './limb-census.ts';
 import { describe, expect, it } from 'effect-bun-test';
 import { LEAST_VIEWS, cutViews } from './views.ts';
 
@@ -42,58 +43,17 @@ interface Row {
   readonly shown: Shown;
 }
 
-/** The arms `spec`'s skeleton skins on a whole arm chain, each its part and side. */
-const armsOf = (spec: PuppetSpec) =>
-  Object.entries(spec.skeleton.skin).flatMap(([part, bones]) =>
-    ['Right', 'Left'].flatMap((side) =>
-      Option.toArray(
-        Option.liftPredicate({ part, side }, () =>
-          ['shoulder', 'elbow', 'wrist'].every((j) => bones.includes(`${j}${side}`)),
-        ),
-      ),
-    ),
-  );
-
-/** The arms `spec`'s view keeps painted, by part, each with why (`skeleton.ts`'s `painted`). */
-const paintedOf = (spec: PuppetSpec): ReadonlyMap<string, string> =>
-  new Map(
-    Option.match(
-      Option.liftPredicate(spec.skeleton, (s) => Predicate.hasProperty(s, 'painted')),
-      {
-        onNone: () => [],
-        onSome: (s) =>
-          Array.from(Object(s).painted as ReadonlyArray<{ part: string; reason: string }>).map(
-            (p) => [p.part, p.reason] as const,
-          ),
-      },
-    ),
-  );
-
-/** Each arm of `spec`'s view, loaded as the film loads it. */
+/** Each arm of a view, loaded as the film loads it. */
 const rowsOf = (spec: PuppetSpec) =>
   Effect.gen(function* () {
     const puppet = yield* puppetFrom(spec);
-    const painted = paintedOf(spec);
+    const census = censusOf(spec, puppet);
+    expect(refusalErrors(puppet.refused, census)).toEqual([]);
     const [member = spec.key, view = spec.key] = spec.key.split('/cutout/');
-    return armsOf(spec).map(({ part, side }): Row => {
-      const limbed = puppet.parts.some((p) => p.name === part && Predicate.isNotUndefined(p.limb));
-      const refused = puppet.refused.filter((r) => r.part === part).map((r) => r.message);
-      const shown = Option.liftPredicate<Shown>({ _tag: 'limb' }, () => limbed).pipe(
-        Option.orElse(() =>
-          Option.map(
-            Option.liftPredicate(refused, (r) => r.length > 0),
-            (r): Shown => ({ _tag: 'refused', reason: r.join('; ') }),
-          ),
-        ),
-        Option.orElse(() =>
-          Option.map(Option.fromUndefinedOr(painted.get(part)), (reason): Shown => ({
-            _tag: 'out',
-            reason,
-          })),
-        ),
-        Option.getOrElse((): Shown => ({ _tag: 'neither' })),
-      );
-      return { member, view, side, part, shown };
+    return census.map((r): Row => {
+      if (r.tag === 'limb' || r.tag === 'neither')
+        return { member, view, side: r.side, part: r.part, shown: { _tag: r.tag } };
+      return { member, view, side: r.side, part: r.part, shown: { _tag: r.tag, reason: r.reason } };
     });
   });
 
