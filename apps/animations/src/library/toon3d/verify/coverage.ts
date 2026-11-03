@@ -19,7 +19,7 @@ export const LINE_INK = 17;
 /** A flat witness lies at least this far (px, either axis) from line ink. */
 export const INK_CLEAR = 2;
 
-/** A flat witness's side (px), and the grid step on which witnesses are enumerated. */
+/** A flat witness's side (px). */
 export const WITNESS_SIDE = 4;
 
 /** The grid step (px, both axes) of the witness enumeration. */
