@@ -12,32 +12,32 @@
     },
     {
       "name": "head",
-      "kept": 24663,
+      "kept": 24030,
       "painted": 1045
     },
     {
       "name": "footLeft",
-      "kept": 1758,
+      "kept": 1687,
       "painted": 0
     },
     {
       "name": "footRight",
-      "kept": 1919,
+      "kept": 1873,
       "painted": 0
     },
     {
       "name": "shadow",
-      "kept": 3235,
+      "kept": 1759,
       "painted": 0
     },
     {
       "name": "robe",
-      "kept": 20548,
+      "kept": 20101,
       "painted": 1400
     },
     {
       "name": "torso",
-      "kept": 16635,
+      "kept": 15862,
       "painted": 9839
     }
   ],
