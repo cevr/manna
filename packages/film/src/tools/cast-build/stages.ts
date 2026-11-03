@@ -44,7 +44,7 @@ import {
   type Scope,
   Struct,
 } from 'effect';
-import type { ChildProcessSpawner } from 'effect/process';
+import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import type { PuppetSpec } from '../../canvas/puppet.ts';
 import type { PuppetImages } from '../../puppet/images.ts';
 import { puppetFrom } from '../../puppet/load.ts';
@@ -79,7 +79,13 @@ import {
 } from './graph.ts';
 import { CastReader, type ReaderError } from './reader.ts';
 import { SAMPLES, shardOf, trainsetOf } from './renders.ts';
-import { cutTableSources, filmCastSources, pageSources, stageSources } from './sources.ts';
+import {
+  cutTableSources,
+  cutterSources,
+  filmCastSources,
+  pageSources,
+  stageSources,
+} from './sources.ts';
 
 /** Bumped when a stage's code makes other bytes from the same inputs. */
 const VERSION = {
@@ -218,6 +224,16 @@ const fittedFiles = (memberDir: string) =>
 const runParts = (film: FilmName, member: string, view: string, flags: ReadonlyArray<string>) =>
   Command.runWith(parts, { version: 'build' })([film, member, '--view', view, ...flags]);
 
+/** A member's own cutter (`Coverage.cutters`), run with bun; a run that fails or exits nonzero fails the stage. */
+const runCutter = (script: string) =>
+  Effect.gen(function* () {
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+    const code = yield* spawner
+      .exitCode(ChildProcess.make('bun', [script], { forceKillAfter: '5 seconds' }))
+      .pipe(Effect.mapError((e) => StageFailed.make({ reason: `${script}: ${e.message}` })));
+    if (code !== 0) return yield* StageFailed.make({ reason: `${script} exited ${code}` });
+  });
+
 /** `entry`'s puppet spec, as the member's `cutout/puppets.ts` declares it (`PUPPETS[<sheet>]`). */
 const puppetSpecIn = (memberDir: string, entry: Coverage['entries'][number]) =>
   Effect.gen(function* () {
@@ -245,6 +261,7 @@ export type StageServices =
   | Path.Path
   | PuppetImages
   | Effect.Services<ReturnType<typeof runParts>>
+  | ChildProcessSpawner.ChildProcessSpawner
   | Exclude<Effect.Services<ReturnType<typeof renderCast>>, Scope.Scope>;
 
 export interface MemberStages {
@@ -311,38 +328,53 @@ export const memberStages = Effect.fn('cast.build.memberStages')(function* (
       },
     });
   }
+  // his part sheets are made by his own cutters, with no repaint, or by `concept parts` from his
+  // cut table, which asks okra only for a view with no answer drawn
+  const cutters = Option.map(Option.fromUndefinedOr(m.coverage.cutters), (scripts) =>
+    scripts.map((s) => path.join(m.memberDir, s)),
+  );
+  const maker = yield* Option.match(cutters, {
+    onNone: () => Effect.map(cutTableSources(m.memberDir), (cut) => [...cut, ...src.parts]),
+    onSome: cutterSources,
+  });
   for (const entry of m.coverage.entries) {
     if (entry.cut !== 'puppet' || Option.isSome(Option.fromUndefinedOr(entry.fitted))) continue;
     const sheet = path.join(m.memberDir, 'cutout', 'sheets', sheetOf(entry));
     // every file of the sheet folder: its record and part PNGs (which `--check` holds to its
     // answers), and its okra ledger and answers
     const sheetFiles = yield* filesUnder(sheet);
-    const cutTable = yield* cutTableSources(m.memberDir);
+    /** `concept parts` on the view: free when its answers are drawn, else okra under `--spend okra`. */
+    const byParts = (ctx: StageContext) =>
+      Effect.gen(function* () {
+        const free = yield* runParts(m.film, m.member, entry.id, ['--check']).pipe(
+          Effect.catch(() => runParts(m.film, m.member, entry.id, ['--reuse'])),
+          Effect.option,
+        );
+        if (Option.isNone(free))
+          yield* ctx.spend(
+            'okra',
+            runParts(m.film, m.member, entry.id, []).pipe(
+              Effect.mapError((e) =>
+                StageFailed.make({ reason: `concept parts ${entry.id}: ${String(e)}` }),
+              ),
+            ),
+          );
+      });
     stages.push({
       id: `parts:${at(entry.id)}`,
       view: entry.id,
       inputs: [
         stageInput(`drawing:${at(entry.id)}`),
-        ...cutTable,
+        ...maker,
         ...sheetFiles.map((f) => fileInput(path.join(sheet, f))),
-        ...src.parts,
       ],
       version: VERSION.parts,
       run: (ctx) =>
         Effect.gen(function* () {
-          const free = yield* runParts(m.film, m.member, entry.id, ['--check']).pipe(
-            Effect.catch(() => runParts(m.film, m.member, entry.id, ['--reuse'])),
-            Effect.option,
-          );
-          if (Option.isNone(free))
-            yield* ctx.spend(
-              'okra',
-              runParts(m.film, m.member, entry.id, []).pipe(
-                Effect.mapError((e) =>
-                  StageFailed.make({ reason: `concept parts ${entry.id}: ${String(e)}` }),
-                ),
-              ),
-            );
+          yield* Option.match(cutters, {
+            onNone: () => byParts(ctx),
+            onSome: (scripts) => Effect.forEach(scripts, runCutter, { discard: true }),
+          });
           return yield* partsOutput(sheet);
         }),
     });

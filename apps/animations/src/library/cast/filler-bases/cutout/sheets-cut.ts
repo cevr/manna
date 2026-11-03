@@ -24,10 +24,11 @@ import * as BunServices from '@effect/platform-bun/BunServices';
 import { type Raster, cutParts, decodePng, encodePng } from '@manna/film/tools';
 import { Array as Arr, Console, Effect, FileSystem, Option, Record as Records } from 'effect';
 import { CUTS, cutOptionsFor, paperOf } from './cut.ts';
+// the kept sheet, imported as a file so the cast build keys the parts stage by it (`COVERAGE.cutters`)
+import KEPT from '../cast-sheet/kept/poses.png' with { type: 'file' };
 import { FRAMES, type FramedView, boxOf } from './frames.ts';
 
 const here = import.meta.dir;
-const KEPT = `${here}/../cast-sheet/kept/poses.png`;
 
 type Rgb = readonly [number, number, number];
 

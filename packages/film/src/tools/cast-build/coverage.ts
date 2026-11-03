@@ -67,11 +67,19 @@ const Clip = Schema.Struct({
 });
 export interface Clip extends Schema.Schema.Type<typeof Clip> {}
 
-/** A member's manifest: every drawing the pipeline needs of him, and the clips his reader is scored on. */
+/**
+ * A member's manifest: every drawing the pipeline needs of him, the clips his
+ * reader is scored on, and, for a member cut with no repaint, his own cutters:
+ * the scripts (from his folder, run with bun in order) that write his part
+ * sheets in place of `concept parts`, so his parts stages ask no okra. A
+ * cutter reads its kept drawings by importing them as files, so its import
+ * closure holds every input of its stage.
+ */
 export const Coverage = Schema.Struct({
   member: Schema.String,
   entries: Schema.Array(Entry),
   clips: Schema.optionalKey(Schema.Array(Clip)),
+  cutters: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 export interface Coverage extends Schema.Schema.Type<typeof Coverage> {}
 

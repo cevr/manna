@@ -38,11 +38,23 @@ import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { type Raster, decodePng, encodePng } from '@manna/film/tools';
 import { Array as Arr, Console, Effect, FileSystem, Option, Record as Records } from 'effect';
+// the kept sheets, imported as files so the cast build keys the parts stage by them (`COVERAGE.cutters`)
+import dressed1 from '../../filler-dressed/cast-sheet/views/poses-1.png' with { type: 'file' };
+import dressed2 from '../../filler-dressed/cast-sheet/views/poses-2.png' with { type: 'file' };
+import dressed3 from '../../filler-dressed/cast-sheet/views/poses-3.png' with { type: 'file' };
+import dressed4 from '../../filler-dressed/cast-sheet/views/poses-4.png' with { type: 'file' };
+import BASE from '../cast-sheet/kept/poses.png' with { type: 'file' };
 import { FRAMES, type FramedView, boxOf } from './frames.ts';
 
 const here = import.meta.dir;
-const BASE = `${here}/../cast-sheet/kept/poses.png`;
-const DRESSED = (view: FramedView) => `${here}/../../filler-dressed/cast-sheet/views/${view}.png`;
+
+/** Each view's kept dressed drawing (`filler-dressed`). */
+const DRESSED: Readonly<Record<FramedView, string>> = {
+  'poses-1': dressed1,
+  'poses-2': dressed2,
+  'poses-3': dressed3,
+  'poses-4': dressed4,
+};
 
 type Rgb = readonly [number, number, number];
 type Pt = readonly [number, number];
@@ -745,7 +757,7 @@ const cutView = (sheet: Raster, view: FramedView) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const base = cropOf(sheet, boxOf(view));
-    const dressed = yield* Effect.fromResult(decodePng(yield* fs.readFile(DRESSED(view))));
+    const dressed = yield* Effect.fromResult(decodePng(yield* fs.readFile(DRESSED[view])));
     const baseEyes = yield* Effect.fromOption(eyesOf(base)).pipe(
       Effect.mapError(() => `${view}: no eyes found on the base`),
     );
@@ -865,9 +877,7 @@ ${Object.entries(ramps)
         )
         .join('')}  },\n`,
   )
-  .join('')}} as const satisfies Readonly<
-  Record<string, Readonly<Record<string, Ramp>>>
->;
+  .join('')}} as const satisfies Readonly<Record<string, Readonly<Record<string, Ramp>>>>;
 `;
 
 const cut = Effect.gen(function* () {

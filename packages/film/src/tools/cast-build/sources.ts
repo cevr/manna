@@ -98,6 +98,19 @@ export const cutTableSources = (memberDir: string) =>
     return [...new Set([cut, ...files])].map(fileInput);
   });
 
+/**
+ * A member's own cutters (`Coverage.cutters`) and every file they run: their
+ * modules and the kept drawings they import as files. Read from each file's
+ * real path, as Bun runs a linked one.
+ */
+export const cutterSources = (scripts: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const real = yield* Effect.forEach(scripts, (s) => fs.realPath(s));
+    const files = yield* declaredClosure(real, []);
+    return [...new Set([...scripts, ...files])].map(fileInput);
+  });
+
 /** A browser page's HTML and every file its scripts and stylesheets run (`pageClosure`). */
 export const pageSources = (page: string) =>
   Effect.map(pageClosure(page), (files) => files.map(fileInput));

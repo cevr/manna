@@ -321,6 +321,72 @@ describe('memberStages', () => {
     }).pipe(Effect.scoped, Effect.provide(BunServices.layer)),
   );
 
+  it.effect(
+    'a member cut by his own cutters runs them for his parts, keyed by what they import, and never asks okra or waits on spend',
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const real = yield* ChildProcessSpawner.ChildProcessSpawner;
+        const dir = yield* fs.realPath(yield* memberIn([]));
+        yield* fs.makeDirectory(`${dir}/cast-sheet/views`, { recursive: true });
+        yield* fs.writeFileString(`${dir}/cast-sheet/views/front.png`, 'png');
+        yield* fs.writeFileString(`${dir}/cast-sheet/kept.png`, 'kept');
+        const cutter = `${dir}/cutout/cutter.ts`;
+        yield* fs.writeFileString(
+          cutter,
+          [
+            "import kept from '../cast-sheet/kept.png' with { type: 'file' };",
+            "import { copyFileSync, mkdirSync } from 'node:fs';",
+            'mkdirSync(`${import.meta.dir}/sheets/front`, { recursive: true });',
+            'copyFileSync(kept, `${import.meta.dir}/sheets/front/head.png`);',
+          ].join('\n'),
+        );
+        const spawned: Array<ReadonlyArray<string>> = [];
+        const recording = ChildProcessSpawner.make((command) => {
+          if (command._tag !== 'StandardCommand')
+            return Effect.die('no piped process in this test');
+          spawned.push([command.command, ...command.args.map(wordValue)]);
+          if (command.command !== 'bun') return Effect.die(`no ${command.command} in this test`);
+          return real.spawn(command);
+        });
+        const entry = FRONT;
+        const services = Layer.merge(
+          FilmFolder.layer(`${dir}/films`),
+          Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, recording),
+        );
+        const built = () =>
+          Effect.gen(function* () {
+            const stages = (yield* memberStages(
+              {
+                film: 'in-its-order' as never,
+                member: 'fake',
+                memberDir: dir,
+                libraryPuppets: `${dir}/library-puppets.ts`,
+                coverage: { member: 'fake', entries: [entry], cutters: ['cutout/cutter.ts'] },
+                facts: { [entry.id]: complete },
+              },
+              yield* buildSources('in-its-order' as never, RENDER_PAGE),
+            )).filter((s) => [`drawing:${entry.id}@fake`, `parts:${entry.id}@fake`].includes(s.id));
+            const report = yield* buildGraph(stages, {
+              root: '/',
+              cache: `${dir}/cache`,
+              plan: false,
+              touch: [],
+              spend: new Set(),
+            });
+            return { stages, report };
+          }).pipe(Effect.provide(services));
+        const { stages, report } = yield* built();
+        expect(filesOf(stages, `parts:${entry.id}@fake`)).toEqual(
+          expect.arrayContaining([cutter, `${dir}/cast-sheet/kept.png`]),
+        );
+        expect(report.stages.find((s) => s.id === `parts:${entry.id}@fake`)?.state).toBe('ran');
+        expect(report.okraCalls).toBe(0);
+        expect(spawned).toEqual([['bun', cutter]]);
+        expect(yield* fs.readFileString(`${dir}/cutout/sheets/front/head.png`)).toBe('kept');
+      }).pipe(Effect.scoped, Effect.provide(partsLayer)),
+  );
+
   describe('the parts stage, on the lead with okra answering from his kept answer', () => {
     it.effect(
       'the sheet holds its answers: it checks, spending nothing',
