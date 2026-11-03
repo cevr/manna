@@ -17,7 +17,7 @@ import {
   type Raster,
   type Rgb,
 } from './measures.ts';
-import { decode, VIEWS } from './pipeline.ts';
+import { decode, readProbes, VIEWS } from './pipeline.ts';
 import { ColourProbesJson, probeAt, probeBox, type ColourProbe } from './probes.ts';
 import { probesFile } from './run.ts';
 import { verdictOf, type CheckVerdict, type Measured } from './verdict.ts';
@@ -227,6 +227,35 @@ describe('probeDelta', () => {
         ),
       ),
     ).toBe('outside the picture');
+  });
+});
+
+describe('readProbes', () => {
+  test('reads every probe of a view at its own part and box, each named by view, part, paint and index', () => {
+    const ids = idsOf(40, 40, (x, y) => {
+      if (!(x >= 5 && x <= 34 && y >= 5 && y <= 34)) return 0;
+      if (x < 20) return PART.mantle;
+      return PART.body;
+    });
+    const kept = body(() => BASE);
+    const scene = body((x) => {
+      if (x < 20) return BASE;
+      return SHADE;
+    });
+    const probes: ReadonlyArray<ColourProbe> = [
+      { part: 'mantle', paint: 'base', box: [8, 10, 8, 8] },
+      { part: 'body', paint: 'shade', box: [24, 10, 8, 8] },
+      { part: 'body', paint: 'base', box: [10, 24, 8, 8] },
+    ];
+    const read = readProbes('back', probes, kept, scene, ids).map((p) => ({
+      at: p.at,
+      read: why(p.read),
+    }));
+    expect(read).toEqual([
+      { at: 'back mantle base #0', read: 'read 0' },
+      { at: 'back body shade #1', read: `read ${deltaE(BASE, SHADE)}` },
+      { at: 'back body base #2', read: 'other part' },
+    ]);
   });
 });
 
