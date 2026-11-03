@@ -2744,14 +2744,16 @@ table's `paperOf`); none of the three calls okra.
 ### The puppet: a part sheet on a skeleton
 
 The CPU reference `rasterOf` reads a part's measured `limb` from
-`Skeleton.limbs`: painted through the elbow's fade start (15° by default),
-a premultiplied crossfade to 25°, then a stroke alone. `core/limb.ts` measures
+`Skeleton.limbs`: painted below the transition window's midpoint (20° for
+the default 15–25° window), then a stroke alone. Selecting one silhouette
+prevents translucent displaced outlines inside that window. `core/limb.ts` measures
 its widths, ink and cuff from the part. `core/limb-stroke.ts` fills the union
 of its upper arm, forearm, elbow and cuff with that paint's cloth, then inks
 one silhouette boundary and the outer fold (60–90°). Its hand begins at the
 first measured skin pixel, turns over the sleeve, and keeps its own painted
-outline; the lining stays with the forearm. A part without a limb, or below
-its fade, follows the painted path exactly.
+outline; the lining stays with the forearm. The wrist boundary rounds with
+a disk of the measured ink width before it is inked. A part without a limb,
+or below its transition midpoint, follows the painted path exactly.
 
 A puppet (`core/puppet.ts`) is a part sheet on a skeleton
 (`<member>/cutout/skeleton.ts`: bones named by the shared controls (`lean`,

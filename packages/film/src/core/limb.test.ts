@@ -185,12 +185,12 @@ const BENT_PUPPET = Result.getOrThrow(
 );
 
 /** Brute-force distance to the raster's alpha boundary: independent of the stroke's distance transform. */
-const nearBoundary = (r: Raster, x: number, y: number, width: number) => {
+const nearBoundary = (r: Raster, x: number, y: number, width: number, alpha = 128) => {
   const radius = Math.ceil(width);
   for (let dy = -radius; dy <= radius; dy++)
     for (let dx = -radius; dx <= radius; dx++) {
       if (Math.hypot(dx, dy) > width) continue;
-      if (r.rgba[((y + dy) * r.width + x + dx) * 4 + 3]! < 128) return true;
+      if (r.rgba[((y + dy) * r.width + x + dx) * 4 + 3]! < alpha) return true;
     }
   return false;
 };
@@ -223,7 +223,156 @@ const strayInk = (r: Raster, elbow: number, width: number) => {
 
 // The public raster catches ink left by overlapping segments; it cannot
 // establish the measured shape, which the acceptance compares to the paint.
+const components = (r: Raster) => {
+  const seen = new Uint8Array(r.width * r.height);
+  const queue: Array<number> = [];
+  let count = 0;
+  for (let i = 0; i < seen.length; i++) {
+    if (seen[i] || r.rgba[i * 4 + 3]! < 128) continue;
+    count++;
+    queue.length = 0;
+    queue.push(i);
+    seen[i] = 1;
+    for (let q = 0; q < queue.length; q++) {
+      const p = queue[q]!;
+      for (const n of [p - r.width, p + r.width, p - 1, p + 1]) {
+        if (n < 0 || n >= seen.length || seen[n] || r.rgba[n * 4 + 3]! < 128) continue;
+        seen[n] = 1;
+        queue.push(n);
+      }
+    }
+  }
+  return count;
+};
+
+const ghostInk = (r: Raster, width: number) => {
+  let ghost = 0;
+  for (let y = 1; y < r.height - 1; y++)
+    for (let x = 1; x < r.width - 1; x++) {
+      const i = (y * r.width + x) * 4;
+      const a = r.rgba[i + 3]!;
+      if (a <= 0 || a >= 250 || r.rgba[i]! > 45) continue;
+      // Use the whole nonzero union, not its half-alpha threshold: a ghost
+      // must not count itself as clear ground and excuse its own outline.
+      if (!nearBoundary(r, x, y, width, 1)) ghost++;
+    }
+  return ghost;
+};
+
+/** Directed pixel-cell boundaries, traced independently of the renderer's mask operations. */
+const boundaryEdges = (r: Raster) => {
+  const stride = r.width + 1;
+  const edges = new Map<number, Array<number>>();
+  const at = (x: number, y: number) =>
+    x >= 0 && x < r.width && y >= 0 && y < r.height && r.rgba[(y * r.width + x) * 4 + 3]! >= 128;
+  const edge = (x: number, y: number, dx: number, dy: number) => {
+    const key = y * stride + x;
+    const list = Option.getOrElse(Option.fromUndefinedOr(edges.get(key)), (): Array<number> => []);
+    list.push((y + dy) * stride + x + dx);
+    edges.set(key, list);
+  };
+  for (let y = 0; y < r.height; y++)
+    for (let x = 0; x < r.width; x++) {
+      if (!at(x, y)) continue;
+      if (!at(x, y - 1)) edge(x, y, 1, 0);
+      if (!at(x + 1, y)) edge(x + 1, y, 0, 1);
+      if (!at(x, y + 1)) edge(x + 1, y + 1, -1, 0);
+      if (!at(x - 1, y)) edge(x, y + 1, 0, -1);
+    }
+  return { edges, stride };
+};
+
+const contours = (r: Raster): Array<Array<Pt>> => {
+  const { edges, stride } = boundaryEdges(r);
+  const loops: Array<Array<Pt>> = [];
+  while (edges.size > 0) {
+    const first = Option.getOrThrow(Option.fromUndefinedOr([...edges.keys()][0]));
+    const points: Array<Pt> = [];
+    let p = first;
+    do {
+      points.push([p % stride, Math.floor(p / stride)]);
+      const next = Option.getOrThrow(Option.fromUndefinedOr(edges.get(p)));
+      const following = Option.getOrThrow(Option.fromUndefinedOr(next.pop()));
+      if (next.length === 0) edges.delete(p);
+      p = following;
+    } while (p !== first);
+    loops.push(points);
+  }
+  return loops;
+};
+const wristTurnBound = (r: Raster, centre: Pt, reach: number, ink: number) => {
+  const step = Math.ceil(ink);
+  let worst = 0;
+  let checked = 0;
+  for (const points of contours(r)) {
+    const n = points.length;
+    for (let i = 0; i < n; i++) {
+      const p = points[i]!;
+      if (Math.hypot(...sub(p, centre)) > reach) continue;
+      checked++;
+      const a = sub(p, points[(i - step + n) % n]!),
+        b = sub(points[(i + step) % n]!, p);
+      const length = Math.hypot(...a) * Math.hypot(...b);
+      if (length === 0) continue;
+      worst = Math.max(worst, Math.acos(Math.max(-1, Math.min(1, dot(a, b) / length))));
+    }
+  }
+  expect(checked).toBeGreaterThan(0);
+  return worst;
+};
+
+const bareWristCloth = (r: Raster, centre: Pt, reach: number) => {
+  let bare = 0;
+  for (let y = 1; y < r.height - 1; y++)
+    for (let x = 1; x < r.width - 1; x++) {
+      if (Math.hypot(x + 0.5 - centre[0], y + 0.5 - centre[1]) > reach) continue;
+      const i = (y * r.width + x) * 4;
+      if (r.rgba[i + 3]! < 128 || r.rgba[i]! < 90) continue;
+      const c: Pt = [r.rgba[i + 1]!, r.rgba[i + 2]!];
+      if (
+        Math.hypot(c[0] - SKIN[1], c[1] - SKIN[2]) <
+        Math.min(
+          Math.hypot(c[0] - LIGHT[1], c[1] - LIGHT[2]),
+          Math.hypot(c[0] - DARK[1], c[1] - DARK[2]),
+        )
+      )
+        continue;
+      if (nearBoundary(r, x, y, 1)) bare++;
+    }
+  return bare;
+};
+
 describe('rasterOf stroke silhouette', () => {
+  test('the turned wrist has no bare cloth edge and no corner sharper than a quarter turn over one ink width', () => {
+    for (const elbowRight of [45, 60, 90]) {
+      const angle = (elbowRight * Math.PI) / 180,
+        d = sub(BC, BE);
+      const centre: Pt = [
+        BE[0] + Math.cos(angle) * d[0] - Math.sin(angle) * d[1],
+        BE[1] + Math.sin(angle) * d[0] + Math.cos(angle) * d[1],
+      ];
+      const reach =
+        Math.max(BENT_LIMB.stations.cuff.inner, BENT_LIMB.stations.cuff.outer) + BENT_LIMB.inkWidth;
+      const r = rasterOf(BENT_PUPPET, {
+        numbers: { elbowRight, wristRight: -0.85 * elbowRight },
+        root: BENT_PUPPET.root,
+        scale: 1,
+      });
+      expect(bareWristCloth(r, centre, reach)).toBe(0);
+      expect(wristTurnBound(r, centre, reach, BENT_LIMB.inkWidth)).toBeLessThanOrEqual(Math.PI / 2);
+    }
+  });
+  test('17, 20 and 23 degrees have one connected silhouette and no translucent interior ink', () => {
+    for (const elbowRight of [17, 20, 23]) {
+      const r = rasterOf(BENT_PUPPET, {
+        numbers: { elbowRight, wristRight: -0.85 * elbowRight },
+        root: BENT_PUPPET.root,
+        scale: 1,
+      });
+      expect(ghostInk(r, BENT_LIMB.inkWidth)).toBe(0);
+      expect(components(r)).toBe(1);
+    }
+  });
   test('at 45 degrees the sleeve has no ink strictly inside its single outline', () => {
     const r = rasterOf(BENT_PUPPET, {
       numbers: { elbowRight: 45 },

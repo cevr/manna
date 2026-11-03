@@ -1063,11 +1063,11 @@ export const rasterOf = (
     Option.match(
       Option.filter(
         Option.fromUndefinedOr(part.limb),
-        (limb) => limbBlend(limb, pose.numbers).sleeve > 0,
+        (limb) => limbBlend(limb, pose.numbers).sleeve >= 0.5,
       ),
       {
         onNone: () => layPart(acc, part, layers, posed[k]!, [0, 0], [W, H]),
-        onSome: (limb) => layLimb(acc, puppet, pose, m, part, limb, layers, posed[k]!, [W, H]),
+        onSome: (limb) => layLimb(acc, puppet, pose, m, part, limb, posed[k]!, [W, H]),
       },
     );
   }
@@ -1119,11 +1119,10 @@ const restMap = (puppet: Puppet, pose: PuppetPose, m: Float64Array, name: string
 };
 
 /**
- * A part with a stroke limb its pose shows (`limbBlend`'s sleeve over 0)
+ * A part with a stroke limb past the midpoint of its transition window
  * laid over `acc`: over the box its posed mesh and its limb's rigid pieces
- * reach, each pixel the painted part (its `layers` on its mesh) and the
- * stroke (`limbStroke`, over the part's stub as painted) mixed by the
- * sleeve's share.
+ * reach. The midpoint selects one silhouette, so the transition never
+ * overlays displaced outlines or hands at partial opacity.
  */
 const layLimb = (
   acc: Float64Array,
@@ -1132,11 +1131,9 @@ const layLimb = (
   m: Float64Array,
   part: PuppetPart,
   limb: PuppetPartLimb,
-  layers: ReadonlyArray<Raster>,
   q: Float64Array,
   [W, H]: readonly [number, number],
 ) => {
-  const shown = limbBlend(limb, pose.numbers);
   const frames = {
     upper: restMap(puppet, pose, m, limb.bones[0]),
     fore: restMap(puppet, pose, m, limb.bones[1]),
@@ -1165,9 +1162,7 @@ const layLimb = (
   const bw = Math.min(W, Math.ceil(Math.max(...xs)) + 2) - x0;
   const bh = Math.min(H, Math.ceil(Math.max(...ys)) + 2) - y0;
   if (bw <= 0 || bh <= 0) return;
-  const painted = new Float64Array(bw * bh * 4);
   const stub = new Float64Array(bw * bh * 4);
-  layPart(painted, part, layers, q, [x0, y0], [bw, bh]);
   layPart(stub, part, [stubOf(limb, part.pixels)], q, [x0, y0], [bw, bh]);
   const stroke = limbStroke(
     limb,
@@ -1177,15 +1172,10 @@ const layLimb = (
     [x0, y0, bw, bh],
     stub,
   );
-  const drawn = new Float64Array(4);
-  const mixed = new Float64Array(4);
-  const s = shown.sleeve;
   for (let y = 0; y < bh; y++)
     for (let x = 0; x < bw; x++) {
       const o = (y * bw + x) * 4;
-      drawn.set(stroke.subarray(o, o + 4));
-      for (let c = 0; c < 4; c++) mixed[c] = (1 - s) * painted[o + c]! + s * drawn[c]!;
-      if (mixed[3]! > 0) over(acc, ((y0 + y) * W + x0 + x) * 4, mixed);
+      if (stroke[o + 3]! > 0) over(acc, ((y0 + y) * W + x0 + x) * 4, stroke.subarray(o, o + 4));
     }
 };
 
