@@ -6,7 +6,7 @@
  * - `Fill`: the owner's `cevr/sda-hymns` repo at a pinned commit, for a key
  *   S3 never had (`./github.ts`).
  * - `Target`: the R2 bucket (`./r2.ts`).
- * - `Hash`: MD5 and git's blob SHA-1 (`./hash-bun.ts`).
+ * - `Hash`: MD5, SHA-256 and git's blob SHA-1 (`./hash-bun.ts`).
  *
  * Every store answers what it holds and checks nothing: the job decides
  * whether bytes match what their store promised.
@@ -89,8 +89,10 @@ export class Hash extends Context.Service<
   Hash,
   {
     /** The MD5 digest, lowercase hex: what a single-part ETag holds. */
-    readonly md5: (bytes: Uint8Array) => string;
+    readonly md5: (bytes: Uint8Array) => Effect.Effect<string>;
+    /** The SHA-256 digest, lowercase hex: what a set's manifest pins for each MP3. */
+    readonly sha256: (bytes: Uint8Array) => Effect.Effect<string>;
     /** Git's blob id, lowercase hex: `sha1("blob <length>\0" + bytes)`. */
-    readonly gitBlobSha1: (bytes: Uint8Array) => string;
+    readonly gitBlobSha1: (bytes: Uint8Array) => Effect.Effect<string>;
   }
 >()('@manna/hymnal-app/infra/audio/Hash') {}

@@ -75,12 +75,6 @@ type Outcome = Data.TaggedEnum<{
 }>;
 const Outcome = Data.taggedEnum<Outcome>();
 
-const sha256Hex = (bytes: Uint8Array) => {
-  const hasher = new Bun.CryptoHasher('sha256');
-  hasher.update(bytes);
-  return hasher.digest('hex');
-};
-
 /** The set's manifest, refused unless it reads and can be uploaded. */
 const readManifest = (dir: string) =>
   Effect.gen(function* () {
@@ -108,10 +102,10 @@ const readHymn = (dir: string, hymn: RecordingManifest['hymns'][number]) =>
     const bytes = yield* fs
       .readFile(file)
       .pipe(Effect.mapError((e) => `${hymn.file}: ${e.message}`));
-    const sha = sha256Hex(bytes);
+    const sha = yield* hash.sha256(bytes);
     if (sha !== hymn.sha256)
       return yield* Effect.fail(`${hymn.file}: sha256 ${sha}, manifest ${hymn.sha256}`);
-    const md5 = hash.md5(bytes);
+    const md5 = yield* hash.md5(bytes);
     if (md5 !== hymn.md5 || bytes.byteLength !== hymn.bytes)
       return yield* Effect.fail(
         `${hymn.file}: md5 ${md5} size ${bytes.byteLength}, manifest ${hymn.md5} size ${hymn.bytes}`,

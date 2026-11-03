@@ -145,12 +145,6 @@ const lastLine = (text: string, otherwise: string) =>
     () => otherwise,
   );
 
-const sha256Hex = (bytes: Uint8Array) => {
-  const hasher = new Bun.CryptoHasher('sha256');
-  hasher.update(bytes);
-  return hasher.digest('hex');
-};
-
 type Status = 'rendered' | 'kept' | 'uploaded' | 'failed';
 
 interface Counts {
@@ -223,13 +217,11 @@ const streamHymn = (
       return yield* say(hymn, 'failed', lastLine(rendered.tail, `render exited ${rendered.code}`));
     }
     const bytes = yield* fs.readFile(mp3).pipe(Effect.option);
-    const matches = Option.exists(
-      bytes,
-      (read) =>
-        read.byteLength === record.value.bytes &&
-        sha256Hex(read) === record.value.sha256 &&
-        hash.md5(read) === record.value.md5,
-    );
+    const matches =
+      Option.isSome(bytes) &&
+      bytes.value.byteLength === record.value.bytes &&
+      (yield* hash.sha256(bytes.value)) === record.value.sha256 &&
+      (yield* hash.md5(bytes.value)) === record.value.md5;
     if (Option.isNone(bytes) || !matches) {
       yield* clean;
       return yield* say(hymn, 'failed', `${hymn}.mp3 is not its record's`);

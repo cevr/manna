@@ -42,9 +42,10 @@ const fixture = Effect.gen(function* () {
   for (const hymn of SDAH_HYMNS) {
     const bytes = recording(hymn);
     const path = `mp3/${String(hymn).padStart(3, '0')} – Hymn ${hymn}.mp3`;
-    const entry = { hymn, path, size: bytes.byteLength, sha: hash.gitBlobSha1(bytes) };
+    const entry = { hymn, path, size: bytes.byteLength, sha: yield* hash.gitBlobSha1(bytes) };
     fill.set(hymn, { entry, bytes });
-    if (hymn !== 388) s3.set(hymn, { bytes, etag: `"${hash.md5(bytes)}"`, size: bytes.byteLength });
+    const etag = `"${yield* hash.md5(bytes)}"`;
+    if (hymn !== 388) s3.set(hymn, { bytes, etag, size: bytes.byteLength });
   }
   return { s3, fill, unanswered: new Set<number>() };
 });
@@ -128,7 +129,7 @@ const targetOf = (state: Bucket, faults: TargetFaults) =>
             if (faults.failing.has(key)) {
               return yield* StoreFailed.make({ store: 'r2', reason: `put ${key}: 500` });
             }
-            const stored = { size: bytes.byteLength, etag: hash.md5(bytes) };
+            const stored = { size: bytes.byteLength, etag: yield* hash.md5(bytes) };
             yield* Ref.update(state.objects, (objects) => new Map(objects).set(key, stored));
             if (faults.lying.has(key))
               return { ...stored, etag: '"0123456789abcdef0123456789abcdef"' };
@@ -200,7 +201,7 @@ describe('audio copy', () => {
       for (const hymn of SDAH_HYMNS) {
         expect(objects.get(key(hymn))).toEqual({
           size: recording(hymn).byteLength,
-          etag: hash.md5(recording(hymn)),
+          etag: yield* hash.md5(recording(hymn)),
         });
       }
       expect(lines).toContain(`upload 1 s3 ${recording(1).byteLength}`);
@@ -321,7 +322,7 @@ describe('audio copy', () => {
       expect(lines).toContain(`fill 388 github ${recording(388).byteLength}`);
       expect((yield* Ref.get(state.objects)).get(key(388))).toEqual({
         size: recording(388).byteLength,
-        etag: hash.md5(recording(388)),
+        etag: yield* hash.md5(recording(388)),
       });
     }));
 
@@ -393,7 +394,9 @@ describe('audio copy', () => {
       const { result } = yield* exec(run, stores(fx, state));
 
       expect(Result.isSuccess(result)).toBe(true);
-      expect((yield* Ref.get(state.objects)).get(key(10))?.etag).toBe(hash.md5(recording(10)));
+      expect((yield* Ref.get(state.objects)).get(key(10))?.etag).toBe(
+        yield* hash.md5(recording(10)),
+      );
     }));
 
   test('a multipart ETag whose body is not the size HEAD said is never uploaded', () =>

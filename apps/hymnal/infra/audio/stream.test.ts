@@ -146,7 +146,7 @@ const layerOf = (fakes: Fakes, behaviour: Behaviour = {}) => {
               file: `${hymn}.mp3`,
               bytes: bytes.byteLength,
               sha256: sha256Hex(bytes),
-              md5: hash.md5(bytes),
+              md5: yield* hash.md5(bytes),
               transpose,
               moves: behaviour.moves?.get(hymn),
             };

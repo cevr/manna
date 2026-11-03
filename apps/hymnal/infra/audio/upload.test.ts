@@ -30,22 +30,22 @@ const sha256Hex = (bytes: Uint8Array) => {
 const setOf = Effect.gen(function* () {
   const hash = yield* Hash;
   const files = new Map<string, Uint8Array>();
-  const hymns = SDAH_HYMNS.map((hymn) => {
+  const hymns = yield* Effect.forEach(SDAH_HYMNS, (hymn) => {
     const bytes = recording(hymn);
     files.set(`${DIR}/${hymn}.mp3`, bytes);
-    return {
+    return Effect.map(hash.md5(bytes), (md5) => ({
       hymn,
       key: `sdah/${hymn}.mp3`,
       file: `${hymn}.mp3`,
       bytes: bytes.byteLength,
       sha256: sha256Hex(bytes),
-      md5: hash.md5(bytes),
+      md5,
       seconds: 60,
       lufs: -16,
       truePeak: -2.5,
       lagMs: 3,
       passed: true,
-    };
+    }));
   });
   const manifest: RecordingManifest = {
     set: 'warm-1',
@@ -113,7 +113,7 @@ const targetOf = (state: Bucket, failing: ReadonlySet<string> = new Set()) =>
             yield* Ref.update(state.puts, (puts) => [...puts, { key, metadata }]);
             if (failing.has(key))
               return yield* StoreFailed.make({ store: 'r2', reason: `put ${key}: 500` });
-            const stored = { size: bytes.byteLength, etag: `"${hash.md5(bytes)}"` };
+            const stored = { size: bytes.byteLength, etag: `"${yield* hash.md5(bytes)}"` };
             yield* Ref.update(state.objects, (objects) => new Map(objects).set(key, stored));
             return stored;
           }),

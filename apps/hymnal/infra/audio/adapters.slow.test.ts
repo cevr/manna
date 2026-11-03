@@ -235,11 +235,15 @@ describe('R2 in a run', () => {
           Source.of({
             head: (hymn) => {
               const body = recordingOf(hymn);
-              return Effect.succeedSome({
-                size: body.byteLength,
-                etag: `"${hash.md5(body)}"`,
-                contentType: 'audio/mpeg',
-              });
+              return hash.md5(body).pipe(
+                Effect.map((md5) =>
+                  Option.some({
+                    size: body.byteLength,
+                    etag: `"${md5}"`,
+                    contentType: 'audio/mpeg',
+                  }),
+                ),
+              );
             },
             get: (hymn) => Effect.succeed(recordingOf(hymn)),
           }),
@@ -263,8 +267,9 @@ describe('R2 in a run', () => {
           puts.push(key);
           if (key === 'audio/sdah/7.mp3') return lostBody();
           const body = Option.getOrElse(request.body, () => new Uint8Array());
-          objects.set(key, { size: body.byteLength, etag: hash.md5(body) });
-          return envelope({ etag: `"${hash.md5(body)}"`, size: String(body.byteLength) });
+          const md5 = Effect.runSync(hash.md5(body));
+          objects.set(key, { size: body.byteLength, etag: md5 });
+          return envelope({ etag: `"${md5}"`, size: String(body.byteLength) });
         });
         return Layer.mergeAll(source, fill, layer);
       }),

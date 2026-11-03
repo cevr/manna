@@ -114,7 +114,7 @@ const s3Bytes = Effect.fn('audio.s3Bytes')(function* (
       reason: `s3 body ${bytes.byteLength} bytes, head said ${item.size}`,
     });
   }
-  const md5 = hash.md5(bytes);
+  const md5 = yield* hash.md5(bytes);
   if (Option.isSome(item.md5) && md5 !== item.md5.value) {
     return yield* Refused.make({ reason: `s3 body md5 ${md5}, etag ${item.md5.value}` });
   }
@@ -131,11 +131,11 @@ const fillBytes = Effect.fn('audio.fillBytes')(function* (entry: FillEntry) {
       reason: `github body ${bytes.byteLength} bytes, tree said ${entry.size}`,
     });
   }
-  const sha = hash.gitBlobSha1(bytes);
+  const sha = yield* hash.gitBlobSha1(bytes);
   if (sha !== entry.sha) {
     return yield* Refused.make({ reason: `github body blob ${sha}, tree said ${entry.sha}` });
   }
-  return { bytes, md5: hash.md5(bytes) };
+  return { bytes, md5: yield* hash.md5(bytes) };
 });
 
 /** Put the bytes in R2 and check R2 stored the recording: its MD5, its size. */
