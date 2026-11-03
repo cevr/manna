@@ -5,13 +5,329 @@
       {
         "part": "hair",
         "paint": "base",
-        "probes": ["hair.base.0", "hair.base.1", "hair.base.2", "hair.base.3", "hair.base.4"]
+        "probes": [
+          "hair.base.0",
+          "hair.base.1",
+          "hair.base.2",
+          "hair.base.3",
+          "hair.base.4",
+          "hair.base.5",
+          "hair.base.6",
+          "hair.base.7"
+        ]
       },
-      { "part": "hair", "paint": "shade", "probes": ["hair.shade.0"] },
-      { "part": "head", "paint": "base", "probes": ["head.base.0", "head.base.1", "head.base.2"] },
-      { "part": "head", "paint": "shade", "probes": ["head.shade.0"] },
+      {
+        "part": "hair",
+        "paint": "shade",
+        "probes": ["hair.shade.0", "hair.shade.1", "hair.shade.2", "hair.shade.3"]
+      },
+      {
+        "part": "head",
+        "paint": "base",
+        "probes": [
+          "head.base.0",
+          "head.base.1",
+          "head.base.2",
+          "head.base.3",
+          "head.base.4",
+          "head.base.5"
+        ]
+      },
+      {
+        "part": "head",
+        "paint": "shade",
+        "probes": ["head.shade.0", "head.shade.1", "head.shade.2"]
+      },
       { "part": "ear", "paint": "base", "probes": ["ear.base.0"] },
       { "part": "ear", "paint": "shade", "probes": ["ear.shade.0"] },
+      { "part": "neck", "paint": "base", "probes": ["neck.base.0"] },
+      {
+        "part": "neck",
+        "paint": "shade",
+        "probes": ["neck.shade.0", "neck.shade.1", "neck.shade.2", "neck.shade.3"]
+      },
+      {
+        "part": "body",
+        "paint": "base",
+        "probes": ["body.base.0", "body.base.1", "body.base.2", "body.base.3"]
+      },
+      {
+        "part": "body",
+        "paint": "shade",
+        "probes": ["body.shade.0", "body.shade.1", "body.shade.2", "body.shade.3", "body.shade.4"]
+      },
+      {
+        "part": "mantle",
+        "paint": "base",
+        "probes": [
+          "mantle.base.0",
+          "mantle.base.1",
+          "mantle.base.2",
+          "mantle.base.3",
+          "mantle.base.4"
+        ]
+      },
+      {
+        "part": "mantle",
+        "paint": "shade",
+        "probes": [
+          "mantle.shade.0",
+          "mantle.shade.1",
+          "mantle.shade.2",
+          "mantle.shade.3",
+          "mantle.shade.4",
+          "mantle.shade.5",
+          "mantle.shade.6",
+          "mantle.shade.7",
+          "mantle.shade.8",
+          "mantle.shade.9",
+          "mantle.shade.10",
+          "mantle.shade.11",
+          "mantle.shade.12",
+          "mantle.shade.13",
+          "mantle.shade.14"
+        ]
+      },
+      {
+        "part": "sleeveR",
+        "paint": "base",
+        "probes": ["sleeveR.base.0", "sleeveR.base.1", "sleeveR.base.2"]
+      },
+      { "part": "sleeveR", "paint": "shade", "probes": ["sleeveR.shade.0", "sleeveR.shade.1"] },
+      { "part": "sleeveL", "paint": "base", "probes": ["sleeveL.base.0", "sleeveL.base.1"] },
+      {
+        "part": "sleeveL",
+        "paint": "shade",
+        "probes": ["sleeveL.shade.0", "sleeveL.shade.1", "sleeveL.shade.2", "sleeveL.shade.3"]
+      },
+      { "part": "sash", "paint": "base", "probes": ["sash.base.0", "sash.base.1", "sash.base.2"] },
+      { "part": "sash", "paint": "shade", "probes": ["sash.shade.0", "sash.shade.1"] },
+      { "part": "knot", "paint": "base", "probes": ["knot.base.0"] },
+      { "part": "knot", "paint": "shade", "probes": ["knot.shade.0", "knot.shade.1"] },
+      { "part": "endR", "paint": "base", "probes": ["endR.base.0"] },
+      {
+        "part": "endR",
+        "paint": "shade",
+        "probes": ["endR.shade.0", "endR.shade.1", "endR.shade.2"]
+      },
+      { "part": "endL", "paint": "base", "probes": ["endL.base.0"] },
+      {
+        "part": "endL",
+        "paint": "shade",
+        "probes": ["endL.shade.0", "endL.shade.1", "endL.shade.2"]
+      },
+      { "part": "handR", "paint": "base", "probes": ["handR.base.0"] },
+      { "part": "handR", "paint": "shade", "probes": ["handR.shade.0", "handR.shade.1"] },
+      { "part": "handL", "paint": "base", "probes": ["handL.base.0", "handL.base.1"] },
+      {
+        "part": "handL",
+        "paint": "shade",
+        "unavailable": "the hand is lit across: its rim darkens in a gradient, and no flat 4 px box 2 px from the ink differs from its base by more than ΔE 4"
+      },
+      {
+        "part": "foot",
+        "paint": "base",
+        "probes": [
+          "foot.base.0",
+          "foot.base.1",
+          "foot.base.2",
+          "foot.base.3",
+          "foot.base.4",
+          "foot.base.5",
+          "foot.base.6",
+          "foot.base.7",
+          "foot.base.8",
+          "foot.base.9",
+          "foot.base.10",
+          "foot.base.11"
+        ]
+      },
+      {
+        "part": "foot",
+        "paint": "shade",
+        "probes": [
+          "foot.shade.0",
+          "foot.shade.1",
+          "foot.shade.2",
+          "foot.shade.3",
+          "foot.shade.4",
+          "foot.shade.5"
+        ]
+      }
+    ],
+    "threeQuarterLeft": [
+      {
+        "part": "hair",
+        "paint": "base",
+        "probes": [
+          "hair.base.0",
+          "hair.base.1",
+          "hair.base.2",
+          "hair.base.3",
+          "hair.base.4",
+          "hair.base.5"
+        ]
+      },
+      {
+        "part": "hair",
+        "paint": "shade",
+        "probes": ["hair.shade.0", "hair.shade.1", "hair.shade.2", "hair.shade.3"]
+      },
+      {
+        "part": "head",
+        "paint": "base",
+        "probes": ["head.base.0", "head.base.1", "head.base.2", "head.base.3"]
+      },
+      { "part": "head", "paint": "shade", "probes": ["head.shade.0", "head.shade.1"] },
+      {
+        "part": "ear",
+        "paint": "base",
+        "probes": ["ear.base.0", "ear.base.1", "ear.base.2", "ear.base.3"]
+      },
+      { "part": "ear", "paint": "shade", "probes": ["ear.shade.0", "ear.shade.1", "ear.shade.2"] },
+      { "part": "neck", "paint": "base", "probes": ["neck.base.0"] },
+      { "part": "neck", "paint": "shade", "probes": ["neck.shade.0", "neck.shade.1"] },
+      {
+        "part": "body",
+        "paint": "base",
+        "probes": ["body.base.0", "body.base.1", "body.base.2", "body.base.3", "body.base.4"]
+      },
+      {
+        "part": "body",
+        "paint": "shade",
+        "probes": ["body.shade.0", "body.shade.1", "body.shade.2", "body.shade.3"]
+      },
+      {
+        "part": "mantle",
+        "paint": "base",
+        "probes": [
+          "mantle.base.0",
+          "mantle.base.1",
+          "mantle.base.2",
+          "mantle.base.3",
+          "mantle.base.4",
+          "mantle.base.5",
+          "mantle.base.6"
+        ]
+      },
+      {
+        "part": "mantle",
+        "paint": "shade",
+        "probes": [
+          "mantle.shade.0",
+          "mantle.shade.1",
+          "mantle.shade.2",
+          "mantle.shade.3",
+          "mantle.shade.4",
+          "mantle.shade.5",
+          "mantle.shade.6",
+          "mantle.shade.7",
+          "mantle.shade.8"
+        ]
+      },
+      { "part": "sleeveR", "paint": "base", "probes": ["sleeveR.base.0"] },
+      { "part": "sleeveR", "paint": "shade", "probes": ["sleeveR.shade.0", "sleeveR.shade.1"] },
+      { "part": "sleeveL", "paint": "base", "probes": ["sleeveL.base.0", "sleeveL.base.1"] },
+      {
+        "part": "sleeveL",
+        "paint": "shade",
+        "probes": [
+          "sleeveL.shade.0",
+          "sleeveL.shade.1",
+          "sleeveL.shade.2",
+          "sleeveL.shade.3",
+          "sleeveL.shade.4",
+          "sleeveL.shade.5",
+          "sleeveL.shade.6",
+          "sleeveL.shade.7",
+          "sleeveL.shade.8",
+          "sleeveL.shade.9",
+          "sleeveL.shade.10",
+          "sleeveL.shade.11",
+          "sleeveL.shade.12"
+        ]
+      },
+      { "part": "sash", "paint": "base", "probes": ["sash.base.0", "sash.base.1", "sash.base.2"] },
+      {
+        "part": "sash",
+        "paint": "shade",
+        "probes": ["sash.shade.0", "sash.shade.1", "sash.shade.2"]
+      },
+      { "part": "knot", "paint": "base", "probes": ["knot.base.0"] },
+      { "part": "knot", "paint": "shade", "probes": ["knot.shade.0"] },
+      { "part": "endR", "paint": "base", "probes": ["endR.base.0", "endR.base.1"] },
+      { "part": "endR", "paint": "shade", "probes": ["endR.shade.0", "endR.shade.1"] },
+      { "part": "endL", "paint": "base", "probes": ["endL.base.0"] },
+      { "part": "endL", "paint": "shade", "probes": ["endL.shade.0", "endL.shade.1"] },
+      { "part": "handR", "paint": "base", "probes": ["handR.base.0"] },
+      {
+        "part": "handR",
+        "paint": "shade",
+        "probes": ["handR.shade.0", "handR.shade.1", "handR.shade.2"]
+      },
+      { "part": "handL", "paint": "base", "probes": ["handL.base.0"] },
+      { "part": "handL", "paint": "shade", "probes": ["handL.shade.0"] },
+      {
+        "part": "foot",
+        "paint": "base",
+        "probes": [
+          "foot.base.0",
+          "foot.base.1",
+          "foot.base.2",
+          "foot.base.3",
+          "foot.base.4",
+          "foot.base.5",
+          "foot.base.6",
+          "foot.base.7",
+          "foot.base.8",
+          "foot.base.9"
+        ]
+      },
+      {
+        "part": "foot",
+        "paint": "shade",
+        "probes": [
+          "foot.shade.0",
+          "foot.shade.1",
+          "foot.shade.2",
+          "foot.shade.3",
+          "foot.shade.4",
+          "foot.shade.5",
+          "foot.shade.6",
+          "foot.shade.7"
+        ]
+      }
+    ],
+    "profileLeft": [
+      {
+        "part": "hair",
+        "paint": "base",
+        "probes": [
+          "hair.base.0",
+          "hair.base.1",
+          "hair.base.2",
+          "hair.base.3",
+          "hair.base.4",
+          "hair.base.5"
+        ]
+      },
+      {
+        "part": "hair",
+        "paint": "shade",
+        "probes": ["hair.shade.0", "hair.shade.1", "hair.shade.2", "hair.shade.3"]
+      },
+      {
+        "part": "head",
+        "paint": "base",
+        "probes": ["head.base.0", "head.base.1", "head.base.2", "head.base.3", "head.base.4"]
+      },
+      {
+        "part": "head",
+        "paint": "shade",
+        "probes": ["head.shade.0", "head.shade.1", "head.shade.2", "head.shade.3"]
+      },
+      { "part": "ear", "paint": "base", "probes": ["ear.base.0", "ear.base.1", "ear.base.2"] },
+      { "part": "ear", "paint": "shade", "probes": ["ear.shade.0", "ear.shade.1"] },
       { "part": "neck", "paint": "base", "probes": ["neck.base.0"] },
       { "part": "neck", "paint": "shade", "probes": ["neck.shade.0", "neck.shade.1"] },
       {
@@ -19,58 +335,6 @@
         "paint": "base",
         "probes": ["body.base.0", "body.base.1", "body.base.2", "body.base.3"]
       },
-      { "part": "body", "paint": "shade", "probes": ["body.shade.0", "body.shade.1"] },
-      {
-        "part": "mantle",
-        "paint": "base",
-        "probes": ["mantle.base.0", "mantle.base.1", "mantle.base.2"]
-      },
-      {
-        "part": "mantle",
-        "paint": "shade",
-        "probes": ["mantle.shade.0", "mantle.shade.1", "mantle.shade.2", "mantle.shade.3"]
-      },
-      { "part": "sleeveR", "paint": "base", "probes": ["sleeveR.base.0", "sleeveR.base.1"] },
-      { "part": "sleeveR", "paint": "shade", "probes": ["sleeveR.shade.0"] },
-      { "part": "sleeveL", "paint": "base", "probes": ["sleeveL.base.0"] },
-      { "part": "sleeveL", "paint": "shade", "probes": ["sleeveL.shade.0", "sleeveL.shade.1"] },
-      { "part": "sash", "paint": "base", "probes": ["sash.base.0", "sash.base.1"] },
-      { "part": "sash", "paint": "shade", "probes": ["sash.shade.0"] },
-      { "part": "knot", "paint": "base", "probes": ["knot.base.0"] },
-      { "part": "knot", "paint": "shade", "probes": ["knot.shade.0"] },
-      { "part": "endR", "paint": "base", "probes": ["endR.base.0"] },
-      { "part": "endR", "paint": "shade", "probes": ["endR.shade.0", "endR.shade.1"] },
-      { "part": "endL", "paint": "base", "probes": ["endL.base.0"] },
-      { "part": "endL", "paint": "shade", "probes": ["endL.shade.0"] },
-      { "part": "handR", "paint": "base", "probes": ["handR.base.0"] },
-      {
-        "part": "handR",
-        "paint": "shade",
-        "unavailable": "the hand is lit across: its rim darkens in a gradient, and no flat 4 px box 2 px from the ink differs from its base by more than ΔE 4"
-      },
-      { "part": "handL", "paint": "base", "probes": ["handL.base.0"] },
-      {
-        "part": "handL",
-        "paint": "shade",
-        "unavailable": "the hand is lit across: its rim darkens in a gradient, and no flat 4 px box 2 px from the ink differs from its base by more than ΔE 4"
-      },
-      { "part": "foot", "paint": "base", "probes": ["foot.base.0", "foot.base.1", "foot.base.2"] },
-      { "part": "foot", "paint": "shade", "probes": ["foot.shade.0"] }
-    ],
-    "threeQuarterLeft": [
-      {
-        "part": "hair",
-        "paint": "base",
-        "probes": ["hair.base.0", "hair.base.1", "hair.base.2", "hair.base.3"]
-      },
-      { "part": "hair", "paint": "shade", "probes": ["hair.shade.0", "hair.shade.1"] },
-      { "part": "head", "paint": "base", "probes": ["head.base.0", "head.base.1"] },
-      { "part": "head", "paint": "shade", "probes": ["head.shade.0", "head.shade.1"] },
-      { "part": "ear", "paint": "base", "probes": ["ear.base.0", "ear.base.1"] },
-      { "part": "ear", "paint": "shade", "probes": ["ear.shade.0"] },
-      { "part": "neck", "paint": "base", "probes": ["neck.base.0"] },
-      { "part": "neck", "paint": "shade", "probes": ["neck.shade.0"] },
-      { "part": "body", "paint": "base", "probes": ["body.base.0", "body.base.1", "body.base.2"] },
       {
         "part": "body",
         "paint": "shade",
@@ -84,57 +348,23 @@
       {
         "part": "mantle",
         "paint": "shade",
-        "probes": ["mantle.shade.0", "mantle.shade.1", "mantle.shade.2"]
-      },
-      { "part": "sleeveR", "paint": "base", "probes": ["sleeveR.base.0"] },
-      { "part": "sleeveR", "paint": "shade", "probes": ["sleeveR.shade.0", "sleeveR.shade.1"] },
-      { "part": "sleeveL", "paint": "base", "probes": ["sleeveL.base.0"] },
-      {
-        "part": "sleeveL",
-        "paint": "shade",
-        "probes": ["sleeveL.shade.0", "sleeveL.shade.1", "sleeveL.shade.2"]
-      },
-      { "part": "sash", "paint": "base", "probes": ["sash.base.0", "sash.base.1"] },
-      { "part": "sash", "paint": "shade", "probes": ["sash.shade.0"] },
-      { "part": "knot", "paint": "base", "probes": ["knot.base.0"] },
-      { "part": "knot", "paint": "shade", "probes": ["knot.shade.0"] },
-      { "part": "endR", "paint": "base", "probes": ["endR.base.0"] },
-      { "part": "endR", "paint": "shade", "probes": ["endR.shade.0", "endR.shade.1"] },
-      { "part": "endL", "paint": "base", "probes": ["endL.base.0"] },
-      { "part": "endL", "paint": "shade", "probes": ["endL.shade.0"] },
-      { "part": "handR", "paint": "base", "probes": ["handR.base.0"] },
-      { "part": "handR", "paint": "shade", "probes": ["handR.shade.0"] },
-      { "part": "handL", "paint": "base", "probes": ["handL.base.0"] },
-      { "part": "handL", "paint": "shade", "probes": ["handL.shade.0"] },
-      {
-        "part": "foot",
-        "paint": "base",
-        "probes": ["foot.base.0", "foot.base.1", "foot.base.2", "foot.base.3"]
-      },
-      { "part": "foot", "paint": "shade", "probes": ["foot.shade.0", "foot.shade.1"] }
-    ],
-    "profileLeft": [
-      { "part": "hair", "paint": "base", "probes": ["hair.base.0", "hair.base.1", "hair.base.2"] },
-      { "part": "hair", "paint": "shade", "probes": ["hair.shade.0", "hair.shade.1"] },
-      { "part": "head", "paint": "base", "probes": ["head.base.0", "head.base.1"] },
-      { "part": "head", "paint": "shade", "probes": ["head.shade.0"] },
-      { "part": "ear", "paint": "base", "probes": ["ear.base.0"] },
-      { "part": "ear", "paint": "shade", "probes": ["ear.shade.0"] },
-      { "part": "neck", "paint": "base", "probes": ["neck.base.0"] },
-      { "part": "neck", "paint": "shade", "probes": ["neck.shade.0"] },
-      { "part": "body", "paint": "base", "probes": ["body.base.0", "body.base.1", "body.base.2"] },
-      { "part": "body", "paint": "shade", "probes": ["body.shade.0"] },
-      { "part": "mantle", "paint": "base", "probes": ["mantle.base.0", "mantle.base.1"] },
-      {
-        "part": "mantle",
-        "paint": "shade",
         "probes": [
           "mantle.shade.0",
           "mantle.shade.1",
           "mantle.shade.2",
           "mantle.shade.3",
           "mantle.shade.4",
-          "mantle.shade.5"
+          "mantle.shade.5",
+          "mantle.shade.6",
+          "mantle.shade.7",
+          "mantle.shade.8",
+          "mantle.shade.9",
+          "mantle.shade.10",
+          "mantle.shade.11",
+          "mantle.shade.12",
+          "mantle.shade.13",
+          "mantle.shade.14",
+          "mantle.shade.15"
         ]
       },
       {
@@ -150,15 +380,21 @@
       {
         "part": "sleeveL",
         "paint": "base",
-        "probes": ["sleeveL.base.0", "sleeveL.base.1", "sleeveL.base.2"]
+        "probes": [
+          "sleeveL.base.0",
+          "sleeveL.base.1",
+          "sleeveL.base.2",
+          "sleeveL.base.3",
+          "sleeveL.base.4"
+        ]
       },
-      { "part": "sleeveL", "paint": "shade", "probes": ["sleeveL.shade.0", "sleeveL.shade.1"] },
-      { "part": "sash", "paint": "base", "probes": ["sash.base.0"] },
       {
-        "part": "sash",
+        "part": "sleeveL",
         "paint": "shade",
-        "unavailable": "the lit front of the sash shows one tone; its lower edge darkens only in a band whose flat 4 px boxes 2 px from the ink number under 10"
+        "probes": ["sleeveL.shade.0", "sleeveL.shade.1", "sleeveL.shade.2"]
       },
+      { "part": "sash", "paint": "base", "probes": ["sash.base.0", "sash.base.1"] },
+      { "part": "sash", "paint": "shade", "probes": ["sash.shade.0", "sash.shade.1"] },
       { "part": "knot", "paint": "base", "probes": ["knot.base.0"] },
       {
         "part": "knot",
@@ -176,7 +412,11 @@
         "unavailable": "not shown: the far sash end is hidden behind the near one in profile"
       },
       { "part": "endL", "paint": "base", "probes": ["endL.base.0"] },
-      { "part": "endL", "paint": "shade", "probes": ["endL.shade.0"] },
+      {
+        "part": "endL",
+        "paint": "shade",
+        "probes": ["endL.shade.0", "endL.shade.1", "endL.shade.2", "endL.shade.3"]
+      },
       {
         "part": "handR",
         "paint": "base",
@@ -188,21 +428,49 @@
         "unavailable": "not shown: the far hand is hidden behind the body in profile"
       },
       { "part": "handL", "paint": "base", "probes": ["handL.base.0"] },
+      { "part": "handL", "paint": "shade", "probes": ["handL.shade.0", "handL.shade.1"] },
       {
-        "part": "handL",
-        "paint": "shade",
-        "unavailable": "the hand is lit across: its rim darkens in a gradient, and no flat 4 px box 2 px from the ink differs from its base by more than ΔE 4"
+        "part": "foot",
+        "paint": "base",
+        "probes": [
+          "foot.base.0",
+          "foot.base.1",
+          "foot.base.2",
+          "foot.base.3",
+          "foot.base.4",
+          "foot.base.5",
+          "foot.base.6",
+          "foot.base.7"
+        ]
       },
-      { "part": "foot", "paint": "base", "probes": ["foot.base.0", "foot.base.1", "foot.base.2"] },
-      { "part": "foot", "paint": "shade", "probes": ["foot.shade.0", "foot.shade.1"] }
+      {
+        "part": "foot",
+        "paint": "shade",
+        "probes": [
+          "foot.shade.0",
+          "foot.shade.1",
+          "foot.shade.2",
+          "foot.shade.3",
+          "foot.shade.4",
+          "foot.shade.5"
+        ]
+      }
     ],
     "back": [
       {
         "part": "hair",
         "paint": "base",
-        "probes": ["hair.base.0", "hair.base.1", "hair.base.2", "hair.base.3"]
+        "probes": [
+          "hair.base.0",
+          "hair.base.1",
+          "hair.base.2",
+          "hair.base.3",
+          "hair.base.4",
+          "hair.base.5",
+          "hair.base.6"
+        ]
       },
-      { "part": "hair", "paint": "shade", "probes": ["hair.shade.0"] },
+      { "part": "hair", "paint": "shade", "probes": ["hair.shade.0", "hair.shade.1"] },
       {
         "part": "head",
         "paint": "base",
@@ -213,11 +481,19 @@
         "paint": "shade",
         "unavailable": "not shown: from behind the hair covers the whole head; the skin below it is the neck"
       },
-      { "part": "ear", "paint": "base", "probes": ["ear.base.0"] },
-      { "part": "ear", "paint": "shade", "probes": ["ear.shade.0"] },
-      { "part": "neck", "paint": "base", "probes": ["neck.base.0", "neck.base.1"] },
-      { "part": "neck", "paint": "shade", "probes": ["neck.shade.0"] },
-      { "part": "body", "paint": "base", "probes": ["body.base.0", "body.base.1"] },
+      { "part": "ear", "paint": "base", "probes": ["ear.base.0", "ear.base.1"] },
+      { "part": "ear", "paint": "shade", "probes": ["ear.shade.0", "ear.shade.1", "ear.shade.2"] },
+      {
+        "part": "neck",
+        "paint": "base",
+        "probes": ["neck.base.0", "neck.base.1", "neck.base.2", "neck.base.3", "neck.base.4"]
+      },
+      {
+        "part": "neck",
+        "paint": "shade",
+        "probes": ["neck.shade.0", "neck.shade.1", "neck.shade.2"]
+      },
+      { "part": "body", "paint": "base", "probes": ["body.base.0", "body.base.1", "body.base.2"] },
       { "part": "body", "paint": "shade", "probes": ["body.shade.0"] },
       {
         "part": "mantle",
@@ -227,23 +503,58 @@
           "mantle.base.1",
           "mantle.base.2",
           "mantle.base.3",
-          "mantle.base.4"
+          "mantle.base.4",
+          "mantle.base.5",
+          "mantle.base.6"
         ]
       },
       {
         "part": "mantle",
         "paint": "shade",
-        "probes": ["mantle.shade.0", "mantle.shade.1", "mantle.shade.2"]
+        "probes": [
+          "mantle.shade.0",
+          "mantle.shade.1",
+          "mantle.shade.2",
+          "mantle.shade.3",
+          "mantle.shade.4",
+          "mantle.shade.5",
+          "mantle.shade.6",
+          "mantle.shade.7",
+          "mantle.shade.8"
+        ]
       },
-      { "part": "sleeveR", "paint": "base", "probes": ["sleeveR.base.0"] },
-      { "part": "sleeveR", "paint": "shade", "probes": ["sleeveR.shade.0", "sleeveR.shade.1"] },
-      { "part": "sleeveL", "paint": "base", "probes": ["sleeveL.base.0", "sleeveL.base.1"] },
+      {
+        "part": "sleeveR",
+        "paint": "base",
+        "probes": ["sleeveR.base.0", "sleeveR.base.1", "sleeveR.base.2"]
+      },
+      {
+        "part": "sleeveR",
+        "paint": "shade",
+        "probes": ["sleeveR.shade.0", "sleeveR.shade.1", "sleeveR.shade.2", "sleeveR.shade.3"]
+      },
+      {
+        "part": "sleeveL",
+        "paint": "base",
+        "probes": ["sleeveL.base.0", "sleeveL.base.1", "sleeveL.base.2"]
+      },
       {
         "part": "sleeveL",
         "paint": "shade",
-        "probes": ["sleeveL.shade.0", "sleeveL.shade.1", "sleeveL.shade.2"]
+        "probes": [
+          "sleeveL.shade.0",
+          "sleeveL.shade.1",
+          "sleeveL.shade.2",
+          "sleeveL.shade.3",
+          "sleeveL.shade.4",
+          "sleeveL.shade.5"
+        ]
       },
-      { "part": "sash", "paint": "base", "probes": ["sash.base.0", "sash.base.1"] },
+      {
+        "part": "sash",
+        "paint": "base",
+        "probes": ["sash.base.0", "sash.base.1", "sash.base.2", "sash.base.3"]
+      },
       { "part": "sash", "paint": "shade", "probes": ["sash.shade.0"] },
       {
         "part": "knot",
@@ -276,39 +587,117 @@
         "unavailable": "not shown: the sash ends hang at the front"
       },
       { "part": "handR", "paint": "base", "probes": ["handR.base.0"] },
-      { "part": "handR", "paint": "shade", "probes": ["handR.shade.0"] },
+      { "part": "handR", "paint": "shade", "probes": ["handR.shade.0", "handR.shade.1"] },
       { "part": "handL", "paint": "base", "probes": ["handL.base.0"] },
+      { "part": "handL", "paint": "shade", "probes": ["handL.shade.0", "handL.shade.1"] },
       {
-        "part": "handL",
-        "paint": "shade",
-        "unavailable": "the hand is lit across: its rim darkens in a gradient, and no flat 4 px box 2 px from the ink differs from its base by more than ΔE 4"
+        "part": "foot",
+        "paint": "base",
+        "probes": [
+          "foot.base.0",
+          "foot.base.1",
+          "foot.base.2",
+          "foot.base.3",
+          "foot.base.4",
+          "foot.base.5",
+          "foot.base.6",
+          "foot.base.7",
+          "foot.base.8"
+        ]
       },
-      { "part": "foot", "paint": "base", "probes": ["foot.base.0", "foot.base.1", "foot.base.2"] },
-      { "part": "foot", "paint": "shade", "probes": ["foot.shade.0", "foot.shade.1"] }
+      {
+        "part": "foot",
+        "paint": "shade",
+        "probes": [
+          "foot.shade.0",
+          "foot.shade.1",
+          "foot.shade.2",
+          "foot.shade.3",
+          "foot.shade.4",
+          "foot.shade.5",
+          "foot.shade.6",
+          "foot.shade.7",
+          "foot.shade.8",
+          "foot.shade.9",
+          "foot.shade.10"
+        ]
+      }
     ],
     "profileRight": [
-      { "part": "hair", "paint": "base", "probes": ["hair.base.0", "hair.base.1", "hair.base.2"] },
-      { "part": "hair", "paint": "shade", "probes": ["hair.shade.0"] },
-      { "part": "head", "paint": "base", "probes": ["head.base.0", "head.base.1"] },
+      {
+        "part": "hair",
+        "paint": "base",
+        "probes": [
+          "hair.base.0",
+          "hair.base.1",
+          "hair.base.2",
+          "hair.base.3",
+          "hair.base.4",
+          "hair.base.5",
+          "hair.base.6"
+        ]
+      },
+      {
+        "part": "hair",
+        "paint": "shade",
+        "probes": ["hair.shade.0", "hair.shade.1", "hair.shade.2"]
+      },
+      {
+        "part": "head",
+        "paint": "base",
+        "probes": ["head.base.0", "head.base.1", "head.base.2", "head.base.3", "head.base.4"]
+      },
       { "part": "head", "paint": "shade", "probes": ["head.shade.0"] },
-      { "part": "ear", "paint": "base", "probes": ["ear.base.0"] },
+      { "part": "ear", "paint": "base", "probes": ["ear.base.0", "ear.base.1", "ear.base.2"] },
       { "part": "ear", "paint": "shade", "probes": ["ear.shade.0"] },
-      { "part": "neck", "paint": "base", "probes": ["neck.base.0"] },
+      { "part": "neck", "paint": "base", "probes": ["neck.base.0", "neck.base.1"] },
       { "part": "neck", "paint": "shade", "probes": ["neck.shade.0"] },
-      { "part": "body", "paint": "base", "probes": ["body.base.0", "body.base.1", "body.base.2"] },
+      {
+        "part": "body",
+        "paint": "base",
+        "probes": ["body.base.0", "body.base.1", "body.base.2", "body.base.3"]
+      },
       { "part": "body", "paint": "shade", "probes": ["body.shade.0", "body.shade.1"] },
       {
         "part": "mantle",
         "paint": "base",
-        "probes": ["mantle.base.0", "mantle.base.1", "mantle.base.2"]
+        "probes": [
+          "mantle.base.0",
+          "mantle.base.1",
+          "mantle.base.2",
+          "mantle.base.3",
+          "mantle.base.4",
+          "mantle.base.5"
+        ]
       },
       {
         "part": "mantle",
         "paint": "shade",
-        "probes": ["mantle.shade.0", "mantle.shade.1", "mantle.shade.2", "mantle.shade.3"]
+        "probes": [
+          "mantle.shade.0",
+          "mantle.shade.1",
+          "mantle.shade.2",
+          "mantle.shade.3",
+          "mantle.shade.4",
+          "mantle.shade.5",
+          "mantle.shade.6",
+          "mantle.shade.7",
+          "mantle.shade.8",
+          "mantle.shade.9",
+          "mantle.shade.10",
+          "mantle.shade.11"
+        ]
       },
-      { "part": "sleeveR", "paint": "base", "probes": ["sleeveR.base.0", "sleeveR.base.1"] },
-      { "part": "sleeveR", "paint": "shade", "probes": ["sleeveR.shade.0"] },
+      {
+        "part": "sleeveR",
+        "paint": "base",
+        "probes": ["sleeveR.base.0", "sleeveR.base.1", "sleeveR.base.2"]
+      },
+      {
+        "part": "sleeveR",
+        "paint": "shade",
+        "probes": ["sleeveR.shade.0", "sleeveR.shade.1", "sleeveR.shade.2"]
+      },
       {
         "part": "sleeveL",
         "paint": "base",
@@ -320,7 +709,11 @@
         "unavailable": "not shown: the far arm is hidden behind the body in profile"
       },
       { "part": "sash", "paint": "base", "probes": ["sash.base.0"] },
-      { "part": "sash", "paint": "shade", "probes": ["sash.shade.0"] },
+      {
+        "part": "sash",
+        "paint": "shade",
+        "probes": ["sash.shade.0", "sash.shade.1", "sash.shade.2", "sash.shade.3"]
+      },
       { "part": "knot", "paint": "base", "probes": ["knot.base.0"] },
       { "part": "knot", "paint": "shade", "probes": ["knot.shade.0"] },
       { "part": "endR", "paint": "base", "probes": ["endR.base.0"] },
@@ -351,20 +744,47 @@
         "paint": "shade",
         "unavailable": "not shown: the far hand is hidden behind the body in profile"
       },
-      { "part": "foot", "paint": "base", "probes": ["foot.base.0", "foot.base.1", "foot.base.2"] },
+      {
+        "part": "foot",
+        "paint": "base",
+        "probes": ["foot.base.0", "foot.base.1", "foot.base.2", "foot.base.3", "foot.base.4"]
+      },
       { "part": "foot", "paint": "shade", "probes": ["foot.shade.0", "foot.shade.1"] }
     ],
     "threeQuarterRight": [
       {
         "part": "hair",
         "paint": "base",
-        "probes": ["hair.base.0", "hair.base.1", "hair.base.2", "hair.base.3"]
+        "probes": [
+          "hair.base.0",
+          "hair.base.1",
+          "hair.base.2",
+          "hair.base.3",
+          "hair.base.4",
+          "hair.base.5",
+          "hair.base.6",
+          "hair.base.7"
+        ]
       },
-      { "part": "hair", "paint": "shade", "probes": ["hair.shade.0"] },
+      {
+        "part": "hair",
+        "paint": "shade",
+        "probes": ["hair.shade.0", "hair.shade.1", "hair.shade.2"]
+      },
       {
         "part": "head",
         "paint": "base",
-        "probes": ["head.base.0", "head.base.1", "head.base.2", "head.base.3"]
+        "probes": [
+          "head.base.0",
+          "head.base.1",
+          "head.base.2",
+          "head.base.3",
+          "head.base.4",
+          "head.base.5",
+          "head.base.6",
+          "head.base.7",
+          "head.base.8"
+        ]
       },
       {
         "part": "head",
@@ -372,14 +792,18 @@
         "unavailable": "the face is lit across: no flat 4 px box on it is darker than its base by more than ΔE 4; its darker flat boxes are the hair and the neck"
       },
       { "part": "ear", "paint": "base", "probes": ["ear.base.0"] },
-      { "part": "ear", "paint": "shade", "probes": ["ear.shade.0"] },
+      { "part": "ear", "paint": "shade", "probes": ["ear.shade.0", "ear.shade.1", "ear.shade.2"] },
       {
         "part": "neck",
         "paint": "base",
         "unavailable": "the neck lies in the head's shadow: every flat box on it is the neck's shade tone"
       },
-      { "part": "neck", "paint": "shade", "probes": ["neck.shade.0", "neck.shade.1"] },
-      { "part": "body", "paint": "base", "probes": ["body.base.0", "body.base.1"] },
+      {
+        "part": "neck",
+        "paint": "shade",
+        "probes": ["neck.shade.0", "neck.shade.1", "neck.shade.2"]
+      },
+      { "part": "body", "paint": "base", "probes": ["body.base.0", "body.base.1", "body.base.2"] },
       {
         "part": "body",
         "paint": "shade",
@@ -388,7 +812,13 @@
       {
         "part": "mantle",
         "paint": "base",
-        "probes": ["mantle.base.0", "mantle.base.1", "mantle.base.2"]
+        "probes": [
+          "mantle.base.0",
+          "mantle.base.1",
+          "mantle.base.2",
+          "mantle.base.3",
+          "mantle.base.4"
+        ]
       },
       {
         "part": "mantle",
@@ -398,31 +828,73 @@
           "mantle.shade.1",
           "mantle.shade.2",
           "mantle.shade.3",
-          "mantle.shade.4"
+          "mantle.shade.4",
+          "mantle.shade.5",
+          "mantle.shade.6",
+          "mantle.shade.7"
         ]
       },
-      { "part": "sleeveR", "paint": "base", "probes": ["sleeveR.base.0"] },
-      { "part": "sleeveR", "paint": "shade", "probes": ["sleeveR.shade.0", "sleeveR.shade.1"] },
+      { "part": "sleeveR", "paint": "base", "probes": ["sleeveR.base.0", "sleeveR.base.1"] },
+      {
+        "part": "sleeveR",
+        "paint": "shade",
+        "probes": ["sleeveR.shade.0", "sleeveR.shade.1", "sleeveR.shade.2", "sleeveR.shade.3"]
+      },
       { "part": "sleeveL", "paint": "base", "probes": ["sleeveL.base.0"] },
-      { "part": "sleeveL", "paint": "shade", "probes": ["sleeveL.shade.0", "sleeveL.shade.1"] },
-      { "part": "sash", "paint": "base", "probes": ["sash.base.0", "sash.base.1"] },
-      { "part": "sash", "paint": "shade", "probes": ["sash.shade.0"] },
+      {
+        "part": "sleeveL",
+        "paint": "shade",
+        "probes": ["sleeveL.shade.0", "sleeveL.shade.1", "sleeveL.shade.2", "sleeveL.shade.3"]
+      },
+      { "part": "sash", "paint": "base", "probes": ["sash.base.0", "sash.base.1", "sash.base.2"] },
+      {
+        "part": "sash",
+        "paint": "shade",
+        "probes": ["sash.shade.0", "sash.shade.1", "sash.shade.2", "sash.shade.3"]
+      },
       { "part": "knot", "paint": "base", "probes": ["knot.base.0"] },
       { "part": "knot", "paint": "shade", "probes": ["knot.shade.0"] },
       { "part": "endR", "paint": "base", "probes": ["endR.base.0"] },
-      { "part": "endR", "paint": "shade", "probes": ["endR.shade.0", "endR.shade.1"] },
-      { "part": "endL", "paint": "base", "probes": ["endL.base.0"] },
-      { "part": "endL", "paint": "shade", "probes": ["endL.shade.0"] },
-      { "part": "handR", "paint": "base", "probes": ["handR.base.0"] },
       {
-        "part": "handR",
+        "part": "endR",
         "paint": "shade",
-        "unavailable": "the hand is lit across: its rim darkens in a gradient, and no flat 4 px box 2 px from the ink differs from its base by more than ΔE 4"
+        "probes": ["endR.shade.0", "endR.shade.1", "endR.shade.2"]
       },
+      { "part": "endL", "paint": "base", "probes": ["endL.base.0", "endL.base.1"] },
+      { "part": "endL", "paint": "shade", "probes": ["endL.shade.0", "endL.shade.1"] },
+      { "part": "handR", "paint": "base", "probes": ["handR.base.0", "handR.base.1"] },
+      { "part": "handR", "paint": "shade", "probes": ["handR.shade.0"] },
       { "part": "handL", "paint": "base", "probes": ["handL.base.0"] },
       { "part": "handL", "paint": "shade", "probes": ["handL.shade.0"] },
-      { "part": "foot", "paint": "base", "probes": ["foot.base.0", "foot.base.1", "foot.base.2"] },
-      { "part": "foot", "paint": "shade", "probes": ["foot.shade.0", "foot.shade.1"] }
+      {
+        "part": "foot",
+        "paint": "base",
+        "probes": [
+          "foot.base.0",
+          "foot.base.1",
+          "foot.base.2",
+          "foot.base.3",
+          "foot.base.4",
+          "foot.base.5",
+          "foot.base.6",
+          "foot.base.7",
+          "foot.base.8",
+          "foot.base.9"
+        ]
+      },
+      {
+        "part": "foot",
+        "paint": "shade",
+        "probes": [
+          "foot.shade.0",
+          "foot.shade.1",
+          "foot.shade.2",
+          "foot.shade.3",
+          "foot.shade.4",
+          "foot.shade.5",
+          "foot.shade.6"
+        ]
+      }
     ]
   },
   "exempt": {

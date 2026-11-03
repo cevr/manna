@@ -45,19 +45,19 @@ const SHADE_SIDE = { x0: 175, y0: 70, x1: 199, y1: 110 };
 /** The lighter hair tone the kept paints across the crown. */
 const LIGHTER_HAIR = [107, 62, 43];
 
-/** An ids pass that names each probe's box its own part, and the hair's shade side hair. */
+/** An ids pass that names the hair's shade side hair, and each probe's box its own part. */
 const idsFor = (kept: Raster, probes: ReadonlyArray<ColourProbe>): Raster => {
   const rgba = new Uint8Array(kept.rgba.length);
   const name = (x: number, y: number, id: number): void => {
     rgba.set([id * 12, id * 12, id * 12, 255], (y * kept.width + x) * 4);
   };
+  for (let y = SHADE_SIDE.y0; y <= SHADE_SIDE.y1; y++)
+    for (let x = SHADE_SIDE.x0; x <= SHADE_SIDE.x1; x++) name(x, y, PART.hair);
   for (const probe of probes) {
     const [x0, y0, w, h] = probe.box;
     for (let y = y0; y < y0 + h; y++)
       for (let x = x0; x < x0 + w; x++) name(x, y, PART[probe.part]);
   }
-  for (let y = SHADE_SIDE.y0; y <= SHADE_SIDE.y1; y++)
-    for (let x = SHADE_SIDE.x0; x <= SHADE_SIDE.x1; x++) name(x, y, PART.hair);
   return { width: kept.width, height: kept.height, rgba };
 };
 
