@@ -1505,7 +1505,7 @@ describe('the docs', () => {
           'Built to `data/built.db`, the app to `app/ios`, logged in `tmp/logs/latest`, under `tmp/`.',
           'It reads `src/kept.ts`; mistyped, `src/gone.ts` and `data/gone.db`;',
           'under the ignored `app/ios`, a folder no code makes: `ios/Podz`.',
-          'Logged, mistyped, in `tmp/lgos/latest` and `tmp/logs2`.',
+          'Logged, mistyped, in `tmp/lgos/latest`, `tmp/logs2`, and `tmp/log`.',
         ];
         const doc: Doc = {
           path: 'whole.md',
@@ -1519,12 +1519,14 @@ describe('the docs', () => {
           'whole.md: path ios/Podz does not exist',
           'whole.md: path tmp/lgos/latest lies under the ignored tmp/, and no .gitignore or script names it',
           'whole.md: path tmp/logs2 lies under the ignored tmp/, and no .gitignore or script names it',
+          'whole.md: path tmp/log lies under the ignored tmp/, and no .gitignore or script names it',
         ]);
         expect(
           yield* anchorsDrift(root, [{ ...doc, whole: false, text: lines.at(-1) ?? '' }]),
         ).toEqual([
           'whole.md: path tmp/lgos/latest lies under the ignored tmp/, and no .gitignore or script names it',
           'whole.md: path tmp/logs2 lies under the ignored tmp/, and no .gitignore or script names it',
+          'whole.md: path tmp/log lies under the ignored tmp/, and no .gitignore or script names it',
         ]);
       }).pipe(Effect.scoped),
   );
