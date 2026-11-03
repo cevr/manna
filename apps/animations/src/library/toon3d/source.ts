@@ -23,7 +23,11 @@ export const FigureSource = Data.taggedEnum<FigureSource>();
 /** A source whose files are missing, do not match their sha256, or do not decode. */
 export class SourceInvalid extends Schema.TaggedError<SourceInvalid>()('SourceInvalid', {
   reason: Schema.String,
-}) {}
+}) {
+  override get message() {
+    return this.reason;
+  }
+}
 
 /** The sha256 of `bytes`, as lowercase hex. */
 export const sha256 = (bytes: Uint8Array | string): string =>

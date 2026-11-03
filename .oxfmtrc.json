@@ -14,6 +14,7 @@
     "apps/animations/src/films/*/board.json",
     "apps/animations/src/films/*/v*/board.json",
     "apps/animations/sounds/fits/*.json",
+    "apps/animations/src/library/cast/*/mesh/labels.json",
     "apps/animations/series/*/scripts/*.md",
     "packages/hymnal/data/sdah-1985/*.json",
     "packages/hymnal/data/playback/*.json",
