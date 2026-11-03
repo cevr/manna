@@ -91,26 +91,35 @@ describe('the judged keys', () => {
 });
 
 describe('the judged selectors', () => {
-  it.effect('commentedCode takes a comment first on its line with the node under it, whole', () =>
-    Effect.sync(() => {
-      expect(
-        read('commentedCode', 'src/a.ts', [
-          '// The header, apart.',
-          '',
-          '/** Doubles `n`. */',
-          'export const double = (n: number) =>',
-          '  n * 2;',
-          'const c = 1; // after code',
-          '// The last line.',
-        ]),
-      ).toEqual([
-        [
-          3,
-          5,
-          'Comment:\nDoubles `n`.\n\nCode it sits on:\nexport const double = (n: number) =>\n  n * 2;',
-        ],
-      ]);
-    }),
+  it.effect(
+    'commentedCode takes a doc comment or a directive first on its line with the node under it, whole',
+    () =>
+      Effect.sync(() => {
+        expect(
+          read('commentedCode', 'src/a.ts', [
+            '/** The header, apart. */',
+            '',
+            '/** Doubles `n`. */',
+            'export const double = (n: number) =>',
+            '  n * 2;',
+            'const c = 1; /** after code */',
+            '// oxlint-disable-next-line no-console',
+            'console.log(c);',
+            '/** The last line. */',
+          ]),
+        ).toEqual([
+          [
+            3,
+            5,
+            'Comment:\nDoubles `n`.\n\nCode it sits on:\nexport const double = (n: number) =>\n  n * 2;',
+          ],
+          [
+            7,
+            8,
+            'Comment:\noxlint-disable-next-line no-console\n\nCode it sits on:\nconsole.log(c);',
+          ],
+        ]);
+      }),
   );
 
   it.effect('testCases takes each case with a name and a function, with the imports', () =>

@@ -958,7 +958,7 @@ The form of an entry, each field on its own line:
 - **Source:** p6-closeink/review-6.md F1
 - **Wrong:** A test helper's comment said it skipped a named node after its `skip` was removed.
 - **Cause:** The helper's code changed and its comment was not read back.
-- **Guard:** skill: whether a comment still says what its code does is judged by reading both, and the judged comment rule is off on its corpus. Carried by `CLAUDE.md`: "A `/** */` doc comment directly above a declaration or member says what it does now and why"
+- **Guard:** skill: whether a comment still says what its code does is judged by reading both, and the judged comment rule, which reads each doc comment or tool directive with the code under it, is off on its corpus. Carried by `CLAUDE.md`: "A `/** */` doc comment directly above a declaration or member says what it does now and why"
 
 ### hand-prop-comment-after-unbake
 
@@ -968,7 +968,7 @@ The form of an entry, each field on its own line:
 - **Source:** rbf-unbake/review-1.md F1
 - **Wrong:** RBF's hand spec said a circle hand has no view model after the file bound its ink, which gives every hand the number `ink`.
 - **Cause:** The unbake changed one flag in `figures.ts`; the comment on the hand spec in `rigs.ts` reads that flag's effect and was not read back.
-- **Guard:** skill: whether a comment still says what its code does is judged by reading both, and the judged comment rule is off on its corpus. Carried by `CLAUDE.md`: "A `/** */` doc comment directly above a declaration or member says what it does now and why"
+- **Guard:** skill: whether a comment still says what its code does is judged by reading both, and the judged comment rule, which reads each doc comment or tool directive with the code under it, is off on its corpus. Carried by `CLAUDE.md`: "A `/** */` doc comment directly above a declaration or member says what it does now and why"
 
 ### veil-drawn-without-its-scarlet
 

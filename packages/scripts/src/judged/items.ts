@@ -251,7 +251,11 @@ const nodeAt = (program: Program, offset: number): Option.Option<Node> => {
   return found;
 };
 
-/** Each comment block first on its line, with the node that starts the line under it. */
+/**
+ * Each comment block first on its line, with the node that starts the line
+ * under it: in the tree, each doc comment with the declaration or member it
+ * documents, and each directive with the line it governs.
+ */
 const commentedCode = (source: Source): ReadonlyArray<Item> => {
   const { lineOf, startOf } = lineReader(source.text);
   return commentBlocks(source)

@@ -3797,10 +3797,11 @@ criteria, the label that reports, a threshold and a message;
 measurements set the thresholds, and where the answers are kept. Its
 severity is its gate: `warn` reports, `error` fails the lint, `off` judges
 nothing. The rules are `historyComment` (the history a doc comment or a
-tool directive tells), `testOracle` (a test whose oracle is its code), `silentDrop` (a function that drops what
-it cannot handle unsaid), all at `warn`, `scriptSpeech` (a film beat that
-names its sources or church history), at `error`, and `commentClaimsCode` (a
-comment that claims more than its code), `off`: reviewers found none of its
+tool directive tells), `testOracle` (a test whose oracle is its code),
+`silentDrop` (a function that drops what it cannot handle unsaid), all at
+`warn`, `scriptSpeech` (a film beat that names its sources or church
+history), at `error`, and `commentClaimsCode` (a doc comment or a tool
+directive that claims more than the code under it), `off`: reviewers found none of its
 findings over the repo true (`docs/lessons.md`); over each,
 `.oxlintrc.json` says what its corpus measured. To add one: write its entry
 in `.oxlintrc.json` (at `warn`), add its id to `RULE_IDS` in
