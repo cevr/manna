@@ -4,8 +4,15 @@
 // PNGs. A member's `cutout/cut.ts` names each view's rule with its own numbers.
 // Pure: the same sheet in gives the same bytes out.
 
+import { labOf } from '@manna/film/core';
 import type { PartSheet, Raster, SheetClean } from '@manna/film/tools';
 import { Option } from 'effect';
+
+/** A colour, RGB or Lab. */
+type Rgb = readonly [number, number, number];
+
+/** ΔE76 between two Lab colours. */
+const deltaE = (a: Rgb, b: Rgb): number => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 
 /** The eight neighbours of a pixel, as steps. */
 const AROUND = [
@@ -266,4 +273,91 @@ export const cuffsToArms =
       );
     }
     return { ...withPixels(sheet, (k) => Option.fromUndefinedOr(out[k])), owner };
+  };
+
+/** What `clearPaperRim` reads: the view's paper (RGB), how many 8-steps the clear ground's flood reaches, and the ΔE76 within which a pixel is paper-coloured. */
+export interface PaperRim {
+  readonly paper: Rgb;
+  readonly band: number;
+  readonly near: number;
+}
+
+/** Whether pixel `i` of the figure laid from `layers` front to back is paper-coloured: its front-most opaque layer's colour lies within `near` (ΔE76) of `paperLab`. A clear pixel is not. */
+const paperAt = (layers: ReadonlyArray<Raster>, i: number, paperLab: Rgb, near: number): boolean =>
+  Option.match(Option.fromUndefinedOr(layers.find((l) => (l.rgba[i * 4 + 3] ?? 0) > 0)), {
+    onNone: () => false,
+    onSome: ({ rgba }) => {
+      const c: Rgb = [rgba[i * 4] ?? 0, rgba[i * 4 + 1] ?? 0, rgba[i * 4 + 2] ?? 0];
+      return deltaE(labOf(c), paperLab) < near;
+    },
+  });
+
+/**
+ * The paper rim of the figure laid from `layers` front to back (each a raster
+ * of one size): 1 on each pixel the clear ground (no layer opaque) reaches
+ * within `band` 8-steps through paper-coloured pixels (`near` of `paper`).
+ * The flood stops at ink and its anti-aliased blend, which lie farther from
+ * the paper, and at the cloth the ink walls in.
+ */
+export const paperRimOf = (
+  layers: ReadonlyArray<Raster>,
+  { paper, band, near }: PaperRim,
+): Uint8Array => {
+  const size = layers[0] ?? NO_PIXELS;
+  const count = size.width * size.height;
+  const paperLab = labOf(paper);
+  const depth = new Int32Array(count).fill(-1);
+  const queue: Array<number> = [];
+  for (let i = 0; i < count; i++)
+    if (!layers.some((l) => (l.rgba[i * 4 + 3] ?? 0) > 0)) {
+      depth[i] = 0;
+      queue.push(i);
+    }
+  const rim = new Uint8Array(count);
+  for (let head = 0; head < queue.length; head++) {
+    const i = queue[head] ?? 0;
+    const d = depth[i] ?? 0;
+    if (d >= band) continue;
+    for (const j of aroundOf(size, i)) {
+      if (depth[j] !== -1 || !paperAt(layers, j, paperLab, near)) continue;
+      depth[j] = d + 1;
+      rim[j] = 1;
+      queue.push(j);
+    }
+  }
+  return rim;
+};
+
+/** `rgba` with every pixel `rim` holds that has alpha above 0 cleared to 0 in all four bytes; a clear pixel keeps its bytes. */
+export const clearedBy = (rgba: Uint8Array, rim: Uint8Array): Uint8Array => {
+  const out = new Uint8Array(rgba);
+  for (let i = 0; i < rim.length; i++)
+    if (rim[i] === 1 && (out[i * 4 + 3] ?? 0) > 0) out.fill(0, i * 4, i * 4 + 4);
+  return out;
+};
+
+/**
+ * Clears the paper rim a view's paint keeps outside the figure's ink: a pale
+ * band the painter lays just outside the outer outline, nearer the member's
+ * cloth than the paper, which the un-matte would read as cloth and draw as a
+ * white torn rim on any paper. The parts are laid front to back as the sheet
+ * holds them; each pixel of their paper rim (`paperRimOf`) is cleared from
+ * every part and becomes the ground's. Run again on its own answer, the flood
+ * stops where it starts.
+ */
+export const clearPaperRim =
+  (rim: PaperRim): SheetClean =>
+  (sheet) => {
+    const mask = paperRimOf(
+      sheet.parts.map((p) => p.pixels),
+      rim,
+    );
+    const owner = new Uint8Array(sheet.owner);
+    for (let i = 0; i < mask.length; i++) if (mask[i] === 1) owner[i] = 0;
+    return {
+      ...withPixels(sheet, (k) =>
+        Option.map(Option.fromUndefinedOr(sheet.parts[k]), (p) => clearedBy(p.pixels.rgba, mask)),
+      ),
+      owner,
+    };
   };

@@ -7,27 +7,27 @@
   "parts": [
     {
       "name": "armRight",
-      "kept": 9046,
+      "kept": 8796,
       "painted": 0
     },
     {
       "name": "armLeft",
-      "kept": 5508,
+      "kept": 5062,
       "painted": 0
     },
     {
       "name": "head",
-      "kept": 28041,
+      "kept": 27222,
       "painted": 0
     },
     {
       "name": "robe",
-      "kept": 41685,
-      "painted": 4869
+      "kept": 40492,
+      "painted": 4820
     },
     {
       "name": "torso",
-      "kept": 22233,
+      "kept": 21803,
       "painted": 6625
     }
   ],
