@@ -16,10 +16,27 @@ import {
   WebGLRenderer,
   WebGLRenderTarget,
 } from 'three';
-import { buildFigure, inkClass, type InkClass } from './figure.ts';
+import { buildFigure, inkClass, type Figure, type InkClass } from './figure.ts';
 import { IDS_PASS } from './ids.ts';
 import { LOOK_PAINTS } from './lead-feast.ts';
+import { buildMeshFigure } from './mesh/figure.ts';
+import { fromPayload, type MeshPayload } from './mesh/payload.ts';
 import type { MemberSpec, Pose } from './spec.ts';
+
+/** What the page builds a figure from: the code-built spec, or a generated mesh painted with the spec's paints, light, face and ink. */
+export type PageFigure =
+  | { readonly _tag: 'Parametric'; readonly spec: MemberSpec }
+  | { readonly _tag: 'Mesh'; readonly spec: MemberSpec; readonly mesh: MeshPayload };
+
+/** The page's figure for `paints`. */
+const figureOf = (source: PageFigure, paints: MemberSpec['paints']): Figure => {
+  switch (source._tag) {
+    case 'Parametric':
+      return buildFigure({ ...source.spec, paints });
+    case 'Mesh':
+      return buildMeshFigure({ ...source.spec, paints }, fromPayload(source.mesh));
+  }
+};
 
 /** One render: the image's size, where the soles' centre sits in it (px), px per head unit, the turn and the pose. */
 export interface RenderRequest {
@@ -149,15 +166,16 @@ void main() {
 
 const hexColour = (hex: string): Color => new Color().setStyle(hex, 'srgb-linear');
 
-/** A page that renders `spec` on request, every pass deterministic. */
-const renderer = (spec: MemberSpec) => {
+/** A page that renders `source`'s figure on request, every pass deterministic. */
+const renderer = (source: PageFigure) => {
+  const spec = source.spec;
   const gl = new WebGLRenderer({ antialias: false, preserveDrawingBuffer: true, alpha: false });
   gl.outputColorSpace = LinearSRGBColorSpace;
   gl.setPixelRatio(1);
   document.body.appendChild(gl.domElement);
   const figures = {
-    kept: buildFigure(spec),
-    look: buildFigure({ ...spec, paints: LOOK_PAINTS }),
+    kept: figureOf(source, spec.paints),
+    look: figureOf(source, LOOK_PAINTS),
   };
   const scenes = { kept: new Scene(), look: new Scene() };
   scenes.kept.add(figures.kept.root);
@@ -276,8 +294,8 @@ const renderer = (spec: MemberSpec) => {
 
 /** The page's handle: `load` builds a member's figure and leaves `render` for it. */
 const toon3d = {
-  load: (spec: MemberSpec): void => {
-    Reflect.set(toon3d, 'render', renderer(spec));
+  load: (source: PageFigure): void => {
+    Reflect.set(toon3d, 'render', renderer(source));
   },
 };
 Reflect.set(window, 'toon3d', toon3d);

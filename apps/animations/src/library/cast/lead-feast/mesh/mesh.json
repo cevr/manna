@@ -1,0 +1,16 @@
+{
+  "glb": "rigged_character.glb",
+  "sha256": "b3c54c5d6947c97a860369fab36ad2fc654ac01f941d1060d696a3cb71328cd8",
+  "fal": {
+    "request": "01a1a229-8ff5-7d73-b39b-96c456fe0371",
+    "endpoint": "fal-ai/meshy/v7.1/multi-image-to-3d",
+    "views": 4,
+    "texture": false,
+    "rigging": true,
+    "symmetry": true
+  },
+  "storage": "git (no LFS in repo)",
+  "heightPx": 656,
+  "labels": "labels.json",
+  "labelsSha256": "d8626a74f13e1b077aaed8ca32aff383fff87c5904d04e96d8898f7cd2c67bf0"
+}

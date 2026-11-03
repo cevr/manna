@@ -1,11 +1,12 @@
 import { compareFigures, measureFigure } from '@manna/film/core';
 import { Effect, Option, Result, Schema } from 'effect';
 import sharp from 'sharp';
-import type { Vector3 } from 'three';
-import { armChain, PART } from '../figure.ts';
+import { PART } from '../figure.ts';
+import type { ArmJoints } from '../mesh/rig.ts';
 import type { RenderRequest } from '../page.ts';
 import { HEAD_PX, toon3dPage, YAWS, type RenderPng, type ViewName } from '../render.ts';
-import { REST, REST_ARM, type MemberSpec, type PaintName, type Pose } from '../spec.ts';
+import type { BuiltFigure } from '../source.ts';
+import { REST, REST_ARM, type MemberSpec, type PaintName, type Pose, type Vec3 } from '../spec.ts';
 import {
   boxOf,
   deltaLab,
@@ -222,11 +223,11 @@ const PAGE_SIZE = { width: 400, height: 700 };
 
 /** The run's first launch: each view placed over its kept picture, then every job rendered. */
 export const firstLaunch = Effect.fn('Toon3dVerify.firstLaunch')(function* (
-  spec: MemberSpec,
+  figure: BuiltFigure,
   plan: Plan,
   kept: ReadonlyMap<ViewName, Raster>,
 ) {
-  const render = yield* toon3dPage(PAGE_SIZE, spec);
+  const render = yield* toon3dPage(PAGE_SIZE, figure.page);
   const places = new Map<ViewName, Placement>();
   for (const view of plan.views) {
     const keptView = kept.get(view);
@@ -240,10 +241,10 @@ export const firstLaunch = Effect.fn('Toon3dVerify.firstLaunch')(function* (
 
 /** A second, separate launch of the page rendering the same jobs, for the determinism check. */
 export const secondLaunch = Effect.fn('Toon3dVerify.secondLaunch')(function* (
-  spec: MemberSpec,
+  figure: BuiltFigure,
   jobs: ReadonlyArray<RenderJob>,
 ) {
-  const render = yield* toon3dPage(PAGE_SIZE, spec);
+  const render = yield* toon3dPage(PAGE_SIZE, figure.page);
   return yield* Effect.forEach(jobs, (job) => render(job.request));
 }, Effect.scoped);
 
@@ -281,18 +282,15 @@ export interface ArmOnScreen {
 }
 
 /** The posed right arm's two bones on screen: shoulder to elbow and elbow to wrist, in a request's pixels. */
-export const rightArmOnScreen = (spec: MemberSpec, request: RenderRequest): ArmOnScreen => {
-  const arm = spec.arms.right;
-  const chain = armChain(arm, request.pose.right, -1);
+export const rightArmOnScreen = (arm: ArmJoints, request: RenderRequest): ArmOnScreen => {
   const c = Math.cos(request.yaw);
   const s = Math.sin(request.yaw);
-  const screen = (v: { readonly x: number; readonly y: number; readonly z: number }): Point => [
-    request.ox + (v.x * c + v.z * s) * request.scale,
-    request.oy - v.y * request.scale,
+  const screen = (v: Vec3): Point => [
+    request.ox + (v[0] * c + v[2] * s) * request.scale,
+    request.oy - v[1] * request.scale,
   ];
-  const shoulder = screen({ x: arm.shoulder[0], y: arm.shoulder[1], z: arm.shoulder[2] });
-  const at = (v: Vector3) => screen(v);
-  return { upper: [shoulder, at(chain.elbow)], fore: [at(chain.elbow), at(chain.wrist)] };
+  const elbow = screen(arm.elbow);
+  return { upper: [screen(arm.shoulder), elbow], fore: [elbow, screen(arm.wrist)] };
 };
 
 /** Where along a bone the sleeve's width is read: its middle, clear of the shoulder ball, the elbow's arc and the cuff. */
@@ -317,12 +315,8 @@ const armBox = (ids: Raster): Box => {
 export type SleeveWidths = Pick<FrameMeasured, 'upper' | 'fore'>;
 
 /** The right sleeve's width across its upper arm and its forearm in an ids render made by `request`. */
-export const sleeveAcross = (
-  spec: MemberSpec,
-  request: RenderRequest,
-  ids: Raster,
-): SleeveWidths => {
-  const bones = rightArmOnScreen(spec, request);
+export const sleeveAcross = (arm: ArmJoints, request: RenderRequest, ids: Raster): SleeveWidths => {
+  const bones = rightArmOnScreen(arm, request);
   return {
     upper: widthAcross(ids, PART.sleeveR, bones.upper, ALONG, [bones.fore]),
     fore: widthAcross(ids, PART.sleeveR, bones.fore, ALONG, [bones.upper]),
@@ -397,7 +391,7 @@ export type Renders = ReadonlyMap<string, Uint8Array>;
 
 /** Every measure of a run, from its renders and the kept views. */
 export const measureRun = Effect.fn('Toon3dVerify.measureRun')(function* (
-  spec: MemberSpec,
+  figure: BuiltFigure,
   plan: Plan,
   kept: ReadonlyMap<ViewName, Raster>,
   jobs: ReadonlyArray<RenderJob>,
@@ -418,7 +412,7 @@ export const measureRun = Effect.fn('Toon3dVerify.measureRun')(function* (
     if (!keptView) return yield* VerifyFailed.make({ reason: `no kept picture for ${view}` });
     const colour = yield* raster(`views/${view}.png`);
     const ids = yield* raster(`views-ids/${view}.png`);
-    views.push(measureView(spec, view, keptView, colour, ids));
+    views.push(measureView(figure.spec, view, keptView, colour, ids));
     if (view === 'front') {
       rows = frontRows(keptView, colour);
       face = frontFace(keptView, colour, ids);
@@ -429,7 +423,7 @@ export const measureRun = Effect.fn('Toon3dVerify.measureRun')(function* (
       const name = `bend-side-ids/${frameName(k)}`;
       const request = requests.get(name);
       if (!request) return yield* VerifyFailed.make({ reason: `no request for ${name}` });
-      return sleeveAcross(spec, request, yield* raster(name));
+      return sleeveAcross(figure.rightArm(request.pose), request, yield* raster(name));
     });
   const frames = (
     dir: string,

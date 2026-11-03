@@ -8,7 +8,7 @@ import { ChildProcess, ChildProcessSpawner } from 'effect/process';
 import sharp from 'sharp';
 import { leadFeast } from '../lead-feast.ts';
 import type { ViewName } from '../render.ts';
-import { FigureSource, specOf } from '../source.ts';
+import { buildSource, FigureSource, sha256 } from '../source.ts';
 import type { MemberSpec } from '../spec.ts';
 import { BARS, STAGES } from './bars.ts';
 import type { Raster } from './measures.ts';
@@ -88,17 +88,12 @@ const keptDir = (member: string): string => `${here}/../../cast/${member}/cast-s
 /** Where a run writes: `apps/animations/out/toon3d/<member>/`. */
 const outDir = (member: string): string => `${here}/../../../../out/toon3d/${member}`;
 
-/** The generated mesh a member's `Mesh` source names. */
-const meshOf = (member: string) =>
+/** A member's generated mesh, named by its `mesh.json`, painted with the member's spec. */
+const meshOf = (member: MemberName) =>
   FigureSource.Mesh({
-    glb: `${here}/../../cast/${member}/mesh/${member}.glb`,
-    sha256: '',
-    labels: `${here}/../../cast/${member}/mesh/labels.json`,
+    spec: MEMBERS[member],
+    manifest: `${here}/../../cast/${member}/mesh/mesh.json`,
   });
-
-/** The sha256 of `bytes`, as lowercase hex. */
-export const sha256 = (bytes: Uint8Array | string): string =>
-  new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
 
 const sharpFailed = (cause: unknown) => VerifyFailed.make({ reason: String(cause) });
 
@@ -122,11 +117,20 @@ const readKept = Effect.fn('Toon3dVerify.readKept')(function* (member: string, p
 const codeFiles = Effect.fn('Toon3dVerify.codeFiles')(function* () {
   const fs = yield* FileSystem.FileSystem;
   const root = `${here}/..`;
+  const sources = (dir: string) =>
+    fs
+      .readDirectory(`${root}/${dir}`)
+      .pipe(
+        Effect.map((names) =>
+          names
+            .filter((n) => n.endsWith('.ts') && !n.endsWith('.test.ts'))
+            .map((n) => `${dir}/${n}`),
+        ),
+      );
   const names = [
     ...(yield* fs.readDirectory(root)).filter((n) => n.endsWith('.ts')),
-    ...(yield* fs.readDirectory(here))
-      .filter((n) => n.endsWith('.ts') && !n.endsWith('.test.ts'))
-      .map((n) => `verify/${n}`),
+    ...(yield* sources('verify')),
+    ...(yield* sources('mesh')),
   ].toSorted();
   const hashes: Array<readonly [string, string]> = [];
   for (const name of names) hashes.push([name, sha256(yield* fs.readFile(`${root}/${name}`))]);
@@ -253,12 +257,13 @@ export const verifyMember = Effect.fn('Toon3dVerify.verifyMember')(function* (
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
-  const spec = yield* specOf(source);
+  const figure = yield* buildSource(source);
+  const spec = figure.spec;
   const { kept, bytes: keptBytes } = yield* readKept(member, plan);
-  const first = yield* firstLaunch(spec, plan, kept);
-  const second = yield* secondLaunch(spec, first.jobs);
+  const first = yield* firstLaunch(figure, plan, kept);
+  const second = yield* secondLaunch(figure, first.jobs);
   const { renders, hashes, differing } = rendersOf(first.jobs, first.pngs, second);
-  const measured = yield* measureRun(spec, plan, kept, first.jobs, renders, differing);
+  const measured = yield* measureRun(figure, plan, kept, first.jobs, renders, differing);
   const verdict: Verdict = verdictOf(BARS, measured);
 
   const rendersDir = path.join(out, 'renders');
@@ -271,6 +276,7 @@ export const verifyMember = Effect.fn('Toon3dVerify.verifyMember')(function* (
   const inputs = Object.fromEntries([
     ...[...keptBytes].map(([name, png]) => [name, sha256(png)] as const),
     ['spec.json', sha256(yield* Schema.encodeEffect(SpecJson)(spec))] as const,
+    ...Object.entries(figure.inputs),
   ]);
   const manifest = yield* Schema.encodeEffect(ManifestJson)({
     member,
