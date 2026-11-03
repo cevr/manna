@@ -71,9 +71,11 @@ export interface Clip extends Schema.Schema.Type<typeof Clip> {}
  * A member's manifest: every drawing the pipeline needs of him, the clips his
  * reader is scored on, and, for a member cut with no repaint, his own cutters:
  * the scripts (from his folder, run with bun in order) that write his part
- * sheets in place of `concept parts`, so his parts stages ask no okra. A
- * cutter reads its kept drawings by importing them as files, so its import
- * closure holds every input of its stage.
+ * sheets in place of `concept parts`, so his parts stages ask no okra. Each
+ * takes one argument, the sheets folder to write (and a later one to read),
+ * which the build makes a scratch folder and holds to his committed
+ * `cutout/sheets`. A cutter reads its kept drawings by importing them as
+ * files, so its import closure holds every input of its stage.
  */
 export const Coverage = Schema.Struct({
   member: Schema.String,

@@ -17,18 +17,29 @@
 // paper the figure holds, and each held piece is a place to look for a gap
 // the cut should name. The run fails before it writes a view whose named gap
 // is stale. Run it from the repo root with
-// `bun apps/animations/src/library/cast/filler-bases/cutout/sheets-cut.ts`.
+// `bun apps/animations/src/library/cast/filler-bases/cutout/sheets-cut.ts [<sheets folder>]`.
 
 import * as BunRuntime from '@effect/platform-bun/BunRuntime';
 import * as BunServices from '@effect/platform-bun/BunServices';
 import { type Raster, cutParts, decodePng, encodePng } from '@manna/film/tools';
-import { Array as Arr, Console, Effect, FileSystem, Option, Record as Records } from 'effect';
+import {
+  Array as Arr,
+  Console,
+  Effect,
+  FileSystem,
+  Option,
+  Record as Records,
+  Stdio,
+} from 'effect';
 import { CUTS, cutOptionsFor, paperOf } from './cut.ts';
 // the kept sheet, imported as a file so the cast build keys the parts stage by it (`COVERAGE.cutters`)
 import KEPT from '../cast-sheet/kept/poses.png' with { type: 'file' };
 import { FRAMES, type FramedView, boxOf } from './frames.ts';
 
-const here = import.meta.dir;
+/** The sheets folder it writes: its one argument, else its own `sheets/` (the cast build passes a scratch folder to check it). */
+const sheetsFolder = Stdio.Stdio.use(({ args }) =>
+  Effect.map(args, (a) => Option.getOrElse(Arr.head(a), () => `${import.meta.dir}/sheets`)),
+);
 
 type Rgb = readonly [number, number, number];
 
@@ -155,7 +166,7 @@ const cropOf = (
 /** A colour as `r,g,b`. */
 const rgbText = ([r, g, b]: Rgb) => `${r},${g},${b}`;
 
-const cutView = (sheet: Raster, name: FramedView) =>
+const cutView = (sheet: Raster, name: FramedView, sheets: string) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const view = cropOf(sheet, boxOf(name));
@@ -169,7 +180,7 @@ const cutView = (sheet: Raster, name: FramedView) =>
       );
     const parts = yield* Effect.fromResult(cutParts(view, CUTS[name], cutOptionsFor(name, view)));
     const inside = Uint8Array.from(outsideOf(view), (o) => 1 - o);
-    yield* fs.makeDirectory(`${here}/sheets/${name}`, { recursive: true });
+    yield* fs.makeDirectory(`${sheets}/${name}`, { recursive: true });
     yield* Effect.forEach(parts.parts, (part) =>
       Effect.gen(function* () {
         const to = Option.fromUndefinedOr(DYES[name][part.name]);
@@ -180,7 +191,7 @@ const cutView = (sheet: Raster, name: FramedView) =>
           onNone: () => part.pixels,
           onSome: (d) => d.raster,
         });
-        yield* fs.writeFile(`${here}/sheets/${name}/${part.name}.png`, encodePng(raster));
+        yield* fs.writeFile(`${sheets}/${name}/${part.name}.png`, encodePng(raster));
         yield* Console.log(
           `  ${part.name}.png: ${part.kept} px${Option.match(written, {
             onNone: () =>
@@ -195,7 +206,8 @@ const cutView = (sheet: Raster, name: FramedView) =>
 const cut = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const sheet = yield* Effect.fromResult(decodePng(yield* fs.readFile(KEPT)));
-  yield* Effect.forEach(Records.keys(FRAMES), (name) => cutView(sheet, name));
+  const sheets = yield* sheetsFolder;
+  yield* Effect.forEach(Records.keys(FRAMES), (name) => cutView(sheet, name, sheets));
 });
 
 if (import.meta.main) cut.pipe(Effect.provide(BunServices.layer), BunRuntime.runMain);

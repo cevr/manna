@@ -371,8 +371,8 @@ describe('memberStages', () => {
           [
             "import kept from '../cast-sheet/kept.png' with { type: 'file' };",
             "import { copyFileSync, mkdirSync } from 'node:fs';",
-            'mkdirSync(`${import.meta.dir}/sheets/front`, { recursive: true });',
-            'copyFileSync(kept, `${import.meta.dir}/sheets/front/head.png`);',
+            'mkdirSync(`${process.argv[2]}/front`, { recursive: true });',
+            'copyFileSync(kept, `${process.argv[2]}/front/head.png`);',
           ].join('\n'),
         );
         const spawned: Array<ReadonlyArray<string>> = [];
@@ -418,12 +418,15 @@ describe('memberStages', () => {
         // no head was committed: the one the cutter writes is new
         expect(parts?.state).toBe('ran');
         expect(report.okraCalls).toBe(0);
-        expect(spawned).toEqual([['bun', cutter]]);
+        // run on a scratch sheets folder, never his own
+        expect(spawned.map((c) => c.slice(0, 2))).toEqual([['bun', cutter]]);
+        expect(spawned[0]?.[2]).not.toContain(dir);
         expect(yield* fs.readFile(head)).toEqual(kept);
         // a committed head of the same pixels in other bytes holds
         yield* fs.writeFile(head, withText(kept));
         expect((yield* built([cutter])).parts?.state).toBe('ran');
-        // a committed head of other pixels fails the stage, and is put back
+        expect(yield* fs.readFile(head)).toEqual(withText(kept));
+        // a committed head of other pixels fails the stage, and writes nothing
         const committed = encodePng(pixels([40, 40, 200, 255]));
         yield* fs.writeFile(head, committed);
         const changed = (yield* built([cutter])).parts;

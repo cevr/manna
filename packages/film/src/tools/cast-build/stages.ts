@@ -211,12 +211,12 @@ const fittedFiles = (memberDir: string) =>
 const runParts = (film: FilmName, member: string, view: string, flags: ReadonlyArray<string>) =>
   Command.runWith(parts, { version: 'build' })([film, member, '--view', view, ...flags]);
 
-/** A member's own cutter (`Coverage.cutters`), run with bun; a run that fails or exits nonzero fails the stage. */
-const runCutter = (script: string) =>
+/** A member's own cutter (`Coverage.cutters`), run with bun on the sheets folder it writes; a run that fails or exits nonzero fails the stage. */
+const runCutter = (script: string, sheets: string) =>
   Effect.gen(function* () {
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const code = yield* spawner
-      .exitCode(ChildProcess.make('bun', [script], { forceKillAfter: '5 seconds' }))
+      .exitCode(ChildProcess.make('bun', [script, sheets], { forceKillAfter: '5 seconds' }))
       .pipe(Effect.mapError((e) => StageFailed.make({ reason: `${script}: ${e.message}` })));
     if (code !== 0) return yield* StageFailed.make({ reason: `${script} exited ${code}` });
   });
@@ -232,35 +232,43 @@ const contentOf = (name: string, bytes: Uint8Array) => {
 };
 
 /**
- * A member's own cutters run and checked: each runs (`runCutter`), and every
- * file his `cutout/sheets` folder held before they ran must hold the same
- * content after (`contentOf`), as `concept parts --check` holds a sheet to
- * what it lays. A cutter that changes one fails the stage and the committed
- * bytes are put back, so the build never rewrites a kept part; a file no
- * cutter had written yet is new, not a change. A change meant is made by
- * running the cutter by hand and committing what it writes.
+ * A member's own cutters run and checked, as `concept parts --check` holds a
+ * sheet to what it lays: each runs in order (`runCutter`) on a scratch sheets
+ * folder, and every file they write there that his `cutout/sheets` folder
+ * holds must hold the same content (`contentOf`). One that differs fails the
+ * stage and nothing is written, so the build never rewrites a committed part;
+ * a change meant is made by running the cutters by hand and committing what
+ * they write. A file his folder does not hold yet is new, and is copied in.
  */
 const checkedCutters = (memberDir: string, scripts: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const sheets = path.join(memberDir, 'cutout', 'sheets');
-    const held = yield* Effect.forEach(yield* filesUnder(sheets), (name) =>
-      Effect.map(fs.readFile(path.join(sheets, name)), (bytes) => ({ name, bytes })),
+    const scratch = yield* fs.makeTempDirectoryScoped();
+    yield* Effect.forEach(scripts, (s) => runCutter(s, scratch), { discard: true });
+    const made = yield* Effect.forEach(yield* filesUnder(scratch), (name) =>
+      Effect.map(fs.readFile(path.join(scratch, name)), (bytes) => ({ name, bytes })),
     );
-    yield* Effect.forEach(scripts, runCutter, { discard: true });
-    const changed = yield* Effect.filter(held, ({ name, bytes }) =>
-      fs.readFile(path.join(sheets, name)).pipe(
-        Effect.map((now) => contentOf(name, now) !== contentOf(name, bytes)),
-        Effect.orElseSucceed(() => true),
+    const committed = yield* Effect.forEach(made, (file) =>
+      fs.readFile(path.join(sheets, file.name)).pipe(
+        Effect.map((held) => ({ ...file, held: Option.some(held) })),
+        Effect.orElseSucceed(() => ({ ...file, held: Option.none<Uint8Array>() })),
       ),
     );
-    if (changed.length === 0) return;
-    for (const { name, bytes } of changed) yield* fs.writeFile(path.join(sheets, name), bytes);
-    return yield* StageFailed.make({
-      reason: `his cutters change ${changed.map((c) => c.name).join(', ')} from the committed files (put back); run them by hand and commit to keep a change`,
-    });
+    const changed = committed.filter(({ name, bytes, held }) =>
+      Option.exists(held, (h) => contentOf(name, h) !== contentOf(name, bytes)),
+    );
+    if (changed.length > 0)
+      return yield* StageFailed.make({
+        reason: `his cutters change ${changed.map((c) => c.name).join(', ')} from the committed files; run them by hand and commit to keep a change`,
+      });
+    for (const { name, bytes } of committed.filter((c) => Option.isNone(c.held))) {
+      yield* fs.makeDirectory(path.dirname(path.join(sheets, name)), { recursive: true });
+      yield* fs.writeFile(path.join(sheets, name), bytes);
+    }
   }).pipe(
+    Effect.scoped,
     Effect.catchTag('PlatformError', (e) =>
       StageFailed.make({ reason: `his cutters' sheets: ${e.message}` }),
     ),
