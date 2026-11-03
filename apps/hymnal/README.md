@@ -155,7 +155,9 @@ under its number, and the refrain written out each time it is sung.
   holds `core-import.test.ts` and `jsx.test.ts`, which read every `src`
   file, and `test:infra` holds `parts.test.ts`. `test:infra` hashes the
   verify-hymnal journeys (`.claude/skills/verify-hymnal/features/`), which
-  `scripts/sim` reads. `HYMNAL_LIST_SEED` reaches the browser tests through
+  `scripts/sim/features.test.ts` reads; the driver itself is `@manna/sim`
+  (`packages/sim`), run with the hymnal's values in `scripts/sim-app.ts`.
+  `HYMNAL_LIST_SEED` reaches the browser tests through
   turbo's `test:slow`.
 
 - `bun run test:browser` (`test/browser/`) renders the home screen's list and

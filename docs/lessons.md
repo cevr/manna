@@ -4843,3 +4843,23 @@ The form of an entry, each field on its own line:
 - **Wrong:** The hand's cut touched cloth inside the silhouette with no ink, and ambiguous brown cuff paint could remain as a skin-coloured fleck on the forearm.
 - **Cause:** Cuff ink was multiplied by the union's outer silhouette band, which vanishes at an internal contact; donor classification accepted paint almost on the cloth/skin bisector. The cloth lip now covers the hand's raw cut by a measured pen radius, the cuff opening receives its own ink, and only unambiguous cloth donates to the sleeve.
 - **Guard:** code: `apps/animations/src/library/cast/lead-feast/cutout/limb.slow.test.ts` `has no uninked hand-skin edge exposed at the cuff`; `apps/animations/src/library/cast/lead-feast/cutout/limb.slow.test.ts` `has zero skin pixels outside the posed hand coverage`
+
+### sim-paths-leave-their-root-through-a-link
+
+- **Date:** 2026-11-03
+- **Kind:** review
+- **Said:** "An install write still bypasses the contained-path constructor"
+- **Source:** hymnapp/simkit/round-3-findings.md M1 (repeat of round-2-findings.md M1 and round-1-findings.md M1)
+- **Wrong:** The simulator driver handed a tool, or wrote, a path that a link led out of the app, state or output folder: a configured workspace or Info.plist under a linked folder, a linked `dd/Build` (there before or made by the prebuild), a linked `build.log` overwritten with the build's output, a link deep in derived data the build follows.
+- **Cause:** Containment was a check added at the call sites each round found, so a site that wrote or passed a plain path stayed outside it. The driver now reaches files and tools only through the contained host (`packages/sim/src/host.ts`), which resolves every path at the moment of use and refuses one that leaves a root holding it.
+- **Guard:** code: `packages/sim/src/host.test.ts` `refuses each census trigger, typed, and keeps install alive on real layouts`
+
+### sim-reaches-the-host-around-its-contained-host
+
+- **Date:** 2026-11-03
+- **Kind:** review
+- **Said:** "the driver reaches the host only through one contained host layer built from its roots"
+- **Source:** hymnapp/simkit/round-3-findings.md M1 (the rewrite's static leg, spec A6)
+- **Wrong:** A driver source could read, write or spawn through `node:fs`, `child_process` or Bun's own file and spawn calls, which the contained host never sees.
+- **Cause:** Nothing kept a host call inside the Effect services the contained host replaces.
+- **Guard:** lint:no-restricted-imports, proof `packages/sim/src/lint.slow.test.ts` `reports every direct file, process and Bun host call, and nothing else`

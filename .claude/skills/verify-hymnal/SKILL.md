@@ -15,7 +15,8 @@ The hymnal is one One app (README of `apps/hymnal`): the same tree runs on
 iOS from a Debug build that loads its JavaScript from a dev server, and on
 the web from that dev server. Both launch models go through one helper,
 `apps/hymnal/scripts/sim.ts`, an Effect CLI that prints one JSON line per
-command:
+command. It is the shared driver `@manna/sim` (`packages/sim`) run with the
+hymnal's values, `apps/hymnal/scripts/sim-app.ts`:
 
 - **iOS** (the default): the simulator named `verify-hymnal` (created when
   missing, never another one), a Debug build of this checkout installed on
@@ -205,7 +206,7 @@ bun run --cwd apps/hymnal sim down --clean
 `sim down` closes the driver session, shuts down `verify-hymnal` (iOS),
 stops the dev server by its recorded PID (never by name), and moves the
 session file into `$EVIDENCE`. `--clean` then deletes the app's build
-output (`apps/hymnal/scripts/sim/drive.ts` `CLEAN_PATHS`: the `build` and
+output (the clean paths of `apps/hymnal/scripts/sim-app.ts` `app`: the `build` and
 `Pods` folders of `apps/hymnal/ios`, and `apps/hymnal/dist`, each checked
 to lie inside the app first) and fails `Unhealthy` (`port-free`) while
 something still listens on the port. Plain `sim down` keeps the build for
@@ -226,9 +227,10 @@ expect still showed), `BadJourney` (a journey file that does not decode),
 commands: `boot`, `install`, `doctor`, `journey`, `open`, `tap`, `back`,
 `fill`, `scroll`, `gesture`, `hold`, `relaunch`, `shot`, `snapshot`,
 `record`, `log`, `down`, and `serve` (the dev server's own process, which
-`boot` starts). Its tests: the unit tests beside it in
-`apps/hymnal/scripts/sim/` (a stand-in Drive, no host), and
-`sim.slow.test.ts`, run by the hymnal's `test:slow`.
+`boot` starts). Its tests: the driver's in `packages/sim/src` (a stand-in
+Drive or host, no device; `sim.slow.test.ts` and
+`app.property.slow.test.ts` run by its `test:slow`), and the hymnal's
+journey files' in `apps/hymnal/scripts/sim/features.test.ts`.
 
 `apps/hymnal/scripts/sticky.ts` checks the home list's pinned topic row in
 every frame of a recording: from `apps/hymnal`, on a booted `verify-hymnal`
