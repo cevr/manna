@@ -12,16 +12,21 @@
  * walk reads: the content policy has the browser refuse it
  * (`../src/worker/respond.test.ts`, `../scripts/computed.ts`).
  */
-import { BunServices } from '@effect/platform-bun';
+import { BunCrypto, BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Option, Order, Path, Schema } from 'effect';
+import { Effect, FileSystem, Layer, Option, Order, Path, Schema } from 'effect';
+import { Digest } from 'effect/crypto';
 
 import { Approved, RECORD, readRecord, unapprovedBuilt } from './approval.ts';
-import { type Format, formatOf, sha256 } from './build-walk.ts';
+import { type Format, formatOf } from './build-walk.ts';
 import viteConfig from '../vite.config.ts';
 import { OUTSIDE } from './served.ts';
 
 const APP = `${import.meta.dir}/..`;
+
+/** The SHA-256 of bytes in hex, from `Digest` itself, so a walk that hashes another way is seen. */
+const sha256 = (bytes: Uint8Array) =>
+  Digest.Digest.use((digest) => digest.digestHex(Digest.sha256, bytes));
 
 /**
  * A scratch app holding the record, its stills hashed as they stand, and the
@@ -35,7 +40,10 @@ const appAsItStands = Effect.gen(function* () {
   const app = yield* fs.makeTempDirectoryScoped({ prefix: 'app-' });
   const record = yield* readRecord(APP);
   const hashed = yield* Effect.forEach(Object.keys(record.stills), (still) =>
-    Effect.map(fs.readFile(path.join(APP, still)), (bytes) => [still, sha256(bytes)] as const),
+    fs.readFile(path.join(APP, still)).pipe(
+      Effect.flatMap(sha256),
+      Effect.map((hash) => [still, hash] as const),
+    ),
   );
   for (const { image } of OUTSIDE) {
     yield* fs.makeDirectory(path.dirname(path.join(app, image)), { recursive: true });
@@ -296,7 +304,7 @@ const NOT_IMAGES: ReadonlyArray<readonly [string, Uint8Array]> = [
   ['bytes that are not text', Uint8Array.from([0xc3, 0x28, 0x3c, 0x73, 0x76, 0x67])],
 ];
 
-const test = it.effect.layer(BunServices.layer);
+const test = it.effect.layer(Layer.merge(BunServices.layer, BunCrypto.layerDigest));
 
 describe('the build walk', () => {
   test('reads each format by its first bytes, a gzipped one by what it unzips to', () =>

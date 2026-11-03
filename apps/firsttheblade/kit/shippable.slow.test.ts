@@ -11,10 +11,10 @@
  * runs; any other stage skips it. The stack runs it second, after the prod
  * state check (`scripts/prod-state.test.ts` holds that order).
  */
-import { BunServices } from '@effect/platform-bun';
+import { BunCrypto, BunServices } from '@effect/platform-bun';
 import { Stage } from 'alchemy/Stage';
 import { describe, expect, it } from 'effect-bun-test';
-import { Effect, FileSystem, Option, Path, Schema } from 'effect';
+import { Effect, FileSystem, Layer, Option, Path, Schema } from 'effect';
 
 import {
   Approved,
@@ -146,7 +146,7 @@ const draws = (seed: number) => {
 const tail = (next: () => number) => Array.from({ length: 96 }, () => Math.floor(next() * 256));
 const ascii = (text: string) => Array.from(text, (character) => character.charCodeAt(0));
 
-const test = it.effect.layer(BunServices.layer);
+const test = it.effect.layer(Layer.merge(BunServices.layer, BunCrypto.layerDigest));
 
 describe('kit:shippable', () => {
   test('refuses a pending record, and an approval whose shown files lack a still that no earlier approval showed byte for byte, before it builds', () =>

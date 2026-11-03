@@ -17,9 +17,10 @@
  * with the hash its saved ask holds for it, not the stills as they stand.
  * Each over a copy of the app, with a stand-in lab.
  */
-import { BunServices } from '@effect/platform-bun';
+import { BunCrypto, BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
 import { Context, Effect, FileSystem, Layer, Match, Option, Path, Ref, Schema } from 'effect';
+import { Digest } from 'effect/crypto';
 
 import {
   APPROVE,
@@ -39,7 +40,6 @@ import {
   StillsMoved,
   StillsNotShown,
 } from './approval.ts';
-import { sha256 } from './build-walk.ts';
 import {
   AskAnswer,
   type AskAnswers,
@@ -55,6 +55,10 @@ const ASK = 'a1b2c3d4e5f';
 const OTHER = 'f5e4d3c2b1a';
 const AT = '2026-10-22T09:00:00.000Z';
 const LAB = 'http://lab.test/';
+
+/** The SHA-256 of bytes in hex, from `Digest` itself, so a kit that hashes another way is seen. */
+const sha256 = (bytes: Uint8Array) =>
+  Digest.Digest.use((digest) => digest.digestHex(Digest.sha256, bytes));
 
 /**
  * The owner's real answers, as the lab records them (`GET /api/asks/<id>`),
@@ -465,7 +469,7 @@ const refusedWhy = (
   ];
 };
 
-const test = it.effect.layer(Layer.mergeAll(BunServices.layer, layerHeld));
+const test = it.effect.layer(Layer.mergeAll(BunServices.layer, BunCrypto.layerDigest, layerHeld));
 
 /** The stills `approve` names as not shown, when it refuses with `StillsNotShown`. */
 const notShownBy = (root: string, ask: string) =>
@@ -508,7 +512,7 @@ describe('kit:approve', () => {
   test("approves the pinned stills an image block showed byte for byte, on the approve choice, storing the lab, the answer's label and the shown files' hashes", () =>
     Effect.gen(function* () {
       const { root, stills } = yield* pinnedOn(ASK);
-      const files = { ...showing(stills), [srcOf('crop.png')]: sha256(new Uint8Array([1])) };
+      const files = { ...showing(stills), [srcOf('crop.png')]: yield* sha256(new Uint8Array([1])) };
       yield* holding([held(APPROVED, Object.keys(files))], files);
       expect(yield* approvedOn(root, ASK)).toEqual(['approved', false]);
       expect(yield* readRecord(root)).toEqual({
@@ -536,7 +540,7 @@ describe('kit:approve', () => {
         .toSorted();
       expect(kept).toHaveLength(9);
       for (const still of kept) {
-        const hash = sha256(yield* fs.readFile(`${SHOWED_STILLS}/${still}`));
+        const hash = yield* sha256(yield* fs.readFile(`${SHOWED_STILLS}/${still}`));
         expect([still, hash]).toEqual([
           still,
           real.shown[`${SHOWED_SET}/${path.basename(still)}`] ?? 'none',
@@ -623,7 +627,7 @@ describe('kit:approve', () => {
       const { stills } = yield* readRecord(root);
       const files = showing(stills);
       const branch = srcOf('revised.png');
-      const all = { ...files, [branch]: sha256(Uint8Array.from([3])) };
+      const all = { ...files, [branch]: yield* sha256(Uint8Array.from([3])) };
       const asking = withReceipt(held({}, Object.keys(files), 'Asking', ASK, [], [branch]), all);
       const answered = withReceipt(
         held(APPROVED, Object.keys(files), 'Answered', ASK, [], [branch]),
@@ -655,7 +659,7 @@ describe('kit:approve', () => {
       const repinned = yield* pinOn(root, OTHER);
       expect(repinned.earlier).toEqual([first.approval]);
       yield* holding([held(APPROVED, [srcOf('decoy.png')], 'Answered', OTHER)], {
-        [srcOf('decoy.png')]: sha256(Uint8Array.from([7])),
+        [srcOf('decoy.png')]: yield* sha256(Uint8Array.from([7])),
       });
       expect(yield* notShownBy(root, OTHER)).toEqual(Option.some([changed]));
       const second = yield* approvedShowing(root, OTHER, showing(only(repinned.stills, [changed])));
@@ -692,7 +696,7 @@ describe('kit:approve', () => {
       const [first = '', second = '', third = '', ...rest] = Object.keys(stills).toSorted();
       const files = {
         ...showing(only(stills, rest)),
-        [srcOf(`crop-of-${first}`)]: sha256(new TextEncoder().encode(first)),
+        [srcOf(`crop-of-${first}`)]: yield* sha256(new TextEncoder().encode(first)),
       };
       const board = srcOf(`board-of-${second}`);
       const branch = srcOf(third);
@@ -782,7 +786,7 @@ describe('kit:approve', () => {
       const first = yield* approvedShowing(root, EARLY, showing(stills));
       yield* pinOn(root, ASK);
       const [src = ''] = Object.keys(first.approval.shown);
-      const other = sha256(Uint8Array.from([9]));
+      const other = yield* sha256(Uint8Array.from([9]));
       const kase = <E, R>(ask: string, why: string, change: Effect.Effect<unknown, E, R>) =>
         [`${ask} ${why}`, change] as const;
       const cases = [
@@ -976,7 +980,7 @@ describe('kit:approve', () => {
           ...Object.fromEntries(
             scrambled.map((still) => [srcOf(`old/${still}`), before[still] ?? '']),
           ),
-          [srcOf('decoy.png')]: sha256(Uint8Array.from([i])),
+          [srcOf('decoy.png')]: yield* sha256(Uint8Array.from([i])),
         };
         const drawn = Option.fromUndefinedOr(
           ANSWERS[Math.max(0, Math.floor(next() * ANSWERS.length * 2) - ANSWERS.length)],

@@ -1,10 +1,10 @@
-import { BunServices } from '@effect/platform-bun';
+import { BunCrypto, BunServices } from '@effect/platform-bun';
 import { describe, expect, test } from 'bun:test';
-import { Effect, FileSystem } from 'effect';
+import { Effect, FileSystem, Layer } from 'effect';
+import { Digest } from 'effect/crypto';
 import { it } from 'effect-bun-test';
 import sharp from 'sharp';
 
-import { sha256 } from './build-walk.ts';
 import {
   HILL_STREAKS,
   type Pixels,
@@ -185,7 +185,7 @@ describe('the far hills without the old rays’ edges', () => {
 /** The master the streaks' lines and steps were measured on, by the SHA-256 of its bytes. */
 const MEASURED_ON = '912faa678ed6c8793eaab564a40708e604945f377c0b0dfadbc484eb7db38b2e';
 
-const withFiles = it.effect.layer(BunServices.layer);
+const withFiles = it.effect.layer(Layer.merge(BunServices.layer, BunCrypto.layerDigest));
 
 const MASTER = `${import.meta.dir}/art/field.webp`;
 
@@ -229,7 +229,10 @@ describe('the streaks as the master has them', () => {
     () =>
       Effect.gen(function* () {
         const fs = yield* FileSystem.FileSystem;
-        expect(sha256(yield* fs.readFile(MASTER))).toBe(MEASURED_ON);
+        const digest = yield* Digest.Digest;
+        expect(yield* digest.digestHex(Digest.sha256, yield* fs.readFile(MASTER))).toBe(
+          MEASURED_ON,
+        );
       }),
   );
 

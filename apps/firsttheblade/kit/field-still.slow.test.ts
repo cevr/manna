@@ -20,9 +20,9 @@
  * base before this rule and the master, in each probe's order, and encoded
  * as the kit encodes.
  */
-import { BunServices } from '@effect/platform-bun';
+import { BunCrypto, BunServices } from '@effect/platform-bun';
 import { describe, expect, it } from 'effect-bun-test';
-import { Array as Arr, Effect, FileSystem, Match, Option, Path, Stream } from 'effect';
+import { Array as Arr, Effect, FileSystem, Layer, Match, Option, Path, Stream } from 'effect';
 import * as ChildProcess from 'effect/process/ChildProcess';
 import { ChildProcessSpawner } from 'effect/process/ChildProcessSpawner';
 import sharp from 'sharp';
@@ -41,7 +41,7 @@ import {
 import { scratchApp } from './scratch-app.ts';
 import { IMAGE, OUTSIDE, servedImages } from './served.ts';
 
-const test = it.effect.layer(BunServices.layer);
+const test = it.effect.layer(Layer.merge(BunServices.layer, BunCrypto.layerDigest));
 
 const APP = `${import.meta.dir}/..`;
 
